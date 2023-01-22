@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-   source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/vpc/?ref=main"
+   source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/vpc/?ref=master"
 }
 
 inputs = {
