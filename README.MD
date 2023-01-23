@@ -20,8 +20,8 @@ CNI :
 - create vpc , subnets
 - create  ec2 (spot ) master and workers 
 - init master node by kubeadm 
-- copy join tokent to s3
-- load   join tokent  from s3 to worker node and join to the cluster .
+- copy join token to s3
+- load   join token  from s3 to worker node and join to the cluster .
 
 ````
 ## Requirements
