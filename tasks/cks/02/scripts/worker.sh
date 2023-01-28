@@ -1,3 +1,4 @@
+#!/bin/bash
 echo " *** install falco"
 #https://falco.org/docs/getting-started/installation/
 curl -s https://falco.org/repo/falcosecurity-packages.asc | apt-key add -
