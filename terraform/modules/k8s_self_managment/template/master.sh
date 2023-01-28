@@ -7,7 +7,7 @@ worker_join_sh=${worker_join}
 pod_network_cidr_sh=${pod_network_cidr}
 external_ip_sh=${external_ip}
 utils_enable_sh=${utils_enable}
-task_script_enable_sh=${task_script_enable}
+
 
 date
 swapoff -a
