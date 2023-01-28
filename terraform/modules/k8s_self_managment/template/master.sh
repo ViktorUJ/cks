@@ -73,8 +73,7 @@ if [[ "$utils_enable_sh" == "true" ]] ; then
   echo 'source <(skaffold completion bash)'>>/root/.bashrc
 fi
 
-
 # add additional script
-wget ${task_script_url} -o task.sh
+curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh

@@ -52,6 +52,6 @@ chmod +x worker_join
 ./worker_join
 
 # add additional script
-wget ${task_script_url} -o task.sh
+curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
