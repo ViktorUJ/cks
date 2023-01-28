@@ -1,3 +1,16 @@
+#apiVersion: v1
+#kind: Pod
+#metadata:
+#  creationTimestamp: null
+#  labels:
+#    run: nginx
+#  name: nginx
+#spec:
+#  containers:
+#  - command: ["while" , ":" "do", "sleep" , "1" , "done"  ]
+#    image: nginx
+#    name: nginx
+
 apiVersion: v1
 kind: Pod
 metadata:
@@ -7,6 +20,11 @@ metadata:
   name: nginx
 spec:
   containers:
-  - command: ["while" , ":" "do", "sleep" , "1" , "done"  ]
+  - command:
+    - sleep
+    - "10"
     image: nginx
     name: nginx
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
