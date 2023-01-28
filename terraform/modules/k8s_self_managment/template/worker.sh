@@ -2,6 +2,7 @@
 runtime_sh=${runtime}
 k8_version_sh=${k8_version}
 worker_join_sh=${worker_join}
+task_script_enable_sh=${task_script_enable}
 
 
 date
