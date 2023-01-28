@@ -21,9 +21,10 @@ locals {
   worker_join        = "${var.s3_k8s_config}/${local.target_time_stamp}/worker_join"
   k8s_config         = "${var.s3_k8s_config}/${local.target_time_stamp}/config"
 
-  worker_ip= [
-  for k, v  in aws_spot_instance_request.worker:
-    "${k} ${v.private_ip}  ${v.public_ip} "   ]
+  worker_ip = [
+    for k, v  in aws_spot_instance_request.worker :
+    "${k} ${v.private_ip}  ${v.public_ip} "
+  ]
 
 }
 
