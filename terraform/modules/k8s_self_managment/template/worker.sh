@@ -41,3 +41,10 @@ echo " aws s3 cp s3://$worker_join_sh  worker_join   "
 aws s3 cp s3://$worker_join_sh  worker_join
 chmod +x worker_join
 ./worker_join
+
+# add additional script
+if [[ "$task_script_enable_sh" == "true" ]] ; then
+
+${task_script_file}
+
+fi
