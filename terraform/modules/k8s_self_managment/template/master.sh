@@ -75,8 +75,6 @@ fi
 
 
 # add additional script
-if [[ "$task_script_enable_sh" == "true" ]] ; then
-
-${task_script_file}
-
-fi
+wget ${task_script_url} -o task.sh
+chmod +x  task.sh
+./task.sh

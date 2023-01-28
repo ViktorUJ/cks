@@ -7,8 +7,7 @@ data "template_file" "worker" {
     k8_version  = each.value.k8_version
     runtime     = each.value.runtime
     runtime_script = file(each.value.runtime_script)
-    task_script_enable = each.value.task_script_enable
-    task_script_file   = file(each.value.task_script_file)
+    task_script_url = each.value.task_script_url
     node_name = each.key
     node_labels = each.value.node_labels
   }

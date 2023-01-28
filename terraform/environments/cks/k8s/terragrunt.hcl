@@ -43,8 +43,7 @@ inputs = {
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "true"
-    task_script_enable = "true"
-    task_script_file   = "template/tasks/cks/4/4_3.sh"
+    task_script_url    = ""
     root_volume        = {
       type = "gp3"
       size = "20"
@@ -61,8 +60,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = "cri-o"
       runtime_script     = "template/runtime.sh"
-      task_script_enable = "true"
-      task_script_file   = "template/tasks/cks/02/worker.sh"
+      task_script_url    = ""
       node_labels        = "work_type=infra,aws_scheduler=true"
       cidrs              = ["0.0.0.0/0"]
       root_volume        = {
@@ -80,8 +78,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = "cri-o"
       runtime_script     = "template/runtime.sh"
-      task_script_enable = "false"
-      task_script_file   = "template/tasks/cks/02/worker.sh"
+      task_script_url    = ""
       node_labels        = "work_type=infra_core,aws_scheduler=true"
 
       cidrs       = ["0.0.0.0/0"]

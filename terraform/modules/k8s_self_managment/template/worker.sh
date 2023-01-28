@@ -2,7 +2,6 @@
 runtime_sh=${runtime}
 k8_version_sh=${k8_version}
 worker_join_sh=${worker_join}
-task_script_enable_sh=${task_script_enable}
 
 
 date
@@ -53,8 +52,6 @@ chmod +x worker_join
 ./worker_join
 
 # add additional script
-if [[ "$task_script_enable_sh" == "true" ]] ; then
-
-${task_script_file}
-
-fi
+wget ${task_script_url} -o task.sh
+chmod +x  task.sh
+./task.sh
