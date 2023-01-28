@@ -44,6 +44,7 @@ variable "k8s_worker" {
     runtime_script     = string
     task_script_enable = string
     task_script_file   = string
+    node_labels        = string
     root_volume        = object({
       type = string
       size = string

@@ -63,6 +63,7 @@ inputs = {
       runtime_script     = "template/runtime.sh"
       task_script_enable = "true"
       task_script_file   = "template/tasks/cks/02/worker.sh"
+      node_labels = "work_type=infra,aws_scheduler=true"
       cidrs              = ["0.0.0.0/0"]
       root_volume        = {
         type = "gp3"

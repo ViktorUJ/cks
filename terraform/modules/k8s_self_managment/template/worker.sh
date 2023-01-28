@@ -41,7 +41,7 @@ date
 # add node labels
 cat > /etc/systemd/system/kubelet.service.d/20-labels-taints.conf <<EOF
 [Service]
-Environment="KUBELET_EXTRA_ARGS=--node-labels=label1=value1,label2=value2"
+Environment="KUBELET_EXTRA_ARGS=--node-labels=node_name=${node_name},${node_labels}"
 EOF
 systemctl enable kubelet
 systemctl restart kubelet

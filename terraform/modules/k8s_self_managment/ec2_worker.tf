@@ -9,6 +9,8 @@ data "template_file" "worker" {
     runtime_script = file(each.value.runtime_script)
     task_script_enable = each.value.task_script_enable
     task_script_file   = file(each.value.task_script_file)
+    node_name = each.key
+    node_labels = each.value.node_labels
   }
 }
 
