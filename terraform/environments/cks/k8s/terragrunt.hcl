@@ -51,7 +51,7 @@ inputs = {
     }
   }
   k8s_worker = {
-# we can  configure each node independently
+    # we can  configure each node independently
     "node_1" = {
       k8_version         = "1.25.0"
       instance_type      = "t3.medium"
@@ -63,7 +63,7 @@ inputs = {
       runtime_script     = "template/runtime.sh"
       task_script_enable = "true"
       task_script_file   = "template/tasks/cks/02/worker.sh"
-      node_labels = "work_type=infra,aws_scheduler=true"
+      node_labels        = "work_type=infra,aws_scheduler=true"
       cidrs              = ["0.0.0.0/0"]
       root_volume        = {
         type = "gp3"
@@ -71,23 +71,25 @@ inputs = {
       }
     }
 
-  #   "node_2" = {
-  #     k8_version    = "1.26.0"
-  #     instance_type      = "t3.medium"
-  #     key_name           = "localize"
-  #     ami_id             = "ami-00c70b245f5354c0a"
-  #     subnet_number      = "0"
-  #     user_data_template = "template/worker.sh"
-  #     runtime = "cri-o"
-  #     runtime_script     = "template/runtime.sh"
-  #    task_script_enable = "false"
-  #    task_script_file   = "template/tasks/cks/02/worker.sh"
-  #     cidrs              = ["0.0.0.0/0"]
-  #     root_volume        = {
-  #       type = "gp3"
-  #       size = "20"
-  #     }
-  #   }
+    "node_2" = {
+      k8_version         = "1.26.0"
+      instance_type      = "t3.medium"
+      key_name           = "localize"
+      ami_id             = "ami-00c70b245f5354c0a"
+      subnet_number      = "0"
+      user_data_template = "template/worker.sh"
+      runtime            = "cri-o"
+      runtime_script     = "template/runtime.sh"
+      task_script_enable = "false"
+      task_script_file   = "template/tasks/cks/02/worker.sh"
+      node_labels        = "work_type=infra_core,aws_scheduler=true"
+
+      cidrs       = ["0.0.0.0/0"]
+      root_volume = {
+        type = "gp3"
+        size = "20"
+      }
+    }
 
 
   }
