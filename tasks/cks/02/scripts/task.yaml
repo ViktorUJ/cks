@@ -19,10 +19,12 @@ metadata:
     run: nginx
   name: nginx
 spec:
+  nodeSelector:
+    work_type: falco
   containers:
   - command:
     - sleep
-    - "10"
+    - "10000"
     image: nginx
     name: nginx
     resources: {}
