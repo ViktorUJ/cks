@@ -7,15 +7,6 @@ metadata:
   name: nginx
 spec:
   containers:
-  - command:
-    - while
-    - ':'
-    - do
-    - cat
-    - '/etc/passwd'
-    - ';'
-    - sleep
-    - 2
-    - done
+  - command: ["while" , ":" "do", "sleep" , "1" , "done"  ]
     image: nginx
     name: nginx
