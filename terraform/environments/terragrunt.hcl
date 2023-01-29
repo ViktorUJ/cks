@@ -20,7 +20,7 @@ generate "backend" {
   if_exists = "overwrite_terragrunt"
   contents = <<EOF
 terraform {
-  backend "s3" { }
+  backend "s3" {}
 }
 EOF
 }
