@@ -32,8 +32,8 @@ inputs = {
   s3_k8s_config = "viktoruj-terraform-state-backet"
 
   k8s_master = {
-    k8_version         = "1.23.0"
-    runtime            = "docker" # docker  , cri-o  , containerd ( need test it )
+    k8_version         = "1.25.0"
+    runtime            = "cri-o" # docker  , cri-o  , containerd ( need test it )
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
     key_name           = "localize"
