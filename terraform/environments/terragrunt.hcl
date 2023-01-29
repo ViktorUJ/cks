@@ -20,13 +20,18 @@ generate "backend" {
   if_exists = "overwrite_terragrunt"
   contents = <<EOF
 terraform {
-  backend "s3" {
+  backend "s3" { }
+}
+EOF
+}
+
+remote_state {
+  backend = "s3"
+  config = {
     bucket         = "viktoruj-terraform-state-backet"
     key            = "terragrunt${path_relative_to_include()}/terraform.tfstate"
     region         = "eu-north-1"
     encrypt        = true
-    dynamodb_table = viktoruj-terraform-state-backet-lock""
+    dynamodb_table = "viktoruj-terraform-state-backet-lock"
   }
-}
-EOF
 }
