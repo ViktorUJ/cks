@@ -21,6 +21,7 @@ generate "backend" {
   contents = <<EOF
 terraform {
   backend "s3"
+  config = {}
 }
 EOF
 }
