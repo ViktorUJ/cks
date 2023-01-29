@@ -1,4 +1,4 @@
-terraform {
+#terraform {
 #  backend "s3" {}
 #  required_providers {
 #    aws = {
@@ -6,7 +6,7 @@ terraform {
 #      version = "~> 4.47.0"
 #    }
 #  }
-}
+#}
 
 
 provider "aws" {
