@@ -37,7 +37,21 @@ while test $? -gt 0
   done
 date
 
+# add node labels
+cat > /etc/systemd/system/kubelet.service.d/20-labels-taints.conf <<EOF
+[Service]
+Environment="KUBELET_EXTRA_ARGS=--node-labels=node_name=${node_name},${node_labels}"
+EOF
+systemctl enable kubelet
+systemctl restart kubelet
+
+
 echo " aws s3 cp s3://$worker_join_sh  worker_join   "
 aws s3 cp s3://$worker_join_sh  worker_join
 chmod +x worker_join
 ./worker_join
+
+# add additional script
+curl "${task_script_url}" -o "task.sh"
+chmod +x  task.sh
+./task.sh

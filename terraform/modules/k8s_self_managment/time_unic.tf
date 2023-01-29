@@ -1,3 +1,4 @@
+
 resource "time_static" "time" {
 }
 

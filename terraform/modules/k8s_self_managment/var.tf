@@ -21,9 +21,8 @@ variable "k8s_master" {
     runtime            = string
     runtime_script     = string
     utils_enable       = string
-    task_script_enable = string
-    task_script_file   = string
     pod_network_cidr   = string
+    task_script_url    = string # url for run additional script
     root_volume        = object({
       type = string
       size = string
@@ -42,6 +41,8 @@ variable "k8s_worker" {
     k8_version         = string
     runtime            = string
     runtime_script     = string
+    task_script_url    = string # url for run additional script
+    node_labels        = string
     root_volume        = object({
       type = string
       size = string

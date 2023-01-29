@@ -7,7 +7,7 @@ worker_join_sh=${worker_join}
 pod_network_cidr_sh=${pod_network_cidr}
 external_ip_sh=${external_ip}
 utils_enable_sh=${utils_enable}
-task_script_enable_sh=${task_script_enable}
+
 
 date
 swapoff -a
@@ -73,10 +73,7 @@ if [[ "$utils_enable_sh" == "true" ]] ; then
   echo 'source <(skaffold completion bash)'>>/root/.bashrc
 fi
 
-
 # add additional script
-if [[ "$task_script_enable_sh" == "true" ]] ; then
-
-${task_script_file}
-
-fi
+curl "${task_script_url}" -o "task.sh"
+chmod +x  task.sh
+./task.sh

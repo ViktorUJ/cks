@@ -7,7 +7,8 @@ locals {
 }
 
 terraform {
-  source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/k8s_self_managment/?ref=master"
+  #source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/k8s_self_managment/?ref=task_01"
+  source = "../../..//modules/k8s_self_managment/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -43,15 +44,14 @@ inputs = {
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "true"
-    task_script_enable = "true"
-    task_script_file   = "template/tasks/cks/4/4_3.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/task_01/tasks/cks/02/scripts/master.sh"
     root_volume        = {
       type = "gp3"
       size = "20"
     }
   }
   k8s_worker = {
-# we can  configure each node independently
+    # we can  configure each node independently
     "node_1" = {
       k8_version         = "1.25.0"
       instance_type      = "t3.medium"
@@ -61,6 +61,8 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = "cri-o"
       runtime_script     = "template/runtime.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/task_01/tasks/cks/02/scripts/worker.sh"
+      node_labels        = "work_type=falco,aws_scheduler=true"
       cidrs              = ["0.0.0.0/0"]
       root_volume        = {
         type = "gp3"
@@ -68,22 +70,25 @@ inputs = {
       }
     }
 
-     "node_2" = {
-       k8_version    = "1.26.0"
-       instance_type      = "t3.medium"
-       key_name           = "localize"
-       ami_id             = "ami-00c70b245f5354c0a"
-       subnet_number      = "0"
-       user_data_template = "template/worker.sh"
-       runtime = "cri-o"
-       runtime_script     = "template/runtime.sh"
-       cidrs              = ["0.0.0.0/0"]
-       root_volume        = {
-         type = "gp3"
-         size = "20"
-       }
-     }
-
+#   "node_2" = {
+#     k8_version         = "1.26.0"
+#     instance_type      = "t3.medium"
+#     key_name           = "localize"
+#     ami_id             = "ami-00c70b245f5354c0a"
+#     subnet_number      = "0"
+#     user_data_template = "template/worker.sh"
+#     runtime            = "cri-o"
+#     runtime_script     = "template/runtime.sh"
+#     task_script_url    = ""
+#     node_labels        = "work_type=infra_core,aws_scheduler=true"
+#
+#     cidrs       = ["0.0.0.0/0"]
+#     root_volume = {
+#       type = "gp3"
+#       size = "20"
+#     }
+#   }
+#
 
   }
 }
