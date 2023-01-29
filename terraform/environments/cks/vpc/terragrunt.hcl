@@ -8,7 +8,7 @@ locals {
 
 terraform {
 #   source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/vpc/?ref=task_01"
-    source = "../../../modules/vpc/"
+    source = "../../..//modules/vpc/"
 }
 
 inputs = {
