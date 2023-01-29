@@ -14,23 +14,23 @@
 #EOF
 #}
 #
-#
-#generate "backend" {
-#  path      = "backend.tf"
-#  if_exists = "overwrite_terragrunt"
-#  contents = <<EOF
-#terraform {
-#  backend "s3" {}
-#  required_providers {
-#    aws = {
-#      source  = "hashicorp/aws"
-#      version = "~> 3.54.0"
-#    }
-#  }
-#}
-#EOF
-#}
-#
+
+generate "backend" {
+  path      = "backend.tf"
+  if_exists = "overwrite_terragrunt"
+  contents = <<EOF
+terraform {
+  backend "s3" {}
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.54.0"
+    }
+  }
+}
+EOF
+}
+
 remote_state {
   backend = "s3"
   config = {
