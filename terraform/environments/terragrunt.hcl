@@ -1,3 +1,7 @@
+generate "backend" {
+  path      = "backend.tf"
+  if_exists = "overwrite_terragrunt"
+  contents = <<EOF
 remote_state {
   backend = "s3"
   config = {
@@ -7,4 +11,5 @@ remote_state {
     encrypt        = true
     dynamodb_table = "viktoruj-terraform-state-backet-lock"
   }
+EOF
 }
