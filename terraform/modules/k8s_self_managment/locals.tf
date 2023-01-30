@@ -23,7 +23,7 @@ locals {
 
   worker_ip = [
     for k, v  in aws_spot_instance_request.worker :
-    "${k} private_ip = ${v.private_ip}  public_ip = ${v.public_ip}  labels= ${var.k8s_worker[k].node_labels} "
+    "${k} private_ip = ${v.private_ip}  public_ip = ${v.public_ip}  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
   ]
 
 }

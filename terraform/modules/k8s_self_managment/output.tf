@@ -2,15 +2,15 @@ output "master_external_ip" {
   value = aws_eip.master.public_ip
 }
 
-output "master_local_ip" {
-  value = aws_spot_instance_request.master.private_ip
-}
-output "master_ec2_id" {
-  value = aws_spot_instance_request.master.spot_instance_id
-}
-output "master_ec2_ebs_id" {
-  value = aws_spot_instance_request.master.root_block_device[0].volume_id
-}
+#output "master_local_ip" {
+#  value = aws_spot_instance_request.master.private_ip
+#}
+#output "master_ec2_id" {
+#  value = aws_spot_instance_request.master.spot_instance_id
+#}
+#output "master_ec2_ebs_id" {
+#  value = aws_spot_instance_request.master.root_block_device[0].volume_id
+#}
 output "worker_join" {
   value = "s3://${local.worker_join}"
 }
