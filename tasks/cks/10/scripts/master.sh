@@ -1,2 +1,2 @@
 #!/bin/bash
-echo " *** master node  "
+echo " *** master node  task 10"

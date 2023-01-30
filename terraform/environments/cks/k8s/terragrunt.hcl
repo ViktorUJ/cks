@@ -44,7 +44,7 @@ inputs = {
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "true"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_02/tasks/cks/03/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/master.sh"
     root_volume        = {
       type = "gp3"
       size = "20"
@@ -61,7 +61,7 @@ inputs = {
      user_data_template = "template/worker.sh"
      runtime            = "cri-o"
      runtime_script     = "template/runtime.sh"
-     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/task_01/tasks/cks/03/scripts/worker.sh"
+     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
      node_labels        = "work_type=falco,aws_scheduler=true,runtime=gvizor"
      cidrs              = ["0.0.0.0/0"]
      root_volume        = {
@@ -79,7 +79,7 @@ inputs = {
      user_data_template = "template/worker.sh"
      runtime            = "containerd_gvizor"
      runtime_script     = "template/runtime.sh"
-     task_script_url    = ""
+     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
      node_labels        = "work_type=infra_core,aws_scheduler=true,runtime=runtimec"
 
      cidrs       = ["0.0.0.0/0"]
