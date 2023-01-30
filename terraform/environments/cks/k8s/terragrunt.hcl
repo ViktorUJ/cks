@@ -62,7 +62,7 @@ inputs = {
      runtime            = "cri-o"
      runtime_script     = "template/runtime.sh"
      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
-     node_labels        = "work_type=falco,aws_scheduler=true,runtime=gvizor"
+     node_labels        = "work_type=falco,aws_scheduler=true"
      cidrs              = ["0.0.0.0/0"]
      root_volume        = {
        type = "gp3"
@@ -80,7 +80,7 @@ inputs = {
      runtime            = "containerd_gvizor"
      runtime_script     = "template/runtime.sh"
      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
-     node_labels        = "work_type=infra_core,aws_scheduler=true,runtime=runtimec"
+     node_labels        = "work_type=infra_core,aws_scheduler=true,runtime=gvizor"
 
      cidrs       = ["0.0.0.0/0"]
      root_volume = {
