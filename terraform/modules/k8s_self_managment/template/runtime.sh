@@ -1,5 +1,6 @@
 case $runtime_sh in
 docker)
+echo "*** install runtime = docker"
 apt-get install -y docker.io
 cat <<EOF | sudo tee /etc/docker/daemon.json
 {
@@ -18,6 +19,7 @@ systemctl restart docker
   ;;
 
 cri-o)
+echo "*** install runtime = cri-o"
 cat <<EOF | tee /etc/modules-load.d/k8s.conf
 overlay
 br_netfilter
@@ -82,6 +84,7 @@ systemctl enable crio --now
 
  ;;
 containerd)
+echo "*** install runtime = containerd"
 cat <<EOF |  tee /etc/modules-load.d/containerd.conf
 overlay
 br_netfilter
@@ -126,6 +129,7 @@ containerd config default | tee /etc/containerd/config.toml
 systemctl restart containerd
   ;;
 containerd_gvizor)
+echo "*** install runtime = containerd_gvizor"
 cat <<EOF |  tee /etc/modules-load.d/containerd.conf
 overlay
 br_netfilter
@@ -170,6 +174,7 @@ containerd config default | tee /etc/containerd/config.toml
 systemctl restart containerd
 
 # install gvizor
+echo "*** install gvizor"
 curl -fsSL https://gvisor.dev/archive.key |  gpg --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main" |  tee /etc/apt/sources.list.d/gvisor.list > /dev/null
 apt-get update &&  apt-get install -y runsc
