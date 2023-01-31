@@ -1,7 +1,12 @@
-Task weight: 3%
+Audit Log Policy
+Task weight: 7%
 
-You received a list from the DevSecOps team which performed a security investigation of the k8s cluster1 ( workload-prod ). The list states the
-following about the apiserver setup:
-Accessible through a NodePort Service
-Change the apiserver setup so that:
-Only accessible through a ClusterIP Service
+Audit Logging has been enabled in the cluster with an Audit Policy located at /etc/kubernetes/audit/policy.yaml on cluster2-master1 .
+Change the configuration so that only one backup of the logs is stored.
+Alter the Policy in a way that it only stores logs:
+1. From Secret resources, level Metadata
+2. From "system:nodes" userGroups, level RequestResponse
+After you altered the Policy make sure to empty the log file so it only contains entries according to your changes, like using truncate -s 0
+/etc/kubernetes/audit/logs/audit.log
+
+NOTE: You can use jq to render json more readable. cat data.json | jq

@@ -1,13 +1,25 @@
-In order to modify the parameters for the apiserver, we first ssh into the master node and check which parameters the apiserver process is
-running with:
 
+https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
+### create backup kube-api manifest
 ```` 
-# ssh to master node
-ps aux | grep kube-apiserver
-# find path to static posds manifest
-
-#edit api pod manifest  
-# delete   --kubernetes-service-node-port=31000
-# delete service 
-kubectl delete svc kubernetes
+cp /etc/kubernetes/manifests/kube-apiserver.yaml ~/17_kube-apiserver.yaml
 ````
+### create policy
+```` 
+
+````
+
+### edit  kube-apiserver.yaml
+```` 
+#   vim /etc/kubernetes/manifests/kube-apiserver.yaml
+
+# add lines
+
+- --audit-policy-file=/etc/kubernetes/audit/policy.yaml
+- --audit-log-path=/etc/kubernetes/audit/logs/audit.log
+- --audit-log-maxsize=5
+- --audit-log-maxbackup=1
+
+````
+
+### 
