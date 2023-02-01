@@ -31,3 +31,7 @@ remote_state {
     dynamodb_table = local.backend_dynamodb_table
   }
 }
+inputs = {
+ region = local.backend_region
+ backend_bucket=local.backend_bucket
+}
