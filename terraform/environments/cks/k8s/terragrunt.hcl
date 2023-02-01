@@ -1,10 +1,13 @@
-include {
+#include {
+#  path = find_in_parent_folders()
+#}
+#
+include "root" {
   path = find_in_parent_folders()
 }
-
 locals {
- # vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
-  vars=read_terragrunt_config(find_in_parent_folders("terragrunt.hcl"))
+  vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+ # vars=read_terragrunt_config(find_in_parent_folders("terragrunt.hcl"))
 }
 
 terraform {
