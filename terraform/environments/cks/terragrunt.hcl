@@ -1,3 +1,7 @@
+include "root" {
+  path = find_in_parent_folders()
+}
+
 locals {
  # region = "eu-north-1"
   aws= "default"
