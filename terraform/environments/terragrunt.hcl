@@ -28,6 +28,6 @@ remote_state {
     key            = "terragrunt${path_relative_to_include()}/terraform.tfstate"
     region         = local.backend_region
     encrypt        = true
-    dynamodb_table = backend_dynamodb_table
+    dynamodb_table = local.backend_dynamodb_table
   }
 }
