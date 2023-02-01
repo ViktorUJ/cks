@@ -1,5 +1,6 @@
 include "root" {
   path = find_in_parent_folders()
+  expose = true
 }
 
 locals {
@@ -13,7 +14,7 @@ terraform {
 }
 
 inputs = {
- #  region=local.vars.locals.region
+   region=include.root.inputs.region
    aws=local.vars.locals.aws
    prefix=local.vars.locals.prefix
    tags_common=local.vars.locals.tags
