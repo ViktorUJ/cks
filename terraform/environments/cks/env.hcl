@@ -1,5 +1,5 @@
 locals {
-#  region = "eu-north-1"
+  region = local.vars.locals.region
   aws= "default"
   prefix="cka1"
    tags={
