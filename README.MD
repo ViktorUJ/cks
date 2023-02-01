@@ -96,3 +96,11 @@ terragrunt destroy
 cd environments/cks/vpc
 terragrunt destroy
 ````
+
+
+### useful links 
+
+```` 
+https://github.com/bakavets/k8s-lessons
+
+````
