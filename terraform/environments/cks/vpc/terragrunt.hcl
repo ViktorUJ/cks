@@ -14,7 +14,7 @@ terraform {
 }
 
 inputs = {
-   region=include.root.inputs.region
+   region="${include.root.inputs.region}"
    aws=local.vars.locals.aws
    prefix=local.vars.locals.prefix
    tags_common=local.vars.locals.tags
