@@ -29,7 +29,7 @@ inputs = {
   app_name      = "k8s"
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
-  s3_k8s_config = "viktoruj-terraform-state-backet"
+  s3_k8s_config = "viktoruj-terraform-state-backet-test1"
 
   k8s_master = {
     k8_version         = "1.26.0"
@@ -52,23 +52,23 @@ inputs = {
   }
   k8s_worker = {
     # we can  configure each node independently
-#  "node_1" = {
-#    k8_version         = "1.25.0"
-#    instance_type      = "t3.medium"
-#    key_name           = "localize"
-#    ami_id             = "ami-00c70b245f5354c0a"
-#    subnet_number      = "0"
-#    user_data_template = "template/worker.sh"
-#    runtime            = "cri-o"
-#    runtime_script     = "template/runtime.sh"
-#    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
-#    node_labels        = "work_type=falco,aws_scheduler=true"
-#    cidrs              = ["0.0.0.0/0"]
-#    root_volume        = {
-#      type = "gp3"
-#      size = "20"
-#    }
-#  }
+  "node_1" = {
+    k8_version         = "1.26.0"
+    instance_type      = "t3.medium"
+    key_name           = "localize"
+    ami_id             = "ami-00c70b245f5354c0a"
+    subnet_number      = "0"
+    user_data_template = "template/worker.sh"
+    runtime            = "cri-o"
+    runtime_script     = "template/runtime.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
+    node_labels        = "work_type=falco,aws_scheduler=true"
+    cidrs              = ["0.0.0.0/0"]
+    root_volume        = {
+      type = "gp3"
+      size = "12"
+    }
+  }
 
 #  "node_2" = {
 #    k8_version         = "1.26.0"
