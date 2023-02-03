@@ -32,8 +32,8 @@ inputs = {
   s3_k8s_config = "viktoruj-terraform-state-backet-test1"
 
   k8s_master = {
-    k8_version         = "1.25.0"
-    runtime            = "cri-o" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
+    k8_version         = "1.22.4"
+    runtime            = "docker" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
     key_name           = "localize"
@@ -52,23 +52,23 @@ inputs = {
   }
   k8s_worker = {
     # we can  configure each node independently
-#  "node_1" = {
-#    k8_version         = "1.22.4"
-#    instance_type      = "t3.medium"
-#    key_name           = "localize"
-#    ami_id             = "ami-00c70b245f5354c0a"
-#    subnet_number      = "0"
-#    user_data_template = "template/worker.sh"
-#    runtime            = "docker"
-#    runtime_script     = "template/runtime.sh"
-#    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_20/tasks/cks/20/scripts/worker.sh"
-#    node_labels        = "work_type=falco,aws_scheduler=true"
-#    cidrs              = ["0.0.0.0/0"]
-#    root_volume        = {
-#      type = "gp3"
-#      size = "12"
-#    }
-#  }
+  "node_1" = {
+    k8_version         = "1.22.4"
+    instance_type      = "t3.medium"
+    key_name           = "localize"
+    ami_id             = "ami-00c70b245f5354c0a"
+    subnet_number      = "0"
+    user_data_template = "template/worker.sh"
+    runtime            = "docker"
+    runtime_script     = "template/runtime.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_20/tasks/cks/20/scripts/worker.sh"
+    node_labels        = "work_type=falco,aws_scheduler=true"
+    cidrs              = ["0.0.0.0/0"]
+    root_volume        = {
+      type = "gp3"
+      size = "12"
+    }
+  }
 
 #  "node_2" = {
 #    k8_version         = "1.26.0"
