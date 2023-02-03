@@ -66,7 +66,7 @@ inputs = {
     cidrs              = ["0.0.0.0/0"]
     root_volume        = {
       type = "gp3"
-      size = "20"
+      size = "12"
     }
   }
 
