@@ -36,19 +36,6 @@ aws profile
 
 # setup 
 
-## create  s3 and dynamoDB  for terraform  state
-
-````
-cd init/0.state
-# edit region and name s3 
-vim var.tf
-mv terrafrom_backend.tf  terrafrom_backend._tf
-terraform  apply 
-
-# update  terrafrom_backend._tf  , set region s3, and dynamoDB
-mv terrafrom_backend._tf   terrafrom_backend.tf  
-terraform  apply 
-````
 ## update terragrunt config
 ````
 cd environments
@@ -67,7 +54,7 @@ terragrunt apply
 ## create k8s 
 ````
 cd environments/cks/k8s
-# edit  k8s version , nodes size ,key_name  , and etc 
+# edit  k8s version ,s3 , nodes size ,key_name  , and etc 
 vim terragrunt.hcl
 terragrunt apply
 ````
