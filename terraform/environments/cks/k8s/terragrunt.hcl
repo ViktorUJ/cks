@@ -33,7 +33,7 @@ inputs = {
 
   k8s_master = {
     k8_version         = "1.25.0"
-    runtime            = "containerd" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
+    runtime            = "cri-o" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.large"
     key_name           = "localize"
@@ -59,7 +59,7 @@ inputs = {
     ami_id             = "ami-00c70b245f5354c0a"
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
-    runtime            = "containerd"
+    runtime            = "cri-o"
     runtime_script     = "template/runtime.sh"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_101/tasks/cks/101/scripts/worker.sh"
     node_labels        = "work_type=falco,aws_scheduler=true"
@@ -77,7 +77,7 @@ inputs = {
     ami_id             = "ami-00c70b245f5354c0a"
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
-    runtime            = "containerd"
+    runtime            = "cri-o"
     runtime_script     = "template/runtime.sh"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_101/tasks/cks/101/scripts/worker.sh"
     node_labels        = "work_type=infra_core,aws_scheduler=true,runtime=gvizor"
