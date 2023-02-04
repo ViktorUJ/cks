@@ -1,4 +1,4 @@
-# Configure mTLS
+# Configure mTLS .Linkerd
 ````` 
 cd /root/
 wget https://run.linkerd.io/install-edge
