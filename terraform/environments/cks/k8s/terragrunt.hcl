@@ -35,7 +35,7 @@ inputs = {
     k8_version         = "1.25.0"
     runtime            = "cri-o" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
-    instance_type      = "t3.medium"
+    instance_type      = "t3.large"
     key_name           = "localize"
     ami_id             = "ami-00c70b245f5354c0a"
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
@@ -54,12 +54,12 @@ inputs = {
     # we can  configure each node independently
   "node_1" = {
     k8_version         = "1.25.0"
-    instance_type      = "t3.medium"
+    instance_type      = "t3.large"
     key_name           = "localize"
     ami_id             = "ami-00c70b245f5354c0a"
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
-    runtime            = "docker"
+    runtime            = "cri-o"
     runtime_script     = "template/runtime.sh"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_05/tasks/cks/05/scripts/worker.sh"
     node_labels        = "work_type=falco,aws_scheduler=true"
@@ -70,24 +70,24 @@ inputs = {
     }
   }
 
-#  "node_2" = {
-#    k8_version         = "1.26.0"
-#    instance_type      = "t3.large"
-#    key_name           = "localize"
-#    ami_id             = "ami-00c70b245f5354c0a"
-#    subnet_number      = "0"
-#    user_data_template = "template/worker.sh"
-#    runtime            = "containerd_gvizor"
-#    runtime_script     = "template/runtime.sh"
-#    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
-#    node_labels        = "work_type=infra_core,aws_scheduler=true,runtime=gvizor"
-#
-#    cidrs       = ["0.0.0.0/0"]
-#    root_volume = {
-#      type = "gp3"
-#      size = "20"
-#    }
-#  }
+  "node_2" = {
+    k8_version         = "1.25.0"
+    instance_type      = "t3.large"
+    key_name           = "localize"
+    ami_id             = "ami-00c70b245f5354c0a"
+    subnet_number      = "0"
+    user_data_template = "template/worker.sh"
+    runtime            = "cri-o"
+    runtime_script     = "template/runtime.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
+    node_labels        = "work_type=infra_core,aws_scheduler=true,runtime=gvizor"
+
+    cidrs       = ["0.0.0.0/0"]
+    root_volume = {
+      type = "gp3"
+      size = "20"
+    }
+  }
 
 
   }
