@@ -7,5 +7,9 @@ chmod  +x install-edge
 export PATH=$PATH:/root/.linkerd2/bin
 
 linkerd install --crds | kubectl apply -f -
-linkerd install | kubectl apply -f -
+linkerd install  --set proxyInit.runAsRoot=true | kubectl apply -f -
+
+# check linkerd pods 
+kubectl  get  po -n linkerd
+
 `````
