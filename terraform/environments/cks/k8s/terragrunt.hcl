@@ -54,7 +54,7 @@ inputs = {
     # we can  configure each node independently
   "node_1" = {
     k8_version         = "1.23.0"
-    instance_type      = "medium"
+    instance_type      = "t3.medium"
     key_name           = "localize"
     ami_id             = "ami-00c70b245f5354c0a"
     subnet_number      = "0"
