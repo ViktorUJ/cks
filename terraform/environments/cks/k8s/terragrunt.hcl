@@ -44,7 +44,7 @@ inputs = {
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_101/tasks/cks/101/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_102/tasks/cks/102/scripts/master.sh"
     root_volume        = {
       type = "gp3"
       size = "12"
@@ -61,7 +61,7 @@ inputs = {
     user_data_template = "template/worker.sh"
     runtime            = "docker"
     runtime_script     = "template/runtime.sh"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_101/tasks/cks/101/scripts/worker.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_102/tasks/cks/102/scripts/worker.sh"
     node_labels        = "work_type=falco,aws_scheduler=true"
     cidrs              = ["0.0.0.0/0"]
     root_volume        = {
