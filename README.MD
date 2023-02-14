@@ -8,12 +8,12 @@ k8s version  : [ 1.21 , 1.26 ]
 Rintime : 
     docker                   [1.21 , 1.23]
     cri-o                    [1.21 , 1.26]
-    containerd               [1.21 , 1.26]  
+    containerd               [1.21 , 1.26]   # cks default 
     containerd_gvizor        [1.21 , 1.26] 
 OS for nodes  : 
    ubuntu  :  20.04 LTS  ,  22.04 LTS 
 CNI :
- calico   
+ calico   # wave??
 ```
 ### about script
 ````
