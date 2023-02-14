@@ -34,8 +34,3 @@ resource "aws_iam_role" "eks-app-WebIdentity" {
 }
 POLICY
 }
-
-resource "aws_iam_role_policy_attachment" "eks-iam-app" {
-  policy_arn = aws_iam_policy.s3.arn
-  role       = aws_iam_role.eks-app-WebIdentity.name
-}
