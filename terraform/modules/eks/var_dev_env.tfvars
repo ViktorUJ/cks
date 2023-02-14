@@ -1,0 +1,11 @@
+aws                          = "default"
+region                       = "us-west-2"
+prefix                       = "dev"
+eks_version                  = "1.20"
+vpc_id                       = "vpc-1ed4e47a"
+eks_node_common_desired_size = "1"
+eks_node_common_max_size     = "2"
+eks_node_common_min_size     = "1"
+eks_node_common_type         = ["t3.medium"]
+eks_allow_cidrs              = ["0.0.0.0/0"]
+cloudwatch_retention_in_days = "30"
