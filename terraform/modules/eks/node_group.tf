@@ -4,8 +4,9 @@ resource "aws_eks_node_group" "common" {
   node_role_arn   = aws_iam_role.eks-node.arn
   subnet_ids      = local.subnets
   instance_types  = var.eks_node_common_type
+  eks_capacity_type = var.eks_capacity_type
   labels = {
-    group_type = "common"
+    work_type = "common"
   }
   tags = {
     "Name" = "${var.aws}-${var.prefix}-eks_workers_common"
