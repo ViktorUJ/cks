@@ -31,7 +31,15 @@ inputs = {
     allow_cidrs = ["0.0.0.0/0"]
     addons = {
       vpc-cni = {
-        version = "v1.12.0-eksbuild.2"
+        version = "v1.12.2-eksbuild.1"
+        resolve_conflicts = "OVERWRITE"
+      }
+      kube-proxy = {
+        version = "v1.24.9-eksbuild.1"
+        resolve_conflicts = "OVERWRITE"
+      }
+      coredns = {
+        version = "v1.8.7-eksbuild.3"
         resolve_conflicts = "OVERWRITE"
       }
     }
