@@ -5,7 +5,7 @@ resource "aws_eks_node_group" "groups" {
   node_role_arn   = aws_iam_role.eks-node.arn
   subnet_ids      = local.subnets
   instance_types  = each.value.ec2_types
-#  eks_capacity_type = each.value.capacity_type
+  capacity_type = each.value.capacity_type
   labels = each.value.labels
   tags = {
     "Name" = "${var.aws}-${var.prefix}-eks_workers_${each.key}"
