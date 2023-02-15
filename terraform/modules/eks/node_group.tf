@@ -7,6 +7,7 @@ resource "aws_eks_node_group" "groups" {
   instance_types  = each.value.ec2_types
   capacity_type = each.value.capacity_type
   labels = each.value.labels
+  disk_size = each.value.disk_size
   tags = {
     "Name" = "${var.aws}-${var.prefix}-eks_workers_${each.key}"
   }
