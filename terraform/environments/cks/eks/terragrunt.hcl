@@ -32,29 +32,29 @@ inputs = {
 
     node_group = {
 
-   #  default = {
-   #    ec2_types = ["t3.medium"]
-   #    capacity_type = "SPOT"
-   #    desired_size = "1"
-   #    max_size = "2"
-   #    min_size = "1"
-   #    labels ={
-   #      work_type = "default"
-   #      cost_type = "devops"
-   #    }
-   #  }
-   #
-   #  job = {
-   #    ec2_types = ["t3.medium"]
-   #    capacity_type = "SPOT"
-   #    desired_size = "1"
-   #    max_size = "2"
-   #    min_size = "1"
-   #    labels ={
-   #      work_type = "jov"
-   #      cost_type = "devops"
-   #    }
-   #  }
+     default = {
+       ec2_types = ["t3.medium"]
+       capacity_type = "SPOT"
+       desired_size = "1"
+       max_size = "2"
+       min_size = "1"
+       labels ={
+         work_type = "default"
+         cost_type = "devops"
+       }
+     }
+
+     job = {
+       ec2_types = ["t3.medium"]
+       capacity_type = "SPOT"
+       desired_size = "1"
+       max_size = "2"
+       min_size = "1"
+       labels ={
+         work_type = "jov"
+         cost_type = "devops"
+       }
+     }
 
 
 
