@@ -29,7 +29,12 @@ inputs = {
     version= "1.24"
     cloudwatch_retention_in_days = "30"
     allow_cidrs = ["0.0.0.0/0"]
-
+    addons = {
+      vpc-cni = {
+        version = "v1.12.0-eksbuild.2"
+        resolve_conflicts = "OVERWRITE"
+      }
+    }
     node_group = {
 
      default = {
