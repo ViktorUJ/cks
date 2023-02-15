@@ -33,7 +33,7 @@ inputs = {
     node_group = {
 
       default = {
-        ec2_types = ["t3.medium", "t3a.medium"]
+        ec2_types = ["t3.medium", "t2.medium"]
         capacity_type = "SPOT"
         desired_size = "1"
         max_size = "2"
@@ -45,7 +45,7 @@ inputs = {
       }
 
       job = {
-        ec2_types = ["t3.medium", "t3a.medium"]
+        ec2_types = ["t3.medium", "t2.medium"]
         capacity_type = "SPOT"
         desired_size = "1"
         max_size = "2"
