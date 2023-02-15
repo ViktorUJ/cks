@@ -1,20 +1,19 @@
-resource "aws_eks_node_group" "common" {
+resource "aws_eks_node_group" "groups" {
+  for_each = var.eks.node_group
   cluster_name    = aws_eks_cluster.eks-cluster.name
-  node_group_name = "common"
+  node_group_name = each.key
   node_role_arn   = aws_iam_role.eks-node.arn
   subnet_ids      = local.subnets
-  instance_types  = var.eks_node_common_type
-  eks_capacity_type = var.eks_capacity_type
-  labels = {
-    work_type = "common"
-  }
+  instance_types  = each.value.ec2_types
+  eks_capacity_type = each.value.capacity_type
+  labels = each.value.labels
   tags = {
-    "Name" = "${var.aws}-${var.prefix}-eks_workers_common"
+    "Name" = "${var.aws}-${var.prefix}-eks_workers_${each.key}"
   }
   scaling_config {
-    desired_size = var.eks_node_common_desired_size
-    max_size     = var.eks_node_common_max_size
-    min_size     = var.eks_node_common_min_size
+    desired_size = each.value.desired_size
+    max_size     = each.value.max_size
+    min_size     = each.value.min_size
   }
 
   depends_on = [

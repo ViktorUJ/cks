@@ -24,15 +24,47 @@ inputs = {
   region                       = local.vars.locals.region
   aws                          = local.vars.locals.aws
   prefix                       = local.vars.locals.prefix
-  eks_version                  = "1.24"
   vpc_id                       = dependency.vpc.outputs.vpc_id
-  eks_node_common_desired_size = "1"
-  eks_node_common_max_size     = "2"
-  eks_node_common_min_size     = "1"
-  eks_node_common_type         = ["t3.medium"]
-  eks_capacity_type            = "SPOT"
-  eks_allow_cidrs              = ["0.0.0.0/0"]
-  cloudwatch_retention_in_days = "30"
+  eks ={
+    version= "1.24"
+    cloudwatch_retention_in_days = "30"
+    allow_cidrs = ["0.0.0.0/0"]
+
+    node_group = {
+
+      default = {
+        ec2_types = ["t3.medium", "t3a.medium"]
+        capacity_type = "SPOT"
+        desired_size = "1"
+        max_size = "2"
+        min_size = "1"
+        labels ={
+          work_type = "default"
+          cost_type = "devops"
+        }
+      }
+
+      job = {
+        ec2_types = ["t3.medium", "t3a.medium"]
+        capacity_type = "SPOT"
+        desired_size = "1"
+        max_size = "2"
+        min_size = "1"
+        labels ={
+          work_type = "jov"
+          cost_type = "devops"
+        }
+      }
+
+
+
+
+
+    }
+
+
+
+  }
 
 }
 

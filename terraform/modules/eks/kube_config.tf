@@ -37,7 +37,7 @@ resource "null_resource" "cube_config" {
   depends_on = [
     local_file.config_map_aws_auth,
     local_file.kubeconfig,
-    aws_eks_node_group.common,
+    aws_eks_node_group.groups,
     aws_eks_cluster.eks-cluster
   ]
   provisioner "local-exec" {

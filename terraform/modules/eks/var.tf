@@ -1,13 +1,19 @@
 variable "region" {}
 variable "aws" {} # aws cli profile_name
 variable "prefix" {}
-variable "eks_version" {}
 variable "vpc_id" {}
 
-variable "eks_allow_cidrs" { type = list(string) }
-variable "eks_node_common_type" { type = list(string) }
-variable "eks_node_common_desired_size" {}
-variable "eks_node_common_max_size" {}
-variable "eks_node_common_min_size" {}
-variable "eks_capacity_type" {} # ON_DEMAND, SPOT
-variable "cloudwatch_retention_in_days" {}
+variable "eks" {type = object({
+  version = string
+  cloudwatch_retention_in_days = string
+  allow_cidrs=list(string)
+  node_group = map(object({
+    ec2_types=list(string)
+    capacity_type = string  # ON_DEMAND, SPOT
+    desired_size = string
+    max_size = string
+    min_size = string
+    labels = map(string)
+  }))
+
+})}

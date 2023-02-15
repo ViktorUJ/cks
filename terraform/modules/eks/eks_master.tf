@@ -35,7 +35,7 @@ resource "aws_security_group" "eks_master" {
     from_port   = 443
     protocol    = "tcp"
     to_port     = 443
-    cidr_blocks = var.eks_allow_cidrs
+    cidr_blocks = var.eks.allow_cidrs
   }
   egress {
     from_port   = 0
@@ -69,7 +69,7 @@ resource "aws_eks_cluster" "eks-cluster" {
   name                      = "${var.aws}-${var.prefix}-eks"
   role_arn                  = aws_iam_role.eks-cluster.arn
   enabled_cluster_log_types = ["api", "audit"]
-  version                   = var.eks_version
+  version                   = var.eks.version
   vpc_config {
     security_group_ids = [aws_security_group.eks_master.id]
     subnet_ids         = local.subnets
