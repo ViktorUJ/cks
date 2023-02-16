@@ -29,7 +29,20 @@ inputs = {
     version= "1.24"
     cloudwatch_retention_in_days = "30"
     allow_cidrs = ["0.0.0.0/0"]
-
+    addons = {
+      vpc-cni = {
+        version = "v1.12.2-eksbuild.1"
+        resolve_conflicts = "OVERWRITE"
+      }
+      kube-proxy = {
+        version = "v1.24.9-eksbuild.1"
+        resolve_conflicts = "OVERWRITE"
+      }
+      coredns = {
+        version = "v1.8.7-eksbuild.3"
+        resolve_conflicts = "OVERWRITE"
+      }
+    }
     node_group = {
 
      default = {
@@ -38,6 +51,7 @@ inputs = {
        desired_size = "1"
        max_size = "2"
        min_size = "1"
+       disk_size = "20"
        labels ={
          work_type = "default"
          cost_type = "devops"
@@ -50,6 +64,7 @@ inputs = {
        desired_size = "1"
        max_size = "2"
        min_size = "1"
+       disk_size = "20"
        labels ={
          work_type = "jov"
          cost_type = "devops"
