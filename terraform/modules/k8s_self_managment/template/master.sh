@@ -48,7 +48,7 @@ while test $? -gt 0
   done
 date
 echo "apply cni"
-kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml   --kubeconfig=/root/.kube/config
+kubectl apply -f ${calico_url}   --kubeconfig=/root/.kube/config
 
 echo "sleep 10"
 sleep 10

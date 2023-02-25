@@ -10,6 +10,7 @@ data "template_file" "master" {
     pod_network_cidr = var.k8s_master.pod_network_cidr
     runtime_script   = file(var.k8s_master.runtime_script)
     task_script_url  = var.k8s_master.task_script_url
+    calico_url       = var.k8s_master.calico_url
   }
 }
 
