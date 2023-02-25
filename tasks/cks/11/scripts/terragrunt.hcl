@@ -7,7 +7,6 @@ locals {
 }
 
 terraform {
-  #source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/k8s_self_managment/?ref=task_01"
   source = "../../..//modules/k8s_self_managment/"
 
   extra_arguments "retry_lock" {
@@ -44,10 +43,11 @@ inputs = {
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_11/tasks/cks/11/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/11/scripts/master.sh"
+    calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     root_volume        = {
       type = "gp3"
-      size = "20"
+      size = "15"
     }
   }
   k8s_worker = {
