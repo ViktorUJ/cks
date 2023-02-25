@@ -4,7 +4,7 @@
 ## k8s_self_managment terraform module 
 ### script support  version 
 ``` 
-k8s version  : [ 1.21 , 1.26 ]
+k8s version  : [ 1.21 , 1.26 ]   https://kubernetes.io/releases/
 Rintime : 
     docker                   [1.21 , 1.23]
     cri-o                    [1.21 , 1.26]
