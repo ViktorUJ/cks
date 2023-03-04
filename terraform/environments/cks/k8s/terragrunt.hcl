@@ -39,7 +39,7 @@ inputs = {
     ami_id             = "ami-03c68810c99d14e95"
     #  ubuntu  :  20.04 LTS  ami-03c68810c99d14e95   22.04 LTS  ami-00c70b245f5354c0a
     subnet_number      = "0"
-    user_data_template = "template/master.sh"
+    user_data_template = "template/clean.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "false"
