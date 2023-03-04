@@ -128,6 +128,8 @@ containerd config default | tee /etc/containerd/config.toml
 # Restart containerd
 cat <<EOF |  tee /etc/crictl.yaml
 runtime-endpoint: unix:///run/containerd/containerd.sock
+image-endpoint: unix:///run/containerd/containerd.sock
+
 EOF
 
 systemctl restart containerd
@@ -201,6 +203,7 @@ sudo mv crictl /usr/local/bin
 
 cat <<EOF |  tee /etc/crictl.yaml
 runtime-endpoint: unix:///run/containerd/containerd.sock
+image-endpoint: unix:///run/containerd/containerd.sock
 EOF
 
 ;;
