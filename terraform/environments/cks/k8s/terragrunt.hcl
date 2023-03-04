@@ -36,14 +36,14 @@ inputs = {
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
     key_name           = "localize"
-    ami_id             = "ami-06410fb0e71718398"
-    #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
+    ami_id             = "ami-03c68810c99d14e95"
+    #  ubuntu  :  20.04 LTS  ami-03c68810c99d14e95   22.04 LTS  ami-00c70b245f5354c0a
     subnet_number      = "0"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/11/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/17-25_02_2023/tasks/cks/17/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     root_volume        = {
       type = "gp3"
@@ -52,23 +52,23 @@ inputs = {
   }
   k8s_worker = {
     # we can  configure each node independently
-#  "node_1" = {
-#    k8_version         = "1.25.0"
-#    instance_type      = "t3.medium"
-#    key_name           = "localize"
-#    ami_id             = "ami-00c70b245f5354c0a"
-#    subnet_number      = "0"
-#    user_data_template = "template/worker.sh"
-#    runtime            = "cri-o"
-#    runtime_script     = "template/runtime.sh"
-#    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
-#    node_labels        = "work_type=falco,aws_scheduler=true"
-#    cidrs              = ["0.0.0.0/0"]
-#    root_volume        = {
-#      type = "gp3"
-#      size = "20"
-#    }
-#  }
+  "node_1" = {
+    k8_version         = "1.25.0"
+    instance_type      = "t3.medium"
+    key_name           = "localize"
+    ami_id             = "ami-03c68810c99d14e95"
+    subnet_number      = "0"
+    user_data_template = "template/worker.sh"
+    runtime            = "cri-o"
+    runtime_script     = "template/runtime.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
+    node_labels        = "work_type=falco,aws_scheduler=true"
+    cidrs              = ["0.0.0.0/0"]
+    root_volume        = {
+      type = "gp3"
+      size = "15"
+    }
+  }
 
 #  "node_2" = {
 #    k8_version         = "1.26.0"
