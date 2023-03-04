@@ -6,4 +6,16 @@ add readOnlyRootFilesystem  and volumes to write
 
 securityContext: # add
    readOnlyRootFilesystem: true # add  
+volumeMounts:
+          - mountPath: /tmp
+            name: temp-vol
+   
+# add to spec level  
+
+volumes:
+- emptyDir: {}
+  name: temp-vol
+
+             
 ````
+check  pod will be running 
