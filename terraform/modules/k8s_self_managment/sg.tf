@@ -1,6 +1,6 @@
 resource "aws_security_group" "servers" {
-  name        = "${var.aws}-${var.prefix}-aerospike"
-  description = "${var.aws}-${var.prefix} Allow aerospike inbound traffic "
+  name        = "${var.aws}-${var.prefix}-k8-self-managment"
+  description = "${var.aws}-${var.prefix}-k8-self-managment"
   vpc_id      = var.vpc_id
 
   ingress {
