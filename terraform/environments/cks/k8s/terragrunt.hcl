@@ -36,7 +36,7 @@ inputs = {
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
     key_name           = "localize"
-    ami_id             = "ami-03c68810c99d14e95"
+    ami_id             = "ami-00c70b245f5354c0a"
     #  ubuntu  :  20.04 LTS  ami-03c68810c99d14e95   22.04 LTS  ami-00c70b245f5354c0a
     subnet_number      = "0"
     user_data_template = "template/master.sh"
