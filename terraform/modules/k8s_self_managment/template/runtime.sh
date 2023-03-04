@@ -126,6 +126,10 @@ mkdir -p /etc/containerd
 containerd config default | tee /etc/containerd/config.toml
 
 # Restart containerd
+cat <<EOF |  tee /etc/crictl.yaml
+runtime-endpoint: unix:///run/containerd/containerd.sock
+EOF
+
 systemctl restart containerd
   ;;
 containerd_gvizor)
