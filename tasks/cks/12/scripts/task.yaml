@@ -53,8 +53,17 @@ spec:
       labels:
         app: deployment1
     spec:
+      volumes:
+        - name: secret
+          secret:
+            secretName: secret1
+            optional: true
       containers:
       - image: busybox
         name: busybox
         command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
+        volumeMounts:
+          - name: secret
+            mountPath: "/var/secret"
+            readOnly: true
 
