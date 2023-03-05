@@ -56,5 +56,5 @@ spec:
       containers:
       - image: busybox
         name: busybox
-        command: ["while", "true", "do", "sleep","1","done"]
+        command: ["while", "true", ";","do", "sleep","1","done"]
 
