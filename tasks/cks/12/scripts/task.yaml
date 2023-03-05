@@ -121,7 +121,7 @@ spec:
         app: deployment3
     spec:
       containers:
-      - image: busybox
+      - image: ubuntu
         name: busybox
         command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
 
