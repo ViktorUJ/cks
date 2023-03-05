@@ -67,3 +67,35 @@ spec:
             mountPath: "/var/secret"
             readOnly: true
 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment2
+  name: deployment2
+  namespace: restricted
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment2
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment2
+    spec:
+      containers:
+      - image: busybox
+        name: busybox
+        command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
+        env:
+          - name: SECRET_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: secret2
+                key: secret
+
