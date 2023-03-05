@@ -1,21 +1,8 @@
-add readOnlyRootFilesystem  and volumes to write 
+inspect definitions of deployments
+
 ```` 
-# kubectl edit nginx
-
-# add line to container level 
-
-securityContext: # add
-   readOnlyRootFilesystem: true # add  
-volumeMounts:
-          - mountPath: /tmp
-            name: temp-vol
-   
-# add to spec level  
-
-volumes:
-- emptyDir: {}
-  name: temp-vol
-
-             
+kubectl  exec deployment1-6d65bf9fc9-clj5x   -n restricted -- cat  /var/secret/secret ; echo
+kubectl  exec deployment2-64487c7d-nhnds  -n restricted -- sh -c  "echo \$SECRET_USERNAME"
+ 
 ````
-check  pod will be running 
+

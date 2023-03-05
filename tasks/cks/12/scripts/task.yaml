@@ -99,3 +99,30 @@ spec:
                 name: secret2
                 key: secret
 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment3
+  name: deployment3
+  namespace: restricted
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment3
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment3
+    spec:
+      containers:
+      - image: busybox
+        name: busybox
+        command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
+
+
