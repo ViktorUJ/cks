@@ -4,6 +4,42 @@ metadata:
   name: restricted
   labels:
     name: restricted
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  name: k8api
+  namespace: restricted
+---
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: k8api
+  namespace: restricted
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: k8api
+  namespace: restricted
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: k8api
+subjects:
+- kind: ServiceAccount
+  name: k8api
+  namespace: restricted
 
 ---
 apiVersion: v1
@@ -120,6 +156,7 @@ spec:
       labels:
         app: deployment3
     spec:
+      serviceAccountName: k8api
       containers:
       - image: viktoruj/cks-lab
         name: busybox
