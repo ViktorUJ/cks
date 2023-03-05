@@ -59,7 +59,7 @@ spec:
             secretName: secret1
             optional: true
       containers:
-      - image: busybox
+      - image: viktoruj/cks-lab
         name: busybox
         command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
         volumeMounts:
@@ -89,7 +89,7 @@ spec:
         app: deployment2
     spec:
       containers:
-      - image: busybox
+      - image: viktoruj/cks-lab
         name: busybox
         command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
         env:
@@ -121,7 +121,7 @@ spec:
         app: deployment3
     spec:
       containers:
-      - image: ubuntu
+      - image: viktoruj/cks-lab
         name: busybox
         command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
 
