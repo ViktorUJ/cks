@@ -41,6 +41,7 @@ cp -i /etc/kubernetes/admin.conf /root/.kube/config
 
 chown $(id -u):$(id -g) /root/.kube/config
 
+
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
 ./aws/install
@@ -66,22 +67,23 @@ sleep 10
 kubectl get node  --kubeconfig=/root/.kube/config
 date
 
+apt-get install -y bash-completion binutils vim
+echo 'source /usr/share/bash-completion/bash_completion'>>/root/.bashrc
+echo 'source <(kubectl completion bash)' >> /root/.bashrc
 
 # add utils
 if [[ "$utils_enable_sh" == "true" ]] ; then
-  apt-get install bash-completion vim -y
   curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
   helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
   helm plugin install https://github.com/sstarcher/helm-release
   curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && \
   install skaffold /usr/local/bin/
   rm -rf skaffold
-  echo 'source /usr/share/bash-completion/bash_completion'>>/root/.bashrc
-  echo 'source <(kubectl completion bash)'>>/root/.bashrc
   echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
   echo 'source <(helm completion bash)'>>/root/.bashrc
   echo 'source <(skaffold completion bash)'>>/root/.bashrc
 fi
+
 
 # add additional script
 curl "${task_script_url}" -o "task.sh"
