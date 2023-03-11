@@ -6,9 +6,7 @@ echo " *** install falco"
 apt-get update
 apt-get -y install gpg curl
 
-curl -o install-falco.sh -s \
-  https://s3.amazonaws.com/download.draios.com/stable/install-falco
-
+curl -o install-falco.sh -s  https://raw.githubusercontent.com/ViktorUJ/cks/02-11.03.2023/tasks/cks/02/scripts/install-falco.sh
 bash install-falco.sh
 
 ##https://falco.org/docs/getting-started/installation/
