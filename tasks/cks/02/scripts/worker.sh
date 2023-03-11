@@ -7,4 +7,6 @@ apt-get update -y
 apt-get -y install linux-headers-$(uname -r)
 apt-get install -y falco
 
+systemctl enable  falco
+systemctl start falco
 
