@@ -1,67 +1,96 @@
-inspect definitions of deployments
+###  create metadata-allow policy
+```` 
+#  cat 13.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: metadata-allow
+  namespace: metadata-access
+spec:
+  podSelector:
+    matchLabels:
+        role: metadata-accessor
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.2.2.187/32   # worker private_ip
+        - ipBlock:
+            cidr: 13.51.64.76/32  # worker public_ip 
+      ports:
+        - protocol: TCP
+          port: 80
+          
+# kubectl apply -f 13.yaml
+````
+
+### create metadata-deny policy
+````
+#cat 13_deny.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: metadata-deny
+  namespace: metadata-access
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+             - 10.2.2.187/32  # worker private_ip
+             - 13.51.64.76/32  # worker public_ip  
+      ports:
+        - protocol: TCP
+          port: 80
+
+
+# kubectl apply -f 13_deny.yaml
+
+````
+### check access from  metadata-accessor  to Metadata Server  
+```` 
+kubectl  exec  -n  metadata-access metadata-accessor   -- sh -c 'curl 13.51.64.76 -s --connect-timeout 1 '
+
+````
+````
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+````
+### check access from  all-pod  to Metadata Server 
 
 ```` 
-kubectl  exec deployment1-6d65bf9fc9-clj5x   -n restricted -- cat  /var/secret/secret ; echo
-kubectl  exec deployment2-64487c7d-nhnds  -n restricted -- sh -c  "echo \$SECRET_USERNAME"
- 
-````
-
-login to pod of deployment3
-````
-kubectl  exec -ti deployment3-798fff6fd5-pprkv -n restricted  -- bash
-````
-
-into pod 
-````
-token=$(cat /run/secrets/kubernetes.io/serviceaccount/token)
-curl https://kubernetes.default/api/v1/namespaces/restricted/secrets -H "Authorization: Bearer $token" -k
-
-````
-
-it will be like this
-````
-deployment3-798fff6fd5-pprkv:/# curl https://kubernetes.default/api/v1/namespaces/restricted/secrets/secret3 -H "Authorization: Bearer $token" -k
-{
-  "kind": "Secret",
-  "apiVersion": "v1",
-  "metadata": {
-    "name": "secret3",
-    "namespace": "restricted",
-    "uid": "dc2c08bb-4dc9-4831-a1bb-4afadebcdbac",
-    "resourceVersion": "3153",
-    "creationTimestamp": "2023-03-05T11:21:33Z",
-    "annotations": {
-      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"data\":{\"secret\":\"MzMzMw==\"},\"kind\":\"Secret\",\"metadata\":{\"annotations\":{},\"creationTimestamp\":null,\"name\":\"secret3\",\"namespace\":\"restricted\"}}\n"
-    },
-    "managedFields": [
-      {
-        "manager": "kubectl-client-side-apply",
-        "operation": "Update",
-        "apiVersion": "v1",
-        "time": "2023-03-05T11:21:33Z",
-        "fieldsType": "FieldsV1",
-        "fieldsV1": {
-          "f:data": {
-            ".": {},
-            "f:secret": {}
-          },
-          "f:metadata": {
-            "f:annotations": {
-              ".": {},
-              "f:kubectl.kubernetes.io/last-applied-configuration": {}
-            }
-          },
-          "f:type": {}
-        }
-      }
-    ]
-  },
-  "data": {
-    "secret": "MzMzMw=="
-  },
-  "type": "Opaque"
-}
+kubectl  exec  -n  metadata-access all-pod   -- sh -c 'curl 13.51.64.76 -s --connect-timeout 1'
 ````
 ```` 
-echo "MzMzMw==" | base64 -d 
+command terminated with exit code 28
 ````
