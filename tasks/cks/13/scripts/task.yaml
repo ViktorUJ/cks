@@ -16,7 +16,7 @@ metadata:
 spec:
   containers:
   - image: viktoruj/cks-lab
-    command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
+    command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 10  ;done']
     name: all-pod
     resources: {}
   dnsPolicy: ClusterFirst
@@ -36,7 +36,7 @@ spec:
   containers:
   - image: viktoruj/cks-lab
     name: all-pod
-    command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
+    command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 10  ;done']
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
