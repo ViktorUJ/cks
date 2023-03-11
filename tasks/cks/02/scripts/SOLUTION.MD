@@ -16,7 +16,8 @@ apt install -y clang llvm
 # You can install also the dialog package if you want it
 apt install -y dialog
 apt-get install -y falco
-# use   'kmod'
+
+# use   'kmod'  and automatic mode update 
 # check services
 systemctl list-units | grep falco
 
