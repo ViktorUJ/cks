@@ -5,3 +5,36 @@ metadata:
   labels:
     name: metadata-access
 ---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: all-pod
+  name: all-pod
+  namespace: metadata-access
+spec:
+  containers:
+  - image: viktoruj/cks-lab
+    name: all-pod
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: metadata-accessor
+    role: metadata-accessor
+  name: metadata-accessor
+  namespace: metadata-access
+spec:
+  containers:
+  - image: viktoruj/cks-lab
+    name: all-pod
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
