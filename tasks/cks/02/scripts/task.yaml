@@ -44,7 +44,7 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        app: deployment1
+        app: deployment2
     spec:
       nodeSelector:
         work_type: falco
