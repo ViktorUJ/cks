@@ -87,4 +87,5 @@ terragrunt destroy
 
 
 # links
+https://github.com/walidshaari/Certified-Kubernetes-Security-Specialist
 https://github.com/snigdhasambitak/cks
