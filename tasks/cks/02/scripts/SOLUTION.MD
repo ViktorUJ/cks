@@ -8,8 +8,9 @@ apt install -y dkms make linux-headers-$(uname -r)
 # If you use the falco-driver-loader to build the BPF probe locally you need also clang toolchain
 apt install -y clang llvm dialog
 # You can install also the dialog package if you want it
-
-apt-get install -y falco
+apt install  dialog -y 
+sleep 5 
+apt  install falco
 
 ```` 
 
