@@ -41,10 +41,12 @@ cp -i /etc/kubernetes/admin.conf /root/.kube/config
 
 chown $(id -u):$(id -g) /root/.kube/config
 
-
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -s -o "awscliv2.zip"
+echo "*** install aws cli "
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s
 unzip awscliv2.zip >/dev/null
 ./aws/install >/dev/null
+aws --version
+
 
 aws s3 cp  /root/.kube/config s3://$k8s_config_sh
 kubeadm token create --print-join-command --ttl 90000m > join_node
