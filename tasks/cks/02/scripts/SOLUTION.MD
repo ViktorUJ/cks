@@ -11,10 +11,13 @@ apt install -y clang llvm dialog
 
 apt-get install -y falco
 
+```` 
+
+````
 # use   'kmod'  and automatic mode update 
 # check services
 systemctl list-units | grep falco
 
 
 ````
-
+###  https://falco.org/docs/rules/supported-fields
