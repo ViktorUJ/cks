@@ -31,9 +31,11 @@ apt-get update
 apt-get install -y kubeadm=$k8_version_sh-00 kubelet=$k8_version_sh-00 kubectl=$k8_version_sh-00
 apt-mark hold kubelet kubeadm kubectl
 
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-./aws/install
+echo "*** install aws cli "
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s
+unzip awscliv2.zip >/dev/null
+./aws/install >/dev/null
+aws --version
 
 date
 echo "wait master ready"
