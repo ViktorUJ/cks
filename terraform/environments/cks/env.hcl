@@ -1,9 +1,9 @@
 locals {
-  region = "eu-north-1"
+  region = "eu-west-1"
   aws= "default"
-  prefix="cka1"
+  prefix="devops"
    tags={
-     "env_name"="cka"
+     "env_name"="dev"
      "env_type"="dev"
      "manage"="terraform"
      "cost_allocation"="dev"

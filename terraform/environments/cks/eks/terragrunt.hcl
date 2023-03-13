@@ -26,8 +26,8 @@ inputs = {
   prefix                       = local.vars.locals.prefix
   vpc_id                       = dependency.vpc.outputs.vpc_id
   eks ={
-    version= "1.24"
-    cloudwatch_retention_in_days = "30"
+    version= "1.23"
+    cloudwatch_retention_in_days = "1"
     allow_cidrs = ["0.0.0.0/0"]
     addons = {
       vpc-cni = {
@@ -35,13 +35,14 @@ inputs = {
         resolve_conflicts = "OVERWRITE"
       }
       kube-proxy = {
-        version = "v1.24.9-eksbuild.1"
+        version = "v1.23.15-eksbuild.1"
         resolve_conflicts = "OVERWRITE"
       }
       coredns = {
         version = "v1.8.7-eksbuild.3"
         resolve_conflicts = "OVERWRITE"
       }
+
     }
     node_group = {
 

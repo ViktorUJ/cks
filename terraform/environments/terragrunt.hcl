@@ -1,7 +1,7 @@
 locals {
-  region                 = "eu-north-1"
-  backend_region         = "eu-north-1"
-  backend_bucket         = "viktoruj-terraform-state-backet-test1"
+  region                 = "eu-west-1"
+  backend_region         = "eu-west-1"
+  backend_bucket         = "devops-viktorm"
   backend_dynamodb_table = "${local.backend_bucket}-lock"
 }
 
