@@ -60,14 +60,14 @@ inputs = {
      }
 
      job = {
-       ec2_types = ["t3.medium"]
+       ec2_types = ["t3.xlarge"]
        capacity_type = "SPOT"
        desired_size = "1"
-       max_size = "2"
+       max_size = "3"
        min_size = "1"
        disk_size = "20"
        labels ={
-         work_type = "jov"
+         work_type = "infra"
          cost_type = "devops"
        }
      }
