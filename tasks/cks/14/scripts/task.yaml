@@ -26,5 +26,29 @@ spec:
         app: deployment1
     spec:
       containers:
-      - image: viktoruj/cks-lab:cks_14
+      - image: viktoruj/cks-lab:cks_14_app1
+        name: busybox
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment2
+  name: deployment2
+  namespace: team-yellow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment2
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment2
+    spec:
+      containers:
+      - image: viktoruj/cks-lab:cks_14_app2
         name: busybox

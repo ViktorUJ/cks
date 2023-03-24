@@ -1,5 +1,5 @@
 #!/bin/bash
-echo " *** master node task 13 "
+echo " *** master node task 14 "
 kubectl taint nodes --all node-role.kubernetes.io/master- --kubeconfig=/root/.kube/config
 kubectl taint nodes --all node-role.kubernetes.io/control-plane-  --kubeconfig=/root/.kube/config
 
