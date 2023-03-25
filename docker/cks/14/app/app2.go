@@ -7,6 +7,6 @@ func main() {
     for {
     println("I am working ")
     syscall.Kill(666, syscall.SIGTERM)
-    time.Sleep(5000 * time.Millisecond)
+    time.Sleep(1000 * time.Millisecond)
 }
 }
