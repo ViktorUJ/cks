@@ -5,5 +5,5 @@ COPY app/app1.go app1.go
 RUN go build -ldflags="-w -s" app1.go
 
 FROM scratch
-COPY --from=builder app1 app1
+COPY --from=builder /go/bin/app1 app1
 ENTRYPOINT ["/app1"]
