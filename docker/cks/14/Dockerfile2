@@ -1,0 +1,9 @@
+FROM golang:alpine AS builder
+RUN apk update && apk add --no-cache git
+WORKDIR $GOPATH/src/mypackage/myapp/
+COPY app/app2.go app2.go
+RUN go build -ldflags="-w -s" app2.go
+
+FROM scratch
+COPY --from=builder /go/src/mypackage/myapp/app2 app2
+ENTRYPOINT ["/app2"]
