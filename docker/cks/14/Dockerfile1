@@ -1,3 +1,18 @@
+FROM golang:alpine AS builder
+RUN apk update && apk add --no-cache git
+WORKDIR $GOPATH/src/mypackage/myapp/
+COPY app/app1.go /app1.go
+RUN go build -ldflags="-w -s" app1.go
+
 FROM scratch
-COPY app1 /app1
-CMD ["/app1"]
+# Copy our static executable.
+COPY --from=builder app1 app1
+
+ENTRYPOINT ["/app1"]
+
+
+
+#FROM scratch
+#COPY app1 /app1
+#CMD ["/app1"]
+#
