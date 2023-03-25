@@ -5,6 +5,6 @@ import (
 func main() {
     for {
     println("I am working ")
-    time.Sleep(1000 * time.Millisecond)
+    time.Sleep(500 * time.Millisecond)
 }
 }
