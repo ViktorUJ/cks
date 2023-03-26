@@ -6,3 +6,5 @@ kubectl taint nodes --all node-role.kubernetes.io/control-plane-  --kubeconfig=/
 export KUBECONFIG=/root/.kube/config
 helm repo add gatekeeper https://open-policy-agent.github.io/gatekeeper/charts
 helm install gatekeeper/gatekeeper --name-template=gatekeeper --namespace gatekeeper-system --create-namespace
+
+kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/13/scripts/task.yaml  --kubeconfig=/root/.kube/config
