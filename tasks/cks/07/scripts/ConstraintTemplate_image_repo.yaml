@@ -18,13 +18,3 @@ spec:
           not startswith(image, "fake-k8s.gcr.io/")
           msg := "not trusted image!"
         }
----
-apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: K8sTrustedImages
-metadata:
-  name: pod-trusted-images
-spec:
-  match:
-    kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
