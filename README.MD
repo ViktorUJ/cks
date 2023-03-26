@@ -91,3 +91,4 @@ terragrunt destroy
 ### https://github.com/walidshaari/Certified-Kubernetes-Security-Specialist
 ### https://github.com/snigdhasambitak/cks
 ### https://github.com/collabnix/kubetools
+### https://github.com/ramanagali/Interview_Guide/blob/main/CKS_Preparation_Guide.md
