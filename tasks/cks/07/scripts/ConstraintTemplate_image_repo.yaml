@@ -11,8 +11,7 @@ spec:
     - target: admission.k8s.gatekeeper.sh
       rego: |
         package k8strustedimages
-        target: admission.k8s.gatekeeper.sh
-
+        
         violation[{"msg": msg}] {
          not images
          msg := "not trusted image!"
@@ -24,5 +23,5 @@ spec:
           not startswith(image, "google-gcr-fake.com/")
           not startswith(image, "very-bad-registry.com/") # ADD THIS LINE
         }
-        
+     
         
