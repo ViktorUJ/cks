@@ -7,7 +7,7 @@ export KUBECONFIG=/root/.kube/config
 helm repo add gatekeeper https://open-policy-agent.github.io/gatekeeper/charts
 helm install gatekeeper/gatekeeper --name-template=gatekeeper --namespace gatekeeper-system --create-namespace
 
-kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/07-25.03.2023/tasks/cks/07/scripts/ConstraintTemplate_image_repo.yaml  --kubeconfig=/root/.kube/config
+kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/07/scripts/ConstraintTemplate_image_repo.yaml  --kubeconfig=/root/.kube/config
 sleep 10
 
-kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/07-25.03.2023/tasks/cks/07/scripts/K8sTrustedImages.yaml  --kubeconfig=/root/.kube/config
+kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/07/scripts/K8sTrustedImages.yaml  --kubeconfig=/root/.kube/config
