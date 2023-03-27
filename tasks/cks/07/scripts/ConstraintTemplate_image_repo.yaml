@@ -14,7 +14,7 @@ spec:
 
         violation[{"msg": msg}] {
           image := input.review.object.spec.containers[_].image
-          not startswith(image, "fake-docker.io/")
-          not startswith(image, "fake-k8s.gcr.io/")
+          not startswith(image, "docker.io/")
+          not startswith(image, "k8s.gcr.io/")
           msg := "not trusted image!"
         }
