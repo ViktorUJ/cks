@@ -12,7 +12,7 @@ spec:
       rego: |
         package k8strustedimages
 
-        violation[{"msg": msg}] {
+        deny[{"msg": msg}] {
           image := input.review.object.spec.containers[_].image
           not startswith(image, "docker.io/")
           not startswith(image, "k8s.gcr.io/")
