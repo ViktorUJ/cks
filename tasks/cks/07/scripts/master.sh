@@ -9,4 +9,5 @@ helm install gatekeeper/gatekeeper --name-template=gatekeeper --namespace gateke
 
 kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/07-25.03.2023/tasks/cks/07/scripts/ConstraintTemplate_image_repo.yaml  --kubeconfig=/root/.kube/config
 sleep 10
+
 kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/07-25.03.2023/tasks/cks/07/scripts/K8sTrustedImages.yaml  --kubeconfig=/root/.kube/config
