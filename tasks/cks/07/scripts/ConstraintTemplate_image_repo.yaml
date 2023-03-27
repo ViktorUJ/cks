@@ -11,10 +11,18 @@ spec:
     - target: admission.k8s.gatekeeper.sh
       rego: |
         package k8strustedimages
+        target: admission.k8s.gatekeeper.sh
 
-        deny[{"msg": msg}] {
-          image := input.review.object.spec.containers[_].image
-          not startswith(image, "docker.io/")
-          not startswith(image, "k8s.gcr.io/")
-          msg := "not trusted image!"
+        violation[{"msg": msg}] {
+         not images
+         msg := "not trusted image!"
         }
+        
+        images {
+          image := input.review.object.spec.containers[_].image
+          not startswith(image, "docker-fake.io/")
+          not startswith(image, "google-gcr-fake.com/")
+          not startswith(image, "very-bad-registry.com/") # ADD THIS LINE
+        }
+        
+        
