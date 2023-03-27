@@ -6,7 +6,7 @@ spec:
   crd:
     spec:
       names:
-        kind: K8sTrustedImages
+        kind: k8strustedimages
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |

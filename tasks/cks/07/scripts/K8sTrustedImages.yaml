@@ -1,7 +1,7 @@
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: K8sTrustedImages
 metadata:
-  name: K8sTrustedImages
+  name: blacklistimages
 spec:
   match:
     kinds:
