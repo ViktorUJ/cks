@@ -32,22 +32,23 @@ inputs = {
   s3_k8s_config = "viktoruj-terraform-state-backet"
 
   k8s_master = {
-    k8_version         = "1.25.0"
+    k8_version         = "1.26.0"
     runtime            = "cri-o" # docker  , cri-o  , containerd ( need test it )
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
     key_name           = "localize"
-    ami_id             = "ami-00c70b245f5354c0a"
+    ami_id             = "ami-06410fb0e71718398"
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
     subnet_number      = "0"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
-    utils_enable       = "true"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_02/tasks/cks/03/scripts/master.sh"
+    utils_enable       = "false"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/03/scripts/master.sh"
+    calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     root_volume        = {
       type = "gp3"
-      size = "20"
+      size = "12"
     }
   }
   k8s_worker = {
