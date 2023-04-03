@@ -11,20 +11,20 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    app: deployment1
-  name: deployment1
+    app: container-host-hacker
+  name: container-host-hacker
   namespace: team-red
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: deployment1
+      app: container-host-hacker
   strategy: {}
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: deployment1
+        app: container-host-hacker
     spec:
       volumes:
         - name: host
