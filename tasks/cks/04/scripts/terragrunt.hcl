@@ -33,7 +33,7 @@ inputs = {
 
   k8s_master = {
     k8_version         = "1.26.0"
-    runtime            = "cri-o" # docker  , cri-o  , containerd ( need test it )
+    runtime            = "containerd" # docker  , cri-o  , containerd ( need test it )
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
     key_name           = "localize"
