@@ -40,6 +40,9 @@ spec:
   ports:
     - port: 8000
       targetPort: 8000
+      nodePort: 32513
+      name: http
+  type: NodePort
   selector:
     k8s-app: kubernetes-dashboard-head
 
@@ -243,9 +246,6 @@ spec:
   ports:
     - port: 8000
       targetPort: 8000
-      nodePort: 32513
-      name: http
-  type: NodePort
   selector:
     k8s-app: dashboard-metrics-scraper-head
 
