@@ -3,11 +3,10 @@
 #### Task weight: 3%
 
 
-Use context: `kubectl config use-context workload-prod`
 
  
 
-The Kubernetes Dashboard is installed in Namespace kubernetes-dashboard and is configured to:
+The Kubernetes Dashboard is installed in Namespace kubernetes-dashboard-head and is configured to:
 
 * Allow users to "skip login"
 * Allow insecure access (HTTP without authentication)
