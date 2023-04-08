@@ -23,20 +23,46 @@ spec:
   restartPolicy: Always
 
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    run: metadata-accessor
-    role: metadata-accessor
+    app: metadata-accessor
   name: metadata-accessor
   namespace: metadata-access
 spec:
-  containers:
-  - image: viktoruj/cks-lab
-    name: all-pod
-    command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 10  ;done']
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metadata-accessor
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: metadata-accessor
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    k8s-app: metadata-accessor
+  name: metadata-accessor
+  namespace: metadata-access
+spec:
+  ports:
+  - name: http
+    nodePort: 30089
+    port: 80
+    protocol: TCP
+    targetPort: 80
+
+  selector:
+    app: metadata-accessor
+  type: NodePort
