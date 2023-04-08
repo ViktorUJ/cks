@@ -74,7 +74,7 @@ metadata:
   labels:
     app: metadata-server
   name: metadata-server
-  namespace: metadata-server
+  namespace: metadata-access
 spec:
   replicas: 1
   selector:
