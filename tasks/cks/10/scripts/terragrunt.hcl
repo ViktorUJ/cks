@@ -45,6 +45,7 @@ inputs = {
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "true"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/10/scripts/master.sh"
+    calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     root_volume        = {
       type = "gp3"
       size = "20"
