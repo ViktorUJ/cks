@@ -44,6 +44,10 @@ vim terragrunt.hcl
 
 ````
 ## create VPC 
+```` 
+make run_cks_vpc
+````
+or 
 ````
 cd environments/cks/vpc
 # edit  cidrs and AZ 
@@ -52,6 +56,10 @@ terragrunt apply
 ````
 
 ## create k8s 
+```` 
+TASK=13 make run_cks_k8s_task
+````
+or 
 ````
 cd environments/cks/k8s
 # edit  k8s version ,s3 , nodes size ,key_name  , and etc 
@@ -73,12 +81,20 @@ tail -f /var/log/cloud-init-output.log
 
 # clean
 ## destroy k8s cluster 
+```` 
+make delete_cks_k8s
+````
+or 
 ````
 cd environments/cks/k8s
 terragrunt destroy
 ````
 
 ## destroy vpc  
+````
+make delete_cks_vpc
+````
+
 ````
 cd environments/cks/vpc
 terragrunt destroy
