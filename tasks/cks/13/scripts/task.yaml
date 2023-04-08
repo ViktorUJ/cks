@@ -29,15 +29,15 @@ kind: Pod
 metadata:
   creationTimestamp: null
   labels:
-    run: pod-metadata-accessor
-    role: pod-metadata-accessor
-  name: pod-metadata-accessor
+    run: metadata-accessor
+    role: metadata-accessor
+  name: metadata-accessor
   namespace: metadata-access
 spec:
   containers:
   - image: viktoruj/cks-lab
     command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 10  ;done']
-    name: pod-metadata-accessor
+    name: metadata-accessor
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
@@ -72,20 +72,20 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    app: metadata-accessor
-  name: metadata-accessor
-  namespace: metadata-access
+    app: metadata-server
+  name: metadata-server
+  namespace: metadata-server
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: metadata-accessor
+      app: metadata-server
   strategy: {}
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: metadata-accessor
+        app: metadata-server
     spec:
       volumes:
       - name: index
@@ -103,9 +103,9 @@ kind: Service
 apiVersion: v1
 metadata:
   labels:
-    k8s-app: metadata-accessor
-  name: metadata-accessor
-  namespace: metadata-access
+    k8s-app: metadata-server
+  name: metadata-server
+  namespace: metadata-server
 spec:
   ports:
   - name: http
@@ -115,5 +115,5 @@ spec:
     targetPort: 80
 
   selector:
-    app: metadata-accessor
+    app: metadata-server
   type: NodePort
