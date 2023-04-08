@@ -6,6 +6,8 @@ output_cks_vpc:
 delete_cks_vpc:
 	cd terraform/environments/cks/vpc/ && terragrunt destroy
 
+clean_cks_vpc:
+	cd terraform/environments/cks/vpc/ && rm -rf .terr*
 
 
 output_cks_k8s:
@@ -13,6 +15,9 @@ output_cks_k8s:
 
 delete_cks_k8s:
 	cd terraform/environments/cks/k8s/ && terragrunt destroy
+
+clean_cks_k8s:
+	cd terraform/environments/cks/k8s/ && rm -rf .terr*
 
 
 run_cks_k8s_task:
