@@ -3,3 +3,4 @@ run_cks_vpc:
 
 delete_cks_vpc:
 	cd terraform/environments/cks/vpc/ && terragrunt destroy
+	pwd
