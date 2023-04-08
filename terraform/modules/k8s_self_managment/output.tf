@@ -28,3 +28,9 @@ output "worker_ip" {
 output "master_ssh" {
   value = "ssh ubuntu@${aws_eip.master.public_ip}"
 }
+
+
+output "check_node_status" {
+  value = "tail -f /var/log/cloud-init-output.log "
+}
+

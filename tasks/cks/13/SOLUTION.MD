@@ -21,7 +21,7 @@ spec:
             cidr: 13.51.64.76/32  # worker public_ip 
       ports:
         - protocol: TCP
-          port: 80
+          port: 30089
           
 # kubectl apply -f 13.yaml
 ````
@@ -54,42 +54,34 @@ spec:
 
 ````
 ### check access from  metadata-accessor  to Metadata Server  
-```` 
-kubectl  exec  -n  metadata-access metadata-accessor   -- sh -c 'curl 13.51.64.76 -s --connect-timeout 1 '
+````
+#13.51.64.76   - ip of controlplane 
+kubectl  exec  -n  metadata-access metadata-accessor   -- sh -c 'curl 13.51.64.76:30089 -s --connect-timeout 1 '
 
 ````
 ````
 <!DOCTYPE html>
 <html>
 <head>
-<title>Welcome to nginx!</title>
+<title>metadata </title>
 <style>
-    body {
-        width: 35em;
-        margin: 0 auto;
-        font-family: Tahoma, Verdana, Arial, sans-serif;
-    }
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
 </style>
 </head>
 <body>
-<h1>Welcome to nginx!</h1>
-<p>If you see this page, the nginx web server is successfully installed and
-working. Further configuration is required.</p>
+<h1>Welcome to metadata </h1>
+<p>If you see this page, the metadata  is working</p>
 
-<p>For online documentation and support please refer to
-<a href="http://nginx.org/">nginx.org</a>.<br/>
-Commercial support is available at
-<a href="http://nginx.com/">nginx.com</a>.</p>
-
-<p><em>Thank you for using nginx.</em></p>
 </body>
-</html>
+
 
 ````
 ### check access from  all-pod  to Metadata Server 
 
 ```` 
-kubectl  exec  -n  metadata-access all-pod   -- sh -c 'curl 13.51.64.76 -s --connect-timeout 1'
+kubectl  exec  -n  metadata-access all-pod   -- sh -c 'curl 13.51.64.76:30089 -s --connect-timeout 1'
 ````
 ```` 
 command terminated with exit code 28
