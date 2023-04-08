@@ -11,6 +11,7 @@ metadata:
   creationTimestamp: null
   labels:
     run: all-pod
+    role: pod-all
   name: all-pod
   namespace: metadata-access
 spec:
@@ -22,6 +23,24 @@ spec:
   dnsPolicy: ClusterFirst
   restartPolicy: Always
 
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod-metadata-accessor
+    role: pod-metadata-accessor
+  name: pod-metadata-accessor
+  namespace: metadata-access
+spec:
+  containers:
+  - image: viktoruj/cks-lab
+    command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 10  ;done']
+    name: pod-metadata-accessor
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
 ---
 apiVersion: v1
 data:
