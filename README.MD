@@ -109,3 +109,4 @@ terragrunt destroy
 ### https://github.com/collabnix/kubetools
 ### https://github.com/ramanagali/Interview_Guide/blob/main/CKS_Preparation_Guide.md
 ### https://github.com/vedmichv/CKA-learn-path/
+### https://learn.sysdig.com/falco-101 
