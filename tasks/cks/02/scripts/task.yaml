@@ -117,3 +117,30 @@ spec:
         command: ['sh', '-c', 'while true ; do  echo "$(date) i am working "; apt update ; sleep 10  ; done']
         resources: {}
 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment3
+  name: deployment3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment3
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment3
+    spec:
+      nodeSelector:
+        work_type: falco
+      containers:
+      - image: nginx
+        name: app
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working "; apt update ; sleep 10  ; done']
+        resources: {}
