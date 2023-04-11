@@ -44,7 +44,7 @@ inputs = {
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/02/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock-10.04.2023/tasks/cks/02/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     root_volume        = {
       type = "gp3"
@@ -62,7 +62,7 @@ inputs = {
     user_data_template = "template/worker.sh"
     runtime            = "containerd"
     runtime_script     = "template/runtime.sh"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/02/scripts/worker.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock-10.04.2023/tasks/cks/02/scripts/worker.sh"
     node_labels        = "work_type=falco,aws_scheduler=true"
     cidrs              = ["0.0.0.0/0"]
     root_volume        = {
