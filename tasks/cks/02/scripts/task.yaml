@@ -123,19 +123,19 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    app: deployment3
-  name: deployment3
+    app: deployment4
+  name: deployment4
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: deployment3
+      app: deployment4
   strategy: {}
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: deployment3
+        app: deployment4
     spec:
       nodeSelector:
         work_type: falco
