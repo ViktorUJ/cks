@@ -62,7 +62,7 @@ inputs = {
     user_data_template = "template/worker.sh"
     runtime            = "containerd"
     runtime_script     = "template/runtime.sh"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/09/scripts/worker.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock-14.04.2023/tasks/cks/09/scripts/worker.sh"
     node_labels        = "work_type=apparmor,aws_scheduler=true"
     cidrs              = ["0.0.0.0/0"]
     root_volume        = {
