@@ -47,7 +47,7 @@ spec:
              - 13.51.64.76/32  # worker public_ip  
       ports:
         - protocol: TCP
-          port: 80
+          port: 30089
 
 
 # kubectl apply -f 13_deny.yaml
