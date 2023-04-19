@@ -66,3 +66,5 @@ check logs
 ```` 
 tail etc/kubernetes/audit/logs/audit.log  -f  | jq
 ````
+
+https://github.com/kodekloudhub/community-faq/blob/main/docs/diagnose-crashed-apiserver.md 

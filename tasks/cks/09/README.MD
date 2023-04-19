@@ -1,6 +1,7 @@
 Task weight: 3%
 
-Some containers need to run more secure and restricted. There is an existing AppArmor profile located at /opt/course/9/profile on worker node .
+Some containers need to run more secure and restricted. 
+There is an existing AppArmor profile located at /opt/course/9/profile on worker node .
 
 Install the AppArmor profile on Node node1. Connect using ssh cluster1-node1.
 
