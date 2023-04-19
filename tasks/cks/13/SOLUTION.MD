@@ -19,9 +19,6 @@ spec:
             cidr: 10.2.2.187/32   # worker private_ip
         - ipBlock:
             cidr: 13.51.64.76/32  # worker public_ip 
-      ports:
-        - protocol: TCP
-          port: 30089
           
 # kubectl apply -f 13.yaml
 ````
@@ -45,10 +42,6 @@ spec:
             except:
              - 10.2.2.187/32  # worker private_ip
              - 13.51.64.76/32  # worker public_ip  
-      ports:
-        - protocol: TCP
-          port: 30089
-
 
 # kubectl apply -f 13_deny.yaml
 
