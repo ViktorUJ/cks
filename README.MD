@@ -111,5 +111,5 @@ terragrunt destroy
 ### https://github.com/vedmichv/CKA-learn-path/
 ### https://learn.sysdig.com/falco-101 
 ### https://github.com/kodekloudhub/community-faq
-### https://www.youtube.com/watch?v=wqsUfvRyYpw
+### https://github.com/killer-sh/cks-course-environment
 
