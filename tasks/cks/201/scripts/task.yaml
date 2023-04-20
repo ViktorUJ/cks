@@ -74,7 +74,7 @@ spec:
   selector:
     app: mysql
 ---
-# prod-stack-1
+# prod-stack-1  backend
 
 apiVersion: v1
 kind: Namespace
@@ -150,8 +150,8 @@ spec:
     protocol: TCP
   selector:
     app: backend
----
-# front
+
+# prod-stack-1 front
 ---
 apiVersion: v1
 kind: ConfigMap
