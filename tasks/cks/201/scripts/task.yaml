@@ -1,0 +1,62 @@
+# prod prod-db
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod-db
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-index.html
+  namespace: prod-db
+data:
+  index.html: |+
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>metadata </title>
+    <style>
+    html { color-scheme: light dark; }
+    body { width: 35em; margin: 0 auto;
+    font-family: Tahoma, Verdana, Arial, sans-serif; }
+    </style>
+    </head>
+    <body>
+    <h1>Welcome to mysql </h1>
+    <p>If you see this page, the mysql mock  is working</p>
+
+    </body>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: mysql
+  name: mysql
+  namespace: prod-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: mysql
+    spec:
+      volumes:
+      - name: index
+        configMap:
+          name: db-index.html
+      containers:
+      - image: nginx
+        name: nginx
+        volumeMounts:
+          - name: index
+            mountPath: /usr/share/nginx/html/
+
+---
+#

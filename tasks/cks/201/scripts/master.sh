@@ -6,4 +6,4 @@ kubectl taint nodes --all node-role.kubernetes.io/control-plane-  --kubeconfig=/
 export KUBECONFIG=/root/.kube/config
 
 
-kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/07/scripts/K8sTrustedImages.yaml  --kubeconfig=/root/.kube/config
+kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/mock-19.04.2023/tasks/cks/201/scripts/task.yaml  --kubeconfig=/root/.kube/config
