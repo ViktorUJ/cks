@@ -112,4 +112,9 @@ terragrunt destroy
 ### https://learn.sysdig.com/falco-101 
 ### https://github.com/kodekloudhub/community-faq
 ### https://github.com/killer-sh/cks-course-environment
+###  https://sysdiglabs.github.io/sysdig-platform-cli/
+### https://www.udemy.com/course/certified-kubernetes-security-specialist/
+### https://www.youtube.com/watch?v=wqsUfvRyYpw
+### https://www.youtube.com/watch?v=gXz4cq3PKdg
+### https://github.com/killer-sh
 
