@@ -1,0 +1,250 @@
+# prod prod-db
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod-db
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-index.html
+  namespace: prod-db
+data:
+  index.html: |+
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>mysql </title>
+    <style>
+    html { color-scheme: light dark; }
+    body { width: 35em; margin: 0 auto;
+    font-family: Tahoma, Verdana, Arial, sans-serif; }
+    </style>
+    </head>
+    <body>
+    <h1>Welcome to mysql </h1>
+    <p>If you see this page, the mysql mock  is working</p>
+
+    </body>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: mysql
+  name: mysql
+  namespace: prod-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: mysql
+    spec:
+      volumes:
+      - name: index
+        configMap:
+          name: db-index.html
+      containers:
+      - image: nginx
+        name: nginx
+        volumeMounts:
+          - name: index
+            mountPath: /usr/share/nginx/html/
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: mysql
+  name: mysql
+  namespace: prod-db
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+  selector:
+    app: mysql
+---
+# prod-stack-1  backend
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod-stack-1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-index.html
+  namespace: prod-stack-1
+data:
+  index.html: |+
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>backend </title>
+    <style>
+    html { color-scheme: light dark; }
+    body { width: 35em; margin: 0 auto;
+    font-family: Tahoma, Verdana, Arial, sans-serif; }
+    </style>
+    </head>
+    <body>
+    <h1>Welcome to backend </h1>
+    <p>If you see this page, the backend mock  is working</p>
+
+    </body>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: backend
+  name: backend
+  namespace: prod-stack-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: backend
+    spec:
+      volumes:
+      - name: index
+        configMap:
+          name: backend-index.html
+      containers:
+      - image: nginx
+        name: nginx
+        volumeMounts:
+          - name: index
+            mountPath: /usr/share/nginx/html/
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: backend
+  name: backend
+  namespace: prod-stack-1
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+  selector:
+    app: backend
+
+# prod-stack-1 front
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-index.html
+  namespace: prod-stack-1
+data:
+  index.html: |+
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <title>frontend </title>
+    <style>
+    html { color-scheme: light dark; }
+    body { width: 35em; margin: 0 auto;
+    font-family: Tahoma, Verdana, Arial, sans-serif; }
+    </style>
+    </head>
+    <body>
+    <h1>Welcome to frontend </h1>
+    <p>If you see this page, the frontend mock  is working</p>
+
+    </body>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: frontend
+  name: frontend
+  namespace: prod-stack-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: frontend
+    spec:
+      volumes:
+      - name: index
+        configMap:
+          name: frontend-index.html
+      containers:
+      - image: nginx
+        name: nginx
+        volumeMounts:
+          - name: index
+            mountPath: /usr/share/nginx/html/
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: frontend
+  name: frontend
+  namespace: prod-stack-1
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+  selector:
+    app: frontend
+---
+#user-client
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: user-client
+  labels:
+    name: user-client
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: all-pod
+    role: pod-all
+  name: all-pod
+  namespace: user-client
+spec:
+  containers:
+  - image: viktoruj/cks-lab
+    command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 10  ;done']
+    name: all-pod
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
