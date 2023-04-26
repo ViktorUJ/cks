@@ -223,3 +223,28 @@ spec:
   selector:
     app: frontend
 ---
+#user-client
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: user-client
+  labels:
+    name: user-client
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: all-pod
+    role: pod-all
+  name: all-pod
+  namespace: user-client
+spec:
+  containers:
+  - image: viktoruj/cks-lab
+    command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 10  ;done']
+    name: all-pod
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
