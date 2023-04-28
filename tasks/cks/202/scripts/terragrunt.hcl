@@ -32,7 +32,7 @@ inputs = {
   s3_k8s_config = "viktoruj-terraform-state-backet-test1"
 
   k8s_master = {
-    k8_version         = "1.27.0"
+    k8_version         = "1.26.0"
     runtime            = "containerd" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
@@ -44,7 +44,7 @@ inputs = {
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "true"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock-28-04-2023/tasks/cks/201/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock-28-04-2023/tasks/cks/202/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     root_volume        = {
       type = "gp3"
