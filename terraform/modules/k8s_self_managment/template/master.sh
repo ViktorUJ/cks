@@ -72,6 +72,8 @@ date
 apt-get install -y bash-completion binutils vim
 echo 'source /usr/share/bash-completion/bash_completion'>>/root/.bashrc
 echo 'source <(kubectl completion bash)' >> /root/.bashrc
+echo 'alias k=kubectl' >> /root/.bashrc
+echo 'complete -F __start_kubectl k' >> /root/.bashrc
 
 # add utils
 if [[ "$utils_enable_sh" == "true" ]] ; then
