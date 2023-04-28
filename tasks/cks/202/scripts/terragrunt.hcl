@@ -69,7 +69,7 @@ inputs = {
 #     type = "gp3"
 #     size = "12"
 #   }
-  }
+#  }
 
 #  "node_2" = {
 #    k8_version         = "1.26.0"
