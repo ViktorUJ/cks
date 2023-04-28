@@ -32,7 +32,7 @@ inputs = {
   s3_k8s_config = "viktoruj-terraform-state-backet-test1"
 
   k8s_master = {
-    k8_version         = "1.26.0"
+    k8_version         = "1.27.0"
     runtime            = "containerd" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
