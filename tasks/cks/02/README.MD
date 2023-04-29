@@ -21,3 +21,16 @@ Collect the logs for at least 30 seconds.
 
 Afterwards remove the threads (both 1 and 2) by scaling the replicas 
 of the Deployments that control the offending Pods down to 0.
+
+
+available fild you can get 
+
+```` 
+falco --list 
+
+
+falco --list | grep  user
+falco --list | grep  container
+falco --list | grep  time
+
+````
