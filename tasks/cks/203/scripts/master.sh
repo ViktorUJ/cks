@@ -69,5 +69,5 @@ kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/mock-28-04-2023
 
 curl "https://raw.githubusercontent.com/ViktorUJ/cks/mock-28-04-2023/tasks/cks/203/scripts/admission_config.json" -o "admission_config.json"
 curl "https://raw.githubusercontent.com/ViktorUJ/cks/mock-28-04-2023/tasks/cks/203/scripts/admission_kube_config.yaml" -o "admission_kube_config.yaml"
-mv admission_config.json  /etc/kubernetes/pki/webhook/admission_config.json
+mv admission_config.json  /etc/kubernetes/pki/admission_config.json
 mv admission_kube_config.yaml  /etc/kubernetes/pki/webhook/admission_kube_config.yaml
