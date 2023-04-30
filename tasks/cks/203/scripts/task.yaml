@@ -19,7 +19,7 @@ spec:
             - "--cert=/etc/admission-controller/tls/tls.crt"
             - "--key=/etc/admission-controller/tls/tls.key"
             - "--debug"
-            - "--registry-whitelist=docker.io,gcr.io"
+            - "--registry-whitelist=docker.io"
           volumeMounts:
             - name: tls
               mountPath: /etc/admission-controller/tls
