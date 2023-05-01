@@ -7,3 +7,8 @@
 ### change config to  aescbc
 ### encrypt  all secrets in prod ns     with new config
 ### delete encryption config  and decrypt  all   secrets in prod ns 
+
+
+https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+
+
