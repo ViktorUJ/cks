@@ -64,10 +64,10 @@ kubectl create secret tls tls-image-bouncer-webhook --key server-key.pem --cert 
 echo "127.0.0.1 image-bouncer-webhook" >> /etc/hosts
 
 
-kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/mock-28-04-2023/tasks/cks/203/scripts/task.yaml
+kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/203/scripts/task.yaml
 
 
-curl "https://raw.githubusercontent.com/ViktorUJ/cks/mock-28-04-2023/tasks/cks/203/scripts/admission_config.json" -o "admission_config.json"
-curl "https://raw.githubusercontent.com/ViktorUJ/cks/mock-28-04-2023/tasks/cks/203/scripts/admission_kube_config.yaml" -o "admission_kube_config.yaml"
+curl "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/203/scripts/admission_config.json" -o "admission_config.json"
+curl "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/203/scripts/admission_kube_config.yaml" -o "admission_kube_config.yaml"
 mv admission_config.json  /etc/kubernetes/pki/admission_config.json
 mv admission_kube_config.yaml  /etc/kubernetes/pki/webhook/admission_kube_config.yaml
