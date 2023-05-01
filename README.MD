@@ -117,4 +117,6 @@ terragrunt destroy
 ### https://www.youtube.com/watch?v=wqsUfvRyYpw
 ### https://www.youtube.com/watch?v=gXz4cq3PKdg
 ### https://github.com/killer-sh
+### https://www.youtube.com/@learnwithgvr/videos
+
 
