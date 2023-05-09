@@ -42,6 +42,9 @@ echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
 mkdir $configs_dir -p
 mkdir $default_configs_dir -p
 
+echo "${ssh_private_key}">/root/.ssh/id_rsa
+echo "${ssh_pub_key}">>/root/.ssh/authorized_keys
+
 export KUBECONFIG=''
 clusters_config="${clusters_config}"
 for cluster in $clusters_config; do

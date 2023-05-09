@@ -17,10 +17,14 @@ variable "work_pc" {
     cidrs              = list(string)
     subnet_number      = string
     user_data_template = string
-    util=object({
-      kubectl_version    = string
+    ssh                = object({
+      private_key = string
+      pub_key     = string
     })
-    root_volume        = object({
+    util = object({
+      kubectl_version = string
+    })
+    root_volume = object({
       type = string
       size = string
     })

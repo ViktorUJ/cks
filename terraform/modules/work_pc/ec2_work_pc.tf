@@ -3,6 +3,8 @@ data "template_file" "master" {
   vars     = {
     clusters_config = join(" ", [for key, value in var.work_pc.clusters_config : "${key}=${value}"])
     kubectl_version= var.work_pc.util.kubectl_version
+    ssh_private_key=var.work_pc.ssh.private_key
+    ssh_pub_key=var.work_pc.ssh.pub_key
   }
 }
 
