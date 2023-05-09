@@ -10,9 +10,7 @@ variable "subnets_az" {}
 variable "s3_k8s_config" {}
 variable "work_pc" {
   type = object({
-    clusters_config = map(object({
-      config_url = string
-    }))
+    clusters_config = map(string)
     instance_type      = string
     ami_id             = string
     key_name           = string
