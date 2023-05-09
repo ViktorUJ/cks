@@ -4,6 +4,6 @@ output "private_key" {
 }
 
 output "pub_key" {
-  value     = tls_private_key.work.public_key_pem
+  value     = tls_private_key.work.public_key_openssh
   sensitive = true
 }
