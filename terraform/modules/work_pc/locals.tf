@@ -9,7 +9,7 @@ locals {
   tags_all       = merge(var.tags_common, local.tags_app)
   tags_k8_master = {
     "k8_node_type" = "worker-pc"
-    "Name"         = "${var.aws}-${var.prefix}-${var.app_name}-master"
+    "Name"         = "${var.aws}-${var.prefix}-${var.app_name}-worker-pc"
   }
   tags_all_k8_master = merge(local.tags_all, local.tags_k8_master)
 
