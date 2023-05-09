@@ -25,6 +25,9 @@ dependency "cluster1" {
   config_path = "clusters/k8s-1"
 }
 
+dependency "cluster2" {
+  config_path = "clusters/k8s-2"
+}
 
 inputs = {
   region        = local.vars.locals.region
@@ -40,6 +43,7 @@ inputs = {
   work_pc= {
     clusters_config={
       cluster1=dependency.cluster1.outputs.k8s_config
+      cluster2=dependency.cluster2.outputs.k8s_config
     }
     instance_type      = "t3.small"
     ami_id             = "ami-06410fb0e71718398"
@@ -48,6 +52,9 @@ inputs = {
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
+    util={
+      kubectl_version="v1.26.0"
+    }
     root_volume        = {
       type = "gp3"
       size = "12"
