@@ -72,3 +72,7 @@ kubectl config view --flatten > $default_configs_dir/config
 
 export KUBECONFIG=/root/.kube/config
 kubectl config get-contexts
+
+mkdir /home/ubuntu/.kube  -p
+cp /root/.kube/config /home/ubuntu/.kube/config
+chown ubuntu:ubuntu /home/ubuntu/.kube/config
