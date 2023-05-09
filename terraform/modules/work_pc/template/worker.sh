@@ -43,6 +43,7 @@ mkdir $configs_dir -p
 mkdir $default_configs_dir -p
 
 echo "${ssh_private_key}">/root/.ssh/id_rsa
+chmod 600 /root/.ssh/id_rsa
 echo "${ssh_pub_key}">>/root/.ssh/authorized_keys
 
 
