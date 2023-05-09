@@ -20,3 +20,6 @@ aws --version
 
 
 clusters_config="${clusters_config}"
+for cluster in $clusters_config; do
+  echo "$cluster"
+done
