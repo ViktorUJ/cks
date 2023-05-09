@@ -2,7 +2,8 @@
 # install util
 # prepare k8 configs
 # check connections
-
+configs_dir="/var/work/configs"
+default_configs_dir="/root/.kube"
 
 apt-get update && sudo apt-get upgrade -y
 apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim
@@ -18,9 +19,10 @@ unzip awscliv2.zip >/dev/null
 aws --version
 
 
-mkdir /var/work/configs -p
-mkdir /root/.kube/ -p
+mkdir $configs_dir -p
+mkdir $default_configs_dir -p
 
+export KUBECONFIG=''
 clusters_config="${clusters_config}"
 for cluster in $clusters_config; do
   cluster_name=$(echo "$cluster" | cut -d'=' -f1 )
@@ -28,9 +30,10 @@ for cluster in $clusters_config; do
   echo "$cluster_name   $cluster_config_url "
   aws s3 cp $cluster_config_url $cluster_name
   cat $cluster_name | sed -e 's/kubernetes/'$cluster_name'/g' >/var/work/configs/$cluster_name
+  KUBECONFIG+="$configs_dir/$cluster_name:"
 done
-export KUBECONFIG=/var/work/configs:$(find . -type f | tr '\n' ':')
-kubectl config view --flatten > /root/.kube/config
+
+kubectl config view --flatten > $default_configs_dir/config
 
 export KUBECONFIG=/root/.kube/config
 kubectl config get-contexts
