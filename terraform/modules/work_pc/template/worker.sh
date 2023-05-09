@@ -26,11 +26,15 @@ curl -LO https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl
 chmod +x kubectl
 mv kubectl  /usr/bin/
 
+echo 'source /usr/share/bash-completion/bash_completion'>>/home/ubuntu/.bashrc
+echo 'source <(kubectl completion bash)' >> /home/ubuntu/.bashrc
+echo 'alias k=kubectl' >>/home/ubuntu/.bashrc
+echo 'complete -F __start_kubectl k' >>/home/ubuntu/.bashrc
+
 echo 'source /usr/share/bash-completion/bash_completion'>>/root/.bashrc
 echo 'source <(kubectl completion bash)' >> /root/.bashrc
 echo 'alias k=kubectl' >> /root/.bashrc
 echo 'complete -F __start_kubectl k' >> /root/.bashrc
-
 
 echo "*** install aws cli "
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s
@@ -38,6 +42,7 @@ unzip awscliv2.zip >/dev/null
 ./aws/install >/dev/null
 aws --version
 echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
+echo 'complete -C "/usr/local/bin/aws_completer" aws' >>/home/ubuntu/.bashrc
 
 mkdir $configs_dir -p
 mkdir $default_configs_dir -p
@@ -46,6 +51,10 @@ echo "${ssh_private_key}">/root/.ssh/id_rsa
 chmod 600 /root/.ssh/id_rsa
 echo "${ssh_pub_key}">>/root/.ssh/authorized_keys
 
+echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
+chmod 600 /home/ubuntu/.ssh/id_rsa
+chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
+echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
 
 export KUBECONFIG=''
 clusters_config="${clusters_config}"
