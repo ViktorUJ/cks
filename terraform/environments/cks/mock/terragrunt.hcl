@@ -38,7 +38,11 @@ inputs = {
 
 
   work_pc= {
-    clusters_config="cluster1=s3://hfjhfjhgf/jgjhgjgjg cluster2=s3//iufyitfytyt"
+    clusters_config={
+      cluster1={
+       config_url = dependency.cluster1.outputs.k8s_config
+      }
+    }
     instance_type      = "t3.small"
     ami_id             = "ami-06410fb0e71718398"
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
