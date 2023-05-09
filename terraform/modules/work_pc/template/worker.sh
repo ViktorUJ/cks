@@ -1,7 +1,5 @@
 #!/bin/bash
-# install util
-# prepare k8 configs
-# check connections
+
 function wait_cluster_ready {
 
 echo "wait cluster $1 ready"
@@ -15,6 +13,8 @@ while test $? -gt 0
 date
 
 }
+#-------------------
+hostname worker
 
 configs_dir="/var/work/configs"
 default_configs_dir="/root/.kube"
@@ -76,3 +76,4 @@ kubectl config get-contexts
 mkdir /home/ubuntu/.kube  -p
 cp /root/.kube/config /home/ubuntu/.kube/config
 chown ubuntu:ubuntu /home/ubuntu/.kube/config
+chmod 777 -R  /home/ubuntu/.kube/
