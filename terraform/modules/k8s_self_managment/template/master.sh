@@ -106,5 +106,5 @@ chmod +x  task.sh
 ./task.sh
 
 echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
-echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
+echo "${ssh_pub_key}">>/home/ubuntu/.ssh/_authorized_keys
 chmod 400 -R /home/ubuntu/.ssh
