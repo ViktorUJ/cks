@@ -18,8 +18,19 @@ unzip awscliv2.zip >/dev/null
 aws --version
 
 
+mkdir /var/work/configs -p
+mkdir /root/.kube/ -p
 
 clusters_config="${clusters_config}"
 for cluster in $clusters_config; do
-  echo "$cluster"
+  cluster_name=$(echo "$cluster" | cut -d'=' -f1 )
+  cluster_config_url=$(echo "$cluster" | cut -d'=' -f2 )
+  echo "$cluster_name   $cluster_config_url "
+  aws s3 cp $cluster_config_url $cluster_name
+  cat $cluster_name | sed -e 's/kubernetes/'$cluster_name'/g' >/var/work/configs/$cluster_name
 done
+export KUBECONFIG=/var/work/configs:$(find . -type f | tr '\n' ':')
+kubectl config view --flatten > /root/.kube/config
+
+export KUBECONFIG=/root/.kube/config
+kubectl config get-contexts
