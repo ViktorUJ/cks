@@ -1,7 +1,7 @@
 data "template_file" "master" {
   template = file(var.work_pc.user_data_template)
   vars     = {
-     clusters_config = var.work_pc.clusters_config
+     clusters_config = tolist(var.work_pc.clusters_config)
   }
 }
 
