@@ -11,3 +11,6 @@ output "worker_pc" {
   value = "   tail -f /var/log/cloud-init-output.log    "
 }
 
+output "worker_reload_bashrc" {
+  value = "  source ~/.bashrc   "
+}
