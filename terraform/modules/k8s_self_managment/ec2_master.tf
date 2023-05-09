@@ -11,6 +11,8 @@ data "template_file" "master" {
     runtime_script   = file(var.k8s_master.runtime_script)
     task_script_url  = var.k8s_master.task_script_url
     calico_url       = var.k8s_master.calico_url
+    ssh_private_key  = var.k8s_master.ssh.private_key
+    ssh_pub_key      = var.k8s_master.ssh.pub_key
   }
 }
 

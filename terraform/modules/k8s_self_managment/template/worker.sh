@@ -66,3 +66,7 @@ chmod +x worker_join
 curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
+
+echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
+echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
+chmod 400 -R /home/ubuntu/.ssh

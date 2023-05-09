@@ -21,6 +21,11 @@ dependency "vpc" {
   config_path = "../vpc"
 }
 
+dependency "ssh-keys" {
+  config_path = "../ssh-keys"
+}
+
+
 inputs = {
   region        = local.vars.locals.region
   aws           = local.vars.locals.aws
@@ -49,6 +54,10 @@ inputs = {
     root_volume        = {
       type = "gp3"
       size = "12"
+    }
+    ssh = {
+      private_key = dependency.ssh-keys.outputs.private_key
+      pub_key     = dependency.ssh-keys.outputs.pub_key
     }
   }
   k8s_worker = {
