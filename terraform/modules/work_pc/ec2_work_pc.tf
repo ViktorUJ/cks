@@ -1,7 +1,8 @@
 data "template_file" "master" {
   template = file(var.work_pc.user_data_template)
   vars     = {
-     clusters_config = tolist(var.work_pc.clusters_config)
+    clusters_config = join(",", [for key, value in var.work_pc.clusters_config : "${key}=${value}"])
+#     clusters_config = tolist(var.work_pc.clusters_config)
   }
 }
 
