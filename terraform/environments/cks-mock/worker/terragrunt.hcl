@@ -34,13 +34,13 @@ dependency "cluster2" {
   config_path = "../k8s-2"
 }
 
-dependency "cluster3" {
-  config_path = "../k8s-3"
-}
-dependency "cluster4" {
-  config_path = "../k8s-4"
-}
-
+#dependency "cluster3" {
+#  config_path = "../k8s-3"
+#}
+#dependency "cluster4" {
+#  config_path = "../k8s-4"
+#}
+#
 
 inputs = {
   region        = local.vars.locals.region
@@ -57,8 +57,8 @@ inputs = {
     clusters_config = {
       cluster1 = dependency.cluster1.outputs.k8s_config
       cluster2 = dependency.cluster2.outputs.k8s_config
-      cluster3 = dependency.cluster3.outputs.k8s_config
-      cluster4 = dependency.cluster4.outputs.k8s_config
+#      cluster3 = dependency.cluster3.outputs.k8s_config
+#      cluster4 = dependency.cluster4.outputs.k8s_config
     }
     instance_type      = "t3.small"
     ami_id             = "ami-06410fb0e71718398"
