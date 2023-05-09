@@ -7,6 +7,7 @@ data "template_file" "master" {
 }
 
 resource "aws_spot_instance_request" "master" {
+  iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
   wait_for_fulfillment        = true
   ami                         = var.work_pc.ami_id
