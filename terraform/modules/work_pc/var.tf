@@ -17,7 +17,6 @@ variable "work_pc" {
     cidrs              = list(string)
     subnet_number      = string
     user_data_template = string
-    utils_enable       = string
     root_volume        = object({
       type = string
       size = string
