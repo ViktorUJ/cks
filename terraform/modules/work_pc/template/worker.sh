@@ -14,9 +14,7 @@ date
 
 }
 #-------------------
-echo 'worker'> /etc/hostname
-echo '127.0.0.1 worker' >>/etc/hosts
-echo '::1 worker' >>/etc/hosts
+hostnamectl  set-hostname worker
 
 configs_dir="/var/work/configs"
 default_configs_dir="/root/.kube"
