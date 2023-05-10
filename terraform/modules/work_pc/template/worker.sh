@@ -80,12 +80,15 @@ chmod 777 -R  /home/ubuntu/.kube/
 
 echo "****  all cluster is done . You can start "
 echo "**** time for exam ${exam_time_minutes} minutes "
+echo "****  please  reload   bash config"
+echo "   source ~/.bashrc       "
 target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
 cat > /usr/bin/exam_check.sh <<EOF
 #!/bin/bash
 if [[   "\$(date +%s)" -gt "$target_time_stamp"  ]] ; then
   wall  "*** time is over  . disable config , run test "
-  mv /home/ubuntu/.kube/config  mv /home/ubuntu/.kube/_config
+  mv /home/ubuntu/.kube/config   /home/ubuntu/.kube/_config
+  rm /usr/bin/exam_check.sh
 fi
 EOF
 
