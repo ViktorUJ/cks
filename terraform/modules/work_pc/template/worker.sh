@@ -84,7 +84,7 @@ target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
 cat > /usr/bin/exam_check.sh <<EOF
 #!/bin/bash
 if [[   "\$(date +%s)" -gt "$target_time_stamp"  ]] ; then
-  echo "disable config , run test "
+  wall  "*** time is over  . disable config , run test "
   mv /home/ubuntu/.kube/config  mv /home/ubuntu/.kube/_config
 fi
 EOF
