@@ -77,3 +77,22 @@ mkdir /home/ubuntu/.kube  -p
 cp /root/.kube/config /home/ubuntu/.kube/config
 chown ubuntu:ubuntu /home/ubuntu/.kube/config
 chmod 777 -R  /home/ubuntu/.kube/
+
+echo "****  all cluster is done . You can start "
+echo "**** time for exam ${exam_time_minutes} minutes "
+target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
+cat > /usr/bin/exam_check.sh <<EOF
+#!/bin/bash
+if [[   "\$(date +%s)" -gt "$target_time_stamp"  ]] ; then
+  echo "disable config , run test "
+  mv /home/ubuntu/.kube/config  mv /home/ubuntu/.kube/_config
+fi
+EOF
+
+chmod +x /usr/bin/exam_check.sh
+
+#Create Cron Job
+cat << EOF | crontab -
+* * * * * /usr/bin/exam_check.sh >> /var/log/exam_check.log
+
+EOF

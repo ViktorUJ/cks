@@ -5,6 +5,7 @@ data "template_file" "master" {
     kubectl_version= var.work_pc.util.kubectl_version
     ssh_private_key=var.work_pc.ssh.private_key
     ssh_pub_key=var.work_pc.ssh.pub_key
+    exam_time_minutes=var.work_pc.exam_time_minutes
   }
 }
 

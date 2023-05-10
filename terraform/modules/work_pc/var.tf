@@ -21,7 +21,8 @@ variable "work_pc" {
       private_key = string
       pub_key     = string
     })
-    util = object({
+    exam_time_minutes = string
+    util              = object({
       kubectl_version = string
     })
     root_volume = object({
