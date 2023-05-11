@@ -87,7 +87,9 @@ chmod 777 -R  /home/ubuntu/.kube/
 echo "****  all cluster is done . You can start "
 echo "**** time for exam ${exam_time_minutes} minutes "
 echo "****  please  reload   bash config"
+echo " "
 echo "   source ~/.bashrc       "
+echo " "
 target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
 cat > /usr/bin/exam_check.sh <<EOF
 #!/bin/bash
