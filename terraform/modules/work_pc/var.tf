@@ -21,6 +21,7 @@ variable "work_pc" {
       private_key = string
       pub_key     = string
     })
+    test_url=string
     exam_time_minutes = string
     util              = object({
       kubectl_version = string
