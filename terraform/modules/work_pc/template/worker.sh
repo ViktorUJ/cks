@@ -44,6 +44,12 @@ aws --version
 echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
 echo 'complete -C "/usr/local/bin/aws_completer" aws' >>/home/ubuntu/.bashrc
 
+
+echo "*** add test engine "
+git clone https://github.com/sstephenson/bats.git
+cd bats
+./install.sh /usr/local
+
 mkdir $configs_dir -p
 mkdir $default_configs_dir -p
 
