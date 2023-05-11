@@ -1,18 +1,12 @@
 data "template_file" "master" {
-  template = file(var.k8s_master.user_data_template)
+  template = file(var.work_pc.user_data_template)
   vars     = {
-    worker_join      = local.worker_join
-    k8s_config       = local.k8s_config
-    external_ip      = aws_eip.master.public_ip
-    k8_version       = var.k8s_master.k8_version
-    runtime          = var.k8s_master.runtime
-    utils_enable     = var.k8s_master.utils_enable
-    pod_network_cidr = var.k8s_master.pod_network_cidr
-    runtime_script   = file(var.k8s_master.runtime_script)
-    task_script_url  = var.k8s_master.task_script_url
-    calico_url       = var.k8s_master.calico_url
-    ssh_private_key  = var.k8s_master.ssh.private_key
-    ssh_pub_key      = var.k8s_master.ssh.pub_key
+    clusters_config   = join(" ", [for key, value in var.work_pc.clusters_config : "${key}=${value}"])
+    kubectl_version   = var.work_pc.util.kubectl_version
+    ssh_private_key   = var.work_pc.ssh.private_key
+    ssh_pub_key       = var.work_pc.ssh.pub_key
+    exam_time_minutes = var.work_pc.exam_time_minutes
+    test_url          = var.work_pc.test_url
   }
 }
 
@@ -20,10 +14,10 @@ resource "aws_spot_instance_request" "master" {
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
   wait_for_fulfillment        = true
-  ami                         = var.k8s_master.ami_id
-  instance_type               = var.k8s_master.instance_type
-  subnet_id                   = local.subnets[var.k8s_master.subnet_number]
-  key_name                    = var.k8s_master.key_name
+  ami                         = var.work_pc.ami_id
+  instance_type               = var.work_pc.instance_type
+  subnet_id                   = local.subnets[var.work_pc.subnet_number]
+  key_name                    = var.work_pc.key_name
   security_groups             = [aws_security_group.servers.id]
   lifecycle {
     ignore_changes = [
@@ -37,8 +31,8 @@ resource "aws_spot_instance_request" "master" {
   user_data = data.template_file.master.rendered
   tags      = local.tags_all
   root_block_device {
-    volume_size           = var.k8s_master.root_volume.size
-    volume_type           = var.k8s_master.root_volume.type
+    volume_size           = var.work_pc.root_volume.size
+    volume_type           = var.work_pc.root_volume.type
     delete_on_termination = true
     tags                  = local.tags_all
     encrypted             = true

@@ -10,6 +10,8 @@ data "template_file" "worker" {
     task_script_url = each.value.task_script_url
     node_name       = each.key
     node_labels     = each.value.node_labels
+    ssh_private_key = each.value.ssh.private_key
+    ssh_pub_key     = each.value.ssh.pub_key
   }
 }
 

@@ -24,7 +24,11 @@ variable "k8s_master" {
     pod_network_cidr   = string
     calico_url         = string
     task_script_url    = string # url for run additional script
-    root_volume        = object({
+    ssh                = object({
+      private_key = string
+      pub_key     = string
+    })
+    root_volume = object({
       type = string
       size = string
     })
@@ -44,7 +48,11 @@ variable "k8s_worker" {
     runtime_script     = string
     task_script_url    = string # url for run additional script
     node_labels        = string
-    root_volume        = object({
+    ssh                = object({
+      private_key = string
+      pub_key     = string
+    })
+    root_volume = object({
       type = string
       size = string
     })
