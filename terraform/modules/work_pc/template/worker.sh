@@ -50,6 +50,19 @@ git clone https://github.com/sstephenson/bats.git
 cd bats
 ./install.sh /usr/local
 
+echo "*** download tests "
+mkdir /var/work/tests -p
+curl "${test_url}"  -o "tests.bats" -s
+chown ubuntu:ubuntu tests.bats
+mv tests.bats  /var/work/tests/
+
+#check_result
+cat > /usr/bin/check_result <<EOF
+bats /var/work/tests/tests.bats
+EOF
+chmod +x /usr/bin/check_result
+
+
 mkdir $configs_dir -p
 mkdir $default_configs_dir -p
 
@@ -91,7 +104,8 @@ echo "****  please  reload   bash config"
 echo " "
 echo "   source ~/.bashrc       "
 echo " "
-echo "**** for checking time   run   <  time_left  >    "
+echo "**** for checking time run     <  time_left  >    "
+echo "**** for checking result run   <  check_result  >    "
 echo "=============================================="
 target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
 cat > /usr/bin/exam_check.sh <<EOF
@@ -122,3 +136,4 @@ if [[   "\$time_left" -gt "0"  ]] ; then
 fi
 EOF
 chmod +x /usr/bin/time_left
+
