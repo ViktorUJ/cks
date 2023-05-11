@@ -59,12 +59,14 @@ mv tests.bats  /var/work/tests/
 chmod  -R 777 /var/work/tests/
 
 #check_result
+echo "**** add check_result"
 cat > /usr/bin/check_result <<EOF
+#!/bin/bash
 bats /var/work/tests/tests.bats
-sum_all=0; while read num; do ((sum_all += num)); done < /var/work/tests/result/all; echo $sum_all
-sum_ok=0; while read num; do ((sum_ok += num)); done < /var/work/tests/result/ok; echo $sum_ok
-result=$(echo "scale=2 ; $sum_ok/$sum_all*100" | bc  )
-echo " result = $result %"
+sum_all=0; while read num; do ((sum_all += num)); done < /var/work/tests/result/all
+sum_ok=0; while read num; do ((sum_ok += num)); done < /var/work/tests/result/ok
+result=\$(echo "scale=2 ; \$sum_ok/\$sum_all*100" | bc  )
+echo " result = \$result %"
 EOF
 chmod +x /usr/bin/check_result
 
@@ -113,6 +115,7 @@ echo " "
 echo "**** for checking time run     <  time_left  >    "
 echo "**** for checking result run   <  check_result  >    "
 echo "=============================================="
+
 target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
 cat > /usr/bin/exam_check.sh <<EOF
 #!/bin/bash
