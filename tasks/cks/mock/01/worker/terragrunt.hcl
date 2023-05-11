@@ -60,6 +60,7 @@ inputs = {
       kubectl_version = "v1.26.0"
     }
     exam_time_minutes="120"
+    test_ur=""
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
