@@ -19,6 +19,7 @@ hostnamectl  set-hostname worker
 configs_dir="/var/work/configs"
 default_configs_dir="/root/.kube"
 
+echo "*** apt update  & install apps "
 apt-get update -qq
 apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim
 
