@@ -59,9 +59,9 @@ inputs = {
     util               = {
       kubectl_version = "v1.26.0"
     }
-    exam_time_minutes="120"
-    test_ur="https://raw.githubusercontent.com/ViktorUJ/cks/mock-exam/tasks/cks/mock/01/worker/files/tests.bats"
-    ssh = {
+    exam_time_minutes = "120"
+    test_ur           = "https://raw.githubusercontent.com/ViktorUJ/cks/mock-exam/tasks/cks/mock/01/worker/files/tests.bats"
+    ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
