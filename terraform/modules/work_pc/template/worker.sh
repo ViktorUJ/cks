@@ -52,14 +52,19 @@ cd bats
 ./install.sh /usr/local
 
 echo "*** download tests "
-mkdir /var/work/tests -p
+mkdir /var/work/tests/result -p
 curl "${test_url}"  -o "tests.bats" -s
 chown ubuntu:ubuntu tests.bats
 mv tests.bats  /var/work/tests/
+chmod  -R 777 /var/work/tests/
 
 #check_result
 cat > /usr/bin/check_result <<EOF
 bats /var/work/tests/tests.bats
+sum_all=0; while read num; do ((sum_all += num)); done < /var/work/tests/result/all; echo $sum_all
+sum_ok=0; while read num; do ((sum_ok += num)); done < /var/work/tests/result/ok; echo $sum_ok
+result=$(echo "scale=2 ; $sum_ok/$sum_all*100" | bc  )
+echo " result = $result %"
 EOF
 chmod +x /usr/bin/check_result
 
