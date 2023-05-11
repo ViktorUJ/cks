@@ -6,7 +6,7 @@ data "template_file" "master" {
     ssh_private_key   = var.work_pc.ssh.private_key
     ssh_pub_key       = var.work_pc.ssh.pub_key
     exam_time_minutes = var.work_pc.exam_time_minutes
-    test_url          = var.work_pc.test_url
+#    test_url          = var.work_pc.test_url
   }
 }
 
