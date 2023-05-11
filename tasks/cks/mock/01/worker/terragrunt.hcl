@@ -7,7 +7,6 @@ locals {
 }
 
 terraform {
-  #source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/k8s_self_managment/?ref=task_01"
   source = "../../..//modules/work_pc/"
 
   extra_arguments "retry_lock" {
@@ -34,14 +33,6 @@ dependency "cluster2" {
   config_path = "../k8s-2"
 }
 
-#dependency "cluster3" {
-#  config_path = "../k8s-3"
-#}
-#dependency "cluster4" {
-#  config_path = "../k8s-4"
-#}
-#
-
 inputs = {
   region        = local.vars.locals.region
   aws           = local.vars.locals.aws
@@ -57,10 +48,8 @@ inputs = {
     clusters_config = {
       cluster1 = dependency.cluster1.outputs.k8s_config
       cluster2 = dependency.cluster2.outputs.k8s_config
-#      cluster3 = dependency.cluster3.outputs.k8s_config
-#      cluster4 = dependency.cluster4.outputs.k8s_config
     }
-    instance_type      = "t3.medium"
+    instance_type      = "t3.small"
     ami_id             = "ami-06410fb0e71718398"
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
     key_name           = "localize"
