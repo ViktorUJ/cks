@@ -118,3 +118,4 @@ if [[   "\$time_left" -gt "0"  ]] ; then
    echo " time is over "
 fi
 EOF
+chmod +x /usr/bin/time_left
