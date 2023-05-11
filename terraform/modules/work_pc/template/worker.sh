@@ -107,3 +107,14 @@ cat << EOF | crontab -
 * * * * * /usr/bin/exam_check.sh >> /var/log/exam_check.log
 
 EOF
+
+#time left
+cat > /usr/bin/time_left <<EOF
+#!/bin/bash
+time_left=\$(echo "$target_time_stamp-\$(date +%s))/60" | bc)
+if [[   "\$time_left" -gt "0"  ]] ; then
+   echo "time_left=\$time_left minutes"
+ else
+   echo " time is over "
+fi
+EOF
