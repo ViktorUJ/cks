@@ -1,64 +1,11 @@
+---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: team-purple
+  name: team-xxx
   labels:
-    name: team-purple
+    name: team-xxx
 ---
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  creationTimestamp: null
-  labels:
-    app: deployment1
-  name: deployment1
-  namespace: team-purple
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: deployment1
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: deployment1
-    spec:
-      containers:
-      - image: viktoruj/cks-lab
-        name: busybox
-        command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
----
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  creationTimestamp: null
-  labels:
-    app: deployment2
-  name: deployment2
-  namespace: team-purple
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: deployment2
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: deployment2
-    spec:
-      containers:
-      - image: viktoruj/cks-lab
-        name: busybox
-        command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
-
----
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -66,7 +13,7 @@ metadata:
   labels:
     app: deployment3
   name: deployment3
-  namespace: team-purple
+  namespace: team-xxx
 spec:
   replicas: 1
   selector:
@@ -80,14 +27,77 @@ spec:
         app: deployment3
     spec:
       containers:
-      - image: viktoruj/cks-lab
-        name: busybox
-        command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
+      - image: mysql:8.0.33-debian
+        name: mysql
 ---
-apiVersion: v1
-kind: Namespace
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: team-xxx
+  creationTimestamp: null
   labels:
-    name: team-xxx
+    app: deployment2
+  name: deployment2
+  namespace: team-xxx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment2
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment2
+    spec:
+      containers:
+      - image: mariadb:10.8-focal
+        name: mariadb
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment1
+  name: deployment1
+  namespace: team-xxx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment1
+    spec:
+      containers:
+      - image: nginx:1.19-alpine-perl
+        name: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment4
+  name: deployment4
+  namespace: team-xxx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment4
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment4
+    spec:
+      containers:
+      - image: nginx:1.23-bullseye-perl
+        name: nginx
