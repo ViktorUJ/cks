@@ -53,6 +53,7 @@ cd bats
 
 echo "*** download tests "
 mkdir /var/work/tests/result -p
+mkdir /var/work/tests/artifacts -p
 curl "${test_url}"  -o "tests.bats" -s
 chown ubuntu:ubuntu tests.bats
 mv tests.bats  /var/work/tests/
