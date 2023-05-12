@@ -29,6 +29,9 @@ spec:
       containers:
       - image: mysql:8.0.33-debian
         name: mysql
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            value: "my-secret-pw"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -53,6 +56,13 @@ spec:
       containers:
       - image: mariadb:10.8-focal
         name: mariadb
+        env:
+          - name: MARIADB_USER
+            value: "example-user"
+          - name: MARIADB_PASSWORD
+            value: "my_cool_secret"
+          - name: MARIADB_ROOT_PASSWORD
+            value: "my-secret-pw"
 ---
 apiVersion: apps/v1
 kind: Deployment

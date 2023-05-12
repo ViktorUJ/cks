@@ -92,4 +92,46 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-# all =4
+# all =4 , task =4
+
+# task 2
+
+@test "2.1  Image Vulnerability Scanning. deployment1  " {
+  echo '.5'>>/var/work/tests/result/all
+  result=$(kubectl get  deployment deployment1   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "2.2  Image Vulnerability Scanning. deployment2  " {
+  echo '.5'>>/var/work/tests/result/all
+  result=$(kubectl get  deployment deployment2   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+  if [[ "$result" == "1" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "1" ]
+}
+
+@test "2.3  Image Vulnerability Scanning. deployment3  " {
+  echo '.5'>>/var/work/tests/result/all
+  result=$(kubectl get  deployment deployment3   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "2.4  Image Vulnerability Scanning. deployment4  " {
+  echo '.5'>>/var/work/tests/result/all
+  result=$(kubectl get  deployment deployment4   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+#  all =6 , task =2
+
+
