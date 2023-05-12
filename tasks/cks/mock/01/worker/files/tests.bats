@@ -22,7 +22,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '.5'>>/var/work/tests/result/all
   result=$(kubectl get no -l node_name=node_2 --context cluster1-admin@cluster1  -o jsonpath='{.items..metadata.labels.RuntimeClass}')
   if [[ "$result" == "runsc" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '.5'>>/var/work/tests/result/ok
   fi
   [ "$result" == "runsc" ]
 }
@@ -31,7 +31,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '.3'>>/var/work/tests/result/all
   result=$(kubectl get  deployment deployment1   -n team-purple  --context cluster1-admin@cluster1 -o jsonpath={.spec.template.spec.nodeSelector.RuntimeClass})
   if [[ "$result" == "runsc" ]]; then
-   echo '0.3'>>/var/work/tests/result/ok
+   echo '.3'>>/var/work/tests/result/ok
   fi
   [ "$result" == "runsc" ]
 }
@@ -41,7 +41,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '.3'>>/var/work/tests/result/all
   result=$(kubectl get  deployment deployment2   -n team-purple  --context cluster1-admin@cluster1 -o jsonpath={.spec.template.spec.nodeSelector.RuntimeClass})
   if [[ "$result" == "runsc" ]]; then
-   echo '0.3'>>/var/work/tests/result/ok
+   echo '.3'>>/var/work/tests/result/ok
   fi
   [ "$result" == "runsc" ]
 }
@@ -50,7 +50,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '.3'>>/var/work/tests/result/all
   result=$(kubectl get  deployment deployment3   -n team-purple  --context cluster1-admin@cluster1 -o jsonpath={.spec.template.spec.nodeSelector.RuntimeClass})
   if [[ "$result" == "runsc" ]]; then
-   echo '0.3'>>/var/work/tests/result/ok
+   echo '.3'>>/var/work/tests/result/ok
   fi
   [ "$result" == "runsc" ]
 }
@@ -58,8 +58,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "1.6  Container Runtime Sandbox gVisor. RuntimeClass deployment1  " {
   echo '.3'>>/var/work/tests/result/all
   result=$(kubectl get  deployment deployment1   -n team-purple  --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.runtimeClassName}')
-  if [[ "$result" == "runsc" ]]; then
-   echo '0.3'>>/var/work/tests/result/ok
+  if [[ "$result" == "gvisor" ]]; then
+   echo '.3'>>/var/work/tests/result/ok
   fi
   [ "$result" == "gvisor" ]
 }
@@ -67,8 +67,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "1.7  Container Runtime Sandbox gVisor. RuntimeClass deployment2  " {
   echo '.3'>>/var/work/tests/result/all
   result=$(kubectl get  deployment deployment2   -n team-purple  --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.runtimeClassName}')
-  if [[ "$result" == "runsc" ]]; then
-   echo '0.3'>>/var/work/tests/result/ok
+  if [[ "$result" == "gvisor" ]]; then
+   echo '.3'>>/var/work/tests/result/ok
   fi
   [ "$result" == "gvisor" ]
 }
@@ -76,8 +76,20 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "1.8  Container Runtime Sandbox gVisor. RuntimeClass deployment3  " {
   echo '.3'>>/var/work/tests/result/all
   result=$(kubectl get  deployment deployment3   -n team-purple  --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.runtimeClassName}')
-  if [[ "$result" == "runsc" ]]; then
-   echo '0.3'>>/var/work/tests/result/ok
+  if [[ "$result" == "gvisor" ]]; then
+   echo '.3'>>/var/work/tests/result/ok
   fi
   [ "$result" == "gvisor" ]
 }
+
+@test "1.9  Container Runtime Sandbox gVisor. logs dmesg  " {
+  echo '.7'>>/var/work/tests/result/all
+  cat /var/work/tests/artifacts/1/gvisor-dmesg | grep 'Starting gVisor'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.7'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+# all =4
