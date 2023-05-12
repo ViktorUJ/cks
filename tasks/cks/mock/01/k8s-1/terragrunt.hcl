@@ -32,6 +32,7 @@ inputs = {
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
   s3_k8s_config = "viktoruj-terraform-state-backet"
+  cluster_name="k8s1"
 
   k8s_master = {
     k8_version         = "1.26.0"
