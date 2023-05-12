@@ -20,6 +20,10 @@ dependency "vpc" {
   config_path = "../vpc"
 }
 
+dependency "ssh-keys" {
+  config_path = "../ssh-keys"
+}
+
 inputs = {
   region        = local.vars.locals.region
   aws           = local.vars.locals.aws
