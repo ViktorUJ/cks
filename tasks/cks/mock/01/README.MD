@@ -8,3 +8,5 @@ Task weight: 4%
 - update pods in Namespace team-purple to use  RuntimeClass  gvisor .
 - Make sure the Pod runs on node with gvisor  
 - Write the dmesg output of the successfully started one of Pod into /var/work/tests/artifacts/1/gvisor-dmesg .
+
+2. 
