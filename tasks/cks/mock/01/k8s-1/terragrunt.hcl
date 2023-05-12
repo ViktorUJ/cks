@@ -44,7 +44,7 @@ inputs = {
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "true"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/10/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     root_volume        = {
       type = "gp3"
@@ -63,7 +63,7 @@ inputs = {
      user_data_template = "template/worker.sh"
      runtime            = "containerd_gvizor"
      runtime_script     = "template/runtime.sh"
-     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/masker/tasks/cks/10/scripts/worker.sh"
+     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
      node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
 
      cidrs       = ["0.0.0.0/0"]
