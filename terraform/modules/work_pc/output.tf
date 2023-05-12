@@ -14,3 +14,16 @@ output "worker_pc" {
 output "worker_reload_bashrc" {
   value = "  source ~/.bashrc   "
 }
+
+output "checking_time" {
+  value = "  time_left   "
+}
+
+output "checking_result" {
+  value = "  check_result   "
+}
+
+output "backup_kube_config" {
+  value = "  /home/ubuntu/.kube/_config   "
+}
+

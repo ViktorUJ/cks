@@ -64,8 +64,8 @@ echo "**** add check_result"
 cat > /usr/bin/check_result <<EOF
 #!/bin/bash
 bats /var/work/tests/tests.bats
-sum_all=0; while read num; do ((sum_all += num)); done < /var/work/tests/result/all
-sum_ok=0; while read num; do ((sum_ok += num)); done < /var/work/tests/result/ok
+sum_all=0; for i in $(cat /var/work/tests/result/all) ; do sum_all=$(echo "\${sum_all}+\${i}"| bc ) ; done
+sum_ok=0; for i in $(cat /var/work/tests/result/ok) ; do sum_ok=$(echo "\${sum_ok}+\${i}"| bc ) ; done
 result=\$(echo "scale=2 ; \$sum_ok/\$sum_all*100" | bc  )
 echo " result = \$result %"
 EOF
@@ -103,7 +103,9 @@ kubectl config get-contexts
 
 mkdir /home/ubuntu/.kube  -p
 cp /root/.kube/config /home/ubuntu/.kube/config
+cp /root/.kube/config /home/ubuntu/.kube/_config
 chown ubuntu:ubuntu /home/ubuntu/.kube/config
+chown ubuntu:ubuntu /home/ubuntu/.kube/_config
 chmod 777 -R  /home/ubuntu/.kube/
 
 echo "==============================================="
@@ -115,6 +117,7 @@ echo "   source ~/.bashrc       "
 echo " "
 echo "**** for checking time run     <  time_left  >    "
 echo "**** for checking result run   <  check_result  >    "
+echo "****  for connect to node use 'ssh  {kubernetes_nodename} "
 echo "=============================================="
 
 target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
@@ -122,7 +125,7 @@ cat > /usr/bin/exam_check.sh <<EOF
 #!/bin/bash
 if [[   "\$(date +%s)" -gt "$target_time_stamp"  ]] ; then
   wall  "*** time is over  . disable config , run test "
-  mv /home/ubuntu/.kube/config   /home/ubuntu/.kube/_config
+  rm /home/ubuntu/.kube/config
   rm /usr/bin/exam_check.sh
 fi
 EOF
