@@ -14,3 +14,11 @@ Task weight: 2%
 cluster : cluster1 (context  cluster1-admin@cluster1 )
 - trivy is installed on your worker node
 - check image in pods  in team-xxx namespace  , find image  without CRITICAL vulnerability . Other deployment scale to 0 replica.
+
+# 3. Enable audit log 
+Task weight: 7%
+cluster : cluster2 (context  cluster2-admin@cluster2 )
+- logs  /var/logs/kubernetes-api.log
+- policy /etc/kubernetes/policy/log-policy.yaml
+  1. From Secret resources, level Metadata, namespace prod 
+  2. From "system:nodes" userGroups, level RequestResponse
