@@ -7,7 +7,6 @@ locals {
 }
 
 terraform {
-  #source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/k8s_self_managment/?ref=task_01"
   source = "../../..//modules/k8s_self_managment/"
 
   extra_arguments "retry_lock" {
@@ -46,6 +45,10 @@ inputs = {
     utils_enable       = "true"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
+    ssh = {
+      private_key = dependency.ssh-keys.outputs.private_key
+      pub_key     = dependency.ssh-keys.outputs.pub_key
+    }
     root_volume        = {
       type = "gp3"
       size = "20"
@@ -65,15 +68,16 @@ inputs = {
      runtime_script     = "template/runtime.sh"
      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
      node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
-
+     ssh = {
+      private_key = dependency.ssh-keys.outputs.private_key
+      pub_key     = dependency.ssh-keys.outputs.pub_key
+     }
      cidrs       = ["0.0.0.0/0"]
      root_volume = {
        type = "gp3"
        size = "20"
      }
    }
-
-
   }
 }
 
