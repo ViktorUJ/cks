@@ -36,3 +36,8 @@ CIS Benchmark  is installed  on nodes
 
 - fix on worker node :
   4.2.6 Ensure that the --protect-kernel-defaults argument is set to true (Automated)
+
+# 5. Secrets
+Task weight: 2%
+cluster : cluster1 (context  cluster1-admin@cluster1 )
+
