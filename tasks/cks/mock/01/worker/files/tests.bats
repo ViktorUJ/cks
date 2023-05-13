@@ -135,3 +135,13 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 #  all =6 , task =2
 
 
+# task 3
+@test "3.1 Enable audit log. cluster are available " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl get  ns   --context cluster2-admin@cluster2
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}

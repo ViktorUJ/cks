@@ -47,16 +47,17 @@ resource "aws_spot_instance_request" "worker" {
 }
 
 
-resource "aws_ec2_tag" "worker_ec2" {
-  for_each    = var.k8s_worker
-  resource_id = aws_spot_instance_request.worker["${each.key}"].spot_instance_id
-  key         = "Name"
-  value       = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}"
-}
-
-resource "aws_ec2_tag" "worker_ebs" {
-  for_each    = var.k8s_worker
-  resource_id = aws_spot_instance_request.worker["${each.key}"].root_block_device[0].volume_id
-  key         = "Name"
-  value       = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}"
-}
+#resource "aws_ec2_tag" "worker_ec2" {
+#  for_each    = var.k8s_worker
+#  resource_id = aws_spot_instance_request.worker["${each.key}"].spot_instance_id
+#  key         = "Name"
+#  value       = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}"
+#}
+#
+#resource "aws_ec2_tag" "worker_ebs" {
+#  for_each    = var.k8s_worker
+#  resource_id = aws_spot_instance_request.worker["${each.key}"].root_block_device[0].volume_id
+#  key         = "Name"
+#  value       = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}"
+#}
+#
