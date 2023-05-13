@@ -167,3 +167,50 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+# all = 6  , task =7
+
+#task 4
+
+@test "4.1 CIS Benchmark. check 1.2.18 " {
+  echo '.75'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.18 | grep PASS"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.75'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "4.2 CIS Benchmark. check 1.3.2 " {
+  echo '.75'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.3.2 | grep PASS"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.75'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "4.3 CIS Benchmark. check 1.4.1 " {
+  echo '.75'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.4.1 | grep PASS"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.75'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "4.4 CIS Benchmark. check 4.2.6 " {
+  echo '.75'>>/var/work/tests/result/all
+  worker_node=$(kubectl get no -l work_type=worker --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $worker_node "sudo kube-bench | grep 4.2.6 | grep PASS"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.75'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}

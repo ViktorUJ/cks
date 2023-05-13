@@ -70,7 +70,7 @@ inputs = {
       runtime            = "containerd"
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-3/scripts/worker.sh"
-      node_labels        = "work_type=falco,aws_scheduler=true"
+      node_labels        = "work_type=worker,aws_scheduler=true"
       cidrs              = ["0.0.0.0/0"]
       root_volume        = {
         type = "gp3"
