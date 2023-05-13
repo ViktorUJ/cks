@@ -145,3 +145,25 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "3.2 Enable audit log. check secrets in log " {
+  echo '3'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster2-admin@cluster2  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo chmod +r /var/logs/kubernetes-api.log ;cat /var/logs/kubernetes-api.log | grep 'secrets' | grep 'Metadata'| grep 'prod' "
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '3'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "3.3 Enable audit log. check configmap in log " {
+  echo '3'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster2-admin@cluster2  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo chmod +r /var/logs/kubernetes-api.log ;cat /var/logs/kubernetes-api.log | grep 'configmap' | grep 'RequestResponse'| grep 'billing'"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '3'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
