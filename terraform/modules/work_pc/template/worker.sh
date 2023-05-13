@@ -67,7 +67,7 @@ bats /var/work/tests/tests.bats
 sum_all=0; for i in \$(cat /var/work/tests/result/all) ; do sum_all=\$(echo "\$sum_all+\$i"| bc ) ; done
 sum_ok=0; for i in \$(cat /var/work/tests/result/ok) ; do sum_ok=\$(echo "\$sum_ok+\$i"| bc ) ; done
 result=\$(echo "scale=2 ; \$sum_ok/\$sum_all*100" | bc  )
-echo " result = \$result %"
+echo " result = \$result %    all_points=\$sum_all"
 time_left
 EOF
 chmod +x /usr/bin/check_result
