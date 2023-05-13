@@ -167,7 +167,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
-# all = 6  , task =7
+# all = 13  , task =7
 
 #task 4
 
@@ -214,3 +214,50 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+# all = 16  , task =3
+
+#task 5
+
+
+@test "5.1  Secrets . /var/work/tests/artifacts/5/user  " {
+  echo '.5'>>/var/work/tests/result/all
+  cat /var/work/tests/artifacts/5/user | grep 'ad-admin'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "5.2  Secrets . /var/work/tests/artifacts/5/password  " {
+  echo '.5'>>/var/work/tests/result/all
+  cat /var/work/tests/artifacts/5/password | grep 'Pa1636worD'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "5.5  Secrets . secret file user in /mnt/secret " {
+  echo '.5'>>/var/work/tests/result/all
+  kubectl exec db-admin  -n team-5 --context cluster1-admin@cluster1 -- sh -c 'cat /mnt/secret/password | grep 'yyyy' '
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "5.6  Secrets . secret file user in /mnt/user " {
+  echo '.5'>>/var/work/tests/result/all
+  kubectl exec db-admin  -n team-5 --context cluster1-admin@cluster1 -- sh -c 'cat /mnt/secret/user | grep 'xxx' '
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+# all = 18  , task =2

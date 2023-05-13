@@ -41,3 +41,9 @@ CIS Benchmark  is installed  on nodes
 Task weight: 2%
 cluster : cluster1 (context  cluster1-admin@cluster1 )
 
+from secret db  in team-5 ns  save :
+  - user  context to /var/work/tests/artifacts/5/user
+  - password  context to /var/work/tests/artifacts/5/password
+  - create new secret db-admin { user=xxx  , password=yyyy }
+  - create pod  db-admin NS=team-5  image = viktoruj/cks-lab , command = sleep 60000 , and mount secret db-admin   to /mnt/secret
+
