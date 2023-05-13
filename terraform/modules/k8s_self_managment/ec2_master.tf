@@ -56,17 +56,16 @@ resource "aws_eip_association" "master" {
   allocation_id = aws_eip.master.id
 }
 
-#resource "aws_ec2_tag" "master_ec2" {
-#  for_each    = local.tags_all_k8_master
-#  resource_id = aws_spot_instance_request.master.spot_instance_id
-#  key         = each.key
-#  value       = each.value
-#}
-#
-#resource "aws_ec2_tag" "master_ebs" {
-#  for_each    = local.tags_all_k8_master
-#  resource_id = aws_spot_instance_request.master.root_block_device[0].volume_id
-#  key         = each.key
-#  value       = each.value
-#}
-#
+resource "aws_ec2_tag" "master_ec2" {
+  for_each    = local.tags_all_k8_master
+  resource_id = aws_spot_instance_request.master.spot_instance_id
+  key         = each.key
+  value       = each.value
+}
+
+resource "aws_ec2_tag" "master_ebs" {
+  for_each    = local.tags_all_k8_master
+  resource_id = aws_spot_instance_request.master.root_block_device[0].volume_id
+  key         = each.key
+  value       = each.value
+}
