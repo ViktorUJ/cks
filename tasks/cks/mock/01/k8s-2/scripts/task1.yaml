@@ -39,7 +39,7 @@ metadata:
   namespace: prod
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: k8api
@@ -55,14 +55,14 @@ rules:
   - list
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   creationTimestamp: null
   name: k8api
   namespace: prod
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: k8api
 subjects:
 - kind: ServiceAccount
