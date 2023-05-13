@@ -19,6 +19,9 @@ resource "aws_spot_instance_request" "master" {
   subnet_id                   = local.subnets[var.work_pc.subnet_number]
   key_name                    = var.work_pc.key_name
   security_groups             = [aws_security_group.servers.id]
+  instance_tags {
+    xxxx        = "aaaa"
+  }
   lifecycle {
     ignore_changes = [
       instance_type,
@@ -50,16 +53,17 @@ resource "aws_eip_association" "master" {
   allocation_id = aws_eip.master.id
 }
 
-resource "aws_ec2_tag" "master_ec2" {
-  for_each    = local.tags_all_k8_master
-  resource_id = aws_spot_instance_request.master.spot_instance_id
-  key         = each.key
-  value       = each.value
-}
-
-resource "aws_ec2_tag" "master_ebs" {
-  for_each    = local.tags_all_k8_master
-  resource_id = aws_spot_instance_request.master.root_block_device[0].volume_id
-  key         = each.key
-  value       = each.value
-}
+#resource "aws_ec2_tag" "master_ec2" {
+#  for_each    = local.tags_all_k8_master
+#  resource_id = aws_spot_instance_request.master.spot_instance_id
+#  key         = each.key
+#  value       = each.value
+#}
+#
+#resource "aws_ec2_tag" "master_ebs" {
+#  for_each    = local.tags_all_k8_master
+#  resource_id = aws_spot_instance_request.master.root_block_device[0].volume_id
+#  key         = each.key
+#  value       = each.value
+#}
+#
