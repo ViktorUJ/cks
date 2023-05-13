@@ -118,7 +118,7 @@ echo "   source ~/.bashrc       "
 echo " "
 echo "**** for checking time run     <  time_left  >    "
 echo "**** for checking result run   <  check_result  >    "
-echo "****  for connect to node use 'ssh  {kubernetes_nodename} "
+echo "****  for connect to node use 'ssh  {kubernetes_nodename} '"
 echo "=============================================="
 
 target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
