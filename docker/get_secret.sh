@@ -14,4 +14,6 @@ TOKEN=$(cat ${SERVICEACCOUNT}/token)
 CACERT=${SERVICEACCOUNT}/ca.crt
 
 # Explore the API with TOKEN
+
 curl  --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/$NS/secrets/$SECRET -ik
+curl  --header "Authorization: Bearer ${TOKEN}" -X GET ${APISERVER}/api/v1/namespaces/$NS_CONFIGMAP/configmaps/$CONFIGMAP -ik

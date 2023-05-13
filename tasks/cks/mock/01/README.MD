@@ -20,5 +20,5 @@ Task weight: 7%
 cluster : cluster2 (context  cluster2-admin@cluster2 )
 - logs  /var/logs/kubernetes-api.log
 - policy /etc/kubernetes/policy/log-policy.yaml
-  1. From Secret resources, level Metadata, namespace prod 
-  2. From "system:nodes" userGroups, level RequestResponse
+  1. From Secret resources, level Metadata, namespace prod.
+  2. From configmap,  level RequestResponse, namespace billing.

@@ -6,6 +6,22 @@ metadata:
     name: prod
 ---
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: billing
+  labels:
+    name: billing
+---
+apiVersion: v1
+data:
+  aaa: bbb
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: bill
+  namespace: billing
+---
+apiVersion: v1
 data:
   secret: MTExMTE=
 kind: Secret
@@ -33,6 +49,7 @@ rules:
   - ""
   resources:
   - secrets
+  - configmaps
   verbs:
   - get
   - list
@@ -84,4 +101,8 @@ spec:
             value: "prod"
           - name: SECRET
             value: "db"
+          - name: NS_CONFIGMAP
+            value: "billing"
+          - name: CONFIGMAP
+            value: "bill"
 
