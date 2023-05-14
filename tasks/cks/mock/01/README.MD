@@ -47,3 +47,17 @@ from secret db  in team-5 ns  save :
   - create new secret db-admin { user=xxx  , password=yyyy }
   - create pod  db-admin NS=team-5  image = viktoruj/cks-lab , command = sleep 60000 , and mount secret db-admin   to /mnt/secret
 
+# 5. set tls version  and  allowed ciphers for etcd , kube-api  , kubelet   
+Task weight: 6%
+cluster : cluster1 (context  cluster4-admin@cluster4 )
+
+  kube-api :
+   - tls  cipher  =  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+   - tls min version 1.3 
+ 
+  etcd :
+   - tls  cipher  =  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+
+  kubelet:
+   - tls  cipher  =  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+   - tls min version 1.3    
