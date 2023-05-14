@@ -122,6 +122,7 @@ echo "****  for connect to node use 'ssh  {kubernetes_nodename} '"
 echo "=============================================="
 
 target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
+start_time_stamp=$(date +%s)
 cat > /usr/bin/exam_check.sh <<EOF
 #!/bin/bash
 if [[   "\$(date +%s)" -gt "$target_time_stamp"  ]] ; then
@@ -148,6 +149,8 @@ if [[   "\$time_left" -gt "0"  ]] ; then
  else
    echo " time is over "
 fi
+env_working_time=\$(echo "(\$(date +%s) - $start_time_stamp)/60" | bc)
+echo "you  spend \$env_working_time"
 EOF
 chmod +x /usr/bin/time_left
 
