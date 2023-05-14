@@ -150,7 +150,7 @@ if [[   "\$time_left" -gt "0"  ]] ; then
    echo " time is over "
 fi
 env_working_time=\$(echo "(\$(date +%s) - $start_time_stamp)/60" | bc)
-echo "you  spend \$env_working_time"
+echo "you  spend \$env_working_time minutes"
 EOF
 chmod +x /usr/bin/time_left
 
