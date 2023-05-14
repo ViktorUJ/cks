@@ -265,7 +265,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "6.1 set tls version  and  allowed ciphers.kubelet tls version " {
   echo '1'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo  ps  aux | grep kubelet  |grep tls-min-version| grep   'VersionTLS13' "
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf |  grep  tls-min-version| grep   'VersionTLS13'"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
@@ -276,7 +276,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "6.2 set tls version  and  allowed ciphers.kubelet cipher" {
   echo '1'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo  ps  aux | grep kubelet | grep 'tls-cipher-suites'| grep 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384' "
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf | grep 'tls-cipher-suites'| grep 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
@@ -287,7 +287,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "6.3 set tls version  and  allowed ciphers.etcd cipher " {
   echo '2'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo  ps  aux | grep etcd | grep 'tls-cipher-suites' | grep 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_2' "
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat   /etc/kubernetes/manifests/etcd.yaml | grep 'cipher-suites' | grep 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '2'>>/var/work/tests/result/ok
@@ -298,7 +298,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "6.4 set tls version  and  allowed ciphers.kube-api cipher " {
   echo '1'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo  ps  aux | grep kube-apiserver | grep 'tls-cipher-suites' | grep 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384' "
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat  /etc/kubernetes/manifests/kube-apiserver.yaml |  grep 'tls-cipher-suites' | grep 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
@@ -309,7 +309,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "6.5 set tls version  and  allowed ciphers.kube-api tls version " {
   echo '1'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo  ps  aux | grep kube-apiserver | grep 'tls-min-version' | grep 'VersionTLS13' "
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat  /etc/kubernetes/manifests/kube-apiserver.yaml |grep 'tls-min-version' | grep 'VersionTLS13'"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
