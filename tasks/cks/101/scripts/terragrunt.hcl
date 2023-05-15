@@ -43,6 +43,7 @@ inputs = {
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
+    eip                = "true"
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_101/tasks/cks/101/scripts/master.sh"
     root_volume        = {

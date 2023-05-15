@@ -42,6 +42,7 @@ inputs = {
     subnet_number      = "0"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
+    eip                = "true"
     cidrs              = ["0.0.0.0/0"]
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/09/scripts/master.sh"
