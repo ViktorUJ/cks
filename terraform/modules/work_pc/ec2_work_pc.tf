@@ -40,15 +40,6 @@ resource "aws_spot_instance_request" "master" {
 
 }
 
-resource "aws_eip" "master" {
-  vpc  = true
-  tags = local.tags_all_k8_master
-}
-
-resource "aws_eip_association" "master" {
-  instance_id   = aws_spot_instance_request.master.spot_instance_id
-  allocation_id = aws_eip.master.id
-}
 
 resource "aws_ec2_tag" "master_ec2" {
   for_each    = local.tags_all_k8_master
