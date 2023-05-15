@@ -2,9 +2,9 @@ output "master_external_ip" {
   value = local.external_ip
 }
 
-#output "master_local_ip" {
-#  value = aws_spot_instance_request.master.private_ip
-#}
+output "master_local_ip" {
+  value = aws_spot_instance_request.master.private_ip
+}
 #output "master_ec2_id" {
 #  value = aws_spot_instance_request.master.spot_instance_id
 #}
