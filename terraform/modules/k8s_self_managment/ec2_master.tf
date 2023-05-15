@@ -55,7 +55,7 @@ resource "aws_eip" "master" {
 resource "aws_eip_association" "master" {
   for_each = toset(var.k8s_master.eip == "true" ? ["enable"] : [])
   instance_id   = aws_spot_instance_request.master.spot_instance_id
-  allocation_id = aws_eip.master.id
+  allocation_id = aws_eip.master["enable"].id
 }
 
 resource "aws_ec2_tag" "master_ec2" {
