@@ -3,7 +3,7 @@ data "template_file" "master" {
   vars     = {
     worker_join      = local.worker_join
     k8s_config       = local.k8s_config
-    external_ip      = aws_eip.master.public_ip
+    external_ip      = local.external_ip
     k8_version       = var.k8s_master.k8_version
     runtime          = var.k8s_master.runtime
     utils_enable     = var.k8s_master.utils_enable
@@ -47,11 +47,13 @@ resource "aws_spot_instance_request" "master" {
 }
 
 resource "aws_eip" "master" {
+  for_each = toset(var.k8s_master.eip == "true" ? ["enable"] : [])
   vpc  = true
   tags = local.tags_all_k8_master
 }
 
 resource "aws_eip_association" "master" {
+  for_each = toset(var.k8s_master.eip == "true" ? ["enable"] : [])
   instance_id   = aws_spot_instance_request.master.spot_instance_id
   allocation_id = aws_eip.master.id
 }

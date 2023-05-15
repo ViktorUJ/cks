@@ -32,7 +32,7 @@ inputs = {
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
   s3_k8s_config = "viktoruj-terraform-state-backet"
-  cluster_name="k8s1"
+  cluster_name  = "k8s1"
 
   k8s_master = {
     k8_version         = "1.26.0"
@@ -46,14 +46,15 @@ inputs = {
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
+    eip                = "false"
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
-    ssh = {
+    ssh                = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
-    root_volume        = {
+    root_volume = {
       type = "gp3"
       size = "12"
     }
@@ -61,27 +62,27 @@ inputs = {
   k8s_worker = {
     # we can  configure each node independently
 
-   "node_2" = {
-     k8_version         = "1.26.0"
-     instance_type      = "t3.medium"
-     key_name           = "localize"
-     ami_id             = "ami-00c70b245f5354c0a"
-     subnet_number      = "0"
-     user_data_template = "template/worker.sh"
-     runtime            = "containerd_gvizor"
-     runtime_script     = "template/runtime.sh"
-     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
-     node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
-     ssh = {
-      private_key = dependency.ssh-keys.outputs.private_key
-      pub_key     = dependency.ssh-keys.outputs.pub_key
-     }
-     cidrs       = ["0.0.0.0/0"]
-     root_volume = {
-       type = "gp3"
-       size = "20"
-     }
-   }
+    "node_2" = {
+      k8_version         = "1.26.0"
+      instance_type      = "t3.medium"
+      key_name           = "localize"
+      ami_id             = "ami-00c70b245f5354c0a"
+      subnet_number      = "0"
+      user_data_template = "template/worker.sh"
+      runtime            = "containerd_gvizor"
+      runtime_script     = "template/runtime.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
+      node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
+      ssh                = {
+        private_key = dependency.ssh-keys.outputs.private_key
+        pub_key     = dependency.ssh-keys.outputs.pub_key
+      }
+      cidrs       = ["0.0.0.0/0"]
+      root_volume = {
+        type = "gp3"
+        size = "20"
+      }
+    }
   }
 }
 
