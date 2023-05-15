@@ -1,5 +1,5 @@
 output "master_external_ip" {
-  value = aws_eip.master.public_ip
+  value = local.external_ip
 }
 
 #output "master_local_ip" {
@@ -26,7 +26,7 @@ output "worker_ip" {
 }
 
 output "master_ssh" {
-  value = "ssh ubuntu@${aws_eip.master.public_ip}"
+  value = "ssh ubuntu@${local.external_ip}"
 }
 
 
