@@ -46,8 +46,14 @@ resource "aws_spot_instance_request" "worker" {
 
 }
 
+resource "time_sleep" "wait_worker" {
+  depends_on = [aws_spot_instance_request.worker]
+
+  create_duration = "10s"
+}
 
 resource "aws_ec2_tag" "worker_ec2" {
+  depends_on = [time_sleep.wait_worker]
   for_each    = var.k8s_worker
   resource_id = aws_spot_instance_request.worker["${each.key}"].spot_instance_id
   key         = "Name"
@@ -55,6 +61,7 @@ resource "aws_ec2_tag" "worker_ec2" {
 }
 
 resource "aws_ec2_tag" "worker_ebs" {
+  depends_on = [time_sleep.wait_worker]
   for_each    = var.k8s_worker
   resource_id = aws_spot_instance_request.worker["${each.key}"].root_block_device[0].volume_id
   key         = "Name"
