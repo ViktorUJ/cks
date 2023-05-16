@@ -40,8 +40,15 @@ resource "aws_spot_instance_request" "master" {
 
 }
 
+resource "time_sleep" "wait_master" {
+  depends_on = [aws_spot_instance_request.master]
+
+  create_duration = "10s"
+}
+
 
 resource "aws_ec2_tag" "master_ec2" {
+  depends_on = [time_sleep.wait_master]
   for_each    = local.tags_all_k8_master
   resource_id = aws_spot_instance_request.master.spot_instance_id
   key         = each.key
@@ -49,6 +56,7 @@ resource "aws_ec2_tag" "master_ec2" {
 }
 
 resource "aws_ec2_tag" "master_ebs" {
+  depends_on = [time_sleep.wait_master]
   for_each    = local.tags_all_k8_master
   resource_id = aws_spot_instance_request.master.root_block_device[0].volume_id
   key         = each.key
