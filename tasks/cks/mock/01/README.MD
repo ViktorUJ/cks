@@ -21,7 +21,7 @@ cluster : cluster2 (context  cluster2-admin@cluster2 )
 - logs  /var/logs/kubernetes-api.log
 - policy /etc/kubernetes/policy/log-policy.yaml
   1. From Secret resources, level Metadata, namespace prod.
-  2. From configmap,  level RequestResponse, namespace billing.
+  2. From configmaps ,  level RequestResponse, namespace billing.
 
 # 4. CIS Benchmark
 Task weight: 3%
@@ -63,5 +63,17 @@ cluster : cluster1 (context  cluster4-admin@cluster4 )
    - tls min version 1.3
 
 # 7. encrypt  secrets in  ETCD
+Task weight: 6%
+cluster : cluster5 (context  cluster5-admin@cluster5 )
 
+1. create  encrypt  config: 
+  
+ - aesgcm 
+    key1  : c2VjcmV0IGlzIHNlY3VyZQ==
+    key2  : dGhpcyBpcyBwYXNzd29yZA==
+ - resources: secret 
+ 
+
+2. create new secret test-secret NS = prod , password=strongPassword
+3. encrypt  all secrets in stage  ns     with new config
 
