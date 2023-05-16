@@ -18,3 +18,6 @@ systemctl list-units | grep falco
 
 ````
 ###  https://falco.org/docs/rules/supported-fields
+
+### https://github.com/draios/sysdig
+### https://github.com/draios/sysdig/wiki/How-to-Install-Sysdig-for-Linux

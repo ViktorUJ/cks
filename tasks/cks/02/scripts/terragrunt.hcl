@@ -52,6 +52,10 @@ inputs = {
       type = "gp3"
       size = "12"
     }
+    ssh = {
+      private_key = ""
+      pub_key     = ""
+    }
   }
   k8s_worker = {
     # we can  configure each node independently
@@ -70,6 +74,10 @@ inputs = {
       root_volume        = {
         type = "gp3"
         size = "12"
+      }
+      ssh = {
+        private_key = ""
+        pub_key     = ""
       }
     }
 
