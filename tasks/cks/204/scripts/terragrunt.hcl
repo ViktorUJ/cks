@@ -44,6 +44,10 @@ inputs = {
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
     eip                = "true"
+    ssh                = {
+      private_key = dependency.ssh-keys.outputs.private_key
+      pub_key     = dependency.ssh-keys.outputs.pub_key
+    }
     utils_enable       = "true"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/204/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
