@@ -15,12 +15,12 @@ mv etcd etcdctl etcdutl /usr/local/bin
 echo "*** etcd = $(etcdctl version)"
 
 
-cat > /usr/bin/etcd_read.sh <<EOF
+cat > /usr/bin/etcd_read <<EOF
 ETCDCTL_API=3 etcdctl \
    --cacert=/etc/kubernetes/pki/etcd/ca.crt   \
    --cert=/etc/kubernetes/pki/etcd/server.crt \
    --key=/etc/kubernetes/pki/etcd/server.key  \
-   get /registry/secrets/\$1/\$2
+   get /registry/secrets/\$1/\$2 | tr -cd '[:print:]\n'
 EOF
 
 chmod +x /usr/bin/etcd_read.sh
