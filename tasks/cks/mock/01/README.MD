@@ -69,8 +69,7 @@ cluster : cluster5 (context  cluster5-admin@cluster5 )
 1. create  encrypt  config (/etc/kubernetes/enc/enc.yaml): 
   
  - aesgcm 
-    key1  : c2VjcmV0IGlzIHNlY3VyZQ==
-    key2  : dGhpcyBpcyBwYXNzd29yZA==
+    key1  : MTIzNDU2Nzg5MDEyMzQ1Ng==
  - resources: secret 
  
 
