@@ -66,7 +66,7 @@ cluster : cluster1 (context  cluster4-admin@cluster4 )
 Task weight: 6%
 cluster : cluster5 (context  cluster5-admin@cluster5 )
 
-1. create  encrypt  config: 
+1. create  encrypt  config (/etc/kubernetes/enc/enc.yaml): 
   
  - aesgcm 
     key1  : c2VjcmV0IGlzIHNlY3VyZQ==

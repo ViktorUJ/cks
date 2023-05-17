@@ -318,3 +318,100 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # all = 24  , task =6
+
+
+
+@test "7.1 encrypt  secrets in  ETCD. kube-api encrypt config " {
+  echo '1'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster5-admin@cluster5  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat  /etc/kubernetes/manifests/kube-apiserver.yaml |grep 'encryption-provider-config' | grep 'etc/kubernetes/enc/enc.yaml'"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "7.2 encrypt  secrets in  ETCD. cluster are available " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl get  ns   --context cluster5-admin@cluster5
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "7.3 encrypt  secrets in  ETCD. check encrypt  config [aesgcm] " {
+  echo '.5'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster5-admin@cluster5  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat  /etc/kubernetes/enc/enc.yaml |grep 'aesgcm' "
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
+@test "7.4 encrypt  secrets in  ETCD. check encrypt  config [key1] " {
+  echo '.5'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster5-admin@cluster5  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat  /etc/kubernetes/enc/enc.yaml  | grep 'c2VjcmV0IGlzIHNlY3VyZQ==' "
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
+@test "7.5 encrypt  secrets in  ETCD. check encrypt  config [key2] " {
+  echo '.5'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster5-admin@cluster5  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat  /etc/kubernetes/enc/enc.yaml  | grep 'dGhpcyBpcyBwYXNzd29yZA==' "
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "7.6 encrypt  secrets in  ETCD. check encrypt  config [resources] " {
+  echo '.5'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster5-admin@cluster5  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat  /etc/kubernetes/enc/enc.yaml |grep 'secret'  "
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "7.7 encrypt  secrets in  ETCD. check test-secret NS = prod " {
+  echo '1'>>/var/work/tests/result/all
+  pod=$(kubectl get po -l app=deployment1 --context cluster5-admin@cluster5 -n prod -o jsonpath={.items..metadata.name})
+  kubectl exec $pod --context cluster5-admin@cluster5 -n prod -- sh -c 'export NS=prod; export  SECRET=test-secret ; get_secret.sh secret ' | grep 'c3Ryb25nUGFzc3dvcmQ='
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
+@test "7.8 encrypt  secrets in  ETCD. check secrets in stage " {
+  echo '1'>>/var/work/tests/result/all
+  pod=$(kubectl get po -l app=deployment1 --context cluster5-admin@cluster5 -n prod -o jsonpath={.items..metadata.name})
+  kubectl exec $pod --context cluster5-admin@cluster5 -n prod -- sh -c 'export NS=stage; export  SECRET=stage ; get_secret.sh secret ' | grep 'c3Ryb25nUGFzc3dvcmQ='
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
+
+# all = 24  , task =6
+

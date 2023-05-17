@@ -19,8 +19,8 @@ data:
 kind: Secret
 metadata:
   creationTimestamp: null
-  name: prod
-  namespace: prod
+  name: stage
+  namespace: stage
 
 ---
 apiVersion: v1

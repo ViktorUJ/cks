@@ -21,3 +21,4 @@ systemctl list-units | grep falco
 
 ### https://github.com/draios/sysdig
 ### https://github.com/draios/sysdig/wiki/How-to-Install-Sysdig-for-Linux
+### https://github.com/draios/sysdig/wiki/Sysdig-Examples#containers
