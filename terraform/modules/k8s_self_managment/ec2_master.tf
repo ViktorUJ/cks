@@ -61,7 +61,7 @@ resource "aws_eip_association" "master" {
 resource "time_sleep" "wait_master" {
   depends_on = [aws_spot_instance_request.master]
 
-  create_duration = "15s"
+  create_duration = "30s"
 }
 
 
