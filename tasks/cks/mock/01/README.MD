@@ -81,6 +81,6 @@ cluster : cluster5 (context  cluster5-admin@cluster5 )
 Task weight: 6%
 cluster : cluster6 (context  cluster6-admin@cluster6 )
  - create default deny ingress policy in prod-db NS
- - create policy  with allow connections from prod Namespaces
+ - create policy  with allow connections from prod Namespaces to  prod-db
  - create policy  with allow connections from stage Namespaces and have label: role=db-connect
- - create policy  with allow connections from enyNamespaces and have label: role=db-external-connect
+ - create policy  with allow connections from any Namespaces and have label: role=db-external-connect
