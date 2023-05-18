@@ -45,6 +45,10 @@ dependency "cluster5" {
   config_path = "../k8s-5"
 }
 
+dependency "cluster6" {
+  config_path = "../k8s-6"
+}
+
 inputs = {
   region        = local.vars.locals.region
   aws           = local.vars.locals.aws
@@ -63,6 +67,7 @@ inputs = {
       cluster3 = dependency.cluster3.outputs.k8s_config
       cluster4 = dependency.cluster4.outputs.k8s_config
       cluster5 = dependency.cluster5.outputs.k8s_config
+      cluster6 = dependency.cluster6.outputs.k8s_config
     }
     instance_type      = "t3.small"
     ami_id             = "ami-06410fb0e71718398"
@@ -74,7 +79,7 @@ inputs = {
     util               = {
       kubectl_version = "v1.26.0"
     }
-    exam_time_minutes = "60"
+    exam_time_minutes = "120"
     test_url           = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/worker/files/tests.bats"
     ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
