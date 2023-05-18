@@ -29,12 +29,12 @@ run_cks_k8s_mock:
 	@echo "*** run cks mock , task ${TASK}"
 	rm -rf terraform/environments/cks-mock/*
 	cp -r tasks/cks/mock/${TASK}/* terraform/environments/cks-mock/
-	cd terraform/environments/cks-mock/ && terragrunt run-all apply
+	cd terraform/environments/cks-mock/ && terragrunt run-all apply --terragrunt-log-level warn
 
 
 delete_cks_k8s_mock:
 	@echo "*** delete cks mock "
-	cd terraform/environments/cks-mock/ && terragrunt run-all destroy
+	cd terraform/environments/cks-mock/ && terragrunt run-all destroy --terragrunt-log-level warn
 	rm -rf terraform/environments/cks-mock/*
 
 
