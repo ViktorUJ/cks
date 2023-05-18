@@ -23,4 +23,4 @@ ETCDCTL_API=3 etcdctl \
    get /registry/secrets/\$1/\$2 | tr -cd '[:print:]\n'
 EOF
 
-chmod +x /usr/bin/etcd_read.sh
+chmod +x /usr/bin/etcd_read
