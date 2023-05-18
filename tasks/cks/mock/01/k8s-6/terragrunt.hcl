@@ -61,6 +61,27 @@ inputs = {
     }
   }
   k8s_worker = {
+    "node_1" = {
+      k8_version         = "1.26.0"
+      instance_type      = "t3.medium"
+      key_name           = "localize"
+      ami_id             = "ami-06410fb0e71718398"
+      subnet_number      = "0"
+      user_data_template = "template/worker.sh"
+      runtime            = "containerd"
+      runtime_script     = "template/runtime.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-6/scripts/worker.sh"
+      node_labels        = "work_type=worker"
+      cidrs              = ["0.0.0.0/0"]
+      root_volume        = {
+        type = "gp3"
+        size = "12"
+      }
+      ssh = {
+        private_key = dependency.ssh-keys.outputs.private_key
+        pub_key     = dependency.ssh-keys.outputs.pub_key
+      }
+    }
 
   }
 }

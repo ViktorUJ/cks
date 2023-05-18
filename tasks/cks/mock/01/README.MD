@@ -84,3 +84,15 @@ cluster : cluster6 (context  cluster6-admin@cluster6 )
  - create policy  with allow connections from prod Namespaces to  prod-db
  - create policy  with allow connections from stage Namespaces and have label: role=db-connect
  - create policy  with allow connections from any Namespaces and have label: role=db-external-connect
+
+# 9. AppArmor
+Task weight: 3%
+cluster : cluster6 (context  cluster6-admin@cluster6 )
+- install appArmor profile from /opt/course/9/profile (work pc)  to worker node on cluster
+- Add label security=apparmor to the Node
+- Create a Deployment named apparmor in  appArmor Namespace with:
+    image nginx:1.19.2 
+    container named c1
+    AppArmor profile enabled
+    nodeSelector to workerNode
+-  save logs of the Pod into /opt/course/9/logs
