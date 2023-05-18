@@ -76,3 +76,11 @@ cluster : cluster5 (context  cluster5-admin@cluster5 )
 2. create new secret test-secret NS = prod , password=strongPassword
 3. encrypt  all secrets in stage  ns     with new config
 
+
+# 8. Network policy
+Task weight: 6%
+cluster : cluster6 (context  cluster6-admin@cluster6 )
+ - create default deny ingress policy in prod-db NS
+ - create policy  with allow connections from prod Namespaces
+ - create policy  with allow connections from stage Namespaces and have label: role=db-connect
+ - create policy  with allow connections from enyNamespaces and have label: role=db-external-connect
