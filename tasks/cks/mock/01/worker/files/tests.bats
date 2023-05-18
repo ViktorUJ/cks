@@ -440,22 +440,27 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "8.4 Network policy. can't connect from stage NameSpace all pod   to prod-db  " {
   echo '1'>>/var/work/tests/result/all
-  set +e && kubectl exec all-stage-pod -n stage  --context cluster6-admin@cluster6 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s '
+  set +e
+  kubectl exec all-stage-pod -n stage  --context cluster6-admin@cluster6 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s '
   result=$?
-  if [[ "$result" != "0" ]]; then
+  set -e
+  if (( $result > 0 )); then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" != "0" ]
+  (( $result > 0 ))
 }
 
 @test "8.5 Network policy. can't connect all   pod   to prod-db  " {
   echo '1'>>/var/work/tests/result/all
-  set +e && kubectl exec all-pod -n user-client   --context cluster6-admin@cluster6 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s '
+  set +e
+  kubectl exec all-pod -n user-client   --context cluster6-admin@cluster6 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s '
   result=$?
-  if [[ "$result" != "0" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+  set -e
+  if (( $result > 0 )); then
+  echo "right"
+   #echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" != "0" ]
+   (( $result > 0 ))
 }
 
 @test "8.6 Network policy. can connect from all    pod   to google.com  " {
@@ -468,4 +473,5 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
+# all = 36  , task =6
 
