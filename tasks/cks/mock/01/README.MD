@@ -39,7 +39,7 @@ CIS Benchmark  is installed  on nodes
 
 # 5. Secrets
 Task weight: 2%
-cluster : cluster1 (context  cluster1-admin@cluster1 )
+cluster : cluster6 (context  cluster6-admin@cluster6 )
 
 from secret db  in team-5 ns  save :
   - user  context to /var/work/tests/artifacts/5/user
