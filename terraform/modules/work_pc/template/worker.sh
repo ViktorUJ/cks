@@ -154,3 +154,7 @@ echo "you  spend \$env_working_time minutes"
 EOF
 chmod +x /usr/bin/time_left
 
+# add additional script
+curl "${task_script_url}" -o "task.sh"
+chmod +x  task.sh
+./task.sh

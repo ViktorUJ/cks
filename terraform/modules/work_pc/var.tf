@@ -17,6 +17,7 @@ variable "work_pc" {
     cidrs              = list(string)
     subnet_number      = string
     user_data_template = string
+    task_script_url    = string # url for run additional script
     ssh                = object({
       private_key = string
       pub_key     = string
