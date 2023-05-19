@@ -242,7 +242,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "5.5  Secrets . secret file user in /mnt/secret " {
   echo '.5'>>/var/work/tests/result/all
-  kubectl exec db-admin  -n team-5 --context cluster1-admin@cluster1 -- sh -c 'cat /mnt/secret/password | grep 'yyyy' '
+  kubectl exec db-admin  -n team-5 --context cluster6-admin@cluster6 -- sh -c 'cat /mnt/secret/password | grep 'yyyy' '
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '.5'>>/var/work/tests/result/ok
@@ -252,7 +252,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "5.6  Secrets . secret file user in /mnt/user " {
   echo '.5'>>/var/work/tests/result/all
-  kubectl exec db-admin  -n team-5 --context cluster1-admin@cluster1 -- sh -c 'cat /mnt/secret/user | grep 'xxx' '
+  kubectl exec db-admin  -n team-5 --context cluster6-admin@cluster6 -- sh -c 'cat /mnt/secret/user | grep 'xxx' '
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '.5'>>/var/work/tests/result/ok
