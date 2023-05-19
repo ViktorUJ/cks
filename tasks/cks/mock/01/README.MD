@@ -101,5 +101,11 @@ cluster : cluster6 (context  cluster6-admin@cluster6 )
 Task weight: 6%
 cluster : cluster6 (context  cluster6-admin@cluster6 )
 
+Modify deployment secure in secure Namespace  : 
+ - prevent escalation
+ - Read only root file system
+ - user id   3000
+ - grup id   3000
+ - allow wread to /tmp/  container c1
 
 , security context, user id, prevent escalation, Read only root file system
