@@ -96,3 +96,10 @@ cluster : cluster6 (context  cluster6-admin@cluster6 )
     AppArmor profile enabled
     nodeSelector to workerNode
 -  save logs of the Pod into /var/work/tests/artifacts/9/log
+
+# 10. Deployment  security
+Task weight: 6%
+cluster : cluster6 (context  cluster6-admin@cluster6 )
+
+
+, security context, user id, prevent escalation, Read only root file system
