@@ -1,6 +1,6 @@
 # 1.  Container Runtime Sandbox gVisor
 Task weight: 4%
-cluster : cluster1 (context  cluster1-admin@cluster1 )
+cluster : cluster1 (kubectl config use-context   cluster1-admin@cluster1 )
 
 - runsc was  installed on node2 (label  node_name=node_2 )
 - create RuntimeClass  gvisor with handler runsc
@@ -11,13 +11,13 @@ cluster : cluster1 (context  cluster1-admin@cluster1 )
 
 # 2. Image Vulnerability Scanning
 Task weight: 2%
-cluster : cluster1 (context  cluster1-admin@cluster1 )
+cluster : cluster1 (kubectl config use-context   cluster1-admin@cluster1 )
 - trivy is installed on your worker node
 - check image in pods  in team-xxx namespace  , find image  without CRITICAL vulnerability . Other deployment scale to 0 replica.
 
 # 3. Enable audit log 
 Task weight: 7%
-cluster : cluster2 (context  cluster2-admin@cluster2 )
+cluster : cluster2 (kubectl config use-context   cluster2-admin@cluster2 )
 - logs  /var/logs/kubernetes-api.log
 - policy /etc/kubernetes/policy/log-policy.yaml
   1. From Secret resources, level Metadata, namespace prod.
@@ -25,7 +25,7 @@ cluster : cluster2 (context  cluster2-admin@cluster2 )
 
 # 4. CIS Benchmark
 Task weight: 3%
-cluster : cluster1 (context  cluster3-admin@cluster3 )
+cluster : cluster1 (kubectl config use-context   cluster3-admin@cluster3 )
 
 CIS Benchmark  is installed  on nodes
 
@@ -39,7 +39,7 @@ CIS Benchmark  is installed  on nodes
 
 # 5. Secrets
 Task weight: 2%
-cluster : cluster6 (context  cluster6-admin@cluster6 )
+cluster : cluster6 (kubectl config use-context   cluster6-admin@cluster6 )
 
 from secret db  in team-5 ns  save :
   - user  context to /var/work/tests/artifacts/5/user
@@ -49,7 +49,7 @@ from secret db  in team-5 ns  save :
 
 # 6. set tls version  and  allowed ciphers for etcd , kube-api  , kubelet   
 Task weight: 6%
-cluster : cluster1 (context  cluster4-admin@cluster4 )
+cluster : cluster1 (kubectl config use-context    cluster4-admin@cluster4 )
 
   kube-api :
    - tls  cipher  =  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -64,7 +64,7 @@ cluster : cluster1 (context  cluster4-admin@cluster4 )
 
 # 7. encrypt  secrets in  ETCD
 Task weight: 6%
-cluster : cluster5 (context  cluster5-admin@cluster5 )
+cluster : cluster5 (kubectl config use-context    cluster5-admin@cluster5 )
 
 1. create  encrypt  config (/etc/kubernetes/enc/enc.yaml): 
   
@@ -79,7 +79,7 @@ cluster : cluster5 (context  cluster5-admin@cluster5 )
 
 # 8. Network policy
 Task weight: 6%
-cluster : cluster6 (context  cluster6-admin@cluster6 )
+cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
  - create default deny ingress policy in prod-db NS
  - create policy  with allow connections from prod Namespaces to  prod-db
  - create policy  with allow connections from stage Namespaces and have label: role=db-connect
@@ -87,7 +87,7 @@ cluster : cluster6 (context  cluster6-admin@cluster6 )
 
 # 9. AppArmor
 Task weight: 3%
-cluster : cluster6 (context  cluster6-admin@cluster6 )
+cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
 - install appArmor profile from /opt/course/9/profile (work pc)  to worker node on cluster
 - Add label security=apparmor to the Node
 - Create a Deployment named apparmor in  apparmor Namespace with:
@@ -99,7 +99,7 @@ cluster : cluster6 (context  cluster6-admin@cluster6 )
 
 # 10. Deployment  security
 Task weight: 6%
-cluster : cluster6 (context  cluster6-admin@cluster6 )
+cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
 
 Modify deployment secure in secure Namespace  : 
  - prevent escalation

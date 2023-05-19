@@ -523,7 +523,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '.5'>>/var/work/tests/result/all
   set +e
   pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
-  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c1 -- sh -c 'echo "test" >/var/tmp'
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c1 -- sh -c 'echo "test" >/var/tmp_xxx'
   result=$?
   set -e
    if (( $result > 0 )); then
@@ -536,7 +536,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '.5'>>/var/work/tests/result/all
   set +e
   pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
-  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c2 -- sh -c 'echo "test" >/var/tmp'
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c2 -- sh -c 'echo "test" >/var/tmp_xxx'
   result=$?
   set -e
    if (( $result > 0 )); then
@@ -549,7 +549,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '.5'>>/var/work/tests/result/all
   set +e
   pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
-  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c3 -- sh -c 'echo "test" >/var/tmp'
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c3 -- sh -c 'echo "test" >/var/tmp_xxx'
   result=$?
   set -e
    if (( $result > 0 )); then
