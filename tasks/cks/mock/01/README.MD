@@ -90,9 +90,9 @@ Task weight: 3%
 cluster : cluster6 (context  cluster6-admin@cluster6 )
 - install appArmor profile from /opt/course/9/profile (work pc)  to worker node on cluster
 - Add label security=apparmor to the Node
-- Create a Deployment named apparmor in  appArmor Namespace with:
+- Create a Deployment named apparmor in  apparmor Namespace with:
     image nginx:1.19.2 
     container named c1
     AppArmor profile enabled
     nodeSelector to workerNode
--  save logs of the Pod into /opt/course/9/logs
+-  save logs of the Pod into /var/work/tests/artifacts/9/log

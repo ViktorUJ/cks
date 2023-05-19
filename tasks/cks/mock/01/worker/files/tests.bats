@@ -475,3 +475,31 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # all = 36  , task =6
 
+@test "9.1 AppArmor. check installed appArmor profile " {
+  echo '1'>>/var/work/tests/result/all
+  worker_node=$(kubectl get no -l work_type=worker --context cluster6-admin@cluster6  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $worker_node "sudo apparmor_status | grep very-secure"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "9.2 AppArmor. check appArmor in deployment " {
+  kubectl get deployments.apps apparmor  -n apparmor --context cluster6-admin@cluster6  -o yaml  | grep "container.apparmor.security.beta.kubernetes.io" | grep "localhost/very-secure"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "9.3 AppArmor. check check pod log " {
+  cat /var/work/tests/artifacts/9/log | grep 'Permission denied'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
