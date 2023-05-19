@@ -43,7 +43,7 @@ resource "aws_spot_instance_request" "master" {
 resource "time_sleep" "wait_master" {
   depends_on = [aws_spot_instance_request.master]
 
-  create_duration = "30s"
+  create_duration = "40s"
 }
 
 

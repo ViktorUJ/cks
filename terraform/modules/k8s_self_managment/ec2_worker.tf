@@ -49,7 +49,7 @@ resource "aws_spot_instance_request" "worker" {
 resource "time_sleep" "wait_worker" {
   depends_on = [aws_spot_instance_request.worker]
 
-  create_duration = "30s"
+  create_duration = "40s"
 }
 
 resource "aws_ec2_tag" "worker_ec2" {
