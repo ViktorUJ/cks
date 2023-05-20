@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/k8s_self_managment/"
+  source = "../../..//modules/k8s_self_managment_ondemand/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -26,7 +26,7 @@ dependency "ssh-keys" {
 inputs = {
   region        = local.vars.locals.region
   aws           = local.vars.locals.aws
-  prefix        = local.vars.locals.prefix
+  prefix        = "cluster1"
   tags_common   = local.vars.locals.tags
   app_name      = "k8s"
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
