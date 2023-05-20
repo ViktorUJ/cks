@@ -602,3 +602,74 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # all = 45  , task =6
+
+
+
+@test "11.1 RBAC. NS=rbac-1,resource = pods , verb=delete " {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  result=$(kubectl auth can-i delete   pods -n rbac-1 --as=system:serviceaccount:rbac-1:dev --context cluster6-admin@cluster6)
+  set -e
+  if [[ "$result" == "no" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "no" ]
+}
+
+
+@test "11.2 RBAC. NS=rbac-1,resource = pods , verb=watch " {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  result=$(kubectl auth can-i watch   pods -n rbac-1 --as=system:serviceaccount:rbac-1:dev --context cluster6-admin@cluster6)
+  set -e
+  if [[ "$result" == "yes" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "yes" ]
+}
+
+
+@test "11.3 RBAC. NS=rbac-2,resource = configmaps , verb=get " {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  result=$(kubectl auth can-i get  configmaps -n rbac-2 --as=system:serviceaccount:rbac-1:dev --context cluster6-admin@cluster6)
+  set -e
+  if [[ "$result" == "yes" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "yes" ]
+}
+
+@test "11.4 RBAC. NS=rbac-2,resource = configmaps , verb=list " {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  result=$(kubectl auth can-i list  configmaps -n rbac-2 --as=system:serviceaccount:rbac-1:dev --context cluster6-admin@cluster6)
+  set -e
+  if [[ "$result" == "yes" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "yes" ]
+}
+
+@test "11.5 RBAC. NS=rbac-1 pod serviceAccount = dev  " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl get po dev-rbac  --context cluster6-admin@cluster6  -n rbac-1  -o yaml  | grep serviceAccount: | grep dev
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
+@test "11.6 RBAC. NS=rbac-1 pod   get configmap  map from  rbac-2  " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl exec  dev-rbac  --context cluster6-admin@cluster6  -n rbac-1   -- sh -c 'export NS_CONFIGMAP=rbac-2; export CONFIGMAP=db-config;get_secret.sh configmap ' | grep aaa | grep bbb
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+# all = 51  , task =6

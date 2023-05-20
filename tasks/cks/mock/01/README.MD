@@ -114,4 +114,12 @@ Modify deployment secure in secure Namespace  :
 Task weight: 6%
 cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
 
-- 
+- update existing permissions for SA dev in Namespaces  rbac-1 :
+  > delete verb    "delete" for pods
+  > add verb "watch"  for pods
+
+- create new role  dev   in  rbac-2  Namespaces :
+   > resource configmaps , verbs =  get,list
+-  create rolebinding  dev in rbac-2   , sa = dev in rbac-1 Namespace
+
+- create pod  dev-rbac  NS=rbac-1  image = viktoruj/cks-lab , command = sleep 60000 , SA=dev
