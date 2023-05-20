@@ -20,7 +20,6 @@ data "template_file" "master" {
 resource "aws_instance" "master" {
   iam_instance_profile = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
-  wait_for_fulfillment        = true
   ami                         = var.k8s_master.ami_id
   instance_type               = var.k8s_master.instance_type
   subnet_id                   = local.subnets[var.k8s_master.subnet_number]

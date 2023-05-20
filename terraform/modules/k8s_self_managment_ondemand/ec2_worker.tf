@@ -19,7 +19,6 @@ resource "aws_instance"  "worker" {
   for_each                    = var.k8s_worker
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
-  wait_for_fulfillment        = true
   ami                         = each.value.ami_id
   instance_type               = each.value.instance_type
   subnet_id                   = local.subnets[each.value.subnet_number]
