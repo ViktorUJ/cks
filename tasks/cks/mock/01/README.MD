@@ -109,3 +109,9 @@ Modify deployment secure in secure Namespace  :
  - allow wread to /tmp/  container c1
 
 , security context, user id, prevent escalation, Read only root file system
+
+# 11. RBAC  . 
+Task weight: 6%
+cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
+
+- 

@@ -7,7 +7,8 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/work_pc/"
+#  source = "../../..//modules/work_pc/"
+ source = "../../..//modules/work_pc_ondemand/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
