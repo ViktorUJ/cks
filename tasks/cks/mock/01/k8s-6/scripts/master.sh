@@ -8,3 +8,4 @@ kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_202
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-6/scripts/task5.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-6/scripts/task9.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-6/scripts/task10.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-6/scripts/task11.yaml
