@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-#  source = "../../..//modules/k8s_self_managment/"
+  source = "../../..//modules/k8s_self_managment/"
 #  source = "../../..//modules/k8s_self_managment_ondemand/"
 
   extra_arguments "retry_lock" {
