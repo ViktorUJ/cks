@@ -54,6 +54,11 @@ dependency "cluster7" {
   config_path = "../k8s-7"
 }
 
+dependency "cluster8" {
+  config_path = "../k8s-8"
+}
+
+
 inputs = {
   region        = local.vars.locals.region
   aws           = local.vars.locals.aws
@@ -74,6 +79,7 @@ inputs = {
       cluster5 = dependency.cluster5.outputs.k8s_config
       cluster6 = dependency.cluster6.outputs.k8s_config
       cluster7 = dependency.cluster7.outputs.k8s_config
+      cluster8 = dependency.cluster8.outputs.k8s_config
     }
     instance_type      = "t3.medium"
     ami_id             = "ami-06410fb0e71718398"
