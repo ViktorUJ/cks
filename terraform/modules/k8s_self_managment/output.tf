@@ -2,6 +2,9 @@ output "master_external_ip" {
   value = local.external_ip
 }
 
+output "cluster" {
+  value = var.cluster_name
+}
 output "master_local_ip" {
   value = aws_spot_instance_request.master.private_ip
 }

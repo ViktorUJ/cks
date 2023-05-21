@@ -123,3 +123,7 @@ cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
 -  create rolebinding  dev in rbac-2   , sa = dev in rbac-1 Namespace
 
 - create pod  dev-rbac  NS=rbac-1  image = viktoruj/cks-lab , command = sleep 60000 , SA=dev
+
+# 12. falco , sysdig 
+Task weight: 6%
+cluster : cluster7 (kubectl config use-context    cluster7-admin@cluster7 )
