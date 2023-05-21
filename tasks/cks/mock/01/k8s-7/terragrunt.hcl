@@ -44,7 +44,7 @@ inputs = {
     key_name           = "localize"
     ami_id             = "ami-06410fb0e71718398"
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
-    subnet_number      = "2"
+    subnet_number      = "1"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
@@ -67,12 +67,12 @@ inputs = {
       instance_type      = "t3.medium"
       key_name           = "localize"
       ami_id             = "ami-06410fb0e71718398"
-      subnet_number      = "2"
+      subnet_number      = "1"
       user_data_template = "template/worker.sh"
       runtime            = "containerd"
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-7/scripts/worker.sh"
-      node_labels        = "work_type=worker"
+      node_labels        = "work_type=falco,aws_scheduler=true"
       cidrs              = ["0.0.0.0/0"]
       root_volume        = {
         type = "gp3"
