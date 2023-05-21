@@ -127,3 +127,7 @@ cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
 # 12. falco , sysdig 
 Task weight: 6%
 cluster : cluster7 (kubectl config use-context    cluster7-admin@cluster7 )
+
+# 13. image policy webhook
+Task weight: 6%
+cluster : cluster8 (kubectl config use-context    cluster8-admin@cluster8 )

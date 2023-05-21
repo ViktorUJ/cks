@@ -1,146 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-bouncer-webhook
+spec:
+  selector:
+    matchLabels:
+      app: image-bouncer-webhook
+  template:
+    metadata:
+      labels:
+        app: image-bouncer-webhook
+    spec:
+      containers:
+        - name: image-bouncer-webhook
+          imagePullPolicy: Always
+          image: "kainlite/kube-image-bouncer:latest"
+          args:
+            - "--cert=/etc/admission-controller/tls/tls.crt"
+            - "--key=/etc/admission-controller/tls/tls.key"
+            - "--debug"
+            - "--registry-whitelist=docker.io"
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/admission-controller/tls
+      volumes:
+        - name: tls
+          secret:
+            secretName: tls-image-bouncer-webhook
+---
 apiVersion: v1
-kind: Namespace
+kind: Service
 metadata:
-  name: blue-team
   labels:
-    name: blue-team
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  creationTimestamp: null
-  labels:
-    app: deployment1
-  name: deployment1
+    app: image-bouncer-webhook
+  name: image-bouncer-webhook
 spec:
-  replicas: 2
+  type: NodePort
+  ports:
+    - name: https
+      port: 443
+      targetPort: 1323
+      protocol: "TCP"
+      nodePort: 30020
   selector:
-    matchLabels:
-      app: deployment1
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: deployment1
-    spec:
-      nodeSelector:
-        work_type: falco
-      containers:
-      - image: httpd
-        name: httpd
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; echo " ">> /etc/passwd; done']
-        resources: {}
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  creationTimestamp: null
-  labels:
-    app: deployment1
-  name: deployment1
-  namespace: blue-team
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: deployment1
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: deployment1
-    spec:
-      nodeSelector:
-        work_type: falco
-      containers:
-      - image: httpd
-        name: httpd
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; echo " ">> /etc/passwd; done']
-        resources: {}
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  creationTimestamp: null
-  labels:
-    app: deployment2
-  name: deployment2
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: deployment2
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: deployment2
-    spec:
-      nodeSelector:
-        work_type: falco
-      containers:
-      - image: viktoruj/cks-lab
-        name: app
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; echo " ">> /etc/passwd; done']
-        resources: {}
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  creationTimestamp: null
-  labels:
-    app: deployment3
-  name: deployment3
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: deployment3
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: deployment3
-    spec:
-      nodeSelector:
-        work_type: falco
-      containers:
-      - image: ubuntu:20.04
-        name: app
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working "; apt update ; sleep 1  ; done']
-        resources: {}
-
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  creationTimestamp: null
-  labels:
-    app: deployment4
-  name: deployment4
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: deployment4
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: deployment4
-    spec:
-      nodeSelector:
-        work_type: falco
-      containers:
-      - image: nginx
-        name: app
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working "; apt update ; sleep 1  ; done']
-        resources: {}
+    app: image-bouncer-webhook
