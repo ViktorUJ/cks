@@ -124,3 +124,8 @@ terragrunt destroy
 ### https://www.youtube.com/@learnwithgvr/videos
 ### https://www.youtube.com/watch?v=hqzuk-msDdM&list=PLmxqUDFl0XM4sJxAocidRKMNzAB48oEnU&index=2
 
+
+vim  : 
+
+G  - end of file
+gg - first line of file  

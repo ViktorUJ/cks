@@ -25,7 +25,7 @@ cluster : cluster2 (  kubectl config use-context   cluster2-admin@cluster2 )
 
 # 4. CIS Benchmark
 Task weight: 3%
-cluster : cluster1 (  kubectl config use-context   cluster3-admin@cluster3  )
+cluster : cluster3 (  kubectl config use-context   cluster3-admin@cluster3  )
 
 CIS Benchmark  is installed  on nodes
 
