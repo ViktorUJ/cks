@@ -2,8 +2,8 @@ apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    certificate-authority: /etc/kubernetes/pki/webhook/server.crt
-    server: << server >>
+    certificate-authority: /etc/kubernetes/pki/server.crt
+    server: https://image-bouncer-webhook:30080/image_policy
   name: bouncer_webhook
 contexts:
 - context:

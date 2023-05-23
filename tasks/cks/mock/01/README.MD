@@ -11,7 +11,7 @@ cluster : cluster1 (  kubectl config use-context   cluster1-admin@cluster1   )
 
 # 2. Image Vulnerability Scanning
 Task weight: 2%
-cluster : cluster1 (kubectl config use-context   cluster1-admin@cluster1 )
+cluster : cluster1 (  kubectl config use-context   cluster1-admin@cluster1   )
 - trivy is installed on your worker node
 - check image in pods  in team-xxx namespace  , find image  without CRITICAL vulnerability . Other deployment scale to 0 replica.
 
@@ -131,3 +131,8 @@ cluster : cluster7 (kubectl config use-context    cluster7-admin@cluster7 )
 # 13. image policy webhook
 Task weight: 6%
 cluster : cluster8 (kubectl config use-context    cluster8-admin@cluster8 )
+
+configure image policy webhook:
+ - /etc/kubernetes/pki/admission_config.json 
+ - /etc/kubernetes/pki/webhook/admission_kube_config.yaml
+ -  https://image-bouncer-webhook:30020/image_policy   
