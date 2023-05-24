@@ -34,7 +34,7 @@ inputs = {
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
   s3_k8s_config = "viktoruj-terraform-state-backet"
-  cluster_name  = "k8s3"
+  cluster_name="k8s3"
 
   k8s_master = {
     k8_version         = "1.26.0"
@@ -44,7 +44,7 @@ inputs = {
     key_name           = "cks"
     ami_id             = "ami-06410fb0e71718398"
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
-    subnet_number      = "0"
+    subnet_number      = "2"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
@@ -67,12 +67,12 @@ inputs = {
       instance_type      = "t3.medium"
       key_name           = "cks"
       ami_id             = "ami-06410fb0e71718398"
-      subnet_number      = "0"
+      subnet_number      = "2"
       user_data_template = "template/worker.sh"
       runtime            = "containerd"
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/mock_12_05_2023/tasks/cks/mock/01/k8s-3/scripts/worker.sh"
-      node_labels        = "work_type=worker,aws_scheduler=true"
+      node_labels        = "work_type=worker"
       cidrs              = ["0.0.0.0/0"]
       root_volume        = {
         type = "gp3"
@@ -83,6 +83,7 @@ inputs = {
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }
     }
+
   }
 }
 
