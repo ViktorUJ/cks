@@ -675,17 +675,17 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 # all = 51  , task =6
 
 
-#@test "12 falco , sysdig " {
-#  echo '1'>>/var/work/tests/result/all
-#  kubectl exec  dev-rbac  --context cluster6-admin@cluster6  -n rbac-1   -- sh -c 'export NS_CONFIGMAP=rbac-2; export CONFIGMAP=db-config;get_secret.sh configmap ' | grep aaa | grep bbb
-#  result=$?
-#  if [[ "$result" == "0" ]]; then
-#   echo '1'>>/var/work/tests/result/ok
-#  fi
-#  [ "$result" == "0" ]
-#}
-#
+@test "12 falco , sysdig " {
+  echo '6'>>/var/work/tests/result/all
+  cat /var/work/tests/artifacts/12/log | grep app | grep default| grep deployment4
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '6'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
 
+# all = 57  , task =6
 
 @test "13.1 image policy webhook . deny creating pod with latest tag" {
   echo '5'>>/var/work/tests/result/all
@@ -712,3 +712,5 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+# all = 63  , task =6
