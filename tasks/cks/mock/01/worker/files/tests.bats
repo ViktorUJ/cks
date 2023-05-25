@@ -673,3 +673,42 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # all = 51  , task =6
+
+
+#@test "12 falco , sysdig " {
+#  echo '1'>>/var/work/tests/result/all
+#  kubectl exec  dev-rbac  --context cluster6-admin@cluster6  -n rbac-1   -- sh -c 'export NS_CONFIGMAP=rbac-2; export CONFIGMAP=db-config;get_secret.sh configmap ' | grep aaa | grep bbb
+#  result=$?
+#  if [[ "$result" == "0" ]]; then
+#   echo '1'>>/var/work/tests/result/ok
+#  fi
+#  [ "$result" == "0" ]
+#}
+#
+
+
+@test "13.1 image policy webhook . deny creating pod with latest tag" {
+  echo '5'>>/var/work/tests/result/all
+  pod_postfix=$(date +%s)
+  set +e
+  kubectl run  test-bats-latest-$pod_postfix --image=inginx    --context cluster8-admin@cluster8
+  result=$?
+  set -e
+  if (( $result > 0 )); then
+   echo '5'>>/var/work/tests/result/ok
+  fi
+  (( $result > 0 ))
+}
+
+@test "13.2 image policy webhook . allow creating pod with specific  tag" {
+  echo '1'>>/var/work/tests/result/all
+  pod_postfix=$(date +%s)
+  set +e
+  kubectl run test-bats-tag-$pod_postfix --image=inginx:alpine3.17    --context cluster8-admin@cluster8
+  result=$?
+  set -e
+  if [ "$result" == "0" ]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
