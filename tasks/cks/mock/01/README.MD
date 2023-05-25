@@ -128,6 +128,12 @@ cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
 Task weight: 6%
 cluster : cluster7 (  kubectl config use-context    cluster7-admin@cluster7   )
 
+use falco or sysdig , prepare  logs  in format 
+time-with-nanosconds, container-id,container-name,user-name ,kubernetes-namespace ,kubernetes-pod-name 
+for pod with image nginx 
+and store log to /var/work/tests/artifacts/12/log
+
+
 # 13. image policy webhook
 Task weight: 6%
 cluster : cluster8 (   kubectl config use-context    cluster8-admin@cluster8   )

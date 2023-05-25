@@ -22,3 +22,5 @@ systemctl list-units | grep falco
 ### https://github.com/draios/sysdig
 ### https://github.com/draios/sysdig/wiki/How-to-Install-Sysdig-for-Linux
 ### https://github.com/draios/sysdig/wiki/Sysdig-Examples#containers
+
+#  sysdig  -p"%evt.time,%container.id,%container.name,%user.name,%k8s.ns.name,%k8s.pod.name"   container.image=docker.io/viktoruj/cks-lab:latest
