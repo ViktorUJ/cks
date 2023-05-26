@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-bouncer-webhook
+spec:
+  selector:
+    matchLabels:
+      app: image-bouncer-webhook
+  template:
+    metadata:
+      labels:
+        app: image-bouncer-webhook
+    spec:
+      containers:
+        - name: image-bouncer-webhook
+          imagePullPolicy: Always
+          image: "kainlite/kube-image-bouncer:latest"
+          args:
+            - "--cert=/etc/admission-controller/tls/tls.crt"
+            - "--key=/etc/admission-controller/tls/tls.key"
+            - "--debug"
+            - "--registry-whitelist=docker.io"
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/admission-controller/tls
+      volumes:
+        - name: tls
+          secret:
+            secretName: tls-image-bouncer-webhook
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: image-bouncer-webhook
+  name: image-bouncer-webhook
+spec:
+  type: NodePort
+  ports:
+    - name: https
+      port: 443
+      targetPort: 1323
+      protocol: "TCP"
+      nodePort: 30020
+  selector:
+    app: image-bouncer-webhook

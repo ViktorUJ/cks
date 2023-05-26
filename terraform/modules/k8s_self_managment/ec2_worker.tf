@@ -2,8 +2,8 @@ data "template_file" "worker" {
   for_each = var.k8s_worker
   template = file(each.value.user_data_template)
   vars     = {
-    worker_join     = "${var.s3_k8s_config}/${local.target_time_stamp}/worker_join"
-    k8s_config      = "${var.s3_k8s_config}/${local.target_time_stamp}/config"
+    worker_join     = local.worker_join
+    k8s_config      = local.k8s_config
     k8_version      = each.value.k8_version
     runtime         = each.value.runtime
     runtime_script  = file(each.value.runtime_script)
@@ -46,8 +46,14 @@ resource "aws_spot_instance_request" "worker" {
 
 }
 
+resource "time_sleep" "wait_worker" {
+  depends_on = [aws_spot_instance_request.worker]
+
+  create_duration = "60s"
+}
 
 resource "aws_ec2_tag" "worker_ec2" {
+  depends_on = [time_sleep.wait_worker]
   for_each    = var.k8s_worker
   resource_id = aws_spot_instance_request.worker["${each.key}"].spot_instance_id
   key         = "Name"
@@ -55,6 +61,7 @@ resource "aws_ec2_tag" "worker_ec2" {
 }
 
 resource "aws_ec2_tag" "worker_ebs" {
+  depends_on = [time_sleep.wait_worker]
   for_each    = var.k8s_worker
   resource_id = aws_spot_instance_request.worker["${each.key}"].root_block_device[0].volume_id
   key         = "Name"

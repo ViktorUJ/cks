@@ -1,10 +1,13 @@
 output "master_external_ip" {
-  value = aws_eip.master.public_ip
+  value = local.external_ip
 }
 
-#output "master_local_ip" {
-#  value = aws_spot_instance_request.master.private_ip
-#}
+output "cluster" {
+  value = var.cluster_name
+}
+output "master_local_ip" {
+  value = aws_spot_instance_request.master.private_ip
+}
 #output "master_ec2_id" {
 #  value = aws_spot_instance_request.master.spot_instance_id
 #}
@@ -26,7 +29,7 @@ output "worker_ip" {
 }
 
 output "master_ssh" {
-  value = "ssh ubuntu@${aws_eip.master.public_ip}"
+  value = "ssh ubuntu@${local.external_ip}"
 }
 
 
