@@ -7,7 +7,6 @@ locals {
 }
 
 terraform {
-  #source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/k8s_self_managment/?ref=task_01"
   source = "../../..//modules/k8s_self_managment/"
 
   extra_arguments "retry_lock" {
@@ -36,7 +35,7 @@ inputs = {
     runtime            = "containerd" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
-    key_name           = "localize"
+    key_name           = "cks"
     ami_id             = "ami-06410fb0e71718398"
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
     subnet_number      = "0"
@@ -51,49 +50,17 @@ inputs = {
     utils_enable       = "true"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/204/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
+    ssh = {
+        private_key = ""
+        pub_key     = ""
+      }
     root_volume        = {
       type = "gp3"
       size = "12"
     }
   }
   k8s_worker = {
-    # we can  configure each node independently
-    # "node_1" = {
-    #   k8_version         = "1.26.0"
-    #   instance_type      = "t3.medium"
-    #   key_name           = "localize"
-    #   ami_id             = "ami-06410fb0e71718398"
-    #   subnet_number      = "0"
-    #   user_data_template = "template/worker.sh"
-    #   runtime            = "containerd"
-    #   runtime_script     = "template/runtime.sh"
-    #   task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/201/scripts/worker.sh"
-    #   node_labels        = "work_type=falco,aws_scheduler=true"
-    #   cidrs              = ["0.0.0.0/0"]
-    #   root_volume        = {
-    #     type = "gp3"
-    #     size = "12"
-    #   }
-    #  }
 
-    #  "node_2" = {
-    #    k8_version         = "1.26.0"
-    #    instance_type      = "t3.large"
-    #    key_name           = "localize"
-    #    ami_id             = "ami-00c70b245f5354c0a"
-    #    subnet_number      = "0"
-    #    user_data_template = "template/worker.sh"
-    #    runtime            = "containerd_gvizor"
-    #    runtime_script     = "template/runtime.sh"
-    #    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/TASK_10/tasks/cks/10/scripts/worker.sh"
-    #    node_labels        = "work_type=infra_core,aws_scheduler=true,runtime=gvizor"
-    #
-    #    cidrs       = ["0.0.0.0/0"]
-    #    root_volume = {
-    #      type = "gp3"
-    #      size = "20"
-    #    }
-    #  }
 
 
   }
