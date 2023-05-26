@@ -677,7 +677,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "12 falco , sysdig " {
   echo '6'>>/var/work/tests/result/all
-  cat /var/work/tests/artifacts/12/log | grep app | grep default| grep deployment4
+  cat /var/work/tests/artifacts/12/log  | grep default| grep deployment4
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '6'>>/var/work/tests/result/ok
