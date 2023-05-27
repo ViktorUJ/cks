@@ -93,8 +93,8 @@ inputs = {
       kubectl_version = "v1.26.0"
     }
     exam_time_minutes = "120"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/mock-27-05-2023/tasks/cks/mock/01/worker/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/mock-27-05-2023/tasks/cks/mock/01/worker/files/worker.sh"
     ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
