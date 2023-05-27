@@ -1,5 +1,5 @@
 resource "aws_instance" "master" {
-  for_each = toset(var.work_pc == "ondemand" ? ["enable"] : [])
+  for_each = toset(var.work_pc.node_type == "ondemand" ? ["enable"] : [])
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
   ami                         = var.work_pc.ami_id
