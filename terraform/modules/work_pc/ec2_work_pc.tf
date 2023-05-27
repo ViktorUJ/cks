@@ -44,7 +44,7 @@ resource "aws_spot_instance_request" "master" {
 
 resource "time_sleep" "wait_master" {
   for_each = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  depends_on = [aws_spot_instance_request.master]
+  depends_on = [aws_spot_instance_request.master["enable"]]
 
   create_duration = "60s"
 }
@@ -53,7 +53,7 @@ resource "time_sleep" "wait_master" {
 resource "aws_ec2_tag" "master_ec2" {
   depends_on  = [time_sleep.wait_master]
   for_each    = local.tags_all_k8_master
-  resource_id = aws_spot_instance_request.master.spot_instance_id
+  resource_id = aws_spot_instance_request.master["enable"].spot_instance_id
   key         = each.key
   value       = each.value
 }
@@ -61,7 +61,7 @@ resource "aws_ec2_tag" "master_ec2" {
 resource "aws_ec2_tag" "master_ebs" {
   depends_on  = [time_sleep.wait_master]
   for_each    = local.tags_all_k8_master
-  resource_id = aws_spot_instance_request.master.root_block_device[0].volume_id
+  resource_id = aws_spot_instance_request.master["enable"].root_block_device[0].volume_id
   key         = each.key
   value       = each.value
 }
