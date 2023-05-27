@@ -82,7 +82,7 @@ inputs = {
       cluster8 = dependency.cluster8.outputs.k8s_config
     }
     instance_type      = "t3.medium"
-    node_type          = "spot"
+    node_type          = "ondemand"
     ami_id             = "ami-06410fb0e71718398"
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
     key_name           = "cks"
