@@ -15,7 +15,7 @@ locals {
 #
 # tags_all_k8_master = var.work_pc.instance_type == "spot" ? tags_all_k8_master_x : ""
 # worker_pc_ip = var.work_pc.instance_type == "spot" ? aws_spot_instance_request.master.public_ip["enable"] : aws_instance.master.public_ip["enable"]
-  worker_pc_ip=  aws_spot_instance_request.master.public_ip["enable"]
+  worker_pc_ip=  aws_spot_instance_request.master["enable"].public_ip
 }
 
 
