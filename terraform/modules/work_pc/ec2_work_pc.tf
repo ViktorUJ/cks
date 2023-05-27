@@ -12,6 +12,7 @@ data "template_file" "master" {
 }
 
 resource "aws_spot_instance_request" "master" {
+  for_each = toset(var.work_pc == "spot" ? ["enable"] : [])
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
   wait_for_fulfillment        = true

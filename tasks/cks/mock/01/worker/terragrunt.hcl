@@ -8,7 +8,7 @@ locals {
 
 terraform {
   source = "../../..//modules/work_pc/"
-# source = "../../..//modules/work_pc_ondemand/"
+  # source = "../../..//modules/work_pc_ondemand/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -82,6 +82,7 @@ inputs = {
       cluster8 = dependency.cluster8.outputs.k8s_config
     }
     instance_type      = "t3.medium"
+    node_type          = "spot"
     ami_id             = "ami-06410fb0e71718398"
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
     key_name           = "cks"
@@ -92,8 +93,8 @@ inputs = {
       kubectl_version = "v1.26.0"
     }
     exam_time_minutes = "120"
-    test_url           = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/tests.bats"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/worker.sh"
     ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key

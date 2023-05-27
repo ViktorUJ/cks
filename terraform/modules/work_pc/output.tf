@@ -1,9 +1,9 @@
 output "worker_pc_ip" {
-  value = aws_spot_instance_request.master.public_ip
+  value = local.worker_pc_ip
 }
 
 output "worker_pc_ssh" {
-  value = "   ssh ubuntu@${aws_spot_instance_request.master.public_ip}  "
+  value = "   ssh ubuntu@${local.worker_pc_ip}  "
 }
 
 
