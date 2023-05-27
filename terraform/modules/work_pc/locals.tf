@@ -11,9 +11,9 @@ locals {
     "k8_node_type" = "worker-pc"
     "Name"         = "${var.aws}-${var.prefix}-${var.app_name}-worker-pc"
   }
-tags_all_k8_master_x = merge(local.tags_all, local.tags_k8_master)
+tags_all_k8_master = var.work_pc.node_type == "spot" ?  merge(local.tags_all, local.tags_k8_master) : ""
 
-tags_all_k8_master = var.work_pc.node_type == "spot" ? local.tags_all_k8_master_x : ""
+#tags_all_k8_master = var.work_pc.node_type == "spot" ? local.tags_all_k8_master_x : ""
 worker_pc_ip = var.work_pc.node_type == "spot" ? aws_spot_instance_request.master["enable"].public_ip : aws_instance.master["enable"].public_ip
 
 }
