@@ -5,7 +5,9 @@ output "worker_pc_ip" {
 output "worker_pc_ssh" {
   value = "   ssh ubuntu@${local.worker_pc_ip}  "
 }
-
+output "node_type" {
+  value = var.work_pc.node_type
+}
 
 output "worker_pc" {
   value = "   tail -f /var/log/cloud-init-output.log    "
