@@ -150,3 +150,15 @@ create pod  test-tag   in default ns    with image nginx:alpine3.17
 
 
 
+# 14. fix Dockerfile 
+Task weight: 4%
+cluster : any
+
+fix Dockerfile    /var/work/14/Dockerfile  
+
+- use FROM image   20.04  version 
+- use myuser  for   running  app
+- build image cks:14   ( podman installed on worker pc )
+
+
+

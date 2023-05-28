@@ -714,3 +714,19 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # all = 63  , task =6
+
+#  podman  run -d --name  cks-14   cks:14
+
+@test "14 fix Dockerfile " {
+  echo '4'>>/var/work/tests/result/all
+  podman  run -d --name  cks-14   cks:14
+  sleep 2
+  podman logs cks-14 | grep myuser
+  result=$?
+  podman stop cks-14
+  podman rm  cks-14
+  if [ "$result" == "0" ]; then
+   echo '4'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
