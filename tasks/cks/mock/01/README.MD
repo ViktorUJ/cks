@@ -172,4 +172,4 @@ This means that the Pod can access various data about other containers running o
 To prevent this configure Namespace team-red to enforce the baseline Pod Security Standard.
 Once completed, delete the Pod of the Deployment mentioned above.
 
-Check the ReplicaSet events and write the event/log lines containing the reason why the Pod isn't recreated into /opt/course/4/logs.
+Check the ReplicaSet events and write the event/log lines containing the reason why the Pod isn't recreated into /var/work/tests/artifacts/15/logs.
