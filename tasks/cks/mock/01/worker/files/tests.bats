@@ -730,3 +730,14 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "15 Pod Security Standard" {
+  echo '6'>>/var/work/tests/result/all
+  cat /var/work/tests/artifacts/15/logs | grep FailedCreate | grep forbidden
+  result=$?
+  set -e
+  if  [ "$result" == "0" ]; then
+   echo '6'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
