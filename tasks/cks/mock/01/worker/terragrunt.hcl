@@ -67,7 +67,7 @@ inputs = {
   app_name      = "k8s-worker"
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
-  s3_k8s_config = "viktoruj-terraform-state-backet"
+  s3_k8s_config = local.vars.locals.s3_k8s_config
 
 
   work_pc = {
@@ -81,11 +81,10 @@ inputs = {
       cluster7 = dependency.cluster7.outputs.k8s_config
       cluster8 = dependency.cluster8.outputs.k8s_config
     }
-    instance_type      = "t3.medium"
-    node_type          = "spot"
-    ami_id             = "ami-06410fb0e71718398"
-    #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
-    key_name           = "cks"
+    instance_type      = local.vars.locals.instance_type
+    node_type          = local.vars.locals.node_type
+    ami_id             = local.vars.locals.ami_id
+    key_name           = local.vars.locals.key_name
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
@@ -99,10 +98,7 @@ inputs = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
-    root_volume = {
-      type = "gp3"
-      size = "12"
-    }
+    root_volume = local.vars.locals.root_volume
   }
 
 

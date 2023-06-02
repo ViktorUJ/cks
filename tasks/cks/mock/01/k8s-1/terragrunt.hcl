@@ -32,17 +32,16 @@ inputs = {
   app_name      = "k8s"
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
-  s3_k8s_config = "viktoruj-terraform-state-backet"
+  s3_k8s_config = local.vars.locals.s3_k8s_config
   cluster_name  = "k8s1"
 
   k8s_master = {
-    k8_version         = "1.26.0"
-    runtime            = "containerd" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
+    k8_version         = local.vars.locals.k8_version
+    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
-    instance_type      = "t3.medium"
-    key_name           = "cks"
-    ami_id             = "ami-06410fb0e71718398"
-    #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
+    instance_type      = local.vars.locals.instance_type
+    key_name           = local.vars.locals.key_name
+    ami_id             = local.vars.locals.ami_id
     subnet_number      = "0"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
@@ -55,19 +54,16 @@ inputs = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
-    root_volume = {
-      type = "gp3"
-      size = "12"
-    }
+    root_volume = local.vars.locals.root_volume
   }
   k8s_worker = {
     # we can  configure each node independently
 
     "node_2" = {
-      k8_version         = "1.26.0"
-      instance_type      = "t3.medium"
-      key_name           = "cks"
-      ami_id             = "ami-06410fb0e71718398"
+      k8_version         = local.vars.locals.k8_version
+      instance_type      = local.vars.locals.instance_type
+      key_name           = local.vars.locals.key_name
+      ami_id             = local.vars.locals.ami_id
       subnet_number      = "0"
       user_data_template = "template/worker.sh"
       runtime            = "containerd_gvizor"
@@ -79,10 +75,7 @@ inputs = {
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }
       cidrs       = ["0.0.0.0/0"]
-      root_volume = {
-        type = "gp3"
-        size = "20"
-      }
+      root_volume = local.vars.locals.root_volume
     }
   }
 }

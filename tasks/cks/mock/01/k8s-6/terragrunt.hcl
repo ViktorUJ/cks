@@ -33,16 +33,16 @@ inputs = {
   app_name      = "k8s"
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
-  s3_k8s_config = "viktoruj-terraform-state-backet"
+  s3_k8s_config = local.vars.locals.s3_k8s_config
   cluster_name="k8s6"
 
   k8s_master = {
-    k8_version         = "1.26.0"
-    runtime            = "containerd" # docker  , cri-o  , containerd ( need test it )
+    k8_version         = local.vars.locals.k8_version
+    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )
     runtime_script     = "template/runtime.sh"
-    instance_type      = "t3.medium"
-    key_name           = "cks"
-    ami_id             = "ami-06410fb0e71718398"
+    instance_type      = local.vars.locals.instance_type
+    key_name           = local.vars.locals.key_name
+    ami_id             = local.vars.locals.ami_id
     #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
     subnet_number      = "0"
     user_data_template = "template/master.sh"
@@ -52,10 +52,7 @@ inputs = {
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-6/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
-    root_volume        = {
-      type = "gp3"
-      size = "12"
-    }
+    root_volume        = local.vars.locals.root_volume
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
@@ -63,21 +60,18 @@ inputs = {
   }
   k8s_worker = {
     "node_1" = {
-      k8_version         = "1.26.0"
-      instance_type      = "t3.medium"
-      key_name           = "cks"
-      ami_id             = "ami-06410fb0e71718398"
+      k8_version         = local.vars.locals.k8_version
+      instance_type      = local.vars.locals.instance_type
+      key_name           = local.vars.locals.key_name
+      ami_id             = local.vars.locals.ami_id
       subnet_number      = "0"
       user_data_template = "template/worker.sh"
-      runtime            = "containerd"
+      runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-6/scripts/worker.sh"
       node_labels        = "work_type=worker"
       cidrs              = ["0.0.0.0/0"]
-      root_volume        = {
-        type = "gp3"
-        size = "12"
-      }
+      root_volume        = local.vars.locals.root_volume
       ssh = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
