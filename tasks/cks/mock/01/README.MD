@@ -1,3 +1,10 @@
+# Instructions 
+- for checking time run     `time_left`
+- for checking result run   `check_result`
+- for connect to node use `ssh  {kubernetes_nodename}`
+
+# Questions
+
 ## 1. Container Runtime Sandbox gVisor
 ### Task weight: 4%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
