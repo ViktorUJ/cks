@@ -3,6 +3,25 @@
 - for checking result run   `check_result`
 - for connect to node use `ssh  {kubernetes_nodename}`
 
+# Allowed resources 
+**Kubernetes Documentation:**
+
+https://kubernetes.io/docs/ and their subdomains
+
+https://kubernetes.io/blog/ and their subdomains
+
+This includes all available language translations of these pages (e.g. https://kubernetes.io/zh/docs/)
+
+**Tools:**
+
+**Trivy** documentation https://aquasecurity.github.io/trivy/
+
+**Falco** documentation https://falco.org/docs/
+This includes all available language translations of these pages (e.g. https://falco.org/zh/docs/)
+
+**App Armor**:
+Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
+
 # Questions
 
 ## 1. Container Runtime Sandbox gVisor
