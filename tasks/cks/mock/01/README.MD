@@ -1,7 +1,21 @@
 # Instructions 
+
+## create mock exam env
+- update `s3` in [terragrunt.hcl](..%2F..%2F..%2F..%2Fterraform%2Fenvironments%2Fterragrunt.hcl)
+- update `region` and `ami id ` (if need it ) in [terragrunt.hcl](..%2F..%2F..%2F..%2Fterraform%2Fenvironments%2Fterragrunt.hcl)
+- create  own aws ec2 `KeyPairs`
+- update ` key_name` in [env.hcl](env.hcl)
+- run `TASK=01 make run_cks_k8s_mock` from  root repo folder
+
+## connect to  mock exam env
+- find `worker_pc_ip` in `terraform output`
+- connect to `worker_pc_ip`  with your ssh key and user `ubuntu`
 - for checking time run     `time_left` on work pc
 - for checking result run   `check_result` on work pc
 - for connect to node use `ssh  {kubernetes_nodename}` on work pc
+
+## Delete mock exam env
+- `make delete_cks_k8s_mock`
 
 # Allowed resources 
 **Kubernetes Documentation:**
