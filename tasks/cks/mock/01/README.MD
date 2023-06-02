@@ -119,7 +119,7 @@ from secret `db` in `team-5` ns save :
  - create default deny ingress policy in `prod-db` NS
  - create policy with allow connections from `prod` Namespaces to `prod-db`
  - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
- - create policy with allow connections from any Namespaces and have label: `role=db-external-connect`
+ - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
 
 ## 9. AppArmor
 ### Task weight: 3%
