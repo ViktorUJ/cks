@@ -5,6 +5,7 @@
 - update `region` and `ami id ` (if need it ) in [terragrunt.hcl](..%2F..%2F..%2F..%2Fterraform%2Fenvironments%2Fterragrunt.hcl)
 - create  own aws ec2 `KeyPairs`
 - update ` key_name` in [env.hcl](env.hcl)
+- update `backend_bucket` in [env.hcl](env.hcl)
 - run `TASK=01 make run_cks_k8s_mock` from  root repo folder
 
 ## connect to  mock exam env
@@ -43,10 +44,10 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
 - `runsc` was installed on `node2` (label `node_name=node_2`)
-- create `RuntimeClass` `gVisor` with handler `runsc`
+- create `RuntimeClass` `gvisor` with handler `runsc`
 - add label `RuntimeClass=runsc` to `node2`
-- update pods in Namespace `team-purple` to use `RuntimeClass gVisor`
-- Make sure the Pod runs on node with `gVisor`
+- update pods in Namespace `team-purple` to use `RuntimeClass gvisor`
+- Make sure the Pod runs on node with `gvisor`
 - Write the `dmesg` output of the successfully started one of Pod into `/var/work/tests/artifacts/1/gvisor-dmesg`
 
 ## 2. Image Vulnerability Scanning
@@ -119,7 +120,7 @@ from secret `db` in `team-5` ns save :
  - create default deny ingress policy in `prod-db` NS
  - create policy with allow connections from `prod` Namespaces to `prod-db`
  - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
- - create policy with allow connections from any Namespaces and have label: `role=db-external-connect`
+ - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
 
 ## 9. AppArmor
 ### Task weight: 3%
