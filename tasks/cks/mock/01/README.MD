@@ -140,11 +140,11 @@ for pod with image `nginx` and store log to `/var/work/tests/artifacts/12/log`
 
 **create pod**  - `test-lasted` in `default` ns with image `nginx` 
 
-**result** `Error from server (Forbidden): pods test is forbidden: image policy webhook .... latest tag are not allowed`
+**result:** `Error from server (Forbidden): pods test is forbidden: image policy webhook .... latest tag are not allowed`
 
 **create pod**  - `test-tag` in `default` ns with image `nginx:alpine3.17`
 
-**result**  - `ok`
+**result:**  - `ok`
 
 ## 14. fix Dockerfile
 ### Task weight: 4%
