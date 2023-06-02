@@ -1,4 +1,4 @@
-# 1.  Container Runtime Sandbox gVisor
+ 1.  Container Runtime Sandbox gVisor
 Task weight: 4%
 cluster : cluster1 (  kubectl config use-context   cluster1-admin@cluster1   )
 
@@ -9,13 +9,13 @@ cluster : cluster1 (  kubectl config use-context   cluster1-admin@cluster1   )
 - Make sure the Pod runs on node with gvisor  
 - Write the dmesg output of the successfully started one of Pod into /var/work/tests/artifacts/1/gvisor-dmesg .
 
-# 2. Image Vulnerability Scanning
+ 2. Image Vulnerability Scanning
 Task weight: 2%
 cluster : cluster1 (  kubectl config use-context   cluster1-admin@cluster1   )
 - trivy is installed on your worker node
 - check image in pods  in team-xxx namespace  , find image  without CRITICAL vulnerability . Other deployment scale to 0 replica.
 
-# 3. Enable audit log 
+ 3. Enable audit log 
 Task weight: 7%
 cluster : cluster2 (  kubectl config use-context   cluster2-admin@cluster2 )
 - logs  /var/logs/kubernetes-api.log
@@ -23,7 +23,7 @@ cluster : cluster2 (  kubectl config use-context   cluster2-admin@cluster2 )
   1. From Secret resources, level Metadata, namespace prod.
   2. From configmaps ,  level RequestResponse, namespace billing.
 
-# 4. CIS Benchmark
+ 4. CIS Benchmark
 Task weight: 3%
 cluster : cluster3 (  kubectl config use-context   cluster3-admin@cluster3  )
 
@@ -37,7 +37,7 @@ CIS Benchmark  is installed  on nodes
 - fix on worker node :
   4.2.6 Ensure that the --protect-kernel-defaults argument is set to true (Automated)
 
-# 5. Secrets
+ 5. Secrets
 Task weight: 2%
 cluster : cluster6 (   kubectl config use-context   cluster6-admin@cluster6 )
 
@@ -47,7 +47,7 @@ from secret db  in team-5 ns  save :
   - create new secret db-admin { user=xxx  , password=yyyy }
   - create pod  db-admin NS=team-5  image = viktoruj/cks-lab , command = sleep 60000 , and mount secret db-admin   to /mnt/secret
 
-# 6. set tls version  and  allowed ciphers for etcd , kube-api  , kubelet   
+ 6. set tls version  and  allowed ciphers for etcd , kube-api  , kubelet   
 Task weight: 6%
 cluster : cluster1 (  kubectl config use-context    cluster4-admin@cluster4   )
 
@@ -62,7 +62,7 @@ cluster : cluster1 (  kubectl config use-context    cluster4-admin@cluster4   )
    - tls  cipher  =  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
    - tls min version 1.3
 
-# 7. encrypt  secrets in  ETCD
+ 7. encrypt  secrets in  ETCD
 Task weight: 6%
 cluster : cluster5 (   kubectl config use-context    cluster5-admin@cluster5    )
 
@@ -77,7 +77,7 @@ cluster : cluster5 (   kubectl config use-context    cluster5-admin@cluster5    
 3. encrypt  all secrets in stage  ns     with new config
 
 
-# 8. Network policy
+ 8. Network policy
 Task weight: 6%
 cluster : cluster6 (   kubectl config use-context    cluster6-admin@cluster6   )
  - create default deny ingress policy in prod-db NS
@@ -85,7 +85,7 @@ cluster : cluster6 (   kubectl config use-context    cluster6-admin@cluster6   )
  - create policy  with allow connections from stage Namespaces and have label: role=db-connect
  - create policy  with allow connections from any Namespaces and have label: role=db-external-connect
 
-# 9. AppArmor
+ 9. AppArmor
 Task weight: 3%
 cluster : cluster6 (   kubectl config use-context    cluster6-admin@cluster6   )
 - install appArmor profile from /opt/course/9/profile (work pc)  to worker node on cluster
@@ -97,7 +97,7 @@ cluster : cluster6 (   kubectl config use-context    cluster6-admin@cluster6   )
     nodeSelector to workerNode
 -  save logs of the Pod into /var/work/tests/artifacts/9/log
 
-# 10. Deployment  security
+ 10. Deployment  security
 Task weight: 6%
 cluster : cluster6 (   kubectl config use-context    cluster6-admin@cluster6   )
 
@@ -110,7 +110,7 @@ Modify deployment secure in secure Namespace  :
 
 , security context, user id, prevent escalation, Read only root file system
 
-# 11. RBAC  . 
+ 11. RBAC  . 
 Task weight: 6%
 cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
 
@@ -124,7 +124,7 @@ cluster : cluster6 (kubectl config use-context    cluster6-admin@cluster6 )
 
 - create pod  dev-rbac  NS=rbac-1  image = viktoruj/cks-lab , command = sleep 60000 , SA=dev
 
-# 12. falco , sysdig 
+ 12. falco , sysdig 
 Task weight: 6%
 cluster : cluster7 (  kubectl config use-context    cluster7-admin@cluster7   )
 
@@ -134,7 +134,7 @@ for pod with image nginx
 and store log to /var/work/tests/artifacts/12/log
 
 
-# 13. image policy webhook
+ 13. image policy webhook
 Task weight: 6%
 cluster : cluster8 (   kubectl config use-context    cluster8-admin@cluster8   )
 
@@ -150,7 +150,7 @@ create pod  test-tag   in default ns    with image nginx:alpine3.17
 
 
 
-# 14. fix Dockerfile 
+ 14. fix Dockerfile 
 Task weight: 4%
 cluster : any
 
@@ -162,7 +162,7 @@ fix Dockerfile    /var/work/14/Dockerfile
 
 
 
-# 15. Pod Security Standard
+ 15. Pod Security Standard
 Task weight: 6%
 cluster : cluster6 (   kubectl config use-context    cluster6-admin@cluster6   )
 
