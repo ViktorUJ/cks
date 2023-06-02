@@ -1,7 +1,7 @@
 # Instructions 
-- for checking time run     `time_left`
-- for checking result run   `check_result`
-- for connect to node use `ssh  {kubernetes_nodename}`
+- for checking time run     `time_left` on work pc
+- for checking result run   `check_result` on work pc
+- for connect to node use `ssh  {kubernetes_nodename}` on work pc
 
 # Allowed resources 
 **Kubernetes Documentation:**
