@@ -1,6 +1,6 @@
 # repo for learning k8s (CKAD, CKA , CKS)
 
-# [run mock cks exam  ]([README.MD](tasks%2Fcks%2Fmock%2F01%2FREADME.MD))
+# [run mock cks exam  ](tasks%2Fcks%2Fmock%2F01%2FREADME.MD)
 
 ## k8s_self_managment terraform module 
 ### script support  version 
