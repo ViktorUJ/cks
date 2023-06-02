@@ -5,6 +5,7 @@
 - update `region` and `ami id ` (if need it ) in [terragrunt.hcl](..%2F..%2F..%2F..%2Fterraform%2Fenvironments%2Fterragrunt.hcl)
 - create  own aws ec2 `KeyPairs`
 - update ` key_name` in [env.hcl](env.hcl)
+- update `backend_bucket` in [env.hcl](env.hcl)
 - run `TASK=01 make run_cks_k8s_mock` from  root repo folder
 
 ## connect to  mock exam env
