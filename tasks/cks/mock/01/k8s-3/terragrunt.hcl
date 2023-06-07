@@ -35,7 +35,7 @@ inputs = {
   vpc_id        = dependency.vpc.outputs.vpc_id
   s3_k8s_config = local.vars.locals.s3_k8s_config
   cluster_name="k8s3"
-
+  node_type     = local.vars.locals.node_type
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
     runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )
