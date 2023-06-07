@@ -26,7 +26,8 @@ locals {
     "${k} private_ip = ${v.private_ip}  public_ip = ${v.public_ip}  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
   ]
 
-  external_ip= var.k8s_master.eip == "true" ?  aws_eip.master["enable"].public_ip  : ""
+#  external_ip= var.k8s_master.eip == "true" ?  aws_eip.master["enable"].public_ip  : ""
+external_ip = var.node_type == "spot" ? aws_spot_instance_request.master["enable"].public_ip : aws_instance.master["enable"].public_ip
 }
 
 
