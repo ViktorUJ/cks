@@ -11,7 +11,7 @@ locals {
     "k8_node_type" = "master"
     "Name"         = "${var.aws}-${var.prefix}-${var.app_name}-master"
   }
-  tags_all_k8_master = var.node_type == "spot" ?   merge(local.tags_all, local.tags_k8_master)
+  tags_all_k8_master = var.node_type == "spot" ?   merge(local.tags_all, local.tags_k8_master) : {}
 
   tags_k8_worker = {
     "k8_node_type" = "worker"
