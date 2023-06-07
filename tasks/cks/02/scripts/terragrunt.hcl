@@ -31,7 +31,7 @@ inputs = {
   vpc_id        = dependency.vpc.outputs.vpc_id
   s3_k8s_config = "viktoruj-terraform-state-backet-test1"
   cluster_name  = "k8s1"
-  node_type="spot"
+  node_type="ondemand"
 
   k8s_master = {
     k8_version         = "1.26.0"
