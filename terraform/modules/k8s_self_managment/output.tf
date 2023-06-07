@@ -1,5 +1,5 @@
 output "master_external_ip" {
-  value = local.external_ip
+  value = local.master_ip_public
 }
 
 output "cluster" {
@@ -26,7 +26,7 @@ output "worker_ip" {
 }
 
 output "master_ssh" {
-  value = "ssh ubuntu@${local.external_ip}"
+  value = "ssh ubuntu@${local.master_ip_public}"
 }
 
 output "eip" {
