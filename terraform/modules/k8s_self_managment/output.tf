@@ -1,19 +1,16 @@
 output "master_external_ip" {
-  value = local.external_ip
+  value = local.master_ip_public
 }
 
 output "cluster" {
   value = var.cluster_name
 }
 output "master_local_ip" {
-  value = aws_spot_instance_request.master.private_ip
+  value = local.master_local_ip
 }
-#output "master_ec2_id" {
-#  value = aws_spot_instance_request.master.spot_instance_id
-#}
-#output "master_ec2_ebs_id" {
-#  value = aws_spot_instance_request.master.root_block_device[0].volume_id
-#}
+output "node_type" {
+  value = var.node_type
+}
 output "worker_join" {
   value = "s3://${local.worker_join}"
 }
@@ -29,9 +26,12 @@ output "worker_ip" {
 }
 
 output "master_ssh" {
-  value = "ssh ubuntu@${local.external_ip}"
+  value = "ssh ubuntu@${local.master_ip_public}"
 }
 
+output "eip" {
+  value = var.k8s_master.eip
+}
 
 output "check_node_status" {
   value = "tail -f /var/log/cloud-init-output.log "

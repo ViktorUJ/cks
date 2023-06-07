@@ -31,9 +31,10 @@ inputs = {
   vpc_id        = dependency.vpc.outputs.vpc_id
   s3_k8s_config = "viktoruj-terraform-state-backet-test1"
   cluster_name  = "k8s1"
+  node_type= "spot" #"ondemand"  "spot"
 
   k8s_master = {
-    k8_version         = "1.26.0"
+    k8_version         = "1.27.0"
     runtime            = "containerd" # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = "t3.medium"
@@ -60,7 +61,7 @@ inputs = {
   k8s_worker = {
     # we can  configure each node independently
     "node_1" = {
-      k8_version         = "1.26.0"
+      k8_version         = "1.27.0"
       instance_type      = "t3.medium"
       key_name           = "cks"
       ami_id             = "ami-06410fb0e71718398"

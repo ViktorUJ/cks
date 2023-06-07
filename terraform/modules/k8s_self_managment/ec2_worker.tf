@@ -16,7 +16,7 @@ data "template_file" "worker" {
 }
 
 resource "aws_spot_instance_request" "worker" {
-  for_each                    = var.k8s_worker
+  for_each                    = local.k8s_worker_spot
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
   wait_for_fulfillment        = true
@@ -54,7 +54,7 @@ resource "time_sleep" "wait_worker" {
 
 resource "aws_ec2_tag" "worker_ec2" {
   depends_on = [time_sleep.wait_worker]
-  for_each    = var.k8s_worker
+  for_each    =  local.k8s_worker_spot
   resource_id = aws_spot_instance_request.worker["${each.key}"].spot_instance_id
   key         = "Name"
   value       = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}"
@@ -62,7 +62,7 @@ resource "aws_ec2_tag" "worker_ec2" {
 
 resource "aws_ec2_tag" "worker_ebs" {
   depends_on = [time_sleep.wait_worker]
-  for_each    = var.k8s_worker
+  for_each    =  local.k8s_worker_spot
   resource_id = aws_spot_instance_request.worker["${each.key}"].root_block_device[0].volume_id
   key         = "Name"
   value       = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}"
