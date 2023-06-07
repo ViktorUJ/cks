@@ -29,6 +29,9 @@ output "master_ssh" {
   value = "ssh ubuntu@${local.external_ip}"
 }
 
+output "eip" {
+  value = var.k8s_master.eip
+}
 
 output "check_node_status" {
   value = "tail -f /var/log/cloud-init-output.log "
