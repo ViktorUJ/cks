@@ -30,6 +30,8 @@ locals {
   external_ip= var.k8s_master.eip == "true" ?  aws_eip.master["enable"].public_ip  : ""
   master_instance_id=var.node_type == "spot" ? aws_spot_instance_request.master["enable"].spot_instance_id : aws_instance.master["enable"].id
   master_local_ip=var.node_type == "spot" ? aws_spot_instance_request.master["enable"].private_ip : aws_instance.master["enable"].private_ip
+  k8s_worker_ondemand=var.node_type == "ondemand" ? var.k8s_worker : {}
+  k8s_worker_spot=var.node_type == "spot" ? var.k8s_worker : {}
 }
 
 
