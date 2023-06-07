@@ -6,7 +6,7 @@ output "cluster" {
   value = var.cluster_name
 }
 output "master_local_ip" {
-  value = aws_spot_instance_request.master.private_ip
+  value = local.master_local_ip
 }
 #output "master_ec2_id" {
 #  value = aws_spot_instance_request.master.spot_instance_id
