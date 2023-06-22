@@ -124,7 +124,7 @@ terragrunt destroy
 ### https://github.com/killer-sh
 ### https://www.youtube.com/@learnwithgvr/videos
 ### https://www.youtube.com/watch?v=hqzuk-msDdM&list=PLmxqUDFl0XM4sJxAocidRKMNzAB48oEnU&index=2
-
+### https://github.com/krol3/container-security-checklist#secure-the-container-registry
 
 vim  : 
 
