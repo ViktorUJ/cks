@@ -8,12 +8,14 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 }
 
-@test "1.1  Container Runtime Sandbox gVisor.RuntimeClass " {
+@test "1. Deploy a pod named nginx-pod using the nginx:alpine image " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get runtimeclasses.node.k8s.io  gvisor  --context cluster1-admin@cluster1  -o jsonpath={.handler})
-  if [[ "$result" == "runsc" ]]; then
+  result=$(kubectl get po nginx-pod  -o jsonpath='{.spec.containers..image}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "nginx:alpine" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "runsc" ]
+  [ "$result" == "nginx:alpine" ]
 }
+
+# 1 ,  1
 
