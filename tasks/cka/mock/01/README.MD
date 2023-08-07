@@ -6,7 +6,7 @@
 - create  own aws ec2 `KeyPairs`
 - update ` key_name` in [env.hcl](env.hcl)
 - update `backend_bucket` in [env.hcl](env.hcl)
-- run `TASK=01 make run_cks_k8s_mock` from  root repo folder
+- run `TASK=01 make run_cka_k8s_mock` from  root repo folder
 
 ## connect to  mock exam env
 - find `worker_pc_ip` in `terraform output`
@@ -16,7 +16,7 @@
 - for connect to node use `ssh  {kubernetes_nodename}` on work pc
 
 ## Delete mock exam env
-- `make delete_cks_k8s_mock`
+- `make delete_cka_k8s_mock`
 
 # Allowed resources 
 **Kubernetes Documentation:**
