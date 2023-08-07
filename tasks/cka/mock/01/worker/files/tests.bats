@@ -124,3 +124,14 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # 1 , 13
+
+@test "9 Use JSON PATH query to retrieve the osImages " {
+  echo '3'>>/var/work/tests/result/all
+  result=$(cat /var/work/tests/artifacts/9/os.json | grep 'Ubuntu 20.04.6 LTS' | wc -l)
+  if [[ "$result" == "2" ]]; then
+   echo '3'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "2" ]
+}
+
+# 3 , 16

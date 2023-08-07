@@ -94,3 +94,21 @@ This includes all available language translations of these pages (e.g. https://k
 - Name: temp-bus
 - Image Name: redis:alpine
 
+## 9. Use JSON PATH query to retrieve the osImages of all the nodes and store it in a file /var/work/tests/artifacts/9/os.json 
+### Task weight: 3%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+-  file /var/work/tests/artifacts/9/os.json
+
+
+## 10. Create a pod called multi-pod with two containers
+### Task weight: 3%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Pod Name: multi-pod
+- Container 1 name: alpha
+- Container 2 name : beta
+- Container 1 Environment variable  name=alpha
+- Container 2 Environment variable  name=alpha
+
+
