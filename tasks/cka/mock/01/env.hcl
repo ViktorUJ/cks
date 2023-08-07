@@ -7,7 +7,7 @@ locals {
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
-    "owner"           = "viktaruj@gmail.com"
+    "owner"           = "viktoruj@gmail.com"
   }
   k8_version    = "1.26.0"
   node_type     = "spot"
