@@ -33,13 +33,64 @@ This includes all available language translations of these pages (e.g. https://k
 ## 1. Deploy a pod named nginx-pod using the nginx:alpine image.
 ### Task weight: 1%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
 - Name: nginx-pod
 - Image: nginx:alpine
 
 
 ## 2. Deploy a messaging pod using the redis:alpine image with the labels set to tier=msg
+### Task weight: 2%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Pod Name: messaging
+- Image: redis:alpine
+- Labels: tier=msg
+
+
+
+## 3. Create a namespace named apx-x9984574  
 ### Task weight: 1%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
-- Name: nginx-pod
+
+- Namespace: apx-x9984574
+
+## 4. Get the list of nodes in JSON format and store it in a file at /var/work/tests/artifacts/4/nodes.json 
+### Task weight: 2%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- list of nodes  /var/work/tests/artifacts/4/nodes.json   
+
+## 5. Create a service messaging-service to expose the messaging application within the cluster on port 6379
+### Task weight: 2%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Use imperative commands.
+- Service: messaging-service
+- Port: 6379
+- Type: ClusterIp
+- Use the right labels 
+
+## 6. Create a deployment named hr-web-app using the image nginx:alpine with 2 replicas
+### Task weight: 2%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Name: hr-web-app
 - Image: nginx:alpine
+- Replicas: 2 
+
+## 7. Create a static pod named static-busybox with label pod-type=static-pod  on the controlplane node that uses the busybox image and the command sleep 60000.
+### Task weight: 2%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Name: static-busybox
+- Image: busybox
+- label: pod-type=static-pod
+
+## 8. Create a POD in the finance namespace named temp-bus with the image redis:alpine.
+### Task weight: 1%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Namespace: finance 
+- Name: temp-bus
+- Image Name: redis:alpine
 
