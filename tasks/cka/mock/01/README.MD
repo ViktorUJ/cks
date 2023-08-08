@@ -106,9 +106,8 @@ This includes all available language translations of these pages (e.g. https://k
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
 - Pod Name: multi-pod
-- Container 1 name: alpha
-- Container 2 name : beta
-- Container 1 Environment variable  name=alpha
-- Container 2 Environment variable  name=alpha
+- Container 1, name: alpha, image: nginx , variable  name=alpha
+- Container 2: name: beta, image: busybox, command: sleep 4800 , variable  name=beta
+
 
 
