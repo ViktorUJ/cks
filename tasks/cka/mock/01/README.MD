@@ -94,7 +94,7 @@ This includes all available language translations of these pages (e.g. https://k
 - Name: temp-bus
 - Image Name: redis:alpine
 
-## 9. Use JSON PATH query to retrieve the osImages of all the nodes and store it in a file /var/work/tests/artifacts/9/os.json 
+## 9. Use JSON PATH query to retrieve the osImages of all the nodes and store it in a file /var/work/tests/artifacts/9/os.json  each node - new line
 ### Task weight: 3%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
@@ -102,7 +102,7 @@ This includes all available language translations of these pages (e.g. https://k
 
 
 ## 10. Create a pod called multi-pod with two containers
-### Task weight: 3%
+### Task weight: 5%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
 - Pod Name: multi-pod
@@ -110,4 +110,30 @@ This includes all available language translations of these pages (e.g. https://k
 - Container 2: name: beta, image: busybox, command: sleep 4800 , variable  name=beta
 
 
+## 11. Create a Persistent Volume with the given specification . Run pod with pv
+### Task weight: 4%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
+- The web application listens on port 80
+- Name: hr-web-app-service
+- Type: NodePort
+- Endpoints: 2
+- Port: 80
+- NodePort: 30082
+
+
+## 12. Create a Persistent Volume with the given specification . Run pod with pv
+### Task weight: 6%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Volume name: pv-analytics
+- pvc name: pvc-analytics
+- Storage: 100Mi
+- Access mode: ReadWriteOnce
+- Host path: /pv/analytics
+
+- pod name: analytics
+- image: busybox
+- node: nodeSelector -  node_name: node_2
+- command : "sleep 60000"
+- mountPath: /pv/analytics
