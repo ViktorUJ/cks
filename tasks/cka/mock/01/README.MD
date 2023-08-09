@@ -139,6 +139,6 @@ This includes all available language translations of these pages (e.g. https://k
 - mountPath: /pv/analytics
 
 ## 13. Take a backup of the etcd cluster and save it to  /var/work/tests/artifacts/13/etcd-backup.db
-### Task weight: 2%
+### Task weight: 3%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
-- etcd backup   /var/work/tests/artifacts/13/etcd-backup.db
+- etcd backup   on control-plane   node   /var/work/tests/artifacts/13/etcd-backup.db
