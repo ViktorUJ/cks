@@ -144,24 +144,30 @@ This includes all available language translations of these pages (e.g. https://k
 - etcd backup   on control-plane   node   /var/work/tests/artifacts/13/etcd-backup.db
 
 
-##### tmp
-
 ## 14. Create a Pod called redis-storage with image: redis:alpine with a Volume of type emptyDir that lasts for the life of the Pod
-### Task weight: 2%
+### Task weight: 4%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
-- Pod named  'redis-storage' 
-- Pod 'redis-storage' uses Volume type of emptyDir
-- Pod 'redis-storage' uses volumeMount with mountPath = /data/redis
+- Pod name: redis-storage 
+- container name: redis-storage
+- image: redis:alpine
+- volumes.name: data
+- volumes.type: emptyDir
+- volumes.sizeLimit: 500Mi
+- volumeMounts.mountPath: /data/redis
+- volumeMounts.name: data
 
 ## 15. Create a new pod called super-user-pod with image busybox:1.28. Allow the pod to be able to set system_time.
 ### Task weight: 2%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
-
-- command:  sleep for 4800 seconds.
 - Pod name : super-user-pod
+- container name: super-user-pod
 - Container Image: busybox:1.28
+- command:  sleep for 4800 seconds.
 - capability:   SYS_TIME 
+
+
+##### tmp
 
 ## 16. Create a new deployment called nginx-deploy, with image nginx:1.16 and 1 replica. Next upgrade the deployment to version 1.17 using rolling update.
 ### Task weight: 3%

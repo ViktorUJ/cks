@@ -260,3 +260,36 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 # 3 , 33
+
+
+@test "14.1 Create a Pod called redis-storage.volume_type_sizeLimit " {
+  echo '2'>>/var/work/tests/result/all
+  result=$(kubectl get po  redis-storage -o jsonpath='{.spec.volumes[?(.name=="data")].emptyDir.sizeLimit}'  --context cluster1-admin@cluster1  )
+  if [[ "$result" == "500Mi" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "500Mi" ]
+}
+
+@test "14.2 Create a Pod called redis-storage.volumeMounts_mountPath " {
+  echo '2'>>/var/work/tests/result/all
+  result=$(kubectl get po  redis-storage -o jsonpath='{.spec.containers[?(.name=="redis-storage")].volumeMounts[?(.name=="data")].mountPath}' --context cluster1-admin@cluster1  )
+  if [[ "$result" == "/data/redis" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "/data/redis" ]
+}
+
+# 4 , 37
+
+@test "15 Create a Pod called redis-storage.volumeMounts_mountPath " {
+  echo '2'>>/var/work/tests/result/all
+  kubectl get po  super-user-pod -o jsonpath='{.spec.containers[?(.name=="super-user-pod")].securityContext.capabilities.add}' --context cluster1-admin@cluster1 | grep 'SYS_TIME'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+# 2 , 39
