@@ -142,3 +142,97 @@ This includes all available language translations of these pages (e.g. https://k
 ### Task weight: 3%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 - etcd backup   on control-plane   node   /var/work/tests/artifacts/13/etcd-backup.db
+
+
+##### tmp
+
+## 14. Create a Pod called redis-storage with image: redis:alpine with a Volume of type emptyDir that lasts for the life of the Pod
+### Task weight: 2%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Pod named  'redis-storage' 
+- Pod 'redis-storage' uses Volume type of emptyDir
+- Pod 'redis-storage' uses volumeMount with mountPath = /data/redis
+
+## 15. Create a new pod called super-user-pod with image busybox:1.28. Allow the pod to be able to set system_time.
+### Task weight: 2%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- command:  sleep for 4800 seconds.
+- Pod name : super-user-pod
+- Container Image: busybox:1.28
+- capability:   SYS_TIME 
+
+## 16. Create a new deployment called nginx-deploy, with image nginx:1.16 and 1 replica. Next upgrade the deployment to version 1.17 using rolling update.
+### Task weight: 3%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Deployment : nginx-deploy. Image: nginx:1.16
+- Image: nginx:1.16
+- Task: Upgrade the version of the deployment to 1:17
+- Task: Record the changes for the image upgrade
+
+## 17. Create a new user called john. Grant him access to the cluster. John should have permission to create, list, get, update and delete pods in the development namespace . The private key exists in the location: /root/CKA/john.key and csr at /root/CKA/john.csr.
+### Task weight: 4%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- Important Note: As of kubernetes 1.19, the CertificateSigningRequest object expects a signerName.
+- Please refer the documentation to see an example. The documentation tab is available at the top right of terminal.
+- CSR: john-developer Status:Approved
+- Role Name: developer, namespace: development, Resource: Pods
+- Access: User 'john' has appropriate permissions
+
+
+## 18. Create a new service account with the name pvviewer. Grant this Service account access to list all PersistentVolumes in the cluster by creating an appropriate cluster role called pvviewer-role and ClusterRoleBinding called pvviewer-role-binding. Next, create a pod called pvviewer with the image: redis and serviceAccount: pvviewer in the default namespace.
+### Task weight: 5%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- ServiceAccount: pvviewer
+- ClusterRole: pvviewer-role
+- ClusterRoleBinding: pvviewer-role-binding
+- Pod: pvviewer
+
+
+## 19. Create a Pod called non-root-pod , image: redis:alpine
+### Task weight: 2%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+
+- pod name : non-root-pod
+- image: redis:alpine
+- runAsUser: 1000
+- fsGroup: 2000
+
+## 20. Taint the worker node node01 to be Unschedulable. Once done, create a pod called dev-redis, image redis:alpine, to ensure workloads are not scheduled to this worker node. Finally, create a new pod called prod-redis and image: redis:alpine with toleration to be scheduled on node01.
+### Task weight: 3%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+- key: env_type, value: production, operator: Equal and effect: NoSchedule
+- Key = env_type ,  Value = production ,  Effect = NoSchedule
+- pod 'dev-redis' (no tolerations) is not scheduled on node01?
+- Create a pod 'prod-redis' to run on node01
+
+## 21. Create a nginx pod called nginx-resolver using image nginx, expose it internally with a service called nginx-resolver-service. Test that you are able to look up the service and pod names from within the cluster. Use the image: busybox:1.28 for dns lookup. Record results in /root/CKA/nginx.svc and /root/CKA/nginx.pod
+### Task weight: 3%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+- Pod: nginx-resolver
+- image: nginx
+- Service DNS Resolution recorded correctly
+- Pod DNS resolution recorded correctly
+
+##  --- from cks --- 
+
+## 22. Network policy
+### Task weight: 6%
+### cluster : cluster6 (`kubectl config use-context cluster6-admin@cluster6`)
+ - create default deny ingress policy in `prod-db` NS
+ - create policy with allow connections from `prod` Namespaces to `prod-db`
+ - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
+ - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
+
+
+## 22. Update Kubernetes
+### Task weight: 6%
+### cluster : cluster2 (`kubectl config use-context cluster2-admin@cluster2`)
+- The cluster is running Kubernetes 1.25.0 , update it to 1.26.0 .
+- Use apt package manager and kubeadm for this.
+- Use ssh  to connect to the instances.
+
