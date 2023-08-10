@@ -1,0 +1,19 @@
+#  k create sa pvviewer
+#  k create clusterrole pvviewer-role --verb list --resource PersistentVolumes
+# k create ClusterRoleBinding pvviewer-role-binding --serviceaccount default:pvviewer --clusterrole pvviewer-role
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pvviewer
+  name: pvviewer
+spec:
+  containers:
+  - image: redis
+    name: pvviewer
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  serviceAccountName: pvviewer
+status: {}

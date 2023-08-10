@@ -293,3 +293,35 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # 2 , 39
+
+@test "18.1 Create service account with the name pvviewer, clusterrole,pod .sa " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get sa  pvviewer  --context cluster1-admin@cluster1 -o jsonpath='{.metadata.name}' )
+  if [[ "$result" == "pvviewer" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "pvviewer" ]
+}
+
+@test "18.2 Create service account with the name pvviewer, clusterrole,pod . clusterrole_resources " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl get ClusterRole pvviewer-role -o jsonpath='{.rules[*].resources}' --context cluster1-admin@cluster1 | grep 'persistentvolumes'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "18.3 Create service account with the name pvviewer, clusterrole,pod . clusterrole_verbs " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl get ClusterRole pvviewer-role -o jsonpath='{.rules[*].verbs}' --context cluster1-admin@cluster1 | grep 'list'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
+# 5 , ???

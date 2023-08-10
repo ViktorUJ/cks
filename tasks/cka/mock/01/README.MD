@@ -173,7 +173,8 @@ This includes all available language translations of these pages (e.g. https://k
 ### Task weight: 3%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
-- Deployment : nginx-deploy. Image: nginx:1.16
+- Deployment : nginx-deploy. 
+- Image: nginx:1.16
 - Image: nginx:1.16
 - Task: Upgrade the version of the deployment to 1:17
 - Task: Record the changes for the image upgrade
@@ -188,15 +189,18 @@ This includes all available language translations of these pages (e.g. https://k
 - Role Name: developer, namespace: development, Resource: Pods
 - Access: User 'john' has appropriate permissions
 
+###### -/tmp 
+
 
 ## 18. Create a new service account with the name pvviewer. Grant this Service account access to list all PersistentVolumes in the cluster by creating an appropriate cluster role called pvviewer-role and ClusterRoleBinding called pvviewer-role-binding. Next, create a pod called pvviewer with the image: redis and serviceAccount: pvviewer in the default namespace.
 ### Task weight: 5%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
 - ServiceAccount: pvviewer
-- ClusterRole: pvviewer-role
+- ClusterRole: pvviewer-role ,  resources - PersistentVolumes   , verbs - list
 - ClusterRoleBinding: pvviewer-role-binding
 - Pod: pvviewer
+- image: redis
 
 
 ## 19. Create a Pod called non-root-pod , image: redis:alpine
