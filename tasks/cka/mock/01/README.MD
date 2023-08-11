@@ -198,9 +198,10 @@ This includes all available language translations of these pages (e.g. https://k
 
 - ServiceAccount: pvviewer
 - ClusterRole: pvviewer-role ,  resources - PersistentVolumes   , verbs - list
-- ClusterRoleBinding: pvviewer-role-binding
+- RoleBinding: pvviewer-role-binding
 - Pod: pvviewer
-- image: redis
+- image: alpine
+- command: sleep 60000
 
 
 ## 19. Create a Pod called non-root-pod , image: redis:alpine
