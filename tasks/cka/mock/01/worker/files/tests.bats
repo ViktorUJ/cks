@@ -350,5 +350,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "pvviewer-role" ]
 }
 
+# curl https://kubernetes.default/api/v1/persistentvolumes/pv-18 -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccount/token)" -k
+
 
 # 5 , ???

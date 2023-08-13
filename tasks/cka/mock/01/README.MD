@@ -197,8 +197,8 @@ This includes all available language translations of these pages (e.g. https://k
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
 - ServiceAccount: pvviewer
-- ClusterRole: pvviewer-role ,  resources - PersistentVolumes   , verbs - list
-- RoleBinding: pvviewer-role-binding
+- ClusterRole: pvviewer-role ,  resources - persistentvolumes   , verbs - list
+- clusterrolebinding: pvviewer-role-binding
 - Pod: pvviewer
 - image: alpine
 - command: sleep 60000
