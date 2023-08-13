@@ -1,5 +1,5 @@
 #  k create sa pvviewer
-#  k create clusterrole pvviewer-role --verb list --resource PersistentVolumes
+#  k create clusterrole pvviewer-role --verb list,get --resource PersistentVolumes
 # k create clusterrolebinding pvviewer-role-binding --clusterrole pvviewer-role --serviceaccount default:pvviewer
 apiVersion: v1
 kind: Pod
