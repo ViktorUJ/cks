@@ -204,6 +204,7 @@ This includes all available language translations of these pages (e.g. https://k
 - command: sleep 60000
 
 
+
 ## 19. Create a Pod called non-root-pod , image: redis:alpine
 ### Task weight: 2%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
