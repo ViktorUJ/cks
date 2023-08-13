@@ -341,7 +341,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "ClusterRole" ]
 }
 
-@test "18.6 Create service account with the name pvviewer, clusterrole,pod . rrolebinding_roleRef_name " {
+@test "18.6 Create service account with the name pvviewer, clusterrole,pod . rolebinding_roleRef_name " {
   echo '0.5'>>/var/work/tests/result/all
   result=$(kubectl get  clusterrolebinding pvviewer-role-binding -o jsonpath='{.roleRef.name}' --context cluster1-admin@cluster1  )
   if [[ "$result" == "pvviewer-role" ]]; then
@@ -350,7 +350,17 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "pvviewer-role" ]
 }
 
-# k exec pvviewer -- sh -c 'curl https://kubernetes.default/api/v1/persistentvolumes/pv-18 -s -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccounnt/token)" -k
+@test "18.7 Create service account with the name pvviewer, clusterrole,pod . list pv from  pod " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl exec pvviewer --context cluster1-admin@cluster1  -- sh -c 'curl https://kubernetes.default/api/v1/persistentvolumes/pv-18  -s -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccount/token)" -k' | grep path | grep "/tmp/pv-18"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
 
+# k exec pvviewer -- sh -c 'curl https://kubernetes.default/api/v1/persistentvolumes/pv-18 -s -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccounnt/token)" -k
+# k exec pvviewer -- sh -c 'curl https://kubernetes.default/api/v1/persistentvolumes/pv-18  -s -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccount/token)" -k' | grep path | grep "/tmp/pv-18"
 
 # 5 , ???

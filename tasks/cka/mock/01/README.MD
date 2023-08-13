@@ -197,7 +197,7 @@ This includes all available language translations of these pages (e.g. https://k
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
 - ServiceAccount: pvviewer
-- ClusterRole: pvviewer-role ,  resources - persistentvolumes   , verbs - list
+- ClusterRole: pvviewer-role ,  resources - persistentvolumes   , verbs - list,get
 - clusterrolebinding: pvviewer-role-binding
 - Pod: pvviewer
 - image: viktoruj/cks-lab:latest
