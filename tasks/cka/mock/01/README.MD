@@ -214,6 +214,8 @@ This includes all available language translations of these pages (e.g. https://k
 - runAsUser: 1000
 - fsGroup: 2000
 
+#### tmp
+
 ## 20. Taint the worker node node01 to be Unschedulable. Once done, create a pod called dev-redis, image redis:alpine, to ensure workloads are not scheduled to this worker node. Finally, create a new pod called prod-redis and image: redis:alpine with toleration to be scheduled on node01.
 ### Task weight: 3%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)

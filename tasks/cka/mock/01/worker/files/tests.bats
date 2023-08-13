@@ -360,7 +360,24 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-# k exec pvviewer -- sh -c 'curl https://kubernetes.default/api/v1/persistentvolumes/pv-18 -s -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccounnt/token)" -k
-# k exec pvviewer -- sh -c 'curl https://kubernetes.default/api/v1/persistentvolumes/pv-18  -s -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccount/token)" -k' | grep path | grep "/tmp/pv-18"
-
 # 5 , ???
+
+@test "19.1 Create a Pod called non-root-pod .runAsUser " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get po  non-root-pod -o jsonpath='{.spec.securityContext.runAsUser}' --context cluster1-admin@cluster1   )
+  if [[ "$result" == "1000" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "1000" ]
+}
+
+@test "19.2 Create a Pod called non-root-pod .fsGroup " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get po  non-root-pod -o jsonpath='{.spec.securityContext.fsGroup}' --context cluster1-admin@cluster1   )
+  if [[ "$result" == "2000" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "2000" ]
+}
+
+#2 , ???
