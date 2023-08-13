@@ -10,7 +10,7 @@ metadata:
   name: pvviewer
 spec:
   containers:
-  - image: alpine
+  - image: viktoruj/cks-lab:latest
     name: pvviewer
     command: ["sleep","60000"]
     resources: {}

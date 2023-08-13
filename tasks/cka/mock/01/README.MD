@@ -200,7 +200,7 @@ This includes all available language translations of these pages (e.g. https://k
 - ClusterRole: pvviewer-role ,  resources - persistentvolumes   , verbs - list
 - clusterrolebinding: pvviewer-role-binding
 - Pod: pvviewer
-- image: alpine
+- image: viktoruj/cks-lab:latest
 - command: sleep 60000
 
 

@@ -325,7 +325,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "18.4 Create service account with the name pvviewer, clusterrole,pod . rrolebinding_sa " {
   echo '0.5'>>/var/work/tests/result/all
-  result=$(kubectl get  rolebinding pvviewer-role-binding -o jsonpath='{.subjects[?(.kind=="ServiceAccount")].name}' --context cluster1-admin@cluster1   )
+  result=$(kubectl get  clusterrolebinding  pvviewer-role-binding -o jsonpath='{.subjects[?(.kind=="ServiceAccount")].name}' --context cluster1-admin@cluster1   )
   if [[ "$result" == "pvviewer" ]]; then
    echo '0.5'>>/var/work/tests/result/ok
   fi
@@ -334,7 +334,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "18.5 Create service account with the name pvviewer, clusterrole,pod . rolebinding_roleRef_kind " {
   echo '0.5'>>/var/work/tests/result/all
-  result=$(kubectl get  rolebinding pvviewer-role-binding -o jsonpath='{.roleRef.kind}' --context cluster1-admin@cluster1   )
+  result=$(kubectl get  clusterrolebinding  pvviewer-role-binding -o jsonpath='{.roleRef.kind}' --context cluster1-admin@cluster1   )
   if [[ "$result" == "ClusterRole" ]]; then
    echo '0.5'>>/var/work/tests/result/ok
   fi
@@ -343,14 +343,14 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "18.6 Create service account with the name pvviewer, clusterrole,pod . rrolebinding_roleRef_name " {
   echo '0.5'>>/var/work/tests/result/all
-  result=$(kubectl get  rolebinding pvviewer-role-binding -o jsonpath='{.roleRef.name}' --context cluster1-admin@cluster1  )
+  result=$(kubectl get  clusterrolebinding pvviewer-role-binding -o jsonpath='{.roleRef.name}' --context cluster1-admin@cluster1  )
   if [[ "$result" == "pvviewer-role" ]]; then
    echo '0.5'>>/var/work/tests/result/ok
   fi
   [ "$result" == "pvviewer-role" ]
 }
 
-# curl https://kubernetes.default/api/v1/persistentvolumes/pv-18 -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccount/token)" -k
+# k exec pvviewer -- sh -c 'curl https://kubernetes.default/api/v1/persistentvolumes/pv-18 -s -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccounnt/token)" -k
 
 
 # 5 , ???
