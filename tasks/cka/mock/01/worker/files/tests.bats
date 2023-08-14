@@ -381,3 +381,20 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 #2 , ???
+
+
+
+@test "22.1 Update Kubernetes.api version " {
+  echo '2'>>/var/work/tests/result/all
+  result=$(kubectl  version -o json --context cluster2-admin@cluster2  | jq -r '.serverVersion.gitVersion'       )
+  if [[ "$result" == "v1.26.0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "v1.26.0" ]
+}
+
+#  k get no  -o jsonpath='{range .items[*]}{.status.nodeInfo.kubeletVersion}{"\n"}'  | uniq| grep
+
+
+#6 , ???
+
