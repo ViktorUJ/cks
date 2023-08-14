@@ -1,3 +1,3 @@
 #!/bin/bash
-echo " *** worker node task 20"
+echo " *** worker node mock-1  k8s-1"
 
