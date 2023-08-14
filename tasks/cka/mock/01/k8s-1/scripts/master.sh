@@ -14,4 +14,4 @@ mv etcd etcdctl etcdutl /usr/local/bin
 echo "*** etcd = $(etcdctl version)"
 
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka/tasks/cka/mock/01/k8s-1/scripts/task18.yaml
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka/tasks/cka/mock/01/k8s-1/scripts/task22.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka/tasks/cka/mock/01/k8s-1/scripts/task23.yaml

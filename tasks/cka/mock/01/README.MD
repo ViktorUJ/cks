@@ -232,16 +232,6 @@ This includes all available language translations of these pages (e.g. https://k
 - Service DNS Resolution recorded correctly
 - Pod DNS resolution recorded correctly
 
-##  --- from cks --- 
-
-## 22. Network policy
-### Task weight: 6%
-### cluster : cluster6 (`kubectl config use-context cluster6-admin@cluster6`)
- - create default deny ingress policy in `prod-db` NS
- - create policy with allow connections from `prod` Namespaces to `prod-db`
- - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
- - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
-
 
 ## 22. Update Kubernetes
 ### Task weight: 7%
@@ -250,3 +240,10 @@ This includes all available language translations of these pages (e.g. https://k
 - Use apt package manager and kubeadm for this.
 - Use ssh  to connect to the instances.
 
+## 23. Network policy
+### Task weight: 6%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+ - create default deny ingress policy in `prod-db` NS
+ - create policy with allow connections from `prod` Namespaces to `prod-db`
+ - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
+ - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
