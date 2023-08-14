@@ -244,7 +244,7 @@ This includes all available language translations of these pages (e.g. https://k
 
 
 ## 22. Update Kubernetes
-### Task weight: 6%
+### Task weight: 7%
 ### cluster : cluster2 (`kubectl config use-context cluster2-admin@cluster2`)
 - The cluster is running Kubernetes 1.25.0 , update it to 1.26.0 .
 - Use apt package manager and kubeadm for this.
