@@ -85,6 +85,7 @@ This includes all available language translations of these pages (e.g. https://k
 - Name: static-busybox
 - Image: busybox
 - label: pod-type=static-pod
+- command:  sleep 60000
 
 ## 8. Create a POD in the finance namespace named temp-bus with the image redis:alpine.
 ### Task weight: 1%
@@ -232,7 +233,7 @@ This includes all available language translations of these pages (e.g. https://k
 - Service DNS Resolution recorded correctly
 - Pod DNS resolution recorded correctly
 
-
+---- ok
 ## 22. Update Kubernetes
 ### Task weight: 7%
 ### cluster : cluster2 (`kubectl config use-context cluster2-admin@cluster2`)
