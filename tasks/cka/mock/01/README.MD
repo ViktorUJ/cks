@@ -111,7 +111,7 @@ This includes all available language translations of these pages (e.g. https://k
 - Container 2: name: beta, image: busybox, command: sleep 4800 , variable  name=beta
 
 
-## 11. Create a Persistent Volume with the given specification . Run pod with pv
+## 11. Expose the hr-web-app as service
 ### Task weight: 4%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 
@@ -248,3 +248,12 @@ This includes all available language translations of these pages (e.g. https://k
  - create policy with allow connections from `prod` Namespaces to `prod-db`
  - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
  - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
+
+### 24 . secret as env and file  in pod 
+
+### 25 .configmap as file pod 
+
+### 26 . deployment . antiafinity  , distruption buget 
+
+
+

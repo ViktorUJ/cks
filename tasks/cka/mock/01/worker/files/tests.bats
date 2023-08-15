@@ -188,7 +188,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "11.1 Expose the hr-web-app as service.Type " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get svc  hr-web-app -o  jsonpath='{.spec.type}'  --context cluster1-admin@cluster1  )
+  result=$(kubectl get svc  hr-web-app-service -o  jsonpath='{.spec.type}'  --context cluster1-admin@cluster1  )
   if [[ "$result" == "NodePort" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
@@ -198,7 +198,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "11.2 Expose the hr-web-app as service.NodePort " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get svc  hr-web-app -o jsonpath='{.spec.ports..nodePort}'  --context cluster1-admin@cluster1  )
+  result=$(kubectl get svc  hr-web-app-service -o jsonpath='{.spec.ports..nodePort}'  --context cluster1-admin@cluster1  )
   if [[ "$result" == "30082" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
@@ -207,7 +207,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "11.3 Expose the hr-web-app as service. target Port " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get svc  hr-web-app -o jsonpath='{.spec.ports..targetPort}'  --context cluster1-admin@cluster1  )
+  result=$(kubectl get svc  hr-web-app-service -o jsonpath='{.spec.ports..targetPort}'  --context cluster1-admin@cluster1  )
   if [[ "$result" == "80" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
