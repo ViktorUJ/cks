@@ -294,6 +294,20 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # 2 , 39
 
+@test "16 Create a new deployment called nginx-deploy .  rollout history " {
+  echo '3'>>/var/work/tests/result/all
+  kubectl  rollout history deployment nginx-deploy --revision 2 --context cluster1-admin@cluster1 | grep Image| grep nginx:1.17
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '3'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+# 3 , 42
+
+
+
 @test "18.1 Create service account with the name pvviewer, clusterrole,pod .sa " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get sa  pvviewer  --context cluster1-admin@cluster1 -o jsonpath='{.metadata.name}' )
