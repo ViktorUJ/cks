@@ -209,17 +209,15 @@ This includes all available language translations of these pages (e.g. https://k
 - runAsUser: 1000
 - fsGroup: 2000
 
-#### tmp
-
-## 20. Taint the worker node node01 to be Unschedulable. Once done, create a pod called dev-redis, image redis:alpine, to ensure workloads are not scheduled to this worker node. Finally, create a new pod called prod-redis and image: redis:alpine with toleration to be scheduled on node01.
-### Task weight: 3%
+## 20. Create  secret , configmap . create pod with mount secret and configmap.
+### Task weight: 8%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
-- key: env_type, value: production, operator: Equal and effect: NoSchedule
-- Key = env_type ,  Value = production ,  Effect = NoSchedule
-- pod 'dev-redis' (no tolerations) is not scheduled on node01?
-- Create a pod 'prod-redis' to run on node01
-
-####  /tmp 
+- namespace: prod-apps
+- secret: name=prod-secret,  ns=prod-apps, variables  var1=aaa , var2=bbb
+- configmap: configmap_name=prod-config,ns=prod-apps,file_name_for_configmap=config.yaml  , file_content = "test config"
+- pod: name = prod-app , ns=prod-apps , 
+- container1: name=app1, image=viktoruj/cks-lab:latest , command="sleep 60000", volume_name=config, volume_type=configmap, mount_path="/app/configs", ENV=from secret 
+- container2: name=app2, image=viktoruj/cks-lab:latest , command="sleep 60000", volume_name=secret, volume_type=secret, mount_path="/app/secrets"
 
 ## 21.  Resolve dns  svc and pod .Create a nginx pod called nginx-resolver using image nginx, expose it internally with a service called nginx-resolver-service.
 ### Task weight: 3%
@@ -247,7 +245,13 @@ This includes all available language translations of these pages (e.g. https://k
  - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
  - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
 
-### 24 . secret as env and file  in pod 
+## 24. Taint the worker node node01 to be Unschedulable. Once done, create a pod called dev-redis, image redis:alpine, to ensure workloads are not scheduled to this worker node. Finally, create a new pod called prod-redis and image: redis:alpine with toleration to be scheduled on node01.
+### Task weight: 3%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+- key: env_type, value: production, operator: Equal and effect: NoSchedule
+- Key = env_type ,  Value = production ,  Effect = NoSchedule
+- pod 'dev-redis' (no tolerations) is not scheduled on node01?
+- Create a pod 'prod-redis' to run on node01
 
 
 ### 26 . deployment . antiafinity  , distruption buget 
