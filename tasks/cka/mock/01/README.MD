@@ -219,15 +219,19 @@ This includes all available language translations of these pages (e.g. https://k
 - pod 'dev-redis' (no tolerations) is not scheduled on node01?
 - Create a pod 'prod-redis' to run on node01
 
-## 21. Create a nginx pod called nginx-resolver using image nginx, expose it internally with a service called nginx-resolver-service. Test that you are able to look up the service and pod names from within the cluster. Use the image: busybox:1.28 for dns lookup. Record results in /root/CKA/nginx.svc and /root/CKA/nginx.pod
+####  /tmp 
+
+## 21.  Resolve dns  svc and pod .Create a nginx pod called nginx-resolver using image nginx, expose it internally with a service called nginx-resolver-service.
 ### Task weight: 3%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 - Pod: nginx-resolver
 - image: nginx
-- Service DNS Resolution recorded correctly
-- Pod DNS resolution recorded correctly
+- Service: nginx-resolver-service
+- lookup pod  name : test-nslookup
+- lookup pod  image : busybox:1.28
+- service file : /var/work/tests/artifacts/21/nginx.svc 
+- pod file : /var/work/tests/artifacts/21/nginx.pod
 
----- ok
 ## 22. Update Kubernetes
 ### Task weight: 7%
 ### cluster : cluster2 (`kubectl config use-context cluster2-admin@cluster2`)
@@ -245,7 +249,6 @@ This includes all available language translations of these pages (e.g. https://k
 
 ### 24 . secret as env and file  in pod 
 
-### 25 .configmap as file pod 
 
 ### 26 . deployment . antiafinity  , distruption buget 
 

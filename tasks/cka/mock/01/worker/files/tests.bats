@@ -476,6 +476,36 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 #2 , ???
 
 
+@test "21.1 Resolve dns  svc and pod . pod  " {
+  echo '1.5'>>/var/work/tests/result/all
+  set +e
+  podip=$( kubectl get po nginx-resolver -o jsonpath='{.status.podIP}' --context cluster1-admin@cluster1  )
+  pod_ip=$( kubectl get po nginx-resolver -o jsonpath='{.status.podIP}' --context cluster1-admin@cluster1  | sed 's/\./-/g' )
+  cat /var/work/tests/artifacts/21/nginx.pod |  grep "$pod_ip" | grep "$podip"
+  result=$?
+  set -e
+  if [[ "$result" == "0" ]]; then
+   echo '1.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
+@test "21.2 Resolve dns  svc and pod . svc  " {
+  echo '1.5'>>/var/work/tests/result/all
+  set +e
+  svcip=$( kubectl get svc nginx-resolver-service -o jsonpath='{.spec.clusterIP}' --context cluster1-admin@cluster1  )
+  svc="nginx-resolver-service.default.svc.cluster.local"
+  cat /var/work/tests/artifacts/21/nginx.svc  |  grep "$svc" | grep "$svcip"
+  result=$?
+  set -e
+  if [[ "$result" == "0" ]]; then
+   echo '1.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+#3 , ???
 
 @test "22.1 Update Kubernetes.api version " {
   echo '1'>>/var/work/tests/result/all
