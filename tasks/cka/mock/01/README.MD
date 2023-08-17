@@ -177,8 +177,6 @@ This includes all available language translations of these pages (e.g. https://k
 - Task: Upgrade the version of the deployment to 1:17 with image 1.17
 - Task: Record the changes for the image upgrade
 
-##### tmp
-
 ## 17. Create a new user called john. Grant him access to the cluster. John should have permission to create, list, get, update and delete pods in the development namespace . 
 ### Task weight: 6%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
@@ -187,10 +185,8 @@ This includes all available language translations of these pages (e.g. https://k
 - create private key , and csr
 - CSR: john-developer Status:Approved
 - Role Name: developer, namespace: development, Resource: Pods , verbs: create,list,get
+- rolebinding : name=developer-role-binding , role=developer,  user=john , namespace=development
 - Access: User 'john' has appropriate permissions
-
-
-###### -/tmp 
 
 
 ## 18. Create a new service account with the name pvviewer. Grant this Service account access to list all PersistentVolumes in the cluster by creating an appropriate cluster role called pvviewer-role and ClusterRoleBinding called pvviewer-role-binding. Next, create a pod called pvviewer with the image: redis and serviceAccount: pvviewer in the default namespace.
@@ -203,8 +199,6 @@ This includes all available language translations of these pages (e.g. https://k
 - Pod: pvviewer
 - image: viktoruj/cks-lab:latest
 - command: sleep 60000
-
-
 
 ## 19. Create a Pod called non-root-pod , image: redis:alpine
 ### Task weight: 2%

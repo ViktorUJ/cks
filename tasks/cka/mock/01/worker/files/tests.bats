@@ -307,6 +307,85 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 # 3 , 42
 
 
+@test "17.1 Create a new user called john. csr " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get csr  john-developer -o jsonpath='{.status.conditions..type}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "Approved" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "Approved" ]
+}
+
+@test "17.2 Create a new user called john. role exist " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get role developer -n development -o jsonpath={.metadata.name}  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "developer" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "developer" ]
+}
+
+@test "17.3 Create a new user called john. rolebinding exist" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get rolebinding developer-role-binding  -n development -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "developer-role-binding" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "developer-role-binding" ]
+}
+
+
+@test "17.4 Create a new user called john. permission pod - create " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl auth can-i create pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "yes" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "yes" ]
+}
+
+@test "17.5 Create a new user called john. permission pod - list " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl auth can-i list pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "yes" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "yes" ]
+}
+
+@test "17.6 Create a new user called john. permission pod - get " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl auth can-i get pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "yes" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "yes" ]
+}
+
+@test "17.7 Create a new user called john. permission pod - delete " {
+  echo '0.5'>>/var/work/tests/result/all
+  set +e
+  result=$(kubectl auth can-i delete pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  set -e
+  if [[ "$result" == "no" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "no" ]
+}
+
+@test "17.8 Create a new user called john. permission pod - update " {
+  echo '0.5'>>/var/work/tests/result/all
+  set +e
+  result=$(kubectl auth can-i update pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  set -e
+  if [[ "$result" == "no" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "no" ]
+}
+
+# 6 , 48
+
 
 @test "18.1 Create service account with the name pvviewer, clusterrole,pod .sa " {
   echo '1'>>/var/work/tests/result/all
