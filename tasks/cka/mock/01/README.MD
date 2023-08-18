@@ -245,16 +245,24 @@ This includes all available language translations of these pages (e.g. https://k
  - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
  - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
 
-## 24. Taint the worker node node01 to be Unschedulable. Once done, create a pod called dev-redis, image redis:alpine, to ensure workloads are not scheduled to this worker node. Finally, create a new pod called prod-redis and image: redis:alpine with toleration to be scheduled on node01.
-### Task weight: 3%
+________
+## 24. create daemonset on all nodes (exclude control-plane)
+### Task weight: 4%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
-- key: env_type, value: production, operator: Equal and effect: NoSchedule
-- Key = env_type ,  Value = production ,  Effect = NoSchedule
-- pod 'dev-redis' (no tolerations) is not scheduled on node01?
-- Create a pod 'prod-redis' to run on node01
+- namespace: app-system
+- taint control-plane  key1=value1:NoSchedule
+- ds: name=important-app , image=nginx 
+- not run on control-plane
+
+## 25. create deployment on all nodes . add Disruption Budget
+### Task weight: 6%
+### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
+- namespace: app2-system
+- deployment: name=important-app2 , image=nginx , replicas 3
+- PodAntiAffinity  : nodename
+- Disruption Budget : min available  pod = 1
 
 
-### 26 . deployment . antiafinity  , distruption buget 
 
 
 

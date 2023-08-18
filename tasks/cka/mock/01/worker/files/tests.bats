@@ -453,7 +453,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-# 5 , ???
+# 5 , 53
 
 @test "19.1 Create a Pod called non-root-pod .runAsUser " {
   echo '1'>>/var/work/tests/result/all
@@ -473,7 +473,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "2000" ]
 }
 
-#2 , ???
+#2 , 55
 
 
 @test "20.1 Create  secret , configmap . create pod with mount secret and configmap. secret exist " {
@@ -555,7 +555,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 
-# 8, ???
+# 8, 63
 
 @test "21.1 Resolve dns  svc and pod . pod  " {
   echo '1.5'>>/var/work/tests/result/all
@@ -586,7 +586,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-#3 , ???
+#3 , 66
 
 @test "22.1 Update Kubernetes.api version " {
   echo '1'>>/var/work/tests/result/all
@@ -652,7 +652,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "Ready" ]
 }
 
-#7 , ???
+#7 , 73
 
 ##
 
@@ -721,4 +721,4 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-# 6, ????
+# 6, 79
