@@ -216,7 +216,7 @@ This includes all available language translations of these pages (e.g. https://k
 - secret: name=prod-secret,  ns=prod-apps, variables  var1=aaa , var2=bbb
 - configmap: configmap_name=prod-config,ns=prod-apps,file_name_for_configmap=config.yaml  , file_content = "test config"
 - pod: name = prod-app , ns=prod-apps , 
-- container1: name=app1, image=viktoruj/cks-lab:latest , command="sleep 60000", volume_name=config, volume_type=configmap, mount_path="/app/configs", ENV=from secret 
+- container1: name=app1, image=viktoruj/cks-lab:latest , command="sleep 60000", volume_name=config, volume_type=configmap, mount_path="/app/configs", ENV=from secret "prod-secret"
 - container2: name=app2, image=viktoruj/cks-lab:latest , command="sleep 60000", volume_name=secret, volume_type=secret, mount_path="/app/secrets"
 
 ## 21.  Resolve dns  svc and pod .Create a nginx pod called nginx-resolver using image nginx, expose it internally with a service called nginx-resolver-service.

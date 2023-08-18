@@ -476,6 +476,87 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 #2 , ???
 
 
+@test "20.1 Create  secret , configmap . create pod with mount secret and configmap. secret exist " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get secrets -n prod-apps prod-secret -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1   )
+  if [[ "$result" == "prod-secret" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "prod-secret" ]
+}
+
+@test "20.2 Create  secret , configmap . create pod with mount secret and configmap. configmap exist " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get configmap -n prod-apps prod-config -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1   )
+  if [[ "$result" == "prod-config" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "prod-config" ]
+}
+
+@test "20.3 Create  secret , configmap . create pod with mount secret and configmap. phase  = Running  " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl  exec prod-app  -n prod-apps -c app2 --context cluster1-admin@cluster1 -- sh -c  'cat  /app/secrets/var2' | grep 'bbb'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "20.4 Create  secret , configmap . create pod with mount secret and configmap. container1 /app/configs " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl  exec prod-app  -n prod-apps -c app1 --context cluster1-admin@cluster1 -- sh -c  'cat /app/configs/config.yaml' | grep 'test config'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "20.5 Create  secret , configmap . create pod with mount secret and configmap. container1 env var1 " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl  exec prod-app  -n prod-apps -c app1 --context cluster1-admin@cluster1 -- sh -c  'echo $var1' | grep 'aaa'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "20.6 Create  secret , configmap . create pod with mount secret and configmap. container1 env var2 " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl  exec prod-app  -n prod-apps -c app1 --context cluster1-admin@cluster1 -- sh -c  'echo $var2' | grep 'bbb'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "20.7 Create  secret , configmap . create pod with mount secret and configmap. container2 /app/secrets/var1 " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl  exec prod-app  -n prod-apps -c app2 --context cluster1-admin@cluster1 -- sh -c  'cat  /app/secrets/var1' | grep 'aaa'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "20.8 Create  secret , configmap . create pod with mount secret and configmap. container2 /app/secrets/var2 " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl  exec prod-app  -n prod-apps -c app2 --context cluster1-admin@cluster1 -- sh -c  'cat  /app/secrets/var2' | grep 'bbb'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
+# 8, ???
+
 @test "21.1 Resolve dns  svc and pod . pod  " {
   echo '1.5'>>/var/work/tests/result/all
   set +e
