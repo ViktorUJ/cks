@@ -736,3 +736,59 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # 6, 85
+
+@test "25.1 create deployment  and spread them on all nodes( control-plane too )+ PodDisruptionBudget . deployment_replicas " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployments.apps  important-app2 -n app2-system  -o jsonpath='{.spec.replicas}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "3" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "3" ]
+}
+
+@test "25.2 create deployment  and spread them on all nodes( control-plane too )+ PodDisruptionBudget . PodDisruptionBudget min available  " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get poddisruptionbudgets.policy -n app2-system important-app2 --context cluster1-admin@cluster1 -o jsonpath='{.spec.minAvailable}' )
+  if [[ "$result" == "1" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "1" ]
+}
+
+@test "25.3 create deployment  and spread them on all nodes( control-plane too )+ PodDisruptionBudget . PodDisruptionBudget selector  " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get poddisruptionbudgets.policy -n app2-system important-app2 --context cluster1-admin@cluster1 -o jsonpath='{.spec.selector.matchLabels.app}' )
+  if [[ "$result" == "important-app2" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "important-app2" ]
+}
+
+@test "25.4 create deployment  and spread them on all nodes( control-plane too )+ PodDisruptionBudget . deployment  PodAntiAffinity topologyKey" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployments.apps  important-app2 -n app2-system  -o jsonpath='{.spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution..topologyKey}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "kubernetes.io/hostname" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "kubernetes.io/hostname" ]
+}
+
+@test "25.5 create deployment  and spread them on all nodes( control-plane too )+ PodDisruptionBudget . deployment  tolerations key" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployments.apps  important-app2 -n app2-system  -o jsonpath='{.spec.template.spec.tolerations..key}'  --context cluster1-admin@cluster1)
+  if [[ "$result" == "node-role.kubernetes.io/control-plane" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "node-role.kubernetes.io/control-plane" ]
+}
+
+@test "25.6 create deployment  and spread them on all nodes( control-plane too )+ PodDisruptionBudget . pod by node" {
+  echo '3'>>/var/work/tests/result/all
+  result=$(kubectl get po -n app2-system -o wide --context cluster1-admin@cluster1 | grep Running|  grep ip  | cut -d' ' -f25 | uniq  |wc -l)
+  if [[ "$result" == "3" ]]; then
+   echo '3'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "3" ]
+}
+
+# 8, 93

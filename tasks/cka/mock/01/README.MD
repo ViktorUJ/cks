@@ -251,15 +251,14 @@ This includes all available language translations of these pages (e.g. https://k
 - namespace: app-system
 - ds: name=important-app , image=nginx 
 - run on  all nodes (control-plane too )
-_____
 
-## 25. create deployment on all nodes( control-plane too ). add Disruption Budget
+## 25. create deployment  and spread them on all nodes( control-plane too ). add PodDisruptionBudget
 ### Task weight: 8%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 - namespace: app2-system
 - deployment: name=important-app2 , image=nginx , replicas 3
 - PodAntiAffinity  : nodename
-- Disruption Budget : min available  pod = 1
+- PodDisruptionBudget : name=important-app2   min available  pod = 1
 
 
 
