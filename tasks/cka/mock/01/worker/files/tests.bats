@@ -722,3 +722,17 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # 6, 79
+
+
+@test "24 create daemonset on all nodes ( control-plane too ) " {
+  echo '6'>>/var/work/tests/result/all
+  nodes=$(kubectl  get no --context cluster1-admin@cluster1 | grep ip| wc -l )
+  pods=$(kubectl  get po -n app-system --context cluster1-admin@cluster1 | grep  Running | wc -l )
+  result=$?
+  if [[ "$nodes" == "$pods" ]]; then
+   echo '6'>>/var/work/tests/result/ok
+  fi
+  [ "$nodes" == "$pods" ]
+}
+
+# 6, 85

@@ -245,16 +245,16 @@ This includes all available language translations of these pages (e.g. https://k
  - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
  - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
 
-________
-## 24. create daemonset on all nodes (exclude control-plane)
-### Task weight: 4%
+## 24. create daemonset on all nodes ( control-plane too )
+### Task weight: 6%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 - namespace: app-system
 - ds: name=important-app , image=nginx 
-- not run on control-plane
+- run on  all nodes (control-plane too )
+_____
 
-## 25. create deployment on all nodes . add Disruption Budget
-### Task weight: 6%
+## 25. create deployment on all nodes( control-plane too ). add Disruption Budget
+### Task weight: 8%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 - namespace: app2-system
 - deployment: name=important-app2 , image=nginx , replicas 3
