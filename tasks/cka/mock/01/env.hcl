@@ -1,9 +1,9 @@
 locals {
   region = "eu-north-1"
   aws    = "default"
-  prefix = "cks-mock"
+  prefix = "cka-mock"
   tags   = {
-    "env_name"        = "cks-mock"
+    "env_name"        = "cka-mock"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
