@@ -658,7 +658,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "23.1 Network policy. can connect from prod NS to prod-db  " {
   echo '1'>>/var/work/tests/result/all
-  kubectl exec prod-pod -n prod --context cluster6-admin@cluster6 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s ' | grep 'mysql'
+  kubectl exec prod-pod -n prod --context cluster1-admin@cluster1 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s ' | grep 'mysql'
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
@@ -668,7 +668,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "23.2 Network policy. can  connect from stage NS  and  label: role=db-connect  to prod-db  " {
   echo '1'>>/var/work/tests/result/all
-  kubectl exec db-connect-stage-pod -n stage --context cluster6-admin@cluster6 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s ' | grep 'mysql'
+  kubectl exec db-connect-stage-pod -n stage --context cluster1-admin@cluster1 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s ' | grep 'mysql'
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
