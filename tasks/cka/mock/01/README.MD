@@ -250,7 +250,6 @@ ________
 ### Task weight: 4%
 ### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
 - namespace: app-system
-- taint control-plane  key1=value1:NoSchedule
 - ds: name=important-app , image=nginx 
 - not run on control-plane
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 echo " *** master node  mock-1  k8s-1"
 export KUBECONFIG=/root/.kube/config
-kubectl taint nodes --all node-role.kubernetes.io/master-
-kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+#kubectl taint nodes --all node-role.kubernetes.io/master-
+#kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 
 
 export RELEASE=$(curl -s https://api.github.com/repos/etcd-io/etcd/releases/latest|grep tag_name | cut -d '"' -f 4)
