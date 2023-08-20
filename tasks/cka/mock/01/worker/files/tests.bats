@@ -131,7 +131,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   if [[ "$result" == "2" ]]; then
    echo '3'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "2" ]
+  [ "$result" == "3" ]
 }
 
 # 3 , 16
@@ -282,7 +282,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # 4 , 37
 
-@test "15 Create a Pod called redis-storage.volumeMounts_mountPath " {
+@test "15 Create a new pod called super-user-pod " {
   echo '2'>>/var/work/tests/result/all
   kubectl get po  super-user-pod -o jsonpath='{.spec.containers[?(.name=="super-user-pod")].securityContext.capabilities.add}' --context cluster1-admin@cluster1 | grep 'SYS_TIME'
   result=$?
@@ -705,8 +705,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   result=$?
   set -e
   if (( $result > 0 )); then
-  echo "right"
-   #echo '1'>>/var/work/tests/result/ok
+  echo '1'>>/var/work/tests/result/ok
   fi
    (( $result > 0 ))
 }
