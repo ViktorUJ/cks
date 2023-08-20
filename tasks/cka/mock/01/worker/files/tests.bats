@@ -705,8 +705,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   result=$?
   set -e
   if (( $result > 0 )); then
-  echo "right"
-   #echo '1'>>/var/work/tests/result/ok
+  echo '1'>>/var/work/tests/result/ok
   fi
    (( $result > 0 ))
 }
