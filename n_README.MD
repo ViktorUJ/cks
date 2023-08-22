@@ -8,7 +8,7 @@ The **Kubernetes Exam Prep Platform** is an open-source hub designed to help IT 
 - Enhance your skills for the **CKS**: [Certified Kubernetes Security Specialist Exam](https://example.com/cks-exam)
 - Excel in the **CKAD**: [Certified Kubernetes Application Developer Exam](https://example.com/ckad-exam)
 
-Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **Kubernetes Exam Prep Platform**.
+Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **Prep Platform**.
 
 
 ## Installation
