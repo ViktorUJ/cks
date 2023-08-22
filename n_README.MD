@@ -4,9 +4,9 @@ Welcome to the Kubernetes Exam Prep Platform!
 
 The **Kubernetes Exam Prep Platform** is an open-source hub designed to help IT engineers effectively prepare for the **CKA (Certified Kubernetes Administrator)**, **CKS (Certified Kubernetes Security Specialist)**, and **CKAD (Certified Kubernetes Application Developer)** exams. Whether you're aiming to validate your skills or enhance your career prospects in Kubernetes administration, security, or application development, this platform offers hands-on labs, practice tests, and expert guidance to guide you toward certification success.
 
-- Prepare for the **CKA**: [Certified Kubernetes Administrator Exam](https://example.com/cka-exam)
-- Enhance your skills for the **CKS**: [Certified Kubernetes Security Specialist Exam](https://example.com/cks-exam)
-- Excel in the **CKAD**: [Certified Kubernetes Application Developer Exam](https://example.com/ckad-exam)
+- Prepare for the **CKA**: [Certified Kubernetes Administrator Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
+- Enhance your skills for the **CKS**: [Certified Kubernetes Security Specialist Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/)
+- Excel in the **CKAD**: [Certified Kubernetes Application Developer Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-application-developer-ckad/)
 
 Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **Prep Platform**.
 
