@@ -70,4 +70,4 @@
 - Contains a list of key terms and corresponding documentation pages.
 
 ## License and Usage Agreement
-- Information about usage rights and restrictions for the product/system.
+- [Apache License 2.0](LICENSE)
