@@ -10,6 +10,14 @@ The **Kubernetes Exam Prep Platform** is an open-source hub designed to help IT 
 
 Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **Prep Platform**.
 
+## Repository Structure
+
+The repository is organized into the following sections:
+
+- **/labs**: Contains hands-on labs for practicing Kubernetes concepts.
+- **/practice-tests**: Includes practice tests simulating exam scenarios.
+- **/resources**: Provides additional learning materials, study guides, and references.
+- **/solutions**: Offers solutions and explanations for labs and practice tests.
 
 ## Installation
 - System Requirements:
