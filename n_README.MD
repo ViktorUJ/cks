@@ -1,5 +1,3 @@
-# IT Engineer's Documentation Guide
-
 Welcome to the Kubernetes Exam Prep Platform!
 
 The **Kubernetes Exam Prep Platform** is an open-source hub designed to help IT engineers effectively prepare for the **CKA (Certified Kubernetes Administrator)**, **CKS (Certified Kubernetes Security Specialist)**, and **CKAD (Certified Kubernetes Application Developer)** exams. Whether you're aiming to validate your skills or enhance your career prospects in Kubernetes administration, security, or application development, this platform offers hands-on labs, practice tests, and expert guidance to guide you toward certification success.
