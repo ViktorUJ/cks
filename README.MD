@@ -30,7 +30,7 @@ CNI :
 ```` 
 terrafrom  >= v1.1.7
 terragrunt >= v0.36.1
-aws IAM user  + Access key  (or IAM role ) with  Admin privilege  form VPC, EC2  
+aws IAM user  + Access key  (or IAM role ) with  Admin privilege  form VPC, EC2, IAM, EKS 
 aws profile 
 ````
 

@@ -84,7 +84,23 @@ The repository is organized into the following sections:
 - List of popular questions and their answers.
 
 ## Support Contacts
-- How to get in touch with technical support if needed.
+
+If you encounter any issues or have questions about the project, you can reach out to:
+
+- **Email**: [viktoruj@gmail.com](mailto:viktoruj@gmail.com)
+- **LinkedIn**: [Viktar Mikalayeu](https://www.linkedin.com/in/viktar-mikalayeu-mns)
+
+Please ensure to check the existing questions and issues before reaching out. If you require technical support, follow the guidelines below:
+
+- **Technical Support Guidelines**: [How to get in touch with technical support if needed](#support-guidelines).
+
+### Support Guidelines
+
+1. Clearly describe your issue or question.
+2. Include any relevant logs or error messages.
+3. Mention your environment details, such as the OS, version of the tool, etc.
+4. Use the provided contact channels. Avoid reaching out through personal channels unless it's a critical issue.
+
 
 ## [Useful links](docs%2Flinks.MD)
 
