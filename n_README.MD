@@ -25,19 +25,11 @@ The repository is organized into the following sections:
   - **/[environments](terraform%2Fenvironments)** - Terraform environments.
   - **/[modules](terraform%2Fmodules)** - Terraform modules.
  
-## Installation
-- System Requirements:
-  - Minimum and recommended system specifications.
-  - Supported operating systems and versions.
-  - Dependencies and third-party components.
-- Pre-installation Steps:
-  - Downloading the installation package.
-  - Preparing the system for installation (closing programs, checking for admin rights, etc.).
-- Installation Process:
-  - Step-by-step instructions for installation.
-  - Selection of options and settings during installation.
-- Verifying Successful Installation:
-  - How to confirm a successful installation.
+## Requirements
+- terrafrom  >= v1.1.7
+- terragrunt >= v0.36.1
+- aws IAM user  + Access key  (or IAM role ) with  Admin privilege  form VPC, EC2, IAM, EKS 
+- aws profile 
 
 ## Configuration and Setup
 - Basic Settings and Parameters:
