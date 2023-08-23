@@ -1,22 +1,30 @@
-Welcome to the Kubernetes Exam Prep Platform!
+# Welcome to the Kubernetes Learning Platform!
 
-The **Kubernetes Exam Prep Platform** is an open-source hub designed to help IT engineers effectively prepare for the **CKA (Certified Kubernetes Administrator)**, **CKS (Certified Kubernetes Security Specialist)**, and **CKAD (Certified Kubernetes Application Developer)** exams. Whether you're aiming to validate your skills or enhance your career prospects in Kubernetes administration, security, or application development, this platform offers hands-on labs, practice tests, and expert guidance to guide you toward certification success.
+The **Kubernetes Learning Platform** is an open-source hub designed to help IT engineers effectively prepare for the **CKA (Certified Kubernetes Administrator)**, **CKS (Certified Kubernetes Security Specialist)**, and **CKAD (Certified Kubernetes Application Developer)** exams. Additionally, this platform offers invaluable hands-on experience with **AWS EKS (Elastic Kubernetes Service)**, equipping users with practical insights for real-world applications. Whether you're aiming to validate your skills, boost your career prospects in Kubernetes administration, security, application development, or delve into AWS EKS, this platform provides hands-on labs, practice tests, and expert guidance to ensure certification success.
 
 - Prepare for the **CKA**: [Certified Kubernetes Administrator Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
 - Enhance your skills for the **CKS**: [Certified Kubernetes Security Specialist Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/)
 - Excel in the **CKAD**: [Certified Kubernetes Application Developer Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-application-developer-ckad/)
 
-Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **Prep Platform**.
+Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **Kubernetes Learning Platform**.
+
 
 ## Repository Structure
 
 The repository is organized into the following sections:
 
-- **/labs**: Contains hands-on labs for practicing Kubernetes concepts.
-- **/practice-tests**: Includes practice tests simulating exam scenarios.
-- **/resources**: Provides additional learning materials, study guides, and references.
-- **/solutions**: Offers solutions and explanations for labs and practice tests.
-
+- **/[Makefile](Makefile)** - File containing scenarios for launching hands-on labs and mock exams.
+- **/[tasks](tasks)** - Contains lab scenarios and mock exam scripts.
+  - **/[cka](tasks%2Fcka)** - Everything related to CKA.
+    - **/[labs](tasks%2Fcka%2Flabs)**  - Contains hands-on labs for the CKA exam.
+    - **/[mock](tasks%2Fcka%2Fmock)**  - Contains mock scripts for the CKA exam.
+  - **/[cks](tasks%2Fcks)** - Everything related to CKS.
+    - **/[labs](tasks%2Fcks%2Flabs)**  - Contains hands-on labs for the CKS exam.
+    - **/[mock](tasks%2Fcks%2Fmock)**  - Contains mock scripts for the CKS exam.
+- **/[terraform](terraform)** - Contains modules and Terraform environments.
+  - **/[environments](terraform%2Fenvironments)** - Terraform environments.
+  - **/[modules](terraform%2Fmodules)** - Terraform modules.
+ 
 ## Installation
 - System Requirements:
   - Minimum and recommended system specifications.
@@ -78,8 +86,9 @@ The repository is organized into the following sections:
 ## Support Contacts
 - How to get in touch with technical support if needed.
 
-## Index and Search
-- Contains a list of key terms and corresponding documentation pages.
+## [Useful links](docs%2Flinks.MD)
+
+## [Tips And Tricks](docs%2Ftips_tricks.MD)
 
 ## License and Usage Agreement
 - [Apache License 2.0](LICENSE)
