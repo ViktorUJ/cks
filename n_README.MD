@@ -1,12 +1,12 @@
-# Welcome to the Kubernetes Learning Platform!
+# Welcome to the SRE Learning Platform!
 
-The **Kubernetes Learning Platform** is an open-source hub designed to help IT engineers effectively prepare for the **CKA (Certified Kubernetes Administrator)**, **CKS (Certified Kubernetes Security Specialist)**, and **CKAD (Certified Kubernetes Application Developer)** exams. Additionally, this platform offers invaluable hands-on experience with **AWS EKS (Elastic Kubernetes Service)**, equipping users with practical insights for real-world applications. Whether you're aiming to validate your skills, boost your career prospects in Kubernetes administration, security, application development, or delve into AWS EKS, this platform provides hands-on labs, practice tests, and expert guidance to ensure certification success.
+The **SRE Learning Platform** is an open-source hub designed to help IT engineers effectively prepare for the **CKA (Certified Kubernetes Administrator)**, **CKS (Certified Kubernetes Security Specialist)**, and **CKAD (Certified Kubernetes Application Developer)** exams. Additionally, this platform offers invaluable hands-on experience with **AWS EKS (Elastic Kubernetes Service)**, equipping users with practical insights for real-world applications. Whether you're aiming to validate your skills, boost your career prospects in Kubernetes administration, security, application development, or delve into AWS EKS, this platform provides hands-on labs, practice tests, and expert guidance to ensure certification success.
 
 - Prepare for the **CKA**: [Certified Kubernetes Administrator Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
 - Enhance your skills for the **CKS**: [Certified Kubernetes Security Specialist Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/)
 - Excel in the **CKAD**: [Certified Kubernetes Application Developer Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-application-developer-ckad/)
 
-Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **Kubernetes Learning Platform**.
+Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **SRE Learning Platform**.
 
 
 ## Repository Structure
@@ -31,17 +31,9 @@ The repository is organized into the following sections:
 - [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  form VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) 
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) 
 
-## Configuration and Setup
-- Basic Settings and Parameters:
-  - Overview of available configuration options.
-  - Examples of configuration files (if applicable).
-- Networking Configuration:
-  - Setting up network parameters (IP addresses, ports, etc.).
-- Integration with Other Systems:
-  - How to integrate the product/system with other tools.
-- Security:
-  - Security best practices for the product/system.
-  - Authentication and authorization setup.
+## Configuration 
+- set **region** , **backend_region**, **backend_bucket** in [terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl) :
+- create  [aws ec2 key-pair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html) with name=cks  in our region (default region = eu-north-1)
 
 ## Usage
 - Key Features and Capabilities:
@@ -51,30 +43,22 @@ The repository is organized into the following sections:
 - Command and Query Parameters:
   - List of available commands with descriptions of their parameters.
 
-## Troubleshooting and Issues
-- Problem Identification and Resolution:
-  - Common issues users might encounter.
-  - Detailed steps for diagnosing and resolving problems.
-- Logging and Logs:
-  - How to analyze log files to identify issues.
-
-## Maintenance and Updates
-- Backup and Restoration:
-  - Recommendations for data backup.
-- Regular Maintenance:
-  - Tasks to maintain performance and stability of the product/system.
-- Updating the Product/System:
-  - Procedure for updating to new versions.
-
-## User Guide (if applicable)
-- Comprehensive guide on using the product/system for end users.
-
-## Reference Materials (if applicable)
-- List of available commands, APIs, parameters, etc.
-
-## FAQ (Frequently Asked Questions)
-- List of popular questions and their answers.
-
+## Command
+Every command should be run from the project's root directory.
+### CKA
+- ``make run_cka_vpc``  - create vpc for CKA hands-on labs
+- ``TASK=01 make run_cka_k8s_task`` - create cka [hands-on labs](tasks%2Fcka%2Flabs)  [number 01](tasks%2Fcka%2Flabs%2F01)
+- ``make delete_cka_k8s`` - delete cka hands-on labs
+- ``make delete_cka_vpc`` - delete vpc for CKA hands-on labs
+- ``TASK=01 make run_cka_k8s_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
+- ``make delete_cka_k8s_mock`` - delete mock  CKA exam
+### CKS 
+- ``make run_cks_vpc``  - create vpc for CKS hands-on labs
+- ``TASK=10 make run_cks_k8s_task`` - create cks [hands-on labs](tasks%2Fcks%2Flabs)  [number 10](tasks%2Fcks%2Flabs%2F10)
+- ``make delete_cks_k8s`` - delete cks hands-on labs
+- ``make delete_cks_vpc`` - delete vpc for CKS hands-on labs
+- ``TASK=01 make run_cks_k8s_mock`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)
+- ``make delete_cks_k8s_mock`` - delete mock  CKS exam
 
 ## [Useful links](docs%2Flinks.MD)
 
