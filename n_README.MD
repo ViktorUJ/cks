@@ -55,12 +55,16 @@ Every command should be run from the project's root directory.
 
 ## Usage scenarios
 ### CKA hands-on lab
-- Сreate vpc for CKA hands-on labs ``make run_cka_vpc``
-- Choose [a hands-on lab](tasks%2Fcka%2Flabs) number
-```` 
-
-````
-
+- create vpc for CKA hands-on labs ``make run_cka_vpc``
+- choose [a hands-on lab](tasks%2Fcka%2Flabs) number
+- update ``s3_k8s_config`` in  ``{lab_number}/scripts/terragrunt.hcl`` 
+- create cka lab cluster ``TASK={lab_number} make run_cka_k8s_task``
+- find {master_external_ip} in terraform output
+- login to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
+- check init logs `` tail -f /var/log/cloud-init-output.log ``
+- read lab descriptions in ``{lab_number}/README.MD``
+- check solution in ``{lab_number}/SOLUTION.MD``
+- delete cka lab cluster ``make delete_cka_k8s_task``
 ## [Useful links](docs%2Flinks.MD)
 
 ## [Tips And Tricks](docs%2Ftips_tricks.MD)
