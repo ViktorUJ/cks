@@ -82,7 +82,7 @@ If you encounter any issues or have questions about the project, you can reach o
 - **Email**: [viktoruj@gmail.com](mailto:viktoruj@gmail.com)
 - [![Telegram](https://badgen.net/badge/icon/telegram?icon=telegram&label)](https://t.me/viktor_uj)
 - **LinkedIn**: [Viktar Mikalayeu](https://www.linkedin.com/in/viktar-mikalayeu-mns)
-- [![Telegram](https://badgen.net/badge/icon/linkedin?icon=linkedin&label)](https://www.linkedin.com/in/viktar-mikalayeu-mns)
+- [![LinkedI](https://badgen.net/badge/icon/linkedin?icon=linkedin&label)](https://www.linkedin.com/in/viktar-mikalayeu-mns)
 
 
 ## [Useful links](docs%2Flinks.MD)
