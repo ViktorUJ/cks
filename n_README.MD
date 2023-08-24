@@ -32,12 +32,12 @@ The repository is organized into the following sections:
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) 
 
 ### About CKA, CKS, CKAD scenarios
-- use aws
+- use **aws**
 - create vpc , subnets
-- create  ec2 (spot ) master and workers 
-- init master node by kubeadm 
-- copy join token to s3
-- load   join token  from s3 to worker node and join to the cluster .
+- create  **ec2** (spot ) master and workers 
+- init master node by **kubeadm** 
+- copy join token to **s3**
+- load   join token  from **s3** to **worker node** and join to the cluster .
 ``
 k8s version  : [ 1.21 , 1.27 ]   https://kubernetes.io/releases/
 Rintime : 
