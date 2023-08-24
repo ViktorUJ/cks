@@ -33,7 +33,7 @@ The repository is organized into the following sections:
 
 ### About CKA, CKS, CKAD scenarios
 - use **aws**
-- create vpc , subnets
+- create **vpc** , **subnets**
 - create  **ec2** (spot ) master and workers 
 - init master node by **kubeadm** 
 - copy join token to **s3**
