@@ -38,7 +38,7 @@ The repository is organized into the following sections:
 - init master node by **kubeadm** 
 - copy join token to **s3**
 - load   join token  from **s3** to **worker node** and join to the cluster .
-``
+````
 k8s version  : [ 1.21 , 1.27 ]   https://kubernetes.io/releases/
 Rintime : 
     docker                   [1.21 , 1.23]
@@ -48,7 +48,7 @@ Rintime :
 OS for nodes  : 
    ubuntu  :  20.04 LTS  ,  22.04 LTS 
 CNI :  calico  
-``
+````
 - 
 ## Configuration 
 - change  **backend_bucket** (not necessary **region** , **backend_region**) in [terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl) :
