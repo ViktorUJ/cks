@@ -75,11 +75,6 @@ The repository is organized into the following sections:
 ## FAQ (Frequently Asked Questions)
 - List of popular questions and their answers.
 
-## Contacts
-
-If you encounter any issues or have questions about the project, you can reach out to:
-
-[![email](https://badgen.net/badge/icon/email?icon=email&label)](mailto:viktoruj@gmail.com) [![Telegram](https://badgen.net/badge/icon/telegram?icon=telegram&label)](https://t.me/viktor_uj) [![LinkedI](https://badgen.net/badge/icon/linkedin?icon=linkedin&label)](https://www.linkedin.com/in/viktar-mikalayeu-mns)
 
 ## [Useful links](docs%2Flinks.MD)
 
@@ -87,3 +82,9 @@ If you encounter any issues or have questions about the project, you can reach o
 
 ## License and Usage Agreement
 - [Apache License 2.0](LICENSE)
+
+## Contacts
+
+If you encounter any issues or have questions about the project, you can reach out to:
+
+[![email](https://badgen.net/badge/icon/email?icon=email&label)](mailto:viktoruj@gmail.com) [![Telegram](https://badgen.net/badge/icon/telegram?icon=telegram&label)](https://t.me/viktor_uj) [![LinkedI](https://badgen.net/badge/icon/linkedin?icon=linkedin&label)](https://www.linkedin.com/in/viktar-mikalayeu-mns)
