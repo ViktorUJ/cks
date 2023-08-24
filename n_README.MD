@@ -31,6 +31,25 @@ The repository is organized into the following sections:
 - [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  form VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html) 
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) 
 
+### About CKA, CKS, CKAD scenarios
+- use aws
+- create vpc , subnets
+- create  ec2 (spot ) master and workers 
+- init master node by kubeadm 
+- copy join token to s3
+- load   join token  from s3 to worker node and join to the cluster .
+``
+k8s version  : [ 1.21 , 1.27 ]   https://kubernetes.io/releases/
+Rintime : 
+    docker                   [1.21 , 1.23]
+    cri-o                    [1.21 , 1.27]
+    containerd               [1.21 , 1.27]   # cks default 
+    containerd_gvizor        [1.21 , 1.27] 
+OS for nodes  : 
+   ubuntu  :  20.04 LTS  ,  22.04 LTS 
+CNI :  calico  
+``
+- 
 ## Configuration 
 - change  **backend_bucket** (not necessary **region** , **backend_region**) in [terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl) :
 - create  [aws ec2 key-pair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html) with name=cks  in our region (default region = eu-north-1)
@@ -67,7 +86,7 @@ Every command should be run from the project's root directory.
 - check solution in ``{lab_number}/SOLUTION.MD``
 - delete cka lab cluster ``make delete_cka_k8s_task``
 
-### CKA mock  CKA exam
+###  mock  CKA exam
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
 - update ``s3_k8s_config`` in ``{mock_number}/env.hcl``
 - if you changed **region** change **ami_id** ``{mock_number}/env.hcl``
@@ -80,6 +99,35 @@ Every command should be run from the project's root directory.
 - for checking time run  ``time_left`` on work pc
 - for checking result run   ``check_result`` on work pc
 - delete mock  CKA exam `make delete_cka_k8s_mock`
+- exam solutions you can find in ``{mock_number}/worker/files/solutions)``
+- exam tests you can find in ``{mock_number}/worker/files/tests.bats)``
+
+### CKS hands-on lab
+- create vpc for CKA hands-on labs ``make run_cks_vpc``
+- choose [a hands-on lab](tasks%2Fcks%2Flabs) number
+- update ``s3_k8s_config`` in  ``{lab_number}/scripts/terragrunt.hcl`` 
+- if you changed **region** change **ami_id** ``{lab_number}/scripts/terragrunt.hcl``    
+- create cka lab cluster ``TASK={lab_number} make run_cks_k8s_task``
+- find {master_external_ip} in terraform output
+- login to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
+- check init logs `` tail -f /var/log/cloud-init-output.log ``
+- read lab descriptions in ``{lab_number}/README.MD``
+- check solution in ``{lab_number}/SOLUTION.MD``
+- delete cka lab cluster ``make delete_cks_k8s_task``
+
+### mock  CKS exam
+- choose [a mock exam](tasks%2Fcks%2Fmock) number
+- update ``s3_k8s_config`` in ``{mock_number}/env.hcl``
+- if you changed **region** change **ami_id** ``{mock_number}/env.hcl``
+- you can change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl``
+- create mock  CKA exam ``TASK={mock_number} make run_cks_k8s_mock`` 
+- find ``worker_pc_ip`` in ``terraform output``
+- connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
+- open questions list ``{mock_number}/README.MD`` and do tasks
+- for connect to node use ``ssh  {kubernetes_nodename}`` from  work pc
+- for checking time run  ``time_left`` on work pc
+- for checking result run   ``check_result`` on work pc
+- delete mock  CKA exam `make delete_cks_k8s_mock`
 - exam solutions you can find in ``{mock_number}/worker/files/solutions)``
 - exam tests you can find in ``{mock_number}/worker/files/tests.bats)``
 
