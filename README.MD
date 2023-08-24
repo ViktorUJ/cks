@@ -38,6 +38,7 @@ The repository is organized into the following sections:
 - init master node by **kubeadm** 
 - copy join token to **s3**
 - load   join token  from **s3** to **worker node** and join to the cluster .
+- versions: 
 ````
 k8s version  : [ 1.21 , 1.27 ]   https://kubernetes.io/releases/
 Rintime : 
