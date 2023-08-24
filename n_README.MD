@@ -26,10 +26,10 @@ The repository is organized into the following sections:
   - **/[modules](terraform%2Fmodules)** - Terraform modules.
  
 ## Requirements
-- terrafrom  >= v1.1.7
-- terragrunt >= v0.36.1
-- aws IAM user  + Access key  (or IAM role ) with  Admin privilege  form VPC, EC2, IAM, EKS 
-- aws profile 
+- [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.1.7
+- [terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= v0.36.1
+- [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + Access key  (or IAM role ) with  Admin privilege  form VPC, EC2, IAM, EKS 
+- [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) 
 
 ## Configuration and Setup
 - Basic Settings and Parameters:
