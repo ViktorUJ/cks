@@ -75,10 +75,12 @@ Every command should be run from the project's root directory.
 - create mock  CKA exam ``TASK={mock_number} make run_cka_k8s_mock`` 
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
+- open questions list ``{mock_number}/README.MD`` and do tasks
+- for connect to node use ``ssh  {kubernetes_nodename}`` from  work pc
 - for checking time run  ``time_left`` on work pc
 - for checking result run   ``check_result`` on work pc
-- for connect to node use ``ssh  {kubernetes_nodename}`` on work pc
 - delete mock  CKA exam `make delete_cka_k8s_mock`
+- exam solutions you can find in ``{mock_number}/worker/files/solutions)``
 
 ## [Useful links](docs%2Flinks.MD)
 
