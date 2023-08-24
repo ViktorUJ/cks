@@ -35,13 +35,6 @@ The repository is organized into the following sections:
 - set **region** , **backend_region**, **backend_bucket** in [terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl) :
 - create  [aws ec2 key-pair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html) with name=cks  in our region (default region = eu-north-1)
 
-## Usage
-- Key Features and Capabilities:
-  - Overview of features provided by the product/system.
-- Usage Examples:
-  - Detailed examples of performing tasks using the product/system.
-- Command and Query Parameters:
-  - List of available commands with descriptions of their parameters.
 
 ## Command
 Every command should be run from the project's root directory.
@@ -59,6 +52,14 @@ Every command should be run from the project's root directory.
 - ``make delete_cks_vpc`` - delete vpc for CKS hands-on labs
 - ``TASK=01 make run_cks_k8s_mock`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)
 - ``make delete_cks_k8s_mock`` - delete mock  CKS exam
+
+## Usage scenarios
+### CKA hands-on lab
+- Сreate vpc for CKA hands-on labs ``make run_cka_vpc``
+- Choose [a hands-on lab](tasks%2Fcka%2Flabs) number
+```` 
+
+````
 
 ## [Useful links](docs%2Flinks.MD)
 
