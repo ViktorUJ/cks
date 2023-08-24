@@ -32,7 +32,7 @@ The repository is organized into the following sections:
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) 
 
 ## Configuration 
-- set **region** , **backend_region**, **backend_bucket** in [terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl) :
+- change  **backend_bucket** (not necessary **region** , **backend_region**) in [terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl) :
 - create  [aws ec2 key-pair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html) with name=cks  in our region (default region = eu-north-1)
 
 
@@ -81,6 +81,7 @@ Every command should be run from the project's root directory.
 - for checking result run   ``check_result`` on work pc
 - delete mock  CKA exam `make delete_cka_k8s_mock`
 - exam solutions you can find in ``{mock_number}/worker/files/solutions)``
+- exam tests you can find in ``{mock_number}/worker/files/tests.bats)``
 
 ## [Useful links](docs%2Flinks.MD)
 
