@@ -7,8 +7,8 @@ CKS - exam questions - [github ramanagali](https://github.com/ramanagali/Intervi
 
 
 CKS - exam questions - [github walidshaari](https://github.com/walidshaari/Certified-Kubernetes-Security-Specialist)
- https://github.com/snigdhasambitak/cks
- https://github.com/collabnix/kubetools
+ALL - list of tools - [github kubetools](https://github.com/collabnix/kubetools)
+
  https://github.com/ramanagali/Interview_Guide/blob/main/CKS_Preparation_Guide.md
  https://github.com/vedmichv/CKA-learn-path/
  https://learn.sysdig.com/falco-101 
@@ -23,11 +23,9 @@ CKS - exam questions - [github walidshaari](https://github.com/walidshaari/Certi
  https://www.youtube.com/watch?v=hqzuk-msDdM&list=PLmxqUDFl0XM4sJxAocidRKMNzAB48oEnU&index=2
  https://github.com/krol3/container-security-checklist#secure-the-container-registry
 
-
 | Related | Type           | Description                                                                                                                  |
 |---------|----------------|------------------------------------------------------------------------------------------------------------------------------|
+| ALL     | list of tools  | [github kubetools](https://github.com/collabnix/kubetools)                                                                   |
 | CKS     | video course   | [Learn with GVR](https://www.youtube.com/playlist?list=PLFkEchqXDZx6Bw3B2NRVc499j1TavjOvm)                                       |
 | CKS     | exam questions | [github ramanagali](https://github.com/ramanagali/Interview_Guide/blob/main/CKS_Preparation_Guide.md)                       |
 | CKS     | exam questions | [github walidshaari](https://github.com/walidshaari/Certified-Kubernetes-Security-Specialist)                               |
-
-
