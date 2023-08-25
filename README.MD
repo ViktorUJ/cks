@@ -13,17 +13,17 @@ Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS
 
 The repository is organized into the following sections:
 
-- **/[Makefile](Makefile)** - File containing scenarios for launching hands-on labs and mock exams.
-- **/[tasks](tasks)** - Contains lab scenarios and mock exam scripts.
-  - **/[cka](tasks%2Fcka)** - Everything related to CKA.
-    - **/[labs](tasks%2Fcka%2Flabs)**  - Contains hands-on labs for the CKA exam.
-    - **/[mock](tasks%2Fcka%2Fmock)**  - Contains mock scripts for the CKA exam.
-  - **/[cks](tasks%2Fcks)** - Everything related to CKS.
-    - **/[labs](tasks%2Fcks%2Flabs)**  - Contains hands-on labs for the CKS exam.
-    - **/[mock](tasks%2Fcks%2Fmock)**  - Contains mock scripts for the CKS exam.
-- **/[terraform](terraform)** - Contains modules and Terraform environments.
-  - **/[environments](terraform%2Fenvironments)** - Terraform environments.
-  - **/[modules](terraform%2Fmodules)** - Terraform modules.
+- **/[Makefile](Makefile)** - File contains scenarios for launching hands-on labs and mock exams.
+- **/[tasks](tasks)** - Directory contains lab scenarios and mock exam scripts.
+  - **/[cka](tasks%2Fcka)** - Directory contains everything related to CKA.
+    - **/[labs](tasks%2Fcka%2Flabs)**  - Directory  contains hands-on labs for the CKA exam.
+    - **/[mock](tasks%2Fcka%2Fmock)**  - Directory contains mock scripts for the CKA exam.
+  - **/[cks](tasks%2Fcks)** - Directory contains everything related to CKS.
+    - **/[labs](tasks%2Fcks%2Flabs)**  - Directory contains hands-on labs for the CKS exam.
+    - **/[mock](tasks%2Fcks%2Fmock)**  - Directory contains mock scripts for the CKS exam.
+- **/[terraform](terraform)** - Directory contains  modules and Terraform environments.
+  - **/[environments](terraform%2Fenvironments)** - Directory contains terragrunt (terraform) environments.
+  - **/[modules](terraform%2Fmodules)** - Directory contains terraform modules.
  
 ## Requirements
 - [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.1.7
@@ -38,7 +38,7 @@ The repository is organized into the following sections:
 - init master node by **kubeadm** 
 - copy join token to **s3**
 - load   join token  from **s3** to **worker node** and join to the cluster .
-- versions: 
+- support versions: 
 ````
 k8s version  : [ 1.21 , 1.27 ]   https://kubernetes.io/releases/
 Rintime : 
@@ -52,7 +52,7 @@ CNI :  calico
 ````
 
 ## Configuration 
-- change  **backend_bucket** (not necessary **region** , **backend_region**) in [terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl) :
+- change  **backend_bucket** ( **region** , **backend_region**  optional ) in [terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl) :
 - create  [aws ec2 key-pair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html) with name=cks  in our region (default region = eu-north-1)
 
 
@@ -78,10 +78,10 @@ Every command should be run from the project's root directory.
 - create vpc for CKA hands-on labs ``make run_cka_vpc``
 - choose [a hands-on lab](tasks%2Fcka%2Flabs) number
 - update ``s3_k8s_config`` in  ``{lab_number}/scripts/terragrunt.hcl`` 
-- if you changed **region** change **ami_id** ``{lab_number}/scripts/terragrunt.hcl``    
+- change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl``  if you changed **region**      
 - create cka lab cluster ``TASK={lab_number} make run_cka_k8s_task``
 - find {master_external_ip} in terraform output
-- login to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
+- log in to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
 - check init logs `` tail -f /var/log/cloud-init-output.log ``
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
@@ -90,27 +90,27 @@ Every command should be run from the project's root directory.
 ###  mock  CKA exam
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
 - update ``s3_k8s_config`` in ``{mock_number}/env.hcl``
-- if you changed **region** change **ami_id** ``{mock_number}/env.hcl``
-- you can change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl``
+- change **ami_id** in ``{mock_number}/env.hcl``  if you changed **region**  
+- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need 
 - create mock  CKA exam ``TASK={mock_number} make run_cka_k8s_mock`` 
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
 - open questions list ``{mock_number}/README.MD`` and do tasks
-- for connect to node use ``ssh  {kubernetes_nodename}`` from  work pc
-- for checking time run  ``time_left`` on work pc
-- for checking result run   ``check_result`` on work pc
+- use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node 
+- run ``time_left`` on work pc to check time
+- run ``check_result`` on work pc to check result 
 - delete mock  CKA exam `make delete_cka_k8s_mock`
-- exam solutions you can find in ``{mock_number}/worker/files/solutions)``
-- exam tests you can find in ``{mock_number}/worker/files/tests.bats)``
+- find exam solutions  in ``{mock_number}/worker/files/solutions)``
+- find  exam tests in ``{mock_number}/worker/files/tests.bats)``
 
 ### CKS hands-on lab
 - create vpc for CKA hands-on labs ``make run_cks_vpc``
 - choose [a hands-on lab](tasks%2Fcks%2Flabs) number
 - update ``s3_k8s_config`` in  ``{lab_number}/scripts/terragrunt.hcl`` 
-- if you changed **region** change **ami_id** ``{lab_number}/scripts/terragrunt.hcl``    
+- change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl`` if you changed **region**    
 - create cka lab cluster ``TASK={lab_number} make run_cks_k8s_task``
 - find {master_external_ip} in terraform output
-- login to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
+- log in to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
 - check init logs `` tail -f /var/log/cloud-init-output.log ``
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
@@ -119,18 +119,18 @@ Every command should be run from the project's root directory.
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
 - update ``s3_k8s_config`` in ``{mock_number}/env.hcl``
-- if you changed **region** change **ami_id** ``{mock_number}/env.hcl``
-- you can change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl``
+- change **ami_id** in ``{mock_number}/env.hcl`` if you changed **region** 
+- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need  
 - create mock  CKA exam ``TASK={mock_number} make run_cks_k8s_mock`` 
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
 - open questions list ``{mock_number}/README.MD`` and do tasks
-- for connect to node use ``ssh  {kubernetes_nodename}`` from  work pc
-- for checking time run  ``time_left`` on work pc
-- for checking result run   ``check_result`` on work pc
+- use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node 
+- run ``time_left`` on work pc to check time 
+- run ``check_result`` on work pc to check result 
 - delete mock  CKA exam `make delete_cks_k8s_mock`
-- exam solutions you can find in ``{mock_number}/worker/files/solutions)``
-- exam tests you can find in ``{mock_number}/worker/files/tests.bats)``
+- find exam solutions in ``{mock_number}/worker/files/solutions)``  
+- find exam tests in ``{mock_number}/worker/files/tests.bats)``
 
 ## [Useful links](docs%2Flinks.MD)
 
