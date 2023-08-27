@@ -18,7 +18,7 @@ variable "work_pc" {
     subnet_number      = string
     user_data_template = string
     task_script_url    = string # url for run additional script
-    node_type          = string # stop ar ondemand
+    node_type          = string # spot ar ondemand
     ssh                = object({
       private_key = string
       pub_key     = string
