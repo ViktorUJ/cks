@@ -15,7 +15,7 @@ This includes all available language translations of these pages (e.g. https://k
 | :-----------------: | :-------------------------------------------------------------- |
 |     Task weight     | 1%                                                              |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`) |
-| Acceptance criteria | - Name: nginx-pod <br/>- Image: nginx:alpine                    |
+| Acceptance criteria | - Name: `nginx-pod` <br/>- Image: `nginx:alpine`                |
 ---
 |        **2**        | **Deploy a messaging pod using the redis:alpine image with the labels set to tier=msg** |
 | :-----------------: | :-------------------------------------------------------------------------------------- |
