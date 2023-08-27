@@ -86,6 +86,7 @@ Every command should be run from the project's root directory.
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
 - delete cka lab cluster ``make delete_cka_k8s_task``
+- clean cka lab cluster ``.terraform`` folder  ``make clean_cka_k8s ``
 
 ###  mock  CKA exam
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
@@ -114,7 +115,8 @@ Every command should be run from the project's root directory.
 - check init logs `` tail -f /var/log/cloud-init-output.log ``
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
-- delete cka lab cluster ``make delete_cks_k8s_task``
+- delete cks lab cluster ``make delete_cks_k8s_task``
+- clean cks lab cluster ``.terraform`` folder  ``make clean_cks_k8s ``
 
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
