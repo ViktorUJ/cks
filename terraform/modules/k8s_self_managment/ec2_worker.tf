@@ -34,7 +34,6 @@ resource "aws_spot_instance_request" "worker" {
       security_groups
     ]
   }
-#  user_data = data.template_file.worker["${each.key}"].rendered
   user_data = templatefile(each.value.user_data_template,{
     worker_join     = local.worker_join
     k8s_config      = local.k8s_config
