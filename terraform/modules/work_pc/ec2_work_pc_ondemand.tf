@@ -16,7 +16,15 @@ resource "aws_instance" "master" {
       security_groups
     ]
   }
-  user_data = data.template_file.master.rendered
+  user_data = templatefile(var.work_pc.user_data_template, {
+    clusters_config   = join(" ", [for key, value in var.work_pc.clusters_config : "${key}=${value}"])
+    kubectl_version   = var.work_pc.util.kubectl_version
+    ssh_private_key   = var.work_pc.ssh.private_key
+    ssh_pub_key       = var.work_pc.ssh.pub_key
+    exam_time_minutes = var.work_pc.exam_time_minutes
+    test_url          = var.work_pc.test_url
+    task_script_url   = var.work_pc.task_script_url
+  })
   tags      = local.tags_all
   root_block_device {
     volume_size           = var.work_pc.root_volume.size
