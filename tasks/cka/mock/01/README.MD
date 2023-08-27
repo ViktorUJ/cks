@@ -10,23 +10,21 @@ This includes all available language translations of these pages (e.g. https://k
 
 # Questions
 
-## 1. Deploy a pod named nginx-pod using the nginx:alpine image.
-### Task weight: 1%
-### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
-
-- Name: nginx-pod
-- Image: nginx:alpine
-
-
-## 2. Deploy a messaging pod using the redis:alpine image with the labels set to tier=msg
-### Task weight: 2%
-### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
-
-- Pod Name: messaging
-- Image: redis:alpine
-- Labels: tier=msg
-
-
+---
+|        **1**        | **Deploy a pod named nginx-pod using the nginx:alpine image**   |
+| :-----------------: | :-------------------------------------------------------------- |
+|     Task weight     | 1%                                                              |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`) |
+| Acceptance criteria | - Name: nginx-pod <br/>- Image: nginx:alpine                    |
+---
+---
+|        **2**        | **Deploy a messaging pod using the redis:alpine image with the labels set to tier=msg** |
+| :-----------------: | :-------------------------------------------------------------------------------------- |
+|     Task weight     | 1%                                                                                      |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                         |
+| Acceptance criteria | - Pod Name: messaging <br/>- Image: redis:alpine <br> - Labels: `tier=msg`              |
+---
+---
 
 ## 3. Create a namespace named apx-x9984574  
 ### Task weight: 1%
