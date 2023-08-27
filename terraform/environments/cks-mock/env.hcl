@@ -7,6 +7,6 @@ locals {
      "env_type"="dev"
      "manage"="terraform"
      "cost_allocation"="dev"
-     "owner" = "viktaruj@gmail.com"
+     "owner" = "viktoruj@gmail.com"
    }
 }
