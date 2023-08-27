@@ -16,7 +16,6 @@ resource "aws_instance" "master" {
       security_groups
     ]
   }
-#  user_data = data.template_file.master.rendered
   user_data =templatefile(var.k8s_master.user_data_template , {
     worker_join      = local.worker_join
     k8s_config       = local.k8s_config

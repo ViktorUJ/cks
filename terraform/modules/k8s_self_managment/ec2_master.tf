@@ -1,21 +1,3 @@
-#data "template_file" "master" {
-#  template = file(var.k8s_master.user_data_template)
-#  vars     = {
-#    worker_join      = local.worker_join
-#    k8s_config       = local.k8s_config
-#    external_ip      = local.external_ip
-#    k8_version       = var.k8s_master.k8_version
-#    runtime          = var.k8s_master.runtime
-#    utils_enable     = var.k8s_master.utils_enable
-#    pod_network_cidr = var.k8s_master.pod_network_cidr
-#    runtime_script   = file(var.k8s_master.runtime_script)
-#    task_script_url  = var.k8s_master.task_script_url
-#    calico_url       = var.k8s_master.calico_url
-#    ssh_private_key  = var.k8s_master.ssh.private_key
-#    ssh_pub_key      = var.k8s_master.ssh.pub_key
-#  }
-#}
-
 resource "aws_spot_instance_request" "master" {
   for_each = toset(var.node_type == "spot" ? ["enable"] : [])
   iam_instance_profile        = aws_iam_instance_profile.server.id
@@ -35,7 +17,6 @@ resource "aws_spot_instance_request" "master" {
       security_groups
     ]
   }
-  #user_data = data.template_file.master.rendered
   user_data =templatefile(var.k8s_master.user_data_template , {
     worker_join      = local.worker_join
     k8s_config       = local.k8s_config

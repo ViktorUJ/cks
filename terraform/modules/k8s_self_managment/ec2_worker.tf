@@ -1,19 +1,19 @@
-data "template_file" "worker" {
-  for_each = var.k8s_worker
-  template = file(each.value.user_data_template)
-  vars     = {
-    worker_join     = local.worker_join
-    k8s_config      = local.k8s_config
-    k8_version      = each.value.k8_version
-    runtime         = each.value.runtime
-    runtime_script  = file(each.value.runtime_script)
-    task_script_url = each.value.task_script_url
-    node_name       = each.key
-    node_labels     = each.value.node_labels
-    ssh_private_key = each.value.ssh.private_key
-    ssh_pub_key     = each.value.ssh.pub_key
-  }
-}
+#data "template_file" "worker" {
+#  for_each = var.k8s_worker
+#  template = file(each.value.user_data_template)
+#  vars     = {
+#    worker_join     = local.worker_join
+#    k8s_config      = local.k8s_config
+#    k8_version      = each.value.k8_version
+#    runtime         = each.value.runtime
+#    runtime_script  = file(each.value.runtime_script)
+#    task_script_url = each.value.task_script_url
+#    node_name       = each.key
+#    node_labels     = each.value.node_labels
+#    ssh_private_key = each.value.ssh.private_key
+#    ssh_pub_key     = each.value.ssh.pub_key
+#  }
+#}
 
 resource "aws_spot_instance_request" "worker" {
   for_each                    = local.k8s_worker_spot
@@ -34,7 +34,19 @@ resource "aws_spot_instance_request" "worker" {
       security_groups
     ]
   }
-  user_data = data.template_file.worker["${each.key}"].rendered
+#  user_data = data.template_file.worker["${each.key}"].rendered
+  user_data = templatefile(each.value.user_data_template,{
+    worker_join     = local.worker_join
+    k8s_config      = local.k8s_config
+    k8_version      = each.value.k8_version
+    runtime         = each.value.runtime
+    runtime_script  = file(each.value.runtime_script)
+    task_script_url = each.value.task_script_url
+    node_name       = each.key
+    node_labels     = each.value.node_labels
+    ssh_private_key = each.value.ssh.private_key
+    ssh_pub_key     = each.value.ssh.pub_key
+  })
   tags      = local.tags_all
   root_block_device {
     volume_size           = each.value.root_volume.size
