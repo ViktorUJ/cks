@@ -10,7 +10,6 @@ This includes all available language translations of these pages (e.g. https://k
 
 ## Questions
 
----
 |        **1**        | **Deploy a pod named nginx-pod using the nginx:alpine image**   |
 | :-----------------: | :-------------------------------------------------------------- |
 |     Task weight     | 1%                                                              |
@@ -160,4 +159,3 @@ This includes all available language translations of these pages (e.g. https://k
 |     Task weight     | 8%                                                                                                                                                                                                        |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                           |
 | Acceptance criteria | - namespace: `app2-system`<br/>- deployment: `name=important-app2` , image=`nginx`, replicas=`3`<br/>- PodAntiAffinity: `nodename`<br/>- PodDisruptionBudget: `name=important-app2` min available pod = 1 |
----
