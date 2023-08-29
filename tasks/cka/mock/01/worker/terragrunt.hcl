@@ -42,7 +42,6 @@ inputs = {
   app_name      = "k8s-worker"
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
-  s3_k8s_config = local.vars.locals.s3_k8s_config
 
 
   work_pc = {

@@ -32,7 +32,6 @@ inputs = {
   app_name      = "k8s"
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
-  s3_k8s_config = local.vars.locals.s3_k8s_config
   cluster_name  = "k8s2"
   node_type     = local.vars.locals.node_type
 

@@ -1,7 +1,7 @@
 locals {
   region = "eu-north-1"
   aws= "default"
-  prefix="cka1"
+  prefix="cks1"
    tags={
      "env_name"="cks"
      "env_type"="dev"

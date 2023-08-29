@@ -18,6 +18,9 @@ terraform {
     }
   }
 }
+variable "s3_k8s_config" {
+default="${local.backend_bucket}"
+}
 EOF
 }
 
