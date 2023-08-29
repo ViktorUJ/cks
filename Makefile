@@ -37,6 +37,13 @@ delete_cks_k8s_mock:
 	cd terraform/environments/cks-mock/ && terragrunt run-all destroy
 	rm -rf terraform/environments/cks-mock/*
 
+run_cka_vpc:
+	cd terraform/environments/cka/vpc/ && terragrunt apply
+delete_cka_vpc:
+	cd terraform/environments/cka/vpc/ && terragrunt destroy
+
+clean_cka_vpc:
+	cd terraform/environments/cka/vpc/ && rm -rf .terr*
 
 run_cka_k8s_mock:
 	@echo "*** run cka mock , task ${TASK}"

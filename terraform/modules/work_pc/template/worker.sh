@@ -44,7 +44,7 @@ unzip awscliv2.zip >/dev/null
 aws --version
 echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
 echo 'complete -C "/usr/local/bin/aws_completer" aws' >>/home/ubuntu/.bashrc
-echo 'export PS1="\[\033[0;38;5;10m\]\u@\h\[\033[0;38;5;14m\]\[\033[0;38;5;6m\]\w\[\033[0;38;5;10m\]\[\033[0m\] "' >>/home/ubuntu/.bashrc
+echo 'export PS1="\[\033[0;38;5;10m\]\u@\h\[\033[0;38;5;14m\]:\[\033[0;38;5;6m\]\w\[\033[0;38;5;10m\]>\[\033[0m\] "' >>/home/ubuntu/.bashrc
 
 echo "*** add test engine "
 git clone https://github.com/sstephenson/bats.git

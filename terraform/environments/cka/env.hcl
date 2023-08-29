@@ -1,12 +1,12 @@
 locals {
   region = "eu-north-1"
   aws= "default"
-  prefix="cks-mock"
+  prefix="cka1"
    tags={
-     "env_name"="cks-mock"
+     "env_name"="cka"
      "env_type"="dev"
      "manage"="terraform"
      "cost_allocation"="dev"
-     "owner" = "viktaruj@gmail.com"
+     "owner" = "viktoruj@gmail.com"
    }
 }

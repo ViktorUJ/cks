@@ -1,23 +1,12 @@
-# links
-
-### https://www.youtube.com/playlist?list=PLFkEchqXDZx6Bw3B2NRVc499j1TavjOvm
-### https://github.com/ramanagali/Interview_Guide/blob/main/CKS_Preparation_Guide.md
-
-### https://www.youtube.com/watch?v=jvmShTBSBoA&list=PLFkEchqXDZx6Bw3B2NRVc499j1TavjOvm
-### https://github.com/walidshaari/Certified-Kubernetes-Security-Specialist
-### https://github.com/snigdhasambitak/cks
-### https://github.com/collabnix/kubetools
-### https://github.com/ramanagali/Interview_Guide/blob/main/CKS_Preparation_Guide.md
-### https://github.com/vedmichv/CKA-learn-path/
-### https://learn.sysdig.com/falco-101 
-### https://github.com/kodekloudhub/community-faq
-### https://github.com/killer-sh/cks-course-environment
-###  https://sysdiglabs.github.io/sysdig-platform-cli/
-### https://www.udemy.com/course/certified-kubernetes-security-specialist/
-### https://www.youtube.com/watch?v=wqsUfvRyYpw
-### https://www.youtube.com/watch?v=gXz4cq3PKdg
-### https://github.com/killer-sh
-### https://www.youtube.com/@learnwithgvr/videos
-### https://www.youtube.com/watch?v=hqzuk-msDdM&list=PLmxqUDFl0XM4sJxAocidRKMNzAB48oEnU&index=2
-### https://github.com/krol3/container-security-checklist#secure-the-container-registry
-
+| Related | Type                   | Description                                                                                                                  |
+|---------|------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| ALL     | list of tools          | [github kubetools](https://github.com/collabnix/kubetools)                                                                   |
+| ALL     | community-faq          | [kodekloudhub](https://github.com/kodekloudhub/community-faq)                                                                |
+| CKA     | learn path             | [github vedmichv](https://github.com/vedmichv/CKA-learn-path/)                                                              |
+| CKS     | video course           | [udemy killer.sh CKS](https://www.udemy.com/course/certified-kubernetes-security-specialist/)                                |
+| CKS     | examples github        | [killer.sh github cks-course](https://github.com/killer-sh/cks-course-environment)                                          |
+| CKS     | falco-101 course       | [falco-101](https://learn.sysdig.com/falco-101)                                                                             |
+| CKS     | exam questions         | [github ramanagali](https://github.com/ramanagali/Interview_Guide/blob/main/CKS_Preparation_Guide.md)                       |
+| CKS     | exam questions         | [github walidshaari](https://github.com/walidshaari/Certified-Kubernetes-Security-Specialist)                               |
+| CKS     | sysdig cli             | [sysdig-platform-cli](https://sysdiglabs.github.io/sysdig-platform-cli/)                                                     |
+| CKS     | checklist              | [container-security-checklist](https://github.com/krol3/container-security-checklist#secure-the-container-registry)         |
