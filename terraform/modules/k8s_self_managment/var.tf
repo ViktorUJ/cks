@@ -7,7 +7,7 @@ variable "tags_common" {
 variable "app_name" {}
 variable "vpc_id" {}
 variable "subnets_az" {}
-variable "s3_k8s_config" {}
+#variable "s3_k8s_config" {}
 # k8_version    https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages
 variable "cluster_name" { type = string }
 variable "node_type" {type = string}
