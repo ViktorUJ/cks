@@ -19,166 +19,93 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 
 # Questions
 
-## 1. Container Runtime Sandbox gVisor
-### Task weight: 4%
-### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
-
-- `runsc` was installed on `node2` (label `node_name=node_2`)
-- create `RuntimeClass` `gvisor` with handler `runsc`
-- add label `RuntimeClass=runsc` to `node2`
-- update pods in Namespace `team-purple` to use `RuntimeClass gvisor`
-- Make sure the Pod runs on node with `gvisor`
-- Write the `dmesg` output of the successfully started one of Pod into `/var/work/tests/artifacts/1/gvisor-dmesg`
-
-## 2. Image Vulnerability Scanning
-### Task weight: 2%
-### cluster : cluster1 (`kubectl config use-context cluster1-admin@cluster1`)
-- `trivy` is installed on your `worker` node
-- check image in pods in `team-xxx` namespace, find image without `CRITICAL` vulnerability. Other deployment scale to `0 replica`.
-
-## 3. Enable audit log 
-### Task weight: 7%
-### cluster : cluster2 (`kubectl config use-context cluster2-admin@cluster2`)
-- **logs** `/var/logs/kubernetes-api.log`
-- **policy** `/etc/kubernetes/policy/log-policy.yaml`
-  - From `Secret` resources, level `Metadata`, namespace `prod`.
-  - From `configmaps`, level `RequestResponse`, namespace `billing`.
-
-## 4. CIS Benchmark
-### Task weight: 3%
-### cluster : cluster3 (`kubectl config use-context cluster3-admin@cluster3`)
-CIS Benchmark is installed on nodes
-- fix on `control-plane` :
-
-  `1.2.18` Ensure that the `--profiling` argument is set to false
-
-  `1.3.2` Ensure that the `--profiling` argument is set to false (Automated)
-
-  `1.4.1` Ensure that the `--profiling` argument is set to false (Automated)
-
-- fix on `worker node` :
-
-  `4.2.6` Ensure that the `--protect-kernel-defaults` argument is set to true (Automated)
-
-## 5. Secrets
-### Task weight: 2%
-### cluster : cluster6 (`kubectl config use-context cluster6-admin@cluster6`)
-from secret `db` in `team-5` ns save :
-  - user context to `/var/work/tests/artifacts/5/user`
-  - password context to `/var/work/tests/artifacts/5/password`
-  - create new secret `db-admin { user=xxx, password=yyyy }`
-  - create pod `db-admin NS=team-5` image = `viktoruj/cks-lab`, command = `sleep 60000`, and mount secret `db-admin` to `/mnt/secret`
-
-## 6. set tls version and allowed ciphers for etcd, kube-api, kubelet   
-### Task weight: 6%
-### cluster : cluster1 (`kubectl config use-context cluster4-admin@cluster4`)
-
-  **kube-api** :
-   - tls cipher = `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`
-   - tls min version 1.3
-
-  **etcd**:
-   - tls cipher = `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`
-
-  **kubelet**:
-   - tls cipher = `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`
-   - tls min version `1.3`
-
-## 7. encrypt secrets in ETCD
-### Task weight: 6%
-### cluster : cluster5 (`kubectl config use-context cluster5-admin@cluster5`)
-1. create encrypt config (`/etc/kubernetes/enc/enc.yaml`): 
-   - `aescbc` 
-     - key1: `MTIzNDU2Nzg5MDEyMzQ1Ng==`
-   - resources: `secret` 
-2. create new secret `test-secret NS = prod, password=strongPassword`
-3. encrypt all `secrets` in `stage` ns with new config
-
-## 8. Network policy
-### Task weight: 6%
-### cluster : cluster6 (`kubectl config use-context cluster6-admin@cluster6`)
- - create default deny ingress policy in `prod-db` NS
- - create policy with allow connections from `prod` Namespaces to `prod-db`
- - create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`
- - create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect`
-
-## 9. AppArmor
-### Task weight: 3%
-### cluster : cluster6 (`kubectl config use-context cluster6-admin@cluster6`)
-- install appArmor profile from `/opt/course/9/profile` (work pc) to `worker node` on cluster
-- Add label `security=apparmor` to the Node
-- Create a `Deployment` named `apparmor` in `apparmor` Namespace with:
-    - image: `nginx:1.19.2`
-    - container named `c1`
-    - AppArmor profile enabled
-    - nodeSelector to `workerNode`
-- save logs of the Pod into `/var/work/tests/artifacts/9/log`
-
-## 10. Deployment security
-### Task weight: 6%
-### cluster : cluster6 (`kubectl config use-context cluster6-admin@cluster6`)
-Modify deployment `secure` in `secure` Namespace: 
- - prevent escalation
- - Read only root file system
- - user id 3000
- - group id 3000
- - allow wread to `/tmp/` container `c1`
-
-## 11. RBAC
-### Task weight: 6%
-### cluster : cluster6 (`kubectl config use-context cluster6-admin@cluster6`)
-- update existing permissions for SA `dev` in Namespaces `rbac-1`:
-  - delete verb `delete` for pods
-  - add verb `watch` for pods
-- create new role `dev` in `rbac-2` Namespaces:
-   - resource configmaps, verbs = `get,list`
-- create rolebinding `dev` in `rbac-2`, sa = `dev` in `rbac-1` Namespace
-- create pod `dev-rbac NS=rbac-1` image = `viktoruj/cks-lab`, command = `sleep 60000`, SA=`dev`
-
-## 12. falco, sysdig
-### Task weight: 6%
-### cluster : cluster7 (`kubectl config use-context cluster7-admin@cluster7`)
-use `falco` or `sysdig`, prepare logs in format:
-
-`time-with-nanosconds,container-id,container-name,user-name,kubernetes-namespace,kubernetes-pod-name` 
-
-for pod with image `nginx` and store log to `/var/work/tests/artifacts/12/log`
-
-## 13. image policy webhook
-### Task weight: 6%
-### cluster : cluster8 (`kubectl config use-context cluster8-admin@cluster8`)
-**configure image policy webhook**:
- - `/etc/kubernetes/pki/admission_config.json` 
- - `/etc/kubernetes/pki/webhook/admission_kube_config.yaml`
- - `https://image-bouncer-webhook:30020/image_policy`    
-
-**create pod**  - `test-lasted` in `default` ns with image `nginx` 
-
-**result:** `Error from server (Forbidden): pods test is forbidden: image policy webhook .... latest tag are not allowed`
-
-**create pod**  - `test-tag` in `default` ns with image `nginx:alpine3.17`
-
-**result:**  - `ok`
-
-## 14. fix Dockerfile
-### Task weight: 4%
-### cluster: any
-
-fix Dockerfile `/var/work/14/Dockerfile`:
-
-- use FROM image `20.04` version
-- use `myuser` for running app
-- build image `cks:14` (podman installed on worker pc)
-
-## 15. Pod Security Standard
-### Task weight: 6%
-### cluster : cluster6 (   `kubectl config use-context    cluster6-admin@cluster6`   )
-
-There is Deployment container-host-hacker in Namespace team-red which mounts `/run/containerd` as a hostPath volume on the Node where its running.
-This means that the Pod can access various data about other containers running on the same Node.
-
-To prevent this configure Namespace `team-red` to `enforce` the `baseline` Pod Security Standard.
-Once completed, delete the Pod of the Deployment mentioned above.
-
-Check the ReplicaSet events and write the event/log lines containing the reason why the Pod isn't recreated into `/var/work/tests/artifacts/15/logs`.
-
+|        **1**        | **Container Runtime Sandbox gVisor**                                                                                                                                                                                                                                                                                                                                                                                      |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | 4%                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                                                                                                           |
+| Acceptance criteria | - `runsc` was installed on `node2` (label `node_name=node_2`)<br/>- create `RuntimeClass` `gvisor` with handler `runsc`<br/>- add label `RuntimeClass=runsc` to `node2`<br/>- update pods in Namespace `team-purple` to use `RuntimeClass gvisor`<br/>- Make sure the Pod runs on node with `gvisor`<br/>- Write the `dmesg` output of the successfully started one of Pod into `/var/work/tests/artifacts/1/gvisor-dmesg |
+---
+|        **2**        | **Image Vulnerability Scanning**                                                                                                                                                     |
+| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 2%                                                                                                                                                                                   |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                      |
+| Acceptance criteria | - `trivy` is installed on your `worker` node<br/>- check image in pods in `team-xxx` namespace, find image without `CRITICAL` vulnerability. Other deployments scale to `0 replica`. |
+---
+|        **3**        | **Enable audit log**                                                                                                                                                                                                                          |
+| :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 7%                                                                                                                                                                                                                                            |
+|       Cluster       | cluster2 (`kubectl config use-context cluster2-admin@cluster2`)                                                                                                                                                                               |
+| Acceptance criteria | - **logs** `/var/logs/kubernetes-api.log`<br/>- **policy** `/etc/kubernetes/policy/log-policy.yaml`<br/>- From `Secret` resources, level `Metadata`, namespace `prod`.<br/>- From `configmaps`, level `RequestResponse`, namespace `billing`. |
+---
+|        **4**        | **CIS Benchmark**                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 3%                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+|       Cluster       | cluster3 (`kubectl config use-context cluster3-admin@cluster3`)                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Acceptance criteria | - CIS Benchmark is installed on nodes<br/>- fix on `control-plane`:<br/>&nbsp;&nbsp;- `1.2.18` Ensure that the `--profiling` argument is set to false<br/>&nbsp;&nbsp;- `1.3.2` Ensure that the `--profiling` argument is set to false (Automated)<br/>&nbsp;&nbsp;- `1.4.1` Ensure that the `--profiling` argument is set to false (Automated)<br/><br/>- fix on `worker node`:<br/>&nbsp;&nbsp;- `4.2.6` Ensure that the `--protect-kernel-defaults` argument is set to true (Automated) |
+---
+|        **5**        | **Secrets**                                                                                                                                                                                                                                                                                                                                                                                                             |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 2%                                                                                                                                                                                                                                                                                                                                                                                                                      |
+|       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                                                                                                                                                                                                                                         |
+| Acceptance criteria | from secret `db` in `team-5` ns save :<br/>&nbsp;&nbsp;- user context to `/var/work/tests/artifacts/5/user`<br/>&nbsp;&nbsp;- password context to `/var/work/tests/artifacts/5/password`<br/>&nbsp;&nbsp;- create new secret `db-admin { user=xxx, password=yyyy }`<br/>&nbsp;&nbsp;- create pod `db-admin NS=team-5` image = `viktoruj/cks-lab`, command = `sleep 60000`, and mount secret `db-admin` to `/mnt/secret` |
+---
+|        **6**        | **Set tls version and allowed ciphers for etcd, kube-api, kubelet**                                                                                                                                                                                                                                                                                                                                                                                                       |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | 6%                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Acceptance criteria | **kube-api**:<br/>&nbsp;&nbsp;- tls cipher=`TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`<br/>&nbsp;&nbsp;- tls min version 1.3<br/><br/>**etcd**:<br/>&nbsp;&nbsp;- tls cipher = `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`<br/><br/>**kubelet**:<br/>&nbsp;&nbsp;- tls cipher = `TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`<br/>&nbsp;&nbsp;- tls min version `1.3` |
+---
+|        **7**        | **Encrypt secrets in ETCD**                                                                                                                                                                                                                                                                                           |
+| :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 6%                                                                                                                                                                                                                                                                                                                    |
+|       Cluster       | cluster5 (`kubectl config use-context cluster5-admin@cluster5`)                                                                                                                                                                                                                                                       |
+| Acceptance criteria | 1. create encrypt config (`/etc/kubernetes/enc/enc.yaml`):<br/>&nbsp;&nbsp;- `aescbc`<br/>&nbsp;&nbsp;- key1: `MTIzNDU2Nzg5MDEyMzQ1Ng==`<br/>&nbsp;&nbsp;- resources: `secret`<br/>2. Create a new secret `test-secret NS = prod, password=strongPassword`<br/>3. encrypt all `secrets` in `stage` ns with new config |
+---
+|        **8**        | **Network policy**                                                                                                                                                                                                                                                                                                                                   |
+| :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 6%                                                                                                                                                                                                                                                                                                                                                   |
+|       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                                                                                                                                                                      |
+| Acceptance criteria | - create default deny ingress policy in `prod-db` NS<br/>- create policy with allow connections from `prod` Namespaces to `prod-db`<br/>- create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`<br/>- create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect` |
+---
+|        **9**        | **AppArmor**                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | 3%                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Acceptance criteria | - install appArmor profile from `/opt/course/9/profile` (work pc) to `worker node` on cluster<br/>- Add label `security=apparmor` to the Node<br/>- Create a `Deployment` named `apparmor` in `apparmor` Namespace with:<br/>&nbsp;&nbsp;- image: `nginx:1.19.2`<br/>&nbsp;&nbsp;- container named `c1`<br/>&nbsp;&nbsp;- AppArmor profile enabled<br/>&nbsp;&nbsp;- nodeSelector to `workerNode`<br/>- save logs of the Pod into `/var/work/tests/artifacts/9/log` |
+---
+|       **10**        | **Deployment security**                                                                                                                                                                        |
+| :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 6%                                                                                                                                                                                             |
+|       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                |
+| Acceptance criteria | Modify deployment `secure` in `secure` Namespace:<br/>- prevent escalation<br/>- Read only root file system<br/>- user id 3000<br/>- group id 3000<br/>- allow wread to `/tmp/` container `c1` |
+---
+|       **11**        | **RBAC**                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | 6%                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                                                                                                                                                                                                                                                                               |
+| Acceptance criteria | - update existing permissions for SA `dev` in Namespaces `rbac-1`:<br/>&nbsp;&nbsp;- delete verb `delete` for pods<br/>&nbsp;&nbsp;- add verb `watch` for pods<br/>- create new role `dev` in `rbac-2` Namespaces:<br/>&nbsp;&nbsp;- resource configmaps, verbs = `get,list`<br/>- create rolebinding `dev` in `rbac-2`, sa = `dev` in `rbac-1` Namespace<br/>- create pod `dev-rbac NS=rbac-1` image = `viktoruj/cks-lab`, command = `sleep 60000`, SA=`dev` |
+---
+|       **12**        | **Falco, sysdig**                                                                                                                                                                                                                                       |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | 6%                                                                                                                                                                                                                                                      |
+|       Cluster       | cluster7 (`kubectl config use-context cluster7-admin@cluster7`)                                                                                                                                                                                         |
+| Acceptance criteria | use `falco` or `sysdig`, prepare logs in format:<br/><br/>`time-with-nanosconds,container-id,container-name,user-name,kubernetes-namespace,kubernetes-pod-name`<br/><br/>for pod with image `nginx` and store log to `/var/work/tests/artifacts/12/log` |
+---
+|       **13**        | **Image policy webhook**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | 6%                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|       Cluster       | cluster8 (`kubectl config use-context cluster8-admin@cluster8`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Acceptance criteria | **configure image policy webhook**:<br/>&nbsp;&nbsp;- `/etc/kubernetes/pki/admission_config.json`<br/>&nbsp;&nbsp;- `/etc/kubernetes/pki/webhook/admission_kube_config.yaml`<br/>&nbsp;&nbsp;- `https://image-bouncer-webhook:30020/image_policy`<br/>**create pod**  - `test-lasted` in `default` ns with image `nginx`<br/><br/>**result:** `Error from server (Forbidden): pods test is forbidden: image policy webhook .... latest tag are not allowed`<br/><br/>**create pod**  - `test-tag` in `default` ns with image `nginx:alpine3.17`<br/><br/>**result:** `ok` |
+|                     |
+---
+|       **14**        | **Fix Dockerfile**                                                                                                                                                                                               |
+| :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 4%                                                                                                                                                                                                               |
+|       Cluster       | any                                                                                                                                                                                                              |
+| Acceptance criteria | fix Dockerfile `/var/work/14/Dockerfile`:<br/>&nbsp;&nbsp;- use FROM image `20.04` version<br/>&nbsp;&nbsp;- use `myuser` for running app<br/>&nbsp;&nbsp;- build image `cks:14` (podman installed on worker pc) |
+---
+|       **15**        | **Pod Security Standard**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 6%                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|       Cluster       | cluster6 (   `kubectl config use-context    cluster6-admin@cluster6`   )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Acceptance criteria | There is Deployment `container-host-hacker` in Namespace `team-red` which mounts `/run/containerd` as a hostPath volume on the Node where its running.<br/>This means that the Pod can access various data about other containers running on the same Node.<br/><br/>To prevent this configure Namespace `team-red` to `enforce` the `baseline` Pod Security Standard.<br/><br/>Once completed, delete the Pod of the Deployment mentioned above.<br/><br/>Check the ReplicaSet events and write the event/log lines containing the reason why the Pod isn't recreated into `/var/work/tests/artifacts/15/logs`. |
