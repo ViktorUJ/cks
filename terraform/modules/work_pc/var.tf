@@ -7,7 +7,6 @@ variable "tags_common" {
 variable "app_name" {}
 variable "vpc_id" {}
 variable "subnets_az" {}
-#variable "s3_k8s_config" {}
 variable "work_pc" {
   type = object({
     clusters_config    = map(string)
