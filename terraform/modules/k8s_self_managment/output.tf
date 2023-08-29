@@ -37,3 +37,6 @@ output "check_node_status" {
   value = "tail -f /var/log/cloud-init-output.log "
 }
 
+output "s3_k8s_config" {
+  value = var.s3_k8s_config
+}

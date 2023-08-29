@@ -29,3 +29,6 @@ output "backup_kube_config" {
   value = "  /home/ubuntu/.kube/_config   "
 }
 
+output "s3_k8s_config" {
+  value = var.s3_k8s_config
+}
