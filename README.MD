@@ -131,7 +131,10 @@ Every command should be run from the project's root directory.
 - find exam solutions in ``{mock_number}/worker/files/solutions)``  
 - find exam tests in ``{mock_number}/worker/files/tests.bats)``
 
-### EKS hands-on lab
+<details>
+
+<summary>  EKS hands-on lab </summary>
+
 - choose [labs](tasks%2Feks%2Flabs)  number
 - create hands-on lab `` TASK={lab_number} make run_eks_task ``
 - find ``worker_pc_ip`` in ``terraform output``
@@ -139,6 +142,7 @@ Every command should be run from the project's root directory.
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
 - delete eks lab cluster ``make delete_eks_task``
+</details>
 
 ## [Useful links](docs%2Flinks.MD)
 
@@ -152,3 +156,13 @@ Every command should be run from the project's root directory.
 If you encounter any issues or have questions about the project, you can reach out to:
 
 [![email](https://badgen.net/badge/icon/email?icon=email&label)](mailto:viktoruj@gmail.com) [![Telegram](https://badgen.net/badge/icon/telegram?icon=telegram&label)](https://t.me/viktor_uj) [![LinkedI](https://badgen.net/badge/icon/linkedin?icon=linkedin&label)](https://www.linkedin.com/in/viktar-mikalayeu-mns)
+
+
+<details>
+  <summary>Click to expand!</summary>
+
+  Content inside the dropdown:
+  1. Item 1
+  2. Item 2
+  3. Item 3
+</details>

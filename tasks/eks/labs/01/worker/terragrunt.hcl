@@ -29,17 +29,17 @@ dependency "eks" {
 
 
 inputs = {
-  region        = local.vars.locals.region
-  aws           = local.vars.locals.aws
-  prefix        = local.vars.locals.prefix
-  tags_common   = local.vars.locals.tags
-  app_name      = "k8s-worker"
-  subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id        = dependency.vpc.outputs.vpc_id
+  region      = local.vars.locals.region
+  aws         = local.vars.locals.aws
+  prefix      = local.vars.locals.prefix
+  tags_common = local.vars.locals.tags
+  app_name    = "k8s-worker"
+  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id      = dependency.vpc.outputs.vpc_id
 
 
   work_pc = {
-    clusters_config = {}
+    clusters_config    = {}
     instance_type      = local.vars.locals.instance_type
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
@@ -53,7 +53,10 @@ inputs = {
     exam_time_minutes = "360"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/tests.bats"
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/worker.sh"
-    ssh               = {}
+    ssh               = {
+      private_key = ""
+      pub_key     = ""
+    }
     root_volume = local.vars.locals.root_volume
   }
 
