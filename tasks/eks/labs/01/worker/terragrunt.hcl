@@ -8,7 +8,6 @@ locals {
 
 terraform {
   source = "../../..//modules/work_pc/"
-  # source = "../../..//modules/work_pc_ondemand/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -29,13 +28,14 @@ dependency "eks" {
 
 
 inputs = {
-  region      = local.vars.locals.region
-  aws         = local.vars.locals.aws
-  prefix      = local.vars.locals.prefix
-  tags_common = local.vars.locals.tags
-  app_name    = "k8s-worker"
-  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id      = dependency.vpc.outputs.vpc_id
+  region          = local.vars.locals.region
+  aws             = local.vars.locals.aws
+  prefix          = local.vars.locals.prefix
+  tags_common     = local.vars.locals.tags
+  app_name        = "k8s-worker"
+  subnets_az      = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id          = dependency.vpc.outputs.vpc_id
+  aws_eks_cluster = dependency.eks.outputs.aws_eks_cluster
 
 
   work_pc = {

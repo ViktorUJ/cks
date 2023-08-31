@@ -60,12 +60,51 @@ resource "aws_iam_policy" "server" {
 EOF
 }
 
+resource "aws_iam_policy" "server-eks" {
+  for_each = toset(var.eks_cluster_name== "" ? [] : ["enable"])
+  name   = "${var.aws}-${var.prefix}-${var.app_name}-eks"
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "eks:DescribeAddonConfiguration",
+                "eks:ListClusters",
+                "eks:DescribeAddonVersions",
+                "eks:RegisterCluster",
+                "eks:CreateCluster"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": "eks:*",
+            "Resource": "arn:aws:eks:*:*:cluster/${var.eks_cluster_name}"
+        }
+    ]
+}
+EOF
+}
+
 
 resource "aws_iam_policy_attachment" "server" {
   name       = "${var.aws}-${var.prefix}-${var.app_name}"
   policy_arn = aws_iam_policy.server.arn
   roles      = [aws_iam_role.server.name]
 }
+
+resource "aws_iam_policy_attachment" "server-eks" {
+  for_each = toset(var.eks_cluster_name== "" ? [] : ["enable"])
+  name       = "${var.aws}-${var.prefix}-${var.app_name}-eks"
+  policy_arn = aws_iam_policy.server-eks.arn
+  roles      = [aws_iam_role.server.name]
+}
+
+
 resource "aws_iam_instance_profile" "server" {
   name = "${var.aws}-${var.prefix}-${var.app_name}"
   role = aws_iam_role.server.name

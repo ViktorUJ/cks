@@ -133,7 +133,7 @@ Every command should be run from the project's root directory.
 
 <details>
 
-<summary>  EKS hands-on lab </summary>
+<summary> style="font-weight: bold; font-size: 1.5em;"  EKS hands-on lab </summary>
 
 - choose [labs](tasks%2Feks%2Flabs)  number
 - create hands-on lab `` TASK={lab_number} make run_eks_task ``
@@ -159,7 +159,7 @@ If you encounter any issues or have questions about the project, you can reach o
 
 
 <details>
-  <summary>Click to expand!</summary>
+  <summary style="font-weight: bold; font-size: 1.5em;">mock CKS exam</summary>
 
   Content inside the dropdown:
   1. Item 1
