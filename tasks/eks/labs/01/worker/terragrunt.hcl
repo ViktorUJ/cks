@@ -46,7 +46,7 @@ inputs = {
     key_name           = local.vars.locals.key_name
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
-    user_data_template = "template/worker.sh"
+    user_data_template = "template/worker_eks.sh"
     util               = {
       kubectl_version = "v1.26.0"
     }
