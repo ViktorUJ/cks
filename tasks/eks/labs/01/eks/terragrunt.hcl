@@ -48,7 +48,7 @@ inputs = {
       default = {
         ec2_types     = ["t3.medium"]
         capacity_type = "SPOT"
-        desired_size  = "1"
+        desired_size  = "2"
         max_size      = "2"
         min_size      = "1"
         disk_size     = "20"
@@ -57,20 +57,6 @@ inputs = {
           cost_type = "devops"
         }
       }
-
-      job = {
-        ec2_types     = ["t3.medium"]
-        capacity_type = "SPOT"
-        desired_size  = "1"
-        max_size      = "2"
-        min_size      = "1"
-        disk_size     = "20"
-        labels        = {
-          work_type = "jov"
-          cost_type = "devops"
-        }
-      }
-
 
     }
 
