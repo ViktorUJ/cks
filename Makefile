@@ -66,3 +66,14 @@ delete_cka_k8s_mock:
 	@echo "*** delete cka mock "
 	cd terraform/environments/cka-mock/ && terragrunt run-all destroy
 	rm -rf terraform/environments/cka-mock/*
+
+run_eks_task:
+	@echo "*** run run_eks_task , task ${TASK}"
+	rm -rf terraform/environments/eks/*
+	cp -r tasks/eks/labs/${TASK}/* terraform/environments/eks/
+	cd terraform/environments/eks/ && terragrunt run-all apply
+
+delete_eks_task:
+	@echo "*** delete delete_eks_task "
+	cd terraform/environments/eks/ && terragrunt run-all destroy
+	rm -rf terraform/environments/eks/*

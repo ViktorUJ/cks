@@ -78,7 +78,6 @@ Every command should be run from the project's root directory.
 ### CKA hands-on lab
 - create vpc for CKA hands-on labs ``make run_cka_vpc``
 - choose [a hands-on lab](tasks%2Fcka%2Flabs) number
-- update ``s3_k8s_config`` in  ``{lab_number}/scripts/terragrunt.hcl`` 
 - change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl``  if you changed **region**      
 - create cka lab cluster ``TASK={lab_number} make run_cka_k8s_task``
 - find {master_external_ip} in terraform output
@@ -91,7 +90,6 @@ Every command should be run from the project's root directory.
 
 ###  mock  CKA exam
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
-- update ``s3_k8s_config`` in ``{mock_number}/env.hcl``
 - change **ami_id** in ``{mock_number}/env.hcl``  if you changed **region**  
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need 
 - create mock  CKA exam ``TASK={mock_number} make run_cka_k8s_mock`` 
@@ -108,7 +106,6 @@ Every command should be run from the project's root directory.
 ### CKS hands-on lab
 - create vpc for CKA hands-on labs ``make run_cks_vpc``
 - choose [a hands-on lab](tasks%2Fcks%2Flabs) number
-- update ``s3_k8s_config`` in  ``{lab_number}/scripts/terragrunt.hcl`` 
 - change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl`` if you changed **region**    
 - create cka lab cluster ``TASK={lab_number} make run_cks_k8s_task``
 - find {master_external_ip} in terraform output
@@ -121,7 +118,6 @@ Every command should be run from the project's root directory.
 
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
-- update ``s3_k8s_config`` in ``{mock_number}/env.hcl``
 - change **ami_id** in ``{mock_number}/env.hcl`` if you changed **region** 
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need  
 - create mock  CKA exam ``TASK={mock_number} make run_cks_k8s_mock`` 
@@ -134,6 +130,15 @@ Every command should be run from the project's root directory.
 - delete mock  CKA exam `make delete_cks_k8s_mock`
 - find exam solutions in ``{mock_number}/worker/files/solutions)``  
 - find exam tests in ``{mock_number}/worker/files/tests.bats)``
+
+### EKS hands-on lab
+- choose [labs](tasks%2Feks%2Flabs)  number
+- create hands-on lab `` TASK={lab_number} make run_eks_task ``
+- find ``worker_pc_ip`` in ``terraform output``
+- log in to worker_pc node via ssh  ``ssh ubuntu@{worker_pc_ip} -i {key}``
+- read lab descriptions in ``{lab_number}/README.MD``
+- check solution in ``{lab_number}/SOLUTION.MD``
+- delete eks lab cluster ``make delete_eks_task``
 
 ## [Useful links](docs%2Flinks.MD)
 
