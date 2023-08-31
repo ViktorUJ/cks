@@ -35,7 +35,7 @@ inputs = {
   app_name        = "k8s-worker"
   subnets_az      = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id          = dependency.vpc.outputs.vpc_id
-  aws_eks_cluster = dependency.eks.outputs.aws_eks_cluster
+  eks_cluster_name = dependency.eks.outputs.eks_cluster_name
 
 
   work_pc = {
