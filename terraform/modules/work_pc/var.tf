@@ -7,7 +7,7 @@ variable "tags_common" {
 variable "app_name" {}
 variable "vpc_id" {}
 variable "subnets_az" {}
-variable "eks_cluster_name" {
+variable "aws_eks_cluster_eks_cluster_arn" {
   default = ""
 }
 variable "work_pc" {

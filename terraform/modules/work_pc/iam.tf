@@ -61,29 +61,18 @@ EOF
 }
 
 resource "aws_iam_policy" "server-eks" {
-  for_each = toset(var.eks_cluster_name== "" ? [] : ["enable"])
+  for_each = toset(var.aws_eks_cluster_eks_cluster_arn== "" ? [] : ["enable"])
   name   = "${var.aws}-${var.prefix}-${var.app_name}-eks"
   policy = <<EOF
 {
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "VisualEditor0",
             "Effect": "Allow",
             "Action": [
-                "eks:DescribeAddonConfiguration",
-                "eks:ListClusters",
-                "eks:DescribeAddonVersions",
-                "eks:RegisterCluster",
-                "eks:CreateCluster"
+                "eks:*"
             ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "VisualEditor1",
-            "Effect": "Allow",
-            "Action": "eks:*",
-            "Resource": "arn:aws:eks:*:*:cluster/${var.eks_cluster_name}"
+            "Resource": "${var.aws_eks_cluster_eks_cluster_arn}"
         }
     ]
 }
