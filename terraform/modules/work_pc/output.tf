@@ -33,6 +33,6 @@ output "s3_k8s_config" {
   value = var.s3_k8s_config
 }
 
-output "eks_cluster_name" {
-  value = var.eks_cluster_name
+output "aws_eks_cluster_eks_cluster_arn" {
+  value = var.aws_eks_cluster_eks_cluster_arn
 }
