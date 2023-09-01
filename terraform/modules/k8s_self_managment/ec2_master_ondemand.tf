@@ -1,6 +1,6 @@
 resource "aws_instance" "master" {
-    for_each = toset(var.node_type == "ondemand" ? ["enable"] : [])
-  iam_instance_profile = aws_iam_instance_profile.server.id
+  for_each                    = toset(var.node_type == "ondemand" ? ["enable"] : [])
+  iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
   ami                         = var.k8s_master.ami_id
   instance_type               = var.k8s_master.instance_type
@@ -16,7 +16,7 @@ resource "aws_instance" "master" {
       security_groups
     ]
   }
-  user_data =templatefile(var.k8s_master.user_data_template , {
+  user_data = templatefile(var.k8s_master.user_data_template, {
     worker_join      = local.worker_join
     k8s_config       = local.k8s_config
     external_ip      = local.external_ip
@@ -30,7 +30,7 @@ resource "aws_instance" "master" {
     ssh_private_key  = var.k8s_master.ssh.private_key
     ssh_pub_key      = var.k8s_master.ssh.pub_key
   })
-  tags      = local.tags_all
+  tags = local.tags_all
   root_block_device {
     volume_size           = var.k8s_master.root_volume.size
     volume_type           = var.k8s_master.root_volume.type
@@ -41,4 +41,3 @@ resource "aws_instance" "master" {
 
 
 }
-

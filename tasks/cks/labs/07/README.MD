@@ -5,7 +5,7 @@
 
 
 
-The Open Policy Agent and Gatekeeper have been installed to, 
+The Open Policy Agent and Gatekeeper have been installed to,
 among other things, enforce blacklisting of certain image registries.
 Alter the existing constraint and/or template to also blacklist images from very-bad-registry.com.
 

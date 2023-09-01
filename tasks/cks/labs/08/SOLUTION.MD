@@ -33,7 +33,7 @@ you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
-    
+
 ```
 
 The dashboard is not secured because it allows unsecure HTTP access without authentication and is exposed externally. It's is loaded with a few parameter making it insecure, let's fix this.
@@ -57,7 +57,7 @@ The changes to make are :
     spec:
       containers:
       - args:
-        - --namespace=kubernetes-dashboard  
+        - --namespace=kubernetes-dashboard
         - --authentication-mode=token        # change or delete, "token" is default
         - --auto-generate-certificates       # add
         #- --enable-skip-login=true          # delete or set to false
@@ -138,5 +138,3 @@ kubernetes-dashboard        ClusterIP   10.100.118.128   ...   9090/TCP,443/TCP
 ```
 
 Much better.
-
- 

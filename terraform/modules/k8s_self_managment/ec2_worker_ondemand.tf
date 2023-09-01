@@ -1,4 +1,4 @@
-resource "aws_instance"  "worker" {
+resource "aws_instance" "worker" {
   for_each                    = local.k8s_worker_ondemand
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
@@ -16,7 +16,7 @@ resource "aws_instance"  "worker" {
       security_groups
     ]
   }
-  user_data = templatefile(each.value.user_data_template,{
+  user_data = templatefile(each.value.user_data_template, {
     worker_join     = local.worker_join
     k8s_config      = local.k8s_config
     k8_version      = each.value.k8_version
@@ -28,7 +28,7 @@ resource "aws_instance"  "worker" {
     ssh_private_key = each.value.ssh.private_key
     ssh_pub_key     = each.value.ssh.pub_key
   })
-  tags      = local.tags_all
+  tags = local.tags_all
   root_block_device {
     volume_size           = each.value.root_volume.size
     volume_type           = each.value.root_volume.type
@@ -38,5 +38,3 @@ resource "aws_instance"  "worker" {
   }
 
 }
-
-

@@ -83,7 +83,7 @@ futex(0x4caaa8, FUTEX_WAIT_PRIVATE, 0, NULL) = 0
 ...
 ```
 
-First  is ok 
+First  is ok
 
 Next let's check the Deployment app2 processes:
 
@@ -109,4 +109,3 @@ we  catch  kill(666, SIGTERM)
 ```sh
 kubectl  -n team-yellow scale deploy deployment2 --replicas 0
 ```
-

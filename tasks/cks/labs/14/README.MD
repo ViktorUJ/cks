@@ -1,6 +1,6 @@
 Task weight: 4%
 
-There are Pods in Namespace team-yellow. 
+There are Pods in Namespace team-yellow.
 A security investigation noticed that some processes running in these Pods are using the Syscall kill,
 which is forbidden by a Team Yellow internal policy.
 

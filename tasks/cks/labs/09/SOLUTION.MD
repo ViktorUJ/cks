@@ -4,10 +4,10 @@ Part 1
 First we have a look at the provided profile:
 
 vim /opt/course/9/profile
-# /opt/course/9/profile 
+# /opt/course/9/profile
 
 #include <tunables/global>
-  
+
 profile very-secure flags=(attach_disconnected) {
   #include <abstractions/base>
 
@@ -114,7 +114,7 @@ e4d91cbdf72fb    ...  Exited       c1           6            be5c0aecee7c7
 ➜ root@cluster1-node1:~# crictl inspect e4d91cbdf72fb | grep -i profile
           "apparmor_profile": "localhost/very-secure",
         "apparmorProfile": "very-secure",
-        
+
 First we find the Pod by it's name and get the pod-id. Next we use crictl ps -a to also show stopped containers. Then crictl inspect shows that the container is using our AppArmor profile. Notice to be fast between ps and inspect as K8s will restart the Pod periodically when in error state.
 
 To complete the task we write the logs into the required location:

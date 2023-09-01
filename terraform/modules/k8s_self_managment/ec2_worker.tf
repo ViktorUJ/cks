@@ -17,7 +17,7 @@ resource "aws_spot_instance_request" "worker" {
       security_groups
     ]
   }
-  user_data = templatefile(each.value.user_data_template,{
+  user_data = templatefile(each.value.user_data_template, {
     worker_join     = local.worker_join
     k8s_config      = local.k8s_config
     k8_version      = each.value.k8_version
@@ -29,7 +29,7 @@ resource "aws_spot_instance_request" "worker" {
     ssh_private_key = each.value.ssh.private_key
     ssh_pub_key     = each.value.ssh.pub_key
   })
-  tags      = local.tags_all
+  tags = local.tags_all
   root_block_device {
     volume_size           = each.value.root_volume.size
     volume_type           = each.value.root_volume.type
@@ -47,16 +47,16 @@ resource "time_sleep" "wait_worker" {
 }
 
 resource "aws_ec2_tag" "worker_ec2" {
-  depends_on = [time_sleep.wait_worker]
-  for_each    =  local.k8s_worker_spot
+  depends_on  = [time_sleep.wait_worker]
+  for_each    = local.k8s_worker_spot
   resource_id = aws_spot_instance_request.worker["${each.key}"].spot_instance_id
   key         = "Name"
   value       = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}"
 }
 
 resource "aws_ec2_tag" "worker_ebs" {
-  depends_on = [time_sleep.wait_worker]
-  for_each    =  local.k8s_worker_spot
+  depends_on  = [time_sleep.wait_worker]
+  for_each    = local.k8s_worker_spot
   resource_id = aws_spot_instance_request.worker["${each.key}"].root_block_device[0].volume_id
   key         = "Name"
   value       = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}"

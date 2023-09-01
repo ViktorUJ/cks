@@ -1,9 +1,9 @@
 inspect definitions of deployments
 
-```` 
+````
 kubectl  exec deployment1-6d65bf9fc9-clj5x   -n restricted -- cat  /var/secret/secret ; echo
 kubectl  exec deployment2-64487c7d-nhnds  -n restricted -- sh -c  "echo \$SECRET_USERNAME"
- 
+
 ````
 
 login to pod of deployment3
@@ -11,7 +11,7 @@ login to pod of deployment3
 kubectl  exec -ti deployment3-798fff6fd5-pprkv -n restricted  -- bash
 ````
 
-into pod 
+into pod
 ````
 token=$(cat /run/secrets/kubernetes.io/serviceaccount/token)
 curl https://kubernetes.default/api/v1/namespaces/restricted/secrets -H "Authorization: Bearer $token" -k
@@ -62,6 +62,6 @@ deployment3-798fff6fd5-pprkv:/# curl https://kubernetes.default/api/v1/namespace
   "type": "Opaque"
 }
 ````
-```` 
-echo "MzMzMw==" | base64 -d 
+````
+echo "MzMzMw==" | base64 -d
 ````

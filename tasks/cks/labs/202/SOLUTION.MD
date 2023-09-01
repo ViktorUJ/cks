@@ -1,5 +1,5 @@
 
-``` 
+```
 #vim /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 # Note: This dropin only works with kubeadm and kubelet v1.11+
 [Service]
@@ -16,22 +16,22 @@ ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELE
 
 ```
 
-```` 
+````
 systemctl daemon-reload
 service kubelet  restart
-service kubelet status  
+service kubelet status
 
 ````
 
 ````
 # vim  /etc/kubernetes/manifests/kube-apiserver.yaml
-# add 
+# add
  --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
  --tls-min-version=VersionTLS13
 ````
-```` 
+````
 # vim /etc/kubernetes/manifests/etcd.yaml
-# add 
+# add
 
 --cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 

@@ -58,5 +58,3 @@ metadata:
   creationTimestamp: null
   name: db-config
   namespace: rbac-2
-
-

@@ -1,4 +1,4 @@
- 
+
 
 #### Answer:
 
@@ -28,7 +28,7 @@ This should already be enough for the default Pod Security Admission Controller 
 NAME                                    READY   STATUS    RESTARTS   AGE
 container-host-hacker-dbf989777-wm8fc   1/1     Running   0          115s
 
-➜ k -n team-red delete pod container-host-hacker-dbf989777-wm8fc 
+➜ k -n team-red delete pod container-host-hacker-dbf989777-wm8fc
 pod "container-host-hacker-dbf989777-wm8fc" deleted
 
 ➜ k -n team-red get pod

@@ -4,7 +4,7 @@
 
 
 
- 
+
 
 The Kubernetes Dashboard is installed in Namespace kubernetes-dashboard-head and is configured to:
 
@@ -21,4 +21,3 @@ You are asked to make it more secure by:
 * Add the --auto-generate-certificates argument
 * Enforce authentication using a token (with possibility to use RBAC)
 * Allow only cluster internal access
- 

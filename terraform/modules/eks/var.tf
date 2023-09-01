@@ -8,7 +8,7 @@ variable "eks" {
     version                      = string
     cloudwatch_retention_in_days = string
     allow_cidrs                  = list(string)
-    addons                       = map(object({
+    addons = map(object({
       # key  - addon name
       version           = string
       resolve_conflicts = string # OVERWRITE
@@ -16,7 +16,7 @@ variable "eks" {
     }))
     node_group = map(object({
       ec2_types     = list(string)
-      capacity_type = string  # ON_DEMAND, SPOT
+      capacity_type = string # ON_DEMAND, SPOT
       desired_size  = string
       max_size      = string
       min_size      = string

@@ -1,11 +1,11 @@
 
 https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
 ### create backup kube-api manifest
-```` 
+````
 cp /etc/kubernetes/manifests/kube-apiserver.yaml ~/17_kube-apiserver.yaml
 ````
 ### create policy
-```` 
+````
 # vim   /etc/kubernetes/audit/policy.yaml
 apiVersion: audit.k8s.io/v1
 kind: Policy
@@ -21,7 +21,7 @@ rules:
 ````
 
 ### edit  kube-apiserver.yaml
-```` 
+````
 #   vim /etc/kubernetes/manifests/kube-apiserver.yaml
 
 # add lines
@@ -31,7 +31,7 @@ rules:
 - --audit-log-maxsize=5
 - --audit-log-maxbackup=1
 
-# ----- add volumes , and mount volumes 
+# ----- add volumes , and mount volumes
 
 ...
 volumes:
@@ -56,15 +56,15 @@ volumeMounts:
 
 ````
 
-clean previous logs 
-```` 
+clean previous logs
+````
 rm /etc/kubernetes/audit/logs/audit.log
 ````
 
-check logs 
+check logs
 
-```` 
+````
 tail etc/kubernetes/audit/logs/audit.log  -f  | jq
 ````
 
-https://github.com/kodekloudhub/community-faq/blob/main/docs/diagnose-crashed-apiserver.md 
+https://github.com/kodekloudhub/community-faq/blob/main/docs/diagnose-crashed-apiserver.md

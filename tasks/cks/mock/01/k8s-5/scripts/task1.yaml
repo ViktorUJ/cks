@@ -87,5 +87,3 @@ spec:
       - image: viktoruj/cks-lab
         name: busybox
         command: ['sh', '-c', 'while true ; do  echo "i am working";  sleep 10  ;done']
-
-

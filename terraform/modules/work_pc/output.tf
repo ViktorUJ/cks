@@ -32,3 +32,7 @@ output "backup_kube_config" {
 output "s3_k8s_config" {
   value = var.s3_k8s_config
 }
+
+output "aws_eks_cluster_eks_cluster_arn" {
+  value = var.aws_eks_cluster_eks_cluster_arn
+}

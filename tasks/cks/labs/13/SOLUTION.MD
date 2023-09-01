@@ -1,5 +1,5 @@
 ###  create metadata-allow policy
-```` 
+````
 #  cat 13.yaml
 
 apiVersion: networking.k8s.io/v1
@@ -18,8 +18,8 @@ spec:
         - ipBlock:
             cidr: 10.2.2.187/32   # worker private_ip
         - ipBlock:
-            cidr: 13.51.64.76/32  # worker public_ip 
-          
+            cidr: 13.51.64.76/32  # worker public_ip
+
 # kubectl apply -f 13.yaml
 ````
 
@@ -41,14 +41,14 @@ spec:
             cidr: 0.0.0.0/0
             except:
              - 10.2.2.187/32  # worker private_ip
-             - 13.51.64.76/32  # worker public_ip  
+             - 13.51.64.76/32  # worker public_ip
 
 # kubectl apply -f 13_deny.yaml
 
 ````
-### check access from  metadata-accessor  to Metadata Server  
+### check access from  metadata-accessor  to Metadata Server
 ````
-#13.51.64.76   - ip of controlplane 
+#13.51.64.76   - ip of controlplane
 kubectl  exec  -n  metadata-access metadata-accessor   -- sh -c 'curl 13.51.64.76:30089 -s --connect-timeout 1 '
 
 ````
@@ -71,11 +71,11 @@ font-family: Tahoma, Verdana, Arial, sans-serif; }
 
 
 ````
-### check access from  all-pod  to Metadata Server 
+### check access from  all-pod  to Metadata Server
 
-```` 
+````
 kubectl  exec  -n  metadata-access all-pod   -- sh -c 'curl 13.51.64.76:30089 -s --connect-timeout 1'
 ````
-```` 
+````
 command terminated with exit code 28
 ````

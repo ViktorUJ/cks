@@ -1,5 +1,5 @@
 resource "aws_spot_instance_request" "master" {
-  for_each = toset(var.node_type == "spot" ? ["enable"] : [])
+  for_each                    = toset(var.node_type == "spot" ? ["enable"] : [])
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
   wait_for_fulfillment        = true
@@ -17,7 +17,7 @@ resource "aws_spot_instance_request" "master" {
       security_groups
     ]
   }
-  user_data =templatefile(var.k8s_master.user_data_template , {
+  user_data = templatefile(var.k8s_master.user_data_template, {
     worker_join      = local.worker_join
     k8s_config       = local.k8s_config
     external_ip      = local.external_ip
@@ -31,7 +31,7 @@ resource "aws_spot_instance_request" "master" {
     ssh_private_key  = var.k8s_master.ssh.private_key
     ssh_pub_key      = var.k8s_master.ssh.pub_key
   })
-  tags      = local.tags_all
+  tags = local.tags_all
   root_block_device {
     volume_size           = var.k8s_master.root_volume.size
     volume_type           = var.k8s_master.root_volume.type
@@ -50,7 +50,7 @@ resource "time_sleep" "wait_master" {
 
 
 resource "aws_ec2_tag" "master_ec2" {
-  depends_on = [time_sleep.wait_master]
+  depends_on  = [time_sleep.wait_master]
   for_each    = local.tags_all_k8_master
   resource_id = aws_spot_instance_request.master["enable"].spot_instance_id
   key         = each.key
@@ -58,7 +58,7 @@ resource "aws_ec2_tag" "master_ec2" {
 }
 
 resource "aws_ec2_tag" "master_ebs" {
-  depends_on = [time_sleep.wait_master]
+  depends_on  = [time_sleep.wait_master]
   for_each    = local.tags_all_k8_master
   resource_id = aws_spot_instance_request.master["enable"].root_block_device[0].volume_id
   key         = each.key

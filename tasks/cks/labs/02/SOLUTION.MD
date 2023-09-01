@@ -1,5 +1,5 @@
-### login to worker node ad install falco 
-```` 
+### login to worker node ad install falco
+````
 
 curl -s https://falco.org/repo/falcosecurity-packages.asc | apt-key add -
 echo "deb https://download.falco.org/packages/deb stable main" | tee -a /etc/apt/sources.list.d/falcosecurity.list
@@ -8,10 +8,10 @@ apt install -y dkms make linux-headers-$(uname -r) clang llvm dialog
 echo "**** install falco"
 apt  install falco
 
-```` 
+````
 
 ````
-# use   'kmod'  and automatic mode update 
+# use   'kmod'  and automatic mode update
 # check services
 systemctl list-units | grep falco
 

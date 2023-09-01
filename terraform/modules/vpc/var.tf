@@ -1,6 +1,6 @@
 variable "region" {}
 variable "az_ids" {
-   type = map(string)
+  type = map(string)
 }
 
 variable "vpc_default_cidr" {}
@@ -10,5 +10,5 @@ variable "prefix" {}
 variable "app_name" {}
 
 variable "tags_common" {
-   type = map(string)
+  type = map(string)
 }
