@@ -75,7 +75,9 @@ Every command should be run from the project's root directory.
 - ``make delete_cks_k8s_mock`` - delete mock  CKS exam
 
 ## Usage scenarios
-### CKA hands-on lab
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
+
 - create vpc for CKA hands-on labs ``make run_cka_vpc``
 - choose [a hands-on lab](tasks%2Fcka%2Flabs) number
 - change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl``  if you changed **region**      
@@ -87,6 +89,25 @@ Every command should be run from the project's root directory.
 - check solution in ``{lab_number}/SOLUTION.MD``
 - delete cka lab cluster ``make delete_cka_k8s_task``
 - clean cka lab cluster ``.terraform`` folder  ``make clean_cka_k8s ``
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">mock CKA exam</summary>
+
+- choose [a mock exam](tasks%2Fcka%2Fmock) number
+- change **ami_id** in ``{mock_number}/env.hcl``  if you changed **region**  
+- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need 
+- create mock  CKA exam ``TASK={mock_number} make run_cka_k8s_mock`` 
+- find ``worker_pc_ip`` in ``terraform output``
+- connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
+- open questions list ``{mock_number}/README.MD`` and do tasks
+- use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node 
+- run ``time_left`` on work pc to check time
+- run ``check_result`` on work pc to check result 
+- delete mock  CKA exam `make delete_cka_k8s_mock`
+- find exam solutions  in ``{mock_number}/worker/files/solutions)``
+- find  exam tests in ``{mock_number}/worker/files/tests.bats)``
+</details>
 
 ###  mock  CKA exam
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
@@ -158,11 +179,4 @@ If you encounter any issues or have questions about the project, you can reach o
 [![email](https://badgen.net/badge/icon/email?icon=email&label)](mailto:viktoruj@gmail.com) [![Telegram](https://badgen.net/badge/icon/telegram?icon=telegram&label)](https://t.me/viktor_uj) [![LinkedI](https://badgen.net/badge/icon/linkedin?icon=linkedin&label)](https://www.linkedin.com/in/viktar-mikalayeu-mns)
 
 
-<details>
-  <summary style="font-weight: bold; font-size: 1.5em;">mock CKS exam</summary>
 
-  Content inside the dropdown:
-  1. Item 1
-  2. Item 2
-  3. Item 3
-</details>
