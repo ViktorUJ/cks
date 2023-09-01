@@ -81,6 +81,13 @@ Every command should be run from the project's root directory.
 - ``make delete_cks_k8s_mock`` - delete mock  CKS exam
 </details>
 
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">EKS</summary>
+
+- ``TASK={lab_number} make run_eks_task`` create hands-on lab
+- ``make delete_eks_task`` delete eks lab cluster 
+</details>
+
 ## Usage scenarios
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
