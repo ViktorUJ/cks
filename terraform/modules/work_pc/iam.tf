@@ -87,7 +87,7 @@ resource "aws_iam_policy_attachment" "server" {
 }
 
 resource "aws_iam_policy_attachment" "server-eks" {
-  for_each = toset(var.eks_cluster_name== "" ? [] : ["enable"])
+  for_each = toset(var.aws_eks_cluster_eks_cluster_arn== "" ? [] : ["enable"])
   name       = "${var.aws}-${var.prefix}-${var.app_name}-eks"
   policy_arn = aws_iam_policy.server-eks["enable"].arn
   roles      = [aws_iam_role.server.name]
