@@ -1,4 +1,4 @@
-```` 
+````
 #deny_prod-db.yaml
 
 apiVersion: networking.k8s.io/v1
@@ -21,7 +21,7 @@ spec:
 
 ````
 
-```` 
+````
 # deny_prod-stack-1.yaml
 
 apiVersion: networking.k8s.io/v1
@@ -44,7 +44,7 @@ spec:
 
 ````
 
-```` 
+````
 # allow_prod-db_backend.yaml
 
 apiVersion: networking.k8s.io/v1
@@ -74,7 +74,7 @@ spec:
 
 ````
 
-```` 
+````
 #allow_prod-stack-1_backend_frontend.yaml
 
 apiVersion: networking.k8s.io/v1
@@ -109,11 +109,11 @@ spec:
       ports:
         - protocol: TCP
           port: 80
- 
+
 
 ````
 
-```` 
+````
 # allow_prod-stack-1_frontend_client.yaml
 
 apiVersion: networking.k8s.io/v1

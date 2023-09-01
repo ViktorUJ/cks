@@ -47,7 +47,7 @@ spec:
       - ""
       kinds:
       - Pod
-````      
+````
 It looks like this constraint simply applies the template to all Pods, no arguments passed. So we edit the template:
 
 ```sh
@@ -110,5 +110,3 @@ Events:                  <none>
 ```
 
 Great, OPA fights bad registries !
-
- 

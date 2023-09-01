@@ -105,4 +105,3 @@ spec:
             value: "billing"
           - name: CONFIGMAP
             value: "bill"
-

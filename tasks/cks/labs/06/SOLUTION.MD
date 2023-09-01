@@ -13,7 +13,7 @@ kube-apiserver  kube-controller-manager  kube-proxy  kubelet
 To generate the sha512 sum of a binary we do:
 
 ```sh
-➜ sha512sum kube-apiserver 
+➜ sha512sum kube-apiserver
 f417c0555bc0167355589dd1afe23be9bf909bf98312b1025f12015d1b58a1c62c9908c0067a7764fa35efdac7016a9efa8711a44425dd6692906a7c283f032c  kube-apiserver
 ```
 
@@ -46,14 +46,14 @@ But did we actually compare everything properly before? Let's have a closer look
 ```sh
 ➜ sha512sum kube-controller-manager > compare
 
-➜ vim compare 
+➜ vim compare
 ```
 
 Edit to only have the provided hash and the generated one in one line each:
 
 ```sh
 # ./compare
-60100cc725e91fe1a949e1b2d0474237844b5862556e25c2c655a33b0a8225855ec5ee22fa4927e6c46a60d43a7c4403a27268f96fbb726307d1608b44f38a60  
+60100cc725e91fe1a949e1b2d0474237844b5862556e25c2c655a33b0a8225855ec5ee22fa4927e6c46a60d43a7c4403a27268f96fbb726307d1608b44f38a60
 60100cc725e91fe1a949e1b2d0474237844b5862556e25c2c655a33boa8225855ec5ee22fa4927e6c46a60d43a7c4403a27268f96fbb726307d1608b44f38a60
 ```
 
@@ -72,4 +72,3 @@ To complete the task we do:
 ```sh
 rm kubelet kube-controller-manager
 ```
- 

@@ -17,4 +17,3 @@ curl -s https://download.sysdig.com/DRAIOS-GPG-KEY.public | sudo apt-key add -
 curl -s -o /etc/apt/sources.list.d/draios.list https://download.sysdig.com/stable/deb/draios.list
 apt-get update
 apt-get -y install sysdig
-

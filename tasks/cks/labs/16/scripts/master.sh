@@ -12,4 +12,3 @@ curl "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/16/scripts
 curl "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/16/scripts/docker/run.sh"  -o "run.sh" -s
 curl "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/16/scripts/docker/build.sh"  -o "build.sh" -s
 chmod +x build.sh
-

@@ -1,5 +1,5 @@
 resource "aws_instance" "master" {
-  for_each = toset(var.work_pc.node_type == "ondemand" ? ["enable"] : [])
+  for_each                    = toset(var.work_pc.node_type == "ondemand" ? ["enable"] : [])
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
   ami                         = var.work_pc.ami_id
@@ -25,7 +25,7 @@ resource "aws_instance" "master" {
     test_url          = var.work_pc.test_url
     task_script_url   = var.work_pc.task_script_url
   })
-  tags      = local.tags_all
+  tags = local.tags_all
   root_block_device {
     volume_size           = var.work_pc.root_volume.size
     volume_type           = var.work_pc.root_volume.type

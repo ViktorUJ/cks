@@ -1,4 +1,4 @@
-## vim  
+## vim
 
 
 `Shift + A` - go to the end of the current row (insert mode)

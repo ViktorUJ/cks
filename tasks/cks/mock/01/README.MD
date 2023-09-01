@@ -1,4 +1,4 @@
-# Allowed resources 
+# Allowed resources
 **Kubernetes Documentation:**
 
 https://kubernetes.io/docs/ and their subdomains

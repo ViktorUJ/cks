@@ -1,11 +1,11 @@
 ## Question 15 | Configure TLS on Ingress
 #### Task weight: 4%
 
- 
+
 
 Use context: `kubectl config use-context workload-prod`
 
- 
+
 
 In Namespace `team-pink` there is an existing Nginx Ingress resources named `secure` which accepts two paths `/app` and `/api` which point to different ClusterIP Services.
 

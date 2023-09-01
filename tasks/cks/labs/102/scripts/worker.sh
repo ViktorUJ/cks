@@ -8,4 +8,3 @@ apt-get install -y falco
 systemctl enable falco
 systemctl start falco
 # systemctl status falco
-

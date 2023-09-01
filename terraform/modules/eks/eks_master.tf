@@ -123,4 +123,3 @@ users:
           value: "${var.aws}"
 KUBECONFIG
 }
-

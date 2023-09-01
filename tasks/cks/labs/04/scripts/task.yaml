@@ -33,7 +33,7 @@ spec:
             path: /run/containerd
             # this field is optional
             type: Directory
-            
+
       containers:
       - image: viktoruj/cks-lab
         name: busybox
@@ -42,4 +42,3 @@ spec:
           - name: host
             mountPath: "/run/containerd"
             readOnly: false
-

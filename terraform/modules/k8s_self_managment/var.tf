@@ -9,7 +9,7 @@ variable "vpc_id" {}
 variable "subnets_az" {}
 # k8_version    https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages
 variable "cluster_name" { type = string }
-variable "node_type" {type = string}
+variable "node_type" { type = string }
 variable "k8s_master" {
   type = object({
     instance_type      = string
@@ -25,8 +25,8 @@ variable "k8s_master" {
     pod_network_cidr   = string
     calico_url         = string
     task_script_url    = string # url for run additional script
-    eip                = string  # true or ...
-    ssh                = object({
+    eip                = string # true or ...
+    ssh = object({
       private_key = string
       pub_key     = string
     })
@@ -50,7 +50,7 @@ variable "k8s_worker" {
     runtime_script     = string
     task_script_url    = string # url for run additional script
     node_labels        = string
-    ssh                = object({
+    ssh = object({
       private_key = string
       pub_key     = string
     })
@@ -60,6 +60,3 @@ variable "k8s_worker" {
     })
   }))
 }
-
-
-

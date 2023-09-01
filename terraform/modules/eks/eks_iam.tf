@@ -69,4 +69,3 @@ resource "aws_iam_instance_profile" "eks-node" {
   name = "${var.aws}-${var.prefix}-eks-node"
   role = aws_iam_role.eks-node.name
 }
-

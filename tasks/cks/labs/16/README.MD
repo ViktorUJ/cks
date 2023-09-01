@@ -8,9 +8,9 @@ Not installing curl
 Updating nginx to use the version constraint >=1.18.0
 Running the main process as user myuser
 
-prevent escalation 
+prevent escalation
 read only root filesystem
 none root user  (security context)
-set user id and grout id to pod 
+set user id and grout id to pod
 
 delete ( sh)

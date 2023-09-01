@@ -22,8 +22,8 @@ POLICY
 
 
 resource "aws_iam_policy" "eks_admin" {
-  name     = "${var.aws}-${var.prefix}-eks-admin"
-  policy   = <<EOF
+  name   = "${var.aws}-${var.prefix}-eks-admin"
+  policy = <<EOF
 {
     "Version": "2012-10-17",
     "Statement": [

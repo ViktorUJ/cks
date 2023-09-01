@@ -1,5 +1,5 @@
 resource "aws_spot_instance_request" "master" {
-  for_each = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  for_each                    = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
   wait_for_fulfillment        = true
@@ -27,7 +27,7 @@ resource "aws_spot_instance_request" "master" {
     task_script_url   = var.work_pc.task_script_url
   })
 
-  tags      = local.tags_all
+  tags = local.tags_all
   root_block_device {
     volume_size           = var.work_pc.root_volume.size
     volume_type           = var.work_pc.root_volume.type
@@ -39,7 +39,7 @@ resource "aws_spot_instance_request" "master" {
 }
 
 resource "time_sleep" "wait_master" {
-  for_each = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  for_each   = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
   depends_on = [aws_spot_instance_request.master["enable"]]
 
   create_duration = "60s"
