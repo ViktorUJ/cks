@@ -59,20 +59,27 @@ CNI :  calico
 
 ## Command
 Every command should be run from the project's root directory.
-### CKA
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">CKA</summary>
+
 - ``make run_cka_vpc``  - create vpc for CKA hands-on labs
 - ``TASK=01 make run_cka_k8s_task`` - create cka [hands-on labs](tasks%2Fcka%2Flabs)  [number 01](tasks%2Fcka%2Flabs%2F01)
 - ``make delete_cka_k8s`` - delete cka hands-on labs
 - ``make delete_cka_vpc`` - delete vpc for CKA hands-on labs
 - ``TASK=01 make run_cka_k8s_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
 - ``make delete_cka_k8s_mock`` - delete mock  CKA exam
-### CKS 
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">CKS</summary>
+
 - ``make run_cks_vpc``  - create vpc for CKS hands-on labs
 - ``TASK=10 make run_cks_k8s_task`` - create cks [hands-on labs](tasks%2Fcks%2Flabs)  [number 10](tasks%2Fcks%2Flabs%2F10)
 - ``make delete_cks_k8s`` - delete cks hands-on labs
 - ``make delete_cks_vpc`` - delete vpc for CKS hands-on labs
 - ``TASK=01 make run_cks_k8s_mock`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)
 - ``make delete_cks_k8s_mock`` - delete mock  CKS exam
+</details>
 
 ## Usage scenarios
 <details>
@@ -109,22 +116,10 @@ Every command should be run from the project's root directory.
 - find  exam tests in ``{mock_number}/worker/files/tests.bats)``
 </details>
 
-###  mock  CKA exam
-- choose [a mock exam](tasks%2Fcka%2Fmock) number
-- change **ami_id** in ``{mock_number}/env.hcl``  if you changed **region**  
-- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need 
-- create mock  CKA exam ``TASK={mock_number} make run_cka_k8s_mock`` 
-- find ``worker_pc_ip`` in ``terraform output``
-- connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
-- open questions list ``{mock_number}/README.MD`` and do tasks
-- use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node 
-- run ``time_left`` on work pc to check time
-- run ``check_result`` on work pc to check result 
-- delete mock  CKA exam `make delete_cka_k8s_mock`
-- find exam solutions  in ``{mock_number}/worker/files/solutions)``
-- find  exam tests in ``{mock_number}/worker/files/tests.bats)``
 
-### CKS hands-on lab
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">CKS hands-on lab</summary>
+
 - create vpc for CKA hands-on labs ``make run_cks_vpc``
 - choose [a hands-on lab](tasks%2Fcks%2Flabs) number
 - change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl`` if you changed **region**    
@@ -136,6 +131,10 @@ Every command should be run from the project's root directory.
 - check solution in ``{lab_number}/SOLUTION.MD``
 - delete cks lab cluster ``make delete_cks_k8s_task``
 - clean cks lab cluster ``.terraform`` folder  ``make clean_cks_k8s ``
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">mock CKS exam</summary>
 
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
@@ -149,12 +148,12 @@ Every command should be run from the project's root directory.
 - run ``time_left`` on work pc to check time 
 - run ``check_result`` on work pc to check result 
 - delete mock  CKA exam `make delete_cks_k8s_mock`
-- find exam solutions in ``{mock_number}/worker/files/solutions)``  
-- find exam tests in ``{mock_number}/worker/files/tests.bats)``
+- find exam solutions in ``{mock_number}/worker/files/solutions``  
+- find exam tests in ``{mock_number}/worker/files/tests.bats``
+</details>
 
 <details>
-
-<summary> style="font-weight: bold; font-size: 1.5em;"  EKS hands-on lab </summary>
+  <summary style="font-weight: bold; font-size: 1.5em;">EKS hands-on lab</summary>
 
 - choose [labs](tasks%2Feks%2Flabs)  number
 - create hands-on lab `` TASK={lab_number} make run_eks_task ``
