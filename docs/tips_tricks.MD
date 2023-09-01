@@ -1,13 +1,14 @@
 ## vim
 
+`G`  - go to end of file
+
+`gg` - first line of file 
 
 `Shift + A` - go to the end of the current row (insert mode)
 
 `Shift + C` - delete everything after the cursor (insert mode)
 
 `Shift + I` - go to the first letter on the current row (insert mode)
-
-`Shift + G` - go to the last row of data in the file
 
 `/Pod` - find any instances of `Pod` in the file
 
