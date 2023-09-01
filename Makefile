@@ -77,3 +77,6 @@ delete_eks_task:
 	@echo "*** delete delete_eks_task "
 	cd terraform/environments/eks/ && terragrunt run-all destroy
 	rm -rf terraform/environments/eks/*
+
+lint:
+	pre-commit run --all-files -c .pre-commit-config.yaml
