@@ -13,17 +13,17 @@ Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS
 
 The repository is organized into the following sections:
 
-- **/[Makefile](Makefile)** - File contains scenarios for launching hands-on labs and mock exams.
-- **/[tasks](tasks)** - Directory contains lab scenarios and mock exam scripts.
-  - **/[cka](tasks%2Fcka)** - Directory contains everything related to CKA.
-    - **/[labs](tasks%2Fcka%2Flabs)**  - Directory  contains hands-on labs for the CKA exam.
-    - **/[mock](tasks%2Fcka%2Fmock)**  - Directory contains mock scripts for the CKA exam.
-  - **/[cks](tasks%2Fcks)** - Directory contains everything related to CKS.
-    - **/[labs](tasks%2Fcks%2Flabs)**  - Directory contains hands-on labs for the CKS exam.
-    - **/[mock](tasks%2Fcks%2Fmock)**  - Directory contains mock scripts for the CKS exam.
-- **/[terraform](terraform)** - Directory contains  modules and Terraform environments.
-  - **/[environments](terraform%2Fenvironments)** - Directory contains terragrunt (terraform) environments.
-  - **/[modules](terraform%2Fmodules)** - Directory contains terraform modules.
+- **[Makefile](Makefile)** - File contains scenarios for launching hands-on labs and mock exams.
+- **[tasks](tasks)** - Directory contains lab scenarios and mock exam scripts.
+  - **[cka](tasks%2Fcka)** - Directory contains everything related to CKA.
+    - **[labs](tasks%2Fcka%2Flabs)**  - Directory  contains hands-on labs for the CKA exam.
+    - **[mock](tasks%2Fcka%2Fmock)**  - Directory contains mock scripts for the CKA exam.
+  - **[cks](tasks%2Fcks)** - Directory contains everything related to CKS.
+    - **[labs](tasks%2Fcks%2Flabs)**  - Directory contains hands-on labs for the CKS exam.
+    - **[mock](tasks%2Fcks%2Fmock)**  - Directory contains mock scripts for the CKS exam.
+- **[terraform](terraform)** - Directory contains  modules and Terraform environments.
+  - **[environments](terraform%2Fenvironments)** - Directory contains terragrunt (terraform) environments.
+  - **[modules](terraform%2Fmodules)** - Directory contains terraform modules.
 
 ## Requirements
 - [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.1.7
