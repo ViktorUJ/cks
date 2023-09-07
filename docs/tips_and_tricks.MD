@@ -1,5 +1,8 @@
 ## vim
 
+When you take exams you need to edit a lot of manifests.
+The Vim editor is used by default, which means you should be aware how to use shortcuts.
+
 `G`  - go to end of file
 
 `gg` - first line of file 

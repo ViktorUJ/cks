@@ -13,17 +13,17 @@ Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS
 
 The repository is organized into the following sections:
 
-- **/[Makefile](Makefile)** - File contains scenarios for launching hands-on labs and mock exams.
-- **/[tasks](tasks)** - Directory contains lab scenarios and mock exam scripts.
-  - **/[cka](tasks%2Fcka)** - Directory contains everything related to CKA.
-    - **/[labs](tasks%2Fcka%2Flabs)**  - Directory  contains hands-on labs for the CKA exam.
-    - **/[mock](tasks%2Fcka%2Fmock)**  - Directory contains mock scripts for the CKA exam.
-  - **/[cks](tasks%2Fcks)** - Directory contains everything related to CKS.
-    - **/[labs](tasks%2Fcks%2Flabs)**  - Directory contains hands-on labs for the CKS exam.
-    - **/[mock](tasks%2Fcks%2Fmock)**  - Directory contains mock scripts for the CKS exam.
-- **/[terraform](terraform)** - Directory contains  modules and Terraform environments.
-  - **/[environments](terraform%2Fenvironments)** - Directory contains terragrunt (terraform) environments.
-  - **/[modules](terraform%2Fmodules)** - Directory contains terraform modules.
+- **[Makefile](Makefile)** - File contains scenarios for launching hands-on labs and mock exams.
+- **[tasks](tasks)** - Directory contains lab scenarios and mock exam scripts.
+  - **[cka](tasks%2Fcka)** - Directory contains everything related to CKA.
+    - **[labs](tasks%2Fcka%2Flabs)**  - Directory  contains hands-on labs for the CKA exam.
+    - **[mock](tasks%2Fcka%2Fmock)**  - Directory contains mock scripts for the CKA exam.
+  - **[cks](tasks%2Fcks)** - Directory contains everything related to CKS.
+    - **[labs](tasks%2Fcks%2Flabs)**  - Directory contains hands-on labs for the CKS exam.
+    - **[mock](tasks%2Fcks%2Fmock)**  - Directory contains mock scripts for the CKS exam.
+- **[terraform](terraform)** - Directory contains  modules and Terraform environments.
+  - **[environments](terraform%2Fenvironments)** - Directory contains terragrunt (terraform) environments.
+  - **[modules](terraform%2Fmodules)** - Directory contains terraform modules.
 
 ## Requirements
 - [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.1.7
@@ -33,13 +33,11 @@ The repository is organized into the following sections:
 
 
 ### About CKA, CKS, CKAD scenarios
-- use **aws**
-- create **vpc** , **subnets**
-- create  **ec2** (spot ) master and workers
-- init master node by **kubeadm**
-- copy join token to **s3**
-- load   join token  from **s3** to **worker node** and join to the cluster .
-- support versions:
+- the platform uses **aws**  to create following resources :  **vpc**, **subnets**, **security groups**, **ec2** (spot ), **s3**
+- after you launch the scenarios the platform will create all the necessary resources   and give access to k8s clusters.
+- to create clusters the platform uses **kubeadm** 
+- you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment) 
+- [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)  module supports versions:
 ````
 k8s version  : [ 1.21 , 1.27 ]   https://kubernetes.io/releases/
 Rintime :
@@ -90,7 +88,7 @@ Every command should be run from the project's root directory.
 
 ## Usage scenarios
 
-[video instruction for launching **CKA mock exam**](https://www.youtube.com/watch?v=P-YYX4CTWIg)
+[Video instruction for launching **CKA mock exam**](https://www.youtube.com/watch?v=P-YYX4CTWIg)
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
@@ -176,7 +174,7 @@ Every command should be run from the project's root directory.
 
 ## [Useful links](docs%2Flinks.MD)
 
-## [Tips And Tricks](docs%2Ftips_tricks.MD)
+## [Tips And Tricks](docs%2Ftips_and_tricks.MD)
 
 ## License and Usage Agreement
 - [Apache License 2.0](LICENSE)
