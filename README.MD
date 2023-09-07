@@ -33,13 +33,11 @@ The repository is organized into the following sections:
 
 
 ### About CKA, CKS, CKAD scenarios
-- use **aws**
-- create **vpc** , **subnets**
-- create  **ec2** (spot ) master and workers
-- init master node by **kubeadm**
-- copy join token to **s3**
-- load   join token  from **s3** to **worker node** and join to the cluster .
-- support versions:
+- the platform uses **aws**  to create following resources :  **vpc**, **subnets**, **security groups**, **ec2** (spot ), **s3**
+- after you launch the scenarios the platform will create all the necessary resources   and give access to k8s clusters.
+- to create clusters the platform uses **kubeadm** 
+- you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment) 
+- [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)  module supports versions:
 ````
 k8s version  : [ 1.21 , 1.27 ]   https://kubernetes.io/releases/
 Rintime :
@@ -90,7 +88,7 @@ Every command should be run from the project's root directory.
 
 ## Usage scenarios
 
-[video instruction for launching **CKA mock exam**](https://www.youtube.com/watch?v=P-YYX4CTWIg)
+[Video instruction for launching **CKA mock exam**](https://www.youtube.com/watch?v=P-YYX4CTWIg)
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
@@ -176,7 +174,7 @@ Every command should be run from the project's root directory.
 
 ## [Useful links](docs%2Flinks.MD)
 
-## [Tips And Tricks](docs%2Ftips_tricks.MD)
+## [Tips And Tricks](docs%2Ftips_and_tricks.MD)
 
 ## License and Usage Agreement
 - [Apache License 2.0](LICENSE)
