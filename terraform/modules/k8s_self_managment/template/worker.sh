@@ -32,7 +32,16 @@ apt-get install -y kubeadm=$k8_version_sh-00 kubelet=$k8_version_sh-00 kubectl=$
 apt-mark hold kubelet kubeadm kubectl
 
 echo "*** install aws cli "
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s
+acrh=$(uname -m)
+case $ubuntu_release in
+x86_64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+;;
+aarch64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+;;
+esac
+curl $awscli_url  -o "awscliv2.zip" -s
 unzip awscliv2.zip >/dev/null
 ./aws/install >/dev/null
 aws --version
