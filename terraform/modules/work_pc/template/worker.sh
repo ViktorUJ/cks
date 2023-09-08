@@ -14,6 +14,7 @@ date
 
 }
 #-------------------
+acrh=$(uname -m)
 hostnamectl  set-hostname worker
 
 configs_dir="/var/work/configs"
@@ -23,7 +24,16 @@ echo "*** apt update  & install apps "
 apt-get update -qq
 apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim
 
-curl -LO https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl
+case $acrh in
+x86_64)
+  kubectl_url="https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl"
+;;
+aarch64)
+  kubectl_url="https://dl.k8s.io/release/${kubectl_version}/bin/linux/arm64/kubectl"
+;;
+esac
+
+curl -LO $kubectl_url
 chmod +x kubectl
 mv kubectl  /usr/bin/
 
@@ -38,7 +48,7 @@ echo 'alias k=kubectl' >> /root/.bashrc
 echo 'complete -F __start_kubectl k' >> /root/.bashrc
 
 echo "*** install aws cli "
-acrh=$(uname -m)
+
 case $acrh in
 x86_64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
