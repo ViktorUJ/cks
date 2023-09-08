@@ -33,7 +33,7 @@ apt-mark hold kubelet kubeadm kubectl
 
 echo "*** install aws cli "
 acrh=$(uname -m)
-case $ubuntu_release in
+case $acrh in
 x86_64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
 ;;
