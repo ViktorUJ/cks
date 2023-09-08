@@ -9,12 +9,12 @@ locals {
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version    = "1.26.0"
+  k8_version    = "1.27.0"
   node_type     = "spot"
   runtime       = "containerd" # docker  , cri-o  , containerd ( need test it )
-  instance_type = "t3.medium"
+  instance_type = "t4g.medium" #  t3.medium  - x86     t4g.medium - arm
   key_name      = "cks"
-  ami_id        = "ami-06410fb0e71718398"
+  ami_id        = "ami-0ff124a3d7381bfec" #  ami-06410fb0e71718398 - x86   ami-0ff124a3d7381bfec - arm
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
   root_volume   = {
     type = "gp3"
