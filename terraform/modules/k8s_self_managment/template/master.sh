@@ -30,7 +30,7 @@ case $ubuntu_release in
   ;;
 esac
 
-
+echo echo "*** install kubeadm , kubectl , kubelet  "
 apt-get update
 apt-get install -y kubeadm=$k8_version_sh-00 kubelet=$k8_version_sh-00 kubectl=$k8_version_sh-00
 apt-mark hold kubelet kubeadm kubectl
