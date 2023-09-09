@@ -1,3 +1,9 @@
+sudo apt-get update
+sudo apt-get install -y qemu-user-static
+sudo apt-get install -y binfmt-support
+qemu-aarch64-static --version
+update-binfmts --version
+
 export DOCKER_CLI_EXPERIMENTAL=enabled
 docker buildx create --name arm-builder --node=crossplat
 
