@@ -240,7 +240,7 @@ case $ubuntu_release in
   ;;
 esac
 
-echo echo "*** install kubeadm , kubectl , kubelet  "
+echo "*** install kubeadm , kubectl , kubelet  "
 apt update
 apt install -y kubeadm=$k8_version_sh-00 kubelet=$k8_version_sh-00 kubectl=$k8_version_sh-00
 apt-mark hold kubelet kubeadm kubectl
