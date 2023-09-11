@@ -42,11 +42,11 @@ The repository is organized into the following sections:
 k8s version  : [ 1.21 , 1.27 ]   https://kubernetes.io/releases/
 Rintime :
     docker                   [1.21 , 1.23]
-    cri-o                    [1.21 , 1.27]
-    containerd               [1.21 , 1.27]   # cks default
-    containerd_gvizor        [1.21 , 1.27]
+    cri-o                    [1.21 , 1.28]
+    containerd               [1.21 , 1.28]   # cks default 1.27
+    containerd_gvizor        [1.21 , 1.28]
 OS for nodes  :
-   ubuntu  :  20.04 LTS  ,  22.04 LTS
+   ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
 CNI :  calico
 ````
 
