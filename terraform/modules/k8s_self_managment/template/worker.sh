@@ -13,30 +13,6 @@ apt-get install -y  unzip
 # install runtime
 ${runtime_script}
 
-
-# install kubernetes
-ubuntu_release=$(lsb_release -a | grep 'Release:'| cut -d':' -f2|tr -d "\n" | tr -d '\t')
-case $ubuntu_release in
-20.04)
-  sh -c "echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' >> /etc/apt/sources.list.d/kubernetes.list"
-  sh -c "curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -"
-  ;;
-*)
-  curl -fsSLo /etc/apt/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-  echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-  ;;
-esac
-
-apt-get update
-apt-get install -y kubeadm=$k8_version_sh-00 kubelet=$k8_version_sh-00 kubectl=$k8_version_sh-00
-apt-mark hold kubelet kubeadm kubectl
-
-echo "*** install aws cli "
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s
-unzip awscliv2.zip >/dev/null
-./aws/install >/dev/null
-aws --version
-
 date
 echo "wait master ready"
 aws s3 ls s3://$worker_join_sh

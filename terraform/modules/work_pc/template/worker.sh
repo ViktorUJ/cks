@@ -14,6 +14,7 @@ date
 
 }
 #-------------------
+acrh=$(uname -m)
 hostnamectl  set-hostname worker
 
 configs_dir="/var/work/configs"
@@ -23,7 +24,16 @@ echo "*** apt update  & install apps "
 apt-get update -qq
 apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim
 
-curl -LO https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl
+case $acrh in
+x86_64)
+  kubectl_url="https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl"
+;;
+aarch64)
+  kubectl_url="https://dl.k8s.io/release/${kubectl_version}/bin/linux/arm64/kubectl"
+;;
+esac
+
+curl -LO $kubectl_url
 chmod +x kubectl
 mv kubectl  /usr/bin/
 
@@ -38,10 +48,20 @@ echo 'alias k=kubectl' >> /root/.bashrc
 echo 'complete -F __start_kubectl k' >> /root/.bashrc
 
 echo "*** install aws cli "
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s
+
+case $acrh in
+x86_64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+;;
+aarch64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+;;
+esac
+curl $awscli_url  -o "awscliv2.zip" -s
 unzip awscliv2.zip >/dev/null
 ./aws/install >/dev/null
 aws --version
+
 echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
 echo 'complete -C "/usr/local/bin/aws_completer" aws' >>/home/ubuntu/.bashrc
 echo 'export PS1="\[\033[0;38;5;10m\]\u@\h\[\033[0;38;5;14m\]:\[\033[0;38;5;6m\]\w\[\033[0;38;5;10m\]>\[\033[0m\] "' >>/home/ubuntu/.bashrc

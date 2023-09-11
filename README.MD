@@ -42,11 +42,11 @@ The repository is organized into the following sections:
 k8s version  : [ 1.21 , 1.27 ]   https://kubernetes.io/releases/
 Rintime :
     docker                   [1.21 , 1.23]
-    cri-o                    [1.21 , 1.27]
-    containerd               [1.21 , 1.27]   # cks default
-    containerd_gvizor        [1.21 , 1.27]
+    cri-o                    [1.21 , 1.28]
+    containerd               [1.21 , 1.28]   # cks default 1.27
+    containerd_gvizor        [1.21 , 1.28]
 OS for nodes  :
-   ubuntu  :  20.04 LTS  ,  22.04 LTS
+   ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
 CNI :  calico
 ````
 
@@ -175,6 +175,17 @@ Every command should be run from the project's root directory.
 ## [Useful links](docs%2Flinks.MD)
 
 ## [Tips And Tricks](docs%2Ftips_and_tricks.MD)
+
+## [CHANGELOG](CHANGELOG%2FCHANGELOG.MD)
+
+## Contribution
+If you want to be part of the project development team, get in touch with [us](https://github.com/ViktorUJ/cks/tree/graviton-supporting#contacts). We are always happy to welcome new members to our development team
+
+
+If you want to say **thank you** or/and support the active development of **SRE Learning Platform project** :
+- [Star](https://github.com/ViktorUJ/cks) the **SRE Learning Platform project** on Github
+- Feel free to write articles about the project on [dev.to](https://dev.to/), [medium](https://medium.com/) or on your personal blog and share your experiences
+
 
 ## License and Usage Agreement
 - [Apache License 2.0](LICENSE)

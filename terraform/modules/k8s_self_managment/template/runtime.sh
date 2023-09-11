@@ -1,3 +1,13 @@
+VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
+case $VERSION in
+1.28)
+   apt_version="$k8_version_sh-1.1"
+;;
+*)
+   apt_version="$k8_version_sh-00"
+;;
+esac
+
 case $runtime_sh in
 docker)
 echo "*** install runtime = docker"
@@ -65,7 +75,6 @@ sysctl --system
 
 ubuntu_release=$(lsb_release -a | grep 'Release:'| cut -d':' -f2|tr -d "\n" | tr -d '\t')
 OS="xUbuntu_$ubuntu_release"
-VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
 
 cat <<EOF | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
 deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/ /
@@ -114,7 +123,7 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg |  gpg --dearmor -o /usr
 
 ## Add Docker apt repository.
 echo \
-  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" |  tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 ## Install packages
@@ -165,7 +174,7 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg |  gpg --dearmor -o /usr
 
 ## Add Docker apt repository.
 echo \
-  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" |  tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 ## Install packages
@@ -197,8 +206,20 @@ EOF
 
 systemctl restart containerd
 
-wget https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.13.0/crictl-v1.13.0-linux-amd64.tar.gz
-tar xf crictl-v1.13.0-linux-amd64.tar.gz
+acrh=$(uname -m)
+VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
+
+case $acrh in
+# https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.28.0/crictl-v1.28.0-linux-amd64.tar.gz
+x86_64)
+  crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/v$k8_version_sh/crictl-v$k8_version_sh-linux-amd64.tar.gz"
+;;
+aarch64)
+  crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/v$k8_version_sh/crictl-v$k8_version_sh-linux-arm.tar.gz"
+;;
+esac
+wget -O crictl.tar.gz $crictl_url
+tar xf crictl.tar.gz
 sudo mv crictl /usr/local/bin
 
 cat <<EOF |  tee /etc/crictl.yaml
@@ -212,3 +233,53 @@ EOF
   echo  "*** runtime not found"
   ;;
 esac
+
+
+ubuntu_release=$(lsb_release -a | grep 'Release:'| cut -d':' -f2|tr -d "\n" | tr -d '\t')
+case $ubuntu_release in
+20.04)
+ sudo mkdir -m 755 /etc/apt/keyrings
+ case $VERSION in
+   1.28)
+      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+   ;;
+   *)
+      curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+      echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+   ;;
+ esac
+  ;;
+*)
+ case $VERSION in
+   1.28)
+      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+      echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+   ;;
+   *)
+      curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+      echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+   ;;
+ esac
+  ;;
+esac
+
+echo "*** install kubeadm , kubectl , kubelet  "
+apt update
+apt install -y kubeadm=$apt_version kubelet=$apt_version kubectl=$apt_version
+apt-mark hold kubelet kubeadm kubectl
+
+echo "*** install aws cli "
+acrh=$(uname -m)
+case $acrh in
+x86_64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+;;
+aarch64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+;;
+esac
+curl $awscli_url  -o "awscliv2.zip" -s
+unzip awscliv2.zip >/dev/null
+./aws/install >/dev/null
+aws --version
