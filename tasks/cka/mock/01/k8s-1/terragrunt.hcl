@@ -66,7 +66,7 @@ inputs = {
       ami_id             = local.vars.locals.ami_id
       subnet_number      = "0"
       user_data_template = "template/worker.sh"
-      runtime            = "containerd_gvizor"
+      runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
@@ -84,7 +84,7 @@ inputs = {
       ami_id             = local.vars.locals.ami_id
       subnet_number      = "0"
       user_data_template = "template/worker.sh"
-      runtime            = "containerd_gvizor"
+      runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
