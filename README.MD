@@ -176,6 +176,8 @@ Every command should be run from the project's root directory.
 
 ## [Tips And Tricks](docs%2Ftips_and_tricks.MD)
 
+## [CHANGELOG](CHANGELOG%2FCHANGELOG.MD)
+
 ## License and Usage Agreement
 - [Apache License 2.0](LICENSE)
 
