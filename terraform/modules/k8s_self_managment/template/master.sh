@@ -17,24 +17,8 @@ apt-get install -y  unzip apt-transport-https ca-certificates curl jq
 
 # install runtime
 ${runtime_script}
+
 # install kubernetes
-ubuntu_release=$(lsb_release -a | grep 'Release:'| cut -d':' -f2|tr -d "\n" | tr -d '\t')
-case $ubuntu_release in
-20.04)
-  sh -c "echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' >> /etc/apt/sources.list.d/kubernetes.list"
-  sh -c "curl -s https://dl.k8s.io/apt/doc/apt-key.gpg | apt-key add -"
-  ;;
-*)
-  curl -fsSLo /etc/apt/keyrings/kubernetes-archive-keyring.gpg https://dl.k8s.io/apt/doc/apt-key.gpg
-  echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-  ;;
-esac
-
-echo echo "*** install kubeadm , kubectl , kubelet  "
-apt update
-apt install -y kubeadm=$k8_version_sh-00 kubelet=$k8_version_sh-00 kubectl=$k8_version_sh-00
-apt-mark hold kubelet kubeadm kubectl
-
 if [ -z "$external_ip_sh" ]; then
    echo "*** kubeadm init without eip "
    kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4
@@ -46,23 +30,9 @@ fi
 
 mkdir -p /root/.kube
 cp -i /etc/kubernetes/admin.conf /root/.kube/config
-
 chown $(id -u):$(id -g) /root/.kube/config
 
-echo "*** install aws cli "
-acrh=$(uname -m)
-case $acrh in
-x86_64)
-  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-;;
-aarch64)
-  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
-;;
-esac
-curl $awscli_url  -o "awscliv2.zip" -s
-unzip awscliv2.zip >/dev/null
-./aws/install >/dev/null
-aws --version
+
 
 
 aws s3 cp  /root/.kube/config s3://$k8s_config_sh
@@ -103,17 +73,6 @@ if [[ "$utils_enable_sh" == "true" ]] ; then
   echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
   echo 'source <(helm completion bash)'>>/root/.bashrc
   echo 'source <(skaffold completion bash)'>>/root/.bashrc
-#  . /etc/os-release
-#  echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$VERSION_ID/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:testing.list
-#  curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$VERSION_ID/Release.key" | sudo apt-key add -
-#  apt-get update -qq
-#  apt-get  -y install podman cri-tools containers-common
-#  rm /etc/apt/sources.list.d/devel:kubic:libcontainers:testing.list
-#  cat <<EOF | sudo tee /etc/containers/registries.conf
-#  [registries.search]
-#  registries = ['docker.io']
-#EOF
-
 fi
 
 
