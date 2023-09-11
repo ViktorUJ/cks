@@ -1,3 +1,13 @@
+VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
+case $VERSION in
+1.28)
+   apt_version="$k8_version_sh-1.1"
+;;
+*)
+   apt_version="$k8_version_sh-00"
+;;
+esac
+
 case $runtime_sh in
 docker)
 echo "*** install runtime = docker"
@@ -65,7 +75,6 @@ sysctl --system
 
 ubuntu_release=$(lsb_release -a | grep 'Release:'| cut -d':' -f2|tr -d "\n" | tr -d '\t')
 OS="xUbuntu_$ubuntu_release"
-VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
 
 cat <<EOF | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
 deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/ /
@@ -199,6 +208,7 @@ systemctl restart containerd
 
 acrh=$(uname -m)
 VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
+
 case $acrh in
 # https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.28.0/crictl-v1.28.0-linux-amd64.tar.gz
 x86_64)
@@ -242,7 +252,7 @@ esac
 
 echo "*** install kubeadm , kubectl , kubelet  "
 apt update
-apt install -y kubeadm=$k8_version_sh-00 kubelet=$k8_version_sh-00 kubectl=$k8_version_sh-00
+apt install -y kubeadm=$apt_version kubelet=$apt_version kubectl=$apt_version
 apt-mark hold kubelet kubeadm kubectl
 
 echo "*** install aws cli "
