@@ -179,7 +179,7 @@ Every command should be run from the project's root directory.
 ## [CHANGELOG](CHANGELOG%2FCHANGELOG.MD)
 
 ## Contribution
-If you want to be part of the project development team, get in touch with [us](https://github.com/ViktorUJ/cks/tree/graviton-supporting#contacts). We are always happy to welcome new members to our development team
+If you want to be part of the project development team, get in touch with [us](https://github.com/ViktorUJ/cks/tree/master#contacts). We are always happy to welcome new members to our development team
 
 
 If you want to say **thank you** or/and support the active development of **SRE Learning Platform project** :
