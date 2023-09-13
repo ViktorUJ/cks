@@ -136,8 +136,8 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                             |
 | Acceptance criteria | - Pod: `nginx-resolver`<br/>- image: `nginx`<br/>- Service: `nginx-resolver-service`<br/>- lookup pod  name : `test-nslookup`<br/>- lookup pod image : `busybox:1.28`<br/>- service file: `/var/work/tests/artifacts/21/nginx.svc`<br/>- pod file: `/var/work/tests/artifacts/21/nginx.pod` |
 ---
-|       **22**        | **Resolve dns  svc and pod .Create a nginx pod called nginx-resolver using image nginx, expose it internally with a service called nginx-resolver-service.**     |
-| :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|       **22**        | **Update Kubernetes cluster.**                                                                                                                                   |
+| :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 7%                                                                                                                                                               |
 |       Cluster       | cluster2 (`kubectl config use-context cluster2-admin@cluster2`)                                                                                                  |
 | Acceptance criteria | - The cluster is running Kubernetes 1.25.0, update it to 1.26.0 .<br/>- Use apt package manager and kubeadm for this.<br/>- Use ssh to connect to the instances. |
