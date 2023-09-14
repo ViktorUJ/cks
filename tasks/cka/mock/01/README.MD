@@ -148,8 +148,8 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                                      |
 | Acceptance criteria | - create default deny ingress policy in `prod-db` NS<br/>- create policy with allow connections from `prod` Namespaces to `prod-db`<br/>- create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`<br/>- create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect` |
 ---
-|       **24**        | **Create daemonset to run pods on all nodes (control-plane too)**                                                   |
-| :-----------------: | :------------------------------------------------------------------------------------------------------------------ |
+|       **24**        | **Create DaemonSet to run pods on all nodes (control-plane too)**                                                   |
+| :-----------------: |:--------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 6%                                                                                                                  |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                     |
 | Acceptance criteria | - namespace: `app-system`<br/>- ds: `name=important-app`, image=`nginx`<br/>- run on  all nodes (control-plane too) |
