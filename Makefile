@@ -71,11 +71,11 @@ run_eks_task:
 	@echo "*** run run_eks_task , task ${TASK}"
 	rm -rf terraform/environments/eks/*
 	cp -r tasks/eks/labs/${TASK}/* terraform/environments/eks/
-	cd terraform/environments/eks/ && terragrunt run-all apply --terragrunt-parallelism 10
+	cd terraform/environments/eks/ && terragrunt run-all apply
 
 delete_eks_task:
 	@echo "*** delete delete_eks_task "
-	cd terraform/environments/eks/ && terragrunt run-all destroy --terragrunt-parallelism 10
+	cd terraform/environments/eks/ && terragrunt run-all destroy
 	rm -rf terraform/environments/eks/*
 
 lint:
