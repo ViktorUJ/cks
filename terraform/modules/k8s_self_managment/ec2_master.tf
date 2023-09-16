@@ -45,7 +45,7 @@ resource "aws_spot_instance_request" "master" {
 resource "time_sleep" "wait_master" {
   depends_on = [aws_spot_instance_request.master["enable"]]
 
-  create_duration = "60s"
+  create_duration = var.time_sleep
 }
 
 

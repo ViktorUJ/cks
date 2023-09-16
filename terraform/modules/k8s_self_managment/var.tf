@@ -9,6 +9,9 @@ variable "vpc_id" {}
 variable "subnets_az" {}
 # k8_version    https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages
 variable "cluster_name" { type = string }
+variable "time_sleep" {
+  default = "30s"
+}
 variable "node_type" { type = string }
 variable "k8s_master" {
   type = object({
