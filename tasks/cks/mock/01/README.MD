@@ -122,6 +122,7 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 
 #### Task weight: 6%
 
+cluster  - 9 
 
 
 The Open Policy Agent and Gatekeeper have been installed to,
