@@ -88,7 +88,7 @@ inputs = {
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
     util               = {
-      kubectl_version = "v1.26.0"
+      kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/tests.bats"
