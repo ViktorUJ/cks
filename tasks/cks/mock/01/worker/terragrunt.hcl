@@ -59,7 +59,7 @@ dependency "cluster8" {
 }
 
 dependency "cluster9" {
-  config_path = "../k8s-8"
+  config_path = "../k8s-9"
 }
 
 inputs = {
