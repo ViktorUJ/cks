@@ -27,7 +27,7 @@ spec:
         app: deployment3
     spec:
       containers:
-      - image: mysql
+      - image: mysql:8.0.33
         name: mysql
         env:
           - name: MYSQL_ROOT_PASSWORD
