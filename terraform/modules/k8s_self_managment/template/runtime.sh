@@ -264,7 +264,7 @@ case $ubuntu_release in
   ;;
 esac
 
-echo "*** install kubeadm , kubectl , kubelet  "
+echo "*** install kubeadm , kubectl , kubelet  version = $apt_version "
 apt update
 apt install -y kubeadm=$apt_version kubelet=$apt_version kubectl=$apt_version
 echo "install status=$?"
