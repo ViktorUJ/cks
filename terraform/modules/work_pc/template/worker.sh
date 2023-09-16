@@ -26,10 +26,10 @@ apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-compl
 
 case $acrh in
 x86_64)
-  kubectl_url="https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl"
+  kubectl_url="https://dl.k8s.io/release/v${kubectl_version}/bin/linux/amd64/kubectl"
 ;;
 aarch64)
-  kubectl_url="https://dl.k8s.io/release/${kubectl_version}/bin/linux/arm64/kubectl"
+  kubectl_url="https://dl.k8s.io/release/v${kubectl_version}/bin/linux/arm64/kubectl"
 ;;
 esac
 
