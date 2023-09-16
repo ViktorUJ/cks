@@ -42,7 +42,7 @@ resource "time_sleep" "wait_master" {
   for_each   = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
   depends_on = [aws_spot_instance_request.master["enable"]]
 
-  create_duration = "60s"
+  create_duration = var.time_sleep
 }
 
 
