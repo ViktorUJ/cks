@@ -267,6 +267,7 @@ esac
 echo "*** install kubeadm , kubectl , kubelet  "
 apt update
 apt install -y kubeadm=$apt_version kubelet=$apt_version kubectl=$apt_version
+echo "install status=$?"
 apt-mark hold kubelet kubeadm kubectl
 
 echo "*** install aws cli "
