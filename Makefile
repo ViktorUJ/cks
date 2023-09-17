@@ -44,7 +44,7 @@ delete_cks_k8s_mock:
 
 run_cks_k8s_task_n:
 	@echo "*** run cks , task ${TASK}"
-	cp tasks/cks/labs/${TASK}/* terraform/environments/cks/
+	cp -r tasks/cks/labs/${TASK}/* terraform/environments/cks/
 	cd terraform/environments/cks/k8s/ && terragrunt run-all  apply
 
 delete_cks_k8s_task_n:
