@@ -51,7 +51,7 @@ run_cks_k8s_task_n:
 delete_cks_k8s_task_n:
 	@echo "*** delete cks , task ${TASK}"
 	cp tasks/cks/labs/${TASK}/* terraform/environments/cks/
-	cd terraform/environments/cks/k8s/ && terragrunt run-all  destroy
+	cd terraform/environments/cks/ && terragrunt run-all  destroy
 
 run_cka_vpc:
 	cd terraform/environments/cka/vpc/ && terragrunt apply
