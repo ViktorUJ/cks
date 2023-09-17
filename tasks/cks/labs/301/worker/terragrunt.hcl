@@ -23,41 +23,6 @@ dependency "vpc" {
 }
 
 
-dependency "cluster1" {
-  config_path = "../k8s-1"
-}
-
-dependency "cluster2" {
-  config_path = "../k8s-2"
-}
-
-dependency "cluster3" {
-  config_path = "../k8s-3"
-}
-
-dependency "cluster4" {
-  config_path = "../k8s-4"
-}
-
-dependency "cluster5" {
-  config_path = "../k8s-5"
-}
-
-dependency "cluster6" {
-  config_path = "../k8s-6"
-}
-
-dependency "cluster7" {
-  config_path = "../k8s-7"
-}
-
-dependency "cluster8" {
-  config_path = "../k8s-8"
-}
-
-dependency "cluster9" {
-  config_path = "../k8s-9"
-}
 
 inputs = {
   region        = local.vars.locals.region
