@@ -41,7 +41,7 @@ resource "aws_launch_template" "master" {
   }
 
  iam_instance_profile {
-    name = aws_iam_instance_profile.server.id
+    name = aws_iam_instance_profile.server.name
   }
 
   lifecycle {
