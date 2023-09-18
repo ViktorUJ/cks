@@ -38,7 +38,7 @@ resource "aws_launch_template" "master" {
 
 
 resource "aws_spot_fleet_request" "master" {
-  iam_fleet_role  = aws_iam_instance_profile.server.id
+  iam_fleet_role  = aws_iam_instance_profile.server.arn
   # spot_price      = "0.005"
   target_capacity = 1
 
