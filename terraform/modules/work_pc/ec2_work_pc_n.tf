@@ -130,8 +130,8 @@ resource "aws_spot_fleet_request" "master" {
 }
 
 
-data "aws_instances" "master" {
-  instance_tags {
-    Name = "spot-fleet-example"
-  }
-}
+#data "aws_instances" "master" {
+#  instance_tags {
+#    Name = "spot-fleet-example"
+#  }
+#}
