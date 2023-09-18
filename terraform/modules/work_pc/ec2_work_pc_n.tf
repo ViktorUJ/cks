@@ -1,3 +1,7 @@
+data "aws_iam_role" "SpotFleetRole" {
+  name = "aws-ec2-spot-fleet-role"
+}
+
 resource "aws_launch_template" "master" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
   name_prefix   = "${var.aws}-${var.prefix}-${var.app_name}"
@@ -47,9 +51,7 @@ resource "aws_launch_template" "master" {
 
 
 resource "aws_spot_fleet_request" "master" {
-  # iam_fleet_role  = aws_iam_role.server.arn
-  iam_fleet_role       = "arn:aws:iam::790660747904:role/aws-service-role/spotfleet.amazonaws.com/AWSServiceRoleForEC2SpotFleet"
-  # spot_price      = "0.005"
+  iam_fleet_role       = data.aws_iam_role.SpotFleetRole.arn
   target_capacity      = 1
   wait_for_fulfillment = true
 
