@@ -130,8 +130,8 @@ resource "aws_spot_fleet_request" "master" {
 }
 
 
-#data "aws_instances" "master" {
-#  instance_tags {
-#    Name = "spot-fleet-example"
-#  }
-#}
+data "aws_instances" "test" {
+  instance_tags = {
+    "aws:ec2spot:fleet-request-id" =  aws_spot_fleet_request.master["enable"].id
+  }
+}
