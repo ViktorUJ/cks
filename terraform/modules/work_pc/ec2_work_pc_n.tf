@@ -35,6 +35,11 @@ resource "aws_launch_template" "master" {
     resource_type = "instance"
     tags          = local.tags_all_k8_master
   }
+
+ iam_instance_profile {
+    name = aws_iam_instance_profile.server.id
+  }
+
   lifecycle {
     create_before_destroy = true
   }
