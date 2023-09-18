@@ -59,7 +59,7 @@ resource "aws_iam_policy" "fleet_role" {
 EOF
 }
 
-resource "aws_iam_policy_attachment" "server" {
+resource "aws_iam_policy_attachment" "fleet_role" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
   name       = "${var.aws}-${var.prefix}-${var.app_name}-work-pc"
   policy_arn = aws_iam_policy.fleet_role["enable"].arn
