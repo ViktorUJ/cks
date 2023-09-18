@@ -46,7 +46,7 @@ resource "aws_spot_fleet_request" "master" {
     launch_template_specification {
 
       id      = aws_launch_template.master.id
-      version = aws_launch_template.master.latest_version
+      version = aws_launch_template.master["enable"].latest_version
     }
   }
 }
