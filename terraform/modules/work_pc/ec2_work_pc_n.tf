@@ -1,6 +1,71 @@
-data "aws_iam_role" "SpotFleetRole" {
-  name = "aws-ec2-spot-fleet-role"
+resource "aws_iam_role" "fleet_role" {
+  for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  name = "${var.aws}-${var.prefix}-${var.app_name}"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "spotfleet.amazonaws.com"
+        }
+      }
+    ]
+  })
 }
+
+resource "aws_iam_policy" "fleet_role" {
+  for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  name     = "${var.aws}-${var.prefix}-${var.app_name}-work-pc"
+  policy   = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeImages",
+                "ec2:DescribeSubnets",
+                "ec2:RequestSpotInstances",
+                "ec2:TerminateInstances",
+                "ec2:DescribeInstanceStatus",
+                "iam:PassRole"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:RegisterInstancesWithLoadBalancer"
+            ],
+            "Resource": [
+                "arn:aws:elasticloadbalancing:*:*:loadbalancer/*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:RegisterTargets"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_iam_policy_attachment" "server" {
+  for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  name       = "${var.aws}-${var.prefix}-${var.app_name}-work-pc"
+  policy_arn = aws_iam_policy.fleet_role["enable"].arn
+  roles      = [aws_iam_role.fleet_role["enable"].name]
+}
+
 
 resource "aws_launch_template" "master" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
@@ -51,7 +116,7 @@ resource "aws_launch_template" "master" {
 
 
 resource "aws_spot_fleet_request" "master" {
-  iam_fleet_role       = data.aws_iam_role.SpotFleetRole.arn
+  iam_fleet_role       = aws_iam_role.fleet_role.arn
   target_capacity      = 1
   wait_for_fulfillment = true
 
