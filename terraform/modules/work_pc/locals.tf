@@ -14,5 +14,5 @@ locals {
   tags_all_k8_master = var.work_pc.node_type == "spot" ? merge(local.tags_all, local.tags_k8_master) : {}
 
   #tags_all_k8_master = var.work_pc.node_type == "spot" ? local.tags_all_k8_master_x : ""
- worker_pc_ip = var.work_pc.node_type == "spot" ? data.aws_instances.spot_fleet.public_ips : aws_instance.master["enable"].public_ip
+ worker_pc_ip = var.work_pc.node_type == "spot" ? data.aws_instances.spot_fleet["enable"].public_ips : aws_instance.master["enable"].public_ip
 }
