@@ -1,9 +1,9 @@
 resource "aws_launch_template" "master" {
-  for_each    = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name_prefix = "${var.aws}-${var.prefix}-${var.app_name}"
-  image_id    = var.work_pc.ami_id
+  for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  name_prefix   = "${var.aws}-${var.prefix}-${var.app_name}"
+  image_id      = var.work_pc.ami_id
   instance_type = var.work_pc.instance_type
-  user_data   = base64encode( templatefile(var.work_pc.user_data_template, {
+  user_data     = base64encode( templatefile(var.work_pc.user_data_template, {
     clusters_config   = join(" ", [for key, value in var.work_pc.clusters_config : "${key}=${value}"])
     kubectl_version   = var.work_pc.util.kubectl_version
     ssh_private_key   = var.work_pc.ssh.private_key
@@ -31,7 +31,10 @@ resource "aws_launch_template" "master" {
       encrypted             = true
     }
   }
-
+  tag_specifications {
+    resource_type = "instance"
+    tags          = local.tags_all_k8_master
+  }
   lifecycle {
     create_before_destroy = true
   }
@@ -39,10 +42,10 @@ resource "aws_launch_template" "master" {
 
 
 resource "aws_spot_fleet_request" "master" {
- # iam_fleet_role  = aws_iam_role.server.arn
-  iam_fleet_role = "arn:aws:iam::790660747904:role/aws-service-role/spotfleet.amazonaws.com/AWSServiceRoleForEC2SpotFleet"
+  # iam_fleet_role  = aws_iam_role.server.arn
+  iam_fleet_role       = "arn:aws:iam::790660747904:role/aws-service-role/spotfleet.amazonaws.com/AWSServiceRoleForEC2SpotFleet"
   # spot_price      = "0.005"
-  target_capacity = 1
+  target_capacity      = 1
   wait_for_fulfillment = true
 
   launch_template_config {
