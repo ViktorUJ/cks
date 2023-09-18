@@ -137,3 +137,6 @@ data "aws_instances" "test" {
     "aws:ec2spot:fleet-request-id" =  aws_spot_fleet_request.master["enable"].id
   }
 }
+output "xxx" {
+  value = data.aws_instances.test
+}
