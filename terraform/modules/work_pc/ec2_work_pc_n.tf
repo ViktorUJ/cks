@@ -1,4 +1,4 @@
-resource "aws_launch_template" "node" {
+resource "aws_launch_template" "master" {
   name_prefix = "${var.aws}-${var.prefix}-${var.app_name}"
   image_id    = var.work_pc.ami_id
   user_data   = base64encode( templatefile(var.work_pc.user_data_template, {
@@ -17,7 +17,9 @@ resource "aws_launch_template" "node" {
     associate_public_ip_address = true
     security_groups             = [aws_security_group.servers.id]
     delete_on_termination       = "true"
+    subnet_id = local.subnets[var.work_pc.subnet_number]
   }
+
   block_device_mappings {
     device_name = "/dev/sda1"
     ebs {
@@ -30,5 +32,20 @@ resource "aws_launch_template" "node" {
 
   lifecycle {
     create_before_destroy = true
+  }
+}
+
+
+resource "aws_spot_fleet_request" "master" {
+  iam_fleet_role  = aws_iam_instance_profile.server.id
+ # spot_price      = "0.005"
+  target_capacity = 1
+
+  launch_template_config {
+    launch_template_specification {
+
+      id      = aws_launch_template.master.id
+      version = aws_launch_template.master.latest_version
+    }
   }
 }
