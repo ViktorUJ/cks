@@ -17,7 +17,7 @@ resource "aws_iam_role" "fleet_role" {
 
 resource "aws_iam_policy" "fleet_role" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name     = "${var.aws}-${var.prefix}-${var.app_name}-work-pc"
+  name     = "${var.aws}-${var.prefix}-${var.app_name}-work-pc-spot-fleet"
   policy   = <<EOF
 {
     "Version": "2012-10-17",
@@ -61,7 +61,7 @@ EOF
 
 resource "aws_iam_policy_attachment" "fleet_role" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name       = "${var.aws}-${var.prefix}-${var.app_name}-work-pc"
+  name       = "${var.aws}-${var.prefix}-${var.app_name}-work-pc-spot-fleet"
   policy_arn = aws_iam_policy.fleet_role["enable"].arn
   roles      = [aws_iam_role.fleet_role["enable"].name]
 }
