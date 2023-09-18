@@ -1,6 +1,6 @@
 resource "aws_iam_role" "fleet_role" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name = "${var.aws}-${var.prefix}-${var.app_name}"
+  name = "${var.aws}-${var.prefix}-${var.app_name}-spot-fleet-worker"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
