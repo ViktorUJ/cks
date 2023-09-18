@@ -131,12 +131,9 @@ resource "aws_spot_fleet_request" "master" {
 }
 
 
-data "aws_instances" "test" {
+data "aws_instances" "spot_fleet" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
   instance_tags = {
     "aws:ec2spot:fleet-request-id" =  aws_spot_fleet_request.master["enable"].id
   }
-}
-output "xxx" {
-  value = data.aws_instances.test
 }
