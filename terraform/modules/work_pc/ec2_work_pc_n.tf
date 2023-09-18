@@ -2,6 +2,7 @@ resource "aws_launch_template" "master" {
   for_each    = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
   name_prefix = "${var.aws}-${var.prefix}-${var.app_name}"
   image_id    = var.work_pc.ami_id
+  instance_type = var.work_pc.instance_type
   user_data   = base64encode( templatefile(var.work_pc.user_data_template, {
     clusters_config   = join(" ", [for key, value in var.work_pc.clusters_config : "${key}=${value}"])
     kubectl_version   = var.work_pc.util.kubectl_version
