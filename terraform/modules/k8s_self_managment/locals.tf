@@ -29,7 +29,6 @@ locals {
       runtime    = var.k8s_worker[key].runtime
       labels     = var.k8s_worker[key].node_labels
       id         = join("", instance.ids)
-
     }
   } : {
     for key, instance in aws_instance.worker :
