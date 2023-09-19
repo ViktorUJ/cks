@@ -10,7 +10,7 @@ data "aws_ami" "master" {
 
     filter {
         name   = "name"
-        values = ["ubuntu/images/hvm-ssd/ubuntu-*-${var.k8s_master.ubuntu_version}-${local.master_arch}-server-*"]
+        values = ["ubuntu/images/hvm-ssd/ubuntu-*-${var.k8s_master.ubuntu_version}-${join("",data.aws_ec2_instance_type.master.supported_architectures)}-server-*"]
     }
 
     filter {
