@@ -46,7 +46,7 @@ inputs = {
     cidrs              = ["0.0.0.0/0"]
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/move-to-spot-fleet/tasks/cks/mock/01/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     ssh                = {
       private_key = dependency.ssh-keys.outputs.private_key
@@ -64,7 +64,7 @@ inputs = {
       ami_id             = local.vars.locals.ami_id
       subnet_number      = "0"
       user_data_template = "template/worker.sh"
-      runtime            = "containerd_gvizor"
+      runtime            = "containerd"
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
