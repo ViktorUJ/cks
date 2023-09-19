@@ -32,7 +32,7 @@ locals {
   master_ip           = var.node_type == "spot" ? join("",data.aws_instances.spot_fleet_master["enable"].public_ips) : aws_instance.master["enable"].public_ip
   master_ip_public    = var.k8s_master.eip == "true" ? aws_eip.master["enable"].public_ip : local.master_ip
   external_ip         = var.k8s_master.eip == "true" ? aws_eip.master["enable"].public_ip : ""
-  master_instance_id  = var.node_type == "spot" ? join("",data.aws_instances.spot_fleet_master["enable"].id) : aws_instance.master["enable"].id
+  master_instance_id  = var.node_type == "spot" ? data.aws_instances.spot_fleet_master["enable"].id : aws_instance.master["enable"].id
   master_local_ip     = var.node_type == "spot" ? join("",data.aws_instances.spot_fleet_master["enable"].private_ips) : aws_instance.master["enable"].private_ip
   k8s_worker_ondemand = var.node_type == "ondemand" ? var.k8s_worker : {}
   k8s_worker_spot     = var.node_type == "spot" ? var.k8s_worker : {}
