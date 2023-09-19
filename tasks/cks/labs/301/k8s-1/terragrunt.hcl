@@ -75,5 +75,23 @@ inputs = {
       cidrs       = ["0.0.0.0/0"]
       root_volume = local.vars.locals.root_volume
     }
+    "node_3" = {
+      k8_version         = local.vars.locals.k8_version
+      instance_type      = local.vars.locals.instance_type
+      key_name           = local.vars.locals.key_name
+      ami_id             = local.vars.locals.ami_id
+      subnet_number      = "0"
+      user_data_template = "template/worker.sh"
+      runtime            = "containerd"
+      runtime_script     = "template/runtime.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
+      node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
+      ssh                = {
+        private_key = dependency.ssh-keys.outputs.private_key
+        pub_key     = dependency.ssh-keys.outputs.pub_key
+      }
+      cidrs       = ["0.0.0.0/0"]
+      root_volume = local.vars.locals.root_volume
+    }
   }
 }
