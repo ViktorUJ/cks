@@ -1,6 +1,6 @@
 data "aws_ami" "master" {
 
-   # most_recent = true
+    most_recent = true
 
     filter {
         name   = "name"
