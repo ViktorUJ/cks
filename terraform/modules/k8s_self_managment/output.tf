@@ -40,3 +40,7 @@ output "check_node_status" {
 output "s3_k8s_config" {
   value = var.s3_k8s_config
 }
+
+output "worker_local_ips" {
+  value = data.aws_instances.spot_fleet_worker.public_ips
+}
