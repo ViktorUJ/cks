@@ -21,7 +21,21 @@ locals {
   worker_join        = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
   k8s_config         = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/config"
 
+
+
+
   worker_ip={}
+
+   workers = var.node_type == "spot" ? {
+    for key, instance in data.aws_instances.spot_fleet_worker :
+    key => {
+      private_ips = instance.private_ips
+    }
+  } : {}
+}
+
+
+
 #  worker_ip = var.node_type == "spot" ? [
 #    for k, v in aws_spot_instance_request.worker :
 #    "${k} private_ip = ${v.private_ips}  public_ip = ${v.public_ips}  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
