@@ -45,6 +45,7 @@ variable "k8s_worker" {
   type = map(object({
     instance_type      = string
     ami_id             = string
+    ubuntu_version     = string
     key_name           = string
     cidrs              = list(string)
     subnet_number      = string
