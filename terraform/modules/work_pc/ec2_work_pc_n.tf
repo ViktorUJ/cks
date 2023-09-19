@@ -147,7 +147,7 @@ resource "aws_spot_fleet_request" "master" {
   iam_fleet_role       = aws_iam_role.fleet_role["enable"].arn
   target_capacity      = 1
   wait_for_fulfillment = true
-
+  terminate_instances_on_delete = true
   launch_template_config {
     launch_template_specification {
 
