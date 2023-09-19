@@ -47,6 +47,7 @@ output "worker_local_ips" {
     key => {
       private_ips = instance.private_ips
       public_ips  = instance.public_ips
+      id  = instance.ids
     }
   }
 }
