@@ -17,8 +17,7 @@ resource "aws_launch_template" "worker" {
     ssh_pub_key     = each.value.ssh.pub_key
   }))
   key_name = each.value.key_name
-  tags     = local.tags_all
-
+  tags = merge(var.tags_common, local.tags_app , {"Name" = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}" })
   network_interfaces {
     associate_public_ip_address = true
     security_groups             = [aws_security_group.servers.id]

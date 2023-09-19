@@ -30,6 +30,7 @@ resource "aws_spot_instance_request" "worker" {
     ssh_pub_key     = each.value.ssh.pub_key
   })
   tags = local.tags_all
+  ta
   root_block_device {
     volume_size           = each.value.root_volume.size
     volume_type           = each.value.root_volume.type
