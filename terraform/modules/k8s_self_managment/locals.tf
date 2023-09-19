@@ -26,12 +26,12 @@ locals {
 
   worker_ip={}
 
-   workers =  {
+   workers = var.node_type == "spot" ? {
     for key, instance in data.aws_instances.spot_fleet_worker :
     key => {
       private_ips = instance.private_ips
     }
-  }
+  } : {}
 
 
 
