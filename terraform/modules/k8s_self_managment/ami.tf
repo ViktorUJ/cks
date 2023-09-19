@@ -1,3 +1,6 @@
+data "aws_ec2_instance_type" "master" {
+    instance_type = var.k8s_master.instance_type
+}
 data "aws_ami" "master" {
 
     most_recent = true
@@ -17,4 +20,8 @@ data "aws_ami" "master" {
 
 output "ami_master" {
   value = data.aws_ami.master
+}
+
+output "aws_ec2_instance_type" {
+    value = data.aws_ec2_instance_type.master.supported_architectures
 }
