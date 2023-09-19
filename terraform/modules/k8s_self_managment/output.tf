@@ -21,9 +21,9 @@ output "k8s_config" {
 output "k8_master_version" {
   value = var.k8s_master.k8_version
 }
-output "worker_ip" {
-  value = local.worker_ip
-}
+#output "worker_ip" {
+#  value = local.worker_ip
+#}
 
 output "master_ssh" {
   value = "ssh ubuntu@${local.master_ip_public}"
