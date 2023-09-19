@@ -54,6 +54,6 @@ output "s3_k8s_config" {
 #  }
 #}
 
-output "workers" {
-  value = local.workers
-}
+#output "workers" {
+#  value = local.workers
+#}
