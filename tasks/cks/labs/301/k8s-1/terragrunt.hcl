@@ -23,15 +23,15 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  region        = local.vars.locals.region
-  aws           = local.vars.locals.aws
-  prefix        = "cluster1"
-  tags_common   = local.vars.locals.tags
-  app_name      = "k8s"
-  subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id        = dependency.vpc.outputs.vpc_id
-  cluster_name  = "k8s1"
-  node_type     = local.vars.locals.node_type
+  region       = local.vars.locals.region
+  aws          = local.vars.locals.aws
+  prefix       = "cluster1"
+  tags_common  = local.vars.locals.tags
+  app_name     = "k8s"
+  subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id       = dependency.vpc.outputs.vpc_id
+  cluster_name = "k8s1"
+  node_type    = local.vars.locals.node_type
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
@@ -40,6 +40,7 @@ inputs = {
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
     ami_id             = local.vars.locals.ami_id
+    ubuntu_version     = "20.04"
     subnet_number      = "0"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"

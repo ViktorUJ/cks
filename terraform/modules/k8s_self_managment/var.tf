@@ -17,7 +17,7 @@ variable "k8s_master" {
   type = object({
     instance_type      = string
     ami_id             = string
- #   ubuntu_version     = string
+    ubuntu_version     = string
     key_name           = string
     cidrs              = list(string)
     subnet_number      = string
