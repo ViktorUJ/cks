@@ -13,6 +13,7 @@ locals {
   node_type     = "spot"
   runtime       = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type = "t4g.medium"
+  instance_type_worker = "t4g.small"
   key_name      = "cks"
   ami_id        = "ami-0ff124a3d7381bfec"
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
