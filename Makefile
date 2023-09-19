@@ -46,7 +46,7 @@ run_cks_k8s_task_n:
 	@echo "*** run cks , task ${TASK}"
 	rm -rf terraform/environments/cks/*
 	cp -r tasks/cks/labs/${TASK}/* terraform/environments/cks/
-	cd terraform/environments/cks/ && terragrunt run-all  apply
+	cd terraform/environments/cks/ && terragrunt run-all  apply --terragrunt-parallelism 2
 
 delete_cks_k8s_task_n:
 	@echo "*** delete cks , task ${TASK}"
