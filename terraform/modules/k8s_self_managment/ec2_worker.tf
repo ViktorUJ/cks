@@ -2,7 +2,7 @@
 resource "aws_launch_template" "worker" {
   for_each                    = local.k8s_worker_spot
   name_prefix   = "${var.aws}-${var.prefix}-${var.app_name}"
-  image_id      = each.value.ami_id
+  image_id      = each.value.ami_id != "" ? each.value.ami_id : data.aws_ami.worker["${each.key}"].image_id
   instance_type = each.value.instance_type
   user_data     = base64encode( templatefile(each.value.user_data_template, {
     worker_join     = local.worker_join
