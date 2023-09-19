@@ -98,10 +98,17 @@ resource "aws_launch_template" "master" {
       volume_size           = var.work_pc.root_volume.size
       volume_type           = var.work_pc.root_volume.type
       encrypted             = true
+
     }
+
   }
   tag_specifications {
     resource_type = "instance"
+    tags          = local.tags_all_k8_master
+  }
+
+   tag_specifications {
+    resource_type = "volume"
     tags          = local.tags_all_k8_master
   }
 
