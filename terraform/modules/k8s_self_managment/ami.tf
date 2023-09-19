@@ -31,7 +31,7 @@ data "aws_ami" "worker" {
 
     filter {
         name   = "name"
-        values = ["ubuntu/images/hvm-ssd/ubuntu-*-${each.value.ubuntu_version}-${join("",data.aws_ec2_instance_type.worker[${each.key}].supported_architectures)}-server-*"]
+        values = ["ubuntu/images/hvm-ssd/ubuntu-*-${each.value.ubuntu_version}-${join("",data.aws_ec2_instance_type.worker["${each.key}"].supported_architectures)}-server-*"]
     }
 
     filter {
