@@ -21,13 +21,13 @@ locals {
   worker_join        = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
   k8s_config         = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/config"
 
-  worker_ip = var.node_type == "spot" ? [
-    for k, v in data.aws_instances.spot_fleet_worker :
-    "${k} private_ip = join('',${data.aws_instances.spot_fleet_worker["${k}"].private_ips})  public_ip = join('',${data.aws_instances.spot_fleet_worker["${k}"].public_ips})  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
-    ] : [
-    for k, v in aws_instance.worker :
-    "${k} private_ip = ${v.private_ip}  public_ip = ${v.public_ip}  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
-  ]
+# worker_ip = var.node_type == "spot" ? [
+#   for k, v in data.aws_instances.spot_fleet_worker :
+#   "${k} private_ip = join('',${data.aws_instances.spot_fleet_worker["${k}"].private_ips})  public_ip = join('',${data.aws_instances.spot_fleet_worker["${k}"].public_ips})  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
+#   ] : [
+#   for k, v in aws_instance.worker :
+#   "${k} private_ip = ${v.private_ip}  public_ip = ${v.public_ip}  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
+# ]
 
   master_ip           = var.node_type == "spot" ? join("",data.aws_instances.spot_fleet_master["enable"].public_ips) : aws_instance.master["enable"].public_ip
   master_ip_public    = var.k8s_master.eip == "true" ? aws_eip.master["enable"].public_ip : local.master_ip
