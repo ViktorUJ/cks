@@ -48,7 +48,8 @@ output "worker_local_ips" {
       private_ips = join("", instance.private_ips)
       public_ips  = join("", instance.public_ips)
       id          = join("", instance.ids)
-
+      runtime     = var.k8s_worker[key].runtime
+      labels      = var.k8s_worker[key].node_labels
     }
   }
 }
