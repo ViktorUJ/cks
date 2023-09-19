@@ -4,7 +4,7 @@ resource "aws_launch_template" "worker" {
   name_prefix   = "${var.aws}-${var.prefix}-${var.app_name}"
   image_id      = each.value.ami_id
   instance_type = each.value.instance_type
-  user_data     = base64encode( templatefile(var.k8s_master.user_data_template,{
+  user_data     = base64encode( templatefile(each.value.user_data_template, {
     worker_join     = local.worker_join
     k8s_config      = local.k8s_config
     k8_version      = each.value.k8_version
@@ -15,7 +15,7 @@ resource "aws_launch_template" "worker" {
     node_labels     = each.value.node_labels
     ssh_private_key = each.value.ssh.private_key
     ssh_pub_key     = each.value.ssh.pub_key
-  } ))
+  }))
   key_name = each.value.key_name
   tags     = local.tags_all
 
