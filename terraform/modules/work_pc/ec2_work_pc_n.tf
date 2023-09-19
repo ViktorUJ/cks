@@ -139,10 +139,6 @@ resource "aws_launch_template" "master" {
 
 
 resource "aws_spot_fleet_request" "master" {
-  depends_on = [
-  aws_iam_instance_profile.server,
-  aws_security_group.servers,
-  ]
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
   iam_fleet_role       = aws_iam_role.fleet_role["enable"].arn
   target_capacity      = 1
@@ -150,7 +146,6 @@ resource "aws_spot_fleet_request" "master" {
   terminate_instances_on_delete = true
   launch_template_config {
     launch_template_specification {
-
       id      = aws_launch_template.master["enable"].id
       version = aws_launch_template.master["enable"].latest_version
     }
