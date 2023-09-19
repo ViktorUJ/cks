@@ -23,5 +23,5 @@ output "ami_master" {
 }
 
 output "aws_ec2_instance_type" {
-    value = data.aws_ec2_instance_type.master.supported_architectures
+    value = join("",data.aws_ec2_instance_type.master.supported_architectures)
 }
