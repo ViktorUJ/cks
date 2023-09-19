@@ -38,12 +38,12 @@ resource "aws_launch_template" "worker" {
   }
   tag_specifications {
     resource_type = "instance"
-    tags          = local.tags_all_k8_master
+    tags = merge(var.tags_common, local.tags_app , {"Name" = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}" })
   }
 
    tag_specifications {
     resource_type = "volume"
-    tags          = local.tags_all
+    tags = merge(var.tags_common, local.tags_app , {"Name" = "${var.aws}-${var.prefix}-${var.app_name}-worker-${each.key}" })
   }
 
  iam_instance_profile {
