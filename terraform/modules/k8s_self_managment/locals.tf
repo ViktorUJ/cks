@@ -28,6 +28,7 @@ locals {
       public_ip  = join("", instance.public_ips)
       runtime    = var.k8s_worker[key].runtime
       labels     = var.k8s_worker[key].node_labels
+      id         = join("", instance.ids)
 
     }
   } : {
@@ -37,13 +38,14 @@ locals {
       public_ip  = instance.public_ip
       runtime    = var.k8s_worker[key].runtime
       labels     = var.k8s_worker[key].node_labels
+      id         = instance.id
     }
   }
 
   master_ip           = var.node_type == "spot" ? join("", data.aws_instances.spot_fleet_master["enable"].public_ips) : aws_instance.master["enable"].public_ip
   master_ip_public    = var.k8s_master.eip == "true" ? aws_eip.master["enable"].public_ip : local.master_ip
   external_ip         = var.k8s_master.eip == "true" ? aws_eip.master["enable"].public_ip : ""
-  master_instance_id  = var.node_type == "spot" ? join("",data.aws_instances.spot_fleet_master["enable"].ids) : aws_instance.master["enable"].id
+  master_instance_id  = var.node_type == "spot" ? join("", data.aws_instances.spot_fleet_master["enable"].ids) : aws_instance.master["enable"].id
   master_local_ip     = var.node_type == "spot" ? join("", data.aws_instances.spot_fleet_master["enable"].private_ips) : aws_instance.master["enable"].private_ip
   k8s_worker_ondemand = var.node_type == "ondemand" ? var.k8s_worker : {}
   k8s_worker_spot     = var.node_type == "spot" ? var.k8s_worker : {}
