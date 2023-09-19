@@ -45,9 +45,10 @@ output "worker_local_ips" {
   value = {
     for key, instance in data.aws_instances.spot_fleet_worker :
     key => {
-      private_ips = instance.private_ips
-      public_ips  = instance.public_ips
-      id  = instance.ids
+      private_ips = join("", instance.private_ips)
+      public_ips  = join("", instance.public_ips)
+      id          = join("", instance.ids)
+
     }
   }
 }
