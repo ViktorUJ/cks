@@ -14,7 +14,7 @@ locals {
   runtime       = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type = "t4g.medium"
   key_name      = "cks"
-  ami_id        = "ami-0ff124a3d7381bfec"
+  ami_id        = ""
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
   root_volume   = {
     type = "gp3"
