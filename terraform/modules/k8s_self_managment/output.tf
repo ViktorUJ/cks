@@ -41,15 +41,19 @@ output "s3_k8s_config" {
   value = var.s3_k8s_config
 }
 
-output "worker_local_ips" {
-  value = {
-    for key, instance in data.aws_instances.spot_fleet_worker :
-    key => {
-      private_ips = join("", instance.private_ips)
-      public_ips  = join("", instance.public_ips)
-      id          = join("", instance.ids)
-      runtime     = var.k8s_worker[key].runtime
-      labels      = var.k8s_worker[key].node_labels
-    }
-  }
+#output "worker_local_ips" {
+#  value = {
+#    for key, instance in data.aws_instances.spot_fleet_worker :
+#    key => {
+#      private_ips = join("", instance.private_ips)
+#      public_ips  = join("", instance.public_ips)
+#      id          = join("", instance.ids)
+#      runtime     = var.k8s_worker[key].runtime
+#      labels      = var.k8s_worker[key].node_labels
+#    }
+#  }
+#}
+
+output "workers" {
+  value = local.workers
 }
