@@ -144,7 +144,7 @@ resource "aws_spot_fleet_request" "master" {
   aws_security_group.servers,
   ]
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  iam_fleet_role       = aws_iam_role.fleet_role.arn
+  iam_fleet_role       = aws_iam_role.fleet_role["enable"].arn
   target_capacity      = 1
   wait_for_fulfillment = true
 
