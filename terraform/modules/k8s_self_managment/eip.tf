@@ -1,6 +1,6 @@
 resource "aws_eip" "master" {
   for_each = toset(var.k8s_master.eip == "true" ? ["enable"] : [])
-  domain   = "vpc"
+  vpc      = true
   tags     = local.tags_all_k8_master
 }
 
