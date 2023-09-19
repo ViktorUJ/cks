@@ -9,8 +9,8 @@ locals {
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version    = "1.27.0"
-  node_type     = "ondemand" # ondemand  spot
+  k8_version    = "1.28.0"
+  node_type     = "spot" # ondemand  spot
   runtime       = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type = "t4g.medium"
   key_name      = "cks"
