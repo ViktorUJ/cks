@@ -42,6 +42,10 @@ output "s3_k8s_config" {
 }
 
 output "worker_local_ips" {
-  value = data.aws_instances.spot_fleet_worker.*.private_ips
-
+  value = {
+    for key, instance in data.aws_instances.spot_fleet_worker :
+    key => {
+      private_ips = instance.private_ips
+    }
+  }
 }
