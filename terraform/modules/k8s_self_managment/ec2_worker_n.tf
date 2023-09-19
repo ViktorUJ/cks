@@ -65,8 +65,8 @@ resource "aws_spot_fleet_request" "worker" {
   terminate_instances_on_delete = true
   launch_template_config {
     launch_template_specification {
-      id      = aws_launch_template.master["${each.key}"].id
-      version = aws_launch_template.master["${each.key}"].latest_version
+      id      = aws_launch_template.worker["${each.key}"].id
+      version = aws_launch_template.worker["${each.key}"].latest_version
     }
   }
 }
@@ -75,6 +75,6 @@ resource "aws_spot_fleet_request" "worker" {
 data "aws_instances" "spot_fleet_worker" {
   for_each                    = local.k8s_worker_spot
   instance_tags = {
-    "aws:ec2spot:fleet-request-id" =  aws_spot_fleet_request.master["${each.key}"].id
+    "aws:ec2spot:fleet-request-id" =  aws_spot_fleet_request.worker["${each.key}"].id
   }
 }
