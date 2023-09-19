@@ -86,7 +86,7 @@ resource "aws_iam_policy_attachment" "fleet_role" {
 resource "aws_launch_template" "master" {
   for_each   = toset(var.node_type == "spot" ? ["enable"] : [])
   name_prefix   = "${var.aws}-${var.prefix}-${var.app_name}"
-  image_id      = var.k8s_master.ami_id
+  image_id      = var.k8s_master.ami_id != "" ? var.k8s_master.ami_id : data.aws_ami.master
   instance_type = var.k8s_master.instance_type
   user_data     = base64encode( templatefile(var.k8s_master.user_data_template,{
     worker_join      = local.worker_join
