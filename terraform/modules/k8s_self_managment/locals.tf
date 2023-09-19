@@ -24,7 +24,7 @@ locals {
  # worker_ip={}
   worker_ip = var.node_type == "spot" ? [
     for k, v in data.aws_instances.spot_fleet_worker :
-    "${k} private_ip = ${v.private_ips}  public_ip = ${v.public_ips}  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
+    "${k} private_ip = join('',${v.private_ips})  public_ip = join('',${v.public_ips})  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
     ] : [
     for k, v in aws_instance.worker :
     "${k} private_ip = ${v.private_ip}  public_ip = ${v.public_ip}  runtime = ${var.k8s_worker[k].runtime} labels= ${var.k8s_worker[k].node_labels} "
