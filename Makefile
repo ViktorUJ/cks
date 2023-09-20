@@ -99,5 +99,25 @@ delete_eks_task:
 	cd terraform/environments/eks/ && terragrunt run-all destroy
 	rm -rf terraform/environments/eks/*
 
+
+BASE_PATH := $(shell pwd)
+VENV_PATH := $(BASE_PATH)/venv
+VENV_BIN_PATH := $(VENV_PATH)/bin/
+
+install_git_hooks:
+	$(VENV_BIN_PATH)/pre-commit install
+	@echo 'Pre-commit hooks installed'
+
+venv:
+	virtualenv -p python3 -q $(VENV_PATH)
+	$(VENV_BIN_PATH)/pip install --default-timeout 60 -r requirements.txt
+	@echo 'Virtualenv created'
+
+clean:
+	@rm -fr $(VENV_PATH)
+	@echo 'Removed virtualenv'
+
+dev: venv install_git_hooks
+
 lint:
 	pre-commit run --all-files -c hooks/.pre-commit-config.yaml
