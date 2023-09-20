@@ -100,4 +100,4 @@ delete_eks_task:
 	rm -rf terraform/environments/eks/*
 
 lint:
-	pre-commit run --all-files -c .pre-commit-config.yaml
+	pre-commit run --all-files -c .hooks/.pre-commit-config.yaml
