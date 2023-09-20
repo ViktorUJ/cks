@@ -53,7 +53,7 @@ inputs = {
   }
   k8s_worker = {
 
-    "node_2" = {
+    "node_1" = {
       k8_version         = local.vars.locals.k8_version
       instance_type      = local.vars.locals.instance_type
       key_name           = local.vars.locals.key_name
@@ -61,10 +61,10 @@ inputs = {
       ubuntu_version     = local.vars.locals.ubuntu_version
       subnet_number      = "0"
       user_data_template = "template/worker.sh"
-      runtime            = "containerd_gvizor"
+      runtime            = "containerd"
       runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
-      node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/move-to-spot-fleet/tasks/cks/labs/02/k8s-1/scripts/worker.sh"
+      node_labels        = "work_type=falco,aws_scheduler=true"
       ssh                = {
         private_key = local.vars.locals.ssh.private_key
         pub_key     = local.vars.locals.ssh.pub_key
