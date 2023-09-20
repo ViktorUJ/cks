@@ -102,6 +102,8 @@ delete_eks_task:
 
 install_lint:
 	@apt install python3-pip
+	@pip install virtualenv
 	@pip install pre-commit
+
 lint:
 	pre-commit run --all-files -c hooks/.pre-commit-config.yaml
