@@ -29,7 +29,6 @@ inputs = {
   app_name      = "k8s"
   subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id        = dependency.vpc.outputs.vpc_id
-  s3_k8s_config = "viktoruj-terraform-state-backet-test1"
   cluster_name  = "k8s1"
   node_type= "spot" #"ondemand"  "spot"
 
