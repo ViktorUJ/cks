@@ -15,7 +15,8 @@ locals {
   instance_type = "t4g.medium"
   instance_type_worker = "t4g.small"
   key_name      = "cks"
-  ami_id        = "ami-0ff124a3d7381bfec"
+  ubuntu_version       = "20.04"
+  ami_id        = ""
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
   root_volume   = {
     type = "gp3"
