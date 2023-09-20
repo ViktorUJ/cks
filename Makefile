@@ -106,4 +106,4 @@ install_lint:
 	@pip install pre-commit
 
 lint:
-	pre-commit run --all-files -c hooks/.pre-commit-config.yaml
+	pre-commit run --all-files -c .hooks/.pre-commit-config.yaml
