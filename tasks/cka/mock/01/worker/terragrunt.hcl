@@ -35,13 +35,13 @@ dependency "cluster2" {
 
 
 inputs = {
-  region        = local.vars.locals.region
-  aws           = local.vars.locals.aws
-  prefix        = local.vars.locals.prefix
-  tags_common   = local.vars.locals.tags
-  app_name      = "k8s-worker"
-  subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id        = dependency.vpc.outputs.vpc_id
+  region      = local.vars.locals.region
+  aws         = local.vars.locals.aws
+  prefix      = local.vars.locals.prefix
+  tags_common = local.vars.locals.tags
+  app_name    = "k8s-worker"
+  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id      = dependency.vpc.outputs.vpc_id
 
 
   work_pc = {
@@ -55,6 +55,7 @@ inputs = {
     key_name           = local.vars.locals.key_name
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
+    ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/worker.sh"
     util               = {
       kubectl_version = local.vars.locals.k8_version
