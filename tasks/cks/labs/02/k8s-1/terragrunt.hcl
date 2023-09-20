@@ -12,7 +12,6 @@ terraform {
     commands  = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
-
 }
 
 dependency "vpc" {
@@ -20,15 +19,15 @@ dependency "vpc" {
 }
 
 inputs = {
-  region        = local.vars.locals.region
-  aws           = local.vars.locals.aws
-  prefix        = local.vars.locals.prefix
-  tags_common   = local.vars.locals.tags
-  app_name      = "k8s"
-  subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id        = dependency.vpc.outputs.vpc_id
-  cluster_name  = "k8s1"
-  node_type     = local.vars.locals.node_type
+  region       = local.vars.locals.region
+  aws          = local.vars.locals.aws
+  prefix       = local.vars.locals.prefix
+  tags_common  = local.vars.locals.tags
+  app_name     = "k8s"
+  subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id       = dependency.vpc.outputs.vpc_id
+  cluster_name = "k8s1"
+  node_type    = local.vars.locals.node_type
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
@@ -47,13 +46,12 @@ inputs = {
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/move-to-spot-fleet/tasks/cks/labs/02/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     ssh                = {
-      private_key = dependency.ssh-keys.outputs.private_key
-      pub_key     = dependency.ssh-keys.outputs.pub_key
+      private_key = local.vars.locals.ssh.private_key
+      pub_key     = local.vars.locals.ssh.pub_key
     }
     root_volume = local.vars.locals.root_volume
   }
   k8s_worker = {
-    # we can  configure each node independently
 
     "node_2" = {
       k8_version         = local.vars.locals.k8_version
@@ -68,8 +66,8 @@ inputs = {
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
       ssh                = {
-        private_key = dependency.ssh-keys.outputs.private_key
-        pub_key     = dependency.ssh-keys.outputs.pub_key
+        private_key = local.vars.locals.ssh.private_key
+        pub_key     = local.vars.locals.ssh.pub_key
       }
       cidrs       = ["0.0.0.0/0"]
       root_volume = local.vars.locals.root_volume
