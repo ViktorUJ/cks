@@ -22,4 +22,8 @@ locals {
     type = "gp3"
     size = "10"
   }
+  ssh = {
+    private_key = ""
+    pub_key     = ""
+  }
 }
