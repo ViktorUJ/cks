@@ -31,7 +31,7 @@ inputs = {
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
-    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
+    runtime            = local.vars.locals.runtime
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
