@@ -1,4 +1,4 @@
-#CKA
+#CKS
 run_cks_k8s_mock:
 	@echo "*** run cks mock clean , task ${TASK}"
 	cp -r tasks/cks/mock/${TASK}/* terraform/environments/cks-mock/
@@ -51,17 +51,18 @@ run_cka_k8s_task:
 	cp tasks/cka/labs/${TASK}/scripts/terragrunt.hcl terraform/environments/cka/k8s/
 	cd terraform/environments/cka/k8s/ && terragrunt apply
 
+delete_cka_k8s_mock:
+	@echo "*** delete cka mock "
+	cd terraform/environments/cka-mock/ && terragrunt run-all destroy
+	rm -rf terraform/environments/cka-mock/*
+
 delete_cka_k8s:
 	cd terraform/environments/cka/k8s/ && terragrunt destroy
 
 clean_cka_k8s:
 	cd terraform/environments/cka/k8s/ && rm -rf .terr*
 
-delete_cka_k8s_mock:
-	@echo "*** delete cka mock "
-	cd terraform/environments/cka-mock/ && terragrunt run-all destroy
-	rm -rf terraform/environments/cka-mock/*
-
+#EKS
 run_eks_task:
 	@echo "*** run run_eks_task , task ${TASK}"
 	rm -rf terraform/environments/eks/*
@@ -72,6 +73,8 @@ delete_eks_task:
 	@echo "*** delete delete_eks_task "
 	cd terraform/environments/eks/ && terragrunt run-all destroy
 	rm -rf terraform/environments/eks/*
+
+#DEV
 
 lint:
 	pre-commit run --all-files -c .hooks/.pre-commit-config.yaml
