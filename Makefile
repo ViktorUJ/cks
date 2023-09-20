@@ -1,6 +1,4 @@
-output_cks_task:
-	cd terraform/environments/cks/ && terragrunt run-all output
-
+#CKA
 run_cks_k8s_mock:
 	@echo "*** run cks mock clean , task ${TASK}"
 	cp -r tasks/cks/mock/${TASK}/* terraform/environments/cks-mock/
@@ -16,16 +14,26 @@ delete_cks_k8s_mock:
 	@echo "*** delete cks mock "
 	cd terraform/environments/cks-mock/ && terragrunt run-all destroy
 
+clean_cks_k8s_task:
+	@echo "*** clean cks task "
+	rm -rf terraform/environments/cks/*
+
 run_cks_k8s_task:
 	@echo "*** run cks , task ${TASK}"
-	rm -rf terraform/environments/cks/*
 	cp -r tasks/cks/labs/${TASK}/* terraform/environments/cks/
 	cd terraform/environments/cks/ && terragrunt run-all  apply
+
+run_cks_k8s_task_clean: clean_cks_k8s_task  run_cks_k8s_task
 
 delete_cks_k8s_task:
 	@echo "*** delete cks , task ${TASK}"
 	cp -r tasks/cks/labs/${TASK}/* terraform/environments/cks/
 	cd terraform/environments/cks/ && terragrunt run-all  destroy
+
+output_cks_task:
+	cd terraform/environments/cks/ && terragrunt run-all output
+
+# CKA
 
 clean_cka_k8s_mock:
 	@echo "*** clean cka mock "
