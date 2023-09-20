@@ -9,9 +9,9 @@ repos:
     rev: 21.7b0
     hooks:
       - id: black
-        language_version: python3.9
+        language_version: python3.10
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.50.0
     hooks:
       - id: terraform_fmt
-      - id: terraform_docs
+
