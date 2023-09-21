@@ -148,7 +148,7 @@ Every command should be run from the project's root directory.
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
 - change **ami_id** in ``{mock_number}/env.hcl`` if you changed **region**
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
-- create mock  CKA exam ``TASK={mock_number} make run_cks_k8s_mock``
+- create mock  CKA exam ``TASK={mock_number} make run_cks_mock`` or ``TASK={mock_number} make run_cks_mock`` if you'd like  to run with clean terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
 - open questions list ``{mock_number}/README.MD`` and do tasks
@@ -178,7 +178,7 @@ Every command should be run from the project's root directory.
 
 ## [CHANGELOG](CHANGELOG%2FCHANGELOG.MD)
 
-## [CODE OF CONDUCT](CODE_OF_CONDUCT.md)
+## [CODE OF CONDUCT](docs%2FCODE_OF_CONDUCT.md)
 
 ## Contribution
 If you want to be part of the project development team, get in touch with [us](https://github.com/ViktorUJ/cks/tree/master#contacts). We are always happy to welcome new members to our development team
