@@ -146,16 +146,16 @@ Every command should be run from the project's root directory.
 
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
-- change **ami_id** in ``{mock_number}/env.hcl`` if you changed **region**
+- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need 
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
-- create mock  CKA exam ``TASK={mock_number} make run_cks_mock`` or ``TASK={mock_number} make run_cks_mock`` if you'd like  to run with clean terragrunt cache
+- create mock  CKS exam ``TASK={mock_number} make run_cks_mock`` or ``TASK={mock_number} make run_cks_mock`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
 - open questions list ``{mock_number}/README.MD`` and do tasks
 - use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node
 - run ``time_left`` on work pc to check time
 - run ``check_result`` on work pc to check result
-- delete mock  CKA exam `make delete_cks_k8s_mock`
+- delete mock  CKA exam `make delete_cks_mock`
 - find exam solutions in ``{mock_number}/worker/files/solutions``
 - find exam tests in ``{mock_number}/worker/files/tests.bats``
 </details>
