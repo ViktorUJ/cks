@@ -3,6 +3,7 @@
 ### Features
 * + move stop ec2 from **spot request** to  **spot fleet** .  get spot ec2 more stability
 * + update make commands 
+* + update terraform code  to use **terraform** version **v1.5.6** 
 * + add **ubuntu_version** to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module . now it is default way to get **ami_id**
 * The [cks mock exam 01](..%2Ftasks%2Fcks%2Fmock%2F01)  utilizes version 1.27 and Graviton instances t4g.medium.
 * The cks labs utilizes version 1.27 and Graviton instances t4g.medium.
