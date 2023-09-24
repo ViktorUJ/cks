@@ -8,9 +8,7 @@ data "aws_ami" "master" {
 
   filter {
     name   = "name"
-    values = [
-      "ubuntu/images/hvm-ssd/ubuntu-*-${var.k8s_master.ubuntu_version}-${join("",data.aws_ec2_instance_type.master.supported_architectures)}-server-*"
-    ]
+    values = join("",data.aws_ec2_instance_type.master.supported_architectures) == "x86_64" ? ["ubuntu/images/hvm-ssd/ubuntu-*-${var.k8s_master.ubuntu_version}-amd64-server-*" ] : ["ubuntu/images/hvm-ssd/ubuntu-*-${var.k8s_master.ubuntu_version}-arm64-server-*"]
   }
 
   filter {
@@ -33,9 +31,7 @@ data "aws_ami" "worker" {
 
   filter {
     name   = "name"
-    values = [
-      "ubuntu/images/hvm-ssd/ubuntu-*-${each.value.ubuntu_version}-${join("",data.aws_ec2_instance_type.worker["${each.key}"].supported_architectures)}-server-*"
-    ]
+    values = join("",data.aws_ec2_instance_type.worker["${key}"].supported_architectures) == "x86_64" ? ["ubuntu/images/hvm-ssd/ubuntu-*-${each.value.ubuntu_version}-amd64-server-*" ] : ["ubuntu/images/hvm-ssd/ubuntu-*-${each.value.ubuntu_version}-arm64-server-*"]
   }
 
   filter {
