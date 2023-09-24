@@ -34,20 +34,23 @@ locals {
  }
 }
 
-data "aws_ami" "worker" {
-  for_each    = var.k8s_worker
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-*-${each.value.ubuntu_version}-${local.worker_ami_arh["$key"].name}-server-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  owners = ["099720109477"]
+output "worker_arch" {
+  value = local.worker_ami_arh
 }
-
+#data "aws_ami" "worker" {
+#  for_each    = var.k8s_worker
+#  most_recent = true
+#
+#  filter {
+#    name   = "name"
+#    values = ["ubuntu/images/hvm-ssd/ubuntu-*-${each.value.ubuntu_version}-${local.worker_ami_arh["$key"].name}-server-*"]
+#  }
+#
+#  filter {
+#    name   = "virtualization-type"
+#    values = ["hvm"]
+#  }
+#
+#  owners = ["099720109477"]
+#}
+#
