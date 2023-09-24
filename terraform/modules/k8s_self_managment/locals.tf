@@ -29,6 +29,7 @@ locals {
       runtime    = var.k8s_worker[key].runtime
       labels     = var.k8s_worker[key].node_labels
       id         = join("", instance.ids)
+      ami= aws_launch_template.worker["${key}"].image_id
     }
   } : {
     for key, instance in aws_instance.worker :

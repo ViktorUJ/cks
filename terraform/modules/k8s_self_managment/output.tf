@@ -41,3 +41,7 @@ output "s3_k8s_config" {
 output "worker_nodes" {
   value = local.worker_nodes
 }
+
+output "ami_id_master" {
+  value = aws_instance.master.ami
+}
