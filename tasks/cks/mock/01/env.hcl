@@ -13,7 +13,7 @@ locals {
   node_type     = "spot"
   runtime       = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type = "t4g.medium"
-  instance_type_worker = "t3.medium"
+  instance_type_worker = "t4g.medium"
   key_name      = "cks"
   ubuntu_version       = "20.04"
   ami_id        = ""
