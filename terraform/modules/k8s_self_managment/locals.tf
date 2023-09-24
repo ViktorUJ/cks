@@ -29,7 +29,8 @@ locals {
       runtime    = var.k8s_worker[key].runtime
       labels     = var.k8s_worker[key].node_labels
       id         = join("", instance.ids)
-      ami= aws_launch_template.worker["${key}"].image_id
+      ami        = aws_launch_template.worker["${key}"].image_id
+      ubuntu_version = var.k8s_worker["${key}"].ubuntu_version
     }
   } : {
     for key, instance in aws_instance.worker :
@@ -39,6 +40,8 @@ locals {
       runtime    = var.k8s_worker[key].runtime
       labels     = var.k8s_worker[key].node_labels
       id         = instance.id
+      ami        = instance.ami
+      ubuntu_version = var.k8s_worker["${key}"].ubuntu_version
     }
   }
 
@@ -49,6 +52,6 @@ locals {
   master_local_ip     = var.node_type == "spot" ? join("", data.aws_instances.spot_fleet_master["enable"].private_ips) : aws_instance.master["enable"].private_ip
   k8s_worker_ondemand = var.node_type == "ondemand" ? var.k8s_worker : {}
   k8s_worker_spot     = var.node_type == "spot" ? var.k8s_worker : {}
-  master_ami = var.k8s_master.ami_id != "" ? var.k8s_master.ami_id : data.aws_ami.master.image_id
+  master_ami          = var.k8s_master.ami_id != "" ? var.k8s_master.ami_id : data.aws_ami.master.image_id
 
 }
