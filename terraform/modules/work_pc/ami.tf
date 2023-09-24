@@ -5,10 +5,10 @@ output "arch" {
   value = join("",data.aws_ec2_instance_type.master.supported_architectures)
 }
 
-locals {
-  arch= 
-
-}
+#locals {
+#  arch=
+#
+#}
 #
 #data "aws_ami" "master" {
 #
