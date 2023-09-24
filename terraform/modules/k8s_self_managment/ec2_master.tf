@@ -84,11 +84,11 @@ resource "aws_iam_policy_attachment" "fleet_role" {
 
 
 resource "aws_launch_template" "master" {
-  for_each   = toset(var.node_type == "spot" ? ["enable"] : [])
+  for_each      = toset(var.node_type == "spot" ? ["enable"] : [])
   name_prefix   = "${var.aws}-${var.prefix}-${var.app_name}"
-  image_id      = var.k8s_master.ami_id != "" ? var.k8s_master.ami_id : data.aws_ami.master.image_id
+  image_id      = local.master_ami
   instance_type = var.k8s_master.instance_type
-  user_data     = base64encode( templatefile(var.k8s_master.user_data_template,{
+  user_data     = base64encode( templatefile(var.k8s_master.user_data_template, {
     worker_join      = local.worker_join
     k8s_config       = local.k8s_config
     external_ip      = local.external_ip
@@ -128,12 +128,12 @@ resource "aws_launch_template" "master" {
     tags          = local.tags_all_k8_master
   }
 
-   tag_specifications {
+  tag_specifications {
     resource_type = "volume"
     tags          = local.tags_all_k8_master
   }
 
- iam_instance_profile {
+  iam_instance_profile {
     name = aws_iam_instance_profile.server.name
   }
 
@@ -144,10 +144,10 @@ resource "aws_launch_template" "master" {
 
 
 resource "aws_spot_fleet_request" "master" {
-  for_each   = toset(var.node_type == "spot" ? ["enable"] : [])
-  iam_fleet_role       = aws_iam_role.fleet_role["enable"].arn
-  target_capacity      = 1
-  wait_for_fulfillment = true
+  for_each                      = toset(var.node_type == "spot" ? ["enable"] : [])
+  iam_fleet_role                = aws_iam_role.fleet_role["enable"].arn
+  target_capacity               = 1
+  wait_for_fulfillment          = true
   terminate_instances_on_delete = true
   launch_template_config {
     launch_template_specification {
@@ -159,8 +159,8 @@ resource "aws_spot_fleet_request" "master" {
 
 
 data "aws_instances" "spot_fleet_master" {
-  for_each   = toset(var.node_type == "spot" ? ["enable"] : [])
+  for_each      = toset(var.node_type == "spot" ? ["enable"] : [])
   instance_tags = {
-    "aws:ec2spot:fleet-request-id" =  aws_spot_fleet_request.master["enable"].id
+    "aws:ec2spot:fleet-request-id" = aws_spot_fleet_request.master["enable"].id
   }
 }

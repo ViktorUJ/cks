@@ -2,7 +2,7 @@ resource "aws_instance" "master" {
   for_each                    = toset(var.node_type == "ondemand" ? ["enable"] : [])
   iam_instance_profile        = aws_iam_instance_profile.server.id
   associate_public_ip_address = "true"
-  ami                         = var.k8s_master.ami_id != "" ? var.k8s_master.ami_id : data.aws_ami.master.image_id
+  ami                         = local.master_ami
   instance_type               = var.k8s_master.instance_type
   subnet_id                   = local.subnets[var.k8s_master.subnet_number]
   key_name                    = var.k8s_master.key_name

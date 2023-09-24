@@ -43,5 +43,5 @@ output "worker_nodes" {
 }
 
 output "ami_id_master" {
-  value = aws_instance.master.ami
+  value = local.master_ami
 }

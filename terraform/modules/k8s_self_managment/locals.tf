@@ -49,4 +49,6 @@ locals {
   master_local_ip     = var.node_type == "spot" ? join("", data.aws_instances.spot_fleet_master["enable"].private_ips) : aws_instance.master["enable"].private_ip
   k8s_worker_ondemand = var.node_type == "ondemand" ? var.k8s_worker : {}
   k8s_worker_spot     = var.node_type == "spot" ? var.k8s_worker : {}
+  master_ami = var.k8s_master.ami_id != "" ? var.k8s_master.ami_id : data.aws_ami.master.image_id
+
 }
