@@ -45,3 +45,7 @@ output "worker_nodes" {
 output "ami_id_master" {
   value = local.master_ami
 }
+
+output "instance_type" {
+  value = var.k8s_master.instance_type
+}

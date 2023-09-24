@@ -24,23 +24,23 @@ locals {
   worker_nodes = var.node_type == "spot" ? {
     for key, instance in data.aws_instances.spot_fleet_worker :
     key => {
-      private_ip = join("", instance.private_ips)
-      public_ip  = join("", instance.public_ips)
-      runtime    = var.k8s_worker[key].runtime
-      labels     = var.k8s_worker[key].node_labels
-      id         = join("", instance.ids)
-      ami        = aws_launch_template.worker["${key}"].image_id
+      private_ip     = join("", instance.private_ips)
+      public_ip      = join("", instance.public_ips)
+      runtime        = var.k8s_worker[key].runtime
+      labels         = var.k8s_worker[key].node_labels
+      id             = join("", instance.ids)
+      ami            = aws_launch_template.worker["${key}"].image_id
       ubuntu_version = var.k8s_worker["${key}"].ubuntu_version
     }
   } : {
     for key, instance in aws_instance.worker :
     key => {
-      private_ip = instance.private_ip
-      public_ip  = instance.public_ip
-      runtime    = var.k8s_worker[key].runtime
-      labels     = var.k8s_worker[key].node_labels
-      id         = instance.id
-      ami        = instance.ami
+      private_ip     = instance.private_ip
+      public_ip      = instance.public_ip
+      runtime        = var.k8s_worker[key].runtime
+      labels         = var.k8s_worker[key].node_labels
+      id             = instance.id
+      ami            = instance.ami
       ubuntu_version = var.k8s_worker["${key}"].ubuntu_version
     }
   }
@@ -53,5 +53,6 @@ locals {
   k8s_worker_ondemand = var.node_type == "ondemand" ? var.k8s_worker : {}
   k8s_worker_spot     = var.node_type == "spot" ? var.k8s_worker : {}
   master_ami          = var.k8s_master.ami_id != "" ? var.k8s_master.ami_id : data.aws_ami.master.image_id
+  instance_type       = var.k8s_worker["${keys}"].instance_type
 
 }
