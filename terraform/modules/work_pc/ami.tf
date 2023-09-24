@@ -1,8 +1,14 @@
 data "aws_ec2_instance_type" "master" {
   instance_type = var.work_pc.instance_type
 }
+
+locals {
+ data_arch= join("",data.aws_ec2_instance_type.master.supported_architectures)
+ arch= local.data_arch== "x86_64" ? "amd64" : local.data_arch
+}
+
 output "arch" {
-  value = join("",data.aws_ec2_instance_type.master.supported_architectures)
+  value = local.arch
 }
 
 #locals {
