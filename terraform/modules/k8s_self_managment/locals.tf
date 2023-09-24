@@ -21,31 +21,31 @@ locals {
   worker_join        = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
   k8s_config         = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/config"
 
-#  worker_nodes = var.node_type == "spot" ? {
-#    for key, instance in data.aws_instances.spot_fleet_worker :
-#    key => {
-#      private_ip     = join("", instance.private_ips)
-#      public_ip      = join("", instance.public_ips)
-#      runtime        = var.k8s_worker[key].runtime
-#      labels         = var.k8s_worker[key].node_labels
-#      id             = join("", instance.ids)
-#      ami            = aws_launch_template.worker["${key}"].image_id
-#      ubuntu_version = var.k8s_worker["${key}"].ubuntu_version
-#      instance_type       = var.k8s_worker["${key}"].instance_type
-#    }
-#  } : {
-#    for key, instance in aws_instance.worker :
-#    key => {
-#      private_ip     = instance.private_ip
-#      public_ip      = instance.public_ip
-#      runtime        = var.k8s_worker[key].runtime
-#      labels         = var.k8s_worker[key].node_labels
-#      id             = instance.id
-#      ami            = instance.ami
-#      ubuntu_version = var.k8s_worker["${key}"].ubuntu_version
-#      instance_type       = var.k8s_worker["${key}"].instance_type
-#    }
-#  }
+  worker_nodes = var.node_type == "spot" ? {
+    for key, instance in data.aws_instances.spot_fleet_worker :
+    key => {
+      private_ip     = join("", instance.private_ips)
+      public_ip      = join("", instance.public_ips)
+      runtime        = var.k8s_worker[key].runtime
+      labels         = var.k8s_worker[key].node_labels
+      id             = join("", instance.ids)
+      ami            = aws_launch_template.worker["${key}"].image_id
+      ubuntu_version = var.k8s_worker["${key}"].ubuntu_version
+      instance_type       = var.k8s_worker["${key}"].instance_type
+    }
+  } : {
+    for key, instance in aws_instance.worker :
+    key => {
+      private_ip     = instance.private_ip
+      public_ip      = instance.public_ip
+      runtime        = var.k8s_worker[key].runtime
+      labels         = var.k8s_worker[key].node_labels
+      id             = instance.id
+      ami            = instance.ami
+      ubuntu_version = var.k8s_worker["${key}"].ubuntu_version
+      instance_type       = var.k8s_worker["${key}"].instance_type
+    }
+  }
 
   master_ip           = var.node_type == "spot" ? join("", data.aws_instances.spot_fleet_master["enable"].public_ips) : aws_instance.master["enable"].public_ip
   master_ip_public    = var.k8s_master.eip == "true" ? aws_eip.master["enable"].public_ip : local.master_ip
