@@ -30,6 +30,7 @@ locals {
    for key, instance in var.k8s_worker:
    key =>{
      name = join("",data.aws_ec2_instance_type.master.supported_architectures) == "x86_64" ? "amd64" : "arm64"
+     filter = join("",data.aws_ec2_instance_type.master.supported_architectures) == "x86_64" ? "ubuntu/images/hvm-ssd/ubuntu-*-${each.value.ubuntu_version}-amd64-server-*" : "ubuntu/images/hvm-ssd/ubuntu-*-${each.value.ubuntu_version}-arm64-server-*"
    }
  }
 }
