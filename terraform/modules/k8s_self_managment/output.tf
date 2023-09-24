@@ -21,9 +21,6 @@ output "k8s_config" {
 output "k8_master_version" {
   value = var.k8s_master.k8_version
 }
-output "worker_ip" {
-  value = local.worker_ip
-}
 
 output "master_ssh" {
   value = "ssh ubuntu@${local.master_ip_public}"
@@ -39,4 +36,16 @@ output "check_node_status" {
 
 output "s3_k8s_config" {
   value = var.s3_k8s_config
+}
+
+output "worker_nodes" {
+  value = local.worker_nodes
+}
+
+output "ami_id_master" {
+  value = local.master_ami
+}
+
+output "master_instance_type" {
+  value = local.master_instance_type
 }

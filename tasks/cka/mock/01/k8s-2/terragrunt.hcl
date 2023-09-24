@@ -25,15 +25,15 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  region        = local.vars.locals.region
-  aws           = local.vars.locals.aws
-  prefix        = "cluster2"
-  tags_common   = local.vars.locals.tags
-  app_name      = "k8s"
-  subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id        = dependency.vpc.outputs.vpc_id
-  cluster_name  = "k8s2"
-  node_type     = local.vars.locals.node_type
+  region       = local.vars.locals.region
+  aws          = local.vars.locals.aws
+  prefix       = "cluster2"
+  tags_common  = local.vars.locals.tags
+  app_name     = "k8s"
+  subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id       = dependency.vpc.outputs.vpc_id
+  cluster_name = "k8s2"
+  node_type    = local.vars.locals.node_type
 
   k8s_master = {
     k8_version         = "1.25.0"
@@ -43,6 +43,7 @@ inputs = {
     key_name           = local.vars.locals.key_name
     ami_id             = local.vars.locals.ami_id
     subnet_number      = "0"
+    ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = ["0.0.0.0/0"]
@@ -65,6 +66,7 @@ inputs = {
       key_name           = local.vars.locals.key_name
       ami_id             = local.vars.locals.ami_id
       subnet_number      = "0"
+      ubuntu_version     = local.vars.locals.ubuntu_version
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"

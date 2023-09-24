@@ -7,7 +7,6 @@ locals {
 }
 
 terraform {
-#   source = "git::git@github.com:ViktorUJ/cks.git//terraform/modules/vpc/?ref=task_01"
     source = "../../..//modules/vpc/"
 }
 
@@ -21,7 +20,6 @@ inputs = {
    az_ids={
    "10.2.0.0/19"=  "eun1-az1"
    "10.2.32.0/19"= "eun1-az2"
-   "10.2.64.0/19"= "eun1-az3"
 
   }
 

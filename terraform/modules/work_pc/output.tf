@@ -33,6 +33,12 @@ output "s3_k8s_config" {
   value = var.s3_k8s_config
 }
 
+output "ami_id" {
+  value = local.master_ami
+}
 output "aws_eks_cluster_eks_cluster_arn" {
   value = var.aws_eks_cluster_eks_cluster_arn
+}
+output "instance_type" {
+  value = var.work_pc.instance_type
 }

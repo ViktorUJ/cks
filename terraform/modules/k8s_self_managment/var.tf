@@ -17,6 +17,7 @@ variable "k8s_master" {
   type = object({
     instance_type      = string
     ami_id             = string
+    ubuntu_version     = string
     key_name           = string
     cidrs              = list(string)
     subnet_number      = string
@@ -29,7 +30,7 @@ variable "k8s_master" {
     calico_url         = string
     task_script_url    = string # url for run additional script
     eip                = string # true or ...
-    ssh = object({
+    ssh                = object({
       private_key = string
       pub_key     = string
     })
@@ -44,6 +45,7 @@ variable "k8s_worker" {
   type = map(object({
     instance_type      = string
     ami_id             = string
+    ubuntu_version     = string
     key_name           = string
     cidrs              = list(string)
     subnet_number      = string
@@ -53,7 +55,7 @@ variable "k8s_worker" {
     runtime_script     = string
     task_script_url    = string # url for run additional script
     node_labels        = string
-    ssh = object({
+    ssh                = object({
       private_key = string
       pub_key     = string
     })

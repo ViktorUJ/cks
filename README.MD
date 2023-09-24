@@ -26,7 +26,7 @@ The repository is organized into the following sections:
   - **[modules](terraform%2Fmodules)** - Directory contains terraform modules.
 
 ## Requirements
-- [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.1.7
+- [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.5.6
 - [terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= v0.36.1
 - [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  for VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
@@ -60,23 +60,36 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA</summary>
 
-- ``make run_cka_vpc``  - create vpc for CKA hands-on labs
-- ``TASK=01 make run_cka_k8s_task`` - create cka [hands-on labs](tasks%2Fcka%2Flabs)  [number 01](tasks%2Fcka%2Flabs%2F01)
-- ``make delete_cka_k8s`` - delete cka hands-on labs
-- ``make delete_cka_vpc`` - delete vpc for CKA hands-on labs
+### cka task
+- ``TASK=01 make run_cka_task`` - create cka [hands-on labs](tasks%2Fcka%2Flabs)  [number 01](tasks%2Fcka%2Flabs%2F01)
+- ``TASK=01 make delete_cka_task`` - delete cka hands-on labs
+- ``make clean_cka_task`` - clean terragrunt cache  for  cka_task
+- ``TASK=01 make run_cka_task_clean`` - run cka_task with clean terragrunt cache  for  cka_task
+- ``make output_cka_task `` - show **outputs** from   **cka_task**
+### cka mock
 - ``TASK=01 make run_cka_k8s_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
 - ``make delete_cka_k8s_mock`` - delete mock  CKA exam
+- ``make clean_cka_mock`` clean terragrunt cache  for  cka_mock
+- ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache 
+- ``make output_cka_mock `` - show **outputs** from   **cka_mock**
+
 </details>
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKS</summary>
 
-- ``make run_cks_vpc``  - create vpc for CKS hands-on labs
-- ``TASK=10 make run_cks_k8s_task`` - create cks [hands-on labs](tasks%2Fcks%2Flabs)  [number 10](tasks%2Fcks%2Flabs%2F10)
-- ``make delete_cks_k8s`` - delete cks hands-on labs
-- ``make delete_cks_vpc`` - delete vpc for CKS hands-on labs
-- ``TASK=01 make run_cks_k8s_mock`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)
-- ``make delete_cks_k8s_mock`` - delete mock  CKS exam
+### cks task
+- ``TASK=10 make run_cks_task`` - create cks [hands-on labs](tasks%2Fcks%2Flabs)  [number 10](tasks%2Fcks%2Flabs%2F10)
+- ``TASK=10 make delete_cks_task`` - delete cks hands-on labs
+- ``make clean_cks_task`` - clean terragrunt cache  for  cks_task
+- ``TASK=10  make run_cks_task_clean`` - run cks_task with clean terragrunt cache  for  cks_task
+- ``make output_cks_task `` - show **outputs** from   **cks_task**
+### cks mock
+- ``TASK=01 make run_cks_mock`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)
+- ``make delete_cks_mock`` - delete mock  CKS exam
+- ``make clean_cks_mock`` clean terragrunt cache  for  cks_mock
+- ``TASK=01 make run_cks_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache 
+- ``make output_cks_mock `` - show **outputs** from   **cks_mock**
 </details>
 
 <details>
@@ -146,16 +159,16 @@ Every command should be run from the project's root directory.
 
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
-- change **ami_id** in ``{mock_number}/env.hcl`` if you changed **region**
+- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need 
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
-- create mock  CKA exam ``TASK={mock_number} make run_cks_k8s_mock``
+- create mock  CKS exam ``TASK={mock_number} make run_cks_mock`` or ``TASK={mock_number} make run_cks_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
 - open questions list ``{mock_number}/README.MD`` and do tasks
 - use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node
 - run ``time_left`` on work pc to check time
 - run ``check_result`` on work pc to check result
-- delete mock  CKA exam `make delete_cks_k8s_mock`
+- delete mock  CKA exam `make delete_cks_mock`
 - find exam solutions in ``{mock_number}/worker/files/solutions``
 - find exam tests in ``{mock_number}/worker/files/tests.bats``
 </details>
@@ -177,6 +190,8 @@ Every command should be run from the project's root directory.
 ## [Tips And Tricks](docs%2Ftips_and_tricks.MD)
 
 ## [CHANGELOG](CHANGELOG%2FCHANGELOG.MD)
+
+## [CODE OF CONDUCT](docs%2FCODE_OF_CONDUCT.md)
 
 ## Contribution
 If you want to be part of the project development team, get in touch with [us](https://github.com/ViktorUJ/cks/tree/master#contacts). We are always happy to welcome new members to our development team
