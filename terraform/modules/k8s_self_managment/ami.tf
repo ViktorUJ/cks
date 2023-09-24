@@ -35,9 +35,9 @@ locals {
  }
 }
 
-output "worker_arch" {
-  value = local.worker_ami_arh
-}
+#output "worker_arch" {
+#  value = local.worker_ami_arh
+#}
 data "aws_ami" "worker" {
   for_each    = var.k8s_worker
   most_recent = true
