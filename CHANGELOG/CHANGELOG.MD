@@ -1,5 +1,5 @@
 # Changelog
-## 0.3.2* (15.10.2023)
+## 0.4.1* (15.10.2023)
 ### Features
 * + move stop ec2 from **spot request** to  **spot fleet** .  get spot ec2 more stability
 * + update make commands 
