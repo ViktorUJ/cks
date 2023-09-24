@@ -11,27 +11,26 @@ output "arch" {
   value = local.arch
 }
 
-#locals {
-#  arch=
-#
-#}
-#
-#data "aws_ami" "master" {
-#
-#  most_recent = true
-#
-#  filter {
-#    name   = "name"
-#    values = [
-#      "ubuntu/images/hvm-ssd/ubuntu-*-${var.work_pc.ubuntu_version}-${join("",data.aws_ec2_instance_type.master.supported_architectures)}-server-*"
-#    ]
-#  }
-#
-#  filter {
-#    name   = "virtualization-type"
-#    values = ["hvm"]
-#  }
-#
-#  owners = ["099720109477"]
-#}
-#
+
+data "aws_ami" "master" {
+
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = [
+      "ubuntu/images/hvm-ssd/ubuntu-*-${var.work_pc.ubuntu_version}-${local.arch}-server-*"
+    ]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"]
+}
+
+output "aws_ami" {
+  value = data.aws_ami.master.image_id
+}
