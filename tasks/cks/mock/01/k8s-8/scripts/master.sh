@@ -66,7 +66,7 @@ kubectl create secret tls tls-image-bouncer-webhook --key server-key.pem --cert 
 echo "127.0.0.1 image-bouncer-webhook" >> /etc/hosts
 
 
-kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/move-to-spot-fleet/tasks/cks/mock/01/k8s-8/scripts/task1.yaml
+kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/0.3.2/tasks/cks/mock/01/k8s-8/scripts/task1.yaml
 
 
 curl "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-8/scripts/admission_config.json" -o "admission_config.json"
