@@ -271,6 +271,7 @@ while test $? -gt 0
   do
    sleep 5 # highly recommended - if it's in your local network, it can try an awful lot pretty quick...
    echo "Trying again... install kubeadm , kubectl , kubelet  version = $apt_version "
+   apt update
    apt install -y kubeadm=$apt_version kubelet=$apt_version kubectl=$apt_version
   done
 
