@@ -1,6 +1,6 @@
 #!/bin/bash
 echo " *** worker node mock-1  k8s-3"
-
+acrh=$(uname -m)
 case $acrh in
 x86_64)
   arc_name="amd64"
