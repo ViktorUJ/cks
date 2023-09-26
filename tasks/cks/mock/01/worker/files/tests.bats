@@ -117,7 +117,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "2.3  Image Vulnerability Scanning. deployment3  " {
   echo '.5'>>/var/work/tests/result/all
   result=$(kubectl get  deployment deployment3   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
-  if [[ "$result" == "0" ]]; then
+  if [[ "$result" == "1" ]]; then
    echo '.5'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
