@@ -42,3 +42,6 @@ output "aws_eks_cluster_eks_cluster_arn" {
 output "instance_type" {
   value = var.work_pc.instance_type
 }
+output "kubectl_version" {
+  value = var.work_pc.util.kubectl_version
+}
