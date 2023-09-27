@@ -6,6 +6,7 @@
 * + update terraform code  to use **terraform** version **v1.5.6** 
 * +  update terraform aws provider to **v5.17.0**
 * + add **ubuntu_version** to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module . now it is default way to get **ami_id**
+* +  change k8s version on cka-mock and cks mock to 1.28
 * The [cks mock exam 01](..%2Ftasks%2Fcks%2Fmock%2F01)  utilizes version 1.27 and Graviton instances t4g.medium.
 * The cks labs utilizes version 1.27 and Graviton instances t4g.medium.
 * add video for cks mock solutions
