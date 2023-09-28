@@ -23,6 +23,7 @@ case $VERSION in
  esac
 
 cat > $kubelet_config_url/20-labels-taints.conf  <<EOF
+[Service]
 Environment="KUBELET_EXTRA_ARGS=--node-labels=node_name=${node_name},${node_labels}"
 EOF
 systemctl enable kubelet
