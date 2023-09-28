@@ -29,11 +29,11 @@ case $VERSION in
      kubelet_config_url="/usr/lib/systemd/system/kubelet.service.d"
    ;;
    *)
-     kubelet_config_url="/etc/systemd/system/kubelet.service.d/"
+     kubelet_config_url="/etc/systemd/system/kubelet.service.d"
    ;;
  esac
 
-cat > $kubelet_config_url/20-labels-taints.conf <<EOF
+cat > $kubelet_config_url/01-labels-taints.conf <<EOF
 [Service]
 Environment="KUBELET_EXTRA_ARGS=--node-labels=node_name=${node_name},${node_labels}"
 EOF
