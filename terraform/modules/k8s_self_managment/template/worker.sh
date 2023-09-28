@@ -2,7 +2,7 @@
 runtime_sh=${runtime}
 k8_version_sh=${k8_version}
 worker_join_sh=${worker_join}
-
+VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
 
 date
 swapoff -a
@@ -10,7 +10,6 @@ swapoff -a
 apt-get update && sudo apt-get upgrade -y
 apt-get install -y  unzip
 
-# install runtime
 ${runtime_script}
 
 date
@@ -25,7 +24,16 @@ while test $? -gt 0
 date
 
 # add node labels
-cat > /etc/systemd/system/kubelet.service.d/20-labels-taints.conf <<EOF
+case $VERSION in
+   1.28)
+     kubelet_config_url="/usr/lib/systemd/system/kubelet.service.d"
+   ;;
+   *)
+     kubelet_config_url="/etc/systemd/system/kubelet.service.d/"
+   ;;
+ esac
+
+cat > $kubelet_config_url/20-labels-taints.conf <<EOF
 [Service]
 Environment="KUBELET_EXTRA_ARGS=--node-labels=node_name=${node_name},${node_labels}"
 EOF
@@ -36,7 +44,6 @@ systemctl restart kubelet
 echo " aws s3 cp s3://$worker_join_sh  worker_join   "
 aws s3 cp s3://$worker_join_sh  worker_join
 chmod +x worker_join
-export NODELABELS="node_name=${node_name},${node_labels}"
 ./worker_join
 
 # add additional script
