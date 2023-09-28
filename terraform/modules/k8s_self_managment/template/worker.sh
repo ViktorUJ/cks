@@ -12,17 +12,6 @@ apt-get install -y  unzip
 
 ${runtime_script}
 
-date
-echo "wait master ready"
-aws s3 ls s3://$worker_join_sh
-while test $? -gt 0
-  do
-   sleep 5
-   echo "Wait master ready .Trying again..."
-   aws s3 ls s3://$worker_join_sh
-  done
-date
-
 # add node labels
 case $VERSION in
    1.28)
@@ -33,13 +22,23 @@ case $VERSION in
    ;;
  esac
 
-cat > $kubelet_config_url/01-labels-taints.conf <<EOF
+cat > $kubelet_config_url/20-labels-taints.conf  <<EOF
 [Service]
 Environment="KUBELET_EXTRA_ARGS=--node-labels=node_name=${node_name},${node_labels}"
 EOF
 systemctl enable kubelet
 systemctl restart kubelet
 
+date
+echo "wait master ready"
+aws s3 ls s3://$worker_join_sh
+while test $? -gt 0
+  do
+   sleep 5
+   echo "Wait master ready .Trying again..."
+   aws s3 ls s3://$worker_join_sh
+  done
+date
 
 echo " aws s3 cp s3://$worker_join_sh  worker_join   "
 aws s3 cp s3://$worker_join_sh  worker_join
