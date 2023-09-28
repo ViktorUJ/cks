@@ -36,6 +36,7 @@ systemctl restart kubelet
 echo " aws s3 cp s3://$worker_join_sh  worker_join   "
 aws s3 cp s3://$worker_join_sh  worker_join
 chmod +x worker_join
+export NODELABELS="node_name=${node_name},${node_labels}"
 ./worker_join
 
 # add additional script

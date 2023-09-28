@@ -35,8 +35,35 @@ chown $(id -u):$(id -g) /root/.kube/config
 
 
 
+
+
 aws s3 cp  /root/.kube/config s3://$k8s_config_sh
-kubeadm token create --print-join-command --ttl 90000m > join_node
+join_command=$(kubeadm token create --print-join-command --ttl 90000m)
+apiServerEndpoint=$(echo $join_command | cut -d ' ' -f3)
+token=$(echo $join_command | cut -d ' ' -f5)
+caCertHashes=$(echo $join_command | cut -d ' ' -f7 | cut -d':' -f2)
+cat <<EOF |  tee join_node
+echo """
+apiVersion: kubeadm.k8s.io/v1beta1
+kind: JoinConfiguration
+nodeRegistration:
+  kubeletExtraArgs:
+    enable-controller-attach-detach: "false"
+    node-labels: \"NODELABELS\"
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: $apiServerEndpoint
+    token: $token
+    caCertHashes:
+    - $caCertHashes
+""" > join_config.yaml
+sed -i "s|NODELABELS|\$NODELABELS|g" join_config.yaml
+kubeadm join --config join_config.yaml
+EOF
+
+
+#kubeadm token create --print-join-command --ttl 90000m > join_node
+
 aws s3 cp  join_node s3://$worker_join_sh
 date
 kubectl get node --kubeconfig=/root/.kube/config
