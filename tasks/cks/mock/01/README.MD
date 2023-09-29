@@ -133,3 +133,9 @@ Test it by creating a single Pod using image very-bad-registry.com/image in Name
 
 You can also verify your changes by looking at the existing Deployment untrusted in Namespace default,
 it uses an image from the new untrusted source. The OPA contraint should throw violation messages for this one.
+
+
+------
+## Question 18 | seccomp
+
+#### Task weight: 6%
