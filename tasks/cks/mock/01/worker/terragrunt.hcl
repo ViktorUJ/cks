@@ -85,7 +85,7 @@ inputs = {
       cluster7 = dependency.cluster7.outputs.k8s_config
       cluster8 = dependency.cluster8.outputs.k8s_config
       cluster9 = dependency.cluster9.outputs.k8s_config
-      cluster9 = dependency.cluster10.outputs.k8s_config
+      cluster10 = dependency.cluster10.outputs.k8s_config
     }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
