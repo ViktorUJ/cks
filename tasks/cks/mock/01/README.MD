@@ -139,3 +139,4 @@ it uses an image from the new untrusted source. The OPA contraint should throw v
 ## Question 18 | seccomp
 
 #### Task weight: 6%
+cluster  - 10
