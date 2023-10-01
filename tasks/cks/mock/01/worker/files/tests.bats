@@ -800,7 +800,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "17 Open Policy Agent" {
   echo '6'>>/var/work/tests/result/all
   set +e
-  k run test --image very-bad-registry.com/image --context cluster9-admin@cluster9 2>&1 | grep "not trusted image"| grep 'k8strustedimages'
+  kubectl  delete po test --force
+  kubectl run test --image very-bad-registry.com/image --context cluster9-admin@cluster9 2>&1 | grep "not trusted image"| grep 'k8strustedimages'
   result=$?
   set -e
   if  [ "$result" == "0" ]; then
