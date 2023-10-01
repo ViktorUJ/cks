@@ -122,7 +122,7 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 
 #### Task weight: 6%
 
-cluster  - 9 
+cluster9 (   `kubectl config use-context    cluster9-admin@cluster9`   )   
 
 
 The Open Policy Agent and Gatekeeper have been installed to,
