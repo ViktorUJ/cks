@@ -123,24 +123,6 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 | **Acceptance criteria**      | - Cannot run a pod with an image from **very-bad-registry.com**                                                                                                                                                               |
 ---
 
-
-
-
-
-
-## Question 17 | Open Policy Agent .  blacklist images from very-bad-registry.com.
-
-#### Task weight: 6%
-
-cluster9 (   `kubectl config use-context    cluster9-admin@cluster9`   )   
-
-
-Acceptance criteria :
-
- - cant run pod  with image from  ** very-bad-registry.com**
-
-
-
 ------
 ## Question 18 | seccomp
 
