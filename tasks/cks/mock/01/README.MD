@@ -116,23 +116,29 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                                                                   |
 | Acceptance criteria | - create ns `development`<br/>- create private key and csr<br/>- CSR: `john-developer` with Status:Approved<br/>- Role Name: `developer`, namespace: `development`, Resource: `pods` , verbs: `create,list,get`<br/>- rolebinding: name=`developer-role-binding` , role=`developer`,  user=`john` , namespace=`development`<br/>- Access: User 'john' has appropriate permissions |
 ---
+|       **Question 17**       | **Open Policy Agent - Blacklist Images from very-bad-registry.com**                                                                                                                                                                                                                         |
+| :--------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     **Task weight**         | 6%                                                                                                                                                                                                                           |
+|       **Cluster**           | cluster9 (`kubectl config use-context cluster9-admin@cluster9`)                                                                                                                                                             |
+| **Acceptance criteria**      | - Cannot run a pod with an image from **very-bad-registry.com**                                                                                                                                                               |
+---
 
 
-## Question 17 | Open Policy Agent
+
+
+
+
+## Question 17 | Open Policy Agent .  blacklist images from very-bad-registry.com.
 
 #### Task weight: 6%
 
 cluster9 (   `kubectl config use-context    cluster9-admin@cluster9`   )   
 
 
-The Open Policy Agent and Gatekeeper have been installed to,
-among other things, enforce blacklisting of certain image registries.
-Alter the existing constraint and/or template to also blacklist images from very-bad-registry.com.
+Acceptance criteria :
 
-Test it by creating a single Pod using image very-bad-registry.com/image in Namespace default, it shouldn't work.
+ - cant run pod  with image from  ** very-bad-registry.com**
 
-You can also verify your changes by looking at the existing Deployment untrusted in Namespace default,
-it uses an image from the new untrusted source. The OPA contraint should throw violation messages for this one.
 
 
 ------
