@@ -809,3 +809,12 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "18.1 seccomp . profile enable   " {
+  echo '3'>>/var/work/tests/result/all
+  result=$(kubectl get po seccomp  --context cluster10-admin@cluster10 )
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
