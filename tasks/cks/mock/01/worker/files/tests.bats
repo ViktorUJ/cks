@@ -810,11 +810,30 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "18.1 seccomp . profile enable   " {
-  echo '3'>>/var/work/tests/result/all
-  result=$(kubectl get po seccomp  --context cluster10-admin@cluster10 )
+@test "18.1 seccomp . profile name   " {
+  echo '2'>>/var/work/tests/result/all
+  result=$(kubectl get po seccomp  --context cluster10-admin@cluster10  -o jsonpath='{.spec.securityContext.seccompProfile.localhostProfile}')
+  if [[ "$result" == "profile-nginx.json" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "profile-nginx.json" ]
+}
+
+@test "18.2 seccomp . profile type   " {
+  echo '2'>>/var/work/tests/result/all
+  result=$(kubectl get po seccomp  --context cluster10-admin@cluster10  -o jsonpath='{.spec.securityContext.seccompProfile.type}')
+  if [[ "$result" == "Localhost" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "Localhost" ]
+}
+
+@test "18.3 seccomp . pod status = Running   " {
+  echo '2'>>/var/work/tests/result/all
+  kubectl get po seccomp  --context cluster10-admin@cluster10 | grep seccomp  | grep 'Running'
+  result=$?
   if [[ "$result" == "0" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '2'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
