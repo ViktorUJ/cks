@@ -129,3 +129,5 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 #### Task weight: 6%
 cluster10 (`kubectl config use-context cluster10-admin@cluster10`)
  profile is located on work node   /var/work/profile-nginx.json
+
+- create po  name=seccomp ,  image=nginx  ,  secomp_profile=profile-nginx.json 
