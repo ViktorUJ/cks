@@ -58,6 +58,10 @@ echo 'source /usr/share/bash-completion/bash_completion'>>/root/.bashrc
 echo 'source <(kubectl completion bash)' >> /root/.bashrc
 echo 'alias k=kubectl' >> /root/.bashrc
 echo 'complete -F __start_kubectl k' >> /root/.bashrc
+echo 'source /usr/share/bash-completion/bash_completion'>>/home/ubuntu/.bashrc
+echo 'source <(kubectl completion bash)' >> /home/ubuntu/.bashrc
+echo 'alias k=kubectl' >> /home/ubuntu/.bashrc
+echo 'complete -F __start_kubectl k' >> /home/ubuntu/.bashrc
 
 acrh=$(uname -m)
 case $acrh in
@@ -79,6 +83,9 @@ if [[ "$utils_enable_sh" == "true" ]] ; then
   echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
   echo 'source <(helm completion bash)'>>/root/.bashrc
   echo 'source <(skaffold completion bash)'>>/root/.bashrc
+  echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/home/ubuntu/.bashrc
+  echo 'source <(helm completion bash)'>>/home/ubuntu/.bashrc
+  echo 'source <(skaffold completion bash)'>>/home/ubuntu/.bashrc
 fi
 
 
