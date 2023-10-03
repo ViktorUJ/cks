@@ -59,12 +59,21 @@ echo 'source <(kubectl completion bash)' >> /root/.bashrc
 echo 'alias k=kubectl' >> /root/.bashrc
 echo 'complete -F __start_kubectl k' >> /root/.bashrc
 
+acrh=$(uname -m)
+case $acrh in
+x86_64)
+  skaffold_url="https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64"
+;;
+aarch64)
+  skaffold_url="https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64"
+;;
+
 # add utils
 if [[ "$utils_enable_sh" == "true" ]] ; then
   curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
   helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
   helm plugin install https://github.com/sstarcher/helm-release
-  curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && \
+  curl -Lo skaffold $skaffold_url && \
   install skaffold /usr/local/bin/
   rm -rf skaffold
   echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
