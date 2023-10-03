@@ -74,7 +74,7 @@ x86_64)
 aarch64)
   skaffold_url="https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64"
 ;;
-
+esac
 # add utils
 if [[ "$utils_enable_sh" == "true" ]] ; then
   echo "*** install utils "
