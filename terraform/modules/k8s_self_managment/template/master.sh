@@ -77,6 +77,7 @@ aarch64)
 
 # add utils
 if [[ "$utils_enable_sh" == "true" ]] ; then
+  echo "*** install utils "
   curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
   helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
   helm plugin install https://github.com/sstarcher/helm-release
