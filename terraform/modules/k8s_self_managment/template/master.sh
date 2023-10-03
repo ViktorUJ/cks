@@ -30,7 +30,9 @@ fi
 
 mkdir -p /root/.kube
 cp -i /etc/kubernetes/admin.conf /root/.kube/config
+cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
 chown $(id -u):$(id -g) /root/.kube/config
+chown $(id -u):$(id -g) /home/ubuntu/.kube/config
 
 aws s3 cp  /root/.kube/config s3://$k8s_config_sh
 kubeadm token create --print-join-command --ttl 90000m > join_node
