@@ -49,3 +49,7 @@ output "ami_id_master" {
 output "master_instance_type" {
   value = local.master_instance_type
 }
+
+output "worker_reload_bashrc" {
+  value = "  source ~/.bashrc   "
+}
