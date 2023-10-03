@@ -29,6 +29,7 @@ fi
 
 
 mkdir -p /root/.kube
+mkdir -p /home/ubuntu/.kube
 cp -i /etc/kubernetes/admin.conf /root/.kube/config
 cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
 chown $(id -u):$(id -g) /root/.kube/config
