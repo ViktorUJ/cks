@@ -4,6 +4,11 @@ k8_version_sh=${k8_version}
 worker_join_sh=${worker_join}
 VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
 
+echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
+chmod 600 /home/ubuntu/.ssh/id_rsa
+chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
+echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
+
 date
 swapoff -a
 
@@ -51,7 +56,3 @@ curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
 
-echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
-chmod 600 /home/ubuntu/.ssh/id_rsa
-chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
-echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
