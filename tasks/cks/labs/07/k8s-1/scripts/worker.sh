@@ -1,2 +1,2 @@
 #!/bin/bash
-echo " *** worker node task k8s-9"
+echo " *** worker node task k8s-1"
