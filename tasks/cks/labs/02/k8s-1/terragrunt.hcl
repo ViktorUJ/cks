@@ -17,6 +17,9 @@ terraform {
 dependency "vpc" {
   config_path = "../vpc"
 }
+dependency "ssh-keys" {
+  config_path = "../ssh-keys"
+}
 
 inputs = {
   region       = local.vars.locals.region
@@ -46,8 +49,8 @@ inputs = {
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/0.3.2/tasks/cks/labs/02/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     ssh                = {
-      private_key = local.vars.locals.ssh.private_key
-      pub_key     = local.vars.locals.ssh.pub_key
+      private_key = dependency.ssh-keys.outputs.private_key
+      pub_key     = dependency.ssh-keys.outputs.pub_key
     }
     root_volume = local.vars.locals.root_volume
   }
@@ -66,8 +69,8 @@ inputs = {
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/0.3.2/tasks/cks/labs/02/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=falco,aws_scheduler=true"
       ssh                = {
-        private_key = local.vars.locals.ssh.private_key
-        pub_key     = local.vars.locals.ssh.pub_key
+        private_key = dependency.ssh-keys.outputs.private_key
+        pub_key     = dependency.ssh-keys.outputs.pub_key
       }
       cidrs       = ["0.0.0.0/0"]
       root_volume = local.vars.locals.root_volume
