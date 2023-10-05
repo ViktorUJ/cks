@@ -1,7 +1,6 @@
----
-|       **7**       | **Open Policy Agent - Blacklist Images from very-bad-registry.com**                                                                                                                                                                                                                         |
+|       **17**       | **Open Policy Agent - Blacklist Images from very-bad-registry.com**                                                                                                                                                                                                                         |
 | :--------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |     Task weight        | 6%                                                                                                                                                                                                                           |
-|       Cluster           | default                                                                                                                                                            |
+|       Cluster           | cluster9 (`kubectl config use-context cluster9-admin@cluster9`)                                                                                                                                                             |
 | Acceptance criteria      | - Cannot run a pod with an image from **very-bad-registry.com**                                                                                                                                                               |
 ---
