@@ -15,10 +15,7 @@ swapoff -a
 apt-get update && sudo apt-get upgrade -y
 apt-get install -y  unzip apt-transport-https ca-certificates curl jq
 
-# install runtime
 ${runtime_script}
-
-# install kubernetes
 if [ -z "$external_ip_sh" ]; then
    echo "*** kubeadm init without eip "
    kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4
@@ -75,7 +72,6 @@ aarch64)
   skaffold_url="https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64"
 ;;
 esac
-# add utils
 if [[ "$utils_enable_sh" == "true" ]] ; then
   echo "*** install utils "
   curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
@@ -92,8 +88,6 @@ if [[ "$utils_enable_sh" == "true" ]] ; then
   echo 'source <(skaffold completion bash)'>>/home/ubuntu/.bashrc
 fi
 
-
-# add additional script
 curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
