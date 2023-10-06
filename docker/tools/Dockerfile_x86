@@ -11,7 +11,7 @@ RUN  echo '[mongodb-org-4.4]'>/etc/yum.repos.d/mongodb-org-4.0.repo && \
      curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && \
      install skaffold /usr/local/bin/ && \
      rm -rf skaffold && \
-     curl -LO kubectl https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl && \
+     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
      chmod +x ./kubectl && \
      mv kubectl /usr/local/bin/kubectl && \
      curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
