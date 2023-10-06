@@ -70,3 +70,57 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                                                                                                                                         |
 | Acceptance criteria | - NodeAffinity: requiredDuringSchedulingIgnoredDuringExecution<br/>- controlplane has the correct labels?<br/>- Deployment beta-apps: NodeAffinity set to requiredDuringSchedulingIgnoredDuringExecution ?<br/>- Deployment beta-apps has correct Key for NodeAffinity?<br/>- Deployment beta-apps has correct Value for NodeAffinity?<br/>- Deployment beta-apps has pods running only on controlplane?<br/>- Deployment beta-apps has 3 pods running? |
 ---
+|       **11**        | **Create new ingress resource to the service. Make it available at the path `/cat** |
+| :-----------------: | :---------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                  |
+|       Cluster       | cluster2 (`kubectl config use-context cluster1-admin@cluster1`)                     |
+| Acceptance criteria | - Annotation: `nginx.ingress.kubernetes.io/rewrite-target: /`<br/>- path: /cat      |
+---
+|       **12**        | **Create a new pod called nginx1233 in the `web-ns` namespace with the image nginx. Add a livenessProbe to the container to restart it if the command ls /var/www/html/probe fails. This check should start after a delay of 10 seconds and run every 60 seconds.** |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                  |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                     |
+| Acceptance criteria | - You may delete and recreate the object. Ignore the warnings from the probe.<br/>-Pod created correctly with the livenessProbe?                                                                                                                                    |
+---
+|       **13**        | **Create a job with the image busybox that executes the command 'echo hello;sleep 30;echo world'.**                                   |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | ?%                                                                                                                                    |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                       |
+| Acceptance criteria | -image: `busybox`<br/>-command: `echo hello;sleep 30;echo world`<br/>- completions: 10<br/>-backoffLimit: 6<br/>-restartPolicy: Never |
+---
+|       **14**        | **Create a job with the image busybox that executes the command 'echo hello;sleep 30;echo world'.**                                   |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | ?%                                                                                                                                    |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                       |
+| Acceptance criteria | -image: `busybox`<br/>-command: `echo hello;sleep 30;echo world`<br/>- completions: 10<br/>-backoffLimit: 6<br/>-restartPolicy: Never |
+---
+|       **15**        | **Create a pod called `multi-pod` with two containers.**                                                                                                                                                                                             |
+| :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                   |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                      |
+| Acceptance criteria | container 1:<br/>   - name: `alpha`, image: `nginx:alpine-slim`<br/>    - environment variable: `type: alpha`<br/>container 2:<br/>    - name: `beta`, image: `busybox`<br/>    - command: `sleep 4800`<br/>    - environment variable: `type: beta` |
+---
+|       **16**        | **Create a PersistentVolume called `my-volume` with size: `50MiB` reclaim policy: `retain`, Access Modes: `ReadWriteMany` and hostPath: `/opt/data`**    |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                       |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                          |
+| Acceptance criteria | - PersistentVolume `my-volume`<br/>- Volume size: `50MiB`<br/>- Reclaim policy: `retain`<br/>- Access Modes: `ReadWriteMany`<br/>- hostPath: `/opt/data` |
+---
+|       **17**        | **Create a CustomResourceDefinition definition and then apply it to the cluster**                                                                                                                                                                           |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                          |
+|       Cluster       | cluster2 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                             |
+| Acceptance criteria | - Name: `operators.stable.example.com`<br/>- Group : `stable.example.com`<br/>- Schema: `<email: string><name: string><age: integer>`<br/>- Scope: `Namespaced`<br/>- Names: `<plural: operators><singular: operator><shortNames: op>`<br/>Kind: `Operator` |
+---
+|       **18**        | **Write two cli commands to get utilisation of the nodes and pods in all namespaces sorted by CPU utilization. Put this shell commands to the required files.**                                           |
+| :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                        |
+|       Cluster       | cluster2 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                           |
+| Acceptance criteria | - Get CPU and Memory utilisation of the nodes and save the command to get this info to `/opt/18/nodes.txt`<br/>- Get pods utilization and sort them by CPU consumtion. Save command to `/opt/18/pods.txt` |
+---
+|       **19**        | **Add prometheus helm repo and install prometheus chart to the cluster.**                                                                                                                                                                                                        |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                               |
+|       Cluster       | cluster2 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                  |
+| Acceptance criteria | - Add repo `prometheus-community` `https://prometheus-community.github.io/helm-charts`<br/>- Install prometheus from the helm chart to kubernetes cluster<br/>    - Release name: `prom`, namespace: `monitoring`<br/>- helm chart: `prometheus-community/kube-prometheus-stack` |
+---
