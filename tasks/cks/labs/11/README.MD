@@ -1,8 +1,7 @@
-Secrets in ETCD
-Task weight: 7%
 
-There is an existing Secret called database-access in
-Namespace:  team-green  , secret name = database-access .
-Read the complete Secret content directly from ETCD (using etcdctl ) and store it into /opt/course/11/etcd-secret-content .
-
-Write the plain and decoded Secret's value of key "pass" into /opt/course/11/database-password .
+|       **11**        | **Secrets in ETCD**. Read the complete Secret content directly from ETCD (using etcdctl )                                                                                                                                                                 |
+|:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 7%                                                                                                                                                                                                                                                        |
+|       Cluster       | default                                                                                                                                                                                                                                                   |
+| Acceptance criteria | - store  plaintext **secret database-access** from **NS=team-green**, using `etcdct` to  `/var/work/tests/artifacts/11/plaintext`  <br/>-  Write decoded Secret's value of key "pass" into `/var/work/tests/artifacts/11/database-password` |  
+---

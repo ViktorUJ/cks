@@ -1,4 +1,6 @@
-### ssh to master node
+``` 
+mkdir /var/work/tests/artifacts/11/ -p 
+```
 
 ### get connection parameters to etcd
 
@@ -21,10 +23,13 @@ cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep etcd
 ETCDCTL_API=3 etcdctl \
 --cert /etc/kubernetes/pki/apiserver-etcd-client.crt \
 --key /etc/kubernetes/pki/apiserver-etcd-client.key \
---cacert /etc/kubernetes/pki/etcd/ca.crt get /registry/secrets/team-green/database-access
+--cacert /etc/kubernetes/pki/etcd/ca.crt get /registry/secrets/team-green/database-access >/var/work/tests/artifacts/11/plaintext 
 
 ````
-
-ETCD in Kubernetes stores data under /registry/{type}/{namespace}/{name} . This is how we came to look for /registry/secrets/teamgreen/
-database-access . There is also an example on a page in the k8s documentation which you could save as a bookmark to access fast
-during the exam.
+``` 
+ETCDCTL_API=3 etcdctl \
+--cert /etc/kubernetes/pki/apiserver-etcd-client.crt \
+--key /etc/kubernetes/pki/apiserver-etcd-client.key \
+--cacert /etc/kubernetes/pki/etcd/ca.crt get /registry/secrets/team-green/database-access
+# find password and store it to /var/work/tests/artifacts/11/database-password
+```
