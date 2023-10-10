@@ -1,7 +1,3 @@
-```
-kubectl config use-context cluster4-admin@cluster4
-
-```
 ``` 
 k get po -n kube-system  | grep api
 
@@ -21,12 +17,7 @@ k exec  -n kube-system etcd-ip-10-2-11-163 -- etcd --help | grep cip
 
 ```
 
-``` 
-k get no
 
-ssh {control-plane}
-
-```
 ``` 
 sudo su
 vim /etc/kubernetes/manifests/kube-apiserver.yaml
