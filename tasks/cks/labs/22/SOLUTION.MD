@@ -1,5 +1,5 @@
 ````
-#deny_prod-db.yaml
+#vim deny_prod-db.yaml
 
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -20,9 +20,11 @@ spec:
           port: 53
 
 ````
-
+``` 
+k apply -f   deny_prod-db.yaml
+```
 ````
-# deny_prod-stack-1.yaml
+# vim deny_prod-stack-1.yaml
 
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -43,9 +45,11 @@ spec:
           port: 53
 
 ````
-
+``` 
+k apply -f deny_prod-stack-1.yaml
+```
 ````
-# allow_prod-db_backend.yaml
+# vim allow_prod-db_backend.yaml
 
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -73,9 +77,11 @@ spec:
 
 
 ````
-
+``` 
+k apply -f  allow_prod-db_backend.yaml
+```
 ````
-#allow_prod-stack-1_backend_frontend.yaml
+#vim allow_prod-stack-1_backend_frontend.yaml
 
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -112,9 +118,12 @@ spec:
 
 
 ````
+```` 
+k apply -f allow_prod-stack-1_backend_frontend.yaml
+````
 
 ````
-# allow_prod-stack-1_frontend_client.yaml
+# vim allow_prod-stack-1_frontend_client.yaml
 
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -147,6 +156,11 @@ spec:
 
 
 ````
+```
+k apply -f allow_prod-stack-1_frontend_client.yaml
+
+```
+
 ### test
 
 ````
