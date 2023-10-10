@@ -147,3 +147,32 @@ spec:
 
 
 ````
+### test
+
+````
+#from backend pod
+curl mysql.prod-db.svc --connect-timeout 1   -v   #  work
+curl google.com    --connect-timeout 1     -v     # not  work   (Network is unreachable)
+curl frontend     --connect-timeout 1     -v # not work (Connection timed)
+
+
+#from frontend  pod
+curl  backend    --connect-timeout 1               # work
+curl mysql.prod-db.svc --connect-timeout 1   -v    #  not work
+curl google.com    --connect-timeout 1     -v      # not  work
+
+
+
+
+# from db pod
+curl backend.prod-stack-1.svc --connect-timeout 1   -v    #  not work
+curl google.com    --connect-timeout 1     -v      # not  work
+
+# from  user-client
+curl frontend.prod-stack-1.svc --connect-timeout 1   -v    #   work
+curl backend.prod-stack-1.svc --connect-timeout 1   -v    #  not work
+curl mysql.prod-db.svc --connect-timeout 1   -v   # not work
+curl google.com    --connect-timeout 1     -v      # work
+
+
+````
