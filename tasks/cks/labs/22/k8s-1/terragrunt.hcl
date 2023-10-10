@@ -53,8 +53,5 @@ inputs = {
     }
     root_volume = local.vars.locals.root_volume
   }
-  k8s_worker = {
-    "node_2" = {
-    }
-  }
+  k8s_worker = {}
 }
