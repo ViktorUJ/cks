@@ -7,4 +7,6 @@
 | [04](04) | [Pod Security Standard](04%2FREADME.MD)                 | [SOLUTION](04%2FSOLUTION.MD) |
 | [05](05) | [CIS Benchmark](05%2FREADME.MD)                         | [SOLUTION](05%2FSOLUTION.MD) |
 | [07](07) | [Open Policy Agent - Blacklist Images](07%2FREADME.MD)  | [SOLUTION](07%2FSOLUTION.MD) |
-| [09](09) | [AppArmor](09%2FREADME.MD)  | [SOLUTION](09%2FSOLUTION.MD) |
+| [09](09) | [AppArmor](09%2FREADME.MD)                              | [SOLUTION](09%2FSOLUTION.MD) |
+| [10](10) | [Container Runtime Sandbox gVisor](10%2FREADME.MD)      | [SOLUTION](10%2FSOLUTION.MD) |
+| [11](11) | [Read the complete Secret content directly from ETCD](11%2FREADME.MD)      | [SOLUTION](11%2FSOLUTION.MD) |
