@@ -106,9 +106,7 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
 
-- create vpc for CKA hands-on labs ``make run_cka_vpc``
 - choose [a hands-on lab](tasks%2Fcka%2Flabs) number
-- change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl``  if you changed **region**
 - create cka lab cluster ``TASK={lab_number} make run_cka_k8s_task``
 - find {master_external_ip} in terraform output
 - log in to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
@@ -123,7 +121,6 @@ Every command should be run from the project's root directory.
   <summary style="font-weight: bold; font-size: 1.5em;">mock CKA exam</summary>
 
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
-- change **ami_id** in ``{mock_number}/env.hcl``  if you changed **region**
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKA exam ``TASK={mock_number} make run_cka_k8s_mock``
 - find ``worker_pc_ip`` in ``terraform output``
@@ -141,8 +138,7 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKS hands-on lab</summary>
 
-- create vpc for CKA hands-on labs ``make run_cks_vpc``
-- choose [a hands-on lab](tasks%2Fcks%2Flabs) number
+- choose [CKS lab](tasks%2Fcks%2Flabs%2FREADME.MD)  number
 - change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl`` if you changed **region**
 - create cka lab cluster ``TASK={lab_number} make run_cks_k8s_task``
 - find {master_external_ip} in terraform output
