@@ -43,12 +43,12 @@ inputs = {
     cidrs              = ["0.0.0.0/0"]
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/0.3.2/tasks/cks/mock/01/k8s-8/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/0.3.2/tasks/cks/labs/25/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     root_volume        = local.vars.locals.root_volume
     ssh                = {
-      private_key = dependency.ssh-keys.outputs.private_key
-      pub_key     = dependency.ssh-keys.outputs.pub_key
+      private_key = ""
+      pub_key     = ""
     }
   }
   k8s_worker = {
