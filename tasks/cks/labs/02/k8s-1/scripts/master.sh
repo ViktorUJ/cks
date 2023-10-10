@@ -1,6 +1,7 @@
 #!/bin/bash
-echo " *** master node task 02 "
-kubectl taint nodes --all node-role.kubernetes.io/master- --kubeconfig=/root/.kube/config
-kubectl taint nodes --all node-role.kubernetes.io/control-plane-  --kubeconfig=/root/.kube/config
+echo " *** master node 02"
+export KUBECONFIG=/root/.kube/config
+kubectl taint nodes --all node-role.kubernetes.io/master-
+kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 
-kubectl apply  --kubeconfig=/root/.kube/config -f https://raw.githubusercontent.com/ViktorUJ/cks/0.3.2/tasks/cks/labs/02/k8s-1/scripts/task.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/0.3.2/tasks/cks/mock/01/k8s-7/scripts/task1.yaml

@@ -1,3 +1,6 @@
+``` 
+sudo su 
+```
 ````
 # check  admission_config.json
 cat  /etc/kubernetes/pki/admission_config.json
@@ -43,7 +46,6 @@ users:
 ``` 
 service kubelet restart
 
-# exit to work pc 
 ```
 
 ``` 

@@ -1,5 +1,6 @@
 #!/bin/bash
-echo " *** worker node  task 02"
+echo " *** worker node 02"
+
 
 curl -s https://falco.org/repo/falcosecurity-packages.asc | apt-key add -
 echo "deb https://download.falco.org/packages/deb stable main" \ | tee -a /etc/apt/sources.list.d/falcosecurity.list
