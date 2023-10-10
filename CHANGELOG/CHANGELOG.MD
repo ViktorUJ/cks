@@ -9,7 +9,7 @@
 * +  utilizes k8s version on cka-mock and cks mock to 1.28
 * + The [cks mock exam 01](..%2Ftasks%2Fcks%2Fmock%2F01)  utilizes version  Graviton instances t4g.medium.
 * + The cks labs utilizes version 1.28 and Graviton instances t4g.medium.
-* +  actualize  [cks labs](..%2Ftasks%2Fcks%2Flabs)
+* +  actualize  [cks labs](..%2Ftasks%2Fcks%2Flabs)  , add [list](..%2Ftasks%2Fcks%2Flabs%2FREADME.MD) to them.
 * + add  cks mock [solutions](..%2Ftasks%2Fcks%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)
 * add video for cks mock solutions
 
