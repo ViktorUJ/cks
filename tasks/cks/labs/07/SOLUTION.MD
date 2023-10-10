@@ -1,8 +1,4 @@
 ``` 
-kubectl config use-context cluster9-admin@cluster9
-```
-
-``` 
 k get crd
 k get constraint
 k get constrainttemplates
