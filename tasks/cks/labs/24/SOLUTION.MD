@@ -1,12 +1,6 @@
-```` 
-kubectl config use-context cluster5-admin@cluster5
-````
+
 https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
 
-``` 
-k get no 
-ssh {control-plane}
-```
 ``` 
 sudo su 
 mkdir /etc/kubernetes/enc/  -p
@@ -88,8 +82,4 @@ ETCDCTL_API=3 etcdctl \
    --key=/etc/kubernetes/pki/etcd/server.key  \
    get /registry/secrets/stage/stage | hexdump -C 
 
-```
-
-``` 
-# exit  to work pc
 ```
