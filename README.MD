@@ -51,7 +51,7 @@ CNI :  calico
 ````
 
 ## Configuration
-- change  **backend_bucket** ( **region** , **backend_region**  optional ) in [terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl#L4) :
+- change  **backend_bucket** ( **region** , **backend_region**  optional ) in [terraform/environments/terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl#L4) :
 - create  [aws ec2 key-pair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html) with name=cks  in our region (default region = eu-north-1)
 
 
