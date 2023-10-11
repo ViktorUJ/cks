@@ -120,7 +120,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   if [[ "$result" == "1" ]]; then
    echo '.5'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "0" ]
+  [ "$result" == "1" ]
 }
 
 @test "2.4  Image Vulnerability Scanning. deployment4  " {

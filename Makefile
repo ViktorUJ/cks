@@ -39,8 +39,6 @@ output_cka_mock:
 	cd terraform/environments/cka/ && terragrunt run-all output
 
 
-
-
 #CKS task
 run_cks_task:
 	@echo "*** run cks , task ${TASK}"
