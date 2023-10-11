@@ -35,7 +35,7 @@ clean_cka_mock:
 
 run_cka_mock_clean: clean_cka_mock run_cka_mock
 
-output_cka_task:
+output_cka_mock:
 	cd terraform/environments/cka/ && terragrunt run-all output
 
 
