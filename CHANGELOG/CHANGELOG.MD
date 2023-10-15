@@ -1,7 +1,7 @@
 # Changelog
 ## 0.4.1 (15.10.2023)
 ### Features
-* spot ec2 is moved  from **spot request** to  **spot fleet** .  get spot ec2 more stability
+* spot ec2 is moved  from **spot request** to  **spot fleet**, which gives spot ec2 more stability
 * update [make commands](..%2FREADME.MD#command)
 * update terraform code  to use **terraform** version **v1.5.6** 
 * update terraform aws provider to **v5.17.0**
