@@ -7,9 +7,9 @@
 * Terraform aws provider is updated  to **v5.17.0**
 * **Ubuntu_version** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module, which is the way to get **ami_id** by default 
 * k8s version **1.28**  is used in cka-mock and cks-mock exams
-* The [cks mock exam 01](..%2Ftasks%2Fcks%2Fmock%2F01)  uses version  **Graviton** instances **t4g.medium**.
-* The cks labs uses version **1.28** and Graviton instances **t4g.medium**.
-* [Cks labs](..%2Ftasks%2Fcks%2Flabs) are actualized, [list](..%2Ftasks%2Fcks%2Flabs%2FREADME.MD) is added to them.
+* The [cks mock exam 01](..%2Ftasks%2Fcks%2Fmock%2F01)  uses version  **Graviton** instances **t4g.medium**
+* The cks labs uses version **1.28** and Graviton instances **t4g.medium**
+* [Cks labs](..%2Ftasks%2Fcks%2Flabs) are actualized, [list](..%2Ftasks%2Fcks%2Flabs%2FREADME.MD) is added to them
 * Cks mock [solutions](..%2Ftasks%2Fcks%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)  are added  
 * [Video](https://youtu.be/_GbsBOMaJ9Q) for run mock exam is added 
 * [Video](https://youtu.be/I8CPwcGbrG8) for cks mock solutions is added 
