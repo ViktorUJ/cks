@@ -1,12 +1,12 @@
 # Changelog
 ## 0.4.1 (15.10.2023)
 ### Features
-* move stop ec2 from **spot request** to  **spot fleet** .  get spot ec2 more stability
+* move spot ec2 from **spot request** to  **spot fleet** .  get spot ec2 more stability
 * update [make commands](..%2FREADME.MD#command)
 * update terraform code  to use **terraform** version **v1.5.6** 
 * update terraform aws provider to **v5.17.0**
-* add **ubuntu_version** to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module . now it is default way to get **ami_id**
-* utilizes k8s version on cka-mock and cks mock to **1.28**
+* add **ubuntu_version** to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module, which is the way to get **ami_id**by default 
+* k8s version **1.28** now is used in cka-mock and cks-mock exams
 * The [cks mock exam 01](..%2Ftasks%2Fcks%2Fmock%2F01)  utilizes version  Graviton instances t4g.medium.
 * The cks labs utilizes version 1.28 and Graviton instances t4g.medium.
 * actualize  [cks labs](..%2Ftasks%2Fcks%2Flabs)  , add [list](..%2Ftasks%2Fcks%2Flabs%2FREADME.MD) to them.
