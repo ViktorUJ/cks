@@ -10,9 +10,9 @@
 * The [cks mock exam 01](..%2Ftasks%2Fcks%2Fmock%2F01)  uses version  **Graviton** instances **t4g.medium**.
 * The cks labs uses version **1.28** and Graviton instances **t4g.medium**.
 * [cks labs](..%2Ftasks%2Fcks%2Flabs) are actualized, [list](..%2Ftasks%2Fcks%2Flabs%2FREADME.MD) is added to them.
-* add  cks mock [solutions](..%2Ftasks%2Fcks%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)
-* add [video](https://youtu.be/_GbsBOMaJ9Q) for run mock exam
-* add [video](https://youtu.be/I8CPwcGbrG8) for cks mock solutions
+* cks mock [solutions](..%2Ftasks%2Fcks%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)  are added  
+* [video](https://youtu.be/_GbsBOMaJ9Q) for run mock exam is added 
+* [video](https://youtu.be/I8CPwcGbrG8) for cks mock solutions is added 
 
 ## 0.3.1 (15.09.2023)
 ### Features
