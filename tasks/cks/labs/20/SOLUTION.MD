@@ -23,7 +23,7 @@ kubelet --version
 apt update
 apt-mark unhold kubeadm
 
-apt install kubeadm=1.23.3-00  -y
+apt install kubeadm=1.26.0-00  -y
 apt-mark hold kubeadm
 
 ````
@@ -32,13 +32,13 @@ apt-mark hold kubeadm
 ````
 kubeadm upgrade plan
 
-kubeadm upgrade apply v1.23.3
+kubeadm upgrade apply v1.26.0
 ````
 
 ### update kubelet and kubectl
 ````
 apt-mark unhold kubelet kubectl
-kubelet=1.23.3-00   kubectl=1.23.3-00
+apt install kubelet=1.26.0-00   kubectl=1.26.0-00
 apt-mark hold kubelet kubectl
 
 service kubelet restart
@@ -63,7 +63,7 @@ drain {worker node } --ignore-daemonsets
 `````
 apt update
 apt-mark unhold kubeadm
-apt install kubeadm=1.23.3-00
+apt install kubeadm=1.26.0-00
 apt-mark hold kubeadm
 kubeadm upgrade node
 `````
@@ -71,7 +71,7 @@ kubeadm upgrade node
 ### update kubelet and kubectl
 ````
 apt-mark unhold kubectl kubelet
-apt install kubelet=1.23.3-00  kubectl=1.23.3-00 -y
+apt install kubelet=1.26.0-00  kubectl=1.26.0-00 -y
 apt-mark hold kubectl kubelet
 service kubelet restart
 service kubelet status

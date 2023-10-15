@@ -8,13 +8,10 @@ locals {
 
 terraform {
   source = "../../..//modules/k8s_self_managment/"
-#
-
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
-
 }
 
 dependency "vpc" {
@@ -42,7 +39,7 @@ inputs = {
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
     ami_id             = local.vars.locals.ami_id
-    #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
+    ubuntu_version     = local.vars.locals.ubuntu_version
     subnet_number      = "0"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
@@ -63,6 +60,7 @@ inputs = {
       instance_type      = local.vars.locals.instance_type
       key_name           = local.vars.locals.key_name
       ami_id             = local.vars.locals.ami_id
+      ubuntu_version     = local.vars.locals.ubuntu_version
       subnet_number      = "0"
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime

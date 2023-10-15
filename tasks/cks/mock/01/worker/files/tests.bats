@@ -117,10 +117,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "2.3  Image Vulnerability Scanning. deployment3  " {
   echo '.5'>>/var/work/tests/result/all
   result=$(kubectl get  deployment deployment3   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
-  if [[ "$result" == "0" ]]; then
+  if [[ "$result" == "1" ]]; then
    echo '.5'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "0" ]
+  [ "$result" == "1" ]
 }
 
 @test "2.4  Image Vulnerability Scanning. deployment4  " {
@@ -171,10 +171,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 #task 4
 
-@test "4.1 CIS Benchmark. check 1.2.18 " {
+@test "4.1 CIS Benchmark. check 1.2.17 " {
   echo '.75'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.18 | grep PASS"
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.17 | grep PASS"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '.75'>>/var/work/tests/result/ok
@@ -262,29 +262,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # all = 18  , task =2
 
-@test "6.1 set tls version  and  allowed ciphers.kubelet tls version " {
-  echo '1'>>/var/work/tests/result/all
-  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf |  grep  tls-min-version| grep   'VersionTLS13'"
-  result=$?
-  if [[ "$result" == "0" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "0" ]
-}
-
-@test "6.2 set tls version  and  allowed ciphers.kubelet cipher" {
-  echo '1'>>/var/work/tests/result/all
-  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf | grep 'tls-cipher-suites'| grep 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'"
-  result=$?
-  if [[ "$result" == "0" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "0" ]
-}
-
-@test "6.3 set tls version  and  allowed ciphers.etcd cipher " {
+@test "6.1 set tls version  and  allowed ciphers.etcd cipher " {
   echo '2'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
   ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat   /etc/kubernetes/manifests/etcd.yaml | grep 'cipher-suites' | grep 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'"
@@ -295,8 +273,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "6.4 set tls version  and  allowed ciphers.kube-api cipher " {
-  echo '1'>>/var/work/tests/result/all
+@test "6.2 set tls version  and  allowed ciphers.kube-api cipher " {
+  echo '2'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
   ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat  /etc/kubernetes/manifests/kube-apiserver.yaml |  grep 'tls-cipher-suites' | grep 'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'"
   result=$?
@@ -306,8 +284,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "6.5 set tls version  and  allowed ciphers.kube-api tls version " {
-  echo '1'>>/var/work/tests/result/all
+@test "6.3 set tls version  and  allowed ciphers.kube-api tls version " {
+  echo '2'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
   ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat  /etc/kubernetes/manifests/kube-apiserver.yaml |grep 'tls-min-version' | grep 'VersionTLS13'"
   result=$?
@@ -737,6 +715,125 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   set -e
   if  [ "$result" == "0" ]; then
    echo '6'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "16.1 Create a new user called john. csr " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get csr  john-developer -o jsonpath='{.status.conditions..type}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "Approved" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "Approved" ]
+}
+
+@test "16.2 Create a new user called john. role exist " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get role developer -n development -o jsonpath={.metadata.name}  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "developer" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "developer" ]
+}
+
+@test "16.3 Create a new user called john. rolebinding exist" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get rolebinding developer-role-binding  -n development -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "developer-role-binding" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "developer-role-binding" ]
+}
+
+
+@test "16.4 Create a new user called john. permission pod - create " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl auth can-i create pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "yes" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "yes" ]
+}
+
+@test "16.5 Create a new user called john. permission pod - list " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl auth can-i list pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "yes" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "yes" ]
+}
+
+@test "16.6 Create a new user called john. permission pod - get " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl auth can-i get pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "yes" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "yes" ]
+}
+
+@test "16.7 Create a new user called john. permission pod - delete " {
+  echo '0.5'>>/var/work/tests/result/all
+  set +e
+  result=$(kubectl auth can-i delete pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  set -e
+  if [[ "$result" == "no" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "no" ]
+}
+
+@test "16.8 Create a new user called john. permission pod - update " {
+  echo '0.5'>>/var/work/tests/result/all
+  set +e
+  result=$(kubectl auth can-i update pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
+  set -e
+  if [[ "$result" == "no" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "no" ]
+}
+
+
+@test "17 Open Policy Agent" {
+  echo '6'>>/var/work/tests/result/all
+  set +e
+  kubectl  delete po test --force
+  kubectl run test --image very-bad-registry.com/image --context cluster9-admin@cluster9 2>&1 | grep "not trusted image"| grep 'k8strustedimages'
+  result=$?
+  set -e
+  if  [ "$result" == "0" ]; then
+   echo '6'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "18.1 seccomp . profile name   " {
+  echo '2'>>/var/work/tests/result/all
+  result=$(kubectl get po seccomp  --context cluster10-admin@cluster10  -o jsonpath='{.spec.securityContext.seccompProfile.localhostProfile}')
+  if [[ "$result" == "profile-nginx.json" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "profile-nginx.json" ]
+}
+
+@test "18.2 seccomp . profile type   " {
+  echo '2'>>/var/work/tests/result/all
+  result=$(kubectl get po seccomp  --context cluster10-admin@cluster10  -o jsonpath='{.spec.securityContext.seccompProfile.type}')
+  if [[ "$result" == "Localhost" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "Localhost" ]
+}
+
+@test "18.3 seccomp . pod status = Running   " {
+  echo '2'>>/var/work/tests/result/all
+  kubectl get po seccomp  --context cluster10-admin@cluster10 | grep seccomp  | grep 'Running'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }

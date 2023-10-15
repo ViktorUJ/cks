@@ -35,13 +35,13 @@ dependency "cluster2" {
 
 
 inputs = {
-  region        = local.vars.locals.region
-  aws           = local.vars.locals.aws
-  prefix        = local.vars.locals.prefix
-  tags_common   = local.vars.locals.tags
-  app_name      = "k8s-worker"
-  subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id        = dependency.vpc.outputs.vpc_id
+  region      = local.vars.locals.region
+  aws         = local.vars.locals.aws
+  prefix      = local.vars.locals.prefix
+  tags_common = local.vars.locals.tags
+  app_name    = "k8s-worker"
+  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id      = dependency.vpc.outputs.vpc_id
 
 
   work_pc = {
@@ -49,15 +49,16 @@ inputs = {
       cluster1 = dependency.cluster1.outputs.k8s_config
       cluster2 = dependency.cluster2.outputs.k8s_config
     }
-    instance_type      = local.vars.locals.instance_type
+    instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
     key_name           = local.vars.locals.key_name
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
+    ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/worker.sh"
     util               = {
-      kubectl_version = "v1.26.0"
+      kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/worker/files/tests.bats"

@@ -1,6 +1,6 @@
-Update Kubernetes
-Task weight: 8%
-
-The cluster is running Kubernetes 1.25.0 , update it to 1.26.0 .
-Use apt package manager and kubeadm for this.
-Use ssh  to connect to the instances.
+|       **20**        | **Update Kubernetes cluster.**                                                                                                                                   |
+|:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 7%                                                                                                                                                               |
+|       Cluster       | default                                                                                                                                                          |
+| Acceptance criteria | - The cluster is running Kubernetes 1.25.0, update it to 1.26.0 .<br/>- Use apt package manager and kubeadm for this.<br/>- Use ssh to connect to the instances. |
+---

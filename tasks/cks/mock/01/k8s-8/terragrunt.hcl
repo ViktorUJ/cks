@@ -8,8 +8,6 @@ locals {
 
 terraform {
   source = "../../..//modules/k8s_self_managment/"
-#
-
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
@@ -39,9 +37,10 @@ inputs = {
     k8_version         = local.vars.locals.k8_version
     runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )
     runtime_script     = "template/runtime.sh"
-    instance_type      = local.vars.locals.instance_type
+    instance_type      = "t3.medium"
     key_name           = local.vars.locals.key_name
     ami_id             = local.vars.locals.ami_id
+    ubuntu_version     = local.vars.locals.ubuntu_version
     subnet_number      = "0"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"

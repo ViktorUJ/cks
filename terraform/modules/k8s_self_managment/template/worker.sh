@@ -2,7 +2,12 @@
 runtime_sh=${runtime}
 k8_version_sh=${k8_version}
 worker_join_sh=${worker_join}
+VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
 
+echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
+chmod 600 /home/ubuntu/.ssh/id_rsa
+chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
+echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
 
 date
 swapoff -a
@@ -10,8 +15,25 @@ swapoff -a
 apt-get update && sudo apt-get upgrade -y
 apt-get install -y  unzip
 
-# install runtime
 ${runtime_script}
+
+# add node labels
+case $VERSION in
+   1.28)
+     kubelet_config_url="/usr/lib/systemd/system/kubelet.service.d"
+   ;;
+   *)
+     kubelet_config_url="/etc/systemd/system/kubelet.service.d"
+   ;;
+ esac
+
+cat > $kubelet_config_url/20-labels-taints.conf  <<EOF
+[Service]
+Environment="KUBELET_EXTRA_ARGS=--node-labels=node_name=${node_name},${node_labels}"
+EOF
+echo "Environment=\"KUBELET_EXTRA_ARGS=--node-labels=node_name=${node_name},${node_labels}\"">/etc/sysconfig/kubelet
+systemctl enable kubelet
+systemctl restart kubelet
 
 date
 echo "wait master ready"
@@ -24,15 +46,6 @@ while test $? -gt 0
   done
 date
 
-# add node labels
-cat > /etc/systemd/system/kubelet.service.d/20-labels-taints.conf <<EOF
-[Service]
-Environment="KUBELET_EXTRA_ARGS=--node-labels=node_name=${node_name},${node_labels}"
-EOF
-systemctl enable kubelet
-systemctl restart kubelet
-
-
 echo " aws s3 cp s3://$worker_join_sh  worker_join   "
 aws s3 cp s3://$worker_join_sh  worker_join
 chmod +x worker_join
@@ -43,7 +56,3 @@ curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
 
-echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
-chmod 600 /home/ubuntu/.ssh/id_rsa
-chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
-echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys

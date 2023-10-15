@@ -38,24 +38,19 @@ EOF
 modprobe overlay
 modprobe br_netfilter
 
-# sysctl params required by setup, params persist across reboots
 cat <<EOF |  tee /etc/sysctl.d/k8s.conf
 net.bridge.bridge-nf-call-iptables  = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 net.ipv4.ip_forward                 = 1
 EOF
 
-# Apply sysctl params without reboot
 sysctl --system
 
-
-#Install CRI-O
 cat <<EOF |  tee /etc/modules-load.d/crio.conf
 overlay
 br_netfilter
 EOF
 
-# Set up required sysctl params, these persist across reboots.
 cat <<EOF |  tee /etc/sysctl.d/99-kubernetes-cri.conf
 net.bridge.bridge-nf-call-iptables  = 1
 net.ipv4.ip_forward                 = 1
@@ -102,39 +97,28 @@ EOF
 modprobe overlay
 modprobe br_netfilter
 
-# Setup required sysctl params, these persist across reboots.
 cat <<EOF |  tee /etc/sysctl.d/99-kubernetes-cri.conf
 net.bridge.bridge-nf-call-iptables  = 1
 net.ipv4.ip_forward                 = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 
-# Apply sysctl params without reboot
 sysctl --system
-
-# Install containerd
-## Set up the repository
-### Install packages to allow apt to use a repository over HTTPS
 apt-get update
 apt-get install -y  apt-transport-https ca-certificates curl gnupg lsb-release
 
-## Add Docker’s official GPG key
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg |  gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-## Add Docker apt repository.
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" |  tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-## Install packages
 apt-get update
 apt-get install -y  containerd.io
 
-# Configure containerd
 mkdir -p /etc/containerd
 containerd config default | tee /etc/containerd/config.toml
 
-# Restart containerd
 cat <<EOF |  tee /etc/crictl.yaml
 runtime-endpoint: unix:///run/containerd/containerd.sock
 image-endpoint: unix:///run/containerd/containerd.sock
@@ -153,42 +137,28 @@ EOF
 modprobe overlay
 modprobe br_netfilter
 
-# Setup required sysctl params, these persist across reboots.
 cat <<EOF |  tee /etc/sysctl.d/99-kubernetes-cri.conf
 net.bridge.bridge-nf-call-iptables  = 1
 net.ipv4.ip_forward                 = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 EOF
 
-# Apply sysctl params without reboot
 sysctl --system
-
-# Install containerd
-## Set up the repository
-### Install packages to allow apt to use a repository over HTTPS
 apt-get update
 apt-get install -y  apt-transport-https ca-certificates curl gnupg lsb-release
-
-## Add Docker’s official GPG key
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg |  gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-## Add Docker apt repository.
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" |  tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-## Install packages
 apt-get update
 apt-get install -y  containerd.io
 
-# Configure containerd
 mkdir -p /etc/containerd
 containerd config default | tee /etc/containerd/config.toml
-
-# Restart containerd
 systemctl restart containerd
 
-# install gvizor
 echo "*** install gvizor"
 curl -fsSL https://gvisor.dev/archive.key |  gpg --dearmor -o /usr/share/keyrings/gvisor-archive-keyring.gpg
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/gvisor-archive-keyring.gpg] https://storage.googleapis.com/gvisor/releases release main" |  tee /etc/apt/sources.list.d/gvisor.list > /dev/null
@@ -210,7 +180,6 @@ acrh=$(uname -m)
 VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
 
 case $acrh in
-# https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.28.0/crictl-v1.28.0-linux-amd64.tar.gz
 x86_64)
   crictl_url="https://github.com/kubernetes-sigs/cri-tools/releases/download/v$k8_version_sh/crictl-v$k8_version_sh-linux-amd64.tar.gz"
 ;;
@@ -264,9 +233,17 @@ case $ubuntu_release in
   ;;
 esac
 
-echo "*** install kubeadm , kubectl , kubelet  "
+echo "*** install kubeadm , kubectl , kubelet  version = $apt_version "
 apt update
 apt install -y kubeadm=$apt_version kubelet=$apt_version kubectl=$apt_version
+while test $? -gt 0
+  do
+   sleep 5
+   echo "Trying again... install kubeadm , kubectl , kubelet  version = $apt_version "
+   apt update
+   apt install -y kubeadm=$apt_version kubelet=$apt_version kubectl=$apt_version
+  done
+
 apt-mark hold kubelet kubeadm kubectl
 
 echo "*** install aws cli "
