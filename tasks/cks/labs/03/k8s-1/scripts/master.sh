@@ -1,6 +1,6 @@
 #!/bin/bash
 echo " *** master node  "
-curl "https://raw.githubusercontent.com/ViktorUJ/cks/0.3.2/tasks/cks/labs/03/k8s-1/scripts/kube-apiserver.yaml" -o "kube-apiserver.yaml"
+curl "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/labs/03/k8s-1/scripts/kube-apiserver.yaml" -o "kube-apiserver.yaml"
 cp kube-apiserver.yaml /etc/kubernetes/manifests/
 echo "*** change kube api config "
 sleep 30

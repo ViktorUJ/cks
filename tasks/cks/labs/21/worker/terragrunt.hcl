@@ -46,7 +46,7 @@ inputs = {
     }
     exam_time_minutes = "120"
     test_url          = ""
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/0.3.2/tasks/cks/labs/21/worker/files/worker.sh"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/labs/21/worker/files/worker.sh"
     ssh               = {
       private_key = ""
       pub_key     = ""
