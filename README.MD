@@ -101,7 +101,6 @@ Every command should be run from the project's root directory.
 
 ## Usage scenarios
 
-[Video instruction for launching **CKA mock exam**](https://www.youtube.com/watch?v=P-YYX4CTWIg)
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
@@ -119,6 +118,8 @@ Every command should be run from the project's root directory.
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">mock CKA exam</summary>
+
+  [Video instruction for launching **CKA mock exam**](https://www.youtube.com/watch?v=P-YYX4CTWIg)
 
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
@@ -152,6 +153,8 @@ Every command should be run from the project's root directory.
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">mock CKS exam</summary>
+
+  [Video instruction for launching **CKS mock exam**](https://youtu.be/_GbsBOMaJ9Q)
 
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
