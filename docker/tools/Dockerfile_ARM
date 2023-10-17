@@ -14,9 +14,6 @@ RUN  echo '[mongodb-org-4.4]'>/etc/yum.repos.d/mongodb-org-4.0.repo && \
      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl" && \
      chmod +x ./kubectl && \
      mv kubectl /usr/local/bin/kubectl && \
-     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
-     helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2 && \
-     helm plugin install https://github.com/sstarcher/helm-release && \
      curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | bash && \
      echo 'source /usr/share/bash-completion/bash_completion'>>~/.bashrc && \
      echo 'source <(kubectl completion bash)'>>~/.bashrc && \
@@ -27,3 +24,7 @@ RUN  echo '[mongodb-org-4.4]'>/etc/yum.repos.d/mongodb-org-4.0.repo && \
      rm -rf /var/cache/yum
 
 ENTRYPOINT ["/bin/bash"]
+
+#     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
+#     helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2 && \
+#     helm plugin install https://github.com/sstarcher/helm-release && \
