@@ -15,6 +15,10 @@ RUN  echo '[mongodb-org-4.4]'>/etc/yum.repos.d/mongodb-org-4.0.repo && \
      chmod +x ./kubectl && \
      mv kubectl /usr/local/bin/kubectl && \
      curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | bash && \
+     wget https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz && \
+     curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz && \
+     tar -zxvf helm.tar.gz && \
+     mv linux-arm/helm /usr/local/bin/helm && \
      echo 'source /usr/share/bash-completion/bash_completion'>>~/.bashrc && \
      echo 'source <(kubectl completion bash)'>>~/.bashrc && \
      echo 'complete -C "/usr/local/bin/aws_completer" aws'>>~/.bashrc && \
