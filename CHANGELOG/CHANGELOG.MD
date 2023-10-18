@@ -1,4 +1,9 @@
 # Changelog
+
+## 0.5.1 (15.11.2023)
+### Features
+* ckad mock exam was added
+
 ## 0.4.1 (15.10.2023)
 ### Features
 * Spot ec2 is moved  from **spot request** to  **spot fleet**, which gives spot ec2 more stability

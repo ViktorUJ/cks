@@ -70,8 +70,20 @@ Every command should be run from the project's root directory.
 - ``TASK=01 make run_cka_k8s_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
 - ``make delete_cka_k8s_mock`` - delete mock  CKA exam
 - ``make clean_cka_mock`` clean terragrunt cache  for  cka_mock
-- ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache 
+- ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)  with clean terragrunt cache 
 - ``make output_cka_mock `` - show **outputs** from   **cka_mock**
+
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">CKAD</summary>
+
+### ckad mock
+- ``TASK=01 make run_ckad_k8s_mock`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)
+- ``make delete_ckad_k8s_mock`` - delete mock  CKAD exam
+- ``make clean_ckad_mock`` clean terragrunt cache  for  ckad_mock
+- ``TASK=01 make run_ckad_mock_clean`` - create mock  CKAD exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache 
+- ``make output_ckad_mock `` - show **outputs** from   **ckad_mock**
 
 </details>
 

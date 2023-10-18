@@ -78,6 +78,27 @@ run_cks_mock_clean: clean_cks_mock  run_cks_mock
 output_cks_mock:
 	cd terraform/environments/cks-mock/ && terragrunt run-all output
 
+#CKAD mock
+run_ckad_mock:
+	@echo "*** run ckad mock clean , task ${TASK}"
+	cp -r tasks/ckad/mock/${TASK}/* terraform/environments/ckad-mock/
+	cd terraform/environments/ckad-mock/ && terragrunt run-all apply
+
+delete_ckad_mock:
+	@echo "*** delete ckad mock "
+	cd terraform/environments/ckad-mock/ && terragrunt run-all destroy
+
+clean_ckad_mock:
+	@echo "*** clean cks mock "
+	rm -rf terraform/environments/ckad-mock/*
+
+run_ckad_mock_clean: clean_ckad_mock  run_ckad_mock
+
+output_ckad_mock:
+	cd terraform/environments/ckad-mock/ && terragrunt run-all output
+
+
+
 #EKS
 run_eks_task:
 	@echo "*** run run_eks_task , task ${TASK}"
