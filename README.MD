@@ -68,7 +68,7 @@ Every command should be run from the project's root directory.
 - ``make output_cka_task `` - show **outputs** from   **cka_task**
 ### cka mock
 - ``TASK=01 make run_cka_k8s_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
-- ``make delete_cka_k8s_mock`` - delete mock  CKA exam
+- ``make delete_cka_mock`` - delete mock  CKA exam
 - ``make clean_cka_mock`` clean terragrunt cache  for  cka_mock
 - ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)  with clean terragrunt cache 
 - ``make output_cka_mock `` - show **outputs** from   **cka_mock**
@@ -79,8 +79,8 @@ Every command should be run from the project's root directory.
   <summary style="font-weight: bold; font-size: 1.5em;">CKAD</summary>
 
 ### ckad mock
-- ``TASK=01 make run_ckad_k8s_mock`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)
-- ``make delete_ckad_k8s_mock`` - delete mock  CKAD exam
+- ``TASK=01 make run_ckad_mock`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)
+- ``make delete_ckad_mock`` - delete mock  CKAD exam
 - ``make clean_ckad_mock`` clean terragrunt cache  for  ckad_mock
 - ``TASK=01 make run_ckad_mock_clean`` - create mock  CKAD exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache 
 - ``make output_ckad_mock `` - show **outputs** from   **ckad_mock**
@@ -118,13 +118,13 @@ Every command should be run from the project's root directory.
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
 
 - choose [a hands-on lab](tasks%2Fcka%2Flabs) number
-- create cka lab cluster ``TASK={lab_number} make run_cka_k8s_task``
+- create cka lab cluster ``TASK={lab_number} make run_cka_task``
 - find {master_external_ip} in terraform output
 - log in to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
 - check init logs `` tail -f /var/log/cloud-init-output.log ``
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
-- delete cka lab cluster ``make delete_cka_k8s_task``
+- delete cka lab cluster ``make delete_cka_task``
 - clean cka lab cluster ``.terraform`` folder  ``make clean_cka_k8s ``
 </details>
 
@@ -135,14 +135,14 @@ Every command should be run from the project's root directory.
 
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
-- create mock  CKA exam ``TASK={mock_number} make run_cka_k8s_mock``
+- create mock  CKA exam ``TASK={mock_number} make run_cka_mock``
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
 - open questions list ``{mock_number}/README.MD`` and do tasks
 - use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node
 - run ``time_left`` on work pc to check time
 - run ``check_result`` on work pc to check result
-- delete mock  CKA exam `make delete_cka_k8s_mock`
+- delete mock  CKA exam `make delete_cka_mock`
 - find exam solutions  in ``{mock_number}/worker/files/solutions)`` and * [Video](https://youtu.be/IZsqAPpbBxM)  for [mock 01](tasks%2Fcka%2Fmock%2F01) .
 - find  exam tests in ``{mock_number}/worker/files/tests.bats)``
 </details>
@@ -153,14 +153,14 @@ Every command should be run from the project's root directory.
 
 - choose [CKS lab](tasks%2Fcks%2Flabs%2FREADME.MD)  number
 - change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl`` if you changed **region**
-- create cka lab cluster ``TASK={lab_number} make run_cks_k8s_task``
+- create cka lab cluster ``TASK={lab_number} make run_cks_task``
 - find {master_external_ip} in terraform output
 - log in to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
 - check init logs `` tail -f /var/log/cloud-init-output.log ``
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
-- delete cks lab cluster ``make delete_cks_k8s_task``
-- clean cks lab cluster ``.terraform`` folder  ``make clean_cks_k8s ``
+- delete cks lab cluster ``make delete_cks_task``
+- clean cks lab cluster ``.terraform`` folder  ``make clean_cks_task ``
 </details>
 
 <details>
