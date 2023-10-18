@@ -10,17 +10,17 @@ This includes all available language translations of these pages (e.g. <https://
 
 ## Questions
 
-|        **1**        | **Deploy a pod named webhttpd using the httpd:alpine image in the `webapp` namespace** |
-| :-----------------: | :------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                     |
+|        **1**        | **Deploy a pod named webhttpd  |
+| :-----------------: |:---------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                     |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                        |
 | Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845`         |
 ---
-|        **2**        | **Create a new Deployment named `nginx-app` with 3 replicas using image `nginx:alpine-slim`** |
-| :-----------------: | :-------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                            |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                               |
-| Acceptance criteria | - Deployment: `nginx-app` <br/>- Image: `nginx:alpine-slim`<br/>- Replicas: `2`               |
+|        **2**        | **Create a new Deployment named `nginx-app`                                     |
+| :-----------------: |:--------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                              |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                 |
+| Acceptance criteria | - Deployment: `nginx-app` <br/>- Image: `nginx:alpine-slim`<br/>- Replicas: `2` |
 ---
 |        **3**        | **Deploy a db pod using the `mysql:8.0` with the labels set to `type=db` in the `dev-db` namespace. Create a secret with the name of dbpassword with the value `my-secret-pw`. Use this secret to define a value for environment variable `MYSQL_ROOT_PASSWORD` to set root password for database** |
 | :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
