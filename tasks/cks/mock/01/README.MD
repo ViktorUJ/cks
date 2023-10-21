@@ -17,6 +17,8 @@ This includes all available language translations of these pages (e.g. https://f
 **App Armor**:
 Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 
+![preview](./preview.png)
+
 # Questions
 
 |        **1**        | **Container Runtime Sandbox gVisor**                                                                                                                                                                                                                                                                                                                                                                                      |
