@@ -19,6 +19,9 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 
 ![preview](./preview.png)
 
+- run ``time_left`` on work pc to **check time**
+- run ``check_result`` on work pc to **check result**
+
 # Questions
 
 |        **1**        | **Container Runtime Sandbox gVisor**                                                                                                                                                                                                                                                                                                                                                                                      |
