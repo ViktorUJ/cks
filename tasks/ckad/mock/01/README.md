@@ -10,35 +10,35 @@ This includes all available language translations of these pages (e.g. <https://
 
 ## Questions
 
-|        **1**        | **Deploy a pod named webhttpd  |
-| :-----------------: |:---------------------------------------------------------------------------------------|
-|     Task weight     | 2%                                                                                     |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                        |
-| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845`         |
+|        **1**        | **Deploy a pod named webhttpd**                                                |
+| :-----------------: | :----------------------------------------------------------------------------- |
+|     Task weight     | 1%                                                                             |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
+| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845` |
 ---
-|        **2**        | **Create a new Deployment named `nginx-app`                                     |
-| :-----------------: |:--------------------------------------------------------------------------------|
+|        **2**        | **Create a new Deployment named `nginx-app`**                                   |
+| :-----------------: | :------------------------------------------------------------------------------ |
 |     Task weight     | 1%                                                                              |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                 |
 | Acceptance criteria | - Deployment: `nginx-app` <br/>- Image: `nginx:alpine-slim`<br/>- Replicas: `2` |
 ---
 |        **3**        | **Deploy a db pod using the `mysql:8.0` with the labels set to `type=db` in the `dev-db` namespace. Create a secret with the name of dbpassword with the value `my-secret-pw`. Use this secret to define a value for environment variable `MYSQL_ROOT_PASSWORD` to set root password for database** |
 | :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | 8%                                                                                                                                                                                                                                                                                                  |
+|     Task weight     | 4%                                                                                                                                                                                                                                                                                                  |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                     |
-| Acceptance criteria | - Name: `db-pod` <br/>- Image: `mysql:8.0`<br/>- Labels: `type=db`<br/>- Namespace: `dev-db`<br/>- Secret Name: `dbpassword`<br/>- Secret value: `my-secret-pw`<br/>- Use environment variable `MYSQL_ROOT_PASSWORD` and value of the secret to set up the password for db                          |
+| Acceptance criteria | - Name: `db-pod` <br/>- Image: `mysql:8.0`<br/>- Labels: `type=db`<br/>- Namespace: `dev-db`<br/>- Secret Name: `dbpassword`<br/>- Secret key: `pwd`<br/>- Secret value: `my-secret-pw`<br/>- Use environment variable `MYSQL_ROOT_PASSWORD` and value of the secret to set up the password for db  |
 ---
-|        **4**        | **A replicaset `rs-app2223` is created. However the pods are not coming up. Identify and fix the issue.** |
-| :-----------------: | :-------------------------------------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                                                        |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                           |
-| Acceptance criteria | - ReplicaSet has 4 Ready replicas.                                                                        |
+|        **4**        | **A replicaset `rs-app2223` in namespace `rsapp` is created. However the pods are not coming up. Identify and fix the issue.** |
+| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 1%                                                                                                                             |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                |
+| Acceptance criteria | - ReplicaSet has 2 Ready replicas.                                                                                             |
 ---
-|        **5**        | **Create a service `msg-service` to expose the redis deployment in the `messaging` namespace within the cluster on port `6379`. Use imperative command.** |
-| :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                                        |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                           |
-| Acceptance criteria | - Use imperative commands <br/>- Service: `msg-service`<br/>- Port: `6379`<br/>- Namespace: `messaging`<br/>- Use the right type of Service               |
+|        **5**        | **Create a service `msg-service` to expose the `msg` deployment with `redis` image in the `messaging` namespace within the cluster on port `6379`. Use imperative commands.** |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 2%                                                                                                                                                                            |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                               |
+| Acceptance criteria | - Use imperative commands <br/>- Service: `msg-service`<br/>- Port: `6379`<br/>- Namespace: `messaging`<br/>- Use the right type of Service                                   |
 ---
 |        **6**        | **Update the environment variable on the pod text-printer.**                                                 |
 | :-----------------: | :----------------------------------------------------------------------------------------------------------- |
