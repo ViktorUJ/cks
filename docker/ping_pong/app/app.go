@@ -17,12 +17,21 @@ var (
 	requestsPerSecond float64
 	requestsPerMinute float64
 	lastRequestTime   time.Time
-	requestsCount     uint64  // Add this line
+	requestsCount     uint64
+	serverName        string
 )
+
+func init() {
+	serverName = os.Getenv("SERVER_NAME")
+	if serverName == "" {
+		serverName = "ping_pong_server"
+	}
+}
 
 // requestHandler handles all incoming HTTP requests and returns the request details as the response.
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
+	response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))  // Server Name is now the first line in the response
 	response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
 	response.WriteString(fmt.Sprintf("URL: %s\n", r.URL.String()))
 	response.WriteString(fmt.Sprintf("Protocol: %s\n", r.Proto))
@@ -92,7 +101,7 @@ func metricsHandler() {
 
 	metricPort := os.Getenv("METRIC_PORT")
 	if metricPort == "" {
-		metricPort = "9090"  // Default port for Prometheus metrics
+		metricPort = "9090"  // Default port for Prometheus metrics is now 9090
 	}
 
 	http.Handle("/metrics", promhttp.Handler())
