@@ -32,7 +32,7 @@ func init() {
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
 	response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))
-	response.WriteString(fmt.Sprintf("URL: %s\n", r.URL.String()))  // The URL is now the second line in the response
+    response.WriteString(fmt.Sprintf("URL: http://%s%s\n", r.Host, r.URL.String()))
 	response.WriteString(fmt.Sprintf("Client IP: %s\n", getIP(r)))
 	response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
 	response.WriteString(fmt.Sprintf("Protocol: %s\n", r.Proto))
