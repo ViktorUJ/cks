@@ -1,6 +1,3 @@
-# docker build  --file Dockerfile --compress --no-cache  -t viktoruj/ping_pong:latest .
-# docker push  viktoruj/ping_pong:latest
-
 docker buildx build --platform linux/arm64 --load -t viktoruj/ping_pong:arm64   .
 docker buildx build --platform linux/amd64 --load -t viktoruj/ping_pong:amd64   .
 docker push viktoruj/ping_pong:arm64
