@@ -110,6 +110,10 @@ func metricsHandler() {
 
 // main function sets up the main HTTP server and the metrics server.
 func main() {
+	// Print all environment variables
+	for _, env := range os.Environ() {
+		fmt.Println(env)
+	}
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()  // Start the metrics server in a separate goroutine
 
