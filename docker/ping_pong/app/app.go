@@ -14,14 +14,12 @@ import (
 )
 
 var (
-	requestsPerSecond int64
-	requestsPerMinute int64
+	requestsPerSecond float64
+	requestsPerMinute float64
+	lastRequestTime   time.Time
 )
 
 func requestHandler(w http.ResponseWriter, r *http.Request) {
-	atomic.AddInt64(&requestsPerSecond, 1)
-	atomic.AddInt64(&requestsPerMinute, 1)
-
 	var response strings.Builder
 	response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
 	response.WriteString(fmt.Sprintf("URL: %s\n", r.URL.String()))
@@ -34,32 +32,73 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Update metrics
+	atomic.AddUint64(&requestsCount, 1)
+	now := time.Now()
+	elapsed := now.Sub(lastRequestTime).Seconds()
+	lastRequestTime = now
+	requestsPerSecond = 1 / elapsed
+	requestsPerMinute = requestsPerSecond * 60
+
 	// Вывод всех заголовков и метаинформации в ответ
 	fmt.Fprint(w, response.String())
 }
 
-func recordMetrics() {
-	tickerSecond := time.NewTicker(time.Second)
-	tickerMinute := time.NewTicker(time.Minute)
-	for {
-		select {
-		case <-tickerSecond.C:
-			atomic.StoreInt64(&requestsPerSecond, 0)
-		case <-tickerMinute.C:
-			atomic.StoreInt64(&requestsPerMinute, 0)
-		}
+func metricsHandler() {
+	requests := prometheus.NewCounterFunc(
+		prometheus.CounterOpts{
+			Name: "requests_total",
+			Help: "Total number of requests.",
+		},
+		func() float64 {
+			return float64(atomic.LoadUint64(&requestsCount))
+		},
+	)
+
+	rps := prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "requests_per_second",
+			Help: "Requests per second.",
+		},
+		func() float64 {
+			return requestsPerSecond
+		},
+	)
+
+	rpm := prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "requests_per_minute",
+			Help: "Requests per minute.",
+		},
+		func() float64 {
+			return requestsPerMinute
+		},
+	)
+
+	goroutines := prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "goroutines",
+			Help: "Current number of goroutines.",
+		},
+		func() float64 {
+			return float64(runtime.NumGoroutine())
+		},
+	)
+
+	prometheus.MustRegister(requests, rps, rpm, goroutines)
+
+	metricPort := os.Getenv("METRIC_PORT")
+	if metricPort == "" {
+		metricPort = "2112"  // Default port for Prometheus metrics
 	}
+
+	http.Handle("/metrics", promhttp.Handler())
+	http.ListenAndServe(":"+metricPort, nil)
 }
 
 func main() {
-	go recordMetrics()
-
 	http.HandleFunc("/", requestHandler)
-
-	http.Handle("/metrics", promhttp.HandlerFor(
-		prometheus.DefaultGatherer,
-		promhttp.HandlerOpts{},
-	))
+	go metricsHandler()  // Start the metrics server in a separate goroutine
 
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
@@ -67,21 +106,8 @@ func main() {
 		port = "8080"
 	}
 
-	metricPort := os.Getenv("METRIC_PORT")
-	if metricPort == "" {
-		fmt.Println("METRIC_PORT is not set, defaulting to 9090")
-		metricPort = "9090"
-	}
-
-	go func() {
-		err := http.ListenAndServe(":"+port, nil)
-		if err != nil {
-			fmt.Println("Server failed:", err)
-		}
-	}()
-
-	err := http.ListenAndServe(":"+metricPort, nil)
+	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
-		fmt.Println("Metric server failed:", err)
+		fmt.Println("Server failed:", err)
 	}
 }
