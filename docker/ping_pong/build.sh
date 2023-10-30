@@ -1,2 +1,2 @@
-docker build  --file Dockerfile --compress --no-cache  -t viktoruj/cks-lab:cks_14_app1 .
-docker push  viktoruj/cks-lab:cks_14_app1
+docker build  --file Dockerfile --compress --no-cache  -t viktoruj/ping_pong:latest .
+docker push  viktoruj/ping_pong:latest
