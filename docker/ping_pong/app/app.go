@@ -40,7 +40,6 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	requestsPerSecond = 1 / elapsed
 	requestsPerMinute = requestsPerSecond * 60
 
-	// Вывод всех заголовков и метаинформации в ответ
 	fmt.Fprint(w, response.String())
 }
 
