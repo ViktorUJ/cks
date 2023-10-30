@@ -17,8 +17,10 @@ var (
 	requestsPerSecond float64
 	requestsPerMinute float64
 	lastRequestTime   time.Time
+	requestsCount     uint64  // Add this line
 )
 
+// requestHandler handles all incoming HTTP requests and returns the request details as the response.
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
 	response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
@@ -40,9 +42,11 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	requestsPerSecond = 1 / elapsed
 	requestsPerMinute = requestsPerSecond * 60
 
+	// Output all headers and meta information in the response
 	fmt.Fprint(w, response.String())
 }
 
+// metricsHandler sets up the Prometheus metrics and starts the metrics server.
 func metricsHandler() {
 	requests := prometheus.NewCounterFunc(
 		prometheus.CounterOpts{
@@ -92,9 +96,10 @@ func metricsHandler() {
 	}
 
 	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":"+metricPort, nil)
+	http.ListenAndServe(":" + metricPort, nil)
 }
 
+// main function sets up the main HTTP server and the metrics server.
 func main() {
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()  // Start the metrics server in a separate goroutine
@@ -105,7 +110,7 @@ func main() {
 		port = "8080"
 	}
 
-	err := http.ListenAndServe(":"+port, nil)
+	err := http.ListenAndServe(":" + port, nil)
 	if err != nil {
 		fmt.Println("Server failed:", err)
 	}
