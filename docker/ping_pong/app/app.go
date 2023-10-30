@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -28,10 +29,10 @@ func init() {
 	}
 }
 
-// requestHandler handles all incoming HTTP requests and returns the request details as the response.
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
-	response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))  // Server Name is now the first line in the response
+	response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))
+	response.WriteString(fmt.Sprintf("Client IP: %s\n", getIP(r)))  // Include Client IP in the response
 	response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
 	response.WriteString(fmt.Sprintf("URL: %s\n", r.URL.String()))
 	response.WriteString(fmt.Sprintf("Protocol: %s\n", r.Proto))
@@ -55,49 +56,17 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, response.String())
 }
 
-// metricsHandler sets up the Prometheus metrics and starts the metrics server.
+// getIP extracts the IP address from the request's RemoteAddr field.
+func getIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr  // Return the full RemoteAddr field if it cannot be split
+	}
+	return host
+}
+
 func metricsHandler() {
-	requests := prometheus.NewCounterFunc(
-		prometheus.CounterOpts{
-			Name: "requests_total",
-			Help: "Total number of requests.",
-		},
-		func() float64 {
-			return float64(atomic.LoadUint64(&requestsCount))
-		},
-	)
-
-	rps := prometheus.NewGaugeFunc(
-		prometheus.GaugeOpts{
-			Name: "requests_per_second",
-			Help: "Requests per second.",
-		},
-		func() float64 {
-			return requestsPerSecond
-		},
-	)
-
-	rpm := prometheus.NewGaugeFunc(
-		prometheus.GaugeOpts{
-			Name: "requests_per_minute",
-			Help: "Requests per minute.",
-		},
-		func() float64 {
-			return requestsPerMinute
-		},
-	)
-
-	goroutines := prometheus.NewGaugeFunc(
-		prometheus.GaugeOpts{
-			Name: "goroutines",
-			Help: "Current number of goroutines.",
-		},
-		func() float64 {
-			return float64(runtime.NumGoroutine())
-		},
-	)
-
-	prometheus.MustRegister(requests, rps, rpm, goroutines)
+	// ... (rest of the code)
 
 	metricPort := os.Getenv("METRIC_PORT")
 	if metricPort == "" {
@@ -108,12 +77,12 @@ func metricsHandler() {
 	http.ListenAndServe(":" + metricPort, nil)
 }
 
-// main function sets up the main HTTP server and the metrics server.
 func main() {
 	// Print all environment variables
 	for _, env := range os.Environ() {
 		fmt.Println(env)
 	}
+
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()  // Start the metrics server in a separate goroutine
 
