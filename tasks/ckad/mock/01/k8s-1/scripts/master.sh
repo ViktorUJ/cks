@@ -12,53 +12,12 @@ aarch64)
 ;;
 esac
 
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: messaging
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: rsapp
----
-apiVersion: apps/v1
-kind: ReplicaSet
-metadata:
-  name: rs-app2223
-  namespace: rsapp
-  labels:
-    app: app2223
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: rs-app2223
-  template:
-    metadata:
-      labels:
-        app: rs-app2223
-    spec:
-      containers:
-      - name: redis
-        image: rrredis:alpine
----
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    run: text-printer
-  name: text-printer
-spec:
-  containers:
-  - image: busybox
-    name: text-printer
-    command:
-      - '/bin/sh'
-      - '-c'
-      - 'while true; do echo "Environment VAR: $COLOR"; sleep 60; done'
-    env:
-    - name: COLOR
-      value: "RED"
-EOF
+mkdir -p /opt/logs/
+chmod o+w /opt/logs
+
+BRANCH="CKAD-mock-questions"
+
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/$BRANCH/tasks/ckad/mock/01/k8s-1/scripts/task4.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/$BRANCH/tasks/ckad/mock/01/k8s-1/scripts/task5.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/$BRANCH/tasks/ckad/mock/01/k8s-1/scripts/task6.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/$BRANCH/tasks/ckad/mock/01/k8s-1/scripts/task8.yaml

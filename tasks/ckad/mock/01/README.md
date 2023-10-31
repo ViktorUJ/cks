@@ -42,21 +42,21 @@ This includes all available language translations of these pages (e.g. <https://
 ---
 |        **6**        | **Update the environment variable on the pod text-printer.**                                                 |
 | :-----------------: | :----------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                           |
+|     Task weight     | 1%                                                                                                           |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                              |
 | Acceptance criteria | - Change the value of the environment variable to `GREEN`<br/>- Ensure that the logs of the pod was updated. |
 ---
-|        **7**        | **Run pod `appsec-pod` with `ubuntu:22.04` image as root user and with SYS_TIME capability.**                         |
-| :-----------------: | :-------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                    |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                       |
-| Acceptance criteria | - Pod name: `appsec-pod` <br/>- Image: `ubuntu:22.04`<br/>- User: `root`<br/>- SecurityContext: Capability `SYS_TIME` |
+|        **7**        | **Run pod `appsec-pod` with `ubuntu:22.04` image as root user and with SYS_TIME capability.**                                                              |
+| :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 2%                                                                                                                                                         |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                            |
+| Acceptance criteria | - Pod name: `appsec-pod` <br/>- Image: `ubuntu:22.04`<br/>- Command: `sleep 4800`<br/>- Container user: `root`<br/>- Allow container capability `SYS_TIME` |
 ---
-|        **8**        | **Export the logs of the pod `app-xyz3322` to a file located at `/var/logs/app-xyz123.log`. The pod is located in a different namespace. First, identify the namespace where the pod is running.** |
+|        **8**        | **Export the logs of the pod `app-xyz3322` to a file located at `/opt/logs/app-xyz123.log`. The pod is located in a different namespace. First, identify the namespace where the pod is running.** |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | 1%                                                                                                                                                                                                 |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                    |
-| Acceptance criteria | - Logs at `/var/logs/app-xyz123.log`                                                                                                                                                               |
+| Acceptance criteria | - Logs at `/opt/logs/app-xyz123.log`                                                                                                                                                               |
 ---
 |        **9**        | **Add a taint to the node node01 of the cluster. Create a pod called alpha, image: redis with toleration to node01.**                                                                                                                 |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

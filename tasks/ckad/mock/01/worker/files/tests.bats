@@ -113,3 +113,45 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 #6
+@test "6 Update environment variable value to GREEN" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get pods text-printer  -o jsonpath='{.spec.containers..env..value}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "GREEN" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "GREEN" ]
+}
+
+#7
+@test "7.1 Check pod capability.SYS_TIME" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get pod appsec-pod -o jsonpath='{.spec.containers..capabilities.add[0]}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "SYS_TIME" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "SYS_TIME" ]
+}
+
+# 8
+@test "8. Check logs from pod app-xyz3322" {
+  echo '1'>>/var/work/tests/result/all
+  grep "app-xyz3322" /opt/logs/app-xyz123.log
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+#9
+#Update from controlplane to node 01
+@test "9.1 Check controlplane taint" {
+  echo '1'>>/var/work/tests/result/all
+  node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node-role\.kubernetes\.io/control-plane)].metadata.name}'  --context cluster1-admin@cluster1)
+  result=$(kubectl get node $node_name -o jsonpath='{.spec.taints[?(.key == "app_type")].value}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "alpha" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "alpha" ]
+}
+
