@@ -8,11 +8,13 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 }
 
-@test "1. Deploy a pod named webhttpd  " {
+@test "1. aws cli , ec2  tag  env_name=hr-mock " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get po webhttpd -n apx-z993845  -o jsonpath='{.spec.containers..image}'  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "httpd:alpine" ]]; then
+  aws ec2 describe-instances --region eu-north-1 --filters "Name=tag:env_name,Values=hr-mock" --output json > /var/work/tests/artifacts/1/ec2_2.json
+  diff <(jq -r '.Reservations[].Instances[].InstanceId' /var/work/tests/artifacts/1/ec2_1.json) <(jq -r '.Reservations[].Instances[].InstanceId' /var/work/tests/artifacts/1/ec2_2.json)
+  result=$?
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "httpd:alpine" ]
+  [ "$result" == "0" ]
 }
