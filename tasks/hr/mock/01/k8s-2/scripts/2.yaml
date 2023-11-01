@@ -26,11 +26,6 @@ spec:
         app: test-app
     spec:
       containers:
-      - image: viktoruj/ping_pong
+      - image: nginx
         name: app
-        env:
-          - name: "SRV_PORT"
-            value: "80"
-          - name: "SERVER_NAME"
-            value: "TEST-APP"
 
