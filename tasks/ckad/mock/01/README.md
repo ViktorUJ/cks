@@ -60,7 +60,7 @@ This includes all available language translations of these pages (e.g. <https://
 ---
 |        **9**        | **Add a taint to the node node01 of the cluster. Create a pod called alpha, image: redis with toleration to node01.**                                                                                                                 |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|     Task weight     | 1%                                                                                                                                                                                                                                    |
+|     Task weight     | 2%                                                                                                                                                                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                       |
 | Acceptance criteria | - Tains node01:<br/>    key: `app_type`, value: `alpha`, effect: `NoSchedule`<br/>- Create a pod called `alpha`, `image: redis` with toleration to node01.<br/>- node01 with the correct taint? Pod alpha has the correct toleration? |
 ---

@@ -143,15 +143,43 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-#9
-#Update from controlplane to node 01
-@test "9.1 Check controlplane taint" {
+# 9
+@test "9.1 Check node taint" {
   echo '1'>>/var/work/tests/result/all
-  node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node-role\.kubernetes\.io/control-plane)].metadata.name}'  --context cluster1-admin@cluster1)
+  node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node_name=="node_2")].metadata.name}' --context cluster1-admin@cluster1)
   result=$(kubectl get node $node_name -o jsonpath='{.spec.taints[?(.key == "app_type")].value}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "alpha" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "alpha" ]
+}
+
+@test "9.2 Check pod tolerations" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get pods alpha -o jsonpath='{.spec.tolerations[?(.key == "app_type")].value}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "alpha" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "alpha" ]
+}
+
+# 10
+@test "10.1 Check controlplane label.app_type" {
+  echo '0.5'>>/var/work/tests/result/all
+  node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node-role\.kubernetes\.io/control-plane)].metadata.name}' --context cluster1-admin@cluster1)
+  result=$(kubectl get node $node_name -o jsonpath='{.metadata.labels.app_type}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "beta" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "beta" ]
+}
+
+@test "10.2 Check deployment" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployment beta-apps -o jsonpath='{.spec.replicas}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "3" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "3" ]
 }
 
