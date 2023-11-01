@@ -18,3 +18,21 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "2.1 update deployment named test-app.Image_tag " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployment  test-app -n dev-team  -o jsonpath='{.spec..containers..image}'  --context cluster2-admin@cluster2 )
+  if [[ "$result" == "nginx:stable" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "nginx:stable" ]
+}
+
+@test "2.2 Create a deployment named hr-web-app.Replicas " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployment  test-app -n dev-team  -o jsonpath='{.spec.replicas}'  --context cluster2-admin@cluster2 )
+  if [[ "$result" == "4" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "4" ]
+}
