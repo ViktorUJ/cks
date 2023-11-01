@@ -56,9 +56,9 @@ x86_64)
 ;;
 aarch64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
-  curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz && \
-  tar -zxvf helm.tar.gz && \
-  mv linux-arm/helm /usr/local/bin/helm && \
+  curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz
+  tar -zxvf helm.tar.gz
+  mv linux-arm/helm /usr/local/bin/helm
 ;;
 esac
 
