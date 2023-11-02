@@ -49,6 +49,10 @@ spec:
     port: 80
     protocol: TCP
     targetPort: 80
+  - name: metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
   selector:
     app: app
   type: ClusterIP
