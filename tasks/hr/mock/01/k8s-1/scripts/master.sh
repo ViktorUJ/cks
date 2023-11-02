@@ -11,3 +11,5 @@ aarch64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
 ;;
 esac
+
+kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/hr/tasks/hr/mock/01/k8s-1/scripts/4.yaml
