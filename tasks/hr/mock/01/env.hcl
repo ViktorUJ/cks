@@ -19,6 +19,6 @@ locals {
   ami_id               = ""
   root_volume          = {
     type = "gp3"
-    size = "12"
+    size = "20"
   }
 }
