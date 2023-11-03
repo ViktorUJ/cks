@@ -1,0 +1,7 @@
+prometheus:
+  additionalPodMonitors:
+    - name: linkerd-proxy
+      namespaceSelector:
+        matchNames:
+          - default
+          - prod
