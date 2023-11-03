@@ -1,3 +1,4 @@
 #!/bin/bash
 echo " *** worker pc mock-1  "
-wget  "${test_url}"  -o "tests.bats" -s
+cd /var/work/tests/artifacts
+wget  https://raw.githubusercontent.com/ViktorUJ/cks/hr/tasks/hr/mock/01/worker/files/kube-prometheus-stack.yaml
