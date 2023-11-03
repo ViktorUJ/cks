@@ -37,6 +37,16 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "4" ]
 }
 
+@test "3. install helm  release  name=kube-prometheus-stack" {
+  echo '1'>>/var/work/tests/result/all
+  helm list   -n monitoring  --kube-context  cluster1-admin@cluster1  -o json | jq -r '.[0].chart' | grep 'kube-prometheus-stack' | grep '45.4.0'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
 @test "5. cluster1 . get node with label work_type=infra " {
   echo '1'>>/var/work/tests/result/all
   kubectl get no    -l work_type=infra  --context cluster1-admin@cluster1 -o json  > /var/work/tests/artifacts/5/nodes_2.json
