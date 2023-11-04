@@ -56,3 +56,23 @@ spec:
   selector:
     app: app
   type: ClusterIP
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: test-prom
+  name: test-prom
+  namespace: prod
+spec:
+  containers:
+  - command:
+    - sleep
+    - "60000"
+    image: viktoruj/cks-lab
+    name: test-prom
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
