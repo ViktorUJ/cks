@@ -59,7 +59,7 @@ inputs = {
     util               = {
       kubectl_version = local.vars.locals.k8_version
     }
-    exam_time_minutes = "120"
+    exam_time_minutes = "25"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/hr/tasks/hr/mock/01/worker/files/tests.bats"
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/hr/tasks/hr/mock/01/worker/files/worker.sh"
     ssh               = {

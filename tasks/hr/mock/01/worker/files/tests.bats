@@ -47,6 +47,15 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
+@test "4. check metrics in prometeus from prod app" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  exec  test-prom -n prod --context cluster1-admin@cluster1 -- sh -c 'curl -s  kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=requests_per_second | jq -r ".data.result[].metric.pod" | wc -l')
+  if [[ "$result" == "3" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "3" ]
+}
+
 @test "5. cluster1 . get node with label work_type=infra " {
   echo '1'>>/var/work/tests/result/all
   kubectl get no    -l work_type=infra  --context cluster1-admin@cluster1 -o json  > /var/work/tests/artifacts/5/nodes_2.json
