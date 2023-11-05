@@ -28,7 +28,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "nginx:stable" ]
 }
 
-@test "2.2 Create a deployment named hr-web-app.Replicas " {
+@test "2.2 update deployment named test-app.Replicas " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get deployment  test-app -n dev-team  -o jsonpath='{.spec.replicas}'  --context cluster2-admin@cluster2 )
   if [[ "$result" == "4" ]]; then
