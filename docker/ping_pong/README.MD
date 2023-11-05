@@ -5,3 +5,5 @@ This is a small HTTP server that sends back the incoming request with all the me
 - `METRIC_PORT`: The port where server metrics are available in Prometheus format.
 
 You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
+
+`docker pull viktoruj/ping_pong`
