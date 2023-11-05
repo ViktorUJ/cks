@@ -3,6 +3,7 @@
 ## 0.5.1 (15.11.2023)
 ### Features
 * ckad mock exam was added
+* [HR scenario](..%2Ftasks%2Fhr%2Fmock%2F01) was added
 
 ## 0.4.1 (15.10.2023)
 ### Features
