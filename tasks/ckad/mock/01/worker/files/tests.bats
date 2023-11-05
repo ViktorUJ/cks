@@ -144,6 +144,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # 9
+
+# WE NEED TO CHECK
 @test "9.1 Check node taint" {
   echo '1'>>/var/work/tests/result/all
   node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node_name=="node_2")].metadata.name}' --context cluster1-admin@cluster1)
@@ -164,6 +166,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # 10
+
+# WE NEED TO CHECK
 @test "10.1 Check controlplane label.app_type" {
   echo '0.5'>>/var/work/tests/result/all
   node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node-role\.kubernetes\.io/control-plane)].metadata.name}' --context cluster1-admin@cluster1)
@@ -182,4 +186,21 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "3" ]
 }
+
+# 11
+
+# 12
+
+# 13
+
+
+# 14
+
+# 15
+
+# 16
+
+# 17
+
+# 18
 
