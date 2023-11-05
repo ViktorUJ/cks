@@ -30,3 +30,17 @@
 |     Task weight     | 1%                                                                        |
 |       Cluster       | cluster2                                                                  |
 | Acceptance criteria | - ns: `dev-team` <br/>- deployment name: `test-app`<br/>-  replicas: `4` <br/>-  image: `nginx:stable` |
+
+
+|        **3**        | **install helm  release  kube-prometheus-stack**                                                                                                                                           |
+|:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                                         |
+|       Cluster       | cluster1                                                                                                                                                                                   |
+| Acceptance criteria | - ns: `monitoring` <br/>- release name : `kube-prometheus-stack`<br/>-  repository: `https://prometheus-community.github.io/helm-charts` <br/>-  version: `45.4.0` <br/>-  values file: `/var/work/tests/artifacts/kube-prometheus-stack.yaml` |
+
+
+|        **4**        | **create prometheus operator crd service monitor**                                                                                                                                                                                            |
+|:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                                                                                            |
+|       Cluster       | cluster1                                                                                                                                                                                                                                      |
+| Acceptance criteria | - ns: `prod` <br/>- service: `app`<br/>-  service.port: `metrics` <br/>-  for checking  result you can make  http request to   : `kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/query?query=requests_per_second ` |
