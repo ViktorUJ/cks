@@ -1,4 +1,4 @@
-**This script is an example of a scenario that can be used as part of the interview screening process for hiring employees for SRE (Site Reliability Engineer) and DevOps positions. The expected execution time should not exceed 25 minutes. The technology stack includes AWS, Kubernetes, Helm, and Prometheus.**
+**This script is an example of a scenario that can be used as part of the interview screening process to hire employees for SRE (Site Reliability Engineer) and DevOps positions. The expected execution time should not exceed 25 minutes. The technology stack includes AWS, Kubernetes, Helm, and Prometheus.**
 
 # Allowed resources
 
