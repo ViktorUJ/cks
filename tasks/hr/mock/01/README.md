@@ -14,6 +14,8 @@
 
 <https://github.com/prometheus-community/helm-charts/>  and their subdomains
 
+<https://github.com/prometheus-operator/prometheus-operator/tree/main/Documentation/user-guides/> and their subdomains
+
 
 
 ## Questions
@@ -39,7 +41,7 @@
 | Acceptance criteria | - ns: `monitoring` <br/>- release name : `kube-prometheus-stack`<br/>-  repository: `https://prometheus-community.github.io/helm-charts` <br/>-  version: `45.4.0` <br/>-  values file: `/var/work/tests/artifacts/kube-prometheus-stack.yaml` |
 
 
-|        **4**        | **Create prometheus operator crd service monitor**                                                                                                                                                                                            |
+|        **4**        | **Create prometheus operator crd serviceMonitor**                                                                                                                                                                                             |
 |:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 1%                                                                                                                                                                                                                                            |
 |       Cluster       | cluster1                                                                                                                                                                                                                                      |
