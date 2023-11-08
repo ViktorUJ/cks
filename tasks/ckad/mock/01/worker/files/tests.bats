@@ -105,7 +105,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "5.3 Create a service msg-service.Port" {
   echo '0.5'>>/var/work/tests/result/all
-  result=$(k get svc -n messaging msg-service -o jsonpath='{.spec.ports..port}' --context cluster1-admin@cluster1 )
+  result=$(kubectl get svc -n messaging msg-service -o jsonpath='{.spec.ports..port}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "6379" ]]; then
    echo '0.5'>>/var/work/tests/result/ok
   fi
@@ -196,11 +196,117 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # 14
 
+
 # 15
+@test "15 Check PersistentVolume" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get pv my-volume -o json --context cluster1-admin@cluster1 | jq -r '"\(.spec.capacity.storage) \(.spec.hostPath.path) \(.spec.accessModes[])"')
+  if [[ "$result" == "50Mi /opt/data ReadWriteMany" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "50Mi /opt/data ReadWriteMany" ]
+}
 
 # 16
+@test "16.1 Check CRD.group" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.group}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "stable.example.com" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "stable.example.com" ]
+}
+
+@test "16.2 Check CRD Scheme.name" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.versions..openAPIV3Schema..spec.properties.name.type}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "string" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "string" ]
+}
+
+@test "16.3 Check CRD Scheme.email" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.versions..openAPIV3Schema..spec.properties.email.type}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "string" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "string" ]
+}
+
+@test "16.4 Check CRD Scheme.age" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.versions..openAPIV3Schema..spec.properties.age.type}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "integer" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "integer" ]
+}
+
+@test "16.5 Check CRD names.kind" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.names.kind}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "Operator" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "Operator" ]
+}
+
+@test "16.6 Check CRD names.plural" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.names.plural}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "operators" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "operators" ]
+}
+
+@test "16.7 Check CRD names.singular" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.names.singular}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "operator" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "operator" ]
+}
+
+@test "16.8 Check CRD names.shortNames" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.names.shortNames[]}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "op" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "op" ]
+}
 
 # 17
+@test "17.1 Check command to check CPU and Mem of the nodes" {
+  echo '1'>>/var/work/tests/result/all
+  diff <(bash /opt/18/nodes.txt) <(kubectl top nodes --context cluster1-admin@cluster1)
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "17.2 Check command to check pod CPU and Mem sorted by cpu consumtion" {
+  echo '1'>>/var/work/tests/result/all
+  diff <(bash /opt/18/pods.txt) <(kubectl top pod --all-namespaces --sort-by cpu --context cluster1-admin@cluster1)
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
 
 # 18
-
+@test "18 Check installed helm chart" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(helm get metadata prom -n monitoring -o json  --kube-context cluster1-admin@cluster1  | jq -r '"\(.name) \(.chart) \(.status)"')
+  if [[ "$result" == "prom kube-prometheus-stack deployed" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "prom kube-prometheus-stack deployed" ]
+}
