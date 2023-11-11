@@ -10,22 +10,14 @@ resource "aws_security_group" "servers" {
     cidr_blocks = var.k8s_master.cidrs
     description = "ssh"
   }
-  ingress {
-    from_port   = "80"
-    to_port     = "80"
-    protocol    = "tcp"
-    cidr_blocks = var.k8s_master.cidrs
-    description = "http"
-  }
 
   ingress {
-    from_port   = "443"
-    to_port     = "443"
+    from_port   = "30000"
+    to_port     = "32767"
     protocol    = "tcp"
     cidr_blocks = var.k8s_master.cidrs
-    description = "https"
+    description = "NodePort k8s"
   }
-
 
   ingress {
     from_port   = 0
