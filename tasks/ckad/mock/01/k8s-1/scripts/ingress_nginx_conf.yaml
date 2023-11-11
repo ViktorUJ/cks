@@ -1,3 +1,5 @@
 controller:
   nodeSelector:
     work_type: ingress
+  service:
+    type: nodePort
