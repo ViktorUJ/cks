@@ -17,4 +17,4 @@ kubectl -n kube-system patch deployment metrics-server --type=json \
 # ingress-nginx installation
 helm upgrade --install ingress-nginx ingress-nginx \
   --repo https://kubernetes.github.io/ingress-nginx \
-  --namespace ingress-nginx --create-namespace
+  --namespace ingress-nginx --create-namespace -f
