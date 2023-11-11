@@ -1,5 +1,5 @@
 #!/bin/bash
-echo " *** master node  mock-1  k8s-1"
+echo " *** master node  ckad mock-1  k8s-1"
 export KUBECONFIG=/root/.kube/config
 
 BRANCH="CKAD-mock-questions"
