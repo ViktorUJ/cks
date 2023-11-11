@@ -70,11 +70,11 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                                                                       |
 | Acceptance criteria | - NodeAffinity: `requiredDuringSchedulingIgnoredDuringExecution`<br/>- controlplane has the labels `app_type=beta`<br/>- Deployment `beta-apps`<br/>- Deployment beta-apps has correct Key for NodeAffinity?<br/>- Deployment beta-apps has correct Value for NodeAffinity?<br/>- Pods of deployment are running only on controlplane?<br/>- Deployment beta-apps has 3 pods running? |
 ---
-|       **11**        | **Create new ingress resource to the service. Make it available at the path `/cat** |
-| :-----------------: | :---------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                  |
-|       Cluster       | cluster2 (`kubectl config use-context cluster1-admin@cluster1`)                     |
-| Acceptance criteria | - Annotation: `nginx.ingress.kubernetes.io/rewrite-target: /`<br/>- path: `/cat`    |
+|       **11**        | **Create new ingress resource to the service. Make it available at the path `/cat**                                         |
+| :-----------------: |:----------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | ?%                                                                                                                          |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                             |
+| Acceptance criteria | - NameSpace: cat <br/>- service: cat  <br/>- Annotation: `nginx.ingress.kubernetes.io/rewrite-target: /`<br/>- path: `/cat` |
 ---
 |       **12**        | **Create a new pod called `nginx1233` in the `web-ns` namespace with the image `nginx`. Add a livenessProbe to the container to restart it if the command `ls /var/www/html/` probe fails. This check should start after a delay of 10 seconds and run every 60 seconds.** |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
