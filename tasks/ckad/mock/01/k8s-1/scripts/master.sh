@@ -15,6 +15,9 @@ kubectl -n kube-system patch deployment metrics-server --type=json \
 -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]]'
 
 # ingress-nginx installation
-helm upgrade --install ingress-nginx ingress-nginx \
-  --repo https://kubernetes.github.io/ingress-nginx \
-  --namespace ingress-nginx --create-namespace -f https://raw.githubusercontent.com/ViktorUJ/cks/CKAD-mock-questions/tasks/ckad/mock/01/k8s-1/scripts/ingress_nginx_conf.yaml
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+
+helm install ingress-nginx  ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --version 4.8.3 \
+  -f https://raw.githubusercontent.com/ViktorUJ/cks/CKAD-mock-questions/tasks/ckad/mock/01/k8s-1/scripts/ingress_nginx_conf.yaml
