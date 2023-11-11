@@ -7,5 +7,6 @@ controller:
       http: 30102
       https: 31139
   ingressClass:
-    setAsDefaultIngress: "true"
-    create: "true"
+    create: true
+    name: nginx
+    setAsDefaultIngress: true
