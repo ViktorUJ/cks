@@ -7,7 +7,7 @@ RUN  echo '[mongodb-org-4.4]'>/etc/yum.repos.d/mongodb-org-4.0.repo && \
      echo 'enabled=1'>>/etc/yum.repos.d/mongodb-org-4.0.repo && \
      echo 'gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc'>>/etc/yum.repos.d/mongodb-org-4.0.repo  && \
      amazon-linux-extras install postgresql13 -y  && \
-     yum install mongodb-org-tools mongodb-org-shell tar git  mysql  bind-utils bash-completion -y && \
+     yum install mongodb-org-tools mongodb-org-shell tar git  mysql  bind-utils iputils bash-completion -y && \
      curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64 && \
      install skaffold /usr/local/bin/ && \
      rm -rf skaffold && \
