@@ -3,3 +3,7 @@ controller:
     work_type: ingress
   service:
     type: NodePort
+    httpPort:
+      nodePort: 30102
+    httpsPort:
+      nodePort: 31139
