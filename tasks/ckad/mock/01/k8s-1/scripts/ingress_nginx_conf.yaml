@@ -8,3 +8,6 @@ controller:
       https: 31139
   ingressClass:
     setAsDefaultIngress: true
+    name: nginx-local
+    create: true
+
