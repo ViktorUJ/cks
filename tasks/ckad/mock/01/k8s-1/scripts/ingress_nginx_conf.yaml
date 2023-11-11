@@ -1,0 +1,3 @@
+controller:
+  nodeSelector:
+    work_type: ingress
