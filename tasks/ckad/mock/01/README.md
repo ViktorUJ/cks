@@ -70,9 +70,9 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                                                                       |
 | Acceptance criteria | - NodeAffinity: `requiredDuringSchedulingIgnoredDuringExecution`<br/>- controlplane has the labels `app_type=beta`<br/>- Deployment `beta-apps`<br/>- Deployment beta-apps has correct Key for NodeAffinity?<br/>- Deployment beta-apps has correct Value for NodeAffinity?<br/>- Pods of deployment are running only on controlplane?<br/>- Deployment beta-apps has 3 pods running? |
 ---
-|       **11**        | **Create new ingress resource to the service. Make it available at the path `/cat`**                                                                                      |
+|       **11**        | **Create new ingress resource to the service. Make it available at the path `/cat`**                                                                                    |
 | :-----------------: |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | ?%                                                                                                                                                                      |
+|     Task weight     | 2%                                                                                                                                                                      |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                         |
 | Acceptance criteria | - NameSpace: cat <br/>- service: cat  <br/>- Annotation: `nginx.ingress.kubernetes.io/rewrite-target: /`<br/>- path: `/cat`  <br/>- check ` curl ckad.local:30102/cat ` |
 ---
