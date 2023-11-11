@@ -6,8 +6,6 @@ controller:
     nodePorts:
       http: 30102
       https: 31139
-  ingressClass:
-    setAsDefaultIngress: true
-    name: nginx-local
-    create: true
+ingressClass:
+  setAsDefaultIngress: true
 
