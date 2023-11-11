@@ -8,3 +8,4 @@ controller:
       https: 31139
   ingressClass:
     setAsDefaultIngress: "true"
+    create: "true"
