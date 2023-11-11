@@ -189,6 +189,28 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # 11
 
+@test "11.1 Create new ingress . path= cat " {
+  echo '1'>>/var/work/tests/result/all
+  curl ckad.local:30102/cat  | grep 'cat-server'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+
+}
+@test "11.2 Create new ingress . check rewrite-target " {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  curl ckad.local:30102/cat  | grep 'URL' | grep 'cat'
+  result=$?
+  set -e
+  if [[ "$result" == "1" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "1" ]
+
+}
 # 12
 
 # 13
