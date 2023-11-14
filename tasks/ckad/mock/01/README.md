@@ -6,6 +6,8 @@
 
 <https://kubernetes.io/blog/> and their subdomains
 
+<https://helm.sh/> and their subdomains
+
 This includes all available language translations of these pages (e.g. <https://kubernetes.io/zh/docs/>)
 
 ## Questions
