@@ -206,19 +206,108 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   curl ckad.local:30102/cat  | grep 'URL' | grep 'cat'
   result=$?
   set -e
-  if [[ "$result" == "1" ]]; then
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "1" ]
+  [ "$result" == "0" ]
 
 }
+
 # 12
+@test "12.1 Create a new pod nginx1233 in the web-ns namespace.command" {
+  echo '0.5'>>/var/work/tests/result/all
+  kubectl get pods -n web-ns nginx1233 -o jsonpath='{.spec..livenessProbe.exec.command}' --context cluster1-admin@cluster1 | grep -E "ls.*\/var\/www\/html\/"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "12.2 Create a new pod nginx1233 in the web-ns namespace.delay and period" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get pod -n web-ns nginx1233 -o json --context cluster1-admin@cluster1 | jq -r '"\(.spec.containers[0].livenessProbe.initialDelaySeconds) \(.spec.containers[0].livenessProbe.periodSeconds)"')
+  if [[ "$result" == "10 60" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "10 60" ]
+}
 
 # 13
+@test "13.1 Create a new job hi-job.Image" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get jobs.batch hi-job -o jsonpath='{.spec..image}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "busybox" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "busybox" ]
+}
 
+@test "13.2 Create a new job hi-job.Command" {
+  echo '0.25'>>/var/work/tests/result/all
+  kubectl get jobs.batch hi-job -o jsonpath='{.spec..command}' --context cluster1-admin@cluster1 | grep -E "hello.*sleep 30.*world"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "13.3 Create a new job hi-job.backoffLimit and completions" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get job hi-job -o json --context cluster1-admin@cluster1 | jq -r '"\(.spec.backoffLimit) \(.spec.completions)"')
+  if [[ "$result" == "6 3" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "6 3" ]
+}
 
 # 14
+@test "14.1 Create a new pod alpha container.Image" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get pod multi-pod -o jsonpath='{.spec.containers[?(@.name=="alpha")].image}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "nginx:alpine-slim" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "nginx:alpine-slim" ]
+}
 
+@test "14.2 Create a new pod alpha container.Env" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get pod multi-pod -o jsonpath='{.spec.containers[?(@.name=="alpha")].env[?(@.name=="type")].value}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "alpha" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "alpha" ]
+}
+
+@test "14.3 Create new pod beta container.Image" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get pod multi-pod -o jsonpath='{.spec.containers[?(@.name=="beta")].image}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "busybox" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "busybox" ]
+}
+
+@test "14.4 Create new pod beta container.Command" {
+  echo '0.25'>>/var/work/tests/result/all
+  kubectl get pod multi-pod -o jsonpath='{.spec.containers[?(@.name=="beta")].command}' --context cluster1-admin@cluster1 | grep -E "sleep.*4800"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "14.5 Create new pod beta container.Env" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get pod multi-pod -o jsonpath='{.spec.containers[?(@.name=="beta")].env[?(@.name=="type")].value}' --context cluster1-admin@cluster1)
+  if [[ "$result" == "beta" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "beta" ]
+}
 
 # 15
 @test "15 Check PersistentVolume" {

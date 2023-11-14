@@ -67,13 +67,13 @@ This includes all available language translations of these pages (e.g. <https://
 | Acceptance criteria | - Tains node01:<br/>    key: `app_type`, value: `alpha`, effect: `NoSchedule`<br/>- Create a pod called `alpha`, `image: redis` with toleration to node01.<br/>- node01 with the correct taint? Pod alpha has the correct toleration? |
 ---
 |       **10**        | **Apply a label `app_type=beta` to node controlplane. Create a new deployment called `beta-apps` with `image: nginx` and `replicas: 3`. Run  PODs on controlplane only.**             |
-| :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |     Task weight     | 2%                                                                                                                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                       |
 | Acceptance criteria | - controlplane has the labels `app_type=beta`<br/>- Deployment `beta-apps` <br/>- Pods of deployment are running only on controlplane?<br/>- Deployment beta-apps has 3 pods running? |
 ---
 |       **11**        | **Create new ingress resource to the service. Make it available at the path `/cat`**                                                                                    |
-| :-----------------: |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | 2%                                                                                                                                                                      |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                         |
 | Acceptance criteria | - NameSpace: cat <br/>- service: cat  <br/>- Annotation: `nginx.ingress.kubernetes.io/rewrite-target: /`<br/>- path: `/cat`  <br/>- check ` curl ckad.local:30102/cat ` |
@@ -86,7 +86,7 @@ This includes all available language translations of these pages (e.g. <https://
 ---
 |       **13**        | **Create a job with the image busybox and name hi-job that executes the command 'echo hello;sleep 30;echo world'.**                                                 |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|     Task weight     | ?%                                                                                                                                                                  |
+|     Task weight     | 1%                                                                                                                                                                  |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                     |
 | Acceptance criteria | - Job name: `hi-job` <br/> - Image: `busybox`<br/>- Command: `echo hello;sleep 30;echo world`<br/>- Completions: 3<br/>- BackoffLimit: 6<br/>- RestartPolicy: Never |
 ---
