@@ -36,11 +36,11 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                |
 | Acceptance criteria | - ReplicaSet has 2 Ready replicas.                                                                                             |
 ---
-|        **5**        | **Create a service `msg-service` to expose the `msg` deployment with `redis` image in the `messaging` namespace within the cluster on port `6379`. Use imperative commands.** |
-| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | 2%                                                                                                                                                                            |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                               |
-| Acceptance criteria | - Use imperative commands <br/>- Service: `msg-service`<br/>- Port: `6379`<br/>- Namespace: `messaging`<br/>- Use the right type of Service                                   |
+|        **5**        | **Create deployment  `msg`  and service `msg-service` to expose the `msg` deployment with `redis` image in the `messaging` namespace within the cluster on port `6379`. Use imperative commands.**                              |
+| :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                                                                                                                                                              |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                 |
+| Acceptance criteria | - Deployment : ns=`messaging` name=`msg` image=`redis` replicas=`2`  <br/>- Service: name=`msg-service` Port=`6379` Namespace=`messaging` deployment=`msg` <br/>- Use the right type of Service  <br/>- Use imperative commands |
 ---
 |        **6**        | **Update the environment variable on the pod text-printer.**                                                 |
 | :-----------------: | :----------------------------------------------------------------------------------------------------------- |
