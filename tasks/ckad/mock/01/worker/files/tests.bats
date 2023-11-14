@@ -85,7 +85,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 #5 
-@test "5.1 Deployment msg was created.Image" {
+@test "5.1 Create deployment msg and service msg-service.Image" {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get deployments.apps -n messaging msg -o jsonpath='{.spec.template..image}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "redis" ]]; then
@@ -94,7 +94,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "redis" ]
 }
 
-@test "5.2 Create a service msg-service.Type" {
+@test "5.2 Create deployment msg and service msg-service.Service type" {
   echo '0.5'>>/var/work/tests/result/all
   result=$(kubectl get svc -n messaging msg-service -o jsonpath='{.spec.type}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "ClusterIP" ]]; then
@@ -103,7 +103,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "ClusterIP" ]
 }
 
-@test "5.3 Create a service msg-service.Port" {
+@test "5.3 Create deployment msg and service msg-service.Port" {
   echo '0.5'>>/var/work/tests/result/all
   result=$(kubectl get svc -n messaging msg-service -o jsonpath='{.spec.ports..port}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "6379" ]]; then

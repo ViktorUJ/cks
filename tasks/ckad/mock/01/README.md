@@ -36,7 +36,7 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                |
 | Acceptance criteria | - ReplicaSet has 2 Ready replicas.                                                                                             |
 ---
-|        **5**        | **Create deployment  `msg`  and service `msg-service` to expose the `msg` deployment with `redis` image in the `messaging` namespace within the cluster on port `6379`. Use imperative commands.**                              |
+|        **5**        | **Create deployment  `msg`  and service `msg-service`**                                                                                                                                                                         |
 | :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 2%                                                                                                                                                                                                                              |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                 |
