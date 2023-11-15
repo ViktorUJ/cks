@@ -30,11 +30,11 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                              |
 | Acceptance criteria | - secret: ns=`dev-db` name=`dbpassword` key=`pwd` value=`my-secret-pwd`  <br/>- pod: ns=`dev-db` name=`db-pod` image=`mysql:8.0` env.name=`MYSQL_ROOT_PASSWORD` env.value=from secret `dbpassword` key=`pwd` |
 ---
-|        **4**        | ** Fix replicaset `rs-app2223` in namespace `rsapp`** |
-| :-----------------: |:------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                  |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                     |
-| Acceptance criteria | - ReplicaSet has 2 Ready replicas.                                                                                                  |
+|        **4**        | **Fix replicaset `rs-app2223` in namespace `rsapp`**                                                                               |
+| :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                 |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                    |
+| Acceptance criteria | - ReplicaSet has 2 Ready replicas.                                                                                                 |
 ---
 |        **5**        | **Create deployment  `msg`  and service `msg-service`**                                                                                                                                                                         |
 | :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
