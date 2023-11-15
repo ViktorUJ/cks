@@ -38,7 +38,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 #3
-@test "3.1 Create a namespace named dev-db " {
+@test "3.1 Create secret and  create pod with  environment variable  from secret. Create a namespace dev-db " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get namespaces dev-db -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "dev-db" ]]; then
@@ -47,7 +47,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "dev-db" ]
 }
 
-@test "3.2 Create a secret named dbpassword with key.pwd and pwd.my-secret-pw " {
+@test "3.2 Create secret and  create pod with  environment variable  from secret. Create a secret dbpassword " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get secrets -n dev-db dbpassword -o jsonpath='{.data.pwd}' --context cluster1-admin@cluster1 | base64 --decode )
   if [[ "$result" == "my-secret-pw" ]]; then
@@ -56,7 +56,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "my-secret-pw" ]
 }
 
-@test "3.3 Create a pod with proper name and in the right namespace." {
+@test "3.3 Create secret and  create pod with  environment variable  from secret .Create a pod " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get pod -n dev-db db-pod -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "db-pod" ]]; then
@@ -65,7 +65,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "db-pod" ]
 }
 
-@test "3.4 Use environment variable as a secret" {
+@test "3.4 Create secret and  create pod with  environment variable  from secret .Use environment variable from  secret" {
   echo '1'>>/var/work/tests/result/all
   result=$(echo $(kubectl get pod -n dev-db db-pod -o jsonpath='{.spec.containers[0].env[?(@.name=="MYSQL_ROOT_PASSWORD")].valueFrom.secretKeyRef.key}' --context cluster1-admin@cluster1):$(kubectl get pod -n dev-db db-pod -o jsonpath='{.spec.containers[0].env[?(@.name=="MYSQL_ROOT_PASSWORD")].valueFrom.secretKeyRef.name}' --context cluster1-admin@cluster1 ))
   if [[ "$result" == "pwd:dbpassword" ]]; then
@@ -75,7 +75,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 #4
-@test "4. ReplicaSet has 2 ready replicas" {
+@test "4.Fix replicaset. ReplicaSet has 2 ready replicas" {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get rs rs-app2223 -n rsapp -o jsonpath='{.status.readyReplicas}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "2" ]]; then
@@ -96,7 +96,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "5.2 Create deployment msg and service msg-service.Service type" {
   echo '0.5'>>/var/work/tests/result/all
-  result=$(kubectl get svc -n messaging msg-service -o jsonpath='{.spec.type}' --context cluster1-admin@cluster1 )
+  result=$(kubectl get svc msg-service  -n messaging  -o jsonpath='{.spec.type}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "ClusterIP" ]]; then
    echo '0.5'>>/var/work/tests/result/ok
   fi

@@ -24,17 +24,17 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                 |
 | Acceptance criteria | - Deployment: `nginx-app` <br/>- Image: `nginx:alpine-slim`<br/>- Replicas: `2` |
 ---
-|        **3**        | **Deploy a db pod using the `mysql:8.0` with the labels set to `type=db` in the `dev-db` namespace. Create a secret with the name of dbpassword with the value `my-secret-pw`. Use this secret to define a value for environment variable `MYSQL_ROOT_PASSWORD` to set root password for database** |
-| :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | 4%                                                                                                                                                                                                                                                                                                  |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                     |
-| Acceptance criteria | - Name: `db-pod` <br/>- Image: `mysql:8.0`<br/>- Labels: `type=db`<br/>- Namespace: `dev-db`<br/>- Secret Name: `dbpassword`<br/>- Secret key: `pwd`<br/>- Secret value: `my-secret-pw`<br/>- Use environment variable `MYSQL_ROOT_PASSWORD` and value of the secret to set up the password for db  |
+|        **3**        | **Create secret and  create pod with  environment variable  from secret .**                                                                                                                                  |
+| :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 4%                                                                                                                                                                                                           |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                              |
+| Acceptance criteria | - secret: ns=`dev-db` name=`dbpassword` key=`pwd` value=`my-secret-pwd`  <br/>- pod: ns=`dev-db` name=`db-pod` image=`mysql:8.0` env.name=`MYSQL_ROOT_PASSWORD` env.value=from secret `dbpassword` key=`pwd` |
 ---
-|        **4**        | **A replicaset `rs-app2223` in namespace `rsapp` is created. However the pods are not coming up. Identify and fix the issue.** |
-| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                                                                             |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                |
-| Acceptance criteria | - ReplicaSet has 2 Ready replicas.                                                                                             |
+|        **4**        | ** Fix replicaset `rs-app2223` in namespace `rsapp`** |
+| :-----------------: |:------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                  |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                     |
+| Acceptance criteria | - ReplicaSet has 2 Ready replicas.                                                                                                  |
 ---
 |        **5**        | **Create deployment  `msg`  and service `msg-service`**                                                                                                                                                                         |
 | :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
