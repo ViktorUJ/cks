@@ -20,7 +20,7 @@
 
 - run ``time_left`` on work pc to **check time**
 - run ``check_result`` on work pc to **check result**
-- time = 20 minutes
+- time = **20 minutes**
 
 ## Questions
 
