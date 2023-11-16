@@ -243,7 +243,7 @@ If you want to be part of the project development team, get in touch with [us](h
 
 If you want to say **thank you** or/and support the active development of **SRE Learning Platform project** :
 - [Star](https://github.com/ViktorUJ/cks) the **SRE Learning Platform project** on Github
-- Feel free to write articles about the project on [dev.to](https://dev.to/), [medium](https://medium.com/) or on your personal blog and share your experiences
+- Feel free to write articles about the project on [dev.to](https://dev.to/), [medium](https://medium.com/), [hackernoon](https://hackernoon.com) or on your personal blog and share your experiences
 
 
 ## License and Usage Agreement
