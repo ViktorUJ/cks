@@ -16,7 +16,10 @@
 
 <https://github.com/prometheus-operator/prometheus-operator/tree/main/Documentation/user-guides/> and their subdomains
 
+![preview](./preview.png)
 
+- run ``time_left`` on work pc to **check time**
+- run ``check_result`` on work pc to **check result**
 
 ## Questions
 
