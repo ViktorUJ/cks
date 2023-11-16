@@ -213,7 +213,7 @@ Every command should be run from the project's root directory.
 - run ``time_left`` on work pc to check time
 - run ``check_result`` on work pc to check result
 - delete mock  CKA exam `make delete_hr_mock`
-- find exam solutions in ``{mock_number}/worker/files/solutions``  [mock 1 solutions](tasks%2Fhr%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)  and [video](https://youtu.be/I8CPwcGbrG8)
+- find exam solutions in ``{mock_number}/worker/files/solutions``  [mock 1 solutions](tasks%2Fhr%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)  and [video](https://youtu.be/4CTC1jl8lxE)
 - find exam tests in ``{mock_number}/worker/files/tests.bats``
 </details>
 
