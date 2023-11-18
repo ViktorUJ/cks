@@ -50,10 +50,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "3.2 Create secret and  create pod with  environment variable  from secret. Create a secret dbpassword " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get secrets -n dev-db dbpassword -o jsonpath='{.data.pwd}' --context cluster1-admin@cluster1 | base64 --decode )
-  if [[ "$result" == "my-secret-pw" ]]; then
+  if [[ "$result" == "my-secret-pwd" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "my-secret-pw" ]
+  [ "$result" == "my-secret-pwd" ]
 }
 
 @test "3.3 Create secret and  create pod with  environment variable  from secret .Create a pod " {
@@ -123,13 +123,40 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 #7
-@test "7.1 Check pod capability.SYS_TIME" {
-  echo '1'>>/var/work/tests/result/all
+@test "7.1 Run pod appsec-pod.SYS_TIME" {
+  echo '0.5'>>/var/work/tests/result/all
   result=$(kubectl get pod appsec-pod -o jsonpath='{.spec.containers..capabilities.add[0]}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "SYS_TIME" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '0.5'>>/var/work/tests/result/ok
   fi
   [ "$result" == "SYS_TIME" ]
+}
+
+@test "7.2 Run pod appsec-pod.check user id" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl exec  appsec-pod  --context cluster1-admin@cluster1 -- sh -c 'id' | cut -d' ' -f1)
+  if [[ "$result" == "uid=0(root)" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "uid=0(root)" ]
+}
+
+@test "7.3 Run pod appsec-pod.image" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get pod appsec-pod -o jsonpath='{.spec.containers..image}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "ubuntu:22.04" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "ubuntu:22.04" ]
+}
+
+@test "7.4 Run pod appsec-pod.pod is Running " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get pod appsec-pod  --context cluster1-admin@cluster1 | grep 'appsec-pod' |cut -d' ' -f9 )
+  if [[ "$result" == "Running" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "Running" ]
 }
 
 # 8
