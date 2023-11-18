@@ -172,18 +172,34 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # 9
 
-# WE NEED TO CHECK
-@test "9.1 Check node taint" {
-  echo '1'>>/var/work/tests/result/all
-  node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node_name=="node_2")].metadata.name}' --context cluster1-admin@cluster1)
-  result=$(kubectl get node $node_name -o jsonpath='{.spec.taints[?(.key == "app_type")].value}' --context cluster1-admin@cluster1 )
+@test "9.1 Add a taint to the node .Create a pod with toleration.node taint effect " {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get node -l work_type=redis -o jsonpath='{.items..spec.taints..effect}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "NoSchedule" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "NoSchedule" ]
+}
+
+@test "9.2 Add a taint to the node .Create a pod with toleration.node taint key" {
+  echo '0.25'>>/var/work/tests/result/all
+  result=$(kubectl get node -l work_type=redis -o jsonpath='{.items..spec.taints..key}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "app_type" ]]; then
+   echo '0.25'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "app_type" ]
+}
+
+@test "9.3 Add a taint to the node .Create a pod with toleration.node taint valuey" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get node -l work_type=redis -o jsonpath='{.items..spec.taints..value}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "alpha" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '0.5'>>/var/work/tests/result/ok
   fi
   [ "$result" == "alpha" ]
 }
 
-@test "9.2 Check pod tolerations" {
+@test "9.4 Check pod tolerations" {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get pods alpha -o jsonpath='{.spec.tolerations[?(.key == "app_type")].value}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "alpha" ]]; then
