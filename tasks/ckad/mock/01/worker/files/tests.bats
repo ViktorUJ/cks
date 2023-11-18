@@ -288,7 +288,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "13.2 Create a new job hi-job.Command" {
   echo '0.25'>>/var/work/tests/result/all
-  kubectl get jobs.batch hi-job -o jsonpath='{.spec..command}' --context cluster1-admin@cluster1 | grep -E "hello.*sleep 30.*world"
+  pod=$( kubectl get po --context cluster1-admin@cluster1 | grep hi-job | tail -1 | cut -d' ' -f1)
+  kubectl logs $pod  --context cluster1-admin@cluster1 | grep -E "hello world"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '0.25'>>/var/work/tests/result/ok

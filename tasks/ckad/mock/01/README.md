@@ -84,11 +84,11 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                            |
 | Acceptance criteria | - You may delete and recreate the object. Ignore the warnings from the probe.<br/>- Pod: `nginx1233`, namespace: `web-ns`, image `nginx`,  livenessProbe?                                                                                                                  |
 ---
-|       **13**        | **Create a job with the image busybox and name hi-job that executes the command 'echo hello;sleep 30;echo world'.**                                                 |
-| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|     Task weight     | 1%                                                                                                                                                                  |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                     |
-| Acceptance criteria | - Job name: `hi-job` <br/> - Image: `busybox`<br/>- Command: `echo hello;sleep 30;echo world`<br/>- Completions: 3<br/>- BackoffLimit: 6<br/>- RestartPolicy: Never |
+|       **13**        | **Create a job with the image busybox and name hi-job that executes the command 'echo hello world'.**                                   |
+| :-----------------: |:------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                    |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                       |
+| Acceptance criteria | - Job name: `hi-job` <br/> - Image: `busybox`<br/>- Command: `echo hello world`<br/>- Completions: 3<br/>- BackoffLimit: 6<br/>- RestartPolicy: Never |
 ---
 |       **14**        | **Create a pod called `multi-pod` with two containers.**                                                                                                                                                                                             |
 | :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
