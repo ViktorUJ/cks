@@ -459,10 +459,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # 18
 @test "18 Check installed helm chart" {
-  echo '1'>>/var/work/tests/result/all
+  echo '2'>>/var/work/tests/result/all
   result=$(helm get metadata prom -n monitoring -o json  --kube-context cluster1-admin@cluster1  | jq -r '"\(.name) \(.chart) \(.status)"')
   if [[ "$result" == "prom kube-prometheus-stack deployed" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '2'>>/var/work/tests/result/ok
   fi
   [ "$result" == "prom kube-prometheus-stack deployed" ]
 }
