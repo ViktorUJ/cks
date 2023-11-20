@@ -384,17 +384,17 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "15.3 Create a Persistent Volume. check storage " {
-  echo '4'>>/var/work/tests/result/all
+  echo '6'>>/var/work/tests/result/all
   kubectl exec analytics   --context cluster1-admin@cluster1  -- sh -c 'echo "analytics">/pv/analytics/test'
   work_node=$(kubectl get no -l node_name=node_2 --context cluster1-admin@cluster1  -o jsonpath='{.items..metadata.name}')
   ssh -oStrictHostKeyChecking=no $work_node "sudo cat /pv/analytics/test | grep 'analytics' "
   result=$?
   if [[ "$result" == "0" ]]; then
-   echo '4'>>/var/work/tests/result/ok
+   echo '6'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
-# 6 43
+# 8 45
 
 # 16
 @test "16.1 Check CRD.group" {
@@ -468,7 +468,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "op" ]
 }
-# 6 49
+# 6 51
 
 # 17
 @test "17.1 Check command to check CPU and Mem of the nodes" {
@@ -490,7 +490,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
-# 2 52
+# 2 54
 
 # 18
 @test "18 Check installed helm chart" {
@@ -501,4 +501,4 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "prom kube-prometheus-stack deployed" ]
 }
-# 4 56
+# 4 58
