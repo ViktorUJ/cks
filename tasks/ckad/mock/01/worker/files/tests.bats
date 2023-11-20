@@ -443,7 +443,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "16.6 Check CRD names.plural" {
-  echo '1'>>/var/work/tests/result/all
+  echo '0.5'>>/var/work/tests/result/all
   result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.names.plural}' --context cluster1-admin@cluster1)
   if [[ "$result" == "operators" ]]; then
    echo '0.5'>>/var/work/tests/result/ok
