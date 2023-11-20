@@ -222,7 +222,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node-role\.kubernetes\.io/control-plane)].metadata.name}' --context cluster1-admin@cluster1)
   result=$(kubectl get node $node_name -o jsonpath='{.metadata.labels.app_type}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "beta" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '2'>>/var/work/tests/result/ok
   fi
   [ "$result" == "beta" ]
 }
@@ -232,7 +232,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node-role\.kubernetes\.io/control-plane)].metadata.name}' --context cluster1-admin@cluster1)
   result=$(kubectl get po -o wide   --context cluster1-admin@cluster1 | grep 'beta-apps'| grep 'Running' | grep $node_name | wc -l  )
   if [[ "$result" == "3" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '2'>>/var/work/tests/result/ok
   fi
   [ "$result" == "3" ]
 }
