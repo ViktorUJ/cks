@@ -17,6 +17,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "httpd:alpine" ]
 }
+# 1 1
 
 #2
 @test "2.1 Create a deployment named hr-web-app.Image " {
@@ -36,6 +37,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "2" ]
 }
+# 1 2
 
 #3
 @test "3.1 Create secret and  create pod with  environment variable  from secret. Create a namespace dev-db " {
@@ -73,16 +75,18 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "pwd:dbpassword" ]
 }
+# 4  6
 
 #4
 @test "4.Fix replicaset. ReplicaSet has 2 ready replicas" {
-  echo '1'>>/var/work/tests/result/all
+  echo '2'>>/var/work/tests/result/all
   result=$(kubectl get rs rs-app2223 -n rsapp -o jsonpath='{.status.readyReplicas}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "2" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '2'>>/var/work/tests/result/ok
   fi
   [ "$result" == "2" ]
 }
+# 2 8
 
 #5 
 @test "5.1 Create deployment msg and service msg-service.Image" {
@@ -111,6 +115,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "6379" ]
 }
+# 2 10
 
 #6
 @test "6 Update environment variable value to GREEN" {
@@ -121,43 +126,45 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "GREEN" ]
 }
+# 1 11
 
 #7
 @test "7.1 Run pod appsec-pod.SYS_TIME" {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get pod appsec-pod -o jsonpath='{.spec.containers..capabilities.add[0]}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "SYS_TIME" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "SYS_TIME" ]
 }
 
 @test "7.2 Run pod appsec-pod.check user id" {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl exec  appsec-pod  --context cluster1-admin@cluster1 -- sh -c 'id' | cut -d' ' -f1)
   if [[ "$result" == "uid=0(root)" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "uid=0(root)" ]
 }
 
 @test "7.3 Run pod appsec-pod.image" {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get pod appsec-pod -o jsonpath='{.spec.containers..image}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "ubuntu:22.04" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "ubuntu:22.04" ]
 }
 
 @test "7.4 Run pod appsec-pod.pod is Running " {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get pod appsec-pod  --context cluster1-admin@cluster1 | grep 'appsec-pod' |cut -d' ' -f9 )
   if [[ "$result" == "Running" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "Running" ]
 }
+# 4 15
 
 # 8
 @test "8. Check logs from pod app-xyz3322" {
@@ -169,11 +176,11 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+# 1 16
 
 # 9
-
 @test "9.1 Add a taint to the node .Create a pod with toleration.node taint effect " {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get node -l work_type=redis -o jsonpath='{.items..spec.taints..effect}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "NoSchedule" ]]; then
    echo '0.25'>>/var/work/tests/result/ok
@@ -182,7 +189,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "9.2 Add a taint to the node .Create a pod with toleration.node taint key" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get node -l work_type=redis -o jsonpath='{.items..spec.taints..key}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "app_type" ]]; then
    echo '0.25'>>/var/work/tests/result/ok
@@ -191,10 +198,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "9.3 Add a taint to the node .Create a pod with toleration.node taint valuey" {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get node -l work_type=redis -o jsonpath='{.items..spec.taints..value}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "alpha" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "alpha" ]
 }
@@ -207,11 +214,11 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "alpha" ]
 }
+# 4 20
 
 # 10
-
 @test "10.1 Check controlplane label.app_type" {
-  echo '1'>>/var/work/tests/result/all
+  echo '2'>>/var/work/tests/result/all
   node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node-role\.kubernetes\.io/control-plane)].metadata.name}' --context cluster1-admin@cluster1)
   result=$(kubectl get node $node_name -o jsonpath='{.metadata.labels.app_type}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "beta" ]]; then
@@ -221,7 +228,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "10.2 Check running pods " {
-  echo '1'>>/var/work/tests/result/all
+  echo '2'>>/var/work/tests/result/all
   node_name=$(kubectl get nodes -o jsonpath='{.items[?(@.metadata.labels.node-role\.kubernetes\.io/control-plane)].metadata.name}' --context cluster1-admin@cluster1)
   result=$(kubectl get po -o wide   --context cluster1-admin@cluster1 | grep 'beta-apps'| grep 'Running' | grep $node_name | wc -l  )
   if [[ "$result" == "3" ]]; then
@@ -229,113 +236,116 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "3" ]
 }
-
+# 4 24
 
 # 11
-
 @test "11.1 Create new ingress . path= cat " {
-  echo '1'>>/var/work/tests/result/all
+  echo '2'>>/var/work/tests/result/all
   curl ckad.local:30102/cat  | grep 'cat-server'
   result=$?
   if [[ "$result" == "0" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '2'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 
 }
 @test "11.2 Create new ingress . check rewrite-target " {
-  echo '1'>>/var/work/tests/result/all
+  echo '2'>>/var/work/tests/result/all
   set +e
   curl ckad.local:30102/cat  | grep 'URL' | grep 'cat'
   result=$?
   set -e
   if [[ "$result" == "0" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '2'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 
 }
+# 4 28
 
 # 12
 @test "12.1 Create a new pod nginx1233 in the web-ns namespace.command" {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   kubectl get pods -n web-ns nginx1233 -o jsonpath='{.spec..livenessProbe.exec.command}' --context cluster1-admin@cluster1 | grep -E "ls.*\/var\/www\/html\/"
   result=$?
   if [[ "$result" == "0" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
 
 @test "12.2 Create a new pod nginx1233 in the web-ns namespace.delay and period" {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get pod -n web-ns nginx1233 -o json --context cluster1-admin@cluster1 | jq -r '"\(.spec.containers[0].livenessProbe.initialDelaySeconds) \(.spec.containers[0].livenessProbe.periodSeconds)"')
   if [[ "$result" == "10 60" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "10 60" ]
 }
+# 2 30
+
 
 # 13
 @test "13.1 Create a new job hi-job.Image" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get jobs.batch hi-job -o jsonpath='{.spec..image}' --context cluster1-admin@cluster1)
   if [[ "$result" == "busybox" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "busybox" ]
 }
 
 @test "13.2 Create a new job hi-job.Command" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   pod=$( kubectl get po --context cluster1-admin@cluster1 | grep hi-job | tail -1 | cut -d' ' -f1)
   kubectl logs $pod  --context cluster1-admin@cluster1 | grep -E "hello world"
   result=$?
   if [[ "$result" == "0" ]]; then
-   echo '0.25'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
 
 @test "13.3 Create a new job hi-job.backoffLimit and completions" {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get job hi-job -o json --context cluster1-admin@cluster1 | jq -r '"\(.spec.backoffLimit) \(.spec.completions)"')
   if [[ "$result" == "6 3" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "6 3" ]
 }
+# 3 33
 
 # 14
 @test "14.1 Create a new pod alpha container.Image" {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get pod multi-pod -o jsonpath='{.spec.containers[?(@.name=="alpha")].image}' --context cluster1-admin@cluster1)
   if [[ "$result" == "nginx:alpine-slim" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "nginx:alpine-slim" ]
 }
 
 @test "14.2 Create a new pod alpha container.Env" {
-  echo '0.5'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get pod multi-pod -o jsonpath='{.spec.containers[?(@.name=="alpha")].env[?(@.name=="type")].value}' --context cluster1-admin@cluster1)
   if [[ "$result" == "alpha" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "alpha" ]
 }
 
 @test "14.3 Create new pod beta container.Image" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get pod multi-pod -o jsonpath='{.spec.containers[?(@.name=="beta")].image}' --context cluster1-admin@cluster1)
   if [[ "$result" == "busybox" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "busybox" ]
 }
 
 @test "14.4 Create new pod beta container.Command" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '0.5'>>/var/work/tests/result/all
   kubectl get pod multi-pod -o jsonpath='{.spec.containers[?(@.name=="beta")].command}' --context cluster1-admin@cluster1 | grep -E "sleep.*4800"
   result=$?
   if [[ "$result" == "0" ]]; then
@@ -352,6 +362,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "beta" ]
 }
+# 4 37
 
 # 15
 @test "15.1 Create a Persistent Volume. capacity " {
@@ -383,6 +394,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+# 6 43
 
 # 16
 @test "16.1 Check CRD.group" {
@@ -395,46 +407,46 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "16.2 Check CRD Scheme.name" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.versions..openAPIV3Schema..spec.properties.name.type}' --context cluster1-admin@cluster1)
   if [[ "$result" == "string" ]]; then
-   echo '0.25'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "string" ]
 }
 
 @test "16.3 Check CRD Scheme.email" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.versions..openAPIV3Schema..spec.properties.email.type}' --context cluster1-admin@cluster1)
   if [[ "$result" == "string" ]]; then
-   echo '0.25'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "string" ]
 }
 
 @test "16.4 Check CRD Scheme.age" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.versions..openAPIV3Schema..spec.properties.age.type}' --context cluster1-admin@cluster1)
   if [[ "$result" == "integer" ]]; then
-   echo '0.25'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "integer" ]
 }
 
 @test "16.5 Check CRD names.kind" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.names.kind}' --context cluster1-admin@cluster1)
   if [[ "$result" == "Operator" ]]; then
-   echo '0.25'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "Operator" ]
 }
 
 @test "16.6 Check CRD names.plural" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.names.plural}' --context cluster1-admin@cluster1)
   if [[ "$result" == "operators" ]]; then
-   echo '0.25'>>/var/work/tests/result/ok
+   echo '0.5'>>/var/work/tests/result/ok
   fi
   [ "$result" == "operators" ]
 }
@@ -456,6 +468,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "op" ]
 }
+# 6 49
 
 # 17
 @test "17.1 Check command to check CPU and Mem of the nodes" {
@@ -477,13 +490,15 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+# 2 52
 
 # 18
 @test "18 Check installed helm chart" {
-  echo '2'>>/var/work/tests/result/all
+  echo '4'>>/var/work/tests/result/all
   result=$(helm get metadata prom -n monitoring -o json  --kube-context cluster1-admin@cluster1  | jq -r '"\(.name) \(.chart) \(.status)"')
   if [[ "$result" == "prom kube-prometheus-stack deployed" ]]; then
-   echo '2'>>/var/work/tests/result/ok
+   echo '4'>>/var/work/tests/result/ok
   fi
   [ "$result" == "prom kube-prometheus-stack deployed" ]
 }
+# 4 56
