@@ -108,7 +108,7 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                             |
 | Acceptance criteria | - Name: `operators.stable.example.com`<br/>- Group : `stable.example.com`<br/>- Schema: `<email: string><name: string><age: integer>`<br/>- Scope: `Namespaced`<br/>- Names: `<plural: operators><singular: operator><shortNames: op>`<br/>Kind: `Operator` |
 ---
-|       **17**        | **Write two cli commands to get top of the nodes and pods in all namespaces sorted by CPU utilization. Put this shell commands to the required files.**                     |
+|       **17**        | **Write two cli commands to get the top  nodes and top pods  in all namespaces sorted by CPU utilization level. Place these shell commands in the necessary files.**                     |
 | :-----------------: |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 2 %                                                                                                                                                                         |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                             |
