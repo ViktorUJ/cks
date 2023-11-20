@@ -183,7 +183,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get node -l work_type=redis -o jsonpath='{.items..spec.taints..effect}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "NoSchedule" ]]; then
-   echo '0.25'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "NoSchedule" ]
 }
@@ -192,7 +192,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get node -l work_type=redis -o jsonpath='{.items..spec.taints..key}' --context cluster1-admin@cluster1 )
   if [[ "$result" == "app_type" ]]; then
-   echo '0.25'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "app_type" ]
 }
@@ -398,10 +398,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # 16
 @test "16.1 Check CRD.group" {
-  echo '0.25'>>/var/work/tests/result/all
+  echo '1'>>/var/work/tests/result/all
   result=$(kubectl get crd operators.stable.example.com -o jsonpath='{.spec.group}' --context cluster1-admin@cluster1)
   if [[ "$result" == "stable.example.com" ]]; then
-   echo '0.25'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "stable.example.com" ]
 }
