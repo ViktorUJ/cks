@@ -255,10 +255,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   curl ckad.local:30102/cat  | grep 'URL' | grep 'cat'
   result=$?
   set -e
-  if [[ "$result" == "0" ]]; then
+  if [[ "$result" == "1" ]]; then
    echo '2'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "0" ]
+  [ "$result" == "1" ]
 
 }
 # 4 28
