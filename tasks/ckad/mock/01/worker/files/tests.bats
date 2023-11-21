@@ -490,7 +490,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
-# 2 54
+# 2 53
 
 # 18
 @test "18 Check installed helm chart" {
