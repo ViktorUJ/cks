@@ -12,6 +12,14 @@ resource "aws_security_group" "servers" {
   }
 
   ingress {
+    from_port   = "30000"
+    to_port     = "32767"
+    protocol    = "tcp"
+    cidr_blocks = var.k8s_master.cidrs
+    description = "NodePort k8s"
+  }
+
+  ingress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
