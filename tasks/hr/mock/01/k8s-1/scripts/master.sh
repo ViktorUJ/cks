@@ -12,4 +12,4 @@ aarch64)
 ;;
 esac
 
-kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/0.5.1/tasks/hr/mock/01/k8s-1/scripts/4.yaml
+kubectl  apply -f https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/hr/mock/01/k8s-1/scripts/4.yaml
