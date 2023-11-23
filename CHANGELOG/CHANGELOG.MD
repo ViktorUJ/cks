@@ -1,4 +1,15 @@
 # Changelog
+
+## 0.5.1 (23.11.2023)
+### Features
+* [Ckad mock exam 1 ](..%2Ftasks%2Fckad%2Fmock%2F01) is added
+* [Ckad mock exam 1 solutions](..%2Ftasks%2Fckad%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions) are added
+* [Video](https://youtu.be/yQK7Ca8d-yw) for CKAD mock solutions is added 
+* [HR scenario 1 ](..%2Ftasks%2Fhr%2Fmock%2F01) is added
+* HR scenario 1 [solutions](..%2Ftasks%2Fhr%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions) are added 
+* [Video](https://youtu.be/4CTC1jl8lxE) for HR scenario 1 solutions is added 
+* [Ping_pong](..%2Fdocker%2Fping_pong) server is added 
+
 ## 0.4.1 (15.10.2023)
 ### Features
 * Spot ec2 is moved  from **spot request** to  **spot fleet**, which gives spot ec2 more stability

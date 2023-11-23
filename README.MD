@@ -68,10 +68,22 @@ Every command should be run from the project's root directory.
 - ``make output_cka_task `` - show **outputs** from   **cka_task**
 ### cka mock
 - ``TASK=01 make run_cka_k8s_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
-- ``make delete_cka_k8s_mock`` - delete mock  CKA exam
+- ``make delete_cka_mock`` - delete mock  CKA exam
 - ``make clean_cka_mock`` clean terragrunt cache  for  cka_mock
-- ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache 
+- ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)  with clean terragrunt cache 
 - ``make output_cka_mock `` - show **outputs** from   **cka_mock**
+
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">CKAD</summary>
+
+### ckad mock
+- ``TASK=01 make run_ckad_mock`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)
+- ``make delete_ckad_mock`` - delete mock  CKAD exam
+- ``make clean_ckad_mock`` clean terragrunt cache  for  ckad_mock
+- ``TASK=01 make run_ckad_mock_clean`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)  with clean terragrunt cache 
+- ``make output_ckad_mock `` - show **outputs** from   **ckad_mock**
 
 </details>
 
@@ -93,6 +105,18 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">HR</summary>
+
+- ``TASK=01 make run_hr_mock`` - create mock  hr exam [number 01](tasks%2Fhr%2Fmock%2F01)
+- ``make delete_hr_mock`` - delete mock  hr exam
+- ``make clean_hr_mock`` clean terragrunt cache  for  hr_mock
+- ``TASK=01 make run_hr_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fhr%2Fmock%2F01)  with clean terragrunt cache 
+- ``make output_hr_mock `` - show **outputs** from   **hr_mock**
+</details>
+
+
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">EKS</summary>
 
 - ``TASK={lab_number} make run_eks_task`` create hands-on lab
@@ -106,13 +130,13 @@ Every command should be run from the project's root directory.
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
 
 - choose [a hands-on lab](tasks%2Fcka%2Flabs) number
-- create cka lab cluster ``TASK={lab_number} make run_cka_k8s_task``
+- create cka lab cluster ``TASK={lab_number} make run_cka_task``
 - find {master_external_ip} in terraform output
 - log in to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
 - check init logs `` tail -f /var/log/cloud-init-output.log ``
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
-- delete cka lab cluster ``make delete_cka_k8s_task``
+- delete cka lab cluster ``make delete_cka_task``
 - clean cka lab cluster ``.terraform`` folder  ``make clean_cka_k8s ``
 </details>
 
@@ -123,14 +147,14 @@ Every command should be run from the project's root directory.
 
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
-- create mock  CKA exam ``TASK={mock_number} make run_cka_k8s_mock``
+- create mock  CKA exam ``TASK={mock_number} make run_cka_mock``
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
 - open questions list ``{mock_number}/README.MD`` and do tasks
 - use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node
 - run ``time_left`` on work pc to check time
 - run ``check_result`` on work pc to check result
-- delete mock  CKA exam `make delete_cka_k8s_mock`
+- delete mock  CKA exam `make delete_cka_mock`
 - find exam solutions  in ``{mock_number}/worker/files/solutions)`` and * [Video](https://youtu.be/IZsqAPpbBxM)  for [mock 01](tasks%2Fcka%2Fmock%2F01) .
 - find  exam tests in ``{mock_number}/worker/files/tests.bats)``
 </details>
@@ -141,14 +165,14 @@ Every command should be run from the project's root directory.
 
 - choose [CKS lab](tasks%2Fcks%2Flabs%2FREADME.MD)  number
 - change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl`` if you changed **region**
-- create cka lab cluster ``TASK={lab_number} make run_cks_k8s_task``
+- create cka lab cluster ``TASK={lab_number} make run_cks_task``
 - find {master_external_ip} in terraform output
 - log in to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
 - check init logs `` tail -f /var/log/cloud-init-output.log ``
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
-- delete cks lab cluster ``make delete_cks_k8s_task``
-- clean cks lab cluster ``.terraform`` folder  ``make clean_cks_k8s ``
+- delete cks lab cluster ``make delete_cks_task``
+- clean cks lab cluster ``.terraform`` folder  ``make clean_cks_task ``
 </details>
 
 <details>
@@ -167,8 +191,50 @@ Every command should be run from the project's root directory.
 - use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node
 - run ``time_left`` on work pc to check time
 - run ``check_result`` on work pc to check result
-- delete mock  CKA exam `make delete_cks_mock`
+- delete mock  CKS exam `make delete_cks_mock`
 - find exam solutions in ``{mock_number}/worker/files/solutions``  [mock 1 solutions](tasks%2Fcks%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)  and [video](https://youtu.be/I8CPwcGbrG8)
+- find exam tests in ``{mock_number}/worker/files/tests.bats``
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">mock CKAD exam</summary>
+
+  [Video instruction for launching **CKAD mock exam**](https://youtu.be/7X4Y9QhbTsk)
+
+### mock  CKAD exam
+- choose [a mock exam](tasks%2Fckad%2Fmock)  number
+- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need 
+- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- create mock  CKAD exam ``TASK={mock_number} make run_ckad_mock`` or ``TASK={mock_number} make run_ckad_mock_clean`` if you'd like  to run with **clean** terragrunt cache
+- find ``worker_pc_ip`` in ``terraform output``
+- connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
+- open questions list ``{mock_number}/README.MD`` and do tasks
+- use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node
+- run ``time_left`` on work pc to check time
+- run ``check_result`` on work pc to check result
+- delete mock  CKAD exam `make delete_ckad_mock`
+- find exam solutions in ``{mock_number}/worker/files/solutions``  [mock 1 solutions](tasks%2Fckad%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)   and [video](https://youtu.be/yQK7Ca8d-yw)
+- find exam tests in ``{mock_number}/worker/files/tests.bats``
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">mock HR exam</summary>
+
+  [Video instruction for launching **HR mock exam**](https://youtu.be/4CTC1jl8lxE)
+
+### mock  HR exam
+- choose [a mock exam](tasks%2Fhr%2Fmock) number
+- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need 
+- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- create mock  CKS exam ``TASK={mock_number} make run_hr_mock`` or ``TASK={mock_number} make run_hr_mock_clean`` if you'd like  to run with **clean** terragrunt cache
+- find ``worker_pc_ip`` in ``terraform output``
+- connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
+- open questions list ``{mock_number}/README.MD`` and do tasks
+- use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node
+- run ``time_left`` on work pc to check time
+- run ``check_result`` on work pc to check result
+- delete mock  CKA exam `make delete_hr_mock`
+- find exam solutions in ``{mock_number}/worker/files/solutions``  [mock 1 solutions](tasks%2Fhr%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)  and [video](https://youtu.be/4CTC1jl8lxE)
 - find exam tests in ``{mock_number}/worker/files/tests.bats``
 </details>
 
@@ -198,7 +264,7 @@ If you want to be part of the project development team, get in touch with [us](h
 
 If you want to say **thank you** or/and support the active development of **SRE Learning Platform project** :
 - [Star](https://github.com/ViktorUJ/cks) the **SRE Learning Platform project** on Github
-- Feel free to write articles about the project on [dev.to](https://dev.to/), [medium](https://medium.com/) or on your personal blog and share your experiences
+- Feel free to write articles about the project on [dev.to](https://dev.to/), [medium](https://medium.com/), [hackernoon](https://hackernoon.com) or on your personal blog and share your experiences
 
 
 ## License and Usage Agreement

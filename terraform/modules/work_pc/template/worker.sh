@@ -22,7 +22,7 @@ default_configs_dir="/root/.kube"
 
 echo "*** apt update  & install apps "
 apt-get update -qq
-apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim
+apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim tar
 
 case $acrh in
 x86_64)
@@ -47,16 +47,24 @@ echo 'source <(kubectl completion bash)' >> /root/.bashrc
 echo 'alias k=kubectl' >> /root/.bashrc
 echo 'complete -F __start_kubectl k' >> /root/.bashrc
 
-echo "*** install aws cli "
+echo "*** install aws cli and helm  "
 
 case $acrh in
 x86_64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 ;;
 aarch64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+  curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz
+  tar -zxvf helm.tar.gz
+  mv linux-arm/helm /usr/local/bin/helm
 ;;
 esac
+
+helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
+helm plugin install https://github.com/sstarcher/helm-release
+
 curl $awscli_url  -o "awscliv2.zip" -s
 unzip awscliv2.zip >/dev/null
 ./aws/install >/dev/null

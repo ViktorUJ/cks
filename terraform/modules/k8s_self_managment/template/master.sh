@@ -67,14 +67,17 @@ acrh=$(uname -m)
 case $acrh in
 x86_64)
   skaffold_url="https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64"
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 ;;
 aarch64)
   skaffold_url="https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64"
+  curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz
+  tar -zxvf helm.tar.gz
+  mv linux-arm/helm /usr/local/bin/helm
 ;;
 esac
 if [[ "$utils_enable_sh" == "true" ]] ; then
   echo "*** install utils "
-  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
   helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
   helm plugin install https://github.com/sstarcher/helm-release
   curl -Lo skaffold $skaffold_url && \
