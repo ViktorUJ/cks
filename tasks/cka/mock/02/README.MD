@@ -77,6 +77,8 @@ This includes all available language translations of these pages (e.g. https://k
 | Acceptance criteria | - Script that shows pods and their container resource usage by memory usage to /var/work/tests/artifacts/11/pods.sh      |
 
 
+
+
 ---
 |       **---**        | **Expose the hr-web-app as service**                                                                                                                           |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
