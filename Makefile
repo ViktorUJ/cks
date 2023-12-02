@@ -3,12 +3,12 @@
 prefix_dir="${USER_ID}_${ENV_ID}_"
 terragrunt_vars="-var=\'prefix=${USER_ID}_${ENV_ID}\'"
 
-## Set prefix_dir to empty if it contains '__'
-#ifneq ($(findstring __,$(prefix_dir)),)
-#  # If '__' is found, set prefix_dir to an empty string
-#  prefix_dir :=
-#  terragrunt_vars :=
-#endif
+# Set prefix_dir to empty if it contains '__'
+ifneq ($(findstring __,$(prefix_dir)),)
+  # If '__' is found, set prefix_dir to an empty string
+  prefix_dir :=
+  terragrunt_vars :=
+endif
 
 test_multienv:
 	@echo "*** run test_multienv  , prefix_dir=${prefix_dir}  dir=terraform/environments/${prefix_dir}cka/  task ${TASK}  "
