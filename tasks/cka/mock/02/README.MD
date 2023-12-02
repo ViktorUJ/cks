@@ -94,11 +94,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - Pods are running on all nodes including control plane and in Namespace team-elephant.     |
 ---
-|        **15**        | **Create a Pod named multi-pod in the default namespace. Pod should have 3 containers: box1, box2 and box3. Containers should use temporary volume to exchange information. Container box1, image: caddy:alpine, container box2, image: busybox:1.36, command: while true; do date >> /vol/time.log; sleep 3;. Container box3, image: busybox:1.36busybox:1.36, commmand: tail -f /vol/time.log.**             |
+|        **15**        | **Create a Pod named multi-pod in the default namespace. Pod should have 3 containers: box1, box2 and box3. Containers should use temporary volume to exchange information. Configure containers box2 and box3 according the acceptance criteria below.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 4%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - kubectl log multi-pod -c box3 should display date output for every 3 seconds.     |
+| Acceptance criteria | - Pod name: `multi-pod`<br/> - Container name: `box1`<br/> - Image: `caddy:alpine`<br/> - Container name: `box2`<br/> - Image: `busybox:1.36`<br/> - Command: `while true; do date >> /vol/time.out; sleep 3;`<br/> - Container name: `box3`<br/> - Image: `busybox:1.36`<br/> - Command: `tail -f /vol/time.out;`<br/> kubectl log multi-pod -c box3 displays date output for every 3 seconds.     |
 ---
 |        **16**        | **Shows the latest events in the whole cluster, ordered by creation time (metadata.creationTimestamp). Write output to /var/work/tests/artifacts/16/events.log**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
