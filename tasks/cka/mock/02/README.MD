@@ -16,53 +16,53 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`) |
 | Acceptance criteria | - Namespace: `dev` <br/>- PV: `dev-pv`                |
 ---
-|        **2**        | **Deploy a utility pod using the busybox:1.36 image. Make sure "date" command is executed every 10 seconds.** |
+|        **2**        | **Deploy a util pod using the busybox:1.36 image in the dev namespace. Use sleep 3600 command to keep it running.** |
 | :-----------------: | :-------------------------------------------------------------------------------------- |
 |     Task weight     | 1%                                                                                      |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                         |
-| Acceptance criteria | - Pod Name: `utility` <br/>- Image: `busybox:1.36`<br> - Commands: `date, sleep 10`           |
+| Acceptance criteria | - Pod Name: `util` <br/> - Namespace: `dev` <br/> - Image: `busybox:1.36`<br> - Commands: `sleep 3600`           |
 ---
 |        **3**        | **Create a namespace named team-elephant**                       |
 | :-----------------: | :-------------------------------------------------------------- |
 |     Task weight     | 1%                                                              |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`) |
-| Acceptance criteria | - Namespace: `team-elephant`                                     |
+| Acceptance criteria | - Namespace: `team-elephant` <br/> Namespace is present in the namespaces list.       |
 ---
 |        **4**        | **Create pod alpine with image "alpine:3.15" and make sure it is running on node with label disk=ssd.** |
 | :-----------------: | :---------------------------------------------------------------------------------------------------------- |
 |     Task weight     | 2%                                                                                                          |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                             |
-| Acceptance criteria | - pod is running on the node with label disk=ssd                                                |
+| Acceptance criteria | - Pod is running on the node with label disk=ssd.                                                |
 ---
-|        **5**        | **Create pod web-app with image "nginx:stable". Container port should be configured on port 80 and named http-web.** |
+|        **5**        | **Create deployment web-app with image "nginx:stable" and 2 replicas. Container port should be configured on port 80 and named http-web.** |
 | :-----------------: | :---------------------------------------------------------------------------------------------------------- |
 |     Task weight     | 2%                                                                                                          |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                             |
-| Acceptance criteria | - pod is running, container's port 80 named http-web                                              |
+| Acceptance criteria | - Deployment name: `web-srv`<br/> - Image: `nginx:stable`<br/> - Replicas: `2`<br/> Deployment pods are running, containers' ports 80 named http-web.       |
 ---
-|        **6**        | **Create a service web-app-svc to expose the web-app application on port 8080 on cluster nodes.**                             |
+|        **6**        | **Create a service web-app-svc to expose the web-app deployment on port 8080 on cluster nodes.**                             |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | 2%                                                                                                                                     |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                        |
 | Acceptance criteria | - Use imperative commands to create mainifest. <br/> - Service: `web-app-svc`<br/>- Port: `8080` <br/>- Type: `NodePort`<br/>- Use the right labels to select targer port. |
 ---
-|        **7**        | **Create a single pod web-srv based on image caddy:alpine in the default namespace. The container in the pod should named app1.**
+|        **7**        | **Create a pod web-srv based on image caddy:alpine in the default namespace. The container in the pod should named app1.**
 | :-----------------: | :-------------------------------------------------------------------------------------- |
 |     Task weight     | 1%                                                                                      |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                         |
-| Acceptance criteria | - Name: `web-srv`<br/>- Image: `caddy:alpine`<br/>- Container name: `app1`              |
+| Acceptance criteria | - Pod name: `web-srv`<br/>- Image: `caddy:alpine`<br/>- Container name: `app1`              |
 ---
 |        **8**        | **2 pods are running in the namspace db-redis named redis-node-\*. You have to scale down number of replicas to 1.** |
 | :-----------------: | :--------------------------------------------------------------------------------------- |
 |     Task weight     |  1%                                                                                                                 |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                      |
-| Acceptance criteria | - Name: `redis-node-\*`<br/>- Number of pods running: 1                                                                                |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                     |
+| Acceptance criteria | - Name: `redis-node-\*`<br/>- Number of pods running: 1 <br/> - Nuber of pods is scaled down to 1. <br/>            |
 ---
-|        **9**        | **Export pods from all namespaces to /var/work/tests/artifacts/9/pods.json**             |
+|        **9**        | **Export pods from all namespaces in json format to /var/work/tests/artifacts/9/pods.json**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 1%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - list of pods to /var/work/tests/artifacts/9/pods.json                              |
+| Acceptance criteria | - List of pod from all namespaces written to /var/work/tests/artifacts/9/pods.json.                              |
 ---
 |        **10**        | **Create a new PersistentVolume poc-web-pv, size 100Mi and mount it to the folder /project/data. Persistent Volume poc-web-pvc in poc-web namespace should bond with volume and claim 100Mi. Finally create a new Deployment poc-web-deploy in Namespace poc-web and mount that volume to /project/data. nginx:alpine image should be used for deployment.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
