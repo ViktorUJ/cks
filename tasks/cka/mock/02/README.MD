@@ -64,11 +64,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - list of pods to /var/work/tests/artifacts/9/pods.json                              |
 ---
-|        **10**        | **Create a new PersistentVolume poc-web-pv, set accessMode ReadWriteOnce, size 1Gi and hostPath /project/data. Bond it with  PersistentVolumeClaim poc-web-pvc in poc-web namespace, size 1Gi. Finally create a new Deployment poc-web-deploy in Namespace poc-web and mount that volume to /project/data. Use nginx:alpine for deployment image.**             |
+|        **10**        | **Create a new PersistentVolume poc-web-pv, size 100Mi and hostPath /project/data. Bond it with poc-web-pvc in poc-web namespace, size 100Mi. Finally create a new Deployment poc-web-deploy in Namespace poc-web and mount that volume to /project/data. nginx:alpine image should be used for deployment.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 8%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - poc-web-pvc bonded to poc-web-pv volume and volume is mounted to pods in poc-web-deploy deployment      |
+| Acceptance criteria | - PV name: `poc-web-pv`<br/> - accessMode: `ReadWriteOnce`<br/> - Size: `100Mi`<br/> - hostPath: `/project/data`<br/> - PersistentVolumeClaim: `poc-web-pvc`<br/>  - Namespace: `poc-web`<br/> - Size: `100Mi`<br/> poc-web-pvc bonded to poc-web-pv volume and volume is mounted to pods in poc-web-deploy deployment      |
 ---
 |        **11**        | **Show Pods and their containers resource usage orderd by memory usage**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
@@ -76,11 +76,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - Script that shows pods and their container resource usage by memory usage to /var/work/tests/artifacts/11/pods.sh      |
 ---
-|        **12**        | **Create Ingress. Point it service web-app-svc, path /, port 8080**             |
+|        **12**        | **Create Ingress web-app-ingress. Point it service web-app-svc, path /, port 8080**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 3%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - Ingress is created and point to the right service and right port     |
+| Acceptance criteria | - Ingress name: `web-app-ingress`<br/> - Path: `/`<br/> - Service: `web-app-svc`<br/> - Port: `8080`<br/> Ingress is created and points to the right service and right port.     |
 ---
 |        **13**        | **In the Namespace team-elephant create a new ServiceAccount pod-sa. Assing an account permissions to list and get pods using Role and RoleBinding**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
@@ -92,7 +92,7 @@ This includes all available language translations of these pages (e.g. https://k
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 4%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - DaemonSet: `team-elephant-ds`<br/> - Namespace: `team-elephant`<br/> - Image: `caddy:alpine`<br/> - Labels: `team=team-elephant`, `env=dev` <br/> - CPU: `100m`<br/> - Memory: `128Mi`<br/> Pods are running on all nodes including control plane and in Namespace team-elephant.     |
+| Acceptance criteria | - DaemonSet: `team-elephant-ds`<br/> - Namespace: `team-elephant`<br/> - Image: `caddy:alpine`<br/> - Labels: `team=team-elephant`, `env=dev` <br/> - CPU: `100m`<br/> - Memory: `128Mi`<br/> Pods are running on all nodes, including control plane, in Namespace team-elephant.     |
 ---
 |        **15**        | **Create a Pod named multi-pod in the default namespace. Pod should have 3 containers: box1, box2 and box3. Containers should use temporary volume to exchange information. Configure containers box2 and box3 according the acceptance criteria below.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
