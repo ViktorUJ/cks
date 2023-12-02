@@ -124,7 +124,7 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - Name: `stat-podv`<br/>- Image: `caddy:alpine`<br/>- CPU: `100m`<br/> - Memory: `128Mi`<br/> - Service name: `stat-pod-svc`<br/> - Service type: `NodePort`<br/> Pod is accessible from control plane node. <br/>
 ---
-|        **20**        | **Backup etcd save it on the control plane node at /var/work/tests/artifacts/20/etcd-backup.db. Create pod web-srv with image nginx. Now restore the backup and make sure pod nginx has disappear.**                  |
+|        **20**        | **Backup etcd save it on the control plane node at /var/work/tests/artifacts/20/etcd-backup.db. Create pod web-srv with image nginx. Now restore the backup and make sure pod nginx has disappeared.**                  |
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 2%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
