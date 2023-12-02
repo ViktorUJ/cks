@@ -1,9 +1,11 @@
 prefix_dir="${USER_ID}_${ENV_ID}_"
+terragrunt_vars="-var=\"prefix=$$prefix_dir\""
 
 # Set prefix_dir to empty if it contains '__'
 ifneq ($(findstring __,$(prefix_dir)),)
   # If '__' is found, set prefix_dir to an empty string
   prefix_dir :=
+  terragrunt_vars :=
 endif
 
 
@@ -93,13 +95,13 @@ run_cks_mock:
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@echo "*** run cks mock clean , task ${TASK}  terragrunt_env_dir =$$terragrunt_env_dir "
 	@cp -r tasks/cks/mock/${TASK}/* $$terragrunt_env_dir
-	@cd $$terragrunt_env_dir && terragrunt run-all apply
+	@cd $$terragrunt_env_dir && terragrunt run-all apply $$terragrunt_vars
 
 delete_cks_mock:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks-mock/"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@echo "*** delete cks mock terragrunt_env_dir =$$terragrunt_env_dir "
-	cd $$terragrunt_env_dir && terragrunt run-all destroy
+	cd $$terragrunt_env_dir && terragrunt run-all destroy $$terragrunt_vars
 
 clean_cks_mock:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks-mock/"
@@ -110,7 +112,7 @@ run_cks_mock_clean: clean_cks_mock  run_cks_mock
 
 output_cks_mock:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks-mock/"
-	cd $$terragrunt_env_dir && terragrunt run-all output
+	cd $$terragrunt_env_dir && terragrunt run-all output $$terragrunt_vars
 
 #CKAD mock
 run_ckad_mock:
