@@ -12,10 +12,11 @@ test_multienv:
 # CKA task
 run_cka_task:
 	@echo "*** run cka , task ${TASK}"
-	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
-	@mkdir $terragrunt_env_dir -p >/dev/null
-	cp -r tasks/cka/labs/${TASK}/* ${terragrunt_env_dir}
-	cd ${terragrunt_env_dir} && terragrunt run-all  apply
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
+	@echo "terragrunt_env_dir =${terragrunt_env_dir}"
+#	@mkdir $terragrunt_env_dir -p >/dev/null
+#	cp -r tasks/cka/labs/${TASK}/* ${terragrunt_env_dir}
+#	cd $()terragrunt_env_dir} && terragrunt run-all  apply
 
 delete_cka_task:
 	@echo "*** delete cka , task ${TASK}"
