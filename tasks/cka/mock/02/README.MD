@@ -88,11 +88,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - Pods are running in the Namespace team-elephant can be listed using pod-sa service account.     |
 ---
-|        **14**        | **Create a DaemonSet named team-elephant-ds, image: caddy:alpine, labels: team=team-elephant and type=daemonset. Pods configuration, CPU: 100m, Memory: 128Mi. Pods should run on all nodes including control plane and in Namespace team-elephant**             |
+|        **14**        | **Create a DaemonSet named team-elephant-ds, image: caddy:alpine, labels: team=team-elephant and env=dev. Pods should run on all nodes including control plane and in Namespace team-elephant**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 4%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - Pods are running on all nodes including control plane and in Namespace team-elephant.     |
+| Acceptance criteria | - DaemonSet: `team-elephant-ds`<br/> - Namespace: `team-elephant`<br/> - Image: `caddy:alpine`<br/> - Labels: `team=team-elephant`, `env=dev` <br/> - CPU: `100m`<br/> - Memory: `128Mi`<br/> Pods are running on all nodes including control plane and in Namespace team-elephant.     |
 ---
 |        **15**        | **Create a Pod named multi-pod in the default namespace. Pod should have 3 containers: box1, box2 and box3. Containers should use temporary volume to exchange information. Configure containers box2 and box3 according the acceptance criteria below.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
