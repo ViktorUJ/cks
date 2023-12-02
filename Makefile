@@ -6,6 +6,7 @@ ifneq ($(findstring __,$(prefix_dir)),)
   prefix_dir :=
 endif
 
+.ONESHELL:
 
 test_multienv:
 	@echo "*** run test_multienv  , prefix_dir=${prefix_dir}  dir=terraform/environments/${prefix_dir}cka/  task ${TASK}  "
