@@ -68,7 +68,7 @@ This includes all available language translations of these pages (e.g. https://k
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 8%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - PV name: `poc-web-pv`<br/> - accessMode: `ReadWriteOnce`<br/> - Size: `100Mi`<br/> - hostPath: `/project/data`<br/> - PersistentVolumeClaim: `poc-web-pvc`<br/>  - Namespace: `poc-web`<br/> - Size: `100Mi`<br/> poc-web-pvc bonded to poc-web-pv volume and volume is mounted to pods in poc-web-deploy deployment      |
+| Acceptance criteria | - PV name: `poc-web-pv`<br/> - accessMode: `ReadWriteOnce`<br/> - Size: `100Mi`<br/> - hostPath: `/project/data`<br/> - PersistentVolumeClaim: `poc-web-pvc`<br/>  - Namespace: `poc-web`<br/> - Size: `100Mi`<br/> - Deployment: `poc-web-deploy`<br/> - Image: `nginx:alpine`<br/> poc-web-pvc bonded to poc-web-pv volume and volume is mounted to pods in poc-web-deploy deployment      |
 ---
 |        **11**        | **Show Pods and their containers resource usage orderd by memory usage**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
