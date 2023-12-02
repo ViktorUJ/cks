@@ -12,7 +12,7 @@ terragrunt_vars="${USER_ID}_${ENV_ID}"
 
 test_multienv:
 	@echo "*** run test_multienv  , prefix_dir=${prefix_dir}  dir=terraform/environments/${prefix_dir}cka/  task ${TASK}  "
-	@echo "vars =   $$terragrunt_vars"
+	@echo "vars =   ${terragrunt_vars}"
 # CKA task
 
 
