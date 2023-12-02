@@ -1,7 +1,8 @@
 .ONESHELL:
 
 prefix_dir="${USER_ID}_${ENV_ID}_"
-terragrunt_vars="-var='prefix=$(prefix_dir)'"
+#terragrunt_vars="-var='prefix=$(prefix_dir)'"
+terragrunt_vars="-var='prefix=${prefix_dir}'"
 
 # Set prefix_dir to empty if it contains '__'
 ifneq ($(findstring __,$(prefix_dir)),)
