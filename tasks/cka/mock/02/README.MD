@@ -128,6 +128,6 @@ This includes all available language translations of these pages (e.g. https://k
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 2%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - Name: `web-srv`<br/> - Image: `nginx`<br/> Make sure pod nginx has disappear after restore. <br/>  |
+| Acceptance criteria | - Name: `web-srv`<br/> - Image: `nginx`<br/> Make sure pod nginx has disappeared after restore. <br/>  |
 ---
 
