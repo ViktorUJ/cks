@@ -98,7 +98,7 @@ This includes all available language translations of these pages (e.g. https://k
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 4%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - kubectl log -c box3 should display date output for every 3 seconds.     |
+| Acceptance criteria | - kubectl log multicontainer-pod -c box3 should display date output for every 3 seconds.     |
 ---
 |        **16**        | **Shows the latest events in the whole cluster, ordered by creation time (metadata.creationTimestamp). Write output to /var/work/tests/artifacts/16/events.log**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
