@@ -1,4 +1,4 @@
-prefix_dir="${USER_ID}_${ENV_ID}/"
+prefix_dir="${USER_ID}_${ENV_ID}_"
 
 test_multienv:
 	@echo "*** run test_multienv  , prefix_dir=${prefix_dir}  dir=terraform/environments/${prefix_dir}cka/  task ${TASK}  "
