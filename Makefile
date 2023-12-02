@@ -12,17 +12,22 @@ test_multienv:
 # CKA task
 run_cka_task:
 	@echo "*** run cka , task ${TASK}"
-	cp -r tasks/cka/labs/${TASK}/* terraform/environments/cka/
+	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
+	@mkdir $terragrunt_env_dir -p >/dev/null
+	cp -r tasks/cka/labs/${TASK}/* $terragrunt_env_dir
 	cd terraform/environments/cka/ && terragrunt run-all  apply
 
 delete_cka_task:
 	@echo "*** delete cka , task ${TASK}"
-	cp -r tasks/cka/labs/${TASK}/* terraform/environments/cka/
+	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
+	@mkdir $terragrunt_env_dir -p >/dev/null
+	cp -r tasks/cka/labs/${TASK}/* $terragrunt_env_dir
 	cd terraform/environments/cka/ && terragrunt run-all  destroy
 
 clean_cka_task:
 	@echo "*** clean cka task "
-	rm -rf terraform/environments/cka/*
+	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
+	rm -rf ${terragrunt_env_dir}/*
 
 run_cka_task_clean: clean_cka_task  run_cka_task
 
