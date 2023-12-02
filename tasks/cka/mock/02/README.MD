@@ -64,7 +64,7 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - list of pods to /var/work/tests/artifacts/9/pods.json                              |
 ---
-|        **10**        | **Create a new PersistentVolume poc-web-pv, size 100Mi and hostPath /project/data. Bond it with poc-web-pvc in poc-web namespace, size 100Mi. Finally create a new Deployment poc-web-deploy in Namespace poc-web and mount that volume to /project/data. nginx:alpine image should be used for deployment.**             |
+|        **10**        | **Create a new PersistentVolume poc-web-pv, size 100Mi and mount it to the folder /project/data. Persistent Volume poc-web-pvc in poc-web namespace should bond with volume and claim 100Mi. Finally create a new Deployment poc-web-deploy in Namespace poc-web and mount that volume to /project/data. nginx:alpine image should be used for deployment.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 8%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
