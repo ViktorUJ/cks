@@ -81,12 +81,13 @@ clean_cks_task:
 	@echo "terragrunt_env_dir =$$terragrunt_env_dir"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@echo "*** clean cks task "
-	rm -rf $$terragrunt_env_dir/*
+	rm -rf $$terragrunt_env_dir
 
 run_cks_task_clean: clean_cks_task  run_cks_task
 
 output_cks_task:
-	cd terraform/environments/cks/ && terragrunt run-all output
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
+	cd $$terragrunt_env_dir && terragrunt run-all output
 
 #CKS mock
 run_cks_mock:
