@@ -112,11 +112,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - List of namespaced resources to /var/work/tests/artifacts/17/namespaced_resources.out    |
 ---
-|        **18**        | **cluster2 seems to have an issue - cluster2-node1 is not joined. It also might be outdated, so make sure it is running same version kubernetes version as control plane. You should fix the issue.**             |
+|        **18**        | **cluster2 seems to have an issue - cluster2-node1 is not joined. It also might be outdated, so make sure it is running same Kubernetes version as control plane. You should fix the issue.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
 |     Task weight     | 8%                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster2-admin@cluster2`)                       |
-| Acceptance criteria | - cluster2-node1 is running the same version of Kubernetes and as control plane, rejoined to cluster and in Ready status.  |
+| Acceptance criteria | - cluster2-node1 is running the same Kubernetes version as control plane, rejoined to the cluster and is in Ready status.  |
 ---
 |        **19**        | **Create static pod stat-pod in the default namespace. Expose it via service stat-pod-svc.**                  |
 | :-----------------: | :------------------------------------------------------------------------------------ |
