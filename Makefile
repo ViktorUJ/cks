@@ -62,17 +62,15 @@ output_cka_mock:
 #CKS task
 run_cks_task:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
-	@echo "terragrunt_env_dir =$$terragrunt_env_dir"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@echo "*** run cks , task ${TASK}"
+	@echo "*** run cks , task ${TASK} terragrunt_env_dir =$$terragrunt_env_dir"
 	cp -r tasks/cks/labs/${TASK}/* $$terragrunt_env_dir
 	cd $$terragrunt_env_dir && terragrunt run-all  apply
 
 delete_cks_task:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
-	@echo "terragrunt_env_dir =$$terragrunt_env_dir"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@echo "*** delete cks , task ${TASK}"
+	@echo "*** delete cks , task ${TASK} terragrunt_env_dir =$$terragrunt_env_dir"
 	cp -r tasks/cks/labs/${TASK}/* $$terragrunt_env_dir
 	cd $$terragrunt_env_dir && terragrunt run-all  destroy
 
@@ -80,8 +78,8 @@ clean_cks_task:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
 	@echo "terragrunt_env_dir =$$terragrunt_env_dir"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@echo "*** clean cks task "
-	rm -rf $$terragrunt_env_dir
+	@echo "*** clean cks task  terragrunt_env_dir=$$terragrunt_env_dir  "
+	rm -rf $$terragrunt_env_dir/*
 
 run_cks_task_clean: clean_cks_task  run_cks_task
 
@@ -91,22 +89,28 @@ output_cks_task:
 
 #CKS mock
 run_cks_mock:
-	@echo "*** run cks mock clean , task ${TASK}"
-	cp -r tasks/cks/mock/${TASK}/* terraform/environments/cks-mock/
-	cd terraform/environments/cks-mock/ && terragrunt run-all apply
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks-mock/"
+	@mkdir $$terragrunt_env_dir -p >/dev/null
+	@echo "*** run cks mock clean , task ${TASK}  terragrunt_env_dir =$$terragrunt_env_dir "
+	@cp -r tasks/cks/mock/${TASK}/* $$terragrunt_env_dir
+	@cd $$terragrunt_env_dir && terragrunt run-all apply
 
 delete_cks_mock:
-	@echo "*** delete cks mock "
-	cd terraform/environments/cks-mock/ && terragrunt run-all destroy
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks-mock/"
+	@mkdir $$terragrunt_env_dir -p >/dev/null
+	@echo "*** delete cks mock terragrunt_env_dir =$$terragrunt_env_dir "
+	cd $$terragrunt_env_dir && terragrunt run-all destroy
 
 clean_cks_mock:
-	@echo "*** clean cks mock "
-	rm -rf terraform/environments/cks-mock/*
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks-mock/"
+	@echo "*** clean cks mock terragrunt_env_dir =$$terragrunt_env_dir  "
+	rm -rf $$terragrunt_env_dir/*
 
 run_cks_mock_clean: clean_cks_mock  run_cks_mock
 
 output_cks_mock:
-	cd terraform/environments/cks-mock/ && terragrunt run-all output
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks-mock/"
+	cd $$terragrunt_env_dir && terragrunt run-all output
 
 #CKAD mock
 run_ckad_mock:
