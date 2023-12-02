@@ -61,9 +61,12 @@ output_cka_mock:
 
 #CKS task
 run_cks_task:
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
+	@echo "terragrunt_env_dir =$$terragrunt_env_dir"
+	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@echo "*** run cks , task ${TASK}"
-	cp -r tasks/cks/labs/${TASK}/* terraform/environments/cks/
-	cd terraform/environments/cks/ && terragrunt run-all  apply
+	cp -r tasks/cks/labs/${TASK}/* $$terragrunt_env_dir
+	cd $$terragrunt_env_dir && terragrunt run-all  apply
 
 delete_cks_task:
 	@echo "*** delete cks , task ${TASK}"
