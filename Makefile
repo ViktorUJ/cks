@@ -1,3 +1,5 @@
+.ONESHELL:
+
 prefix_dir="${USER_ID}_${ENV_ID}_"
 terragrunt_vars="-var=\"prefix=$$prefix_dir\""
 
@@ -8,13 +10,12 @@ ifneq ($(findstring __,$(prefix_dir)),)
   terragrunt_vars :=
 endif
 
-
 test_multienv:
 	@echo "*** run test_multienv  , prefix_dir=${prefix_dir}  dir=terraform/environments/${prefix_dir}cka/  task ${TASK}  "
 	@echo "vars =   $$terragrunt_vars"
 # CKA task
 
-.ONESHELL:
+
 run_cka_task:
 	@echo "*** run cka , task ${TASK}"
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
