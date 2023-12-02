@@ -11,6 +11,7 @@ endif
 
 test_multienv:
 	@echo "*** run test_multienv  , prefix_dir=${prefix_dir}  dir=terraform/environments/${prefix_dir}cka/  task ${TASK}  "
+	@echo $$terragrunt_vars
 # CKA task
 
 .ONESHELL:
