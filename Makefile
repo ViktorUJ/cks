@@ -1,3 +1,7 @@
+prefix_dir="${USER_ID}_${ENV_ID}/"
+
+test_multienv:
+	@echo "*** run test_multienv  , terraform/environments/${prefix_dir}cka/  task ${TASK}  "
 # CKA task
 run_cka_task:
 	@echo "*** run cka , task ${TASK}"
