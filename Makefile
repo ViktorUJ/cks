@@ -69,13 +69,19 @@ run_cks_task:
 	cd $$terragrunt_env_dir && terragrunt run-all  apply
 
 delete_cks_task:
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
+	@echo "terragrunt_env_dir =$$terragrunt_env_dir"
+	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@echo "*** delete cks , task ${TASK}"
-	cp -r tasks/cks/labs/${TASK}/* terraform/environments/cks/
-	cd terraform/environments/cks/ && terragrunt run-all  destroy
+	cp -r tasks/cks/labs/${TASK}/* $$terragrunt_env_dir
+	cd $$terragrunt_env_dir && terragrunt run-all  destroy
 
 clean_cks_task:
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
+	@echo "terragrunt_env_dir =$$terragrunt_env_dir"
+	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@echo "*** clean cks task "
-	rm -rf terraform/environments/cks/*
+	rm -rf $$terragrunt_env_dir/*
 
 run_cks_task_clean: clean_cks_task  run_cks_task
 
