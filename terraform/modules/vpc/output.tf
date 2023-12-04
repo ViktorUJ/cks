@@ -14,5 +14,5 @@ output "vpc_default_cidr" {
 }
 
 output "env" {
-  value = "${var.aws}-${var.prefix}-${var.app_name} "
+  value = "${var.aws}-${local.prefix}-${var.app_name} "
 }
