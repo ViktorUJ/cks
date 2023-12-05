@@ -46,5 +46,5 @@ output "kubectl_version" {
   value = var.work_pc.util.kubectl_version
 }
 output "prefix" {
-  value = var.prefix
+  value = local.prefix
 }

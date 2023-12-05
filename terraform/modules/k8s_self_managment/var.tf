@@ -4,6 +4,14 @@ variable "prefix" {}
 variable "tags_common" {
   type = map(string)
 }
+variable "USER_ID" {
+  type = string
+  default = ""
+}
+variable "ENV_ID" {
+  type = string
+  default = ""
+}
 variable "app_name" {}
 variable "vpc_id" {}
 variable "subnets_az" {}

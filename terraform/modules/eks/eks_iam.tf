@@ -1,5 +1,5 @@
 resource "aws_iam_role" "eks-node" {
-  name = "${var.aws}-${var.prefix}-eks-node"
+  name = "${var.aws}-${local.prefix}-eks-node"
 
   assume_role_policy = <<POLICY
 {
@@ -19,7 +19,7 @@ POLICY
 
 
 resource "aws_iam_policy" "ClusterAutoScaler" {
-  name        = "${var.aws}-${var.prefix}-eks"
+  name        = "${var.aws}-${local.prefix}-eks"
   path        = "/"
   description = ""
   policy      = <<POLICY
@@ -66,6 +66,6 @@ resource "aws_iam_role_policy_attachment" "eks-node-AmazonEC2ContainerRegistryRe
 }
 
 resource "aws_iam_instance_profile" "eks-node" {
-  name = "${var.aws}-${var.prefix}-eks-node"
+  name = "${var.aws}-${local.prefix}-eks-node"
   role = aws_iam_role.eks-node.name
 }

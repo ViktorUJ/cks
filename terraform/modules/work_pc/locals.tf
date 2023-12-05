@@ -1,15 +1,17 @@
 locals {
+  prefix_id="${var.USER_ID}_${var.ENV_ID}"
+  prefix=local.prefix_id == "_" ? var.prefix : local.prefix_id
   subnets_az = distinct(split(",", (var.subnets_az)))
   subnets    = [for item in local.subnets_az : split("=", item)[0]]
   az         = [for item in local.subnets_az : split("=", item)[1]]
   tags_app   = {
-    "Name"     = "${var.aws}-${var.prefix}-${var.app_name}"
+    "Name"     = "${var.aws}-${local.prefix}-${var.app_name}"
     "app_name" = var.app_name
   }
   tags_all       = merge(var.tags_common, local.tags_app)
   tags_k8_master = {
     "k8_node_type" = "worker-pc"
-    "Name"         = "${var.aws}-${var.prefix}-${var.app_name}-worker-pc"
+    "Name"         = "${var.aws}-${local.prefix}-${var.app_name}-worker-pc"
   }
   tags_all_k8_master = var.work_pc.node_type == "spot" ? merge(local.tags_all, local.tags_k8_master) : {}
 

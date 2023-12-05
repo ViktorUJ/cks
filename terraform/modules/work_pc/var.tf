@@ -1,6 +1,14 @@
 variable "region" {}
 variable "aws" {}
 variable "prefix" {}
+variable "USER_ID" {
+  type = string
+  default = ""
+}
+variable "ENV_ID" {
+  type = string
+  default = ""
+}
 variable "tags_common" {
   type = map(string)
 }
