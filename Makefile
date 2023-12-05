@@ -20,20 +20,20 @@ run_cka_task:
 delete_cka_task:
 	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
 	@echo "*** delete cka , task ${TASK} .  terragrunt_env_dir =$$terragrunt_env_dir "
-	@mkdir ${terragrunt_env_dir} -p >/dev/null
+	@mkdir $${terragrunt_env_dir} -p >/dev/null
 	@cp -r tasks/cka/labs/${TASK}/* ${terragrunt_env_dir}
-	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd ${terragrunt_env_dir} && terragrunt run-all  destroy
+	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $${terragrunt_env_dir} && terragrunt run-all  destroy
 
 clean_cka_task:
 	@echo "*** clean cka task "
 	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
-	@rm -rf ${terragrunt_env_dir}/*
+	@rm -rf $${terragrunt_env_dir}/*
 
 run_cka_task_clean: clean_cka_task  run_cka_task
 
 output_cka_task:
 	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
-	@cd ${terragrunt_env_dir} && terragrunt run-all output
+	@cd $${terragrunt_env_dir} && terragrunt run-all output
 
 #CKA mock
 run_cka_mock:
