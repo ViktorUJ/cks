@@ -62,6 +62,7 @@ output_cka_mock:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
 	@cd $$terragrunt_env_dir && terragrunt run-all output
 
+#####
 
 #CKS task
 run_cks_task:
