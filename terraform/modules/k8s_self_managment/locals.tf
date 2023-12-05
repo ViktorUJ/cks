@@ -1,6 +1,6 @@
 locals {
   prefix_id="${var.USER_ID}_${var.ENV_ID}"
-  prefix=local.prefix_id == "_" ? var.prefix : local.prefix_id
+  prefix=local.prefix_id == "_" ? var.prefix : "${local.prefix_id}_${var.prefix}"
   subnets_az = distinct(split(",", (var.subnets_az)))
   subnets    = [for item in local.subnets_az : split("=", item)[0]]
   az         = [for item in local.subnets_az : split("=", item)[1]]
