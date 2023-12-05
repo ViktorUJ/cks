@@ -121,14 +121,14 @@ run_ckad_mock:
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@echo "*** run ckad mock , task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir"
 	@cp -r tasks/ckad/mock/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir ;  && terragrunt run-all apply
+	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir   && terragrunt run-all apply
 
 delete_ckad_mock:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}ckad-mock/"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@echo "*** delete ckad mock task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir"
 	@cp -r tasks/ckad/mock/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir ; && terragrunt run-all destroy
+	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir  && terragrunt run-all destroy
 
 clean_ckad_mock:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}ckad-mock/"
@@ -139,7 +139,7 @@ run_ckad_mock_clean: clean_ckad_mock  run_ckad_mock
 
 output_ckad_mock:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}ckad-mock/"
-	@cd $$terragrunt_env_dir ; && terragrunt run-all output
+	@cd $$terragrunt_env_dir  && terragrunt run-all output
 
 
 #HR mock
