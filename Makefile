@@ -1,40 +1,33 @@
 .ONESHELL:
 
 prefix_dir="${USER_ID}_${ENV_ID}_"
-terragrunt_vars="-var=\'USER_ID=${USER_ID}' -var=\'ENV_ID=${ENV_ID}' "
 
 # Set prefix_dir to empty if it contains '__'
 ifneq ($(findstring __,$(prefix_dir)),)
   # If '__' is found, set prefix_dir to an empty string
   prefix_dir :=
-  terragrunt_vars :=
 endif
 
-test_multienv:
-	@echo "*** run test_multienv  , prefix_dir=${prefix_dir}  dir=terraform/environments/${prefix_dir}cka/  task ${TASK}  "
-	@echo "vars =   ${terragrunt_vars}"
+
 # CKA task
-
-
 run_cka_task:
-	@echo "*** run cka , task ${TASK}"
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
-	@echo "terragrunt_env_dir =$$terragrunt_env_dir"
+	@echo "*** run cka , task ${TASK} .  terragrunt_env_dir =$$terragrunt_env_dir"
 	@mkdir $terragrunt_env_dir -p >/dev/null
-	cp -r tasks/cka/labs/${TASK}/* $$terragrunt_env_dir
-	cd $$terragrunt_env_dir && terragrunt run-all  apply
+	@cp -r tasks/cka/labs/${TASK}/* $$terragrunt_env_dir
+	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all  apply
 
 delete_cka_task:
-	@echo "*** delete cka , task ${TASK}"
 	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
+	@echo "*** delete cka , task ${TASK} .  terragrunt_env_dir =$$terragrunt_env_dir "
 	@mkdir ${terragrunt_env_dir} -p >/dev/null
-	cp -r tasks/cka/labs/${TASK}/* ${terragrunt_env_dir}
-	cd ${terragrunt_env_dir} && terragrunt run-all  destroy
+	@cp -r tasks/cka/labs/${TASK}/* ${terragrunt_env_dir}
+	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd ${terragrunt_env_dir} && terragrunt run-all  destroy
 
 clean_cka_task:
 	@echo "*** clean cka task "
 	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
-	rm -rf ${terragrunt_env_dir}/*
+	@rm -rf ${terragrunt_env_dir}/*
 
 run_cka_task_clean: clean_cka_task  run_cka_task
 
@@ -108,7 +101,7 @@ delete_cks_mock:
 clean_cks_mock:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks-mock/"
 	@echo "*** clean cks mock terragrunt_env_dir =$$terragrunt_env_dir  "
-	rm -rf $$terragrunt_env_dir/*
+	@rm -rf $$terragrunt_env_dir/*
 
 run_cks_mock_clean: clean_cks_mock  run_cks_mock
 
