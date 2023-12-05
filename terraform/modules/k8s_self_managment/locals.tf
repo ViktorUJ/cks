@@ -20,8 +20,8 @@ locals {
     "Name"         = "${var.aws}-${local.prefix}-${var.app_name}-worker"
   }
   tags_all_k8_worker = merge(local.tags_all, local.tags_k8_worker)
-  worker_join        = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
-  k8s_config         = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/config"
+  worker_join        = "${var.s3_k8s_config}/${local.prefix}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
+  k8s_config         = "${var.s3_k8s_config}/${local.prefix}/${var.cluster_name}-${local.target_time_stamp}/config"
 
   worker_nodes = var.node_type == "spot" ? {
     for key, instance in data.aws_instances.spot_fleet_worker :
