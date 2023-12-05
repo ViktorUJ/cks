@@ -69,8 +69,8 @@ run_cks_task:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@echo "*** run cks , task ${TASK} terragrunt_env_dir =$$terragrunt_env_dir"
-	cp -r tasks/cks/labs/${TASK}/* $$terragrunt_env_dir
-	cd $$terragrunt_env_dir && terragrunt run-all  apply
+	@cp -r tasks/cks/labs/${TASK}/* $$terragrunt_env_dir
+	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all  apply
 
 delete_cks_task:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
@@ -117,22 +117,29 @@ output_cks_mock:
 
 #CKAD mock
 run_ckad_mock:
-	@echo "*** run ckad mock , task ${TASK}"
-	cp -r tasks/ckad/mock/${TASK}/* terraform/environments/ckad-mock/
-	cd terraform/environments/ckad-mock/ && terragrunt run-all apply
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}ckad-mock/"
+	@mkdir $$terragrunt_env_dir -p >/dev/null
+	@echo "*** run ckad mock , task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir"
+	@cp -r tasks/ckad/mock/${TASK}/* $$terragrunt_env_dir
+	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir ;  && terragrunt run-all apply
 
 delete_ckad_mock:
-	@echo "*** delete ckad mock "
-	cd terraform/environments/ckad-mock/ && terragrunt run-all destroy
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}ckad-mock/"
+	@mkdir $$terragrunt_env_dir -p >/dev/null
+	@echo "*** delete ckad mock task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir"
+	@cp -r tasks/ckad/mock/${TASK}/* $$terragrunt_env_dir
+	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir ; && terragrunt run-all destroy
 
 clean_ckad_mock:
-	@echo "*** run clean ckad mock "
-	rm -rf terraform/environments/ckad-mock/*
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}ckad-mock/"
+	@echo "*** run clean ckad mock . terragrunt_env_dir =$$terragrunt_env_dir"
+	rm -rf $$terragrunt_env_dir
 
 run_ckad_mock_clean: clean_ckad_mock  run_ckad_mock
 
 output_ckad_mock:
-	cd terraform/environments/ckad-mock/ && terragrunt run-all output
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}ckad-mock/"
+	@cd $$terragrunt_env_dir ; && terragrunt run-all output
 
 
 #HR mock
