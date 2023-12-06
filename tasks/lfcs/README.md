@@ -72,3 +72,27 @@
 | Acceptance criteria | - `tar` archieve is created?<br/>- `gzip` archieve is created?<br/>- `bz` archieve is created?<br/> - `zip` archieve is created?                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ---
+
+|        **8**        | **Extracting content**                                                                                                                                                                                        |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | ?%                                                                                                                                                                                                            |
+|        Task         | There are two archives in the `/opt/08task` folder:<br/> - Extract the content of `backup.tar.gz` to `/opt/08solution/tarbackup` <br/> - - Extract the content of `backup.zip` to `/opt/08solution/zipbackup` |
+| Acceptance criteria | `backup.tar.gz` is extracted? `backup.zip` is extracted?                                                                                                                                                      |
+
+---
+
+|        **9**        | **Installing the service**                                                                                                                |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                        |
+|        Task         | - Install the service nginx using package manager<br/> - Make this service automatically start up after rebooting <br/> - Run the service |
+| Acceptance criteria | - nginx is installed?<br/> - nginx is enabled?<br/> - nginx is running?                                                                   |
+
+---
+
+|       **10**        | **Adding a new user**                                                                                                                                                                                                                                                                                       |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                          |
+|        Task         | Add a new admin user with the following requirenments:<br/> - with the name `cooluser` <br/> - with a password `superstrongpassword` <br/> - Set the default shell for this user as `/bin/zsh`<br/> - if that's an admin user,`cooluser` should be able to run commands with sudo without entering password |
+| Acceptance criteria | - user `cooluser` with password is created ?<br/> - default shell for this user is `zsh`?<br/> - This user is able to perform sudo commands without entering as password?                                                                                                                                   |
+
+---
