@@ -14,7 +14,8 @@ resource "aws_dynamodb_table_item" "cmdb" {
   "LockID": {"S": "CMDB_${local.prefix}_${var.app_name}"},
   "time_stamp": {"S": "${time_static.time.unix}"},
   "USER_ID": {"S": "${var.USER_ID}"},
-  "ENV_ID": {"S": "${var.ENV_ID}"}
+  "ENV_ID": {"S": "${var.ENV_ID}"},
+  "region": {"S": "${var.region}"}
 
     }
 ITEM
@@ -31,7 +32,8 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   "USER_ID": {"S": "${var.USER_ID}"},
   "ENV_ID": {"S": "${var.ENV_ID}"},
   "vpc_id": {"S": "${aws_vpc.default.id}"},
-  "subnets_az_cmdb": {"S": "${local.subnets_az_cmdb}"}
+  "subnets_az_cmdb": {"S": "${local.subnets_az_cmdb}"},
+  "region": {"S": "${var.region}"}
     }
 ITEM
 
