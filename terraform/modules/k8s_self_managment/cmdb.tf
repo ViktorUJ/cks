@@ -1,6 +1,3 @@
-resource "time_static" "time" {}
-
-
 data "aws_dynamodb_table" "cmdb" {
   name = var.backend_dynamodb_table
 
