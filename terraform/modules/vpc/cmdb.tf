@@ -11,19 +11,22 @@ resource "aws_dynamodb_table_item" "cmdb" {
   table_name = data.aws_dynamodb_table.cmdb.name
   item = <<ITEM
 {
-  "LockID": {"S": "CMDB_${local.prefix}_${var.app_name}"}
+  "LockID": {"S": "CMDB_${local.prefix}_${var.app_name}"},
+  "time_stamp": {"S": "${time_static.time.unix}"},
+  "USER_ID": {"S": "${var.USER_ID}"},
+  "ENV_ID": {"S": "${var.ENV_ID}"}
 
     }
 ITEM
 
 }
 
-resource "aws_dynamodb_table_item" "cmdb_update" {
+resource "aws_dynamodb_table_item" "cmdb_data" {
   hash_key = "LockID"
   table_name = data.aws_dynamodb_table.cmdb.name
   item = <<ITEM
 {
-  "LockID": {"S": "CMDB_${local.prefix}_${var.app_name}"},
+  "LockID": {"S": "CMDB_${local.prefix}_${var.app_name}_data"},
   "time_stamp": {"S": "${time_static.time.unix}"},
   "USER_ID": {"S": "${var.USER_ID}"},
   "ENV_ID": {"S": "${var.ENV_ID}"},
