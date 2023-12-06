@@ -89,10 +89,51 @@
 
 ---
 
-|       **10**        | **Adding a new user**                                                                                                                                                                                                                                                                                       |
-| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                                                                                                                                                                                          |
-|        Task         | Add a new admin user with the following requirenments:<br/> - with the name `cooluser` <br/> - with a password `superstrongpassword` <br/> - Set the default shell for this user as `/bin/zsh`<br/> - if that's an admin user,`cooluser` should be able to run commands with sudo without entering password |
-| Acceptance criteria | - user `cooluser` with password is created ?<br/> - default shell for this user is `zsh`?<br/> - This user is able to perform sudo commands without entering as password?                                                                                                                                   |
+|       **10**        | **Adding a new user**                                                                                                                                                                                                                                                             |
+| :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                |
+|        Task         | Add a new admin user with the following requirenments:<br/> - with the name `cooluser` <br/> - with a password `superstrongpassword` <br/> - Set the default shell for this user as `/bin/zsh`<br/> - if that's an admin user,`cooluser` should be able to run commands with sudo |
+| Acceptance criteria | - user `cooluser` with password is created ?<br/> - default shell for this user is `zsh`?<br/> - This user is able to perform sudo?                                                                                                                                               |
+
+---
+
+|       **11**        | **Locking and unlocking users**                                                                                                                                                                                                                                                                                                |
+| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                             |
+|        Task         | There are two users in the system `spiderman` and `batman`. In this task is needed to perform some actions to lock/unlock password for these users:<br/> - `spiderman` cannot login to the system with his password, as password was locked, we need to unlock this user  <br/> - `batman` is unlocked, so we need to lock him |
+| Acceptance criteria | - user `spiderman` is unlocked?<br/> - user `batman` is locked?                                                                                                                                                                                                                                                                |
+
+---
+
+|       **12**        | **Set a limit for the user users**                                                                                                                |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | ?%                                                                                                                                                |
+|        Task         | There is a user `phoenix` in the system. Set a limit for this user so that she can open no more than `20` processes. This should be a hard limit. |
+| Acceptance criteria | - hard limit is set for user `phoenix` processes  ?                                                                                               |
+
+---
+
+|       **13**        | **Set a skeleton for the user users**                                                                                                                             |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                |
+|        Task         | Edit the so-called skeleton directory so that whenever a new user is created on this system, a file called `IMPORTANT_NOTES` is copied to his/her home directory. |
+| Acceptance criteria | - Make sure a file called `IMPORTANT_NOTES` is copied to the new user's home directory                                                                            |
+
+---
+
+|       **14**        | **Revoke sudo privilligies**                                                              |
+| :-----------------: | :---------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                        |
+|        Task         | There is a user `jack` in the system. This user should not have sudo permissions anymore. |
+| Acceptance criteria | - Make sure that a user `jack` is not able to perform commands with sudo                  |
+
+---
+
+# Not ready
+|       **15**        | **Redirect filtering output**                                                        |
+| :-----------------: | :----------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                   |
+|        Task         | Display all the lines in the `/etc/services` file that start out with the text core. |
+| Acceptance criteria | -                                                                                    |
 
 ---
