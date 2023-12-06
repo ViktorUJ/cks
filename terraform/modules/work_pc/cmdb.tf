@@ -32,6 +32,7 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   "USER_ID": {"S": "${var.USER_ID}"},
   "ENV_ID": {"S": "${var.ENV_ID}"},
   "worker_pc_id": {"S": "${local.worker_pc_id}"},
+  "worker_pc_ip": {"S": "${local.worker_pc_ip}"},
   "region": {"S": "${var.region}"}
     }
 ITEM
