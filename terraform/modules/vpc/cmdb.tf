@@ -1,8 +1,4 @@
-resource "time_static" "time" {
-  triggers = {
-    time = local.time_stamp
-  }
-}
+resource "time_static" "time" {}
 
 
 data "aws_dynamodb_table" "cmdb" {
