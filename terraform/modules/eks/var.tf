@@ -10,6 +10,7 @@ variable "ENV_ID" {
   default = ""
 }
 variable "vpc_id" {}
+variable "app_name" {}
 
 variable "eks" {
   type = object({

@@ -31,8 +31,7 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   "time_stamp": {"S": "${time_static.time.unix}"},
   "USER_ID": {"S": "${var.USER_ID}"},
   "ENV_ID": {"S": "${var.ENV_ID}"},
-  "vpc_id": {"S": "${aws_vpc.default.id}"},
-  "subnets_az_cmdb": {"S": "${local.subnets_az_cmdb}"},
+  "eks_cluster_name": {"S": "${aws_eks_cluster.eks-cluster.name}"},
   "region": {"S": "${var.region}"}
     }
 ITEM

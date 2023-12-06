@@ -8,7 +8,7 @@ resource "aws_dynamodb_table_item" "cmdb" {
   table_name = data.aws_dynamodb_table.cmdb.name
   item = <<ITEM
 {
-  "LockID": {"S": "CMDB_${local.prefix}_${var.app_name}"},
+  "LockID": {"S": "CMDB_${local.prefix}_lock_${var.app_name}"},
   "time_stamp": {"S": "${time_static.time.unix}"},
   "USER_ID": {"S": "${var.USER_ID}"},
   "ENV_ID": {"S": "${var.ENV_ID}"},
@@ -24,11 +24,12 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   table_name = data.aws_dynamodb_table.cmdb.name
   item = <<ITEM
 {
-  "LockID": {"S": "CMDB_${local.prefix}_${var.app_name}_data"},
+  "LockID": {"S": "CMDB_${local.prefix}_data_${var.app_name}"},
   "time_stamp": {"S": "${time_static.time.unix}"},
   "USER_ID": {"S": "${var.USER_ID}"},
   "ENV_ID": {"S": "${var.ENV_ID}"},
   "master_instance_id": {"S": "${local.master_instance_id}"},
+  "master_ip": {"S": "${local.master_ip_public}"},
   "worker_node_ids": {"S": "${local.worker_node_ids}"},
   "region": {"S": "${var.region}"}
     }

@@ -2,6 +2,7 @@ locals {
   region = "eu-north-1"
   aws    = "default"
   prefix = "eks-01"
+  app_name= "eks"
   tags   = {
     "env_name"        = "eks-01"
     "env_type"        = "dev"
