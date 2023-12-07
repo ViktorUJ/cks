@@ -52,6 +52,8 @@ locals {
   }
 
   worker_node_ids = join(" ", [for node in local.worker_nodes : node.id])
+  worker_node_ips_public = join(" ", [for node in local.worker_nodes : node.public_ip])
+  worker_node_ips_private = join(" ", [for node in local.worker_nodes : node.private_ip])
 
   master_ip           = var.node_type == "spot" ? join("", data.aws_instances.spot_fleet_master["enable"].public_ips) : aws_instance.master["enable"].public_ip
   master_ip_public    = var.k8s_master.eip == "true" ? aws_eip.master["enable"].public_ip : local.master_ip

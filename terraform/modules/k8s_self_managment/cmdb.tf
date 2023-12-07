@@ -31,6 +31,8 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   "master_instance_id": {"S": "${local.master_instance_id}"},
   "master_ip": {"S": "${local.master_ip_public}"},
   "worker_node_ids": {"S": "${local.worker_node_ids}"},
+  "worker_node_ips_private": {"S": "${local.worker_node_ips_private}"},
+  "worker_node_ips_public": {"S": "${local.worker_node_ips_public}"},
   "region": {"S": "${var.region}"}
     }
 ITEM
