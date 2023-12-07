@@ -2,7 +2,7 @@
 
 prefix_dir="${USER_ID}_${ENV_ID}_"
 region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl | awk -F '"' '{print $$2}')
-backend_bucket := $(shell grep 'backend_bucket' terraform/environments/terragrunt.hcl | awk -F '"' '{print $$2}')
+backend_bucket := $(shell grep '^  backend_bucket' terraform/environments/terragrunt.hcl | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
 dynamodb_table := $(backend_bucket)-lock
 
 # Set prefix_dir to empty if it contains '__'
