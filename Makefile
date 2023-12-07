@@ -199,5 +199,5 @@ lint:
 
 # OPERATION
 cmdb_get_user_env:
-	@echo "DynamoDB Table = $(dynamodb_table)"
+#	@echo "DynamoDB Table = $(dynamodb_table)"
 	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_data_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
