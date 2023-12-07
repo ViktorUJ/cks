@@ -1,6 +1,6 @@
 resource "aws_iam_role" "fleet_role" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name = "${var.aws}-${local.prefix}-${var.app_name}-spot-fleet-worker"
+  name = "${local.prefix}-${var.app_name}-worker"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -17,7 +17,7 @@ resource "aws_iam_role" "fleet_role" {
 
 resource "aws_iam_policy" "fleet_role" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name     = "${var.aws}-${local.prefix}-${var.app_name}-work-pc-spot-fleet"
+  name     = "${local.prefix}-${var.app_name}-work-pc"
   policy   = <<EOF
 {
     "Version": "2012-10-17",
@@ -77,7 +77,7 @@ EOF
 
 resource "aws_iam_policy_attachment" "fleet_role" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name       = "${var.aws}-${local.prefix}-${var.app_name}-work-pc-spot-fleet"
+  name       = "${local.prefix}-${var.app_name}-work-pc"
   policy_arn = aws_iam_policy.fleet_role["enable"].arn
   roles      = [aws_iam_role.fleet_role["enable"].name]
 }
@@ -85,7 +85,7 @@ resource "aws_iam_policy_attachment" "fleet_role" {
 
 resource "aws_launch_template" "master" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name_prefix   = "${var.aws}-${local.prefix}-${var.app_name}"
+  name_prefix   = "${local.prefix}-${var.app_name}"
   image_id  = var.work_pc.ami_id != "" ? var.work_pc.ami_id : data.aws_ami.master.image_id
   instance_type = var.work_pc.instance_type
   user_data     = base64encode( templatefile(var.work_pc.user_data_template, {

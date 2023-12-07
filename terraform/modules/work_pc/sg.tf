@@ -1,6 +1,6 @@
 resource "aws_security_group" "servers" {
-  name        = "${var.aws}-${local.prefix}-mock-work-pc"
-  description = "${var.aws}-${local.prefix}-mock-work-pc"
+  name        = "${local.prefix}-mock-work-pc"
+  description = "${local.prefix}-mock-work-pc"
   vpc_id      = var.vpc_id
 
   ingress {

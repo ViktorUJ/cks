@@ -2,7 +2,7 @@ data "aws_caller_identity" "audit" {
 }
 
 resource "aws_iam_role" "eks_admin" {
-  name               = "${var.aws}-${local.prefix}-eks-admin"
+  name               = "${local.prefix}-eks-admin"
   assume_role_policy = <<POLICY
 {
   "Version": "2012-10-17",
@@ -22,7 +22,7 @@ POLICY
 
 
 resource "aws_iam_policy" "eks_admin" {
-  name   = "${var.aws}-${local.prefix}-eks-admin"
+  name   = "${local.prefix}-eks-admin"
   policy = <<EOF
 {
     "Version": "2012-10-17",
@@ -43,7 +43,7 @@ EOF
 
 
 resource "aws_iam_policy_attachment" "eks-admin" {
-  name       = "${var.aws}-${local.prefix}-eks-admin"
+  name       = "${local.prefix}-eks-admin"
   policy_arn = aws_iam_policy.eks_admin.arn
   roles      = [aws_iam_role.eks_admin.name]
 }

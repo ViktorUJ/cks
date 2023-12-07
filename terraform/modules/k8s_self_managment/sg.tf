@@ -1,6 +1,6 @@
 resource "aws_security_group" "servers" {
-  name        = "${var.aws}-${local.prefix}-k8-self-managment"
-  description = "${var.aws}-${local.prefix}-k8-self-managment"
+  name        = "${local.prefix}-k8-self-managment"
+  description = "${local.prefix}-k8-self-managment"
   vpc_id      = var.vpc_id
 
   ingress {

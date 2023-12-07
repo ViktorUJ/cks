@@ -1,5 +1,5 @@
 resource "aws_iam_role" "server" {
-  name               = "${var.aws}-${local.prefix}-${var.app_name}"
+  name               = "${local.prefix}-${var.app_name}"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -20,7 +20,7 @@ EOF
 }
 
 resource "aws_iam_policy" "server" {
-  name   = "${var.aws}-${local.prefix}-${var.app_name}"
+  name   = "${local.prefix}-${var.app_name}"
   policy = <<EOF
 {
     "Version": "2012-10-17",
@@ -62,11 +62,11 @@ EOF
 
 
 resource "aws_iam_policy_attachment" "server" {
-  name       = "${var.aws}-${local.prefix}-${var.app_name}"
+  name       = "${local.prefix}-${var.app_name}"
   policy_arn = aws_iam_policy.server.arn
   roles      = [aws_iam_role.server.name]
 }
 resource "aws_iam_instance_profile" "server" {
-  name = "${var.aws}-${local.prefix}-${var.app_name}"
+  name = "${local.prefix}-${var.app_name}"
   role = aws_iam_role.server.name
 }

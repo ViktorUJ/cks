@@ -1,7 +1,7 @@
 
 resource "aws_launch_template" "worker" {
   for_each                    = local.k8s_worker_spot
-  name_prefix   = "${var.aws}-${local.prefix}-${var.app_name}"
+  name_prefix   = "${local.prefix}-${var.app_name}"
   image_id      = each.value.ami_id != "" ? each.value.ami_id : data.aws_ami.worker["${each.key}"].image_id
   instance_type = each.value.instance_type
   user_data     = base64encode( templatefile(each.value.user_data_template, {
@@ -17,7 +17,7 @@ resource "aws_launch_template" "worker" {
     ssh_pub_key     = each.value.ssh.pub_key
   }))
   key_name = each.value.key_name
-  tags = merge(var.tags_common, local.tags_app , {"Name" = "${var.aws}-${local.prefix}-${var.app_name}-worker-${each.key}" })
+  tags = merge(var.tags_common, local.tags_app , {"Name" = "${local.prefix}-${var.app_name}-worker-${each.key}" })
   network_interfaces {
     associate_public_ip_address = true
     security_groups             = [aws_security_group.servers.id]
@@ -38,12 +38,12 @@ resource "aws_launch_template" "worker" {
   }
   tag_specifications {
     resource_type = "instance"
-    tags = merge(var.tags_common, local.tags_app , {"Name" = "${var.aws}-${local.prefix}-${var.app_name}-worker-${each.key}" })
+    tags = merge(var.tags_common, local.tags_app , {"Name" = "${local.prefix}-${var.app_name}-worker-${each.key}" })
   }
 
    tag_specifications {
     resource_type = "volume"
-    tags = merge(var.tags_common, local.tags_app , {"Name" = "${var.aws}-${local.prefix}-${var.app_name}-worker-${each.key}" })
+    tags = merge(var.tags_common, local.tags_app , {"Name" = "${local.prefix}-${var.app_name}-worker-${each.key}" })
   }
 
  iam_instance_profile {

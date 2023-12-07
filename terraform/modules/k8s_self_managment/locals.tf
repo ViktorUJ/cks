@@ -9,19 +9,19 @@ locals {
   subnets    = [for item in local.subnets_az : split("=", item)[0]]
   az         = [for item in local.subnets_az : split("=", item)[1]]
   tags_app   = {
-    "Name"     = "${var.aws}-${local.prefix}-${var.app_name}"
+    "Name"     = "${local.prefix}-${var.app_name}"
     "app_name" = var.app_name
   }
   tags_all       = merge(var.tags_common, local.tags_app)
   tags_k8_master = {
     "k8_node_type" = "master"
-    "Name"         = "${var.aws}-${local.prefix}-${var.app_name}-master"
+    "Name"         = "${local.prefix}-${var.app_name}-master"
   }
   tags_all_k8_master = var.node_type == "spot" ? merge(local.tags_all, local.tags_k8_master) : {}
 
   tags_k8_worker = {
     "k8_node_type" = "worker"
-    "Name"         = "${var.aws}-${local.prefix}-${var.app_name}-worker"
+    "Name"         = "${local.prefix}-${var.app_name}-worker"
   }
   tags_all_k8_worker = merge(local.tags_all, local.tags_k8_worker)
   worker_join        = "${var.s3_k8s_config}/config/${local.USER_ID}/${local.ENV_ID}/${var.cluster_name}-${local.target_time_stamp}/worker_join"

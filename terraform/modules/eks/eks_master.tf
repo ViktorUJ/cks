@@ -1,5 +1,5 @@
 resource "aws_iam_role" "eks-cluster" {
-  name = "${var.aws}-${local.prefix}-eks-master"
+  name = "${local.prefix}-eks-master"
 
   assume_role_policy = <<POLICY
 {
@@ -28,7 +28,7 @@ resource "aws_iam_role_policy_attachment" "eks-server-policy" {
 }
 
 resource "aws_security_group" "eks_master" {
-  name        = "${var.aws}-${local.prefix}-eks"
+  name        = "${local.prefix}-eks"
   description = "communication with worker nodes "
   vpc_id      = var.vpc_id
   ingress {
@@ -59,14 +59,14 @@ resource "aws_security_group" "eks_master" {
 
 
   tags = {
-    Name = "${var.aws}-${local.prefix}-eks"
+    Name = "${local.prefix}-eks"
   }
 }
 
 
 
 resource "aws_eks_cluster" "eks-cluster" {
-  name                      = "${var.aws}-${local.prefix}-eks"
+  name                      = "${local.prefix}-eks"
   role_arn                  = aws_iam_role.eks-cluster.arn
   enabled_cluster_log_types = ["api", "audit"]
   version                   = var.eks.version
