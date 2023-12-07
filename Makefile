@@ -206,3 +206,6 @@ cmdb_get_user_env_data:
 
 cmdb_get_user_env_lock:
 	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_lock_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
+
+cmdb_get_item:
+	@aws dynamodb get-item --table-name $(dynamodb_table) --region $(region)  --key '{"LockID": {"S": "CMDB_lock_vkfedorov_01_k8s_cluster2"}}'
