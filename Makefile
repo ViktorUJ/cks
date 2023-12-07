@@ -196,4 +196,5 @@ lint:
 
 # OPERATION
 cmdb_get_user_env:
-	@aws dynamodb scan  --table-name sre-learning-platform-state-backet-lock     --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_data_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $$region | jq -r '.Items[].LockID.S'
+	echo "region = $$region"
+#	@aws dynamodb scan  --table-name sre-learning-platform-state-backet-lock     --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_data_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $$region | jq -r '.Items[].LockID.S'
