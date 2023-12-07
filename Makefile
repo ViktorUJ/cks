@@ -198,6 +198,9 @@ lint:
 	pre-commit run --all-files -c .hooks/.pre-commit-config.yaml
 
 # OPERATION
+cmdb_get_user_env_all:
+	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
+
 cmdb_get_user_env_data:
 	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_data_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
 
