@@ -1,7 +1,7 @@
 .ONESHELL:
 
 prefix_dir="${USER_ID}_${ENV_ID}_"
-region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl | awk -F '"' '{print $2}')
+region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl | awk -F '"' '{print $$2}')
 # Set prefix_dir to empty if it contains '__'
 ifneq ($(findstring __,$(prefix_dir)),)
   # If '__' is found, set prefix_dir to an empty string
