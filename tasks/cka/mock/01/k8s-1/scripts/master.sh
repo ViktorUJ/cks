@@ -27,14 +27,3 @@ echo "*** etcd = $(etcdctl version)"
 
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/k8s-1/scripts/task18.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/k8s-1/scripts/task23.yaml
-
-
-acrh=$(uname -m)
-case $acrh in
-x86_64)
-  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-;;
-aarch64)
-  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
-;;
-esac
