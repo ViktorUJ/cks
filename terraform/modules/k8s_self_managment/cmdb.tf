@@ -10,8 +10,8 @@ resource "aws_dynamodb_table_item" "cmdb" {
 {
   "LockID": {"S": "${local.item_id_lock}"},
   "time_stamp": {"S": "${time_static.time.unix}"},
-  "USER_ID": {"S": "${var.USER_ID}"},
-  "ENV_ID": {"S": "${var.ENV_ID}"},
+  "USER_ID": {"S": "${local.USER_ID}"},
+  "ENV_ID": {"S": "${local.ENV_ID}"},
   "region": {"S": "${var.region}"}
 
     }
@@ -26,8 +26,8 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
 {
   "LockID": {"S": "${local.item_id_data}"},
   "time_stamp": {"S": "${time_static.time.unix}"},
-  "USER_ID": {"S": "${var.USER_ID}"},
-  "ENV_ID": {"S": "${var.ENV_ID}"},
+  "USER_ID": {"S": "${local.USER_ID}"},
+  "ENV_ID": {"S": "${local.ENV_ID}"},
   "master_instance_id": {"S": "${local.master_instance_id}"},
   "master_ip": {"S": "${local.master_ip_public}"},
   "worker_node_ids": {"S": "${local.worker_node_ids}"},

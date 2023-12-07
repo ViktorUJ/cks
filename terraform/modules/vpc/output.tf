@@ -17,10 +17,10 @@ output "env" {
   value = "${var.aws}-${local.prefix}-${var.app_name} "
 }
 output "USER_ID" {
-  value = var.USER_ID
+  value = local.USER_ID
 }
 output "ENV_ID" {
-  value = var.ENV_ID
+  value = local.ENV_ID
 }
 output "local_prefix" {
   value = local.prefix
