@@ -10,11 +10,11 @@ variable "prefix" {}
 variable "app_name" {}
 variable "USER_ID" {
   type = string
-  default = ""
+  default = "defaultUser"
 }
 variable "ENV_ID" {
   type = string
-  default = ""
+  default = "defaultId"
 }
 variable "tags_common" {
   type = map(string)

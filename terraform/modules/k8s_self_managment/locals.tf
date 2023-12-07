@@ -1,8 +1,8 @@
 locals {
   prefix_id="${var.USER_ID}_${var.ENV_ID}"
-  prefix=local.prefix_id == "_" ? var.prefix : "${local.prefix_id}_${var.prefix}"
-  item_id_lock =local.prefix_id == "_" ? "CMDB_defaultUser_defaultId_lock_${var.app_name}_${var.prefix}" : "CMDB_${var.USER_ID}_${var.ENV_ID}_lock_${var.app_name}_${var.prefix}"
-  item_id_data=local.prefix_id == "_" ? "CMDB_defaultUser_defaultId_data_${var.app_name}_${var.prefix}" : "CMDB_${var.USER_ID}_${var.ENV_ID}_data_${var.app_name}_${var.prefix}"
+  prefix="${local.prefix_id}_${var.prefix}"
+  item_id_lock ="CMDB_${var.USER_ID}_${var.ENV_ID}_lock_${var.app_name}_${var.prefix}"
+  item_id_data="CMDB_${var.USER_ID}_${var.ENV_ID}_data_${var.app_name}_${var.prefix}"
   subnets_az = distinct(split(",", (var.subnets_az)))
   subnets    = [for item in local.subnets_az : split("=", item)[0]]
   az         = [for item in local.subnets_az : split("=", item)[1]]
@@ -22,8 +22,8 @@ locals {
     "Name"         = "${var.aws}-${local.prefix}-${var.app_name}-worker"
   }
   tags_all_k8_worker = merge(local.tags_all, local.tags_k8_worker)
-  worker_join        = "${var.s3_k8s_config}/${local.prefix}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
-  k8s_config         = "${var.s3_k8s_config}/${local.prefix}/${var.cluster_name}-${local.target_time_stamp}/config"
+  worker_join        = "${var.s3_k8s_config}/config/${var.USER_ID}/${var.ENV_ID}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
+  k8s_config         = "${var.s3_k8s_config}/config/${var.USER_ID}/${var.ENV_ID}/${var.cluster_name}-${local.target_time_stamp}/config"
 
   worker_nodes = var.node_type == "spot" ? {
     for key, instance in data.aws_instances.spot_fleet_worker :

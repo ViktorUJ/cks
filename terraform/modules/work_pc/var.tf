@@ -3,11 +3,11 @@ variable "aws" {}
 variable "prefix" {}
 variable "USER_ID" {
   type = string
-  default = ""
+  default = "defaultUser"
 }
 variable "ENV_ID" {
   type = string
-  default = ""
+  default = "defaultId"
 }
 variable "tags_common" {
   type = map(string)

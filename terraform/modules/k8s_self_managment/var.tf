@@ -6,11 +6,11 @@ variable "tags_common" {
 }
 variable "USER_ID" {
   type = string
-  default = ""
+  default = "defaultUser"
 }
 variable "ENV_ID" {
   type = string
-  default = ""
+  default = "defaultId"
 }
 variable "app_name" {}
 variable "vpc_id" {}
