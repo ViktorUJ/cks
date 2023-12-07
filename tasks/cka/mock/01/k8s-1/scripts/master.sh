@@ -19,7 +19,8 @@ esac
 wget -O etcd.tar.gz $etcdctl_url
 tar xvf etcd.tar.gz
 etcd_dir=$(ls  | grep linux | tr -d '\n')
-echo "*** etcd_dir = $etcd_dir"
+echo "*** dir=$(pwd) etcd_dir = $etcd_dir"
+
 cd $etcd_dir
 mv etcd etcdctl etcdutl /usr/local/bin/
 echo "*** etcd = $(etcdctl version)"
