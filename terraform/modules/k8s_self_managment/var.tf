@@ -73,3 +73,13 @@ variable "k8s_worker" {
     })
   }))
 }
+
+variable "STACK_NAME" {
+  type = string
+  default = ""
+}
+
+variable "STACK_TASK" {
+  type = string
+  default = ""
+}

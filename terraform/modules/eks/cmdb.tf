@@ -15,6 +15,8 @@ resource "aws_dynamodb_table_item" "cmdb" {
   "time_stamp": {"S": "${time_static.time.unix}"},
   "USER_ID": {"S": "${local.USER_ID}"},
   "ENV_ID": {"S": "${local.ENV_ID}"},
+  "STACK_NAME": {"S": "${var.STACK_NAME}"},
+  "STACK_TASK": {"S": "${var.STACK_TASK}"},
   "region": {"S": "${var.region}"}
 
     }
@@ -31,6 +33,8 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   "time_stamp": {"S": "${time_static.time.unix}"},
   "USER_ID": {"S": "${local.USER_ID}"},
   "ENV_ID": {"S": "${local.ENV_ID}"},
+  "STACK_NAME": {"S": "${var.STACK_NAME}"},
+  "STACK_TASK": {"S": "${var.STACK_TASK}"},
   "eks_cluster_name": {"S": "${aws_eks_cluster.eks-cluster.name}"},
   "region": {"S": "${var.region}"}
     }
