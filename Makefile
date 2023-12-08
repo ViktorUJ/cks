@@ -204,16 +204,16 @@ cmdb_get_env_all:
 
 cmdb_get_user_env_data:
 	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_data_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
-# USER_ID='vkfedorov' ENV_ID='01' TASK=01 make cmdb_get_user_env_data
+# USER_ID='myuser' ENV_ID='01' TASK=01 make cmdb_get_user_env_data
 
 cmdb_get_user_env_lock:
 	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_lock_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
 # only 01 env by user vkfedorov
-# USER_ID='vkfedorov' ENV_ID='01' TASK=01 make cmdb_get_user_env_lock
+# USER_ID='myuser' ENV_ID='01' TASK=01 make cmdb_get_user_env_lock
 
 # all envs by user
-# USER_ID='vkfedorov' ENV_ID='' TASK=01 make cmdb_get_user_env_lock
+# USER_ID='myuser' ENV_ID='' TASK=01 make cmdb_get_user_env_lock
 
 cmdb_get_item:
 	@aws dynamodb get-item --table-name $(dynamodb_table) --region $(region)  --key '{"LockID": {"S": "'${CMDB_ITEM}'"}}'
-# CMDB_ITEM=CMDB_data_vkfedorov_02_k8s_cluster1 make cmdb_get_item
+# CMDB_ITEM=CMDB_data_myuser_02_k8s_cluster1 make cmdb_get_item
