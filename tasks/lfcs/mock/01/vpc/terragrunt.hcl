@@ -19,10 +19,7 @@ inputs = {
    app_name = "network"
    vpc_default_cidr="10.2.0.0/16"
    az_ids={
-   "10.2.0.0/19"=  "eun1-az1"
-   "10.2.32.0/19"= "eun1-az2"
-   "10.2.64.0/19"= "eun1-az3"
-
+   "10.2.0.0/19"=  "eun1-az3"
   }
 
 }

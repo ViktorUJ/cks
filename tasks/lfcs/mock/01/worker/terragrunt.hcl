@@ -24,11 +24,11 @@ dependency "vpc" {
   config_path = "../vpc"
 }
 
-
-dependency "cluster1" {
-  config_path = "../k8s-1"
-}
-
+#
+#dependency "cluster1" {
+#  config_path = "../k8s-1"
+#}
+#
 inputs = {
   region      = local.vars.locals.region
   aws         = local.vars.locals.aws

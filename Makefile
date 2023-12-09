@@ -172,6 +172,34 @@ output_hr_mock:
 
 
 
+#lfcs mock
+run_lfcs_mock:
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}lfcs/"
+	@mkdir $$terragrunt_env_dir -p >/dev/null
+	@echo "*** run lfcs mock , task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir"
+	@cp -r tasks/lfcs/mock/${TASK}/* $$terragrunt_env_dir
+	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="lfcs"  ; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir   && terragrunt run-all apply
+
+delete_lfcs_mock:
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}lfcs/"
+	@mkdir $$terragrunt_env_dir -p >/dev/null
+	@echo "*** delete lfcs mock task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir"
+	@cp -r tasks/lfcs/mock/${TASK}/* $$terragrunt_env_dir
+	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir  && terragrunt run-all destroy
+
+clean_lfcs_mock:
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}lfcs/"
+	@echo "*** run clean lfcs mock . terragrunt_env_dir =$$terragrunt_env_dir"
+	rm -rf $$terragrunt_env_dir
+
+run_lfcs_mock_clean: clean_lfcs_mock  run_lfcs_mock
+
+output_lfcs_mock:
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}lfcs/"
+	@cd $$terragrunt_env_dir  && terragrunt run-all output
+
+
+
 #EKS
 run_eks_task:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}eks/"

@@ -1,9 +1,9 @@
 locals {
   region = "eu-north-1"
   aws    = "default"
-  prefix = "ckad-mock"
+  prefix = "lfcs"
   tags   = {
-    "env_name"        = "ckad-mock"
+    "env_name"        = "lfcs-mock"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
