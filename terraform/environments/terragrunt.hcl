@@ -21,6 +21,10 @@ terraform {
 variable "s3_k8s_config" {
 default="${local.backend_bucket}"
 }
+variable "backend_dynamodb_table" {
+default="${local.backend_dynamodb_table}"
+}
+
 EOF
 }
 
@@ -37,4 +41,5 @@ remote_state {
 inputs = {
  region = local.backend_region
  backend_bucket=local.backend_bucket
+ backend_dynamodb_table=local.backend_dynamodb_table
 }
