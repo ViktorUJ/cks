@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1 (*15.01.2024)
+### Features
+* Support for simultaneous creation of independent test environments was added. 
+* The ability to create independent environments for different users was added.
+* the ability to create independent environments for each user has been added.
+* CMDB has been added. now all resources created when creating environments are automatically added to CMDB. 
+* commands for working with CMDB were added (getting the list of all resources, getting all user resources, getting detailed information on individual resources).
+
+
 ## 0.5.1 (23.11.2023)
 ### Features
 * [Ckad mock exam 1 ](..%2Ftasks%2Fckad%2Fmock%2F01) is added
