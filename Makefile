@@ -197,7 +197,7 @@ output_eks_task:
 lint:
 	pre-commit run --all-files -c .hooks/.pre-commit-config.yaml
 
-# OPERATION
+# CMDB
 cmdb_get_env_all:
 	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
 # make cmdb_get_env_all
