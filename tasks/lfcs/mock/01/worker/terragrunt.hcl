@@ -34,7 +34,7 @@ inputs = {
   aws         = local.vars.locals.aws
   prefix      = local.vars.locals.prefix
   tags_common = local.vars.locals.tags
-  app_name    = "k8s-worker"
+  app_name    = "worker"
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
 
@@ -55,8 +55,8 @@ inputs = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ckad/mock/01/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ckad/mock/01/worker/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/LFCS-exam/tasks/lfcs/mock/01/worker/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/LFCS-exam/tasks/lfcs/mock/01/worker/files/worker.sh"
     ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
