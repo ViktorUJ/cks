@@ -9,7 +9,7 @@ resource "aws_eks_node_group" "groups" {
   labels          = each.value.labels
   disk_size       = each.value.disk_size
   tags = {
-    "Name" = "${var.aws}-${var.prefix}-eks_workers_${each.key}"
+    "Name" = "${local.prefix}-eks_workers_${each.key}"
   }
   scaling_config {
     desired_size = each.value.desired_size

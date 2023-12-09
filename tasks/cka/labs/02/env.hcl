@@ -1,23 +1,25 @@
 locals {
   region = "eu-north-1"
   aws    = "default"
-  prefix = "eks-01"
-  app_name= "eks"
+  prefix = "cka-task"
   tags   = {
-    "env_name"        = "eks-01"
+    "env_name"        = "cka-task"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version    = "1.26.0"
+  k8_version    = "1.28.0"
   node_type     = "spot"
-  instance_type = "t3.medium"
+  runtime       = "containerd" # docker  , cri-o  , containerd ( need test it )
+  instance_type = "t4g.medium"
+  instance_type_worker = "t4g.small"
   key_name      = "cks"
-  ami_id        = "ami-06410fb0e71718398"
+  ubuntu_version       = "20.04"
+  ami_id        = ""
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
   root_volume   = {
     type = "gp3"
-    size = "12"
+    size = "10"
   }
 }

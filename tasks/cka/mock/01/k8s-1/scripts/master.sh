@@ -15,24 +15,15 @@ aarch64)
 ;;
 esac
 
-
+cd ~
 wget -O etcd.tar.gz $etcdctl_url
 tar xvf etcd.tar.gz
 etcd_dir=$(ls  | grep linux | tr -d '\n')
+echo "*** dir=$(pwd) etcd_dir = $etcd_dir"
+
 cd $etcd_dir
-mv etcd etcdctl etcdutl /usr/local/bin
+mv etcd etcdctl etcdutl /usr/local/bin/
 echo "*** etcd = $(etcdctl version)"
 
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/k8s-1/scripts/task18.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/k8s-1/scripts/task23.yaml
-
-
-acrh=$(uname -m)
-case $acrh in
-x86_64)
-  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-;;
-aarch64)
-  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
-;;
-esac

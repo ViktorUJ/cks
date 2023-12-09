@@ -22,7 +22,7 @@ CONFIGMAPAWSAUTH
 
 resource "local_file" "config_map_aws_auth" {
   content  = local.config_map_aws_auth
-  filename = "${var.prefix}_${var.aws}config_map_aws_auth.yaml"
+  filename = "${local.prefix}_${var.aws}config_map_aws_auth.yaml"
 }
 resource "local_file" "kubeconfig" {
   content  = local.kubeconfig
