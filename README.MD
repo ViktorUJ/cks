@@ -119,6 +119,18 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">LFCS</summary>
+
+### ckad mock
+- ``TASK=01 make run_lfcs_mock`` - create mock  LFCS exam [number 01](tasks%2Flfcs%2Fmock%2F01)
+- ``make delete_lfcs_mock`` - delete mock  LFCS exam
+- ``make clean_lfcs_mock`` clean terragrunt cache  for  lfcs_mock
+- ``TASK=01 make run_lfcs_mock_clean`` - create mock  LFCS exam [number 01](tasks%2Flfcs%2Fmock%2F01)  with clean terragrunt cache 
+- ``make output_lfcs_mock `` - show **outputs** from   **lfcs_mock**
+
+</details>
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">HR</summary>
 
 - ``TASK=01 make run_hr_mock`` - create mock  hr exam [number 01](tasks%2Fhr%2Fmock%2F01)
