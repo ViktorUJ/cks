@@ -1,25 +1,31 @@
 locals {
+  USER_ID=var.USER_ID=="" ? "defaultUser": var.USER_ID
+  ENV_ID=var.ENV_ID=="" ? "defaultId" :var.ENV_ID
+  prefix_id="${local.USER_ID}_${local.ENV_ID}"
+  prefix="${local.prefix_id}_${var.prefix}"
+  item_id_lock ="CMDB_lock_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
+  item_id_data="CMDB_data_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
   subnets_az = distinct(split(",", (var.subnets_az)))
   subnets    = [for item in local.subnets_az : split("=", item)[0]]
   az         = [for item in local.subnets_az : split("=", item)[1]]
   tags_app   = {
-    "Name"     = "${var.aws}-${var.prefix}-${var.app_name}"
+    "Name"     = "${local.prefix}-${var.app_name}"
     "app_name" = var.app_name
   }
   tags_all       = merge(var.tags_common, local.tags_app)
   tags_k8_master = {
     "k8_node_type" = "master"
-    "Name"         = "${var.aws}-${var.prefix}-${var.app_name}-master"
+    "Name"         = "${local.prefix}-${var.app_name}-master"
   }
   tags_all_k8_master = var.node_type == "spot" ? merge(local.tags_all, local.tags_k8_master) : {}
 
   tags_k8_worker = {
     "k8_node_type" = "worker"
-    "Name"         = "${var.aws}-${var.prefix}-${var.app_name}-worker"
+    "Name"         = "${local.prefix}-${var.app_name}-worker"
   }
   tags_all_k8_worker = merge(local.tags_all, local.tags_k8_worker)
-  worker_join        = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
-  k8s_config         = "${var.s3_k8s_config}/${var.cluster_name}-${local.target_time_stamp}/config"
+  worker_join        = "${var.s3_k8s_config}/config/${local.USER_ID}/${local.ENV_ID}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
+  k8s_config         = "${var.s3_k8s_config}/config/${local.USER_ID}/${local.ENV_ID}/${var.cluster_name}-${local.target_time_stamp}/config"
 
   worker_nodes = var.node_type == "spot" ? {
     for key, instance in data.aws_instances.spot_fleet_worker :
@@ -46,6 +52,10 @@ locals {
       instance_type       = var.k8s_worker["${key}"].instance_type
     }
   }
+
+  worker_node_ids = join(" ", [for node in local.worker_nodes : node.id])
+  worker_node_ips_public = join(" ", [for node in local.worker_nodes : node.public_ip])
+  worker_node_ips_private = join(" ", [for node in local.worker_nodes : node.private_ip])
 
   master_ip           = var.node_type == "spot" ? join("", data.aws_instances.spot_fleet_master["enable"].public_ips) : aws_instance.master["enable"].public_ip
   master_ip_public    = var.k8s_master.eip == "true" ? aws_eip.master["enable"].public_ip : local.master_ip

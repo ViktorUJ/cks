@@ -12,7 +12,7 @@ resource "aws_iam_openid_connect_provider" "default" {
 
 
 resource "aws_iam_role" "eks-app-WebIdentity" {
-  name = "${var.aws}-${var.prefix}-eks-WebIdentity"
+  name = "${local.prefix}-eks-WebIdentity"
 
   assume_role_policy = <<POLICY
 {

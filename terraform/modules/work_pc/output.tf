@@ -45,3 +45,6 @@ output "instance_type" {
 output "kubectl_version" {
   value = var.work_pc.util.kubectl_version
 }
+output "prefix" {
+  value = local.prefix
+}
