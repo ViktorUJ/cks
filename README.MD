@@ -232,6 +232,26 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">mock LFCS exam</summary>
+
+ ### mock  LFCS exam
+- choose [a mock exam](tasks%2Flfcs%2Fmock)  number
+- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need 
+- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- create mock  LFCS exam ``TASK={mock_number} make run_lfcs_mock`` or ``TASK={mock_number} make run_lfcs_mock_clean`` if you'd like  to run with **clean** terragrunt cache
+- find ``worker_pc_ip`` in ``terraform output``
+- connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
+- open questions list ``{mock_number}/README.MD`` and do tasks
+- use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node
+- run ``time_left`` on work pc to check time
+- run ``check_result`` on work pc to check result
+- delete mock  LFCS exam `make delete_lfcs_mock`
+- find exam solutions in ``{mock_number}/worker/files/solutions`` 
+- find exam tests in ``{mock_number}/worker/files/tests.bats``
+</details>
+
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">mock HR exam</summary>
 
   [Video instruction for launching **HR mock exam**](https://youtu.be/4CTC1jl8lxE)
