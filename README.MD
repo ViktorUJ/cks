@@ -66,7 +66,7 @@ Every command should be run from the project's root directory.
 - ``USER_ID='myuser' ENV_ID='01' make cmdb_get_user_env_lock`` - show all lock resources of user **myuser** in environment **01**
 - ``USER_ID='myuser' make cmdb_get_user_env_lock`` - show all lock resources of user **myuser** in **all** environment 
 - ``USER_ID='myuser' make cmdb_get_user_env_data`` - show all data resources of user **myuser** in **all** environment 
-- ``CMDB_ITEM=CMDB_data_myuser_02_k8s_cluster1 make cmdb_get_item`` - getting detailed information about **CMDB_data_myuser_02_k8s_cluster1** resource. 
+- ``CMDB_ITEM='CMDB_data_myuser_02_k8s_cluster1' make cmdb_get_item`` - getting detailed information about **CMDB_data_myuser_02_k8s_cluster1** resource. 
 
 
 </details>
