@@ -41,7 +41,7 @@ inputs = {
 
   work_pc = {
     clusters_config = {
-      cluster1 = dependency.cluster1.outputs.k8s_config
+ #     cluster1 = dependency.cluster1.outputs.k8s_config
     }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
