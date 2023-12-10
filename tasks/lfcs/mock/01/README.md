@@ -168,3 +168,43 @@
 | Acceptance criteria | - DNS resolver was configured?<br/> - Static host entry for `database.local` was added?<br/> - Static route was configured properly?                                                                                                                                                                                                                                                               |
 
 ---
+
+|       **20**        | **Create a bash script**                                                                                                                                                                                                                                                                                                                                          |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                |
+|        Task         | This script should perform the following actions. You should put this script to `/opt/19/result/script.sh`: <br/>- Recursively copies the `/opt/19/task/` directory into the `/opt/19/task-backup/` directory.<br/>- Creates an empty file called `empty_file` at this location: `/opt/19/result/`<br/>- Make this script automatically running every day at 2AM. |
+| Acceptance criteria | - Script was created, made executable and placed as it's required?<br/>- Test the script?<br/>- Make sure that this script was added to cron?                                                                                                                                                                                                                     |
+
+---
+
+|       **21**        | **Work with advanced file permissions and attributes**                                                                                                                                                                                                                                                                                                                                                                  |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                                      |
+|        Task         | - In the folder `/opt/21/tasks` you will find a file `aclfile`. Currently this file can only be read by `user21`. Add a new ACL permission so that `user22` can also read this. `user22` should have only read permissions.<br/> - Next, in the `/opt/21/tasks` directory you will find a file named `frozenfile`. This currently has the immutable attribute set on it. Remove the immutable attribute from this file. |
+| Acceptance criteria | - ACL permissions are set?<br/> - `frozenfile` file is no longer immutable?                                                                                                                                                                                                                                                                                                                                             |
+
+---
+
+|       **22**        | **Send signal to a process**                     |
+| :-----------------: | :----------------------------------------------- |
+|     Task weight     | ?%                                               |
+|        Task         | - Send the SIGHUP signal to the `redis` process. |
+| Acceptance criteria | - SIGHUP sent to the `redis` service?            |
+
+---
+
+|       **23**        | **Perform disk operations**                                                                                                                                                                                                                                                                                                                                                                                  |
+| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                           |
+|        Task         | You will find a disk `/dev/sda2` to be used in the system. We need to perform the following actions: <br/> - This disk has unpartitioned space. Create two partitions. Each should be exactly 1GB in size for each.<br/> - Mount this file to be mounted to the `/drive` folder. It should be mounted even after rebooting of the system<br/> - Format the second partitions to be used in `xfs` file system |
+| Acceptance criteria | - Verify created partitions?<br/> - Verify that required partitions was mounted? <br/> - Partition is mounted automatically even after rebooting of the instance?                                                                                                                                                                                                                                            |
+
+---
+
+|       **24**        | **Perform LVM operations**                                                                                                                                                                                                                                                                                         |
+| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                 |
+|        Task         | - Add these two physical volumes to lvm: `/dev/sda3` and `/dev/sda4`<br/> - Create a volume group called `volgroup1` out of these two physical volumes, `/dev/sda3` and `/dev/sda4`<br/> - Create a logical volume of 1GB on the volume group `volgroup1`. The name of this logical volume should be `logvolume1`. |
+| Acceptance criteria | - Verify the LVM<br/>- Volume Group (VG) named `volgroup1` has been created?<br/> - `logvolume1` LV has been created?                                                                                                                                                                                              |
+
+---
