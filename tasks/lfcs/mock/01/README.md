@@ -121,19 +121,50 @@
 
 ---
 
-|       **14**        | **Revoke sudo privilligies**                                                              |
-| :-----------------: | :---------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                        |
-|        Task         | There is a user `jack` in the system. This user should not have sudo permissions anymore. |
-| Acceptance criteria | - Make sure that a user `jack` is not able to perform commands with sudo                  |
+|       **14**        | **Revoke sudo privilligies**                                                                |
+| :-----------------: | :------------------------------------------------------------------------------------------ |
+|     Task weight     | ?%                                                                                          |
+|        Task         | There is a user `jakson` in the system. This user should not have sudo permissions anymore. |
+| Acceptance criteria | - Make sure that a user `jakson` is not able to perform commands with sudo                  |
 
 ---
 
-# Not ready
-|       **15**        | **Redirect filtering output**                                                        |
-| :-----------------: | :----------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                   |
-|        Task         | Display all the lines in the `/etc/services` file that start out with the text core. |
-| Acceptance criteria | -                                                                                    |
+|       **15**        | **Redirect filtering output**                                                                                                    |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                               |
+|        Task         | Display all the lines in the `/etc/services` file that start out with the text `net`. Redirect the output to `/opt/15result.txt` |
+| Acceptance criteria | - Filtered output redirected to the file                                                                                         |
+
+---
+
+|       **16**        | **Check the difference between files and folders**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+|        Task         | - There are 2 files in the folder `/opt/task16/file1` and `/opt/task16/file2`. Files are almost the same, but they have one line that exist in one file and don't exist in another one. Find that line and save the difference to `/opt/task16/result/text_difference`.<br/> - `/opt/task16/dir1/` and `/opt/task16/dir2/` have almost similar files. Find out which files only exist in `/opt/task16/dir2/` but not in `/opt/task16/dir1/`. Find these files and save the output in the `/opt/task16/result/folder_difference` file. |
+| Acceptance criteria | - The difference between 2 files was found?<br/>- The difference between 2 folders was found?                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+
+---
+
+|       **17**        | **Perform docker operations**                                                                         |
+| :-----------------: | :---------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                    |
+|        Task         | - Run docker `apache` container with name `webserv`.<br/> - Removed all docker images except `apache` |
+| Acceptance criteria | - Container is running? <br/>- Removed all images except `apache`                                     |
+
+---
+
+|       **18**        | **Analyze networking information**                                                                                                                                                                                                                                                                      |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                      |
+|        Task         | - Check the ip address of the `eth0` network interface, save IP address to `/opt/18/result/ip` file. <br/> - Print out the route table and save the output to the `/opt/18/result/routes` file.<br/> - Check the PID of the service that uses 22 port and save the pid to the `/opt/18/result/pid` file |
+| Acceptance criteria | - IP adrress was saved to the file? <br/>- Route table was written to the file?<br/>- PID of the service was saved to the file?                                                                                                                                                                         |
+
+---
+
+|       **19**        | **Networking settings**                                                                                                                                                                                                                                                                                                                                                                            |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                 |
+|        Task         | SSH to the node02 and perform the following actions:<br/> - Add an extra DNS resolver (nameserver) on this system: `1.1.1.1`<br/> - Add a static dns resolution to make `database.local` host to be resolver to `10.10.20.5`. DNS resolver should repond with this IP on `database.local` hostname<br\> - Configure route table of this host to route all of the traffic through this node01 host. |
+| Acceptance criteria | - DNS resolver was configured?<br/> - Static host entry for `database.local` was added?<br/> - Static route was configured properly?                                                                                                                                                                                                                                                               |
 
 ---
