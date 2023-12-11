@@ -7,6 +7,7 @@ Or you need to create several independent environments for one student with diff
 To create an independent environment you need to set additional variables USER_ID='myuser' ENV_ID='01' before running the make command. 
 
 for example : 
+
 `` 
 USER_ID='myuser' ENV_ID='3' TASK=01 make run_ckad_mock
 ``
