@@ -266,7 +266,7 @@ Every command should be run from the project's root directory.
 - delete eks lab cluster ``make delete_eks_task``
 </details>
 
-## [simultaneous work with independent environments](docs%2Fmultiple_users_envs.MD)
+## [Simultaneous work with independent environments](docs%2Fmultiple_users_envs.MD)
 
 ## [Useful links](docs%2Flinks.MD)
 
