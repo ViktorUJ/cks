@@ -26,9 +26,11 @@ The repository is organized into the following sections:
   - **[modules](terraform%2Fmodules)** - Directory contains terraform modules.
 
 ## Requirements
+- [GNU Make](https://www.gnu.org/software/make/) >= 4.2.1
 - [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.5.6
 - [terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= v0.36.1
 - [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  for VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html) > 2.2.30
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
 
 
@@ -81,7 +83,7 @@ Every command should be run from the project's root directory.
 - ``TASK=01 make run_cka_task_clean`` - run cka_task with clean terragrunt cache  for  cka_task
 - ``make output_cka_task `` - show **outputs** from   **cka_task**
 ### cka mock
-- ``TASK=01 make run_cka_k8s_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
+- ``TASK=01 make run_cka_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
 - ``make delete_cka_mock`` - delete mock  CKA exam
 - ``make clean_cka_mock`` clean terragrunt cache  for  cka_mock
 - ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)  with clean terragrunt cache 
@@ -151,7 +153,7 @@ Every command should be run from the project's root directory.
 - read lab descriptions in ``{lab_number}/README.MD``
 - check solution in ``{lab_number}/SOLUTION.MD``
 - delete cka lab cluster ``make delete_cka_task``
-- clean cka lab cluster ``.terraform`` folder  ``make clean_cka_k8s ``
+- clean cka lab cluster ``.terraform`` folder  ``make clean_cka_task ``
 </details>
 
 <details>
@@ -263,6 +265,8 @@ Every command should be run from the project's root directory.
 - check solution in ``{lab_number}/SOLUTION.MD``
 - delete eks lab cluster ``make delete_eks_task``
 </details>
+
+## [simultaneous work with independent environments](docs%2Fmultiple_users_envs.MD)
 
 ## [Useful links](docs%2Flinks.MD)
 

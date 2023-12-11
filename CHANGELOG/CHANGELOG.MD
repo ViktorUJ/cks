@@ -2,7 +2,7 @@
 
 ## 0.6.1 (*15.01.2024)
 ### Features
-* Support for simultaneous creation of independent test environments was added. 
+* Support for [simultaneous creation of independent environments](..%2Fdocs%2Fmultiple_users_envs.MD) was added.
 * The ability to create independent environments for different users was added.
 * the ability to create independent environments for each user has been added.
 * CMDB has been added. now all resources created when creating environments are automatically added to CMDB. 
