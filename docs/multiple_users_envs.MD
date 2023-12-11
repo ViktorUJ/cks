@@ -8,9 +8,9 @@ To create an independent environment you need to set additional variables USER_I
 
 for example : 
 
-create environment '3' for user 'myuser' with task set '01' ckad mock `USER_ID='myuser' ENV_ID='3' TASK=01 make run_ckad_mock`
+create environment **3** for user **myuser** with task set **01** ckad mock `USER_ID='myuser' ENV_ID='3' TASK=01 make run_ckad_mock`
 
-delete environment '3' for user 'myuser' with job set '01' ckad mock `USER_ID='myuser' ENV_ID='3' TASK=01 make delete_ckad_mock`
+delete environment **3** for user **myuser** with job set **01** ckad mock `USER_ID='myuser' ENV_ID='3' TASK=01 make delete_ckad_mock`
 
 
 - ``make cmdb_get_env_all`` - get a list of all resources in CMDB
