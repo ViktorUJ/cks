@@ -2,7 +2,7 @@ locals {
   region = "eu-north-1"
   aws    = "default"
   prefix = "lfcs"
-  tags   = {
+  tags = {
     "env_name"        = "lfcs-mock"
     "env_type"        = "dev"
     "manage"          = "terraform"
@@ -17,8 +17,18 @@ locals {
   key_name             = "cks"
   ubuntu_version       = "20.04"
   ami_id               = ""
-  root_volume          = {
+  root_volume = {
     type = "gp3"
     size = "12"
+  }
+  non_root_volumes = {
+    "/dev/sdf" = {
+      size = 1
+      type = "gp3"
+    }
+    "/dev/sdh" = {
+      size = 1
+      type = "gp3"
+    }
   }
 }

@@ -57,8 +57,7 @@ inputs = {
       private_key = ""
       pub_key     = ""
     }
-    root_volume = local.vars.locals.root_volume
+    root_volume       = local.vars.locals.root_volume
+    non_root_volumes  = {}
   }
-
-
 }

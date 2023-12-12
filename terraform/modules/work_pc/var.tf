@@ -2,11 +2,11 @@ variable "region" {}
 variable "aws" {}
 variable "prefix" {}
 variable "USER_ID" {
-  type = string
+  type    = string
   default = "defaultUser"
 }
 variable "ENV_ID" {
-  type = string
+  type    = string
   default = "defaultId"
 }
 variable "tags_common" {
@@ -42,19 +42,25 @@ variable "work_pc" {
     util              = object({
       kubectl_version = string
     })
-    root_volume = object({
+    root_volume       = object({
       type = string
       size = string
     })
+    non_root_volumes  = map(object({
+      delete_on_termination = optional(bool),
+      size                  = number,
+      type                  = string,
+      encrypted             = optional(bool)
+    }))
   })
 }
 
 variable "STACK_NAME" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "STACK_TASK" {
-  type = string
+  type    = string
   default = ""
 }

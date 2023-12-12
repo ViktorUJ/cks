@@ -33,5 +33,27 @@ resource "aws_instance" "master" {
     tags                  = local.tags_all
     encrypted             = true
   }
+}
 
+resource "aws_ebs_volume" "master" {
+  for_each = var.work_pc.node_type == "ondemand" ? var.work_pc.non_root_volumes : {}
+
+  size              = each.value.size
+  type              = each.value.type
+  encrypted         = lookup(each.value, "encrypted", false)
+  availability_zone = data.aws_subnet.active.availability_zone
+
+  tags = local.tags_all_k8_master
+}
+
+data "aws_subnet" "active" {
+  id = local.subnets[var.work_pc.subnet_number]
+}
+
+resource "aws_volume_attachment" "master" {
+  for_each = var.work_pc.node_type == "ondemand" ? var.work_pc.non_root_volumes : {}
+
+  device_name = each.key
+  volume_id   = aws_ebs_volume.master[each.key].id
+  instance_id = aws_instance.master["enable"].id
 }
