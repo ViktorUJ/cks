@@ -13,7 +13,6 @@ terraform {
     commands  = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
-
 }
 
 dependency "ssh-keys" {
@@ -24,17 +23,12 @@ dependency "vpc" {
   config_path = "../vpc"
 }
 
-#
-#dependency "cluster1" {
-#  config_path = "../k8s-1"
-#}
-#
 inputs = {
   region      = local.vars.locals.region
   aws         = local.vars.locals.aws
   prefix      = local.vars.locals.prefix
   tags_common = local.vars.locals.tags
-  app_name    = "worker"
+  app_name    = "worker-02"
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
 
@@ -50,7 +44,7 @@ inputs = {
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version
-    user_data_template = "template/worker_lfcs.sh"
+    user_data_template = "template/clean.sh"
     util = {
       kubectl_version = local.vars.locals.k8_version
     }
@@ -62,6 +56,6 @@ inputs = {
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
     root_volume      = local.vars.locals.root_volume
-    non_root_volumes = local.vars.locals.non_root_volumes
+    non_root_volumes = {}
   }
 }
