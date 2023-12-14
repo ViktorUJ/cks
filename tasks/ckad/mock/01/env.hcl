@@ -2,7 +2,7 @@ locals {
   region = "eu-north-1"
   aws    = "default"
   prefix = "ckad-mock"
-  tags   = {
+  tags = {
     "env_name"        = "ckad-mock"
     "env_type"        = "dev"
     "manage"          = "terraform"
@@ -17,7 +17,7 @@ locals {
   key_name             = "cks"
   ubuntu_version       = "20.04"
   ami_id               = ""
-  root_volume          = {
+  root_volume = {
     type = "gp3"
     size = "12"
   }

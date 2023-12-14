@@ -1,9 +1,9 @@
 locals {
-  region = "eu-north-1"
-  aws    = "default"
-  prefix = "eks-01"
-  app_name= "eks"
-  tags   = {
+  region   = "eu-north-1"
+  aws      = "default"
+  prefix   = "eks-01"
+  app_name = "eks"
+  tags = {
     "env_name"        = "eks-01"
     "env_type"        = "dev"
     "manage"          = "terraform"
@@ -16,7 +16,7 @@ locals {
   key_name      = "cks"
   ami_id        = "ami-06410fb0e71718398"
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
-  root_volume   = {
+  root_volume = {
     type = "gp3"
     size = "12"
   }

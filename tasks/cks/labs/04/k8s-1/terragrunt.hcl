@@ -30,7 +30,7 @@ inputs = {
   vpc_id       = dependency.vpc.outputs.vpc_id
   cluster_name = "k8s1"
   node_type    = local.vars.locals.node_type
-  k8s_master   = {
+  k8s_master = {
     k8_version         = local.vars.locals.k8_version
     runtime            = "containerd"
     runtime_script     = "template/runtime.sh"
@@ -46,7 +46,7 @@ inputs = {
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/labs/04/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
-    ssh                = {
+    ssh = {
       private_key = ""
       pub_key     = ""
     }
