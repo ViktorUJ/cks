@@ -10,9 +10,9 @@ ifneq ($(findstring __,$(prefix_dir)),)
   # If '__' is found, set prefix_dir to an empty string
   prefix_dir :=
 endif
-# family_tasks{cka,cks,ckad,eks}, type{mock,labs},command{run,delete,output},task_number{0..x},type_run{clean,or  empty}
+# family_tasks{cka,cks,ckad,eks}, type{mock,labs},command{run,delete,output},type_run{clean,or  empty}
 define terragrint_run
-    @case "$(1)" in
+    @case "$(3)" in
         run)
             @echo "command = run"
             @commnand := "terragrunt run-all  apply "
@@ -26,13 +26,12 @@ define terragrint_run
             ;;
     esac
 #	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
-#    @echo "terrgunt = $(1) , $(2) , $(3)"
+    @echo "terrgunt = $(1) , $(2) , $(3) , $(4) , $(5) "
 
 endef
 
 test:
-	$(call terragrint_run,run,cks,'xxx')
-	$(call terragrint_run,$(prefix_dir),'cks','delete')
+	$(call terragrint_run,cka,mock,run,'xxx',clean)
 
 # CKA task
 run_cka_task:
