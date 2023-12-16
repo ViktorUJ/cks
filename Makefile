@@ -23,6 +23,7 @@ define terragrint_run
             ;;
     esac
 	@terragrunt_env_dir="$$base_dir/terraform/environments/${prefix_dir}$(1)-$$run_type"
+	@echo "base_dir = $$base_dir"
 	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
     @case "$(3)" in
         run)
