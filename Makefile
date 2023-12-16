@@ -17,6 +17,7 @@ endef
 
 test:
 	$(call terragrint_run,'run','cks','xxx')
+	$(call terragrint_run,$(prefix_dir),'cks','run')
 
 # CKA task
 run_cka_task:
