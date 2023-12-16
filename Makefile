@@ -13,7 +13,7 @@ endif
 
 # family_tasks{cka,cks,ckad,eks}, type{mock,task},command{run,delete,output},type_run{clean,or  empty}
 define terragrint_run
-	@base_dir=$$(shell pwd)
+	@base_dir=$$(pwd)
     @case "$(2)" in
         mock)
             @run_type="mock"
