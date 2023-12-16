@@ -25,7 +25,6 @@ define terragrint_run
 	@terragrunt_env_dir="$$base_dir/terraform/environments/${prefix_dir}$(1)-$$run_type"
 	@echo "base_dir = $$base_dir"
 	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
-	@exit 1
     @case "$(3)" in
         run)
             @commnand="terragrunt run-all  apply"
