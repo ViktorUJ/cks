@@ -43,13 +43,14 @@ define terragrint_run
 
 
 	@echo "terragrunt_env_dir= $$terragrunt_env_dir command= $$commnand"
-#	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
-#    $$commnand
+	@cp -r tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
+	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand
 
 endef
 
 test:
 	$(call terragrint_run,cka,mock,run,clean)
+	$(call terragrint_run,cka,mock,delete,clean)
 
 # CKA task
 run_cka_task:
