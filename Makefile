@@ -58,11 +58,12 @@ test:
 
 # CKA task
 run_cka_task:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
-	@echo "*** run cka , task ${TASK} .  terragrunt_env_dir =$$terragrunt_env_dir"
-	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@cp -r tasks/cka/labs/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="cka_task"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all  apply
+	$(call terragrint_run,cka,task,run)
+#	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
+#	@echo "*** run cka , task ${TASK} .  terragrunt_env_dir =$$terragrunt_env_dir"
+#	@mkdir $$terragrunt_env_dir -p >/dev/null
+#	@cp -r tasks/cka/labs/${TASK}/* $$terragrunt_env_dir
+#	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="cka_task"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all  apply
 
 delete_cka_task:
 	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
