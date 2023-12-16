@@ -85,16 +85,12 @@ run_cka_mock:
 delete_cka_mock:
 	$(call terragrint_run,cka,mock,delete)
 
-clean_cka_mock:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka-mock/"
-	@echo "*** clean cka mock terragrunt_env_dir=$$terragrunt_env_dir "
-	@rm -rf $$terragrunt_env_dir
 
-run_cka_mock_clean: clean_cka_mock run_cka_mock
+run_cka_mock_clean:
+	$(call terragrint_run,cka,mock,run,clean)
 
 output_cka_mock:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks/"
-	@cd $$terragrunt_env_dir && terragrunt run-all output
+	$(call terragrint_run,cka,mock,output)
 
 #####
 
