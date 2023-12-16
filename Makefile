@@ -62,46 +62,28 @@ test:
 # CKA task
 run_cka_task:
 	$(call terragrint_run,cka,task,run)
-#	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
-#	@echo "*** run cka , task ${TASK} .  terragrunt_env_dir =$$terragrunt_env_dir"
-#	@mkdir $$terragrunt_env_dir -p >/dev/null
-#	@cp -r tasks/cka/labs/${TASK}/* $$terragrunt_env_dir
-#	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="cka_task"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all  apply
 
 delete_cka_task:
 	$(call terragrint_run,cka,task,delete)
-#	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
-#	@echo "*** delete cka , task ${TASK} .  terragrunt_env_dir =$$terragrunt_env_dir "
-#	@mkdir $${terragrunt_env_dir} -p >/dev/null
-#	@cp -r tasks/cka/labs/${TASK}/* ${terragrunt_env_dir}
-#	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="cka_task" ;export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $${terragrunt_env_dir} && terragrunt run-all  destroy
 
-clean_cka_task:
-	@echo "*** clean cka task "
-	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
-	@rm -rf $${terragrunt_env_dir}/*
 
-run_cka_task_clean: clean_cka_task  run_cka_task
+run_cka_task_clean:
+	$(call terragrint_run,cka,task,run,clean)
+
+delete_cka_task_clean:
+	$(call terragrint_run,cka,task,delete,clean)
 
 output_cka_task:
-	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
-	@cd $${terragrunt_env_dir} && terragrunt run-all output
+	$(call terragrint_run,cka,task,output)
+
+output_cka_task_clean:
+	$(call terragrint_run,cka,task,output)
 
 #CKA mock
 run_cka_mock:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka-mock/"
-	@echo "*** run cka mock , task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir"
-	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@cp -r tasks/cka/mock/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="cka-mock" ; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all apply
-
+	$(call terragrint_run,cka,mock,run)
 delete_cka_mock:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka-mock/"
-	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@echo "*** delete cka mock task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir"
-	@cp -r tasks/cka/mock/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="cka-mock" ; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all destroy
-	@rm -rf $$terragrunt_env_dir
+	$(call terragrint_run,cka,mock,delete)
 
 clean_cka_mock:
 	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka-mock/"
