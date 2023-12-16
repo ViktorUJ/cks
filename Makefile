@@ -36,7 +36,7 @@ define terragrint_run
 
     @case "$(4)" in
         clean)
-        	@echo "clean"
+        	@echo "*** clean $$terragrunt_env_dir/*"
             @rm -rf $$terragrunt_env_dir/*
             ;;
     esac
