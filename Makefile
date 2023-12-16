@@ -39,7 +39,7 @@ define terragrint_run
     esac
 
 
-	@echo "terragrunt_env_dir= ${terragrunt_env_dir} command= ${commnand}"
+	@echo "terragrunt_env_dir= $(terragrunt_env_dir) command= $(commnand)"
 #	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
 #    $$commnand
 
