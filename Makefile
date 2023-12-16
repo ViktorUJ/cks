@@ -21,7 +21,7 @@ define terragrint_run
             @run_type="labs"
             ;;
     esac
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}$(1)-$$run_type/"
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}$(1)-$$run_type"
     @case "$(3)" in
         run)
             @commnand="terragrunt run-all  apply"
