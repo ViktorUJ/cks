@@ -24,7 +24,6 @@ define terragrint_run
             @commnand := "terragrunt run-all  output"
             ;;
     esac
-    echo "$(commnand)"
 #	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
 #    @echo "terrgunt = $(1) , $(2) , $(3) , $(4) , $(5) "
 
