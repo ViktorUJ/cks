@@ -29,6 +29,7 @@ The repository is organized into the following sections:
 - [GNU Make](https://www.gnu.org/software/make/) >= 4.2.1
 - [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.5.6
 - [terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= v0.36.1
+- [jq](https://jqlang.github.io/jq/download/) >= 1.6
 - [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  for VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html) > 2.2.30
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
