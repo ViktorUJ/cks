@@ -15,8 +15,6 @@ define terragrint_run
     @case "$(3)" in
         run)
             @echo "command = run"
-            @commnand := "terragrunt run-all  apply "
-            @
             ;;
         delete)
             @commnand := "terragrunt run-all  destroy"
