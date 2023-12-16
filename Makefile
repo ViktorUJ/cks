@@ -15,13 +15,13 @@ endif
 define terragrint_run
     @case "$(3)" in
         run)
-            commnand := "terragrunt run-all  apply"
+            @commnand="terragrunt run-all  apply"
             ;;
         delete)
-            commnand := "terragrunt run-all  destroy"
+            @commnand="terragrunt run-all  destroy"
             ;;
         output)
-            commnand := "terragrunt run-all  output"
+            @commnand="terragrunt run-all  output"
             ;;
     esac
 #	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
