@@ -55,9 +55,6 @@ define terragrint_run
     esac
 endef
 
-test:
-	$(call terragrint_run,cka,mock,run,clean)
-	$(call terragrint_run,cka,mock,delete,clean)
 
 # CKA task
 run_cka_task:
@@ -76,18 +73,19 @@ delete_cka_task_clean:
 output_cka_task:
 	$(call terragrint_run,cka,task,output)
 
-output_cka_task_clean:
-	$(call terragrint_run,cka,task,output)
 
 #CKA mock
 run_cka_mock:
 	$(call terragrint_run,cka,mock,run)
+
 delete_cka_mock:
 	$(call terragrint_run,cka,mock,delete)
 
-
 run_cka_mock_clean:
 	$(call terragrint_run,cka,mock,run,clean)
+
+delete_cka_mock_clean:
+	$(call terragrint_run,cka,mock,delete,clean)
 
 output_cka_mock:
 	$(call terragrint_run,cka,mock,output)
