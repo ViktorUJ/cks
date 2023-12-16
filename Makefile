@@ -44,7 +44,6 @@ define terragrint_run
             ;;
     esac
 
-
 	@echo "terragrunt_env_dir= $$terragrunt_env_dir command= $$commnand"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@cp -r $(base_dir)/tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
@@ -66,11 +65,12 @@ run_cka_task:
 #	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="cka_task"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all  apply
 
 delete_cka_task:
-	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
-	@echo "*** delete cka , task ${TASK} .  terragrunt_env_dir =$$terragrunt_env_dir "
-	@mkdir $${terragrunt_env_dir} -p >/dev/null
-	@cp -r tasks/cka/labs/${TASK}/* ${terragrunt_env_dir}
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="cka_task" ;export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $${terragrunt_env_dir} && terragrunt run-all  destroy
+	$(call terragrint_run,cka,task,delete)
+#	@terragrunt_env_dir=terraform/environments/${prefix_dir}cka/
+#	@echo "*** delete cka , task ${TASK} .  terragrunt_env_dir =$$terragrunt_env_dir "
+#	@mkdir $${terragrunt_env_dir} -p >/dev/null
+#	@cp -r tasks/cka/labs/${TASK}/* ${terragrunt_env_dir}
+#	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="cka_task" ;export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $${terragrunt_env_dir} && terragrunt run-all  destroy
 
 clean_cka_task:
 	@echo "*** clean cka task "
