@@ -4,6 +4,7 @@ prefix_dir="${USER_ID}_${ENV_ID}_"
 region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl | awk -F '"' '{print $$2}')
 backend_bucket := $(shell grep '^  backend_bucket' terraform/environments/terragrunt.hcl | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
 dynamodb_table := $(backend_bucket)-lock
+base_dir := $(shell pwd)
 
 # Set prefix_dir to empty if it contains '__'
 ifneq ($(findstring __,$(prefix_dir)),)
@@ -13,7 +14,6 @@ endif
 
 # family_tasks{cka,cks,ckad,eks}, type{mock,task},command{run,delete,output},type_run{clean,or  empty}
 define terragrint_run
-	@base_dir=$$(pwd)
     @case "$(2)" in
         mock)
             @run_type="mock"
@@ -22,8 +22,8 @@ define terragrint_run
             @run_type="labs"
             ;;
     esac
-	@terragrunt_env_dir="$$base_dir/terraform/environments/${prefix_dir}$(1)-$$run_type"
-	@echo "base_dir = $$base_dir"
+	@terragrunt_env_dir="$(base_dir)/terraform/environments/${prefix_dir}$(1)-$$run_type"
+	@echo "base_dir = $(base_dir)"
 	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
     @case "$(3)" in
         run)
@@ -46,7 +46,7 @@ define terragrint_run
 
 
 	@echo "terragrunt_env_dir= $$terragrunt_env_dir command= $$commnand"
-	@cp -r $$base_dir/tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
+	@cp -r $(base_dir)/tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
 	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand
 
 endef
