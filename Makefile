@@ -13,7 +13,7 @@ endif
 
 # family_tasks{cka,cks,ckad,eks}, type{mock,labs},command{run,delete,output},type_run{clean,or  empty}
 define terragrint_run
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}$(1)_$(2)/"
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}$(1)-$(2)/"
     @case "$(3)" in
         run)
             @commnand="terragrunt run-all  apply"
