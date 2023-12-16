@@ -10,17 +10,16 @@ ifneq ($(findstring __,$(prefix_dir)),)
   # If '__' is found, set prefix_dir to an empty string
   prefix_dir :=
 endif
-# command{run}, type{mock,labs},task_number{0..x}
+# family_tasks{cka,cks,ckad,eks}, type{mock,labs},command{run,delete,output},task_number{0..x},type_run{clean,or  empty}
 define terragrint_run
     @case "$(1)" in
         run)
             @echo "command = run"
+            @commnand := "terragrunt run-all  apply "
+            @
             ;;
         delete)
-            @echo "command = delete"
-            ;;
-        clean)
-            @echo "command = clean"
+            @commnand := "terragrunt run-all  destroy"
             ;;
         output)
             @echo "command = output"
@@ -32,8 +31,8 @@ define terragrint_run
 endef
 
 test:
-	$(call terragrint_run,run,'cks','xxx')
-	$(call terragrint_run,$(prefix_dir),'cks','run')
+	$(call terragrint_run,run,cks,'xxx')
+	$(call terragrint_run,$(prefix_dir),'cks','delete')
 
 # CKA task
 run_cka_task:
