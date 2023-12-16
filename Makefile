@@ -25,7 +25,8 @@ define terragrint_run
             ;;
     esac
 #	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
-#    @echo "terrgunt = $(1) , $(2) , $(3) , $(4) , $(5) "
+    @echo "terrgunt = $(1) , $(2) , $(3) , $(4) , $(5) "
+    @echo "$$commnand"
 
 endef
 
