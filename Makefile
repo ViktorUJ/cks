@@ -11,9 +11,17 @@ ifneq ($(findstring __,$(prefix_dir)),)
   prefix_dir :=
 endif
 
-# family_tasks{cka,cks,ckad,eks}, type{mock,labs},command{run,delete,output},type_run{clean,or  empty}
+# family_tasks{cka,cks,ckad,eks}, type{mock,task},command{run,delete,output},type_run{clean,or  empty}
 define terragrint_run
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}$(1)-$(2)/"
+    @case "$(2)" in
+        mock)
+            @run_type="mock"
+            ;;
+        task)
+            @run_type="labs"
+            ;;
+    esac
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}$(1)-${run_type}/"
     @case "$(3)" in
         run)
             @commnand="terragrunt run-all  apply"
@@ -26,15 +34,10 @@ define terragrint_run
             ;;
     esac
 
-    @case "$(3)" in
-        run)
-            @commnand="terragrunt run-all  apply"
-            ;;
-        delete)
-            @commnand="terragrunt run-all  destroy"
-            ;;
-        output)
-            @commnand="terragrunt run-all  output"
+    @case "$(4)" in
+        clean)
+        	@echo "clean"
+            @rm -rf $${terragrunt_env_dir}/*
             ;;
     esac
 
@@ -46,7 +49,7 @@ define terragrint_run
 endef
 
 test:
-	$(call terragrint_run,cka,mock,run,'xxx',clean)
+	$(call terragrint_run,cka,mock,run,clean)
 
 # CKA task
 run_cka_task:
