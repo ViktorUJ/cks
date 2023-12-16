@@ -10,9 +10,25 @@ ifneq ($(findstring __,$(prefix_dir)),)
   # If '__' is found, set prefix_dir to an empty string
   prefix_dir :=
 endif
-
+# command{run}, type{mock,labs},task_number{0..x}
 define terragrint_run
-    @echo "terrgunt = $(1) , $(2) , $(3)"
+    @case "$(1)" in
+        run)
+            @echo "command = run"
+            ;;
+        delete)
+            @echo "command = delete"
+            ;;
+        clean)
+            @echo "command = clean"
+            ;;
+        output)
+            @echo "command = output"
+            ;;
+    esac
+#	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
+#    @echo "terrgunt = $(1) , $(2) , $(3)"
+
 endef
 
 test:
