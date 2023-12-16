@@ -13,6 +13,7 @@ endif
 
 # family_tasks{cka,cks,ckad,eks}, type{mock,task},command{run,delete,output},type_run{clean,or  empty}
 define terragrint_run
+	@base_dir=$(pwd)
     @case "$(2)" in
         mock)
             @run_type="mock"
@@ -21,7 +22,7 @@ define terragrint_run
             @run_type="labs"
             ;;
     esac
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}$(1)-$$run_type"
+	@terragrunt_env_dir="$$base_dir/terraform/environments/${prefix_dir}$(1)-$$run_type"
     @case "$(3)" in
         run)
             @commnand="terragrunt run-all  apply"
@@ -43,7 +44,7 @@ define terragrint_run
 
 
 	@echo "terragrunt_env_dir= $$terragrunt_env_dir command= $$commnand"
-	@cp -r tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
+	@cp -r $base_dir/tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
 	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand
 
 endef
