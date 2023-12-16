@@ -13,6 +13,7 @@ endif
 
 # family_tasks{cka,cks,ckad,eks}, type{mock,labs},command{run,delete,output},type_run{clean,or  empty}
 define terragrint_run
+	@terragrunt_env_dir="terraform/environments/${prefix_dir}$(1)_$(2)/"
     @case "$(3)" in
         run)
             @commnand="terragrunt run-all  apply"
@@ -24,10 +25,23 @@ define terragrint_run
             @commnand="terragrunt run-all  output"
             ;;
     esac
+
+    @case "$(3)" in
+        run)
+            @commnand="terragrunt run-all  apply"
+            ;;
+        delete)
+            @commnand="terragrunt run-all  destroy"
+            ;;
+        output)
+            @commnand="terragrunt run-all  output"
+            ;;
+    esac
+
+
+	@echo "terragrunt_env_dir= ${terragrunt_env_dir} command= ${commnand}"
 #	@terragrunt_env_dir="terraform/environments/${prefix_dir}cka/"
-    @echo "terrgunt = $(1) , $(2) , $(3) , $(4) , $(5) "
-    @echo "$$commnand"
-    $$commnand
+#    $$commnand
 
 endef
 
