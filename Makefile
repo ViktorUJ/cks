@@ -11,6 +11,12 @@ ifneq ($(findstring __,$(prefix_dir)),)
   prefix_dir :=
 endif
 
+define terragrint_run
+    @echo "terrgunt = $(1) , $(2) , $(3)"
+endef
+
+test:
+	$(call terragrint_run,'run','cks','xxx')
 
 # CKA task
 run_cka_task:
