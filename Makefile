@@ -141,50 +141,36 @@ output_ckad_mock:
 
 #HR mock
 run_hr_mock:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}hr/"
-	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@echo "*** run HR mock , task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir "
-	@cp -r tasks/hr/mock/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="hr" ; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ;cd $$terragrunt_env_dir && terragrunt run-all apply
+	$(call terragrint_run,hr,mock,run)
 
 delete_hr_mock:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}hr/"
-	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@echo "*** delete hr mock task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir "
-	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ;cd $$terragrunt_env_dir  && terragrunt run-all destroy
+	$(call terragrint_run,hr,mock,delete)
 
-clean_hr_mock:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}cks-mock/"
-	@echo "*** clean hr mock terragrunt_env_dir =$$terragrunt_env_dir "
-	@rm -rf $$terragrunt_env_dir/*
+run_hr_mock_clean:
+	$(call terragrint_run,hr,mock,run,clean)
 
-run_hr_mock_clean: clean_hr_mock  run_hr_mock
+delete_hr_mock_clean:
+	$(call terragrint_run,hr,mock,delete,clean)
 
 output_hr_mock:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}hr/"
-	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all output
+	$(call terragrint_run,hr,mock,output)
 
 
 
 #EKS
 run_eks_task:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}eks/"
-	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@echo "*** run run_eks_task , task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir"
-	@rm -rf $$terragrunt_env_dir/*
-	@cp -r tasks/eks/labs/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="eks" ; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ;cd $$terragrunt_env_dir && terragrunt run-all apply
-
+	$(call terragrint_run,eks,task,run)
 delete_eks_task:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}eks/"
-	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@echo "*** delete delete_eks_task ${TASK} . terragrunt_env_dir =$$terragrunt_env_dir "
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="eks" ; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ;cd $$terragrunt_env_dir && terragrunt run-all destroy
+	$(call terragrint_run,eks,task,delete)
+
+run_eks_task_clean:
+	$(call terragrint_run,eks,task,run,clean)
+
+delete_eks_task_clean:
+	$(call terragrint_run,eks,task,delete,clean)
 
 output_eks_task:
-	@terragrunt_env_dir="terraform/environments/${prefix_dir}eks/"
-	@export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && terragrunt run-all output
-
+	$(call terragrint_run,eks,task,output)
 
 #DEV
 
