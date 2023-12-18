@@ -138,6 +138,21 @@ delete_ckad_mock_clean:
 output_ckad_mock:
 	$(call terragrint_run,ckad,mock,output)
 
+#LFCS mock
+run_lfcs_mock:
+	$(call terragrint_run,lfcs,mock,run)
+delete_lfcs_mock:
+	$(call terragrint_run,lfcs,mock,delete)
+
+run_lfcs_mock_clean:
+	$(call terragrint_run,lfcs,mock,run,clean)
+
+delete_lfcs_mock_clean:
+	$(call terragrint_run,lfcs,mock,delete,clean)
+
+output_lfcs_mock:
+	$(call terragrint_run,lfcs,mock,output)
+
 
 #HR mock
 run_hr_mock:
