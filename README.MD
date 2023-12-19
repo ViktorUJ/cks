@@ -80,13 +80,11 @@ Every command should be run from the project's root directory.
 ### cka task
 - ``TASK=01 make run_cka_task`` - create cka [hands-on labs](tasks%2Fcka%2Flabs)  [number 01](tasks%2Fcka%2Flabs%2F01)
 - ``TASK=01 make delete_cka_task`` - delete cka hands-on labs
-- ``make clean_cka_task`` - clean terragrunt cache  for  cka_task
 - ``TASK=01 make run_cka_task_clean`` - run cka_task with clean terragrunt cache  for  cka_task
 - ``make output_cka_task `` - show **outputs** from   **cka_task**
 ### cka mock
 - ``TASK=01 make run_cka_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
 - ``make delete_cka_mock`` - delete mock  CKA exam
-- ``make clean_cka_mock`` clean terragrunt cache  for  cka_mock
 - ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)  with clean terragrunt cache 
 - ``make output_cka_mock `` - show **outputs** from   **cka_mock**
 
@@ -98,7 +96,6 @@ Every command should be run from the project's root directory.
 ### ckad mock
 - ``TASK=01 make run_ckad_mock`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)
 - ``make delete_ckad_mock`` - delete mock  CKAD exam
-- ``make clean_ckad_mock`` clean terragrunt cache  for  ckad_mock
 - ``TASK=01 make run_ckad_mock_clean`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)  with clean terragrunt cache 
 - ``make output_ckad_mock `` - show **outputs** from   **ckad_mock**
 
@@ -110,13 +107,11 @@ Every command should be run from the project's root directory.
 ### cks task
 - ``TASK=10 make run_cks_task`` - create cks [hands-on labs](tasks%2Fcks%2Flabs)  [number 10](tasks%2Fcks%2Flabs%2F10)
 - ``TASK=10 make delete_cks_task`` - delete cks hands-on labs
-- ``make clean_cks_task`` - clean terragrunt cache  for  cks_task
 - ``TASK=10  make run_cks_task_clean`` - run cks_task with clean terragrunt cache  for  cks_task
 - ``make output_cks_task `` - show **outputs** from   **cks_task**
 ### cks mock
 - ``TASK=01 make run_cks_mock`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)
 - ``make delete_cks_mock`` - delete mock  CKS exam
-- ``make clean_cks_mock`` clean terragrunt cache  for  cks_mock
 - ``TASK=01 make run_cks_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache 
 - ``make output_cks_mock `` - show **outputs** from   **cks_mock**
 </details>
@@ -126,7 +121,6 @@ Every command should be run from the project's root directory.
 
 - ``TASK=01 make run_hr_mock`` - create mock  hr exam [number 01](tasks%2Fhr%2Fmock%2F01)
 - ``make delete_hr_mock`` - delete mock  hr exam
-- ``make clean_hr_mock`` clean terragrunt cache  for  hr_mock
 - ``TASK=01 make run_hr_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fhr%2Fmock%2F01)  with clean terragrunt cache 
 - ``make output_hr_mock `` - show **outputs** from   **hr_mock**
 </details>
