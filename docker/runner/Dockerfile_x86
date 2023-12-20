@@ -3,6 +3,6 @@ FROM ubuntu:24.04
 RUN apt update && apt install curl unzip make  -y && \
     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s && \
     unzip awscliv2.zip >/dev/null && ./aws/install >/dev/null && \
-    aws --version &&  make --version && rm awscliv2.zip
+    aws --version &&  make --version && rm awscliv2.zip &&  rm -rf aws
 
 ENTRYPOINT ["/bin/bash"]
