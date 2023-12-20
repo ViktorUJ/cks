@@ -88,20 +88,6 @@ resource "aws_launch_template" "master" {
   name_prefix   = "${local.prefix}-${var.app_name}"
   image_id      = local.master_ami
   instance_type = var.k8s_master.instance_type
-#  user_data     = base64encode( templatefile(var.k8s_master.user_data_template, {
-#    worker_join      = local.worker_join
-#    k8s_config       = local.k8s_config
-#    external_ip      = local.external_ip
-#    k8_version       = var.k8s_master.k8_version
-#    runtime          = var.k8s_master.runtime
-#    utils_enable     = var.k8s_master.utils_enable
-#    pod_network_cidr = var.k8s_master.pod_network_cidr
-#    runtime_script   = file(var.k8s_master.runtime_script)
-#    task_script_url  = var.k8s_master.task_script_url
-#    calico_url       = var.k8s_master.calico_url
-#    ssh_private_key  = var.k8s_master.ssh.private_key
-#    ssh_pub_key      = var.k8s_master.ssh.pub_key
-#  } ))
   user_data =base64encode(templatefile("template/boot_zip.sh",{
     boot_zip = base64gzip(templatefile(var.k8s_master.user_data_template, {
       worker_join      = local.worker_join
