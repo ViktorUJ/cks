@@ -5,4 +5,8 @@ RUN apt update && apt install curl unzip make  -y && \
     unzip awscliv2.zip >/dev/null && ./aws/install >/dev/null && \
     aws --version &&  make --version && rm awscliv2.zip &&  rm -rf aws
 
+RUN curl "https://github.com/gruntwork-io/terragrunt/releases/download/v0.54.8/terragrunt_linux_amd64"  -o "terragrunt" -s  && \
+    chmod +x terragrunt && mv terragrunt /usr/bin/ && \
+    terragrunt --version
+
 ENTRYPOINT ["/bin/bash"]
