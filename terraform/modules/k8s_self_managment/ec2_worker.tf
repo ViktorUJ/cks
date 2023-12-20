@@ -4,7 +4,9 @@ resource "aws_launch_template" "worker" {
   name_prefix   = "${local.prefix}-${var.app_name}"
   image_id      = each.value.ami_id != "" ? each.value.ami_id : data.aws_ami.worker["${each.key}"].image_id
   instance_type = each.value.instance_type
-  user_data     = base64encode( templatefile(each.value.user_data_template, {
+
+  user_data =base64encode(templatefile("template/boot_zip.sh",{
+    boot_zip = base64gzip(templatefile(each.value.user_data_template, {
     worker_join     = local.worker_join
     k8s_config      = local.k8s_config
     k8_version      = each.value.k8_version
@@ -15,7 +17,10 @@ resource "aws_launch_template" "worker" {
     node_labels     = each.value.node_labels
     ssh_private_key = each.value.ssh.private_key
     ssh_pub_key     = each.value.ssh.pub_key
-  }))
+    } ))
+
+  } ))
+
   key_name = each.value.key_name
   tags = merge(var.tags_common, local.tags_app , {"Name" = "${local.prefix}-${var.app_name}-worker-${each.key}" })
   network_interfaces {

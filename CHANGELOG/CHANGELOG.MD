@@ -7,6 +7,7 @@
 * the ability to create independent environments for each user has been added.
 * CMDB has been added. now all resources created when creating environments are automatically added to CMDB. 
 * commands for working with CMDB were added (getting the list of all resources, getting all user resources, getting detailed information on individual resources).
+* k8s version **1.29** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
 
 
 ## 0.5.1 (23.11.2023)
