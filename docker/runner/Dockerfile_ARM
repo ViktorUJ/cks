@@ -8,7 +8,7 @@ RUN apt update && apt install curl unzip make git  -y && \
 
 RUN curl "https://github.com/gruntwork-io/terragrunt/releases/download/v0.54.8/terragrunt_linux_arm64"  -o "terragrunt" -s
 RUN chmod +x terragrunt && mv terragrunt /usr/bin/
-RUN terragrunt --version
+#RUN terragrunt --version
 
 #   curl "https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_arm64.zip" -o "terraform.zip" -s  && \
 #   unzip terraform.zip >/dev/null && chmod +x terraform.zip && \
