@@ -1,34 +1,16 @@
-FROM amazon/aws-cli:2.13.24
+FROM ubuntu:24.04
 #install tools
-RUN  echo '[mongodb-org-4.4]'>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'name=MongoDB Repository'>>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'baseurl=https://repo.mongodb.org/yum/amazon/2/mongodb-org/4.4/x86_64/'>>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'gpgcheck=1'>>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'enabled=1'>>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc'>>/etc/yum.repos.d/mongodb-org-4.0.repo  && \
-     amazon-linux-extras install postgresql13 -y  && \
-     yum install mongodb-org-tools mongodb-org-shell tar git  mysql  bind-utils iputils bash-completion -y && \
-     curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64 && \
-     install skaffold /usr/local/bin/ && \
-     rm -rf skaffold && \
-     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl" && \
-     chmod +x ./kubectl && \
-     mv kubectl /usr/local/bin/kubectl && \
-     curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | bash && \
-     wget https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz && \
-     curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz && \
-     tar -zxvf helm.tar.gz && \
-     mv linux-arm/helm /usr/local/bin/helm && \
-     echo 'source /usr/share/bash-completion/bash_completion'>>~/.bashrc && \
-     echo 'source <(kubectl completion bash)'>>~/.bashrc && \
-     echo 'complete -C "/usr/local/bin/aws_completer" aws'>>~/.bashrc && \
-     echo 'source <(helm completion bash)'>>~/.bashrc && \
-     echo 'source <(skaffold completion bash)'>>~/.bashrc && \
-     yum clean all && \
-     rm -rf /var/cache/yum
+RUN apt update && apt install curl unzip make git  -y && \
+    apt  clean && rm -rf /var/lib/apt/lists/* && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"  -o "awscliv2.zip" -s && \
+    unzip awscliv2.zip >/dev/null && ./aws/install >/dev/null && \
+    aws --version &&  make --version && rm awscliv2.zip &&  rm -rf aws && \
+    curl "https://github.com/gruntwork-io/terragrunt/releases/download/v0.54.8/terragrunt_linux_arm64"  -o "terragrunt" -s  && \
+    chmod +x terragrunt && mv terragrunt /usr/bin/ && \
+    terragrunt --version && \
+    curl "https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_arm64.zip" -o "terraform.zip" -s  && \
+    unzip terraform.zip >/dev/null && chmod +x terraform.zip && \
+    mv terraform /usr/bin/ && terraform --version && \
+    rm terraform.zip
 
 ENTRYPOINT ["/bin/bash"]
-
-#     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
-#     helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2 && \
-#     helm plugin install https://github.com/sstarcher/helm-release && \
