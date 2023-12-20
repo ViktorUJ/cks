@@ -10,9 +10,9 @@ RUN curl "https://github.com/gruntwork-io/terragrunt/releases/download/v0.54.8/t
 RUN chmod +x terragrunt && mv terragrunt /usr/bin/
 #RUN terragrunt --version
 
-#   curl "https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_arm64.zip" -o "terraform.zip" -s  && \
-#   unzip terraform.zip >/dev/null && chmod +x terraform.zip && \
-#   mv terraform /usr/bin/ && terraform --version && \
-#   rm terraform.zip
+RUN  curl "https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_arm64.zip" -o "terraform.zip" -s  && \
+RUN  unzip terraform.zip >/dev/null && chmod +x terraform.zip && \
+RUN  mv terraform /usr/bin/ && terraform --version && \
+RUN  rm terraform.zip
 
 ENTRYPOINT ["/bin/bash"]
