@@ -10,7 +10,6 @@ RUN apt update && apt install curl unzip make git wget  -y && \
     terragrunt --version && \
     curl "https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_arm64.zip" -o "terraform.zip" -s  && \
     unzip terraform.zip >/dev/null && chmod +x terraform.zip  && \
-    mv terraform /usr/bin/ && terraform --version   && \
-    rm terraform.zip
+    mv terraform /usr/bin/  && rm terraform.zip && terraform --version
 
 ENTRYPOINT ["/bin/bash"]
