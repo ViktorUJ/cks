@@ -1,6 +1,6 @@
 FROM ubuntu:24.04
 #install tools
-RUN apt update && apt install curl unzip make git wget -y && \
+RUN apt update && apt install curl unzip make git wget vim -y && \
     apt  clean && rm -rf /var/lib/apt/lists/* && \
     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s && \
     unzip awscliv2.zip >/dev/null && ./aws/install >/dev/null && \
