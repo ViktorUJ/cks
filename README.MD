@@ -34,6 +34,8 @@ The repository is organized into the following sections:
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html) > 2.2.30
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
 
+**Or you can** [run via docker](docs%2Frun_from_docker.MD)
+
 
 ### About CKA, CKS, CKAD scenarios
 - the platform uses **aws**  to create following resources :  **vpc**, **subnets**, **security groups**, **ec2** (spot ), **s3**
