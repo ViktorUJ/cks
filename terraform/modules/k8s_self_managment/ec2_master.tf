@@ -1,12 +1,12 @@
 resource "aws_iam_role" "fleet_role" {
-  for_each           = toset(var.node_type == "spot" ? ["enable"] : [])
-  name               = "${local.prefix}-${var.app_name}-${var.cluster_name}"
+  for_each = toset(var.node_type == "spot" ? ["enable"] : [])
+  name     = "${local.prefix}-${var.app_name}-${var.cluster_name}"
   assume_role_policy = jsonencode({
-    Version   = "2012-10-17",
+    Version = "2012-10-17",
     Statement = [
       {
-        Action    = "sts:AssumeRole",
-        Effect    = "Allow",
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
         Principal = {
           Service = "spotfleet.amazonaws.com"
         }
@@ -88,7 +88,7 @@ resource "aws_launch_template" "master" {
   name_prefix   = "${local.prefix}-${var.app_name}"
   image_id      = local.master_ami
   instance_type = var.k8s_master.instance_type
-  user_data =base64encode(templatefile("template/boot_zip.sh",{
+  user_data = base64encode(templatefile("template/boot_zip.sh", {
     boot_zip = base64gzip(templatefile(var.k8s_master.user_data_template, {
       worker_join      = local.worker_join
       k8s_config       = local.k8s_config
@@ -102,9 +102,9 @@ resource "aws_launch_template" "master" {
       calico_url       = var.k8s_master.calico_url
       ssh_private_key  = var.k8s_master.ssh.private_key
       ssh_pub_key      = var.k8s_master.ssh.pub_key
-    } ))
+    }))
 
-  } ))
+  }))
 
   key_name = var.k8s_master.key_name
   tags     = local.tags_all_k8_master
@@ -163,7 +163,7 @@ resource "aws_spot_fleet_request" "master" {
 
 
 data "aws_instances" "spot_fleet_master" {
-  for_each      = toset(var.node_type == "spot" ? ["enable"] : [])
+  for_each = toset(var.node_type == "spot" ? ["enable"] : [])
   instance_tags = {
     "aws:ec2spot:fleet-request-id" = aws_spot_fleet_request.master["enable"].id
   }

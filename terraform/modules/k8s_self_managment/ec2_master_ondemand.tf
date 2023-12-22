@@ -16,7 +16,7 @@ resource "aws_instance" "master" {
       security_groups
     ]
   }
-  user_data =base64encode(templatefile("template/boot_zip.sh",{
+  user_data = base64encode(templatefile("template/boot_zip.sh", {
     boot_zip = base64gzip(templatefile(var.k8s_master.user_data_template, {
       worker_join      = local.worker_join
       k8s_config       = local.k8s_config
@@ -30,9 +30,9 @@ resource "aws_instance" "master" {
       calico_url       = var.k8s_master.calico_url
       ssh_private_key  = var.k8s_master.ssh.private_key
       ssh_pub_key      = var.k8s_master.ssh.pub_key
-    } ))
+    }))
 
-  } ))
+  }))
 
 
   tags = local.tags_all

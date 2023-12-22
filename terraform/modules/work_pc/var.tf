@@ -33,20 +33,20 @@ variable "work_pc" {
     user_data_template = string
     task_script_url    = string # url for run additional script
     node_type          = string # spot ar ondemand
-    ssh                = object({
+    ssh = object({
       private_key = string
       pub_key     = string
     })
     test_url          = string
     exam_time_minutes = string
-    util              = object({
+    util = object({
       kubectl_version = string
     })
-    root_volume       = object({
+    root_volume = object({
       type = string
       size = string
     })
-    non_root_volumes  = map(object({
+    non_root_volumes = map(object({
       delete_on_termination = optional(bool),
       size                  = number,
       type                  = string,

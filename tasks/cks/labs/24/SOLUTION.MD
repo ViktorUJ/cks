@@ -1,12 +1,12 @@
 
 https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
 
-``` 
-sudo su 
+```
+sudo su
 mkdir /etc/kubernetes/enc/  -p
 
 ```
-``` 
+```
 # vim /etc/kubernetes/enc/enc.yaml
 
 apiVersion: apiserver.config.k8s.io/v1
@@ -23,7 +23,7 @@ resources:
       - identity: {}
 
 ````
-``` 
+```
 # vim /etc/kubernetes/manifests/kube-apiserver.yaml
 
 apiVersion: v1
@@ -58,28 +58,28 @@ spec:
   ...
 ```
 
-``` 
+```
 service kubelet restart
 k get no
 # wait k8s ready
 ```
-``` 
+```
 k create secret generic test-secret -n prod --from-literal password=strongPassword
 ```
-``` 
-# encrypt all secrets in stage ns with new config 
+```
+# encrypt all secrets in stage ns with new config
 
 kubectl get secrets -n stage -o json | kubectl replace -f -
 
 ```
 
 ```
-# check 
+# check
 
 ETCDCTL_API=3 etcdctl \
    --cacert=/etc/kubernetes/pki/etcd/ca.crt   \
    --cert=/etc/kubernetes/pki/etcd/server.crt \
    --key=/etc/kubernetes/pki/etcd/server.key  \
-   get /registry/secrets/stage/stage | hexdump -C 
+   get /registry/secrets/stage/stage | hexdump -C
 
 ```

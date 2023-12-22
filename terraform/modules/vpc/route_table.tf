@@ -1,6 +1,6 @@
 resource "aws_route_table" "pub" {
   depends_on = [aws_dynamodb_table_item.cmdb]
-  vpc_id = aws_vpc.default.id
+  vpc_id     = aws_vpc.default.id
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.default.id

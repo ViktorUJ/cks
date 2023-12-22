@@ -9,21 +9,21 @@ variable "aws" {}
 variable "prefix" {}
 variable "app_name" {}
 variable "USER_ID" {
-  type = string
+  type    = string
   default = "defaultUser"
 }
 variable "ENV_ID" {
-  type = string
+  type    = string
   default = "defaultId"
 }
 
 variable "STACK_NAME" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "STACK_TASK" {
-  type = string
+  type    = string
   default = ""
 }
 variable "tags_common" {

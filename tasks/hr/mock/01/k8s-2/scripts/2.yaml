@@ -28,4 +28,3 @@ spec:
       containers:
       - image: nginx
         name: app
-

@@ -40,8 +40,8 @@ The repository is organized into the following sections:
 ### About CKA, CKS, CKAD scenarios
 - the platform uses **aws**  to create following resources :  **vpc**, **subnets**, **security groups**, **ec2** (spot ), **s3**
 - after you launch the scenarios the platform will create all the necessary resources   and give access to k8s clusters.
-- to create clusters the platform uses **kubeadm** 
-- you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment) 
+- to create clusters the platform uses **kubeadm**
+- you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)
 - [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)  module supports versions:
 ````
 k8s version  : [ 1.21 , 1.28 ]   https://kubernetes.io/releases/
@@ -69,9 +69,9 @@ Every command should be run from the project's root directory.
 - ``USER_ID='myuser' ENV_ID='01' make cmdb_get_user_env_data`` - show all created resources of user **myuser** in environment **01**
 - ``USER_ID='myuser' ENV_ID='01' make cmdb_get_user_env_lock`` - show all lock resources of user **myuser** in environment **01**
 - ``USER_ID='myuser' ENV_ID='01' make cmdb_get_user_env_lock`` - show all lock resources of user **myuser** in environment **01**
-- ``USER_ID='myuser' make cmdb_get_user_env_lock`` - show all lock resources of user **myuser** in **all** environment 
-- ``USER_ID='myuser' make cmdb_get_user_env_data`` - show all data resources of user **myuser** in **all** environment 
-- ``CMDB_ITEM='CMDB_data_myuser_02_k8s_cluster1' make cmdb_get_item`` - getting detailed information about **CMDB_data_myuser_02_k8s_cluster1** resource. 
+- ``USER_ID='myuser' make cmdb_get_user_env_lock`` - show all lock resources of user **myuser** in **all** environment
+- ``USER_ID='myuser' make cmdb_get_user_env_data`` - show all data resources of user **myuser** in **all** environment
+- ``CMDB_ITEM='CMDB_data_myuser_02_k8s_cluster1' make cmdb_get_item`` - getting detailed information about **CMDB_data_myuser_02_k8s_cluster1** resource.
 
 
 </details>
@@ -87,7 +87,7 @@ Every command should be run from the project's root directory.
 ### cka mock
 - ``TASK=01 make run_cka_mock`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)
 - ``make delete_cka_mock`` - delete mock  CKA exam
-- ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)  with clean terragrunt cache 
+- ``TASK=01 make run_cka_mock_clean`` - create mock  CKA exam [number 01](tasks%2Fcka%2Fmock%2F01)  with clean terragrunt cache
 - ``make output_cka_mock `` - show **outputs** from   **cka_mock**
 
 </details>
@@ -98,7 +98,7 @@ Every command should be run from the project's root directory.
 ### ckad mock
 - ``TASK=01 make run_ckad_mock`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)
 - ``make delete_ckad_mock`` - delete mock  CKAD exam
-- ``TASK=01 make run_ckad_mock_clean`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)  with clean terragrunt cache 
+- ``TASK=01 make run_ckad_mock_clean`` - create mock  CKAD exam [number 01](tasks%2Fckad%2Fmock%2F01)  with clean terragrunt cache
 - ``make output_ckad_mock `` - show **outputs** from   **ckad_mock**
 
 </details>
@@ -114,7 +114,7 @@ Every command should be run from the project's root directory.
 ### cks mock
 - ``TASK=01 make run_cks_mock`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)
 - ``make delete_cks_mock`` - delete mock  CKS exam
-- ``TASK=01 make run_cks_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache 
+- ``TASK=01 make run_cks_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache
 - ``make output_cks_mock `` - show **outputs** from   **cks_mock**
 </details>
 
@@ -123,7 +123,7 @@ Every command should be run from the project's root directory.
 
 - ``TASK=01 make run_hr_mock`` - create mock  hr exam [number 01](tasks%2Fhr%2Fmock%2F01)
 - ``make delete_hr_mock`` - delete mock  hr exam
-- ``TASK=01 make run_hr_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fhr%2Fmock%2F01)  with clean terragrunt cache 
+- ``TASK=01 make run_hr_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fhr%2Fmock%2F01)  with clean terragrunt cache
 - ``make output_hr_mock `` - show **outputs** from   **hr_mock**
 </details>
 
@@ -195,7 +195,7 @@ Every command should be run from the project's root directory.
 
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
-- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need 
+- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKS exam ``TASK={mock_number} make run_cks_mock`` or ``TASK={mock_number} make run_cks_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
@@ -216,7 +216,7 @@ Every command should be run from the project's root directory.
 
 ### mock  CKAD exam
 - choose [a mock exam](tasks%2Fckad%2Fmock)  number
-- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need 
+- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKAD exam ``TASK={mock_number} make run_ckad_mock`` or ``TASK={mock_number} make run_ckad_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
@@ -237,7 +237,7 @@ Every command should be run from the project's root directory.
 
 ### mock  HR exam
 - choose [a mock exam](tasks%2Fhr%2Fmock) number
-- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need 
+- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
 - change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKS exam ``TASK={mock_number} make run_hr_mock`` or ``TASK={mock_number} make run_hr_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``

@@ -1,6 +1,6 @@
 https://kubernetes.io/docs/tutorials/clusters/apparmor
 
-``` 
+```
 k get no
 ssh {work node}
 ```
@@ -24,11 +24,11 @@ apparmor_parser -q  /opt/course/9/profile
 apparmor_status
 ```
 
-``` 
+```
 k label node {work-node} security=apparmor
 
 ```
-``` 
+```
 k create deploy apparmor --image=nginx:1.19.2 $do > 9.yaml
 ```
 ```
@@ -61,9 +61,9 @@ spec:
       - image: nginx:1.19.2
         name: c1                       # change
         resources: {}
-```    
 ```
-k -f 9.yaml apply 
+```
+k -f 9.yaml apply
 k get pod -owide | grep apparmor
 
 k logs apparmor-{xxxx}
@@ -76,4 +76,3 @@ k logs apparmor-{xxxx}
 nginx: [emerg] mkdir() "/var/cache/nginx/client_temp" failed (13: Permission denied)
 This looks alright, the Pod is running on cluster1-node1 because of the nodeSelector. The AppArmor profile simply denies all filesystem writes, but Nginx needs to write into some locations to run, hence the errors.
 ```
-

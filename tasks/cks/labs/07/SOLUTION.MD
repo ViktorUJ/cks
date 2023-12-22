@@ -1,11 +1,11 @@
-``` 
+```
 k get crd
 k get constraint
 k get constrainttemplates
 k edit constrainttemplates k8strustedimages
 ```
 
-``` 
+```
 .......
   - rego: |
       package k8strustedimages
@@ -22,5 +22,5 @@ k edit constrainttemplates k8strustedimages
         not startswith(image, "very-bad-registry.com/")  # add
 
       }
-...........      
+...........
 ```

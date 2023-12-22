@@ -20,7 +20,7 @@ spec:
           port: 53
 
 ````
-``` 
+```
 k apply -f   deny_prod-db.yaml
 ```
 ````
@@ -45,7 +45,7 @@ spec:
           port: 53
 
 ````
-``` 
+```
 k apply -f deny_prod-stack-1.yaml
 ```
 ````
@@ -77,7 +77,7 @@ spec:
 
 
 ````
-``` 
+```
 k apply -f  allow_prod-db_backend.yaml
 ```
 ````
@@ -118,7 +118,7 @@ spec:
 
 
 ````
-```` 
+````
 k apply -f allow_prod-stack-1_backend_frontend.yaml
 ````
 
