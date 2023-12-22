@@ -8,7 +8,7 @@ locals {
 
 terraform {
   source = "../../..//modules/k8s_self_managment/"
-#
+  #
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -26,15 +26,15 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  region        = local.vars.locals.region
-  aws           = local.vars.locals.aws
-  prefix        = "cluster3"
-  tags_common   = local.vars.locals.tags
-  app_name      = "k8s"
-  subnets_az    = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id        = dependency.vpc.outputs.vpc_id
-  cluster_name="k8s3"
-  node_type     = local.vars.locals.node_type
+  region       = local.vars.locals.region
+  aws          = local.vars.locals.aws
+  prefix       = "cluster3"
+  tags_common  = local.vars.locals.tags
+  app_name     = "k8s"
+  subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id       = dependency.vpc.outputs.vpc_id
+  cluster_name = "k8s3"
+  node_type    = local.vars.locals.node_type
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
     runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )

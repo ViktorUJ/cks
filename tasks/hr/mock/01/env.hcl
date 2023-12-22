@@ -2,7 +2,7 @@ locals {
   region = "eu-north-1"
   aws    = "default"
   prefix = "hr-mock"
-  tags   = {
+  tags = {
     "env_name"        = "hr-mock"
     "env_type"        = "dev"
     "manage"          = "terraform"
@@ -17,7 +17,7 @@ locals {
   key_name             = "cks"
   ubuntu_version       = "20.04"
   ami_id               = ""
-  root_volume          = {
+  root_volume = {
     type = "gp3"
     size = "20"
   }

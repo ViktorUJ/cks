@@ -2,7 +2,7 @@ locals {
   region = "eu-north-1"
   aws    = "default"
   prefix = "cks-lab"
-  tags   = {
+  tags = {
     "env_name"        = "cks-lab"
     "env_type"        = "dev"
     "manage"          = "terraform"
@@ -18,7 +18,7 @@ locals {
   ubuntu_version       = "20.04"
   ami_id               = ""
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
-  root_volume          = {
+  root_volume = {
     type = "gp3"
     size = "10"
   }

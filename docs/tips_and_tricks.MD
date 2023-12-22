@@ -5,7 +5,7 @@ The Vim editor is used by default, which means you should be aware how to use sh
 
 `G`  - go to end of file
 
-`gg` - first line of file 
+`gg` - first line of file
 
 `Shift + A` - go to the end of the current row (insert mode)
 

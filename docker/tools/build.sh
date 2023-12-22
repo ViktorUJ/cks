@@ -5,4 +5,3 @@ docker push viktoruj/tools:amd64
 docker manifest create viktoruj/tools:latest viktoruj/tools:arm64  viktoruj/tools:amd64
 #docker manifest create viktoruj/tools:latest  viktoruj/tools:amd64
 docker manifest push viktoruj/tools:latest
-

@@ -130,4 +130,3 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - Name: `web-srv`<br/> - Image: `nginx`<br/> Make sure pod web-srv has disappeared after restore. <br/>  |
 ---
-

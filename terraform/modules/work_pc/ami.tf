@@ -3,8 +3,8 @@ data "aws_ec2_instance_type" "master" {
 }
 
 locals {
- data_arch= join("",data.aws_ec2_instance_type.master.supported_architectures)
- arch= local.data_arch== "x86_64" ? "amd64" : local.data_arch
+  data_arch = join("", data.aws_ec2_instance_type.master.supported_architectures)
+  arch      = local.data_arch == "x86_64" ? "amd64" : local.data_arch
 }
 
 output "arch" {
@@ -17,7 +17,7 @@ data "aws_ami" "master" {
   most_recent = true
 
   filter {
-    name   = "name"
+    name = "name"
     values = [
       "ubuntu/images/hvm-ssd/ubuntu-*-${var.work_pc.ubuntu_version}-${local.arch}-server-*"
     ]

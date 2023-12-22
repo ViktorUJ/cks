@@ -88,7 +88,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 # 2 8
 
-#5 
+#5
 @test "5.1 Create deployment msg and service msg-service.Image" {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get deployments.apps -n messaging msg -o jsonpath='{.spec.template..image}' --context cluster1-admin@cluster1 )

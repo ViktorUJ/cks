@@ -2,7 +2,7 @@ locals {
   region = "eu-north-1"
   aws    = "default"
   prefix = "cka-mock"
-  tags   = {
+  tags = {
     "env_name"        = "cka-mock"
     "env_type"        = "dev"
     "manage"          = "terraform"
@@ -18,7 +18,7 @@ locals {
   ubuntu_version       = "20.04"
   ami_id               = "" #  ami-06410fb0e71718398 - x86   ami-0ff124a3d7381bfec - arm
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a    ami-0ebb6753c095cb52a - arm
-  root_volume          = {
+  root_volume = {
     type = "gp3"
     size = "12"
   }

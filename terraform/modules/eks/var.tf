@@ -2,11 +2,11 @@ variable "region" {}
 variable "aws" {}
 variable "prefix" {}
 variable "USER_ID" {
-  type = string
+  type    = string
   default = "defaultUser"
 }
 variable "ENV_ID" {
-  type = string
+  type    = string
   default = "defaultId"
 }
 variable "vpc_id" {}
@@ -37,11 +37,11 @@ variable "eks" {
 }
 
 variable "STACK_NAME" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "STACK_TASK" {
-  type = string
+  type    = string
   default = ""
 }

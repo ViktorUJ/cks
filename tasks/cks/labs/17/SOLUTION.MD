@@ -1,12 +1,12 @@
 https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/
 
-``` 
-sudo su 
+```
+sudo su
 
 mkdir -p /etc/kubernetes/policy/
 
 ```
-``` 
+```
 # vim /etc/kubernetes/policy/log-policy.yaml
 
 apiVersion: audit.k8s.io/v1
@@ -21,10 +21,10 @@ rules:
   resources:
   - group: "" # core API group
     resources: ["configmaps"]
-  namespaces: ["billing"]    
+  namespaces: ["billing"]
 - level: None
 ```
-``` 
+```
 # vim /etc/kubernetes/manifests/kube-apiserver.yaml
 
 apiVersion: v1
@@ -69,9 +69,9 @@ spec:
     - --service-cluster-ip-range=10.96.0.0/12
     - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
     - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
-    - --audit-policy-file=/etc/kubernetes/policy/log-policy.yaml           # add 
-    - --audit-log-path=/var/logs/kubernetes-api.log                        # add 
-      
+    - --audit-policy-file=/etc/kubernetes/policy/log-policy.yaml           # add
+    - --audit-log-path=/var/logs/kubernetes-api.log                        # add
+
     image: registry.k8s.io/kube-apiserver:v1.28.0
     imagePullPolicy: IfNotPresent
     livenessProbe:
@@ -127,13 +127,13 @@ spec:
       name: usr-share-ca-certificates
       readOnly: true
 
-    - mountPath: /etc/kubernetes/policy/log-policy.yaml    # add 
-      name: audit                                          # add 
-      readOnly: true                                       # add 
-    - mountPath: /var/logs/                                # add 
-      name: audit-log                                      # add 
-      readOnly: false      
-      
+    - mountPath: /etc/kubernetes/policy/log-policy.yaml    # add
+      name: audit                                          # add
+      readOnly: true                                       # add
+    - mountPath: /var/logs/                                # add
+      name: audit-log                                      # add
+      readOnly: false
+
   hostNetwork: true
   priority: 2000001000
   priorityClassName: system-node-critical
@@ -165,7 +165,7 @@ spec:
       path: /usr/share/ca-certificates
       type: DirectoryOrCreate
     name: usr-share-ca-certificates
-    
+
   - name: audit                                             # add
     hostPath:                                               # add
       path: /etc/kubernetes/policy/log-policy.yaml          # add
@@ -175,14 +175,14 @@ spec:
     hostPath:                                               # add
       path: /var/logs/                                      # add
       type: DirectoryOrCreate                               # add
-      
-    
+
+
 status: {}
 
 
 ```
-``` 
-service kubelet restart 
+```
+service kubelet restart
 k get no
 k get secret -n prod
 k get configmaps -n billing
@@ -217,7 +217,7 @@ k get configmaps -n billing
     "apiVersion": "v1"
   },
   "responseStatus": {
- 
+
 
 ```
 

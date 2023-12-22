@@ -5,11 +5,11 @@ variable "tags_common" {
   type = map(string)
 }
 variable "USER_ID" {
-  type = string
+  type    = string
   default = "defaultUser"
 }
 variable "ENV_ID" {
-  type = string
+  type    = string
   default = "defaultId"
 }
 variable "app_name" {}
@@ -38,7 +38,7 @@ variable "k8s_master" {
     calico_url         = string
     task_script_url    = string # url for run additional script
     eip                = string # true or ...
-    ssh                = object({
+    ssh = object({
       private_key = string
       pub_key     = string
     })
@@ -63,7 +63,7 @@ variable "k8s_worker" {
     runtime_script     = string
     task_script_url    = string # url for run additional script
     node_labels        = string
-    ssh                = object({
+    ssh = object({
       private_key = string
       pub_key     = string
     })
@@ -75,11 +75,11 @@ variable "k8s_worker" {
 }
 
 variable "STACK_NAME" {
-  type = string
+  type    = string
   default = ""
 }
 
 variable "STACK_TASK" {
-  type = string
+  type    = string
   default = ""
 }

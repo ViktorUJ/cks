@@ -51,7 +51,7 @@ inputs = {
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/0.6.1/tasks/cka/mock/01/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
-    ssh                = {
+    ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
@@ -72,7 +72,7 @@ inputs = {
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
-      ssh                = {
+      ssh = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }
@@ -91,7 +91,7 @@ inputs = {
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
-      ssh                = {
+      ssh = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }

@@ -1,12 +1,12 @@
-``` 
+```
 k get po -n kube-system  | grep api
 
 ```
-``` 
+```
 k exec  -n kube-system  kube-apiserver-ip-10-2-11-163  -- kube-apiserver --help  | grep cip
       --tls-cipher-suites strings              Comma-separated list of cipher suites for the server. If omitted, the default Go cipher suites will be used.
 ```
-``` 
+```
 k exec  -n kube-system  kube-apiserver-ip-10-2-11-163  -- kube-apiserver --help  | grep tls | grep min
 --tls-min-version string                 Minimum TLS version supported. Possible values: VersionTLS10, VersionTLS11, VersionTLS12, VersionTLS13
 
@@ -18,11 +18,11 @@ k exec  -n kube-system etcd-ip-10-2-11-163 -- etcd --help | grep cip
 ```
 
 
-``` 
+```
 sudo su
 vim /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
-``` 
+```
 apiVersion: v1
 kind: Pod
 metadata:
@@ -39,7 +39,7 @@ spec:
   - command:
     - kube-apiserver
     - --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384  # add
-    - --tls-min-version=VersionTLS13    # add 
+    - --tls-min-version=VersionTLS13    # add
     - --advertise-address=10.2.11.163
     - --allow-privileged=true
     - --authorization-mode=Node,RBAC
@@ -69,7 +69,7 @@ spec:
     - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
 ..........
 ```
-``` 
+```
 # vim /etc/kubernetes/manifests/etcd.yaml
 
 apiVersion: v1
@@ -87,7 +87,7 @@ spec:
   containers:
   - command:
     - etcd
-    - --cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 # add 
+    - --cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 # add
     - --advertise-client-urls=https://10.2.11.163:2379
     - --cert-file=/etc/kubernetes/pki/etcd/server.crt
     - --client-cert-auth=true
@@ -110,10 +110,9 @@ spec:
 
 ```
 
-``` 
+```
 service kubelet restart
 
 k get no
 
 ```
-
