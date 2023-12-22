@@ -11,7 +11,8 @@
 * docker runner has been added. Now you can run [make commands](..%2FREADME.MD#command)  from docker container. [more details](..%2Fdocs%2Frun_from_docker.MD)
 * Terraform code is updated  to use **terraform** version **v1.6.6**
 * Terragrunt is updated  to use  version **v0.54.8**
-* [cka mock 02 questions list](..%2Ftasks%2Fcka%2Fmock%2F02) is added
+* [cka mock 02 questions list](..%2Ftasks%2Fcka%2Fmock%2F02) is added.
+* [lfcs mock 01 questions list](..%2Ftasks%2Flfcs%2Fmock%2F01) is added.
 
 
 ## 0.5.1 (23.11.2023)
