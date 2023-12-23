@@ -136,6 +136,14 @@ Every command should be run from the project's root directory.
 - ``make delete_eks_task`` delete eks lab cluster
 </details>
 
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">dev</summary>
+
+- ``make lint`` run linter on the project
+
+</details>
+
+
 ## Usage scenarios
 
 
