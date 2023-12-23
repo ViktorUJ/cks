@@ -137,7 +137,7 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
-  <summary style="font-weight: bold; font-size: 1.5em;">dev</summary>
+  <summary style="font-weight: bold; font-size: 1.5em;">DEV</summary>
 
 - ``make lint`` run linter on the project
 
