@@ -231,4 +231,3 @@ cmdb_get_user_env_lock:
 cmdb_get_item:
 	@aws dynamodb get-item --table-name $(dynamodb_table) --region $(region)  --key '{"LockID": {"S": "'${CMDB_ITEM}'"}}'
 # CMDB_ITEM=CMDB_data_myuser_02_k8s_cluster1 make cmdb_get_item
-
