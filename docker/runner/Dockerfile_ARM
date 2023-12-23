@@ -1,6 +1,6 @@
 FROM ubuntu:24.04
 #install tools
-RUN apt update && apt install curl unzip make git wget vim jq -y && \
+RUN apt update && apt install curl unzip make git wget vim jq python3-pip python3.11-venv pre-commit  -y && \
     apt  clean && rm -rf /var/lib/apt/lists/* && \
     curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"  -o "awscliv2.zip" -s  && \
     unzip awscliv2.zip >/dev/null && ./aws/install >/dev/null && \
@@ -10,6 +10,8 @@ RUN apt update && apt install curl unzip make git wget vim jq -y && \
     terragrunt --version && \
     curl "https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_arm64.zip" -o "terraform.zip" -s  && \
     unzip terraform.zip >/dev/null && chmod +x terraform.zip  && \
-    mv terraform /usr/bin/  && rm terraform.zip && terraform --version
+    mv terraform /usr/bin/  && rm terraform.zip && terraform --version && \
+    ln -sf /usr/bin/python3 /usr/bin/python && ln -sf /usr/bin/pip3 /usr/bin/pip
+
 
 ENTRYPOINT ["/bin/bash"]
