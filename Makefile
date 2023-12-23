@@ -5,6 +5,9 @@ region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl | 
 backend_bucket := $(shell grep '^  backend_bucket' terraform/environments/terragrunt.hcl | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
 dynamodb_table := $(backend_bucket)-lock
 base_dir := $(shell pwd)
+BASE_PATH := $(shell pwd)
+VENV_PATH := $(BASE_PATH)/venv
+VENV_BIN_PATH := $(VENV_PATH)/bin/
 
 # Set prefix_dir to empty if it contains '__'
 ifneq ($(findstring __,$(prefix_dir)),)
@@ -192,6 +195,22 @@ output_eks_task:
 lint:
 	pre-commit run --all-files -c .hooks/.pre-commit-config.yaml
 
+install_git_hooks:
+	$(VENV_BIN_PATH)/pre-commit install
+	@echo 'Pre-commit hooks installed'
+
+venv:
+	virtualenv -p python3 -q $(VENV_PATH)
+	$(VENV_BIN_PATH)/pip install --default-timeout 60 -r .hooks/requirements.txt
+	@echo 'Virtualenv created'
+
+clean:
+	@rm -fr $(VENV_PATH)
+	@echo 'Removed virtualenv'
+
+dev: venv install_git_hooks
+
+
 # CMDB
 cmdb_get_env_all:
 	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
@@ -212,3 +231,4 @@ cmdb_get_user_env_lock:
 cmdb_get_item:
 	@aws dynamodb get-item --table-name $(dynamodb_table) --region $(region)  --key '{"LockID": {"S": "'${CMDB_ITEM}'"}}'
 # CMDB_ITEM=CMDB_data_myuser_02_k8s_cluster1 make cmdb_get_item
+
