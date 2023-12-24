@@ -95,7 +95,7 @@ resource "aws_launch_template" "master" {
     exam_time_minutes = var.work_pc.exam_time_minutes
     test_url          = var.work_pc.test_url
     task_script_url   = var.work_pc.task_script_url
-    ssh_password = random_password.ssh.result
+    ssh_password = random_string.ssh.result
   }))
   key_name = var.work_pc.key_name
   tags     = local.tags_all_k8_master

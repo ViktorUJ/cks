@@ -1,4 +1,4 @@
-resource "random_password" "ssh" {
+resource "random_string" "ssh" {
   length = 10
   special = false
 }

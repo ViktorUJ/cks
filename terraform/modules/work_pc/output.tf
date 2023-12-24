@@ -3,7 +3,7 @@ output "worker_pc_ip" {
 }
 
 output "worker_pc_ssh" {
-  value = "   ssh ubuntu@${local.worker_pc_ip}  password   =   ${random_password.ssh.result} "
+  value = "   ssh ubuntu@${local.worker_pc_ip} paassword= ${random_string.ssh.result} "
 }
 output "node_type" {
   value = var.work_pc.node_type
