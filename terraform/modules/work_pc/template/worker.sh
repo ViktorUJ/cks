@@ -14,6 +14,8 @@ date
 
 }
 #-------------------
+echo ${ssh_password} | passwd --stdin ubuntu
+
 acrh=$(uname -m)
 hostnamectl  set-hostname worker
 
