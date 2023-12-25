@@ -5,6 +5,15 @@ output "worker_pc_ip" {
 output "worker_pc_ssh" {
   value = "   ssh ubuntu@${local.worker_pc_ip} password= ${random_string.ssh.result}   "
 }
+
+output "ssh_user" {
+  value = "  ubuntu  "
+}
+
+output "ssh_password" {
+  value = "  ${random_string.ssh.result}   "
+}
+
 output "node_type" {
   value = var.work_pc.node_type
 }
