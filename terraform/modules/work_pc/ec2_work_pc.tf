@@ -97,12 +97,7 @@ resource "aws_launch_template" "master" {
     task_script_url   = var.work_pc.task_script_url
     ssh_password = random_string.ssh.result
   }))
-  dynamic "settings_block" {
-    for_each = var.work_pc.key_name != "" ? [var.work_pc.key_name ] : []
-    content {
-      key_name = var.work_pc.key_name
-    }
-  }
+  key_name = var.work_pc.key_name != "" ? var.work_pc.key_name : null
   tags     = local.tags_all_k8_master
 
   network_interfaces {
