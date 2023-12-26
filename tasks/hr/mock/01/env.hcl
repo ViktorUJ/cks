@@ -14,7 +14,7 @@ locals {
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type        = "t4g.medium" #  t3.medium  - x86     t4g.medium - arm
   instance_type_worker = "t4g.medium"
-  key_name             = "cks"
+  key_name             = ""
   ubuntu_version       = "20.04"
   ami_id               = ""
   root_volume = {
