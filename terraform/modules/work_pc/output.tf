@@ -3,8 +3,17 @@ output "worker_pc_ip" {
 }
 
 output "worker_pc_ssh" {
-  value = "   ssh ubuntu@${local.worker_pc_ip}  "
+  value = "   ssh ubuntu@${local.worker_pc_ip} password= ${random_string.ssh.result}   "
 }
+
+output "ssh_user" {
+  value = "  ubuntu  "
+}
+
+output "ssh_password" {
+  value = "  ${random_string.ssh.result}   "
+}
+
 output "node_type" {
   value = var.work_pc.node_type
 }
@@ -55,4 +64,8 @@ output "prefix" {
 
 output "app_name" {
   value = var.app_name
+}
+
+output "ec2_key" {
+  value = var.work_pc.key_name
 }

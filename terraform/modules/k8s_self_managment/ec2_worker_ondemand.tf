@@ -5,7 +5,7 @@ resource "aws_instance" "worker" {
   ami                         = each.value.ami_id != "" ? each.value.ami_id : data.aws_ami.worker["${each.key}"].image_id
   instance_type               = each.value.instance_type
   subnet_id                   = local.subnets[each.value.subnet_number]
-  key_name                    = each.value.key_name
+  key_name                    = each.value.key_name != "" ? each.value.key_name : null
   security_groups             = [aws_security_group.servers.id]
   lifecycle {
     ignore_changes = [
@@ -29,6 +29,7 @@ resource "aws_instance" "worker" {
       node_labels     = each.value.node_labels
       ssh_private_key = each.value.ssh.private_key
       ssh_pub_key     = each.value.ssh.pub_key
+      ssh_password    = random_string.ssh.result
     }))
 
   }))

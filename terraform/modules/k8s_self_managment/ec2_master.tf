@@ -102,11 +102,11 @@ resource "aws_launch_template" "master" {
       calico_url       = var.k8s_master.calico_url
       ssh_private_key  = var.k8s_master.ssh.private_key
       ssh_pub_key      = var.k8s_master.ssh.pub_key
+      ssh_password     = random_string.ssh.result
     }))
 
   }))
-
-  key_name = var.k8s_master.key_name
+  key_name = var.k8s_master.key_name != "" ? var.k8s_master.key_name : null
   tags     = local.tags_all_k8_master
 
   network_interfaces {

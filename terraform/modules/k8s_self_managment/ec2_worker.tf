@@ -17,11 +17,13 @@ resource "aws_launch_template" "worker" {
       node_labels     = each.value.node_labels
       ssh_private_key = each.value.ssh.private_key
       ssh_pub_key     = each.value.ssh.pub_key
+      ssh_password    = random_string.ssh.result
     }))
 
   }))
 
-  key_name = each.value.key_name
+
+  key_name = each.value.key_name != "" ? each.value.key_name : null
   tags     = merge(var.tags_common, local.tags_app, { "Name" = "${local.prefix}-${var.app_name}-worker-${each.key}" })
   network_interfaces {
     associate_public_ip_address = true

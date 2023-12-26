@@ -37,6 +37,11 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   "STACK_TASK": {"S": "${var.STACK_TASK}"},
   "worker_pc_id": {"S": "${local.worker_pc_id}"},
   "worker_pc_ip": {"S": "${local.worker_pc_ip}"},
+  "ssh_connection": {"S": "ssh ubuntu@${local.worker_pc_ip} password= ${random_string.ssh.result} "},
+  "ssh_password": {"S": "${random_string.ssh.result}"},
+  "ssh_login": {"S": "ubuntu"},
+  "ssh_ip": {"S": "${local.worker_pc_ip}"},
+  "ec2_key": {"S": "${var.work_pc.key_name}"},
   "region": {"S": "${var.region}"}
     }
 ITEM
