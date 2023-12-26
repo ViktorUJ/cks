@@ -65,3 +65,7 @@ output "prefix" {
 output "app_name" {
   value = var.app_name
 }
+
+output "ec2_key" {
+  value = var.work_pc.key_name
+}
