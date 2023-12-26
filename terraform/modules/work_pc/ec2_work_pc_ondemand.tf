@@ -5,7 +5,7 @@ resource "aws_instance" "master" {
   ami                         = var.work_pc.ami_id != "" ? var.work_pc.ami_id : data.aws_ami.master.image_id
   instance_type               = var.work_pc.instance_type
   subnet_id                   = local.subnets[var.work_pc.subnet_number]
-  key_name = var.work_pc.key_name != "" ? var.work_pc.key_name : null
+  key_name                    = var.work_pc.key_name != "" ? var.work_pc.key_name : null
   security_groups             = [aws_security_group.servers.id]
   lifecycle {
     ignore_changes = [
@@ -24,7 +24,7 @@ resource "aws_instance" "master" {
     exam_time_minutes = var.work_pc.exam_time_minutes
     test_url          = var.work_pc.test_url
     task_script_url   = var.work_pc.task_script_url
-    ssh_password = random_string.ssh.result
+    ssh_password      = random_string.ssh.result
   })
   tags = local.tags_all
   root_block_device {

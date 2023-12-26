@@ -5,7 +5,7 @@ resource "aws_instance" "master" {
   ami                         = local.master_ami
   instance_type               = var.k8s_master.instance_type
   subnet_id                   = local.subnets[var.k8s_master.subnet_number]
-  key_name = var.k8s_master.key_name != "" ? var.k8s_master.key_name : null
+  key_name                    = var.k8s_master.key_name != "" ? var.k8s_master.key_name : null
   security_groups             = [aws_security_group.servers.id]
   lifecycle {
     ignore_changes = [
@@ -30,7 +30,7 @@ resource "aws_instance" "master" {
       calico_url       = var.k8s_master.calico_url
       ssh_private_key  = var.k8s_master.ssh.private_key
       ssh_pub_key      = var.k8s_master.ssh.pub_key
-      ssh_password = random_string.ssh.result
+      ssh_password     = random_string.ssh.result
     }))
 
   }))
