@@ -5,7 +5,7 @@ resource "aws_instance" "master" {
   ami                         = local.master_ami
   instance_type               = var.k8s_master.instance_type
   subnet_id                   = local.subnets[var.k8s_master.subnet_number]
-  key_name                    = var.k8s_master.key_name
+  key_name = var.k8s_master.key_name != "" ? var.k8s_master.key_name : null
   security_groups             = [aws_security_group.servers.id]
   lifecycle {
     ignore_changes = [

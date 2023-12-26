@@ -106,8 +106,7 @@ resource "aws_launch_template" "master" {
     }))
 
   }))
-
-  key_name = var.k8s_master.key_name
+  key_name = var.k8s_master.key_name != "" ? var.k8s_master.key_name : null
   tags     = local.tags_all_k8_master
 
   network_interfaces {

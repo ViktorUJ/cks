@@ -22,7 +22,8 @@ resource "aws_launch_template" "worker" {
 
   }))
 
-  key_name = each.value.key_name
+
+  key_name = each.value.key_name != "" ? each.value.key_name : null
   tags     = merge(var.tags_common, local.tags_app, { "Name" = "${local.prefix}-${var.app_name}-worker-${each.key}" })
   network_interfaces {
     associate_public_ip_address = true
