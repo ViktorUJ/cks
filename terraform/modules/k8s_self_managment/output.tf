@@ -23,7 +23,7 @@ output "k8_master_version" {
 }
 
 output "master_ssh" {
-  value = "ssh ubuntu@${local.master_ip_public}"
+  value = "ssh ubuntu@${local.master_ip_public}  password= ${random_string.ssh.result}  "
 }
 
 output "eip" {
@@ -52,4 +52,11 @@ output "master_instance_type" {
 
 output "worker_reload_bashrc" {
   value = "  source ~/.bashrc   "
+}
+output "ec2_key" {
+  value = var.k8s_master.key_name
+}
+
+output "ssh_password" {
+  value = "  ${random_string.ssh.result}   "
 }

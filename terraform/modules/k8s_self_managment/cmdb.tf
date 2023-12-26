@@ -37,6 +37,9 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   "worker_node_ids": {"S": "${local.worker_node_ids}"},
   "worker_node_ips_private": {"S": "${local.worker_node_ips_private}"},
   "worker_node_ips_public": {"S": "${local.worker_node_ips_public}"},
+  "ssh_password": {"S": "${random_string.ssh.result}"},
+  "ssh_login": {"S": "ubuntu"},
+  "ec2_key": {"S": "${var.k8s_master.key_name}"},
   "region": {"S": "${var.region}"}
     }
 ITEM

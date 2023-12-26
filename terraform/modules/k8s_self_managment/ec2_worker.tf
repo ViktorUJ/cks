@@ -17,6 +17,7 @@ resource "aws_launch_template" "worker" {
       node_labels     = each.value.node_labels
       ssh_private_key = each.value.ssh.private_key
       ssh_pub_key     = each.value.ssh.pub_key
+          ssh_password = random_string.ssh.result
     }))
 
   }))

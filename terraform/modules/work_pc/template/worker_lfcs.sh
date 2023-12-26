@@ -14,6 +14,13 @@ date
 
 }
 #-------------------
+echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
+
+SSH_CONFIG_FILE="/etc/ssh/sshd_config"
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+systemctl restart sshd
+
 acrh=$(uname -m)
 hostnamectl  set-hostname worker
 
