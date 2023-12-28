@@ -34,7 +34,7 @@ The repository is organized into the following sections:
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html) > 2.2.30
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
 
-**Or you can** [run via docker](docs%2Frun_from_docker.MD)
+**Or you can** [run via docker](docs%2Frun_from_docker.MD)  ( [video instruction](https://youtu.be/Xh6sWzafBmw) )
 
 
 ### About CKA, CKS, CKAD scenarios
