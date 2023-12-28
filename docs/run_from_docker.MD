@@ -1,3 +1,8 @@
+# Run platform via docker 
+
+We have prepared a docker image including all necessary dependencies and utilities .
+
+You can use it to run exams or labs by following the instructions below
 
 ```
 sudo docker run -it viktoruj/runner
