@@ -14,3 +14,4 @@
 | CKS             |              checklist              |         [container-security-checklist](https://github.com/krol3/container-security-checklist#secure-the-container-registry)         |
 | CKS             |             publication             | [The Path to Passing the CKS Exam](https://hackernoon.com/the-path-to-passing-the-cks-exam-from-challenges-to-creating-a-simulator) |
 | CKS             |  rules library for OPA Gatekeeper   |        [rules library](https://cloud.google.com/anthos-config-management/docs/latest/reference/constraint-template-library)         |
+| CKS             |  video course   |        [Learn with GVR](https://www.youtube.com/watch?v=jvmShTBSBoA&list=PLFkEchqXDZx6Bw3B2NRVc499j1TavjOvm)         |

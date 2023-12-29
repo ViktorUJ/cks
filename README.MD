@@ -34,7 +34,7 @@ The repository is organized into the following sections:
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html) > 2.2.30
 - [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
 
-**Or you can** [run via docker](docs%2Frun_from_docker.MD)
+**Or you can** [run via docker](docs%2Frun_from_docker.MD)  ( [video instruction](https://youtu.be/Xh6sWzafBmw) )
 
 
 ### About CKA, CKS, CKAD scenarios
@@ -44,12 +44,12 @@ The repository is organized into the following sections:
 - you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)
 - [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)  module supports versions:
 ````
-k8s version  : [ 1.21 , 1.28 ]   https://kubernetes.io/releases/
+k8s version  : [ 1.21 , 1.29 ]   https://kubernetes.io/releases/
 Rintime :
     docker                   [1.21 , 1.23]
-    cri-o                    [1.21 , 1.28]
-    containerd               [1.21 , 1.28]   # cks, cka  default 1.28
-    containerd_gvizor        [1.21 , 1.28]
+    cri-o                    [1.21 , 1.29]
+    containerd               [1.21 , 1.29]   # cks, cka  default 1.28
+    containerd_gvizor        [1.21 , 1.29]
 OS for nodes  :
    ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
 CNI :  calico
@@ -57,7 +57,6 @@ CNI :  calico
 
 ## Configuration
 - change  **backend_bucket** ( **region** , **backend_region**  optional ) in [terraform/environments/terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl#L4) :
-- create  [aws ec2 key-pair](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html) with name=cks  in our region (default region = eu-north-1)
 
 
 ## Command
