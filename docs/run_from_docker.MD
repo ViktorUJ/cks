@@ -2,7 +2,7 @@
 
 We have prepared a docker image including all necessary dependencies and utilities .
 
-You can use it to run exams or labs by following the instructions below or use  [video instruction](https://youtu.be/Xh6sWzafBmw)
+You can use it to run exams or labs by following the instructions below or use  [video instructions](https://youtu.be/Xh6sWzafBmw)
 
 ```
 sudo docker run -it viktoruj/runner
