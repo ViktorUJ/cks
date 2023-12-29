@@ -6,7 +6,7 @@ Or you need to create several independent environments for one student with diff
 
 To create an independent environment you need to set additional variables USER_ID='myuser' ENV_ID='01' before running the make command.
 
-for example :
+[for example](https://youtu.be/3H0RMLXGmgg) :
 
 - `USER_ID='myuser' ENV_ID='3' TASK=01 make run_ckad_mock` - create environment **3** for user **myuser** with task set **01** ckad mock 
 - `USER_ID='myuser' ENV_ID='3' TASK=01 make delete_ckad_mock` -  delete environment **3** for user **myuser** with job set **01** ckad mock 
