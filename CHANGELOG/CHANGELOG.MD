@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.1 (*15.01.2024)
+## 0.6.1 (30.12.2023)
 ### Features
 * Support for [simultaneous creation of independent environments](..%2Fdocs%2Fmultiple_users_envs.MD) is added.
 * The ability to create independent environments for different users is added.
