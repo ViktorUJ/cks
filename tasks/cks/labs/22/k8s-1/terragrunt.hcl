@@ -47,7 +47,7 @@ inputs = {
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/labs/22/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
-    ssh                = {
+    ssh = {
       private_key = ""
       pub_key     = ""
     }

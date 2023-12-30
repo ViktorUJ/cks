@@ -1,6 +1,6 @@
 resource "aws_iam_role" "fleet_role" {
-  for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name = "${var.aws}-${var.prefix}-${var.app_name}-spot-fleet-worker"
+  for_each = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  name     = "${local.prefix}-${var.app_name}-worker"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -16,8 +16,8 @@ resource "aws_iam_role" "fleet_role" {
 }
 
 resource "aws_iam_policy" "fleet_role" {
-  for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name     = "${var.aws}-${var.prefix}-${var.app_name}-work-pc-spot-fleet"
+  for_each = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  name     = "${local.prefix}-${var.app_name}-work-pc"
   policy   = <<EOF
 {
     "Version": "2012-10-17",
@@ -76,19 +76,18 @@ EOF
 }
 
 resource "aws_iam_policy_attachment" "fleet_role" {
-  for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name       = "${var.aws}-${var.prefix}-${var.app_name}-work-pc-spot-fleet"
+  for_each   = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  name       = "${local.prefix}-${var.app_name}-work-pc"
   policy_arn = aws_iam_policy.fleet_role["enable"].arn
   roles      = [aws_iam_role.fleet_role["enable"].name]
 }
 
-
 resource "aws_launch_template" "master" {
   for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  name_prefix   = "${var.aws}-${var.prefix}-${var.app_name}"
-  image_id  = var.work_pc.ami_id != "" ? var.work_pc.ami_id : data.aws_ami.master.image_id
+  name_prefix   = "${local.prefix}-${var.app_name}"
+  image_id      = var.work_pc.ami_id != "" ? var.work_pc.ami_id : data.aws_ami.master.image_id
   instance_type = var.work_pc.instance_type
-  user_data     = base64encode( templatefile(var.work_pc.user_data_template, {
+  user_data = base64encode(templatefile(var.work_pc.user_data_template, {
     clusters_config   = join(" ", [for key, value in var.work_pc.clusters_config : "${key}=${value}"])
     kubectl_version   = var.work_pc.util.kubectl_version
     ssh_private_key   = var.work_pc.ssh.private_key
@@ -96,8 +95,9 @@ resource "aws_launch_template" "master" {
     exam_time_minutes = var.work_pc.exam_time_minutes
     test_url          = var.work_pc.test_url
     task_script_url   = var.work_pc.task_script_url
+    ssh_password      = random_string.ssh.result
   }))
-  key_name = var.work_pc.key_name
+  key_name = var.work_pc.key_name != "" ? var.work_pc.key_name : null
   tags     = local.tags_all_k8_master
 
   network_interfaces {
@@ -114,21 +114,35 @@ resource "aws_launch_template" "master" {
       volume_size           = var.work_pc.root_volume.size
       volume_type           = var.work_pc.root_volume.type
       encrypted             = true
-
     }
-
   }
+
+  dynamic "block_device_mappings" {
+    for_each = var.work_pc.non_root_volumes
+
+    content {
+      device_name = block_device_mappings.key
+
+      ebs {
+        delete_on_termination = lookup(block_device_mappings.value, "delete_on_termination", true)
+        volume_size           = block_device_mappings.value.size
+        volume_type           = block_device_mappings.value.type
+        encrypted             = lookup(block_device_mappings.value, "encrypted", false)
+      }
+    }
+  }
+
   tag_specifications {
     resource_type = "instance"
     tags          = local.tags_all_k8_master
   }
 
-   tag_specifications {
+  tag_specifications {
     resource_type = "volume"
     tags          = local.tags_all_k8_master
   }
 
- iam_instance_profile {
+  iam_instance_profile {
     name = aws_iam_instance_profile.server.name
   }
 
@@ -139,10 +153,10 @@ resource "aws_launch_template" "master" {
 
 
 resource "aws_spot_fleet_request" "master" {
-  for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
-  iam_fleet_role       = aws_iam_role.fleet_role["enable"].arn
-  target_capacity      = 1
-  wait_for_fulfillment = true
+  for_each                      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  iam_fleet_role                = aws_iam_role.fleet_role["enable"].arn
+  target_capacity               = 1
+  wait_for_fulfillment          = true
   terminate_instances_on_delete = true
   launch_template_config {
     launch_template_specification {
@@ -154,8 +168,8 @@ resource "aws_spot_fleet_request" "master" {
 
 
 data "aws_instances" "spot_fleet" {
-  for_each      = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
+  for_each = toset(var.work_pc.node_type == "spot" ? ["enable"] : [])
   instance_tags = {
-    "aws:ec2spot:fleet-request-id" =  aws_spot_fleet_request.master["enable"].id
+    "aws:ec2spot:fleet-request-id" = aws_spot_fleet_request.master["enable"].id
   }
 }

@@ -1,4 +1,11 @@
 #!/bin/bash
+echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
+
+SSH_CONFIG_FILE="/etc/ssh/sshd_config"
+sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+systemctl restart sshd
+
 runtime_sh=${runtime}
 k8_version_sh=${k8_version}
 worker_join_sh=${worker_join}
@@ -55,4 +62,3 @@ chmod +x worker_join
 curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
-

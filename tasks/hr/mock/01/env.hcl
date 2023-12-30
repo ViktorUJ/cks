@@ -2,7 +2,7 @@ locals {
   region = "eu-north-1"
   aws    = "default"
   prefix = "hr-mock"
-  tags   = {
+  tags = {
     "env_name"        = "hr-mock"
     "env_type"        = "dev"
     "manage"          = "terraform"
@@ -14,10 +14,10 @@ locals {
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type        = "t4g.medium" #  t3.medium  - x86     t4g.medium - arm
   instance_type_worker = "t4g.medium"
-  key_name             = "cks"
+  key_name             = ""
   ubuntu_version       = "20.04"
   ami_id               = ""
-  root_volume          = {
+  root_volume = {
     type = "gp3"
     size = "20"
   }

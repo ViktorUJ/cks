@@ -32,7 +32,7 @@ inputs = {
 
 
   work_pc = {
-    clusters_config = {}
+    clusters_config    = {}
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
@@ -41,13 +41,13 @@ inputs = {
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
-    util               = {
+    util = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
     test_url          = ""
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/labs/19/worker/files/worker.sh"
-    ssh               = {
+    ssh = {
       private_key = ""
       pub_key     = ""
     }

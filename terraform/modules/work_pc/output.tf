@@ -3,8 +3,17 @@ output "worker_pc_ip" {
 }
 
 output "worker_pc_ssh" {
-  value = "   ssh ubuntu@${local.worker_pc_ip}  "
+  value = "   ssh ubuntu@${local.worker_pc_ip} password= ${random_string.ssh.result}   "
 }
+
+output "ssh_user" {
+  value = "  ubuntu  "
+}
+
+output "ssh_password" {
+  value = "  ${random_string.ssh.result}   "
+}
+
 output "node_type" {
   value = var.work_pc.node_type
 }
@@ -36,12 +45,27 @@ output "s3_k8s_config" {
 output "ami_id" {
   value = local.master_ami
 }
+
 output "aws_eks_cluster_eks_cluster_arn" {
   value = var.aws_eks_cluster_eks_cluster_arn
 }
+
 output "instance_type" {
   value = var.work_pc.instance_type
 }
+
 output "kubectl_version" {
   value = var.work_pc.util.kubectl_version
+}
+
+output "prefix" {
+  value = local.prefix
+}
+
+output "app_name" {
+  value = var.app_name
+}
+
+output "ec2_key" {
+  value = var.work_pc.key_name
 }

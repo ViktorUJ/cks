@@ -8,7 +8,7 @@ data "aws_ami" "master" {
 
   filter {
     name   = "name"
-    values = join("",data.aws_ec2_instance_type.master.supported_architectures) == "x86_64" ? ["ubuntu/images/hvm-ssd/ubuntu-*-${var.k8s_master.ubuntu_version}-amd64-server-*" ] : ["ubuntu/images/hvm-ssd/ubuntu-*-${var.k8s_master.ubuntu_version}-arm64-server-*"]
+    values = join("", data.aws_ec2_instance_type.master.supported_architectures) == "x86_64" ? ["ubuntu/images/hvm-ssd/ubuntu-*-${var.k8s_master.ubuntu_version}-amd64-server-*"] : ["ubuntu/images/hvm-ssd/ubuntu-*-${var.k8s_master.ubuntu_version}-arm64-server-*"]
   }
 
   filter {
@@ -26,13 +26,13 @@ data "aws_ec2_instance_type" "worker" {
 }
 
 locals {
- worker_ami_arh= {
-   for key, instance in var.k8s_worker:
-   key =>{
-     name = join("",data.aws_ec2_instance_type.master.supported_architectures) == "x86_64" ? "amd64" : "arm64"
-     filter = join("",data.aws_ec2_instance_type.master.supported_architectures) == "x86_64" ? "ubuntu/images/hvm-ssd/ubuntu-*-${instance.ubuntu_version}-amd64-server-*" : "ubuntu/images/hvm-ssd/ubuntu-*-${instance.ubuntu_version}-arm64-server-*"
-   }
- }
+  worker_ami_arh = {
+    for key, instance in var.k8s_worker :
+    key => {
+      name   = join("", data.aws_ec2_instance_type.master.supported_architectures) == "x86_64" ? "amd64" : "arm64"
+      filter = join("", data.aws_ec2_instance_type.master.supported_architectures) == "x86_64" ? "ubuntu/images/hvm-ssd/ubuntu-*-${instance.ubuntu_version}-amd64-server-*" : "ubuntu/images/hvm-ssd/ubuntu-*-${instance.ubuntu_version}-arm64-server-*"
+    }
+  }
 }
 
 #output "worker_arch" {
@@ -54,4 +54,3 @@ data "aws_ami" "worker" {
 
   owners = ["099720109477"]
 }
-

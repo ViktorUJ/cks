@@ -1,5 +1,5 @@
-``` 
-mkdir /var/work/tests/artifacts/11/ -p 
+```
+mkdir /var/work/tests/artifacts/11/ -p
 ```
 
 ### get connection parameters to etcd
@@ -23,10 +23,10 @@ cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep etcd
 ETCDCTL_API=3 etcdctl \
 --cert /etc/kubernetes/pki/apiserver-etcd-client.crt \
 --key /etc/kubernetes/pki/apiserver-etcd-client.key \
---cacert /etc/kubernetes/pki/etcd/ca.crt get /registry/secrets/team-green/database-access >/var/work/tests/artifacts/11/plaintext 
+--cacert /etc/kubernetes/pki/etcd/ca.crt get /registry/secrets/team-green/database-access >/var/work/tests/artifacts/11/plaintext
 
 ````
-``` 
+```
 ETCDCTL_API=3 etcdctl \
 --cert /etc/kubernetes/pki/apiserver-etcd-client.crt \
 --key /etc/kubernetes/pki/apiserver-etcd-client.key \

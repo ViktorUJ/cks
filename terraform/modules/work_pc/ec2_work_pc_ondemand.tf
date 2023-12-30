@@ -5,7 +5,7 @@ resource "aws_instance" "master" {
   ami                         = var.work_pc.ami_id != "" ? var.work_pc.ami_id : data.aws_ami.master.image_id
   instance_type               = var.work_pc.instance_type
   subnet_id                   = local.subnets[var.work_pc.subnet_number]
-  key_name                    = var.work_pc.key_name
+  key_name                    = var.work_pc.key_name != "" ? var.work_pc.key_name : null
   security_groups             = [aws_security_group.servers.id]
   lifecycle {
     ignore_changes = [
@@ -24,6 +24,7 @@ resource "aws_instance" "master" {
     exam_time_minutes = var.work_pc.exam_time_minutes
     test_url          = var.work_pc.test_url
     task_script_url   = var.work_pc.task_script_url
+    ssh_password      = random_string.ssh.result
   })
   tags = local.tags_all
   root_block_device {
@@ -33,5 +34,27 @@ resource "aws_instance" "master" {
     tags                  = local.tags_all
     encrypted             = true
   }
+}
 
+resource "aws_ebs_volume" "master" {
+  for_each = var.work_pc.node_type == "ondemand" ? var.work_pc.non_root_volumes : {}
+
+  size              = each.value.size
+  type              = each.value.type
+  encrypted         = lookup(each.value, "encrypted", false)
+  availability_zone = data.aws_subnet.active.availability_zone
+
+  tags = local.tags_all_k8_master
+}
+
+data "aws_subnet" "active" {
+  id = local.subnets[var.work_pc.subnet_number]
+}
+
+resource "aws_volume_attachment" "master" {
+  for_each = var.work_pc.node_type == "ondemand" ? var.work_pc.non_root_volumes : {}
+
+  device_name = each.key
+  volume_id   = aws_ebs_volume.master[each.key].id
+  instance_id = aws_instance.master["enable"].id
 }

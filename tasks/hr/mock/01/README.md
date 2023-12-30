@@ -57,4 +57,3 @@
 |     Task weight     | 1%                                                                                                              |
 |       Cluster       | cluster1                                                                                                        |
 | Acceptance criteria | - node label: `work_type=infra` <br/>- format type: `json` <br/>-  save path : `/var/work/tests/artifacts/5/nodes.json` |
-

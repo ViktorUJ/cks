@@ -57,18 +57,17 @@ inputs = {
     subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/worker.sh"
-    util               = {
+    util = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/worker/files/tests.bats"
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/worker/files/worker.sh"
-    ssh               = {
+    ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
-    root_volume = local.vars.locals.root_volume
+    root_volume      = local.vars.locals.root_volume
+    non_root_volumes = {}
   }
-
-
 }
