@@ -2,13 +2,13 @@
 
 ## 0.6.1 (*15.01.2024)
 ### Features
-* Support for [simultaneous creation of independent environments](..%2Fdocs%2Fmultiple_users_envs.MD) was added.
-* The ability to create independent environments for different users was added.
-* the ability to create independent environments for each user has been added.
-* CMDB has been added. now all resources created when creating environments are automatically added to CMDB. [video instructions](https://youtu.be/3H0RMLXGmgg)
-* commands for working with CMDB were added (getting the list of all resources, getting all user resources, getting detailed information on individual resources).
-* k8s version **1.29** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
-* docker runner has been added. Now you can run [make commands](..%2FREADME.MD#command)  from docker container. [more details](..%2Fdocs%2Frun_from_docker.MD)
+* Support for [simultaneous creation of independent environments](..%2Fdocs%2Fmultiple_users_envs.MD) is added.
+* The ability to create independent environments for different users is added.
+* The ability to create independent environments for each user is added.
+* CMDB is added. Now all created resources are automatically added to CMDB. [video instructions](https://youtu.be/3H0RMLXGmgg)
+* Commands for working with CMDB are added (The user can get the list of all resources,  all user resources, detailed information on individual resources).
+* K8s version **1.29** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
+* Docker runner is added. Now you can run [make commands](..%2FREADME.MD#command)  from docker container. [more details](..%2Fdocs%2Frun_from_docker.MD)
 * Terraform code is updated  to use **terraform** version **v1.6.6**
 * Terragrunt is updated  to use  version **v0.54.8**
 * [cka mock 02 questions list](..%2Ftasks%2Fcka%2Fmock%2F02) is added.

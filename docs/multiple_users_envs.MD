@@ -1,8 +1,8 @@
-# Why it needed ?
+# Why is it needed ?
 
-This is necessary when you need to create many identical independent environments. e.g. for a group of students.
+- to create many identical independent environments. e.g. for a group of students.
 
-Or you need to create several independent environments for one student with different tasks.
+- to create several independent environments for one student with different tasks.
 
 To create an independent environment you need to set additional variables USER_ID='myuser' ENV_ID='01' before running the make command.
 
