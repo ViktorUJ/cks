@@ -14,7 +14,7 @@ date
 
 }
 #-------------------
-for host in $hosts ; do
+for host in ${hosts} ; do
  host_name=$(echo $host | cut -d'=' -f1)
  host_ip=$(echo $host | cut -d'=' -f2)
  echo "$host_ip $host_name" >>/etc/hosts
