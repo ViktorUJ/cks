@@ -14,6 +14,12 @@ date
 
 }
 #-------------------
+for host in $hosts ; do
+ host_name=$(echo $host | cut -d'=' -f1)
+ host_ip=$(echo $host | cut -d'=' -f2)
+ echo "$host_ip $host_name" >>/etc/hosts
+done
+
 echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
 
 SSH_CONFIG_FILE="/etc/ssh/sshd_config"

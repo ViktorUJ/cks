@@ -96,6 +96,7 @@ resource "aws_launch_template" "master" {
     test_url          = var.work_pc.test_url
     task_script_url   = var.work_pc.task_script_url
     ssh_password      = random_string.ssh.result
+    hosts             = join(" ", var.host_list)
   }))
   key_name = var.work_pc.key_name != "" ? var.work_pc.key_name : null
   tags     = local.tags_all_k8_master

@@ -64,3 +64,8 @@ variable "STACK_TASK" {
   type    = string
   default = ""
 }
+
+variable "host_list" {
+  type    = list(string)
+  default = []
+}
