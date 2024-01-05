@@ -32,7 +32,7 @@ inputs = {
     addons = {
       vpc-cni = {
         # related table https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
-        version           = "v1.24.10-eksbuild.2"
+        version           = "v1.16.0-eksbuild.1	"
         resolve_conflicts = "OVERWRITE"
       }
       kube-proxy = {
