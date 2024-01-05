@@ -37,7 +37,7 @@ inputs = {
   app_name    = "k8s-worker"
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
-  host_list = ["my_host1=10.0.0.1","my_host_2=10.0.0.2"]
+  host_list = dependency.cluster1.outputs.hosts
 
   work_pc = {
     clusters_config = {
