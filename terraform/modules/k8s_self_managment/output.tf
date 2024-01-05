@@ -60,3 +60,7 @@ output "ec2_key" {
 output "ssh_password" {
   value = "  ${random_string.ssh.result}   "
 }
+
+output "hosts_worker_node" {
+  value = local.hosts_worker_node
+}

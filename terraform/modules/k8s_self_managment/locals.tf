@@ -67,5 +67,5 @@ locals {
   master_ami           = var.k8s_master.ami_id != "" ? var.k8s_master.ami_id : data.aws_ami.master.image_id
   master_instance_type = var.k8s_master.instance_type
 
-
+  hosts_worker_node = [for key, value in local.worker_nodes : "${key}_${value.private_ip}"]
 }
