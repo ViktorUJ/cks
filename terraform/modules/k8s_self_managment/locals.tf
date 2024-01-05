@@ -67,5 +67,7 @@ locals {
   master_ami           = var.k8s_master.ami_id != "" ? var.k8s_master.ami_id : data.aws_ami.master.image_id
   master_instance_type = var.k8s_master.instance_type
 
-
+  hosts_worker_node = [for key, value in local.worker_nodes : "${var.cluster_name}_node_${key}=${value.private_ip}"]
+  hosts_master_node = ["${var.cluster_name}_controlPlane_1=${local.master_local_ip}"]
+  hosts             = concat(local.hosts_master_node, local.hosts_worker_node)
 }

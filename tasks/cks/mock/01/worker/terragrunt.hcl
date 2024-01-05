@@ -73,7 +73,18 @@ inputs = {
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
 
-
+  host_list = concat(
+    dependency.cluster1.outputs.hosts,
+    dependency.cluster2.outputs.hosts,
+    dependency.cluster3.outputs.hosts,
+    dependency.cluster4.outputs.hosts,
+    dependency.cluster5.outputs.hosts,
+    dependency.cluster6.outputs.hosts,
+    dependency.cluster7.outputs.hosts,
+    dependency.cluster8.outputs.hosts,
+    dependency.cluster9.outputs.hosts,
+    dependency.cluster10.outputs.hosts
+  )
   work_pc = {
     clusters_config = {
       cluster1  = dependency.cluster1.outputs.k8s_config
@@ -95,13 +106,13 @@ inputs = {
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
-    util = {
+    util               = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/tests.bats"
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/worker.sh"
-    ssh = {
+    ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }

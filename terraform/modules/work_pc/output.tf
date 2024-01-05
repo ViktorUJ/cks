@@ -69,3 +69,7 @@ output "app_name" {
 output "ec2_key" {
   value = var.work_pc.key_name
 }
+
+output "hosts_list" {
+  value = local.hosts
+}

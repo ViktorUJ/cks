@@ -25,6 +25,7 @@ resource "aws_instance" "master" {
     test_url          = var.work_pc.test_url
     task_script_url   = var.work_pc.task_script_url
     ssh_password      = random_string.ssh.result
+    hosts             = local.hosts
   })
   tags = local.tags_all
   root_block_device {
