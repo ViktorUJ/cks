@@ -1,0 +1,10 @@
+controller:
+  service:
+    type: NodePort
+    nodePorts:
+      http: 30102
+      https: 31139
+  ingressClass:
+    create: true
+    name: nginx
+    setAsDefaultIngress: true
