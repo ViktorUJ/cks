@@ -31,17 +31,21 @@ inputs = {
     allow_cidrs                  = ["0.0.0.0/0"]
     addons = {
       vpc-cni = {
-        version           = "v1.12.2-eksbuild.1"
+        # related table https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
+        version           = "v1.24.10-eksbuild.2"
         resolve_conflicts = "OVERWRITE"
       }
       kube-proxy = {
-        version           = "v1.24.9-eksbuild.1"
+        # related table https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html 
+        version           = "v1.24.10-eksbuild.2"
         resolve_conflicts = "OVERWRITE"
       }
       coredns = {
-        version           = "v1.8.7-eksbuild.3"
+        # related table https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
+        version           = "v1.9.3-eksbuild.10"
         resolve_conflicts = "OVERWRITE"
       }
+      # TODO add CSI addon https://docs.aws.amazon.com/eks/latest/userguide/managing-ebs-csi.html
     }
     node_group = {
 
