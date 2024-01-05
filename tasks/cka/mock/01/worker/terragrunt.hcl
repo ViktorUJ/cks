@@ -43,7 +43,10 @@ inputs = {
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
 
-
+  host_list = concat(
+    dependency.cluster1.outputs.hosts,
+    dependency.cluster2.outputs.hosts
+  )
   work_pc = {
     clusters_config = {
       cluster1 = dependency.cluster1.outputs.k8s_config
