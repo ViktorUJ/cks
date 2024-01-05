@@ -64,3 +64,10 @@ output "ssh_password" {
 output "hosts_worker_node" {
   value = local.hosts_worker_node
 }
+output "hosts_master_node" {
+  value = local.hosts_master_node
+}
+
+output "hosts" {
+  value = local.hosts
+}
