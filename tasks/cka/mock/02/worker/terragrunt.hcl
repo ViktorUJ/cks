@@ -8,7 +8,6 @@ locals {
 
 terraform {
   source = "../../..//modules/work_pc/"
-  # source = "../../..//modules/work_pc_ondemand/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -41,8 +40,7 @@ inputs = {
   vpc_id      = dependency.vpc.outputs.vpc_id
 
   host_list = concat(
-    dependency.cluster1.outputs.hosts,
-    dependency.cluster2.outputs.hosts
+    dependency.cluster1.outputs.hosts
   )
   work_pc = {
     clusters_config = {
@@ -60,8 +58,8 @@ inputs = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/worker/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/01/worker/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/01/worker/files/worker.sh"
     ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
