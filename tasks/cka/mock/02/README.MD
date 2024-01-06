@@ -50,7 +50,7 @@ This includes all available language translations of these pages (e.g. https://k
 | :-----------------: | :-------------------------------------------------------------------------------------- |
 |     Task weight     | 1%                                                                                      |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                         |
-| Acceptance criteria | - Pod name: `web-srv`<br/>- Image: `caddy:alpine`<br/>- Container name: `app1`              |
+| Acceptance criteria | - Pod name: `web-srv`<br/>- Image: `viktoruj/ping_pong:latest`<br/>- Container name: `app1`              |
 ---
 |        **8**        | **2 pods are running in the namspace db-redis named redis-node-\*. You have to scale down number of replicas to 1.** |
 | :-----------------: | :--------------------------------------------------------------------------------------- |
