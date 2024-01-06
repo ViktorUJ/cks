@@ -39,4 +39,12 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "team-elephant" ]
 }
 
-# 1 1
+
+@test "7 Deploy a util pod. command " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get po util -n dev  -o jsonpath='{.spec.containers..command}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == '["sleep","3600"]' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == '["sleep","3600"]' ]
+}

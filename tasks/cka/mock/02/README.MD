@@ -46,7 +46,7 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                        |
 | Acceptance criteria | - Use imperative commands to create mainifest. <br/> - Service: `web-app-svc`<br/>- Port: `8080` <br/>- Type: `NodePort`<br/>- Use the right labels to select targer port. |
 ---
-|        **7**        | **Create a pod web-srv based on image caddy:alpine in the default namespace. The container in the pod should named app1.**
+|        **7**        | **Create a pod web-srv based on image viktoruj/ping_pong:latest in the default namespace. The container in the pod should named app1.**
 | :-----------------: | :-------------------------------------------------------------------------------------- |
 |     Task weight     | 1%                                                                                      |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                         |
