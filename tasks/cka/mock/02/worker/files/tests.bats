@@ -40,11 +40,11 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 
-@test "7 Deploy a util pod. command " {
-  echo '0.5'>>/var/work/tests/result/all
-  result=$(kubectl get po util -n dev  -o jsonpath='{.spec.containers..command}'  --context cluster1-admin@cluster1 )
-  if [[ "$result" == '["sleep","3600"]' ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
+@test "7 Create a pod web-srv based on image viktoruj/ping_pong. Container name " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get po web-srv -o jsonpath='{.spec.containers[*].name}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == 'app1' ]]; then
+   echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == '["sleep","3600"]' ]
+  [ "$result" == 'app1' ]
 }
