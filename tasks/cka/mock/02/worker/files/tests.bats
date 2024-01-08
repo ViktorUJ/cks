@@ -77,3 +77,65 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$nodes" == "$pods" ]
 }
+
+@test "14.2 Create a DaemonSet named team-elephant-ds . ds  label team=team-elephant" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get ds  team-elephant-ds -n team-elephant  -o jsonpath='{.metadata.labels.team}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == 'team-elephant' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == 'team-elephant' ]
+}
+
+@test "14.3 Create a DaemonSet named team-elephant-ds . ds  label env=dev" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get ds  team-elephant-ds -n team-elephant  -o jsonpath='{.metadata.labels.env}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == 'dev' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == 'dev' ]
+}
+
+@test "14.4 Create a DaemonSet named team-elephant-ds . po  label team=team-elephant" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get ds  team-elephant-ds -n team-elephant  -o jsonpath={.spec.template.metadata.labels.team}  --context cluster1-admin@cluster1 )
+  if [[ "$result" == 'team-elephant' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == 'team-elephant' ]
+}
+@test "14.5 Create a DaemonSet named team-elephant-ds . po  label env=dev" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get ds  team-elephant-ds -n team-elephant  -o jsonpath={.spec.template.metadata.labels.env}  --context cluster1-admin@cluster1 )
+  if [[ "$result" == 'dev' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == 'dev' ]
+}
+
+@test "14.6 Create a DaemonSet named team-elephant-ds . image = viktoruj/ping_pong" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get ds  team-elephant-ds -n team-elephant  -o jsonpath='{.spec.template.spec.containers..image}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == 'viktoruj/ping_pong' ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == 'viktoruj/ping_pong' ]
+}
+
+@test "14.7 Create a DaemonSet named team-elephant-ds . requests CPU= 50m" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get ds  team-elephant-ds -n team-elephant  -o jsonpath='{.spec.template.spec.containers..resources.requests.cpu}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == '50m' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == '50m' ]
+}
+
+@test "14.8 Create a DaemonSet named team-elephant-ds . requests Memory = 50Mi " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get ds  team-elephant-ds -n team-elephant  -o jsonpath='{.spec.template.spec.containers..resources.requests.memory}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == '50Mi' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == '50Mi' ]
+}
