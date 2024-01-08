@@ -67,3 +67,13 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == 'app1' ]
 }
+
+@test "14.1 Create a DaemonSet named team-elephant-ds . is running on all nodes ( control-plane too ) " {
+  echo '1'>>/var/work/tests/result/all
+  nodes=$(kubectl  get no --context cluster1-admin@cluster1 | grep ip| wc -l )
+  pods=$(kubectl  get po -n team-elephant --context cluster1-admin@cluster1 |grep 'team-elephant-ds' | grep  Running | wc -l )
+  if [[ "$nodes" == "$pods" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$nodes" == "$pods" ]
+}
