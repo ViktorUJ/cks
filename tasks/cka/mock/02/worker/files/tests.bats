@@ -40,6 +40,25 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 
+@test "5.1 Create deployment web-app. Image " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployment  web-app  -o jsonpath='{.spec..containers..image}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "viktoruj/ping_pong:latest" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "viktoruj/ping_pong:latest" ]
+}
+
+@test "5.2 Create a deployment named hr-web-app.Replicas " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployment  web-app  -o jsonpath='{.spec.replicas}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "2" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "2" ]
+}
+
+
 @test "7 Create a pod web-srv based on image viktoruj/ping_pong. Container name " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get po web-srv -o jsonpath='{.spec.containers[*].name}'  --context cluster1-admin@cluster1 )
