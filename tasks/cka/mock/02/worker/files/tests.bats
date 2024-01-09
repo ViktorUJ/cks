@@ -140,3 +140,15 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == '50Mi' ]
 }
 # 5 xxxx
+
+@test "16 Write cli commands with shows the latest events in the whole cluster" {
+  echo '2'>>/var/work/tests/result/all
+  diff <(bash /var/work/artifact/16.sh) <(kubectl get events --sort-by=".metadata.creationTimestamp" -A --context cluster1-admin@cluster1)
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+# 2
