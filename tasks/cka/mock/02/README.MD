@@ -100,11 +100,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - Pod name: `multi-pod`<br/> - Container name: `box1`<br/> - Image: `caddy:alpine`<br/> - Container name: `box2`<br/> - Image: `busybox:1.36`<br/> - Command: `while true; do date >> /vol/time.out; sleep 3;`<br/> - Container name: `box3`<br/> - Image: `busybox:1.36`<br/> - Command: `tail -f /vol/time.out;`<br/> kubectl log multi-pod -c box3 displays date output for every 3 seconds.     |
 ---
-|        **16**        | **Shows the latest events in the whole cluster, ordered by creation time (metadata.creationTimestamp). Write output to /var/work/tests/artifacts/16/events.log**             |
-| :-----------------: | :------------------------------------------------------------------------------------ |
-|     Task weight     | 1%                                                                                    |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - Events ordered by creation time to /var/work/tests/artifacts/16/events.log    |
+|        **16**        | Write cli commands with  shows the latest events in the whole cluster, ordered by creation time (metadata.creationTimestamp). |
+| :-----------------: |:------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                                                            |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                               |
+| Acceptance criteria | - Events ordered by creation time <br/> - script is  located  `/var/work/16.sh`                                               |
 ---
 |        **17**        | **Export names of all namespaced resources in Kubernetes to /var/work/tests/artifacts/17/namespaced_resources.out**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
