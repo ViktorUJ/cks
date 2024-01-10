@@ -106,11 +106,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                              |
 | Acceptance criteria | - Events ordered by creation time <br/> - script is  located  `/var/work/16.sh`                                              |
 ---
-|        **17**        | **Export names of all namespaced resources in Kubernetes to /var/work/tests/artifacts/17/namespaced_resources.out**             |
-| :-----------------: | :------------------------------------------------------------------------------------ |
-|     Task weight     | 1%                                                                                    |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - List of namespaced resources to /var/work/tests/artifacts/17/namespaced_resources.out    |
+|        **17**        | Write cli commands with show  names of all namespaced api resources in Kubernetes cluster   |
+| :-----------------: |:--------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                          |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                             |
+| Acceptance criteria | - show  names of all namespaced api resources <br/> - script is  located  `/var/work/17.sh` |
 ---
 |        **18**        | **cluster2 seems to have an issue - cluster2-node1 is not joined. It also might be outdated, so make sure it is running same Kubernetes version as control plane. You should fix the issue.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
