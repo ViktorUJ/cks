@@ -53,7 +53,9 @@ spec:
   containers:
   - image: viktoruj/ping_pong:latest
     name: pod3
-    resources: {}
+    resources:
+      requests:
+        memory: 50Mi
   dnsPolicy: ClusterFirst
   restartPolicy: Always
 status: {}
@@ -71,7 +73,9 @@ spec:
   containers:
   - image: viktoruj/ping_pong:latest
     name: pod4
-    resources: {}
+    resources:
+      requests:
+        memory: 50Mi
   dnsPolicy: ClusterFirst
   restartPolicy: Always
 status: {}
