@@ -27,9 +27,6 @@ kubectl -n kube-system patch deployment metrics-server --type=json \
 -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]]'
 
 
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/02/k8s-1/scripts/task2.yaml
-
-
 acrh=$(uname -m)
 case $acrh in
 x86_64)
@@ -49,3 +46,7 @@ helm install ingress-nginx  ingress-nginx/ingress-nginx \
   -f https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/02/k8s-1/scripts/ingress_nginx_conf.yaml
 
 kubectl patch ingressclass nginx --patch '{"metadata": {"annotations": {"ingressclass.kubernetes.io/is-default-class": "true"}}}'
+
+# tasks
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/02/k8s-1/scripts/task1.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/02/k8s-1/scripts/task2.yaml
