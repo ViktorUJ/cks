@@ -8,6 +8,15 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 }
 
+@test "1 find a pod in dev-1 namespace with labels `team=finance` and maximum memory usage  " {
+  echo '2'>>/var/work/tests/result/all
+  result=$(kubectl get po -n dev-1 -l usage=max -o jsonpath='{.items..metadata.name}'  --context cluster1-admin@cluster1 )
+  if [[ "$result" == "pod4" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "pod4" ]
+}
+
 
 @test "2.1 Deploy a util pod. Image " {
   echo '0.5'>>/var/work/tests/result/all
