@@ -38,7 +38,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 
 
-#3
+
 @test "3. Create a namespace named team-elephant  " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get ns  team-elephant -o jsonpath={.metadata.name}  --context cluster1-admin@cluster1 )
@@ -47,6 +47,17 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "team-elephant" ]
 }
+
+@test "4. Create pod alpine with image alpine:3.15 and make sure it is running on node with label disk=ssd " {
+  echo '2'>>/var/work/tests/result/all
+  node=$(kubectl get no -l disk=ssd -o jsonpath={.items..metadata.name} --context cluster1-admin@cluster1 )
+  pod_node=$(kubectl get po  alpine -o jsonpath='{.spec.nodeName}' --context cluster1-admin@cluster1 )
+  if [[ "$node" == "$pod_node" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$node" == "$pod_node" ]
+}
+
 
 
 @test "5.1 Create deployment web-app. Image " {
