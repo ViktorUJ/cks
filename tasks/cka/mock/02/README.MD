@@ -10,11 +10,11 @@ This includes all available language translations of these pages (e.g. https://k
 
 ## Questions
 
-|        **1**        | **Create persistent volume in the dev namespace**   |
-| :-----------------: | :-------------------------------------------------------------- |
-|     Task weight     | 1%                                                              |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`) |
-| Acceptance criteria | - Namespace: `dev` <br/>- PV: `dev-pv`                |
+|        **1**        | find a pod in dev-1 namespace with labels `team=finance` and maximum memory usage |
+| :-----------------: |:----------------------------------------------------------------------------------|
+|     Task weight     | 4%                                                                                |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                   |
+| Acceptance criteria | - Namespace: `dev` <br/>- PV: `dev-pv`                                            |
 ---
 |        **2**        | Deploy a **util** pod using the **busybox:1.36** image in the **dev** namespace. Use **sleep 3600 command** to keep it running. |
 | :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------|
