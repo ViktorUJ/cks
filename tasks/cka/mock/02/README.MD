@@ -28,11 +28,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                 |
 | Acceptance criteria | - Namespace: `team-elephant` <br/> Namespace is present in the namespaces list. |
 ---
-|        **4**        | **Create pod `alpine` with image `alpine:3.15` and make sure it is running on node with label `disk=ssd`.**   |
-| :-----------------: |:-----------------------------------------------------------------------------------------------------------|
-|     Task weight     | 2%                                                                                                         |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                            |
-| Acceptance criteria | - Pod is running on the node with label disk=ssd.                                                          |
+|        **4**        | **Create pod `alpine` with image `alpine:3.15` and and command `sleep 6000` . Make sure the pod  is running on node with label `disk=ssd`.** |
+| :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                                                                           |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                              |
+| Acceptance criteria | - Pod is running on the node with label disk=ssd.                                                                                            |
 ---
 |        **5**        | Create deployment **web-app** with image **viktoruj/ping_pong:latest** and **2** replicas. Container port should be configured on port **8080** and named **http-web**. |
 | :-----------------: |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
