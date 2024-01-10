@@ -12,6 +12,7 @@ metadata:
   creationTimestamp: null
   labels:
     run: pod1
+    team: finance
   name: pod1
   namespace: dev-1
 spec:
@@ -63,6 +64,7 @@ metadata:
   creationTimestamp: null
   labels:
     run: pod4
+    team: finance
   name: pod4
   namespace: dev-1
 spec:
@@ -86,6 +88,24 @@ spec:
   containers:
   - image: viktoruj/ping_pong:latest
     name: pod5
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod6
+    team: finance
+  name: pod6
+  namespace: dev-1
+spec:
+  containers:
+  - image: viktoruj/ping_pong:latest
+    name: pod6
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
