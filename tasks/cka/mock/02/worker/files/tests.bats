@@ -152,3 +152,15 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # 2
+
+@test "17 Write cli commands with show names of all namespaced api resources in Kubernetes cluster" {
+  echo '1'>>/var/work/tests/result/all
+  diff <(bash /var/work/artifact/17.sh) <(kubectl api-resources --namespaced=true --context cluster1-admin@cluster1)
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+# 1
