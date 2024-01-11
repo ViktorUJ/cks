@@ -135,6 +135,75 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
+
+@test "11.1 Update Kubernetes.api version " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  version -o json --context cluster2-admin@cluster2  | jq -r '.serverVersion.gitVersion'       )
+  if [[ "$result" == "v1.28.4" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "v1.28.4" ]
+}
+
+@test "11.2 Update Kubernetes. control-plane kubeletVersion " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items..status.nodeInfo.kubeletVersion}' --context cluster2-admin@cluster2 )
+  if [[ "$result" == "v1.26.0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "v1.28.4" ]
+}
+
+@test "11.3 Update Kubernetes. control-plane kubeProxyVersion " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items..status.nodeInfo.kubeProxyVersion}' --context cluster2-admin@cluster2 )
+  if [[ "$result" == "v1.28.4" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "v1.28.4" ]
+}
+
+@test "11.4 Update Kubernetes. work node  kubeProxyVersion " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get nodes -l node_name=node_2 -o jsonpath='{.items..status.nodeInfo.kubeProxyVersion}' --context cluster2-admin@cluster2 )
+  if [[ "$result" == "v1.28.4" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "v1.28.4" ]
+}
+
+
+@test "11.5 Update Kubernetes. work node  kubeletVersion " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get nodes -l node_name=node_2 -o jsonpath='{.items..status.nodeInfo.kubeletVersion}' --context cluster2-admin@cluster2 )
+  if [[ "$result" == "v1.28.4" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "v1.28.4" ]
+}
+
+@test "11.6 Update Kubernetes.control-plane Ready " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get nodes -l node-role.kubernetes.io/control-plane --context cluster2-admin@cluster2 --no-headers | cut -d' ' -f4 )
+  if [[ "$result" == "Ready" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "Ready" ]
+}
+
+@test "11.7 Update Kubernetes.work node Ready " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get nodes -l node_name=node_2 --context cluster2-admin@cluster2 --no-headers | cut -d' ' -f4 )
+  if [[ "$result" == "Ready" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "Ready" ]
+}
+
+#7 xxx
+
+
+
 @test "14.1 Create a DaemonSet named team-elephant-ds . is running on all nodes ( control-plane too ) " {
   echo '1'>>/var/work/tests/result/all
   nodes=$(kubectl  get no --context cluster1-admin@cluster1 | grep ip| wc -l )
