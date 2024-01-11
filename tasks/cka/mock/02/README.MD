@@ -112,11 +112,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                      |
 | Acceptance criteria | - show  names of all namespaced api resources <br/> - script is  located  `/var/work/artifact/17.sh` |
 ---
-|        **18**        | **cluster2 seems to have an issue - cluster2-node1 is not joined. It also might be outdated, so make sure it is running same Kubernetes version as control plane. You should fix the issue.**             |
-| :-----------------: | :------------------------------------------------------------------------------------ |
-|     Task weight     | 8%                                                                                    |
-|       Cluster       | cluster1 (`kubectl config use-context cluster2-admin@cluster2`)                       |
-| Acceptance criteria | - cluster2-node1 is running the same Kubernetes version as control plane, rejoined to the cluster and is in Ready status.  |
+|        **18**        | **cluster2 seems to have an issue - cluster2-node1 is not joined. It also might be outdated, so make sure it is running same Kubernetes version as control plane. You should fix the issue.** |
+| :-----------------: |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 8%                                                                                                                                                                                            |
+|       Cluster       | cluster3 (`kubectl config use-context cluster3-admin@cluster3`)                                                                                                                               |
+| Acceptance criteria | - k8s3_node_node_2 is running the same Kubernetes version as control plane, rejoined to the cluster and is in Ready status.                                                                     |
 ---
 |        **19**        | Create static pod `stat-pod` in the `default` namespace. Expose it via service `stat-pod-svc`.                                                                                                                                                                                   |
 | :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
