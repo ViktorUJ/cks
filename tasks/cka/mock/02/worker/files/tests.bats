@@ -125,7 +125,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 
-@test "9 Write cli commands with shows pods from all namespaces in json format" {
+@test "9 Write cli commands with shows pods from kube-system namespace in json format" {
   echo '1'>>/var/work/tests/result/all
   diff <(bash /var/work/artifact/9.sh) <(kubectl get po -n kube-system -o json --context cluster1-admin@cluster1)
   result=$?
@@ -300,3 +300,52 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 # 1
+
+@test "19.1 Create static pod stat-pod in the default namespace. Expose it via service stat-pod-svc . Memory = 128Mi " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get po -l run=stat-podv  -o jsonpath='{.items..spec.containers..resources.requests.memory}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == '128Mi' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == '128Mi' ]
+}
+
+@test "19.2 Create static pod stat-pod in the default namespace. Expose it via service stat-pod-svc . Cpu = 100m " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get po -l run=stat-podv  -o jsonpath='{.items..spec.containers..resources.requests.cpu}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == '100m' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == '100m' ]
+}
+
+@test "19.3 Create static pod stat-pod in the default namespace. Expose it via service stat-pod-svc . image  " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl get po -l run=stat-podv  -o jsonpath='{.items..spec.containers..image}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == 'viktoruj/ping_pong:latest' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == 'viktoruj/ping_pong:latest' ]
+}
+
+@test "19.4 Create static pod stat-pod in the default namespace. Expose it via service stat-pod-svc . is pod static   " {
+  echo '0.5'>>/var/work/tests/result/all
+  controlPlane_name=$(kubectl get no --context cluster1-admin@cluster1 | grep 'control-plane' | cut -d' ' -f1)
+  kubectl get po -l run=stat-podv  -o jsonpath='{.items..metadata.name}' --context cluster1-admin@cluster1  | grep $controlPlane_name
+  result=$?
+  if [[ "$result" == '0' ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == '0' ]
+}
+
+@test "19.5 Create static pod stat-pod in the default namespace. Expose it via service stat-pod-svc . curl {controlPlane}:nodePort   " {
+  echo '2'>>/var/work/tests/result/all
+  controlPlane_name=$(kubectl get no --context cluster1-admin@cluster1 | grep 'control-plane' | cut -d' ' -f1)
+  curl $controlPlane_name:30084 | grep 'ping_pong_server'
+  result=$?
+  if [[ "$result" == '0' ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == '0' ]
+}
