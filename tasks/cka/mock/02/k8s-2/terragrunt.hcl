@@ -61,7 +61,7 @@ inputs = {
     # we can  configure each node independently
 
     "node_2" = {
-      k8_version         = "1.25.0"
+      k8_version         = "1.28.0"
       instance_type      = local.vars.locals.instance_type
       key_name           = local.vars.locals.key_name
       ami_id             = local.vars.locals.ami_id
