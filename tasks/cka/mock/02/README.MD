@@ -58,11 +58,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                           |
 | Acceptance criteria | - Name: `redis-node-xxxx`<br/>- Number of pods running: 1 <br/> - Nuber of pods is scaled down to 1. <br/>                |
 ---
-|        **9**        | Write cli commands with  shows pods from `all` namespaces in  `json` format . script is  located  `/var/work/artifact/9.sh` |
-| :-----------------: |:----------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                          |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                             |
-| Acceptance criteria | - script shows pods from all namespaces in json format <br/> - script is  located  `/var/work/artifact/9.sh`           |
+|        **9**        | Write cli commands with  shows pods from `kube-system` namespace in  `json` format . script is  located  `/var/work/artifact/9.sh`          |
+| :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                          |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                             |
+| Acceptance criteria | - script shows pods from `kube-system` namespace in json format <br/> - script is  located  `/var/work/artifact/9.sh`                       |
 ---
 |        **10**        | **Create a new PersistentVolume poc-web-pv, size 100Mi and mount it to the folder /project/data. Persistent Volume poc-web-pvc in poc-web namespace should bond with volume and claim 100Mi. Finally create a new Deployment poc-web-deploy in Namespace poc-web and mount that volume to /project/data. nginx:alpine image should be used for deployment.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
