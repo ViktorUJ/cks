@@ -10,59 +10,59 @@ This includes all available language translations of these pages (e.g. https://k
 
 ## Questions
 
-|        **1**        | find a pod in dev-1 namespace with labels `team=finance` and maximum memory usage . Add label `usage=max` to it |
-| :-----------------: |:-----------------------------------------------------------------------------------------------------|
-|     Task weight     | 4%                                                                                                   |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                      |
-| Acceptance criteria | - Namespace: `dev` <br/>- PV: `dev-pv`                                                               |
+|        **1**        | find a pod in `dev-1` namespace with labels `team=finance` and maximum memory usage . Add label `usage=max` to it        |
+| :-----------------: |:-----------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 4%                                                                                                                     |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                        |
+| Acceptance criteria | - pod from `dev-1`  NS  <br/> - with label `team=finance` <br/> -  has max memory usage  <br/> - has label `usage=max` |
 ---
-|        **2**        | Deploy a **util** pod using the **busybox:1.36** image in the **dev** namespace. Use **sleep 3600 command** to keep it running. |
-| :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                              |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                 |
-| Acceptance criteria | - Pod Name: `util` <br/> - Namespace: `dev` <br/> - Image: `busybox:1.36`<br> - Commands: `sleep 3600`                          |
+|        **2**        | Deploy a `util` pod using the `busybox:1.36` image in the `dev` namespace. Use `sleep 3600 command` to keep it running. |
+| :-----------------: |:-----------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                     |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                        |
+| Acceptance criteria | - Pod Name: `util` <br/> - Namespace: `dev` <br/> - Image: `busybox:1.36`<br> - Commands: `sleep 3600`                 |
 ---
-|        **3**        | Create a **namespace** named **team-elephant**                                  |
+|        **3**        | Create a `namespace` named `team-elephant`                                       |
 | :-----------------: |:--------------------------------------------------------------------------------|
 |     Task weight     | 1%                                                                              |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                 |
 | Acceptance criteria | - Namespace: `team-elephant` <br/> Namespace is present in the namespaces list. |
 ---
-|        **4**        | **Create pod `alpine` with image `alpine:3.15` and and command `sleep 6000` . Make sure the pod  is running on node with label `disk=ssd`.** |
-| :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 2%                                                                                                                                           |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                              |
-| Acceptance criteria | - Pod is running on the node with label disk=ssd.                                                                                            |
+|        **4**        | Create pod `alpine` with image `alpine:3.15` and and command `sleep 6000` . Make sure the pod  is running on node with label `disk=ssd`. |
+| :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                                                                       |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                          |
+| Acceptance criteria | - Pod is running on the node with label disk=ssd.                                                                                        |
 ---
-|        **5**        | Create deployment **web-app** with image **viktoruj/ping_pong:latest** and **2** replicas. Container port should be configured on port **8080** and named **http-web**. |
-| :-----------------: |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 2%                                                                                                                                                                      |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                         |
-| Acceptance criteria | - Deployment name: `web-app`<br/> - Image: `viktoruj/ping_pong:latest`<br/> - Replicas: `2`<br/> Deployment pods are running, containers' ports 8080 named http-web.    |
+|        **5**        | Create deployment `web-app` with image `viktoruj/ping_pong:latest` and `2` replicas. Container port should be configured on port `8080` and named `http-web`.         |
+| :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                                                                                                   |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                      |
+| Acceptance criteria | - Deployment name: `web-app`<br/> - Image: `viktoruj/ping_pong:latest`<br/> - Replicas: `2`<br/> Deployment pods are running, containers' ports 8080 named http-web. |
 ---
-|        **6**        | **Create a service web-app-svc to expose the web-app deployment on port 8080 on cluster nodes.**                             |
-| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | 2%                                                                                                                                     |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                        |
-| Acceptance criteria | - Use imperative commands to create mainifest. <br/> - Service: `web-app-svc`<br/>- Port: `8080` <br/>- Type: `NodePort`<br/>- Use the right labels to select targer port. |
+|        **6**        | Create a service `web-app-svc` to expose the `web-app` deployment on port `8080` on cluster nodes.                                                                             |
+| :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 3%                                                                                                                                                                             |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                |
+| Acceptance criteria | - Use imperative commands to create mainifest. <br/> - Service: `web-app-svc`<br/>- Port: `8080` <br/>- Type: `NodePort`<br/>- Use the right labels to select targer port.     |
 ---
-|        **7**        | Create a pod **web-srv** based on image **viktoruj/ping_pong:latest** in the default namespace. The container in the pod should named app1.|
-| :-----------------: | :-------------------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                                      |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                         |
-| Acceptance criteria | - Pod name: `web-srv`<br/>- Image: `viktoruj/ping_pong:latest`<br/>- Container name: `app1`              |
+|        **7**        | Create a pod `web-srv` based on image `viktoruj/ping_pong:latest` in the default namespace. The container in the pod should named `app1`.|
+| :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                    |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                       |
+| Acceptance criteria | - Pod name: `web-srv`<br/>- Image: `viktoruj/ping_pong:latest`<br/>- Container name: `app1`                                           |
 ---
-|        **8**        | **2 pods are running in the namspace db-redis named redis-node-\*. You have to scale down number of replicas to 1.** |
-| :-----------------: | :--------------------------------------------------------------------------------------- |
-|     Task weight     |  1%                                                                                                                 |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                     |
-| Acceptance criteria | - Name: `redis-node-\*`<br/>- Number of pods running: 1 <br/> - Nuber of pods is scaled down to 1. <br/>            |
+|        **8**        | 2 pods are running in the namespace `db-redis` named `redis-node-xxxx`. You need to scale down number of replicas to `1`. |
+| :-----------------: |:--------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                        |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                           |
+| Acceptance criteria | - Name: `redis-node-xxxx`<br/>- Number of pods running: 1 <br/> - Nuber of pods is scaled down to 1. <br/>                |
 ---
-|        **9**        | **Export pods from all namespaces in json format to /var/work/tests/artifacts/9/pods.json**             |
-| :-----------------: | :------------------------------------------------------------------------------------ |
-|     Task weight     | 1%                                                                                    |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - List of pod from all namespaces written to /var/work/tests/artifacts/9/pods.json.                              |
+|        **9**        | Write cli commands with  shows pods from `all` namespaces in  `json` format . script is  located  `/var/work/artifact/9.sh` |
+| :-----------------: |:------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                      |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                         |
+| Acceptance criteria | - List of pod from all namespaces written  <br/> - script is  located  `/var/work/artifact/9.sh`                           |
 ---
 |        **10**        | **Create a new PersistentVolume poc-web-pv, size 100Mi and mount it to the folder /project/data. Persistent Volume poc-web-pvc in poc-web namespace should bond with volume and claim 100Mi. Finally create a new Deployment poc-web-deploy in Namespace poc-web and mount that volume to /project/data. nginx:alpine image should be used for deployment.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
@@ -104,13 +104,13 @@ This includes all available language translations of these pages (e.g. https://k
 | :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 2%                                                                                                                           |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                              |
-| Acceptance criteria | - Events ordered by creation time <br/> - script is  located  `/var/work/16.sh`                                              |
+| Acceptance criteria | - Events ordered by creation time <br/> - script is  located  `/var/work/artifact/16.sh`                                              |
 ---
-|        **17**        | Write cli commands with show  names of all namespaced api resources in Kubernetes cluster   |
-| :-----------------: |:--------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                          |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                             |
-| Acceptance criteria | - show  names of all namespaced api resources <br/> - script is  located  `/var/work/17.sh` |
+|        **17**        | Write cli commands with show  names of all namespaced api resources in Kubernetes cluster            |
+| :-----------------: |:-----------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                   |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                      |
+| Acceptance criteria | - show  names of all namespaced api resources <br/> - script is  located  `/var/work/artifact/17.sh` |
 ---
 |        **18**        | **cluster2 seems to have an issue - cluster2-node1 is not joined. It also might be outdated, so make sure it is running same Kubernetes version as control plane. You should fix the issue.**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
