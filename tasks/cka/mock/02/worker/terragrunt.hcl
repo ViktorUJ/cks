@@ -29,6 +29,9 @@ dependency "cluster1" {
   config_path = "../k8s-1"
 }
 
+dependency "cluster2" {
+  config_path = "../k8s-2"
+}
 
 inputs = {
   region      = local.vars.locals.region
@@ -41,10 +44,12 @@ inputs = {
 
   host_list = concat(
     dependency.cluster1.outputs.hosts
+    dependency.cluster2.outputs.hosts
   )
   work_pc = {
     clusters_config = {
       cluster1 = dependency.cluster1.outputs.k8s_config
+      cluster2 = dependency.cluster2.outputs.k8s_config
     }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type

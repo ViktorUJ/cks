@@ -70,11 +70,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
 | Acceptance criteria | - PV name: `poc-web-pv`<br/> - accessMode: `ReadWriteOnce`<br/> - Size: `100Mi`<br/> - hostPath: `/project/data`<br/> - PersistentVolumeClaim: `poc-web-pvc`<br/>  - Namespace: `poc-web`<br/> - Size: `100Mi`<br/> - Deployment: `poc-web-deploy`<br/> - Image: `nginx:alpine`<br/> poc-web-pvc bonded to poc-web-pv volume and volume is mounted to pods in poc-web-deploy deployment      |
 ---
-|        **11**        | **Show Pods and their containers resource usage orderd by memory usage**             |
-| :-----------------: | :------------------------------------------------------------------------------------ |
-|     Task weight     | 1%                                                                                    |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - Script that shows pods and their container resource usage by memory usage to /var/work/tests/artifacts/11/pods.sh      |
+|       **11**        | **Update Kubernetes cluster.**                                                                                                                                   |
+|:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 7%                                                                                                                                                               |
+|       Cluster       | cluster2 (`kubectl config use-context cluster2-admin@cluster2`)                                                                                                  |
+| Acceptance criteria | - The cluster is running Kubernetes 1.28.0, update it to 1.28.4 .<br/>- Use apt package manager and kubeadm for this.<br/>- Use ssh to connect to the instances. |
 ---
 |        **12**        | **Create Ingress web-app-ingress. Point it service web-app-svc, path /, port 8080**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
