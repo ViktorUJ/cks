@@ -64,11 +64,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                             |
 | Acceptance criteria | - script shows pods from `kube-system` namespace in json format <br/> - script is  located  `/var/work/artifact/9.sh`                       |
 ---
-|        **10**        | **Create a new PersistentVolume poc-web-pv, size 100Mi and mount it to the folder /project/data. Persistent Volume poc-web-pvc in poc-web namespace should bond with volume and claim 100Mi. Finally create a new Deployment poc-web-deploy in Namespace poc-web and mount that volume to /project/data. nginx:alpine image should be used for deployment.**             |
-| :-----------------: | :------------------------------------------------------------------------------------ |
-|     Task weight     | 8%                                                                                    |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - PV name: `poc-web-pv`<br/> - accessMode: `ReadWriteOnce`<br/> - Size: `100Mi`<br/> - hostPath: `/project/data`<br/> - PersistentVolumeClaim: `poc-web-pvc`<br/>  - Namespace: `poc-web`<br/> - Size: `100Mi`<br/> - Deployment: `poc-web-deploy`<br/> - Image: `nginx:alpine`<br/> poc-web-pvc bonded to poc-web-pv volume and volume is mounted to pods in poc-web-deploy deployment      |
+|       **10**        | **Create a Persistent Volume with the given specification. Run pod with pv.**                                                                                                                                                                                                                                                          |
+|:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 8%                                                                                                                                                                                                                                                                                                                                     |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                        |
+| Acceptance criteria | - Volume name: `pv-analytics`<br/>- pvc name: `pvc-analytics`<br/>- Storage: `100Mi`<br/>- Access mode: `ReadWriteOnce`<br/>- Host path: `/pv/analytics`<br/><br/>- pod name: `analytics`<br/>- image: `busybox`<br/>- node: `nodeSelector`<br/>-  node_name: `node_2`<br/>- command: `"sleep 60000"`<br/>- mountPath: `/pv/analytics` |
 ---
 |       **11**        | **Update Kubernetes cluster.**                                                                                                                                   |
 |:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -76,11 +76,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster2 (`kubectl config use-context cluster2-admin@cluster2`)                                                                                                  |
 | Acceptance criteria | - The cluster is running Kubernetes 1.28.0, update it to 1.28.4 .<br/>- Use apt package manager and kubeadm for this.<br/>- Use ssh to connect to the instances. |
 ---
-|        **12**        | **Create Ingress web-app-ingress. Point it service web-app-svc, path /, port 8080**             |
-| :-----------------: | :------------------------------------------------------------------------------------ |
-|     Task weight     | 3%                                                                                    |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - Ingress name: `web-app-ingress`<br/> - Path: `/`<br/> - Service: `web-app-svc`<br/> - Port: `8080`<br/> Ingress is created and points to the right service and right port.     |
+|       **12**        | **Create new ingress resource to the service. Make it available at the path `/cat`**                                                                                   |
+|:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 4%                                                                                                                                                                     |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                        |
+| Acceptance criteria | - NameSpace: cat <br/>- service: cat  <br/>- Annotation: `nginx.ingress.kubernetes.io/rewrite-target: /`<br/>- path: `/cat`  <br/>- check ` curl cka.local:30102/cat ` |
 ---
 |        **13**        | **In the Namespace team-elephant create a new ServiceAccount pod-sa. Assing an account permissions to list and get pods using Role and RoleBinding**             |
 | :-----------------: | :------------------------------------------------------------------------------------ |
@@ -113,10 +113,10 @@ This includes all available language translations of these pages (e.g. https://k
 | Acceptance criteria | - show  names of all namespaced api resources <br/> - script is  located  `/var/work/artifact/17.sh` |
 ---
 |        **18**        | cluster3 seems to have an issue - one of node is not joined. It also might be outdated, so make sure it is running same Kubernetes version as control plane. You should fix the issue. |
-| :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 8%                                                                                                                                                                                       |
-|       Cluster       | cluster3 (`kubectl config use-context cluster3-admin@cluster3`)                                                                                                                          |
-| Acceptance criteria | - k8s3_node_node_2 is running the same Kubernetes version as control plane, rejoined to the cluster and is in Ready status.                                                              |
+| :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 4%                                                                                                                                                                                     |
+|       Cluster       | cluster3 (`kubectl config use-context cluster3-admin@cluster3`)                                                                                                                        |
+| Acceptance criteria | - k8s3_node_node_2 is running the same Kubernetes version as control plane, rejoined to the cluster and is in Ready status.                                                            |
 ---
 |        **19**        | Create static pod `stat-pod` in the `default` namespace. Expose it via service `stat-pod-svc`.                                                                                                                                                                                   |
 | :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -124,9 +124,9 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                  |
 | Acceptance criteria | - Pod name: `stat-podv`<br/>- Image: `viktoruj/ping_pong:latest`<br/> - requests  CPU: `100m`<br/> - requests  Memory: `128Mi` <br/> - app port `8080` <br/> - Service name: `stat-pod-svc`<br/> - Service type: `NodePort` <br/> - NodePort: `30084`  <br/> - Pod is accessible from control plane node. <br/> 
 ---
-|        **20**        | **Backup etcd and save it on the control plane node at /var/work/tests/artifacts/20/etcd-backup.db. Create pod web-srv with image nginx. Now restore the backup and make sure pod web-srv has disappeared.**                  |
-| :-----------------: | :------------------------------------------------------------------------------------ |
-|     Task weight     | 2%                                                                                    |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                       |
-| Acceptance criteria | - Name: `web-srv`<br/> - Image: `nginx`<br/> Make sure pod web-srv has disappeared after restore. <br/>  |
+|        **20**        | **Backup etcd and save it on the control plane node at /var/work/tests/artifacts/20/etcd-backup.db. Create pod web-srv with image nginx. Now restore the backup and make sure pod web-srv has disappeared.** |
+| :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                                                                                                                                           |
+|       Cluster       | cluster4 (`kubectl config use-context cluster4-admin@cluster4`)                                                                                                                                              |
+| Acceptance criteria | - Name: `web-srv`<br/> - Image: `nginx`<br/> Make sure pod web-srv has disappeared after restore. <br/>                                                                                                      |
 ---

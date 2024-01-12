@@ -52,3 +52,4 @@ kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/task
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/02/k8s-1/scripts/task2.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/02/k8s-1/scripts/task6.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/02/k8s-1/scripts/task8.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/02/k8s-1/scripts/task12.yaml
