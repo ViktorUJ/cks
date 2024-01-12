@@ -417,3 +417,70 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == '0' ]
 }
+
+
+@test "21.1 Network policy. can connect from prod NS to prod-db  " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl exec prod-pod -n prod --context cluster5-admin@cluster5 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s ' | grep 'mysql'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "21.2 Network policy. can  connect from stage NS  and  label: role=db-connect  to prod-db  " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl exec db-connect-stage-pod -n stage --context cluster5-admin@cluster5 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s ' | grep 'mysql'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "21.3 Network policy. can connect from any Namespaces and have label: role=db-external-connect  to prod-db  " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl exec all-pod-db-external -n user-client --context cluster5-admin@cluster5 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s ' | grep 'mysql'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "21.4 Network policy. can't connect from stage NameSpace all pod   to prod-db  " {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  kubectl exec all-stage-pod -n stage  --context cluster5-admin@cluster5 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s '
+  result=$?
+  set -e
+  if (( $result > 0 )); then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  (( $result > 0 ))
+}
+
+@test "21.5 Network policy. can't connect all   pod   to prod-db  " {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  kubectl exec all-pod -n user-client   --context cluster5-admin@cluster5 -- sh -c ' curl mysql.prod-db.svc --connect-timeout 1 -s '
+  result=$?
+  set -e
+  if (( $result > 0 )); then
+  echo '1'>>/var/work/tests/result/ok
+  fi
+   (( $result > 0 ))
+}
+
+@test "21.6 Network policy. can connect from all    pod   to google.com  " {
+  echo '1'>>/var/work/tests/result/all
+  set +e && kubectl exec all-pod -n user-client   --context cluster5-admin@cluster5 -- sh -c ' curl https://google.com --connect-timeout 1 -s '
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+# 6
