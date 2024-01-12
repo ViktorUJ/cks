@@ -70,7 +70,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cks/mock/02/k8s-3/scripts/worker.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/cka_mock2/tasks/cka/mock/02/k8s-3/scripts/worker.sh"
       node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
       ssh = {
         private_key = dependency.ssh-keys.outputs.private_key
