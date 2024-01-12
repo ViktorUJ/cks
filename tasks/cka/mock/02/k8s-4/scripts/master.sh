@@ -16,7 +16,7 @@ aarch64)
 ;;
 esac
 
-
+cd /tmp/
 wget -O etcd.tar.gz $etcdctl_url
 tar xvf etcd.tar.gz
 etcd_dir=$(ls  | grep linux | tr -d '\n')
