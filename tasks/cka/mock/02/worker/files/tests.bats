@@ -235,7 +235,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "12.1 Create new ingress . path= cat " {
   echo '2'>>/var/work/tests/result/all
-  curl ckad.local:30102/cat  | grep 'cat-server'
+  curl cka.local:30102/cat  | grep 'cat-server'
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '2'>>/var/work/tests/result/ok
