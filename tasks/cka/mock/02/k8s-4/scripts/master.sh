@@ -23,3 +23,16 @@ etcd_dir=$(ls  | grep linux | tr -d '\n')
 cd $etcd_dir
 mv etcd etcdctl etcdutl /usr/local/bin
 echo "*** etcd = $(etcdctl version)"
+
+mkdir /var/work/tests/artifacts/20/ -p
+chmod -R 777  /var/work
+
+kubectl  create secret generic etcd-check --from-literal aa=aa
+
+ETCDCTL_API=3 etcdctl --endpoints 127.0.0.1:2379 \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  snapshot save  /var/work/tests/artifacts/20/etcd-backup_old.db
+
+kubectl  delete secret etcd-check
