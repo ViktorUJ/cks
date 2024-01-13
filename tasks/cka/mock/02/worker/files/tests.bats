@@ -127,7 +127,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "9 Write cli commands with shows pods from kube-system namespace in json format" {
   echo '1'>>/var/work/tests/result/all
-  diff <(bash /var/work/artifact/9.sh) <(kubectl get po -n kube-system -o json --context cluster1-admin@cluster1)
+  diff <(bash /var/work/artifact/9.sh) <(kubectl get po -n dev-2 -o json --context cluster1-admin@cluster1)
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok

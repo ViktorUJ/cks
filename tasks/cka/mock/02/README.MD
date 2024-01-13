@@ -58,11 +58,11 @@ This includes all available language translations of these pages (e.g. https://k
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                           |
 | Acceptance criteria | - Name: `redis-node-xxxx`<br/>- Number of pods running: 1 <br/> - Nuber of pods is scaled down to 1. <br/>                |
 ---
-|        **9**        | Write cli commands with  shows pods from `kube-system` namespace in  `json` format . script is  located  `/var/work/artifact/9.sh`          |
-| :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                          |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                             |
-| Acceptance criteria | - script shows pods from `kube-system` namespace in json format <br/> - script is  located  `/var/work/artifact/9.sh`                       |
+|        **9**        | Write cli commands with  shows pods from `dev-2` namespace in  `json` format . script is  located  `/var/work/artifact/9.sh` |
+| :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                 |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                    |
+| Acceptance criteria | - script shows pods from `dev-2` namespace in json format <br/> - script is  located  `/var/work/artifact/9.sh`                    |
 ---
 |       **10**        | **Create a Persistent Volume with the given specification. Run pod with pv.**                                                                                                                                                                                                                                                          |
 |:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
