@@ -40,13 +40,13 @@ func init() {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			err := os.MkdirAll(dir, os.ModePerm)
 			if err != nil {
-				fmt.println("Failed to create log directory: %v", err)
+				fmt.Println("Failed to create log directory: %v", err)
 			}
 		}
 
 		file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
-			fmt.println("Failed to open log file: %v", err)
+			fmt.Println("Failed to open log file: %v", err)
 		}
 		file.Close()
 	}
@@ -173,6 +173,6 @@ func main() {
 
 	err := http.ListenAndServe(":" + port, nil)
 	if err != nil {
-		sendLog("Server failed:", err)
+		sendLog(fmt.Sprintf("Server failed: %v", err))
 	}
 }
