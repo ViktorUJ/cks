@@ -76,3 +76,20 @@ spec:
   type: ClusterIP
 
 ---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: checker
+  name: checker
+  namespace: legacy
+spec:
+  containers:
+  - image: viktoruj/cks-lab:latest
+    name: checker
+    command: ["sleep","60000"]
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
