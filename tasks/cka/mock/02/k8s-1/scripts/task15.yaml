@@ -34,6 +34,8 @@ spec:
           value: "app1"
         - name: SRV_PORT
           value: "8081"
+        - name: METRIC_PORT
+          value: "9092"
       - image: viktoruj/ping_pong
         name: app2
         env:
@@ -41,8 +43,36 @@ spec:
           value: "app2"
         - name: SRV_PORT
           value: "8082"
+        - name: METRIC_PORT
+          value: "9092"
 ---
-
-
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: legacy-app
+  name: legacy-app
+  namespace: legacy
+spec:
+  ports:
+  - name: httpApp1
+    port: 8081
+    protocol: TCP
+    targetPort: 8081
+  - name: metricsApp1
+    port: 9091
+    protocol: TCP
+    targetPort: 9091
+  - name: httpApp2
+    port: 8082
+    protocol: TCP
+    targetPort: 8082
+  - name: metricsApp2
+    port: 9092
+    protocol: TCP
+    targetPort: 9092
+  selector:
+    app: legacy-app
+  type: ClusterIP
 
 ---
