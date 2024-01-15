@@ -36,6 +36,10 @@ spec:
           value: "8081"
         - name: METRIC_PORT
           value: "9092"
+        - name: LOG_PATH
+          value: /log/logs.txt
+        - name: ENABLE_OUTPUT
+          value: "false"
       - image: viktoruj/ping_pong
         name: app2
         env:
@@ -45,6 +49,10 @@ spec:
           value: "8082"
         - name: METRIC_PORT
           value: "9092"
+        - name: LOG_PATH
+          value: /log/logs.txt
+        - name: ENABLE_OUTPUT
+          value: "false"
 ---
 apiVersion: v1
 kind: Service
