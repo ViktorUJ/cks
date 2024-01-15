@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: legacy
+spec: {}
+status: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: legacy-app
+  name: legacy-app
+  namespace: legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-app
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: legacy-app
+    spec:
+      containers:
+      - image: viktoruj/ping_pong
+        name: app1
+        env:
+        - name: SERVER_NAME
+          value: "app1"
+        - name: SRV_PORT
+          value: "8081"
+      - image: viktoruj/ping_pong
+        name: app2
+        env:
+        - name: SERVER_NAME
+          value: "app2"
+        - name: SRV_PORT
+          value: "8082"
+---
+
+
+
+---
