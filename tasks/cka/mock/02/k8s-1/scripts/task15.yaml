@@ -55,19 +55,19 @@ metadata:
   namespace: legacy
 spec:
   ports:
-  - name: httpapp1
+  - name: http1app
     port: 8081
     protocol: TCP
     targetPort: 8081
-  - name: metricsapp1
+  - name: metric1sapp
     port: 9091
     protocol: TCP
     targetPort: 9091
-  - name: httpapp2
+  - name: http2app
     port: 8082
     protocol: TCP
     targetPort: 8082
-  - name: metricsapp2
+  - name: metrics2app
     port: 9092
     protocol: TCP
     targetPort: 9092
