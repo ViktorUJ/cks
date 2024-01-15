@@ -52,6 +52,7 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	requestsPerMinute = requestsPerSecond * 60
 
 	fmt.Fprint(w, response.String())
+	fmt.Println(response.String())
 }
 
 func getIP(r *http.Request) string {
