@@ -408,6 +408,36 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 # 5 xxxx
 
+@test "15.1 collect logs from legacy app . from app1 " {
+  echo '3'>>/var/work/tests/result/all
+  kubectl exec checker -n legacy -- sh -c 'curl legacy-app:8081/xxxx_test_app1' --context cluster1-admin@cluster1
+  sleep 3
+  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1| grep 'xxxx_test_app1'
+  result=$?
+  if [[ "$result" == '0' ]]; then
+   echo '3'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == '0' ]
+}
+
+@test "15.2 collect logs from legacy app . from app2 " {
+  echo '3'>>/var/work/tests/result/all
+  kubectl exec checker -n legacy -- sh -c 'curl legacy-app:8082/yyyy_test_app2' --context cluster1-admin@cluster1
+  sleep 3
+  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1| grep 'yyyy_test_app2'
+  result=$?
+  if [[ "$result" == '0' ]]; then
+   echo '3'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == '0' ]
+}
+
+
+# 6 xxxx
+
+
+
+
 @test "16 Write cli commands with shows the latest events in the whole cluster" {
   echo '2'>>/var/work/tests/result/all
   diff <(bash /var/work/artifact/16.sh) <(kubectl get events --sort-by=".metadata.creationTimestamp" -A --context cluster1-admin@cluster1)
