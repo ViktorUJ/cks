@@ -1,8 +1,6 @@
 #!/bin/bash
-echo " *** master node  mock-1  k8s-1"
+echo " *** master node  mock-2  k8s-1"
 export KUBECONFIG=/root/.kube/config
-#kubectl taint nodes --all node-role.kubernetes.io/master-
-#kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 
 acrh=$(uname -m)
 export RELEASE=$(curl -s https://api.github.com/repos/etcd-io/etcd/releases/latest|grep tag_name | cut -d '"' -f 4)
@@ -23,8 +21,10 @@ cd $etcd_dir
 mv etcd etcdctl etcdutl /usr/local/bin
 echo "*** etcd = $(etcdctl version)"
 
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/k8s-1/scripts/task18.yaml
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/k8s-1/scripts/task23.yaml
+# Installation of metrics server
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+kubectl -n kube-system patch deployment metrics-server --type=json \
+-p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]]'
 
 
 acrh=$(uname -m)
@@ -36,3 +36,21 @@ aarch64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
 ;;
 esac
+
+# ingress-nginx installation
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+
+helm install ingress-nginx  ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --version 4.8.3 \
+  -f https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/k8s-1/scripts/ingress_nginx_conf.yaml
+
+kubectl patch ingressclass nginx --patch '{"metadata": {"annotations": {"ingressclass.kubernetes.io/is-default-class": "true"}}}'
+
+# tasks
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/k8s-1/scripts/task1.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/k8s-1/scripts/task2.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/k8s-1/scripts/task6.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/k8s-1/scripts/task8.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/k8s-1/scripts/task12.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/k8s-1/scripts/task15.yaml

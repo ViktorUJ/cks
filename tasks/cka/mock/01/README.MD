@@ -8,6 +8,11 @@ https://kubernetes.io/blog/ and their subdomains
 
 This includes all available language translations of these pages (e.g. https://kubernetes.io/zh/docs/)
 
+![preview](./preview.png)
+
+- run ``time_left`` on work pc to **check time**
+- run ``check_result`` on work pc to **check result**
+
 ## Questions
 
 |        **1**        | **Deploy a pod named nginx-pod using the nginx:alpine image**   |

@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+    "path/filepath"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -20,12 +21,35 @@ var (
 	lastRequestTime   time.Time
 	requestsCount     uint64
 	serverName        string
+	logPath       string
+	enableOutput  string
 )
 
 func init() {
 	serverName = os.Getenv("SERVER_NAME")
 	if serverName == "" {
 		serverName = "ping_pong_server"
+	}
+	logPath = os.Getenv("LOG_PATH")
+	enableOutput = os.Getenv("ENABLE_OUTPUT")
+	if enableOutput == "" {
+		enableOutput = "true"
+	}
+
+	if logPath != "" {
+		dir := filepath.Dir(logPath)
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			err := os.MkdirAll(dir, os.ModePerm)
+			if err != nil {
+				fmt.Println("Failed to create log directory: %v", err)
+			}
+		}
+
+		file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			fmt.Println("Failed to open log file: %v", err)
+		}
+		file.Close()
 	}
 }
 
@@ -52,6 +76,7 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	requestsPerMinute = requestsPerSecond * 60
 
 	fmt.Fprint(w, response.String())
+	sendLog(response.String())
 }
 
 func getIP(r *http.Request) string {
@@ -114,9 +139,28 @@ func metricsHandler() {
 	http.ListenAndServe(":" + metricPort, nil)
 }
 
+func sendLog(message string) {
+	if enableOutput == "true" {
+		fmt.Println(message)
+	}
+
+	if logPath != "" {
+		file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			fmt.Println("Failed to open log file:", err)
+			return
+		}
+		defer file.Close()
+
+		if _, err := file.WriteString(message + "\n"); err != nil {
+			fmt.Println("Failed to write to log file:", err)
+		}
+	}
+}
+
 func main() {
 	for _, env := range os.Environ() {
-		fmt.Println(env)
+		sendLog(env)
 	}
 
 	http.HandleFunc("/", requestHandler)
@@ -124,12 +168,12 @@ func main() {
 
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
-		fmt.Println("SRV_PORT is not set, defaulting to 8080")
+		sendLog("SRV_PORT is not set, defaulting to 8080")
 		port = "8080"
 	}
 
 	err := http.ListenAndServe(":" + port, nil)
 	if err != nil {
-		fmt.Println("Server failed:", err)
+		sendLog(fmt.Sprintf("Server failed: %v", err))
 	}
 }

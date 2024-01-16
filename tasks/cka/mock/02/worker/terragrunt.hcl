@@ -8,7 +8,6 @@ locals {
 
 terraform {
   source = "../../..//modules/work_pc/"
-  # source = "../../..//modules/work_pc_ondemand/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -30,6 +29,21 @@ dependency "cluster1" {
   config_path = "../k8s-1"
 }
 
+dependency "cluster2" {
+  config_path = "../k8s-2"
+}
+
+dependency "cluster3" {
+  config_path = "../k8s-3"
+}
+
+dependency "cluster4" {
+  config_path = "../k8s-4"
+}
+
+dependency "cluster5" {
+  config_path = "../k8s-5"
+}
 
 inputs = {
   region      = local.vars.locals.region
@@ -42,11 +56,18 @@ inputs = {
 
   host_list = concat(
     dependency.cluster1.outputs.hosts,
-    dependency.cluster2.outputs.hosts
+    dependency.cluster2.outputs.hosts,
+    dependency.cluster3.outputs.hosts,
+    dependency.cluster4.outputs.hosts,
+    dependency.cluster5.outputs.hosts,
   )
   work_pc = {
     clusters_config = {
-      cluster1 = dependency.cluster1.outputs.k8s_config
+      cluster1 = dependency.cluster1.outputs.k8s_config,
+      cluster2 = dependency.cluster2.outputs.k8s_config,
+      cluster3 = dependency.cluster3.outputs.k8s_config,
+      cluster4 = dependency.cluster4.outputs.k8s_config,
+      cluster5 = dependency.cluster5.outputs.k8s_config,
     }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
@@ -60,13 +81,14 @@ inputs = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/01/worker/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/worker/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/worker/files/worker.sh"
     ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
     root_volume = local.vars.locals.root_volume
+    non_root_volumes = {}
   }
 
 
