@@ -526,6 +526,38 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == '0' ]
 }
 
+@test "20.1 Take a backup of the etcd cluster.check backup " {
+  echo '2'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo ETCDCTL_API=3 etcdctl snapshot status /var/work/tests/artifacts/20/etcd-backup.db"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "20.2 Take a backup of the etcd cluster.check  restored etcd   " {
+  echo '2'>>/var/work/tests/result/all
+  result=$(kubectl get secret  etcd-check --context cluster4-admin@cluster4 -o jsonpath='{.data.aa}' | base64 -d)
+  if [[ "$result" == "aa" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "aa" ]
+}
+
+@test "20.3 Take a backup of the etcd cluster.check  pods  ready in kube-system   " {
+  echo '2'>>/var/work/tests/result/all
+  all_pods=$(kubectl get po  -n kube-system --no-headers  --context cluster4-admin@cluster4 | wc -l)
+  ready_pods=$(kubectl get po  -n kube-system --no-headers  --context cluster4-admin@cluster4 |grep 'Running'| wc -l )
+
+  if [[ "$all_pods" == "$ready_pods" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$all_pods" == "$ready_pods" ]
+}
+
+
 
 @test "21.1 Network policy. can connect from prod NS to prod-db  " {
   echo '1'>>/var/work/tests/result/all

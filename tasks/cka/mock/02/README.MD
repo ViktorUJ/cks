@@ -131,9 +131,9 @@ This includes all available language translations of these pages (e.g. https://k
 ---
 |        **20**        | Backup etcd and save it on the control plane node at `/var/work/tests/artifacts/20/etcd-backup.db` . Restore etcd from `/var/work/tests/artifacts/20/etcd-backup_old.db` on control plane node . |
 | :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 2%                                                                                                                                                                                               |
+|     Task weight     | 6%                                                                                                                                                                                               |
 |       Cluster       | cluster4 (`kubectl config use-context cluster4-admin@cluster4`)                                                                                                                                  |
-| Acceptance criteria | - backup etcd to `/var/work/tests/artifacts/20/etcd-backup.db`  <br/> - restore etcd from `/var/work/tests/artifacts/20/etcd-backup_old.db`                                                      |
+| Acceptance criteria | - backup etcd to `/var/work/tests/artifacts/20/etcd-backup.db`  <br/> - restore etcd from `/var/work/tests/artifacts/20/etcd-backup_old.db` <br/> - pods are ready in kube-system                |
 ---
 |       **21**        | **Network policy.**                                                                                                                                                                                                                                                                                                                                  |
 |:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
