@@ -8,6 +8,11 @@ https://kubernetes.io/blog/ and their subdomains
 
 This includes all available language translations of these pages (e.g. https://kubernetes.io/zh/docs/)
 
+![preview](./preview.png)
+
+- run ``time_left`` on work pc to **check time**
+- run ``check_result`` on work pc to **check result**
+
 ## Questions
 
 |        **1**        | find a pod in `dev-1` namespace with labels `team=finance` and maximum memory usage . Add label `usage=max` to it        |
