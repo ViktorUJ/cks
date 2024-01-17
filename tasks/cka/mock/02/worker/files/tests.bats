@@ -177,7 +177,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
-# 8
+# 8 24
+
 
 @test "11.1 Update Kubernetes.api version " {
   echo '1'>>/var/work/tests/result/all
@@ -191,7 +192,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "11.2 Update Kubernetes. control-plane kubeletVersion " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items..status.nodeInfo.kubeletVersion}' --context cluster2-admin@cluster2 )
-  if [[ "$result" == "v1.26.0" ]]; then
+  if [[ "$result" == "v1.28.4" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "v1.28.4" ]
@@ -243,7 +244,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "Ready" ]
 }
 
-#7 xxx
+#7 31
 
 @test "12.1 Create new ingress . path= cat " {
   echo '2'>>/var/work/tests/result/all
