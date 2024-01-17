@@ -9,14 +9,15 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "1 find a pod in dev-1 namespace with labels `team=finance` and maximum memory usage  " {
-  echo '2'>>/var/work/tests/result/all
+  echo '4'>>/var/work/tests/result/all
   result=$(kubectl get po -n dev-1 -l usage=max -o jsonpath='{.items..metadata.name}'  --context cluster1-admin@cluster1 )
   if [[ "$result" == "pod4" ]]; then
-   echo '2'>>/var/work/tests/result/ok
+   echo '4'>>/var/work/tests/result/ok
   fi
   [ "$result" == "pod4" ]
 }
 
+#4 4
 
 @test "2.1 Deploy a util pod. Image " {
   echo '0.5'>>/var/work/tests/result/all
@@ -36,7 +37,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == '["sleep","3600"]' ]
 }
 
-
+# 1  5
 
 
 @test "3. Create a namespace named team-elephant  " {
@@ -48,6 +49,9 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "team-elephant" ]
 }
 
+# 1 6
+
+
 @test "4. Create pod alpine with image alpine:3.15 and make sure it is running on node with label disk=ssd " {
   echo '2'>>/var/work/tests/result/all
   node=$(kubectl get no -l disk=ssd -o jsonpath={.items..metadata.name} --context cluster1-admin@cluster1 )
@@ -58,6 +62,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$node" == "$pod_node" ]
 }
 
+# 2 8
 
 
 @test "5.1 Create deployment web-app. Image " {
@@ -78,6 +83,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "2" ]
 }
 
+# 2 10
 
 @test "6.1 Create a service web-app-svc to expose the web-app deployment on port 8080 on cluster nodes . selector " {
   echo '1'>>/var/work/tests/result/all
@@ -105,6 +111,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == 'NodePort' ]
 }
+
+#3 13
 
 @test "7 Create a pod web-srv based on image viktoruj/ping_pong. Container name " {
   echo '1'>>/var/work/tests/result/all
