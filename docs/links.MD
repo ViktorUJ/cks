@@ -6,7 +6,6 @@
 | CKA,CKS,CKAD    |            video course             |                   [bakavets](https://www.youtube.com/watch?v=Amkkr4_nsyc&list=PL3SzV1_k2H1VDePbSWUqERqlBXIk02wCQ)                   |
 | CKA             |             learn path              |                                   [github vedmichv](https://github.com/vedmichv/CKA-learn-path/)                                    |
 | CKA             |               course                |                       [CKA Course](https://github.com/kodekloudhub/certified-kubernetes-administrator-course)                       |
-| CKS             |            video course             |                    [udemy killer.sh CKS](https://www.udemy.com/course/certified-kubernetes-security-specialist/)                    |
 | CKS             |            video course             |                      [ killer.sh CKS ](https://www.youtube.com/watch?v=d9xfB5qaOfg)                      |
 | CKS             |           examples github           |                         [killer.sh github cks-course](https://github.com/killer-sh/cks-course-environment)                          |
 | CKS             |          falco-101 course           |                                           [falco-101](https://learn.sysdig.com/falco-101)                                           |
