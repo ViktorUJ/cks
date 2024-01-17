@@ -123,6 +123,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == 'app1' ]
 }
 
+#1 14
+
 @test "8 Scale down number of replicas to 1 redis-node-xxxx " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get deployment redis-node  -n db-redis  -o jsonpath='{.spec.replicas}'  --context cluster1-admin@cluster1 )
