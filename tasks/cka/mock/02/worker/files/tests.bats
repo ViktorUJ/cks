@@ -134,6 +134,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == '1' ]
 }
 
+#1 15
 
 @test "9 Write cli commands with shows pods from kube-system namespace in json format" {
   echo '1'>>/var/work/tests/result/all
@@ -145,6 +146,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
+#1 16
 
 @test "10.1 Create a Persistent Volume. capacity " {
   echo '1'>>/var/work/tests/result/all
