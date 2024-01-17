@@ -270,6 +270,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 }
 
+#4 35
+
 @test "13.1 Create service account with the name pod-sa in  Namespace team-elephant" {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl get sa  pod-sa -n team-elephant   --context cluster1-admin@cluster1 -o jsonpath='{.metadata.name}' )
@@ -346,7 +348,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-# 8 ??
+# 8 43
 
 @test "14.1 Create a DaemonSet named team-elephant-ds . is running on all nodes ( control-plane too ) " {
   echo '1'>>/var/work/tests/result/all
@@ -419,7 +421,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == '50Mi' ]
 }
-# 5 xxxx
+# 5 48
 
 @test "15.1 collect logs from legacy app . from app1 " {
   echo '3'>>/var/work/tests/result/all
@@ -446,10 +448,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 
-# 6 xxxx
-
-
-
+# 6 54
 
 @test "16 Write cli commands with shows the latest events in the whole cluster" {
   echo '2'>>/var/work/tests/result/all
@@ -461,7 +460,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-# 2
+# 2 56
 
 @test "17 Write cli commands with show names of all namespaced api resources in Kubernetes cluster" {
   echo '1'>>/var/work/tests/result/all
@@ -473,7 +472,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-# 1
+# 1 57
 
 @test "18 Fix cluster 3 .work node is  ready " {
   echo '4'>>/var/work/tests/result/all
@@ -487,7 +486,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" != "0" ]
 }
 
-#7 xxx
+#4 61
 
 
 @test "19.1 Create static pod stat-pod in the default namespace. Expose it via service stat-pod-svc . Memory = 128Mi " {
@@ -539,6 +538,8 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == '0' ]
 }
 
+#4 65
+
 @test "20.1 Take a backup of the etcd cluster.check backup " {
   echo '2'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster4-admin@cluster4  -o jsonpath='{.items..metadata.name}')
@@ -570,6 +571,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$all_pods" == "$ready_pods" ]
 }
 
+#6 71
 
 
 @test "21.1 Network policy. can connect from prod NS to prod-db  " {
@@ -636,4 +638,4 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-# 6
+# 6 77
