@@ -1,9 +1,10 @@
 locals {
-  questions_list="https://github.com/ViktorUJ/cks/blob/0.7.1/tasks/cks/mock/01/README.MD"
-  region = "eu-north-1"
-  aws    = "default"
-  prefix = "cks-mock"
-  tags = {
+  questions_list = "https://github.com/ViktorUJ/cks/blob/0.7.1/tasks/cks/mock/01/README.MD"
+  debug_output   = "true"
+  region         = "eu-north-1"
+  aws            = "default"
+  prefix         = "cks-mock"
+  tags           = {
     "env_name"        = "cks-mock"
     "env_type"        = "dev"
     "manage"          = "terraform"
@@ -21,7 +22,7 @@ locals {
   ssh_password_enable  = "true" # false |  true
   access_cidrs         = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
-  root_volume = {
+  root_volume          = {
     type = "gp3"
     size = "10"
   }

@@ -66,6 +66,7 @@ dependency "cluster10" {
 }
 inputs = {
   questions_list=local.vars.locals.questions_list
+  debug_output=local.vars.locals.debug_output
   region      = local.vars.locals.region
   aws         = local.vars.locals.aws
   prefix      = local.vars.locals.prefix
