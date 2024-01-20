@@ -7,9 +7,6 @@ locals {
   arch      = local.data_arch == "x86_64" ? "amd64" : local.data_arch
 }
 
-output "arch" {
-  value = local.arch
-}
 
 
 data "aws_ami" "master" {
