@@ -3,7 +3,7 @@ output "worker_pc_ip" {
 }
 
 output "worker_pc_ssh" {
-  value = "   ssh ubuntu@${local.worker_pc_ip} password= ${random_string.ssh.result}   "
+  value = local.worker_pc_ssh
 }
 
 output "ssh_user" {
