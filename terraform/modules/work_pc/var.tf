@@ -24,6 +24,9 @@ variable "aws_eks_cluster_eks_cluster_arn" {
 variable "ssh_password_enable" {
   default = "true"
 }
+variable "debug_output" {
+  default = "false" # false | true
+}
 variable "work_pc" {
   type = object({
     clusters_config    = map(string)

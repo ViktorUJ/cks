@@ -75,5 +75,5 @@ output "hosts_list" {
 }
 
 output "ssh_password_enable" {
-  value = var.ssh_password_enable
+  value =var.debug_output  == "true" ? var.ssh_password_enable : null
 }
