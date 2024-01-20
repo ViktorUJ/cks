@@ -67,7 +67,7 @@ output "app_name" {
 }
 
 output "ec2_key" {
-  value = var.work_pc.key_name
+  value = length(var.work_pc.key_name)>0 ? var.work_pc.key_name  : null 
 }
 
 output "hosts_list" {
@@ -83,5 +83,5 @@ output "arch" {
 }
 
 output "questions_list" {
-  value = length(var.questions_list) > 0 ? var.questions_list : null
+  value = length(var.questions_list) > 0 ? "   ${var.questions_list}    " : null
 }
