@@ -43,6 +43,7 @@ inputs = {
   app_name    = "k8s-worker"
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
+  ssh_password_enable =local.vars.locals.ssh_password_enable
 
   host_list = concat(
     dependency.cluster1.outputs.hosts,

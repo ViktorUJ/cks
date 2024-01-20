@@ -104,21 +104,6 @@ resource "aws_launch_template" "master" {
     }))
 
   }))
-
-
-# user_data = base64encode(templatefile(var.work_pc.user_data_template, {
-#   clusters_config   = join(" ", [for key, value in var.work_pc.clusters_config : "${key}=${value}"])
-#   kubectl_version   = var.work_pc.util.kubectl_version
-#   ssh_private_key   = var.work_pc.ssh.private_key
-#   ssh_pub_key       = var.work_pc.ssh.pub_key
-#   exam_time_minutes = var.work_pc.exam_time_minutes
-#   test_url          = var.work_pc.test_url
-#   task_script_url   = var.work_pc.task_script_url
-#   ssh_password      = random_string.ssh.result
-#   ssh_password_enable =var.ssh_password_enable
-#   hosts             = local.hosts
-# }))
-
   key_name = var.work_pc.key_name != "" ? var.work_pc.key_name : null
   tags     = local.tags_all_k8_master
 

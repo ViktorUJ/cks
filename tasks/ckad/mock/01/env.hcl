@@ -1,4 +1,5 @@
 locals {
+  questions_list="https://github.com/ViktorUJ/cks/blob/0.7.1/tasks/ckad/mock/01/README.md"
   region = "eu-north-1"
   aws    = "default"
   prefix = "ckad-mock"
@@ -15,6 +16,8 @@ locals {
   instance_type        = "t4g.medium" #  t3.medium  - x86     t4g.medium - arm
   instance_type_worker = "t4g.small"
   key_name             = ""
+  ssh_password_enable  = "true" # false |  true
+  access_cidrs         = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
   ubuntu_version       = "20.04"
   ami_id               = ""
   root_volume = {
