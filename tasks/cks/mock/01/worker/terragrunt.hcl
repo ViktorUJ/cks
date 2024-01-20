@@ -65,6 +65,7 @@ dependency "cluster10" {
   config_path = "../k8s-10"
 }
 inputs = {
+  questions_list=local.vars.locals.questions_list
   region      = local.vars.locals.region
   aws         = local.vars.locals.aws
   prefix      = local.vars.locals.prefix
