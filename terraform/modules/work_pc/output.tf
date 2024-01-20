@@ -73,3 +73,7 @@ output "ec2_key" {
 output "hosts_list" {
   value = local.hosts
 }
+
+output "ssh_password_enable" {
+  value = var.ssh_password_enable
+}
