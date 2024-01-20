@@ -1,5 +1,5 @@
 output "worker_pc_ip" {
-  value = local.worker_pc_ip
+  value = var.debug_output  == "true" ? local.worker_pc_ip  : null
 }
 
 output "worker_pc_ssh" {
@@ -7,15 +7,15 @@ output "worker_pc_ssh" {
 }
 
 output "ssh_user" {
-  value = "  ubuntu  "
+  value = var.debug_output  == "true" ? "ubuntu"  : null
 }
 
 output "ssh_password" {
-  value = "  ${random_string.ssh.result}   "
+  value = var.debug_output  == "true" ? random_string.ssh.result  : null
 }
 
 output "node_type" {
-  value = var.work_pc.node_type
+  value =var.debug_output  == "true" ?   var.work_pc.node_type  : null
 }
 
 output "worker_pc" {
@@ -39,31 +39,31 @@ output "backup_kube_config" {
 }
 
 output "s3_k8s_config" {
-  value = var.s3_k8s_config
+  value = var.debug_output  == "true" ?  var.s3_k8s_config   : null
 }
 
 output "ami_id" {
-  value = local.master_ami
+  value = var.debug_output  == "true" ?  local.master_ami : null
 }
 
 output "aws_eks_cluster_eks_cluster_arn" {
-  value = var.aws_eks_cluster_eks_cluster_arn
+  value = var.debug_output  == "true" ?  var.aws_eks_cluster_eks_cluster_arn  : null
 }
 
 output "instance_type" {
-  value = var.work_pc.instance_type
+  value = var.debug_output  == "true" ?  var.work_pc.instance_type : null
 }
 
 output "kubectl_version" {
-  value = var.work_pc.util.kubectl_version
+  value =  var.debug_output  == "true" ?  var.work_pc.util.kubectl_version  : null
 }
 
 output "prefix" {
-  value = local.prefix
+  value = var.debug_output  == "true" ? local.prefix : null
 }
 
 output "app_name" {
-  value = var.app_name
+  value =var.debug_output  == "true" ? var.app_name  : null
 }
 
 output "ec2_key" {
@@ -71,7 +71,7 @@ output "ec2_key" {
 }
 
 output "hosts_list" {
-  value = local.hosts
+  value = var.debug_output  == "true" ? local.hosts : null
 }
 
 output "ssh_password_enable" {
