@@ -18,7 +18,7 @@ locals {
   key_name             = "cks"
   ubuntu_version       = "20.04"
   ssh_password_enable  = "false" # false |  true
-  access_cidrs         = ["93.177.191.10"]
+  access_cidrs         = ["93.177.191.10/32"] #  "93.177.191.10/32"  | "0.0.0.0/0"
   ami_id               = "" #  ami-06410fb0e71718398 - x86   ami-0ff124a3d7381bfec - arm
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a    ami-0ebb6753c095cb52a - arm
   root_volume          = {
