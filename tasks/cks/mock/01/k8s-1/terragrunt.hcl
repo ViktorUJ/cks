@@ -32,6 +32,7 @@ inputs = {
   vpc_id       = dependency.vpc.outputs.vpc_id
   cluster_name = "k8s1"
   node_type    = local.vars.locals.node_type
+  ssh_password_enable =local.vars.locals.ssh_password_enable
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
@@ -44,7 +45,7 @@ inputs = {
     subnet_number      = "0"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
-    cidrs              = ["0.0.0.0/0"]
+    cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/k8s-1/scripts/master.sh"
@@ -74,7 +75,7 @@ inputs = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }
-      cidrs       = ["0.0.0.0/0"]
+      cidrs              = local.vars.locals.access_cidrs
       root_volume = local.vars.locals.root_volume
     }
   }

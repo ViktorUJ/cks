@@ -71,3 +71,7 @@ output "hosts_master_node" {
 output "hosts" {
   value = local.hosts
 }
+
+output "ssh_password_enable" {
+  value = var.ssh_password_enable
+}

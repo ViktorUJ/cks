@@ -30,6 +30,7 @@ resource "aws_instance" "worker" {
       ssh_private_key = each.value.ssh.private_key
       ssh_pub_key     = each.value.ssh.pub_key
       ssh_password    = random_string.ssh.result
+      ssh_password_enable =var.ssh_password_enable
     }))
 
   }))

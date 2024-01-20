@@ -1,10 +1,17 @@
 #!/bin/bash
-echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
-
-SSH_CONFIG_FILE="/etc/ssh/sshd_config"
-sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
-sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
-systemctl restart sshd
+ssh_password_enable_check=${ssh_password_enable}
+case  $ssh_password_enable_check in
+true)
+    echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
+    SSH_CONFIG_FILE="/etc/ssh/sshd_config"
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+    systemctl restart sshd
+;;
+*)
+    echo "*** ssh password not enable "
+;;
+esac
 
 runtime_sh=${runtime}
 k8_version_sh=${k8_version}

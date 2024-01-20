@@ -1,4 +1,5 @@
 locals {
+  questions_list="https://github.com/ViktorUJ/cks/blob/0.7.1/tasks/cka/mock/02/README.MD"
   region = "eu-north-1"
   aws    = "default"
   prefix = "cka-mock"
@@ -16,6 +17,8 @@ locals {
   instance_type_worker = "t4g.medium"
   key_name             = ""
   ubuntu_version       = "20.04"
+  ssh_password_enable  = "true" # false |  true
+  access_cidrs         = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
   ami_id               = "" #  ami-06410fb0e71718398 - x86   ami-0ff124a3d7381bfec - arm
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a    ami-0ebb6753c095cb52a - arm
   root_volume          = {

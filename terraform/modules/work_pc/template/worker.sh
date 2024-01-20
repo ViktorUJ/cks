@@ -1,5 +1,5 @@
 #!/bin/bash
-
+ssh_password_enable_check=${ssh_password_enable}
 function wait_cluster_ready {
 
 echo "wait cluster $1 ready"
@@ -20,12 +20,18 @@ for host in ${hosts} ; do
  echo "$host_ip $host_name" >>/etc/hosts
 done
 
-echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
-
-SSH_CONFIG_FILE="/etc/ssh/sshd_config"
-sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
-sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
-systemctl restart sshd
+case  $ssh_password_enable_check in
+true)
+    echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
+    SSH_CONFIG_FILE="/etc/ssh/sshd_config"
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+    systemctl restart sshd
+;;
+*)
+    echo "*** ssh password not enable "
+;;
+esac
 
 
 acrh=$(uname -m)

@@ -21,6 +21,15 @@ variable "time_sleep" {
 variable "aws_eks_cluster_eks_cluster_arn" {
   default = ""
 }
+variable "ssh_password_enable" {
+  default = "true"
+}
+variable "debug_output" {
+  default = "false" # false | true
+}
+variable "questions_list" {
+  default = ""
+}
 variable "work_pc" {
   type = object({
     clusters_config    = map(string)

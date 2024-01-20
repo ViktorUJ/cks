@@ -20,6 +20,9 @@ variable "cluster_name" { type = string }
 variable "time_sleep" {
   default = "30s"
 }
+variable "ssh_password_enable" {
+  default = "true"
+}
 variable "node_type" { type = string }
 variable "k8s_master" {
   type = object({

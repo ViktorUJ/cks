@@ -16,7 +16,8 @@ resource "aws_instance" "master" {
       security_groups
     ]
   }
-  user_data = templatefile(var.work_pc.user_data_template, {
+  user_data = base64encode(templatefile("template/boot_zip.sh", {
+    boot_zip = base64gzip(templatefile(var.work_pc.user_data_template, {
     clusters_config   = join(" ", [for key, value in var.work_pc.clusters_config : "${key}=${value}"])
     kubectl_version   = var.work_pc.util.kubectl_version
     ssh_private_key   = var.work_pc.ssh.private_key
@@ -25,8 +26,12 @@ resource "aws_instance" "master" {
     test_url          = var.work_pc.test_url
     task_script_url   = var.work_pc.task_script_url
     ssh_password      = random_string.ssh.result
+    ssh_password_enable =var.ssh_password_enable
     hosts             = local.hosts
-  })
+    }))
+
+  }))
+
   tags = local.tags_all
   root_block_device {
     volume_size           = var.work_pc.root_volume.size
