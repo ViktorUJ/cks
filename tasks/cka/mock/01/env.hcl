@@ -18,6 +18,7 @@ locals {
   ubuntu_version       = "20.04"
   ami_id               = "" #  ami-06410fb0e71718398 - x86   ami-0ff124a3d7381bfec - arm
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a    ami-0ebb6753c095cb52a - arm
+  access_cidrs         = ["0.0.0.0/0"]
   root_volume = {
     type = "gp3"
     size = "12"
