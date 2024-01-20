@@ -1,6 +1,6 @@
 locals {
   questions_list = "https://github.com/ViktorUJ/cks/blob/0.7.1/tasks/cks/mock/01/README.MD"
-  debug_output   = "true"
+  debug_output   = "false"
   region         = "eu-north-1"
   aws            = "default"
   prefix         = "cks-mock"
