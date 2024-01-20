@@ -14,7 +14,8 @@ date
 
 }
 #-------------------
-case in ${ssh_password_enable} in
+ssh_password_enable_check=${ssh_password_enable}
+case in $ssh_password_enable_check in
 true)
     echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
     SSH_CONFIG_FILE="/etc/ssh/sshd_config"

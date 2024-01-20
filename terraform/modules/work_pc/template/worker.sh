@@ -1,5 +1,5 @@
 #!/bin/bash
-
+ssh_password_enable_check=${ssh_password_enable}
 function wait_cluster_ready {
 
 echo "wait cluster $1 ready"
@@ -20,7 +20,7 @@ for host in ${hosts} ; do
  echo "$host_ip $host_name" >>/etc/hosts
 done
 
-case in ${ssh_password_enable} in
+case in $ssh_password_enable_check in
 true)
     echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
     SSH_CONFIG_FILE="/etc/ssh/sshd_config"
