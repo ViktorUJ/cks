@@ -47,7 +47,7 @@ inputs = {
     ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
-    cidrs              = ["0.0.0.0/0"]
+    cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/k8s-2/scripts/master.sh"
@@ -77,7 +77,7 @@ inputs = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }
-      cidrs       = ["0.0.0.0/0"]
+      cidrs       = local.vars.locals.access_cidrs
       root_volume = local.vars.locals.root_volume
     }
   }

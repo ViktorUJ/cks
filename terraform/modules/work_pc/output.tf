@@ -85,3 +85,7 @@ output "arch" {
 output "questions_list" {
   value = length(var.questions_list) > 0 ? "   ${var.questions_list}    " : null
 }
+
+output "ssh_access_cidrs" {
+  value = var.work_pc.cidrs
+}
