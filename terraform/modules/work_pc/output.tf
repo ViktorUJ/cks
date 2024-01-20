@@ -87,5 +87,5 @@ output "questions_list" {
 }
 
 output "ssh_access_cidrs" {
-  value = var.work_pc.cidrs
+  value =var.debug_output  == "true" ? var.work_pc.cidrs : null
 }
