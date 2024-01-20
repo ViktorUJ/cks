@@ -34,6 +34,7 @@ inputs = {
   vpc_id       = dependency.vpc.outputs.vpc_id
   cluster_name = "k8s2"
   node_type    = local.vars.locals.node_type
+  ssh_password_enable =local.vars.locals.ssh_password_enable
 
   k8s_master = {
     k8_version         = "1.28.0"

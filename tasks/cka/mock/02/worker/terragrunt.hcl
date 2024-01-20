@@ -73,6 +73,7 @@ inputs = {
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
     key_name           = local.vars.locals.key_name
+    ssh_password_enable =local.vars.locals.ssh_password_enable
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version

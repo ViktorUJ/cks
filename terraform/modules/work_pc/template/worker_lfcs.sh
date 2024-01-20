@@ -20,12 +20,19 @@ for host in ${hosts} ; do
  echo "$host_ip $host_name" >>/etc/hosts
 done
 
-echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
+case in ${ssh_password_enable} in
+true)
+    echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
+    SSH_CONFIG_FILE="/etc/ssh/sshd_config"
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+    systemctl restart sshd
+;;
+*)
+    echo "*** ssh password not enable "
+;;
+esac
 
-SSH_CONFIG_FILE="/etc/ssh/sshd_config"
-sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
-sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
-systemctl restart sshd
 
 acrh=$(uname -m)
 hostnamectl  set-hostname worker

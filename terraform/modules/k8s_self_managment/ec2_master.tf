@@ -103,6 +103,7 @@ resource "aws_launch_template" "master" {
       ssh_private_key  = var.k8s_master.ssh.private_key
       ssh_pub_key      = var.k8s_master.ssh.pub_key
       ssh_password     = random_string.ssh.result
+      ssh_password_enable =var.ssh_password_enable
     }))
 
   }))
