@@ -53,6 +53,7 @@ inputs = {
   app_name    = "k8s-worker"
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
+  ssh_password_enable =local.vars.locals.ssh_password_enable
 
   host_list = concat(
     dependency.cluster1.outputs.hosts,
@@ -73,7 +74,6 @@ inputs = {
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
     key_name           = local.vars.locals.key_name
-    ssh_password_enable =local.vars.locals.ssh_password_enable
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version
