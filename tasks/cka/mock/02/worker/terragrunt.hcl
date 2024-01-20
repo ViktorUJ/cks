@@ -46,6 +46,7 @@ dependency "cluster5" {
 }
 
 inputs = {
+  questions_list=local.vars.locals.questions_list
   region      = local.vars.locals.region
   aws         = local.vars.locals.aws
   prefix      = local.vars.locals.prefix

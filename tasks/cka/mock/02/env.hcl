@@ -1,4 +1,5 @@
 locals {
+  questions_list="https://github.com/ViktorUJ/cks/blob/0.7.1/tasks/cka/mock/02/README.MD"
   region = "eu-north-1"
   aws    = "default"
   prefix = "cka-mock"

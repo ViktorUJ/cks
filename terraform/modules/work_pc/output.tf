@@ -18,7 +18,7 @@ output "node_type" {
   value =var.debug_output  == "true" ?   var.work_pc.node_type  : null
 }
 
-output "worker_pc" {
+output "boot_log" {
   value = "   tail -f /var/log/cloud-init-output.log    "
 }
 
@@ -80,4 +80,8 @@ output "ssh_password_enable" {
 
 output "arch" {
   value = var.debug_output  == "true" ? local.arch : null
+}
+
+output "questions_list" {
+  value = length(var.questions_list) > 0 ? var.questions_list : null
 }
