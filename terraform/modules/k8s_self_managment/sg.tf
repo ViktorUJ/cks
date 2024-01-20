@@ -24,7 +24,9 @@ resource "aws_security_group" "servers" {
     to_port     = 0
     protocol    = "-1"
     self = true
+    cidr_blocks = var.k8s_master.cidrs
   }
+
 
 
   egress {
