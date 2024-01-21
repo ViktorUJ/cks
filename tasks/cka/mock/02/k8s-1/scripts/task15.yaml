@@ -37,7 +37,7 @@ spec:
         - name: METRIC_PORT
           value: "9092"
         - name: LOG_PATH
-          value: /log/logs.txt
+          value: /log/logs1.txt
         - name: ENABLE_OUTPUT
           value: "false"
       - image: viktoruj/ping_pong
@@ -50,7 +50,7 @@ spec:
         - name: METRIC_PORT
           value: "9092"
         - name: LOG_PATH
-          value: /log/logs.txt
+          value: /log/logs2.txt
         - name: ENABLE_OUTPUT
           value: "false"
 ---
