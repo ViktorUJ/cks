@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.7.1 (30.01.2024)
+## 0.7.1 (23.01.2024)
 ### Features
 * [Cka mock exam 2 ](..%2Ftasks%2Fcka%2Fmock%2F02) is added . List of questions updated as of December 2023
 * [Cka mock exam 2 solutions](..%2Ftasks%2Fcka%2Fmock%2F02%2Fworker%2Ffiles%2Fsolutions) are added
