@@ -89,3 +89,11 @@ output "questions_list" {
 output "ssh_access_cidrs" {
   value =var.debug_output  == "true" ? var.work_pc.cidrs : null
 }
+
+output "solutions_scripts" {
+  value = length(var.solutions_scripts) > 0 ? "   ${var.solutions_scripts}    " : null
+}
+
+output "solutions_video" {
+  value = length(var.solutions_video) > 0 ? "   ${var.solutions_video}    " : null
+}

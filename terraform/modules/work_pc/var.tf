@@ -30,6 +30,15 @@ variable "debug_output" {
 variable "questions_list" {
   default = ""
 }
+
+variable "solutions_scripts" {
+  default = ""
+}
+
+variable "solutions_video" {
+  default = ""
+}
+
 variable "work_pc" {
   type = object({
     clusters_config    = map(string)

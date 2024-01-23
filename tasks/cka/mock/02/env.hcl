@@ -1,5 +1,7 @@
 locals {
   questions_list="https://github.com/ViktorUJ/cks/blob/0.7.1/tasks/cka/mock/02/README.MD"
+  solutions_scripts="https://github.com/ViktorUJ/cks/tree/0.7.1/tasks/cka/mock/02/worker/files/solutions"
+  solutions_video="https://youtu.be/ia6Vw_BR-L0"
   region = "eu-north-1"
   aws    = "default"
   prefix = "cka-mock"

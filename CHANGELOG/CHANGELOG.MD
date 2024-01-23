@@ -4,11 +4,13 @@
 ### Features
 * [Cka mock exam 2 ](..%2Ftasks%2Fcka%2Fmock%2F02) is added . List of questions updated as of December 2023 
 * [Cka mock exam 2 solutions](..%2Ftasks%2Fcka%2Fmock%2F02%2Fworker%2Ffiles%2Fsolutions) are added
-* [Video](https://youtu.be/yQK7Ca8d-yw) for CKA mock 2  solutions is added.
+* [Video](https://youtu.be/ia6Vw_BR-L0) for CKA mock 2  solutions is added.
 * **ssh_password_enable**  is added to configuration in  env.hcl  (default true). 
 * **access_cidrs**  is added to configuration in  env.hcl   (default ["0.0.0.0/0"] )
 * **debug_output**  is added to configuration in  env.hcl  ( default false )
-* **questions_list**  is added to configuration in  env.hcl . It is url  to  mock questions (like https://github.com/ViktorUJ/cks/blob/master/tasks/cks/mock/01/README.MD) 
+* **solutions_scripts**  is added to configuration in  env.hcl . 
+* **solutions_video**  is added to configuration in  env.hcl . 
+* **questions_list**  is added to configuration in  env.hcl . It is url  to  mock questions (like https://github.com/ViktorUJ/cks/blob/master/tasks/cks/mock/01/README.MD)
 * [links](..%2Fdocs%2Flinks.MD) is updated. **killer shell cks**  free  course is added. It is **best** course for **cks** exam.
 
 

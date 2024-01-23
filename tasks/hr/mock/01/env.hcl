@@ -1,4 +1,5 @@
 locals {
+  questions_list="https://github.com/ViktorUJ/cks/blob/0.7.1/tasks/hr/mock/01/README.md"
   region = "eu-north-1"
   aws    = "default"
   prefix = "hr-mock"
