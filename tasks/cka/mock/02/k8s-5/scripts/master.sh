@@ -24,4 +24,4 @@ cd $etcd_dir
 mv etcd etcdctl etcdutl /usr/local/bin
 echo "*** etcd = $(etcdctl version)"
 
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/0.7.1/tasks/cka/mock/02/k8s-5/scripts/task21.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/02/k8s-5/scripts/task21.yaml

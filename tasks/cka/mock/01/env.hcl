@@ -1,6 +1,6 @@
 locals {
-  questions_list="https://github.com/ViktorUJ/cks/blob/0.7.1/tasks/cka/mock/01/README.MD"
-  solutions_scripts="https://github.com/ViktorUJ/cks/tree/0.7.1/tasks/cka/mock/01/worker/files/solutions"
+  questions_list="https://github.com/ViktorUJ/cks/blob/master/tasks/cka/mock/01/README.MD"
+  solutions_scripts="https://github.com/ViktorUJ/cks/tree/master/tasks/cka/mock/01/worker/files/solutions"
   solutions_video="https://youtu.be/IZsqAPpbBxM"
   region = "eu-north-1"
   aws    = "default"
