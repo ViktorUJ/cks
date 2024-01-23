@@ -1,14 +1,14 @@
 locals {
-  USER_ID      = var.USER_ID == "" ? "defaultUser" : var.USER_ID
-  ENV_ID       = var.ENV_ID == "" ? "defaultId" : var.ENV_ID
-  prefix_id    = "${local.USER_ID}_${local.ENV_ID}"
-  prefix       = "${local.prefix_id}_${var.prefix}"
-  item_id_lock = "CMDB_lock_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
-  item_id_data = "CMDB_data_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
-  subnets_az   = distinct(split(",", (var.subnets_az)))
-  subnets      = [for item in local.subnets_az : split("=", item)[0]]
-  az           = [for item in local.subnets_az : split("=", item)[1]]
-  worker_pc_ssh= var.ssh_password_enable=="true" ? "   ssh ubuntu@${local.worker_pc_ip} password= ${random_string.ssh.result}   " : "   ssh ubuntu@${local.worker_pc_ip}   "
+  USER_ID       = var.USER_ID == "" ? "defaultUser" : var.USER_ID
+  ENV_ID        = var.ENV_ID == "" ? "defaultId" : var.ENV_ID
+  prefix_id     = "${local.USER_ID}_${local.ENV_ID}"
+  prefix        = "${local.prefix_id}_${var.prefix}"
+  item_id_lock  = "CMDB_lock_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
+  item_id_data  = "CMDB_data_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
+  subnets_az    = distinct(split(",", (var.subnets_az)))
+  subnets       = [for item in local.subnets_az : split("=", item)[0]]
+  az            = [for item in local.subnets_az : split("=", item)[1]]
+  worker_pc_ssh = var.ssh_password_enable == "true" ? "   ssh ubuntu@${local.worker_pc_ip} password= ${random_string.ssh.result}   " : "   ssh ubuntu@${local.worker_pc_ip}   "
   tags_app = {
     "Name"     = "${local.prefix}-${var.app_name}"
     "app_name" = var.app_name

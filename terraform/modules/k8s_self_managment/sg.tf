@@ -23,7 +23,7 @@ resource "aws_security_group" "servers" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    self = true
+    self        = true
     cidr_blocks = var.k8s_master.cidrs
   }
 
