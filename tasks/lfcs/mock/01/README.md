@@ -11,7 +11,7 @@
 
 |        **1**        | **Create hard and soft links to the file `file1`**                                                                                                                                                                     |
 | :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                                                                                                     |
+|     Task weight     | 1%                                                                                                                                                                                                                     |
 |        Task         | - Create a hard link from file `file1` in your home directory to `/opt/file1`<br/>- Create a soft link from `file1` in your home directory to `/opt/softlinkfile`.<br/>  - Soft link should point to the absloute path |
 | Acceptance criteria | <br/> - Hard and soft links are created?                                                                                                                                                                               |
 

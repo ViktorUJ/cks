@@ -30,6 +30,9 @@ dependency "cluster1" {
 }
 
 inputs = {
+  questions_list=local.vars.locals.questions_list
+  solutions_scripts=local.vars.locals.solutions_scripts
+  solutions_video=local.vars.locals.solutions_video
   region      = local.vars.locals.region
   aws         = local.vars.locals.aws
   prefix      = local.vars.locals.prefix
@@ -47,7 +50,7 @@ inputs = {
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
     key_name           = local.vars.locals.key_name
-    cidrs              = ["0.0.0.0/0"]
+    cidrs              = local.vars.locals.access_cidrs
     subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/worker.sh"

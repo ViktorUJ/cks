@@ -18,19 +18,20 @@ resource "aws_instance" "master" {
   }
   user_data = base64encode(templatefile("template/boot_zip.sh", {
     boot_zip = base64gzip(templatefile(var.k8s_master.user_data_template, {
-      worker_join      = local.worker_join
-      k8s_config       = local.k8s_config
-      external_ip      = local.external_ip
-      k8_version       = var.k8s_master.k8_version
-      runtime          = var.k8s_master.runtime
-      utils_enable     = var.k8s_master.utils_enable
-      pod_network_cidr = var.k8s_master.pod_network_cidr
-      runtime_script   = file(var.k8s_master.runtime_script)
-      task_script_url  = var.k8s_master.task_script_url
-      calico_url       = var.k8s_master.calico_url
-      ssh_private_key  = var.k8s_master.ssh.private_key
-      ssh_pub_key      = var.k8s_master.ssh.pub_key
-      ssh_password     = random_string.ssh.result
+      worker_join         = local.worker_join
+      k8s_config          = local.k8s_config
+      external_ip         = local.external_ip
+      k8_version          = var.k8s_master.k8_version
+      runtime             = var.k8s_master.runtime
+      utils_enable        = var.k8s_master.utils_enable
+      pod_network_cidr    = var.k8s_master.pod_network_cidr
+      runtime_script      = file(var.k8s_master.runtime_script)
+      task_script_url     = var.k8s_master.task_script_url
+      calico_url          = var.k8s_master.calico_url
+      ssh_private_key     = var.k8s_master.ssh.private_key
+      ssh_pub_key         = var.k8s_master.ssh.pub_key
+      ssh_password        = random_string.ssh.result
+      ssh_password_enable = var.ssh_password_enable
     }))
 
   }))

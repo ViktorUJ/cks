@@ -65,6 +65,10 @@ dependency "cluster10" {
   config_path = "../k8s-10"
 }
 inputs = {
+  questions_list=local.vars.locals.questions_list
+  solutions_scripts=local.vars.locals.solutions_scripts
+  solutions_video=local.vars.locals.solutions_video
+  debug_output=local.vars.locals.debug_output
   region      = local.vars.locals.region
   aws         = local.vars.locals.aws
   prefix      = local.vars.locals.prefix
@@ -72,6 +76,7 @@ inputs = {
   app_name    = "k8s-worker"
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
+  ssh_password_enable =local.vars.locals.ssh_password_enable
 
   host_list = concat(
     dependency.cluster1.outputs.hosts,
@@ -103,7 +108,7 @@ inputs = {
     ami_id             = local.vars.locals.ami_id
     ubuntu_version     = local.vars.locals.ubuntu_version
     key_name           = local.vars.locals.key_name
-    cidrs              = ["0.0.0.0/0"]
+    cidrs              = local.vars.locals.access_cidrs
     subnet_number      = "0"
     user_data_template = "template/worker.sh"
     util               = {
