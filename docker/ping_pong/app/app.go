@@ -118,6 +118,7 @@ func init() {
 	}
 
     size := memoryUsageMin * 1024 * 1024
+    fmt.Println("slize size: %v", size )
     slice := make([]byte, size)
     slice[0] = 0xFF
 
