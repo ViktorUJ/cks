@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -118,6 +119,7 @@ func init() {
 
     size := memoryUsageMin * 1024 * 1024
     slice := make([]byte, size)
+    slice[0] = 0xFF
 
 }
 
