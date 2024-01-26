@@ -28,7 +28,7 @@ var (
     enableLoadMemory string
     memoryUsageMin int
     memoryUsageMax int
-//    memoryUsageIncreaseSteps int
+    memoryUsageIncreaseTime int
 //    memoryUsageIncreaseStepsWait int
 //    memoryUsageIncreaseLoopWait int
 //    cpuMaxProc int
@@ -71,6 +71,13 @@ func init() {
         }
         return memoryUsageMin
     }()
+    memoryUsageIncreaseTime = func() int {
+        if value, err := strconv.Atoi(os.Getenv("MEMORY_USAGE_INCREASE_TIME")); err == nil && value > 0 {
+            return value
+        }
+        return 30
+    }()
+
 //	memoryUsageMax = os.Getenv("MEMORY_USAGE_MAX")
 //	if memoryUsageMax == "" {
 //		memoryUsageMax = "1"
@@ -124,10 +131,17 @@ func init() {
         slice[i] = 0xFF
     }
 
-   additionalSize := (memoryUsageMax - memoryUsageMin ) * 1024 * 1024
-    for i := 0; i < additionalSize; i++ {
-        slice = append(slice, 0xFF)
+    time.Sleep(memoryUsageIncreaseTime * time.Second)
+    slice = nil
+
+    size := memoryUsageMax * 1024 * 1024
+    slice := make([]byte, size)
+
+    for i := range slice {
+        slice[i] = 0xFF
     }
+
+
 
 }
 

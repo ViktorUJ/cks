@@ -9,7 +9,7 @@ This is a small HTTP server that sends back the incoming request with all the me
 - `ENABLE_LOAD_MEMORY` : enable memory usage (default=false)
 - `MEMORY_USAGE_MIN`: additional memory usage Mb (default=1)
 - `MEMORY_USAGE_MAX`: additional memory usage Mb (default=1)
-- `MEMORY_USAGE_INCREASE_STEPS`: (default=1)
+- `MEMORY_USAGE_INCREASE_TIME`: time seconds  to  set MEMORY_USAGE_MAX  (default=60)
 - `MEMORY_USAGE_INCREASE_STEPS_WAIT`: time seconds  to next increase (default=1)
 - `MEMORY_USAGE_INCREASE_LOOP_WAIT`: time seconds  wait start next memory loop usage (default=1) . new loop start from `MEMORY_USAGE_MIN`
 - `CPU_MAXPROC`: GOMAXPROCS (default = 1)
