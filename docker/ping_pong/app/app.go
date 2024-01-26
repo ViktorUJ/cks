@@ -31,9 +31,55 @@ func init() {
 		serverName = "ping_pong_server"
 	}
 	logPath = os.Getenv("LOG_PATH")
+
 	enableOutput = os.Getenv("ENABLE_OUTPUT")
 	if enableOutput == "" {
 		enableOutput = "true"
+	}
+
+	enableLoadCpu = os.Getenv("ENABLE_LOAD_CPU")
+	if enableLoadCpu == "" {
+		enableLoadCpu = "false"
+	}
+
+	enableLoadMemory = os.Getenv("ENABLE_LOAD_MEMORY")
+	if enableLoadMemory == "" {
+		enableLoadMemory = "false"
+	}
+
+	memoryUsageMin = os.Getenv("MEMORY_USAGE_MIN")
+	if memoryUsageMin == "" {
+		memoryUsageMin = "1"
+	}
+
+	memoryUsageMax = os.Getenv("MEMORY_USAGE_MAX")
+	if memoryUsageMax == "" {
+		memoryUsageMax = "1"
+	}
+
+	memoryUsageIncreaseSteps = os.Getenv("MEMORY_USAGE_INCREASE_STEPS")
+	if memoryUsageIncreaseSteps == "" {
+		memoryUsageIncreaseSteps = "1"
+	}
+
+	memoryUsageIncreaseStepsWait = os.Getenv("MEMORY_USAGE_INCREASE_STEPS_WAIT")
+	if memoryUsageIncreaseStepsWait == "" {
+		memoryUsageIncreaseStepsWait = "1"
+	}
+
+	memoryUsageIncreaseLoopWait = os.Getenv("MEMORY_USAGE_INCREASE_LOOP_WAIT")
+	if memoryUsageIncreaseLoopWait == "" {
+		memoryUsageIncreaseLoopWait = "1"
+	}
+
+	cpuMaxProc = os.Getenv("CPU_MAXPROC")
+	if cpuMaxProc == "" {
+		cpuMaxProc = "1"
+	}
+
+	cpuPiIterations = os.Getenv("CPU_PI_ITERATIONS")
+	if cpuPiIterations == "" {
+		cpuPiIterations = "1"
 	}
 
 	if logPath != "" {

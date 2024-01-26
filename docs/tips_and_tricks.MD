@@ -20,3 +20,13 @@ The Vim editor is used by default, which means you should be aware how to use sh
 `w` - jump to the start of the next word
 
 `:25` - go to the 25th row in the file
+
+## aliases 
+
+`export do="--dry-run=client -o yaml" `
+````
+# usage fo create pod template
+
+k run  test --image nginx $do
+```` 
+
