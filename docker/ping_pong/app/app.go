@@ -133,6 +133,7 @@ func init() {
 
     time.Sleep(time.Duration(memoryUsageIncreaseTime) * time.Second)
     slice = nil
+    runtime.GC()
 
     size = memoryUsageMax * 1024 * 1024
     slice = make([]byte, size)
