@@ -27,7 +27,7 @@ var (
     enableLoadCpu string
     enableLoadMemory string
     memoryUsageMin int
-//    memoryUsageMax int
+    memoryUsageMax int
 //    memoryUsageIncreaseSteps int
 //    memoryUsageIncreaseStepsWait int
 //    memoryUsageIncreaseLoopWait int
