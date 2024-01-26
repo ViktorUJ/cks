@@ -121,7 +121,7 @@ func init() {
     slice := make([]byte, size)
 
     for i := range slice {
-        slice[i] = xFF
+        slice[i] = 0xFF
     }
 
 }
