@@ -65,12 +65,12 @@ func init() {
         return 1
     }()
 
-//	memoryUsageMin = os.Getenv("MEMORY_USAGE_MIN")
-//	if memoryUsageMin == "" {
-//		memoryUsageMin = "1"
-//	}
-//
-//
+    memoryUsageMax = func() int {
+        if value, err := strconv.Atoi(os.Getenv("MEMORY_USAGE_MAX")); err == nil && value > 0 {
+            return value
+        }
+        return memoryUsageMin
+    }()
 //	memoryUsageMax = os.Getenv("MEMORY_USAGE_MAX")
 //	if memoryUsageMax == "" {
 //		memoryUsageMax = "1"
@@ -122,6 +122,11 @@ func init() {
 
     for i := range slice {
         slice[i] = 0xFF
+    }
+
+   additionalSize := (memoryUsageMax - memoryUsageMin ) * 1024 * 1024
+    for i := 0; i < additionalSize; i++ {
+        slice = append(slice, 0xFF)
     }
 
 }
