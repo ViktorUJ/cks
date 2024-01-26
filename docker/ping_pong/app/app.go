@@ -26,12 +26,12 @@ var (
     enableLoadCpu string
     enableLoadMemory string
     memoryUsageMin int
-    memoryUsageMax int
-    memoryUsageIncreaseSteps int
-    memoryUsageIncreaseStepsWait int
-    memoryUsageIncreaseLoopWait int
-    cpuMaxProc int
-    cpuPiIterations int
+//    memoryUsageMax int
+//    memoryUsageIncreaseSteps int
+//    memoryUsageIncreaseStepsWait int
+//    memoryUsageIncreaseLoopWait int
+//    cpuMaxProc int
+//    cpuPiIterations int
 
 )
 
@@ -57,41 +57,49 @@ func init() {
 		enableLoadMemory = "false"
 	}
 
-	memoryUsageMin = os.Getenv("MEMORY_USAGE_MIN")
-	if memoryUsageMin == "" {
-		memoryUsageMin = "1"
-	}
+    memoryUsageMin = func() int {
+        if value, err := strconv.Atoi(os.Getenv("MEMORY_USAGE_MIN")); err == nil && value > 0 {
+            return value
+        }
+        return 1
+    }()
 
-	memoryUsageMax = os.Getenv("MEMORY_USAGE_MAX")
-	if memoryUsageMax == "" {
-		memoryUsageMax = "1"
-	}
-
-	memoryUsageIncreaseSteps = os.Getenv("MEMORY_USAGE_INCREASE_STEPS")
-	if memoryUsageIncreaseSteps == "" {
-		memoryUsageIncreaseSteps = "1"
-	}
-
-	memoryUsageIncreaseStepsWait = os.Getenv("MEMORY_USAGE_INCREASE_STEPS_WAIT")
-	if memoryUsageIncreaseStepsWait == "" {
-		memoryUsageIncreaseStepsWait = "1"
-	}
-
-	memoryUsageIncreaseLoopWait = os.Getenv("MEMORY_USAGE_INCREASE_LOOP_WAIT")
-	if memoryUsageIncreaseLoopWait == "" {
-		memoryUsageIncreaseLoopWait = "1"
-	}
-
-	cpuMaxProc = os.Getenv("CPU_MAXPROC")
-	if cpuMaxProc == "" {
-		cpuMaxProc = "1"
-	}
-
-	cpuPiIterations = os.Getenv("CPU_PI_ITERATIONS")
-	if cpuPiIterations == "" {
-		cpuPiIterations = "1"
-	}
-
+//	memoryUsageMin = os.Getenv("MEMORY_USAGE_MIN")
+//	if memoryUsageMin == "" {
+//		memoryUsageMin = "1"
+//	}
+//
+//
+//	memoryUsageMax = os.Getenv("MEMORY_USAGE_MAX")
+//	if memoryUsageMax == "" {
+//		memoryUsageMax = "1"
+//	}
+//
+//	memoryUsageIncreaseSteps = os.Getenv("MEMORY_USAGE_INCREASE_STEPS")
+//	if memoryUsageIncreaseSteps == "" {
+//		memoryUsageIncreaseSteps = "1"
+//	}
+//
+//	memoryUsageIncreaseStepsWait = os.Getenv("MEMORY_USAGE_INCREASE_STEPS_WAIT")
+//	if memoryUsageIncreaseStepsWait == "" {
+//		memoryUsageIncreaseStepsWait = "1"
+//	}
+//
+//	memoryUsageIncreaseLoopWait = os.Getenv("MEMORY_USAGE_INCREASE_LOOP_WAIT")
+//	if memoryUsageIncreaseLoopWait == "" {
+//		memoryUsageIncreaseLoopWait = "1"
+//	}
+//
+//	cpuMaxProc = os.Getenv("CPU_MAXPROC")
+//	if cpuMaxProc == "" {
+//		cpuMaxProc = "1"
+//	}
+//
+//	cpuPiIterations = os.Getenv("CPU_PI_ITERATIONS")
+//	if cpuPiIterations == "" {
+//		cpuPiIterations = "1"
+//	}
+//
 	if logPath != "" {
 		dir := filepath.Dir(logPath)
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
