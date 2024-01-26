@@ -23,6 +23,16 @@ var (
 	serverName        string
 	logPath       string
 	enableOutput  string
+    enableLoadCpu string
+    enableLoadMemory string
+    memoryUsageMin int
+    memoryUsageMax int
+    memoryUsageIncreaseSteps int
+    memoryUsageIncreaseStepsWait int
+    memoryUsageIncreaseLoopWait int
+    cpuMaxProc int
+    cpuPiIterations int
+
 )
 
 func init() {
