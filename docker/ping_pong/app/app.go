@@ -107,6 +107,17 @@ func init() {
 
     for _, profile := range memoryProfiles {
         fmt.Printf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds)
+        size := profile.Megabytes * 1024 * 1024
+        slice := make([]byte, size)
+
+        for i := range slice {
+            slice[i] = 0xFF
+        }
+    time.Sleep(time.Duration(profile.Seconds) * time.Second)
+    slice = nil
+    runtime.GC()
+    time.Sleep(5 * time.Second) // wait GCC
+
     }
 
 //	memoryUsageMax = os.Getenv("MEMORY_USAGE_MAX")
@@ -155,25 +166,25 @@ func init() {
 		file.Close()
 	}
 
-    size := memoryUsageMin * 1024 * 1024
-    slice := make([]byte, size)
-
-    for i := range slice {
-        slice[i] = 0xFF
-    }
-
-    time.Sleep(time.Duration(memoryUsageIncreaseTime) * time.Second)
-    slice = nil
-    runtime.GC()
-    time.Sleep(10 * time.Second)
-
-    size = memoryUsageMax * 1024 * 1024
-    slice = make([]byte, size)
-
-    for i := range slice {
-        slice[i] = 0xFF
-    }
-
+//    size := memoryUsageMin * 1024 * 1024
+//    slice := make([]byte, size)
+//
+//    for i := range slice {
+//        slice[i] = 0xFF
+//    }
+//
+//    time.Sleep(time.Duration(memoryUsageIncreaseTime) * time.Second)
+//    slice = nil
+//    runtime.GC()
+//    time.Sleep(10 * time.Second)
+//
+//    size = memoryUsageMax * 1024 * 1024
+//    slice = make([]byte, size)
+//
+//    for i := range slice {
+//        slice[i] = 0xFF
+//    }
+//
 
 
 }
