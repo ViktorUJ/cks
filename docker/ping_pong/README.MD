@@ -7,6 +7,7 @@ This is a small HTTP server that sends back the incoming request with all the me
 - `LOG_PATH`: write logs to file ${LOG_PATH} (default=""  without file output)
 - `ENABLE_LOAD_CPU` : enable cpu usage (default=false)
 - `ENABLE_LOAD_MEMORY` : enable memory usage (default=false)
+- `MEMORY_USAGE_PROFILE`: additional memory usage  and time for usage . example `5=10 7=60  1024=360  ` - 5 Mb 10sec  7 Mb 60sec 1024Mb 360sec
 - `MEMORY_USAGE_MIN`: additional memory usage Mb (default=1)
 - `MEMORY_USAGE_MAX`: additional memory usage Mb (default=1)
 - `MEMORY_USAGE_INCREASE_TIME`: time seconds  to  set MEMORY_USAGE_MAX  (default=60)

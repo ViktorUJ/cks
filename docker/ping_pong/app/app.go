@@ -16,6 +16,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+type MemoryUsageProfile struct {
+    Megabytes int
+    Seconds   int
+}
+
 var (
 	requestsPerSecond float64
 	requestsPerMinute float64
@@ -29,6 +34,7 @@ var (
     memoryUsageMin int
     memoryUsageMax int
     memoryUsageIncreaseTime int
+    memoryProfiles []MemoryUsageProfile
 //    memoryUsageIncreaseStepsWait int
 //    memoryUsageIncreaseLoopWait int
 //    cpuMaxProc int
@@ -77,6 +83,31 @@ func init() {
         }
         return 30
     }()
+
+    memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
+
+    if memoryProfileStr != "" {
+        // split  "Mb=sec"
+        memoryProfilePairs := strings.Split(memoryProfileStr, " ")
+
+        for _, pair := range memoryProfilePairs {
+            parts := strings.Split(pair, "=")
+            if len(parts) == 2 {
+                mb, errMb := strconv.Atoi(parts[0])
+                sec, errSec := strconv.Atoi(parts[1])
+                if errMb == nil && errSec == nil {
+                    memoryProfiles = append(memoryProfiles, MemoryUsageProfile{
+                        Megabytes: mb,
+                        Seconds:   sec,
+                    })
+                }
+            }
+        }
+    }
+
+    for _, profile := range memoryProfiles {
+        fmt.Printf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds)
+    }
 
 //	memoryUsageMax = os.Getenv("MEMORY_USAGE_MAX")
 //	if memoryUsageMax == "" {
