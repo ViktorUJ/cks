@@ -97,6 +97,10 @@ func init() {
 		}
 		file.Close()
 	}
+
+    size := memoryUsageMin * 1024 * 1024
+    slice := make([]byte, size)
+
 }
 
 func requestHandler(w http.ResponseWriter, r *http.Request) {
