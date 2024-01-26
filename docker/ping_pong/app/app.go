@@ -212,7 +212,7 @@ func main() {
 	for _, env := range os.Environ() {
 		sendLog(env)
 	}
-
+    fmt.Println(enableLoadCpu)
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()
 
