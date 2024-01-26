@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 	"strconv"
-	"math/rand"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -119,15 +118,10 @@ func init() {
 	}
 
     size := memoryUsageMin * 1024 * 1024
-    fmt.Println("slize size: %v", size )
     slice := make([]byte, size)
 
-    // Initialize the random number generator
-    rand.Seed(time.Now().UnixNano())
-
-    // Fill the slice with random values
     for i := range slice {
-        slice[i] = byte(rand.Intn(256)) // Generate a random byte
+        slice[i] = xFF
     }
 
 }
