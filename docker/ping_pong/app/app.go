@@ -131,11 +131,11 @@ func init() {
         slice[i] = 0xFF
     }
 
-    time.Sleep(memoryUsageIncreaseTime * time.Second)
+    time.Sleep(time.Duration(memoryUsageIncreaseTime) * time.Second)
     slice = nil
 
-    size := memoryUsageMax * 1024 * 1024
-    slice := make([]byte, size)
+    size = memoryUsageMax * 1024 * 1024
+    slice = make([]byte, size)
 
     for i := range slice {
         slice[i] = 0xFF
