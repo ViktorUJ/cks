@@ -124,8 +124,8 @@ func init() {
 		file.Close()
 	}
 
-    size = memoryUsageMin * 1024 * 1024
-    slice = make([]byte, size)
+    size := memoryUsageMin * 1024 * 1024
+    slice := make([]byte, size)
 
     for i := range slice {
         slice[i] = 0xFF
