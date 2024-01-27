@@ -63,86 +63,6 @@ func init() {
 		enableLoadMemory = "false"
 	}
 
-    memoryUsageMin = func() int {
-        if value, err := strconv.Atoi(os.Getenv("MEMORY_USAGE_MIN")); err == nil && value > 0 {
-            return value
-        }
-        return 1
-    }()
-
-    memoryUsageMax = func() int {
-        if value, err := strconv.Atoi(os.Getenv("MEMORY_USAGE_MAX")); err == nil && value > 0 {
-            return value
-        }
-        return memoryUsageMin
-    }()
-
-    memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
-
-    if memoryProfileStr != "" {
-        // split  "Mb=sec"
-        memoryProfilePairs := strings.Split(memoryProfileStr, " ")
-
-        for _, pair := range memoryProfilePairs {
-            parts := strings.Split(pair, "=")
-            if len(parts) == 2 {
-                mb, errMb := strconv.Atoi(parts[0])
-                sec, errSec := strconv.Atoi(parts[1])
-                if errMb == nil && errSec == nil {
-                    memoryProfiles = append(memoryProfiles, MemoryUsageProfile{
-                        Megabytes: mb,
-                        Seconds:   sec,
-                    })
-                }
-            }
-        }
-    }
-
-    for _, profile := range memoryProfiles {
-        fmt.Printf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds)
-        size := profile.Megabytes * 1024 * 1024
-        slice := make([]byte, size)
-
-        for i := range slice {
-            slice[i] = 0xFF
-        }
-    time.Sleep(time.Duration(profile.Seconds) * time.Second)
-    slice = nil
-    runtime.GC()
-    time.Sleep(5 * time.Second) // wait GCC
-
-    }
-
-//	memoryUsageMax = os.Getenv("MEMORY_USAGE_MAX")
-//	if memoryUsageMax == "" {
-//		memoryUsageMax = "1"
-//	}
-//
-//	memoryUsageIncreaseSteps = os.Getenv("MEMORY_USAGE_INCREASE_STEPS")
-//	if memoryUsageIncreaseSteps == "" {
-//		memoryUsageIncreaseSteps = "1"
-//	}
-//
-//	memoryUsageIncreaseStepsWait = os.Getenv("MEMORY_USAGE_INCREASE_STEPS_WAIT")
-//	if memoryUsageIncreaseStepsWait == "" {
-//		memoryUsageIncreaseStepsWait = "1"
-//	}
-//
-//	memoryUsageIncreaseLoopWait = os.Getenv("MEMORY_USAGE_INCREASE_LOOP_WAIT")
-//	if memoryUsageIncreaseLoopWait == "" {
-//		memoryUsageIncreaseLoopWait = "1"
-//	}
-//
-//	cpuMaxProc = os.Getenv("CPU_MAXPROC")
-//	if cpuMaxProc == "" {
-//		cpuMaxProc = "1"
-//	}
-//
-//	cpuPiIterations = os.Getenv("CPU_PI_ITERATIONS")
-//	if cpuPiIterations == "" {
-//		cpuPiIterations = "1"
-//	}
-//
 	if logPath != "" {
 		dir := filepath.Dir(logPath)
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -158,26 +78,6 @@ func init() {
 		}
 		file.Close()
 	}
-
-//    size := memoryUsageMin * 1024 * 1024
-//    slice := make([]byte, size)
-//
-//    for i := range slice {
-//        slice[i] = 0xFF
-//    }
-//
-//    time.Sleep(time.Duration(memoryUsageIncreaseTime) * time.Second)
-//    slice = nil
-//    runtime.GC()
-//    time.Sleep(10 * time.Second)
-//
-//    size = memoryUsageMax * 1024 * 1024
-//    slice = make([]byte, size)
-//
-//    for i := range slice {
-//        slice[i] = 0xFF
-//    }
-//
 
 
 }
@@ -215,7 +115,7 @@ func memoryUsage () {
     time.Sleep(time.Duration(profile.Seconds) * time.Second)
     slice = nil
     runtime.GC()
-    time.Sleep(5 * time.Second) // wait GCC
+    time.Sleep(10 * time.Second) // wait GCC
 
     }
 
