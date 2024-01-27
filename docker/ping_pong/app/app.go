@@ -31,8 +31,7 @@ var (
 	enableOutput  string
     enableLoadCpu string
     enableLoadMemory string
-    memoryUsageMin int
-    memoryUsageMax int
+    enableLogLoadMemory string
     memoryProfiles []MemoryUsageProfile
 //    memoryUsageIncreaseStepsWait int
 //    memoryUsageIncreaseLoopWait int
@@ -61,6 +60,10 @@ func init() {
 	enableLoadMemory = os.Getenv("ENABLE_LOAD_MEMORY")
 	if enableLoadMemory == "" {
 		enableLoadMemory = "false"
+	}
+	enableLogLoadMemory = os.Getenv("ENABLE_LOG_LOAD_MEMORY")
+	if enableLogLoadMemory == "" {
+		enableLogLoadMemory = "false"
 	}
 
 	if logPath != "" {
@@ -105,8 +108,9 @@ func memoryUsage () {
     }
 
     for _, profile := range memoryProfiles {
-//        fmt.Printf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds)
-        sendLog(fmt.Sprintf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
+       if enableLogLoadMemory == "true" {
+           sendLog(fmt.Sprintf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
+           }
         size := profile.Megabytes * 1024 * 1024
         slice := make([]byte, size)
 
