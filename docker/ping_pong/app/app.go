@@ -120,7 +120,7 @@ func memoryUsage () {
     time.Sleep(time.Duration(profile.Seconds) * time.Second)
     slice = nil
     runtime.GC()
-    time.Sleep(10 * time.Second) // wait GCC
+    time.Sleep(20 * time.Second) // wait GCC
 
     }
 
