@@ -19,3 +19,9 @@ This is a small HTTP server that sends back the incoming request with all the me
 You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
 
 `docker pull viktoruj/ping_pong`
+
+
+``` 
+ k run test -n circleci --image  viktoruj/ping_pong:bc6a2e0  --env MEMORY_USAGE_MIN=20 --env MEMORY_USAGE_MAX=40 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    '
+
+```

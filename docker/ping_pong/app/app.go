@@ -33,7 +33,6 @@ var (
     enableLoadMemory string
     memoryUsageMin int
     memoryUsageMax int
-    memoryUsageIncreaseTime int
     memoryProfiles []MemoryUsageProfile
 //    memoryUsageIncreaseStepsWait int
 //    memoryUsageIncreaseLoopWait int
@@ -76,12 +75,6 @@ func init() {
             return value
         }
         return memoryUsageMin
-    }()
-    memoryUsageIncreaseTime = func() int {
-        if value, err := strconv.Atoi(os.Getenv("MEMORY_USAGE_INCREASE_TIME")); err == nil && value > 0 {
-            return value
-        }
-        return 30
     }()
 
     memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
@@ -186,6 +179,45 @@ func init() {
 //    }
 //
 
+
+}
+func memoryUsage {
+
+    memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
+
+    if memoryProfileStr != "" {
+        // split  "Mb=sec"
+        memoryProfilePairs := strings.Split(memoryProfileStr, " ")
+
+        for _, pair := range memoryProfilePairs {
+            parts := strings.Split(pair, "=")
+            if len(parts) == 2 {
+                mb, errMb := strconv.Atoi(parts[0])
+                sec, errSec := strconv.Atoi(parts[1])
+                if errMb == nil && errSec == nil {
+                    memoryProfiles = append(memoryProfiles, MemoryUsageProfile{
+                        Megabytes: mb,
+                        Seconds:   sec,
+                    })
+                }
+            }
+        }
+    }
+
+    for _, profile := range memoryProfiles {
+        fmt.Printf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds)
+        size := profile.Megabytes * 1024 * 1024
+        slice := make([]byte, size)
+
+        for i := range slice {
+            slice[i] = 0xFF
+        }
+    time.Sleep(time.Duration(profile.Seconds) * time.Second)
+    slice = nil
+    runtime.GC()
+    time.Sleep(5 * time.Second) // wait GCC
+
+    }
 
 }
 
@@ -301,6 +333,7 @@ func main() {
     fmt.Println(enableLoadCpu)
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()
+	go memoryUsage()
 
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
