@@ -182,7 +182,7 @@ func init() {
 
 }
 func memoryUsage () {
-
+  for {
     memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
 
     if memoryProfileStr != "" {
@@ -218,6 +218,9 @@ func memoryUsage () {
     time.Sleep(5 * time.Second) // wait GCC
 
     }
+
+}
+
 
 }
 
