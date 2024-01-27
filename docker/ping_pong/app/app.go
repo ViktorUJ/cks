@@ -181,7 +181,7 @@ func init() {
 
 
 }
-func memoryUsage {
+func memoryUsage () {
 
     memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
 
