@@ -245,7 +245,7 @@ func main() {
 
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
-		sendLog("SRV_PORT is not set, defaulting to 8080")
+		sendLog("SRV_PORT is not set, default port :  8080")
 		port = "8080"
 	}
 
