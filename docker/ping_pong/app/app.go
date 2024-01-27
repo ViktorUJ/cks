@@ -105,7 +105,8 @@ func memoryUsage () {
     }
 
     for _, profile := range memoryProfiles {
-        fmt.Printf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds)
+//        fmt.Printf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds)
+        sendLog(fmt.Sprintf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
         size := profile.Megabytes * 1024 * 1024
         slice := make([]byte, size)
 
