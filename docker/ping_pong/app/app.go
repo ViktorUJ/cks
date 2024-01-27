@@ -236,7 +236,7 @@ func main() {
     fmt.Println(enableLoadCpu)
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()
-	go memoryUsage()
+	if enableLoadMemory == "true" { go memoryUsage() }
 
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
