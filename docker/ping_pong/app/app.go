@@ -121,8 +121,10 @@ func cpuUsage () {
     for _, profile := range cpuProfiles {
         fmt.Printf("IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
             profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds)
+             go cpuLoad(profile.IterationsMillion, profile.TimeSeconds)
+             time.Sleep(profile.profile.TimeSeconds * time.Second)
     }
- go cpuLoad(1, 10)
+
 }
 
 func cpuLoad(iterationsMillion int, timeSeconds int) {
