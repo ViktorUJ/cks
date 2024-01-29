@@ -131,26 +131,18 @@ func cpuLoad(iterationsMillion int, timeMilliseconds int, waitMilliseconds int) 
     totalIterations := iterationsMillion * 1000000
     var sum int
 
-    timer := time.NewTimer(time.Duration(timeMilliseconds) * time.Millisecond)
-    defer timer.Stop()
+    deadline := time.Now().Add(time.Duration(timeMilliseconds) * time.Millisecond)
 
     for {
         for i := 0; i < totalIterations; i++ {
-            select {
-            case <-timer.C:
-                return
-            default:
-                sum += rand.Intn(256)
-            }
+            sum += rand.Intn(256)
         }
-        time.Sleep(time.Duration(waitMilliseconds) * time.Millisecond)
 
-        select {
-        case <-timer.C:
+        if time.Now().After(deadline) {
             return
-        default:
-
         }
+
+        time.Sleep(time.Duration(waitMilliseconds) * time.Millisecond)
     }
 }
 
