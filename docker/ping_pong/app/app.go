@@ -279,8 +279,8 @@ func main() {
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()
 	sendLog(fmt.Sprintf("enableLoadCpu: %v", enableLoadCpu))
-	if enableLoadMemory == "true" { go cpuUsage() }
-	if enableLoadCpu == "true" { go memoryUsage() }
+	if enableLoadMemory == "true" { go memoryUsage() }
+	if enableLoadCpu == "true" { go cpuUsage() }
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
 		sendLog("SRV_PORT is not set, default port :  8080")
