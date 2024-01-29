@@ -94,6 +94,8 @@ func init() {
 }
 func cpuUsage () {
 
+    cpuProfileStr := os.Getenv("CPU_USAGE_PROFILE")
+
     // split structure
     profileParts := strings.Split(cpuProfileStr, "=")
     if len(profileParts) == 4 {
