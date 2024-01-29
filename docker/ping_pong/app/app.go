@@ -127,11 +127,11 @@ func cpuUsage () {
 
 }
 
-func cpuLoad(iterationsMillion int, timeMilliseconds int, waitMilliseconds int) {
+func cpuLoad(iterationsMillion int, waitMilliseconds int, timeSeconds int) {
     totalIterations := iterationsMillion * 1000000
     var sum int
 
-    deadline := time.Now().Add(time.Duration(timeMilliseconds) * time.Millisecond)
+    deadline := time.Now().Add(time.Duration(timeSeconds) * time.Second)
 
     for time.Now().Before(deadline) {
         for i := 0; i < totalIterations; i++ {
@@ -143,7 +143,6 @@ func cpuLoad(iterationsMillion int, timeMilliseconds int, waitMilliseconds int) 
         }
     }
 }
-
 
 func memoryUsage () {
   for {
