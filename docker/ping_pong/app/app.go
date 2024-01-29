@@ -133,16 +133,14 @@ func cpuLoad(iterationsMillion int, timeMilliseconds int, waitMilliseconds int) 
 
     deadline := time.Now().Add(time.Duration(timeMilliseconds) * time.Millisecond)
 
-    for {
+    for time.Now().Before(deadline) {
         for i := 0; i < totalIterations; i++ {
             sum += rand.Intn(256)
         }
 
-        if time.Now().After(deadline) {
-            return
+        if time.Now().Add(time.Duration(waitMilliseconds) * time.Millisecond).Before(deadline) {
+            time.Sleep(time.Duration(waitMilliseconds) * time.Millisecond)
         }
-
-        time.Sleep(time.Duration(waitMilliseconds) * time.Millisecond)
     }
 }
 
