@@ -119,6 +119,7 @@ func cpuUsage () {
             profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds)
     }
 
+fmt.Sprintf(cpuProfiles)
 
 }
 func memoryUsage () {
