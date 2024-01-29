@@ -121,9 +121,26 @@ func cpuUsage () {
         fmt.Printf("IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
             profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds)
     }
-
-
+ go cpuLoad(1, 10)
 }
+
+func cpuLoad(iterationsMillion int, timeSeconds int) {
+    totalIterations := iterationsMillion * 1000000
+    var sum int
+
+    timer := time.NewTimer(time.Duration(timeSeconds) * time.Second)
+
+    for i := 0; i < totalIterations; i++ {
+        select {
+        case <-timer.C:
+            return
+        default:
+            sum += rand.Intn(256)
+        }
+    }
+}
+
+
 func memoryUsage () {
   for {
     memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
