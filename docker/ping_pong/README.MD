@@ -19,4 +19,6 @@ You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
 ``` 
  k run test -n circleci --image  viktoruj/ping_pong:bc6a2e0  --env MEMORY_USAGE_MIN=20 --env MEMORY_USAGE_MAX=40 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    '
 
+
+k run test  --image  viktoruj/ping_pong:a2de4a6  --env CPU_USAGE_PROFILE='1=100=4=36000'  --env ENABLE_LOAD_CPU=true
 ```

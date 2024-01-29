@@ -97,7 +97,6 @@ func cpuUsage () {
 
     cpuProfileStr := os.Getenv("CPU_USAGE_PROFILE")
     sendLog(" *** cpu load enable ")
-
     profiles := strings.Split(cpuProfileStr, " ")
     for _, p := range profiles {
         parts := strings.Split(p, "=")
@@ -118,6 +117,7 @@ func cpuUsage () {
         }
     }
 
+for {
     for _, profile := range cpuProfiles {
         fmt.Printf("IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
             profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds)
@@ -125,6 +125,7 @@ func cpuUsage () {
              time.Sleep(time.Duration(profile.TimeSeconds) * time.Second)
     }
 
+}
 }
 
 func cpuLoad(iterationsMillion int, waitMilliseconds int, timeSeconds int) {
