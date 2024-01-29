@@ -21,6 +21,13 @@ type MemoryUsageProfile struct {
     Seconds   int
 }
 
+type CpuUsageProfile struct {
+    IterationsMillion int
+    WaitMilliseconds  int
+    Goroutines        int
+    TimeSeconds       int
+}
+
 var (
 	requestsPerSecond float64
 	requestsPerMinute float64
@@ -33,6 +40,7 @@ var (
     enableLoadMemory string
     enableLogLoadMemory string
     memoryProfiles []MemoryUsageProfile
+    cpuProfiles []CpuUsageProfile
 //    memoryUsageIncreaseStepsWait int
 //    memoryUsageIncreaseLoopWait int
 //    cpuMaxProc int
@@ -81,6 +89,33 @@ func init() {
 		}
 		file.Close()
 	}
+
+
+}
+func cpuUsage () {
+
+    // split structure
+    profileParts := strings.Split(cpuProfileStr, "=")
+    if len(profileParts) == 4 {
+        iterationsMillion, err1 := strconv.Atoi(profileParts[0])
+        waitMilliseconds, err2 := strconv.Atoi(profileParts[1])
+        goroutines, err3 := strconv.Atoi(profileParts[2])
+        timeSeconds, err4 := strconv.Atoi(profileParts[3])
+
+        if err1 == nil && err2 == nil && err3 == nil && err4 == nil {
+            cpuProfiles = append(cpuProfiles, CpuUsageProfile{
+                IterationsMillion: iterationsMillion,
+                WaitMilliseconds:  waitMilliseconds,
+                Goroutines:        goroutines,
+                TimeSeconds:       timeSeconds,
+            })
+        }
+    }
+
+    for _, profile := range cpuProfiles {
+        fmt.Printf("IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
+            profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds)
+    }
 
 
 }
@@ -241,8 +276,8 @@ func main() {
     fmt.Println(enableLoadCpu)
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()
-	if enableLoadMemory == "true" { go memoryUsage() }
-
+	if enableLoadMemory == "true" { go cpuUsage() }
+	if enableLoadCpu == "true" { go memoryUsage() }
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
 		sendLog("SRV_PORT is not set, default port :  8080")
