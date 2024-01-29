@@ -121,24 +121,35 @@ func cpuUsage () {
     for _, profile := range cpuProfiles {
         fmt.Printf("IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
             profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds)
-             go cpuLoad(profile.IterationsMillion, profile.TimeSeconds)
+             go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
              time.Sleep(time.Duration(profile.TimeSeconds) * time.Second)
     }
 
 }
 
-func cpuLoad(iterationsMillion int, timeSeconds int) {
+func cpuLoad(iterationsMillion int, timeMilliseconds int, waitMilliseconds int) {
     totalIterations := iterationsMillion * 1000000
     var sum int
 
-    timer := time.NewTimer(time.Duration(timeSeconds) * time.Second)
+    timer := time.NewTimer(time.Duration(timeMilliseconds) * time.Millisecond)
+    defer timer.Stop()
 
-    for i := 0; i < totalIterations; i++ {
+    for {
+        for i := 0; i < totalIterations; i++ {
+            select {
+            case <-timer.C:
+                return
+            default:
+                sum += rand.Intn(256)
+            }
+        }
+        time.Sleep(time.Duration(waitMilliseconds) * time.Millisecond)
+
         select {
         case <-timer.C:
             return
         default:
-            sum += rand.Intn(256)
+
         }
     }
 }
