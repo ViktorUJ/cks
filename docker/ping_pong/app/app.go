@@ -96,21 +96,24 @@ func cpuUsage () {
 
     cpuProfileStr := os.Getenv("CPU_USAGE_PROFILE")
     sendLog(" *** cpu load enable ")
-    // split structure
-    profileParts := strings.Split(cpuProfileStr, "=")
-    if len(profileParts) == 4 {
-        iterationsMillion, err1 := strconv.Atoi(profileParts[0])
-        waitMilliseconds, err2 := strconv.Atoi(profileParts[1])
-        goroutines, err3 := strconv.Atoi(profileParts[2])
-        timeSeconds, err4 := strconv.Atoi(profileParts[3])
 
-        if err1 == nil && err2 == nil && err3 == nil && err4 == nil {
-            cpuProfiles = append(cpuProfiles, CpuUsageProfile{
-                IterationsMillion: iterationsMillion,
-                WaitMilliseconds:  waitMilliseconds,
-                Goroutines:        goroutines,
-                TimeSeconds:       timeSeconds,
-            })
+    profiles := strings.Split(cpuProfileStr, " ")
+    for _, p := range profiles {
+        parts := strings.Split(p, "=")
+        if len(parts) == 4 {
+            iterationsMillion, err1 := strconv.Atoi(parts[0])
+            waitMilliseconds, err2 := strconv.Atoi(parts[1])
+            goroutines, err3 := strconv.Atoi(parts[2])
+            timeSeconds, err4 := strconv.Atoi(parts[3])
+
+            if err1 == nil && err2 == nil && err3 == nil && err4 == nil {
+                cpuProfiles = append(cpuProfiles, CpuUsageProfile{
+                    IterationsMillion: iterationsMillion,
+                    WaitMilliseconds:  waitMilliseconds,
+                    Goroutines:        goroutines,
+                    TimeSeconds:       timeSeconds,
+                })
+            }
         }
     }
 
@@ -119,7 +122,6 @@ func cpuUsage () {
             profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds)
     }
 
-fmt.Sprintf(cpuProfiles)
 
 }
 func memoryUsage () {
