@@ -14,10 +14,14 @@ while [[ $# > 0 ]]; do
     shift
 done
 
+if [ -z "$release" ]; then
+     release="dev"
+fi
 
+echo "*** release = $release"
 
 case $release in
-true)
+scratch)
    docker buildx build --platform linux/arm64 --load -t viktoruj/ping_pong:${latest_commit_hash}-arm64   .
    docker buildx build --platform linux/amd64 --load -t viktoruj/ping_pong:${latest_commit_hash}-amd64   .
    docker push viktoruj/ping_pong:${latest_commit_hash}-arm64
@@ -43,7 +47,7 @@ alpine)
    docker manifest push viktoruj/ping_pong:alpine
 
 ;;
-*)
+dev)
    docker buildx build --platform linux/arm64 --load -t viktoruj/ping_pong:${latest_commit_hash}-arm64   .
    docker buildx build --platform linux/amd64 --load -t viktoruj/ping_pong:${latest_commit_hash}-amd64   .
    docker push viktoruj/ping_pong:${latest_commit_hash}-arm64
