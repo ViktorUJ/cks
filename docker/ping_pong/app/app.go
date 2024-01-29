@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 	"strconv"
+	"math/rand"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
