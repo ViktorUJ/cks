@@ -107,7 +107,6 @@ func init() {
 func cpuUsage () {
 
     cpuProfileStr := os.Getenv("CPU_USAGE_PROFILE")
-    sendLog(" *** cpu load enable ")
     profiles := strings.Split(cpuProfileStr, " ")
     for _, p := range profiles {
         parts := strings.Split(p, "=")
@@ -131,7 +130,7 @@ func cpuUsage () {
 for {
     for _, profile := range cpuProfiles {
         if enableLogLoadCpu == "true" {
-          sendLog(fmt.Sprintf("IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
+          sendLog(fmt.Sprintf("LoadCpu =>  IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
             profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds))}
 
             for i := 0; i < profile.Goroutines; i++ {
@@ -185,7 +184,7 @@ func memoryUsage () {
 
     for _, profile := range memoryProfiles {
        if enableLogLoadMemory == "true" {
-           sendLog(fmt.Sprintf("Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
+           sendLog(fmt.Sprintf("LoadMemory => Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
            }
         size := profile.Megabytes * 1024 * 1024
         slice := make([]byte, size)
