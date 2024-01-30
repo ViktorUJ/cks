@@ -73,6 +73,11 @@ func init() {
 		enableLogLoadMemory = "false"
 	}
 
+	enableLogLoadCpu = os.Getenv("ENABLE_LOG_LOAD_CPU")
+	if enableLogLoadCpu == "" {
+		enableLogLoadCpu = "false"
+	}
+
     cpuMaxProc = func() int {
         if value, err := strconv.Atoi(os.Getenv("CPU_MAXPROC")); err == nil && value > 0 {
             return value

@@ -9,6 +9,7 @@ This is a small HTTP server that sends back the incoming request with all the me
 - `MEMORY_USAGE_PROFILE`: additional memory usage  and time for usage . example `5=10 7=60  1024=360  ` - 5 Mb 10sec  7 Mb 60sec 1024Mb 360sec
 - `ENABLE_LOG_LOAD_MEMORY`: logs LOAD_MEMORY function
 - `ENABLE_LOAD_CPU` : enable cpu usage (default=false)
+- `ENABLE_LOG_LOAD_CPU`: logs LOAD_CPU function
 - `CPU_USAGE_PROFILE`: additional CPU usage `iteraction_milion=wait_msec=gorutins=time_sec` . example  `10=1=1=30  1=400=1=60`
 - `CPU_MAXPROC`: GOMAXPROCS (default = 1)
 
