@@ -23,4 +23,10 @@ You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
 
 
  k run test  --image  viktoruj/ping_pong:ba4cdb4  --env CPU_USAGE_PROFILE='1=400=4=60 1=4=4=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true
+
+ k  run test  --image  viktoruj/ping_pong:8cec1b2  --env CPU_USAGE_PROFILE='1=400=1=60 1=4=1=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true  --env ENABLE_LOG_LOAD_CPU=true --env CPU_MAXPROC=2 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOG_LOAD_MEMORY=true
+ 
+
+
+
 ```
