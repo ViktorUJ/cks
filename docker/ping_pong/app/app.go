@@ -42,10 +42,8 @@ var (
     enableLogLoadMemory string
     memoryProfiles []MemoryUsageProfile
     cpuProfiles []CpuUsageProfile
-//    memoryUsageIncreaseStepsWait int
-//    memoryUsageIncreaseLoopWait int
-//    cpuMaxProc int
-//    cpuPiIterations int
+    cpuMaxProc int
+
 
 )
 
@@ -74,6 +72,13 @@ func init() {
 	if enableLogLoadMemory == "" {
 		enableLogLoadMemory = "false"
 	}
+
+    cpuMaxProc = func() int {
+        if value, err := strconv.Atoi(os.Getenv("CPU_MAXPROC")); err == nil && value > 0 {
+            return value
+        }
+        return 1
+    }()
 
 	if logPath != "" {
 		dir := filepath.Dir(logPath)
@@ -121,7 +126,11 @@ for {
     for _, profile := range cpuProfiles {
         fmt.Printf("IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
             profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds)
-             go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
+//             go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
+
+            for i := 0; i < profile.Goroutines; i++ {
+                go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
+            }
              time.Sleep(time.Duration(profile.TimeSeconds) * time.Second)
     }
 
@@ -299,10 +308,10 @@ func main() {
 	for _, env := range os.Environ() {
 		sendLog(env)
 	}
-    fmt.Println(enableLoadCpu)
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()
-	sendLog(fmt.Sprintf("enableLoadCpu: %v", enableLoadCpu))
+	sendLog(fmt.Sprintf("enableLoadCpu: %v, cpuMaxProc: %d", enableLoadCpu, cpuMaxProc))
+	runtime.GOMAXPROCS(cpuMaxProc)
 	if enableLoadMemory == "true" { go memoryUsage() }
 	if enableLoadCpu == "true" { go cpuUsage() }
 	port := os.Getenv("SRV_PORT")
