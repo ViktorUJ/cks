@@ -17,16 +17,27 @@ You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
 
 `docker pull viktoruj/ping_pong`
 
+##  examples 
 
+### run http pingPong server 
 ``` 
- k run test -n circleci --image  viktoruj/ping_pong:bc6a2e0   --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true
+kubectl  run test -n circleci --image  viktoruj/ping_pong  
+```
+
+### run http pingPong server  with serverName
+```
+kubectl  run test -n circleci --image  viktoruj/ping_pong  --env SERVER_NAME=pingPongServer 
+```
 
 
- k run test  --image  viktoruj/ping_pong:ba4cdb4  --env CPU_USAGE_PROFILE='1=400=4=60 1=4=4=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true
-
- k  run test  --image  viktoruj/ping_pong:8cec1b2  --env CPU_USAGE_PROFILE='1=400=1=60 1=4=1=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true  --env ENABLE_LOG_LOAD_CPU=true --env CPU_MAXPROC=2 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOG_LOAD_MEMORY=true
- 
+```
+kubectl  run test -n circleci --image  viktoruj/ping_pong   --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true
 
 
+kubectl  run test  --image  viktoruj/ping_pong:ba4cdb4  --env CPU_USAGE_PROFILE='1=400=4=60 1=4=4=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true
+
+kubectl  run test  --image  viktoruj/ping_pong:8cec1b2  --env CPU_USAGE_PROFILE='1=400=1=60 1=4=1=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true  --env ENABLE_LOG_LOAD_CPU=true --env CPU_MAXPROC=2 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOG_LOAD_MEMORY=true
+
+kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1=60 1=4=1=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true  --env ENABLE_LOG_LOAD_CPU=true --env CPU_MAXPROC=2 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOG_LOAD_MEMORY=true
 
 ```
