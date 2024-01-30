@@ -40,6 +40,7 @@ var (
     enableLoadCpu string
     enableLoadMemory string
     enableLogLoadMemory string
+    enableLogLoadCpu string
     memoryProfiles []MemoryUsageProfile
     cpuProfiles []CpuUsageProfile
     cpuMaxProc int
