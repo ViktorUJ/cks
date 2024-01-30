@@ -124,9 +124,9 @@ func cpuUsage () {
 
 for {
     for _, profile := range cpuProfiles {
-        fmt.Printf("IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
-            profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds)
-//             go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
+        if enableLogLoadCpu == "true" {
+          sendLog(fmt.Sprintf("IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d\n",
+            profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds))}
 
             for i := 0; i < profile.Goroutines; i++ {
                 go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
