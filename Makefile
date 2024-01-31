@@ -195,6 +195,9 @@ output_eks_task:
 lint:
 	pre-commit run --all-files -c .hooks/.pre-commit-config.yaml
 
+lint_go:
+	cd docker/ping_pong/app ; go fmt ./...
+
 install_git_hooks:
 	$(VENV_BIN_PATH)/pre-commit install
 	@echo 'Pre-commit hooks installed'
