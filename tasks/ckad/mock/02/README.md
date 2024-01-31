@@ -35,9 +35,11 @@ This includes all available language translations of these pages (e.g. <https://
             - /bin/sh
             - -c
             - echo Hello from CKAD mock   
-| Acceptance criteria | - Job should tolerate 4 failures <br/> |
-|                       - Job should complet 3 times <br/> |
+| :-----------------: | :----------------------------------------------------------------------------- |
+| Acceptance criteria   - Job should tolerate 4 failures <br/> 
+|                       - Job should complet 3 times <br/> 
 |                       - Job should run every 15 minutes <br/> 
+| :-----------------: | :----------------------------------------------------------------------------- |
 
 |        **3**        | **Deploy a pod named webhttpd**                                                |
 | :-----------------: | :----------------------------------------------------------------------------- |
