@@ -4,6 +4,11 @@ locals {
   solutions_video="https://youtu.be/I8CPwcGbrG8"
   debug_output   = "false"
   region         = "eu-north-1"
+  vpc_default_cidr = "10.2.0.0/16"
+  az_ids = {
+    "10.2.0.0/19"  = "eun1-az3"
+    "10.2.32.0/19" = "eun1-az2"
+  }
   aws            = "default"
   prefix         = "cks-mock"
   tags           = {

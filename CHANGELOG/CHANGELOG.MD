@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.1 (xx.02.2024)
+### Features
+* update ping_pong service
+* split CMDB and  resources aws region 
+
 ## 0.7.1 (23.01.2024)
 ### Features
 * [Cka mock exam 2 ](..%2Ftasks%2Fcka%2Fmock%2F02) is added . List of questions updated as of December 2023
