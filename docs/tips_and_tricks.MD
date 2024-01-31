@@ -21,12 +21,11 @@ The Vim editor is used by default, which means you should be aware how to use sh
 
 `:25` - go to the 25th row in the file
 
-## aliases 
+## aliases
 
 `export do="--dry-run=client -o yaml" `
 ````
 # usage fo create pod template
 
 k run  test --image nginx $do
-```` 
-
+````

@@ -2,50 +2,48 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
-    "path/filepath"
+	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
-	"strconv"
-	"math/rand"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type MemoryUsageProfile struct {
-    Megabytes int
-    Seconds   int
+	Megabytes int
+	Seconds   int
 }
 
 type CpuUsageProfile struct {
-    IterationsMillion int
-    WaitMilliseconds  int
-    Goroutines        int
-    TimeSeconds       int
+	IterationsMillion int
+	WaitMilliseconds  int
+	Goroutines        int
+	TimeSeconds       int
 }
 
 var (
-	requestsPerSecond float64
-	requestsPerMinute float64
-	lastRequestTime   time.Time
-	requestsCount     uint64
-	serverName        string
-	logPath       string
-	enableOutput  string
-    enableLoadCpu string
-    enableLoadMemory string
-    enableLogLoadMemory string
-    enableLogLoadCpu string
-    memoryProfiles []MemoryUsageProfile
-    cpuProfiles []CpuUsageProfile
-    cpuMaxProc int
-
-
+	requestsPerSecond   float64
+	requestsPerMinute   float64
+	lastRequestTime     time.Time
+	requestsCount       uint64
+	serverName          string
+	logPath             string
+	enableOutput        string
+	enableLoadCpu       string
+	enableLoadMemory    string
+	enableLogLoadMemory string
+	enableLogLoadCpu    string
+	memoryProfiles      []MemoryUsageProfile
+	cpuProfiles         []CpuUsageProfile
+	cpuMaxProc          int
 )
 
 func init() {
@@ -79,12 +77,12 @@ func init() {
 		enableLogLoadCpu = "false"
 	}
 
-    cpuMaxProc = func() int {
-        if value, err := strconv.Atoi(os.Getenv("CPU_MAXPROC")); err == nil && value > 0 {
-            return value
-        }
-        return 1
-    }()
+	cpuMaxProc = func() int {
+		if value, err := strconv.Atoi(os.Getenv("CPU_MAXPROC")); err == nil && value > 0 {
+			return value
+		}
+		return 1
+	}()
 
 	if logPath != "" {
 		dir := filepath.Dir(logPath)
@@ -102,112 +100,111 @@ func init() {
 		file.Close()
 	}
 
-
 }
-func cpuUsage () {
+func cpuUsage() {
 
-    cpuProfileStr := os.Getenv("CPU_USAGE_PROFILE")
-    profiles := strings.Split(cpuProfileStr, " ")
-    for _, p := range profiles {
-        parts := strings.Split(p, "=")
-        if len(parts) == 4 {
-            iterationsMillion, err1 := strconv.Atoi(parts[0])
-            waitMilliseconds, err2 := strconv.Atoi(parts[1])
-            goroutines, err3 := strconv.Atoi(parts[2])
-            timeSeconds, err4 := strconv.Atoi(parts[3])
+	cpuProfileStr := os.Getenv("CPU_USAGE_PROFILE")
+	profiles := strings.Split(cpuProfileStr, " ")
+	for _, p := range profiles {
+		parts := strings.Split(p, "=")
+		if len(parts) == 4 {
+			iterationsMillion, err1 := strconv.Atoi(parts[0])
+			waitMilliseconds, err2 := strconv.Atoi(parts[1])
+			goroutines, err3 := strconv.Atoi(parts[2])
+			timeSeconds, err4 := strconv.Atoi(parts[3])
 
-            if err1 == nil && err2 == nil && err3 == nil && err4 == nil {
-                cpuProfiles = append(cpuProfiles, CpuUsageProfile{
-                    IterationsMillion: iterationsMillion,
-                    WaitMilliseconds:  waitMilliseconds,
-                    Goroutines:        goroutines,
-                    TimeSeconds:       timeSeconds,
-                })
-            }
-        }
-    }
+			if err1 == nil && err2 == nil && err3 == nil && err4 == nil {
+				cpuProfiles = append(cpuProfiles, CpuUsageProfile{
+					IterationsMillion: iterationsMillion,
+					WaitMilliseconds:  waitMilliseconds,
+					Goroutines:        goroutines,
+					TimeSeconds:       timeSeconds,
+				})
+			}
+		}
+	}
 
-for {
-    for _, profile := range cpuProfiles {
-        if enableLogLoadCpu == "true" {
-          sendLog(fmt.Sprintf("LoadCpu =>  IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d, cpuMaxProc:%d\n ",
-            profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds,cpuMaxProc))}
+	for {
+		for _, profile := range cpuProfiles {
+			if enableLogLoadCpu == "true" {
+				sendLog(fmt.Sprintf("LoadCpu =>  IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d, cpuMaxProc:%d\n ",
+					profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds, cpuMaxProc))
+			}
 
-            for i := 0; i < profile.Goroutines; i++ {
-                go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
-            }
-             time.Sleep(time.Duration(profile.TimeSeconds) * time.Second)
-    }
+			for i := 0; i < profile.Goroutines; i++ {
+				go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
+			}
+			time.Sleep(time.Duration(profile.TimeSeconds) * time.Second)
+		}
 
-}
+	}
 }
 
 func cpuLoad(iterationsMillion int, waitMilliseconds int, timeSeconds int) {
-    totalIterations := iterationsMillion * 1000000
-    var sum int
+	totalIterations := iterationsMillion * 1000000
+	var sum int
 
-    deadline := time.Now().Add(time.Duration(timeSeconds) * time.Second)
+	deadline := time.Now().Add(time.Duration(timeSeconds) * time.Second)
 
-    for time.Now().Before(deadline) {
-        for i := 0; i < totalIterations; i++ {
-            sum += rand.Intn(256)
-        }
+	for time.Now().Before(deadline) {
+		for i := 0; i < totalIterations; i++ {
+			sum += rand.Intn(256)
+		}
 
-        if time.Now().Add(time.Duration(waitMilliseconds) * time.Millisecond).Before(deadline) {
-            time.Sleep(time.Duration(waitMilliseconds) * time.Millisecond)
-        }
-    }
+		if time.Now().Add(time.Duration(waitMilliseconds) * time.Millisecond).Before(deadline) {
+			time.Sleep(time.Duration(waitMilliseconds) * time.Millisecond)
+		}
+	}
 }
 
-func memoryUsage () {
-  for {
-    memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
+func memoryUsage() {
+	for {
+		memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
 
-    if memoryProfileStr != "" {
-        // split  "Mb=sec"
-        memoryProfilePairs := strings.Split(memoryProfileStr, " ")
+		if memoryProfileStr != "" {
+			// split  "Mb=sec"
+			memoryProfilePairs := strings.Split(memoryProfileStr, " ")
 
-        for _, pair := range memoryProfilePairs {
-            parts := strings.Split(pair, "=")
-            if len(parts) == 2 {
-                mb, errMb := strconv.Atoi(parts[0])
-                sec, errSec := strconv.Atoi(parts[1])
-                if errMb == nil && errSec == nil {
-                    memoryProfiles = append(memoryProfiles, MemoryUsageProfile{
-                        Megabytes: mb,
-                        Seconds:   sec,
-                    })
-                }
-            }
-        }
-    }
+			for _, pair := range memoryProfilePairs {
+				parts := strings.Split(pair, "=")
+				if len(parts) == 2 {
+					mb, errMb := strconv.Atoi(parts[0])
+					sec, errSec := strconv.Atoi(parts[1])
+					if errMb == nil && errSec == nil {
+						memoryProfiles = append(memoryProfiles, MemoryUsageProfile{
+							Megabytes: mb,
+							Seconds:   sec,
+						})
+					}
+				}
+			}
+		}
 
-    for _, profile := range memoryProfiles {
-       if enableLogLoadMemory == "true" {
-           sendLog(fmt.Sprintf("LoadMemory => Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
-           }
-        size := profile.Megabytes * 1024 * 1024
-        slice := make([]byte, size)
+		for _, profile := range memoryProfiles {
+			if enableLogLoadMemory == "true" {
+				sendLog(fmt.Sprintf("LoadMemory => Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
+			}
+			size := profile.Megabytes * 1024 * 1024
+			slice := make([]byte, size)
 
-        for i := range slice {
-            slice[i] = 0xFF
-        }
-    time.Sleep(time.Duration(profile.Seconds) * time.Second)
-    slice = nil
-    runtime.GC()
-    time.Sleep(20 * time.Second) // wait GCC
+			for i := range slice {
+				slice[i] = 0xFF
+			}
+			time.Sleep(time.Duration(profile.Seconds) * time.Second)
+			slice = nil
+			runtime.GC()
+			time.Sleep(20 * time.Second) // wait GCC
 
-    }
+		}
 
-}
-
+	}
 
 }
 
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
 	response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))
-    response.WriteString(fmt.Sprintf("URL: http://%s%s\n", r.Host, r.URL.String()))
+	response.WriteString(fmt.Sprintf("URL: http://%s%s\n", r.Host, r.URL.String()))
 	response.WriteString(fmt.Sprintf("Client IP: %s\n", getIP(r)))
 	response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
 	response.WriteString(fmt.Sprintf("Protocol: %s\n", r.Proto))
@@ -287,7 +284,7 @@ func metricsHandler() {
 	}
 
 	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":" + metricPort, nil)
+	http.ListenAndServe(":"+metricPort, nil)
 }
 
 func sendLog(message string) {
@@ -317,15 +314,19 @@ func main() {
 	go metricsHandler()
 	sendLog(fmt.Sprintf("enableLoadCpu: %v, cpuMaxProc: %d", enableLoadCpu, cpuMaxProc))
 	runtime.GOMAXPROCS(cpuMaxProc)
-	if enableLoadMemory == "true" { go memoryUsage() }
-	if enableLoadCpu == "true" { go cpuUsage() }
+	if enableLoadMemory == "true" {
+		go memoryUsage()
+	}
+	if enableLoadCpu == "true" {
+		go cpuUsage()
+	}
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
 		sendLog("SRV_PORT is not set, default port :  8080")
 		port = "8080"
 	}
 
-	err := http.ListenAndServe(":" + port, nil)
+	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		sendLog(fmt.Sprintf("Server failed: %v", err))
 	}
