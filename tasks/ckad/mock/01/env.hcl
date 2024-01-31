@@ -2,7 +2,7 @@ locals {
   questions_list="https://github.com/ViktorUJ/cks/blob/master/tasks/ckad/mock/01/README.md"
   solutions_scripts="https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01/worker/files/solutions"
   solutions_video="https://youtu.be/yQK7Ca8d-yw"
-  region = "eu-north-1"
+  region = "eu-west-1"
   aws    = "default"
   prefix = "ckad-mock"
   tags = {
