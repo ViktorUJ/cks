@@ -1,6 +1,8 @@
 provider "aws" {
   region = var.region
 }
-provider "aws_cmdb" {
+provider "aws" {
   region = var.region_cmdb
+  alias = "cmdb"
+
 }
