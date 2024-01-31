@@ -36,7 +36,7 @@ inputs = {
         resolve_conflicts = "OVERWRITE"
       }
       kube-proxy = {
-        # related table https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html 
+        # related table https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
         version           = "v1.24.10-eksbuild.2"
         resolve_conflicts = "OVERWRITE"
       }
