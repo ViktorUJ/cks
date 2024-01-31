@@ -28,7 +28,7 @@ This includes all available language translations of these pages (e.g. <https://
 |     Task weight     | 1%                                                                             |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
 | Code sniplet:       | 
-|         - name: crnjb
+          - name: crnjb
             image: busybox:1.28
             imagePullPolicy: IfNotPresent
             command:
