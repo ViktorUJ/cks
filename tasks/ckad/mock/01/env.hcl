@@ -12,6 +12,11 @@ locals {
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
+  az_ids = {
+    "10.2.0.0/19"  = "euw1-az1"
+    "10.2.32.0/19" = "euw1-az2"
+    "10.2.64.0/19" = "euw1-az3"
+  }
   k8_version           = "1.28.0"
   node_type            = "spot"
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
