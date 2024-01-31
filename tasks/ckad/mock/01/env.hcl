@@ -2,7 +2,11 @@ locals {
   questions_list="https://github.com/ViktorUJ/cks/blob/master/tasks/ckad/mock/01/README.md"
   solutions_scripts="https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01/worker/files/solutions"
   solutions_video="https://youtu.be/yQK7Ca8d-yw"
-  region = "eu-west-1"
+  region = "eu-north-1"
+  az_ids = {
+    "10.2.0.0/19"  = "eun1-az3"
+    "10.2.32.0/19" = "eun1-az2"
+  }
   aws    = "default"
   prefix = "ckad-mock"
   tags = {
@@ -11,11 +15,6 @@ locals {
     "manage"          = "terraform"
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
-  }
-  az_ids = {
-    "10.2.0.0/19"  = "euw1-az1"
-    "10.2.32.0/19" = "euw1-az2"
-    "10.2.64.0/19" = "euw1-az3"
   }
   k8_version           = "1.28.0"
   node_type            = "spot"
