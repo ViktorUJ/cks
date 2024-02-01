@@ -1,15 +1,20 @@
 locals {
   region = "eu-north-1"
+  vpc_default_cidr =  "10.2.0.0/16"
+  az_ids = {
+    "10.2.0.0/19"  = "eun1-az3"
+    "10.2.32.0/19" = "eun1-az2"
+  }
   aws    = "default"
-  prefix = "cka-task"
+  prefix = "cka-task02"
   tags = {
-    "env_name"        = "cka-task"
+    "env_name"        = "cka-task02"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version           = "1.28.0"
+  k8_version           = "1.29.0"
   node_type            = "spot"
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type        = "t4g.medium"
