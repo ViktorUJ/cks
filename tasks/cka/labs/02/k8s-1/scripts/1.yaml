@@ -35,6 +35,6 @@ spec:
         - name: CPU_MAXPROC
           value: "1"
         - name: CPU_USAGE_PROFILE
-          value: '1=400=1=120 1=4=1=120'
+          value: '1=400=1=60 1=100=1=60'
         resources: {}
 status: {}
