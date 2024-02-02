@@ -5,6 +5,7 @@
 * update ping_pong service
 * split CMDB and  resources aws region 
 * add cka lab 02 (HPA by CPU)
+* add summary lisf if [labs](..%2Fdocs%2Flabs.MD)
 
 ## 0.7.1 (23.01.2024)
 ### Features
