@@ -149,7 +149,7 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
 
-- choose [a hands-on lab](tasks%2Fcka%2Flabs) number
+- choose [a hands-on lab](docs%2Flabs.MD#cka-labs) number
 - create cka lab cluster ``TASK={lab_number} make run_cka_task``
 - find {master_external_ip} in terraform output
 - log in to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
@@ -183,7 +183,7 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKS hands-on lab</summary>
 
-- choose [CKS lab](tasks%2Fcks%2Flabs%2FREADME.MD)  number
+- choose [CKS lab](docs%2Flabs.MD#cks-labs)  number
 - change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl`` if you changed **region**
 - create cka lab cluster ``TASK={lab_number} make run_cks_task``
 - find {master_external_ip} in terraform output
