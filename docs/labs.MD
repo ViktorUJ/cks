@@ -1,8 +1,8 @@
 ## CKS labs
-- ``TASK=01 make run_cka_task`` - create cka lab number 01 
-- ``TASK=01 make delete_cka_task`` - delete cka hands-on labs
-- ``TASK=01 make run_cka_task_clean`` - run cka_task with clean terragrunt cache  for  cka_task
-- ``make output_cka_task `` - show **outputs** from   **cka_task**
+- ``TASK=01 make run_cks_task`` - create cks lab number 01 
+- ``TASK=01 make delete_cks_task`` - delete cks hands-on labs
+- ``TASK=01 make run_cks_task_clean`` - run cks_task with clean terragrunt cache  for  cks_task
+- ``make output_cks_task `` - show **outputs** from   **cks_task**
 
 
 | Task   | Description                                          | Solution                     |
@@ -27,9 +27,25 @@
 
 
 ## CKA labs
-| Task     | Description                                                              | Solution                     |
-|----------|--------------------------------------------------------------------------|------------------------------|
-| [01](01) | [kubectl contexts](01%2FREADME.MD)                                       | [SOLUTION](01%2FSOLUTION.MD) |
 
+- ``TASK=01 make run_cka_task`` - create cka lab number 01 
+- ``TASK=01 make delete_cka_task`` - delete cka hands-on labs
+- ``TASK=01 make run_cka_task_clean`` - run cka_task with clean terragrunt cache  for  cka_task
+- ``make output_cka_task `` - show **outputs** from   **cka_task**
+
+
+| Task | Description                                        | Solution                     |
+|------|----------------------------------------------------|------------------------------|
+| 02   | [Horizontal Pod Autoscaling .CPU ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
 
 ## CKAD labs
+
+- ``TASK=01 make run_ckad_task`` - create ckad lab number 01 
+- ``TASK=01 make delete_ckad_task`` - delete ckad hands-on labs
+- ``TASK=01 make run_ckad_task_clean`` - run cka_task with clean terragrunt cache  for  ckad_task
+- ``make output_ckad_task `` - show **outputs** from   **ckad_task**
+
+
+| Task | Description                                       | Solution                     |
+|------|---------------------------------------------------|------------------------------|
+| 01   | [test ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
