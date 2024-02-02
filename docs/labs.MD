@@ -5,6 +5,7 @@
 - ``make output_cks_task `` - show **outputs** from   **cks_task**
 
 
+
 | Task   | Description                                          | Solution                     |
 |--------|------------------------------------------------------|------------------------------|
 | **01** | [kubectl contexts](..%2Ftasks%2Fcks%2Flabs%2F01%2FREADME.MD)| [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F01%2FSOLUTION.MD) |
@@ -26,6 +27,7 @@
 | **25** | [Image policy webhook](..%2Ftasks%2Fcks%2Flabs%2F25%2FREADME.MD)               | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F25%2FSOLUTION.MD) |
 
 
+
 ## CKA labs
 
 - ``TASK=01 make run_cka_task`` - create cka lab number 01 
@@ -38,6 +40,8 @@
 |--------|----------------------------------------------------|------------------------------|
 | **02** | [Horizontal Pod Autoscaling .CPU ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
 
+
+
 ## CKAD labs
 
 - ``TASK=01 make run_ckad_task`` - create ckad lab number 01 
@@ -49,6 +53,8 @@
 | Task   | Description                                       | Solution                     |
 |--------|---------------------------------------------------|------------------------------|
 | **01** | [test ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+
+
 
 
 ## EKS labs
