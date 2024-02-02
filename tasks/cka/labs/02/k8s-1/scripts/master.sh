@@ -2,7 +2,7 @@
 echo " *** master node  cka lab-2  k8s-1"
 export KUBECONFIG=/root/.kube/config
 
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-5/tasks/cka/labs/02/k8s-1/scripts/1.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/0.8.1/tasks/cka/labs/02/k8s-1/scripts/1.yaml
 
 # Installation of metrics server
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
