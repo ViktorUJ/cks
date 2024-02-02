@@ -79,7 +79,7 @@ Every command should be run from the project's root directory.
   <summary style="font-weight: bold; font-size: 1.5em;">CKA</summary>
 
 ### cka task
-- ``TASK=01 make run_cka_task`` - create cka [hands-on labs](tasks%2Fcka%2Flabs)  [number 01](tasks%2Fcka%2Flabs%2F01)
+- ``TASK=01 make run_cka_task`` - create cka [hands-on labs](docs%2Flabs.MD#cka-labs) number 01    
 - ``TASK=01 make delete_cka_task`` - delete cka hands-on labs
 - ``TASK=01 make run_cka_task_clean`` - run cka_task with clean terragrunt cache  for  cka_task
 - ``make output_cka_task `` - show **outputs** from   **cka_task**
@@ -106,7 +106,7 @@ Every command should be run from the project's root directory.
   <summary style="font-weight: bold; font-size: 1.5em;">CKS</summary>
 
 ### cks task
-- ``TASK=10 make run_cks_task`` - create cks [hands-on labs](tasks%2Fcks%2Flabs)  [number 10](tasks%2Fcks%2Flabs%2F10)
+- ``TASK=10 make run_cks_task`` - create cks [hands-on labs](docs%2Flabs.MD#cks-labs) number 10
 - ``TASK=10 make delete_cks_task`` - delete cks hands-on labs
 - ``TASK=10  make run_cks_task_clean`` - run cks_task with clean terragrunt cache  for  cks_task
 - ``make output_cks_task `` - show **outputs** from   **cks_task**
@@ -149,7 +149,7 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
 
-- choose [a hands-on lab](tasks%2Fcka%2Flabs) number
+- choose [a hands-on lab](docs%2Flabs.MD#cka-labs) number
 - create cka lab cluster ``TASK={lab_number} make run_cka_task``
 - find {master_external_ip} in terraform output
 - log in to master node via ssh  ``ssh ubuntu@{master_external_ip} -i {key}``
@@ -183,7 +183,7 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKS hands-on lab</summary>
 
-- choose [CKS lab](tasks%2Fcks%2Flabs%2FREADME.MD)  number
+- choose [CKS lab](docs%2Flabs.MD#cks-labs)  number
 - change **ami_id** in ``{lab_number}/scripts/terragrunt.hcl`` if you changed **region**
 - create cka lab cluster ``TASK={lab_number} make run_cks_task``
 - find {master_external_ip} in terraform output
@@ -261,7 +261,7 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">EKS hands-on lab</summary>
 
-- choose [labs](tasks%2Feks%2Flabs)  number
+- choose [labs](docs%2Flabs.MD#eks-labs)  number
 - create hands-on lab `` TASK={lab_number} make run_eks_task ``
 - find ``worker_pc_ip`` in ``terraform output``
 - log in to worker_pc node via ssh  ``ssh ubuntu@{worker_pc_ip} -i {key}``
