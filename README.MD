@@ -261,7 +261,7 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">EKS hands-on lab</summary>
 
-- choose [labs](tasks%2Feks%2Flabs)  number
+- choose [labs](docs%2Flabs.MD#eks-labs)  number
 - create hands-on lab `` TASK={lab_number} make run_eks_task ``
 - find ``worker_pc_ip`` in ``terraform output``
 - log in to worker_pc node via ssh  ``ssh ubuntu@{worker_pc_ip} -i {key}``

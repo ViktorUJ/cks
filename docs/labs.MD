@@ -49,3 +49,16 @@
 | Task   | Description                                       | Solution                     |
 |--------|---------------------------------------------------|------------------------------|
 | **01** | [test ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+
+
+## EKS labs
+
+- ``TASK=01 make run_eks_task`` - create ckad lab number 01 
+- ``TASK=01 make delete_eks_task`` - delete ckad hands-on labs
+- ``TASK=01 make run_eks_task_clean`` - run cka_task with clean terragrunt cache  for  ckad_task
+- ``make output_eks_task `` - show **outputs** from   **ckad_task**
+
+
+| Task   | Description                                       | Solution                     |
+|--------|---------------------------------------------------|------------------------------|
+| **01** | [test ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
