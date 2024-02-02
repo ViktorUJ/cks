@@ -18,3 +18,9 @@
 | [23](23) | [Set tls version and allowed ciphers for etcd, kube-api](23%2FREADME.MD) | [SOLUTION](23%2FSOLUTION.MD) |
 | [24](24) | [Encrypt secrets in ETCD](24%2FREADME.MD)                                | [SOLUTION](24%2FSOLUTION.MD) |
 | [25](25) | [Image policy webhook](25%2FREADME.MD)                                | [SOLUTION](25%2FSOLUTION.MD) |
+
+
+## CKA labs
+| Task     | Description                                                              | Solution                     |
+|----------|--------------------------------------------------------------------------|------------------------------|
+| [01](01) | [kubectl contexts](01%2FREADME.MD)                                       | [SOLUTION](01%2FSOLUTION.MD) |
