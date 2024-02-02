@@ -4,6 +4,7 @@
 ### Features
 * update ping_pong service
 * split CMDB and  resources aws region 
+* add cka lab 02 (HPA by CPU)
 
 ## 0.7.1 (23.01.2024)
 ### Features
