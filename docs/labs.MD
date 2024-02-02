@@ -4,6 +4,7 @@
 - ``TASK=01 make run_cka_task_clean`` - run cka_task with clean terragrunt cache  for  cka_task
 - ``make output_cka_task `` - show **outputs** from   **cka_task**
 
+
 | Task   | Description                                          | Solution                     |
 |--------|------------------------------------------------------|------------------------------|
 | **01** | [kubectl contexts](..%2Ftasks%2Fcks%2Flabs%2F01%2FREADME.MD)| [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F01%2FSOLUTION.MD) |
