@@ -106,7 +106,7 @@ Every command should be run from the project's root directory.
   <summary style="font-weight: bold; font-size: 1.5em;">CKS</summary>
 
 ### cks task
-- ``TASK=10 make run_cks_task`` - create cks [hands-on labs](tasks%2Fcks%2Flabs)  [number 10](tasks%2Fcks%2Flabs%2F10)
+- ``TASK=10 make run_cks_task`` - create cks [hands-on labs](docs%2Flabs.MD#cka-labs) number 10
 - ``TASK=10 make delete_cks_task`` - delete cks hands-on labs
 - ``TASK=10  make run_cks_task_clean`` - run cks_task with clean terragrunt cache  for  cks_task
 - ``make output_cks_task `` - show **outputs** from   **cks_task**
