@@ -31,8 +31,6 @@ true)
 
     systemctl restart sshd
     echo "*** ssh password "
-    cat $SSH_CONFIG_FILE_CLOUD | grep PasswordAuthentication
-    cat $SSH_CONFIG_FILE | grep PasswordAuthentication
 ;;
 *)
     echo "*** ssh password not enable "
