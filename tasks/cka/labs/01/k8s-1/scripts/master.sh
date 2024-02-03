@@ -7,3 +7,6 @@ sed -i '/--advertise-address=/a \    - --new-option2=value' /etc/kubernetes/mani
 
 sed -i 's/Pod/PoD/g'  /etc/kubernetes/manifests/kube-apiserver.yaml
 service kubelet restart
+sleep 10
+systemctl disable kubelet
+service kubelet stop
