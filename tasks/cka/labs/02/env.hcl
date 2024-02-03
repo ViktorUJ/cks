@@ -24,7 +24,7 @@ locals {
   instance_type        = "t4g.large"
   instance_type_worker = "t4g.small"
   key_name             = "cks"
-  ssh_password_enable  = "false" # false |  true
+  ssh_password_enable  = "true" # false |  true
   access_cidrs         = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
   ubuntu_version       = "20.04"
   ami_id               = ""
