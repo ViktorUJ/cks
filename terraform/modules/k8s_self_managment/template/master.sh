@@ -5,9 +5,11 @@ true)
   #  echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
     echo "ubuntu:${ssh_password}" |chpasswd
     SSH_CONFIG_FILE="/etc/ssh/sshd_config"
-    rm /etc/ssh/sshd_config.d/60-cloudimg-settings.conf -rf
+    SSH_CONFIG_FILE_CLOUD="/etc/ssh/sshd_config.d/60-cloudimg-settings.conf"
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
     sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE_CLOUD
+
     systemctl restart sshd
 ;;
 *)
