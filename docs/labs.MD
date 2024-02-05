@@ -36,10 +36,10 @@
 - ``make output_cka_task `` - show **outputs** from   **cka_task**
 
 
-| Task   | Description                                                                  | Solution                                                                     |
-|--------|------------------------------------------------------------------------------|------------------------------------------------------------------------------|
-| **01** | [Fix problem with kube-api ](..%2Ftasks%2Fcka%2Flabs%2F01%2FREADME.MD)       | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F01%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
-| **02** | [Horizontal Pod Autoscaling .CPU ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| Task   | Description                                                                  | Solution                                                                      |
+|--------|------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| **01** | [Fix problem with kube-api ](..%2Ftasks%2Fcka%2Flabs%2F01%2FREADME.MD)       | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F01%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/OFHiI_XAXNU) |
+| **02** | [Horizontal Pod Autoscaling .CPU ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD)  |
 
 
 
