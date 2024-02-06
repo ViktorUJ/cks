@@ -23,40 +23,21 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                  |
 | Acceptance criteria | - Name: `secret1` <br/>- key1: `value1`<br/>- Namespace: `jellyfish`                                                                                                             |
 
-|        **2**        | Create a cron job **cron-job1**                                                                                                                                                                                                                     |
-|:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                                                                                                                                  |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                     |
-| Acceptance criteria | -name: `cron-job1` <br/>- namespace: `rnd`  <br/>- image: `viktoruj/cks-lab` <br/>-  imagePullPolicy: `IfNotPresent` <br/>-  command: `echo "Hello from CKAD mock"` <br/>- tolerate 4 failures <br/>-  complet 3 times <br/>-  run every 15 minutes |
+|        **2**        | Create a cron job `cron-job1`                                                                                                                                                                                                                        |
+|:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                                                                                                   |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                      |
+| Acceptance criteria | - name: `cron-job1` <br/>- namespace: `rnd`  <br/>- image: `viktoruj/cks-lab` <br/>-  imagePullPolicy: `IfNotPresent` <br/>-  command: `echo "Hello from CKAD mock"` <br/>- tolerate 4 failures <br/>-  complet 3 times <br/>-  run every 15 minutes |
+
+|        **3**        | There is deployment my-deployment in the namespace baracuda . Update deployment |
+| :-----------------: |:--------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                              |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                 |
+| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845`  |
 
 
 
 
-
-
-|        **2**        | **Create a cron job cron-job1 using code sniplet blow:**                                                |
-| :-----------------: | :----------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                             |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
-| Code sniplet:       | 
-          - name: crnjb
-            image: busybox:1.28
-            imagePullPolicy: IfNotPresent
-            command:
-            - /bin/sh
-            - -c
-            - echo Hello from CKAD mock   
-| :-----------------: | :----------------------------------------------------------------------------- |
-| Acceptance criteria   - Job should tolerate 4 failures <br/> 
-|                       - Job should complet 3 times <br/> 
-|                       - Job should run every 15 minutes <br/> 
-| :-----------------: | :----------------------------------------------------------------------------- |
-
-|        **3**        | **Deploy a pod named webhttpd**                                                |
-| :-----------------: | :----------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                             |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
-| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845` |
 
 |        **4**        | **Deploy a pod named webhttpd**                                                |
 | :-----------------: | :----------------------------------------------------------------------------- |
