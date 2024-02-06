@@ -29,11 +29,13 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                      |
 | Acceptance criteria | - name: `cron-job1` <br/>- namespace: `rnd`  <br/>- image: `viktoruj/cks-lab` <br/>-  imagePullPolicy: `IfNotPresent` <br/>-  command: `echo "Hello from CKAD mock"` <br/>- tolerate 4 failures <br/>-  complet 3 times <br/>-  run every 15 minutes |
 
-|        **3**        | There is deployment my-deployment in the namespace baracuda . Update deployment |
-| :-----------------: |:--------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                              |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                 |
-| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845`  |
+|        **3**        | There is deployment `my-deployment` in the namespace `baracuda` . Update deployment                                                  |
+| :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                   |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                      |
+| Acceptance criteria | - Scale deployment to 5 replicas  <br/>- Update image nginx:1.24.0-alpine-slim for container web-srv <br/>- Rollback deployment to the previous version |
+
+
 
 
 
