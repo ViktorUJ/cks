@@ -17,11 +17,22 @@ This includes all available language translations of these pages (e.g. <https://
 
 ## Questions
 
-|        **1**        | **Create a secret secret1 with value key1=value1 in the namespace jellyfish. Add that secret as an environment variable to an existing pod1 in the same namespace.**                                                |
-| :-----------------: | :----------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                             |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
-| Acceptance criteria | - Name: `secret1` <br/>- key1: `value1`<br/>- Namespace: `jellyfish` |
+|        **1**        | Create a secret **secret1** with value **key1=value1** in the namespace **jellyfish**. Add that secret as an environment variable to an existing **pod1** in the same namespace. |
+| :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                               |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                  |
+| Acceptance criteria | - Name: `secret1` <br/>- key1: `value1`<br/>- Namespace: `jellyfish`                                                                                                             |
+
+|        **2**        | Create a cron job **cron-job1**                                                                                                                                                                                                                     |
+|:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                                                                                                  |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                     |
+| Acceptance criteria | -name: `cron-job1` <br/>- namespace: `rnd`  <br/>- image: `viktoruj/cks-lab` <br/>-  imagePullPolicy: `IfNotPresent` <br/>-  command: `echo "Hello from CKAD mock"` <br/>- tolerate 4 failures <br/>-  complet 3 times <br/>-  run every 15 minutes |
+
+
+
+
+
 
 |        **2**        | **Create a cron job cron-job1 using code sniplet blow:**                                                |
 | :-----------------: | :----------------------------------------------------------------------------- |
