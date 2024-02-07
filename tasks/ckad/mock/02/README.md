@@ -53,11 +53,11 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                    |
 | Acceptance criteria | - user with ID `5000`  <br/>- restrict privilege execution |
 
-|        **7**        | **Deploy a pod named webhttpd**                                                |
-| :-----------------: | :----------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                             |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
-| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845` |
+|        **7**        | There are deployment, service and the ingress  in  `meg` namespace . user can't access to the app `http://ckad.local:30200/app` . Plese fix it . |
+| :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                               |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                  |
+| Acceptance criteria | - ` curl http://ckad.local:30200/app ` works.                                                                                                    |
 
 |        **8**        | **Deploy a pod named webhttpd**                                                |
 | :-----------------: | :----------------------------------------------------------------------------- |
