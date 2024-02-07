@@ -145,7 +145,7 @@ This includes all available language translations of these pages (e.g. https://k
 | :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 7%                                                                                                                                                               |
 |       Cluster       | cluster2 (`kubectl config use-context cluster2-admin@cluster2`)                                                                                                  |
-| Acceptance criteria | - The cluster is running Kubernetes 1.25.0, update it to 1.26.0 .<br/>- Use apt package manager and kubeadm for this.<br/>- Use ssh to connect to the instances. |
+| Acceptance criteria | - The cluster is running Kubernetes 1.29.0, update it to 1.29.1 .<br/>- Use apt package manager and kubeadm for this.<br/>- Use ssh to connect to the instances. |
 ---
 |       **23**        | **Network policy.**                                                                                                                                                                                                                                                                                                                                  |
 | :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
