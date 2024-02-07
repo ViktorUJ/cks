@@ -1,3 +1,4 @@
+#!/bin/bash
 docker buildx build --platform linux/arm64 --load -t viktoruj/tools:arm64  -f Dockerfile_ARM .
 docker buildx build --platform linux/amd64 --load -t viktoruj/tools:amd64  -f Dockerfile_x86 .
 docker push viktoruj/tools:arm64

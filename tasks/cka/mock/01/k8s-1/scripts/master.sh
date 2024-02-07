@@ -5,7 +5,8 @@ export KUBECONFIG=/root/.kube/config
 #kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 
 acrh=$(uname -m)
-export RELEASE=$(curl -s https://api.github.com/repos/etcd-io/etcd/releases/latest|grep tag_name | cut -d '"' -f 4)
+RELEASE=$(curl -s https://api.github.com/repos/etcd-io/etcd/releases/latest | grep tag_name | cut -d '"' -f 4)
+export RELEASE
 case $acrh in
 x86_64)
   etcdctl_url="https://github.com/etcd-io/etcd/releases/download/${RELEASE}/etcd-${RELEASE}-linux-amd64.tar.gz"

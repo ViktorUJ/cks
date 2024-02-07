@@ -1,29 +1,55 @@
 FROM amazon/aws-cli:2.13.24
+
+ENV SYSTEM_DEPENDENCIES="mongodb-org-tools mongodb-org-shell tar git mysql bind-utils bash-completion iputils"
+ENV AWS_LINUX_EXTRAS="postgresql13"
+ENV KUBECTL_VERSION="1.21.0"
+ENV SKAFFOLD_VERSION="latest"
+ENV HELM_VERSION="3.12.2"
+ENV HELM_PLUGIN_SECRETS_VERSION="4.5.1"
+ENV HELM_PLUGIN_RELEASE_VERSION="0.3.3"
+
 #install tools
-RUN  echo '[mongodb-org-4.4]'>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'name=MongoDB Repository'>>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'baseurl=https://repo.mongodb.org/yum/amazon/2/mongodb-org/4.4/x86_64/'>>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'gpgcheck=1'>>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'enabled=1'>>/etc/yum.repos.d/mongodb-org-4.0.repo && \
-     echo 'gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc'>>/etc/yum.repos.d/mongodb-org-4.0.repo  && \
-     amazon-linux-extras install postgresql13 -y  && \
-     yum install mongodb-org-tools mongodb-org-shell tar git  mysql  bind-utils bash-completion iputils  -y && \
-     curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && \
+ARG MONGODB_REPO_CONTENT='\
+[mongodb-org-4.4]\n\
+name=MongoDB Repository\n\
+baseurl=https://repo.mongodb.org/yum/amazon/2/mongodb-org/4.4/x86_64/\n\
+gpgcheck=1\n\
+enabled=1\n\
+gpgkey=https://www.mongodb.org/static/pgp/server-4.4.asc'
+
+ARG BASHRC_CONTENT="\
+source /usr/share/bash-completion/bash_completion\n\
+source <(kubectl completion bash)\n\
+complete -C /usr/local/bin/aws_completer aws\n\
+source <(helm completion bash)\n\
+source <(skaffold completion bash)"
+
+RUN  echo -e $MONGODB_REPO_CONTENT > /etc/yum.repos.d/mongodb-org-4.0.repo
+
+# install system dependencies
+RUN  amazon-linux-extras install ${AWS_LINUX_EXTRAS} -y  && \
+     yum install ${SYSTEM_DEPENDENCIES} -y
+# install skaffold
+RUN  curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64 && \
      install skaffold /usr/local/bin/ && \
-     rm -rf skaffold && \
-     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
-     chmod +x ./kubectl && \
-     mv kubectl /usr/local/bin/kubectl && \
-     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
-     helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2 && \
-     helm plugin install https://github.com/sstarcher/helm-release && \
-     curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | bash && \
-     echo 'source /usr/share/bash-completion/bash_completion'>>~/.bashrc && \
-     echo 'source <(kubectl completion bash)'>>~/.bashrc && \
-     echo 'complete -C "/usr/local/bin/aws_completer" aws'>>~/.bashrc && \
-     echo 'source <(helm completion bash)'>>~/.bashrc && \
-     echo 'source <(skaffold completion bash)'>>~/.bashrc && \
-     yum clean all && \
+     rm -rf skaffold
+# install kubectl
+RUN curl -sSL https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl -o \
+     /usr/local/bin/kubectl && \
+     chmod +x /usr/local/bin/kubectl
+# install helm
+RUN curl -sSL https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz | tar xz && \
+     mv linux-amd64/helm /usr/local/bin/helm && \
+     rm -rf linux-amd64
+# install helm plugins
+RUN  helm plugin install https://github.com/jkroepke/helm-secrets --version v${HELM_PLUGIN_SECRETS_VERSION} && \
+     helm plugin install https://github.com/sstarcher/helm-release --version ${HELM_PLUGIN_SECRETS_VERSION}
+# install terraform switcher
+RUN curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | bash
+
+RUN echo -e $BASHRC_CONTENT >> ~/.bashrc
+
+RUN yum clean all && \
      rm -rf /var/cache/yum
 
 ENTRYPOINT ["/bin/bash"]

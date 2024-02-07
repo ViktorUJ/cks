@@ -1,3 +1,4 @@
+#!/bin/bash
 docker buildx build --platform linux/arm64 --load -t viktoruj/runner:arm64 --no-cache  -f Dockerfile_ARM .
 docker buildx build --platform linux/amd64 --load -t viktoruj/runner:amd64 --no-cache  -f Dockerfile_x86 .
 docker push viktoruj/runner:arm64

@@ -1,0 +1,57 @@
+name: Docker build and test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-test-runner:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Build Docker image
+      env:
+        file_path: "docker/runner/Dockerfile_x86"
+      run: docker build -t my-docker-image -f ${{ env.file_path }} .
+
+    - name: Test aws command
+      run: docker run my-docker-image aws --version
+
+    - name: Test terraform command
+      run: docker run my-docker-image terraform --version
+
+    - name: Test terragrunt command
+      run: docker run my-docker-image terragrunt --version
+
+
+  build-test-tool:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Build Docker image
+      env:
+        file_path: "docker/tools/Dockerfile_x86"
+      run: docker build -t my-docker-image -f ${{ env.file_path }} .
+
+    - name: Test kubectl command
+      run: docker run my-docker-image kubectl --version
+
+    - name: Test terraform command
+      run: docker run my-docker-image terraform --version
+
+    - name: Test terragrunt command
+      run: docker run my-docker-image terragrunt --version
+
+    - name: Test helm command
+      run: docker run my-docker-image helm --version

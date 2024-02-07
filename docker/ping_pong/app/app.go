@@ -5,7 +5,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-    "path/filepath"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -21,8 +21,8 @@ var (
 	lastRequestTime   time.Time
 	requestsCount     uint64
 	serverName        string
-	logPath       string
-	enableOutput  string
+	logPath           string
+	enableOutput      string
 )
 
 func init() {
@@ -56,7 +56,7 @@ func init() {
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
 	response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))
-    response.WriteString(fmt.Sprintf("URL: http://%s%s\n", r.Host, r.URL.String()))
+	response.WriteString(fmt.Sprintf("URL: http://%s%s\n", r.Host, r.URL.String()))
 	response.WriteString(fmt.Sprintf("Client IP: %s\n", getIP(r)))
 	response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
 	response.WriteString(fmt.Sprintf("Protocol: %s\n", r.Proto))
@@ -136,7 +136,7 @@ func metricsHandler() {
 	}
 
 	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":" + metricPort, nil)
+	http.ListenAndServe(":"+metricPort, nil)
 }
 
 func sendLog(message string) {
@@ -172,7 +172,7 @@ func main() {
 		port = "8080"
 	}
 
-	err := http.ListenAndServe(":" + port, nil)
+	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		sendLog(fmt.Sprintf("Server failed: %v", err))
 	}

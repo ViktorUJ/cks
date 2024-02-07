@@ -1,10 +1,12 @@
 package main
+
 import (
-  "time"
-   )
+	"time"
+)
+
 func main() {
-    for {
-    println("I am working ")
-    time.Sleep(500 * time.Millisecond)
-}
+	for {
+		println("I am working ")
+		time.Sleep(500 * time.Millisecond)
+	}
 }
