@@ -41,16 +41,14 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                           |
 | Acceptance criteria | - Name: `shark-app` <br/>- namespace `shark`  <br/>- Image: `viktoruj/ping_pong`<br/>- container port `8080` <br/>- Environment variable `ENV1` = `8080`  |
 
+|        **5**        | Build container image using given `/path/to/Dockerfile`. Podman is instaled on Worker-PC              |
+| :-----------------: |:------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                    |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                       |
+| Acceptance criteria | - Image Name: `my-image` <br/>- Tag: `0.0.1`<br/>- export image in OCI format to `/var/work/my-image.tar` |
 
-
-|        **5**        | **Deploy a pod named webhttpd**                                                |
-| :-----------------: | :----------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                             |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
-| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845` |
-
-|        **6**        | **Deploy a pod named webhttpd**                                                |
-| :-----------------: | :----------------------------------------------------------------------------- |
+|        **6**        | Deploy a pod named webhttpd                                                    |
+| :-----------------: |:-------------------------------------------------------------------------------|
 |     Task weight     | 1%                                                                             |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
 | Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845` |
