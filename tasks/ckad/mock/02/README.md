@@ -55,18 +55,18 @@ This includes all available language translations of these pages (e.g. <https://
 
 |        **7**        | There are deployment, service and the ingress  in  `meg` namespace . user can't access to the app `http://ckad.local:30200/app` . Plese fix it . |
 | :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                               |
+|     Task weight     | 1%      - Ingress has wrong svc name, app path was wrong  , - Svc has wrong app port                                                             |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                  |
 | Acceptance criteria | - ` curl http://ckad.local:30200/app ` works.                                                                                                    |
 
-|        **8**        | **Deploy a pod named webhttpd**                                                |
-| :-----------------: | :----------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                             |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
-| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845` |
+|        **8**        | There is a pod web-app in namespace tuna. Web-app should be able to communicate to pod with label type=db and pod label type=backend.Network policies have already been created, don't modify them |
+| :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                                                 |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                    |
+| Acceptance criteria | - pods  can communicate                                                                                                                                                                            |
 
-|        **9**        | **Deploy a pod named webhttpd**                                                |
-| :-----------------: | :----------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                             |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
-| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845` |
+|        **9**        | Deployment main-app in a salmon namespace, has 3 replicas. It is published via main-app-svc service. Create canary deployment canary-app similar to main-app deployment. main-app deployment file is here: /path/to/deployment.yaml.Make sure that deployment is receiving 20% of the traffic. Keep in mind that salmon namespace only allows 8 pod running. |
+| :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                                                                                                                                                                                                           |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                                              |
+| Acceptance criteria |                                                                                                                                                                                                                                                                               |
