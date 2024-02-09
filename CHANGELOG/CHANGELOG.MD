@@ -2,14 +2,18 @@
 
 ## 0.8.1 (xx.02.2024)
 ### Features
-* update ping_pong service
-* split CMDB and  resources aws region 
-* add cka lab 02 (HPA by CPU)
-* add solution fo cka lab 02
+* update [ping_pong service](..%2Fdocker%2Fping_pong%2FREADME.MD) ( add cpu and memory load profile )
+* split CMDB and resources aws region 
+* add cka lab 02 [(HPA by CPU)](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD)  
+* add [solution](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD)  fo cka lab 02 [(HPA by CPU)](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) 
 * add summary lisf of [labs](..%2Fdocs%2Flabs.MD)
-* add cka lab 01 (Fix problem with kube-api)
-* add solution fo cka lab 01 (Fix problem with kube-api) 
-* add [video solution](https://youtu.be/OFHiI_XAXNU) for  cka lab 01 (Fix problem with kube-api)
+* add cka lab 01 [(Fix problem with kube-api)](..%2Ftasks%2Fcka%2Flabs%2F01%2FREADME.MD)
+* add [solution](..%2Ftasks%2Fcka%2Flabs%2F01%2Fworker%2Ffiles%2Fsolutions) for cka lab 01 [(Fix problem with kube-api)](..%2Ftasks%2Fcka%2Flabs%2F01%2FREADME.MD)
+* add [video solution](https://youtu.be/OFHiI_XAXNU) for  cka lab 01 [(Fix problem with kube-api)](..%2Ftasks%2Fcka%2Flabs%2F01%2FREADME.MD)
+* k8s version **1.29**  is used in [cka-mock 1](..%2Ftasks%2Fcka%2Fmock%2F01)
+* k8s version **1.29**  is used in [cka-mock 2](..%2Ftasks%2Fcka%2Fmock%2F02)
+* k8s version **1.29**  is used in [ckad-mock 1](..%2Ftasks%2Fckad%2Fmock%2F01)
+* k8s version **1.29**  is used in [cks-mock 1](..%2Ftasks%2Fcks%2Fmock%2F01)
 
 ## 0.7.1 (23.01.2024)
 ### Features
