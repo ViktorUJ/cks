@@ -1,3 +1,11 @@
+cgroup_check=$(stat -fc %T /sys/fs/cgroup/ | tr -d '\n' )
+if [[ "$cgroup_check" == "cgroup2fs" ]] ;  then
+    cgroup_version=2
+   else
+   cgroup_version=1
+fi
+echo "*** cgroup_version=$cgroup_version"
+
 VERSION="$(echo $k8_version_sh| cut -d'.' -f1).$(echo $k8_version_sh| cut -d'.' -f2)"
 case $VERSION in
 1.28)
@@ -148,7 +156,7 @@ EOF
 
 sysctl --system
 apt-get update
-apt-get install -y  apt-transport-https ca-certificates curl gnupg lsb-release
+apt-get install -y  apt-transport-https ca-certificates curl gnupg lsb-release net-tools
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg |  gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
 echo \
