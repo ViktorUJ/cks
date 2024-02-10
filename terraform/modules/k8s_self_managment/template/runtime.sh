@@ -280,3 +280,9 @@ curl $awscli_url  -o "awscliv2.zip" -s
 unzip awscliv2.zip >/dev/null
 ./aws/install >/dev/null
 aws --version
+
+#tmp  test cgroup
+sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+systemctl daemon-reload
+systemctl enable containerd.service
+systemctl restart containerd.service
