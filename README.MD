@@ -79,7 +79,7 @@ Every command should be run from the project's root directory.
   <summary style="font-weight: bold; font-size: 1.5em;">CKA</summary>
 
 ### cka task
-- ``TASK=01 make run_cka_task`` - create cka [hands-on labs](docs%2Flabs.MD#cka-labs) number 01    
+- ``TASK=01 make run_cka_task`` - create cka [hands-on labs](docs%2Flabs.MD#cka-labs) number 01
 - ``TASK=01 make delete_cka_task`` - delete cka hands-on labs
 - ``TASK=01 make run_cka_task_clean`` - run cka_task with clean terragrunt cache  for  cka_task
 - ``make output_cka_task `` - show **outputs** from   **cka_task**

@@ -1,5 +1,5 @@
 ## CKS labs
-- ``TASK=01 make run_cks_task`` - create cks lab number 01 
+- ``TASK=01 make run_cks_task`` - create cks lab number 01
 - ``TASK=01 make delete_cks_task`` - delete cks hands-on labs
 - ``TASK=01 make run_cks_task_clean`` - run cks_task with clean terragrunt cache  for  cks_task
 - ``make output_cks_task `` - show **outputs** from   **cks_task**
@@ -30,7 +30,7 @@
 
 ## CKA labs
 
-- ``TASK=01 make run_cka_task`` - create cka lab number 01 
+- ``TASK=01 make run_cka_task`` - create cka lab number 01
 - ``TASK=01 make delete_cka_task`` - delete cka hands-on labs
 - ``TASK=01 make run_cka_task_clean`` - run cka_task with clean terragrunt cache  for  cka_task
 - ``make output_cka_task `` - show **outputs** from   **cka_task**
@@ -47,7 +47,7 @@
 
 ## CKAD labs
 
-- ``TASK=01 make run_ckad_task`` - create ckad lab number 01 
+- ``TASK=01 make run_ckad_task`` - create ckad lab number 01
 - ``TASK=01 make delete_ckad_task`` - delete ckad hands-on labs
 - ``TASK=01 make run_ckad_task_clean`` - run cka_task with clean terragrunt cache  for  ckad_task
 - ``make output_ckad_task `` - show **outputs** from   **ckad_task**
@@ -62,7 +62,7 @@
 
 ## EKS labs
 
-- ``TASK=01 make run_eks_task`` - create ckad lab number 01 
+- ``TASK=01 make run_eks_task`` - create ckad lab number 01
 - ``TASK=01 make delete_eks_task`` - delete ckad hands-on labs
 - ``TASK=01 make run_eks_task_clean`` - run cka_task with clean terragrunt cache  for  ckad_task
 - ``make output_eks_task `` - show **outputs** from   **ckad_task**

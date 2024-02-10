@@ -289,4 +289,3 @@ if [[ "$cgroup_version" == "2" ]] ;  then
    systemctl enable containerd.service
    systemctl restart containerd.service
 fi
-
