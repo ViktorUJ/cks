@@ -2,11 +2,13 @@ resource "time_static" "time" {}
 
 
 data "aws_dynamodb_table" "cmdb" {
-  name = var.backend_dynamodb_table
+  name     = var.backend_dynamodb_table
+  provider = aws.cmdb
 
 }
 
 resource "aws_dynamodb_table_item" "cmdb" {
+  provider   = aws.cmdb
   hash_key   = "LockID"
   table_name = data.aws_dynamodb_table.cmdb.name
   item       = <<ITEM
@@ -25,6 +27,7 @@ ITEM
 }
 
 resource "aws_dynamodb_table_item" "cmdb_data" {
+  provider   = aws.cmdb
   hash_key   = "LockID"
   table_name = data.aws_dynamodb_table.cmdb.name
   item       = <<ITEM

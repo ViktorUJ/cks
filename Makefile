@@ -1,7 +1,7 @@
 .ONESHELL:
 
 prefix_dir="${USER_ID}_${ENV_ID}_"
-region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl | awk -F '"' '{print $$2}')
+region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl |grep -v 'local.'| awk -F '"' '{print $$2}')
 backend_bucket := $(shell grep '^  backend_bucket' terraform/environments/terragrunt.hcl | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
 dynamodb_table := $(backend_bucket)-lock
 base_dir := $(shell pwd)
@@ -194,6 +194,9 @@ output_eks_task:
 
 lint:
 	pre-commit run --all-files -c .hooks/.pre-commit-config.yaml
+
+lint_go:
+	cd docker/ping_pong/app ; go fmt ./... ; cd $(base_dir)
 
 install_git_hooks:
 	$(VENV_BIN_PATH)/pre-commit install

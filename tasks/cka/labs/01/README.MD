@@ -1,7 +1,4 @@
-Task weight: 3%
+## Fix problem with kube-api.
 
-You received a list from the DevSecOps team which performed a security investigation of the k8s cluster1 ( workload-prod ). The list states the
-following about the apiserver setup:
-Accessible through a NodePort Service
-Change the apiserver setup so that:
-Only accessible through a ClusterIP Service
+You have problems with k8s cluster.
+Connect to controlPlane  **ssh  k8s1_controlPlane_1** and fix them.
