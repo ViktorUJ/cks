@@ -281,8 +281,12 @@ unzip awscliv2.zip >/dev/null
 ./aws/install >/dev/null
 aws --version
 
-#tmp  test cgroup
-sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
-systemctl daemon-reload
-systemctl enable containerd.service
-systemctl restart containerd.service
+# SystemdCgroup enable
+if [[ "$cgroup_version" == "2" ]] ;  then
+   echo "*** set SystemdCgroup=true cgroup_version=$cgroup_version"
+   sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+   systemctl daemon-reload
+   systemctl enable containerd.service
+   systemctl restart containerd.service
+fi
+
