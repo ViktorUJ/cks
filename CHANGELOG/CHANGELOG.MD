@@ -3,7 +3,7 @@
 ## 0.8.1 (xx.02.2024)
 ### Features
 *  Two new features **cpu and memory load profile** are added to [ping_pong service](..%2Fdocker%2Fping_pong%2FREADME.MD)
-*  CMDB and resources aws region are split
+*  CMDB and resources aws regions are split
 * [(HPA by CPU)](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) is   added cka lab 02 
 *  [solution](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD)  fo cka lab 02 [(HPA by CPU)](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) is added
 * summary lisf of [labs](..%2Fdocs%2Flabs.MD) is  added
