@@ -1,4 +1,4 @@
-This is a small HTTP server that sends back the incoming request with all the metadata in response, including the sender's IP address, all request parameters, and headers. The server's configuration can be modified using environment variables:
+This is a small HTTP server that sends back the incoming request with all the metadata in response, including the sender's IP address, all request parameters, and headers. The server's configuration can be modified by using environment variables:
 
 - `SERVER_NAME`: The name of the server.
 - `SRV_PORT`: The port on which the server is running.
