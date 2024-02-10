@@ -23,7 +23,7 @@ locals {
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"
-  ubuntu_version       = "22.04"
+  ubuntu_version       = "20.04"
   ami_id               = ""
   key_name             = ""
   ssh_password_enable  = "true" # false |  true
