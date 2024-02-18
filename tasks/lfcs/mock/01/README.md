@@ -19,7 +19,7 @@
 
 |        **2**        | **Perform the following actions on the file `file2` in the home directory**                                                                                                                                                                                                                                  |
 | :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                                                                                                                                                                                           |
+|     Task weight     | 2%                                                                                                                                                                                                                                                                                                           |
 |        Task         | - Change owner of this file to uid `750` and gid `750` <br/> - Apply the following permissions to this file:<br/>&nbsp;&nbsp;- Group members should be able to write and read<br/>&nbsp;&nbsp;- Others only should be able to read.<br/> - Enable the SUID (set user id) special permission flag on `file2`. |
 | Acceptance criteria | - File owners changes?<br/> - Set file permissions and SUID?                                                                                                                                                                                                                                                 |
 
@@ -27,9 +27,9 @@
 
 |        **3**        | **Perform the following actions on the files `file31`,`file32`,`file33`**                                                                      |
 | :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                             |
+|     Task weight     | 1%                                                                                                                                             |
 |        Task         | - Create directory `/opt/newdir`<br/> - Move `file31` to this directory<br/> - Copy `file32` to `/opt/newdir` directory<br/> - Remove `file33` |
-| Acceptance criteria | - Created directory?<br/> - Moved `file31`? <br/> - Copied `file32`?<br/> - Removed `file5` file?                                              |
+| Acceptance criteria | - Created directory?<br/> - Moved `file31`? <br/> - Copied `file32`?<br/> - Removed `file33` file?                                             |
 
 ---
 
