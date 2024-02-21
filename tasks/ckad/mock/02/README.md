@@ -21,7 +21,7 @@ This includes all available language translations of these pages (e.g. <https://
 | :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 2%                                                                                                                                                                               |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                  |
-| Acceptance criteria | - Name: `secret1` <br/>- key1: `value1`<br/>- Namespace: `jellyfish`  <br/>- env name: `PASSWORD`                                                                                |
+| Acceptance criteria | - Name: `secret1` <br/>- key1: `value1`<br/>- Namespace: `jellyfish`  <br/>- pod env name: `PASSWORD`  from secret1 key1                                                         |
 
 |        **2**        | Create a cron job `cron-job1`                                                                                                                                                                                                                        |
 |:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
