@@ -125,14 +125,6 @@ This includes all available language translations of these pages (e.g. <https://
 ---
 
 ---
-|       **xxx**       | collect logs from 4 pods with label   app_name=xxx   to logfile                                                                                                                                                                                                                  |
-|:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 4%                                                                                                                                                                                                                                                                               |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                  |
-| Acceptance criteria | - Add repo `prometheus-community` `https://prometheus-community.github.io/helm-charts`<br/>- Install prometheus from the helm chart to kubernetes cluster<br/>    - Release name: `prom`, namespace: `monitoring`<br/>- helm chart: `prometheus-community/kube-prometheus-stack` |
----
-
----
 |       **xxx**       | config map from file . create deployment with mount af volume configmap                                                                                                                                                                                                          |
 |:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 4%                                                                                                                                                                                                                                                                               |
