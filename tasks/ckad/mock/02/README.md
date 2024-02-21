@@ -19,7 +19,7 @@ This includes all available language translations of these pages (e.g. <https://
 
 |        **1**        | Create a secret **secret1** with value **key1=value1** in the namespace **jellyfish**. Add that secret as an environment variable to an existing **pod1** in the same namespace. |
 | :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                                                               |
+|     Task weight     | 2%                                                                                                                                                                               |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                  |
 | Acceptance criteria | - Name: `secret1` <br/>- key1: `value1`<br/>- Namespace: `jellyfish`  <br/>- env name: `PASSWORD`                                                                                |
 
