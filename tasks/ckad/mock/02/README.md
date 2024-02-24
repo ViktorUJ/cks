@@ -29,11 +29,11 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                       |
 | Acceptance criteria | - name: `cron-job1` <br/>- namespace: `rnd`  <br/>- image: `viktoruj/ping_pong:alpine` <br/>-  Concurrency policy: `Forbid` <br/>-  command: `echo "Hello from CKAD mock"`  <br/>-  run every 15 minutes <br/>- tolerate 4 failures <br/>- completions 3 times <br/>-  imagePullPolicy `IfNotPresent` |
 
-|        **3**        | There is deployment `my-deployment` in the namespace `baracuda` . Update deployment                                                  |
-| :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                   |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                      |
-| Acceptance criteria | - Scale deployment to 5 replicas  <br/>- Update image nginx:1.24.0-alpine-slim for container web-srv <br/>- Rollback deployment to the previous version |
+|        **3**        | There is deployment `my-deployment` in the namespace `baracuda` . Rollback deployment  to 1-st version . Scale deployment to 3 replicas. |
+| :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                       |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                          |
+| Acceptance criteria | - Rollback deployment  to 1-st version <br/>- Scale deployment to 3 replicas                                                             |
 
 |        **4**        | Create deployment  `shark-app` in the `shark` namespace.                                                                                                  |
 | :-----------------: |:----------------------------------------------------------------------------------------------------------------------------------------------------------|
