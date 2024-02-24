@@ -2,7 +2,13 @@
 echo " *** master node  ckad mock-2  k8s-1"
 export KUBECONFIG=/root/.kube/config
 
+#task 1
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ckad/mock/02/k8s-1/scripts/task1.yaml --record
+
+# task  3
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ckad/mock/02/k8s-1/scripts/task3_1.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ckad/mock/02/k8s-1/scripts/task3_2.yaml --record
+
 
 # Installation of metrics server
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
