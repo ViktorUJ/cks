@@ -12,6 +12,8 @@ metadata:
     app: my-deployment
   name: my-deployment
   namespace: baracuda
+  annotations:
+    change-log: "default pingpong service"
 spec:
   replicas: 1
   selector:
