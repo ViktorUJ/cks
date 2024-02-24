@@ -91,3 +91,14 @@
   fi
   [ ! -e "/home/ubuntu/file33" ]
 }
+
+#4
+@test "4 Check if a folder does have sticky bit enabled" {
+  result=$(stat -c '%A' "/home/ubuntu/file2")
+  echo '1' >> /var/work/tests/result/all
+  if [ "$result" == "drwxrwxrwt" ]; then
+    echo $result
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  [ "$result" == "drwxrwxrwt" ]
+}
