@@ -4,3 +4,28 @@ kind: Namespace
 metadata:
   name: baracuda
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: my-deployment
+  name: my-deployment
+  namespace: baracuda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-deployment
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: my-deployment
+    spec:
+      containers:
+      - image: viktoruj/ping_pong
+        name: ping-pong-8j7v9
+        resources: {}
+status: {}
