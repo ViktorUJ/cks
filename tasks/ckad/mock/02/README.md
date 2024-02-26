@@ -31,15 +31,15 @@ This includes all available language translations of these pages (e.g. <https://
 
 |        **3**        | There is deployment `my-deployment` in the namespace `baracuda` . Rollback deployment  to 1-st version . Scale deployment to 3 replicas. |
 | :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                       |
+|     Task weight     | 2%                                                                                                                                       |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                          |
 | Acceptance criteria | - Rollback deployment  to 1-st version <br/>- Scale deployment to 3 replicas                                                             |
 
-|        **4**        | Create deployment  `shark-app` in the `shark` namespace.                                                                                                  |
-| :-----------------: |:----------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                                        |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                           |
-| Acceptance criteria | - Name: `shark-app` <br/>- namespace `shark`  <br/>- Image: `viktoruj/ping_pong`<br/>- container port `8080` <br/>- Environment variable `ENV1` = `8080`  |
+|        **4**        | Create deployment  `shark-app` in the `shark` namespace.                                                                                                 |
+| :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                                                                                       |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                          |
+| Acceptance criteria | - Name: `shark-app` <br/>- namespace `shark`  <br/>- Image: `viktoruj/ping_pong`<br/>- container port `8080` <br/>- Environment variable `ENV1` = `8080` |
 
 |        **5**        | Build container image using given `/path/to/Dockerfile`. Podman is instaled on Worker-PC              |
 | :-----------------: |:------------------------------------------------------------------------------------------------------|

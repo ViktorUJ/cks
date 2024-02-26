@@ -83,3 +83,48 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "IfNotPresent" ]
 }
+
+@test "3.1 Deployment my-deployment in the namespace baracuda. Rollback deployment " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment  my-deployment -n baracuda    --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..image}')
+  if [[ "$result" == "viktoruj/ping_pong" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "viktoruj/ping_pong" ]
+}
+
+@test "3.2 Deployment my-deployment in the namespace baracuda. Replicas " {
+  echo '1'>>/var/work/tests/result/all
+  result=$( kubectl  get deployment  my-deployment -n baracuda    --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+  if [[ "$result" == "3" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "3" ]
+}
+
+@test "4.1 Create deployment  shark-app in the shark namespace. Image " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment  shark-app -n shark   --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..image}')
+  if [[ "$result" == "viktoruj/ping_pong" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "viktoruj/ping_pong" ]
+}
+
+@test "4.2 Create deployment  shark-app in the shark namespace. Port " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment  shark-app -n shark   --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec..ports..containerPort}')
+  if [[ "$result" == "8080" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "8080" ]
+}
+
+@test "4.3 Create deployment  shark-app in the shark namespace. Environment variable ENV1 = 8080  " {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment  shark-app -n shark   --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec..env}')
+  if [[ "$result" == "[{\"name\":\"ENV1\",\"value\":\"8080\"}]" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "[{\"name\":\"ENV1\",\"value\":\"8080\"}]" ]
+}
