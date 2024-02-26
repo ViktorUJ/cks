@@ -10,3 +10,8 @@ chmod a+w /opt/logs/ /opt/18/
 
 address=$(kubectl get no -l work_type=infra_core --context cluster1-admin@cluster1 -o json  | jq -r '.items[] | select(.kind == "Node") | .status.addresses[] | select(.type == "InternalIP") | .address')
 echo "$address ckad.local">>/etc/hosts
+
+mkdir -p /var/work/5/
+cd /var/work/5/
+wget https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/14/Dockerfile
+chmod 777 Dockerfile
