@@ -128,3 +128,15 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "[{\"name\":\"ENV1\",\"value\":\"8080\"}]" ]
 }
+
+@test "5 Build container image using given manifest " {
+  echo '2'>>/var/work/tests/result/all
+  podman image rm localhost/ckad:0.0.1
+  podman load -i /var/work/5/5.tar
+  podman image ls  | grep ckad| grep '0.0.1'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
