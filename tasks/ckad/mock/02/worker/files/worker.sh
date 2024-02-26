@@ -13,5 +13,5 @@ echo "$address ckad.local">>/etc/hosts
 
 mkdir -p /var/work/5/
 cd /var/work/5/
-wget https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/01/worker/files/14/Dockerfile
+wget https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ckad/mock/02/worker/files/5/Dockerfile
 chmod 777 Dockerfile
