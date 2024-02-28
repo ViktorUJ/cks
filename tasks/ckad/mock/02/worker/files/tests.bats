@@ -140,3 +140,21 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "6.1 Update sword-app deployment in the swordfish namespace. user with ID 5000 " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment sword-app  -n swordfish    --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec..securityContext.runAsUser}')
+  if [[ "$result" == "5000" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "5000" ]
+}
+
+@test "6.2 Update sword-app deployment in the swordfish namespace. restrict privilege escalation " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment sword-app  -n swordfish    --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec..securityContext.allowPrivilegeEscalation}')
+  if [[ "$result" == "false" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "false" ]
+}

@@ -43,15 +43,15 @@ This includes all available language translations of these pages (e.g. <https://
 
 |        **5**        | Build container image using given manifest `/var/work/5/Dockerfile`. Podman is instaled on Worker-PC  |
 | :-----------------: |:------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                    |
+|     Task weight     | 2%                                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                       |
 | Acceptance criteria | - Image Name: `ckad` <br/>- Tag: `0.0.1`<br/>- export image in oci-archive  to `/var/work/5/ckad.tar` |
 
-|        **6**        | Update `sword-app` deployment in the `swordfish` namespace      |
-| :-----------------: |:----------------------------------------------------------------|
-|     Task weight     | 1%                                                              |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`) |
-| Acceptance criteria | - user with ID `5000`  <br/>- restrict privilege escalation     |
+|        **6**        | Update `sword-app` deployment in the `swordfish` namespace                                         |
+| :-----------------: |:---------------------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                                 |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                    |
+| Acceptance criteria | - user with ID `5000`on  container level   <br/>- restrict privilege escalation on container level |
 
 |        **7**        | There are deployment, service and the ingress  in  `meg` namespace . user can't access to the app `http://ckad.local:30200/app` . Plese fix it . |
 | :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------|
