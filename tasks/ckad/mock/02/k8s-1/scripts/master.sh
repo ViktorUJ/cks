@@ -10,6 +10,8 @@ kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ck
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ckad/mock/02/k8s-1/scripts/task3_2.yaml --record
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ckad/mock/02/k8s-1/scripts/task3_3.yaml --record
 
+# task 6
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ckad/mock/02/k8s-1/scripts/task6.yaml
 
 # Installation of metrics server
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
