@@ -47,11 +47,11 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                       |
 | Acceptance criteria | - Image Name: `ckad` <br/>- Tag: `0.0.1`<br/>- export image in oci-archive  to `/var/work/5/ckad.tar` |
 
-|        **6**        | Update `sword-app` deployment in the `swordfish` namespace                         |
-| :-----------------: |:-----------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                 |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                    |
-| Acceptance criteria | - user with ID `5000`  <br/>- restrict privilege execution |
+|        **6**        | Update `sword-app` deployment in the `swordfish` namespace      |
+| :-----------------: |:----------------------------------------------------------------|
+|     Task weight     | 1%                                                              |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`) |
+| Acceptance criteria | - user with ID `5000`  <br/>- restrict privilege escalation     |
 
 |        **7**        | There are deployment, service and the ingress  in  `meg` namespace . user can't access to the app `http://ckad.local:30200/app` . Plese fix it . |
 | :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------|
