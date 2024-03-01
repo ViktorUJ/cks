@@ -53,11 +53,11 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                    |
 | Acceptance criteria | - user with ID `5000`on  container level   <br/>- restrict privilege escalation on container level |
 
-|        **7**        | There are deployment, service and the ingress  in  `meg` namespace . user can't access to the app `http://ckad.local:30200/app` . Plese fix it . |
+|        **7**        | There are deployment, service and the ingress  in  `meg` namespace . user can't access to the app `http://ckad.local:30102/app` . Plese fix it . |
 | :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 1%      - Ingress has wrong svc name, app path was wrong  , - Svc has wrong app port                                                             |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                  |
-| Acceptance criteria | - ` curl http://ckad.local:30200/app ` works.                                                                                                    |
+| Acceptance criteria | - ` curl http://ckad.local:30102/app ` works.                                                                                                    |
 
 |        **8**        | There is a pod web-app in namespace tuna. Web-app should be able to communicate to pod with label type=db and pod label type=backend.Network policies have already been created, don't modify them |
 | :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

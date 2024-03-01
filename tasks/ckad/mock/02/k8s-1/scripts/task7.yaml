@@ -27,5 +27,49 @@ spec:
       containers:
       - image: viktoruj/ping_pong:alpine
         name: app
+        env:
+        - name: SERVER_NAME
+          value: megApp
         resources: {}
+      ports:
+      - containerPort: 8080
 status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: meg-app
+  name: meg-service
+  namespace: meg
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: megapp
+  type: ClusterIP
+status:
+  loadBalancer: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: meg
+  namespace: meg
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /app
+        pathType: Prefix
+        backend:
+          service:
+            name: meg-service
+            port:
+              number: 808
