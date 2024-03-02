@@ -160,11 +160,11 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "7 Fix app in meg NS . Can access to the app http://ckad.local:30102/app " {
-  echo '4'>>/var/work/tests/result/all
+  echo '6'>>/var/work/tests/result/all
   curl http://ckad.local:30102/app  | grep megApp
   result=$?
   if [[ "$result" == "0" ]]; then
-   echo '4'>>/var/work/tests/result/ok
+   echo '6'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
