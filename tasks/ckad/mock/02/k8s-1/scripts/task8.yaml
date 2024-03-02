@@ -23,29 +23,6 @@ spec:
 status: {}
 
 ---
-apiVersion: v1
-kind: Pod
-metadata:
-  creationTimestamp: null
-  labels:
-    run: client
-  name: client
-  namespace: tuna
-spec:
-  containers:
-  - image: viktoruj/ping_pong:alpine
-    name: client
-    env:
-    - name: SERVER_NAME
-      value: client
-    - name: SRV_PORT
-      value: "80"
-    resources: {}
-  dnsPolicy: ClusterFirst
-  restartPolicy: Always
-status: {}
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -126,23 +103,3 @@ spec:
       podSelector:
         matchLabels:
           type: backend
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-client-web-app
-  namespace: tuna
-spec:
-  podSelector:
-    matchLabels:
-      run: web-app
-  policyTypes:
-  - Ingress
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: tuna
-      podSelector:
-        matchLabels:
-          type: client
