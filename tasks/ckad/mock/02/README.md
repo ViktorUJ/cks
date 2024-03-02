@@ -55,7 +55,7 @@ This includes all available language translations of these pages (e.g. <https://
 
 |        **7**        | There are deployment, service and the ingress  in  `meg` namespace . user can't access to the app `http://ckad.local:30102/app` . Plese fix it . |
 | :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%      - Ingress has wrong svc name, app path was wrong  , - Svc has wrong app port                                                             |
+|     Task weight     | 4%      - Ingress has wrong svc name, app path was wrong  , - Svc has wrong app port                                                             |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                  |
 | Acceptance criteria | - ` curl http://ckad.local:30102/app ` works.                                                                                                    |
 
