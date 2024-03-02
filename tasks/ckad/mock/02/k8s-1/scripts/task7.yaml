@@ -31,8 +31,8 @@ spec:
         - name: SERVER_NAME
           value: megApp
         resources: {}
-      ports:
-      - containerPort: 8080
+        ports:
+        - containerPort: 8080
 status: {}
 
 ---
