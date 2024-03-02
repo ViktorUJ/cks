@@ -168,3 +168,13 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "8  Fix web-app in namespace tuna. It needs  to communicate with mysql-db " {
+  echo '4'>>/var/work/tests/result/all
+  kubectl exec web-app  -n tuna  -- curl mysql-db:3306 --connect-timeout 1
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '4'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
