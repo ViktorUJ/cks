@@ -30,9 +30,11 @@ spec:
         env:
         - name: SERVER_NAME
           value: megApp
+        - name: SRV_PORT
+          value: "80"
         resources: {}
         ports:
-        - containerPort: 8080
+        - containerPort: 80
 status: {}
 
 ---
@@ -41,14 +43,14 @@ kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    app: meg-app
+    app: meg-service
   name: meg-service
   namespace: meg
 spec:
   ports:
-  - port: 8080
+  - port: 80
     protocol: TCP
-    targetPort: 8080
+    targetPort: 80
   selector:
     app: megapp
   type: ClusterIP
