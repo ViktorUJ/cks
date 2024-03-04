@@ -69,7 +69,7 @@ This includes all available language translations of these pages (e.g. <https://
 | :-----------------: |:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 6%                                                                                                                                                                                                                                                                                    |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                       |
-| Acceptance criteria | - The new version deplyment name `main-app-v2` <br/>- The new version of the application receives 30% of requests <br/>- new version has  image `viktoruj/ping_pong:latest`  and  env `SERVER_NAME=appV2` <br/>- total replicas is `10`                                               |
+| Acceptance criteria | - The new version deplyment name is `main-app-v2` <br/>- The new version of the application receives 30% of requests <br/>- new version has  image `viktoruj/ping_pong:latest`  and  env `SERVER_NAME=appV2` <br/>- total replicas is `10`                                            |
 
 
 ---
