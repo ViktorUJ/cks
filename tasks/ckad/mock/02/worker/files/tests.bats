@@ -303,3 +303,25 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+# 13
+@test "13.1 Create a new pod nginx1233 in the web-ns namespace.command" {
+  echo '1'>>/var/work/tests/result/all
+  kubectl get pods -n web-ns nginx1233 -o jsonpath='{.spec..livenessProbe.exec.command}' --context cluster1-admin@cluster1 | grep -E "ls.*\/var\/www\/html\/"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "13.2 Create a new pod nginx1233 in the web-ns namespace.delay and period" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get pod -n web-ns nginx1233 -o json --context cluster1-admin@cluster1 | jq -r '"\(.spec.containers[0].livenessProbe.initialDelaySeconds) \(.spec.containers[0].livenessProbe.periodSeconds)"')
+  if [[ "$result" == "10 60" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "10 60" ]
+}
+
+# 2
