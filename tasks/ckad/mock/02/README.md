@@ -71,14 +71,15 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                      |
 | Acceptance criteria | - The new version deplyment name is `main-app-v2` <br/>- The new version of the application receives 30% of requests <br/>- new version has  image `viktoruj/ping_pong:latest`  and  env `SERVER_NAME=appV2` <br/>- total replicas of the app  is `10`                               |
 
-
----
-|       **15**        | **Create a Persistent Volume with the given specification. Run pod with pv.**                                                                                                                                                                                                                                                          |
+|       **10**        | Create a Persistent Volume with the given specification. Run pod with pv.                                                                                                                                                                                                                                                         |
 |:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 8%                                                                                                                                                                                                                                                                                                                                     |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                        |
 | Acceptance criteria | - Volume name: `pv-analytics`<br/>- pvc name: `pvc-analytics`<br/>- Storage: `100Mi`<br/>- Access mode: `ReadWriteOnce`<br/>- Host path: `/pv/analytics`<br/><br/>- pod name: `analytics`<br/>- image: `busybox`<br/>- node: `nodeSelector`<br/>-  node_name: `node_2`<br/>- command: `"sleep 60000"`<br/>- mountPath: `/pv/analytics` |
 ---
+
+
+
 |        **3**        | **Create secret from file .  create doployment  , mount the secret as a file **                                                                                                                              |
 | :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 4%                                                                                                                                                                                                           |

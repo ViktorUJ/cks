@@ -225,3 +225,35 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "main-app" ]
 }
+
+# 10
+@test "10.1 Create a Persistent Volume. capacity " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get pv pv-analytics -o jsonpath='{.spec.capacity.storage}'  --context cluster1-admin@cluster1  )
+  if [[ "$result" == "100Mi" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "100Mi" ]
+}
+
+@test "10.2 Create a Persistent Volume. hostPath " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get pv pv-analytics -o jsonpath='{.spec.hostPath.path}'  --context cluster1-admin@cluster1  )
+  if [[ "$result" == "/pv/analytics" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "/pv/analytics" ]
+}
+
+@test "10.3 Create a Persistent Volume. check storage " {
+  echo '6'>>/var/work/tests/result/all
+  kubectl exec analytics   --context cluster1-admin@cluster1  -- sh -c 'echo "analytics">/pv/analytics/test'
+  work_node=$(kubectl get no -l node_name=node_2 --context cluster1-admin@cluster1  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $work_node "sudo cat /pv/analytics/test | grep 'analytics' "
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '6'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+# 8
