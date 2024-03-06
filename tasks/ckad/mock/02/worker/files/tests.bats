@@ -293,3 +293,13 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "pwd:dbpassword" ]
 }
+
+@test "12. Check logs from pod app-xyz3322" {
+  echo '1'>>/var/work/tests/result/all
+  grep "app-xyz3322" /opt/logs/app-xyz123.log
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
