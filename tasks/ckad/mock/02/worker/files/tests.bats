@@ -178,3 +178,50 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "9.1 Deployment main-app in  salmon namespace new version . old  version replicas =7  " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment main-app   -n salmon   --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+  if [[ "$result" == "7" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "7" ]
+}
+
+@test "9.2 Deployment main-app in  salmon namespace new version . new  version replicas =3  " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment main-app-v2   -n salmon   --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+  if [[ "$result" == "3" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "3" ]
+}
+
+
+
+@test "9.3 Deployment main-app in  salmon namespace new version . new  version  image = viktoruj/ping_pong:latest  " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment main-app-v2   -n salmon   --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..image}')
+  if [[ "$result" == "viktoruj/ping_pong:latest" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "viktoruj/ping_pong:latest" ]
+}
+
+@test "9.4 Deployment main-app in  salmon namespace new version . new  version  env SERVER_NAME=appV2  " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get deployment main-app-v2   -n salmon   --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..env[?(@.name=="SERVER_NAME")].value}')
+  if [[ "$result" == "appV2" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "appV2" ]
+}
+
+@test "9.5 Deployment main-app in  salmon namespace new version . new  version  labels.app  " {
+  echo '1'>>/var/work/tests/result/all
+  result=$( kubectl  get deployment main-app-v2   -n salmon   --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.metadata.labels.app}')
+  if [[ "$result" == "main-app" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "main-app" ]
+}
