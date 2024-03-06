@@ -324,4 +324,92 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "10 60" ]
 }
 
-# 2
+
+@test "14 Check installed helm chart" {
+  echo '4'>>/var/work/tests/result/all
+  result=$(helm get metadata prom -n monitoring -o json  --kube-context cluster1-admin@cluster1  | jq -r '"\(.name) \(.chart) \(.status)"')
+  if [[ "$result" == "prom kube-prometheus-stack deployed" ]]; then
+   echo '4'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "prom kube-prometheus-stack deployed" ]
+}
+
+# 4
+
+@test "15.1 Create service account with the name pod-sa in  Namespace team-elephant" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get sa  pod-sa -n team-elephant   --context cluster1-admin@cluster1 -o jsonpath='{.metadata.name}' )
+  if [[ "$result" == "pod-sa" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "pod-sa" ]
+}
+
+@test "15.2 Create  Role pod-sa-role  resource:pods  " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl get role pod-sa-role -n team-elephant  -o jsonpath='{.rules[*].resources}' --context cluster1-admin@cluster1 | grep 'pods'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "15.3 Create  Role pod-sa-role .  verb : list and get" {
+  echo '1'>>/var/work/tests/result/all
+  kubectl get role pod-sa-role -n team-elephant -o jsonpath='{.rules[*].verbs}' --context cluster1-admin@cluster1 | grep 'list' | grep 'get'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "15.4 Create RoleBinding pod-sa-roleBinding . sa = pod-sa" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get  rolebinding  pod-sa-roleBinding -n team-elephant -o jsonpath='{.subjects[?(.kind=="ServiceAccount")].name}' --context cluster1-admin@cluster1   )
+  if [[ "$result" == "pod-sa" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "pod-sa" ]
+}
+
+@test "15.5 Create RoleBinding pod-sa-roleBinding . roleRef.kind = role " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get  rolebinding  pod-sa-roleBinding -n team-elephant -o jsonpath='{.roleRef.kind}' --context cluster1-admin@cluster1   )
+  if [[ "$result" == "Role" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "Role" ]
+}
+
+@test "15.6 Create RoleBinding pod-sa-roleBinding . roleRef.name = pod-sa-role " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get  rolebinding pod-sa-roleBinding -n team-elephant -o jsonpath='{.roleRef.name}' --context cluster1-admin@cluster1  )
+  if [[ "$result" == "pod-sa-role" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "pod-sa-role" ]
+}
+
+@test "15.7 get list pod from pod pod-sa in team-elephant " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl exec pod-sa  -n team-elephant  --context cluster1-admin@cluster1  -- sh -c 'curl  GET https://kubernetes.default/api/v1/namespaces/team-elephant/pods/  -s -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccount/token)" -k'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "15.8 get list pod from pod pod-sa in default (forbidden) " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl exec pod-sa  -n team-elephant  --context cluster1-admin@cluster1  -- sh -c 'curl  GET https://kubernetes.default/api/v1/namespaces/default/pods/  -s -H "Authorization: Bearer $(cat /run/secrets/kubernetes.io/serviceaccount/token)" -k' | grep 'pods is forbidden'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+# 8
