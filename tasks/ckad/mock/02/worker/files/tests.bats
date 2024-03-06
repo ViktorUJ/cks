@@ -256,4 +256,40 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
-# 8
+
+
+@test "11.1 Create secret and  create pod with  environment variable  from secret. Create a namespace dev-db " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get namespaces dev-db -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "dev-db" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "dev-db" ]
+}
+
+@test "11.2 Create secret and  create pod with  environment variable  from secret. Create a secret dbpassword " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get secrets -n dev-db dbpassword -o jsonpath='{.data.pwd}' --context cluster1-admin@cluster1 | base64 --decode )
+  if [[ "$result" == "my-secret-pwd" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "my-secret-pwd" ]
+}
+
+@test "11.3 Create secret and  create pod with  environment variable  from secret .Create a pod " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get pod -n dev-db db-pod -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1 )
+  if [[ "$result" == "db-pod" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "db-pod" ]
+}
+
+@test "11.4 Create secret and  create pod with  environment variable  from secret .Use environment variable from  secret" {
+  echo '1'>>/var/work/tests/result/all
+  result=$(echo $(kubectl get pod -n dev-db db-pod -o jsonpath='{.spec.containers[0].env[?(@.name=="MYSQL_ROOT_PASSWORD")].valueFrom.secretKeyRef.key}' --context cluster1-admin@cluster1):$(kubectl get pod -n dev-db db-pod -o jsonpath='{.spec.containers[0].env[?(@.name=="MYSQL_ROOT_PASSWORD")].valueFrom.secretKeyRef.name}' --context cluster1-admin@cluster1 ))
+  if [[ "$result" == "pwd:dbpassword" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "pwd:dbpassword" ]
+}

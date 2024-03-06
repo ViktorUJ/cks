@@ -76,16 +76,15 @@ This includes all available language translations of these pages (e.g. <https://
 |     Task weight     | 8%                                                                                                                                                                                                                                                                                                                                     |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                        |
 | Acceptance criteria | - Volume name: `pv-analytics`<br/>- pvc name: `pvc-analytics`<br/>- Storage: `100Mi`<br/>- Access mode: `ReadWriteOnce`<br/>- Host path: `/pv/analytics`<br/><br/>- pod name: `analytics`<br/>- image: `busybox`<br/>- node: `nodeSelector`<br/>-  node_name: `node_2`<br/>- command: `"sleep 60000"`<br/>- mountPath: `/pv/analytics` |
----
 
-
-
-|        **3**        | **Create secret from file .  create doployment  , mount the secret as a file **                                                                                                                              |
-| :-----------------: |:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|       **11**        | **Create secret from file .  create doployment  , mount the secret as a file **                                                                                                                              |
+|:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 4%                                                                                                                                                                                                           |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                              |
 | Acceptance criteria | - secret: ns=`dev-db` name=`dbpassword` key=`pwd` value=`my-secret-pwd`  <br/>- pod: ns=`dev-db` name=`db-pod` image=`mysql:8.0` env.name=`MYSQL_ROOT_PASSWORD` env.value=from secret `dbpassword` key=`pwd` |
 ---
+
+
 |        **8**        | **Export the logs of the pod `app-xyz3322` to a file located at `/opt/logs/app-xyz123.log`. The pod is located in a different namespace. First, identify the namespace where the pod is running.** |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | 1%                                                                                                                                                                                                 |
