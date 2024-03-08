@@ -13,6 +13,7 @@ metadata:
   labels:
     app_name: xxx
   name: app1
+  namespace: app-x
 spec:
   containers:
   - env:
@@ -32,6 +33,7 @@ metadata:
   labels:
     app_name: xxx
   name: app2
+  namespace: app-x
 spec:
   containers:
   - env:
@@ -51,6 +53,7 @@ metadata:
   labels:
     app_name: xxx
   name: app3
+  namespace: app-x
 spec:
   containers:
   - env:
@@ -70,6 +73,7 @@ metadata:
   labels:
     app_name: xxx
   name: app4
+  namespace: app-x
 spec:
   containers:
   - env:
