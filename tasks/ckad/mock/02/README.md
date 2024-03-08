@@ -120,7 +120,7 @@ This includes all available language translations of these pages (e.g. <https://
 | Acceptance criteria | - `/opt/17/17.log` contains logs from 4 pods with label `app_name=xxx` in namespace `app-x`            |
 ---
 
-|       **18**        | Convert existing pod in namespace to deployment  . set allowPrivilegeEscalation: false and privileged: false                                                                                                                                                                     |
+|       **18**        | Convert existing pod in namespace `app-y`  to deployment `deployment-app-y` . set `allowPrivilegeEscalation: false ` and `privileged: false`                                                                                                                                        |
 |:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 4%                                                                                                                                                                                                                                                                               |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                  |
