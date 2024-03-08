@@ -15,3 +15,8 @@ mkdir -p /var/work/5/
 cd /var/work/5/
 wget https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ckad/mock/02/worker/files/5/Dockerfile
 chmod 777 Dockerfile
+
+mkdir -p /var/work/19/
+cd /var/work/19/
+wget https://raw.githubusercontent.com/ViktorUJ/cks/AG-26/tasks/ckad/mock/02/k8s-1/scripts/ingress_nginx_conf.yaml
+chmod 777 ingress_nginx_conf.yaml
