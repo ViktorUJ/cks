@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: app-x
+spec: {}
+status: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    app_name: xxx
+  name: app1
+spec:
+  containers:
+  - env:
+    - name: SERVER_NAME
+      value: app1
+    image: viktoruj/ping_pong:alpine
+    name: app1
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    app_name: xxx
+  name: app2
+spec:
+  containers:
+  - env:
+    - name: SERVER_NAME
+      value: app2
+    image: viktoruj/ping_pong:alpine
+    name: app1
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    app_name: xxx
+  name: app3
+spec:
+  containers:
+  - env:
+    - name: SERVER_NAME
+      value: app3
+    image: viktoruj/ping_pong:alpine
+    name: app1
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    app_name: xxx
+  name: app4
+spec:
+  containers:
+  - env:
+    - name: SERVER_NAME
+      value: app4
+    image: viktoruj/ping_pong:alpine
+    name: app1
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
