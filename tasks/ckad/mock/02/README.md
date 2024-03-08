@@ -135,4 +135,10 @@ This includes all available language translations of these pages (e.g. <https://
 ---
 
 
-init container 
+--- 
+
+20 
+init container  
+
+deployment / init container get config from web url  and store int to tmp dir .
+man container mount  tmp_dir 
