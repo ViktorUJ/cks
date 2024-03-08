@@ -20,7 +20,7 @@ spec:
     - name: SERVER_NAME
       value: app1
     image: viktoruj/ping_pong:alpine
-    name: app1
+    name: app
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
@@ -40,7 +40,7 @@ spec:
     - name: SERVER_NAME
       value: app2
     image: viktoruj/ping_pong:alpine
-    name: app1
+    name: app
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
@@ -60,7 +60,7 @@ spec:
     - name: SERVER_NAME
       value: app3
     image: viktoruj/ping_pong:alpine
-    name: app1
+    name: app
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
@@ -80,7 +80,7 @@ spec:
     - name: SERVER_NAME
       value: app4
     image: viktoruj/ping_pong:alpine
-    name: app1
+    name: app
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always

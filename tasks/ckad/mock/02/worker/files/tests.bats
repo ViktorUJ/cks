@@ -436,3 +436,12 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == '0' ]
 }
+
+@test "17 collect logs from 4 pods with label   app_name=xxx  in namespace app-x  " {
+  echo '4'>>/var/work/tests/result/all
+  result=$(cat /opt/17/17.log | grep enableLoadCpu | wc -l  )
+  if [[ "$result" == "4" ]]; then
+   echo '4'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "4" ]
+}
