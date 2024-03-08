@@ -131,14 +131,11 @@ This includes all available language translations of these pages (e.g. <https://
 |:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 4%                                                                                                                                                                                                                                                                               |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                  |
-| Acceptance criteria | - Add repo `prometheus-community` `https://prometheus-community.github.io/helm-charts`<br/>- Install prometheus from the helm chart to kubernetes cluster<br/>    - Release name: `prom`, namespace: `monitoring`<br/>- helm chart: `prometheus-community/kube-prometheus-stack` |
+| Acceptance criteria | - |
 ---
-
-
---- 
-
-20 
-init container  
-
-deployment / init container get config from web url  and store int to tmp dir .
-man container mount  tmp_dir 
+|    **20**   ???     | create deployment `app`  in namespace `app-20` with init container.                                                                                                                                                                                                                                |
+|:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 6%                                                                                                                                                                                                                                                                                                 |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                    |
+| Acceptance criteria | - ns `app-20` <br/>- deployment name `app` <br/> - init container image `viktoruj/ping_pong:alpine` <br/> - replicas `1` <br/> - volume type `tmpDir` <br/> - mount to `init  and main containers `  to  `/configs/` <br/> - init container command ` echo 'hello from init '>/configs/app.config` |
+---
