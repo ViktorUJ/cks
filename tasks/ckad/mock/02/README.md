@@ -120,11 +120,11 @@ This includes all available language translations of these pages (e.g. <https://
 | Acceptance criteria | - `/opt/17/17.log` contains logs from 4 pods with label `app_name=xxx` in namespace `app-x`            |
 ---
 
-|      **18**         | Convert existing pod in namespace `app-y`  to deployment `deployment-app-y` . set `allowPrivilegeEscalation: false ` and `privileged: false`                |
-|:-------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 3%                                                                                                                                                          |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                             |
-| Acceptance criteria | - Ns `app-y`   <br/>- deployment name  `deployment-app-y` <br/> - image `viktoruj/ping_pong:alpine` <br/> - replicas `1` <br/> -  env `SERVER_NAME = app-y` |
+|      **18**         | Convert existing pod in namespace `app-y`  to deployment `deployment-app-y` . set `allowPrivilegeEscalation: false ` and `privileged: false`                                                                      |
+|:-------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 5%                                                                                                                                                                                                                |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                   |
+| Acceptance criteria | - Ns `app-y`   <br/>- deployment name  `deployment-app-y` <br/> - image `viktoruj/ping_pong:alpine` <br/> - replicas `1` <br/> -  env `SERVER_NAME = app-y`  <br/> - `allowPrivilegeEscalation: false `  <br/> - `privileged: false`  |
 ---
 
 |    **19**   ???     | create configmap `config` from file `/var/work/19/ingress_nginx_conf.yaml` in namespace `app-z` . create deployment `app-z` with mount af volume configmap with mount path `/app`                                                                                                |

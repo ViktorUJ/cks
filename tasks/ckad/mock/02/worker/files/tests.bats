@@ -472,3 +472,21 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "app-y" ]
 }
+
+@test "18.4 Convert existing pod in namespace app-y  to deployment deployment-app-y  . allowPrivilegeEscalation =  false " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(  kubectl get  deployment  deployment-app-y -n app-y  --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..securityContext.allowPrivilegeEscalation}')
+  if [[ "$result" == "false" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "false" ]
+}
+
+@test "18.5 Convert existing pod in namespace app-y  to deployment deployment-app-y  . privileged =  false" {
+  echo '1'>>/var/work/tests/result/all
+  result=$( kubectl get  deployment  deployment-app-y -n app-y  --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..securityContext.privileged}')
+  if [[ "$result" == "false" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "false" ]
+}
