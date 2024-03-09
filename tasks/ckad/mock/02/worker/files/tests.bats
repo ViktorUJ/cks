@@ -445,3 +445,30 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "4" ]
 }
+
+@test "18.1 Convert existing pod in namespace app-y  to deployment deployment-app-y  . replicas = 1  " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get  deployment  deployment-app-y -n app-y  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}' )
+  if [[ "$result" == "1" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "1" ]
+}
+
+@test "18.2 Convert existing pod in namespace app-y  to deployment deployment-app-y  . image = viktoruj/ping_pong:alpine " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get  deployment  deployment-app-y -n app-y  --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..image}')
+  if [[ "$result" == "viktoruj/ping_pong:alpine" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "viktoruj/ping_pong:alpine" ]
+}
+
+@test "18.3 Convert existing pod in namespace app-y  to deployment deployment-app-y  . env SERVER_NAME = app-y  " {
+  echo '1'>>/var/work/tests/result/all
+  result=$( kubectl get  deployment  deployment-app-y -n app-y  --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..env[?(@.name=="SERVER_NAME")].value}')
+  if [[ "$result" == "app-y" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "app-y" ]
+}

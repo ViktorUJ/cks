@@ -120,11 +120,11 @@ This includes all available language translations of these pages (e.g. <https://
 | Acceptance criteria | - `/opt/17/17.log` contains logs from 4 pods with label `app_name=xxx` in namespace `app-x`            |
 ---
 
-|    **18**   ???     | Convert existing pod in namespace `app-y`  to deployment `deployment-app-y` . set `allowPrivilegeEscalation: false ` and `privileged: false`                                                                                                                                        |
-|:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 4%                                                                                                                                                                                                                                                                               |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                  |
-| Acceptance criteria | - Add repo `prometheus-community` `https://prometheus-community.github.io/helm-charts`<br/>- Install prometheus from the helm chart to kubernetes cluster<br/>    - Release name: `prom`, namespace: `monitoring`<br/>- helm chart: `prometheus-community/kube-prometheus-stack` |
+|      **18**         | Convert existing pod in namespace `app-y`  to deployment `deployment-app-y` . set `allowPrivilegeEscalation: false ` and `privileged: false`                |
+|:-------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 3%                                                                                                                                                          |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                             |
+| Acceptance criteria | - Ns `app-y`   <br/>- deployment name  `deployment-app-y` <br/> - image `viktoruj/ping_pong:alpine` <br/> - replicas `1` <br/> -  env `SERVER_NAME = app-y` |
 ---
 
 |    **19**   ???     | create configmap `config` from file `/var/work/19/ingress_nginx_conf.yaml` in namespace `app-z` . create deployment `app-z` with mount af volume configmap with mount path `/app`                                                                                                |
