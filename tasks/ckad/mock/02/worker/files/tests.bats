@@ -502,3 +502,14 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "20 create deployment app  in namespace app-20 with init container " {
+  echo '4'>>/var/work/tests/result/all
+  pod=$(kubectl get po -n app-20 -o jsonpath='{.items[*].metadata.name}' --context cluster1-admin@cluster1 )
+  kubectl exec $pod -n app-20  --context cluster1-admin@cluster1  -- cat /configs/app.config | grep 'hello from init'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '4'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
