@@ -490,3 +490,15 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "false" ]
 }
+
+@test "19 create configmap from file  and mount it to deployment " {
+  echo '4'>>/var/work/tests/result/all
+  pod=$(kubectl get po -n app-z -o jsonpath='{.items[*].metadata.name}' --context cluster1-admin@cluster1 )
+  kubectl exec $pod -n app-z --context cluster1-admin@cluster1  -- cat  /appConfig/ingress_nginx_conf.yaml  >/tmp/19.log
+  diff /tmp/19.log /var/work/19/ingress_nginx_conf.yaml
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '4'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
