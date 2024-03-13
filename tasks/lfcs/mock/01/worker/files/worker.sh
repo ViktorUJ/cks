@@ -1,6 +1,9 @@
 #!/bin/bash
 echo " *** worker pc mock-1  "
 GIT_BRANCH="lfcs_development"
+
+apt install -y zip 
+
 chmod o+w /opt
 
 echo "This is a file for task1!"  > /home/ubuntu/file1
