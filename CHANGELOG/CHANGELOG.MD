@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1 (20.03.2024)
+### Features
+* [Ckad mock exam 2 ](..%2Ftasks%2Fckad%2Fmock%2F02%2FREADME.md) is added . List of questions updated as of March 2024
+* [Ckad mock exam 2 solutions](..%2Ftasks%2Fckad%2Fmock%2F02%2Fworker%2Ffiles%2Fsolutions) are added 
+* [Video](https://youtu.be/_0nX68vil-A) for CKAD mock 2  solutions is added.
+
 ## 0.8.1 (10.02.2024)
 ### Features
 *  Two new features **cpu and memory load profile** are added to [ping_pong service](..%2Fdocker%2Fping_pong%2FREADME.MD)

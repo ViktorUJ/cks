@@ -77,17 +77,17 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                        |
 | Acceptance criteria | - Volume name: `pv-analytics`<br/>- pvc name: `pvc-analytics`<br/>- Storage: `100Mi`<br/>- Access mode: `ReadWriteOnce`<br/>- Host path: `/pv/analytics`<br/><br/>- pod name: `analytics`<br/>- image: `busybox`<br/>- node: `nodeSelector`<br/>-  node_name: `node_2`<br/>- command: `"sleep 60000"`<br/>- mountPath: `/pv/analytics` |
 ---
-|       **11**        | **Create secret from file .  create doployment  , mount the secret as a file **                                                                                                                              |
+|       **11**        | Create secret from literal .  create deployment  , mount the secret as env                                                                                                                                   |
 |:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 4%                                                                                                                                                                                                           |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                              |
 | Acceptance criteria | - secret: ns=`dev-db` name=`dbpassword` key=`pwd` value=`my-secret-pwd`  <br/>- pod: ns=`dev-db` name=`db-pod` image=`mysql:8.0` env.name=`MYSQL_ROOT_PASSWORD` env.value=from secret `dbpassword` key=`pwd` |
 ---
-|       **12**        | **Export the logs of the pod `app-xyz3322` to a file located at `/opt/logs/app-xyz123.log`. The pod is located in a different namespace. First, identify the namespace where the pod is running.** |
-|:-------------------:| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | 1%                                                                                                                                                                                                 |
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                    |
-| Acceptance criteria | - Logs at `/opt/logs/app-xyz123.log`                                                                                                                                                               |
+|       **12**        | Export the logs of the pod `app-xyz3322` to a file located at `/opt/logs/app-xyz123.log`. The pod is located in any namespace. First, identify the namespace where the pod is running. |
+|:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                                     |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                        |
+| Acceptance criteria | - Logs at `/opt/logs/app-xyz123.log`                                                                                                                                                   |
 ---
 |       **13**        | **Create a new pod called `nginx1233` in the `web-ns` namespace with the image `nginx`. Add a livenessProbe to the container to restart it if the command `ls /var/www/html/` probe fails. This check should start after a delay of 10 seconds and run every 60 seconds.** |
 |:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -127,7 +127,7 @@ This includes all available language translations of these pages (e.g. <https://
 | Acceptance criteria | - Ns `app-y`   <br/>- deployment name  `deployment-app-y` <br/> - image `viktoruj/ping_pong:alpine` <br/> - replicas `1` <br/> -  env `SERVER_NAME = app-y`  <br/> - `allowPrivilegeEscalation: false `  <br/> - `privileged: false`  |
 ---
 
-|      **19**         | create configmap `config` from file `/var/work/19/ingress_nginx_conf.yaml` in namespace `app-z` . create deployment `app-z` with mount af volume configmap with mount path `/app`                                             |
+|      **19**         | create configmap `config` from file `/var/work/19/ingress_nginx_conf.yaml` in namespace `app-z` . create deployment `app-z` with mount as volume configmap with mount path `/app`                                             |
 |:-------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 4%                                                                                                                                                                                                                            |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                               |
