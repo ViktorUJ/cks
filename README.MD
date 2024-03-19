@@ -14,10 +14,6 @@ Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS
 
 [![video instruction](docs%2Fimages%2Frun_via_docker.gif)](https://youtu.be/Xh6sWzafBmw "yyyy")
 
-![run_via_docker.gif](docs%2Fimages%2Frun_via_docker.gif)
-
-( [video instruction](https://youtu.be/Xh6sWzafBmw) )
-
 ## Repository Structure
 
 The repository is organized into the following sections:
