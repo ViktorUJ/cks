@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-@test "0  Init  " {
+@test "0  Init" {
   echo ''>/var/work/tests/result/all
   echo ''>/var/work/tests/result/ok
   [ "$?" -eq 0 ]
@@ -101,4 +101,44 @@
     echo '1' >> /var/work/tests/result/ok
   fi
   [ "$result" == "drwxrwxrwt" ]
+}
+
+
+# 11
+@test "11.1 Check creatiom of a user with name.cooluser" {
+  id cooluser
+  status=$?
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "0" ]
+}
+
+@test "11.2 Check if a user has correct shell configured" {
+  check_sh=$(cat /etc/passwd | grep cooluser | awk -F ':' '{print $7}')
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "/bin/zsh" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "/bin/zsh" ]
+}
+
+@test "11.3 Check if user cooluser has correct password" {
+  check_sh=$(cat /etc/passwd | grep cooluser | awk -F ':' '{print $7}')
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "/bin/zsh" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "/bin/zsh" ]
+}
+
+@test "11.4 Check if user cooluser has sudo permissions" {
+  sudo -lU cooluser &>/dev/null
+  check_sudo=$?
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "0" ]
 }

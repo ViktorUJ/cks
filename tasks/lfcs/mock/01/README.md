@@ -97,19 +97,19 @@
 
 ---
 
-|       **12**        | **Locking and unlocking users**                                                                                                                                                                                                                                                                                                |
-| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                             |
-|        Task         | There are two users in the system `spiderman` and `batman`. In this task is needed to perform some actions to lock/unlock password for these users:<br/> - `spiderman` cannot login to the system with his password, as password was locked, we need to unlock this user  <br/> - `batman` is unlocked, so we need to lock him |
-| Acceptance criteria | - user `spiderman` is unlocked?<br/> - user `batman` is locked?                                                                                                                                                                                                                                                                |
+|       **12**        | **Locking and unlocking users**                                                                                                                                                                                                                                                                                               |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 1%                                                                                                                                                                                                                                                                                                                            |
+|        Task         | There are two users in the system `spiderman` and `batman`. In this task is needed to perform some actions to lock/unlock password for these users:<br/> - `spiderman` cannot login to the system with his password, as password was locked, we need to unlock this user <br/> - `batman` is unlocked, so we need to lock him |
+| Acceptance criteria | - user `spiderman` is unlocked?<br/> - user `batman` is locked?                                                                                                                                                                                                                                                               |
 
 ---
 
-|       **13**        | **Set a limit for the user users**                                                                                                                |
-| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------ |
-|     Task weight     | ?%                                                                                                                                                |
-|        Task         | There is a user `phoenix` in the system. Set a limit for this user so that she can open no more than `20` processes. This should be a hard limit. |
-| Acceptance criteria | - hard limit is set for user `phoenix` processes  ?                                                                                               |
+|       **13**        | **Set a limit for the users**                                                                                                                    |
+| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                               |
+|        Task         | There is a user `phoenix` in the system. Set a limit for this user so that it can open no more than `20` processes. This should be a hard limit. |
+| Acceptance criteria | - hard limit is set for user `phoenix` processes?                                                                                                |
 
 ---
 
@@ -121,19 +121,19 @@
 
 ---
 
-|       **15**        | **Revoke sudo privilligies**                                                                |
-| :-----------------: | :------------------------------------------------------------------------------------------ |
-|     Task weight     | ?%                                                                                          |
-|        Task         | There is a user `jakson` in the system. This user should not have sudo permissions anymore. |
-| Acceptance criteria | - Make sure that a user `jakson` is not able to perform commands with sudo                  |
+|       **15**        | **Revoke sudo privilligies**                                                                 |
+| :-----------------: | :------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                           |
+|        Task         | There is a user `jackson` in the system. This user should not have sudo permissions anymore. |
+| Acceptance criteria | - Make sure that a user `jackson` is not able to perform commands with sudo                  |
 
 ---
 
-|       **16**        | **Redirect filtering output**                                                                                                    |
-| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                               |
-|        Task         | Display all the lines in the `/etc/services` file that start out with the text `net`. Redirect the output to `/opt/15result.txt` |
-| Acceptance criteria | - Filtered output redirected to the file                                                                                         |
+|       **16**        | **Redirect filtering output**                                                                                                     |
+| :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                |
+|        Task         | Display all the lines in the `/etc/services` file that start out with the text `net`. Redirect the output to `/opt/15/result.txt` |
+| Acceptance criteria | - Filtered output redirected to the file                                                                                          |
 
 ---
 
