@@ -127,7 +127,7 @@ This includes all available language translations of these pages (e.g. <https://
 | Acceptance criteria | - Ns `app-y`   <br/>- deployment name  `deployment-app-y` <br/> - image `viktoruj/ping_pong:alpine` <br/> - replicas `1` <br/> -  env `SERVER_NAME = app-y`  <br/> - `allowPrivilegeEscalation: false `  <br/> - `privileged: false`  |
 ---
 
-|      **19**         | create configmap `config` from file `/var/work/19/ingress_nginx_conf.yaml` in namespace `app-z` . create deployment `app-z` with mount af volume configmap with mount path `/app`                                             |
+|      **19**         | create configmap `config` from file `/var/work/19/ingress_nginx_conf.yaml` in namespace `app-z` . create deployment `app-z` with mount as volume configmap with mount path `/app`                                             |
 |:-------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 4%                                                                                                                                                                                                                            |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                               |
