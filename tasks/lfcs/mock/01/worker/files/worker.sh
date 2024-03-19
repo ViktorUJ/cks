@@ -2,7 +2,13 @@
 echo " *** worker pc mock-1  "
 GIT_BRANCH="lfcs_development"
 
-apt install -y zip 
+apt install -y zip zsh openssl
+
+useradd batman
+useradd spiderman
+useradd phoenix
+useradd jackson
+usermod -aG sudo jackson
 
 chmod o+w /opt
 
