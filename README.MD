@@ -9,6 +9,11 @@ The **SRE Learning Platform** is an open-source hub designed to help IT engineer
 Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **SRE Learning Platform**.
 
 
+## Quick start
+[run via docker](docs%2Frun_from_docker.MD)  
+
+( [video instruction](https://youtu.be/Xh6sWzafBmw) )
+
 ## Repository Structure
 
 The repository is organized into the following sections:
