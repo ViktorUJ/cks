@@ -12,7 +12,7 @@ Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS
 ## Quick start
 [run via docker](docs%2Frun_from_docker.MD)  
 
-[![video instruction](docs%2Fimages%2Frun_via_docker.gif)](https://youtu.be/Xh6sWzafBmw "yyyy")
+[![video instruction](docs%2Fimages%2Frun_via_docker.gif)](https://youtu.be/Xh6sWzafBmw "run via docker")
 
 ## Repository Structure
 
