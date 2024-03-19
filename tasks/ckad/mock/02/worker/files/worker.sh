@@ -13,10 +13,10 @@ echo "$address ckad.local">>/etc/hosts
 
 mkdir -p /var/work/5/
 cd /var/work/5/
-wget https://raw.githubusercontent.com/ViktorUJ/cks/0.9.1/tasks/ckad/mock/02/worker/files/5/Dockerfile
+wget https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ckad/mock/02/worker/files/5/Dockerfile
 chmod 777 -R /var/work/5/
 
 mkdir -p /var/work/19/
 cd /var/work/19/
-wget https://raw.githubusercontent.com/ViktorUJ/cks/0.9.1/tasks/ckad/mock/02/k8s-1/scripts/ingress_nginx_conf.yaml
+wget https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ckad/mock/02/k8s-1/scripts/ingress_nginx_conf.yaml
 chmod 777 ingress_nginx_conf.yaml
