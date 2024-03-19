@@ -14,6 +14,22 @@ Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS
 
 [![video instruction](docs%2Fimages%2Frun_via_docker.gif)](https://youtu.be/Xh6sWzafBmw "run via docker")
 
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">Requirements</summary>
+
+- [GNU Make](https://www.gnu.org/software/make/) >= 4.2.1
+- [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.6.6
+- [terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= v0.54.8
+- [jq](https://jqlang.github.io/jq/download/) >= 1.6
+- [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  for VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html) > 2.2.30
+- [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
+
+**Or you can** [run via docker](docs%2Frun_from_docker.MD)  ( [video instruction](https://youtu.be/Xh6sWzafBmw) )
+
+</details>
+
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">Repository Structure</summary>
 
@@ -30,21 +46,6 @@ The repository is organized into the following sections:
 - **[terraform](terraform)** - Directory contains  modules and Terraform environments.
   - **[environments](terraform%2Fenvironments)** - Directory contains terragrunt (terraform) environments.
   - **[modules](terraform%2Fmodules)** - Directory contains terraform modules.
-
-</details>
-
-<details>
-  <summary style="font-weight: bold; font-size: 1.5em;">Requirements</summary>
-
-- [GNU Make](https://www.gnu.org/software/make/) >= 4.2.1
-- [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.6.6
-- [terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= v0.54.8
-- [jq](https://jqlang.github.io/jq/download/) >= 1.6
-- [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  for VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html) > 2.2.30
-- [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
-
-**Or you can** [run via docker](docs%2Frun_from_docker.MD)  ( [video instruction](https://youtu.be/Xh6sWzafBmw) )
 
 </details>
 
