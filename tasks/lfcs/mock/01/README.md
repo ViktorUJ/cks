@@ -19,7 +19,7 @@
 
 |        **2**        | **Perform the following actions on the file `file2` in the home directory**                                                                                                                                                                                                                                  |
 | :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                                                                                                                                                                                           |
+|     Task weight     | 2%                                                                                                                                                                                                                                                                                                           |
 |        Task         | - Change owner of this file to uid `750` and gid `750` <br/> - Apply the following permissions to this file:<br/>&nbsp;&nbsp;- Group members should be able to write and read<br/>&nbsp;&nbsp;- Others only should be able to read.<br/> - Enable the SUID (set user id) special permission flag on `file2`. |
 | Acceptance criteria | - File owners changes?<br/> - Set file permissions and SUID?                                                                                                                                                                                                                                                 |
 
@@ -27,9 +27,9 @@
 
 |        **3**        | **Perform the following actions on the files `file31`,`file32`,`file33`**                                                                      |
 | :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                             |
+|     Task weight     | 1%                                                                                                                                             |
 |        Task         | - Create directory `/opt/newdir`<br/> - Move `file31` to this directory<br/> - Copy `file32` to `/opt/newdir` directory<br/> - Remove `file33` |
-| Acceptance criteria | - Created directory?<br/> - Moved `file31`? <br/> - Copied `file32`?<br/> - Removed `file5` file?                                              |
+| Acceptance criteria | - Created directory?<br/> - Moved `file31`? <br/> - Copied `file32`?<br/> - Removed `file33` file?                                             |
 
 ---
 
@@ -65,23 +65,23 @@
 
 ---
 
-|        **8**        | **Work with archivies**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| :-----------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-|        Task         | Create the following archieve from the files in the `/opt/08files/` directory:<br/> - Create a simple *TAR* archieve from the files inside the folder. Store this archieve in `/opt/08results/mytar.tar`<br/> - Compress entire `/opt/08files/` directory into *GZIP* archieve. Save it at `/opt/08results/mytargz.tar.gz`<br/> - Compress entire `/opt/08files/` directory into *BZ* archieve. Save it at `/opt/08results/mybz.tar.bz2`<br/> - Compress entire `/opt/08files/` directory into *ZIP* archieve. Save it at `/opt/08results/myzip.zip` |
-| Acceptance criteria | - `tar` archieve is created?<br/>- `gzip` archieve is created?<br/>- `bz` archieve is created?<br/> - `zip` archieve is created?                                                                                                                                                                                                                                                                                                                                                                                                                     |
+|        **8**        | **Work with archives**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+|        Task         | Create the following archive from the files in the `/opt/08/files/` directory:<br/> - Create a simple *TAR* archive from the files inside the folder. Store this archive in `/opt/08results/mytar.tar`<br/> - Compress entire `/opt/08/files/` directory into *GZIP* archive. Save it at `/opt/08/results/mytargz.tar.gz`<br/> - Compress entire `/opt/08/files/` directory into *BZ* archive. Save it at `/opt/08/results/mybz.tar.bz2`<br/> - Compress entire `/opt/08/files/` directory into *ZIP* archive. Save it at `/opt/08/results/myzip.zip` |
+| Acceptance criteria | - `tar` archive is created?<br/>- `gzip` archive is created?<br/>- `bz` archive is created?<br/> - `zip` archive is created?                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ---
 
-|        **8**        | **Extracting content**                                                                                                                                                                                        |
-| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|     Task weight     | ?%                                                                                                                                                                                                            |
-|        Task         | There are two archives in the `/opt/08task` folder:<br/> - Extract the content of `backup.tar.gz` to `/opt/08solution/tarbackup` <br/> - - Extract the content of `backup.zip` to `/opt/08solution/zipbackup` |
-| Acceptance criteria | `backup.tar.gz` is extracted? `backup.zip` is extracted?                                                                                                                                                      |
+|        **9**        | **Extracting content**                                                                                                                                                                                         |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                                                                                             |
+|        Task         | There are two archives in the `/opt/08/task` folder:<br/> - Extract the content of `backup.tar.gz` to `/opt/08/solution/tarbackup` <br/> - Extract the content of `backup.zip` to `/opt/08/solution/zipbackup` |
+| Acceptance criteria | `backup.tar.gz` is extracted? `backup.zip` is extracted?                                                                                                                                                       |
 
 ---
 
-|        **9**        | **Installing the service**                                                                                                                |
+|       **10**        | **Installing the service**                                                                                                                |
 | :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | ?%                                                                                                                                        |
 |        Task         | - Install the service nginx using package manager<br/> - Make this service automatically start up after rebooting <br/> - Run the service |
@@ -89,7 +89,7 @@
 
 ---
 
-|       **10**        | **Adding a new user**                                                                                                                                                                                                                                                             |
+|       **11**        | **Adding a new user**                                                                                                                                                                                                                                                             |
 | :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | ?%                                                                                                                                                                                                                                                                                |
 |        Task         | Add a new admin user with the following requirenments:<br/> - with the name `cooluser` <br/> - with a password `superstrongpassword` <br/> - Set the default shell for this user as `/bin/zsh`<br/> - if that's an admin user,`cooluser` should be able to run commands with sudo |
@@ -97,23 +97,23 @@
 
 ---
 
-|       **11**        | **Locking and unlocking users**                                                                                                                                                                                                                                                                                                |
-| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                                                                                                                                                                                                                             |
-|        Task         | There are two users in the system `spiderman` and `batman`. In this task is needed to perform some actions to lock/unlock password for these users:<br/> - `spiderman` cannot login to the system with his password, as password was locked, we need to unlock this user  <br/> - `batman` is unlocked, so we need to lock him |
-| Acceptance criteria | - user `spiderman` is unlocked?<br/> - user `batman` is locked?                                                                                                                                                                                                                                                                |
+|       **12**        | **Locking and unlocking users**                                                                                                                                                                                                                                                                                               |
+| :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 1%                                                                                                                                                                                                                                                                                                                            |
+|        Task         | There are two users in the system `spiderman` and `batman`. In this task is needed to perform some actions to lock/unlock password for these users:<br/> - `spiderman` cannot login to the system with his password, as password was locked, we need to unlock this user <br/> - `batman` is unlocked, so we need to lock him |
+| Acceptance criteria | - user `spiderman` is unlocked?<br/> - user `batman` is locked?                                                                                                                                                                                                                                                               |
 
 ---
 
-|       **12**        | **Set a limit for the user users**                                                                                                                |
-| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------ |
-|     Task weight     | ?%                                                                                                                                                |
-|        Task         | There is a user `phoenix` in the system. Set a limit for this user so that she can open no more than `20` processes. This should be a hard limit. |
-| Acceptance criteria | - hard limit is set for user `phoenix` processes  ?                                                                                               |
+|       **13**        | **Set a limit for the users**                                                                                                                    |
+| :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                               |
+|        Task         | There is a user `phoenix` in the system. Set a limit for this user so that it can open no more than `20` processes. This should be a hard limit. |
+| Acceptance criteria | - hard limit is set for user `phoenix` processes?                                                                                                |
 
 ---
 
-|       **13**        | **Set a skeleton for the user users**                                                                                                                             |
+|       **14**        | **Set a skeleton for the user users**                                                                                                                             |
 | :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | ?%                                                                                                                                                                |
 |        Task         | Edit the so-called skeleton directory so that whenever a new user is created on this system, a file called `IMPORTANT_NOTES` is copied to his/her home directory. |
@@ -121,23 +121,23 @@
 
 ---
 
-|       **14**        | **Revoke sudo privilligies**                                                                |
-| :-----------------: | :------------------------------------------------------------------------------------------ |
-|     Task weight     | ?%                                                                                          |
-|        Task         | There is a user `jakson` in the system. This user should not have sudo permissions anymore. |
-| Acceptance criteria | - Make sure that a user `jakson` is not able to perform commands with sudo                  |
+|       **15**        | **Revoke sudo privilligies**                                                                 |
+| :-----------------: | :------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                           |
+|        Task         | There is a user `jackson` in the system. This user should not have sudo permissions anymore. |
+| Acceptance criteria | - Make sure that a user `jackson` is not able to perform commands with sudo                  |
 
 ---
 
-|       **15**        | **Redirect filtering output**                                                                                                    |
-| :-----------------: | :------------------------------------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                                               |
-|        Task         | Display all the lines in the `/etc/services` file that start out with the text `net`. Redirect the output to `/opt/15result.txt` |
-| Acceptance criteria | - Filtered output redirected to the file                                                                                         |
+|       **16**        | **Redirect filtering output**                                                                                                     |
+| :-----------------: | :-------------------------------------------------------------------------------------------------------------------------------- |
+|     Task weight     | ?%                                                                                                                                |
+|        Task         | Display all the lines in the `/etc/services` file that start out with the text `net`. Redirect the output to `/opt/15/result.txt` |
+| Acceptance criteria | - Filtered output redirected to the file                                                                                          |
 
 ---
 
-|       **16**        | **Check the difference between files and folders**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+|       **17**        | **Check the difference between files and folders**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 |        Task         | - There are 2 files in the folder `/opt/task16/file1` and `/opt/task16/file2`. Files are almost the same, but they have one line that exist in one file and don't exist in another one. Find that line and save the difference to `/opt/task16/result/text_difference`.<br/> - `/opt/task16/dir1/` and `/opt/task16/dir2/` have almost similar files. Find out which files only exist in `/opt/task16/dir2/` but not in `/opt/task16/dir1/`. Find these files and save the output in the `/opt/task16/result/folder_difference` file. |
@@ -145,7 +145,7 @@
 
 ---
 
-|       **17**        | **Perform docker operations**                                                                         |
+|       **18**        | **Perform docker operations**                                                                         |
 | :-----------------: | :---------------------------------------------------------------------------------------------------- |
 |     Task weight     | ?%                                                                                                    |
 |        Task         | - Run docker `apache` container with name `webserv`.<br/> - Removed all docker images except `apache` |
@@ -153,7 +153,7 @@
 
 ---
 
-|       **18**        | **Analyze networking information**                                                                                                                                                                                                                                                                      |
+|       **19**        | **Analyze networking information**                                                                                                                                                                                                                                                                      |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |     Task weight     | ?%                                                                                                                                                                                                                                                                                                      |
 |        Task         | - Check the ip address of the `eth0` network interface, save IP address to `/opt/18/result/ip` file. <br/> - Print out the route table and save the output to the `/opt/18/result/routes` file.<br/> - Check the PID of the service that uses 22 port and save the pid to the `/opt/18/result/pid` file |
@@ -161,7 +161,7 @@
 
 ---
 
-|       **19**        | **Networking settings**                                                                                                                                                                                                                                                                                                                                                                            |
+|       **20**        | **Networking settings**                                                                                                                                                                                                                                                                                                                                                                            |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                 |
 |        Task         | SSH to the node02 and perform the following actions:<br/> - Add an extra DNS resolver (nameserver) on this system: `1.1.1.1`<br/> - Add a static dns resolution to make `database.local` host to be resolver to `10.10.20.5`. DNS resolver should repond with this IP on `database.local` hostname<br\> - Configure route table of this host to route all of the traffic through this node01 host. |
@@ -169,7 +169,7 @@
 
 ---
 
-|       **20**        | **Create a bash script**                                                                                                                                                                                                                                                                                                                                          |
+|       **21**        | **Create a bash script**                                                                                                                                                                                                                                                                                                                                          |
 | :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                |
 |        Task         | This script should perform the following actions. You should put this script to `/opt/19/result/script.sh`: <br/>- Recursively copies the `/opt/19/task/` directory into the `/opt/19/task-backup/` directory.<br/>- Creates an empty file called `empty_file` at this location: `/opt/19/result/`<br/>- Make this script automatically running every day at 2AM. |
@@ -177,7 +177,7 @@
 
 ---
 
-|       **21**        | **Work with advanced file permissions and attributes**                                                                                                                                                                                                                                                                                                                                                                  |
+|       **22**        | **Work with advanced file permissions and attributes**                                                                                                                                                                                                                                                                                                                                                                  |
 | :-----------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                                      |
 |        Task         | - In the folder `/opt/21/tasks` you will find a file `aclfile`. Currently this file can only be read by `user21`. Add a new ACL permission so that `user22` can also read this. `user22` should have only read permissions.<br/> - Next, in the `/opt/21/tasks` directory you will find a file named `frozenfile`. This currently has the immutable attribute set on it. Remove the immutable attribute from this file. |
@@ -185,7 +185,7 @@
 
 ---
 
-|       **22**        | **Send signal to a process**                     |
+|       **23**        | **Send signal to a process**                     |
 | :-----------------: | :----------------------------------------------- |
 |     Task weight     | ?%                                               |
 |        Task         | - Send the SIGHUP signal to the `redis` process. |
@@ -193,7 +193,7 @@
 
 ---
 
-|       **23**        | **Perform disk operations**                                                                                                                                                                                                                                                                                                                                                                                  |
+|       **24**        | **Perform disk operations**                                                                                                                                                                                                                                                                                                                                                                                  |
 | :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | ?%                                                                                                                                                                                                                                                                                                                                                                                                           |
 |        Task         | You will find a disk `/dev/sda2` to be used in the system. We need to perform the following actions: <br/> - This disk has unpartitioned space. Create two partitions. Each should be exactly 1GB in size for each.<br/> - Mount this file to be mounted to the `/drive` folder. It should be mounted even after rebooting of the system<br/> - Format the second partitions to be used in `xfs` file system |
@@ -201,7 +201,7 @@
 
 ---
 
-|       **24**        | **Perform LVM operations**                                                                                                                                                                                                                                                                                         |
+|       **25**        | **Perform LVM operations**                                                                                                                                                                                                                                                                                         |
 | :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | ?%                                                                                                                                                                                                                                                                                                                 |
 |        Task         | - Add these two physical volumes to lvm: `/dev/sda3` and `/dev/sda4`<br/> - Create a volume group called `volgroup1` out of these two physical volumes, `/dev/sda3` and `/dev/sda4`<br/> - Create a logical volume of 1GB on the volume group `volgroup1`. The name of this logical volume should be `logvolume1`. |
