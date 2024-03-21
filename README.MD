@@ -307,6 +307,11 @@ If you want to say **thank you** or/and support the active development of **SRE 
 ## License and Usage Agreement
 - [Apache License 2.0](LICENSE)
 
+## Channels for cooperative preparation
+ -  [cka](https://t.me/sre_platform_cka)
+ -  [cks](https://t.me/sre_platform_cks)
+ -  [ckad](https://t.me/sre_platform_ckad)
+
 ## Contacts
 
 If you encounter any issues or have questions about the project, you can reach out to:
