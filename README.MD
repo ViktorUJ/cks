@@ -181,7 +181,7 @@ Every command should be run from the project's root directory.
   [Video instruction for launching **CKA mock exam**](https://www.youtube.com/watch?v=P-YYX4CTWIg)
 
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
-- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- change instance type from ``spot`` to ``ondemand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKA exam ``TASK={mock_number} make run_cka_mock``
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
@@ -218,7 +218,7 @@ Every command should be run from the project's root directory.
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
 - change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
-- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- change instance type from ``spot`` to ``ondemand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKS exam ``TASK={mock_number} make run_cks_mock`` or ``TASK={mock_number} make run_cks_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
@@ -239,7 +239,7 @@ Every command should be run from the project's root directory.
 ### mock  CKAD exam
 - choose [a mock exam](tasks%2Fckad%2Fmock)  number
 - change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
-- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- change instance type from ``spot`` to ``ondemand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKAD exam ``TASK={mock_number} make run_ckad_mock`` or ``TASK={mock_number} make run_ckad_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
@@ -260,7 +260,7 @@ Every command should be run from the project's root directory.
 ### mock  HR exam
 - choose [a mock exam](tasks%2Fhr%2Fmock) number
 - change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
-- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- change instance type from ``spot`` to ``ondemand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKS exam ``TASK={mock_number} make run_hr_mock`` or ``TASK={mock_number} make run_hr_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
