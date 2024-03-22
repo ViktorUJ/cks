@@ -1,4 +1,6 @@
 controller:
+  config:
+    enable-snippet-annotations: "true"
   service:
     type: NodePort
     nodePorts:
