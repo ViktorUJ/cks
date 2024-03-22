@@ -17,5 +17,6 @@ helm install ingress-nginx  ingress-nginx/ingress-nginx \
 
 kubectl patch ingressclass nginx --patch '{"metadata": {"annotations": {"ingressclass.kubernetes.io/is-default-class": "true"}}}'
 
+sleep 20
 
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-46/tasks/cka/labs/03/k8s-1/scripts/1.yaml
