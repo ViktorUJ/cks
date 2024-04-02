@@ -12,11 +12,11 @@ output "node_type" {
   value = var.node_type
 }
 output "worker_join" {
-  value = "s3://${local.worker_join}"
+  value = "gs://${local.worker_join}"
 }
 
 output "k8s_config" {
-  value = "s3://${local.k8s_config}"
+  value = "gs://${local.k8s_config}"
 }
 output "k8_master_version" {
   value = var.k8s_master.k8_version

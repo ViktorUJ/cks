@@ -54,17 +54,17 @@ systemctl restart kubelet
 
 date
 echo "wait master ready"
-aws s3 ls s3://$worker_join_sh
+gsutil ls gs://$worker_join_sh
 while test $? -gt 0
   do
    sleep 5
    echo "Wait master ready .Trying again..."
-   aws s3 ls s3://$worker_join_sh
+   gsutil ls gs://$worker_join_sh
   done
 date
 
-echo " aws s3 cp s3://$worker_join_sh  worker_join   "
-aws s3 cp s3://$worker_join_sh  worker_join
+echo " gsutil cp gs://$worker_join_sh  worker_join   "
+gsutil cp gs://$worker_join_sh  worker_join
 chmod +x worker_join
 ./worker_join
 

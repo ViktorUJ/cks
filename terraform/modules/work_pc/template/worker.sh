@@ -3,12 +3,12 @@ ssh_password_enable_check=${ssh_password_enable}
 function wait_cluster_ready {
 
 echo "wait cluster $1 ready"
-aws s3 ls $2
+gsutil ls $2
 while test $? -gt 0
   do
    sleep 10
    echo "wait cluster $1 ready .Trying again..."
-   aws s3 ls $2
+   gsutil ls $2
   done
 date
 
@@ -157,7 +157,7 @@ for cluster in $clusters_config; do
   cluster_config_url=$(echo "$cluster" | cut -d'=' -f2 )
   echo "$cluster_name   $cluster_config_url "
   wait_cluster_ready "$cluster_name" "$cluster_config_url"
-  aws s3 cp $cluster_config_url $cluster_name
+  gsutil cp $cluster_config_url $cluster_name
   cat $cluster_name | sed -e 's/kubernetes/'$cluster_name'/g' >/var/work/configs/$cluster_name
   KUBECONFIG+="$configs_dir/$cluster_name:"
 done

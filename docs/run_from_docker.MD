@@ -28,10 +28,12 @@ locals {
 }
 
 ```
-### Set the aws key
+### Set the google cloud service account key
+
+https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/provider_reference#running-terraform-outside-of-google-cloud
+
 ```
-export AWS_ACCESS_KEY_ID=Your_Access_Key
-export AWS_SECRET_ACCESS_KEY=Your_Secred_Access_Key
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/json
 ```
 
 ### Run your scenario

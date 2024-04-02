@@ -16,7 +16,7 @@ true)
 ;;
 esac
 
-local_ipv4=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+local_ipv4=$(curl -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip)
 runtime_sh=${runtime}
 k8_version_sh=${k8_version}
 k8s_config_sh=${k8s_config}
@@ -49,9 +49,9 @@ cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
 chown $(id -u):$(id -g) /root/.kube/config
 chown ubuntu:ubuntu /home/ubuntu/.kube/config
 
-aws s3 cp  /root/.kube/config s3://$k8s_config_sh
+gsutil cp /root/.kube/config gs://$k8s_config_sh
 kubeadm token create --print-join-command --ttl 90000m > join_node
-aws s3 cp  join_node s3://$worker_join_sh
+gsutil cp join_node gs://$worker_join_sh
 date
 kubectl get node --kubeconfig=/root/.kube/config
 while test $? -gt 0

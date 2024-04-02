@@ -1,7 +1,7 @@
 locals {
-  region                 = "eu-north-1"
-  backend_region         = "eu-north-1"
-  backend_bucket         = "sre-learning-platform-state-backet"
+  region                 = "asia-east2-a"
+  backend_region         = "ASIA-EAST2"
+  backend_bucket         = "v0v4n-cks-state-backet"
   backend_dynamodb_table = "${local.backend_bucket}-lock"
 }
 
@@ -10,11 +10,11 @@ generate "backend" {
   if_exists = "overwrite_terragrunt"
   contents  = <<EOF
 terraform {
-  backend "s3" {}
+  backend "gcs" {}
   required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.17.0"
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 4.40"
     }
   }
 }
@@ -33,13 +33,11 @@ EOF
 }
 
 remote_state {
-  backend = "s3"
+  backend = "gcs"
   config  = {
     bucket         = local.backend_bucket
-    key            = "terragrunt${path_relative_to_include()}/terraform.tfstate"
-    region         = local.backend_region
-    encrypt        = true
-    dynamodb_table = local.backend_dynamodb_table
+    location       = local.backend_region
+    prefix         = "terragrunt${path_relative_to_include()}"
   }
 }
 inputs = {

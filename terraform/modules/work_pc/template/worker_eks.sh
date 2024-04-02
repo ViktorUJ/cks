@@ -3,12 +3,12 @@
 function wait_cluster_ready {
 
 echo "wait cluster $1 ready"
-aws s3 ls $2
+gsutil ls $2
 while test $? -gt 0
   do
    sleep 10
    echo "wait cluster $1 ready .Trying again..."
-   aws s3 ls $2
+   gsutil ls $2
   done
 date
 
