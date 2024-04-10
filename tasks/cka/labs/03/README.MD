@@ -77,3 +77,22 @@ User-Agent: curl/7.68.0
 
 
 ```
+check result via  tests
+``` 
+check_result
+
+```
+
+``` 
+ubuntu@worker:~> check_result
+ ✓ 0  Init
+ ✓ 1.1 Check routing by  header  X-Appversion =  v2
+ ✓ 1.2 Check routing by  header  X-Appversion =  v3
+ ✓ 1.3 Check routing without  header  X-Appversion
+
+4 tests, 0 failures
+ result = 100.00 %   ok_points=3  all_points=3
+time_left=327 minutes
+you  spend 32 minutes
+
+```
