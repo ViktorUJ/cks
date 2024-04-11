@@ -1,3 +1,5 @@
+# Nginx ingress. Routing by header.
+
 We use the **ingress nginx** controller.
 We have an  application (deployment, service , ingress) in namespace  **meg**. You can check the app via command  `curl http://ckad.local:30102/app` 
 
