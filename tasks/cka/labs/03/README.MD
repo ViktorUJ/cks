@@ -1,18 +1,18 @@
 # Nginx ingress. Routing by header.
 
 We use the **ingress nginx** controller.
-We have an  application (deployment, service , ingress) in namespace  **meg**. You can check the app via command  `curl http://ckad.local:30102/app` 
+We have an  application (deployment, service , ingress) in namespace  **meg**. You can check the app via command  `curl http://ckad.local:30102/app`
 
-You need create new deployment, service, ingress  in namespace  **meg** 
+You need create new deployment, service, ingress  in namespace  **meg**
  - **deployment** : name ` meg-app2` , env:  name: `SERVER_NAME` and  value: `megApp2` , all other parameters  copy from  `meg-app` deployment
- - **service**    : name ` meg-app2`   -> deployment ` meg-app2` 
+ - **service**    : name ` meg-app2`   -> deployment ` meg-app2`
  - **ingress**    : name ` meg-app2`   -> service ` meg-app2`  , route to the same address  `curl http://ckad.local:30102/app`  but with header `X-Appversion=v2`
 
-In case of any other header value or unset header, the request should go to the old service. 
+In case of any other header value or unset header, the request should go to the old service.
 
 check `    curl -H "X-Appversion: v2" http://ckad.local:30102/app    `
 
-``` 
+```
 Server Name: megApp2
 URL: http://ckad.local:30102/
 Client IP: 10.0.158.196
@@ -36,7 +36,7 @@ X-Appversion: v2
 
 check `    curl -H "X-Appversion: v3" http://ckad.local:30102/app    `
 
-``` 
+```
 Server Name: megApp
 URL: http://ckad.local:30102/
 Client IP: 10.0.158.196
@@ -59,7 +59,7 @@ X-Forwarded-Proto: http
 
 check `    curl http://ckad.local:30102/app    `
 
-``` 
+```
 Server Name: megApp
 URL: http://ckad.local:30102/
 Client IP: 10.0.158.196
@@ -80,12 +80,12 @@ User-Agent: curl/7.68.0
 
 ```
 check result via  tests
-``` 
+```
 check_result
 
 ```
 
-``` 
+```
 ubuntu@worker:~> check_result
  ✓ 0  Init
  ✓ 1.1 Check routing by  header  X-Appversion =  v2

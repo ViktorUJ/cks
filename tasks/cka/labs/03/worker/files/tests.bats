@@ -39,4 +39,3 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "megApp" ]
 }
-
