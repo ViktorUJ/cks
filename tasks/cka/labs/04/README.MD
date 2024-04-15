@@ -19,5 +19,16 @@ check result via  tests
 check_result
 
 ```
+```` 
+ubuntu@worker:~> check_result
+ ✓ 0  Init
+ ✓ 1.1 Check routing to version 2
+ ✓ 1.2 Check ingress v2 canary-weight
 
+3 tests, 0 failures
+ result = 100.00 %   ok_points=2  all_points=2
+time_left=333 minutes
+you  spend 26 minutes
+
+````
 
