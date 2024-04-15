@@ -10,7 +10,9 @@ You need create new deployment, service, ingress  in namespace  **meg**
 
 In case of any other header value or unset header, the request should go to the old service.
 
-check `    curl  http://ckad.local:30102/app    `
+Run the command 10 times to test it `    curl  http://ckad.local:30102/app    `
+You are expected to see a response from **megApp2** of about **30%**.
+
 
 check result via  tests
 ```
@@ -18,6 +20,4 @@ check_result
 
 ```
 
-```
 
-```
