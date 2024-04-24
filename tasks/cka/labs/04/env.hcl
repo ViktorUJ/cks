@@ -1,7 +1,7 @@
 locals {
-  questions_list = "https://github.com/ViktorUJ/cks/blob/0.10.1/tasks/cka/labs/03/README.MD"
-  solutions_scripts="https://github.com/ViktorUJ/cks/blob/0.10.1/tasks/cka/labs/03/worker/files/solutions/1.MD"
-  solutions_video="https://youtu.be/1-qA7RjSx4A"
+  questions_list = "https://github.com/ViktorUJ/cks/blob/0.10.1/tasks/cka/labs/04/README.MD"
+  solutions_scripts="https://github.com/ViktorUJ/cks/blob/0.10.1/tasks/cka/labs/04/worker/files/solutions/1.MD"
+  solutions_video="https://youtu.be/IC_0FeQtgwA"
   debug_output   = "false"
   region = "eu-north-1"
   vpc_default_cidr =  "10.2.0.0/16"
@@ -10,7 +10,7 @@ locals {
     "10.2.32.0/19" = "eun1-az2"
   }
   aws    = "default"
-  prefix = "cka-task03"
+  prefix = "cka-task04"
   tags = {
     "env_name"        = "cka-task03"
     "env_type"        = "dev"

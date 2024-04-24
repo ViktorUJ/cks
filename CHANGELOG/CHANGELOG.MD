@@ -1,10 +1,14 @@
 # Changelog
 
-## 0.10.1 (*20.04.2024)
+## 0.10.1 (24.04.2024)
 ### Features
 * [Cka lab 3. Nginx ingress. Routing by header ](..%2Ftasks%2Fcka%2Flabs%2F03%2FREADME.MD) is added.
 * [Cka lab 3 solution ](..%2Ftasks%2Fcka%2Flabs%2F03%2Fworker%2Ffiles%2Fsolutions%2F1.MD) is added.
 * [Video](https://youtu.be/1-qA7RjSx4A) for Cka lab 3 solution is added.
+* [Cka lab 4. Nginx ingress. Routing 30% of requests to new version of app](..%2Ftasks%2Fcka%2Flabs%2F04%2FREADME.MD)  is added.
+* [Cka lab 4 solution ](..%2Ftasks%2Fcka%2Flabs%2F04%2Fworker%2Ffiles%2Fsolutions%2F1.MD) is added.
+* [Video](https://youtu.be/IC_0FeQtgwA) for Cka lab 4 solution is added.
+
 
 ## 0.9.1 (20.03.2024)
 ### Features
