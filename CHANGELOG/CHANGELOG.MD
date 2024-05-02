@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.1 (*24.05.2024)
+### Features
+* K8s version **1.30** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
+* k8s version **1.30**  is used in [cka-mock 1](..%2Ftasks%2Fcka%2Fmock%2F01)
+
+
 ## 0.10.1 (24.04.2024)
 ### Features
 * [Cka lab 3. Nginx ingress. Routing by header ](..%2Ftasks%2Fcka%2Flabs%2F03%2FREADME.MD) is added.
