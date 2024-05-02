@@ -22,7 +22,7 @@ locals {
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type        = "t4g.medium" #  t3.medium  - x86     t4g.medium - arm
   instance_type_worker = "t4g.small"
-  ubuntu_version       = "22.04"
+  ubuntu_version       = "20.04"
   key_name             = ""
   ssh_password_enable  = "true" # false |  true
   access_cidrs         = ["0.0.0.0/0"]
