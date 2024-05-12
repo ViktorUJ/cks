@@ -103,6 +103,52 @@
   [ "$result" == "drwxrwxrwt" ]
 }
 
+#5.1
+@test "5.1 Check the filtering out files with executable permissions." {
+  find "/opt/task5" -type f -perm -u=x > /var/work/tests/artifacts/task0501
+  echo '1' >> /var/work/tests/result/all
+  if diff -q <(cat /var/work/tests/artifacts/task0501 | sort) <(cat /opt/05execuser | sort) &>/dev/null; then
+    echo $result
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff -q <(cat /var/work/tests/artifacts/task0501 | sort) <(cat /opt/05execuser | sort) &>/dev/null
+}
+
+#5.2
+@test "5.2 Check the filtering out files with SETUID permissions." {
+  rm -rf /var/work/tests/artifacts/task0502 && mkdir /var/work/tests/artifacts/task0502
+  find "/opt/task5" -type f -perm -4000 -exec cp {} /var/work/tests/artifacts/task0502/ \;
+  echo '1' >> /var/work/tests/result/all
+  if diff -q <(ls -1 /var/work/tests/artifacts/task0502 | sort) <(ls -1 /opt/05setuid/ | sort) &>/dev/null; then
+    echo $result
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff -q <(ls -1 /var/work/tests/artifacts/task0502 | sort) <(ls -1 /opt/05setuid/ | sort);
+}
+
+#5.3
+@test "5.3 Check the filtering out files that larget than 1KB" {
+  rm -rf /var/work/tests/artifacts/task0503 && mkdir /var/work/tests/artifacts/task0503
+  find "/opt/task5" -type f -size +1k -exec cp {} "/var/work/tests/artifacts/task0503/" \;
+  echo '1' >> /var/work/tests/result/all
+  if diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/05kb/ | sort) &>/dev/null; then
+    echo $result
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/05kb/ | sort) &>/dev/null;
+}
+
+#6
+@test "6 Check the files that contain findme word" {
+  rm -rf /var/work/tests/artifacts/task06 && mkdir /var/work/tests/artifacts/task06
+  find /opt/task6 -type f -exec grep -q 'findme' {} \; -exec cp {} /var/work/tests/artifacts/task06 \;
+  echo '1' >> /var/work/tests/result/all
+  if diff -q <(ls -1 /var/work/tests/artifacts/task06 | sort) <(ls -1 /opt/06result | sort) &>/dev/null; then
+    echo $result
+    echo '1' >> /var/work/tests/result/ok
+  fi
+   diff -q <(ls -1 /var/work/tests/artifacts/task06 | sort) <(ls -1 /opt/06result | sort) &>/dev/null
+}
 
 # 11
 @test "11.1 Check creatiom of a user with name.cooluser" {

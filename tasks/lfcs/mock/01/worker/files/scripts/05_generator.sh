@@ -10,7 +10,7 @@ mkdir /opt/task5/
 
 for i in {1..500}; do
   dd if=/dev/urandom bs=${arr[$[ $RANDOM % 4 ]]} count=1 of=/opt/task5/file$i  > /dev/null
-  rand=$((RANDOM % 3))
+  rand=$((RANDOM % 2))
   if [[ "$rand" -eq 0 ]]; then
     chmod u+x /opt/task5/file$i
   elif [[ "$rand" -eq 1 ]]; then
