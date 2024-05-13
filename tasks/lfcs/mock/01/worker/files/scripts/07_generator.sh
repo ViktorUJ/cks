@@ -10,3 +10,6 @@ for ((k=1;k<=70;k++)); do
       echo "system$k=disabled" >> /etc/config.conf
     fi
 done
+
+chmod a+rw /etc/config.conf
+cp /etc/config.conf /var/work/tests/artifacts/05_config.conf

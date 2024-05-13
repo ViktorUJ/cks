@@ -108,7 +108,6 @@
   find "/opt/task5" -type f -perm -u=x > /var/work/tests/artifacts/task0501
   echo '1' >> /var/work/tests/result/all
   if diff -q <(cat /var/work/tests/artifacts/task0501 | sort) <(cat /opt/05execuser | sort) &>/dev/null; then
-    echo $result
     echo '1' >> /var/work/tests/result/ok
   fi
   diff -q <(cat /var/work/tests/artifacts/task0501 | sort) <(cat /opt/05execuser | sort) &>/dev/null
@@ -120,7 +119,6 @@
   find "/opt/task5" -type f -perm -4000 -exec cp {} /var/work/tests/artifacts/task0502/ \;
   echo '1' >> /var/work/tests/result/all
   if diff -q <(ls -1 /var/work/tests/artifacts/task0502 | sort) <(ls -1 /opt/05setuid/ | sort) &>/dev/null; then
-    echo $result
     echo '1' >> /var/work/tests/result/ok
   fi
   diff -q <(ls -1 /var/work/tests/artifacts/task0502 | sort) <(ls -1 /opt/05setuid/ | sort);
@@ -132,7 +130,6 @@
   find "/opt/task5" -type f -size +1k -exec cp {} "/var/work/tests/artifacts/task0503/" \;
   echo '1' >> /var/work/tests/result/all
   if diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/05kb/ | sort) &>/dev/null; then
-    echo $result
     echo '1' >> /var/work/tests/result/ok
   fi
   diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/05kb/ | sort) &>/dev/null;
@@ -144,10 +141,81 @@
   find /opt/task6 -type f -exec grep -q 'findme' {} \; -exec cp {} /var/work/tests/artifacts/task06 \;
   echo '1' >> /var/work/tests/result/all
   if diff -q <(ls -1 /var/work/tests/artifacts/task06 | sort) <(ls -1 /opt/06result | sort) &>/dev/null; then
-    echo $result
     echo '1' >> /var/work/tests/result/ok
   fi
    diff -q <(ls -1 /var/work/tests/artifacts/task06 | sort) <(ls -1 /opt/06result | sort) &>/dev/null
+}
+
+#7
+@test "7.1 Check the new line system71=enabled added to the end of file" {
+  echo '0.5' >> /var/work/tests/result/all
+  if tail -n 1 /etc/config.conf | grep "system71=enabled"; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  tail -n 1 /etc/config.conf | grep "system71=enabled"
+}
+
+@test "7.2 Check if the script /opt/07filter.sh is working" {
+  echo '0.5' >> /var/work/tests/result/all
+  if diff -q <( /opt/07filter.sh | sort) <( cat /etc/config.conf | grep enabled | sort) &>/dev/null; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  diff -q <( /opt/07filter.sh | sort) <( cat /etc/config.conf | grep enabled | sort) &>/dev/null;
+}
+
+@test "7.3 Check if the all parameters have been enabled." {
+  echo '0.5' >> /var/work/tests/result/all
+  if [[ $(grep -o disabled /etc/config.conf | wc -l) == 0 ]]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [[ $(grep -o disabled /etc/config.conf | wc -l) == 0 ]]
+}
+
+# 8
+@test "8.1 Check tar archieve to be created" {
+  mkdir -p /var/work/tests/artifacts/08-tar/ && tar -xf /opt/08/results/mytar.tar -C /var/work/tests/artifacts/08-tar/
+  echo '1' >> /var/work/tests/result/all
+  if [[ diff /var/work/tests/artifacts/08-tar/ /opt/08/files/ ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff /var/work/tests/artifacts/08-tar/ /opt/08/files/
+}
+
+# 8
+@test "8.1 Check tar archive to be created" {
+  mkdir -p /var/work/tests/artifacts/08-tar/ && tar -xf /opt/08/results/mytar.tar -C /var/work/tests/artifacts/08-tar/
+  echo '1' >> /var/work/tests/result/all
+  if [[ diff /var/work/tests/artifacts/08-tar/ /opt/08/files/ ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff /var/work/tests/artifacts/08-tar/ /opt/08/files/
+}
+
+@test "8.2 Check tar.gz archive to be created" {
+  mkdir -p /var/work/tests/artifacts/08-targz/ && tar -xf /opt/08/results/mytargz.tar.gz -C /var/work/tests/artifacts/08-targz/
+  echo '1' >> /var/work/tests/result/all
+  if [[ diff /var/work/tests/artifacts/08-targz/ /opt/08/files/ ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff /var/work/tests/artifacts/08-targz/ /opt/08/files/
+}
+
+@test "8.3 Check tar.bz2 archive to be created" {
+  mkdir -p /var/work/tests/artifacts/08-tarbz/ && tar -xf /opt/08/results/mybz.tar.bz2 -C /var/work/tests/artifacts/08-tarbz/
+  echo '1' >> /var/work/tests/result/all
+  if [[ diff /var/work/tests/artifacts/08-tarbz/ /opt/08/files/ ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff /var/work/tests/artifacts/08-tarbz/ /opt/08/files/
+}
+
+@test "8.4 Check zip archive to be created" {
+  mkdir -p /var/work/tests/artifacts/08-zip/ && unzip /opt/08/results/myzip.zip -d /var/work/tests/artifacts/08-zip/
+  echo '1' >> /var/work/tests/result/all
+  if [[ diff /var/work/tests/artifacts/08-zip/ /opt/08/files/ ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff /var/work/tests/artifacts/08-zip/ /opt/08/files/
 }
 
 # 11
