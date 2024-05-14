@@ -218,6 +218,42 @@
   diff /var/work/tests/artifacts/08-zip/ /opt/08/files/
 }
 
+# 9
+@test "9.1 Check extracted tar.gz archive" {
+  mkdir -p /var/work/tests/artifacts/09/targz/ && tar -xf /opt/09/task/backup.tar.gz -C /var/work/tests/artifacts/09/targz/
+  echo '1' >> /var/work/tests/result/all
+  if [[ diff /var/work/tests/artifacts/09/targz/ /opt/08/solution/tarbackup ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff /var/work/tests/artifacts/09-tar/ /opt/09/solution/tarbackup
+}
+
+@test "9.2 Check extracted zip archive" {
+  mkdir -p /var/work/tests/artifacts/09/zip/ && tar -xf /opt/09/task/backup.zip -C /var/work/tests/artifacts/09/zip/
+  echo '1' >> /var/work/tests/result/all
+  if [[ diff /var/work/tests/artifacts/09/zip/ /opt/09/solution/zipbackup ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  diff /var/work/tests/artifacts/09/zip/ /opt/09/solution/tarbackup
+}
+
+# 10
+@test "10.1 Check if the nginx service was installed." {
+  echo '0.5' >> /var/work/tests/result/all
+  if [[ systemctl list-units | grep nginx ]]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  systemctl list-units | grep nginx
+}
+
+@test "10.2 Check if the nginx service was enabled." {
+  echo '0.5' >> /var/work/tests/result/all
+  if [[ systemctl is-enabled nginx | grep enabled ]]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  systemctl is-enabled nginx | grep enabled
+}
+
 # 11
 @test "11.1 Check creatiom of a user with name.cooluser" {
   id cooluser
@@ -238,21 +274,13 @@
   [ "$status" == "/bin/zsh" ]
 }
 
-@test "11.3 Check if user cooluser has correct password" {
-  check_sh=$(cat /etc/passwd | grep cooluser | awk -F ':' '{print $7}')
-  echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "/bin/zsh" ]; then
-    echo '0.5' >> /var/work/tests/result/ok
-  fi
-  [ "$status" == "/bin/zsh" ]
-}
-
-@test "11.4 Check if user cooluser has sudo permissions" {
+@test "11.3 Check if user cooluser has sudo permissions" {
   sudo -lU cooluser &>/dev/null
   check_sudo=$?
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "0" ]; then
+  if [ "$check_sudo" == "0" ]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
-  [ "$status" == "0" ]
+  [ "$check_sudo" == "0" ]
 }
+

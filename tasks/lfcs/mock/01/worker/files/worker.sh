@@ -4,8 +4,7 @@ GIT_BRANCH="lfcs_development"
 
 apt install -y zip zsh openssl
 
-useradd batman
-useradd spiderman
+
 useradd phoenix
 useradd jackson
 usermod -aG sudo jackson
@@ -24,6 +23,7 @@ curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker/files/scripts/06_generator.sh | bash
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker/files/scripts/07_generator.sh | bash
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker/files/scripts/08_generator.sh | bash
+curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker/files/scripts/09_generator.sh | bash
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker/files/scripts/12_generator.sh | bash
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker/files/scripts/16_generator.sh | bash
 chown ubuntu:ubuntu -R /home/ubuntu/file* /opt/*
