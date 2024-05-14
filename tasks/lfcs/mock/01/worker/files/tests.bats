@@ -284,3 +284,33 @@
   [ "$check_sudo" == "0" ]
 }
 
+
+# Check
+#12
+@test "12.1 Check a user spiderman for being unlocked." {
+  status=$(sudo passwd -S spiderman | awk '{print $2}')
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" != "L" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" != "L" ]
+}
+
+@test "12.2 Check a batman spiderman for being locked." {
+  status=$(sudo passwd -S batman | awk '{print $2}')
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "L" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "L" ]
+}
+
+#13
+@test "13.1 Check if a user phoenix has hard limit of opening 20 processes." {
+  exit_status=$(cat /etc/security/limits.conf | grep -E "phoenix.*hard.*nproc.*20")
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$exit_status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$exit_status" == "0" ]
+}
