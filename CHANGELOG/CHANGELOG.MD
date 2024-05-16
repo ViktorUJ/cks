@@ -5,6 +5,7 @@
 * K8s version **1.30** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
 * k8s version **1.30**  is used in [cka-mock 1](..%2Ftasks%2Fcka%2Fmock%2F01)
 * k8s version **1.30**  is used in [cka-mock 2](..%2Ftasks%2Fcka%2Fmock%2F02)
+* kube-bench in [cks mock1](..%2Ftasks%2Fcks%2Fmock%2F01) is updated to version  0.7.3 .
 
 ## 0.10.1 (24.04.2024)
 ### Features
