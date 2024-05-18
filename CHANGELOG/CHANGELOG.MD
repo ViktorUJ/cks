@@ -8,6 +8,7 @@
 * kube-bench in [cks mock1](..%2Ftasks%2Fcks%2Fmock%2F01) is updated to version  0.7.3 .
 * k8s version **1.30**  is used in [cks mock1](..%2Ftasks%2Fcks%2Fmock%2F01)
 * k8s version **1.30**  is used in [ckad mock1](..%2Ftasks%2Fckad%2Fmock%2F01)
+* k8s version **1.30**  is used in [ckad mock2](..%2Ftasks%2Fckad%2Fmock%2F02)
 
 ## 0.10.1 (24.04.2024)
 ### Features
