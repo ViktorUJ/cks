@@ -17,7 +17,11 @@ locals {
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
+<<<<<<< HEAD
   k8_version           = "1.29.0"
+=======
+  k8_version           = "1.30.0"
+>>>>>>> 0.11.1
   node_type            = "spot"
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type        = "t4g.medium" #  t3.medium  - x86     t4g.medium - arm

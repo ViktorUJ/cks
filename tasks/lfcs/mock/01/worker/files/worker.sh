@@ -4,7 +4,6 @@ GIT_BRANCH="lfcs_development"
 
 apt install -y zip zsh openssl
 
-
 useradd phoenix
 useradd jackson
 usermod -aG sudo jackson

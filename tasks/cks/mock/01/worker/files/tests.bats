@@ -171,10 +171,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 #task 4
 
-@test "4.1 CIS Benchmark. check 1.2.17 " {
+@test "4.1 CIS Benchmark. check 1.2.16 " {
   echo '.75'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.17 | grep PASS"
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.16 | grep PASS"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '.75'>>/var/work/tests/result/ok
@@ -463,22 +463,12 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "9.2 AppArmor. check appArmor in deployment " {
-  echo '1'>>/var/work/tests/result/all
-  kubectl get deployments.apps apparmor  -n apparmor --context cluster6-admin@cluster6  -o yaml  | grep "container.apparmor.security.beta.kubernetes.io" | grep "localhost/very-secure"
-  result=$?
-  if [[ "$result" == "0" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "0" ]
-}
-
-@test "9.3 AppArmor. check check pod log " {
-  echo '1'>>/var/work/tests/result/all
+@test "9.2 AppArmor. check check pod log " {
+  echo '2'>>/var/work/tests/result/all
   cat /var/work/tests/artifacts/9/log | grep 'Permission denied'
   result=$?
   if [[ "$result" == "0" ]]; then
-   echo '1'>>/var/work/tests/result/ok
+   echo '2'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
@@ -487,7 +477,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "10.1 Deployment  security . check prevent escalation  " {
   echo '1'>>/var/work/tests/result/all
-  kubectl  get deployment secure -n secure --context cluster6-admin@cluster6  -o yaml  | grep allowPrivilegeEscalation | grep false | wc -l  | grep 3
+  kubectl  get deployment secure -n secure --context cluster6-admin@cluster6  -o yaml  | grep allowPrivilegeEscalation | grep false |grep -v '{}'| wc -l  | grep 3
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok

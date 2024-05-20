@@ -28,4 +28,8 @@ spec:
       - image: viktoruj/ping_pong:alpine
         name: app
         resources: {}
+<<<<<<< HEAD
 status: {}
+=======
+status: {}
+>>>>>>> 0.11.1

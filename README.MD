@@ -1,5 +1,7 @@
 # Welcome to the SRE Learning Platform!
 
+# Pyotr's commit
+
 The **SRE Learning Platform** is an open-source hub designed to help IT engineers effectively prepare for the **CKA (Certified Kubernetes Administrator)**, **CKS (Certified Kubernetes Security Specialist)**, and **CKAD (Certified Kubernetes Application Developer)** exams. Additionally, this platform offers invaluable hands-on experience with **AWS EKS (Elastic Kubernetes Service)**, equipping users with practical insights for real-world applications. Whether you're aiming to validate your skills, boost your career prospects in Kubernetes administration, security, application development, or delve into AWS EKS, this platform provides hands-on labs, practice tests, and expert guidance to ensure certification success.
 
 - Prepare for the **CKA**: [Certified Kubernetes Administrator Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
@@ -10,11 +12,28 @@ Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS
 
 
 ## Quick start
-[run via docker](docs%2Frun_from_docker.MD)  
+[run via docker](docs%2Frun_from_docker.MD)
 
-( [video instruction](https://youtu.be/Xh6sWzafBmw) )
+[![video instruction](docs%2Fimages%2Frun_via_docker.gif)](https://youtu.be/Xh6sWzafBmw "run via docker")
 
-## Repository Structure
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">Requirements</summary>
+
+- [GNU Make](https://www.gnu.org/software/make/) >= 4.2.1
+- [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.6.6
+- [terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= v0.54.8
+- [jq](https://jqlang.github.io/jq/download/) >= 1.6
+- [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  for VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html) > 2.2.30
+- [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
+
+**Or you can** [run via docker](docs%2Frun_from_docker.MD)  ( [video instruction](https://youtu.be/Xh6sWzafBmw) )
+
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">Repository Structure</summary>
 
 The repository is organized into the following sections:
 
@@ -30,19 +49,11 @@ The repository is organized into the following sections:
   - **[environments](terraform%2Fenvironments)** - Directory contains terragrunt (terraform) environments.
   - **[modules](terraform%2Fmodules)** - Directory contains terraform modules.
 
-## Requirements
-- [GNU Make](https://www.gnu.org/software/make/) >= 4.2.1
-- [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.6.6
-- [terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= v0.54.8
-- [jq](https://jqlang.github.io/jq/download/) >= 1.6
-- [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  for VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-version.html) > 2.2.30
-- [aws profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html)
+</details>
 
-**Or you can** [run via docker](docs%2Frun_from_docker.MD)  ( [video instruction](https://youtu.be/Xh6sWzafBmw) )
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">About CKA, CKS, CKAD scenarios</summary>
 
-
-### About CKA, CKS, CKAD scenarios
 - the platform uses **aws**  to create following resources :  **vpc**, **subnets**, **security groups**, **ec2** (spot ), **s3**
 - after you launch the scenarios the platform will create all the necessary resources   and give access to k8s clusters.
 - to create clusters the platform uses **kubeadm**
@@ -59,6 +70,7 @@ OS for nodes  :
    ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
 CNI :  calico
 ````
+</details>
 
 ## Configuration
 - change  **backend_bucket** ( **region** , **backend_region**  optional ) in [terraform/environments/terragrunt.hcl](terraform%2Fenvironments%2Fterragrunt.hcl#L4) :
@@ -171,7 +183,7 @@ Every command should be run from the project's root directory.
   [Video instruction for launching **CKA mock exam**](https://www.youtube.com/watch?v=P-YYX4CTWIg)
 
 - choose [a mock exam](tasks%2Fcka%2Fmock) number
-- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- change instance type from ``spot`` to ``ondemand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKA exam ``TASK={mock_number} make run_cka_mock``
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
@@ -208,7 +220,7 @@ Every command should be run from the project's root directory.
 ### mock  CKS exam
 - choose [a mock exam](tasks%2Fcks%2Fmock) number
 - change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
-- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- change instance type from ``spot`` to ``ondemand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKS exam ``TASK={mock_number} make run_cks_mock`` or ``TASK={mock_number} make run_cks_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
@@ -229,7 +241,7 @@ Every command should be run from the project's root directory.
 ### mock  CKAD exam
 - choose [a mock exam](tasks%2Fckad%2Fmock)  number
 - change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
-- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- change instance type from ``spot`` to ``ondemand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKAD exam ``TASK={mock_number} make run_ckad_mock`` or ``TASK={mock_number} make run_ckad_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
@@ -250,7 +262,7 @@ Every command should be run from the project's root directory.
 ### mock  HR exam
 - choose [a mock exam](tasks%2Fhr%2Fmock) number
 - change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
-- change instance type from ``spot`` to ``on-demand`` in  ``{mock_number}/env.hcl`` if you need
+- change instance type from ``spot`` to ``ondemand`` in  ``{mock_number}/env.hcl`` if you need
 - create mock  CKS exam ``TASK={mock_number} make run_hr_mock`` or ``TASK={mock_number} make run_hr_mock_clean`` if you'd like  to run with **clean** terragrunt cache
 - find ``worker_pc_ip`` in ``terraform output``
 - connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
@@ -296,6 +308,11 @@ If you want to say **thank you** or/and support the active development of **SRE 
 
 ## License and Usage Agreement
 - [Apache License 2.0](LICENSE)
+
+## Channels for cooperative preparation
+ -  [cka](https://t.me/sre_platform_cka)
+ -  [cks](https://t.me/sre_platform_cks)
+ -  [ckad](https://t.me/sre_platform_ckad)
 
 ## Contacts
 

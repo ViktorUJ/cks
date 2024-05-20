@@ -1,9 +1,29 @@
 # Changelog
 
+## 0.11.1 (*24.05.2024)
+### Features
+* K8s version **1.30** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
+* k8s version **1.30**  is used in [cka-mock 1](..%2Ftasks%2Fcka%2Fmock%2F01)
+* k8s version **1.30**  is used in [cka-mock 2](..%2Ftasks%2Fcka%2Fmock%2F02)
+* kube-bench in [cks mock1](..%2Ftasks%2Fcks%2Fmock%2F01) is updated to version  0.7.3 .
+* k8s version **1.30**  is used in [cks mock1](..%2Ftasks%2Fcks%2Fmock%2F01)
+* k8s version **1.30**  is used in [ckad mock1](..%2Ftasks%2Fckad%2Fmock%2F01)
+* k8s version **1.30**  is used in [ckad mock2](..%2Ftasks%2Fckad%2Fmock%2F02)
+
+## 0.10.1 (24.04.2024)
+### Features
+* [Cka lab 3. Nginx ingress. Routing by header ](..%2Ftasks%2Fcka%2Flabs%2F03%2FREADME.MD) is added.
+* [Cka lab 3 solution ](..%2Ftasks%2Fcka%2Flabs%2F03%2Fworker%2Ffiles%2Fsolutions%2F1.MD) is added.
+* [Video](https://youtu.be/1-qA7RjSx4A) for Cka lab 3 solution is added.
+* [Cka lab 4. Nginx ingress. Routing 30% of requests to new version of app](..%2Ftasks%2Fcka%2Flabs%2F04%2FREADME.MD)  is added.
+* [Cka lab 4 solution ](..%2Ftasks%2Fcka%2Flabs%2F04%2Fworker%2Ffiles%2Fsolutions%2F1.MD) is added.
+* [Video](https://youtu.be/IC_0FeQtgwA) for Cka lab 4 solution is added.
+
+
 ## 0.9.1 (20.03.2024)
 ### Features
 * [Ckad mock exam 2 ](..%2Ftasks%2Fckad%2Fmock%2F02%2FREADME.md) is added . List of questions updated as of March 2024
-* [Ckad mock exam 2 solutions](..%2Ftasks%2Fckad%2Fmock%2F02%2Fworker%2Ffiles%2Fsolutions) are added 
+* [Ckad mock exam 2 solutions](..%2Ftasks%2Fckad%2Fmock%2F02%2Fworker%2Ffiles%2Fsolutions) are added
 * [Video](https://youtu.be/_0nX68vil-A) for CKAD mock 2  solutions is added.
 
 ## 0.8.1 (10.02.2024)
