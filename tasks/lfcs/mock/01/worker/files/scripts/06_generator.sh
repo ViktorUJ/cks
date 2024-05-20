@@ -4,7 +4,7 @@
 mkdir -p /opt/06result
 r=$(( $RANDOM % 10 + 10 ));
 for i in $(seq 1 $r);
-do
+do 
     mkdir -p /opt/task6/dir$i
     rand=$((RANDOM % 2))
     if [[ "$rand" -eq 0 ]]; then
