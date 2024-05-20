@@ -145,11 +145,11 @@
 
 ---
 
-|       **18**        | **Perform docker operations**                                                                         |
-| :-----------------: | :---------------------------------------------------------------------------------------------------- |
-|     Task weight     | ?%                                                                                                    |
-|        Task         | - Run docker `apache` container with name `webserv`.<br/> - Removed all docker images except `apache` |
-| Acceptance criteria | - Container is running? <br/>- Removed all images except `apache`                                     |
+|       **18**        | **Perform docker operations**                                                                                 |
+| :-----------------: | :------------------------------------------------------------------------------------------------------------ |
+|     Task weight     | ?%                                                                                                            |
+|        Task         | - Run docker `ubuntu/apache2` container with name `webserv`.<br/> - Removed all docker images except `apache` |
+| Acceptance criteria | - Container is running? <br/>- Removed all images except `apache`                                             |
 
 ---
 

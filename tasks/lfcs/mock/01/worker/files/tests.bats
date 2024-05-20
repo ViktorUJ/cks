@@ -306,11 +306,73 @@
 }
 
 #13
-@test "13.1 Check if a user phoenix has hard limit of opening 20 processes." {
+@test "13. Check if a user phoenix has hard limit of opening 20 processes." {
   exit_status=$(cat /etc/security/limits.conf | grep -E "phoenix.*hard.*nproc.*20")
   echo '0.5' >> /var/work/tests/result/all
   if [ "$exit_status" == "0" ]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$exit_status" == "0" ]
+}
+
+#14
+@test "14. Check if skeleton file IMPORTANT_NOTES has been created." {
+  exit_status=$(ls /etc/skel/IMPORTANT_NOTES)
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$exit_status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$exit_status" == "0" ]
+}
+
+#15
+@test "15. Check if a user jackson cannot use sudo." {
+  exit_status=$(sudo su - jackson -c 'sudo echo' &>/dev/null;)
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$exit_status" == "1" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$exit_status" == "1" ]
+}
+
+#16
+@test "16. Check filtering out /etc/services file with the lines started from net." {
+  exit_status=$(grep "net" /etc/services > /opt/15/result.txt)
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$exit_status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$exit_status" == "0" ]
+}
+
+#17
+@test "17 Check filtering out /etc/services file with the lines started from net." {
+  exit_status=$(diff $(grep "net" /etc/services) $(cat /opt/15/result.txt | sort))
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$exit_status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$exit_status" == "0" ]
+}
+
+#18
+@test "17 Check if docker ubuntu/apache2 container is running with name webserv" {
+  status=$(docker inspect webserv | jq -r '.[].State.Status' )
+  image=$(docker inspect webserv | jq -r '.[].Config.Image')
+  echo '1' >> /var/work/tests/result/all
+  if [ "$status" == "running" && "$image" == "ubuntu/apache2" ]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "running" && "$image" == "ubuntu/apache2" ]
+}
+
+#19
+@test "17 Check if docker ubuntu/apache2 container is running with name webserv" {
+  status=$(docker inspect webserv | jq -r '.[].State.Status' )
+  image=$(docker inspect webserv | jq -r '.[].Config.Image')
+  echo '1' >> /var/work/tests/result/all
+  if [ "$status" == "running" && "$image" == "ubuntu/apache2" ]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "running" && "$image" == "ubuntu/apache2" ]
 }
