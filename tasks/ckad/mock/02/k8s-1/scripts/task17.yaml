@@ -84,8 +84,4 @@ spec:
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
-<<<<<<< HEAD
 status: {}
-=======
-status: {}
->>>>>>> 0.11.1

@@ -13,10 +13,7 @@ metadata:
   namespace: jellyfish
 spec:
   containers:
-  - image: viktoruj/ping_pong:alpine
-    name: app
-<<<<<<< HEAD
+    - image: viktoruj/ping_pong:alpine
+      name: app
 ---
-=======
----
->>>>>>> 0.11.1
+

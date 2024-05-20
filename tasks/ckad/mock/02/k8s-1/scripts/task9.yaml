@@ -75,8 +75,4 @@ spec:
           service:
             name: main-app
             port:
-<<<<<<< HEAD
               number: 80
-=======
-              number: 80
->>>>>>> 0.11.1

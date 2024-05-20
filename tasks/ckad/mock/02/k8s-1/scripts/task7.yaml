@@ -75,8 +75,4 @@ spec:
           service:
             name: meg-service
             port:
-<<<<<<< HEAD
               number: 808
-=======
-              number: 808
->>>>>>> 0.11.1
