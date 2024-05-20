@@ -16,4 +16,3 @@ spec:
   - image: viktoruj/ping_pong:alpine
     name: app
 ---
-
