@@ -512,8 +512,4 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
    echo '4'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 0.11.1
