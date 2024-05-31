@@ -1,0 +1,17 @@
+FROM golang:alpine AS builder
+
+RUN apk update && apk add --no-cache git
+WORKDIR $GOPATH/src/mypackage/myapp/
+COPY app/ .
+RUN go mod tidy
+RUN go build -ldflags="-w -s" -o app app.go
+
+
+FROM amazon/aws-cli:2.15.47
+COPY yum.repos /etc/yum.repos.d/
+RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh -y && \
+    curl -LO https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl && \
+    chmod +x ./kubectl && \
+    mv kubectl /usr/local/bin/kubectl
+COPY --from=builder /go/src/mypackage/myapp/app app
+ENTRYPOINT ["/app"]
