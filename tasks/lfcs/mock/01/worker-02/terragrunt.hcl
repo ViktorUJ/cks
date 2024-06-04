@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/work_pc/"
+  source = "../../..//modules/worker_lfcs/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -32,12 +32,8 @@ inputs = {
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
 
-
   work_pc = {
-    clusters_config = {
-      #     cluster1 = dependency.cluster1.outputs.k8s_config
-    }
-    instance_type      = local.vars.locals.instance_type_worker
+    instance_type      = local.vars.locals.instance_type_worker2
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
     key_name           = local.vars.locals.key_name
@@ -46,7 +42,6 @@ inputs = {
     ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/clean.sh"
     util = {
-      kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/lfcs/mock/01/worker/files/tests.bats"

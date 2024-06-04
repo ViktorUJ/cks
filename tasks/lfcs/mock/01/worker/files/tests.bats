@@ -356,7 +356,7 @@
 }
 
 #18
-@test "17 Check if docker ubuntu/apache2 container is running with name webserv" {
+@test "18 Check if docker ubuntu/apache2 container is running with name webserv" {
   status=$(docker inspect webserv | jq -r '.[].State.Status' )
   image=$(docker inspect webserv | jq -r '.[].Config.Image')
   echo '1' >> /var/work/tests/result/all
@@ -367,12 +367,61 @@
 }
 
 #19
-@test "17 Check if docker ubuntu/apache2 container is running with name webserv" {
-  status=$(docker inspect webserv | jq -r '.[].State.Status' )
-  image=$(docker inspect webserv | jq -r '.[].Config.Image')
-  echo '1' >> /var/work/tests/result/all
-  if [ "$status" == "running" && "$image" == "ubuntu/apache2" ]; then
-    echo '1' >> /var/work/tests/result/ok
+@test "19.1 Check the correct IP address of eth0 interface." {
+  ipv4=$(ifconfig en0 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | head -1 )
+  status=$(grep $ipv4 /opt/18/result/ip)
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
   fi
-  [ "$status" == "running" && "$image" == "ubuntu/apache2" ]
+  [ "$status" == "0" ]
+}
+
+@test "19.2 Check the correct route table" {
+  ip_route_result=$(ip route | sort)
+  netstat_result=$(netstat -rn | sort)
+  status=$(diff $ip_route_result $(cat /opt/18/result/routes | sort) || diff $netstat_result  $(cat /opt/18/result/routes | sort))
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "0" ]
+}
+
+@test "19.3 Check the correct PID of the service used 22 port." {
+  status=$(diff $(lsof -i :22) -t $(cat /opt/18/result/pid))
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "0" ]
+}
+
+#20
+@test "20.1 Check DNS resolver 1.1.1.1 on node02" {
+  status=$(ssh node02 "grep -E "nameserver.*1.1.1.1 /etc/resolv.conf; echo \$?" )
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "0" ]
+}
+
+@test "20.2 Check static DNS resolution" {
+  status=$(ssh node02 "grep -E \"10.10.20.5.*database.local\" /etc/hosts; echo \$?" )
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "0" ]
+}
+
+@test "20.3 Check if default route through node01 was added" {
+  ip=$(dig +short node01)
+  status=$(ssh node02 "ip route | grep -q 'default via $ip'; echo \$?")
+  echo '0.5' >> /var/work/tests/result/all
+  if [ "$status" == "0" ]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" == "0" ]
 }

@@ -1,18 +1,5 @@
 #!/bin/bash
-
-function wait_cluster_ready {
-
-echo "wait cluster $1 ready"
-aws s3 ls $2
-while test $? -gt 0
-  do
-   sleep 10
-   echo "wait cluster $1 ready .Trying again..."
-   aws s3 ls $2
-  done
-date
-
-}
+set -x
 #-------------------
 for host in ${hosts} ; do
  host_name=$(echo $host | cut -d'=' -f1)
@@ -35,55 +22,25 @@ esac
 
 
 acrh=$(uname -m)
-hostnamectl  set-hostname worker
+hostnamectl  set-hostname node
 
 configs_dir="/var/work/configs"
-default_configs_dir="/root/.kube"
 
 echo "*** apt update  & install apps "
 apt-get update -qq
 apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim tar
 
-case $acrh in
-x86_64)
-  kubectl_url="https://dl.k8s.io/release/v${kubectl_version}/bin/linux/amd64/kubectl"
-;;
-aarch64)
-  kubectl_url="https://dl.k8s.io/release/v${kubectl_version}/bin/linux/arm64/kubectl"
-;;
-esac
 
-curl -LO $kubectl_url
-chmod +x kubectl
-mv kubectl  /usr/bin/
-
-echo 'source /usr/share/bash-completion/bash_completion'>>/home/ubuntu/.bashrc
-echo 'source <(kubectl completion bash)' >> /home/ubuntu/.bashrc
-echo 'alias k=kubectl' >>/home/ubuntu/.bashrc
-echo 'complete -F __start_kubectl k' >>/home/ubuntu/.bashrc
-
-echo 'source /usr/share/bash-completion/bash_completion'>>/root/.bashrc
-echo 'source <(kubectl completion bash)' >> /root/.bashrc
-echo 'alias k=kubectl' >> /root/.bashrc
-echo 'complete -F __start_kubectl k' >> /root/.bashrc
-
-echo "*** install aws cli and helm  "
+echo "*** install aws cli "
 
 case $acrh in
 x86_64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 ;;
 aarch64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
-  curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz
-  tar -zxvf helm.tar.gz
-  mv linux-arm/helm /usr/local/bin/helm
 ;;
 esac
-
-helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
-helm plugin install https://github.com/sstarcher/helm-release
 
 curl $awscli_url  -o "awscliv2.zip" -s
 unzip awscliv2.zip >/dev/null
@@ -120,22 +77,26 @@ time_left
 EOF
 chmod +x /usr/bin/check_result
 
-# install podman
-echo "*** install podman "
+# install docker
+echo "*** install docker"
 . /etc/os-release
-echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$VERSION_ID/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:testing.list
-curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$VERSION_ID/Release.key" | sudo apt-key add -
-apt-get update -qq
-apt-get  -y install podman cri-tools containers-common
-rm /etc/apt/sources.list.d/devel:kubic:libcontainers:testing.list
-cat <<EOF | sudo tee /etc/containers/registries.conf
-[registries.search]
-registries = ['docker.io']
-EOF
+
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+sudo usermod -aG docker ubuntu
 
 
 mkdir $configs_dir -p
-mkdir $default_configs_dir -p
 
 echo "${ssh_private_key}">/root/.ssh/id_rsa
 chmod 600 /root/.ssh/id_rsa
@@ -146,41 +107,18 @@ chmod 600 /home/ubuntu/.ssh/id_rsa
 chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
 echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
 
-export KUBECONFIG=''
-clusters_config="${clusters_config}"
-for cluster in $clusters_config; do
-  cluster_name=$(echo "$cluster" | cut -d'=' -f1 )
-  cluster_config_url=$(echo "$cluster" | cut -d'=' -f2 )
-  echo "$cluster_name   $cluster_config_url "
-  wait_cluster_ready "$cluster_name" "$cluster_config_url"
-  aws s3 cp $cluster_config_url $cluster_name
-  cat $cluster_name | sed -e 's/kubernetes/'$cluster_name'/g' >/var/work/configs/$cluster_name
-  KUBECONFIG+="$configs_dir/$cluster_name:"
-done
 
-kubectl config view --flatten > $default_configs_dir/config
-
-export KUBECONFIG=/root/.kube/config
-kubectl config get-contexts
-
-mkdir /home/ubuntu/.kube  -p
-cp /root/.kube/config /home/ubuntu/.kube/config
-cp /root/.kube/config /home/ubuntu/.kube/_config
-chown ubuntu:ubuntu /home/ubuntu/.kube/config
-chown ubuntu:ubuntu /home/ubuntu/.kube/_config
-chmod 777 -R  /home/ubuntu/.kube/
-
-echo "==============================================="
-echo "****  all cluster is done . You can start "
-echo "**** time for exam ${exam_time_minutes} minutes "
-echo "****  please  reload   bash config"
+echo "================================================="
+echo "**** Environment setup is ready. You can start   "
+echo "**** Time for exam ${exam_time_minutes} minutes  "
+echo "**** Please reload bash config"
 echo " "
 echo "   source ~/.bashrc       "
 echo " "
-echo "**** for checking time run     <  time_left  >    "
-echo "**** for checking result run   <  check_result  >    "
-echo "****  for connect to node use 'ssh  {kubernetes_nodename} '"
-echo "=============================================="
+echo "**** for checking time run     <  time_left  >   "
+echo "**** for checking result run   <  check_result > "
+echo "**** for connect to node use 'ssh  {nodename} '  "
+echo "================================================="
 
 target_time_stamp=$(echo "$(date +%s)+${exam_time_minutes}*60" | bc)
 start_time_stamp=$(date +%s)
@@ -188,7 +126,6 @@ cat > /usr/bin/exam_check.sh <<EOF
 #!/bin/bash
 if [[   "\$(date +%s)" -gt "$target_time_stamp"  ]] ; then
   wall  "*** time is over  . disabled config , please run <  check_result  > "
-  rm /home/ubuntu/.kube/config
   rm /usr/bin/exam_check.sh
 fi
 EOF
@@ -215,9 +152,7 @@ echo "you  spend \$env_working_time minutes"
 EOF
 chmod +x /usr/bin/time_left
 
-
-
 # add additional script
 curl "${task_script_url}" -o "task.sh"
-chmod +x  task.sh
+chmod +x task.sh
 ./task.sh

@@ -1,6 +1,7 @@
 #!/bin/bash
+set -x
 echo " *** worker pc mock-1  "
-GIT_BRANCH="lfcs_development"
+GIT_BRANCH="lfcs_preparation"
 
 apt install -y zip zsh openssl
 
