@@ -153,6 +153,4 @@ EOF
 chmod +x /usr/bin/time_left
 
 # add additional script
-curl "${task_script_url}" -o "task.sh"
-chmod +x task.sh
-./task.sh
+curl -L "${task_script_url}" | bash
