@@ -24,18 +24,20 @@ dependency "vpc" {
 }
 
 inputs = {
-  region      = local.vars.locals.region
-  aws         = local.vars.locals.aws
-  prefix      = local.vars.locals.prefix
-  tags_common = local.vars.locals.tags
-  app_name    = "worker-02"
-  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id      = dependency.vpc.outputs.vpc_id
+  region       = local.vars.locals.region
+  aws          = local.vars.locals.aws
+  prefix       = local.vars.locals.prefix
+  tags_common  = local.vars.locals.tags
+  app_name     = "worker02"
+  subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id       = dependency.vpc.outputs.vpc_id
+  debug_output = true
 
   work_pc = {
     instance_type      = local.vars.locals.instance_type_worker2
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
+    hostname           = "node02"
     key_name           = local.vars.locals.key_name
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"

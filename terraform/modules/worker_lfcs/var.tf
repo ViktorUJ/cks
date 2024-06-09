@@ -25,11 +25,15 @@ variable "time_sleep" {
 }
 
 variable "ssh_password_enable" {
-  default = "true"
+  type    = bool
+  default = true
 }
+
 variable "debug_output" {
-  default = "false" # false | true
+  type    = bool
+  default = false # false | true
 }
+
 variable "questions_list" {
   default = ""
 }
@@ -45,6 +49,7 @@ variable "solutions_video" {
 variable "work_pc" {
   type = object({
     instance_type      = string
+    hostname           = optional(string, "node")
     ami_id             = string
     key_name           = string
     cidrs              = list(string)

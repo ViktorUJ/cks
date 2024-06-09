@@ -24,19 +24,26 @@ dependency "vpc" {
   config_path = "../vpc"
 }
 
+dependency "worker02" {
+  config_path = "../worker-02"
+}
+
 inputs = {
   region      = local.vars.locals.region
   aws         = local.vars.locals.aws
   prefix      = local.vars.locals.prefix
   tags_common = local.vars.locals.tags
-  app_name    = "worker"
+  app_name    = "worker01"
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
+  ssb
+  hosts = dependency.worker02.outputs.hosts_list
 
   work_pc = {
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
     key_name           = local.vars.locals.key_name
+    hostname           = "node01"
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
     instance_type      = local.vars.locals.instance_type_worker1

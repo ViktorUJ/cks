@@ -24,5 +24,4 @@ locals {
     type = "gp3"
     size = "12"
   }
-
 }

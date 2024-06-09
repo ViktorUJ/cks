@@ -174,84 +174,90 @@
 # 8
 @test "8.1 Check tar archieve to be created" {
   mkdir -p /var/work/tests/artifacts/08-tar/ && tar -xf /opt/08/results/mytar.tar -C /var/work/tests/artifacts/08-tar/
+  diff /var/work/tests/artifacts/08-tar/ /opt/08/files/
+  status=$?
   echo '1' >> /var/work/tests/result/all
-  if [[ diff /var/work/tests/artifacts/08-tar/ /opt/08/files/ ]]; then
+  if [[ "$status" == "0" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff /var/work/tests/artifacts/08-tar/ /opt/08/files/
-}
-
-# 8
-@test "8.1 Check tar archive to be created" {
-  mkdir -p /var/work/tests/artifacts/08-tar/ && tar -xf /opt/08/results/mytar.tar -C /var/work/tests/artifacts/08-tar/
-  echo '1' >> /var/work/tests/result/all
-  if [[ diff /var/work/tests/artifacts/08-tar/ /opt/08/files/ ]]; then
-    echo '1' >> /var/work/tests/result/ok
-  fi
-  diff /var/work/tests/artifacts/08-tar/ /opt/08/files/
+  [ "$status" == "0" ]
 }
 
 @test "8.2 Check tar.gz archive to be created" {
   mkdir -p /var/work/tests/artifacts/08-targz/ && tar -xf /opt/08/results/mytargz.tar.gz -C /var/work/tests/artifacts/08-targz/
   echo '1' >> /var/work/tests/result/all
-  if [[ diff /var/work/tests/artifacts/08-targz/ /opt/08/files/ ]]; then
+  diff /var/work/tests/artifacts/08-targz/ /opt/08/files/
+  status=$?
+  if [[ "$status" == "0" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff /var/work/tests/artifacts/08-targz/ /opt/08/files/
+  [ "$status" == "0" ]
 }
 
 @test "8.3 Check tar.bz2 archive to be created" {
   mkdir -p /var/work/tests/artifacts/08-tarbz/ && tar -xf /opt/08/results/mybz.tar.bz2 -C /var/work/tests/artifacts/08-tarbz/
   echo '1' >> /var/work/tests/result/all
-  if [[ diff /var/work/tests/artifacts/08-tarbz/ /opt/08/files/ ]]; then
+  diff /var/work/tests/artifacts/08-tarbz/ /opt/08/files/
+  status=$?
+  if [[ "$status" == "0" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff /var/work/tests/artifacts/08-tarbz/ /opt/08/files/
+  [ "$status" == "0" ]
 }
 
 @test "8.4 Check zip archive to be created" {
   mkdir -p /var/work/tests/artifacts/08-zip/ && unzip /opt/08/results/myzip.zip -d /var/work/tests/artifacts/08-zip/
   echo '1' >> /var/work/tests/result/all
-  if [[ diff /var/work/tests/artifacts/08-zip/ /opt/08/files/ ]]; then
+  diff /var/work/tests/artifacts/08-zip/ /opt/08/files/
+  status=$?
+  if [[ "$status" == "0" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff /var/work/tests/artifacts/08-zip/ /opt/08/files/
+  [ "$status" == "0" ]
 }
 
 # 9
 @test "9.1 Check extracted tar.gz archive" {
   mkdir -p /var/work/tests/artifacts/09/targz/ && tar -xf /opt/09/task/backup.tar.gz -C /var/work/tests/artifacts/09/targz/
   echo '1' >> /var/work/tests/result/all
-  if [[ diff /var/work/tests/artifacts/09/targz/ /opt/08/solution/tarbackup ]]; then
+  diff /var/work/tests/artifacts/09-tar/ /opt/09/solution/tarbackup
+  status=$?
+  if [[ "$status" == "0" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff /var/work/tests/artifacts/09-tar/ /opt/09/solution/tarbackup
+  [ "$status" == "0" ]
 }
 
 @test "9.2 Check extracted zip archive" {
   mkdir -p /var/work/tests/artifacts/09/zip/ && tar -xf /opt/09/task/backup.zip -C /var/work/tests/artifacts/09/zip/
   echo '1' >> /var/work/tests/result/all
-  if [[ diff /var/work/tests/artifacts/09/zip/ /opt/09/solution/zipbackup ]]; then
+  diff /var/work/tests/artifacts/09/zip/ /opt/09/solution/tarbackup
+  status=$?
+  if [[ "$status" == "0" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff /var/work/tests/artifacts/09/zip/ /opt/09/solution/tarbackup
+  [ "$status" == "0" ]
 }
 
 # 10
 @test "10.1 Check if the nginx service was installed." {
   echo '0.5' >> /var/work/tests/result/all
-  if [[ systemctl list-units | grep nginx ]]; then
+  systemctl list-units | grep nginx
+  status=$?
+  if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
-  systemctl list-units | grep nginx
+  [ "$status" == "0" ]
 }
 
 @test "10.2 Check if the nginx service was enabled." {
   echo '0.5' >> /var/work/tests/result/all
-  if [[ systemctl is-enabled nginx | grep enabled ]]; then
+  systemctl is-enabled nginx | grep enabled
+  status=$?
+  if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
-  systemctl is-enabled nginx | grep enabled
+  [ "$status" == "0" ]
 }
 
 # 11
