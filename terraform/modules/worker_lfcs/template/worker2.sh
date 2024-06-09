@@ -9,3 +9,6 @@ date
 swapoff -a
 
 apt-get update && sudo apt-get upgrade -y
+
+acrh=$(uname -m)
+hostnamectl  set-hostname ${hostname}
