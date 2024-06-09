@@ -19,7 +19,9 @@ locals {
   worker_pc_ip = var.work_pc.node_type == "spot" ? join("", data.aws_instances.spot_fleet["enable"].public_ips) : aws_instance.master["enable"].public_ip
   master_ami   = var.work_pc.ami_id != "" ? var.work_pc.ami_id : data.aws_ami.master.image_id
   worker_pc_id = var.work_pc.node_type == "spot" ? join("", data.aws_instances.spot_fleet["enable"].ids) : aws_instance.master["enable"].id
-  hosts        = "${var.work_pc.hostname}=${var.work_pc.node_type == "spot" ? join("", data.aws_instances.spot_fleet["enable"].private_ips) : aws_instance.master["enable"].public_ip}"
+  hosts = [
+    "${var.work_pc.hostname}=${var.work_pc.node_type == "spot" ? join("", data.aws_instances.spot_fleet["enable"].private_ips) : aws_instance.master["enable"].public_ip}"
+  ]
   user_data = base64encode(templatefile("template/boot_zip.sh", {
     boot_zip = base64gzip(templatefile(var.work_pc.user_data_template, {
       ssh_private_key     = var.work_pc.ssh.private_key

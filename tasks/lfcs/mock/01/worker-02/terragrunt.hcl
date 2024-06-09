@@ -42,12 +42,12 @@ inputs = {
     cidrs              = ["0.0.0.0/0"]
     subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version
-    user_data_template = "template/clean.sh"
+    user_data_template = "template/worker2.sh"
     util = {
     }
     exam_time_minutes = "120"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/lfcs/mock/01/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/lfcs/mock/01/worker/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/lfcs/mock/01/worker-02/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/lfcs/mock/01/worker-02/files/worker.sh"
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key

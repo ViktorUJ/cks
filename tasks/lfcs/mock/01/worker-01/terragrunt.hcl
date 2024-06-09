@@ -36,7 +36,7 @@ inputs = {
   app_name    = "worker01"
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
-  hosts       = dependency.worker02.outputs.hosts_list
+  host_list   = dependency.worker02.outputs.hosts_list
 
   work_pc = {
     node_type          = local.vars.locals.node_type

@@ -265,7 +265,7 @@
   id cooluser
   status=$?
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "0" ]; then
+  if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" == "0" ]
@@ -274,7 +274,7 @@
 @test "11.2 Check if a user has correct shell configured" {
   check_sh=$(cat /etc/passwd | grep cooluser | awk -F ':' '{print $7}')
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "/bin/zsh" ]; then
+  if [[ "$status" == "/bin/zsh" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" == "/bin/zsh" ]
@@ -284,7 +284,7 @@
   sudo -lU cooluser &>/dev/null
   check_sudo=$?
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$check_sudo" == "0" ]; then
+  if [[ "$check_sudo" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$check_sudo" == "0" ]
@@ -296,7 +296,7 @@
 @test "12.1 Check a user spiderman for being unlocked." {
   status=$(sudo passwd -S spiderman | awk '{print $2}')
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" != "L" ]; then
+  if [[ "$status" != "L" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" != "L" ]
@@ -305,7 +305,7 @@
 @test "12.2 Check a batman spiderman for being locked." {
   status=$(sudo passwd -S batman | awk '{print $2}')
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "L" ]; then
+  if [[ "$status" == "L" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" == "L" ]
@@ -315,7 +315,7 @@
 @test "13. Check if a user phoenix has hard limit of opening 20 processes." {
   exit_status=$(cat /etc/security/limits.conf | grep -E "phoenix.*hard.*nproc.*20")
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$exit_status" == "0" ]; then
+  if [[ "$exit_status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$exit_status" == "0" ]
@@ -325,7 +325,7 @@
 @test "14. Check if skeleton file IMPORTANT_NOTES has been created." {
   exit_status=$(ls /etc/skel/IMPORTANT_NOTES)
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$exit_status" == "0" ]; then
+  if [[ "$exit_status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$exit_status" == "0" ]
@@ -335,7 +335,7 @@
 @test "15. Check if a user jackson cannot use sudo." {
   exit_status=$(sudo su - jackson -c 'sudo echo' &>/dev/null;)
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$exit_status" == "1" ]; then
+  if [[ "$exit_status" == "1" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$exit_status" == "1" ]
@@ -345,7 +345,7 @@
 @test "16. Check filtering out /etc/services file with the lines started from net." {
   exit_status=$(grep "net" /etc/services > /opt/15/result.txt)
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$exit_status" == "0" ]; then
+  if [[ "$exit_status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$exit_status" == "0" ]
@@ -355,7 +355,7 @@
 @test "17 Check filtering out /etc/services file with the lines started from net." {
   exit_status=$(diff $(grep "net" /etc/services) $(cat /opt/15/result.txt | sort))
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$exit_status" == "0" ]; then
+  if [[ "$exit_status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$exit_status" == "0" ]
@@ -366,7 +366,7 @@
   status=$(docker inspect webserv | jq -r '.[].State.Status' )
   image=$(docker inspect webserv | jq -r '.[].Config.Image')
   echo '1' >> /var/work/tests/result/all
-  if [ "$status" == "running" && "$image" == "ubuntu/apache2" ]; then
+  if [[ "$status" == "running" && "$image" == "ubuntu/apache2" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
   [ "$status" == "running" && "$image" == "ubuntu/apache2" ]
@@ -374,10 +374,10 @@
 
 #19
 @test "19.1 Check the correct IP address of eth0 interface." {
-  ipv4=$(ifconfig en0 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | head -1 )
+  ipv4=$(ip addr show ens5 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | head -1 )
   status=$(grep $ipv4 /opt/18/result/ip)
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "0" ]; then
+  if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" == "0" ]
@@ -388,7 +388,7 @@
   netstat_result=$(netstat -rn | sort)
   status=$(diff $ip_route_result $(cat /opt/18/result/routes | sort) || diff $netstat_result  $(cat /opt/18/result/routes | sort))
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "0" ]; then
+  if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" == "0" ]
@@ -397,7 +397,7 @@
 @test "19.3 Check the correct PID of the service used 22 port." {
   status=$(diff $(lsof -i :22) -t $(cat /opt/18/result/pid))
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "0" ]; then
+  if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" == "0" ]
@@ -407,7 +407,7 @@
 @test "20.1 Check DNS resolver 1.1.1.1 on node02" {
   status=$(ssh node02 "grep -E "nameserver.*1.1.1.1 /etc/resolv.conf; echo \$?" )
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "0" ]; then
+  if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" == "0" ]
@@ -416,17 +416,17 @@
 @test "20.2 Check static DNS resolution" {
   status=$(ssh node02 "grep -E \"10.10.20.5.*database.local\" /etc/hosts; echo \$?" )
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "0" ]; then
+  if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" == "0" ]
 }
 
 @test "20.3 Check if default route through node01 was added" {
-  ip=$(dig +short node01)
+  ip=$(dig +short node01 | head -n 1)
   status=$(ssh node02 "ip route | grep -q 'default via $ip'; echo \$?")
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$status" == "0" ]; then
+  if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$status" == "0" ]
