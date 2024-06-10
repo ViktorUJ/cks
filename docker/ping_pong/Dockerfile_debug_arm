@@ -11,7 +11,7 @@ COPY yum.repos /etc/yum.repos.d/
 RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql netcat redis -y  && \
     curl -LO https://dl.k8s.io/release/v1.30.0/bin/linux/arm64/kubectl && \
     chmod +x ./kubectl && \
-    mv kubectl /usr/local/bin/kubectl &&
+    mv kubectl /usr/local/bin/kubectl
 #    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
 #    curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64 && \
 #    chmod +x skaffold && \
