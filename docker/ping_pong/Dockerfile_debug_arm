@@ -1,0 +1,28 @@
+FROM golang:alpine AS builder
+
+RUN apk update && apk add --no-cache git
+WORKDIR $GOPATH/src/mypackage/myapp/
+COPY app/ .
+RUN go mod tidy
+RUN go build -ldflags="-w -s" -o app app.go
+
+FROM amazon/aws-cli:2.16.4
+COPY yum.repos /etc/yum.repos.d/
+RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql netcat redis tar git -y  && \
+    curl -LO https://dl.k8s.io/release/v1.30.0/bin/linux/arm64/kubectl && \
+    chmod +x ./kubectl && \
+    mv kubectl /usr/local/bin/kubectl && \
+    curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm64.tar.gz && \
+    tar -zxvf helm.tar.gz && \
+    mv linux-arm64/helm /usr/local/bin/helm && \
+    helm plugin install https://github.com/jkroepke/helm-secrets && \
+    curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64 && \
+    chmod +x skaffold && \
+    mv skaffold /usr/local/bin/skaffold && \
+    skaffold version && \
+    curl -Lo sops https://github.com/getsops/sops/releases/download/v3.8.1/sops-v3.8.1.linux.arm64 && \
+    chmod +x sops && \
+    mv sops /usr/local/bin/sops
+
+COPY --from=builder /go/src/mypackage/myapp/app app
+ENTRYPOINT ["/app"]
