@@ -50,8 +50,8 @@ alpine)
 
 debug)
    echo "*** do release debug"
-   docker buildx build --platform linux/arm64 --load -t viktoruj/ping_pong:${latest_commit_hash}-arm64-debug  -f  Dockerfile_debug_arm .
-#   docker buildx build --platform linux/amd64 --load -t viktoruj/ping_pong:${latest_commit_hash}-amd64-debug  -f  Dockerfile_debug_x86  .
+#   docker buildx build --platform linux/arm64 --load -t viktoruj/ping_pong:${latest_commit_hash}-arm64-debug  -f  Dockerfile_debug_arm .
+   docker buildx build --platform linux/amd64 --load -t viktoruj/ping_pong:${latest_commit_hash}-amd64-debug  -f  Dockerfile_debug_x86  .
 #   docker push viktoruj/ping_pong:${latest_commit_hash}-arm64-debug
 #   docker push viktoruj/ping_pong:${latest_commit_hash}-amd64-debug
 #   docker manifest create viktoruj/ping_pong:${latest_commit_hash}-debug  viktoruj/ping_pong:${latest_commit_hash}-arm64-debug   viktoruj/ping_pong:${latest_commit_hash}-amd64-debug
