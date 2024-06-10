@@ -24,6 +24,5 @@ RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql netcat 
     chmod +x sops && \
     mv sops /usr/local/bin/sops
 
-
 COPY --from=builder /go/src/mypackage/myapp/app app
 ENTRYPOINT ["/app"]
