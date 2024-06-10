@@ -19,11 +19,11 @@ RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql netcat 
     curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64 && \
     chmod +x skaffold && \
     mv skaffold /usr/local/bin/skaffold && \
-    skaffold version
-#    curl -Lo sops https://github.com/mozilla/sops/releases/download/v3.7.3/sops-v3.7.3.linux && \
-#    chmod +x sops && \
-#    mv sops /usr/local/bin/sops && \
-#    helm plugin install https://github.com/jkroepke/helm-secrets
+    skaffold version && \
+    curl -Lo sops https://github.com/getsops/sops/releases/download/v3.8.1/sops-v3.8.1.linux.arm64 && \
+    chmod +x sops && \
+    mv sops /usr/local/bin/sops
+
 
 COPY --from=builder /go/src/mypackage/myapp/app app
 ENTRYPOINT ["/app"]
