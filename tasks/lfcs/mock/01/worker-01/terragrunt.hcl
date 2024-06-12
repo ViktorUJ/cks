@@ -60,7 +60,7 @@ inputs = {
     root_volume = local.vars.locals.root_volume
     non_root_volumes = {
       "/dev/sdf" = {
-        size = 2
+        size = 3
         type = "gp3"
       }
       "/dev/sdh" = {

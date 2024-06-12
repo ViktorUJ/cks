@@ -487,3 +487,58 @@
   fi
   [ "$status" -eq 0 ]
 }
+
+# 23
+# ???
+
+# 24
+@test "24.1 Two partitions have been created with size 2GB." {
+  SIZE1=$(lsblk /dev/nvme2n1p1 --output SIZE -b)
+  SIZE2=$(lsblk /dev/nvme2n1p2 --output SIZE -b)
+  echo '1' >> /var/work/tests/result/all
+  if [[ $SIZE1 == "1073741824" && $SIZE2 == "1073741824" ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  [ $SIZE1 == "1073741824" && $SIZE2 == "1073741824" ]
+}
+
+@test "24.2 - 1 Partition has been mounted properly." {
+  lsblk /dev/nvme2n1p1 --output MOUNTPOINT | grep "/drive"
+  status=$?
+  echo '1' >> /var/work/tests/result/all
+  if [[ $status -eq 0 ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  [ $status -eq 0 ]
+}
+
+@test "24.3 Check that partition has been formatted to xfs" {
+  sudo file -sL /dev/nvme2n1p2 | grep XFS
+  status=$?
+  echo '1' >> /var/work/tests/result/all
+  if [[ $status -eq 0 ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  [ $status -eq 0 ]
+}
+
+#25
+@test "25.1 Check volume group has been created properly" {
+  result=$(sudo pvs | grep volgroup1 | grep -cE '/dev/nvme1n1|/dev/nvme3n1')
+  echo '2' >> /var/work/tests/result/all
+  if [[ $result == "2" ]]; then
+    echo '2' >> /var/work/tests/result/ok
+  fi
+  [ $result == "2" ]
+}
+
+@test "25.2 Check logic volume has been created properly wuth required size" {
+  result=$(sudo lvs volgroup1 | grep -c 'logvolume1')
+  size=$(sudo lvs --units G --noheadings -o lv_size volgroup1/logvolume1 | xargs)
+  echo '2' >> /var/work/tests/result/all
+  if [[ $result -eq 1 && $(echo $size | grep -E "1.*G") ]]; then
+    echo '2' >> /var/work/tests/result/ok
+  fi
+  [ $result -eq 1 && $(echo $size | grep -E "1.*G") ]
+}
+
