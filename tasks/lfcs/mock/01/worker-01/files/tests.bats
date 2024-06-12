@@ -405,7 +405,7 @@
 
 #20
 @test "20.1 Check DNS resolver 1.1.1.1 on node02" {
-  status=$(ssh node02 "grep -E "nameserver.*1.1.1.1 /etc/resolv.conf; echo \$?" )
+  status=$(ssh -o 'StrictHostKeyChecking=no' node02 "grep -E \"nameserver.*1.1.1.1\" /etc/resolv.conf; echo \$?" )
   echo '0.5' >> /var/work/tests/result/all
   if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
@@ -414,7 +414,7 @@
 }
 
 @test "20.2 Check static DNS resolution" {
-  status=$(ssh node02 "grep -E \"10.10.20.5.*database.local\" /etc/hosts; echo \$?" )
+  status=$(ssh -o 'StrictHostKeyChecking=no' node02 "grep -E \"10.10.20.5.*database.local\" /etc/hosts; echo \$?" )
   echo '0.5' >> /var/work/tests/result/all
   if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
@@ -424,10 +424,66 @@
 
 @test "20.3 Check if default route through node01 was added" {
   ip=$(dig +short node01 | head -n 1)
-  status=$(ssh node02 "ip route | grep -q 'default via $ip'; echo \$?")
+  status=$(ssh -o 'StrictHostKeyChecking=no' node02 "ip route | grep -q 'default via $ip'; echo \$?")
   echo '0.5' >> /var/work/tests/result/all
-  if [[ "$status" == "0" ]]; then
+  if [[ "$status" -eq 0 ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
-  [ "$status" == "0" ]
+  [ "$status" -eq 0 ]
+}
+
+#21
+@test "21.1 Ensure that scripts copies files from '/opt/21/task/' '/opt/21/task-backup/'" {
+  rm -rf /opt/21/task-backup/*
+  /opt/21/result/script.sh
+  diff -r /opt/21/task/ /opt/21/task-backup/
+  status=$?
+  echo '0.5' >> /var/work/tests/result/all
+  if [[ "$status" -eq 0 ]]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" -eq 0 ]
+}
+
+@test "21.2 Check if empty_file is created at /opt/19/result/" {
+  /opt/21/result/script.sh
+  [[ -e /opt/21/result/empty_file ]]
+  status=$?
+  echo '0.5' >> /var/work/tests/result/all
+  if [[ "$status" -eq 0 ]]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" -eq 0 ]
+}
+
+@test "21.3 Check if script is set to run every day at 2AM" {
+  result=$(crontab -l | grep "/opt/21/result/script.sh")
+  [[ "$result" == "0 2 * * * /opt/21/result/script.sh" ]]
+  status=$?
+  echo '0.5' >> /var/work/tests/result/all
+  if [[ "$status" -eq 0 ]]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" -eq 0 ]
+}
+
+# 22
+@test "22.1 Check if user `user22` has permissions to read 'aclfile'." {
+  getfacl /opt/22/tasks/aclfile | grep "user:user0:r--"
+  status=$?
+  echo '0.5' >> /var/work/tests/result/all
+  if [[ "$status" -eq 0 ]]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" -eq 0 ]
+}
+
+@test "22.2 Check if 'frozenfile' is no longer immutable" {
+  lsattr /opt/22/tasks/frozenfile | grep -o 'i'
+  status=$?
+  echo '0.5' >> /var/work/tests/result/all
+  if [[ "$status" -eq 0 ]]; then
+    echo '0.5' >> /var/work/tests/result/ok
+  fi
+  [ "$status" -eq 0 ]
 }

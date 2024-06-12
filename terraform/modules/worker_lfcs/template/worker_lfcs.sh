@@ -97,7 +97,6 @@ sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 sudo usermod -aG docker ubuntu
 
-
 mkdir $configs_dir -p
 
 echo "${ssh_private_key}">/root/.ssh/id_rsa
