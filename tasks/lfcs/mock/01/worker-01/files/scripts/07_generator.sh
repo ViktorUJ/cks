@@ -12,5 +12,6 @@ for ((k=1;k<=70;k++)); do
 done
 
 chmod a+rw /etc/config.conf
+chown ubuntu:ubuntu /etc/config.conf
 cp /etc/config.conf /var/work/tests/artifacts/05_config.conf
 mkdir -p /opt/07 /var/work/07/

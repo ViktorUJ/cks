@@ -94,7 +94,7 @@
 
 # 4
 @test "4 Check if a folder does have sticky bit enabled" {
-  stat -c '%A' "/home/ubuntu/file2" | grep S
+  stat -c '%A' "/opt/stickydir/" | grep S
   status=$?
   echo '1' >> /var/work/tests/result/all
   if [[ $status -eq 0 ]]; then
@@ -225,9 +225,11 @@
 
 # 9
 @test "9.1 Check extracted tar.gz archive" {
-  mkdir -p /var/work/tests/artifacts/09/targz/ && tar -xf /opt/09/task/backup.tar.gz -C /var/work/tests/artifacts/09/targz/
+  mkdir -p /var/work/tests/artifacts/09/targz/
+  rm -rf /var/work/tests/artifacts/09/targz/*
+  tar -xf /opt/09/task/backup.tar.gz -C /var/work/tests/artifacts/09/targz/
   echo '1' >> /var/work/tests/result/all
-  diff /var/work/tests/artifacts/09-tar/ /opt/09/solution/tarbackup
+  diff /var/work/tests/artifacts/09/targz/ /opt/09/solution/tarbackup
   status=$?
   if [[ "$status" == "0" ]]; then
     echo '1' >> /var/work/tests/result/ok
@@ -236,9 +238,11 @@
 }
 
 @test "9.2 Check extracted zip archive" {
-  mkdir -p /var/work/tests/artifacts/09/zip/ && tar -xf /opt/09/task/backup.zip -C /var/work/tests/artifacts/09/zip/
+  mkdir -p /var/work/tests/artifacts/09/zip/
+  rm -rf /var/work/tests/artifacts/09/zip/*
+  unzip -o /opt/09/task/backup.zip -d /var/work/tests/artifacts/09/zip/
   echo '1' >> /var/work/tests/result/all
-  diff /var/work/tests/artifacts/09/zip/ /opt/09/solution/tarbackup
+  diff /var/work/tests/artifacts/09/zip/ /opt/09/solution/zipbackup/
   status=$?
   if [[ "$status" == "0" ]]; then
     echo '1' >> /var/work/tests/result/ok
@@ -281,10 +285,10 @@
 @test "11.2 Check if a user has correct shell configured" {
   check_sh=$(cat /etc/passwd | grep cooluser | awk -F ':' '{print $7}')
   echo '0.25' >> /var/work/tests/result/all
-  if [[ "$status" == "/bin/zsh" ]]; then
+  if [[ "$check_sh" == "/bin/zsh" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
-  [ "$status" == "/bin/zsh" ]
+  [ "$check_sh" == "/bin/zsh" ]
 }
 
 @test "11.3 Check if user cooluser has sudo permissions" {
@@ -301,34 +305,36 @@
 @test "12.1 Check a user spiderman for being unlocked." {
   status=$(sudo passwd -S spiderman | awk '{print $2}')
   echo '1' >> /var/work/tests/result/all
-  if [[ "$status" != "L" ]]; then
-    echo '1' >> /var/work/tests/result/ok
-  fi
-  [ "$status" != "L" ]
-}
-
-@test "12.2 Check a batman spiderman for being locked." {
-  status=$(sudo passwd -S batman | awk '{print $2}')
-  echo '1' >> /var/work/tests/result/all
   if [[ "$status" == "L" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
   [ "$status" == "L" ]
 }
 
-#13
-@test "13 Check if a user phoenix has hard limit of opening 20 processes." {
-  exit_status=$(cat /etc/security/limits.conf | grep -E "phoenix.*hard.*nproc.*20")
+@test "12.2 Check a batman spiderman for being locked." {
+  status=$(sudo passwd -S batman | awk '{print $2}')
   echo '1' >> /var/work/tests/result/all
-  if [[ "$exit_status" == "0" ]]; then
+  if [[ "$status" == "P" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$exit_status" == "0" ]
+  [ "$status" == "P" ]
+}
+
+#13
+@test "13 Check if a user phoenix has hard limit of opening 20 processes." {
+  cat /etc/security/limits.conf | grep -E "phoenix.*hard.*nproc.*20"
+  exit_status=$?
+  echo '1' >> /var/work/tests/result/all
+  if [[ "$exit_status" -eq 0 ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  [ "$exit_status" -eq 0 ]
 }
 
 #14
 @test "14 Check if skeleton file IMPORTANT_NOTES has been created." {
-  exit_status=$(ls /etc/skel/IMPORTANT_NOTES)
+  ls /etc/skel/IMPORTANT_NOTES
+  exit_status=$?
   echo '1' >> /var/work/tests/result/all
   if [[ "$exit_status" -eq 0 ]]; then
     echo '1' >> /var/work/tests/result/ok

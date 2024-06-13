@@ -15,6 +15,6 @@ cd /tmp/tar/
 tar -czf /opt/09/task/backup.tar.gz *
 cd -
 cd /tmp/zip/
-zip -r /opt/09/task/backup.zip *
+zip -r /opt/09/task/backup.zip file*
 cd -
 rm -rf /tmp/tar /tmp/zip
