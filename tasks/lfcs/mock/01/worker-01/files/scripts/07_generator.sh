@@ -13,4 +13,4 @@ done
 
 chmod a+rw /etc/config.conf
 cp /etc/config.conf /var/work/tests/artifacts/05_config.conf
-mkdir -p /var/work/07/
+mkdir -p /opt/07 /var/work/07/

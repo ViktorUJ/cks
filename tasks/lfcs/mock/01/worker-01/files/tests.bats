@@ -94,13 +94,14 @@
 
 # 4
 @test "4 Check if a folder does have sticky bit enabled" {
-  result=$(stat -c '%A' "/home/ubuntu/file2")
+  stat -c '%A' "/home/ubuntu/file2" | grep S
+  status=$?
   echo '1' >> /var/work/tests/result/all
-  if [ "$result" == "drwxrwxrwt" ]; then
+  if [[ $status -eq 0 ]]; then
     echo $result
     echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$result" == "drwxrwxrwt" ]
+  [ $status -eq 0 ]
 }
 
 # 5
@@ -127,10 +128,10 @@
   rm -rf /var/work/tests/artifacts/task0503 && mkdir /var/work/tests/artifacts/task0503
   find "/opt/05/task" -type f -size +1k -exec cp {} "/var/work/tests/artifacts/task0503/" \;
   echo '1' >> /var/work/tests/result/all
-  if diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/result/05kb | sort) &>/dev/null; then
+  if diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/05/result/05kb | sort) &>/dev/null; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/result/05kb | sort) &>/dev/null;
+  diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/05/result/05kb | sort) &>/dev/null;
 }
 
 # 6
@@ -153,7 +154,7 @@
   tail -n 1 /etc/config.conf | grep "system71=enabled"
 }
 
-@test "7.2 Check if the script /opt/07filter.sh is working" {
+@test "7.2 Check if the script /opt/07/filter.sh is working" {
   echo '1' >> /var/work/tests/result/all
   if diff -q <( /opt/07/filter.sh | sort) <( cat /etc/config.conf | grep enabled | sort) &>/dev/null; then
     echo '1' >> /var/work/tests/result/ok
@@ -170,8 +171,10 @@
 }
 
 # 8
-@test "8.1 Check tar archieve to be created" {
-  mkdir -p /var/work/tests/artifacts/08-tar/ && tar -xf /opt/08/results/mytar.tar -C /var/work/tests/artifacts/08-tar/
+@test "8.1 Check tar archieve to be created" { 
+  mkdir -p /var/work/tests/artifacts/08-tar/
+  rm -rf /var/work/tests/artifacts/08-tar/*
+  tar -xf /opt/08/results/mytar.tar -C /var/work/tests/artifacts/08-tar/
   diff /var/work/tests/artifacts/08-tar/ /opt/08/files/
   status=$?
   echo '1' >> /var/work/tests/result/all
@@ -182,7 +185,9 @@
 }
 
 @test "8.2 Check tar.gz archive to be created" {
-  mkdir -p /var/work/tests/artifacts/08-targz/ && tar -xf /opt/08/results/mytargz.tar.gz -C /var/work/tests/artifacts/08-targz/
+  mkdir -p /var/work/tests/artifacts/08-targz/
+  rm -rf /var/work/tests/artifacts/08-targz/*
+  tar -xf /opt/08/results/mytargz.tar.gz -C /var/work/tests/artifacts/08-targz/
   echo '1' >> /var/work/tests/result/all
   diff /var/work/tests/artifacts/08-targz/ /opt/08/files/
   status=$?
@@ -193,7 +198,9 @@
 }
 
 @test "8.3 Check tar.bz2 archive to be created" {
-  mkdir -p /var/work/tests/artifacts/08-tarbz/ && tar -xf /opt/08/results/mybz.tar.bz2 -C /var/work/tests/artifacts/08-tarbz/
+  mkdir -p /var/work/tests/artifacts/08-tarbz/
+  rm -rf /var/work/tests/artifacts/08-tarbz/*
+  tar -xf /opt/08/results/mybz.tar.bz2 -C /var/work/tests/artifacts/08-tarbz/
   echo '1' >> /var/work/tests/result/all
   diff /var/work/tests/artifacts/08-tarbz/ /opt/08/files/
   status=$?
@@ -204,7 +211,9 @@
 }
 
 @test "8.4 Check zip archive to be created" {
-  mkdir -p /var/work/tests/artifacts/08-zip/ && unzip /opt/08/results/myzip.zip -d /var/work/tests/artifacts/08-zip/
+  mkdir -p /var/work/tests/artifacts/08-zip/
+  rm -rf /var/work/tests/artifacts/08-zip/*
+  unzip /opt/08/results/myzip.zip -d /var/work/tests/artifacts/08-zip/
   echo '1' >> /var/work/tests/result/all
   diff /var/work/tests/artifacts/08-zip/ /opt/08/files/
   status=$?
@@ -482,7 +491,7 @@
 }
 
 # 22
-@test "22.1 Check if user `user22` has permissions to read 'aclfile'." {
+@test "22.1 Check if user 'user22' has permissions to read 'aclfile'." {
   getfacl /opt/22/tasks/aclfile | grep "user:user0:r--"
   status=$?
   echo '0.5' >> /var/work/tests/result/all
