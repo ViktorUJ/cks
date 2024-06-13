@@ -92,7 +92,7 @@
   [ ! -e "/home/ubuntu/file33" ]
 }
 
-#4
+# 4
 @test "4 Check if a folder does have sticky bit enabled" {
   result=$(stat -c '%A' "/home/ubuntu/file2")
   echo '1' >> /var/work/tests/result/all
@@ -103,47 +103,45 @@
   [ "$result" == "drwxrwxrwt" ]
 }
 
-#5.1
+# 5
 @test "5.1 Check the filtering out files with executable permissions." {
-  find "/opt/task5" -type f -perm -u=x > /var/work/tests/artifacts/task0501
+  find "/opt/05/task" -type f -perm -u=x > /var/work/tests/artifacts/task0501
   echo '1' >> /var/work/tests/result/all
-  if diff -q <(cat /var/work/tests/artifacts/task0501 | sort) <(cat /opt/05execuser | sort) &>/dev/null; then
+  if diff -q <(cat /var/work/tests/artifacts/task0501 | sort) <(cat /opt/05/result/execuser | sort) &>/dev/null; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff -q <(cat /var/work/tests/artifacts/task0501 | sort) <(cat /opt/05execuser | sort) &>/dev/null
+  diff -q <(cat /var/work/tests/artifacts/task0501 | sort) <(cat /opt/05/result/execuser | sort) &>/dev/null
 }
 
-#5.2
 @test "5.2 Check the filtering out files with SETUID permissions." {
   rm -rf /var/work/tests/artifacts/task0502 && mkdir /var/work/tests/artifacts/task0502
-  find "/opt/task5" -type f -perm -4000 -exec cp {} /var/work/tests/artifacts/task0502/ \;
+  find "/opt/05/task" -type f -perm -4000 -exec cp {} /var/work/tests/artifacts/task0502/ \;
   echo '1' >> /var/work/tests/result/all
-  if diff -q <(ls -1 /var/work/tests/artifacts/task0502 | sort) <(ls -1 /opt/05setuid/ | sort) &>/dev/null; then
+  if diff -q <(ls -1 /var/work/tests/artifacts/task0502 | sort) <(ls -1 /opt/05/result/setuid | sort) &>/dev/null; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff -q <(ls -1 /var/work/tests/artifacts/task0502 | sort) <(ls -1 /opt/05setuid/ | sort);
+  diff -q <(ls -1 /var/work/tests/artifacts/task0502 | sort) <(ls -1 /opt/05/result/setuid | sort);
 }
 
-#5.3
 @test "5.3 Check the filtering out files that larget than 1KB" {
   rm -rf /var/work/tests/artifacts/task0503 && mkdir /var/work/tests/artifacts/task0503
-  find "/opt/task5" -type f -size +1k -exec cp {} "/var/work/tests/artifacts/task0503/" \;
+  find "/opt/05/task" -type f -size +1k -exec cp {} "/var/work/tests/artifacts/task0503/" \;
   echo '1' >> /var/work/tests/result/all
-  if diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/05kb/ | sort) &>/dev/null; then
+  if diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/result/05kb | sort) &>/dev/null; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/05kb/ | sort) &>/dev/null;
+  diff -q <(ls -1 /var/work/tests/artifacts/task0503 | sort) <(ls -1 /opt/result/05kb | sort) &>/dev/null;
 }
 
-#6
+# 6
 @test "6 Check the files that contain findme word" {
   rm -rf /var/work/tests/artifacts/task06 && mkdir /var/work/tests/artifacts/task06
-  find /opt/task6 -type f -exec grep -q 'findme' {} \; -exec cp {} /var/work/tests/artifacts/task06 \;
-  echo '1' >> /var/work/tests/result/all
-  if diff -q <(ls -1 /var/work/tests/artifacts/task06 | sort) <(ls -1 /opt/06result | sort) &>/dev/null; then
-    echo '1' >> /var/work/tests/result/ok
+  find /opt/06/task -type f -exec grep -q 'findme' {} \; -exec cp {} /var/work/tests/artifacts/task06 \;
+  echo '2' >> /var/work/tests/result/all
+  if diff -q <(ls -1 /var/work/tests/artifacts/task06 | sort) <(ls -1 /opt/06/result | sort) &>/dev/null; then
+    echo '2' >> /var/work/tests/result/ok
   fi
-   diff -q <(ls -1 /var/work/tests/artifacts/task06 | sort) <(ls -1 /opt/06result | sort) &>/dev/null
+  diff -q <(ls -1 /var/work/tests/artifacts/task06 | sort) <(ls -1 /opt/06/result | sort) &>/dev/null
 }
 
 #7
@@ -156,11 +154,11 @@
 }
 
 @test "7.2 Check if the script /opt/07filter.sh is working" {
-  echo '0.5' >> /var/work/tests/result/all
-  if diff -q <( /opt/07filter.sh | sort) <( cat /etc/config.conf | grep enabled | sort) &>/dev/null; then
-    echo '0.5' >> /var/work/tests/result/ok
+  echo '1' >> /var/work/tests/result/all
+  if diff -q <( /opt/07/filter.sh | sort) <( cat /etc/config.conf | grep enabled | sort) &>/dev/null; then
+    echo '1' >> /var/work/tests/result/ok
   fi
-  diff -q <( /opt/07filter.sh | sort) <( cat /etc/config.conf | grep enabled | sort) &>/dev/null;
+  diff -q <( /opt/07/filter.sh | sort) <( cat /etc/config.conf | grep enabled | sort) &>/dev/null;
 }
 
 @test "7.3 Check if the all parameters have been enabled." {
@@ -273,7 +271,7 @@
 
 @test "11.2 Check if a user has correct shell configured" {
   check_sh=$(cat /etc/passwd | grep cooluser | awk -F ':' '{print $7}')
-  echo '0.5' >> /var/work/tests/result/all
+  echo '0.25' >> /var/work/tests/result/all
   if [[ "$status" == "/bin/zsh" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
@@ -283,83 +281,96 @@
 @test "11.3 Check if user cooluser has sudo permissions" {
   sudo -lU cooluser &>/dev/null
   check_sudo=$?
-  echo '0.5' >> /var/work/tests/result/all
+  echo '0.25' >> /var/work/tests/result/all
   if [[ "$check_sudo" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$check_sudo" == "0" ]
 }
 
-
-# Check
 #12
 @test "12.1 Check a user spiderman for being unlocked." {
   status=$(sudo passwd -S spiderman | awk '{print $2}')
-  echo '0.5' >> /var/work/tests/result/all
+  echo '1' >> /var/work/tests/result/all
   if [[ "$status" != "L" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+    echo '1' >> /var/work/tests/result/ok
   fi
   [ "$status" != "L" ]
 }
 
 @test "12.2 Check a batman spiderman for being locked." {
   status=$(sudo passwd -S batman | awk '{print $2}')
-  echo '0.5' >> /var/work/tests/result/all
+  echo '1' >> /var/work/tests/result/all
   if [[ "$status" == "L" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+    echo '1' >> /var/work/tests/result/ok
   fi
   [ "$status" == "L" ]
 }
 
 #13
-@test "13. Check if a user phoenix has hard limit of opening 20 processes." {
+@test "13 Check if a user phoenix has hard limit of opening 20 processes." {
   exit_status=$(cat /etc/security/limits.conf | grep -E "phoenix.*hard.*nproc.*20")
-  echo '0.5' >> /var/work/tests/result/all
+  echo '1' >> /var/work/tests/result/all
   if [[ "$exit_status" == "0" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+    echo '1' >> /var/work/tests/result/ok
   fi
   [ "$exit_status" == "0" ]
 }
 
 #14
-@test "14. Check if skeleton file IMPORTANT_NOTES has been created." {
+@test "14 Check if skeleton file IMPORTANT_NOTES has been created." {
   exit_status=$(ls /etc/skel/IMPORTANT_NOTES)
-  echo '0.5' >> /var/work/tests/result/all
-  if [[ "$exit_status" == "0" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+  echo '1' >> /var/work/tests/result/all
+  if [[ "$exit_status" -eq 0 ]]; then
+    echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$exit_status" == "0" ]
+  [ "$exit_status" -eq 0 ]
 }
 
 #15
-@test "15. Check if a user jackson cannot use sudo." {
-  exit_status=$(sudo su - jackson -c 'sudo echo' &>/dev/null;)
-  echo '0.5' >> /var/work/tests/result/all
-  if [[ "$exit_status" == "1" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+@test "15 Check if a user jackson cannot use sudo." {
+  sudo su - jackson -c 'sudo echo' &>/dev/null;
+  exit_status=$?
+  echo '1' >> /var/work/tests/result/all
+  if [[ "$exit_status" -eq 1 ]]; then
+    echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$exit_status" == "1" ]
+  [ "$exit_status" -eq 1 ]
 }
 
 #16
-@test "16. Check filtering out /etc/services file with the lines started from net." {
-  exit_status=$(grep "net" /etc/services > /opt/15/result.txt)
-  echo '0.5' >> /var/work/tests/result/all
+@test "16 Check filtering out /etc/services file with the lines started from net." {
+  diff <(grep "net" /etc/services | sort) <(sort /opt/16/result.txt)
+  exit_status=$?
+  echo '1' >> /var/work/tests/result/all
   if [[ "$exit_status" == "0" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+    echo '1' >> /var/work/tests/result/ok
   fi
   [ "$exit_status" == "0" ]
 }
 
 #17
-@test "17 Check filtering out /etc/services file with the lines started from net." {
-  exit_status=$(diff $(grep "net" /etc/services) $(cat /opt/15/result.txt | sort))
-  echo '0.5' >> /var/work/tests/result/all
-  if [[ "$exit_status" == "0" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+@test "17.1 Check the correct difference between /opt/17/file1 and /opt/17/file2." {
+  diff /opt/17/file1 /opt/17/file2 > /var/work/tests/artifacts/17_text_difference
+  diff <(sort /var/work/tests/artifacts/17_text_difference) <(sort /opt/17/results/text_difference)
+  exit_status=$?
+  echo '1' >> /var/work/tests/result/all
+  if [[ "$exit_status" -eq 0 ]]; then
+    echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$exit_status" == "0" ]
+  [ "$exit_status" -eq 0 ]
 }
+
+@test "17.2 Check the correct difference between /opt/17/file1 and /opt/17/file2." {
+  diff -rq /opt/17/dir1/ /opt/17/dir2/ > /var/work/tests/artifacts/17_folder_difference
+  diff <(sort /var/work/tests/artifacts/17_folder_difference) <(sort /opt/17/results/folder_difference)
+  exit_status=$?
+  echo '1' >> /var/work/tests/result/all
+  if [[ "$exit_status" -eq 0 ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  [ "$exit_status" -eq 0 ]
+} 
 
 #18
 @test "18 Check if docker ubuntu/apache2 container is running with name webserv" {
@@ -375,7 +386,8 @@
 #19
 @test "19.1 Check the correct IP address of eth0 interface." {
   ipv4=$(ip addr show ens5 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | head -1 )
-  status=$(grep $ipv4 /opt/18/result/ip)
+  grep $ipv4 /opt/19/result/ip
+  status=$?
   echo '0.5' >> /var/work/tests/result/all
   if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
@@ -386,7 +398,8 @@
 @test "19.2 Check the correct route table" {
   ip_route_result=$(ip route | sort)
   netstat_result=$(netstat -rn | sort)
-  status=$(diff $ip_route_result $(cat /opt/18/result/routes | sort) || diff $netstat_result  $(cat /opt/18/result/routes | sort))
+  diff <(echo "$ip_route_result") <(sort /opt/19/result/routes) || diff <(echo "$netstat_result") <(sort /opt/19/result/routes)
+  status=$?
   echo '0.5' >> /var/work/tests/result/all
   if [[ "$status" == "0" ]]; then
     echo '0.5' >> /var/work/tests/result/ok
@@ -395,29 +408,30 @@
 }
 
 @test "19.3 Check the correct PID of the service used 22 port." {
-  status=$(diff $(lsof -i :22) -t $(cat /opt/18/result/pid))
-  echo '0.5' >> /var/work/tests/result/all
-  if [[ "$status" == "0" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+  diff $(lsof -i :22) -t $(cat /opt/19/result/pid)
+  status=$?
+  echo '1' >> /var/work/tests/result/all
+  if [[ "$status" -eq 0 ]]; then
+    echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$status" == "0" ]
+  [ "$status" -eq 0 ]
 }
 
 #20
 @test "20.1 Check DNS resolver 1.1.1.1 on node02" {
   status=$(ssh -o 'StrictHostKeyChecking=no' node02 "grep -E \"nameserver.*1.1.1.1\" /etc/resolv.conf; echo \$?" )
-  echo '0.5' >> /var/work/tests/result/all
+  echo '1' >> /var/work/tests/result/all
   if [[ "$status" == "0" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+    echo '1' >> /var/work/tests/result/ok
   fi
   [ "$status" == "0" ]
 }
 
 @test "20.2 Check static DNS resolution" {
   status=$(ssh -o 'StrictHostKeyChecking=no' node02 "grep -E \"10.10.20.5.*database.local\" /etc/hosts; echo \$?" )
-  echo '0.5' >> /var/work/tests/result/all
+  echo '1' >> /var/work/tests/result/all
   if [[ "$status" == "0" ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+    echo '1' >> /var/work/tests/result/ok
   fi
   [ "$status" == "0" ]
 }
@@ -425,9 +439,9 @@
 @test "20.3 Check if default route through node01 was added" {
   ip=$(dig +short node01 | head -n 1)
   status=$(ssh -o 'StrictHostKeyChecking=no' node02 "ip route | grep -q 'default via $ip'; echo \$?")
-  echo '0.5' >> /var/work/tests/result/all
+  echo '1' >> /var/work/tests/result/all
   if [[ "$status" -eq 0 ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+    echo '1' >> /var/work/tests/result/ok
   fi
   [ "$status" -eq 0 ]
 }
@@ -460,9 +474,9 @@
   result=$(crontab -l | grep "/opt/21/result/script.sh")
   [[ "$result" == "0 2 * * * /opt/21/result/script.sh" ]]
   status=$?
-  echo '0.5' >> /var/work/tests/result/all
+  echo '1' >> /var/work/tests/result/all
   if [[ "$status" -eq 0 ]]; then
-    echo '0.5' >> /var/work/tests/result/ok
+    echo '1' >> /var/work/tests/result/ok
   fi
   [ "$status" -eq 0 ]
 }

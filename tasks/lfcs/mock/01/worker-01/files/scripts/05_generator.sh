@@ -6,14 +6,15 @@ arr[1]="512K"
 arr[2]="1536K"
 arr[3]="2M"
 
-mkdir /opt/task5/
+mkdir -p /opt/05/task
+mkdir -p /opt/05/result/05kb
 
 for i in {1..500}; do
-  dd if=/dev/urandom bs=${arr[$[ $RANDOM % 4 ]]} count=1 of=/opt/task5/file$i  > /dev/null
+  dd if=/dev/urandom bs=${arr[$[ $RANDOM % 4 ]]} count=1 of=/opt/05/task/file$i  > /dev/null
   rand=$((RANDOM % 2))
   if [[ "$rand" -eq 0 ]]; then
-    chmod u+x /opt/task5/file$i
+    chmod u+x /opt/05/task/file$i
   elif [[ "$rand" -eq 1 ]]; then
-    chmod u+s /opt/task5/file$i
+    chmod u+s /opt/05/task/file$i
   fi
 done
