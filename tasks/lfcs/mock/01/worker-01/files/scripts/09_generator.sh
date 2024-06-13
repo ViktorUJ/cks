@@ -11,7 +11,8 @@ for i in {1..10}; do
   echo "This is a dummy file$i for zip." > /tmp/zip/file_$i.txt
 done
 
-tar -czf /opt/09/task/backup.tar.gz /tmp/tar/
-zip -r /opt/09/task/backup.zip /tmp/zip/
-
+tar -czf /opt/09/task/backup.tar.gz /tmp/tar/*
+cd /tmp/zip/
+zip -r /opt/09/task/backup.zip *
+cd -
 rm -rf /tmp/tar /tmp/zip
