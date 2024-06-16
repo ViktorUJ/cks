@@ -40,11 +40,11 @@
 @test "2.2 Check file permissions" {
   result=$(stat -c '%a' "/home/ubuntu/file2")
   echo '0.5' >> /var/work/tests/result/all
-  if [ "$result" == "644" ] || [ "$result" == "4664" ]; then
+  if [ "$result" == "664" ] || [ "$result" == "4664" ]; then
     echo $result
     echo '0.5' >> /var/work/tests/result/ok
   fi
-  [ "$result" == "644" ] || [ "$result" == "4664" ]
+  [ "$result" == "664" ] || [ "$result" == "4664" ]
 }
 
 #2.3
@@ -94,7 +94,7 @@
 
 # 4
 @test "4 Check if a folder does have sticky bit enabled" {
-  stat -c '%A' "/opt/stickydir/" | grep S
+  stat -c '%A' "/opt/stickydir/" | grep t
   status=$?
   echo '1' >> /var/work/tests/result/all
   if [[ $status -eq 0 ]]; then
@@ -344,29 +344,29 @@
 
 #15
 @test "15 Check if a user jackson cannot use sudo." {
-  sudo su - jackson -c 'sudo echo' &>/dev/null;
+  ! cat /etc/group | grep sudo | grep jackson &>/dev/null;
   exit_status=$?
   echo '1' >> /var/work/tests/result/all
-  if [[ "$exit_status" -eq 1 ]]; then
+  if [[ $exit_status -eq 0 ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$exit_status" -eq 1 ]
+  [[ $exit_status -eq 0 ]]
 }
 
 #16
 @test "16 Check filtering out /etc/services file with the lines started from net." {
-  diff <(grep "net" /etc/services | sort) <(sort /opt/16/result.txt)
+  diff <(grep -e "^net.*" /etc/services | sort) <(sort /opt/16/result.txt)
   exit_status=$?
   echo '1' >> /var/work/tests/result/all
-  if [[ "$exit_status" == "0" ]]; then
+  if [[ "$exit_status" -eq 0 ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$exit_status" == "0" ]
+  [ "$exit_status" -eq 0 ]
 }
 
 #17
 @test "17.1 Check the correct difference between /opt/17/file1 and /opt/17/file2." {
-  diff /opt/17/file1 /opt/17/file2 > /var/work/tests/artifacts/17_text_difference
+  ! diff /opt/17/file1 /opt/17/file2 > /var/work/tests/artifacts/17_text_difference
   diff <(sort /var/work/tests/artifacts/17_text_difference) <(sort /opt/17/results/text_difference)
   exit_status=$?
   echo '1' >> /var/work/tests/result/all
@@ -377,7 +377,7 @@
 }
 
 @test "17.2 Check the correct difference between /opt/17/file1 and /opt/17/file2." {
-  diff -rq /opt/17/dir1/ /opt/17/dir2/ > /var/work/tests/artifacts/17_folder_difference
+  ! diff -rq /opt/17/dir1/ /opt/17/dir2/ > /var/work/tests/artifacts/17_folder_difference
   diff <(sort /var/work/tests/artifacts/17_folder_difference) <(sort /opt/17/results/folder_difference)
   exit_status=$?
   echo '1' >> /var/work/tests/result/all
@@ -395,7 +395,7 @@
   if [[ "$status" == "running" && "$image" == "ubuntu/apache2" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$status" == "running" && "$image" == "ubuntu/apache2" ]
+  [[ "$status" == "running" && "$image" == "ubuntu/apache2" ]]
 }
 
 #19
@@ -412,7 +412,7 @@
 
 @test "19.2 Check the correct route table" {
   ip_route_result=$(ip route | sort)
-  netstat_result=$(netstat -rn | sort)
+  netstat_result=$(ss -rn | sort)
   diff <(echo "$ip_route_result") <(sort /opt/19/result/routes) || diff <(echo "$netstat_result") <(sort /opt/19/result/routes)
   status=$?
   echo '0.5' >> /var/work/tests/result/all
@@ -423,7 +423,7 @@
 }
 
 @test "19.3 Check the correct PID of the service used 22 port." {
-  diff $(lsof -i :22) -t $(cat /opt/19/result/pid)
+  diff <(sudo lsof -i :22 -t | head -n1) /opt/19/result/pid
   status=$?
   echo '1' >> /var/work/tests/result/all
   if [[ "$status" -eq 0 ]]; then
@@ -434,16 +434,16 @@
 
 #20
 @test "20.1 Check DNS resolver 1.1.1.1 on node02" {
-  status=$(ssh -o 'StrictHostKeyChecking=no' node02 "grep -E \"nameserver.*1.1.1.1\" /etc/resolv.conf; echo \$?" )
+  status=$(ssh -o 'StrictHostKeyChecking=no' node02 "grep -E \"nameserver.*1.1.1.1\" /etc/resolv.conf &>/dev/null; echo \$?" )
   echo '1' >> /var/work/tests/result/all
-  if [[ "$status" == "0" ]]; then
+  if [[ "$status" -eq 0 ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$status" == "0" ]
+  [ "$status" -eq 0 ]
 }
 
 @test "20.2 Check static DNS resolution" {
-  status=$(ssh -o 'StrictHostKeyChecking=no' node02 "grep -E \"10.10.20.5.*database.local\" /etc/hosts; echo \$?" )
+  status=$(ssh -o 'StrictHostKeyChecking=no' node02 "grep -E \"10.10.20.5.*database.local\" /etc/hosts &>/dev/null ; echo \$?" )
   echo '1' >> /var/work/tests/result/all
   if [[ "$status" == "0" ]]; then
     echo '1' >> /var/work/tests/result/ok
@@ -498,7 +498,7 @@
 
 # 22
 @test "22.1 Check if user 'user22' has permissions to read 'aclfile'." {
-  getfacl /opt/22/tasks/aclfile | grep "user:user0:r--"
+  getfacl /opt/22/tasks/aclfile | grep "user:user22:r--"
   status=$?
   echo '0.5' >> /var/work/tests/result/all
   if [[ "$status" -eq 0 ]]; then
@@ -508,7 +508,7 @@
 }
 
 @test "22.2 Check if 'frozenfile' is no longer immutable" {
-  lsattr /opt/22/tasks/frozenfile | grep -o 'i'
+  ! lsattr /opt/22/tasks/frozenfile | grep -o 'i-' &>/dev/null
   status=$?
   echo '0.5' >> /var/work/tests/result/all
   if [[ "$status" -eq 0 ]]; then
