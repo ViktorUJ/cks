@@ -399,7 +399,7 @@
 }
 
 #19
-@test "19.1 Check the correct IP address of eth0 interface." {
+@test "19.1 Check the correct IP address of ens5 interface." {
   ipv4=$(ip addr show ens5 | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | head -1 )
   grep $ipv4 /opt/19/result/ip
   status=$?
@@ -518,17 +518,25 @@
 }
 
 # 23
-# ???
+@test "23 Check that SIGHUP has been sent." {
+  journalctl -xe | grep HUP | grep $(pidof redis-server)
+  status=$?
+  echo '1' >> /var/work/tests/result/all
+  if [[ $status -eq 0 ]]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  [ $status -eq 0  ]
+}
 
 # 24
 @test "24.1 Two partitions have been created with size 2GB." {
-  SIZE1=$(lsblk /dev/nvme2n1p1 --output SIZE -b)
-  SIZE2=$(lsblk /dev/nvme2n1p2 --output SIZE -b)
+  SIZE1=$(lsblk /dev/nvme2n1p1 --output SIZE -b --json | jq .blockdevices[0].size)
+  SIZE2=$(lsblk /dev/nvme2n1p2 --output SIZE -b --json | jq .blockdevices[0].size)
   echo '1' >> /var/work/tests/result/all
   if [[ $SIZE1 == "1073741824" && $SIZE2 == "1073741824" ]]; then
     echo '1' >> /var/work/tests/result/ok
   fi
-  [ $SIZE1 == "1073741824" && $SIZE2 == "1073741824" ]
+  [[ $SIZE1 == "1073741824" && $SIZE2 == "1073741824" ]]
 }
 
 @test "24.2 - 1 Partition has been mounted properly." {
@@ -568,6 +576,5 @@
   if [[ $result -eq 1 && $(echo $size | grep -E "1.*G") ]]; then
     echo '2' >> /var/work/tests/result/ok
   fi
-  [ $result -eq 1 && $(echo $size | grep -E "1.*G") ]
+  [[ $result -eq 1 && $(echo $size | grep -E "1.*G") ]]
 }
-

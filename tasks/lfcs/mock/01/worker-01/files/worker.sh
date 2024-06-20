@@ -29,8 +29,7 @@ curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker-01/files/scripts/21_generator.sh | bash
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker-01/files/scripts/22_generator.sh | bash
 
+mkdir -p /opt/19/result
 chown ubuntu:ubuntu -R /home/ubuntu/file* /opt/*
 
 systemctl enable redis-server --now
-
-mkdir -p /opt/19/result
