@@ -26,7 +26,7 @@ RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc tar 
 
 RUN wget http://download.redis.io/redis-stable.tar.gz
 RUN tar xvzf redis-stable.tar.gz
-RUN cd redis-stable
+RUN cd redis-stable && ls -la
 RUN make
 RUN cp src/redis-cli /usr/local/bin/redis-cli
 
