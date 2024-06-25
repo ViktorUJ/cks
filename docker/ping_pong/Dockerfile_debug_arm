@@ -24,7 +24,7 @@ RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc tar 
     chmod +x sops && \
     mv sops /usr/local/bin/sops
 
-RUN wget http://download.redis.io/redis-stable.tar.gz &&  tar xvzf redis-stable.tar.gz && cd redis-stable  && make redis-cli  && cp src/redis-cli /usr/local/bin/redis-cli && cd .. && rm -rf redis-stable && rm -f redis-stable.tar.gz
+RUN wget http://download.redis.io/redis-stable.tar.gz &&  tar xvzf redis-stable.tar.gz && cd redis-stable  && make -j$(nproc) redis-cli  && cp src/redis-cli /usr/local/bin/redis-cli && cd .. && rm -rf redis-stable && rm -f redis-stable.tar.gz
 
 
 COPY --from=builder /go/src/mypackage/myapp/app /app
