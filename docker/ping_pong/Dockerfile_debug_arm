@@ -6,9 +6,16 @@ COPY app/ .
 RUN go mod tidy
 RUN go build -ldflags="-w -s" -o app app.go
 
-FROM amazon/aws-cli:2.16.4
+FROM amazon/aws-cli:2.17.1  AS redis-builder
+RUN yum install  tar git wget make gcc pkgconfig which -y
+RUN wget http://download.redis.io/redis-stable.tar.gz &&  \
+ tar xvzf redis-stable.tar.gz && cd redis-stable  && \
+ make -j$(nproc) redis-cli   && \
+ cp src/redis-cli /usr/local/bin/redis-cli
+
+FROM amazon/aws-cli:2.17.1
 COPY yum.repos /etc/yum.repos.d/
-RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql netcat redis tar git -y  && \
+RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc tar git wget make gcc pkgconfig  -y  && \
     curl -LO https://dl.k8s.io/release/v1.30.0/bin/linux/arm64/kubectl && \
     chmod +x ./kubectl && \
     mv kubectl /usr/local/bin/kubectl && \
@@ -24,5 +31,7 @@ RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql netcat 
     chmod +x sops && \
     mv sops /usr/local/bin/sops
 
-COPY --from=builder /go/src/mypackage/myapp/app app
+
+COPY --from=builder /go/src/mypackage/myapp/app /app
+COPY --from=redis-builder /usr/local/bin/redis-cli  /usr/local/bin/redis-cli
 ENTRYPOINT ["/app"]
