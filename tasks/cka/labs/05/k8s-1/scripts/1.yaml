@@ -27,11 +27,17 @@ spec:
       containers:
       - image: viktoruj/ping_pong
         name: app
+        resources:
+          limits:
+            memory: 2500Mi
+          requests:
+            memory: 2500Mi
+
         env:
            - name:  ENABLE_LOAD_MEMORY
              value: "true"
            - name:  MEMORY_USAGE_PROFILE
-             value: "500=60  1024=360"
-        resources:
-          requests:
-            memory: 1000Mi
+             value: "500=60  1024=30 2048=30"
+           - name:  ENABLE_LOG_LOAD_MEMORY
+             value: "true"
+
