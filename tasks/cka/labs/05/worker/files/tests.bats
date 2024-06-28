@@ -5,35 +5,34 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo ''>/var/work/tests/result/all
   echo ''>/var/work/tests/result/ok
   echo ''>/var/work/tests/result/requests
-  for i in {1..100}; do curl -s  http://ckad.local:30102/app | grep 'Server Name' >>/var/work/tests/result/requests; done
-  [ "$?" -eq 0 ]
 
 }
 
 #1
 
-@test "1.1 Check routing to version 2  " {
+@test "1.1 PriorityClass  " {
   echo '1'>>/var/work/tests/result/all
-  total=$(cat /var/work/tests/result/requests | wc -l )
-  app2=$(cat /var/work/tests/result/requests |grep megApp2 | wc -l )
-  percentage=$((100 * app2 / total))
-  if [ $percentage -ge 20 ] && [ $percentage -le 40 ]; then
-    result=0
-  else
-    result=1
-  fi
-  if [[ "$result" == "0" ]]; then
+  result=$(kubectl get priorityclasses.scheduling.k8s.io  monitoring  -o jsonpath='{.value}')
+  if [[ "$result" == "1000000000" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "0" ]
+  [ "$result" == "1000000000" ]
 }
 
-
-@test "1.2 Check ingress v2 canary-weight  " {
+@test "1.2 DaemonSet PriorityClass  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get ing -n meg meg-app2 -o jsonpath='{.metadata.annotations.nginx\.ingress\.kubernetes\.io/canary-weight}')
-  if [[ "$result" == "30" ]]; then
+  result=$(kubectl get daemonsets.apps -n monitoring  monitoring-system  -o jsonpath='{.spec.template.spec.priorityClassName}')
+  if [[ "$result" == "monitoring" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "30" ]
+  [ "$result" == "monitoring" ]
+}
+
+@test "1.3 monitoring-system pods ready   " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get po -n monitoring  | grep Running | wc -l)
+  if [[ "$result" == "3" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "3" ]
 }
