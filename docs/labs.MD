@@ -42,7 +42,7 @@
 | **02** | [Horizontal Pod Autoscaling .CPU ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD)                              | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD)                                                       |
 | **03** | [Nginx ingress. Routing by header ](..%2Ftasks%2Fcka%2Flabs%2F03%2FREADME.MD)                             | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F03%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/1-qA7RjSx4A) |
 | **04** | [Nginx ingress. Routing 30% of requests to new version of app.](..%2Ftasks%2Fcka%2Flabs%2F04%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F04%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/IC_0FeQtgwA) |
-| **05** | [PriorityClass.](..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD)                                                | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F05%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **05** | [PriorityClass.](..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD)                                                | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F05%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/7MhXfbiMfOM)       |
 
 
 ## CKAD labs
