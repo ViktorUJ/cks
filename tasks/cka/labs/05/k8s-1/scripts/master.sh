@@ -8,4 +8,5 @@ kubectl -n kube-system patch deployment metrics-server --type=json \
 -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]]'
 
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-17/tasks/cka/labs/05/k8s-1/scripts/1.yaml
+sleep 10
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-17/tasks/cka/labs/05/k8s-1/scripts/app.yaml
