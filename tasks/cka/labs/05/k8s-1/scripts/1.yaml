@@ -27,7 +27,11 @@ spec:
       containers:
       - image: viktoruj/ping_pong:debug
         name: app
+        env:
+           - name:  ENABLE_LOAD_MEMORY
+             value: "true"
+           - name:  MEMORY_USAGE_PROFILE
+             value: "500=60  1024=360"
         resources:
           requests:
-            cpu: 1
             memory: 1000Mi
