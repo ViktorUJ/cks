@@ -25,7 +25,7 @@ spec:
       - key: node-role.kubernetes.io/control-plane
         effect: "NoSchedule"
       containers:
-      - image: viktoruj/ping_pong:debug
+      - image: viktoruj/ping_pong
         name: app
         env:
            - name:  ENABLE_LOAD_MEMORY

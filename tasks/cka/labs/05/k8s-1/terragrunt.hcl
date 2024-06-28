@@ -62,7 +62,7 @@ inputs = {
   k8s_worker = {
     # we can  configure each node independently
 
-    "node_2" = {
+    "node_system" = {
       k8_version         = local.vars.locals.k8_version
       instance_type      = local.vars.locals.instance_type
       key_name           = local.vars.locals.key_name
@@ -81,5 +81,25 @@ inputs = {
       cidrs       = local.vars.locals.access_cidrs
       root_volume = local.vars.locals.root_volume
     }
+    "node_for_app" = {
+      k8_version         = local.vars.locals.k8_version
+      instance_type      = local.vars.locals.instance_type
+      key_name           = local.vars.locals.key_name
+      ami_id             = local.vars.locals.ami_id
+      subnet_number      = "0"
+      ubuntu_version     = local.vars.locals.ubuntu_version
+      user_data_template = "template/worker.sh"
+      runtime            = local.vars.locals.runtime
+      runtime_script     = "template/runtime.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-17/tasks/cka/labs/05/k8s-1/scripts/worker.sh"
+      node_labels        = "work_type=app"
+      ssh                = {
+        private_key = dependency.ssh-keys.outputs.private_key
+        pub_key     = dependency.ssh-keys.outputs.pub_key
+      }
+      cidrs       = local.vars.locals.access_cidrs
+      root_volume = local.vars.locals.root_volume
+    }
+
   }
 }

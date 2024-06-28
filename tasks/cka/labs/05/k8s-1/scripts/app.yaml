@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app
+  name: app
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: app
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app
+    spec:
+      nodeSelector:
+        work_type: app
+      containers:
+      - image: viktoruj/ping_pong
+        name: ping-pong-q4ktp
+        env:
+           - name:  ENABLE_LOAD_MEMORY
+             value: "true"
+           - name:  MEMORY_USAGE_PROFILE
+             value: "450=60"
+        resources:
+            requests:
+                memory: 500Mi
+                cpu: 100m
+            limits:
+                memory: 500Mi
+                cpu: 100m
