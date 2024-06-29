@@ -18,7 +18,6 @@ for i in 1 2 3; do echo "This is a file for task3$i!" >> /home/ubuntu/file3$i ; 
 
 mkdir /opt/stickydir/
 
-curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker-01/files/scripts/05_generator.sh | bash
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker-01/files/scripts/06_generator.sh | bash
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker-01/files/scripts/07_generator.sh | bash
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker-01/files/scripts/08_generator.sh | bash
@@ -31,5 +30,7 @@ curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/
 
 mkdir -p /opt/19/result
 chown ubuntu:ubuntu -R /home/ubuntu/file* /opt/*
+# this is neededto be after that as chown rewrites needed permissions
+curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker-01/files/scripts/05_generator.sh | bash
 
 systemctl enable redis-server --now
