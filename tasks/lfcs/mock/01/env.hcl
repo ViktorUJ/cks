@@ -5,8 +5,9 @@ locals {
     "10.2.0.0/19"  = "eun1-az3"
     "10.2.32.0/19" = "eun1-az2"
   }
-  aws    = "default"
-  prefix = "lfcs"
+  aws        = "default"
+  prefix     = "lfcs"
+  git_branch = "lfcs_preparation"
   tags = {
     "env_name"        = "lfcs-mock"
     "env_type"        = "dev"

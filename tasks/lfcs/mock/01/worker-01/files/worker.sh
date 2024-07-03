@@ -34,3 +34,12 @@ chown ubuntu:ubuntu -R /home/ubuntu/file* /opt/*
 curl -L https://raw.githubusercontent.com/ViktorUJ/cks/${GIT_BRANCH}/tasks/lfcs/mock/01/worker-01/files/scripts/05_generator.sh | bash
 
 systemctl enable redis-server --now
+
+# This is for task 20.3
+sudo iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE
+sudo iptables -A FORWARD -i ens5 -o ens5 -m state --state RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -A FORWARD -i ens5 -o ens5 -j ACCEPT
+
+EC2_INSTANCE_ID=$(wget -q -O - http://169.254.169.254/latest/meta-data/instance-id)
+REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/.$//')
+aws ec2 modify-instance-attribute --no-source-dest-check --instance-id $EC2_INSTANCE_ID --region $REGION

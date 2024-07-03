@@ -41,7 +41,8 @@ resource "aws_iam_policy" "server" {
                 "ec2:DescribeVpcs",
                 "ec2:DescribeVolumes",
                 "ec2:DescribeSubnets",
-                "ec2:DescribeInstanceStatus"
+                "ec2:DescribeInstanceStatus",
+                "ec2:ModifyInstanceAttribute"
             ],
             "Resource": "*"
         }

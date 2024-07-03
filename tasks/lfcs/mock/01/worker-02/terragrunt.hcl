@@ -31,6 +31,7 @@ inputs = {
   app_name     = "worker02"
   subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id       = dependency.vpc.outputs.vpc_id
+  vpc_cidr     = dependency.vpc.outputs.vpc_default_cidr
   debug_output = true
 
   work_pc = {
@@ -46,8 +47,8 @@ inputs = {
     util = {
     }
     exam_time_minutes = "120"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/lfcs/mock/01/worker-02/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/lfcs/mock/01/worker-02/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/${local.vars.locals.git_branch}/tasks/lfcs/mock/01/worker-02/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/${local.vars.locals.git_branch}/tasks/lfcs/mock/01/worker-02/files/worker.sh"
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key

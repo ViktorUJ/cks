@@ -37,6 +37,7 @@ inputs = {
   subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
   vpc_id      = dependency.vpc.outputs.vpc_id
   host_list   = dependency.worker02.outputs.hosts_list
+  vpc_cidr    = dependency.vpc.outputs.vpc_default_cidr
 
   work_pc = {
     node_type          = local.vars.locals.node_type
@@ -51,8 +52,8 @@ inputs = {
     util = {
     }
     exam_time_minutes = "120"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/lfcs_preparation/tasks/lfcs/mock/01/worker-01/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/lfcs_preparation/tasks/lfcs/mock/01/worker-01/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/${local.vars.locals.git_branch}/tasks/lfcs/mock/01/worker-01/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/${local.vars.locals.git_branch}/tasks/lfcs/mock/01/worker-01/files/worker.sh"
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key

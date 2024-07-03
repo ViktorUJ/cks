@@ -12,6 +12,14 @@ resource "aws_security_group" "servers" {
   }
 
   ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [var.vpc_cidr]
+    description = "allow access within vpc"
+  }
+
+  ingress {
     from_port = 0
     to_port   = 0
     protocol  = "-1"
