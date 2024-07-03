@@ -7,7 +7,7 @@ locals {
   }
   aws        = "default"
   prefix     = "lfcs"
-  git_branch = "lfcs_preparation"
+  git_branch = "0.12.1"
   tags = {
     "env_name"        = "lfcs-mock"
     "env_type"        = "dev"

@@ -1,6 +1,6 @@
 #!/bin/bash
 echo " *** worker-01 pc mock-1  "
-GIT_BRANCH="lfcs_preparation"
+GIT_BRANCH="0.12.1"
 
 apt install -y zip zsh openssl acl redis net-tools
 
