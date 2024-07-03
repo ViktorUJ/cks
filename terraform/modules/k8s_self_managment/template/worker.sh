@@ -27,7 +27,7 @@ date
 swapoff -a
 
 apt-get update && sudo apt-get upgrade -y
-apt-get install -y  unzip
+apt-get install -y unzip
 
 ${runtime_script}
 
