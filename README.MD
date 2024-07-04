@@ -62,8 +62,8 @@ k8s version  : [ 1.21 , 1.29 ]   https://kubernetes.io/releases/
 Rintime :
     docker                   [1.21 , 1.23]
     cri-o                    [1.21 , 1.29]
-    containerd               [1.21 , 1.29]   # cks, cka  default 1.29
-    containerd_gvizor        [1.21 , 1.29]
+    containerd               [1.21 , 1.30]   # cks, cka  default 1.29
+    containerd_gvizor        [1.21 , 1.30]
 OS for nodes  :
    ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
 CNI :  calico

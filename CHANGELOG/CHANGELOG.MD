@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.11.1 (*24.05.2024)
+## 0.12.1 (04.07.2024)
+### Features
+* [Cka lab 5. PriorityClass ](..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD) is added.
+* [Cka lab 5. PriorityClass solutions ](..%2Ftasks%2Fcka%2Flabs%2F05%2Fworker%2Ffiles%2Fsolutions%2F1.MD) is added.
+* [Video](https://youtu.be/7MhXfbiMfOM) for Cka lab 5  solutions is added.
+* [lfcs mock exam 1 ](..%2Ftasks%2Flfcs%2Fmock%2F01%2FREADME.md) is added .
+* [lfcs mock exam 1 solutions](..%2Ftasks%2Flfcs%2Fmock%2F01%2Fworker-01%2Ffiles%2Fsolutions) are added
+
+
+## 0.11.1 (24.05.2024)
 ### Features
 * K8s version **1.30** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
 * k8s version **1.30**  is used in [cka-mock 1](..%2Ftasks%2Fcka%2Fmock%2F01)
