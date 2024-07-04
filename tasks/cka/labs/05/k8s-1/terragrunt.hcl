@@ -51,7 +51,7 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/0.12.1/tasks/cka/labs/05/k8s-1/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/labs/05/k8s-1/scripts/master.sh"
     calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
     ssh                = {
       private_key = dependency.ssh-keys.outputs.private_key
@@ -72,7 +72,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/0.12.1/tasks/cka/labs/05/k8s-1/scripts/worker.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/labs/05/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=infra_core"
       ssh                = {
         private_key = dependency.ssh-keys.outputs.private_key
@@ -91,7 +91,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/0.12.1/tasks/cka/labs/05/k8s-1/scripts/worker.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/labs/05/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=app"
       ssh                = {
         private_key = dependency.ssh-keys.outputs.private_key
