@@ -5,6 +5,7 @@ The **SRE Learning Platform** is an open-source hub designed to help IT engineer
 - Prepare for the **CKA**: [Certified Kubernetes Administrator Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
 - Enhance your skills for the **CKS**: [Certified Kubernetes Security Specialist Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/)
 - Excel in the **CKAD**: [Certified Kubernetes Application Developer Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-application-developer-ckad/)
+- Prepare for the **LFCS**: [Linux Foundation Certified System Administrator](https://training.linuxfoundation.org/certification/linux-foundation-certified-sysadmin-lfcs/)
 
 Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **SRE Learning Platform**.
 
@@ -133,6 +134,18 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">LFCS</summary>
+
+### lfcs mock
+
+- ``TASK=01 make run_lfcs_mock`` - create mock LFCS exam [number 01](tasks/lfcs/mock/01/)
+- ``make delete_lfcs_mock`` - delete mock LFCS exam
+- ``TASK=01 make delete_lfcs_mock_clean`` - delete mock LFCS exam [number 01](tasks/lfcs/mock/01/) with cleaning terragrunt cache
+- ``make output_lfcs_mock`` - show **outputs** from  **lfcs_mock**
+
+</details>
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">HR</summary>
 
 - ``TASK=01 make run_hr_mock`` - create mock  hr exam [number 01](tasks%2Fhr%2Fmock%2F01)
@@ -140,8 +153,6 @@ Every command should be run from the project's root directory.
 - ``TASK=01 make run_hr_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fhr%2Fmock%2F01)  with clean terragrunt cache
 - ``make output_hr_mock `` - show **outputs** from   **hr_mock**
 </details>
-
-
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">EKS</summary>
@@ -156,7 +167,6 @@ Every command should be run from the project's root directory.
 - ``make lint`` run linter on the project
 
 </details>
-
 
 ## Usage scenarios
 
