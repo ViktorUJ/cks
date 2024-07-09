@@ -1,24 +1,39 @@
 #!/bin/bash
-
 ssh_password_enable_check=${ssh_password_enable}
+#-------------------
+for host in ${hosts} ; do
+ host_name=$(echo $host | cut -d'=' -f1)
+ host_ip=$(echo $host | cut -d'=' -f2)
+ echo "$host_ip $host_name" >>/etc/hosts
+done
+
 case  $ssh_password_enable_check in
 true)
-    echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
+    echo "ubuntu:${ssh_password}" |sudo chpasswd
     SSH_CONFIG_FILE="/etc/ssh/sshd_config"
+    SSH_CONFIG_FILE_CLOUD="/etc/ssh/sshd_config.d/60-cloudimg-settings.conf"
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
     sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE_CLOUD
+
     systemctl restart sshd
+    echo "*** ssh password "
 ;;
 *)
     echo "*** ssh password not enable "
 ;;
 esac
 
-apt-get update -qq
-apt-get install -y  ca-certificates curl
 
 acrh=$(uname -m)
 hostnamectl  set-hostname worker
+
+configs_dir="/var/work/configs"
+default_configs_dir="/root/.kube"
+
+echo "*** apt update  & install apps "
+apt-get update -qq
+apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim tar
 
 case $acrh in
 x86_64)
@@ -33,7 +48,6 @@ curl -LO $kubectl_url
 chmod +x kubectl
 mv kubectl  /usr/bin/
 
-
 echo 'source /usr/share/bash-completion/bash_completion'>>/home/ubuntu/.bashrc
 echo 'source <(kubectl completion bash)' >> /home/ubuntu/.bashrc
 echo 'alias k=kubectl' >>/home/ubuntu/.bashrc
@@ -43,6 +57,8 @@ echo 'source /usr/share/bash-completion/bash_completion'>>/root/.bashrc
 echo 'source <(kubectl completion bash)' >> /root/.bashrc
 echo 'alias k=kubectl' >> /root/.bashrc
 echo 'complete -F __start_kubectl k' >> /root/.bashrc
+
+echo "*** install aws cli and helm  "
 
 case $acrh in
 x86_64)
@@ -60,11 +76,13 @@ esac
 helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
 helm plugin install https://github.com/sstarcher/helm-release
 
+
+echo 'export PS1="\[\033[0;38;5;10m\]\u@\h\[\033[0;38;5;14m\]:\[\033[0;38;5;6m\]\w\[\033[0;38;5;10m\]>\[\033[0m\] "' >>/home/ubuntu/.bashrc
+
 echo "*** add test engine "
 git clone https://github.com/sstephenson/bats.git
 cd bats
 ./install.sh /usr/local
-
 
 echo "*** download tests "
 mkdir /var/work/tests/result -p
@@ -87,6 +105,20 @@ time_left
 EOF
 chmod +x /usr/bin/check_result
 
+# install podman
+echo "*** install podman "
+. /etc/os-release
+echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$VERSION_ID/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:testing.list
+curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_$VERSION_ID/Release.key" | sudo apt-key add -
+apt-get update -qq
+apt-get  -y install podman cri-tools containers-common
+rm /etc/apt/sources.list.d/devel:kubic:libcontainers:testing.list
+cat <<EOF | sudo tee /etc/containers/registries.conf
+[registries.search]
+registries = ['docker.io']
+EOF
+
+
 mkdir $configs_dir -p
 mkdir $default_configs_dir -p
 
@@ -98,6 +130,8 @@ echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
 chmod 600 /home/ubuntu/.ssh/id_rsa
 chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
 echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
+
+
 
 
 
