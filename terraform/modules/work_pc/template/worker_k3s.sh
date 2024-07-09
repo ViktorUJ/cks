@@ -169,6 +169,17 @@ chmod +x /usr/bin/time_left
 curl -sfL https://get.k3s.io | sh -
 chmod 777 /etc/rancher/k3s/k3s.yaml
 
+echo 'source /usr/share/bash-completion/bash_completion'>>/home/ubuntu/.bashrc
+echo 'source <(kubectl completion bash)' >> /home/ubuntu/.bashrc
+echo 'alias k=kubectl' >>/home/ubuntu/.bashrc
+echo 'complete -F __start_kubectl k' >>/home/ubuntu/.bashrc
+
+echo 'source /usr/share/bash-completion/bash_completion'>>/root/.bashrc
+echo 'source <(kubectl completion bash)' >> /root/.bashrc
+echo 'alias k=kubectl' >> /root/.bashrc
+echo 'complete -F __start_kubectl k' >> /root/.bashrc
+
+
 # add additional script
 curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
