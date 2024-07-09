@@ -45,21 +45,21 @@ aarch64)
 esac
 
 
-#case $acrh in
-#x86_64)
-#  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
-#  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-#;;
-#aarch64)
-#  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
-#  curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz
-#  tar -zxvf helm.tar.gz
-#  mv linux-arm/helm /usr/local/bin/helm
-#;;
-#esac
-#
-#helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
-#helm plugin install https://github.com/sstarcher/helm-release
+case $acrh in
+x86_64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+;;
+aarch64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+  curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz
+  tar -zxvf helm.tar.gz
+  mv linux-arm/helm /usr/local/bin/helm
+;;
+esac
+
+helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
+helm plugin install https://github.com/sstarcher/helm-release
 
 
 echo 'export PS1="\[\033[0;38;5;10m\]\u@\h\[\033[0;38;5;14m\]:\[\033[0;38;5;6m\]\w\[\033[0;38;5;10m\]>\[\033[0m\] "' >>/home/ubuntu/.bashrc
