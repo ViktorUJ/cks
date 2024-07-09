@@ -22,7 +22,7 @@ locals {
   node_type            = "spot"
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type        = "t4g.medium"
-  instance_type_worker = "t4g.small"
+  instance_type_worker = "t4g.micro"
   key_name             = "cks"
   ssh_password_enable  = "true" # false |  true
   access_cidrs         = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
