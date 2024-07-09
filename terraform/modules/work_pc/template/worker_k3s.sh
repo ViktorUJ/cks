@@ -44,22 +44,7 @@ aarch64)
 ;;
 esac
 
-#curl -LO $kubectl_url
-#chmod +x kubectl
-#mv kubectl  /usr/bin/
-#
-#echo 'source /usr/share/bash-completion/bash_completion'>>/home/ubuntu/.bashrc
-#echo 'source <(kubectl completion bash)' >> /home/ubuntu/.bashrc
-#echo 'alias k=kubectl' >>/home/ubuntu/.bashrc
-#echo 'complete -F __start_kubectl k' >>/home/ubuntu/.bashrc
-#
-#echo 'source /usr/share/bash-completion/bash_completion'>>/root/.bashrc
-#echo 'source <(kubectl completion bash)' >> /root/.bashrc
-#echo 'alias k=kubectl' >> /root/.bashrc
-#echo 'complete -F __start_kubectl k' >> /root/.bashrc
-#
-#echo "*** install aws cli and helm  "
-#
+
 case $acrh in
 x86_64)
   awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
@@ -180,7 +165,9 @@ echo "you  spend \$env_working_time minutes"
 EOF
 chmod +x /usr/bin/time_left
 
-
+# install  k3s
+curl -sfL https://get.k3s.io | sh -
+chmod 777 /etc/rancher/k3s/k3s.yaml
 
 # add additional script
 curl "${task_script_url}" -o "task.sh"
