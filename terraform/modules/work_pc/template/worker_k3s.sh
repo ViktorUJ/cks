@@ -169,6 +169,13 @@ chmod +x /usr/bin/time_left
 curl -sfL https://get.k3s.io | sh -
 chmod 777 /etc/rancher/k3s/k3s.yaml
 
+mkdir /home/ubuntu/.kube  -p
+cp  /etc/rancher/k3s/k3s.yaml /home/ubuntu/.kube/config
+cp  /etc/rancher/k3s/k3s.yaml /home/ubuntu/.kube/_config
+chown ubuntu:ubuntu /home/ubuntu/.kube/config
+chown ubuntu:ubuntu /home/ubuntu/.kube/_config
+chmod 777 -R  /home/ubuntu/.kube/
+
 echo 'source /usr/share/bash-completion/bash_completion'>>/home/ubuntu/.bashrc
 echo 'source <(kubectl completion bash)' >> /home/ubuntu/.bashrc
 echo 'alias k=kubectl' >>/home/ubuntu/.bashrc
