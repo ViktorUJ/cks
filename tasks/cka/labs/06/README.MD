@@ -1,13 +1,5 @@
-# PriorityClass
-
-You have a DaemonSet with a specialized monitoring system.
-The problem is that under this system is superseded by other pods and you lose the data of the monitoring system.
-
-You must create a PriorityClass and apply it to the DaemonSet monitoring system in NS `monitoring`
-
-
-
-|        **1**        | create a PriorityClass and apply it to the DaemonSet                                                                                                                                                             |
+# General resurces
+|        **1**        | create NS, Deployment , Service                                                                                                                                                                                  |
 | :-----------------: |:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 3%                                                                                                                                                                                                               |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                  |
