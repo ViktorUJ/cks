@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.1 (15.08.2024)
+### Features
+
+* [Cka lab 6. Create general resources (Namespace, Deployment, Service)](..%2Ftasks%2Fcka%2Flabs%2F06%2FREADME.MD) is added.
+
+
+
 ## 0.12.1 (04.07.2024)
 ### Features
 * [Cka lab 5. PriorityClass ](..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD) is added.
