@@ -171,7 +171,7 @@
 }
 
 # 8
-@test "8.1 Check tar archieve to be created" { 
+@test "8.1 Check tar archieve to be created" {
   mkdir -p /var/work/tests/artifacts/08-tar/
   rm -rf /var/work/tests/artifacts/08-tar/*
   tar -xf /opt/08/results/mytar.tar -C /var/work/tests/artifacts/08-tar/
@@ -385,7 +385,7 @@
     echo '1' >> /var/work/tests/result/ok
   fi
   [ "$exit_status" -eq 0 ]
-} 
+}
 
 #18
 @test "18 Check if docker ubuntu/apache2 container is running with name webserv" {

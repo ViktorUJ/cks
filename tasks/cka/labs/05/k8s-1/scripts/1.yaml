@@ -40,4 +40,3 @@ spec:
              value: "500=60  1024=30 2048=30"
            - name:  ENABLE_LOG_LOAD_MEMORY
              value: "true"
-

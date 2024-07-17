@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.1 (15.08.2024)
+### Features
+
+* [Cka lab 6. Create general resources (Namespace, Deployment, Service)](..%2Ftasks%2Fcka%2Flabs%2F06%2FREADME.MD) is added.
+* [Video](https://youtu.be/vqs_SUjKee8) for Cka lab 6 solution is added.
+* [k3s template](..%2Fterraform%2Fmodules%2Fwork_pc%2Ftemplate%2Fworker_k3s.sh) is added. It helps to create k8s cluster with [k3s](https://k3s.io/) for simple scenarios.
+
+
 ## 0.12.1 (04.07.2024)
 ### Features
 * [Cka lab 5. PriorityClass ](..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD) is added.
