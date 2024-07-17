@@ -1,7 +1,7 @@
 locals {
-  questions_list = "https://github.com/ViktorUJ/cks/blob/AG-58/tasks/cka/labs/06/README.MD"
-  solutions_scripts="https://github.com/ViktorUJ/cks/blob/AG-58/tasks/cka/labs/06/worker/files/solutions/1.MD"
-  solutions_video="https://youtu.be/7MhXfbiMfOM"
+  questions_list = "https://github.com/ViktorUJ/cks/blob/0.13.1/tasks/cka/labs/06/README.MD"
+  solutions_scripts="https://github.com/ViktorUJ/cks/blob/0.13.1/tasks/cka/labs/06/worker/files/solutions/1.MD"
+  solutions_video="https://youtu.be/vqs_SUjKee8"
   debug_output   = "false"
   region = "eu-north-1"
   vpc_default_cidr =  "10.2.0.0/16"
