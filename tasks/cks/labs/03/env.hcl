@@ -31,6 +31,7 @@ locals {
     private_key = ""
     pub_key     = ""
   }
-}
   ssh_password_enable  = "true" # false |  true
   access_cidrs         = ["0.0.0.0/0"]
+}
+
