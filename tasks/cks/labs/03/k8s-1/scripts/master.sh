@@ -1,8 +1,8 @@
 #!/bin/bash
 exit 1
 echo " *** master node  "
-curl "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/labs/03/k8s-1/scripts/kube-apiserver.yaml" -o "kube-apiserver.yaml"
-cp kube-apiserver.yaml /etc/kubernetes/manifests/
+YAML_FILE="/etc/kubernetes/manifests/kube-apiserver.yaml"
+sed -i '/--tls-private-key-file=\/etc\/kubernetes\/pki\/apiserver.key/a\    - --kubernetes-service-node-port=31000' "$YAML_FILE"
 echo "*** change kube api config "
 sleep 30
 kubectl get node --kubeconfig=/root/.kube/config
