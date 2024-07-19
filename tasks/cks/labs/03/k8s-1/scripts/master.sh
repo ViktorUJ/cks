@@ -1,5 +1,4 @@
 #!/bin/bash
-exit 1
 echo " *** master node  "
 YAML_FILE="/etc/kubernetes/manifests/kube-apiserver.yaml"
 sed -i '/--tls-private-key-file=\/etc\/kubernetes\/pki\/apiserver.key/a\    - --kubernetes-service-node-port=31000' "$YAML_FILE"
