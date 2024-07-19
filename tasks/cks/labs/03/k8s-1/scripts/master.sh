@@ -1,4 +1,5 @@
 #!/bin/bash
+exit 1
 echo " *** master node  "
 curl "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/labs/03/k8s-1/scripts/kube-apiserver.yaml" -o "kube-apiserver.yaml"
 cp kube-apiserver.yaml /etc/kubernetes/manifests/
