@@ -30,9 +30,10 @@ inputs = {
   vpc_id       = dependency.vpc.outputs.vpc_id
   cluster_name = "k8s1"
   node_type    = local.vars.locals.node_type
+  ssh_password_enable =local.vars.locals.ssh_password_enable
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
-    runtime            = "containerd" # docker  , cri-o  , containerd ( need test it )
+    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
@@ -50,10 +51,7 @@ inputs = {
       private_key = ""
       pub_key     = ""
     }
-    root_volume = {
-      type = "gp3"
-      size = "10"
-    }
+    root_volume = local.vars.locals.root_volume
   }
   k8s_worker = {
   }
