@@ -1,40 +1,36 @@
 ```
-kubectl config use-context cluster3-admin@cluster3
-```
-
-```
 k get no
-ssh {control-plane}
 ```
 
+# On the control-plane node
 ```
 sudo su
-
-kube-bench | grep '1.2.17' -A 5
-# read   and fix
-
-kube-bench | grep '1.3.2' -A 5
-# read   and fix
-
-kube-bench | grep '1.4.1' -A 5
-# read   and fix
-
-# exit to work PC
-
+kube-bench run -s master -c '1.2.17,1.3.2,1.4.1'
 ```
+*Make recomendations specified in the "== Remediations master ==" block*
+*Re-run kube-bench - checks must be PASS*
 
+# On the worker node
 ```
-k get no
 ssh {work node}
-```
 
-```
 sudo su
-
-kube-bench | grep '4.2.6' -A 5
-# read   and fix
-
-
-# exit to work PC
-
+kube-bench run -s node -c 4.2.6
 ```
+*Read recomendations specified in the "== Remediations master ==" block*
+
+#### Find a kubelet config file "--config":
+```
+systemctl status kubelet
+```
+
+#### Add argument into the kubelet conbfig file:
+```
+protectKernelDefaults: true
+```
+
+#### Restart the kubelet service
+```
+systemctl restart kubelet.service
+```
+*Re-run kube-bench - checks must be PASS*
