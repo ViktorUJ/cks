@@ -22,7 +22,7 @@ k edit constrainttemplates k8strustedimages
         image := input.review.object.spec.containers[_].image
         not startswith(image, "docker-fake.io/")
         not startswith(image, "google-gcr-fake.com/")
-        not startswith(image, "very-bad-registry.com/")  #add
+        not startswith(image, "very-bad-registry.com/")  # add
       }
 
 ...........
