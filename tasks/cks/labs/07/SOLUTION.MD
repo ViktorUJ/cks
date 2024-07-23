@@ -24,7 +24,6 @@ k edit constrainttemplates k8strustedimages
         not startswith(image, "google-gcr-fake.com/")
         not startswith(image, "very-bad-registry.com/")  # add
       }
-
 ...........
 
 
