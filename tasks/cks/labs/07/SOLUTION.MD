@@ -9,6 +9,7 @@ k get constrainttemplates
 ```
 k edit constrainttemplates k8strustedimages
 ```
+```
 .......
   - rego: |
       package k8strustedimages
@@ -25,7 +26,7 @@ k edit constrainttemplates k8strustedimages
         not startswith(image, "very-bad-registry.com/")  # add
       }
 ...........
-
+```
 
 # Check if the admission webhook policy works right
 ```
