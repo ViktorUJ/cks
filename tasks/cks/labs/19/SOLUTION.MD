@@ -8,7 +8,8 @@ vim  /var/work/14/Dockerfile
 ```
 FROM ubuntu:20.04
 RUN apt-get update && apt-get -y install curl
-RUN useradd myuser
+RUN groupadd myuser
+RUN useradd -g myuser myuser
 USER myuser
 CMD ["sh", "-c", "while true ; do  id ;  sleep 1  ;done"]
 ```
