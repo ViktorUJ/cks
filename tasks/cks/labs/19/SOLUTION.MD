@@ -27,6 +27,7 @@ podman run -d --rm --name cks-14 cks:14
 # Check the result
 ```
 podman logs cks-14
+sleep 2
 ```
 *Result must be like this one:*
 ```
