@@ -36,7 +36,7 @@ inputs = {
   node_type    = local.vars.locals.node_type
 
   k8s_master = {
-    k8_version         = "1.25.0"
+    k8_version         = local.vars.locals.k8_version
     runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
@@ -61,7 +61,7 @@ inputs = {
     # we can  configure each node independently
 
     "node_2" = {
-      k8_version         = "1.25.0"
+      k8_version         = local.vars.locals.k8_version
       instance_type      = local.vars.locals.instance_type
       key_name           = local.vars.locals.key_name
       ami_id             = local.vars.locals.ami_id
