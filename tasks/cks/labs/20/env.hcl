@@ -1,6 +1,6 @@
 locals {
-  questions_list = "https://github.com/ViktorUJ/cks/tree/FIX_CKS_TASK20/tasks/cks/labs/20"
-  solutions_scripts="https://github.com/ViktorUJ/cks/blob/FIX_CKS_TASK20/tasks/cks/labs/20/worker/files/solutions/22.MD"
+  questions_list = "https://github.com/ViktorUJ/cks/tree/master/tasks/cks/labs/20"
+  solutions_scripts="https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/20/worker/files/solutions/22.MD"
   solutions_video="https://www.youtube.com/watch?v=IZsqAPpbBxM"
   region = "eu-north-1"
   aws    = "default"
