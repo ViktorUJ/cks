@@ -46,8 +46,7 @@ inputs = {
   ssh_password_enable =local.vars.locals.ssh_password_enable
 
   host_list = concat(
-    dependency.cluster1.outputs.hosts,
-    dependency.cluster2.outputs.hosts
+    dependency.cluster1.outputs.hosts
   )
   work_pc = {
     clusters_config = {
