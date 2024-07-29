@@ -20,6 +20,7 @@ locals {
   key_name             = ""
   ubuntu_version       = "20.04"
   ssh_password_enable  = "true" # false |  true
+  access_cidrs         = ["0.0.0.0/0"]
   ami_id               = ""
   #  ubuntu  :  20.04 LTS  ami-06410fb0e71718398     22.04 LTS  ami-00c70b245f5354c0a
   root_volume = {
