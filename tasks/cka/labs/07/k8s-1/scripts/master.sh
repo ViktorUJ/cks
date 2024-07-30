@@ -9,3 +9,5 @@ kubectl -n kube-system patch deployment metrics-server --type=json \
 
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-32/tasks/cka/labs/07/k8s-1/scripts/app.yaml
 
+helm repo add prometheus-community  https://prometheus-community.github.io/helm-charts
+helm install kube-prometheus-stack  prometheus-community/kube-prometheus-stack  --version 61.6.0 -n monitoring --create-namespace  -f https://raw.githubusercontent.com/ViktorUJ/cks/AG-32/tasks/cka/labs/07/k8s-1/scripts/kube-prometheus-stack.yaml
