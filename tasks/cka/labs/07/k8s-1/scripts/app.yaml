@@ -13,7 +13,7 @@ metadata:
   name: app
   namespace: production
 spec:
-  replicas: 5
+  replicas: 2
   selector:
     matchLabels:
       app: app
