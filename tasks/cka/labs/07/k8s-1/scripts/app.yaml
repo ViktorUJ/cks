@@ -33,11 +33,11 @@ spec:
            - name:  ENABLE_LOAD_CPU
              value: "true"
            - name:  CPU_USAGE_PROFILE
-             value: "10=1=1=120 10=100=1=120"
+             value: "2=25=1=120 1=100=1=120"
         resources:
             requests:
                 memory: 10Mi
-                cpu: 250m
+                cpu: 100m
             limits:
-                memory: 200Mi
-                cpu: 500m
+                memory: 20Mi
+                cpu: 250m
