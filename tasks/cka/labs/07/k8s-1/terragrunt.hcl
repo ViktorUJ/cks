@@ -83,7 +83,7 @@ inputs = {
     }
     "node_monitoring" = {
       k8_version         = local.vars.locals.k8_version
-      instance_type      = "t4g.large"
+      instance_type      = local.vars.locals.instance_type
       key_name           = local.vars.locals.key_name
       ami_id             = local.vars.locals.ami_id
       subnet_number      = "0"
