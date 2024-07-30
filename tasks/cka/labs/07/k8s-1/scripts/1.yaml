@@ -1,0 +1,42 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: monitoring-system
+  name: monitoring-system
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: monitoring-system
+  template:
+    metadata:
+      labels:
+        app: monitoring-system
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        effect: "NoSchedule"
+      containers:
+      - image: viktoruj/ping_pong
+        name: app
+        resources:
+          limits:
+            memory: 2500Mi
+          requests:
+            memory: 2500Mi
+
+        env:
+           - name:  ENABLE_LOAD_MEMORY
+             value: "true"
+           - name:  MEMORY_USAGE_PROFILE
+             value: "500=60  1024=30 2048=30"
+           - name:  ENABLE_LOG_LOAD_MEMORY
+             value: "true"
