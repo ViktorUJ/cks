@@ -1,6 +1,6 @@
 locals {
-  questions_list = "https://github.com/ViktorUJ/cks/blob/0.13.1/tasks/cka/labs/06/README.MD"
-  solutions_scripts="https://github.com/ViktorUJ/cks/blob/0.13.1/tasks/cka/labs/06/worker/files/solutions/1.MD"
+  questions_list = "https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/06/README.MD"
+  solutions_scripts="https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/06/worker/files/solutions/1.MD"
   solutions_video="https://youtu.be/vqs_SUjKee8"
   debug_output   = "false"
   region = "eu-north-1"
