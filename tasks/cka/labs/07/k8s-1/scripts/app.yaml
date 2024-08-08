@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app
+  name: app
+  namespace: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app
+    spec:
+      nodeSelector:
+        work_type: app
+      containers:
+      - image: viktoruj/ping_pong
+        name: app
+        env:
+           - name:  ENABLE_LOAD_CPU
+             value: "true"
+           - name:  CPU_USAGE_PROFILE
+             value: "2=25=1=120 1=100=1=120"
+        resources:
+            requests:
+                memory: 10Mi
+                cpu: 100m
+            limits:
+                memory: 20Mi
+                cpu: 250m

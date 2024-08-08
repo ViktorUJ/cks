@@ -15,12 +15,13 @@ RUN wget http://download.redis.io/redis-stable.tar.gz &&  \
 
 FROM amazon/aws-cli:2.17.1
 COPY yum.repos /etc/yum.repos.d/
-RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc tar git wget make  -y  && \
+RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc tar git wget make bind-utils iputils  -y  && \
     curl -LO https://dl.k8s.io/release/v1.30.0/bin/linux/amd64/kubectl && \
     chmod +x ./kubectl && \
     mv kubectl /usr/local/bin/kubectl && \
     curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-amd64.tar.gz && \
     tar -zxvf helm.tar.gz && \
+    rm -rf helm.tar.gz && \
     mv linux-amd64/helm /usr/local/bin/helm && \
     helm plugin install https://github.com/jkroepke/helm-secrets && \
     curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && \
