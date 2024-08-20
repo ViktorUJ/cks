@@ -1,4 +1,8 @@
 # Changelog
+## 0.14.1 (**.09.2024)
+### Features
+
+* K8s version **1.31** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
 
 ## 0.13.1 (09.08.2024)
 ### Features
