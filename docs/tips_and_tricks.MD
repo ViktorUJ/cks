@@ -23,8 +23,11 @@ The Vim editor is used by default, which means you should be aware how to use sh
 
 ## aliases
 
-`export do="--dry-run=client -o yaml" `
-````
+```sh
+export do="--dry-run=client -o yaml"
+```
+
+```sh
 # usage fo create pod template
 
 k run  test --image nginx $do
