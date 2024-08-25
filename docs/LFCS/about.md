@@ -1,12 +1,3 @@
----
-id: about_lfcs
-title: About
-description: About LFCS section
-slug: /LFCS/about
-sidebar_position: 1
-custom_edit_url: null
----
-
 This section contains labs and mock exams to train your LFCS certifications.
 
 - The platform uses **aws** to create following resources:  **vpc**, **subnets**, **security groups**, **ec2** (spot/on-demand), **s3**

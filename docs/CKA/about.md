@@ -1,12 +1,3 @@
----
-id: about_cka
-title: About
-description: About CKA section
-slug: /CKA/about
-sidebar_position: 2
-custom_edit_url: null
----
-
 This section contains labs and mock exams to train your CKA certifications.
 
 - The platform uses **aws** to create following resources:  **vpc**, **subnets**, **security groups**, **ec2** (spot/on-demand), **s3**
