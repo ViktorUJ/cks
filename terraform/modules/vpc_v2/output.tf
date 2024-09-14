@@ -4,15 +4,16 @@
 output "subnets" {
   value = local.subnets
 }
+output "vpc_id" {
+  value = local.vpc_id
+}
 /*
 
 output "subnets_az_cmdb" {
   value = local.subnets_az_cmdb
 }
 
-output "vpc_id" {
-  value = aws_vpc.default.id
-}
+
 
 output "vpc_default_cidr" {
   value = var.vpc_default_cidr
