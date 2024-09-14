@@ -1,7 +1,10 @@
-/*
-output "subnets_az" {
-  value = local.subnets_az
+
+
+
+output "subnets" {
+  value = local.subnets
 }
+/*
 
 output "subnets_az_cmdb" {
   value = local.subnets_az_cmdb

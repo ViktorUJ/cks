@@ -14,5 +14,6 @@ locals {
     "app_name" = var.app_name
   }
   tags_all = merge(var.tags_common, local.tags_app)
+  subnets = module.vpc.public_subnets_by_type.public.id
 
 }
