@@ -5,6 +5,7 @@ locals {
   debug_output   = "false"
   region = "eu-north-1"
   vpc_default_cidr =  "10.2.0.0/16"
+
   az_ids = {
     "10.2.0.0/19"  = "eun1-az3"
     "10.2.32.0/19" = "eun1-az2"
@@ -32,5 +33,21 @@ locals {
   root_volume = {
     type = "gp3"
     size = "10"
+  }
+
+    subnets = {
+    public = {
+      "pub1" = {
+        name = "public-subnet-1"
+        cidr = "10.10.1.0/24"
+        az   = "eu-north-1a"
+      }
+      "pub2" = {
+        name = "public-subnet-2"
+        cidr = "10.10.2.0/24"
+        az   = "eu-north-1a"
+      }
+
+    }
   }
 }
