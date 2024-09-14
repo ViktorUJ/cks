@@ -38,7 +38,7 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   "ENV_ID": {"S": "${local.ENV_ID}"},
   "STACK_NAME": {"S": "${var.STACK_NAME}"},
   "STACK_TASK": {"S": "${var.STACK_TASK}"},
-  "vpc_id": {"S": "${module.vpc.default.id}"},
+  "vpc_id": {"S": "${module.vpc.vpc_raw.id}"},
 
   "region": {"S": "${var.region}"}
     }
