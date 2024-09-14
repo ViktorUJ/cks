@@ -4,7 +4,7 @@ variable "az_ids" {
 }
 
 variable "vpc_default_cidr" {}
-
+variable "subnets" {}
 variable "aws" {}
 variable "prefix" {}
 variable "app_name" {}

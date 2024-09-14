@@ -22,6 +22,5 @@ module "vpc" {
       }
 
     }
-    private = {}
   }
 }
