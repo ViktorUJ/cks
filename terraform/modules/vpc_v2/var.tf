@@ -1,8 +1,4 @@
 variable "region" {}
-variable "az_ids" {
-  type = map(string)
-}
-
 variable "vpc_default_cidr" {}
 
 variable "aws" {}
