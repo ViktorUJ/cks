@@ -7,21 +7,6 @@ output "subnets" {
 output "vpc_id" {
   value = local.vpc_id
 }
-/*
-
-output "subnets_az_cmdb" {
-  value = local.subnets_az_cmdb
-}
-
-
-
-output "vpc_default_cidr" {
-  value = var.vpc_default_cidr
-}
-
-output "env" {
-  value = "${local.prefix}-${var.app_name} "
-}
 output "USER_ID" {
   value = local.USER_ID
 }
@@ -31,6 +16,24 @@ output "ENV_ID" {
 output "local_prefix" {
   value = local.prefix
 }
+
+output "vpc_default_cidr" {
+  value = var.vpc_default_cidr
+}
+
+
+/*
+
+output "subnets_az_cmdb" {
+  value = local.subnets_az_cmdb
+}
+
+
+
+output "env" {
+  value = "${local.prefix}-${var.app_name} "
+}
+
 
 
  */
