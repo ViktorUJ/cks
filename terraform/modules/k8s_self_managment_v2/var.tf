@@ -14,7 +14,9 @@ variable "ENV_ID" {
 }
 variable "app_name" {}
 variable "vpc_id" {}
-variable "subnets" {}
+variable "subnets" {
+  type = list(string)
+}
 # k8_version    https://packages.cloud.google.com/apt/dists/kubernetes-xenial/main/binary-amd64/Packages
 variable "cluster_name" { type = string }
 variable "time_sleep" {
