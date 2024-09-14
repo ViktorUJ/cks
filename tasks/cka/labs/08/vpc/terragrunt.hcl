@@ -17,7 +17,6 @@ inputs = {
   tags_common      = local.vars.locals.tags
   app_name         = "network"
   vpc_default_cidr = local.vars.locals.vpc_default_cidr
-  az_ids           = local.vars.locals.az_ids
   subnets          = local.vars.locals.subnets
 
 }
