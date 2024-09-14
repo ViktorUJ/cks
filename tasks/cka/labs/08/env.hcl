@@ -47,6 +47,8 @@ locals {
         az   = "eu-north-1a"
       }
 
+
     }
+   private ={}
   }
 }
