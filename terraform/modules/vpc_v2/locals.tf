@@ -16,5 +16,6 @@ locals {
   tags_all = merge(var.tags_common, local.tags_app)
   subnets = module.vpc.public_subnets_by_type.public.ids
   vpc_id = module.vpc.vpc_raw.id
+  subnets_az_cmdb = join(",", local.subnets)
 
 }

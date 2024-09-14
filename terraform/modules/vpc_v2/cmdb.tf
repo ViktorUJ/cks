@@ -38,12 +38,11 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
   "ENV_ID": {"S": "${local.ENV_ID}"},
   "STACK_NAME": {"S": "${var.STACK_NAME}"},
   "STACK_TASK": {"S": "${var.STACK_TASK}"},
-  "vpc_id": {"S": "${module.vpc.vpc_raw.id}"},
-
+  "vpc_id": {"S": "${local.vpc_id}"},
+  "subnets_az_cmdb": {"S": "${local.subnets_az_cmdb}"},
   "region": {"S": "${var.region}"}
     }
 ITEM
 
 }
 
-#   "subnets_az_cmdb": {"S": "${local.subnets_az_cmdb}"},
