@@ -18,7 +18,6 @@ inputs = {
   app_name         = "network"
   vpc_default_cidr = local.vars.locals.vpc_default_cidr
   az_ids           = local.vars.locals.az_ids
-  vpc              = local.vars.locals.vpc
   subnets          = local.vars.locals.subnets
 
 }
