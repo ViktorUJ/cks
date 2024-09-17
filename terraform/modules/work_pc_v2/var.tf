@@ -14,7 +14,9 @@ variable "tags_common" {
 }
 variable "app_name" {}
 variable "vpc_id" {}
-variable "subnets" {}
+variable "subnets" {
+  type = list(string)
+}
 variable "time_sleep" {
   default = "30s"
 }
