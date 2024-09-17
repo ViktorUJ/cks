@@ -5,9 +5,9 @@ locals {
   prefix       = "${local.prefix_id}_${var.prefix}"
   item_id_lock = "CMDB_lock_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
   item_id_data = "CMDB_data_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
-#  subnets_az   = distinct(split(",", (var.subnets_az)))
-  subnets      = var.subnets
-#  az           = [for item in local.subnets_az : split("=", item)[1]]
+  #  subnets_az   = distinct(split(",", (var.subnets_az)))
+  subnets = var.subnets
+  #  az           = [for item in local.subnets_az : split("=", item)[1]]
   tags_app = {
     "Name"     = "${local.prefix}-${var.app_name}"
     "app_name" = var.app_name

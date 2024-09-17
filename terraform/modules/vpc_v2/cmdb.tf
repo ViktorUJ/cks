@@ -45,4 +45,3 @@ resource "aws_dynamodb_table_item" "cmdb_data" {
 ITEM
 
 }
-

@@ -75,4 +75,3 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 #7 , 73
-
