@@ -1,4 +1,22 @@
 # Changelog
+## 0.14.1 (17.09.2024)
+### Features
+
+* K8s version **1.31** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
+* new terraform [aws vpc module](https://registry.terraform.io/modules/ViktorUJ/vpc/aws/latest) is crearated. [github](https://github.com/ViktorUJ/terraform-aws-vpc)
+  * Creation of a VPC with specified CIDR blocks, tags, and NACL settings.
+  * Dynamic creation of public and private subnets with automatic retrieval of their IDs.
+  * Subnet creation with the ability to assign them to specific Availability Zones (AZ) or AZ IDs.
+  * Independent tagging for each subnet, allowing for individual resource labeling.
+  * Flexible network management: ability to add new subnets or remove existing ones without impacting other subnets.
+  * Support for three NAT Gateway scenarios (by default, AZ NAT Gateway is used):
+    * AZ: One NAT Gateway is created for each AZ specified in private subnets.
+    * SINGLE: One NAT Gateway is created for the entire VPC.
+    * SUBNET: One NAT Gateway per subnet.
+    * NONE: No NAT Gateway is created for the subnet, and no routes for 0.0.0.0/0 are configured.
+    * Each subnet can be configured with any NAT Gateway type, and all types can coexist within a single VPC.
+  * Custom DHCP options to fine-tune network configurations.
+  * Output of all created resources, including subnet IDs grouped by type, AZ, and AZ ID.
 
 ## 0.13.1 (09.08.2024)
 ### Features
