@@ -24,6 +24,8 @@ worker_join_sh=${worker_join}
 pod_network_cidr_sh=${pod_network_cidr}
 external_ip_sh=${external_ip}
 utils_enable_sh=${utils_enable}
+cni_type=${cni_type}
+cilium_version=${cilium_version}
 
 
 date
@@ -61,8 +63,16 @@ while test $? -gt 0
    kubectl get node   --kubeconfig=/root/.kube/config
   done
 date
-echo "apply cni"
-kubectl apply -f ${calico_url}   --kubeconfig=/root/.kube/config
+echo "*** apply cni"
+case $cni_type in
+calico)
+   kubectl apply -f ${calico_url}   --kubeconfig=/root/.kube/config
+;;
+cilium)
+   echo '*** install cilium '
+;;
+
+esac
 
 echo "sleep 10"
 sleep 10
