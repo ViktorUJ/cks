@@ -41,7 +41,7 @@ variable "k8s_master" {
     utils_enable       = string
     pod_network_cidr   = string
     cni=optional(object({
-      cni_type = optional(string, "calico") # calico, cilium
+      type = optional(string, "calico") # calico, cilium
       calico_url = optional(string, "https://docs.projectcalico.org/manifests/calico.yaml")
       cilium_version = optional(string, "1.16.1")
 

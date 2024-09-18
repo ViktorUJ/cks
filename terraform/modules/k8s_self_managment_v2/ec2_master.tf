@@ -99,7 +99,7 @@ resource "aws_launch_template" "master" {
       pod_network_cidr    = var.k8s_master.pod_network_cidr
       runtime_script      = file(var.k8s_master.runtime_script)
       task_script_url     = var.k8s_master.task_script_url
-      cni_type            = var.k8s_master.cni.cni_type
+      cni_type            = var.k8s_master.cni.type
       calico_url          = var.k8s_master.cni.calico_url
       cilium_version      = var.k8s_master.cni.cilium_version
       ssh_private_key     = var.k8s_master.ssh.private_key
