@@ -52,7 +52,9 @@ inputs = {
     eip                = "false"
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/labs/07/k8s-1/scripts/master.sh"
-
+    cni = {
+      type = "cilium"
+    }
     ssh                = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
