@@ -40,12 +40,12 @@ variable "k8s_master" {
     runtime_script     = string
     utils_enable       = string
     pod_network_cidr   = string
-    cni=object({
+    cni=optional(object({
       type = optional(string, "calico") # calico, cilium
       calico_url = optional(string, "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml")
       cilium_version = optional(string, "1.16.1")
 
-    })
+    }),{})
     task_script_url    = string # url for run additional script
     eip                = string # true or ...
     ssh = object({
