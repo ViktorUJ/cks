@@ -64,9 +64,9 @@ while test $? -gt 0
    kubectl get node   --kubeconfig=/root/.kube/config
   done
 date
-cp -r /root/.kube/config ~/.kube/config
 
 echo "*** apply cni"
+export KUBECONFIG=/root/.kube/config
 case $acrh in
 x86_64)
   cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-amd64.tar.gz"
