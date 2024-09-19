@@ -2,6 +2,7 @@
 ssh_password_enable_check=${ssh_password_enable}
 case $ssh_password_enable_check in
 true)
+    echo "*** ssh password enable "
     echo "ubuntu:${ssh_password}" |sudo chpasswd
     SSH_CONFIG_FILE="/etc/ssh/sshd_config"
     SSH_CONFIG_FILE_CLOUD="/etc/ssh/sshd_config.d/60-cloudimg-settings.conf"
