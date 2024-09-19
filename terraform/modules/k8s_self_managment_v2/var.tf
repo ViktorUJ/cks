@@ -44,6 +44,7 @@ variable "k8s_master" {
       type = optional(string, "calico") # calico, cilium
       calico_url = optional(string, "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml")
       cilium_version = optional(string, "v0.16.17")
+      cilium_helm_version = optional(string, "1.16.1")
 
     }),{})
     task_script_url    = string # url for run additional script

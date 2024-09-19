@@ -85,7 +85,7 @@ cilium)
    curl -Lo cilium.tar.gz $cilium_url
    tar -zxvf cilium.tar.gz
    mv cilium /usr/local/bin/cilium
-   cilium  install
+   cilium install --version ${cilium_helm_version}
 ;;
 *)
    echo "cni type = $cni_type  not support"
