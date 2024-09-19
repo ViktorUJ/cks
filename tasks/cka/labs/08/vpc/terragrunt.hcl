@@ -18,5 +18,6 @@ inputs = {
   app_name         = "network"
   vpc_default_cidr = local.vars.locals.vpc_default_cidr
   subnets          = local.vars.locals.subnets
+  enable_dns_hostnames="true"
 
 }
