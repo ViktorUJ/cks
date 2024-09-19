@@ -63,13 +63,32 @@ while test $? -gt 0
    kubectl get node   --kubeconfig=/root/.kube/config
   done
 date
+cp -r /root/.kube/config ~/.kube/config
+
 echo "*** apply cni"
+case $acrh in
+x86_64)
+  cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-amd64.tar.gz"
+
+;;
+aarch64)
+  cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-arm64.tar.gz"
+;;
+esac
+
 case $cni_type in
 calico)
    kubectl apply -f ${calico_url}   --kubeconfig=/root/.kube/config
 ;;
 cilium)
-   echo '*** install cilium '
+   echo "*** install cilium cilium_url=$cilium_url"
+   curl -Lo cilium.tar.gz $cilium_url
+   tar -zxvf cilium.tar.gz
+   mv cilium /usr/local/bin/cilium
+   cilium  install
+;;
+*)
+   echo "cni type = $cni_type  not support"
 ;;
 
 esac
