@@ -3,3 +3,5 @@
 - attach the role to the instance
 - connect via ssm session manager
 
+> The instance should have installed SSM agent
+
