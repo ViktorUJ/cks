@@ -25,6 +25,11 @@ output "private_subnets_by_type" {
   value = module.vpc.private_subnets_by_type
 }
 
+output "public_subnets_by_type" {
+  value = module.vpc.public_subnets_by_type
+}
+
+
 /*
 
 output "subnets_az_cmdb" {
