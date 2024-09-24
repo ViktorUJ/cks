@@ -7,7 +7,7 @@ resource "aws_security_group" "servers" {
     from_port   = "22"
     to_port     = "22"
     protocol    = "tcp"
-    cidr_blocks = "8.8.8.8/32"
+    cidr_blocks = ["8.8.8.8/32"]
     description = "ssh"
   }
   ingress {
@@ -22,7 +22,7 @@ resource "aws_security_group" "servers" {
     from_port   = "9090"
     to_port     = "9090"
     protocol    = "tcp"
-    cidr_blocks = "9.9.9.9/32"
+    cidr_blocks = ["9.9.9.9/32"]
     description = "prometheus"
   }
 
