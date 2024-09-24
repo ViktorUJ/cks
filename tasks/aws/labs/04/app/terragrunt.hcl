@@ -27,7 +27,7 @@ inputs = {
   prefix              = "awsgame"
   tags_common         = local.vars.locals.tags
   app_name            = "04"
-  subnets             = dependency.vpc.outputs.private_subnets_by_type.intra.ids
+  subnets             = dependency.vpc.outputs.public_subnets_by_type.public.ids
   vpc_id              = dependency.vpc.outputs.vpc_id
 
 }
