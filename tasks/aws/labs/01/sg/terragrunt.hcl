@@ -24,9 +24,9 @@ dependency "vpc" {
 inputs = {
   region              = local.vars.locals.region
   aws                 = local.vars.locals.aws
-  prefix              = "cluster1"
+  prefix              = "awsgame"
   tags_common         = local.vars.locals.tags
-  app_name            = "k8s"
+  app_name            = "01"
   subnets             = dependency.vpc.outputs.subnets
   vpc_id              = dependency.vpc.outputs.vpc_id
 
