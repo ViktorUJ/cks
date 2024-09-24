@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/aws/sg/"
+  source = "../../..//modules/aws/app"
   #
 
   extra_arguments "retry_lock" {
