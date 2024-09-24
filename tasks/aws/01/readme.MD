@@ -1,0 +1,2 @@
+# Restrict ssh access from 0.0.0.0/0
+It is necessary to find all SGs with open ssh port in Frankfurt region. remove this rule from securiti group. if this rule is added it should be removed automatically. and send email to xxxx@gmail.com.

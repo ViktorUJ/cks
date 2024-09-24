@@ -1,0 +1,1 @@
+# add automatic tracking of asg changes , deleting instances . sending alerts and disabling keys
