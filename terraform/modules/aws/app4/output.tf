@@ -3,5 +3,5 @@ output "subnets" {
 }
 
 output "sever" {
-  value = aws_instance.server
+  value = aws_instance.server.id
 }
