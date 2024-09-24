@@ -190,6 +190,24 @@ delete_eks_task_clean:
 output_eks_task:
 	$(call terragrint_run,eks,task,output)
 
+
+#AWS
+run_aws_task:
+	$(call terragrint_run,aws,task,run)
+delete_aws_task:
+	$(call terragrint_run,aws,task,delete)
+
+run_aws_task_clean:
+	$(call terragrint_run,aws,task,run,clean)
+
+delete_aws_task_clean:
+	$(call terragrint_run,aws,task,delete,clean)
+
+output_aws_task:
+	$(call terragrint_run,aws,task,output)
+
+
+
 #DEV
 
 lint:
