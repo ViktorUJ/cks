@@ -12,10 +12,16 @@ locals {
   }
 
   subnets = {
-    public = {}
+    public = {
+       "pub1" = {
+        name = "public"
+        cidr = "10.10.1.0/24"
+        az   = "eu-north-1a"
+      }
+    }
     private = {
        "pub2" = {
-        name = "app"
+        name = "app-intra"
         cidr = "10.10.2.0/24"
         az   = "eu-north-1b"
         nat_gateway="NONE"
