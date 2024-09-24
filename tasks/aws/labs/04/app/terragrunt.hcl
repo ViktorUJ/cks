@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/aws/sg"
+  source = "../../..//modules/aws/app4"
   #
 
   extra_arguments "retry_lock" {
@@ -27,7 +27,7 @@ inputs = {
   prefix              = "awsgame"
   tags_common         = local.vars.locals.tags
   app_name            = "04"
-  subnets             = dependency.vpc.outputs.subnets
+  subnets             = dependency.vpc.outputs.private_subnets_by_type.intra.id
   vpc_id              = dependency.vpc.outputs.vpc_id
 
 }

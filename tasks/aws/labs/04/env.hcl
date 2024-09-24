@@ -25,6 +25,7 @@ locals {
         cidr = "10.10.2.0/24"
         az   = "eu-north-1b"
         nat_gateway="NONE"
+        type="intra"
       }
     }
   }
