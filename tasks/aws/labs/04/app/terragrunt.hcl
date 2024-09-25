@@ -28,7 +28,7 @@ inputs = {
   tags_common         = local.vars.locals.tags
   app_name            = "04"
   subnets             = dependency.vpc.outputs.public_subnets_by_type.public.ids
-    subnets_private     = dependency.vpc.outputs.private_subnets_by_type.infra.ids
+    subnets_private     = dependency.vpc.outputs.private_subnets_by_type.intra.ids
   vpc_id              = dependency.vpc.outputs.vpc_id
 
 }
