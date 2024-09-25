@@ -31,3 +31,6 @@ variable "STACK_TASK" {
 variable "subnets" {
   type = list(string)
 }
+variable "subnets_private" {
+    type = list(string)
+}
