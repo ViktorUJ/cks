@@ -186,7 +186,9 @@ resource "aws_autoscaling_group" "ec2_asg" {
     propagate_at_launch = true
   }
 
-#  target_group_arns = [aws_lb_target_group.app_target_group.arn]
+
+  target_group_arns = [aws_lb_target_group.app_target_group.arn]
+
 
   lifecycle {
     create_before_destroy = true
