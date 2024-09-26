@@ -34,4 +34,16 @@ variable "subnets" {
 variable "subnets_private" {
     type = list(string)
 }
+variable "ami" {
+  default = "ami-0129bfde49ddb0ed6"
 
+}
+variable "instance_type" {
+    default = "t3.micro"
+}
+variable "volume_size" {
+    default = 8
+}
+variable "volume_type" {
+    default="gp3"
+}
