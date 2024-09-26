@@ -10,7 +10,7 @@ chkconfig docker on
 
 yum install -y amazon-cloudwatch-agent
 
-cat <<EOF > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
+cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
 {
   "metrics": {
     "append_dimensions": {
