@@ -55,7 +55,7 @@ resource "aws_lb_listener" "http" {
 # Привязка Auto Scaling Group к целевой группе
 resource "aws_autoscaling_attachment" "asg_attachment" {
   autoscaling_group_name = aws_autoscaling_group.ec2_asg.name
-  alb_target_group_arn   = aws_lb_target_group.app_target_group.arn
+  lb_target_group_arn   = aws_lb_target_group.app_target_group.arn
 }
 
 # Security Group для ALB (публичный доступ на порт 80)
