@@ -56,15 +56,6 @@ cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
   },
   "logs": {
     "logs_collected": {
-      "journal": {
-        "collect_list": [
-          {
-            "log_group_name": "${aws_cloudwatch_log_group}",
-            "log_stream_name": "{instance_id}/journal",
-            "timezone": "UTC"
-          }
-        ]
-      },
       "files": {
         "collect_list": [
           {
@@ -73,24 +64,7 @@ cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
             "log_stream_name": "{instance_id}/init",
             "timezone": "UTC"
           },
-          {
-            "file_path": "/var/log/secure",
-            "log_group_name": "${aws_cloudwatch_log_group}",
-            "log_stream_name": "{instance_id}/secure",
-            "timezone": "UTC"
-          },
-          {
-            "file_path": "/var/log/dmesg",
-            "log_group_name": "${aws_cloudwatch_log_group}",
-            "log_stream_name": "{instance_id}/dmesg",
-            "timezone": "UTC"
-          },
-          {
-            "file_path": "/var/log/boot.log",
-            "log_group_name": "${aws_cloudwatch_log_group}",
-            "log_stream_name": "{instance_id}/boot",
-            "timezone": "UTC"
-          },
+
           {
             "file_path": "/var/log/app.log",
             "log_group_name": "${aws_cloudwatch_log_group}",
