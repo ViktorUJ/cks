@@ -11,7 +11,7 @@ terraform {
   #
 
   extra_arguments "retry_lock" {
-    commands  = get_terraform_commands_that_need_locking()
+    commands = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -22,13 +22,14 @@ dependency "vpc" {
 }
 
 inputs = {
-  region              = local.vars.locals.region
-  aws                 = local.vars.locals.aws
-  prefix              = "awsgame"
-  tags_common         = local.vars.locals.tags
-  app_name            = "03"
-  subnets             = dependency.vpc.outputs.public_subnets_by_type.public.ids
-    subnets_private     = dependency.vpc.outputs.private_subnets_by_type.app.ids
-  vpc_id              = dependency.vpc.outputs.vpc_id
+  region           = local.vars.locals.region
+  aws              = local.vars.locals.aws
+  prefix           = "awsgame"
+  tags_common      = local.vars.locals.tags
+  app_name         = "03"
+  subnets          = dependency.vpc.outputs.public_subnets_by_type.public.ids
+  subnets_private  = dependency.vpc.outputs.private_subnets_by_type.app.ids
+  vpc_id           = dependency.vpc.outputs.vpc_id
+  vpc_default_cidr = dependency.vpc.outputs.vpc_default_cidr
 
 }

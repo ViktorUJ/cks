@@ -59,3 +59,4 @@ variable "asg" {
     desired_capacity = 1
   }
 }
+variable "vpc_default_cidr" {}
