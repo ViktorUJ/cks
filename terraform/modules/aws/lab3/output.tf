@@ -2,10 +2,7 @@ output "subnets" {
   value = var.subnets
 }
 
-output "sever" {
-  value = aws_instance.server.id
+output "asg" {
+  value = aws_autoscaling_group
 }
 
-output "sever-private" {
-  value = aws_instance.server-private.id
-}
