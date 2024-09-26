@@ -12,20 +12,26 @@ yum install -y amazon-cloudwatch-agent
 
 cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
 {
-  "metrics": {  
-    "append_dimensions": {   
+  "metrics": {
+    "append_dimensions": {
       "InstanceId": "$${aws:InstanceId}",
       "autoScalingGroupName": "$${aws:AutoScalingGroupName}"
     },
-    "metrics_collected": {      "cpu": {
-        "measurement": [          "cpu_usage_idle",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "cpu_usage_idle",
           "cpu_usage_iowait",
           "cpu_usage_user"
         ],
-        "metrics_collection_interval": 60,        "resources": ["*"]
-      },      "disk": {        "measurement": [
+        "metrics_collection_interval": 60,
+        "resources": ["*"]
+      },
+      "disk": {
+        "measurement": [
           "used_percent"
-        ],        "metrics_collection_interval": 60,
+        ],
+        "metrics_collection_interval": 60,
         "resources": ["*"]
       },
       "mem": {
@@ -42,15 +48,16 @@ cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
       },
       "net": {
         "measurement": [
-          "bytes_sent",
-          "bytes_recv"
+          "bytes_in",
+          "bytes_out"
         ],
         "metrics_collection_interval": 60,
         "resources": ["*"]
       }
     }
   },
-  "agent": {
+
+    "agent": {
     "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
     "region": "${aws_region}"
   },
@@ -93,7 +100,6 @@ cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
     }
   }
 }
-
 
 EOF
 
