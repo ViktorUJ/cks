@@ -55,8 +55,8 @@ variable "asg" {
   })
   default = {
     min_size         = 1
-    max_size         = 3
-    desired_capacity = 1
+    max_size         = 4
+    desired_capacity = 3
   }
 }
 variable "vpc_default_cidr" {}
