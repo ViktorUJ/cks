@@ -12,11 +12,11 @@ resource "aws_security_group" "servers1" {
   }
 
   ingress {
-    from_port   = "9090"
-    to_port     = "9090"
+    from_port   = "80"
+    to_port     = "80"
     protocol    = "tcp"
-    cidr_blocks = ["9.9.9.9/32"]
-    description = "prometheus"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "app"
   }
 
   ingress {
@@ -49,11 +49,11 @@ resource "aws_security_group" "servers2" {
     description = "ssh"
   }
   ingress {
-    from_port   = "9090"
-    to_port     = "9090"
+    from_port   = "80"
+    to_port     = "80"
     protocol    = "tcp"
-    cidr_blocks = ["9.9.9.9/32"]
-    description = "prometheus"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "app"
   }
 
   ingress {
