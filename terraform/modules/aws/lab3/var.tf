@@ -47,3 +47,15 @@ variable "volume_size" {
 variable "volume_type" {
     default="gp3"
 }
+variable "asg" {
+  type = object({
+    min_size         = string
+    max_size         = string
+    desired_capacity = string
+  })
+  default = {
+    min_size         = 1
+    max_size         = 3
+    desired_capacity = 1
+  }
+}
