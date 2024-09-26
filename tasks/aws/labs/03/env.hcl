@@ -24,18 +24,21 @@ locals {
         name = "app-intra-1"
         cidr = "10.10.2.0/24"
         az   = "eu-north-1a"
+        nat_gateway="AZ"
         type="app"
       }
        "pub2" = {
         name = "app-intra-2"
         cidr = "10.10.3.0/24"
         az   = "eu-north-1b"
+        nat_gateway="AZ"
         type="app"
       }
        "pub3" = {
         name = "app-intra-3"
         cidr = "10.10.4.0/24"
         az   = "eu-north-1c"
+        nat_gateway="AZ"
         type="app"
       }
 
