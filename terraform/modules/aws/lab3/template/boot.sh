@@ -60,7 +60,7 @@ cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
     "agent": {
     "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
     "region": "${aws_region}"
-  }
+  },
   "logs": {
     "logs_collected": {
       "files": {
