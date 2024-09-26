@@ -10,13 +10,6 @@ resource "aws_security_group" "servers1" {
     cidr_blocks = ["8.8.8.8/32"]
     description = "ssh"
   }
-  ingress {
-    from_port   = "22"
-    to_port     = "22"
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "ssh for all "
-  }
 
   ingress {
     from_port   = "9090"
@@ -55,14 +48,6 @@ resource "aws_security_group" "servers2" {
     cidr_blocks = ["8.8.8.8/32"]
     description = "ssh"
   }
-  ingress {
-    from_port   = "22"
-    to_port     = "22"
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "ssh for all "
-  }
-
   ingress {
     from_port   = "9090"
     to_port     = "9090"
