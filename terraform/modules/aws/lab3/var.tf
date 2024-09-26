@@ -60,3 +60,7 @@ variable "asg" {
   }
 }
 variable "vpc_default_cidr" {}
+
+variable "notification_email" {
+  default = "viktoruj@gmail.com"
+}
