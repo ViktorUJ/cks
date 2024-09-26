@@ -102,11 +102,16 @@ resource "aws_iam_instance_profile" "server" {
 }
 
 
+
 resource "aws_launch_template" "server" {
   name_prefix   = "${var.prefix}-${var.app_name}-server"
   image_id      = var.ami
   instance_type = var.instance_type
-  user_data = base64encode(file("template/boot.sh"))
+  user_data = base64encode(templatefile("template/boot.sh",
+    {
+      aws_cloudwatch_log_group=aws_cloudwatch_log_group.app_log_group.name
+    }
+  ))
     tags = merge(
         var.tags_common,
         {
