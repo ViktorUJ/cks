@@ -14,7 +14,8 @@ cat <<EOF > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
 {
   "metrics": {
     "append_dimensions": {
-      "InstanceId": "$${aws:InstanceId}"
+      "InstanceId": "$${aws:InstanceId}",
+      "autoScalingGroupName": "$${aws:AutoScalingGroupName}"
     },
     "metrics_collected": {
       "cpu": {
@@ -55,6 +56,11 @@ cat <<EOF > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
       }
     }
   },
+
+    "agent": {
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+    "region": "${aws_region}"
+  }
   "logs": {
     "logs_collected": {
       "files": {

@@ -110,6 +110,7 @@ resource "aws_launch_template" "server" {
   user_data = base64encode(templatefile("template/boot.sh",
     {
       aws_cloudwatch_log_group=aws_cloudwatch_log_group.app_log_group.name
+      aws_region=var.region
     }
   ))
     tags = merge(
