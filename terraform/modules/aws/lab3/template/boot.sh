@@ -90,4 +90,4 @@ EOF
 # app
 instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
 
-docker run -p 0.0.0.0:80:8080 --name app viktoruj/ping_pong -e SERVER_NAME="$instance_id"  > /var/log/app.log
+docker run -e SERVER_NAME="$instance_id" -p 0.0.0.0:80:8080 --name app viktoruj/ping_pong   > /var/log/app.log
