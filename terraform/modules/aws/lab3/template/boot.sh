@@ -88,6 +88,8 @@ EOF
 
 
 # app
-instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+
+instance_id=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
 
 docker run -e SERVER_NAME="$instance_id" -p 0.0.0.0:80:8080 --name app viktoruj/ping_pong   > /var/log/app.log
