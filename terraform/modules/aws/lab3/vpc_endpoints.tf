@@ -1,3 +1,6 @@
+/*
+
+
 # Создание VPC endpoint для SSM
 resource "aws_vpc_endpoint" "ssm" {
   vpc_id            = var.vpc_id
@@ -54,3 +57,6 @@ resource "aws_security_group" "vpc_endpoint_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+
+ */

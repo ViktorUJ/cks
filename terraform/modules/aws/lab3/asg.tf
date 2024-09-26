@@ -167,7 +167,7 @@ resource "aws_autoscaling_group" "ec2_asg" {
     version = "$Latest"
   }
   name = "${var.prefix}-${var.app_name}-server"
-  vpc_zone_identifier = var.subnets_private
+  vpc_zone_identifier = var.subnets
   min_size            = var.asg.min_size
   max_size            = var.asg.max_size
   desired_capacity    = var.asg.desired_capacity
