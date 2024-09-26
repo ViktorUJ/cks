@@ -166,7 +166,7 @@ resource "aws_autoscaling_group" "ec2_asg" {
     id      = aws_launch_template.server.id
     version = "$Latest"
   }
-
+  name = "${var.prefix}-${var.app_name}-server"
   vpc_zone_identifier = var.subnets_private
   min_size            = var.asg.min_size
   max_size            = var.asg.max_size
