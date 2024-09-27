@@ -100,10 +100,12 @@ resource "aws_lb" "ping_pong_lb" {
 
 resource "aws_lb_target_group" "ping_pong_target_group" {
   name     = "ping-pong-target-group"
-  port     = 8080  # Изменили порт на 8080
+  port     = 8080
   protocol = "HTTP"
-  vpc_id   = var.vpc_id  # Заменить на ваш VPC ID
+  vpc_id   = var.vpc_id
+  target_type = "ip"  # Меняем тип на "ip" для работы с awsvpc и Fargate
 }
+
 
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.ping_pong_lb.arn
