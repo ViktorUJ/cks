@@ -1,3 +1,6 @@
+
+
+
 # Создаем IAM роль для API Gateway
 resource "aws_iam_role" "api_gateway_role" {
   name = "api-gateway-role"
