@@ -126,6 +126,12 @@ resource "aws_appautoscaling_target" "ecs_scaling" {
   service_namespace  = "ecs"
 }
 
+
+output "load_balancer_dns" {
+  value = aws_lb.ping_pong_lb.dns_name
+}
+
+
 /*
 resource "aws_appautoscaling_policy" "ecs_scaling_policy" {
   name               = "request-scaling-policy"
