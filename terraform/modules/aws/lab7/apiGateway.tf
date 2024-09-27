@@ -110,7 +110,6 @@ resource "aws_api_gateway_domain_name" "custom_domain" {
 
 resource "aws_api_gateway_base_path_mapping" "path_mapping" {
   domain_name = aws_api_gateway_domain_name.custom_domain.domain_name
-  rest_api_id = aws_api_gateway_rest_api.api_gateway.id
+  api_id      = aws_api_gateway_rest_api.api_gateway.id  # Замените rest_api_id на api_id
   stage_name  = "prod"  # Укажите вашу стадию (например, prod)
 }
-
