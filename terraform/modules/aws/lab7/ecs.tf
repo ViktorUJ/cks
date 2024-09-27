@@ -138,11 +138,21 @@ output "load_balancer_dns" {
 }
 
 
+# Выводим данные о балансировщике и целевой группе
+output "target_group_arn_suffix" {
+  value = aws_lb_target_group.ping_pong_target_group.arn_suffix
+}
+
+output "load_balancer_arn_suffix" {
+  value = aws_lb.ping_pong_lb.arn_suffix
+}
+
+# Обновляем aws_appautoscaling_policy
+
 resource "aws_appautoscaling_policy" "ecs_scaling_policy" {
   name               = "request-scaling-policy"
   policy_type        = "TargetTrackingScaling"
 
-  # Заменяем scaling_target_id на правильные параметры
   resource_id        = "service/${aws_ecs_cluster.example.name}/${aws_ecs_service.ping_pong_service.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
@@ -150,6 +160,7 @@ resource "aws_appautoscaling_policy" "ecs_scaling_policy" {
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
       predefined_metric_type = "ALBRequestCountPerTarget"
+      resource_label         = "${aws_lb.ping_pong_lb.arn_suffix}/${aws_lb_target_group.ping_pong_target_group.arn_suffix}"
     }
     target_value = 10
   }
