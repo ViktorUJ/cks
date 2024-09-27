@@ -38,12 +38,11 @@ resource "aws_api_gateway_integration" "ecs_service_integration" {
   http_method             = aws_api_gateway_method.any_method.http_method
   integration_http_method = "ANY"
   type                    = "HTTP_PROXY"
-  uri                     = "http://${aws_lb.ping_pong_lb.dns_name}/{proxy}"
+  uri                     = "http://${aws_lb.ping_pong_lb.dns_name}"
 
-  request_parameters = {
-    "integration.request.path.proxy" = "method.request.path.proxy"
-  }
+  # Удалите request_parameters для proxy
 }
+
 
 resource "aws_iam_policy" "api_gateway_alb_policy" {
   name   = "api-gateway-alb-policy"
