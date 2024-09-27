@@ -56,7 +56,7 @@ resource "aws_ecs_service" "ping_pong_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = [var.subnets]  # Заменить на ваши ID подсетей
+    subnets         = var.subnets  # Заменить на ваши ID подсетей
     security_groups = [aws_security_group.lb_sg.id]
     assign_public_ip = true
   }
@@ -95,7 +95,7 @@ resource "aws_lb" "ping_pong_lb" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.lb_sg.id]
-  subnets            = ["your_subnet_ids"]  # Заменить на ваши ID подсетей
+  subnets            = var.subnets  # Заменить на ваши ID подсетей
 }
 
 resource "aws_lb_target_group" "ping_pong_target_group" {
