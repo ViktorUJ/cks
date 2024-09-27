@@ -73,7 +73,7 @@ resource "aws_ecs_service" "ping_pong_service" {
 resource "aws_security_group" "lb_sg" {
   name        = "lb-sg"
   description = "Allow http traffic"
-  vpc_id      = "your_vpc_id"  # Заменить на ваш VPC ID
+  vpc_id      = var.vpc_id  # Заменить на ваш VPC ID
 
   ingress {
     from_port   = 8080  # Изменили порт на 8080
