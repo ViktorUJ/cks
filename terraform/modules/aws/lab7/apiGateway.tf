@@ -94,6 +94,7 @@ output "api_gateway_url" {
 }
 
 resource "aws_acm_certificate" "api_gateway_cert" {
+  provider = "aws.cloudfront"
   domain_name       = "api.aws-guru.com"  # Замените на ваш домен
   validation_method = "DNS"
 

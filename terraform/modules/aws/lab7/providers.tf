@@ -6,3 +6,7 @@ provider "aws" {
   alias  = "cmdb"
 
 }
+provider "aws" {
+  alias = "cloudfront"
+  region = "us-east-1"
+}
