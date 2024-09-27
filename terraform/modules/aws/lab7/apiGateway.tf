@@ -84,10 +84,20 @@ resource "aws_api_gateway_integration" "root_integration" {
 }
 
 
+
+
+
 # Выводим URL API Gateway
 output "api_gateway_url" {
   value = "https://${aws_api_gateway_rest_api.api_gateway.id}.execute-api.${var.region}.amazonaws.com/${aws_api_gateway_stage.api_stage.stage_name}/"
   description = "The URL of the API Gateway"
 }
 
+resource "aws_acm_certificate" "api_gateway_cert" {
+  domain_name       = "api.aws-guru.com"  # Замените на ваш домен
+  validation_method = "DNS"
 
+  lifecycle {
+    create_before_destroy = true
+  }
+}
