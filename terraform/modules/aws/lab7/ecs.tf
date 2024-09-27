@@ -9,8 +9,8 @@ resource "aws_ecs_task_definition" "ping_pong" {
       name      = "ping_pong"
       image     = "viktoruj/ping_pong"
       essential = true
-      memory    = 512
-      cpu       = 256
+      memory    = 32
+      cpu       = 16
       portMappings = [
         {
           containerPort = 8080  # Изменили порт контейнера на 8080
@@ -22,8 +22,8 @@ resource "aws_ecs_task_definition" "ping_pong" {
 
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "256"
-  memory                   = "512"
+  cpu                      = "16"
+  memory                   = "32"
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
 }
 
