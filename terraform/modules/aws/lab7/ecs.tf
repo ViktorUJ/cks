@@ -138,7 +138,7 @@ output "load_balancer_dns" {
 }
 
 
-/*
+
 resource "aws_appautoscaling_policy" "ecs_scaling_policy" {
   name               = "request-scaling-policy"
   policy_type        = "TargetTrackingScaling"
@@ -149,8 +149,8 @@ resource "aws_appautoscaling_policy" "ecs_scaling_policy" {
       predefined_metric_type = "ALBRequestCountPerTarget"
     }
 
-    target_value = 100.0
+    target_value = 10
   }
 }
 
- */
+
