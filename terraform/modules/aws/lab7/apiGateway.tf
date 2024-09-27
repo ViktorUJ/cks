@@ -101,3 +101,16 @@ resource "aws_acm_certificate" "api_gateway_cert" {
     create_before_destroy = true
   }
 }
+
+resource "aws_api_gateway_domain_name" "custom_domain" {
+  domain_name = "api.aws-guru.com"  # Замените на ваш домен
+  certificate_arn = aws_acm_certificate.api_gateway_cert.arn
+}
+
+
+resource "aws_api_gateway_base_path_mapping" "path_mapping" {
+  domain_name = aws_api_gateway_domain_name.custom_domain.domain_name
+  rest_api_id = aws_api_gateway_rest_api.api_gateway.id
+  stage_name  = "prod"  # Укажите вашу стадию (например, prod)
+}
+
