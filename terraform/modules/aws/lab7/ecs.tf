@@ -56,7 +56,7 @@ resource "aws_ecs_service" "ping_pong_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = ["your_subnet_ids"]  # Заменить на ваши ID подсетей
+    subnets         = [var.subnets]  # Заменить на ваши ID подсетей
     security_groups = [aws_security_group.lb_sg.id]
     assign_public_ip = true
   }
@@ -102,7 +102,7 @@ resource "aws_lb_target_group" "ping_pong_target_group" {
   name     = "ping-pong-target-group"
   port     = 8080  # Изменили порт на 8080
   protocol = "HTTP"
-  vpc_id   = "your_vpc_id"  # Заменить на ваш VPC ID
+  vpc_id   = var.vpc_id  # Заменить на ваш VPC ID
 }
 
 resource "aws_lb_listener" "http" {
