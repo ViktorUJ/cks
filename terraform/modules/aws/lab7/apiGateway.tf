@@ -114,3 +114,11 @@ resource "aws_api_gateway_base_path_mapping" "path_mapping" {
   api_id      = aws_api_gateway_rest_api.api_gateway.id  # Замените rest_api_id на api_id
   stage_name  = "prod"  # Укажите вашу стадию (например, prod)
 }
+
+output "aws_api_gateway_domain_name_cloudfront_domain_name" {
+  value = aws_api_gateway_domain_name.custom_domain.cloudfront_domain_name
+}
+
+output "aws_api_gateway_domain_name_custom_domain_cloudfront_zone_id" {
+  value = aws_api_gateway_domain_name.custom_domain.cloudfront_zone_id
+}
