@@ -138,19 +138,19 @@ output "load_balancer_dns" {
 }
 
 
-
 resource "aws_appautoscaling_policy" "ecs_scaling_policy" {
   name               = "request-scaling-policy"
   policy_type        = "TargetTrackingScaling"
-  scaling_target_id  = aws_appautoscaling_target.ecs_scaling.id
+
+  # Заменяем scaling_target_id на правильные параметры
+  resource_id        = "service/${aws_ecs_cluster.example.name}/${aws_ecs_service.ping_pong_service.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
       predefined_metric_type = "ALBRequestCountPerTarget"
     }
-
     target_value = 10
   }
 }
-
-
