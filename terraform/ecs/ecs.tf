@@ -52,7 +52,6 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   ]
 }
 
-/*
 resource "aws_ecs_service" "ping_pong_service" {
   name            = "ping-pong-service"
   cluster         = aws_ecs_cluster.example.id
@@ -61,24 +60,24 @@ resource "aws_ecs_service" "ping_pong_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.subnets  # Заменить на ваши ID подсетей
-    security_groups = [aws_security_group.lb_sg.id]
+    subnets         = ["subnet-0abe5b905b26d2a34","subnet-0a566cf68fb017a79"]  # Заменить на ваши ID подсетей
+    security_groups = ["sg-0a21d77aa63554877"]
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.ping_pong_target_group.arn
+    target_group_arn = "arn:aws:elasticloadbalancing:eu-central-1:482771304229:loadbalancer/app/webserverloadbalancer-v2/0813a90dac822b7c"
     container_name   = "ping_pong"
-    container_port   = 8080  # Изменили порт контейнера на 8080
+    container_port   = 80  # Изменили порт контейнера на 8080
   }
 
-  depends_on = [aws_lb_listener.http]
+ # depends_on = [aws_lb_listener.http]
 }
 
 resource "aws_security_group" "lb_sg" {
   name        = "lb-sg"
   description = "Allow http traffic"
-  vpc_id      = var.vpc_id  # Заменить на ваш VPC ID
+  vpc_id      = "vpc-0faeccad38aae3f0c"  # Заменить на ваш VPC ID
 
   ingress {
     from_port   = 80  # Изменили порт на 8080
@@ -87,8 +86,8 @@ resource "aws_security_group" "lb_sg" {
     cidr_blocks = ["0.0.0.0/0"]  # Разрешаем доступ из интернета
   }
     ingress {
-    from_port   = 8080  # Изменили порт на 8080
-    to_port     = 8080  # Изменили порт на 8080
+    from_port   = 80  # Изменили порт на 8080
+    to_port     = 80  # Изменили порт на 8080
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]  # Разрешаем доступ из интернета
   }
@@ -100,6 +99,8 @@ resource "aws_security_group" "lb_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+/*
 
 resource "aws_lb" "ping_pong_lb" {
   name               = "ping-pong-lb"
@@ -113,7 +114,7 @@ resource "aws_lb_target_group" "ping_pong_target_group" {
   name     = "ping-pong-target-group"
   port     = 8080
   protocol = "HTTP"
-  vpc_id   = var.vpc_id
+  vpc_id   = "vpc-0faeccad38aae3f0c"
   target_type = "ip"  # Меняем тип на "ip" для работы с awsvpc и Fargate
 }
 
