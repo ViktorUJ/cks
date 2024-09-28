@@ -1,3 +1,7 @@
+provider "aws" {
+  region = "eu-central-1"
+}
+
 resource "aws_ecs_cluster" "example" {
   name = "ecs-cluster"
 }
@@ -7,14 +11,14 @@ resource "aws_ecs_task_definition" "ping_pong" {
   container_definitions = jsonencode([
     {
       name      = "ping_pong"
-      image     = "viktoruj/ping_pong"
+      image     = "viktoruj/ping_pong:app"
       essential = true
       memory    = 512
       cpu       = 256
       portMappings = [
         {
-          containerPort = 8080  # Изменили порт контейнера на 8080
-          hostPort      = 8080  # Изменили host порт на 8080
+          containerPort = 80  # Изменили порт контейнера на 8080
+          hostPort      = 80  # Изменили host порт на 8080
         }
       ]
     }
