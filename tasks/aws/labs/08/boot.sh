@@ -1,8 +1,5 @@
 #!/bin/bash
 
-declare -i  docker_worker_count=300
-declare -i start_port=8080
-
 yum update -y
 yum install -y docker nginx
 service docker start
@@ -30,8 +27,11 @@ EOF
 docker build -t app .
 
 
+declare -i  docker_worker_count=50 # small 50  , micro 25 ,
+declare -i start_port=8080
+
 for ((i=0; i<docker_worker_count; i++)); do
-   echo "Starting container $i"
+  echo "Starting container $i"
   docker run -d -p $((start_port+i)):8080 --name "app-${i}" app
 done
 
