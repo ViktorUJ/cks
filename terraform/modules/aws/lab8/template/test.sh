@@ -25,7 +25,7 @@ timeout=4  # Таймаут в секундах
 > "$error_log"
 
 # Запускаем несколько запросов
-for i in {1..300}; do
+for i in {1..1000}; do
     make_request $i "$url" "$error_log" "$timeout" &
 done
 

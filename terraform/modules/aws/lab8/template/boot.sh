@@ -9,8 +9,8 @@ chkconfig docker on
 
 declare -i  docker_worker_count=55 # small 55  , micro 27 ,
 declare -i start_port=8080
-server_bin_url="https://ws-assets-prod-iad-r-fra-b129423e91500967.s3.amazonaws.com/5fb682bf-699a-4972-848b-ab4a1ec243d5/server-binary.py"
-
+#server_bin_url="https://ws-assets-prod-iad-r-fra-b129423e91500967.s3.amazonaws.com/5fb682bf-699a-4972-848b-ab4a1ec243d5/server-binary.py"
+server_bin_url="https://ws-assets-prod-iad-r-fra-b129423e91500967.s3.amazonaws.com/5fb682bf-699a-4972-848b-ab4a1ec243d5/server-binary-v2.py"
 # logs
 
 
