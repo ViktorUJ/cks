@@ -108,7 +108,7 @@ RUN apt-get update && \
     apt-get install -y wget && \
     rm -rf /var/lib/apt/lists/*
 
-RUN wget wget -O server-binary.py  $server_bin_url
+RUN wget -O server-binary.py  $server_bin_url
 
 RUN chmod +x server-binary.py
 
