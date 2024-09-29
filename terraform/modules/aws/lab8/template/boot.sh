@@ -92,4 +92,37 @@ TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metad
 
 instance_id=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
 
+
+
+cat <<"EOF" > Dockerfile
+
+FROM python:3.9-slim
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y wget && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN wget https://ws-assets-prod-iad-r-fra-b129423e91500967.s3.amazonaws.com/5fb682bf-699a-4972-848b-ab4a1ec243d5/server-binary.py
+
+RUN chmod +x server-binary.py
+
+CMD ["python3.9", "server-binary.py"]
+
+EOF
+
+docker build -t app .
+
+
+declare -i  docker_worker_count=50 # small 50  , micro 25 ,
+declare -i start_port=8080
+
+for ((i=0; i<docker_worker_count; i++)); do
+  echo "Starting container $i"
+  docker run -d -p $((start_port+i)):8080 --name "app-${i}" app
+done
+
+
+
 #docker run -e SERVER_NAME="$instance_id" -p 0.0.0.0:80:8080 --name app viktoruj/ping_pong   > /var/log/app.log
