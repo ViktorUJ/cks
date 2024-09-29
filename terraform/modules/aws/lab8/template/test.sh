@@ -18,14 +18,14 @@ make_request() {
 
 # Параметры для тестирования
 error_log="error_log.txt"  # Файл для записи ошибок
-url="http://127.0.0.1:80/calc?input=SGVsbG9Xb3JsZA=="  # Строка запроса
+url="http://awsgame-03-alb-344523096.eu-north-1.elb.amazonaws.com/calc?input=SGVsbG9Xb3JsZA=="  # Строка запроса
 timeout=4  # Таймаут в секундах
 
 # Очищаем файл с ошибками перед запуском
 > "$error_log"
 
 # Запускаем несколько запросов
-for i in {1..1000}; do
+for i in {1..1500}; do
     make_request $i "$url" "$error_log" "$timeout" &
 done
 
@@ -33,3 +33,5 @@ done
 wait
 
 echo "Тестирование завершено. Проверьте файл $error_log на наличие ошибок."
+
+cat $error_log | wc -l
