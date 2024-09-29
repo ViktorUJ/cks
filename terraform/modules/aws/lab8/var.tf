@@ -35,7 +35,7 @@ variable "subnets_private" {
     type = list(string)
 }
 variable "ami" {
-  default = "ami-0129bfde49ddb0ed6"
+  default = "ami-0d916634f7eb5727f"
 
 }
 variable "instance_type" {
