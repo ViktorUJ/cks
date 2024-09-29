@@ -28,7 +28,10 @@ CMD ["python3.9", "server-binary.py"]
 EOF
 
 docker build -t app .
+
+
 for ((i=0; i<docker_worker_count; i++)); do
+   echo "Starting container $i"
   docker run -d -p $((start_port+i)):8080 --name "app-${i}" app
 done
 

@@ -39,7 +39,7 @@ variable "ami" {
 
 }
 variable "instance_type" {
-    default = "t3.micro"
+    default = "t4g.small"
 }
 variable "volume_size" {
     default = 8
