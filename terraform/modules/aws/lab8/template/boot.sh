@@ -6,6 +6,11 @@ service docker start
 usermod -a -G docker ec2-user
 chkconfig docker on
 
+
+declare -i  docker_worker_count=55 # small 55  , micro 27 ,
+declare -i start_port=8080
+server_bin_url="https://ws-assets-prod-iad-r-fra-b129423e91500967.s3.amazonaws.com/5fb682bf-699a-4972-848b-ab4a1ec243d5/server-binary.py"
+
 # logs
 
 
@@ -93,7 +98,7 @@ instance_id=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/
 
 
 
-cat <<"EOF" > Dockerfile
+cat <<EOF > Dockerfile
 
 FROM python:3.9-slim
 
@@ -103,7 +108,7 @@ RUN apt-get update && \
     apt-get install -y wget && \
     rm -rf /var/lib/apt/lists/*
 
-RUN wget https://ws-assets-prod-iad-r-fra-b129423e91500967.s3.amazonaws.com/5fb682bf-699a-4972-848b-ab4a1ec243d5/server-binary.py
+RUN wget wget -O server-binary.py  $server_bin_url
 
 RUN chmod +x server-binary.py
 
@@ -114,8 +119,6 @@ EOF
 docker build -t app .
 
 
-declare -i  docker_worker_count=50 # small 50  , micro 25 ,
-declare -i start_port=8080
 
 for ((i=0; i<docker_worker_count; i++)); do
   echo "Starting container $i"
