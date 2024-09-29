@@ -1,14 +1,13 @@
 #!/bin/bash
 
 yum update -y
-yum install -y docker
+yum install -y docker nginx  amazon-cloudwatch-agent
 service docker start
 usermod -a -G docker ec2-user
 chkconfig docker on
 
 # logs
 
-yum install -y amazon-cloudwatch-agent
 
 cat <<'EOF' > /opt/aws/amazon-cloudwatch-agent/bin/cloudwatch-config.json
 {
@@ -120,9 +119,77 @@ declare -i start_port=8080
 
 for ((i=0; i<docker_worker_count; i++)); do
   echo "Starting container $i"
-  docker run -d -p $((start_port+i)):8080 --name "app-$i" app
+  docker run -d -p $((start_port+i)):80 --name "app-$i" app
 done
 
+### Nginx
 
+#!/bin/bash
 
-#docker run -e SERVER_NAME="$instance_id" -p 0.0.0.0:80:8080 --name app viktoruj/ping_pong   > /var/log/app.log
+# Параметры
+declare -i docker_worker_count=50  # small 50, micro 25
+declare -i start_port=8080         # Начальный порт для контейнеров
+
+# Путь для конфигурации Nginx
+nginx_conf="/etc/nginx/nginx.conf"
+
+# Генерация основной конфигурации Nginx
+echo "Генерация новой конфигурации для Nginx..."
+
+cat > "$nginx_conf" <<EOL
+user nginx;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream backend {
+EOL
+
+# Добавляем бэкэнды для всех контейнеров
+for ((i=0; i<docker_worker_count; i++)); do
+  echo "        server 127.0.0.1:$((start_port+i));" >> "$nginx_conf"
+done
+
+cat >> "$nginx_conf" <<EOL
+    }
+
+    server {
+        listen 80;
+        server_name localhost;
+
+        location / {
+            proxy_pass http://backend;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+    }
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+}
+EOL
+
+echo "Новая конфигурация для Nginx сгенерирована: $nginx_conf"
+
+# Перезапуск Nginx для применения новой конфигурации
+echo "Перезапуск Nginx..."
+nginx -t
+
+chkconfig nginx on
+service nginx start
