@@ -11,7 +11,7 @@ terraform {
   #
 
   extra_arguments "retry_lock" {
-    commands  = get_terraform_commands_that_need_locking()
+    commands = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -39,7 +39,7 @@ inputs = {
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
-    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
+    runtime = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
@@ -52,10 +52,8 @@ inputs = {
     eip                = "false"
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/labs/07/k8s-1/scripts/master.sh"
-    cni = {
-      type = "cilium"
-    }
-    ssh                = {
+    cni                = local.vars.locals.cni
+    ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
@@ -76,7 +74,7 @@ inputs = {
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/labs/07/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=system"
-      ssh                = {
+      ssh = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }
@@ -95,7 +93,7 @@ inputs = {
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/labs/07/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=monitoring"
-      ssh                = {
+      ssh = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }
@@ -114,7 +112,7 @@ inputs = {
       runtime_script     = "template/runtime.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/labs/07/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=app"
-      ssh                = {
+      ssh = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }

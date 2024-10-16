@@ -17,6 +17,9 @@ locals {
   k8_version           = "1.31.0"
   node_type            = "spot"
   runtime = "containerd" # docker  , cri-o  , containerd ( need test it )
+  cni = {
+      type = "cilium"
+    }
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"
   key_name             = "cks"
