@@ -22,7 +22,7 @@ locals {
     }
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"
-  key_name             = "cks"
+  key_name             = ""
   ssh_password_enable = "true" # false |  true
   access_cidrs = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
   ubuntu_version       = "22.04"
