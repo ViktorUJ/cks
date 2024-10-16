@@ -24,16 +24,9 @@ spec:
       labels:
         app: app
     spec:
-      nodeSelector:
-        work_type: app
       containers:
       - image: viktoruj/ping_pong
         name: app
-        env:
-           - name:  ENABLE_LOAD_CPU
-             value: "true"
-           - name:  CPU_USAGE_PROFILE
-             value: "2=25=1=120 1=100=1=120"
         resources:
             requests:
                 memory: 10Mi
