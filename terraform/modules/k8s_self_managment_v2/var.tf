@@ -45,7 +45,7 @@ variable "k8s_master" {
       calico_url = optional(string, "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml")
       cilium_version = optional(string, "v0.16.17")
       cilium_helm_version = optional(string, "1.16.1")
-      disable_kube_proxy = optional(string, "false")
+      disable_kube_proxy = optional(string, "false") # set to  true  for replace kube-proxy by cilium
 
     }),{})
     task_script_url    = string # url for run additional script
