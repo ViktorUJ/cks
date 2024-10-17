@@ -34,3 +34,75 @@ spec:
             limits:
                 memory: 20Mi
                 cpu: 250m
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finance
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: finance
+  name: finance
+  namespace: finance
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        resources:
+            requests:
+                memory: 10Mi
+                cpu: 100m
+            limits:
+                memory: 20Mi
+                cpu: 250m
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: external
+  name: external
+  namespace: external
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        resources:
+            requests:
+                memory: 10Mi
+                cpu: 100m
+            limits:
+                memory: 20Mi
+                cpu: 250m
