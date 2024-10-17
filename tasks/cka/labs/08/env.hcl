@@ -18,7 +18,7 @@ locals {
   node_type            = "spot"
   runtime = "containerd" # docker  , cri-o  , containerd ( need test it )
   cni = {
-      type = "calico" #calico , cilium
+      type = "cilium" #calico , cilium
     }
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"
