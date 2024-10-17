@@ -27,8 +27,8 @@ external_ip_sh=${external_ip}
 utils_enable_sh=${utils_enable}
 cni_type=${cni_type}
 cilium_version=${cilium_version}
-
-
+disable_kube_proxy=${disable_kube_proxy}
+kubeadm_init_extra_args=""
 date
 swapoff -a
 
@@ -36,12 +36,17 @@ apt-get update && sudo apt-get upgrade -y
 apt-get install -y  unzip apt-transport-https ca-certificates curl jq
 
 ${runtime_script}
+if [[ "$disable_kube_proxy" == "true" ]] ; then
+  echo "*** disable kube-proxy"
+   kubeadm_init_extra_args+="--skip-phases=addon/kube-proxy"
+fi
+
 if [ -z "$external_ip_sh" ]; then
    echo "*** kubeadm init without eip "
-   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4
+   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4 $kubeadm_init_extra_args
   else
    echo "*** kubeadm init with eip "
-   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4,$external_ip_sh
+   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4,$external_ip_sh $kubeadm_init_extra_args
 fi
 
 
