@@ -19,6 +19,7 @@ locals {
   runtime = "containerd" # docker  , cri-o  , containerd ( need test it )
   cni = {
       type = "cilium" #calico , cilium
+      disable_kube_proxy="true"
     }
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"
