@@ -1,6 +1,3 @@
-
-
-
 output "subnets" {
   value = local.subnets
 }
@@ -21,19 +18,3 @@ output "vpc_default_cidr" {
   value = var.vpc_default_cidr
 }
 
-
-/*
-
-output "subnets_az_cmdb" {
-  value = local.subnets_az_cmdb
-}
-
-
-
-output "env" {
-  value = "${local.prefix}-${var.app_name} "
-}
-
-
-
- */
