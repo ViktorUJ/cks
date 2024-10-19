@@ -75,3 +75,7 @@ output "hosts" {
 output "ssh_password_enable" {
   value = var.ssh_password_enable
 }
+
+output "master" {
+  value = var.k8s_master
+}
