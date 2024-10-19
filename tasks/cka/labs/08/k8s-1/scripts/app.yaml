@@ -36,6 +36,23 @@ spec:
                 cpu: 250m
 ---
 apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app
+  name: portal
+  namespace: production
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: app
+
+---
+apiVersion: v1
 kind: Namespace
 metadata:
   name: finance
@@ -49,7 +66,7 @@ metadata:
   name: finance
   namespace: finance
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: app
@@ -85,7 +102,7 @@ metadata:
   name: external
   namespace: external
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: app

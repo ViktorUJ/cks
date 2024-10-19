@@ -9,3 +9,15 @@ the portal  APIs:
 /public/*  - open to all
 /private/* - open from the finance namespace
 
+for checking access you can use curl from pod in  the **finance** namespace or **external**  namespace
+
+like this:
+
+
+```
+# private api
+k exec  -n finance finance-855d98bddb-8kkdg  --  curl http://portal.production/private/api
+
+# public api
+k exec  -n finance finance-855d98bddb-8kkdg  --  curl http://portal.production/public/api 
+```
