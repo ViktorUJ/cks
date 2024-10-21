@@ -27,6 +27,10 @@ spec:
       containers:
       - image: viktoruj/ping_pong
         name: app
+        env:
+           - name:  SRV_PORT
+             value: "80"
+
         resources:
             requests:
                 memory: 10Mi
@@ -47,7 +51,7 @@ spec:
   ports:
   - port: 80
     protocol: TCP
-    targetPort: 8080
+    targetPort: 80
   selector:
     app: app
 
