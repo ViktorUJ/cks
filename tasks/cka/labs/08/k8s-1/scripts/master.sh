@@ -7,4 +7,4 @@ kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/late
 kubectl -n kube-system patch deployment metrics-server --type=json \
 -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]]'
 
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-21/tasks/cka/labs/08/k8s-1/scripts/app.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/0.15.1/tasks/cka/labs/08/k8s-1/scripts/app.yaml
