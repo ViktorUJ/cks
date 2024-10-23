@@ -23,3 +23,18 @@ k exec  -n finance finance-855d98bddb-8kkdg  --  curl http://portal.production/p
 # public api
 k exec  -n finance finance-855d98bddb-8kkdg  --  curl http://portal.production/public/api  --connect-timeout 1
 ```
+
+lab
+``` 
+kubectl apply -f https://raw.githubusercontent.com/cilium/cilium/HEAD/examples/minikube/http-sw-app.yaml
+
+# check connections
+ kubectl exec tiefighter -- \
+  curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+```
+
+```` 
+# l3 policy 
+kubectl apply -f https://raw.githubusercontent.com/cilium/cilium/HEAD/examples/minikube/sw_l3_l4_policy.yaml
+
+````

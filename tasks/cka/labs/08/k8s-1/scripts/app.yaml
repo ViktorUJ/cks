@@ -9,8 +9,8 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    app: app
-  name: app
+    app: portal
+  name: portal
   namespace: production
 spec:
   replicas: 2
@@ -44,7 +44,7 @@ kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    app: app
+    app: portal
   name: portal
   namespace: production
 spec:
@@ -61,69 +61,42 @@ kind: Namespace
 metadata:
   name: finance
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
   creationTimestamp: null
   labels:
-    app: finance
+    run: finance
   name: finance
   namespace: finance
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: app
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: app
-    spec:
-      containers:
-      - image: viktoruj/ping_pong:alpine
-        name: app
-        resources:
-            requests:
-                memory: 10Mi
-                cpu: 100m
-            limits:
-                memory: 20Mi
-                cpu: 250m
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: finance
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: external
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
   creationTimestamp: null
   labels:
-    app: external
+    run: external
   name: external
   namespace: external
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: app
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: app
-    spec:
-      containers:
-      - image: viktoruj/ping_pong:alpine
-        name: app
-        resources:
-            requests:
-                memory: 10Mi
-                cpu: 100m
-            limits:
-                memory: 20Mi
-                cpu: 250m
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: external
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
