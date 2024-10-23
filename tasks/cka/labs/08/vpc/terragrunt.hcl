@@ -20,4 +20,5 @@ inputs = {
   subnets          = local.vars.locals.subnets
   enable_dns_hostnames="true"
 
+
 }
