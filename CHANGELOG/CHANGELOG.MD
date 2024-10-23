@@ -1,4 +1,15 @@
 # Changelog
+
+## 0.15.1 (24.10.2024)
+### Features
+
+* cilum CNI is added to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
+* [Cka lab 8.Cilium NetworkPolicy L7](..%2Ftasks%2Fcka%2Flabs%2F08%2FREADME.MD) is added.
+* [Cka lab 8.Cilium NetworkPolicy L7](..%2Ftasks%2Fcka%2Flabs%2F08%2Fworker%2Ffiles%2Fsolutions%2F1.MD) is added.
+* [Video](https://youtu.be/needupdate) for Cka lab 8 solution is added.
+
+
+
 ## 0.14.1 (17.09.2024)
 ### Features
 
