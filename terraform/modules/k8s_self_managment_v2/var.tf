@@ -40,7 +40,14 @@ variable "k8s_master" {
     runtime_script     = string
     utils_enable       = string
     pod_network_cidr   = string
-    calico_url         = string
+    cni=optional(object({
+      type = optional(string, "calico") # calico, cilium
+      calico_url = optional(string, "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml")
+      cilium_version = optional(string, "v0.16.17")
+      cilium_helm_version = optional(string, "1.16.1")
+      disable_kube_proxy = optional(string, "false") # set to  true  for replace kube-proxy by cilium
+
+    }),{})
     task_script_url    = string # url for run additional script
     eip                = string # true or ...
     ssh = object({
