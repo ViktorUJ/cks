@@ -6,35 +6,35 @@ You have a corporate portal ( k8s service **portal** in **production** namespace
 
 You need to create  [Cilium NetworkPolicy](https://editor.networkpolicy.io/) **api-access** provide these requirements 
 
-the portal  APIs: 
 
-/public/*  - open to all
-/private/* - open from the finance namespace
+[docs](https://docs.cilium.io/en/v1.10/policy/language/#l7-layer-7-policies)
+
+the portal  **APIs**: 
+
+/public/*  - open all **method**  from  all cluster 
+
+
+/private/* - open all **method** from all in  **finance** namespace
+
 
 for checking access you can use curl from pod in  the **finance** namespace or **external**  namespace
 
 like this:
 
-
+### **private** api from **finance** namespace
 ```
-# private api
-k exec  -n finance finance-855d98bddb-8kkdg  --  curl http://portal.production/private/api --connect-timeout 1
-
-# public api
-k exec  -n finance finance-855d98bddb-8kkdg  --  curl http://portal.production/public/api  --connect-timeout 1
+k exec  -n finance finance  --  curl http://portal.production/private/api123 --connect-timeout 1
 ```
-
-lab
-``` 
-kubectl apply -f https://raw.githubusercontent.com/cilium/cilium/HEAD/examples/minikube/http-sw-app.yaml
-
-# check connections
- kubectl exec tiefighter -- \
-  curl -s -XPOST deathstar.default.svc.cluster.local/v1/request-landing
+### **public** api from **finance** namespace
+```
+k exec  -n finance finance  --  curl http://portal.production/public/api123  --connect-timeout 1
 ```
 
-```` 
-# l3 policy 
-kubectl apply -f https://raw.githubusercontent.com/cilium/cilium/HEAD/examples/minikube/sw_l3_l4_policy.yaml
-
-````
+### **private** api from **external** namespace
+```
+k exec  -n external external  --  curl http://portal.production/private/api123 --connect-timeout 1
+```
+### **public** api from **external** namespace
+```
+k exec  -n external external  --  curl http://portal.production/public/api123  --connect-timeout 1
+```
