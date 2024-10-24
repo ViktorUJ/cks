@@ -147,5 +147,39 @@ TASK=01  make run_ckad_mock_clean
 
 ``` 
 # информация о кластере 
-k  cluster-info
+k version 
+
+
+# список нод 
+
+k get no
+
+# информация по конкретной ноде
+
+k describe no ip-10-2-14-14 
+
+k get no ip-10-2-14-14 -o yaml
+ 
+
+# список namespace
+
+k get ns
+
+```
+
+``` 
+# создание pod
+
+k run nginx --image=nginx 
+
+# удаление pod
+```
+
+
+```
+# генерация манифеста pod  и  создание pod  из манифеста
+ 
+k run nginx --image=nginx -0 yaml --dry-run=client > pod.yaml
+
+k apply -f pod.yaml
 ```
