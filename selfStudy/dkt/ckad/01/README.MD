@@ -172,14 +172,26 @@ k get ns
 
 k run nginx --image=nginx 
 
+
 # удаление pod
+
+k delete po nginx
+
 ```
 
 
 ```
 # генерация манифеста pod  и  создание pod  из манифеста
  
-k run nginx --image=nginx -0 yaml --dry-run=client > pod.yaml
+k run nginx --image=nginx -o yaml --dry-run=client > pod.yaml
+
 
 k apply -f pod.yaml
+
+
+# удаление pod через манифест
+
+k delete -f pod.yaml
+
 ```
+
