@@ -97,6 +97,13 @@
 ~/.kube/config
 
 ```
+Можно изменить путь к конфигурации 
+
+``` 
+export KUBECONFIG=/etc/kubernetes/admin.conf
+
+```
+
 ``` 
 apiVersion: v1
 kind: Config
@@ -119,5 +126,6 @@ contexts:
 current-context: kubernetes-admin@kubernetes
 
 ```
+
 
 [шпаргалка](https://kubernetes.io/ru/docs/reference/kubectl/cheatsheet/)
