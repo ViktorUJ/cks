@@ -71,7 +71,7 @@
 | [Minikube](https://minikube.sigs.k8s.io/docs/) | Локальные машины                       | Низкая              | Бесплатно               | CKAD                                                                           |
 | [k3s](https://k3s.io/)                | Локальные машины, виртуальные машины   | Низкая              | Бесплатно               | CKAD                                                                           |
 | [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/) | Виртуальные машины, локальные машины   | Средняя             | Бесплатно               | CKAD ,CKA,CKS(при запуске  паблик клауде )                                     |
-| [Killercoda](https://killercoda.com/) | Как сервис (облако)                    | Низкая              | Бесплатно (для учебных сценариев) | Обучение в интерактивных сценариях для CKAD ,CKA,CKS . только готовые сценапии |
+| [Killercoda](https://killercoda.com/) | Как сервис (облако)                    | Низкая              | Бесплатно (для учебных сценариев) | Обучение в интерактивных сценариях для CKAD ,CKA,CKS . только готовые сценарии |
 | [SRE Learning Platform](https://github.com/ViktorUJ/cks)   | AWS, ec2                               | Низкая             | Низкая              | CKAD ,CKA,CKS . лабораторные работы , моки экзаменов , свои сценарии.          |
 
 
