@@ -79,11 +79,38 @@
 
 ###  [http запросы api серверу](https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/)
 
+
+### [kubernetes lens](https://k8slens.dev/)
+
+
 ###  [kubectl](https://kubernetes.io/docs/reference/kubectl/overview/)
+
 
 ### конфигурация 
 ```
 ~/.kube/config
+
+```
+``` 
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://<cluster-api-server-url>:6443
+    certificate-authority-data: <base64-encoded-ca-cert>
+  name: kubernetes
+users:
+- name: kubernetes-admin
+  user:
+    client-certificate-data: <base64-encoded-client-cert>
+    client-key-data: <base64-encoded-client-key>
+contexts:
+- context:
+    cluster: kubernetes
+    user: kubernetes-admin
+    namespace: default
+  name: kubernetes-admin@kubernetes
+current-context: kubernetes-admin@kubernetes
 
 ```
 
