@@ -73,3 +73,9 @@
 | [SRE Learning Platform](https://github.com/ViktorUJ/cks)   | AWS, ec2                             | Низкая             | Низкая              | CKAD ,CKA,CKS . лабораторные работы , моки экзаменов , свои сценарии.          |
 
 
+## Подключение к кластеру 
+
+###  (http запросы api серверу)[https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/]
+
+###  (kubectl)[https://kubernetes.io/docs/reference/kubectl/overview/]
+
