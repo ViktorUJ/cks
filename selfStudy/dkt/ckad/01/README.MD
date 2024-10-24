@@ -6,6 +6,20 @@
 
 [CNI plugins](https://kubernetes.io/docs/concepts/cluster-administration/networking/#cni)
 
+## Основные компоненты  Kubernetes
+
+| Компонент         | Что решает                                                | Как найти                                                       |
+|-------------------|-----------------------------------------------------------|-----------------------------------------------------------------|
+| API Server        | Управляет запросами к кластеру                             | Статический под. Манифест находится в `/etc/kubernetes/manifests/kube-apiserver.yaml` |
+| etcd              | Хранение всей информации о состоянии кластера              | Статический под. Манифест находится в `/etc/kubernetes/manifests/etcd.yaml` |
+| Scheduler         | Планирует запуск подов на нодах                            | Статический под. Манифест находится в `/etc/kubernetes/manifests/kube-scheduler.yaml` |
+| Controller-Manager| Управляет контроллерами для поддержания работоспособности кластера | Статический под. Манифест находится в `/etc/kubernetes/manifests/kube-controller-manager.yaml` |
+| Kubelet           | Управляет подами на конкретных нодах                       | Установлен в виде сервиса на нодах. Проверка: `systemctl status kubelet` |
+| kube-proxy        | Управляет сетевыми правилами (iptables)                    | Демонсет. Проверка: `kubectl get daemonset kube-proxy --namespace=kube-system` |
+| CNI               | Обеспечивает сетевое взаимодействие между подами           | Установлен в виде плагинов. Проверка: `kubectl get pods --namespace=kube-system` |
+| DNS               | Обеспечивает разрешение имен сервисов в кластере           | Развернут как сервис и под (CoreDNS). Проверка: `kubectl get svc kube-dns --namespace=kube-system` |
+
+
 
 ## Примитивы Kubernetes
 
