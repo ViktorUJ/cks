@@ -87,7 +87,7 @@
 ### [kubernetes lens](https://k8slens.dev/)
 
 
-###  [kubectl](https://kubernetes.io/docs/reference/kubectl/overview/)
+###  [kubectl - основной инструмент  ](https://kubernetes.io/docs/reference/kubectl/overview/)
 
 
 ### конфигурация 
