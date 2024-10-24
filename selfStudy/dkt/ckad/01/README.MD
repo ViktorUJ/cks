@@ -3,7 +3,7 @@
 
 
 <p align="center">
-    <a href="https://github.com/ViktorUJ/cks/blob/dkt_ckad_01/selfStudy/dkt/ckad/01/README.MD"><img src="https://kubernetes.io/images/docs/components-of-kubernetes.svg" width="800" height="1200" alt="SRE Learning Platform"/></a>
+    <a href="https://github.com/ViktorUJ/cks/blob/dkt_ckad_01/selfStudy/dkt/ckad/01/README.MD"><img src="https://kubernetes.io/images/docs/components-of-kubernetes.svg" width="1800" height="800" alt="SRE Learning Platform"/></a>
 </p>
 
 [components](https://kubernetes.io/docs/concepts/overview/components/)
