@@ -126,8 +126,6 @@ current-context: kubernetes-admin@kubernetes
 ```
 
 
-[шпаргалка](https://kubernetes.io/ru/docs/reference/kubectl/cheatsheet/)
-
 
 ### Запуск сценария на нашей платформе 
 
@@ -195,3 +193,29 @@ k delete -f pod.yaml
 
 ```
 
+``` 
+# создание pod с переменными окружения 
+
+k run nginx --image=nginx --env="key1=value1" --env="key2=value2"
+
+```
+
+
+### Изменения существующего pod 
+
+
+``` 
+# получеем манифест pod
+k get po nginx -o yaml > pod.yaml
+
+# удаляем существующий pod
+
+# изменяем манифест
+vim pod.yaml
+
+# применяем манифест
+k apply -f pod.yaml
+
+```
+
+[Настройка автодобивики команд, аллиасов](https://kubernetes.io/ru/docs/reference/kubectl/cheatsheet/)
