@@ -55,7 +55,7 @@
 | [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/)                | Средняя             | Бесплатно                               | Продакшен, ручная настройка                 |
 | [MicroK8s](https://microk8s.io/)                                                                 | Низкая              | Бесплатно                               | Обучение, разработка, малые кластеры        |
 | [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine)                     | Низкая              | Платная, зависит от ресурсов            | Продакшен, облачные решения                 |
-| [Amazon EKS](https://aws.amazon.com/eks/)                                                        | Средняя             | Платная, зависит от ресурсов            | Продакшен, облачные решения                 |
+| [Amazon EKS](https://aws.amazon.com/eks/)                                                        | Низкая             | Платная, зависит от ресурсов            | Продакшен, облачные решения                 |
 | [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/en-us/services/kubernetes-service/) | Низкая              | Платная, зависит от ресурсов            | Продакшен, облачные решения                 |
 | [OpenShift](https://www.openshift.com/)                                                          | Высокая             | Платная                                 | Продакшен, корпоративные решения            |
 | [Rancher](https://rancher.com/)                                                                  | Средняя             | Платная (базовый функционал бесплатно)  | Продакшен, многокластерные решения          |
