@@ -1,5 +1,9 @@
+**Kubernetes**  - система оркестрации контейнерами . Сейчас самая популярная система оркестрации контейнерами.
+альтернатива : , AWS -ECS ,  docker-Swarm, mesos , Nomad (hashicorp),
+
+
 <p align="center">
-    <a href="https://github.com/ViktorUJ/cks/blob/dkt_ckad_01/selfStudy/dkt/ckad/01/README.MD"><img src="https://kubernetes.io/images/docs/components-of-kubernetes.svg" width="1900" height="1060" alt="SRE Learning Platform"/></a>
+    <a href="https://github.com/ViktorUJ/cks/blob/dkt_ckad_01/selfStudy/dkt/ckad/01/README.MD"><img src="https://kubernetes.io/images/docs/components-of-kubernetes.svg" width="1200" height="1200" alt="SRE Learning Platform"/></a>
 </p>
 
 [components](https://kubernetes.io/docs/concepts/overview/components/)
