@@ -43,8 +43,9 @@
 | Persistent volume  (PV)  | постоянная файловая система для pod                                       | Size + Access Type + Storage Class                                       |
 | Persistent Volume Claims | шаблон для создания Persistent volume                                     | проверяет  создан ли PV ,если нужно создает                              |
 | Ingress                  | подключение к приложению из внешнего мира                                 | балансировка трафика, терминация SSL, виртуальный хостинг на основе имен |
-| ConfigMaps               | хранение конфигураций приложения                                          | монтируется в Pod как ридонли файловая система во время запуска         |
+| ConfigMaps               | хранение конфигураций приложения                                          | монтируется в Pod как ридонли файловая система во время запуска          |
 | Secrets                  | хранение сертификатов и приватных данных                                  | монтируется в Pod как ридонли файловая система или переменных окружения  |
+| Namespace                | Логическое разделение приложений                                          | в них создаются pod , deployment , service  , etc                        |
 
 
 ## Варианты установки Kubernetes
@@ -126,3 +127,25 @@ current-context: kubernetes-admin@kubernetes
 
 
 [шпаргалка](https://kubernetes.io/ru/docs/reference/kubectl/cheatsheet/)
+
+
+### Запуск сценария на нашей платформе 
+
+[видео](https://www.youtube.com/watch?v=Xh6sWzafBmw)
+
+
+[инструкция](https://github.com/ViktorUJ/cks/blob/master/docs%2Frun_from_docker.MD)
+
+
+[DKT64](https://www.youtube.com/watch?v=QuMUzflHsS4)
+
+``` 
+
+TASK=01  make run_ckad_mock_clean
+
+```
+
+``` 
+# информация о кластере 
+k  cluster-info
+```
