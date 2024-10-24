@@ -218,4 +218,83 @@ k apply -f pod.yaml
 
 ```
 
+### Создание pod с командой
+
+
+```
+k run nginx --image=nginx --command -- sleep 1000
+
+```
+
+###  Быстрое удаление pod (полезно на экзамене )
+
+```
+k delete po nginx --force --grace-period=0
+
+```
+
+### Просмотр namespace
+``` 
+k get ns
+
+```
+### Создание namespace
+
+```
+k create ns my-namespace
+
+```
+
+### Удаление namespace
+
+```
+k delete ns my-namespace
+```
+
+### Создание pod в namespace
+
+```
+k create ns my-namespace
+
+k run nginx --image=nginx --namespace=my-namespace
+``` 
+
+### [Пример экзаменационного задания 1](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
+
+```
+k get ns  apx-z993845
+k create ns apx-z993845
+
+k run webhttpd --image httpd:alpine -n apx-z993845
+k get po -n  apx-z993845
+
+
+check_result 
+
+``` 
+
+
+### [Пример экзаменационного задания 6](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
+
+```
+k get pod text-printer -o yaml > 6.yaml
+
+k delete pod text-printer
+
+``` 
+``` 
+# vim 6.yaml
+...
+  env:
+    - name: COLOR
+      value: GREEN
+...
+```
+
+```
+k apply -f 6.yaml
+
+check_result 
+```
+
 [Настройка автодобивики команд, аллиасов](https://kubernetes.io/ru/docs/reference/kubectl/cheatsheet/)
