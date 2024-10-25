@@ -1,4 +1,4 @@
-## [презентация]https://www.canva.com/design/DAGUf_wVLzU/3loTtTVLbmVJULPuzeI5VA/edit
+## [презентация](https://www.canva.com/design/DAGUf_wVLzU/3loTtTVLbmVJULPuzeI5VA/edit)
 
 
 **Kubernetes**  - система оркестрации контейнерами . Сейчас самая популярная система оркестрации контейнерами.
