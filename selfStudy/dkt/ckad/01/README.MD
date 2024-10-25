@@ -78,6 +78,24 @@
 | [SRE Learning Platform](https://github.com/ViktorUJ/cks)   | AWS, ec2                               | Низкая             | Низкая              | CKAD ,CKA,CKS . лабораторные работы , моки экзаменов , свои сценарии.          |
 
 
+### Запуск сценария на нашей платформе 
+
+[видео](https://www.youtube.com/watch?v=Xh6sWzafBmw)
+
+
+[инструкция](https://github.com/ViktorUJ/cks/blob/master/docs%2Frun_from_docker.MD)
+
+
+[DKT64](https://www.youtube.com/watch?v=QuMUzflHsS4)
+
+``` 
+
+TASK=01  make run_ckad_mock_clean
+
+```
+
+
+
 ## Подключение к кластеру 
 
 
@@ -125,23 +143,6 @@ current-context: kubernetes-admin@kubernetes
 
 ```
 
-
-
-### Запуск сценария на нашей платформе 
-
-[видео](https://www.youtube.com/watch?v=Xh6sWzafBmw)
-
-
-[инструкция](https://github.com/ViktorUJ/cks/blob/master/docs%2Frun_from_docker.MD)
-
-
-[DKT64](https://www.youtube.com/watch?v=QuMUzflHsS4)
-
-``` 
-
-TASK=01  make run_ckad_mock_clean
-
-```
 
 ``` 
 # информация о кластере 
