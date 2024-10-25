@@ -262,6 +262,13 @@ k run nginx --image=nginx --namespace=my-namespace
 
 ### [Пример экзаменационного задания 1](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
 
+
+|        **1**        | **Deploy a pod named webhttpd**                                                |
+| :-----------------: | :----------------------------------------------------------------------------- |
+|     Task weight     | 1%                                                                             |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                |
+| Acceptance criteria | - Name: `webhttpd` <br/>- Image: `httpd:alpine`<br/>- Namespace: `apx-z993845` |
+
 ```
 k get ns  apx-z993845
 k create ns apx-z993845
@@ -276,6 +283,14 @@ check_result
 
 
 ### [Пример экзаменационного задания 6](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
+
+
+|        **6**        | **Update the environment variable on the pod text-printer.**                                                 |
+| :-----------------: | :----------------------------------------------------------------------------------------------------------- |
+|     Task weight     | 1%                                                                                                           |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                              |
+| Acceptance criteria | - Change the value of the environment variable to `GREEN`<br/>- Ensure that the logs of the pod was updated. |
+
 
 ```
 k get pod text-printer -o yaml > 6.yaml
