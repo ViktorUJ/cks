@@ -59,15 +59,15 @@ The repository is organized into the following sections:
 - you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)
 - [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)  module supports versions:
 ````
-k8s version  : [ 1.21 , 1.29 ]   https://kubernetes.io/releases/
+k8s version  : [ 1.21 , 1.31 ]   https://kubernetes.io/releases/
 Rintime :
     docker                   [1.21 , 1.23]
     cri-o                    [1.21 , 1.29]
-    containerd               [1.21 , 1.30]   # cks, cka  default 1.29
-    containerd_gvizor        [1.21 , 1.30]
+    containerd               [1.21 , 1.31]   # cks, cka  default 1.30
+    containerd_gvizor        [1.21 , 1.31]
 OS for nodes  :
    ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
-CNI :  calico
+CNI :  calico ,culium
 ````
 </details>
 
