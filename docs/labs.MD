@@ -45,7 +45,7 @@
 | **05** | [PriorityClass.](..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD)                                                | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F05%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/7MhXfbiMfOM) |
 | **06** | [Create general resources (Namespace, Deployment, Service)](..%2Ftasks%2Fcka%2Flabs%2F06%2FREADME.MD)     | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F06%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/vqs_SUjKee8) |
 | **07** | [CPU throttle](..%2Ftasks%2Fcka%2Flabs%2F07%2FREADME.MD)                                                  | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F07%2Fworker%2Ffiles%2Fsolutions%2F1.MD)                                                       |
-| **08** | [Cilium NetworkPolicy  L7](..%2Ftasks%2Fcka%2Flabs%2F08%2FREADME.MD)                                      | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F08%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/need_update) |
+| **08** | [Cilium NetworkPolicy  L7](..%2Ftasks%2Fcka%2Flabs%2F08%2FREADME.MD)                                      | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F08%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/eFZQi6sy3SQ) |
 
 ## CKAD labs
 

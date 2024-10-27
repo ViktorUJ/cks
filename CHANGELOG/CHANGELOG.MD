@@ -6,7 +6,7 @@
 * [cilium](https://cilium.io/) CNI is added to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module.
 * [Cka lab 8.Cilium NetworkPolicy L7](..%2Ftasks%2Fcka%2Flabs%2F08%2FREADME.MD) is added.
 * [solutions](..%2Ftasks%2Fcka%2Flabs%2F08%2Fworker%2Ffiles%2Fsolutions%2F1.MD) Cka lab 8.Cilium NetworkPolicy L7 is added.
-* [Video](https://youtu.be/needupdate) for Cka lab 8 solution is added.
+* [Video](https://youtu.be/eFZQi6sy3SQ) for Cka lab 8 solution is added.
 
 
 
