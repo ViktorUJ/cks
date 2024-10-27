@@ -2,6 +2,7 @@
 ssh_password_enable_check=${ssh_password_enable}
 case $ssh_password_enable_check in
 true)
+    echo "*** ssh password enable "
     echo "ubuntu:${ssh_password}" |sudo chpasswd
     SSH_CONFIG_FILE="/etc/ssh/sshd_config"
     SSH_CONFIG_FILE_CLOUD="/etc/ssh/sshd_config.d/60-cloudimg-settings.conf"
@@ -24,8 +25,10 @@ worker_join_sh=${worker_join}
 pod_network_cidr_sh=${pod_network_cidr}
 external_ip_sh=${external_ip}
 utils_enable_sh=${utils_enable}
-
-
+cni_type=${cni_type}
+cilium_version=${cilium_version}
+disable_kube_proxy=${disable_kube_proxy}
+kubeadm_init_extra_args=""
 date
 swapoff -a
 
@@ -33,12 +36,17 @@ apt-get update && sudo apt-get upgrade -y
 apt-get install -y  unzip apt-transport-https ca-certificates curl jq
 
 ${runtime_script}
+if [[ "$disable_kube_proxy" == "true" ]] ; then
+  echo "*** disable kube-proxy"
+   kubeadm_init_extra_args+="--skip-phases=addon/kube-proxy"
+fi
+
 if [ -z "$external_ip_sh" ]; then
    echo "*** kubeadm init without eip "
-   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4
+   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4 $kubeadm_init_extra_args
   else
    echo "*** kubeadm init with eip "
-   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4,$external_ip_sh
+   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4,$external_ip_sh $kubeadm_init_extra_args
 fi
 
 
@@ -61,8 +69,35 @@ while test $? -gt 0
    kubectl get node   --kubeconfig=/root/.kube/config
   done
 date
-echo "apply cni"
-kubectl apply -f ${calico_url}   --kubeconfig=/root/.kube/config
+
+echo "*** apply cni"
+export KUBECONFIG=/root/.kube/config
+case $acrh in
+x86_64)
+  cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-amd64.tar.gz"
+
+;;
+aarch64)
+  cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-arm64.tar.gz"
+;;
+esac
+
+case $cni_type in
+calico)
+   kubectl apply -f ${calico_url}   --kubeconfig=/root/.kube/config
+;;
+cilium)
+   echo "*** install cilium cilium_url=$cilium_url"
+   curl -Lo cilium.tar.gz $cilium_url
+   tar -zxvf cilium.tar.gz
+   mv cilium /usr/local/bin/cilium
+   cilium install --version ${cilium_helm_version}
+;;
+*)
+   echo "cni type = $cni_type  not support"
+;;
+
+esac
 
 echo "sleep 10"
 sleep 10

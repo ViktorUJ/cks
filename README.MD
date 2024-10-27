@@ -63,15 +63,15 @@ The repository is organized into the following sections:
 - you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)
 - [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)  module supports versions:
 ````
-k8s version  : [ 1.21 , 1.29 ]   https://kubernetes.io/releases/
+k8s version  : [ 1.21 , 1.31 ]   https://kubernetes.io/releases/
 Rintime :
     docker                   [1.21 , 1.23]
     cri-o                    [1.21 , 1.29]
-    containerd               [1.21 , 1.30]   # cks, cka  default 1.29
-    containerd_gvizor        [1.21 , 1.30]
+    containerd               [1.21 , 1.31]   # cks, cka  default 1.30
+    containerd_gvizor        [1.21 , 1.31]
 OS for nodes  :
    ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
-CNI :  calico
+CNI :  calico ,culium
 ````
 </details>
 
@@ -310,7 +310,7 @@ Every command should be run from the project's root directory.
 ## [CODE OF CONDUCT](docs%2FCODE_OF_CONDUCT.md)
 
 ## Contribution
-If you want to be part of the project development team, get in touch with [us](https://github.com/ViktorUJ/cks/tree/master#contacts). We are always happy to welcome new members to our development team
+If you want to be part of the project development team, get in touch with [us](https://github.com/ViktorUJ/cks/tree/master#contacts). We are always happy to welcome new members to our development team.
 
 
 If you want to say **thank you** or/and support the active development of **SRE Learning Platform project** :

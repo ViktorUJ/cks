@@ -9,8 +9,8 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    app: app
-  name: app
+    app: portal
+  name: portal
   namespace: production
 spec:
   replicas: 2
@@ -24,16 +24,13 @@ spec:
       labels:
         app: app
     spec:
-      nodeSelector:
-        work_type: app
       containers:
       - image: viktoruj/ping_pong
         name: app
         env:
-           - name:  ENABLE_LOAD_CPU
-             value: "true"
-           - name:  CPU_USAGE_PROFILE
-             value: "2=25=1=120 1=100=1=120"
+           - name:  SRV_PORT
+             value: "80"
+
         resources:
             requests:
                 memory: 10Mi
@@ -41,3 +38,65 @@ spec:
             limits:
                 memory: 20Mi
                 cpu: 250m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: portal
+  name: portal
+  namespace: production
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finance
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: finance
+  name: finance
+  namespace: finance
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: finance
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: external
+  name: external
+  namespace: external
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: external
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
