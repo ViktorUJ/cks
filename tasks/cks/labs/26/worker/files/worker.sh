@@ -1,3 +1,3 @@
 #!/bin/bash
-echo " *** worker pc cka lab 8  "
+echo " *** worker pc cks lab 26  "
 export KUBECONFIG=/root/.kube/config

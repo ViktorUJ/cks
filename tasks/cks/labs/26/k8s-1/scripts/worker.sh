@@ -1,2 +1,2 @@
 #!/bin/bash
-echo " *** worker node cka  lab-8  k8s-1"
+echo " *** worker node cks  lab-26  k8s-1"
