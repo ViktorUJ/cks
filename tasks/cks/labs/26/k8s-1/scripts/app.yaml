@@ -13,6 +13,8 @@ metadata:
   name: finance
   namespace: finance
 spec:
+  nodeSelector:
+    work_type: app1
   containers:
   - image: viktoruj/ping_pong:alpine
     name: finance
@@ -20,6 +22,22 @@ spec:
   dnsPolicy: ClusterFirst
   restartPolicy: Always
 status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: finance
+  name: finance
+  namespace: finance
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    run: finance
+  type: ClusterIP
 
 ---
 apiVersion: v1
@@ -36,6 +54,8 @@ metadata:
   name: external
   namespace: external
 spec:
+  nodeSelector:
+    work_type: app2
   containers:
   - image: viktoruj/ping_pong:alpine
     name: external
