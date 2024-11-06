@@ -2,8 +2,11 @@
 
 ### [Configure Liveness, Readiness and Startup Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
 
-### [реквесты,  лимиты](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 
+### [реквесты, лимиты](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+
+
+### [qos](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
 
 
 Создадим новый под в NS `default` c именем `pod2` и образом `viktoruj/ping_pong:alpine` и переменной окружения  `SRV_PORT`=`80`
