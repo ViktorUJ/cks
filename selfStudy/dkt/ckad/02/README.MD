@@ -9,6 +9,9 @@
 ### [qos](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
 
 
+### [PriorityClass](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
+
+
 Создадим новый под в NS `default` c именем `pod2` и образом `viktoruj/ping_pong:alpine` и переменной окружения  `SRV_PORT`=`80`
 
 [viktoruj/ping_pong:alpine](https://github.com/ViktorUJ/cks/tree/master/docker/ping_pong) - это образ с http сервером, который возвращает в ответе всю метаинформацию входящего запроса, включая IP-адрес отправителя, все параметры запроса и заголовки. Конфигурация сервера может быть изменена с помощью переменных окружения:
