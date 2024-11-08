@@ -103,10 +103,24 @@ k apply -f 1.yaml
 ```
 Посмотрим лог пода, чтобы убедиться, как работает проба
 ```
-k logs  pod2  -f 
+k logs  pod2 
+```
+``` 
+Server Name: ping_pong_server                   
+URL: http://10.0.130.194:80/healthz
+Client IP: 10.2.13.62                           #   ip address ноды на которой запущен под  , т.к. kubelet проверяет пробы только своих подов
+Method: GET
+Protocol: HTTP/1.1
+Headers:
+User-Agent: kube-probe/1.30
+Accept: */*
+Custom-Header: Awesome                          #   заголовок который мы установили в пробе
+Connection: close
 ```
 
-Расширенная информация о поде 
+
+
+
 ```
 k get po pod2 -o wide
 ```
