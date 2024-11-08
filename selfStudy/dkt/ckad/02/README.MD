@@ -89,6 +89,7 @@ spec:
           value: Awesome                  # add it 
       initialDelaySeconds: 3              # add it                время ожидания перед первой проверкой
       periodSeconds: 3                    # add it                периодичность проверок
+      failureThreshold: 5                 # add it                количество неудачных проверок, после которых контейнер будет перезапущен
 
     resources: {}
   dnsPolicy: ClusterFirst
@@ -116,6 +117,59 @@ User-Agent: kube-probe/1.30
 Accept: */*
 Custom-Header: Awesome                          #   заголовок который мы установили в пробе
 Connection: close
+```
+
+
+Сэмулируем ситуацию, когда проба не проходит
+
+``` 
+k delete -f 1.yaml
+vim 1.yaml
+```
+
+
+``` 
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod2
+  name: pod2
+spec:
+  containers:
+  - env:
+    - name: SRV_PORT
+      value: "9111"
+    image: viktoruj/ping_pong:alpine
+    name: pod2
+    livenessProbe:                        # add it                тип пробы
+      httpGet:                            # add it                тип проверки
+        path: /healthz                    # add it 
+        port: 80                          # add it 
+        httpHeaders:                      # add it                устанавливает заголовки HTTP запроса , если они нужны
+        - name: Custom-Header             # add it 
+          value: Awesome                  # add it 
+      initialDelaySeconds: 3              # add it                время ожидания перед первой проверкой
+      periodSeconds: 3                    # add it                периодичность проверок
+      failureThreshold: 5                 # add it                количество неудачных проверок, после которых контейнер будет перезапущен
+
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+```
+
+
+``` 
+k apply -f 1.yaml
+
+```
+
+
+
+
 ```
 
 
