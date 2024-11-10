@@ -135,7 +135,7 @@ Connection: close
 ```
 
 
-Сэмулируем ситуацию, когда проба не проходит
+Сэмулируем ситуацию, когда **livenessProbe** проба не проходит
 
 ``` 
 k delete -f 1.yaml
@@ -155,7 +155,7 @@ spec:
   containers:
   - env:
     - name: SRV_PORT
-      value: "9111"
+      value: "9111"                       # add it   изменяем порт http сервера
     image: viktoruj/ping_pong:alpine
     name: pod2
     livenessProbe:                        # add it                тип пробы
@@ -190,13 +190,79 @@ NAME   READY   STATUS    RESTARTS      AGE
 pod2   1/1     Running   1 (15s ago)   33s      # произошло т.к. проба не прошла 5 раз  через 3 секунды  и кубелет перезапустил под . 
                                                 # но так как мы не установливали Readiness   под сразу попал в балансировку 
 ```
+Изменим порт http сервера на **80** и добавим **Readiness** пробу на порт **9111**,  а **Liveness** пробу на порт 80. 
+
+
+Сэмулируем ситуацию, когда **Readiness** проба не проходит . 
+В таком случае под не будет принудительно рестартовать и просто не будет включен в балансировку, пока не пройдет **Readiness** проба. 
+
+``` 
+k delete -f 1.yaml
+vim 1.yaml
+```
+
+
+``` 
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod2
+  name: pod2
+spec:
+  containers:
+  - env:
+    - name: SRV_PORT
+      value: "80"                       # add it   изменяем порт http сервера
+    image: viktoruj/ping_pong:alpine
+    name: pod2
+    livenessProbe:                        # add it                тип пробы
+      httpGet:                            # add it                тип проверки
+        path: /healthz                    # add it 
+        port: 80                          # add it 
+      initialDelaySeconds: 3              # add it                время ожидания перед первой проверкой
+      periodSeconds: 3                    # add it                периодичность проверок
+      failureThreshold: 3                 # add it                количество неудачных проверок, после которых контейнер будет перезапущен
+    ReadinessProbe:                       # add it                тип пробы
+      httpGet:                            # add it                тип проверки
+        path: /readiness                  # add it 
+        port: 9111                        # add it 
+      initialDelaySeconds: 9              # add it                время ожидания перед первой проверкой
+      periodSeconds: 5                    # add it                периодичность проверок
+      failureThreshold: 1                 # add it                количество неудачных проверок, после которых контейнер будет перезапущен      
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+```
+
+
+``` 
+k apply -f 1.yaml
 
 ```
 
 
 
 
-```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
