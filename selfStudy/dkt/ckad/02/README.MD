@@ -272,10 +272,18 @@ pod2   0/1     Running   0          22s   # под не включен в бал
 
 
 
-
+``` 
+k delete -f 1.yaml
+```
 
 ###  реквесты лимиты
 
+Создадим под в NS `default` c именем `pod2` и образом `viktoruj/ping_pong:alpine` и переменными окружения: 
+
+`ENABLE_LOAD_MEMORY`=`true` 
+`ENABLE_LOAD_CPU`=`true` 
+`MEMORY_USAGE_PROFILE`=`5=10 7=60`
+`CPU_USAGE_PROFILE`=`5=10 7=60`
 
 
 
