@@ -398,7 +398,7 @@ QoS Class:                   Guaranteed
 
 ```
 
-Сэмулируем ситуацию, когда наш под превышает лимиты по памяти.
+Создадим ситуацию, когда наш под превышает лимиты по памяти.
 
 
 
@@ -490,5 +490,75 @@ k describe   po pod2
 
 # PriorityClass
 
+получим существущие PriorityClass
+
+```
+k get priorityclasses
+
+```
+
+``` 
+NAME                      VALUE        GLOBAL-DEFAULT   AGE
+system-cluster-critical   2000000000   false            18m
+system-node-critical      2000001000   false            18m
+
+```
+
+Создадим PriorityClass с именем `high-priority` и значением `1000000000`
+
+```
+k create priorityclass high-priority --value 1000000000 
+
+k get priorityclasses
+
+ 
+```
+Создадим манифест пода, и добавим в него PriorityClass `high-priority`
+
+``` 
+k run pod3 --image viktoruj/ping_pong:alpine   -o yaml --dry-run=client > 3.yaml
+
+vim 3.yaml
+``` 
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod3
+  name: pod3
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: pod3
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  priorityClassName: high-priority                  # add it
+status: {}
+
+ 
+```
+``` 
+k apply -f 3.yaml
+k describe po pod3
+```
+``` 
+Name:                 pod3
+Namespace:            default
+Priority:             1000000000
+Priority Class Name:  high-priority
+
+-------
+
+```
+
+Более детально можно потренировать в [лабораторной работе](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD) . Решение можно посмотреть  [тут](https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/05/worker/files/solutions/1.MD)
 
 
+``` 
+
+
+```
