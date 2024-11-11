@@ -473,7 +473,7 @@ k describe   po pod2
 
 Когда привышаются лимиты по CPU, то kubelet не убивает поды, а просто включает throttling, что приводит к замедлению работы пода.
 
-У нас есть [лабораторная работа](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F07%2FREADME.MD), где мы можем попробовать это на практике.
+У нас есть [лабораторная работа](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F07%2FREADME.MD), где мы можем попробовать это на практике. [solution](https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/07/worker/files/solutions/1.MD)
 
 ```
 k get po pod2 -o wide
