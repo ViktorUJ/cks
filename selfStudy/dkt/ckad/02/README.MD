@@ -286,6 +286,9 @@ k delete -f 1.yaml
 `CPU_USAGE_PROFILE`=`5=10 7=60`
 
 
+``` 
+ k run pod2 --image viktoruj/ping_pong:alpine --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOAD_CPU=true --env MEMORY_USAGE_PROFILE="5=10 7=60" --env CPU_USAGE_PROFILE="5=10 7=60" -o yaml --dry-run=client > 2.yaml
+```
 
 
 
