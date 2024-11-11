@@ -290,13 +290,184 @@ k delete -f 1.yaml
  k run pod2 --image viktoruj/ping_pong:alpine --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOAD_CPU=true --env MEMORY_USAGE_PROFILE="5=10 7=60" --env CPU_USAGE_PROFILE="5=10 7=60" -o yaml --dry-run=client > 2.yaml
 ```
 
+``` 
+k apply -f 2.yaml
+
+k get  po pod2 
+```
+``` 
+NAME   READY   STATUS    RESTARTS   AGE
+pod2   1/1     Running   0          22s
+
+```
+
+О посмотрим потребление нашего пода
+
+``` 
+k top po pod2 
+```
+``` 
+NAME   CPU(cores)   MEMORY(bytes)
+pod2   997m         9Mi
+
+```
+
+посмотрим qos нашего пода
+
+``` 
+k describe po pod2
+```
+
+```
+------
+
+QoS Class:                   BestEffort
+
+------
+
+
+```
+
+BestEffort - это самый низкий уровень QoS, который назначается по умолчанию, если не указаны ресурсы. Поды с этим классом QoS не имеют гарантированного доступа к ресурсам и могут быть убиты, если на узле не хватает ресурсов.
+
+Добавим реквесты и лимиты равными ,  + 30% к нашему потреблению.
+
+
+``` 
+k delete -f 2.yaml
+
+vim 2.yaml
+```
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod2
+  name: pod2
+spec:
+  containers:
+  - env:
+    - name: ENABLE_LOAD_MEMORY
+      value: "true"
+    - name: ENABLE_LOAD_CPU
+      value: "true"
+    - name: MEMORY_USAGE_PROFILE
+      value: 5=10 7=60
+    - name: CPU_USAGE_PROFILE
+      value: 5=10 7=60
+    image: viktoruj/ping_pong:alpine
+    name: pod2
+    resources:
+      requests:
+        memory: "10Mi"
+        cpu: "1300m"
+      limits:
+        memory: "10Mi"
+        cpu: "1300m"
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
 
 
 
+```
+
+```
+k apply -f 2.yaml
+
+k describe   po pod2 
+```
+```
+
+QoS Class:                   Guaranteed
+
+
+```
+
+Сэмулируем ситуацию, когда наш под  превышает лимиты  по памяти .
 
 
 
+``` 
+k delete -f 2.yaml
 
+vim 2.yaml
+```
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod2
+  name: pod2
+spec:
+  containers:
+  - env:
+    - name: ENABLE_LOAD_MEMORY
+      value: "true"
+    - name: ENABLE_LOAD_CPU
+      value: "true"
+    - name: MEMORY_USAGE_PROFILE
+      value: 5=10 70=60                     # update  it
+    - name: CPU_USAGE_PROFILE
+      value: 5=10 7=60
+    image: viktoruj/ping_pong:alpine
+    name: pod2
+    resources:
+      requests:
+        memory: "10Mi"
+        cpu: "1000m"                         # update  it
+      limits:
+        memory: "10Mi"
+        cpu: "1300m"
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+
+
+```
+
+```
+k apply -f 2.yaml
+
+k describe   po pod2 
+```
+
+``` 
+QoS Class:                   Burstable     # так как лимиты не равны реквестам
+
+```
+
+``` 
+ubuntu@worker:~> k get po pod2
+NAME   READY   STATUS    RESTARTS      AGE
+pod2   1/1     Running   2 (16s ago)   77s
+
+
+```
+``` 
+k describe   po pod2
+```
+``` 
+------
+    Last State:     Terminated
+      Reason:       OOMKilled
+      Exit Code:    137
+      Started:      Mon, 11 Nov 2024 06:20:04 +0000
+      Finished:     Mon, 11 Nov 2024 06:20:34 +0000
+    Ready:          False
+------
+
+```
+Это произошло, так как наш под превысил лимиты по памяти и был убит kubelet
+
+Похожую ситуацию можно наблюдать, когда у нас превышается объем доступной памяти , тогда kubelet убивает поды в зависимости от PriorityClass и qos . 
 
 
 ```
