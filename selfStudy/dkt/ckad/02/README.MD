@@ -598,8 +598,20 @@ error: Internal error occurred: Internal error occurred: error executing command
 kubectl   debug  -it   pod4  --image ubuntu --target pod4 
  
 ```
+Получим pid запущенных процессов внутри контейнера
 ``` 
-apt update
-apt install -y curl 
+ps -aux
+
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.0  0.1 1233220 5284 ?        Ssl  19:15   0:00 /app         # PID 1 это наш http сервер
+root          20  0.0  0.0   4296  3128 pts/0    Ss   19:16   0:00 /bin/bash
+root        2950  0.0  0.0   7628  3604 pts/0    R+   19:22   0:00 ps -aux
+
+
+```
+Получим список файлов нашего основного контейнера
+``` 
+ls /proc/1/root/
+app  dev  etc  proc  sys  var
 
 ```
