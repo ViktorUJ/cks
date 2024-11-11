@@ -559,7 +559,7 @@ Priority Class Name:  high-priority
 
 # Ephemeral containers
 
-| Возможности временного контейнера | Описание |
+| Возможности Ephemeral containers | Описание |
 |-----------------------------------|----------|
 | Работает без перезапуска пода     | Временный контейнер можно запустить без необходимости перезагрузки всего пода. |
 | Может подключаться к любому контейнеру в поде | Временный контейнер позволяет подключиться к любому контейнеру внутри пода. |
@@ -568,3 +568,38 @@ Priority Class Name:  high-priority
 | Имеет доступ к файловой системе любого контейнера | Временный контейнер может работать с файловой системой любого контейнера в поде. |
 | Имеет ту же сеть, что и любой контейнер в поде | Временный контейнер имеет общий сетевой интерфейс с остальными контейнерами в поде. |
 | Можно использовать любой образ Docker для временного контейнера | Вы можете запускать временный контейнер с использованием любого Docker-образа. |
+
+
+``` 
+kubectl   debug  -it   {pod_name} --image {ephemeral_container_image}    -n {k8s_name_space} --target {container_name_in_pod}
+```
+
+
+Создадим под в NS `default` c именем `pod4` и образом `viktoruj/ping_pong` . Данный образ не имеет утилиты `bash , sh , etc ` , поэтому мы не сможем подключиться к нему через `kubectl exec`  ли выполнить любые команды внутри пода.
+
+``` 
+
+k run pod4 --image viktoruj/ping_pong
+
+k get po pod4
+```
+
+Подключимся к поду через `kubectl exec` (должны получить ошибку)
+
+```
+k exec -ti  pod4 -- sh
+error: Internal error occurred: Internal error occurred: error executing command in container: failed to exec in container: failed to start exec "f1ba06eb91523589c2bae6c098e3140024e88e89d54debee4004e0fc0fe37686": OCI runtime exec failed: exec failed: unable to start container process: exec: "sh": executable file not found in $PATH: unknown
+
+```
+
+Подключимся к поду через `kubectl debug` 
+
+```
+kubectl   debug  -it   pod4  --image ubuntu --target pod4 
+ 
+```
+``` 
+apt update
+apt install -y curl 
+
+```
