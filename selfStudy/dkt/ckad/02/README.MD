@@ -674,3 +674,238 @@ ls /proc/1/root/
 app  dev  etc  proc  sys  var
 
 ```
+###  logs , мультиконтейнеры , label
+
+Создадим под в NS `default` c именем `pod5` и двумя контейнерами : 
+- `app` с образом `viktoruj/ping_pong`  и envs  `SRV_PORT=8080` `SERVER_NAME=app` 
+- `side-car` c образом `viktoruj/ping_pong` и envs  `SRV_PORT=8081` `SERVER_NAME=side-car`  
+
+```
+k run pod5 --image viktoruj/ping_pong --env SRV_PORT=8080 --env SERVER_NAME=app --dry-run=client -o yaml > 5.yaml
+
+``` 
+
+
+```
+# vim 5.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod5
+  name: pod5
+spec:
+  containers:
+  - env:
+    - name: SRV_PORT
+      value: "8080"
+    - name: SERVER_NAME
+      value: app
+    image: viktoruj/ping_pong
+    name: app
+    resources: {}
+
+  - env:
+    - name: SRV_PORT
+      value: "8081"
+    - name: SERVER_NAME
+      value: side-car
+    image: viktoruj/ping_pong
+    name: side-car
+    resources: {}
+
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+
+```
+
+``` 
+k apply -f 5.yaml
+k get po pod5
+
+```
+``` 
+NAME   READY   STATUS    RESTARTS   AGE
+pod5   2/2     Running   0          4m16s
+
+```
+
+Получим логи контейнера `app` в поде `pod5`
+
+```
+k logs pod5 -c app
+```
+``` 
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOSTNAME=pod5
+SERVER_NAME=app                              
+SRV_PORT=8080
+KUBERNETES_PORT_443_TCP_PORT=443
+KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+KUBERNETES_SERVICE_HOST=10.96.0.1
+KUBERNETES_SERVICE_PORT=443
+KUBERNETES_SERVICE_PORT_HTTPS=443
+KUBERNETES_PORT=tcp://10.96.0.1:443
+KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+KUBERNETES_PORT_443_TCP_PROTO=tcp
+HOME=/
+enableLoadCpu: false, cpuMaxProc: 1
+
+```
+
+Получим логи контейнера `side-car` в поде `pod5`
+
+```
+k logs pod5 -c side-car
+```
+
+``` 
+k logs pod5 -c side-car -f   # получать логи в реальном времени
+
+```
+
+Добавим Label к нашему поду  `app=http-server`
+
+```
+k delete -f 5.yaml
+vim 5.yaml
+```
+``` 
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod5
+    app: http-server
+  name: pod5
+spec:
+  containers:
+  - env:
+    - name: SRV_PORT
+      value: "8080"
+    - name: SERVER_NAME
+      value: app
+    image: viktoruj/ping_pong
+    name: app
+    resources: {}
+
+  - env:
+    - name: SRV_PORT
+      value: "8081"
+    - name: SERVER_NAME
+      value: side-car
+    image: viktoruj/ping_pong
+    name: side-car
+    resources: {}
+
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+```
+Создадим под pod6 такой же, как pod5
+
+```
+cp 5.yaml 6.yaml
+vim 6.yaml
+```
+
+``` 
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod6
+    app: http-server
+  name: pod6
+spec:
+  containers:
+  - env:
+    - name: SRV_PORT
+      value: "8080"
+    - name: SERVER_NAME
+      value: app
+    image: viktoruj/ping_pong
+    name: app
+    resources: {}
+
+  - env:
+    - name: SRV_PORT
+      value: "8081"
+    - name: SERVER_NAME
+      value: side-car
+    image: viktoruj/ping_pong
+    name: side-car
+    resources: {}
+
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+```
+
+``` 
+k apply -f 6.yaml
+
+
+```
+Получим все поды с label app=http-server
+``` 
+# k get po -l app=http-server 
+
+NAME   READY   STATUS    RESTARTS   AGE
+pod5   2/2     Running   0          2m40s
+pod6   2/2     Running   0          7s
+
+```
+
+Получим логи всех подов с **label** `app=http-server` и контейнера **app**
+
+```
+k logs  -c app -l  app=http-server
+```
+
+Покажет логи с префиксом источника 
+``` 
+k logs  -c app --prefix  -l  app=http-server
+```
+
+```  
+ k logs  -c app --prefix  -l  app=http-server
+[pod/pod5/app] KUBERNETES_SERVICE_HOST=10.96.0.1
+[pod/pod5/app] KUBERNETES_SERVICE_PORT=443
+[pod/pod5/app] KUBERNETES_SERVICE_PORT_HTTPS=443
+[pod/pod5/app] KUBERNETES_PORT=tcp://10.96.0.1:443
+[pod/pod5/app] KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+[pod/pod5/app] KUBERNETES_PORT_443_TCP_PROTO=tcp
+[pod/pod5/app] KUBERNETES_PORT_443_TCP_PORT=443
+[pod/pod5/app] KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+[pod/pod5/app] HOME=/
+[pod/pod5/app] enableLoadCpu: false, cpuMaxProc: 1
+[pod/pod6/app] KUBERNETES_SERVICE_HOST=10.96.0.1
+[pod/pod6/app] KUBERNETES_SERVICE_PORT=443
+[pod/pod6/app] KUBERNETES_SERVICE_PORT_HTTPS=443
+[pod/pod6/app] KUBERNETES_PORT=tcp://10.96.0.1:443
+[pod/pod6/app] KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+[pod/pod6/app] KUBERNETES_PORT_443_TCP_PROTO=tcp
+[pod/pod6/app] KUBERNETES_PORT_443_TCP_PORT=443
+[pod/pod6/app] KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+[pod/pod6/app] HOME=/
+[pod/pod6/app] enableLoadCpu: false, cpuMaxProc: 1
+
+```
+Покажет логи от всех контейнеров в подах с **label** `app=http-server` и перфиксом источника
+
+```
+k logs   --prefix  --all-containers   -l  app=http-server 
+``` 
+
+Если контейнер рестартовал, то можно посмотреть логи с предыдущего контейнера с флагом `--previous`
+
+```
