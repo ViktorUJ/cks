@@ -905,6 +905,49 @@ k logs  -c app --prefix  -l  app=http-server
 ```
 k logs   --prefix  --all-containers   -l  app=http-server 
 ``` 
+``` 
+[pod/pod5/app] KUBERNETES_SERVICE_HOST=10.96.0.1
+[pod/pod5/app] KUBERNETES_SERVICE_PORT=443
+[pod/pod5/app] KUBERNETES_SERVICE_PORT_HTTPS=443
+[pod/pod5/app] KUBERNETES_PORT=tcp://10.96.0.1:443
+[pod/pod5/app] KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+[pod/pod5/app] KUBERNETES_PORT_443_TCP_PROTO=tcp
+[pod/pod5/app] KUBERNETES_PORT_443_TCP_PORT=443
+[pod/pod5/app] KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+[pod/pod5/app] HOME=/
+[pod/pod5/app] enableLoadCpu: false, cpuMaxProc: 1
+[pod/pod5/side-car] KUBERNETES_SERVICE_PORT_HTTPS=443
+[pod/pod5/side-car] KUBERNETES_PORT=tcp://10.96.0.1:443
+[pod/pod5/side-car] KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+[pod/pod5/side-car] KUBERNETES_PORT_443_TCP_PROTO=tcp
+[pod/pod5/side-car] KUBERNETES_PORT_443_TCP_PORT=443
+[pod/pod5/side-car] KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+[pod/pod5/side-car] KUBERNETES_SERVICE_HOST=10.96.0.1
+[pod/pod5/side-car] KUBERNETES_SERVICE_PORT=443
+[pod/pod5/side-car] HOME=/
+[pod/pod5/side-car] enableLoadCpu: false, cpuMaxProc: 1
+[pod/pod6/app] KUBERNETES_SERVICE_HOST=10.96.0.1
+[pod/pod6/app] KUBERNETES_SERVICE_PORT=443
+[pod/pod6/app] KUBERNETES_SERVICE_PORT_HTTPS=443
+[pod/pod6/app] KUBERNETES_PORT=tcp://10.96.0.1:443
+[pod/pod6/app] KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+[pod/pod6/app] KUBERNETES_PORT_443_TCP_PROTO=tcp
+[pod/pod6/app] KUBERNETES_PORT_443_TCP_PORT=443
+[pod/pod6/app] KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+[pod/pod6/app] HOME=/
+[pod/pod6/app] enableLoadCpu: false, cpuMaxProc: 1
+[pod/pod6/side-car] KUBERNETES_PORT_443_TCP_PORT=443
+[pod/pod6/side-car] KUBERNETES_PORT_443_TCP_ADDR=10.96.0.1
+[pod/pod6/side-car] KUBERNETES_SERVICE_HOST=10.96.0.1
+[pod/pod6/side-car] KUBERNETES_SERVICE_PORT=443
+[pod/pod6/side-car] KUBERNETES_SERVICE_PORT_HTTPS=443
+[pod/pod6/side-car] KUBERNETES_PORT=tcp://10.96.0.1:443
+[pod/pod6/side-car] KUBERNETES_PORT_443_TCP=tcp://10.96.0.1:443
+[pod/pod6/side-car] KUBERNETES_PORT_443_TCP_PROTO=tcp
+[pod/pod6/side-car] HOME=/
+[pod/pod6/side-car] enableLoadCpu: false, cpuMaxProc: 1
+
+```
 
 Если контейнер рестартовал, то можно посмотреть логи с предыдущего контейнера с флагом `--previous`
 
