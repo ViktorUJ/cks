@@ -546,7 +546,7 @@ k describe   po pod2
 
 # PriorityClass
 
-получим существущие PriorityClass
+Получим существующие PriorityClass
 
 ```
 k get priorityclasses
@@ -613,13 +613,10 @@ Priority Class Name:  high-priority
 
 Более детально можно потренировать в [лабораторной работе](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD) . Решение можно посмотреть  [тут](https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/05/worker/files/solutions/1.MD)
 
-# Сбора плавильных имаджей
-
-
-
-
 
 # Ephemeral containers
+
+- нужны для отладки и диагностики , если имаджи собраны правильно  , то они не будут содержать ничего лишнего , кроме исполняемых файлов и библиотек. В идеале будет использоваться **Scratch** образ , который весит 0 байт.
 
 | Возможности Ephemeral containers | Описание |
 |-----------------------------------|----------|
