@@ -951,4 +951,108 @@ k logs   --prefix  --all-containers   -l  app=http-server
 
 Если контейнер рестартовал, то можно посмотреть логи с предыдущего контейнера с флагом `--previous`
 
+
+### Init containers
+
+Создадим под в NS `default` c именем `pod7` image `viktoruj/ping_pong:alpine`  и init и контейнером  `init`  image `viktoruj/ping_pong:alpine`  и  командой ` echo '**** init ' ; sleep 10 '`
+
+
+```
+k run pod7 --image viktoruj/ping_pong:alpine --dry-run=client -o yaml > 7.yaml
+
+vim 7.yaml
+```
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod7
+  name: pod7
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: pod7
+    resources: {}
+  initContainers:                                          # add it
+  - name: init                                             # add it
+    image: viktoruj/ping_pong:alpine                       # add it
+    command: ["sh", "-c", "echo '**** init '; sleep 10"]   # add it
+
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+ 
+```
+
+``` 
+#  k get po pod7
+
+NAME   READY   STATUS     RESTARTS   AGE
+pod7   0/1     Init:0/1   0          10s
+
+```
+Получим логи init контейнера
+
+```
+k logs  pod7  -c init
+
+**** init
+
+```
+
+Давайте сэмулируем ситуацию, когда init контейнер завершится с ошибкой
+
+```
+k delete -f 7.yaml
+vim 7.yaml
+
+```
+
+``` 
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: pod7
+  name: pod7
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: pod7
+    resources: {}
+  initContainers:                                          
+  - name: init                                             
+    image: viktoruj/ping_pong:alpine                       
+    command: ["sh", "-c", "echo '**** init '; slerrrrep 10"]   # update it
+
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+```
+
+``` 
+k apply -f 7.yaml
+k get po pod7
+```
+
+
+```
+NAME   READY   STATUS                  RESTARTS      AGE
+pod7   0/1     Init:CrashLoopBackOff   1 (11s ago)   12s
+
+```
+Плучим логи init контейнера
+
+```
+k logs  pod7  -c init
+```
+
+``` 
+**** init
+sh: slerrrrep: not found
+
 ```
