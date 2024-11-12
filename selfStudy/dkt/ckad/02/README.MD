@@ -12,10 +12,9 @@
 ### [PriorityClass](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
 
 
-### [Ephemeral containers](https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/)
-
-
 ### [Twelve-Factor App](https://12factor.net/ru/)
+
+### [Ephemeral containers](https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/)
 
 
 ### [logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/)
@@ -274,6 +273,63 @@ pod2   0/1     Running   0          22s   # под не включен в бал
 
 ``` 
 k delete -f 1.yaml
+```
+
+### [Пример экзаменационного задания 12](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
+
+---
+|       **12**        | **Create a new pod called `nginx1233` in the `web-ns` namespace with the image `nginx`. Add a livenessProbe to the container to restart it if the command `ls /var/www/html/` probe fails. This check should start after a delay of 10 seconds and run every 60 seconds.** |
+| :-----------------: |:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 2%                                                                                                                                                                                                                                                                         |
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                            |
+| Acceptance criteria | - You may delete and recreate the object. Ignore the warnings from the probe.<br/>- Pod: `nginx1233`, namespace: `web-ns`, image `nginx`,  livenessProbe?                                                                                                                  |
+---
+
+``` 
+k create ns web-ns
+
+k run nginx1233 --namespace web-ns --image nginx --dry-run=client -o yaml > 12.yaml
+```
+
+
+```
+# vim 12.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nginx1233
+  name: nginx1233
+  namespace: web-ns
+spec:
+  containers:
+  - image: nginx
+    name: nginx1233
+    livenessProbe:
+      exec:
+        command:
+        - ls
+        - /var/www/html/
+      initialDelaySeconds: 10
+      periodSeconds: 60
+```
+```
+k apply -f 12.yaml
+```
+```
+check_result
+
+```
+
+```
+-----
+ ✓ 12.1 Create a new pod nginx1233 in the web-ns namespace.command
+ ✓ 12.2 Create a new pod nginx1233 in the web-ns namespace.delay and period
+ 
+-----
+
+
 ```
 
 ###  реквесты лимиты
@@ -556,6 +612,12 @@ Priority Class Name:  high-priority
 ```
 
 Более детально можно потренировать в [лабораторной работе](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD) . Решение можно посмотреть  [тут](https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/05/worker/files/solutions/1.MD)
+
+# Сбора плавильных имаджей
+
+
+
+
 
 # Ephemeral containers
 
