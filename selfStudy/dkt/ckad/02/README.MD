@@ -365,6 +365,12 @@ NAME             READY   UP-TO-DATE   AVAILABLE   AGE
 metrics-server   1/1     1            1           115m
 
 ```
+или 
+
+``` 
+kubectl get po  -n kube-system | grep  metrics-server
+
+```
 
 
 Посмотрим потребление нашего пода
