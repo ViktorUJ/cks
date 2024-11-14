@@ -431,7 +431,7 @@ spec:
     - name: MEMORY_USAGE_PROFILE
       value: 5=10 7=60
     - name: CPU_USAGE_PROFILE
-      value: 5=10 7=60
+      value: 1=400=1=60
     image: viktoruj/ping_pong:alpine
     name: pod2
     resources:
@@ -489,13 +489,13 @@ spec:
     - name: MEMORY_USAGE_PROFILE
       value: 5=10 70=60                     # update  it
     - name: CPU_USAGE_PROFILE
-      value: 5=10 7=60
+      value: 1=400=1=60
     image: viktoruj/ping_pong:alpine
     name: pod2
     resources:
       requests:
         memory: "10Mi"
-        cpu: "1000m"                         # update  it
+        cpu: "1000m"                       
       limits:
         memory: "10Mi"
         cpu: "1300m"
