@@ -44,6 +44,9 @@ case $VERSION in
    ;;
    1.31)
      kubelet_config_url="/usr/lib/systemd/system/kubelet.service.d"
+     NEW_LINE='Environment="KUBELET_EXTRA_ARGS=--node-labels=node_name='${node_name}','${node_labels}'"'
+     CONFIG_FILE="/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf"
+     sudo sed -i '/^\[Service\]/a\'"$NEW_LINE" "$CONFIG_FILE"
    ;;
    *)
      kubelet_config_url="/etc/systemd/system/kubelet.service.d"
