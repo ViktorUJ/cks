@@ -39,7 +39,10 @@ case $VERSION in
    1.29)
      kubelet_config_url="/usr/lib/systemd/system/kubelet.service.d"
    ;;
-   1.3?)
+   1.30)
+     kubelet_config_url="/usr/lib/systemd/system/kubelet.service.d"
+   ;;
+   1.31)
      kubelet_config_url="/usr/lib/systemd/system/kubelet.service.d"
    ;;
    *)
