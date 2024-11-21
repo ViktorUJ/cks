@@ -14,7 +14,7 @@ locals {
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version           = "1.30.0"
+  k8_version           = "1.31.0"
   node_type            = "spot"
   runtime = "containerd" # docker  , cri-o  , containerd ( need test it )
   cni = {
