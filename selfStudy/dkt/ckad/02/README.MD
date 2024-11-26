@@ -289,7 +289,7 @@ metadata:
 spec:
   containers:
   - image: nginx
-    name: nginx1233                        # add it
+    name: nginx1233                       
     livenessProbe:                         # add it
       exec:                                # add it
         command:                           # add it
