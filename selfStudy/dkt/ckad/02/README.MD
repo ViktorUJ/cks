@@ -289,14 +289,14 @@ metadata:
 spec:
   containers:
   - image: nginx
-    name: nginx1233
-    livenessProbe:
-      exec:
-        command:
-        - ls
-        - /var/www/html/
-      initialDelaySeconds: 10
-      periodSeconds: 60
+    name: nginx1233                        # add it
+    livenessProbe:                         # add it
+      exec:                                # add it
+        command:                           # add it
+        - ls                               # add it
+        - /var/www/html/                   # add it
+      initialDelaySeconds: 10              # add it
+      periodSeconds: 60                    # add it
 ```
 ```
 k apply -f 12.yaml
