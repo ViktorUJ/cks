@@ -1,26 +1,14 @@
 # 2 CKAD 
 
+
+
+
+
+
+
+#-----
+
 ### [Configure Liveness, Readiness and Startup Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
-
-
-### [реквесты, лимиты](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
-
-
-### [qos](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
-
-
-### [PriorityClass](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
-
-
-### [Twelve-Factor App](https://12factor.net/ru/)
-
-### [Ephemeral containers](https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/)
-
-
-### [logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/)
-
-
-# Практика
 
 ### Типы проб
 
@@ -333,7 +321,15 @@ check_result
 
 ```
 
-###  реквесты лимиты
+### [реквесты, лимиты](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+
+
+### [qos](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
+
+
+### [PriorityClass](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
+
+
 
 Создадим под в NS `default` c именем `pod2` и образом `viktoruj/ping_pong:alpine` и переменными окружения: 
 
@@ -622,9 +618,11 @@ Priority Class Name:  high-priority
 Более детально можно потренировать в [лабораторной работе](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD) . Решение можно посмотреть  [тут](https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/05/worker/files/solutions/1.MD)
 
 
-# Ephemeral containers
+### [Twelve-Factor App](https://12factor.net/ru/)
 
-- нужны для отладки и диагностики , если имаджи собраны правильно  , то они не будут содержать ничего лишнего , кроме исполняемых файлов и библиотек. В идеале будет использоваться **Scratch** образ , который весит 0 байт.
+### [Ephemeral containers](https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/) - нужны для отладки и диагностики , если имаджи собраны правильно  , то они не будут содержать ничего лишнего , кроме исполняемых файлов и библиотек. В идеале будет использоваться **Scratch** образ , который весит 0 байт.
+
+
 
 | Возможности Ephemeral containers | Описание |
 |-----------------------------------|----------|
@@ -682,7 +680,8 @@ ls /proc/1/root/
 app  dev  etc  proc  sys  var
 
 ```
-###  logs , мультиконтейнеры , label
+### [logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/)
+
 
 Создадим под в NS `default` c именем `pod5` и двумя контейнерами : 
 - `app` с образом `viktoruj/ping_pong`  и envs  `SRV_PORT=8080` `SERVER_NAME=app` 
