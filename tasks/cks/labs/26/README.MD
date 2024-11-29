@@ -1,7 +1,7 @@
 # Install Cilium with WireGuard
 [install cilium cli](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/#install-the-cilium-cli)
 
-
+You have a k8s cluster installed with kubeadm without kube-proxy .
 Use [documentation](https://docs.cilium.io/en/stable/security/network/encryption-wireguard/) to install Cilium with WireGuard.
 
 
