@@ -25,7 +25,7 @@
 | **23** | [Set tls version and allowed ciphers for etcd, kube-api](..%2Ftasks%2Fcks%2Flabs%2F23%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F23%2FSOLUTION.MD)  |
 | **24** | [Encrypt secrets in ETCD](..%2Ftasks%2Fcks%2Flabs%2F24%2FREADME.MD)                                | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F24%2FSOLUTION.MD)  |
 | **25** | [Image policy webhook](..%2Ftasks%2Fcks%2Flabs%2F25%2FREADME.MD)                                   | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F25%2FSOLUTION.MD)  |
-| **25** | [Install Cilium with WireGuard](..%2Ftasks%2Fcks%2Flabs%2F26%2FREADME.MD)                          | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F26%2FSOLUTION.MD)  <br/>  [VIDEO SOLUTION](https://youtu.be/lVrkuX6CriQ) |
+| **26** | [Install Cilium with WireGuard](..%2Ftasks%2Fcks%2Flabs%2F26%2FREADME.MD)                          | [SOLUTION](..%2Ftasks%2Fcks%2Flabs%2F26%2FSOLUTION.MD)  <br/>  [VIDEO SOLUTION](https://youtu.be/lVrkuX6CriQ) |
 
 
 
