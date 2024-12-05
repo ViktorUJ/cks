@@ -5,7 +5,7 @@ RUN apt update && apt install curl unzip make git wget vim jq python3-pip python
     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s && \
     unzip awscliv2.zip >/dev/null && ./aws/install >/dev/null && \
     aws --version &&  make --version && rm awscliv2.zip &&  rm -rf aws && \
-    wget https://github.com/gruntwork-io/terragrunt/releases/download/v0.54.8/terragrunt_linux_amd64 && \
+    wget https://github.com/gruntwork-io/terragrunt/releases/download/v0.54.20/terragrunt_linux_amd64 && \
     chmod +x terragrunt_linux_amd64 && mv terragrunt_linux_amd64 /usr/bin/terragrunt && \
     terragrunt --version && \
     curl "https://releases.hashicorp.com/terraform/1.6.6/terraform_1.6.6_linux_amd64.zip" -o "terraform.zip" -s  && \
