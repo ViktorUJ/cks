@@ -140,7 +140,7 @@ This includes all available language translations of these pages (e.g. <https://
 | Acceptance criteria | - ns `app-20` <br/>- deployment name `app` <br/> - init container image and app image  `viktoruj/ping_pong:alpine` <br/> - replicas `1` <br/> - volume type `emptyDir` sizeLimit `5Mi` <br/> - mount to `init  and main containers `  to  `/configs` <br/> - init container command ` echo 'hello from init '>/configs/app.config` |
 ---
 
-|       **21**        | fix manifest  from previous  version kubernets    and deploy it .                                                                                                                    |
+|       **21**        | fix deployment manifest  from previous  version kubernets    and deploy it .                                                                                                         |
 |:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 2%                                                                                                                                                                                   |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                      |
