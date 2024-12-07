@@ -47,9 +47,14 @@ var (
 )
 
 func init() {
+	hostName = os.Getenv("HOSTNAME")
+	if hostName == "" {
+		hostName = "ping_pong_server"
+	}
+
 	serverName = os.Getenv("SERVER_NAME")
 	if serverName == "" {
-		serverName = "ping_pong_server"
+		serverName = hostName
 	}
 	logPath = os.Getenv("LOG_PATH")
 
