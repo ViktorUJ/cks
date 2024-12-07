@@ -35,6 +35,7 @@ var (
 	lastRequestTime     time.Time
 	requestsCount       uint64
 	serverName          string
+	hostName            string
 	logPath             string
 	enableOutput        string
 	enableLoadCpu       string
