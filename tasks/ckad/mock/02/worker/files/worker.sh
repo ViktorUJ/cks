@@ -20,3 +20,8 @@ mkdir -p /var/work/19/
 cd /var/work/19/
 wget https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ckad/mock/02/k8s-1/scripts/ingress_nginx_conf.yaml
 chmod 777 ingress_nginx_conf.yaml
+
+mkdir -p /var/work/21/
+cd /var/work/21/
+wget https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/0.16.1/tasks/ckad/mock/02/worker/files/21/app-21.yaml
+chmod 777 app-21.yaml
