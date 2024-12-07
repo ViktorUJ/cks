@@ -23,5 +23,5 @@ chmod 777 ingress_nginx_conf.yaml
 
 mkdir -p /var/work/21/
 cd /var/work/21/
-wget https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ckad/mock/02/k8s-1/scripts/ingress_nginx_conf.yaml
-chmod 777 ingress_nginx_conf.yaml
+wget https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-79/tasks/ckad/mock/02/worker/files/21/app-21.yaml
+
