@@ -1,0 +1,21 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: app-21
+  labels:
+    app: app-21
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app-21
+  template:
+    metadata:
+      labels:
+        app: app-21
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:alpine
+        ports:
+        - containerPort: 8080
