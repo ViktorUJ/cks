@@ -4,6 +4,8 @@
 ### Features
 
 * [Cks lab 26.Install Cilium with WireGuard](..%2Ftasks%2Fcks%2Flabs%2F26%2FREADME.MD) is added.
+* Cks lab 26.Install Cilium with WireGuard [solutions](..%2Ftasks%2Fcks%2Flabs%2F26%2Fworker%2Ffiles%2Fsolutions%2F1.MD) are added.
+* Cks lab 26.Install Cilium with WireGuard [video solution](https://youtu.be/lVrkuX6CriQ) is added.
 * We have launched a comprehensive series on practical Kubernetes exam preparation with [devops kitchen talks](https://www.youtube.com/@DevOpsKitchenTalks) channel, starting with CKAD . [CKAD  01 episode](https://www.youtube.com/watch?v=4WXSijgYbVw) , [script](https://github.com/ViktorUJ/cks/blob/dkt_ckad_01/selfStudy/dkt/ckad/01/README.MD).
 
 
