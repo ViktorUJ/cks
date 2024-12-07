@@ -10,6 +10,8 @@
 * [cka lab 08](../tasks/cka/labs/08) is updated to  kubernetes version 1.31.
 * fixed issue with node labels in [k8s_self_managment_v2](../terraform/modules/k8s_self_managment_v2) module with 1.31 version.
 * [ping_pong](../docker/ping_pong/README.MD) image is updated . Now default  **SERVER_NAME**  = pod name
+* [ckad mock 02](../tasks/ckad/mock/02) is updated, question 21 is added.
+* ckad mock 02 [solutions](../tasks/ckad/mock/02/worker/files/solutions/21.MD) are added.
 
 
 ## 0.15.1 (28.10.2024)
