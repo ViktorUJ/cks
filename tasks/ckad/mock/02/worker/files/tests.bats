@@ -513,3 +513,22 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "21.1 create deployment app-21 " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployment app-21 --context cluster1-admin@cluster1 | grep '3/3'| cut -d' ' -f1)
+  if [[ "$result" == "app-21" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "app-21" ]
+}
+
+@test "21.2 fix manifest /var/work/21/app-21.yaml  " {
+  echo '1'>>/var/work/tests/result/all
+  cat /var/work/21/app-21.yaml | grep apiVersion | grep 'apps/v1'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
