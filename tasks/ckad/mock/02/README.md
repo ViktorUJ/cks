@@ -144,5 +144,5 @@ This includes all available language translations of these pages (e.g. <https://
 |:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 4%                                                                                                                                                              |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                 |
-| Acceptance criteria | - deployment manifest app-21.yaml is updated to current kubernetes version <br/> - app-21 deployment is deployed <br/> - pods from deployment  app-21 are ready |
+| Acceptance criteria | - deployment manifest /var/work/21/app-21.yaml is updated to current kubernetes version <br/> - app-21 deployment is deployed <br/> - pods from deployment  app-21 are ready |
 ---
