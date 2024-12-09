@@ -84,6 +84,34 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "IfNotPresent" ]
 }
 
+@test "2.8 Create a cron job cron-job1. failedJobsHistoryLimit" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$( kubectl  get cronjobs.batch  cron-job1 -n rnd  --context cluster1-admin@cluster1 -o jsonpath='{.spec.failedJobsHistoryLimit}')
+  if [[ "$result" == "7" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "7" ]
+}
+
+@test "2.9 Create a cron job cron-job1. successfulJobsHistoryLimit" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$( kubectl  get cronjobs.batch  cron-job1 -n rnd  --context cluster1-admin@cluster1 -o jsonpath='{.spec.successfulJobsHistoryLimit}')
+  if [[ "$result" == "5" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "5" ]
+}
+
+@test "2.10 Create a cron job cron-job1. terminationGracePeriodSeconds" {
+  echo '1'>>/var/work/tests/result/all
+  result=$( kubectl  get cronjobs.batch  cron-job1 -n rnd  --context cluster1-admin@cluster1 -o jsonpath='{.spec.jobTemplate.spec.template.spec.terminationGracePeriodSeconds}')
+  if [[ "$result" == "10" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "10" ]
+}
+
+
 @test "3.1 Deployment my-deployment in the namespace baracuda. Rollback deployment " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl  get deployment  my-deployment -n baracuda    --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..image}')
