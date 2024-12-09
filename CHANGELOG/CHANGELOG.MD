@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.16.1 (21.1.2024)
+## 0.16.1 (09.12.2024)
 ### Features
 
 * [CKS lab 26. Install Cilium with WireGuard](..%2Ftasks%2Fcks%2Flabs%2F26%2FREADME.MD) is added.
@@ -12,6 +12,8 @@
 * [ping_pong](../docker/ping_pong/README.MD) image is updated . Now default  **SERVER_NAME**  = pod name
 * [ckad mock 02](../tasks/ckad/mock/02) is updated, question 21 is added.
 * ckad mock 02 [solutions](../tasks/ckad/mock/02/worker/files/solutions/21.MD) are added.
+* [ckad mock 02](../tasks/ckad/mock/02) is updated, question 02 is updated.
+* ckad mock 02 [solution](../tasks/ckad/mock/02/worker/files/solutions/2.MD) are updated.
 
 
 ## 0.15.1 (28.10.2024)

@@ -1,6 +1,6 @@
 locals {
-  questions_list="https://github.com/ViktorUJ/cks/blob/0.16.1/tasks/ckad/mock/02/README.md"
-  solutions_scripts="https://github.com/ViktorUJ/cks/tree/0.16.1/tasks/ckad/mock/02/worker/files/solutions"
+  questions_list="https://github.com/ViktorUJ/cks/blob/master/tasks/ckad/mock/02/README.md"
+  solutions_scripts="https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/02/worker/files/solutions"
   solutions_video=""
   region = "eu-north-1"
   vpc_default_cidr =  "10.2.0.0/16"

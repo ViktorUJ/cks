@@ -43,7 +43,7 @@ variable "k8s_master" {
     cni=optional(object({
       type = optional(string, "calico") # calico, cilium
       calico_url = optional(string, "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml")
-      cilium_version = optional(string, "v0.16.17")
+      cilium_version = optional(string, "vmaster7")
       cilium_helm_version = optional(string, "1.16.1")
       disable_kube_proxy = optional(string, "false") # set to  true  for replace kube-proxy by cilium
 
