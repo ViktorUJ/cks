@@ -15,4 +15,4 @@ For check use tcpdump on  nodes
 check pods communication
 ```
 k exec external -n external  --  sh -c 'curl finance.finance:8080'
-``` 
+```
