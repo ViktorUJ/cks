@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.16.1 (09.12.2024)
+### Features
+
+* [CKS lab 26. Install Cilium with WireGuard](..%2Ftasks%2Fcks%2Flabs%2F26%2FREADME.MD) is added.
+* Cks lab 26.Install Cilium with WireGuard [solutions](..%2Ftasks%2Fcks%2Flabs%2F26%2Fworker%2Ffiles%2Fsolutions%2F1.MD) are added.
+* Cks lab 26.Install Cilium with WireGuard [video solution](https://youtu.be/lVrkuX6CriQ) is added.
+* We have launched a comprehensive series on practical Kubernetes exam preparation with [devops kitchen talks](https://www.youtube.com/@DevOpsKitchenTalks) channel, starting with CKAD . [CKAD  01 episode](https://www.youtube.com/watch?v=4WXSijgYbVw) , [script](https://github.com/ViktorUJ/cks/blob/dkt_ckad_01/selfStudy/dkt/ckad/01/README.MD).
+* [cka lab 08](../tasks/cka/labs/08) is updated to  kubernetes version 1.31.
+* fixed issue with node labels in [k8s_self_managment_v2](../terraform/modules/k8s_self_managment_v2) module with 1.31 version.
+* [ping_pong](../docker/ping_pong/README.MD) image is updated . Now default  **SERVER_NAME**  = pod name
+* [ckad mock 02](../tasks/ckad/mock/02) is updated, question 21 is added.
+* ckad mock 02 [solutions](../tasks/ckad/mock/02/worker/files/solutions/21.MD) are added.
+* [ckad mock 02](../tasks/ckad/mock/02) is updated, question 02 is updated.
+* ckad mock 02 [solution](../tasks/ckad/mock/02/worker/files/solutions/2.MD) are updated.
+
+
 ## 0.15.1 (28.10.2024)
 ### Features
 

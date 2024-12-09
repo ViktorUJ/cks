@@ -17,4 +17,3 @@ output "local_prefix" {
 output "vpc_default_cidr" {
   value = var.vpc_default_cidr
 }
-

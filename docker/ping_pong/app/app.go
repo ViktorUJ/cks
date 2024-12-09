@@ -35,6 +35,7 @@ var (
 	lastRequestTime     time.Time
 	requestsCount       uint64
 	serverName          string
+	hostName            string
 	logPath             string
 	enableOutput        string
 	enableLoadCpu       string
@@ -47,9 +48,14 @@ var (
 )
 
 func init() {
+	hostName = os.Getenv("HOSTNAME")
+	if hostName == "" {
+		hostName = "ping_pong_server"
+	}
+
 	serverName = os.Getenv("SERVER_NAME")
 	if serverName == "" {
-		serverName = "ping_pong_server"
+		serverName = hostName
 	}
 	logPath = os.Getenv("LOG_PATH")
 
