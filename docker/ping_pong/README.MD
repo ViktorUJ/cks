@@ -46,5 +46,5 @@ kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1
 
 ### tags :
 - `latest` - from scratch image with only binary
-- `alpine` - alpine image with binary and utils 
+- `alpine` - alpine image with binary and utils
 - `debug` - amazon/aws-cli image with utils
