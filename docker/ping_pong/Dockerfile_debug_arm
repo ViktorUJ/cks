@@ -30,7 +30,8 @@ RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc tar 
     skaffold version && \
     curl -Lo sops https://github.com/getsops/sops/releases/download/v3.8.1/sops-v3.8.1.linux.arm64 && \
     chmod +x sops && \
-    mv sops /usr/local/bin/sops
+    mv sops /usr/local/bin/sops \
+    curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh | bash
 
 
 COPY --from=builder /go/src/mypackage/myapp/app /app
