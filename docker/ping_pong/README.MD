@@ -1,6 +1,7 @@
 This is a small HTTP server that sends back the incoming request with all the metadata in response, including the sender's IP address, all request parameters, and headers. The server's configuration can be modified by using environment variables:
 
-- `SERVER_NAME`: The name of the server.
+- `SERVER_NAME`: The name of the server. Default is `ping_pong_server`.
+- `ENABLE_DEFAULT_HOSTNAME`: Use the default hostname (default = "true").
 - `SRV_PORT`: The port on which the server is running.
 - `METRIC_PORT`: The port where server metrics are available in Prometheus format.
 - `ENABLE_OUTPUT`: log to stdout (default = "true")
@@ -21,19 +22,29 @@ You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
 
 ### run http pingPong server
 ```
-kubectl  run test -n circleci --image  viktoruj/ping_pong
+kubectl  run test  --image  viktoruj/ping_pong
 ```
 
 ### run http pingPong server  with serverName
 ```
-kubectl  run test -n circleci --image  viktoruj/ping_pong  --env SERVER_NAME=pingPongServer
+kubectl  run test  --image  viktoruj/ping_pong  --env SERVER_NAME=pingPongServer
 ```
+### run http pingPong server  with serverName  = podName
+```
+kubectl  run test  --image  viktoruj/ping_pong --env ENABLE_DEFAULT_HOSTNAME=false
+```
+
 
 ### run http pingPong server  with MEMORY_USAGE
 ```
-kubectl  run test -n circleci --image  viktoruj/ping_pong   --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true
+kubectl  run test --image  viktoruj/ping_pong   --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true
 ```
 ### run http pingPong server  with MEMORY_USAGE and CPU_USAGE  and enable cpu and memory loging . It uses CPU_MAXPROC =2 .
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1=60 1=4=1=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true  --env ENABLE_LOG_LOAD_CPU=true --env CPU_MAXPROC=2 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360  ' --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOG_LOAD_MEMORY=true
 ```
+
+### tags :
+- `latest` - from scratch image with only binary
+- `alpine` - alpine image with binary and utils 
+- `debug` - amazon/aws-cli image with utils
