@@ -42,6 +42,7 @@ var (
 	enableLoadMemory    string
 	enableLogLoadMemory string
 	enableLogLoadCpu    string
+	enableDefaultHostName     string
 	memoryProfiles      []MemoryUsageProfile
 	cpuProfiles         []CpuUsageProfile
 	cpuMaxProc          int
@@ -49,9 +50,15 @@ var (
 
 func init() {
 	hostName = os.Getenv("HOSTNAME")
-	if hostName == "" {
-		hostName = "ping_pong_server"
+
+    enableDefaultHostName = os.Getenv("ENABLE_DEFAULT_HOSTNAME")
+  	if enableDefaultHostName == "" {
+		enableDefaultHostName = "true"
 	}
+
+    if hostName == "" || enableDefaultHostName == "true" {
+        hostName = "ping_pong_server"
+    }
 
 	serverName = os.Getenv("SERVER_NAME")
 	if serverName == "" {
