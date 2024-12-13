@@ -35,21 +35,34 @@ var (
 	lastRequestTime     time.Time
 	requestsCount       uint64
 	serverName          string
+	hostName            string
 	logPath             string
 	enableOutput        string
 	enableLoadCpu       string
 	enableLoadMemory    string
 	enableLogLoadMemory string
 	enableLogLoadCpu    string
+	enableDefaultHostName     string
 	memoryProfiles      []MemoryUsageProfile
 	cpuProfiles         []CpuUsageProfile
 	cpuMaxProc          int
 )
 
 func init() {
+	hostName = os.Getenv("HOSTNAME")
+
+    enableDefaultHostName = os.Getenv("ENABLE_DEFAULT_HOSTNAME")
+  	if enableDefaultHostName == "" {
+		enableDefaultHostName = "true"
+	}
+
+    if hostName == "" || enableDefaultHostName == "true" {
+        hostName = "ping_pong_server"
+    }
+
 	serverName = os.Getenv("SERVER_NAME")
 	if serverName == "" {
-		serverName = "ping_pong_server"
+		serverName = hostName
 	}
 	logPath = os.Getenv("LOG_PATH")
 

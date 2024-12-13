@@ -4,7 +4,7 @@
 
 You have a corporate portal ( k8s service **portal** in **production** namespace)
 
-You need to create  [Cilium NetworkPolicy](https://editor.networkpolicy.io/) **api-access** provide these requirements 
+You need to create  [Cilium NetworkPolicy](https://editor.networkpolicy.io/) **api-access** provide these requirements
 
 
 [docs](https://docs.cilium.io/en/v1.10/policy/language/#l7-layer-7-policies)
@@ -12,9 +12,9 @@ You need to create  [Cilium NetworkPolicy](https://editor.networkpolicy.io/) **a
 
 [examples](https://github.com/cilium/cilium/tree/main/examples/policies/getting-started)
 
-the portal  **APIs**: 
+the portal  **APIs**:
 
-/public/*  - open all **method**  from  all cluster 
+/public/*  - open all **method**  from  all cluster
 
 
 /private/* - open all **method** from all in  **finance** namespace
