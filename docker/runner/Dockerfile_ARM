@@ -13,3 +13,5 @@ RUN apt update && apt install -y software-properties-common && \
     unzip terraform.zip >/dev/null && chmod +x terraform && \
     mv terraform /usr/bin/ && rm terraform.zip && terraform --version && \
     ln -sf /usr/bin/python3 /usr/bin/python && ln -sf /usr/bin/pip3 /usr/bin/pip
+
+ENTRYPOINT ["/bin/bash"]
