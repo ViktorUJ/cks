@@ -287,6 +287,14 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCSA</summary>
+
+### example questions for KCSA exam
+
+- check examle questions in [kcsa](tasks%2Fkcsa) directory
+</details>
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">mock HR exam</summary>
 
   [Video instruction for launching **HR mock exam**](https://youtu.be/4CTC1jl8lxE)
