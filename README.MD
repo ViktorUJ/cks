@@ -279,6 +279,14 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCNA </summary>
+
+### example questions for KCNA exam
+
+- check examle questions in [kcna](tasks%2Fkcna) directory
+</details>
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">mock HR exam</summary>
 
   [Video instruction for launching **HR mock exam**](https://youtu.be/4CTC1jl8lxE)
