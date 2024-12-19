@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.1 (09.01.2025)
+### Features
+
+* [kcna](../tasks/kcna)  example is added.
+* [kcsa](../tasks/kcsa)  example is added.
+
 ## 0.16.1 (09.12.2024)
 ### Features
 
