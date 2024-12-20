@@ -17,7 +17,8 @@ curl -X GET "https://github.com/ViktorUJ/terraform-aws-vpc/blob/master/examples/
   -H "Accept-Encoding: gzip, deflate, br, zstd" \
   -H "Accept-Language: ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7" \
   -H "Sec-Ch-Ua-Platform: \"Linux\"" \
-  -H "Sec-Fetch-Dest: document"
+  -H "Sec-Fetch-Dest: document"  \
+  --output -
 
 
 sleep 1
@@ -36,7 +37,8 @@ curl -X GET "https://github.com/ViktorUJ/terraform-aws-vpc/blob/master/examples/
   -H "Sec-Ch-Ua-Platform: \"Windows\"" \
   -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7" \
   -H "Sec-Fetch-User: ?1" \
-  -H "Accept-Language: en-US,en;q=0.9,ru;q=0.8"
+  -H "Accept-Language: en-US,en;q=0.9,ru;q=0.8" \
+  --output -
 
 
 
@@ -59,7 +61,8 @@ curl -X GET "https://github.com/ViktorUJ/terraform-aws-vpc/blob/master/examples/
   -H "Sec-Ch-Ua-Mobile: ?0" \
   -H "Sec-Fetch-User: ?1" \
   -H "Sec-Fetch-Dest: document" \
-  -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+  -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"  \
+  --output -
 
 
 sleep 1
@@ -77,7 +80,8 @@ curl -X GET "https://github.com/ViktorUJ/terraform-aws-vpc/blob/master/examples/
   -H "Sec-Ch-Ua-Mobile: ?0" \
   -H "Accept-Encoding: gzip, deflate, br, zstd" \
   -H "Upgrade-Insecure-Requests: 1" \
-  -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+  -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"  \
+  --output -
 
 
 cd /tmp/
@@ -103,7 +107,8 @@ curl -X GET "https://github.com/ViktorUJ/terraform-aws-vpc/blob/master/examples/
   -H "Sec-Fetch-Mode: navigate" \
   -H "Sec-Fetch-User: ?1" \
   -H "Sec-Fetch-Dest: document" \
-  -H "Priority: u=0, i"
+  -H "Priority: u=0, i"  \
+  --output -
 
 sleep 1
 
@@ -120,4 +125,5 @@ curl -X GET "https://github.com/ViktorUJ/terraform-aws-vpc/blob/master/examples/
   -H "Upgrade-Insecure-Requests: 1" \
   -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7" \
   -H "Accept-Encoding: gzip, deflate, br, zstd" \
-  -H "Accept-Language: ru,ru-RU;q=0.9,en-US;q=0.8,en;q=0.7"
+  -H "Accept-Language: ru,ru-RU;q=0.9,en-US;q=0.8,en;q=0.7"  \
+  --output -
