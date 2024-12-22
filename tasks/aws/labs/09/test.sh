@@ -127,3 +127,4 @@ curl -X GET "https://github.com/ViktorUJ/terraform-aws-vpc/blob/master/examples/
   -H "Accept-Encoding: gzip, deflate, br, zstd" \
   -H "Accept-Language: ru,ru-RU;q=0.9,en-US;q=0.8,en;q=0.7"  \
   --output -
+
