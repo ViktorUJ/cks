@@ -5,6 +5,9 @@
 
 * [kcna](../tasks/kcna)  example is added.
 * [kcsa](../tasks/kcsa)  example is added.
+* K8s version **1.32** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
+* [cka lab 08](../tasks/cka/labs/08) is updated to  kubernetes version 1.32.
+
 
 ## 0.16.1 (09.12.2024)
 ### Features
