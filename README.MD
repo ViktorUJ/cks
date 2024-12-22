@@ -10,6 +10,7 @@ The **SRE Learning Platform** is an open-source hub designed to help IT engineer
 - Enhance your skills for the **CKS**: [Certified Kubernetes Security Specialist Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/)
 - Excel in the **CKAD**: [Certified Kubernetes Application Developer Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-application-developer-ckad/)
 - Prepare for the **LFCS**: [Linux Foundation Certified System Administrator](https://training.linuxfoundation.org/certification/linux-foundation-certified-sysadmin-lfcs/)
+- Prepare for the **KCNA**: [Kubernetes and Cloud Native Associate](https://training.linuxfoundation.org/certification/kubernetes-cloud-native-associate/)
 
 Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **SRE Learning Platform**.
 
@@ -150,6 +151,17 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCNA</summary>
+
+### KCNA
+
+- check examle questions in [kcna](tasks%2Fkcna) directory
+
+</details>
+
+
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">HR</summary>
 
 - ``TASK=01 make run_hr_mock`` - create mock  hr exam [number 01](tasks%2Fhr%2Fmock%2F01)
@@ -264,6 +276,22 @@ Every command should be run from the project's root directory.
 - delete mock  CKAD exam `make delete_ckad_mock`
 - find exam solutions in ``{mock_number}/worker/files/solutions``  [mock 1 solutions](tasks%2Fckad%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)   and [video](https://youtu.be/yQK7Ca8d-yw)
 - find exam tests in ``{mock_number}/worker/files/tests.bats``
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCNA </summary>
+
+### example questions for KCNA exam
+
+- check examle questions in [kcna](tasks%2Fkcna) directory
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCSA</summary>
+
+### example questions for KCSA exam
+
+- check examle questions in [kcsa](tasks%2Fkcsa) directory
 </details>
 
 <details>
