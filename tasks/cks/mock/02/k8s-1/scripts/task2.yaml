@@ -1,0 +1,113 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-xxx
+  labels:
+    name: team-xxx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment3
+  name: deployment3
+  namespace: team-xxx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment3
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment3
+    spec:
+      containers:
+      - image: mysql:8.0.33
+        name: mysql
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            value: "my-secret-pw"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment2
+  name: deployment2
+  namespace: team-xxx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment2
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment2
+    spec:
+      containers:
+      - image: mariadb:10.8-focal
+        name: mariadb
+        env:
+          - name: MARIADB_USER
+            value: "example-user"
+          - name: MARIADB_PASSWORD
+            value: "my_cool_secret"
+          - name: MARIADB_ROOT_PASSWORD
+            value: "my-secret-pw"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment1
+  name: deployment1
+  namespace: team-xxx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment1
+    spec:
+      containers:
+      - image: nginx:1.19-alpine-perl
+        name: nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: deployment4
+  name: deployment4
+  namespace: team-xxx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment4
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: deployment4
+    spec:
+      containers:
+      - image: nginx:1.23-bullseye-perl
+        name: nginx

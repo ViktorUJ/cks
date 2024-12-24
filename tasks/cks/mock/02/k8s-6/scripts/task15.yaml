@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-red
+  labels:
+    name: team-red
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: container-host-hacker
+  name: container-host-hacker
+  namespace: team-red
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: container-host-hacker
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: container-host-hacker
+    spec:
+      volumes:
+        - name: host
+          hostPath:
+            # directory location on host
+            path: /run/containerd
+            # this field is optional
+            type: Directory
+
+      containers:
+      - image: viktoruj/cks-lab
+        name: busybox
+        command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
+        volumeMounts:
+          - name: host
+            mountPath: "/run/containerd"
+            readOnly: false
