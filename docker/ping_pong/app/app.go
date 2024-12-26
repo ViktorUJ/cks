@@ -62,11 +62,6 @@ func init() {
 		delayStart = "0"
 	}
 
-    parsedDelay, err := strconv.Atoi(delayStart)
-    if err != nil {
-        parsedDelay = 0
-    }
-
     if hostName == "" || enableDefaultHostName == "true" {
         hostName = "ping_pong_server"
     }
@@ -331,6 +326,10 @@ func sendLog(message string) {
 }
 
 func main() {
+    parsedDelay, err := strconv.Atoi(delayStart)
+    if err != nil {
+        parsedDelay = 0
+    }
     sendLog(fmt.Sprintf("DELAY START %v  , second", delayStart))
     time.Sleep(time.Duration(parsedDelay) * time.Second)
 	for _, env := range os.Environ() {
