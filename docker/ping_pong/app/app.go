@@ -332,6 +332,7 @@ func main() {
     }
     sendLog(fmt.Sprintf("DELAY START %v  , second", delayStart))
     time.Sleep(time.Duration(parsedDelay) * time.Second)
+
 	for _, env := range os.Environ() {
 		sendLog(env)
 	}
@@ -351,7 +352,7 @@ func main() {
 		port = "8080"
 	}
 
-	err := http.ListenAndServe(":"+port, nil)
+	err = http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		sendLog(fmt.Sprintf("Server failed: %v", err))
 	}
