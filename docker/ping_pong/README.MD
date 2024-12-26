@@ -45,6 +45,11 @@ kubectl  run test --image  viktoruj/ping_pong   --env MEMORY_USAGE_PROFILE='5=60
 kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1=60 1=4=1=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true  --env ENABLE_LOG_LOAD_CPU=true --env CPU_MAXPROC=2 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360  ' --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOG_LOAD_MEMORY=true
 ```
 
+### run http pingPong server  with slow start 10 seconds.
+```
+kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
+```
+
 ### tags :
 - `latest` - from scratch image with only binary
 - `alpine` - alpine image with binary and utils
