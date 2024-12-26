@@ -13,7 +13,7 @@ This is a small HTTP server that sends back the incoming request with all the me
 - `ENABLE_LOG_LOAD_CPU`: logs LOAD_CPU function
 - `CPU_USAGE_PROFILE`: additional CPU usage `iteraction_milion=wait_msec=gorutins=time_sec` . example  `10=1=1=30  1=400=1=60`
 - `CPU_MAXPROC`: GOMAXPROCS (default = 1)
-- `DELAY_START`: delay start in seconds (default = 0)
+- `DELAY_START`: delay start in seconds before start app (default = 0) . It is useful for testing slow start of app and test startup probes.  
 
 You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
 
