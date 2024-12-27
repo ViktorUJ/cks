@@ -4,11 +4,26 @@ locals {
   solutions_video="https://youtu.be/I8CPwcGbrG8"
   debug_output   = "false"
   region         = "eu-north-1"
-  vpc_default_cidr = "10.2.0.0/16"
-  az_ids = {
-    "10.2.0.0/19"  = "eun1-az3"
-    "10.2.32.0/19" = "eun1-az2"
+  vpc_default_cidr  = "10.10.0.0/16"
+
+  subnets = {
+    public = {
+      "pub1" = {
+        name = "k8s-1"
+        cidr = "10.10.1.0/24"
+        az   = "eu-north-1a"
+      }
+      "pub2" = {
+        name = "k8s-2"
+        cidr = "10.10.2.0/24"
+        az   = "eu-north-1b"
+      }
+
+
+    }
+    private = {}
   }
+
   aws            = "default"
   prefix         = "cks-mock"
   tags           = {
@@ -18,12 +33,12 @@ locals {
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version           = "1.30.0"
+  k8_version           = "1.32.0"
   node_type            = "spot"
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"
-  ubuntu_version       = "20.04"
+  ubuntu_version       = "22.04"
   ami_id               = ""
   key_name             = ""
   ssh_password_enable  = "true" # false |  true
