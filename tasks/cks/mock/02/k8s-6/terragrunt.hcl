@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/k8s_self_managment/"
+  source = "../../..//modules/k8s_self_managment_v2/"
   #
 
   extra_arguments "retry_lock" {
@@ -31,7 +31,7 @@ inputs = {
   prefix       = "cluster6"
   tags_common  = local.vars.locals.tags
   app_name     = "k8s"
-  subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
+  subnets      = dependency.vpc.outputs.subnets
   vpc_id       = dependency.vpc.outputs.vpc_id
   cluster_name = "k8s6"
   node_type    = local.vars.locals.node_type
@@ -52,7 +52,7 @@ inputs = {
     eip                = "false"
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/01/k8s-6/scripts/master.sh"
-    calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
+    cni                = local.vars.locals.cni
     root_volume        = local.vars.locals.root_volume
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
