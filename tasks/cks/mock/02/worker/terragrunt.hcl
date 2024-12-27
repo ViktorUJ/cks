@@ -7,8 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/work_pc/"
-  # source = "../../..//modules/work_pc_ondemand/"
+  source = "../../..//modules/work_pc_v2/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -74,7 +73,7 @@ inputs = {
   prefix      = local.vars.locals.prefix
   tags_common = local.vars.locals.tags
   app_name    = "k8s-worker"
-  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
+  subnets  = dependency.vpc.outputs.subnets
   vpc_id      = dependency.vpc.outputs.vpc_id
   ssh_password_enable =local.vars.locals.ssh_password_enable
 
