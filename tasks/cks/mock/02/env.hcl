@@ -36,6 +36,10 @@ locals {
   k8_version           = "1.32.0"
   node_type            = "spot"
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
+  cni = {
+      type = "calico" #calico , cilium
+      disable_kube_proxy="false"
+    }
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"
   ubuntu_version       = "22.04"
