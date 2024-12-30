@@ -171,10 +171,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 #task 4
 
-@test "4.1 CIS Benchmark. check 1.2.16 " {
+@test "4.1 CIS Benchmark. check 1.2.15  " {
   echo '.75'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.16 | grep PASS"
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.15  | grep PASS"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '.75'>>/var/work/tests/result/ok
