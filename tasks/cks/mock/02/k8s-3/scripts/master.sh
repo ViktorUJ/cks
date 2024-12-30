@@ -13,4 +13,4 @@ kube_bench_version="0.9.4"
 kube_bench_url="https://github.com/aquasecurity/kube-bench/releases/download/v${kube_bench_version}/kube-bench_${kube_bench_version}_linux_${arc_name}.deb"
 # https://github.com/aquasecurity/kube-bench/releases
 curl -L $kube_bench_url  -o kube-bench.deb
-DEBIAN_FRONTEND=noninteractive apt install -y -f ./kube-bench.deb
+sudo  DEBIAN_FRONTEND=noninteractive apt install -y -f ./kube-bench.deb
