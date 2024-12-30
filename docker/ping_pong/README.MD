@@ -13,6 +13,7 @@ This is a small HTTP server that sends back the incoming request with all the me
 - `ENABLE_LOG_LOAD_CPU`: logs LOAD_CPU function
 - `CPU_USAGE_PROFILE`: additional CPU usage `iteraction_milion=wait_msec=gorutins=time_sec` . example  `10=1=1=30  1=400=1=60`
 - `CPU_MAXPROC`: GOMAXPROCS (default = 1)
+- `DELAY_START`: delay start in seconds before start app (default = 0) . It is useful for testing slow start of app and test startup probes.  
 
 You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
 
@@ -42,6 +43,11 @@ kubectl  run test --image  viktoruj/ping_pong   --env MEMORY_USAGE_PROFILE='5=60
 ### run http pingPong server  with MEMORY_USAGE and CPU_USAGE  and enable cpu and memory loging . It uses CPU_MAXPROC =2 .
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1=60 1=4=1=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true  --env ENABLE_LOG_LOAD_CPU=true --env CPU_MAXPROC=2 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360  ' --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOG_LOAD_MEMORY=true
+```
+
+### run http pingPong server  with slow start 10 seconds.
+```
+kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 ```
 
 ### tags :
