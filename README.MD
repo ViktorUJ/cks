@@ -161,6 +161,15 @@ Every command should be run from the project's root directory.
 
 </details>
 
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCSA</summary>
+
+### KCSA
+
+- check examle questions in [kcsa](tasks%2Fkcsa) directory
+
+</details>
+
 
 
 <details>
