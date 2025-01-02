@@ -5,7 +5,7 @@
 
 * [kcna](../tasks/kcna)  example is added.
 * [kcsa](../tasks/kcsa)  example is added.
-* K8s version **1.32** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment) module.
+* K8s version **1.32** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module.
 * [cka lab 08](../tasks/cka/labs/08) is updated to  kubernetes version 1.32.
 * slow start to [ping_pong](../docker/ping_pong/README.MD) is added. Now you can use `DELAY_START`  to delay start in seconds before start app (default = 0) . It is useful for testing slow start of app and test startup probes.
 
