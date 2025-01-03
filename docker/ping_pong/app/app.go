@@ -42,6 +42,7 @@ var (
 	enableLoadMemory    string
 	enableLogLoadMemory string
 	enableLogLoadCpu    string
+	delayStart          string
 	enableDefaultHostName     string
 	memoryProfiles      []MemoryUsageProfile
 	cpuProfiles         []CpuUsageProfile
@@ -54,6 +55,11 @@ func init() {
     enableDefaultHostName = os.Getenv("ENABLE_DEFAULT_HOSTNAME")
   	if enableDefaultHostName == "" {
 		enableDefaultHostName = "true"
+	}
+
+    delayStart = os.Getenv("DELAY_START")
+  	if delayStart == "" {
+		delayStart = "0"
 	}
 
     if hostName == "" || enableDefaultHostName == "true" {
@@ -320,6 +326,13 @@ func sendLog(message string) {
 }
 
 func main() {
+    parsedDelay, err := strconv.Atoi(delayStart)
+    if err != nil {
+        parsedDelay = 0
+    }
+    sendLog(fmt.Sprintf("DELAY START %v  , second", delayStart))
+    time.Sleep(time.Duration(parsedDelay) * time.Second)
+
 	for _, env := range os.Environ() {
 		sendLog(env)
 	}
@@ -339,7 +352,7 @@ func main() {
 		port = "8080"
 	}
 
-	err := http.ListenAndServe(":"+port, nil)
+	err = http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		sendLog(fmt.Sprintf("Server failed: %v", err))
 	}
