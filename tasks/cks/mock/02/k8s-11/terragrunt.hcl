@@ -11,7 +11,7 @@ terraform {
   #
 
   extra_arguments "retry_lock" {
-    commands  = get_terraform_commands_that_need_locking()
+    commands = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -26,20 +26,20 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  region       = local.vars.locals.region
-  aws          = local.vars.locals.aws
-  prefix       = "cluster6"
-  tags_common  = local.vars.locals.tags
-  app_name     = "k8s"
-  subnets      = dependency.vpc.outputs.subnets
-  vpc_id       = dependency.vpc.outputs.vpc_id
-  cluster_name = "k8s6"
-  node_type    = local.vars.locals.node_type
-  ssh_password_enable =local.vars.locals.ssh_password_enable
+  region              = local.vars.locals.region
+  aws                 = local.vars.locals.aws
+  prefix              = "cluster11"
+  tags_common         = local.vars.locals.tags
+  app_name            = "k8s"
+  subnets             = dependency.vpc.outputs.subnets
+  vpc_id              = dependency.vpc.outputs.vpc_id
+  cluster_name        = "k8s11"
+  node_type           = local.vars.locals.node_type
+  ssh_password_enable = local.vars.locals.ssh_password_enable
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
-    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )
+    runtime = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
@@ -51,9 +51,12 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-6/scripts/master.sh"
-    cni                = local.vars.locals.cni
-    root_volume        = local.vars.locals.root_volume
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-11/scripts/master.sh"
+    cni = {
+      type = "cilium" #calico , cilium
+      disable_kube_proxy = "false"
+    }
+    root_volume = local.vars.locals.root_volume
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
@@ -70,7 +73,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-6/scripts/worker.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-11/scripts/worker.sh"
       node_labels        = "work_type=worker"
       cidrs              = local.vars.locals.access_cidrs
       root_volume        = local.vars.locals.root_volume
