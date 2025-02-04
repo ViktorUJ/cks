@@ -709,81 +709,46 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "16.1 Create a new user called john. csr " {
+# 16
+
+@test "16.1 check private api from finance namespace  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get csr  john-developer -o jsonpath='{.status.conditions..type}'  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "Approved" ]]; then
+  kubectl  exec  -n finance finance --context cluster11-admin@cluster11  --  curl http://portal.production/private/api123 --connect-timeout 1 | grep 'http://portal.production/private/api123'
+  result=$?
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "Approved" ]
+  [ "$result" == "0" ]
 }
 
-@test "16.2 Create a new user called john. role exist " {
+@test "16.2 check public api from finance namespace  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get role developer -n development -o jsonpath={.metadata.name}  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "developer" ]]; then
+  kubectl  exec  -n finance finance   --context cluster11-admin@cluster11 --  curl http://portal.production/public/api123  --connect-timeout 1 | grep 'http://portal.production/public/api123'
+  result=$?
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "developer" ]
+  [ "$result" == "0" ]
 }
 
-@test "16.3 Create a new user called john. rolebinding exist" {
+@test "16.3 check private api from external namespace  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get rolebinding developer-role-binding  -n development -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1 )
-  if [[ "$result" == "developer-role-binding" ]]; then
+  kubectl  exec  -n external external  --context cluster11-admin@cluster11 --  curl http://portal.production/private/api123   --connect-timeout 1 | grep 'Access denied'
+  result=$?
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "developer-role-binding" ]
+  [ "$result" == "0" ]
 }
 
-
-@test "16.4 Create a new user called john. permission pod - create " {
+@test "16.4 check public api from external namespace  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl auth can-i create pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "yes" ]]; then
+  kubectl  exec  -n external external  --context cluster11-admin@cluster11 --  curl http://portal.production/public/api123  --connect-timeout 1 | grep 'http://portal.production/public/api123'
+  result=$?
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "yes" ]
-}
-
-@test "16.5 Create a new user called john. permission pod - list " {
-  echo '0.5'>>/var/work/tests/result/all
-  result=$(kubectl auth can-i list pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "yes" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "yes" ]
-}
-
-@test "16.6 Create a new user called john. permission pod - get " {
-  echo '0.5'>>/var/work/tests/result/all
-  result=$(kubectl auth can-i get pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "yes" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "yes" ]
-}
-
-@test "16.7 Create a new user called john. permission pod - delete " {
-  echo '0.5'>>/var/work/tests/result/all
-  set +e
-  result=$(kubectl auth can-i delete pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  set -e
-  if [[ "$result" == "no" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "no" ]
-}
-
-@test "16.8 Create a new user called john. permission pod - update " {
-  echo '0.5'>>/var/work/tests/result/all
-  set +e
-  result=$(kubectl auth can-i update pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  set -e
-  if [[ "$result" == "no" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "no" ]
+  [ "$result" == "0" ]
 }
 
 
