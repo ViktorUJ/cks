@@ -20,3 +20,6 @@ sudo tee /etc/containers/policy.json <<EOF
     ]
 }
 EOF
+
+address=$(kubectl get no -l work_type=worker --context cluster6-admin@cluster6 -o json  | jq -r '.items[] | select(.kind == "Node") | .status.addresses[] | select(.type == "InternalIP") | .address')
+echo "$address cks.local">>/etc/hosts
