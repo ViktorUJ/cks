@@ -6,6 +6,7 @@ kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-6/scripts/task1.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-6/scripts/task5.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-6/scripts/task8.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-6/scripts/task9.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-6/scripts/task10.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/k8s-6/scripts/task11.yaml
