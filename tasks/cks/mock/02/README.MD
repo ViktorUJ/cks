@@ -142,3 +142,11 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 |       **Cluster**       | cluster10 (`kubectl config use-context cluster10-admin@cluster10`)                                                 |
 | **Acceptance criteria** | - Pod status is Running<br/>- Pod name is seccomp<br/>- Image is nginx<br/>- Seccomp profile is profile-nginx.json |
 ---
+
+---
+|         **19**          | Update the existing **Ingress** using the provided **certificate**.                                         |
+|:-----------------------:|:------------------------------------------------------------------------------------------------------------|
+|     **Task weight**     | 3%                                                                                                          |
+|       **Cluster**       | cluster10 (`kubectl config use-context cluster6-admin@cluster6`)                                            |
+| **Acceptance criteria** | - cert located `/var/work/19`<br/>- ns `` <br/>- Image is nginx<br/>- Seccomp profile is profile-nginx.json |
+---
