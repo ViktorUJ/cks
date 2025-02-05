@@ -792,3 +792,13 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "19 Update the existing Ingress using the provided certificate. " {
+  echo '4'>>/var/work/tests/result/all
+  curl https://cks.local:31139 -kv 2>&1  | grep 'CN=cks.local'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '4'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
