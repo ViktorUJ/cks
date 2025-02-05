@@ -51,8 +51,8 @@ openssl req -x509 -nodes -days 365 \
     -subj "/C=US/ST=State/L=City/O=Organization/CN=$DOMAIN"
 
 # Set the correct permissions
-chmod 600 "$KEY_FILE"
-chmod 600 "$CERT_FILE"
+chmod +r "$KEY_FILE"
+chmod +r "$CERT_FILE"
 
 # Output information about the created files
 echo "Self-signed certificate created:"

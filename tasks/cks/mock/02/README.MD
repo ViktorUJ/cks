@@ -144,9 +144,9 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 ---
 
 ---
-|         **19**          | Update the existing **Ingress** using the provided **certificate**.                                         |
-|:-----------------------:|:------------------------------------------------------------------------------------------------------------|
-|     **Task weight**     | 3%                                                                                                          |
-|       **Cluster**       | cluster10 (`kubectl config use-context cluster6-admin@cluster6`)                                            |
-| **Acceptance criteria** | - cert located `/var/work/19`<br/>- ns `` <br/>- Image is nginx<br/>- Seccomp profile is profile-nginx.json |
+|         **19**          | Update the existing **Ingress** using the provided **certificate**.                                                                                              |
+|:-----------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     **Task weight**     | 3%                                                                                                                                                               |
+|       **Cluster**       | cluster10 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                 |
+| **Acceptance criteria** | - cert located `/var/work/19` <br/>- ns `team-19` <br/> -ingress `team19` <br/> - check `curl https://cks.local:31139  -kv` <br/> - certificate CN=**cks.local** |
 ---
