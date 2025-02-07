@@ -96,41 +96,42 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # task 2
 
-@test "2.1  Image Vulnerability Scanning. deployment1  " {
-  echo '.5'>>/var/work/tests/result/all
-  result=$(kubectl get  deployment deployment1   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+@test "2.1  Image Vulnerability Scanning. /var/work/02/critical_image.json " {
+  echo '1'>>/var/work/tests/result/all
+  trivy image --format cyclonedx --output /tmp/critical_image.json  nginx:1.23-bullseye-perl
+  diff <(jq 'walk(if type == "object" then del(.serialNumber, .timestamp, .["bom-ref"], .["ref"]) elif type == "string" and test("^[a-f0-9-]{36}$") then empty else . end)' /tmp/critical_image.json) \
+     <(jq 'walk(if type == "object" then del(.serialNumber, .timestamp, .["bom-ref"], .["ref"]) elif type == "string" and test("^[a-f0-9-]{36}$") then empty else . end)' /var/work/02/critical_image.json)
+
+  result=$?
   if [[ "$result" == "0" ]]; then
-   echo '.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
 
-@test "2.2  Image Vulnerability Scanning. deployment2  " {
-  echo '.5'>>/var/work/tests/result/all
-  result=$(kubectl get  deployment deployment2   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
-  if [[ "$result" == "1" ]]; then
-   echo '.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "1" ]
-}
+@test "2.2  Image Vulnerability Scanning. /var/work/02/kube_scheduler_sbom.json " {
+  echo '1'>>/var/work/tests/result/all
+  bom generate --image registry.k8s.io/kube-scheduler:v1.32.0 --format json --output /tmp/kube_scheduler_sbom.json
+#  diff <(jq 'walk(if type == "object" then del(.serialNumber, .timestamp, .["bom-ref"], .["ref"]) elif type == "string" and test("^[a-f0-9-]{36}$") then empty else . end)' /tmp/kube_scheduler_sbom.json) \
+#     <(jq 'walk(if type == "object" then del(.serialNumber, .timestamp, .["bom-ref"], .["ref"]) elif type == "string" and test("^[a-f0-9-]{36}$") then empty else . end)' /var/work/02/kube_scheduler_sbom.json)
 
-@test "2.3  Image Vulnerability Scanning. deployment3  " {
-  echo '.5'>>/var/work/tests/result/all
-  result=$(kubectl get  deployment deployment3   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
-  if [[ "$result" == "1" ]]; then
-   echo '.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "1" ]
-}
-
-@test "2.4  Image Vulnerability Scanning. deployment4  " {
-  echo '.5'>>/var/work/tests/result/all
-  result=$(kubectl get  deployment deployment4   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
   if [[ "$result" == "0" ]]; then
-   echo '.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
+
+@test "2.3  Image Vulnerability Scanning. /var/work/02/result_sbom.json " {
+  echo '1'>>/var/work/tests/result/all
+trivy sbom --format json --output /tmp/result_sbom.json /var/work/02/check_sbom.json
+  diff <(sha256sum /tmp/result_sbom.json) <(sha256sum /var/work/02/result_sbom.json )
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
 
 #  all =6 , task =2
 
