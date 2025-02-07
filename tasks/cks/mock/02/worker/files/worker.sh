@@ -82,3 +82,9 @@ echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.
 apt-get update
 apt-get install trivy -y
 trivy image --download-db-only
+
+# tast 2
+
+mkdir -p /var/work/02/
+chmod 777 -R /var/work/02/
+bom generate --image registry.k8s.io/kube-controller-manager:v1.32.0 --format json --output /var/work/02/check_sbom.json
