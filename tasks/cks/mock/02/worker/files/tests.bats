@@ -124,8 +124,9 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "2.3  Image Vulnerability Scanning. /var/work/02/result_sbom.json " {
   echo '1'>>/var/work/tests/result/all
-trivy sbom --format json --output /tmp/result_sbom.json /var/work/02/check_sbom.json
-  diff <(sha256sum /tmp/result_sbom.json) <(sha256sum /var/work/02/result_sbom.json )
+   trivy sbom --format json --output /tmp/result_sbom.json /var/work/02/check_sbom.json
+   diff <(jq --sort-keys 'del(.CreatedAt?)' /tmp/result_sbom.json) \
+     <(jq --sort-keys 'del(.CreatedAt?)' /var/work/02/result_sbom.json)
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi

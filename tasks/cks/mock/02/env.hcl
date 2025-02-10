@@ -1,7 +1,7 @@
 locals {
   questions_list = "https://github.com/ViktorUJ/cks/blob/AG-92/tasks/cks/mock/02/README.MD"
   solutions_scripts="https://github.com/ViktorUJ/cks/tree/AG-92/tasks/cks/mock/02/worker/files/solutions"
-  solutions_video="https://youtu.be/I8CPwcGbrG8"
+  solutions_video="need to update . old version https://youtu.be/I8CPwcGbrG8"
   debug_output   = "false"
   region         = "eu-north-1"
   vpc_default_cidr  = "10.10.0.0/16"
