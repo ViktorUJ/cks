@@ -127,6 +127,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
    trivy sbom --format json --output /tmp/result_sbom.json /var/work/02/check_sbom.json
    diff <(jq --sort-keys 'del(.CreatedAt?)' /tmp/result_sbom.json) \
      <(jq --sort-keys 'del(.CreatedAt?)' /var/work/02/result_sbom.json)
+  result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
