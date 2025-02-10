@@ -112,9 +112,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "2.2  Image Vulnerability Scanning. /var/work/02/kube_scheduler_sbom.json " {
   echo '1'>>/var/work/tests/result/all
   bom generate --image registry.k8s.io/kube-scheduler:v1.32.0 --format json --output /tmp/kube_scheduler_sbom.json
-#  diff <(jq 'walk(if type == "object" then del(.serialNumber, .timestamp, .["bom-ref"], .["ref"]) elif type == "string" and test("^[a-f0-9-]{36}$") then empty else . end)' /tmp/kube_scheduler_sbom.json) \
-#     <(jq 'walk(if type == "object" then del(.serialNumber, .timestamp, .["bom-ref"], .["ref"]) elif type == "string" and test("^[a-f0-9-]{36}$") then empty else . end)' /var/work/02/kube_scheduler_sbom.json)
 
+  diff <(jq --sort-keys 'del(.. | .created?, .creationTimestamp?, .generatedAt?, .timestamp?, .buildTime?, .documentNamespace?, .name?, .SPDXID?, .checksumValue?, .checksums?, .copyrightText?, .downloadLocation?, .filesAnalyzed?, .versionInfo?, .supplier?, .externalRefs?, .referenceLocator?, .relatedSpdxElement?, .spdxElementId?, .relationshipType?)' /tmp/kube_scheduler_sbom.json) \
+       <(jq --sort-keys 'del(.. | .created?, .creationTimestamp?, .generatedAt?, .timestamp?, .buildTime?, .documentNamespace?, .name?, .SPDXID?, .checksumValue?, .checksums?, .copyrightText?, .downloadLocation?, .filesAnalyzed?, .versionInfo?, .supplier?, .externalRefs?, .referenceLocator?, .relatedSpdxElement?, .spdxElementId?, .relationshipType?)' /var/work/02/kube_scheduler_sbom.json)
+  result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
