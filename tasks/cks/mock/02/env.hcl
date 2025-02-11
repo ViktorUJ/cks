@@ -40,8 +40,8 @@ locals {
       type = "calico" #calico , cilium
       disable_kube_proxy="false"
     }
-  instance_type        = "m5.large" # m5.large | t4g.medium
-  instance_type_worker = "m5.large" # m5.large | t4g.medium
+  instance_type        = "m6g.medium" # m5.large | t4g.medium
+  instance_type_worker = "m6g.medium" # m5.large | t4g.medium
   ubuntu_version       = "22.04"
   ami_id               = ""
   key_name             = ""
