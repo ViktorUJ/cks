@@ -34,14 +34,14 @@ locals {
     "owner"           = "viktoruj@gmail.com"
   }
   k8_version           = "1.32.0"
-  node_type            = "spot"  # ondemand | spot
+  node_type            = "ondemand"  # ondemand | spot
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   cni = {
       type = "calico" #calico , cilium
       disable_kube_proxy="false"
     }
-  instance_type        = "m7g.medium" # m5.large | t4g.medium
-  instance_type_worker = "m7g.medium" # m5.large | t4g.medium
+  instance_type        = "t4g.medium" # m5.large | t4g.medium
+  instance_type_worker = "t4g.medium" # m5.large | t4g.medium
   ubuntu_version       = "22.04"
   ami_id               = ""
   key_name             = ""
