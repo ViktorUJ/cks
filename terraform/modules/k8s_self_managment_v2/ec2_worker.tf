@@ -85,7 +85,7 @@ resource "aws_spot_fleet_request" "worker" {
         # subnet_id = "subnet-12345678"
       }
     }
-  }
+
 }
 
 
