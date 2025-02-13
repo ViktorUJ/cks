@@ -85,20 +85,21 @@ resource "aws_spot_fleet_request" "worker" {
   wait_for_fulfillment          = true
   terminate_instances_on_delete = true
 
-  launch_template_config {
-    launch_template_specification {
-      id      = aws_launch_template.worker["${each.key}"].id
-      version = aws_launch_template.worker["${each.key}"].latest_version
-    }
+  dynamic "launch_template_config" {
+    for_each = length(var.spot_additional_types) > 0 ? var.spot_additional_types : ["default"]
 
-    dynamic "override" {
-      for_each = var.spot_additional_types
-      content {
-        instance_type = override.value
+    content {
+      launch_template_specification {
+        id      = aws_launch_template.worker["${each.key}"].id
+        version = aws_launch_template.worker["${each.key}"].latest_version
       }
+
+      # Добавляем instance_type только если он не "default"
+      instance_type = launch_template_config.value == "default" ? null : launch_template_config.value
     }
   }
 }
+
 
 
 
