@@ -86,7 +86,7 @@ resource "aws_spot_fleet_request" "worker" {
   terminate_instances_on_delete = true
 
   dynamic "launch_template_config" {
-    for_each = length(var.spot_additional_types) > 0 ? concat(["default"], var.spot_additional_types) : ["default"]
+    for_each = length(var.spot_additional_types) > 0 ? var.spot_additional_types : ["default"]
 
     content {
       launch_template_specification {
@@ -94,7 +94,7 @@ resource "aws_spot_fleet_request" "worker" {
         version = aws_launch_template.worker["${each.key}"].latest_version
       }
 
-      # Если элемент "default", используем launch template без изменений
+      # Если текущий элемент "default", используем базовый launch_template без override
       dynamic "override" {
         for_each = launch_template_config.value == "default" ? [] : [launch_template_config.value]
         content {
