@@ -64,30 +64,30 @@ resource "aws_launch_template" "worker" {
 }
 
 
+
 resource "aws_spot_fleet_request" "worker" {
   for_each                      = local.k8s_worker_spot
   iam_fleet_role                = aws_iam_role.fleet_role["enable"].arn
   target_capacity               = 1
   wait_for_fulfillment          = true
   terminate_instances_on_delete = true
+
   launch_template_config {
     launch_template_specification {
-      id      = aws_launch_template.worker["${each.key}"].id
-      version = aws_launch_template.worker["${each.key}"].latest_version
+      id      = aws_launch_template.worker[each.key].id
+      version = aws_launch_template.worker[each.key].latest_version
     }
-  }
 
-      dynamic "override" {
-      for_each = var.spot_additional_types
+    dynamic "overrides" {
+      for_each = set(var.spot_additional_types)
       content {
-        instance_type = override.value
-        # При необходимости добавьте другие параметры, например, subnet_id
+        instance_type = overrides.value
+        # Если необходимо, добавьте другие параметры, например, subnet_id
         # subnet_id = "subnet-12345678"
       }
     }
-
+  }
 }
-
 
 
 
