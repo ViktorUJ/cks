@@ -79,7 +79,7 @@ resource "aws_spot_fleet_request" "worker" {
     }
 
     dynamic "overrides" {
-      for_each = set(var.spot_additional_types)
+      for_each = toset(var.spot_additional_types)
       content {
         instance_type = overrides.value
         # Если необходимо, добавьте другие параметры, например, subnet_id
