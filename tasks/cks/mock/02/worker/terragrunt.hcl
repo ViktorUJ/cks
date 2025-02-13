@@ -18,66 +18,53 @@ terraform {
 
 dependency "ssh-keys" {
   config_path = "../ssh-keys"
-  skip_outputs = true
 }
 
 dependency "vpc" {
   config_path = "../vpc"
-  skip_outputs = true
 }
 
 
 dependency "cluster1" {
   config_path = "../k8s-1"
-  skip_outputs = true
 }
 
 dependency "cluster2" {
   config_path = "../k8s-2"
-  skip_outputs = true
 }
 
 dependency "cluster3" {
   config_path = "../k8s-3"
-  skip_outputs = true
 }
 
 dependency "cluster4" {
   config_path = "../k8s-4"
-  skip_outputs = true
 }
 
 dependency "cluster5" {
   config_path = "../k8s-5"
-  skip_outputs = true
 }
 
 dependency "cluster6" {
   config_path = "../k8s-6"
-  skip_outputs = true
 }
 
 dependency "cluster7" {
   config_path = "../k8s-7"
-  skip_outputs = true
 }
 
 dependency "cluster8" {
   config_path = "../k8s-8"
-  skip_outputs = true
 }
 
 dependency "cluster9" {
   config_path = "../k8s-9"
-  skip_outputs = true
 }
 dependency "cluster10" {
   config_path = "../k8s-10"
-  skip_outputs = true
 }
 dependency "cluster11" {
   config_path = "../k8s-11"
-  skip_outputs = true
 }
 inputs = {
   questions_list=local.vars.locals.questions_list
@@ -89,36 +76,36 @@ inputs = {
   prefix      = local.vars.locals.prefix
   tags_common = local.vars.locals.tags
   app_name    = "k8s-worker"
-  subnets  = dependency.vpc.outputs.subnets
-  vpc_id      = dependency.vpc.outputs.vpc_id
+  subnets  = try(dependency.vpc.outputs.subnets)
+  vpc_id      = try(dependency.vpc.outputs.vpc_id)
   ssh_password_enable =local.vars.locals.ssh_password_enable
 
   host_list = concat(
-    dependency.cluster1.outputs.hosts,
-    dependency.cluster2.outputs.hosts,
-    dependency.cluster3.outputs.hosts,
-    dependency.cluster4.outputs.hosts,
-    dependency.cluster5.outputs.hosts,
-    dependency.cluster6.outputs.hosts,
-    dependency.cluster7.outputs.hosts,
-    dependency.cluster8.outputs.hosts,
-    dependency.cluster9.outputs.hosts,
-    dependency.cluster10.outputs.hosts,
-    dependency.cluster11.outputs.hosts
+    try(dependency.cluster1.outputs.hosts),
+    try(dependency.cluster2.outputs.hosts),
+    try(dependency.cluster3.outputs.hosts),
+    try(dependency.cluster4.outputs.hosts),
+    try(dependency.cluster5.outputs.hosts),
+    try(dependency.cluster6.outputs.hosts),
+    try(dependency.cluster7.outputs.hosts),
+    try(dependency.cluster8.outputs.hosts),
+    try(dependency.cluster9.outputs.hosts),
+    try(dependency.cluster10.outputs.hosts),
+    try(dependency.cluster11.outputs.hosts)
   )
   work_pc = {
     clusters_config = {
-      cluster1  = dependency.cluster1.outputs.k8s_config
-      cluster2  = dependency.cluster2.outputs.k8s_config
-      cluster3  = dependency.cluster3.outputs.k8s_config
-      cluster4  = dependency.cluster4.outputs.k8s_config
-      cluster5  = dependency.cluster5.outputs.k8s_config
-      cluster6  = dependency.cluster6.outputs.k8s_config
-      cluster7  = dependency.cluster7.outputs.k8s_config
-      cluster8  = dependency.cluster8.outputs.k8s_config
-      cluster9  = dependency.cluster9.outputs.k8s_config
-      cluster10 = dependency.cluster10.outputs.k8s_config
-      cluster11 = dependency.cluster11.outputs.k8s_config
+      cluster1  = try(dependency.cluster1.outputs.k8s_config)
+      cluster2  = try(dependency.cluster2.outputs.k8s_config)
+      cluster3  = try(dependency.cluster3.outputs.k8s_config)
+      cluster4  = try(dependency.cluster4.outputs.k8s_config)
+      cluster5  = try(dependency.cluster5.outputs.k8s_config)
+      cluster6  = try(dependency.cluster6.outputs.k8s_config)
+      cluster7  = try(dependency.cluster7.outputs.k8s_config)
+      cluster8  = try(dependency.cluster8.outputs.k8s_config)
+      cluster9  = try(dependency.cluster9.outputs.k8s_config)
+      cluster10 = try(dependency.cluster10.outputs.k8s_config)
+      cluster11 = try(dependency.cluster11.outputs.k8s_config)
     }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
@@ -135,8 +122,8 @@ inputs = {
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/worker/files/tests.bats"
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/worker/files/worker.sh"
     ssh               = {
-      private_key = dependency.ssh-keys.outputs.private_key
-      pub_key     = dependency.ssh-keys.outputs.pub_key
+      private_key = try(dependency.ssh-keys.outputs.private_key)
+      pub_key     = try(dependency.ssh-keys.outputs.pub_key)
     }
     root_volume      = local.vars.locals.root_volume
     non_root_volumes = {}
