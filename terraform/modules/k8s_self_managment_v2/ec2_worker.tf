@@ -64,17 +64,7 @@ resource "aws_launch_template" "worker" {
 }
 
 
-locals {
-  instance_subnet_map = {
-    for subnet in var.subnets : {
-      for instance_type in var.spot_additional_types :
-      "${subnet}-${instance_type}" => {
-        instance_type = instance_type
-        subnet_id     = subnet
-      }
-    }
-  }...
-}
+
 
 
 resource "aws_spot_fleet_request" "worker" {
@@ -91,7 +81,7 @@ resource "aws_spot_fleet_request" "worker" {
     }
 
     dynamic "overrides" {
-      for_each = instance_subnet_map
+      for_each = toset(var.spot_additional_types)
       content {
         instance_type = overrides.value
         # Если необходимо, добавьте другие параметры, например, subnet_id
