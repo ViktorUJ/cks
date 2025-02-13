@@ -9,16 +9,21 @@ locals {
   subnets = {
     public = {
       "pub1" = {
-        name = "k8s-1"
+        name = "AZ-1"
         cidr = "10.10.1.0/24"
         az   = "eu-north-1a"
       }
       "pub2" = {
-        name = "k8s-2"
+        name = "AZ-2"
         cidr = "10.10.2.0/24"
         az   = "eu-north-1b"
       }
 
+      "pub3" = {
+        name = "AZ-3"
+        cidr = "10.10.3.0/24"
+        az   = "eu-north-1c"
+      }
 
     }
     private = {}
