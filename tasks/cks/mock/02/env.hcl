@@ -34,7 +34,7 @@ locals {
     "owner"           = "viktoruj@gmail.com"
   }
   k8_version           = "1.32.0"
-  node_type            = "spot"  # ondemand | spot
+  node_type            = "ondemand"  # ondemand | spot
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   cni = {
       type = "calico" #calico , cilium
