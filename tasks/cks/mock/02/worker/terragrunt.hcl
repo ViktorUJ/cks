@@ -89,7 +89,7 @@ inputs = {
   prefix      = local.vars.locals.prefix
   tags_common = local.vars.locals.tags
   app_name    = "k8s-worker"
-  subnets  = try(dependency.vpc.outputs.subnets,{})
+  subnets  = try(dependency.vpc.outputs.subnets,[])
   vpc_id      = try(dependency.vpc.outputs.vpc_id,"")
   ssh_password_enable =local.vars.locals.ssh_password_enable
 
