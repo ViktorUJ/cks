@@ -41,7 +41,7 @@ locals {
       disable_kube_proxy="false"
     }
   instance_type        = "t4g.medium" # m5.large | t4g.medium
-  instance_type_worker = "t4g.medium" # m5.large | t4g.medium
+  instance_type_worker = "t4g.large" # m5.large | t4g.medium
   ubuntu_version       = "22.04"
   ami_id               = ""
   key_name             = ""
