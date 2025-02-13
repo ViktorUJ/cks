@@ -36,6 +36,7 @@ inputs = {
   cluster_name = "k8s2"
   node_type    = local.vars.locals.node_type
   ssh_password_enable =local.vars.locals.ssh_password_enable
+  spot_additional_types = local.vars.locals.spot_additional_types
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version

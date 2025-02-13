@@ -26,6 +26,11 @@ variable "ssh_password_enable" {
   default = "true"
 }
 variable "node_type" { type = string }
+
+variable "spot_additional_types" {  # additional types for spot instances
+  type = list(string)
+  default = []
+}
 variable "k8s_master" {
   type = object({
     instance_type      = string
