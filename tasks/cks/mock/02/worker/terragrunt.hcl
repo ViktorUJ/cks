@@ -76,36 +76,36 @@ inputs = {
   prefix      = local.vars.locals.prefix
   tags_common = local.vars.locals.tags
   app_name    = "k8s-worker"
-  subnets  = try(dependency.vpc.outputs.subnets)
-  vpc_id      = try(dependency.vpc.outputs.vpc_id)
+  subnets  = try(dependency.vpc.outputs.subnets,{})
+  vpc_id      = try(dependency.vpc.outputs.vpc_id,"")
   ssh_password_enable =local.vars.locals.ssh_password_enable
 
   host_list = concat(
-    try(dependency.cluster1.outputs.hosts),
-    try(dependency.cluster2.outputs.hosts),
-    try(dependency.cluster3.outputs.hosts),
-    try(dependency.cluster4.outputs.hosts),
-    try(dependency.cluster5.outputs.hosts),
-    try(dependency.cluster6.outputs.hosts),
-    try(dependency.cluster7.outputs.hosts),
-    try(dependency.cluster8.outputs.hosts),
-    try(dependency.cluster9.outputs.hosts),
-    try(dependency.cluster10.outputs.hosts),
-    try(dependency.cluster11.outputs.hosts)
+    try(dependency.cluster1.outputs.hosts,[]),
+    try(dependency.cluster2.outputs.hosts,[]),
+    try(dependency.cluster3.outputs.hosts,[]),
+    try(dependency.cluster4.outputs.hosts,[]),
+    try(dependency.cluster5.outputs.hosts,[]),
+    try(dependency.cluster6.outputs.hosts,[]),
+    try(dependency.cluster7.outputs.hosts,[]),
+    try(dependency.cluster8.outputs.hosts,[]),
+    try(dependency.cluster9.outputs.hosts,[]),
+    try(dependency.cluster10.outputs.hosts,[]),
+    try(dependency.cluster11.outputs.hosts,[])
   )
   work_pc = {
     clusters_config = {
-      cluster1  = try(dependency.cluster1.outputs.k8s_config)
-      cluster2  = try(dependency.cluster2.outputs.k8s_config)
-      cluster3  = try(dependency.cluster3.outputs.k8s_config)
-      cluster4  = try(dependency.cluster4.outputs.k8s_config)
-      cluster5  = try(dependency.cluster5.outputs.k8s_config)
-      cluster6  = try(dependency.cluster6.outputs.k8s_config)
-      cluster7  = try(dependency.cluster7.outputs.k8s_config)
-      cluster8  = try(dependency.cluster8.outputs.k8s_config)
-      cluster9  = try(dependency.cluster9.outputs.k8s_config)
-      cluster10 = try(dependency.cluster10.outputs.k8s_config)
-      cluster11 = try(dependency.cluster11.outputs.k8s_config)
+      cluster1  = try(dependency.cluster1.outputs.k8s_config,"")
+      cluster2  = try(dependency.cluster2.outputs.k8s_config,"")
+      cluster3  = try(dependency.cluster3.outputs.k8s_config,"")
+      cluster4  = try(dependency.cluster4.outputs.k8s_config,"")
+      cluster5  = try(dependency.cluster5.outputs.k8s_config,"")
+      cluster6  = try(dependency.cluster6.outputs.k8s_config,"")
+      cluster7  = try(dependency.cluster7.outputs.k8s_config,"")
+      cluster8  = try(dependency.cluster8.outputs.k8s_config,"")
+      cluster9  = try(dependency.cluster9.outputs.k8s_config,"")
+      cluster10 = try(dependency.cluster10.outputs.k8s_config,"")
+      cluster11 = try(dependency.cluster11.outputs.k8s_config,"")
     }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
@@ -122,8 +122,8 @@ inputs = {
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/worker/files/tests.bats"
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-92/tasks/cks/mock/02/worker/files/worker.sh"
     ssh               = {
-      private_key = try(dependency.ssh-keys.outputs.private_key)
-      pub_key     = try(dependency.ssh-keys.outputs.pub_key)
+      private_key = try(dependency.ssh-keys.outputs.private_key,"")
+      pub_key     = try(dependency.ssh-keys.outputs.pub_key,"")
     }
     root_volume      = local.vars.locals.root_volume
     non_root_volumes = {}
