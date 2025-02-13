@@ -18,53 +18,66 @@ terraform {
 
 dependency "ssh-keys" {
   config_path = "../ssh-keys"
+  skip_outputs_if_error     = true
 }
 
 dependency "vpc" {
   config_path = "../vpc"
+  skip_outputs_if_error     = true
 }
 
 
 dependency "cluster1" {
   config_path = "../k8s-1"
+  skip_outputs_if_error     = true
 }
 
 dependency "cluster2" {
   config_path = "../k8s-2"
+  skip_outputs_if_error     = true
 }
 
 dependency "cluster3" {
   config_path = "../k8s-3"
+    skip_outputs_if_error     = true
 }
 
 dependency "cluster4" {
   config_path = "../k8s-4"
+    skip_outputs_if_error     = true
 }
 
 dependency "cluster5" {
   config_path = "../k8s-5"
+    skip_outputs_if_error     = true
 }
 
 dependency "cluster6" {
   config_path = "../k8s-6"
+    skip_outputs_if_error     = true
 }
 
 dependency "cluster7" {
   config_path = "../k8s-7"
+    skip_outputs_if_error     = true
 }
 
 dependency "cluster8" {
   config_path = "../k8s-8"
+    skip_outputs_if_error     = true
 }
 
 dependency "cluster9" {
   config_path = "../k8s-9"
+    skip_outputs_if_error     = true
 }
 dependency "cluster10" {
   config_path = "../k8s-10"
+    skip_outputs_if_error     = true
 }
 dependency "cluster11" {
   config_path = "../k8s-11"
+    skip_outputs_if_error     = true
 }
 inputs = {
   questions_list=local.vars.locals.questions_list
