@@ -18,10 +18,12 @@ terraform {
 
 dependency "ssh-keys" {
   config_path = "../ssh-keys"
+  skip_outputs = true
 }
 
 dependency "vpc" {
   config_path = "../vpc"
+  skip_outputs = true
 }
 
 
