@@ -75,6 +75,14 @@ resource "aws_spot_fleet_request" "worker" {
       id      = aws_launch_template.worker["${each.key}"].id
       version = aws_launch_template.worker["${each.key}"].latest_version
     }
+    dynamic "override" {
+      for_each = length(var.spot_additional_types) > 0 ? var.spot_additional_types : []
+      content {
+        instance_type = override.value
+      }
+    }
+
+
   }
 }
 
