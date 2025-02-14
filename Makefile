@@ -30,13 +30,13 @@ define terragrint_run
 	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
     @case "$(3)" in
         run)
-            @commnand="terragrunt run-all  apply --terragrunt-parallelism=$$(nproc) "
+            @commnand="terragrunt run-all  apply --terragrunt-parallelism=$$(( $$(nproc) + (($$(nproc) <= 2 ? 1 : (($$(nproc) * 150 + 99) / 100 - $$(nproc)) )) )) "
             ;;
         delete)
-            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$$(nproc) "
+            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$$(( $$(nproc) + (($$(nproc) <= 2 ? 1 : (($$(nproc) * 150 + 99) / 100 - $$(nproc)) )) ))  "
             ;;
         output)
-            @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(nproc) "
+            @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(( $$(nproc) + (($$(nproc) <= 2 ? 1 : (($$(nproc) * 150 + 99) / 100 - $$(nproc)) )) ))  "
             ;;
     esac
 
