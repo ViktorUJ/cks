@@ -165,6 +165,7 @@ resource "aws_spot_fleet_request" "master" {
   target_capacity               = 1
   wait_for_fulfillment          = true
   terminate_instances_on_delete = true
+  tags = {type = "work_pc"  , app = var.app_name  ,key= each.key}
   launch_template_config {
     launch_template_specification {
       id      = aws_launch_template.master["enable"].id
