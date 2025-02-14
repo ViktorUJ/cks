@@ -69,7 +69,7 @@ resource "aws_launch_template" "worker" {
 
 locals {
   # Объединяем список spot_additional_types с instance_main_type и удаляем дубликаты
-  all_instance_types = toset(concat(var.spot_additional_types, [var.k8s_worker.instance_type]))
+  all_instance_types = toset(var.spot_additional_types)
 
   # Создаем карту с ключами в формате "{тип}-{сабнет}" и значениями с полями type и subnet
   type_sub_spot = {
