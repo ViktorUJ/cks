@@ -46,7 +46,7 @@ locals {
       disable_kube_proxy="false"
     }
   instance_type        = "t4g.medium" # m5.large | t4g.medium
-  instance_type_worker = "t4g.large" # m5.large | t4g.medium
+  instance_type_worker = "t3.medium" # m5.large | t4g.medium
   spot_additional_types= [
     "t4g.medium" , "t4g.large","m6g.medium",
     "m6g.large","r6g.large","r6g.medium",
