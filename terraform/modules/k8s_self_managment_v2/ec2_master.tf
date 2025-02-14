@@ -163,6 +163,13 @@ resource "aws_spot_fleet_request" "master" {
       id      = aws_launch_template.master["enable"].id
       version = aws_launch_template.master["enable"].latest_version
     }
+    dynamic "overrides" {
+      for_each = var.all_spot_subnet == "true" ? local.type_sub_spot:{}
+      content {
+        instance_type = overrides.value.type
+        subnet_id = overrides.value.subnet
+      }
+    }
   }
 }
 
