@@ -67,6 +67,20 @@ resource "aws_launch_template" "worker" {
 
 
 
+locals {
+  # Объединяем список spot_additional_types с instance_main_type и удаляем дубликаты
+  all_instance_types = toset(concat(var.spot_additional_types, [var.k8s_worker.instance_type]))
+
+  # Создаем карту с ключами в формате "{тип}-{сабнет}" и значениями с полями type и subnet
+  type_sub_spot = {
+    for pair in setproduct(local.all_instance_types, var.subnets) :
+    "${pair[0]}-${pair[1]}" => {
+      type   = pair[0]
+      subnet = pair[1]
+    }
+  }
+}
+
 resource "aws_spot_fleet_request" "worker" {
   for_each                      = local.k8s_worker_spot
   iam_fleet_role                = aws_iam_role.fleet_role["enable"].arn
@@ -81,11 +95,10 @@ resource "aws_spot_fleet_request" "worker" {
     }
 
     dynamic "overrides" {
-      for_each = toset(var.spot_additional_types)
+      for_each = local.type_sub_spot
       content {
-        instance_type = overrides.value
-        # Если необходимо, добавьте другие параметры, например, subnet_id
-        # subnet_id = "subnet-12345678"
+        instance_type = overrides.value.type
+        subnet_id = overrides.value.subnet
       }
     }
   }
