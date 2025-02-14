@@ -31,6 +31,10 @@ variable "spot_additional_types" {  # additional types for spot instances
   type = list(string)
   default = []
 }
+variable "all_spot_subnet" {
+  type = string
+  default = "false"
+}
 variable "k8s_master" {
   type = object({
     instance_type      = string

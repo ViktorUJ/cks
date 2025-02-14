@@ -53,6 +53,7 @@ locals {
     "m7g.medium","m7g.large", "c6g.medium",
     "c6g.large" ,"c6gn.large","r7g.large"
   ]
+  all_spot_subnet      = "true"
   ubuntu_version       = "22.04"
   ami_id               = ""
   key_name             = ""

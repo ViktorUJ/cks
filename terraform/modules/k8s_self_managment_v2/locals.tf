@@ -26,6 +26,15 @@ locals {
   tags_all_k8_worker = merge(local.tags_all, local.tags_k8_worker)
   worker_join        = "${var.s3_k8s_config}/config/${local.USER_ID}/${local.ENV_ID}/${var.cluster_name}-${local.target_time_stamp}/worker_join"
   k8s_config         = "${var.s3_k8s_config}/config/${local.USER_ID}/${local.ENV_ID}/${var.cluster_name}-${local.target_time_stamp}/config"
+  all_instance_types = toset(var.spot_additional_types)
+
+  type_sub_spot = {
+    for pair in setproduct(local.all_instance_types, var.subnets) :
+    "${pair[0]}-${pair[1]}" => {
+      type   = pair[0]
+      subnet = pair[1]
+    }
+  }
 
   worker_nodes = var.node_type == "spot" ? {
     for key, instance in data.aws_instances.spot_fleet_worker :

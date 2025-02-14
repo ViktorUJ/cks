@@ -63,27 +63,6 @@ resource "aws_launch_template" "worker" {
   }
 }
 
-
-
-
-
-locals {
-  all_instance_types = toset(var.spot_additional_types)
-
-  type_sub_spot = {
-    for pair in setproduct(local.all_instance_types, var.subnets) :
-    "${pair[0]}-${pair[1]}" => {
-      type   = pair[0]
-      subnet = pair[1]
-    }
-  }
-}
-
-variable "all_spot_sublet" {
-  type = string
-  default = "false"
-}
-
 resource "aws_spot_fleet_request" "worker" {
   for_each                      = local.k8s_worker_spot
   iam_fleet_role                = aws_iam_role.fleet_role["enable"].arn
@@ -98,7 +77,7 @@ resource "aws_spot_fleet_request" "worker" {
     }
 
     dynamic "overrides" {
-      for_each = var.all_spot_sublet == "true" ? local.type_sub_spot:{}
+      for_each = var.all_spot_subnet == "true" ? local.type_sub_spot:{}
       content {
         instance_type = overrides.value.type
         subnet_id = overrides.value.subnet
@@ -106,10 +85,6 @@ resource "aws_spot_fleet_request" "worker" {
     }
   }
 }
-
-
-
-
 
 
 data "aws_instances" "spot_fleet_worker" {
