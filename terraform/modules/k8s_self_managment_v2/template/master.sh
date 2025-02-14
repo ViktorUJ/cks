@@ -43,10 +43,10 @@ fi
 
 if [ -z "$external_ip_sh" ]; then
    echo "*** kubeadm init without eip "
-   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4 $kubeadm_init_extra_args
+   kubeadm init --ignore-preflight-errors=NumCPU,Mem --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4 $kubeadm_init_extra_args
   else
    echo "*** kubeadm init with eip "
-   kubeadm init --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4,$external_ip_sh $kubeadm_init_extra_args
+   kubeadm init --ignore-preflight-errors=NumCPU,Mem --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4,$external_ip_sh $kubeadm_init_extra_args
 fi
 
 
