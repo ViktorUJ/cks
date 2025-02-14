@@ -79,7 +79,7 @@ inputs = {
   subnets  = try(dependency.vpc.outputs.subnets,[])
   vpc_id      = try(dependency.vpc.outputs.vpc_id,"")
   ssh_password_enable =local.vars.locals.ssh_password_enable
-  all_spot_subnet       = local.vars.locals.all_spot_subnet
+  all_spot_subnet       = "false"
   spot_additional_types = local.vars.locals.spot_additional_types
 
   host_list = concat(
