@@ -81,7 +81,7 @@ locals {
 
 variable "all_spot_sublet" {
   type = string
-  default = "true"
+  default = "false"
 }
 
 resource "aws_spot_fleet_request" "worker" {
