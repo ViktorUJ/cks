@@ -68,10 +68,8 @@ resource "aws_launch_template" "worker" {
 
 
 locals {
-  # Объединяем список spot_additional_types с instance_main_type и удаляем дубликаты
   all_instance_types = toset(var.spot_additional_types)
 
-  # Создаем карту с ключами в формате "{тип}-{сабнет}" и значениями с полями type и subnet
   type_sub_spot = {
     for pair in setproduct(local.all_instance_types, var.subnets) :
     "${pair[0]}-${pair[1]}" => {
@@ -79,6 +77,11 @@ locals {
       subnet = pair[1]
     }
   }
+}
+
+variable "all_spot_sublet" {
+  type = string
+  default = "true"
 }
 
 resource "aws_spot_fleet_request" "worker" {
@@ -95,7 +98,7 @@ resource "aws_spot_fleet_request" "worker" {
     }
 
     dynamic "overrides" {
-      for_each = local.type_sub_spot
+      for_each = var.all_spot_sublet == "true" ? local.type_sub_spot:{}
       content {
         instance_type = overrides.value.type
         subnet_id = overrides.value.subnet
