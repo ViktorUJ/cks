@@ -46,19 +46,14 @@ locals {
       disable_kube_proxy="false"
     }
   instance_type        = "t4g.medium" # m5.large | t4g.medium
-  instance_type_worker = "t3.medium" # m5.large | t4g.medium
-# spot_additional_types= [
-#   "t4g.medium" , "t4g.large","m6g.medium",
-#   "m6g.large","r6g.large","r6g.medium",
-#   "m7g.medium","m7g.large", "c6g.medium",
-#   "c6g.large" ,"c6gn.large","r7g.large"
-# ]
-
-spot_additional_types= [
-"r6g.medium",
-   "r7g.medium"
-
+  instance_type_worker = "t4g.medium" # m5.large | t4g.medium
+ spot_additional_types= [
+   "t4g.medium" , "t4g.large",
+   "m6g.large","r6g.large",
+   "m7g.large",
+   "c6g.large" ,"c6gn.large","r7g.large"
  ]
+
 
   all_spot_subnet      = "true"
   ubuntu_version       = "22.04"
