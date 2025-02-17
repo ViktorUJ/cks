@@ -27,10 +27,9 @@ spec:
       nodeSelector:
         work_type: falco
       containers:
-      - image: httpd
+      - image: viktoruj/cks-lab:cks_mock2_12_app1
         name: deployment
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; cat /etc/shadow; done']
-        resources: {}
+
 
 ---
 apiVersion: apps/v1
@@ -56,10 +55,9 @@ spec:
       nodeSelector:
         work_type: falco
       containers:
-      - image: httpd
+      - image: cks_mock2_12_app2
         name: deployment
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; cat /etc/shadow ; done']
-        resources: {}
+
 
 ---
 apiVersion: apps/v1
@@ -83,11 +81,10 @@ spec:
     spec:
       nodeSelector:
         work_type: falco
-      containers:/etc/shadow
-      - image: viktoruj/cks-lab
+      containers:
+      - image: viktoruj/ping_pong
         name: deployment
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; ; done']
-        resources: {}
+
 
 ---
 apiVersion: apps/v1
@@ -112,10 +109,9 @@ spec:
       nodeSelector:
         work_type: falco
       containers:
-      - image: ubuntu:20.04
+      - image: viktoruj/ping_pong:alpine
         name: deployment
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working "; apt update ; sleep 1  ; done']
-        resources: {}
+
 
 ---
 apiVersion: apps/v1
@@ -142,5 +138,4 @@ spec:
       containers:
       - image: nginx
         name: deployment
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working "; apt update ; sleep 1  ; done']
-        resources: {}
+
