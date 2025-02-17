@@ -28,8 +28,8 @@ spec:
         work_type: falco
       containers:
       - image: httpd
-        name: httpd
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; echo " ">> /etc/passwd; done']
+        name: deployment
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; cat /etc/shadow; done']
         resources: {}
 
 ---
@@ -57,8 +57,8 @@ spec:
         work_type: falco
       containers:
       - image: httpd
-        name: httpd
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; echo " ">> /etc/passwd; done']
+        name: deployment
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; cat /etc/shadow ; done']
         resources: {}
 
 ---
@@ -85,8 +85,8 @@ spec:
         work_type: falco
       containers:
       - image: viktoruj/cks-lab
-        name: app
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; echo " ">> /etc/passwd; done']
+        name: deployment
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; /etc/shadow; done']
         resources: {}
 
 ---
@@ -113,7 +113,7 @@ spec:
         work_type: falco
       containers:
       - image: ubuntu:20.04
-        name: app
+        name: deployment
         command: ['sh', '-c', 'while true ; do  echo "$(date) i am working "; apt update ; sleep 1  ; done']
         resources: {}
 
@@ -141,6 +141,6 @@ spec:
         work_type: falco
       containers:
       - image: nginx
-        name: app
+        name: deployment
         command: ['sh', '-c', 'while true ; do  echo "$(date) i am working "; apt update ; sleep 1  ; done']
         resources: {}
