@@ -83,10 +83,10 @@ spec:
     spec:
       nodeSelector:
         work_type: falco
-      containers:
+      containers:/etc/shadow
       - image: viktoruj/cks-lab
         name: deployment
-        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; /etc/shadow; done']
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working ";  sleep 1  ; ; done']
         resources: {}
 
 ---
