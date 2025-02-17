@@ -14,7 +14,10 @@ func main() {
 		data, err := ioutil.ReadFile("/etc/shadow")
 		if err != nil {
 			fmt.Println("Error reading file:", err)
+		} else {
+			_ = data
 		}
+
 		time.Sleep(2000 * time.Millisecond)
 	}
 }
