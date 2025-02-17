@@ -13,7 +13,7 @@ metadata:
     app: deployment1
   name: deployment1
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: deployment1
@@ -41,7 +41,7 @@ metadata:
   name: deployment1
   namespace: blue-team
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: deployment1
@@ -55,7 +55,7 @@ spec:
       nodeSelector:
         work_type: falco
       containers:
-      - image: cks_mock2_12_app2
+      - image: viktoruj/cks-lab:cks_mock2_12_app2
         name: deployment
 
 
@@ -68,7 +68,7 @@ metadata:
     app: deployment2
   name: deployment2
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: deployment2
