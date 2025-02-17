@@ -8,6 +8,6 @@ import (
 func main() {
 	for {
 		fmt.Println("I am working")
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
 	}
 }
