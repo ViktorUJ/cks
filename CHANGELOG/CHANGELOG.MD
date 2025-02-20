@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.18.1 (20.02.2025)
+### Features
+
+* [cks mock exam 02](../tasks/cks/mock/02) is added.
+* [cks mock exam 02 solutions](../tasks/cks/mock/02/worker/files/solutions) is added.
+* **spot_additional_type** is added to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module. Now you can use spot instances with additional type. [example](../tasks/cks/mock/02/env.hcl)
+* **all_spot_subnet** is added to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module. Now you can use spot instances in all subnets. [example](../tasks/cks/mock/02/env.hcl)
+* **--terragrunt-parallelism** now is depends on cpu cores. It helps you create environments faster on multi-core computers.
+
+
 ## 0.17.1 (09.01.2025)
 ### Features
 
