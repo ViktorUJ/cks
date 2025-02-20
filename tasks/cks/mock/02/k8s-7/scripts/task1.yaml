@@ -138,4 +138,3 @@ spec:
       containers:
       - image: nginx
         name: deployment
-

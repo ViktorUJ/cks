@@ -27,12 +27,12 @@ variable "ssh_password_enable" {
 }
 variable "node_type" { type = string }
 
-variable "spot_additional_types" {  # additional types for spot instances
-  type = list(string)
+variable "spot_additional_types" { # additional types for spot instances
+  type    = list(string)
   default = []
 }
 variable "all_spot_subnet" {
-  type = string
+  type    = string
   default = "false"
 }
 variable "k8s_master" {
