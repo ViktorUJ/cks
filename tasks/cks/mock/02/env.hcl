@@ -1,6 +1,6 @@
 locals {
-  questions_list = "https://github.com/ViktorUJ/cks/blob/AG-92/tasks/cks/mock/02/README.MD"
-  solutions_scripts="https://github.com/ViktorUJ/cks/tree/AG-92/tasks/cks/mock/02/worker/files/solutions"
+  questions_list = "https://github.com/ViktorUJ/cks/blob/0.18.1/tasks/cks/mock/02/README.MD"
+  solutions_scripts="https://github.com/ViktorUJ/cks/tree/0.18.1/tasks/cks/mock/02/worker/files/solutions"
   solutions_video="need to update . old version https://youtu.be/I8CPwcGbrG8"
   debug_output   = "false"
   region         = "eu-north-1"
