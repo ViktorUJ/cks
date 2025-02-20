@@ -1,11 +1,3 @@
-# under reconstruction
-
-
-
-
-
-
-
 
 # Allowed resources
 **Kubernetes Documentation:**
@@ -25,6 +17,19 @@ This includes all available language translations of these pages (e.g. https://f
 
 **App Armor**:
 Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
+
+**Cilium** 
+Documentation  https://docs.cilium.io/en/stable
+
+**NGINX Ingress Controller**
+Documentation  https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/
+
+**Bom**
+Documentation  https://kubernetes-sigs.github.io/bom/cli-reference/
+
+**Etcd** 
+documentation https://etcd.io/docs/
+
 
 ![preview](./preview.png)
 
