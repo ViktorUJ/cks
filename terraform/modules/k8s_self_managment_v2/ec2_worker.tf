@@ -63,17 +63,26 @@ resource "aws_launch_template" "worker" {
   }
 }
 
-
 resource "aws_spot_fleet_request" "worker" {
   for_each                      = local.k8s_worker_spot
   iam_fleet_role                = aws_iam_role.fleet_role["enable"].arn
   target_capacity               = 1
   wait_for_fulfillment          = true
   terminate_instances_on_delete = true
+  tags                          = { type = "master", env = var.cluster_name, app = var.app_name, key = each.key }
+
   launch_template_config {
     launch_template_specification {
-      id      = aws_launch_template.worker["${each.key}"].id
-      version = aws_launch_template.worker["${each.key}"].latest_version
+      id      = aws_launch_template.worker[each.key].id
+      version = aws_launch_template.worker[each.key].latest_version
+    }
+
+    dynamic "overrides" {
+      for_each = var.all_spot_subnet == "true" ? local.type_sub_spot : {}
+      content {
+        instance_type = overrides.value.type
+        subnet_id     = overrides.value.subnet
+      }
     }
   }
 }

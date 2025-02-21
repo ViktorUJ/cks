@@ -26,6 +26,16 @@ variable "aws_eks_cluster_eks_cluster_arn" {
 variable "ssh_password_enable" {
   default = "true"
 }
+
+variable "spot_additional_types" { # additional types for spot instances
+  type    = list(string)
+  default = []
+}
+variable "all_spot_subnet" {
+  type    = string
+  default = "false"
+}
+
 variable "debug_output" {
   default = "false" # false | true
 }

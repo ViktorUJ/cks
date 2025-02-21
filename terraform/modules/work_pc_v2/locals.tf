@@ -1,11 +1,20 @@
 locals {
-  USER_ID       = var.USER_ID == "" ? "defaultUser" : var.USER_ID
-  ENV_ID        = var.ENV_ID == "" ? "defaultId" : var.ENV_ID
-  prefix_id     = "${local.USER_ID}_${local.ENV_ID}"
-  prefix        = "${local.prefix_id}_${var.prefix}"
-  item_id_lock  = "CMDB_lock_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
-  item_id_data  = "CMDB_data_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
-  subnets       = var.subnets
+  USER_ID            = var.USER_ID == "" ? "defaultUser" : var.USER_ID
+  ENV_ID             = var.ENV_ID == "" ? "defaultId" : var.ENV_ID
+  prefix_id          = "${local.USER_ID}_${local.ENV_ID}"
+  prefix             = "${local.prefix_id}_${var.prefix}"
+  item_id_lock       = "CMDB_lock_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
+  item_id_data       = "CMDB_data_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
+  subnets            = var.subnets
+  all_instance_types = toset(var.spot_additional_types)
+
+  type_sub_spot = {
+    for pair in setproduct(local.all_instance_types, var.subnets) :
+    "${pair[0]}-${pair[1]}" => {
+      type   = pair[0]
+      subnet = pair[1]
+    }
+  }
   worker_pc_ssh = var.ssh_password_enable == "true" ? "   ssh ubuntu@${local.worker_pc_ip} password= ${random_string.ssh.result}   " : "   ssh ubuntu@${local.worker_pc_ip}   "
   tags_app = {
     "Name"     = "${local.prefix}-${var.app_name}"
