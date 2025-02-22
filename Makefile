@@ -5,6 +5,7 @@ region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl |g
 backend_bucket := $(shell grep '^  backend_bucket' terraform/environments/terragrunt.hcl | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
 dynamodb_table := $(backend_bucket)-lock
 base_dir := $(shell pwd)
+nproc := $(shell if [ "$(shell uname)" = "Darwin" ]; then sysctl -n hw.physicalcpu; else nproc; fi)
 BASE_PATH := $(shell pwd)
 VENV_PATH := $(BASE_PATH)/venv
 VENV_BIN_PATH := $(VENV_PATH)/bin/
@@ -30,13 +31,13 @@ define terragrint_run
 	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
     @case "$(3)" in
         run)
-            @commnand="terragrunt run-all  apply --terragrunt-parallelism=$$(( $$(nproc) + (($$(nproc) <= 2 ? 1 : (($$(nproc) * 150 + 99) / 100 - $$(nproc)) )) )) "
+            @commnand="terragrunt run-all  apply --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) )) "
             ;;
         delete)
-            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$$(( $$(nproc) + (($$(nproc) <= 2 ? 1 : (($$(nproc) * 150 + 99) / 100 - $$(nproc)) )) ))  "
+            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
             ;;
         output)
-            @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(( $$(nproc) + (($$(nproc) <= 2 ? 1 : (($$(nproc) * 150 + 99) / 100 - $$(nproc)) )) ))  "
+            @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
             ;;
     esac
 
