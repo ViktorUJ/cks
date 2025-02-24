@@ -54,7 +54,7 @@ define terragrint_run
 	@echo "terragrunt_env_dir= $$terragrunt_env_dir command= $$commnand"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@cp -r $(base_dir)/tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand
+	export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand
     @case "$(3)" in
         delete)
             @rm -rf $$terragrunt_env_dir
