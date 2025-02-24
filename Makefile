@@ -39,6 +39,9 @@ define terragrint_run
         output)
             @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
             ;;
+        init)
+        	@commnand="terragrunt run-all  init --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
+			;;
     esac
 
     @case "$(4)" in
@@ -126,6 +129,9 @@ delete_cks_mock_clean:
 
 output_cks_mock:
 	$(call terragrint_run,cks,mock,output)
+
+init_cks_mock:
+	$(call terragrint_run,cks,mock,init)
 
 #CKAD mock
 run_ckad_mock:

@@ -11,8 +11,9 @@ RUN apt update && apt install curl unzip make git wget vim jq  -y && \
     terragrunt --version && \
     curl "https://releases.hashicorp.com/terraform/1.10.5/terraform_1.10.5_linux_arm64.zip" -o "terraform.zip" -s  && \
     unzip terraform.zip >/dev/null && chmod +x terraform.zip  && \
-    mv terraform /usr/bin/  && rm terraform.zip && terraform --version
+    mv terraform /usr/bin/  && rm terraform.zip && terraform --version \
 
-ENV APP_ENV=production
+ENV TF_PLUGIN_CACHE_DIR="/root/.terraform.d/plugin-cache"
+RUN git clone https://github.com/ViktorUJ/cks.git
 
 ENTRYPOINT ["/bin/bash"]
