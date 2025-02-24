@@ -6,4 +6,4 @@ venv
 **.terraform
 **.__pycache__
 
-terraform/environments/**/**
+#terraform/environments/**/**
