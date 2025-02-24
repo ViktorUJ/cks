@@ -13,5 +13,8 @@ RUN apt update && apt install curl unzip make git wget vim jq  -y && \
     unzip terraform.zip >/dev/null && chmod +x terraform.zip  && \
     mv terraform /usr/bin/  && rm terraform.zip && terraform --version
 
+RUN mkdir /root/.terraform.d/plugin-cache -p && chmod 777 -R /root/.terraform.d
+ENV TF_PLUGIN_CACHE_DIR="/root/.terraform.d/plugin-cache"
+ENV TG_PROVIDER_CACHE=1
 
 ENTRYPOINT ["/bin/bash"]
