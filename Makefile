@@ -40,7 +40,7 @@ define terragrint_run
             @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
             ;;
         init)
-        	@commnand="terragrunt run-all  init --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
+        	@commnand="cd vpc; terragrunt init ; cd .. ; cd ssh-keys ; terragrunt init ;cd .. ;  cd worker ; terragrunt init ; cd .. ; cd k8s-1 ; terragrunt init ; cd .. "
 			;;
     esac
 
