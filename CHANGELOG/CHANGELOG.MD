@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.1 (*.03.2025)
+### Features
+
+* docker image for runner(viktoruj/runner) is updated(terraform and terragrunt versions are updated). 
+
+
 ## 0.18.1 (20.02.2025)
 ### Features
 
