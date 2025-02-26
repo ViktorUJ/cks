@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net"
@@ -30,41 +31,41 @@ type CpuUsageProfile struct {
 }
 
 var (
-	requestsPerSecond   float64
-	requestsPerMinute   float64
-	lastRequestTime     time.Time
-	requestsCount       uint64
-	serverName          string
-	hostName            string
-	logPath             string
-	enableOutput        string
-	enableLoadCpu       string
-	enableLoadMemory    string
-	enableLogLoadMemory string
-	enableLogLoadCpu    string
-	delayStart          string
-	enableDefaultHostName     string
-	memoryProfiles      []MemoryUsageProfile
-	cpuProfiles         []CpuUsageProfile
-	cpuMaxProc          int
+	requestsPerSecond     float64
+	requestsPerMinute     float64
+	lastRequestTime       time.Time
+	requestsCount         uint64
+	serverName            string
+	hostName              string
+	logPath               string
+	enableOutput          string
+	enableLoadCpu         string
+	enableLoadMemory      string
+	enableLogLoadMemory   string
+	enableLogLoadCpu      string
+	delayStart            string
+	enableDefaultHostName string
+	memoryProfiles        []MemoryUsageProfile
+	cpuProfiles           []CpuUsageProfile
+	cpuMaxProc            int
 )
 
 func init() {
 	hostName = os.Getenv("HOSTNAME")
 
-    enableDefaultHostName = os.Getenv("ENABLE_DEFAULT_HOSTNAME")
-  	if enableDefaultHostName == "" {
+	enableDefaultHostName = os.Getenv("ENABLE_DEFAULT_HOSTNAME")
+	if enableDefaultHostName == "" {
 		enableDefaultHostName = "true"
 	}
 
-    delayStart = os.Getenv("DELAY_START")
-  	if delayStart == "" {
+	delayStart = os.Getenv("DELAY_START")
+	if delayStart == "" {
 		delayStart = "0"
 	}
 
-    if hostName == "" || enableDefaultHostName == "true" {
-        hostName = "ping_pong_server"
-    }
+	if hostName == "" || enableDefaultHostName == "true" {
+		hostName = "ping_pong_server"
+	}
 
 	serverName = os.Getenv("SERVER_NAME")
 	if serverName == "" {
@@ -325,13 +326,38 @@ func sendLog(message string) {
 	}
 }
 
+// getVar in JSON fromat
+func getVarHandler(w http.ResponseWriter, r *http.Request) {
+	vars := map[string]interface{}{
+		"requestsPerSecond":     requestsPerSecond,
+		"requestsPerMinute":     requestsPerMinute,
+		"lastRequestTime":       lastRequestTime.Format(time.RFC3339),
+		"requestsCount":         atomic.LoadUint64(&requestsCount),
+		"serverName":            serverName,
+		"hostName":              hostName,
+		"logPath":               logPath,
+		"enableOutput":          enableOutput,
+		"enableLoadCpu":         enableLoadCpu,
+		"enableLoadMemory":      enableLoadMemory,
+		"enableLogLoadMemory":   enableLogLoadMemory,
+		"enableLogLoadCpu":      enableLogLoadCpu,
+		"delayStart":            delayStart,
+		"enableDefaultHostName": enableDefaultHostName,
+		"cpuMaxProc":            cpuMaxProc,
+		"memoryProfiles":        memoryProfiles,
+		"cpuProfiles":           cpuProfiles,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(vars)
+}
 func main() {
-    parsedDelay, err := strconv.Atoi(delayStart)
-    if err != nil {
-        parsedDelay = 0
-    }
-    sendLog(fmt.Sprintf("DELAY START %v  , second", delayStart))
-    time.Sleep(time.Duration(parsedDelay) * time.Second)
+	parsedDelay, err := strconv.Atoi(delayStart)
+	if err != nil {
+		parsedDelay = 0
+	}
+	sendLog(fmt.Sprintf("DELAY START %v  , second", delayStart))
+	time.Sleep(time.Duration(parsedDelay) * time.Second)
 
 	for _, env := range os.Environ() {
 		sendLog(env)
@@ -346,6 +372,7 @@ func main() {
 	if enableLoadCpu == "true" {
 		go cpuUsage()
 	}
+	http.HandleFunc("/ping-pong-api/getVar", getVarHandler)
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
 		sendLog("SRV_PORT is not set, default port :  8080")
