@@ -69,6 +69,10 @@ case $release in
 bin)
    build_cross_binaries
 ;;
+bin_deploy)
+   aws s3 cp ./dist s3://sre-platform.aws-guru.com/download/pingpong/ --recursive --profile deploy
+   aws cloudfront create-invalidation --distribution-id E1HF54QM48F9SB --paths "/download/pingpong/*" --profile deploy
+;;
 scratch)
    docker buildx build --platform linux/arm64 --load -t viktoruj/ping_pong:${latest_commit_hash}-arm64   .
    docker buildx build --platform linux/amd64 --load -t viktoruj/ping_pong:${latest_commit_hash}-amd64   .
