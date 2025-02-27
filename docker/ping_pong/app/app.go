@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -15,6 +18,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/process"
+	"github.com/klauspost/cpuid/v2"
 )
 
 type MemoryUsageProfile struct {
@@ -30,41 +39,41 @@ type CpuUsageProfile struct {
 }
 
 var (
-	requestsPerSecond   float64
-	requestsPerMinute   float64
-	lastRequestTime     time.Time
-	requestsCount       uint64
-	serverName          string
-	hostName            string
-	logPath             string
-	enableOutput        string
-	enableLoadCpu       string
-	enableLoadMemory    string
-	enableLogLoadMemory string
-	enableLogLoadCpu    string
-	delayStart          string
-	enableDefaultHostName     string
-	memoryProfiles      []MemoryUsageProfile
-	cpuProfiles         []CpuUsageProfile
-	cpuMaxProc          int
+	requestsPerSecond     float64
+	requestsPerMinute     float64
+	lastRequestTime       time.Time
+	requestsCount         uint64
+	serverName            string
+	hostName              string
+	logPath               string
+	enableOutput          string
+	enableLoadCpu         string
+	enableLoadMemory      string
+	enableLogLoadMemory   string
+	enableLogLoadCpu      string
+	delayStart            string
+	enableDefaultHostName string
+	memoryProfiles        []MemoryUsageProfile
+	cpuProfiles           []CpuUsageProfile
+	cpuMaxProc            int
 )
 
 func init() {
 	hostName = os.Getenv("HOSTNAME")
 
-    enableDefaultHostName = os.Getenv("ENABLE_DEFAULT_HOSTNAME")
-  	if enableDefaultHostName == "" {
+	enableDefaultHostName = os.Getenv("ENABLE_DEFAULT_HOSTNAME")
+	if enableDefaultHostName == "" {
 		enableDefaultHostName = "true"
 	}
 
-    delayStart = os.Getenv("DELAY_START")
-  	if delayStart == "" {
+	delayStart = os.Getenv("DELAY_START")
+	if delayStart == "" {
 		delayStart = "0"
 	}
 
-    if hostName == "" || enableDefaultHostName == "true" {
-        hostName = "ping_pong_server"
-    }
+	if hostName == "" || enableDefaultHostName == "true" {
+		hostName = "ping_pong_server"
+	}
 
 	serverName = os.Getenv("SERVER_NAME")
 	if serverName == "" {
@@ -325,13 +334,458 @@ func sendLog(message string) {
 	}
 }
 
+// getVar in JSON fromat
+func getVarHandler(w http.ResponseWriter, r *http.Request) {
+	vars := map[string]interface{}{
+		"requestsPerSecond":     requestsPerSecond,
+		"requestsPerMinute":     requestsPerMinute,
+		"lastRequestTime":       lastRequestTime.Format(time.RFC3339),
+		"requestsCount":         atomic.LoadUint64(&requestsCount),
+		"serverName":            serverName,
+		"hostName":              hostName,
+		"logPath":               logPath,
+		"enableOutput":          enableOutput,
+		"enableLoadCpu":         enableLoadCpu,
+		"enableLoadMemory":      enableLoadMemory,
+		"enableLogLoadMemory":   enableLogLoadMemory,
+		"enableLogLoadCpu":      enableLogLoadCpu,
+		"delayStart":            delayStart,
+		"enableDefaultHostName": enableDefaultHostName,
+		"cpuMaxProc":            cpuMaxProc,
+		"memoryProfiles":        memoryProfiles,
+		"cpuProfiles":           cpuProfiles,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(vars)
+}
+
+// Metric API  JSON
+func getMetricHandler(w http.ResponseWriter, r *http.Request) {
+	metrics := map[string]interface{}{
+		"requests_total":      atomic.LoadUint64(&requestsCount),
+		"requests_per_second": requestsPerSecond,
+		"requests_per_minute": requestsPerMinute,
+		"goroutines":          runtime.NumGoroutine(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(metrics)
+}
+
+func panicHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("Panic occurred:", err)
+			os.Exit(1)
+		}
+	}()
+	panic("Test panic")
+}
+
+func setVarHandler(w http.ResponseWriter, r *http.Request) {
+	// Метод запроса должен быть POST
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	// Декодируем входной JSON в мапу
+	var updates map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	changed := false
+	changes := make(map[string]map[string]string)
+
+	// serverName
+	if val, ok := updates["serverName"]; ok {
+		if s, ok := val.(string); ok && s != serverName {
+			changes["serverName"] = map[string]string{"old": serverName, "new": s}
+			serverName = s
+			changed = true
+		}
+	}
+	// hostName
+	if val, ok := updates["hostName"]; ok {
+		if s, ok := val.(string); ok && s != hostName {
+			changes["hostName"] = map[string]string{"old": hostName, "new": s}
+			hostName = s
+			changed = true
+		}
+	}
+	// logPath
+	if val, ok := updates["logPath"]; ok {
+		if s, ok := val.(string); ok && s != logPath {
+			changes["logPath"] = map[string]string{"old": logPath, "new": s}
+			logPath = s
+			changed = true
+		}
+	}
+	// enableOutput
+	if val, ok := updates["enableOutput"]; ok {
+		if s, ok := val.(string); ok && s != enableOutput {
+			changes["enableOutput"] = map[string]string{"old": enableOutput, "new": s}
+			enableOutput = s
+			changed = true
+		}
+	}
+	// enableLoadCpu
+	if val, ok := updates["enableLoadCpu"]; ok {
+		if s, ok := val.(string); ok && s != enableLoadCpu {
+			changes["enableLoadCpu"] = map[string]string{"old": enableLoadCpu, "new": s}
+			enableLoadCpu = s
+			changed = true
+		}
+	}
+	// enableLoadMemory
+	if val, ok := updates["enableLoadMemory"]; ok {
+		if s, ok := val.(string); ok && s != enableLoadMemory {
+			changes["enableLoadMemory"] = map[string]string{"old": enableLoadMemory, "new": s}
+			enableLoadMemory = s
+			changed = true
+		}
+	}
+	// enableLogLoadMemory
+	if val, ok := updates["enableLogLoadMemory"]; ok {
+		if s, ok := val.(string); ok && s != enableLogLoadMemory {
+			changes["enableLogLoadMemory"] = map[string]string{"old": enableLogLoadMemory, "new": s}
+			enableLogLoadMemory = s
+			changed = true
+		}
+	}
+	// enableLogLoadCpu
+	if val, ok := updates["enableLogLoadCpu"]; ok {
+		if s, ok := val.(string); ok && s != enableLogLoadCpu {
+			changes["enableLogLoadCpu"] = map[string]string{"old": enableLogLoadCpu, "new": s}
+			enableLogLoadCpu = s
+			changed = true
+		}
+	}
+	// delayStart
+	if val, ok := updates["delayStart"]; ok {
+		if s, ok := val.(string); ok && s != delayStart {
+			changes["delayStart"] = map[string]string{"old": delayStart, "new": s}
+			delayStart = s
+			changed = true
+		}
+	}
+	// enableDefaultHostName
+	if val, ok := updates["enableDefaultHostName"]; ok {
+		if s, ok := val.(string); ok && s != enableDefaultHostName {
+			changes["enableDefaultHostName"] = map[string]string{"old": enableDefaultHostName, "new": s}
+			enableDefaultHostName = s
+			changed = true
+		}
+	}
+	// cpuMaxProc
+	if val, ok := updates["cpuMaxProc"]; ok {
+		switch v := val.(type) {
+		case float64:
+			intVal := int(v)
+			if intVal != cpuMaxProc {
+				changes["cpuMaxProc"] = map[string]string{
+					"old": strconv.Itoa(cpuMaxProc),
+					"new": strconv.Itoa(intVal),
+				}
+				cpuMaxProc = intVal
+				changed = true
+			}
+		case string:
+			intVal, err := strconv.Atoi(v)
+			if err == nil && intVal != cpuMaxProc {
+				changes["cpuMaxProc"] = map[string]string{
+					"old": strconv.Itoa(cpuMaxProc),
+					"new": v,
+				}
+				cpuMaxProc = intVal
+				changed = true
+			}
+		}
+		runtime.GOMAXPROCS(cpuMaxProc)
+	}
+
+	// Возвращаем ответ в JSON
+	w.Header().Set("Content-Type", "application/json")
+	if changed {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "Variables updated. Handlers reloaded.",
+			"changes": changes,
+		})
+	} else {
+		json.NewEncoder(w).Encode(map[string]string{"status": "No changes detected."})
+	}
+}
+
+// roundToOneDecimal rounds a float to 1 decimal place
+func roundToOneDecimal(value float64) float64 {
+	return math.Round(value*10) / 10
+}
+
+func roundFloat(value float64, precision int) float64 {
+	multiplier := math.Pow(10, float64(precision))
+	return math.Round(value*multiplier) / multiplier
+}
+
+func getTopProcesses() (topCPU, topMemory []map[string]interface{}) {
+	processes, err := process.Processes()
+	if err != nil {
+		fmt.Println("Error retrieving processes:", err)
+		return nil, nil
+	}
+
+	var cpuList, memList []map[string]interface{}
+
+	for _, p := range processes {
+		name, err := p.Name()
+		if err != nil {
+			continue // Skip process if we can't retrieve its name
+		}
+
+		cpuPercent, err := p.CPUPercent()
+		if err != nil {
+			continue // Skip process if we can't retrieve CPU usage
+		}
+
+		memInfo, err := p.MemoryInfo()
+		if err != nil || memInfo == nil {
+			continue // Skip process if memory info is not available
+		}
+
+		cpuList = append(cpuList, map[string]interface{}{
+			"name":      name,
+			"cpu_usage": roundFloat(cpuPercent, 1),
+			"unit":      "percentage",
+		})
+
+		memList = append(memList, map[string]interface{}{
+			"name":         name,
+			"memory_usage": roundFloat(float64(memInfo.RSS)/1024/1024, 1),
+			"unit":         "MB",
+		})
+	}
+
+	// Sort by highest CPU and memory usage
+	sort.Slice(cpuList, func(i, j int) bool {
+		return cpuList[i]["cpu_usage"].(float64) > cpuList[j]["cpu_usage"].(float64)
+	})
+	sort.Slice(memList, func(i, j int) bool {
+		return memList[i]["memory_usage"].(float64) > memList[j]["memory_usage"].(float64)
+	})
+
+	// Keep only top 5 processes
+	if len(cpuList) > 5 {
+		cpuList = cpuList[:5]
+	}
+	if len(memList) > 5 {
+		memList = memList[:5]
+	}
+
+	return cpuList, memList
+}
+
+// getNetworkInterfaces retrieves details of available network interfaces and returns a map with interface names as keys
+func getNetworkInterfaces() map[string]map[string]interface{} {
+	interfaces, _ := net.Interfaces() // Uses Go's standard net package
+	networkInfo := make(map[string]map[string]interface{})
+
+	for _, iface := range interfaces {
+		ipv4 := []string{}
+		ipv6 := []string{}
+
+		// Retrieve IP addresses
+		addrs, err := iface.Addrs()
+		if err == nil {
+			for _, addr := range addrs {
+				ip, _, err := net.ParseCIDR(addr.String())
+				if err != nil {
+					continue
+				}
+				if ip.To4() != nil {
+					ipv4 = append(ipv4, ip.String()) // Store IPv4 addresses
+				} else {
+					ipv6 = append(ipv6, ip.String()) // Store IPv6 addresses
+				}
+			}
+		}
+
+		// Store data in a map where the key is the interface name
+		networkInfo[iface.Name] = map[string]interface{}{
+			"mac_address": iface.HardwareAddr.String(), // MAC address
+			"status":      iface.Flags.String(),        // Interface status
+			"ipv4":        ipv4,                        // List of IPv4 addresses
+			"ipv6":        ipv6,                        // List of IPv6 addresses
+		}
+	}
+
+	return networkInfo
+}
+
+// getGPUInfo retrieves details about available GPUs using CPU and system info
+func getGPUInfo() []map[string]interface{} {
+	gpuList := []map[string]interface{}{}
+
+	// Try to get GPU information from CPU Vendor (for integrated GPUs)
+	if cpuid.CPU.VendorString != "" {
+		gpuList = append(gpuList, map[string]interface{}{
+			"name":   "Integrated GPU",
+			"vendor": cpuid.CPU.VendorString,
+			"memory": "N/A",
+		})
+	}
+
+	// If there is no detected GPU, provide a fallback
+	if len(gpuList) == 0 {
+		gpuList = append(gpuList, map[string]interface{}{
+			"name":   "Unknown GPU",
+			"vendor": "Unknown Vendor",
+			"memory": "N/A",
+		})
+	}
+
+	return gpuList
+}
+
+func osInfoHandler(w http.ResponseWriter, r *http.Request) {
+	// Get CPU information
+	cpuUsage, _ := cpu.Percent(0, false)
+	cpuPerCore, _ := cpu.Percent(0, true)
+
+	// Get memory information
+	memStats, _ := mem.VirtualMemory()
+
+	// Get OS version
+	hostInfo, _ := host.Info()
+
+	// Get Go runtime information
+	goInfo := map[string]interface{}{
+		"version":       runtime.Version(),
+		"gomaxprocs":    runtime.GOMAXPROCS(0),
+		"num_goroutine": runtime.NumGoroutine(),
+		"num_cpu":       runtime.NumCPU(),
+	}
+
+	// Get architecture details
+	archInfo := map[string]interface{}{
+		"architecture": runtime.GOARCH,
+		"goamd64":      os.Getenv("GOAMD64"),
+		"goarm":        os.Getenv("GOARM"),
+	}
+
+	// Get disk partitions (logical disks)
+	partitions, _ := disk.Partitions(false)
+	logicalDisks := []map[string]interface{}{}
+
+	for _, p := range partitions {
+		usage, err := disk.Usage(p.Mountpoint)
+		if err == nil {
+			logicalDisks = append(logicalDisks, map[string]interface{}{
+				"device": p.Device,
+				"mount":  p.Mountpoint,
+				"total": map[string]interface{}{
+					"value": usage.Total / 1024 / 1024 / 1024,
+					"unit":  "GB",
+				},
+				"used": map[string]interface{}{
+					"value": usage.Used / 1024 / 1024 / 1024,
+					"unit":  "GB",
+				},
+				"free": map[string]interface{}{
+					"value": usage.Free / 1024 / 1024 / 1024,
+					"unit":  "GB",
+				},
+				"usage": map[string]interface{}{
+					"value": roundFloat(usage.UsedPercent, 1),
+					"unit":  "percentage",
+				},
+			})
+		}
+	}
+
+	// Get physical disk I/O statistics
+	physicalDisks, _ := disk.IOCounters()
+	physicalDiskInfo := []map[string]interface{}{}
+
+	for name, stats := range physicalDisks {
+		physicalDiskInfo = append(physicalDiskInfo, map[string]interface{}{
+			"name":        name,
+			"read_bytes":  stats.ReadBytes,
+			"write_bytes": stats.WriteBytes,
+			"read_count":  stats.ReadCount,
+			"write_count": stats.WriteCount,
+		})
+	}
+
+	// Get top processes
+	topCPU, topMemory := getTopProcesses()
+
+	// Get network interfaces
+	networkInfo := getNetworkInterfaces()
+
+	// Get GPU info
+	gpuInfo := getGPUInfo()
+
+	// Prepare CPU core usage details
+	cpuCores := []map[string]interface{}{}
+	for i, usage := range cpuPerCore {
+		cpuCores = append(cpuCores, map[string]interface{}{
+			"core":  i + 1,
+			"usage": roundFloat(usage, 1),
+			"unit":  "percentage",
+		})
+	}
+
+	// Prepare JSON response
+	info := map[string]interface{}{
+		"os": map[string]interface{}{
+			"name":    runtime.GOOS,
+			"version": hostInfo.PlatformVersion,
+		},
+		"cpu": map[string]interface{}{
+			"usage_total": map[string]interface{}{
+				"value": roundFloat(cpuUsage[0], 1),
+				"unit":  "percentage",
+			},
+			"cores": cpuCores,
+		},
+		"memory": map[string]interface{}{
+			"total": map[string]interface{}{
+				"value": memStats.Total / 1024 / 1024,
+				"unit":  "MB",
+			},
+			"used": map[string]interface{}{
+				"value": memStats.Used / 1024 / 1024,
+				"unit":  "MB",
+			},
+			"free": map[string]interface{}{
+				"value": memStats.Available / 1024 / 1024,
+				"unit":  "MB",
+			},
+		},
+		"architecture":   archInfo,
+		"network":        networkInfo,
+		"logical_disks":  logicalDisks,
+		"physical_disks": physicalDiskInfo,
+		"top_processes": map[string]interface{}{
+			"cpu":    topCPU,
+			"memory": topMemory,
+		},
+		"go": goInfo,
+		"gpu": gpuInfo,
+	}
+
+	// Send response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(info)
+}
+
 func main() {
-    parsedDelay, err := strconv.Atoi(delayStart)
-    if err != nil {
-        parsedDelay = 0
-    }
-    sendLog(fmt.Sprintf("DELAY START %v  , second", delayStart))
-    time.Sleep(time.Duration(parsedDelay) * time.Second)
+	parsedDelay, err := strconv.Atoi(delayStart)
+	if err != nil {
+		parsedDelay = 0
+	}
+	sendLog(fmt.Sprintf("DELAY START %v  , second", delayStart))
+	time.Sleep(time.Duration(parsedDelay) * time.Second)
 
 	for _, env := range os.Environ() {
 		sendLog(env)
@@ -346,6 +800,11 @@ func main() {
 	if enableLoadCpu == "true" {
 		go cpuUsage()
 	}
+	http.HandleFunc("/ping-pong-api/getVar", getVarHandler)
+	http.HandleFunc("/ping-pong-api/getMetric", getMetricHandler)
+	http.HandleFunc("/ping-pong-api/setVar", setVarHandler)
+	http.HandleFunc("/ping-pong-api/panic", panicHandler)
+	http.HandleFunc("/ping-pong-api/osInfo", osInfoHandler)
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
 		sendLog("SRV_PORT is not set, default port :  8080")
