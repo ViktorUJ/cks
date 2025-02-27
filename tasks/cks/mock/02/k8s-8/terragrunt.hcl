@@ -24,16 +24,16 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  region       = local.vars.locals.region
-  aws          = local.vars.locals.aws
-  prefix       = "cluster8"
-  tags_common  = local.vars.locals.tags
-  app_name     = "k8s"
-  subnets      = dependency.vpc.outputs.subnets
-  vpc_id       = dependency.vpc.outputs.vpc_id
-  cluster_name = "k8s8"
-  node_type    = local.vars.locals.node_type
-  ssh_password_enable =local.vars.locals.ssh_password_enable
+  region                = local.vars.locals.region
+  aws                   = local.vars.locals.aws
+  prefix                = "cluster8"
+  tags_common           = local.vars.locals.tags
+  app_name              = "k8s"
+  subnets               = dependency.vpc.outputs.subnets
+  vpc_id                = dependency.vpc.outputs.vpc_id
+  cluster_name          = "k8s8"
+  node_type             = local.vars.locals.node_type
+  ssh_password_enable   = local.vars.locals.ssh_password_enable
   spot_additional_types = local.vars.locals.spot_additional_types
   all_spot_subnet       = local.vars.locals.all_spot_subnet
 
@@ -41,7 +41,7 @@ inputs = {
     k8_version         = local.vars.locals.k8_version
     runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )
     runtime_script     = "template/runtime.sh"
-    instance_type      = local.vars.locals.instance_type
+    instance_type      = "t3.medium"
     key_name           = local.vars.locals.key_name
     ami_id             = local.vars.locals.ami_id
     ubuntu_version     = local.vars.locals.ubuntu_version
