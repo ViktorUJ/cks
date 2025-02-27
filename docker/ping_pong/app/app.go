@@ -351,6 +351,153 @@ func getVarHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(vars)
 }
+
+// Metric API  JSON
+func getMetricHandler(w http.ResponseWriter, r *http.Request) {
+	metrics := map[string]interface{}{
+		"requests_total":      atomic.LoadUint64(&requestsCount),
+		"requests_per_second": requestsPerSecond,
+		"requests_per_minute": requestsPerMinute,
+		"goroutines":          runtime.NumGoroutine(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(metrics)
+}
+
+func setVarHandler(w http.ResponseWriter, r *http.Request) {
+	// Метод запроса должен быть POST
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	// Декодируем входной JSON в мапу
+	var updates map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	changed := false
+	changes := make(map[string]map[string]string)
+
+	// serverName
+	if val, ok := updates["serverName"]; ok {
+		if s, ok := val.(string); ok && s != serverName {
+			changes["serverName"] = map[string]string{"old": serverName, "new": s}
+			serverName = s
+			changed = true
+		}
+	}
+	// hostName
+	if val, ok := updates["hostName"]; ok {
+		if s, ok := val.(string); ok && s != hostName {
+			changes["hostName"] = map[string]string{"old": hostName, "new": s}
+			hostName = s
+			changed = true
+		}
+	}
+	// logPath
+	if val, ok := updates["logPath"]; ok {
+		if s, ok := val.(string); ok && s != logPath {
+			changes["logPath"] = map[string]string{"old": logPath, "new": s}
+			logPath = s
+			changed = true
+		}
+	}
+	// enableOutput
+	if val, ok := updates["enableOutput"]; ok {
+		if s, ok := val.(string); ok && s != enableOutput {
+			changes["enableOutput"] = map[string]string{"old": enableOutput, "new": s}
+			enableOutput = s
+			changed = true
+		}
+	}
+	// enableLoadCpu
+	if val, ok := updates["enableLoadCpu"]; ok {
+		if s, ok := val.(string); ok && s != enableLoadCpu {
+			changes["enableLoadCpu"] = map[string]string{"old": enableLoadCpu, "new": s}
+			enableLoadCpu = s
+			changed = true
+		}
+	}
+	// enableLoadMemory
+	if val, ok := updates["enableLoadMemory"]; ok {
+		if s, ok := val.(string); ok && s != enableLoadMemory {
+			changes["enableLoadMemory"] = map[string]string{"old": enableLoadMemory, "new": s}
+			enableLoadMemory = s
+			changed = true
+		}
+	}
+	// enableLogLoadMemory
+	if val, ok := updates["enableLogLoadMemory"]; ok {
+		if s, ok := val.(string); ok && s != enableLogLoadMemory {
+			changes["enableLogLoadMemory"] = map[string]string{"old": enableLogLoadMemory, "new": s}
+			enableLogLoadMemory = s
+			changed = true
+		}
+	}
+	// enableLogLoadCpu
+	if val, ok := updates["enableLogLoadCpu"]; ok {
+		if s, ok := val.(string); ok && s != enableLogLoadCpu {
+			changes["enableLogLoadCpu"] = map[string]string{"old": enableLogLoadCpu, "new": s}
+			enableLogLoadCpu = s
+			changed = true
+		}
+	}
+	// delayStart
+	if val, ok := updates["delayStart"]; ok {
+		if s, ok := val.(string); ok && s != delayStart {
+			changes["delayStart"] = map[string]string{"old": delayStart, "new": s}
+			delayStart = s
+			changed = true
+		}
+	}
+	// enableDefaultHostName
+	if val, ok := updates["enableDefaultHostName"]; ok {
+		if s, ok := val.(string); ok && s != enableDefaultHostName {
+			changes["enableDefaultHostName"] = map[string]string{"old": enableDefaultHostName, "new": s}
+			enableDefaultHostName = s
+			changed = true
+		}
+	}
+	// cpuMaxProc
+	if val, ok := updates["cpuMaxProc"]; ok {
+		switch v := val.(type) {
+		case float64:
+			intVal := int(v)
+			if intVal != cpuMaxProc {
+				changes["cpuMaxProc"] = map[string]string{
+					"old": strconv.Itoa(cpuMaxProc),
+					"new": strconv.Itoa(intVal),
+				}
+				cpuMaxProc = intVal
+				changed = true
+			}
+		case string:
+			intVal, err := strconv.Atoi(v)
+			if err == nil && intVal != cpuMaxProc {
+				changes["cpuMaxProc"] = map[string]string{
+					"old": strconv.Itoa(cpuMaxProc),
+					"new": v,
+				}
+				cpuMaxProc = intVal
+				changed = true
+			}
+		}
+	}
+
+	// Возвращаем ответ в JSON
+	w.Header().Set("Content-Type", "application/json")
+	if changed {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "Variables updated. Handlers reloaded.",
+			"changes": changes,
+		})
+	} else {
+		json.NewEncoder(w).Encode(map[string]string{"status": "No changes detected."})
+	}
+}
+
 func main() {
 	parsedDelay, err := strconv.Atoi(delayStart)
 	if err != nil {
@@ -373,6 +520,8 @@ func main() {
 		go cpuUsage()
 	}
 	http.HandleFunc("/ping-pong-api/getVar", getVarHandler)
+	http.HandleFunc("/ping-pong-api/getMetric", getMetricHandler)
+	http.HandleFunc("/ping-pong-api/setVar", setVarHandler)
 	port := os.Getenv("SRV_PORT")
 	if port == "" {
 		sendLog("SRV_PORT is not set, default port :  8080")
