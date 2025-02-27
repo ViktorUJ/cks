@@ -53,13 +53,20 @@ build_cross_binaries() {
       go build -ldflags='-w -s' -o ../dist/ping-pong-windows-arm64.exe app.go
 
       # Build for macOS (darwin) amd64
-      CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 \
-      go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-amd64 app.go
+     # CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 \
+     # go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-amd64 app.go
 
       # Build for macOS (darwin) arm64
-      CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 \
-      go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-arm64 app.go
+     # CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 \
+     # go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-arm64 app.go
     "
+   cd app
+   go mod tidy
+   CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-amd64 app.go
+   chmod +x ../dist/ping-pong-darwin-amd64
+   CGO_ENABLED=1 GOOS=darwin GOARCH=arm64  go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-arm64 app.go
+   chmod +x ../dist/ping-pong-darwin-arm64
+   cd ..
 
   echo "=== Cross-compilation finished. Binaries are in './dist' folder ==="
 }
