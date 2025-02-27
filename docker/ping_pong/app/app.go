@@ -23,7 +23,7 @@ import (
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
-	//	gopsutilNet "github.com/shirou/gopsutil/v3/net"
+	"github.com/klauspost/cpuid/v2"
 )
 
 type MemoryUsageProfile struct {
@@ -621,6 +621,31 @@ func getNetworkInterfaces() map[string]map[string]interface{} {
 	return networkInfo
 }
 
+// getGPUInfo retrieves details about available GPUs using CPU and system info
+func getGPUInfo() []map[string]interface{} {
+	gpuList := []map[string]interface{}{}
+
+	// Try to get GPU information from CPU Vendor (for integrated GPUs)
+	if cpuid.CPU.VendorString != "" {
+		gpuList = append(gpuList, map[string]interface{}{
+			"name":   "Integrated GPU",
+			"vendor": cpuid.CPU.VendorString,
+			"memory": "N/A",
+		})
+	}
+
+	// If there is no detected GPU, provide a fallback
+	if len(gpuList) == 0 {
+		gpuList = append(gpuList, map[string]interface{}{
+			"name":   "Unknown GPU",
+			"vendor": "Unknown Vendor",
+			"memory": "N/A",
+		})
+	}
+
+	return gpuList
+}
+
 func osInfoHandler(w http.ResponseWriter, r *http.Request) {
 	// Get CPU information
 	cpuUsage, _ := cpu.Percent(0, false)
@@ -697,6 +722,9 @@ func osInfoHandler(w http.ResponseWriter, r *http.Request) {
 	// Get network interfaces
 	networkInfo := getNetworkInterfaces()
 
+	// Get GPU info
+	gpuInfo := getGPUInfo()
+
 	// Prepare CPU core usage details
 	cpuCores := []map[string]interface{}{}
 	for i, usage := range cpuPerCore {
@@ -743,6 +771,7 @@ func osInfoHandler(w http.ResponseWriter, r *http.Request) {
 			"memory": topMemory,
 		},
 		"go": goInfo,
+		"gpu": gpuInfo,
 	}
 
 	// Send response
