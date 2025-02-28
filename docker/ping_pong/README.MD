@@ -70,7 +70,26 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 sudo xattr -d com.apple.quarantine ping-pong-darwin-amd64
 sudo chmod +x ping-pong-darwin-amd64
 ./ping-pong-darwin-amd64 
+# or
+SERVER_NAME=myCustomServer ./ping-pong-linux-amd64
+
+# check server 
+curl 127.0.0.1:8080
+
 ```
+
+### run binary on linux
+```
+sudo chmod +x ping-pong-linux-amd64
+./ping-pong-linux-amd64
+# or
+SERVER_NAME=myCustomServer ./ping-pong-linux-amd64
+
+# check server 
+curl 127.0.0.1:8080
+
+```
+
 
 ### api
 - `/ping-pong-api/getVar` - get all ping-pong variables
