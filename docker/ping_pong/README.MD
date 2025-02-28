@@ -65,6 +65,13 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 - [darwin x86](https://sre-platform.aws-guru.com/download/pingpong/ping-pong-darwin-amd64)
 - [darwin arm64](https://sre-platform.aws-guru.com/download/pingpong/ping-pong-darwin-arm64)
 
+### run binary on macOS
+``` 
+xattr -d com.apple.quarantine ping-pong-darwin-amd64
+chmod +x ping-pong-darwin-amd64
+./ping-pong-darwin-amd64 
+```
+
 ### api
 - `/ping-pong-api/getVar` - get all ping-pong variables
 - `/ping-pong-api/osInfo` - get os info
