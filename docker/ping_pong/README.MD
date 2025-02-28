@@ -91,6 +91,14 @@ curl 127.0.0.1:8080
 
 ```
 
+### run binary on android
+- use Termux
+``` 
+copy ping-pong-android-arm64  to /data/data/com.termux/files/usr/bin/
+chmod +x /data/data/com.termux/files/usr/bin/ping-pong-android-arm64
+ping-pong-android-arm64 
+```
+
 
 ### api
 - `/ping-pong-api/getVar` - get all ping-pong variables
