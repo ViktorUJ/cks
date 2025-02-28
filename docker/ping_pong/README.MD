@@ -64,6 +64,7 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 - [linux arm](https://sre-platform.aws-guru.com/download/pingpong/ping-pong-linux-arm)
 - [darwin x86](https://sre-platform.aws-guru.com/download/pingpong/ping-pong-darwin-amd64)
 - [darwin arm64](https://sre-platform.aws-guru.com/download/pingpong/ping-pong-darwin-arm64)
+- [android arm64](https://sre-platform.aws-guru.com/download/pingpong/ping-pong-android-arm64)
 
 ### run binary on macOS
 ``` 
