@@ -34,7 +34,7 @@ inputs = {
   cluster_name          = "k8s8"
   node_type             = local.vars.locals.node_type
   ssh_password_enable   = local.vars.locals.ssh_password_enable
-  spot_additional_types = local.vars.locals.spot_additional_types
+  spot_additional_types = ["t3.medium", "t3.large", "t3.xlarge"]
   all_spot_subnet       = local.vars.locals.all_spot_subnet
 
   k8s_master = {
