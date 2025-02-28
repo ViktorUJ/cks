@@ -67,8 +67,8 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 
 ### run binary on macOS
 ``` 
-xattr -d com.apple.quarantine ping-pong-darwin-amd64
-chmod +x ping-pong-darwin-amd64
+sudo xattr -d com.apple.quarantine ping-pong-darwin-amd64
+sudo chmod +x ping-pong-darwin-amd64
 ./ping-pong-darwin-amd64 
 ```
 
