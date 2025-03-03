@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/klauspost/cpuid/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/v3/cpu"
@@ -23,7 +24,6 @@ import (
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
-	"github.com/klauspost/cpuid/v2"
 )
 
 type MemoryUsageProfile struct {
@@ -44,6 +44,8 @@ var (
 	lastRequestTime       time.Time
 	requestsCount         uint64
 	serverName            string
+	serverPort            string
+	metricPort            string
 	hostName              string
 	logPath               string
 	enableOutput          string
@@ -56,9 +58,12 @@ var (
 	memoryProfiles        []MemoryUsageProfile
 	cpuProfiles           []CpuUsageProfile
 	cpuMaxProc            int
+	parsedDelay           int
 )
 
 func init() {
+	var err error
+
 	hostName = os.Getenv("HOSTNAME")
 
 	enableDefaultHostName = os.Getenv("ENABLE_DEFAULT_HOSTNAME")
@@ -70,6 +75,10 @@ func init() {
 	if delayStart == "" {
 		delayStart = "0"
 	}
+	parsedDelay, err = strconv.Atoi(delayStart)
+	if err != nil {
+		parsedDelay = 0
+	}
 
 	if hostName == "" || enableDefaultHostName == "true" {
 		hostName = "ping_pong_server"
@@ -79,6 +88,15 @@ func init() {
 	if serverName == "" {
 		serverName = hostName
 	}
+	serverPort = os.Getenv("SRV_PORT")
+	if serverPort == "" {
+		serverPort = "8080"
+	}
+	metricPort = os.Getenv("METRIC_PORT")
+	if metricPort == "" {
+		metricPort = "9090"
+	}
+
 	logPath = os.Getenv("LOG_PATH")
 
 	enableOutput = os.Getenv("ENABLE_OUTPUT")
@@ -127,7 +145,8 @@ func init() {
 		}
 		file.Close()
 	}
-
+	// init
+	runtime.GOMAXPROCS(cpuMaxProc)
 }
 func cpuUsage() {
 
@@ -306,11 +325,6 @@ func metricsHandler() {
 
 	prometheus.MustRegister(requests, rps, rpm, goroutines)
 
-	metricPort := os.Getenv("METRIC_PORT")
-	if metricPort == "" {
-		metricPort = "9090"
-	}
-
 	http.Handle("/metrics", promhttp.Handler())
 	http.ListenAndServe(":"+metricPort, nil)
 }
@@ -337,10 +351,6 @@ func sendLog(message string) {
 // getVar in JSON fromat
 func getVarHandler(w http.ResponseWriter, r *http.Request) {
 	vars := map[string]interface{}{
-		"requestsPerSecond":     requestsPerSecond,
-		"requestsPerMinute":     requestsPerMinute,
-		"lastRequestTime":       lastRequestTime.Format(time.RFC3339),
-		"requestsCount":         atomic.LoadUint64(&requestsCount),
 		"serverName":            serverName,
 		"hostName":              hostName,
 		"logPath":               logPath,
@@ -349,7 +359,7 @@ func getVarHandler(w http.ResponseWriter, r *http.Request) {
 		"enableLoadMemory":      enableLoadMemory,
 		"enableLogLoadMemory":   enableLogLoadMemory,
 		"enableLogLoadCpu":      enableLogLoadCpu,
-		"delayStart":            delayStart,
+		"delayStart":            parsedDelay,
 		"enableDefaultHostName": enableDefaultHostName,
 		"cpuMaxProc":            cpuMaxProc,
 		"memoryProfiles":        memoryProfiles,
@@ -770,7 +780,7 @@ func osInfoHandler(w http.ResponseWriter, r *http.Request) {
 			"cpu":    topCPU,
 			"memory": topMemory,
 		},
-		"go": goInfo,
+		"go":  goInfo,
 		"gpu": gpuInfo,
 	}
 
@@ -780,20 +790,14 @@ func osInfoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	parsedDelay, err := strconv.Atoi(delayStart)
-	if err != nil {
-		parsedDelay = 0
-	}
-	sendLog(fmt.Sprintf("DELAY START %v  , second", delayStart))
+	var err error
+
+	sendLog(fmt.Sprintf("DELAY START %v  , second", parsedDelay))
 	time.Sleep(time.Duration(parsedDelay) * time.Second)
 
-	for _, env := range os.Environ() {
-		sendLog(env)
-	}
 	http.HandleFunc("/", requestHandler)
 	go metricsHandler()
 	sendLog(fmt.Sprintf("enableLoadCpu: %v, cpuMaxProc: %d", enableLoadCpu, cpuMaxProc))
-	runtime.GOMAXPROCS(cpuMaxProc)
 	if enableLoadMemory == "true" {
 		go memoryUsage()
 	}
@@ -805,13 +809,10 @@ func main() {
 	http.HandleFunc("/ping-pong-api/setVar", setVarHandler)
 	http.HandleFunc("/ping-pong-api/panic", panicHandler)
 	http.HandleFunc("/ping-pong-api/osInfo", osInfoHandler)
-	port := os.Getenv("SRV_PORT")
-	if port == "" {
-		sendLog("SRV_PORT is not set, default port :  8080")
-		port = "8080"
-	}
 
-	err = http.ListenAndServe(":"+port, nil)
+	sendLog("start server on port: " + serverPort)
+	sendLog("path: /metrics start metrics on port: " + metricPort)
+	err = http.ListenAndServe(":"+serverPort, nil)
 	if err != nil {
 		sendLog(fmt.Sprintf("Server failed: %v", err))
 	}
