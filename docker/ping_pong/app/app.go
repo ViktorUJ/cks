@@ -57,6 +57,7 @@ var (
 	enableDefaultHostName string
 	memoryProfiles        []MemoryUsageProfile
 	cpuProfiles           []CpuUsageProfile
+	cpuProfileStr         string
 	cpuMaxProc            int
 	parsedDelay           int
 )
@@ -122,7 +123,10 @@ func init() {
 	if enableLogLoadCpu == "" {
 		enableLogLoadCpu = "false"
 	}
-
+	cpuProfileStr = os.Getenv("CPU_USAGE_PROFILE")
+	if cpuProfileStr == "" {
+		cpuProfileStr = "10=1=1=30"
+	}
 	cpuMaxProc = func() int {
 		if value, err := strconv.Atoi(os.Getenv("CPU_MAXPROC")); err == nil && value > 0 {
 			return value
@@ -149,41 +153,55 @@ func init() {
 	runtime.GOMAXPROCS(cpuMaxProc)
 }
 func cpuUsage() {
-
-	cpuProfileStr := os.Getenv("CPU_USAGE_PROFILE")
-	profiles := strings.Split(cpuProfileStr, " ")
-	for _, p := range profiles {
-		parts := strings.Split(p, "=")
-		if len(parts) == 4 {
-			iterationsMillion, err1 := strconv.Atoi(parts[0])
-			waitMilliseconds, err2 := strconv.Atoi(parts[1])
-			goroutines, err3 := strconv.Atoi(parts[2])
-			timeSeconds, err4 := strconv.Atoi(parts[3])
-
-			if err1 == nil && err2 == nil && err3 == nil && err4 == nil {
-				cpuProfiles = append(cpuProfiles, CpuUsageProfile{
-					IterationsMillion: iterationsMillion,
-					WaitMilliseconds:  waitMilliseconds,
-					Goroutines:        goroutines,
-					TimeSeconds:       timeSeconds,
-				})
-			}
-		}
-	}
-
+	var enableLoadCpuOld string
+	var cpuProfileStrOld string
 	for {
-		for _, profile := range cpuProfiles {
-			if enableLogLoadCpu == "true" {
-				sendLog(fmt.Sprintf("LoadCpu =>  IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d, cpuMaxProc:%d\n ",
-					profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds, cpuMaxProc))
-			}
-
-			for i := 0; i < profile.Goroutines; i++ {
-				go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
-			}
-			time.Sleep(time.Duration(profile.TimeSeconds) * time.Second)
+		if enableLoadCpuOld != enableLoadCpu {
+			sendLog("enableLoadCpu  changed =>  " + enableLoadCpu)
+			enableLoadCpuOld = enableLoadCpu
+		}
+		if cpuProfileStrOld != cpuProfileStr {
+			sendLog("cpuProfileStr  changed =>  " + cpuProfileStr)
+			cpuProfileStrOld = cpuProfileStr
 		}
 
+		if enableLoadCpu == "true" {
+			sendLog(fmt.Sprintf("enableLoadCpu: %v, cpuMaxProc: %d", enableLoadCpu, cpuMaxProc))
+			profiles := strings.Split(cpuProfileStr, " ")
+			var tempProfiles []CpuUsageProfile
+			for _, p := range profiles {
+				parts := strings.Split(p, "=")
+				if len(parts) == 4 {
+					iterationsMillion, err1 := strconv.Atoi(parts[0])
+					waitMilliseconds, err2 := strconv.Atoi(parts[1])
+					goroutines, err3 := strconv.Atoi(parts[2])
+					timeSeconds, err4 := strconv.Atoi(parts[3])
+
+					if err1 == nil && err2 == nil && err3 == nil && err4 == nil {
+						tempProfiles = append(tempProfiles, CpuUsageProfile{
+							IterationsMillion: iterationsMillion,
+							WaitMilliseconds:  waitMilliseconds,
+							Goroutines:        goroutines,
+							TimeSeconds:       timeSeconds,
+						})
+					}
+				}
+			}
+
+			for _, profile := range tempProfiles {
+				if enableLogLoadCpu == "true" {
+					sendLog(fmt.Sprintf("LoadCpu => IterationsMillion: %d, WaitMilliseconds: %d, Goroutines: %d, TimeSeconds: %d, cpuMaxProc: %d\n",
+						profile.IterationsMillion, profile.WaitMilliseconds, profile.Goroutines, profile.TimeSeconds, cpuMaxProc))
+				}
+
+				for i := 0; i < profile.Goroutines && enableLoadCpu == "true"; i++ {
+					go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
+				}
+				time.Sleep(time.Duration(profile.TimeSeconds) * time.Second)
+			}
+		} else {
+			time.Sleep(1 * time.Second)
+		}
 	}
 }
 
@@ -193,8 +211,9 @@ func cpuLoad(iterationsMillion int, waitMilliseconds int, timeSeconds int) {
 
 	deadline := time.Now().Add(time.Duration(timeSeconds) * time.Second)
 
-	for time.Now().Before(deadline) {
-		for i := 0; i < totalIterations; i++ {
+	for time.Now().Before(deadline) && enableLoadCpu == "true" {
+
+		for i := 0; i < totalIterations && enableLoadCpu == "true"; i++ {
 			sum += rand.Intn(256)
 		}
 
@@ -363,7 +382,7 @@ func getVarHandler(w http.ResponseWriter, r *http.Request) {
 		"enableDefaultHostName": enableDefaultHostName,
 		"cpuMaxProc":            cpuMaxProc,
 		"memoryProfiles":        memoryProfiles,
-		"cpuProfiles":           cpuProfiles,
+		"cpuProfileStr":         cpuProfileStr,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -394,12 +413,10 @@ func panicHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func setVarHandler(w http.ResponseWriter, r *http.Request) {
-	// Метод запроса должен быть POST
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	// Декодируем входной JSON в мапу
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -472,14 +489,7 @@ func setVarHandler(w http.ResponseWriter, r *http.Request) {
 			changed = true
 		}
 	}
-	// delayStart
-	if val, ok := updates["delayStart"]; ok {
-		if s, ok := val.(string); ok && s != delayStart {
-			changes["delayStart"] = map[string]string{"old": delayStart, "new": s}
-			delayStart = s
-			changed = true
-		}
-	}
+
 	// enableDefaultHostName
 	if val, ok := updates["enableDefaultHostName"]; ok {
 		if s, ok := val.(string); ok && s != enableDefaultHostName {
@@ -515,7 +525,6 @@ func setVarHandler(w http.ResponseWriter, r *http.Request) {
 		runtime.GOMAXPROCS(cpuMaxProc)
 	}
 
-	// Возвращаем ответ в JSON
 	w.Header().Set("Content-Type", "application/json")
 	if changed {
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -795,15 +804,16 @@ func main() {
 	sendLog(fmt.Sprintf("DELAY START %v  , second", parsedDelay))
 	time.Sleep(time.Duration(parsedDelay) * time.Second)
 
-	http.HandleFunc("/", requestHandler)
+	sendLog("path: /metrics start metrics on port: " + metricPort)
+
 	go metricsHandler()
-	sendLog(fmt.Sprintf("enableLoadCpu: %v, cpuMaxProc: %d", enableLoadCpu, cpuMaxProc))
+
 	if enableLoadMemory == "true" {
 		go memoryUsage()
 	}
-	if enableLoadCpu == "true" {
-		go cpuUsage()
-	}
+	go cpuUsage()
+
+	http.HandleFunc("/", requestHandler)
 	http.HandleFunc("/ping-pong-api/getVar", getVarHandler)
 	http.HandleFunc("/ping-pong-api/getMetric", getMetricHandler)
 	http.HandleFunc("/ping-pong-api/setVar", setVarHandler)
@@ -811,7 +821,6 @@ func main() {
 	http.HandleFunc("/ping-pong-api/osInfo", osInfoHandler)
 
 	sendLog("start server on port: " + serverPort)
-	sendLog("path: /metrics start metrics on port: " + metricPort)
 	err = http.ListenAndServe(":"+serverPort, nil)
 	if err != nil {
 		sendLog(fmt.Sprintf("Server failed: %v", err))
