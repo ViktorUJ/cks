@@ -170,6 +170,9 @@ func cpuUsage() {
 			profiles := strings.Split(cpuProfileStr, " ")
 			var tempProfiles []CpuUsageProfile
 			for _, p := range profiles {
+				if enableLoadCpu != "true" {
+					break
+				}
 				parts := strings.Split(p, "=")
 				if len(parts) == 4 {
 					iterationsMillion, err1 := strconv.Atoi(parts[0])
@@ -195,6 +198,9 @@ func cpuUsage() {
 				}
 
 				for i := 0; i < profile.Goroutines && enableLoadCpu == "true"; i++ {
+					if enableLoadCpu != "true" {
+						break
+					}
 					go cpuLoad(profile.IterationsMillion, profile.WaitMilliseconds, profile.TimeSeconds)
 				}
 				time.Sleep(time.Duration(profile.TimeSeconds) * time.Second)
@@ -212,9 +218,14 @@ func cpuLoad(iterationsMillion int, waitMilliseconds int, timeSeconds int) {
 	deadline := time.Now().Add(time.Duration(timeSeconds) * time.Second)
 
 	for time.Now().Before(deadline) && enableLoadCpu == "true" {
-
+		if enableLoadCpu != "true" {
+			break
+		}
 		for i := 0; i < totalIterations && enableLoadCpu == "true"; i++ {
 			sum += rand.Intn(256)
+			if enableLoadCpu != "true" {
+				break
+			}
 		}
 
 		if time.Now().Add(time.Duration(waitMilliseconds) * time.Millisecond).Before(deadline) {
@@ -462,6 +473,14 @@ func setVarHandler(w http.ResponseWriter, r *http.Request) {
 		if s, ok := val.(string); ok && s != enableLoadCpu {
 			changes["enableLoadCpu"] = map[string]string{"old": enableLoadCpu, "new": s}
 			enableLoadCpu = s
+			changed = true
+		}
+	}
+	// cpuProfileStr
+	if val, ok := updates["cpuProfileStr"]; ok {
+		if s, ok := val.(string); ok && s != cpuProfileStr {
+			changes["cpuProfileStr"] = map[string]string{"old": cpuProfileStr, "new": s}
+			cpuProfileStr = s
 			changed = true
 		}
 	}
