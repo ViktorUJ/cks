@@ -51,11 +51,12 @@ var (
 	enableOutput          string
 	enableLoadCpu         string
 	enableLoadMemory      string
+	memoryProfileStr      string
+	memoryProfiles        []MemoryUsageProfile
 	enableLogLoadMemory   string
 	enableLogLoadCpu      string
 	delayStart            string
 	enableDefaultHostName string
-	memoryProfiles        []MemoryUsageProfile
 	cpuProfiles           []CpuUsageProfile
 	cpuProfileStr         string
 	cpuMaxProc            int
@@ -117,6 +118,11 @@ func init() {
 	enableLogLoadMemory = os.Getenv("ENABLE_LOG_LOAD_MEMORY")
 	if enableLogLoadMemory == "" {
 		enableLogLoadMemory = "false"
+	}
+
+	memoryProfileStr = os.Getenv("MEMORY_USAGE_PROFILE")
+	if memoryProfileStr == "" {
+		memoryProfileStr = "1=10 2=30"
 	}
 
 	enableLogLoadCpu = os.Getenv("ENABLE_LOG_LOAD_CPU")
@@ -235,47 +241,61 @@ func cpuLoad(iterationsMillion int, waitMilliseconds int, timeSeconds int) {
 }
 
 func memoryUsage() {
+	var enableLoadMemoryOld string
+	var memoryProfileStrOld string
 	for {
-		memoryProfileStr := os.Getenv("MEMORY_USAGE_PROFILE")
+		if enableLoadMemoryOld != enableLoadMemory {
+			sendLog("enableLoadMemory  changed =>  " + enableLoadMemory)
+			enableLoadMemoryOld = enableLoadMemory
+		}
+		if memoryProfileStrOld != memoryProfileStr {
+			sendLog("memoryProfileStr  changed =>  " + memoryProfileStr)
+			memoryProfileStrOld = memoryProfileStr
+		}
 
-		if memoryProfileStr != "" {
-			// split  "Mb=sec"
-			memoryProfilePairs := strings.Split(memoryProfileStr, " ")
+		if enableLoadMemory == "true" {
 
-			for _, pair := range memoryProfilePairs {
-				parts := strings.Split(pair, "=")
-				if len(parts) == 2 {
-					mb, errMb := strconv.Atoi(parts[0])
-					sec, errSec := strconv.Atoi(parts[1])
-					if errMb == nil && errSec == nil {
-						memoryProfiles = append(memoryProfiles, MemoryUsageProfile{
-							Megabytes: mb,
-							Seconds:   sec,
-						})
+			if memoryProfileStr != "" {
+				// split  "Mb=sec"
+				memoryProfilePairs := strings.Split(memoryProfileStr, " ")
+
+				for _, pair := range memoryProfilePairs {
+					parts := strings.Split(pair, "=")
+					if len(parts) == 2 {
+						mb, errMb := strconv.Atoi(parts[0])
+						sec, errSec := strconv.Atoi(parts[1])
+						if errMb == nil && errSec == nil {
+							memoryProfiles = append(memoryProfiles, MemoryUsageProfile{
+								Megabytes: mb,
+								Seconds:   sec,
+							})
+						}
 					}
 				}
 			}
-		}
 
-		for _, profile := range memoryProfiles {
-			if enableLogLoadMemory == "true" {
-				sendLog(fmt.Sprintf("LoadMemory => Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
+			for _, profile := range memoryProfiles {
+				if enableLogLoadMemory == "true" {
+					sendLog(fmt.Sprintf("LoadMemory => Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
+				}
+				size := profile.Megabytes * 1024 * 1024
+				slice := make([]byte, size)
+
+				for i := range slice {
+					slice[i] = 0xFF
+				}
+				time.Sleep(time.Duration(profile.Seconds) * time.Second)
+				slice = nil
+				runtime.GC()
+				time.Sleep(20 * time.Second) // wait GCC
+
 			}
-			size := profile.Megabytes * 1024 * 1024
-			slice := make([]byte, size)
 
-			for i := range slice {
-				slice[i] = 0xFF
-			}
-			time.Sleep(time.Duration(profile.Seconds) * time.Second)
-			slice = nil
-			runtime.GC()
-			time.Sleep(20 * time.Second) // wait GCC
-
+		} else {
+			time.Sleep(1 * time.Second)
 		}
 
 	}
-
 }
 
 func requestHandler(w http.ResponseWriter, r *http.Request) {
@@ -500,6 +520,15 @@ func setVarHandler(w http.ResponseWriter, r *http.Request) {
 			changed = true
 		}
 	}
+	// memoryProfileStr
+	if val, ok := updates["memoryProfileStr"]; ok {
+		if s, ok := val.(string); ok && s != memoryProfileStr {
+			changes["memoryProfileStr"] = map[string]string{"old": memoryProfileStr, "new": s}
+			memoryProfileStr = s
+			changed = true
+		}
+	}
+
 	// enableLogLoadCpu
 	if val, ok := updates["enableLogLoadCpu"]; ok {
 		if s, ok := val.(string); ok && s != enableLogLoadCpu {
@@ -826,10 +855,7 @@ func main() {
 	sendLog("path: /metrics start metrics on port: " + metricPort)
 
 	go metricsHandler()
-
-	if enableLoadMemory == "true" {
-		go memoryUsage()
-	}
+	go memoryUsage()
 	go cpuUsage()
 
 	http.HandleFunc("/", requestHandler)
