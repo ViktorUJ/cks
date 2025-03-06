@@ -244,6 +244,7 @@ func memoryUsage() {
 	var enableLoadMemoryOld string
 	var memoryProfileStrOld string
 	for {
+		memoryProfiles = nil
 		if enableLoadMemoryOld != enableLoadMemory {
 			sendLog("enableLoadMemory  changed =>  " + enableLoadMemory)
 			enableLoadMemoryOld = enableLoadMemory
@@ -278,16 +279,8 @@ func memoryUsage() {
 				if enableLogLoadMemory == "true" {
 					sendLog(fmt.Sprintf("LoadMemory => Megabytes: %d, Seconds: %d\n", profile.Megabytes, profile.Seconds))
 				}
-				size := profile.Megabytes * 1024 * 1024
-				slice := make([]byte, size)
-
-				for i := range slice {
-					slice[i] = 0xFF
-				}
-				time.Sleep(time.Duration(profile.Seconds) * time.Second)
-				slice = nil
+				memoryLoad(profile.Megabytes*1024*1024, profile.Seconds)
 				runtime.GC()
-				time.Sleep(20 * time.Second) // wait GCC
 
 			}
 
@@ -298,6 +291,18 @@ func memoryUsage() {
 	}
 }
 
+func memoryLoad(size int, sec int) {
+	slice := make([]byte, size)
+	for i := range slice {
+		slice[i] = 0xFF
+	}
+	for i := 0; i < sec; i++ {
+		if enableLoadMemory != "true" {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
 	response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))
