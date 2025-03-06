@@ -20,7 +20,66 @@ fi
 
 echo "*** release = $release"
 
+build_cross_binaries() {
+  echo "=== Starting cross-compilation inside Docker ==="
+
+  # Create 'dist' folder for output binaries
+  mkdir -p dist
+
+  # We use the golang:alpine container to perform cross-compilation
+  docker run --rm \
+    -v "$(pwd)":/app \
+    -w /app/app \
+    golang:alpine \
+    sh -c "
+      # Install git (if needed) and update go modules
+      apk add --no-cache git
+      go mod tidy
+
+      # Build for Linux (amd64)
+      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+      go build -ldflags='-w -s' -o ../dist/ping-pong-linux-amd64 app.go
+
+      # Build for Linux (arm64)
+      CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
+      go build -ldflags='-w -s' -o ../dist/ping-pong-linux-arm64 app.go
+
+      # Build for Windows (amd64)
+      CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+      go build -ldflags='-w -s' -o ../dist/ping-pong-windows-amd64.exe app.go
+
+      # Build for Windows (arm64)
+      CGO_ENABLED=0 GOOS=windows GOARCH=arm64 \
+      go build -ldflags='-w -s' -o ../dist/ping-pong-windows-arm64.exe app.go
+
+      # Build for macOS (darwin) amd64
+     # CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 \
+     # go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-amd64 app.go
+
+      # Build for macOS (darwin) arm64
+     # CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 \
+     # go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-arm64 app.go
+    "
+   cd app
+   go mod tidy
+   CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-amd64 app.go
+   chmod +x ../dist/ping-pong-darwin-amd64
+   CGO_ENABLED=1 GOOS=darwin GOARCH=arm64  go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-arm64 app.go
+   chmod +x ../dist/ping-pong-darwin-arm64
+   cd ..
+
+  echo "=== Cross-compilation finished. Binaries are in './dist' folder ==="
+}
+
+
 case $release in
+bin)
+   build_cross_binaries
+;;
+bin_deploy)
+   aws s3 cp ./dist s3://sre-platform.aws-guru.com/download/pingpong/ --recursive --profile deploy
+   aws cloudfront create-invalidation --distribution-id E1HF54QM48F9SB --paths "/download/pingpong/*" --profile deploy
+;;
 scratch)
    docker buildx build --platform linux/arm64 --load -t viktoruj/ping_pong:${latest_commit_hash}-arm64   .
    docker buildx build --platform linux/amd64 --load -t viktoruj/ping_pong:${latest_commit_hash}-amd64   .
