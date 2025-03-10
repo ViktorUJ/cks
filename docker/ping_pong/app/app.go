@@ -61,6 +61,9 @@ var (
 	cpuProfileStr         string
 	cpuMaxProc            int
 	parsedDelay           int
+	responseDelay         int // in milliseconds
+	maxResponseWorker     int
+	ResponseWorker        uint64
 )
 
 func init() {
@@ -77,6 +80,18 @@ func init() {
 	if delayStart == "" {
 		delayStart = "0"
 	}
+	responseDelayStr := os.Getenv("RESPONSE_DELAY")
+	if responseDelayStr == "" {
+		responseDelayStr  = "0"
+	}
+    responseDelay, err = strconv.Atoi(responseDelayStr)
+
+	maxResponseWorkerStr := os.Getenv("MAX_RESPONSE_WORKER")
+	if maxResponseWorkerStr == "" {
+		maxResponseWorkerStr  = "65535"
+	}
+    maxResponseWorker, err = strconv.Atoi(maxResponseWorkerStr)
+
 	parsedDelay, err = strconv.Atoi(delayStart)
 	if err != nil {
 		parsedDelay = 0
@@ -305,11 +320,25 @@ func memoryLoad(size int, sec int) {
 }
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
+    if atomic.LoadUint64(&ResponseWorker) >= uint64(maxResponseWorker) {
+        w.WriteHeader(http.StatusServiceUnavailable)
+        fmt.Fprintf(w, "Server is overloaded. Current workers: %d, Max allowed: %d\n", ResponseWorker, maxResponseWorker)
+        return
+    }
+	atomic.AddUint64(&ResponseWorker, 1)
+    defer atomic.AddUint64(&ResponseWorker, ^uint64(0))
+    if responseDelay > 0 {
+        time.Sleep(time.Duration(responseDelay) * time.Millisecond)
+    }
 	response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))
 	response.WriteString(fmt.Sprintf("URL: http://%s%s\n", r.Host, r.URL.String()))
 	response.WriteString(fmt.Sprintf("Client IP: %s\n", getIP(r)))
 	response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
 	response.WriteString(fmt.Sprintf("Protocol: %s\n", r.Proto))
+	response.WriteString(fmt.Sprintf("responseDelay: %s\n", strconv.Itoa(responseDelay)))
+    response.WriteString(fmt.Sprintf("maxResponseWorker: %s\n", strconv.Itoa(maxResponseWorker)))
+//	response.WriteString(fmt.Sprintf("ResponseWorker: %s\n", strconv.Itoa(ResponseWorker)))
+response.WriteString(fmt.Sprintf("ResponseWorker: %d\n", ResponseWorker))
 	response.WriteString("Headers:\n")
 
 	for name, headers := range r.Header {
@@ -324,6 +353,7 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	lastRequestTime = now
 	requestsPerSecond = 1 / elapsed
 	requestsPerMinute = requestsPerSecond * 60
+
 
 	fmt.Fprint(w, response.String())
 	sendLog(response.String())
