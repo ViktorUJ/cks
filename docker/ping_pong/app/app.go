@@ -447,8 +447,11 @@ func getVarHandler(w http.ResponseWriter, r *http.Request) {
 		"delayStart":            parsedDelay,
 		"enableDefaultHostName": enableDefaultHostName,
 		"cpuMaxProc":            cpuMaxProc,
-		"memoryProfiles":        memoryProfiles,
+		"memoryProfileStr":      memoryProfileStr,
 		"cpuProfileStr":         cpuProfileStr,
+		"responseDelay":        responseDelay,
+		"maxResponseWorker":    maxResponseWorker,
+		"ResponseWorker":       ResponseWorker,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
