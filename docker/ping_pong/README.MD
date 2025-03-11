@@ -1,3 +1,14 @@
+## ping_pong
+
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/viktoruj/ping_pong?sort=semver)](https://hub.docker.com/r/viktoruj/ping_pong)
+[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/viktoruj/ping_pong?sort=semver)](https://hub.docker.com/r/viktoruj/ping_pong)
+[![Docker Pulls](https://img.shields.io/docker/pulls/viktoruj/ping_pong)](https://hub.docker.com/r/viktoruj/ping_pong)
+[![Docker Cloud Automated build](https://img.shields.io/docker/cloud/automated/viktoruj/ping_pong)](https://hub.docker.com/r/viktoruj/ping_pong)
+[![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/viktoruj/ping_pong)](https://hub.docker.com/r/viktoruj/ping_pong)
+
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/viktoruj/ping_pong)](
+
+
 This is a small HTTP server that sends back the incoming request with all the metadata in response, including the
 sender's IP address, all request parameters, and headers. The server's configuration can be modified by using
 environment variables:
