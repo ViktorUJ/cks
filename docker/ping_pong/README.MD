@@ -18,7 +18,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
   - Binary File Android
   - Compilation from Source Code
 - Configuration
-- API
+- [API](#api)
    - [getVar - get ping-pong variables](#get-variables)
    - [setVar - set ping-pong variables ](#set-variables) 
    - [osInfo - information about system ](#get-os-info)
