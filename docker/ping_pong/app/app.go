@@ -582,6 +582,59 @@ func setVarHandler(w http.ResponseWriter, r *http.Request) {
 			changed = true
 		}
 	}
+
+	// responseDelay
+	if val, ok := updates["responseDelay"]; ok {
+		switch v := val.(type) {
+		case float64:
+			intVal := int(v)
+			if intVal != responseDelay {
+				changes["responseDelay"] = map[string]string{
+					"old": strconv.Itoa(responseDelay),
+					"new": strconv.Itoa(intVal),
+				}
+				responseDelay = intVal
+				changed = true
+			}
+		case string:
+			intVal, err := strconv.Atoi(v)
+			if err == nil && intVal != responseDelay {
+				changes["responseDelay"] = map[string]string{
+					"old": strconv.Itoa(responseDelay),
+					"new": v,
+				}
+				responseDelay = intVal
+				changed = true
+			}
+		}
+	}
+
+	// maxResponseWorker
+	if val, ok := updates["maxResponseWorker"]; ok {
+		switch v := val.(type) {
+		case float64:
+			intVal := int(v)
+			if intVal != maxResponseWorker {
+				changes["maxResponseWorker"] = map[string]string{
+					"old": strconv.Itoa(maxResponseWorker),
+					"new": strconv.Itoa(intVal),
+				}
+				maxResponseWorker = intVal
+				changed = true
+			}
+		case string:
+			intVal, err := strconv.Atoi(v)
+			if err == nil && intVal != maxResponseWorker {
+				changes["maxResponseWorker"] = map[string]string{
+					"old": strconv.Itoa(maxResponseWorker),
+					"new": v,
+				}
+				maxResponseWorker = intVal
+				changed = true
+			}
+		}
+	}
+
 	// cpuMaxProc
 	if val, ok := updates["cpuMaxProc"]; ok {
 		switch v := val.(type) {
