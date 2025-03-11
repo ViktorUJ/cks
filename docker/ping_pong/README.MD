@@ -3,11 +3,8 @@
 This project is a small **HTTP server** that returns the incoming request with **metadata** in the response, including the sender's **IP address, all request parameters, and headers**. The server's configuration can be **modified** using **environment variables**. Additionally, the server supports **CPU and memory load** testing and provides **metrics in Prometheus** format. The **running server's** parameters can be **modified via API**.
 
 
+The server can be run as a Docker container or Kubernetes resources for x86 or ARM platforms. It can also be run as compiled binary files or compiled from source code.
 
-
-This is a small HTTP server that sends back the incoming request with all the metadata in response, including the
-sender's IP address, all request parameters, and headers. The server's configuration can be modified by using
-environment variables:
 
 - `SERVER_NAME`: The name of the server. Default is `ping_pong_server`.
 - `ENABLE_DEFAULT_HOSTNAME`: Use the default hostname (default = "true").
