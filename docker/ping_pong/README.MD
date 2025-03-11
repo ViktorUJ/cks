@@ -1,6 +1,6 @@
 # ping_pong
 
-This project is a small HTTP server that returns the incoming request with metadata in the response, including the sender's IP address, all request parameters, and headers. The server's configuration can be modified using environment variables. Additionally, the server supports CPU and memory load testing and provides metrics in Prometheus format. The running server's parameters can be modified via API.
+This project is a small **HTTP server** that returns the incoming request with **metadata** in the response, including the sender's **IP address, all request parameters, and headers**. The server's configuration can be **modified** using **environment variables**. Additionally, the server supports **CPU and memory load** testing and provides **metrics in Prometheus** format. The **running server's** parameters can be **modified via API**.
 
 
 
