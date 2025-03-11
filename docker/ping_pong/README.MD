@@ -22,7 +22,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
    - getVar
    - setVar
    - osInfo
-   - panic
+   - [panic - emulate crash app](#emulate-crash-app)
    - getMetric
 
    
