@@ -5,16 +5,17 @@ This project is a small **HTTP server** that returns the incoming request with *
 
 The server can be run as a Docker container or Kubernetes resources for x86 or ARM platforms. It can also be run as compiled binary files or compiled from source code.
 
-## Оглавление
-- сценарии использования
-  - сценарий 1
-  - сценарий 2
-- установка
-  - докер
-  - кебернетес
-  - бинарный файл виндовс
-  - бинарный файл linux
-- конфигурация
+## Table of Contents
+- Usage Scenarios
+  - Scenario 1
+  - Scenario 2
+- Installation
+  - Docker
+  - Kubernetes
+  - Binary File Windows
+  - Binary File Linux
+- Configuration
+
 
 
 - `SERVER_NAME`: The name of the server. Default is `ping_pong_server`.
