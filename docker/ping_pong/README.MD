@@ -11,11 +11,13 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
   - Scenario 2
 - Installation
   - Docker
+    - [tags](#tags-)
   - Kubernetes
-  - Binary File Windows
-  - Binary File Linux
-  - Binary File macOS
-  - Binary File Android
+  - [Binary](#binary) 
+    - Windows
+    - [Linux](#run-binary-on-linux)
+    - [macOS](#run-binary-on-macos)
+    - [Android](#run-binary-on-android)
   - Compilation from Source Code
 - Configuration
 - [API](#api)
