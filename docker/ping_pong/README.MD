@@ -19,11 +19,11 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
   - Compilation from Source Code
 - Configuration
 - API
-   - getVar
-   - setVar
-   - osInfo
+   - [getVar - get ping-pong variables](#get-var)
+   - [setVar - set ping-pong variables ](#set-var) 
+   - [osInfo - information about system ](#os-info)
    - [panic - emulate crash app](#emulate-crash-app)
-   - getMetric
+   - [getMetric - get metric ](#get-metric)
 
    
 
