@@ -14,7 +14,18 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
   - Kubernetes
   - Binary File Windows
   - Binary File Linux
+  - Binary File macOS
+  - Binary File Android
+  - Compilation from Source Code
 - Configuration
+- API
+   - getVar
+   - setVar
+   - osInfo
+   - panic
+   - getMetric
+
+   
 
 
 
