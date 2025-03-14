@@ -93,9 +93,9 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 
 ### tags :
 
-- `latest` - from scratch image with only binary
-- `alpine` - alpine image with binary and utils
-- `debug` - amazon/aws-cli image with utils
+- `latest` - from scratch image with only binary. [Dockerfile](Dockerfile)
+- `alpine` - alpine image with binary and utils. [Dockerfile_alpine](Dockerfile_alpine)
+- `debug` - amazon/aws-cli image with utils. [Dockerfile_debug_arm](Dockerfile_debug_arm) [Dockerfile_debug_amd64](Dockerfile_debug_amd64)
 
 ### binary
 
