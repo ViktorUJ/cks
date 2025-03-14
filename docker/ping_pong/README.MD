@@ -9,7 +9,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
 - Usage Scenarios
   - Scenario 1
   - Scenario 2
-- Installation
+- Run
   - Docker
     - [tags](#tags-)
   - Kubernetes
@@ -89,6 +89,10 @@ kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
+```
+### run Docker container
+```
+docker run -d -p 8080:8080 viktoruj/ping_pong
 ```
 
 ### tags :
