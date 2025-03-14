@@ -10,7 +10,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
   - Scenario 1
   - Scenario 2
 - Run
-  - Docker
+  - [Docker](#run-docker-container)
     - [tags](#tags-)
   - Kubernetes
   - [Binary](#binary) 
