@@ -37,7 +37,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
 kubectl  run test  --image  viktoruj/ping_pong
 ```
 
-### run http pingPong server  with serverName
+### run http ping-pong server  with custom **server Name**
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env SERVER_NAME=pingPongServer
