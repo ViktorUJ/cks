@@ -9,7 +9,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
 - [Usage Scenarios](#usage-scenarios)
   - [run http ping-pong server](#run-http-ping-pong-server)
   - [run http ping-pong server with custom server Name](#run-http-ping-pong-server--with-custom-server-name)
-  - [run http pingPong server  with serverName = podName](#run-http-pingpong-server--with-servername--podname)
+  - [run http ping-pong server  with serverName = podName](#run-http-pingpong-server--with-servername--podname)
 - Run
   - [Docker](#run-docker-container)
     - [tags](#tags-)
@@ -44,25 +44,25 @@ kubectl  run test  --image  viktoruj/ping_pong
 kubectl  run test  --image  viktoruj/ping_pong  --env SERVER_NAME=pingPongServer
 ```
 
-### run http pingPong server  with serverName = podName
+### run http ping-pong server  with serverName = podName
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong --env ENABLE_DEFAULT_HOSTNAME=false
 ```
 
-### run http pingPong server  with MEMORY_USAGE
+### run http ping-pong server  with MEMORY_USAGE
 
 ```
 kubectl  run test --image  viktoruj/ping_pong   --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true
 ```
 
-### run http pingPong server  with MEMORY_USAGE and CPU_USAGE  and enable cpu and memory loging . It uses CPU_MAXPROC =2 .
+### run http ping-pong server  with MEMORY_USAGE and CPU_USAGE  and enable cpu and memory loging . It uses CPU_MAXPROC =2 .
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1=60 1=4=1=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true  --env ENABLE_LOG_LOAD_CPU=true --env CPU_MAXPROC=2 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360  ' --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOG_LOAD_MEMORY=true
 ```
 
-### run http pingPong server  with slow start 10 seconds.
+### run http ping-pong server  with slow start 10 seconds.
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
