@@ -9,7 +9,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
 - [Usage Scenarios](#usage-scenarios)
   - [run http ping-pong server](#run-http-ping-pong-server)
   - [run http ping-pong server with custom server Name](#run-http-ping-pong-server--with-custom-server-name)
-  - [run http ping-pong server  with serverName = podName](#run-http-pingpong-server--with-servername--podname)
+  - [run http ping-pong server  with serverName = podName](#run-http-ping-pong-server--with-servername--podname)
 - Run
   - [Docker](#run-docker-container)
     - [tags](#tags-)
