@@ -7,7 +7,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
 
 ## Table of Contents
 - Usage Scenarios
-  - [run http ping-pong server]()
+  - [run http ping-pong server](#run-http-ping-pong-server)
   - Scenario 2
 - Run
   - [Docker](#run-docker-container)
