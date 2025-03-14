@@ -28,7 +28,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
    - [getMetric - get metric ](#get-metric)
 
    
-
+## Usage Scenarios
 
 
 - `SERVER_NAME`: The name of the server. Default is `ping_pong_server`.
@@ -51,7 +51,6 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
 
 You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
 
-`docker pull viktoruj/ping_pong`
 
 ## examples
 
