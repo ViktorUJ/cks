@@ -12,7 +12,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
 - Run
   - [Docker](#run-docker-container)
     - [tags](#tags-)
-  - Kubernetes
+  - [Kubernetes](#run-http-ping-pong-server)
   - [Binary](#binary) 
     - Windows
     - [Linux](#run-binary-on-linux)
