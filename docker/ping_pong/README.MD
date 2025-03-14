@@ -7,7 +7,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
 
 ## Table of Contents
 - Usage Scenarios
-  - Scenario 1
+  - [run http ping-pong server]()
   - Scenario 2
 - Run
   - [Docker](#run-docker-container)
@@ -31,7 +31,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
 ## Usage Scenarios
 
 
-### run http pingPong server
+### run http ping-pong server
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong
