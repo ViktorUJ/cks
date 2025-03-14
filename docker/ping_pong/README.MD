@@ -114,7 +114,7 @@ docker run -d -p 8080:8080 viktoruj/ping_pong
 
 ### run binary on macOS
 
-``` 
+```bash 
 sudo xattr -d com.apple.quarantine ping-pong-darwin-amd64
 sudo chmod +x ping-pong-darwin-amd64
 ./ping-pong-darwin-amd64 
@@ -128,7 +128,7 @@ curl 127.0.0.1:8080
 
 ### run binary on linux
 
-```
+```bash
 sudo chmod +x ping-pong-linux-amd64
 ./ping-pong-linux-amd64
 # or
@@ -143,7 +143,7 @@ curl 127.0.0.1:8080
 
 - use Termux
 
-``` 
+```bash 
 copy ping-pong-android-arm64  to /data/data/com.termux/files/usr/bin/
 chmod +x /data/data/com.termux/files/usr/bin/ping-pong-android-arm64
 ping-pong-android-arm64 
