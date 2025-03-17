@@ -5,8 +5,8 @@
 
 * docker image for runner(viktoruj/runner) is updated(terraform and terragrunt versions are updated). 
 * api was added to [ping_pong](../docker/ping_pong/README.MD#api) service.
-* emulate crash was added to [ping_pong](../docker/ping_pong/README.MD#emulate-crash) service.
-* emulate slow response was added to [ping_pong](../docker/ping_pong/README.MD#emulate-slow-response) service.
+* emulate crash was added to [ping_pong](../docker/ping_pong/README.MD#emulate-crash-app) service.
+* emulate slow response was added to [ping_pong](../docker/ping_pong/README.MD#run-http-ping-pong-server--with-response-delay-3-seconds-and-10-workers) service.
 * 
 
 
