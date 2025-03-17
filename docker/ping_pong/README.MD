@@ -105,7 +105,7 @@ docker run -d -p 8080:8080 viktoruj/ping_pong
 ```
 
 ### tags :
-The images work on x86 and ARM platforms.
+The images work on **x86** and **ARM** platforms.
 
 - `latest` - from **scratch** image with **only binary**. [Dockerfile](Dockerfile)
 - `alpine` - **alpine** image with **binary** and **utils**. [Dockerfile_alpine](Dockerfile_alpine)
