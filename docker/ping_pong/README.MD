@@ -71,23 +71,6 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 
 ### Configuration
 
-- `SERVER_NAME`: The name of the server. Default is `ping_pong_server`.
-- `ENABLE_DEFAULT_HOSTNAME`: Use the default hostname (default = "true").
-- `SRV_PORT`: The port on which the server is running.
-- `METRIC_PORT`: The port where server metrics are available in Prometheus format.
-- `ENABLE_OUTPUT`: log to stdout (default = "true")
-- `LOG_PATH`: write logs to file ${LOG_PATH} (default=""  without file output)
-- `ENABLE_LOAD_MEMORY` : enable memory usage (default=false)
-- `MEMORY_USAGE_PROFILE`: additional memory usage and time for usage . example `5=10 7=60  1024=360  ` - 5 Mb 10sec 7 Mb
-  60sec 1024Mb 360sec
-- `ENABLE_LOG_LOAD_MEMORY`: logs LOAD_MEMORY function
-- `ENABLE_LOAD_CPU` : enable cpu usage (default=false)
-- `ENABLE_LOG_LOAD_CPU`: logs LOAD_CPU function
-- `CPU_USAGE_PROFILE`: additional CPU usage `iteraction_milion=wait_msec=gorutins=time_sec` . example
-  `10=1=1=30  1=400=1=60`
-- `CPU_MAXPROC`: GOMAXPROCS (default = 1)
-- `DELAY_START`: delay start in seconds before start app (default = 0) . It is useful for testing slow start of app and
-  test startup probes.
 
 | ENV VAR                  | APP VAR                | set via API | Description                                                                                                          |
 |--------------------------|------------------------|-------------|----------------------------------------------------------------------------------------------------------------------|
