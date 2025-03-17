@@ -21,7 +21,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
     - [macOS](#run-binary-on-macos)
     - [Android](#run-binary-on-android)
   - Compilation from Source Code
-- Configuration
+- [Configuration](#configuration)
 - [API](#api)
    - [getVar - get ping-pong variables](#get-variables)
    - [setVar - set ping-pong variables ](#set-variables) 
@@ -69,6 +69,7 @@ kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1
 kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 ```
 
+### Configuration
 
 - `SERVER_NAME`: The name of the server. Default is `ping_pong_server`.
 - `ENABLE_DEFAULT_HOSTNAME`: Use the default hostname (default = "true").
