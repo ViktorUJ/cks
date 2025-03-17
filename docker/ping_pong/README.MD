@@ -16,7 +16,6 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
     - [tags](#tags-)
   - [Kubernetes](#run-http-ping-pong-server)
   - [Binary](#binary) 
-    - Windows
     - [Linux](#run-binary-on-linux)
     - [macOS](#run-binary-on-macos)
     - [Android](#run-binary-on-android)
@@ -99,6 +98,7 @@ docker run -d -p 8080:8080 viktoruj/ping_pong
 ```
 
 ### tags :
+The images work on x86 and ARM platforms.
 
 - `latest` - from **scratch** image with **only binary**. [Dockerfile](Dockerfile)
 - `alpine` - **alpine** image with **binary** and **utils**. [Dockerfile_alpine](Dockerfile_alpine)
