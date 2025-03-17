@@ -4,7 +4,7 @@
 ### Features
 
 * docker image for runner(viktoruj/runner) is updated(terraform and terragrunt versions are updated). 
-* api was added to [ping_pong](../docker/ping_pong/README.MD) service.
+* api was added to [ping_pong](../docker/ping_pong/README.MD#api) service.
 
 
 ## 0.18.1 (20.02.2025)
