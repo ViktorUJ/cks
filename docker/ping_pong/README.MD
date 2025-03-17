@@ -105,6 +105,8 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 | `CPU_USAGE_PROFILE`      | `cpuProfileStr`        |     Yes     | Additional CPU usage `iteraction_milion=wait_msec=gorutins=time_sec`. Example: `10=1=1=30 1=400=1=60`. |
 | `CPU_MAXPROC`            | `cpuMaxProc`           |     Yes     | GOMAXPROCS (default = 1).                                                    |
 | `DELAY_START`            | `parsedDelay`          |     No      | Delay start in seconds before start app (default = 0). Useful for testing slow start of app and test startup probes. |
+| `RESPONSE_DELAY`         | `responseDelay`        |     Yes     | Response delay in milliseconds.                                              |
+| `MAX_RESPONSE_WORKER`    | `maxResponseWorker`    |     Yes     | Maximum number of response workers.                                          |
 
 
 You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
