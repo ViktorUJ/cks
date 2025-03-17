@@ -89,27 +89,27 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 - `DELAY_START`: delay start in seconds before start app (default = 0) . It is useful for testing slow start of app and
   test startup probes.
 
-| ENV VAR                  | APP VAR                | set via API | Description                                                                 |
-|--------------------------|------------------------|-------------|-----------------------------------------------------------------------------|
-| `SERVER_NAME`            | `serverName`           |     Yes     | The name of the server. Default is `ping_pong_server`.                       |
-| `ENABLE_DEFAULT_HOSTNAME`| `enableDefaultHostName`|     Yes     | Use the default hostname (default = "true").                                 |
-| `SRV_PORT`               | `serverPort`           |     No      | The port on which the server is running.                                     |
-| `METRIC_PORT`            | `metricPort`           |     No      | The port where server metrics are available in Prometheus format.            |
-| `ENABLE_OUTPUT`          | `enableOutput`         |     Yes     | Log to stdout (default = "true").                                            |
-| `LOG_PATH`               | `logPath`              |     Yes     | Write logs to file `${LOG_PATH}` (default="" without file output).           |
-| `ENABLE_LOAD_MEMORY`     | `enableLoadMemory`     |     Yes     | Enable memory usage (default=false).                                         |
-| `MEMORY_USAGE_PROFILE`   | `memoryProfileStr`     |     Yes     | Additional memory usage and time for usage. Example: `5=10 7=60 1024=360`.   |
-| `ENABLE_LOG_LOAD_MEMORY` | `enableLogLoadMemory`  |     Yes     | Logs LOAD_MEMORY function.                                                   |
-| `ENABLE_LOAD_CPU`        | `enableLoadCpu`        |     Yes     | Enable CPU usage (default=false).                                            |
-| `ENABLE_LOG_LOAD_CPU`    | `enableLogLoadCpu`     |     Yes     | Logs LOAD_CPU function.                                                      |
-| `CPU_USAGE_PROFILE`      | `cpuProfileStr`        |     Yes     | Additional CPU usage `iteraction_milion=wait_msec=gorutins=time_sec`. Example: `10=1=1=30 1=400=1=60`. |
-| `CPU_MAXPROC`            | `cpuMaxProc`           |     Yes     | GOMAXPROCS (default = 1).                                                    |
+| ENV VAR                  | APP VAR                | set via API | Description                                                                                                          |
+|--------------------------|------------------------|-------------|----------------------------------------------------------------------------------------------------------------------|
+| `SERVER_NAME`            | `serverName`           |     Yes     | The name of the server. Default is `ping_pong_server`.                                                               |
+| `ENABLE_DEFAULT_HOSTNAME`| `enableDefaultHostName`|     Yes     | Use the default hostname (default = "true").                                                                         |
+| `SRV_PORT`               | `serverPort`           |     No      | The port on which the server is running.                                                                             |
+| `METRIC_PORT`            | `metricPort`           |     No      | The port where server metrics are available in Prometheus format. <br/> You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.                                             |
+| `ENABLE_OUTPUT`          | `enableOutput`         |     Yes     | Log to stdout (default = "true").                                                                                    |
+| `LOG_PATH`               | `logPath`              |     Yes     | Write logs to file `${LOG_PATH}` (default="" without file output).                                                   |
+| `ENABLE_LOAD_MEMORY`     | `enableLoadMemory`     |     Yes     | Enable memory usage (default=false).                                                                                 |
+| `MEMORY_USAGE_PROFILE`   | `memoryProfileStr`     |     Yes     | Additional memory usage and time for usage. Example: `5=10 7=60 1024=360`.                                           |
+| `ENABLE_LOG_LOAD_MEMORY` | `enableLogLoadMemory`  |     Yes     | Logs LOAD_MEMORY function.                                                                                           |
+| `ENABLE_LOAD_CPU`        | `enableLoadCpu`        |     Yes     | Enable CPU usage (default=false).                                                                                    |
+| `ENABLE_LOG_LOAD_CPU`    | `enableLogLoadCpu`     |     Yes     | Logs LOAD_CPU function.                                                                                              |
+| `CPU_USAGE_PROFILE`      | `cpuProfileStr`        |     Yes     | Additional CPU usage `iteraction_milion=wait_msec=gorutins=time_sec`. Example: `10=1=1=30 1=400=1=60`.               |
+| `CPU_MAXPROC`            | `cpuMaxProc`           |     Yes     | GOMAXPROCS (default = 1).                                                                                            |
 | `DELAY_START`            | `parsedDelay`          |     No      | Delay start in seconds before start app (default = 0). Useful for testing slow start of app and test startup probes. |
-| `RESPONSE_DELAY`         | `responseDelay`        |     Yes     | Response delay in milliseconds.                                              |
-| `MAX_RESPONSE_WORKER`    | `maxResponseWorker`    |     Yes     | Maximum number of response workers.                                          |
+| `RESPONSE_DELAY`         | `responseDelay`        |     Yes     | Response delay in milliseconds.                                                                                      |
+| `MAX_RESPONSE_WORKER`    | `maxResponseWorker`    |     Yes     | Maximum number of response workers.                                                                                  |
 
 
-You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
+
 
 
 
