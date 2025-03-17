@@ -159,6 +159,15 @@ chmod +x /data/data/com.termux/files/usr/bin/ping-pong-android-arm64
 ping-pong-android-arm64 
 ```
 
+### Compilation from Source Code
+
+```bash
+cd docker/ping_pong/app
+go mod tidy
+go run app.go # or go build app.go
+
+```
+
 ### api
 
 - `/ping-pong-api/getVar` - get all ping-pong variables
