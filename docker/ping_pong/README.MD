@@ -1,72 +1,119 @@
-This is a small HTTP server that sends back the incoming request with all the metadata in response, including the
-sender's IP address, all request parameters, and headers. The server's configuration can be modified by using
-environment variables:
+# ping_pong
+<p align="center">
+    <a href="https://github.com/ViktorUJ/cks"><img src="https://raw.githubusercontent.com/ViktorUJ/terraform-aws-vpc/master/img/logo_192x192.png" width="192" height="192" alt="SRE Learning Platform"/></a>
+</p>
 
-- `SERVER_NAME`: The name of the server. Default is `ping_pong_server`.
-- `ENABLE_DEFAULT_HOSTNAME`: Use the default hostname (default = "true").
-- `SRV_PORT`: The port on which the server is running.
-- `METRIC_PORT`: The port where server metrics are available in Prometheus format.
-- `ENABLE_OUTPUT`: log to stdout (default = "true")
-- `LOG_PATH`: write logs to file ${LOG_PATH} (default=""  without file output)
-- `ENABLE_LOAD_MEMORY` : enable memory usage (default=false)
-- `MEMORY_USAGE_PROFILE`: additional memory usage and time for usage . example `5=10 7=60  1024=360  ` - 5 Mb 10sec 7 Mb
-  60sec 1024Mb 360sec
-- `ENABLE_LOG_LOAD_MEMORY`: logs LOAD_MEMORY function
-- `ENABLE_LOAD_CPU` : enable cpu usage (default=false)
-- `ENABLE_LOG_LOAD_CPU`: logs LOAD_CPU function
-- `CPU_USAGE_PROFILE`: additional CPU usage `iteraction_milion=wait_msec=gorutins=time_sec` . example
-  `10=1=1=30  1=400=1=60`
-- `CPU_MAXPROC`: GOMAXPROCS (default = 1)
-- `DELAY_START`: delay start in seconds before start app (default = 0) . It is useful for testing slow start of app and
-  test startup probes.
 
-You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`.
+This project is a small **HTTP server** that returns the incoming request with **metadata** in the response, including the sender's **IP address, all request parameters, and headers**. The server's configuration can be **modified** using **environment variables**. Additionally, the server supports **CPU and memory load** testing and provides **metrics in Prometheus** format. The **running server's** parameters can be **modified via API**.
 
-`docker pull viktoruj/ping_pong`
 
-## examples
+The server can be run as a Docker container or Kubernetes resources for x86 or ARM platforms. It can also be run as compiled binary files or compiled from source code.
 
-### run http pingPong server
+## Table of Contents
+- [Usage Scenarios](#usage-scenarios)
+  - [run http ping-pong server](#run-http-ping-pong-server)
+  - [run http ping-pong server with custom server Name](#run-http-ping-pong-server--with-custom-server-name)
+  - [run http ping-pong server  with serverName = podName](#run-http-ping-pong-server--with-servername--podname)
+  - [run http ping-pong server with MEMORY_USAGE](#run-http-ping-pong-server--with-memory_usage)
+  - [emulate crash app](#emulate-crash-app)
+  - [run http ping-pong server  with response delay 3 seconds and 10 workers](#run-http-ping-pong-server--with-response-delay-3-seconds-and-10-workers)
+- Run
+  - [Docker](#run-docker-container)
+    - [tags](#tags-)
+  - [Kubernetes](#run-http-ping-pong-server)
+  - [Binary](#binary) 
+    - [Linux](#run-binary-on-linux)
+    - [macOS](#run-binary-on-macos)
+    - [Android](#run-binary-on-android)
+  - [Compilation from Source Code](#compilation-from-source-code)
+- [Configuration](#configuration)
+- [API](#api)
+   - [getVar - get ping-pong variables](#get-variables)
+   - [setVar - set ping-pong variables ](#set-variables) 
+   - [osInfo - information about system ](#get-os-info)
+   - [panic - emulate crash app](#emulate-crash-app)
+   - [getMetric - get metric ](#get-metric)
+
+   
+## Usage Scenarios
+
+
+### run http ping-pong server
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong
 ```
 
-### run http pingPong server  with serverName
+### run http ping-pong server  with custom **server Name**
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env SERVER_NAME=pingPongServer
 ```
 
-### run http pingPong server  with serverName = podName
+### run http ping-pong server  with serverName = podName
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong --env ENABLE_DEFAULT_HOSTNAME=false
 ```
 
-### run http pingPong server  with MEMORY_USAGE
+### run http ping-pong server  with MEMORY_USAGE
 
 ```
 kubectl  run test --image  viktoruj/ping_pong   --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360    ' --env ENABLE_LOAD_MEMORY=true
 ```
 
-### run http pingPong server  with MEMORY_USAGE and CPU_USAGE  and enable cpu and memory loging . It uses CPU_MAXPROC =2 .
+### run http ping-pong server  with MEMORY_USAGE and CPU_USAGE  and enable cpu and memory loging . It uses CPU_MAXPROC =2 .
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1=60 1=4=1=60 10=1=4=60'  --env ENABLE_LOAD_CPU=true  --env ENABLE_LOG_LOAD_CPU=true --env CPU_MAXPROC=2 --env MEMORY_USAGE_PROFILE='5=60  20=60   1024=360  ' --env ENABLE_LOAD_MEMORY=true --env ENABLE_LOG_LOAD_MEMORY=true
 ```
 
-### run http pingPong server  with slow start 10 seconds.
+### run http ping-pong server  with slow start 10 seconds.
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 ```
 
-### tags :
+### run http ping-pong server  with response delay 3 seconds and 10 workers.
+``` 
+kubectl  run test  --image  viktoruj/ping_pong --env  RESPONSE_DELAY=3000 --env  MAX_RESPONSE_WORKER=10
+```
 
-- `latest` - from scratch image with only binary
-- `alpine` - alpine image with binary and utils
-- `debug` - amazon/aws-cli image with utils
+### Configuration
+
+
+| ENV VAR                  | APP VAR                | set via API | Description                                                                                                                                           |
+|--------------------------|------------------------|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `SERVER_NAME`            | `serverName`           |     Yes     | The name of the server. Default is `ping_pong_server`.                                                                                                |
+| `ENABLE_DEFAULT_HOSTNAME`| `enableDefaultHostName`|     Yes     | Use the default hostname (default = "true").                                                                                                          |
+| `SRV_PORT`               | `serverPort`           |     No      | The port on which the server is running.                                                                                                              |
+| `METRIC_PORT`            | `metricPort`           |     No      | The port where server metrics are available in Prometheus format. <br/> You can view the current metrics at `{server_address}:{METRIC_PORT}/metrics`. |
+| `ENABLE_OUTPUT`          | `enableOutput`         |     Yes     | Log to stdout (default = "true").                                                                                                                     |
+| `LOG_PATH`               | `logPath`              |     Yes     | Write logs to file `${LOG_PATH}` (default="" without file output).                                                                                    |
+| `ENABLE_LOAD_MEMORY`     | `enableLoadMemory`     |     Yes     | Enable memory usage (default=false).                                                                                                                  |
+| `MEMORY_USAGE_PROFILE`   | `memoryProfileStr`     |     Yes     | Additional memory usage and time for usage. Example: `5=10 7=60 1024=360`.                                                                            |
+| `ENABLE_LOG_LOAD_MEMORY` | `enableLogLoadMemory`  |     Yes     | Logs LOAD_MEMORY function.                                                                                                                            |
+| `ENABLE_LOAD_CPU`        | `enableLoadCpu`        |     Yes     | Enable CPU usage (default=false).                                                                                                                     |
+| `ENABLE_LOG_LOAD_CPU`    | `enableLogLoadCpu`     |     Yes     | Logs LOAD_CPU function.                                                                                                                               |
+| `CPU_USAGE_PROFILE`      | `cpuProfileStr`        |     Yes     | Additional CPU usage `iteraction_milion=wait_msec=gorutins=time_sec`. Example: `10=1=1=30 1=400=1=60`.                                                |
+| `CPU_MAXPROC`            | `cpuMaxProc`           |     Yes     | GOMAXPROCS (default = 1). How many cores to use.                                                                                                      |
+| `DELAY_START`            | `parsedDelay`          |     No      | Delay start in seconds before start app (default = 0). Useful for testing slow start of app and test startup probes.                                  |
+| `RESPONSE_DELAY`         | `responseDelay`        |     Yes     | Response delay in milliseconds.                                                                                                                       |
+| `MAX_RESPONSE_WORKER`    | `maxResponseWorker`    |     Yes     | Maximum number of response workers.                                                                                                                   |
+
+
+
+### run Docker container
+```
+docker run -d -p 8080:8080 viktoruj/ping_pong
+```
+
+### tags :
+The images work on **x86** and **ARM** platforms.
+
+- `latest` - from **scratch** image with **only binary**. [Dockerfile](Dockerfile)
+- `alpine` - **alpine** image with **binary** and **utils**. [Dockerfile_alpine](Dockerfile_alpine)
+- `debug` - **amazon/aws-cli** image with **utils**. [Dockerfile_debug_arm](Dockerfile_debug_arm)  and [Dockerfile_debug_x86](Dockerfile_debug_x86) .
 
 ### binary
 
@@ -81,7 +128,7 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 
 ### run binary on macOS
 
-``` 
+```bash 
 sudo xattr -d com.apple.quarantine ping-pong-darwin-amd64
 sudo chmod +x ping-pong-darwin-amd64
 ./ping-pong-darwin-amd64 
@@ -95,7 +142,7 @@ curl 127.0.0.1:8080
 
 ### run binary on linux
 
-```
+```bash
 sudo chmod +x ping-pong-linux-amd64
 ./ping-pong-linux-amd64
 # or
@@ -110,10 +157,19 @@ curl 127.0.0.1:8080
 
 - use Termux
 
-``` 
+```bash 
 copy ping-pong-android-arm64  to /data/data/com.termux/files/usr/bin/
 chmod +x /data/data/com.termux/files/usr/bin/ping-pong-android-arm64
 ping-pong-android-arm64 
+```
+
+### Compilation from Source Code
+
+```bash
+cd docker/ping_pong/app
+go mod tidy
+go run app.go # or go build app.go
+
 ```
 
 ### api
