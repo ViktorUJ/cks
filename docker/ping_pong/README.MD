@@ -21,7 +21,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
     - [Linux](#run-binary-on-linux)
     - [macOS](#run-binary-on-macos)
     - [Android](#run-binary-on-android)
-  - Compilation from Source Code
+  - [Compilation from Source Code](#compilation-from-source-code)
 - [Configuration](#configuration)
 - [API](#api)
    - [getVar - get ping-pong variables](#get-variables)
