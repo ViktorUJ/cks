@@ -12,6 +12,7 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
   - [run http ping-pong server  with serverName = podName](#run-http-ping-pong-server--with-servername--podname)
   - [run http ping-pong server with MEMORY_USAGE](#run-http-ping-pong-server--with-memory_usage)
   - [emulate crash app](#emulate-crash-app)
+  - [run http ping-pong server  with response delay 3 seconds and 10 workers](#run-http-ping-pong-server--with-response-delay-3-seconds-and-10-workers)
 - Run
   - [Docker](#run-docker-container)
     - [tags](#tags-)
@@ -67,6 +68,11 @@ kubectl  run test  --image  viktoruj/ping_pong  --env CPU_USAGE_PROFILE='1=400=1
 
 ```
 kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
+```
+
+### run http ping-pong server  with response delay 3 seconds and 10 workers.
+``` 
+kubectl  run test  --image  viktoruj/ping_pong --env  RESPONSE_DELAY=3000 --env  MAX_RESPONSE_WORKER=10
 ```
 
 ### Configuration
