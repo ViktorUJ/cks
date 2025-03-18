@@ -160,5 +160,5 @@ documentation https://etcd.io/docs/
 |:-----------------------:|:----------------------------------------------------------------|
 |     **Task weight**     | 3%                                                              |
 |       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`) |
-| **Acceptance criteria** | - ns  team-20                                                   |
+| **Acceptance criteria** | - ns  team-20  , deployment sercret-app                         |
 ---
