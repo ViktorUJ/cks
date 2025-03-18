@@ -13,8 +13,6 @@ metadata:
   name: app
   namespace: myapp
 spec:
-  nodeSelector:
-    work_type: app1
   containers:
   - image: viktoruj/ping_pong:alpine
     name: app
@@ -44,7 +42,10 @@ kind: Ingress
 metadata:
   name: ingress-rule
   namespace: myapp
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
 spec:
+  ingressClassName: nginx
   rules:
   - host: myapp.local
     http:
