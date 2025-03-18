@@ -11,7 +11,7 @@ metadata:
   labels:
     run: app
   name: app
-  namespace: app
+  namespace: myapp
 spec:
   nodeSelector:
     work_type: app1
@@ -29,7 +29,7 @@ metadata:
   labels:
     run: app
   name: app
-  namespace: app
+  namespace: myapp
 spec:
   ports:
   - port: 8080
@@ -42,10 +42,12 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: minimal-ingress
+  name: ingress-rule
+  namespace: myapp
 spec:
   rules:
-  - http:
+  - host: myapp.local
+    http:
       paths:
       - path: /
         pathType: Prefix
