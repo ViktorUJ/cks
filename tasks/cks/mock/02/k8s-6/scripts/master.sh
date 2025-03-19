@@ -22,3 +22,4 @@ kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/c
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/02/k8s-6/scripts/task11.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/02/k8s-6/scripts/task15.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/02/k8s-6/scripts/task19.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-102/tasks/cks/mock/02/k8s-6/scripts/task20.yaml
