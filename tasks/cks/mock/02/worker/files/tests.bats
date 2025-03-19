@@ -817,3 +817,12 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "20.1  disable sa secret auto-mount. " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get sa team20   -n team-20  -o jsonpath='{.automountServiceAccountToken}'  --context cluster6-admin@cluster6)
+  if [[ "$result" == "false" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "false" ]
+}
