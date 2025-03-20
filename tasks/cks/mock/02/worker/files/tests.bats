@@ -826,3 +826,14 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "false" ]
 }
+
+@test "20.2 check mount secret " {
+  echo '2'>>/var/work/tests/result/all
+  pod=$(kubectl get  po  -n team-20    --context cluster6-admin@cluster6  -l app=team20 -o jsonpath={.items..metadata.name})
+  kubectl exec $pod -ti -n  team-20    --context cluster6-admin@cluster6 -- bash -c ' cat /var/team20/secret/token'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
