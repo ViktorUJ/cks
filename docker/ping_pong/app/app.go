@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"net"
@@ -318,6 +319,7 @@ func memoryLoad(size int, sec int) {
 		time.Sleep(1 * time.Second)
 	}
 }
+
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
 	if atomic.LoadUint64(&ResponseWorker) >= uint64(maxResponseWorker) {
@@ -343,6 +345,16 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	for name, headers := range r.Header {
 		for _, h := range headers {
 			response.WriteString(fmt.Sprintf("%v: %v\n", name, h))
+		}
+	}
+
+	if r.Method == http.MethodPost || r.Method == http.MethodPut {
+		body, err := io.ReadAll(r.Body)
+		if err == nil {
+			response.WriteString("Request Body:\n")
+			response.Write(body)
+		} else {
+			response.WriteString(fmt.Sprintf("Failed to read request body: %v\n", err))
 		}
 	}
 
