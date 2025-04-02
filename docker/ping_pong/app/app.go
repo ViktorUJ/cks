@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"io"
 
 	"github.com/klauspost/cpuid/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -318,43 +319,54 @@ func memoryLoad(size int, sec int) {
 		time.Sleep(1 * time.Second)
 	}
 }
+
 func requestHandler(w http.ResponseWriter, r *http.Request) {
-	var response strings.Builder
-	if atomic.LoadUint64(&ResponseWorker) >= uint64(maxResponseWorker) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		fmt.Fprintf(w, "Server is overloaded. Current workers: %d, Max allowed: %d\n", ResponseWorker, maxResponseWorker)
-		return
-	}
-	atomic.AddUint64(&ResponseWorker, 1)
-	defer atomic.AddUint64(&ResponseWorker, ^uint64(0))
-	if responseDelay > 0 {
-		time.Sleep(time.Duration(responseDelay) * time.Millisecond)
-	}
-	response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))
-	response.WriteString(fmt.Sprintf("URL: http://%s%s\n", r.Host, r.URL.String()))
-	response.WriteString(fmt.Sprintf("Client IP: %s\n", getIP(r)))
-	response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
-	response.WriteString(fmt.Sprintf("Protocol: %s\n", r.Proto))
-	response.WriteString(fmt.Sprintf("responseDelay: %s\n", strconv.Itoa(responseDelay)))
-	response.WriteString(fmt.Sprintf("maxResponseWorker: %s\n", strconv.Itoa(maxResponseWorker)))
-	response.WriteString(fmt.Sprintf("ResponseWorker: %d\n", ResponseWorker))
-	response.WriteString("Headers:\n")
+    var response strings.Builder
+    if atomic.LoadUint64(&ResponseWorker) >= uint64(maxResponseWorker) {
+        w.WriteHeader(http.StatusServiceUnavailable)
+        fmt.Fprintf(w, "Server is overloaded. Current workers: %d, Max allowed: %d\n", ResponseWorker, maxResponseWorker)
+        return
+    }
+    atomic.AddUint64(&ResponseWorker, 1)
+    defer atomic.AddUint64(&ResponseWorker, ^uint64(0))
+    if responseDelay > 0 {
+        time.Sleep(time.Duration(responseDelay) * time.Millisecond)
+    }
+    response.WriteString(fmt.Sprintf("Server Name: %s\n", serverName))
+    response.WriteString(fmt.Sprintf("URL: http://%s%s\n", r.Host, r.URL.String()))
+    response.WriteString(fmt.Sprintf("Client IP: %s\n", getIP(r)))
+    response.WriteString(fmt.Sprintf("Method: %s\n", r.Method))
+    response.WriteString(fmt.Sprintf("Protocol: %s\n", r.Proto))
+    response.WriteString(fmt.Sprintf("responseDelay: %s\n", strconv.Itoa(responseDelay)))
+    response.WriteString(fmt.Sprintf("maxResponseWorker: %s\n", strconv.Itoa(maxResponseWorker)))
+    response.WriteString(fmt.Sprintf("ResponseWorker: %d\n", ResponseWorker))
+    response.WriteString("Headers:\n")
 
-	for name, headers := range r.Header {
-		for _, h := range headers {
-			response.WriteString(fmt.Sprintf("%v: %v\n", name, h))
-		}
-	}
+    for name, headers := range r.Header {
+        for _, h := range headers {
+            response.WriteString(fmt.Sprintf("%v: %v\n", name, h))
+        }
+    }
 
-	atomic.AddUint64(&requestsCount, 1)
-	now := time.Now()
-	elapsed := now.Sub(lastRequestTime).Seconds()
-	lastRequestTime = now
-	requestsPerSecond = 1 / elapsed
-	requestsPerMinute = requestsPerSecond * 60
+    if r.Method == http.MethodPost || r.Method == http.MethodPut {
+        body, err := io.ReadAll(r.Body)
+        if err == nil {
+            response.WriteString("Request Body:\n")
+            response.Write(body)
+        } else {
+            response.WriteString(fmt.Sprintf("Failed to read request body: %v\n", err))
+        }
+    }
 
-	fmt.Fprint(w, response.String())
-	sendLog(response.String())
+    atomic.AddUint64(&requestsCount, 1)
+    now := time.Now()
+    elapsed := now.Sub(lastRequestTime).Seconds()
+    lastRequestTime = now
+    requestsPerSecond = 1 / elapsed
+    requestsPerMinute = requestsPerSecond * 60
+
+    fmt.Fprint(w, response.String())
+    sendLog(response.String())
 }
 
 func getIP(r *http.Request) string {
