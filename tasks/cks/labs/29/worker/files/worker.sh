@@ -16,11 +16,11 @@ echo \
 apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io
 
-if ! id -u developer &>/dev/null; then
-  useradd -m -s /bin/bash developer 
+if ! id -u user &>/dev/null; then
+  useradd -m -s /bin/bash user 
 fi
 
-usermod -aG docker developer
+usermod -aG docker user
 
 sed -i 's|ListenStream=/run/docker.sock|ListenStream=/var/run/docker.sock|' /lib/systemd/system/docker.socket
 sed -i 's|^ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock|ExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375 --containerd=/run/containerd/containerd.sock|' /lib/systemd/system/docker.service
