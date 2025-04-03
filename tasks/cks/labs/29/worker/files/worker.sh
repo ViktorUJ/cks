@@ -14,7 +14,7 @@ echo \
   tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 apt-get update
-apt-get install docker-ce docker-ce-cli containerd.io
+apt-get install -y docker-ce docker-ce-cli containerd.io
 
 if ! id -u developer &>/dev/null; then
   useradd -m -s /bin/bash developer 
