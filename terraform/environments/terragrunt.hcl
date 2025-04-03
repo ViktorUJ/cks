@@ -1,7 +1,7 @@
 locals {
   region                 = "eu-north-1"
   backend_region         = "eu-north-1"
-  backend_bucket         = "sre-learning-platform-state-backet"
+  backend_bucket         = "vitdevops-platform-state-backet"
   backend_dynamodb_table = "${local.backend_bucket}-lock"
 }
 
@@ -34,7 +34,7 @@ EOF
 
 remote_state {
   backend = "s3"
-  config  = {
+  config = {
     bucket         = local.backend_bucket
     key            = "terragrunt${path_relative_to_include()}/terraform.tfstate"
     region         = local.backend_region
@@ -43,7 +43,7 @@ remote_state {
   }
 }
 inputs = {
- region = local.backend_region
- backend_bucket=local.backend_bucket
- backend_dynamodb_table=local.backend_dynamodb_table
+  region                 = local.backend_region
+  backend_bucket         = local.backend_bucket
+  backend_dynamodb_table = local.backend_dynamodb_table
 }
