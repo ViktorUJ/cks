@@ -7,7 +7,7 @@ kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/late
 kubectl -n kube-system patch deployment metrics-server --type=json \
 -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]]'
 
-#Untaint master node
+# Untaint master node
 kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule-
 
 # Installation of the ingress-nginx
