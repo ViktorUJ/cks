@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.1 (xx.04.2025)
+### Features
+* calculation of **headers size**, **body size** and **full size** was added to  [ping_pong](../docker/ping_pong/README.MD)
+
 ## 0.19.1 (17.03.2025)
 ### Features
 
