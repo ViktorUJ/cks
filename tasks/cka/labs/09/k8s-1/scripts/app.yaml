@@ -29,7 +29,7 @@ spec:
         name: app
         env:
         - name: SERVER_NAME
-          value: megApp
+          value: megApp1
         - name: SRV_PORT
           value: "80"
         resources: {}
@@ -56,4 +56,3 @@ spec:
   type: ClusterIP
 status:
   loadBalancer: {}
----
