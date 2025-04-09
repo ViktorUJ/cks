@@ -13,7 +13,10 @@ kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule
 # Installation of the ingress-nginx
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
 
+sleep 30s
+
 kubectl apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/cks-new-labs-added/tasks/cks/labs/27/k8s-1/scripts/app.yaml
+kubectl apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/cks-new-labs-added/tasks/cks/labs/27/k8s-1/scripts/default-deny.yaml
 
 kubectl patch svc ingress-nginx-controller -n ingress-nginx --type='json' -p='[{"op": "replace", "path": "/spec/type", "value": "NodePort"}, {"op": "add", "path": "/spec/ports/0/nodePort", "value": 30800}]'
 
