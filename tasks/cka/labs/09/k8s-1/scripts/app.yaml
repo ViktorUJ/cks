@@ -168,3 +168,60 @@ spec:
   type: ClusterIP
 status:
   loadBalancer: {}
+
+---
+# restricted
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-restricted
+  name: app-restricted
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-restricted
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-restricted
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        env:
+        - name: SERVER_NAME
+          value: restricted
+        - name: SRV_PORT
+          value: "80"
+        resources: {}
+        ports:
+        - containerPort: 80
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-restricted
+  name: app-restricted
+  namespace: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app-restricted
+  type: ClusterIP
+status:
+  loadBalancer: {}
+
