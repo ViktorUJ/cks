@@ -12,7 +12,7 @@ metadata:
   labels:
     app: app-prod
   name: app-prod
-  namespace: meg
+  namespace: app
 spec:
   replicas: 2
   selector:
