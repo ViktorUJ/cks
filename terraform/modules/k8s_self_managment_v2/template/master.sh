@@ -29,6 +29,7 @@ cni_type=${cni_type}
 cilium_version=${cilium_version}
 disable_kube_proxy=${disable_kube_proxy}
 kubeadm_init_extra_args=""
+enable_cilium_mtls=${enable_cilium_mtls}
 date
 swapoff -a
 
@@ -91,7 +92,12 @@ cilium)
    curl -Lo cilium.tar.gz $cilium_url
    tar -zxvf cilium.tar.gz
    mv cilium /usr/local/bin/cilium
-   cilium install --version ${cilium_helm_version}
+   if [[ "$enable_cilium_mtls" == "true" ]] ; then
+     cilium install --version ${cilium_helm_version} --set authentication.mutual.spire.enabled=true \
+        --set authentication.mutual.spire.install.enabled=true
+   else
+     cilium install --version ${cilium_helm_version}
+   fi
 ;;
 *)
    echo "cni type = $cni_type  not support"
