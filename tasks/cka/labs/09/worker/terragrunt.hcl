@@ -40,6 +40,8 @@ inputs = {
   app_name    = "k8s-worker"
   subnets  = dependency.vpc.outputs.subnets
   vpc_id      = dependency.vpc.outputs.vpc_id
+  all_spot_subnet       = local.vars.locals.all_spot_subnet
+  spot_additional_types = local.vars.locals.spot_additional_types
 
   host_list = concat(dependency.cluster1.outputs.hosts)
   work_pc = {
@@ -57,7 +59,7 @@ inputs = {
     util = {
       kubectl_version = local.vars.locals.k8_version
     }
-    exam_time_minutes = "360"
+    exam_time_minutes = "3600"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-105/tasks/cka/labs/09/worker/files/tests.bats"
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-105/tasks/cka/labs/09/worker/files/worker.sh"
     ssh = {
