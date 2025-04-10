@@ -2,34 +2,35 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: meg
+  name: app
 ---
+# prod
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    app: meg-app
-  name: meg-app
+    app: app-prod
+  name: app-prod
   namespace: meg
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: meg-app
+      app: app-prod
   strategy: {}
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: meg-app
+        app: app-prod
     spec:
       containers:
       - image: viktoruj/ping_pong:alpine
         name: app
         env:
         - name: SERVER_NAME
-          value: megApp1
+          value: production
         - name: SRV_PORT
           value: "80"
         resources: {}
@@ -43,16 +44,18 @@ kind: Service
 metadata:
   creationTimestamp: null
   labels:
-    app: meg-service
-  name: meg-service
-  namespace: meg
+    app: app-prod
+  name: app-prod
+  namespace: app
 spec:
   ports:
   - port: 80
     protocol: TCP
     targetPort: 80
   selector:
-    app: meg-app
+    app: app-prod
   type: ClusterIP
 status:
   loadBalancer: {}
+
+#
