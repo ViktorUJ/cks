@@ -20,7 +20,6 @@ locals {
   cni = {
     type               = "cilium" #calico , cilium
     disable_kube_proxy = "true"
-    enable_cilium_mtls = "true"
   }
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"

@@ -29,7 +29,6 @@ cni_type=${cni_type}
 cilium_version=${cilium_version}
 disable_kube_proxy=${disable_kube_proxy}
 kubeadm_init_extra_args=""
-enable_cilium_mtls=${enable_cilium_mtls}
 date
 swapoff -a
 
