@@ -11,7 +11,7 @@ terraform {
   #
 
   extra_arguments "retry_lock" {
-    commands = get_terraform_commands_that_need_locking()
+    commands  = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -39,7 +39,7 @@ inputs = {
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
-    runtime = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
+    runtime            = local.vars.locals.runtime
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
@@ -51,7 +51,7 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/26/k8s-1/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/28/k8s-1/scripts/master.sh"
     cni                = local.vars.locals.cni
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
@@ -59,50 +59,5 @@ inputs = {
     }
     root_volume = local.vars.locals.root_volume
   }
-  k8s_worker = {
-    # we can  configure each node independently
-
-    "app1" = {
-      k8_version         = local.vars.locals.k8_version
-      instance_type      = local.vars.locals.instance_type
-      key_name           = local.vars.locals.key_name
-      ami_id             = local.vars.locals.ami_id
-      subnet_number      = "0"
-      ubuntu_version     = local.vars.locals.ubuntu_version
-      user_data_template = "template/worker.sh"
-      runtime            = local.vars.locals.runtime
-      runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cka/labs/08/k8s-1/scripts/worker.sh"
-      node_labels        = "work_type=app1"
-      ssh = {
-        private_key = dependency.ssh-keys.outputs.private_key
-        pub_key     = dependency.ssh-keys.outputs.pub_key
-      }
-      cidrs       = local.vars.locals.access_cidrs
-      root_volume = local.vars.locals.root_volume
-    }
-
-    "app2" = {
-      k8_version         = local.vars.locals.k8_version
-      instance_type      = local.vars.locals.instance_type
-      key_name           = local.vars.locals.key_name
-      ami_id             = local.vars.locals.ami_id
-      subnet_number      = "0"
-      ubuntu_version     = local.vars.locals.ubuntu_version
-      user_data_template = "template/worker.sh"
-      runtime            = local.vars.locals.runtime
-      runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cka/labs/08/k8s-1/scripts/worker.sh"
-      node_labels        = "work_type=app2"
-      ssh = {
-        private_key = dependency.ssh-keys.outputs.private_key
-        pub_key     = dependency.ssh-keys.outputs.pub_key
-      }
-      cidrs       = local.vars.locals.access_cidrs
-      root_volume = local.vars.locals.root_volume
-    }
-
-
-
-  }
+  k8s_worker = {}
 }
