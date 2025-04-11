@@ -21,7 +21,7 @@ kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1
 #Deploy NGINX Gateway Fabric
 kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.6.1/deploy/nodeport/deploy.yaml
 
-kubectl patch svc nginx-gateway -n nginx-gateway --type='json' -p='[{"op": "replace", "path": "/spec/ports/0/nodePort", "value": 30080},{"op": "replace", "path": "/spec/ports/1/nodePort", "value": 30081}]'
+kubectl patch svc nginx-gateway -n nginx-gateway --type='json' -p='[{"op": "replace", "path": "/spec/ports/0/nodePort", "value": 30102},{"op": "replace", "path": "/spec/ports/1/nodePort", "value": 31139}]'
 
 
 #install lab manifests
