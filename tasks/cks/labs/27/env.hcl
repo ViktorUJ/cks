@@ -16,7 +16,7 @@ locals {
   }
   k8_version = "1.31.0"
   node_type  = "spot"
-  runtime    = "containerd" # docker  , cri-o  , containerd ( need test it )
+  runtime    = "containerd" # docker, cri-o, containerd ( need test it )
   cni = {
     type               = "cilium" #calico , cilium
     disable_kube_proxy = "true"
