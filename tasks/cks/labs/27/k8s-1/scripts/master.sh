@@ -13,6 +13,17 @@ kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule
 # Installation of the ingress-nginx
 kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.1/deploy/static/provider/cloud/deploy.yaml
 
+# Install local path provisioner
+kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.31/deploy/local-path-storage.yaml
+
+# Reinstalling cilium
+cur_ver=$(cilium version | grep running | awk -F ':' '{print $2}' | sed 's/[[:space:]]//g')
+cilium uninstall
+cilium install --version $cur_ver --set authentication.mutual.spire.enabled=true --set authentication.mutual.spire.install.enabled=true
+
+kubectl patch pvc spire-data-spire-server-0 -n cilium-spire --type='json' \
+-p='[{"op": "add", "path": "/spec/storageClassName", "value": "local-path"}]'
+
 sleep 60s # Wait until ingress-nginx is up and running
 
 kubectl apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/cks-new-labs-added/tasks/cks/labs/27/k8s-1/scripts/app.yaml

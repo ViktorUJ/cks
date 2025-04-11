@@ -55,7 +55,6 @@ variable "k8s_master" {
       cilium_version      = optional(string, "v0.16.24")
       cilium_helm_version = optional(string, "1.16.1")
       disable_kube_proxy  = optional(string, "false")
-      enable_cilium_mtls  = optional(string, "false") # Set to true if you want to enable cilium mTLS https://docs.cilium.io/en/latest/network/servicemesh/mutual-authentication/mutual-authentication/
     }), {})
     task_script_url = string # url for run additional script
     eip             = string # true or ...

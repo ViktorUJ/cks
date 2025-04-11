@@ -103,7 +103,6 @@ resource "aws_launch_template" "master" {
       calico_url          = var.k8s_master.cni.calico_url
       cilium_version      = var.k8s_master.cni.cilium_version
       cilium_helm_version = var.k8s_master.cni.cilium_helm_version
-      enable_cilium_mtls  = var.k8s_master.cni.enable_cilium_mtls
       disable_kube_proxy  = var.k8s_master.cni.disable_kube_proxy
       ssh_private_key     = var.k8s_master.ssh.private_key
       ssh_pub_key         = var.k8s_master.ssh.pub_key
