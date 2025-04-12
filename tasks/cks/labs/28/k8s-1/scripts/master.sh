@@ -8,6 +8,10 @@ echo "deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://down
 
 apt-get update -y
 
+export FALCO_FRONTEND=noninteractive
+export FALCO_DRIVER_CHOICE=ebpf
+export FALCOCTL_ENABLED=''
+
 DEBIAN_FRONTEND=noninteractive apt install -y dkms make linux-headers-$(uname -r) clang llvm dialog falco
 
 kubectl apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/cks-new-labs-added/tasks/cks/labs/28/k8s-1/scripts/app.yaml
