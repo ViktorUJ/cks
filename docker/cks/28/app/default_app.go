@@ -1,12 +1,13 @@
 package main
 
 import (
+	"log"
 	"time"
 )
 
 func main() {
 	for {
-		println("I am working...")
-		time.Sleep(500 * time.Millisecond)
+		log.Println("I am working...")
+		time.Sleep(5000 * time.Millisecond)
 	}
 }

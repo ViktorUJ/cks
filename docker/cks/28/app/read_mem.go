@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"syscall"
 	"time"
 )
@@ -12,7 +13,8 @@ func main() {
 			if err == nil {
 				syscall.Close(fd)
 			}
-			time.Sleep(100 * time.Millisecond)
+			log.Println("I am working...")
+			time.Sleep(5000 * time.Millisecond)
 		}
 	}
 }
