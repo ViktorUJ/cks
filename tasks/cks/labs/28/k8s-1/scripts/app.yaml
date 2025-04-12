@@ -22,7 +22,7 @@ spec:
         app: app1
     spec:
       containers:
-      - image: public.ecr.aws/v8u2l1s7/vitdevops/cks-lab:cks_28_app1 # viktoruj/cks-lab:cks_28_app1
+      - image: viktoruj/cks-lab:cks_28_app1
         name: app1
 ---
 apiVersion: apps/v1
@@ -43,7 +43,7 @@ spec:
         app: app2
     spec:
       containers:
-      - image: public.ecr.aws/v8u2l1s7/vitdevops/cks-lab:cks_28_app2 # viktoruj/cks-lab:cks_28_app2 #
+      - image: viktoruj/cks-lab:cks_28_app2
         name: app2
 ---
 apiVersion: apps/v1
@@ -64,6 +64,6 @@ spec:
         app: app3
     spec:
       containers:
-      - image: public.ecr.aws/v8u2l1s7/vitdevops/cks-lab:cks_28_app3 # viktoruj/cks-lab:cks_28_app3
+      - image: viktoruj/cks-lab:cks_28_app3
         name: app3
 ...

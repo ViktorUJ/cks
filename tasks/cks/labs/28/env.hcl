@@ -1,7 +1,7 @@
 locals {
   questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/28/README.MD"
   solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/28/worker/files/solutions/1.MD"
-  solutions_video   = "https://youtu.be/lVrkuX6CriQ"
+  solutions_video   = "<< to be added >>"
   debug_output      = "false"
   region            = "eu-north-1"
   vpc_default_cidr  = "10.10.0.0/16"
