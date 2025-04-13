@@ -22,6 +22,9 @@ curl IP  or not in domain -> svc `app-restricted`
 `curl cka.local:30102` from forbidden country -> svc `app-restricted`
 
 
+`curl weight-cka.local:30102` -> svc `app-weight-v1` 70% ,  svc `app-weight-v2` 30%  
+
+
 | URL + Headers (Request Details)                                                                        | Curl Command                                                      | Expected Result            |
 |--------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|----------------------------|
 | Request from an IP address or not using the proper domain                                              | `curl http://<IP>:30102` or `curl http://non-domain.example`        | Service `app-restricted`   |
