@@ -10,10 +10,7 @@ curl IP  or not in domain -> svc `app-restricted`
 `curl cka.local:30102` -> svc `app-prod`
 
 
-`curl -H "environment: dev" cka.local:30102` -> svc `app-mobile`
-
-
-`curl cka.local:30102`    from mobile -> svc `app-mobile`
+`curl -H "environment: dev" cka.local:30102` -> svc `app-dev`
 
 
 `curl dev-cka.local:30102` -> svc `app-dev`
@@ -24,7 +21,7 @@ curl IP  or not in domain -> svc `app-restricted`
 
 `curl weight-cka.local:30102` -> svc `app-weight-v1` 70% ,  svc `app-weight-v2` 30%  
 
-`curl header-cka.local:30102` -> svc `app-dev` . remove header `user-type: dev` . add header `user-name: test-user` . modify header `user-city` to `NYC`
+`curl header-cka.local:30102` -> svc `app-dev` . remove header `X-CH` . add header `User-Type: test-user` . modify header `User-City` to `NYC`
 
 | URL + Headers (Request Details)                                                                        | Curl Command                                                      | Expected Result            |
 |--------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|----------------------------|
