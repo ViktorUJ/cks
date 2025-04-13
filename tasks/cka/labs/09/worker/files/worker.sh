@@ -6,3 +6,4 @@ address=$(kubectl get no -l work_type=system --context cluster1-admin@cluster1 -
 echo "$address cka.local">>/etc/hosts
 echo "$address dev-cka.local">>/etc/hosts
 echo "$address weight-cka.local">>/etc/hosts
+echo "$address header-cka.local">>/etc/hosts
