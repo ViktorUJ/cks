@@ -4,3 +4,4 @@ export KUBECONFIG=/root/.kube/config
 
 address=$(kubectl get no -l work_type=system --context cluster1-admin@cluster1 -o json  | jq -r '.items[] | select(.kind == "Node") | .status.addresses[] | select(.type == "InternalIP") | .address')
 echo "$address cka.local">>/etc/hosts
+echo "$address dev-cka.local">>/etc/hosts
