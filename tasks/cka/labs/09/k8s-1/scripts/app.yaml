@@ -336,3 +336,59 @@ spec:
   type: ClusterIP
 status:
   loadBalancer: {}
+
+---
+# header
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-header
+  name: app-header
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-header
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-header
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        env:
+        - name: SERVER_NAME
+          value: app-header
+        - name: SRV_PORT
+          value: "80"
+        resources: {}
+        ports:
+        - containerPort: 80
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-header
+  name: app-header
+  namespace: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app-header
+  type: ClusterIP
+status:
+  loadBalancer: {}

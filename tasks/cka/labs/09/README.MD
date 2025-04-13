@@ -24,6 +24,7 @@ curl IP  or not in domain -> svc `app-restricted`
 
 `curl weight-cka.local:30102` -> svc `app-weight-v1` 70% ,  svc `app-weight-v2` 30%  
 
+`curl header-cka.local:30102` -> svc `app-header` . remove header `user-type: dev` . add header `user-name: test-user`
 
 | URL + Headers (Request Details)                                                                        | Curl Command                                                      | Expected Result            |
 |--------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|----------------------------|
