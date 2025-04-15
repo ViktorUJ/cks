@@ -1,5 +1,5 @@
 
-[Gateway API is Kubernetes ](https://gateway-api.sigs.k8s.io/#:~:text=Gateway%20API%20is%20an%20interface,to%20instantiate%20and%20its%20configuration.)
+[Gateway API in Kubernetes ](https://gateway-api.sigs.k8s.io/#:~:text=Gateway%20API%20is%20an%20interface,to%20instantiate%20and%20its%20configuration.)
 
 [doc](https://docs.nginx.com/nginx-gateway-fabric/how-to/traffic-management/advanced-routing/)
 [examples](https://github.com/nginx/nginx-gateway-fabric/tree/main/examples)
@@ -26,7 +26,7 @@
 
 |        **3**        | Create **HTTPRoute** `cka.local`                                                                                                                                            |
 |:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                                                          |
+|     Task weight     | 2%                                                                                                                                                                          |
 | Acceptance criteria | ns `app` <br/> name `cka-route` <br/> hostname `cka.local` <br/>  header  `environment = dev` path `/`  svc `app-dev`  port `80`  <br/> path `/`  svc `app-prod`  port `80` |
 |        tests        | `curl cka.local:30102 -s `  **result**   `Server Name = production`   <br/>  `curl cka.local:30102 -s -H "environment: dev" ` **result**  `Server Name = dev`               |
 
@@ -48,7 +48,7 @@
 
 |        **6**        | Create **HTTPRoute** `header-cka.local`                                                                                                                                                                                                         |
 |:-------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                                                                                                                              |
+|     Task weight     | 3%                                                                                                                                                                                                                                              |
 | Acceptance criteria | ns `app` <br/> name `header-cka-route` <br/> hostname `header-cka.local` <br/>  path `/`  svc `app-dev`  port `80` <br/> **add** Header `User-Type = test-user` <br/> **remove** Header `X-CH ` <br/> **overwrite** Header `User-City` to `NYC` |
-|        tests        | `curl header-cka.local:30102 -s  -H "X-CH: CH" -H "User-City: TBC"  ` <br/>  **result**  Headers :  `User-Type = test-user` ,  `X-CH` was deleted  , `User-City = NYC`                                                                                |
+|        tests        | `curl header-cka.local:30102 -s  -H "X-CH: CH" -H "User-City: TBC"  ` <br/>  **result**  Headers :  `User-Type = test-user` ,  `X-CH` was deleted  , `User-City = NYC`                                                                          |
 
