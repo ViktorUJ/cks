@@ -24,25 +24,25 @@
 |        tests        | `curl non-domain.example:30102 -s ` <br/> **result**  `Server Name = restricted`            |
 
 
-|        **3**        | Create **HTTPRoute** `cka.local`                                                                                                                                                      |
-|:-------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                                                                    |
-| Acceptance criteria | ns `app` <br/> name `cka-route` <br/> hostname `cka.local` <br/>  header  `environment = dev` path `/`  svc `app-dev`  port `80`  <br/> path `/`  svc `app-prod`  port `80`           |
-|        tests        | `curl cka.local:30102 -s ` **result**   `Server Name = production`   <br/>  `curl cka.local:30102 -s -H "environment: dev" ` **result**  `Server Name = dev`                          |
+|        **3**        | Create **HTTPRoute** `cka.local`                                                                                                                                            |
+|:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                          |
+| Acceptance criteria | ns `app` <br/> name `cka-route` <br/> hostname `cka.local` <br/>  header  `environment = dev` path `/`  svc `app-dev`  port `80`  <br/> path `/`  svc `app-prod`  port `80` |
+|        tests        | `curl cka.local:30102 -s ` <br/>  **result**   `Server Name = production`   <br/>  `curl cka.local:30102 -s -H "environment: dev" ` **result**  `Server Name = dev`               |
 
 
 |        **4**        | Create **HTTPRoute** `dev-cka.local`                                                                         |
 |:-------------------:|:-------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 1%                                                                                                           |
 | Acceptance criteria | ns `app` <br/> name `dev-cka-route` <br/> hostname `dev-cka.local` <br/>  path `/`  svc `app-dev`  port `80` |
-|        tests        | `curl dev-cka.local:30102 -s ` **result**   `Server Name = dev`                                              |
+|        tests        | `curl dev-cka.local:30102 -s ` <br/>  **result**   `Server Name = dev`                                       |
 
 
 |        **5**        | Create **HTTPRoute** `weight-cka.local`                                                                                                                                                          |
 |:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 1%                                                                                                                                                                                               |
 | Acceptance criteria | ns `app` <br/> name `weight-cka-route` <br/> hostname `weight-cka.local` <br/>  path `/`  svc `app-weight-v1`  port `80` weight `70` <br/>  path `/`  svc `app-weight-v2`  port `80` weight `30` |
-|        tests        | `curl weight-cka.local:30102 -s ` **result**  **70%**  `Server Name = app-weight-v1`   **30%**  `Server Name = app-weight-v2`                                                                    |
+|        tests        | `curl weight-cka.local:30102 -s ` <br/>  **result**  **70%**  `Server Name = app-weight-v1`   **30%**  `Server Name = app-weight-v2`                                                                   |
 
 
 
