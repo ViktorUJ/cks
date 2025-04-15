@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.1 (XX.04.2025)
+### Features
+* [CKS Lab 27. Cilium network policy with mTLS](..%2Ftasks%2Fcks%2Flabs%2F27%2FREADME.MD) is added.
+* [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is added.
+* [CKS Lab 29. Perform Docker security configutaion](..%2Ftasks%2Fcks%2Flabs%2F29%2FREADME.MD) is added.
+* ADD MORE
+
+
 ## 0.19.1 (17.03.2025)
 ### Features
 

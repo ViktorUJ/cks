@@ -30,16 +30,16 @@ dependency "cluster1" {
 }
 
 inputs = {
-  questions_list=local.vars.locals.questions_list
-  solutions_scripts=local.vars.locals.solutions_scripts
-  solutions_video=local.vars.locals.solutions_video
-  region      = local.vars.locals.region
-  aws         = local.vars.locals.aws
-  prefix      = local.vars.locals.prefix
-  tags_common = local.vars.locals.tags
-  app_name    = "k8s-worker"
-  subnets  = dependency.vpc.outputs.subnets
-  vpc_id      = dependency.vpc.outputs.vpc_id
+  questions_list    = local.vars.locals.questions_list
+  solutions_scripts = local.vars.locals.solutions_scripts
+  solutions_video   = local.vars.locals.solutions_video
+  region            = local.vars.locals.region
+  aws               = local.vars.locals.aws
+  prefix            = local.vars.locals.prefix
+  tags_common       = local.vars.locals.tags
+  app_name          = "k8s-worker"
+  subnets           = dependency.vpc.outputs.subnets
+  vpc_id            = dependency.vpc.outputs.vpc_id
 
   host_list = concat(dependency.cluster1.outputs.hosts)
   work_pc = {
@@ -58,8 +58,8 @@ inputs = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "360"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/26/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/26/worker/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/0.20.1/tasks/cks/labs/28/worker/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/0.20.1/tasks/cks/labs/28/worker/files/worker.sh"
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key

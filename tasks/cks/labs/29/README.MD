@@ -1,4 +1,4 @@
-# Perform a Docker security configutaion
+# Perform Docker security configutaion
 
 Allowed resources:
 
