@@ -50,5 +50,5 @@
 |:-------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 1%                                                                                                                                                                                                                                              |
 | Acceptance criteria | ns `app` <br/> name `header-cka-route` <br/> hostname `header-cka.local` <br/>  path `/`  svc `app-dev`  port `80` <br/> **add** Header `User-Type = test-user` <br/> **remove** Header `X-CH ` <br/> **overwrite** Header `User-City` to `NYC` |
-|        tests        | `curl header-cka.local:30102 -s  -H "X-CH: CH" -H "User-City: TBC"  ` **result**  Headers :  `User-Type = test-user` ,  `X-CH` was deleted  , `User-City = NYC`                                                                                 |
+|        tests        | `curl header-cka.local:30102 -s  -H "X-CH: CH" -H "User-City: TBC"  ` <br/>  **result**  Headers :  `User-Type = test-user` ,  `X-CH` was deleted  , `User-City = NYC`                                                                                |
 
