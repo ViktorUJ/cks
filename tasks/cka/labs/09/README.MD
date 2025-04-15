@@ -23,6 +23,56 @@ curl IP  or not in domain -> svc `app-restricted`
 
 `curl header-cka.local:30102` -> svc `app-dev` . remove header `X-CH` . add header `User-Type: test-user` . modify header `User-City` to `NYC`
 
+
+- run ``check_result`` on work pc to **check result**
+
+## Questions
+
+
+|        **1**        | Create a Gateway                                                                                                                                                              |
+| :-----------------: |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                            |
+| Acceptance criteria | ns `nginx-gateway` <br/> name `nginx-gateway` <br/> gatewayClassName `nginx` <br/> listener : <br/> name `http` port `80` protocol `HTTP`  allowedRoutes from  all namespaces |
+
+
+
+|        **2**        | Create default restrict   (HTTPRoute)                                                                |
+|:-------------------:|:--------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                          |
+| Acceptance criteria | ns `app` <br/> name `restricted` <br/> PathPrefix `/`<br/>  svc `app-restricted`  port `80` |
+
+
+
+|        **3**        | Create **HTTPRoute** `cka.local`                                                                                                         |
+|:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                       |
+| Acceptance criteria | ns `app` <br/> name `cka-route` <br/> hostname `cka.local` <br/>  header  `environment = dev` path `/`  svc `app-dev`  port `80`  <br/> path `/`  svc `app-prod`  port `80` |
+
+
+
+|        **4**        | Create **HTTPRoute** `dev-cka.local`                                                                                                         |
+|:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                       |
+| Acceptance criteria | ns `app` <br/> name `dev-cka-route` <br/> hostname `dev-cka.local` <br/>  path `/`  svc `app-dev`  port `80`   |
+
+
+
+|        **5**        | Create **HTTPRoute** `weight-cka.local`                                                                                                                                                          |
+|:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                                               |
+| Acceptance criteria | ns `app` <br/> name `weight-cka-route` <br/> hostname `weight-cka.local` <br/>  path `/`  svc `app-weight-v1`  port `80` weight `70` <br/>  path `/`  svc `app-weight-v2`  port `80` weight `30` |
+
+
+
+
+|        **6**        | Create **HTTPRoute** `header-cka.local`                                                                                                                                                                                                         |
+|:-------------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     Task weight     | 1%                                                                                                                                                                                                                                              |
+| Acceptance criteria | ns `app` <br/> name `header-cka-route` <br/> hostname `header-cka.local` <br/>  path `/`  svc `app-dev`  port `80` <br/> **add** Header `User-Type = test-user` <br/> **remove** Header `X-CH ` <br/> **overwrite** Header `User-City` to `NYC` |
+
+
+
+
 | URL + Headers (Request Details)                                                                        | Curl Command                                                      | Expected Result            |
 |--------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|----------------------------|
 | Request from an IP address or not using the proper domain                                              | `curl http://<IP>:30102` or `curl http://non-domain.example`        | Service `app-restricted`   |
