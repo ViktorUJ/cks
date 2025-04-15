@@ -48,7 +48,7 @@
 | **06** | [Create general resources (Namespace, Deployment, Service)](..%2Ftasks%2Fcka%2Flabs%2F06%2FREADME.MD)     | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F06%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/vqs_SUjKee8) |
 | **07** | [CPU throttle](..%2Ftasks%2Fcka%2Flabs%2F07%2FREADME.MD)                                                  | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F07%2Fworker%2Ffiles%2Fsolutions%2F1.MD)                                                       |
 | **08** | [Cilium NetworkPolicy  L7](..%2Ftasks%2Fcka%2Flabs%2F08%2FREADME.MD)                                      | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F08%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/eFZQi6sy3SQ) |
-| **09** | [Gateway API in Kubernetes](..%2Ftasks%2Fcka%2Flabs%2F09%2FREADME.MD)   
+| **09** | [Gateway API in Kubernetes](..%2Ftasks%2Fcka%2Flabs%2F09%2FREADME.MD)| [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F09%2Fworker%2Ffiles%2Fsolutions%2F1.MD)                                                       |  
 
 ## CKAD labs
 
