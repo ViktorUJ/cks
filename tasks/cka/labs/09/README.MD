@@ -28,7 +28,7 @@
 |:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 1%                                                                                                                                                                          |
 | Acceptance criteria | ns `app` <br/> name `cka-route` <br/> hostname `cka.local` <br/>  header  `environment = dev` path `/`  svc `app-dev`  port `80`  <br/> path `/`  svc `app-prod`  port `80` |
-|        tests        | `curl cka.local:30102 -s ` <br/>  **result**   `Server Name = production`   <br/>  `curl cka.local:30102 -s -H "environment: dev" ` **result**  `Server Name = dev`               |
+|        tests        | `curl cka.local:30102 -s `  **result**   `Server Name = production`   <br/>  `curl cka.local:30102 -s -H "environment: dev" ` **result**  `Server Name = dev`               |
 
 
 |        **4**        | Create **HTTPRoute** `dev-cka.local`                                                                         |
