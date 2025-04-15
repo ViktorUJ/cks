@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"net"
@@ -318,8 +319,12 @@ func memoryLoad(size int, sec int) {
 		time.Sleep(1 * time.Second)
 	}
 }
+
 func requestHandler(w http.ResponseWriter, r *http.Request) {
 	var response strings.Builder
+	var totalSize int
+	var bodySize int
+
 	if atomic.LoadUint64(&ResponseWorker) >= uint64(maxResponseWorker) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		fmt.Fprintf(w, "Server is overloaded. Current workers: %d, Max allowed: %d\n", ResponseWorker, maxResponseWorker)
@@ -338,13 +343,55 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	response.WriteString(fmt.Sprintf("responseDelay: %s\n", strconv.Itoa(responseDelay)))
 	response.WriteString(fmt.Sprintf("maxResponseWorker: %s\n", strconv.Itoa(maxResponseWorker)))
 	response.WriteString(fmt.Sprintf("ResponseWorker: %d\n", ResponseWorker))
+	response.WriteString(fmt.Sprintf("--------------- \n"))
+	response.WriteString(fmt.Sprintf(" \n"))
 	response.WriteString("Headers:\n")
+	response.WriteString(fmt.Sprintf(" \n"))
 
 	for name, headers := range r.Header {
 		for _, h := range headers {
 			response.WriteString(fmt.Sprintf("%v: %v\n", name, h))
 		}
 	}
+
+	response.WriteString(fmt.Sprintf("--------------- \n"))
+	response.WriteString(fmt.Sprintf(" \n"))
+	response.WriteString("Headers size : \n")
+	response.WriteString(fmt.Sprintf(" \n"))
+	for name, headers := range r.Header {
+		for _, h := range headers {
+			totalSize += len(h)
+			response.WriteString(fmt.Sprintf("%v:  %d byte  \n", name, len(h)))
+		}
+	}
+	response.WriteString(fmt.Sprintf("--------------- \n"))
+	response.WriteString(fmt.Sprintf("total size of headers: %d byte  \n", totalSize))
+	response.WriteString(fmt.Sprintf("--------------- \n"))
+
+	if r.Method == http.MethodPost || r.Method == http.MethodPut {
+		body, err := io.ReadAll(r.Body)
+		if err == nil {
+			response.WriteString("Request Body:\n")
+			response.Write(body)
+			response.WriteString(fmt.Sprintf("\n--------------- \n"))
+			response.WriteString(fmt.Sprintf("size of Body : %d byte \n", len(body)))
+		} else {
+			response.WriteString(fmt.Sprintf("Failed to read request body: %v\n", err))
+		}
+	}
+
+	if r.Body != nil {
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err == nil {
+			bodySize = len(bodyBytes)
+		}
+	}
+
+	requestLine := fmt.Sprintf("%s %s %s\r\n", r.Method, r.RequestURI, r.Proto)
+	requestLineSize := len(requestLine)
+	blankLineSize := len("\r\n")
+	totalSizeRaw := requestLineSize + totalSize + blankLineSize + bodySize
+	response.WriteString(fmt.Sprintf("total request size  : %d byte \n", totalSizeRaw))
 
 	atomic.AddUint64(&requestsCount, 1)
 	now := time.Now()
