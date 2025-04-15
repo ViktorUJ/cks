@@ -40,9 +40,9 @@
 
 |        **5**        | Create **HTTPRoute** `weight-cka.local`                                                                                                                                                          |
 |:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 1%                                                                                                                                                                                               |
+|     Task weight     | 2%                                                                                                                                                                                               |
 | Acceptance criteria | ns `app` <br/> name `weight-cka-route` <br/> hostname `weight-cka.local` <br/>  path `/`  svc `app-weight-v1`  port `80` weight `70` <br/>  path `/`  svc `app-weight-v2`  port `80` weight `30` |
-|        tests        | `curl weight-cka.local:30102 -s ` <br/>  **result**  **70%**  `Server Name = app-weight-v1`   **30%**  `Server Name = app-weight-v2`                                                                   |
+|        tests        | `curl weight-cka.local:30102 -s ` <br/>  **result**  **70%**  `Server Name = app-weight-v1`   **30%**  `Server Name = app-weight-v2`                                                             |
 
 
 
