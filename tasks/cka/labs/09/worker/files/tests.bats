@@ -5,7 +5,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo ''>/var/work/tests/result/all
   echo ''>/var/work/tests/result/ok
   echo ''>/var/work/tests/result/requests
-  for i in {1..100}; do curl -s  weight-cka.local:30102 | grep 'Server Name' >>/var/work/tests/result/requests; done
+
 }
 
 #1
@@ -80,7 +80,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "5.2 Create HTTPRoute weight-cka.local  .  app-weight-v2 " {
-
+  for i in {1..100}; do curl -s  weight-cka.local:30102 | grep 'Server Name' >>/var/work/tests/result/requests; done
   echo '1'>>/var/work/tests/result/all
   total=$(cat /var/work/tests/result/requests | wc -l )
   app1=$(cat /var/work/tests/result/requests |grep app-weight-v2 | wc -l )
