@@ -53,7 +53,7 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-105/tasks/cka/labs/09/k8s-1/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/0.20.1/tasks/cka/labs/09/k8s-1/scripts/master.sh"
     cni                = local.vars.locals.cni
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
@@ -74,7 +74,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-105/tasks/cka/labs/09/k8s-1/scripts/worker.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/0.20.1/tasks/cka/labs/09/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=system"
       ssh = {
         private_key = dependency.ssh-keys.outputs.private_key

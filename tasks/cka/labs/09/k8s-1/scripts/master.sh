@@ -27,4 +27,4 @@ kubectl patch svc nginx-gateway -n nginx-gateway --type='json' -p='[{"op": "repl
 #
 
 #install lab manifests
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-105/tasks/cka/labs/09/k8s-1/scripts/app.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/0.20.1/tasks/cka/labs/09/k8s-1/scripts/app.yaml
