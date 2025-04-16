@@ -9,8 +9,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "1. Check if user was removed from docker group" {
   echo '2'>>/var/work/tests/result/all
+  set +e
   groups user | grep docker
   result=$?
+  set -e
   if [[ "$result" == "1" ]]; then
    echo '2'>>/var/work/tests/result/ok
   fi
