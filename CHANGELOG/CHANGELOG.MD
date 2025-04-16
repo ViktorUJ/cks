@@ -10,8 +10,8 @@
 * [CKS Lab 28. solutions](../tasks/cks/labs/28/worker/files/solutions/1.MD) is added.
 * [CKS Lab 29. Perform Docker security configutaion](..%2Ftasks%2Fcks%2Flabs%2F29%2FREADME.MD) is added.
 * [CKS Lab 29. solutions ](../tasks/cks/labs/29/worker/files/solutions/1.MD) is added.
-* [CKA LAB 09. Gateway API in Kubernetes](../tasks/cka/labs/09/README.MD) is added.
-* [CKA LAB 09. solutions](../tasks/cka/labs/09/worker/files/solutions/1.MD) is added.
+* [CKA Lab 09. Gateway API in Kubernetes](../tasks/cka/labs/09/README.MD) is added.
+* [CKA Lab 09. solutions](../tasks/cka/labs/09/worker/files/solutions/1.MD) is added.
 
 ## 0.19.1 (17.03.2025)
 ### Features
