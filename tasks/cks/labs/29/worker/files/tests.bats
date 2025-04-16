@@ -35,8 +35,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "3. Check if Docker is not exposed through a TCP socket" {
   echo '1'>>/var/work/tests/result/all
+  set +e
   netstat -tuln | grep -q 'docker'
   result=$?
+  set -e
   if [[ "$result" == "1" ]]; then
     echo '1'>>/var/work/tests/result/ok
   fi
