@@ -13,7 +13,7 @@
 |        **1**        | Create a Gateway                                                                                                                                                              |
 | :-----------------: |:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 1%                                                                                                                                                                            |
-| Acceptance criteria | ns `nginx-gateway` <br/> name `nginx-gateway` <br/> gatewayClassName `nginx` <br/> listener : <br/> name `http` port `80` protocol `HTTP`  allowedRoutes from  all namespaces |
+| Acceptance criteria |ns `nginx-gateway` <br/> name `nginx-gateway` <br/> gatewayClassName `nginx` <br/> listener : <br/> name `http` port `80` protocol `HTTP`  allowedRoutes -  `namespaces`  from  `All`  |
 
 
 
