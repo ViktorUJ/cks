@@ -23,7 +23,6 @@ locals {
   }
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"
-  spot_additional_types= [ "t4g.medium" , "t4g.large" , "t4g.xlarge" ]
   all_spot_subnet      = "true"
   key_name             = ""
   ssh_password_enable  = "true"        # false |  true
