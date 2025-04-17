@@ -16,5 +16,5 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   if [[ "$app1_replicas" == "1" && "$app2_replicas" == "1" && "$app3_replicas" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$app1_replicas" == "1" && "$app2_replicas" == "1" && "$app3_replicas" == "0" ]
+  [[ "$app1_replicas" == "1" && "$app2_replicas" == "1" && "$app3_replicas" == "0" ]]
 }
