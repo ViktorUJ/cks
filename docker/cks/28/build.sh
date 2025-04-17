@@ -13,4 +13,3 @@ docker buildx build --platform linux/arm64 --load -t viktoruj/cks-lab:cks_28_app
 docker buildx build --platform linux/amd64 --load -t viktoruj/cks-lab:cks_28_app3_x86  -f  Dockerfile2  .
 docker manifest create viktoruj/cks-lab:cks_28_app3  viktoruj/cks-lab:cks_28_app3_arm viktoruj/cks-lab:cks_28_app3_x86
 docker manifest push viktoruj/cks-lab:cks_28_app3
-3
