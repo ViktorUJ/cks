@@ -40,31 +40,33 @@ type CpuUsageProfile struct {
 }
 
 var (
-	requestsPerSecond     float64
-	requestsPerMinute     float64
-	lastRequestTime       time.Time
-	requestsCount         uint64
-	serverName            string
-	serverPort            string
-	metricPort            string
-	hostName              string
-	logPath               string
-	enableOutput          string
-	enableLoadCpu         string
-	enableLoadMemory      string
-	memoryProfileStr      string
-	memoryProfiles        []MemoryUsageProfile
-	enableLogLoadMemory   string
-	enableLogLoadCpu      string
-	delayStart            string
-	enableDefaultHostName string
-	cpuProfiles           []CpuUsageProfile
-	cpuProfileStr         string
-	cpuMaxProc            int
-	parsedDelay           int
-	responseDelay         int // in milliseconds
-	maxResponseWorker     int
-	ResponseWorker        uint64
+	requestsPerSecond      float64
+	requestsPerMinute      float64
+	lastRequestTime        time.Time
+	requestsCount          uint64
+	serverName             string
+	serverPort             string
+	metricPort             string
+	hostName               string
+	logPath                string
+	enableOutput           string
+	enableLoadCpu          string
+	enableLoadMemory       string
+	memoryProfileStr       string
+	memoryProfiles         []MemoryUsageProfile
+	enableLogLoadMemory    string
+	enableLogLoadCpu       string
+	delayStart             string
+	enableDefaultHostName  string
+	cpuProfiles            []CpuUsageProfile
+	cpuProfileStr          string
+	cpuMaxProc             int
+	parsedDelay            int
+	responseDelay          int // in milliseconds
+	maxResponseWorker      int
+	ResponseWorker         uint64
+	additionalResponseSize uint64
+	randomBytes []byte
 )
 
 func init() {
@@ -92,6 +94,12 @@ func init() {
 		maxResponseWorkerStr = "65535"
 	}
 	maxResponseWorker, err = strconv.Atoi(maxResponseWorkerStr)
+
+	additionalResponseSizeStr := os.Getenv("ADDITIONAL_RESPONSE_SIZE")
+	if additionalResponseSizeStr == "" {
+		additionalResponseSizeStr = "0"
+	}
+	additionalResponseSize, err = strconv.ParseUint(additionalResponseSizeStr,10,64)
 
 	parsedDelay, err = strconv.Atoi(delayStart)
 	if err != nil {
@@ -392,6 +400,11 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	blankLineSize := len("\r\n")
 	totalSizeRaw := requestLineSize + totalSize + blankLineSize + bodySize
 	response.WriteString(fmt.Sprintf("total request size  : %d byte \n", totalSizeRaw))
+
+    for i := uint64(0); i < additionalResponseSize; i++ {
+     block := strings.Repeat("*", 1024)
+     htmlBlock := fmt.Sprintf("%s", block)
+     response.WriteString(htmlBlock) }
 
 	atomic.AddUint64(&requestsCount, 1)
 	now := time.Now()
