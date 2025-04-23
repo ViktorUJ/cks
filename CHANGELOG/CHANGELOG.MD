@@ -12,6 +12,7 @@
 * [CKS Lab 29. solutions ](../tasks/cks/labs/29/worker/files/solutions/1.MD) is added.
 * [CKA Lab 09. Gateway API in Kubernetes](../tasks/cka/labs/09/README.MD) is added.
 * [CKA Lab 09. solutions](../tasks/cka/labs/09/worker/files/solutions/1.MD) is added.
+* K8s version **1.33** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module.
 
 ## 0.19.1 (17.03.2025)
 ### Features
