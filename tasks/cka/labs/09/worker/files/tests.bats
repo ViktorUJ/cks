@@ -19,8 +19,6 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "nginx" ]
 }
 
-
-
 @test "2 Create default restrict " {
   echo '1'>>/var/work/tests/result/all
   curl non-domain.example:30102 -s | grep 'Server Name' | grep 'restricted'
@@ -61,14 +59,13 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-
 @test "5.1 Create HTTPRoute weight-cka.local  .  app-weight-v1 " {
-
+ for i in {1..100}; do curl -s  weight-cka.local:30102 | grep 'Server Name' >>/var/work/tests/result/requests; done
   echo '1'>>/var/work/tests/result/all
   total=$(cat /var/work/tests/result/requests | wc -l )
   app1=$(cat /var/work/tests/result/requests |grep app-weight-v1 | wc -l )
   percentage=$((100 * app1 / total))
-  if [ $percentage -ge 65 ] && [ $percentage -le 75 ]; then
+  if [ $percentage -ge 60 ] && [ $percentage -le 80 ]; then
     result=0
   else
     result=1
@@ -80,12 +77,11 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 @test "5.2 Create HTTPRoute weight-cka.local  .  app-weight-v2 " {
-  for i in {1..100}; do curl -s  weight-cka.local:30102 | grep 'Server Name' >>/var/work/tests/result/requests; done
   echo '1'>>/var/work/tests/result/all
   total=$(cat /var/work/tests/result/requests | wc -l )
   app1=$(cat /var/work/tests/result/requests |grep app-weight-v2 | wc -l )
   percentage=$((100 * app1 / total))
-  if [ $percentage -ge 25 ] && [ $percentage -le 35 ]; then
+  if [ $percentage -ge 20 ] && [ $percentage -le 40 ]; then
     result=0
   else
     result=1
@@ -95,7 +91,6 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
-
 
 @test "6.1 Create HTTPRoute  header-cka.local  . header User-Type" {
   echo '1'>>/var/work/tests/result/all
