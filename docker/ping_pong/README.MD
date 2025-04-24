@@ -79,6 +79,11 @@ kubectl  run test  --image  viktoruj/ping_pong  --env DELAY_START=10
 kubectl  run test  --image  viktoruj/ping_pong --env  RESPONSE_DELAY=3000 --env  MAX_RESPONSE_WORKER=10
 ```
 
+### run http ping-pong server  with additional response size in Kb.
+``` 
+kubectl  run test  --image  viktoruj/ping_pong --env  ADDITIONAL_RESPONSE_SIZE=1024
+```
+
 ### Configuration
 
 
