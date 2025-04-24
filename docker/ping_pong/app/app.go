@@ -40,31 +40,33 @@ type CpuUsageProfile struct {
 }
 
 var (
-	requestsPerSecond     float64
-	requestsPerMinute     float64
-	lastRequestTime       time.Time
-	requestsCount         uint64
-	serverName            string
-	serverPort            string
-	metricPort            string
-	hostName              string
-	logPath               string
-	enableOutput          string
-	enableLoadCpu         string
-	enableLoadMemory      string
-	memoryProfileStr      string
-	memoryProfiles        []MemoryUsageProfile
-	enableLogLoadMemory   string
-	enableLogLoadCpu      string
-	delayStart            string
-	enableDefaultHostName string
-	cpuProfiles           []CpuUsageProfile
-	cpuProfileStr         string
-	cpuMaxProc            int
-	parsedDelay           int
-	responseDelay         int // in milliseconds
-	maxResponseWorker     int
-	ResponseWorker        uint64
+	requestsPerSecond      float64
+	requestsPerMinute      float64
+	lastRequestTime        time.Time
+	requestsCount          uint64
+	serverName             string
+	serverPort             string
+	metricPort             string
+	hostName               string
+	logPath                string
+	enableOutput           string
+	enableLoadCpu          string
+	enableLoadMemory       string
+	memoryProfileStr       string
+	memoryProfiles         []MemoryUsageProfile
+	enableLogLoadMemory    string
+	enableLogLoadCpu       string
+	delayStart             string
+	enableDefaultHostName  string
+	cpuProfiles            []CpuUsageProfile
+	cpuProfileStr          string
+	cpuMaxProc             int
+	parsedDelay            int
+	responseDelay          int // in milliseconds
+	maxResponseWorker      int
+	ResponseWorker         uint64
+	additionalResponseSize uint64
+	randomBytes            []byte
 )
 
 func init() {
@@ -92,6 +94,12 @@ func init() {
 		maxResponseWorkerStr = "65535"
 	}
 	maxResponseWorker, err = strconv.Atoi(maxResponseWorkerStr)
+
+	additionalResponseSizeStr := os.Getenv("ADDITIONAL_RESPONSE_SIZE")
+	if additionalResponseSizeStr == "" {
+		additionalResponseSizeStr = "0"
+	}
+	additionalResponseSize, err = strconv.ParseUint(additionalResponseSizeStr, 10, 64)
 
 	parsedDelay, err = strconv.Atoi(delayStart)
 	if err != nil {
@@ -343,6 +351,7 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	response.WriteString(fmt.Sprintf("responseDelay: %s\n", strconv.Itoa(responseDelay)))
 	response.WriteString(fmt.Sprintf("maxResponseWorker: %s\n", strconv.Itoa(maxResponseWorker)))
 	response.WriteString(fmt.Sprintf("ResponseWorker: %d\n", ResponseWorker))
+	response.WriteString(fmt.Sprintf("additionalResponseSize: %d Kb \n", additionalResponseSize))
 	response.WriteString(fmt.Sprintf("--------------- \n"))
 	response.WriteString(fmt.Sprintf(" \n"))
 	response.WriteString("Headers:\n")
@@ -392,6 +401,12 @@ func requestHandler(w http.ResponseWriter, r *http.Request) {
 	blankLineSize := len("\r\n")
 	totalSizeRaw := requestLineSize + totalSize + blankLineSize + bodySize
 	response.WriteString(fmt.Sprintf("total request size  : %d byte \n", totalSizeRaw))
+
+	for i := uint64(0); i < additionalResponseSize; i++ {
+		block := strings.Repeat("*", 1024)
+		htmlBlock := fmt.Sprintf("%s", block)
+		response.WriteString(htmlBlock)
+	}
 
 	atomic.AddUint64(&requestsCount, 1)
 	now := time.Now()
@@ -481,22 +496,23 @@ func sendLog(message string) {
 // getVar in JSON fromat
 func getVarHandler(w http.ResponseWriter, r *http.Request) {
 	vars := map[string]interface{}{
-		"serverName":            serverName,
-		"hostName":              hostName,
-		"logPath":               logPath,
-		"enableOutput":          enableOutput,
-		"enableLoadCpu":         enableLoadCpu,
-		"enableLoadMemory":      enableLoadMemory,
-		"enableLogLoadMemory":   enableLogLoadMemory,
-		"enableLogLoadCpu":      enableLogLoadCpu,
-		"delayStart":            parsedDelay,
-		"enableDefaultHostName": enableDefaultHostName,
-		"cpuMaxProc":            cpuMaxProc,
-		"memoryProfileStr":      memoryProfileStr,
-		"cpuProfileStr":         cpuProfileStr,
-		"responseDelay":         responseDelay,
-		"maxResponseWorker":     maxResponseWorker,
-		"ResponseWorker":        ResponseWorker,
+		"serverName":             serverName,
+		"hostName":               hostName,
+		"logPath":                logPath,
+		"enableOutput":           enableOutput,
+		"enableLoadCpu":          enableLoadCpu,
+		"enableLoadMemory":       enableLoadMemory,
+		"enableLogLoadMemory":    enableLogLoadMemory,
+		"enableLogLoadCpu":       enableLogLoadCpu,
+		"delayStart":             parsedDelay,
+		"enableDefaultHostName":  enableDefaultHostName,
+		"cpuMaxProc":             cpuMaxProc,
+		"memoryProfileStr":       memoryProfileStr,
+		"cpuProfileStr":          cpuProfileStr,
+		"responseDelay":          responseDelay,
+		"maxResponseWorker":      maxResponseWorker,
+		"ResponseWorker":         ResponseWorker,
+		"additionalResponseSize": additionalResponseSize,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -677,6 +693,35 @@ func setVarHandler(w http.ResponseWriter, r *http.Request) {
 					"new": v,
 				}
 				maxResponseWorker = intVal
+				changed = true
+			}
+		}
+	}
+
+	// additionalResponseSize
+	if val, ok := updates["additionalResponseSize"]; ok {
+		switch v := val.(type) {
+		case float64:
+			// Convert float64 to uint64
+			newSize := uint64(v)
+			if newSize != additionalResponseSize {
+				changes["additionalResponseSize"] = map[string]string{
+					"old": strconv.FormatUint(additionalResponseSize, 10),
+					"new": strconv.FormatUint(newSize, 10),
+				}
+				additionalResponseSize = newSize
+				changed = true
+			}
+
+		case string:
+			// Parse string directly into uint64
+			parsed, err := strconv.ParseUint(v, 10, 64)
+			if err == nil && parsed != additionalResponseSize {
+				changes["additionalResponseSize"] = map[string]string{
+					"old": strconv.FormatUint(additionalResponseSize, 10),
+					"new": v,
+				}
+				additionalResponseSize = parsed
 				changed = true
 			}
 		}
@@ -1000,10 +1045,12 @@ func main() {
 	http.HandleFunc("/ping-pong-api/setVar", setVarHandler)
 	http.HandleFunc("/ping-pong-api/panic", panicHandler)
 	http.HandleFunc("/ping-pong-api/osInfo", osInfoHandler)
-
+	sendLog("additionalResponseSize: " + strconv.FormatUint(additionalResponseSize, 10))
 	sendLog("start server on port: " + serverPort)
+
 	err = http.ListenAndServe(":"+serverPort, nil)
 	if err != nil {
 		sendLog(fmt.Sprintf("Server failed: %v", err))
 	}
+
 }
