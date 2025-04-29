@@ -8,6 +8,7 @@
 * [CKS Lab 27. solutions ](../tasks/cks/labs/27/worker/files/solutions/1.MD) is added.
 * [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is added.
 * [CKS Lab 28. solutions](../tasks/cks/labs/28/worker/files/solutions/1.MD) is added.
+* Cks lab 28.[video solution](https://youtu.be/HsQlGC52bRM) is added.
 * [CKS Lab 29. Perform Docker security configutaion](..%2Ftasks%2Fcks%2Flabs%2F29%2FREADME.MD) is added.
 * [CKS Lab 29. solutions ](../tasks/cks/labs/29/worker/files/solutions/1.MD) is added.
 * Cks lab 29.[video solution](https://youtu.be/-uEHbkI3wcs) is added.
