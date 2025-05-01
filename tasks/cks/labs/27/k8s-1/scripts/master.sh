@@ -34,3 +34,4 @@ kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/0.20.
 kubectl patch svc ingress-nginx-controller -n ingress-nginx --type='json' -p='[{"op": "replace", "path": "/spec/type", "value": "NodePort"}, {"op": "add", "path": "/spec/ports/0/nodePort", "value": 30800}]'
 
 echo "127.0.0.1 myapp.local" >> /etc/hosts
+
