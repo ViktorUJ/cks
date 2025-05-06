@@ -6,6 +6,7 @@
 * body  is added  to  [ping_pong](../docker/ping_pong/README.MD) for **POST** and **PUT** methods.
 * [CKS Lab 27. Cilium network policy with mTLS](..%2Ftasks%2Fcks%2Flabs%2F27%2FREADME.MD) is added.
 * [CKS Lab 27. solutions ](../tasks/cks/labs/27/worker/files/solutions/1.MD) is added.
+* Cks lab 27.[video solution](https://youtu.be/IScbc12Nj2A) is added.
 * [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is added.
 * [CKS Lab 28. solutions](../tasks/cks/labs/28/worker/files/solutions/1.MD) is added.
 * Cks lab 28.[video solution](https://youtu.be/HsQlGC52bRM) is added.
