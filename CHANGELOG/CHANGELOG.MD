@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.20.1 (09.05.2025)
+### Features
+* calculation of **headers size**, **body size** and **full size** is added to  [ping_pong](../docker/ping_pong/README.MD)
+* body  is added  to  [ping_pong](../docker/ping_pong/README.MD) for **POST** and **PUT** methods.
+* [CKS Lab 27. Cilium network policy with mTLS](..%2Ftasks%2Fcks%2Flabs%2F27%2FREADME.MD) is added.
+* [CKS Lab 27. solutions ](../tasks/cks/labs/27/worker/files/solutions/1.MD) is added.
+* Cks lab 27.[video solution](https://youtu.be/IScbc12Nj2A) is added.
+* [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is added.
+* [CKS Lab 28. solutions](../tasks/cks/labs/28/worker/files/solutions/1.MD) is added.
+* Cks lab 28.[video solution](https://youtu.be/HsQlGC52bRM) is added.
+* [CKS Lab 29. Perform Docker security configutaion](..%2Ftasks%2Fcks%2Flabs%2F29%2FREADME.MD) is added.
+* [CKS Lab 29. solutions ](../tasks/cks/labs/29/worker/files/solutions/1.MD) is added.
+* Cks lab 29.[video solution](https://youtu.be/-uEHbkI3wcs) is added.
+* [CKA Lab 09. Gateway API in Kubernetes](../tasks/cka/labs/09/README.MD) is added.
+* [CKA Lab 09. solutions](../tasks/cka/labs/09/worker/files/solutions/1.MD) is added.
+* CKA lab 09.[video solution](https://youtu.be/rjqmgYyYQ8U) is added.
+* K8s version **1.33** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module.
+* additional response size is added to [ping_pong](../docker/ping_pong/README.MD) 
+
 ## 0.19.1 (17.03.2025)
 ### Features
 

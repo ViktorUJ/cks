@@ -152,6 +152,13 @@ documentation https://etcd.io/docs/
 |         **19**          | Update the existing **Ingress** using the provided **certificate**.                                                                                              |
 |:-----------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     **Task weight**     | 3%                                                                                                                                                               |
-|       **Cluster**       | cluster10 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                 |
+|       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                  |
 | **Acceptance criteria** | - cert located `/var/work/19` <br/>- ns `team-19` <br/> -ingress `team19` <br/> - check `curl https://cks.local:31139  -kv` <br/> - certificate CN=**cks.local** |
+---
+---
+|         **20**          | disable sa secret auto-mount.  mount it to specific path.                                                                                                                                               |
+|:-----------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     **Task weight**     | 3%                                                                                                                                                                                                      |
+|       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                         |
+| **Acceptance criteria** | - ns  team-20  , deployment `team20`   <br/> -  create sa `team20` <br/>- update deployment `team20` to use sa `team20` <br/> disable automount sa secret <br/> mount sa secret to `/var/team20/secret` |
 ---

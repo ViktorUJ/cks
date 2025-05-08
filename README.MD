@@ -1,4 +1,4 @@
-# Welcome to the SRE Learning Platform!
+uut5# Welcome to the SRE Learning Platform!
 <p align="center">
     <a href="https://github.com/ViktorUJ/cks"><img src="https://raw.githubusercontent.com/ViktorUJ/terraform-aws-vpc/master/img/logo_192x192.png" width="192" height="192" alt="SRE Learning Platform"/></a>
 </p>
@@ -67,14 +67,14 @@ The repository is organized into the following sections:
 - you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)
 - [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)  module supports versions:
 ````
-k8s version  : [ 1.21 , 1.32 ]   https://kubernetes.io/releases/
+k8s version  : [ 1.21 , 1.33 ]   https://kubernetes.io/releases/
 Rintime :
     docker                   [1.21 , 1.23]
     cri-o                    [1.21 , 1.29]
-    containerd               [1.21 , 1.31]   # cks, cka  default 1.30
-    containerd_gvizor        [1.21 , 1.31]
+    containerd               [1.21 , 1.33]   # cks, cka  default 1.32
+    containerd_gvizor        [1.21 , 1.33]
 OS for nodes  :
-   ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
+   ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  22.04 LTS
 CNI :  calico ,culium
 ````
 </details>
@@ -368,3 +368,5 @@ If you want to say **thank you** or/and support the active development of **SRE 
 If you encounter any issues or have questions about the project, you can reach out to:
 
 [![email](https://badgen.net/badge/icon/email?icon=email&label)](mailto:viktoruj@gmail.com) [![Telegram](https://badgen.net/badge/icon/telegram?icon=telegram&label)](https://t.me/viktor_uj) [![LinkedI](https://badgen.net/badge/icon/linkedin?icon=linkedin&label)](https://www.linkedin.com/in/viktar-mikalayeu-mns)
+
+

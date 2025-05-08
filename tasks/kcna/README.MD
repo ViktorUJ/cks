@@ -1,4 +1,4 @@
-# Kubernetes Certified Network Administrator (KCNA) example questions
+# Kubernetes and Cloud Native Associate (KCNA) example questions
 
 
 **What native runtime is Open Container Initiative (OCI) compliant?**

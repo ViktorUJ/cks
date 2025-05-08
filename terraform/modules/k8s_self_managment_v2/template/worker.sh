@@ -54,6 +54,12 @@ EOF
 KUBELET_EXTRA_ARGS="--node-labels=node_name=${node_name},${node_labels}"
 EOF
    ;;
+   1.33)
+     kubelet_config_url="/usr/lib/systemd/system/kubelet.service.d"
+     cat > /etc/default/kubelet  <<EOF
+KUBELET_EXTRA_ARGS="--node-labels=node_name=${node_name},${node_labels}"
+EOF
+   ;;
    *)
      kubelet_config_url="/etc/systemd/system/kubelet.service.d"
    ;;
