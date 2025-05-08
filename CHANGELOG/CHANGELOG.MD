@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.20.1 (XX.04.2025)
+## 0.20.1 (09.05.2025)
 ### Features
 * calculation of **headers size**, **body size** and **full size** is added to  [ping_pong](../docker/ping_pong/README.MD)
 * body  is added  to  [ping_pong](../docker/ping_pong/README.MD) for **POST** and **PUT** methods.
@@ -15,6 +15,7 @@
 * Cks lab 29.[video solution](https://youtu.be/-uEHbkI3wcs) is added.
 * [CKA Lab 09. Gateway API in Kubernetes](../tasks/cka/labs/09/README.MD) is added.
 * [CKA Lab 09. solutions](../tasks/cka/labs/09/worker/files/solutions/1.MD) is added.
+* CKA lab 09.[video solution](https://youtu.be/rjqmgYyYQ8U) is added.
 * K8s version **1.33** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module.
 * additional response size is added to [ping_pong](../docker/ping_pong/README.MD) 
 
