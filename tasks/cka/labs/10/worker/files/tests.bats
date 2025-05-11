@@ -10,85 +10,116 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 #1
 
-@test "1.1 NS prod " {
+@test "1 Create a Gateway  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get ns prod  -o jsonpath={.metadata.name})
-  if [[ "$result" == "prod" ]]; then
+  result=$(kubectl  get  gateway nginx-gateway  -n nginx-gateway  -o jsonpath='{.spec.gatewayClassName}'  )
+  if [[ "$result" == "nginx" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "prod" ]
+  [ "$result" == "nginx" ]
 }
 
-@test "1.2 deplyment app-server .image  = viktoruj/ping_pong  " {
+@test "2 Create default restrict " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl  get deployments.apps app-server   -n prod  -o jsonpath={.spec.template.spec.containers..image})
-  if [[ "$result" == "viktoruj/ping_pong" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "viktoruj/ping_pong" ]
-}
-
-@test "1.3 deplyment app-server .replicas = 2  " {
-  echo '1'>>/var/work/tests/result/all
-  result=$(kubectl  get deployments.apps app-server   -n prod  -o jsonpath={.spec.replicas})
-  if [[ "$result" == "2" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "2" ]
-}
-
-@test "1.4 deplyment app-server . ENV SRV_PORT = 80  " {
-  echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get deployments.apps app-server -n prod -o jsonpath='{.spec.template.spec.containers[?(@.name=="ping-pong")].env[?(@.name=="SRV_PORT")].value}')
-  if [[ "$result" == "80" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "80" ]
-}
-
-
-@test "1.5 deplyment app-server . ENV SERVER_NAME = app-server  " {
-  echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get deployments.apps app-server -n prod -o jsonpath='{.spec.template.spec.containers[?(@.name=="ping-pong")].env[?(@.name=="SERVER_NAME")].value}')
-  if [[ "$result" == "app-server" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "app-server" ]
-}
-
-@test "1.6 service app-server . port = 80  " {
-  echo '1'>>/var/work/tests/result/all
-  result=$( kubectl get svc -n prod app-server  -o jsonpath={.spec.ports..port})
-  if [[ "$result" == "80" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "80" ]
-}
-
-@test "1.7 service app-server . targetPort = 80  " {
-  echo '1'>>/var/work/tests/result/all
-  result=$( kubectl get svc -n prod app-server  -o jsonpath={.spec.ports..targetPort})
-  if [[ "$result" == "80" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "80" ]
-}
-
-@test "1.8 service app-server . selector app = app-server  " {
-  echo '1'>>/var/work/tests/result/all
-  result=$( kubectl get svc -n prod app-server  -o jsonpath={.spec.selector.app})
-  if [[ "$result" == "app-server" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "app-server" ]
-}
-
-@test "1.9 service app-server .  curl  response  - > Servername: app-server" {
-  echo '1'>>/var/work/tests/result/all
-  kubectl run -i --tty --rm debug -n prod  --image=alpine --restart=Never -- sh -c "apk add curl>/dev/null; curl -s app-server --max-time 1 " | grep 'Server Name' | grep 'app-server'
+  curl non-domain.example:30102 -s | grep 'Server Name' | grep 'restricted'
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
+}
+
+@test "3.1 Create HTTPRoute cka.local with  header environment: dev " {
+  echo '1'>>/var/work/tests/result/all
+  curl cka.local:30102 -s -H "environment: dev"  | grep 'Server Name' | grep 'dev'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "3.2 Create HTTPRoute cka.local  default " {
+  echo '1'>>/var/work/tests/result/all
+  curl cka.local:30102 -s  | grep 'Server Name' | grep 'production'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "4 Create HTTPRoute  dev-cka.local " {
+  echo '1'>>/var/work/tests/result/all
+  curl dev-cka.local:30102 -s  | grep 'Server Name' | grep 'dev'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "5.1 Create HTTPRoute weight-cka.local  .  app-weight-v1 " {
+ for i in {1..100}; do curl -s  weight-cka.local:30102 | grep 'Server Name' >>/var/work/tests/result/requests; done
+  echo '1'>>/var/work/tests/result/all
+  total=$(cat /var/work/tests/result/requests | wc -l )
+  app1=$(cat /var/work/tests/result/requests |grep app-weight-v1 | wc -l )
+  percentage=$((100 * app1 / total))
+  if [ $percentage -ge 60 ] && [ $percentage -le 80 ]; then
+    result=0
+  else
+    result=1
+  fi
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "5.2 Create HTTPRoute weight-cka.local  .  app-weight-v2 " {
+  echo '1'>>/var/work/tests/result/all
+  total=$(cat /var/work/tests/result/requests | wc -l )
+  app1=$(cat /var/work/tests/result/requests |grep app-weight-v2 | wc -l )
+  percentage=$((100 * app1 / total))
+  if [ $percentage -ge 20 ] && [ $percentage -le 40 ]; then
+    result=0
+  else
+    result=1
+  fi
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "6.1 Create HTTPRoute  header-cka.local  . header User-Type" {
+  echo '1'>>/var/work/tests/result/all
+  curl header-cka.local:30102 -s  -H "X-CH: CH" -H "User-City: TBC" | grep 'User-Type' | grep 'test-user'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "6.2 Create HTTPRoute  header-cka.local  . header User-City" {
+  echo '1'>>/var/work/tests/result/all
+  curl header-cka.local:30102 -s  -H "X-CH: CH" -H "User-City: TBC" | grep 'User-City' | grep 'NYC'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "6.3 Create HTTPRoute  header-cka.local  . header X-CH" {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  curl header-cka.local:30102 -s  -H "X-CH: CH" -H "User-City: TBC" | grep 'X-CH'
+  result=$?
+  set -e
+  if [[ "$result" == "1" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "1" ]
 }

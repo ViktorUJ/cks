@@ -1,0 +1,394 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+---
+# prod
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-prod
+  name: app-prod
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-prod
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-prod
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        env:
+        - name: SERVER_NAME
+          value: production
+        - name: SRV_PORT
+          value: "80"
+        resources: {}
+        ports:
+        - containerPort: 80
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-prod
+  name: app-prod
+  namespace: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app-prod
+  type: ClusterIP
+status:
+  loadBalancer: {}
+
+---
+# dev
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-dev
+  name: app-dev
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-dev
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-dev
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        env:
+        - name: SERVER_NAME
+          value: dev
+        - name: SRV_PORT
+          value: "80"
+        resources: {}
+        ports:
+        - containerPort: 80
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-dev
+  name: app-dev
+  namespace: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app-dev
+  type: ClusterIP
+status:
+  loadBalancer: {}
+
+---
+# mobile
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-mobile
+  name: app-mobile
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-mobile
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-mobile
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        env:
+        - name: SERVER_NAME
+          value: mobile
+        - name: SRV_PORT
+          value: "80"
+        resources: {}
+        ports:
+        - containerPort: 80
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-mobile
+  name: app-mobile
+  namespace: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app-mobile
+  type: ClusterIP
+status:
+  loadBalancer: {}
+
+---
+# restricted
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-restricted
+  name: app-restricted
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-restricted
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-restricted
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        env:
+        - name: SERVER_NAME
+          value: restricted
+        - name: SRV_PORT
+          value: "80"
+        resources: {}
+        ports:
+        - containerPort: 80
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-restricted
+  name: app-restricted
+  namespace: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app-restricted
+  type: ClusterIP
+status:
+  loadBalancer: {}
+
+---
+# weight-v1
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-weight-v1
+  name: app-weight-v1
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-weight-v1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-weight-v1
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        env:
+        - name: SERVER_NAME
+          value: app-weight-v1
+        - name: SRV_PORT
+          value: "80"
+        resources: {}
+        ports:
+        - containerPort: 80
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-weight-v1
+  name: app-weight-v1
+  namespace: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app-weight-v1
+  type: ClusterIP
+status:
+  loadBalancer: {}
+
+---
+# weight-v2
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-weight-v2
+  name: app-weight-v2
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-weight-v2
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-weight-v2
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        env:
+        - name: SERVER_NAME
+          value: app-weight-v2
+        - name: SRV_PORT
+          value: "80"
+        resources: {}
+        ports:
+        - containerPort: 80
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-weight-v2
+  name: app-weight-v2
+  namespace: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app-weight-v2
+  type: ClusterIP
+status:
+  loadBalancer: {}
+
+---
+# header
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-header
+  name: app-header
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-header
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-header
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        env:
+        - name: SERVER_NAME
+          value: app-header
+        - name: SRV_PORT
+          value: "80"
+        resources: {}
+        ports:
+        - containerPort: 80
+status: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-header
+  name: app-header
+  namespace: app
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app-header
+  type: ClusterIP
+status:
+  loadBalancer: {}

@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/work_pc/"
+  source = "../../..//modules/work_pc_v2/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -25,6 +25,10 @@ dependency "vpc" {
 }
 
 
+dependency "cluster1" {
+  config_path = "../k8s-1"
+}
+
 inputs = {
   questions_list=local.vars.locals.questions_list
   solutions_scripts=local.vars.locals.solutions_scripts
@@ -34,13 +38,15 @@ inputs = {
   prefix      = local.vars.locals.prefix
   tags_common = local.vars.locals.tags
   app_name    = "k8s-worker"
-  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
+  subnets  = dependency.vpc.outputs.subnets
   vpc_id      = dependency.vpc.outputs.vpc_id
+  all_spot_subnet       = local.vars.locals.all_spot_subnet
+  spot_additional_types = local.vars.locals.spot_additional_types
 
-  host_list = []
+  host_list = concat(dependency.cluster1.outputs.hosts)
   work_pc = {
     clusters_config = {
-      cluster1 =""
+      cluster1 = dependency.cluster1.outputs.k8s_config
     }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
@@ -49,13 +55,13 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version
-    user_data_template = "template/worker_k3s.sh"
+    user_data_template = "template/worker.sh"
     util = {
       kubectl_version = local.vars.locals.k8_version
     }
-    exam_time_minutes = "360"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-96/tasks/cka/labs/10/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-96/tasks/cka/labs/10/worker/files/worker.sh"
+    exam_time_minutes = "3600"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-96/tasks/cka/labs/10/worker/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-96/tasks/cka/labs/10/worker/files/worker.sh"
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
