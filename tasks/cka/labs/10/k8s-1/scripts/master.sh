@@ -7,24 +7,13 @@ kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/late
 kubectl -n kube-system patch deployment metrics-server --type=json \
 -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]]'
 
+# ingress-nginx installation
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 
-#### install NGINX Gateway Fabric
-# https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/manifests/
+helm install ingress-nginx  ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --version 4.8.3 \
+  -f https://raw.githubusercontent.com/ViktorUJ/cks/AG-96/tasks/cka/labs/10/k8s-1/scripts/ingress_nginx_conf.yaml \
+  --wait --timeout 5m
 
-
-# Install the Gateway API resources
-kubectl kustomize "https://github.com/nginx/nginx-gateway-fabric/config/crd/gateway-api/standard?ref=v1.6.2" | kubectl apply -f -
-
-# Deploy the NGINX Gateway Fabric CRDs
-
-kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.6.2/deploy/crds.yaml
-
-#Deploy NGINX Gateway Fabric
-kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.6.2/deploy/nodeport/deploy.yaml
-
-# set service ports
-kubectl patch svc nginx-gateway -n nginx-gateway --type='json' -p='[{"op": "replace", "path": "/spec/ports/0/nodePort", "value": 30102},{"op": "replace", "path": "/spec/ports/1/nodePort", "value": 31139}]'
-#
-
-#install lab manifests
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-96/tasks/cka/labs/10/k8s-1/scripts/app.yaml
+kubectl patch ingressclass nginx --patch '{"metadata": {"annotations": {"ingressclass.kubernetes.io/is-default-class": "true"}}}'

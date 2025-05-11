@@ -1,1 +1,9 @@
 [Kubernetes resource orchestration (kro) ](https://cloud.google.com/blog/products/containers-kubernetes/introducing-kube-resource-orchestrator)
+
+- install kro
+- create CustomResource   with
+  - deployment
+  - service
+  - ingress
+
+- deploy the custom resource
