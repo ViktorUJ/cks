@@ -1,5 +1,5 @@
 #!/bin/bash
-echo " *** master node  cka lab-8  k8s-1"
+echo " *** master node  cka lab-10  k8s-1"
 export KUBECONFIG=/root/.kube/config
 
 # Installation of metrics server
