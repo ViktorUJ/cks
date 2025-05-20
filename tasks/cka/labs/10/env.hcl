@@ -8,7 +8,7 @@ locals {
   aws    = "default"
   prefix = "cka-task10"
   tags = {
-    "env_name"        = "cka-task09"
+    "env_name"        = "cka-task10"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
