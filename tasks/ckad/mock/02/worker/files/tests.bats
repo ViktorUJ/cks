@@ -445,7 +445,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '3'>>/var/work/tests/result/all
   kubectl exec checker -n legacy -- sh -c 'curl legacy-app:8081/xxxx_test_app1' --context cluster1-admin@cluster1
   sleep 3
-  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1| grep 'xxxx_test_app1'
+  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1  --tail=-1| grep 'xxxx_test_app1'
   result=$?
   if [[ "$result" == '0' ]]; then
    echo '3'>>/var/work/tests/result/ok
@@ -457,7 +457,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '3'>>/var/work/tests/result/all
   kubectl exec checker -n legacy -- sh -c 'curl legacy-app:8082/yyyy_test_app2' --context cluster1-admin@cluster1
   sleep 3
-  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1| grep 'yyyy_test_app2'
+  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1  --tail=-1| grep 'yyyy_test_app2'
   result=$?
   if [[ "$result" == '0' ]]; then
    echo '3'>>/var/work/tests/result/ok
