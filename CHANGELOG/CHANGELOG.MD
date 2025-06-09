@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.1 (09.06.2025)
+### Features
+* [CKA Lab 10. Kubernetes resource orchestration (kro)](../tasks/cka/labs/10/README.MD) is added.
+* [CKA Lab 10. solutions](../tasks/cka/labs/10/worker/files/solutions/1.MD) is added.
+* CKAD mock exam 01 tests are fixed. 
+* CKAD mock exam 02 tests are fixed. 
+
 ## 0.20.1 (09.05.2025)
 ### Features
 * calculation of **headers size**, **body size** and **full size** is added to  [ping_pong](../docker/ping_pong/README.MD)
