@@ -13,7 +13,7 @@ helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm install ingress-nginx  ingress-nginx/ingress-nginx \
   --namespace ingress-nginx --create-namespace \
   --version 4.8.3 \
-  -f https://raw.githubusercontent.com/ViktorUJ/cks/AG-96/tasks/cka/labs/10/k8s-1/scripts/ingress_nginx_conf.yaml \
+  -f https://raw.githubusercontent.com/ViktorUJ/cks/0.21.1/tasks/cka/labs/10/k8s-1/scripts/ingress_nginx_conf.yaml \
   --wait --timeout 5m
 
 kubectl patch ingressclass nginx --patch '{"metadata": {"annotations": {"ingressclass.kubernetes.io/is-default-class": "true"}}}'
