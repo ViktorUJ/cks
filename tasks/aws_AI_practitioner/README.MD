@@ -52,7 +52,7 @@ Documentation: <https://aws.amazon.com/machine-learning/ai-services/>
 **Correct answer:** A. The balance between model complexity and generalization ability  
 
 *Explanation:* The trade‑off explains how increasing model complexity can lower bias but raise variance, and vice‑versa; a good model finds the sweet spot between the two.  
-Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/bias-variance.html>
+Documentation: <https://docs.aws.amazon.com/wellarchitected/latest/machine-learning-lens/mlper-09.html>
 
 </details>
 
@@ -70,7 +70,7 @@ Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/bias-vari
 **Correct answer:** B. Medical speech recognition with healthcare-specific vocabulary  
 
 *Explanation:* Transcribe Medical is a variant of Amazon Transcribe tuned for clinical dictation and tele‑health conversations, recognising medical terminology securely.  
-Documentation: <https://docs.aws.amazon.com/transcribe/latest/dg/medical-transcription.html>
+Documentation: <https://docs.aws.amazon.com/transcribe/latest/dg/transcribe-medical.html>
 
 </details>
 
@@ -358,7 +358,7 @@ Documentation: <https://docs.aws.amazon.com/lexv2/latest/dg/what-is.html>
 **Correct answer:** B. To prevent overfitting by adding penalties to the loss function  
 
 *Explanation:* Techniques like L1/L2 add a cost for large weights so the model generalizes better.  
-Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/regularization.html>
+Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/training-parameters1.html#regularization>
 
 </details>
 
@@ -556,7 +556,7 @@ Documentation: <https://docs.aws.amazon.com/forecast/latest/dg/what-is-forecast.
 **Correct answer:** B. Customer segmentation through clustering  
 
 *Explanation:* Clustering groups customers without labels to discover natural segments.  
-Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/unsupervised.html>
+Documentation: <https://docs.aws.amazon.com/sagemaker/latest/dg/algorithms-unsupervised.html>
 
 </details>
 
@@ -664,7 +664,7 @@ Documentation: <https://docs.aws.amazon.com/kendra/latest/dg/what-is-kendra.html
 **Correct answer:** A. When a model performs well on training data but poorly on new data  
 
 *Explanation:* Overfitting means the model has memorised noise and lost generalisation.  
-Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/overfitting.html>
+Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/model-fit-underfitting-vs-overfitting.html>
 
 </details>
 
@@ -1132,7 +1132,7 @@ Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/types-of-
 **Correct answer:** A. Supervised learning uses labeled data, unsupervised learning uses unlabeled data  
 
 *Explanation:* In supervised learning you train on input–label pairs; unsupervised algorithms infer structure from raw inputs.  
-Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/unsupervised.html>
+Documentation: <https://docs.aws.amazon.com/sagemaker/latest/dg/algorithms-unsupervised.html>
 
 </details>
 
