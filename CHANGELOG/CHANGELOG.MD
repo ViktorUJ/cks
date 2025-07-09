@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.1 (11.07.2025)
+### Features
+* [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is added. 
+
+
 ## 0.21.1 (09.06.2025)
 ### Features
 * [CKA Lab 10. Kubernetes resource orchestration (kro)](../tasks/cka/labs/10/README.MD) is added.
