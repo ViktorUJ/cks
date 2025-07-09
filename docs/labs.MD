@@ -82,3 +82,10 @@
 | Task   | Description                                       | Solution                                                                     |
 | ------ | ------------------------------------------------- | ---------------------------------------------------------------------------- |
 | **01** | [test ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+
+
+## AWS mock exams
+
+| Task   | Description                                               | Solution                                                                     |
+| ------ |-----------------------------------------------------------| ---------------------------------------------------------------------------- |
+| **01** | [AI practitioner](../tasks/aws_AI_practitioner/README.MD) |  |
