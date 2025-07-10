@@ -201,7 +201,7 @@ Every command should be run from the project's root directory.
 
 ### example questions for **AWS Certified AI Practitioner** exam
 
-- check examle questions in [AWS Certified AI Practitioner](tasks/aws_AI_practitioner/README.MD) directory
+- check examle questions in [AWS Certified AI Practitioner](tasks/aws_AI_practitioner) directory
 </details>
 
 <details>
