@@ -3,6 +3,8 @@
 ## 0.22.1 (11.07.2025)
 ### Features
 * [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is added. 
+* [CKS Lab 30. Create istio network policy](..%2Ftasks%2Fcks%2Flabs%2F30%2FREADME.MD) is added.
+* [CKS Lab 30. solutions ](../tasks/cks/labs/30/worker/files/solutions/1.MD) is added.
 
 
 ## 0.21.1 (09.06.2025)
