@@ -196,6 +196,13 @@ Every command should be run from the project's root directory.
 
 ## Usage scenarios
 
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">AWS Certified AI Practitioner </summary>
+
+### example questions for **AWS Certified AI Practitioner** exam
+
+- check examle questions in [AWS Certified AI Practitioner](tasks/aws_AI_practitioner/README.MD) directory
+</details>
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
