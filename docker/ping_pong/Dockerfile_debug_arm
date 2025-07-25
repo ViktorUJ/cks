@@ -33,7 +33,6 @@ RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc vim 
     mv sops /usr/local/bin/sops && \
     curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh | bash
 
-
 COPY --from=builder /go/src/mypackage/myapp/app /app
 COPY --from=redis-builder /usr/local/bin/redis-cli  /usr/local/bin/redis-cli
 COPY ./redis/redis_scan.sh /usr/local/bin/redis_scan
