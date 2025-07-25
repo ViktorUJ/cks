@@ -1191,7 +1191,6 @@ Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/ensemble-
 
 </details>
 
----
 
 ### 67. A law firm wants to build an AI application that reads legal documents and extracts key points. Which solution meets this requirement?
 
@@ -1212,7 +1211,6 @@ Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/ensemble-
 
 </details>
 
----
 
 ### 68. A company has built an image‑classification model to predict plant diseases from photos of plant leaves. The company wants to evaluate how many images the model classified correctly. Which evaluation metric should the company use?
 
@@ -1233,7 +1231,7 @@ Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/ensemble-
 
 </details>
 
----
+
 
 ### 69. A company is using a pre‑trained large language model (LLM) to build a chatbot for product recommendations. The company needs the LLM outputs to be short and written in a specific language. Which action will best align responses with these requirements?
 
@@ -1254,7 +1252,7 @@ Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/ensemble-
 
 </details>
 
----
+
 
 ### 70. A company uses Amazon SageMaker for its ML pipeline in a production environment. The company has large input data sizes up to 1 GB and processing times up to 1 hour. The company needs near real‑time latency. Which SageMaker inference option meets these requirements?
 
@@ -1275,7 +1273,7 @@ Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/ensemble-
 
 </details>
 
----
+
 
 ### 71. A team wants to adapt pre‑trained, domain‑specific models for related tasks without training from scratch. Which ML strategy fits this goal?
 
@@ -1296,7 +1294,7 @@ Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/ensemble-
 
 </details>
 
----
+
 
 ### 72. A company is building a solution to generate images for protective eyewear. The solution must have high accuracy and must minimize the risk of incorrect annotations. Which solution will meet these requirements?
 
