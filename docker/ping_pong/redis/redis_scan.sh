@@ -1,13 +1,63 @@
 #!/bin/bash
 
-# Redis connection settings
-REDIS_HOST="cache-redis-client"
-REDIS_PORT="6379"
-SLEEP_TIME=0.0001
+while [[ $# > 0 ]]; do
+    key="$1"
+    case "$key" in
+      --REDIS_HOST)
+         REDIS_HOST="$2"
+         shift
+      ;;
+      --REDIS_PORT)
+         REDIS_PORT="$2"
+         shift
+      ;;
+      --SLEEP_TIME)
+         SLEEP_TIME="$2"
+         shift
+     ;;
+      --NO_TTL_FILE)
+         NO_TTL_FILE="$2"
+         shift
+      ;;
+      --WITH_TTL_FILE)
+         WITH_TTL_FILE="$2"
+         shift
+      ;;
+      --help|-h)
+         echo "Usage: $0 --REDIS_HOST <host> [--REDIS_PORT <port>] [--SLEEP_TIME <seconds>] [--NO_TTL_FILE <file>] [--WITH_TTL_FILE <file>]"
+         echo "  --REDIS_HOST: Redis server hostname or IP (required)"
+         echo "  --REDIS_PORT: Redis server port (default: 6379)"
+         echo "  --SLEEP_TIME: Time to sleep between key checks (default: 0.0001 seconds)"
+         echo "  --NO_TTL_FILE: Output file for keys without TTL (default: keys_without_ttl.txt)"
+         echo "  --WITH_TTL_FILE: Output file for keys with TTL (default: keys_with_ttl.txt)"
+         exit 0
+      ;;
+      *)
+      ;;
+    esac
+    shift
+done
 
-# Output files
-NO_TTL_FILE="keys_without_ttl.txt"
-WITH_TTL_FILE="keys_with_ttl.txt"
+if [ -z "$REDIS_HOST" ]; then
+     echo "Error: --REDIS_HOST is required"
+     exit 1
+fi
+
+if [ -z "$REDIS_PORT" ]; then
+     REDIS_PORT="6379"
+fi
+
+if [ -z "$SLEEP_TIME" ]; then
+     SLEEP_TIME="0.0001"
+fi
+
+if [ -z "$NO_TTL_FILE" ]; then
+     NO_TTL_FILE="keys_without_ttl.txt"
+fi
+
+if [ -z "$WITH_TTL_FILE" ]; then
+     WITH_TTL_FILE="keys_with_ttl.txt"
+fi
 
 # ── Timer start ─────────────────────────────
 START_TIME=$(date +%s)
