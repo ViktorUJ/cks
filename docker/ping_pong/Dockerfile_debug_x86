@@ -13,7 +13,7 @@ RUN wget http://download.redis.io/redis-stable.tar.gz &&  \
  make -j$(nproc) redis-cli   && \
  cp src/redis-cli /usr/local/bin/redis-cli
 
-FROM amazon/aws-cli:2.27.59
+FROM amazon/aws-cli:2.17.33
 COPY yum.repos /etc/yum.repos.d/
 RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc vim tar git wget make bind-utils iputils  -y  && \
     curl -LO https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl && \
