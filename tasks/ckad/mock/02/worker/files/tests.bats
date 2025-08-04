@@ -102,9 +102,9 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "5" ]
 }
 
-@test "2.10 Create a cron job cron-job1. terminationGracePeriodSeconds" {
+@test "2.10 Create a cron job cron-job1. activeDeadlineSeconds" {
   echo '1'>>/var/work/tests/result/all
-  result=$( kubectl  get cronjobs.batch  cron-job1 -n rnd  --context cluster1-admin@cluster1 -o jsonpath='{.spec.jobTemplate.spec.template.spec.terminationGracePeriodSeconds}')
+  result=$( kubectl  get cronjobs.batch  cron-job1 -n rnd  --context cluster1-admin@cluster1 -o jsonpath='{.spec.jobTemplate.spec.activeDeadlineSeconds}')
   if [[ "$result" == "10" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
