@@ -90,7 +90,7 @@ scratch)
    echo "*** do release"
    docker manifest rm viktoruj/k8s-svc-sync:latest
    docker manifest create viktoruj/k8s-svc-sync:latest viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64  viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64
-   docker manifest push viktoruj/k8s-svc-sync:latest
+   docker manifest push viktoruj/k8s-svc-sync:latest --amend
 ;;
 alpine)
    echo "*** do release alpine"
@@ -103,7 +103,7 @@ alpine)
 
    docker manifest rm viktoruj/k8s-svc-sync:alpine
    docker manifest create viktoruj/k8s-svc-sync:alpine viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-alpine  viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-alpine
-   docker manifest push viktoruj/k8s-svc-sync:alpine
+   docker manifest push viktoruj/k8s-svc-sync:alpine --amend
 
 ;;
 
@@ -118,7 +118,7 @@ debug)
 
    docker manifest rm viktoruj/k8s-svc-sync:debug
    docker manifest create viktoruj/k8s-svc-sync:debug viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-debug  viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-debug
-   docker manifest push viktoruj/k8s-svc-sync:debug
+   docker manifest push viktoruj/k8s-svc-sync:debug --amend
 
 ;;
 dev)
@@ -127,7 +127,7 @@ dev)
    docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64
    docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64
    docker manifest create viktoruj/k8s-svc-sync:${latest_commit_hash} viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64  viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64
-   docker manifest push viktoruj/k8s-svc-sync:${latest_commit_hash}
+   docker manifest push viktoruj/k8s-svc-sync:${latest_commit_hash} --amend
    echo "*** not need release"
 ;;
 
