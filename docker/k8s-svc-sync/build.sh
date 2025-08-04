@@ -83,10 +83,10 @@ bin_deploy)
 scratch)
    docker buildx build --platform linux/arm64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64   .
    docker buildx build --platform linux/amd64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64   .
-   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64
-   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64
+   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64 --amend
+   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64 --amend
    docker manifest create viktoruj/k8s-svc-sync:${latest_commit_hash} viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64  viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64
-   docker manifest push viktoruj/k8s-svc-sync:${latest_commit_hash}
+   docker manifest push viktoruj/k8s-svc-sync:${latest_commit_hash} --amend
    echo "*** do release"
    docker manifest rm viktoruj/k8s-svc-sync:latest
    docker manifest create viktoruj/k8s-svc-sync:latest viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64  viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64
@@ -96,10 +96,10 @@ alpine)
    echo "*** do release alpine"
    docker buildx build --platform linux/arm64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-alpine  -f  Dockerfile_alpine .
    docker buildx build --platform linux/amd64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-alpine  -f  Dockerfile_alpine  .
-   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-alpine
-   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-alpine
+   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-alpine --amend
+   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-alpine --amend
    docker manifest create viktoruj/k8s-svc-sync:${latest_commit_hash}-alpine  viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-alpine   viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-alpine
-   docker manifest push viktoruj/k8s-svc-sync:${latest_commit_hash}-alpine
+   docker manifest push viktoruj/k8s-svc-sync:${latest_commit_hash}-alpine --amend
 
    docker manifest rm viktoruj/k8s-svc-sync:alpine
    docker manifest create viktoruj/k8s-svc-sync:alpine viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-alpine  viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-alpine
@@ -111,10 +111,10 @@ debug)
    echo "*** do release debug"
    docker buildx build --platform linux/arm64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-debug  -f  Dockerfile_debug_arm .
    docker buildx build --platform linux/amd64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-debug  -f  Dockerfile_debug_x86  .
-   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-debug
-   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-debug
+   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-debug --amend
+   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-debug --amend
    docker manifest create viktoruj/k8s-svc-sync:${latest_commit_hash}-debug  viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-debug   viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-debug
-   docker manifest push viktoruj/k8s-svc-sync:${latest_commit_hash}-debug
+   docker manifest push viktoruj/k8s-svc-sync:${latest_commit_hash}-debug --amend
 
    docker manifest rm viktoruj/k8s-svc-sync:debug
    docker manifest create viktoruj/k8s-svc-sync:debug viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-debug  viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-debug
@@ -124,8 +124,8 @@ debug)
 dev)
    docker buildx build --platform linux/arm64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64   .
    docker buildx build --platform linux/amd64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64   .
-   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64
-   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64
+   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64 --amend
+   docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64 --amend
    docker manifest create viktoruj/k8s-svc-sync:${latest_commit_hash} viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64  viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64
    docker manifest push viktoruj/k8s-svc-sync:${latest_commit_hash} --amend
    echo "*** not need release"
