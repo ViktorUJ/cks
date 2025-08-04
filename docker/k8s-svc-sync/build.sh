@@ -53,6 +53,7 @@ case $release in
     ;;
 
   scratch)
+    rm -rf "${DOCKER_CONFIG:-$HOME/.docker}/manifests"
     docker buildx build --platform linux/arm64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64 .
     docker buildx build --platform linux/amd64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64 .
     docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64
@@ -72,6 +73,7 @@ case $release in
 
   alpine)
     echo "*** do release alpine"
+    rm -rf "${DOCKER_CONFIG:-$HOME/.docker}/manifests"
     docker buildx build --platform linux/arm64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-alpine -f Dockerfile_alpine .
     docker buildx build --platform linux/amd64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-alpine -f Dockerfile_alpine .
     docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-alpine
@@ -90,6 +92,7 @@ case $release in
 
   debug)
     echo "*** do release debug"
+    rm -rf "${DOCKER_CONFIG:-$HOME/.docker}/manifests"
     docker buildx build --platform linux/arm64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-debug -f Dockerfile_debug_arm .
     docker buildx build --platform linux/amd64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64-debug -f Dockerfile_debug_x86 .
     docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64-debug
@@ -107,6 +110,7 @@ case $release in
     ;;
 
   dev|*)
+    rm -rf "${DOCKER_CONFIG:-$HOME/.docker}/manifests"
     docker buildx build --platform linux/arm64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64 .
     docker buildx build --platform linux/amd64 --load -t viktoruj/k8s-svc-sync:${latest_commit_hash}-amd64 .
     docker push viktoruj/k8s-svc-sync:${latest_commit_hash}-arm64
