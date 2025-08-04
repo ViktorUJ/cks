@@ -1,8 +1,3 @@
-// mirror.go
-// Continuous mirroring: does an initial full sync, then watches Services and Endpoints in
-// the source cluster and mirrors Ready pod IPs into a headless Service +
-// Endpoints in the destination cluster.
-//
 // Build & run:
 //   go mod tidy && go build -o mirror .
 //   ./mirror -src-context israel-production -dst-context prod-madlan -port 8080
