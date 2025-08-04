@@ -32,8 +32,8 @@ import (
 // -------------------------------------------------------------------------
 var (
     kubeconfig = flag.String("kubeconfig", os.Getenv("KUBECONFIG"), "path to kubeconfig; leave empty for default")
-    srcCtx     = flag.String("src-context", "israel-production", "source kube context")
-    dstCtx     = flag.String("dst-context", "prod-madlan", "destination kube context")
+    srcCtx     = flag.String("src-context", "local-cluster", "source kube context")
+    dstCtx     = flag.String("dst-context", "external-cluster", "destination kube context")
     srcNS      = flag.String("src-ns", "default", "source namespace")
     dstNS      = flag.String("dst-ns", "prod-test", "destination namespace")
     port       = flag.Int("port", 8080, "fallback service port if source service has no ports defined")
