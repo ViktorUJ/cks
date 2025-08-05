@@ -1,6 +1,5 @@
 // Build & run:
 //   go mod tidy && go build -o mirror .
-//   ./mirror -src-context israel-production -dst-context prod-madlan -port 8080
 package main
 
 import (
@@ -284,10 +283,15 @@ func syncAllServices(ctx context.Context, src, dst *kubernetes.Clientset) error 
 }
 
 func performInitialServiceSync(ctx context.Context, src, dst *kubernetes.Clientset, serviceName string) error {
-    // Get the service to check if it exists
-    _, err := src.CoreV1().Services(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
+    // Get the service to check if it exists and its type
+    srcSvc, err := src.CoreV1().Services(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
     if err != nil {
         return fmt.Errorf("get source service: %w", err)
+    }
+
+    // Handle ExternalName services differently
+    if srcSvc.Spec.Type == corev1.ServiceTypeExternalName {
+        return syncExternalNameService(ctx, dst, srcSvc, serviceName)
     }
 
     // Check if endpoints exist for this service
@@ -312,6 +316,11 @@ func syncService(ctx context.Context, src, dst *kubernetes.Clientset, serviceNam
     srcSvc, err := src.CoreV1().Services(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
     if err != nil {
         return fmt.Errorf("get src service: %w", err)
+    }
+
+    // Handle ExternalName services differently
+    if srcSvc.Spec.Type == corev1.ServiceTypeExternalName {
+        return syncExternalNameService(ctx, dst, srcSvc, serviceName)
     }
 
     eps, err := src.CoreV1().Endpoints(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
@@ -420,6 +429,63 @@ func syncService(ctx context.Context, src, dst *kubernetes.Clientset, serviceNam
     return nil
 }
 
+func syncExternalNameService(ctx context.Context, dst *kubernetes.Clientset, srcSvc *corev1.Service, serviceName string) error {
+    // Ensure namespace exists
+    if _, err := dst.CoreV1().Namespaces().Get(ctx, *dstNS, metav1.GetOptions{}); err != nil {
+        if _, err := dst.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: *dstNS}}, metav1.CreateOptions{}); err != nil {
+            return err
+        }
+    }
+
+    // Check if Service exists
+    existingSvc, err := dst.CoreV1().Services(*dstNS).Get(ctx, serviceName, metav1.GetOptions{})
+    if err != nil {
+        // Service doesn't exist, create ExternalName service
+        svc := &corev1.Service{
+            ObjectMeta: metav1.ObjectMeta{
+                Name: serviceName,
+                Labels: map[string]string{
+                    "sync": "true",
+                },
+            },
+            Spec: corev1.ServiceSpec{
+                Type:         corev1.ServiceTypeExternalName,
+                ExternalName: srcSvc.Spec.ExternalName,
+                Ports:        srcSvc.Spec.Ports,
+            },
+        }
+        if _, err := dst.CoreV1().Services(*dstNS).Create(ctx, svc, metav1.CreateOptions{}); err != nil {
+            return fmt.Errorf("create ExternalName service: %w", err)
+        }
+        logInfo("created ExternalName service %s/%s → %s", *dstNS, serviceName, srcSvc.Spec.ExternalName)
+        return nil
+    }
+
+    // Service exists, check if it's managed by us
+    if existingSvc.Labels["sync"] != "true" {
+        logInfo("ExternalName service %s/%s exists but not managed by sync (missing sync=true label), skipping", *dstNS, serviceName)
+        return nil
+    }
+
+    // Check if update is needed
+    if existingSvc.Spec.Type == corev1.ServiceTypeExternalName &&
+       existingSvc.Spec.ExternalName == srcSvc.Spec.ExternalName {
+        return nil // No update needed
+    }
+
+    // Update existing service
+    existingSvc.Spec.Type = corev1.ServiceTypeExternalName
+    existingSvc.Spec.ExternalName = srcSvc.Spec.ExternalName
+    existingSvc.Spec.Ports = srcSvc.Spec.Ports
+    existingSvc.Spec.ClusterIP = "" // Clear ClusterIP for ExternalName services
+
+    if _, err := dst.CoreV1().Services(*dstNS).Update(ctx, existingSvc, metav1.UpdateOptions{}); err != nil {
+        return fmt.Errorf("update ExternalName service: %w", err)
+    }
+    logInfo("updated ExternalName service %s/%s → %s", *dstNS, serviceName, srcSvc.Spec.ExternalName)
+    return nil
+}
+
 func removeService(ctx context.Context, dst *kubernetes.Clientset, serviceName string) error {
     // Check if service exists and is managed by us before deletion
     existingSvc, err := dst.CoreV1().Services(*dstNS).Get(ctx, serviceName, metav1.GetOptions{})
@@ -438,11 +504,13 @@ func removeService(ctx context.Context, dst *kubernetes.Clientset, serviceName s
         }
     }
 
-    // Always try to remove endpoints (they don't have labels to check)
-    if err := dst.CoreV1().Endpoints(*dstNS).Delete(ctx, serviceName, metav1.DeleteOptions{}); err != nil {
-        logErr("failed to delete endpoints %s/%s: %v", *dstNS, serviceName, err)
-    } else {
-        logInfo("deleted endpoints %s/%s", *dstNS, serviceName)
+    // Try to remove endpoints only for non-ExternalName services
+    if existingSvc != nil && existingSvc.Spec.Type != corev1.ServiceTypeExternalName {
+        if err := dst.CoreV1().Endpoints(*dstNS).Delete(ctx, serviceName, metav1.DeleteOptions{}); err != nil {
+            logErr("failed to delete endpoints %s/%s: %v", *dstNS, serviceName, err)
+        } else {
+            logInfo("deleted endpoints %s/%s", *dstNS, serviceName)
+        }
     }
 
     return nil
