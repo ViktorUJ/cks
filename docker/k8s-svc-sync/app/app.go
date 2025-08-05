@@ -61,8 +61,8 @@ func main() {
     dstClient, err := clientFor(*kubeconfig, *dstCtx)
     must(err)
 
-    // For leader election, we'll use the destination cluster client
-    leaderElectionClient, err := clientFor(*kubeconfig, *dstCtx)
+    // For leader election, we'll use the source cluster client (local cluster)
+    leaderElectionClient, err := clientFor(*kubeconfig, *srcCtx)
     must(err)
 
     ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
