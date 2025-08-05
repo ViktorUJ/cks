@@ -1,5 +1,6 @@
 // Build & run:
 //   go mod tidy && go build -o mirror .
+//   ./mirror -src-context israel-production -dst-context prod-madlan -port 8080
 package main
 
 import (
@@ -19,6 +20,8 @@ import (
     "k8s.io/client-go/kubernetes"
     "k8s.io/client-go/tools/clientcmd"
     clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+    "k8s.io/client-go/tools/leaderelection"
+    "k8s.io/client-go/tools/leaderelection/resourcelock"
 )
 
 // -------------------------------------------------------------------------
@@ -32,25 +35,108 @@ var (
     dstNS      = flag.String("dst-ns", "prod-test", "destination namespace")
     port       = flag.Int("port", 8080, "fallback service port if source service has no ports defined")
     syncLabel  = flag.String("sync-label", "sync=true", "label selector for services to sync")
+    leaderElectionNamespace = flag.String("leader-election-namespace", "k8s-sync", "namespace for leader election")
+    leaderElectionName      = flag.String("leader-election-name", "k8s-svc-sync-leader", "name for leader election")
+    podName                 = flag.String("pod-name", os.Getenv("HOSTNAME"), "pod name for leader election")
 )
 
 // Track which services are currently being synced
 var (
     syncedServices = make(map[string]bool)
     syncMutex      = sync.RWMutex{}
+    isLeader       = false
+    leaderMutex    = sync.RWMutex{}
 )
 
 func main() {
     flag.Parse()
+
+    if *podName == "" {
+        *podName = "k8s-svc-sync-" + strconv.FormatInt(time.Now().Unix(), 10)
+        logInfo("pod name not set, using generated name: %s", *podName)
+    }
 
     srcClient, err := clientFor(*kubeconfig, *srcCtx)
     must(err)
     dstClient, err := clientFor(*kubeconfig, *dstCtx)
     must(err)
 
+    // For leader election, we'll use the destination cluster client
+    leaderElectionClient, err := clientFor(*kubeconfig, *dstCtx)
+    must(err)
+
     ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
     defer stop()
 
+    logInfo("starting k8s-svc-sync pod %s", *podName)
+
+    // Start HTTP server for health and readiness checks
+    go startHTTPServer(ctx, srcClient, dstClient)
+
+    // Start leader election
+    startLeaderElection(ctx, leaderElectionClient, srcClient, dstClient)
+}
+
+// -------------------------------------------------------------------------
+// Leader Election
+// -------------------------------------------------------------------------
+func startLeaderElection(ctx context.Context, leaderClient, srcClient, dstClient *kubernetes.Clientset) {
+    lock := &resourcelock.LeaseLock{
+        LeaseMeta: metav1.ObjectMeta{
+            Name:      *leaderElectionName,
+            Namespace: *leaderElectionNamespace,
+        },
+        Client: leaderClient.CoordinationV1(),
+        LockConfig: resourcelock.ResourceLockConfig{
+            Identity: *podName,
+        },
+    }
+
+    leaderElectionConfig := leaderelection.LeaderElectionConfig{
+        Lock:            lock,
+        ReleaseOnCancel: true,
+        LeaseDuration:   30 * time.Second,
+        RenewDeadline:   15 * time.Second,
+        RetryPeriod:     5 * time.Second,
+        Callbacks: leaderelection.LeaderCallbacks{
+            OnStartedLeading: func(ctx context.Context) {
+                logInfo("became leader, starting sync operations")
+                setLeaderStatus(true)
+                startSyncOperations(ctx, srcClient, dstClient)
+            },
+            OnStoppedLeading: func() {
+                logInfo("stopped leading")
+                setLeaderStatus(false)
+            },
+            OnNewLeader: func(identity string) {
+                if identity == *podName {
+                    logInfo("I am the new leader")
+                } else {
+                    logInfo("new leader elected: %s", identity)
+                }
+            },
+        },
+    }
+
+    leaderelection.RunOrDie(ctx, leaderElectionConfig)
+}
+
+func setLeaderStatus(leader bool) {
+    leaderMutex.Lock()
+    defer leaderMutex.Unlock()
+    isLeader = leader
+}
+
+func getLeaderStatus() bool {
+    leaderMutex.RLock()
+    defer leaderMutex.RUnlock()
+    return isLeader
+}
+
+// -------------------------------------------------------------------------
+// Sync Operations (only runs on leader)
+// -------------------------------------------------------------------------
+func startSyncOperations(ctx context.Context, srcClient, dstClient *kubernetes.Clientset) {
     logInfo("starting mirror for services with label %s: %s/%s → %s/%s", *syncLabel, *srcCtx, *srcNS, *dstCtx, *dstNS)
 
     // Initial full sync
@@ -67,7 +153,14 @@ func main() {
     go func() {
         defer wg.Done()
         for {
+            if !getLeaderStatus() {
+                logInfo("no longer leader, stopping service watcher")
+                return
+            }
             if err := watchServices(ctx, srcClient, dstClient); err != nil {
+                if !getLeaderStatus() {
+                    return
+                }
                 logErr("service watch error: %v – retrying in 5s", err)
                 select {
                 case <-time.After(5 * time.Second):
@@ -84,7 +177,14 @@ func main() {
     go func() {
         defer wg.Done()
         for {
+            if !getLeaderStatus() {
+                logInfo("no longer leader, stopping endpoints watcher")
+                return
+            }
             if err := watchEndpoints(ctx, srcClient, dstClient); err != nil {
+                if !getLeaderStatus() {
+                    return
+                }
                 logErr("endpoints watch error: %v – retrying in 5s", err)
                 select {
                 case <-time.After(5 * time.Second):
@@ -96,9 +196,6 @@ func main() {
             }
         }
     }()
-
-    // Start HTTP server for health and readiness checks
-    startHTTPServer(ctx, srcClient, dstClient)
 
     wg.Wait()
 }
@@ -139,12 +236,23 @@ func startHTTPServer(ctx context.Context, srcClient, dstClient *kubernetes.Clien
         w.Write([]byte("Clusters connected"))
     })
 
+    // Leader status endpoint
+    mux.HandleFunc("/leader", func(w http.ResponseWriter, r *http.Request) {
+        if getLeaderStatus() {
+            w.WriteHeader(http.StatusOK)
+            w.Write([]byte(fmt.Sprintf("Leader: %s", *podName)))
+        } else {
+            w.WriteHeader(http.StatusOK)
+            w.Write([]byte("Follower"))
+        }
+    })
+
     server := &http.Server{
         Addr:    ":" + strconv.Itoa(httpPort),
         Handler: mux,
     }
 
-    logInfo("starting HTTP server on port %d with endpoints: /health, /ready", httpPort)
+    logInfo("starting HTTP server on port %d with endpoints: /health, /ready, /leader", httpPort)
 
     // Start HTTP server in its own goroutine
     go func() {
@@ -185,6 +293,9 @@ func watchServices(ctx context.Context, src, dst *kubernetes.Clientset) error {
             if !ok {
                 return fmt.Errorf("service watch channel closed")
             }
+            if !getLeaderStatus() {
+                return fmt.Errorf("no longer leader")
+            }
             if svc, ok := ev.Object.(*corev1.Service); ok {
                 handleServiceEvent(ctx, src, dst, svc, string(ev.Type))
             }
@@ -208,6 +319,9 @@ func watchEndpoints(ctx context.Context, src, dst *kubernetes.Clientset) error {
         case ev, ok := <-w.ResultChan():
             if !ok {
                 return fmt.Errorf("endpoints watch channel closed")
+            }
+            if !getLeaderStatus() {
+                return fmt.Errorf("no longer leader")
             }
             if eps, ok := ev.Object.(*corev1.Endpoints); ok {
                 // Only sync if service is being tracked
@@ -576,11 +690,11 @@ func toEPAddrs(ips []string) []corev1.EndpointAddress {
 // Logging
 // -------------------------------------------------------------------------
 func logInfo(format string, a ...interface{}) {
-    fmt.Printf("%s " + format + "\n", append([]interface{}{time.Now().Format("2006-01-02 15:04:05")}, a...)...)
+    fmt.Printf("%s [%s] " + format + "\n", append([]interface{}{time.Now().Format("2006-01-02 15:04:05"), *podName}, a...)...)
 }
 
 func logErr(format string, a ...interface{}) {
-    fmt.Fprintf(os.Stderr, "%s " + format + "\n", append([]interface{}{time.Now().Format("2006-01-02 15:04:05")}, a...)...)
+    fmt.Fprintf(os.Stderr, "%s [%s] " + format + "\n", append([]interface{}{time.Now().Format("2006-01-02 15:04:05"), *podName}, a...)...)
 }
 
 // -------------------------------------------------------------------------
