@@ -1,7 +1,3 @@
-// Build & run:
-//
-//	go mod tidy && go build -o mirror .
-//	./mirror -src-context israel-production -dst-context prod-madlan -port 8080
 package main
 
 import (
