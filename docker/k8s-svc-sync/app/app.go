@@ -492,7 +492,7 @@ func syncService(ctx context.Context, src, dst *kubernetes.Clientset, serviceNam
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
 				Namespace: *dstNS,
-				Labels:    map[string]string{"sync": "true"},
+				Labels:    map[string]string{"sync": "true-external"},
 			},
 			Spec: corev1.ServiceSpec{
 				Type:  corev1.ServiceTypeClusterIP,
@@ -512,7 +512,7 @@ func syncService(ctx context.Context, src, dst *kubernetes.Clientset, serviceNam
 				if existingSvc.Labels == nil {
 					existingSvc.Labels = make(map[string]string)
 				}
-				existingSvc.Labels["sync"] = "true"
+				existingSvc.Labels["sync"] = "true-external"
 				existingSvc.Spec.Ports = servicePorts
 
 				if _, err := dst.CoreV1().Services(*dstNS).Update(ctx, existingSvc, metav1.UpdateOptions{}); err != nil {
@@ -527,12 +527,12 @@ func syncService(ctx context.Context, src, dst *kubernetes.Clientset, serviceNam
 		}
 	} else {
 		// Service exists, check if it's managed by sync
-		if existingSvc.Labels["sync"] != "true" {
+		if existingSvc.Labels["sync"] != "true-external" {
 			// Take ownership of existing service
 			if existingSvc.Labels == nil {
 				existingSvc.Labels = make(map[string]string)
 			}
-			existingSvc.Labels["sync"] = "true"
+			existingSvc.Labels["sync"] = "true-external"
 			existingSvc.Spec.Ports = servicePorts
 
 			if _, err := dst.CoreV1().Services(*dstNS).Update(ctx, existingSvc, metav1.UpdateOptions{}); err != nil {
@@ -600,7 +600,7 @@ func syncExternalNameService(ctx context.Context, dst *kubernetes.Clientset, src
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
 				Namespace: *dstNS,
-				Labels:    map[string]string{"sync": "true"},
+				Labels:    map[string]string{"sync": "true-external"},
 			},
 			Spec: corev1.ServiceSpec{
 				Type:         corev1.ServiceTypeExternalName,
@@ -615,8 +615,8 @@ func syncExternalNameService(ctx context.Context, dst *kubernetes.Clientset, src
 		return nil
 	}
 
-	if existingSvc.Labels["sync"] != "true" {
-		logInfo("ExternalName service %s/%s exists but not managed by sync (missing sync=true label), skipping", *dstNS, serviceName)
+	if existingSvc.Labels["sync"] != "true-external" {
+		logInfo("ExternalName service %s/%s exists but not managed by sync (missing sync=true-external label), skipping", *dstNS, serviceName)
 		return nil
 	}
 
@@ -644,8 +644,8 @@ func removeService(ctx context.Context, dst *kubernetes.Clientset, serviceName s
 		return nil
 	}
 
-	if existingSvc.Labels["sync"] != "true" {
-		logInfo("service %s/%s exists but not managed by sync (missing sync=true label), skipping deletion", *dstNS, serviceName)
+	if existingSvc.Labels["sync"] != "true-external" {
+		logInfo("service %s/%s exists but not managed by sync (missing sync=true-external label), skipping deletion", *dstNS, serviceName)
 		return nil
 	}
 
