@@ -32,7 +32,6 @@ var (
 	dstCtx                  = flag.String("dst-context", "external-cluster", "destination kube context")
 	srcNS                   = flag.String("src-ns", "default", "source namespace")
 	dstNS                   = flag.String("dst-ns", "prod-test", "destination namespace")
-	port                    = flag.Int("port", 8080, "fallback service port if source service has no ports defined")
 	syncLabel               = flag.String("sync-label", "sync=true", "label selector for services to sync")
 	leaderElectionNamespace = flag.String("leader-election-namespace", "k8s-sync", "namespace for leader election")
 	leaderElectionName      = flag.String("leader-election-name", "k8s-svc-sync-leader", "name for leader election")
@@ -475,8 +474,9 @@ func syncService(ctx context.Context, src, dst *kubernetes.Clientset, serviceNam
 			}
 		}
 	} else {
-		servicePorts = []corev1.ServicePort{{Port: int32(*port)}}
-		endpointPorts = []corev1.EndpointPort{{Port: int32(*port)}}
+		// Skip services without ports instead of using fallback
+		logInfo("service %s has no ports defined, skipping sync", serviceName)
+		return nil
 	}
 
 	if _, err := dst.CoreV1().Namespaces().Get(ctx, *dstNS, metav1.GetOptions{}); err != nil {
