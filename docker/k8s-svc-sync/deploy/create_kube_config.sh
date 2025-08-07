@@ -1,7 +1,7 @@
 #!/bin/bash
 # generate_kubeconfig.sh
 
-context="prod-madlan"  # Change this  to external cluster context name
+context="external-cluster"  # Change this  to external cluster context name
 template_file="kubeconfig_template.yaml"
 output_file="kubeconfig.yaml"
 
