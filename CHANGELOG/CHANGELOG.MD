@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.23.1 (11.08.2025)
+## 0.23.1 (12.08.2025)
 ### Features
 * [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is updated.
 * [a service for synchronizing EKS(Kubernetes) services](../docker/k8s-svc-sync/README.MD) is added.
