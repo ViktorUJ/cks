@@ -28,7 +28,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       containers:
         - name: app
-          image: viktoruj/k8s-svc-sync:f077ce5
+          image: viktoruj/k8s-svc-sync
           args:
             - "-kubeconfig=/root/.kube/config"
             - "-leader-election-namespace=k8s-sync"
