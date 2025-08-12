@@ -1171,3 +1171,146 @@ Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/feature-e
 Documentation: <https://docs.aws.amazon.com/machine-learning/latest/dg/ensemble-methods.html>
 
 </details>
+
+### 66. What should an AI practitioner include in a transparency and explainability report for quarterly demand‑forecast models?
+
+**Options:**
+
+- **A.** Code for model training  
+- **B.** Partial dependence plots (PDPs)  
+- **C.** Sample data for training  
+- **D.** Model convergence tables  
+
+<details><summary>Answer</summary>
+
+**Correct answer:** B. Partial dependence plots (PDPs)  
+
+*Explanation:* PDPs illustrate how individual input features influence the model’s predictions, giving stakeholders an intuitive view of feature impact and improving model transparency.  
+
+*Documentation:* <https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-processing-job-analysis-results.html>
+
+</details>
+
+
+### 67. A law firm wants to build an AI application that reads legal documents and extracts key points. Which solution meets this requirement?
+
+**Options:**
+
+- **A.** Build an automatic named entity recognition system.  
+- **B.** Create a recommendation engine.  
+- **C.** Develop a summarization chatbot.  
+- **D.** Develop a multi‑language translation system.  
+
+<details><summary>Answer</summary>
+
+**Correct answer:** A. Build an automatic named entity recognition system.  
+
+*Explanation:* Named entity recognition (NER) detects and labels entities such as statutes, organizations, and dates, allowing the application to surface critical information for attorneys.  
+
+*Documentation:* <https://docs.aws.amazon.com/comprehend/latest/dg/custom-entity-recognition.html>
+
+</details>
+
+
+### 68. A company has built an image‑classification model to predict plant diseases from photos of plant leaves. The company wants to evaluate how many images the model classified correctly. Which evaluation metric should the company use?
+
+**Options:**
+
+- **A.** R‑squared score  
+- **B.** Accuracy  
+- **C.** Root mean squared error (RMSE)  
+- **D.** Learning rate  
+
+<details><summary>Answer</summary>
+
+**Correct answer:** B. Accuracy  
+
+*Explanation:* For classification tasks, accuracy is the proportion of correctly classified images out of all images evaluated, making it the most direct measure of overall correctness.  
+
+*Documentation:* <https://docs.aws.amazon.com/machine-learning/latest/dg/evaluating-model-accuracy.html>
+
+</details>
+
+
+
+### 69. A company is using a pre‑trained large language model (LLM) to build a chatbot for product recommendations. The company needs the LLM outputs to be short and written in a specific language. Which action will best align responses with these requirements?
+
+**Options:**
+
+- **A.** Adjust the prompt.  
+- **B.** Choose an LLM of a different size.  
+- **C.** Increase the temperature.  
+- **D.** Increase the Top K value.  
+
+<details><summary>Answer</summary>
+
+**Correct answer:** A. Adjust the prompt.  
+
+*Explanation:* Clear, constraint‑focused prompting (for example, “Reply in one sentence in Spanish”) steers the LLM toward concise, language‑specific outputs without retraining or parameter tuning.  
+
+*Documentation:* <https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-engineering-guidelines.html>
+
+</details>
+
+
+
+### 70. A company uses Amazon SageMaker for its ML pipeline in a production environment. The company has large input data sizes up to 1 GB and processing times up to 1 hour. The company needs near real‑time latency. Which SageMaker inference option meets these requirements?
+
+**Options:**
+
+- **A.** Realtime inference  
+- **B.** Serverless inference  
+- **C.** Asynchronous inference  
+- **D.** Batch transform  
+
+<details><summary>Answer</summary>
+
+**Correct answer:** C. Asynchronous inference  
+
+*Explanation:* Asynchronous inference queues large requests (up to 1 GB) and processes them in the background (up to 1 hour), returning results with low perceived latency to the client.  
+
+*Documentation:* <https://docs.aws.amazon.com/sagemaker/latest/dg/async-inference.html>
+
+</details>
+
+
+
+### 71. A team wants to adapt pre‑trained, domain‑specific models for related tasks without training from scratch. Which ML strategy fits this goal?
+
+**Options:**
+
+- **A.** Increase the number of epochs.  
+- **B.** Use transfer learning.  
+- **C.** Decrease the number of epochs.  
+- **D.** Use unsupervised learning.  
+
+<details><summary>Answer</summary>
+
+**Correct answer:** B. Use transfer learning  
+
+*Explanation:* Transfer learning fine‑tunes a pre‑trained network on new data, saving time and compute while leveraging the model’s learned representations.  
+
+*Documentation:* <https://docs.aws.amazon.com/sagemaker/latest/dg/IC-HowItWorks.html>
+
+</details>
+
+
+
+### 72. A company is building a solution to generate images for protective eyewear. The solution must have high accuracy and must minimize the risk of incorrect annotations. Which solution will meet these requirements?
+
+**Options:**
+
+- **A.** Human‑in‑the‑loop validation with Amazon SageMaker Ground Truth Plus  
+- **B.** Data augmentation with an Amazon Bedrock knowledge base  
+- **C.** Image recognition with Amazon Rekognition  
+- **D.** Data summarization with Amazon QuickSight Q  
+
+<details><summary>Answer</summary>
+
+**Correct answer:** A. Human‑in‑the‑loop validation with Amazon SageMaker Ground Truth Plus  
+
+*Explanation:* Ground Truth Plus integrates expert human review into the ML workflow, ensuring high‑precision labels for safety‑critical image datasets like protective eyewear.  
+
+*Documentation:* <https://docs.aws.amazon.com/sagemaker/latest/dg/gtp.html>
+
+</details>

@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app: k8s-svc-sync
+  name: svc-sync-rules
+  namespace: monitoring
+spec:
+  groups:
+  - name: ./k8s-svc-sync
+    rules:
+    - alert: k8s-svc-sync
+      annotations:
+        description: no ready k8s-svc-sync pods found
+        summary: k8s-svc-sync pods are not ready
+      expr: kube_deployment_status_replicas_ready{deployment="k8s-svc-sync", namespace="k8s-sync"} == 0
+      for: 3m
+      labels:
+        severity: critical

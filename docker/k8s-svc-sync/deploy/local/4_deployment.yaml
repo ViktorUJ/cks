@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-svc-sync
+  namespace: k8s-sync
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: k8s-svc-sync
+  template:
+    metadata:
+      labels:
+        app: k8s-svc-sync
+    spec:
+      serviceAccountName: k8s-svc-sync
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - k8s-svc-sync
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: app
+          image: viktoruj/k8s-svc-sync
+          args:
+            - "-kubeconfig=/root/.kube/config"
+            - "-leader-election-namespace=k8s-sync"
+            - "-leader-election-name=k8s-svc-sync-leader"
+            - "-src-ns=default"
+            - "-dst-ns=prod-test"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            periodSeconds: 3
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /root/.kube
+              readOnly: true
+      volumes:
+        - name: kubeconfig
+          configMap:
+            name: k8s-svc-sync-kubeconfig
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: k8s-svc-sync-pdb
+  namespace: k8s-sync
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: k8s-svc-sync

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.23.1 (12.08.2025)
+### Features
+* [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is updated.
+* [a service for synchronizing EKS(Kubernetes) services](../docker/k8s-svc-sync/README.MD) is added.
+* Unit tests for [k8s-svc-sync](../docker/k8s-svc-sync/README.MD) are added.
+* CKAD mock exam 02 tests are fixed.
+
 ## 0.22.1 (11.07.2025)
 ### Features
 * [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is added. 
