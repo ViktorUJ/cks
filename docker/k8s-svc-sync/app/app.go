@@ -17,11 +17,24 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	coordinationv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 )
+
+// -------------------------------------------------------------------------
+// Interface for testability
+// -------------------------------------------------------------------------
+type KubernetesClient interface {
+	CoreV1() corev1client.CoreV1Interface
+	CoordinationV1() coordinationv1.CoordinationV1Interface
+}
+
+// Ensure *kubernetes.Clientset implements KubernetesClient
+var _ KubernetesClient = (*kubernetes.Clientset)(nil)
 
 // -------------------------------------------------------------------------
 // Flags
@@ -78,7 +91,7 @@ func main() {
 // -------------------------------------------------------------------------
 // Leader Election
 // -------------------------------------------------------------------------
-func startLeaderElection(ctx context.Context, leaderClient, srcClient, dstClient *kubernetes.Clientset) {
+func startLeaderElection(ctx context.Context, leaderClient, srcClient, dstClient KubernetesClient) {
 	lock := &resourcelock.LeaseLock{
 		LeaseMeta: metav1.ObjectMeta{
 			Name:      *leaderElectionName,
@@ -133,7 +146,7 @@ func getLeaderStatus() bool {
 // -------------------------------------------------------------------------
 // Sync Operations (only runs on leader)
 // -------------------------------------------------------------------------
-func startSyncOperations(ctx context.Context, srcClient, dstClient *kubernetes.Clientset) {
+func startSyncOperations(ctx context.Context, srcClient, dstClient KubernetesClient) {
 	logInfo("starting mirror for services with label %s: %s/%s → %s/%s", *syncLabel, *srcCtx, *srcNS, *dstCtx, *dstNS)
 
 	// Initial full sync
@@ -188,7 +201,7 @@ func startSyncOperations(ctx context.Context, srcClient, dstClient *kubernetes.C
 // -------------------------------------------------------------------------
 // HTTP Server for health and readiness checks
 // -------------------------------------------------------------------------
-func startHTTPServer(ctx context.Context, srcClient, dstClient *kubernetes.Clientset) {
+func startHTTPServer(ctx context.Context, srcClient, dstClient KubernetesClient) {
 	httpPort := 8080
 	mux := http.NewServeMux()
 
@@ -253,7 +266,7 @@ func startHTTPServer(ctx context.Context, srcClient, dstClient *kubernetes.Clien
 // -------------------------------------------------------------------------
 // Watchers
 // -------------------------------------------------------------------------
-func watchServices(ctx context.Context, src, dst *kubernetes.Clientset) error {
+func watchServices(ctx context.Context, src, dst KubernetesClient) error {
 	w, err := src.CoreV1().Services(*srcNS).Watch(ctx, metav1.ListOptions{
 		Watch: true,
 	})
@@ -280,7 +293,7 @@ func watchServices(ctx context.Context, src, dst *kubernetes.Clientset) error {
 	}
 }
 
-func watchEndpoints(ctx context.Context, src, dst *kubernetes.Clientset) error {
+func watchEndpoints(ctx context.Context, src, dst KubernetesClient) error {
 	w, err := src.CoreV1().Endpoints(*srcNS).Watch(ctx, metav1.ListOptions{
 		Watch: true,
 	})
@@ -325,7 +338,7 @@ func watchEndpoints(ctx context.Context, src, dst *kubernetes.Clientset) error {
 	}
 }
 
-func handleServiceEvent(ctx context.Context, src, dst *kubernetes.Clientset, svc *corev1.Service, eventType string) {
+func handleServiceEvent(ctx context.Context, src, dst KubernetesClient, svc *corev1.Service, eventType string) {
 	shouldSyncNow := svc.Labels["sync"] == "true"
 	wasSyncing := isServiceSynced(svc.Name)
 
@@ -377,9 +390,9 @@ func handleServiceEvent(ctx context.Context, src, dst *kubernetes.Clientset, svc
 }
 
 // -------------------------------------------------------------------------
-// Sync logic
+// Sync logic - Updated to use interface
 // -------------------------------------------------------------------------
-func syncAllServices(ctx context.Context, src, dst *kubernetes.Clientset) error {
+func syncAllServices(ctx context.Context, src, dst KubernetesClient) error {
 	services, err := src.CoreV1().Services(*srcNS).List(ctx, metav1.ListOptions{
 		LabelSelector: *syncLabel,
 	})
@@ -408,7 +421,7 @@ func syncAllServices(ctx context.Context, src, dst *kubernetes.Clientset) error 
 	return nil
 }
 
-func performInitialServiceSync(ctx context.Context, src, dst *kubernetes.Clientset, serviceName string) error {
+func performInitialServiceSync(ctx context.Context, src, dst KubernetesClient, serviceName string) error {
 	srcSvc, err := src.CoreV1().Services(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("get source service: %w", err)
@@ -433,7 +446,7 @@ func performInitialServiceSync(ctx context.Context, src, dst *kubernetes.Clients
 	return syncService(ctx, src, dst, serviceName)
 }
 
-func syncService(ctx context.Context, src, dst *kubernetes.Clientset, serviceName string) error {
+func syncService(ctx context.Context, src, dst KubernetesClient, serviceName string) error {
 	srcSvc, err := src.CoreV1().Services(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("get src service: %w", err)
@@ -587,7 +600,7 @@ func syncService(ctx context.Context, src, dst *kubernetes.Clientset, serviceNam
 	return nil
 }
 
-func syncExternalNameService(ctx context.Context, dst *kubernetes.Clientset, srcSvc *corev1.Service, serviceName string) error {
+func syncExternalNameService(ctx context.Context, dst KubernetesClient, srcSvc *corev1.Service, serviceName string) error {
 	if _, err := dst.CoreV1().Namespaces().Get(ctx, *dstNS, metav1.GetOptions{}); err != nil {
 		if _, err := dst.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: *dstNS}}, metav1.CreateOptions{}); err != nil {
 			return err
@@ -637,7 +650,7 @@ func syncExternalNameService(ctx context.Context, dst *kubernetes.Clientset, src
 	return nil
 }
 
-func removeService(ctx context.Context, dst *kubernetes.Clientset, serviceName string) error {
+func removeService(ctx context.Context, dst KubernetesClient, serviceName string) error {
 	existingSvc, err := dst.CoreV1().Services(*dstNS).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
 		logInfo("service %s/%s not found for deletion", *dstNS, serviceName)
@@ -708,6 +721,10 @@ func readyIPs(eps *corev1.Endpoints) []string {
 		for _, a := range ss.Addresses {
 			ips = append(ips, a.IP)
 		}
+	}
+	// Ensure we always return an initialized slice, never nil
+	if ips == nil {
+		return []string{}
 	}
 	return ips
 }
