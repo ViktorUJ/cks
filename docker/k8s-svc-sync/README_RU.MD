@@ -91,7 +91,7 @@ Source Cluster                    Destination Cluster
 
 ```bash
 cd external
-kubectl apply -f install_sa.yaml --context prod-madlan
+kubectl apply -f install_sa.yaml --context prod-old
 ```
 
 #### 2. Генерация и применение ConfigMap с kubeconfig для локального кластера

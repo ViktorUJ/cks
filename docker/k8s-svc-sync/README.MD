@@ -88,7 +88,7 @@ Source Cluster                    Destination Cluster
 
 ```bash
 cd external
-kubectl apply -f install_sa.yaml --context prod-madlan
+kubectl apply -f install_sa.yaml --context prod-old
 ```
 
 #### 2. Generate and apply ConfigMap with kubeconfig for local cluster
