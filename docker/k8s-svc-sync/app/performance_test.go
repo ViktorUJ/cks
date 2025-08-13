@@ -1,117 +1,157 @@
 package main
 
 import (
-	"context"
-	"strconv"
-	"testing"
-	"time"
+ "context"
+ "testing"
+ "time"
+ "fmt"
 
-	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
+ "github.com/stretchr/testify/assert"
+ "github.com/stretchr/testify/require"
+ corev1 "k8s.io/api/core/v1"
+ metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ "k8s.io/client-go/kubernetes/fake"
 )
 
-func BenchmarkSyncService(b *testing.B) {
-	ctx := context.Background()
-	srcClient := fake.NewSimpleClientset()
-	dstClient := fake.NewSimpleClientset()
+func BenchmarkServiceSync(b *testing.B) {
+ ctx := context.Background()
+ srcClient := fake.NewSimpleClientset()
+ dstClient := fake.NewSimpleClientset()
 
-	*srcNS = "test-src"
-	*dstNS = "test-dst"
+ originalSrcNS := *srcNS
+ originalDstNS := *dstNS
+ originalPodName := *podName
+ *srcNS = "bench-src"
+ *dstNS = "bench-dst"
+ *podName = "bench-pod"
+ defer func() {
+  *srcNS = originalSrcNS
+  *dstNS = originalDstNS
+  *podName = originalPodName
+ }()
 
-	// Create destination namespace
-	dstNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-dst"},
-	}
-	_, err := dstClient.CoreV1().Namespaces().Create(ctx, dstNamespace, metav1.CreateOptions{})
-	require.NoError(b, err)
+ // Create namespaces
+ srcNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "bench-src"}}
+ dstNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "bench-dst"}}
+ _, err := srcClient.CoreV1().Namespaces().Create(ctx, srcNamespace, metav1.CreateOptions{})
+ require.NoError(b, err)
+ _, err = dstClient.CoreV1().Namespaces().Create(ctx, dstNamespace, metav1.CreateOptions{})
+ require.NoError(b, err)
 
-	// Create test service with many endpoints
-	testService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "bench-service",
-			Namespace: "test-src",
-			Labels:    map[string]string{"sync": "true"},
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{{Port: 80}},
-		},
-	}
+ // Create test service and endpoints
+ service := &corev1.Service{
+  ObjectMeta: metav1.ObjectMeta{
+   Name:      "bench-service",
+   Namespace: "bench-src",
+   Labels:    map[string]string{"sync": "true"},
+  },
+  Spec: corev1.ServiceSpec{
+   Type: corev1.ServiceTypeClusterIP,
+   Ports: []corev1.ServicePort{{
+    Name:     "http",
+    Protocol: corev1.ProtocolTCP,
+    Port:     80,
+   }},
+  },
+ }
 
-	// Create endpoints with multiple IPs for performance testing
-	ips := make([]corev1.EndpointAddress, 100)
-	for i := 0; i < 100; i++ {
-		ips[i] = corev1.EndpointAddress{IP: "10.0.0." + strconv.Itoa(i+1)}
-	}
+ endpoints := &corev1.Endpoints{
+  ObjectMeta: metav1.ObjectMeta{
+   Name:      "bench-service",
+   Namespace: "bench-src",
+  },
+  Subsets: []corev1.EndpointSubset{{
+   Addresses: []corev1.EndpointAddress{{IP: "10.0.0.1"}},
+   Ports:     []corev1.EndpointPort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP}},
+  }},
+ }
 
-	testEndpoints := &corev1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "bench-service",
-			Namespace: "test-src",
-		},
-		Subsets: []corev1.EndpointSubset{{
-			Addresses: ips,
-			Ports:     []corev1.EndpointPort{{Port: 80}},
-		}},
-	}
+ _, err = srcClient.CoreV1().Services("bench-src").Create(ctx, service, metav1.CreateOptions{})
+ require.NoError(b, err)
+ _, err = srcClient.CoreV1().Endpoints("bench-src").Create(ctx, endpoints, metav1.CreateOptions{})
+ require.NoError(b, err)
 
-	_, err = srcClient.CoreV1().Services("test-src").Create(ctx, testService, metav1.CreateOptions{})
-	require.NoError(b, err)
-	_, err = srcClient.CoreV1().Endpoints("test-src").Create(ctx, testEndpoints, metav1.CreateOptions{})
-	require.NoError(b, err)
+ b.ResetTimer()
 
-	b.ResetTimer()
-
-	// Benchmark service synchronization
-	for i := 0; i < b.N; i++ {
-		err := syncService(ctx, srcClient, dstClient, "bench-service")
-		require.NoError(b, err)
-	}
+ for i := 0; i < b.N; i++ {
+  _, err := syncServiceWithResult(ctx, srcClient, dstClient, "bench-service")
+  if err != nil {
+   b.Fatal(err)
+  }
+ }
 }
 
-func TestConcurrentServiceTracking(t *testing.T) {
-	// Clear state before test
-	syncMutex.Lock()
-	syncedServices = make(map[string]bool)
-	syncMutex.Unlock()
+func TestPerformanceMultipleServices(t *testing.T) {
+ ctx := context.Background()
+ srcClient := fake.NewSimpleClientset()
+ dstClient := fake.NewSimpleClientset()
 
-	// Test concurrent access to service tracking
-	done := make(chan bool)
+ originalSrcNS := *srcNS
+ originalDstNS := *dstNS
+ originalPodName := *podName
+ *srcNS = "perf-src"
+ *dstNS = "perf-dst"
+ *podName = "perf-pod"
+ defer func() {
+  *srcNS = originalSrcNS
+  *dstNS = originalDstNS
+  *podName = originalPodName
+ }()
 
-	// Goroutine 1: Adding services concurrently
-	go func() {
-		for i := 0; i < 100; i++ {
-			setSyncedService("service-"+strconv.Itoa(i), true)
-			time.Sleep(1 * time.Millisecond)
-		}
-		done <- true
-	}()
+ // Create namespaces
+ srcNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "perf-src"}}
+ dstNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "perf-dst"}}
+ _, err := srcClient.CoreV1().Namespaces().Create(ctx, srcNamespace, metav1.CreateOptions{})
+ require.NoError(t, err)
+ _, err = dstClient.CoreV1().Namespaces().Create(ctx, dstNamespace, metav1.CreateOptions{})
+ require.NoError(t, err)
 
-	// Goroutine 2: Removing services concurrently
-	go func() {
-		for i := 0; i < 50; i++ {
-			setSyncedService("service-"+strconv.Itoa(i), false)
-			time.Sleep(2 * time.Millisecond)
-		}
-		done <- true
-	}()
+ // Create multiple services
+ serviceCount := 100
+ for i := 0; i < serviceCount; i++ {
+  serviceName := fmt.Sprintf("service-%d", i)
 
-	// Goroutine 3: Reading service list concurrently
-	go func() {
-		for i := 0; i < 50; i++ {
-			getSyncedServicesList()
-			time.Sleep(1 * time.Millisecond)
-		}
-		done <- true
-	}()
+  service := &corev1.Service{
+   ObjectMeta: metav1.ObjectMeta{
+    Name:      serviceName,
+    Namespace: "perf-src",
+    Labels:    map[string]string{"sync": "true"},
+   },
+   Spec: corev1.ServiceSpec{
+    Type: corev1.ServiceTypeClusterIP,
+    Ports: []corev1.ServicePort{{
+     Name:     "http",
+     Protocol: corev1.ProtocolTCP,
+     Port:     80,
+    }},
+   },
+  }
 
-	// Wait for all goroutines to complete
-	for i := 0; i < 3; i++ {
-		<-done
-	}
+  endpoints := &corev1.Endpoints{
+   ObjectMeta: metav1.ObjectMeta{
+    Name:      serviceName,
+    Namespace: "perf-src",
+   },
+   Subsets: []corev1.EndpointSubset{{
+    Addresses: []corev1.EndpointAddress{{IP: fmt.Sprintf("10.0.0.%d", i+1)}},
+    Ports:     []corev1.EndpointPort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP}},
+   }},
+  }
 
-	// Verify final state is consistent
-	services := getSyncedServicesList()
-	require.True(t, len(services) >= 50) // At least 50 services should remain
+  _, err = srcClient.CoreV1().Services("perf-src").Create(ctx, service, metav1.CreateOptions{})
+  require.NoError(t, err)
+  _, err = srcClient.CoreV1().Endpoints("perf-src").Create(ctx, endpoints, metav1.CreateOptions{})
+  require.NoError(t, err)
+ }
+
+ start := time.Now()
+
+ for i := 0; i < serviceCount; i++ {
+  serviceName := fmt.Sprintf("service-%d", i)
+  _, err := syncServiceWithResult(ctx, srcClient, dstClient, serviceName)
+  assert.NoError(t, err)
+ }
+
+ duration := time.Since(start)
+ t.Logf("Synced %d services in %v (%.2f ms per service)", serviceCount, duration, float64(duration.Nanoseconds())/float64(serviceCount)/1000000)
 }

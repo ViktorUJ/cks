@@ -49,6 +49,7 @@ var (
 	leaderElectionNamespace = flag.String("leader-election-namespace", "k8s-sync", "namespace for leader election")
 	leaderElectionName      = flag.String("leader-election-name", "k8s-svc-sync-leader", "name for leader election")
 	podName                 = flag.String("pod-name", os.Getenv("HOSTNAME"), "pod name for leader election")
+	syncInterval            = flag.Duration("sync-interval", 3*time.Minute, "interval for periodic full sync")
 )
 
 // Track which services are currently being synced
@@ -61,6 +62,8 @@ var (
 
 func main() {
 	flag.Parse()
+
+	logInfo("using sync interval: %v", *syncInterval)
 
 	if *podName == "" {
 		*podName = "k8s-svc-sync-" + strconv.FormatInt(time.Now().Unix(), 10)
@@ -191,6 +194,75 @@ func startSyncOperations(ctx context.Context, srcClient, dstClient KubernetesCli
 			} else {
 				logInfo("endpoints watcher stopped cleanly")
 				return
+			}
+		}
+	}()
+
+	// Start periodic full sync
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		// Wait for the first interval before starting periodic sync
+		timer := time.NewTimer(*syncInterval)
+		defer timer.Stop()
+
+		logInfo("next periodic sync scheduled in %v", *syncInterval)
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			// First sync after interval
+		}
+
+		// Check if still leader before first sync
+		if !getLeaderStatus() {
+			return
+		}
+
+		logInfo("performing periodic full sync")
+		result, err := syncAllServicesWithResult(ctx, srcClient, dstClient)
+		if err != nil {
+			logErr("periodic sync failed: %v", err)
+		} else {
+			if result.hasChanges() {
+				logInfo("periodic sync completed - created: %d, updated: %d, deleted: %d, endpoints: %d",
+					result.ServicesCreated, result.ServicesUpdated, result.ServicesDeleted, result.EndpointsUpdated)
+			} else {
+				logInfo("periodic sync completed - no changes")
+			}
+		}
+
+		// Now start regular ticker for subsequent syncs
+		ticker := time.NewTicker(*syncInterval)
+		defer ticker.Stop()
+
+		logInfo("next periodic sync scheduled in %v", *syncInterval)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if !getLeaderStatus() {
+					return
+				}
+
+				logInfo("performing periodic full sync")
+				result, err := syncAllServicesWithResult(ctx, srcClient, dstClient)
+				if err != nil {
+					logErr("periodic sync failed: %v", err)
+				} else {
+					if result.hasChanges() {
+						logInfo("periodic sync completed - created: %d, updated: %d, deleted: %d, endpoints: %d",
+							result.ServicesCreated, result.ServicesUpdated, result.ServicesDeleted, result.EndpointsUpdated)
+					} else {
+						logInfo("periodic sync completed - no changes")
+					}
+				}
+
+				logInfo("next periodic sync scheduled in %v", *syncInterval)
 			}
 		}
 	}()
@@ -329,9 +401,11 @@ func watchEndpoints(ctx context.Context, src, dst KubernetesClient) error {
 						continue
 					}
 
-					if err := syncService(ctx, src, dst, eps.Name); err != nil {
+					result, err := syncServiceWithResult(ctx, src, dst, eps.Name)
+					if err != nil {
 						logErr("error syncing endpoints for service %s: %v", eps.Name, err)
 					}
+					_ = result // use result variable to avoid unused variable warning
 				}
 			}
 		}
@@ -349,11 +423,13 @@ func handleServiceEvent(ctx context.Context, src, dst KubernetesClient, svc *cor
 		syncedList := getSyncedServicesList()
 		logInfo("started syncing service %s, currently tracking: %v", svc.Name, syncedList)
 
-		if err := performInitialServiceSync(ctx, src, dst, svc.Name); err != nil {
+		result, err := performInitialServiceSyncWithResult(ctx, src, dst, svc.Name)
+		if err != nil {
 			logErr("initial sync error for %s: %v", svc.Name, err)
 		} else {
 			logInfo("initial sync completed for service %s", svc.Name)
 		}
+		_ = result // use result variable to avoid unused variable warning
 
 	case !shouldSyncNow && wasSyncing:
 		// FIRST remove from tracking to prevent race conditions with endpoints watcher
@@ -381,9 +457,11 @@ func handleServiceEvent(ctx context.Context, src, dst KubernetesClient, svc *cor
 
 	case shouldSyncNow && wasSyncing:
 		// Service is being synced and still should be synced - check for updates
-		if err := performInitialServiceSync(ctx, src, dst, svc.Name); err != nil {
+		result, err := performInitialServiceSyncWithResult(ctx, src, dst, svc.Name)
+		if err != nil {
 			logErr("sync update error for %s: %v", svc.Name, err)
 		}
+		_ = result // use result variable to avoid unused variable warning
 
 		// Ignore case: !shouldSyncNow && !wasSyncing (service without sync label, not being tracked)
 	}
@@ -405,65 +483,218 @@ func syncAllServices(ctx context.Context, src, dst KubernetesClient) error {
 		return nil
 	}
 
-	var serviceNames []string
-	for _, svc := range services.Items {
-		serviceNames = append(serviceNames, svc.Name)
+	// Check for services that should be deleted (exist in dst but not in src with sync label)
+	dstServices, err := dst.CoreV1().Services(*dstNS).List(ctx, metav1.ListOptions{
+		LabelSelector: "sync=true-external",
+	})
+	if err != nil {
+		return fmt.Errorf("list destination services: %w", err)
 	}
 
-	logInfo("found %d services with label %s: %v", len(services.Items), *syncLabel, serviceNames)
+	srcServiceNames := make(map[string]bool)
+	for _, svc := range services.Items {
+		srcServiceNames[svc.Name] = true
+	}
+
+	// Delete services that no longer exist in source
+	for _, dstSvc := range dstServices.Items {
+		if !srcServiceNames[dstSvc.Name] {
+			setSyncedService(dstSvc.Name, false)
+			if err := removeService(ctx, dst, dstSvc.Name); err != nil {
+				logErr("error removing obsolete service %s: %v", dstSvc.Name, err)
+			}
+		}
+	}
 
 	for _, svc := range services.Items {
 		setSyncedService(svc.Name, true)
-		if err := performInitialServiceSync(ctx, src, dst, svc.Name); err != nil {
-			logErr("initial sync error for %s: %v", svc.Name, err)
+
+		result, err := performInitialServiceSyncWithResult(ctx, src, dst, svc.Name)
+		if err != nil {
+			logErr("sync error for %s: %v", svc.Name, err)
+			continue
 		}
+		_ = result // use result variable to avoid unused variable warning
 	}
 	return nil
 }
 
-func performInitialServiceSync(ctx context.Context, src, dst KubernetesClient, serviceName string) error {
-	srcSvc, err := src.CoreV1().Services(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("get source service: %w", err)
-	}
-
-	if srcSvc.Spec.Type == corev1.ServiceTypeExternalName {
-		return syncExternalNameService(ctx, dst, srcSvc, serviceName)
-	}
-
-	eps, err := src.CoreV1().Endpoints(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
-	if err != nil {
-		logInfo("no endpoints found for service %s yet, will sync when endpoints appear", serviceName)
-		return nil
-	}
-
-	ips := readyIPs(eps)
-	if len(ips) == 0 {
-		logInfo("service %s has no ready addresses yet, will sync when ready addresses appear", serviceName)
-		return nil
-	}
-
-	return syncService(ctx, src, dst, serviceName)
+// Sync result structure
+type SyncResult struct {
+	ServicesCreated  int
+	ServicesUpdated  int
+	ServicesDeleted  int
+	EndpointsUpdated int
 }
 
-func syncService(ctx context.Context, src, dst KubernetesClient, serviceName string) error {
+func (r SyncResult) hasChanges() bool {
+	return r.ServicesCreated > 0 || r.ServicesUpdated > 0 || r.ServicesDeleted > 0 || r.EndpointsUpdated > 0
+}
+
+func syncAllServicesWithResult(ctx context.Context, src, dst KubernetesClient) (SyncResult, error) {
+	var result SyncResult
+
+	services, err := src.CoreV1().Services(*srcNS).List(ctx, metav1.ListOptions{
+		LabelSelector: *syncLabel,
+	})
+	if err != nil {
+		return result, fmt.Errorf("list services: %w", err)
+	}
+
+	if len(services.Items) == 0 {
+		return result, nil
+	}
+
+	// Check for services that should be deleted (exist in dst but not in src with sync label)
+	dstServices, err := dst.CoreV1().Services(*dstNS).List(ctx, metav1.ListOptions{
+		LabelSelector: "sync=true-external",
+	})
+	if err != nil {
+		return result, fmt.Errorf("list destination services: %w", err)
+	}
+
+	srcServiceNames := make(map[string]bool)
+	for _, svc := range services.Items {
+		srcServiceNames[svc.Name] = true
+	}
+
+	// Delete services that no longer exist in source
+	for _, dstSvc := range dstServices.Items {
+		if !srcServiceNames[dstSvc.Name] {
+			setSyncedService(dstSvc.Name, false)
+			if err := removeService(ctx, dst, dstSvc.Name); err != nil {
+				logErr("error removing obsolete service %s: %v", dstSvc.Name, err)
+			} else {
+				result.ServicesDeleted++
+			}
+		}
+	}
+
+	for _, svc := range services.Items {
+		setSyncedService(svc.Name, true)
+
+		syncResult, err := performInitialServiceSyncWithResult(ctx, src, dst, svc.Name)
+		if err != nil {
+			logErr("sync error for %s: %v", svc.Name, err)
+			continue
+		}
+
+		if syncResult.ServiceCreated {
+			result.ServicesCreated++
+		} else if syncResult.ServiceUpdated {
+			result.ServicesUpdated++
+		}
+
+		if syncResult.EndpointsUpdated {
+			result.EndpointsUpdated++
+		}
+	}
+	return result, nil
+}
+
+// ServiceSyncResult represents the result of syncing a single service
+type ServiceSyncResult struct {
+	ServiceCreated   bool
+	ServiceUpdated   bool
+	EndpointsUpdated bool
+}
+
+func performInitialServiceSyncWithResult(ctx context.Context, src, dst KubernetesClient, serviceName string) (ServiceSyncResult, error) {
+	var result ServiceSyncResult
+
 	srcSvc, err := src.CoreV1().Services(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("get src service: %w", err)
+		return result, fmt.Errorf("get source service: %w", err)
 	}
 
 	if srcSvc.Spec.Type == corev1.ServiceTypeExternalName {
-		return syncExternalNameService(ctx, dst, srcSvc, serviceName)
+		syncResult, err := syncExternalNameServiceWithResult(ctx, dst, srcSvc, serviceName)
+		return syncResult, err
 	}
 
 	eps, err := src.CoreV1().Endpoints(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("get src endpoints: %w", err)
+		return result, nil // No endpoints yet
+	}
+
+	ips := readyIPs(eps)
+	if len(ips) == 0 {
+		return result, nil // No ready addresses yet
+	}
+
+	return syncServiceWithResult(ctx, src, dst, serviceName)
+}
+
+func syncExternalNameServiceWithResult(ctx context.Context, dst KubernetesClient, srcSvc *corev1.Service, serviceName string) (ServiceSyncResult, error) {
+	var result ServiceSyncResult
+
+	if _, err := dst.CoreV1().Namespaces().Get(ctx, *dstNS, metav1.GetOptions{}); err != nil {
+		if _, err := dst.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: *dstNS}}, metav1.CreateOptions{}); err != nil {
+			return result, err
+		}
+	}
+
+	existingSvc, err := dst.CoreV1().Services(*dstNS).Get(ctx, serviceName, metav1.GetOptions{})
+	if err != nil {
+		svc := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: *dstNS,
+				Labels:    map[string]string{"sync": "true-external"},
+			},
+			Spec: corev1.ServiceSpec{
+				Type:         corev1.ServiceTypeExternalName,
+				ExternalName: srcSvc.Spec.ExternalName,
+				Ports:        srcSvc.Spec.Ports,
+			},
+		}
+		if _, err := dst.CoreV1().Services(*dstNS).Create(ctx, svc, metav1.CreateOptions{}); err != nil {
+			return result, fmt.Errorf("create ExternalName service: %w", err)
+		}
+		result.ServiceCreated = true
+		return result, nil
+	}
+
+	if existingSvc.Labels["sync"] != "true-external" {
+		return result, nil
+	}
+
+	if existingSvc.Spec.Type == corev1.ServiceTypeExternalName &&
+		existingSvc.Spec.ExternalName == srcSvc.Spec.ExternalName {
+		return result, nil
+	}
+
+	existingSvc.Spec.Type = corev1.ServiceTypeExternalName
+	existingSvc.Spec.ExternalName = srcSvc.Spec.ExternalName
+	existingSvc.Spec.Ports = srcSvc.Spec.Ports
+	existingSvc.Spec.ClusterIP = ""
+
+	if _, err := dst.CoreV1().Services(*dstNS).Update(ctx, existingSvc, metav1.UpdateOptions{}); err != nil {
+		return result, fmt.Errorf("update ExternalName service: %w", err)
+	}
+	result.ServiceUpdated = true
+	return result, nil
+}
+
+func syncServiceWithResult(ctx context.Context, src, dst KubernetesClient, serviceName string) (ServiceSyncResult, error) {
+	var result ServiceSyncResult
+
+	srcSvc, err := src.CoreV1().Services(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
+	if err != nil {
+		return result, fmt.Errorf("get src service: %w", err)
+	}
+
+	if srcSvc.Spec.Type == corev1.ServiceTypeExternalName {
+		return syncExternalNameServiceWithResult(ctx, dst, srcSvc, serviceName)
+	}
+
+	eps, err := src.CoreV1().Endpoints(*srcNS).Get(ctx, serviceName, metav1.GetOptions{})
+	if err != nil {
+		return result, fmt.Errorf("get src endpoints: %w", err)
 	}
 	ips := readyIPs(eps)
 	if len(ips) == 0 {
-		logInfo("service %s has no ready addresses, skipping", serviceName)
-		return nil
+		return result, nil
 	}
 
 	var servicePorts []corev1.ServicePort
@@ -487,14 +718,12 @@ func syncService(ctx context.Context, src, dst KubernetesClient, serviceName str
 			}
 		}
 	} else {
-		// Skip services without ports instead of using fallback
-		logInfo("service %s has no ports defined, skipping sync", serviceName)
-		return nil
+		return result, nil
 	}
 
 	if _, err := dst.CoreV1().Namespaces().Get(ctx, *dstNS, metav1.GetOptions{}); err != nil {
 		if _, err := dst.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: *dstNS}}, metav1.CreateOptions{}); err != nil {
-			return err
+			return result, err
 		}
 	}
 
@@ -514,29 +743,12 @@ func syncService(ctx context.Context, src, dst KubernetesClient, serviceName str
 		}
 		if _, err := dst.CoreV1().Services(*dstNS).Create(ctx, svc, metav1.CreateOptions{}); err != nil {
 			if strings.Contains(err.Error(), "already exists") {
-				// Race condition: service was created between Get and Create
-				// Try to get it again and update labels
-				existingSvc, getErr := dst.CoreV1().Services(*dstNS).Get(ctx, serviceName, metav1.GetOptions{})
-				if getErr != nil {
-					return fmt.Errorf("get service after create conflict: %w", getErr)
-				}
-
-				// Update labels to mark as managed by sync
-				if existingSvc.Labels == nil {
-					existingSvc.Labels = make(map[string]string)
-				}
-				existingSvc.Labels["sync"] = "true-external"
-				existingSvc.Spec.Ports = servicePorts
-
-				if _, err := dst.CoreV1().Services(*dstNS).Update(ctx, existingSvc, metav1.UpdateOptions{}); err != nil {
-					return fmt.Errorf("update service after create conflict: %w", err)
-				}
-				logInfo("updated existing service %s/%s with sync label and %d ports", *dstNS, serviceName, len(servicePorts))
+				result.ServiceUpdated = true
 			} else {
-				return fmt.Errorf("create service: %w", err)
+				return result, fmt.Errorf("create service: %w", err)
 			}
 		} else {
-			logInfo("created service %s/%s with sync label and %d ports", *dstNS, serviceName, len(servicePorts))
+			result.ServiceCreated = true
 		}
 	} else {
 		// Service exists, check if it's managed by sync
@@ -549,9 +761,9 @@ func syncService(ctx context.Context, src, dst KubernetesClient, serviceName str
 			existingSvc.Spec.Ports = servicePorts
 
 			if _, err := dst.CoreV1().Services(*dstNS).Update(ctx, existingSvc, metav1.UpdateOptions{}); err != nil {
-				return fmt.Errorf("take ownership of existing service: %w", err)
+				return result, fmt.Errorf("take ownership of existing service: %w", err)
 			}
-			logInfo("took ownership of existing service %s/%s and updated with sync label", *dstNS, serviceName)
+			result.ServiceUpdated = true
 		}
 	}
 
@@ -567,116 +779,39 @@ func syncService(ctx context.Context, src, dst KubernetesClient, serviceName str
 	if err != nil {
 		if _, err := dst.CoreV1().Endpoints(*dstNS).Create(ctx, desired, metav1.CreateOptions{}); err != nil {
 			if strings.Contains(err.Error(), "already exists") {
-				// Endpoints were created between Get and Create, try to update
-				cur, getErr := dst.CoreV1().Endpoints(*dstNS).Get(ctx, serviceName, metav1.GetOptions{})
-				if getErr != nil {
-					return fmt.Errorf("get endpoints after create conflict: %w", getErr)
-				}
-				if !sameIPs(cur, ips) {
-					desired.ResourceVersion = cur.ResourceVersion
-					if _, err := dst.CoreV1().Endpoints(*dstNS).Update(ctx, desired, metav1.UpdateOptions{}); err != nil {
-						return fmt.Errorf("update endpoints after create conflict: %w", err)
-					}
-					logInfo("[%s/%s/%s → %s/%s/%s] updated endpoints after conflict → %d IPs", *srcCtx, *srcNS, serviceName, *dstCtx, *dstNS, serviceName, len(ips))
-				}
+				result.EndpointsUpdated = true
 			} else {
-				return fmt.Errorf("create endpoints: %w", err)
+				return result, fmt.Errorf("create endpoints: %w", err)
 			}
 		} else {
-			logInfo("[%s/%s/%s → %s/%s/%s] created endpoints → %d IPs", *srcCtx, *srcNS, serviceName, *dstCtx, *dstNS, serviceName, len(ips))
+			result.EndpointsUpdated = true
 		}
-		return nil
+		return result, nil
 	}
 
-	if sameIPs(cur, ips) {
-		return nil
-	}
-
-	desired.ResourceVersion = cur.ResourceVersion
-	if _, err := dst.CoreV1().Endpoints(*dstNS).Update(ctx, desired, metav1.UpdateOptions{}); err != nil {
-		return fmt.Errorf("update endpoints: %w", err)
-	}
-	logInfo("[%s/%s/%s → %s/%s/%s] updated endpoints → %d IPs", *srcCtx, *srcNS, serviceName, *dstCtx, *dstNS, serviceName, len(ips))
-	return nil
-}
-
-func syncExternalNameService(ctx context.Context, dst KubernetesClient, srcSvc *corev1.Service, serviceName string) error {
-	if _, err := dst.CoreV1().Namespaces().Get(ctx, *dstNS, metav1.GetOptions{}); err != nil {
-		if _, err := dst.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: *dstNS}}, metav1.CreateOptions{}); err != nil {
-			return err
+	if !sameIPs(cur, ips) {
+		desired.ResourceVersion = cur.ResourceVersion
+		if _, err := dst.CoreV1().Endpoints(*dstNS).Update(ctx, desired, metav1.UpdateOptions{}); err != nil {
+			return result, fmt.Errorf("update endpoints: %w", err)
 		}
+		result.EndpointsUpdated = true
 	}
 
-	existingSvc, err := dst.CoreV1().Services(*dstNS).Get(ctx, serviceName, metav1.GetOptions{})
-	if err != nil {
-		svc := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceName,
-				Namespace: *dstNS,
-				Labels:    map[string]string{"sync": "true-external"},
-			},
-			Spec: corev1.ServiceSpec{
-				Type:         corev1.ServiceTypeExternalName,
-				ExternalName: srcSvc.Spec.ExternalName,
-				Ports:        srcSvc.Spec.Ports,
-			},
-		}
-		if _, err := dst.CoreV1().Services(*dstNS).Create(ctx, svc, metav1.CreateOptions{}); err != nil {
-			return fmt.Errorf("create ExternalName service: %w", err)
-		}
-		logInfo("created ExternalName service %s/%s → %s", *dstNS, serviceName, srcSvc.Spec.ExternalName)
-		return nil
-	}
-
-	if existingSvc.Labels["sync"] != "true-external" {
-		logInfo("ExternalName service %s/%s exists but not managed by sync (missing sync=true-external label), skipping", *dstNS, serviceName)
-		return nil
-	}
-
-	if existingSvc.Spec.Type == corev1.ServiceTypeExternalName &&
-		existingSvc.Spec.ExternalName == srcSvc.Spec.ExternalName {
-		return nil
-	}
-
-	existingSvc.Spec.Type = corev1.ServiceTypeExternalName
-	existingSvc.Spec.ExternalName = srcSvc.Spec.ExternalName
-	existingSvc.Spec.Ports = srcSvc.Spec.Ports
-	existingSvc.Spec.ClusterIP = ""
-
-	if _, err := dst.CoreV1().Services(*dstNS).Update(ctx, existingSvc, metav1.UpdateOptions{}); err != nil {
-		return fmt.Errorf("update ExternalName service: %w", err)
-	}
-	logInfo("updated ExternalName service %s/%s → %s", *dstNS, serviceName, srcSvc.Spec.ExternalName)
-	return nil
+	return result, nil
 }
 
 func removeService(ctx context.Context, dst KubernetesClient, serviceName string) error {
-	existingSvc, err := dst.CoreV1().Services(*dstNS).Get(ctx, serviceName, metav1.GetOptions{})
-	if err != nil {
-		logInfo("service %s/%s not found for deletion", *dstNS, serviceName)
-		return nil
-	}
-
-	if existingSvc.Labels["sync"] != "true-external" {
-		logInfo("service %s/%s exists but not managed by sync (missing sync=true-external label), skipping deletion", *dstNS, serviceName)
-		return nil
-	}
-
-	if existingSvc.Spec.Type != corev1.ServiceTypeExternalName {
-		if err := dst.CoreV1().Endpoints(*dstNS).Delete(ctx, serviceName, metav1.DeleteOptions{}); err != nil {
-			logErr("failed to delete endpoints %s/%s: %v", *dstNS, serviceName, err)
-		} else {
-			logInfo("deleted endpoints %s/%s", *dstNS, serviceName)
+	if err := dst.CoreV1().Services(*dstNS).Delete(ctx, serviceName, metav1.DeleteOptions{}); err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			return fmt.Errorf("delete service: %w", err)
 		}
 	}
 
-	if err := dst.CoreV1().Services(*dstNS).Delete(ctx, serviceName, metav1.DeleteOptions{}); err != nil {
-		logErr("failed to delete service %s/%s: %v", *dstNS, serviceName, err)
-		return err
+	if err := dst.CoreV1().Endpoints(*dstNS).Delete(ctx, serviceName, metav1.DeleteOptions{}); err != nil {
+		if !strings.Contains(err.Error(), "not found") {
+			return fmt.Errorf("delete endpoints: %w", err)
+		}
 	}
-
-	syncedList := getSyncedServicesList()
-	logInfo("deleted service %s/%s, currently tracking: %v", *dstNS, serviceName, syncedList)
 
 	return nil
 }
