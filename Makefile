@@ -157,6 +157,21 @@ delete_lfcs_mock_clean:
 output_lfcs_mock:
 	$(call terragrint_run,lfcs,mock,output)
 
+#ica mock
+run_ica_mock:
+	$(call terragrint_run,ica,mock,run)
+delete_ica_mock:
+	$(call terragrint_run,ica,mock,delete)
+
+run_ica_mock_clean:
+	$(call terragrint_run,ica,mock,run,clean)
+
+delete_ica_mock_clean:
+	$(call terragrint_run,icamock,delete,clean)
+
+output_ica_mock:
+	$(call terragrint_run,ica,mock,output)
+
 
 #HR mock
 run_hr_mock:

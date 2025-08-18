@@ -1,6 +1,6 @@
 locals {
-  questions_list="https://github.com/ViktorUJ/cks/blob/master/tasks/cka/mock/01/README.MD"
-  solutions_scripts="https://github.com/ViktorUJ/cks/tree/master/tasks/cka/mock/01/worker/files/solutions"
+  questions_list="https://github.com/ViktorUJ/cks/blob/AG-117/tasks/cka/mock/01/README.MD"
+  solutions_scripts="https://github.com/ViktorUJ/cks/tree/AG-117/tasks/cka/mock/01/worker/files/solutions"
   solutions_video="https://youtu.be/IZsqAPpbBxM"
   region = "eu-north-1"
   vpc_default_cidr =  "10.2.0.0/16"
@@ -9,15 +9,15 @@ locals {
     "10.2.32.0/19" = "eun1-az2"
   }
   aws    = "default"
-  prefix = "cka-mock"
+  prefix = "ica-mock"
   tags = {
-    "env_name"        = "cka-mock"
+    "env_name"        = "ica-mock"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version           = "1.30.0"
+  k8_version           = "1.33.0"
   node_type            = "spot"
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   instance_type        = "t4g.medium" #  t3.medium  - x86     t4g.medium - arm
