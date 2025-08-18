@@ -7,8 +7,8 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/k8s_self_managment/"
-  #
+  source = "../../..//modules/k8s_self_managment_v2/"
+
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -31,11 +31,13 @@ inputs = {
   prefix       = "cluster2"
   tags_common  = local.vars.locals.tags
   app_name     = "k8s"
-  subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
+  subnets             = dependency.vpc.outputs.subnets
   vpc_id       = dependency.vpc.outputs.vpc_id
   cluster_name = "k8s2"
   node_type    = local.vars.locals.node_type
   ssh_password_enable =local.vars.locals.ssh_password_enable
+  spot_additional_types = local.vars.locals.spot_additional_types
+  all_spot_subnet       = local.vars.locals.all_spot_subnet
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
@@ -45,14 +47,14 @@ inputs = {
     key_name           = local.vars.locals.key_name
     ami_id             = local.vars.locals.ami_id
     ubuntu_version     = local.vars.locals.ubuntu_version
-    subnet_number      = "0"
+    subnet_number      = "1"
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-117/tasks/cks/mock/01/k8s-2/scripts/AG-117.sh"
-    calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/02/k8s-2/scripts/master.sh"
+    cni                = local.vars.locals.cni
     root_volume        = local.vars.locals.root_volume
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key

@@ -1,8 +1,16 @@
 #!/bin/bash
-echo " *** worker node mock-1  k8s-1"
-
-apt-get install wget apt-transport-https gnupg lsb-release
-wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | tee /usr/share/keyrings/trivy.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" |  tee -a /etc/apt/sources.list.d/trivy.list
-apt-get update
-apt-get install trivy -y
+echo " *** worker node mock-1  k8s-3"
+acrh=$(uname -m)
+case $acrh in
+x86_64)
+  arc_name="amd64"
+;;
+aarch64)
+  arc_name="arm64"
+;;
+esac
+kube_bench_version="0.9.4"
+kube_bench_url="https://github.com/aquasecurity/kube-bench/releases/download/v${kube_bench_version}/kube-bench_${kube_bench_version}_linux_${arc_name}.deb"
+# https://github.com/aquasecurity/kube-bench/releases
+curl -L $kube_bench_url  -o kube-bench.deb
+sudo apt install ./kube-bench.deb -f -y

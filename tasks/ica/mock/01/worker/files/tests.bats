@@ -96,41 +96,45 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 # task 2
 
-@test "2.1  Image Vulnerability Scanning. deployment1  " {
-  echo '.5'>>/var/work/tests/result/all
-  result=$(kubectl get  deployment deployment1   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+@test "2.1  Image Vulnerability Scanning. /var/work/02/critical_image.json " {
+  echo '1'>>/var/work/tests/result/all
+  trivy image --format cyclonedx --output /tmp/critical_image.json  nginx:1.23-bullseye-perl
+  diff <(jq 'walk(if type == "object" then del(.serialNumber, .timestamp, .["bom-ref"], .["ref"]) elif type == "string" and test("^[a-f0-9-]{36}$") then empty else . end)' /tmp/critical_image.json) \
+     <(jq 'walk(if type == "object" then del(.serialNumber, .timestamp, .["bom-ref"], .["ref"]) elif type == "string" and test("^[a-f0-9-]{36}$") then empty else . end)' /var/work/02/critical_image.json)
+
+  result=$?
   if [[ "$result" == "0" ]]; then
-   echo '.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
 
-@test "2.2  Image Vulnerability Scanning. deployment2  " {
-  echo '.5'>>/var/work/tests/result/all
-  result=$(kubectl get  deployment deployment2   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
-  if [[ "$result" == "1" ]]; then
-   echo '.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "1" ]
-}
+@test "2.2  Image Vulnerability Scanning. /var/work/02/kube_scheduler_sbom.json " {
+  echo '1'>>/var/work/tests/result/all
+  bom generate --image registry.k8s.io/kube-scheduler:v1.32.0 --format json --output /tmp/kube_scheduler_sbom.json
 
-@test "2.3  Image Vulnerability Scanning. deployment3  " {
-  echo '.5'>>/var/work/tests/result/all
-  result=$(kubectl get  deployment deployment3   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
-  if [[ "$result" == "1" ]]; then
-   echo '.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "1" ]
-}
-
-@test "2.4  Image Vulnerability Scanning. deployment4  " {
-  echo '.5'>>/var/work/tests/result/all
-  result=$(kubectl get  deployment deployment4   -n team-xxx  --context cluster1-admin@cluster1 -o jsonpath='{.spec.replicas}')
+  diff <(jq --sort-keys 'del(.. | .created?, .creationTimestamp?, .generatedAt?, .timestamp?, .buildTime?, .documentNamespace?, .name?, .SPDXID?, .checksumValue?, .checksums?, .copyrightText?, .downloadLocation?, .filesAnalyzed?, .versionInfo?, .supplier?, .externalRefs?, .referenceLocator?, .relatedSpdxElement?, .spdxElementId?, .relationshipType?)' /tmp/kube_scheduler_sbom.json) \
+       <(jq --sort-keys 'del(.. | .created?, .creationTimestamp?, .generatedAt?, .timestamp?, .buildTime?, .documentNamespace?, .name?, .SPDXID?, .checksumValue?, .checksums?, .copyrightText?, .downloadLocation?, .filesAnalyzed?, .versionInfo?, .supplier?, .externalRefs?, .referenceLocator?, .relatedSpdxElement?, .spdxElementId?, .relationshipType?)' /var/work/02/kube_scheduler_sbom.json)
+  result=$?
   if [[ "$result" == "0" ]]; then
-   echo '.5'>>/var/work/tests/result/ok
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
+
+@test "2.3  Image Vulnerability Scanning. /var/work/02/result_sbom.json " {
+  echo '1'>>/var/work/tests/result/all
+   trivy sbom --format json --output /tmp/result_sbom.json /var/work/02/check_sbom.json
+   diff <(jq --sort-keys 'del(.CreatedAt?)' /tmp/result_sbom.json) \
+     <(jq --sort-keys 'del(.CreatedAt?)' /var/work/02/result_sbom.json)
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
 
 #  all =6 , task =2
 
@@ -171,10 +175,10 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 #task 4
 
-@test "4.1 CIS Benchmark. check 1.2.16 " {
+@test "4.1 CIS Benchmark. check 1.2.15  " {
   echo '.75'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
-  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.16 | grep PASS"
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.15  | grep PASS"
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '.75'>>/var/work/tests/result/ok
@@ -642,15 +646,26 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 # all = 51  , task =6
 
 
-@test "12 falco , sysdig " {
-  echo '6'>>/var/work/tests/result/all
-  cat /var/work/tests/artifacts/12/log  | grep default| grep deployment4
+@test "12.1 falco log" {
+  echo '5'>>/var/work/tests/result/all
+  cat /var/work/tests/artifacts/12/log |  grep '/etc/shadow ' | grep 'ns=default' |  grep 'Warning read ' |  grep ' pod_name=deployment1' |  grep 'user_name=root' | grep 'container_image=docker.io/viktoruj/cks-lab:cks_mock2_12_app1'
   result=$?
   if [[ "$result" == "0" ]]; then
-   echo '6'>>/var/work/tests/result/ok
+   echo '5'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }
+
+@test "12.2 scale deployment to 0 replicas" {
+  echo '1'>>/var/work/tests/result/all
+  result=$( kubectl get deployments.apps deployment1 -o jsonpath='{.spec.replicas}' --context cluster7-admin@cluster7)
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
 
 # all = 57  , task =6
 
@@ -709,81 +724,46 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "16.1 Create a new user called john. csr " {
+# 16
+
+@test "16.1 check private api from finance namespace  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get csr  john-developer -o jsonpath='{.status.conditions..type}'  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "Approved" ]]; then
+  kubectl  exec  -n finance finance --context cluster11-admin@cluster11  --  curl http://portal.production/private/api123 --connect-timeout 1 | grep 'http://portal.production/private/api123'
+  result=$?
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "Approved" ]
+  [ "$result" == "0" ]
 }
 
-@test "16.2 Create a new user called john. role exist " {
+@test "16.2 check public api from finance namespace  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get role developer -n development -o jsonpath={.metadata.name}  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "developer" ]]; then
+  kubectl  exec  -n finance finance   --context cluster11-admin@cluster11 --  curl http://portal.production/public/api123  --connect-timeout 1 | grep 'http://portal.production/public/api123'
+  result=$?
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "developer" ]
+  [ "$result" == "0" ]
 }
 
-@test "16.3 Create a new user called john. rolebinding exist" {
+@test "16.3 check private api from external namespace  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl get rolebinding developer-role-binding  -n development -o jsonpath='{.metadata.name}' --context cluster1-admin@cluster1 )
-  if [[ "$result" == "developer-role-binding" ]]; then
+  kubectl  exec  -n external external  --context cluster11-admin@cluster11 --  curl http://portal.production/private/api123   --connect-timeout 1 | grep 'Access denied'
+  result=$?
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "developer-role-binding" ]
+  [ "$result" == "0" ]
 }
 
-
-@test "16.4 Create a new user called john. permission pod - create " {
+@test "16.4 check public api from external namespace  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl auth can-i create pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "yes" ]]; then
+  kubectl  exec  -n external external  --context cluster11-admin@cluster11 --  curl http://portal.production/public/api123  --connect-timeout 1 | grep 'http://portal.production/public/api123'
+  result=$?
+  if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "yes" ]
-}
-
-@test "16.5 Create a new user called john. permission pod - list " {
-  echo '0.5'>>/var/work/tests/result/all
-  result=$(kubectl auth can-i list pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "yes" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "yes" ]
-}
-
-@test "16.6 Create a new user called john. permission pod - get " {
-  echo '0.5'>>/var/work/tests/result/all
-  result=$(kubectl auth can-i get pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  if [[ "$result" == "yes" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "yes" ]
-}
-
-@test "16.7 Create a new user called john. permission pod - delete " {
-  echo '0.5'>>/var/work/tests/result/all
-  set +e
-  result=$(kubectl auth can-i delete pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  set -e
-  if [[ "$result" == "no" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "no" ]
-}
-
-@test "16.8 Create a new user called john. permission pod - update " {
-  echo '0.5'>>/var/work/tests/result/all
-  set +e
-  result=$(kubectl auth can-i update pods --as=john --namespace=development  --context cluster1-admin@cluster1 )
-  set -e
-  if [[ "$result" == "no" ]]; then
-   echo '0.5'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "no" ]
+  [ "$result" == "0" ]
 }
 
 
@@ -821,6 +801,36 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "18.3 seccomp . pod status = Running   " {
   echo '2'>>/var/work/tests/result/all
   kubectl get po seccomp  --context cluster10-admin@cluster10 | grep seccomp  | grep 'Running'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "19 Update the existing Ingress using the provided certificate. " {
+  echo '4'>>/var/work/tests/result/all
+  curl https://cks.local:31139 -kv 2>&1  | grep 'CN=cks.local'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '4'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "20.1  disable sa secret auto-mount. " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl  get sa team20   -n team-20  -o jsonpath='{.automountServiceAccountToken}'  --context cluster6-admin@cluster6)
+  if [[ "$result" == "false" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "false" ]
+}
+
+@test "20.2 check mount secret " {
+  echo '2'>>/var/work/tests/result/all
+  pod=$(kubectl get  po  -n team-20    --context cluster6-admin@cluster6  -l app=team20 -o jsonpath={.items..metadata.name})
+  kubectl exec $pod -ti -n  team-20    --context cluster6-admin@cluster6 -- bash -c ' cat /var/team20/secret/token'
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '2'>>/var/work/tests/result/ok

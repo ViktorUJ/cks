@@ -7,8 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/work_pc/"
-  # source = "../../..//modules/work_pc_ondemand/"
+  source = "../../..//modules/work_pc_v2/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
@@ -45,9 +44,11 @@ inputs = {
   prefix      = local.vars.locals.prefix
   tags_common = local.vars.locals.tags
   app_name    = "k8s-worker"
-  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
+  subnets  = dependency.vpc.outputs.subnets
   vpc_id      = dependency.vpc.outputs.vpc_id
   ssh_password_enable =local.vars.locals.ssh_password_enable
+  all_spot_subnet       = local.vars.locals.all_spot_subnet
+  spot_additional_types = local.vars.locals.spot_additional_types
 
   host_list = concat(
     dependency.cluster1.outputs.hosts,
@@ -57,7 +58,6 @@ inputs = {
     clusters_config = {
       cluster1  = dependency.cluster1.outputs.k8s_config
       cluster2  = dependency.cluster2.outputs.k8s_config
-
     }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
@@ -70,9 +70,9 @@ inputs = {
     util               = {
       kubectl_version = local.vars.locals.k8_version
     }
-    exam_time_minutes = "120"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-117/tasks/ica/mock/01/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-117/tasks/ica/mock/01/worker/files/worker.sh"
+    exam_time_minutes = "122"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/02/worker/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/02/worker/files/worker.sh"
     ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
