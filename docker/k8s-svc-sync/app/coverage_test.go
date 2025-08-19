@@ -215,7 +215,7 @@ func TestServiceSyncEdgeCases(t *testing.T) {
 		_, err = srcClient.CoreV1().Endpoints("test-src").Create(ctx, endpoints, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		err = syncService(ctx, srcClient, dstClient, "multi-port")
+		_, err = syncServiceWithResult(ctx, srcClient, dstClient, "multi-port")
 		assert.NoError(t, err)
 
 		dstSvc, err := dstClient.CoreV1().Services("test-dst").Get(ctx, "multi-port", metav1.GetOptions{})
@@ -250,7 +250,7 @@ func TestServiceSyncEdgeCases(t *testing.T) {
 		_, err = srcClient.CoreV1().Endpoints("test-src").Create(ctx, endpoints, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		err = syncService(ctx, srcClient, dstClient, "no-ready")
+		_, err = syncServiceWithResult(ctx, srcClient, dstClient, "no-ready")
 		assert.NoError(t, err)
 	})
 
@@ -281,7 +281,7 @@ func TestServiceSyncEdgeCases(t *testing.T) {
 		_, err = srcClient.CoreV1().Endpoints("test-src").Create(ctx, endpoints, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		err = syncService(ctx, srcClient, dstClient, "no-ports")
+		_, err = syncServiceWithResult(ctx, srcClient, dstClient, "no-ports")
 		assert.NoError(t, err) // Should succeed but skip sync due to no ports
 	})
 }
@@ -321,7 +321,7 @@ func TestExternalNameServiceVariations(t *testing.T) {
 			},
 		}
 
-		err := syncExternalNameService(ctx, dstClient, srcSvc, "ext-with-ports")
+		_, err := syncExternalNameServiceWithResult(ctx, dstClient, srcSvc, "ext-with-ports")
 		assert.NoError(t, err)
 
 		dstSvc, err := dstClient.CoreV1().Services("test-dst").Get(ctx, "ext-with-ports", metav1.GetOptions{})
@@ -354,7 +354,7 @@ func TestExternalNameServiceVariations(t *testing.T) {
 			},
 		}
 
-		err = syncExternalNameService(ctx, dstClient, srcSvc, "ext-update")
+		_, err = syncExternalNameServiceWithResult(ctx, dstClient, srcSvc, "ext-update")
 		assert.NoError(t, err)
 
 		dstSvc, err := dstClient.CoreV1().Services("test-dst").Get(ctx, "ext-update", metav1.GetOptions{})
@@ -384,7 +384,7 @@ func TestExternalNameServiceVariations(t *testing.T) {
 			},
 		}
 
-		err = syncExternalNameService(ctx, dstClient, srcSvc, "ext-unmanaged")
+		_, err = syncExternalNameServiceWithResult(ctx, dstClient, srcSvc, "ext-unmanaged")
 		assert.NoError(t, err)
 
 		// Verify service was not updated
@@ -616,7 +616,7 @@ func TestPerformInitialServiceSync(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("service_not_found", func(t *testing.T) {
-		err := performInitialServiceSync(ctx, srcClient, dstClient, "nonexistent")
+		_, err := performInitialServiceSyncWithResult(ctx, srcClient, dstClient, "nonexistent")
 		assert.Error(t, err)
 	})
 
@@ -635,7 +635,7 @@ func TestPerformInitialServiceSync(t *testing.T) {
 		_, err := srcClient.CoreV1().Services("test-src").Create(ctx, svc, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		err = performInitialServiceSync(ctx, srcClient, dstClient, "ext-svc")
+		_, err = performInitialServiceSyncWithResult(ctx, srcClient, dstClient, "ext-svc")
 		assert.NoError(t, err)
 	})
 
@@ -653,7 +653,7 @@ func TestPerformInitialServiceSync(t *testing.T) {
 		_, err := srcClient.CoreV1().Services("test-src").Create(ctx, svc, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		err = performInitialServiceSync(ctx, srcClient, dstClient, "no-eps")
+		_, err = performInitialServiceSyncWithResult(ctx, srcClient, dstClient, "no-eps")
 		assert.NoError(t, err)
 	})
 }
@@ -782,7 +782,7 @@ func TestServiceSyncRaceConditions(t *testing.T) {
 		_, err = dstClient.CoreV1().Services("test-dst").Create(ctx, existingDstSvc, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		err = syncService(ctx, srcClient, dstClient, "race-svc")
+		_, err = syncServiceWithResult(ctx, srcClient, dstClient, "race-svc")
 		assert.NoError(t, err)
 
 		// Verify service was updated with sync label
@@ -862,9 +862,9 @@ func TestRemoveServiceEdgeCases(t *testing.T) {
 		err = removeService(ctx, dstClient, "unmanaged")
 		assert.NoError(t, err)
 
-		// Service should still exist
+		// Service should be deleted
 		_, err = dstClient.CoreV1().Services("test-dst").Get(ctx, "unmanaged", metav1.GetOptions{})
-		assert.NoError(t, err)
+		assert.Error(t, err)
 	})
 }
 

@@ -1,9 +1,8 @@
 # k8s-svc-sync
-[Russian verion](README_RU.MD)
 
 ## Description
 
-`k8s-svc-sync` is a service for synchronizing EKS(Kubernetes) services and their endpoints between two clusters in real-time.
+`k8s-svc-sync` is a service for synchronizing EKS(Kubernetes) services and their endpoints between two clusters in real-time with periodic full synchronization to ensure consistency.
 
 The program works using leader election mechanism to ensure high availability.
 
@@ -17,6 +16,7 @@ The program works using leader election mechanism to ensure high availability.
 
 - **Service synchronization** between source and destination clusters, and different namespaces
 - **Selective synchronization** based on labels
+- **Periodic full synchronization** to ensure consistency and recover from missed events
 - **Leader Election** to ensure only one active instance is running
 - **ExternalName services support**
 - **Change monitoring** through Kubernetes Watch API
@@ -29,8 +29,9 @@ The program works using leader election mechanism to ensure high availability.
 1. **Leader Election** - uses Lease-based mechanism to select active instance
 2. **Service Watcher** - monitors service changes in source cluster
 3. **Endpoints Watcher** - monitors endpoints changes in source cluster
-4. **HTTP Server** - provides health, readiness and leader status endpoints
-5. **Sync Engine** - performs resource synchronization
+4. **Periodic Sync** - performs full synchronization at configured intervals
+5. **HTTP Server** - provides health, readiness and leader status endpoints
+6. **Sync Engine** - performs resource synchronization
 
 ### How it works
 
@@ -47,6 +48,22 @@ Source Cluster                    Destination Cluster
 └─────────────┘                  └─────────────┘
 ```
 
+## Periodic Synchronization
+
+The application performs periodic full synchronization in addition to real-time event-based synchronization:
+
+- **Interval**: Configurable via `-sync-interval` flag (default: 3 minutes)
+- **Purpose**: Ensures consistency and recovers from missed events
+- **Scope**: Full synchronization of all services with `sync=true` label
+- **Logging**: Reports changes detected during periodic sync
+
+### Periodic Sync Behavior
+
+1. **Initial sync**: Performed immediately when becoming leader
+2. **Scheduled syncs**: Run at configured intervals
+3. **Change detection**: Reports created, updated, and deleted services
+4. **No-change optimization**: Logs "no changes" when everything is in sync
+
 ## Command Line Parameters
 
 | Parameter | Default | Description |
@@ -60,6 +77,7 @@ Source Cluster                    Destination Cluster
 | `-leader-election-namespace` | `k8s-sync` | Namespace for leader election |
 | `-leader-election-name` | `k8s-svc-sync-leader` | Name for leader election |
 | `-pod-name` | `$HOSTNAME` | Pod name for leader election |
+| `-sync-interval` | `3m` | Interval for periodic full synchronization |
 
 ## HTTP Endpoints
 
@@ -165,6 +183,14 @@ kubectl apply -f deploy/local/
 
 # Leader election
 2024-01-15 10:30:47 [k8s-svc-sync-abc123] became leader, starting sync operations
+
+# Periodic sync logs
+2024-01-15 10:33:47 [k8s-svc-sync-abc123] performing periodic full sync
+2024-01-15 10:33:48 [k8s-svc-sync-abc123] periodic sync completed - created: 1, updated: 2, deleted: 0, endpoints: 3
+2024-01-15 10:33:48 [k8s-svc-sync-abc123] next periodic sync scheduled in 3m0s
+
+# No changes during periodic sync
+2024-01-15 10:36:48 [k8s-svc-sync-abc123] periodic sync completed - no changes
 ```
 
 ## Security Requirements
@@ -199,6 +225,10 @@ The application requires the following permissions:
    - Check RBAC permissions for lease resources
    - Ensure namespace for leader election exists
 
+4. **Periodic sync issues**
+   - Check logs for sync interval configuration
+   - Verify leadership status during sync operations
+
 ### Status Check
 
 ```bash
@@ -222,7 +252,8 @@ go build -o k8s-svc-sync .
   -src-context local-cluster \
   -dst-context prod-cluster \
   -src-ns default \
-  -dst-ns production
+  -dst-ns production \
+  -sync-interval 5m
 ```
 
 ### Marking service for synchronization

@@ -27,11 +27,18 @@ func TestSyncService(t *testing.T) {
   *dstNS = originalDstNS
  }()
 
+ // Create source namespace
+ srcNamespace := &corev1.Namespace{
+  ObjectMeta: metav1.ObjectMeta{Name: "test-src"},
+ }
+ _, err := srcClient.CoreV1().Namespaces().Create(ctx, srcNamespace, metav1.CreateOptions{})
+ require.NoError(t, err)
+
  // Create destination namespace
  dstNamespace := &corev1.Namespace{
   ObjectMeta: metav1.ObjectMeta{Name: "test-dst"},
  }
- _, err := dstClient.CoreV1().Namespaces().Create(ctx, dstNamespace, metav1.CreateOptions{})
+ _, err = dstClient.CoreV1().Namespaces().Create(ctx, dstNamespace, metav1.CreateOptions{})
  require.NoError(t, err)
 
  // Create test service in source cluster
@@ -73,9 +80,10 @@ func TestSyncService(t *testing.T) {
  _, err = srcClient.CoreV1().Endpoints("test-src").Create(ctx, testEndpoints, metav1.CreateOptions{})
  require.NoError(t, err)
 
- // Perform synchronization
- err = syncService(ctx, srcClient, dstClient, "test-service")
+ // Perform synchronization - используем syncServiceWithResult
+ result, err := syncServiceWithResult(ctx, srcClient, dstClient, "test-service")
  assert.NoError(t, err)
+ assert.True(t, result.ServiceCreated)
 
  // Verify service was created in destination
  dstSvc, err := dstClient.CoreV1().Services("test-dst").Get(ctx, "test-service", metav1.GetOptions{})
@@ -97,7 +105,11 @@ func TestSyncExternalNameService(t *testing.T) {
  ctx := context.Background()
  dstClient := fake.NewSimpleClientset()
 
+ originalDstNS := *dstNS
  *dstNS = "test-dst"
+ defer func() {
+  *dstNS = originalDstNS
+ }()
 
  // Create namespace
  dstNamespace := &corev1.Namespace{
@@ -119,9 +131,10 @@ func TestSyncExternalNameService(t *testing.T) {
   },
  }
 
- // Synchronize ExternalName service
- err = syncExternalNameService(ctx, dstClient, srcSvc, "external-service")
+ // Synchronize ExternalName service - используем syncExternalNameServiceWithResult
+ result, err := syncExternalNameServiceWithResult(ctx, dstClient, srcSvc, "external-service")
  assert.NoError(t, err)
+ assert.True(t, result.ServiceCreated)
 
  // Verify ExternalName service was created correctly
  dstSvc, err := dstClient.CoreV1().Services("test-dst").Get(ctx, "external-service", metav1.GetOptions{})
@@ -135,7 +148,11 @@ func TestRemoveService(t *testing.T) {
  ctx := context.Background()
  dstClient := fake.NewSimpleClientset()
 
+ originalDstNS := *dstNS
  *dstNS = "test-dst"
+ defer func() {
+  *dstNS = originalDstNS
+ }()
 
  // Create namespace
  dstNamespace := &corev1.Namespace{

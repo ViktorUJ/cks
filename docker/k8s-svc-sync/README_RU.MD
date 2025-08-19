@@ -1,9 +1,9 @@
 # k8s-svc-sync
-[English version ](README.MD) 
+[English version ](README.MD)
 
 ## Описание
 
-`k8s-svc-sync` - это сервис для синхронизации EKS(Kubernetes) сервисов и их endpoints между двумя кластерами в реальном времени.
+`k8s-svc-sync` - это сервис для синхронизации EKS(Kubernetes) сервисов и их endpoints между двумя кластерами в реальном времени с периодической полной синхронизацией для обеспечения консистентности.
 
 Программа работает с использованием механизма leader election для обеспечения высокой доступности.
 
@@ -17,11 +17,11 @@
 
 - **Синхронизация сервисов** между source и destination кластерами,  и различными неймспейсами
 - **Селективная синхронизация** на основе меток (labels)
+- **Периодическая полная синхронизация** для обеспечения консистентности и восстановления после пропущенных событий
 - **Leader Election** для обеспечения работы только одного активного экземпляра
-- **Поддержка ExternalName сервисов** 
+- **Поддержка ExternalName сервисов**
 - **Мониторинг изменений** через Kubernetes Watch API
 - **Health checks** через HTTP endpoints
-
 
 ## Архитектура
 
@@ -30,8 +30,9 @@
 1. **Leader Election** - использует Lease-based механизм для выбора активного экземпляра
 2. **Service Watcher** - отслеживает изменения сервисов в source кластере
 3. **Endpoints Watcher** - отслеживает изменения endpoints в source кластере
-4. **HTTP Server** - предоставляет health, readiness и leader status endpoints
-5. **Sync Engine** - выполняет синхронизацию ресурсов
+4. **Periodic Sync** - выполняет полную синхронизацию через настраиваемые интервалы
+5. **HTTP Server** - предоставляет health, readiness и leader status endpoints
+6. **Sync Engine** - выполняет синхронизацию ресурсов
 
 ### Принцип работы
 
@@ -48,6 +49,22 @@ Source Cluster                    Destination Cluster
 └─────────────┘                  └─────────────┘
 ```
 
+## Периодическая синхронизация
+
+Приложение выполняет периодическую полную синхронизацию в дополнение к синхронизации в реальном времени на основе событий:
+
+- **Интервал**: Настраивается через флаг `-sync-interval` (по умолчанию: 3 минуты)
+- **Назначение**: Обеспечивает консистентность и восстанавливает пропущенные события
+- **Область**: Полная синхронизация всех сервисов с меткой `sync=true`
+- **Логирование**: Сообщает об изменениях, обнаруженных во время периодической синхронизации
+
+### Поведение периодической синхронизации
+
+1. **Начальная синхронизация**: Выполняется сразу при становлении лидером
+2. **Запланированная синхронизация**: Запускается через настроенные интервалы
+3. **Обнаружение изменений**: Сообщает о созданных, обновленных и удаленных сервисах
+4. **Оптимизация без изменений**: Логирует "нет изменений" когда все синхронизировано
+
 ## Параметры командной строки
 
 | Параметр | По умолчанию | Описание |
@@ -55,37 +72,36 @@ Source Cluster                    Destination Cluster
 | `-kubeconfig` | `$KUBECONFIG` | Путь к файлу kubeconfig |
 | `-src-context` | `local-cluster` | Контекст source кластера |
 | `-dst-context` | `external-cluster` | Контекст destination кластера |
-| `-src-ns` | `default` | Namespace в source кластере |
-| `-dst-ns` | `prod-test` | Namespace в destination кластере |
+| `-src-ns` | `default` | Неймспейс в source кластере |
+| `-dst-ns` | `prod-test` | Неймспейс в destination кластере |
 | `-sync-label` | `sync=true` | Селектор меток для синхронизации |
-| `-leader-election-namespace` | `k8s-sync` | Namespace для leader election |
+| `-leader-election-namespace` | `k8s-sync` | Неймспейс для leader election |
 | `-leader-election-name` | `k8s-svc-sync-leader` | Имя для leader election |
 | `-pod-name` | `$HOSTNAME` | Имя пода для leader election |
+| `-sync-interval` | `3m` | Интервал для периодической полной синхронизации |
 
 ## HTTP Endpoints
 
 ### `/health`
 - **Метод**: GET
-- **Описание**: Проверка здоровья приложения
+- **Описание**: Проверка работоспособности приложения
 - **Ответ**: `200 OK` - приложение работает
 
 ### `/ready`
-- **Метод**: GET  
-- **Описание**: Проверка готовности к работе
-- **Ответ**: 
-  - `200 OK` - подключение к кластерам установлено
-  - `503 Service Unavailable` - проблемы с подключением
+- **Метод**: GET
+- **Описание**: Проверка готовности
+- **Ответ**:
+  - `200 OK` - соединение с кластерами установлено
+  - `503 Service Unavailable` - проблемы с соединением
 
 ### `/leader`
 - **Метод**: GET
 - **Описание**: Статус лидерства
-- **Ответ**: 
+- **Ответ**:
   - `Leader: <pod-name>` - если экземпляр является лидером
   - `Follower` - если экземпляр не является лидером
 
 ## Развертывание
-
-
 
 #### 1. Настройка Service Account во внешнем кластере
 
@@ -104,7 +120,7 @@ kubectl apply -f kubeconfig.yaml  # локальный кластер
 
 ### применяем манифесты в локальном кластере
 
-``` 
+```
 kubectl apply -f deploy/local/
 ```
 
@@ -112,7 +128,7 @@ kubectl apply -f deploy/local/
 
 - **Replicas**: 3 экземпляра для высокой доступности
 - **Anti-affinity**: Поды распределяются по разным нодам
-- **Resources**: 
+- **Resources**:
   - Requests: 100m CPU, 128Mi Memory
   - Limits: 1000m CPU, 512Mi Memory
 - **PodDisruptionBudget**: Минимум 1 доступный под
@@ -133,14 +149,14 @@ kubectl apply -f deploy/local/
 - Синхронизируются все порты из source сервиса
 - Endpoints содержат IP адреса ready подов
 
-#### ExternalName сервисы  
+#### ExternalName сервисы
 - Создается сервис типа ExternalName
 - Копируется ExternalName и порты
 - Endpoints не создаются
 
 ### Удаление сервисов
 
-1. **Удаление метки**: При удалении `sync=true` сервис перестает отслеживаться и удаляется из destination кластера 
+1. **Удаление метки**: При удалении `sync=true` сервис перестает отслеживаться и удаляется из destination кластера
 2. **Удаление сервиса**: При удалении source сервиса, удаляется destination сервис
 3. **Защита**: Удаляются только сервисы с меткой `sync=true-external`
 
@@ -168,6 +184,14 @@ kubectl apply -f deploy/local/
 
 # Leader election
 2024-01-15 10:30:47 [k8s-svc-sync-abc123] became leader, starting sync operations
+
+# Логи периодической синхронизации
+2024-01-15 10:33:47 [k8s-svc-sync-abc123] performing periodic full sync
+2024-01-15 10:33:48 [k8s-svc-sync-abc123] periodic sync completed - created: 1, updated: 2, deleted: 0, endpoints: 3
+2024-01-15 10:33:48 [k8s-svc-sync-abc123] next periodic sync scheduled in 3m0s
+
+# Нет изменений при периодической синхронизации
+2024-01-15 10:36:48 [k8s-svc-sync-abc123] periodic sync completed - no changes
 ```
 
 ## Требования к безопасности
@@ -178,7 +202,7 @@ kubectl apply -f deploy/local/
 
 **Source кластер**:
 - `services`: get, list, watch
-- `endpoints`: get, list, watch  
+- `endpoints`: get, list, watch
 - `leases`: get, list, create, update
 
 **Destination кластер**:
@@ -192,15 +216,19 @@ kubectl apply -f deploy/local/
 
 1. **Сервис не синхронизируется**
    - Проверьте наличие метки `sync=true`
-   - Убедитесь что endpoints имеют ready адреса
+   - Убедитесь, что endpoints имеют готовые адреса
 
 2. **Ошибки подключения к кластеру**
-   - Проверьте kubeconfig и доступность API серверов
-   - Убедитесь в корректности контекстов
+   - Проверьте kubeconfig и доступность API сервера
+   - Проверьте корректность контекста
 
 3. **Leader election не работает**
    - Проверьте RBAC права для lease ресурсов
-   - Убедитесь что namespace для leader election существует
+   - Убедитесь, что неймспейс для leader election существует
+
+4. **Проблемы с периодической синхронизацией**
+   - Проверьте логи для конфигурации интервала синхронизации
+   - Проверьте статус лидерства во время операций синхронизации
 
 ### Проверка статуса
 
@@ -225,7 +253,8 @@ go build -o k8s-svc-sync .
   -src-context local-cluster \
   -dst-context prod-cluster \
   -src-ns default \
-  -dst-ns production
+  -dst-ns production \
+  -sync-interval 5m
 ```
 
 ### Маркировка сервиса для синхронизации
