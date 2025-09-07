@@ -18,4 +18,4 @@ DEBIAN_FRONTEND=noninteractive apt install -y dkms make linux-headers-$(uname -r
 kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule-
 
 # Install deployments
-kubectl apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/28/k8s-1/scripts/app.yaml
+kubectl apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-118/tasks/cks/labs/28/k8s-1/scripts/app.yaml

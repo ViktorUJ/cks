@@ -58,8 +58,8 @@ inputs = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "360"
-    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/28/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/28/worker/files/worker.sh"
+    test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-118/tasks/cks/labs/28/worker/files/tests.bats"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-118/tasks/cks/labs/28/worker/files/worker.sh"
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
