@@ -22,7 +22,7 @@ YAML
 rm -f /root/.falco/falco-bpf.o || true
 
 # Untaint master node
-kubectl taint nodes "$(hostname)" node-role.kubernetes.io/control-plane:NoSchedule-
+kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule-
 
 # Install deployments
 kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/28/k8s-1/scripts/app.yaml
