@@ -7,24 +7,22 @@ echo "deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://down
 apt-get update -y
 
 export FALCO_FRONTEND=noninteractive
-export FALCOCTL_ENABLED=''           # keep falcoctl disabled since we'll use modern-bpf
-export FALCO_DRIVER_CHOICE=ebpf      # left as-is; we'll override engine via config
+export FALCOCTL_ENABLED=''           # keep falcoctl disabled since we'll use modern ebpf
+export FALCO_DRIVER_CHOICE=modern_ebpf
 DEBIAN_FRONTEND=noninteractive apt install -y dkms make linux-headers-$(uname -r) clang llvm dialog falco
-
 
 install -m 0755 -d /etc/falco/config.d
 cat >/etc/falco/config.d/engine-kind.yaml <<'YAML'
 # Use Modern eBPF (CO-RE) engine
 engine:
-  kind: modern-bpf
+  kind: modern_ebpf
 YAML
 
 # Clean any stale classic eBPF probe cache (harmless if missing)
 rm -f /root/.falco/falco-bpf.o || true
-# --- end of additions ---
 
 # Untaint master node
-kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule-
+kubectl taint nodes "$(hostname)" node-role.kubernetes.io/control-plane:NoSchedule-
 
 # Install deployments
 kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-118/tasks/cks/labs/28/k8s-1/scripts/app.yaml
