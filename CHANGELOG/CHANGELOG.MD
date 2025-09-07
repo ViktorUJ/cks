@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.1 (xx.09.2025)
+### Features
+* [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is updated.
+
+
 ## 0.23.1 (12.08.2025)
 ### Features
 * [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is updated.
