@@ -1,6 +1,6 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/AG-118/tasks/cks/labs/28/README.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/AG-118/tasks/cks/labs/28/worker/files/solutions/1.MD"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/28/README.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/28/worker/files/solutions/1.MD"
   solutions_video   = "https://youtu.be/-uEHbkI3wcs"
   debug_output      = "false"
   region            = "eu-north-1"
@@ -8,22 +8,22 @@ locals {
   aws               = "default"
   prefix            = "cks-task28"
   tags = {
-    "env_name"        = "cks-task28"
+    "env_name"        = "cka-task28"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version = "1.33.0"
+  k8_version = "1.32.0"
   node_type  = "spot"
   runtime    = "containerd"
   cni = {
     type               = "calico"
     disable_kube_proxy = "false"
   }
-  instance_type        = "t3.medium"
-  instance_type_worker = "t3.small"
-  spot_additional_types= [ "t3.medium" , "t3.large" , "t3.xlarge" ]
+  instance_type        = "t4g.medium"
+  instance_type_worker = "t4g.small"
+  spot_additional_types= [ "t4g.medium" , "t4g.large" , "t4g.xlarge" ]
   all_spot_subnet      = "true"
   key_name             = ""
   ssh_password_enable  = "true"        # false |  true
