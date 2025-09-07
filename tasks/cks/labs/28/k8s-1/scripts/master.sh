@@ -2,6 +2,7 @@
 echo " *** master node cks lab-28 k8s-1"
 export KUBECONFIG=/root/.kube/config
 
+exit 0
 curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | gpg --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
 
 echo "deb [signed-by=/usr/share/keyrings/falco-archive-keyring.gpg] https://download.falco.org/packages/deb stable main" | tee -a /etc/apt/sources.list.d/falcosecurity.list
