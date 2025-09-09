@@ -69,6 +69,10 @@ dependency "cluster11" {
 dependency "cluster12" {
   config_path = "../k8s-12"
 }
+dependency "docker_worker" {
+  config_path = "../docker_worker"
+}
+
 inputs = {
   questions_list=local.vars.locals.questions_list
   solutions_scripts=local.vars.locals.solutions_scripts
@@ -98,6 +102,7 @@ inputs = {
     dependency.cluster10.outputs.hosts,
     dependency.cluster11.outputs.hosts,
     dependency.cluster12.outputs.hosts,
+
   )
   work_pc = {
     clusters_config = {
