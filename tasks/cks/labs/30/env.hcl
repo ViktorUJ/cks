@@ -1,6 +1,6 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/30/README.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/30/worker/files/solutions/1.MD"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/AG-119/tasks/cks/labs/30/README.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/AG-119/tasks/cks/labs/30/worker/files/solutions/1.MD"
   solutions_video   = "Not ready yet"
   debug_output      = "false"
   region            = "eu-north-1"
@@ -8,13 +8,13 @@ locals {
   aws               = "default"
   prefix            = "cks-task30"
   tags = {
-    "env_name"        = "cka-task30"
+    "env_name"        = "cks-task30"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version = "1.32.0"
+  k8_version = "1.34.0"
   node_type  = "spot"
   runtime    = "containerd" # docker, cri-o, containerd ( need test it )
   cni = {
