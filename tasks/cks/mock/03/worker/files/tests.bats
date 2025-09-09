@@ -646,24 +646,17 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 # all = 51  , task =6
 
 
-@test "12.1 falco log" {
-  echo '5'>>/var/work/tests/result/all
-  cat /var/work/tests/artifacts/12/log |  grep '/etc/shadow ' | grep 'ns=default' |  grep 'Warning read ' |  grep ' pod_name=deployment1' |  grep 'user_name=root' | grep 'container_image=docker.io/viktoruj/cks-lab:cks_mock2_12_app1'
-  result=$?
-  if [[ "$result" == "0" ]]; then
-   echo '5'>>/var/work/tests/result/ok
+@test "12 Check that proper deployment was scaled to 0" {
+  echo '2'>>/var/work/tests/result/all
+  app1_replicas=$(kubectl get deployments.apps --context cluster7-admin@cluster7 -n north app1 -o jsonpath='{.spec.replicas}')
+  app2_replicas=$(kubectl get deployments.apps --context cluster7-admin@cluster7 -n north app2 -o jsonpath='{.spec.replicas}')
+  app3_replicas=$(kubectl get deployments.apps --context cluster7-admin@cluster7 -n north app3 -o jsonpath='{.spec.replicas}')
+  if [[ "$app1_replicas" == "1" && "$app2_replicas" == "1" && "$app3_replicas" == "0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "0" ]
+  [[ "$app1_replicas" == "1" && "$app2_replicas" == "1" && "$app3_replicas" == "0" ]]
 }
 
-@test "12.2 scale deployment to 0 replicas" {
-  echo '1'>>/var/work/tests/result/all
-  result=$( kubectl get deployments.apps deployment1 -o jsonpath='{.spec.replicas}' --context cluster7-admin@cluster7)
-  if [[ "$result" == "0" ]]; then
-   echo '1'>>/var/work/tests/result/ok
-  fi
-  [ "$result" == "0" ]
-}
 
 
 
