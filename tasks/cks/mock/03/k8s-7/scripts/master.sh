@@ -1,5 +1,5 @@
 #!/bin/bash
-echo " *** master node cks lab-28 k8s-1"
+echo " *** master node cks mock3 k8s-7"
 export KUBECONFIG=/root/.kube/config
 
 curl -fsSL https://falco.org/repo/falcosecurity-packages.asc | gpg --dearmor -o /usr/share/keyrings/falco-archive-keyring.gpg
@@ -25,4 +25,4 @@ rm -f /root/.falco/falco-bpf.o || true
 kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule-
 
 # Install deployments
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/28/k8s-1/scripts/app.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-119/tasks/cks/mock/03/k8s-7/scripts/app.yaml
