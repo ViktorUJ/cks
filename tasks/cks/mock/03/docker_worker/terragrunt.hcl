@@ -32,7 +32,7 @@ inputs = {
   aws               = local.vars.locals.aws
   prefix            = local.vars.locals.prefix
   tags_common       = local.vars.locals.tags
-  app_name          = "k8s-worker"
+  app_name          = "docker-worker"
   subnets           = dependency.vpc.outputs.subnets
   vpc_id            = dependency.vpc.outputs.vpc_id
 
