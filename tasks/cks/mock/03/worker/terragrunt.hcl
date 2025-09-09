@@ -102,7 +102,7 @@ inputs = {
     dependency.cluster10.outputs.hosts,
     dependency.cluster11.outputs.hosts,
     dependency.cluster12.outputs.hosts,
-
+    dependency.docker_worker.outputs.hosts,
   )
   work_pc = {
     clusters_config = {
