@@ -646,7 +646,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 # all = 51  , task =6
 
 
-@test "12 Check that proper deployment was scaled to 0" {
+@test "12 Falco. Check that proper deployment was scaled to 0" {
   echo '2'>>/var/work/tests/result/all
   app1_replicas=$(kubectl get deployments.apps --context cluster7-admin@cluster7 -n north app1 -o jsonpath='{.spec.replicas}')
   app2_replicas=$(kubectl get deployments.apps --context cluster7-admin@cluster7 -n north app2 -o jsonpath='{.spec.replicas}')
