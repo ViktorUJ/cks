@@ -66,6 +66,9 @@ dependency "cluster10" {
 dependency "cluster11" {
   config_path = "../k8s-11"
 }
+dependency "cluster12" {
+  config_path = "../k8s-12"
+}
 inputs = {
   questions_list=local.vars.locals.questions_list
   solutions_scripts=local.vars.locals.solutions_scripts
@@ -93,7 +96,8 @@ inputs = {
     dependency.cluster8.outputs.hosts,
     dependency.cluster9.outputs.hosts,
     dependency.cluster10.outputs.hosts,
-    dependency.cluster11.outputs.hosts
+    dependency.cluster11.outputs.hosts,
+    dependency.cluster12.outputs.hosts,
   )
   work_pc = {
     clusters_config = {
@@ -108,6 +112,7 @@ inputs = {
       cluster9  = dependency.cluster9.outputs.k8s_config
       cluster10 = dependency.cluster10.outputs.k8s_config
       cluster11 = dependency.cluster11.outputs.k8s_config
+      cluster12 = dependency.cluster12.outputs.k8s_config
     }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
