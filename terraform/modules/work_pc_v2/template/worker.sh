@@ -39,7 +39,7 @@ esac
 
 
 acrh=$(uname -m)
-hostnamectl  set-hostname worker
+hostnamectl  set-hostname ${hostname}
 
 configs_dir="/var/work/configs"
 default_configs_dir="/root/.kube"
