@@ -162,3 +162,10 @@ documentation https://etcd.io/docs/
 |       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                         |
 | **Acceptance criteria** | - ns  team-20  , deployment `team20`   <br/> -  create sa `team20` <br/>- update deployment `team20` to use sa `team20` <br/> disable automount sa secret <br/> mount sa secret to `/var/team20/secret` |
 ---
+---
+|         **21**          | disable sa secret auto-mount.  mount it to specific path.                                                                                                                                               |
+|:-----------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     **Task weight**     | 3%                                                                                                                                                                                                      |
+|       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                         |
+| **Acceptance criteria** | - ns  team-20  , deployment `team20`   <br/> -  create sa `team20` <br/>- update deployment `team20` to use sa `team20` <br/> disable automount sa secret <br/> mount sa secret to `/var/team20/secret` |
+---
