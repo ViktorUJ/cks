@@ -21,6 +21,9 @@ Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
 **Cilium** 
 Documentation  https://docs.cilium.io/en/stable
 
+**Istio**
+Documentation https://istio.io/latest/docs/
+
 **NGINX Ingress Controller**
 Documentation  https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/
 
