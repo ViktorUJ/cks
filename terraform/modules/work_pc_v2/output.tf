@@ -99,5 +99,5 @@ output "solutions_video" {
 }
 
 output "hosts" {
-  value = ["${var.app_name}=${local.worker_pc_ip}"]
+  value = ["${var.app_name}=${local.worker_pc_ip_local}"]
 }

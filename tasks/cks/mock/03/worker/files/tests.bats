@@ -860,3 +860,15 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "22.1. Check if user was removed from docker group" {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  ssh -oStrictHostKeyChecking=no docker-worker "groups user " | grep docker
+  result=$?
+  set -e
+  if [[ "$result" == "1" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "1" ]
+}
