@@ -873,28 +873,45 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "1" ]
 }
 
-#@test "22.2. Check docker socket configuration" {
-#  echo '1' >>/var/work/tests/result/all
-#  if [[ "$(stat -c %G /var/run/docker.sock)" == "root" ]] && grep -q "SocketGroup=root" /lib/systemd/system/docker.socket; then
-#    result="0"
-#  else
-#    result="1"
-#  fi
-#
-#  if [["$result" == "0" ]]; then
-#    echo '1'>>/var/work/tests/result/ok
-#  fi
-#  [ "$result" == "0" ]
-#}
+@test "22.2. Check docker socket configuration (remote via ssh)" {
+  echo '1' >> /var/work/tests/result/all
 
-@test "22.3. Check if Docker is not exposed through a TCP socket" {
-  echo '1'>>/var/work/tests/result/all
-  set +e
-  ssh -oStrictHostKeyChecking=no docker-worker "netstat -tuln" | grep -q 'docker'
-  result=$?
-  set -e
-  if [[ "$result" == "1" ]]; then
-    echo '1'>>/var/work/tests/result/ok
+  # Run the check remotely on docker-worker:
+  # 1) /var/run/docker.sock must belong to group "root"
+  # 2) systemd unit docker.socket must explicitly contain "SocketGroup=root"
+  #
+  # Using systemctl cat is more reliable (works even if the unit is overridden).
+  # As a fallback, read the unit file from common systemd directories.
+  run bash -o pipefail -c '
+    ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=5 docker-worker \
+      "bash -o pipefail -c '\''[ \"$(stat -c %G /var/run/docker.sock)\" = root ] && \
+        { systemctl cat docker.socket 2>/dev/null || \
+          cat /lib/systemd/system/docker.socket /usr/lib/systemd/system/docker.socket 2>/dev/null; } | \
+        grep -q \"^SocketGroup=root$\"'\''"
+  '
+
+  # If everything is correct on the remote host, $status == 0
+  if [ "$status" -eq 0 ]; then
+    echo '1' >> /var/work/tests/result/ok
   fi
-  [ "$result" == "1" ]
+
+  # The test must only pass when the configuration is correct
+  [ "$status" -eq 0 ]
 }
+
+
+@test "22.3. Docker is NOT exposed on TCP 2375" {
+  run bash -o pipefail -c 'ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=5 docker-worker "ss -ltn" | grep -qE "[:.]2375(\\s|$)"'
+
+  if [ "$status" -eq 0 ]; then
+    echo "FAIL: tcp/2375 открыт на docker-worker" >&2
+  fi
+
+  [ "$status" -ne 0 ]
+
+  if [ "$status" -ne 0 ]; then
+    echo '1' >> /var/work/tests/result/ok
+  fi
+  echo '1' >> /var/work/tests/result/all
+}
+
