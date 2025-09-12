@@ -26,6 +26,6 @@ echo "source <(istioctl completion bash)" | tee -a ~/.bashrc /home/ubuntu/.bashr
 kubectl create namespace market
 kubectl run tester --image=curlimages/curl:8.6.0 -- sleep 1d
 
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-119/tasks/cks/mock/03/k8s-12/scripts/app.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/mock/03/k8s-12/scripts/app.yaml
 
 

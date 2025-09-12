@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.24.1 (11.09.2025)
+## 0.24.1 (12.09.2025)
 ### Features
 * [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is updated.
 * [cks mock exam 03](../tasks/cks/mock/03) is added.
