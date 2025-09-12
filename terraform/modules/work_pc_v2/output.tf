@@ -97,3 +97,7 @@ output "solutions_scripts" {
 output "solutions_video" {
   value = length(var.solutions_video) > 0 ? "   ${var.solutions_video}    " : null
 }
+
+output "hosts" {
+  value = ["${var.app_name}=${local.worker_pc_ip_local}"]
+}

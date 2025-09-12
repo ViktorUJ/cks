@@ -101,6 +101,7 @@ resource "aws_launch_template" "master" {
       ssh_password        = random_string.ssh.result
       ssh_password_enable = var.ssh_password_enable
       hosts               = local.hosts
+      hostname=var.app_name
     }))
 
   }))

@@ -1,9 +1,11 @@
 # Changelog
 
-## 0.24.1 (xx.09.2025)
+## 0.24.1 (12.09.2025)
 ### Features
 * [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is updated.
-
+* [cks mock exam 03](../tasks/cks/mock/03) is added.
+* [cks mock exam 03 solutions](../tasks/cks/mock/03/worker/files/solutions) is added.
+* K8s version **1.34** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module.
 
 ## 0.23.1 (12.08.2025)
 ### Features
