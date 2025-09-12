@@ -10,7 +10,7 @@ helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm install ingress-nginx  ingress-nginx/ingress-nginx \
   --namespace ingress-nginx --create-namespace \
   --version 4.12.0 \
-  -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/mock/03/k8s-6/scripts/ingress_nginx_conf.yaml \
+  -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-119/tasks/cks/mock/03/k8s-6/scripts/ingress_nginx_conf.yaml \
   --wait --timeout 5m
 
 
