@@ -38,7 +38,7 @@ locals {
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version           = "1.34.0"
+  k8_version           = "1.34.1"
   node_type            = "spot"  # ondemand | spot
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   cni = {
