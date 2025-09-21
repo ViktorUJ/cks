@@ -1,5 +1,6 @@
 ``` 
-powershell -ExecutionPolicy Bypass -File .\1.ps1 -SinceHours 24 -Top 10
+powershell -ExecutionPolicy Bypass -File .\top_hour_proces.ps1 -SinceHours 24 -Top 10 -ExportCsv "C:\Users\Public\top.csv"
+
 ```
 
 ```
