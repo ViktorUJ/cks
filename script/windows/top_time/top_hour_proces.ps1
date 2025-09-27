@@ -1,67 +1,65 @@
 param(
-    [int]$SinceHours = 24,        # how many hours back to look
-    [int]$Top = 10,               # top N apps in output
-    [string]$ExportCsv = ""       # optional CSV export path
+    [int]$SinceHours = 24,                 # fallback duration if -Hours not provided
+    [int]$Top = 0,                         # 0 = show all; otherwise top N rows
+    [string]$ExportCsv = "",               # optional CSV export path (overall)
+    [string]$ExportDailyCsv = "",          # optional CSV export path (daily breakdown)
+    [ValidateSet('browsers','browsers+games')]
+    [string]$Mode = 'browsers+games',      # report mode
+    [datetime]$Start,                      # optional absolute window start (local time)
+    [int]$Hours = 0,                       # optional duration in hours; if 0 -> use SinceHours
+    [int]$RetentionDays = 0                # if >0, estimate & set Security log size to retain at least N days
+)
+
+# ============================== config ==============================
+$IgnoreNames = @('openvpn.exe','openvpn-gui.exe')
+
+$BrowserNames = @(
+    'chrome.exe','msedge.exe','firefox.exe','opera.exe',
+    'vivaldi.exe','brave.exe','yandex.exe'
+)
+
+$GameLaunchers = @(
+    'battle.net.exe','agent.exe','steam.exe','epicgameslauncher.exe',
+    'riotclientservices.exe','goggalaxy.exe','origin.exe',
+    'eaapp.exe','ubisoftconnect.exe'
+)
+
+$KnownGameExe = @(
+    'sc2_x64.exe','sc2switcher_x64.exe','starcraft.exe','starcraft ii.exe'
 )
 
 # ============================== helpers ==============================
 function Parse468xEvent {
     param([System.Diagnostics.Eventing.Reader.EventRecord]$Event)
-    # Parse event XML and flatten EventData into a dictionary (safe for PS 5.1)
     $xml = [xml]$Event.ToXml()
     $data = @{}
-
     foreach ($d in $xml.Event.EventData.Data) {
         $name = $d.name
-        if (-not [string]::IsNullOrWhiteSpace($name)) {
-            $data[$name] = $d.'#text'
-        }
+        if (-not [string]::IsNullOrWhiteSpace($name)) { $data[$name] = $d.'#text' }
     }
 
-    # Normalize common fields (4688/4689 have slightly different names)
     $procId = $null
-    if ($data.ContainsKey('NewProcessId') -and $data['NewProcessId']) {
-        $procId = $data['NewProcessId']
-    } elseif ($data.ContainsKey('ProcessId')) {
-        $procId = $data['ProcessId']
-    }
+    if ($data.ContainsKey('NewProcessId') -and $data['NewProcessId']) { $procId = $data['NewProcessId'] }
+    elseif ($data.ContainsKey('ProcessId')) { $procId = $data['ProcessId'] }
 
     $procNameFull = $null
-    if ($data.ContainsKey('NewProcessName') -and $data['NewProcessName']) {
-        $procNameFull = $data['NewProcessName']
-    } elseif ($data.ContainsKey('ProcessName')) {
-        $procNameFull = $data['ProcessName']
-    }
+    if ($data.ContainsKey('NewProcessName') -and $data['NewProcessName']) { $procNameFull = $data['NewProcessName'] }
+    elseif ($data.ContainsKey('ProcessName')) { $procNameFull = $data['ProcessName'] }
 
     $procNameLeaf = $null
-    if ($procNameFull) {
-        $procNameLeaf = (Split-Path -Leaf $procNameFull)
-    }
+    if ($procNameFull) { $procNameLeaf = (Split-Path -Leaf $procNameFull) }
 
     $parentName = $null
-    if ($data.ContainsKey('ParentProcessName')) {
-        $parentName = $data['ParentProcessName']
-    }
+    if ($data.ContainsKey('ParentProcessName')) { $parentName = $data['ParentProcessName'] }
 
     $subjectUser = $null
-    if ($data.ContainsKey('SubjectUserName')) {
-        $subjectUser = $data['SubjectUserName']
-    }
+    if ($data.ContainsKey('SubjectUserName')) { $subjectUser = $data['SubjectUserName'] }
 
     $subjectDomain = $null
-    if ($data.ContainsKey('SubjectDomainName')) {
-        $subjectDomain = $data['SubjectDomainName']
-    }
-
-    $cmdLine = $null
-    if ($data.ContainsKey('CommandLine')) {
-        $cmdLine = $data['CommandLine']
-    }
+    if ($data.ContainsKey('SubjectDomainName')) { $subjectDomain = $data['SubjectDomainName'] }
 
     $procGuid = $null
-    if ($data.ContainsKey('ProcessGuid')) {
-        $procGuid = $data['ProcessGuid']
-    }
+    if ($data.ContainsKey('ProcessGuid')) { $procGuid = $data['ProcessGuid'] }
 
     [PSCustomObject]@{
         TimeCreated       = $Event.TimeCreated
@@ -74,55 +72,55 @@ function Parse468xEvent {
         ParentProcessName = $parentName
         SubjectUser       = $subjectUser
         SubjectDomain     = $subjectDomain
-        CommandLine       = $cmdLine
     }
 }
 
-function IsWantedProcess {
+function IsWindowsStandard {
     param($rec)
-
-    # 1) Exclude obvious system/service things
+    if (-not $rec) { return $true }
     $sysUsers = @('SYSTEM','LOCAL SERVICE','NETWORK SERVICE')
-    if ($rec.SubjectUser -and ($sysUsers -contains $rec.SubjectUser)) { return $false }
-
-    if ($rec.ParentProcessName -and ($rec.ParentProcessName -match '(^|\\)services\.exe$')) { return $false }
-
+    if ($rec.SubjectUser -and ($sysUsers -contains $rec.SubjectUser)) { return $true }
+    if ($rec.ParentProcessName -and ($rec.ParentProcessName -match '(^|\\)services\.exe$')) { return $true }
     if ($rec.ProcessNameFull) {
-        $win32 = [Regex]::Escape("$env:WINDIR\System32")
-        if ($rec.ProcessNameFull -match $win32) { return $false }
-    }
-
-    if (-not $rec.ProcessNameLeaf) { return $false }
-
-    # 2) Allowlist: browsers and game launchers (extend as needed)
-    $name = $rec.ProcessNameLeaf.ToLower()
-    $browsers = @(
-        'chrome.exe','msedge.exe','firefox.exe','opera.exe',
-        'vivaldi.exe','brave.exe','yandex.exe'
-    )
-    $launchers = @(
-        'steam.exe','epicgameslauncher.exe','battle.net.exe','riotclient.exe','goggalaxy.exe'
-    )
-
-    if ($browsers -contains $name) { return $true }
-    if ($launchers -contains $name) { return $true }
-
-    # 3) Heuristic for direct game executables by install path
-    if ($rec.ProcessNameFull) {
+        $winRoot = [Regex]::Escape("$env:WINDIR").ToLower()
         $full = $rec.ProcessNameFull.ToLower()
-        if ($full -match 'steamapps\\common' -or
-            $full -match '^d:\\games' -or
-            $full -match '^c:\\games') {
-            return $true
-        }
+        if ($full -match "^$winRoot\\") { return $true }
     }
-
     return $false
 }
 
-function Summarize-Durations {
-    param($instances, $top)
+function IsIgnored {
+    param([string]$NameLower, [string[]]$IgnoreList)
+    if (-not $NameLower) { return $false }
+    foreach ($n in $IgnoreList) { if ($NameLower -eq ($n.ToLower())) { return $true } }
+    return $false
+}
 
+function IsWantedName {
+    param([string]$LeafLower, [string]$Mode)
+    if (-not $LeafLower) { return $false }
+    $browserSet  = $BrowserNames  | ForEach-Object { $_.ToLower() }
+    $gameSet     = $KnownGameExe  | ForEach-Object { $_.ToLower() }
+    $launcherSet = $GameLaunchers | ForEach-Object { $_.ToLower() }
+
+    $isBrowser  = $browserSet  -contains $LeafLower
+    if ($Mode -eq 'browsers') { return $isBrowser }
+
+    $isGameExe  = $gameSet     -contains $LeafLower
+    $isLauncher = $launcherSet -contains $LeafLower
+    return ($isBrowser -or $isGameExe -or $isLauncher)
+}
+
+function ParentIsLauncher {
+    param($rec)
+    if (-not $rec.ParentProcessName) { return $false }
+    $launcherSet = $GameLaunchers | ForEach-Object { $_.ToLower() }
+    $parentLeaf = (Split-Path -Leaf $rec.ParentProcessName).ToLower()
+    return ($launcherSet -contains $parentLeaf)
+}
+
+function Summarize-Durations {
+    param($instances, [int]$top)
     $byName = $instances | Group-Object ProcessName
     $rows = foreach ($g in $byName) {
         $sum = ($g.Group | Measure-Object DurationMin -Sum).Sum
@@ -133,26 +131,137 @@ function Summarize-Durations {
             TotalHrs  = [math]::Round($sum / 60, 2)
         }
     }
-
-    $rows | Sort-Object TotalMin -Descending | Select-Object -First $top
+    $rows = $rows | Sort-Object -Property TotalMin -Descending
+    if ($top -gt 0) { return $rows | Select-Object -First $top }
+    return $rows
 }
 
-# ============================== main ==============================
-$since = (Get-Date).AddHours(-1 * $SinceHours)
-$now = Get-Date
+# split one usage interval across calendar days
+function Split-Instance-ByDay {
+    param([datetime]$Start, [datetime]$End, [string]$ProcessName)
 
+    $fragments = @()
+    if ($End -le $Start) { return $fragments }
+
+    $curStart = $Start
+    while ($curStart -lt $End) {
+        $dayEnd = ($curStart.Date).AddDays(1)
+        if ($dayEnd -gt $End) { $dayEnd = $End }
+        $durMin = ($dayEnd - $curStart).TotalMinutes
+        $fragments += [PSCustomObject]@{
+            Day         = $curStart.Date
+            ProcessName = $ProcessName
+            DurationMin = $durMin
+        }
+        $curStart = $dayEnd
+    }
+    return $fragments
+}
+
+function Summarize-Durations-ByDay {
+    param($instances, [int]$top)
+
+    # explode into daily fragments
+    $frags = @()
+    foreach ($i in $instances) {
+        $frags += Split-Instance-ByDay -Start $i.Start -End $i.End -ProcessName $i.ProcessName
+    }
+
+    # aggregate per day+process
+    $grp = $frags | Group-Object { "{0:yyyy-MM-dd}|{1}" -f $_.Day, $_.ProcessName }
+
+    $rows = @()
+    foreach ($g in $grp) {
+        $parts = $g.Name -split '\|', 2
+        $dayStr = $parts[0]
+        $pname = $parts[1]
+        $sum = ($g.Group | Measure-Object DurationMin -Sum).Sum
+        $rows += [PSCustomObject]@{
+            Day       = [datetime]::ParseExact($dayStr,'yyyy-MM-dd',$null)
+            Name      = $pname
+            TotalMin  = [math]::Round($sum,2)
+            TotalHrs  = [math]::Round($sum/60,2)
+        }
+    }
+
+    # sort safely in a separate statement (PS 5.1-friendly)
+    $rows = $rows | Sort-Object -Property Day, @{Expression='TotalMin'; Descending=$true}
+
+    if ($top -gt 0) {
+        # take top-N per day
+        $byDay = $rows | Group-Object Day
+        $limited = @()
+        foreach ($d in $byDay) {
+            $limited += ($d.Group | Sort-Object -Property TotalMin -Descending | Select-Object -First $top)
+        }
+        return $limited
+    }
+    return $rows
+}
+
+# --- Retention estimator: set Security log max size to keep ~N days ---
+function Ensure-SecurityLogRetentionDays {
+    param([int]$Days, [double]$SafetyFactor = 1.3, [int]$SampleEvents = 5000)
+
+    if ($Days -le 0) { return }
+    Write-Host "Estimating Security log size for ~$Days days..."
+
+    try {
+        $events = Get-WinEvent -LogName Security -MaxEvents $SampleEvents -ErrorAction Stop
+        if (-not $events -or $events.Count -eq 0) {
+            Write-Warning "No events sampled; skipping size estimation."
+            return
+        }
+
+        $totalLen = 0
+        foreach ($ev in $events) { $totalLen += ($ev.ToXml()).Length }
+        $avgSize = [math]::Max([double]($totalLen / $events.Count), 900.0)
+
+        $minTime = ($events | Measure-Object TimeCreated -Minimum).Minimum
+        $maxTime = ($events | Measure-Object TimeCreated -Maximum).Maximum
+        $spanSec = [math]::Max((New-TimeSpan -Start $minTime -End $maxTime).TotalSeconds, 1)
+        $ratePerSec = $events.Count / $spanSec
+
+        $bytesPerDay = [double]$avgSize * $ratePerSec * 86400.0
+        $sizeBytes = [long]([math]::Ceiling($bytesPerDay * $Days * $SafetyFactor))
+        if ($sizeBytes -lt 134217728) { $sizeBytes = 134217728 } # >=128MB
+
+        wevtutil sl Security /ms:$sizeBytes | Out-Null
+        Write-Host ("Security log size set to ~{0} MB" -f [math]::Round($sizeBytes/1MB,0))
+    }
+    catch {
+        Write-Warning "Failed to estimate or set Security log size: $_"
+    }
+}
+
+# ============================== window ==============================
+$windowStart = if ($PSBoundParameters.ContainsKey('Start')) { Get-Date $Start } else { (Get-Date).AddHours(-1 * $SinceHours) }
+$durationHrs = if ($Hours -gt 0) { $Hours } else { $SinceHours }
+$windowEnd   = $windowStart.AddHours($durationHrs)
+
+if ($RetentionDays -gt 0) { Ensure-SecurityLogRetentionDays -Days $RetentionDays }
+
+# ============================== main ==============================
 $startEvents = @()
 $endEvents   = @()
 $eventQueryWorked = $true
 
 try {
-    # Security 4688 = process creation (we filter here to wanted apps only)
-    $startEvents = Get-WinEvent -FilterHashtable @{ LogName='Security'; Id=4688; StartTime=$since } -ErrorAction Stop |
+    $startEvents = Get-WinEvent -FilterHashtable @{
+        LogName   = 'Security'
+        Id        = 4688
+        StartTime = $windowStart
+        EndTime   = $windowEnd
+    } -ErrorAction Stop |
         ForEach-Object { Parse468xEvent $_ } |
-        Where-Object { IsWantedProcess $_ }
+        Where-Object { -not (IsWindowsStandard $_) }
 
-    # Security 4689 = process termination (no filter yet; used for matching)
-    $endEvents = Get-WinEvent -FilterHashtable @{ LogName='Security'; Id=4689; StartTime=$since } -ErrorAction Stop |
+    $endEvents = Get-WinEvent -FilterHashtable @{
+        LogName   = 'Security'
+        Id        = 4689
+        StartTime = $windowStart
+        EndTime   = $windowEnd
+    } -ErrorAction Stop |
         ForEach-Object { Parse468xEvent $_ }
 }
 catch {
@@ -160,18 +269,23 @@ catch {
     $eventQueryWorked = $false
 }
 
+$startEvents = $startEvents | Where-Object {
+    $leafLower = if ($_.ProcessNameLeaf) { $_.ProcessNameLeaf.ToLower() } else { "" }
+    $wantedByName   = IsWantedName -LeafLower $leafLower -Mode $Mode
+    $wantedByParent = ParentIsLauncher $_
+    $notIgnored     = -not (IsIgnored -NameLower $leafLower -IgnoreList $IgnoreNames)
+    ($notIgnored -and ($wantedByName -or $wantedByParent))
+}
+
 $instances = @()
 
 if ($eventQueryWorked -and $startEvents.Count -gt 0) {
-    # Build lookups for termination events
     $endsByGuid = @{}
     foreach ($e in ($endEvents | Where-Object { $_.ProcessGuid })) {
         if (-not $endsByGuid.ContainsKey($e.ProcessGuid)) { $endsByGuid[$e.ProcessGuid] = @() }
         $endsByGuid[$e.ProcessGuid] += ,$e
     }
-    foreach ($k in @($endsByGuid.Keys)) {
-        $endsByGuid[$k] = $endsByGuid[$k] | Sort-Object TimeCreated
-    }
+    foreach ($k in @($endsByGuid.Keys)) { $endsByGuid[$k] = $endsByGuid[$k] | Sort-Object -Property TimeCreated }
 
     $endsByPid = @{}
     foreach ($e in $endEvents) {
@@ -179,21 +293,17 @@ if ($eventQueryWorked -and $startEvents.Count -gt 0) {
         if (-not $endsByPid.ContainsKey($key)) { $endsByPid[$key] = @() }
         $endsByPid[$key] += ,$e
     }
-    foreach ($k in @($endsByPid.Keys)) {
-        $endsByPid[$k] = $endsByPid[$k] | Sort-Object TimeCreated
-    }
+    foreach ($k in @($endsByPid.Keys)) { $endsByPid[$k] = $endsByPid[$k] | Sort-Object -Property TimeCreated }
 
     foreach ($s in $startEvents) {
         $startTime = $s.TimeCreated
         $endTime = $null
 
-        # Prefer match by ProcessGuid
         if ($s.ProcessGuid -and $endsByGuid.ContainsKey($s.ProcessGuid)) {
             $cand = $endsByGuid[$s.ProcessGuid] | Where-Object { $_.TimeCreated -ge $startTime } | Select-Object -First 1
             if ($cand) { $endTime = $cand.TimeCreated }
         }
 
-        # Fallback: match by (Computer|PID)
         if (-not $endTime -and $s.ProcessId) {
             $key = "$($s.Computer)|$($s.ProcessId)"
             if ($endsByPid.ContainsKey($key)) {
@@ -202,7 +312,7 @@ if ($eventQueryWorked -and $startEvents.Count -gt 0) {
             }
         }
 
-        if (-not $endTime) { $endTime = $now }
+        if (-not $endTime) { $endTime = $windowEnd }
 
         $duration = ($endTime - $startTime).TotalMinutes
         if ($duration -lt 0) { $duration = 0 }
@@ -210,48 +320,35 @@ if ($eventQueryWorked -and $startEvents.Count -gt 0) {
         $procName = $s.ProcessNameLeaf
         if (-not $procName) { $procName = $s.ProcessNameFull }
 
-        $userStr = $s.SubjectUser
-        if ($s.SubjectDomain) { $userStr = "$($s.SubjectDomain)\$($s.SubjectUser)" }
-
         $instances += [PSCustomObject]@{
             ProcessName = $procName
             Start       = $startTime
             End         = $endTime
             DurationMin = $duration
-            User        = $userStr
             Source      = "SecurityLog"
         }
     }
 }
 else {
-    # Fallback: running-process snapshot (approximate, only still-alive processes)
+    # Fallback: still-alive processes only
     try {
-        $procs = Get-Process -ErrorAction Stop | Where-Object { $_.StartTime -ge $since -and $_.SessionId -ne 0 }
+        $procs = Get-Process -ErrorAction Stop | Where-Object { $_.StartTime -lt $windowEnd -and $_.StartTime -ge $windowStart -and $_.SessionId -ne 0 }
         foreach ($p in $procs) {
-            $full = ""
-            $leaf = ""
-            try { $full = ($p.Path) } catch { $full = "" }
-            if (-not $full -or $full -eq "") { $full = "$($p.ProcessName).exe" }
-            $leaf = (Split-Path -Leaf $full)
+            $leaf = "$($p.ProcessName).exe"
+            $leafLower = $leaf.ToLower()
 
-            # Build a fake record to reuse the same filter
-            $fakeRec = [PSCustomObject]@{
-                SubjectUser       = $null
-                ParentProcessName = $null
-                ProcessNameFull   = $full
-                ProcessNameLeaf   = $leaf
-            }
-            if (-not (IsWantedProcess $fakeRec)) { continue }
+            $wantedByName = IsWantedName -LeafLower $leafLower -Mode $Mode
+            $notIgnored   = -not (IsIgnored -NameLower $leafLower -IgnoreList $IgnoreNames)
+            if (-not ($wantedByName -and $notIgnored)) { continue }
 
             $end = Get-Date
-            if ($p.HasExited) { $end = $p.ExitTime }
+            if ($end -gt $windowEnd) { $end = $windowEnd }
 
             $instances += [PSCustomObject]@{
                 ProcessName = $leaf
                 Start       = $p.StartTime
                 End         = $end
                 DurationMin = (($end - $p.StartTime).TotalMinutes)
-                User        = ""
                 Source      = "Snapshot"
             }
         }
@@ -262,14 +359,13 @@ else {
     }
 }
 
-# Aggregate and print Top N
-$topRows = Summarize-Durations -instances $instances -top $Top
-$topRows | Format-Table -AutoSize
+# ---- Overall summary
+$overall = Summarize-Durations -instances $instances -top $Top
+$overall | Format-Table -AutoSize
 
-# Optional export
 if ($ExportCsv -and $ExportCsv.Trim()) {
     try {
-        $topRows | Export-Csv -Path $ExportCsv -NoTypeInformation -Encoding UTF8
+        $overall | Export-Csv -Path $ExportCsv -NoTypeInformation -Encoding UTF8
         Write-Host "Saved summary to: $ExportCsv"
     }
     catch {
@@ -277,7 +373,34 @@ if ($ExportCsv -and $ExportCsv.Trim()) {
     }
 }
 
-# Footer with context
-$mode = "Running-process snapshot (approximate)"
-if ($eventQueryWorked -and $startEvents.Count -gt 0) { $mode = "Security 4688/4689 (accurate)" }
-Write-Host ("Mode: {0}. Window: {1:g} .. {2:g}" -f $mode, $since, $now)
+# ---- Daily breakdown if window spans > 24h
+$spanHours = ($windowEnd - $windowStart).TotalHours
+if ($spanHours -gt 24) {
+    $daily = Summarize-Durations-ByDay -instances $instances -top $Top
+
+    Write-Host ""
+    Write-Host "Daily breakdown:"
+    $days = $daily | Group-Object Day
+    foreach ($d in $days) {
+        Write-Host ("`n{0:yyyy-MM-dd}" -f $d.Name) -ForegroundColor Cyan
+        $t = $d.Group | Select-Object @{n='Name';e={$_.Name}},
+                                  @{n='TotalMin';e={$_.TotalMin}},
+                                  @{n='TotalHrs';e={$_.TotalHrs}}
+        $t | Format-Table -AutoSize
+    }
+
+    if ($ExportDailyCsv -and $ExportDailyCsv.Trim()) {
+        try {
+            $daily |
+                Select-Object @{n='Day';e={$_.Day.ToString('yyyy-MM-dd')}}, Name, TotalMin, TotalHrs |
+                Export-Csv -Path $ExportDailyCsv -NoTypeInformation -Encoding UTF8
+            Write-Host "Saved daily breakdown to: $ExportDailyCsv"
+        }
+        catch {
+            Write-Warning "Failed to export Daily CSV to '$ExportDailyCsv': $_"
+        }
+    }
+}
+
+$modeStr = if ($eventQueryWorked -and $startEvents.Count -gt 0) { "Security 4688/4689 (accurate)" } else { "Running-process snapshot (approximate)" }
+Write-Host ("Mode: {0}. Window: {1:g} .. {2:g}" -f $modeStr, $windowStart, $windowEnd)

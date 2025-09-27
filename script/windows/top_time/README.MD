@@ -1,5 +1,25 @@
+```` 
+auditpol /get /subcategory:"Process Creation","Process Termination"
+
+auditpol /set /subcategory:"Process Creation"   /success:enable /failure:enable
+auditpol /set /subcategory:"Process Termination" /success:enable /failure:enable
+
+reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\Audit `
+  /v ProcessCreationIncludeCmdLine_Enabled /t REG_DWORD /d 1 /f
+
+
+````
+
+
 ``` 
-powershell -ExecutionPolicy Bypass -File .\top_hour_proces.ps1 -SinceHours 24 -Top 10 -ExportCsv "C:\Users\Public\top.csv"
+# Последние 72 часа, с разбивкой по суткам, экспорт обоих отчётов
+powershell -ExecutionPolicy Bypass -File .\top_hour_proces.ps1 -SinceHours 72 -Top 0 `
+  -ExportCsv ".\summary.csv" -ExportDailyCsv ".\daily.csv"
+
+# Окно: с 2025-09-15 00:00 на 48 часов, только браузеры
+powershell -ExecutionPolicy Bypass -File .\top_hour_proces.ps1 -Start "2025-09-15" -Hours 48 -Mode browsers -Top 0
+
+
 
 ```
 
