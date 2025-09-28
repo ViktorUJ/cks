@@ -45,9 +45,9 @@ locals {
       type = "calico" #calico , cilium
       disable_kube_proxy="false"
     }
-  instance_type        = "t3.medium" # m5.large | t4g.medium
-  instance_type_worker = "t3.medium" # m5.large | t4g.medium
- spot_additional_types= [ "t3.medium" , "t3.large" , "t3.xlarge","r4.large","r5.large","m5.large" ]
+  instance_type        = "t4g.medium" # m5.large | t4g.medium
+  instance_type_worker = "t4g.medium" # m5.large | t4g.medium
+ spot_additional_types= [ "t4g.medium" , "t4g.large" , "t4g.xlarge" ]
 
   all_spot_subnet      = "true"
   ubuntu_version       = "22.04"
