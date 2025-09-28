@@ -100,7 +100,7 @@ inputs = {
       cluster12 = dependency.cluster12.outputs.k8s_config
     }
     instance_type      = local.vars.locals.instance_type_worker
-    node_type          = "t3.medium"
+    node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id
     ubuntu_version     = local.vars.locals.ubuntu_version
     key_name           = local.vars.locals.key_name
