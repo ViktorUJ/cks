@@ -21,6 +21,61 @@ YAML
 # Clean any stale classic eBPF probe cache (harmless if missing)
 rm -f /root/.falco/falco-bpf.o || true
 
+tmp=$(mktemp)
+awk '{
+  if ($0 ~ /^append_output:$/) {
+    if (getline nl) {
+      if (nl ~ /^[[:space:]]*- suggested_output: true$/) {
+        print "- suggested_output: false"
+      } else {
+        print $0
+        print nl
+      }
+    } else {
+      print $0
+    }
+  } else {
+    print $0
+  }
+}' /etc/falco/falco.yaml > "$tmp" && mv "$tmp" /etc/falco/falco.yaml
+
+tmp2=$(mktemp)
+awk '{
+  if ($0 ~ /^[[:space:]]*- name: k8saudit[[:space:]]*$/) {
+    print "# " $0
+    in_block=1
+    next
+  }
+  if (in_block) {
+    if ($0 ~ /^[[:space:]]+/) {
+      print "# " $0
+      next
+    } else {
+      in_block=0
+    }
+  }
+  print $0
+}' /etc/falco/falco.yaml > "$tmp2" && mv "$tmp2" /etc/falco/falco.yaml
+
+tmp3=$(mktemp)
+awk '{
+  if ($0 ~ /^[[:space:]]*load_plugins:[[:space:]]*$/) {
+    if (getline nl) {
+      if (nl ~ /^[[:space:]]*-[[:space:]]*k8smeta[[:space:]]*$/) {
+        print "# " $0
+        print "# " nl
+      } else {
+        print $0
+        print nl
+      }
+    } else {
+      print $0
+    }
+  } else {
+    print $0
+  }
+}' /etc/falco/falco.yaml > "$tmp3" && mv "$tmp3" /etc/falco/falco.yaml
+
 # Untaint master node
 kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule-
 
