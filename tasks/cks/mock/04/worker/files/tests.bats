@@ -33,17 +33,13 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "1.3. Docker is NOT exposed on TCP 2375" {
   echo '1' >>/var/work/tests/result/all
-  run bash -o pipefail -c 'ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=5 docker-worker "ss -ltn" | grep -qE "[:.]2375(\\s|$)"'
-
-  if [ "$status" -eq 0 ]; then
-    echo "FAIL: tcp/2375 is opened" >&2
+  set +e
+  ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=5 docker-worker 'ss -ltn  | grep -qE "[:.]2375(\\s|$)"'
+  result=$?
+  set -e
+  if [[ "$result" == "1" ]]; then
+   echo '1'>>/var/work/tests/result/ok
   fi
-
-
-
-  if [ "$status" -ne 0 ]; then
-    echo '1' >> /var/work/tests/result/ok
-  fi
-
+  [ "$result" == "1" ]
 }
 
