@@ -66,9 +66,9 @@ dependency "vpc" {
 #dependency "cluster11" {
 #  config_path = "../k8s-11"
 #}
-dependency "cluster12" {
-  config_path = "../k8s-12"
-}
+#dependency "cluster12" {
+#  config_path = "../k8s-12"
+#}
 
 
 dependency "docker_worker" {
@@ -92,7 +92,6 @@ inputs = {
   spot_additional_types = local.vars.locals.spot_additional_types
 
   host_list = concat(
-    dependency.cluster12.outputs.hosts,
     dependency.docker_worker.outputs.hosts,
   )
   work_pc = {
