@@ -47,7 +47,7 @@ locals {
     }
   instance_type        = "t3.medium" # m5.large | t4g.medium
   instance_type_worker = "t3.medium" # m5.large | t4g.medium
- spot_additional_types= [ "t3.medium" , "t3.large" , "t3.xlarge","r4.large","r5.large","m4.large","m5.large" ]
+ spot_additional_types= [ "t3.medium" , "t3.large" , "t3.xlarge","r4.large","r5.large","m5.large" ]
 
   all_spot_subnet      = "true"
   ubuntu_version       = "22.04"
