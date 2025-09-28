@@ -43,3 +43,22 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "1" ]
 }
 
+@test "1.4. Docker daemon is running" {
+  echo '1' >>/var/work/tests/result/all
+  ssh -oStrictHostKeyChecking=no docker-worker "systemctl is-active docker" | grep active
+  result=$?
+  if [[ "$result" == "0" ]]; then
+    echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "1.5. Docker socket is active" {
+  echo '1' >>/var/work/tests/result/all
+  ssh -oStrictHostKeyChecking=no docker-worker "systemctl is-active docker.socket" | grep active
+  result=$?
+  if [[ "$result" == "0" ]]; then
+    echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
