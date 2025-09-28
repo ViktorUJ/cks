@@ -24,7 +24,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '1' >>/var/work/tests/result/all
   ssh -oStrictHostKeyChecking=no docker-worker "stat -c %G /var/run/docker.sock" | grep root
   result=$?
-  if [["$result" == "0" ]]; then
+  if [[ "$result" == "0" ]]; then
     echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
