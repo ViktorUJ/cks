@@ -25,33 +25,37 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  region       = local.vars.locals.region
-  aws          = local.vars.locals.aws
-  prefix       = "cluster2"
-  tags_common  = local.vars.locals.tags
-  app_name     = "k8s"
-  subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id       = dependency.vpc.outputs.vpc_id
-  cluster_name = "k8s2"
-  node_type    = local.vars.locals.node_type
-  ssh_password_enable =local.vars.locals.ssh_password_enable
+  questions_list      = local.vars.locals.questions_list
+  region              = local.vars.locals.region
+  aws                 = local.vars.locals.aws
+  prefix              = "cluster2"
+  tags_common         = local.vars.locals.tags
+  app_name            = "k8s"
+  subnets             = dependency.vpc.outputs.subnets
+  vpc_id              = dependency.vpc.outputs.vpc_id
+  cluster_name        = "k8s2"
+  node_type           = local.vars.locals.node_type
+  ssh_password_enable = local.vars.locals.ssh_password_enable
+  spot_additional_types = local.vars.locals.spot_additional_types
+  all_spot_subnet       = local.vars.locals.all_spot_subnet
+
 
   k8s_master = {
-    k8_version         = "1.33.0"
-    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
+    k8_version         = "1.33.1"
+    runtime            = local.vars.locals.runtime
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
     ami_id             = local.vars.locals.ami_id
-    subnet_number      = "1"
+    subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-2/scripts/master.sh"
-    calico_url         = "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-7/scripts/master.sh"
+    cni                = local.vars.locals.cni
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
@@ -62,7 +66,7 @@ inputs = {
     # we can  configure each node independently
 
     "node_2" = {
-      k8_version         = "1.28.0"
+      k8_version         = "1.33.0"
       instance_type      = local.vars.locals.instance_type
       key_name           = local.vars.locals.key_name
       ami_id             = local.vars.locals.ami_id
