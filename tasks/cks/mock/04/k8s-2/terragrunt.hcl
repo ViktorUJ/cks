@@ -40,7 +40,7 @@ inputs = {
   all_spot_subnet       = local.vars.locals.all_spot_subnet
 
   k8s_master = {
-    k8_version         = "1.33.0"
+    k8_version         = local.vars.locals.k8_version
     runtime            = local.vars.locals.runtime
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
