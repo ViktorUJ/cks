@@ -39,9 +39,8 @@ inputs = {
   spot_additional_types = local.vars.locals.spot_additional_types
   all_spot_subnet       = local.vars.locals.all_spot_subnet
 
-
   k8s_master = {
-    k8_version         = "1.33.1"
+    k8_version         = local.vars.locals.k8_version
     runtime            = local.vars.locals.runtime
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
@@ -54,7 +53,7 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-7/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-2/scripts/master.sh"
     cni                = local.vars.locals.cni
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
@@ -63,26 +62,6 @@ inputs = {
     root_volume = local.vars.locals.root_volume
   }
   k8s_worker = {
-    # we can  configure each node independently
 
-    "node_2" = {
-      k8_version         = "1.33.0"
-      instance_type      = local.vars.locals.instance_type
-      key_name           = local.vars.locals.key_name
-      ami_id             = local.vars.locals.ami_id
-      subnet_number      = "0"
-      ubuntu_version     = local.vars.locals.ubuntu_version
-      user_data_template = "template/worker.sh"
-      runtime            = local.vars.locals.runtime
-      runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-2/scripts/worker.sh"
-      node_labels        = "work_type=infra_core,node_type=gvisor,runtime=gvizor"
-      ssh = {
-        private_key = dependency.ssh-keys.outputs.private_key
-        pub_key     = dependency.ssh-keys.outputs.pub_key
-      }
-      cidrs       = local.vars.locals.access_cidrs
-      root_volume = local.vars.locals.root_volume
-    }
   }
 }

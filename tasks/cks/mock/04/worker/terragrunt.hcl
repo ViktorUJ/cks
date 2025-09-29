@@ -29,9 +29,9 @@ dependency "vpc" {
 #  config_path = "../k8s-1"
 #}
 #
-dependency "cluster2" {
-  config_path = "../k8s-2"
-}
+#dependency "cluster2" {
+#  config_path = "../k8s-2"
+#}
 
 #dependency "cluster3" {
 #  config_path = "../k8s-3"
@@ -49,9 +49,9 @@ dependency "cluster2" {
 #  config_path = "../k8s-6"
 #}
 #
-dependency "cluster7" {
-  config_path = "../k8s-7"
-}
+#dependency "cluster7" {
+#  config_path = "../k8s-7"
+#}
 
 #dependency "cluster8" {
 #  config_path = "../k8s-8"
@@ -66,14 +66,14 @@ dependency "cluster7" {
 #dependency "cluster11" {
 #  config_path = "../k8s-11"
 #}
-dependency "cluster12" {
-  config_path = "../k8s-12"
-}
+#dependency "cluster12" {
+#  config_path = "../k8s-12"
+#}
 
 
-dependency "docker_worker" {
-  config_path = "../docker_worker"
-}
+#dependency "docker_worker" {
+#  config_path = "../docker_worker"
+#}
 
 inputs = {
   questions_list=local.vars.locals.questions_list
@@ -92,16 +92,16 @@ inputs = {
   spot_additional_types = local.vars.locals.spot_additional_types
 
   host_list = concat(
-    dependency.docker_worker.outputs.hosts,
-    dependency.cluster12.outputs.hosts,
-    dependency.cluster7.outputs.hosts,
+  #  dependency.docker_worker.outputs.hosts,
+  #  dependency.cluster12.outputs.hosts,
+   # dependency.cluster7.outputs.hosts,
     dependency.cluster2.outputs.hosts,
   )
   work_pc = {
     clusters_config = {
       cluster2 = dependency.cluster2.outputs.k8s_config
-      cluster7 = dependency.cluster7.outputs.k8s_config
-      cluster12 = dependency.cluster12.outputs.k8s_config
+   #   cluster7 = dependency.cluster7.outputs.k8s_config
+   #   cluster12 = dependency.cluster12.outputs.k8s_config
      }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
