@@ -29,9 +29,9 @@ dependency "vpc" {
 #  config_path = "../k8s-1"
 #}
 #
-#dependency "cluster2" {
-#  config_path = "../k8s-2"
-#}
+dependency "cluster2" {
+  config_path = "../k8s-2"
+}
 
 #dependency "cluster3" {
 #  config_path = "../k8s-3"
