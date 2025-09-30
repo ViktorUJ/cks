@@ -29,9 +29,9 @@ dependency "vpc" {
 #  config_path = "../k8s-1"
 #}
 #
-dependency "cluster2" {
-  config_path = "../k8s-2"
-}
+#dependency "cluster2" {
+#  config_path = "../k8s-2"
+#}
 
 #dependency "cluster3" {
 #  config_path = "../k8s-3"
@@ -45,10 +45,10 @@ dependency "cluster2" {
 #  config_path = "../k8s-5"
 #}
 #
-#dependency "cluster6" {
-#  config_path = "../k8s-6"
-#}
-#
+dependency "cluster6" {
+  config_path = "../k8s-6"
+}
+
 #dependency "cluster7" {
 #  config_path = "../k8s-7"
 #}
@@ -95,11 +95,11 @@ inputs = {
   #  dependency.docker_worker.outputs.hosts,
   #  dependency.cluster12.outputs.hosts,
    # dependency.cluster7.outputs.hosts,
-    dependency.cluster2.outputs.hosts,
+    dependency.cluster6.outputs.hosts,
   )
   work_pc = {
     clusters_config = {
-      cluster2 = dependency.cluster2.outputs.k8s_config
+      cluster6 = dependency.cluster6.outputs.k8s_config
    #   cluster7 = dependency.cluster7.outputs.k8s_config
    #   cluster12 = dependency.cluster12.outputs.k8s_config
      }
