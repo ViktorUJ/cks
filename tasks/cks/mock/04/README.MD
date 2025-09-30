@@ -60,10 +60,10 @@ documentation https://etcd.io/docs/
 ---
 
 
-|      **19**     4       | создать ингресс . с https / и редиректом с http ->https                                                                                                          |
-|:-----------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                  |
-| **Acceptance criteria** | - cert located `/var/work/19` <br/>- ns `team-19` <br/> -ingress `team19` <br/> - check `curl https://cks.local:31139  -kv` <br/> - certificate CN=**cks.local** |
+|      **19**     4       | Create an **Ingress** with a redirect from **HTTP** to **HTTPS**                                                                                                                                                                                              |
+|:-----------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                                                                               |
+| **Acceptance criteria** | - cert located `/var/work/19` <br/>- ns `team-19`  <br/> - Service  `team19` <br/> -ingress `team19` <br/> - check https  `curl https://cks.local:31139  -kvL` <br/> - certificate CN=**cks.local**  <br/>-   check redirect  `curl http://cks.local:30102 -kv` |
 ---
 
 
