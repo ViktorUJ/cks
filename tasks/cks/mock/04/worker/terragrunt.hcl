@@ -71,9 +71,9 @@ dependency "cluster6" {
 #}
 
 
-#dependency "docker_worker" {
-#  config_path = "../docker_worker"
-#}
+dependency "docker_worker" {
+  config_path = "../docker_worker"
+}
 
 inputs = {
   questions_list=local.vars.locals.questions_list
@@ -92,7 +92,7 @@ inputs = {
   spot_additional_types = local.vars.locals.spot_additional_types
 
   host_list = concat(
-  #  dependency.docker_worker.outputs.hosts,
+    dependency.docker_worker.outputs.hosts,
   #  dependency.cluster12.outputs.hosts,
    # dependency.cluster7.outputs.hosts,
     dependency.cluster6.outputs.hosts,
