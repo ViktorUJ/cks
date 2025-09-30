@@ -84,6 +84,7 @@ kind: Pod
 metadata:
   labels:
     run: stage-app
+    role: db-connect
   name: stage-app
   namespace: stage
 spec:
@@ -96,12 +97,26 @@ kind: Pod
 metadata:
   labels:
     run: all-app
+    role: db-external-connect
   name: all-app
   namespace: default
 spec:
   containers:
   - image: viktoruj/ping_pong:alpine
     name: all-app
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: all-not-db-app
+  name: all-not-db-app
+  namespace: default
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: all-not-db-app
+
 
 
 
