@@ -1,5 +1,5 @@
 #!/bin/bash
-echo " *** master node  mock-3  k8s-6"
+echo " *** master node  mock-4  k8s-6"
 export KUBECONFIG=/root/.kube/config
 kubectl taint nodes --all node-role.kubernetes.io/master-
 kubectl taint nodes --all node-role.kubernetes.io/control-plane-
@@ -12,6 +12,10 @@ helm install ingress-nginx  ingress-nginx/ingress-nginx \
   --version 4.12.0 \
   -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-6/scripts/ingress_nginx_conf.yaml \
   --wait --timeout 5m
+
+
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-6/scripts/task4.yaml
+exit
 
 
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-6/scripts/task1.yaml

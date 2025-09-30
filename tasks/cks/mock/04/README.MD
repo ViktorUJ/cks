@@ -59,12 +59,14 @@ documentation https://etcd.io/docs/
 | Acceptance criteria | There are different pods in k8s cluster with  managed by different deployments. One pod  is attempting to access `/dev/mem`, which is a potential security risk. Your task is to identify the pod using falco and scale down the associated deployment. |
 ---
 
-|      **19**      3      | создать ингресс . с https / и редиректом с http ->https                                                                                                          |
+
+|      **19**     4       | создать ингресс . с https / и редиректом с http ->https                                                                                                          |
 |:-----------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     **Task weight**     | 3%                                                                                                                                                               |
 |       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                  |
 | **Acceptance criteria** | - cert located `/var/work/19` <br/>- ns `team-19` <br/> -ingress `team19` <br/> - check `curl https://cks.local:31139  -kv` <br/> - certificate CN=**cks.local** |
 ---
+
+
 
 ---
 |      **8**   4      | **Network policy**                                                                                                                                                                                                                                                                                                                                   |
