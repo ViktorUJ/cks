@@ -25,12 +25,12 @@ spec:
         app: deployment1
     spec:
       containers:
-      - image: alpine:3.22.1
+      - image: viktoruj/ping_pong:b7a1494-arm64-alpine  # pkg:apk/alpine/ca-certificates-bundle@20250619-r0?arch=aarch64"
         name: app1
         command: ["sleep", "1000000"]
-      - image: alpine:3.16.9
+      - image: viktoruj/ping_pong:f23606e-arm64-alpine  # referenceLocator": "pkg:apk/alpine/ca-certificates-bundle@20230506-r0?arch=aarch64",
         name: app2
         command: ["sleep", "1000000"]
-      - image: alpine:3.8.4
+      - image: viktoruj/ping_pong:53833ea-amd64-alpine # "pkg:apk/alpine/ca-certificates-bundle@20230506-r0?arch=x86_64"
         name: app3
         command: ["sleep", "1000000"]
