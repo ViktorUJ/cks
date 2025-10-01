@@ -96,6 +96,18 @@ apiVersion: v1
 kind: Pod
 metadata:
   labels:
+    run: stage-not-db-app
+  name: not-db-app
+  namespace: stage
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: not-db-app
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
     run: all-app
     role: db-external-connect
   name: all-app
