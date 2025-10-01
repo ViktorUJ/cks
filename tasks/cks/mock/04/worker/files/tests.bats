@@ -162,7 +162,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 @test "5.5 Network policy. can't connect all   pod   to prod-db  " {
   echo '1'>>/var/work/tests/result/all
   set +e
-  kubectl exec all-not-db-app -n user-client   --context cluster6-admin@cluster6 -- sh -c ' curl db.prod-db.svc:3306 --connect-timeout 1 -s '
+  kubectl exec all-not-db-app -n default   --context cluster6-admin@cluster6 -- sh -c ' curl db.prod-db.svc:3306 --connect-timeout 1 -s '
   result=$?
   set -e
   if (( $result > 0 )); then
@@ -173,7 +173,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 @test "5.6 Network policy. can connect from all    pod   to google.com  " {
   echo '1'>>/var/work/tests/result/all
-  set +e && kubectl exec all-not-db-app -n user-client   --context cluster6-admin@cluster6 -- sh -c ' curl https://google.com --connect-timeout 1 -s '
+  set +e && kubectl exec all-not-db-app -n default    --context cluster6-admin@cluster6 -- sh -c ' curl https://google.com --connect-timeout 1 -s '
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '1'>>/var/work/tests/result/ok
