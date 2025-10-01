@@ -180,3 +180,98 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+
+
+@test "10.1 Deployment  security . check prevent escalation  " {
+  echo '1'>>/var/work/tests/result/all
+  kubectl  get deployment secure -n secure --context cluster6-admin@cluster6  -o yaml  | grep allowPrivilegeEscalation | grep false |grep -v '{}'| wc -l  | grep 3
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+
+@test "6.2 Deployment  security . Read only root file system c1  " {
+  echo '.5'>>/var/work/tests/result/all
+  set +e
+  pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c1 -- sh -c 'echo "test" >/var/tmp_xxx'
+  result=$?
+  set -e
+   if (( $result > 0 )); then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  (( $result > 0 ))
+}
+
+@test "6.3 Deployment  security . Read only root file system c2  " {
+  echo '.5'>>/var/work/tests/result/all
+  set +e
+  pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c2 -- sh -c 'echo "test" >/var/tmp_xxx'
+  result=$?
+  set -e
+   if (( $result > 0 )); then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  (( $result > 0 ))
+}
+
+@test "6.4 Deployment  security . Read only root file system c3  " {
+  echo '.5'>>/var/work/tests/result/all
+  set +e
+  pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c3 -- sh -c 'echo "test" >/var/tmp_xxx'
+  result=$?
+  set -e
+   if (( $result > 0 )); then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  (( $result > 0 ))
+}
+
+@test "6.5 Deployment  security . user_id,  c1  " {
+  echo '.5'>>/var/work/tests/result/all
+  pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c1 -- sh -c 'id ' | grep 3000
+  result=$?
+   if [[ "$result" == "0" ]]; then
+   echo '.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "6.6 Deployment  security . user_id,  c2  " {
+  echo '1'>>/var/work/tests/result/all
+  pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c2 -- sh -c 'id ' | grep 3000
+  result=$?
+   if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+@test "6.7 Deployment  security . user_id,  c3  " {
+  echo '1'>>/var/work/tests/result/all
+  pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c3 -- sh -c 'id ' | grep 3000
+  result=$?
+   if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "6.8 Deployment  security . allow wread to /tmp/  container c1 " {
+  echo '1'>>/var/work/tests/result/all
+  pod=$(kubectl  get po  -n secure --context cluster6-admin@cluster6 -o jsonpath='{.items..metadata.name}')
+  kubectl  exec $pod  -n secure --context cluster6-admin@cluster6  -c c1 -- sh -c 'echo "test">/tmp/test '
+  result=$?
+   if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}

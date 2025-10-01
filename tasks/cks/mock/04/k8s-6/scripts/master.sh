@@ -22,6 +22,7 @@ kubectl -n kube-system patch deployment metrics-server --type=json \
 
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-6/scripts/task4.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-6/scripts/task5.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-6/scripts/task6.yaml
 exit
 
 
