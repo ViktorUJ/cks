@@ -183,7 +183,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 
 
 
-@test "10.1 Deployment  security . check prevent escalation  " {
+@test "6.1 Deployment  security . check prevent escalation  " {
   echo '1'>>/var/work/tests/result/all
   kubectl  get deployment secure -n secure --context cluster6-admin@cluster6  -o yaml  | grep allowPrivilegeEscalation | grep false |grep -v '{}'| wc -l  | grep 3
   result=$?
