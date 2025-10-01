@@ -76,7 +76,13 @@ documentation https://etcd.io/docs/
 | Acceptance criteria | Modify deployment `secure` in `secure` Namespace:<br/>- prevent escalation<br/>- Read only root file system<br/>- user id 3000<br/>- group id 3000<br/>- allow wread to `/tmp/` container `c1` |
 ---
 
-
+---
+|       **20**    7       | disable sa secret auto-mount.  mount it to specific path.                                                                                                                                               |
+|:-----------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     **Task weight**     | 3%                                                                                                                                                                                                      |
+|       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                         |
+| **Acceptance criteria** | - ns  team-20  , deployment `team20`   <br/> -  create sa `team20` <br/>- update deployment `team20` to use sa `team20` <br/> disable automount sa secret <br/> mount sa secret to `/var/team20/secret` |
+---
 =======
 
 |    **2**      5     | **Image Vulnerability Scanning**  bom    / в деплойменте несколько контейнеров . найти в каком имадже контейнера  содержится либа определенной верси . удалить этот контейнер из деплоймента . и для этого имаджа сохранить результат скана в определенном формате .                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -94,13 +100,7 @@ documentation https://etcd.io/docs/
 |       Cluster       | cluster6 (   `kubectl config use-context    cluster6-admin@cluster6`   )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Acceptance criteria | There is Deployment `container-host-hacker` in Namespace `team-red` which mounts `/run/containerd` as a hostPath volume on the Node where its running.<br/>This means that the Pod can access various data about other containers running on the same Node.<br/><br/>To prevent this configure Namespace `team-red` to `enforce` the `baseline` Pod Security Standard.<br/><br/>Once completed, delete the Pod of the Deployment mentioned above.<br/><br/>Check the ReplicaSet events and write the event/log lines containing the reason why the Pod isn't recreated into `/var/work/tests/artifacts/15/logs`. |
 ---
----
-|      **20**    12       | disable sa secret auto-mount.  mount it to specific path.                                                                                                                                               |
-|:-----------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     **Task weight**     | 3%                                                                                                                                                                                                      |
-|       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                         |
-| **Acceptance criteria** | - ns  team-20  , deployment `team20`   <br/> -  create sa `team20` <br/>- update deployment `team20` to use sa `team20` <br/> disable automount sa secret <br/> mount sa secret to `/var/team20/secret` |
----
+
 
 |           13            | создать сикрет tls из файлов . есть деплоймент  с настроенными маунтами . проверить что повилось в поде                                                                                                 |
 |:-----------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
