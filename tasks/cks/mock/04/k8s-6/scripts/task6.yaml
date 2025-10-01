@@ -8,6 +8,7 @@ metadata:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  creationTimestamp: null
   labels:
     app: secure
   name: secure
@@ -20,14 +21,21 @@ spec:
   strategy: {}
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: secure
     spec:
       containers:
-      - image: viktoruj/ping_pong:alpine
+      - image: viktoruj/cks-lab
         name: c1
-      - image: viktoruj/ping_pong:alpine
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working . c1 . $(id)";  sleep 10  ;done']
+        resources: {}
+      - image: viktoruj/cks-lab
         name: c2
-      - image: viktoruj/ping_pong:alpine
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working . c2 . $(id)";  sleep 10  ;done']
+        resources: {}
+      - image: viktoruj/cks-lab
         name: c3
-
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working . c3 . $(id)";  sleep 10  ;done']
+        resources: {}
+status: {}
