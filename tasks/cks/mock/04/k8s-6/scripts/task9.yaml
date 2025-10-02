@@ -26,6 +26,6 @@ spec:
         app: container-host-hacker
     spec:
       containers:
-      - image: viktoruj/ping_pong:alpne
+      - image: viktoruj/ping_pong:alpine
         name: app
 
