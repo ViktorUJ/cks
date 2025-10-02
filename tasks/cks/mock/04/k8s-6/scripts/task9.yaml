@@ -25,19 +25,7 @@ spec:
       labels:
         app: container-host-hacker
     spec:
-      volumes:
-        - name: host
-          hostPath:
-            # directory location on host
-            path: /run/containerd
-            # this field is optional
-            type: Directory
-
       containers:
       - image: viktoruj/ping_pong:alpne
-        name: busybox
-        command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
-        volumeMounts:
-          - name: host
-            mountPath: "/run/containerd"
-            readOnly: false
+        name: app
+
