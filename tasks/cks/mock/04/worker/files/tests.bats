@@ -323,11 +323,21 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "9.1 Pod Security Standard . check  " {
+@test "9.1 Pod Security Standard . check enabled restricted  " {
   echo '1'>>/var/work/tests/result/all
-  result=$(kubectl  get sa team20   -n team-20  -o jsonpath='{.automountServiceAccountToken}'  --context cluster6-admin@cluster6)
-  if [[ "$result" == "false" ]]; then
+  result=$(kubectl  get ns   team-red   --context cluster6-admin@cluster6  -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}' )
+  if [[ "$result" == "restricted" ]]; then
    echo '1'>>/var/work/tests/result/ok
   fi
-  [ "$result" == "false" ]
+  [ "$result" == "restricted" ]
+}
+
+@test "9.2 Pod Security Standard . pod is Ready  " {
+  echo '1'>>/var/work/tests/result/all
+  [ "$(kubectl get po -n team-red -l app=container-host-hacker --context cluster6-admin@cluster6 -o jsonpath='{.items[0].status.phase}')" = "Running" ]
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
 }
