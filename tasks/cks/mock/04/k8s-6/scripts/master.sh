@@ -26,6 +26,7 @@ kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/c
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-6/scripts/task7.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-6/scripts/task8.yaml
 kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-6/scripts/task9.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-6/scripts/task10.yaml
 exit
 
 
