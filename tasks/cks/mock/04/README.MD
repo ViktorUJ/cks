@@ -81,8 +81,6 @@ documentation https://etcd.io/docs/
 |       **Cluster**       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                         |
 | **Acceptance criteria** | - ns  team-20  , deployment `team20`   <br/> -  create sa `team20` <br/>- update deployment `team20` to use sa `team20` <br/> disable automount sa secret <br/> mount sa secret to `/var/team20/secret` |
 ---
-=======
-
 |        **8**        | **Image Vulnerability Scanning**  bom    / в деплойменте несколько контейнеров . найти в каком имадже контейнера  содержится либа определенной верси . удалить этот контейнер из деплоймента . и для этого имаджа сохранить результат скана в определенном формате .                                                             |
 |:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                                                                                                                                                  |
@@ -90,15 +88,19 @@ documentation https://etcd.io/docs/
 ---
 
 
+======
 
-
-
-|    **15**    10     | **Pod Security Standard**   на неймспейсе включен . в режиме рестрикт . не стартует под . пофиксить деплоймент .                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|     **9**   15      | **Pod Security Standard**   на неймспейсе включен . в режиме рестрикт . не стартует под . пофиксить деплоймент .                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 |:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     Task weight     | 6%                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 |       Cluster       | cluster6 (   `kubectl config use-context    cluster6-admin@cluster6`   )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Acceptance criteria | There is Deployment `container-host-hacker` in Namespace `team-red` which mounts `/run/containerd` as a hostPath volume on the Node where its running.<br/>This means that the Pod can access various data about other containers running on the same Node.<br/><br/>To prevent this configure Namespace `team-red` to `enforce` the `baseline` Pod Security Standard.<br/><br/>Once completed, delete the Pod of the Deployment mentioned above.<br/><br/>Check the ReplicaSet events and write the event/log lines containing the reason why the Pod isn't recreated into `/var/work/tests/artifacts/15/logs`. |
 ---
+
+
+
+
+
 
 
 |           13            | создать сикрет tls из файлов . есть деплоймент  с настроенными маунтами . проверить что повилось в поде                                                                                                 |

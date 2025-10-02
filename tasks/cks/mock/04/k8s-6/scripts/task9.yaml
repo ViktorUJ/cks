@@ -4,12 +4,13 @@ metadata:
   name: team-red
   labels:
     name: team-red
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
 ---
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app: container-host-hacker
   name: container-host-hacker
@@ -19,10 +20,8 @@ spec:
   selector:
     matchLabels:
       app: container-host-hacker
-  strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: container-host-hacker
     spec:
@@ -35,7 +34,7 @@ spec:
             type: Directory
 
       containers:
-      - image: viktoruj/cks-lab
+      - image: viktoruj/ping_pong:alpne
         name: busybox
         command: ['sh', '-c', 'while true ; do  echo "i am working ";  sleep 10  ;done']
         volumeMounts:
