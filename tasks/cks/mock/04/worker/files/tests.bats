@@ -296,3 +296,29 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "8.1 check right images and containters " {
+  echo '1'>>/var/work/tests/result/all
+  [ "$(kubectl get deployment -n team-xxx --context cluster6-admin@cluster6 -o jsonpath='{.items[*].spec.template.spec.containers[*].name}')" = "app1" ] \
+  && [ "$(kubectl get deployment -n team-xxx --context cluster6-admin@cluster6 -o jsonpath='{.items[*].spec.template.spec.containers[*].image}')" = "viktoruj/ping_pong:b7a1494-arm64-alpine" ] \
+  && [ "$(kubectl get deployment -n team-xxx --context cluster6-admin@cluster6 -o jsonpath='{.items[*].spec.template.spec.containers[*].name}' | wc -w)" -eq 1 ]
+
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "8.2  Image Vulnerability Scanning. /var/work/02/kube_scheduler_sbom.json " {
+  echo '1'>>/var/work/tests/result/all
+  bom generate --image registry.k8s.io/kube-scheduler:v1.32.0 --format json --output /tmp/kube_scheduler_sbom.json
+
+  diff <(jq --sort-keys 'del(.. | .created?, .creationTimestamp?, .generatedAt?, .timestamp?, .buildTime?, .documentNamespace?, .name?, .SPDXID?, .checksumValue?, .checksums?, .copyrightText?, .downloadLocation?, .filesAnalyzed?, .versionInfo?, .supplier?, .externalRefs?, .referenceLocator?, .relatedSpdxElement?, .spdxElementId?, .relationshipType?)' /tmp/kube_scheduler_sbom.json) \
+       <(jq --sort-keys 'del(.. | .created?, .creationTimestamp?, .generatedAt?, .timestamp?, .buildTime?, .documentNamespace?, .name?, .SPDXID?, .checksumValue?, .checksums?, .copyrightText?, .downloadLocation?, .filesAnalyzed?, .versionInfo?, .supplier?, .externalRefs?, .referenceLocator?, .relatedSpdxElement?, .spdxElementId?, .relationshipType?)' /var/work/02/kube_scheduler_sbom.json)
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
