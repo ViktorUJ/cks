@@ -1,0 +1,14 @@
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "deny-all"
+  namespace: myapp
+spec:
+  endpointSelector:
+    matchLabels: {}
+  egress:
+  - {}
+  ingress:
+  - {}
+---

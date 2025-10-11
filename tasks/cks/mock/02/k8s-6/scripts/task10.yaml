@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secure
+  labels:
+    name: secure
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: secure
+  name: secure
+  namespace: secure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secure
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: secure
+    spec:
+      containers:
+      - image: viktoruj/cks-lab
+        name: c1
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working . c1 . $(id)";  sleep 10  ;done']
+        resources: {}
+      - image: viktoruj/cks-lab
+        name: c2
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working . c2 . $(id)";  sleep 10  ;done']
+        resources: {}
+      - image: viktoruj/cks-lab
+        name: c3
+        command: ['sh', '-c', 'while true ; do  echo "$(date) i am working . c3 . $(id)";  sleep 10  ;done']
+        resources: {}
+status: {}

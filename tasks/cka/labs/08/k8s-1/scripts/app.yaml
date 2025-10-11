@@ -1,0 +1,102 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: portal
+  name: portal
+  namespace: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app
+    spec:
+      containers:
+      - image: viktoruj/ping_pong
+        name: app
+        env:
+           - name:  SRV_PORT
+             value: "80"
+
+        resources:
+            requests:
+                memory: 10Mi
+                cpu: 100m
+            limits:
+                memory: 20Mi
+                cpu: 250m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: portal
+  name: portal
+  namespace: production
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: app
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: finance
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: finance
+  name: finance
+  namespace: finance
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: finance
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: external
+  name: external
+  namespace: external
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: external
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}

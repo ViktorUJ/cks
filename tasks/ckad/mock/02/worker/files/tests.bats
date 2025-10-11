@@ -84,6 +84,34 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "IfNotPresent" ]
 }
 
+@test "2.8 Create a cron job cron-job1. failedJobsHistoryLimit" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$( kubectl  get cronjobs.batch  cron-job1 -n rnd  --context cluster1-admin@cluster1 -o jsonpath='{.spec.failedJobsHistoryLimit}')
+  if [[ "$result" == "7" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "7" ]
+}
+
+@test "2.9 Create a cron job cron-job1. successfulJobsHistoryLimit" {
+  echo '0.5'>>/var/work/tests/result/all
+  result=$( kubectl  get cronjobs.batch  cron-job1 -n rnd  --context cluster1-admin@cluster1 -o jsonpath='{.spec.successfulJobsHistoryLimit}')
+  if [[ "$result" == "5" ]]; then
+   echo '0.5'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "5" ]
+}
+
+@test "2.10 Create a cron job cron-job1. activeDeadlineSeconds" {
+  echo '1'>>/var/work/tests/result/all
+  result=$( kubectl  get cronjobs.batch  cron-job1 -n rnd  --context cluster1-admin@cluster1 -o jsonpath='{.spec.jobTemplate.spec.activeDeadlineSeconds}')
+  if [[ "$result" == "10" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "10" ]
+}
+
+
 @test "3.1 Deployment my-deployment in the namespace baracuda. Rollback deployment " {
   echo '1'>>/var/work/tests/result/all
   result=$(kubectl  get deployment  my-deployment -n baracuda    --context cluster1-admin@cluster1 -o jsonpath='{.spec.template.spec.containers..image}')
@@ -417,7 +445,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '3'>>/var/work/tests/result/all
   kubectl exec checker -n legacy -- sh -c 'curl legacy-app:8081/xxxx_test_app1' --context cluster1-admin@cluster1
   sleep 3
-  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1| grep 'xxxx_test_app1'
+  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1  --tail=-1| grep 'xxxx_test_app1'
   result=$?
   if [[ "$result" == '0' ]]; then
    echo '3'>>/var/work/tests/result/ok
@@ -429,7 +457,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   echo '3'>>/var/work/tests/result/all
   kubectl exec checker -n legacy -- sh -c 'curl legacy-app:8082/yyyy_test_app2' --context cluster1-admin@cluster1
   sleep 3
-  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1| grep 'yyyy_test_app2'
+  kubectl logs  -l app=legacy-app  -n legacy  -c log --context cluster1-admin@cluster1  --tail=-1| grep 'yyyy_test_app2'
   result=$?
   if [[ "$result" == '0' ]]; then
    echo '3'>>/var/work/tests/result/ok
@@ -510,6 +538,25 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   result=$?
   if [[ "$result" == "0" ]]; then
    echo '4'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "21.1 create deployment app-21 " {
+  echo '1'>>/var/work/tests/result/all
+  result=$(kubectl get deployment app-21 --context cluster1-admin@cluster1 | grep '3/3'| cut -d' ' -f1)
+  if [[ "$result" == "app-21" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "app-21" ]
+}
+
+@test "21.2 fix manifest /var/work/21/app-21.yaml  " {
+  echo '1'>>/var/work/tests/result/all
+  cat /var/work/21/app-21.yaml | grep apiVersion | grep 'apps/v1'
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
   fi
   [ "$result" == "0" ]
 }

@@ -1,11 +1,20 @@
 # Welcome to the SRE Learning Platform!
+<p align="center">
+    <a href="https://github.com/ViktorUJ/cks"><img src="https://raw.githubusercontent.com/ViktorUJ/terraform-aws-vpc/master/img/logo_192x192.png" width="192" height="192" alt="SRE Learning Platform"/></a>
+</p>
+
 
 The **SRE Learning Platform** is an open-source hub designed to help IT engineers effectively prepare for the **CKA (Certified Kubernetes Administrator)**, **CKS (Certified Kubernetes Security Specialist)**, **CKAD (Certified Kubernetes Application Developer)**, and **LFCS (Linux Foundation Certified System Administrator)** exams. Additionally, this platform offers invaluable hands-on experience with **AWS EKS (Elastic Kubernetes Service)**, equipping users with practical insights for real-world applications. Whether you're aiming to validate your skills, boost your career prospects in Kubernetes administration, security, application development, or delve into AWS EKS, this platform provides hands-on labs, practice tests, and expert guidance to ensure certification success.
 
 - Prepare for the **CKA**: [Certified Kubernetes Administrator Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
 - Enhance your skills for the **CKS**: [Certified Kubernetes Security Specialist Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/)
 - Excel in the **CKAD**: [Certified Kubernetes Application Developer Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-application-developer-ckad/)
+- Prepare for the **KCNA**: [Kubernetes and Cloud Native Associate](https://training.linuxfoundation.org/certification/kubernetes-cloud-native-associate/)
+- Prepare for the **KCSA**: [Kubernetes and Cloud Native Security Associate](https://training.linuxfoundation.org/certification/kubernetes-and-cloud-native-security-associate-kcsa/)
 - Prepare for the **LFCS**: [Linux Foundation Certified System Administrator](https://training.linuxfoundation.org/certification/linux-foundation-certified-sysadmin-lfcs/)
+- Prepare for the **KCNA**: [Kubernetes and Cloud Native Associate](https://training.linuxfoundation.org/certification/kubernetes-cloud-native-associate/)
+- Prepare for the [AWS Certified AI Practitioner](https://aws.amazon.com/certification/certified-ai-practitioner/)
+
 
 Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **SRE Learning Platform**.
 
@@ -59,15 +68,15 @@ The repository is organized into the following sections:
 - you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)
 - [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)  module supports versions:
 ````
-k8s version  : [ 1.21 , 1.29 ]   https://kubernetes.io/releases/
+k8s version  : [ 1.21 , 1.33 ]   https://kubernetes.io/releases/
 Rintime :
     docker                   [1.21 , 1.23]
     cri-o                    [1.21 , 1.29]
-    containerd               [1.21 , 1.30]   # cks, cka  default 1.29
-    containerd_gvizor        [1.21 , 1.30]
+    containerd               [1.21 , 1.33]   # cks, cka  default 1.32
+    containerd_gvizor        [1.21 , 1.33]
 OS for nodes  :
-   ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
-CNI :  calico
+   ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  22.04 LTS
+CNI :  calico ,culium
 ````
 </details>
 
@@ -146,6 +155,23 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCNA</summary>
+
+### KCNA
+
+- check examle questions in [kcna](tasks%2Fkcna) directory
+
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCSA</summary>
+
+- check examle questions in [kcsa](tasks%2Fkcsa) directory
+
+</details>
+
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">HR</summary>
 
 - ``TASK=01 make run_hr_mock`` - create mock  hr exam [number 01](tasks%2Fhr%2Fmock%2F01)
@@ -170,6 +196,13 @@ Every command should be run from the project's root directory.
 
 ## Usage scenarios
 
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">AWS Certified AI Practitioner </summary>
+
+### example questions for **AWS Certified AI Practitioner** exam
+
+- check examle questions in [AWS Certified AI Practitioner](tasks/aws_AI_practitioner) directory
+</details>
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
@@ -263,6 +296,22 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCNA </summary>
+
+### example questions for KCNA exam
+
+- check examle questions in [kcna](tasks%2Fkcna) directory
+</details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCSA</summary>
+
+### example questions for KCSA exam
+
+- check examle questions in [kcsa](tasks%2Fkcsa) directory
+</details>
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">mock HR exam</summary>
 
   [Video instruction for launching **HR mock exam**](https://youtu.be/4CTC1jl8lxE)
@@ -306,7 +355,7 @@ Every command should be run from the project's root directory.
 ## [CODE OF CONDUCT](docs%2FCODE_OF_CONDUCT.md)
 
 ## Contribution
-If you want to be part of the project development team, get in touch with [us](https://github.com/ViktorUJ/cks/tree/master#contacts). We are always happy to welcome new members to our development team
+If you want to be part of the project development team, get in touch with [us](https://github.com/ViktorUJ/cks/tree/master#contacts). We are always happy to welcome new members to our development team.
 
 
 If you want to say **thank you** or/and support the active development of **SRE Learning Platform project** :
@@ -327,3 +376,7 @@ If you want to say **thank you** or/and support the active development of **SRE 
 If you encounter any issues or have questions about the project, you can reach out to:
 
 [![email](https://badgen.net/badge/icon/email?icon=email&label)](mailto:viktoruj@gmail.com) [![Telegram](https://badgen.net/badge/icon/telegram?icon=telegram&label)](https://t.me/viktor_uj) [![LinkedI](https://badgen.net/badge/icon/linkedin?icon=linkedin&label)](https://www.linkedin.com/in/viktar-mikalayeu-mns)
+
+
+
+
