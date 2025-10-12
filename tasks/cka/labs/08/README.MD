@@ -1,7 +1,5 @@
 # Cilium NetworkPolicy  L7.
 
-
-
 You have a corporate portal ( k8s service **portal** in **production** namespace)
 
 You need to create  [Cilium NetworkPolicy](https://editor.networkpolicy.io/) **api-access** provide these requirements
