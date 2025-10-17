@@ -24,7 +24,16 @@ spec:
       labels:
         app: app
     spec:
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: tls
+
       containers:
       - image: viktoruj/ping_pong:alpine
         name: app
+        volumeMounts:
+           - name: secret-volume
+             readOnly: true
+             mountPath: "/mnt/secret-volume"
 
