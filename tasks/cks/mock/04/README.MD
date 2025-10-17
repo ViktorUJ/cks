@@ -95,25 +95,10 @@ documentation https://etcd.io/docs/
 |        Cluster      | cluster6 (   `kubectl config use-context    cluster6-admin@cluster6`   )           |
 | Acceptance criteria | pod from  Deployment `container-host-hacker` in Namespace `team-red` is running .  |
 ---
-
-======
-
-|       **10**        | создать сикрет tls из файлов . есть деплоймент  с настроенными маунтами . проверить что повилось в поде                              |
+|       **10**        | Create a TLS secret from local files. There is a Deployment with the appropriate volume mounts configured. Verify that the secret has appeared correctly inside the Pod.                            |
 |:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------|
 |       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                      |
 | Acceptance criteria | **NS** `team-black10`  , create  tls secret `tls` from  `/var/work/19` . pod from deployment `app` has mounted secret in file system |
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
