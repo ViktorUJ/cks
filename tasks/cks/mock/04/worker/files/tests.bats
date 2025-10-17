@@ -341,3 +341,23 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+@test "10.1 deloyment pod mount secret. crt file  " {
+  echo '1'>>/var/work/tests/result/all
+  POD=$(kubectl get pod -n team-black10 -l app=app --context cluster6-admin@cluster6  -o jsonpath='{.items[0].metadata.name}')
+  diff -q /var/work/19/cks.local.crt <(kubectl exec "$POD" -n team-black10 --context cluster6-admin@cluster6  -- sh -c 'cat /mnt/secret-volume/tls.crt')
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+@test "10.2 deloyment pod mount secret. key file  " {
+  echo '1'>>/var/work/tests/result/all
+  POD=$(kubectl get pod -n team-black10 -l app=app --context cluster6-admin@cluster6  -o jsonpath='{.items[0].metadata.name}')
+  diff -q /var/work/19/cks.local.key <(kubectl exec "$POD" -n team-black10 --context cluster6-admin@cluster6  -- sh -c 'cat /mnt/secret-volume/tls.key')
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
