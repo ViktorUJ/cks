@@ -3,12 +3,10 @@ set -Eeuo pipefail
 
 # ---- traps (show where it failed) ----
 on_err() {
-  echo "❌ ERROR at line $BASH_LINENO: command '${BASH_COMMAND}' failed." >&2
+  echo "❌ ERROR at line ${BASH_LINENO[0]}: command '${BASH_COMMAND}' failed." >&2
   echo "    Hint: run with --trace to see full execution." >&2
 }
-on_exit() { :; }
 trap on_err ERR
-trap on_exit EXIT
 
 # -------- Defaults --------
 REGION="${REGION:-eu-north-1}"         # EC2 region
@@ -64,18 +62,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-(( TRACE )) && set -x
+if (( TRACE )); then set -x; fi
 
 # -------- Logging --------
 log()   { printf "%s\n" "$*" >&2; }
-debug() { (( DEBUG )) && printf "[DEBUG] %s\n" "$*" >&2; }
+debug() { if (( DEBUG )); then printf "[DEBUG] %s\n" "$*" >&2; fi; }
 
 # progress bar without seq
 pbar() {
   local progress=$1 total=$2 width=40
-  (( total <= 0 )) && total=1
-  (( progress < 0 )) && progress=0
-  (( progress > total )) && progress=$total
+  if (( total <= 0 )); then total=1; fi
+  if (( progress < 0 )); then progress=0; fi
+  if (( progress > total )); then progress=$total; fi
   local percent=$(( progress * 100 / total ))
   local filled=$(( width * progress / total ))
   local empty=$(( width - filled ))
@@ -86,7 +84,9 @@ pbar() {
 }
 
 EMOJI_BOX="📦"; EMOJI_MAG="🔍"; EMOJI_OK="✅"; EMOJI_CLOUD="☁️"
-(( NO_EMOJI )) && EMOJI_BOX="[ ]" && EMOJI_MAG="[*]" && EMOJI_OK="[OK]" && EMOJI_CLOUD="(cloud)"
+if (( NO_EMOJI )); then
+  EMOJI_BOX="[ ]"; EMOJI_MAG="[*]"; EMOJI_OK="[OK]"; EMOJI_CLOUD="(cloud)"
+fi
 
 # -------- Dependencies --------
 for bin in aws jq curl; do
@@ -125,7 +125,7 @@ log "$EMOJI_MAG Describing ${#OFFERINGS[@]} instance types..."
 DESCRIBE_COMBINED='{"InstanceTypes":[]}'
 CHUNK=100
 chunks=$(( (${#OFFERINGS[@]} + CHUNK - 1) / CHUNK ))
-(( chunks == 0 )) && chunks=1
+if (( chunks == 0 )); then chunks=1; fi
 for (( i=0; i<${#OFFERINGS[@]}; i+=CHUNK )); do
   PART=( "${OFFERINGS[@]:i:CHUNK}" )
   # shellcheck disable=SC2086
@@ -162,10 +162,11 @@ fi
 
 # -------- 4) Load Spot Advisor --------
 log "$EMOJI_CLOUD  Fetching Spot Advisor JSON..."
-# curl -f (fail), -s (silent), -S (show errors), -L (follow)
 ADVISOR=$(curl -fSsL "$ADVISOR_URL")
 log "$EMOJI_OK Spot Advisor loaded."
-(( DEBUG )) && debug "Top-level keys: $(jq -r '.spot_advisor | keys[]' <<<"$ADVISOR" | tr '\n' ' ')"
+if (( DEBUG )); then
+  debug "Top-level keys: $(jq -r '.spot_advisor | keys[]' <<<"$ADVISOR" | tr '\n' ' ')"
+fi
 
 # Optional JSON snippet for region
 if (( DEBUG )); then
@@ -219,6 +220,7 @@ threshold_to_rank() {
   elif (( pct <= 20 )); then echo 4
   else echo 4; fi
 }
+threshold_rank_max
 threshold_rank_max=$(threshold_to_rank "$INTERRUPT_THRESHOLD")
 
 MISSING_DUMP_COUNT=0
@@ -230,7 +232,7 @@ rank_one() {
   size="${it##*.}"
   rank="$(jq_get_rank "$fam" "$size" "$it")"
   if [[ -z "$rank" ]]; then
-    if (( DEBUG && MISSING_DUMP_COUNT < MISSING_DUMP_LIMIT )); then
+    if (( DEBUG )) && (( MISSING_DUMP_COUNT < MISSING_DUMP_LIMIT )); then
       ((MISSING_DUMP_COUNT++))
       echo "[DEBUG] No rate for ${it} in region '${REGION}' (tried A/B/C/D/E). Dump #${MISSING_DUMP_COUNT}:" >&2
       echo "[DEBUG]   Path D: .spot_advisor[\"$REGION\"][\"$OS_BUCKET\"][\"$it\"]" >&2
@@ -260,13 +262,13 @@ rank_one() {
         }' <<<"$ADVISOR" >&2
       echo "[DEBUG] --------------------------------------------------------------" >&2
     fi
-    if (( INCLUDE_UNKNOWN == 1 )); then
+    if (( INCLUDE_UNKNOWN )); then
       rank=2
     else
       return
     fi
   fi
-  (( rank > threshold_rank_max )) && return
+  if (( rank > threshold_rank_max )); then return; fi
   printf "%d\t%s\n" "$rank" "$it"
 }
 
@@ -288,7 +290,7 @@ readarray -t FINAL < <(echo "$PRE_SORTED" | awk 'NF>0' | awk '!seen[$0]++' | hea
 
 printf "[ "
 for (( i=0; i<${#FINAL[@]}; i++ )); do
-  (( i>0 )) && printf " , "
+  if (( i>0 )); then printf " , "; fi
   printf "\"%s\"" "${FINAL[$i]}"
 done
 printf " ]\n"
