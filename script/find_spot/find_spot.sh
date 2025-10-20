@@ -29,7 +29,7 @@ Filters:
 
 System:
   --os <linux|windows>              OS for Spot Advisor (default: linux)
-  --debug                           Verbose debug logs (shows JSON snippet, missing rates, counts)
+  --debug                           Verbose debug logs (JSON snippets for missing rates)
 
 Env:
   REGION (default: eu-north-1)
@@ -173,6 +173,10 @@ threshold_to_rank() {
 }
 threshold_rank_max=$(threshold_to_rank "$INTERRUPT_THRESHOLD")
 
+# Counter to print JSON dump for first 3 missing-rate cases only
+MISSING_DUMP_COUNT=0
+MISSING_DUMP_LIMIT=3
+
 # -------- 7) Rank by interruptions --------
 rank_one() {
   local it="$1" fam size rate rank
@@ -180,14 +184,45 @@ rank_one() {
   size="${it##*.}"
 
   rate="$(jq_get_rate "$fam" "$size")"
-  if (( DEBUG )) && [[ -z "$rate" ]]; then
-    echo "[DEBUG] No rate for $fam.$size in region '$REGION' (tried A/B/C layouts)" >&2
-  fi
   if [[ -z "$rate" || "$rate" == "null" ]]; then
-    if (( INCLUDE_UNKNOWN == 1 )); then rank=2; else return; fi
+    if (( DEBUG && MISSING_DUMP_COUNT < MISSING_DUMP_LIMIT )); then
+      ((MISSING_DUMP_COUNT++))
+      echo "[DEBUG] No rate for ${fam}.${size} in region '${REGION}' (tried A/B/C layouts). Dump #${MISSING_DUMP_COUNT}:" >&2
+      # Show small, targeted snippets around the likely paths
+      echo "[DEBUG]   Path B: .spot_advisor[\"$REGION\"][\"$OS_BUCKET\"][\"$fam\"][\"$size\"]" >&2
+      jq -r --arg reg "$REGION" --arg os "$OS_BUCKET" --arg fam "$fam" --arg size "$size" '
+        { value: (.spot_advisor[$reg][$os][$fam][$size] // null),
+          fam_exists: (.spot_advisor[$reg][$os][$fam] | (type=="object")),
+          region_exists: (.spot_advisor[$reg] | (type=="object")),
+          os_keys: ((.spot_advisor[$reg] // {}) | keys[0:5]),
+          fam_keys: ((.spot_advisor[$reg][$os] // {}) | keys[0:10])
+        }' <<<"$ADVISOR" >&2
+
+      echo "[DEBUG]   Path C: .spot_advisor[\"$REGION\"][\"$fam\"][\"$size\"]" >&2
+      jq -r --arg reg "$REGION" --arg fam "$fam" --arg size "$size" '
+        { value: (.spot_advisor[$reg][$fam][$size] // null),
+          fam_exists: (.spot_advisor[$reg][$fam] | (type=="object")),
+          region_keys: ((.spot_advisor[$reg] // {}) | keys[0:10]),
+          size_keys: ((.spot_advisor[$reg][$fam] // {}) | keys[0:10])
+        }' <<<"$ADVISOR" >&2
+
+      echo "[DEBUG]   Path A: .spot_advisor[\"$OS_BUCKET\"][\"$REGION\"][\"$fam\"][\"$size\"]" >&2
+      jq -r --arg os "$OS_BUCKET" --arg reg "$REGION" --arg fam "$fam" --arg size "$size" '
+        { value: (.spot_advisor[$os][$reg][$fam][$size] // null),
+          os_exists: (.spot_advisor[$os] | (type=="object")),
+          os_keys: ((.spot_advisor[$os] // {}) | keys[0:10])
+        }' <<<"$ADVISOR" >&2
+      echo "[DEBUG] --------------------------------------------------------------" >&2
+    fi
+    if (( INCLUDE_UNKNOWN == 1 )); then
+      rank=2
+    else
+      return
+    fi
   else
     rank=$(spot_bucket_to_rank "$rate")
   fi
+
   (( rank > threshold_rank_max )) && return
   printf "%d\t%s\n" "$rank" "$it"
 }
