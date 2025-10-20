@@ -9,7 +9,7 @@ OUTPUT_LIMIT_DEFAULT=50
 INTERRUPT_THRESHOLD_DEFAULT=20
 PROFILE_OPT=${AWS_PROFILE:+--profile "$AWS_PROFILE"}
 ADVISOR_URL="https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json"
-EXCLUDE_FAMILY_RE='^(g|p|inf|trn|f1|dl|vt)'  # exclude expensive families (GPU/FPGA/Infer/Trainium/Video)
+EXCLUDE_FAMILY_RE='^(g|p|inf|trn|f1|dl|vt)'  # exclude expensive families
 
 # -------- CLI --------
 OUTPUT_LIMIT="$OUTPUT_LIMIT_DEFAULT"
@@ -138,38 +138,47 @@ if (( DEBUG )); then
   fi
 fi
 
-# -------- 5) Access helper: try all known layouts --------
+# -------- 5) Access helper: try all known layouts and normalize "r" --------
+# Supported layouts:
 # A: .spot_advisor[OS][REGION][family][size].r
 # B: .spot_advisor[REGION][OS][family][size].r
 # C: .spot_advisor[REGION][family][size].r
 # D: .spot_advisor[REGION][OS][instanceType].r
 # E: .spot_advisor[REGION][instanceType].r
-jq_get_rate() {
+#
+# We normalize:
+# - if r is a string ("<5%","5-10%",...) -> map to rank 1..5
+# - if r is a number (0..4)              -> rank = r + 1
+jq_get_rank() {
   local fam="$1" size="$2" it="$3"
   jq -r --arg os "$OS_BUCKET" --arg reg "$REGION" --arg fam "$fam" --arg size "$size" --arg it "$it" '
-    .spot_advisor[$os][$reg][$fam][$size].r
+    def norm($x):
+      if ($x|type)=="string" then
+        if   $x=="<5%"     then 1
+        elif $x=="5-10%"   then 2
+        elif $x=="10-15%"  then 3
+        elif $x=="15-20%"  then 4
+        elif $x==">20%"    then 5
+        else empty end
+      elif ($x|type)=="number" then
+        # numeric 0..4 -> 1..5
+        ($x + 1)
+      else empty end;
+    # try all layouts, pick first non-empty
+    ( .spot_advisor[$os][$reg][$fam][$size].r
     // .spot_advisor[$reg][$os][$fam][$size].r
     // .spot_advisor[$reg][$fam][$size].r
     // .spot_advisor[$reg][$os][$it].r
     // .spot_advisor[$reg][$it].r
-    // empty
+    // empty ) as $r
+    | norm($r)
   ' <<<"$ADVISOR"
 }
 
 # -------- 6) Buckets & threshold --------
-spot_bucket_to_rank() {
-  case "$1" in
-    "<5%") echo 1;;
-    "5-10%") echo 2;;
-    "10-15%") echo 3;;
-    "15-20%") echo 4;;
-    ">20%") echo 5;;
-    *) echo 9;;
-  esac
-}
 threshold_to_rank() {
   local pct="$1"
-  if   (( pct <= 5 )); then echo 1
+  if   (( pct <= 5 ));  then echo 1
   elif (( pct <= 10 )); then echo 2
   elif (( pct <= 15 )); then echo 3
   elif (( pct <= 20 )); then echo 4
@@ -183,12 +192,12 @@ MISSING_DUMP_LIMIT=3
 
 # -------- 7) Rank by interruptions --------
 rank_one() {
-  local it="$1" fam size rate rank
+  local it="$1" fam size rank
   fam="${it%%.*}"
   size="${it##*.}"
 
-  rate="$(jq_get_rate "$fam" "$size" "$it")"
-  if [[ -z "$rate" || "$rate" == "null" ]]; then
+  rank="$(jq_get_rank "$fam" "$size" "$it")"
+  if [[ -z "$rank" ]]; then
     if (( DEBUG && MISSING_DUMP_COUNT < MISSING_DUMP_LIMIT )); then
       ((MISSING_DUMP_COUNT++))
       echo "[DEBUG] No rate for ${it} in region '${REGION}' (tried A/B/C/D/E). Dump #${MISSING_DUMP_COUNT}:" >&2
@@ -229,11 +238,11 @@ rank_one() {
     else
       return
     fi
-  else
-    rank=$(spot_bucket_to_rank "$rate")
   fi
 
+  # Threshold filter
   (( rank > threshold_rank_max )) && return
+  # Emit: rank \t instanceType
   printf "%d\t%s\n" "$rank" "$it"
 }
 
@@ -243,7 +252,8 @@ PRE_SORTED=$(
   | LC_ALL=C sort -n -k1,1 -k2,2 \
   | awk '{print $2}'
 )
-debug "Pre-sorted count: $(echo "$PRE_SORTED" | wc -l)"
+# Note: wc -l on empty string returns 0, on blank line returns 1; use non-empty check below.
+debug "Pre-sorted empty? $([[ -z "${PRE_SORTED}" ]] && echo yes || echo no)"
 
 # -------- 8) Output --------
 if [[ -z "$PRE_SORTED" ]]; then
@@ -252,7 +262,7 @@ if [[ -z "$PRE_SORTED" ]]; then
   exit 0
 fi
 
-readarray -t FINAL < <(echo "$PRE_SORTED" | awk '!seen[$0]++' | head -n "$OUTPUT_LIMIT")
+readarray -t FINAL < <(echo "$PRE_SORTED" | awk 'NF>0' | awk '!seen[$0]++' | head -n "$OUTPUT_LIMIT")
 
 # Exact required format: [ "a" , "b" , "c" ]
 printf "[ "
