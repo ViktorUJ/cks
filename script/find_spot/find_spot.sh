@@ -3,21 +3,20 @@ set -euo pipefail
 
 # -------- Defaults --------
 REGION="${REGION:-eu-north-1}"         # EC2 region
-OS_BUCKET_RAW="linux"                  # default OS (user input)
 MIN_MEM_MIB="${MIN_MEM_MIB:-4096}"     # >= 4 GiB
 SIZE_RE='\.((medium)|(large)|(xlarge)|(2xlarge))$'  # up to 2xlarge
 OUTPUT_LIMIT_DEFAULT=50
 INTERRUPT_THRESHOLD_DEFAULT=20
 PROFILE_OPT=${AWS_PROFILE:+--profile "$AWS_PROFILE"}
 ADVISOR_URL="https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json"
-EXCLUDE_FAMILY_RE='^(g|p|inf|trn|f1|dl|vt)'  # exclude expensive families
+EXCLUDE_FAMILY_RE='^(g|p|inf|trn|f1|dl|vt)'  # exclude expensive families (GPU/FPGA/Infer/Trainium/Video)
 
 # -------- CLI --------
 OUTPUT_LIMIT="$OUTPUT_LIMIT_DEFAULT"
 INTERRUPT_THRESHOLD="$INTERRUPT_THRESHOLD_DEFAULT"
-INCLUDE_UNKNOWN=0  # include missing Advisor entries as rank=2
+INCLUDE_UNKNOWN=0      # include missing Advisor entries as rank=2 (~<=10%)
 DEBUG=0
-OS_CLI=""          # --os linux|windows
+OS_CLI="linux"        # --os linux|windows (default linux)
 
 usage() {
   cat <<'EOF'
@@ -29,8 +28,8 @@ Filters:
   --include-unknown                 Include types missing in Advisor as rank=2 (~<=10%)
 
 System:
-  --os <linux|windows>              OS for Advisor if OS level exists (default: linux)
-  --debug                           Verbose debug logs
+  --os <linux|windows>              OS for Spot Advisor (default: linux)
+  --debug                           Verbose debug logs (shows JSON snippet, missing rates, counts)
 
 Env:
   REGION (default: eu-north-1)
@@ -65,8 +64,8 @@ for bin in aws jq curl; do
   command -v "$bin" >/dev/null || { echo "❌ Missing dependency: $bin" >&2; exit 1; }
 done
 
-# -------- Normalize OS bucket name --------
-case "${OS_CLI:-$OS_BUCKET_RAW,,}" in
+# -------- Normalize OS bucket to "Linux"/"Windows" --------
+case "${OS_CLI,,}" in
   linux|"") OS_BUCKET="Linux" ;;
   windows)  OS_BUCKET="Windows" ;;
   *)        OS_BUCKET="Linux" ;;
@@ -123,32 +122,37 @@ ADVISOR=$(curl -fsSL "$ADVISOR_URL")
 log "✅ Spot Advisor loaded."
 debug "Spot Advisor top-level keys: $(jq -r '.spot_advisor | keys[]' <<<"$ADVISOR" | tr '\n' ' ')"
 
+# Debug JSON snippet for the chosen region (does not break stdout)
+if (( DEBUG )); then
+  if jq -e --arg reg "$REGION" '.spot_advisor[$reg] | type=="object"' <<<"$ADVISOR" >/dev/null; then
+    debug "Region '$REGION' exists in Advisor."
+    debug "Region-level keys (first 10): $(jq -r --arg reg "$REGION" '.spot_advisor[$reg] | keys[]' <<<"$ADVISOR" | head -n 10 | tr '\n' ' ')"
+    echo "[DEBUG] --- JSON snippet for region '$REGION' ---" >&2
+    jq --arg reg "$REGION" '.spot_advisor[$reg] | to_entries | .[0:3]' <<<"$ADVISOR" >&2
+    echo "[DEBUG] ---------------------------------------" >&2
+  else
+    debug "Region '$REGION' not found at top-level of Advisor."
+    echo "[DEBUG] --- JSON root preview ---" >&2
+    jq '.spot_advisor | to_entries | .[0:3]' <<<"$ADVISOR" >&2
+    echo "[DEBUG] --------------------------------------" >&2
+  fi
+fi
+
 # -------- 5) Access helper: try all known layouts --------
 # Layout A: .spot_advisor[OS][REGION][family][size].r
 # Layout B: .spot_advisor[REGION][OS][family][size].r
 # Layout C: .spot_advisor[REGION][family][size].r
 jq_get_rate() {
   local fam="$1" size="$2"
-  local r
-  r=$(jq -r --arg os "$OS_BUCKET" --arg reg "$REGION" --arg fam "$fam" --arg size "$size" '
-      .spot_advisor[$os][$reg][$fam][$size].r
-      // .spot_advisor[$reg][$os][$fam][$size].r
-      // .spot_advisor[$reg][$fam][$size].r
-      // empty
-    ' <<<"$ADVISOR")
-  printf "%s" "$r"
+  jq -r --arg os "$OS_BUCKET" --arg reg "$REGION" --arg fam "$fam" --arg size "$size" '
+    .spot_advisor[$os][$reg][$fam][$size].r
+    // .spot_advisor[$reg][$os][$fam][$size].r
+    // .spot_advisor[$reg][$fam][$size].r
+    // empty
+  ' <<<"$ADVISOR"
 }
 
-# Helpful debug dump: show which keys exist under region
-if (( DEBUG )); then
-  if jq -e --arg reg "$REGION" '.spot_advisor[$reg] | type=="object"' <<<"$ADVISOR" >/dev/null; then
-    debug "Region '$REGION' exists in Advisor."
-    debug "Region-level keys: $(jq -r --arg reg "$REGION" '.spot_advisor[$reg] | keys[]' <<<"$ADVISOR" | head -n 10 | tr '\n' ' ') ..."
-  else
-    debug "Region '$REGION' not found at top-level of Advisor."
-  fi
-fi
-
+# -------- 6) Buckets & threshold --------
 spot_bucket_to_rank() {
   case "$1" in
     "<5%") echo 1;;
@@ -169,7 +173,7 @@ threshold_to_rank() {
 }
 threshold_rank_max=$(threshold_to_rank "$INTERRUPT_THRESHOLD")
 
-# -------- 6) Rank by interruptions --------
+# -------- 7) Rank by interruptions --------
 rank_one() {
   local it="$1" fam size rate rank
   fam="${it%%.*}"
@@ -177,7 +181,7 @@ rank_one() {
 
   rate="$(jq_get_rate "$fam" "$size")"
   if (( DEBUG )) && [[ -z "$rate" ]]; then
-    echo "[DEBUG] No rate for $fam.$size in region '$REGION' (trying A/B/C layouts failed)" >&2
+    echo "[DEBUG] No rate for $fam.$size in region '$REGION' (tried A/B/C layouts)" >&2
   fi
   if [[ -z "$rate" || "$rate" == "null" ]]; then
     if (( INCLUDE_UNKNOWN == 1 )); then rank=2; else return; fi
@@ -196,15 +200,16 @@ PRE_SORTED=$(
 )
 debug "Pre-sorted count: $(echo "$PRE_SORTED" | wc -l)"
 
+# -------- 8) Output --------
 if [[ -z "$PRE_SORTED" ]]; then
   echo "[]"
   log "⚠️ No instances matched Spot threshold. Try --include-unknown or increase -i (e.g., 20)."
   exit 0
 fi
 
-# -------- 7) Output --------
 readarray -t FINAL < <(echo "$PRE_SORTED" | awk '!seen[$0]++' | head -n "$OUTPUT_LIMIT")
 
+# Exact required format: [ "a" , "b" , "c" ]
 printf "[ "
 for (( i=0; i<${#FINAL[@]}; i++ )); do
   (( i>0 )) && printf " , "
