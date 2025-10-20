@@ -220,7 +220,6 @@ threshold_to_rank() {
   elif (( pct <= 20 )); then echo 4
   else echo 4; fi
 }
-threshold_rank_max
 threshold_rank_max=$(threshold_to_rank "$INTERRUPT_THRESHOLD")
 
 MISSING_DUMP_COUNT=0
