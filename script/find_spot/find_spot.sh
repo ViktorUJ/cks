@@ -16,7 +16,7 @@ OUTPUT_LIMIT_DEFAULT=50
 INTERRUPT_THRESHOLD_DEFAULT=20
 PROFILE_OPT=${AWS_PROFILE:+--profile "$AWS_PROFILE"}
 ADVISOR_URL="https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json"
-EXCLUDE_FAMILY_RE='^(g|p|inf|trn|f1|dl|vt)'  # exclude expensive families
+EXCLUDE_FAMILY_RE='^(g|p|inf|trn|f1|dl|vt)'  # exclude expensive families (GPU/Inferentia/Trainium/FPGA/Video)
 
 # -------- CLI --------
 OUTPUT_LIMIT="$OUTPUT_LIMIT_DEFAULT"
@@ -26,6 +26,7 @@ DEBUG=0
 TRACE=0
 OS_CLI="linux"        # --os linux|windows (default linux)
 NO_EMOJI=0
+ARCH="x86"            # --arch x86|arm (default x86)
 
 usage() {
   cat <<'EOF'
@@ -34,6 +35,7 @@ Usage: find_spot.sh [options]
 Filters:
   -i, --interrupt-threshold <PCT>   Max Spot interruption bucket (5,10,15,20). Includes lower. Default: 20
   -n, --limit <NUM>                 Max instance types in output. Default: 50
+  -a, --arch <x86|arm>             Architecture filter (default: x86)
   --include-unknown                 Include types missing in Advisor as rank=2 (~<=10%)
 
 System:
@@ -52,6 +54,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     -i|--interrupt-threshold) INTERRUPT_THRESHOLD="${2:?}"; shift 2;;
     -n|--limit)               OUTPUT_LIMIT="${2:?}"; shift 2;;
+    -a|--arch)                ARCH="${2,,}"; shift 2;;
     --include-unknown)        INCLUDE_UNKNOWN=1; shift;;
     --os)                     OS_CLI="${2:?}"; shift 2;;
     --debug)                  DEBUG=1; shift;;
@@ -104,6 +107,14 @@ case "${OS_CLI,,}" in
 esac
 debug "OS bucket preferred: '$OS_BUCKET'"
 
+# -------- Normalize architecture to jq filter value --------
+case "$ARCH" in
+  x86|x86_64|amd64) ARCH_FILTER="x86_64" ;;
+  arm|arm64|aarch64) ARCH_FILTER="arm64" ;;
+  *) echo "❌ Unknown arch: $ARCH (use x86 or arm)" >&2; exit 1 ;;
+esac
+debug "Architecture filter: $ARCH_FILTER"
+
 # -------- 1) Offerings --------
 log "$EMOJI_BOX Fetching available instance types for region $REGION ..."
 readarray -t OFFERINGS < <(aws ec2 describe-instance-type-offerings \
@@ -140,10 +151,10 @@ done
 printf "\n" >&2
 log "$EMOJI_OK Instance types described."
 
-# -------- 3) Filter candidates --------
-CANDIDATES=$(jq -r --arg re "$SIZE_RE" --argjson min "$MIN_MEM_MIB" '
+# -------- 3) Filter candidates (arch, mem >= 4GiB, size <= 2xlarge, exclude metal/expensive) --------
+CANDIDATES=$(jq -r --arg re "$SIZE_RE" --argjson min "$MIN_MEM_MIB" --arg arch "$ARCH_FILTER" '
   .InstanceTypes[]
-  | select(.ProcessorInfo.SupportedArchitectures[] | contains("x86_64"))
+  | select(.ProcessorInfo.SupportedArchitectures[] | contains($arch))
   | select(.MemoryInfo.SizeInMiB >= $min)
   | .InstanceType as $t
   | select(($t | test($re)) and ($t | contains(".metal") | not))
@@ -156,7 +167,7 @@ debug "Filtered candidates: $(echo "$CANDIDATES" | wc -l) types"
 
 if [[ -z "$CANDIDATES" ]]; then
   echo "[]"
-  echo "⚠️ No matching x86 types after filters (arch/mem/size/family)." >&2
+  echo "⚠️ No matching types after filters (arch/mem/size/family)." >&2
   exit 0
 fi
 
@@ -220,6 +231,7 @@ threshold_to_rank() {
   elif (( pct <= 20 )); then echo 4
   else echo 4; fi
 }
+threshold_rank_max
 threshold_rank_max=$(threshold_to_rank "$INTERRUPT_THRESHOLD")
 
 MISSING_DUMP_COUNT=0
