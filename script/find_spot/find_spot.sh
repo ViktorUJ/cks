@@ -139,15 +139,19 @@ if (( DEBUG )); then
 fi
 
 # -------- 5) Access helper: try all known layouts --------
-# Layout A: .spot_advisor[OS][REGION][family][size].r
-# Layout B: .spot_advisor[REGION][OS][family][size].r
-# Layout C: .spot_advisor[REGION][family][size].r
+# A: .spot_advisor[OS][REGION][family][size].r
+# B: .spot_advisor[REGION][OS][family][size].r
+# C: .spot_advisor[REGION][family][size].r
+# D: .spot_advisor[REGION][OS][instanceType].r
+# E: .spot_advisor[REGION][instanceType].r
 jq_get_rate() {
-  local fam="$1" size="$2"
-  jq -r --arg os "$OS_BUCKET" --arg reg "$REGION" --arg fam "$fam" --arg size "$size" '
+  local fam="$1" size="$2" it="$3"
+  jq -r --arg os "$OS_BUCKET" --arg reg "$REGION" --arg fam "$fam" --arg size "$size" --arg it "$it" '
     .spot_advisor[$os][$reg][$fam][$size].r
     // .spot_advisor[$reg][$os][$fam][$size].r
     // .spot_advisor[$reg][$fam][$size].r
+    // .spot_advisor[$reg][$os][$it].r
+    // .spot_advisor[$reg][$it].r
     // empty
   ' <<<"$ADVISOR"
 }
@@ -183,34 +187,40 @@ rank_one() {
   fam="${it%%.*}"
   size="${it##*.}"
 
-  rate="$(jq_get_rate "$fam" "$size")"
+  rate="$(jq_get_rate "$fam" "$size" "$it")"
   if [[ -z "$rate" || "$rate" == "null" ]]; then
     if (( DEBUG && MISSING_DUMP_COUNT < MISSING_DUMP_LIMIT )); then
       ((MISSING_DUMP_COUNT++))
-      echo "[DEBUG] No rate for ${fam}.${size} in region '${REGION}' (tried A/B/C layouts). Dump #${MISSING_DUMP_COUNT}:" >&2
-      # Show small, targeted snippets around the likely paths
+      echo "[DEBUG] No rate for ${it} in region '${REGION}' (tried A/B/C/D/E). Dump #${MISSING_DUMP_COUNT}:" >&2
+
+      echo "[DEBUG]   Path D: .spot_advisor[\"$REGION\"][\"$OS_BUCKET\"][\"$it\"]" >&2
+      jq -r --arg reg "$REGION" --arg os "$OS_BUCKET" --arg it "$it" '
+        { value: (.spot_advisor[$reg][$os][$it] // null),
+          keys_under_os: ((.spot_advisor[$reg][$os] // {}) | (keys[0:15]))
+        }' <<<"$ADVISOR" >&2
+
+      echo "[DEBUG]   Path E: .spot_advisor[\"$REGION\"][\"$it\"]" >&2
+      jq -r --arg reg "$REGION" --arg it "$it" '
+        { value: (.spot_advisor[$reg][$it] // null),
+          region_keys: ((.spot_advisor[$reg] // {}) | keys[0:15])
+        }' <<<"$ADVISOR" >&2
+
       echo "[DEBUG]   Path B: .spot_advisor[\"$REGION\"][\"$OS_BUCKET\"][\"$fam\"][\"$size\"]" >&2
       jq -r --arg reg "$REGION" --arg os "$OS_BUCKET" --arg fam "$fam" --arg size "$size" '
         { value: (.spot_advisor[$reg][$os][$fam][$size] // null),
-          fam_exists: (.spot_advisor[$reg][$os][$fam] | (type=="object")),
-          region_exists: (.spot_advisor[$reg] | (type=="object")),
-          os_keys: ((.spot_advisor[$reg] // {}) | keys[0:5]),
-          fam_keys: ((.spot_advisor[$reg][$os] // {}) | keys[0:10])
+          fam_exists_under_os: (.spot_advisor[$reg][$os][$fam] | (type=="object"))
         }' <<<"$ADVISOR" >&2
 
       echo "[DEBUG]   Path C: .spot_advisor[\"$REGION\"][\"$fam\"][\"$size\"]" >&2
       jq -r --arg reg "$REGION" --arg fam "$fam" --arg size "$size" '
         { value: (.spot_advisor[$reg][$fam][$size] // null),
-          fam_exists: (.spot_advisor[$reg][$fam] | (type=="object")),
-          region_keys: ((.spot_advisor[$reg] // {}) | keys[0:10]),
-          size_keys: ((.spot_advisor[$reg][$fam] // {}) | keys[0:10])
+          fam_exists_under_region: (.spot_advisor[$reg][$fam] | (type=="object"))
         }' <<<"$ADVISOR" >&2
 
       echo "[DEBUG]   Path A: .spot_advisor[\"$OS_BUCKET\"][\"$REGION\"][\"$fam\"][\"$size\"]" >&2
       jq -r --arg os "$OS_BUCKET" --arg reg "$REGION" --arg fam "$fam" --arg size "$size" '
         { value: (.spot_advisor[$os][$reg][$fam][$size] // null),
-          os_exists: (.spot_advisor[$os] | (type=="object")),
-          os_keys: ((.spot_advisor[$os] // {}) | keys[0:10])
+          os_exists_top: (.spot_advisor[$os] | (type=="object"))
         }' <<<"$ADVISOR" >&2
       echo "[DEBUG] --------------------------------------------------------------" >&2
     fi
