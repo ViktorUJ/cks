@@ -23,7 +23,7 @@ usage() {
 Usage: find_spot.sh [options]
 
 Options:
-  -i, --interrupt-threshold <PCT>   Max Spot interruption bucket (%). Allowed: 5,10,15,20.
+  -i, --interrupt-threshold <PCT>   Max Spot interruption bucket (%). Allowed: any integer 1..20.
                                     Includes all lower buckets. Default: 20
   -n, --limit <NUM>                 Max number of instance types to output (default: 50)
   -h, --help                        Show this help message
@@ -33,49 +33,51 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -i|--interrupt-threshold)
-      [[ $# -ge 2 ]] || { echo "Missing value for $1"; usage; exit 1; }
-      [[ "$2" =~ ^[0-9]+$ ]] || { echo "Threshold must be integer"; exit 1; }
+      [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 1; }
+      [[ "$2" =~ ^[0-9]+$ ]] || { echo "Threshold must be integer" >&2; exit 1; }
       INTERRUPT_THRESHOLD="$2"; shift 2;;
     -n|--limit)
-      [[ $# -ge 2 ]] || { echo "Missing value for $1"; usage; exit 1; }
-      [[ "$2" =~ ^[0-9]+$ ]] || { echo "Limit must be integer"; exit 1; }
+      [[ $# -ge 2 ]] || { echo "Missing value for $1" >&2; usage; exit 1; }
+      [[ "$2" =~ ^[0-9]+$ ]] || { echo "Limit must be integer" >&2; exit 1; }
       OUTPUT_LIMIT="$2"; shift 2;;
     -h|--help) usage; exit 0;;
-    *) echo "Unknown option: $1"; usage; exit 1;;
+    *) echo "Unknown option: $1" >&2; usage; exit 1;;
   esac
 done
 
-# -------- Progress bar helper --------
+# -------- Logging & progress helpers (stderr) --------
+log() { printf "%s\n" "$*" >&2; }
 progress_bar() {
   local progress=$1 total=$2 width=40
-  local percent=$((progress * 100 / total))
-  local filled=$((width * progress / total))
-  local empty=$((width - filled))
-  printf "\r[%-${width}s] %3d%%" "$(printf '#%.0s' $(seq 1 $filled))" "$percent"
+  local percent=$(( total==0 ? 100 : progress * 100 / total ))
+  local filled=$(( total==0 ? width : width * progress / total ))
+  local empty=$(( width - filled ))
+  printf "\r[%-${width}s] %3d%%" "$(printf '#%.0s' $(seq 1 $filled))" "$percent" >&2
 }
 
 # -------- Dependencies --------
 for bin in aws jq curl; do
-  command -v "$bin" >/dev/null || { echo "❌ Missing dependency: $bin"; exit 1; }
+  command -v "$bin" >/dev/null || { echo "❌ Missing dependency: $bin" >&2; exit 1; }
 done
 
 # -------- Step 1: Get region offerings --------
-echo "📦 Fetching available instance types for region $REGION ..."
+log "📦 Fetching available instance types for region $REGION ..."
 readarray -t OFFERINGS < <(aws ec2 describe-instance-type-offerings \
   --region "$REGION" \
   --location-type region \
   --filters Name=location,Values="$REGION" \
   --query 'InstanceTypeOfferings[].InstanceType' \
   --output text $PROFILE_OPT | tr '\t' '\n' | sort -u)
-(( ${#OFFERINGS[@]} > 0 )) || { echo "❌ No offerings found"; exit 1; }
+(( ${#OFFERINGS[@]} > 0 )) || { echo "❌ No offerings found" >&2; exit 1; }
 
 # -------- Step 2: Describe in chunks --------
-echo "🔍 Describing ${#OFFERINGS[@]} instance types..."
+log "🔍 Describing ${#OFFERINGS[@]} instance types..."
 DESCRIBE_COMBINED='{"InstanceTypes":[]}'
 CHUNK=100
 chunks=$(( (${#OFFERINGS[@]} + CHUNK - 1) / CHUNK ))
 for (( i=0; i<${#OFFERINGS[@]}; i+=CHUNK )); do
   PART=( "${OFFERINGS[@]:i:CHUNK}" )
+  # shellcheck disable=SC2086
   DESCRIBE_JSON=$(aws ec2 describe-instance-types \
       --region "$REGION" \
       --instance-types ${PART[*]} \
@@ -84,7 +86,8 @@ for (( i=0; i<${#OFFERINGS[@]}; i+=CHUNK )); do
     <(jq '.' <<<"$DESCRIBE_COMBINED") <(jq '.' <<<"$DESCRIBE_JSON"))
   progress_bar $((i/CHUNK+1)) $chunks
 done
-echo -e "\n✅ Instance types described."
+printf "\n" >&2
+log "✅ Instance types described."
 
 # -------- Step 3: Filter --------
 CANDIDATES=$(jq -r --arg re "$SIZE_RE" --argjson min "$MIN_MEM_MIB" '
@@ -99,12 +102,12 @@ CANDIDATES=$(jq -r --arg re "$SIZE_RE" --argjson min "$MIN_MEM_MIB" '
     { fam=$0; sub(/\..*$/,"",fam); if (fam !~ excl) print $0 }
 ' | sort -u)
 
-[[ -n "$CANDIDATES" ]] || { echo "❌ No matching x86 types"; exit 1; }
+[[ -n "$CANDIDATES" ]] || { echo "❌ No matching x86 types" >&2; exit 1; }
 
 # -------- Step 4: Spot Advisor --------
-echo "☁️  Fetching Spot Advisor data..."
+log "☁️  Fetching Spot Advisor data..."
 ADVISOR=$(curl -fsSL "$ADVISOR_URL")
-echo "✅ Spot Advisor data loaded."
+log "✅ Spot Advisor data loaded."
 
 spot_bucket_to_rank() {
   case "$1" in
@@ -121,8 +124,8 @@ threshold_to_rank() {
 }
 threshold_rank_max=$(threshold_to_rank "$INTERRUPT_THRESHOLD")
 
-# -------- Step 5: Pricing with progress --------
-echo "💰 Fetching On-Demand pricing (this may take a while)..."
+# -------- Step 5: Pricing with progress (stderr) --------
+log "💰 Fetching On-Demand pricing (this may take a while)..."
 declare -A PRICE_CACHE
 get_price() {
   local itype="$1"
@@ -139,7 +142,9 @@ get_price() {
       Type=TERM_MATCH,Field=tenancy,Value=Shared \
     --query 'PriceList[0]' \
     --output text 2>/dev/null || true)
-  [[ -z "$prod_json" || "$prod_json" == "None" ]] && { echo "nan"; return; }
+  if [[ -z "$prod_json" || "$prod_json" == "None" ]]; then
+    echo "nan"; return
+  fi
   price=$(jq -r '.terms.OnDemand | to_entries[0].value.priceDimensions | to_entries[0].value.pricePerUnit.USD // empty' <<<"$prod_json")
   [[ -n "$price" ]] && echo "$price" || echo "nan"
 }
@@ -164,25 +169,42 @@ rank_one() {
   fi
 }
 
-# Build ranking with progress bar
+# Build ranking with a progress bar to stderr; collect only valid lines to stdout
 types=($CANDIDATES)
 total=${#types[@]}
 counter=0
-SORTED=$(
-  for it in "${types[@]}"; do
-    rank_one "$it"
-    ((counter++))
-    (( counter % 3 == 0 )) && progress_bar "$counter" "$total"
-  done
-  echo
-)
-echo -e "\n✅ Pricing data fetched."
+RANK_LINES=()
+for it in "${types[@]}"; do
+  line="$(rank_one "$it" || true)"
+  if [[ -n "$line" ]]; then
+    RANK_LINES+=("$line")
+  fi
+  ((counter++))
+  (( counter % 3 == 0 )) && progress_bar "$counter" "$total"
+done
+printf "\n" >&2
+log "✅ Pricing data fetched."
 
-# -------- Step 6: Sort and output --------
-SORTED=$(echo "$SORTED" | sort -n -k1,1 -k2,2 -k3,3 | awk -F'\t' '{print $3}')
+# -------- Step 6: Sort and output (stdout only) --------
+# Keep only lines with exactly 3 tab-separated fields to avoid empty/garbage
+SORTED=$(
+  printf "%s\n" "${RANK_LINES[@]}" \
+  | awk -F'\t' 'NF==3' \
+  | LC_ALL=C sort -n -k1,1 -k2,2 -k3,3 \
+  | awk -F'\t' '{print $3}'
+)
+
+# Make sure we have something after filtering; hint if empty
+if [[ -z "$SORTED" ]]; then
+  echo "[]"  # valid empty JSON-array-ish format, but not your custom spacing
+  echo "⚠️ No instances matched after filters. Try increasing -i (interrupt threshold)." >&2
+  exit 0
+fi
+
+# Unique + limit
 readarray -t FINAL < <(awk '!seen[$0]++' <<<"$SORTED" | head -n "$OUTPUT_LIMIT")
 
-echo -e "\n🎯 Result:"
+# Print exactly like: [ "a" , "b" , "c" ]
 printf "[ "
 for (( i=0; i<${#FINAL[@]}; i++ )); do
   (( i>0 )) && printf " , "
