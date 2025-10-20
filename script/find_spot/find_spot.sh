@@ -2,38 +2,37 @@
 set -euo pipefail
 
 # -------- Defaults --------
-REGION="${REGION:-eu-north-1}"         # EC2 region to target
-OS_BUCKET="${OS_BUCKET:-linux}"        # preferred OS bucket name
+REGION="${REGION:-eu-north-1}"         # EC2 region
+OS_BUCKET_RAW="linux"                  # default OS
 MIN_MEM_MIB="${MIN_MEM_MIB:-4096}"     # >= 4 GiB
-SIZE_RE='\.((medium)|(large)|(xlarge)|(2xlarge))$'  # up to 2xlarge
+SIZE_RE='\.((medium)|(large)|(xlarge)|(2xlarge))$'
 OUTPUT_LIMIT_DEFAULT=50
 INTERRUPT_THRESHOLD_DEFAULT=20
 PROFILE_OPT=${AWS_PROFILE:+--profile "$AWS_PROFILE"}
-
 ADVISOR_URL="https://spot-bid-advisor.s3.amazonaws.com/spot-advisor-data.json"
-EXCLUDE_FAMILY_RE='^(g|p|inf|trn|f1|dl|vt)'  # exclude expensive families (GPU/FPGA/Infer/Trainium/Video)
+EXCLUDE_FAMILY_RE='^(g|p|inf|trn|f1|dl|vt)'  # exclude GPU / expensive families
+DEBUG=0
 
 # -------- CLI --------
 OUTPUT_LIMIT="$OUTPUT_LIMIT_DEFAULT"
 INTERRUPT_THRESHOLD="$INTERRUPT_THRESHOLD_DEFAULT"
-INCLUDE_UNKNOWN=0  # include family/size missing in Advisor as rank=2 (<=10%)
+INCLUDE_UNKNOWN=0  # include missing as rank=2 (~<=10%)
 
 usage() {
   cat <<'EOF'
 Usage: find_spot.sh [options]
 
 Filters:
-  -i, --interrupt-threshold <PCT>   Max Spot interruption bucket (%). Includes all lower buckets.
-                                    Examples: 5, 10, 15, 20. Default: 20
-  -n, --limit <NUM>                 Max number of instance types in output. Default: 50
-  --include-unknown                 Include family/size missing in Advisor (treated as rank=2)
+  -i, --interrupt-threshold <PCT>   Max Spot interruption bucket (%). Includes all lower. Default: 20
+  -n, --limit <NUM>                 Max instance types in output. Default: 50
+  --include-unknown                 Include missing types as rank=2
 
-Misc:
-  -h, --help                        Show help
+System:
+  --os <linux|windows>              OS for Spot Advisor (default: linux)
+  --debug                           Enable verbose debug logs
 
-Env overrides:
+Env:
   REGION (default: eu-north-1)
-  OS_BUCKET (default: linux)
   MIN_MEM_MIB (default: 4096)
 EOF
 }
@@ -43,13 +42,16 @@ while [[ $# -gt 0 ]]; do
     -i|--interrupt-threshold) INTERRUPT_THRESHOLD="${2:?}"; shift 2;;
     -n|--limit)               OUTPUT_LIMIT="${2:?}"; shift 2;;
     --include-unknown)        INCLUDE_UNKNOWN=1; shift;;
+    --os)                     OS_BUCKET_RAW="${2:?}"; shift 2;;
+    --debug)                  DEBUG=1; shift;;
     -h|--help)                usage; exit 0;;
     *) echo "Unknown option: $1" >&2; usage; exit 1;;
   esac
 done
 
-# -------- Logging (stderr) --------
+# -------- Logging --------
 log() { printf "%s\n" "$*" >&2; }
+debug() { (( DEBUG )) && printf "[DEBUG] %s\n" "$*" >&2; }
 progress_bar() {
   local progress=$1 total=$2 width=40
   local percent=$(( total==0 ? 100 : progress * 100 / total ))
@@ -62,7 +64,15 @@ for bin in aws jq curl; do
   command -v "$bin" >/dev/null || { echo "❌ Missing dependency: $bin" >&2; exit 1; }
 done
 
-# -------- 1) Get offerings in region --------
+# -------- Normalize OS bucket --------
+case "${OS_BUCKET_RAW,,}" in
+  linux)   OS_BUCKET="Linux" ;;
+  windows) OS_BUCKET="Windows" ;;
+  *)       OS_BUCKET="Linux" ;;
+esac
+debug "OS bucket normalized to '$OS_BUCKET'"
+
+# -------- 1) Offerings --------
 log "📦 Fetching available instance types for region $REGION ..."
 readarray -t OFFERINGS < <(aws ec2 describe-instance-type-offerings \
   --region "$REGION" \
@@ -70,9 +80,10 @@ readarray -t OFFERINGS < <(aws ec2 describe-instance-type-offerings \
   --filters Name=location,Values="$REGION" \
   --query 'InstanceTypeOfferings[].InstanceType' \
   --output text $PROFILE_OPT | tr '\t' '\n' | sort -u)
+debug "Found ${#OFFERINGS[@]} offerings"
 (( ${#OFFERINGS[@]} > 0 )) || { echo "❌ No offerings in $REGION" >&2; exit 1; }
 
-# -------- 2) Describe in chunks (≤100) --------
+# -------- 2) Describe types --------
 log "🔍 Describing ${#OFFERINGS[@]} instance types..."
 DESCRIBE_COMBINED='{"InstanceTypes":[]}'
 CHUNK=100
@@ -90,7 +101,7 @@ done
 printf "\n" >&2
 log "✅ Instance types described."
 
-# -------- 3) Filter candidates (x86_64, >=4GiB, <=2xlarge, not metal, not expensive) --------
+# -------- 3) Filter --------
 CANDIDATES=$(jq -r --arg re "$SIZE_RE" --argjson min "$MIN_MEM_MIB" '
   .InstanceTypes[]
   | select(.ProcessorInfo.SupportedArchitectures[] | contains("x86_64"))
@@ -102,25 +113,16 @@ CANDIDATES=$(jq -r --arg re "$SIZE_RE" --argjson min "$MIN_MEM_MIB" '
 | awk -v RS='\n' -v ORS='\n' -v excl="$EXCLUDE_FAMILY_RE" '
     { fam=$0; sub(/\..*$/,"",fam); if (fam !~ excl) print $0 }
 ' | sort -u)
+debug "Filtered candidates: $(echo "$CANDIDATES" | wc -l) types"
 [[ -n "$CANDIDATES" ]] || { echo "❌ No matching x86 types after filters" >&2; exit 1; }
 
-# -------- 4) Load Spot Advisor --------
-log "☁️  Fetching Spot Instance Advisor..."
+# -------- 4) Load Advisor --------
+log "☁️  Fetching Spot Advisor JSON..."
 ADVISOR=$(curl -fsSL "$ADVISOR_URL")
-log "✅ Spot Advisor JSON loaded."
+log "✅ Spot Advisor loaded."
+debug "Spot Advisor top-level keys: $(jq -r '.spot_advisor | keys[]' <<<"$ADVISOR" | tr '\n' ' ')"
 
-# -------- 4a) Robust accessors for both JSON layouts --------
-# Layout A: .spot_advisor[os][region][family][size].r
-# Layout B: .spot_advisor[region][os][family][size].r
-jq_has_path() {
-  local os="$1" reg="$2"
-  jq -e --arg os "$os" --arg reg "$reg" '
-    (.spot_advisor[$os][$reg] // empty) | type == "object"
-    or
-    (.spot_advisor[$reg][$os] // empty) | type == "object"
-  ' <<<"$ADVISOR" >/dev/null
-}
-
+# -------- 5) Helper --------
 jq_get_rate() {
   local os="$1" reg="$2" fam="$3" size="$4"
   jq -r --arg os "$os" --arg reg "$reg" --arg fam "$fam" --arg size "$size" '
@@ -130,36 +132,6 @@ jq_get_rate() {
   ' <<<"$ADVISOR"
 }
 
-# Validate that some path exists; if not, try to auto-pick alternatives
-OS_EFF="$OS_BUCKET"
-REG_EFF="$REGION"
-if ! jq_has_path "$OS_EFF" "$REG_EFF"; then
-  # Try swapping order (maybe region-first)
-  # If still not found, try to find any linux/Windows bucket paired with our region
-  # 1) Try same OS with any region
-  alt_reg=$(jq -r --arg os "$OS_EFF" '
-    [
-      (.spot_advisor[$os] // {}) | keys[]?,
-      (.spot_advisor | keys[]? | select(test("^[a-z]{2}-")))  # maybe region-first
-    ] | unique[]
-  ' <<<"$ADVISOR" | head -n1 || true)
-  if [[ -n "$alt_reg" ]] && jq_has_path "$OS_EFF" "$alt_reg"; then
-    REG_EFF="$alt_reg"
-  else
-    # 2) Try to find any OS that pairs with our region
-    alt_os=$(jq -r --arg reg "$REG_EFF" '
-      [
-        (.spot_advisor | keys[]?)                          # could be OS or region
-        | select(. != null)
-      ] | unique[]
-    ' <<<"$ADVISOR" | head -n1 || true)
-    if [[ -n "$alt_os" ]] && jq_has_path "$alt_os" "$REG_EFF"; then
-      OS_EFF="$alt_os"
-    fi
-  fi
-fi
-
-# -------- 4b) Bucket mapping and threshold --------
 spot_bucket_to_rank() {
   case "$1" in
     "<5%") echo 1;;
@@ -180,26 +152,20 @@ threshold_to_rank() {
 }
 threshold_rank_max=$(threshold_to_rank "$INTERRUPT_THRESHOLD")
 
-# -------- 5) Rank by interruptions only (stable & fast) --------
+# -------- 6) Rank --------
 rank_one() {
   local it="$1" fam size rate rank
   fam="${it%%.*}"
   size="${it##*.}"
-
-  # Try both layouts transparently
-  rate="$(jq_get_rate "$OS_EFF" "$REG_EFF" "$fam" "$size")"
-
+  rate="$(jq_get_rate "$OS_BUCKET" "$REGION" "$fam" "$size")"
+  if (( DEBUG )) && [[ -z "$rate" ]]; then
+    echo "[DEBUG] No rate for $fam.$size in $OS_BUCKET/$REGION" >&2
+  fi
   if [[ -z "$rate" || "$rate" == "null" ]]; then
-    # Missing in Advisor
-    if (( INCLUDE_UNKNOWN == 1 )); then
-      rank=2   # treat unknown as reasonably stable (<=10%)
-    else
-      return   # skip unknown
-    fi
+    if (( INCLUDE_UNKNOWN == 1 )); then rank=2; else return; fi
   else
     rank=$(spot_bucket_to_rank "$rate")
   fi
-
   (( rank > threshold_rank_max )) && return
   printf "%d\t%s\n" "$rank" "$it"
 }
@@ -210,16 +176,16 @@ PRE_SORTED=$(
   | LC_ALL=C sort -n -k1,1 -k2,2 \
   | awk '{print $2}'
 )
+debug "Pre-sorted count: $(echo "$PRE_SORTED" | wc -l)"
 
 if [[ -z "$PRE_SORTED" ]]; then
-  echo "[]"   # still produce a valid array
-  log "⚠️ No instances passed the Spot threshold. Try --include-unknown or increase -i (e.g., 20)."
+  echo "[]"
+  log "⚠️ No instances matched. Try --include-unknown or -i 20."
   exit 0
 fi
 
-# -------- 6) Output in the requested array format --------
+# -------- 7) Output --------
 readarray -t FINAL < <(echo "$PRE_SORTED" | awk '!seen[$0]++' | head -n "$OUTPUT_LIMIT")
-
 printf "[ "
 for (( i=0; i<${#FINAL[@]}; i++ )); do
   (( i>0 )) && printf " , "
