@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# ---- traps (show where it failed) ----
+# ---- traps (print where it failed) ----
 on_err() {
   echo "❌ ERROR at line ${BASH_LINENO[0]}: command '${BASH_COMMAND}' failed." >&2
   echo "    Hint: run with --trace to see full execution." >&2
@@ -71,7 +71,7 @@ if (( TRACE )); then set -x; fi
 log()   { printf "%s\n" "$*" >&2; }
 debug() { if (( DEBUG )); then printf "[DEBUG] %s\n" "$*" >&2; fi; }
 
-# progress bar without seq
+# Simple progress bar (no external seq)
 pbar() {
   local progress=$1 total=$2 width=40
   if (( total <= 0 )); then total=1; fi
@@ -222,7 +222,7 @@ jq_get_rank() {
   ' <<<"$ADVISOR"
 }
 
-# threshold as rank
+# -------- 6) Threshold (convert percent to comparable rank) --------
 threshold_to_rank() {
   local pct="$1"
   if   (( pct <= 5 ));  then echo 1
@@ -233,9 +233,11 @@ threshold_to_rank() {
 }
 threshold_rank_max=$(threshold_to_rank "$INTERRUPT_THRESHOLD")
 
+# Only print JSON dumps for the first few missing-rate cases
 MISSING_DUMP_COUNT=0
 MISSING_DUMP_LIMIT=3
 
+# -------- 7) Rank by interruptions --------
 rank_one() {
   local it="$1" fam size rank
   fam="${it%%.*}"
@@ -275,10 +277,10 @@ rank_one() {
     if (( INCLUDE_UNKNOWN )); then
       rank=2
     else
-      return
+      return 0
     fi
   fi
-  if (( rank > threshold_rank_max )); then return; fi
+  if (( rank > threshold_rank_max )); then return 0; fi
   printf "%d\t%s\n" "$rank" "$it"
 }
 
@@ -289,7 +291,7 @@ PRE_SORTED=$(
   | awk '{print $2}'
 )
 
-# -------- 6) Output --------
+# -------- 8) Output --------
 if [[ -z "$PRE_SORTED" ]]; then
   echo "[]"
   echo "⚠️ No instances matched Spot threshold. Try --include-unknown or increase -i (e.g., 20)." >&2
@@ -298,6 +300,7 @@ fi
 
 readarray -t FINAL < <(echo "$PRE_SORTED" | awk 'NF>0' | awk '!seen[$0]++' | head -n "$OUTPUT_LIMIT")
 
+# Exact required format: [ "a" , "b" , "c" ]
 printf "[ "
 for (( i=0; i<${#FINAL[@]}; i++ )); do
   if (( i>0 )); then printf " , "; fi
