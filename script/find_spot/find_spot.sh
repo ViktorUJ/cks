@@ -35,7 +35,7 @@ Usage: find_spot.sh [options]
 Filters:
   -i, --interrupt-threshold <PCT>   Max Spot interruption bucket (5,10,15,20). Includes lower. Default: 20
   -n, --limit <NUM>                 Max instance types in output. Default: 50
-  -a, --arch <x86|arm>             Architecture filter (default: x86)
+  -a, --arch <x86|arm>              Architecture filter (default: x86)
   --include-unknown                 Include types missing in Advisor as rank=2 (~<=10%)
 
 System:
@@ -231,7 +231,6 @@ threshold_to_rank() {
   elif (( pct <= 20 )); then echo 4
   else echo 4; fi
 }
-threshold_rank_max
 threshold_rank_max=$(threshold_to_rank "$INTERRUPT_THRESHOLD")
 
 MISSING_DUMP_COUNT=0
