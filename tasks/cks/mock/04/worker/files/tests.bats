@@ -361,3 +361,25 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+@test "11.1 update cluster. worker node version  " {
+  echo '1'>>/var/work/tests/result/all
+  cp_ver=$(kubectl get node --context cluster7-admin@cluster7 -l node-role.kubernetes.io/control-plane= -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')
+  wk_ver=$(kubectl get node --context cluster7-admin@cluster7 -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}')
+  [[ "$cp_ver" == "$wk_ver" ]]
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "11.2 update cluster. worker node has Ready status " {
+  echo '1'>>/var/work/tests/result/all
+  status=$(kubectl get node --context cluster7-admin@cluster7  -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}')
+  [[ "$status" == "True" ]]
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
