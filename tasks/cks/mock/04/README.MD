@@ -95,6 +95,7 @@ documentation https://etcd.io/docs/
 |        Cluster      | cluster6 (   `kubectl config use-context    cluster6-admin@cluster6`   )           |
 | Acceptance criteria | pod from  Deployment `container-host-hacker` in Namespace `team-red` is running .  |
 ---
+
 |       **10**        | Create a TLS secret from local files. There is a Deployment with the appropriate volume mounts configured. Verify that the secret has appeared correctly inside the Pod.                            |
 |:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------|
 |       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                      |
@@ -113,14 +114,14 @@ documentation https://etcd.io/docs/
 | Acceptance criteria | - **logs** `/var/logs/kubernetes-api.log`<br/>- **policy** `/etc/kubernetes/policy/log-policy.yaml`<br/>- From `Secret` resources, level `Metadata`, namespace `prod`.<br/>- From `configmaps`, level `RequestResponse`, namespace `billing`. |
 ---
 
-
-
-
-|    **13**     7     | **CIS Benchmark** надо найти по пределенной проблеме (не номеру а описанию ) и пофиксить                                                                                                                                                                                                                                                                                                                                                                                                   |
+|        **13**       | **CIS Benchmark**                                                                                                                                                                                                                                                                                                                                                                                                 |
 |:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |       Cluster       | cluster3 (`kubectl config use-context cluster3-admin@cluster3`)                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Acceptance criteria | - CIS Benchmark is installed on nodes<br/>- fix on `control-plane`:<br/>&nbsp;&nbsp;- `1.2.15` Ensure that the `--profiling` argument is set to false<br/>&nbsp;&nbsp;- `1.3.2` Ensure that the `--profiling` argument is set to false (Automated)<br/>&nbsp;&nbsp;- `1.4.1` Ensure that the `--profiling` argument is set to false (Automated)<br/><br/>- fix on `worker node`:<br/>&nbsp;&nbsp;- `4.2.6` Ensure that the `--protect-kernel-defaults` argument is set to true (Automated) |
+| Acceptance criteria | - CIS Benchmark is installed on nodes<br/>- fix on `control-plane`:<br/>&nbsp;&nbsp;- `kube-apiserver` Ensure that the `--profiling` argument is set to false<br/>&nbsp;&nbsp;- `controller-manager` Ensure that the `--profiling` argument is set to false (Automated)<br/>&nbsp;&nbsp;- `kube-scheduler` Ensure that the `--profiling` argument is set to false (Automated)<br/><br/>- fix on `worker node`:<br/>&nbsp;&nbsp;- Ensure that the `--protect-kernel-defaults` argument is set to true (Automated) |
 ---
+
+
+
 
 |    **14**     11    | **Fix Dockerfile**   and deployment                                                                                                                                                                              |
 |:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

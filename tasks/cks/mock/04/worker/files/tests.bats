@@ -417,7 +417,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "13.1 CIS Benchmark. check 1.2.15  " {
+@test "13.1 CIS Benchmark. check kube-apiserver 1.2.15  " {
   echo '.75'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
   ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.2.15  | grep PASS"
@@ -428,7 +428,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "13.2 CIS Benchmark. check 1.3.2 " {
+@test "13.2 CIS Benchmark. check controller-manager 1.3.2 " {
   echo '.75'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
   ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.3.2 | grep PASS"
@@ -439,7 +439,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "13.3 CIS Benchmark. check 1.4.1 " {
+@test "13.3 CIS Benchmark. check kube-scheduler 1.4.1 " {
   echo '.75'>>/var/work/tests/result/all
   control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
   ssh -oStrictHostKeyChecking=no $control_plane_node "sudo kube-bench | grep 1.4.1 | grep PASS"
@@ -450,7 +450,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   [ "$result" == "0" ]
 }
 
-@test "13.4 CIS Benchmark. check 4.2.6 " {
+@test "13.4 CIS Benchmark. check  protect-kernel-defaults 4.2.6 " {
   echo '.75'>>/var/work/tests/result/all
   worker_node=$(kubectl get no -l work_type=worker --context cluster3-admin@cluster3  -o jsonpath='{.items..metadata.name}')
   ssh -oStrictHostKeyChecking=no $worker_node "sudo kube-bench | grep 4.2.6 | grep PASS"
