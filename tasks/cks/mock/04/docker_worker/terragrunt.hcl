@@ -35,6 +35,8 @@ inputs = {
   app_name          = "docker-worker"
   subnets           = dependency.vpc.outputs.subnets
   vpc_id            = dependency.vpc.outputs.vpc_id
+  all_spot_subnet       = local.vars.locals.all_spot_subnet
+  spot_additional_types = local.vars.locals.spot_additional_types
 
   host_list = []
   work_pc = {
