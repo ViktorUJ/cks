@@ -122,6 +122,13 @@ documentation https://etcd.io/docs/
 
 
 
+|       **14**        | **kubeadm** анонимный                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|       Cluster       | cluster3 (`kubectl config use-context cluster3-admin@cluster3`)                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Acceptance criteria | - CIS Benchmark is installed on nodes<br/>- fix on `control-plane`:<br/>&nbsp;&nbsp;- `kube-apiserver` Ensure that the `--profiling` argument is set to false<br/>&nbsp;&nbsp;- `controller-manager` Ensure that the `--profiling` argument is set to false (Automated)<br/>&nbsp;&nbsp;- `kube-scheduler` Ensure that the `--profiling` argument is set to false (Automated)<br/><br/>- fix on `worker node`:<br/>&nbsp;&nbsp;- Ensure that the `--protect-kernel-defaults` argument is set to true (Automated) |
+---
+
+
 
 |    **14**     11    | **Fix Dockerfile**   and deployment                                                                                                                                                                              |
 |:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
