@@ -24,6 +24,10 @@ dependency "vpc" {
   config_path = "../vpc"
 }
 
+dependency "cluster1" {
+  config_path = "../k8s-1"
+}
+
 dependency "cluster2" {
   config_path = "../k8s-2"
 }
@@ -72,6 +76,7 @@ inputs = {
 
   host_list = concat(
     dependency.docker_worker.outputs.hosts,
+    dependency.cluster1.outputs.hosts,
     dependency.cluster2.outputs.hosts,
     dependency.cluster3.outputs.hosts,
     dependency.cluster6.outputs.hosts,
@@ -81,6 +86,7 @@ inputs = {
   )
   work_pc = {
     clusters_config = {
+      cluster1  = dependency.cluster1.outputs.k8s_config
       cluster2  = dependency.cluster2.outputs.k8s_config
       cluster3  = dependency.cluster3.outputs.k8s_config
       cluster6  = dependency.cluster6.outputs.k8s_config
