@@ -28,7 +28,7 @@ utils_enable_sh=${utils_enable}
 cni_type=${cni_type}
 cilium_version=${cilium_version}
 disable_kube_proxy=${disable_kube_proxy}
-kubeadm_init_extra_args=""
+kubeadm_init_extra_args=${kubeadm_init_extra_args}
 date
 swapoff -a
 
