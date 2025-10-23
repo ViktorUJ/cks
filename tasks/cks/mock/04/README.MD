@@ -56,7 +56,7 @@ documentation https://etcd.io/docs/
 
 |     **3**  надо     | **falco**  Detect and Stop Unauthorized Memory Access   . в фалко не видны k8 тэги .                                                                                                                                                                    |
 |:-------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|       Cluster       | cluster7 (`kubectl config use-context cluster7-admin@cluster7`)                                                                                                                                                                                         |
+|       Cluster       | cluster8 (`kubectl config use-context cluster8-admin@cluster8`)                                                                                                                                                                                         |
 | Acceptance criteria | There are different pods in k8s cluster with  managed by different deployments. One pod  is attempting to access `/dev/mem`, which is a potential security risk. Your task is to identify the pod using falco and scale down the associated deployment. |
 ---
 
@@ -99,11 +99,12 @@ documentation https://etcd.io/docs/
 |:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------|
 |       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                      |
 | Acceptance criteria | **NS** `team-black10`  , create  tls secret `tls` from  `/var/work/19` . pod from deployment `app` has mounted secret in file system |
+---
 
-|         **11**          | **update cluster** <br/>  In the cluster, the control plane node has been upgraded to the new version. It is necessary to upgrade the worker node |
-|:-----------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------|
-|       **Cluster**       | cluster7 (`kubectl config use-context cluster7-admin@cluster7`)                                                                                   |
-| **Acceptance criteria** | node is **ready** and **version** is the same with control-plane                                                                                  |
+|         **11**      | **update cluster** <br/>  In the cluster, the control plane node has been upgraded to the new version. It is necessary to upgrade the worker node |
+|:-------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------|
+|       Cluster       | cluster7 (`kubectl config use-context cluster7-admin@cluster7`)                                                                                   |
+| Acceptance criteria | node is **ready** and **version** is the same with control-plane                                                                                  |
 ---
 
 
