@@ -72,7 +72,7 @@ documentation https://etcd.io/docs/
 | Acceptance criteria | - create default deny ingress policy in `prod-db` NS<br/>- create policy with allow connections from `prod` Namespaces to `prod-db`<br/>- create policy with allow connections from `stage` Namespaces and have label: `role=db-connect`<br/>- create policy with allow connections from `any` Namespaces and have label: `role=db-external-connect` <br/>- for test connections use **svc** in `prod-db` NS and pods in `stage` ,  `prod` and `default ` NS |
 ---
 
-|         **6**       | **Deployment security**        user ID , эскалейшен  и рут реадонли .                                                                                                                          |
+|         **6**       | **Deployment security**                                                                                                                         |
 |:-------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                |
 | Acceptance criteria | Modify deployment `secure` in `secure` Namespace:<br/>- prevent escalation<br/>- Read only root file system<br/>- user id 3000<br/>- group id 3000<br/>- allow wread to `/tmp/` container `c1` |
@@ -102,7 +102,7 @@ documentation https://etcd.io/docs/
 | Acceptance criteria | **NS** `team-black10`  , create  tls secret `tls` from  `/var/work/19` . pod from deployment `app` has mounted secret in file system |
 ---
 
-|         **11**      | **update cluster** <br/>  In the cluster, the control plane node has been upgraded to the new version. It is necessary to upgrade the worker node |
+|       **11**        | **update cluster** <br/>  In the cluster, the control plane node has been upgraded to the new version. It is necessary to upgrade the worker node |
 |:-------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------|
 |       Cluster       | cluster7 (`kubectl config use-context cluster7-admin@cluster7`)                                                                                   |
 | Acceptance criteria | node is **ready** and **version** is the same with control-plane                                                                                  |
