@@ -56,7 +56,7 @@ inputs = {
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-2/scripts/master.sh"
     cni                = local.vars.locals.cni
     root_volume        = local.vars.locals.root_volume
-    kubeadm_init_extra_args= "--apiserver-extra-args=anonymous-auth=true,authorization-mode=AlwaysAllow"
+   # kubeadm_init_extra_args= "--apiserver-extra-args=anonymous-auth=true,authorization-mode=AlwaysAllow"
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
