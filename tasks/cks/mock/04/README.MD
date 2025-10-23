@@ -106,12 +106,8 @@ documentation https://etcd.io/docs/
 |       Cluster       | cluster7 (`kubectl config use-context cluster7-admin@cluster7`)                                                                                   |
 | Acceptance criteria | node is **ready** and **version** is the same with control-plane                                                                                  |
 ---
-
-***
-
-|       **12**        | **Enable audit log**   есть тестовая полиси . надо включить                                                                                                                                                                                   |
+|       **12**        | **Enable audit log**                                                                                                                                                                               |
 |:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|     Task weight     | 7%                                                                                                                                                                                                                                            |
 |       Cluster       | cluster2 (`kubectl config use-context cluster2-admin@cluster2`)                                                                                                                                                                               |
 | Acceptance criteria | - **logs** `/var/logs/kubernetes-api.log`<br/>- **policy** `/etc/kubernetes/policy/log-policy.yaml`<br/>- From `Secret` resources, level `Metadata`, namespace `prod`.<br/>- From `configmaps`, level `RequestResponse`, namespace `billing`. |
 ---
