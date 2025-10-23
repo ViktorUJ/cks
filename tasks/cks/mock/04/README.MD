@@ -106,6 +106,7 @@ documentation https://etcd.io/docs/
 |       Cluster       | cluster7 (`kubectl config use-context cluster7-admin@cluster7`)                                                                                   |
 | Acceptance criteria | node is **ready** and **version** is the same with control-plane                                                                                  |
 ---
+
 |       **12**        | **Enable audit log**                                                                                                                                                                               |
 |:-------------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |       Cluster       | cluster2 (`kubectl config use-context cluster2-admin@cluster2`)                                                                                                                                                                               |
