@@ -27,9 +27,9 @@ external_ip_sh=${external_ip}
 utils_enable_sh=${utils_enable}
 cni_type=${cni_type}
 cilium_version=${cilium_version}
+cilium_helm_version=${cilium_helm_version}
 disable_kube_proxy=${disable_kube_proxy}
 kubeadm_init_extra_args=${kubeadm_init_extra_args}
-
 date
 swapoff -a
 
@@ -50,7 +50,7 @@ fi
 
 KUBEADM_CONFIG_FILE="/root/kubeadm-lab.yaml"
 
-# 1. Write the static part (InitConfiguration + ClusterConfiguration start)
+# 1. Write the static part
 cat > "${KUBEADM_CONFIG_FILE}" <<EOF
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: InitConfiguration
@@ -76,7 +76,6 @@ if [ -n "${kubeadm_init_extra_args}" ]; then
     for kv in "${kv_list[@]}"; do
         key="${kv%%=*}"
         val="${kv#*=}"
-        # write key: "val"
         printf '    %s: "%s"\n' "$key" "$val" >> "${KUBEADM_CONFIG_FILE}"
     done
 fi
@@ -119,6 +118,7 @@ date
 
 echo "*** apply cni"
 export KUBECONFIG=/root/.kube/config
+acrh=$(uname -m)
 
 case $acrh in
 x86_64)
@@ -161,7 +161,6 @@ echo 'source <(kubectl completion bash)' >> /home/ubuntu/.bashrc
 echo 'alias k=kubectl' >> /home/ubuntu/.bashrc
 echo 'complete -F __start_kubectl k' >> /home/ubuntu/.bashrc
 
-acrh=$(uname -m)
 case $acrh in
 x86_64)
   skaffold_url="https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64"
@@ -194,7 +193,17 @@ curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
 
-echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
+mkdir -p /home/ubuntu/.ssh
+
+# write private key safely even if it is multiline
+cat > /home/ubuntu/.ssh/id_rsa <<'KEYEOF'
+${ssh_private_key}
+KEYEOF
 chmod 600 /home/ubuntu/.ssh/id_rsa
-echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
-chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
+
+# append public key
+cat >> /home/ubuntu/.ssh/authorized_keys <<'PUBEOF'
+${ssh_pub_key}
+PUBEOF
+
+chown -R ubuntu:ubuntu /home/ubuntu/.ssh
