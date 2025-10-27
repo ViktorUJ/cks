@@ -29,6 +29,7 @@ cni_type=${cni_type}
 cilium_version=${cilium_version}
 disable_kube_proxy=${disable_kube_proxy}
 kubeadm_init_extra_args=${kubeadm_init_extra_args}
+
 date
 swapoff -a
 
@@ -38,51 +39,47 @@ apt-get install -y  unzip apt-transport-https ca-certificates curl jq
 ${runtime_script}
 
 ########################################
-# NEW: build kubeadm config file instead of passing flags directly
+# Build kubeadm config file instead of passing flags directly
 ########################################
 
-# Build certSANs list: always localhost,127.0.0.1,local_ipv4
+# Build certSANs list
 apiserver_sans="localhost,127.0.0.1,${local_ipv4}"
 if [ -n "$external_ip_sh" ]; then
     apiserver_sans="${apiserver_sans},${external_ip_sh}"
 fi
 
-# Function: render extraArgs from kubeadm_init_extra_args="k=v,k2=v2"
-render_extra_args_yaml() {
-    local args_str="$1"
-    if [ -z "$args_str" ]; then
-        return 0
-    fi
-    IFS=',' read -ra kv_list <<< "$args_str"
-    echo "  extraArgs:"
+KUBEADM_CONFIG_FILE="/root/kubeadm-lab.yaml"
+
+# 1. Write the static part (InitConfiguration + ClusterConfiguration start)
+cat > "${KUBEADM_CONFIG_FILE}" <<EOF
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+nodeRegistration:
+  criSocket: unix:///run/containerd/containerd.sock
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+kubernetesVersion: "v${k8_version_sh}"
+networking:
+  podSubnet: "${pod_network_cidr_sh}"
+apiServer:
+  certSANs:
+EOF
+
+# 2. Append certSANs lines
+echo "${apiserver_sans}" | tr ',' '\n' | sed 's/^/    - "/; s/$/"/' >> "${KUBEADM_CONFIG_FILE}"
+
+# 3. Append extraArgs if kubeadm_init_extra_args is not empty
+if [ -n "${kubeadm_init_extra_args}" ]; then
+    echo "  extraArgs:" >> "${KUBEADM_CONFIG_FILE}"
+    IFS=',' read -ra kv_list <<< "${kubeadm_init_extra_args}"
     for kv in "${kv_list[@]}"; do
         key="${kv%%=*}"
         val="${kv#*=}"
-        echo "    ${key}: \"${val}\""
+        # write key: "val"
+        printf '    %s: "%s"\n' "$key" "$val" >> "${KUBEADM_CONFIG_FILE}"
     done
-}
-
-KUBEADM_CONFIG_FILE="/root/kubeadm-lab.yaml"
-{
-    echo "apiVersion: kubeadm.k8s.io/v1beta4"
-    echo "kind: InitConfiguration"
-    echo "nodeRegistration:"
-    echo "  criSocket: unix:///run/containerd/containerd.sock"
-    echo "---"
-    echo "apiVersion: kubeadm.k8s.io/v1beta4"
-    echo "kind: ClusterConfiguration"
-    # kubeadm ClusterConfiguration expects v-prefixed version
-    echo "kubernetesVersion: \"v${k8_version_sh}\""
-    echo "networking:"
-    echo "  podSubnet: \"${pod_network_cidr_sh}\""
-    echo "apiServer:"
-    echo "  certSANs:"
-    echo "${apiserver_sans}" | tr ',' '\n' | sed 's/^/    - "/; s/$/"/'
-    rendered_extra_args=$(render_extra_args_yaml "${kubeadm_init_extra_args}")
-    if [ -n "${rendered_extra_args}" ]; then
-        echo "${rendered_extra_args}"
-    fi
-} > "${KUBEADM_CONFIG_FILE}"
+fi
 
 echo "*** kubeadm config file ${KUBEADM_CONFIG_FILE}:"
 cat "${KUBEADM_CONFIG_FILE}"
@@ -126,7 +123,6 @@ export KUBECONFIG=/root/.kube/config
 case $acrh in
 x86_64)
   cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-amd64.tar.gz"
-
 ;;
 aarch64)
   cilium_url="https://github.com/cilium/cilium-cli/releases/download/${cilium_version}/cilium-linux-arm64.tar.gz"
@@ -147,7 +143,6 @@ cilium)
 *)
    echo "cni type = $cni_type  not support"
 ;;
-
 esac
 
 echo "sleep 10"
@@ -179,6 +174,7 @@ aarch64)
   mv linux-arm/helm /usr/local/bin/helm
 ;;
 esac
+
 if [[ "$utils_enable_sh" == "true" ]] ; then
   echo "*** install utils "
   helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
