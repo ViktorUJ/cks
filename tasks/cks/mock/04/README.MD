@@ -34,6 +34,8 @@ Documentation  https://kubernetes-sigs.github.io/bom/cli-reference/
 documentation https://etcd.io/docs/
 
 
+**NGINX Ingress Controller**
+Documentation  https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/
 ![preview](./preview.png)
 
 - run ``time_left`` on work pc to **check time**
