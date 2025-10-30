@@ -54,19 +54,19 @@ fi
 cat >/tmp/kubeadm-config.yaml <<EOF
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
-kubernetesVersion: "${k8_version_sh}"
+kubernetesVersion: "$k8_version_sh"
 networking:
-  podSubnet: "${pod_network_cidr_sh}"
+  podSubnet: "$pod_network_cidr_sh"
 apiServer:
   certSANs:
     - localhost
     - 127.0.0.1
-    - ${local_ipv4}
+    - $local_ipv4
 EOF
 # Append external IP SAN if provided
 if [ -n "$external_ip_sh" ]; then
-  echo "    - ${external_ip_sh}" >> /tmp/kubeadm-config.yaml
-  echo "*** added external_ip ${external_ip_sh} to certSANs"
+  echo "    - $external_ip_sh" >> /tmp/kubeadm-config.yaml
+  echo "*** added external_ip $external_ip_sh to certSANs"
 else
   echo "*** external_ip not set; proceeding without it"
 fi
