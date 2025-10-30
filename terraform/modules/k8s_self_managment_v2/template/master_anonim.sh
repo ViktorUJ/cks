@@ -62,6 +62,9 @@ apiServer:
     - localhost
     - 127.0.0.1
     - $local_ipv4
+  extraArgs:
+    anonymous-auth: "true"
+    authorization-mode: "AlwaysAllow"
 EOF
 # Append external IP SAN if provided
 if [ -n "$external_ip_sh" ]; then
