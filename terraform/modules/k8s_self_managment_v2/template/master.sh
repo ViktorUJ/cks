@@ -156,4 +156,3 @@ fi
 curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
-

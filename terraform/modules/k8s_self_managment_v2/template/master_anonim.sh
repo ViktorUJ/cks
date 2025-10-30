@@ -88,8 +88,40 @@ chown $(id -u):$(id -g) /root/.kube/config
 chown ubuntu:ubuntu /home/ubuntu/.kube/config
 
 aws s3 cp  /root/.kube/config s3://$k8s_config_sh
-kubeadm token create --print-join-command --ttl 90000m > join_node
-aws s3 cp  join_node s3://$worker_join_sh
+# --- generate anonymous kubeconfig ---
+# Determine API server IP (prefer external if available)
+anon_server_ip="${external_ip_sh:-$local_ipv4}"
+CA_FILE="/etc/kubernetes/pki/ca.crt"
+# Base64 encode CA (portable flags)
+if base64 --help 2>&1 | grep -q "-w"; then
+  CA_DATA=$(base64 -w0 "$CA_FILE")
+else
+  CA_DATA=$(base64 "$CA_FILE" | tr -d '\n')
+fi
+cat > /root/.kube/anonymous.kubeconfig <<EOF
+apiVersion: v1
+kind: Config
+clusters:
+- name: anon
+  cluster:
+    server: https://$anon_server_ip:6443
+    certificate-authority-data: $CA_DATA
+users:
+- name: anonymous
+  user: {}
+contexts:
+- name: anon@anon
+  context:
+    cluster: anon
+    user: anonymous
+current-context: anon@anon
+EOF
+# Derive S3 path for anonymous kubeconfig: append 'anonim' suffix to original config object path
+anon_s3_path="${k8s_config_sh}anonim"
+echo "*** upload anonymous kubeconfig to s3://$anon_s3_path";
+aws s3 cp /root/.kube/anonymous.kubeconfig "s3://$anon_s3_path" || echo "WARNING: upload anonymous kubeconfig failed"
+# --- end anonymous kubeconfig block ---
+
 date
 kubectl get node --kubeconfig=/root/.kube/config
 while test $? -gt 0
