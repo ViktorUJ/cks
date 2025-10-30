@@ -3,7 +3,7 @@ locals {
   solutions_scripts = "https://github.com/ViktorUJ/cks/blob/AG-120/tasks/cks/labs/30/worker/files/solutions/1.MD"
   solutions_video   = "Not ready yet"
   debug_output      = "false"
-  region            = "eu-north-1"
+  region            = "eu-central-1"
   vpc_default_cidr  = "10.10.0.0/16"
   aws               = "default"
   prefix            = "cks-task30"
@@ -41,12 +41,12 @@ locals {
       "pub1" = {
         name = "k8s-1"
         cidr = "10.10.1.0/24"
-        az   = "eu-north-1a"
+        az   = "eu-central-1a"
       }
       "pub2" = {
         name = "k8s-2"
         cidr = "10.10.2.0/24"
-        az   = "eu-north-1b"
+        az   = "eu-central-1b"
       }
     }
     private = {}
