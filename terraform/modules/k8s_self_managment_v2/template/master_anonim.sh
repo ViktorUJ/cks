@@ -87,7 +87,6 @@ cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
 chown $(id -u):$(id -g) /root/.kube/config
 chown ubuntu:ubuntu /home/ubuntu/.kube/config
 
-aws s3 cp  /root/.kube/config s3://$k8s_config_sh
 # --- generate anonymous kubeconfig ---
 # Determine API server IP (prefer external if available)
 anon_server_ip="${external_ip_sh:-$local_ipv4}"
