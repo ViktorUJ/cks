@@ -116,10 +116,6 @@ contexts:
     user: anonymous
 current-context: anon@anon
 EOF
-# Derive S3 path for anonymous kubeconfig: append 'anonim' suffix to original config object path
-anon_s3_path="${k8s_config_sh}anonim"
-echo "*** upload anonymous kubeconfig to s3://$anon_s3_path";
-aws s3 cp /root/.kube/anonymous.kubeconfig "s3://$anon_s3_path" || echo "WARNING: upload anonymous kubeconfig failed"
 # --- end anonymous kubeconfig block ---
 
 date
