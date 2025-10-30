@@ -21,8 +21,8 @@ locals {
     type               = "cilium" #calico , cilium
     disable_kube_proxy = "true"
   }
-  instance_type        = "t4g.medium"
-  instance_type_worker = "t4g.small"
+  instance_type        = "t3.medium"
+  instance_type_worker = "t3.small"
   spot_additional_types= [ "t4g.medium" , "t4g.large" , "t4g.xlarge" ]
   all_spot_subnet      = "true"
   key_name             = ""
