@@ -3,7 +3,7 @@ locals {
   solutions_scripts="https://github.com/ViktorUJ/cks/tree/AG-120/tasks/cks/mock/04/worker/files/solutions"
   solutions_video="need to update. old version https://youtu.be/I8CPwcGbrG8"
   debug_output   = "false"
-  region         = "eu-central-1"
+  region         = "eu-central-2"
   vpc_default_cidr  = "10.10.0.0/16"
 
   subnets = {
@@ -11,18 +11,18 @@ locals {
       "pub1" = {
         name = "AZ-1"
         cidr = "10.10.1.0/24"
-        az   = "eu-central-1a"
+        az   = "eu-central-2a"
       }
       "pub2" = {
         name = "AZ-2"
         cidr = "10.10.2.0/24"
-        az   = "eu-central-1b"
+        az   = "eu-central-2b"
       }
 
       "pub3" = {
         name = "AZ-3"
         cidr = "10.10.3.0/24"
-        az   = "eu-central-1c"
+        az   = "eu-central-2c"
       }
 
     }
