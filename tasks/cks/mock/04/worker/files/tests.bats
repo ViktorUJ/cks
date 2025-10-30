@@ -95,6 +95,19 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 }
 
 
+@test "3 Falco. Check that proper deployment was scaled to 0" {
+  echo '2'>>/var/work/tests/result/all
+  app1_replicas=$(kubectl get deployments.apps --context cluster8-admin@cluster8 -n north app1 -o jsonpath='{.spec.replicas}')
+  app2_replicas=$(kubectl get deployments.apps --context cluster8-admin@cluster8 -n north app2 -o jsonpath='{.spec.replicas}')
+  app3_replicas=$(kubectl get deployments.apps --context cluster8-admin@cluster8 -n north app3 -o jsonpath='{.spec.replicas}')
+  if [[ "$app1_replicas" == "1" && "$app2_replicas" == "1" && "$app3_replicas" == "0" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [[ "$app1_replicas" == "1" && "$app2_replicas" == "1" && "$app3_replicas" == "0" ]]
+}
+
+
+
 @test "4.1 Check  Ingress using the provided certificate. " {
   echo '2'>>/var/work/tests/result/all
   timeout 2 curl https://cks.local:31139 -kv 2>&1  | grep 'CN=cks.local'

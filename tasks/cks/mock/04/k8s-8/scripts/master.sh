@@ -80,4 +80,4 @@ awk '{
 kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule-
 
 # Install deployments
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-7/scripts/app.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-8/scripts/app.yaml
