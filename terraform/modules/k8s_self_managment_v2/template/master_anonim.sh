@@ -87,36 +87,6 @@ cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
 chown $(id -u):$(id -g) /root/.kube/config
 chown ubuntu:ubuntu /home/ubuntu/.kube/config
 
-# --- generate anonymous kubeconfig ---
-# Determine API server IP (prefer external if available)
-anon_server_ip="$${external_ip_sh:-$local_ipv4}"
-CA_FILE="/etc/kubernetes/pki/ca.crt"
-# Base64 encode CA (portable flags)
-if base64 --help 2>&1 | grep -q "-w"; then
-  CA_DATA=$(base64 -w0 "$CA_FILE")
-else
-  CA_DATA=$(base64 "$CA_FILE" | tr -d '\n')
-fi
-cat > /root/.kube/anonymous.kubeconfig <<EOF
-apiVersion: v1
-kind: Config
-clusters:
-- name: anon
-  cluster:
-    server: https://$anon_server_ip:6443
-    certificate-authority-data: $CA_DATA
-users:
-- name: anonymous
-  user: {}
-contexts:
-- name: anon@anon
-  context:
-    cluster: anon
-    user: anonymous
-current-context: anon@anon
-EOF
-# --- end anonymous kubeconfig block ---
-
 date
 kubectl get node --kubeconfig=/root/.kube/config
 while test $? -gt 0
@@ -199,6 +169,40 @@ if [[ "$utils_enable_sh" == "true" ]] ; then
   echo 'source <(helm completion bash)'>>/home/ubuntu/.bashrc
   echo 'source <(skaffold completion bash)'>>/home/ubuntu/.bashrc
 fi
+
+
+
+echo "*** generate anonim config "
+# --- generate anonymous kubeconfig ---
+# Determine API server IP (prefer external if available)
+anon_server_ip="$${external_ip_sh:-$local_ipv4}"
+CA_FILE="/etc/kubernetes/pki/ca.crt"
+# Base64 encode CA (portable flags)
+if base64 --help 2>&1 | grep -q "-w"; then
+  CA_DATA=$(base64 -w0 "$CA_FILE")
+else
+  CA_DATA=$(base64 "$CA_FILE" | tr -d '\n')
+fi
+cat > /root/.kube/anonymous.kubeconfig <<EOF
+apiVersion: v1
+kind: Config
+clusters:
+- name: anon
+  cluster:
+    server: https://$anon_server_ip:6443
+    certificate-authority-data: $CA_DATA
+users:
+- name: anonymous
+  user: {}
+contexts:
+- name: anon@anon
+  context:
+    cluster: anon
+    user: anonymous
+current-context: anon@anon
+EOF
+# --- end anonymous kubeconfig block ---
+
 
 curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
