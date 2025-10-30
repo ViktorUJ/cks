@@ -87,6 +87,9 @@ cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
 chown $(id -u):$(id -g) /root/.kube/config
 chown ubuntu:ubuntu /home/ubuntu/.kube/config
 
+aws s3 cp  /root/.kube/config s3://$k8s_config_sh
+kubeadm token create --print-join-command --ttl 90000m > join_node
+aws s3 cp  join_node s3://$worker_join_sh
 date
 kubectl get node --kubeconfig=/root/.kube/config
 while test $? -gt 0
