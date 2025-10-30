@@ -94,6 +94,7 @@ resource "aws_launch_template" "master" {
       k8s_config          = local.k8s_config
       external_ip         = local.external_ip
       k8_version          = var.k8s_master.k8_version
+      k8_version_sh       = var.k8s_master.k8_version
       runtime             = var.k8s_master.runtime
       utils_enable        = var.k8s_master.utils_enable
       pod_network_cidr    = var.k8s_master.pod_network_cidr
