@@ -89,7 +89,7 @@ chown ubuntu:ubuntu /home/ubuntu/.kube/config
 
 # --- generate anonymous kubeconfig ---
 # Determine API server IP (prefer external if available)
-anon_server_ip="${external_ip_sh:-$local_ipv4}"
+anon_server_ip="$${external_ip_sh:-$local_ipv4}"
 CA_FILE="/etc/kubernetes/pki/ca.crt"
 # Base64 encode CA (portable flags)
 if base64 --help 2>&1 | grep -q "-w"; then
