@@ -194,9 +194,11 @@ clusters:
   cluster:
     server: https://$anon_server_ip:6443
     certificate-authority-data: $CA_DATA
+    insecure-skip-tls-verify: false
 users:
 - name: anonymous
-  user: {}
+  user:
+    token: ""
 contexts:
 - name: anon@anon
   context:
@@ -204,6 +206,7 @@ contexts:
     user: anonymous
 current-context: anon@anon
 EOF
+echo "*** anonymous kubeconfig created at /root/.kube/anonymous.kubeconfig"
 # --- end anonymous kubeconfig block ---
 
 
