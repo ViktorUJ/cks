@@ -86,7 +86,7 @@ Documentation  https://kubernetes.github.io/ingress-nginx/user-guide/nginx-confi
 | Acceptance criteria | - ns  team-20  , deployment `team20`   <br/> -  create sa `team20` <br/>- update deployment `team20` to use sa `team20` <br/> disable automount sa secret <br/> mount sa secret to `/var/team20/secret` |
 ---
 
-|        **8**        | **Image Vulnerability Scanning**  bom    / в деплойменте несколько контейнеров . найти в каком имадже контейнера  содержится либа определенной верси . удалить этот контейнер из деплоймента . и для этого имаджа сохранить результат скана в определенном формате .                                                             |
+|        **8**        | **Image Vulnerability Scanning**  bom |
 |:-------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |       Cluster       | cluster6 (`kubectl config use-context cluster6-admin@cluster6`)                                                                                                                                                                                                                                                                  |
 | Acceptance criteria | - delete all containers with `ca-certificates-bundle` version `20230506-r0` in deployment `deployment1` NS `team-xxx` using the `bom` utility.  <br/> -  Generate a SPDX-Json SBOM of image for `registry.k8s.io/kube-scheduler:v1.32.0` and store to `/var/work/02/kube_scheduler_sbom.json` using the `bom` utility. |
