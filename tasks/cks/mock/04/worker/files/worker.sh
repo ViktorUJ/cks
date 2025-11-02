@@ -89,6 +89,6 @@ mkdir -p /var/work/02/
 chmod 777 -R /var/work/02/
 sudo -u ubuntu bom generate --image registry.k8s.io/kube-controller-manager:v1.32.0 --format json --output /var/work/02/check_sbom.json
 
-sudo -u ubuntu trivy image  nginx:1.23-bullseye-perl
 
-sudo -u ubuntu trivy image --format cyclonedx --output /tmp/1.json  nginx:1.23-bullseye-perl
+address=$(kubectl get no --context cluster4-admin@cluster4 -o json  | jq -r '.items[] | select(.kind == "Node") | .status.addresses[] | select(.type == "InternalIP") | .address')
+echo "$address myapp.local">>/etc/hosts
