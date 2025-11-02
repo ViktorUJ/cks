@@ -1,4 +1,4 @@
 #!/bin/bash
-echo "*** worker node cks lab-27 k8s-1"
+echo "*** worker node cks mock 4  k8s-4"
 apt-get update
 apt-get -y install tcpdump
