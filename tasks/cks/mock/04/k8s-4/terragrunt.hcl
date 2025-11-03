@@ -52,7 +52,10 @@ inputs = {
     eip                = "false"
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-4/scripts/master.sh"
-    cni                = local.vars.locals.cni
+    cni = {
+      type = "cilium" #calico , cilium
+      disable_kube_proxy = "false"
+    }
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
