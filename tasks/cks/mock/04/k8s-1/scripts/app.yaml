@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: myapp
+  name: market
 ---
 apiVersion: v1
 kind: Pod
@@ -11,11 +11,11 @@ metadata:
   labels:
     run: app
   name: app
-  namespace: myapp
+  namespace: market
 spec:
   containers:
   - image: viktoruj/ping_pong:alpine
-    name: app
+    name: market
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
@@ -27,34 +27,48 @@ metadata:
   labels:
     run: app
   name: app
-  namespace: myapp
+  namespace: market
 spec:
   ports:
   - port: 8080
+    name: http
     protocol: TCP
     targetPort: 8080
   selector:
     run: app
   type: ClusterIP
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: v1
+kind: Pod
 metadata:
-  name: ingress-rule
-  namespace: myapp
-  annotations:
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+  creationTimestamp: null
+  labels:
+    run: db
+  name: db
+  namespace: market
 spec:
-  ingressClassName: nginx
-  rules:
-  - host: myapp.local
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: app
-            port:
-              number: 8080
+  containers:
+    - image: viktoruj/ping_pong:alpine
+      name: db
+      resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: db
+  name: db
+  namespace: market
+spec:
+  ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    run: db
+  type: ClusterIP
 ---
