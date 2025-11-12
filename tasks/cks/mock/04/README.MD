@@ -128,11 +128,13 @@ Documentation  https://kubernetes.github.io/ingress-nginx/user-guide/nginx-confi
 | Acceptance criteria | **cilium cli** is installed on **control-plane** node <br/> You have to develop Cilium network policy in `myapp` namespace:<br/>&nbsp;&nbsp;1. You have to configure cilium network policy to allow access from pods in `ingress-nginx` namespace to our app deployed in `myapp` namespace.<br/>&nbsp;&nbsp;2. Enforce Mutual Authentication between pods in `ingress-nginx` and our app in `myapp` namespace.<br/>&nbsp;&nbsp; To check that policy is working, you can run `curl --connect-timeout 1 --max-time 1 -s http://myapp.local:30800 -v ` should work without any problems. |
 
 
-|       **15**        | **kubeadm** анонимный    . bcghfdbnm rkf                        |
-|:-------------------:|:----------------------------------------------------------------|
-|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`) |
-| Acceptance criteria | исправить кластер чтобы не было анонимного доступа              |
+|       **15**        | **kubeadm anonymous**.The cluster was configured using kubeadm with anonymous access enabled. It is necessary to disable anonymous access                                                                                                  |
+|:-------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                            |
+| Acceptance criteria | `curl -k https://{control-plane}:6443/api/v1/namespaces` not allow  <br/> `anonymous-auth` is  disable <br/> `authorization-mode`  is `Node,RBAC` <br/> don't have any **clusterrole** and **cluster role binding** for `system:anonymous` | |
 ---
+
+
 
 
 

@@ -29,4 +29,4 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 YAML
 
-kubectl apply -f anonymous-rbac.yaml 
+kubectl apply -f anonymous-rbac.yaml
