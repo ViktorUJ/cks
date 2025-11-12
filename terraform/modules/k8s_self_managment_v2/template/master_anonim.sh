@@ -64,8 +64,9 @@ apiServer:
     - $local_ipv4
   extraArgs:
     anonymous-auth: "true"
-    authorization-mode: "AlwaysAllow"
+    authorization-mode: "Node,RBAC"
 EOF
+
 # Append external IP SAN if provided
 if [ -n "$external_ip_sh" ]; then
   echo "    - $external_ip_sh" >> /tmp/kubeadm-config.yaml
