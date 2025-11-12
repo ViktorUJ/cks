@@ -1,0 +1,90 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cyan
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cyan-echo-v1
+  namespace: cyan
+  labels:
+    app: cyan-echo
+    version: v1
+spec:
+  containers:
+  - name: cyan-echo
+    image: bizy92/echo-version-app:v1
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 8080
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "64Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+    env:
+    - name: VERSION
+      value: "v1"
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cyan-echo-v2
+  namespace: cyan
+  labels:
+    app: cyan-echo
+    version: v2
+spec:
+  containers:
+  - name: cyan-echo
+    image: bizy92/echo-version-app:v1
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 8080
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "64Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+    env:
+    - name: VERSION
+      value: "v2"
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cyan-echo
+  namespace: cyan
+spec:
+  selector:
+    app: cyan-echo
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+---

@@ -1,0 +1,44 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: violet
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: violet-echo
+  namespace: violet
+  labels:
+    app: violet-echo
+    version: v1
+spec:
+  containers:
+  - name: violet-echo
+    image: bizy92/echo-version-app:v1
+    ports:
+    - containerPort: 8080
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "64Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: violet-echo
+  namespace: violet
+spec:
+  selector:
+    app: violet-echo
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---

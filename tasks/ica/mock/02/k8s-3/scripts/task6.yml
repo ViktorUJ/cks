@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gold
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gold-echo-v1
+  namespace: gold
+  labels:
+    app: gold-echo
+    version: v1
+spec:
+  containers:
+  - name: gold-echo
+    image: bizy92/echo-version-app:v1
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 8080
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "64Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+    env:
+    - name: VERSION
+      value: "v1"
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gold-echo-v2
+  namespace: gold
+  labels:
+    app: gold-echo
+    version: v2
+spec:
+  containers:
+  - name: gold-echo
+    image: bizy92/echo-version-app:v1
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 8080
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "64Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+    env:
+    - name: VERSION
+      value: "v2"
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+     
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gold-echo
+  namespace: gold
+spec:
+  selector:
+    app: gold-echo
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-gold
+  namespace: gold
+  labels:
+    app: sleep-gold
+spec:
+  containers:
+  - name: sleep-gold
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "32Mi"
+---

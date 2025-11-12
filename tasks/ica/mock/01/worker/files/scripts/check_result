@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Usage: check_result [task_number]
+# Examples:
+#   check_result       - Check all tasks
+#   check_result 5     - Check only task 5
+
+TASK_NUM=$1
+
+# Clear previous results
+rm -f /var/work/tests/result/all /var/work/tests/result/ok
+touch /var/work/tests/result/all /var/work/tests/result/ok
+
+# Run test files
+if [ -z "$TASK_NUM" ]; then
+  # Run all tests
+  echo "Running all tests..."
+  for test_file in /var/work/tests/*.bats; do
+    if [ -f "$test_file" ]; then
+      echo "Running $(basename $test_file)..."
+      bats "$test_file"
+    fi
+  done
+else
+  # Run specific task test
+  test_file="/var/work/tests/tests-$(printf "%02d" $TASK_NUM).bats"
+  if [ -f "$test_file" ]; then
+    echo "Running task $TASK_NUM test..."
+    bats "$test_file"
+  else
+    echo "Error: Test file for task $TASK_NUM not found: $test_file"
+    exit 1
+  fi
+fi
+
+# Calculate total scores
+sum_all=0; for i in $(cat /var/work/tests/result/all) ; do sum_all=$(echo "$sum_all+$i"| bc ) ; done
+sum_ok=0; for i in $(cat /var/work/tests/result/ok) ; do sum_ok=$(echo "$sum_ok+$i"| bc ) ; done
+
+if [ "$sum_all" != "0" ]; then
+  result=$(echo "scale=2 ; $sum_ok/$sum_all*100" | bc  )
+  echo ""
+  echo "=========================================="
+  if [ -z "$TASK_NUM" ]; then
+    echo "  Total Result (All Tasks)"
+  else
+    echo "  Result for Task $TASK_NUM"
+  fi
+  echo "=========================================="
+  echo " Result: $result %"
+  echo " Points: $sum_ok / $sum_all"
+  echo "=========================================="
+else
+  echo " result = 0 %   ok_points=0  all_points=0  "
+fi
+
+time_left

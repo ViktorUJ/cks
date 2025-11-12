@@ -1,0 +1,34 @@
+#!/bin/bash
+export KUBECONFIG=/home/ubuntu/.kube/_config
+
+# Get the node IP
+NODE_IP=$(kubectl get nodes --context cluster3-admin@cluster3 -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+
+# Get NodePort for port 80
+NODE_PORT=$(kubectl get svc istio-ingressgateway -n istio-system --context cluster3-admin@cluster3 -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}' 2>/dev/null)
+
+if [ -z "$NODE_PORT" ]; then
+    echo "Error: Could not get Istio ingress gateway port"
+    exit 1
+fi
+
+echo "=========================================="
+echo "  Istio Ingress Gateway Info"
+echo "=========================================="
+echo "  Service Type: NodePort"
+echo "  Node IP:      $NODE_IP"
+echo "  HTTP Port:    $NODE_PORT"
+echo ""
+echo "Available hosts:"
+echo "  - echo.example.com"
+echo "  - ship.milkyway.gal"
+echo "  - app.domain.com"
+echo "  - test.gateway.ica"
+echo ""
+echo "Test commands:"
+echo "  curl http://echo.example.com:$NODE_PORT/mars"
+echo "  curl http://ship.milkyway.gal:$NODE_PORT/normandy"
+echo "  curl -H 'commander: shepard' http://ship.milkyway.gal:$NODE_PORT/normandy"
+echo "  curl http://app.domain.com:$NODE_PORT/moon"
+echo "  curl http://test.gateway.ica:$NODE_PORT/"
+echo "=========================================="

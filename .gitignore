@@ -7,3 +7,6 @@ venv
 **.__pycache__
 /docker/ping_pong/dist/*
 terraform/environments/**/**
+istio-1.27.2
+echo-version
+todo
