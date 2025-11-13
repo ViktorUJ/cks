@@ -493,3 +493,58 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
   fi
   [ "$result" == "0" ]
 }
+
+@test "15.1 Check anonymous-auth is disabled" {
+  echo '1'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster1-admin@cluster1  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep 'anonymous-auth=false'"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+@test "15.2 Check authorization-mode is Node,RBAC" {
+  echo '1'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster1-admin@cluster1  -o jsonpath='{.items..metadata.name}')
+  ssh -oStrictHostKeyChecking=no $control_plane_node "sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml | grep 'authorization-mode=Node,RBAC'"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+@test "15.3 Check anonymous access is denied" {
+  echo '1'>>/var/work/tests/result/all
+  control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --context cluster1-admin@cluster1  -o jsonpath='{.items..metadata.name}')
+  set +e
+  ssh -oStrictHostKeyChecking=no $control_plane_node "curl -k https://127.0.0.1:6443/api/v1/namespaces 2>&1 | grep 'Unauthorized'"
+  result=$?
+  set -e
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+@test "15.4 Check clusterrolebinding anonymous-binding is deleted" {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  kubectl get clusterrolebinding anonymous-binding --context cluster1-admin@cluster1 2>&1 | grep 'NotFound'
+  result=$?
+  set -e
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+@test "15.5 Check clusterrole anonymous is deleted" {
+  echo '1'>>/var/work/tests/result/all
+  set +e
+  kubectl get clusterrole anonymous --context cluster1-admin@cluster1 2>&1 | grep 'NotFound'
+  result=$?
+  set -e
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
