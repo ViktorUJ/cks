@@ -89,6 +89,11 @@ mkdir -p /var/work/02/
 chmod 777 -R /var/work/02/
 sudo -u ubuntu bom generate --image registry.k8s.io/kube-controller-manager:v1.32.0 --format json --output /var/work/02/check_sbom.json
 
+#task 16
+mkdir -p /var/work/16/
+chmod 777 -R /var/work/16/
+cd /var/work/16/
+wget https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/worker/files/16/Dockerfile
 
 address=$(kubectl get no --context cluster4-admin@cluster4 -o json  | jq -r '.items[] | select(.kind == "Node") | .status.addresses[] | select(.type == "InternalIP") | .address')
 echo "$address myapp.local">>/etc/hosts
