@@ -549,3 +549,46 @@ control_plane_node=$(kubectl get no -l node-role.kubernetes.io/control-plane --c
   fi
   [ "$result" == "0" ]
 }
+
+@test "16.1 Dockerfile: Check 1" {
+  echo '1'>>/var/work/tests/result/all
+  # Check that USER is couchdb, not root
+  grep -E '^USER couchdb' /var/work/16/Dockerfile
+  result=$?
+  if [[ "$result" == "0" ]]; then
+   echo '1'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "16.2 Dockerfile: Check 2" {
+  echo '2'>>/var/work/tests/result/all
+  # Check that the problematic separate RUN command is removed
+  set +e
+  grep -E '^RUN\s+rm -rf /var/lib/apt/lists/\*' /var/work/16/Dockerfile
+  result=$?
+  set -e
+  # Should NOT find standalone rm command (result should be 1)
+  if [[ "$result" == "1" ]]; then
+   echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "1" ]
+}
+
+@test "16.3 Dockerfile: Check 3" {
+  echo '2'>>/var/work/tests/result/all
+  # Check that line with gnupg ends with '; \', next line has rm -rf /var/lib/apt/lists/*.
+  awk '
+    /gnupg/ && /;[[:space:]]*\\[[:space:]]*$/ { found_prev=1; next }
+    found_prev && /^[[:space:]]*rm[[:space:]]+-rf[[:space:]]+\/var\/lib\/apt\/lists\/\*/ {
+      print "Found proper chain"
+      exit 0
+    }
+    END { exit 1 }
+  ' /var/work/16/Dockerfile | grep -q "Found proper chain"
+  result=$?
+  if [[ "$result" == "0" ]]; then
+    echo '2'>>/var/work/tests/result/ok
+  fi
+  [ "$result" == "0" ]
+}
