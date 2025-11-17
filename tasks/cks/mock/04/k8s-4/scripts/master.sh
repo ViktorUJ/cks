@@ -28,10 +28,11 @@ echo "Waiting for ingress-nginx pods to be ready..."
 kubectl wait --namespace ingress-nginx --for=condition=Ready pod --selector=app.kubernetes.io/component=controller --timeout=180s || { echo "Timed out waiting for ingress-nginx pods"; exit 1; }
 echo "Ingress-nginx pods are ready."
 
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-4/scripts/app.yaml
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-4/scripts/default-deny.yaml
 
 kubectl patch svc ingress-nginx-controller -n ingress-nginx --type='json' -p='[{"op": "replace", "path": "/spec/type", "value": "NodePort"}, {"op": "add", "path": "/spec/ports/0/nodePort", "value": 30800}]'
 
 echo "127.0.0.1 myapp.local" >> /etc/hosts
+
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-4/scripts/app.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-4/scripts/default-deny.yaml
 
