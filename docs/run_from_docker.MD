@@ -1,8 +1,8 @@
 ## Run platform via docker
 
-We have prepared a docker image including all necessary dependencies and utilities .
+We have prepared a docker image including all necessary dependencies and utilities.
 
-You can use it to run exams or labs by following the instructions below or use  [video instructions](https://youtu.be/Xh6sWzafBmw)
+You can use it to run exams or labs by following the instructions below or use [video instructions](https://youtu.be/Xh6sWzafBmw)
 
 ### Run the docker container
 
@@ -50,7 +50,7 @@ Increase spot instances count (Default quota is 5):
 Service Quotas -> AWS services -> Amazon Elastic Compute Cloud (Amazon EC2) -> All Standard (A, C, D, H, I, M, R, T, Z) Spot Instance Requests
 ```
 
-If you're going to use different type, update your service quote accordinally.
+If you're going to use different instance type, please ensure that your service quotes set accordinally.
 
 ## Run your scenario
 
