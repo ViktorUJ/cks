@@ -33,6 +33,6 @@ kubectl patch svc ingress-nginx-controller -n ingress-nginx --type='json' -p='[{
 
 echo "127.0.0.1 myapp.local" >> /etc/hosts
 sleep 30 # Wait for services to stabilize
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-4/scripts/app.yaml
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-120/tasks/cks/mock/04/k8s-4/scripts/default-deny.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/mock/04/k8s-4/scripts/app.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/mock/04/k8s-4/scripts/default-deny.yaml
 

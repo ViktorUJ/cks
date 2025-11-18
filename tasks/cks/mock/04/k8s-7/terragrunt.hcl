@@ -53,7 +53,7 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-7/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/04/k8s-7/scripts/master.sh"
     cni                = local.vars.locals.cni
     root_volume        = local.vars.locals.root_volume
     ssh = {
@@ -72,7 +72,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-120/tasks/cks/mock/04/k8s-7/scripts/worker.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/04/k8s-7/scripts/worker.sh"
       node_labels        = "work_type=worker"
       cidrs              = local.vars.locals.access_cidrs
       root_volume        = local.vars.locals.root_volume
