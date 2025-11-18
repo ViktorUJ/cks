@@ -17,6 +17,13 @@ true)
 ;;
 esac
 
+echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
+chmod 600 /home/ubuntu/.ssh/id_rsa
+echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
+chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
+
+
+
 local_ipv4=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
 runtime_sh=${runtime}
 k8_version_sh=${k8_version}
@@ -28,7 +35,7 @@ utils_enable_sh=${utils_enable}
 cni_type=${cni_type}
 cilium_version=${cilium_version}
 disable_kube_proxy=${disable_kube_proxy}
-kubeadm_init_extra_args=""
+kubeadm_init_extra_args=${kubeadm_init_extra_args}
 date
 swapoff -a
 
@@ -41,11 +48,14 @@ if [[ "$disable_kube_proxy" == "true" ]] ; then
    kubeadm_init_extra_args+="--skip-phases=addon/kube-proxy"
 fi
 
+
 if [ -z "$external_ip_sh" ]; then
    echo "*** kubeadm init without eip "
+   echo "*** kubeadm init --ignore-preflight-errors=NumCPU,Mem --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4 $kubeadm_init_extra_args "
    kubeadm init --ignore-preflight-errors=NumCPU,Mem --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4 $kubeadm_init_extra_args
   else
    echo "*** kubeadm init with eip "
+   echo "*** kubeadm init --ignore-preflight-errors=NumCPU,Mem --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4,$external_ip_sh $kubeadm_init_extra_args"
    kubeadm init --ignore-preflight-errors=NumCPU,Mem --kubernetes-version $k8_version_sh --pod-network-cidr $pod_network_cidr_sh --apiserver-cert-extra-sans=localhost,127.0.0.1,$local_ipv4,$external_ip_sh $kubeadm_init_extra_args
 fi
 
@@ -146,8 +156,3 @@ fi
 curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
-
-echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
-chmod 600 /home/ubuntu/.ssh/id_rsa
-echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
-chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa

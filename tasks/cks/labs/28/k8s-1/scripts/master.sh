@@ -18,6 +18,33 @@ engine:
   kind: modern_ebpf
 YAML
 
+if [ -f /etc/falco/falco.yaml ]; then
+  awk '
+  {
+    if (inside) {
+      if ($0 ~ /^[[:space:]]/) { next }
+      else { inside=0 }
+    }
+    if ($0 ~ /^k8s:/ || $0 ~ /^kubernetes:/) { inside=1; next }
+    print
+  }
+  END {
+    print "k8s:";
+    print "  enabled: false";
+    print "kubernetes:";
+    print "  enabled: false";
+  }' /etc/falco/falco.yaml > /tmp/falco.yaml.new && mv /tmp/falco.yaml.new /etc/falco/falco.yaml
+else
+  cat >/etc/falco/falco.yaml <<'YAML'
+# Falco main config (generated)
+# Disable Kubernetes metadata enrichment
+k8s:
+  enabled: false
+kubernetes:
+  enabled: false
+YAML
+fi
+
 # Clean any stale classic eBPF probe cache (harmless if missing)
 rm -f /root/.falco/falco-bpf.o || true
 

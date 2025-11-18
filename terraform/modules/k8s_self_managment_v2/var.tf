@@ -49,6 +49,7 @@ variable "k8s_master" {
     runtime_script     = string
     utils_enable       = string
     pod_network_cidr   = string
+    kubeadm_init_extra_args= optional(string, "")
     cni = optional(object({
       type                = optional(string, "calico") # calico, cilium
       calico_url          = optional(string, "https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml")
