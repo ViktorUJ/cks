@@ -1,0 +1,88 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: blue
+  labels:
+    istio-injection: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: blue
+  name: echo-version-v1
+  labels:
+    app: echo-version
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-version
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: echo-version
+        version: v1
+    spec:
+      containers:
+      - name: echo-version
+        image: bizy92/echo-version-app:v1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+        env:
+        - name: VERSION
+          value: "v1"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: blue
+  name: echo-version-v1
+spec:
+  selector:
+    app: echo-version
+    version: v1
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+
+--- 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-blue
+  namespace: blue
+  labels:
+    app: sleep-blue
+spec:
+  containers:
+  - name: curl
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"

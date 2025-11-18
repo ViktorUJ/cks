@@ -1,0 +1,104 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: brown
+  labels:
+    istio-injection: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: brown-echo
+  namespace: brown
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: brown-echo
+  template:
+    metadata:
+      labels:
+        app: brown-echo
+    spec:
+      containers:
+      - name: brown-echo
+        image: bizy92/echo-version-app:v1
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "64Mi"
+          limits:
+            cpu: "20m"
+            memory: "64Mi"
+        env:
+        - name: VERSION
+          value: "v1"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: brown-echo
+  namespace: brown
+spec:
+  selector:
+    app: brown-echo
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fortio
+  namespace: brown
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fortio
+  template:
+    metadata:
+      labels:
+        app: fortio
+    spec:
+      containers:
+      - name: fortio
+        image: fortio/fortio:latest_release
+        ports:
+        - containerPort: 8080
+          name: http-fortio
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fortio
+  namespace: brown
+spec:
+  selector:
+    app: fortio
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  type: ClusterIP
+---
