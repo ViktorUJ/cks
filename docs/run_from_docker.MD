@@ -43,11 +43,13 @@ You have to increase you AWS quotes to be able to launch such amount of on-deman
 
 ```text
 Increase on-demand count of the instances (Default quota is 5):
-Service Quotas -> AWS services -> Amazon Elastic Compute Cloud (Amazon EC2) -> Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances and submit a request to increase it to 40
+Service Quotas -> AWS services -> Amazon Elastic Compute Cloud (Amazon EC2) ->
+Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances and submit a request to increase it to 40
 
 Increase spot instances count (Default quota is 5):
 
-Service Quotas -> AWS services -> Amazon Elastic Compute Cloud (Amazon EC2) -> All Standard (A, C, D, H, I, M, R, T, Z) Spot Instance Requests
+Service Quotas -> AWS services -> Amazon Elastic Compute Cloud (Amazon EC2) ->
+All Standard (A, C, D, H, I, M, R, T, Z) Spot Instance Requests
 ```
 
 If you're going to use different instance type, please ensure that your service quotes set accordinally.
