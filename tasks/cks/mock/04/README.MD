@@ -137,3 +137,4 @@ Documentation  https://kubernetes.github.io/ingress-nginx/user-guide/nginx-confi
 |       Cluster       | any                                                                                                                                              |
 | Acceptance criteria | fix 2 problem in  Dockerfile `/var/work/16/Dockerfile`   <br/> All changes must be made on the **same line**. Do not delete or create new lines. |
 ---
+---
