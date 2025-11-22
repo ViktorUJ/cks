@@ -45,8 +45,8 @@ locals {
       type = "calico" #calico , cilium
       disable_kube_proxy="false"
     }
-  instance_type        = "t4g.medium" # m5.large | t4g.medium
-  instance_type_worker = "t4g.medium" # m5.large | t4g.medium
+  instance_type        = "m5.largem" # m5.large | t4g.medium
+  instance_type_worker = "m5.large" # m5.large | t4g.medium
  spot_additional_types= [ "t4g.medium" , "t4g.large" , "t4g.xlarge" ]
 
   all_spot_subnet      = "true"
