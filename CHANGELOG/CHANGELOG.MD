@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.1 (19.11.2025)
+### Features
+* [cks mock exam 04](../tasks/cks/mock/04) is added.
+* [cks mock exam 04 solutions](../tasks/cks/mock/04/worker/files/solutions) is added.
+* cks mock exam 04 [video solution](https://youtu.be/9W9KvSGq3nc) is added.
+
 ## 0.24.1 (12.09.2025)
 ### Features
 * [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is updated.
