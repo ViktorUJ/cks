@@ -13,13 +13,6 @@ while test $? -gt 0
 date
 
 }
-#-------------------
-for host in ${hosts} ; do
- host_name=$(echo $host | cut -d'=' -f1)
- host_ip=$(echo $host | cut -d'=' -f2)
- echo "$host_ip $host_name" >>/etc/hosts
-done
-
 case  $ssh_password_enable_check in
 true)
     echo "ubuntu:${ssh_password}" |sudo chpasswd
@@ -36,6 +29,25 @@ true)
     echo "*** ssh password not enable "
 ;;
 esac
+
+echo "${ssh_private_key}">/root/.ssh/id_rsa
+chmod 600 /root/.ssh/id_rsa
+echo "${ssh_pub_key}">>/root/.ssh/authorized_keys
+
+echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
+chmod 600 /home/ubuntu/.ssh/id_rsa
+chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
+echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
+
+
+#-------------------
+for host in ${hosts} ; do
+ host_name=$(echo $host | cut -d'=' -f1)
+ host_ip=$(echo $host | cut -d'=' -f2)
+ echo "$host_ip $host_name" >>/etc/hosts
+done
+
+
 
 
 acrh=$(uname -m)
@@ -141,14 +153,6 @@ EOF
 mkdir $configs_dir -p
 mkdir $default_configs_dir -p
 
-echo "${ssh_private_key}">/root/.ssh/id_rsa
-chmod 600 /root/.ssh/id_rsa
-echo "${ssh_pub_key}">>/root/.ssh/authorized_keys
-
-echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
-chmod 600 /home/ubuntu/.ssh/id_rsa
-chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
-echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
 
 export KUBECONFIG=''
 clusters_config="${clusters_config}"
