@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: emerald
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-emerald
+  namespace: emerald
+  labels:
+    app: sleep-emerald
+spec:
+  containers:
+  - name: sleep-emerald
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---

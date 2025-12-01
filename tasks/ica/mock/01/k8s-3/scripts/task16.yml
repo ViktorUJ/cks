@@ -1,0 +1,99 @@
+# Task 30: AuthorizationPolicy in Olive Namespace
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: olive
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: orchid
+  labels:
+    istio-injection: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: olive-echo
+  namespace: olive
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: olive
+  template:
+    metadata:
+      labels:
+        app: olive
+    spec:
+      containers:
+      - name: echo
+        image: bizy92/echo-version-app:v1
+        env:
+        - name: VERSION
+          value: "v1"
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: olive-echo
+  namespace: olive
+spec:
+  selector:
+    app: olive
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-olive
+  namespace: olive
+  labels:
+    app: sleep-olive
+spec:
+  containers:
+  - name: sleep
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-orchid
+  namespace: orchid
+  labels:
+    app: sleep-orchid
+spec:
+  containers:
+  - name: sleep
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---

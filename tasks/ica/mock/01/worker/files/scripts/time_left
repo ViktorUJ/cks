@@ -1,0 +1,20 @@
+#!/bin/bash
+if [ -f /var/work/target_time ]; then
+    target_time_stamp=$(cat /var/work/target_time)
+    start_time_stamp=$(cat /var/work/start_time 2>/dev/null || echo "0")
+
+    time_left=$(echo "($target_time_stamp-$(date +%s))/60" | bc)
+    if [[ "$time_left" -gt "0" ]]; then
+       echo "Time left: $time_left minutes"
+    else
+       echo "Time is over"
+    fi
+
+    if [ "$start_time_stamp" != "0" ]; then
+        env_working_time=$(echo "($(date +%s) - $start_time_stamp)/60" | bc)
+        echo "You have spent $env_working_time minutes"
+    fi
+else
+    echo "Error: Timer not initialized"
+    exit 1
+fi
