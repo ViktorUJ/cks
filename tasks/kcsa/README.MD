@@ -1,4 +1,4 @@
-# Kubernetes Certified Security Administrator (KCSA) example  questions
+# Kubernetes and Cloud Native Security Associate (KCSA) example  questions
 
 
 **What is a primary security advantage of using a cloud provider’s managed Kubernetes service?**

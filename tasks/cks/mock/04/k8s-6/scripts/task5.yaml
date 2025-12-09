@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: prod-db
+spec: {}
+status: {}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod
+
+---
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stage
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: db
+  name:  db
+  namespace: prod-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: db
+        env:
+          - name: SERVER_NAME
+            value: "mysql"
+          - name: SRV_PORT
+            value: "3306"
+        resources:
+          requests:
+            cpu:  "50m"
+            memory: "10Mi"
+        ports:
+        - containerPort: 3306
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: db
+  name: db
+  namespace: prod-db
+spec:
+  ports:
+  - port: 3306
+    protocol: TCP
+    targetPort: 3306
+  selector:
+    app: db
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: prod-app
+  name: prod-app
+  namespace: prod
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: prod-app
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: stage-app
+    role: db-connect
+  name: stage-app
+  namespace: stage
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: stage-app
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: stage-not-db-app
+  name: not-db-app
+  namespace: stage
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: not-db-app
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: all-app
+    role: db-external-connect
+  name: all-app
+  namespace: default
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: all-app
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: all-not-db-app
+  name: all-not-db-app
+  namespace: default
+spec:
+  containers:
+  - image: viktoruj/ping_pong:alpine
+    name: all-not-db-app
+
+
+
+
+

@@ -8,13 +8,13 @@ locals {
   aws               = "default"
   prefix            = "cks-task30"
   tags = {
-    "env_name"        = "cka-task30"
+    "env_name"        = "cks-task30"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version = "1.32.0"
+  k8_version = "1.34.0"
   node_type  = "spot"
   runtime    = "containerd" # docker, cri-o, containerd ( need test it )
   cni = {

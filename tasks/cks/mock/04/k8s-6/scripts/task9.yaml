@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-red
+  labels:
+    name: team-red
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: container-host-hacker
+  name: container-host-hacker
+  namespace: team-red
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: container-host-hacker
+  template:
+    metadata:
+      labels:
+        app: container-host-hacker
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+
