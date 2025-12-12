@@ -2,7 +2,7 @@
 
 ## **Istio Documentation:**
 
-https://istio.io/v1.26/docs/ and their subdomains
+https://istio.io/latest/docs/ and their subdomains
 
 - run ``time_left`` on work pc to **check time**
 - run ``check_result`` on work pc to **check result**

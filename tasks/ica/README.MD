@@ -136,7 +136,7 @@ ica/
 
 You can reference official Istio documentation:
 
-**https://istio.io/v1.26/docs/** and all subdomains
+**https://istio.io/latest/docs/** and all subdomains
 
 This mirrors the real ICA exam environment where official documentation access is permitted.
 
