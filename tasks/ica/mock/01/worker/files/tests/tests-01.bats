@@ -19,7 +19,7 @@ CONTEXT="cluster1-admin@cluster1"
 }
 
 @test "1.2 Istio - istiod deployment exists" {
-  echo '1 >> /var/work/tests/result/all
+  echo '1' >> /var/work/tests/result/all
   kubectl get deployment istiod -n istio-system --context $CONTEXT
   result=$?
   if [[ "$result" == "0" ]]; then
