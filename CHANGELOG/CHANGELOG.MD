@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.26.1 (17.12.2025)
+## 0.26.1 (16.12.2025)
 ### Features
 * [ica mock exam 01](../tasks/ica/mock/01) is added.
 * [ica mock exam 01 solutions](../tasks/ica/mock/01/worker/files/solutions) is added.

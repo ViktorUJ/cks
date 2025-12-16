@@ -72,7 +72,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-117/tasks/ica/mock/02/k8s-3/scripts/worker.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ica/mock/02/k8s-3/scripts/worker.sh"
       node_labels        = "work_type=worker"
       cidrs              = local.vars.locals.access_cidrs
       root_volume        = local.vars.locals.root_volume

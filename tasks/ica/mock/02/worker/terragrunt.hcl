@@ -70,8 +70,8 @@ inputs = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "122"
-    test_base_url     = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-117/tasks/ica/mock/02/worker/files/tests"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-117/tasks/ica/mock/02/worker/files/worker-ica.sh"
+    test_base_url     = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ica/mock/02/worker/files/tests"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ica/mock/02/worker/files/worker-ica.sh"
     ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key

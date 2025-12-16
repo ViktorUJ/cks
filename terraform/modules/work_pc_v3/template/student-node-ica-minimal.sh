@@ -16,7 +16,7 @@ export SSH_PASSWORD_ENABLE="${ssh_password_enable}"
 export ENABLE_WEB_CONSOLE="${enable_web_console}"
 
 # Download and execute full initialization script from GitHub
-FULL_INIT_URL="https://raw.githubusercontent.com/ViktorUJ/cks/AG-117/tasks/ica/mock/01/worker/files/init-full.sh"
+FULL_INIT_URL="https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ica/mock/01/worker/files/init-full.sh"
 
 echo "*** Downloading full initialization script from GitHub..."
 curl -fsSL "$FULL_INIT_URL" -o /tmp/init-full.sh
