@@ -293,7 +293,7 @@ mkdir -p /var/work/tests/result /var/work/tests/artifacts $configs_dir $default_
 
 # Download all test files
 echo "Downloading test files..."
-for i in {01..17}; do
+for i in {00..17}; do
   test_file="tests-$i.bats"
   echo "  Downloading $test_file..."
   curl -f "${TEST_BASE_URL}/$test_file" -o "/var/work/tests/$test_file" -s 2>/dev/null || echo "  $test_file not found (skipping)"
