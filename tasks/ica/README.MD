@@ -12,6 +12,7 @@ This repository contains **2 complete mock exams** designed to simulate the real
 - **Mock 02**: 16 tasks focusing on advanced service mesh patterns
 
 Each mock exam tests your knowledge of:
+
 - Istio installation and configuration (Helm and istioctl)
 - Traffic management (VirtualServices, DestinationRules, Gateways)
 - Security policies (AuthorizationPolicy, PeerAuthentication)
