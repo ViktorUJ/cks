@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pearl
+  labels:
+    istio-injection: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-pearl-v1
+  namespace: pearl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-pearl
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: echo-pearl
+        version: v1
+    spec:
+      containers:
+      - name: echo-pearl
+        image: bizy92/echo-version-app:v1
+        env:
+        - name: VERSION
+          value: "v1"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-pearl-v2
+  namespace: pearl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-pearl
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: echo-pearl
+        version: v2
+    spec:
+      containers:
+      - name: echo-pearl
+        image: bizy92/echo-version-app:v1
+        env:
+        - name: VERSION
+          value: "v2"        
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-pearl
+  namespace: pearl
+spec:
+  selector:
+    app: echo-pearl
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-pearl
+  namespace: pearl
+  labels:
+    app: sleep-pearl
+spec:
+  containers:
+  - name: sleep-pearl
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"
+---

@@ -1,0 +1,33 @@
+# Task 25: ServiceEntry with STATIC Resolution to Local Service
+# Namespace: turquoise (already exists from task 20)
+# Note: turquoise namespace is already created in task20.yml with istio-injection enabled
+
+# Sleep pod for testing
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: turquoise
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-turquoise-test
+  namespace: turquoise
+  labels:
+    app: sleep-test
+spec:
+  containers:
+  - name: sleep
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---

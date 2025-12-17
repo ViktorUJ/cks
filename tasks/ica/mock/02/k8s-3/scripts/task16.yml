@@ -1,0 +1,85 @@
+# Task 33: DestinationRule with Port-Level Load Balancing
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: maroon
+  labels:
+    istio-injection: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maroon-echo
+  namespace: maroon
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: maroon
+  template:
+    metadata:
+      labels:
+        app: maroon
+    spec:
+      containers:
+      - name: echo
+        image: bizy92/echo-version-app:v1
+        env:
+        - name: VERSION
+          value: "v1"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        ports:
+        - containerPort: 8080
+        - containerPort: 8443
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maroon-svc
+  namespace: maroon
+spec:
+  selector:
+    app: maroon
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  - port: 443
+    targetPort: 8443
+    name: https
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-maroon
+  namespace: maroon
+  labels:
+    app: sleep-maroon
+spec:
+  containers:
+  - name: sleep
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---

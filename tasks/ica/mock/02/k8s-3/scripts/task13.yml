@@ -1,0 +1,5 @@
+# Task 27: Install Istio with Minimal Profile
+# This is an installation task performed via istioctl command line
+# No Kubernetes manifests needed - this file serves as a placeholder
+# See solution file 27.MD for istioctl installation commands
+---

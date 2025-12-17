@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: turquoise
+  labels:
+    istio-injection: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: turquoise-echo
+  namespace: turquoise
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: turquoise-echo
+  template:
+    metadata:
+      labels:
+        app: turquoise-echo
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+      - name: echo
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-turquoise
+  namespace: turquoise
+  labels:
+    app: sleep-turquoise
+spec:
+  containers:
+  - name: sleep-turquoise
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---
