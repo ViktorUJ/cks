@@ -1,0 +1,114 @@
+# Task 32: Sidecar with Workload Selector in Coral
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: coral
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: turquoise
+  labels:
+    istio-injection: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-coral
+  namespace: coral
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-coral
+  template:
+    metadata:
+      labels:
+        app: echo-coral
+    spec:
+      containers:
+      - name: echo
+        image: bizy92/echo-version-app:v1
+        env:
+        - name: VERSION
+          value: "v1"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-coral
+  namespace: coral
+spec:
+  selector:
+    app: echo-coral
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-coral
+  namespace: coral
+  labels:
+    app: sleep-coral
+spec:
+  containers:
+  - name: sleep
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: space-app
+  namespace: coral
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: space
+  template:
+    metadata:
+      labels:
+        app: space
+    spec:
+      containers:
+      - name: app
+        image: curlimages/curl
+        command: ["/bin/sh", "-c", "sleep 3600"]
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "32Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+---
