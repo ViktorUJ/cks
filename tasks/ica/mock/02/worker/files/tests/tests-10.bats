@@ -6,15 +6,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 CONTEXT="cluster3-admin@cluster3"
 NAMESPACE="emerald"
 
-@test "0 Init" {
-  echo '' > /var/work/tests/result/all
-  echo '' > /var/work/tests/result/ok
-  [ "$?" -eq 0 ]
-}
-
-# Task 21: Egress Gateway (4 points)
-
-@test "21.1 Egress Gateway exists in emerald namespace" {
+@test "10.1 Egress Gateway exists in emerald namespace" {
   echo '0.5' >> /var/work/tests/result/all
   kubectl get gateway echo-egress -n $NAMESPACE --context $CONTEXT > /dev/null 2>&1
   result=$?
@@ -24,7 +16,7 @@ NAMESPACE="emerald"
   [ "$result" == "0" ]
 }
 
-@test "21.2 Gateway selector is app=istio-egressgateway" {
+@test "10.2 Gateway selector is app=istio-egressgateway" {
   echo '0.5' >> /var/work/tests/result/all
   selector=$(kubectl get gateway echo-egress -n $NAMESPACE --context $CONTEXT -o jsonpath='{.spec.selector.app}')
   result=1
@@ -35,7 +27,7 @@ NAMESPACE="emerald"
   [ "$result" == "0" ]
 }
 
-@test "21.3 Gateway has echo.free.beeceptor.com in hosts" {
+@test "10.3 Gateway has echo.free.beeceptor.com in hosts" {
   echo '0.5' >> /var/work/tests/result/all
   hosts=$(kubectl get gateway echo-egress -n $NAMESPACE --context $CONTEXT -o jsonpath='{.spec.servers[*].hosts[*]}' | grep -c "echo.free.beeceptor.com")
   result=1
@@ -46,7 +38,7 @@ NAMESPACE="emerald"
   [ "$result" == "0" ]
 }
 
-@test "21.4 VirtualService echo-egress-vs exists" {
+@test "10.4 VirtualService echo-egress-vs exists" {
   echo '0.5' >> /var/work/tests/result/all
   kubectl get virtualservice echo-egress-vs -n $NAMESPACE --context $CONTEXT > /dev/null 2>&1
   result=$?
@@ -56,7 +48,7 @@ NAMESPACE="emerald"
   [ "$result" == "0" ]
 }
 
-@test "21.5 VirtualService has echo.free.beeceptor.com in hosts" {
+@test "10.5 VirtualService has echo.free.beeceptor.com in hosts" {
   echo '0.5' >> /var/work/tests/result/all
   hosts=$(kubectl get virtualservice echo-egress-vs -n $NAMESPACE --context $CONTEXT -o jsonpath='{.spec.hosts[*]}' | grep -c "echo.free.beeceptor.com")
   result=1
@@ -67,7 +59,7 @@ NAMESPACE="emerald"
   [ "$result" == "0" ]
 }
 
-@test "21.6 VirtualService has mesh and gateway in gateways" {
+@test "10.6 VirtualService has mesh and gateway in gateways" {
   echo '0.5' >> /var/work/tests/result/all
   gateways=$(kubectl get virtualservice echo-egress-vs -n $NAMESPACE --context $CONTEXT -o jsonpath='{.spec.gateways[*]}')
   mesh_exists=$(echo "$gateways" | grep -c "mesh")
@@ -80,7 +72,7 @@ NAMESPACE="emerald"
   [ "$result" == "0" ]
 }
 
-@test "21.7 DestinationRule egressgateway-for-echo exists" {
+@test "10.7 DestinationRule egressgateway-for-echo exists" {
   echo '0.5' >> /var/work/tests/result/all
   kubectl get destinationrule egressgateway-for-echo -n $NAMESPACE --context $CONTEXT > /dev/null 2>&1
   result=$?
@@ -90,7 +82,7 @@ NAMESPACE="emerald"
   [ "$result" == "0" ]
 }
 
-@test "21.8 DestinationRule points to egress gateway" {
+@test "10.8 DestinationRule points to egress gateway" {
   echo '0.5' >> /var/work/tests/result/all
   host=$(kubectl get destinationrule egressgateway-for-echo -n $NAMESPACE --context $CONTEXT -o jsonpath='{.spec.host}')
   result=1
@@ -101,7 +93,7 @@ NAMESPACE="emerald"
   [ "$result" == "0" ]
 }
 
-@test "21.9 Can access echo.free.beeceptor.com from sleep-emerald pod" {
+@test "10.9 Can access echo.free.beeceptor.com from sleep-emerald pod" {
   echo '0.5' >> /var/work/tests/result/all
   kubectl exec sleep-emerald -n $NAMESPACE --context $CONTEXT -- curl -I --max-time 10 http://echo.free.beeceptor.com > /dev/null 2>&1
   result=$?
@@ -111,4 +103,3 @@ NAMESPACE="emerald"
   [ "$result" == "0" ]
 }
 
-# Total: 4 points for Task 21

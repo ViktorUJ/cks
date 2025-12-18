@@ -8,15 +8,8 @@ NAMESPACE="white"
 VS_NAME="white-echo-vs"
 SERVICE="white-echo"
 
-@test "0 Init" {
-  echo '' > /var/work/tests/result/all
-  echo '' > /var/work/tests/result/ok
-  [ "$?" -eq 0 ]
-}
 
-# Task 09: Configure Request Timeout (2 points)
-
-@test "9.1 VirtualService exists in white namespace" {
+@test "4.1 VirtualService exists in white namespace" {
   echo '0.5' >> /var/work/tests/result/all
   kubectl get virtualservice -n $NAMESPACE --context $CONTEXT | grep -q "$VS_NAME\|echo-white\|white"
   result=$?
@@ -26,19 +19,19 @@ SERVICE="white-echo"
   [ "$result" == "0" ]
 }
 
-@test "9.2 VirtualService timeout is configured to 3s" {
-  echo '0.75' >> /var/work/tests/result/all
+@test "4.2 VirtualService timeout is configured to 3s" {
+  echo '0.5' >> /var/work/tests/result/all
   # Get the first VirtualService in white namespace and check for 3s timeout
   vs_name=$(kubectl get virtualservice -n $NAMESPACE --context $CONTEXT -o jsonpath='{.items[0].metadata.name}')
   timeout=$(kubectl get virtualservice $vs_name -n $NAMESPACE --context $CONTEXT -o jsonpath='{.spec.http[*].timeout}')
   if [[ "$timeout" == "3s" ]]; then
-    echo '0.75' >> /var/work/tests/result/ok
+    echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$timeout" == "3s" ]
 }
 
-@test "9.3 Requests exceeding 3s return 504 Gateway Timeout" {
-  echo '0.75' >> /var/work/tests/result/all
+@test "4.3 Requests exceeding 3s return 504 Gateway Timeout" {
+  echo '0.5' >> /var/work/tests/result/all
   # Test /invincible path which simulates slow response (>3s)
   # The app has 50% chance of 5s delay, so try multiple times
   timeout_found=false
@@ -52,9 +45,8 @@ SERVICE="white-echo"
   done
 
   if [[ "$timeout_found" == "true" ]]; then
-    echo '0.75' >> /var/work/tests/result/ok
+    echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$timeout_found" == "true" ]
 }
 
-# Total: 2 points for Task 09

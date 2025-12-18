@@ -66,7 +66,7 @@ done
 # ================================================
 echo "*** Downloading helper scripts from repository"
 
-REPO_BASE="https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/ica/mock/01/worker/files/scripts"
+REPO_BASE="https://raw.githubusercontent.com/ViktorUJ/cks/AG-121/tasks/ica/mock/01/worker/files/scripts"
 
 wget -q "$REPO_BASE/hosts" -O /usr/local/bin/hosts
 chmod +x /usr/local/bin/hosts

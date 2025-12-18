@@ -6,15 +6,7 @@ export KUBECONFIG=/home/ubuntu/.kube/_config
 CONTEXT="cluster3-admin@cluster3"
 NAMESPACE="navy"
 
-@test "0 Init" {
-  echo '' > /var/work/tests/result/all
-  echo '' > /var/work/tests/result/ok
-  [ "$?" -eq 0 ]
-}
-
-# Task 31: AuthorizationPolicy in navy (2 points)
-
-@test "31.1 AuthorizationPolicy allow-get-policy exists" {
+@test "15.1 AuthorizationPolicy allow-get-policy exists" {
   echo '0.5' >> /var/work/tests/result/all
   kubectl get authorizationpolicy allow-get-policy -n $NAMESPACE --context $CONTEXT > /dev/null 2>&1
   result=$?
@@ -24,29 +16,29 @@ NAMESPACE="navy"
   [ "$result" == "0" ]
 }
 
-@test "31.2 AuthorizationPolicy action is ALLOW" {
-  echo '0.25' >> /var/work/tests/result/all
+@test "15.2 AuthorizationPolicy action is ALLOW" {
+  echo '0.5' >> /var/work/tests/result/all
   action=$(kubectl get authorizationpolicy allow-get-policy -n $NAMESPACE --context $CONTEXT -o jsonpath='{.spec.action}')
   result=1
   if [[ "$action" == "ALLOW" ]]; then
-    echo '0.25' >> /var/work/tests/result/ok
+    echo '0.5' >> /var/work/tests/result/ok
     result=0
   fi
   [ "$result" == "0" ]
 }
 
-@test "31.3 AuthorizationPolicy allows /pluto path" {
-  echo '0.75' >> /var/work/tests/result/all
+@test "15.3 AuthorizationPolicy allows /pluto path" {
+  echo '0.5' >> /var/work/tests/result/all
   paths=$(kubectl get authorizationpolicy allow-get-policy -n $NAMESPACE --context $CONTEXT -o jsonpath='{.spec.rules[*].to[*].operation.paths[*]}')
   result=1
   if echo "$paths" | grep -q "/pluto"; then
-    echo '0.75' >> /var/work/tests/result/ok
+    echo '0.5' >> /var/work/tests/result/ok
     result=0
   fi
   [ "$result" == "0" ]
 }
 
-@test "31.4 AuthorizationPolicy allows from turquoise namespace" {
+@test "15.4 AuthorizationPolicy allows from turquoise namespace" {
   echo '0.5' >> /var/work/tests/result/all
   # Check if source namespace is turquoise
   namespaces=$(kubectl get authorizationpolicy allow-get-policy -n $NAMESPACE --context $CONTEXT -o jsonpath='{.spec.rules[*].from[*].source.namespaces[*]}')
@@ -59,4 +51,3 @@ NAMESPACE="navy"
   [ "$result" == "0" ]
 }
 
-# Total: 2 points for Task 31
