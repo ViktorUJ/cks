@@ -1,58 +1,64 @@
+[README_RU](README_RU.MD)
+
+## [video](https://www.youtube.com/watch?v=vTvTGCol1pk)
+
+## [presentation](https://www.canva.com/design/DAGWcfZPJs4/-hiEe3YOJB2bSEw2r3WAag/view?utm_content=DAGWcfZPJs4&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h40df1da1b4)
+
 # 2 CKAD 
 
 
 ### [Configure Liveness, Readiness and Startup Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
 
-### Типы проб
+### Probe Types
 
-| **Тип пробы**          | **Когда применяется**                               | **Что происходит, если проба не проходит**                                                                                                                                  | **Взаимодействие с другими пробами**                                                                                                                                                    |
-|------------------------|----------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Liveness Probe**     | Регулярно во время жизненного цикла контейнера     | Контейнер **перезапускается**, если не проходит `liveness`-проверку. Это предотвращает зависания контейнера и поддерживает его в рабочем состоянии.                         | Начинает действовать только после успешного завершения `startup`-проверки, если она настроена.                                                                                           |
-| **Readiness Probe**    | После запуска контейнера и в течение его работы    | Контейнер **исключается из балансировки**, пока не пройдет `readiness`-проверку. Kubernetes не будет отправлять трафик на контейнер, пока он не готов обрабатывать запросы. | Начинает действовать только после успешного завершения `startup`-проверки, если она настроена.                                                                                           |
-| **Startup Probe**      | Только во время начальной загрузки контейнера      | Если контейнер не проходит `startup`-проверку в указанный период, Kubernetes считает, что он не может инициализироваться, и перезапускает контейнер.                        | Блокирует выполнение `liveness` и `readiness`-проверок до успешного завершения `startup`-проверки. Помогает избежать преждевременных проверок при долгой инициализации контейнера. |
-
-
-### Типы проверок в пробах
+| **Probe Type**          | **When Applied**                               | **What Happens if Probe Fails**                                                                                                                                                  | **Interaction with Other Probes**                                                                                                                                                    |
+|------------------------|-------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Liveness Probe**     | Regularly during container lifecycle     | Container **restarts** if it fails the `liveness` check. This prevents container hangs and keeps it in working state.                         | Only starts after successful completion of `startup` check, if configured.                                                                                           |
+| **Readiness Probe**    | After container startup and during operation    | Container is **excluded from load balancing** until it passes the `readiness` check. Kubernetes won't send traffic to the container until it's ready to handle requests. | Only starts after successful completion of `startup` check, if configured.                                                                                           |
+| **Startup Probe**      | Only during initial container startup      | If container fails the `startup` check within the specified period, Kubernetes considers it unable to initialize and restarts the container.                        | Blocks execution of `liveness` and `readiness` checks until `startup` check completes successfully. Helps avoid premature checks during long initialization. |
 
 
-| **Тип проверки** | **Описание**                                                                                                                                                                                                                   |
+### Probe Check Types
+
+
+| **Check Type** | **Description**                                                                                                                                                                                                   |
 |------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **httpGet**      | Отправляет HTTP-запрос на указанный порт и путь. Проверка считается успешной, если возвращается статусный код в диапазоне 200–399.                                                                                            |
-| **tcpSocket**    | Пытается установить TCP-соединение на указанный порт. Если соединение установлено успешно, проверка считается пройденной.                                                                                                     |
-| **exec**         | Выполняет указанную команду внутри контейнера. Проверка считается успешной, если команда завершается с кодом выхода 0.                                                                                                        |
-| **grpc**         | Отправляет gRPC-запрос на указанный порт и, при необходимости, на определенный сервис. Проверка считается успешной, если gRPC-сервис отвечает статусом `SERVING`. Требует реализации стандартного gRPC Health Checking Protocol. |
+| **httpGet**      | Sends an HTTP request to the specified port and path. Check is considered successful if it returns a status code in the 200–399 range.                                                                                            |
+| **tcpSocket**    | Attempts to establish a TCP connection on the specified port. If connection is established successfully, the check is considered passed.                                                                                     |
+| **exec**         | Executes the specified command inside the container. Check is considered successful if the command exits with code 0.                                                                                                        |
+| **grpc**         | Sends a gRPC request to the specified port and, if necessary, to a specific service. Check is considered successful if the gRPC service responds with `SERVING` status. Requires implementation of the standard gRPC Health Checking Protocol. |
 
 
 
 
-###  За пробы отвечает kubelet (проверяет пробы без участия API сервера)
+###  Probes are managed by kubelet (checks probes without API server involvement)
 
 
 
 
 
-### Настройка эндпоинтов для Kubernetes проб
+### Configuring Endpoints for Kubernetes Probes
 
-Для подготовки эндпоинтов, которые будут использованы в Kubernetes пробах, можно реализовать **Readiness** и **Liveness** эндпоинты с разным функционалом:
+To prepare endpoints that will be used in Kubernetes probes, you can implement **Readiness** and **Liveness** endpoints with different functionality:
 
-1. **Эндпоинт для Readiness Probe** (`/ready`):
-   - Проверяет готовность приложения к обработке запросов, включая установленные соединения с базами данных, кэшами и внешними сервисами.
-   - Возвращает HTTP статус **200 OK** при полной готовности и **503 Service Unavailable** в случае, если соединения с базами данных или другими внешними сервисами не установлены.
+1. **Readiness Probe Endpoint** (`/ready`):
+   - Checks application readiness to handle requests, including established connections to databases, caches, and external services.
+   - Returns HTTP status **200 OK** when fully ready and **503 Service Unavailable** if connections to databases or other external services are not established.
 
-2. **Эндпоинт для Liveness Probe** (`/health`):
-   - Простой эндпоинт, проверяющий, что приложение запущено и не зависло.
-   - Возвращает HTTP статус **200 OK** при успешной работе приложения.
-
-
-###  Практика. Создание проб.
+2. **Liveness Probe Endpoint** (`/health`):
+   - Simple endpoint checking that the application is running and not hung.
+   - Returns HTTP status **200 OK** when application is working successfully.
 
 
-Создадим под в NS `default` c именем `pod1` и образом `viktoruj/ping_pong:alpine` и переменной окружения  `SRV_PORT`=`80`
+###  Practice. Creating Probes.
+
+
+Let's create a pod in `default` NS named `pod1` with image `viktoruj/ping_pong:alpine` and environment variable `SRV_PORT`=`80`
 
 
 
 
-[viktoruj/ping_pong:alpine](https://github.com/ViktorUJ/cks/tree/master/docker/ping_pong) - это образ с http сервером, который возвращает в ответе всю метаинформацию входящего запроса, включая IP-адрес отправителя, все параметры запроса и заголовки. Конфигурация сервера может быть изменена с помощью переменных окружения:
+[viktoruj/ping_pong:alpine](https://github.com/ViktorUJ/cks/tree/master/docker/ping_pong) - this is an image with an HTTP server that returns in its response all meta-information of the incoming request, including the sender's IP address, all request parameters and headers. Server configuration can be changed using environment variables:
 
 
 
@@ -78,16 +84,16 @@ spec:
       value: "80"
     image: viktoruj/ping_pong:alpine
     name: pod2
-    livenessProbe:                        # add it                тип пробы
-      httpGet:                            # add it                тип проверки
+    livenessProbe:                        # add it - probe type
+      httpGet:                            # add it - check type
         path: /healthz                    # add it 
         port: 80                          # add it 
-        httpHeaders:                      # add it                устанавливает заголовки HTTP запроса , если они нужны
+        httpHeaders:                      # add it - sets HTTP request headers if needed
         - name: Custom-Header             # add it 
           value: Awesome                  # add it 
-      initialDelaySeconds: 3              # add it                время ожидания перед первой проверкой
-      periodSeconds: 3                    # add it                периодичность проверок
-      failureThreshold: 5                 # add it                количество неудачных проверок, после которых контейнер будет перезапущен
+      initialDelaySeconds: 3              # add it - wait time before first check
+      periodSeconds: 3                    # add it - check frequency
+      failureThreshold: 5                 # add it - number of failed checks before container restart
 
     resources: {}
   dnsPolicy: ClusterFirst
@@ -100,25 +106,25 @@ status: {}
 k apply -f 1.yaml
 
 ```
-Посмотрим лог пода, чтобы убедиться, как работает проба
+Let's check the pod logs to make sure the probe is working
 ```
 k logs  pod2 
 ```
 ``` 
 Server Name: ping_pong_server                   
 URL: http://10.0.130.194:80/healthz
-Client IP: 10.2.13.62                           #   ip address ноды на которой запущен под  , т.к. kubelet проверяет пробы только своих подов
+Client IP: 10.2.13.62                           # node IP address where pod is running, since kubelet only checks probes of its own pods
 Method: GET
 Protocol: HTTP/1.1
 Headers:
 User-Agent: kube-probe/1.30
 Accept: */*
-Custom-Header: Awesome                          #   заголовок который мы установили в пробе
+Custom-Header: Awesome                          # header we set in the probe
 Connection: close
 ```
 
 
-Сэмулируем ситуацию, когда **livenessProbe** проба не проходит
+Let's simulate a situation where **livenessProbe** fails
 
 ``` 
 k delete -f 1.yaml
@@ -138,19 +144,19 @@ spec:
   containers:
   - env:
     - name: SRV_PORT
-      value: "9111"                       # add it   изменяем порт http сервера
+      value: "9111"                       # add it - change HTTP server port
     image: viktoruj/ping_pong:alpine
     name: pod2
-    livenessProbe:                        # add it                тип пробы
-      httpGet:                            # add it                тип проверки
+    livenessProbe:                        # add it - probe type
+      httpGet:                            # add it - check type
         path: /healthz                    # add it 
         port: 80                          # add it 
-        httpHeaders:                      # add it                устанавливает заголовки HTTP запроса , если они нужны
+        httpHeaders:                      # add it - sets HTTP request headers if needed
         - name: Custom-Header             # add it 
           value: Awesome                  # add it 
-      initialDelaySeconds: 3              # add it                время ожидания перед первой проверкой
-      periodSeconds: 3                    # add it                периодичность проверок
-      failureThreshold: 5                 # add it                количество неудачных проверок, после которых контейнер будет перезапущен
+      initialDelaySeconds: 3              # add it - wait time before first check
+      periodSeconds: 3                    # add it - check frequency
+      failureThreshold: 5                 # add it - number of failed checks before container restart
 
     resources: {}
   dnsPolicy: ClusterFirst
@@ -170,14 +176,14 @@ k get po pod2
 ```
 ``` 
 NAME   READY   STATUS    RESTARTS      AGE
-pod2   1/1     Running   1 (15s ago)   33s      # произошло т.к. проба не прошла 5 раз  через 3 секунды  и кубелет перезапустил под . 
-                                                # но так как мы не установливали Readiness   под сразу попал в балансировку 
+pod2   1/1     Running   1 (15s ago)   33s      # occurred because probe failed 5 times every 3 seconds and kubelet restarted the pod
+                                                # but since we didn't set Readiness, the pod was immediately included in load balancing 
 ```
-Изменим порт http сервера на **80** и добавим **Readiness** пробу на порт **9111**,  а **Liveness** пробу на порт 80. 
+Let's change the HTTP server port to **80** and add **Readiness** probe on port **9111**, and **Liveness** probe on port 80.
 
 
-Сэмулируем ситуацию, когда **Readiness** проба не проходит . 
-В таком случае под не будет принудительно рестартовать и просто не будет включен в балансировку, пока не пройдет **Readiness** проба. 
+Let's simulate a situation where **Readiness** probe fails.
+In this case, the pod won't be forcibly restarted and simply won't be included in load balancing until the **Readiness** probe passes.
 
 ``` 
 k delete -f 1.yaml
@@ -197,23 +203,23 @@ spec:
   containers:
   - env:
     - name: SRV_PORT
-      value: "80"                       # add it   изменяем порт http сервера
+      value: "80"                       # add it - change HTTP server port
     image: viktoruj/ping_pong:alpine
     name: pod2
-    livenessProbe:                        # add it                тип пробы
-      httpGet:                            # add it                тип проверки
+    livenessProbe:                        # add it - probe type
+      httpGet:                            # add it - check type
         path: /healthz                    # add it 
         port: 80                          # add it 
-      initialDelaySeconds: 3              # add it                время ожидания перед первой проверкой
-      periodSeconds: 3                    # add it                периодичность проверок
-      failureThreshold: 3                 # add it                количество неудачных проверок, после которых контейнер будет перезапущен
-    readinessProbe:                       # add it                тип пробы
-      httpGet:                            # add it                тип проверки
+      initialDelaySeconds: 3              # add it - wait time before first check
+      periodSeconds: 3                    # add it - check frequency
+      failureThreshold: 3                 # add it - number of failed checks before container restart
+    readinessProbe:                       # add it - probe type
+      httpGet:                            # add it - check type
         path: /readiness                  # add it 
         port: 9111                        # add it 
-      initialDelaySeconds: 9              # add it                время ожидания перед первой проверкой
-      periodSeconds: 5                    # add it                периодичность проверок
-      failureThreshold: 1                 # add it                количество неудачных проверок, после которых контейнер будет перезапущен      
+      initialDelaySeconds: 9              # add it - wait time before first check
+      periodSeconds: 5                    # add it - check frequency
+      failureThreshold: 1                 # add it - number of failed checks before container restart      
     resources: {}
   dnsPolicy: ClusterFirst
   restartPolicy: Always
@@ -237,21 +243,21 @@ k get po pod2
 ``` 
 
 NAME   READY   STATUS    RESTARTS   AGE
-pod2   0/1     Running   0          22s   # под не включен в балансировку, пока не пройдет Readiness проба , но рестартовать не будет.
+pod2   0/1     Running   0          22s   # pod is not included in load balancing until Readiness probe passes, but won't restart
 
 ```
 
 
 
-### Типичные ошибки при настройке проб
+### Common Mistakes When Configuring Probes
 
 
-| **Ошибка**                                           | **К чему приводит**                                                                                                                                                                                                             |
-|------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Нет **Liveness Probe**                               | Kubernetes не перезапустит контейнер при его зависании или остановке, что может привести к длительной недоступности приложения.                                                                                                 |
-| Нет **Readiness Probe**                              | Kubernetes начнет отправлять трафик на контейнер до того, как приложение будет полностью готово обрабатывать запросы. Или  будет отпралять запросы когда приложение не может их обработать(пропала связи сбазой данных и т.д.). |
-| **Liveness** и **Readiness** пробы ведут на один и тот же эндпоинт | Временные проблемы с внешними зависимостями (например, базой данных) могут вызвать перезапуск контейнера, хотя он мог бы восстановиться сам.                                                                                    |
-| Нет **Startup Probe** для медленно стартующих приложений | **Liveness** и **Readiness** пробы могут начать проверки до завершения полной загрузки приложения, что приведет к преждевременным перезапускам.                                                                                 |
+| **Mistake**                                           | **What It Leads To**                                                                                                                                                                                             |
+|------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| No **Liveness Probe**                               | Kubernetes won't restart the container when it hangs or stops, which can lead to prolonged application unavailability.                                                                                                 |
+| No **Readiness Probe**                              | Kubernetes will start sending traffic to the container before the application is fully ready to handle requests. Or will send requests when the application cannot process them (lost database connection, etc.). |
+| **Liveness** and **Readiness** probes point to the same endpoint | Temporary issues with external dependencies (e.g., database) may cause container restart, even though it could recover on its own.                                                                                    |
+| No **Startup Probe** for slowly starting applications | **Liveness** and **Readiness** probes may start checks before full application load completes, leading to premature restarts.                                                                                 |
 
 
 
@@ -259,7 +265,7 @@ pod2   0/1     Running   0          22s   # под не включен в бал
 k delete -f 1.yaml
 ```
 
-### [Пример экзаменационного задания 12](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
+### [Exam Task Example 12](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
 
 ---
 |       **12**        | **Create a new pod called `nginx1233` in the `web-ns` namespace with the image `nginx`. Add a livenessProbe to the container to restart it if the command `ls /var/www/html/` probe fails. This check should start after a delay of 10 seconds and run every 60 seconds.** |
@@ -276,7 +282,7 @@ k run nginx1233 --namespace web-ns --image nginx --dry-run=client -o yaml > 12.y
 ```
 
 
-```
+``` 
 # vim 12.yaml
 
 apiVersion: v1
@@ -316,17 +322,17 @@ check_result
 
 ```
 
-### [реквесты, лимиты](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+### [Requests, Limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 
 
-### [qos](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
+### [QoS](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
 
 
 ### [PriorityClass](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
 
 
 
-Создадим под в NS `default` c именем `pod2` и образом `viktoruj/ping_pong:alpine` и переменными окружения: 
+Let's create a pod in `default` NS named `pod2` with image `viktoruj/ping_pong:alpine` and environment variables: 
 
 `ENABLE_LOAD_MEMORY`=`true` 
 `ENABLE_LOAD_CPU`=`true` 
@@ -349,7 +355,7 @@ pod2   1/1     Running   0          22s
 
 ```
 
-Для работы  **kubectl top**, нужен Metrics Server . Проверим его наличие
+For **kubectl top** to work, Metrics Server is needed. Let's check its presence
 ``` 
 kubectl get deployment metrics-server -n kube-system
 
@@ -357,7 +363,7 @@ NAME             READY   UP-TO-DATE   AVAILABLE   AGE
 metrics-server   1/1     1            1           115m
 
 ```
-или 
+or 
 
 ``` 
 kubectl get po  -n kube-system | grep  metrics-server
@@ -365,7 +371,7 @@ kubectl get po  -n kube-system | grep  metrics-server
 ```
 
 
-Посмотрим потребление нашего пода
+Let's check our pod's consumption
 
 
 ``` 
@@ -378,7 +384,7 @@ pod2   63m          9Mi
 
 ```
 
-Посмотрим qos нашего пода
+Let's check our pod's QoS
 
 ``` 
 k describe po pod2
@@ -394,9 +400,9 @@ QoS Class:                   BestEffort
 
 ```
 
-BestEffort - это самый низкий уровень QoS, который назначается по умолчанию, если не указаны ресурсы. Поды с этим классом QoS не имеют гарантированного доступа к ресурсам и могут быть убиты, если на узле не хватает ресурсов.
+BestEffort is the lowest QoS level, assigned by default when resources are not specified. Pods with this QoS class have no guaranteed access to resources and can be killed if the node runs out of resources.
 
-Добавим реквесты и лимиты равными, + 30% к нашему потреблению.
+Let's add requests and limits equal to each other, +30% of our consumption.
 
 
 ``` 
@@ -453,7 +459,7 @@ QoS Class:                   Guaranteed
 
 ```
 
-Создадим ситуацию, когда наш под превышает лимиты по памяти.
+Let's create a situation where our pod exceeds memory limits.
 
 
 
@@ -479,7 +485,7 @@ spec:
     - name: ENABLE_LOAD_CPU
       value: "true"
     - name: MEMORY_USAGE_PROFILE
-      value: 5=10 70=60                     # update  it
+      value: 5=10 70=60                     # update it
     - name: CPU_USAGE_PROFILE
       value: 1=400=1=60
     image: viktoruj/ping_pong:alpine
@@ -506,7 +512,7 @@ k describe   po pod2
 ```
 
 ``` 
-QoS Class:                   Burstable     # так как лимиты не равны реквестам
+QoS Class:                   Burstable     # since limits don't equal requests
 
 ```
 
@@ -531,21 +537,21 @@ k describe   po pod2
 ------
 
 ```
-Это произошло, так как наш под превысил лимиты по памяти и был убит kubelet
+This happened because our pod exceeded memory limits and was killed by kubelet
 
-Похожую ситуацию можно наблюдать, когда у нас превышается объем доступной памяти , тогда kubelet убивает поды в зависимости от PriorityClass и qos . 
+A similar situation can be observed when we exceed available memory volume, then kubelet kills pods depending on PriorityClass and QoS.
 
 
 
-Когда привышаются лимиты по CPU, то kubelet не убивает поды, а просто включает throttling, что приводит к замедлению работы пода.
+When CPU limits are exceeded, kubelet doesn't kill pods but simply enables throttling, which leads to pod slowdown.
 
-У нас есть [лабораторная работа](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F07%2FREADME.MD), где мы можем попробовать это на практике. [solution](https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/07/worker/files/solutions/1.MD)
+We have a [lab work](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F07%2FREADME.MD) where we can try this in practice. [solution](https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/07/worker/files/solutions/1.MD)
 
 
 
 # PriorityClass
 
-Получим существующие PriorityClass
+Get existing PriorityClasses
 
 ```
 k get priorityclasses
@@ -559,7 +565,7 @@ system-node-critical      2000001000   false            18m
 
 ```
 
-Создадим PriorityClass с именем `high-priority` и значением `1000000000`
+Create PriorityClass named `high-priority` with value `1000000000`
 
 ```
 k create priorityclass high-priority --value 1000000000 
@@ -568,7 +574,7 @@ k get priorityclasses
 
  
 ```
-Создадим манифест пода, и добавим в него PriorityClass `high-priority`
+Create pod manifest and add PriorityClass `high-priority` to it
 
 ``` 
 k run pod3 --image viktoruj/ping_pong:alpine   -o yaml --dry-run=client > 3.yaml
@@ -610,24 +616,24 @@ Priority Class Name:  high-priority
 
 ```
 
-Более детально можно потренировать в [лабораторной работе](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD) . Решение можно посмотреть  [тут](https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/05/worker/files/solutions/1.MD)
+You can practice this in more detail in the [lab work](https://github.com/ViktorUJ/cks/blob/master/docs/..%2Ftasks%2Fcka%2Flabs%2F05%2FREADME.MD). Solution can be found [here](https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/05/worker/files/solutions/1.MD)
 
 
 ### [Twelve-Factor App](https://12factor.net/ru/)
 
-### [Ephemeral containers](https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/) - нужны для отладки и диагностики , если имаджи собраны правильно  , то они не будут содержать ничего лишнего , кроме исполняемых файлов и библиотек. В идеале будет использоваться **Scratch** образ , который весит 0 байт.
+### [Ephemeral containers](https://kubernetes.io/docs/concepts/workloads/pods/ephemeral-containers/) - needed for debugging and diagnostics. If images are built correctly, they won't contain anything extra except executables and libraries. Ideally, a **Scratch** image will be used, which weighs 0 bytes.
 
 
 
-| Возможности Ephemeral containers | Описание |
+| Ephemeral Container Capabilities | Description |
 |-----------------------------------|----------|
-| Работает без перезапуска пода     | Временный контейнер можно запустить без необходимости перезагрузки всего пода. |
-| Может подключаться к любому контейнеру в поде | Временный контейнер позволяет подключиться к любому контейнеру внутри пода. |
-| Может подключаться к подам с CrashLoop | Временный контейнер может подключаться даже к подам, находящимся в состоянии CrashLoop. |
-| Имеет возможность отслеживать процессы в любом контейнере | Можно отслеживать процессы внутри любого контейнера в поде с помощью временного контейнера. |
-| Имеет доступ к файловой системе любого контейнера | Временный контейнер может работать с файловой системой любого контейнера в поде. |
-| Имеет ту же сеть, что и любой контейнер в поде | Временный контейнер имеет общий сетевой интерфейс с остальными контейнерами в поде. |
-| Можно использовать любой образ Docker для временного контейнера | Вы можете запускать временный контейнер с использованием любого Docker-образа. |
+| Works without pod restart     | Temporary container can be started without needing to restart the entire pod. |
+| Can attach to any container in the pod | Temporary container allows attaching to any container inside the pod. |
+| Can attach to pods with CrashLoop | Temporary container can attach even to pods in CrashLoop state. |
+| Can track processes in any container | You can track processes inside any container in the pod using a temporary container. |
+| Has access to any container's filesystem | Temporary container can work with the filesystem of any container in the pod. |
+| Has the same network as any container in the pod | Temporary container has a shared network interface with other containers in the pod. |
+| Can use any Docker image for the temporary container | You can run a temporary container using any Docker image. |
 
 
 ``` 
@@ -635,7 +641,7 @@ kubectl   debug  -it   {pod_name} --image {ephemeral_container_image}    -n {k8s
 ```
 
 
-Создадим под в NS `default` c именем `pod4` и образом `viktoruj/ping_pong` . Данный образ не имеет утилиты `bash , sh , etc ` , поэтому мы не сможем подключиться к нему через `kubectl exec`  ли выполнить любые команды внутри пода.
+Let's create a pod in `default` NS named `pod4` with image `viktoruj/ping_pong`. This image doesn't have `bash, sh, etc` utilities, so we won't be able to connect to it via `kubectl exec` or execute any commands inside the pod.
 
 ``` 
 
@@ -644,7 +650,7 @@ k run pod4 --image viktoruj/ping_pong
 k get po pod4
 ```
 
-Подключимся к поду через `kubectl exec` (должны получить ошибку)
+Let's connect to the pod via `kubectl exec` (should get an error)
 
 ```
 k exec -ti  pod4 -- sh
@@ -652,35 +658,35 @@ error: Internal error occurred: Internal error occurred: error executing command
 
 ```
 
-Подключимся к поду через `kubectl debug` 
+Let's connect to the pod via `kubectl debug` 
 
 ```
 kubectl   debug  -it   pod4  --image ubuntu --target pod4 
  
 ```
-Получим pid запущенных процессов внутри контейнера
+Get PIDs of running processes inside the container
 ``` 
 ps -aux
 
 USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
-root           1  0.0  0.1 1233220 5284 ?        Ssl  19:15   0:00 /app         # PID 1 это наш http сервер
+root           1  0.0  0.1 1233220 5284 ?        Ssl  19:15   0:00 /app         # PID 1 is our HTTP server
 root          20  0.0  0.0   4296  3128 pts/0    Ss   19:16   0:00 /bin/bash
 root        2950  0.0  0.0   7628  3604 pts/0    R+   19:22   0:00 ps -aux
 
 
 ```
-Получим список файлов нашего основного контейнера
+Get list of files from our main container
 ``` 
 ls /proc/1/root/
 app  dev  etc  proc  sys  var
 
 ```
-### [logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/)
+### [Logs](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_logs/)
 
 
-Создадим под в NS `default` c именем `pod5` и двумя контейнерами : 
-- `app` с образом `viktoruj/ping_pong`  и envs  `SRV_PORT=8080` `SERVER_NAME=app` 
-- `side-car` c образом `viktoruj/ping_pong` и envs  `SRV_PORT=8081` `SERVER_NAME=side-car`  
+Let's create a pod in `default` NS named `pod5` with two containers: 
+- `app` with image `viktoruj/ping_pong` and envs `SRV_PORT=8080` `SERVER_NAME=app` 
+- `side-car` with image `viktoruj/ping_pong` and envs `SRV_PORT=8081` `SERVER_NAME=side-car`  
 
 ```
 k run pod5 --image viktoruj/ping_pong --env SRV_PORT=8080 --env SERVER_NAME=app --dry-run=client -o yaml > 5.yaml
@@ -688,7 +694,7 @@ k run pod5 --image viktoruj/ping_pong --env SRV_PORT=8080 --env SERVER_NAME=app 
 ``` 
 
 
-```
+``` 
 # vim 5.yaml
 
 apiVersion: v1
@@ -736,7 +742,7 @@ pod5   2/2     Running   0          4m16s
 
 ```
 
-Получим логи контейнера `app` в поде `pod5`
+Get logs from `app` container in `pod5` pod
 
 ```
 k logs pod5 -c app
@@ -759,18 +765,18 @@ enableLoadCpu: false, cpuMaxProc: 1
 
 ```
 
-Получим логи контейнера `side-car` в поде `pod5`
+Get logs from `side-car` container in `pod5` pod
 
 ```
 k logs pod5 -c side-car
 ```
 
 ``` 
-k logs pod5 -c side-car -f   # получать логи в реальном времени
+k logs pod5 -c side-car -f   # get logs in real time
 
 ```
 
-Добавим Label к нашему поду  `app=http-server`
+Add Label to our pod `app=http-server`
 
 ```
 k delete -f 5.yaml
@@ -810,7 +816,7 @@ spec:
 status: {}
 
 ```
-Создадим под pod6 такой же, как pod5
+Create pod6 identical to pod5
 
 ```
 cp 5.yaml 6.yaml
@@ -857,7 +863,7 @@ k apply -f 6.yaml
 
 
 ```
-Получим все поды с label app=http-server
+Get all pods with label app=http-server
 ``` 
 # k get po -l app=http-server 
 
@@ -867,13 +873,13 @@ pod6   2/2     Running   0          7s
 
 ```
 
-Получим логи всех подов с **label** `app=http-server` и контейнера **app**
+Get logs from all pods with **label** `app=http-server` and container **app**
 
 ```
 k logs  -c app -l  app=http-server
 ```
 
-Покажет логи с префиксом источника 
+Show logs with source prefix 
 ``` 
 k logs  -c app --prefix  -l  app=http-server
 ```
@@ -902,7 +908,7 @@ k logs  -c app --prefix  -l  app=http-server
 [pod/pod6/app] enableLoadCpu: false, cpuMaxProc: 1
 
 ```
-Покажет логи от всех контейнеров в подах с **label** `app=http-server` и перфиксом источника
+Show logs from all containers in pods with **label** `app=http-server` and source prefix
 
 ```
 k logs   --prefix  --all-containers   -l  app=http-server 
@@ -951,12 +957,12 @@ k logs   --prefix  --all-containers   -l  app=http-server
 
 ```
 
-Если контейнер рестартовал, то можно посмотреть логи с предыдущего контейнера с флагом `--previous`
+If the container restarted, you can view logs from the previous container with the `--previous` flag
 
 
-### Init containers
+### Init Containers
 
-Создадим под в NS `default` c именем `pod7` image `viktoruj/ping_pong:alpine`  и init и контейнером  `init`  image `viktoruj/ping_pong:alpine`  и  командой ` echo '**** init ' ; sleep 10 '`
+Let's create a pod in `default` NS named `pod7` with image `viktoruj/ping_pong:alpine` and init container `init` with image `viktoruj/ping_pong:alpine` and command `echo '**** init '; sleep 10`
 
 
 ```
@@ -996,7 +1002,7 @@ NAME   READY   STATUS     RESTARTS   AGE
 pod7   0/1     Init:0/1   0          10s
 
 ```
-Получим логи init контейнера
+Get init container logs
 
 ```
 k logs  pod7  -c init
@@ -1005,7 +1011,7 @@ k logs  pod7  -c init
 
 ```
 
-Давайте сэмулируем ситуацию, когда init контейнер завершится с ошибкой
+Let's simulate a situation where the init container exits with an error
 
 ```
 k delete -f 7.yaml
@@ -1047,7 +1053,7 @@ NAME   READY   STATUS                  RESTARTS      AGE
 pod7   0/1     Init:CrashLoopBackOff   1 (11s ago)   12s
 
 ```
-Плучим логи init контейнера
+Get init container logs
 
 ```
 k logs  pod7  -c init

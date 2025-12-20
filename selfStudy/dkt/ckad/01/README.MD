@@ -1,8 +1,12 @@
-## [презентация](https://www.canva.com/design/DAGUf_wVLzU/3loTtTVLbmVJULPuzeI5VA/edit)
+[README_RU](README_RU.MD)
+
+## [video](https://www.youtube.com/watch?v=4WXSijgYbVw)
+
+## [presentation](https://www.canva.com/design/DAGUf_wVLzU/3loTtTVLbmVJULPuzeI5VA/edit)
 
 
-**Kubernetes**  - система оркестрации контейнерами . Сейчас самая популярная система оркестрации контейнерами.
-альтернатива : , AWS -ECS ,  docker-Swarm, mesos , Nomad (hashicorp),
+**Kubernetes** - container orchestration system. Currently the most popular container orchestration system.
+Alternatives: AWS ECS, docker-Swarm, Mesos, Nomad (hashicorp)
 
 
 <p align="center">
@@ -14,79 +18,79 @@
 [CNI plugins](https://kubernetes.io/docs/concepts/cluster-administration/networking/#cni)
 
 
-## Основные компоненты  Kubernetes
+## Main Kubernetes Components
 
-| **Компонент**      | **назначение**                                                    | **Как найти**                                                                                      |
-|--------------------|--------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| API Server         | Управляет запросами к кластеру                                     | Статический под. Манифест находится в `/etc/kubernetes/manifests/kube-apiserver.yaml`              |
-| etcd               | Хранение всей информации о состоянии кластера                      | Статический под. Манифест находится в `/etc/kubernetes/manifests/etcd.yaml`                        |
-| Scheduler          | Планирует запуск подов на нодах                                    | Статический под. Манифест находится в `/etc/kubernetes/manifests/kube-scheduler.yaml`              |
-| Controller-Manager | Управляет контроллерами для поддержания работоспособности кластера | Статический под. Манифест находится в `/etc/kubernetes/manifests/kube-controller-manager.yaml`     |
-| Kubelet            | Управляет подами на конкретных нодах                               | Установлен в виде сервиса на нодах. Проверка: `systemctl status kubelet`                           |
-| kube-proxy         | Управляет сетевыми правилами (iptables)                            | Демонсет. Проверка: `kubectl get daemonset kube-proxy --namespace=kube-system`                     |
-| CNI                | Обеспечивает сетевое взаимодействие между подами                   | Установлен в виде плагинов. Проверка: `kubectl get pods --namespace=kube-system`                   |
-| DNS                | Обеспечивает разрешение имен сервисов в кластере                   | Развернут как сервис и под (CoreDNS). Проверка: `kubectl get svc kube-dns --namespace=kube-system` |
-
-
-
-## Примитивы Kubernetes
+| **Component**      | **Purpose**                                                       | **How to Find**                                                                                    |
+|--------------------|-------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| API Server         | Manages requests to the cluster                                   | Static pod. Manifest located at `/etc/kubernetes/manifests/kube-apiserver.yaml`                   |
+| etcd               | Stores all cluster state information                              | Static pod. Manifest located at `/etc/kubernetes/manifests/etcd.yaml`                             |
+| Scheduler          | Schedules pod launches on nodes                                   | Static pod. Manifest located at `/etc/kubernetes/manifests/kube-scheduler.yaml`                   |
+| Controller-Manager | Manages controllers to maintain cluster health                    | Static pod. Manifest located at `/etc/kubernetes/manifests/kube-controller-manager.yaml`          |
+| Kubelet            | Manages pods on specific nodes                                    | Installed as a service on nodes. Check: `systemctl status kubelet`                                |
+| kube-proxy         | Manages network rules (iptables)                                  | DaemonSet. Check: `kubectl get daemonset kube-proxy --namespace=kube-system`                      |
+| CNI                | Provides network communication between pods                       | Installed as plugins. Check: `kubectl get pods --namespace=kube-system`                           |
+| DNS                | Provides service name resolution in the cluster                   | Deployed as a service and pod (CoreDNS). Check: `kubectl get svc kube-dns --namespace=kube-system` |
 
 
-| **Имя**                  | **назначение**                                                            | **описание**                                                             |
-|--------------------------|---------------------------------------------------------------------------|--------------------------------------------------------------------------|
-| Container                | часть конфигурации pod                                                    | отдельно запустить нельзя                                                |
-| Pod                      | запуск 1 или нескольких контейнеров с общей сетью  + общие папки + Labels | изменить нельзя, нужно пересоздавать                                     |
-| ReplicaSet               | держит нужное количество pod                                              | изменяется только  число pod , применяется  как часть  deployment        |
-| Deployment               | основной примитив для приложений. ( ReplicaSet + история обновлений)      | поддержка состояния , обновление параметров pod                          |
-| DaemonSets               | развертывание системных демонов                                           | системные демоны, такие как журналирование и мониторинг                  |
-| StatefulSet              | набор pods  c фиксированными именами                                      | поддержка состояния для Pod                                              |
-| Service                  | балансировщик внутри кластера                                             | может быть внешним                                                       |
-| Job                      | разовые задачи                                                            | pod + результат выполнения                                               |
-| Cron Job                 | Job + расписание                                                          | выполнение задач по расписанию                                           |
-| Persistent volume  (PV)  | постоянная файловая система для pod                                       | Size + Access Type + Storage Class                                       |
-| Persistent Volume Claims | шаблон для создания Persistent volume                                     | проверяет  создан ли PV ,если нужно создает                              |
-| Ingress                  | подключение к приложению из внешнего мира                                 | балансировка трафика, терминация SSL, виртуальный хостинг на основе имен |
-| ConfigMaps               | хранение конфигураций приложения                                          | монтируется в Pod как ридонли файловая система во время запуска          |
-| Secrets                  | хранение сертификатов и приватных данных                                  | монтируется в Pod как ридонли файловая система или переменных окружения  |
-| Namespace                | Логическое разделение приложений                                          | в них создаются pod , deployment , service  , etc                        |
+
+## Kubernetes Primitives
 
 
-## Варианты установки Kubernetes
+| **Name**                 | **Purpose**                                                                 | **Description**                                                          |
+|--------------------------|-----------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| Container                | Part of pod configuration                                                   | Cannot be launched separately                                            |
+| Pod                      | Runs 1 or more containers with shared network + shared folders + Labels    | Cannot be modified, must be recreated                                    |
+| ReplicaSet               | Maintains desired number of pods                                            | Only pod count changes, applied as part of deployment                    |
+| Deployment               | Main primitive for applications (ReplicaSet + update history)               | State support, pod parameter updates                                     |
+| DaemonSets               | Deploy system daemons                                                       | System daemons such as logging and monitoring                            |
+| StatefulSet              | Set of pods with fixed names                                                | State support for Pods                                                   |
+| Service                  | Load balancer inside the cluster                                            | Can be external                                                          |
+| Job                      | One-time tasks                                                              | Pod + execution result                                                   |
+| Cron Job                 | Job + schedule                                                              | Execute tasks on schedule                                                |
+| Persistent volume (PV)   | Persistent file system for pods                                             | Size + Access Type + Storage Class                                       |
+| Persistent Volume Claims | Template for creating Persistent volumes                                    | Checks if PV is created, creates if needed                               |
+| Ingress                  | Connect to application from outside world                                   | Traffic balancing, SSL termination, name-based virtual hosting           |
+| ConfigMaps               | Store application configurations                                            | Mounted in Pod as read-only filesystem during startup                    |
+| Secrets                  | Store certificates and private data                                         | Mounted in Pod as read-only filesystem or environment variables          |
+| Namespace                | Logical separation of applications                                          | Pods, deployments, services, etc. are created in them                    |
 
 
-| Название                                                                                         | Сложность           | Стоимость                               | Применение                                  |
+## Kubernetes Installation Options
+
+
+| Name                                                                                             | Complexity          | Cost                                    | Use Case                                    |
 |--------------------------------------------------------------------------------------------------|---------------------|-----------------------------------------|---------------------------------------------|
-| [Minikube](https://minikube.sigs.k8s.io/docs/)                                                   | Низкая              | Бесплатно                               | Обучение, тестирование на локальных машинах |
-| [kind (Kubernetes in Docker)](https://kind.sigs.k8s.io/)                                         | Низкая              | Бесплатно                               | Обучение, разработка, тестирование          |
-| [k3s](https://k3s.io/)                                                                           | Низкая              | Бесплатно                               | Легковесные кластеры, IoT, edge устройства  |
-| [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/)                | Средняя             | Бесплатно                               | Продакшен, ручная настройка                 |
-| [MicroK8s](https://microk8s.io/)                                                                 | Низкая              | Бесплатно                               | Обучение, разработка, малые кластеры        |
-| [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine)                     | Низкая              | Платная, зависит от ресурсов            | Продакшен, облачные решения                 |
-| [Amazon EKS](https://aws.amazon.com/eks/)                                                        | Низкая             | Платная, зависит от ресурсов            | Продакшен, облачные решения                 |
-| [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/en-us/services/kubernetes-service/) | Низкая              | Платная, зависит от ресурсов            | Продакшен, облачные решения                 |
-| [OpenShift](https://www.openshift.com/)                                                          | Высокая             | Платная                                 | Продакшен, корпоративные решения            |
-| [Rancher](https://rancher.com/)                                                                  | Средняя             | Платная (базовый функционал бесплатно)  | Продакшен, многокластерные решения          |
-| Kubernetes на собственных серверах                                                               | Высокая             | Варьируется (зависит от инфраструктуры) | Продакшен, корпоративные решения            |
+| [Minikube](https://minikube.sigs.k8s.io/docs/)                                                   | Low                 | Free                                    | Learning, testing on local machines         |
+| [kind (Kubernetes in Docker)](https://kind.sigs.k8s.io/)                                         | Low                 | Free                                    | Learning, development, testing              |
+| [k3s](https://k3s.io/)                                                                           | Low                 | Free                                    | Lightweight clusters, IoT, edge devices     |
+| [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/)                | Medium              | Free                                    | Production, manual setup                    |
+| [MicroK8s](https://microk8s.io/)                                                                 | Low                 | Free                                    | Learning, development, small clusters       |
+| [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine)                     | Low                 | Paid, depends on resources              | Production, cloud solutions                 |
+| [Amazon EKS](https://aws.amazon.com/eks/)                                                        | Low                 | Paid, depends on resources              | Production, cloud solutions                 |
+| [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/en-us/services/kubernetes-service/) | Low                 | Paid, depends on resources              | Production, cloud solutions                 |
+| [OpenShift](https://www.openshift.com/)                                                          | High                | Paid                                    | Production, enterprise solutions            |
+| [Rancher](https://rancher.com/)                                                                  | Medium              | Paid (basic features free)              | Production, multi-cluster solutions         |
+| Kubernetes on own servers                                                                        | High                | Varies (depends on infrastructure)      | Production, enterprise solutions            |
 
 
-## Варианты Kubernetes для обучения
+## Kubernetes Options for Learning
 
 
-| Название                              | Запускается                            | Сложность           | Стоимость               | Область применения                                                             |
-|---------------------------------------|----------------------------------------|---------------------|-------------------------|--------------------------------------------------------------------------------|
-| [Minikube](https://minikube.sigs.k8s.io/docs/) | Локальные машины                       | Низкая              | Бесплатно               | CKAD                                                                           |
-| [k3s](https://k3s.io/)                | Локальные машины, виртуальные машины   | Низкая              | Бесплатно               | CKAD                                                                           |
-| [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/) | Виртуальные машины, локальные машины   | Средняя             | Бесплатно               | CKAD ,CKA,CKS(при запуске  паблик клауде )                                     |
-| [Killercoda](https://killercoda.com/) | Как сервис (облако)                    | Низкая              | Бесплатно (для учебных сценариев) | Обучение в интерактивных сценариях для CKAD ,CKA,CKS . только готовые сценарии |
-| [SRE Learning Platform](https://github.com/ViktorUJ/cks)   | AWS, ec2                               | Низкая             | Низкая              | CKAD ,CKA,CKS . лабораторные работы , моки экзаменов , свои сценарии.          |
+| Name                                  | Runs On                                | Complexity          | Cost                | Use Case                                                                       |
+|---------------------------------------|----------------------------------------|---------------------|---------------------|--------------------------------------------------------------------------------|
+| [Minikube](https://minikube.sigs.k8s.io/docs/) | Local machines                         | Low                 | Free                | CKAD                                                                           |
+| [k3s](https://k3s.io/)                | Local machines, virtual machines       | Low                 | Free                | CKAD                                                                           |
+| [kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/) | Virtual machines, local machines       | Medium              | Free                | CKAD, CKA, CKS (when running in public cloud)                                  |
+| [Killercoda](https://killercoda.com/) | As a service (cloud)                   | Low                 | Free (for educational scenarios) | Interactive scenario learning for CKAD, CKA, CKS. Pre-made scenarios only     |
+| [SRE Learning Platform](https://github.com/ViktorUJ/cks)   | AWS, ec2                               | Low                 | Low                 | CKAD, CKA, CKS. Lab work, exam mocks, custom scenarios.                        |
 
 
-### Запуск сценария на нашей платформе 
+### Running a scenario on our platform 
 
-[видео](https://www.youtube.com/watch?v=Xh6sWzafBmw)
+[video](https://www.youtube.com/watch?v=Xh6sWzafBmw)
 
 
-[инструкция](https://github.com/ViktorUJ/cks/blob/master/docs%2Frun_from_docker.MD)
+[instructions](https://github.com/ViktorUJ/cks/blob/master/docs%2Frun_from_docker.MD)
 
 
 [DKT64](https://www.youtube.com/watch?v=QuMUzflHsS4)
@@ -99,24 +103,24 @@ TASK=01  make run_ckad_mock_clean
 
 
 
-## Подключение к кластеру 
+## Connecting to the cluster 
 
 
-###  [http запросы api серверу](https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/)
+###  [HTTP requests to API server](https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/)
 
 
 ### [kubernetes lens](https://k8slens.dev/)
 
 
-###  [kubectl - основной инструмент  ](https://kubernetes.io/docs/reference/kubectl/overview/)
+###  [kubectl - main tool](https://kubernetes.io/docs/reference/kubectl/overview/)
 
 
-### конфигурация 
+### Configuration 
 ```
 ~/.kube/config
 
 ```
-Можно изменить путь к конфигурации 
+You can change the path to configuration 
 
 ``` 
 export KUBECONFIG=/etc/kubernetes/admin.conf
@@ -148,34 +152,34 @@ current-context: kubernetes-admin@kubernetes
 
 
 ``` 
-# информация о кластере 
+# cluster information 
 k version 
 
 
-# список нод 
+# list of nodes 
 
 k get no
 
-# информация по конкретной ноде
+# information about a specific node
 
 k describe no ip-10-2-14-14 
 
 k get no ip-10-2-14-14 -o yaml
  
 
-# список namespace
+# list of namespaces
 
 k get ns
 
 ```
 
 ``` 
-# создание pod
+# create pod
 
 k run nginx --image=nginx 
 
 
-# удаление pod
+# delete pod
 
 k delete po nginx
 
@@ -183,7 +187,7 @@ k delete po nginx
 
 
 ```
-# генерация манифеста pod  и  создание pod  из манифеста
+# generate pod manifest and create pod from manifest
  
 k run nginx --image=nginx -o yaml --dry-run=client > pod.yaml
 
@@ -191,38 +195,38 @@ k run nginx --image=nginx -o yaml --dry-run=client > pod.yaml
 k apply -f pod.yaml
 
 
-# удаление pod через манифест
+# delete pod using manifest
 
 k delete -f pod.yaml
 
 ```
 
 ``` 
-# создание pod с переменными окружения 
+# create pod with environment variables 
 
 k run nginx --image=nginx --env="key1=value1" --env="key2=value2"
 
 ```
 
 
-### Изменения существующего pod 
+### Modifying existing pod 
 
 
 ``` 
-# получеем манифест pod
+# get pod manifest
 k get po nginx -o yaml > pod.yaml
 
-# удаляем существующий pod
+# delete existing pod
 
-# изменяем манифест
+# modify manifest
 vim pod.yaml
 
-# применяем манифест
+# apply manifest
 k apply -f pod.yaml
 
 ```
 
-### Создание pod с командой
+### Creating pod with command
 
 
 ```
@@ -230,32 +234,32 @@ k run nginx --image=nginx --command -- sleep 1000
 
 ```
 
-###  Быстрое удаление pod (полезно на экзамене )
+###  Quick pod deletion (useful on exam)
 
 ```
 k delete po nginx --force --grace-period=0
 
 ```
 
-### Просмотр namespace
+### View namespaces
 ``` 
 k get ns
 
 ```
-### Создание namespace
+### Create namespace
 
 ```
 k create ns my-namespace
 
 ```
 
-### Удаление namespace
+### Delete namespace
 
 ```
 k delete ns my-namespace
 ```
 
-### Создание pod в namespace
+### Create pod in namespace
 
 ```
 k create ns my-namespace
@@ -263,7 +267,7 @@ k create ns my-namespace
 k run nginx --image=nginx --namespace=my-namespace
 ``` 
 
-### [Пример экзаменационного задания 1](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
+### [Exam task example 1](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
 
 
 |        **1**        | **Deploy a pod named webhttpd**                                                |
@@ -285,7 +289,7 @@ check_result
 ``` 
 
 
-### [Пример экзаменационного задания 6](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
+### [Exam task example 6](https://github.com/ViktorUJ/cks/tree/master/tasks/ckad/mock/01) 
 
 
 |        **6**        | **Update the environment variable on the pod text-printer.**                                                 |
@@ -316,8 +320,6 @@ k apply -f 6.yaml
 check_result 
 ```
 
-[Настройка автодобивики команд, аллиасов](https://kubernetes.io/ru/docs/reference/kubectl/cheatsheet/)
+[Setting up command autocompletion, aliases](https://kubernetes.io/ru/docs/reference/kubectl/cheatsheet/)
 
-**На экзамене обязательно используем аллиасы  , автодобивку команд и генерацию манифестов**
-
-```
+**On the exam, always use aliases, command autocompletion and manifest generation**
