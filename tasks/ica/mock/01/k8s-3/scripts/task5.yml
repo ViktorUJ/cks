@@ -1,0 +1,61 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gray
+  labels:
+    istio-injection: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gray-echo
+  namespace: gray
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gray-echo
+  template:
+    metadata:
+      labels:
+        app: gray-echo
+    spec:
+      containers:
+      - name: gray-echo
+        image: bizy92/echo-version-app:v1
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "10m"
+            memory: "64Mi"
+        env:
+        - name: VERSION
+          value: "v1"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gray-echo
+  namespace: gray
+spec:
+  selector:
+    app: gray-echo
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+---

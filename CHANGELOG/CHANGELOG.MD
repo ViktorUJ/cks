@@ -1,10 +1,95 @@
 # Changelog
 
+## 0.26.1 (17.12.2025)
+### Features
+* [ica mock exam 01](../tasks/ica/mock/01) is added.
+* [ica mock exam 01 solutions](../tasks/ica/mock/01/worker/files/solutions) is added.
+* New useful [links](../docs/links.MD) for  exams are added.
+
+
+## 0.25.1 (19.11.2025)
+### Features
+* [cks mock exam 04](../tasks/cks/mock/04) is added.
+* [cks mock exam 04 solutions](../tasks/cks/mock/04/worker/files/solutions) is added.
+* cks mock exam 04 [video solution](https://youtu.be/9W9KvSGq3nc) is added.
+
+## 0.24.1 (12.09.2025)
+### Features
+* [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is updated.
+* [cks mock exam 03](../tasks/cks/mock/03) is added.
+* [cks mock exam 03 solutions](../tasks/cks/mock/03/worker/files/solutions) is added.
+* K8s version **1.34** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module.
+
+## 0.23.1 (12.08.2025)
+### Features
+* [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is updated.
+* [a service for synchronizing EKS(Kubernetes) services](../docker/k8s-svc-sync/README.MD) is added.
+* Unit tests for [k8s-svc-sync](../docker/k8s-svc-sync/README.MD) are added.
+* CKAD mock exam 02 tests are fixed.
+
+## 0.22.1 (11.07.2025)
+### Features
+* [AWS AI Practitioner example question](../tasks/aws_AI_practitioner/README.MD) is added. 
+* [CKS Lab 30. Create istio network policy](..%2Ftasks%2Fcks%2Flabs%2F30%2FREADME.MD) is added.
+* [CKS Lab 30. solutions ](../tasks/cks/labs/30/worker/files/solutions/1.MD) is added.
+
+
+## 0.21.1 (09.06.2025)
+### Features
+* [CKA Lab 10. Kubernetes resource orchestration (kro)](../tasks/cka/labs/10/README.MD) is added.
+* [CKA Lab 10. solutions](../tasks/cka/labs/10/worker/files/solutions/1.MD) is added.
+* CKAD mock exam 01 tests are fixed. 
+* CKAD mock exam 02 tests are fixed. 
+
+## 0.20.1 (09.05.2025)
+### Features
+* calculation of **headers size**, **body size** and **full size** is added to  [ping_pong](../docker/ping_pong/README.MD)
+* body  is added  to  [ping_pong](../docker/ping_pong/README.MD) for **POST** and **PUT** methods.
+* [CKS Lab 27. Cilium network policy with mTLS](..%2Ftasks%2Fcks%2Flabs%2F27%2FREADME.MD) is added.
+* [CKS Lab 27. solutions ](../tasks/cks/labs/27/worker/files/solutions/1.MD) is added.
+* Cks lab 27.[video solution](https://youtu.be/IScbc12Nj2A) is added.
+* [CKS Lab 28. Detect and stop unauthorized access with Falco](..%2Ftasks%2Fcks%2Flabs%2F28%2FREADME.MD) is added.
+* [CKS Lab 28. solutions](../tasks/cks/labs/28/worker/files/solutions/1.MD) is added.
+* Cks lab 28.[video solution](https://youtu.be/HsQlGC52bRM) is added.
+* [CKS Lab 29. Perform Docker security configutaion](..%2Ftasks%2Fcks%2Flabs%2F29%2FREADME.MD) is added.
+* [CKS Lab 29. solutions ](../tasks/cks/labs/29/worker/files/solutions/1.MD) is added.
+* Cks lab 29.[video solution](https://youtu.be/-uEHbkI3wcs) is added.
+* [CKA Lab 09. Gateway API in Kubernetes](../tasks/cka/labs/09/README.MD) is added.
+* [CKA Lab 09. solutions](../tasks/cka/labs/09/worker/files/solutions/1.MD) is added.
+* CKA lab 09.[video solution](https://youtu.be/rjqmgYyYQ8U) is added.
+* K8s version **1.33** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module.
+* additional response size is added to [ping_pong](../docker/ping_pong/README.MD) 
+
+## 0.19.1 (17.03.2025)
+### Features
+
+* docker image for runner(viktoruj/runner) is updated(terraform and terragrunt versions are updated). 
+* api was added to [ping_pong](../docker/ping_pong/README.MD#api) service.
+* emulate crash was added to [ping_pong](../docker/ping_pong/README.MD#emulate-crash-app) service.
+* emulate slow response was added to [ping_pong](../docker/ping_pong/README.MD#run-http-ping-pong-server--with-response-delay-3-seconds-and-10-workers) service.
+* osInfo was added to api [ping_pong](../docker/ping_pong/README.MD#get-os-info)
+* getVar was added to api [ping_pong](../docker/ping_pong/README.MD#get-variables)
+* setVar was added to api [ping_pong](../docker/ping_pong/README.MD#set-variables)
+
+
+## 0.18.1 (20.02.2025)
+### Features
+
+* [cks mock exam 02](../tasks/cks/mock/02) is added.
+* [cks mock exam 02 solutions](../tasks/cks/mock/02/worker/files/solutions) is added.
+* **spot_additional_type** is added to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module. Now you can use spot instances with additional type. [example](../tasks/cks/mock/02/env.hcl)
+* **all_spot_subnet** is added to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module. Now you can use spot instances in all subnets. [example](../tasks/cks/mock/02/env.hcl)
+* **--terragrunt-parallelism** now is depends on cpu cores. It helps you create environments faster on multi-core computers.
+
+
 ## 0.17.1 (09.01.2025)
 ### Features
 
 * [kcna](../tasks/kcna)  example is added.
 * [kcsa](../tasks/kcsa)  example is added.
+* K8s version **1.32** is added  to [k8s_self_management](..%2Fterraform%2Fmodules%2Fk8s_self_managment_v2) module.
+* [cka lab 08](../tasks/cka/labs/08) is updated to  kubernetes version 1.32.
+* slow start to [ping_pong](../docker/ping_pong/README.MD) is added. Now you can use `DELAY_START`  to delay start in seconds before start app (default = 0) . It is useful for testing slow start of app and test startup probes.
 
 ## 0.16.1 (09.12.2024)
 ### Features

@@ -101,6 +101,7 @@ resource "aws_launch_template" "master" {
       ssh_password        = random_string.ssh.result
       ssh_password_enable = var.ssh_password_enable
       hosts               = local.hosts
+      hostname=var.app_name
     }))
 
   }))
@@ -165,11 +166,20 @@ resource "aws_spot_fleet_request" "master" {
   target_capacity               = 1
   wait_for_fulfillment          = true
   terminate_instances_on_delete = true
+  tags                          = { type = "work_pc", app = var.app_name, key = each.key }
   launch_template_config {
     launch_template_specification {
       id      = aws_launch_template.master["enable"].id
       version = aws_launch_template.master["enable"].latest_version
     }
+    dynamic "overrides" {
+      for_each = var.all_spot_subnet == "true" ? local.type_sub_spot : {}
+      content {
+        instance_type = overrides.value.type
+        subnet_id     = overrides.value.subnet
+      }
+    }
+
   }
 }
 

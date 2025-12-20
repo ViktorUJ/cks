@@ -1,0 +1,133 @@
+---
+# Black namespace - where Sidecar configuration will be applied
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: black
+  labels:
+    istio-injection: enabled
+---
+# Green namespace - target for egress
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: green
+  labels:
+    istio-injection: enabled
+---
+# Pod in black namespace
+apiVersion: v1
+kind: Pod
+metadata:
+  name: black-echo-pod
+  namespace: black
+  labels:
+    app: black-echo
+spec:
+  containers:
+  - name: echo
+    image: bizy92/echo-version-app:v1
+    ports:
+    - containerPort: 8080
+    env:
+    - name: VERSION
+      value: "v1"
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "64Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---
+# Service in black namespace
+apiVersion: v1
+kind: Service
+metadata:
+  name: black-echo-service
+  namespace: black
+spec:
+  selector:
+    app: black-echo
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+# Pod in green namespace
+apiVersion: v1
+kind: Pod
+metadata:
+  name: green-echo-pod
+  namespace: green
+  labels:
+    app: green-echo
+spec:
+  containers:
+  - name: echo
+    image: bizy92/echo-version-app:v1
+    ports:
+    - containerPort: 8080
+    env:
+    - name: VERSION
+      value: "v1"
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "64Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"
+---
+# Service in green namespace
+apiVersion: v1
+kind: Service
+metadata:
+  name: green-echo-service
+  namespace: green
+spec:
+  selector:
+    app: green-echo
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+# Test client pod in black namespace
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sleep-black
+  namespace: black
+  labels:
+    app: sleep-black
+spec:
+  containers:
+  - name: curl
+    image: curlimages/curl
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
+        cpu: "10m"
+        memory: "64Mi"

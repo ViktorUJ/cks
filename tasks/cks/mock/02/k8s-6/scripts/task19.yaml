@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  creationTimestamp: null
+  name: team-19
+spec: {}
+status: {}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: team19
+  name: team19
+  namespace: team-19
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: team19
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: team19
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: app
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: team19
+  name: team19
+  namespace: team-19
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: team19
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: team19
+  namespace: team-19
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: cks.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: team19
+            port:
+              number: 80

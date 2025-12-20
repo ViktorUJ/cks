@@ -9,8 +9,13 @@ The **SRE Learning Platform** is an open-source hub designed to help IT engineer
 - Prepare for the **CKA**: [Certified Kubernetes Administrator Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
 - Enhance your skills for the **CKS**: [Certified Kubernetes Security Specialist Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/)
 - Excel in the **CKAD**: [Certified Kubernetes Application Developer Exam](https://training.linuxfoundation.org/certification/certified-kubernetes-application-developer-ckad/)
+- Excel in the **ICA**:  [Istio Certified Associate Exam](https://training.linuxfoundation.org/certification/istio-certified-associate-ica/)
+- Prepare for the **KCNA**: [Kubernetes and Cloud Native Associate](https://training.linuxfoundation.org/certification/kubernetes-cloud-native-associate/)
+- Prepare for the **KCSA**: [Kubernetes and Cloud Native Security Associate](https://training.linuxfoundation.org/certification/kubernetes-and-cloud-native-security-associate-kcsa/)
 - Prepare for the **LFCS**: [Linux Foundation Certified System Administrator](https://training.linuxfoundation.org/certification/linux-foundation-certified-sysadmin-lfcs/)
 - Prepare for the **KCNA**: [Kubernetes and Cloud Native Associate](https://training.linuxfoundation.org/certification/kubernetes-cloud-native-associate/)
+- Prepare for the [AWS Certified AI Practitioner](https://aws.amazon.com/certification/certified-ai-practitioner/)
+
 
 Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS, and CKAD exams with the **SRE Learning Platform**.
 
@@ -64,14 +69,14 @@ The repository is organized into the following sections:
 - you can easily add your own scenario using the already existing terraform module [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)
 - [k8s_self_managment](terraform%2Fmodules%2Fk8s_self_managment)  module supports versions:
 ````
-k8s version  : [ 1.21 , 1.31 ]   https://kubernetes.io/releases/
+k8s version  : [ 1.21 , 1.34 ]   https://kubernetes.io/releases/
 Rintime :
     docker                   [1.21 , 1.23]
     cri-o                    [1.21 , 1.29]
-    containerd               [1.21 , 1.31]   # cks, cka  default 1.30
-    containerd_gvizor        [1.21 , 1.31]
+    containerd               [1.21 , 1.33]   # cks, cka  default 1.33
+    containerd_gvizor        [1.21 , 1.33]
 OS for nodes  :
-   ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  20.04 LTS
+   ubuntu  :  20.04 LTS  ,  22.04 LTS   # cks default  22.04 LTS
 CNI :  calico ,culium
 ````
 </details>
@@ -139,6 +144,22 @@ Every command should be run from the project's root directory.
 </details>
 
 <details>
+  <summary style="font-weight: bold; font-size: 1.5em;">ICA</summary>
+
+### cks task
+- ``TASK=10 make run_ica_task`` - create cks [hands-on labs](docs%2Flabs.MD#cks-labs) number 10
+- ``TASK=10 make delete_ica_task`` - delete cks hands-on labs
+- ``TASK=10  make run_ica_task_clean`` - run cks_task with clean terragrunt cache  for  cks_task
+- ``make output_cks_task `` - show **outputs** from   **cks_task**
+### cks mock
+- ``TASK=01 make run_ica_mock`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)
+- ``make delete_ica_mock`` - delete mock  CKS exam
+- ``TASK=01 make run_ica_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache
+- ``make output_ica_mock `` - show **outputs** from   **cks_mock**
+</details>
+
+
+<details>
   <summary style="font-weight: bold; font-size: 1.5em;">LFCS</summary>
 
 ### lfcs mock
@@ -159,6 +180,12 @@ Every command should be run from the project's root directory.
 
 </details>
 
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">KCSA</summary>
+
+- check examle questions in [kcsa](tasks%2Fkcsa) directory
+
+</details>
 
 
 <details>
@@ -186,6 +213,13 @@ Every command should be run from the project's root directory.
 
 ## Usage scenarios
 
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">AWS Certified AI Practitioner </summary>
+
+### example questions for **AWS Certified AI Practitioner** exam
+
+- check examle questions in [AWS Certified AI Practitioner](tasks/aws_AI_practitioner) directory
+</details>
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">CKA hands-on lab</summary>
@@ -256,6 +290,26 @@ Every command should be run from the project's root directory.
 - find exam solutions in ``{mock_number}/worker/files/solutions``  [mock 1 solutions](tasks%2Fcks%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)  and [video](https://youtu.be/I8CPwcGbrG8)
 - find exam tests in ``{mock_number}/worker/files/tests.bats``
 </details>
+
+<details>
+  <summary style="font-weight: bold; font-size: 1.5em;">mock ICA exam</summary>
+
+### mock  ICA exam
+- choose [a mock exam](tasks%2Fica%2Fmock) number
+- change **ubuntu_version** in ``{mock_number}/env.hcl`` if you need
+- change instance type from ``spot`` to ``ondemand`` in  ``{mock_number}/env.hcl`` if you need
+- create mock  CKS exam ``TASK={mock_number} make run_ica_mock`` or ``TASK={mock_number} make run_ica_mock_clean`` if you'd like  to run with **clean** terragrunt cache
+- find ``worker_pc_ip`` in ``terraform output``
+- connect to ``worker_pc_ip``  with your ssh key and user ``ubuntu``
+- open questions list ``{mock_number}/README.MD`` and do tasks
+- use ``ssh  {kubernetes_nodename}`` from  work pc to connect to node
+- run ``time_left`` on work pc to check time
+- run ``check_result`` on work pc to check result
+- delete mock  CKS exam `make delete_ica_mock`
+- find exam solutions in ``{mock_number}/worker/files/solutions``  [mock 1 solutions](tasks%2Fica%2Fmock%2F01%2Fworker%2Ffiles%2Fsolutions)  and [video](https://youtu.be/I8CPwcGbrG8)
+- find exam tests in ``{mock_number}/worker/files/tests/``
+</details>
+
 
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">mock CKAD exam</summary>

@@ -1,0 +1,9 @@
+FROM golang:alpine AS builder
+RUN apk update && apk add --no-cache git
+WORKDIR $GOPATH/src/mypackage/myapp/
+COPY app/app1.go app1.go
+RUN CGO_ENABLED=0 go build -ldflags="-w -s" app1.go
+
+FROM alpine:3.19.1
+COPY --from=builder /go/src/mypackage/myapp/app1 app1
+ENTRYPOINT ["/app1"]

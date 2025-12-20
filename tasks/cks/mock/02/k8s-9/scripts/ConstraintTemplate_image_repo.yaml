@@ -1,0 +1,24 @@
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8strustedimages
+spec:
+  crd:
+    spec:
+      names:
+        kind: k8strustedimages
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8strustedimages
+
+        violation[{"msg": msg}] {
+         not images
+         msg := "not trusted image!"
+        }
+
+        images {
+          image := input.review.object.spec.containers[_].image
+          not startswith(image, "docker-fake.io/")
+          not startswith(image, "google-gcr-fake.com/")
+        }

@@ -15,7 +15,7 @@ RUN wget http://download.redis.io/redis-stable.tar.gz &&  \
 
 FROM amazon/aws-cli:2.17.33
 COPY yum.repos /etc/yum.repos.d/
-RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc tar git wget make bind-utils iputils  -y  && \
+RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc vim  tar git wget make bind-utils iputils  -y  && \
     curl -LO https://dl.k8s.io/release/v1.31.0/bin/linux/arm64/kubectl && \
     chmod +x ./kubectl && \
     mv kubectl /usr/local/bin/kubectl && \
@@ -33,7 +33,9 @@ RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc tar 
     mv sops /usr/local/bin/sops && \
     curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh | bash
 
-
 COPY --from=builder /go/src/mypackage/myapp/app /app
 COPY --from=redis-builder /usr/local/bin/redis-cli  /usr/local/bin/redis-cli
+COPY ./redis/redis_scan.sh /usr/local/bin/redis_scan
+RUN chmod +x /usr/local/bin/redis_scan
+
 ENTRYPOINT ["/app"]

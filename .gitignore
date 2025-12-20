@@ -5,5 +5,5 @@ venv
 **.idea
 **.terraform
 **.__pycache__
-
+/docker/ping_pong/dist/*
 terraform/environments/**/**

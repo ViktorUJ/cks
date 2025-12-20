@@ -5,6 +5,7 @@ region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl |g
 backend_bucket := $(shell grep '^  backend_bucket' terraform/environments/terragrunt.hcl | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
 dynamodb_table := $(backend_bucket)-lock
 base_dir := $(shell pwd)
+nproc := $(shell if [ "$(shell uname)" = "Darwin" ]; then sysctl -n hw.physicalcpu; else nproc; fi)
 BASE_PATH := $(shell pwd)
 VENV_PATH := $(BASE_PATH)/venv
 VENV_BIN_PATH := $(VENV_PATH)/bin/
@@ -30,13 +31,13 @@ define terragrint_run
 	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
     @case "$(3)" in
         run)
-            @commnand="terragrunt run-all  apply"
+            @commnand="terragrunt run-all  apply --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) )) "
             ;;
         delete)
-            @commnand="terragrunt run-all  destroy"
+            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
             ;;
         output)
-            @commnand="terragrunt run-all  output"
+            @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
             ;;
     esac
 
@@ -155,6 +156,21 @@ delete_lfcs_mock_clean:
 
 output_lfcs_mock:
 	$(call terragrint_run,lfcs,mock,output)
+
+#ICA mock
+run_ica_mock:
+	$(call terragrint_run,ica,mock,run)
+delete_ica_mock:
+	$(call terragrint_run,ica,mock,delete)
+
+run_ica_mock_clean:
+	$(call terragrint_run,ica,mock,run,clean)
+
+delete_ica_mock_clean:
+	$(call terragrint_run,ica,mock,delete,clean)
+
+output_ica_mock:
+	$(call terragrint_run,ica,mock,output)
 
 
 #HR mock
