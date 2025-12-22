@@ -41,6 +41,7 @@ module "eks" {
       selectors = [
         { namespace = "kube-system" }
       ]
+      subnet_ids = var.eks.subnet_ids
     }
   }
 
