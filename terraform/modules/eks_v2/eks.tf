@@ -1,3 +1,7 @@
+output "subnet" {
+  value = var.eks.subnet_ids
+}
+/*
 module "eks" {
   depends_on = [aws_dynamodb_table_item.cmdb_data]
   source     = "terraform-aws-modules/eks/aws"
@@ -51,3 +55,6 @@ module "eks" {
     "karpenter.sh/discovery" = var.eks.name
   }
 }
+
+*/
+
