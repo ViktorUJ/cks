@@ -41,7 +41,7 @@ module "eks" {
       selectors = [
         { namespace = "kube-system" }
       ]
-      subnet_ids = var.eks.subnet_ids
+      # Remove subnet_ids to let the module use cluster's private subnets automatically
     }
   }
 
@@ -51,5 +51,3 @@ module "eks" {
     "karpenter.sh/discovery" = var.eks.name
   }
 }
-
-
