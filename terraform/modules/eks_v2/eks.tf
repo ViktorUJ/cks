@@ -38,7 +38,8 @@ module "eks" {
   fargate_profiles = {
     kube_system = {
       name = "kube-system"
-     partition  = data.aws_partition.current.id
+     create = true
+     partition  = data.aws_partition.current.partition
      account_id = data.aws_caller_identity.current.account_id
 
       selectors = [
