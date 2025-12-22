@@ -62,7 +62,7 @@ output "private_subnets_by_az_id" {
 
 # NACL
 output "nacl_default_rules_raw" {
-  value = module.vpc.nacl_default_rules_raw"
+  value = module.vpc.nacl_default_rules_raw
 }
 output "public_nacl_raw" {
   value = module.vpc.public_nacl_raw
