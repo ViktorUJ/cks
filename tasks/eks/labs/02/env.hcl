@@ -32,27 +32,43 @@ locals {
     }
     private = {
 
-      "private1" = {
+      "eks1" = {
         name        = "private-subnet-1"
         cidr        = "10.10.11.0/24"
         az          = "eu-central-1a"
         nat_gateway = "SINGLE"
+        type = "eks"
         tags = {
           "kubernetes.io/cluster/karpenter-poc" = "owned"
           "kubernetes.io/role/internal-elb"     = "1"
           "karpenter.sh/discovery"              = "karpenter-poc"
         }
       }
-      "private2" = {
+      "eks2" = {
         name        = "private-subnet-2"
         cidr        = "10.10.12.0/24"
         az          = "eu-central-1b"
         nat_gateway = "SINGLE"
+        type = "eks"
         tags = {
           "kubernetes.io/cluster/karpenter-poc" = "owned"
           "kubernetes.io/role/internal-elb"     = "1"
           "karpenter.sh/discovery"              = "karpenter-poc"
         }
+      }
+      "rds1" = {
+        name        = "rds-subnet-1"
+        cidr        = "10.10.21.0/24"
+        az          = "eu-central-1a"
+        nat_gateway = "NONE"
+        type = "rds"
+      }
+      "rds2" = {
+        name        = "rds-subnet-2"
+        cidr        = "10.10.22.0/24"
+        az          = "eu-central-1b"
+        nat_gateway = "NONE"
+        type = "rds"
       }
     }
   }
