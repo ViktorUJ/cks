@@ -34,14 +34,14 @@ module "eks" {
   subnet_ids               = var.eks.subnet_ids
   control_plane_subnet_ids = var.eks.control_plane_subnet_ids
 
-  # Fargate profiles for system pods - use private subnets directly
+  # Fargate profile inside module; assumes var.eks.subnet_ids are private subnets
   fargate_profiles = {
     kube_system = {
       name = "kube-system"
       selectors = [
         { namespace = "kube-system" }
       ]
-      subnet_ids = var.eks.subnet_ids  # Must be private subnets only
+      subnet_ids = var.eks.subnet_ids
     }
   }
 
