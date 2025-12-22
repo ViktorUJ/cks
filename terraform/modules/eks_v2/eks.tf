@@ -41,7 +41,7 @@ module "eks" {
       selectors = [
         { namespace = "kube-system" }
       ]
-      subnet_ids = var.eks.subnet_ids
+      subnet_ids = var.eks.control_plane_subnet_ids
     }
   }
 
