@@ -32,7 +32,6 @@ inputs = {
     vpc_id      = dependency.vpc.outputs.vpc_id
     subnet_ids  = dependency.vpc.outputs.private_subnets_by_type.eks.ids
     control_plane_subnet_ids = dependency.vpc.outputs.public_subnets_by_type.public.ids
-  #  control_plane_subnet_ids = ["8768765","134"]
     tags        = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
   }
 }
