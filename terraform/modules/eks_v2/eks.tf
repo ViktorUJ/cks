@@ -6,7 +6,12 @@ module "eks" {
   name               = var.eks.name
   kubernetes_version = var.eks.version
   addons = {
-    coredns = {}
+    coredns = {
+      resolve_conflicts_on_create = "OVERWRITE"
+      configuration_values = jsonencode({
+        computeType = "Fargate"
+      })
+    }
     eks-pod-identity-agent = {
       before_compute = true
     }
@@ -29,6 +34,16 @@ module "eks" {
   subnet_ids               = var.eks.subnet_ids
   control_plane_subnet_ids = var.eks.control_plane_subnet_ids
 
+  # Fargate profiles for system pods
+  fargate_profiles = {
+    kube_system = {
+      name = "kube-system"
+      selectors = [
+        { namespace = "kube-system" }
+      ]
+      subnet_ids = var.eks.subnet_ids
+    }
+  }
 
   tags = var.eks.tags
 
@@ -36,5 +51,3 @@ module "eks" {
     "karpenter.sh/discovery" = var.eks.name
   }
 }
-
-
