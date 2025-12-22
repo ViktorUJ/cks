@@ -34,7 +34,7 @@ locals {
 
       "eks1" = {
         name        = "private-subnet-1"
-        cidr        = "10.10.11.0/24"
+        cidr        = "10.10.15.0/24"
         az          = "eu-central-1a"
         nat_gateway = "SINGLE"
         type = "eks"
@@ -46,7 +46,7 @@ locals {
       }
       "eks2" = {
         name        = "private-subnet-2"
-        cidr        = "10.10.12.0/24"
+        cidr        = "10.10.16.0/24"
         az          = "eu-central-1b"
         nat_gateway = "SINGLE"
         type = "eks"
