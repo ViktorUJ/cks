@@ -9,19 +9,21 @@ locals {
   subnets = {
     public = {
       "pub1" = {
-        name = "AZ-1"
+        name = "eks-AZ-1"
         cidr = "10.10.1.0/24"
         az   = "eu-central-1a"
         nat_gateway = "DEFAULT"
+        type = "eks"
         tags = {
           "kubernetes.io/cluster/karpenter-poc" = "owned"
           "kubernetes.io/role/elb"              = "1"
         }
       }
       "pub2" = {
-        name = "AZ-2"
+        name = "eks-AZ-2"
         cidr = "10.10.2.0/24"
         az   = "eu-central-1b"
+        type = "eks"
                 tags = {
           "kubernetes.io/cluster/karpenter-poc" = "owned"
           "kubernetes.io/role/elb"              = "1"
