@@ -1,5 +1,8 @@
 # https://github.com/terraform-aws-modules/terraform-aws-eks/blob/master/tests/eks-fargate-profile/main.tf
 
+data "aws_partition" "current" {}
+data "aws_caller_identity" "current" {}
+
 module "eks" {
   depends_on = [aws_dynamodb_table_item.cmdb_data]
   source     = "terraform-aws-modules/eks/aws"
@@ -26,15 +29,18 @@ module "eks" {
   create_security_group      = true
   create_node_security_group = true
 
-  # fargate_profile_defaults убрали — wrapper его не принимает
+  # removed: fargate_profile_defaults (unsupported by the module you actually call)
 
   fargate_profiles = {
     kube-system = {
       selectors = [
         { namespace = "kube-system" }
       ]
+
       subnet_ids = var.eks.subnet_ids
       tags       = var.eks.tags
+
+      # IMPORTANT: set explicitly to avoid "Invalid count argument" inside fargate-profile submodule
       partition  = data.aws_partition.current.partition
       account_id = data.aws_caller_identity.current.account_id
     }
