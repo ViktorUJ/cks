@@ -35,7 +35,7 @@ module "eks" {
 
 
       # Using specific subnets instead of the subnets supplied for the cluster itself
-      subnet_ids = [var.eks.subnet_ids]
+      subnet_ids = var.eks.subnet_ids
 
       tags = var.eks.tags
     }
