@@ -26,18 +26,13 @@ module "eks" {
   create_security_group      = true
   create_node_security_group = true
 
-
-  fargate_profile_defaults = {
-    partition  = data.aws_partition.current.partition
-    account_id = data.aws_caller_identity.current.account_id
-  }
+  # fargate_profile_defaults убрали — wrapper его не принимает
 
   fargate_profiles = {
     kube-system = {
       selectors = [
         { namespace = "kube-system" }
       ]
-
       subnet_ids = var.eks.subnet_ids
       tags       = var.eks.tags
     }
