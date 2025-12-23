@@ -1,8 +1,5 @@
 # https://github.com/terraform-aws-modules/terraform-aws-eks/blob/master/tests/eks-fargate-profile/main.tf
 
-data "aws_partition" "current" {}
-
-data "aws_caller_identity" "current" {}
 module "eks" {
   depends_on = [aws_dynamodb_table_item.cmdb_data]
   source     = "terraform-aws-modules/eks/aws"
