@@ -40,6 +40,9 @@ inputs = {
     "vpc-cni" = {
          version="v1.20.5-eksbuild.1"
     }
+    "aws-ebs-csi-driver"= {
+         version="v1.53.0-eksbuild.1"
+    }
 
 
   }
