@@ -33,7 +33,14 @@ inputs = {
   addons = {
     "coredns" = {
          version="v1.12.3-eksbuild.1"
-         resolve_conflicts="OVERWRITE"
     }
+    "kube-proxy" = {
+         version="v1.34.1-eksbuild.2"
+    }
+    "vpc-cni" = {
+         version="v1.20.5-eksbuild.1"
+    }
+
+
   }
 }
