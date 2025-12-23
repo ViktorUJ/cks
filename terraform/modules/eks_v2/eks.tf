@@ -1,5 +1,8 @@
 # https://github.com/terraform-aws-modules/terraform-aws-eks/blob/master/tests/eks-fargate-profile/main.tf
 
+data "aws_partition" "current" {}
+
+data "aws_caller_identity" "current" {}
 module "eks" {
   depends_on = [aws_dynamodb_table_item.cmdb_data]
   source     = "terraform-aws-modules/eks/aws"
@@ -23,31 +26,29 @@ module "eks" {
   subnet_ids               = var.eks.subnet_ids
   control_plane_subnet_ids = var.eks.control_plane_subnet_ids
 
-  # Fargate profiles use the cluster primary security group so these are not utilized
   create_security_group      = true
   create_node_security_group = true
 
+
+  fargate_profile_defaults = {
+    partition  = data.aws_partition.current.partition
+    account_id = data.aws_caller_identity.current.account_id
+  }
+
   fargate_profiles = {
-    example = {
-      name = "example"
-      selectors = [
-    { namespace = "kube-system" }]
-
-
-      # Using specific subnets instead of the subnets supplied for the cluster itself
-      subnet_ids = var.eks.subnet_ids
-
-      tags = var.eks.tags
-    }
     kube-system = {
       selectors = [
         { namespace = "kube-system" }
       ]
+
+      subnet_ids = var.eks.subnet_ids
+      tags       = var.eks.tags
     }
   }
 
   tags = var.eks.tags
-    node_security_group_tags = {
+
+  node_security_group_tags = {
     "karpenter.sh/discovery" = var.eks.name
   }
 }
