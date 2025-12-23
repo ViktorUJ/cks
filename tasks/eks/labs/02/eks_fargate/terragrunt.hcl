@@ -32,7 +32,7 @@ inputs = {
 
   fargate = {
     name        = "system"
-    cluster= dependency.eks_control_plane.outputs.cluster_name
+    cluster= dependency.eks_control_plane.outputs.eks_mudule.cluster_name
     subnet_ids  = dependency.vpc.outputs.private_subnets_by_type.eks.ids
     selectors = [{namespace = "kube-system"}]
     tags        = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
