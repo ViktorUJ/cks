@@ -4,3 +4,7 @@ output "kubectl_config" {
 output "eks_mudule" {
   value = module.eks
 }
+
+output "ebs_csi_iam" {
+  value = aws_iam_role.ebs_csi.arn
+}
