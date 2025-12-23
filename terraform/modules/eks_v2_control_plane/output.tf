@@ -1,6 +1,6 @@
 output "kubectl_config" {
   value = "aws eks update-kubeconfig --region ${var.region} --name ${var.eks.name} "
 }
-output "eks_mudule_output" {
+output "eks_mudule" {
   value = module.eks
 }
