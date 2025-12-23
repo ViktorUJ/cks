@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/eks_v2/"
+  source = "../../..//modules/eks_v2_control_plane/"
 
   extra_arguments "retry_lock" {
     commands  = get_terraform_commands_that_need_locking()
