@@ -24,9 +24,9 @@ variable "cluster" {
   type = string
 }
 variable "addons" {
-  type = object({
+  type = map(object({
   version=string
-  resolve_conflicts=string
+  resolve_conflicts=optional(string, "OVERWRITE")
   configuration= optional(any)
-  })
+  }))
 }
