@@ -15,7 +15,7 @@ module "eks" {
 
   create_security_group      = true
   create_node_security_group = true
-
+  enable_cluster_creator_admin_permissions = true
 
   tags = var.eks.tags
 
