@@ -1,3 +1,59 @@
+# https://github.com/terraform-aws-modules/terraform-aws-eks/blob/master/tests/eks-fargate-profile/main.tf
+
+module "eks" {
+  depends_on = [aws_dynamodb_table_item.cmdb_data]
+  source     = "terraform-aws-modules/eks/aws"
+  version    = "21.10.1"
+
+  name                   = var.eks.name
+  kubernetes_version     = var.eks.version
+  endpoint_public_access = true
+
+  addons = {
+    kube-proxy = {}
+    vpc-cni    = {}
+    coredns = {
+      configuration_values = jsonencode({
+        computeType = "fargate"
+      })
+    }
+  }
+
+  vpc_id                   = var.eks.vpc_id
+  subnet_ids               = var.eks.subnet_ids
+  control_plane_subnet_ids = var.eks.control_plane_subnet_ids
+
+  # Fargate profiles use the cluster primary security group so these are not utilized
+  create_security_group      = true
+  create_node_security_group = true
+
+  fargate_profiles = {
+    example = {
+      name = "example"
+      selectors = [
+    { namespace = "kube-system" }]
+
+
+      # Using specific subnets instead of the subnets supplied for the cluster itself
+      subnet_ids = [var.eks.subnet_ids]
+
+      tags = var.eks.tags
+    }
+    kube-system = {
+      selectors = [
+        { namespace = "kube-system" }
+      ]
+    }
+  }
+
+  tags = var.eks.tags
+    node_security_group_tags = {
+    "karpenter.sh/discovery" = var.eks.name
+  }
+}
+
+
+/*
 module "eks" {
   depends_on = [aws_dynamodb_table_item.cmdb_data]
   source     = "terraform-aws-modules/eks/aws"
@@ -5,23 +61,18 @@ module "eks" {
 
   name               = var.eks.name
   kubernetes_version = var.eks.version
-  addons = {
+ addons = {
+    kube-proxy = {}
+    vpc-cni    = {}
     coredns = {
-      resolve_conflicts_on_create = "OVERWRITE"
       configuration_values = jsonencode({
-        computeType = "Fargate"
+        computeType = "fargate"
       })
     }
-    eks-pod-identity-agent = {
-      before_compute = true
-    }
-    kube-proxy = {}
-    vpc-cni = {
-      before_compute = true
-    }
   }
-
-  # Optional
+    eks-pod-identity-agent = {}
+    kube-proxy = {}
+    vpc-cni = {}
   endpoint_public_access = true
 
   # Optional: Adds the current caller identity as an administrator via cluster access entry
@@ -55,3 +106,6 @@ module "eks" {
     "karpenter.sh/discovery" = var.eks.name
   }
 }
+
+
+ */
