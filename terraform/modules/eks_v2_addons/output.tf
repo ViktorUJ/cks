@@ -1,3 +1,3 @@
-output "fargate" {
-  value = module.fargate_profile
+output "addons" {
+  value = aws_eks_addon.addons
 }
