@@ -35,6 +35,8 @@ module "eks" {
       ]
       subnet_ids = var.eks.subnet_ids
       tags       = var.eks.tags
+      partition  = data.aws_partition.current.partition
+      account_id = data.aws_caller_identity.current.account_id
     }
   }
 
