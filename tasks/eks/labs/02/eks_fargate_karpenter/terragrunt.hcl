@@ -7,7 +7,7 @@ locals {
 }
 
 terraform {
-  source = "../../..//modules/eks_v2_addons/"
+  source = "../../..//modules/eks_v2_fargate/"
 
   extra_arguments "retry_lock" {
     commands = get_terraform_commands_that_need_locking()
@@ -15,33 +15,30 @@ terraform {
   }
 
 }
-
-dependency "eks_fargate_kube_system" {
-  config_path = "../eks_fargate_kube_system"
+dependency "vpc" {
+  config_path = "../vpc"
 }
+
 dependency "eks_control_plane" {
   config_path = "../eks_control_plane"
 }
 
+dependency "eks_addons" {
+  config_path = "../eks_addons"
+}
 
 inputs = {
   region   = local.vars.locals.region
   aws      = local.vars.locals.aws
   prefix   = local.vars.locals.prefix
-  app_name = "eks_addons"
+  vpc_id   = dependency.vpc.outputs.vpc_id
+  app_name = "eks_fargate"
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
-  addons = {
-    "coredns" = {
-      version = "v1.12.4-eksbuild.1"
-    }
-    "kube-proxy" = {
-      version = "v1.34.1-eksbuild.2"
-    }
-    "vpc-cni" = {
-      version = "v1.21.1-eksbuild.1"
-    }
-    "eks-pod-identity-agent" = {
-      version = "v1.3.10-eksbuild.2"
-    }
+  fargate = {
+    name       = "karpenter"
+    subnet_ids = dependency.vpc.outputs.private_subnets_by_type.eks.ids
+    selectors = [{ namespace = "karpenter" }]
+    tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
   }
+
 }
