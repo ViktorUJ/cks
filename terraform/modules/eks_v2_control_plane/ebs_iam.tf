@@ -1,5 +1,5 @@
 resource "aws_iam_role" "ebs_csi" {
-  name = "${local.name}-ebs-csi-pod-identity"
+  name = "${var.eks.name}-ebs-csi-pod-identity"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

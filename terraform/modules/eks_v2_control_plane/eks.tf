@@ -5,7 +5,7 @@ module "eks" {
   source     = "terraform-aws-modules/eks/aws"
   version    = "21.10.1"
 
-  name                   = local.name
+  name                   = var.eks.name
   kubernetes_version     = var.eks.version
   endpoint_public_access = true
 
@@ -20,7 +20,7 @@ module "eks" {
   tags = var.eks.tags
 
   node_security_group_tags = {
-    "karpenter.sh/discovery" = local.name
+    "karpenter.sh/discovery" = var.eks.name
   }
 }
 
