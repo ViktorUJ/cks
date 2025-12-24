@@ -1,5 +1,5 @@
 output "kubectl_config" {
-  value = "aws eks update-kubeconfig --region ${var.region} --name ${var.eks.name} "
+  value = "aws eks update-kubeconfig --region ${var.region} --name ${local.name} "
 }
 output "eks_mudule" {
   value = module.eks

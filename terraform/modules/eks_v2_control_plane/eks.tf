@@ -20,7 +20,7 @@ module "eks" {
   tags = var.eks.tags
 
   node_security_group_tags = {
-    "karpenter.sh/discovery" = var.eks.name
+    "karpenter.sh/discovery" = local.name
   }
 }
 
