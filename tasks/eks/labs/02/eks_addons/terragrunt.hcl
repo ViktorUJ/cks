@@ -43,8 +43,5 @@ inputs = {
     "eks-pod-identity-agent" = {
       version = "v1.3.10-eksbuild.2"
     }
-    "aws-ebs-csi-driver" = {
-      version = "v1.54.0-eksbuild.1"
-    }
   }
 }
