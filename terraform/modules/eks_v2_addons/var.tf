@@ -20,13 +20,13 @@ variable "STACK_TASK" {
   type    = string
   default = ""
 }
-variable "cluster" {
-  type = string
-}
 variable "addons" {
   type = map(object({
   version=string
   resolve_conflicts=optional(string, "OVERWRITE")
   configuration= optional(any)
   }))
+}
+variable "name" {
+    type = string
 }

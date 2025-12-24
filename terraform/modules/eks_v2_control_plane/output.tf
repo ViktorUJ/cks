@@ -8,3 +8,7 @@ output "eks_mudule" {
 output "ebs_csi_iam" {
   value = aws_iam_role.ebs_csi.arn
 }
+
+output "name" {
+  value = local.name
+}

@@ -1,6 +1,6 @@
 resource "aws_eks_addon" "addons" {
   for_each          = var.addons
-  cluster_name      = var.cluster
+  cluster_name      = var.name
   addon_name        = each.key
   addon_version     = each.value.version
   resolve_conflicts_on_create = each.value.resolve_conflicts

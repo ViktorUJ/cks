@@ -5,6 +5,6 @@ locals {
   prefix             = "${local.prefix_id}_${var.prefix}"
   item_id_lock       = "CMDB_lock_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
   item_id_data       = "CMDB_data_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
-  name="${var.eks.name}-${var.prefix}"
+  name="${var.prefix}-${var.USER_ID}-${var.ENV_ID}-${var.STACK_NAME}-${var.STACK_TASK}"
 
 }

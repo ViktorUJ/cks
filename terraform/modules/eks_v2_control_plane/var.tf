@@ -23,7 +23,6 @@ variable "STACK_TASK" {
 
 variable "eks" {
   type = object({
-    name        = string
     version     = string
     vpc_id= string
     subnet_ids  = list(string)
