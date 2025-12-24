@@ -6,6 +6,6 @@ module "fargate_profile" {
   name         = var.fargate.name
   cluster_name = var.name
   subnet_ids   = var.fargate.subnet_ids
-  selectors    = var.fargate.subnet_ids
+  selectors    = var.fargate.selectors
   tags         = var.fargate.tags
 }
