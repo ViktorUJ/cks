@@ -5,7 +5,10 @@ locals {
   debug_output   = "false"
   region         = "eu-central-1"
   vpc_default_cidr  = "10.10.0.0/16"
-
+  stack_name     = "eks2"
+  user_id = get_env("TF_VAR_USER_ID")
+  env_id  = get_env("TF_VAR_ENV_ID")
+  env_name= "${local.stack_name}-${local.user_id}-${local.env_id}"
   subnets = {
     public = {
       "pub1" = {
@@ -14,7 +17,7 @@ locals {
         az   = "eu-central-1a"
         nat_gateway = "DEFAULT"
         tags = {
-          "kubernetes.io/cluster/karpenter-poc" = "owned"
+          "kubernetes.io/cluster/${local.env_name}" = "owned"
           "kubernetes.io/role/elb"              = "1"
         }
       }
@@ -23,7 +26,7 @@ locals {
         cidr = "10.10.2.0/24"
         az   = "eu-central-1b"
                 tags = {
-          "kubernetes.io/cluster/karpenter-poc" = "owned"
+          "kubernetes.io/cluster/${local.env_name}" = "owned"
           "kubernetes.io/role/elb"              = "1"
         }
       }
@@ -39,9 +42,9 @@ locals {
         nat_gateway = "SINGLE"
         type = "eks"
         tags = {
-          "kubernetes.io/cluster/karpenter-poc" = "owned"
+          "kubernetes.io/cluster/${local.env_name}" = "owned"
           "kubernetes.io/role/internal-elb"     = "1"
-          "karpenter.sh/discovery"              = "karpenter-poc"
+          "karpenter.sh/discovery"              = "${local.env_name}"
         }
       }
       "eks2" = {
@@ -51,9 +54,9 @@ locals {
         nat_gateway = "SINGLE"
         type = "eks"
         tags = {
-          "kubernetes.io/cluster/karpenter-poc" = "owned"
+          "kubernetes.io/cluster/${local.env_name}" = "owned"
           "kubernetes.io/role/internal-elb"     = "1"
-          "karpenter.sh/discovery"              = "karpenter-poc"
+          "karpenter.sh/discovery"              = "${local.env_name}"
         }
       }
       "rds1" = {
