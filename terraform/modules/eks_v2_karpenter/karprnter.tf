@@ -39,7 +39,7 @@ resource "helm_release" "karpenter" {
     },
     {
       name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-      value = module.karpenter.irsa_iam_role_arn
+      value = module.karpenter.iam_role_arn
     },
 
       {
