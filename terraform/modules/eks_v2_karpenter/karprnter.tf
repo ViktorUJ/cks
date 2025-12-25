@@ -28,6 +28,20 @@ resource "helm_release" "karpenter" {
   wait             = false
 
   set = [
+
+       {
+      name  = "serviceAccount.create"
+      value = "true"
+    },
+    {
+      name  = "serviceAccount.name"
+      value = "karpenter"
+    },
+    {
+      name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+      value = module.karpenter.irsa_iam_role_arn
+    },
+
       {
       name  = "logLevel"
       value = "debug"
