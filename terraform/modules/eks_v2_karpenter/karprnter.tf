@@ -26,6 +26,10 @@ resource "helm_release" "karpenter" {
   wait             = false
 
   set = [
+      {
+      name  = "logLevel"
+      value = "debug"
+    },
     {
       name  = "settings.clusterName"
       value = var.name
