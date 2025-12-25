@@ -4,7 +4,6 @@ module "karpenter" {
   source       = "terraform-aws-modules/eks/aws//modules/karpenter"
   version      = "20.8.5"
   cluster_name = var.name
-  namespace    = var.karpenter.namespace
   irsa_oidc_provider_arn          = var.karpenter.irsa_oidc_provider_arn
   irsa_namespace_service_accounts = ["${var.karpenter.namespace}:karpenter"]
   enable_irsa                     = true
