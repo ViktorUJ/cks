@@ -28,12 +28,12 @@ variable "karpenter" {
   type = object({
     version = optional(string,"1.8.1")
     tags = optional(map(string),{"owner" = "eks task2"})
-    namespace= optional(string,"kerpenter")
+    namespace= optional(string,"karpenter")
     replicas = optional(string,"2")
   })
   default = {
     version = "1.8.1"
-    namespace = "kerpenter"
+    namespace = "karpenter"
     tags = {
       "owner" = "eks task2"
     }

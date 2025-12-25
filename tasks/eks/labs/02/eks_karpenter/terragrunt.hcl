@@ -40,7 +40,7 @@ inputs = {
   app_name = "eks_karpenter"
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   karpenter = {
-    version ="1.7.1"
+    version ="1.8.1"
     tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
   }
 
