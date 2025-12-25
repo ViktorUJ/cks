@@ -40,7 +40,7 @@ inputs = {
   app_name = "eks_karpenter"
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   karpenter = {
-    irsa_oidc_provider_arn= dependency.eks_control_plane.outputs.eks_mudule.irsa_oidc_provider_arn
+    irsa_oidc_provider_arn= dependency.eks_control_plane.outputs.eks_mudule.oidc_provider_arn
     namespace = "karpenter"
     version ="1.8.1"
     tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
