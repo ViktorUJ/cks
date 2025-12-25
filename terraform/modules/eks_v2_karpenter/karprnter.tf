@@ -1,3 +1,27 @@
+resource "aws_iam_policy" "karpenter_controller_instance_profiles" {
+  name        = "${var.name}-karpenter-controller-instanceprofiles"
+  description = "Karpenter controller permissions for instance profile GC"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "InstanceProfileGC"
+        Effect = "Allow"
+        Action = [
+          "iam:ListInstanceProfiles",
+          "iam:GetInstanceProfile",
+          "iam:CreateInstanceProfile",
+          "iam:DeleteInstanceProfile",
+          "iam:AddRoleToInstanceProfile",
+          "iam:RemoveRoleFromInstanceProfile",
+          "iam:TagInstanceProfile"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 
 module "karpenter" {
   depends_on   = [aws_dynamodb_table_item.cmdb_data]
@@ -7,6 +31,10 @@ module "karpenter" {
   irsa_oidc_provider_arn          = var.karpenter.irsa_oidc_provider_arn
   irsa_namespace_service_accounts = ["${var.karpenter.namespace}:karpenter"]
   enable_irsa                     = true
+
+   iam_role_additional_policies = {
+    InstanceProfiles = aws_iam_policy.karpenter_controller_instance_profiles.arn
+  }
   # Additional permissions for Karpenter to work properly
   node_iam_role_additional_policies = {
     AmazonSSMManagedInstanceCore       = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
