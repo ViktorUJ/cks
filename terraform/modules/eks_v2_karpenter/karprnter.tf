@@ -32,9 +32,6 @@ module "karpenter" {
   irsa_namespace_service_accounts = ["${var.karpenter.namespace}:karpenter"]
   enable_irsa                     = true
 
-   iam_role_additional_policies = {
-    InstanceProfiles = aws_iam_policy.karpenter_controller_instance_profiles.arn
-  }
   # Additional permissions for Karpenter to work properly
   node_iam_role_additional_policies = {
     AmazonSSMManagedInstanceCore       = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -45,6 +42,12 @@ module "karpenter" {
 
   tags = var.karpenter.tags
 }
+
+resource "aws_iam_role_policy_attachment" "karpenter_controller_instance_profiles" {
+  role       = module.karpenter.iam_role_name
+  policy_arn = aws_iam_policy.karpenter_controller_instance_profiles.arn
+}
+
 
 resource "helm_release" "karpenter" {
   name             = "karpenter"
