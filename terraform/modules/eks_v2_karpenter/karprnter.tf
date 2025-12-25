@@ -23,7 +23,7 @@ resource "helm_release" "karpenter" {
   version          = var.karpenter.version
   namespace        = var.karpenter.namespace
   create_namespace = true
-  wait             = true
+  wait             = false
 
   set = [
     {
