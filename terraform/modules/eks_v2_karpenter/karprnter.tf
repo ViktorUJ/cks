@@ -75,7 +75,7 @@ resource "helm_release" "karpenter" {
 
       {
       name  = "logLevel"
-      value = "debug"
+      value = "info"
     },
     {
       name  = "settings.clusterName"
