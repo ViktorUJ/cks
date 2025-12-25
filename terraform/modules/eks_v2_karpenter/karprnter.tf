@@ -22,7 +22,7 @@ resource "helm_release" "karpenter" {
   chart            = "karpenter"
   version          = var.karpenter.version
   namespace        = var.karpenter.namespace
-  create_namespace = false
+  create_namespace = true
   wait             = true
 
   set = [
