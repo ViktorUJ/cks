@@ -1,10 +1,10 @@
 
 module "karpenter" {
-  depends_on = [aws_dynamodb_table_item.cmdb_data]
-  source     = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version    = "21.10.1"
+  depends_on   = [aws_dynamodb_table_item.cmdb_data]
+  source       = "terraform-aws-modules/eks/aws//modules/karpenter"
+  version      = "21.10.1"
   cluster_name = var.name
-
+  namespace    = var.karpenter.namespace
   # Additional permissions for Karpenter to work properly
   node_iam_role_additional_policies = {
     AmazonSSMManagedInstanceCore       = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
