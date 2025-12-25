@@ -16,3 +16,43 @@ module "karpenter" {
   tags = var.karpenter.tags
 }
 
+resource "helm_release" "karpenter" {
+  name             = "karpenter"
+  repository       = "oci://public.ecr.aws/karpenter"
+  chart            = "karpenter"
+  version          = var.karpenter.version
+  namespace        = var.karpenter.namespace
+  create_namespace = false
+  wait             = true
+
+  set = [
+    {
+      name  = "settings.clusterName"
+      value = var.name
+    },
+    {
+      name  = "settings.interruptionQueue"
+      value = module.karpenter.queue_name
+    },
+    {
+      name  = "controller.resources.requests.cpu"
+      value = "1"
+    },
+    {
+      name  = "controller.resources.requests.memory"
+      value = "1Gi"
+    },
+    {
+      name  = "controller.resources.limits.cpu"
+      value = "1"
+    },
+    {
+      name  = "controller.resources.limits.memory"
+      value = "1Gi"
+    },
+    {
+      name  = "replicas"
+      value = var.karpenter.replicas
+    },
+  ]
+}
