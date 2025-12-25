@@ -2,9 +2,12 @@
 module "karpenter" {
   depends_on   = [aws_dynamodb_table_item.cmdb_data]
   source       = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version      = "21.10.1"
+  version      = "20.8.5"
   cluster_name = var.name
   namespace    = var.karpenter.namespace
+  irsa_oidc_provider_arn          = var.karpenter.irsa_oidc_provider_arn
+  irsa_namespace_service_accounts = ["${var.karpenter.namespace}:karpenter"]
+  enable_irsa                     = true
   # Additional permissions for Karpenter to work properly
   node_iam_role_additional_policies = {
     AmazonSSMManagedInstanceCore       = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"

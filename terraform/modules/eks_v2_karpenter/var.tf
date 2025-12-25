@@ -30,6 +30,8 @@ variable "karpenter" {
     tags = optional(map(string),{"owner" = "eks task2"})
     namespace= optional(string,"karpenter")
     replicas = optional(string,"2")
+    irsa_oidc_provider_arn= optional(string,"")
+
   })
   default = {
     version = "1.8.1"
