@@ -38,6 +38,8 @@ variable "karpenter" {
     controller_resources_limits_cpu      = optional(string, "1")
     controller_resources_limits_memory   = optional(string, "1Gi")
     controller_replicas                  = optional(string, "2")
+    controller_create_namespace          = optional(string, "true")
+    controller_wait_ready_pods           = optional(string, "false")
 
   })
 

@@ -55,8 +55,8 @@ resource "helm_release" "karpenter" {
   chart            = "karpenter"
   version          = var.karpenter.version
   namespace        = var.karpenter.namespace
-  create_namespace = true
-  wait             = false
+  create_namespace = var.karpenter.controller_create_namespace
+  wait             = var.karpenter.controller_wait_ready_pods
 
   set = [
 
