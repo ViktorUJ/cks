@@ -1,3 +1,4 @@
+/*
 resource "aws_eks_addon" "addons" {
   cluster_name      = var.name
   addon_name        = var.name
@@ -10,3 +11,6 @@ resource "aws_eks_addon" "addons" {
     null
   )
 }
+
+
+ */
