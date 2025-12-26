@@ -27,8 +27,8 @@ dependency "eks_addons" {
   config_path = "../eks_addons"
 }
 
-dependency "eks_fargate_karpenter" {
-  config_path = "../eks_fargate_karpenter"
+dependency "eks_fargate_system" {
+  config_path = "../eks_fargate_system"
 }
 
 

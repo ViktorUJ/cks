@@ -16,8 +16,8 @@ terraform {
 
 }
 
-dependency "eks_fargate_kube_system" {
-  config_path = "../eks_fargate_kube_system"
+dependency "eks_fargate_system" {
+  config_path = "../eks_fargate_system"
 }
 dependency "eks_control_plane" {
   config_path = "../eks_control_plane"
