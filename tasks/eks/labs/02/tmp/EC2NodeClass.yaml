@@ -3,7 +3,7 @@ kind: EC2NodeClass
 metadata:
   name: default
 spec:
-  role: "Karpenter-eks2-viktor-01-20251226151931948600000004" # IAM role for EC2 nodes
+  role: "Karpenter-eks2-viktor-01-20251226173201240100000006" # IAM role for EC2 nodes
   amiSelectorTerms:
     - alias: "al2023@latest" # Use correct alias format: family@version
   subnetSelectorTerms:
