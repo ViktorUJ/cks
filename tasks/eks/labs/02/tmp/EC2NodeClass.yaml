@@ -5,7 +5,7 @@ metadata:
 spec:
   role: "Karpenter-eks2-viktor-01-20251226151931948600000004" # IAM role for EC2 nodes
   amiSelectorTerms:
-    - alias: "al2023"
+    - alias: "al2023@latest" # Use correct alias format: family@version
   subnetSelectorTerms:
     - tags:
         karpenter.sh/discovery: "eks2-viktor-01" # replace with your cluster name
