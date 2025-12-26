@@ -62,11 +62,11 @@ resource "helm_release" "karpenter" {
 
        {
       name  = "serviceAccount.create"
-      value = "true"
+      value = var.karpenter.serviceAccount_create
     },
     {
       name  = "serviceAccount.name"
-      value = "karpenter"
+      value = var.karpenter.serviceAccount_name
     },
     {
       name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
@@ -75,7 +75,7 @@ resource "helm_release" "karpenter" {
 
       {
       name  = "logLevel"
-      value = "info"
+      value = var.karpenter.logLevel
     },
     {
       name  = "settings.clusterName"
@@ -87,19 +87,19 @@ resource "helm_release" "karpenter" {
     },
     {
       name  = "controller.resources.requests.cpu"
-      value = "1"
+      value = var.karpenter.controller_resources_requests_cpu
     },
     {
       name  = "controller.resources.requests.memory"
-      value = "1Gi"
+      value = var.karpenter.controller_resources_requests_memory
     },
     {
       name  = "controller.resources.limits.cpu"
-      value = "1"
+      value = var.karpenter.controller_resources_limits_cpu
     },
     {
       name  = "controller.resources.limits.memory"
-      value = "1Gi"
+      value = var.karpenter.controller_resources_limits_memory
     },
     {
       name  = "replicas"
