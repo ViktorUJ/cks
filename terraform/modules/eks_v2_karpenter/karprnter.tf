@@ -103,7 +103,7 @@ resource "helm_release" "karpenter" {
     },
     {
       name  = "replicas"
-      value = var.karpenter.replicas
+      value = var.karpenter.controller_replicas
     },
   ]
 }
