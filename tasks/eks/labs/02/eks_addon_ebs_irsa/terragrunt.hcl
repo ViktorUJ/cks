@@ -33,7 +33,9 @@ inputs = {
   oidc_provider_arn = dependency.eks_control_plane.outputs.eks_mudule.oidc_provider_arn
   tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
   addons = {
-    name    = "ebs-csi-driver"
+    name    = "aws-ebs-csi-driver"
     version = "v1.54.0-eksbuild.1"
   }
 }
+
+# aws-ebs-csi-driver = "v1.53.0-eksbuild.1"
