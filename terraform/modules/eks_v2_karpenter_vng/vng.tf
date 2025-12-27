@@ -87,9 +87,7 @@ resource "kubernetes_manifest" "nodepool_infra" {
     spec = {
       template = {
         metadata = {
-          labels = {
-            work_type = var.vng.name
-          }
+          labels = var.vng.labels
         }
         spec = {
           requirements = var.requirements

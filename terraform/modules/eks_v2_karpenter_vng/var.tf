@@ -48,6 +48,7 @@ variable "requirements" {
 variable "vng" {
   type = object({
     name      = string
+    labels    = optional(map(string),{})
     iam_role  = string
     ami_alias = optional(string, "al2023@latest")
     tags      = map(string)
