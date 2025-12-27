@@ -40,7 +40,9 @@ inputs = {
     name="infra"
     iam_role=dependency.eks_karpenter.outputs.karpenter_module.node_iam_role_name
     tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks-infra" })
-    requirements = [
+
+    nodepool={
+      requirements = [
 
             {
               key      = "kubernetes.io/arch"
@@ -74,7 +76,8 @@ inputs = {
             }
 
     ]
-    nodepool={}
+
+    }
   }
 
 }
