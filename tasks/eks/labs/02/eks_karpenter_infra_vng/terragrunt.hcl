@@ -38,7 +38,7 @@ inputs = {
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   vng = {
     name="infra"
-    iam_role=dependency.eks_karpenter.karpenter_module.node_iam_role_name
+    iam_role=dependency.eks_karpenter.outputs.karpenter_module.node_iam_role_name
     tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks-infra" })
     requirements = [
 
