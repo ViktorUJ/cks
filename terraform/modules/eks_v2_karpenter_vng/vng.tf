@@ -1,5 +1,5 @@
 resource "kubernetes_manifest" "ec2nodeclass" {
-  depends_on   = [aws_dynamodb_table_item.cmdb_data]
+  depends_on = [aws_dynamodb_table_item.cmdb_data]
   manifest = {
     apiVersion = "karpenter.k8s.aws/v1"
     kind       = "EC2NodeClass"
@@ -76,10 +76,10 @@ resource "kubernetes_manifest" "ec2nodeclass" {
 }
 
 
-/*
+
 
 resource "kubernetes_manifest" "nodepool" {
-  depends_on   = [aws_dynamodb_table_item.cmdb_data]
+  depends_on = [aws_dynamodb_table_item.cmdb_data]
   manifest = {
     apiVersion = "karpenter.sh/v1"
     kind       = "NodePool"
@@ -107,13 +107,15 @@ resource "kubernetes_manifest" "nodepool" {
 
       limits = var.nodepool.limits
 
-      disruption = var.disruption
+      disruption = {
+        budgets             = var.disruption.budgets
+        consolidationPolicy = var.disruption.consolidationPolicy
+        consolidateAfter    = var.disruption.consolidateAfter
+      }
     }
   }
 }
 
 
 
-
- */
 
