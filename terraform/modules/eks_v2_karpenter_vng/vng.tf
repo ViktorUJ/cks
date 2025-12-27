@@ -76,7 +76,6 @@ resource "kubernetes_manifest" "ec2nodeclass" {
 }
 
 
-/*
 
 resource "kubernetes_manifest" "nodepool" {
   depends_on   = [aws_dynamodb_table_item.cmdb_data]
@@ -107,7 +106,7 @@ resource "kubernetes_manifest" "nodepool" {
 
       limits = var.nodepool.limits
 
-      disruption = var.nodepool.disruption
+      disruption = var.disruption
     }
   }
 }
@@ -115,4 +114,3 @@ resource "kubernetes_manifest" "nodepool" {
 
 
 
- */

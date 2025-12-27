@@ -27,15 +27,15 @@ variable "name" {
 variable "nodepool" {
   type = object({
       limits = optional(map(string), { cpu = 100 })
-
-      disruption = optional(object({
+      expireAfter = optional(string, "720h")
+    })
+}
+variable "disruption" {
+  type= object({
         consolidationPolicy = optional(string, "WhenEmptyOrUnderutilized")
         consolidateAfter    = optional(string, "600s")
         budgets             = optional(list(map(string)), [{ nodes = "30%" }])
-      }))
-
-      expireAfter = optional(string, "720h")
-    })
+      })
 }
 variable "requirements" {
   type = list(object({

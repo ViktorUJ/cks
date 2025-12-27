@@ -37,6 +37,11 @@ inputs = {
   app_name = "eks_karpenter_vng_infra"
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   nodepool={}
+  disruption={
+    consolidationPolicy="WhenEmptyOrUnderutilized"
+    consolidateAfter   ="300s"
+    budgets            =[ { nodes = "10%" } ]
+  }
   requirements = [
 
             {
