@@ -38,7 +38,7 @@ inputs = {
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   vng = {
     name="infra"
-    iam_role=dependency.eks_karpenter.karpenter_module.karpenter_node_role_arn
+    iam_role=dependency.eks_karpenter.karpenter_module.node_iam_role_name
     tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks-infra" })
     requirements = [
 
@@ -60,7 +60,7 @@ inputs = {
             {
               key      = "karpenter.k8s.aws/instance-category"
               operator = "In"
-              values   = ["t", "m", "r"]
+              values   = ["t", "m", "r","c"]
             },
             {
               key      = "karpenter.k8s.aws/instance-generation"
