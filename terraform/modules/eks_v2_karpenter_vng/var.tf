@@ -42,7 +42,7 @@ variable "vng" {
       })
     })))
 
-    nodepool = optional(object({
+    nodepool = object({
       limits = optional(map(string), { cpu = 100 })
 
       disruption = optional(object({
@@ -57,7 +57,7 @@ variable "vng" {
         operator = string
         values   = list(string)
       }))
-    }))
+    })
   })
 
 }
