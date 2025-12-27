@@ -96,7 +96,7 @@ resource "kubernetes_manifest" "nodepool_infra" {
             kind  = "EC2NodeClass"
             name  = kubernetes_manifest.ec2nodeclass.manifest.metadata.name
           }
-          expireAfter = "7200h"
+          expireAfter = var.nodepool.expireAfter
           #  taints = [
           #    {
           #      key    = "dedicated"
