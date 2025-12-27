@@ -76,7 +76,7 @@ resource "kubernetes_manifest" "ec2nodeclass" {
 }
 
 
-/*
+
 resource "kubernetes_manifest" "nodepool" {
   depends_on   = [aws_dynamodb_table_item.cmdb_data]
   manifest = {
@@ -93,23 +93,23 @@ resource "kubernetes_manifest" "nodepool" {
           }
         }
         spec = {
-          requirements = var.vng.nodepool.requirements
+          requirements = var.nodepool.requirements
           nodeClassRef = {
             group = "karpenter.k8s.aws"
             kind  = "EC2NodeClass"
             name  = kubernetes_manifest.ec2nodeclass.manifest.metadata.name
           }
-          expireAfter = var.vng.nodepool.expireAfter
+          expireAfter = var.nodepool.expireAfter
 
         }
       }
 
-      limits = var.vng.nodepool.limits
+      limits = var.nodepool.limits
 
-      disruption = var.vng.nodepool.disruption
+      disruption = var.nodepool.disruption
     }
   }
 }
 
- */
+
 

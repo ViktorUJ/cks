@@ -24,6 +24,24 @@ variable "name" {
   type = string
 }
 
+variable "nodepool" {
+  type = object({
+      limits = optional(map(string), { cpu = 100 })
+
+      disruption = optional(object({
+        consolidationPolicy = optional(string, "WhenEmptyOrUnderutilized")
+        consolidateAfter    = optional(string, "600s")
+        budgets             = optional(list(map(string)), [{ nodes = "30%" }])
+      }))
+
+      expireAfter = optional(string, "720h")
+      requirements = list(object({
+        key      = string
+        operator = string
+        values   = list(string)
+      }))
+    })
+}
 variable "vng" {
   type = object({
     name      = string
@@ -42,22 +60,7 @@ variable "vng" {
       })
     })))
 
-    nodepool = object({
-      limits = optional(map(string), { cpu = 100 })
 
-      disruption = optional(object({
-        consolidationPolicy = optional(string, "WhenEmptyOrUnderutilized")
-        consolidateAfter    = optional(string, "600s")
-        budgets             = optional(list(map(string)), [{ nodes = "30%" }])
-      }))
-
-      expireAfter = optional(string, "720h")
-      requirements = list(object({
-        key      = string
-        operator = string
-        values   = list(string)
-      }))
-    })
   })
 
 }
