@@ -37,6 +37,13 @@ inputs = {
   app_name = "eks_karpenter_vng_infra"
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   nodepool={}
+  taints = [
+     {
+       key    = "dedicated"
+       value  = "karpenter"
+       effect = "NoSchedule"
+     }
+   ]
   disruption={
     consolidationPolicy="WhenEmptyOrUnderutilized"
     consolidateAfter   ="300s"
