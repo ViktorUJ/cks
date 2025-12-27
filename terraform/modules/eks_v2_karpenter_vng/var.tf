@@ -39,7 +39,7 @@ variable "disruption" {
 
 variable "budgets" {
   type = list(map(string))
-    default =  [{ nodes = "30%" }]
+    default =  [{ nodes = "10%" }]
 }
 variable "taints" {
     type = list(object({
