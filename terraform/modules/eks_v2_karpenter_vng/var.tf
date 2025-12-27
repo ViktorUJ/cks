@@ -37,6 +37,16 @@ variable "disruption" {
         budgets             = optional(list(map(string)), [{ nodes = "30%" }])
       })
 }
+
+variable "taints" {
+    type = list(object({
+            key    = string
+            value  = string
+            effect = string
+        }))
+    default = []
+}
+
 variable "requirements" {
   type = list(object({
         key      = string
