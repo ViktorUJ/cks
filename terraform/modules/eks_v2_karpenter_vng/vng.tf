@@ -111,5 +111,5 @@ resource "kubernetes_manifest" "nodepool" {
   }
 }
 
-/ 
+/
  */
