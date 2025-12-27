@@ -107,9 +107,7 @@ resource "kubernetes_manifest" "nodepool_infra" {
         }
       }
 
-      limits = {
-        cpu = 200
-      }
+      limits = var.nodepool.limits
 
       disruption = {
         budgets = [
