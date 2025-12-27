@@ -83,6 +83,9 @@ inputs = {
             }
 
     ]
+  budgets=[
+    { nodes = "33%" }
+  ]
   vng = {
     labels = {
         work_type = "infra"
