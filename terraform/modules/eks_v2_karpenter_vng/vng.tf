@@ -76,6 +76,7 @@ resource "kubernetes_manifest" "ec2nodeclass" {
 }
 
 
+/*
 
 resource "kubernetes_manifest" "nodepool" {
   depends_on   = [aws_dynamodb_table_item.cmdb_data]
@@ -113,4 +114,6 @@ resource "kubernetes_manifest" "nodepool" {
 
 
 
+
+ */
 
