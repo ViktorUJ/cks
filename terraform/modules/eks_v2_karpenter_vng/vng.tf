@@ -97,13 +97,7 @@ resource "kubernetes_manifest" "nodepool_infra" {
             name  = kubernetes_manifest.ec2nodeclass.manifest.metadata.name
           }
           expireAfter = var.nodepool.expireAfter
-          taints = [
-            {
-              key    = "dedicated"
-              value  = "karpenter"
-              effect = "NoSchedule"
-            }
-          ]
+          taints = var.taints
         }
       }
 
