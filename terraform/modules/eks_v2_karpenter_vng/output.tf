@@ -14,3 +14,6 @@ output "disruption" {
 output "kubectl_config" {
   value = "aws eks update-kubeconfig --region ${var.region} --name ${var.name} "
 }
+output "budgets" {
+  value = var.budgets
+}

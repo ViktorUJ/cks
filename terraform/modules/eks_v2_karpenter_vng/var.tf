@@ -34,10 +34,13 @@ variable "disruption" {
   type= object({
         consolidationPolicy = optional(string, "WhenEmptyOrUnderutilized")
         consolidateAfter    = optional(string, "600s")
-        budgets             = optional(list(map(string)), [{ nodes = "30%" }])
       })
 }
 
+variable "budgets" {
+  type = list(map(string))
+    default =  [{ nodes = "30%" }]
+}
 variable "taints" {
     type = list(object({
             key    = string
