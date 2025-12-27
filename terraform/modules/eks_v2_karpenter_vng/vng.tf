@@ -94,7 +94,7 @@ resource "kubernetes_manifest" "nodepool_infra" {
           nodeClassRef = {
             group = "karpenter.k8s.aws"
             kind  = "EC2NodeClass"
-            name  = "infra-v1"
+            name  = kubernetes_manifest.ec2nodeclass.manifest.metadata.name
           }
           expireAfter = "7200h"
           #  taints = [
