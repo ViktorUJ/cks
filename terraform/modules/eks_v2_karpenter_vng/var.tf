@@ -26,42 +26,50 @@ variable "name" {
 
 variable "nodepool" {
   type = object({
-      limits = optional(map(string), { cpu = 100 })
-      expireAfter = optional(string, "720h")
-    })
+    limits      = optional(map(string), { cpu = 100 })
+    expireAfter = optional(string, "720h")
+  })
 }
 variable "disruption" {
-  type= object({
-        consolidationPolicy = optional(string, "WhenEmptyOrUnderutilized")
-        consolidateAfter    = optional(string, "600s")
-      })
+  type = object({
+    consolidationPolicy = optional(string, "WhenEmptyOrUnderutilized")
+    consolidateAfter    = optional(string, "600s")
+  })
 }
 
 variable "budgets" {
-  type = list(map(string))
-    default =  [{ nodes = "10%" }]
+  type = list(object({
+    nodes    = string
+    schedule = optional(string)
+    duration = optional(string)
+    reasons  = optional(list(string))
+  }))
+  default = [
+    { nodes = "10%" }
+  ]
 }
+
 variable "taints" {
-    type = list(object({
-            key    = string
-            value  = string
-            effect = string
-        }))
-    default = []
+  type = list(object({
+    key    = string
+    value  = string
+    effect = string
+  }))
+  default = []
 }
 
 variable "requirements" {
   type = list(object({
-        key      = string
-        operator = string
-        values   = list(string)
-      }))
+    key      = string
+    operator = string
+    values   = list(string)
+  }))
 
 }
 variable "vng" {
   type = object({
     name      = string
-    labels    = optional(map(string),{})
+    labels    = optional(map(string), {})
     iam_role  = string
     ami_alias = optional(string, "al2023@latest")
     tags      = map(string)
