@@ -93,7 +93,7 @@ resource "kubernetes_manifest" "nodepool" {
           }
         }
         spec = {
-          requirements = var.nodepool.requirements
+          requirements = var.requirements
           nodeClassRef = {
             group = "karpenter.k8s.aws"
             kind  = "EC2NodeClass"

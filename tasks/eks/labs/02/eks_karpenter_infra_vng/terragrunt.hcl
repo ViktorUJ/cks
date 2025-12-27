@@ -37,13 +37,7 @@ inputs = {
   app_name = "eks_karpenter_vng_infra"
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   nodepool={}
-  vng = {
-    name="infra"
-    iam_role=dependency.eks_karpenter.outputs.karpenter_module.node_iam_role_name
-    tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks-infra" })
-
-    nodepool={
-      requirements = [
+  requirements = [
 
             {
               key      = "kubernetes.io/arch"
@@ -77,8 +71,11 @@ inputs = {
             }
 
     ]
+  vng = {
+    name="infra"
+    iam_role=dependency.eks_karpenter.outputs.karpenter_module.node_iam_role_name
+    tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks-infra" })
 
-    }
   }
 
 }

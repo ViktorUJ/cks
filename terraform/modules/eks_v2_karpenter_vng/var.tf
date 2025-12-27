@@ -35,12 +35,15 @@ variable "nodepool" {
       }))
 
       expireAfter = optional(string, "720h")
-      requirements = list(object({
+    })
+}
+variable "requirements" {
+  type = list(object({
         key      = string
         operator = string
         values   = list(string)
       }))
-    })
+
 }
 variable "vng" {
   type = object({
