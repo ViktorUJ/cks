@@ -110,11 +110,7 @@ resource "kubernetes_manifest" "nodepool_infra" {
       limits = var.nodepool.limits
 
       disruption = {
-        budgets = [
-          {
-            nodes = "30%"
-          }
-        ]
+        budgets = var.disruption.budgets
         consolidationPolicy = "WhenEmptyOrUnderutilized"
         consolidateAfter    = "600s"
       }
