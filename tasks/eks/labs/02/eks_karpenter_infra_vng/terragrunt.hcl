@@ -46,8 +46,7 @@ inputs = {
    ]
   disruption={
     consolidationPolicy="WhenEmptyOrUnderutilized"
-    consolidateAfter   ="300s"
-    budgets            =[ { nodes = "10%" } ]
+    consolidateAfter   ="30s"
   }
   requirements = [
 
