@@ -43,13 +43,7 @@ inputs = {
   all_spot_subnet       = local.vars.locals.all_spot_subnet
   spot_additional_types = local.vars.locals.spot_additional_types
 
-  host_list = concat(
-    "xxx"
-  )
   work_pc = {
-    clusters_config = {
-
-    }
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type
     ami_id             = local.vars.locals.ami_id

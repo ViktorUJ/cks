@@ -53,7 +53,6 @@ variable "solutions_video" {
 
 variable "work_pc" {
   type = object({
-    clusters_config    = map(string)
     instance_type      = string
     ami_id             = string
     key_name           = string
@@ -95,7 +94,4 @@ variable "STACK_TASK" {
   default = ""
 }
 
-variable "host_list" {
-  type    = list(string)
-  default = []
-}
+
