@@ -60,24 +60,6 @@ resource "aws_iam_policy" "server" {
 EOF
 }
 
-resource "aws_iam_policy" "server-eks" {
-  for_each = toset(var.aws_eks_cluster_eks_cluster_arn == "" ? [] : ["enable"])
-  name     = "${local.prefix}-${var.app_name}-eks"
-  policy   = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "eks:*"
-            ],
-            "Resource": "${var.aws_eks_cluster_eks_cluster_arn}"
-        }
-    ]
-}
-EOF
-}
 
 resource "aws_iam_policy" "server-eks-admin" {
   for_each = toset(var.aws_eks_cluster_eks_cluster_arn == "" ? [] : ["enable"])
@@ -98,35 +80,11 @@ resource "aws_iam_policy" "server-eks-admin" {
 EOF
 }
 
-resource "aws_iam_policy" "server-eks-describe" {
-  for_each = toset(var.aws_eks_cluster_eks_cluster_arn == "" ? [] : ["enable"])
-  name     = "${local.prefix}-${var.app_name}-eks-describe"
-  policy   = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "eks:DescribeCluster"
-            ],
-            "Resource": "${var.aws_eks_cluster_eks_cluster_arn}"
-        }
-    ]
-}
-EOF
-}
+
 
 resource "aws_iam_policy_attachment" "server" {
   name       = "${local.prefix}-${var.app_name}"
   policy_arn = aws_iam_policy.server.arn
-  roles      = [aws_iam_role.server.name]
-}
-
-resource "aws_iam_policy_attachment" "server-eks" {
-  for_each   = toset(var.aws_eks_cluster_eks_cluster_arn == "" ? [] : ["enable"])
-  name       = "${local.prefix}-${var.app_name}-eks"
-  policy_arn = aws_iam_policy.server-eks["enable"].arn
   roles      = [aws_iam_role.server.name]
 }
 
@@ -137,12 +95,6 @@ resource "aws_iam_policy_attachment" "server-eks-admin" {
   roles      = [aws_iam_role.server.name]
 }
 
-resource "aws_iam_policy_attachment" "server-eks-describe" {
-  for_each   = toset(var.aws_eks_cluster_eks_cluster_arn == "" ? [] : ["enable"])
-  name       = "${local.prefix}-${var.app_name}-eks-describe"
-  policy_arn = aws_iam_policy.server-eks-describe["enable"].arn
-  roles      = [aws_iam_role.server.name]
-}
 
 resource "aws_iam_instance_profile" "server" {
   name = "${local.prefix}-${var.app_name}"
