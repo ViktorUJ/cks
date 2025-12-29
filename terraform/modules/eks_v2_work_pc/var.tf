@@ -61,6 +61,7 @@ variable "work_pc" {
     ubuntu_version     = string
     user_data_template = string
     task_script_url    = string # url for run additional script
+    eks_config_url     = string # url for download kubeconfig
     node_type          = string # spot ar ondemand
     ssh = object({
       private_key = string
