@@ -51,6 +51,10 @@ variable "solutions_video" {
   default = ""
 }
 
+variable "name" {
+  type = string
+}
+
 variable "work_pc" {
   type = object({
     instance_type      = string

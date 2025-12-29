@@ -46,7 +46,7 @@ inputs = {
   ssh_password_enable   = local.vars.locals.ssh_password_enable
   all_spot_subnet       = local.vars.locals.all_spot_subnet
   spot_additional_types = local.vars.locals.spot_additional_types
-
+  name                  = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   work_pc = {
     instance_type      = local.vars.locals.instance_type_worker
     node_type          = local.vars.locals.node_type

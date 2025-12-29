@@ -79,3 +79,19 @@ resource "aws_iam_instance_profile" "server" {
   name = "${local.prefix}-${var.app_name}"
   role = aws_iam_role.server.name
 }
+
+
+resource "aws_eks_access_entry" "server_admin" {
+  cluster_name      = var.name
+  principal_arn     = aws_iam_role.server.arn
+  type              = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "server_admin" {
+  cluster_name      = var.name
+  principal_arn     = aws_iam_role.server.arn
+  policy_arn        = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  access_scope {
+    type = "cluster"
+  }
+}
