@@ -13,13 +13,11 @@ module "eks" {
   name                   = var.eks.name
   kubernetes_version     = var.eks.version
   endpoint_public_access = true
+  endpoint_private_access = true # Enable private access from all VPC subnets
 
   vpc_id                   = var.eks.vpc_id
   subnet_ids               = var.eks.subnet_ids
   control_plane_subnet_ids = var.eks.control_plane_subnet_ids
-
-  # Allow access to EKS API from VPC CIDR
-  cluster_endpoint_private_access_cidrs = [data.aws_vpc.eks_vpc.cidr_block]
 
   create_security_group      = true
   create_node_security_group = true
