@@ -27,6 +27,10 @@ dependency "eks_control_plane" {
   config_path = "../eks_control_plane"
 }
 
+dependency "eks_karpenter_monitoring_vng" {
+  config_path = "../eks_karpenter_monitoring_vng"
+}
+
 inputs = {
   questions_list        = local.vars.locals.questions_list
   solutions_scripts     = local.vars.locals.solutions_scripts
