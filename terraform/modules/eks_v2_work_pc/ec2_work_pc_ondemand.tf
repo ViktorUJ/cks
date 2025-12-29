@@ -27,7 +27,6 @@ resource "aws_instance" "master" {
       task_script_url     = var.work_pc.task_script_url
       ssh_password        = random_string.ssh.result
       ssh_password_enable = var.ssh_password_enable
-      hosts               = local.hosts
       hostname=var.app_name
     }))
 

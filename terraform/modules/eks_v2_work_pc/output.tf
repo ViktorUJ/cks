@@ -38,9 +38,6 @@ output "backup_kube_config" {
   value = "  /home/ubuntu/.kube/_config   "
 }
 
-output "s3_k8s_config" {
-  value = var.debug_output == "true" ? var.s3_k8s_config : null
-}
 
 output "ami_id" {
   value = var.debug_output == "true" ? local.master_ami : null
@@ -70,9 +67,6 @@ output "ec2_key" {
   value = length(var.work_pc.key_name) > 0 ? var.work_pc.key_name : null
 }
 
-output "hosts_list" {
-  value = var.debug_output == "true" ? local.hosts : null
-}
 
 output "ssh_password_enable" {
   value = var.debug_output == "true" ? var.ssh_password_enable : null
