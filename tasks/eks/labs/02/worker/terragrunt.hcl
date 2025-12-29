@@ -44,6 +44,7 @@ inputs = {
   spot_additional_types = local.vars.locals.spot_additional_types
 
   host_list = concat(
+    "xxx"
   )
   work_pc = {
     clusters_config = {
