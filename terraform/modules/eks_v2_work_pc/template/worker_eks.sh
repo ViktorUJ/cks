@@ -1,44 +1,63 @@
 #!/bin/bash
-
-function wait_cluster_ready {
-
-echo "wait cluster $1 ready"
-aws s3 ls $2
-while test $? -gt 0
-  do
-   sleep 10
-   echo "wait cluster $1 ready .Trying again..."
-   aws s3 ls $2
-  done
-date
-
-}
-#-------------------
 ssh_password_enable_check=${ssh_password_enable}
+
 case  $ssh_password_enable_check in
 true)
-    echo -e "${ssh_password}\n${ssh_password}" | passwd ubuntu
+    echo "ubuntu:${ssh_password}" |sudo chpasswd
     SSH_CONFIG_FILE="/etc/ssh/sshd_config"
+    SSH_CONFIG_FILE_CLOUD="/etc/ssh/sshd_config.d/60-cloudimg-settings.conf"
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' $SSH_CONFIG_FILE
     sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' $SSH_CONFIG_FILE_CLOUD
+
     systemctl restart sshd
+    echo "*** ssh password "
 ;;
 *)
     echo "*** ssh password not enable "
 ;;
 esac
 
+echo "${ssh_private_key}">/root/.ssh/id_rsa
+chmod 600 /root/.ssh/id_rsa
+echo "${ssh_pub_key}">>/root/.ssh/authorized_keys
 
-hostnamectl  set-hostname worker
+echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
+chmod 600 /home/ubuntu/.ssh/id_rsa
+chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
+echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
+
+
+#-------------------
+for host in ${hosts} ; do
+ host_name=$(echo $host | cut -d'=' -f1)
+ host_ip=$(echo $host | cut -d'=' -f2)
+ echo "$host_ip $host_name" >>/etc/hosts
+done
+
+
+
+
+acrh=$(uname -m)
+hostnamectl  set-hostname ${hostname}
 
 configs_dir="/var/work/configs"
 default_configs_dir="/root/.kube"
 
 echo "*** apt update  & install apps "
 apt-get update -qq
-apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim
+apt-get install -y  unzip apt-transport-https ca-certificates curl jq bash-completion binutils vim tar
 
-curl -LO https://dl.k8s.io/release/${kubectl_version}/bin/linux/amd64/kubectl
+case $acrh in
+x86_64)
+  kubectl_url="https://dl.k8s.io/release/v${kubectl_version}/bin/linux/amd64/kubectl"
+;;
+aarch64)
+  kubectl_url="https://dl.k8s.io/release/v${kubectl_version}/bin/linux/arm64/kubectl"
+;;
+esac
+
+curl -LO $kubectl_url
 chmod +x kubectl
 mv kubectl  /usr/bin/
 
@@ -52,11 +71,29 @@ echo 'source <(kubectl completion bash)' >> /root/.bashrc
 echo 'alias k=kubectl' >> /root/.bashrc
 echo 'complete -F __start_kubectl k' >> /root/.bashrc
 
-echo "*** install aws cli "
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"  -o "awscliv2.zip" -s
+echo "*** install aws cli and helm  "
+
+case $acrh in
+x86_64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
+  curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+;;
+aarch64)
+  awscli_url="https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip"
+  curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm.tar.gz
+  tar -zxvf helm.tar.gz
+  mv linux-arm/helm /usr/local/bin/helm
+;;
+esac
+
+helm plugin install https://github.com/jkroepke/helm-secrets --version v3.8.2
+helm plugin install https://github.com/sstarcher/helm-release
+
+curl $awscli_url  -o "awscliv2.zip" -s
 unzip awscliv2.zip >/dev/null
 ./aws/install >/dev/null
 aws --version
+
 echo 'complete -C "/usr/local/bin/aws_completer" aws'>>/root/.bashrc
 echo 'complete -C "/usr/local/bin/aws_completer" aws' >>/home/ubuntu/.bashrc
 echo 'export PS1="\[\033[0;38;5;10m\]\u@\h\[\033[0;38;5;14m\]:\[\033[0;38;5;6m\]\w\[\033[0;38;5;10m\]>\[\033[0m\] "' >>/home/ubuntu/.bashrc
@@ -104,26 +141,7 @@ EOF
 mkdir $configs_dir -p
 mkdir $default_configs_dir -p
 
-echo "${ssh_private_key}">/root/.ssh/id_rsa
-chmod 600 /root/.ssh/id_rsa
-echo "${ssh_pub_key}">>/root/.ssh/authorized_keys
-
-echo "${ssh_private_key}">/home/ubuntu/.ssh/id_rsa
-chmod 600 /home/ubuntu/.ssh/id_rsa
-chown ubuntu:ubuntu /home/ubuntu/.ssh/id_rsa
-echo "${ssh_pub_key}">>/home/ubuntu/.ssh/authorized_keys
-
-echo "**** aws eks config export"
-
-
-kubectl config get-contexts
-
-mkdir /home/ubuntu/.kube  -p
-cp /root/.kube/config /home/ubuntu/.kube/config
-cp /root/.kube/config /home/ubuntu/.kube/_config
-chown ubuntu:ubuntu /home/ubuntu/.kube/config
-chown ubuntu:ubuntu /home/ubuntu/.kube/_config
-chmod 777 -R  /home/ubuntu/.kube/
+${eks_config_url}
 
 echo "==============================================="
 echo "****  all cluster is done . You can start "

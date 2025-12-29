@@ -19,6 +19,7 @@ resource "aws_instance" "master" {
   user_data = base64encode(templatefile("template/boot_zip.sh", {
     boot_zip = base64gzip(templatefile(var.work_pc.user_data_template, {
       kubectl_version     = var.work_pc.util.kubectl_version
+      eks_config_url      = var.work_pc.eks_config_url
       ssh_private_key     = var.work_pc.ssh.private_key
       ssh_pub_key         = var.work_pc.ssh.pub_key
       exam_time_minutes   = var.work_pc.exam_time_minutes
@@ -26,7 +27,7 @@ resource "aws_instance" "master" {
       task_script_url     = var.work_pc.task_script_url
       ssh_password        = random_string.ssh.result
       ssh_password_enable = var.ssh_password_enable
-      hostname=var.app_name
+      hostname            = var.app_name
     }))
 
   }))
