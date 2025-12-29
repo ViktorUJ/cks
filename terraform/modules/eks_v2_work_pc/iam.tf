@@ -79,6 +79,25 @@ resource "aws_iam_policy" "server-eks" {
 EOF
 }
 
+resource "aws_iam_policy" "server-eks-admin" {
+  for_each = toset(var.aws_eks_cluster_eks_cluster_arn == "" ? [] : ["enable"])
+  name     = "${local.prefix}-${var.app_name}-eks-admin"
+  policy   = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "eks:*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+}
+
 
 resource "aws_iam_policy_attachment" "server" {
   name       = "${local.prefix}-${var.app_name}"
@@ -90,6 +109,13 @@ resource "aws_iam_policy_attachment" "server-eks" {
   for_each   = toset(var.aws_eks_cluster_eks_cluster_arn == "" ? [] : ["enable"])
   name       = "${local.prefix}-${var.app_name}-eks"
   policy_arn = aws_iam_policy.server-eks["enable"].arn
+  roles      = [aws_iam_role.server.name]
+}
+
+resource "aws_iam_policy_attachment" "server-eks-admin" {
+  for_each   = toset(var.aws_eks_cluster_eks_cluster_arn == "" ? [] : ["enable"])
+  name       = "${local.prefix}-${var.app_name}-eks-admin"
+  policy_arn = aws_iam_policy.server-eks-admin["enable"].arn
   roles      = [aws_iam_role.server.name]
 }
 
