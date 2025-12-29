@@ -95,3 +95,4 @@ resource "aws_eks_access_policy_association" "server_admin" {
     type = "cluster"
   }
 }
+
