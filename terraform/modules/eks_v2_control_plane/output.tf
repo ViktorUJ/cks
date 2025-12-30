@@ -8,3 +8,6 @@ output "eks_mudule" {
 output "name" {
   value = var.eks.name
 }
+output "additional_IP_cirds" {
+  value = local.api_cidr
+}
