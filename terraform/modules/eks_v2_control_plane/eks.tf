@@ -16,7 +16,7 @@ resource "aws_security_group" "eks_api_access" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = [local.api_cidr]
+    cidr_blocks = local.api_cidr
   }
 
   egress {
