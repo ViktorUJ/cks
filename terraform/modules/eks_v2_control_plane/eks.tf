@@ -44,6 +44,7 @@ module "eks" {
 
   create_security_group      = true
   create_node_security_group = true
+   cluster_additional_security_group_ids = [aws_security_group.eks_api_access.id]
   enable_cluster_creator_admin_permissions = true
 
   tags = var.eks.tags
