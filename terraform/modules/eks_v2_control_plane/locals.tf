@@ -5,5 +5,5 @@ locals {
   prefix       = "${local.prefix_id}_${var.prefix}"
   item_id_lock = "CMDB_lock_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
   item_id_data = "CMDB_data_${local.USER_ID}_${local.ENV_ID}_${var.app_name}_${var.prefix}"
-  api_cidr     = concat(data.aws_vpc.eks_vpc.cidr_block, var.eks.eks_access_cidr)
+  api_cidr     = concat([data.aws_vpc.eks_vpc.cidr_block], var.eks.eks_access_cidr)
 }
