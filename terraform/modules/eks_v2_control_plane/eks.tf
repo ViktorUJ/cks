@@ -5,6 +5,29 @@ data "aws_vpc" "eks_vpc" {
   id = var.eks.vpc_id
 }
 
+
+resource "aws_security_group" "eks_api_access" {
+  name        = "${var.eks.name}-eks-api-access"
+  description = "Allow access to EKS ${var.eks.name}  API server"
+  vpc_id      = var.eks.vpc_id
+
+  ingress {
+    description = "Allow access from env CIDR"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [local.api_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
 module "eks" {
   depends_on = [aws_dynamodb_table_item.cmdb_data]
   source     = "terraform-aws-modules/eks/aws"

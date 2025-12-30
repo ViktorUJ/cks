@@ -26,6 +26,7 @@ variable "eks" {
     name        = string
     version     = string
     vpc_id= string
+    eks_access_cidr= optional(list(string),[])
     subnet_ids  = list(string)
     control_plane_subnet_ids= list(string)
     tags        = map(string)
