@@ -62,7 +62,7 @@ inputs = {
     }
     exam_time_minutes = "123"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/04/worker/files/tests.bats"
-    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/04/worker/files/worker.sh"
+    task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/worker.sh"
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
