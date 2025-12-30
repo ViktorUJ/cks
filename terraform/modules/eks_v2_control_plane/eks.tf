@@ -26,7 +26,7 @@ module "eks" {
   }
 
 
-  cluster_security_group_additional_rules = {
+  security_group_additional_rules = {
     private_api_from_vpc_and_peers = {
       description = "Allow EKS private endpoint (443) from VPC + peered VPCs"
       protocol    = "tcp"
