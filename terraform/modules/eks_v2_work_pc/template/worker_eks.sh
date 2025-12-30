@@ -136,6 +136,7 @@ mkdir $configs_dir -p
 mkdir $default_configs_dir -p
 
 ${eks_config_url}
+sudo -u ubuntu ${eks_config_url}
 
 echo "==============================================="
 echo "****  all cluster is done . You can start "
