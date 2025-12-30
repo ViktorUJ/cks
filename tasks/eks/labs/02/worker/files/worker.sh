@@ -1,3 +1,3 @@
 echo "eks worker"
 
-kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/mock/04/k8s-2/scripts/task1.yaml
+kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
