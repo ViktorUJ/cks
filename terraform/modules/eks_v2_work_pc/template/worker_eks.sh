@@ -2,6 +2,8 @@
 ssh_password_enable_check=${ssh_password_enable}
 
 wait_for_kubectl_ns() {
+  local timeout=30
+  local elapsed=0
   while true; do
     # Try to get namespaces, suppress output
     if (kubectl get ns ); then
@@ -11,6 +13,11 @@ wait_for_kubectl_ns() {
       echo "*** Waiting for kubectl to return namespaces..."
       cat /root/.kube/config
       sleep 2
+      elapsed=$((elapsed + 2))
+      if [ "$elapsed" -ge "$timeout" ]; then
+        echo "*** Timeout reached while waiting for kubectl"
+        break
+      fi
     fi
   done
 }
@@ -218,5 +225,4 @@ chmod +x  task.sh
 ./task.sh
 
 # Waits for 'kubectl get ns' to return namespaces, retries every 2 seconds
-
 
