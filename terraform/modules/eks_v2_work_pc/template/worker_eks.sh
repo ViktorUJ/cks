@@ -15,6 +15,21 @@ wait_for_kubectl_ns() {
   done
 }
 
+wait_aws_cli() {
+  while true; do
+    # Try to get namespaces, suppress output
+    if (${eks_config_url} ); then
+      echo "*** aws cli  is ready"
+      sudo -u ubuntu ${eks_config_url}
+      break
+    else
+      echo "*** aws cli..."
+
+      sleep 2
+    fi
+  done
+}
+
 case  $ssh_password_enable_check in
 true)
     echo "ubuntu:${ssh_password}" |sudo chpasswd
@@ -149,9 +164,6 @@ EOF
 mkdir $configs_dir -p
 mkdir $default_configs_dir -p
 
-${eks_config_url}
-sudo -u ubuntu ${eks_config_url}
-
 echo "==============================================="
 echo "****  all cluster is done . You can start "
 echo "**** time for exam ${exam_time_minutes} minutes "
@@ -197,6 +209,7 @@ echo "you  spend \$env_working_time minutes"
 EOF
 chmod +x /usr/bin/time_left
 
+wait_aws_cli
 wait_for_kubectl_ns
 
 # add additional script
