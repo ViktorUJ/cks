@@ -4,11 +4,12 @@ ssh_password_enable_check=${ssh_password_enable}
 wait_for_kubectl_ns() {
   while true; do
     # Try to get namespaces, suppress output
-    if kubectl get ns >/dev/null 2>&1; then
+    if (kubectl get ns ); then
       echo "*** kubectl is ready"
       break
     else
       echo "*** Waiting for kubectl to return namespaces..."
+      cat /root/.kube/config
       sleep 2
     fi
   done
