@@ -1,6 +1,19 @@
 #!/bin/bash
 ssh_password_enable_check=${ssh_password_enable}
 
+wait_for_kubectl_ns() {
+  while true; do
+    # Try to get namespaces, suppress output
+    if kubectl get ns >/dev/null 2>&1; then
+      echo "*** kubectl is ready"
+      break
+    else
+      echo "*** Waiting for kubectl to return namespaces..."
+      sleep 2
+    fi
+  done
+}
+
 case  $ssh_password_enable_check in
 true)
     echo "ubuntu:${ssh_password}" |sudo chpasswd
@@ -183,9 +196,13 @@ echo "you  spend \$env_working_time minutes"
 EOF
 chmod +x /usr/bin/time_left
 
-
+wait_for_kubectl_ns
 
 # add additional script
 curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
+
+# Waits for 'kubectl get ns' to return namespaces, retries every 2 seconds
+
+
