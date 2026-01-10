@@ -3,11 +3,11 @@
 # ==========================================
 # Voice Typer Installer for Ubuntu Wayland
 # ==========================================
-# Features:
-# 1. Auto-compiles ydotool (fixes Ubuntu 24.04 missing daemon).
-# 2. Smart-typing: Applies key-mapping ONLY for Russian, treats English as is.
-# 3. Explicit socket path fixing (fixes "text not appearing").
-# 4. Auto F8 shortcut setup.
+# FINAL STABLE VERSION
+# 1. Compiles ydotool (Fixes missing daemon).
+# 2. Smart-typing (Detects RU/EN context).
+# 3. Medium Model (Better accuracy).
+# 4. Slower typing speed (Fixes "overwritten symbols").
 
 set -e
 
@@ -82,7 +82,7 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install faster-whisper sounddevice numpy scipy
 
-# 7. Generate App Code (FIXED LOGIC HERE)
+# 7. Generate App Code (Adjusted Speed)
 echo -e "${BLUE}>>> Generating main_wayland.py...${NC}"
 cat << 'EOF' > main_wayland.py
 import sys
@@ -96,9 +96,7 @@ from scipy.io.wavfile import write
 from faster_whisper import WhisperModel
 
 # --- CONFIG ---
-# Change to "medium" or "large-v3" for better accuracy (e.g. for Tbilisi)
-# Warning: "medium" requires ~1.5GB RAM, "small" requires ~500MB
-MODEL_SIZE = "small"
+MODEL_SIZE = "medium"
 COMPUTE_TYPE = "int8"
 SAMPLE_RATE = 16000
 TEMP_AUDIO_FILE = "/tmp/voice_input.wav"
@@ -159,34 +157,32 @@ class VoiceTyper:
         print(f"Recognized: '{text}'")
 
         if text:
-            self.type_mapped_text(text, info.language)
+            self.type_mapped_text(text)
 
     def audio_callback(self, indata, frames, time, status):
         if self.recording:
             self.audio_data.append(indata.copy())
 
-    def type_mapped_text(self, text, language):
+    def type_mapped_text(self, text):
         final_keystrokes = ""
 
-        # LOGIC FIX: Only use the map if the detected language is Russian
-        # English characters should be typed "as is"
+        has_cyrillic = any('а' <= char.lower() <= 'я' for char in text)
 
-        if language == 'ru':
+        if has_cyrillic:
             for char in text:
                 if char in RU_TO_EN_KEYMAP:
                     final_keystrokes += RU_TO_EN_KEYMAP[char]
                 else:
                     final_keystrokes += char
         else:
-            # For English (and others), type directly
             final_keystrokes = text
 
         try:
             env = os.environ.copy()
-            # Explicit socket path to match systemd service
             env["YDOTOOL_SOCKET"] = "/tmp/.ydotool_socket"
 
-            subprocess.run(["ydotool", "type", "--key-delay", "50", final_keystrokes], env=env)
+            # Increased delay to 100ms to prevent glitches
+            subprocess.run(["ydotool", "type", "--key-delay", "100", final_keystrokes], env=env)
             print("--- TYPED ---")
         except Exception as e:
             print(f"Typing Error: {e}")
@@ -206,7 +202,7 @@ EOF
 echo -e "${BLUE}>>> Configuring systemd services...${NC}"
 mkdir -p ~/.config/systemd/user
 
-# ydotoold service (WITH EXPLICIT SOCKET PATH)
+# ydotoold service
 cat << EOF > ~/.config/systemd/user/ydotoold.service
 [Unit]
 Description=ydotool daemon
@@ -271,6 +267,3 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$
 echo -e "${GREEN}==========================================${NC}"
 echo -e "${GREEN}INSTALLATION COMPLETE!${NC}"
 echo -e "${GREEN}==========================================${NC}"
-echo -e "Usage:"
-echo -e "1. Press F8 -> Speak -> Press F8."
-echo -e "2. Check logs: journalctl --user -u voice-typer -f"
