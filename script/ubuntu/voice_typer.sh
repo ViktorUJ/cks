@@ -102,7 +102,7 @@ import numpy as np
 from scipy.io.wavfile import write
 from faster_whisper import WhisperModel
 
-MODEL_SIZE = "small"
+MODEL_SIZE = "medium"
 COMPUTE_TYPE = "int8"
 SAMPLE_RATE = 16000
 TEMP_AUDIO_FILE = "/tmp/voice_input.wav"
