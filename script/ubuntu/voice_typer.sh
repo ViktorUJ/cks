@@ -3,74 +3,91 @@
 # ==========================================
 # Voice Typer Installer for Ubuntu Wayland
 # ==========================================
-# Features:
-# 1. Installs via APT (standard package manager).
-# 2. Automatically fixes the broken ydotool package in Ubuntu 24.04.
-# 3. Sets up Python virtual environment.
-# 4. Configures systemd services.
-# 5. Automatically registers the F8 keyboard shortcut.
+# 1. Installs build dependencies.
+# 2. Automatically compiles ydotool from source (fixes Ubuntu 24.04 issues).
+# 3. Sets up Python virtual environment (Whisper AI).
+# 4. Configures systemd services & udev rules.
+# 5. Automatically registers F8 shortcut.
 
-set -e
+set -e # Exit on error
 
-# Colors
+# Output Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
 echo -e "${BLUE}>>> Starting Voice Typer installation...${NC}"
 
-# 1. Install system dependencies
-echo -e "${BLUE}>>> Installing system packages via APT...${NC}"
+# 1. Install Dependencies
+echo -e "${BLUE}>>> Installing system dependencies...${NC}"
 sudo apt update
-sudo apt install -y python3-venv python3-pip portaudio19-dev git curl ydotool
+# libevdev-dev is critical for the build
+sudo apt install -y python3-venv python3-pip portaudio19-dev git curl \
+    build-essential cmake pkg-config scdoc libevdev-dev
 
-# 2. FIX FOR BROKEN YDOTOOL IN UBUNTU 24.04
-# The standard package often misses 'ydotoold'. We fix this by symlinking.
-echo -e "${BLUE}>>> Checking/Fixing ydotool installation...${NC}"
+# 2. Compile Ydotool from Source (The Working Method)
+echo -e "${BLUE}>>> Compiling ydotool from source...${NC}"
+
+BUILD_DIR="/tmp/voice_typer_build_final"
+rm -rf "$BUILD_DIR"
+mkdir -p "$BUILD_DIR"
+
+build_git() {
+    URL=$1
+    NAME=$2
+    echo -e "${BLUE}>>> Building $NAME...${NC}"
+    cd "$BUILD_DIR"
+    rm -rf "$NAME"
+    git clone "$URL" "$NAME"
+    cd "$NAME"
+    mkdir -p build && cd build
+    cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+    make
+    sudo make install
+}
+
+# Build sequence (Using the confirmed working URLs)
+build_git "https://github.com/YukiWorkshop/libevdevPlus.git" "libevdevPlus"
+build_git "https://github.com/YukiWorkshop/libuInputPlus.git" "libuInputPlus"
+build_git "https://github.com/ReimuNotMoe/ydotool.git" "ydotool"
+
+# Cleanup build files
+rm -rf "$BUILD_DIR"
+sudo ldconfig # Refresh shared libs
 
 if ! command -v ydotoold &> /dev/null; then
-    echo "⚠️ 'ydotoold' binary not found (common Ubuntu bug)."
-    if command -v ydotool &> /dev/null; then
-        echo "✅ 'ydotool' client found. Creating symlink to fix the daemon..."
-        # We link ydotool to ydotoold. In many versions, it's a multi-call binary.
-        # If not, this is the best effort without compilation.
-        sudo ln -sf $(which ydotool) /usr/bin/ydotoold
-        sudo ln -sf $(which ydotool) /usr/local/bin/ydotoold
-    else
-        echo -e "${RED}Error: ydotool package failed to install.${NC}"
-        exit 1
-    fi
-else
-    echo "✅ 'ydotoold' is present."
+    echo -e "\033[0;31mError: ydotoold failed to install.\033[0m"
+    exit 1
 fi
+echo -e "${GREEN}>>> ydotool installed successfully!${NC}"
 
-# 3. Configure permissions (udev rules)
-echo -e "${BLUE}>>> Configuring udev rules (permissions)...${NC}"
+# 3. Configure Permissions (udev)
+echo -e "${BLUE}>>> Configuring permissions...${NC}"
 echo 'KERNEL=="uinput", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee /etc/udev/rules.d/80-uinput.rules > /dev/null
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 sudo usermod -aG input $USER
 
-# 4. Create project directory
+# 4. Project Setup
 PROJECT_DIR="$HOME/voice-typer"
 echo -e "${BLUE}>>> Setting up project folder: ${PROJECT_DIR}${NC}"
 mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 
-# 5. Create Virtual Environment
+# 5. Python Environment
 if [ ! -d "venv" ]; then
     echo -e "${BLUE}>>> Creating Python venv...${NC}"
     python3 -m venv venv
 fi
 
-# 6. Install Python Libraries
-echo -e "${BLUE}>>> Installing Python dependencies...${NC}"
+# 6. Install Python Libs
+echo -e "${BLUE}>>> Installing Python libraries...${NC}"
 source venv/bin/activate
 pip install --upgrade pip
 pip install faster-whisper sounddevice numpy scipy
 
-# 7. Generate main_wayland.py
-echo -e "${BLUE}>>> Generating application code...${NC}"
+# 7. Generate App Code
+echo -e "${BLUE}>>> Generating main_wayland.py...${NC}"
 cat << 'EOF' > main_wayland.py
 import sys
 import os
@@ -181,24 +198,21 @@ EOF
 echo -e "${BLUE}>>> Configuring systemd services...${NC}"
 mkdir -p ~/.config/systemd/user
 
-# Finds where the binary (or our symlink) is located
-YDO_BIN=$(which ydotoold)
-
-# Service for ydotool daemon
+# ydotoold service
 cat << EOF > ~/.config/systemd/user/ydotoold.service
 [Unit]
 Description=ydotool daemon
 
 [Service]
 Type=simple
-ExecStart=$YDO_BIN
+ExecStart=/usr/bin/ydotoold
 Restart=always
 
 [Install]
 WantedBy=default.target
 EOF
 
-# Service for main python script
+# voice-typer service
 cat << EOF > ~/.config/systemd/user/voice-typer.service
 [Unit]
 Description=Whisper Voice Typing Service
@@ -227,20 +241,24 @@ systemctl --user daemon-reload
 systemctl --user enable --now ydotoold
 systemctl --user enable --now voice-typer
 
-# 10. Automated Keyboard Shortcut Setup (GNOME)
+# 10. Automated Keyboard Shortcut (GNOME)
 echo -e "${BLUE}>>> Configuring F8 Shortcut (GNOME)...${NC}"
 KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-voice-typer/"
+
+# 1. Create the keybinding entry
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH name 'Voice Typing'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH command 'systemctl --user kill -s SIGUSR1 voice-typer'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH binding 'F8'
 
-# Add to active bindings list
+# 2. Add it to the list of active bindings (Safe Append)
 CURRENT_BINDINGS=$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
+
 if [[ "$CURRENT_BINDINGS" == "@as []" ]]; then
     NEW_BINDINGS="['$KEY_PATH']"
 else
-    # Check if already exists to avoid duplicates (simple check)
+    # Only append if not already there
     if [[ "$CURRENT_BINDINGS" != *"$KEY_PATH"* ]]; then
+        # Remove closing bracket and add new path
         NEW_BINDINGS="${CURRENT_BINDINGS%]*}, '$KEY_PATH']"
     else
         NEW_BINDINGS="$CURRENT_BINDINGS"
@@ -253,6 +271,4 @@ echo -e "${GREEN}INSTALLATION COMPLETE!${NC}"
 echo -e "${GREEN}==========================================${NC}"
 echo -e "Usage:"
 echo -e "1. Press F8 -> Speak -> Press F8."
-echo -e "2. Switch keyboard layout to match your language (RU/EN)."
-echo -e ""
-echo -e "${BLUE}Logs: journalctl --user -u voice-typer -f${NC}"
+echo -e "2. Check logs: journalctl --user -u voice-typer -f"
