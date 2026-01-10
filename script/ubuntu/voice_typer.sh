@@ -3,11 +3,10 @@
 # ==========================================
 # Voice Typer Installer for Ubuntu Wayland
 # ==========================================
-# FINAL STABLE VERSION
-# 1. Compiles ydotool (Fixes missing daemon).
-# 2. Smart-typing (Detects RU/EN context).
-# 3. Medium Model (Better accuracy).
-# 4. Slower typing speed (Fixes "overwritten symbols").
+# VERSION: CLIPBOARD PASTE (Instant & Error-free)
+# 1. Compiles ydotool.
+# 2. Installs wl-clipboard.
+# 3. Uses Ctrl+V to insert text instantly.
 
 set -e
 
@@ -18,10 +17,11 @@ NC='\033[0m'
 echo -e "${BLUE}>>> Starting Voice Typer installation...${NC}"
 
 # 1. Install Dependencies
+# Added 'wl-clipboard' for copy-paste functionality
 echo -e "${BLUE}>>> Installing system dependencies...${NC}"
 sudo apt update
 sudo apt install -y python3-venv python3-pip portaudio19-dev git curl \
-    build-essential cmake pkg-config scdoc libevdev-dev
+    build-essential cmake pkg-config scdoc libevdev-dev wl-clipboard
 
 # 2. Compile Ydotool from Source
 echo -e "${BLUE}>>> Compiling ydotool from source...${NC}"
@@ -44,7 +44,6 @@ build_git() {
     sudo make install
 }
 
-# Build sequence
 build_git "https://github.com/YukiWorkshop/libevdevPlus.git" "libevdevPlus"
 build_git "https://github.com/YukiWorkshop/libuInputPlus.git" "libuInputPlus"
 build_git "https://github.com/ReimuNotMoe/ydotool.git" "ydotool"
@@ -82,7 +81,7 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install faster-whisper sounddevice numpy scipy
 
-# 7. Generate App Code (Adjusted Speed)
+# 7. Generate App Code (CLIPBOARD VERSION)
 echo -e "${BLUE}>>> Generating main_wayland.py...${NC}"
 cat << 'EOF' > main_wayland.py
 import sys
@@ -100,19 +99,6 @@ MODEL_SIZE = "medium"
 COMPUTE_TYPE = "int8"
 SAMPLE_RATE = 16000
 TEMP_AUDIO_FILE = "/tmp/voice_input.wav"
-
-# Map for Russian Layout only
-RU_TO_EN_KEYMAP = {
-    'а': 'f', 'б': ',', 'в': 'd', 'г': 'u', 'д': 'l', 'е': 't', 'ё': '`', 'ж': ';', 'з': 'p',
-    'и': 'b', 'й': 'q', 'к': 'r', 'л': 'k', 'м': 'v', 'н': 'y', 'о': 'j', 'п': 'g',
-    'р': 'h', 'с': 'c', 'т': 'n', 'у': 'e', 'ф': 'a', 'х': '[', 'ц': 'w', 'ч': 'x',
-    'ш': 'i', 'щ': 'o', 'ъ': ']', 'ы': 's', 'ь': 'm', 'э': "'", 'ю': '.', 'я': 'z',
-    'А': 'F', 'Б': '<', 'В': 'D', 'Г': 'U', 'Д': 'L', 'Е': 'T', 'Ё': '~', 'Ж': ':', 'З': 'P',
-    'И': 'B', 'Й': 'Q', 'К': 'R', 'Л': 'K', 'М': 'V', 'Н': 'Y', 'О': 'J', 'П': 'G',
-    'Р': 'H', 'С': 'C', 'Т': 'N', 'У': 'E', 'Ф': 'A', 'Х': '{', 'Ц': 'W', 'Ч': 'X',
-    'Ш': 'I', 'Щ': 'O', 'Ъ': '}', 'Ы': 'S', 'Ь': 'M', 'Э': '"', 'Ю': '>', 'Я': 'Z',
-    '.': '/', ',': '?', '?': '&', ';': '$', ':': '^', '"': '@', '-': '-', ' ': ' '
-}
 
 class VoiceTyper:
     def __init__(self):
@@ -157,35 +143,32 @@ class VoiceTyper:
         print(f"Recognized: '{text}'")
 
         if text:
-            self.type_mapped_text(text)
+            self.paste_text(text)
 
     def audio_callback(self, indata, frames, time, status):
         if self.recording:
             self.audio_data.append(indata.copy())
 
-    def type_mapped_text(self, text):
-        final_keystrokes = ""
-
-        has_cyrillic = any('а' <= char.lower() <= 'я' for char in text)
-
-        if has_cyrillic:
-            for char in text:
-                if char in RU_TO_EN_KEYMAP:
-                    final_keystrokes += RU_TO_EN_KEYMAP[char]
-                else:
-                    final_keystrokes += char
-        else:
-            final_keystrokes = text
-
+    def paste_text(self, text):
+        """
+        Copies text to clipboard using wl-copy and presses Ctrl+V.
+        This is much faster and safer than typing character by character.
+        """
         try:
+            # 1. Copy to clipboard (Wayland)
+            subprocess.run(["wl-copy", text], check=True)
+
+            # 2. Press Ctrl+V using ydotool
             env = os.environ.copy()
             env["YDOTOOL_SOCKET"] = "/tmp/.ydotool_socket"
 
-            # Increased delay to 100ms to prevent glitches
-            subprocess.run(["ydotool", "type", "--key-delay", "100", final_keystrokes], env=env)
-            print("--- TYPED ---")
+            # Key codes: 29=Left Ctrl, 47=V
+            # Sequence: Ctrl Down, V Down, V Up, Ctrl Up
+            subprocess.run(["ydotool", "key", "29:1", "47:1", "47:0", "29:0"], env=env)
+
+            print("--- PASTED ---")
         except Exception as e:
-            print(f"Typing Error: {e}")
+            print(f"Paste Error: {e}")
 
 typer = VoiceTyper()
 
@@ -267,3 +250,6 @@ gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$
 echo -e "${GREEN}==========================================${NC}"
 echo -e "${GREEN}INSTALLATION COMPLETE!${NC}"
 echo -e "${GREEN}==========================================${NC}"
+echo -e "Usage:"
+echo -e "1. Press F8 -> Speak -> Press F8."
+echo -e "2. The text will be inserted INSTANTLY (via Ctrl+V)."
