@@ -23,7 +23,7 @@ echo -e "${BLUE}>>> 2. INSTALLING DEPENDENCIES...${NC}"
 sudo apt update
 sudo apt install -y python3-venv python3-pip portaudio19-dev git curl \
     build-essential cmake pkg-config scdoc libevdev-dev wl-clipboard
-sudo chmod 0666 /dev/uinput
+
 
 # --- BUILDING YDOTOOL ---
 # Check if our self-built daemon is installed. If not - build it.
@@ -269,6 +269,10 @@ if [[ "$CURRENT" != *"$KEY_PATH"* ]]; then
     if [[ "$CURRENT" == "@as []" ]]; then NEW="['$KEY_PATH']"; else NEW="${CURRENT%]*}, '$KEY_PATH']"; fi
     gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$NEW"
 fi
+
+sudo chmod 0666 /dev/uinput
+systemctl --user restart ydotoold
+systemctl --user restart voice-typer
 
 echo -e "${GREEN}==========================================${NC}"
 echo -e "${GREEN} READY! YOU CAN USE IT NOW. ${NC}"
