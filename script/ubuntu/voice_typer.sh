@@ -1,89 +1,96 @@
 #!/bin/bash
 
 # ==========================================
-# Voice Typer Installer for Ubuntu Wayland
+# Voice Typer Installer (Ultimate Version)
 # ==========================================
-# VERSION: CLIPBOARD PASTE (Instant & Error-free)
-# 1. Compiles ydotool.
-# 2. Installs wl-clipboard.
-# 3. Uses Ctrl+V to insert text instantly.
-# v1
+# 1. Compiles ydotool from source (Fixes Ubuntu 24.04 daemon).
+# 2. Uses 'Double Paste' strategy (Ctrl+Shift+V + Ctrl+V) to work everywhere.
+# 3. Pre-downloads Whisper 'medium' model.
+# 4. Sets up auto-start services and F8 shortcut.
 
-set -e
+set -e # Exit on error
 
+# Colors
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}>>> Starting Voice Typer installation...${NC}"
+echo -e "${BLUE}>>> 1. STOPPING OLD PROCESSES...${NC}"
+systemctl --user stop voice-typer || true
+systemctl --user stop ydotoold || true
 
-# 1. Install Dependencies
-# Added 'wl-clipboard' for copy-paste functionality
-echo -e "${BLUE}>>> Installing system dependencies...${NC}"
+echo -e "${BLUE}>>> 2. INSTALLING DEPENDENCIES...${NC}"
 sudo apt update
 sudo apt install -y python3-venv python3-pip portaudio19-dev git curl \
     build-essential cmake pkg-config scdoc libevdev-dev wl-clipboard
 
-# 2. Compile Ydotool from Source
-echo -e "${BLUE}>>> Compiling ydotool from source...${NC}"
-
-BUILD_DIR="/tmp/voice_typer_build_final"
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"
-
-build_git() {
-    URL=$1
-    NAME=$2
-    echo -e "${BLUE}>>> Building $NAME...${NC}"
-    cd "$BUILD_DIR"
-    rm -rf "$NAME"
-    git clone "$URL" "$NAME"
-    cd "$NAME"
-    mkdir -p build && cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX=/usr
-    make
-    sudo make install
-}
-
-build_git "https://github.com/YukiWorkshop/libevdevPlus.git" "libevdevPlus"
-build_git "https://github.com/YukiWorkshop/libuInputPlus.git" "libuInputPlus"
-build_git "https://github.com/ReimuNotMoe/ydotool.git" "ydotool"
-
-rm -rf "$BUILD_DIR"
-sudo ldconfig
-
+# --- BUILDING YDOTOOL ---
+# Check if our self-built daemon is installed. If not - build it.
 if ! command -v ydotoold &> /dev/null; then
-    echo -e "\033[0;31mError: ydotoold failed to install.\033[0m"
-    exit 1
-fi
-echo -e "${GREEN}>>> ydotool installed successfully!${NC}"
+    echo -e "${BLUE}>>> Building ydotool from source...${NC}"
+    BUILD_DIR="/tmp/voice_typer_build_final"
+    rm -rf "$BUILD_DIR"
+    mkdir -p "$BUILD_DIR"
 
-# 3. Configure Permissions
-echo -e "${BLUE}>>> Configuring permissions...${NC}"
+    build_git() {
+        URL=$1
+        NAME=$2
+        echo -e "${BLUE}>>> Downloading $NAME...${NC}"
+        cd "$BUILD_DIR"
+        rm -rf "$NAME"
+        git clone "$URL" "$NAME"
+        cd "$NAME"
+        mkdir -p build && cd build
+        cmake .. -DCMAKE_INSTALL_PREFIX=/usr
+        make
+        sudo make install
+    }
+
+    build_git "https://github.com/YukiWorkshop/libevdevPlus.git" "libevdevPlus"
+    build_git "https://github.com/YukiWorkshop/libuInputPlus.git" "libuInputPlus"
+    build_git "https://github.com/ReimuNotMoe/ydotool.git" "ydotool"
+
+    rm -rf "$BUILD_DIR"
+    sudo ldconfig
+    echo -e "${GREEN}>>> ydotool successfully built!${NC}"
+fi
+
+# --- ACCESS RIGHTS ---
+echo -e "${BLUE}>>> Setting up udev permissions...${NC}"
 echo 'KERNEL=="uinput", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee /etc/udev/rules.d/80-uinput.rules > /dev/null
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 sudo usermod -aG input $USER
 
-# 4. Project Setup
+# --- CREATING ENVIRONMENT ---
 PROJECT_DIR="$HOME/voice-typer"
+echo -e "${BLUE}>>> Setting up folder ${PROJECT_DIR}...${NC}"
 mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 
-# 5. Python Environment
 if [ ! -d "venv" ]; then
-    echo -e "${BLUE}>>> Creating Python venv...${NC}"
     python3 -m venv venv
 fi
 
-# 6. Install Python Libs
 echo -e "${BLUE}>>> Installing Python libraries...${NC}"
 source venv/bin/activate
 pip install --upgrade pip
 pip install faster-whisper sounddevice numpy scipy
 
-# 7. Generate App Code (CLIPBOARD VERSION)
-echo -e "${BLUE}>>> Generating main_wayland.py...${NC}"
+# --- MODEL PRELOADING ---
+echo -e "${BLUE}>>> DOWNLOADING 'medium' MODEL (~1.5 GB)...${NC}"
+echo -e "${BLUE}>>> This is needed to make the first run fast.${NC}"
+cat << 'EOF' > download_model.py
+from faster_whisper import WhisperModel
+print("--- Start Download ---")
+model = WhisperModel("medium", device="cpu", compute_type="int8")
+print("--- Download Complete ---")
+EOF
+python download_model.py
+rm download_model.py
+
+# --- PROGRAM GENERATION ---
+echo -e "${BLUE}>>> Creating main_wayland.py (Double Paste Logic)...${NC}"
 cat << 'EOF' > main_wayland.py
 import sys
 import os
@@ -95,7 +102,6 @@ import numpy as np
 from scipy.io.wavfile import write
 from faster_whisper import WhisperModel
 
-# --- CONFIG ---
 MODEL_SIZE = "medium"
 COMPUTE_TYPE = "int8"
 SAMPLE_RATE = 16000
@@ -103,21 +109,30 @@ TEMP_AUDIO_FILE = "/tmp/voice_input.wav"
 
 class VoiceTyper:
     def __init__(self):
-        print(f"Loading Whisper Model ({MODEL_SIZE})...")
-        self.model = WhisperModel(MODEL_SIZE, device="cpu", compute_type=COMPUTE_TYPE)
-        print(f"Model loaded. PID: {os.getpid()}")
+        self.model = None
         self.recording = False
         self.audio_data = []
         self.stream = None
 
+    def load_model(self):
+        print(f"Initializing model ({MODEL_SIZE})...")
+        try:
+            self.model = WhisperModel(MODEL_SIZE, device="cpu", compute_type=COMPUTE_TYPE)
+            print(f"✅ Ready! PID: {os.getpid()}")
+        except Exception as e:
+            print(f"Loading error: {e}")
+
     def toggle_recording(self):
+        if not self.model:
+            print("⚠️ Model is still loading, please wait...")
+            return
         if self.recording:
             self.stop_recording()
         else:
             self.start_recording()
 
     def start_recording(self):
-        print("--- 🔴 REC ---")
+        print("--- 🔴 RECORDING ---")
         self.recording = True
         self.audio_data = []
         self.stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=1, callback=self.audio_callback)
@@ -138,10 +153,8 @@ class VoiceTyper:
         write(TEMP_AUDIO_FILE, SAMPLE_RATE, my_recording)
 
         segments, info = self.model.transcribe(TEMP_AUDIO_FILE, beam_size=1)
-        print(f"Detected language: {info.language}")
-
         text = " ".join([segment.text for segment in segments]).strip()
-        print(f"Recognized: '{text}'")
+        print(f"Recognized ({info.language}): '{text}'")
 
         if text:
             self.paste_text(text)
@@ -152,24 +165,31 @@ class VoiceTyper:
 
     def paste_text(self, text):
         """
-        Copies text to clipboard using wl-copy and presses Ctrl+V.
-        This is much faster and safer than typing character by character.
+        'Double Paste' method:
+        1. Copies text to clipboard.
+        2. Presses Ctrl+Shift+V (for terminal).
+        3. Presses Ctrl+V (for everything else).
+        Extra press is usually just ignored by the system.
         """
         try:
-            # 1. Copy to clipboard (Wayland)
+            # 1. Copy to clipboard
             subprocess.run(["wl-copy", text], check=True)
+            time.sleep(0.05) # Small pause for clipboard
 
-            # 2. Press Ctrl+V using ydotool
             env = os.environ.copy()
             env["YDOTOOL_SOCKET"] = "/tmp/.ydotool_socket"
 
-            # Key codes: 29=Left Ctrl, 47=V
-            # Sequence: Ctrl Down, V Down, V Up, Ctrl Up
+            # 2. ATTEMPT FOR TERMINAL (Ctrl+Shift+V)
+            # 29=Ctrl, 42=Shift, 47=V
+            subprocess.run(["ydotool", "key", "29:1", "42:1", "47:1", "47:0", "42:0", "29:0"], env=env)
+
+            # 3. ATTEMPT FOR GUI (Ctrl+V)
+            # 29=Ctrl, 47=V
             subprocess.run(["ydotool", "key", "29:1", "47:1", "47:0", "29:0"], env=env)
 
-            print("--- PASTED ---")
+            print("--- PASTED (Double Paste) ---")
         except Exception as e:
-            print(f"Paste Error: {e}")
+            print(f"Paste error: {e}")
 
 typer = VoiceTyper()
 
@@ -177,22 +197,27 @@ def signal_handler(sig, frame):
     typer.toggle_recording()
 
 if __name__ == "__main__":
+    # First set up the handler so F8 doesn't kill the process at startup
     signal.signal(signal.SIGUSR1, signal_handler)
+    # Then load the model
+    typer.load_model()
+
     while True:
         time.sleep(1)
 EOF
 
-# 8. Configure Systemd Services
-echo -e "${BLUE}>>> Configuring systemd services...${NC}"
+# --- SYSTEMD SERVICES ---
+echo -e "${BLUE}>>> Setting up systemd...${NC}"
 mkdir -p ~/.config/systemd/user
 
-# ydotoold service
+# ydotool daemon
 cat << EOF > ~/.config/systemd/user/ydotoold.service
 [Unit]
 Description=ydotool daemon
 
 [Service]
 Type=simple
+# Specify socket explicitly so clients can find it
 ExecStart=/usr/bin/ydotoold --socket-path=/tmp/.ydotool_socket
 Restart=always
 
@@ -200,7 +225,7 @@ Restart=always
 WantedBy=default.target
 EOF
 
-# voice-typer service
+# Main script
 cat << EOF > ~/.config/systemd/user/voice-typer.service
 [Unit]
 Description=Whisper Voice Typing Service
@@ -223,34 +248,33 @@ RestartSec=3
 WantedBy=default.target
 EOF
 
-# 9. Start Services
+# --- STARTUP ---
 echo -e "${BLUE}>>> Starting services...${NC}"
 systemctl --user daemon-reload
-systemctl --user enable --now ydotoold
-systemctl --user enable --now voice-typer
+systemctl --user enable ydotoold voice-typer
+systemctl --user restart ydotoold
+systemctl --user restart voice-typer
 
-# 10. Configure F8 Shortcut
-echo -e "${BLUE}>>> Configuring F8 Shortcut...${NC}"
+# --- F8 HOTKEY ---
+echo -e "${BLUE}>>> Setting up F8...${NC}"
 KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-voice-typer/"
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH name 'Voice Typing'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH command 'systemctl --user kill -s SIGUSR1 voice-typer'
 gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH binding 'F8'
 
-CURRENT_BINDINGS=$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
-if [[ "$CURRENT_BINDINGS" == "@as []" ]]; then
-    NEW_BINDINGS="['$KEY_PATH']"
-else
-    if [[ "$CURRENT_BINDINGS" != *"$KEY_PATH"* ]]; then
-        NEW_BINDINGS="${CURRENT_BINDINGS%]*}, '$KEY_PATH']"
-    else
-        NEW_BINDINGS="$CURRENT_BINDINGS"
-    fi
+# Safe addition to list
+CURRENT=$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
+if [[ "$CURRENT" != *"$KEY_PATH"* ]]; then
+    if [[ "$CURRENT" == "@as []" ]]; then NEW="['$KEY_PATH']"; else NEW="${CURRENT%]*}, '$KEY_PATH']"; fi
+    gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$NEW"
 fi
-gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$NEW_BINDINGS"
 
 echo -e "${GREEN}==========================================${NC}"
-echo -e "${GREEN}INSTALLATION COMPLETE!${NC}"
+echo -e "${GREEN} READY! YOU CAN USE IT NOW. ${NC}"
 echo -e "${GREEN}==========================================${NC}"
-echo -e "Usage:"
-echo -e "1. Press F8 -> Speak -> Press F8."
-echo -e "2. The text will be inserted INSTANTLY (via Ctrl+V)."
+echo -e "Instructions:"
+echo -e "1. Open Terminal, Browser or Telegram."
+echo -e "2. Press F8."
+echo -e "3. Say a phrase."
+echo -e "4. Press F8."
+echo -e "Text will be pasted automatically (uses both Ctrl+V and Ctrl+Shift+V)."
