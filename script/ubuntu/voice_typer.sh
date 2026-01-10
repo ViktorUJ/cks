@@ -7,6 +7,7 @@
 # 1. Compiles ydotool.
 # 2. Installs wl-clipboard.
 # 3. Uses Ctrl+V to insert text instantly.
+# v1
 
 set -e
 
