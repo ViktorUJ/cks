@@ -5,7 +5,7 @@
 # ==========================================
 # 1. Compiles ydotool from source (Fixes Ubuntu 24.04 daemon).
 # 2. Uses 'Double Paste' strategy (Ctrl+Shift+V + Ctrl+V) to work everywhere.
-# 3. Pre-downloads Whisper 'medium' model.
+# 3. Pre-downloads Whisper 'small' model.
 # 4. Sets up auto-start services and F8 shortcut.
 
 set -e # Exit on error
@@ -23,6 +23,7 @@ echo -e "${BLUE}>>> 2. INSTALLING DEPENDENCIES...${NC}"
 sudo apt update
 sudo apt install -y python3-venv python3-pip portaudio19-dev git curl \
     build-essential cmake pkg-config scdoc libevdev-dev wl-clipboard
+sudo chmod 0666 /dev/uinput
 
 # --- BUILDING YDOTOOL ---
 # Check if our self-built daemon is installed. If not - build it.
@@ -78,12 +79,12 @@ pip install --upgrade pip
 pip install faster-whisper sounddevice numpy scipy
 
 # --- MODEL PRELOADING ---
-echo -e "${BLUE}>>> DOWNLOADING 'medium' MODEL (~1.5 GB)...${NC}"
+echo -e "${BLUE}>>> DOWNLOADING 'small' MODEL ...${NC}"
 echo -e "${BLUE}>>> This is needed to make the first run fast.${NC}"
 cat << 'EOF' > download_model.py
 from faster_whisper import WhisperModel
 print("--- Start Download ---")
-model = WhisperModel("medium", device="cpu", compute_type="int8")
+model = WhisperModel("small", device="cpu", compute_type="int8")
 print("--- Download Complete ---")
 EOF
 python download_model.py
@@ -102,7 +103,7 @@ import numpy as np
 from scipy.io.wavfile import write
 from faster_whisper import WhisperModel
 
-MODEL_SIZE = "medium"
+MODEL_SIZE = "small"
 COMPUTE_TYPE = "int8"
 SAMPLE_RATE = 16000
 TEMP_AUDIO_FILE = "/tmp/voice_input.wav"
@@ -278,3 +279,4 @@ echo -e "2. Press F8."
 echo -e "3. Say a phrase."
 echo -e "4. Press F8."
 echo -e "Text will be pasted automatically (uses both Ctrl+V and Ctrl+Shift+V)."
+echo -e "for debug :     journalctl --user -u ydotoold -f"
