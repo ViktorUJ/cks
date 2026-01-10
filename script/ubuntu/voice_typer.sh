@@ -4,92 +4,50 @@
 # Voice Typer Installer for Ubuntu Wayland
 # ==========================================
 
-set -e
+set -e # Exit immediately if a command exits with a non-zero status
 
-# Colors
+# Colors for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-NC='\033[0m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
 echo -e "${BLUE}>>> Starting Voice Typer installation...${NC}"
 
-# 1. Install generic build tools
-# We removed the missing libs from apt and added generic build tools
-echo -e "${BLUE}>>> Installing build dependencies...${NC}"
+# 1. Install system dependencies
+echo -e "${BLUE}>>> Installing system packages...${NC}"
 sudo apt update
-sudo apt install -y python3-venv python3-pip portaudio19-dev git curl \
-    build-essential cmake pkg-config scdoc
+sudo apt install -y python3-venv python3-pip portaudio19-dev git ydotool curl
 
-# 2. Compile Core Dependencies & Ydotool
-# Since Ubuntu repos lack the required libraries, we build them from source.
-
-BUILD_DIR="/tmp/voice_typer_build"
-mkdir -p "$BUILD_DIR"
-
-build_and_install() {
-    REPO_URL=$1
-    DIR_NAME=$2
-    echo -e "${BLUE}>>> Compiling $DIR_NAME...${NC}"
-    cd "$BUILD_DIR"
-    rm -rf "$DIR_NAME"
-    git clone "$REPO_URL" "$DIR_NAME"
-    cd "$DIR_NAME"
-    mkdir -p build && cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX=/usr
-    make
-    sudo make install
-}
-
-# Only build if ydotoold is missing
-if ! command -v ydotoold &> /dev/null; then
-    echo -e "${BLUE}>>> ydotoold not found. Starting compilation chain...${NC}"
-
-    # 2.1 Build libevdev-plus
-    build_and_install "https://github.com/Ydotool/libevdev-plus" "libevdev-plus"
-
-    # 2.2 Build libuinput-plus
-    build_and_install "https://github.com/Ydotool/libuinput-plus" "libuinput-plus"
-
-    # 2.3 Build ydotool
-    build_and_install "https://github.com/ReimuNotMoe/ydotool" "ydotool"
-
-    # Refresh shared libraries
-    sudo ldconfig
-
-    echo -e "${GREEN}>>> ydotool installed successfully!${NC}"
-else
-    echo -e "${GREEN}>>> ydotoold is already installed.${NC}"
-fi
-
-# Cleanup build files
-rm -rf "$BUILD_DIR"
-
-# 3. Configure permissions
-echo -e "${BLUE}>>> Configuring udev rules...${NC}"
+# 2. Configure permissions (udev rules) for ydotool
+# This fixes the "failed to open uinput device" error permanently
+echo -e "${BLUE}>>> Configuring udev rules for ydotool (permissions)...${NC}"
 echo 'KERNEL=="uinput", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee /etc/udev/rules.d/80-uinput.rules > /dev/null
 sudo udevadm control --reload-rules
 sudo udevadm trigger
+# Add current user to the input group
 sudo usermod -aG input $USER
 
-# 4. Create project directory
+# 3. Create project directory
 PROJECT_DIR="$HOME/voice-typer"
+echo -e "${BLUE}>>> Creating project directory: ${PROJECT_DIR}${NC}"
 mkdir -p "$PROJECT_DIR"
 cd "$PROJECT_DIR"
 
-# 5. Create Python environment
+# 4. Create virtual environment
 if [ ! -d "venv" ]; then
-    echo -e "${BLUE}>>> Creating virtual environment...${NC}"
+    echo -e "${BLUE}>>> Creating Python virtual environment (venv)...${NC}"
     python3 -m venv venv
 fi
 
-# 6. Install Python libs
-echo -e "${BLUE}>>> Installing Python libraries...${NC}"
+# 5. Install Python libraries
+echo -e "${BLUE}>>> Installing Python libraries (Whisper, SoundDevice)...${NC}"
 source venv/bin/activate
 pip install --upgrade pip
 pip install faster-whisper sounddevice numpy scipy
 
-# 7. Generate Python Script
-echo -e "${BLUE}>>> Generating main_wayland.py...${NC}"
+# 6. Generate the main Python script (main_wayland.py)
+echo -e "${BLUE}>>> Generating application code (main_wayland.py)...${NC}"
 cat << 'EOF' > main_wayland.py
 import sys
 import os
@@ -101,11 +59,15 @@ import numpy as np
 from scipy.io.wavfile import write
 from faster_whisper import WhisperModel
 
+# --- CONFIGURATION ---
 MODEL_SIZE = "small"
 COMPUTE_TYPE = "int8"
 SAMPLE_RATE = 16000
 TEMP_AUDIO_FILE = "/tmp/voice_input.wav"
 
+# Translation Map: Russian char -> English key
+# Required because ydotool (simulating a US keyboard) does not understand Cyrillic input.
+# This maps the Russian character to the physical key location on a US keyboard.
 RU_TO_EN_KEYMAP = {
     'а': 'f', 'б': ',', 'в': 'd', 'г': 'u', 'д': 'l', 'е': 't', 'ё': '`', 'ж': ';', 'з': 'p',
     'и': 'b', 'й': 'q', 'к': 'r', 'л': 'k', 'м': 'v', 'н': 'y', 'о': 'j', 'п': 'g',
@@ -154,8 +116,9 @@ class VoiceTyper:
         my_recording = (my_recording * 32767).astype(np.int16)
         write(TEMP_AUDIO_FILE, SAMPLE_RATE, my_recording)
 
+        # Language auto-detection
         segments, info = self.model.transcribe(TEMP_AUDIO_FILE, beam_size=1)
-        print(f"Detected language: {info.language}")
+        print(f"Detected language: {info.language} (probability {info.language_probability:.2f})")
 
         text = " ".join([segment.text for segment in segments]).strip()
         print(f"Recognized: '{text}'")
@@ -168,6 +131,11 @@ class VoiceTyper:
             self.audio_data.append(indata.copy())
 
     def type_mapped_text(self, text):
+        """
+        Smart Typing:
+        1. If char is in the Russian map, convert to English key (for RU layout).
+        2. If char is not in map (English/Numbers), type as is.
+        """
         final_keystrokes = ""
         for char in text:
             if char in RU_TO_EN_KEYMAP:
@@ -177,9 +145,11 @@ class VoiceTyper:
 
         try:
             env = os.environ.copy()
+            # Set default socket path if not present in environment
             if "YDOTOOL_SOCKET" not in env:
                 env["YDOTOOL_SOCKET"] = "/tmp/.ydotool_socket"
 
+            # key_delay ensures the system processes keystrokes correctly
             subprocess.run(["ydotool", "type", "--key-delay", "100", final_keystrokes], env=env)
             print("--- TYPED ---")
         except Exception as e:
@@ -192,22 +162,20 @@ def signal_handler(sig, frame):
 
 if __name__ == "__main__":
     signal.signal(signal.SIGUSR1, signal_handler)
+    # Keep the script running
     while True:
         time.sleep(1)
 EOF
 
-# 8. Configure Systemd Services
-echo -e "${BLUE}>>> Configuring systemd services...${NC}"
+# 7. Configure Systemd service for ydotoold (Input Daemon)
+echo -e "${BLUE}>>> Configuring ydotoold service...${NC}"
 mkdir -p ~/.config/systemd/user
-
-# ydotoold service
 cat << EOF > ~/.config/systemd/user/ydotoold.service
 [Unit]
 Description=ydotool daemon
 
 [Service]
 Type=simple
-# We installed to /usr, so binary is in /usr/bin
 ExecStart=/usr/bin/ydotoold
 Restart=always
 
@@ -215,7 +183,8 @@ Restart=always
 WantedBy=default.target
 EOF
 
-# voice-typer service
+# 8. Configure Systemd service for Voice Typer (Main App)
+echo -e "${BLUE}>>> Configuring voice-typer service...${NC}"
 cat << EOF > ~/.config/systemd/user/voice-typer.service
 [Unit]
 Description=Whisper Voice Typing Service
@@ -226,10 +195,13 @@ Requires=ydotoold.service
 Type=simple
 Environment=PYTHONUNBUFFERED=1
 Environment=DISPLAY=:0
+# ydotool usually listens on this socket
 Environment=YDOTOOL_SOCKET=/tmp/.ydotool_socket
 
 ExecStart=$PROJECT_DIR/venv/bin/python $PROJECT_DIR/main_wayland.py
 WorkingDirectory=$PROJECT_DIR
+
+# Prevent Systemd from killing child processes (like ydotool/wl-copy)
 KillMode=process
 Restart=always
 RestartSec=3
@@ -244,21 +216,18 @@ systemctl --user daemon-reload
 systemctl --user enable --now ydotoold
 systemctl --user enable --now voice-typer
 
-# 10. Automated Keyboard Shortcut (GNOME)
-echo -e "${BLUE}>>> Setting up Keyboard Shortcut (F8)...${NC}"
-KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-voice-typer/"
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH name 'Voice Typing'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH command 'systemctl --user kill -s SIGUSR1 voice-typer'
-gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH binding 'F8'
-
-CURRENT_BINDINGS=$(gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
-if [[ "$CURRENT_BINDINGS" == "@as []" ]]; then
-    NEW_BINDINGS="['$KEY_PATH']"
-else
-    NEW_BINDINGS="${CURRENT_BINDINGS%]*}, '$KEY_PATH']"
-fi
-gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$NEW_BINDINGS"
-
 echo -e "${GREEN}==========================================${NC}"
-echo -e "${GREEN}INSTALLATION COMPLETE!${NC}"
+echo -e "${GREEN}INSTALLATION SUCCESSFUL!${NC}"
 echo -e "${GREEN}==========================================${NC}"
+echo -e "There is ONE LAST STEP (Keyboard Shortcut Setup):"
+echo -e "1. Go to Settings -> Keyboard -> View and Customize Shortcuts -> Custom Shortcuts."
+echo -e "2. Add a new shortcut:"
+echo -e "   Name:     Voice Typing"
+echo -e "   Command:  systemctl --user kill -s SIGUSR1 voice-typer"
+echo -e "   Shortcut: F8 (or your preference)"
+echo -e ""
+echo -e "Usage:"
+echo -e "1. Switch keyboard layout to Russian (for RU speech) or English (for EN speech)."
+echo -e "2. Press F8, speak, then press F8 again."
+echo -e ""
+echo -e "${BLUE}To view logs, run: journalctl --user -u voice-typer -f${NC}"
