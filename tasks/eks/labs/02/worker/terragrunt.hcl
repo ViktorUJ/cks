@@ -27,6 +27,9 @@ dependency "eks_control_plane" {
   config_path = "../eks_control_plane"
 }
 
+dependency "eks_karpenter" {
+  config_path = "../eks_karpenter"
+}
 inputs = {
   questions_list        = local.vars.locals.questions_list
   solutions_scripts     = local.vars.locals.solutions_scripts
