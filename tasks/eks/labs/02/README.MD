@@ -337,6 +337,53 @@ default-c549s   t3a.small   spot       eu-central-1a   ip-10-10-15-190.eu-centra
 
 
 ```
+проверяем ноды кластера 
+
+```
+#  kubectl  get no
+
+
+NAME                                                    STATUS   ROLES    AGE     VERSION
+fargate-ip-10-10-15-205.eu-central-1.compute.internal   Ready    <none>   149m    v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-183.eu-central-1.compute.internal   Ready    <none>   146m    v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-196.eu-central-1.compute.internal   Ready    <none>   149m    v1.34.2-eks-b3126f4
+ip-10-10-16-59.eu-central-1.compute.internal            Ready    <none>   9m13s   v1.34.2-eks-ecaa3a6
+
+```
+удалим наше приложение у проверим  и проверим что нода созданная карпентором удалилась (это пройдет не сразу )
+
+```
+#   kubectl   delete -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
+
+namespace "team-19" deleted
+deployment.apps "team19" deleted from team-19 namespace
+service "team19" deleted from team-19 namespace
+
+```
+
+```
+
+#  kubectl  get po -n team-19
+
+No resources found in team-19 namespace.
+
+```
+
+```
+#  kubectl  get nodeclaims.karpenter.sh
+No resources found
+
+
+```
+```
+# kubectl  get no
+
+NAME                                                    STATUS   ROLES    AGE    VERSION
+fargate-ip-10-10-15-205.eu-central-1.compute.internal   Ready    <none>   155m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-183.eu-central-1.compute.internal   Ready    <none>   152m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-196.eu-central-1.compute.internal   Ready    <none>   155m   v1.34.2-eks-b3126f4
+
+```
 
 
 ## Scaling Application
