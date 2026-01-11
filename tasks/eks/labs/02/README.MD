@@ -227,6 +227,94 @@ EoF
 kubectl -f default-nodeclass.yaml create
 ```
 
+проверяем статус EC2NodeClass   и  NodePool
+
+```
+ # kubectl  get ec2nodeclasses.karpenter.k8s.aws
+
+NAME      READY   AGE
+default   True    2m17s
+
+# kubectl  get nodepools.karpenter.sh
+
+NAME      NODECLASS   NODES   READY   AGE
+default   default     1       True    55m
+
+
+```
+если EC2NodeClass   или  NodePool не в статусе  READY делаем describe   и проверяем логи контроллера
+
+```
+# kubectl describe ec2nodeclasses.karpenter.k8s.aws default 
+
+.....
+Events:
+  Type    Reason                     Age    From       Message
+  ----    ------                     ----   ----       -------
+  Normal  AMIsReady                  5m44s  karpenter  Status condition transitioned, Type: AMIsReady, St                atus: Unknown -> True, Reason: AMIsReady
+  Normal  CapacityReservationsReady  5m44s  karpenter  Status condition transitioned, Type: CapacityReser                vationsReady, Status: Unknown -> True, Reason: CapacityReservationsReady
+  Normal  SubnetsReady               5m44s  karpenter  Status condition transitioned, Type: SubnetsReady,                 Status: Unknown -> True, Reason: SubnetsReady
+  Normal  SecurityGroupsReady        5m44s  karpenter  Status condition transitioned, Type: SecurityGroup                sReady, Status: Unknown -> True, Reason: SecurityGroupsReady
+  Normal  InstanceProfileReady       5m44s  karpenter  Status condition transitioned, Type: InstanceProfi                leReady, Status: Unknown -> True, Reason: InstanceProfileReady
+  Normal  ValidationSucceeded        5m31s  karpenter  Status condition transitioned, Type: ValidationSuc                ceeded, Status: Unknown -> True, Reason: ValidationSucceeded
+  Normal  Ready                      5m31s  karpenter  Status condition transitioned, Type: Ready, Status                : Unknown -> True, Reason: Ready
+
+
+```
+```
+# kubectl describe nodepools.karpenter.sh
+
+....
+Events:
+  Type     Reason               Age                   From       Message
+  ----     ------               ----                  ----       -------
+  Normal   ValidationSucceeded  59m                   karpenter  Status condition transitioned, Type: ValidationSucc, Status: Unknown -> True, Reason: ValidationSucceeded
+  Normal   NodeClassReady       59m                   karpenter  Status condition transitioned, Type: NodeClassReadytus: Unknown -> False, Reason: NodeClassNotFound, Message: NodeClass not found on cluster
+  Normal   Ready                59m                   karpenter  Status condition transitioned, Type: Ready, Status:own -> False, Reason: UnhealthyDependents, Message: NodeClassReady=False
+  Warning                       7m27s (x27 over 59m)  karpenter  Failed resolving NodeClass
+  Normal   NodeClassReady       6m46s                 karpenter  Status condition transitioned, Type: NodeClassReadytus: False -> True, Reason: NodeClassReady
+  Normal   Ready                6m46s                 karpenter  Status condition transitioned, Type: Ready, Status:e -> True, Reason: Ready
+
+
+```
+```
+# kubectl logs  -n karpenter  -l app.kubernetes.io/instance=karpenter | jq
+
+......
+{
+  "level": "INFO",
+  "time": "2026-01-11T16:30:19.194Z",
+  "logger": "controller",
+  "message": "discovered ssm parameter",
+  "commit": "1ad0d78",
+  "controller": "nodeclass",
+  "controllerGroup": "karpenter.k8s.aws",
+  "controllerKind": "EC2NodeClass",
+  "EC2NodeClass": {
+    "name": "default"
+  },
+  "namespace": "",
+  "name": "default",
+  "reconcileID": "5fe4f70b-e3af-4116-b939-ce6756321a00",
+  "parameter": "/aws/service/eks/optimized-ami/1.34/amazon-linux-2023/arm64/nvidia/recommended/image_id",
+  "value": "ami-0e8c1e804635db463"
+}
+{
+  "level": "INFO",
+  "time": "2026-01-11T16:30:19.233Z",
+  "logger": "controller",
+  "message": "discovered ssm parameter",
+  "commit": "1ad0d78",
+  "controller": "nodeclass",
+  "controllerGroup": "karpenter.k8s.aws",
+  "controllerKind": "EC2NodeClass",
+  "EC2NodeClass": {
+    "name": "default"
+  },
+
+......
+```
+
 ## Scaling Application
 ...existing code...
 
