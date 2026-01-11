@@ -72,7 +72,72 @@ Ensure you have configured:
 - AWS CLI with appropriate access permissions, and increased node limits in region `eu-central-1`
 
 ## Basic NodePool
-...existing code...
+ найдите в аутпуте  ssh конекшен стринг и  залогинтесь на воркер ноду 
+ ```
+ ........
+
+18:45:18.510 STDOUT [worker] terraform: worker_pc_ssh = "   ssh ubuntu@18.199.222.47 password= x2HcfbM577   "
+......... 
+ ```
+проверьте что карпентер контроллер работает
+```
+#  kubectl get po -n karpenter
+
+
+NAME                         READY   STATUS    RESTARTS   AGE
+karpenter-846b886fb4-6fpxw   1/1     Running   0          12m
+
+```
+проверьте NodePool и EC2NodeClass
+```
+# kubectl get nodepools
+No resources found
+
+```
+
+```
+# kubectl get ec2nodeclasses
+No resources found
+```
+
+создадим тестовое приложение 
+```
+#   kubectl  apply -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
+
+
+
+namespace/team-19 created
+deployment.apps/team19 created
+service/team19 created
+
+```
+проверим состояние подов приложения 
+
+```
+# kubectl get po -n team-19
+
+NAME                      READY   STATUS    RESTARTS   AGE
+team19-6c59b6bf7b-4pqvn   0/1     Pending   0          2m6s
+```
+```
+#  kubectl describe  po -n team-19
+
+.....
+Events:
+  Type     Reason            Age    From               Message
+  ----     ------            ----   ----               -------
+  Warning  FailedScheduling  2m56s  default-scheduler  0/3 nodes are available: 3 node(s) had untolerated taint(s). no new claims to deallocate, preemption: 0/3 nodes are available: 3 Preemption is not helpful for scheduling.
+
+
+```
+это  потому что у нас нет доступных нод для этих подов . фаргейт профиль поднимает фаргейт только для неймспейсов kube-system и karpenter
+
+создадим ec2nodeclasses  и nodepool
+```
+
+
+```
+
 
 ## Scaling Application
 ...existing code...
