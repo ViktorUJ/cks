@@ -321,7 +321,12 @@ Events:
 проверяем  nodeclaims
 
 ```
-kubectl  get nodeclaims.karpenter.sh
+#  kubectl  get nodeclaims.karpenter.sh
+
+
+NAME            TYPE        CAPACITY   ZONE            NODE                                            READY   AGE
+default-c549s   t3a.small   spot       eu-central-1a   ip-10-10-15-190.eu-central-1.compute.internal   True    67s
+
 
 ```
 
