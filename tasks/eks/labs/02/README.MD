@@ -162,6 +162,9 @@ spec:
         - key: karpenter.k8s.aws/instance-generation
           operator: Gt
           values: ["2"]
+        - key: "karpenter.k8s.aws/instance-size"
+          operator: In
+          values: ["small","medium","large", "xlarge" ]
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
@@ -314,6 +317,14 @@ Events:
 
 ......
 ```
+
+проверяем  nodeclaims
+
+```
+kubectl  get nodeclaims.karpenter.sh
+
+```
+
 
 ## Scaling Application
 ...existing code...
