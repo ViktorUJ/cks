@@ -23,6 +23,10 @@ variable "time_sleep" {
 variable "aws_eks_cluster_eks_cluster_arn" {
   default = ""
 }
+variable "karpenter_node_iam_role_name" {
+  default = "" 
+}
+
 variable "ssh_password_enable" {
   default = "true"
 }

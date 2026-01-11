@@ -177,25 +177,51 @@ EoF
 kubectl apply -f default-nodepool.yaml
 
 ```
+
+получим имя кластера и karpenter_node_iam_role_name  из аутпута 
+
 ```
-mkdir -p ~/environment/karpenter && cd ~/environment/karpenter
+......
+19:53:19.507 STDOUT [worker] terraform: eks_name = "eks2-viktor-01"
+
+20:26:31.128 STDOUT [worker] terraform: karpenter_node_iam_role_name = "Karpenter-eks2-viktor-01-20260111144312385200000005"
+
+......
+```
+
+```
 cat <<EoF> default-nodeclass.yaml
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
   name: default
 spec:
+  role: "Karpenter-eks2-viktor-01-20260111144312385200000005" # replace with your karpenter_node_iam_role_name
   amiSelectorTerms:
-    - alias: al2023@latest
-  role: karpenterNodeRole-${CLUSTER_NAME}
-  securityGroupSelectorTerms:
-  - tags:
-      alpha.eksctl.io/cluster-name: ${CLUSTER_NAME}
+    - alias: "al2023@latest"
   subnetSelectorTerms:
-  - tags:
-      alpha.eksctl.io/cluster-name: ${CLUSTER_NAME}
+    - tags:
+        karpenter.sh/discovery: "eks2-viktor-01" # replace with your cluster name
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "eks2-viktor-01" # replace with your cluster name
   tags:
-    intent: apps
+      Name: "eks2-viktor-01-default" # replace with your cluster name
+      team: "infra"
+      operation: "my eks lab"
+      city: "myCity"
+      resource_type: "dynamic"
+      karpenter.sh/discovery: eks2-viktor-01
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda    # root
+      ebs:
+        volumeType: gp3
+        volumeSize: 25Gi       # размер
+        iops: 3000             # для gp3 можно настраивать iops/throughput (необязательно)
+        throughput: 125        # MiB/s (необязательно)
+        encrypted: true
+        deleteOnTermination: true
 
 EoF
 kubectl -f default-nodeclass.yaml create

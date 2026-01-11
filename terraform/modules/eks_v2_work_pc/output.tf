@@ -95,3 +95,11 @@ output "solutions_video" {
 output "hosts" {
   value = ["${var.app_name}=${local.worker_pc_ip_local}"]
 }
+output "eks_name" {
+
+  value = var.name
+}
+
+output "karpenter_node_iam_role_name" {
+   value = var.karpenter_node_iam_role_name
+}
