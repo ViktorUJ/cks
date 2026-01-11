@@ -134,7 +134,7 @@ Events:
 
 создадим ec2nodeclasses  и nodepool
 ```
-mkdir -p ~/environment/karpenter && cd ~/environment/karpenter
+
 cat <<EoF> default-nodepool.yaml
 apiVersion: karpenter.sh/v1
 kind: NodePool
