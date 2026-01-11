@@ -149,7 +149,7 @@ spec:
       requirements:
         - key: kubernetes.io/arch
           operator: In
-          values: ["amd64"]
+          values: ["amd64","arm64"]
         - key: kubernetes.io/os
           operator: In
           values: ["linux"]
@@ -326,6 +326,14 @@ Events:
 
 NAME            TYPE        CAPACITY   ZONE            NODE                                            READY   AGE
 default-c549s   t3a.small   spot       eu-central-1a   ip-10-10-15-190.eu-central-1.compute.internal   True    67s
+
+
+```
+
+проверяем состояние пода нашего апликейшена
+
+```
+# kubectl  get po -n team-19
 
 
 ```
