@@ -798,8 +798,10 @@ NAME            TYPE        CAPACITY   ZONE            NODE                     
 default-927zs   t4g.small   spot       eu-central-1b   ip-10-10-16-179.eu-central-1.compute.internal   True    30m
 
 ````
-видим что осталось только одна нода 
+видим что осталось только одна нода .
 
+
+лимиты мы можем установливать на  различные рессурсы  (cpu , memory,gpu , nodes ) . подробно можно посмотреть в официальной [документации](https://karpenter.sh/docs/concepts/nodepools/#speclimits)
 
 
 ## Disruption
