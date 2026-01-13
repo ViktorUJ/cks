@@ -391,10 +391,416 @@ fargate-ip-10-10-16-196.eu-central-1.compute.internal   Ready    <none>   155m  
 
 
 ## Scaling Application
-...existing code...
+
+продеплоим  тестовое приложение 
+``` 
+ kubectl   apply  -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
+```
+проверим что появился нодеклэйм нода и под  в статусе реди
+``` 
+# kubectl get  nodeclaims.karpenter.sh
+
+NAME            TYPE        CAPACITY   ZONE            NODE                                           READY   AGE
+default-k4crl   t4g.small   spot       eu-central-1b   ip-10-10-16-67.eu-central-1.compute.internal   True    6m6s
+
+
+```
+
+``` 
+#  kubectl get no
+NAME                                                    STATUS   ROLES    AGE     VERSION
+fargate-ip-10-10-15-87.eu-central-1.compute.internal    Ready    <none>   30m     v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-112.eu-central-1.compute.internal   Ready    <none>   32m     v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-72.eu-central-1.compute.internal    Ready    <none>   32m     v1.34.2-eks-b3126f4
+ip-10-10-16-67.eu-central-1.compute.internal            Ready    <none>   6m34s   v1.34.2-eks-ecaa3a6
+
+```
+``` 
+# kubectl get po -n team-19
+NAME                      READY   STATUS    RESTARTS   AGE
+team19-5d69f69559-bzq77   1/1     Running   0          11
+```
+проскалируем нашего приложение до 6 подов
+``` 
+#   kubectl scale deployment -n team-19  team19 --replicas 6
+
+deployment.apps/team19 scaled
+
+```
+проверим состояние подов нашего деплоймента 
+
+``` 
+#   kubectl get po -n team-19
+
+
+NAME                      READY   STATUS    RESTARTS   AGE
+team19-5d69f69559-4fmrc   1/1     Running   0          2m41s
+team19-5d69f69559-bzq77   1/1     Running   0          17m
+team19-5d69f69559-gpzgc   1/1     Running   0          2m41s
+team19-5d69f69559-kxw6k   1/1     Running   0          2m41s
+team19-5d69f69559-pc2dv   1/1     Running   0          2m41s
+team19-5d69f69559-q6brn   1/1     Running   0          2m41s
+
+
+```
+проверим нодеклеймы 
+``` 
+# kubectl  get nodeclaims.karpenter.sh
+NAME            TYPE        CAPACITY   ZONE            NODE                                           READY   AGE
+default-gm8sj   t4g.small   spot       eu-central-1b   ip-10-10-16-66.eu-central-1.compute.internal   True    4m24s
+default-k4crl   t4g.small   spot       eu-central-1b   ip-10-10-16-67.eu-central-1.compute.internal   True    15m
+
+
+```
+видим что добавилась еще нода для наших деплойментов
+
+
+отскалируем наш деплоймент до 16 реплик
+
+``` 
+kubectl scale deployment -n team-19  team19 --replicas 16
+```
+
+проверим состояние подов нашего деплоймента 
+
+``` 
+#   kubectl get po -n team-19
+
+NAME                      READY   STATUS    RESTARTS   AGE
+team19-5d69f69559-4fmrc   1/1     Running   0          10m
+team19-5d69f69559-4m772   0/1     Pending   0          2m37s
+team19-5d69f69559-5ml7m   1/1     Running   0          2m37s
+team19-5d69f69559-6dk8l   1/1     Running   0          2m37s
+team19-5d69f69559-9qs2b   1/1     Running   0          2m37s
+team19-5d69f69559-bzq77   1/1     Running   0          24m
+team19-5d69f69559-fmcjq   1/1     Running   0          2m37s
+team19-5d69f69559-gpzgc   1/1     Running   0          10m
+team19-5d69f69559-kxw6k   1/1     Running   0          10m
+team19-5d69f69559-ndg8q   1/1     Running   0          2m37s
+team19-5d69f69559-pc2dv   1/1     Running   0          10m
+team19-5d69f69559-q6brn   1/1     Running   0          10m
+team19-5d69f69559-qgrqt   1/1     Running   0          2m37s
+team19-5d69f69559-rss5s   1/1     Running   0          2m37s
+team19-5d69f69559-x6qp8   1/1     Running   0          2m37s
+team19-5d69f69559-z2wbm   0/1     Pending   0          2m37s
+
+```
+видим что часть подов в статусе **Pending**
 
 ## Limit Resources
-...existing code...
+
+проверии лимиты нодепула
+``` 
+#   kubectl get nodepools.karpenter.sh  default -o jsonpath='{.spec.limits}' | jq
+
+{
+  "cpu": 4
+}
+
+```
+проверяем нодеклеймы 
+
+``` 
+# kubectl  get nodeclaims.karpenter.sh
+NAME            TYPE        CAPACITY   ZONE            NODE                                           READY   AGE
+default-gm8sj   t4g.small   spot       eu-central-1b   ip-10-10-16-66.eu-central-1.compute.internal   True    4m24s
+default-k4crl   t4g.small   spot       eu-central-1b   ip-10-10-16-67.eu-central-1.compute.internal   True    15m
+```
+у t4g.small 2   vCPU  . мы упираемся в лимиты по CPU
+
+проверим  это в логах карпентера 
+
+``` 
+kubectl logs  -n karpenter  -l app.kubernetes.io/instance=karpenter  | jq | grep ERROR -A 20
+```
+``` 
+......
+{
+  "level": "ERROR",
+  "time": "2026-01-13T17:41:15.044Z",
+  "logger": "controller",
+  "message": "could not schedule pod",
+  "commit": "1ad0d78",
+  "controller": "provisioner",
+  "namespace": "",
+  "name": "",
+  "reconcileID": "0e86c755-4ab9-4d86-abb5-7e15e91241fc",
+  "Pod": {
+    "name": "team19-5d69f69559-4m772",
+    "namespace": "team-19"
+  },
+  "NodePool": {
+    "name": "default"
+  },
+  "error": "all available instance types exceed limits for nodepool (NodePool=default)"
+}
+.....
+```
+
+**"error": "all available instance types exceed limits for nodepool (NodePool=default)"**
+
+увеличим  cpu лимиты  нодепула до 6 
+
+``` 
+kubectl edit nodepools.karpenter.sh default
+```
+``` 
+......
+spec:
+  disruption:
+    budgets:
+    - nodes: 10%
+    consolidateAfter: 30s
+    consolidationPolicy: WhenEmptyOrUnderutilized
+  limits:
+    cpu: 4     # set to 6 
+.....
+```
+проверяем нодеклеймы 
+``` 
+#   kubectl get nodeclaims.karpenter.sh
+
+
+NAME            TYPE        CAPACITY   ZONE            NODE                                            READY   AGE
+default-927zs   t4g.small   spot       eu-central-1b   ip-10-10-16-179.eu-central-1.compute.internal   True    19m
+default-gpgn9   t4g.small   spot       eu-central-1b   ip-10-10-16-30.eu-central-1.compute.internal    True    66s
+default-k4crl   t4g.small   spot       eu-central-1b   ip-10-10-16-67.eu-central-1.compute.internal    True    38m
+
+```
+видим что добавилась еще 1 нода 
+
+
+проверяем состояние подов нашего апликейшена 
+
+``` 
+ #    kubectl get po -n team-19
+NAME                      READY   STATUS    RESTARTS   AGE
+team19-5d69f69559-4fmrc   1/1     Running   0          29m
+team19-5d69f69559-4m772   1/1     Running   0          22m
+team19-5d69f69559-5ml7m   1/1     Running   0          22m
+team19-5d69f69559-6dk8l   1/1     Running   0          22m
+team19-5d69f69559-9qs2b   1/1     Running   0          22m
+team19-5d69f69559-bzq77   1/1     Running   0          44m
+team19-5d69f69559-fmcjq   1/1     Running   0          22m
+team19-5d69f69559-gpzgc   1/1     Running   0          29m
+team19-5d69f69559-kxw6k   1/1     Running   0          29m
+team19-5d69f69559-ndg8q   1/1     Running   0          22m
+team19-5d69f69559-pc2dv   1/1     Running   0          29m
+team19-5d69f69559-q6brn   1/1     Running   0          29m
+team19-5d69f69559-qgrqt   1/1     Running   0          22m
+team19-5d69f69559-rss5s   1/1     Running   0          22m
+team19-5d69f69559-x6qp8   1/1     Running   0          22m
+team19-5d69f69559-z2wbm   1/1     Running   0          22m
+
+
+```
+теперь  все наши поды готовы к работе 
+
+
+отскалируем наше приложение до 3 под 
+``` 
+kubectl scale deployment -n team-19  team19 --replicas 3
+```
+в  логах контроллера мы увидим , что контроллер увидел недоиспользованные ноды и их удалил 
+``` 
+kubectl logs  -n karpenter  -l app.kubernetes.io/instance=karpenter  -f | jq
+
+```
+``` 
+{
+  "level": "INFO",
+  "time": "2026-01-13T17:51:58.119Z",
+  "logger": "controller",
+  "message": "disrupting node(s)",
+  "commit": "1ad0d78",
+  "controller": "disruption",
+  "namespace": "",
+  "name": "",
+  "reconcileID": "9f332b96-08dc-437e-a2a6-6db4de6a6016",
+  "command-id": "b64d8a05-1a56-4f27-a408-6c441f95641d",
+  "reason": "underutilized",
+  "decision": "delete",
+  "disrupted-node-count": 1,
+  "replacement-node-count": 0,
+  "pod-count": 2,
+  "disrupted-nodes": [
+    {
+      "Node": {
+        "name": "ip-10-10-16-30.eu-central-1.compute.internal"
+      },
+      "NodeClaim": {
+        "name": "default-gpgn9"
+      },
+      "capacity-type": "spot",
+      "instance-type": "t4g.small"
+    }
+  ],
+  "replacement-nodes": []
+}
+{
+  "level": "INFO",
+  "time": "2026-01-13T17:51:58.347Z",
+  "logger": "controller",
+  "message": "tainted node",
+  "commit": "1ad0d78",
+  "controller": "node.termination",
+  "controllerGroup": "",
+  "controllerKind": "Node",
+  "Node": {
+    "name": "ip-10-10-16-30.eu-central-1.compute.internal"
+  },
+  "namespace": "",
+  "name": "ip-10-10-16-30.eu-central-1.compute.internal",
+  "reconcileID": "2e09de9a-8988-4ba2-9193-edaa531572a5",
+  "NodeClaim": {
+    "name": "default-gpgn9"
+  },
+  "taint.Key": "karpenter.sh/disrupted",
+  "taint.Value": "",
+  "taint.Effect": "NoSchedule"
+}
+{
+  "level": "INFO",
+  "time": "2026-01-13T17:52:23.462Z",
+  "logger": "controller",
+  "message": "disrupting node(s)",
+  "commit": "1ad0d78",
+  "controller": "disruption",
+  "namespace": "",
+  "name": "",
+  "reconcileID": "2b857488-a858-4a6d-87b0-8c82aaf9d2ae",
+  "command-id": "a576675b-e234-49d0-93a3-77f3034af36e",
+  "reason": "underutilized",
+  "decision": "delete",
+  "disrupted-node-count": 1,
+  "replacement-node-count": 0,
+  "pod-count": 1,
+  "disrupted-nodes": [
+    {
+      "Node": {
+        "name": "ip-10-10-16-67.eu-central-1.compute.internal"
+      },
+      "NodeClaim": {
+        "name": "default-k4crl"
+      },
+      "capacity-type": "spot",
+      "instance-type": "t4g.small"
+    }
+  ],
+  "replacement-nodes": []
+}
+{
+  "level": "INFO",
+  "time": "2026-01-13T17:52:23.629Z",
+  "logger": "controller",
+  "message": "tainted node",
+  "commit": "1ad0d78",
+  "controller": "node.termination",
+  "controllerGroup": "",
+  "controllerKind": "Node",
+  "Node": {
+    "name": "ip-10-10-16-67.eu-central-1.compute.internal"
+  },
+  "namespace": "",
+  "name": "ip-10-10-16-67.eu-central-1.compute.internal",
+  "reconcileID": "918fc9c2-4fa2-44e8-9929-de88a556c0d0",
+  "NodeClaim": {
+    "name": "default-k4crl"
+  },
+  "taint.Key": "karpenter.sh/disrupted",
+  "taint.Value": "",
+  "taint.Effect": "NoSchedule"
+}
+{
+  "level": "INFO",
+  "time": "2026-01-13T17:53:03.256Z",
+  "logger": "controller",
+  "message": "deleted node",
+  "commit": "1ad0d78",
+  "controller": "node.termination",
+  "controllerGroup": "",
+  "controllerKind": "Node",
+  "Node": {
+    "name": "ip-10-10-16-30.eu-central-1.compute.internal"
+  },
+  "namespace": "",
+  "name": "ip-10-10-16-30.eu-central-1.compute.internal",
+  "reconcileID": "f43541f4-7efd-40a6-b8c9-995be55ac9e1",
+  "NodeClaim": {
+    "name": "default-gpgn9"
+  }
+}
+{
+  "level": "INFO",
+  "time": "2026-01-13T17:53:03.523Z",
+  "logger": "controller",
+  "message": "deleted nodeclaim",
+  "commit": "1ad0d78",
+  "controller": "nodeclaim.lifecycle",
+  "controllerGroup": "karpenter.sh",
+  "controllerKind": "NodeClaim",
+  "NodeClaim": {
+    "name": "default-gpgn9"
+  },
+  "namespace": "",
+  "name": "default-gpgn9",
+  "reconcileID": "23321c83-f9c4-4927-ba30-1f99a997b59c",
+  "provider-id": "aws:///eu-central-1b/i-01f658c89d1f5a570",
+  "Node": {
+    "name": "ip-10-10-16-30.eu-central-1.compute.internal"
+  }
+}
+{
+  "level": "INFO",
+  "time": "2026-01-13T17:53:12.896Z",
+  "logger": "controller",
+  "message": "deleted node",
+  "commit": "1ad0d78",
+  "controller": "node.termination",
+  "controllerGroup": "",
+  "controllerKind": "Node",
+  "Node": {
+    "name": "ip-10-10-16-67.eu-central-1.compute.internal"
+  },
+  "namespace": "",
+  "name": "ip-10-10-16-67.eu-central-1.compute.internal",
+  "reconcileID": "2a955a80-1fd1-4e8e-9de8-0c2364d35a83",
+  "NodeClaim": {
+    "name": "default-k4crl"
+  }
+}
+{
+  "level": "INFO",
+  "time": "2026-01-13T17:53:13.131Z",
+  "logger": "controller",
+  "message": "deleted nodeclaim",
+  "commit": "1ad0d78",
+  "controller": "nodeclaim.lifecycle",
+  "controllerGroup": "karpenter.sh",
+  "controllerKind": "NodeClaim",
+  "NodeClaim": {
+    "name": "default-k4crl"
+  },
+  "namespace": "",
+  "name": "default-k4crl",
+  "reconcileID": "0c4014fd-1faf-4403-921d-a7d0c5c9d167",
+  "provider-id": "aws:///eu-central-1b/i-05b6326885f000b9b",
+  "Node": {
+    "name": "ip-10-10-16-67.eu-central-1.compute.internal"
+  }
+}
+
+```
+проверим нодеклэймы 
+```` 
+kubectl  get nodeclaims.karpenter.sh
+NAME            TYPE        CAPACITY   ZONE            NODE                                            READY   AGE
+default-927zs   t4g.small   spot       eu-central-1b   ip-10-10-16-179.eu-central-1.compute.internal   True    30m
+
+````
+видим что осталось только одна нода 
+
+
 
 ## Disruption
 ...existing code...
