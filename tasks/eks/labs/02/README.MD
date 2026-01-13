@@ -335,6 +335,10 @@ default-c549s   t3a.small   spot       eu-central-1a   ip-10-10-15-190.eu-centra
 ```
 # kubectl  get po -n team-19
 
+NAME                      READY   STATUS    RESTARTS   AGE
+team19-6c59b6bf7b-m9plq   1/1     Running   0          17m
+
+
 
 ```
 проверяем ноды кластера 
