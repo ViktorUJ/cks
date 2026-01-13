@@ -171,7 +171,7 @@ spec:
         name: default
       expireAfter: 720h # 30 * 24h = 720h
   limits:
-    cpu: 100
+    cpu: 4
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
     consolidateAfter: 30s
