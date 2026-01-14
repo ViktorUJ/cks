@@ -805,10 +805,23 @@ default-927zs   t4g.small   spot       eu-central-1b   ip-10-10-16-179.eu-centra
 
 
 ## Disruption
-...existing code...
+Karpenter provides support for disrupting nodes using the consolidateAfter field in the node group specification of NodePool. The consolidateAfter field specifies the amount of time that a node remains idle before it is deprovisioned. When a node is deemed "empty" by Karpenter, meaning that all pods have been successfully moved off the node, Karpenter waits for the specified consolidateAfter period before deprovisioning the node.
+подробно  про эти параметры можно почитать в [официальной документации](https://karpenter.sh/docs/concepts/disruption/)
 
 ## RightSizing
-...existing code...
+продеплоим  тестовое приложение 
+``` 
+ kubectl   apply  -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/2.yaml
+```
+данное приложение  в реквестах имеет 4  кор и 1 реплику
+
+проверим нодеклэймы 
+```` 
+kubectl  get nodeclaims.karpenter.sh
+NAME            TYPE        CAPACITY   ZONE            NODE                                            READY   AGE
+default-927zs   t4g.small   spot       eu-central-1b   ip-10-10-16-179.eu-central-1.compute.internal   True    30m
+
+````
 
 ## Drift
 ...existing code...
