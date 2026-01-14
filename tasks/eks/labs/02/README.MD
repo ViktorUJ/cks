@@ -999,6 +999,22 @@ default-48ck8   t4g.small   spot       eu-central-1b   ip-10-10-16-44.eu-central
 ```
 карпентер заменил ноду на более дешевый вариант подходящий по размеру 
 
+   
+удалим деплоймент с нашим приложением
+```` 
+# kubectl  delete  deployments.apps -n team-19  team19
+ 
+ deployment.apps "team19" deleted from team-19 namespace
+````
+дождемся пока нодеклеймы будет удалены
+
+``` 
+# kubectl get nodeclaims.karpenter.sh
+
+No resources found
+
+
+```
 
 
 ## Drift
