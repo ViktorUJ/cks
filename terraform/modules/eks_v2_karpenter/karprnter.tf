@@ -105,5 +105,13 @@ resource "helm_release" "karpenter" {
       name  = "replicas"
       value = var.karpenter.controller_replicas
     },
+    {
+      name  = "settings.featureGates.kubeletConfiguration"
+      value = var.karpenter.featureGates_kubeletConfiguration
+    },
+    {
+      name  = "settings.featureGates.spotToSpotConsolidation"
+      value = var.karpenter.featureGates_spotToSpotConsolidation
+    }
   ]
 }

@@ -809,19 +809,197 @@ Karpenter provides support for disrupting nodes using the consolidateAfter field
 подробно  про эти параметры можно почитать в [официальной документации](https://karpenter.sh/docs/concepts/disruption/)
 
 ## RightSizing
+
+установим лимит нодепула  по cpu на  10 кор 
+```
+
+kubectl edit nodepools.karpenter.sh default
+```
+``` 
+......
+spec:
+  disruption:
+    budgets:
+    - nodes: 10%
+    consolidateAfter: 30s
+    consolidationPolicy: WhenEmptyOrUnderutilized
+  limits:
+    cpu: 6     # set to 15
+.....
+
+```
+
 продеплоим  тестовое приложение 
 ``` 
  kubectl   apply  -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/2.yaml
 ```
-данное приложение  в реквестах имеет 4  кор и 1 реплику
+данное приложение  в реквестах имеет 3  кор и 1 реплику
 
 проверим нодеклэймы 
 ```` 
-kubectl  get nodeclaims.karpenter.sh
+kubectl get nodeclaims.karpenter.sh
 NAME            TYPE        CAPACITY   ZONE            NODE                                            READY   AGE
-default-927zs   t4g.small   spot       eu-central-1b   ip-10-10-16-179.eu-central-1.compute.internal   True    30m
+default-6ltdb   t3.xlarge   spot       eu-central-1a   ip-10-10-15-179.eu-central-1.compute.internal   True    117s
+
 
 ````
+была создана нода с 4 ядрами
+
+```
+ kubectl get no ip-10-10-15-179.eu-central-1.compute.internal -o yaml
+apiVersion: v1
+kind: Node
+metadata:
+  annotations:
+    alpha.kubernetes.io/provided-node-ip: 10.10.15.179
+    karpenter.k8s.aws/ec2nodeclass-hash: "9448784864236590660"
+    karpenter.k8s.aws/ec2nodeclass-hash-version: v4
+    karpenter.k8s.aws/instance-profile-name: eks2-viktor-01_1217678268806220021
+    karpenter.sh/nodeclaim-min-values-relaxed: "false"
+    karpenter.sh/nodepool-hash: "4651802054396059648"
+    karpenter.sh/nodepool-hash-version: v3
+    node.alpha.kubernetes.io/ttl: "0"
+    volumes.kubernetes.io/controller-managed-attach-detach: "true"
+  creationTimestamp: "2026-01-14T18:04:27Z"
+  finalizers:
+  - karpenter.sh/termination
+  labels:
+    beta.kubernetes.io/arch: amd64
+    beta.kubernetes.io/instance-type: t3.xlarge
+    beta.kubernetes.io/os: linux
+    failure-domain.beta.kubernetes.io/region: eu-central-1
+    failure-domain.beta.kubernetes.io/zone: eu-central-1a
+    k8s.io/cloud-provider-aws: 28e5afbe9a7207cdfa5bb8d7e5428ced
+    karpenter.k8s.aws/ec2nodeclass: default
+    karpenter.k8s.aws/instance-capability-flex: "false"
+    karpenter.k8s.aws/instance-category: t
+    karpenter.k8s.aws/instance-cpu: "4"                                                       #   <------
+    karpenter.k8s.aws/instance-cpu-manufacturer: intel
+........ 
+```
+изменим реквесты по cpu  в деплойменте 
+``` 
+kubectl edit  deployments.apps -n team-19   team19
+
+```
+```` 
+.....
+    spec:
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        imagePullPolicy: IfNotPresent
+        name: app
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources:
+          requests:
+            cpu: "3"                      #  <-----   set to  "50m" 
+            memory: 500Mi                  
+
+.....
+````
+проверим логи карпентера 
+
+```` 
+{
+  "level": "INFO",
+  "time": "2026-01-14T18:38:07.171Z",
+  "logger": "controller",
+  "message": "disrupting node(s)",
+  "commit": "1ad0d78",
+  "controller": "disruption",
+  "namespace": "",
+  "name": "",
+  "reconcileID": "0ee4ba6d-1f80-44c2-a909-3fba9cafc20e",
+  "command-id": "599029f2-96c5-4738-bdfc-524318d6ad7b",
+  "reason": "underutilized",                                                              <--------
+  "decision": "replace",
+  "disrupted-node-count": 1,
+  "replacement-node-count": 1,
+  "pod-count": 1,
+  "disrupted-nodes": [
+    {
+      "Node": {
+        "name": "ip-10-10-15-179.eu-central-1.compute.internal"
+      },
+      "NodeClaim": {
+        "name": "default-6ltdb"
+      },
+      "capacity-type": "spot",
+      "instance-type": "t3.xlarge"
+    }
+  ],
+  "replacement-nodes": [
+    {
+      "capacity-type": "spot",
+      "instance-types": "t4g.small, t3.small, t3a.small, m8gd.medium, r7gd.medium and 10 other(s)"
+    }
+  ]
+}
+{
+  "level": "INFO",
+  "time": "2026-01-14T18:38:07.219Z",
+  "logger": "controller",
+  "message": "created nodeclaim",                                                     <---------
+  "commit": "1ad0d78",
+  "controller": "disruption",
+  "namespace": "",
+  "name": "",
+  "reconcileID": "0ee4ba6d-1f80-44c2-a909-3fba9cafc20e",
+  "NodePool": {
+    "name": "default"
+  },
+  "NodeClaim": {
+    "name": "default-48ck8"
+  },
+  "requests": {
+    "cpu": "200m",
+    "memory": "50Mi",
+    "pods": "4"
+  },
+  "instance-types": "m6g.medium, m6gd.medium, m7g.medium, m8g.medium, m8gd.medium and 10 other(s)"
+}
+{
+  "level": "INFO",
+  "time": "2026-01-14T18:38:10.582Z",
+  "logger": "controller",
+  "message": "launched nodeclaim",
+  "commit": "1ad0d78",
+  "controller": "nodeclaim.lifecycle",
+  "controllerGroup": "karpenter.sh",
+  "controllerKind": "NodeClaim",
+  "NodeClaim": {
+    "name": "default-48ck8"
+  },
+  "namespace": "",
+  "name": "default-48ck8",
+  "reconcileID": "426d87ab-dc62-4deb-a1ad-344b85658188",
+  "provider-id": "aws:///eu-central-1b/i-0f0d32ba789615574",
+  "instance-type": "t4g.small",                                                                 <-------
+  "zone": "eu-central-1b",
+  "capacity-type": "spot",
+  "allocatable": {
+    "cpu": "1930m",
+    "ephemeral-storage": "22016Mi",
+    "memory": "1359Mi",
+    "pods": "11"
+  }
+}
+
+
+````
+проверим нодеклеймы
+
+``` 
+#  kubectl get nodeclaims.karpenter.sh
+NAME            TYPE        CAPACITY   ZONE            NODE                                           READY   AGE
+default-48ck8   t4g.small   spot       eu-central-1b   ip-10-10-16-44.eu-central-1.compute.internal   True    8m59s
+
+```
+карпентер заменил ноду на более дешевый вариант подходящий по размеру 
+
+
 
 ## Drift
 ...existing code...

@@ -40,6 +40,8 @@ variable "karpenter" {
     controller_replicas                  = optional(string, "2")
     controller_create_namespace          = optional(string, "true")
     controller_wait_ready_pods           = optional(string, "false")
+    featureGates_spotToSpotConsolidation = optional(string, "true")
+    featureGates_kubeletConfiguration    = optional(string, "true")
 
   })
 
