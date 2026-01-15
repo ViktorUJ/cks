@@ -1102,6 +1102,23 @@ ip-10-10-16-230.eu-central-1.compute.internal           Ready    <none>   4m22s 
 
 ```
 
+удалим деплоймент с нашим приложением
+```` 
+# kubectl  delete  deployments.apps -n team-19  team19
+ 
+ deployment.apps "team19" deleted from team-19 namespace
+````
+дождемся пока нодеклеймы будет удалены
+
+``` 
+# kubectl get nodeclaims.karpenter.sh
+
+No resources found
+
+
+```
+
+
 ## Multi NodePools
 ...existing code...
 
