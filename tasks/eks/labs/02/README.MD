@@ -1024,11 +1024,83 @@ id предыдущей версии eks
 ````
 aws ssm get-parameter --name /aws/service/eks/optimized-ami/1.33/amazon-linux-2023/x86_64/standard/recommended/image_id   --query "Parameter.Value" --output text
 
+ami-0fc1cdef3ebc3a8fe
 
+````
+установите этот ami id в default ec2 class
+
+```` 
+kubectl  edit ec2nodeclasses.karpenter.k8s.aws default
+````
+``` 
+.....
+spec:
+  amiSelectorTerms:
+  - alias: al2023@latest
+
+.....
+```
+
+```` 
+spec:
+  amiFamily: AL2023
+  amiSelectorTerms:
+  - id: "ami-0fc1cdef3ebc3a8fe"
 
 ````
 
 
+продеплоим  тестовое приложение 
+``` 
+ kubectl   apply  -f  https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/2.yaml
+```
+получим ноды кластера 
+``` 
+fargate-ip-10-10-16-114.eu-central-1.compute.internal   Ready    <none>   60m     v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-23.eu-central-1.compute.internal    Ready    <none>   60m     v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-52.eu-central-1.compute.internal    Ready    <none>   58m     v1.34.2-eks-b3126f4
+ip-10-10-15-175.eu-central-1.compute.internal           Ready    <none>   2m23s   v1.33.5-eks-ecaa3a6   <------  1.33 
+
+```
+установите этот ami **alias** `al2023@latest`
+
+``` 
+kubectl  edit ec2nodeclasses.karpenter.k8s.aws default
+````
+``` 
+.....
+spec:
+  amiSelectorTerms:
+  - alias: al2023@latest
+
+.....
+```
+
+получим ноды кластера
+```
+#   kubectl  get no
+
+
+NAME                                                    STATUS   ROLES    AGE   VERSION
+fargate-ip-10-10-16-114.eu-central-1.compute.internal   Ready    <none>   89m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-23.eu-central-1.compute.internal    Ready    <none>   89m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-52.eu-central-1.compute.internal    Ready    <none>   87m   v1.34.2-eks-b3126f4
+ip-10-10-15-175.eu-central-1.compute.internal            Ready    <none>   33s   v1.34.2-eks-ecaa3a6   <-----
+```
+карпентер создал новую ноду  с обновленной версией ami id  .  перместил туда поды и удалил   ноду со старой версией ami
+
+``` 
+#  kubectl  get no
+
+
+NAME                                                    STATUS   ROLES    AGE     VERSION
+fargate-ip-10-10-16-114.eu-central-1.compute.internal   Ready    <none>   93m     v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-23.eu-central-1.compute.internal    Ready    <none>   93m     v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-52.eu-central-1.compute.internal    Ready    <none>   91m     v1.34.2-eks-b3126f4
+ip-10-10-16-230.eu-central-1.compute.internal           Ready    <none>   4m22s   v1.34.2-eks-ecaa3a6
+
+
+```
 
 ## Multi NodePools
 ...existing code...
