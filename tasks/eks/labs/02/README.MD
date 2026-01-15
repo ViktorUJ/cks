@@ -1018,7 +1018,17 @@ No resources found
 
 
 ## Drift
-...existing code...
+
+id предыдущей версии eks 
+
+````
+aws ssm get-parameter --name /aws/service/eks/optimized-ami/1.33/amazon-linux-2023/x86_64/standard/recommended/image_id   --query "Parameter.Value" --output text
+
+
+
+````
+
+
 
 ## Multi NodePools
 ...existing code...
