@@ -824,7 +824,7 @@ spec:
     consolidateAfter: 30s
     consolidationPolicy: WhenEmptyOrUnderutilized
   limits:
-    cpu: 6     # set to 15
+    cpu: 6     # set to 10
 .....
 
 ```
@@ -1019,7 +1019,7 @@ No resources found
 
 ## Drift
 
-id предыдущей версии eks 
+ami id предыдущей версии eks 
 
 ````
 aws ssm get-parameter --name /aws/service/eks/optimized-ami/1.33/amazon-linux-2023/x86_64/standard/recommended/image_id   --query "Parameter.Value" --output text
@@ -1120,7 +1120,17 @@ No resources found
 
 
 ## Multi NodePools
-...existing code...
+
+часто в продакшен среде нужно зазделять нагрузку по определенным нодегруупам . например ингресс контроллеры , мощные ноды  для запуска переодичных заданий.
+
+сэмулируем ситуацию с такими требованиями :
+
+- надо запускать переодические job с очень большими требованиями по cpu  памяти (GPU).
+- важно чтобы на эти ноды не попадали никакие  поды  не пренадлежащие job .
+- чтобы пока на ноде работаю job  не происходила консолидация  (не было прерывания job  )
+- как только на ноде нет активных  подов . нода удалялась  
+
+
 
 ## Cost Optimization
 ...existing code...
