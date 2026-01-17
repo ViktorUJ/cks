@@ -1,3 +1,6 @@
+[Russian version](README_RUS.MD)
+
+
 # Lab: Karpenter Basics
 
 ## Description
