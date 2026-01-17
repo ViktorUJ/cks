@@ -47,6 +47,7 @@ This lab will introduce you to **Karpenter** — an automatic node scaling tool 
 ## Environment Setup
 
 ### Starting the Lab
+[Run platform via docker](https://github.com/ViktorUJ/cks/blob/AG-122/docs%2Frun_from_docker.MD)
 
 To start the lab, run the following command:
 
