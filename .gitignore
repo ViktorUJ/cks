@@ -7,5 +7,3 @@ venv
 **.__pycache__
 /docker/ping_pong/dist/*
 terraform/environments/**/**
-**.vscode
-**.hooks
