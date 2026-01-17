@@ -1255,7 +1255,47 @@ job       job         0       True    3m38s
 ```
 если EC2NodeClass   или  NodePool не в статусе  READY делаем describe   и проверяем логи контроллера
 
+запустим job с толерансом и афинити  , чтобы наша ждоба создавалась именно на надах созданнго нодепула  job
 
+```` 
+#   kubectl get nodeclaims.karpenter.sh
+NAME        TYPE        CAPACITY   ZONE            NODE                                           READY   AGE
+job-mpt7v   t4g.small   spot       eu-central-1b   ip-10-10-16-18.eu-central-1.compute.internal   True    58s
+
+
+
+#   kubectl  get po
+NAME            READY   STATUS      RESTARTS   AGE
+testjob-gtlbk   0/1     Completed   0          64s
+
+
+
+#  kubectl get po
+NAME            READY   STATUS      RESTARTS   AGE
+testjob-gtlbk   0/1     Completed   0          72s
+
+
+#  kubectl get no
+NAME                                                    STATUS   ROLES    AGE    VERSION
+fargate-ip-10-10-15-110.eu-central-1.compute.internal   Ready    <none>   130m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-15-71.eu-central-1.compute.internal    Ready    <none>   128m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-96.eu-central-1.compute.internal    Ready    <none>   130m   v1.34.2-eks-b3126f4
+ip-10-10-16-18.eu-central-1.compute.internal            Ready    <none>   59s    v1.34.2-eks-ecaa3a6
+
+
+````
+проверим ноды спустя  минуту после завершения job
+
+``` 
+# kubectl get no
+NAME                                                    STATUS   ROLES    AGE    VERSION
+fargate-ip-10-10-15-110.eu-central-1.compute.internal   Ready    <none>   133m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-15-71.eu-central-1.compute.internal    Ready    <none>   131m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-96.eu-central-1.compute.internal    Ready    <none>   133m   v1.34.2-eks-b3126f4
+
+
+```
+нода успешно удалена после завершения job
 
 
 
