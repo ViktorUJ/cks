@@ -1322,28 +1322,28 @@ fargate-ip-10-10-16-96.eu-central-1.compute.internal    Ready    <none>   133m  
 TASK=02 make delete_eks_task
 ```
 ```` 
-2:09:21.991 INFO   The stack at . will be processed in the following order for command apply:
+16:14:15.750 INFO   The stack at . will be processed in the following order for command destroy:
 Group 1
-- Module ./ssh-keys
-- Module ./vpc
-
-Group 2
-- Module ./eks_control_plane
-
-Group 3
-- Module ./eks_fargate_system
-
-Group 4
-- Module ./eks_addons
-
-Group 5
-- Module ./eks_karpenter
-
-Group 6
 - Module ./worker
 
+Group 2
+- Module ./eks_karpenter
+- Module ./ssh-keys
 
-Are you sure you want to run 'terragrunt apply' in each folder of the stack described above? (y/n) y
+Group 3
+- Module ./eks_addons
+
+Group 4
+- Module ./eks_fargate_system
+
+Group 5
+- Module ./eks_control_plane
+
+Group 6
+- Module ./vpc
+
+
+WARNING: Are you sure you want to run `terragrunt destroy` in each folder of the stack described above? There is no undo! (y/n) y
 .....
 
 
