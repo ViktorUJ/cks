@@ -8,4 +8,3 @@ venv
 /docker/ping_pong/dist/*
 terraform/environments/**/**
 **.vscode
-**.hooks
