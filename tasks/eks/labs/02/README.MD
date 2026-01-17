@@ -1,4 +1,4 @@
-# Karpenter Workshop
+# Karpenter basic  
 
 ## Table of Contents
 - [Setup](#setup)
@@ -1293,4 +1293,58 @@ fargate-ip-10-10-16-96.eu-central-1.compute.internal    Ready    <none>   133m  
 
 
 ## Clean Up
-...existing code...
+проверим что  отсутсвуют нодеклеймы .
+
+```` 
+kubectl get nodeclaims.karpenter.sh
+No resources found
+
+````
+если есть активные нодеклеймы .   проверяем нет ли запущенных подов на нодах клеймов . если есть удаляем deployment (pod , jobs).
+после удаления подов удаляем нодеклэймы .
+``` 
+kubectl get nodeclaims.karpenter.sh  {name of nodeclaim}
+```
+
+убездаемся , что остались только **fargate** ноды
+
+``` 
+# kubectl get no
+NAME                                                    STATUS   ROLES    AGE    VERSION
+fargate-ip-10-10-15-110.eu-central-1.compute.internal   Ready    <none>   133m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-15-71.eu-central-1.compute.internal    Ready    <none>   131m   v1.34.2-eks-b3126f4
+fargate-ip-10-10-16-96.eu-central-1.compute.internal    Ready    <none>   133m   v1.34.2-eks-b3126f4
+
+
+```
+удаляем созданные рессурсы для лабораторной работы
+```bash
+TASK=02 make delete_eks_task
+```
+```` 
+2:09:21.991 INFO   The stack at . will be processed in the following order for command apply:
+Group 1
+- Module ./ssh-keys
+- Module ./vpc
+
+Group 2
+- Module ./eks_control_plane
+
+Group 3
+- Module ./eks_fargate_system
+
+Group 4
+- Module ./eks_addons
+
+Group 5
+- Module ./eks_karpenter
+
+Group 6
+- Module ./worker
+
+
+Are you sure you want to run 'terragrunt apply' in each folder of the stack described above? (y/n) y
+.....
+
+
+````
