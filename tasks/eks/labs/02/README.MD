@@ -1132,6 +1132,133 @@ No resources found
 
 
 
+создадим ec2nodeclasses  и nodepool
+```
+
+cat <<EoF> job-nodepool.yaml
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: job
+spec:
+  template:
+    metadata:
+      labels:
+        work_type: "job_karpenter"
+    spec:
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64","arm64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot" ,"on-demand"]
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["t", "m", "r"]
+        - key: karpenter.k8s.aws/instance-generation
+          operator: Gt
+          values: ["2"]
+        - key: "karpenter.k8s.aws/instance-size"
+          operator: In
+          values: ["small","medium","large", "xlarge" ]
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: job
+      expireAfter: 720h # 30 * 24h = 720h
+      taints:
+        - key: workType                                # это не позволит запускать поды на нодах этой грусспу если нет соответсвующего tolerans
+          value: "job"                                 # это не позволит запускать поды на нодах этой грусспу если нет соответсвующего tolerans
+          effect: NoSchedule                           # это не позволит запускать поды на нодах этой грусспу если нет соответсвующего tolerans
+      
+  limits:
+    cpu: 6
+  disruption:
+    consolidationPolicy: WhenEmpty     # нода будет удаляться только после того как на ней не будет pod
+    consolidateAfter: 10s              # время после которого нода встанет в очередь на удаление 
+EoF
+
+kubectl apply -f job-nodepool.yaml
+
+```
+
+получим имя кластера и karpenter_node_iam_role_name  из аутпута 
+
+```
+......
+19:53:19.507 STDOUT [worker] terraform: eks_name = "eks2-viktor-01"
+
+20:26:31.128 STDOUT [worker] terraform: karpenter_node_iam_role_name = "Karpenter-eks2-viktor-01-20260111144312385200000005"
+
+......
+```
+
+```
+cat <<EoF> job-nodeclass.yaml
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: job
+spec:
+  role: "Karpenter-eks2-viktor-01-20260111144312385200000005" # replace with your karpenter_node_iam_role_name
+  amiSelectorTerms:
+    - alias: "al2023@latest"
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "eks2-viktor-01" # replace with your cluster name
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "eks2-viktor-01" # replace with your cluster name
+  tags:
+      Name: "eks2-viktor-01-job" # replace with your cluster name
+      team: "infra"
+      woork_type: "job"
+      operation: "my eks lab"
+      city: "myCity"
+      resource_type: "dynamic"
+      karpenter.sh/discovery: eks2-viktor-01
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda    # root
+      ebs:
+        volumeType: gp3
+        volumeSize: 25Gi       # размер
+        iops: 3000             # для gp3 можно настраивать iops/throughput (необязательно)
+        throughput: 125        # MiB/s (необязательно)
+        encrypted: true
+        deleteOnTermination: true
+
+EoF
+kubectl -f job-nodeclass.yaml create
+```
+
+проверяем статус EC2NodeClass   и  NodePool
+
+```
+#  kubectl get ec2nodeclasses.karpenter.k8s.aws
+
+NAME      READY   AGE
+default   True    8m10s
+job       True    2m22s
+
+#  kubectl get nodepools.karpenter.sh
+
+NAME      NODECLASS   NODES   READY   AGE
+default   default     0       True    9m30s
+job       job         0       True    3m38s
+
+
+```
+если EC2NodeClass   или  NodePool не в статусе  READY делаем describe   и проверяем логи контроллера
+
+
+
+
+
 ## Cost Optimization
 ...existing code...
 

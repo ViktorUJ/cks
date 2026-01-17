@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: testjob
+spec:
+  template:
+    metadata: {}
+    spec:
+      tolerations:
+       - key: "workType"
+         operator: "Equal"
+         value: "job"
+         effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: karpenter.sh/nodepool   # Label automatically added by Karpenter
+                    operator: In
+                    values:
+                      - job              # Your NodePool name (check with `kubectl get nodepool`)
+      containers:
+      - image: viktoruj/ping_pong:alpine
+        name: testjob
+        command:
+          - echo
+          - " running job"
+          - ;
+          - sleep
+          - 20
+        resources: {}
+      restartPolicy: Never
+status: {}
