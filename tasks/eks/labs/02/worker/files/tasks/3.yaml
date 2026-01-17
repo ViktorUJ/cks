@@ -23,12 +23,7 @@ spec:
       containers:
       - image: viktoruj/ping_pong:alpine
         name: testjob
-        command:
-          - echo
-          - " running job"
-          - ;
-          - sleep
-          - 20
+        command: ["sleep","20"]
         resources: {}
       restartPolicy: Never
 status: {}
