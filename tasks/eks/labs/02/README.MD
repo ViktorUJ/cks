@@ -1725,3 +1725,4 @@ Congratulations! You have successfully completed the Karpenter basics lab.
 - Integrate Karpenter with your production applications
 - Set up monitoring and alerting for Karpenter
 - Optimize costs through analysis of spot vs on-demand instance usage
+

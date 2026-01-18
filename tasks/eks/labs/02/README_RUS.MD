@@ -1719,3 +1719,4 @@ WARNING: Are you sure you want to run `terragrunt destroy` in each folder of the
 - Интегрируйте Karpenter с вашими production-приложениями
 - Настройте мониторинг и алертинг для Karpenter
 - Оптимизируйте затраты через анализ использования spot vs on-demand инстансов
+
