@@ -1,7 +1,7 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/mock/04/README.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/tree/master/tasks/cks/mock/04/worker/files/solutions"
-  solutions_video   = "https://youtu.be/9W9KvSGq3nc"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/eks/labs/02/README.MD"
+  solutions_scripts = " not need"
+  solutions_video   = "  need to add https://youtu.be/9W9KvSGq3nc"
   debug_output      = "false"
   region            = "eu-central-1"
   vpc_default_cidr  = "10.10.0.0/16"

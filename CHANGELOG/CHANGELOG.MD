@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.1 (19.01.2026)
+### Features
+* [eks modules](../terraform/modules) are updated. This enables the creation of diverse tasks and the emulation of a production environment.
+* [EKS lab . Karpenter Basics](../tasks/eks/labs/02/README.MD) is added.
+* [EKS lab .Karpenter Basics RUS](../tasks/eks/labs/02/README_RUS.MD) is added.
+* New useful [links](../docs/links.MD) for  exams are added.
+
+
 ## 0.26.1 (17.12.2025)
 ### Features
 * [ica mock exam 01](../tasks/ica/mock/01) is added.
