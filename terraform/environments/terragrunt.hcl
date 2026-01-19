@@ -16,6 +16,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "> 5.17.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = ">= 3.0.0"
+    }
   }
 }
 variable "s3_k8s_config" {
