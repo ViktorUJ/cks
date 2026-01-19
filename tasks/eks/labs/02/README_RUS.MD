@@ -47,7 +47,7 @@
 ## Подготовка окружения
 
 ### Запуск лабораторной работы
-[запуск через docker ](https://github.com/ViktorUJ/cks/blob/AG-122/docs%2Frun_from_docker.MD)
+[запуск через docker ](https://github.com/ViktorUJ/cks/blob/master/docs%2Frun_from_docker.MD)
 Для запуска лабораторной работы выполните следующую команду:
 
 ```bash
@@ -162,7 +162,7 @@ No resources found
 Развернём простое тестовое приложение:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/1.yaml
 ```
 
 **Результат:**
@@ -467,7 +467,7 @@ ip-10-10-16-59.eu-central-1.compute.internal            Ready    <none>   9m13s 
 Удалим наше приложение:
 
 ```bash
-kubectl delete -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
+kubectl delete -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/1.yaml
 ```
 
 **Результат:**
@@ -531,7 +531,7 @@ fargate-ip-10-10-16-196.eu-central-1.compute.internal   Ready    <none>   155m  
 **Шаг 1: Развёртывание тестового приложения**
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/1.yaml
 ```
 
 **Шаг 2: Проверка созданных ресурсов**
@@ -968,7 +968,7 @@ spec:
 Развернём приложение, которое запрашивает 3 CPU:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/2.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/2.yaml
 ```
 
 **Шаг 3: Проверка созданного NodeClaim**
@@ -1198,7 +1198,7 @@ spec:
 **Шаг 3: Развёртывание приложения**
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/2.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/2.yaml
 ```
 
 **Шаг 4: Проверка версии узла**

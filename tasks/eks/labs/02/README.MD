@@ -47,7 +47,7 @@ This lab will introduce you to **Karpenter** — an automatic node scaling tool 
 ## Environment Setup
 
 ### Starting the Lab
-[Run platform via docker](https://github.com/ViktorUJ/cks/blob/AG-122/docs%2Frun_from_docker.MD)
+[Run platform via docker](https://github.com/ViktorUJ/cks/blob/master/docs%2Frun_from_docker.MD)
 
 To start the lab, run the following command:
 
@@ -164,7 +164,7 @@ No resources found
 Let's deploy a simple test application:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/1.yaml
 ```
 
 **Result:**
@@ -471,7 +471,7 @@ ip-10-10-16-59.eu-central-1.compute.internal            Ready    <none>   9m13s 
 Let's delete our application:
 
 ```bash
-kubectl delete -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
+kubectl delete -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/1.yaml
 ```
 
 **Result:**
@@ -535,7 +535,7 @@ In this section, we'll explore how Karpenter automatically adds nodes when load 
 **Step 1: Deploy Test Application**
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/1.yaml
 ```
 
 **Step 2: Check Created Resources**
@@ -973,7 +973,7 @@ spec:
 Let's deploy an application that requests 3 CPUs:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/2.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/2.yaml
 ```
 
 **Step 3: Check Created NodeClaim**
@@ -1203,7 +1203,7 @@ spec:
 **Step 3: Deploy Application**
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-122/tasks/eks/labs/02/worker/files/tasks/2.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/02/worker/files/tasks/2.yaml
 ```
 
 **Step 4: Check Node Version**
