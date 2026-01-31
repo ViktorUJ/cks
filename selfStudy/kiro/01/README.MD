@@ -62,10 +62,13 @@ Kiro supports the following authentication providers:
 # kiro settings
 
 
-|                       **parametr**                       | **value**    | **description**                                                                                                                                                                                             |
-|:--------------------------------------------------------:|:-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Agent Autonomy](https://kiro.dev/docs/chat/autopilot/)  | Autopilot , Supervised | Autonomy determines whether the agent will ask for accept/reject at each checkpoint in the workflow.                                                                                                        |
-| [Trusted Commands](https://kiro.dev/docs/chat/terminal/) |  | Shell commands to auto-accept if requested by the Agent.                                                                                                                                                    |
-|                     Command Denylist                     | | String patterns to deny auto-approval and require user review, even if they match trusted commands. Commands containing any of these patterns will always require manual approval.                          |
+|                       **parametr**                       | **value**    | **description**                                                                                                                                                                                            |
+|:--------------------------------------------------------:|:-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|                         . kiro/                          ||                                                                                                                                                                                                            |
+| [Agent Autonomy](https://kiro.dev/docs/chat/autopilot/)  | Autopilot , Supervised | Autonomy determines whether the agent will ask for accept/reject at each checkpoint in the workflow.                                                                                                       |
+| [Trusted Commands](https://kiro.dev/docs/chat/terminal/) |  | Shell commands to auto-accept if requested by the Agent.                                                                                                                                                   |
+|                     Command Denylist                     | | String patterns to deny auto-approval and require user review, even if they match trusted commands. Commands containing any of these patterns will always require manual approval.                         |
 |                    Agent Ignore Files                    |  | Ignore pattern files that Kiro Agent should respect when reading workspace files. These files contain patterns for files and directories that should be excluded from agent read operations. Ex: .gitignore |
+|                         . Application/Telemetry and Content                          || **disable all**                                                                                                                                                                                            |
+
 
