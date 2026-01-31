@@ -72,3 +72,16 @@ Kiro supports the following authentication providers:
 |                         . Application/Telemetry and Content                          || **disable all**                                                                                                                                                                                            |
 
 
+# kiro panels
+
+## [Mcp Server](https://kiro.dev/docs/mcp/)
+
+Model Context Protocol (MCP) extends Kiro's capabilities by connecting to specialized servers that provide additional tools and context. This guide helps you set up, configure, and use MCP servers with Kiro.
+
+
+## [Agent steering](https://kiro.dev/docs/steering/)
+
+Steering gives Kiro persistent knowledge about your workspace through markdown files. Instead of explaining your conventions in every chat, steering files ensure Kiro consistently follows your established patterns, libraries, and standards.
+
+#### workspace steering  `.kiro/steering/`
+#### global steering  `~/.kiro/steering/`
