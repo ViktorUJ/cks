@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
       - name: echo-version
-        image: bizy92/echo-version-app:v1
+        image: viktoruj/cks-lab:ica_echo_version_app_v1
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
