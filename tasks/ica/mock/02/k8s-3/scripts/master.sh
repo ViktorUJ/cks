@@ -84,7 +84,7 @@ EOF
 podman run -d --name nginx-test -p 8082:80 --restart unless-stopped nginx:alpine
 
 for task in {2..17}; do
-  kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-121/tasks/ica/mock/02/k8s-3/scripts/task${task}.yml
+  kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/mock/02/k8s-3/scripts/task${task}.yml
 done
 
 echo "*** master node  mock-1  k8s-3 ready" > /tmp/master_ready

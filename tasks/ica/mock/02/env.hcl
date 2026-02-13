@@ -1,6 +1,6 @@
 locals {
-  questions_list = "https://github.com/ViktorUJ/cks/blob/AG-121/tasks/cks/mock/02/README.MD"
-  solutions_scripts="https://github.com/ViktorUJ/cks/tree/AG-121/master/tasks/cks/mock/02/worker/files/solutions"
+  questions_list = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/mock/02/README.MD"
+  solutions_scripts="https://github.com/ViktorUJ/cks/tree/master/master/tasks/cks/mock/02/worker/files/solutions"
   solutions_video="N/A"
   debug_output   = "true"
   region         = "eu-north-1"
