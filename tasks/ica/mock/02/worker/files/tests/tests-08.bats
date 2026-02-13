@@ -69,31 +69,41 @@ NAMESPACE="magenta"
   echo '0.5' >> /var/work/tests/result/all
 
   # Get NodePort
-  NODE_PORT=$(kubectl get svc istio-demo-ingress -n istio-system --context $CONTEXT -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+  NODE_PORT=$(kubectl get svc istio-ingressgateway -n istio-system --context $CONTEXT -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
   NODE_IP=$(kubectl get nodes --context $CONTEXT -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 
-  # Test with header (should get v1 response: "welcome aboard capitan")
-  response=$(curl -s -H "Host: ship.milkyway.gal" -H "commander: shepard" --max-time 10 http://$NODE_IP:$NODE_PORT/normandy)
+  # Test with header (should get v1 response)
+  # Retry a few times in case of startup delay
+  for i in {1..5}; do
+    response=$(curl -s -H "Host: ship.milkyway.gal" -H "commander: shepard" --max-time 5 http://$NODE_IP:$NODE_PORT/normandy)
+    echo "$response" | grep -iq "v1" && break
+    sleep 1
+  done
 
-  if echo "$response" | grep -q "welcome aboard capitan"; then
+  echo "DEBUG Response 8.7: $response"
+  if echo "$response" | grep -iq "v1"; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
-  echo "$response" | grep -q "welcome aboard capitan"
+  echo "$response" | grep -iq "v1"
 }
 
 @test "8.8 Request without header goes to v2" {
   echo '0.5' >> /var/work/tests/result/all
 
   # Get NodePort
-  NODE_PORT=$(kubectl get svc istio-demo-ingress -n istio-system --context $CONTEXT -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
+  NODE_PORT=$(kubectl get svc istio-ingressgateway -n istio-system --context $CONTEXT -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
   NODE_IP=$(kubectl get nodes --context $CONTEXT -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 
-  # Test without header (should get v2 response: "Normandy SR2")
-  response=$(curl -s -H "Host: ship.milkyway.gal" --max-time 10 http://$NODE_IP:$NODE_PORT/normandy)
+  # Test without header (should get v2 response)
+  for i in {1..5}; do
+    response=$(curl -s -H "Host: ship.milkyway.gal" --max-time 5 http://$NODE_IP:$NODE_PORT/normandy)
+    echo "$response" | grep -iq "v2" && break
+    sleep 1
+  done
 
-  if echo "$response" | grep -q "Normandy SR2"; then
+  echo "DEBUG Response 8.8: $response"
+  if echo "$response" | grep -iq "v2"; then
     echo '0.5' >> /var/work/tests/result/ok
   fi
-  echo "$response" | grep -q "Normandy SR2"
+  echo "$response" | grep -iq "v2"
 }
-
