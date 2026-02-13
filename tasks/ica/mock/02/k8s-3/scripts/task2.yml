@@ -26,7 +26,7 @@ metadata:
 spec:
   containers:
   - name: echo
-    image: bizy92/echo-version-app:v1
+    image: viktoruj/cks-lab:ica_echo_version_app_v1
     ports:
     - containerPort: 8080
     env:
@@ -74,7 +74,7 @@ metadata:
 spec:
   containers:
   - name: echo
-    image: bizy92/echo-version-app:v1
+    image: viktoruj/cks-lab:ica_echo_version_app_v1
     ports:
     - containerPort: 8080
     env:
