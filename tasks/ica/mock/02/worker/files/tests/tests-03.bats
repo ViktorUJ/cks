@@ -7,15 +7,8 @@ CONTEXT="cluster3-admin@cluster3"
 NAMESPACE="violet"
 POLICY_NAME="deny-all"
 
-@test "0 Init" {
-  echo '' > /var/work/tests/result/all
-  echo '' > /var/work/tests/result/ok
-  [ "$?" -eq 0 ]
-}
 
-# Task 07: Create deny-all AuthorizationPolicy (2 points)
-
-@test "7.1 AuthorizationPolicy exists in violet namespace" {
+@test "3.1 AuthorizationPolicy exists in violet namespace" {
   echo '0.5' >> /var/work/tests/result/all
   kubectl get authorizationpolicy $POLICY_NAME -n $NAMESPACE --context $CONTEXT
   result=$?
@@ -25,7 +18,7 @@ POLICY_NAME="deny-all"
   [ "$result" == "0" ]
 }
 
-@test "7.2 AuthorizationPolicy name is 'deny-all'" {
+@test "3.2 AuthorizationPolicy name is 'deny-all'" {
   echo '0.5' >> /var/work/tests/result/all
   name=$(kubectl get authorizationpolicy $POLICY_NAME -n $NAMESPACE --context $CONTEXT -o jsonpath='{.metadata.name}')
   if [[ "$name" == "deny-all" ]]; then
@@ -34,24 +27,23 @@ POLICY_NAME="deny-all"
   [ "$name" == "deny-all" ]
 }
 
-@test "7.3 AuthorizationPolicy is in violet namespace" {
-  echo '0.25' >> /var/work/tests/result/all
+@test "3.3 AuthorizationPolicy is in violet namespace" {
+  echo '0.5' >> /var/work/tests/result/all
   ns=$(kubectl get authorizationpolicy $POLICY_NAME -n $NAMESPACE --context $CONTEXT -o jsonpath='{.metadata.namespace}')
   if [[ "$ns" == "violet" ]]; then
-    echo '0.25' >> /var/work/tests/result/ok
+    echo '0.5' >> /var/work/tests/result/ok
   fi
   [ "$ns" == "violet" ]
 }
 
-@test "7.4 All traffic to violet services is denied (RBAC denied)" {
-  echo '0.75' >> /var/work/tests/result/all
+@test "3.4 All traffic to violet services is denied (RBAC denied)" {
+  echo '0.5' >> /var/work/tests/result/all
   # Try to access violet-echo from black namespace - should be denied with RBAC message
   run kubectl exec -n black sleep-black --context $CONTEXT -- curl -s --max-time 5 http://violet-echo.violet.svc.cluster.local:8080
   # Should get RBAC: access denied message (check output contains this string)
   if [[ "$output" == *"RBAC: access denied"* ]]; then
-    echo '0.75' >> /var/work/tests/result/ok
+    echo '0.5' >> /var/work/tests/result/ok
   fi
   [[ "$output" == *"RBAC: access denied"* ]]
 }
 
-# Total: 2 points for Task 07

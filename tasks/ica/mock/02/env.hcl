@@ -38,15 +38,15 @@ locals {
     "cost_allocation" = "dev"
     "owner"           = "viktoruj@gmail.com"
   }
-  k8_version           = "1.33.0"
+  k8_version           = "1.34.0"
   node_type            = "spot"  # ondemand | spot
   runtime              = "containerd" # docker  , cri-o  , containerd ( need test it )
   cni = {
       type = "calico" #calico , cilium
       disable_kube_proxy="false"
     }
-  instance_type        = "t4g.medium" # m5.large | t4g.medium
-  instance_type_worker = "t4g.medium" # m5.large | t4g.medium
+  instance_type        = "m6g.medium" # m5.large | t4g.medium
+  instance_type_worker = "m6g.medium" # m5.large | t4g.medium
   spot_additional_types= [ "c8g.xlarge" , "m6g.medium" , "m6gd.2xlarge" , "m7g.large" , "m7g.xlarge" , "m7gd.large" , "m7gd.xlarge" , "m8g.xlarge" , "r6g.2xlarge" , "r6gd.2xlarge" , "r6gd.xlarge" , "r7g.large" , "r7gd.xlarge" , "t4g.large" , "c6gd.xlarge" , "c7g.large" , "c7g.xlarge" , "c7gd.2xlarge" , "c8g.large" , "m6g.large" , "m6g.xlarge" , "m6gd.large" , "m6gd.medium" , "m6gd.xlarge" , "m7g.2xlarge" , "m7g.medium" , "m7gd.2xlarge" , "m8g.2xlarge" , "m8g.large" , "m8g.medium" , "r6g.xlarge" , "r6gd.large" , "r6gd.medium" , "r7g.medium" , "r7g.xlarge" , "r7gd.2xlarge" , "r7gd.large" , "r7gd.medium" , "r8g.2xlarge" , "r8g.large" , "r8g.xlarge" , "t4g.2xlarge" , "t4g.xlarge" ]
 
   all_spot_subnet      = "true"
