@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.28.1 (17.02.2026)
+### Features
+* [ica mock exam 02](../tasks/ica/mock/02) is added.
+* [ica mock exam 02 solutions](../tasks/ica/mock/02/worker/files/solutions) is added.
+
 ## 0.27.1 (19.01.2026)
 ### Features
 * [eks modules](../terraform/modules) are updated. This enables the creation of diverse tasks and the emulation of a production environment.
