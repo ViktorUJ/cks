@@ -45,16 +45,10 @@ Simply put: Kiro is an app with windows and buttons, Kiro CLI is terminal-based 
 
 Kiro supports the following authentication providers:
 
-**GitHub**: Seamless integration with your GitHub account
-
-
-**Google**: Sign in with your Google credentials
-
-
-**AWS Builder ID**: Quick setup for individual developers
-
-
-**AWS IAM Identity Center**: Enterprise-grade authentication
+- **GitHub**: Seamless integration with your GitHub account
+- **Google**: Sign in with your Google credentials
+- **AWS Builder ID**: Quick setup for individual developers
+- **AWS IAM Identity Center**: Enterprise-grade authentication
 
 # [Pricing](https://kiro.dev/pricing/)
 
@@ -85,3 +79,32 @@ Steering gives Kiro persistent knowledge about your workspace through markdown f
 
 #### workspace steering  `.kiro/steering/`
 #### global steering  `~/.kiro/steering/`
+
+
+## [Agent hook](https://kiro.dev/docs/hooks/)
+
+Agent hooks are automated triggers that execute predefined agent prompts or shell commands when specific events occur in your IDE. Rather than manually asking for routine tasks to be performed, hooks set up automated responses to events such as:
+
+- Saving files
+- Creating new files
+- Deleting files
+- User prompt submission
+- Agent turn completion
+
+## [Specs](https://kiro.dev/docs/specs/)
+
+Specs or specifications are structured artifacts that formalize the development process for complex features in your application. They provide a systematic approach to transform high-level ideas into detailed implementation plans with clear tracking and accountability.
+
+With Kiro's specs, you can:
+
+- Break down requirements into user stories with acceptance criteria
+- Build design docs with sequence diagrams and architecture plans
+- Track implementation progress across discrete tasks
+- Collaborate effectively between product and engineering teams
+
+## [Powers](https://kiro.dev/docs/powers/)
+
+Instead of loading all MCP tools at once, powers activate dynamically based on keywords in your conversation.
+When a power is triggered, Kiro connects to the relevant MCP server and loads only the necessary tools and context for that specific task. This on-demand activation keeps the agent focused and efficient, avoiding context overload.
+
+
