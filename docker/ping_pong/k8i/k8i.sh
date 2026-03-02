@@ -6,7 +6,6 @@
 if ! (return 0 2>/dev/null); then
   echo "Error: This script must be sourced, not executed directly."
   echo "Usage: source $0"
-  echo "   or: . $0"
   exit 1
 fi
 
@@ -40,6 +39,38 @@ log_debug() {
   if [ -n "$K8I_DEBUG" ]; then
     # Print to stderr
     printf "%s\n" "$*" >&2
+  fi
+}
+
+# Function to compute human-readable age from ISO timestamp
+compute_age() {
+  local created="$1"
+  if [ -z "$created" ] || [ "$created" = "null" ]; then
+    echo "x"
+    return
+  fi
+  local now_epoch created_epoch diff_seconds
+  now_epoch=$(date +%s 2>/dev/null)
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    created_epoch=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$created" +%s 2>/dev/null || date -jf "%Y-%m-%dT%T%z" "$created" +%s 2>/dev/null)
+  else
+    created_epoch=$(date -d "$created" +%s 2>/dev/null)
+  fi
+  if [ -z "$created_epoch" ] || [ -z "$now_epoch" ]; then
+    echo "x"
+    return
+  fi
+  diff_seconds=$((now_epoch - created_epoch))
+  if [ "$diff_seconds" -lt 0 ]; then diff_seconds=0; fi
+  local days=$((diff_seconds / 86400))
+  local hours=$(( (diff_seconds % 86400) / 3600 ))
+  local minutes=$(( (diff_seconds % 3600) / 60 ))
+  if [ "$days" -gt 0 ]; then
+    echo "${days}d${hours}h"
+  elif [ "$hours" -gt 0 ]; then
+    echo "${hours}h${minutes}m"
+  else
+    echo "${minutes}m"
   fi
 }
 
@@ -279,6 +310,14 @@ cache_node_data() {
 
   show_progress 3 4 "Collecting cluster data..."
 
+  # Fetch Karpenter nodeclaims (non-fatal if CRD doesn't exist)
+  local all_nodeclaims
+  all_nodeclaims=$(kc get nodeclaims.karpenter.sh -o json 2>/dev/null | \
+    jq -r '[.items[] | {name: .metadata.name, nodeName: (.status.nodeName // "")}]' 2>/dev/null)
+  if [ -z "$all_nodeclaims" ] || [ "$all_nodeclaims" = "null" ]; then
+    all_nodeclaims="[]"
+  fi
+
   # Start JSON structure
   echo "{" > "$CACHE_FILE"
   echo "  \"timestamp\": \"$(get_iso_timestamp)\"," >> "$CACHE_FILE"
@@ -331,6 +370,31 @@ cache_node_data() {
         if [ -z "$ec2_id" ]; then
           ec2_id=$(printf "%s" "$clean_provider_id" | awk -F'/' '{print $NF}' | grep '^i-')
         fi
+      fi
+    } 2>/dev/null
+
+    # Extract nodeclaim and node age
+    {
+      # Look up nodeclaim name by matching node name in cached nodeclaims data
+      nodeclaim=$(echo "$all_nodeclaims" | jq -r --arg n "$node" '
+        map(select(.nodeName == $n)) | if length > 0 then .[0].name else "x" end
+      ' 2>/dev/null)
+      if [ -z "$nodeclaim" ] || [ "$nodeclaim" = "null" ]; then nodeclaim="x"; fi
+      # Trim nodeclaim to 20 chars
+      nodeclaim="${nodeclaim:0:20}"
+
+      creation_ts=$(echo "$all_nodes_capacity" | jq -r ".items[] | select(.metadata.name==\"$node\") | .metadata.creationTimestamp // \"\"" 2>/dev/null)
+      node_age=$(compute_age "$creation_ts")
+
+      # Store epoch for numeric sorting by age
+      if [ -n "$creation_ts" ] && [ "$creation_ts" != "null" ]; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+          creation_epoch=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$creation_ts" +%s 2>/dev/null || echo "0")
+        else
+          creation_epoch=$(date -d "$creation_ts" +%s 2>/dev/null || echo "0")
+        fi
+      else
+        creation_epoch="0"
       fi
     } 2>/dev/null
 
@@ -410,7 +474,7 @@ cache_node_data() {
     fi
 
     # Build node_info only from the ec2_id determined above
-    node_info="${ec2_id}/${instance_type}/${capacity_type}/${arch}/${short_zone}/${node_pool}"
+    node_info="${ec2_id}/${instance_type}/${capacity_type}/${arch}/${short_zone}/${node_pool}/${nodeclaim}/${node_age}"
 
     # Get pods count from cache
     current_pods=$(read_cached_pods_count "$node")
@@ -555,6 +619,7 @@ cache_node_data() {
       "memory_usage_gb": "$memory_usage_gb",
       "cpu_load_percent": "$cpu_load_percent",
       "memory_load_percent": "$memory_load_percent",
+      "creation_epoch": "$creation_epoch",
       "node_info": "$node_info"
     }
 EOF
@@ -626,13 +691,15 @@ Options:
   --context CONTEXT    Kubernetes context to use (if omitted current context will be used)
   --labels SELECTOR    Filter nodes by label selector (e.g. 'worker-type=spot')
   --filter FILTER      Filter output by node attributes (e.g. 'ec2_type=spot', 'ec2_type=od')
-  --sort COLUMN=DIR    Sort by column (asc/desc). Columns: name, pods, cpu_req, cpu_lim, cpu_use, cpu_cap, cpu_load, mem_req, mem_lim, mem_use, mem_cap, mem_load, ec2_type, instance_type, arch, zone, pool
+  --sort COLUMN=DIR    Sort by column (asc/desc). Columns: name, pods, cpu_req, cpu_lim, cpu_use, cpu_cap, cpu_load, mem_req, mem_lim, mem_use, mem_cap, mem_load, ec2_type, instance_type, arch, zone, pool, age
+  --fargate            Show Fargate nodes (hidden by default)
   --color true|false   Force enable/disable ANSI colors for this run (overrides shell defaults)
   --debug true|false   Enable or disable debug output for this run
   --help              Show this help message
 
 Examples:
-  k8i                              # Show all nodes
+  k8i                              # Show all nodes (fargate hidden)
+  k8i --fargate                    # Show all nodes including fargate
   k8i --context my-cluster         # Use kube context 'my-cluster'
   k8i --labels 'worker-type=spot'  # Show only spot nodes
   k8i --filter 'ec2_type=spot'     # Show only spot instances in output
@@ -643,6 +710,8 @@ Examples:
   k8i --sort 'ec2_type=asc'        # Sort by EC2 capacity type (od, spot)
   k8i --sort 'instance_type=desc'  # Sort by instance type
   k8i --sort 'zone=asc'            # Sort by availability zone
+  k8i --sort 'age=asc'             # Sort by node age (youngest first)
+  k8i --sort 'age=desc'            # Sort by node age (oldest first)
 
 Combined example:
   k8i --sort 'mem_load=asc' --filter 'ec2_type=spot' --labels 'work_type=default'
@@ -672,10 +741,11 @@ Filter format:
   - arch: amd64, arm64
   - zone: 1a, 1b, etc. (last 2 characters)
   - pool: nodepool name
+  - nodeclaim: Karpenter nodeclaim name
 
 Sort format:
   --sort 'column=direction' where:
-  - column: name, pods, cpu_req, cpu_lim, cpu_use, cpu_cap, cpu_load, mem_req, mem_lim, mem_use, mem_cap, mem_load, ec2_type, instance_type, arch, zone, pool
+  - column: name, pods, cpu_req, cpu_lim, cpu_use, cpu_cap, cpu_load, mem_req, mem_lim, mem_use, mem_cap, mem_load, ec2_type, instance_type, arch, zone, pool, age
   - direction: asc (ascending) or desc (descending)
 
 EOF
@@ -770,13 +840,14 @@ apply_filter() {
   local filter_attr="${filter%=*}"
   local filter_value="${filter#*=}"
 
-  # Parse node_info: ec2_id/instance_type/capacity_type/arch/zone/pool
+  # Parse node_info: ec2_id/instance_type/capacity_type/arch/zone/pool/nodeclaim/age
   ec2_id=$(printf '%s' "$node_info" | cut -d'/' -f1)
   instance_type=$(printf '%s' "$node_info" | cut -d'/' -f2)
   capacity_type=$(printf '%s' "$node_info" | cut -d'/' -f3)
   arch=$(printf '%s' "$node_info" | cut -d'/' -f4)
   zone=$(printf '%s' "$node_info" | cut -d'/' -f5)
   pool=$(printf '%s' "$node_info" | cut -d'/' -f6)
+  nodeclaim=$(printf '%s' "$node_info" | cut -d'/' -f7)
 
   case "$filter_attr" in
     "ec2_type")
@@ -816,9 +887,16 @@ apply_filter() {
         return 1
       fi
       ;;
+    "nodeclaim")
+      if [ "$nodeclaim" = "$filter_value" ]; then
+        return 0
+      else
+        return 1
+      fi
+      ;;
     *)
       echo "Error: Unknown filter attribute '$filter_attr'" >&2
-      echo "Supported attributes: ec2_type, instance_type, arch, zone, pool" >&2
+      echo "Supported attributes: ec2_type, instance_type, arch, zone, pool, nodeclaim" >&2
       return 1
       ;;
   esac
@@ -876,11 +954,11 @@ sort_nodes() {
 
   # Validate sort column
   case "$sort_column" in
-    name|pods|cpu_req|cpu_lim|cpu_use|cpu_cap|cpu_load|mem_req|mem_lim|mem_use|mem_cap|mem_load|ec2_type|instance_type|arch|zone|pool)
+    name|pods|cpu_req|cpu_lim|cpu_use|cpu_cap|cpu_load|mem_req|mem_lim|mem_use|mem_cap|mem_load|ec2_type|instance_type|arch|zone|pool|age)
       ;;
     *)
       echo "Error: Unknown sort column '$sort_column'" >&2
-      echo "Supported columns: name, pods, cpu_req, cpu_lim, cpu_use, cpu_cap, cpu_load, mem_req, mem_lim, mem_use, mem_cap, mem_load, ec2_type, instance_type, arch, zone, pool" >&2
+      echo "Supported columns: name, pods, cpu_req, cpu_lim, cpu_use, cpu_cap, cpu_load, mem_req, mem_lim, mem_use, mem_cap, mem_load, ec2_type, instance_type, arch, zone, pool, age" >&2
       return 1
       ;;
   esac
@@ -899,6 +977,7 @@ sort_nodes() {
     mem_use) numeric_field="memory_usage_gb";;
     mem_cap) numeric_field="memory_capacity_gb";;
     mem_load) numeric_field="memory_load_percent";;
+    age) numeric_field="creation_epoch";;
   esac
 
   if [ -n "$numeric_field" ] && command -v jq >/dev/null 2>&1; then
@@ -947,7 +1026,7 @@ sort_nodes() {
     node_info=$(read_cached_data "$node" "node_info")
 
     # Parse node_info for text fields
-    IFS='/' read -r ec2_id instance_type capacity_type arch zone pool <<< "$node_info"
+    IFS='/' read -r ec2_id instance_type capacity_type arch zone pool nodeclaim node_age <<< "$node_info"
 
     # Format: node_name|sort_value
     case "$sort_column" in
@@ -968,6 +1047,7 @@ sort_nodes() {
       arch)            echo "$node|$arch" >> "$temp_file";;
       zone)            echo "$node|$zone" >> "$temp_file";;
       pool)            echo "$node|$pool" >> "$temp_file";;
+      age)             echo "$node|$(read_cached_data "$node" "creation_epoch")" >> "$temp_file";;
     esac
   done < <(printf '%s\n' "$nodes")
 
@@ -995,7 +1075,7 @@ _k8i_completion() {
   local cur opts
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
-  opts="--context --labels --filter --sort --color --debug --help -h"
+  opts="--context --labels --filter --sort --fargate --color --debug --help -h"
 
   if [[ ${cur} == -* ]]; then
     # Use mapfile to avoid word-splitting and shell warnings
@@ -1017,6 +1097,7 @@ k8i() {
   local sort_spec="pool=asc"  # Default sort by pool ascending
   local color_arg=""
   local debug_arg=""
+  local show_fargate=false
 
   # Temporarily disable xtrace/verbose to prevent leaking variable assignments
   local __had_xtrace=0 __had_verbose=0
@@ -1122,6 +1203,10 @@ k8i() {
           return 1
         fi
         ;;
+      --fargate)
+        show_fargate=true
+        shift
+        ;;
       --help|-h)
         k8i_help
         return 0
@@ -1187,6 +1272,10 @@ k8i() {
   local filtered_nodes=""
   while IFS= read -r node; do
     [ -z "$node" ] && continue
+    # Hide fargate nodes by default unless --fargate flag is set
+    if [ "$show_fargate" = false ] && [[ "$node" == fargate-* ]]; then
+      continue
+    fi
     if [ -n "$filter" ]; then
       node_info=$(read_cached_data "$node" "node_info")
       if ! apply_filter "$filter" "$node_info"; then
@@ -1225,8 +1314,8 @@ k8i() {
 
   # Print properly formatted two-line header with adjusted CPU LOAD spacing
   echo -e "\t\t\tNODE\t\t\tPODS     CPU cores\t   CPU        MEMORY GB\t     MEM  \t\tNode info"
-  echo -e "\t\t\t\t\t     used/max  req/lim/use/total   LOAD\t  req/lim/use/total  LOAD  \tec2/type/spot/arch/zone/pool"
-  echo "============================================================================================================================================="
+  echo -e "\t\t\t\t\t     used/max  req/lim/use/total   LOAD\t  req/lim/use/total  LOAD  \tec2/type/spot/arch/zone/pool/nodeclaim/age"
+  echo "========================================================================================================================================================"
 
   local displayed_nodes=0
   # Iterate robustly over newline-separated nodes (works in zsh and bash)
@@ -1265,7 +1354,7 @@ k8i() {
     memory_load_percent=$(nz0 "$memory_load_percent")
     # Ensure node_info is a meaningful string (not numeric 0)
     if [ -z "$node_info" ] || [ "$node_info" = "0" ]; then
-      node_info="unknown/unknown/x/unknown/xx/x"
+      node_info="unknown/unknown/x/unknown/xx/x/x/x"
     fi
 
     # Apply colorization to load percentages
