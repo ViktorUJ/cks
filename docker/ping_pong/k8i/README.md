@@ -27,9 +27,9 @@ The following utilities must be installed:
 
 1. Download the script:
 ```bash
-curl -O https://path/to/k8i.sh
+curl -O https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/docker/ping_pong/k8i/k8i.sh
 # or
-wget https://path/to/k8i.sh
+wget https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/docker/ping_pong/k8i/k8i.sh
 ```
 
 2. Source the script in your current session:
