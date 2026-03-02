@@ -7,7 +7,7 @@
 
 ### 1.1. Кто я и чем занимается наша команда
 
-Меня зовут Виктар Мікалаеў (Viktar Mikalayeu), я Tech Lead SRE-отдела в компании Madlan. Помимо основной работы, я являюсь участником программы [AWS Community Builders](https://aws.amazon.com/developer/community/community-builders/) и автором open-source проекта [SRE Learning Platform](https://github.com/ViktorUJ/cks) - образовательной платформы для подготовки к сертификациям CKA, CKS, CKAD и практической работе с AWS EKS.
+Меня зовут Виктор Николаев (Viktar Mikalayeu), я Tech Lead SRE-отдела в компании Madlan. Помимо основной работы, я являюсь участником программы [AWS Community Builders](https://aws.amazon.com/developer/community/community-builders/) и автором open-source проекта [SRE Learning Platform](https://github.com/ViktorUJ/cks) - образовательной платформы для подготовки к сертификациям CKA, CKS, CKAD и практической работе с AWS EKS.
 
 Наша команда отвечает за инфраструктуру Kubernetes в продакшене - сопровождает несколько десятков кластеров в AWS, от небольших dev-окружений до крупных production-кластеров с сотнями нод. В зону ответственности входит всё, что связано с жизненным циклом кластеров: provisioning, масштабирование, cost-оптимизация, обновления и обеспечение стабильности для продуктовых команд.
 
