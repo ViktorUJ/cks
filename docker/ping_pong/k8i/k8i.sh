@@ -9,6 +9,8 @@ if ! (return 0 2>/dev/null); then
   exit 1
 fi
 
+alias k8w="watch \"kubectl get po -A | grep -v Running | grep -v 'Completed' \""
+
 # Colors are produced inline by colorize_load(); no global constants needed
 
 # Cache file location
