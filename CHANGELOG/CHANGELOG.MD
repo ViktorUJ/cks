@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.29.1 (17.02.2026)
+## 0.29.1 (xx.03.2026)
 ### Features
 * K8s version **1.35** is added  to [k8s_self_managment_v2](../terraform/modules/k8s_self_managment_v2) module.  
+* Article [Vibe Coding → Spec-Driven: How AI Development Found an Engineering Approach](../docs/articles/spec_driven_development/README.md) is added.
+* Article [From Spot.io to Karpenter: Node Management Migration Experience in Kubernetes](../docs/articles/from_spot_io_to_karpenter/readme.MD) is added.
 
 ## 0.28.1 (17.02.2026)
 ### Features
