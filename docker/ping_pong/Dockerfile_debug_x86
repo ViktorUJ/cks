@@ -39,6 +39,6 @@ COPY ./redis/redis_scan.sh /usr/local/bin/redis_scan
 RUN chmod +x /usr/local/bin/redis_scan
 
 COPY ./k8i/k8i.sh /usr/local/bin/k8i.sh
-RUN echo 'source /usr/local/bin/k8i.sh' >> /etc/profile.d/k8i.sh
+RUN echo 'source /usr/local/bin/k8i.sh' >> /root/.bashrc
 
 ENTRYPOINT ["/app"]
