@@ -1,16 +1,18 @@
-# От Spot.io к Karpenter: опыт миграции управления нодами в Kubernetes
+[RU version](readme_RU.MD)
 
-## 1. Вступление
+# From Spot.io to Karpenter: Node Management Migration Experience in Kubernetes
 
-### 1.1. Кто я и чем занимается наша команда
+## 1. Introduction
 
-Меня зовут Виктар Мікалаеў (Viktar Mikalayeu), я Tech Lead SRE-отдела в компании Madlan. Помимо основной работы, я являюсь участником программы [AWS Community Builders](https://aws.amazon.com/developer/community/community-builders/) и автором open-source проекта [SRE Learning Platform](https://github.com/ViktorUJ/cks) - образовательной платформы для подготовки к сертификациям CKA, CKS, CKAD и практической работе с AWS EKS.
+### 1.1. About Me and Our Team
 
-Наша команда отвечает за инфраструктуру Kubernetes в продакшене - сопровождает несколько десятков кластеров в AWS, от небольших dev-окружений до крупных production-кластеров с сотнями нод. В зону ответственности входит всё, что связано с жизненным циклом кластеров: provisioning, масштабирование, cost-оптимизация, обновления и обеспечение стабильности для продуктовых команд.
+My name is Viktar Mikalayeu, I'm a Tech Lead of the SRE department at Madlan. In addition to my main role, I'm a member of the [AWS Community Builders](https://aws.amazon.com/developer/community/community-builders/) program and the author of the open-source project [SRE Learning Platform](https://github.com/ViktorUJ/cks) - an educational platform for preparing for CKA, CKS, CKAD certifications and hands-on experience with AWS EKS.
 
-Мы работаем в модели Platform Engineering - предоставляем внутренним командам удобную и предсказуемую платформу для запуска workloads, скрывая за абстракциями сложность инфраструктуры. Одна из ключевых задач - управление нодами кластера: какие инстансы использовать, как балансировать между Spot и On-Demand, как реагировать на прерывания и при этом не переплачивать.
+Our team is responsible for Kubernetes infrastructure in production - maintaining dozens of clusters in AWS, from small dev environments to large production clusters with hundreds of nodes. Our scope covers everything related to cluster lifecycle: provisioning, scaling, cost optimization, upgrades, and ensuring stability for product teams.
 
-### 1.2. Контекст: инфраструктура, типы кластеров, задачи
+We operate in a Platform Engineering model - providing internal teams with a convenient and predictable platform for running workloads, abstracting away infrastructure complexity. One of the key tasks is cluster node management: which instances to use, how to balance between Spot and On-Demand, how to handle interruptions while keeping costs under control.
+
+### 1.2. Context: Infrastructure, Cluster Types, Tasks
 
 ```mermaid
 ---
@@ -26,16 +28,16 @@ graph TD
     EKS --> DEV["🔵 Dev / Staging"]
     EKS --> AIRFLOW["🔴 Airflow"]
 
-    PROD --> P1["Сервисы, API"]
-    PROD --> P2["Воркеры очередей"]
+    PROD --> P1["Services, API"]
+    PROD --> P2["Queue Workers"]
     PROD --> P3["Cron Jobs"]
 
-    DEV --> D1["Разработка"]
-    DEV --> D2["Тестирование"]
+    DEV --> D1["Development"]
+    DEV --> D2["Testing"]
 
-    AIRFLOW --> A1["Batch-задачи"]
+    AIRFLOW --> A1["Batch Jobs"]
     AIRFLOW --> A2["Data Processing"]
-    AIRFLOW --> A3["ML-пайплайны"]
+    AIRFLOW --> A3["ML Pipelines"]
 
     style EKS fill:#232f3e,stroke:#ff9900,color:#fff,font-size:20px
     style PROD fill:#2d6a4f,stroke:#1b4332,color:#fff,font-size:18px
@@ -43,39 +45,39 @@ graph TD
     style AIRFLOW fill:#6a040f,stroke:#370617,color:#fff,font-size:18px
 ```
 
-Наша инфраструктура построена на Amazon EKS. Кластеры различаются по назначению и профилю нагрузки:
+Our infrastructure is built on Amazon EKS. Clusters differ by purpose and workload profile:
 
-- **Production-кластеры** - основная нагрузка, требования к стабильности и SLA. Здесь работают stateless-сервисы, API-шлюзы, воркеры очередей, а также cron jobs для регулярных фоновых задач.
-- **Dev/Staging-кластеры** - окружения для разработки и тестирования. Нагрузка непредсказуемая, но допустимы кратковременные перебои.
-- **Airflow-кластеры** - кластеры для аналитиков, объединяющие batch-задачи, data processing и ML-пайплайны. Характерны резкие всплески потребления ресурсов с последующим простоем, а также специфические требования к типам инстансов (включая GPU-ноды для обучения моделей и inference).
+- **Production clusters** - primary workload, stability and SLA requirements. Running stateless services, API gateways, queue workers, and cron jobs for regular background tasks.
+- **Dev/Staging clusters** - development and testing environments. Unpredictable load, but short-term disruptions are acceptable.
+- **Airflow clusters** - clusters for analysts, combining batch jobs, data processing, and ML pipelines. Characterized by sharp resource consumption spikes followed by idle periods, as well as specific instance type requirements (including GPU nodes for model training and inference).
 
-Каждый тип кластера предъявляет свои требования к стратегии масштабирования. Где-то критична скорость поднятия новых нод, где-то - минимизация стоимости, а где-то - гарантия доступности определённых типов инстансов.
+Each cluster type has its own scaling strategy requirements. Some need fast node provisioning, others prioritize cost minimization, and some require guaranteed availability of specific instance types.
 
-До миграции все кластеры управлялись через Spot.io (Ocean) - SaaS-решение для автоматического управления нодами в Kubernetes с фокусом на Spot-инстансы. Со временем мы столкнулись с рядом ограничений, которые привели нас к решению перейти на Karpenter - open-source node provisioner от AWS.
+Before migration, all clusters were managed through Spot.io (Ocean) - a SaaS solution for automatic Kubernetes node management focused on Spot instances. Over time, we encountered a number of limitations that led us to switch to Karpenter - an open-source node provisioner from AWS.
 
-Эта статья - подробный разбор нашего пути: от причин миграции до результатов, проблем и практических рекомендаций.
+This article is a detailed breakdown of our journey: from migration reasons to results, problems, and practical recommendations.
 
-## 2. История и контекст
+## 2. History and Context
 
-### 2.1. Как использовался Spot.io
+### 2.1. How Spot.io Was Used
 
-Когда мы начинали активно работать со Spot-инстансами, выбор инструментов был невелик. Единственной реальной альтернативой Spot.io был Cluster Autoscaler, который работал через AWS Auto Scaling Groups (ASG). На практике это означало:
+When we started actively working with Spot instances, the choice of tools was limited. The only real alternative to Spot.io was Cluster Autoscaler, which worked through AWS Auto Scaling Groups (ASG). In practice, this meant:
 
-- Медленное масштабирование - ASG добавляет ноды через цепочку «запрос → ASG → Launch Template → EC2», что занимало минуты вместо секунд.
-- Жёсткая привязка к типам инстансов - каждая ASG настраивалась на фиксированный набор instance types. Если нужного типа не было в наличии, масштабирование просто не происходило.
-- Сложность управления - для разных workloads приходилось создавать отдельные ASG с разными конфигурациями, что быстро превращалось в зоопарк.
+- Slow scaling - ASG adds nodes through the chain "request → ASG → Launch Template → EC2", which took minutes instead of seconds.
+- Rigid binding to instance types - each ASG was configured for a fixed set of instance types. If the needed type wasn't available, scaling simply didn't happen.
+- Management complexity - different workloads required separate ASGs with different configurations, which quickly turned into a zoo.
 
-Spot.io (Ocean) решал все эти проблемы «из коробки». Он брал на себя выбор оптимальных типов инстансов, автоматически переключался между Spot и On-Demand, быстро поднимал ноды и предоставлял удобный дашборд для мониторинга. Для нас на тот момент это был очевидный выбор.
+Spot.io (Ocean) solved all these problems out of the box. It handled optimal instance type selection, automatically switched between Spot and On-Demand, quickly provisioned nodes, and provided a convenient monitoring dashboard. For us at that time, it was an obvious choice.
 
-### 2.2. Роль Virtual Node Groups (VNG)
+### 2.2. The Role of Virtual Node Groups (VNG)
 
-Ключевой абстракцией в Spot.io Ocean являются Virtual Node Groups (VNG) - логические группы нод с определёнными параметрами:
+The key abstraction in Spot.io Ocean is Virtual Node Groups (VNG) - logical node groups with specific parameters:
 
-- Набор допустимых типов инстансов
-- Стратегия Spot/On-Demand (процентное соотношение)
-- Labels и taints для привязки workloads
-- Ограничения по availability zones
-- Настройки autoscaling (min/max количество нод)
+- Set of allowed instance types
+- Spot/On-Demand strategy (percentage ratio)
+- Labels and taints for workload binding
+- Availability zone restrictions
+- Autoscaling settings (min/max node count)
 
 ```mermaid
 ---
@@ -95,10 +97,10 @@ graph TD
     VNG1 --> L1["Labels, Taints"]
     VNG1 --> I1["Instance Types"]
 
-    VNG2 --> S2["Spot-приоритет"]
+    VNG2 --> S2["Spot priority"]
     VNG2 --> L2["Labels, Taints"]
 
-    VNG3 --> S3["Burst-конфигурация"]
+    VNG3 --> S3["Burst configuration"]
     VNG3 --> L3["GPU Instance Types"]
 
     style OCEAN fill:#0052cc,stroke:#003d99,color:#fff
@@ -107,41 +109,41 @@ graph TD
     style VNG3 fill:#6a040f,stroke:#370617,color:#fff
 ```
 
-VNG позволяли гибко разделять ноды по назначению. Для каждого типа кластера и workload-группы создавалась своя VNG с подходящими параметрами. Ocean автоматически выбирал оптимальные инстансы внутри каждой группы, учитывая текущие цены на Spot и доступность.
+VNGs allowed flexible node separation by purpose. Each cluster type and workload group had its own VNG with appropriate parameters. Ocean automatically selected optimal instances within each group, considering current Spot prices and availability.
 
-### 2.3. Основные преимущества Spot.io на старте
+### 2.3. Key Advantages of Spot.io at the Start
 
-На момент внедрения Spot.io давал нам ряд ощутимых преимуществ по сравнению с Cluster Autoscaler + ASG:
+At the time of adoption, Spot.io provided several tangible advantages over Cluster Autoscaler + ASG:
 
-- **Скорость масштабирования** - Ocean поднимал ноды значительно быстрее, чем ASG, за счёт прямого взаимодействия с EC2 API и предварительного прогрева.
-- **Автоматический выбор инстансов** - не нужно было вручную подбирать типы. Ocean сам определял оптимальный instance type на основе требований подов и текущих цен.
-- **Spot-менеджмент** - встроенная логика обработки прерываний: заблаговременная миграция подов перед eviction, автоматический fallback на On-Demand.
-- **Визуализация и аналитика** - удобный дашборд с информацией о стоимости, утилизации, экономии на Spot. Для менеджмента это было важно - можно было наглядно показать savings.
-- **Простота интеграции** - подключение к существующему EKS-кластеру занимало минимум времени. Terraform-модуль, пара IAM-ролей - и Ocean управляет нодами.
-- **Привлекательная ценовая модель** - Spot.io работал по модели «процент от экономии»: оплата рассчитывалась как доля от разницы между стоимостью On-Demand инстансов и фактической стоимостью использованных Spot-инстансов. Чем больше экономишь - тем больше платишь Spot.io, но при этом всегда остаёшься в плюсе. Модель была прозрачной и мотивировала обе стороны.
+- **Scaling speed** - Ocean provisioned nodes significantly faster than ASG, through direct EC2 API interaction and pre-warming.
+- **Automatic instance selection** - no need to manually pick types. Ocean determined the optimal instance type based on pod requirements and current prices.
+- **Spot management** - built-in interruption handling logic: proactive pod migration before eviction, automatic On-Demand fallback.
+- **Visualization and analytics** - convenient dashboard with cost, utilization, and Spot savings information. For management, this was important - savings could be clearly demonstrated.
+- **Easy integration** - connecting to an existing EKS cluster took minimal time. A Terraform module, a couple of IAM roles - and Ocean manages the nodes.
+- **Attractive pricing model** - Spot.io operated on a "percentage of savings" model: payment was calculated as a share of the difference between On-Demand instance cost and actual Spot instance cost. The more you save, the more you pay Spot.io, but you always come out ahead. The model was transparent and motivated both sides.
 
-Какое-то время всё работало хорошо. Spot.io закрывал наши потребности, экономия была заметной, а операционная нагрузка на команду - минимальной. Проблемы начали проявляться по мере роста инфраструктуры и усложнения требований.
+For a while, everything worked well. Spot.io covered our needs, savings were noticeable, and operational load on the team was minimal. Problems started appearing as infrastructure grew and requirements became more complex.
 
-## 3. Причины миграции
+## 3. Migration Reasons
 
-### 3.1. Ограниченные настройки групп и поведение job-нод
+### 3.1. Limited Group Settings and Job Node Behavior
 
-По мере роста инфраструктуры мы всё чаще упирались в ограничения VNG. Настройки групп были недостаточно гибкими для наших сценариев:
+As infrastructure grew, we increasingly hit VNG limitations. Group settings weren't flexible enough for our scenarios:
 
-- Невозможно было тонко управлять поведением нод для short-lived задач. Job-ноды, которые поднимались под batch-задачи или Airflow DAG, жили дольше, чем нужно - Ocean не всегда корректно определял момент, когда нода становилась пустой и её можно было удалить.
-- Настройки grace period и draining работали на уровне всего кластера или VNG, без возможности задать поведение для конкретного workload.
-- При масштабировании job-нод Ocean иногда выбирал слишком крупные инстансы «про запас», что приводило к низкой утилизации и перерасходу.
+- It was impossible to finely control node behavior for short-lived tasks. Job nodes provisioned for batch tasks or Airflow DAGs lived longer than needed - Ocean didn't always correctly determine when a node became empty and could be removed.
+- Grace period and draining settings worked at the cluster or VNG level, without the ability to set behavior for a specific workload.
+- When scaling job nodes, Ocean sometimes chose overly large instances "just in case", leading to low utilization and overspending.
 
-Ещё одна серьёзная проблема - невозможность запретить консолидацию нод для групп с cron jobs. Идея простая: ноды этой группы запускаются под задания, и пока задания выполняются - ноды нельзя перемещать и консолидировать, потому что задание прервётся и будет запущено заново с нуля.
+Another serious problem - the inability to prevent node consolidation for cron job groups. The idea is simple: nodes in this group are launched for tasks, and while tasks are running - nodes cannot be moved or consolidated, because the task will be interrupted and restarted from scratch.
 
-На практике мы не раз наблюдали такой сценарий:
+In practice, we repeatedly observed this scenario:
 
-1. Поднимается нода для задания
-2. Приходят новые задания - поднимаются ещё ноды
-3. Spot.io решает консолидировать ноды (объединить поды на меньшее количество нод)
-4. Задания прерываются
-5. Задания стартуют заново - поднимаются новые ноды
-6. Цикл повторяется
+1. A node is provisioned for a task
+2. New tasks arrive - more nodes are provisioned
+3. Spot.io decides to consolidate nodes (merge pods onto fewer nodes)
+4. Tasks are interrupted
+5. Tasks restart - new nodes are provisioned
+6. The cycle repeats
 
 ```mermaid
 ---
@@ -153,14 +155,14 @@ config:
     rankSpacing: 60
 ---
 graph TD
-    J1["Cron Job запущен"] --> N1["Нода 1 поднята"]
-    J2["Новые задания"] --> N2["Ноды 2, 3 поднимаются"]
-    N1 --> CONS["🔄 Spot.io консолидирует"]
+    J1["Cron Job started"] --> N1["Node 1 provisioned"]
+    J2["New tasks"] --> N2["Nodes 2, 3 provisioned"]
+    N1 --> CONS["🔄 Spot.io consolidates"]
     N2 --> CONS
-    CONS --> KILL["❌ Задания прерваны"]
-    KILL --> RESTART["🔁 Задания стартуют заново"]
-    RESTART --> N3["Новые ноды поднимаются"]
-    N3 -.->|"Цикл"| CONS
+    CONS --> KILL["❌ Tasks interrupted"]
+    KILL --> RESTART["🔁 Tasks restart"]
+    RESTART --> N3["New nodes provisioned"]
+    N3 -.->|"Cycle"| CONS
 
     style J1 fill:#2a9d8f,stroke:#1a7a6d,color:#fff
     style J2 fill:#2a9d8f,stroke:#1a7a6d,color:#fff
@@ -172,21 +174,21 @@ graph TD
     style N3 fill:#264653,stroke:#1d3557,color:#fff
 ```
 
-В Spot.io существует механизм предотвращения scale down - label `spotinst.io/restrict-scale-down: true` на поде или параметр `restrictScaleDown` на уровне VNG ([документация](https://docs.spot.io/ocean/features/scaling-kubernetes)). Однако на момент нашей миграции этот механизм работал недостаточно гибко для наших сценариев: он предотвращал scale down ноды, но не защищал от консолидации в рамках bin packing. Кроме того, управление этим label на уровне cron jobs требовало дополнительной автоматизации - нужно было динамически добавлять и убирать label в зависимости от состояния задания. Всё это приводило к потере вычислительного времени, повторным запускам и непредсказуемому поведению batch-пайплайнов.
+Spot.io does have a scale down prevention mechanism - the `spotinst.io/restrict-scale-down: true` label on a pod or the `restrictScaleDown` parameter at the VNG level ([documentation](https://docs.spot.io/ocean/features/scaling-kubernetes)). However, at the time of our migration, this mechanism wasn't flexible enough for our scenarios: it prevented node scale down but didn't protect against consolidation through bin packing. Additionally, managing this label for cron jobs required extra automation - dynamically adding and removing the label depending on task state. All this led to wasted compute time, task restarts, and unpredictable batch pipeline behavior.
 
-### 3.2. Ошибки с On-Demand fallback и перерасход
+### 3.2. On-Demand Fallback Errors and Overspending
 
-Одна из самых болезненных проблем - поведение fallback на On-Demand. Когда Spot-инстансы были недоступны, Ocean переключался на On-Demand. Само по себе это правильно - workloads должны работать. Но:
+One of the most painful problems - On-Demand fallback behavior. When Spot instances were unavailable, Ocean switched to On-Demand. This is correct in itself - workloads must run. But:
 
-- Обратное переключение на Spot происходило не всегда. Ноды оставались On-Demand дольше, чем нужно, даже когда Spot-ёмкость возвращалась.
-- Не было прозрачного механизма отслеживания, сколько нод сейчас работает на On-Demand из-за fallback, а сколько - по конфигурации.
-- В результате мы периодически обнаруживали кластеры, где значительная часть нод работала на On-Demand неделями, хотя Spot был доступен. Это приводило к существенному перерасходу бюджета.
+- Switching back to Spot didn't always happen. Nodes remained On-Demand longer than needed, even when Spot capacity returned.
+- There was no transparent mechanism to track how many nodes were running On-Demand due to fallback vs. by configuration.
+- As a result, we periodically discovered clusters where a significant portion of nodes had been running On-Demand for weeks, even though Spot was available. This led to substantial budget overruns.
 
-Отдельная частая ситуация - неоптимальный выбор размера инстанса. Допустим, поду нужно 1 vCPU. Ocean поднимает Spot-ноду с 64 ядрами - просто потому что именно этот тип Spot сейчас доступен. При этом было бы значительно выгоднее запустить маленький On-Demand инстанс на 2-4 vCPU. Но Ocean этого не делал.
+A separate frequent situation - suboptimal instance size selection. Say a pod needs 1 vCPU. Ocean provisions a Spot node with 64 cores - simply because that Spot type is currently available. It would have been significantly cheaper to launch a small On-Demand instance with 2-4 vCPU. But Ocean didn't do that.
 
-Такая нода могла работать сутками, утилизируя 1-2% ресурсов. Мы даже создали специальные алерты для обнаружения подобных ситуаций, но всё равно это требовало ручного вмешательства - зайти, проверить, пересоздать ноду.
+Such a node could run for days, utilizing 1-2% of resources. We even created special alerts to detect such situations, but it still required manual intervention - check, verify, recreate the node.
 
-И что особенно неприятно: Spot.io считал savings как разницу между стоимостью On-Demand инстанса такого же размера и фактической ценой Spot. То есть за эту огромную Spot-ноду с 64 ядрами Spot.io начислял себе огромный процент - ведь формально «экономия» от On-Demand цены 64-ядерного инстанса колоссальная. А по факту нам нужен был инстанс на 2 vCPU, и маленький On-Demand обошёлся бы дешевле, чем Spot на 64 ядра + комиссия Spot.io.
+And what's especially unpleasant: Spot.io calculated savings as the difference between the On-Demand price of the same-sized instance and the actual Spot price. So for this huge 64-core Spot node, Spot.io charged itself a massive percentage - because formally the "savings" from the On-Demand price of a 64-core instance are enormous. In reality, we needed a 2 vCPU instance, and a small On-Demand would have been cheaper than Spot with 64 cores + Spot.io commission.
 
 ```mermaid
 ---
@@ -198,13 +200,13 @@ config:
     rankSpacing: 60
 ---
 graph TD
-    POD["Pod: 1 vCPU"] --> SPOT_BIG["Ocean поднимает Spot 64 vCPU"]
-    SPOT_BIG --> UTIL["Утилизация ~1-2%"]
-    SPOT_BIG --> DAYS["Работает сутками"]
-    SPOT_BIG --> PAY["💰 Платим за Spot 64 vCPU"]
-    PAY --> SPOTIO["💰 + огромный % Spot.io<br/>от 'экономии' 64 vCPU"]
+    POD["Pod: 1 vCPU"] --> SPOT_BIG["Ocean provisions Spot 64 vCPU"]
+    SPOT_BIG --> UTIL["Utilization ~1-2%"]
+    SPOT_BIG --> DAYS["Runs for days"]
+    SPOT_BIG --> PAY["💰 Paying for Spot 64 vCPU"]
+    PAY --> SPOTIO["💰 + huge % Spot.io<br/>from 'savings' on 64 vCPU"]
 
-    POD -.->|"Было бы выгоднее"| SMALL["On-Demand 2-4 vCPU ✅"]
+    POD -.->|"Would be cheaper"| SMALL["On-Demand 2-4 vCPU ✅"]
 
     style POD fill:#2a9d8f,stroke:#1a7a6d,color:#fff
     style SPOT_BIG fill:#d62828,stroke:#9d0208,color:#fff
@@ -215,97 +217,98 @@ graph TD
     style SMALL fill:#2d6a4f,stroke:#1b4332,color:#fff
 ```
 
-### 3.3. Изменение модели ценообразования Spot.io
+### 3.3. Spot.io Pricing Model Change
 
-Критическим фактором стало изменение ценовой модели Spot.io. Изначальная модель «процент от экономии» была заменена на фиксированную оплату за каждый управляемый vCPU в час. Это принципиально меняло экономику:
+A critical factor was the change in Spot.io's pricing model. The original "percentage of savings" model was replaced with a fixed payment per managed vCPU per hour. This fundamentally changed the economics:
 
-| | Старая модель | Новая модель |
+| | Old Model | New Model |
 |---|---|---|
-| Принцип | % от savings (On-Demand − Spot) | Фиксированная цена за vCPU/час |
-| Риск для клиента | Минимальный - платишь только при экономии | Платишь всегда, независимо от экономии |
-| Предсказуемость | Зависит от Spot-цен | Фиксированная, но растёт с масштабом |
-| Мотивация вендора | Максимизировать Spot-использование | Максимизировать количество управляемых vCPU |
+| Principle | % of savings (On-Demand - Spot) | Fixed price per vCPU/hour |
+| Client risk | Minimal - pay only when saving | Pay always, regardless of savings |
+| Predictability | Depends on Spot prices | Fixed, but grows with scale |
+| Vendor motivation | Maximize Spot usage | Maximize managed vCPU count |
 
-### 3.4. Риски новой модели при пиковых нагрузках
+### 3.4. New Model Risks During Peak Loads
 
-Новая модель ценообразования создавала особенно серьёзные риски для наших Airflow-кластеров и любых workloads с пиковыми нагрузками:
+The new pricing model created especially serious risks for our Airflow clusters and any workloads with peak loads:
 
-- При burst-сценариях количество vCPU могло вырастать в разы на короткое время. По новой модели мы платили Spot.io за каждый vCPU, даже если инстанс жил 10 минут.
-- В сочетании с проблемой fallback на On-Demand (п. 3.2) ситуация усугублялась: мы платили и полную цену On-Demand за инстанс, и Spot.io за управление этим vCPU.
-- Прогнозирование затрат на Spot.io становилось сложным - стоимость напрямую зависела от пиковых значений, а не от средней нагрузки.
+- During burst scenarios, vCPU count could grow several times for a short period. Under the new model, we paid Spot.io for every vCPU, even if the instance lived 10 minutes.
+- Combined with the On-Demand fallback problem (section 3.2), the situation worsened: we paid both the full On-Demand price for the instance and Spot.io for managing that vCPU.
+- Forecasting Spot.io costs became difficult - cost directly depended on peak values, not average load.
 
-По нашим расчётам, при переходе на новую модель стоимость Spot.io могла вырасти в 2-3 раза, при этом качество сервиса оставалось прежним. Это стало финальным аргументом в пользу поиска альтернативы.
+By our estimates, switching to the new model could increase Spot.io costs by 2-3x, while service quality remained the same. This became the final argument for seeking an alternative.
 
-## 4. Выбор подхода к миграции
+## 4. Choosing the Migration Approach
 
-### 4.1. Рассмотренные варианты
+### 4.1. Considered Options
 
-Приняв решение уходить от Spot.io, мы рассмотрели несколько вариантов:
+Having decided to move away from Spot.io, we considered several options:
 
-| Критерий | Karpenter | Cluster Autoscaler + ASG | Гибрид: CA + Spot.io |
+| Criterion | Karpenter | Cluster Autoscaler + ASG | Hybrid: CA + Spot.io |
 |---|---|---|---|
-| Скорость provisioning | ✅ Секунды (прямой EC2 API) | ❌ Минуты (через ASG) | ⚠️ Зависит от компонента |
-| Выбор инстансов | ✅ Автоматический, по цене и доступности | ❌ Фиксированный набор в ASG | ⚠️ Частично автоматический |
-| Стоимость решения | ✅ $0 (open-source) | ✅ $0 | ❌ Лицензия Spot.io |
-| Гибкость управления | ✅ NodePool + Disruption Budgets | ❌ Ограничена ASG | ⚠️ Конфликты двух систем |
-| Сложность эксплуатации | ✅ Единая система | ✅ Единая система | ❌ Двойная сложность |
-| Интеграция с EKS | ✅ Нативная (AWS) | ✅ Стандартная | ⚠️ Внешний SaaS |
-| Spot-менеджмент | ✅ Встроенный | ❌ Нет | ✅ Через Spot.io |
+| Provisioning speed | ✅ Seconds (direct EC2 API) | ❌ Minutes (via ASG) | ⚠️ Depends on component |
+| Instance selection | ✅ Automatic, by price and availability | ❌ Fixed set in ASG | ⚠️ Partially automatic |
+| Solution cost | ✅ $0 (open-source) | ✅ $0 | ❌ Spot.io license |
+| Management flexibility | ✅ NodePool + Disruption Budgets | ❌ Limited by ASG | ⚠️ Two-system conflicts |
+| Operational complexity | ✅ Single system | ✅ Single system | ❌ Double complexity |
+| EKS integration | ✅ Native (AWS) | ✅ Standard | ⚠️ External SaaS |
+| Spot management | ✅ Built-in | ❌ None | ✅ Via Spot.io |
 
-**Cluster Autoscaler + ASG** - возврат к стандартному решению. Мы уже знали его ограничения: медленное масштабирование через ASG, необходимость заранее определять типы инстансов, сложность управления множеством ASG для разных workloads. По сути, это был шаг назад к тем проблемам, от которых мы ушли к Spot.io.
+**Cluster Autoscaler + ASG** - return to the standard solution. We already knew its limitations: slow scaling via ASG, need to pre-define instance types, complexity of managing multiple ASGs for different workloads. Essentially, a step back to the problems we left for Spot.io.
 
-**Гибрид: Cluster Autoscaler + Spot.io** - оставить Spot.io для части кластеров, а для остальных использовать CA. Вариант отвергли быстро: двойная сложность в управлении, потенциальные конфликты между двумя autoscaler-ами, и это не решало проблему стоимости Spot.io - просто уменьшало масштаб.
+**Hybrid: Cluster Autoscaler + Spot.io** - keep Spot.io for some clusters, use CA for others. Rejected quickly: double management complexity, potential conflicts between two autoscalers, and it didn't solve the Spot.io cost problem - just reduced the scale.
 
-**Karpenter** - open-source node provisioner от AWS, спроектированный специально для Kubernetes на EKS. На момент нашего выбора Karpenter уже вышел из beta и активно развивался.
+**Karpenter** - open-source node provisioner from AWS, designed specifically for Kubernetes on EKS. At the time of our choice, Karpenter had already exited beta and was actively developing.
 
-### 4.2. Почему остановились на Karpenter
+### 4.2. Why We Chose Karpenter
 
-Karpenter выиграл по совокупности факторов:
+Karpenter won on the combination of factors:
 
-- **Прямая работа с EC2 API** - Karpenter создаёт инстансы напрямую, минуя ASG. Это даёт скорость provisioning в секундах, а не минутах.
-- **Автоматический подбор инстансов** - на основе requirements подов Karpenter сам выбирает оптимальный тип инстанса из доступных, учитывая цену, доступность и constraints.
-- **NodePool и NodeClass** - гибкие абстракции для управления группами нод. NodePool определяет requirements (instance types, capacity type, zones), а NodeClass - параметры инфраструктуры (AMI, security groups, subnets).
-- **Disruption management** - встроенные механизмы consolidation, drift detection и expiration с возможностью тонкой настройки через Disruption Budgets.
-- **Нулевая стоимость** - open-source, никаких лицензий и комиссий. Платим только за EC2-инстансы.
-- **Нативная интеграция с AWS** - Karpenter разработан AWS, глубоко интегрирован с EKS, EC2 Fleet API, Spot interruption notices.
+- **Direct EC2 API interaction** - Karpenter creates instances directly, bypassing ASG. This gives provisioning speed in seconds, not minutes.
+- **Automatic instance selection** - based on pod requirements, Karpenter selects the optimal instance type from available ones, considering price, availability, and constraints.
+- **NodePool and NodeClass** - flexible abstractions for managing node groups. NodePool defines requirements (instance types, capacity type, zones), and NodeClass defines infrastructure parameters (AMI, security groups, subnets).
+- **Disruption management** - built-in consolidation, drift detection, and expiration mechanisms with fine-tuning through Disruption Budgets.
+- **Zero cost** - open-source, no licenses or commissions. We only pay for EC2 instances.
+- **Native AWS integration** - Karpenter is developed by AWS, deeply integrated with EKS, EC2 Fleet API, Spot interruption notices.
 
-### 4.3. Ключевые преимущества Karpenter для AWS
+### 4.3. Key Karpenter Advantages for AWS
 
-| Преимущество | Описание |
+| Advantage | Description |
 |---|---|
-| ⚡ Provisioning за секунды | Прямая работа с EC2 API, минуя ASG |
-| 🔧 NodePool / NodeClass | Гибкие абстракции для управления группами нод |
-| 💰 $0 за лицензию | Open-source, платим только за EC2 |
-| ☁️ Нативный для AWS EKS | Разработан AWS, глубокая интеграция с EC2 Fleet API |
-| 🛡️ Disruption Budgets | Тонкая настройка consolidation, drift, expiration |
-| 📊 Spot + On-Demand стратегии | Автоматический выбор capacity type по цене и доступности |
-| 📈 Prometheus-метрики | Экспорт метрик из коробки, без внешних SaaS |
-| 🔄 Drift Detection | Автоматическое обнаружение и замена устаревших нод |
+| ⚡ Provisioning in seconds | Direct EC2 API interaction, bypassing ASG |
+| 🔧 NodePool / NodeClass | Flexible abstractions for node group management |
+| 💰 $0 license | Open-source, pay only for EC2 |
+| ☁️ Native for AWS EKS | Developed by AWS, deep EC2 Fleet API integration |
+| 🛡️ Disruption Budgets | Fine-tuning consolidation, drift, expiration |
+| 📊 Spot + On-Demand strategies | Automatic capacity type selection by price and availability |
+| 📈 Prometheus metrics | Out-of-the-box metrics export, no external SaaS |
+| 🔄 Drift Detection | Automatic detection and replacement of outdated nodes |
 
-Для нашего стека (EKS, Terraform, Prometheus/Grafana) Karpenter вписывался идеально. Конфигурация описывается в Kubernetes-манифестах, метрики экспортируются в Prometheus из коробки, а управление - через стандартные kubectl-команды. Не нужен отдельный SaaS-аккаунт, дополнительные IAM-интеграции с третьей стороной или vendor lock-in.
+For our stack (EKS, Terraform, Prometheus/Grafana), Karpenter fit perfectly. Configuration is described in Kubernetes manifests, metrics are exported to Prometheus out of the box, and management is through standard kubectl commands. No separate SaaS account, additional third-party IAM integrations, or vendor lock-in needed.
 
-## 5. Модель миграции и процесс внедрения
 
-### 5.1. Proof of Concept и тестирование на отдельном кластере
+## 5. Migration Model and Implementation Process
 
-Миграцию мы начали с PoC на отдельном dev-кластере. Цель - убедиться, что Karpenter закрывает наши основные сценарии, и набить руку на конфигурации до выхода в production.
+### 5.1. Proof of Concept and Testing on a Separate Cluster
 
-На этапе PoC мы проверяли:
+We started the migration with a PoC on a separate dev cluster. The goal was to verify that Karpenter covers our main scenarios and gain configuration experience before going to production.
 
-| Сценарий | Что тестировали |
+During the PoC we tested:
+
+| Scenario | What We Tested |
 |---|---|
-| Базовый provisioning | Скорость поднятия нод, выбор instance types |
-| Spot + On-Demand | Корректность fallback, возврат на Spot |
-| Consolidation | Поведение при снижении нагрузки, bin packing |
-| Disruption Budgets | Защита workloads от нежелательных eviction |
-| Cron Jobs | Ноды не консолидируются, пока задания активны |
-| Drift Detection | Реакция на изменение AMI, security groups |
+| Basic provisioning | Node provisioning speed, instance type selection |
+| Spot + On-Demand | Fallback correctness, return to Spot |
+| Consolidation | Behavior under decreasing load, bin packing |
+| Disruption Budgets | Workload protection from unwanted eviction |
+| Cron Jobs | Nodes not consolidated while tasks are active |
+| Drift Detection | Reaction to AMI, security group changes |
 
-PoC занял около двух недель. За это время мы сформировали базовые шаблоны NodePool и EC2NodeClass для каждого типа кластера и задокументировали отличия в поведении по сравнению со Spot.io.
+The PoC took about two weeks. During this time, we formed base NodePool and EC2NodeClass templates for each cluster type and documented behavioral differences compared to Spot.io.
 
-### 5.2. Постепенный переход по namespace и workload-группам
+### 5.2. Gradual Transition by Namespace and Workload Groups
 
-Мы не переключали кластеры целиком за один раз. Вместо этого использовали постепенный подход - переводили workloads группами:
+We didn't switch entire clusters at once. Instead, we used a gradual approach - migrating workloads in groups:
 
 ```mermaid
 ---
@@ -317,9 +320,9 @@ config:
     rankSpacing: 70
 ---
 graph LR
-    P1["Фаза 1: Dev/Staging"] --> P2["Фаза 2: Airflow"]
-    P2 --> P3["Фаза 3: Prod некритичные"]
-    P3 --> P4["Фаза 4: Prod критичные"]
+    P1["Phase 1: Dev/Staging"] --> P2["Phase 2: Airflow"]
+    P2 --> P3["Phase 3: Prod non-critical"]
+    P3 --> P4["Phase 4: Prod critical"]
 
     style P1 fill:#264653,stroke:#1d3557,color:#fff
     style P2 fill:#2a9d8f,stroke:#1a7a6d,color:#fff
@@ -327,23 +330,23 @@ graph LR
     style P4 fill:#2d6a4f,stroke:#1b4332,color:#fff
 ```
 
-**Фаза 1: Dev/Staging** - минимальный риск. Здесь мы обкатали конфигурации, настроили мониторинг и алерты, выявили первые edge cases.
+**Phase 1: Dev/Staging** - minimal risk. Here we tested configurations, set up monitoring and alerts, identified first edge cases.
 
-**Фаза 2: Airflow-кластеры** - именно здесь были самые большие проблемы со Spot.io (консолидация job-нод, избыточно крупные инстансы под мелкие задачи). Переход дал быстрый и заметный эффект.
+**Phase 2: Airflow clusters** - this is where we had the biggest problems with Spot.io (job node consolidation, oversized instances for small tasks). The transition gave a quick and noticeable effect.
 
-**Фаза 3: Production (некритичные сервисы)** - воркеры очередей, cron jobs, внутренние сервисы. Workloads, которые толерантны к кратковременным перебоям.
+**Phase 3: Production (non-critical services)** - queue workers, cron jobs, internal services. Workloads tolerant to short-term disruptions.
 
-**Фаза 4: Production (критичные сервисы)** - API-шлюзы, основные сервисы с жёсткими SLA. Переводили последними, после накопления опыта на предыдущих фазах.
+**Phase 4: Production (critical services)** - API gateways, core services with strict SLAs. Migrated last, after accumulating experience from previous phases.
 
-На каждой фазе мы выдерживали период наблюдения (1-2 недели), сравнивали метрики стоимости и стабильности с предыдущим состоянием на Spot.io, и только после этого двигались дальше.
+At each phase, we maintained an observation period (1-2 weeks), compared cost and stability metrics with the previous Spot.io state, and only then moved forward.
 
-### 5.3. Совместная работа Spot.io и Karpenter на переходном этапе
+### 5.3. Spot.io and Karpenter Running Together During Transition
 
-Во время миграции Spot.io и Karpenter работали параллельно в одном кластере. Это было возможно благодаря разделению через labels и taints:
+During migration, Spot.io and Karpenter ran in parallel within the same cluster. This was possible through label and taint separation:
 
-- Workloads, переведённые на Karpenter, получали nodeSelector/affinity на ноды Karpenter.
-- Workloads, оставшиеся на Spot.io, продолжали использовать VNG с соответствующими labels.
-- Два контроллера не конфликтовали, потому что каждый управлял только «своими» нодами.
+- Workloads migrated to Karpenter received nodeSelector/affinity for Karpenter nodes.
+- Workloads remaining on Spot.io continued using VNGs with corresponding labels.
+- The two controllers didn't conflict because each managed only "its own" nodes.
 
 ```mermaid
 ---
@@ -355,13 +358,13 @@ config:
     rankSpacing: 70
 ---
 graph TD
-    CLUSTER["EKS Cluster"] --> SPOT_NODES["Spot.io ноды\n(VNG labels)"]
-    CLUSTER --> KARP_NODES["Karpenter ноды\n(NodePool labels)"]
+    CLUSTER["EKS Cluster"] --> SPOT_NODES["Spot.io nodes (VNG labels)"]
+    CLUSTER --> KARP_NODES["Karpenter nodes (NodePool labels)"]
 
-    SPOT_NODES --> W1["Workloads\nещё на Spot.io"]
-    KARP_NODES --> W2["Workloads\nуже на Karpenter"]
+    SPOT_NODES --> W1["Workloads still on Spot.io"]
+    KARP_NODES --> W2["Workloads already on Karpenter"]
 
-    W1 -.->|"Постепенный перевод"| W2
+    W1 -.->|"Gradual migration"| W2
 
     style CLUSTER fill:#232f3e,stroke:#ff9900,color:#fff
     style SPOT_NODES fill:#0052cc,stroke:#003d99,color:#fff
@@ -370,29 +373,30 @@ graph TD
     style W2 fill:#2a9d8f,stroke:#1a7a6d,color:#fff
 ```
 
-Такой подход позволял откатиться в любой момент - достаточно было вернуть nodeSelector на Spot.io labels. За всё время миграции нам пришлось откатить только один workload, и то временно - из-за специфичного поведения с GPU-инстансами, которое мы быстро поправили в конфигурации NodePool.
+This approach allowed rollback at any moment - just switch the nodeSelector back to Spot.io labels. Throughout the entire migration, we only had to roll back one workload, and that was temporary - due to specific GPU instance behavior that we quickly fixed in the NodePool configuration.
 
-## 6. Мониторинг стоимости и производительности
 
-### 6.1. Методы анализа до миграции (Spot.io Dashboard, Cost Explorer)
+## 6. Cost and Performance Monitoring
 
-До миграции основными источниками данных о стоимости были:
+### 6.1. Pre-Migration Analysis Methods (Spot.io Dashboard, Cost Explorer)
 
-| Инструмент | Что давал | Ограничения |
+Before migration, the main cost data sources were:
+
+| Tool | What It Provided | Limitations |
 |---|---|---|
-| Spot.io Dashboard | Savings, Spot vs On-Demand ratio, стоимость по VNG | Данные только внутри Spot.io, нет экспорта в наш стек |
-| AWS Cost Explorer | Общая стоимость EC2 по аккаунтам и тегам | Нет разбивки по кластерам/namespace, задержка 24-48ч |
-| AWS CUR (Cost & Usage Report) | Детальные данные по каждому инстансу | Сложная обработка, требует отдельного пайплайна |
+| Spot.io Dashboard | Savings, Spot vs On-Demand ratio, cost by VNG | Data only inside Spot.io, no export to our stack |
+| AWS Cost Explorer | Total EC2 cost by accounts and tags | No breakdown by cluster/namespace, 24-48h delay |
+| AWS CUR (Cost & Usage Report) | Detailed data per instance | Complex processing, requires a separate pipeline |
 
-Основная проблема - данные были разрозненными. Spot.io показывал свою картину savings, AWS Cost Explorer - свою. Сопоставить их и получить реальную стоимость конкретного workload было сложно. Мы не могли ответить на простой вопрос: "Сколько стоит namespace X в кластере Y за последний месяц?"
+The main problem - data was fragmented. Spot.io showed its savings picture, AWS Cost Explorer showed its own. Correlating them to get the real cost of a specific workload was difficult. We couldn't answer a simple question: "How much does namespace X in cluster Y cost for the last month?"
 
-### 6.2. Методы анализа после миграции (Prometheus, Grafana)
+### 6.2. Post-Migration Analysis Methods (Prometheus, Grafana)
 
-После перехода на Karpenter мониторинг стоимости стал частью нашего стандартного стека:
+After switching to Karpenter, cost monitoring became part of our standard stack:
 
-- **Karpenter metrics** - Karpenter экспортирует метрики в Prometheus из коробки: количество нод, типы инстансов, capacity type (Spot/On-Demand), время provisioning, disruption events.
-- **kubecost / custom exporter** - для расчёта стоимости на уровне pod/namespace мы используем данные о ценах инстансов и метрики потребления ресурсов.
-- **Grafana dashboards** - единая точка визуализации: стоимость по кластерам, namespace, workload-группам, динамика Spot/On-Demand ratio.
+- **Karpenter metrics** - Karpenter exports metrics to Prometheus out of the box: node count, instance types, capacity type (Spot/On-Demand), provisioning time, disruption events.
+- **kubecost / custom exporter** - for pod/namespace-level cost calculation, we use instance pricing data and resource consumption metrics.
+- **Grafana dashboards** - single visualization point: cost by cluster, namespace, workload groups, Spot/On-Demand ratio dynamics.
 
 ```mermaid
 ---
@@ -407,9 +411,9 @@ graph LR
     KARP["Karpenter"] --> PROM["Prometheus"]
     K8S["Kubernetes metrics"] --> PROM
     PROM --> GRAF["Grafana Dashboards"]
-    GRAF --> COST["Стоимость по namespace"]
+    GRAF --> COST["Cost by namespace"]
     GRAF --> SPOT["Spot/On-Demand ratio"]
-    GRAF --> PERF["Время provisioning"]
+    GRAF --> PERF["Provisioning time"]
 
     style KARP fill:#2d6a4f,stroke:#1b4332,color:#fff
     style K8S fill:#264653,stroke:#1d3557,color:#fff
@@ -420,63 +424,64 @@ graph LR
     style PERF fill:#2a9d8f,stroke:#1a7a6d,color:#fff
 ```
 
-Ключевое отличие - все данные теперь в одном месте, в нашем стеке, с возможностью строить любые кастомные запросы и алерты.
+The key difference - all data is now in one place, in our stack, with the ability to build any custom queries and alerts.
 
-### 6.3. Подход к сравнению результатов
+### 6.3. Approach to Comparing Results
 
-Для корректного сравнения "до" и "после" мы использовали следующий подход:
+For a fair "before" and "after" comparison, we used the following approach:
 
-| Параметр | Как сравнивали |
+| Parameter | How We Compared |
 |---|---|
-| Общая стоимость EC2 | AWS Cost Explorer, одинаковые теги и период |
-| Spot/On-Demand ratio | Spot.io Dashboard vs Karpenter metrics в Prometheus |
-| Стоимость Spot.io лицензии | Счета от Spot.io vs $0 (Karpenter) |
-| Время provisioning | Логи Spot.io vs метрики Karpenter (scheduling-to-ready) |
-| Количество инцидентов | Алерты в PagerDuty/Slack за сопоставимые периоды |
-| Утилизация нод | Prometheus node_exporter, средний % CPU/Memory |
+| Total EC2 cost | AWS Cost Explorer, same tags and period |
+| Spot/On-Demand ratio | Spot.io Dashboard vs Karpenter metrics in Prometheus |
+| Spot.io license cost | Spot.io invoices vs $0 (Karpenter) |
+| Provisioning time | Spot.io logs vs Karpenter metrics (scheduling-to-ready) |
+| Incident count | Alerts in PagerDuty/Slack for comparable periods |
+| Node utilization | Prometheus node_exporter, average CPU/Memory % |
 
-Важно: мы сравнивали не просто "месяц на Spot.io" vs "месяц на Karpenter", а одинаковые workloads в одинаковых условиях. Для этого миграция по фазам (п. 5.2) была критична - мы могли видеть разницу на одном и том же кластере до и после переключения.
+Important: we didn't simply compare "a month on Spot.io" vs "a month on Karpenter", but identical workloads under identical conditions. The phased migration (section 5.2) was critical for this - we could see the difference on the same cluster before and after switching.
 
-## 7. Результаты миграции
 
-### 7.1. Снижение затрат и повышение стабильности
+## 7. Migration Results
 
-Главный результат - ощутимое снижение затрат на инфраструктуру:
+### 7.1. Cost Reduction and Improved Stability
 
-| Метрика | До (Spot.io) | После (Karpenter) | Изменение |
+The main result - a noticeable reduction in infrastructure costs:
+
+| Metric | Before (Spot.io) | After (Karpenter) | Change |
 |---|---|---|---|
-| Стоимость лицензии node manager | Комиссия Spot.io (% от savings) | $0 | -100% |
+| Node manager license cost | Spot.io commission (% of savings) | $0 | -100% |
 | Spot/On-Demand ratio | ~60-70% Spot | ~80-90% Spot | +15-20% |
-| Случаи "застрявших" On-Demand нод | Регулярно | Практически нет | Значительное снижение |
-| Избыточно крупные инстансы под мелкие задачи | Часто | Редко (right-sizing) | Значительное снижение |
-| Время provisioning новой ноды | ~1-2 минуты | ~1-2 минуты | Сопоставимо |
+| "Stuck" On-Demand node cases | Regularly | Virtually none | Significant reduction |
+| Oversized instances for small tasks | Frequently | Rarely (right-sizing) | Significant reduction |
+| New node provisioning time | ~1-2 minutes | ~1-2 minutes | Comparable |
 
-Karpenter лучше подбирает размер инстанса под реальные потребности подов. Вместо Spot на 64 vCPU под задачу в 1 vCPU - Karpenter поднимает инстанс подходящего размера. Это дало заметную экономию, особенно на Airflow-кластерах.
+Karpenter is better at matching instance size to actual pod needs. Instead of a 64 vCPU Spot for a 1 vCPU task - Karpenter provisions an appropriately sized instance. This delivered noticeable savings, especially on Airflow clusters.
 
-Стабильность тоже выросла: пропали ситуации с "зависшими" On-Demand нодами, прекратились циклы консолидации cron job нод, уменьшилось количество алертов, требующих ручного вмешательства.
+Stability also improved: "stuck" On-Demand node situations disappeared, cron job node consolidation cycles stopped, and the number of alerts requiring manual intervention decreased.
 
-### 7.2. Упрощение IAM и конфигураций
+### 7.2. Simplified IAM and Configurations
 
-Переход на Karpenter позволил существенно упростить инфраструктурный слой:
+Switching to Karpenter allowed us to significantly simplify the infrastructure layer:
 
-| Аспект | До (Spot.io) | После (Karpenter) |
+| Aspect | Before (Spot.io) | After (Karpenter) |
 |---|---|---|
-| IAM | Роли для Spot.io controller + cross-account доступ | Стандартная IAM-роль для Karpenter в кластере |
-| Конфигурация | Terraform + Spot.io API + VNG в UI | Terraform + Kubernetes-манифесты (NodePool, EC2NodeClass) |
-| Управление секретами | API-токены Spot.io | Нет внешних токенов, только IAM |
-| Зависимости | Внешний SaaS (Spot.io API, UI) | Только AWS API + Kubernetes API |
-| Обновления | Зависимость от релизов Spot.io | Helm chart, контролируемые обновления |
+| IAM | Roles for Spot.io controller + cross-account access | Standard IAM role for Karpenter in the cluster |
+| Configuration | Terraform + Spot.io API + VNG in UI | Terraform + Kubernetes manifests (NodePool, EC2NodeClass) |
+| Secret management | Spot.io API tokens | No external tokens, only IAM |
+| Dependencies | External SaaS (Spot.io API, UI) | Only AWS API + Kubernetes API |
+| Updates | Dependency on Spot.io releases | Helm chart, controlled updates |
 
-Убрав Spot.io, мы убрали целый слой внешних зависимостей: API-токены, cross-account IAM-роли, SaaS-аккаунт, отдельный UI. Всё управление теперь через стандартные инструменты - kubectl, Terraform, Helm.
+By removing Spot.io, we eliminated an entire layer of external dependencies: API tokens, cross-account IAM roles, SaaS account, separate UI. All management is now through standard tools - kubectl, Terraform, Helm.
 
-### 7.3. Повышение прозрачности и контроля
+### 7.3. Improved Transparency and Control
 
-Одно из самых ценных изменений - полная прозрачность происходящего:
+One of the most valuable changes - full transparency of what's happening:
 
-- **Все решения видны** - Karpenter логирует каждое решение о provisioning/deprovisioning: почему выбран этот тип инстанса, почему нода удаляется, какой disruption budget применяется.
-- **Метрики в нашем стеке** - у Spot.io тоже был экспортер в Prometheus, но у Karpenter метрики значительно прозрачнее. Видно, почему была заменена та или иная нода, сколько Spot-нод было забрано AWS, какие решения принимал autoscaler и по какой причине. Всё в Grafana, рядом с остальными метриками кластера.
-- **Конфигурация как код** - VNG в Spot.io мы тоже хранили в коде (Terraform), так что тут паритет. Разница в том, что NodePool и EC2NodeClass - это нативные Kubernetes-ресурсы, которые живут рядом с остальными манифестами кластера, а не в отдельном Terraform-модуле для внешнего SaaS.
-- **Предсказуемое поведение** - Karpenter действует строго по конфигурации. Нет "чёрного ящика", который принимает решения на стороне SaaS.
+- **All decisions are visible** - Karpenter logs every provisioning/deprovisioning decision: why this instance type was chosen, why a node is being removed, which disruption budget applies.
+- **Metrics in our stack** - Spot.io also had a Prometheus exporter, but Karpenter metrics are significantly more transparent. You can see why a particular node was replaced, how many Spot nodes were reclaimed by AWS, what decisions the autoscaler made and why. Everything in Grafana, alongside other cluster metrics.
+- **Configuration as code** - we also stored VNG configs in Spot.io as code (Terraform), so that's parity. The difference is that NodePool and EC2NodeClass are native Kubernetes resources that live alongside other cluster manifests, not in a separate Terraform module for an external SaaS.
+- **Predictable behavior** - Karpenter acts strictly according to configuration. No "black box" making decisions on the SaaS side.
 
 ```mermaid
 ---
@@ -504,66 +509,67 @@ graph LR
     style NODES fill:#2a9d8f,stroke:#1a7a6d,color:#fff
 ```
 
-Для команды это означает: меньше "магии", больше контроля, проще дебажить проблемы.
+For the team, this means: less "magic", more control, easier to debug problems.
 
-## 8. Проблемы и решения (минусы Karpenter)
 
-Karpenter - не серебряная пуля. После миграции мы столкнулись с рядом проблем, которые пришлось решать самостоятельно.
+## 8. Problems and Solutions (Karpenter Downsides)
 
-### 8.1. Отсутствие визуализации по нодам - дашборды в Grafana
+Karpenter is not a silver bullet. After migration, we encountered a number of problems that we had to solve ourselves.
 
-У Spot.io был удобный UI с визуализацией нод: какие инстансы работают, Spot или On-Demand, утилизация, стоимость. У Karpenter ничего подобного из коробки нет - только метрики в Prometheus, логи и NodeClaims (можно посмотреть в разрезе `kubectl get nodeclaims`, `kubectl top node`).
+### 8.1. No Node Visualization - Grafana Dashboards
 
-Решение: мы написали собственный консольный скрипт, который выдаёт похожую информацию - список нод с типом инстанса, capacity type, утилизацией, возрастом. Причём данные берутся напрямую из кластера через Kubernetes API, без кэширования на стороне внешнего бэкенда. В Spot.io данные в UI могли отставать от реальности из-за кэширования на стороне их бэкенда - наш скрипт показывает актуальное состояние в реальном времени.
+Spot.io had a convenient UI with node visualization: which instances are running, Spot or On-Demand, utilization, cost. Karpenter has nothing like this out of the box - only Prometheus metrics, logs, and NodeClaims (viewable via `kubectl get nodeclaims -o wide`).
 
-Дополнительно мы построили Grafana-дашборды:
+Solution: we wrote our own console script that provides similar information - a list of nodes with instance type, capacity type, utilization, age. The data is pulled directly from the cluster via Kubernetes API, without caching on an external backend side. In Spot.io, UI data could lag behind reality due to caching on their backend - our script shows the actual state in real time.
 
-| Дашборд | Что показывает |
+Additionally, we built Grafana dashboards:
+
+| Dashboard | What It Shows |
 |---|---|
-| Cluster Overview | Количество нод, Spot/On-Demand ratio, общая ёмкость |
-| Node Details | Список нод с типом инстанса, capacity type, возрастом, утилизацией |
-| Disruption Events | История замен нод: причина, время, затронутые поды |
-| Provisioning Latency | Время от pending pod до ready node |
+| Cluster Overview | Node count, Spot/On-Demand ratio, total capacity |
+| Node Details | Node list with instance type, capacity type, age, utilization |
+| Disruption Events | Node replacement history: reason, time, affected pods |
+| Provisioning Latency | Time from pending pod to ready node |
 
-Это потребовало начальных вложений времени, но в итоге дашборды получились более информативными, чем UI Spot.io, потому что мы строили их под свои задачи.
+This required initial time investment, but the dashboards ended up being more informative than Spot.io's UI because we built them for our specific needs.
 
-### 8.2. Поддержание фиксированного числа нод
+### 8.2. Maintaining a Fixed Number of Nodes
 
-В некоторых сценариях нам нужно гарантировать минимальное количество нод - например, для production-сервисов с жёсткими требованиями к latency при cold start. В Spot.io это настраивалось через min nodes в VNG.
+In some scenarios, we need to guarantee a minimum number of nodes - for example, for production services with strict cold start latency requirements. In Spot.io, this was configured via min nodes in VNG.
 
-В ранних версиях Karpenter не было прямого параметра "минимум N нод". Однако в текущих версиях появилась поддержка static NodePool с параметром `replicas`, который позволяет поддерживать фиксированное количество нод ([документация](https://karpenter.sh/docs/concepts/nodepools/)). На момент нашей миграции этой функции ещё не было, поэтому мы использовали комбинацию подходов:
+Early Karpenter versions didn't have a direct "minimum N nodes" parameter. However, current versions support static NodePool with a `replicas` parameter that maintains a fixed number of nodes ([documentation](https://karpenter.sh/docs/concepts/nodepools/)). At the time of our migration, this feature didn't exist yet, so we used a combination of approaches:
 
-- **Placeholder pods** - создаём Deployment с "пустыми" подами (минимальные resource requests) и podAntiAffinity, чтобы каждый под гарантированно поднимался на отдельной ноде. Минимальное количество нод = количество реплик в Deployment. Placeholder практически не потребляет ресурсов, поэтому вытеснять его не нужно - реальные workloads спокойно размещаются на тех же нодах рядом с ним.
-- **NodePool limits** - задаём максимум ресурсов по NodePool, чтобы ограничить рост кластера и контролировать бюджет.
+- **Placeholder pods** - we create a Deployment with "empty" pods (minimal resource requests) and podAntiAffinity so each pod is guaranteed to run on a separate node. Minimum number of nodes = number of replicas in the Deployment. Placeholders consume virtually no resources, so there's no need to evict them - real workloads are placed on the same nodes alongside them.
+- **NodePool limits** - we set maximum resources per NodePool to limit cluster growth and control budget.
 
-### 8.3. Прерывания Spot - отсутствие instance_id в логах
+### 8.3. Spot Interruptions - Missing instance_id in Logs
 
-При прерывании Spot-инстанса AWS отправляет interruption notice. Karpenter обрабатывает его и начинает draining ноды. Проблема в том, что в логах Karpenter не всегда легко сопоставить прерывание с конкретным instance_id - информация размазана по нескольким log entries.
+When AWS interrupts a Spot instance, it sends an interruption notice. Karpenter processes it and begins draining the node. The problem is that in Karpenter logs, it's not always easy to correlate an interruption with a specific instance_id - information is spread across multiple log entries.
 
-Решение: в планах - добавить сбор событий через AWS EventBridge (Spot Interruption Warnings) и коррелировать их с логами Karpenter в нашей системе логирования. Это позволит построить полную картину: какой инстанс был прерван, когда, какие поды были затронуты, куда переехали. Пока этого нет, и это одна из точек роста.
+Solution: we plan to add event collection through AWS EventBridge (Spot Interruption Warnings) and correlate them with Karpenter logs in our logging system. This will allow building a complete picture: which instance was interrupted, when, which pods were affected, where they moved. This isn't implemented yet and remains one of our growth areas.
 
-### 8.4. Нет накопительной статистики по прерываниям
+### 8.4. No Cumulative Interruption Statistics
 
-Spot.io вёл статистику прерываний на своей стороне и использовал её для принятия решений - старался выбирать инстансы с меньшей вероятностью прерывания. Но эта статистика была закрыта от пользователя - мы не видели, какие типы прерываются чаще и в каких AZ. У Karpenter такой встроенной аналитики тоже нет - он не учитывает историю прерываний при выборе инстансов.
+Spot.io maintained interruption statistics internally and used them for decision-making - it tried to select instances with lower interruption probability. But this data was closed to the user - we couldn't see which types were interrupted more often and in which AZs. Karpenter doesn't have such built-in analytics either - it doesn't consider interruption history when selecting instances.
 
-Решение: собираем данные о прерываниях через:
-- Karpenter metrics (`karpenter_nodeclaims_disrupted`) в Prometheus
+Solution: we collect interruption data through:
+- Karpenter metrics (`karpenter_nodeclaims_disrupted`) in Prometheus
 - AWS EventBridge events (Spot Interruption Warning)
-- Собственный Grafana-дашборд с агрегацией по instance type, AZ, времени суток
+- Custom Grafana dashboard with aggregation by instance type, AZ, time of day
 
-Со временем мы накопили достаточно данных, чтобы принимать обоснованные решения о выборе instance types и diversification strategy.
+Over time, we accumulated enough data to make informed decisions about instance type selection and diversification strategy.
 
-### 8.5. Поведение при price-capacity loop и флаппинг нод
+### 8.5. Price-Capacity Loop Behavior and Node Flapping
 
-Одна из неочевидных проблем - ситуация, когда Karpenter попадает в цикл:
+One of the non-obvious problems - a situation where Karpenter gets into a loop:
 
-1. Karpenter поднимает Spot-ноду
-2. Spot-ёмкость заканчивается, нода прерывается
-3. Karpenter поднимает новую ноду (возможно, того же типа)
-4. Снова прерывание
-5. Цикл повторяется
+1. Karpenter provisions a Spot node
+2. Spot capacity runs out, node is interrupted
+3. Karpenter provisions a new node (possibly the same type)
+4. Interrupted again
+5. The cycle repeats
 
-Это приводит к "флаппингу" нод - поды постоянно перемещаются, сервисы нестабильны.
+This leads to node "flapping" - pods are constantly moving, services are unstable.
 
 ```mermaid
 ---
@@ -575,11 +581,11 @@ config:
     rankSpacing: 60
 ---
 graph TD
-    START["Karpenter поднимает Spot"] --> INT["AWS прерывает Spot"]
-    INT --> NEW["Karpenter поднимает новую ноду"]
-    NEW --> INT2["Снова прерывание"]
-    INT2 -.->|"Цикл"| NEW
-    NEW -.->|"Решение"| DIV["Расширить список instance types"]
+    START["Karpenter provisions Spot"] --> INT["AWS interrupts Spot"]
+    INT --> NEW["Karpenter provisions new node"]
+    NEW --> INT2["Interrupted again"]
+    INT2 -.->|"Cycle"| NEW
+    NEW -.->|"Solution"| DIV["Expand instance type list"]
 
     style START fill:#2a9d8f,stroke:#1a7a6d,color:#fff
     style INT fill:#d62828,stroke:#9d0208,color:#fff
@@ -588,72 +594,236 @@ graph TD
     style DIV fill:#2d6a4f,stroke:#1b4332,color:#fff
 ```
 
-Решение: максимально расширять список допустимых instance types в NodePool, но с умом. Мы используем следующий подход:
+Solution: maximize the list of allowed instance types in NodePool, but wisely. We use the following approach:
 
-- **Ограничение по генерации** - указываем минимальную генерацию инстансов (например, 4+), чтобы не получать устаревшие типы с худшим соотношением цена/производительность.
-- **Исключение проблемных типов** - мы получали официальную статистику AWS по частоте прерываний Spot-инстансов и добавляли в исключения типы, которые прерывались чаще остальных.
-- **Широкий набор семейств** - вместо конкретных типов указываем семейства (m5, m6i, m6a, c5, c6i, r5, r6i и т.д.) с фильтрацией по размеру.
-- **Несколько AZ** - распределение по availability zones увеличивает шансы найти доступный Spot.
+- **Generation restriction** - we specify a minimum instance generation (e.g., 4+) to avoid outdated types with worse price/performance ratio.
+- **Excluding problematic types** - we obtained official AWS statistics on Spot instance interruption frequency and excluded types that were interrupted more often than others.
+- **Wide range of families** - instead of specific types, we specify families (m5, m6i, m6a, c5, c6i, r5, r6i, etc.) with size filtering.
+- **Multiple AZs** - distribution across availability zones increases the chances of finding available Spot capacity.
 
-## 9. Подводные камни (Pitfalls)
 
-Помимо проблем, которые мы решили (раздел 8), есть ряд подводных камней, о которых стоит знать заранее.
+## 9. Pitfalls
 
-### 9.1. Недостаток спотов и частые прерывания
+Beyond the problems we solved (section 8), there are several pitfalls worth knowing about in advance.
 
-В некоторых регионах и AZ Spot-ёмкость бывает ограничена. Если NodePool настроен на узкий набор instance types или одну AZ - можно столкнуться с ситуацией, когда Karpenter просто не может поднять ноду. Поды висят в Pending, алерты срабатывают, а сделать ничего нельзя - ёмкости нет.
+### 9.1. Spot Shortage and Frequent Interruptions
 
-Рекомендации: вместо одного NodePool с fallback лучше использовать каскад NodePool с разными weight. Karpenter при наличии нескольких подходящих NodePool выбирает тот, у которого weight выше. Если в приоритетном пуле нет ёмкости - переходит к следующему по весу ([документация](https://karpenter.sh/docs/concepts/nodepools/)).
+In some regions and AZs, Spot capacity can be limited. If a NodePool is configured for a narrow set of instance types or a single AZ - you may face a situation where Karpenter simply cannot provision a node. Pods hang in Pending, alerts fire, and there's nothing you can do - there's no capacity.
 
-Пример каскадной стратегии:
+Recommendations: instead of a single NodePool with fallback, it's better to use a cascade of NodePools with different weights. When multiple suitable NodePools exist, Karpenter selects the one with the highest weight. If the priority pool has no capacity - it moves to the next by weight ([documentation](https://karpenter.sh/docs/concepts/nodepools/)).
+
+Cascading strategy example:
 
 | Weight | NodePool | Capacity Type | Instance Types | AZ |
 |---|---|---|---|---|
-| 100 | spot-priority | Spot | Оптимальные типы для нагрузки | Приоритетная AZ (минимизация межзонного трафика) |
-| 50 | spot-wide | Spot | Широкий набор подходящих типов | Все AZ |
-| 25 | ondemand-priority | On-Demand | Подходящие типы | Приоритетная AZ |
-| 10 | ondemand-wide | On-Demand | Максимально широкий набор | Все AZ |
+| 100 | spot-priority | Spot | Optimal types for the workload | Priority AZ (minimize cross-zone traffic) |
+| 50 | spot-wide | Spot | Wide range of suitable types | All AZs |
+| 25 | ondemand-priority | On-Demand | Suitable types | Priority AZ |
+| 10 | ondemand-wide | On-Demand | Widest possible range | All AZs |
 
-Такой подход даёт:
-- Приоритет Spot в нужной AZ (экономия + минимум межзонного трафика)
-- Расширение на все AZ если в приоритетной нет ёмкости
-- Fallback на On-Demand в нужной AZ
-- Последний рубеж - On-Demand в любой AZ с максимальным набором типов
+This approach provides:
+- Spot priority in the needed AZ (savings + minimal cross-zone traffic)
+- Expansion to all AZs if the priority one has no capacity
+- Fallback to On-Demand in the needed AZ
+- Last resort - On-Demand in any AZ with the widest type range
 
-### 9.2. Неясность логов и отсутствующие метрики
+### 9.2. Unclear Logs and Missing Metrics
 
-Логи Karpenter информативны, но не всегда интуитивны. Примеры:
+Karpenter logs are informative but not always intuitive. Examples:
 
-| Ситуация | Что видим в логах | Чего не хватает |
+| Situation | What We See in Logs | What's Missing |
 |---|---|---|
-| Spot прерывание | "disrupting nodeclaim" | instance_id не всегда очевиден |
-| Consolidation | "consolidating nodes" | Какие именно поды будут перемещены |
-| Не удалось поднять ноду | "launching nodeclaim, capacity unavailable" | Какие типы были попробованы |
-| Drift detected | "drifted nodeclaim" | Что именно изменилось (AMI, SG, subnet) |
+| Spot interruption | "disrupting nodeclaim" | instance_id not always obvious |
+| Consolidation | "consolidating nodes" | Which specific pods will be moved |
+| Failed to provision node | "launching nodeclaim, capacity unavailable" | Which types were attempted |
+| Drift detected | "drifted nodeclaim" | What exactly changed (AMI, SG, subnet) |
 
-Для production-эксплуатации мы рекомендуем настроить structured logging и парсинг логов Karpenter в вашу систему логирования (ELK, Loki и т.д.), чтобы можно было быстро искать и коррелировать события.
+For production operations, we recommend setting up structured logging and parsing Karpenter logs into your logging system (ELK, Loki, etc.) so you can quickly search and correlate events.
 
-### 9.3. Проблема со стабильностью при дефиците типов
+### 9.3. Stability Issues with Limited Instance Types
 
-Если в NodePool указано мало instance types и Spot-ёмкость по ним исчерпана, Karpenter начинает вести себя непредсказуемо:
+If a NodePool has few instance types and Spot capacity for them is exhausted, Karpenter starts behaving unpredictably:
 
-- Поднимает ноду, она тут же прерывается
-- Пытается снова тот же тип (кэш недоступности - 3 минуты)
-- После истечения кэша - снова пробует и снова неудача
-- Поды остаются в Pending
+- Provisions a node, it's immediately interrupted
+- Tries again with the same type (unavailability cache - 3 minutes)
+- After cache expires - tries again and fails again
+- Pods remain in Pending
 
-Это особенно критично для production-сервисов. Решение - всегда иметь On-Demand как fallback и достаточное разнообразие типов. Мы придерживаемся правила: минимум 10-15 допустимых instance types в каждом NodePool.
+This is especially critical for production services. The solution - always have On-Demand as fallback and sufficient type diversity. We follow the rule: minimum 10-15 allowed instance types in each NodePool.
 
-### 9.4. Отличие поведения Karpenter и Spot.io при нехватке ёмкости
+### 9.4. Behavioral Differences Between Karpenter and Spot.io During Capacity Shortage
 
-Важный нюанс, который стоит учитывать при миграции:
+An important nuance to consider during migration:
 
-| Поведение | Spot.io | Karpenter |
+| Behavior | Spot.io | Karpenter |
 |---|---|---|
-| Нет Spot нужного типа | Поднимает Spot другого типа или On-Demand | Пробует все допустимые типы, потом fallback на On-Demand |
-| Нет ёмкости вообще | Ждёт, периодически пробует | Кэширует недоступность на 3 мин, потом пробует снова |
-| Выбор типа инстанса | На основе внутренней аналитики прерываний | На основе цены и доступности (без истории прерываний) |
-| Возврат на Spot с On-Demand | Не всегда происходил (п. 3.2) | Consolidation автоматически заменяет On-Demand на Spot |
-| Размер инстанса | Мог выбрать избыточно крупный | Подбирает под реальные requests подов |
+| No Spot of needed type | Provisions Spot of another type or On-Demand | Tries all allowed types, then falls back to On-Demand |
+| No capacity at all | Waits, periodically retries | Caches unavailability for 3 min, then retries |
+| Instance type selection | Based on internal interruption analytics | Based on price and availability (no interruption history) |
+| Return to Spot from On-Demand | Didn't always happen (section 3.2) | Consolidation automatically replaces On-Demand with Spot |
+| Instance size | Could choose an oversized one | Matches actual pod requests |
 
-Ключевое отличие: Karpenter прозрачнее и предсказуемее, но требует от команды больше ответственности за конфигурацию. Spot.io принимал часть решений за вас (не всегда удачно), Karpenter делает ровно то, что вы настроили.
+Key difference: Karpenter is more transparent and predictable, but requires more configuration responsibility from the team. Spot.io made some decisions for you (not always successfully), Karpenter does exactly what you configure.
+
+
+## 10. Practical Aspects and Demo
+
+### 10.1. Disruption Budget for Deployment
+
+Disruption Budget on the Kubernetes side (PodDisruptionBudget, PDB) is the first line of defense for workloads against unwanted eviction. Karpenter respects PDB during consolidation and drift replacement.
+
+PDB example for a production service:
+
+```yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: my-service-pdb
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: my-service
+```
+
+Key points:
+- `maxUnavailable: 1` - Karpenter can evict at most 1 pod at a time. Other replicas continue running.
+- For cron jobs and batch tasks, you can use `maxUnavailable: 0` - Karpenter won't touch the node until the task completes.
+- PDB works in conjunction with `terminationGracePeriod` on NodePool - if PDB blocks eviction longer than the grace period, Karpenter will forcefully delete the pod.
+
+### 10.2. Disruption Budget for NodePool
+
+Karpenter has its own Disruption Budgets mechanism at the NodePool level, which limits the rate of node replacement:
+
+```yaml
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: production
+spec:
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 5m
+    budgets:
+      - nodes: 10%
+      # During business hours - don't touch nodes
+      - schedule: "0 9 * * mon-fri"
+        duration: 8h
+        nodes: "0"
+```
+
+| Parameter | Description |
+|---|---|
+| `nodes: 10%` | Maximum 10% of nodes can be replaced simultaneously |
+| `schedule` + `duration` | Time window when disruption is prohibited |
+| `nodes: "0"` | Complete disruption ban during specified time |
+| `consolidateAfter: 5m` | Wait 5 minutes after load change before consolidation |
+
+This is analogous to a maintenance window - you can prohibit node replacement during business hours when load is at its peak.
+
+### 10.3. Spot-to-Spot Replacement Mechanism
+
+When Karpenter detects that the current Spot instance can be replaced with a cheaper or more suitable one, it performs a Spot-to-Spot replacement:
+
+```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    fontSize: 16px
+    nodeSpacing: 40
+    rankSpacing: 60
+---
+graph LR
+    OLD["Spot m5.2xlarge"] -->|"Consolidation"| KARP["Karpenter"]
+    KARP -->|"Cheaper and suitable"| NEW["Spot c6i.xlarge"]
+    KARP -->|"Drain + Launch"| PROC["1. Cordon old node\n2. Launch new node\n3. Drain pods\n4. Terminate old node"]
+
+    style OLD fill:#e76f51,stroke:#c1440e,color:#fff
+    style KARP fill:#2d6a4f,stroke:#1b4332,color:#fff
+    style NEW fill:#2a9d8f,stroke:#1a7a6d,color:#fff
+    style PROC fill:#264653,stroke:#1d3557,color:#fff
+```
+
+Process:
+1. Karpenter finds a node that can be replaced with a cheaper one
+2. Checks Disruption Budget (NodePool) and PDB (Deployment)
+3. Launches a new node
+4. Cordons the old node (blocks new pods)
+5. Drains pods to the new node
+6. Terminates the old node
+
+Important: Spot-to-Spot replacement only happens with `consolidationPolicy: WhenEmptyOrUnderutilized`. With `WhenEmpty` - only empty nodes are removed.
+
+### 10.4. Demo Tools and Visualization
+
+For demonstrating and debugging Karpenter behavior, we use a set of tools:
+
+| Tool | Purpose |
+|---|---|
+| `kubectl get nodeclaims -o wide` | Current nodes: type, capacity type, AZ, age |
+| `kubectl get nodepools` | NodePool status: node count, resource consumption |
+| `kubectl describe nodeclaim <name>` | Node details: events, conditions, labels |
+| `kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` | Real-time Karpenter logs |
+| Custom console script | Node summary: type, Spot/OD, utilization, cost |
+| Grafana dashboards | Metrics visualization: provisioning, disruption, cost |
+
+For presentations and demos, it's convenient to show:
+- `kubectl get nodeclaims` before and after load changes - shows how Karpenter provisions/removes nodes
+- Grafana dashboard with real-time Spot/On-Demand ratio
+- Karpenter logs during Spot interruption - shows the entire node replacement process
+
+
+## 11. Conclusions and Recommendations
+
+### 11.1. Key Benefits of the Transition
+
+| Benefit | Description |
+|---|---|
+| 💰 Cost reduction | No Spot.io license + better instance right-sizing |
+| 🔍 Transparency | All decisions visible in logs and metrics, no "black box" |
+| 🔧 Flexibility | NodePool, Disruption Budgets, weight - fine-tuning for each workload |
+| 🛡️ Control | Configuration in Kubernetes manifests, no external SaaS dependency |
+| 📉 Fewer incidents | "Stuck" On-Demand node issues and consolidation cycles eliminated |
+| 🔄 Automatic return to Spot | Consolidation replaces On-Demand with Spot when capacity appears |
+| 🏗️ Simplified infrastructure | Removed cross-account IAM, API tokens, external SaaS account |
+
+### 11.2. What Can Be Improved Further
+
+- Implement Spot Interruption event collection via AWS EventBridge for a complete interruption picture
+- Automate excluded instance type list updates based on interruption statistics
+- Add automatic canary tests when upgrading Karpenter versions
+- Explore static NodePool with `replicas` as a replacement for placeholder pods
+- Expand Grafana dashboards: add cost analytics at the namespace level
+
+### 11.3. Practical Tips for Migration Preparation
+
+If you're planning a transition from Spot.io (or another node manager) to Karpenter:
+
+1. **Start with a PoC on a dev cluster** - don't go straight to production. Two weeks on a PoC will save months of problems.
+
+2. **Document your current VNGs** - before migration, list all VNGs with their parameters: instance types, labels, taints, Spot/OD ratio. This becomes the foundation for NodePools.
+
+3. **Use a NodePool cascade with weights** - don't put everything in one NodePool. Separate by priority: Spot in the needed AZ → Spot in all AZs → On-Demand.
+
+4. **Set up monitoring in advance** - Grafana dashboards and alerts should be ready before migration starts, not after.
+
+5. **Migrate in phases** - Dev → Airflow → Prod non-critical → Prod critical. At each phase - an observation period of 1-2 weeks.
+
+6. **Keep Spot.io and Karpenter running in parallel** - label separation allows rollback at any moment.
+
+7. **Expand instance types** - minimum 10-15 types per NodePool. Exclude frequently interrupted ones based on AWS statistics.
+
+8. **Don't forget PDB** - Disruption Budget at the Deployment level protects workloads from unwanted eviction.
+
+9. **Test Spot interruption** - use AWS FIS (Fault Injection Service) to simulate interruptions and verify Karpenter behavior.
+
+10. **Plan a time budget** - migrating all clusters took us several months. This is not a weekend task.
+
+---
+
+The transition from Spot.io to Karpenter required effort, but the result was worth it. We got a more transparent, controllable, and cost-effective node management system. Karpenter isn't perfect - it has its own downsides and pitfalls. But for a team willing to invest time in configuration and monitoring, it's a powerful tool.
+
+If you have questions about migration - feel free to reach out, happy to share our experience.
+
+**Viktar Mikalayeu** - [LinkedIn](https://www.linkedin.com/in/viktar-mikalayeu-mns/) | [SRE Learning Platform](https://github.com/ViktorUJ/cks)
