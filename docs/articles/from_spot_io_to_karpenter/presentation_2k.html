@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>From Spot.io to Karpenter (2K)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
+<style>
+  :root {
+    --r-background-color: #1a1a2e;
+    --r-main-color: #e0e0e0;
+    --r-heading-color: #ff9900;
+    --r-link-color: #2a9d8f;
+    --r-main-font-size: 26px;
+  }
+  .reveal { background: #1a1a2e; }
+  .reveal .slides section { display: flex !important; flex-direction: column; justify-content: flex-start; height: 100%; padding: 20px 40px; box-sizing: border-box; }
+  .reveal h1, .reveal h2, .reveal h3 { color: #ff9900; text-transform: none; font-weight: 700; margin-top: 0; }
+  .reveal h1 { font-size: 2.4em; margin-bottom: 0.3em; }
+  .reveal h2 { font-size: 1.7em; margin-bottom: 0.3em; }
+  .reveal h3 { font-size: 1.2em; color: #2a9d8f; margin-bottom: 0.2em; }
+  .reveal p, .reveal li { font-size: 1em; line-height: 1.55; }
+  .reveal ul { list-style: none; padding-left: 0; }
+  .reveal ul li { margin-bottom: 0.2em; }
+  .reveal ul li::before { content: "▸ "; color: #ff9900; }
+  .reveal table { font-size: 0.85em; margin: 0 auto; border-collapse: collapse; }
+  .reveal table th { background: #232f3e; color: #ff9900; padding: 8px 14px; }
+  .reveal table td { padding: 6px 14px; border-bottom: 1px solid #333; }
+  .reveal table tr:nth-child(even) { background: rgba(255,255,255,0.03); }
+  .reveal .subtitle { color: #8a8a8a; font-size: 0.8em; margin-top: 0.2em; }
+  .reveal .highlight { color: #2a9d8f; font-weight: bold; }
+  .reveal .warn { color: #e76f51; font-weight: bold; }
+  .reveal .ok { color: #2d6a4f; }
+  .reveal code { background: #232f3e; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; color: #ff9900; }
+  .reveal pre { background: #232f3e; border-radius: 8px; padding: 10px; margin: 0; width: 100%; box-sizing: border-box; }
+  .reveal pre code { color: #e0e0e0; font-size: 1.25em; line-height: 1.6; overflow: visible; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: geometricPrecision; }
+  .two-col { display: flex; gap: 30px; align-items: flex-start; }
+  .two-col > div { flex: 1; }
+  .reveal .slide-number { color: #ff9900; }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 10px; font-size: 0.65em; margin: 2px; }
+  .badge-spot { background: #0052cc; color: #fff; }
+  .badge-karp { background: #2d6a4f; color: #fff; }
+  .badge-warn { background: #d62828; color: #fff; }
+  .flow-arrow { color: #ff9900; font-size: 1.2em; }
+  @media print {
+    body { background: #1a1a2e !important; }
+    .reveal { background: #1a1a2e !important; }
+    .reveal .slides section { background: #1a1a2e !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- SLIDE 1: Title -->
+<section>
+  <h1>From Spot.io to Karpenter</h1>
+  <p style="color:#8a8a8a;">Node Management Migration Experience in Kubernetes</p>
+  <p>Viktar Mikalayeu — Tech Lead SRE @ Madlan</p>
+  <p style="font-size:0.75em; color:#555;">AWS Community Builder · <a href="https://www.cncf.io/training/kubestronaut/">CNCF Kubestronaut</a> · <a href="https://github.com/ViktorUJ/cks">SRE Learning Platform</a></p>
+</section>
+
+<!-- SLIDE 2: Audience Poll -->
+<section>
+  <h2>Quick Poll 🙋</h2>
+  <ul>
+    <li style="margin-bottom:0.6em; font-size:1.15em;">Who uses Amazon EKS?</li>
+    <li style="margin-bottom:0.6em; font-size:1.15em;">Who uses Karpenter?</li>
+    <li style="margin-bottom:0.6em; font-size:1.15em;">Who uses any other autoscaler?<br>
+      <span style="font-size:0.75em; color:#8a8a8a;">(Cluster Autoscaler, Spot.io, CAST AI, etc.)</span></li>
+  </ul>
+</section>
+
+<!-- SLIDE 3: About Me -->
+<section style="padding: 20px 15px;">
+  <h2>About Me & Team</h2>
+  <div style="display:flex; gap:30px; align-items:center;">
+    <div style="flex:1;">
+      <ul>
+        <li>Tech Lead SRE — large numbers of EKS clusters in AWS</li>
+        <li>Platform Engineering — abstracting infra complexity</li>
+        <li>Provisioning, scaling, cost optimization, upgrades</li>
+        <li>AWS Community Builder, SRE Learning Platform author</li>
+      </ul>
+    </div>
+    <div style="text-align:center; flex-shrink:0;">
+      <canvas id="qr-linkedin" style="border-radius:8px; background:#fff; padding:6px;"></canvas>
+      <p style="font-size:0.7em; margin-top:4px;">LinkedIn</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 3: Infrastructure Context -->
+<section>
+  <h2>Our Infrastructure</h2>
+  <div class="two-col">
+    <div>
+      <h3>🟢 Production</h3>
+      <ul>
+        <li>Stateless services, APIs</li>
+        <li>Queue workers</li>
+        <li>Cron jobs</li>
+      </ul>
+      <h3>🔵 Dev / Staging</h3>
+      <ul>
+        <li>Unpredictable load</li>
+        <li>Short disruptions OK</li>
+      </ul>
+    </div>
+    <div>
+      <h3>🔴 Airflow</h3>
+      <ul>
+        <li>Batch jobs, data processing</li>
+        <li>ML pipelines (GPU)</li>
+        <li>Sharp resource spikes</li>
+      </ul>
+      <p style="font-size:0.75em; color:#8a8a8a;">All on Amazon EKS · Managed via Terraform</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 4: How Spot.io Was Used -->
+<section>
+  <h2>How Spot.io (Ocean) Was Used</h2>
+  <ul>
+    <li>Replaced Cluster Autoscaler + ASG (slow, rigid)</li>
+    <li>Automatic instance type selection</li>
+    <li>Spot/On-Demand switching</li>
+    <li>Virtual Node Groups (VNG) — logical node groups</li>
+    <li>"% of savings" pricing — transparent, aligned incentives</li>
+  </ul>
+  <p class="subtitle">It worked well… until infrastructure grew</p>
+</section>
+
+<!-- SLIDE 5: Problem 1 -->
+<section>
+  <h2><span class="warn">Problem 1:</span> Job Node Consolidation</h2>
+  <p>Cron job nodes were consolidated while tasks were running:</p>
+  <p>
+    Task starts → Node provisioned → More tasks → More nodes<br>
+    <span class="flow-arrow">↓</span><br>
+    <span class="warn">Spot.io consolidates</span> → Tasks interrupted → Restart<br>
+    <span class="flow-arrow">↓</span><br>
+    New nodes → <span class="warn">Consolidation again</span> → ♻️ Loop
+  </p>
+  <p class="subtitle">restrict-scale-down label existed but didn't prevent bin-packing consolidation</p>
+</section>
+
+<!-- SLIDE 6: Problem 2 -->
+<section>
+  <h2><span class="warn">Problem 2:</span> On-Demand Fallback & Oversizing</h2>
+  <div class="two-col">
+    <div>
+      <h3>Stuck On-Demand</h3>
+      <ul>
+        <li>Nodes stayed On-Demand for weeks</li>
+        <li>Even when Spot capacity returned</li>
+        <li>No transparent tracking</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Oversized Instances</h3>
+      <ul>
+        <li>Pod needs 1 vCPU</li>
+        <li>Ocean provisions 64 vCPU Spot</li>
+        <li>~1-2% utilization for days</li>
+        <li>Spot.io charges % on "savings" of 64 vCPU</li>
+      </ul>
+    </div>
+  </div>
+  <p class="subtitle">A small On-Demand would have been cheaper than Spot 64 vCPU + commission</p>
+</section>
+
+<!-- SLIDE 7: Problem 3 -->
+<section>
+  <h2><span class="warn">Problem 3:</span> Pricing Model Change</h2>
+  <table>
+    <tr><th></th><th>Old Model</th><th>New Model</th></tr>
+    <tr><td>Principle</td><td>% of savings</td><td>Fixed per vCPU/hour</td></tr>
+    <tr><td>Client risk</td><td>Minimal</td><td>Pay always</td></tr>
+    <tr><td>Vendor motivation</td><td>Maximize Spot usage</td><td>Maximize managed vCPUs</td></tr>
+  </table>
+  <ul>
+    <li>Burst workloads (Airflow) → cost spikes</li>
+    <li>On-Demand fallback → double payment</li>
+    <li>Estimated <span class="warn">2-3x cost increase</span></li>
+  </ul>
+</section>
+
+<!-- SLIDE 8: Why Karpenter -->
+<section>
+  <h2>Why Karpenter?</h2>
+  <table>
+    <tr><th>Criterion</th><th>Karpenter</th><th>CA + ASG</th><th>Spot.io</th></tr>
+    <tr><td>Speed</td><td>✅ Seconds</td><td>❌ Minutes</td><td>✅ Fast</td></tr>
+    <tr><td>Instance selection</td><td>✅ Auto</td><td>❌ Fixed</td><td>✅ Auto</td></tr>
+    <tr><td>Cost</td><td>✅ $0</td><td>✅ $0</td><td>❌ License</td></tr>
+    <tr><td>Flexibility</td><td>✅ NodePool + Budgets</td><td>❌ Limited</td><td>⚠️ VNG</td></tr>
+    <tr><td>EKS integration</td><td>✅ Native</td><td>✅ Standard</td><td>⚠️ SaaS</td></tr>
+    <tr><td>Transparency</td><td>✅ Full logs/metrics</td><td>✅ Standard</td><td>❌ Black box</td></tr>
+  </table>
+</section>
+
+<!-- SLIDE 9: Karpenter Key Advantages -->
+<section>
+  <h2>Karpenter Key Advantages</h2>
+  <ul>
+    <li>⚡ Direct EC2 API — provisioning in seconds</li>
+    <li>🔧 NodePool + EC2NodeClass — flexible abstractions</li>
+    <li>💰 Open-source — $0 license</li>
+    <li>🛡️ Disruption Budgets — fine-grained control</li>
+    <li>📊 Prometheus metrics out of the box</li>
+    <li>🔄 Drift Detection — auto-replace outdated nodes</li>
+    <li>☁️ Native AWS EKS integration</li>
+  </ul>
+</section>
+
+<!-- SLIDE 10: Migration Strategy -->
+<section>
+  <h2>Migration Strategy</h2>
+  <h3>Proof of Concept (2 weeks)</h3>
+  <p>Tested: provisioning, Spot+OD fallback, consolidation, disruption budgets, cron jobs, drift</p>
+  <h3>Phased Rollout</h3>
+  <p>
+    <span class="badge badge-spot">Phase 1: Dev/Staging</span>
+    <span class="flow-arrow">→</span>
+    <span class="badge badge-warn">Phase 2: Airflow</span>
+    <span class="flow-arrow">→</span>
+    <span class="badge badge-karp">Phase 3: Prod non-critical</span>
+    <span class="flow-arrow">→</span>
+    <span class="badge badge-karp">Phase 4: Prod critical</span>
+  </p>
+  <p class="subtitle">1-2 week observation period at each phase</p>
+</section>
+
+<!-- SLIDE 11: Parallel Running -->
+<section>
+  <h2>Spot.io + Karpenter in Parallel</h2>
+  <ul>
+    <li>Both controllers in the same cluster</li>
+    <li>Label/taint separation — no conflicts</li>
+    <li>Migrated workloads → <code>nodeSelector</code> for Karpenter nodes</li>
+    <li>Remaining workloads → VNG labels (Spot.io)</li>
+    <li>Rollback at any moment — just switch nodeSelector</li>
+  </ul>
+  <p class="subtitle">Only 1 workload needed temporary rollback (GPU instance edge case)</p>
+</section>
+
+<!-- SLIDE 12: Monitoring Before/After -->
+<section>
+  <h2>Monitoring: Before vs After</h2>
+  <div class="two-col">
+    <div>
+      <h3>Before (Spot.io)</h3>
+      <ul>
+        <li>Spot.io Dashboard (closed data)</li>
+        <li>AWS Cost Explorer (24-48h delay)</li>
+        <li>Fragmented — hard to correlate</li>
+      </ul>
+    </div>
+    <div>
+      <h3>After (Karpenter)</h3>
+      <ul>
+        <li>Karpenter → Prometheus → Grafana</li>
+        <li>All data in one stack</li>
+        <li>Custom queries & alerts</li>
+        <li>Cost by namespace/workload</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 13: Results -->
+<section>
+  <h2>Migration Results</h2>
+  <table>
+    <tr><th>Metric</th><th>Spot.io</th><th>Karpenter</th></tr>
+    <tr><td>License cost</td><td>Commission</td><td class="ok">$0</td></tr>
+    <tr><td>Spot ratio</td><td>60-70%</td><td class="ok">80-90%</td></tr>
+    <tr><td>Stuck On-Demand</td><td>Regularly</td><td class="ok">Virtually none</td></tr>
+    <tr><td>Oversized instances</td><td>Frequently</td><td class="ok">Rarely</td></tr>
+    <tr><td>Provisioning time</td><td>~1-2 min</td><td>~1-2 min</td></tr>
+    <tr><td>IAM complexity</td><td>Cross-account + tokens</td><td class="ok">Standard IAM</td></tr>
+    <tr><td>Config management</td><td>TF + Spot.io API + UI</td><td class="ok">TF + K8s manifests</td></tr>
+  </table>
+</section>
+
+<!-- SLIDE 14: Karpenter Downsides -->
+<section>
+  <h2>Karpenter Downsides & Solutions</h2>
+  <table>
+    <tr><th>Problem</th><th>Solution</th></tr>
+    <tr><td>No node visualization UI</td><td>Custom Grafana dashboards + console script</td></tr>
+    <tr><td>No min nodes parameter (old versions)</td><td>Placeholder pods + podAntiAffinity</td></tr>
+    <tr><td>Missing instance_id in interruption logs</td><td>AWS EventBridge correlation (planned)</td></tr>
+    <tr><td>No cumulative interruption stats</td><td>Prometheus metrics + EventBridge + Grafana</td></tr>
+    <tr><td>Spot flapping loops</td><td>Wide instance type list (10-15+ types)</td></tr>
+  </table>
+</section>
+
+<!-- SLIDE 15: NodePool Cascade -->
+<section>
+  <h2>NodePool Cascade Strategy</h2>
+  <table>
+    <tr><th>Weight</th><th>NodePool</th><th>Type</th><th>AZ</th></tr>
+    <tr><td>100</td><td>spot-priority</td><td>Spot</td><td>Priority AZ</td></tr>
+    <tr><td>50</td><td>spot-wide</td><td>Spot</td><td>All AZs</td></tr>
+    <tr><td>25</td><td>ondemand-priority</td><td>On-Demand</td><td>Priority AZ</td></tr>
+    <tr><td>10</td><td>ondemand-wide</td><td>On-Demand</td><td>All AZs</td></tr>
+  </table>
+  <p>Spot in needed AZ → Spot anywhere → On-Demand in needed AZ → On-Demand anywhere</p>
+</section>
+
+<!-- SLIDE 16: Disruption Budgets - Code -->
+<section>
+  <h2>Disruption Budgets — NodePool Config</h2>
+  <pre><code>apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: production
+spec:
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 5m
+    budgets:
+      - nodes: 10%
+      - schedule: "0 9 * * mon-fri"
+        duration: 8h
+        nodes: "0"    # No disruption during business hours</code></pre>
+</section>
+
+<!-- SLIDE 16b: Disruption Budgets - Explanation -->
+<section>
+  <h2>Disruption Budgets — Key Points</h2>
+  <ul>
+    <li>PDB on Deployment level — first line of defense</li>
+    <li>NodePool budgets — rate-limit node replacement</li>
+    <li>Schedule-based windows — protect peak hours</li>
+    <li><code>nodes: 10%</code> — max 10% replaced simultaneously</li>
+    <li><code>nodes: "0"</code> — complete ban during business hours</li>
+    <li><code>consolidateAfter: 5m</code> — wait before consolidation</li>
+  </ul>
+</section>
+
+<!-- SLIDE 17: Disruption Management -->
+<section>
+  <h2>Managing Disruptions — Key Tools</h2>
+  <ul>
+    <li>🛡️ <span class="highlight">PodDisruptionBudget (PDB)</span> on Deployment — first line of defense, Karpenter respects this</li>
+    <li>⚙️ <span class="highlight">NodePool budgets</span> — control how many nodes can be replaced at the same time</li>
+    <li>📅 <span class="highlight">Schedules</span> — protect busy times from node replacements</li>
+    <li>🔗 <span class="highlight">Affinity and Anti-Affinity</span> — spread critical pods across different nodes, so they are not all on the same node</li>
+  </ul>
+  <br>
+  <p class="subtitle">Together, these tools let you control when and how nodes are replaced safely and keep critical services running</p>
+</section>
+
+<!-- SLIDE 18: 10 Tips for Migration -->
+<section>
+  <h2>10 Tips for Migration</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li>Start with PoC on dev cluster</li>
+        <li>Document all VNGs first</li>
+        <li>Use NodePool cascade with weights</li>
+        <li>Set up monitoring before migration</li>
+        <li>Migrate in phases (Dev → Prod)</li>
+      </ul>
+    </div>
+    <div>
+      <ul>
+        <li>Run Spot.io + Karpenter in parallel</li>
+        <li>Min 10-15 instance types per NodePool</li>
+        <li>Don't forget PDB</li>
+        <li>Test Spot interruption with AWS FIS</li>
+        <li>Plan months, not weekends</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 19: Summary -->
+<section>
+  <h2>Key Takeaways</h2>
+  <ul>
+    <li>💰 Cost reduction — no license + better right-sizing</li>
+    <li>🔍 Full transparency — logs, metrics, no black box</li>
+    <li>🔧 More flexibility — NodePool, Disruption Budgets, weights</li>
+    <li>🛡️ More control — config as K8s manifests, no SaaS dependency</li>
+    <li>📉 Fewer incidents — no stuck OD, no consolidation loops</li>
+  </ul>
+  <p style="font-size:0.8em;">Karpenter isn't perfect — but for teams willing to invest in config & monitoring, it's a powerful tool.</p>
+</section>
+
+<!-- SLIDE 20: k8i Tool - What -->
+<section>
+  <h2>k8i — Console Node Visualization</h2>
+  <ul>
+    <li>Replacement for Spot.io node dashboard</li>
+    <li>Real-time data directly from Kubernetes API</li>
+    <li>Per-node: pods, CPU, memory, utilization, Spot/OD, instance type</li>
+    <li>Filter by labels: <code>k8i --labels karpenter.sh/nodepool=c8g</code></li>
+    <li>Sort by any column, group by pool</li>
+    <li>No external backend, no caching lag — actual cluster state</li>
+  </ul>
+</section>
+
+<!-- SLIDE 21: k8i Tool - Output -->
+<section style="padding: 10px 0px;">
+  <h2>k8i — Example Output</h2>
+  <pre style="padding:6px 2px;"><code style="font-size:1.0em; line-height:1.4;">$ k8i --labels karpenter.sh/nodepool=c8g
+NODE          PODS     CPU cores           CPU  MEMORY GB          MEM  Node info
+             used/max req/lim/use/total   LOAD req/lim/use/total  LOAD ec2/type/spot/arch/zone/pool/nodeclaim/age
+=================================================================================================================
+ip-..24-124.. 40/58  3.6/16.9/0.3/4      08%  5.1/21.4/2.6/7.5  34% i-09bc../c8g.xl/od/arm64/1a/c8g/d7qrg/6d0h
+ip-..24-166.. 29/58  3.5/14.2/0.1/4      04%  4.8/24.0/5.6/7.5  74% i-0412../c8g.xl/od/arm64/1b/c8g/9vsrs/3h0m
+ip-..24-189.. 46/58  3.6/26.4/0.2/4      05%  6.4/35.0/3.1/7.5  41% i-0323../c8g.xl/od/arm64/1b/c8g/szw48/6d13h
+ip-..24-202.. 23/58  7.6/15.4/0.1/8      01%  10.8/22.1/1.8/15  11% i-0410../c8g.2xl/od/arm64/1b/c8g/fmkk4/6d20h
+ip-..24-211.. 39/58  3.5/22.4/0.2/4      05%  5.8/31.1/2.0/7.5  26% i-0431../c8g.xl/od/arm64/1b/c8g/4r6xm/6h31m</code></pre>
+</section>
+
+<!-- SLIDE 22: QR Codes -->
+<section>
+  <h2>Links</h2>
+  <div style="display:flex; justify-content:center; gap:40px; margin-top:10px;">
+    <div style="text-align:center;">
+      <canvas id="qr-presentation" style="border-radius:8px; background:#fff; padding:6px;"></canvas>
+    </div>
+    <div style="text-align:center;">
+      <canvas id="qr-github" style="border-radius:8px; background:#fff; padding:6px;"></canvas>
+    </div>
+    <div style="text-align:center;">
+      <canvas id="qr-k8i" style="border-radius:8px; background:#fff; padding:6px;"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 23: Thank You & Questions -->
+<section>
+  <h1>Thank You</h1>
+  <h2 style="margin-top:40px;">Questions?</h2>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  slideNumber: true,
+  transition: 'slide',
+  backgroundTransition: 'fade',
+  width: 960,
+  height: 540,
+  margin: 0.02
+});
+
+function drawQR(canvasId, text, size, label) {
+  var qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  var canvas = document.getElementById(canvasId);
+  var ctx = canvas.getContext('2d');
+  var moduleCount = qr.getModuleCount();
+  var cellSize = Math.floor(size / moduleCount);
+  var qrSize = cellSize * moduleCount;
+  canvas.width = size;
+  canvas.height = size;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#000000';
+  var offset = Math.floor((size - qrSize) / 2);
+  for (var r = 0; r < moduleCount; r++) {
+    for (var c = 0; c < moduleCount; c++) {
+      if (qr.isDark(r, c)) {
+        ctx.fillRect(offset + c * cellSize, offset + r * cellSize, cellSize, cellSize);
+      }
+    }
+  }
+  if (label) {
+    var fontSize = Math.max(10, Math.floor(size / 14));
+    ctx.font = 'bold ' + fontSize + 'px Arial, sans-serif';
+    var tw = ctx.measureText(label).width;
+    var pad = 4;
+    var lx = (size - tw) / 2;
+    var ly = size / 2 + fontSize / 3;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(lx - pad, ly - fontSize + 2, tw + pad * 2, fontSize + pad);
+    ctx.fillStyle = '#000000';
+    ctx.fillText(label, lx, ly);
+  }
+}
+drawQR('qr-presentation', 'https://github.com/ViktorUJ/cks/tree/AG-130/docs/articles/from_spot_io_to_karpenter', 240, 'Presentation');
+drawQR('qr-github', 'https://github.com/ViktorUJ/cks', 240, 'SRE Platform');
+drawQR('qr-k8i', 'https://github.com/ViktorUJ/cks/tree/master/docker/ping_pong/k8i', 240, 'k8i Tool');
+drawQR('qr-linkedin', 'https://www.linkedin.com/in/viktar-mikalayeu-mns/', 240, 'LinkedIn');
+</script>
+</body>
+</html>
