@@ -44,6 +44,12 @@
   .badge-karp { background: #2d6a4f; color: #fff; }
   .badge-warn { background: #d62828; color: #fff; }
   .flow-arrow { color: #ff9900; font-size: 1.5em; }
+  @media print {
+    body { background: #1a1a2e !important; }
+    .reveal { background: #1a1a2e !important; }
+    .reveal .slides section { background: #1a1a2e !important; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  }
 </style>
 </head>
 <body>
