@@ -321,6 +321,13 @@
 </section>
 
 <!-- SLIDE 17: Disruption Budgets - Code -->
+<!-- 
+  Disruption Budgets — NodePool ConfigWhenEmpty:
+  - consolidationPolicy: WhenEmptyOrUnderutilized controls when nodes can be consolidated
+  - WhenEmpty: only consolidate completely empty nodes
+  - WhenEmptyOrUnderutilized: also consolidate underutilized nodes (bin-packing)
+  - consolidateAfter: delay before consolidation starts (prevents premature consolidation)
+-->
 <section>
   <h2>Disruption Budgets — NodePool Config</h2>
   <pre><code>apiVersion: karpenter.sh/v1
@@ -329,7 +336,7 @@ metadata:
   name: production
 spec:
   disruption:
-    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidationPolicy: WhenEmptyOrUnderutilized  # WhenEmpty
     consolidateAfter: 5m
     budgets:
       - nodes: 10%
@@ -339,6 +346,12 @@ spec:
 </section>
 
 <!-- SLIDE 18: Disruption Budgets - Explanation -->
+<!-- 
+  ConfigWhenEmpty options:
+  - WhenEmpty: safest, only removes completely empty nodes
+  - WhenEmptyOrUnderutilized: more aggressive, consolidates underutilized nodes for cost savings
+  - consolidateAfter: critical for cron jobs - prevents consolidation during task execution
+-->
 <section>
   <h2>Disruption Budgets — Key Points</h2>
   <ul>
