@@ -59,6 +59,8 @@ kubectl label namespace default istio-injection=enabled
 ````
 установливаем демо приложение bookinfo
 ```
+cd istio-1.29.1
+
 kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
 ```
 проверяем что поды поднялись с сайдкаром
