@@ -1,0 +1,95 @@
+# 1. Общий Service для всех версий
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+# 2. Deployment Версии 1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+        version: v1
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong-V1 (Stable)"
+---
+# 3. Deployment Версии 2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+        version: v2
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong-V2 (Canary)"
+---
+# 4. Deployment Версии 3
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong-v3
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+      version: v3
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+        version: v3
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong-V3 (Experimental)"
