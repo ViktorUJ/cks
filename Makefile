@@ -172,6 +172,20 @@ delete_ica_mock_clean:
 output_ica_mock:
 	$(call terragrint_run,ica,mock,output)
 
+#ica task
+run_ica_task:
+	$(call terragrint_run,ica,task,run)
+delete_ica_task:
+	$(call terragrint_run,ica,task,delete)
+
+run_ica_task_clean:
+	$(call terragrint_run,ica,task,run,clean)
+
+delete_ica_task_clean:
+	$(call terragrint_run,ica,task,delete,clean)
+
+output_ica_task:
+	$(call terragrint_run,ica,task,output)
 
 #HR mock
 run_hr_mock:
