@@ -53,3 +53,33 @@ istiod-76d6698857-wmvhs                 1/1     Running   0          61s
 
 
 ```
+добавляем лейбл для автоматической инъекции sidecar в namespace default
+````
+kubectl label namespace default istio-injection=enabled
+````
+установливаем демо приложение bookinfo
+```
+kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
+```
+проверяем что поды поднялись с сайдкаром
+``` 
+# kubectl get pods
+NAME                              READY   STATUS    RESTARTS   AGE
+details-v1-6cc9f5cc44-csr7h       2/2     Running   0          50s
+productpage-v1-7f885b46fc-qqd29   2/2     Running   0          49s
+ratings-v1-77b8b6df5b-kfdx8       2/2     Running   0          50s
+reviews-v1-fdbf79cd8-zs7qf        2/2     Running   0          50s
+reviews-v2-674c6d8b4-p5r65        2/2     Running   0          50s
+reviews-v3-7b775c7568-m44z7       2/2     Running   0          50s
+
+
+```
+
+устанвливаем gateway для bookinfo
+```
+kubectl apply -f samples/bookinfo/networking/bookinfo-gateway.yaml
+```
+проверяем что все работает
+```
+curl -s http://myapp.local:32080/productpage | grep -o "<title>.*</title>"
+```
