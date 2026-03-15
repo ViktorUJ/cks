@@ -65,10 +65,11 @@ metadata:
   name: ping-pong-vs
 spec:
   hosts:
-  - "*"
+  - "ping-pong"       # 1. Для внутрикластерного трафика (mesh)
+  - "myapp.local"     # 2. Для внешнего трафика (gateway)
   gateways:
-  - ping-pong-gateway  # для внешнего трафика 
-  - mesh #  нужно чтобы наши правила работали внутри кластера
+  - ping-pong-gateway # Работает для myapp.local
+  - mesh              # Работает для ping-pong
   http:
   # ПРАВИЛО №1: Срабатывает ТОЛЬКО если есть заголовок x-user: tester
   - match:
@@ -113,7 +114,7 @@ spec:
       name: http
       protocol: HTTP
     hosts:
-    - "*" # Принимаем запросы на любые домены (включая myapp.local и IP-адреса)
+    - "myapp.local" # Принимаем запросы на myapp.local  ,  если нужно на все хосты, то hosts: ["*"]
 
 ```
 test
@@ -124,7 +125,7 @@ for i in {1..10}; do curl -s  http://myapp.local:32080 | grep 'Server Name:' ; d
 ```
 Server Name: Ping-Pong-V1 (Stable)
 Server Name: Ping-Pong-V1 (Stable)
-Server Name: Ping-Pong-V2 (Canary)
+Server Name: Ping-Pong-V2 (Canary)  #  10% трафика идет на v2
 Server Name: Ping-Pong-V1 (Stable)
 Server Name: Ping-Pong-V1 (Stable)
 Server Name: Ping-Pong-V1 (Stable)
