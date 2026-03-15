@@ -12,13 +12,13 @@
 
 ```mermaid
 flowchart TD
-    Client["🖥️ Клиент (curl / браузер)"]
-    GW["🚪 Istio Gateway\n(NodePort :32080)\nТочка входа для внешнего трафика\nХост: myapp.local"]
-    VS["📋 VirtualService (ping-pong-vs)\nАнализирует HTTP-заголовки\nи выбирает маршрут"]
-    DR["📦 DestinationRule (ping-pong-dr)\nОпределяет subsets по лейблу version"]
-    V1["🟢 ping-pong-v1\n(Stable)\nversion: v1"]
-    V2["🟡 ping-pong-v2\n(Canary)\nversion: v2"]
-    V3["🔴 ping-pong-v3\n(Experimental)\nversion: v3"]
+    Client["Клиент\n(curl / браузер)"]
+    GW["Istio Gateway\n(NodePort :32080)\nХост: myapp.local"]
+    VS["VirtualService\nping-pong-vs"]
+    DR["DestinationRule\nping-pong-dr"]
+    V1["ping-pong-v1\nStable"]
+    V2["ping-pong-v2\nCanary"]
+    V3["ping-pong-v3\nExperimental"]
 
     Client -->|"HTTP запрос"| GW
     GW --> VS
@@ -27,6 +27,14 @@ flowchart TD
     DR -->|"90%"| V1
     DR -->|"10%"| V2
     DR -->|"только tester"| V3
+
+    style Client fill:#326ce5,stroke:#fff,color:#fff
+    style GW fill:#326ce5,stroke:#fff,color:#fff
+    style VS fill:#326ce5,stroke:#fff,color:#fff
+    style DR fill:#326ce5,stroke:#fff,color:#fff
+    style V1 fill:#0f9d58,stroke:#fff,color:#fff
+    style V2 fill:#f4b400,stroke:#fff,color:#000
+    style V3 fill:#db4437,stroke:#fff,color:#fff
 ```
 
 ## Шаг 1. Включение sidecar-инъекции
