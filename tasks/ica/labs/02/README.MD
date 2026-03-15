@@ -12,13 +12,13 @@ A Gateway has been created at: http://myapp.local:32080
 
 ```mermaid
 flowchart TD
-    Client["Client\n(curl / browser)"]
-    GW["Istio Gateway\n(NodePort :32080)\nHost: myapp.local"]
-    VS["VirtualService\nping-pong-vs"]
-    DR["DestinationRule\nping-pong-dr"]
-    V1["ping-pong-v1\nStable"]
-    V2["ping-pong-v2\nCanary"]
-    V3["ping-pong-v3\nExperimental"]
+    Client["Client<br>(curl / browser)"]
+    GW["Istio Gateway<br>(NodePort :32080)<br>Host: myapp.local"]
+    VS["VirtualService<br>ping-pong-vs"]
+    DR["DestinationRule<br>ping-pong-dr"]
+    V1["ping-pong-v1<br>Stable"]
+    V2["ping-pong-v2<br>Canary"]
+    V3["ping-pong-v3<br>Experimental"]
 
     Client -->|"HTTP request"| GW
     GW --> VS

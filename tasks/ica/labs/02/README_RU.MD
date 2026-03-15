@@ -12,13 +12,13 @@
 
 ```mermaid
 flowchart TD
-    Client["Клиент\n(curl / браузер)"]
-    GW["Istio Gateway\n(NodePort :32080)\nХост: myapp.local"]
-    VS["VirtualService\nping-pong-vs"]
-    DR["DestinationRule\nping-pong-dr"]
-    V1["ping-pong-v1\nStable"]
-    V2["ping-pong-v2\nCanary"]
-    V3["ping-pong-v3\nExperimental"]
+    Client["Клиент<br>(curl / браузер)"]
+    GW["Istio Gateway<br>(NodePort :32080)<br>Хост: myapp.local"]
+    VS["VirtualService<br>ping-pong-vs"]
+    DR["DestinationRule<br>ping-pong-dr"]
+    V1["ping-pong-v1<br>Stable"]
+    V2["ping-pong-v2<br>Canary"]
+    V3["ping-pong-v3<br>Experimental"]
 
     Client -->|"HTTP запрос"| GW
     GW --> VS
