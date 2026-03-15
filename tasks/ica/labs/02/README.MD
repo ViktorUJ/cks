@@ -55,7 +55,7 @@ This is why you'll see `2/2` in the `READY` column — one container for the app
 Deploy the application in three versions. A shared Kubernetes Service named `ping-pong` is created.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-134/tasks/ica/labs/02/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/02/k8s-1/scripts/1.yaml
 ```
 
 **What gets deployed:**

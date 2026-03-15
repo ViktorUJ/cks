@@ -55,7 +55,7 @@ kubectl label namespace default istio-injection=enabled
 Устанавливаем приложение в 3 версиях. Создан общий Kubernetes Service с именем `ping-pong`.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-134/tasks/ica/labs/02/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/02/k8s-1/scripts/1.yaml
 ```
 
 **Что разворачивается:**
