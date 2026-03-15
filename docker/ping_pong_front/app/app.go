@@ -64,8 +64,14 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	// Pass nil body for methods that don't have a body (GET, HEAD, DELETE, etc.)
+	var reqBody io.Reader
+	if len(bodyBytes) > 0 {
+		reqBody = strings.NewReader(string(bodyBytes))
+	}
+
 	// Create upstream request
-	req, err := http.NewRequest(r.Method, targetURL, strings.NewReader(string(bodyBytes)))
+	req, err := http.NewRequest(r.Method, targetURL, reqBody)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to create upstream request: %v", err), http.StatusInternalServerError)
 		return
