@@ -1,3 +1,4 @@
+[RU version](README_RU.MD)
 # Dark Launch
 
 The dev team has rolled out a brand-new, experimental version of the application — v3. It's still rough around the edges, and regular users should never see it (they must stay on the stable v1). However, you need to give QA engineers access so they can test it against real production-like traffic. Testers will identify themselves using a special HTTP header: `x-user: tester`.
