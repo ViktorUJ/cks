@@ -36,6 +36,22 @@ scratch)
      viktoruj/ping_pong_front:${latest_commit_hash}-amd64
    docker manifest push viktoruj/ping_pong_front:latest
 ;;
+alpine)
+   echo "*** do release alpine"
+   docker buildx build --platform linux/arm64 --load -t viktoruj/ping_pong_front:${latest_commit_hash}-arm64-alpine -f Dockerfile_alpine .
+   docker buildx build --platform linux/amd64 --load -t viktoruj/ping_pong_front:${latest_commit_hash}-amd64-alpine -f Dockerfile_alpine .
+   docker push viktoruj/ping_pong_front:${latest_commit_hash}-arm64-alpine
+   docker push viktoruj/ping_pong_front:${latest_commit_hash}-amd64-alpine
+   docker manifest create viktoruj/ping_pong_front:${latest_commit_hash}-alpine \
+     viktoruj/ping_pong_front:${latest_commit_hash}-arm64-alpine \
+     viktoruj/ping_pong_front:${latest_commit_hash}-amd64-alpine
+   docker manifest push viktoruj/ping_pong_front:${latest_commit_hash}-alpine
+   docker manifest rm viktoruj/ping_pong_front:alpine || true
+   docker manifest create viktoruj/ping_pong_front:alpine \
+     viktoruj/ping_pong_front:${latest_commit_hash}-arm64-alpine \
+     viktoruj/ping_pong_front:${latest_commit_hash}-amd64-alpine
+   docker manifest push viktoruj/ping_pong_front:alpine
+;;
 dev)
    docker buildx build --platform linux/arm64 --load -t viktoruj/ping_pong_front:${latest_commit_hash}-arm64 .
    docker buildx build --platform linux/amd64 --load -t viktoruj/ping_pong_front:${latest_commit_hash}-amd64 .

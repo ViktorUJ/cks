@@ -109,7 +109,11 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Copy backend response headers to client
+	// Skip Content-Length — our proxy info block changes the actual body size
 	for name, values := range resp.Header {
+		if strings.EqualFold(name, "Content-Length") {
+			continue
+		}
 		for _, v := range values {
 			w.Header().Add(name, v)
 		}
