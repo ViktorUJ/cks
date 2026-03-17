@@ -18,8 +18,8 @@ locals {
   node_type  = "ondemand" # ondemand | spot
   runtime    = "containerd" # docker, cri-o, containerd ( need test it )
   cni = {
-    type               = "cilium" #calico , cilium
-    disable_kube_proxy = "true"
+    type               = "calico" #calico , cilium
+    disable_kube_proxy = "false"
   }
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"

@@ -7,6 +7,10 @@ kubectl label namespace default istio-injection=enabled
 ```
 
 
+``` 
+k apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-136/tasks/ica/labs/03/k8s-1/scripts/1.yaml
+```
+
 
 ```
 apiVersion: networking.istio.io/v1
@@ -17,7 +21,7 @@ spec:
   hosts:
   - "myapp.local"       # Внешний домен
   gateways:
-  - ping-pong-gateway   # Наш Ingress Gateway
+  - main-gateway   # Наш Ingress Gateway
   http:
   - route:
     - destination:
@@ -32,16 +36,19 @@ metadata:
   name: ping-pong-vs
 spec:
   hosts:
-  - "ping-pong"  # Реагируем на внутрикластерное DNS-имя
+  - "ping-pong"
   gateways:
-  - mesh         # МАГИЧЕСКОЕ СЛОВО: правило только для внутреннего трафика!
+  - mesh
   http:
-  # Дефолтная маршрутизация 90% на v1, 10% на v2
-  - route:
+  - fault:
+      abort:
+        httpStatus: 503
+        percentage:
+          value: 50.0 # Ломаем ровно половину запросов
+    route:
     - destination:
         host: ping-pong
-        subset: v1
-      weight: 100
+        # Обратите внимание: никаких subset! Трафик идет просто на сервис.
 ```
 
 ``` 
@@ -59,4 +66,8 @@ spec:
       protocol: HTTP
     hosts:
     - "myapp.local"
+```
+
+``` 
+curl http://myapp.local:32080
 ```
