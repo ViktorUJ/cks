@@ -146,15 +146,15 @@ Every command should be run from the project's root directory.
 <details>
   <summary style="font-weight: bold; font-size: 1.5em;">ICA</summary>
 
-### cks task
-- ``TASK=10 make run_ica_task`` - create cks [hands-on labs](docs%2Flabs.MD#cks-labs) number 10
-- ``TASK=10 make delete_ica_task`` - delete cks hands-on labs
-- ``TASK=10  make run_ica_task_clean`` - run cks_task with clean terragrunt cache  for  cks_task
-- ``make output_cks_task `` - show **outputs** from   **cks_task**
-### cks mock
-- ``TASK=01 make run_ica_mock`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)
-- ``make delete_ica_mock`` - delete mock  CKS exam
-- ``TASK=01 make run_ica_mock_clean`` - create mock  CKS exam [number 01](tasks%2Fcks%2Fmock%2F01)  with clean terragrunt cache
+### ica task
+- ``TASK=01 make run_ica_task`` - create ica [hands-on labs](docs/labs.MD) number 01
+- ``TASK=01 make delete_ica_task`` - delete ica hands-on labs
+- ``TASK=01  make run_ica_task_clean`` - run ica_task with clean terragrunt cache  for ica_task
+- ``make output_cks_task `` - show **outputs** from   **ica_task**
+### ica mock
+- ``TASK=01 make run_ica_mock`` - create mock  ica exam [number 01](tasks%2Fica%2Fmock%2F01)
+- ``make delete_ica_mock`` - delete mock  ica exam
+- ``TASK=01 make run_ica_mock_clean`` - create mock  ica exam [number 01](tasks%2Fica%2Fmock%2F01)  with clean terragrunt cache
 - ``make output_ica_mock `` - show **outputs** from   **cks_mock**
 </details>
 
