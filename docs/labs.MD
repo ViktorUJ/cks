@@ -70,6 +70,19 @@
 | **01** | [test ](..%2Ftasks%2Fcka%2Flabs%2F02%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F02%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
 
 
+## ICA labs
+
+- ``TASK=01 make run_ica_task`` - create ica lab number 01
+- ``TASK=01 make delete_ica_task`` - delete ica hands-on labs
+- ``TASK=01 make run_ckad_ica_clean`` - run ica_task with clean terragrunt cache  for  ica_task
+- ``make output_ica_task `` - show **outputs** from   **ica_task**
+
+
+| Task   | Description                                     | Solution                                                                     |
+|--------| ----------------------------------------------- | ---------------------------------------------------------------------------- |
+| **01** |[Installing Istio](../tasks/ica/labs/01) |  |
+| **02** |[Dark Launch](../tasks/ica/labs/02) |  |
+
 
 
 ## EKS labs
