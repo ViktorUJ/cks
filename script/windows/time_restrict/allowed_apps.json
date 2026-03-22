@@ -25,6 +25,25 @@
     { "name": "Lenovo Now", "executable": "LenovoNow.exe" },
     { "name": "Lenovo ID", "executable": "LenovoID.exe" },
     { "name": "Lenovo Battery Gauge", "executable": "BatteryGauge.exe" },
-    { "name": "Lenovo FnAndFunction Keys", "executable": "FnAndFunctionKeys.exe" }
+    { "name": "Lenovo FnAndFunction Keys", "executable": "FnAndFunctionKeys.exe" },
+    { "name": "Lenovo Service Bridge", "executable": "LSB.exe" },
+
+    { "name": "Parental Control Service", "executable": "service.exe", "path": "C:\\Program Files\\ParentalControlService\\*" },
+    { "name": "Parental Control Tray", "executable": "tray.exe", "path": "C:\\Program Files\\ParentalControlService\\*" },
+
+    { "name": "Windows Defender", "executable": "MsMpEng.exe" },
+    { "name": "Windows Defender Core", "executable": "MpDefenderCoreService.exe" },
+    { "name": "Windows Defender NIS", "executable": "NisSrv.exe" },
+    { "name": "WSL Service", "executable": "wslservice.exe" },
+    { "name": "Intel Graphics Service", "executable": "IntelGraphicsSoftware.Service.exe" },
+    { "name": "PresentMon Service", "executable": "PresentMonService.exe" },
+    { "name": "DSA Service", "executable": "DSAService.exe" },
+    { "name": "DSA Update Service", "executable": "DSAUpdateService.exe" },
+    { "name": "Foxit PDF Reader Update", "executable": "FoxitPDFReaderUpdateService.exe" },
+    { "name": "Freemake Utils", "executable": "FreemakeUtilsService.exe" },
+    { "name": "Immersed VR Service", "executable": "Immersed-service.exe" },
+    { "name": "OpenVPN Helper", "executable": "ovpnhelper_service.exe" },
+    { "name": "OpenVPN Connect Agent", "executable": "agent_ovpnconnect.exe" },
+    { "name": "Updater", "executable": "updater.exe" }
   ]
 }
