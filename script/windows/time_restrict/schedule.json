@@ -38,7 +38,7 @@
   ],
   "warning_before_minutes": 10,
   "sleep_warning_before_minutes": 15,
-  "full_logging": false,
+  "full_logging": true,
   "http_log_enabled": true,
   "http_log_port": 8080
 }
