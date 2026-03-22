@@ -8,6 +8,8 @@
     { "name": "PyCharm (32-bit)", "executable": "pycharm.exe", "path": "C:\\Program Files\\JetBrains\\*" },
     { "name": "Microsoft Copilot", "executable": "Microsoft.Copilot_8wekyb3d8bbwe!App", "path": "C:\\Program Files\\WindowsApps\\Microsoft.Copilot_*" },
     { "name": "Microsoft Copilot (AI Host)", "executable": "AI Host.exe", "path": "C:\\Program Files\\WindowsApps\\Microsoft.Copilot_*" },
-    { "name": "Microsoft Copilot (Runtime)", "executable": "Microsoft.Copilot.exe", "path": "C:\\Program Files\\WindowsApps\\Microsoft.Copilot_*" }
+    { "name": "Microsoft Copilot (Runtime)", "executable": "Microsoft.Copilot.exe", "path": "C:\\Program Files\\WindowsApps\\Microsoft.Copilot_*" },
+    { "name": "Kiro IDE", "executable": "Kiro.exe", "path": "C:\\Users\\*\\AppData\\Local\\Programs\\Kiro\\*" },
+    { "name": "Kiro IDE Helper", "executable": "Kiro Helper.exe", "path": "C:\\Users\\*\\AppData\\Local\\Programs\\Kiro\\*" }
   ]
 }
