@@ -16,7 +16,7 @@
       "days": ["sunday"],
       "start": "10:00",
       "end": "21:00",
-      "limit_minutes": 60
+      "limit_minutes": 360
     }
   ],
   "sleep_times": [
