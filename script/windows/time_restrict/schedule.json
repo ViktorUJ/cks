@@ -1,0 +1,44 @@
+{
+  "entertainment_windows": [
+    {
+      "days": ["friday"],
+      "start": "17:00",
+      "end": "22:00",
+      "limit_minutes": 180
+    },
+    {
+      "days": ["saturday"],
+      "start": "10:00",
+      "end": "22:00",
+      "limit_minutes": 120
+    },
+    {
+      "days": ["sunday"],
+      "start": "10:00",
+      "end": "21:00",
+      "limit_minutes": 60
+    }
+  ],
+  "sleep_times": [
+    {
+      "days": ["monday", "tuesday", "wednesday", "thursday"],
+      "start": "22:00",
+      "end": "07:00"
+    },
+    {
+      "days": ["friday", "saturday"],
+      "start": "23:00",
+      "end": "07:00"
+    },
+    {
+      "days": ["sunday"],
+      "start": "22:00",
+      "end": "07:00"
+    }
+  ],
+  "warning_before_minutes": 10,
+  "sleep_warning_before_minutes": 15,
+  "full_logging": false,
+  "http_log_enabled": true,
+  "http_log_port": 8080
+}

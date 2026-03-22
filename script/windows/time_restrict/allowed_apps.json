@@ -1,0 +1,13 @@
+{
+  "apps": [
+    { "name": "VMware Workstation", "executable": "vmware.exe", "path": "C:\\Program Files (x86)\\VMware\\VMware Workstation\\*" },
+    { "name": "VMware Player", "executable": "vmplayer.exe", "path": "C:\\Program Files (x86)\\VMware\\VMware Workstation\\*" },
+    { "name": "VMware Tray", "executable": "vmware-tray.exe", "path": "C:\\Program Files (x86)\\VMware\\VMware Workstation\\*" },
+    { "name": "VMware Auth", "executable": "vmware-authd.exe", "path": "C:\\Program Files (x86)\\VMware\\VMware Workstation\\*" },
+    { "name": "PyCharm", "executable": "pycharm64.exe", "path": "C:\\Program Files\\JetBrains\\*" },
+    { "name": "PyCharm (32-bit)", "executable": "pycharm.exe", "path": "C:\\Program Files\\JetBrains\\*" },
+    { "name": "Microsoft Copilot", "executable": "Microsoft.Copilot_8wekyb3d8bbwe!App", "path": "C:\\Program Files\\WindowsApps\\Microsoft.Copilot_*" },
+    { "name": "Microsoft Copilot (AI Host)", "executable": "AI Host.exe", "path": "C:\\Program Files\\WindowsApps\\Microsoft.Copilot_*" },
+    { "name": "Microsoft Copilot (Runtime)", "executable": "Microsoft.Copilot.exe", "path": "C:\\Program Files\\WindowsApps\\Microsoft.Copilot_*" }
+  ]
+}

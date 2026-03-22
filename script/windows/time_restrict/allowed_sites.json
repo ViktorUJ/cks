@@ -1,0 +1,79 @@
+{
+  "sites": [
+    { "domain": "edupage.org", "include_subdomains": true },
+    { "domain": "canva.com", "include_subdomains": true },
+    { "domain": "stepik.org", "include_subdomains": true },
+
+    { "domain": "google.com", "include_subdomains": true, "allowed_paths": ["/search", "/maps", "/translate", "/books"] },
+    { "domain": "google.ru", "include_subdomains": true, "allowed_paths": ["/search", "/maps", "/translate", "/books"] },
+    { "domain": "googleapis.com", "include_subdomains": true },
+
+    { "domain": "wikipedia.org", "include_subdomains": true },
+    { "domain": "wikimedia.org", "include_subdomains": true },
+    { "domain": "wiktionary.org", "include_subdomains": true },
+
+    { "domain": "youtube.com", "include_subdomains": true, "allowed_paths": ["/edu", "/@edu"] },
+
+    { "domain": "uchi.ru", "include_subdomains": true },
+    { "domain": "resh.edu.ru", "include_subdomains": true },
+    { "domain": "foxford.ru", "include_subdomains": true },
+    { "domain": "yaklass.ru", "include_subdomains": true },
+    { "domain": "interneturok.ru", "include_subdomains": true },
+    { "domain": "sdamgia.ru", "include_subdomains": true },
+
+    { "domain": "translate.google.com", "include_subdomains": false },
+    { "domain": "deepl.com", "include_subdomains": true },
+    { "domain": "multitran.com", "include_subdomains": true },
+
+    { "domain": "wolframalpha.com", "include_subdomains": true },
+    { "domain": "desmos.com", "include_subdomains": true },
+    { "domain": "geogebra.org", "include_subdomains": true },
+
+    { "domain": "microsoft.com", "include_subdomains": true, "allowed_paths": ["/en-us/microsoft-365", "/ru-ru/microsoft-365"] },
+    { "domain": "office.com", "include_subdomains": true },
+    { "domain": "live.com", "include_subdomains": true },
+    { "domain": "onedrive.com", "include_subdomains": true },
+    { "domain": "sharepoint.com", "include_subdomains": true },
+
+    { "domain": "docs.google.com", "include_subdomains": false },
+    { "domain": "drive.google.com", "include_subdomains": false },
+    { "domain": "classroom.google.com", "include_subdomains": false },
+
+    { "domain": "zoom.us", "include_subdomains": true },
+
+    { "domain": "copilot.microsoft.com", "include_subdomains": true },
+    { "domain": "bing.com", "include_subdomains": true, "allowed_paths": ["/search", "/chat"] },
+
+    { "domain": "scratch.mit.edu", "include_subdomains": true },
+    { "domain": "code.org", "include_subdomains": true },
+    { "domain": "codecademy.com", "include_subdomains": true },
+    { "domain": "freecodecamp.org", "include_subdomains": true },
+    { "domain": "w3schools.com", "include_subdomains": true },
+    { "domain": "developer.mozilla.org", "include_subdomains": false },
+    { "domain": "python.org", "include_subdomains": true },
+    { "domain": "go.dev", "include_subdomains": true },
+    { "domain": "learn.microsoft.com", "include_subdomains": false },
+    { "domain": "github.com", "include_subdomains": true },
+    { "domain": "gitlab.com", "include_subdomains": true },
+    { "domain": "stackoverflow.com", "include_subdomains": true },
+    { "domain": "replit.com", "include_subdomains": true },
+    { "domain": "codepen.io", "include_subdomains": true },
+    { "domain": "hackerrank.com", "include_subdomains": true },
+    { "domain": "leetcode.com", "include_subdomains": true },
+    { "domain": "codeforces.com", "include_subdomains": true },
+    { "domain": "informatics.msk.ru", "include_subdomains": true },
+    { "domain": "acmp.ru", "include_subdomains": true },
+
+    { "domain": "coursera.org", "include_subdomains": true },
+    { "domain": "edx.org", "include_subdomains": true },
+    { "domain": "khanacademy.org", "include_subdomains": true },
+    { "domain": "openedu.ru", "include_subdomains": true },
+    { "domain": "lektorium.tv", "include_subdomains": true },
+    { "domain": "skillbox.ru", "include_subdomains": true, "allowed_paths": ["/media/education", "/media/code"] },
+    { "domain": "habr.com", "include_subdomains": true },
+    { "domain": "britannica.com", "include_subdomains": true },
+    { "domain": "nationalgeographic.com", "include_subdomains": true, "allowed_paths": ["/science", "/education"] },
+    { "domain": "kahoot.com", "include_subdomains": true },
+    { "domain": "kahoot.it", "include_subdomains": true }
+  ]
+}
