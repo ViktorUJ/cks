@@ -28,6 +28,18 @@
     { "name": "Lenovo FnAndFunction Keys", "executable": "FnAndFunctionKeys.exe" },
     { "name": "Lenovo Service Bridge", "executable": "LSB.exe" },
 
+    { "name": "Go Compiler", "executable": "go.exe" },
+    { "name": "Go Toolchain", "executable": "gopls.exe" },
+    { "name": "Go Linker", "executable": "link.exe" },
+    { "name": "Go Compiler Backend", "executable": "compile.exe" },
+    { "name": "Go Assembler", "executable": "asm.exe" },
+    { "name": "Git", "executable": "git.exe" },
+    { "name": "Git Remote HTTPS", "executable": "git-remote-https.exe" },
+    { "name": "Node.js", "executable": "node.exe" },
+    { "name": "NPM", "executable": "npm.cmd" },
+    { "name": "Python", "executable": "python.exe" },
+    { "name": "Python3", "executable": "python3.exe" },
+
     { "name": "Parental Control Service", "executable": "service.exe", "path": "C:\\Program Files\\ParentalControlService\\*" },
     { "name": "Parental Control Tray", "executable": "tray.exe", "path": "C:\\Program Files\\ParentalControlService\\*" },
 
