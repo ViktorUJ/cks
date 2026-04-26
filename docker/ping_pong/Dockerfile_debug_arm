@@ -1,19 +1,30 @@
-FROM golang:alpine AS builder
+# hadolint ignore=FromPlatformFlagConstDisallowed
+FROM --platform=linux/amd64 golang:alpine AS builder
 
 RUN apk update && apk add --no-cache git
 WORKDIR $GOPATH/src/mypackage/myapp/
 COPY app/ .
 RUN go mod tidy
-RUN go build -ldflags="-w -s" -o app app.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o app app.go
 
-FROM redis:7-bookworm AS redis-builder
+# hadolint ignore=FromPlatformFlagConstDisallowed
+FROM --platform=linux/arm64 redis:7-bookworm AS redis-builder
 
-FROM amazon/aws-cli:2.17.33
+FROM --platform=linux/arm64 amazon/aws-cli:2.34.37
 COPY yum.repos /etc/yum.repos.d/
-RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc vim  tar git wget make bind-utils iputils  -y  && \
-    curl -LO https://dl.k8s.io/release/v1.31.0/bin/linux/arm64/kubectl && \
+RUN yum install jq bc mariadb105 postgresql15 nc vim  tar git wget make bind-utils iputils  -y  && \
+    curl -LO https://dl.k8s.io/release/v1.36.0/bin/linux/arm64/kubectl && \
     chmod +x ./kubectl && \
     mv kubectl /usr/local/bin/kubectl && \
+    curl -Lo mongosh.tgz https://downloads.mongodb.com/compass/mongosh-2.5.0-linux-arm64.tgz && \
+    tar -xzf mongosh.tgz && \
+    mv mongosh-2.5.0-linux-arm64/bin/mongosh /usr/local/bin/mongosh && \
+    mv mongosh-2.5.0-linux-arm64/bin/mongocryptd-mongosh /usr/local/bin/ 2>/dev/null || true && \
+    rm -rf mongosh.tgz mongosh-2.5.0-linux-arm64 && \
+    curl -Lo atlas.tar.gz https://fastdl.mongodb.org/mongocli/mongodb-atlas-cli_1.24.0_linux_arm64.tar.gz && \
+    tar -xzf atlas.tar.gz && \
+    mv mongodb-atlas-cli_1.24.0_linux_arm64/bin/atlas /usr/local/bin/atlas && \
+    rm -rf atlas.tar.gz mongodb-atlas-cli_1.24.0_linux_arm64 && \
     curl -Lo helm.tar.gz https://get.helm.sh/helm-v3.13.1-linux-arm64.tar.gz && \
     tar -zxvf helm.tar.gz && \
     rm -rf helm.tar.gz && \
@@ -29,7 +40,7 @@ RUN yum install jq bc mongodb-atlas-cli mongodb-mongosh mysql postgresql nc vim 
     curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/master/install.sh | bash
 
 COPY --from=builder /go/src/mypackage/myapp/app /app
-COPY --from=redis-builder /usr/local/bin/redis-cli  /usr/local/bin/redis-cli
+COPY --from=redis-builder /usr/local/bin/redis-cli /usr/local/bin/redis-cli
 COPY ./redis/redis_scan.sh /usr/local/bin/redis_scan
 RUN chmod +x /usr/local/bin/redis_scan
 
