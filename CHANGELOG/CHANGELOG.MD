@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.30.1 (01.05.2026)
+### Features
+* K8s version **1.36** is added  to [k8s_self_managment_v2](../terraform/modules/k8s_self_managment_v2) module.  
+* Lab 03 Istio.[Fault Injection and Retry](../tasks/ica/labs/03) is added.
+* [ping_pong:debug](../docker/ping_pong/README.MD)  is updated (new aws cli , redis client)
+
+
+
 ## 0.29.1 (20.03.2026)
 ### Features
 * K8s version **1.35** is added  to [k8s_self_managment_v2](../terraform/modules/k8s_self_managment_v2) module.  
