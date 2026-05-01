@@ -1,6 +1,6 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/AG-136/tasks/ica/labs/03/README.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/AG-136/tasks/ica/labs/03/worker/files/solutions/1.MD"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/ica/labs/03/README.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/ica/labs/03/worker/files/solutions/1.MD"
   solutions_video   = "Not ready yet"
   debug_output      = "false"
   region            = "eu-north-1"
