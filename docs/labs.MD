@@ -98,6 +98,20 @@
 | **02** | [Karpenter Basics](../tasks/eks/labs/02/README.MD)
 
 
+## ICA labs (Istio Certified Associate)
+
+- ``TASK=01 make run_ica_task`` - create ica lab number 01
+- ``TASK=01 make delete_ica_task`` - delete ica hands-on lab
+- ``TASK=01 make run_ica_task_clean`` - run ica_task with clean terragrunt cache
+- ``make output_ica_task`` - show **outputs** from **ica_task**
+
+| Task   | Description                                                                              |
+|--------|------------------------------------------------------------------------------------------|
+| **01** | [Installing Istio on a Kubernetes Cluster](../tasks/ica/labs/01/README.MD)               |
+| **02** | [Dark Launch (Header-based routing)](../tasks/ica/labs/02/README.MD)                     |
+| **03** | [Fault Injection and Retry](../tasks/ica/labs/03/README.MD)                              |
+
+
 ## AWS mock exams
 
 | Task   | Description                                               | Solution                                                                     |

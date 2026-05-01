@@ -1,0 +1,79 @@
+# 1. Общий Service для всех версий
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+# 2. Deployment Версии 1
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+        version: v1
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong-V1 (Stable)"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: frontend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: viktoruj/ping_pong_front:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: BACKEND_URL
+          value: "http://ping-pong:8080/"
