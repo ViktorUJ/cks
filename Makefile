@@ -18,45 +18,49 @@ endif
 
 # family_tasks{cka,cks,ckad,eks}, type{mock,task},command{run,delete,output},type_run{clean,or  empty}
 define terragrint_run
-    @case "$(2)" in
-        mock)
-            @run_type="mock"
-            ;;
-        task)
-            @run_type="labs"
-            ;;
-    esac
-	@terragrunt_env_dir="$(base_dir)/terraform/environments/${prefix_dir}$(1)-$$run_type"
-	@echo "base_dir = $(base_dir)"
-	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
-    @case "$(3)" in
-        run)
-            @commnand="terragrunt run-all  apply --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) )) "
-            ;;
-        delete)
-            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
-            ;;
-        output)
-            @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
-            ;;
-    esac
-
-    @case "$(4)" in
-        clean)
-        	@echo "*** clean $$terragrunt_env_dir/*"
-            @rm -rf $$terragrunt_env_dir/*
-            ;;
-    esac
-
-	@echo "terragrunt_env_dir= $$terragrunt_env_dir command= $$commnand"
-	@mkdir $$terragrunt_env_dir -p >/dev/null
-	@cp -r $(base_dir)/tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand
-    @case "$(3)" in
-        delete)
-            @rm -rf $$terragrunt_env_dir
-            ;;
-    esac
+	@run_type=""; \
+	case "$(2)" in \
+		mock) \
+			run_type="mock" \
+			;; \
+		task) \
+			run_type="labs" \
+			;; \
+	esac; \
+	terragrunt_env_dir="$(base_dir)/terraform/environments/$(prefix_dir)$(1)-$$run_type"; \
+	echo "base_dir = $(base_dir)"; \
+	echo "**** terragrunt_env_dir = $$terragrunt_env_dir"; \
+	commnand=""; \
+	case "$(3)" in \
+		run) \
+			commnand="terragrunt run-all apply --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))" \
+			;; \
+		delete) \
+			commnand="terragrunt run-all destroy --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))" \
+			;; \
+		output) \
+			commnand="terragrunt run-all output --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))" \
+			;; \
+	esac; \
+	case "$(4)" in \
+		clean) \
+			echo "*** clean $$terragrunt_env_dir/*"; \
+			rm -rf $$terragrunt_env_dir/* \
+			;; \
+	esac; \
+	echo "terragrunt_env_dir= $$terragrunt_env_dir command= $$commnand"; \
+	mkdir -p "$$terragrunt_env_dir"; \
+	cp -r "$(base_dir)/tasks/$(1)/$$run_type/$(TASK)/"* "$$terragrunt_env_dir/"; \
+	export TF_VAR_STACK_TASK=$(TASK); \
+	export TF_VAR_STACK_NAME="$(1)-$$run_type"; \
+	export TF_VAR_USER_ID=$(USER_ID); \
+	export TF_VAR_ENV_ID=$(ENV_ID); \
+	cd "$$terragrunt_env_dir" && $$commnand; \
+	case "$(3)" in \
+		delete) \
+			rm -rf "$$terragrunt_env_dir" \
+			;; \
+	esac
 endef
 
 
