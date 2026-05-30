@@ -35,5 +35,24 @@ module "eks" {
       type        = "ingress"
       cidr_blocks = local.api_cidr
     }
+
+    # Allow pods on Karpenter nodes to reach CoreDNS pods running on Fargate.
+    # Fargate pods use the cluster security group, Karpenter nodes use the node security group.
+    nodes_to_fargate_dns_udp = {
+      description                = "DNS UDP from Karpenter nodes to CoreDNS on Fargate"
+      protocol                   = "udp"
+      from_port                  = 53
+      to_port                    = 53
+      type                       = "ingress"
+      source_node_security_group = true
+    }
+    nodes_to_fargate_dns_tcp = {
+      description                = "DNS TCP from Karpenter nodes to CoreDNS on Fargate"
+      protocol                   = "tcp"
+      from_port                  = 53
+      to_port                    = 53
+      type                       = "ingress"
+      source_node_security_group = true
+    }
   }
 }
