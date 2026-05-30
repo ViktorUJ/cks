@@ -426,17 +426,38 @@ spec:
     name: team19
   minReplicaCount: 1
   maxReplicaCount: 10
-  pollingInterval: 15
-  cooldownPeriod: 30
+  pollingInterval: 10
+  cooldownPeriod: 10
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          # Быстрый scale down: окно стабилизации 10с, можно убирать сразу до 100% подов
+          stabilizationWindowSeconds: 10
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 10
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 10
   triggers:
   - type: prometheus
     metadata:
       serverAddress: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
-      query: avg(requests_per_second{namespace="team-19", service="team19"})
-      threshold: "5"
-      activationThreshold: "1"
+      # rate(requests_total[1m]) -> настоящий RPS из счётчика, стабильный и падает к 0 в простое.
+      # sum по всем подам. Реплики = ceil(sum(rate) / threshold)
+      query: sum(rate(requests_total{namespace="team-19", service="team19"}[1m]))
+      threshold: "10"
+      activationThreshold: "3"
 EOF
 ```
+
+Расчёт реплик: `реплики = ceil(sum(rate) / threshold)`.  
+`rate(requests_total[1m])` даёт реальный RPS — в простое стремится к 0, поэтому фонового скейлинга нет.
 
 ### Проверка ScaledObject
 
@@ -468,29 +489,25 @@ spec:
     - |
       echo "Starting traffic generation..."
       while true; do
-        wget -q -O /dev/null http://team19.team-19.svc.cluster.local:80/ &
-        wget -q -O /dev/null http://team19.team-19.svc.cluster.local:80/ &
-        wget -q -O /dev/null http://team19.team-19.svc.cluster.local:80/ &
-        wget -q -O /dev/null http://team19.team-19.svc.cluster.local:80/ &
-        wget -q -O /dev/null http://team19.team-19.svc.cluster.local:80/ &
-        sleep 0.1
+        for i in $(seq 1 50); do
+          wget -q -O /dev/null http://team19.team-19.svc.cluster.local:80/ &
+        done
+        sleep 1
       done
 EOF
 ```
 
 ### Наблюдаем за скейлингом
 
+Один watch показывает поды, HPA и суммарный RPS из Prometheus сразу:
+
 ```bash
-# Смотрим как растёт количество подов
-# Смотрим HPA
 
-PROM_URL=$(kubectl get svc -n monitoring prometheus-kube-prometheus-prometheus -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+export PROM_URL=$(kubectl get svc -n monitoring prometheus-kube-prometheus-prometheus -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
 
-watch 'kubectl get pods -n team-19 ; kubectl get hpa -n team-19  '
+watch 'kubectl get pods -n team-19 ; echo ; kubectl get hpa -n team-19 ; echo ; echo -n "rps per pod = " ; curl -s "http://${PROM_URL}:9090/api/v1/query" --data-urlencode "query=sum(rate(requests_total{namespace=\"team-19\", service=\"team19\"}[1m])) / count(up{namespace=\"team-19\", service=\"team19\"})" | jq -r ".data.result[0].value[1]"'
 
-# Проверяем метрику в Prometheus
 
-curl -s "http://${PROM_URL}:9090/api/v1/query?query=avg(requests_per_second{namespace=\"team-19\"})" | jq '.data.result'
 ```
 
 ### Остановка генератора трафика
@@ -499,4 +516,4 @@ curl -s "http://${PROM_URL}:9090/api/v1/query?query=avg(requests_per_second{name
 kubectl delete pod traffic-generator -n team-19
 ```
 
-После остановки трафика, через `cooldownPeriod` (30 сек) KEDA начнёт скейлить обратно до `minReplicaCount: 1`.
+После остановки трафика, через `cooldownPeriod` (10 сек) + окно стабилизации scale down (10 сек) KEDA быстро скейлит обратно до `minReplicaCount: 1`.
