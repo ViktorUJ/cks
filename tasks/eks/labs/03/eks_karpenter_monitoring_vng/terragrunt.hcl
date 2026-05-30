@@ -79,7 +79,7 @@ inputs = {
             {
               key      = "karpenter.k8s.aws/instance-size"
               operator = "In"
-              values   = ["small","medium","large", "xlarge", "2xlarge", "4xlarge"]
+              values   = ["medium","large", "xlarge", "2xlarge", "4xlarge"]
             }
 
     ]
