@@ -244,3 +244,9 @@ kubectl get nodes -l work_type=monitoring
 kubectl top nodes
 ```
 
+
+установливаем приложение 
+```
+k apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-143/tasks/eks/labs/03/worker/files/tasks/1.yaml
+
+```
