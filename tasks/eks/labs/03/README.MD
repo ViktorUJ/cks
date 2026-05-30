@@ -294,26 +294,10 @@ monitoring-rlm6f   t4g.small   spot       eu-central-1a   ip-10-10-15-53.eu-cent
 Приложение `ping_pong` экспортирует prometheus метрики на порту `9090` по пути `/metrics`.  
 Метрики: `requests_total`, `requests_per_second`, `requests_per_minute`, `goroutines`.
 
-Нужно добавить порт метрик в Service и создать ServiceMonitor:
+Нужно создать ServiceMonitor для сбора метрик (порт metrics уже добавлен в Service приложения):
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
-apiVersion: v1
-kind: Service
-metadata:
-  name: team19-metrics
-  namespace: team-19
-  labels:
-    app: team19
-spec:
-  ports:
-  - name: metrics
-    port: 9090
-    protocol: TCP
-    targetPort: 9090
-  selector:
-    app: team19
----
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -448,7 +432,7 @@ spec:
   - type: prometheus
     metadata:
       serverAddress: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
-      query: avg(requests_per_second{namespace="team-19", service="team19-metrics"})
+      query: avg(requests_per_second{namespace="team-19", service="team19"})
       threshold: "5"
       activationThreshold: "1"
 EOF
@@ -498,13 +482,14 @@ EOF
 
 ```bash
 # Смотрим как растёт количество подов
-kubectl get pods -n team-19 -w
-
 # Смотрим HPA
-kubectl get hpa -n team-19 -w
+
+PROM_URL=$(kubectl get svc -n monitoring prometheus-kube-prometheus-prometheus -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+watch 'kubectl get pods -n team-19 ; kubectl get hpa -n team-19  '
 
 # Проверяем метрику в Prometheus
-PROM_URL=$(kubectl get svc -n monitoring prometheus-kube-prometheus-prometheus -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
 curl -s "http://${PROM_URL}:9090/api/v1/query?query=avg(requests_per_second{namespace=\"team-19\"})" | jq '.data.result'
 ```
 

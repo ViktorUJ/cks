@@ -64,12 +64,12 @@ inputs = {
             {
               key      = "karpenter.sh/capacity-type"
               operator = "In"
-              values   = ["spot", "on-demand"]
+              values   = [ "on-demand"]
             },
             {
               key      = "karpenter.k8s.aws/instance-category"
               operator = "In"
-              values   = ["t", "m", "r","c"]
+              values   = ["t"]
             },
             {
               key      = "karpenter.k8s.aws/instance-generation"
