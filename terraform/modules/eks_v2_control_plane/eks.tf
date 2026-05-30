@@ -37,3 +37,25 @@ module "eks" {
     }
   }
 }
+
+# CoreDNS runs on Fargate and uses the EKS *primary* cluster security group
+# (cluster.resourcesVpcConfig.clusterSecurityGroupId), NOT the additional cluster SG
+# managed by `security_group_additional_rules`. Pods on Karpenter EC2 nodes use the node
+# security group. These rules allow those pods to reach CoreDNS (DNS 53 TCP/UDP) on Fargate.
+resource "aws_vpc_security_group_ingress_rule" "nodes_to_fargate_dns_udp" {
+  security_group_id            = module.eks.cluster_primary_security_group_id
+  referenced_security_group_id = module.eks.node_security_group_id
+  from_port                    = 53
+  to_port                      = 53
+  ip_protocol                  = "udp"
+  description                  = "DNS UDP from Karpenter nodes to CoreDNS on Fargate"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "nodes_to_fargate_dns_tcp" {
+  security_group_id            = module.eks.cluster_primary_security_group_id
+  referenced_security_group_id = module.eks.node_security_group_id
+  from_port                    = 53
+  to_port                      = 53
+  ip_protocol                  = "tcp"
+  description                  = "DNS TCP from Karpenter nodes to CoreDNS on Fargate"
+}

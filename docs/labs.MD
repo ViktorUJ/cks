@@ -94,6 +94,7 @@
 | Task   | Description                                       | Solution                                                                     |
 |--------| ------------------------------------------------- | ---------------------------------------------------------------------------- |
 | **02** | [Karpenter Basics](../tasks/eks/labs/02/README.MD)
+| **03** | [Application Autoscaling with KEDA and Prometheus](../tasks/eks/labs/03/README.MD)
 
 
 

@@ -37,13 +37,7 @@ inputs = {
   app_name = "eks_karpenter_vng_infra"
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   nodepool={}
-  taints = [
-  #   {
-  #     key    = "dedicated"
-  #     value  = "karpenter"
-  #     effect = "NoSchedule"
-  #   }
-   ]
+  taints = []
   disruption={
     consolidationPolicy="WhenEmptyOrUnderutilized"
     consolidateAfter   ="30s"
@@ -87,9 +81,9 @@ inputs = {
   ]
   vng = {
     labels = {
-        work_type = "infra"
+        work_type = "default"
     }
-    name="infra"
+    name="default"
     iam_role=dependency.eks_karpenter.outputs.karpenter_module.node_iam_role_name
     tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks-infra" })
 
