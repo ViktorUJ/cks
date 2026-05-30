@@ -313,7 +313,7 @@ kubectl get svc -n monitoring prometheus-kube-prometheus-prometheus \
 Разверните тестовое приложение (`ping_pong`). Service публикует два порта: `http` (80 → 8080) и `metrics` (9090 → 9090).
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-143/tasks/eks/labs/03/worker/files/tasks/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/03/worker/files/tasks/1.yaml
 ```
 
 Проверьте, что приложение запустилось:
@@ -580,7 +580,7 @@ kubectl delete pod traffic-generator -n team-19 --ignore-not-found
 kubectl delete servicemonitor team19 -n team-19 --ignore-not-found
 
 # Удаляем само приложение (deployment, service, namespace)
-kubectl delete -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-143/tasks/eks/labs/03/worker/files/tasks/1.yaml
+kubectl delete -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/03/worker/files/tasks/1.yaml
 ```
 
 ### Удаление Prometheus (важно: удаляет LoadBalancer)

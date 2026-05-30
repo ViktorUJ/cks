@@ -313,7 +313,7 @@ Open `http://<LB-ADDRESS>:9090` in a browser to access the Prometheus UI.
 Deploy the test application (`ping_pong`). The Service exposes two ports: `http` (80 → 8080) and `metrics` (9090 → 9090).
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-143/tasks/eks/labs/03/worker/files/tasks/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/03/worker/files/tasks/1.yaml
 ```
 
 Check that the application is running:
@@ -580,7 +580,7 @@ kubectl delete pod traffic-generator -n team-19 --ignore-not-found
 kubectl delete servicemonitor team19 -n team-19 --ignore-not-found
 
 # Delete the application itself (deployment, service, namespace)
-kubectl delete -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-143/tasks/eks/labs/03/worker/files/tasks/1.yaml
+kubectl delete -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/eks/labs/03/worker/files/tasks/1.yaml
 ```
 
 ### Deleting Prometheus (important: removes the LoadBalancer)
