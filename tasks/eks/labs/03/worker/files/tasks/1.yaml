@@ -29,6 +29,10 @@ spec:
     spec:
       containers:
       - image: viktoruj/ping_pong:alpine
+        resources:
+          requests:
+            memory: "50Mi"
+            cpu: "250m"
         name: app
         ports:
         - containerPort: 8080

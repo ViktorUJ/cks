@@ -38,16 +38,16 @@ inputs = {
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   nodepool={}
   taints = [
-  #   {
-  #     key    = "dedicated"
-  #     value  = "karpenter"
-  #     effect = "NoSchedule"
-  #   }
+     {
+       key    = "dedicated"
+       value  = "monitoring"
+       effect = "NoSchedule"
+     }
    ]
   disruption={
     consolidationPolicy="WhenEmptyOrUnderutilized"
-    consolidateAfter   ="30s"
-    budgets            =[ { nodes = "10%" } ]
+    consolidateAfter   ="300s"
+    budgets            =[ { nodes = "50%%" } ]
   }
   requirements = [
 
