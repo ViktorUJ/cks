@@ -59,3 +59,31 @@ resource "aws_vpc_security_group_ingress_rule" "nodes_to_fargate_dns_tcp" {
   ip_protocol                  = "tcp"
   description                  = "DNS TCP from Karpenter nodes to CoreDNS on Fargate"
 }
+
+# Pods on Fargate (including the kubelet that serves their metrics) use the EKS
+# *primary* cluster security group, while Prometheus runs on Karpenter EC2 nodes and
+# sources traffic from the node security group. By default there is no rule permitting
+# the node SG to reach the primary SG on the kubelet port, so scrapes of Fargate pods
+# time out ("context deadline exceeded"). This rule allows Prometheus to scrape the
+# kubelet (10250) of pods running on Fargate.
+resource "aws_vpc_security_group_ingress_rule" "nodes_to_fargate_kubelet" {
+  security_group_id            = module.eks.cluster_primary_security_group_id
+  referenced_security_group_id = module.eks.node_security_group_id
+  from_port                    = 10250
+  to_port                      = 10250
+  ip_protocol                  = "tcp"
+  description                  = "Kubelet metrics scrape from Karpenter nodes to Fargate pods"
+}
+
+# CoreDNS exposes Prometheus metrics on 9153/TCP (separate from DNS on 53). Since CoreDNS
+# runs on Fargate (primary cluster SG) and Prometheus runs on Karpenter EC2 nodes (node SG),
+# scrapes of the CoreDNS metrics endpoint time out without an explicit rule. This allows
+# Prometheus to scrape CoreDNS metrics (9153) on Fargate.
+resource "aws_vpc_security_group_ingress_rule" "nodes_to_fargate_coredns_metrics" {
+  security_group_id            = module.eks.cluster_primary_security_group_id
+  referenced_security_group_id = module.eks.node_security_group_id
+  from_port                    = 9153
+  to_port                      = 9153
+  ip_protocol                  = "tcp"
+  description                  = "CoreDNS metrics scrape from Karpenter nodes to Fargate pods"
+}
