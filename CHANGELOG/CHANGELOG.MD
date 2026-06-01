@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.31.1 (01.06.2026)
+### Features
+* [k8i kubectl plugin](https://github.com/ViktorUJ/kubectl-k8i) was released 
+* Lab 03 EKS.[Application Autoscaling with KEDA and Prometheus based on rps](../tasks/eks/labs/03/README.MD) is added.
+* Analize fature is added to [k8i kubectl plugin](https://github.com/ViktorUJ/kubectl-k8i) .shows all workloads running on a selected set of nodes. For each workload it displays the namespace, kind, name, pod count, and aggregated CPU/memory requests, limits, and usage.
+
+
 ## 0.30.1 (01.05.2026)
 ### Features
 * K8s version **1.36** is added  to [k8s_self_managment_v2](../terraform/modules/k8s_self_managment_v2) module.  
