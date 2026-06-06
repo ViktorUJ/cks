@@ -7,7 +7,7 @@ You can use it to run exams or labs by following the instructions below or use [
 ### Run the docker container
 
 ```sh
-sudo docker run -it viktoruj/runner
+docker run -it viktoruj/runner
 ```
 
 ### Clone the git repo
@@ -25,8 +25,8 @@ cd cks
 locals {
   region                 = "eu-north-1"
   backend_region         = "eu-north-1"
-  backend_bucket         = "sre-learning-platform-state-backet"  # update to your own name
-  backend_dynamodb_table = "${local.backend_bucket}-lock"
+  backend_bucket         = "sre-learning-platform-state-bucket"  # update to your own name
+  backend_dynamodb_table = "${local.backend_bucket}-lock" # will be created automatically
 }
 ```
 

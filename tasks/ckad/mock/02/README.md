@@ -17,7 +17,7 @@ This includes all available language translations of these pages (e.g. <https://
 
 ## Questions
 
-|        **1**        | Create a secret **secret1** with value **key1=value1** in the namespace **jellyfish**. Add that secret as an environment variable to an existing **pod1** in the same namespace. |
+|        **1**        | Create a secret **secret1** with value **key1=value1** in the namespace **jellyfish**. Add that secret as an environment variable to an existing **app1** in the same namespace. |
 | :-----------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | 2%                                                                                                                                                                               |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                  |
@@ -77,7 +77,7 @@ This includes all available language translations of these pages (e.g. <https://
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                                                                                                                                                        |
 | Acceptance criteria | - Volume name: `pv-analytics`<br/>- pvc name: `pvc-analytics`<br/>- Storage: `100Mi`<br/>- Access mode: `ReadWriteOnce`<br/>- Host path: `/pv/analytics`<br/><br/>- pod name: `analytics`<br/>- image: `busybox`<br/>- node: `nodeSelector`<br/>-  node_name: `node_2`<br/>- command: `"sleep 60000"`<br/>- mountPath: `/pv/analytics` |
 ---
-|       **11**        | Create secret from literal .  create deployment  , mount the secret as env                                                                                                                                   |
+|       **11**        | Create secret from literal. Create pod, mount the secret as env                                                                                                                                   |
 | :-----------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |     Task weight     | 4%                                                                                                                                                                                                           |
 |       Cluster       | cluster1 (`kubectl config use-context cluster1-admin@cluster1`)                                                                                                                                              |
