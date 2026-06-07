@@ -7,7 +7,7 @@ You can use it to run exams or labs by following the instructions below or use [
 ### Run the docker container
 
 ```sh
-docker run -it viktoruj/runner
+sudo docker run -it viktoruj/runner
 ```
 
 ### Clone the git repo
