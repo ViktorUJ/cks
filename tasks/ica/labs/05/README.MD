@@ -58,7 +58,7 @@ kubectl label namespace default istio-injection=enabled --overwrite
 Deploy `mesh-client` — a plain pod with `curl` inside the mesh. We'll make external requests from it.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-147/tasks/ica/labs/05/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/05/k8s-1/scripts/1.yaml
 kubectl rollout restart deployment -n default
 ```
 
