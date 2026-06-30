@@ -11,7 +11,8 @@ export KUBECONFIG=/home/ubuntu/.kube/config
   echo '1' >> /var/work/tests/result/all
 
   total_pods=$(kubectl get pods -n default --no-headers 2>/dev/null | wc -l)
-  pods_with_sidecar=$(kubectl get pods -n default -o json | jq -r '.items[] | select(.spec.containers[].name == "istio-proxy") | .metadata.name' | sort -u | wc -l)
+  # istio-proxy may be a regular container or a native sidecar (initContainer with restartPolicy: Always)
+  pods_with_sidecar=$(kubectl get pods -n default -o json | jq -r '.items[] | select(([.spec.containers[].name] + [.spec.initContainers[]?.name]) | index("istio-proxy")) | .metadata.name' | sort -u | wc -l)
 
   if [[ "$total_pods" -gt 0 ]] && [[ "$total_pods" -eq "$pods_with_sidecar" ]]; then
     echo '1' >> /var/work/tests/result/ok
