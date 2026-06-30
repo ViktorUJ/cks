@@ -1,0 +1,50 @@
+# ============================================================================
+# ICA Lab 07 — Helm install + Canary upgrade with revisions
+# ----------------------------------------------------------------------------
+# A simple workload used to observe which Istio control-plane revision injects
+# the sidecar. Lives in namespace "app", which is pinned to a revision via the
+# "istio.io/rev" label (set in the README steps).
+#
+# NOTE: the "app" namespace must already exist and be labelled with the desired
+#       istio.io/rev BEFORE applying this manifest, so the pods get a sidecar.
+# ============================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  namespace: app
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ping-pong
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong"

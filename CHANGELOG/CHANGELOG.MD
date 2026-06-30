@@ -5,6 +5,7 @@
 * Lab 04 Istio.[Zero Trust: mTLS and AuthorizationPolicy](../tasks/ica/labs/04) is added.
 * Lab 05 Istio.[Controlled Egress: ServiceEntry, Egress Gateway and Sidecar scope](../tasks/ica/labs/05) is added.
 * Lab 06 Istio.[Load Balancing and Traffic Mirroring](../tasks/ica/labs/06) is added.
+* Lab 07 Istio.[Helm install and Canary upgrade with revisions](../tasks/ica/labs/07) is added.
 
 ## 0.31.1 (01.06.2026)
 ### Features

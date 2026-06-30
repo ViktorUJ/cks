@@ -84,6 +84,7 @@
 | **04** | [Zero Trust: mTLS and AuthorizationPolicy](../tasks/ica/labs/04/README.MD)               |
 | **05** | [Controlled Egress: ServiceEntry, Egress Gateway and Sidecar scope](../tasks/ica/labs/05/README.MD) |
 | **06** | [Load Balancing and Traffic Mirroring](../tasks/ica/labs/06/README.MD)                   |
+| **07** | [Helm install and Canary upgrade with revisions](../tasks/ica/labs/07/README.MD)         |
 
 
 ## EKS labs
