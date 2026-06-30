@@ -122,9 +122,9 @@ spec:
 kubectl apply -f gateway.yaml
 ```
 
-## Шаг 4. Load Balancing — балансировка между репликами
+## Шаг 4. Load Balancing — алгоритм ROUND_ROBIN
 
-`DestinationRule` задаёт, как трафик распределяется между эндпоинтами (подами) сервиса. Поле `trafficPolicy.loadBalancer.simple` выбирает алгоритм, а `portLevelSettings` позволяет переопределить его для конкретного порта.
+`DestinationRule` задаёт, как трафик распределяется между эндпоинтами (подами) сервиса. Поле `trafficPolicy.loadBalancer.simple` выбирает алгоритм. Начнём с `ROUND_ROBIN`.
 
 ```bash
 vim destination-rule.yaml
@@ -141,11 +141,6 @@ spec:
   trafficPolicy:
     loadBalancer:
       simple: ROUND_ROBIN       # глобальный алгоритм для сервиса
-    portLevelSettings:
-    - port:
-        number: 8080
-      loadBalancer:
-        simple: LEAST_REQUEST   # переопределение для порта 8080
   subsets:
   - name: v1
     labels:
@@ -165,7 +160,6 @@ kubectl apply -f destination-rule.yaml
   - `LEAST_REQUEST` — на реплику с наименьшим числом активных запросов (часто эффективнее round-robin);
   - `RANDOM` — случайный выбор;
   - `PASSTHROUGH` — без балансировки, на исходный адрес.
-- **`portLevelSettings`** — переопределение политики для конкретного порта. Здесь глобально стоит `ROUND_ROBIN`, но для порта `8080` действует `LEAST_REQUEST`. Это полезно, когда у сервиса несколько портов с разными требованиями (например, в задаче экзамена: глобально `ROUND_ROBIN`, а для `443` — `LEAST_CONN`).
 - **`subsets`** — логические группы подов (`v1`, `v2`) по лейблу `version`; на них ссылаются `VirtualService` (маршрут и mirror).
 
 Смотрим распределение по трём репликам v1:
@@ -175,14 +169,63 @@ for i in $(seq 12); do curl -s http://myapp.local:32080 | grep 'Server Name'; do
 ```
 
 ```
-      4 Server Name   : ping-pong-v1-6c8f...-aaaaa
-      4 Server Name   : ping-pong-v1-6c8f...-bbbbb
-      4 Server Name   : ping-pong-v1-6c8f...-ccccc
+      4 Server Name: ping-pong-v1-6c8f...-aaaaa
+      4 Server Name: ping-pong-v1-6c8f...-bbbbb
+      4 Server Name: ping-pong-v1-6c8f...-ccccc
 ```
 
-Трафик равномерно распределяется между тремя подами v1. Версия v2 в ответах не появляется — на неё пока ничего не направлено.
+При `ROUND_ROBIN` трафик распределяется примерно поровну между тремя подами v1. Версия v2 в ответах не появляется — на неё пока ничего не направлено.
 
-## Шаг 5. Traffic Mirroring — зеркалируем трафик на v2
+## Шаг 5. Port-level override — балансировка на уровне порта
+
+`portLevelSettings` позволяет переопределить алгоритм балансировки для конкретного порта. Это полезно, когда у сервиса несколько портов с разными требованиями (например, в задаче экзамена: глобально `ROUND_ROBIN`, а для `443` — `LEAST_CONN`).
+
+Обновляем `DestinationRule`, добавляя переопределение для порта `8080` на `LEAST_REQUEST`:
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: ping-pong-dr
+  namespace: default
+spec:
+  host: ping-pong
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN       # глобальный алгоритм (для всех остальных портов)
+    portLevelSettings:
+    - port:
+        number: 8080
+      loadBalancer:
+        simple: LEAST_REQUEST   # переопределение именно для порта 8080
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: v2
+    labels:
+      version: v2
+```
+
+```bash
+kubectl apply -f destination-rule.yaml
+```
+
+**Что изменилось:** для порта `8080` (а это наш HTTP-порт) теперь действует `LEAST_REQUEST` — Envoy отправляет запрос на реплику с наименьшим числом активных запросов. Глобальный `ROUND_ROBIN` остаётся для всех прочих портов. Поэтому при повторной проверке распределение уже не обязательно ровно `4/4/4` — оно подстраивается под загрузку реплик:
+
+```bash
+for i in $(seq 12); do curl -s http://myapp.local:32080 | grep 'Server Name'; done | sort | uniq -c
+```
+
+```
+      3 Server Name: ping-pong-v1-6c8f...-aaaaa
+      2 Server Name: ping-pong-v1-6c8f...-bbbbb
+      7 Server Name: ping-pong-v1-6c8f...-ccccc
+```
+
+Главное — переопределение применяется именно к указанному порту, а не ко всему сервису.
+
+## Шаг 6. Traffic Mirroring — зеркалируем трафик на v2
 
 Теперь включим теневой запуск: 100% реальных запросов по-прежнему обслуживает v1, но Envoy дополнительно отправляет **копию** каждого запроса на v2. Ответ от v2 **отбрасывается** — клиент его никогда не видит.
 
@@ -228,7 +271,7 @@ kubectl apply -f mirror-vs.yaml
 
 **Зачем это нужно:** вы прогоняете реальную нагрузку через v2 и смотрите её метрики, логи, ошибки — но без какого-либо риска для пользователей. Если v2 упадёт или начнёт ошибаться, клиенты этого не заметят.
 
-## Шаг 6. Проверка
+## Шаг 7. Проверка
 
 ### Клиент всегда получает v1
 
@@ -250,7 +293,11 @@ Server Name   : ping-pong-v1-6c8f...-bbbbb
 
 ```bash
 kubectl exec -n default deploy/ping-pong-v2 -c istio-proxy -- \
-  pilot-agent request GET stats | grep -E 'inbound\|8080.*rq_total'
+  pilot-agent request GET stats | grep istio_requests_total | grep destination_workload.ping-pong-v2
+```
+
+```
+istiocustom.istio_requests_total.<...>.destination_workload.ping-pong-v2.<...>.response_code.200<...>: 40
 ```
 
 Счётчик растёт по мере поступления запросов — значит зеркальный трафик действительно доходит до v2, хотя клиент об этом не подозревает.

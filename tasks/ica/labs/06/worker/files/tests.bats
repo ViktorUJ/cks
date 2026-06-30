@@ -111,8 +111,8 @@ export KUBECONFIG=/home/ubuntu/.kube/config
   sleep 2
 
   rq=$(kubectl exec -n default deploy/ping-pong-v2 -c istio-proxy -- pilot-agent request GET stats 2>/dev/null \
-    | grep -E 'inbound\|8080.*(rq_total|rq_completed)' \
-    | awk -F: '{gsub(/ /,"",$2); s+=$2} END{print s+0}')
+    | grep 'istio_requests_total' | grep 'destination_workload.ping-pong-v2' \
+    | awk -F': ' '{s+=$2} END{print s+0}')
 
   if [[ "${rq:-0}" -gt 0 ]]; then
     echo '1' >> /var/work/tests/result/ok
