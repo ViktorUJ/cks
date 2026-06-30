@@ -56,7 +56,7 @@ The `istio-proxy` (Envoy) sidecar in each pod is what implements both load balan
 Deploy one `ping-pong` Service and two Deployments: **v1** (3 replicas, stable) and **v2** (1 replica, new).
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-148/tasks/ica/labs/06/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/06/k8s-1/scripts/1.yaml
 kubectl rollout restart deployment -n default
 ```
 
