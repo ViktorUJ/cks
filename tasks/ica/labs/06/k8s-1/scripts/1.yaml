@@ -1,0 +1,84 @@
+# ============================================================================
+# ICA Lab 06 — Load Balancing + Traffic Mirroring
+# ----------------------------------------------------------------------------
+# Topology (namespace default, istio-injection=enabled):
+#   Service ping-pong (one Service, two versions selected via subsets)
+#     - ping-pong-v1 : 3 replicas (stable)      -> used to observe load balancing
+#     - ping-pong-v2 : 1 replica  (new release) -> receives MIRRORED traffic
+#
+# Each pod reports its own pod name as "Server Name" (via the downward API),
+# so curl output reveals WHICH replica handled the request.
+# ============================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  namespace: default
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong-v1
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ping-pong
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+        version: v1
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME       # report the pod name so we can see load balancing
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong-v2
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+        version: v2
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
