@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.1 (03.07.2026)
+### Features
+* Lab 04 Istio.[Zero Trust: mTLS and AuthorizationPolicy](../tasks/ica/labs/04) is added.
+
 ## 0.31.1 (01.06.2026)
 ### Features
 * [k8i kubectl plugin](https://github.com/ViktorUJ/kubectl-k8i) was released 
