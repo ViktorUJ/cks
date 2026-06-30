@@ -81,6 +81,7 @@
 | **01** | [Installing Istio on a Kubernetes Cluster](../tasks/ica/labs/01/README.MD)               |
 | **02** | [Dark Launch (Header-based routing)](../tasks/ica/labs/02/README.MD)                     |
 | **03** | [Fault Injection and Retry](../tasks/ica/labs/03/README.MD)                              |
+| **04** | [Zero Trust: mTLS and AuthorizationPolicy](../tasks/ica/labs/04/README.MD)               |
 
 
 ## EKS labs

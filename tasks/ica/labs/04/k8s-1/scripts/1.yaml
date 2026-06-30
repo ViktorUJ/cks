@@ -1,0 +1,169 @@
+# ============================================================================
+# ICA Lab 04 — Zero Trust Security: mTLS + AuthorizationPolicy
+# ----------------------------------------------------------------------------
+# Topology:
+#   default (istio-injection=enabled)
+#     - ping-pong    : protected backend           (SA: ping-pong)
+#     - frontend     : authorized client           (SA: frontend), calls ping-pong
+#     - unauthorized : in-mesh client, WRONG identity (SA: unauthorized)
+#   legacy (NO injection)
+#     - legacy-client: plaintext client without an Envoy sidecar
+# ============================================================================
+---
+# Namespace for a legacy client WITHOUT an Istio sidecar.
+# Used to demonstrate that STRICT mTLS rejects plaintext connections.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: legacy
+---
+# ServiceAccounts give each workload a cryptographic SPIFFE identity
+# (spiffe://cluster.local/ns/<ns>/sa/<name>) used by mTLS and AuthorizationPolicy.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend
+  namespace: default
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ping-pong
+  namespace: default
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: unauthorized
+  namespace: default
+---
+# ---------- Backend: the protected workload ----------
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  namespace: default
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+    spec:
+      serviceAccountName: ping-pong
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong Backend"
+---
+# ---------- Frontend: the authorized client ----------
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: default
+  labels:
+    app: frontend
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: frontend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      serviceAccountName: frontend
+      containers:
+      - name: frontend
+        image: viktoruj/ping_pong_front:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: BACKEND_URL
+          value: "http://ping-pong:8080/"
+---
+# ---------- Unauthorized client: in-mesh, but the WRONG identity ----------
+# Has an Envoy sidecar (mTLS works) but uses SA "unauthorized".
+# Used to demonstrate AuthorizationPolicy denial (403).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unauthorized
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unauthorized
+  template:
+    metadata:
+      labels:
+        app: unauthorized
+    spec:
+      serviceAccountName: unauthorized
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "3650d"]
+---
+# ---------- Legacy client: NO sidecar (plaintext only) ----------
+# Lives in the non-injected "legacy" namespace.
+# Used to demonstrate that STRICT mTLS rejects plaintext connections.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-client
+  namespace: legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-client
+  template:
+    metadata:
+      labels:
+        app: legacy-client
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "3650d"]
