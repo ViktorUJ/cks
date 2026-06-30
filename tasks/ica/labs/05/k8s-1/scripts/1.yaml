@@ -1,0 +1,39 @@
+# ============================================================================
+# ICA Lab 05 — Controlling Egress: ServiceEntry + Egress Gateway + Sidecar scope
+# ----------------------------------------------------------------------------
+# Topology:
+#   default (istio-injection=enabled)
+#     - mesh-client : a pod inside the mesh that makes OUTBOUND calls to the
+#                     internet. We will control where it is allowed to go.
+# External services used in the lab:
+#   - httpbin.org              -> the "approved" external API (registered, routed
+#                                 through the egress gateway)
+#   - example.com              -> an "unapproved" external host (must be blocked)
+# ============================================================================
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mesh-client
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mesh-client
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mesh-client
+  template:
+    metadata:
+      labels:
+        app: mesh-client
+    spec:
+      serviceAccountName: mesh-client
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "3650d"]
