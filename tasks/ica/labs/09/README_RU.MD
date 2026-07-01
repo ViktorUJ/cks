@@ -53,7 +53,7 @@ kubectl label namespace default istio.io/dataplane-mode=ambient --overwrite
 ## Шаг 2. Установка приложения
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/09/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/09/k8s-1/scripts/1.yaml
 ```
 
 Проверяем, что поды поднялись **без сайдкаров** (`1/1`, а не `2/2`):
