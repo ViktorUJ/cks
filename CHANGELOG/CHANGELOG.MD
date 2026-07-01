@@ -6,6 +6,7 @@
 * Lab 05 Istio.[Controlled Egress: ServiceEntry, Egress Gateway and Sidecar scope](../tasks/ica/labs/05) is added.
 * Lab 06 Istio.[Load Balancing and Traffic Mirroring](../tasks/ica/labs/06) is added.
 * Lab 07 Istio.[Helm install and Canary upgrade with revisions](../tasks/ica/labs/07) is added.
+* Lab 08 Istio.[Observability: Prometheus, Jaeger and Kiali](../tasks/ica/labs/08) is added.
 
 ## 0.31.1 (01.06.2026)
 ### Features

@@ -85,6 +85,7 @@
 | **05** | [Controlled Egress: ServiceEntry, Egress Gateway and Sidecar scope](../tasks/ica/labs/05/README.MD) |
 | **06** | [Load Balancing and Traffic Mirroring](../tasks/ica/labs/06/README.MD)                   |
 | **07** | [Helm install and Canary upgrade with revisions](../tasks/ica/labs/07/README.MD)         |
+| **08** | [Observability: Prometheus, Jaeger and Kiali](../tasks/ica/labs/08/README.MD)            |
 
 
 ## EKS labs
