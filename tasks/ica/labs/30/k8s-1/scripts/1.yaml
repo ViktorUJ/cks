@@ -1,0 +1,28 @@
+# Namespace with sidecar injection enabled
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio-injection: enabled
+---
+# In-mesh client (has a sidecar)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-client
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-client
+  template:
+    metadata:
+      labels:
+        app: app-client
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "infinity"]

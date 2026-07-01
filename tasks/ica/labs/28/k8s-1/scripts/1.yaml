@@ -1,0 +1,75 @@
+# Namespace with sidecar injection enabled
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio-injection: enabled
+---
+# Common Service for the TCP echo app (both versions)
+apiVersion: v1
+kind: Service
+metadata:
+  name: tcp-echo
+  namespace: app
+  labels:
+    app: tcp-echo
+spec:
+  ports:
+  - name: tcp
+    port: 9000
+    targetPort: 9000
+  selector:
+    app: tcp-echo
+---
+# Version 1 — replies with the "one" prefix
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tcp-echo-v1
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tcp-echo
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: tcp-echo
+        version: v1
+    spec:
+      containers:
+      - name: tcp-echo
+        image: docker.io/istio/tcp-echo-server:1.3
+        imagePullPolicy: IfNotPresent
+        args: [ "9000", "one" ]
+        ports:
+        - containerPort: 9000
+---
+# Version 2 — replies with the "two" prefix
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tcp-echo-v2
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tcp-echo
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: tcp-echo
+        version: v2
+    spec:
+      containers:
+      - name: tcp-echo
+        image: docker.io/istio/tcp-echo-server:1.3
+        imagePullPolicy: IfNotPresent
+        args: [ "9000", "two" ]
+        ports:
+        - containerPort: 9000

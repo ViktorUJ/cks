@@ -93,6 +93,21 @@
 | **13** | [Securing Edge Traffic with TLS](../tasks/ica/labs/13/README.MD)                         |
 | **14** | [Locality-aware Failover](../tasks/ica/labs/14/README.MD)                                |
 | **15** | [Installation & Configuration: customizing the Istio install (IstioOperator + MeshConfig)](../tasks/ica/labs/15/README.MD) |
+| **16** | [Kubernetes Gateway API: ingress routing with Gateway and HTTPRoute](../tasks/ica/labs/16/README.MD) |
+| **17** | [Rate Limiting: local rate limit with EnvoyFilter](../tasks/ica/labs/17/README.MD) |
+| **18** | [Telemetry API: access logs and distributed tracing](../tasks/ica/labs/18/README.MD) |
+| **19** | [Custom CA: plug your own root and intermediate CA into istiod](../tasks/ica/labs/19/README.MD) |
+| **20** | [mTLS migration: PERMISSIVE to STRICT with zero downtime](../tasks/ica/labs/20/README.MD) |
+| **21** | [Sidecar scoping: limit the proxy configuration scope](../tasks/ica/labs/21/README.MD) |
+| **22** | [TLS origination: initiate TLS from the mesh](../tasks/ica/labs/22/README.MD) |
+| **23** | [WasmPlugin: extend the data plane with WebAssembly](../tasks/ica/labs/23/README.MD) |
+| **24** | [Ambient: waypoint proxy and L7 authorization](../tasks/ica/labs/24/README.MD) |
+| **25** | [Progressive delivery with Flagger](../tasks/ica/labs/25/README.MD) |
+| **26** | [Dynamic CA: cert-manager and istio-csr](../tasks/ica/labs/26/README.MD) |
+| **27** | [EnvoyFilter and Lua: custom logic with an inline script](../tasks/ica/labs/27/README.MD) |
+| **28** | [TCP routing: routing non-HTTP traffic](../tasks/ica/labs/28/README.MD) |
+| **29** | [Ingress TLS: MUTUAL and PASSTHROUGH modes](../tasks/ica/labs/29/README.MD) |
+| **30** | [StatefulSets and headless services in the mesh](../tasks/ica/labs/30/README.MD) |
 
 
 ## EKS labs

@@ -14,6 +14,21 @@
 * Lab 13 Istio.[Securing Edge Traffic with TLS](../tasks/ica/labs/13) is added.
 * Lab 14 Istio.[Locality-aware Failover](../tasks/ica/labs/14) is added.
 * Lab 15 Istio.[Installation & Configuration: customizing the Istio install (IstioOperator and MeshConfig)](../tasks/ica/labs/15) is added.
+* Lab 16 Istio.[Kubernetes Gateway API: ingress routing with Gateway and HTTPRoute](../tasks/ica/labs/16) is added.
+* Lab 17 Istio.[Rate Limiting: local rate limit with EnvoyFilter](../tasks/ica/labs/17) is added.
+* Lab 18 Istio.[Telemetry API: access logs and distributed tracing](../tasks/ica/labs/18) is added.
+* Lab 19 Istio.[Custom CA: plug your own root and intermediate CA into istiod](../tasks/ica/labs/19) is added.
+* Lab 20 Istio.[mTLS migration: PERMISSIVE to STRICT with zero downtime](../tasks/ica/labs/20) is added.
+* Lab 21 Istio.[Sidecar scoping: limit the proxy configuration scope](../tasks/ica/labs/21) is added.
+* Lab 22 Istio.[TLS origination: initiate TLS from the mesh](../tasks/ica/labs/22) is added.
+* Lab 23 Istio.[WasmPlugin: extend the data plane with WebAssembly](../tasks/ica/labs/23) is added.
+* Lab 24 Istio.[Ambient: waypoint proxy and L7 authorization](../tasks/ica/labs/24) is added.
+* Lab 25 Istio.[Progressive delivery with Flagger](../tasks/ica/labs/25) is added.
+* Lab 26 Istio.[Dynamic CA: cert-manager and istio-csr](../tasks/ica/labs/26) is added.
+* Lab 27 Istio.[EnvoyFilter and Lua: custom logic with an inline script](../tasks/ica/labs/27) is added.
+* Lab 28 Istio.[TCP routing: routing non-HTTP traffic](../tasks/ica/labs/28) is added.
+* Lab 29 Istio.[Ingress TLS: MUTUAL and PASSTHROUGH modes](../tasks/ica/labs/29) is added.
+* Lab 30 Istio.[StatefulSets and headless services in the mesh](../tasks/ica/labs/30) is added.
 ### Improvements
 * ICA labs [01](../tasks/ica/labs/01), [02](../tasks/ica/labs/02) and [03](../tasks/ica/labs/03) are reworked: valid `check_result` tests, reference solutions, per-lab prefixes and region `eu-central-1` / `t3` instances.
 * Lab 07 Istio.[Helm install and Canary upgrade with revisions](../tasks/ica/labs/07): In-Place upgrade section is added.
