@@ -1,3 +1,5 @@
+[Eng version](README.MD)
+
 # Lab 15 — Installation & Configuration: кастомизация установки Istio (IstioOperator + MeshConfig)
 
 ## Обзор

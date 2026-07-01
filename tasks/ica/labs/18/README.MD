@@ -1,3 +1,5 @@
+[RU version](README_RU.MD)
+
 # Lab 18 — Telemetry API: access logs and distributed tracing
 
 ## Overview

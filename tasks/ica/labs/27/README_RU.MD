@@ -1,3 +1,5 @@
+[Eng version](README.MD)
+
 # Lab 27 — EnvoyFilter + Lua: кастомная логика инлайн-скриптом
 
 ## Обзор

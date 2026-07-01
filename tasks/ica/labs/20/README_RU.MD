@@ -1,3 +1,5 @@
+[Eng version](README.MD)
+
 # Lab 20 — Миграция mTLS: PERMISSIVE → STRICT без даунтайма
 
 ## Обзор

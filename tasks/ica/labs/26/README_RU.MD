@@ -1,3 +1,5 @@
+[Eng version](README.MD)
+
 # Lab 26 — Динамический CA: cert-manager + istio-csr
 
 ## Обзор

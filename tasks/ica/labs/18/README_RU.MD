@@ -1,3 +1,5 @@
+[Eng version](README.MD)
+
 # Lab 18 — Telemetry API: access logs и распределённый трейсинг
 
 ## Обзор

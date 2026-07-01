@@ -1,3 +1,5 @@
+[RU version](README_RU.MD)
+
 # Lab 24 — Ambient: waypoint proxy and L7 authorization
 
 ## Overview

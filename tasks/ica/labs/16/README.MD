@@ -1,3 +1,5 @@
+[RU version](README_RU.MD)
+
 # Lab 16 — Kubernetes Gateway API: ingress routing with Gateway + HTTPRoute
 
 ## Overview

@@ -1,3 +1,5 @@
+[RU version](README_RU.MD)
+
 # Lab 17 — Rate Limiting: local rate limit with EnvoyFilter
 
 ## Overview

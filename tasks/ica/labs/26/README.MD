@@ -1,3 +1,5 @@
+[RU version](README_RU.MD)
+
 # Lab 26 — Dynamic CA: cert-manager + istio-csr
 
 ## Overview

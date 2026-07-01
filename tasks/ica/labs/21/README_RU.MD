@@ -1,3 +1,5 @@
+[Eng version](README.MD)
+
 # Lab 21 — Sidecar scoping: ограничение области конфигурации прокси
 
 ## Обзор

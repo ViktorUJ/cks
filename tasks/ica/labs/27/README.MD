@@ -1,3 +1,5 @@
+[RU version](README_RU.MD)
+
 # Lab 27 — EnvoyFilter + Lua: custom logic with an inline script
 
 ## Overview

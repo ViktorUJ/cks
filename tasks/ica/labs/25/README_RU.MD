@@ -1,3 +1,5 @@
+[Eng version](README.MD)
+
 # Lab 25 — Progressive delivery с Flagger
 
 ## Обзор

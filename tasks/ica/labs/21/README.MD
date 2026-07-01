@@ -1,3 +1,5 @@
+[RU version](README_RU.MD)
+
 # Lab 21 — Sidecar scoping: limit the proxy configuration scope
 
 ## Overview

@@ -1,3 +1,5 @@
+[RU version](README_RU.MD)
+
 # Lab 23 — WasmPlugin: extend the data plane with WebAssembly
 
 ## Overview

@@ -1,3 +1,5 @@
+[RU version](README_RU.MD)
+
 # Lab 19 — Custom CA: plug your own root + intermediate CA into istiod
 
 ## Overview

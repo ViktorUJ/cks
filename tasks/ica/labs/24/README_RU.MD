@@ -1,3 +1,5 @@
+[Eng version](README.MD)
+
 # Lab 24 — Ambient: waypoint proxy и L7-авторизация
 
 ## Обзор
