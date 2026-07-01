@@ -104,6 +104,7 @@
 | **24** | [Ambient: waypoint proxy and L7 authorization](../tasks/ica/labs/24/README.MD) |
 | **25** | [Progressive delivery with Flagger](../tasks/ica/labs/25/README.MD) |
 | **26** | [Dynamic CA: cert-manager and istio-csr](../tasks/ica/labs/26/README.MD) |
+| **27** | [EnvoyFilter and Lua: custom logic with an inline script](../tasks/ica/labs/27/README.MD) |
 
 
 ## EKS labs

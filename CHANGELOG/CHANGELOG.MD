@@ -13,6 +13,7 @@
 * Lab 24 Istio.[Ambient: waypoint proxy and L7 authorization](../tasks/ica/labs/24) is added.
 * Lab 25 Istio.[Progressive delivery with Flagger](../tasks/ica/labs/25) is added.
 * Lab 26 Istio.[Dynamic CA: cert-manager and istio-csr](../tasks/ica/labs/26) is added.
+* Lab 27 Istio.[EnvoyFilter and Lua: custom logic with an inline script](../tasks/ica/labs/27) is added.
 
 ## 0.32.1 (03.07.2026)
 ### Features
