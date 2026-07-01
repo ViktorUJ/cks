@@ -1,14 +1,14 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/ica/labs/11/README.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/ica/labs/11/worker/files/solutions/1.MD"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/AG-149/tasks/ica/labs/12/README.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/AG-149/tasks/ica/labs/12/worker/files/solutions/1.MD"
   solutions_video   = "Not ready yet"
   debug_output      = "false"
   region            = "eu-central-1"
   vpc_default_cidr  = "10.10.0.0/16"
   aws               = "default"
-  prefix            = "ica-task11"
+  prefix            = "ica-task12"
   tags = {
-    "env_name"        = "ica-task11"
+    "env_name"        = "ica-task12"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"

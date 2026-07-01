@@ -52,7 +52,7 @@ kubectl label namespace default istio-injection=enabled --overwrite
 ## Шаг 2. Установка приложения
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/11/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/11/k8s-1/scripts/1.yaml
 kubectl rollout restart deployment -n default
 ```
 

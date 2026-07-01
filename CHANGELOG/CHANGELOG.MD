@@ -10,6 +10,7 @@
 * Lab 09 Istio.[Advanced: Ambient mode](../tasks/ica/labs/09) is added.
 * Lab 10 Istio.[Resilience: Timeout and Circuit Breaker](../tasks/ica/labs/10) is added.
 * Lab 11 Istio.[End-user authentication: RequestAuthentication and JWT](../tasks/ica/labs/11) is added.
+* Lab 12 Istio.[Troubleshooting: istioctl analyze, proxy-status, proxy-config](../tasks/ica/labs/12) is added.
 
 ## 0.31.1 (01.06.2026)
 ### Features

@@ -52,7 +52,7 @@ JWT validation is performed by the Envoy sidecar of the service — without it `
 ## Step 2. Deploy the Application
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/11/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/11/k8s-1/scripts/1.yaml
 kubectl rollout restart deployment -n default
 ```
 
