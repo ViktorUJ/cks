@@ -6,6 +6,7 @@
 * Lab 17 Istio.[Rate Limiting: local rate limit with EnvoyFilter](../tasks/ica/labs/17) is added.
 * Lab 18 Istio.[Telemetry API: access logs and distributed tracing](../tasks/ica/labs/18) is added.
 * Lab 19 Istio.[Custom CA: plug your own root and intermediate CA into istiod](../tasks/ica/labs/19) is added.
+* Lab 20 Istio.[mTLS migration: PERMISSIVE to STRICT with zero downtime](../tasks/ica/labs/20) is added.
 
 ## 0.32.1 (03.07.2026)
 ### Features

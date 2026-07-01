@@ -1,0 +1,97 @@
+# In-mesh namespace (sidecar injection enabled)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio-injection: enabled
+---
+# Legacy namespace (NO sidecar injection) — simulates a workload not yet in the mesh
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: legacy
+---
+# Application service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  namespace: app
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+# Application deployment (gets an Envoy sidecar)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong"
+---
+# In-mesh client (has a sidecar -> talks mTLS to the app)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mesh-client
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mesh-client
+  template:
+    metadata:
+      labels:
+        app: mesh-client
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "infinity"]
+---
+# Legacy client (NO sidecar -> plaintext only)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-client
+  namespace: legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-client
+  template:
+    metadata:
+      labels:
+        app: legacy-client
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "infinity"]
