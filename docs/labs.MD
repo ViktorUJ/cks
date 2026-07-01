@@ -102,6 +102,7 @@
 | **22** | [TLS origination: initiate TLS from the mesh](../tasks/ica/labs/22/README.MD) |
 | **23** | [WasmPlugin: extend the data plane with WebAssembly](../tasks/ica/labs/23/README.MD) |
 | **24** | [Ambient: waypoint proxy and L7 authorization](../tasks/ica/labs/24/README.MD) |
+| **25** | [Progressive delivery with Flagger](../tasks/ica/labs/25/README.MD) |
 
 
 ## EKS labs
