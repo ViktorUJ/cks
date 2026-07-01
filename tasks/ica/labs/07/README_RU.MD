@@ -172,6 +172,37 @@ kubectl get ns app --show-labels | grep 1-29-1
 kubectl get pods -n app -o jsonpath='{range .items[*]}{.spec.initContainers[*].image}{"\n"}{end}' | grep 1.29.1
 ```
 
+## Шаг 8. Альтернатива — In-Place upgrade
+
+Canary-обновление через ревизии — самый безопасный путь, но Istio поддерживает и **in-place upgrade**: обновление того же istiod «на месте», **без** второй ревизии. Минус: все прокси переключаются на новую версию сразу (после перезапуска подов), а откат — не сменой метки, а через `helm rollback`.
+
+In-place делается через `helm upgrade` того же релиза istiod (устанавливается **без** `revision`, namespace размечается обычным `istio-injection=enabled`):
+
+```bash
+# базовая установка без ревизии
+helm install istio-base istio/base -n istio-system --version 1.28.1
+helm install istiod istio/istiod -n istio-system --version 1.28.1 --wait
+kubectl label namespace app istio-injection=enabled --overwrite
+
+# ... позже: обновляем CRD и istiod НА МЕСТЕ до новой версии
+helm upgrade istio-base istio/base -n istio-system --version 1.29.1
+helm upgrade istiod    istio/istiod -n istio-system --version 1.29.1 --wait
+
+# перезапускаем data plane, чтобы поды получили новый sidecar
+kubectl rollout restart deployment -n app
+```
+
+**Canary vs In-Place:**
+
+| | Canary (ревизии) | In-Place |
+|---|---|---|
+| Второй control plane | да, рядом | нет |
+| Переключение нагрузки | по namespace, постепенно | сразу для всех |
+| Откат | сменить метку `istio.io/rev` | `helm rollback` |
+| Риск | ниже | выше |
+
+Эквивалент через istioctl: `istioctl upgrade` — обновляет установку без ревизии «на месте».
+
 ## Итог
 
 | Шаг | Что сделали | Инструмент |

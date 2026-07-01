@@ -172,6 +172,37 @@ kubectl get ns app --show-labels | grep 1-29-1
 kubectl get pods -n app -o jsonpath='{range .items[*]}{.spec.initContainers[*].image}{"\n"}{end}' | grep 1.29.1
 ```
 
+## Step 8. Alternative — In-Place upgrade
+
+Canary upgrades via revisions are the safest path, but Istio also supports an **in-place upgrade**: upgrading the same istiod "in place", **without** a second revision. The trade-off: all proxies switch to the new version at once (after pods restart), and rollback is via `helm rollback` rather than flipping a label.
+
+An in-place upgrade is a `helm upgrade` of the same istiod release (installed **without** `revision`; the namespace uses the plain `istio-injection=enabled` label):
+
+```bash
+# base install without a revision
+helm install istio-base istio/base -n istio-system --version 1.28.1
+helm install istiod istio/istiod -n istio-system --version 1.28.1 --wait
+kubectl label namespace app istio-injection=enabled --overwrite
+
+# ... later: upgrade the CRDs and istiod IN PLACE to the new version
+helm upgrade istio-base istio/base -n istio-system --version 1.29.1
+helm upgrade istiod    istio/istiod -n istio-system --version 1.29.1 --wait
+
+# restart the data plane so pods pick up the new sidecar
+kubectl rollout restart deployment -n app
+```
+
+**Canary vs In-Place:**
+
+| | Canary (revisions) | In-Place |
+|---|---|---|
+| Second control plane | yes, alongside | no |
+| Traffic cutover | per namespace, gradual | all at once |
+| Rollback | flip the `istio.io/rev` label | `helm rollback` |
+| Risk | lower | higher |
+
+istioctl equivalent: `istioctl upgrade` — upgrades a non-revisioned installation in place.
+
 ## Summary
 
 | Step | What we did | Tool |
