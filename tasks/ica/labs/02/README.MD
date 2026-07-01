@@ -38,6 +38,25 @@ flowchart TD
     style V3 fill:#db4437,stroke:#fff,color:#fff
 ```
 
+## Infrastructure
+
+The environment is provisioned in AWS (`eu-central-1`) using Terragrunt and includes:
+
+| Component  | Description                                       |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` with public subnets            |
+| `ssh-keys` | SSH keys for node access                          |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) with Istio installed |
+| `worker`   | Workstation with `kubectl` and cluster access     |
+
+Instances: `t3.medium` (master), Ubuntu `22.04`
+
+## Provisioning
+
+```bash
+TASK=02 make run_ica_task
+```
+
 ## Step 1. Enable Sidecar Injection
 
 Label the `default` namespace so that Istio automatically injects the Envoy sidecar proxy into every new pod:
@@ -55,7 +74,7 @@ This is why you'll see `2/2` in the `READY` column — one container for the app
 Deploy the application in three versions. A shared Kubernetes Service named `ping-pong` is created.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/02/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/02/k8s-1/scripts/1.yaml
 ```
 
 **What gets deployed:**

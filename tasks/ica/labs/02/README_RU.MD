@@ -38,6 +38,25 @@ flowchart TD
     style V3 fill:#db4437,stroke:#fff,color:#fff
 ```
 
+## Инфраструктура
+
+Окружение разворачивается в AWS (`eu-central-1`) через Terragrunt и состоит из:
+
+| Компонент  | Описание                                          |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` с публичными подсетями          |
+| `ssh-keys` | SSH-ключи для доступа к нодам                      |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) с установленным Istio |
+| `worker`   | Рабочая машина с `kubectl` и доступом к кластеру   |
+
+Инстансы: `t3.medium` (master) Ubuntu `22.04`
+
+## Развёртывание
+
+```bash
+TASK=02 make run_ica_task
+```
+
 ## Шаг 1. Включение sidecar-инъекции
 
 Добавляем label на namespace `default` для автоматической инъекции sidecar-прокси Envoy:
@@ -55,7 +74,7 @@ kubectl label namespace default istio-injection=enabled
 Устанавливаем приложение в 3 версиях. Создан общий Kubernetes Service с именем `ping-pong`.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/02/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/02/k8s-1/scripts/1.yaml
 ```
 
 **Что разворачивается:**
