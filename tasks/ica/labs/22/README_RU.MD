@@ -37,6 +37,10 @@ kubectl exec -n app deploy/app-client -c curl -- \
 
 ## Шаг 2. Настроить TLS origination через DestinationRule
 
+Бэкенд использует self-signed сертификат, поэтому проверку upstream отключаем через
+`insecureSkipVerify: true`. В проде вместо этого задают `caCertificates` с CA, которым
+подписан upstream.
+
 ```bash
 kubectl apply -f - <<'EOF'
 apiVersion: networking.istio.io/v1
@@ -52,6 +56,7 @@ spec:
         number: 80
       tls:
         mode: SIMPLE
+        insecureSkipVerify: true
 EOF
 ```
 
@@ -71,9 +76,10 @@ kubectl exec -n app deploy/app-client -c curl -- \
 - `DestinationRule` с `tls.mode: SIMPLE` на порту 80 говорит client-side Envoy
   **инициировать TLS** к upstream (бэкенд слушает `targetPort: 8443`).
 - Бэкенд получает корректное TLS-соединение и возвращает `200`.
-- `SIMPLE` без `caCertificates` не проверяет сертификат сервера. В проде задают
-  `caCertificates` (и при необходимости `subjectAltNames`) для проверки upstream, либо
-  используют `MUTUAL` для клиентской аутентификации по сертификату.
+- В Istio `SIMPLE` по умолчанию **проверяет** сертификат сервера. Наш бэкенд использует
+  self-signed cert, поэтому мы ставим `insecureSkipVerify: true`. В проде вместо этого
+  задают `caCertificates` (и при необходимости `subjectAltNames`) для проверки upstream,
+  либо используют `MUTUAL` для клиентской аутентификации по сертификату.
 
 ## Зачем инициировать TLS в mesh
 
