@@ -105,6 +105,7 @@
 | **25** | [Progressive delivery with Flagger](../tasks/ica/labs/25/README.MD) |
 | **26** | [Dynamic CA: cert-manager and istio-csr](../tasks/ica/labs/26/README.MD) |
 | **27** | [EnvoyFilter and Lua: custom logic with an inline script](../tasks/ica/labs/27/README.MD) |
+| **28** | [TCP routing: routing non-HTTP traffic](../tasks/ica/labs/28/README.MD) |
 
 
 ## EKS labs
