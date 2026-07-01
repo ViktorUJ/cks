@@ -98,6 +98,7 @@
 | **18** | [Telemetry API: access logs and distributed tracing](../tasks/ica/labs/18/README.MD) |
 | **19** | [Custom CA: plug your own root and intermediate CA into istiod](../tasks/ica/labs/19/README.MD) |
 | **20** | [mTLS migration: PERMISSIVE to STRICT with zero downtime](../tasks/ica/labs/20/README.MD) |
+| **21** | [Sidecar scoping: limit the proxy configuration scope](../tasks/ica/labs/21/README.MD) |
 
 
 ## EKS labs
