@@ -72,7 +72,7 @@ kubectl label namespace default istio-injection=enabled
 Разворачиваем два сервиса: `frontend` (точка входа) и `ping-pong` (бэкенд). Frontend при каждом запросе обращается к ping-pong по внутреннему адресу `http://ping-pong:8080/`.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/03/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/03/k8s-1/scripts/1.yaml
 ```
 
 **Что разворачивается:**

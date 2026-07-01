@@ -72,7 +72,7 @@ kubectl label namespace default istio-injection=enabled
 Deploy two services: `frontend` (the entry point) and `ping-pong` (the backend). On every incoming request, frontend calls `http://ping-pong:8080/` and returns the result to the client.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/03/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/03/k8s-1/scripts/1.yaml
 ```
 
 **What gets deployed:**
