@@ -67,7 +67,7 @@ export KUBECONFIG=/home/ubuntu/.kube/config
 
   resp=""
   for i in $(seq 12); do
-    resp=$(timeout 6 bash -c 'exec 3<>/dev/tcp/myapp.local/31400; printf "hello\n" >&3; head -c 100 <&3' 2>/dev/null || true)
+    resp=$(timeout 6 bash -c 'exec 3<>/dev/tcp/myapp.local/31400; printf "hello\n" >&3; head -n 1 <&3' 2>/dev/null || true)
     if echo "$resp" | grep -q 'hello' && echo "$resp" | grep -qE 'one|two'; then break; fi
     sleep 5
   done

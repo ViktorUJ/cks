@@ -111,7 +111,7 @@ EOF
 
 ```bash
 for i in $(seq 10); do
-  echo "hello" | timeout 3 bash -c 'exec 3<>/dev/tcp/myapp.local/31400; cat >&3; head -c 60 <&3'
+  echo "hello" | timeout 3 bash -c 'exec 3<>/dev/tcp/myapp.local/31400; cat >&3; head -n 1 <&3'
 done
 # ~80% "one hello", ~20% "two hello"
 ```
