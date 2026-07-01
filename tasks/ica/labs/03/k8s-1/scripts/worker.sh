@@ -1,4 +1,4 @@
 #!/bin/bash
-echo "*** worker node ica lab-02  k8s-1"
+echo "*** worker node ica lab-03  k8s-1"
 
 
