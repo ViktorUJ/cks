@@ -4,6 +4,7 @@
 ### Features
 * Lab 16 Istio.[Kubernetes Gateway API: ingress routing with Gateway and HTTPRoute](../tasks/ica/labs/16) is added.
 * Lab 17 Istio.[Rate Limiting: local rate limit with EnvoyFilter](../tasks/ica/labs/17) is added.
+* Lab 18 Istio.[Telemetry API: access logs and distributed tracing](../tasks/ica/labs/18) is added.
 
 ## 0.32.1 (03.07.2026)
 ### Features
