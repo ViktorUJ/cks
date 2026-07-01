@@ -88,6 +88,7 @@
 | **08** | [Observability: Prometheus, Jaeger and Kiali](../tasks/ica/labs/08/README.MD)            |
 | **09** | [Advanced: Ambient mode](../tasks/ica/labs/09/README.MD)                                 |
 | **10** | [Resilience: Timeout and Circuit Breaker](../tasks/ica/labs/10/README.MD)                |
+| **11** | [End-user authentication: RequestAuthentication and JWT](../tasks/ica/labs/11/README.MD) |
 
 
 ## EKS labs

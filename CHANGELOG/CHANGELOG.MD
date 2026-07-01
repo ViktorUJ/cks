@@ -9,6 +9,7 @@
 * Lab 08 Istio.[Observability: Prometheus, Jaeger and Kiali](../tasks/ica/labs/08) is added.
 * Lab 09 Istio.[Advanced: Ambient mode](../tasks/ica/labs/09) is added.
 * Lab 10 Istio.[Resilience: Timeout and Circuit Breaker](../tasks/ica/labs/10) is added.
+* Lab 11 Istio.[End-user authentication: RequestAuthentication and JWT](../tasks/ica/labs/11) is added.
 
 ## 0.31.1 (01.06.2026)
 ### Features
