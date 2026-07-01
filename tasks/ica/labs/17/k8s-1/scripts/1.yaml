@@ -1,0 +1,84 @@
+# Namespace with sidecar injection enabled
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio-injection: enabled
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  namespace: app
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong"
+---
+# Istio Gateway exposing the app on the shared ingress gateway
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: app-gateway
+  namespace: app
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "myapp.local"
+---
+# VirtualService routing myapp.local to the app
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: ping-pong
+  namespace: app
+spec:
+  hosts:
+  - "myapp.local"
+  gateways:
+  - app-gateway
+  http:
+  - route:
+    - destination:
+        host: ping-pong
+        port:
+          number: 8080

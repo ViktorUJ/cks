@@ -94,6 +94,7 @@
 | **14** | [Locality-aware Failover](../tasks/ica/labs/14/README.MD)                                |
 | **15** | [Installation & Configuration: customizing the Istio install (IstioOperator + MeshConfig)](../tasks/ica/labs/15/README.MD) |
 | **16** | [Kubernetes Gateway API: ingress routing with Gateway and HTTPRoute](../tasks/ica/labs/16/README.MD) |
+| **17** | [Rate Limiting: local rate limit with EnvoyFilter](../tasks/ica/labs/17/README.MD) |
 
 
 ## EKS labs
