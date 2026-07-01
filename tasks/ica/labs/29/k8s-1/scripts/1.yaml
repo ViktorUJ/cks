@@ -1,0 +1,108 @@
+# ---- MUTUAL target: ping-pong in the injected 'app' namespace ----
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  namespace: app
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong"
+---
+# ---- PASSTHROUGH target: a TLS-only backend that terminates TLS itself ----
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: secure-backend-conf
+  namespace: backend
+data:
+  default.conf: |
+    server {
+        listen 8443 ssl;
+        ssl_certificate     /etc/nginx/tls/tls.crt;
+        ssl_certificate_key /etc/nginx/tls/tls.key;
+        location / {
+            default_type text/plain;
+            return 200 "secure-ok\n";
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secure-backend
+  namespace: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secure-backend
+  template:
+    metadata:
+      labels:
+        app: secure-backend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 8443
+        volumeMounts:
+        - name: conf
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+        - name: tls
+          mountPath: /etc/nginx/tls
+          readOnly: true
+      volumes:
+      - name: conf
+        configMap:
+          name: secure-backend-conf
+      - name: tls
+        secret:
+          secretName: backend-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: secure-backend
+  namespace: backend
+  labels:
+    app: secure-backend
+spec:
+  ports:
+  - port: 443
+    name: https
+    targetPort: 8443
+  selector:
+    app: secure-backend
