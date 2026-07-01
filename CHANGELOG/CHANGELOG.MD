@@ -12,6 +12,7 @@
 * Lab 11 Istio.[End-user authentication: RequestAuthentication and JWT](../tasks/ica/labs/11) is added.
 * Lab 12 Istio.[Troubleshooting: istioctl analyze, proxy-status, proxy-config](../tasks/ica/labs/12) is added.
 * Lab 13 Istio.[Securing Edge Traffic with TLS](../tasks/ica/labs/13) is added.
+* Lab 14 Istio.[Locality-aware Failover](../tasks/ica/labs/14) is added.
 
 ## 0.31.1 (01.06.2026)
 ### Features

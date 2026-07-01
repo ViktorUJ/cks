@@ -91,6 +91,7 @@
 | **11** | [End-user authentication: RequestAuthentication and JWT](../tasks/ica/labs/11/README.MD) |
 | **12** | [Troubleshooting: istioctl analyze, proxy-status, proxy-config](../tasks/ica/labs/12/README.MD) |
 | **13** | [Securing Edge Traffic with TLS](../tasks/ica/labs/13/README.MD)                         |
+| **14** | [Locality-aware Failover](../tasks/ica/labs/14/README.MD)                                |
 
 
 ## EKS labs

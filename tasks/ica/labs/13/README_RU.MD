@@ -59,7 +59,7 @@ flowchart TD
 
 ```bash
 kubectl label namespace default istio-injection=enabled --overwrite
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/13/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/13/k8s-1/scripts/1.yaml
 kubectl rollout restart deployment -n default
 ```
 
