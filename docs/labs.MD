@@ -93,6 +93,7 @@
 | **13** | [Securing Edge Traffic with TLS](../tasks/ica/labs/13/README.MD)                         |
 | **14** | [Locality-aware Failover](../tasks/ica/labs/14/README.MD)                                |
 | **15** | [Installation & Configuration: customizing the Istio install (IstioOperator + MeshConfig)](../tasks/ica/labs/15/README.MD) |
+| **16** | [Kubernetes Gateway API: ingress routing with Gateway and HTTPRoute](../tasks/ica/labs/16/README.MD) |
 
 
 ## EKS labs
