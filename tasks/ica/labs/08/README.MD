@@ -55,7 +55,7 @@ All telemetry originates in the sidecar proxy: Envoy counts metrics for every re
 Deploy a two-tier app: `frontend` calls `ping-pong` on every request. That call produces a two-span trace (frontend → ping-pong) and metrics for both services. A `curl-client` is also deployed — we'll use it to query the Prometheus API from inside the mesh.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/08/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/08/k8s-1/scripts/1.yaml
 kubectl rollout restart deployment -n default
 ```
 

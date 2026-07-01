@@ -55,7 +55,7 @@ kubectl label namespace default istio-injection=enabled --overwrite
 Разворачиваем двухуровневое приложение: `frontend` на каждый запрос вызывает `ping-pong`. Такой вызов даёт «двухзвенный» трейс (frontend → ping-pong) и метрики по обоим сервисам. Также поднимается `curl-client` — с него будем опрашивать API Prometheus изнутри mesh.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/08/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/08/k8s-1/scripts/1.yaml
 kubectl rollout restart deployment -n default
 ```
 

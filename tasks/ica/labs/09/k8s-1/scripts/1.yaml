@@ -1,0 +1,69 @@
+# ============================================================================
+# ICA Lab 09 — Ambient mode (sidecar-less data plane)
+# ----------------------------------------------------------------------------
+# In ambient mode pods have NO sidecar (they stay 1/1). L4 mTLS is provided by
+# the per-node ztunnel; L7 policy requires a waypoint proxy.
+#   - ping-pong  : backend
+#   - curl-client: client used to test L4 connectivity and L7 policy (GET/POST)
+# Namespace: default (enrolled into ambient via istio.io/dataplane-mode=ambient).
+# ============================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  namespace: default
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong Backend"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl-client
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curl-client
+  template:
+    metadata:
+      labels:
+        app: curl-client
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "3650d"]

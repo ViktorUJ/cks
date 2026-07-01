@@ -1,14 +1,14 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/ica/labs/08/README.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/ica/labs/08/worker/files/solutions/1.MD"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/AG-149/tasks/ica/labs/09/README.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/AG-149/tasks/ica/labs/09/worker/files/solutions/1.MD"
   solutions_video   = "Not ready yet"
   debug_output      = "false"
   region            = "eu-central-1"
   vpc_default_cidr  = "10.10.0.0/16"
   aws               = "default"
-  prefix            = "ica-task08"
+  prefix            = "ica-task09"
   tags = {
-    "env_name"        = "ica-task08"
+    "env_name"        = "ica-task09"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
@@ -21,9 +21,9 @@ locals {
     type               = "calico" #calico , cilium
     disable_kube_proxy = "false"
   }
-  instance_type        = "t4g.medium"
-  instance_type_worker = "t4g.small"
-  spot_additional_types= [ "t4g.medium" , "t4g.large" , "t4g.xlarge" ]
+  instance_type        = "t3.medium"
+  instance_type_worker = "t3.small"
+  spot_additional_types= [ "t3.medium" ]
   all_spot_subnet      = "true"
   key_name             = ""
   ssh_password_enable  = "true"        # false |  true

@@ -91,7 +91,7 @@ istiod-1-28-1-xxxxxxxxxx-xxxxx    1/1     Running   0          40s
 kubectl create namespace app
 kubectl label namespace app istio.io/rev=1-28-1
 
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-149/tasks/ica/labs/07/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/07/k8s-1/scripts/1.yaml
 kubectl rollout restart deployment -n app
 ```
 
