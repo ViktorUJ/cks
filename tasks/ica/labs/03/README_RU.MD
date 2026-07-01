@@ -38,6 +38,25 @@ flowchart TD
     style PingPong fill:#f4b400,stroke:#fff,color:#000
 ```
 
+## Инфраструктура
+
+Окружение разворачивается в AWS (`eu-central-1`) через Terragrunt и состоит из:
+
+| Компонент  | Описание                                          |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` с публичными подсетями          |
+| `ssh-keys` | SSH-ключи для доступа к нодам                      |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) с установленным Istio |
+| `worker`   | Рабочая машина с `kubectl` и доступом к кластеру   |
+
+Инстансы: `t3.medium` (master) Ubuntu `22.04`
+
+## Развёртывание
+
+```bash
+TASK=03 make run_ica_task
+```
+
 ## Шаг 1. Включение sidecar-инъекции
 
 Добавляем label на namespace `default` для автоматической инъекции sidecar-прокси Envoy:

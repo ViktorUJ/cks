@@ -84,6 +84,14 @@
 | **04** | [Zero Trust: mTLS and AuthorizationPolicy](../tasks/ica/labs/04/README.MD)               |
 | **05** | [Controlled Egress: ServiceEntry, Egress Gateway and Sidecar scope](../tasks/ica/labs/05/README.MD) |
 | **06** | [Load Balancing and Traffic Mirroring](../tasks/ica/labs/06/README.MD)                   |
+| **07** | [Helm install and Canary upgrade with revisions](../tasks/ica/labs/07/README.MD)         |
+| **08** | [Observability: Prometheus, Jaeger and Kiali](../tasks/ica/labs/08/README.MD)            |
+| **09** | [Advanced: Ambient mode](../tasks/ica/labs/09/README.MD)                                 |
+| **10** | [Resilience: Timeout and Circuit Breaker](../tasks/ica/labs/10/README.MD)                |
+| **11** | [End-user authentication: RequestAuthentication and JWT](../tasks/ica/labs/11/README.MD) |
+| **12** | [Troubleshooting: istioctl analyze, proxy-status, proxy-config](../tasks/ica/labs/12/README.MD) |
+| **13** | [Securing Edge Traffic with TLS](../tasks/ica/labs/13/README.MD)                         |
+| **14** | [Locality-aware Failover](../tasks/ica/labs/14/README.MD)                                |
 
 
 ## EKS labs

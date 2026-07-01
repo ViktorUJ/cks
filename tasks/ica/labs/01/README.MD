@@ -9,7 +9,7 @@ In this lab you will install the Istio service mesh on a Kubernetes cluster (set
 
 ## Infrastructure
 
-The environment is provisioned in AWS (`eu-north-1`) using Terragrunt and includes:
+The environment is provisioned in AWS (`eu-central-1`) using Terragrunt and includes:
 
 | Component  | Description                                      |
 |------------|--------------------------------------------------|
@@ -18,7 +18,7 @@ The environment is provisioned in AWS (`eu-north-1`) using Terragrunt and includ
 | `k8s-1`   | Kubernetes `1.35.2` (kubeadm)                    |
 | `worker`   | Workstation with `kubectl` and cluster access    |
 
-Instances: `t4g.medium` (master), Ubuntu `22.04`
+Instances: `t3.medium` (master), Ubuntu `22.04`
 
 ## Provisioning
 

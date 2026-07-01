@@ -1,5 +1,5 @@
 #!/bin/bash
-echo " *** worker pc ica lab 02 k8s-1"
+echo " *** worker pc ica lab 03 k8s-1"
 export KUBECONFIG=/root/.kube/config
 
 # Wait until at least one node is available

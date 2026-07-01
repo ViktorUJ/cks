@@ -5,6 +5,17 @@
 * Lab 04 Istio.[Zero Trust: mTLS and AuthorizationPolicy](../tasks/ica/labs/04) is added.
 * Lab 05 Istio.[Controlled Egress: ServiceEntry, Egress Gateway and Sidecar scope](../tasks/ica/labs/05) is added.
 * Lab 06 Istio.[Load Balancing and Traffic Mirroring](../tasks/ica/labs/06) is added.
+* Lab 07 Istio.[Helm install and Canary upgrade with revisions](../tasks/ica/labs/07) is added.
+* Lab 08 Istio.[Observability: Prometheus, Jaeger and Kiali](../tasks/ica/labs/08) is added.
+* Lab 09 Istio.[Advanced: Ambient mode](../tasks/ica/labs/09) is added.
+* Lab 10 Istio.[Resilience: Timeout and Circuit Breaker](../tasks/ica/labs/10) is added.
+* Lab 11 Istio.[End-user authentication: RequestAuthentication and JWT](../tasks/ica/labs/11) is added.
+* Lab 12 Istio.[Troubleshooting: istioctl analyze, proxy-status, proxy-config](../tasks/ica/labs/12) is added.
+* Lab 13 Istio.[Securing Edge Traffic with TLS](../tasks/ica/labs/13) is added.
+* Lab 14 Istio.[Locality-aware Failover](../tasks/ica/labs/14) is added.
+### Improvements
+* ICA labs [01](../tasks/ica/labs/01), [02](../tasks/ica/labs/02) and [03](../tasks/ica/labs/03) are reworked: valid `check_result` tests, reference solutions, per-lab prefixes and region `eu-central-1` / `t3` instances.
+* Lab 07 Istio.[Helm install and Canary upgrade with revisions](../tasks/ica/labs/07): In-Place upgrade section is added.
 
 ## 0.31.1 (01.06.2026)
 ### Features

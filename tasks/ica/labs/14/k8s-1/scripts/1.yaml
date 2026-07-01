@@ -1,0 +1,109 @@
+# ============================================================================
+# ICA Lab 14 — Locality-aware Failover
+# ----------------------------------------------------------------------------
+# One Service "ping-pong" backed by two zone-pinned deployments:
+#   - ping-pong-a : runs in zone eu-central-1a (SERVER_NAME "Zone-A")
+#   - ping-pong-b : runs in zone eu-central-1b (SERVER_NAME "Zone-B")
+# curl-client runs in zone eu-central-1a, so with locality load balancing it is
+# served by the local (Zone-A) backend, and fails over to Zone-B if the local
+# endpoints become unavailable.
+#
+# NOTE: the cluster nodes are labelled with topology.kubernetes.io/zone
+#       (done automatically by the worker bootstrap). Istio derives workload
+#       locality from those node labels.
+# ============================================================================
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  namespace: default
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong-a
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+      zone: a
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+        zone: a
+    spec:
+      nodeSelector:
+        topology.kubernetes.io/zone: eu-central-1a
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Zone-A"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong-b
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+      zone: b
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+        zone: b
+    spec:
+      nodeSelector:
+        topology.kubernetes.io/zone: eu-central-1b
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Zone-B"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl-client
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curl-client
+  template:
+    metadata:
+      labels:
+        app: curl-client
+    spec:
+      nodeSelector:
+        topology.kubernetes.io/zone: eu-central-1a
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "3650d"]
