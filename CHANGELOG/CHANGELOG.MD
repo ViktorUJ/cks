@@ -16,6 +16,7 @@
 * Lab 27 Istio.[EnvoyFilter and Lua: custom logic with an inline script](../tasks/ica/labs/27) is added.
 * Lab 28 Istio.[TCP routing: routing non-HTTP traffic](../tasks/ica/labs/28) is added.
 * Lab 29 Istio.[Ingress TLS: MUTUAL and PASSTHROUGH modes](../tasks/ica/labs/29) is added.
+* Lab 30 Istio.[StatefulSets and headless services in the mesh](../tasks/ica/labs/30) is added.
 
 ## 0.32.1 (03.07.2026)
 ### Features
