@@ -9,6 +9,7 @@
 * Lab 20 Istio.[mTLS migration: PERMISSIVE to STRICT with zero downtime](../tasks/ica/labs/20) is added.
 * Lab 21 Istio.[Sidecar scoping: limit the proxy configuration scope](../tasks/ica/labs/21) is added.
 * Lab 22 Istio.[TLS origination: initiate TLS from the mesh](../tasks/ica/labs/22) is added.
+* Lab 23 Istio.[WasmPlugin: extend the data plane with WebAssembly](../tasks/ica/labs/23) is added.
 
 ## 0.32.1 (03.07.2026)
 ### Features

@@ -100,6 +100,7 @@
 | **20** | [mTLS migration: PERMISSIVE to STRICT with zero downtime](../tasks/ica/labs/20/README.MD) |
 | **21** | [Sidecar scoping: limit the proxy configuration scope](../tasks/ica/labs/21/README.MD) |
 | **22** | [TLS origination: initiate TLS from the mesh](../tasks/ica/labs/22/README.MD) |
+| **23** | [WasmPlugin: extend the data plane with WebAssembly](../tasks/ica/labs/23/README.MD) |
 
 
 ## EKS labs
