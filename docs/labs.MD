@@ -103,6 +103,7 @@
 | **23** | [WasmPlugin: extend the data plane with WebAssembly](../tasks/ica/labs/23/README.MD) |
 | **24** | [Ambient: waypoint proxy and L7 authorization](../tasks/ica/labs/24/README.MD) |
 | **25** | [Progressive delivery with Flagger](../tasks/ica/labs/25/README.MD) |
+| **26** | [Dynamic CA: cert-manager and istio-csr](../tasks/ica/labs/26/README.MD) |
 
 
 ## EKS labs
