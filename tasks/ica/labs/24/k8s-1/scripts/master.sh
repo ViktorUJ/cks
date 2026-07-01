@@ -23,4 +23,4 @@ istioctl install --set profile=ambient -y
 
 # Deploy the app and a client in the ambient namespace.
 until kubectl get ns istio-system >/dev/null 2>&1; do sleep 2; done
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-151/tasks/ica/labs/24/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/24/k8s-1/scripts/1.yaml

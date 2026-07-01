@@ -70,4 +70,4 @@ kubectl create -n backend secret tls backend-tls --cert=backend.crt --key=backen
 
 # Deploy the apps: ping-pong (MUTUAL target) and a TLS-only backend (passthrough).
 # Building the Gateway (MUTUAL + PASSTHROUGH) and the routes is the task — see README.MD.
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-151/tasks/ica/labs/29/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/29/k8s-1/scripts/1.yaml

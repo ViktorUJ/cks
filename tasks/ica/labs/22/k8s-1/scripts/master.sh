@@ -28,4 +28,4 @@ openssl req -x509 -newkey rsa:2048 -nodes -keyout tls.key -out tls.crt -days 365
 kubectl create namespace external
 kubectl create secret tls httpsvc-tls -n external --cert=/tmp/tls.crt --key=/tmp/tls.key
 
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-151/tasks/ica/labs/22/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/22/k8s-1/scripts/1.yaml

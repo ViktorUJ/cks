@@ -55,4 +55,4 @@ until kubectl get ns istio-system >/dev/null 2>&1; do sleep 2; done
 kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.29/samples/addons/jaeger.yaml
 
 # Deploy the application, a curl client, and expose the app through the gateway.
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-151/tasks/ica/labs/18/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/18/k8s-1/scripts/1.yaml

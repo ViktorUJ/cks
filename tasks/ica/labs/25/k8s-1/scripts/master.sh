@@ -24,7 +24,7 @@ kubectl apply -k github.com/fluxcd/flagger//kustomize/istio
 
 # Public ingress gateway + the demo app (podinfo) + a load tester that generates
 # traffic during the canary analysis.
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-151/tasks/ica/labs/25/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/25/k8s-1/scripts/1.yaml
 
 kubectl create namespace test
 kubectl label namespace test istio-injection=enabled --overwrite

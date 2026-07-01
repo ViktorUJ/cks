@@ -43,4 +43,4 @@ istioctl install -f /root/istio-install.yaml -y
 # Deploy the TCP echo app (v1 replies "one ...", v2 replies "two ...").
 # Routing raw TCP through the gateway is the task of this lab — see README.MD.
 until kubectl get ns istio-system >/dev/null 2>&1; do sleep 2; done
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-151/tasks/ica/labs/28/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/28/k8s-1/scripts/1.yaml

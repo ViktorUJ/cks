@@ -51,7 +51,7 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-151/tasks/ica/labs/17/k8s-1/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/17/k8s-1/scripts/master.sh"
     cni                = local.vars.locals.cni
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
@@ -70,7 +70,7 @@ inputs = {
       ubuntu_version     = local.vars.locals.ubuntu_version
       subnet_number      = "0"
       user_data_template = "template/worker.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-151/tasks/ica/labs/17/k8s-1/scripts/worker.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/17/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=worker"
       cidrs              = local.vars.locals.access_cidrs
       root_volume        = local.vars.locals.root_volume

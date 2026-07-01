@@ -42,4 +42,4 @@ istioctl install -f /root/istio-install.yaml -y
 # Deploy the application and expose it through the ingress gateway.
 # Writing a Lua EnvoyFilter on the gateway is the task of this lab — see README.MD.
 until kubectl get ns istio-system >/dev/null 2>&1; do sleep 2; done
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-151/tasks/ica/labs/27/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/27/k8s-1/scripts/1.yaml
