@@ -99,6 +99,7 @@
 | **19** | [Custom CA: plug your own root and intermediate CA into istiod](../tasks/ica/labs/19/README.MD) |
 | **20** | [mTLS migration: PERMISSIVE to STRICT with zero downtime](../tasks/ica/labs/20/README.MD) |
 | **21** | [Sidecar scoping: limit the proxy configuration scope](../tasks/ica/labs/21/README.MD) |
+| **22** | [TLS origination: initiate TLS from the mesh](../tasks/ica/labs/22/README.MD) |
 
 
 ## EKS labs
