@@ -1,0 +1,70 @@
+# Ambient namespace: workloads join the mesh via ztunnel, NO sidecars
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio.io/dataplane-mode: ambient
+---
+# Application service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ping-pong
+  namespace: app
+  labels:
+    app: ping-pong
+spec:
+  ports:
+  - port: 8080
+    name: http
+    targetPort: 8080
+  selector:
+    app: ping-pong
+---
+# Application deployment (no sidecar in ambient mode)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ping-pong
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ping-pong
+  template:
+    metadata:
+      labels:
+        app: ping-pong
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SERVER_NAME
+          value: "Ping-Pong"
+---
+# In-mesh client (ambient, no sidecar)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-client
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-client
+  template:
+    metadata:
+      labels:
+        app: app-client
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "infinity"]
