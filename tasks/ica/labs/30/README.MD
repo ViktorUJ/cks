@@ -1,6 +1,6 @@
 [RU version](README_RU.MD)
 
-# Lab 30 — StatefulSets and headless services in the mesh
+# Lab 30 - StatefulSets and headless services in the mesh
 
 ## Overview
 
@@ -51,7 +51,7 @@ spec:
   selector:
     app: web
   ports:
-    - name: http           # named port — required for Istio protocol detection
+    - name: http           # named port - required for Istio protocol detection
       port: 8080
       targetPort: 8080
 ---
@@ -119,9 +119,9 @@ sidecars even though the Service is headless.
 
 - **Port naming** is required: `http`/`tcp`/`grpc`/`mongo-*` etc. An unnamed port makes
   Istio treat it as opaque TCP and you lose L7 features.
-- **StatefulSet + serviceName** gives stable pod DNS names — exactly how DB/broker
+- **StatefulSet + serviceName** gives stable pod DNS names - exactly how DB/broker
   clusters are addressed.
-- **STRICT mTLS works on headless** since Istio 1.10+ — per-pod traffic encryption with no
+- **STRICT mTLS works on headless** since Istio 1.10+ - per-pod traffic encryption with no
   VIP.
 
 ## External headless services (bonus)

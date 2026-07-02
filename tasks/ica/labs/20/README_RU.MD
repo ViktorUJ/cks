@@ -1,6 +1,6 @@
 [Eng version](README.MD)
 
-# Lab 20 — Миграция mTLS: PERMISSIVE → STRICT без даунтайма
+# Lab 20 - Миграция mTLS: PERMISSIVE → STRICT без даунтайма
 
 ## Обзор
 
@@ -11,9 +11,9 @@
 переключиться на `STRICT`.
 
 В лабе развёрнуты три нагрузки:
-- `ping-pong` в namespace `app` (с sidecar — сам сервис);
-- `mesh-client` в namespace `app` (с sidecar — ходит по mTLS);
-- `legacy-client` в namespace `legacy` (**без** sidecar — только plaintext).
+- `ping-pong` в namespace `app` (с sidecar - сам сервис);
+- `mesh-client` в namespace `app` (с sidecar - ходит по mTLS);
+- `legacy-client` в namespace `legacy` (**без** sidecar - только plaintext).
 
 Без `PeerAuthentication` действует дефолтный **PERMISSIVE**: оба клиента достают сервис.
 
@@ -97,12 +97,12 @@ kubectl exec -n legacy deploy/legacy-client -c curl -- \
 
 - **PeerAuthentication** управляет тем, как *серверный* sidecar принимает входящие
   соединения:
-  - `PERMISSIVE` (дефолт mesh) — принимает и mTLS, и plaintext. Именно это делает
+  - `PERMISSIVE` (дефолт mesh) - принимает и mTLS, и plaintext. Именно это делает
     возможной миграцию без даунтайма: заводим нагрузки в mesh постепенно, а legacy
     plaintext-клиенты продолжают работать.
-  - `STRICT` — только mTLS; plaintext-соединения сбрасываются.
-- Иерархия областей: `PeerAuthentication` в `istio-system` (root) — на весь mesh; в
-  namespace — переопределяет там; с `selector` — на конкретный ворклоад.
+  - `STRICT` - только mTLS; plaintext-соединения сбрасываются.
+- Иерархия областей: `PeerAuthentication` в `istio-system` (root) - на весь mesh; в
+  namespace - переопределяет там; с `selector` - на конкретный ворклоад.
 - **Рецепт безопасной миграции**: держим PERMISSIVE, смотрим метрику
   `istio_requests_total{connection_security_policy="none"}`, пока она не упадёт до нуля
   (plaintext не осталось), и только тогда включаем STRICT.
@@ -110,7 +110,7 @@ kubectl exec -n legacy deploy/legacy-client -c curl -- \
 ## Связь с другими лабами
 
 Лаба 04 показывает конечное состояние STRICT + `AuthorizationPolicy` (кто кому может
-ходить). Эта лаба — про сам переход и роль PERMISSIVE.
+ходить). Эта лаба - про сам переход и роль PERMISSIVE.
 
 ## Проверка результата
 
@@ -123,7 +123,7 @@ check_result
 ## Итог
 
 Вы выполнили миграцию namespace на строгий mTLS без обрыва трафика mesh-клиентов и
-увидели, как STRICT отсекает plaintext. Понимание пары PERMISSIVE → STRICT — базовый
+увидели, как STRICT отсекает plaintext. Понимание пары PERMISSIVE → STRICT - базовый
 senior/security-навык для внедрения zero-trust в живом окружении.
 
 ## Инфраструктура

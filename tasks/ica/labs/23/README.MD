@@ -1,6 +1,6 @@
 [RU version](README_RU.MD)
 
-# Lab 23 — WasmPlugin: extend the data plane with WebAssembly
+# Lab 23 - WasmPlugin: extend the data plane with WebAssembly
 
 ## Overview
 
@@ -36,12 +36,12 @@ proxies.
 Step by step, here is what is going on:
 
 - **What the data plane and Envoy are.** In Istio, an **Envoy** proxy runs next to each
-  pod (the "sidecar"). All of the pod's network traffic — inbound and outbound — goes
+  pod (the "sidecar"). All of the pod's network traffic - inbound and outbound - goes
   through it. Together these proxies form the *data plane*. Envoy is what actually
   enforces the rules: mTLS, routing, limits, authorization.
 - **The problem.** Envoy can do a lot out of the box, but it cannot anticipate
   everything. Historically, to add custom logic you had to rebuild Envoy in C++ and swap
-  the proxy image — slow, risky, and it breaks on upgrades.
+  the proxy image - slow, risky, and it breaks on upgrades.
 - **The Wasm plugin idea.** Instead of rebuilding, you write a small module in a
   convenient language (**Rust, C++, Go/TinyGo, AssemblyScript**), compile it to `.wasm`,
   and hand it to Envoy. Envoy loads that module **at runtime, with no restart and no
@@ -67,20 +67,20 @@ which requires a username/password (HTTP Basic auth) at the mesh edge.
 ## Ready-made modules and how to build your own
 
 **Ready-made Wasm modules (no code needed).** Often the functionality you need already
-exists — you just point the `WasmPlugin` at an image:
+exists - you just point the `WasmPlugin` at an image:
 
-- **istio-ecosystem/wasm-extensions** — the official Istio community examples
+- **istio-ecosystem/wasm-extensions** - the official Istio community examples
   (`basic_auth` and others), published under `ghcr.io/istio-ecosystem/wasm-extensions/...`
   (this is exactly what we use in the lab).
 - **Vendor/product modules** (for example coraza-WAF as Wasm, OPA, various auth/rate-limit
   filters) distributed as OCI images.
-- **WebAssembly Hub / OCI registries** — modules are packaged as regular OCI images, so
+- **WebAssembly Hub / OCI registries** - modules are packaged as regular OCI images, so
   they can live in any registry (ghcr, Docker Hub, ECR, a private Harbor).
 
 The rule is simple: if the module exists as an OCI image, you just write `url: oci://...`
 and write no code.
 
-**If you need your own module — the short path.** Custom logic is written in a language
+**If you need your own module - the short path.** Custom logic is written in a language
 that compiles to Wasm, using a proxy-wasm SDK:
 
 1. **Pick a language and SDK.** Popular choices: **Rust**
@@ -99,7 +99,7 @@ that compiles to Wasm, using a proxy-wasm SDK:
    Build it with tools like `buildah`/`docker` or `func-e`/`wasme`, then
    `docker push <registry>/my-plugin:1.0`.
 5. **Wire it up via WasmPlugin.** Set `url: oci://<registry>/my-plugin:1.0` and, if
-   needed, a `pluginConfig` with your parameters — exactly as in this lab.
+   needed, a `pluginConfig` with your parameters - exactly as in this lab.
 
 A minimal Rust example (adds a response header):
 
@@ -183,7 +183,7 @@ curl -s -o /dev/null -w "%{http_code}\n" \
 
 - **WebAssembly (Wasm)** lets you add custom logic to Envoy without rebuilding the proxy
   and load it dynamically at runtime.
-- **`url: oci://...`** — the module ships as an OCI artifact; the Istio agent pulls and
+- **`url: oci://...`** - the module ships as an OCI artifact; the Istio agent pulls and
   caches it. `file://` (baked into the image) and `http(s)://` are also supported.
 - **`phase: AUTHN`** places the filter early in the chain (before routing/authz).
 - **`selector`** scopes the plugin to workloads by labels (here the ingress gateway).
@@ -193,7 +193,7 @@ curl -s -o /dev/null -w "%{http_code}\n" \
 ## When this is useful (real-world scenarios)
 
 - **Custom authentication/authorization**: Basic auth, API-key checks, HMAC request
-  signing, integration with a non-standard IdP — things `RequestAuthentication` /
+  signing, integration with a non-standard IdP - things `RequestAuthentication` /
   `AuthorizationPolicy` cannot express.
 - **Request/response manipulation**: enrich headers from an external source, compute
   signatures, rewrite bodies (mask PII), normalize paths.
@@ -224,7 +224,7 @@ the ability to roll out/update the filter dynamically without rebuilding the pro
 keep as a separate service and latency is not critical → **Wasm** when you need your own
 fast in-process code inside the proxy itself. Mind the operational cost of Wasm: module
 distribution, versioning, and the runtime fetch (`failStrategy` controls behaviour on a
-failed download — fail-open or fail-close).
+failed download - fail-open or fail-close).
 
 ## Check the result
 

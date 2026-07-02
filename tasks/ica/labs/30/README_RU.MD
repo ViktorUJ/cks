@@ -1,6 +1,6 @@
 [Eng version](README.MD)
 
-# Lab 30 — StatefulSet и headless-сервисы в mesh
+# Lab 30 - StatefulSet и headless-сервисы в mesh
 
 ## Обзор
 
@@ -51,7 +51,7 @@ spec:
   selector:
     app: web
   ports:
-    - name: http           # именованный порт — нужен Istio для определения протокола
+    - name: http           # именованный порт - нужен Istio для определения протокола
       port: 8080
       targetPort: 8080
 ---
@@ -119,9 +119,9 @@ kubectl exec -n app deploy/app-client -c curl -- \
 
 - **Именование порта** обязательно: `http`/`tcp`/`grpc`/`mongo-*` и т.д. Без имени Istio
   считает порт «непрозрачным TCP» и теряет L7-фичи.
-- **StatefulSet + serviceName** даёт стабильные DNS-имена подов — именно так адресуются
+- **StatefulSet + serviceName** даёт стабильные DNS-имена подов - именно так адресуются
   кластеры БД/брокеров.
-- **STRICT mTLS работает на headless** начиная с Istio 1.10+ — шифрование пер-подового
+- **STRICT mTLS работает на headless** начиная с Istio 1.10+ - шифрование пер-подового
   трафика без VIP.
 
 ## Внешние headless-сервисы (бонус)
@@ -157,7 +157,7 @@ check_result
 
 Вы развернули StatefulSet за headless-сервисом в mesh, включили STRICT mTLS и обратились к
 каждой реплике по стабильному имени. Понимание особенностей headless/StatefulSet (именование
-портов, стабильные DNS, mTLS без VIP) — важный навык для запуска stateful-нагрузок (БД,
+портов, стабильные DNS, mTLS без VIP) - важный навык для запуска stateful-нагрузок (БД,
 брокеры, кворумные системы) в service mesh.
 
 ## Инфраструктура

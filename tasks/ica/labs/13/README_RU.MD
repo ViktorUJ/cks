@@ -1,8 +1,8 @@
 [Eng version](README.MD)
 
-# Lab 13 — Securing Edge Traffic with TLS
+# Lab 13 - Securing Edge Traffic with TLS
 
-До сих пор трафик снаружи приходил в кластер по **HTTP** (`http://myapp.local:32080`). В продакшене так нельзя — трафик на входе (edge) должен быть зашифрован по **TLS/HTTPS**. Istio позволяет терминировать TLS прямо на ingress-шлюзе: клиент подключается по HTTPS, шлюз расшифровывает трафик и дальше внутри mesh передаёт его сервису.
+До сих пор трафик снаружи приходил в кластер по **HTTP** (`http://myapp.local:32080`). В продакшене так нельзя - трафик на входе (edge) должен быть зашифрован по **TLS/HTTPS**. Istio позволяет терминировать TLS прямо на ingress-шлюзе: клиент подключается по HTTPS, шлюз расшифровывает трафик и дальше внутри mesh передаёт его сервису.
 
 В этой лабораторной мы:
 - сгенерируем TLS-сертификат и положим его в Kubernetes `Secret`;
@@ -67,7 +67,7 @@ kubectl rollout restart deployment -n default
 
 Генерируем самоподписанный сертификат для `myapp.local` и кладём его в `Secret` типа `tls`.
 
-**Важно:** для `credentialName` в `Gateway` Secret должен лежать в namespace ingress-шлюза — `istio-system`.
+**Важно:** для `credentialName` в `Gateway` Secret должен лежать в namespace ingress-шлюза - `istio-system`.
 
 ```bash
 openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
@@ -111,9 +111,9 @@ kubectl apply -f gateway.yaml
 ```
 
 **Разбор:**
-- **`protocol: HTTPS`** + **`tls.mode: SIMPLE`** — шлюз принимает TLS-соединения и **расшифровывает** их (серверная терминация). Клиент говорит по HTTPS, дальше внутри mesh — обычный HTTP (или mTLS между сайдкарами).
-- **`credentialName: myapp-cert`** — имя `Secret` с сертификатом и ключом. Istio читает его из namespace ingress-шлюза (`istio-system`) через SDS. Именно поэтому Secret создан в `istio-system`, а не в `default`.
-- **`hosts: ["myapp.local"]`** — TLS-сертификат и маршрутизация привязаны к этому хосту (SNI).
+- **`protocol: HTTPS`** + **`tls.mode: SIMPLE`** - шлюз принимает TLS-соединения и **расшифровывает** их (серверная терминация). Клиент говорит по HTTPS, дальше внутри mesh - обычный HTTP (или mTLS между сайдкарами).
+- **`credentialName: myapp-cert`** - имя `Secret` с сертификатом и ключом. Istio читает его из namespace ingress-шлюза (`istio-system`) через SDS. Именно поэтому Secret создан в `istio-system`, а не в `default`.
+- **`hosts: ["myapp.local"]`** - TLS-сертификат и маршрутизация привязаны к этому хосту (SNI).
 
 ## Шаг 4. VirtualService
 
@@ -168,7 +168,7 @@ TLS терминируется на ingress-шлюзе, а клиент види
 
 ## (опционально) Взаимный TLS на входе (MUTUAL)
 
-Чтобы требовать сертификат и от **клиента**, используется `mode: MUTUAL` — в Secret добавляется CA (`ca.crt`), а шлюз проверяет клиентский сертификат:
+Чтобы требовать сертификат и от **клиента**, используется `mode: MUTUAL` - в Secret добавляется CA (`ca.crt`), а шлюз проверяет клиентский сертификат:
 
 ```yaml
     tls:
@@ -186,4 +186,4 @@ TLS терминируется на ingress-шлюзе, а клиент види
 | `Gateway` | `tls.mode: SIMPLE` + `credentialName` | терминирует HTTPS на входе |
 | `VirtualService` | `gateways: [myapp-gateway]` | маршрутизирует расшифрованный трафик на сервис |
 
-**Ключевой вывод:** защита edge-трафика в Istio — это HTTPS-`Gateway` с `tls.mode: SIMPLE` (серверная терминация) или `MUTUAL` (взаимный TLS), ссылающийся на `Secret` с сертификатом в namespace ingress-шлюза. Клиенты подключаются по TLS, а внутри mesh трафик идёт уже расшифрованным (и, при желании, защищён отдельно mTLS между сайдкарами). Приложение при этом не занимается TLS вообще.
+**Ключевой вывод:** защита edge-трафика в Istio - это HTTPS-`Gateway` с `tls.mode: SIMPLE` (серверная терминация) или `MUTUAL` (взаимный TLS), ссылающийся на `Secret` с сертификатом в namespace ingress-шлюза. Клиенты подключаются по TLS, а внутри mesh трафик идёт уже расшифрованным (и, при желании, защищён отдельно mTLS между сайдкарами). Приложение при этом не занимается TLS вообще.

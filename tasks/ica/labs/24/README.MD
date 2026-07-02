@@ -1,20 +1,20 @@
 [RU version](README_RU.MD)
 
-# Lab 24 — Ambient: waypoint proxy and L7 authorization
+# Lab 24 - Ambient: waypoint proxy and L7 authorization
 
 ## Overview
 
-In Istio's ambient mode (see Lab 09) each pod's traffic flows through **ztunnel** — a
+In Istio's ambient mode (see Lab 09) each pod's traffic flows through **ztunnel** - a
 per-node proxy that provides L4 mTLS and identity **without sidecars**. But ztunnel does
 not parse HTTP: L4 policies (by identity/port) work, while L7 rules (HTTP methods, paths,
 headers) do not.
 
-To enforce **L7** policy in ambient you add a **waypoint proxy** — a per-namespace (or
+To enforce **L7** policy in ambient you add a **waypoint proxy** - a per-namespace (or
 per-service) Envoy that ambient traffic is routed through for L7 processing. This is the
 core idea of ambient: cheap L4 everywhere (ztunnel) plus L7 only where you need it
 (waypoint).
 
-Namespace `app` is enrolled in ambient and runs `ping-pong` and an `app-client` — both
+Namespace `app` is enrolled in ambient and runs `ping-pong` and an `app-client` - both
 **without** sidecars. `istioctl` is available on the worker PC.
 
 ```mermaid
@@ -89,7 +89,7 @@ kubectl exec -n app deploy/app-client -c curl -- \
 - **Waypoint (L7)** is added only where you need HTTP-level features: L7 authorization,
   routing, retries, traffic splitting. You pay for an Envoy only for those services.
 - The `AuthorizationPolicy` `targetRefs` the waypoint `Gateway`, so it is enforced at the
-  L7 hop. The same policy in the sidecar model works too — ambient just moves the L7
+  L7 hop. The same policy in the sidecar model works too - ambient just moves the L7
   enforcement point to the waypoint.
 - This layered model (ztunnel for L4 everywhere, waypoint for L7 where needed) is the key
   idea of ambient: lower baseline cost than sidecars, opt-in L7.

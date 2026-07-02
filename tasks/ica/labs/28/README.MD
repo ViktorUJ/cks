@@ -1,6 +1,6 @@
 [RU version](README_RU.MD)
 
-# Lab 28 — TCP routing: routing non-HTTP traffic
+# Lab 28 - TCP routing: routing non-HTTP traffic
 
 ## Overview
 
@@ -126,16 +126,16 @@ done
 - **Port naming matters**: the service/gateway port must be named `tcp` (or `tcp-*`).
   Istio uses the port-name prefix to detect the protocol; an unprefixed or `http-*` name
   would make Istio treat it as HTTP and the raw protocol would break.
-- **Weighted TCP** splits *connections* (not requests) across subsets — each new TCP
+- **Weighted TCP** splits *connections* (not requests) across subsets - each new TCP
   connection is routed by weight.
-- L7 features (retries, header routing, fault injection) do **not** apply to TCP routes —
+- L7 features (retries, header routing, fault injection) do **not** apply to TCP routes -
   only connection-level policies (connection pool, timeouts) via `DestinationRule`.
 
 ## Related protocols
 
-- **MongoDB/MySQL/Redis** — name the port `mongo-*` / `mysql-*` / `redis-*` so Envoy
+- **MongoDB/MySQL/Redis** - name the port `mongo-*` / `mysql-*` / `redis-*` so Envoy
   applies the right protocol parser; routing still uses `tcp` routes.
-- **WebSocket** — despite being long-lived, it rides on HTTP `Upgrade`, so use normal
+- **WebSocket** - despite being long-lived, it rides on HTTP `Upgrade`, so use normal
   `http` routes and `http-*` port names, not TCP.
 
 ## Check the result

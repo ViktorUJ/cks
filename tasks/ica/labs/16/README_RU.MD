@@ -1,17 +1,17 @@
 [Eng version](README.MD)
 
-# Lab 16 — Kubernetes Gateway API: ingress-роутинг через Gateway + HTTPRoute
+# Lab 16 - Kubernetes Gateway API: ingress-роутинг через Gateway + HTTPRoute
 
 ## Обзор
 
-Istio исторически управляет входящим трафиком через свои CRD — `Gateway`
+Istio исторически управляет входящим трафиком через свои CRD - `Gateway`
 (networking.istio.io) и `VirtualService`. Индустрия постепенно переходит на
-**Kubernetes Gateway API** — вендор-нейтральный стандарт (`gateway.networking.k8s.io`),
+**Kubernetes Gateway API** - вендор-нейтральный стандарт (`gateway.networking.k8s.io`),
 который Istio полноценно реализует и считает будущим API для traffic management.
 
 В этой лабе вы настроите тот же ingress-роутинг, но средствами Gateway API:
-- `Gateway` — точка входа (слушатель на порту/протоколе);
-- `HTTPRoute` — правила маршрутизации (по хосту, пути, заголовкам, весам).
+- `Gateway` - точка входа (слушатель на порту/протоколе);
+- `HTTPRoute` - правила маршрутизации (по хосту, пути, заголовкам, весам).
 
 Istio уже установлен (профиль `default`), CRD Gateway API (`v1.2.1`) применены,
 приложение `ping-pong` (две версии v1/v2) развёрнуто в namespace `app`.
@@ -118,7 +118,7 @@ curl -s -H "x-version: canary" http://myapp.local:${NODEPORT}/
 ```
 
 Ожидаем: обычный запрос вернёт `Ping-Pong-V1 (Stable)`, а запрос с заголовком
-`x-version: canary` — `Ping-Pong-V2 (Canary)`.
+`x-version: canary` - `Ping-Pong-V2 (Canary)`.
 
 ## Istio API против Gateway API
 

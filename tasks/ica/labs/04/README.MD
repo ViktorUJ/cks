@@ -1,16 +1,16 @@
 [RU version](README_RU.MD)
 
-# Lab 04 — Zero Trust: mTLS (PeerAuthentication) + AuthorizationPolicy
+# Lab 04 - Zero Trust: mTLS (PeerAuthentication) + AuthorizationPolicy
 
-Imagine you have a `ping-pong` backend holding sensitive data. By default, any pod inside the cluster can reach any service over the network — a flat, trusted network. We want to build a **Zero Trust** model ("never trust, always verify"): first, all service-to-service traffic must be encrypted and authenticated (mTLS); second, **only** the frontend may call the backend, and **only** with `GET`. Everything else is denied.
+Imagine you have a `ping-pong` backend holding sensitive data. By default, any pod inside the cluster can reach any service over the network - a flat, trusted network. We want to build a **Zero Trust** model ("never trust, always verify"): first, all service-to-service traffic must be encrypted and authenticated (mTLS); second, **only** the frontend may call the backend, and **only** with `GET`. Everything else is denied.
 
 In this lab we do this at the infrastructure level, without touching application code: first we enable **STRICT mTLS** via `PeerAuthentication`, then we lock the backend down with a **deny-all** policy and selectively open access with an `AuthorizationPolicy`.
 
 ## Objective
 
 Understand two key Istio security mechanisms:
-- **PeerAuthentication (mTLS)** — mutual TLS authentication between services. Answers the question **"can the communication channel be trusted?"** (encryption + verifying the caller's identity).
-- **AuthorizationPolicy** — request authorization. Answers the question **"is this client allowed to perform this specific action?"** (who, where, which method, which path).
+- **PeerAuthentication (mTLS)** - mutual TLS authentication between services. Answers the question **"can the communication channel be trusted?"** (encryption + verifying the caller's identity).
+- **AuthorizationPolicy** - request authorization. Answers the question **"is this client allowed to perform this specific action?"** (who, where, which method, which path).
 
 A Gateway has been created at: http://myapp.local:32080
 
@@ -53,7 +53,7 @@ Label the `default` namespace so that Istio automatically injects the Envoy side
 kubectl label namespace default istio-injection=enabled --overwrite
 ```
 
-**What this does:** Istio uses the sidecar pattern. When a namespace carries the `istio-injection=enabled` label, an `istio-proxy` (Envoy) container is added to every pod, intercepting all of the pod's network traffic. It's Envoy that performs mTLS encryption and enforces authorization rules — without any application code change.
+**What this does:** Istio uses the sidecar pattern. When a namespace carries the `istio-injection=enabled` label, an `istio-proxy` (Envoy) container is added to every pod, intercepting all of the pod's network traffic. It's Envoy that performs mTLS encryption and enforces authorization rules - without any application code change.
 
 **Important:** we deliberately do **not** label the `legacy` namespace. The pod there stays without a sidecar and communicates the old way, in plaintext. Later this lets us clearly show how STRICT mTLS rejects such connections.
 
@@ -65,14 +65,14 @@ kubectl rollout restart deployment -n default
 ```
 
 **What gets deployed:**
-- **`ping-pong`** (namespace `default`, ServiceAccount `ping-pong`) — the protected backend.
-- **`frontend`** (namespace `default`, ServiceAccount `frontend`) — the legitimate client. On each incoming request it calls `http://ping-pong:8080/`.
-- **`unauthorized`** (namespace `default`, ServiceAccount `unauthorized`) — a client **inside the mesh** (it has a sidecar, mTLS works) but with the "wrong" identity. Used to demonstrate authorization denial.
-- **`legacy-client`** (namespace `legacy`, **no** sidecar) — a legacy client that speaks plaintext. Used to demonstrate mTLS denial.
+- **`ping-pong`** (namespace `default`, ServiceAccount `ping-pong`) - the protected backend.
+- **`frontend`** (namespace `default`, ServiceAccount `frontend`) - the legitimate client. On each incoming request it calls `http://ping-pong:8080/`.
+- **`unauthorized`** (namespace `default`, ServiceAccount `unauthorized`) - a client **inside the mesh** (it has a sidecar, mTLS works) but with the "wrong" identity. Used to demonstrate authorization denial.
+- **`legacy-client`** (namespace `legacy`, **no** sidecar) - a legacy client that speaks plaintext. Used to demonstrate mTLS denial.
 
-**Key concept — identity.** Each pod gets a cryptographic identity derived from its ServiceAccount, in SPIFFE format:
+**Key concept - identity.** Each pod gets a cryptographic identity derived from its ServiceAccount, in SPIFFE format:
 `spiffe://cluster.local/ns/<namespace>/sa/<serviceaccount>`.
-Istio uses this identity both to encrypt traffic (mTLS) and to make authorization decisions. That's why every service in the manifest has an explicit `serviceAccountName` — it's not boilerplate, it's the foundation of the whole security model.
+Istio uses this identity both to encrypt traffic (mTLS) and to make authorization decisions. That's why every service in the manifest has an explicit `serviceAccountName` - it's not boilerplate, it's the foundation of the whole security model.
 
 Verify the pods in `default` came up with the Envoy sidecar (`2/2`), and `legacy-client` without it (`1/1`):
 
@@ -145,7 +145,7 @@ kubectl apply -f gateway.yaml
 kubectl apply -f frontend-vs.yaml
 ```
 
-On every request `frontend` calls `ping-pong` and prints a `Backend Status` line — this is our signal: `200` means the backend responded, `403` means authorization denied access.
+On every request `frontend` calls `ping-pong` and prints a `Backend Status` line - this is our signal: `200` means the backend responded, `403` means authorization denied access.
 
 ## Step 4. Baseline Check (before security policies)
 
@@ -177,9 +177,9 @@ kubectl exec -n legacy deploy/legacy-client -c curl -- \
 200
 ```
 
-All three get `200`. The network is flat — no protection at all. Time to tighten the screws.
+All three get `200`. The network is flat - no protection at all. Time to tighten the screws.
 
-## Step 5. STRICT mTLS — Encrypt and Authenticate the Channel
+## Step 5. STRICT mTLS - Encrypt and Authenticate the Channel
 
 `PeerAuthentication` controls how services accept incoming connections. `STRICT` mode means: **accept mTLS traffic only**, reject any plaintext.
 
@@ -204,8 +204,8 @@ kubectl apply -f peer-auth.yaml
 
 **Breakdown:**
 - **`PeerAuthentication`** configures authentication at the transport (peer-to-peer) layer. It's about the **communication channel**, not a specific HTTP request.
-- **`mode: STRICT`** — the backend's Envoy will accept only mutually authenticated TLS connections. Istio (via istiod) automatically issues and rotates the mTLS certificates for every pod with a sidecar.
-- **Name `default` with no `selector`** — an Istio convention: such a policy applies to the whole namespace. Add `selector.matchLabels` and it applies only to the selected pods (as in the mock-exam task targeting `app=space`).
+- **`mode: STRICT`** - the backend's Envoy will accept only mutually authenticated TLS connections. Istio (via istiod) automatically issues and rotates the mTLS certificates for every pod with a sidecar.
+- **Name `default` with no `selector`** - an Istio convention: such a policy applies to the whole namespace. Add `selector.matchLabels` and it applies only to the selected pods (as in the mock-exam task targeting `app=space`).
 
 Check what changed:
 
@@ -215,7 +215,7 @@ kubectl exec -n legacy deploy/legacy-client -c curl -- \
   curl -s -o /dev/null -w "%{http_code}\n" --max-time 5 http://ping-pong.default:8080/
 ```
 ```
-000      # connection reset — plaintext rejected
+000      # connection reset - plaintext rejected
 ```
 
 ```bash
@@ -225,9 +225,9 @@ kubectl exec -n default deploy/unauthorized -c curl -- \
   curl -s -o /dev/null -w "%{http_code}\n" http://ping-pong:8080/  # 200
 ```
 
-**Takeaway:** STRICT mTLS cut off `legacy-client` — it couldn't even establish a connection. But `unauthorized` still gets through: it has a valid mTLS identity. mTLS verifies that the peer **can be trusted as a mesh member**, but it does not restrict **what** that peer is allowed to do. That's the job of authorization — the next step.
+**Takeaway:** STRICT mTLS cut off `legacy-client` - it couldn't even establish a connection. But `unauthorized` still gets through: it has a valid mTLS identity. mTLS verifies that the peer **can be trusted as a mesh member**, but it does not restrict **what** that peer is allowed to do. That's the job of authorization - the next step.
 
-## Step 6. Default-deny — Lock the Backend Down for Everyone
+## Step 6. Default-deny - Lock the Backend Down for Everyone
 
 The Zero Trust principle: deny everything first, then selectively allow what's needed. Create an `AuthorizationPolicy` that selects the `ping-pong` backend but contains **no `rules` at all**. In Istio this means "deny every request to the selected pods".
 
@@ -257,7 +257,7 @@ kubectl apply -f deny-all.yaml
 
 > You could also use `action: DENY` with an empty rule, but the canonical "default-deny" pattern in Istio is exactly an empty `ALLOW` policy. It's often applied namespace-wide (`spec: {}`); here we scoped it to the backend only via `selector` so as not to affect the `Gateway -> frontend` traffic.
 
-Verify — now everyone is blocked, even the legitimate frontend:
+Verify - now everyone is blocked, even the legitimate frontend:
 
 ```bash
 curl -s http://myapp.local:32080 | grep 'Backend Status'          # 403
@@ -267,10 +267,10 @@ kubectl exec -n default deploy/unauthorized -c curl -- \
 
 The backend is fully isolated. All that's left is to open exactly the one path we need.
 
-## Step 7. Allow — Only the Frontend, Only GET
+## Step 7. Allow - Only the Frontend, Only GET
 
 Add a second `AuthorizationPolicy` that allows access to `ping-pong` **only** for requests:
-- from the frontend's identity (principal) — `cluster.local/ns/default/sa/frontend`;
+- from the frontend's identity (principal) - `cluster.local/ns/default/sa/frontend`;
 - using the `GET` method.
 
 ```bash
@@ -302,8 +302,8 @@ kubectl apply -f allow-frontend.yaml
 ```
 
 **Breaking down the rule:**
-- **`from.source.principals`** — *who* the caller is. Here it's the frontend's SPIFFE identity. This identity is proven precisely by the mTLS from Step 5 — without mTLS, Istio wouldn't know who is really on the other end of the connection. That's why mTLS and AuthorizationPolicy work as a pair.
-- **`to.operation.methods`** — *what* is allowed. Only the HTTP `GET` method is permitted. A `POST` from the same frontend would be rejected.
+- **`from.source.principals`** - *who* the caller is. Here it's the frontend's SPIFFE identity. This identity is proven precisely by the mTLS from Step 5 - without mTLS, Istio wouldn't know who is really on the other end of the connection. That's why mTLS and AuthorizationPolicy work as a pair.
+- **`to.operation.methods`** - *what* is allowed. Only the HTTP `GET` method is permitted. A `POST` from the same frontend would be rejected.
 - The `allow` policy combines with the `deny-all` from Step 6 with OR semantics: a request passes if **at least one** `ALLOW` policy permits it. So for `ping-pong` exactly one combination is now "open": frontend + GET.
 
 ## Step 8. Final Verification
@@ -343,7 +343,7 @@ kubectl exec -n legacy deploy/legacy-client -c curl -- \
 | Authorization | `AuthorizationPolicy` (allow) | Allowed only `frontend` + `GET` | only the legitimate path works |
 
 **Key takeaway:** mTLS and AuthorizationPolicy are two distinct, complementary layers of defense:
-- **PeerAuthentication (mTLS)** answers "**can the channel be trusted, and who is on the other end?**" — encryption and authentication.
-- **AuthorizationPolicy** answers "**what exactly is this client allowed to do?**" — authorization by identity, path, and method.
+- **PeerAuthentication (mTLS)** answers "**can the channel be trusted, and who is on the other end?**" - encryption and authentication.
+- **AuthorizationPolicy** answers "**what exactly is this client allowed to do?**" - authorization by identity, path, and method.
 
-Authorization is built on top of the identity that mTLS provides: without mutual authentication, a `principals: [.../sa/frontend]` rule couldn't be reliably verified. Together they deliver a Zero Trust model — all at the infrastructure level, without a single line of application code.
+Authorization is built on top of the identity that mTLS provides: without mutual authentication, a `principals: [.../sa/frontend]` rule couldn't be reliably verified. Together they deliver a Zero Trust model - all at the infrastructure level, without a single line of application code.

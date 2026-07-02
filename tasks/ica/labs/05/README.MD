@@ -1,13 +1,13 @@
 [RU version](README_RU.MD)
 
-# Lab 05 — Controlled Egress: ServiceEntry + Egress Gateway + Sidecar scope
+# Lab 05 - Controlled Egress: ServiceEntry + Egress Gateway + Sidecar scope
 
-Imagine a service inside the cluster that needs to call an external API (`httpbin.org`). By default Istio runs in `ALLOW_ANY` mode — any pod can reach anything on the internet. From a security standpoint that's bad: a compromised pod could exfiltrate data to any external address. We want **controlled egress**: allow only an approved external service, send its traffic through a single point (the egress gateway), and block everything else.
+Imagine a service inside the cluster that needs to call an external API (`httpbin.org`). By default Istio runs in `ALLOW_ANY` mode - any pod can reach anything on the internet. From a security standpoint that's bad: a compromised pod could exfiltrate data to any external address. We want **controlled egress**: allow only an approved external service, send its traffic through a single point (the egress gateway), and block everything else.
 
 In this lab we cover three Istio mechanisms for handling outbound traffic:
-- **ServiceEntry** — registers an external service in the mesh registry so Istio "knows" about it and can apply policy to it.
-- **Egress Gateway** — a dedicated exit point: all external traffic flows through a separate Envoy gateway (handy for auditing, monitoring, and filtering).
-- **Sidecar (egress scope)** — the `Sidecar` resource, which limits which hosts and namespaces a sidecar may reach and switches the namespace into `REGISTRY_ONLY` mode.
+- **ServiceEntry** - registers an external service in the mesh registry so Istio "knows" about it and can apply policy to it.
+- **Egress Gateway** - a dedicated exit point: all external traffic flows through a separate Envoy gateway (handy for auditing, monitoring, and filtering).
+- **Sidecar (egress scope)** - the `Sidecar` resource, which limits which hosts and namespaces a sidecar may reach and switches the namespace into `REGISTRY_ONLY` mode.
 
 ### How It Works (High-Level Overview)
 
@@ -51,11 +51,11 @@ Understand how Istio controls **outbound** traffic and assemble the full egress-
 kubectl label namespace default istio-injection=enabled --overwrite
 ```
 
-**What this does:** the namespace gets the label, and an `istio-proxy` (Envoy) sidecar is added to every pod. It's Envoy that intercepts the pod's **outbound** traffic — without it, neither ServiceEntry, nor the egress gateway, nor Sidecar policies would have any effect.
+**What this does:** the namespace gets the label, and an `istio-proxy` (Envoy) sidecar is added to every pod. It's Envoy that intercepts the pod's **outbound** traffic - without it, neither ServiceEntry, nor the egress gateway, nor Sidecar policies would have any effect.
 
 ## Step 2. Deploy the Application
 
-Deploy `mesh-client` — a plain pod with `curl` inside the mesh. We'll make external requests from it.
+Deploy `mesh-client` - a plain pod with `curl` inside the mesh. We'll make external requests from it.
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/05/k8s-1/scripts/1.yaml
@@ -75,7 +75,7 @@ mesh-client-7d9c8b6f4d-xy12z   2/2     Running   0          20s
 
 ## Step 3. Baseline Check (ALLOW_ANY mode)
 
-By default Istio has `outboundTrafficPolicy.mode = ALLOW_ANY` — you can reach anything outbound. Let's confirm:
+By default Istio has `outboundTrafficPolicy.mode = ALLOW_ANY` - you can reach anything outbound. Let's confirm:
 
 ```bash
 # approved host
@@ -87,7 +87,7 @@ kubectl exec -n default deploy/mesh-client -c curl -- \
 ```
 
 ```bash
-# any other host — also reachable
+# any other host - also reachable
 kubectl exec -n default deploy/mesh-client -c curl -- \
   curl -s -o /dev/null -w "%{http_code}\n" http://example.com/
 ```
@@ -95,9 +95,9 @@ kubectl exec -n default deploy/mesh-client -c curl -- \
 200
 ```
 
-Both requests succeed. There is no egress control at all — that's the problem we're about to fix.
+Both requests succeed. There is no egress control at all - that's the problem we're about to fix.
 
-## Step 4. ServiceEntry — Register the External Service
+## Step 4. ServiceEntry - Register the External Service
 
 `ServiceEntry` adds an external host to Istio's internal service registry. This is needed for two things: so the external service can be routed (through the egress gateway), and so it counts as "known" once `REGISTRY_ONLY` is enabled.
 
@@ -127,12 +127,12 @@ kubectl apply -f service-entry.yaml
 ```
 
 **Breakdown:**
-- **`hosts`** — the external DNS name we're registering.
-- **`ports`** — port and protocol. We declare `HTTP/80` so Istio understands the L7 protocol and can route on it.
-- **`resolution: DNS`** — Envoy resolves `httpbin.org` itself via DNS. Alternatives are `STATIC` (fixed IPs) or `NONE`.
-- **`location: MESH_EXTERNAL`** — the service is outside the mesh (it has no sidecar, no mTLS is applied to it).
+- **`hosts`** - the external DNS name we're registering.
+- **`ports`** - port and protocol. We declare `HTTP/80` so Istio understands the L7 protocol and can route on it.
+- **`resolution: DNS`** - Envoy resolves `httpbin.org` itself via DNS. Alternatives are `STATIC` (fixed IPs) or `NONE`.
+- **`location: MESH_EXTERNAL`** - the service is outside the mesh (it has no sidecar, no mTLS is applied to it).
 
-## Step 5. Egress Gateway — a Single Exit Point
+## Step 5. Egress Gateway - a Single Exit Point
 
 Right now traffic to `httpbin.org` leaves directly from the pod's sidecar. We want it to flow through the dedicated `istio-egressgateway` (already deployed in the `istio-system` namespace by the `demo` profile). This gives a single point to log and control outbound traffic.
 
@@ -211,8 +211,8 @@ kubectl apply -f egress-gateway.yaml
 ```
 
 **How to read the `VirtualService`:** it describes two "hops" of the same request:
-- **Stage 1** — the request originates inside the mesh (`gateways: [mesh]`). Instead of going straight to the internet, it is routed to the `istio-egressgateway` service in `istio-system`.
-- **Stage 2** — the same request now arrives at the egress gateway (`gateways: [istio-egressgateway]`), and the gateway sends it out to `httpbin.org`.
+- **Stage 1** - the request originates inside the mesh (`gateways: [mesh]`). Instead of going straight to the internet, it is routed to the `istio-egressgateway` service in `istio-system`.
+- **Stage 2** - the same request now arrives at the egress gateway (`gateways: [istio-egressgateway]`), and the gateway sends it out to `httpbin.org`.
 
 Verify the traffic really flows through the gateway:
 
@@ -223,9 +223,9 @@ kubectl exec -n default deploy/mesh-client -c curl -- \
 kubectl logs -n istio-system -l istio=egressgateway --tail=20 | grep httpbin.org
 ```
 
-The egress gateway log should show an entry for the request to `httpbin.org` — proof that the traffic passed through it.
+The egress gateway log should show an entry for the request to `httpbin.org` - proof that the traffic passed through it.
 
-## Step 6. Sidecar — Scope the Namespace's Egress
+## Step 6. Sidecar - Scope the Namespace's Egress
 
 The final step is to lock down the `default` namespace so that only registered services may be reached from it. We use a `Sidecar` resource: it both limits the list of visible hosts (`egress.hosts`) and enables `REGISTRY_ONLY` mode.
 
@@ -253,11 +253,11 @@ kubectl apply -f sidecar.yaml
 ```
 
 **Breakdown:**
-- **`egress.hosts`** — the list of what the sidecar "sees". Format `namespace/dnsName`:
-  - `"istio-system/*"` — needed because traffic goes through the egress gateway in `istio-system`;
-  - `"./*"` — services in the current namespace, including our `ServiceEntry` for `httpbin.org`.
+- **`egress.hosts`** - the list of what the sidecar "sees". Format `namespace/dnsName`:
+  - `"istio-system/*"` - needed because traffic goes through the egress gateway in `istio-system`;
+  - `"./*"` - services in the current namespace, including our `ServiceEntry` for `httpbin.org`.
   By limiting this list, we reduce the amount of config Istio pushes into every sidecar and narrow the pod's visibility.
-- **`outboundTrafficPolicy.mode: REGISTRY_ONLY`** — the key switch. Now Envoy only allows outbound traffic to hosts in the registry (i.e., those with a `ServiceEntry` or an in-cluster service). Everything else is blocked and returns `502`.
+- **`outboundTrafficPolicy.mode: REGISTRY_ONLY`** - the key switch. Now Envoy only allows outbound traffic to hosts in the registry (i.e., those with a `ServiceEntry` or an in-cluster service). Everything else is blocked and returns `502`.
 
 ## Step 7. Final Verification
 
@@ -276,7 +276,7 @@ kubectl exec -n default deploy/mesh-client -c curl -- \
   curl -s -o /dev/null -w "%{http_code}\n" http://example.com/
 ```
 ```
-502      # BlackHoleCluster — egress denied
+502      # BlackHoleCluster - egress denied
 ```
 
 ## Summary
@@ -288,8 +288,8 @@ kubectl exec -n default deploy/mesh-client -c curl -- \
 | Restriction | `Sidecar` (`REGISTRY_ONLY`) | Closed the namespace to everything else | `httpbin.org` reachable, `example.com` not |
 
 **Key takeaway:** egress control in Istio is built from three complementary building blocks:
-- **ServiceEntry** makes an external service "visible" to the mesh — without it the service can neither be routed nor allowed under `REGISTRY_ONLY`.
+- **ServiceEntry** makes an external service "visible" to the mesh - without it the service can neither be routed nor allowed under `REGISTRY_ONLY`.
 - **Egress Gateway** provides a single, managed exit point: all external traffic flows through one gateway where it's easy to log and filter.
-- **Sidecar + REGISTRY_ONLY** implements "deny everything not explicitly allowed" for outbound traffic — the egress counterpart of the default-deny pattern from the security lab.
+- **Sidecar + REGISTRY_ONLY** implements "deny everything not explicitly allowed" for outbound traffic - the egress counterpart of the default-deny pattern from the security lab.
 
-Together they turn a flat, uncontrolled path to the internet into a strictly limited and observable channel — all at the infrastructure level, without changing application code.
+Together they turn a flat, uncontrolled path to the internet into a strictly limited and observable channel - all at the infrastructure level, without changing application code.

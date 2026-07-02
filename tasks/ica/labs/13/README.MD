@@ -1,8 +1,8 @@
 [RU version](README_RU.MD)
 
-# Lab 13 — Securing Edge Traffic with TLS
+# Lab 13 - Securing Edge Traffic with TLS
 
-So far, traffic from the outside entered the cluster over **HTTP** (`http://myapp.local:32080`). In production that's not acceptable — edge traffic must be encrypted with **TLS/HTTPS**. Istio can terminate TLS right at the ingress gateway: the client connects over HTTPS, the gateway decrypts the traffic, and then forwards it to the service inside the mesh.
+So far, traffic from the outside entered the cluster over **HTTP** (`http://myapp.local:32080`). In production that's not acceptable - edge traffic must be encrypted with **TLS/HTTPS**. Istio can terminate TLS right at the ingress gateway: the client connects over HTTPS, the gateway decrypts the traffic, and then forwards it to the service inside the mesh.
 
 In this lab we:
 - generate a TLS certificate and store it in a Kubernetes `Secret`;
@@ -67,7 +67,7 @@ kubectl rollout restart deployment -n default
 
 Generate a self-signed certificate for `myapp.local` and store it in a `tls` Secret.
 
-**Important:** for `credentialName` in the `Gateway`, the Secret must live in the ingress gateway's namespace — `istio-system`.
+**Important:** for `credentialName` in the `Gateway`, the Secret must live in the ingress gateway's namespace - `istio-system`.
 
 ```bash
 openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
@@ -111,9 +111,9 @@ kubectl apply -f gateway.yaml
 ```
 
 **Breakdown:**
-- **`protocol: HTTPS`** + **`tls.mode: SIMPLE`** — the gateway accepts TLS connections and **decrypts** them (server-side termination). The client speaks HTTPS; inside the mesh it becomes plain HTTP (or mTLS between sidecars).
-- **`credentialName: myapp-cert`** — the name of the `Secret` holding the certificate and key. Istio reads it from the ingress gateway's namespace (`istio-system`) via SDS. That's why the Secret is created in `istio-system`, not `default`.
-- **`hosts: ["myapp.local"]`** — the certificate and routing are bound to this host (SNI).
+- **`protocol: HTTPS`** + **`tls.mode: SIMPLE`** - the gateway accepts TLS connections and **decrypts** them (server-side termination). The client speaks HTTPS; inside the mesh it becomes plain HTTP (or mTLS between sidecars).
+- **`credentialName: myapp-cert`** - the name of the `Secret` holding the certificate and key. Istio reads it from the ingress gateway's namespace (`istio-system`) via SDS. That's why the Secret is created in `istio-system`, not `default`.
+- **`hosts: ["myapp.local"]`** - the certificate and routing are bound to this host (SNI).
 
 ## Step 4. VirtualService
 
@@ -168,7 +168,7 @@ TLS is terminated at the ingress gateway, and the client sees our certificate fo
 
 ## (optional) Mutual TLS at the edge (MUTUAL)
 
-To require a certificate from the **client** too, use `mode: MUTUAL` — add a CA (`ca.crt`) to the Secret and the gateway verifies the client certificate:
+To require a certificate from the **client** too, use `mode: MUTUAL` - add a CA (`ca.crt`) to the Secret and the gateway verifies the client certificate:
 
 ```yaml
     tls:

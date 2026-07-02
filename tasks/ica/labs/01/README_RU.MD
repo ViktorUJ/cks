@@ -1,6 +1,6 @@
 [Eng version](README.MD)
 
-# Lab 01 — Установка Istio в Kubernetes-кластер
+# Lab 01 - Установка Istio в Kubernetes-кластер
 
 ## Описание
 

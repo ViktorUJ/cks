@@ -1,6 +1,6 @@
 [RU version](README_RU.MD)
 
-# Lab 31 — Zero-downtime production migration: ingress-nginx → Istio Gateway
+# Lab 31 - Zero-downtime production migration: ingress-nginx → Istio Gateway
 
 ## Overview
 
@@ -9,7 +9,7 @@ an **Istio Gateway + VirtualService**. The constraints mirror production:
 
 - the service runs **24/7**, users **must not** be affected (zero downtime);
 - the migration happens in a **low-traffic window**;
-- there are **100+ such services** — we cannot migrate in one pass, so we go in **waves**;
+- there are **100+ such services** - we cannot migrate in one pass, so we go in **waves**;
 - every step must have a **fast rollback** with minimal user impact.
 
 Technically you migrate one "wave" here (two hosts): multiple hosts, path-based and
@@ -50,7 +50,7 @@ flowchart LR
 
 The core zero-downtime principle: **do not remove nginx until the migration is done**.
 ingress-nginx and istio-ingressgateway run **at the same time**, and public traffic is
-switched at the **external LB / DNS** layer — gradually and reversibly.
+switched at the **external LB / DNS** layer - gradually and reversibly.
 
 ```mermaid
 flowchart LR
@@ -63,30 +63,30 @@ flowchart LR
 
 ## Migration principle (per service/host)
 
-1. **Build the Istio equivalent** (`Gateway` + `VirtualService`) — an exact copy of the
+1. **Build the Istio equivalent** (`Gateway` + `VirtualService`) - an exact copy of the
    nginx rules (hosts, paths, headers, timeouts, rewrite). See "Task".
 2. **Parity check BEFORE switching users.** The Istio gateway already runs in parallel;
    send test traffic to it (internal address / correct Host) and compare each rule against
    nginx. Users still go through nginx.
 3. **(optional) Shadow / mirroring.** Use `VirtualService.mirror` to copy part of live
-   traffic to the new path (responses discarded) — validation under real load with no user
+   traffic to the new path (responses discarded) - validation under real load with no user
    impact.
 4. **Cut over in the low-traffic window.** On the external LB/DNS gradually shift weight:
    `nginx 100/istio 0 → 90/10 → 50/50 → 0/100`. Watch metrics between steps.
 5. **Soak.** Keep 100% on Istio for hours/days, watch errors and latency. Leave the nginx
-   config **untouched** — it stays a hot standby.
-6. **Decommission nginx** for this service — only after a successful soak.
+   config **untouched** - it stays a hot standby.
+6. **Decommission nginx** for this service - only after a successful soak.
 
 ## Traffic-shift mechanism (and why it matters for rollback)
 
 | Mechanism | Pros | Cons / rollback impact |
 |---|---|---|
 | **External LB target-group weights** (ALB/NLB) | instant, no cache; rollback in seconds | needs a weighting-capable LB |
-| **Weighted DNS** (Route53 weighted) | simple | **cache/TTL** — rollback not instant; set a low TTL ahead of time |
+| **Weighted DNS** (Route53 weighted) | simple | **cache/TTL** - rollback not instant; set a low TTL ahead of time |
 | **Per-host cutover** | risk isolated per host | more steps |
 
 Recommendation for 24/7: shift with **LB weights** (instant rollback), not DNS. If DNS
-only — lower the TTL (e.g. to 30–60s) a day before.
+only - lower the TTL (e.g. to 30–60s) a day before.
 
 ## Risks to users and how to remove them
 
@@ -107,7 +107,7 @@ Rollback must take **seconds to minutes** because the old path is not torn down:
 
 1. On the external LB/DNS, put the weight back on nginx (`istio 0 / nginx 100`).
 2. Confirm from metrics that 5xx/latency returned to normal.
-3. The nginx `Ingress` **stayed untouched** the whole time — nothing to restore.
+3. The nginx `Ingress` **stayed untouched** the whole time - nothing to restore.
 4. Root-cause the issue (usually a rule mismatch), fix the `VirtualService`, re-run the
    parity test, and retry the cutover.
 
@@ -116,7 +116,7 @@ Rollback must take **seconds to minutes** because the old path is not torn down:
 
 ## Phased rollout for 100+ services (waves)
 
-You cannot migrate everything at once — build confidence in waves:
+You cannot migrate everything at once - build confidence in waves:
 
 1. **Wave 0 (pilot):** 2–3 **non-critical**, low-traffic services. Cut over in the
    low-traffic window, observe for **several days**. Break in the runbook, dashboards, and
@@ -153,7 +153,7 @@ spec:
 EOF
 ```
 
-### Step 2. shop.local — path-based routing
+### Step 2. shop.local - path-based routing
 
 Order matters: specific prefixes first, catch-all `/` last.
 
@@ -176,7 +176,7 @@ spec:
 EOF
 ```
 
-### Step 3. api.local — header-based routing
+### Step 3. api.local - header-based routing
 
 What needed a separate canary Ingress in nginx is a single `match` block in Istio.
 
@@ -240,7 +240,7 @@ curl -s --resolve api.local:80:$GW  -H "x-api-version: v2" http://api.local/
 ```
 
 In this environment the istio-gateway is on `:32080` and `shop.local`/`api.local` already
-resolve to the node — so the Step 4 commands hit the new path directly, bypassing the
+resolve to the node - so the Step 4 commands hit the new path directly, bypassing the
 "public" LB. That is exactly the pre-cutover check.
 
 ### 3. Parity matrix nginx ↔ istio
@@ -260,15 +260,15 @@ done
 curl -s --resolve api.local:80:$ISTIO -H "x-api-version: v2" http://api.local/ | grep "Server Name"
 ```
 
-Everything must match for **every** rule. A mismatch is a stop-gate — fix the VS and retry.
+Everything must match for **every** rule. A mismatch is a stop-gate - fix the VS and retry.
 
 ### 4. (optional) Shadow traffic / replay
 
 - **Replay from nginx access logs**: take a sample of real requests from the nginx logs and
-  replay them against the istio-gateway (`--resolve`), diff the responses — validation on
+  replay them against the istio-gateway (`--resolve`), diff the responses - validation on
   the real traffic profile with no user impact.
 - **Mirroring**: once Istio already serves some traffic, `VirtualService.mirror` sends a
-  copy of requests to the new backend (responses discarded) — validation under real load.
+  copy of requests to the new backend (responses discarded) - validation under real load.
 
 ### 5. Load test and observability
 
@@ -285,7 +285,7 @@ up, and the rollback (put weight back on nginx) is rehearsed.
 ## The source ingress-nginx config (for reference)
 
 ```yaml
-# shop.local — path-based
+# shop.local - path-based
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata: {name: shop}
@@ -299,7 +299,7 @@ spec:
       - {path: /cart,    pathType: Prefix, backend: {service: {name: cart,     port: {number: 8080}}}}
       - {path: /,        pathType: Prefix, backend: {service: {name: frontend, port: {number: 8080}}}}
 ---
-# api.local — header routing = TWO Ingresses (main + canary)
+# api.local - header routing = TWO Ingresses (main + canary)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata: {name: api}
@@ -330,7 +330,7 @@ spec:
 
 ## Tools that auto-convert Ingress → Gateway API
 
-You don't have to rewrite rules by hand — open-source tools can read your existing
+You don't have to rewrite rules by hand - open-source tools can read your existing
 `Ingress` resources (with provider annotations) straight from the cluster and generate
 Gateway API resources.
 
@@ -353,7 +353,7 @@ Important caveats:
   `Gateway`/`VirtualService`. Istio implements Gateway API (see Lab 16), so the generated
   resources are applied to Istio with `gatewayClassName: istio`;
 - **not everything converts 1:1**: nginx-specific annotations (rewrite, canary-by-header,
-  auth-url, custom timeouts/limits) may translate only partially or not at all — the
+  auth-url, custom timeouts/limits) may translate only partially or not at all - the
   output is a **draft**;
 - therefore always **review + parity-test** (section above) before shifting traffic.
 

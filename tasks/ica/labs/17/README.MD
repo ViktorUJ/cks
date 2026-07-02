@@ -1,15 +1,15 @@
 [RU version](README_RU.MD)
 
-# Lab 17 — Rate Limiting: local rate limit with EnvoyFilter
+# Lab 17 - Rate Limiting: local rate limit with EnvoyFilter
 
 ## Overview
 
 Rate limiting protects services from overload, abuse, and DoS. Istio offers two
 approaches:
 
-- **Local rate limit** — each Envoy keeps its own token bucket. Simple, no external
+- **Local rate limit** - each Envoy keeps its own token bucket. Simple, no external
   dependencies, configured via an `EnvoyFilter`.
-- **Global rate limit** — Envoy calls an external rate-limit service (usually backed by
+- **Global rate limit** - Envoy calls an external rate-limit service (usually backed by
   Redis) so the limit is shared across all replicas.
 
 In this lab you configure a **local** rate limit on the ingress gateway: at most 5
@@ -106,19 +106,19 @@ done
 
 ## How it works
 
-- **`token_bucket`** — `max_tokens: 5`, `tokens_per_fill: 5`, `fill_interval: 60s`:
+- **`token_bucket`** - `max_tokens: 5`, `tokens_per_fill: 5`, `fill_interval: 60s`:
   the bucket holds 5 tokens and refills to 5 every 60 seconds. Each request consumes a
   token; when the bucket is empty, requests are rejected with `429`.
-- **`filter_enabled` / `filter_enforced`** — the fraction of requests the filter is
+- **`filter_enabled` / `filter_enforced`** - the fraction of requests the filter is
   active on and actually enforces (both `100%` here).
-- **context: GATEWAY** — the filter is inserted into the ingress gateway's listener, so
+- **context: GATEWAY** - the filter is inserted into the ingress gateway's listener, so
   the limit applies to all inbound traffic at the edge.
 
 ## Local vs Global
 
-- **Local** (this lab) — a token bucket per Envoy. Simple, but with multiple gateway
+- **Local** (this lab) - a token bucket per Envoy. Simple, but with multiple gateway
   replicas the effective limit multiplies by their count.
-- **Global** — Envoy calls an external rate-limit service (with Redis), so the limit is
+- **Global** - Envoy calls an external rate-limit service (with Redis), so the limit is
   shared across all replicas. It uses the `envoy.filters.http.ratelimit` filter plus a
   ConfigMap of descriptors and a deployed ratelimit service. Use it when you need an
   exact cluster-wide quota.
@@ -133,8 +133,8 @@ check_result
 
 ## Summary
 
-You configured a local rate limit on the ingress gateway with an `EnvoyFilter` — a
-basic overload-protection mechanism with no external dependencies — and learned how it
+You configured a local rate limit on the ingress gateway with an `EnvoyFilter` - a
+basic overload-protection mechanism with no external dependencies - and learned how it
 differs from global rate limiting. Working with `EnvoyFilter` is a key senior skill for
 fine-tuning the Envoy data plane beyond Istio's standard CRDs.
 

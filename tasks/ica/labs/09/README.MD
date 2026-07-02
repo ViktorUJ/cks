@@ -1,12 +1,12 @@
 [RU version](README_RU.MD)
 
-# Lab 09 — Advanced: Ambient mode (sidecar-less data plane)
+# Lab 09 - Advanced: Ambient mode (sidecar-less data plane)
 
-So far, in every lab Istio used the classic sidecar model: an `istio-proxy` (Envoy) container was added to every pod. It's reliable but costly — a proxy in every pod consumes memory and CPU, and any data-plane upgrade requires restarting pods.
+So far, in every lab Istio used the classic sidecar model: an `istio-proxy` (Envoy) container was added to every pod. It's reliable but costly - a proxy in every pod consumes memory and CPU, and any data-plane upgrade requires restarting pods.
 
 **Ambient mode** is Istio's new **sidecar-less** data plane. It splits into two layers:
-- **ztunnel** — a lightweight proxy, one per **node** (a DaemonSet). It captures pod traffic and automatically provides **L4 mTLS** (encryption + identity) — with no sidecars at all.
-- **waypoint** — a separate proxy (Envoy) deployed **on demand** for a namespace/service when you need **L7 features** (HTTP routing, L7 authorization, retries, etc.).
+- **ztunnel** - a lightweight proxy, one per **node** (a DaemonSet). It captures pod traffic and automatically provides **L4 mTLS** (encryption + identity) - with no sidecars at all.
+- **waypoint** - a separate proxy (Envoy) deployed **on demand** for a namespace/service when you need **L7 features** (HTTP routing, L7 authorization, retries, etc.).
 
 The idea: pay for an L7 proxy only where you actually need it, and get baseline security (L4 mTLS) "for free" at the node level.
 
@@ -42,13 +42,13 @@ flowchart TD
 
 ## Step 1. Enroll the Namespace into Ambient
 
-In ambient a namespace is labelled with `istio.io/dataplane-mode=ambient` — **not** `istio-injection=enabled`:
+In ambient a namespace is labelled with `istio.io/dataplane-mode=ambient` - **not** `istio-injection=enabled`:
 
 ```bash
 kubectl label namespace default istio.io/dataplane-mode=ambient --overwrite
 ```
 
-**What this does:** istio-cni starts redirecting this namespace's pod traffic to the node's ztunnel. Sidecars are **not** added — pods stay `1/1`. This is the fundamental difference from sidecar mode.
+**What this does:** istio-cni starts redirecting this namespace's pod traffic to the node's ztunnel. Sidecars are **not** added - pods stay `1/1`. This is the fundamental difference from sidecar mode.
 
 ## Step 2. Deploy the Application
 
@@ -68,7 +68,7 @@ ping-pong-xxxx                 1/1     Running   0          20s
 curl-client-xxxx               1/1     Running   0          20s
 ```
 
-**Key point:** `READY 1/1` — there is no sidecar. In sidecar mode this would be `2/2`. Yet the pod is already part of the mesh: its traffic flows through ztunnel.
+**Key point:** `READY 1/1` - there is no sidecar. In sidecar mode this would be `2/2`. Yet the pod is already part of the mesh: its traffic flows through ztunnel.
 
 ## Step 3. Verify L4 Connectivity (mTLS via ztunnel)
 
@@ -82,17 +82,17 @@ kubectl exec -n default deploy/curl-client -c curl -- \
 200
 ```
 
-The request succeeds — and it's **already mTLS-encrypted** at the ztunnel layer, even though we configured nothing for it and there are no sidecars. ztunnel runs as a DaemonSet:
+The request succeeds - and it's **already mTLS-encrypted** at the ztunnel layer, even though we configured nothing for it and there are no sidecars. ztunnel runs as a DaemonSet:
 
 ```bash
 kubectl get daemonset ztunnel -n istio-system
 ```
 
-**What happened:** the ztunnel on the client's node established an mTLS tunnel (the HBONE protocol) to the ztunnel on the backend's node. This is "zero-trust out of the box" at L4 — identity and encryption without sidecars.
+**What happened:** the ztunnel on the client's node established an mTLS tunnel (the HBONE protocol) to the ztunnel on the backend's node. This is "zero-trust out of the box" at L4 - identity and encryption without sidecars.
 
-## Step 4. Waypoint — a Proxy for L7
+## Step 4. Waypoint - a Proxy for L7
 
-ztunnel operates only at L4 (TCP/mTLS). As soon as you need **L7 features** (e.g., authorization by HTTP method or path), you need a **waypoint** — an Envoy L7 proxy for a namespace or service. It's deployed via the Gateway API with the `istio-waypoint` class.
+ztunnel operates only at L4 (TCP/mTLS). As soon as you need **L7 features** (e.g., authorization by HTTP method or path), you need a **waypoint** - an Envoy L7 proxy for a namespace or service. It's deployed via the Gateway API with the `istio-waypoint` class.
 
 ```bash
 vim waypoint.yaml
@@ -128,9 +128,9 @@ kubectl get pods -n default -l gateway.networking.k8s.io/gateway-name=waypoint
 ```
 
 **Breakdown:**
-- **`gatewayClassName: istio-waypoint`** — tells Istio to create a waypoint proxy, not a regular ingress gateway.
-- **`istio.io/waypoint-for: service`** — the waypoint will handle traffic addressed to services.
-- **`istio.io/use-waypoint=waypoint`** on the service — enables routing of traffic to `ping-pong` through the waypoint. The path is now: `curl-client → ztunnel → waypoint → ztunnel → ping-pong`.
+- **`gatewayClassName: istio-waypoint`** - tells Istio to create a waypoint proxy, not a regular ingress gateway.
+- **`istio.io/waypoint-for: service`** - the waypoint will handle traffic addressed to services.
+- **`istio.io/use-waypoint=waypoint`** on the service - enables routing of traffic to `ping-pong` through the waypoint. The path is now: `curl-client → ztunnel → waypoint → ztunnel → ping-pong`.
 
 ## Step 5. L7 AuthorizationPolicy (allow GET only)
 
@@ -181,7 +181,7 @@ kubectl exec -n default deploy/curl-client -c curl -- \
   curl -s -o /dev/null -w "%{http_code}\n" -X POST http://ping-pong:8080/
 ```
 ```
-403      # RBAC: access denied — the L7 policy fired at the waypoint
+403      # RBAC: access denied - the L7 policy fired at the waypoint
 ```
 
 ## Summary
@@ -192,7 +192,7 @@ kubectl exec -n default deploy/curl-client -c curl -- \
 | L7 | **waypoint** (Envoy, on demand) | HTTP routing, L7 authorization, retries | only where explicitly deployed |
 
 **Key takeaway:** ambient mode splits the data plane into two layers:
-- **ztunnel** provides baseline security (L4 mTLS) for all pods in the namespace **with no sidecars** — pods stay `1/1`, resources are saved, and data-plane upgrades don't require restarting applications.
-- **waypoint** adds L7 capabilities **selectively** — only for the services that need them.
+- **ztunnel** provides baseline security (L4 mTLS) for all pods in the namespace **with no sidecars** - pods stay `1/1`, resources are saved, and data-plane upgrades don't require restarting applications.
+- **waypoint** adds L7 capabilities **selectively** - only for the services that need them.
 
 This is fundamentally different from the sidecar model, where Envoy lives in every pod and always handles both L4 and L7. Ambient is about "paying for L7 only where you need it".

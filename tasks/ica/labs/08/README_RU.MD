@@ -1,14 +1,14 @@
 [Eng version](README.MD)
 
-# Lab 08 — Observability: Prometheus / Jaeger / Kiali
+# Lab 08 - Observability: Prometheus / Jaeger / Kiali
 
 Представьте: в кластере крутится несколько сервисов, и вдруг что-то «тормозит». Где именно? Какой сервис кому звонит, сколько ошибок, какая задержка? Istio собирает всю эту телеметрию автоматически (sidecar-прокси видит каждый запрос), но чтобы её увидеть, нужны инструменты:
-- **Prometheus** — сбор и хранение метрик (RPS, коды ответов, задержки).
-- **Jaeger** — распределённая трассировка: путь одного запроса через все сервисы.
-- **Kiali** — визуализация mesh: граф сервисов, здоровье, потоки трафика.
-- **Grafana** — дашборды поверх метрик Prometheus.
+- **Prometheus** - сбор и хранение метрик (RPS, коды ответов, задержки).
+- **Jaeger** - распределённая трассировка: путь одного запроса через все сервисы.
+- **Kiali** - визуализация mesh: граф сервисов, здоровье, потоки трафика.
+- **Grafana** - дашборды поверх метрик Prometheus.
 
-В этой лабораторной мы развернём этот стек, сгенерируем трафик и убедимся, что метрики, трейсы и граф сервисов реально собираются — без какого-либо инструментирования кода приложения.
+В этой лабораторной мы развернём этот стек, сгенерируем трафик и убедимся, что метрики, трейсы и граф сервисов реально собираются - без какого-либо инструментирования кода приложения.
 
 ### Как это работает (общая схема)
 
@@ -52,7 +52,7 @@ kubectl label namespace default istio-injection=enabled --overwrite
 
 ## Шаг 2. Установка приложения и точки входа
 
-Разворачиваем двухуровневое приложение: `frontend` на каждый запрос вызывает `ping-pong`. Такой вызов даёт «двухзвенный» трейс (frontend → ping-pong) и метрики по обоим сервисам. Также поднимается `curl-client` — с него будем опрашивать API Prometheus изнутри mesh.
+Разворачиваем двухуровневое приложение: `frontend` на каждый запрос вызывает `ping-pong`. Такой вызов даёт «двухзвенный» трейс (frontend → ping-pong) и метрики по обоим сервисам. Также поднимается `curl-client` - с него будем опрашивать API Prometheus изнутри mesh.
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/08/k8s-1/scripts/1.yaml
@@ -130,10 +130,10 @@ prometheus-xxxx     2/2   Running
 ```
 
 **Что устанавливается:**
-- **prometheus.yaml** — Prometheus, настроенный на scrape метрик Istio (`istio_requests_total`, `istio_request_duration_milliseconds` и др.).
-- **jaeger.yaml** — Jaeger all-in-one; помимо UI поднимает сервис `zipkin` в `istio-system` (именно туда meshConfig шлёт спаны).
-- **kiali.yaml** — Kiali, который читает метрики из Prometheus и строит граф сервисов.
-- **grafana.yaml** — Grafana с преднастроенными дашбордами Istio.
+- **prometheus.yaml** - Prometheus, настроенный на scrape метрик Istio (`istio_requests_total`, `istio_request_duration_milliseconds` и др.).
+- **jaeger.yaml** - Jaeger all-in-one; помимо UI поднимает сервис `zipkin` в `istio-system` (именно туда meshConfig шлёт спаны).
+- **kiali.yaml** - Kiali, который читает метрики из Prometheus и строит граф сервисов.
+- **grafana.yaml** - Grafana с преднастроенными дашбордами Istio.
 
 ## Шаг 4. Включение трейсинга (100% сэмплирование)
 
@@ -160,7 +160,7 @@ spec:
 kubectl apply -f telemetry.yaml
 ```
 
-**Разбор:** `Telemetry` в namespace `istio-system` без `selector` — это дефолтная политика для всего mesh. `providers.name: zipkin` ссылается на `extensionProvider`, заданный при установке Istio. `randomSamplingPercentage: 100` означает, что в трейсы попадёт каждый запрос (удобно для демо; в проде ставят 1–5%).
+**Разбор:** `Telemetry` в namespace `istio-system` без `selector` - это дефолтная политика для всего mesh. `providers.name: zipkin` ссылается на `extensionProvider`, заданный при установке Istio. `randomSamplingPercentage: 100` означает, что в трейсы попадёт каждый запрос (удобно для демо; в проде ставят 1–5%).
 
 ## Шаг 5. Генерируем трафик
 
@@ -179,7 +179,7 @@ kubectl exec -n default deploy/curl-client -c curl -- \
   curl -s 'http://prometheus.istio-system:9090/api/v1/query?query=istio_requests_total{destination_service_name="ping-pong"}' | jq '.data.result | length'
 ```
 
-Ненулевой результат означает, что Prometheus собирает метрики Istio. Каждая серия `istio_requests_total` размечена лейблами `source_workload`, `destination_workload`, `response_code` и т.д. — это и есть «золотые сигналы» mesh.
+Ненулевой результат означает, что Prometheus собирает метрики Istio. Каждая серия `istio_requests_total` размечена лейблами `source_workload`, `destination_workload`, `response_code` и т.д. - это и есть «золотые сигналы» mesh.
 
 Для браузера (опционально):
 
@@ -226,4 +226,4 @@ kubectl -n istio-system port-forward svc/kiali 20001:20001
 | Kiali | граф сервисов mesh | визуальный граф namespace |
 | Grafana | дашборды поверх метрик | преднастроенные Istio-дашборды |
 
-**Ключевой вывод:** Istio даёт наблюдаемость «из коробки» — sidecar-прокси автоматически экспортирует метрики и спаны для **каждого** запроса, без изменения кода приложения. Аддоны (Prometheus/Jaeger/Kiali/Grafana) лишь собирают и визуализируют эти данные. Telemetry API позволяет тонко настраивать, что именно собирать (например, процент сэмплирования трейсов).
+**Ключевой вывод:** Istio даёт наблюдаемость «из коробки» - sidecar-прокси автоматически экспортирует метрики и спаны для **каждого** запроса, без изменения кода приложения. Аддоны (Prometheus/Jaeger/Kiali/Grafana) лишь собирают и визуализируют эти данные. Telemetry API позволяет тонко настраивать, что именно собирать (например, процент сэмплирования трейсов).
