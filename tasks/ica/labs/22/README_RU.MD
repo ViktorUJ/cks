@@ -1,10 +1,10 @@
 [Eng version](README.MD)
 
-# Lab 22 — TLS origination: инициация TLS на стороне mesh
+# Lab 22 - TLS origination: инициация TLS на стороне mesh
 
 ## Обзор
 
-**TLS origination** — это когда приложение общается по обычному HTTP, а sidecar сам
+**TLS origination** - это когда приложение общается по обычному HTTP, а sidecar сам
 устанавливает TLS-соединение к целевому сервису. Так код приложения остаётся простым (без
 работы с сертификатами), а весь TLS к внешним/legacy-сервисам единообразно берёт на себя
 mesh.
@@ -23,7 +23,7 @@ flowchart LR
 
 ## Задание
 
-1. Убедиться, что без origination запрос к `httpsvc.external` падает (`400` — plaintext
+1. Убедиться, что без origination запрос к `httpsvc.external` падает (`400` - plaintext
    попал на TLS-порт).
 2. Создать `DestinationRule` для `httpsvc.external.svc.cluster.local`, включающий TLS
    origination (`tls.mode: SIMPLE`) на порту `80`.
@@ -103,7 +103,7 @@ check_result
 
 Вы настроили инициацию TLS на стороне mesh: приложение ходит по HTTP, а sidecar
 устанавливает TLS к сервису, принимающему только TLS. Это частый паттерн интеграции с
-внешними и legacy HTTPS-сервисами без изменения кода приложения — важный навык домена
+внешними и legacy HTTPS-сервисами без изменения кода приложения - важный навык домена
 Traffic Management.
 
 ## Инфраструктура

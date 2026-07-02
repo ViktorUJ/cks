@@ -1,23 +1,23 @@
 [RU version](README_RU.MD)
 
-# Lab 15 — Installation & Configuration: customizing the Istio install (IstioOperator + MeshConfig)
+# Lab 15 - Installation & Configuration: customizing the Istio install (IstioOperator + MeshConfig)
 
 ## Overview
 
 In most labs Istio is already installed for you. Here the task is the opposite:
 **install and configure Istio to meet specific requirements**. This is a core
-competency of the *Installation, Upgrade & Configuration* domain — "Customizing your
+competency of the *Installation, Upgrade & Configuration* domain - "Customizing your
 Istio Installation".
 
 Istio is installed with `istioctl install -f <file>`, where the file is an
 `IstioOperator` manifest. In it you set:
-- **profile** — the base set of components (`default`, `minimal`, `demo`, ...);
-- **meshConfig** — global mesh settings (logging, egress policy, etc.);
-- **components** — which components to deploy and how many (e.g. multiple ingress
+- **profile** - the base set of components (`default`, `minimal`, `demo`, ...);
+- **meshConfig** - global mesh settings (logging, egress policy, etc.);
+- **components** - which components to deploy and how many (e.g. multiple ingress
   gateways).
 
 In this lab the cluster is already up (control-plane + worker) but Istio is **not
-installed** — installing it is the task. `istioctl` is pre-installed on the worker PC.
+installed** - installing it is the task. `istioctl` is pre-installed on the worker PC.
 
 ```mermaid
 flowchart LR
@@ -37,8 +37,8 @@ flowchart LR
 
 1. Write an `IstioOperator` manifest based on the `default` profile.
 2. Set in `meshConfig`:
-   - `accessLogFile: /dev/stdout` — enable Envoy access logs to stdout;
-   - `outboundTrafficPolicy.mode: REGISTRY_ONLY` — block egress to hosts that are not
+   - `accessLogFile: /dev/stdout` - enable Envoy access logs to stdout;
+   - `outboundTrafficPolicy.mode: REGISTRY_ONLY` - block egress to hosts that are not
      in the mesh registry.
 3. Add a **second** ingress gateway `ingressgateway-internal` alongside the default
    `istio-ingressgateway`.
@@ -89,19 +89,19 @@ kubectl get configmap istio -n istio-system -o jsonpath='{.data.mesh}' \
 
 Expected:
 - `istiod` is `Running`;
-- two deployments: `istio-ingressgateway` and `ingressgateway-internal` — both ready;
+- two deployments: `istio-ingressgateway` and `ingressgateway-internal` - both ready;
 - the `istio` configmap contains `accessLogFile: /dev/stdout` and
   `outboundTrafficPolicy.mode: REGISTRY_ONLY`.
 
 ## Breakdown
 
-- **profile: default** — deploys `istiod` and one ingress gateway. A profile is the
+- **profile: default** - deploys `istiod` and one ingress gateway. A profile is the
   starting point you layer your customizations on top of.
 - **meshConfig** lands in the `istio` configmap (key `mesh`) and is read by istiod.
   This is how global parameters are configured without editing the Deployments.
 - **outboundTrafficPolicy: REGISTRY_ONLY** blocks calls to external hosts that are not
   declared via a `ServiceEntry` (see Lab 05). The default mode is `ALLOW_ANY`.
-- **components.ingressGateways** lets you deploy multiple gateways — a common pattern
+- **components.ingressGateways** lets you deploy multiple gateways - a common pattern
   when you need a separate internal gateway (`ClusterIP`) in addition to the external
   one.
 

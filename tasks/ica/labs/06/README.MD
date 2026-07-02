@@ -1,12 +1,12 @@
 [RU version](README_RU.MD)
 
-# Lab 06 — Load Balancing + Traffic Mirroring
+# Lab 06 - Load Balancing + Traffic Mirroring
 
-Imagine you have a `ping-pong` service with three replicas of the stable version **v1** and a new version **v2** you want to try out. Two questions arise. First — **how exactly** is traffic distributed across replicas, and can you tune it (round-robin, least-loaded, etc.)? Second — how do you test **v2** against real production traffic **without risking** your users?
+Imagine you have a `ping-pong` service with three replicas of the stable version **v1** and a new version **v2** you want to try out. Two questions arise. First - **how exactly** is traffic distributed across replicas, and can you tune it (round-robin, least-loaded, etc.)? Second - how do you test **v2** against real production traffic **without risking** your users?
 
 Istio solves both at the infrastructure level:
-- **Load Balancing** (`DestinationRule`) — choose the load-balancing algorithm across a service's endpoints, including a per-port override.
-- **Traffic Mirroring** (shadowing) — Envoy sends a **copy** of each request to a second version (v2), while its response is ignored. The client always gets v1's response, and v2 "sees" real traffic in a shadow-launch mode.
+- **Load Balancing** (`DestinationRule`) - choose the load-balancing algorithm across a service's endpoints, including a per-port override.
+- **Traffic Mirroring** (shadowing) - Envoy sends a **copy** of each request to a second version (v2), while its response is ignored. The client always gets v1's response, and v2 "sees" real traffic in a shadow-launch mode.
 
 ### How It Works (High-Level Overview)
 
@@ -122,7 +122,7 @@ spec:
 kubectl apply -f gateway.yaml
 ```
 
-## Step 4. Load Balancing — the ROUND_ROBIN Algorithm
+## Step 4. Load Balancing - the ROUND_ROBIN Algorithm
 
 A `DestinationRule` defines how traffic is distributed across a service's endpoints (pods). The `trafficPolicy.loadBalancer.simple` field selects the algorithm. Let's start with `ROUND_ROBIN`.
 
@@ -155,12 +155,12 @@ kubectl apply -f destination-rule.yaml
 ```
 
 **Breakdown:**
-- **`loadBalancer.simple`** — the built-in balancing algorithms:
-  - `ROUND_ROBIN` — round the ring, one after another (the default);
-  - `LEAST_REQUEST` — to the replica with the fewest active requests (often more efficient than round-robin);
-  - `RANDOM` — random choice;
-  - `PASSTHROUGH` — no balancing, to the original destination address.
-- **`subsets`** — logical groups of pods (`v1`, `v2`) by the `version` label; the `VirtualService` references them (route and mirror).
+- **`loadBalancer.simple`** - the built-in balancing algorithms:
+  - `ROUND_ROBIN` - round the ring, one after another (the default);
+  - `LEAST_REQUEST` - to the replica with the fewest active requests (often more efficient than round-robin);
+  - `RANDOM` - random choice;
+  - `PASSTHROUGH` - no balancing, to the original destination address.
+- **`subsets`** - logical groups of pods (`v1`, `v2`) by the `version` label; the `VirtualService` references them (route and mirror).
 
 Observe the distribution across the three v1 replicas:
 
@@ -174,9 +174,9 @@ for i in $(seq 12); do curl -s http://myapp.local:32080 | grep 'Server Name'; do
       4 Server Name: ping-pong-v1-6c8f...-ccccc
 ```
 
-With `ROUND_ROBIN` traffic is spread roughly evenly across the three v1 pods. Version v2 never appears in the responses — nothing is routed to it yet.
+With `ROUND_ROBIN` traffic is spread roughly evenly across the three v1 pods. Version v2 never appears in the responses - nothing is routed to it yet.
 
-## Step 5. Port-level Override — Balancing per Port
+## Step 5. Port-level Override - Balancing per Port
 
 `portLevelSettings` lets you override the balancing algorithm for a specific port. This is useful when a service has multiple ports with different needs (e.g., the exam task: global `ROUND_ROBIN`, `LEAST_CONN` for `443`).
 
@@ -211,7 +211,7 @@ spec:
 kubectl apply -f destination-rule.yaml
 ```
 
-**What changed:** port `8080` (our HTTP port) now uses `LEAST_REQUEST` — Envoy sends each request to the replica with the fewest active requests. The global `ROUND_ROBIN` still applies to any other port. So on re-checking, the distribution is no longer necessarily an even `4/4/4` — it adapts to replica load:
+**What changed:** port `8080` (our HTTP port) now uses `LEAST_REQUEST` - Envoy sends each request to the replica with the fewest active requests. The global `ROUND_ROBIN` still applies to any other port. So on re-checking, the distribution is no longer necessarily an even `4/4/4` - it adapts to replica load:
 
 ```bash
 for i in $(seq 12); do curl -s http://myapp.local:32080 | grep 'Server Name'; done | sort | uniq -c
@@ -225,9 +225,9 @@ for i in $(seq 12); do curl -s http://myapp.local:32080 | grep 'Server Name'; do
 
 The key point: the override applies to the specified port only, not to the whole service.
 
-## Step 6. Traffic Mirroring — Shadow Traffic to v2
+## Step 6. Traffic Mirroring - Shadow Traffic to v2
 
-Now enable a shadow launch: v1 still serves 100% of real requests, but Envoy additionally sends a **copy** of each request to v2. The v2 response is **discarded** — the client never sees it.
+Now enable a shadow launch: v1 still serves 100% of real requests, but Envoy additionally sends a **copy** of each request to v2. The v2 response is **discarded** - the client never sees it.
 
 Update the `VirtualService`, adding a `mirror` block:
 
@@ -265,11 +265,11 @@ kubectl apply -f mirror-vs.yaml
 ```
 
 **Breaking down the `mirror` block:**
-- **`route.destination`** — the primary route. The client gets a response **only** from here (subset v1).
-- **`mirror`** — where to send the copy of the request (subset v2). This is fire-and-forget: Envoy neither waits for nor uses the mirror's response.
-- **`mirrorPercentage.value`** — what fraction of requests is mirrored (here 100%). You could set, say, `25.0` to duplicate only a quarter of production traffic.
+- **`route.destination`** - the primary route. The client gets a response **only** from here (subset v1).
+- **`mirror`** - where to send the copy of the request (subset v2). This is fire-and-forget: Envoy neither waits for nor uses the mirror's response.
+- **`mirrorPercentage.value`** - what fraction of requests is mirrored (here 100%). You could set, say, `25.0` to duplicate only a quarter of production traffic.
 
-**Why it's useful:** you push real load through v2 and watch its metrics, logs, and errors — with zero risk to users. If v2 crashes or starts erroring, clients won't notice.
+**Why it's useful:** you push real load through v2 and watch its metrics, logs, and errors - with zero risk to users. If v2 crashes or starts erroring, clients won't notice.
 
 ## Step 7. Verification
 
@@ -300,7 +300,7 @@ kubectl exec -n default deploy/ping-pong-v2 -c istio-proxy -- \
 istiocustom.istio_requests_total.<...>.destination_workload.ping-pong-v2.<...>.response_code.200<...>: 40
 ```
 
-The counter grows as requests arrive — proof that the mirrored traffic really reaches v2, even though the client has no idea.
+The counter grows as requests arrive - proof that the mirrored traffic really reaches v2, even though the client has no idea.
 
 ## Summary
 
@@ -310,7 +310,7 @@ The counter grows as requests arrive — proof that the mirrored traffic really 
 | Traffic Mirroring | `VirtualService` (`mirror` + `mirrorPercentage`) | Mirror production traffic to v2 | v2 tested under real load with no risk |
 
 **Key takeaway:**
-- **DestinationRule** defines the balancing policy: which algorithm and (optionally) a per-port override — this is about **how** traffic is split across endpoints.
+- **DestinationRule** defines the balancing policy: which algorithm and (optionally) a per-port override - this is about **how** traffic is split across endpoints.
 - **Traffic Mirroring** gives a safe way to validate a new version against production traffic: the client always talks to the stable v1, while v2 receives a "shadow" of the real requests with its response discarded.
 
-Both mechanisms operate entirely at the Envoy layer — without a single line of change in the application code.
+Both mechanisms operate entirely at the Envoy layer - without a single line of change in the application code.

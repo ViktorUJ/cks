@@ -1,10 +1,10 @@
 [Eng version](README.MD)
 
-# Lab 14 — Locality-aware Failover (отказоустойчивость по зонам)
+# Lab 14 - Locality-aware Failover (отказоустойчивость по зонам)
 
-Представьте: ваш сервис работает в двух зонах доступности (`eu-central-1a` и `eu-central-1b`). В нормальном режиме хочется, чтобы клиент ходил в **ближайший** (в своей зоне) экземпляр — это снижает задержку и трафик между зонами. Но если локальный экземпляр отказал — трафик должен **автоматически переключиться** на другую зону. Это и есть **locality-aware load balancing + failover**.
+Представьте: ваш сервис работает в двух зонах доступности (`eu-central-1a` и `eu-central-1b`). В нормальном режиме хочется, чтобы клиент ходил в **ближайший** (в своей зоне) экземпляр - это снижает задержку и трафик между зонами. Но если локальный экземпляр отказал - трафик должен **автоматически переключиться** на другую зону. Это и есть **locality-aware load balancing + failover**.
 
-Istio реализует это на основе топологии нод (`topology.kubernetes.io/region` / `zone`): он знает, в какой зоне находится каждый эндпоинт, и направляет трафик сначала в локальную зону, а при её недоступности — в соседнюю.
+Istio реализует это на основе топологии нод (`topology.kubernetes.io/region` / `zone`): он знает, в какой зоне находится каждый эндпоинт, и направляет трафик сначала в локальную зону, а при её недоступности - в соседнюю.
 
 ## Инфраструктура
 
@@ -17,7 +17,7 @@ Istio реализует это на основе топологии нод (`to
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm) с Istio; **control-plane + 2 worker-ноды в разных зонах** (`1a`, `1b`) |
 | `worker`   | Рабочая машина с `kubectl` и доступом к кластеру   |
 
-Инстансы: `t3.medium`, Ubuntu `22.04`. Worker-ноды при джойне получают метки `topology.kubernetes.io/zone` через `node_labels` (kubelet `--node-labels`) — self-managed kubeadm без cloud-provider их не ставит.
+Инстансы: `t3.medium`, Ubuntu `22.04`. Worker-ноды при джойне получают метки `topology.kubernetes.io/zone` через `node_labels` (kubelet `--node-labels`) - self-managed kubeadm без cloud-provider их не ставит.
 
 ## Развёртывание
 
@@ -64,7 +64,7 @@ ip-10-10-1-yyy    ...   eu-central-1a   # worker-a
 ip-10-10-2-zzz    ...   eu-central-1b   # worker-b
 ```
 
-**Важно:** в облаке эти метки проставляет cloud-provider. В self-managed kubeadm их нет — в этой лабе они заданы на worker-нодах через `node_labels` при джойне. Без них locality LB не работает.
+**Важно:** в облаке эти метки проставляет cloud-provider. В self-managed kubeadm их нет - в этой лабе они заданы на worker-нодах через `node_labels` при джойне. Без них locality LB не работает.
 
 ## Шаг 2. Установка приложения
 
@@ -75,9 +75,9 @@ kubectl rollout restart deployment -n default
 ```
 
 **Что разворачивается:** один Service `ping-pong` и два Deployment под ним:
-- **`ping-pong-a`** — прибит к зоне a (`nodeSelector` zone=eu-central-1a), `SERVER_NAME: "Zone-A"`;
-- **`ping-pong-b`** — прибит к зоне b, `SERVER_NAME: "Zone-B"`;
-- **`curl-client`** — в зоне a (тот же локалити, что и ping-pong-a).
+- **`ping-pong-a`** - прибит к зоне a (`nodeSelector` zone=eu-central-1a), `SERVER_NAME: "Zone-A"`;
+- **`ping-pong-b`** - прибит к зоне b, `SERVER_NAME: "Zone-B"`;
+- **`curl-client`** - в зоне a (тот же локалити, что и ping-pong-a).
 
 Оба бэкенда имеют лейбл `app: ping-pong`, поэтому Service видит эндпоинты в **обеих** зонах, а Istio знает локальность каждого.
 
@@ -85,7 +85,7 @@ kubectl rollout restart deployment -n default
 kubectl get pods -n default -o wide
 ```
 
-## Шаг 3. DestinationRule — locality LB + outlier detection
+## Шаг 3. DestinationRule - locality LB + outlier detection
 
 Для locality failover нужны **два** элемента: `outlierDetection` (обнаружение нездоровых эндпоинтов) и `localityLbSetting` (включение маршрутизации по локальности).
 
@@ -118,8 +118,8 @@ kubectl apply -f dr.yaml
 ```
 
 **Разбор:**
-- **`localityLbSetting.enabled: true`** — включает предпочтение локальной зоны: трафик идёт в эндпоинты той же зоны, что и клиент, пока они здоровы.
-- **`outlierDetection`** — без него failover не работает. Istio должен уметь помечать эндпоинты нездоровыми, чтобы исключить их и переключиться на другую зону. Даже если локальные эндпоинты просто исчезли, именно outlier detection «включает» механизм локалити-приоритетов и переливов.
+- **`localityLbSetting.enabled: true`** - включает предпочтение локальной зоны: трафик идёт в эндпоинты той же зоны, что и клиент, пока они здоровы.
+- **`outlierDetection`** - без него failover не работает. Istio должен уметь помечать эндпоинты нездоровыми, чтобы исключить их и переключиться на другую зону. Даже если локальные эндпоинты просто исчезли, именно outlier detection «включает» механизм локалити-приоритетов и переливов.
 
 ## Шаг 4. Проверка локального предпочтения
 
@@ -138,9 +138,9 @@ Server Name: Zone-A
 Server Name: Zone-A
 ```
 
-Весь трафик остаётся в своей зоне — зона b не задействована, хотя её эндпоинт здоров и входит в Service.
+Весь трафик остаётся в своей зоне - зона b не задействована, хотя её эндпоинт здоров и входит в Service.
 
-## Шаг 5. Failover — «роняем» зону a
+## Шаг 5. Failover - «роняем» зону a
 
 Уводим локальный бэкенд (Zone-A) из строя и смотрим, что трафик переключается на Zone-B:
 
@@ -178,4 +178,4 @@ kubectl scale deployment ping-pong-a -n default --replicas=1
 | `localityLbSetting.enabled` | предпочтение локальной зоны |
 | `outlierDetection` | обязательное условие для failover (без него переливов нет) |
 
-**Ключевой вывод:** locality-aware failover в Istio строится на топологии нод и связке `localityLbSetting` + `outlierDetection`. В норме трафик остаётся в своей зоне (меньше задержки и cross-zone трафика), а при отказе локальных эндпоинтов автоматически переливается в соседнюю зону — без вмешательства и без изменения кода приложения.
+**Ключевой вывод:** locality-aware failover в Istio строится на топологии нод и связке `localityLbSetting` + `outlierDetection`. В норме трафик остаётся в своей зоне (меньше задержки и cross-zone трафика), а при отказе локальных эндпоинтов автоматически переливается в соседнюю зону - без вмешательства и без изменения кода приложения.

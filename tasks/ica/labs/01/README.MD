@@ -1,7 +1,7 @@
 [Russian version ](README_RU.MD)
 
 
-# Lab 01 — Installing Istio on a Kubernetes Cluster
+# Lab 01 - Installing Istio on a Kubernetes Cluster
 
 ## Overview
 

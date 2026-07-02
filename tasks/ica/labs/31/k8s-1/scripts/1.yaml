@@ -1,0 +1,137 @@
+# Namespace with sidecar injection enabled
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: app
+  labels: {app: frontend}
+spec:
+  ports: [{name: http, port: 8080, targetPort: 8080}]
+  selector: {app: frontend}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: frontend, namespace: app}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: frontend}}
+  template:
+    metadata: {labels: {app: frontend}}
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports: [{containerPort: 8080}]
+        env: [{name: SERVER_NAME, value: "frontend"}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+  namespace: app
+  labels: {app: catalog}
+spec:
+  ports: [{name: http, port: 8080, targetPort: 8080}]
+  selector: {app: catalog}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: catalog, namespace: app}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: catalog}}
+  template:
+    metadata: {labels: {app: catalog}}
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports: [{containerPort: 8080}]
+        env: [{name: SERVER_NAME, value: "catalog"}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart
+  namespace: app
+  labels: {app: cart}
+spec:
+  ports: [{name: http, port: 8080, targetPort: 8080}]
+  selector: {app: cart}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: cart, namespace: app}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: cart}}
+  template:
+    metadata: {labels: {app: cart}}
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports: [{containerPort: 8080}]
+        env: [{name: SERVER_NAME, value: "cart"}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-v1
+  namespace: app
+  labels: {app: api-v1}
+spec:
+  ports: [{name: http, port: 8080, targetPort: 8080}]
+  selector: {app: api-v1}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: api-v1, namespace: app}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: api-v1}}
+  template:
+    metadata: {labels: {app: api-v1}}
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports: [{containerPort: 8080}]
+        env: [{name: SERVER_NAME, value: "api-v1"}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-v2
+  namespace: app
+  labels: {app: api-v2}
+spec:
+  ports: [{name: http, port: 8080, targetPort: 8080}]
+  selector: {app: api-v2}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: api-v2, namespace: app}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: api-v2}}
+  template:
+    metadata: {labels: {app: api-v2}}
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        ports: [{containerPort: 8080}]
+        env: [{name: SERVER_NAME, value: "api-v2"}]

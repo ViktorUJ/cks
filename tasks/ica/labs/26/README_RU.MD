@@ -1,22 +1,22 @@
 [Eng version](README.MD)
 
-# Lab 26 — Динамический CA: cert-manager + istio-csr
+# Lab 26 - Динамический CA: cert-manager + istio-csr
 
 ## Обзор
 
-В Lab 19 мы подключили свой CA статически — через секрет `cacerts`: ключ промежуточного
-CA лежит в istiod, а ротация — руками. В продакшене так обычно не делают. Более зрелый
-подход — **cert-manager + istio-csr**:
+В Lab 19 мы подключили свой CA статически - через секрет `cacerts`: ключ промежуточного
+CA лежит в istiod, а ротация - руками. В продакшене так обычно не делают. Более зрелый
+подход - **cert-manager + istio-csr**:
 
 - **istiod** больше не подписывает сертификаты (`ENABLE_CA_SERVER=false`), а перенаправляет
   агенты на istio-csr (`caAddress`);
 - **istio-csr** реализует gRPC-API Istio CA: на каждый CSR ворклоада он создаёт
   `CertificateRequest` cert-manager;
-- **cert-manager** подписывает его через настроенный `Issuer` (здесь — self-signed CA, но
+- **cert-manager** подписывает его через настроенный `Issuer` (здесь - self-signed CA, но
   это может быть **Vault**, **ACME** или корпоративный PKI).
 
 Подписывающий ключ остаётся в cert-manager, ротация CA автоматизирована, а каждый
-выпущенный сертификат — это объект `CertificateRequest` (аудируемо).
+выпущенный сертификат - это объект `CertificateRequest` (аудируемо).
 
 В лабе платформа уже собрана: cert-manager, `Issuer` `istio-ca`, istio-csr и Istio с
 отключённым встроенным CA. На worker PC есть `istioctl`.
@@ -62,7 +62,7 @@ istioctl proxy-config secret "$POD" -n app -o json \
 # X509v3 Subject Alternative Name: URI:spiffe://cluster.local/ns/app/sa/default
 ```
 
-Issuer содержит `cert-manager`/`istio-ca` — сертификат подписан вашим CA cert-manager, а
+Issuer содержит `cert-manager`/`istio-ca` - сертификат подписан вашим CA cert-manager, а
 SPIFFE-identity на месте.
 
 ## Как это работает
@@ -87,9 +87,9 @@ sidecar получает SVID (ротация автоматическая)
 | Где ключ подписи | промежуточный ключ в istiod | остаётся в `Issuer` cert-manager (Vault/PKI) |
 | Ротация CA | вручную (пересоздать секрет + рестарт) | автоматически cert-manager'ом |
 | Бэкенды | только статичный PEM | Vault, ACME, корпоративный PKI и т.д. |
-| Аудит | нет | каждый сертификат — объект `CertificateRequest` |
+| Аудит | нет | каждый сертификат - объект `CertificateRequest` |
 
-Оба варианта заставляют mesh доверять вашему CA; istio-csr — продакшен-версия с
+Оба варианта заставляют mesh доверять вашему CA; istio-csr - продакшен-версия с
 автоматизацией.
 
 ## Проверка результата

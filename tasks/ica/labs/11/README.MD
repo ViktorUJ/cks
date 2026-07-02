@@ -1,12 +1,12 @@
 [RU version](README_RU.MD)
 
-# Lab 11 — End-user authentication: RequestAuthentication + JWT
+# Lab 11 - End-user authentication: RequestAuthentication + JWT
 
-In Lab 04 we covered authentication **between services** (mTLS, `PeerAuthentication`). But there's a second kind of authentication — **end-user**: when a request carries a **JWT token** (e.g., issued by your Identity Provider — Auth0, Keycloak, Google, etc.), and the service must validate that token and authorize the user based on its contents.
+In Lab 04 we covered authentication **between services** (mTLS, `PeerAuthentication`). But there's a second kind of authentication - **end-user**: when a request carries a **JWT token** (e.g., issued by your Identity Provider - Auth0, Keycloak, Google, etc.), and the service must validate that token and authorize the user based on its contents.
 
 Istio solves this with two resources:
-- **RequestAuthentication** — **validates** a JWT: signature, issuer, expiry. Key nuance: on its own it does **not require** a token — it only rejects *invalid* tokens (401). A request with no token passes through.
-- **AuthorizationPolicy** with `requestPrincipals` — **requires** a valid JWT (otherwise 403) and authorizes based on the token's claims.
+- **RequestAuthentication** - **validates** a JWT: signature, issuer, expiry. Key nuance: on its own it does **not require** a token - it only rejects *invalid* tokens (401). A request with no token passes through.
+- **AuthorizationPolicy** with `requestPrincipals` - **requires** a valid JWT (otherwise 403) and authorizes based on the token's claims.
 
 These two always work as a pair: `RequestAuthentication` validates, `AuthorizationPolicy` requires and allows.
 
@@ -47,7 +47,7 @@ This lab uses the test keys and token from the Istio repository:
 kubectl label namespace default istio-injection=enabled --overwrite
 ```
 
-JWT validation is performed by the Envoy sidecar of the service — without it `RequestAuthentication` has no effect.
+JWT validation is performed by the Envoy sidecar of the service - without it `RequestAuthentication` has no effect.
 
 ## Step 2. Deploy the Application
 
@@ -58,7 +58,7 @@ kubectl rollout restart deployment -n default
 
 This deploys the protected backend `ping-pong` and a `curl-client` from which we'll send requests with and without a token.
 
-Baseline check (no policies yet — open access):
+Baseline check (no policies yet - open access):
 
 ```bash
 kubectl exec -n default deploy/curl-client -c curl -- \
@@ -68,7 +68,7 @@ kubectl exec -n default deploy/curl-client -c curl -- \
 200
 ```
 
-## Step 3. RequestAuthentication — Validate the JWT
+## Step 3. RequestAuthentication - Validate the JWT
 
 ```bash
 vim request-auth.yaml
@@ -94,9 +94,9 @@ kubectl apply -f request-auth.yaml
 ```
 
 **Breakdown:**
-- **`selector`** — the policy applies to the `ping-pong` pods (their sidecar validates tokens).
-- **`jwtRules.issuer`** — the expected token issuer (the `iss` claim in the JWT).
-- **`jwksUri`** — where to fetch the public keys to verify the signature. istiod fetches the JWKS and pushes it to the proxies.
+- **`selector`** - the policy applies to the `ping-pong` pods (their sidecar validates tokens).
+- **`jwtRules.issuer`** - the expected token issuer (the `iss` claim in the JWT).
+- **`jwksUri`** - where to fetch the public keys to verify the signature. istiod fetches the JWKS and pushes it to the proxies.
 
 Check the behaviour:
 
@@ -118,9 +118,9 @@ kubectl exec -n default deploy/curl-client -c curl -- \
 200
 ```
 
-**Key nuance:** `RequestAuthentication` only **validates** the token if one is present. An invalid token → `401`. But a request **with no token** passes (`200`). To make the token mandatory, you need an `AuthorizationPolicy` — the next step.
+**Key nuance:** `RequestAuthentication` only **validates** the token if one is present. An invalid token → `401`. But a request **with no token** passes (`200`). To make the token mandatory, you need an `AuthorizationPolicy` - the next step.
 
-## Step 4. AuthorizationPolicy — Require a Valid JWT
+## Step 4. AuthorizationPolicy - Require a Valid JWT
 
 ```bash
 vim require-jwt.yaml
@@ -148,7 +148,7 @@ kubectl apply -f require-jwt.yaml
 ```
 
 **Breakdown:**
-- **`requestPrincipals: ["*"]`** — allow only requests that carry a **valid JWT principal** (format `<issuer>/<subject>`). A request with no token has no principal → it's denied (`403`).
+- **`requestPrincipals: ["*"]`** - allow only requests that carry a **valid JWT principal** (format `<issuer>/<subject>`). A request with no token has no principal → it's denied (`403`).
 - This is exactly how the pair works: `RequestAuthentication` sets the principal from the verified token, and `AuthorizationPolicy` requires it.
 
 ## Step 5. Final Verification
@@ -205,11 +205,11 @@ Then only users whose JWT contains the claim `groups: group1` are allowed.
 | Request | RequestAuthentication | AuthorizationPolicy | Result |
 |---------|----------------------|---------------------|--------|
 | no token | passes | no principal → deny | **403** |
-| invalid token | rejects | — | **401** |
+| invalid token | rejects | - | **401** |
 | valid JWT | validates, sets principal | principal present → allow | **200** |
 
 **Key takeaway:** end-user authentication in Istio is a **pair** of resources:
 - **RequestAuthentication** answers "is the token even valid?" (signature, issuer, expiry) and rejects bad tokens (`401`);
-- **AuthorizationPolicy** answers "is a token required, and what does it grant?" — it makes the token mandatory (`403` without one) and authorizes based on claims.
+- **AuthorizationPolicy** answers "is a token required, and what does it grant?" - it makes the token mandatory (`403` without one) and authorizes based on claims.
 
-Both resources live at the infrastructure level — the application doesn't parse or validate JWTs itself.
+Both resources live at the infrastructure level - the application doesn't parse or validate JWTs itself.

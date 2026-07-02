@@ -1,20 +1,20 @@
 [Eng version](README.MD)
 
-# Lab 24 — Ambient: waypoint proxy и L7-авторизация
+# Lab 24 - Ambient: waypoint proxy и L7-авторизация
 
 ## Обзор
 
-В ambient-режиме Istio (см. Lab 09) трафик каждого пода идёт через **ztunnel** —
+В ambient-режиме Istio (см. Lab 09) трафик каждого пода идёт через **ztunnel** -
 пер-нодовый прокси, который даёт L4 mTLS и identity **без sidecar'ов**. Но ztunnel не
 разбирает HTTP: L4-политики (по identity/порту) работают, а L7-правила (HTTP-методы,
-пути, заголовки) — нет.
+пути, заголовки) - нет.
 
-Чтобы применять **L7**-политики в ambient, добавляют **waypoint proxy** — Envoy на уровне
+Чтобы применять **L7**-политики в ambient, добавляют **waypoint proxy** - Envoy на уровне
 namespace (или сервиса), через который ambient-трафик проходит для L7-обработки. Это
 ключевая идея ambient: дешёвый L4 везде (ztunnel) + L7 только там, где нужно (waypoint).
 
 В лабе namespace `app` включён в ambient, в нём работают `ping-pong` и клиент
-`app-client` — **без sidecar'ов**. На worker PC есть `istioctl`.
+`app-client` - **без sidecar'ов**. На worker PC есть `istioctl`.
 
 ```mermaid
 flowchart LR
@@ -64,7 +64,7 @@ spec:
 EOF
 ```
 
-Политика `ALLOW` работает по принципу «что не разрешено — запрещено», поэтому проходит
+Политика `ALLOW` работает по принципу «что не разрешено - запрещено», поэтому проходит
 только `GET`, остальные методы получают `403`.
 
 ## Шаг 3. Проверка
@@ -84,18 +84,18 @@ kubectl exec -n app deploy/app-client -c curl -- \
 ## Как это работает
 
 - **L4 без sidecar (ztunnel)** обслуживает mTLS и identity для всего namespace без
-  прокси в каждом поде — дёшево и всегда включено в ambient.
+  прокси в каждом поде - дёшево и всегда включено в ambient.
 - **Waypoint (L7)** добавляется только там, где нужны HTTP-возможности: L7-авторизация,
   роутинг, ретраи, traffic splitting. За Envoy платите только для этих сервисов.
 - `AuthorizationPolicy` через `targetRefs` привязан к `Gateway` waypoint, поэтому
-  применяется на L7-хопе. Та же политика в sidecar-модели тоже работает — ambient лишь
+  применяется на L7-хопе. Та же политика в sidecar-модели тоже работает - ambient лишь
   переносит точку L7-энфорсмента в waypoint.
-- Слоистая модель (ztunnel для L4 везде, waypoint для L7 по необходимости) — суть
-  ambient: ниже базовая стоимость, чем у sidecar'ов, а L7 — opt-in.
+- Слоистая модель (ztunnel для L4 везде, waypoint для L7 по необходимости) - суть
+  ambient: ниже базовая стоимость, чем у sidecar'ов, а L7 - opt-in.
 
 ## Связь с другими лабами
 
-Lab 09 — основы ambient (ztunnel, L4). Lab 04 — та же `AuthorizationPolicy` в
+Lab 09 - основы ambient (ztunnel, L4). Lab 04 - та же `AuthorizationPolicy` в
 sidecar-модели.
 
 ## Проверка результата
@@ -109,7 +109,7 @@ check_result
 ## Итог
 
 Вы добавили waypoint-прокси в ambient-namespace и применили L7-авторизацию по
-HTTP-методу. Понимание связки «ztunnel (L4) + waypoint (L7)» — ключ к ambient, на который
+HTTP-методу. Понимание связки «ztunnel (L4) + waypoint (L7)» - ключ к ambient, на который
 двигается Istio: минимальные накладные расходы по умолчанию и L7-функции только там, где
 они реально нужны.
 

@@ -1,13 +1,13 @@
 [RU version](README_RU.MD)
 
-# Lab 27 — EnvoyFilter + Lua: custom logic with an inline script
+# Lab 27 - EnvoyFilter + Lua: custom logic with an inline script
 
 ## Overview
 
 Sometimes you need a bit of custom logic in the data plane but a full Wasm module
 (Lab 23) is overkill. Envoy can run **inline Lua scripts** via the
 `envoy.filters.http.lua` HTTP filter, and Istio lets you insert that filter with an
-`EnvoyFilter`. No image, no build — the logic lives right in the YAML.
+`EnvoyFilter`. No image, no build - the logic lives right in the YAML.
 
 In this lab you attach a Lua filter to the ingress gateway that:
 - adds a response header `x-lua-lab: hello-from-lua`;
@@ -102,22 +102,22 @@ curl -s -o /dev/null -w "%{http_code}\n" http://myapp.local:32080/
   built-in **Lua** HTTP filter (`envoy.filters.http.lua`) into the ingress gateway's
   filter chain, right before the router.
 - The Lua script implements two lifecycle callbacks:
-  - `envoy_on_request(request_handle)` — runs per request; can read/modify headers, read
+  - `envoy_on_request(request_handle)` - runs per request; can read/modify headers, read
     the body, or short-circuit with `request_handle:respond(...)`.
-  - `envoy_on_response(response_handle)` — runs per response; here it adds a header.
+  - `envoy_on_response(response_handle)` - runs per response; here it adds a header.
 - `context: GATEWAY` scopes the patch to the ingress gateway. Use `SIDECAR_INBOUND` /
   `SIDECAR_OUTBOUND` to target workload sidecars instead.
 
 ## Lua vs Wasm vs built-in CRDs
 
-- **Inline Lua** — the quickest way to add small custom logic: no image, no build, edit
+- **Inline Lua** - the quickest way to add small custom logic: no image, no build, edit
   the script in YAML. Great for header tweaks, simple request gating, quick experiments.
-- **Wasm** (Lab 23) — for heavier/reusable logic in a real language (Rust/Go), versioned
+- **Wasm** (Lab 23) - for heavier/reusable logic in a real language (Rust/Go), versioned
   and distributed as an OCI image, running in a sandbox.
-- **Built-in CRDs** (`AuthorizationPolicy`, `Telemetry`, ...) — always prefer these
+- **Built-in CRDs** (`AuthorizationPolicy`, `Telemetry`, ...) - always prefer these
   first; reach for Lua/Wasm only when they cannot express what you need.
 
-> `EnvoyFilter` is a low-level, version-sensitive API — Istio warns that its config can
+> `EnvoyFilter` is a low-level, version-sensitive API - Istio warns that its config can
 > change between releases. Keep such patches minimal and test them across upgrades.
 
 ## Check the result
@@ -130,7 +130,7 @@ check_result
 
 ## Summary
 
-You added custom data-plane logic with inline Lua in an `EnvoyFilter` — no image and no
+You added custom data-plane logic with inline Lua in an `EnvoyFilter` - no image and no
 proxy rebuild. It is a handy senior tool for quick traffic tweaks at the mesh edge when
 built-in CRDs fall short and a full Wasm module would be overkill.
 

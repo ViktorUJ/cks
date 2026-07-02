@@ -1,6 +1,6 @@
 [RU version](README_RU.MD)
 
-# Lab 22 — TLS origination: initiate TLS from the mesh
+# Lab 22 - TLS origination: initiate TLS from the mesh
 
 ## Overview
 
@@ -21,7 +21,7 @@ flowchart LR
 
 ## Task
 
-1. Confirm that without origination the request to `httpsvc.external` fails (`400` —
+1. Confirm that without origination the request to `httpsvc.external` fails (`400` -
    plaintext hit the TLS port).
 2. Create a `DestinationRule` for `httpsvc.external.svc.cluster.local` enabling TLS
    origination (`tls.mode: SIMPLE`) on port `80`.
@@ -101,7 +101,7 @@ check_result
 
 You configured mesh-side TLS origination: the app speaks HTTP while the sidecar
 establishes TLS to a TLS-only service. This is a common pattern for integrating with
-external and legacy HTTPS services without changing application code — a key Traffic
+external and legacy HTTPS services without changing application code - a key Traffic
 Management skill.
 
 ## Infrastructure

@@ -1,14 +1,14 @@
 [RU version](README_RU.MD)
 
-# Lab 08 — Observability: Prometheus / Jaeger / Kiali
+# Lab 08 - Observability: Prometheus / Jaeger / Kiali
 
 Imagine several services running in the cluster and suddenly something is "slow". Where exactly? Which service calls which, how many errors, what latency? Istio collects all this telemetry automatically (the sidecar proxy sees every request), but to actually see it you need tools:
-- **Prometheus** — collects and stores metrics (RPS, response codes, latency).
-- **Jaeger** — distributed tracing: the path of a single request through all services.
-- **Kiali** — mesh visualization: service graph, health, traffic flows.
-- **Grafana** — dashboards on top of Prometheus metrics.
+- **Prometheus** - collects and stores metrics (RPS, response codes, latency).
+- **Jaeger** - distributed tracing: the path of a single request through all services.
+- **Kiali** - mesh visualization: service graph, health, traffic flows.
+- **Grafana** - dashboards on top of Prometheus metrics.
 
-In this lab we deploy this stack, generate traffic, and confirm that metrics, traces, and the service graph are actually collected — without any instrumentation of the application code.
+In this lab we deploy this stack, generate traffic, and confirm that metrics, traces, and the service graph are actually collected - without any instrumentation of the application code.
 
 ### How It Works (High-Level Overview)
 
@@ -52,7 +52,7 @@ All telemetry originates in the sidecar proxy: Envoy counts metrics for every re
 
 ## Step 2. Deploy the App and the Entry Point
 
-Deploy a two-tier app: `frontend` calls `ping-pong` on every request. That call produces a two-span trace (frontend → ping-pong) and metrics for both services. A `curl-client` is also deployed — we'll use it to query the Prometheus API from inside the mesh.
+Deploy a two-tier app: `frontend` calls `ping-pong` on every request. That call produces a two-span trace (frontend → ping-pong) and metrics for both services. A `curl-client` is also deployed - we'll use it to query the Prometheus API from inside the mesh.
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/08/k8s-1/scripts/1.yaml
@@ -130,10 +130,10 @@ prometheus-xxxx     2/2   Running
 ```
 
 **What gets installed:**
-- **prometheus.yaml** — Prometheus configured to scrape Istio metrics (`istio_requests_total`, `istio_request_duration_milliseconds`, etc.).
-- **jaeger.yaml** — Jaeger all-in-one; besides the UI it stands up a `zipkin` service in `istio-system` (that's where meshConfig sends spans).
-- **kiali.yaml** — Kiali, which reads metrics from Prometheus and builds the service graph.
-- **grafana.yaml** — Grafana with pre-built Istio dashboards.
+- **prometheus.yaml** - Prometheus configured to scrape Istio metrics (`istio_requests_total`, `istio_request_duration_milliseconds`, etc.).
+- **jaeger.yaml** - Jaeger all-in-one; besides the UI it stands up a `zipkin` service in `istio-system` (that's where meshConfig sends spans).
+- **kiali.yaml** - Kiali, which reads metrics from Prometheus and builds the service graph.
+- **grafana.yaml** - Grafana with pre-built Istio dashboards.
 
 ## Step 4. Enable Tracing (100% sampling)
 
@@ -179,7 +179,7 @@ kubectl exec -n default deploy/curl-client -c curl -- \
   curl -s 'http://prometheus.istio-system:9090/api/v1/query?query=istio_requests_total{destination_service_name="ping-pong"}' | jq '.data.result | length'
 ```
 
-A non-zero result means Prometheus is collecting Istio metrics. Each `istio_requests_total` series is labelled with `source_workload`, `destination_workload`, `response_code`, etc. — these are the mesh's "golden signals".
+A non-zero result means Prometheus is collecting Istio metrics. Each `istio_requests_total` series is labelled with `source_workload`, `destination_workload`, `response_code`, etc. - these are the mesh's "golden signals".
 
 Browser (optional):
 
@@ -226,4 +226,4 @@ You'll see the `ingressgateway → frontend → ping-pong` graph with edges show
 | Kiali | mesh service graph | visual namespace graph |
 | Grafana | dashboards on top of metrics | pre-built Istio dashboards |
 
-**Key takeaway:** Istio gives you observability out of the box — the sidecar proxy automatically exports metrics and spans for **every** request, with no application code changes. The addons (Prometheus/Jaeger/Kiali/Grafana) just collect and visualize that data. The Telemetry API lets you fine-tune what is collected (e.g., the trace sampling rate).
+**Key takeaway:** Istio gives you observability out of the box - the sidecar proxy automatically exports metrics and spans for **every** request, with no application code changes. The addons (Prometheus/Jaeger/Kiali/Grafana) just collect and visualize that data. The Telemetry API lets you fine-tune what is collected (e.g., the trace sampling rate).

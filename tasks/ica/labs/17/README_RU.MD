@@ -1,19 +1,19 @@
 [Eng version](README.MD)
 
-# Lab 17 — Rate Limiting: локальное ограничение запросов через EnvoyFilter
+# Lab 17 - Rate Limiting: локальное ограничение запросов через EnvoyFilter
 
 ## Обзор
 
 Rate limiting (ограничение частоты запросов) защищает сервисы от перегрузки, abuse и
 DoS. В Istio есть два подхода:
 
-- **Local rate limit** — каждый Envoy держит собственный token bucket. Просто, без
+- **Local rate limit** - каждый Envoy держит собственный token bucket. Просто, без
   внешних зависимостей, настраивается через `EnvoyFilter`.
-- **Global rate limit** — Envoy обращается к внешнему rate-limit-сервису (обычно с
+- **Global rate limit** - Envoy обращается к внешнему rate-limit-сервису (обычно с
   Redis), лимит общий для всех реплик.
 
 В этой лабе вы настроите **локальный** rate limit на ingress-gateway: не более 5
-запросов в минуту, остальное — `429 Too Many Requests`.
+запросов в минуту, остальное - `429 Too Many Requests`.
 
 Istio уже установлен (ingress gateway на NodePort `32080`), приложение `ping-pong`
 развёрнуто в namespace `app` и опубликовано через gateway на `http://myapp.local:32080/`.
@@ -105,19 +105,19 @@ done
 
 ## Как это работает
 
-- **`token_bucket`** — `max_tokens: 5`, `tokens_per_fill: 5`, `fill_interval: 60s`:
+- **`token_bucket`** - `max_tokens: 5`, `tokens_per_fill: 5`, `fill_interval: 60s`:
   в корзине 5 токенов, каждые 60с она пополняется до 5. Каждый запрос забирает токен;
-  когда токенов нет — `429`.
-- **`filter_enabled` / `filter_enforced`** — доля запросов, на которых фильтр включён
+  когда токенов нет - `429`.
+- **`filter_enabled` / `filter_enforced`** - доля запросов, на которых фильтр включён
   и реально применяется (здесь по 100%).
-- **context: GATEWAY** — фильтр встраивается в listener ingress-gateway, поэтому лимит
+- **context: GATEWAY** - фильтр встраивается в listener ingress-gateway, поэтому лимит
   действует на весь входящий трафик на границе mesh.
 
 ## Local против Global
 
-- **Local** (эта лаба) — свой token bucket у каждого Envoy. Просто, но при нескольких
+- **Local** (эта лаба) - свой token bucket у каждого Envoy. Просто, но при нескольких
   репликах gateway фактический лимит умножается на их число.
-- **Global** — Envoy вызывает внешний rate-limit-сервис (с Redis), лимит общий для всех
+- **Global** - Envoy вызывает внешний rate-limit-сервис (с Redis), лимит общий для всех
   реплик. Использует фильтр `envoy.filters.http.ratelimit` + ConfigMap с дескрипторами
   и развёрнутый ratelimit-сервис. Нужен, когда требуется точная квота на весь кластер.
 
@@ -131,9 +131,9 @@ check_result
 
 ## Итог
 
-Вы настроили локальный rate limit на ingress-gateway через `EnvoyFilter` — базовый
+Вы настроили локальный rate limit на ingress-gateway через `EnvoyFilter` - базовый
 механизм защиты от перегрузки без внешних зависимостей, и разобрались, чем он отличается
-от глобального. Работа с `EnvoyFilter` — важный senior-навык для тонкой настройки
+от глобального. Работа с `EnvoyFilter` - важный senior-навык для тонкой настройки
 data plane Envoy за пределами стандартных CRD Istio.
 
 ## Инфраструктура

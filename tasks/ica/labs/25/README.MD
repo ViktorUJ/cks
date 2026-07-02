@@ -1,6 +1,6 @@
 [RU version](README_RU.MD)
 
-# Lab 25 — Progressive delivery with Flagger
+# Lab 25 - Progressive delivery with Flagger
 
 ## Overview
 
@@ -28,7 +28,7 @@ flowchart LR
 1. Create a `Canary` resource for `podinfo` with a progressive analysis (weight steps,
    metrics, a load-test webhook).
 2. Wait for Flagger to initialize (a `podinfo-primary` appears).
-3. Trigger a release — update the `podinfo` image to `6.0.1`.
+3. Trigger a release - update the `podinfo` image to `6.0.1`.
 4. Wait for the automated promotion (Flagger copies the new image into `podinfo-primary`).
 
 ## Step 1. Create the Canary
@@ -125,7 +125,7 @@ POD=$(kubectl -n test get pod -l app=flagger-loadtester -o jsonpath='{.items[0].
 kubectl -n test exec -it "$POD" -- hey -z 1m -c 5 -q 10 http://podinfo-canary.test:9898/status/500
 ```
 
-When failed metric checks reach the threshold, Flagger halts and rolls back — traffic
+When failed metric checks reach the threshold, Flagger halts and rolls back - traffic
 returns to the primary, the canary scales to zero, and STATUS becomes `Failed`.
 
 ## How it works
@@ -138,7 +138,7 @@ returns to the primary, the canary scales to zero, and STATUS becomes `Failed`.
 - `podinfo-primary` always holds the "known good" version; live traffic is served by the
   primary until the canary fully passes and is promoted.
 - This turns a risky manual canary (Lab 06 traffic shifting) into an automated,
-  metric-gated release with built-in rollback — the essence of progressive delivery.
+  metric-gated release with built-in rollback - the essence of progressive delivery.
 
 ## Check the result
 

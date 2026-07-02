@@ -1,6 +1,6 @@
 [RU version](README_RU.MD)
 
-# Lab 26 — Dynamic CA: cert-manager + istio-csr
+# Lab 26 - Dynamic CA: cert-manager + istio-csr
 
 ## Overview
 
@@ -62,7 +62,7 @@ istioctl proxy-config secret "$POD" -n app -o json \
 # X509v3 Subject Alternative Name: URI:spiffe://cluster.local/ns/app/sa/default
 ```
 
-The issuer contains `cert-manager` / `istio-ca` — the SVID was signed by your cert-manager
+The issuer contains `cert-manager` / `istio-ca` - the SVID was signed by your cert-manager
 CA, and the SPIFFE identity is intact.
 
 ## How it works

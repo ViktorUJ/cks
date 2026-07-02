@@ -1,6 +1,6 @@
 [RU version](README_RU.MD)
 
-# Lab 20 — mTLS migration: PERMISSIVE → STRICT with zero downtime
+# Lab 20 - mTLS migration: PERMISSIVE → STRICT with zero downtime
 
 ## Overview
 
@@ -11,9 +11,9 @@ plaintext at the same time. That lets you onboard workloads to the mesh graduall
 then safely switch to `STRICT`.
 
 Three workloads are deployed:
-- `ping-pong` in namespace `app` (sidecar injected — the service);
-- `mesh-client` in namespace `app` (sidecar injected — speaks mTLS);
-- `legacy-client` in namespace `legacy` (**no** sidecar — plaintext only).
+- `ping-pong` in namespace `app` (sidecar injected - the service);
+- `mesh-client` in namespace `app` (sidecar injected - speaks mTLS);
+- `legacy-client` in namespace `legacy` (**no** sidecar - plaintext only).
 
 With no `PeerAuthentication`, the default is **PERMISSIVE**: both clients reach the app.
 
@@ -97,10 +97,10 @@ kubectl exec -n legacy deploy/legacy-client -c curl -- \
 
 - **PeerAuthentication** controls how the *server-side* sidecar accepts inbound
   connections:
-  - `PERMISSIVE` (mesh default) — accepts both mTLS and plaintext. This is what makes a
+  - `PERMISSIVE` (mesh default) - accepts both mTLS and plaintext. This is what makes a
     zero-downtime migration possible: onboard workloads gradually while legacy plaintext
     clients keep working.
-  - `STRICT` — mTLS only; plaintext connections are reset.
+  - `STRICT` - mTLS only; plaintext connections are reset.
 - Scope hierarchy: a `PeerAuthentication` in `istio-system` (root) applies mesh-wide; one
   in a namespace overrides it there; one with a `selector` overrides it per workload.
 - **Safe migration recipe**: keep PERMISSIVE, watch

@@ -1,12 +1,12 @@
 [RU version](README_RU.MD)
 
-# Lab 19 — Custom CA: plug your own root + intermediate CA into istiod
+# Lab 19 - Custom CA: plug your own root + intermediate CA into istiod
 
 ## Overview
 
 istiod is the mesh certificate authority (CA): it signs the SPIFFE identity certificates
 (`SVID`) that sidecars use for mTLS. By default istiod generates a **self-signed** CA on
-first start. Production rarely does that — organizations plug in their own PKI so the
+first start. Production rarely does that - organizations plug in their own PKI so the
 whole mesh chains to a root they control (and so multiple clusters can share a common
 root of trust).
 
@@ -30,7 +30,7 @@ flowchart TB
 1. Generate a root CA and an intermediate CA (openssl).
 2. Create a `cacerts` secret in namespace `istio-system` with keys `ca-cert.pem`,
    `ca-key.pem`, `root-cert.pem`, `cert-chain.pem`.
-3. Install Istio (`istioctl install`) — istiod picks up `cacerts` and signs workload
+3. Install Istio (`istioctl install`) - istiod picks up `cacerts` and signs workload
    certificates with the intermediate CA.
 4. Deploy the app and confirm the sidecar's root of trust is your custom CA.
 
@@ -93,7 +93,7 @@ kubectl rollout status deploy/ping-pong -n app
 ```bash
 POD=$(kubectl get pod -n app -l app=ping-pong -o jsonpath='{.items[0].metadata.name}')
 
-# The root of trust the sidecar validates against — should be our custom root
+# The root of trust the sidecar validates against - should be our custom root
 istioctl proxy-config secret "$POD" -n app -o json \
   | jq -r '.dynamicActiveSecrets[] | select(.name=="ROOTCA") | .secret.validationContext.trustedCa.inlineBytes' \
   | base64 -d | openssl x509 -noout -subject -issuer
@@ -111,7 +111,7 @@ istioctl proxy-config secret "$POD" -n app -o json \
 - istiod is the mesh CA: it signs the SPIFFE identity certs (`SVID`) that power mTLS.
 - The **`cacerts`** secret (`ca-cert.pem`, `ca-key.pem`, `root-cert.pem`,
   `cert-chain.pem`) lets you supply your own intermediate CA. istiod then issues workload
-  certs from *your* PKI, so the whole mesh chains to a root you control — essential for
+  certs from *your* PKI, so the whole mesh chains to a root you control - essential for
   integrating with an enterprise PKI or sharing a multi-cluster trust root.
 - istiod still **rotates** workload certificates automatically (short-lived SVIDs); you
   only supply the signing CA.
@@ -136,7 +136,7 @@ check_result
 
 You plugged your own root and intermediate CA into istiod via the `cacerts` secret and
 confirmed workload certificates are issued from your PKI. Managing the mesh CA is a key
-senior/security skill — without it you cannot integrate Istio with a corporate PKI or
+senior/security skill - without it you cannot integrate Istio with a corporate PKI or
 build a shared trust root across clusters.
 
 ## Infrastructure

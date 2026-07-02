@@ -1,11 +1,11 @@
 [RU version](README_RU.MD)
 
-# Lab 21 — Sidecar scoping: limit the proxy configuration scope
+# Lab 21 - Sidecar scoping: limit the proxy configuration scope
 
 ## Overview
 
 By default Istio runs as a "full mesh": every sidecar receives config for **all**
-services in the mesh — even ones it never talks to. In a small cluster that is
+services in the mesh - even ones it never talks to. In a small cluster that is
 invisible, but with thousands of services it means huge Envoy configs, high memory per
 pod, and heavy istiod load on every change.
 
@@ -66,8 +66,8 @@ spec:
 EOF
 ```
 
-- `./*` — every service in the **local** namespace (`app`);
-- `istio-system/*` — the control-plane namespace (needed for telemetry, etc.).
+- `./*` - every service in the **local** namespace (`app`);
+- `istio-system/*` - the control-plane namespace (needed for telemetry, etc.).
 
 A `Sidecar` named `default` with no `workloadSelector` applies to all workloads in the
 namespace.

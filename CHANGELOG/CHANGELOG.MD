@@ -29,6 +29,7 @@
 * Lab 28 Istio.[TCP routing: routing non-HTTP traffic](../tasks/ica/labs/28) is added.
 * Lab 29 Istio.[Ingress TLS: MUTUAL and PASSTHROUGH modes](../tasks/ica/labs/29) is added.
 * Lab 30 Istio.[StatefulSets and headless services in the mesh](../tasks/ica/labs/30) is added.
+* Lab 31 Istio.[Zero-downtime production migration: ingress-nginx to Istio Gateway](../tasks/ica/labs/31) is added.
 ### Improvements
 * ICA labs [01](../tasks/ica/labs/01), [02](../tasks/ica/labs/02) and [03](../tasks/ica/labs/03) are reworked: valid `check_result` tests, reference solutions, per-lab prefixes and region `eu-central-1` / `t3` instances.
 * Lab 07 Istio.[Helm install and Canary upgrade with revisions](../tasks/ica/labs/07): In-Place upgrade section is added.

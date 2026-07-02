@@ -1,20 +1,20 @@
 [RU version](README_RU.MD)
 
-# Lab 29 — Ingress TLS: MUTUAL and PASSTHROUGH modes
+# Lab 29 - Ingress TLS: MUTUAL and PASSTHROUGH modes
 
 ## Overview
 
 In Lab 13 we terminated TLS at the ingress gateway using `SIMPLE` mode. The gateway
 supports other TLS modes too:
 
-- **MUTUAL** — the gateway terminates TLS and **requires a client certificate** (mTLS at
+- **MUTUAL** - the gateway terminates TLS and **requires a client certificate** (mTLS at
   the edge): ideal for partner/B2B APIs where the client must prove its identity.
-- **PASSTHROUGH** — the gateway **does not decrypt**; it forwards the encrypted stream by
+- **PASSTHROUGH** - the gateway **does not decrypt**; it forwards the encrypted stream by
   SNI and the backend terminates TLS (end-to-end encryption).
 
 The lab pre-creates a PKI (server, client, backend certs) and deploys:
-- `ping-pong` (namespace `app`, injected) — the MUTUAL target;
-- `secure-backend` (namespace `backend`, no sidecar) — a TLS-only nginx replying
+- `ping-pong` (namespace `app`, injected) - the MUTUAL target;
+- `secure-backend` (namespace `backend`, no sidecar) - a TLS-only nginx replying
   `secure-ok`, the PASSTHROUGH target.
 
 The ingress gateway listens for HTTPS on NodePort `32443`.
@@ -30,8 +30,8 @@ flowchart LR
 ## Task
 
 1. Create a `Gateway` with two servers on port 443 (selected by SNI):
-   - `myapp.local` — `tls.mode: MUTUAL`, `credentialName: myapp-credential`;
-   - `passthrough.local` — `tls.mode: PASSTHROUGH`.
+   - `myapp.local` - `tls.mode: MUTUAL`, `credentialName: myapp-credential`;
+   - `passthrough.local` - `tls.mode: PASSTHROUGH`.
 2. A `VirtualService` (http) for `myapp.local` → `ping-pong`.
 3. A `VirtualService` (tls, `sniHosts`) for `passthrough.local` → `secure-backend`.
 4. Verify: MUTUAL without a client cert is rejected, with a cert → 200; PASSTHROUGH → 200.
@@ -121,15 +121,15 @@ EOF
 ## Step 4. Verify
 
 ```bash
-# MUTUAL — without a client cert the handshake is rejected
+# MUTUAL - without a client cert the handshake is rejected
 curl -sk -o /dev/null -w "%{http_code}\n" https://myapp.local:32443/        # not 200
 
-# MUTUAL — with the client cert it succeeds
+# MUTUAL - with the client cert it succeeds
 kubectl get secret client-certs -n app -o jsonpath='{.data.client\.crt}' | base64 -d > /tmp/c.crt
 kubectl get secret client-certs -n app -o jsonpath='{.data.client\.key}' | base64 -d > /tmp/c.key
 curl -sk --cert /tmp/c.crt --key /tmp/c.key https://myapp.local:32443/      # 200
 
-# PASSTHROUGH — TLS terminates at the backend
+# PASSTHROUGH - TLS terminates at the backend
 curl -sk https://passthrough.local:32443/                                   # secure-ok
 ```
 

@@ -1,17 +1,17 @@
 [RU version](README_RU.MD)
 
-# Lab 16 — Kubernetes Gateway API: ingress routing with Gateway + HTTPRoute
+# Lab 16 - Kubernetes Gateway API: ingress routing with Gateway + HTTPRoute
 
 ## Overview
 
-Istio has traditionally managed ingress traffic through its own CRDs — `Gateway`
+Istio has traditionally managed ingress traffic through its own CRDs - `Gateway`
 (networking.istio.io) and `VirtualService`. The industry is gradually moving to the
-**Kubernetes Gateway API** — a vendor-neutral standard (`gateway.networking.k8s.io`)
+**Kubernetes Gateway API** - a vendor-neutral standard (`gateway.networking.k8s.io`)
 that Istio fully implements and considers the future API for traffic management.
 
 In this lab you configure the same ingress routing, but with the Gateway API:
-- `Gateway` — the entry point (a listener on a port/protocol);
-- `HTTPRoute` — routing rules (by host, path, headers, weights).
+- `Gateway` - the entry point (a listener on a port/protocol);
+- `HTTPRoute` - routing rules (by host, path, headers, weights).
 
 Istio is already installed (`default` profile), the Gateway API CRDs (`v1.2.1`) are
 applied, and the `ping-pong` app (two versions v1/v2) is deployed in namespace `app`.

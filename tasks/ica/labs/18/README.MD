@@ -1,11 +1,11 @@
 [RU version](README_RU.MD)
 
-# Lab 18 — Telemetry API: access logs and distributed tracing
+# Lab 18 - Telemetry API: access logs and distributed tracing
 
 ## Overview
 
 The **Telemetry API** (`telemetry.istio.io`) is the modern, declarative way to manage
-mesh telemetry — access logs, metrics, and traces. It replaces the older `meshConfig`
+mesh telemetry - access logs, metrics, and traces. It replaces the older `meshConfig`
 and `EnvoyFilter` approaches and supports a scope hierarchy:
 
 - a `Telemetry` in the root namespace (`istio-system`) applies mesh-wide;
@@ -119,10 +119,10 @@ kubectl -n istio-system port-forward svc/tracing 16686:80
   production to control overhead).
 
 > **Production note.** The `envoy` provider writes access logs to the **`istio-proxy`
-> container stdout** — you can only read them locally via
+> container stdout** - you can only read them locally via
 > `kubectl logs -n app <pod> -c istio-proxy`. That is handy for debugging, but stdout is
 > ephemeral: logs are lost when the pod restarts or is deleted, and you cannot search or
-> alert on them centrally. In a real environment you add log collection on top — a
+> alert on them centrally. In a real environment you add log collection on top - a
 > per-node agent (**Fluent Bit / Fluentd / Vector**) tails container stdout and ships it
 > to a central store (**Loki, Elasticsearch/OpenSearch, CloudWatch Logs**, etc.) where
 > logs are retained, searched, and drive alerting. The same applies to traces: **Jaeger**
@@ -139,8 +139,8 @@ check_result
 
 ## Summary
 
-You learned the Telemetry API — the single declarative interface for logs, metrics, and
-traces — and configured real collection: access logs in the sidecar stdout and
+You learned the Telemetry API - the single declarative interface for logs, metrics, and
+traces - and configured real collection: access logs in the sidecar stdout and
 distributed traces in Jaeger through the `zipkin` provider. For a senior DevOps this is
 a key tool for observability control without editing `meshConfig` or relying on fragile
 `EnvoyFilter` patches.
