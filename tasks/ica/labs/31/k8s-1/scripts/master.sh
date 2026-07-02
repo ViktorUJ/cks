@@ -43,4 +43,4 @@ istioctl install -f /root/istio-install.yaml -y
 # Migrating the legacy ingress-nginx rules to an Istio Gateway + VirtualServices
 # (multi-host, path-based and header-based routing) is the task — see README.MD.
 until kubectl get ns istio-system >/dev/null 2>&1; do sleep 2; done
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/31/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-152/tasks/ica/labs/31/k8s-1/scripts/1.yaml
