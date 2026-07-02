@@ -108,6 +108,7 @@
 | **28** | [TCP routing: routing non-HTTP traffic](../tasks/ica/labs/28/README.MD) |
 | **29** | [Ingress TLS: MUTUAL and PASSTHROUGH modes](../tasks/ica/labs/29/README.MD) |
 | **30** | [StatefulSets and headless services in the mesh](../tasks/ica/labs/30/README.MD) |
+| **31** | [Zero-downtime production migration: ingress-nginx to Istio Gateway](../tasks/ica/labs/31/README.MD) |
 
 
 ## EKS labs
