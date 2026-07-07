@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.2 (07.07.2026)
+### Features
+* Lab 32 Istio.[gRPC: per-request load balancing, port naming, retries and timeouts](../tasks/ica/labs/32) is added.
+
 ## 0.32.1 (03.07.2026)
 ### Features
 * Lab 04 Istio.[Zero Trust: mTLS and AuthorizationPolicy](../tasks/ica/labs/04) is added.

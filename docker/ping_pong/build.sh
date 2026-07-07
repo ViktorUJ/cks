@@ -38,33 +38,33 @@ build_cross_binaries() {
 
       # Build for Linux (amd64)
       CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-      go build -ldflags='-w -s' -o ../dist/ping-pong-linux-amd64 app.go
+      go build -ldflags='-w -s' -o ../dist/ping-pong-linux-amd64 .
 
       # Build for Linux (arm64)
       CGO_ENABLED=0 GOOS=linux GOARCH=arm64 \
-      go build -ldflags='-w -s' -o ../dist/ping-pong-linux-arm64 app.go
+      go build -ldflags='-w -s' -o ../dist/ping-pong-linux-arm64 .
 
       # Build for Windows (amd64)
       CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
-      go build -ldflags='-w -s' -o ../dist/ping-pong-windows-amd64.exe app.go
+      go build -ldflags='-w -s' -o ../dist/ping-pong-windows-amd64.exe .
 
       # Build for Windows (arm64)
       CGO_ENABLED=0 GOOS=windows GOARCH=arm64 \
-      go build -ldflags='-w -s' -o ../dist/ping-pong-windows-arm64.exe app.go
+      go build -ldflags='-w -s' -o ../dist/ping-pong-windows-arm64.exe .
 
       # Build for macOS (darwin) amd64
      # CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 \
-     # go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-amd64 app.go
+     # go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-amd64 .
 
       # Build for macOS (darwin) arm64
      # CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 \
-     # go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-arm64 app.go
+     # go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-arm64 .
     "
    cd app
    go mod tidy
-   CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-amd64 app.go
+   CGO_ENABLED=1 GOOS=darwin GOARCH=amd64  go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-amd64 .
    chmod +x ../dist/ping-pong-darwin-amd64
-   CGO_ENABLED=1 GOOS=darwin GOARCH=arm64  go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-arm64 app.go
+   CGO_ENABLED=1 GOOS=darwin GOARCH=arm64  go build -ldflags='-w -s' -o ../dist/ping-pong-darwin-arm64 .
    chmod +x ../dist/ping-pong-darwin-arm64
    cd ..
 

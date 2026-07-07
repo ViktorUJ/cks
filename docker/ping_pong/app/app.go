@@ -1030,6 +1030,10 @@ func osInfoHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	var err error
 
+	// gRPC client mode: `app -grpc-client -target host:port ...` runs the
+	// client load generator and exits before any server startup.
+	runGRPCClientIfRequested()
+
 	sendLog(fmt.Sprintf("DELAY START %v  , second", parsedDelay))
 	time.Sleep(time.Duration(parsedDelay) * time.Second)
 
@@ -1038,6 +1042,7 @@ func main() {
 	go metricsHandler()
 	go memoryUsage()
 	go cpuUsage()
+	go startGRPCServer()
 
 	http.HandleFunc("/", requestHandler)
 	http.HandleFunc("/ping-pong-api/getVar", getVarHandler)

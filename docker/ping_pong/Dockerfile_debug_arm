@@ -5,14 +5,14 @@ RUN apk update && apk add --no-cache git
 WORKDIR $GOPATH/src/mypackage/myapp/
 COPY app/ .
 RUN go mod tidy
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o app app.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o app .
 
 # hadolint ignore=FromPlatformFlagConstDisallowed
 FROM --platform=linux/arm64 redis:7-bookworm AS redis-builder
 
 FROM --platform=linux/arm64 amazon/aws-cli:2.34.37
 COPY yum.repos /etc/yum.repos.d/
-RUN yum install jq bc mariadb105 postgresql15 nc vim  tar git wget make bind-utils iputils  -y  && \
+RUN yum install jq bc mariadb105 postgresql15 nc vim  tar git wget make bind-utils iputils bash-completion  -y  && \
     curl -LO https://dl.k8s.io/release/v1.36.0/bin/linux/arm64/kubectl && \
     chmod +x ./kubectl && \
     mv kubectl /usr/local/bin/kubectl && \
@@ -44,7 +44,21 @@ COPY --from=redis-builder /usr/local/bin/redis-cli /usr/local/bin/redis-cli
 COPY ./redis/redis_scan.sh /usr/local/bin/redis_scan
 RUN chmod +x /usr/local/bin/redis_scan
 
-COPY ./k8i/k8i.sh /usr/local/bin/k8i.sh
-RUN echo 'source /usr/local/bin/k8i.sh' >> /root/.bashrc
+# Install kubectl-k8i via krew (https://github.com/ViktorUJ/kubectl-k8i)
+RUN set -eux; \
+    export KREW_ROOT=/root/.krew; \
+    cd /tmp; \
+    curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/krew-linux_arm64.tar.gz"; \
+    tar zxvf krew-linux_arm64.tar.gz; \
+    ./krew-linux_arm64 install krew; \
+    export PATH="$KREW_ROOT/bin:$PATH"; \
+    kubectl krew install k8i; \
+    kubectl k8i completion > /usr/local/bin/kubectl_complete-k8i; \
+    chmod +x /usr/local/bin/kubectl_complete-k8i; \
+    rm -rf /tmp/krew-linux_arm64*
+RUN { \
+      echo 'export PATH="/root/.krew/bin:$PATH"'; \
+      echo 'source <(kubectl completion bash)'; \
+    } >> /root/.bashrc
 
 ENTRYPOINT ["/app"]
