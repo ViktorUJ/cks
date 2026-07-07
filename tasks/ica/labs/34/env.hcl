@@ -1,14 +1,14 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/ica/labs/32/README.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/ica/labs/32/worker/files/solutions/1.MD"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/AG-153/tasks/ica/labs/34/README.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/AG-153/tasks/ica/labs/34/worker/files/solutions/1.MD"
   solutions_video   = "Not ready yet"
   debug_output      = "false"
   region            = "eu-central-1"
   vpc_default_cidr  = "10.10.0.0/16"
   aws               = "default"
-  prefix            = "ica-task32"
+  prefix            = "ica-task34"
   tags = {
-    "env_name"        = "ica-task32"
+    "env_name"        = "ica-task34"
     "env_type"        = "dev"
     "manage"          = "terraform"
     "cost_allocation" = "dev"
@@ -21,9 +21,9 @@ locals {
     type               = "calico" #calico , cilium
     disable_kube_proxy = "false"
   }
-  instance_type        = "t3.medium"
+  instance_type        = "t3.large"
   instance_type_worker = "t3.small"
-  spot_additional_types= [ "t3.medium" ]
+  spot_additional_types= [ "t3.large" ]
   all_spot_subnet      = "true"
   key_name             = ""
   ssh_password_enable  = "true"        # false |  true
@@ -33,7 +33,7 @@ locals {
 
   root_volume = {
     type = "gp3"
-    size = "10"
+    size = "20"
   }
 
   subnets = {

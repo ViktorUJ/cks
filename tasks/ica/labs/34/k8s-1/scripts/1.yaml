@@ -1,0 +1,139 @@
+# ============================================================================
+# ICA Lab 34 — Hardening & threat model
+# ----------------------------------------------------------------------------
+# app namespace (istio-injection=enabled):
+#   - frontend : ping_pong HTTP service on 8080 (the protected workload)
+#   - good     : curl client, SA "good"  -> must be ALLOWED to reach frontend
+#   - bad      : curl client, SA "bad"   -> must be DENIED (403)
+#   - SA mesh-editor : used for the Istio-CRD RBAC task
+# legacy namespace (NOT injected):
+#   - legacy   : curl client with no sidecar -> plaintext & sidecar-bypass tests
+# ============================================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: good
+  namespace: app
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bad
+  namespace: app
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mesh-editor
+  namespace: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: app
+spec:
+  selector:
+    app: frontend
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: good
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: good
+  template:
+    metadata:
+      labels:
+        app: good
+    spec:
+      serviceAccountName: good
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "3650d"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bad
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bad
+  template:
+    metadata:
+      labels:
+        app: bad
+    spec:
+      serviceAccountName: bad
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "3650d"]
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: legacy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy
+  namespace: legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy
+  template:
+    metadata:
+      labels:
+        app: legacy
+    spec:
+      containers:
+      - name: curl
+        image: curlimages/curl:latest
+        command: ["sleep", "3650d"]

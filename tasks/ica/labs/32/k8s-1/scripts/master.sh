@@ -27,4 +27,4 @@ istioctl install --set profile=default -y
 # long-lived HTTP/2 connection to one pod. Fixing the port naming and adding
 # retries/timeout is the task of this lab — see README.MD.
 until kubectl get ns istio-system >/dev/null 2>&1; do sleep 2; done
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-153/tasks/ica/labs/32/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/32/k8s-1/scripts/1.yaml

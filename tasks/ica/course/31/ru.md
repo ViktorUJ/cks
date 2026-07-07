@@ -176,11 +176,10 @@ Gatekeeper audit для соответствия политикам, плюс о
 
 ## Практика
 
-Отдельная лаба по харденингу **планируется**: включение STRICT mTLS и default-deny,
-контроль egress, ограничение прав на Istio-CRD, политики OPA Gatekeeper, проверка
-устойчивости к обходу sidecar.
+Отработайте харденинг на практике: STRICT mTLS и default-deny, контроль egress, ограничение
+прав на Istio-CRD, политики OPA Gatekeeper и устойчивость к обходу sidecar (NetworkPolicy).
 
-🧪 Лаба: **TODO**.
+🧪 Лаба 34: [tasks/ica/labs/34](../../labs/34/README_RU.MD)
 
 ---
 [Оглавление](../README.md) · [Глава 30](../30/ru.md) · [Глава 32](../32/ru.md)
