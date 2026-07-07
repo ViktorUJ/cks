@@ -41,4 +41,4 @@ until kubectl get ns istio-system >/dev/null 2>&1; do sleep 2; done
 # Label istio-system so it stays discovered once the student enables
 # discoverySelectors matching label mesh=enabled.
 kubectl label ns istio-system mesh=enabled --overwrite
-kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/AG-153/tasks/ica/labs/33/k8s-1/scripts/1.yaml
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/33/k8s-1/scripts/1.yaml
