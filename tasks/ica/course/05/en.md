@@ -581,4 +581,4 @@ split traffic by service version and by HTTP header.
 🧪 Lab 02: [tasks/ica/labs/02](../../labs/02/README.MD)
 
 ---
-[Contents](../README.md) · [Chapter 4](../04/en.md) · [Chapter 6](../06/ru.md)
+[Contents](../README.md) · [Chapter 4](../04/en.md) · [Chapter 6](../06/en.md)

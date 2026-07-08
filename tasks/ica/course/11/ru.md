@@ -1,3 +1,5 @@
+[Eng version](en.md)
+
 # Глава 11. Kubernetes Gateway API
 
 > **Что дальше.** В главах 5-10 мы управляли трафиком через ресурсы Istio: Gateway и
@@ -40,7 +42,35 @@
 `GRPCRoute`. Идея та же, что и в Istio: отдельно «что слушаем» (Gateway), отдельно «куда
 направляем» (Route).
 
-## 11.3. Gateway и HTTPRoute на примере
+## 11.3. Установка CRD Gateway API
+
+Важный практический момент, о который часто спотыкаются: ресурсы Gateway API - это **CRD,
+которых по умолчанию в кластере может не быть**. Istio реализует стандарт, но сами
+определения (`GatewayClass`, `Gateway`, `HTTPRoute`…) должно поставить или сообщество, или
+Istio. Если CRD не установлены, ваши манифесты просто не применятся.
+
+Проверить наличие:
+
+```bash
+kubectl get crd gateways.gateway.networking.k8s.io
+```
+
+Если CRD нет, поставьте их из официального релиза стандарта (канал `standard` содержит
+стабильные ресурсы, `experimental` - ещё и `TCPRoute`/`TLSRoute` и прочее):
+
+```bash
+kubectl apply -f \
+  https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.0/standard-install.yaml
+```
+
+Istio ставит `GatewayClass` с именем `istio` автоматически при установке (istiod следит за
+CRD и создаёт класс). Проверить, что класс на месте:
+
+```bash
+kubectl get gatewayclass istio
+```
+
+## 11.4. Gateway и HTTPRoute на примере
 
 Поднимем шлюз на порту 80 и направим весь трафик на сервис `reviews`.
 
@@ -97,24 +127,165 @@ flowchart LR
 автоматически развернуть под этот шлюз отдельный Envoy-деплоймент. Не нужно заранее
 ставить ingress gateway - он появляется под конкретный Gateway.
 
-## 11.4. Сравнение с Istio API
+## 11.5. TLS: HTTPS на Gateway API
+
+Edge TLS из главы 9 в Gateway API описывается своими полями. HTTPS-listener объявляют с
+`protocol: HTTPS` и блоком `tls`, где режим и ссылка на Secret с сертификатом:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: my-gateway
+  namespace: istio-system
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: https
+    port: 443
+    protocol: HTTPS
+    hostname: myapp.example.com
+    tls:
+      mode: Terminate                # шлюз терминирует TLS (аналог SIMPLE в Istio)
+      certificateRefs:
+      - kind: Secret
+        name: myapp-cert             # тот же tls-Secret, что и в главе 9
+    allowedRoutes:
+      namespaces:
+        from: All                    # какие namespace могут привязывать маршруты (см. 11.7)
+```
+
+Соответствие режимов главе 9:
+
+- **`mode: Terminate`** - шлюз расшифровывает TLS (как `SIMPLE`/`MUTUAL` в Istio). Клиентский
+  сертификат (аналог `MUTUAL`) настраивается через `frontendValidation`/`BackendTLSPolicy` и
+  зависит от версии стандарта.
+- **`mode: Passthrough`** - шлюз не расшифровывает, трафик идёт насквозь по SNI (как
+  `PASSTHROUGH`); для него используют `TLSRoute`, а не `HTTPRoute`.
+
+Сертификат хранится в обычном Kubernetes `Secret` типа `tls` - его так же можно выпускать
+cert-manager'ом (глава 9), просто маршрут теперь ссылается на него через `certificateRefs`,
+а не через `credentialName`.
+
+## 11.6. Canary и фильтры в HTTPRoute
+
+Взвешенное разделение трафика (canary из главы 6) в Gateway API - это **стандартная**
+возможность, а не расширение: у `backendRefs` есть поле `weight`.
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: reviews-canary
+spec:
+  parentRefs:
+  - name: my-gateway
+  rules:
+  - backendRefs:
+    - name: reviews-v1       # 90% трафика на v1
+      port: 8080
+      weight: 90
+    - name: reviews-v2       # 10% на v2
+      port: 8080
+      weight: 10
+```
+
+Обратите внимание: в Gateway API нет subsets/DestinationRule, поэтому разные версии - это
+**разные Kubernetes Service** (`reviews-v1`, `reviews-v2`), а не subset одного сервиса.
+
+HTTPRoute умеет менять запросы через **фильтры** (`filters`) - это аналог части
+возможностей VirtualService:
+
+```yaml
+  rules:
+  - filters:
+    - type: RequestHeaderModifier      # добавить/убрать заголовки
+      requestHeaderModifier:
+        add:
+        - name: x-env
+          value: prod
+    - type: RequestMirror              # зеркалирование трафика (глава 6)
+      requestMirror:
+        backendRef:
+          name: reviews-shadow
+          port: 8080
+    backendRefs:
+    - name: reviews
+      port: 8080
+```
+
+Полезные типы фильтров: `RequestHeaderModifier`/`ResponseHeaderModifier` (заголовки),
+`RequestRedirect` (редиректы, в т.ч. HTTP→HTTPS), `URLRewrite` (переписывание пути/хоста),
+`RequestMirror` (зеркалирование). А вот **fault injection** в стандарте нет - это остаётся
+эксклюзивом Istio API (глава 8).
+
+## 11.7. Маршруты между namespace: allowedRoutes и ReferenceGrant
+
+Сильная сторона Gateway API - явное и безопасное разделение прав между namespace. Здесь два
+механизма.
+
+**`allowedRoutes` на listener** - Gateway сам решает, из каких namespace ему разрешено
+привязывать маршруты (`from: Same` - только свой, `All` - любой, `Selector` - по меткам
+namespace):
+
+```yaml
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            team: frontend      # только маршруты из namespace с этой меткой
+```
+
+**`ReferenceGrant`** - когда ресурс из одного namespace ссылается на ресурс в **другом**
+(например, HTTPRoute в `apps` хочет слать трафик на Service в `data`), это по умолчанию
+запрещено. Разрешение выдаёт `ReferenceGrant` в **целевом** namespace:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-apps-to-data
+  namespace: data              # namespace, где лежит целевой Service
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: apps            # кто ссылается
+  to:
+  - group: ""
+    kind: Service              # на что разрешаем ссылаться
+```
+
+Это защищает от того, чтобы чужой маршрут «увёл» трафик на сервис в вашем namespace без
+вашего согласия - в Istio API такого встроенного механизма нет.
+
+## 11.8. Сравнение с Istio API
 
 | | Istio API | Kubernetes Gateway API |
 |---|-----------|------------------------|
 | Ресурсы входа | `Gateway` + `VirtualService` | `Gateway` + `HTTPRoute` |
 | Привязка маршрута | поле `gateways` в VirtualService | `parentRefs` в Route |
 | Выбор реализации | `selector` на ingress gateway | `gatewayClassName` |
-| Версии/subsets | `DestinationRule` (subsets) | иначе, часть через расширения |
+| Версии/subsets | `DestinationRule` (subsets) | разные Service + `weight` в `backendRefs` |
+| Canary по весам | `VirtualService` weight | `backendRefs.weight` (штатно) |
+| Зеркалирование | `VirtualService` mirror | фильтр `RequestMirror` (штатно) |
+| Fault injection | есть | нет (только Istio) |
+| Политики к бэкенду | `DestinationRule` (LB, circuit breaking) | нет (только Istio) |
+| Разделение прав по namespace | нет встроенного | `allowedRoutes` + `ReferenceGrant` |
 | Стандарт | специфичный для Istio | общий, вендор-нейтральный |
-| Зрелость в Istio | стабильный, все возможности | поддерживается, активно растёт |
-| Продвинутые фичи | mirror, fault, сложные match - всё есть | базовое есть, часть через расширения |
 | Портируемость | только Istio | любой совместимый ingress/mesh |
 
-Главный вывод из таблицы: Gateway API выигрывает в стандартности и портируемости, а
-Istio API - в полноте возможностей (особенно продвинутых: зеркалирование, fault
-injection, тонкая маршрутизация).
+Главный вывод из таблицы: Gateway API выигрывает в стандартности, портируемости и
+разграничении прав между командами, а Istio API - в полноте возможностей у получателя
+(`DestinationRule`: балансировка, circuit breaking, subsets) и в fault injection.
+Зеркалирование и canary по весам есть в обоих API.
 
-## 11.5. Что и когда использовать (best practices)
+## 11.9. Что и когда использовать (best practices)
 
 Практические рекомендации, что выбирать в реальных проектах.
 
@@ -130,11 +301,13 @@ injection, тонкая маршрутизация).
 
 **Оставайтесь на Istio API (VirtualService/DestinationRule), когда:**
 
-- нужны продвинутые фичи: traffic mirroring, fault injection, сложные правила match,
+- нужны фичи, которых в стандарте нет: **fault injection** (глава 8), политики
+  `DestinationRule` (тонкая балансировка, circuit breaking, outlier detection, subsets),
   делегирование маршрутов;
-- у вас уже много рабочих манифестов на Istio API и нет причин их переписывать;
-- нужны политики DestinationRule (тонкая балансировка, circuit breaking, subsets),
-  которых в базовом Gateway API нет.
+- у вас уже много рабочих манифестов на Istio API и нет причин их переписывать.
+
+(Зеркалирование и canary по весам есть в обоих API, так что ради них переходить или
+оставаться не нужно.)
 
 **Общие правила:**
 
@@ -145,7 +318,7 @@ injection, тонкая маршрутизация).
 - Direction движения индустрии - в сторону Gateway API, поэтому его стоит знать и
   осваивать, даже если сегодня основной трафик у вас на Istio API.
 
-## 11.6. Итоги главы
+## 11.10. Итоги главы
 
 - Kubernetes Gateway API (`gateway.networking.k8s.io`) - вендор-нейтральный стандарт
   управления входящим трафиком; Istio его реализует.
@@ -154,19 +327,32 @@ injection, тонкая маршрутизация).
   и другие Route (куда направить).
 - Привязка маршрута к шлюзу - через `parentRefs`, выбор реализации - через
   `gatewayClassName: istio`.
-- Istio API полнее по возможностям (mirror, fault, DestinationRule), Gateway API лучше
-  по стандартности и портируемости.
+- CRD Gateway API по умолчанию может не быть - их ставят отдельно (канал `standard`), а
+  `GatewayClass istio` Istio создаёт сам.
+- TLS: HTTPS-listener с `tls.mode: Terminate`/`Passthrough` и ссылкой на Secret через
+  `certificateRefs` (аналог `credentialName`); сертификаты так же выпускает cert-manager.
+- Canary по весам (`backendRefs.weight`, но версии - это разные Service) и зеркалирование
+  (фильтр `RequestMirror`) есть штатно; fault injection и политики `DestinationRule` -
+  только в Istio API.
+- Разграничение прав между namespace: `allowedRoutes` на listener и `ReferenceGrant` для
+  cross-namespace ссылок - встроенного аналога в Istio API нет.
 - Best practice: Gateway API для нового ingress, стандартных сценариев и ambient; Istio
-  API - когда нужны продвинутые фичи; не смешивать оба для одного маршрута.
+  API - когда нужны fault injection или политики DestinationRule; не смешивать оба для
+  одного маршрута.
 
-## 11.7. Вопросы для самопроверки
+## 11.11. Вопросы для самопроверки
 
 1. Какую проблему решает Kubernetes Gateway API по сравнению с Istio API?
 2. Чем отличаются два ресурса с именем `Gateway`?
 3. Какие ресурсы Gateway API соответствуют Istio Gateway и VirtualService?
 4. За что отвечают `gatewayClassName` и `parentRefs`?
-5. В каких случаях лучше остаться на Istio VirtualService/DestinationRule?
+5. В каких случаях лучше остаться на Istio VirtualService/DestinationRule? Каких фич нет в
+   Gateway API?
 6. Почему не стоит описывать один маршрут одновременно в обоих API?
+7. Как в Gateway API настроить HTTPS и canary по весам? Чем canary отличается от Istio
+   (что с subsets)?
+8. Зачем нужны `allowedRoutes` и `ReferenceGrant`? Какую проблему безопасности они решают?
+9. Что проверить, если манифесты Gateway API не применяются в кластере?
 
 ## Практика
 

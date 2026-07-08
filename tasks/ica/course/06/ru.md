@@ -1,3 +1,5 @@
+[Eng version](en.md)
+
 # Глава 6. Релизные стратегии: canary, header-routing, traffic mirroring
 
 > **Что дальше.** В главе 5 мы разобрали базовые ресурсы: Gateway, VirtualService,

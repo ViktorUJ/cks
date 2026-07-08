@@ -22,7 +22,7 @@
 7. [Балансировка нагрузки и locality-aware failover](07/ru.md)
 8. [Устойчивость: fault injection, timeouts, retries, circuit breaking](08/ru.md)
 9. [Edge TLS: ingress в режимах SIMPLE, MUTUAL, PASSTHROUGH](09/ru.md)
-10. [Маршрутизация TCP и gRPC трафика](10/ru.md)
+10. [Маршрутизация TCP, gRPC и WebSocket](10/ru.md)
 11. [Kubernetes Gateway API](11/ru.md)
 12. [Egress: ServiceEntry, egress gateway, TLS origination](12/ru.md)
 13. [mTLS и PeerAuthentication: модель Zero Trust](13/ru.md)

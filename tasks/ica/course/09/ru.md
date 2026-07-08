@@ -1,3 +1,5 @@
+[Eng version](en.md)
+
 # Глава 9. Edge TLS: ingress в режимах SIMPLE, MUTUAL, PASSTHROUGH
 
 > **Что дальше.** До сих пор трафик снаружи приходил к нам по обычному HTTP. В
@@ -202,7 +204,199 @@ spec:
 только по клиентским сертификатам. `PASSTHROUGH` - когда шлюз не должен видеть
 содержимое и TLS обязан дойти до бэкенда нетронутым.
 
-## 9.8. Итоги главы
+## 9.8. Где терминировать TLS: на NLB (ACM) или в Istio
+
+Всё, что было выше, - это терминация TLS **в Istio** (шлюз расшифровывает трафик по
+сертификату из Secret). Но на AWS есть альтернатива: повесить готовый сертификат из **AWS
+Certificate Manager (ACM)** прямо на Network Load Balancer, и тогда TLS терминируется **на
+балансировщике**, ещё до Envoy. Технически это делается аннотациями к Service шлюза
+(`aws-load-balancer-ssl-cert` + `aws-load-balancer-ssl-ports`) - подробный разбор аннотаций
+в [главе 5](../05/ru.md). Здесь важно понять, **что выбрать**.
+
+```mermaid
+flowchart LR
+    C1["Клиент"] -->|"HTTPS"| NLB1["NLB<br>ACM терминирует TLS"]
+    NLB1 -->|"TCP, уже расшифровано"| GW1["Ingress Gateway"]
+    C2["Клиент"] -->|"HTTPS/TLS"| NLB2["NLB<br>просто проброс TCP"]
+    NLB2 -->|"TLS насквозь"| GW2["Ingress Gateway<br>терминирует TLS"]
+    style C1 fill:#673ab7,color:#fff
+    style C2 fill:#673ab7,color:#fff
+    style NLB1 fill:#f4b400,color:#000
+    style NLB2 fill:#326ce5,color:#fff
+    style GW1 fill:#0f9d58,color:#fff
+    style GW2 fill:#0f9d58,color:#fff
+```
+
+**Вариант A - TLS на NLB (offload через ACM).**
+
+Плюсы:
+
+- Сертификатом управляет AWS: ACM сам продлевает его, ключ не покидает AWS, в кластер
+  ничего грузить не нужно.
+- Разгрузка шлюза: криптографию делает NLB, Envoy получает уже расшифрованный трафик.
+- Простая интеграция с Route 53/ACM (DNS-валидация сертификата в пару кликов).
+
+Минусы:
+
+- Между NLB и шлюзом трафик идёт **без этого TLS** (защищён только границами VPC). Для
+  сквозного шифрования это не годится.
+- Istio **не видит** исходный TLS: нельзя маршрутизировать по SNI, нельзя сделать `MUTUAL`
+  (проверку клиентского сертификата) на шлюзе, `PASSTHROUGH` теряет смысл.
+- Сертификат должен лежать в ACM. Свой сертификат (от своего CA или Let's Encrypt) в ACM
+  **импортировать можно**, но такие импортированные сертификаты ACM **не продлевает
+  автоматически** - их придётся перезаливать вручную (автопродление работает только для
+  сертификатов, выпущенных самим ACM).
+
+**Вариант B - TLS в Istio (SIMPLE/MUTUAL/PASSTHROUGH), NLB в режиме проброса TCP.**
+
+Плюсы:
+
+- Полный контроль: `MUTUAL` (mTLS на входе), `PASSTHROUGH`, маршрутизация по SNI.
+- Любой источник сертификата: свой CA, ACM Private CA, Let's Encrypt через cert-manager
+  (раздел 9.9).
+- Шифрование доходит до самого mesh, а не обрывается на балансировщике.
+
+Минусы:
+
+- Сертификатами управляете вы сами (или ставите cert-manager - см. ниже).
+- Криптографическая нагрузка ложится на поды шлюза.
+
+| Критерий | TLS на NLB (ACM) | TLS в Istio |
+|----------|------------------|-------------|
+| Кто продлевает сертификат | AWS (ACM) | вы / cert-manager |
+| Сквозное шифрование до mesh | нет | да |
+| `MUTUAL` (клиентский серт) на входе | нет | да |
+| `PASSTHROUGH` / маршрут по SNI | нет | да |
+| Источник сертификата | ACM (выпущенный или импортированный) | любой (CA, ACM PCA, Let's Encrypt) |
+| Автопродление импортированного серта | нет (заливать вручную) | да (cert-manager) |
+| Нагрузка на шлюз | ниже | выше |
+
+Практическое правило: **простой публичный HTTPS на EKS без mTLS на входе** - удобнее и
+дешевле в эксплуатации отдать на NLB+ACM. **Нужен `MUTUAL`, `PASSTHROUGH`, сквозное
+шифрование или сертификат не из ACM** - терминируйте в Istio.
+
+## 9.9. Автоматические сертификаты: cert-manager и Let's Encrypt
+
+Грузить и продлевать сертификаты руками (`kubectl create secret tls ...`) в продакшене
+неудобно и опасно - забудете продлить, и сайт «ляжет». Стандартное решение для Istio -
+[cert-manager](https://cert-manager.io/): он сам получает сертификаты от центра
+сертификации по протоколу **ACME** (самый известный ACME-провайдер - бесплатный **Let's
+Encrypt**), кладёт их в Kubernetes `Secret` и автоматически продлевает до истечения срока.
+
+Схема простая: cert-manager создаёт ровно тот `Secret` (`tls.crt` + `tls.key`), на который
+уже умеет ссылаться Gateway через `credentialName`. Для Istio ничего специального не нужно
+- он просто видит готовый Secret.
+
+```mermaid
+flowchart LR
+    CM["cert-manager"] -->|"ACME challenge"| LE["Let's Encrypt"]
+    LE -->|"выдаёт сертификат"| CM
+    CM -->|"пишет Secret<br>tls.crt + tls.key"| SEC["Secret myapp-cert<br>istio-system"]
+    SEC -->|"credentialName"| GW["Ingress Gateway"]
+    style CM fill:#326ce5,color:#fff
+    style LE fill:#f4b400,color:#000
+    style SEC fill:#0f9d58,color:#fff
+    style GW fill:#673ab7,color:#fff
+```
+
+Сначала описывают источник сертификатов - `ClusterIssuer` (общий на кластер) или `Issuer`
+(в рамках namespace). Пример ACME-issuer для Let's Encrypt с DNS-01 проверкой через Route 53
+(на AWS это надёжнее HTTP-01, потому что не требует доступности порта 80 снаружи):
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+    - dns01:
+        route53:
+          region: eu-central-1        # cert-manager подтверждает владение доменом
+                                       # через запись в Route 53 (нужны IAM-права)
+```
+
+Затем - ресурс `Certificate`, который говорит «хочу сертификат для такого-то домена, положи
+его в такой-то Secret». Secret обязан быть **в namespace шлюза** (`istio-system`), иначе
+Gateway его не увидит:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: myapp-cert
+  namespace: istio-system          # там же, где ingress gateway
+spec:
+  secretName: myapp-cert           # cert-manager создаст этот Secret
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - myapp.example.com
+```
+
+Дальше всё как в разделе 9.3 - Gateway ссылается на этот Secret:
+
+```yaml
+    tls:
+      mode: SIMPLE
+      credentialName: myapp-cert   # Secret, который наполнил cert-manager
+```
+
+Про challenge коротко:
+
+- **DNS-01** (пример выше) - cert-manager создаёт TXT-запись в DNS-зоне (Route 53, Cloud DNS
+  и т.п.). Работает даже для внутренних шлюзов и для wildcard-сертификатов (`*.example.com`).
+- **HTTP-01** - Let's Encrypt проверяет домен, запрашивая файл по `http://<домен>/.well-known/...`.
+  Для этого порт 80 шлюза должен быть доступен из интернета, а challenge-запрос - доходить до
+  solver'а cert-manager; в связке с Istio это настраивается сложнее, поэтому на AWS чаще берут
+  DNS-01.
+
+Плюсы cert-manager+Let's Encrypt: бесплатно, полностью автоматическое продление, единый
+механизм для всех доменов. Минусы: нужно эксплуатировать сам cert-manager, у Let's Encrypt
+есть [лимиты на выпуск](https://letsencrypt.org/docs/rate-limits/) (используйте staging-issuer
+`acme-staging-v02` при отладке), а для DNS-01 нужны права на изменение DNS-зоны.
+
+## 9.10. Best practices
+
+- **Всегда редиректьте HTTP на HTTPS** (`httpsRedirect: true`, раздел 9.4) - никакого
+  открытого HTTP в продакшене.
+- **Задавайте минимальную версию TLS.** По умолчанию берите TLS 1.2 и выше, отключая старые
+  протоколы прямо в сервере Gateway:
+
+  ```yaml
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: myapp-cert
+        minProtocolVersion: TLSV1_2      # запретить TLS 1.0/1.1
+        # cipherSuites: [ECDHE-ECDSA-AES256-GCM-SHA384, ...]  # при необходимости
+  ```
+
+- **Автоматизируйте сертификаты.** Ручной `kubectl create secret tls` - только для лаб и
+  отладки. В продакшене - cert-manager (Let's Encrypt/свой CA) или ACM на NLB.
+- **Не храните приватные ключи в git.** Ключ и сертификат - секреты; в репозитории держат
+  только манифесты `Certificate`/`Issuer`, но не сами ключи.
+- **Отдельный Secret на домен/хост.** Не складывайте несовместимые домены в один сертификат;
+  для набора поддоменов берите wildcard (`*.example.com`) или SAN-сертификат.
+- **Ограничьте доступ к секретам шлюза.** Secret'ы с ключами лежат в namespace шлюза
+  (`istio-system`); закройте доступ к ним RBAC, чтобы читать их могли только те, кому нужно.
+- **Мониторьте срок действия.** Даже с автопродлением следите за датой истечения (алерт за
+  N дней) - на случай, если автоматика сломалась.
+- **Разделяйте публичный и внутренний трафик** по разным ingress gateway (глава 5): у них
+  разные сертификаты и разные требования к TLS.
+- **HSTS для публичных сайтов.** Заголовок `Strict-Transport-Security` заставляет браузер
+  всегда ходить по HTTPS; его добавляют через `headers` в VirtualService или EnvoyFilter.
+
+## 9.11. Итоги главы
 
 - Трафик на входе в кластер надо шифровать; TLS настраивается в `Gateway` в блоке
   `tls`.
@@ -213,15 +407,27 @@ spec:
 - **MUTUAL** - шлюз дополнительно проверяет клиентский сертификат; в Secret нужен CA.
 - **PASSTHROUGH** - шлюз не расшифровывает трафик, терминирует его бэкенд; маршрутизация
   только по SNI (нужен VirtualService с `tls` и `sniHosts`).
+- TLS можно терминировать **на NLB** готовым сертификатом из ACM (offload, AWS сам
+  продлевает) или **в Istio** (полный контроль, mTLS/passthrough, любой источник серта) -
+  выбор зависит от того, нужны ли `MUTUAL`, `PASSTHROUGH` и сквозное шифрование.
+- В продакшене сертификаты выпускают автоматически: **cert-manager + Let's Encrypt** (ACME,
+  DNS-01 на AWS) кладёт готовый Secret, на который ссылается `credentialName`.
+- Best practices: редирект на HTTPS, `minProtocolVersion: TLSV1_2`, автоматизация выпуска,
+  ключи не в git, RBAC на секреты, мониторинг срока действия, HSTS.
 - Edge TLS это не то же самое, что mTLS внутри mesh (глава 12).
 
-## 9.9. Вопросы для самопроверки
+## 9.12. Вопросы для самопроверки
 
 1. Что значит «терминация TLS» и чем в этом смысле отличаются SIMPLE и PASSTHROUGH?
 2. Где должен лежать Secret с сертификатом и как Gateway на него ссылается?
 3. Чем MUTUAL отличается от SIMPLE и что дополнительно нужно в Secret?
 4. Почему при PASSTHROUGH нельзя маршрутизировать по HTTP-путям, только по SNI?
 5. Как настроить автоматический редирект с HTTP на HTTPS?
+6. В чём разница между терминацией TLS на NLB (ACM) и в Istio? Когда какой вариант выбрать?
+7. Как cert-manager с Let's Encrypt выдаёт сертификат для Istio Gateway и почему на AWS
+   удобнее DNS-01, а не HTTP-01?
+8. Какие меры безопасности стоит применить к edge TLS (версия протокола, хранение ключей,
+   доступ к секретам)?
 
 ## Практика
 
