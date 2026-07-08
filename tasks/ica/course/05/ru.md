@@ -1,3 +1,5 @@
+[Eng version](en.md)
+
 # Глава 5. Управление трафиком: Gateway, VirtualService, DestinationRule
 
 > **Что дальше.** Мы установили Istio и разобрались с data plane. Теперь начинается
@@ -70,6 +72,268 @@ spec:
 
 Важно понять: Gateway только открывает порт и говорит «я готов принять трафик для
 myapp.local». Куда его потом отправить - решает VirtualService.
+
+### Несколько ingress gateway: разделение трафика
+
+`selector` в Gateway показывает, к какому именно Envoy-шлюзу применить правила. По
+умолчанию это один шлюз `istio-ingressgateway` (метка `istio: ingressgateway`). Но
+шлюзов может быть **несколько**: вы разворачиваете дополнительные ingress gateway - это
+отдельные Deployment'ы Envoy со своими метками и своим Kubernetes Service - и
+направляете разный трафик на разные шлюзы, указывая нужную метку в `selector`.
+
+Зачем это нужно:
+
+- **Разделить публичный и внутренний трафик.** Один шлюз смотрит в интернет, другой -
+  только во внутреннюю сеть; они не пересекаются.
+- **Изоляция команд/арендаторов.** У каждой команды свой шлюз со своими лимитами и
+  сертификатами.
+- **Разные требования.** Отдельный шлюз под gRPC/TCP, под другой набор TLS-сертификатов
+  или под отдельное масштабирование.
+
+Развернуть второй шлюз можно через IstioOperator, добавив ещё один ingress gateway со
+своим именем и меткой:
+
+```yaml
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  components:
+    ingressGateways:
+    - name: istio-ingressgateway          # публичный (по умолчанию)
+      enabled: true
+    - name: istio-ingressgateway-internal # дополнительный, внутренний
+      enabled: true
+      label:
+        istio: ingressgateway-internal    # своя метка для selector
+```
+
+Каждая запись в `ingressGateways` - это самостоятельный шлюз. При `istioctl install`
+Istio создаёт для него в namespace `istio-system` полный набор объектов:
+
+- **Deployment** с подами Envoy (имя = `name`, здесь `istio-ingressgateway-internal`);
+- **Service** того же имени - через него трафик попадает на эти поды (тип берётся из
+  `k8s.service.type`, по умолчанию `LoadBalancer`);
+- **ServiceAccount**, HPA/PodDisruptionBudget и т.п.
+
+Метка из `label` (`istio: ingressgateway-internal`) вешается на поды Deployment -
+именно по ней Gateway через `selector` находит нужный шлюз. Проверить, что шлюз
+появился, можно так:
+
+```bash
+kubectl -n istio-system get deploy,svc,pod -l istio=ingressgateway-internal
+```
+
+```
+NAME                                             READY   UP-TO-DATE   AVAILABLE
+deployment.apps/istio-ingressgateway-internal    1/1     1            1
+
+NAME                                    TYPE           CLUSTER-IP     EXTERNAL-IP      PORT(S)
+service/istio-ingressgateway-internal   LoadBalancer   10.100.5.6     <lb-address>     80:31234/TCP
+
+NAME                                                 READY   STATUS
+pod/istio-ingressgateway-internal-6c9f4b8d7-xk2mn    1/1     Running
+```
+
+То есть «шлюз» - это пара **Deployment (поды Envoy) + Service**. Если Service имеет тип
+`LoadBalancer`, облако (в нашем случае AWS) создаёт под него балансировщик и проставляет
+его адрес в `EXTERNAL-IP`.
+
+Теперь в Gateway можно выбрать, какой шлюз слушает данный хост:
+
+```yaml
+# публичное приложение — через внешний шлюз
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: public-gateway
+spec:
+  selector:
+    istio: ingressgateway            # внешний шлюз
+  servers:
+  - port: { number: 80, name: http, protocol: HTTP }
+    hosts: ["shop.example.com"]
+---
+# внутреннее приложение — через внутренний шлюз
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: internal-gateway
+spec:
+  selector:
+    istio: ingressgateway-internal   # внутренний шлюз
+  servers:
+  - port: { number: 80, name: http, protocol: HTTP }
+    hosts: ["admin.internal"]
+```
+
+Так один кластер обслуживает и публичный, и внутренний трафик через разные «двери», а
+VirtualService привязывается к нужному шлюзу через поле `gateways`.
+
+### Пример для AWS VPC: public и private подсети
+
+Типичная AWS VPC состоит из двух видов подсетей:
+
+- **public** - имеют маршрут в Internet Gateway, ресурсы в них доступны из интернета;
+- **private** - без прямого маршрута в интернет, доступны только внутри VPC (и через
+  VPN/Direct Connect).
+
+Балансировщик AWS создаётся **в подсетях**, и от того, в каких он подсетях, зависит,
+публичный он или внутренний:
+
+- `scheme: internet-facing` → балансировщик ставится в **public** подсети и получает
+  публичный адрес;
+- `scheme: internal` → балансировщик ставится в **private** подсети и резолвится только
+  в приватные IP (из интернета недоступен).
+
+За создание балансировщиков отвечает [AWS Load Balancer
+Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/). Нужные
+подсети он находит по тегам (их обычно ставит установщик кластера, например `eksctl`):
+
+- public: тег `kubernetes.io/role/elb = 1`;
+- private: тег `kubernetes.io/role/internal-elb = 1`;
+- плюс `kubernetes.io/cluster/<cluster-name> = owned` (или `shared`).
+
+Если подсети не тегированы или их надо выбрать явно, подсети задают аннотацией
+`service.beta.kubernetes.io/aws-load-balancer-subnets`.
+
+Разворачиваем два шлюза - интернет-шлюз в public-подсетях и внутренний в private:
+
+```yaml
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+spec:
+  components:
+    ingressGateways:
+    # 1) интернет-шлюз: публичный NLB в PUBLIC подсетях
+    - name: istio-ingressgateway
+      enabled: true
+      # метка по умолчанию istio: ingressgateway
+      k8s:
+        service:
+          type: LoadBalancer
+        serviceAnnotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: external
+          service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+          service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+          # можно указать подсети явно вместо тегов:
+          # service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-pub-a,subnet-pub-b
+    # 2) внутренний шлюз: приватный NLB в PRIVATE подсетях
+    - name: istio-ingressgateway-internal
+      enabled: true
+      label:
+        istio: ingressgateway-internal
+      k8s:
+        service:
+          type: LoadBalancer
+        serviceAnnotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: external
+          service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+          service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+          # service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-priv-a,subnet-priv-b
+```
+
+Что означают аннотации:
+
+- **`aws-load-balancer-type`** - выбирает, **какой контроллер** провижинит
+  балансировщик (а не «ALB или NLB»). Значение `external` = современный [AWS Load
+  Balancer Controller](https://kubernetes-sigs.github.io/aws-load-balancer-controller/),
+  и для ресурса **Service** он всегда создаёт **NLB** (Network Load Balancer, L4).
+  Возможные значения: `external` (AWS LBC → NLB), устаревшее `nlb-ip` (тот же AWS LBC с
+  IP-таргетами), `nlb` (in-tree контроллер → NLB). Если аннотацию не ставить вовсе,
+  сработает встроенный in-tree контроллер и создаст устаревший **Classic Load Balancer
+  (CLB)** - поэтому тип указывать нужно. Значения `alb` у этой аннотации **не бывает**:
+  ALB создаётся не из Service, а из ресурса `Ingress` (см. ниже).
+  Не путайте с **ELB** (*Elastic Load Balancing*) - это общее название сервиса AWS, куда
+  входят CLB, ALB и NLB, а не отдельный тип балансировщика.
+- **`aws-load-balancer-nlb-target-type`** - куда слать трафик: `ip` (прямо на IP подов
+  через VPC CNI) или `instance` (на NodePort нод). `ip` эффективнее и сохраняет исходный
+  клиентский IP.
+- **`aws-load-balancer-scheme`** - `internet-facing` (public-подсети, публичный адрес)
+  или `internal` (private-подсети, только из VPC).
+
+Главное про типы балансировщиков AWS в Kubernetes: **тип балансировщика определяется
+типом ресурса Kubernetes, а не значением аннотации.**
+
+- **Service (type `LoadBalancer`) → NLB (L4).** Это и есть случай ingress gateway: NLB
+  просто пробрасывает TCP, а маршрутизацию, TLS и mTLS делает сам Istio. ALB из Service
+  создать нельзя.
+- **Ingress → ALB (L7).** ALB провижинится только из ресурса `Ingress` (класс
+  `ingressClassName: alb` и аннотации `alb.ingress.kubernetes.io/*`), к Service это
+  отношения не имеет. ALB иногда ставят перед Istio, но тогда он сам терминирует HTTPS и
+  часть L7-логики уходит из mesh; для «чистого» Istio-ingress обычно берут NLB. Подробнее
+  об этом выборе - в главах про продакшн-установку на EKS.
+
+```mermaid
+flowchart TB
+    subgraph VPC["AWS VPC"]
+        subgraph PUB["public подсети"]
+            NLB1["NLB internet-facing"]
+        end
+        subgraph PRIV["private подсети"]
+            NLB2["NLB internal"]
+            subgraph K8S["кластер (ноды в private)"]
+                G1["istio-ingressgateway<br>(Envoy pods)"]
+                G2["istio-ingressgateway-internal<br>(Envoy pods)"]
+            end
+        end
+    end
+    Internet["Интернет"] --> NLB1 --> G1
+    VPNVPC["Клиенты из VPC / VPN"] --> NLB2 --> G2
+    style NLB1 fill:#f4b400,color:#000
+    style NLB2 fill:#326ce5,color:#fff
+    style G1 fill:#0f9d58,color:#fff
+    style G2 fill:#0f9d58,color:#fff
+    style Internet fill:#673ab7,color:#fff
+    style VPNVPC fill:#673ab7,color:#fff
+```
+
+Результат:
+
+- Service `istio-ingressgateway` получит публичный NLB (в `EXTERNAL-IP` - публичное DNS-
+  имя `*.elb.amazonaws.com`, резолвится в публичные IP). Через него выставляем публичные
+  приложения (`shop.example.com`).
+- Service `istio-ingressgateway-internal` получит **внутренний** NLB (адрес резолвится
+  только в приватные IP VPC). Через него ходят внутренние/админские сервисы
+  (`admin.internal`) - из интернета они недоступны в принципе, потому что у их шлюза нет
+  публичного адреса.
+
+Сами поды Envoy обоих шлюзов при этом обычно живут на нодах в private-подсетях - в
+интернет «смотрит» только публичный NLB, а не сами поды.
+
+### TLS-сертификат ACM прямо на NLB
+
+Сертификат для входящего HTTPS не обязательно грузить в Istio - можно повесить готовый
+сертификат из **AWS Certificate Manager (ACM)** сразу на NLB. Тогда TLS терминируется на
+балансировщике, а ACM сам продлевает сертификат. Достаточно добавить аннотации к Service
+шлюза:
+
+```yaml
+        serviceAnnotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: external
+          service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+          # ACM-сертификат и порт(ы), на которых NLB терминирует TLS
+          service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:eu-central-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx
+          service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+```
+
+- `aws-load-balancer-ssl-cert` - ARN сертификата из ACM.
+- `aws-load-balancer-ssl-ports` - на каких портах NLB слушает TLS (обычно `443`);
+  остальные порты (например, `80`) остаются обычным TCP.
+
+Важный нюанс - **где** терминируется TLS:
+
+- **TLS на NLB (offload).** NLB расшифровывает трафик по ACM-сертификату, и дальше по VPC
+  до шлюза идёт уже расшифрованный трафик. Плюс: сертификатом управляет AWS
+  (автопродление), в Istio его грузить не нужно. Минус: между NLB и шлюзом трафик не
+  защищён этим сертификатом (только внутри VPC), и Istio не «видит» исходный TLS.
+- **Passthrough + TLS в Istio.** Альтернатива: NLB просто пробрасывает TCP (без
+  `ssl-cert`), а сертификат кладут в Istio, и TLS (или mTLS) терминирует уже ingress
+  gateway. Этот вариант с `Gateway` в режимах `SIMPLE`/`MUTUAL`/`PASSTHROUGH` разбираем
+  в главе 9.
+
+Коротко: хотите отдать управление сертификатом AWS и терминировать TLS на краю - вешайте
+ACM-сертификат на NLB аннотациями; нужен сквозной TLS/mTLS до самого mesh - терминируйте
+в Istio (глава 9).
 
 ## 5.3. VirtualService: правила маршрутизации
 
@@ -270,6 +534,17 @@ spec:
   DestinationRule.
 - **Gateway** открывает порт на границе mesh и говорит, какие хосты принимать; трафик
   сам не направляет.
+- Ingress gateway может быть **несколько**: каждая запись `ingressGateways` в
+  IstioOperator - это свой Deployment (поды Envoy) + Service, а разными метками
+  `selector` трафик разделяют по разным шлюзам (например, публичный и внутренний).
+- На AWS тип балансировщика задаёт аннотация `aws-load-balancer-type: external` (AWS LB
+  Controller → NLB; без неё - устаревший Classic LB), а схема - где он создаётся:
+  `internet-facing` в public-подсетях (публичный адрес) или `internal` в private-
+  подсетях (только из VPC/VPN). Подсети выбираются по тегам или аннотацией
+  `aws-load-balancer-subnets`. ALB (L7) создаётся для Ingress, а не для Service.
+- TLS можно терминировать прямо на NLB готовым сертификатом из ACM (аннотации
+  `aws-load-balancer-ssl-cert` + `aws-load-balancer-ssl-ports`) - AWS сам продлевает
+  его; либо использовать passthrough и терминировать TLS/mTLS в Istio (глава 9).
 - **VirtualService** решает, куда и по каким правилам направить трафик (хост, условия,
   destination).
 - **DestinationRule** описывает subsets (группы подов по меткам) и политики к
@@ -291,6 +566,8 @@ spec:
 4. Чем отличается `gateways: [main-gateway]` от `gateways: [mesh]`?
 5. Почему для трафика между namespace в hosts стоит указывать FQDN?
 6. Зачем нужен обычный Kubernetes Service, если есть VirtualService? Как они связаны?
+7. Как развернуть несколько ingress gateway и направить на них разный трафик? Как на
+   AWS сделать один шлюз публичным, а другой - доступным только из VPC?
 
 ## Практика
 

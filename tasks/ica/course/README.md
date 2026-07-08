@@ -13,11 +13,11 @@ main one for now; English translations are added later).
 
 ### Part 1. Fundamentals and ICA preparation
 
-1. [Introduction to service mesh and Istio architecture](01/ru.md)
-2. [Installing and configuring Istio](02/ru.md)
-3. [Upgrading Istio: Helm, revisions, canary and in-place](03/ru.md)
-4. [Data plane: Envoy and sidecar injection](04/ru.md)
-5. [Traffic management: Gateway, VirtualService, DestinationRule](05/ru.md)
+1. [Introduction to service mesh and Istio architecture](01/en.md)
+2. [Installing and configuring Istio](02/en.md)
+3. [Upgrading Istio: Helm, revisions, canary and in-place](03/en.md)
+4. [Data plane: Envoy and sidecar injection](04/en.md)
+5. [Traffic management: Gateway, VirtualService, DestinationRule](05/en.md)
 6. [Release strategies: canary, header-routing, traffic mirroring](06/ru.md)
 7. [Load balancing and locality-aware failover](07/ru.md)
 8. [Resilience: fault injection, timeouts, retries, circuit breaking](08/ru.md)
