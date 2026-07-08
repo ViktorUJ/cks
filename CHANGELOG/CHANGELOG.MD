@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.32.2 (07.07.2026)
+## 0.33.1 (xx.08.2026)
 ### Features
 * Lab 32 Istio.[gRPC: per-request load balancing, port naming, retries and timeouts](../tasks/ica/labs/32) is added.
 * Lab 33 Istio.[Control plane performance & operations: discovery selectors, Sidecar scope, istiod golden signals, OPA Gatekeeper](../tasks/ica/labs/33) is added.
