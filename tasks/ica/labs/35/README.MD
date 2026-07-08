@@ -80,7 +80,9 @@ sudo install istio-$ISTIO_VERSION/bin/istioctl /usr/local/bin/
    `topology.istio.io/network`.
 3. **East-west gateway** - install the EW gateway (NodePort), patch its Service
    `externalIPs=[<node IP>]`, apply a `Gateway` with `tls.mode: AUTO_PASSTHROUGH` for
-   `*.local`.
+   `*.local`. Note: the EW gateway operator must carry the same
+   `meshID`/`multiCluster.clusterName`/`network` as istiod, otherwise its proxy reports
+   cluster `Kubernetes` and istiod rejects its token.
 4. **Remote secrets**:
 
    ```bash
@@ -128,8 +130,8 @@ load balancing. This is the foundation of a fault-tolerant, geo-distributed mesh
 
 | Component | Type | Count | Role |
 |---|---|---|---|
-| cluster1 (control-plane) | `t3.large` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
-| cluster2 (control-plane) | `t3.large` | 1 | k8s + istiod + EW gateway + helloworld v2 |
+| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
+| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v2 |
 | worker PC | `t3.small` | 1 | `kubectl` (both contexts), `istioctl`, `openssl`, `check_result` |
 
 Both clusters share one VPC (`10.10.0.0/16`); node-to-node traffic is open inside the VPC.

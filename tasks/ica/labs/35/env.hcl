@@ -21,9 +21,9 @@ locals {
     type               = "calico" #calico , cilium
     disable_kube_proxy = "false"
   }
-  instance_type        = "t3.large"
+  instance_type        = "t3.xlarge"
   instance_type_worker = "t3.small"
-  spot_additional_types= [ "t3.large" ]
+  spot_additional_types= [ "t3.xlarge" ]
   all_spot_subnet      = "true"
   key_name             = ""
   ssh_password_enable  = "true"        # false |  true

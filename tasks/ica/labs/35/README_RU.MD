@@ -79,6 +79,8 @@ sudo install istio-$ISTIO_VERSION/bin/istioctl /usr/local/bin/
    `topology.istio.io/network`.
 3. **East-west gateway** - установить EW-шлюз (NodePort), пропатчить его Service
    `externalIPs=[<IP ноды>]`, применить `Gateway` с `tls.mode: AUTO_PASSTHROUGH` для `*.local`.
+   Важно: у оператора EW-шлюза должны быть те же `meshID`/`multiCluster.clusterName`/`network`,
+   что и у istiod, иначе прокси представится кластером `Kubernetes` и istiod отклонит его токен.
 4. **Remote secrets**:
 
    ```bash
@@ -126,8 +128,8 @@ gateway для multi-network, cross-cluster discovery через remote-секр
 
 | Компонент | Тип | Кол-во | Роль |
 |---|---|---|---|
-| cluster1 (control-plane) | `t3.large` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
-| cluster2 (control-plane) | `t3.large` | 1 | k8s + istiod + EW gateway + helloworld v2 |
+| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
+| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v2 |
 | worker PC | `t3.small` | 1 | `kubectl` (оба контекста), `istioctl`, `openssl`, `check_result` |
 
 Оба кластера в одном VPC (`10.10.0.0/16`), трафик между нодами открыт внутри VPC.
