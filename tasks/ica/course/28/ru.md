@@ -153,10 +153,10 @@ istioctl create-remote-secret --name=cluster2 | kubectl apply -f - --context=clu
 
 ## Практика
 
-Отдельная лаба по мультикластеру на EKS **планируется**: настройка общего CA, две модели
-(primary-remote и multi-primary), east-west gateway, cross-cluster discovery и failover.
+Отработайте мультикластер на практике: общий CA, multi-primary/multi-network, east-west
+gateway, cross-cluster discovery через remote-секреты и межкластерная балансировка.
 
-🧪 Лаба: **TODO (EKS multi-cluster)**.
+🧪 Лаба 35: [tasks/ica/labs/35](../../labs/35/README_RU.MD)
 
 ---
 [Оглавление](../README.md) · [Глава 27](../27/ru.md) · [Глава 29](../29/ru.md)

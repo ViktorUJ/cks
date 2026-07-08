@@ -5,6 +5,7 @@
 * Lab 32 Istio.[gRPC: per-request load balancing, port naming, retries and timeouts](../tasks/ica/labs/32) is added.
 * Lab 33 Istio.[Control plane performance & operations: discovery selectors, Sidecar scope, istiod golden signals, OPA Gatekeeper](../tasks/ica/labs/33) is added.
 * Lab 34 Istio.[Hardening & threat model: STRICT mTLS, default-deny, egress control, RBAC on Istio CRDs, OPA Gatekeeper, NetworkPolicy](../tasks/ica/labs/34) is added.
+* Lab 35 Istio.[Multicluster mesh: multi-primary, multi-network, shared CA, east-west gateway, cross-cluster discovery](../tasks/ica/labs/35) is added.
 ### Improvements
 * `ping_pong` now speaks gRPC (PingPong.Echo + Health + reflection) and has a built-in gRPC client / load generator (`-grpc-client`).
 * `ping_pong` debug images install `kubectl-k8i` via krew with shell completion; scratch/alpine images cross-compile natively (BuildKit `$BUILDPLATFORM`) instead of under QEMU.
