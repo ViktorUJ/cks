@@ -150,7 +150,22 @@ flowchart TB
     style B fill:#0f9d58,color:#fff
 ```
 
-## 22.6. How to enable ambient
+## 22.6. Installing and enabling ambient
+
+### Installing Istio in ambient mode
+
+Ambient is a separate **installation profile**: it installs istiod, **istio-cni** and **ztunnel**
+(the sidecar profile does not have them). Via istioctl:
+
+```bash
+istioctl install --set profile=ambient --skip-confirmation
+```
+
+Via Helm you install four charts: `base`, `istiod` (with `--set profile=ambient`), `cni` and
+`ztunnel`. Waypoints (L7) are not part of the installation - they are deployed as needed (section
+22.4). On EKS istio-cni is plugged in on top of the VPC CNI/Cilium (chapter 27).
+
+### Enabling ambient on a namespace
 
 Ambient is enabled with a label on the namespace (instead of `istio-injection=enabled` from the
 sidecar world):
@@ -172,6 +187,35 @@ Ambient requires **istio-cni** to be installed (chapter 27) - it is what sets up
 interception to the ztunnel. On EKS this works on top of the standard **VPC CNI** (istio-cni is
 plugged into the chain) or on top of **Cilium**; when choosing a CNI, check compatibility with the
 Istio version.
+
+### Migrating sidecar → ambient
+
+You can move gradually, namespace by namespace - sidecar and ambient are compatible in one mesh
+(section 22.9). For one namespace:
+
+1. Make sure ambient is installed (istio-cni + ztunnel) - see above.
+2. Remove the sidecar-injection label from the namespace and add the ambient one:
+
+   ```bash
+   kubectl label namespace app istio-injection-               # remove sidecar injection
+   kubectl label namespace app istio.io/dataplane-mode=ambient
+   ```
+
+3. Restart the pods to remove the sidecar from them:
+
+   ```bash
+   kubectl rollout restart deployment -n app
+   ```
+
+   After the restart the pods become `1/1` (no istio-proxy), and their traffic is picked up by the
+   ztunnel.
+4. For services that need L7 (routing, L7 authorization, per-request gRPC balancing), deploy a
+   **waypoint** (section 22.4) - in sidecar these functions lived in the pod, in ambient the
+   waypoint performs them.
+
+The key nuance: a pod is restarted **once** (to remove the sidecar), whereas enabling ambient "from
+scratch" needs no restart. mTLS and identity are preserved (a common trust, chapter 13), so during
+the migration the sidecar and ambient workloads keep communicating without interruption.
 
 ## 22.7. The threat model and limitations of ambient
 
@@ -382,6 +426,10 @@ debugging, so the team must master the eBPF tools before relying on such a data 
   per namespace/service rather than in every pod.
 - It is enabled with the `istio.io/dataplane-mode=ambient` label; the pods **are not restarted** and
   do not get a sidecar; L4 mTLS works right away, L7 is added via a waypoint.
+- Ambient is a separate **installation profile** (`istioctl install --set profile=ambient`: istiod +
+  istio-cni + ztunnel). The sidecar→ambient migration goes namespace by namespace: remove the
+  injection label, add `dataplane-mode=ambient`, restart the pods (once), and deploy a waypoint for
+  L7.
 - Ambient saves resources and simplifies updates; sidecar is proven and fully-featured right away.
   The choice depends on the need for L7 and the resource requirements.
 - Balancing: ztunnel (L4) spreads by connections, the waypoint (L7) by requests. For gRPC a waypoint
@@ -416,6 +464,8 @@ debugging, so the team must master the eBPF tools before relying on such a data 
 10. How does the threat model change in ambient because of ztunnel? Why is taking over a node more
     dangerous than in sidecar, and what do you do about it?
 11. Name the limitations of ambient compared with the mature sidecar.
+12. How do you install Istio in ambient mode (which profile, which components) and how do you migrate
+    a namespace from sidecar to ambient? Why is a one-time pod restart needed during the migration?
 
 ## Practice
 

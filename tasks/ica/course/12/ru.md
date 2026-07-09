@@ -88,6 +88,32 @@ spec:
 egress gateway, ни разрешить в строгом режиме `REGISTRY_ONLY`. Это первый кирпичик
 контроля egress.
 
+### DNS proxying: резолвинг силами Istio
+
+По умолчанию DNS-запросы приложения уходят в kube-DNS (CoreDNS), а Istio их не трогает.
+У этого есть ограничения: приложение не может резолвить хосты из `ServiceEntry` без реальных
+DNS-записей (особенно с `resolution: STATIC`/`NONE`), а на каждый внешний запрос идёт
+обращение к CoreDNS.
+
+Istio умеет поднять **DNS proxy**: istio-agent прямо в поде отвечает на DNS-запросы, зная
+реестр mesh (сервисы кластера и хосты `ServiceEntry`). Включается через MeshConfig:
+
+```yaml
+meshConfig:
+  defaultConfig:
+    proxyMetadata:
+      ISTIO_META_DNS_CAPTURE: "true"        # перехватывать DNS в data plane
+      ISTIO_META_DNS_AUTO_ALLOCATE: "true"  # выдавать виртуальные IP хостам ServiceEntry без адресов
+```
+
+(то же можно включить точечно аннотацией пода `proxy.istio.io/config`). Что это даёт:
+
+- **ServiceEntry-хосты резолвятся локально** - важно для внешних TCP-сервисов без DNS-записей;
+  с `DNS_AUTO_ALLOCATE` Istio выдаёт им виртуальные IP, чтобы точнее маршрутизировать (иначе
+  несколько TCP-сервисов на одном порту неразличимы по destination IP).
+- **Меньше нагрузки на CoreDNS** и быстрее ответ (резолвинг локально в поде).
+- В **ambient** и на **VM** (глава 29) DNS proxy - штатный способ резолвить кластерные имена.
+
 ## 12.3. REGISTRY_ONLY: запрещаем всё лишнее
 
 Теперь закрутим гайки: переключим mesh в режим, где наружу можно ходить **только** к
@@ -347,6 +373,9 @@ flowchart LR
   через Gateway + DestinationRule + VirtualService с двухэтапной маршрутизацией.
 - **ServiceEntry** гибок по `resolution` (`DNS`/`STATIC`/`NONE`), поддерживает wildcard-хосты
   и ограничение видимости через `exportTo`.
+- **DNS proxying** (`ISTIO_META_DNS_CAPTURE`) резолвит имена силами istio-agent: делает
+  ServiceEntry-хосты резолвимыми (с `DNS_AUTO_ALLOCATE` - виртуальные IP хостам без адресов),
+  разгружает CoreDNS; штатно используется в ambient и на VM.
 - **Egress gateway - не граница безопасности сам по себе**: работает только вместе с
   `REGISTRY_ONLY` и/или `NetworkPolicy`, иначе под обойдёт его напрямую.
 - **TLS origination** позволяет приложению ходить по HTTP, а mesh сам шифрует трафик
@@ -365,7 +394,8 @@ flowchart LR
    режим `MUTUAL`?
 6. Почему egress gateway сам по себе не является границей безопасности? Что нужно добавить?
 7. Чем отличаются `resolution: DNS`, `STATIC` и `NONE` в ServiceEntry?
-8. Как в EKS сделать так, чтобы запросы к внешнему партнёру уходили с известного IP для
+8. Что такое DNS proxying в Istio и зачем нужен `DNS_AUTO_ALLOCATE`?
+9. Как в EKS сделать так, чтобы запросы к внешнему партнёру уходили с известного IP для
    allowlist? Кто именно определяет исходящий адрес?
 
 ## Практика

@@ -88,6 +88,34 @@ Why this is needed: without a `ServiceEntry` an external service can neither be 
 the egress gateway nor allowed in strict `REGISTRY_ONLY` mode. This is the first building
 block of egress control.
 
+### DNS proxying: resolving by Istio itself
+
+By default the application's DNS queries go to kube-DNS (CoreDNS), and Istio does not touch
+them. This has limitations: the application cannot resolve `ServiceEntry` hosts without real
+DNS records (especially with `resolution: STATIC`/`NONE`), and every external request goes to
+CoreDNS.
+
+Istio can bring up a **DNS proxy**: istio-agent right in the pod answers DNS queries, knowing
+the mesh registry (cluster services and `ServiceEntry` hosts). It is enabled via MeshConfig:
+
+```yaml
+meshConfig:
+  defaultConfig:
+    proxyMetadata:
+      ISTIO_META_DNS_CAPTURE: "true"        # capture DNS in the data plane
+      ISTIO_META_DNS_AUTO_ALLOCATE: "true"  # allocate virtual IPs to ServiceEntry hosts without addresses
+```
+
+(the same can be enabled surgically with the pod annotation `proxy.istio.io/config`). What
+this gives:
+
+- **ServiceEntry hosts resolve locally** - important for external TCP services without DNS
+  records; with `DNS_AUTO_ALLOCATE` Istio allocates them virtual IPs to route more precisely
+  (otherwise several TCP services on one port are indistinguishable by destination IP).
+- **Less load on CoreDNS** and a faster answer (resolution locally in the pod).
+- In **ambient** and on **VMs** (chapter 29) the DNS proxy is the standard way to resolve
+  cluster names.
+
 ## 12.3. REGISTRY_ONLY: forbidding everything else
 
 Now let us tighten the screws: switch the mesh to a mode where you may go out **only** to
@@ -352,6 +380,9 @@ it on the egress gateway, traffic would spread across all nodes and NAT gateways
   configured via Gateway + DestinationRule + VirtualService with two-stage routing.
 - **ServiceEntry** is flexible in `resolution` (`DNS`/`STATIC`/`NONE`), supports wildcard hosts
   and visibility limiting via `exportTo`.
+- **DNS proxying** (`ISTIO_META_DNS_CAPTURE`) resolves names by istio-agent itself: it makes
+  ServiceEntry hosts resolvable (with `DNS_AUTO_ALLOCATE` - virtual IPs for hosts without
+  addresses), offloads CoreDNS; used by default in ambient and on VMs.
 - **An egress gateway is not a security boundary by itself**: it works only together with
   `REGISTRY_ONLY` and/or a `NetworkPolicy`, otherwise a pod will bypass it directly.
 - **TLS origination** lets the application go over HTTP while the mesh encrypts the traffic
@@ -372,7 +403,8 @@ it on the egress gateway, traffic would spread across all nodes and NAT gateways
    `MUTUAL` mode add?
 6. Why is an egress gateway not a security boundary by itself? What needs to be added?
 7. How do `resolution: DNS`, `STATIC` and `NONE` differ in a ServiceEntry?
-8. How, on EKS, do you make requests to an external partner leave from a known IP for an
+8. What is DNS proxying in Istio and what is `DNS_AUTO_ALLOCATE` for?
+9. How, on EKS, do you make requests to an external partner leave from a known IP for an
    allowlist? Who exactly determines the outbound address?
 
 ## Practice
