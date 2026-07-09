@@ -386,4 +386,4 @@ Practice TLS origination (initiating TLS on the mesh side):
 🧪 Lab 22: [tasks/ica/labs/22](../../labs/22/README.MD)
 
 ---
-[Contents](../README.md) · [Chapter 11](../11/en.md) · [Chapter 13](../13/ru.md)
+[Contents](../README.md) · [Chapter 11](../11/en.md) · [Chapter 13](../13/en.md)

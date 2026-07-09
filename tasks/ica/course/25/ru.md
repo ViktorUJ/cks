@@ -1,3 +1,5 @@
+[Eng version](en.md)
+
 # Глава 25. Прогрессивная доставка с Flagger
 
 > **Начинается Часть 2** - best practices для реальной эксплуатации. Здесь темы, которых
@@ -155,7 +157,163 @@ weight 20/40/50` и в конце `Promotion completed!` - или откат, е
 Итог: плохая версия не доедет до всех пользователей - её отсекут автоматически на малой
 доле трафика по объективным метрикам.
 
-## 25.7. Пример: пошаговое внедрение и контроль
+## 25.7. Другие стратегии выката
+
+Взвешенный canary из раздела 25.5 - лишь одна из стратегий. Тем же ресурсом `Canary` (и той
+же обвязкой Istio) Flagger умеет ещё три, меняется только блок `analysis`.
+
+**Blue/Green** - никакого постепенного веса: новая версия сначала проходит N проверок «в
+сторонке», и только потом трафик переключается на неё целиком. Задаётся через `iterations`
+без `stepWeight`:
+
+```yaml
+  analysis:
+    interval: 30s
+    threshold: 5
+    iterations: 10          # 10 успешных проверок подряд - и переключаем 100% разом
+    metrics:
+    - name: request-success-rate
+      thresholdRange: {min: 99}
+      interval: 1m
+```
+
+**A/B-тестирование** - трафик делят не по весу, а по признаку запроса: заголовку или куке.
+Полезно, когда новую версию надо показать конкретному сегменту (бета-пользователи,
+внутренние сотрудники). Маршрутизация через `match` - тот же синтаксис, что в
+`VirtualService` (главы 6 и 15):
+
+```yaml
+  analysis:
+    interval: 30s
+    threshold: 5
+    iterations: 10
+    match:                  # только запросы с этим заголовком идут на canary
+    - headers:
+        x-canary:
+          exact: "insider"
+    metrics:
+    - name: request-success-rate
+      thresholdRange: {min: 99}
+      interval: 1m
+```
+
+**Traffic mirroring (shadowing)** - copy запросов зеркалится на canary, но ответ canary
+пользователю **не отдаётся** (глава 11). Так новую версию проверяют на реальном трафике
+вообще без риска для пользователей:
+
+```yaml
+  analysis:
+    interval: 30s
+    threshold: 5
+    iterations: 10
+    mirror: true            # дублируем трафик на canary, ответ отбрасываем
+    metrics:
+    - name: request-success-rate
+      thresholdRange: {min: 99}
+      interval: 1m
+```
+
+Выбор стратегии зависит от риска и задачи: canary - универсальный дефолт, Blue/Green - когда
+нельзя держать две версии под нагрузкой одновременно, A/B - для таргетированной проверки,
+mirroring - для «боевой» проверки без влияния на пользователей.
+
+## 25.8. Кастомные метрики: MetricTemplate
+
+Встроенных `request-success-rate` и `request-duration` хватает не всегда: иногда критерий
+успеха - это бизнес-метрика (конверсия, доля ошибок конкретного эндпоинта) или метрика из
+внешней системы. Для этого есть отдельный CRD `MetricTemplate`: в нём вы описываете
+провайдера и произвольный запрос, возвращающий число, а потом ссылаетесь на шаблон из
+`Canary`.
+
+```yaml
+apiVersion: flagger.app/v1beta1
+kind: MetricTemplate
+metadata:
+  name: not-found-percentage
+  namespace: test
+spec:
+  provider:
+    type: prometheus
+    address: http://prometheus.istio-system:9090
+  query: |                                   # доля 404 в общем числе запросов к canary
+    100 - sum(
+        rate(istio_requests_total{
+          destination_workload="podinfo",
+          response_code!="404"
+        }[{{ interval }}])
+    )
+    /
+    sum(
+        rate(istio_requests_total{
+          destination_workload="podinfo"
+        }[{{ interval }}])
+    ) * 100
+```
+
+Теперь этот шаблон подключается в `Canary` наравне со встроенными метриками через
+`templateRef`:
+
+```yaml
+  analysis:
+    metrics:
+    - name: "404s percentage"
+      templateRef:
+        name: not-found-percentage          # ссылка на MetricTemplate выше
+        namespace: test
+      thresholdRange:
+        max: 5                               # не более 5% ответов 404
+      interval: 1m
+```
+
+Провайдером может быть не только Prometheus: Flagger поддерживает в том числе CloudWatch,
+Datadog, New Relic и другие - то есть критерий отката можно строить хоть на метриках AWS
+(см. следующие разделы). Шаблоны `{{ interval }}` и другие переменные Flagger подставляет
+сам на каждом шаге анализа.
+
+## 25.9. Хуки (webhooks): проверки и ручные гейты
+
+В разделе 25.5 мы видели один webhook - генератор нагрузки. На самом деле Flagger вызывает
+хуки на разных фазах выката, и это мощный инструмент контроля. Основные типы:
+
+- **`confirm-rollout`** - гейт **перед** стартом выката: пока хук не вернёт 200, выкат не
+  начнётся (например, ждём одобрения или окна релиза).
+- **`pre-rollout`** - приёмочные тесты новой версии **до** наращивания трафика; провал
+  прекращает выкат.
+- **`rollout`** - генерация нагрузки во время анализа (тот самый load-test).
+- **`confirm-promotion`** - ручной гейт **перед** промоутом: удобно, когда финальное
+  переключение должен подтвердить человек.
+- **`post-rollout`** - действия после успешного промоута (очистка, нотификации).
+- **`rollback`** - вызывается при откате.
+- **`event`** - Flagger шлёт сюда все события выката (для внешних систем/алертов).
+
+Пример: приёмочный тест перед трафиком плюс ручной гейт на промоут.
+
+```yaml
+  analysis:
+    webhooks:
+    - name: acceptance-test
+      type: pre-rollout                       # тест ДО наращивания трафика
+      url: http://flagger-loadtester.test/
+      timeout: 30s
+      metadata:
+        type: bash
+        cmd: "curl -sd 'test' http://podinfo-canary.test:9898/token | grep token"
+    - name: load-test
+      type: rollout                           # нагрузка во время анализа
+      url: http://flagger-loadtester.test/
+      metadata:
+        cmd: "hey -z 1m -q 10 -c 2 http://podinfo-canary.test:9898/"
+    - name: manual-gate
+      type: confirm-promotion                 # человек подтверждает промоут
+      url: http://flagger-loadtester.test/gate/halt
+```
+
+Ручной гейт `confirm-promotion` держит выкат на `maxWeight`, пока по нему не разрешат
+двигаться дальше (через API load-tester'а: `gate/open`). Так автоматический анализ и
+человеческий контроль сочетаются: машина проверяет метрики, а финальное слово - за
+человеком, если релиз того требует.
+
+## 25.10. Пример: пошаговое внедрение и контроль
 
 Разберём на конкретном примере: у нас есть обычный деплоймент `podinfo`, и мы хотим,
 чтобы его релизы шли через Flagger. Пройдём весь путь по шагам.
@@ -303,7 +461,52 @@ spec:
 Эти алерты дополняют статус Canary: Flagger сам откатит плохую версию, а Prometheus
 уведомит команду, что откат произошёл и почему (ошибки или задержка).
 
-## 25.8. Best practices для прода
+## 25.11. Flagger на EKS/AWS
+
+Основа анализа Flagger - метрики (глава 17), и на EKS их источник часто не in-cluster
+Prometheus, а управляемые сервисы AWS. Ключевые моменты.
+
+**Метрики из Amazon Managed Prometheus (AMP).** Вместо самостоятельного Prometheus метрики
+Istio можно писать в AMP и оттуда же кормить Flagger. Отличие от обычного `metricsServer` -
+запросы к AMP надо подписывать SigV4 (доступ по IAM). Обычно между Flagger и AMP ставят
+прокси-сайдкар (например, `aws-sigv4-proxy`), который подписывает запросы через IRSA, а
+Flagger ходит на него как на обычный Prometheus:
+
+```yaml
+# MetricTemplate, указывающий на SigV4-прокси перед AMP
+apiVersion: flagger.app/v1beta1
+kind: MetricTemplate
+metadata:
+  name: success-rate-amp
+  namespace: test
+spec:
+  provider:
+    type: prometheus
+    address: http://localhost:8005            # sigv4-proxy -> AMP workspace
+  query: |
+    100 - sum(
+        rate(istio_requests_total{
+          destination_workload="podinfo",
+          response_code=~"5.."
+        }[{{ interval }}])
+    )
+    /
+    sum(rate(istio_requests_total{destination_workload="podinfo"}[{{ interval }}])) * 100
+```
+
+Схема «canary + rollback на метриках AMP + Flagger» описана в
+[официальном блоге AWS](https://aws.amazon.com/blogs/opensource/performing-canary-deployments-and-metrics-driven-rollback-with-amazon-managed-service-for-prometheus-and-flagger).
+
+**Нотификации об откатах в Slack/SNS.** Flagger умеет слать события через `event`-webhook
+или встроенные алерты. На AWS откаты удобно заворачивать в SNS (а дальше - в Chatbot/Slack,
+почту, PagerDuty), чтобы команда узнавала о `Failed` сразу.
+
+**Провайдер Gateway API.** Если вместо классических Gateway/VirtualService вы используете
+Gateway API (глава 11), Flagger умеет управлять весами и через него -
+`meshProvider=gatewayapi`. Полезно на EKS с ingress-контроллерами, реализующими Gateway
+API. Логика анализа и отката при этом та же.
+
+## 25.12. Best practices для прода
 
 - **Правильные метрики и пороги - основа всего.** Flagger хорош ровно настолько,
   насколько точны критерии. Начните с успешности запросов и задержки (p99), при
@@ -322,7 +525,7 @@ spec:
 - **Тестируйте сам процесс в staging.** Убедитесь, что выкат, промоут и откат работают,
   прежде чем доверять Flagger прод.
 
-## 25.9. Итоги главы
+## 25.13. Итоги главы
 
 - Прогрессивная доставка автоматизирует canary: система сама двигает трафик, проверяет
   метрики и откатывается, без ручного труда.
@@ -333,23 +536,36 @@ spec:
   обновлении двигает веса автоматически.
 - В `Canary` задают ритм (`interval`, `stepWeight`, `maxWeight`), критерии
   (`metrics` + `thresholdRange`), допуск ошибок (`threshold`) и проверки (`webhooks`).
+- Тем же ресурсом делаются и другие стратегии: **Blue/Green** (`iterations` без
+  `stepWeight`), **A/B** (`match` по заголовкам/кукам), **mirroring** (`mirror: true`).
+- Свои критерии задают через `MetricTemplate` - произвольный запрос к Prometheus,
+  CloudWatch, Datadog и др. (в т.ч. бизнес-метрики), подключается в `Canary` по `templateRef`.
+- **Webhooks** вызываются на разных фазах: `confirm-rollout`/`confirm-promotion` (ручные
+  гейты), `pre-rollout` (приёмочные тесты), `rollout` (нагрузка), `rollback`, `event`.
 - Хорошая версия постепенно промоутится в primary, плохая - автоматически откатывается на
   малой доле трафика.
+- На EKS/AWS метрики часто берут из **Amazon Managed Prometheus** (запросы через
+  SigV4-прокси/IRSA), откаты шлют в **SNS/Slack**; при Gateway API - `meshProvider=gatewayapi`.
 - После первичной настройки (деплоймент -> Canary -> `Initialized` с обвязкой) ежедневный
   релиз = обновить образ; контроль ведут по статусу Canary
   (`Progressing`/`Succeeded`/`Failed`), дашборду Grafana и алертам на откаты.
 - Best practices: точные метрики и пороги из baseline, генерация нагрузки, консервативные
   шаги, приёмочные тесты, алерты на откаты, обкатка в staging.
 
-## 25.10. Вопросы для самопроверки
+## 25.14. Вопросы для самопроверки
 
 1. Какие минусы ручного canary решает прогрессивная доставка?
 2. Что делает Flagger и как он связан с ресурсами Istio?
 3. За что отвечают `stepWeight`, `maxWeight`, `interval` и `threshold` в `Canary`?
 4. Почему для работы Flagger обязательно нужен трафик (нагрузка)?
 5. Почему пороги метрик стоит брать из реального baseline, а не наугад?
-6. Опишите путь от обычного деплоймента до автоматических релизов через Flagger. Как
-   контролировать первичную настройку и как - ежедневные выкаты?
+6. Чем отличаются стратегии canary, Blue/Green, A/B и mirroring и когда какую выбрать?
+7. Зачем нужен `MetricTemplate` и как подключить свою метрику в `Canary`?
+8. Для чего служат хуки `confirm-promotion` и `pre-rollout`?
+9. Как устроен анализ Flagger на EKS с Amazon Managed Prometheus и чем он отличается от
+   in-cluster Prometheus?
+10. Опишите путь от обычного деплоймента до автоматических релизов через Flagger. Как
+    контролировать первичную настройку и как - ежедневные выкаты?
 
 ## Практика
 

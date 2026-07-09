@@ -1,3 +1,5 @@
+[Eng version](en.md)
+
 # Глава 21. Расширение data plane: EnvoyFilter, Lua и WasmPlugin
 
 > **Что дальше.** Встроенных ресурсов Istio (VirtualService, AuthorizationPolicy,
@@ -78,6 +80,45 @@ function envoy_on_request(handle)
 end
 ```
 
+Сам по себе `.lua`-код никуда не подключается - его инжектит `EnvoyFilter`, добавляя фильтр
+`envoy.filters.http.lua` в нужный listener. Полный ресурс, который включает скрипт выше на
+подах `ping-pong`:
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: lua-headers
+  namespace: app
+spec:
+  workloadSelector:
+    labels:
+      app: ping-pong
+  configPatches:
+  - applyTo: HTTP_FILTER
+    match:
+      context: SIDECAR_INBOUND
+      listener:
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+    patch:
+      operation: INSERT_BEFORE          # до основного роутинга
+      value:
+        name: envoy.filters.http.lua
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+          inlineCode: |
+            function envoy_on_response(handle)
+              handle:headers():add("x-lua-lab", "hello-from-lua")
+            end
+            function envoy_on_request(handle)
+              if handle:headers():get("x-block") == "yes" then
+                handle:respond({[":status"] = "403"}, "blocked by lua")
+              end
+            end
+```
+
 Lua хорош для быстрых мелочей: манипуляции с заголовками, простые проверки. Но он тоже
 подключается через EnvoyFilter (со всеми его рисками) и не предназначен для тяжёлой
 логики или внешних вызовов - для этого есть Wasm.
@@ -99,8 +140,20 @@ spec:
     matchLabels:
       istio: ingressgateway
   url: oci://ghcr.io/my-org/basic-auth:1.0    # модуль из OCI-реестра
-  phase: AUTHN
+  phase: AUTHN                                # когда в цепочке выполнять (см. ниже)
+  pluginConfig:                               # конфиг, который получит сам модуль
+    users:
+      alice: "$2y$10$..."                     # пример: логин -> bcrypt-хэш пароля
 ```
+
+Два важных поля:
+
+- **`pluginConfig`** - произвольная конфигурация, которую Envoy передаёт **внутрь** модуля при
+  загрузке. Один и тот же модуль (например, `basic_auth`) настраивается данными отсюда - без
+  пересборки. Без `pluginConfig` большинство модулей бесполезны.
+- **`phase`** - в какой момент цепочки фильтров выполнять модуль: `AUTHN` (до аутентификации),
+  `AUTHZ` (после аутентификации, до авторизации), `STATS` (в самом конце) или значение по
+  умолчанию. Порядок нескольких плагинов в одной фазе задаётся полем `priority`.
 
 Ключевые плюсы Wasm:
 
@@ -198,8 +251,9 @@ spec:
 - **Версионируйте и ревьюйте.** Расширения - это код на горячем пути; держите их в Git и
   проходите ревью, как обычный код.
 - **Wasm из своего реестра с пиннингом версий.** Не тяните модули по `latest` из чужих
-  реестров: используйте приватный OCI-реестр, фиксируйте версию, проверяйте supply chain
-  (скан, подпись).
+  реестров: используйте приватный OCI-реестр (на AWS это **Amazon ECR** - Wasm лежит там как
+  обычный OCI-артефакт, pull-доступ через IAM/IRSA), фиксируйте версию по digest, проверяйте
+  supply chain (скан, подпись).
 - **Не кладите тяжёлую логику в Lua на hot path.** Для серьёзной логики - Wasm.
 - **Регресс-тест после каждого апгрейда Istio.** Особенно для EnvoyFilter - он ломается
   тихо.
@@ -214,7 +268,10 @@ spec:
 - **Lua** - простой инлайн-скрипт (через EnvoyFilter) для мелкой логики с заголовками и
   простых проверок.
 - **WasmPlugin** - полноценный модуль WebAssembly: любой язык, динамическая загрузка из
-  OCI-реестра, песочница, стабильный ABI (устойчив к апгрейдам), переиспользуемость.
+  OCI-реестра (на AWS - ECR), песочница, стабильный ABI (устойчив к апгрейдам),
+  переиспользуемость. Настраивается через `pluginConfig`, порядок - через `phase`/`priority`.
+- Lua и любой другой фильтр Envoy подключаются полным `EnvoyFilter` (`applyTo: HTTP_FILTER`,
+  `envoy.filters.http.*`); сам `.lua`-скрипт без обёртки не работает.
 - Приоритет выбора: штатные CRD -> Lua (мелочь) -> Wasm (сложное) -> EnvoyFilter (крайний
   случай).
 - Расширения работают на горячем пути: Lua и Wasm стоят CPU/памяти на каждый запрос -
@@ -233,6 +290,8 @@ spec:
 6. Какой оверхед добавляют Lua и Wasm и как его оценивать?
 7. Как проверить, что расширение применилось и ничего не сломало? Куда смотреть при
    troubleshooting, если фильтр не сработал или Wasm не загрузился?
+8. Как Lua-скрипт попадает в Envoy (что за ресурс его инжектит)?
+9. Зачем в WasmPlugin нужны `pluginConfig` и `phase`? Откуда берут Wasm-модуль на AWS?
 
 ## Практика
 

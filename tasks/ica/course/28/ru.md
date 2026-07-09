@@ -1,3 +1,5 @@
+[Eng version](en.md)
+
 # Глава 28. Мультикластерный mesh
 
 > **Что дальше.** Пока у нас был один кластер. Но в проде часто нужно несколько:
@@ -59,6 +61,32 @@ flowchart LR
     style R fill:#999,color:#fff
 ```
 
+Модель и принадлежность к общему mesh задаются при установке - через `global` в
+`IstioOperator`/Helm. Ключевые поля: единый `meshID` на все кластеры, уникальное имя
+кластера и имя его сети:
+
+```yaml
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: istio-cluster1
+spec:
+  values:
+    global:
+      meshID: mesh1                # ОДИН mesh на все кластеры
+      multiCluster:
+        clusterName: cluster1      # уникальное имя этого кластера
+      network: network1            # имя сети этого кластера (см. 28.4)
+```
+
+В соседнем кластере тот же `meshID`, но `clusterName: cluster2` и, если сеть другая,
+`network: network2`. Доверие держится на общем корневом CA (28.2) и одинаковом
+`trustDomain` - без этого cross-cluster mTLS не установится.
+
+> **Ambient и мультикластер.** Всё в этой главе описано для сайдкар-режима. Мультикластер
+> для ambient (глава 22) на момент Istio ~1.24 ещё дозревает и имеет ограничения, поэтому
+> для отказоустойчивого прод-мультикластера сейчас берут именно сайдкары.
+
 ## 28.4. Одна сеть или несколько: east-west gateway
 
 Второе измерение - сетевая связность между кластерами.
@@ -84,6 +112,41 @@ flowchart LR
 East-west gateway маршрутизирует зашифрованный трафик между кластерами по SNI, не
 расшифровывая его (сохраняется сквозной mTLS между сервисами).
 
+На практике для multi-network настройка такая. Сначала помечают сеть кластера, чтобы
+istiod знал, какие эндпоинты локальные, а какие - за шлюзом:
+
+```bash
+kubectl label namespace istio-system topology.istio.io/network=network1
+```
+
+Затем ставят сам east-west gateway (отдельный ingress-gateway с ролью router) и открывают
+на нём порт `15443` в режиме `AUTO_PASSTHROUGH` - он маршрутизирует по SNI, не вскрывая
+mTLS:
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: cross-network-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: eastwestgateway          # поды east-west шлюза
+  servers:
+  - port:
+      number: 15443
+      name: tls
+      protocol: TLS
+    tls:
+      mode: AUTO_PASSTHROUGH        # не расшифровывать, маршрутизировать по SNI
+    hosts:
+    - "*.local"                     # cross-cluster сервисы (*.svc.cluster.local)
+```
+
+Сам east-west gateway публикуют через сервис типа LoadBalancer (на EKS - обычно
+**internal NLB**, раздел 28.7). Его адрес istiod соседнего кластера использует как точку
+входа для трафика в эту сеть.
+
 ## 28.5. Обнаружение сервисов между кластерами
 
 Чтобы istiod одного кластера знал о сервисах другого, ему нужен доступ к API этого
@@ -98,6 +161,19 @@ istioctl create-remote-secret --name=cluster2 | kubectl apply -f - --context=clu
 общий реестр. Для сервиса с одинаковым именем в обоих кластерах Istio объединяет
 эндпоинты - и запрос может уйти на под в любом из кластеров.
 
+**Проверь свою работу.** Что связка кластеров действительно поднялась, видно так:
+
+```bash
+istioctl remote-clusters                     # istiod видит соседние кластеры (synced?)
+# в эндпоинтах локального сервиса появились адреса из другого кластера/сети:
+istioctl proxy-config endpoints <pod> -n app | grep <service>
+# и наконец боевой тест - несколько запросов, отвечать должны оба кластера:
+kubectl exec <pod> -n app -- sh -c 'for i in $(seq 10); do curl -s http://<service>/hostname; done'
+```
+
+Если `remote-clusters` не показывает сосед, или в `endpoints` только локальные адреса -
+проблема в remote secret (доступ к API) или в сети/east-west шлюзе.
+
 ## 28.6. Балансировка между кластерами
 
 Когда эндпоинты сервиса есть в нескольких кластерах, встаёт вопрос: куда слать запрос.
@@ -110,7 +186,36 @@ istioctl create-remote-secret --name=cluster2 | kubectl apply -f - --context=clu
 Это и есть отказоустойчивость мультикластера: локально быстро, а при проблеме трафик сам
 уходит туда, где сервис жив. Как и в главе 7, для failover нужен `outlierDetection`.
 
-## 28.7. Best practices
+## 28.7. Мультикластер на EKS/AWS
+
+На EKS абстрактные «сеть» и «доступ к API соседа» превращаются в конкретные сервисы AWS.
+Ключевые моменты.
+
+- **Одна сеть или несколько - это про VPC.** Если кластеры в одном VPC или в разных VPC,
+  связанных через **VPC peering / Transit Gateway** (плоская маршрутизируемая сеть без
+  пересечения CIDR), поды видят друг друга напрямую - это модель **single-network**,
+  east-west gateway не нужен. Если сети изолированы, берут **multi-network** с east-west
+  шлюзом.
+- **East-west gateway за internal NLB.** В multi-network шлюз публикуют через **внутренний
+  NLB** (`aws-load-balancer-scheme: internal`), а не наружу - межкластерный трафик обычно
+  идёт по приватной сети (peering/TGW), а не через интернет.
+- **Общий CA на практике.** Корень для всех кластеров - это либо offline-корень с
+  промежуточными на каждый кластер, либо **AWS Private CA (ACM PCA)** через
+  cert-manager + istio-csr (глава 16). Главное - один корень на весь mesh.
+- **Доступ к API соседнего кластера (remote secret) - засада на EKS.** kubeconfig от EKS
+  по умолчанию использует IAM-аутентификацию (`aws eks get-token`), и такой секрет
+  завязан на локальные AWS-креды - istiod соседнего кластера ими воспользоваться не
+  сможет. Поэтому для remote secret обычно создают отдельный ServiceAccount с токеном и
+  дают его identity доступ к API (через `aws-auth`/**EKS access entries**). То есть
+  межкластерный discovery на EKS требует и сетевого доступа к API-эндпоинту, и корректной
+  IAM/RBAC-привязки.
+- **Cross-region - дорого и медленно.** Межрегиональный трафик тарифицируется дороже
+  межзонного и добавляет задержку (глава 27). Держите взаимодействующие сервисы в одном
+  регионе, а мультирегион используйте под гео-отказоустойчивость, а не под постоянные
+  cross-region вызовы. Cross-account-схемы (общие сабнеты через **AWS RAM**) добавляют
+  ещё слой согласования сети и IAM.
+
+## 28.8. Best practices
 
 - **Общий CA - с самого начала.** Без общего корня мультикластер невозможен; закладывайте
   его на старте (глава 16), а не мигрируйте потом.
@@ -128,7 +233,7 @@ istioctl create-remote-secret --name=cluster2 | kubectl apply -f - --context=clu
 - **Начинайте с простого.** Один кластер, пока он справляется. Мультикластер добавляет
   много сложности - вводите его под конкретную потребность (HA, гео, изоляция).
 
-## 28.8. Итоги главы
+## 28.9. Итоги главы
 
 - Мультикластерный mesh объединяет несколько кластеров: сервисы видят друг друга и
   общаются по mTLS как в одном mesh.
@@ -136,20 +241,34 @@ istioctl create-remote-secret --name=cluster2 | kubectl apply -f - --context=clu
   кластерами (remote secret) и **сетевая связность**.
 - Модели по control plane: **primary-remote** (один istiod на всех, проще, но primary
   критичен) и **multi-primary** (свой istiod в каждом, надёжнее).
+- Принадлежность к mesh задаётся при установке: общий `meshID`, уникальный `clusterName`
+  и `network` в `IstioOperator`/Helm; сеть кластера метят `topology.istio.io/network`.
 - Сеть: **одна сеть** (поды видят друг друга напрямую) или **несколько сетей** (трафик
-  через **east-west gateway** по SNI с сохранением mTLS).
+  через **east-west gateway**, порт 15443, `AUTO_PASSTHROUGH` по SNI с сохранением mTLS).
 - Балансировка между кластерами - **locality-aware** с failover (глава 7); локально
   быстро и дёшево, cross-cluster - при отказе.
+- На EKS: single-network через VPC peering/Transit Gateway, multi-network через east-west
+  за **internal NLB**; общий CA через ACM PCA; remote secret требует SA-токена +
+  IAM/RBAC-доступа к API (не IAM-kubeconfig); cross-region дорог и медленен.
+- Проверка связки: `istioctl remote-clusters`, cross-cluster эндпоинты в `proxy-config`,
+  боевой `curl` (отвечают оба кластера).
 - Best practices: общий CA заранее, multi-primary для HA, минимум межкластерного трафика
   (он платный), единые версии, сквозная наблюдаемость, не усложнять без нужды.
 
-## 28.9. Вопросы для самопроверки
+## 28.10. Вопросы для самопроверки
 
 1. Зачем нужен мультикластерный mesh и какие проблемы он решает?
 2. Почему мультикластер невозможен без общего корневого CA?
 3. Чем отличаются модели primary-remote и multi-primary?
-4. Когда нужен east-west gateway и чем он отличается от обычного ingress?
-5. Как балансируется трафик между кластерами и при чём тут стоимость облака?
+4. Когда нужен east-west gateway и чем он отличается от обычного ingress? Что такое
+   `AUTO_PASSTHROUGH` и порт 15443?
+5. Какими полями (`meshID`, `clusterName`, `network`) задаётся принадлежность кластера к
+   общему mesh?
+6. Как балансируется трафик между кластерами и при чём тут стоимость облака?
+7. Как на EKS устроены single-network (VPC peering/TGW) и multi-network (east-west за
+   internal NLB)?
+8. Почему remote secret на EKS не работает с обычным IAM-kubeconfig и что делают вместо?
+9. Как проверить, что кластеры действительно объединились в один mesh?
 
 ## Практика
 

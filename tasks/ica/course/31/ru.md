@@ -1,3 +1,5 @@
+[Eng version](en.md)
+
 # Глава 31. Харденинг и модель угроз mesh
 
 > **Что дальше.** Мы разбирали безопасность по частям: mTLS (глава 13), авторизацию
@@ -12,10 +14,10 @@
 
 ```mermaid
 flowchart TB
-    CA["CA / корневой ключ"] --> ID["выдача любых identity"]
-    CP["control plane (istiod)"] --> CFG["рассылка конфигурации всем прокси"]
-    WH["mutating webhook"] --> POD["изменение подов при создании"]
-    DP["data plane (Envoy/sidecar)"] --> TR["весь трафик приложений"]
+    CA["CA и<br>корневой ключ"] --> ID["выдача любых<br>identity"]
+    CP["control plane<br>istiod"] --> CFG["рассылка конфигурации<br>всем прокси"]
+    WH["mutating<br>webhook"] --> POD["изменение подов<br>при создании"]
+    DP["data plane<br>Envoy sidecar"] --> TR["весь трафик<br>приложений"]
     style CA fill:#db4437,color:#fff
     style CP fill:#db4437,color:#fff
     style WH fill:#db4437,color:#fff
@@ -47,6 +49,32 @@ flowchart TB
 - **Доступ к Kubernetes API = доступ к mesh.** Кто может менять Istio-CRD через API,
   управляет mesh. Защита: это обычная гигиена Kubernetes RBAC (вы её знаете по CKA).
 
+На практике «строгий RBAC на Istio-CRD» - это выдать командам приложений роль **только на
+безопасные** ресурсы маршрутизации, а мощные `EnvoyFilter`/`Sidecar`/`WorkloadEntry`
+оставить platform-команде:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: istio-app-config
+  namespace: team-a
+rules:
+# командам приложений - только маршрутизация и политики их namespace
+- apiGroups: ["networking.istio.io"]
+  resources: ["virtualservices", "destinationrules", "gateways"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["security.istio.io"]
+  resources: ["authorizationpolicies", "requestauthentications"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# EnvoyFilter, Sidecar, WorkloadEntry сюда НЕ включены -
+# ими управляет отдельная роль platform-команды (через ревью/GitOps)
+```
+
+RBAC не умеет «запрещать» — он работает по принципу «разрешено только перечисленное».
+Поэтому `EnvoyFilter` просто не попадает в роль приложений: раз его нет в списке -
+создать его в своём namespace команда не сможет.
+
 ## 31.3. Векторы атак на data plane
 
 - **Обход sidecar.** Если трафик минует Envoy (приложение с `NET_ADMIN`, прямое
@@ -61,6 +89,13 @@ flowchart TB
   внешний адрес. Защита: контроль egress - `REGISTRY_ONLY` и egress gateway (глава 12).
 - **Открытый admin-интерфейс Envoy.** Порт админки Envoy (15000) не должен быть доступен
   извне пода. Защита: не выставлять его наружу.
+
+> **Ambient меняет модель угроз, а не просто «убирает sidecar».** Ambient (глава 22)
+> действительно снимает Envoy из пода приложения (плюс к изоляции), но L4-трафик и ключи
+> теперь обслуживает **ztunnel - один на ноду**. Он держит mTLS-ключи **всех подов своей
+> ноды**, поэтому компрометация ноды/ztunnel опаснее, чем компрометация одного sidecar в
+> sidecar-режиме (см. §13.11 и главу 22). Вывод: ambient - не «бесплатно безопаснее», а
+> другой трейдофф; защищайте ноды и ztunnel соответственно.
 
 ## 31.4. Чеклист харденинга
 
@@ -146,7 +181,28 @@ Gatekeeper audit для соответствия политикам, плюс о
 Смысл: перевести security best practices из этого курса в **проверяемые и обязательные**
 правила, а не в пожелания.
 
-## 31.7. Итоги главы
+## 31.7. Харденинг на EKS/AWS
+
+На EKS модель угроз mesh дополняется специфичными для облака рубежами - их закрывают вне
+самого Istio.
+
+- **IMDSv2 обязателен.** Скомпрометированный под через SSRF или неконтролируемый egress
+  тянется к метадата-эндпоинту `169.254.169.254`, чтобы украсть креды ноды/роли. Требуйте
+  **IMDSv2** (токен + hop limit = 1), чтобы под не мог достать метадату инстанса. Это
+  дополняет контроль egress из главы 12 и перехват метадаты из главы 27.
+- **Least privilege в IRSA / Pod Identity.** Узкие IAM-политики контроллерам (LB
+  Controller, external-dns, cert-manager) - чтобы взлом такого пода не давал широких прав
+  в AWS. Не вешайте на ноды жирные instance-роли, которыми пользуются все поды.
+- **Runtime-обнаружение на нодах.** Amazon **GuardDuty EKS Runtime Monitoring** (и/или
+  свой runtime-агент) ловит подозрительную активность на нодах - независимый рубеж к
+  mesh-политикам: если sidecar обошли, аномалию заметят на уровне ОС.
+- **Защита корня доверия.** CA-ключ - в **ACM PCA** или в **KMS/HSM** (глава 16), а не в
+  Secret кластера; доступ к нему - по узкой IAM-политике.
+- **Периметр и сеть.** **AWS WAF** на ALB для L7-фильтрации на входе (глава 20); security
+  groups istiod (порты `15012`/`15017`/`15000`) закрыты от лишнего; шифрование секретов
+  кластера через **KMS** (envelope encryption).
+
+## 31.8. Итоги главы
 
 - Mesh не только защищает, но и добавляет **поверхность атаки**: CA, control plane, data
   plane, admission webhook.
@@ -154,7 +210,10 @@ Gatekeeper audit для соответствия политикам, плюс о
   Istio-CRD (особенно `EnvoyFilter`); защита - offline-корень, RBAC, OPA Gatekeeper.
 - **Data plane**: риски - обход sidecar, злоупотребление identity скомпрометированного
   пода, эксфильтрация; защита - NetworkPolicy, least-privilege authz, контроль egress,
-  istio-cni, ambient.
+  istio-cni, ambient. Строгий RBAC на Istio-CRD: `EnvoyFilter`/`Sidecar` - только
+  platform-команде (RBAC разрешает лишь перечисленное).
+- **Ambient** - не «бесплатно безопаснее»: ztunnel на ноде держит ключи всех её подов,
+  поэтому меняется модель угроз (компрометация ноды опаснее).
 - Харденинг это **защита в глубину**: mTLS + авторизация + сеть + контроль egress +
   ограничение прав + обновления + supply chain.
 - Ключевые правила нужно **автоматизировать** (OPA Gatekeeper, GitOps, алерты), а не
@@ -162,17 +221,22 @@ Gatekeeper audit для соответствия политикам, плюс о
 - Список проблем получают сканерами: `istioctl analyze`, `istioctl x precheck`, Kiali
   validations, OPA Gatekeeper audit и общие k8s-сканеры (kubescape/trivy) - единого
   «istio-bench» нет, используют комбинацию.
+- На EKS модель дополняют облачными рубежами: IMDSv2, least-privilege IRSA/Pod Identity,
+  GuardDuty runtime, CA в ACM PCA/KMS, WAF на edge, закрытые security groups istiod.
 
-## 31.8. Вопросы для самопроверки
+## 31.9. Вопросы для самопроверки
 
 1. Какие новые активы для защиты появляются с внедрением mesh?
 2. Почему компрометация CA-ключа - самый опасный сценарий?
 3. Чем опасны избыточные права на `EnvoyFilter` и как это ограничить?
 4. Что такое обход sidecar и какие меры защищают от него?
 5. Как least-privilege авторизация ограничивает ущерб от скомпрометированного пода?
-6. Зачем автоматизировать харденинг и какими инструментами?
-7. Какими инструментами получить список проблем Istio (аналог сканеров с CKS) и почему
+6. Как ограничить создание `EnvoyFilter` через RBAC, если RBAC не умеет «запрещать»?
+7. Почему ambient меняет модель угроз, а не просто «убирает sidecar»?
+8. Зачем автоматизировать харденинг и какими инструментами?
+9. Какими инструментами получить список проблем Istio (аналог сканеров с CKS) и почему
    используют их комбинацию?
+10. Какие облачные рубежи добавляют харденинг mesh на EKS (IMDSv2, IRSA, GuardDuty, KMS)?
 
 ## Практика
 
