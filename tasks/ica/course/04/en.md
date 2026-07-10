@@ -1,4 +1,4 @@
-[RU version](ru.md)
+[RU version](ru.md) · [Versión en español](es.md)
 
 # Chapter 4. Data plane: Envoy and sidecar injection
 

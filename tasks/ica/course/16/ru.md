@@ -1,4 +1,4 @@
-[Eng version](en.md)
+[Eng version](en.md) · [Versión en español](es.md)
 
 # Глава 16. Управление сертификатами: кастомный CA, cert-manager и istio-csr
 

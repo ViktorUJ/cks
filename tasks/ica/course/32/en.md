@@ -1,4 +1,4 @@
-[RU version](ru.md)
+[RU version](ru.md) · [Versión en español](es.md)
 
 # Chapter 32. The ICA exam: format and preparation
 

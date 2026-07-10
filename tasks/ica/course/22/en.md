@@ -1,4 +1,4 @@
-[RU version](ru.md)
+[RU version](ru.md) · [Versión en español](es.md)
 
 # Chapter 22. Ambient mode: ztunnel and the waypoint proxy
 

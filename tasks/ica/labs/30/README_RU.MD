@@ -1,4 +1,4 @@
-[Eng version](README.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD)
 
 # Lab 30 - StatefulSet и headless-сервисы в mesh
 

@@ -1,4 +1,4 @@
-[RU version](ru.md)
+[RU version](ru.md) · [Versión en español](es.md)
 
 # Chapter 16. Certificate management: a custom CA, cert-manager and istio-csr
 

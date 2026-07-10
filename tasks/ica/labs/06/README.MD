@@ -1,4 +1,4 @@
-[RU version](README_RU.MD)
+[RU version](README_RU.MD) · [Versión en español](README_ES.MD)
 
 # Lab 06 - Load Balancing + Traffic Mirroring
 

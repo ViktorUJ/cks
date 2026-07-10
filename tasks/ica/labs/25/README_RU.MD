@@ -1,4 +1,4 @@
-[Eng version](README.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD)
 
 # Lab 25 - Progressive delivery с Flagger
 

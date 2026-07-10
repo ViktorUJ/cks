@@ -1,4 +1,4 @@
-[RU version](README_RU.MD)
+[RU version](README_RU.MD) · [Versión en español](README_ES.MD)
 
 # Lab 07 - Helm install + Canary upgrade with revisions
 

@@ -1,4 +1,4 @@
-[RU version](README_RU.MD)
+[RU version](README_RU.MD) · [Versión en español](README_ES.MD)
 
 # Lab 29 - Ingress TLS: MUTUAL and PASSTHROUGH modes
 

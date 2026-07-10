@@ -1,4 +1,4 @@
-[Eng version](README.md)
+[Eng version](README.md) · [Versión en español](README_ES.md)
 
 # Istio: практический самоучитель
 

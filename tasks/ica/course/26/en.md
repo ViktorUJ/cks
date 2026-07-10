@@ -1,4 +1,4 @@
-[RU version](ru.md)
+[RU version](ru.md) · [Versión en español](es.md)
 
 # Chapter 26. Zero-downtime production migration: ingress-nginx to Istio
 

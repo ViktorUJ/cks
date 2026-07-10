@@ -1,4 +1,4 @@
-[RU version](README_RU.MD)
+[RU version](README_RU.MD) · [Versión en español](README_ES.MD)
 
 # Lab 20 - mTLS migration: PERMISSIVE → STRICT with zero downtime
 

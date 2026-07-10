@@ -1,4 +1,4 @@
-[Eng version](README.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD)
 
 # Lab 09 - Advanced: Ambient mode (data plane без сайдкаров)
 

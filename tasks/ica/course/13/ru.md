@@ -1,4 +1,4 @@
-[Eng version](en.md)
+[Eng version](en.md) · [Versión en español](es.md)
 
 # Глава 13. mTLS и PeerAuthentication: модель Zero Trust
 

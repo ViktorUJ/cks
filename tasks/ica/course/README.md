@@ -1,4 +1,4 @@
-[RU version](README_RU.md)
+[RU version](README_RU.md) · [Versión en español](README_ES.md)
 
 # Istio: a hands-on self-study course
 

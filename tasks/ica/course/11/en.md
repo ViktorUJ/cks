@@ -1,4 +1,4 @@
-[RU version](ru.md)
+[RU version](ru.md) · [Versión en español](es.md)
 
 # Chapter 11. The Kubernetes Gateway API
 
@@ -313,6 +313,60 @@ Practical recommendations for what to choose in real projects.
 (Mirroring and weighted canary exist in both APIs, so there is no need to migrate or stay for
 their sake.)
 
+### The classic Kubernetes Ingress resource (legacy)
+
+There is a third way in as well - the plain Kubernetes `Ingress` (`networking.k8s.io/v1`), the
+one used with nginx-ingress, Traefik and cloud controllers. Istio can act as an ingress
+controller for it: the Istio ingress gateway reads `Ingress` resources if they specify the
+`istio` class.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: istio
+spec:
+  controller: istio.io/ingress-controller
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reviews-ingress
+  namespace: app
+spec:
+  ingressClassName: istio          # served by the Istio ingress gateway
+  rules:
+  - host: myapp.example.com
+    http:
+      paths:
+      - path: /reviews
+        pathType: Prefix
+        backend:
+          service:
+            name: reviews
+            port:
+              number: 8080
+  tls:
+  - hosts:
+    - myapp.example.com
+    secretName: myapp-cert          # a tls Secret, as in chapter 9
+```
+
+Why this is **legacy** and why it should not be chosen for new traffic:
+
+- The `Ingress` standard itself has a very poor set of capabilities: host, path, TLS - and
+  that's it. No weights, no mirroring, no redirects, no header-based splits.
+- Everything on top of that is implemented via **non-standard annotations** of the controller
+  (like nginx, chapter 26). Annotations are incompatible between controllers, and Istio
+  supports only a small subset of them - most of the familiar `nginx.ingress.kubernetes.io/*`
+  do not work.
+- The direction of the industry and of Istio itself is toward the Gateway API, which was
+  created as the "next-generation `Ingress`".
+
+The practical takeaway: the classic `Ingress` in Istio is kept only for compatibility with old
+manifests during migration (chapter 26). For new ingress take the Kubernetes Gateway API or,
+if you need Istio features, the Istio `Gateway` + `VirtualService`.
+
 **General rules:**
 
 - Do not describe the same route both through a VirtualService and an HTTPRoute at once - that
@@ -344,6 +398,9 @@ their sake.)
   for cross-namespace references - there is no built-in analogue in the Istio API.
 - Best practice: the Gateway API for new ingress, standard scenarios and ambient; the Istio
   API when you need fault injection or DestinationRule policies; do not mix both for one route.
+- Istio also serves the classic Kubernetes `Ingress` (`ingressClassName: istio`), but that is
+  legacy: capabilities are poor, the advanced stuff goes through non-standard annotations (a
+  small subset). It is kept for compatibility during migration and not chosen for new traffic.
 
 ## 11.11. Self-check questions
 
@@ -358,6 +415,8 @@ their sake.)
    differ from Istio (what about subsets)?
 8. What are `allowedRoutes` and `ReferenceGrant` for? What security problem do they solve?
 9. What should you check if Gateway API manifests do not apply in the cluster?
+10. Can Istio serve the classic Kubernetes `Ingress`, and why is it considered legacy? When is
+    it still used?
 
 ## Practice
 

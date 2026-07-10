@@ -1,4 +1,4 @@
-[RU version](README_RU.MD)
+[RU version](README_RU.MD) · [Versión en español](README_ES.MD)
 
 # Lab 16 - Kubernetes Gateway API: ingress routing with Gateway + HTTPRoute
 

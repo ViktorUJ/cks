@@ -1,4 +1,4 @@
-[Eng version](en.md)
+[Eng version](en.md) · [Versión en español](es.md)
 
 # Глава 3. Обновление Istio: Helm, ревизии, canary и in-place
 

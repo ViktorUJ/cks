@@ -1,4 +1,4 @@
-[RU version](ru.md)
+[RU version](ru.md) · [Versión en español](es.md)
 
 # Chapter 9. Edge TLS: ingress in SIMPLE, MUTUAL, PASSTHROUGH modes
 

@@ -1,4 +1,4 @@
-[Eng version](README.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD)
 
 # Lab 04 - Zero Trust: mTLS (PeerAuthentication) + AuthorizationPolicy
 

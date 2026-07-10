@@ -1,4 +1,4 @@
-[RU version](ru.md)
+[RU version](ru.md) · [Versión en español](es.md)
 
 # Chapter 12. Egress: ServiceEntry, egress gateway, TLS origination
 
@@ -87,6 +87,127 @@ A couple more useful fields:
 Why this is needed: without a `ServiceEntry` an external service can neither be routed through
 the egress gateway nor allowed in strict `REGISTRY_ONLY` mode. This is the first building
 block of egress control.
+
+### Wildcard hosts: caveats and the egress gateway
+
+A wildcard in `hosts` (`*.example.com`) is handy for covering a bunch of subdomains with a
+single `ServiceEntry`, but it has an important limitation: **a wildcard cannot be DNS-resolved
+directly** - there is no DNS record for `*.example.com`, and Envoy does not know where to send
+the packets. So the behavior depends on how the subdomains "land" in reality:
+
+- **All subdomains behind a common set of addresses** (a typical example is `*.wikipedia.org`,
+  where everything is served by one server pool). Then you set `resolution: DNS` and an
+  **explicit** endpoint to actually go to:
+
+  ```yaml
+  apiVersion: networking.istio.io/v1
+  kind: ServiceEntry
+  metadata:
+    name: wikipedia
+    namespace: app
+  spec:
+    hosts:
+    - "*.wikipedia.org"
+    ports:
+    - number: 443
+      name: https
+      protocol: TLS
+    resolution: DNS
+    endpoints:
+    - address: www.wikipedia.org    # the common address all subdomains resolve to
+  ```
+
+- **Arbitrary, independent subdomains** (each resolves to its own address). Here DNS will not
+  help - you use `resolution: NONE` (Envoy passes traffic by SNI/destination IP, resolving
+  nothing):
+
+  ```yaml
+  spec:
+    hosts:
+    - "*.example.com"
+    ports:
+    - number: 443
+      name: tls
+      protocol: TLS
+    resolution: NONE               # no resolution, route by SNI/IP as is
+    location: MESH_EXTERNAL
+  ```
+
+Limitations people trip over:
+
+- **A bare `*` is not set** - a domain suffix is needed (`*.example.com`), otherwise it means
+  "let out to anywhere", which contradicts the point of `REGISTRY_ONLY`.
+- A wildcard works only for the top level of subdomains: `*.example.com` matches
+  `a.example.com`, but not `a.b.example.com`.
+
+Through an **egress gateway** a wildcard is routed by SNI (`tls` in `PASSTHROUGH` mode) rather
+than by an exact host - you put the wildcard itself in `sniHosts` and in the gateway's
+`hosts`. The scheme is the same four-resource one as in 12.4, only the hosts change:
+
+```yaml
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: istio-egressgateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: egressgateway
+  servers:
+  - port:
+      number: 443
+      name: tls
+      protocol: TLS
+    hosts:
+    - "*.example.com"             # the wildcard right on the gateway listener
+    tls:
+      mode: PASSTHROUGH
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: wildcard-via-egress
+  namespace: istio-system
+spec:
+  hosts:
+  - "*.example.com"
+  gateways:
+  - mesh
+  - istio-egressgateway
+  tls:
+  - match:
+    - gateways: [mesh]
+      sniHosts: ["*.example.com"]          # SNI match by the wildcard, not by an exact host
+    route:
+    - destination:
+        host: istio-egressgateway.istio-system.svc.cluster.local
+        subset: api-egress
+        port:
+          number: 443
+  - match:
+    - gateways: [istio-egressgateway]
+      sniHosts: ["*.example.com"]
+    route:
+    - destination:
+        host: "*.example.com"              # let it out by SNI
+        port:
+          number: 443
+```
+
+> **Check your work.** An allowed subdomain should go through, while a host outside the
+> wildcard should hit `REGISTRY_ONLY`:
+>
+> ```bash
+> kubectl exec deploy/sleep -n app -- curl -sS -o /dev/null -w "%{http_code}\n" \
+>   https://a.example.com          # expect 200 (in the registry by wildcard)
+> kubectl exec deploy/sleep -n app -- curl -sS -o /dev/null -w "%{http_code}\n" \
+>   https://api.other.com          # expect an error/502 (not in the registry)
+> ```
+
+The practical advice stays the same: a wildcard is a trade-off between convenience and
+precision of control. The broader the `*`, the less you know where the mesh actually goes, so
+in production precise hosts are preferred, and a wildcard is taken deliberately (for example,
+for a CDN or a cloud service with unpredictable subdomains).
 
 ### DNS proxying: resolving by Istio itself
 
@@ -380,6 +501,10 @@ it on the egress gateway, traffic would spread across all nodes and NAT gateways
   configured via Gateway + DestinationRule + VirtualService with two-stage routing.
 - **ServiceEntry** is flexible in `resolution` (`DNS`/`STATIC`/`NONE`), supports wildcard hosts
   and visibility limiting via `exportTo`.
+- **Wildcard hosts** (`*.example.com`) cannot be DNS-resolved directly: for a common address
+  use `resolution: DNS` with an explicit `endpoints`, for arbitrary subdomains use
+  `resolution: NONE`; through an egress gateway they are routed by SNI
+  (`sniHosts: ["*.example.com"]`, `PASSTHROUGH`).
 - **DNS proxying** (`ISTIO_META_DNS_CAPTURE`) resolves names by istio-agent itself: it makes
   ServiceEntry hosts resolvable (with `DNS_AUTO_ALLOCATE` - virtual IPs for hosts without
   addresses), offloads CoreDNS; used by default in ambient and on VMs.
@@ -406,6 +531,9 @@ it on the egress gateway, traffic would spread across all nodes and NAT gateways
 8. What is DNS proxying in Istio and what is `DNS_AUTO_ALLOCATE` for?
 9. How, on EKS, do you make requests to an external partner leave from a known IP for an
    allowlist? Who exactly determines the outbound address?
+10. Why can't a wildcard host be DNS-resolved directly, and which `resolution` do you pick for
+    a common address versus arbitrary subdomains? How do you route a wildcard through an egress
+    gateway?
 
 ## Practice
 

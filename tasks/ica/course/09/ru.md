@@ -1,4 +1,4 @@
-[Eng version](en.md)
+[Eng version](en.md) · [Versión en español](es.md)
 
 # Глава 9. Edge TLS: ingress в режимах SIMPLE, MUTUAL, PASSTHROUGH
 

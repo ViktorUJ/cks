@@ -1,4 +1,4 @@
-[RU version](ru.md)
+[RU version](ru.md) · [Versión en español](es.md)
 
 # Chapter 13. mTLS and PeerAuthentication: the Zero Trust model
 
