@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Eng version](README.MD)
+[RU version](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
 
 # Lab 01 - Instalación de Istio en un clúster de Kubernetes
 

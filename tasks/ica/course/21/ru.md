@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
 
 # Глава 21. Расширение data plane: EnvoyFilter, Lua и WasmPlugin
 

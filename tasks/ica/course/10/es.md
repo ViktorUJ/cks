@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md)
+[RU version](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md)
 
 # Capítulo 10. Enrutamiento de tráfico TCP, gRPC y WebSocket
 

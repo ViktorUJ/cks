@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md)
+[RU version](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md)
 
 # Capítulo 18. La Telemetry API: logs de acceso y trazado distribuido
 

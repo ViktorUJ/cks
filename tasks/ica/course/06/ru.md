@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
 
 # Глава 6. Релизные стратегии: canary, header-routing, traffic mirroring
 

@@ -1,4 +1,4 @@
-[RU version](README_RU.md) · [Eng version](README.md)
+[RU version](README_RU.md) · [Eng version](README.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md)
 
 # Istio: curso práctico de autoaprendizaje
 
@@ -6,8 +6,20 @@ Un curso práctico sobre la malla de servicios Istio, ligado a los laboratorios 
 (`tasks/ica/labs`). Escrito para ingenieros que ya han aprobado el CKA. La Parte 1 cubre el
 examen ICA, la Parte 2 cubre las buenas prácticas para operaciones en el mundo real.
 
-Estructura: cada tema es una carpeta numerada. Dentro hay archivos localizados (`ru.md` es
-el principal por ahora; las traducciones al inglés y al español se añaden después).
+Estructura: cada tema es una carpeta numerada. Dentro hay archivos localizados.
+El idioma principal es el ruso (`ru.md`); a partir de él se hacen las traducciones.
+
+Localizaciones disponibles (los capítulos del curso y los laboratorios están traducidos
+por completo):
+
+- 🇷🇺 Русский - `ru.md` (principal, fuente de verdad)
+- 🇬🇧 English - `en.md`
+- 🇪🇸 Español - `es.md`
+- 🇫🇷 Français - `fr.md`
+- 🇩🇪 Deutsch - `de.md`
+
+Cambia de idioma con los enlaces de la primera línea de cada capítulo y de la cabecera de
+este índice. Los exámenes de práctica (`tasks/ica/mock`) están solo en inglés.
 
 ## Contenido
 

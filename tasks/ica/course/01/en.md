@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Versión en español](es.md)
+[RU version](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
 
 # Chapter 1. Introduction to service mesh and Istio architecture
 

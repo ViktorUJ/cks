@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Versión en español](README_ES.MD)
+[RU version](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
 
 # Lab 05 - Controlled Egress: ServiceEntry + Egress Gateway + Sidecar scope
 

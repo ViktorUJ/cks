@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Eng version](README.MD)
+[RU version](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
 
 # Lab 11 - Autenticación de usuarios finales: RequestAuthentication + JWT
 

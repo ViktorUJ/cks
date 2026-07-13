@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Eng version](README.MD)
+[RU version](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
 # Dark Launch (Lanzamiento oculto)
 
 Los desarrolladores han lanzado una versión totalmente nueva y experimental de la aplicación: v3. Aún está inmadura y los usuarios normales bajo ningún concepto deben verla (deben permanecer en la v1 estable). Sin embargo, necesitas dar acceso a los ingenieros de QA para que verifiquen la lógica de funcionamiento en un clúster real de "producción". Los testers se identificarán mediante una cabecera HTTP especial: `x-user: tester`.

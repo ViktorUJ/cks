@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Versión en español](README_ES.MD)
+[RU version](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
 
 # Lab 32 - gRPC: per-request load balancing, port naming, retries and timeouts
 

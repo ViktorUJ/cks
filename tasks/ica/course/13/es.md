@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md)
+[RU version](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md)
 
 # Capítulo 13. mTLS y PeerAuthentication: el modelo Zero Trust
 

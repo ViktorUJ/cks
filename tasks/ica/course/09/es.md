@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md)
+[RU version](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md)
 
 # Capítulo 9. TLS en el borde: ingress en modos SIMPLE, MUTUAL, PASSTHROUGH
 

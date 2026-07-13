@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md)
+[RU version](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md)
 
 # Capítulo 21. Extender el data plane: EnvoyFilter, Lua y WasmPlugin
 

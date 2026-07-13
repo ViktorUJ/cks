@@ -1,4 +1,4 @@
-[RU version](README_RU.md) · [Versión en español](README_ES.md)
+[RU version](README_RU.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md)
 
 # Istio: a hands-on self-study course
 
@@ -6,8 +6,19 @@ A practical course on the Istio service mesh, tied to the hands-on labs
 (`tasks/ica/labs`). Written for engineers who already passed CKA. Part 1 covers the ICA
 exam, Part 2 covers best practices for real-world operations.
 
-Structure: every topic is a numbered folder. Inside are localized files (`ru.md` is the
-main one for now; English translations are added later).
+Structure: every topic is a numbered folder. Inside are localized files.
+The main language is Russian (`ru.md`); the translations are made from it.
+
+Available localizations (course chapters and labs are fully translated):
+
+- 🇷🇺 Русский - `ru.md` (main, source of truth)
+- 🇬🇧 English - `en.md`
+- 🇪🇸 Español - `es.md`
+- 🇫🇷 Français - `fr.md`
+- 🇩🇪 Deutsch - `de.md`
+
+Switch between languages via the links in the first line of every chapter and in the
+header of this contents page. The mock exams (`tasks/ica/mock`) are English-only.
 
 ## Contents
 
