@@ -1,4 +1,4 @@
-[RU version](README_RU.MD)
+[RU version](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
 
 # Lab 15 - Installation & Configuration: customizing the Istio install (IstioOperator + MeshConfig)
 

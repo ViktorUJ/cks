@@ -28,6 +28,14 @@ The server can be run as a Docker container or Kubernetes resources for x86 or A
     - [Android](#run-binary-on-android)
   - [Compilation from Source Code](#compilation-from-source-code)
 - [Configuration](#configuration)
+- [gRPC](#grpc)
+  - [What the gRPC server exposes](#what-the-grpc-server-exposes)
+  - [Run the gRPC server](#run-the-grpc-server)
+  - [Use the built-in gRPC client / load generator](#use-the-built-in-grpc-client--load-generator)
+  - [Call it with grpcurl](#call-it-with-grpcurl)
+  - [Check health with fortio / grpc_health_probe](#check-health-with-fortio--grpc_health_probe)
+  - [gRPC in a service mesh (per-request load balancing)](#grpc-in-a-service-mesh-per-request-load-balancing)
+  - [Proto definition and regeneration](#proto-definition-and-regeneration)
 - [API](#api)
    - [getVar - get ping-pong variables](#get-variables)
    - [setVar - set ping-pong variables ](#set-variables) 
@@ -107,8 +115,159 @@ kubectl  run test  --image  viktoruj/ping_pong --env  ADDITIONAL_RESPONSE_SIZE=1
 | `RESPONSE_DELAY`           | `responseDelay`          |     Yes     | Response delay in milliseconds.                                                                                                                       |
 | `MAX_RESPONSE_WORKER`      | `maxResponseWorker`      |     Yes     | Maximum number of response workers.                                                                                                                   |
 | `ADDITIONAL_RESPONSE_SIZE` | `additionalResponseSize` |     Yes     | additional response size in Kb , default = 0                                                                                                          |
+| `ENABLE_GRPC`              | -                        |     No      | Start the gRPC server (default = "true"; set "false" to disable).                                                                                     |
+| `GRPC_PORT`                | -                        |     No      | Port for the gRPC server (default = `8079`).                                                                                                          |
 
 
+
+## gRPC
+
+Besides the HTTP server, `ping_pong` also runs a **gRPC server** (over HTTP/2) on a
+separate port (default `8079`). It is enabled by default; the **same binary** can also act
+as a gRPC **client / load generator**, so one image covers both the server and the client
+side of a demo.
+
+Control it with two environment variables (see also the [Configuration](#configuration)
+table):
+
+| ENV VAR       | Default | Description                                   |
+|---------------|---------|-----------------------------------------------|
+| `ENABLE_GRPC` | `true`  | Start the gRPC server. Set `false` to disable.|
+| `GRPC_PORT`   | `8079`  | Port the gRPC server listens on.              |
+
+The HTTP server (`8080`) and metrics (`9090`) keep working alongside gRPC.
+
+### What the gRPC server exposes
+
+- **`pingpong.PingPong/Echo`** - returns the request payload plus the serving pod identity:
+  `message`, `server_name`, `hostname`, and a per-pod `count`. Because every reply carries
+  the pod hostname, a client can **see which pod answered each call** - the direct way to
+  prove per-request load balancing across replicas.
+- **`grpc.health.v1.Health`** - the standard gRPC health service. Returns `SERVING`, so
+  `fortio load -grpc`, `grpc_health_probe` and Istio/Kubernetes gRPC readiness probes work
+  out of the box.
+- **server reflection** - so tools like `grpcurl` can call the server without any `.proto`
+  files.
+
+### Run the gRPC server
+
+```bash
+# Docker: expose the gRPC port
+docker run -d -p 8079:8079 viktoruj/ping_pong
+
+# Kubernetes: gRPC on by default; make each pod report its real hostname
+kubectl run grpc --image viktoruj/ping_pong --env ENABLE_DEFAULT_HOSTNAME=false
+
+# disable gRPC / change the port
+docker run -d -e ENABLE_GRPC=false -p 8080:8080 viktoruj/ping_pong
+docker run -d -e GRPC_PORT=50051 -p 50051:50051 viktoruj/ping_pong
+```
+
+> Tip: set `ENABLE_DEFAULT_HOSTNAME=false` on the server so `Echo` returns the real pod
+> hostname instead of the fixed default `ping_pong_server`. This is what makes the
+> per-request balancing demo readable.
+
+### Use the built-in gRPC client / load generator
+
+The binary switches to client mode when the first argument is `-grpc-client`; it sends
+`Echo` requests, prints which pod answered each one, then prints a summary and exits.
+
+```bash
+# from any pod/host that has the binary or the image
+/app -grpc-client -target grpc-server:8079 -n 180 -c 4
+
+# inside Kubernetes (exec into a pod running the image)
+kubectl exec -it deploy/grpc-client -- /app -grpc-client -target grpc-server:8079 -n 180
+```
+
+Client flags:
+
+| Flag       | Default          | Description                                       |
+|------------|------------------|---------------------------------------------------|
+| `-target`  | `localhost:8079` | gRPC server `host:port`.                          |
+| `-n`       | `100`            | Number of `Echo` requests to send.                |
+| `-c`       | `1`              | Parallel workers sharing the channel.             |
+| `-message` | `ping`           | Payload string echoed back.                       |
+| `-timeout` | `30s`            | Overall deadline for the run.                     |
+| `-quiet`   | `false`          | Print only the summary (no per-request lines).    |
+
+Example output:
+
+```
+req 1 from host=grpc-server-6d4f-aaaaa server=grpc-server-6d4f-aaaaa count=1
+req 2 from host=grpc-server-6d4f-bbbbb server=grpc-server-6d4f-bbbbb count=1
+...
+--- summary ---
+requests: 180  ok: 180  errors: 0
+distinct servers: 3
+host grpc-server-6d4f-aaaaa: 60
+host grpc-server-6d4f-bbbbb: 60
+host grpc-server-6d4f-ccccc: 60
+```
+
+`distinct servers: N` is the key line - it tells you how many backend pods actually
+answered. The process exits `0` if at least one request succeeded, otherwise `1`.
+
+### Call it with grpcurl
+
+Server reflection is enabled, so no `.proto` files are needed:
+
+```bash
+# list services and methods
+grpcurl -plaintext localhost:8079 list
+grpcurl -plaintext localhost:8079 describe pingpong.PingPong
+
+# call Echo
+grpcurl -plaintext -d '{"message":"hello"}' localhost:8079 pingpong.PingPong/Echo
+# -> { "message": "hello", "serverName": "...", "hostname": "...", "count": "1" }
+
+# health check
+grpcurl -plaintext localhost:8079 grpc.health.v1.Health/Check
+# -> { "status": "SERVING" }
+```
+
+### Check health with fortio / grpc_health_probe
+
+```bash
+# fortio uses the standard gRPC health service
+fortio load -grpc -n 50 localhost:8079        # reports "Health SERVING : 50"
+
+# grpc_health_probe (handy as a Kubernetes probe)
+grpc_health_probe -addr=localhost:8079        # -> status: SERVING
+```
+
+Kubernetes gRPC readiness probe example:
+
+```yaml
+readinessProbe:
+  grpc:
+    port: 8079
+  initialDelaySeconds: 2
+```
+
+### gRPC in a service mesh (per-request load balancing)
+
+gRPC is **HTTP/2, not raw TCP**. In a mesh (e.g. Istio) the service port must be named
+`grpc` / `grpc-*` or carry `appProtocol: grpc`, otherwise the proxy treats it as L4 TCP,
+pins the single long-lived connection to one pod, and the client sees `distinct servers:
+1`. With the port declared as gRPC, the proxy balances **each request** and the client
+sees `distinct servers: 3`. A full worked example is ICA
+[Lab 32](../../tasks/ica/labs/32/README.MD).
+
+### Proto definition and regeneration
+
+The service is defined in [`app/proto/pingpong.proto`](app/proto/pingpong.proto). The
+generated Go code (`*.pb.go`) is committed, so the Docker build stays a plain `go build`.
+Regenerate it only when you change the `.proto`:
+
+```bash
+cd docker/ping_pong/app
+# needs: buf, protoc-gen-go, protoc-gen-go-grpc on PATH
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+buf generate
+# generated files land next to buf.yaml; keep them under app/proto/
+```
 
 ### run Docker container
 ```
@@ -175,7 +334,7 @@ ping-pong-android-arm64
 ```bash
 cd docker/ping_pong/app
 go mod tidy
-go run app.go # or go build app.go
+go run . # or go build .
 
 ```
 

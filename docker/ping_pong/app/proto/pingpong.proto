@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package pingpong;
+
+option go_package = "mypackage/myapp/proto";
+
+// PingPong is a minimal echo service used to demonstrate gRPC (HTTP/2)
+// behaviour in a service mesh: because every response carries the serving
+// pod's identity, a client can prove per-request load balancing across
+// replicas.
+service PingPong {
+  // Echo returns the request payload together with the serving pod identity.
+  rpc Echo(EchoRequest) returns (EchoReply) {}
+}
+
+message EchoRequest {
+  // Arbitrary client payload, echoed back unchanged.
+  string message = 1;
+}
+
+message EchoReply {
+  // The payload sent by the client.
+  string message = 2;
+  // SERVER_NAME env (or hostname) of the pod that served the request.
+  string server_name = 3;
+  // Pod hostname that served the request.
+  string hostname = 4;
+  // Per-pod monotonically increasing counter of served Echo requests.
+  uint64 count = 5;
+}

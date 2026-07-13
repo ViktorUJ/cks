@@ -1,0 +1,173 @@
+# ============================================================================
+# ICA Lab 33 — Control plane performance & operations
+# ----------------------------------------------------------------------------
+# Three namespaces to demonstrate the two scope levers:
+#   - app    : injected + discovered (mesh=enabled). We attach a Sidecar here
+#              to restrict its egress scope.
+#   - shop   : injected + discovered (mesh=enabled). Observation proxy for
+#              discovery selectors; also the service that app's Sidecar will
+#              exclude.
+#   - legacy : NOT injected, NOT labelled mesh=enabled -> dropped from the mesh
+#              once discoverySelectors are enabled.
+#
+# Services (FQDNs used by the tests):
+#   frontend.app.svc.cluster.local
+#   catalog.shop.svc.cluster.local
+#   legacy-app.legacy.svc.cluster.local
+# ============================================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio-injection: enabled
+    mesh: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shop
+  labels:
+    istio-injection: enabled
+    mesh: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: legacy
+---
+# app / frontend (in mesh)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: app
+spec:
+  selector:
+    app: frontend
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+# shop / catalog (in mesh)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog
+  namespace: shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalog
+  template:
+    metadata:
+      labels:
+        app: catalog
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog
+  namespace: shop
+spec:
+  selector:
+    app: catalog
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+# probe: a plain (sidecar-disabled) curl pod used to read istiod golden-signal
+# metrics from istiod:15014/metrics.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: probe
+  namespace: shop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: probe
+  template:
+    metadata:
+      labels:
+        app: probe
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+      - name: probe
+        image: curlimages/curl:latest
+        command: ["sleep", "3650d"]
+---
+# legacy / legacy-app (NOT in mesh, no sidecar)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-app
+  namespace: legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-app
+  template:
+    metadata:
+      labels:
+        app: legacy-app
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: legacy-app
+  namespace: legacy
+spec:
+  selector:
+    app: legacy-app
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080

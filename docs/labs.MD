@@ -109,6 +109,10 @@
 | **29** | [Ingress TLS: MUTUAL and PASSTHROUGH modes](../tasks/ica/labs/29/README.MD) |
 | **30** | [StatefulSets and headless services in the mesh](../tasks/ica/labs/30/README.MD) |
 | **31** | [Zero-downtime production migration: ingress-nginx to Istio Gateway](../tasks/ica/labs/31/README.MD) |
+| **32** | [gRPC: per-request load balancing, port naming, retries and timeouts](../tasks/ica/labs/32/README.MD) |
+| **33** | [Control plane performance & operations: discovery selectors, Sidecar scope, istiod golden signals, OPA Gatekeeper](../tasks/ica/labs/33/README.MD) |
+| **34** | [Hardening & threat model: STRICT mTLS, default-deny, egress control, RBAC on Istio CRDs, OPA Gatekeeper, NetworkPolicy](../tasks/ica/labs/34/README.MD) |
+| **35** | [Multicluster mesh: multi-primary, multi-network, shared CA, east-west gateway, cross-cluster discovery](../tasks/ica/labs/35/README.MD) |
 
 
 ## EKS labs

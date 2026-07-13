@@ -1,0 +1,106 @@
+# ============================================================================
+# ICA Lab 32 — gRPC per-request load balancing, port naming, retries/timeouts
+# ----------------------------------------------------------------------------
+# Workloads (namespace app, istio-injection=enabled), all on viktoruj/ping_pong
+# which now speaks gRPC (PingPong.Echo returns the serving pod's hostname):
+#   - grpc-server : gRPC Echo/Health server, 3 replicas -> the backends.
+#   - grpc-client : same image; tests `exec /app -grpc-client ...` to drive load
+#                   and count how many distinct pods answered.
+#
+# The grpc-server Service is created with a MIS-NAMED port ("tcp"). Because of
+# that, Istio classifies port 8079 as raw L4 TCP: the single long-lived HTTP/2
+# gRPC connection is pinned to ONE pod and per-request balancing does NOT
+# happen (the client sees a single distinct server). Fixing the port name
+# (grpc / appProtocol: grpc) and adding a VirtualService with gRPC retries +
+# timeout is the task of this lab.
+# ============================================================================
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app
+  labels:
+    istio-injection: enabled
+---
+# gRPC backends: 3 replicas. ENABLE_DEFAULT_HOSTNAME=false makes each pod report
+# its real (unique) hostname in the Echo reply, so balancing is observable.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-server
+  namespace: app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: grpc-server
+  template:
+    metadata:
+      labels:
+        app: grpc-server
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        args: [ ]
+        env:
+        - name: ENABLE_GRPC
+          value: "true"
+        - name: GRPC_PORT
+          value: "8079"
+        - name: ENABLE_DEFAULT_HOSTNAME
+          value: "false"
+        ports:
+        - name: grpc
+          containerPort: 8079
+        - name: http
+          containerPort: 8080
+---
+# Service for the gRPC backends.
+# NOTE: the port is intentionally named "tcp" -> Istio treats it as L4 TCP and
+# per-request gRPC balancing is broken. Renaming it to "grpc" (or adding
+# appProtocol: grpc) is part of the task.
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-server
+  namespace: app
+  labels:
+    app: grpc-server
+spec:
+  ports:
+  - name: tcp
+    port: 8079
+    targetPort: 8079
+  selector:
+    app: grpc-server
+---
+# gRPC client. Runs the ping_pong server just to stay alive; tests `exec` into
+# it and run `/app -grpc-client -target grpc-server:8079 ...`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-client
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpc-client
+  template:
+    metadata:
+      labels:
+        app: grpc-client
+    spec:
+      containers:
+      - name: ping-pong
+        image: viktoruj/ping_pong:latest
+        imagePullPolicy: Always
+        args: [ ]
+        env:
+        - name: ENABLE_DEFAULT_HOSTNAME
+          value: "false"
+        ports:
+        - name: http
+          containerPort: 8080

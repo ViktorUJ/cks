@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.33.1 (xx.08.2026)
+### Features
+* Lab 32 Istio.[gRPC: per-request load balancing, port naming, retries and timeouts](../tasks/ica/labs/32) is added.
+* Lab 33 Istio.[Control plane performance & operations: discovery selectors, Sidecar scope, istiod golden signals, OPA Gatekeeper](../tasks/ica/labs/33) is added.
+* Lab 34 Istio.[Hardening & threat model: STRICT mTLS, default-deny, egress control, RBAC on Istio CRDs, OPA Gatekeeper, NetworkPolicy](../tasks/ica/labs/34) is added.
+* Lab 35 Istio.[Multicluster mesh: multi-primary, multi-network, shared CA, east-west gateway, cross-cluster discovery](../tasks/ica/labs/35) is added.
+* Istio [self-study course](../tasks/ica/course) is added: 32 chapters (Part 1 - ICA exam prep, Part 2 - production best practices) tied to the hands-on labs. Available in 5 languages: Russian (source), English, Spanish, French and German.
+### Improvements
+* `ping_pong` now speaks gRPC (PingPong.Echo + Health + reflection) and has a built-in gRPC client / load generator (`-grpc-client`).
+* `ping_pong` debug images install `kubectl-k8i` via krew with shell completion; scratch/alpine images cross-compile natively (BuildKit `$BUILDPLATFORM`) instead of under QEMU.
+* ICA labs [01-35](../tasks/ica/labs) are now translated into Spanish (`README_ES.MD`), French (`README_FR.MD`) and German (`README_DE.MD`) in addition to the existing Russian and English versions.
+
 ## 0.32.1 (03.07.2026)
 ### Features
 * Lab 04 Istio.[Zero Trust: mTLS and AuthorizationPolicy](../tasks/ica/labs/04) is added.
