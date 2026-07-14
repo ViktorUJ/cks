@@ -24,6 +24,22 @@ flowchart LR
     HR -->|"по умолчанию"| V1["ping-pong-v1<br>(Stable)"]
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + gateway-под |
+| worker | `t3.small` | 1 | ёмкость для приложения и шлюза |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=16 make run_ica_task
+```
+
 ## Задание
 
 1. Развернуть приложение (манифест `1.yaml`).
@@ -144,13 +160,3 @@ check_result
 входа и `HTTPRoute` с header-based роутингом. Istio сам развернул под шлюза под этот
 `Gateway`. Это современный, переносимый способ управления входящим трафиком, на который
 двигается вся экосистема.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + gateway-под |
-| worker | `t3.small` | 1 | ёмкость для приложения и шлюза |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

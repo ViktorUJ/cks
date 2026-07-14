@@ -25,6 +25,22 @@ flowchart LR
     GW -->|"por encima del límite"| R["429 Too Many Requests"]
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cantidad | Rol |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacidad para la aplicación |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `curl`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=17 make run_ica_task
+```
+
 ## Tarea
 
 1. Comprobar que la aplicación está accesible (`200`).
@@ -136,13 +152,3 @@ Configuraste un rate limit local en el ingress gateway mediante `EnvoyFilter` - 
 de protección contra la sobrecarga sin dependencias externas, y entendiste en qué se diferencia del
 global. Trabajar con `EnvoyFilter` es una habilidad senior importante para el ajuste fino del
 data plane de Envoy más allá de los CRD estándar de Istio.
-
-## Infraestructura
-
-| Componente | Tipo | Cantidad | Rol |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacidad para la aplicación |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `curl`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

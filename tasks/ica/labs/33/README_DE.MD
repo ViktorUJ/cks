@@ -33,6 +33,22 @@ flowchart LR
     SEL -.verringern.-> P
 ```
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
+| worker | `t3.large` | 1 | Kapazität für Workloads der drei Namespaces |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=33 make run_ica_task
+```
+
 ## Aufgabe
 
 1. **discovery selectors** aktivieren, damit istiod nur die Namespaces mit dem Label
@@ -179,13 +195,3 @@ check_result
 Sie haben den Sichtbarkeitsbereich der Control Plane mit zwei Hebeln (discovery selectors +
 Sidecar scope) verengt, die goldenen Signale von istiod angeschaut und eine Deployment-Policy über
 OPA Gatekeeper verbindlich gemacht - das Grundset für den Betrieb von Istio in großem Maßstab.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
-| worker | `t3.large` | 1 | Kapazität für Workloads der drei Namespaces |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

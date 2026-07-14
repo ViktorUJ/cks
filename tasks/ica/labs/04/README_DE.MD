@@ -45,6 +45,25 @@ flowchart TD
     style Backend fill:#0f9d58,stroke:#fff,color:#fff
 ```
 
+## Infrastruktur
+
+Die Umgebung wird in AWS (`eu-north-1`) über Terragrunt bereitgestellt und besteht aus:
+
+| Komponente  | Beschreibung                                      |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` mit öffentlichen Subnetzen          |
+| `ssh-keys` | SSH-Schlüssel für den Zugriff auf die Nodes                      |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) mit installiertem Istio |
+| `worker`   | Arbeitsmaschine mit `kubectl` und Zugriff auf den Cluster   |
+
+Instanzen: `t4g.medium` (master) Ubuntu `22.04`
+
+## Deployment
+
+```bash
+TASK=04 make run_ica_task
+```
+
 ## Schritt 1. Aktivierung der Sidecar-Injektion
 
 Wir fügen dem Namespace `default` ein Label hinzu, um die automatische Injektion des Sidecar-Proxys Envoy zu ermöglichen:

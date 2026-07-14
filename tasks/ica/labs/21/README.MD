@@ -32,6 +32,22 @@ flowchart LR
     end
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | capacity for services in two namespaces |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=21 make run_ica_task
+```
+
 ## Task
 
 1. Observe that by default the `app` proxy has a cluster for `backend.other`.
@@ -111,13 +127,3 @@ You scoped the proxy configuration with a `Sidecar` resource and watched unrelat
 services disappear from the Envoy config. Managing scoping is a key senior skill for
 operating Istio in large clusters: without it istiod and the sidecars hit memory and CPU
 limits as the number of services grows.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | capacity for services in two namespaces |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

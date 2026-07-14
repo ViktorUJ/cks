@@ -32,6 +32,22 @@ flowchart LR
     SEL -.уменьшают.-> P
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
+| worker | `t3.large` | 1 | ёмкость для workload'ов трёх namespace |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=33 make run_ica_task
+```
+
 ## Задание
 
 1. Включить **discovery selectors**, чтобы istiod следил только за namespace с меткой
@@ -177,13 +193,3 @@ check_result
 Вы сузили область видимости control plane двумя рычагами (discovery selectors + Sidecar
 scope), посмотрели золотые сигналы istiod и сделали политику деплоя обязательной через OPA
 Gatekeeper - базовый набор для эксплуатации Istio в масштабе.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
-| worker | `t3.large` | 1 | ёмкость для workload'ов трёх namespace |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

@@ -23,6 +23,22 @@ flowchart LR
     VS["VirtualService.tcp<br>match port 31400"] --> GW
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | ёмкость для tcp-echo v1/v2 |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `bash /dev/tcp`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=28 make run_ica_task
+```
+
 ## Задание
 
 1. Создать `Gateway` с сервером `protocol: TCP` на порту `31400`.
@@ -152,13 +168,3 @@ check_result
 Вы настроили маршрутизацию сырого TCP через ingress gateway с взвешенным распределением
 между версиями. Понимание L4-маршрутизации (по порту, с учётом именования портов) -
 важный навык для работы с не-HTTP-нагрузками (БД, брокеры, кастомные протоколы) в mesh.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | ёмкость для tcp-echo v1/v2 |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `bash /dev/tcp`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

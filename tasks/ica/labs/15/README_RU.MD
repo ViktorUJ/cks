@@ -32,6 +32,22 @@ flowchart LR
     IOP --> G2
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + рабочие нагрузки (istiod, gateways) |
+| worker | `t3.small` | 1 | дополнительная ёмкость для двух gateway |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=15 make run_ica_task
+```
+
 ## Задание
 
 1. Написать манифест `IstioOperator` на базе профиля `default`.
@@ -116,13 +132,3 @@ check_result
 Вы установили Istio из кастомного `IstioOperator`: выбрали профиль, задали глобальные
 параметры mesh через `meshConfig` и развернули дополнительный ingress-gateway
 компонентом. Это и есть навык «Customizing your Istio Installation» из программы ICA.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + рабочие нагрузки (istiod, gateways) |
-| worker | `t3.small` | 1 | дополнительная ёмкость для двух gateway |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

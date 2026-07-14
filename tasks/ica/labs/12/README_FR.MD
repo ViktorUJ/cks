@@ -41,6 +41,25 @@ Trouver les deux erreurs à l'aide d'`istioctl` et les corriger de sorte que :
 - le pod `ping-pong` soit `2/2` (sidecar injecté) ;
 - la requête `curl http://myapp.local:32080/` renvoie `200`.
 
+## Infrastructure
+
+L'environnement est déployé dans AWS (`eu-central-1`) via Terragrunt et se compose de :
+
+| Composant  | Description                                          |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` avec des sous-réseaux publics          |
+| `ssh-keys` | Clés SSH pour l'accès aux nœuds                      |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) avec Istio installé |
+| `worker`   | Machine de travail avec `kubectl` et accès au cluster   |
+
+Instances : `t3.medium` (master) Ubuntu `22.04`
+
+## Déploiement
+
+```bash
+TASK=12 make run_ica_task
+```
+
 ## Étape 1. Inspection - qu'est-ce qui ne va pas
 
 D'abord, regardons les symptômes :

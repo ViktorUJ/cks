@@ -25,6 +25,22 @@ flowchart LR
     HR -->|"par défaut"| V1["ping-pong-v1<br>(Stable)"]
 ```
 
+## Infrastructure
+
+| Composant | Type | Nombre | Rôle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + pod du gateway |
+| worker | `t3.small` | 1 | capacité pour l'application et le gateway |
+| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `check_result` |
+
+Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Déploiement
+
+```bash
+TASK=16 make run_ica_task
+```
+
 ## Tâche
 
 1. Déployer l'application (manifeste `1.yaml`).
@@ -145,13 +161,3 @@ Vous avez configuré le routage ingress via le Kubernetes Gateway API : `Gateway
 point d'entrée et `HTTPRoute` avec un routage basé sur les en-têtes. Istio a lui-même
 déployé le pod du gateway pour ce `Gateway`. C'est une façon moderne et portable de gérer
 le trafic entrant, vers laquelle se dirige tout l'écosystème.
-
-## Infrastructure
-
-| Composant | Type | Nombre | Rôle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + pod du gateway |
-| worker | `t3.small` | 1 | capacité pour l'application et le gateway |
-| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `check_result` |
-
-Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

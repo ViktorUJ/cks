@@ -42,6 +42,25 @@ flowchart TD
 
 > Istio aquí ya está instalado (perfil demo), y el trazado está configurado para enviar spans a `zipkin.istio-system:9411` (este endpoint lo proporciona el addon Jaeger).
 
+## Infraestructura
+
+El entorno se despliega en AWS (`eu-central-1`) mediante Terragrunt y consta de:
+
+| Componente  | Descripción                                       |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` con subredes públicas          |
+| `ssh-keys` | Claves SSH para el acceso a los nodos             |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) con Istio instalado (perfil demo) |
+| `worker`   | Máquina de trabajo con `kubectl` y acceso al clúster |
+
+Instancias: `t4g.medium` (master) Ubuntu `22.04`
+
+## Despliegue
+
+```bash
+TASK=08 make run_ica_task
+```
+
 ## Paso 1. Activación de la inyección de sidecar
 
 ```bash

@@ -21,6 +21,22 @@ flowchart LR
     DR["DestinationRule<br>tls: SIMPLE (port 80)"] --> S
 ```
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | Kapazität für Client und „externes" Backend |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=22 make run_ica_task
+```
+
 ## Aufgabe
 
 1. Sicherstellen, dass ohne origination eine Anfrage an `httpsvc.external` fehlschlägt
@@ -105,13 +121,3 @@ Sie haben die Initiierung von TLS auf der Mesh-Seite konfiguriert: die Anwendung
 kommuniziert über HTTP, und der Sidecar baut TLS zu einem Service auf, der nur TLS
 akzeptiert. Das ist ein häufiges Integrationsmuster für externe und Legacy-HTTPS-Services
 ohne Änderung des Anwendungscodes - eine wichtige Fähigkeit der Domäne Traffic Management.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | Kapazität für Client und „externes" Backend |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

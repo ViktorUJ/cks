@@ -31,6 +31,22 @@ flowchart TB
     SIGN --> S
 ```
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + cert-manager + istio-csr |
+| worker | `t3.small` | 1 | Kapazität für die Anwendung |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `openssl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=26 make run_ica_task
+```
+
 ## Aufgabe
 
 1. Eine Anwendung in einem Namespace mit Sidecar-Injection deployen.
@@ -109,13 +125,3 @@ Signatur an cert-manager über istio-csr, Workload-Zertifikate werden aus Ihrer 
 ausgestellt, automatisch rotiert und sind vollständig über `CertificateRequest`
 auditierbar. Das ist eine zentrale Senior-/Security-Fähigkeit für die Integration von
 Istio mit einer Unternehmens-Zertifikatsinfrastruktur.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + cert-manager + istio-csr |
-| worker | `t3.small` | 1 | Kapazität für die Anwendung |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `openssl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

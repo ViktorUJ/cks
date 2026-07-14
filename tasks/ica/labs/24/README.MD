@@ -25,6 +25,22 @@ flowchart LR
     AP["AuthorizationPolicy<br>methods: GET"] --> WP
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + istio-cni + ztunnel |
+| worker | `t3.small` | 1 | capacity for the app and the waypoint |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=24 make run_ica_task
+```
+
 ## Task
 
 1. Add a waypoint to namespace `app`.
@@ -113,13 +129,3 @@ You added a waypoint proxy to an ambient namespace and enforced L7 authorization
 method. Understanding the "ztunnel (L4) + waypoint (L7)" split is the key to ambient, the
 direction Istio is heading: minimal overhead by default and L7 features only where they
 are actually needed.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + istio-cni + ztunnel |
-| worker | `t3.small` | 1 | capacity for the app and the waypoint |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

@@ -22,6 +22,22 @@ flowchart LR
     VS["VirtualService.tcp<br>match port 31400"] --> GW
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacity for tcp-echo v1/v2 |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `bash /dev/tcp`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=28 make run_ica_task
+```
+
 ## Task
 
 1. Create a `Gateway` with a `protocol: TCP` server on port `31400`.
@@ -151,13 +167,3 @@ check_result
 You routed raw TCP through the ingress gateway with weighted splitting between versions.
 Understanding L4 routing (by port, mindful of port naming) is a key skill for non-HTTP
 workloads (databases, brokers, custom protocols) in the mesh.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacity for tcp-echo v1/v2 |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `bash /dev/tcp`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

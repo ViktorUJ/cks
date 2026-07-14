@@ -33,6 +33,22 @@ flowchart LR
     SEL -.reduce.-> P
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
+| worker | `t3.large` | 1 | capacity for the three-namespace workloads |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=33 make run_ica_task
+```
+
 ## Task
 
 1. Enable **discovery selectors** so istiod only tracks namespaces labelled `mesh=enabled`
@@ -179,13 +195,3 @@ check_result
 You narrowed the control-plane scope with two levers (discovery selectors + Sidecar scope),
 observed istiod golden signals, and made a deploy policy mandatory with OPA Gatekeeper - the
 baseline toolkit for operating Istio at scale.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
-| worker | `t3.large` | 1 | capacity for the three-namespace workloads |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

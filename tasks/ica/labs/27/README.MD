@@ -23,6 +23,22 @@ flowchart LR
     GW -->|"normal request"| A["ping-pong 200<br>+ header x-lua-lab"]
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacity for the app |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `curl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=27 make run_ica_task
+```
+
 ## Task
 
 1. Check the baseline (no header, `x-block` ignored).
@@ -133,13 +149,3 @@ check_result
 You added custom data-plane logic with inline Lua in an `EnvoyFilter` - no image and no
 proxy rebuild. It is a handy senior tool for quick traffic tweaks at the mesh edge when
 built-in CRDs fall short and a full Wasm module would be overkill.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacity for the app |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `curl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

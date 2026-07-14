@@ -29,6 +29,22 @@ flowchart TB
     RBAC["RBAC auf Istio-CRDs + Gatekeeper"] -.Konfigurationskontrolle.-> APP
 ```
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
+| worker | `t3.large` | 1 | Kapazität für Workloads app/legacy |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=34 make run_ica_task
+```
+
 ## Aufgabe
 
 1. **STRICT mTLS** für das gesamte Mesh aktivieren.
@@ -264,13 +280,3 @@ Sie haben ein Hardening von Istio nach dem Prinzip Defense in Depth angewendet: 
 default-deny-Autorisierung, Egress-Kontrolle, Einschränkung der Rechte auf Istio-CRDs,
 verbindliche Policies über OPA Gatekeeper und eine unabhängige Netzwerkschicht (NetworkPolicy) für
 den Fall der Sidecar-Umgehung.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
-| worker | `t3.large` | 1 | Kapazität für Workloads app/legacy |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

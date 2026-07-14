@@ -25,6 +25,22 @@ flowchart LR
     PA --> W1
 ```
 
+## Infrastructure
+
+| Composant | Type | Qté | Rôle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | capacité pour le StatefulSet et le client |
+| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `istioctl`, `check_result` |
+
+Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Déploiement
+
+```bash
+TASK=30 make run_ica_task
+```
+
 ## Exercice
 
 1. Créer un **Service headless** `web` (`clusterIP: None`) avec un port **nommé**.
@@ -161,13 +177,3 @@ Vous avez déployé un StatefulSet derrière un service headless dans le mesh, a
 et accédé à chaque réplica par son nom stable. Comprendre les spécificités headless/StatefulSet
 (nommage des ports, DNS stables, mTLS sans VIP) est une compétence essentielle pour exécuter des
 charges stateful (BDD, brokers, systèmes à quorum) dans un maillage de services.
-
-## Infrastructure
-
-| Composant | Type | Qté | Rôle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | capacité pour le StatefulSet et le client |
-| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `istioctl`, `check_result` |
-
-Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

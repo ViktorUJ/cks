@@ -38,6 +38,25 @@ flowchart TD
     style V2 fill:#f4b400,stroke:#fff,color:#000
 ```
 
+## Infrastruktur
+
+Die Umgebung wird in AWS (`eu-north-1`) über Terragrunt bereitgestellt und besteht aus:
+
+| Komponente  | Beschreibung                                      |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` mit öffentlichen Subnetzen          |
+| `ssh-keys` | SSH-Schlüssel für den Zugriff auf die Nodes                      |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) mit installiertem Istio |
+| `worker`   | Arbeitsmaschine mit `kubectl` und Zugriff auf den Cluster   |
+
+Instanzen: `t4g.medium` (master) Ubuntu `22.04`
+
+## Deployment
+
+```bash
+TASK=06 make run_ica_task
+```
+
 ## Ziel
 
 - Den Load-Balancing-Algorithmus über `DestinationRule` konfigurieren, inklusive Überschreibung auf Port-Ebene.

@@ -36,6 +36,22 @@ flowchart LR
 | Access-Logs | `envoy` (integriert) | stdout des Sidecars → `kubectl logs -c istio-proxy` |
 | Traces | `zipkin` (extensionProvider) | Jaeger (`zipkin.istio-system:9411`) → Jaeger UI |
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + Ingress Gateway + Jaeger |
+| worker | `t3.small` | 1 | Kapazität für die Anwendung |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `curl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=18 make run_ica_task
+```
+
 ## Aufgabe
 
 1. Sicherstellen, dass standardmäßig keine Access Logs im Sidecar vorhanden sind.
@@ -143,13 +159,3 @@ Sie haben das Telemetry API gemeistert - eine einheitliche deklarative Schnittst
 Metriken und Traces - und eine echte Sammlung konfiguriert: Access-Logs in stdout des Sidecars und
 verteilte Traces in Jaeger über den Provider `zipkin`. Für Senior DevOps ist das ein Schlüsselwerkzeug
 zur Steuerung der Observability ohne Bearbeitung von meshConfig und fragile `EnvoyFilter`.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + Ingress Gateway + Jaeger |
-| worker | `t3.small` | 1 | Kapazität für die Anwendung |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `curl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

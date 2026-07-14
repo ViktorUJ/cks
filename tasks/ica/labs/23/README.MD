@@ -26,6 +26,22 @@ flowchart LR
     OCI["oci://ghcr.io/.../basic_auth:1.12.0"] -.pull.-> GW
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacity for the app |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `curl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=23 make run_ica_task
+```
+
 ## What WebAssembly is (for those new to it)
 
 In short: **WebAssembly (Wasm)** is a format for small compiled programs that can run
@@ -239,13 +255,3 @@ check_result
 You extended the data plane with a custom Wasm module pulled from an OCI registry and
 added Basic auth at the mesh edge without changing the application. Working with
 `WasmPlugin` is a senior skill for cases where Istio's built-in capabilities fall short.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacity for the app |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `curl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

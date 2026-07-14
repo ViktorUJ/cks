@@ -32,6 +32,22 @@ flowchart LR
     end
 ```
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | Kapazität für die Services zweier Namespaces |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=21 make run_ica_task
+```
+
 ## Aufgabe
 
 1. Ansehen, dass der Proxy in `app` standardmäßig einen Cluster für `backend.other` enthält.
@@ -112,13 +128,3 @@ Sie haben den Konfigurationsbereich des Proxy über die Ressource `Sidecar` eing
 wie überflüssige Services aus der Envoy-Konfiguration verschwunden sind. Die Verwaltung des Scoping
 ist eine zentrale Senior-Fähigkeit für den Betrieb von Istio in großen Clustern: ohne sie stoßen
 istiod und die Sidecars mit wachsender Anzahl von Services an ihre Speicher- und CPU-Grenzen.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | Kapazität für die Services zweier Namespaces |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

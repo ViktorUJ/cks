@@ -24,6 +24,22 @@ flowchart LR
     PA["PeerAuthentication<br>mode: STRICT (ns app)"] --> A
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | capacity for the app and clients |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=20 make run_ica_task
+```
+
 ## Task
 
 1. Observe the PERMISSIVE baseline (both clients get `200`).
@@ -125,13 +141,3 @@ check_result
 You migrated a namespace to strict mTLS without breaking in-mesh traffic and saw STRICT
 reject plaintext. Understanding the PERMISSIVE → STRICT pair is a fundamental
 senior/security skill for rolling out zero-trust in a live environment.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | capacity for the app and clients |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

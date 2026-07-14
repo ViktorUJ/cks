@@ -36,6 +36,22 @@ flowchart TB
     end
 ```
 
+## Infrastructure
+
+| Composant | Type | Nombre | Rôle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.medium` | 1 | capacité pour grpc-server (3 réplicas) + client |
+| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `check_result` |
+
+Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Déploiement
+
+```bash
+TASK=32 make run_ica_task
+```
+
 ## Objectif
 
 1. Corriger le **Service** `grpc-server` : le port `8079` doit être reconnu comme gRPC - nommer
@@ -145,13 +161,3 @@ configuré les tentatives et le timeout pour gRPC comme pour du HTTP. Comprendre
 HTTP/2** est l'une des compétences clés de l'exploitation d'un maillage : c'est précisément pour une
 répartition de charge correcte que l'on intègre le plus souvent les services gRPC dans un maillage
 de services.
-
-## Infrastructure
-
-| Composant | Type | Nombre | Rôle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.medium` | 1 | capacité pour grpc-server (3 réplicas) + client |
-| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `check_result` |
-
-Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

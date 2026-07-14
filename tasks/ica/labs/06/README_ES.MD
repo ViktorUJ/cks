@@ -38,6 +38,25 @@ flowchart TD
     style V2 fill:#f4b400,stroke:#fff,color:#000
 ```
 
+## Infraestructura
+
+El entorno se despliega en AWS (`eu-north-1`) mediante Terragrunt y consta de:
+
+| Componente  | Descripción                                       |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` con subredes públicas          |
+| `ssh-keys` | Claves SSH para el acceso a los nodos             |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) con Istio instalado |
+| `worker`   | Máquina de trabajo con `kubectl` y acceso al clúster |
+
+Instancias: `t4g.medium` (master) Ubuntu `22.04`
+
+## Despliegue
+
+```bash
+TASK=06 make run_ica_task
+```
+
 ## Objetivo
 
 - Configurar el algoritmo de balanceo de carga mediante `DestinationRule`, incluida la sobrescritura a nivel de puerto.

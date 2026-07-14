@@ -21,6 +21,22 @@ Im Namespace `app` sind bereits 5 Backends bereitgestellt (`frontend`, `catalog`
 `api-v1`, `api-v2`), jedes antwortet mit `Server Name: <Name>`. Istio ist installiert, das
 Ingress Gateway am NodePort `32080`.
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | Kapazität für 5 Backends |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `curl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=31 make run_ica_task
+```
+
 ## Ausgangsarchitektur (wie sie ist)
 
 ```mermaid
@@ -397,13 +413,3 @@ das Äquivalent der Regeln gebaut, die Parität vor der Umschaltung geprüft, de
 Umschaltung per LB-Gewichten, die Risiken für 24/7-Nutzer, das sofortige Rollback und den
 Stufenplan für 100+ Services durchgegangen. Das ist genau der Prozess, der bei der Einführung
 eines Service Mesh in lebender Produktion angewendet wird.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | Kapazität für 5 Backends |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `curl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

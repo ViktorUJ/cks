@@ -24,6 +24,22 @@ flowchart LR
     VS["VirtualService.tcp<br>match port 31400"] --> GW
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cantidad | Rol |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacidad para tcp-echo v1/v2 |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `bash /dev/tcp`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=28 make run_ica_task
+```
+
 ## Tarea
 
 1. Crear un `Gateway` con un servidor `protocol: TCP` en el puerto `31400`.
@@ -154,13 +170,3 @@ Has configurado el enrutamiento de TCP crudo a través del ingress gateway con d
 ponderada entre versiones. Entender el enrutamiento L4 (por puerto, teniendo en cuenta el
 nombrado de puertos) es una habilidad importante para trabajar con cargas no-HTTP (BD, brokers,
 protocolos personalizados) en la malla.
-
-## Infraestructura
-
-| Componente | Tipo | Cantidad | Rol |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacidad para tcp-echo v1/v2 |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `bash /dev/tcp`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

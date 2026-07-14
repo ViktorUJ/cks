@@ -27,6 +27,22 @@ flowchart LR
     OCI["oci://ghcr.io/.../basic_auth:1.12.0"] -.pull.-> GW
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cantidad | Rol |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacidad para la aplicación |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `curl`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=23 make run_ica_task
+```
+
 ## Qué es WebAssembly (para quienes no lo han visto)
 
 En pocas palabras: **WebAssembly (Wasm)** es un formato de pequeños programas compilados
@@ -250,13 +266,3 @@ Has extendido el data plane con tu propio módulo Wasm, cargado desde un registr
 añadido autenticación Basic en el borde de la malla sin modificar la aplicación. Trabajar
 con `WasmPlugin` es una habilidad senior para los casos en que las capacidades integradas de
 Istio no bastan.
-
-## Infraestructura
-
-| Componente | Tipo | Cantidad | Rol |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacidad para la aplicación |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `curl`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

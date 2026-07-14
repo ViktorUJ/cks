@@ -23,6 +23,22 @@ flowchart LR
     F -->|"метрики плохие"| RB["Rollback → primary"]
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + Prometheus + Flagger |
+| worker | `t3.small` | 1 | ёмкость для podinfo/canary/loadtester |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=25 make run_ica_task
+```
+
 ## Задание
 
 1. Создать ресурс `Canary` для `podinfo` с прогрессивным анализом (шаги веса, метрики,
@@ -153,13 +169,3 @@ check_result
 Вы настроили автоматическую прогрессивную выкатку через Flagger поверх Istio: релиз идёт
 пошагово, решение о promote/rollback принимается по реальным метрикам без ручного
 вмешательства. Progressive delivery - важный senior-навык безопасных релизов в проде.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + Prometheus + Flagger |
-| worker | `t3.small` | 1 | ёмкость для podinfo/canary/loadtester |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

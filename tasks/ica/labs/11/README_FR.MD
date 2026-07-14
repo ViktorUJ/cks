@@ -41,6 +41,25 @@ Ce lab utilise des clés de test et un jeton issus du dépôt Istio :
 - JWKS : `.../security/tools/jwt/samples/jwks.json`
 - jeton valide : `.../security/tools/jwt/samples/demo.jwt`
 
+## Infrastructure
+
+L'environnement est déployé dans AWS (`eu-central-1`) via Terragrunt et se compose de :
+
+| Composant  | Description                                          |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` avec des sous-réseaux publics          |
+| `ssh-keys` | Clés SSH pour l'accès aux nœuds                      |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) avec Istio installé |
+| `worker`   | Machine de travail avec `kubectl` et accès au cluster   |
+
+Instances : `t3.medium` (master) Ubuntu `22.04`
+
+## Déploiement
+
+```bash
+TASK=11 make run_ica_task
+```
+
 ## Étape 1. Activation de l'injection du sidecar
 
 ```bash

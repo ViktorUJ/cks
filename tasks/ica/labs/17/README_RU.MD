@@ -25,6 +25,22 @@ flowchart LR
     GW -->|"сверх лимита"| R["429 Too Many Requests"]
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | ёмкость для приложения |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `curl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=17 make run_ica_task
+```
+
 ## Задание
 
 1. Проверить, что приложение доступно (`200`).
@@ -135,13 +151,3 @@ check_result
 механизм защиты от перегрузки без внешних зависимостей, и разобрались, чем он отличается
 от глобального. Работа с `EnvoyFilter` - важный senior-навык для тонкой настройки
 data plane Envoy за пределами стандартных CRD Istio.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | ёмкость для приложения |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `curl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

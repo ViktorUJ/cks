@@ -32,6 +32,22 @@ flowchart LR
     SEL -.reducen.-> P
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cant. | Rol |
+|---|---|---|---|
+| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
+| worker | `t3.large` | 1 | capacidad para las workload de tres namespace |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `istioctl`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=33 make run_ica_task
+```
+
 ## Tarea
 
 1. Activar **discovery selectors** para que istiod vigile solo los namespace con la etiqueta
@@ -177,13 +193,3 @@ check_result
 Has estrechado el alcance de visibilidad del control plane con dos palancas (discovery selectors + Sidecar
 scope), consultado las señales doradas de istiod y hecho obligatoria la política de despliegue mediante OPA
 Gatekeeper - el conjunto básico para operar Istio a escala.
-
-## Infraestructura
-
-| Componente | Tipo | Cant. | Rol |
-|---|---|---|---|
-| control-plane | `t3.large` | 1 | master + istiod + OPA Gatekeeper |
-| worker | `t3.large` | 1 | capacidad para las workload de tres namespace |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `istioctl`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

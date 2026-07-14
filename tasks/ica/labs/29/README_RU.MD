@@ -27,6 +27,22 @@ flowchart LR
     GW -->|"PASSTHROUGH: не расшифровывает,<br>роутинг по SNI"| B["secure-backend<br>(сам терминирует TLS)"]
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | ёмкость для ping-pong и secure-backend |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `curl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=29 make run_ica_task
+```
+
 ## Задание
 
 1. Создать `Gateway` с двумя серверами на порту 443 (различаются по SNI):
@@ -166,13 +182,3 @@ check_result
 сквозной TLS (PASSTHROUGH), различаемые по SNI на одном порту. Понимание всех режимов TLS
 gateway - важный навык для безопасной публикации сервисов (партнёрские API, end-to-end
 шифрование).
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | ёмкость для ping-pong и secure-backend |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `curl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

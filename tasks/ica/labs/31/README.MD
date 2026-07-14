@@ -20,6 +20,22 @@ Namespace `app` already runs 5 backends (`frontend`, `catalog`, `cart`, `api-v1`
 `api-v2`), each replying `Server Name: <name>`. Istio is installed, ingress gateway on
 NodePort `32080`.
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacity for the 5 backends |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `curl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=31 make run_ica_task
+```
+
 ## Source architecture (as-is)
 
 ```mermaid
@@ -391,13 +407,3 @@ rule equivalent, parity-checked before cutover, worked through the LB-weight shi
 mechanism, the risks to 24/7 users, the instant rollback, and the phased plan for 100+
 services. This is exactly the process used when adopting a service mesh in live
 production.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacity for the 5 backends |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `curl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

@@ -41,6 +41,25 @@ This lab uses the test keys and token from the Istio repository:
 - JWKS: `.../security/tools/jwt/samples/jwks.json`
 - valid token: `.../security/tools/jwt/samples/demo.jwt`
 
+## Infrastructure
+
+The environment is provisioned in AWS (`eu-central-1`) using Terragrunt and includes:
+
+| Component  | Description                                       |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` with public subnets            |
+| `ssh-keys` | SSH keys for node access                          |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) with Istio installed |
+| `worker`   | Workstation with `kubectl` and cluster access     |
+
+Instances: `t3.medium` (master), Ubuntu `22.04`
+
+## Provisioning
+
+```bash
+TASK=11 make run_ica_task
+```
+
 ## Step 1. Enable Sidecar Injection
 
 ```bash

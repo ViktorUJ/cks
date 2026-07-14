@@ -45,6 +45,25 @@ flowchart TD
     style Backend fill:#0f9d58,stroke:#fff,color:#fff
 ```
 
+## Infrastructure
+
+The environment is provisioned in AWS (`eu-north-1`) using Terragrunt and includes:
+
+| Component  | Description                                       |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` with public subnets            |
+| `ssh-keys` | SSH keys for node access                          |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) with Istio installed |
+| `worker`   | Workstation with `kubectl` and cluster access     |
+
+Instances: `t4g.medium` (master), Ubuntu `22.04`
+
+## Provisioning
+
+```bash
+TASK=04 make run_ica_task
+```
+
 ## Step 1. Enable Sidecar Injection
 
 Label the `default` namespace so that Istio automatically injects the Envoy sidecar proxy into every pod:

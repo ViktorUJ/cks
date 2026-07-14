@@ -38,6 +38,25 @@ flowchart TD
     style Block fill:#db4437,stroke:#fff,color:#fff
 ```
 
+## Infraestructura
+
+El entorno se despliega en AWS (`eu-north-1`) mediante Terragrunt y consta de:
+
+| Componente  | Descripción                                       |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` con subredes públicas          |
+| `ssh-keys` | Claves SSH para el acceso a los nodos             |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) con Istio instalado |
+| `worker`   | Máquina de trabajo con `kubectl` y acceso al clúster |
+
+Instancias: `t4g.medium` (master) Ubuntu `22.04`
+
+## Despliegue
+
+```bash
+TASK=05 make run_ica_task
+```
+
 ## Objetivo
 
 Entender cómo Istio gestiona el tráfico **saliente** y montar la cadena completa de control de egress:

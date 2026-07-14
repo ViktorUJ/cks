@@ -23,6 +23,22 @@ flowchart LR
     PA --> W1
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | ёмкость для StatefulSet и клиента |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=30 make run_ica_task
+```
+
 ## Задание
 
 1. Создать **headless Service** `web` (`clusterIP: None`) с **именованным** портом.
@@ -159,13 +175,3 @@ check_result
 каждой реплике по стабильному имени. Понимание особенностей headless/StatefulSet (именование
 портов, стабильные DNS, mTLS без VIP) - важный навык для запуска stateful-нагрузок (БД,
 брокеры, кворумные системы) в service mesh.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | ёмкость для StatefulSet и клиента |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

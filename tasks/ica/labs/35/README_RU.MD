@@ -37,6 +37,23 @@ flowchart LR
     CA --> I2
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
+| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v2 |
+| worker PC | `t3.small` | 1 | `kubectl` (оба контекста), `istioctl`, `openssl`, `check_result` |
+
+Оба кластера в одном VPC (`10.10.0.0/16`), трафик между нодами открыт внутри VPC.
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=35 make run_ica_task
+```
+
 ## Задание
 
 Собрать из двух кластеров единый mesh и доказать межкластерную балансировку:
@@ -123,14 +140,3 @@ check_result
 Вы объединили два кластера в единый mesh: общий CA, multi-primary istiod, east-west
 gateway для multi-network, cross-cluster discovery через remote-секреты - и подтвердили
 межкластерную балансировку. Это фундамент отказоустойчивого и гео-распределённого mesh.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
-| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v2 |
-| worker PC | `t3.small` | 1 | `kubectl` (оба контекста), `istioctl`, `openssl`, `check_result` |
-
-Оба кластера в одном VPC (`10.10.0.0/16`), трафик между нодами открыт внутри VPC.
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

@@ -23,6 +23,22 @@ flowchart LR
     PA --> W1
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | capacity for the StatefulSet and the client |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=30 make run_ica_task
+```
+
 ## Task
 
 1. Create a **headless Service** `web` (`clusterIP: None`) with a **named** port.
@@ -159,13 +175,3 @@ You ran a StatefulSet behind a headless Service in the mesh, enabled STRICT mTLS
 reached each replica by its stable identity. Understanding headless/StatefulSet specifics
 (port naming, stable DNS, mTLS without a VIP) is a key skill for running stateful workloads
 (databases, brokers, quorum systems) in a service mesh.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | capacity for the StatefulSet and the client |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

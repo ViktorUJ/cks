@@ -25,6 +25,22 @@ flowchart TB
     D --> W["workload SVID<br>(sidecar mTLS)"]
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod (mesh CA) |
+| worker | `t3.small` | 1 | ёмкость для приложения |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `openssl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=19 make run_ica_task
+```
+
 ## Задание
 
 1. Сгенерировать корневой CA и промежуточный CA (openssl).
@@ -138,13 +154,3 @@ check_result
 убедились, что сертификаты рабочих нагрузок выпускаются из вашего PKI. Управление
 mesh-CA - важный senior/security-навык: без него нельзя интегрировать Istio с
 корпоративным PKI и построить общий корень доверия для нескольких кластеров.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod (mesh CA) |
-| worker | `t3.small` | 1 | ёмкость для приложения |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `openssl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

@@ -29,6 +29,22 @@ flowchart TB
     SIGN --> S
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + cert-manager + istio-csr |
+| worker | `t3.small` | 1 | ёмкость для приложения |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `openssl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=26 make run_ica_task
+```
+
 ## Задание
 
 1. Развернуть приложение в namespace с инъекцией sidecar.
@@ -106,13 +122,3 @@ check_result
 через istio-csr, сертификаты ворклоадов выпускаются из вашего PKI, ротируются
 автоматически и полностью аудируемы через `CertificateRequest`. Это ключевой
 senior/security-навык для интеграции Istio с корпоративной инфраструктурой сертификатов.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + cert-manager + istio-csr |
-| worker | `t3.small` | 1 | ёмкость для приложения |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `openssl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

@@ -37,6 +37,25 @@ flowchart TD
 - Configurar el **timeout** en `VirtualService` y comprobar que un backend lento devuelve `504`.
 - Configurar el **circuit breaker** en `DestinationRule` (`connectionPool` + `outlierDetection`) y ver cómo la carga excedente se corta con `503`.
 
+## Infraestructura
+
+El entorno se despliega en AWS (`eu-central-1`) mediante Terragrunt y consta de:
+
+| Componente  | Descripción                                       |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` con subredes públicas          |
+| `ssh-keys` | Claves SSH para el acceso a los nodos             |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) con Istio instalado |
+| `worker`   | Máquina de trabajo con `kubectl` y acceso al clúster |
+
+Instancias: `t3.medium` (master) Ubuntu `22.04`
+
+## Despliegue
+
+```bash
+TASK=10 make run_ica_task
+```
+
 ## Paso 1. Activación de la inyección de sidecar
 
 ```bash

@@ -23,6 +23,22 @@ flowchart LR
     GW -->|"normale Anfrage"| A["ping-pong 200<br>+ Header x-lua-lab"]
 ```
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | Kapazität für die Anwendung |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `curl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=27 make run_ica_task
+```
+
 ## Aufgabe
 
 1. Das Basisverhalten prüfen (kein Header, `x-block` wird ignoriert).
@@ -138,13 +154,3 @@ Sie haben dem data plane über Inline-Lua in einem `EnvoyFilter` eigene Logik hi
 ohne Image und Neubau des Proxys. Das ist ein praktisches Senior-Werkzeug für schnelle
 Anpassungen des Verkehrs am Rand des Mesh, wenn eingebaute CRDs nicht ausreichen und ein
 vollwertiges Wasm-Modul übertrieben ist.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | Kapazität für die Anwendung |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `curl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

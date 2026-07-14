@@ -29,6 +29,22 @@ flowchart TB
     SIGN --> S
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + cert-manager + istio-csr |
+| worker | `t3.small` | 1 | capacity for the app |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `openssl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=26 make run_ica_task
+```
+
 ## Task
 
 1. Deploy a workload into an injection-enabled namespace.
@@ -106,13 +122,3 @@ You saw production-grade mesh CA management: istiod delegates signing to cert-ma
 istio-csr, workload certificates are issued from your PKI, rotated automatically, and
 fully auditable through `CertificateRequest`s. This is a key senior/security skill for
 integrating Istio with a corporate certificate infrastructure.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + cert-manager + istio-csr |
-| worker | `t3.small` | 1 | capacity for the app |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `openssl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

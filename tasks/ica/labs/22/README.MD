@@ -19,6 +19,22 @@ flowchart LR
     DR["DestinationRule<br>tls: SIMPLE (port 80)"] --> S
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | capacity for the client and the "external" backend |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=22 make run_ica_task
+```
+
 ## Task
 
 1. Confirm that without origination the request to `httpsvc.external` fails (`400` -
@@ -103,13 +119,3 @@ You configured mesh-side TLS origination: the app speaks HTTP while the sidecar
 establishes TLS to a TLS-only service. This is a common pattern for integrating with
 external and legacy HTTPS services without changing application code - a key Traffic
 Management skill.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | capacity for the client and the "external" backend |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

@@ -21,6 +21,22 @@ Dans le namespace `app` sont déjà déployés 5 backends (`frontend`, `catalog`
 `api-v2`), chacun répondant `Server Name: <nom>`. Istio est installé, l'ingress gateway sur le
 NodePort `32080`.
 
+## Infrastructure
+
+| Composant | Type | Nombre | Rôle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacité pour 5 backends |
+| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `curl`, `check_result` |
+
+Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Déploiement
+
+```bash
+TASK=31 make run_ica_task
+```
+
 ## Architecture initiale (état actuel)
 
 ```mermaid
@@ -394,13 +410,3 @@ avez construit l'équivalent des règles, vérifié la parité avant la bascule,
 de bascule par poids du LB, les risques pour les utilisateurs 24/7, le rollback instantané et le
 plan par étapes pour 100+ services. C'est exactement le processus utilisé lors de l'adoption d'un
 maillage de services en production réelle.
-
-## Infrastructure
-
-| Composant | Type | Nombre | Rôle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacité pour 5 backends |
-| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `curl`, `check_result` |
-
-Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

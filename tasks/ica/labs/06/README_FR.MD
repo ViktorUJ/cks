@@ -38,6 +38,25 @@ flowchart TD
     style V2 fill:#f4b400,stroke:#fff,color:#000
 ```
 
+## Infrastructure
+
+L'environnement est déployé dans AWS (`eu-north-1`) via Terragrunt et se compose de :
+
+| Composant  | Description                                          |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` avec des sous-réseaux publics          |
+| `ssh-keys` | Clés SSH pour l'accès aux nœuds                      |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) avec Istio installé |
+| `worker`   | Machine de travail avec `kubectl` et accès au cluster   |
+
+Instances : `t4g.medium` (master) Ubuntu `22.04`
+
+## Déploiement
+
+```bash
+TASK=06 make run_ica_task
+```
+
 ## Objectif
 
 - Configurer l'algorithme de répartition de charge via `DestinationRule`, y compris la surcharge au niveau du port.

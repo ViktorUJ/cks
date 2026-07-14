@@ -24,6 +24,22 @@ flowchart LR
     AP["AuthorizationPolicy<br>methods: GET"] --> WP
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + istio-cni + ztunnel |
+| worker | `t3.small` | 1 | ёмкость для приложения и waypoint |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=24 make run_ica_task
+```
+
 ## Задание
 
 1. Добавить waypoint в namespace `app`.
@@ -112,13 +128,3 @@ check_result
 HTTP-методу. Понимание связки «ztunnel (L4) + waypoint (L7)» - ключ к ambient, на который
 двигается Istio: минимальные накладные расходы по умолчанию и L7-функции только там, где
 они реально нужны.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + istio-cni + ztunnel |
-| worker | `t3.small` | 1 | ёмкость для приложения и waypoint |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

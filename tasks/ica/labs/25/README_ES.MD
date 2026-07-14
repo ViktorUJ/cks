@@ -24,6 +24,22 @@ flowchart LR
     F -->|"métricas malas"| RB["Rollback → primary"]
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cantidad | Rol |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + Prometheus + Flagger |
+| worker | `t3.small` | 1 | capacidad para podinfo/canary/loadtester |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=25 make run_ica_task
+```
+
 ## Tarea
 
 1. Crear el recurso `Canary` para `podinfo` con análisis progresivo (pasos de peso,
@@ -158,13 +174,3 @@ Has configurado un despliegue progresivo automático con Flagger sobre Istio: el
 avanza por pasos y la decisión de promote/rollback se toma según métricas reales, sin
 intervención manual. La progressive delivery es una habilidad senior importante para
 releases seguros en producción.
-
-## Infraestructura
-
-| Componente | Tipo | Cantidad | Rol |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + Prometheus + Flagger |
-| worker | `t3.small` | 1 | capacidad para podinfo/canary/loadtester |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

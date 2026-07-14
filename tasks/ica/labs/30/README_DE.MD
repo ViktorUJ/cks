@@ -24,6 +24,22 @@ flowchart LR
     PA --> W1
 ```
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | Kapazität für StatefulSet und Client |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=30 make run_ica_task
+```
+
 ## Aufgabe
 
 1. Einen **Headless Service** `web` (`clusterIP: None`) mit **benanntem** Port erstellen.
@@ -162,13 +178,3 @@ aktiviert und jedes Replikat über seinen stabilen Namen angesprochen. Das Verst
 Besonderheiten von Headless/StatefulSet (Benennung der Ports, stabiles DNS, mTLS ohne VIP) ist
 eine wichtige Fähigkeit für den Betrieb von Stateful-Workloads (DBs, Broker, Quorum-Systeme) im
 Service Mesh.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | Kapazität für StatefulSet und Client |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

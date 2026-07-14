@@ -36,6 +36,22 @@ flowchart LR
 | Access-логи | `envoy` (встроенный) | stdout sidecar → `kubectl logs -c istio-proxy` |
 | Трейсы | `zipkin` (extensionProvider) | Jaeger (`zipkin.istio-system:9411`) → Jaeger UI |
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway + Jaeger |
+| worker | `t3.small` | 1 | ёмкость для приложения |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `curl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=18 make run_ica_task
+```
+
 ## Задание
 
 1. Убедиться, что по умолчанию access-логи в sidecar отсутствуют.
@@ -142,13 +158,3 @@ check_result
 и настроили реальный сбор: access-логи в stdout sidecar и распределённые трейсы в Jaeger
 через провайдер `zipkin`. Для senior DevOps это ключевой инструмент управления
 наблюдаемостью без правки meshConfig и хрупких `EnvoyFilter`.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway + Jaeger |
-| worker | `t3.small` | 1 | ёмкость для приложения |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `curl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

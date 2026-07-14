@@ -34,6 +34,22 @@ flowchart LR
     end
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cantidad | Rol |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | capacidad para los servicios de dos namespaces |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `istioctl`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=21 make run_ica_task
+```
+
 ## Tarea
 
 1. Ver que por defecto el proxy en `app` contiene un cluster para `backend.other`.
@@ -115,13 +131,3 @@ visto cómo desaparecieron de la configuración de Envoy los servicios innecesar
 gestión del scoping es una habilidad senior clave para operar Istio en clústeres grandes:
 sin ella, istiod y los sidecars chocan contra los límites de memoria y CPU a medida que
 crece el número de servicios.
-
-## Infraestructura
-
-| Componente | Tipo | Cantidad | Rol |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | capacidad para los servicios de dos namespaces |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `istioctl`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

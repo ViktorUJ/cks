@@ -21,6 +21,22 @@ flowchart LR
     DR["DestinationRule<br>tls: SIMPLE (port 80)"] --> S
 ```
 
+## Infrastructure
+
+| Composant | Type | Qté | Rôle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | capacité pour le client et le backend « externe » |
+| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `check_result` |
+
+Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Déploiement
+
+```bash
+TASK=22 make run_ica_task
+```
+
 ## Exercice
 
 1. Vérifier que sans origination, la requête vers `httpsvc.external` échoue (`400` - du
@@ -105,13 +121,3 @@ Vous avez configuré l'initiation du TLS côté maillage : l'application communi
 et le sidecar établit le TLS vers un service qui n'accepte que le TLS. C'est un pattern
 d'intégration fréquent avec des services HTTPS externes et legacy sans modifier le code de
 l'application - une compétence importante du domaine Traffic Management.
-
-## Infrastructure
-
-| Composant | Type | Qté | Rôle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | capacité pour le client et le backend « externe » |
-| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `check_result` |
-
-Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

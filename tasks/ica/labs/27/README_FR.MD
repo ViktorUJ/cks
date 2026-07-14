@@ -23,6 +23,22 @@ flowchart LR
     GW -->|"requête normale"| A["ping-pong 200<br>+ en-tête x-lua-lab"]
 ```
 
+## Infrastructure
+
+| Composant | Type | Qté | Rôle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacité pour l'application |
+| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `curl`, `check_result` |
+
+Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Déploiement
+
+```bash
+TASK=27 make run_ica_task
+```
+
 ## Exercice
 
 1. Vérifier le comportement de base (pas d'en-tête, `x-block` est ignoré).
@@ -136,13 +152,3 @@ Vous avez ajouté une logique personnalisée dans le data plane via du Lua inlin
 `EnvoyFilter` - sans image ni recompilation du proxy. C'est un outil senior pratique pour
 des ajustements rapides du trafic à la frontière du maillage, quand les CRD intégrés ne
 suffisent pas et qu'un module Wasm complet serait excessif.
-
-## Infrastructure
-
-| Composant | Type | Qté | Rôle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacité pour l'application |
-| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `curl`, `check_result` |
-
-Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

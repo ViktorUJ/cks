@@ -37,6 +37,23 @@ flowchart LR
     CA --> I2
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cant. | Rol |
+|---|---|---|---|
+| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
+| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v2 |
+| worker PC | `t3.small` | 1 | `kubectl` (ambos contextos), `istioctl`, `openssl`, `check_result` |
+
+Ambos clústeres en un mismo VPC (`10.10.0.0/16`), el tráfico entre nodos está abierto dentro del VPC.
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=35 make run_ica_task
+```
+
 ## Tarea
 
 Montar un mesh único a partir de dos clústeres y demostrar el balanceo entre clústeres:
@@ -123,14 +140,3 @@ check_result
 Has unido dos clústeres en un mesh único: CA común, istiod multi-primary, east-west
 gateway para multi-network, cross-cluster discovery mediante remote-secrets - y confirmado el
 balanceo entre clústeres. Este es el fundamento de un mesh tolerante a fallos y geo-distribuido.
-
-## Infraestructura
-
-| Componente | Tipo | Cant. | Rol |
-|---|---|---|---|
-| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
-| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v2 |
-| worker PC | `t3.small` | 1 | `kubectl` (ambos contextos), `istioctl`, `openssl`, `check_result` |
-
-Ambos clústeres en un mismo VPC (`10.10.0.0/16`), el tráfico entre nodos está abierto dentro del VPC.
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

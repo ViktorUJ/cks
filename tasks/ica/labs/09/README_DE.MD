@@ -40,6 +40,25 @@ flowchart TD
 
 > Istio ist hier bereits im **Ambient**-Profil installiert (istiod + istio-cni + ztunnel), und die CRDs der Gateway API sind installiert (werden für waypoint benötigt).
 
+## Infrastruktur
+
+Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt bereitgestellt und besteht aus:
+
+| Komponente  | Beschreibung                                      |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` mit öffentlichen Subnetzen          |
+| `ssh-keys` | SSH-Schlüssel für den Zugriff auf die Nodes                      |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm) mit installiertem Istio (Ambient-Profil) |
+| `worker`   | Arbeitsmaschine mit `kubectl` und Zugriff auf den Cluster   |
+
+Instanzen: `t3.medium` (master) Ubuntu `22.04`
+
+## Deployment
+
+```bash
+TASK=09 make run_ica_task
+```
+
 ## Schritt 1. Aktivierung von Ambient für den Namespace
 
 Im Ambient-Modus wird der Namespace **nicht** mit `istio-injection=enabled` gekennzeichnet, sondern mit dem speziellen Label `istio.io/dataplane-mode=ambient`:

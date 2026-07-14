@@ -25,6 +25,22 @@ flowchart LR
     AP["AuthorizationPolicy<br>methods: GET"] --> WP
 ```
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + istio-cni + ztunnel |
+| worker | `t3.small` | 1 | Kapazität für die Anwendung und waypoint |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=24 make run_ica_task
+```
+
 ## Aufgabe
 
 1. Einen waypoint zum Namespace `app` hinzufügen.
@@ -115,13 +131,3 @@ Sie haben einen waypoint-Proxy in einen ambient-Namespace eingefügt und L7-Auto
 nach HTTP-Methode angewendet. Das Verständnis der Kombination „ztunnel (L4) + waypoint
 (L7)" ist der Schlüssel zu ambient, in dessen Richtung sich Istio bewegt: minimaler
 Overhead standardmäßig und L7-Funktionen nur dort, wo sie wirklich gebraucht werden.
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + istio-cni + ztunnel |
-| worker | `t3.small` | 1 | Kapazität für die Anwendung und waypoint |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

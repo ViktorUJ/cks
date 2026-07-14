@@ -38,6 +38,23 @@ flowchart LR
     CA --> I2
 ```
 
+## Infrastructure
+
+| Composant | Type | Nombre | Rôle |
+|---|---|---|---|
+| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + gateway EW + helloworld v1 + sleep |
+| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + gateway EW + helloworld v2 |
+| worker PC | `t3.small` | 1 | `kubectl` (les deux contextes), `istioctl`, `openssl`, `check_result` |
+
+Les deux clusters dans un même VPC (`10.10.0.0/16`), le trafic entre nœuds est ouvert à l'intérieur du VPC.
+Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Déploiement
+
+```bash
+TASK=35 make run_ica_task
+```
+
 ## Objectif
 
 Assembler un maillage unique à partir de deux clusters et prouver la répartition de charge
@@ -125,14 +142,3 @@ check_result
 Vous avez regroupé deux clusters en un maillage unique : CA commun, istiod multi-primary, east-west
 gateway pour le multi-network, cross-cluster discovery via des remote secrets - et confirmé la
 répartition de charge inter-cluster. C'est le fondement d'un maillage résilient et géo-distribué.
-
-## Infrastructure
-
-| Composant | Type | Nombre | Rôle |
-|---|---|---|---|
-| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + gateway EW + helloworld v1 + sleep |
-| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + gateway EW + helloworld v2 |
-| worker PC | `t3.small` | 1 | `kubectl` (les deux contextes), `istioctl`, `openssl`, `check_result` |
-
-Les deux clusters dans un même VPC (`10.10.0.0/16`), le trafic entre nœuds est ouvert à l'intérieur du VPC.
-Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

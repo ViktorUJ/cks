@@ -25,6 +25,22 @@ flowchart TB
     D --> W["workload SVID<br>(sidecar mTLS)"]
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cantidad | Rol |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod (mesh CA) |
+| worker | `t3.small` | 1 | capacidad para la aplicación |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `istioctl`, `openssl`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=19 make run_ica_task
+```
+
 ## Tarea
 
 1. Generar la CA raíz y la CA intermedia (openssl).
@@ -138,13 +154,3 @@ Conectaste tu propia CA raíz e intermedia en istiod mediante el secret `cacerts
 comprobaste que los certificados de las cargas de trabajo se emiten a partir de tu PKI. Gestionar
 la CA del mesh es una habilidad senior/de seguridad importante: sin ella no se puede integrar Istio con
 un PKI corporativo ni construir una raíz de confianza común para varios clústeres.
-
-## Infraestructura
-
-| Componente | Tipo | Cantidad | Rol |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod (mesh CA) |
-| worker | `t3.small` | 1 | capacidad para la aplicación |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `istioctl`, `openssl`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

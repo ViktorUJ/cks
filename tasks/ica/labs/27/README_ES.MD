@@ -23,6 +23,22 @@ flowchart LR
     GW -->|"petición normal"| A["ping-pong 200<br>+ cabecera x-lua-lab"]
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cantidad | Rol |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | capacidad para la aplicación |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `curl`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=27 make run_ica_task
+```
+
 ## Tarea
 
 1. Comprobar el comportamiento base (no hay cabecera, `x-block` se ignora).
@@ -136,13 +152,3 @@ Has añadido lógica personalizada al data plane mediante Lua inline en un `Envo
 imagen ni recompilación del proxy. Es una herramienta senior cómoda para ajustes rápidos del
 tráfico en el borde de la malla, cuando los CRD integrados no bastan y un módulo Wasm completo
 resulta excesivo.
-
-## Infraestructura
-
-| Componente | Tipo | Cantidad | Rol |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | capacidad para la aplicación |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `curl`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

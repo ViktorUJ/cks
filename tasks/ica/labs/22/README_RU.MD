@@ -21,6 +21,22 @@ flowchart LR
     DR["DestinationRule<br>tls: SIMPLE (port 80)"] --> S
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | ёмкость для клиента и «внешнего» бэкенда |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=22 make run_ica_task
+```
+
 ## Задание
 
 1. Убедиться, что без origination запрос к `httpsvc.external` падает (`400` - plaintext
@@ -105,13 +121,3 @@ check_result
 устанавливает TLS к сервису, принимающему только TLS. Это частый паттерн интеграции с
 внешними и legacy HTTPS-сервисами без изменения кода приложения - важный навык домена
 Traffic Management.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | ёмкость для клиента и «внешнего» бэкенда |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

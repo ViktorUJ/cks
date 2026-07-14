@@ -28,6 +28,22 @@ flowchart TB
     D --> W["workload SVID<br>(sidecar mTLS)"]
 ```
 
+## Infrastructure
+
+| Composant | Type | Nombre | Rôle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod (mesh CA) |
+| worker | `t3.small` | 1 | capacité pour l'application |
+| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `istioctl`, `openssl`, `check_result` |
+
+Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Déploiement
+
+```bash
+TASK=19 make run_ica_task
+```
+
 ## Tâche
 
 1. Générer une CA racine et une CA intermédiaire (openssl).
@@ -145,13 +161,3 @@ et vérifié que les certificats des charges de travail sont émis depuis votre 
 de la CA du maillage est une compétence senior/sécurité importante : sans elle, impossible
 d'intégrer Istio à un PKI d'entreprise et de construire une racine de confiance commune pour
 plusieurs clusters.
-
-## Infrastructure
-
-| Composant | Type | Nombre | Rôle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod (mesh CA) |
-| worker | `t3.small` | 1 | capacité pour l'application |
-| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `istioctl`, `openssl`, `check_result` |
-
-Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

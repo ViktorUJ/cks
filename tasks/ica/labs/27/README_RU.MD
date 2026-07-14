@@ -23,6 +23,22 @@ flowchart LR
     GW -->|"обычный запрос"| A["ping-pong 200<br>+ заголовок x-lua-lab"]
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | ёмкость для приложения |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `curl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=27 make run_ica_task
+```
+
 ## Задание
 
 1. Проверить базовое поведение (заголовка нет, `x-block` игнорируется).
@@ -135,13 +151,3 @@ check_result
 Вы добавили кастомную логику в data plane через инлайн Lua в `EnvoyFilter` - без образа и
 пересборки прокси. Это удобный senior-инструмент для быстрых правок трафика на границе
 mesh, когда встроенных CRD не хватает, а полноценный Wasm-модуль избыточен.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | ёмкость для приложения |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `curl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

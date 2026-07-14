@@ -38,6 +38,23 @@ flowchart LR
     CA --> I2
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
+| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v2 |
+| worker PC | `t3.small` | 1 | `kubectl` (both contexts), `istioctl`, `openssl`, `check_result` |
+
+Both clusters share one VPC (`10.10.0.0/16`); node-to-node traffic is open inside the VPC.
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=35 make run_ica_task
+```
+
 ## Task
 
 Join the two clusters into one mesh and prove cross-cluster balancing:
@@ -125,14 +142,3 @@ check_result
 You joined two clusters into one mesh: shared CA, multi-primary istiod, an east-west gateway
 for multi-network, cross-cluster discovery via remote secrets - and confirmed cross-cluster
 load balancing. This is the foundation of a fault-tolerant, geo-distributed mesh.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| cluster1 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v1 + sleep |
-| cluster2 (control-plane) | `t3.xlarge` | 1 | k8s + istiod + EW gateway + helloworld v2 |
-| worker PC | `t3.small` | 1 | `kubectl` (both contexts), `istioctl`, `openssl`, `check_result` |
-
-Both clusters share one VPC (`10.10.0.0/16`); node-to-node traffic is open inside the VPC.
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

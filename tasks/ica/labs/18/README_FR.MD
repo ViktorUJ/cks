@@ -37,6 +37,22 @@ flowchart LR
 | Access logs | `envoy` (intégré) | stdout du sidecar → `kubectl logs -c istio-proxy` |
 | Traces | `zipkin` (extensionProvider) | Jaeger (`zipkin.istio-system:9411`) → Jaeger UI |
 
+## Infrastructure
+
+| Composant | Type | Nombre | Rôle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway + Jaeger |
+| worker | `t3.small` | 1 | capacité pour l'application |
+| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `curl`, `check_result` |
+
+Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Déploiement
+
+```bash
+TASK=18 make run_ica_task
+```
+
 ## Tâche
 
 1. Vérifier que par défaut, il n'y a pas d'access logs dans le sidecar.
@@ -147,13 +163,3 @@ les métriques et les traces - et configuré une collecte réelle : access logs 
 du sidecar et traces distribuées dans Jaeger via le fournisseur `zipkin`. Pour un senior
 DevOps, c'est un outil clé de gestion de l'observabilité sans modifier meshConfig ni recourir
 à de fragiles `EnvoyFilter`.
-
-## Infrastructure
-
-| Composant | Type | Nombre | Rôle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway + Jaeger |
-| worker | `t3.small` | 1 | capacité pour l'application |
-| worker PC | `t3.small` | 1 | poste de travail : `kubectl`, `curl`, `check_result` |
-
-Région : `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

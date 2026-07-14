@@ -24,6 +24,22 @@ flowchart LR
     PA["PeerAuthentication<br>mode: STRICT (ns app)"] --> A
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | ёмкость для приложения и клиентов |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=20 make run_ica_task
+```
+
 ## Задание
 
 1. Посмотреть базовое поведение PERMISSIVE (оба клиента получают `200`).
@@ -125,13 +141,3 @@ check_result
 Вы выполнили миграцию namespace на строгий mTLS без обрыва трафика mesh-клиентов и
 увидели, как STRICT отсекает plaintext. Понимание пары PERMISSIVE → STRICT - базовый
 senior/security-навык для внедрения zero-trust в живом окружении.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | ёмкость для приложения и клиентов |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

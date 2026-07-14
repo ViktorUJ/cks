@@ -29,6 +29,22 @@ flowchart TB
     SIGN --> S
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cantidad | Rol |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + cert-manager + istio-csr |
+| worker | `t3.small` | 1 | capacidad para la aplicación |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `istioctl`, `openssl`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=26 make run_ica_task
+```
+
 ## Tarea
 
 1. Desplegar la aplicación en un namespace con inyección de sidecar.
@@ -107,13 +123,3 @@ cert-manager mediante istio-csr, los certificados de los workloads se emiten des
 rotan automáticamente y son totalmente auditables a través de `CertificateRequest`. Esta es una
 habilidad clave senior/seguridad para integrar Istio con la infraestructura de certificados
 corporativa.
-
-## Infraestructura
-
-| Componente | Tipo | Cantidad | Rol |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + cert-manager + istio-csr |
-| worker | `t3.small` | 1 | capacidad para la aplicación |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `istioctl`, `openssl`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

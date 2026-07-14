@@ -31,6 +31,22 @@ flowchart LR
     end
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.small` | 1 | ёмкость для сервисов двух namespace |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=21 make run_ica_task
+```
+
 ## Задание
 
 1. Посмотреть, что по умолчанию прокси в `app` содержит cluster для `backend.other`.
@@ -111,13 +127,3 @@ check_result
 конфига Envoy исчезли лишние сервисы. Управление scoping - ключевой senior-навык для
 эксплуатации Istio в больших кластерах: без него istiod и sidecar'ы упираются в память и
 CPU по мере роста числа сервисов.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.small` | 1 | ёмкость для сервисов двух namespace |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `istioctl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

@@ -33,6 +33,22 @@ flowchart LR
     IOP --> G2
 ```
 
+## Infrastructure
+
+| Component | Type | Count | Role |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + workloads (istiod, gateways) |
+| worker | `t3.small` | 1 | extra capacity for the two gateways |
+| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Provisioning
+
+```bash
+TASK=15 make run_ica_task
+```
+
 ## Task
 
 1. Write an `IstioOperator` manifest based on the `default` profile.
@@ -118,13 +134,3 @@ check_result
 You installed Istio from a custom `IstioOperator`: chose a profile, set global mesh
 parameters via `meshConfig`, and deployed an extra ingress gateway as a component.
 That is the "Customizing your Istio Installation" skill from the ICA curriculum.
-
-## Infrastructure
-
-| Component | Type | Count | Role |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + workloads (istiod, gateways) |
-| worker | `t3.small` | 1 | extra capacity for the two gateways |
-| worker PC | `t3.small` | 1 | workstation: `kubectl`, `istioctl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

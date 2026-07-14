@@ -36,6 +36,22 @@ flowchart TB
     end
 ```
 
+## Инфраструктура
+
+| Компонент | Тип | Кол-во | Роль |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.medium` | 1 | ёмкость для grpc-server (3 реплики) + client |
+| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
+
+Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Развёртывание
+
+```bash
+TASK=32 make run_ica_task
+```
+
 ## Задание
 
 1. Исправить **Service** `grpc-server`: порт `8079` должен быть распознан как gRPC -
@@ -143,13 +159,3 @@ check_result
 ретраи и таймаут для gRPC как для HTTP. Понимание того, что **gRPC - это HTTP/2**, - один
 из ключевых навыков эксплуатации mesh: именно ради корректной балансировки gRPC-сервисы
 чаще всего и заводят в service mesh.
-
-## Инфраструктура
-
-| Компонент | Тип | Кол-во | Роль |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.medium` | 1 | ёмкость для grpc-server (3 реплики) + client |
-| worker PC | `t3.small` | 1 | рабочее место: `kubectl`, `check_result` |
-
-Регион: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

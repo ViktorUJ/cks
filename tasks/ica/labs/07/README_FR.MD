@@ -49,6 +49,25 @@ Dans le lab sont utilisées les versions :
 
 Une **révision** est une instance nommée du control plane (istiod). Chaque révision a son propre Deployment `istiod-<revision>` et son propre mutating webhook pour l'injection de sidecar. Le namespace choisit par quelle révision ses pods seront « cousus », via le label `istio.io/rev=<revision>`. C'est justement ce qui permet de garder **deux versions d'Istio simultanément** et de basculer la charge entre elles - la base de la mise à jour canary.
 
+## Infrastructure
+
+L'environnement est déployé dans AWS (`eu-central-1`) via Terragrunt et se compose de :
+
+| Composant  | Description                                          |
+|------------|---------------------------------------------------|
+| `vpc`      | VPC `10.10.0.0/16` avec des sous-réseaux publics          |
+| `ssh-keys` | Clés SSH pour l'accès aux nœuds                      |
+| `k8s-1`    | Kubernetes `1.35.2` (kubeadm)                      |
+| `worker`   | Machine de travail avec `kubectl` et accès au cluster   |
+
+Instances : `t3.medium` (master) Ubuntu `22.04`
+
+## Déploiement
+
+```bash
+TASK=07 make run_ica_task
+```
+
 ## Étape 1. On ajoute le dépôt Helm d'Istio
 
 ```bash

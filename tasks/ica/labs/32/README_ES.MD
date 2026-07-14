@@ -36,6 +36,22 @@ flowchart TB
     end
 ```
 
+## Infraestructura
+
+| Componente | Tipo | Cant. | Rol |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod |
+| worker | `t3.medium` | 1 | capacidad para grpc-server (3 réplicas) + client |
+| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `check_result` |
+
+Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Despliegue
+
+```bash
+TASK=32 make run_ica_task
+```
+
 ## Tarea
 
 1. Corregir el **Service** `grpc-server`: el puerto `8079` debe reconocerse como gRPC -
@@ -143,13 +159,3 @@ Has activado el balanceo per-request de gRPC mediante el nombrado correcto del p
 reintentos y timeout para gRPC como para HTTP. Comprender que **gRPC es HTTP/2** es una de
 las habilidades clave para operar un mesh: precisamente por el balanceo correcto los servicios gRPC
 suelen incorporarse a un service mesh.
-
-## Infraestructura
-
-| Componente | Tipo | Cant. | Rol |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod |
-| worker | `t3.medium` | 1 | capacidad para grpc-server (3 réplicas) + client |
-| worker PC | `t3.small` | 1 | puesto de trabajo: `kubectl`, `check_result` |
-
-Región: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).

@@ -29,6 +29,22 @@ flowchart LR
     GW -->|"PASSTHROUGH: entschlüsselt nicht,<br>Routing nach SNI"| B["secure-backend<br>(terminiert TLS selbst)"]
 ```
 
+## Infrastruktur
+
+| Komponente | Typ | Anzahl | Rolle |
+|---|---|---|---|
+| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
+| worker | `t3.small` | 1 | Kapazität für ping-pong und secure-backend |
+| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `curl`, `check_result` |
+
+Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
+
+## Deployment
+
+```bash
+TASK=29 make run_ica_task
+```
+
 ## Aufgabe
 
 1. Ein `Gateway` mit zwei Servern auf Port 443 erstellen (unterscheiden sich per SNI):
@@ -169,13 +185,3 @@ Sie haben am Ingress Gateway zwei fortgeschrittene TLS-Modi konfiguriert: mTLS a
 (MUTUAL) und durchgehendes TLS (PASSTHROUGH), unterschieden nach SNI auf demselben Port. Das
 Verständnis aller TLS-Modi des Gateways ist eine wichtige Fähigkeit für das sichere
 Veröffentlichen von Services (Partner-APIs, Ende-zu-Ende-Verschlüsselung).
-
-## Infrastruktur
-
-| Komponente | Typ | Anzahl | Rolle |
-|---|---|---|---|
-| control-plane | `t3.medium` | 1 | master + istiod + ingress gateway |
-| worker | `t3.small` | 1 | Kapazität für ping-pong und secure-backend |
-| worker PC | `t3.small` | 1 | Arbeitsplatz: `kubectl`, `curl`, `check_result` |
-
-Region: `eu-central-1` (AZ `eu-central-1a` / `eu-central-1b`).
