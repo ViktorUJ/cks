@@ -277,7 +277,7 @@ reclaimPolicy, WaitForFirstConsumer) определяют производите
 начиная с проб (liveness, readiness, startup - глава 27). StorageClass, динамический
 провижининг и StatefulSet-хранилище отрабатываются в лабах по хранению.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 108 (StorageClass и хранение в StatefulSet): [tasks/cka/labs/108](../../labs/108/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 25](../25/ru.md) · [Глава 27](../27/ru.md)

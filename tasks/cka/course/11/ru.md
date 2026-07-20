@@ -302,7 +302,7 @@ volumeClaimTemplates и headless-сервис.
 Kubernetes и вы решаете, на какую ноду попадёт под. StatefulSet с хранилищем вернётся в
 главе 26 (хранение), а DaemonSet - в лабах по рабочим нагрузкам.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 103 (DaemonSet; StatefulSet — в лабе 108): [tasks/cka/labs/103](../../labs/103/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 10](../10/ru.md) · [Глава 12](../12/ru.md)

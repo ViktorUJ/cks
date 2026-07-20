@@ -333,7 +333,7 @@ stateful определяет, каким контроллером вообще 
 обновления и откаты Deployment. Первая объединённая лаба свяжет воедино поды,
 Deployment, namespaces и Service.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 101 (ReplicaSet, Deployment, Service): [tasks/cka/labs/101](../../labs/101/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 4](../04/ru.md) · [Глава 6](../06/ru.md)

@@ -251,7 +251,7 @@ flowchart TB
 разбор сбоев control plane и worker-нод. Отладка приложений отрабатывается в лабах по
 troubleshooting и мок-экзаменах.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 114 (отладка сломанных ресурсов): [tasks/cka/labs/114](../../labs/114/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 43](../43/ru.md) · [Глава 45](../45/ru.md)

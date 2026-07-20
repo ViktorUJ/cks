@@ -250,7 +250,7 @@ Endpoints ↔ безопасный выкат - сквозная тема.
 кластером: логи, metrics-server и `kubectl top`. Пробы отрабатываются в лабах по
 наблюдаемости (в т.ч. на образе `ping_pong`, умеющем эмулировать провал проб).
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 109 (liveness, readiness, startup пробы): [tasks/cka/labs/109](../../labs/109/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 26](../26/ru.md) · [Глава 28](../28/ru.md)

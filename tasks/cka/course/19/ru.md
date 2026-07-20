@@ -277,7 +277,7 @@ flowchart TB
 контейнера - SecurityContext и capabilities: под каким пользователем работает процесс и
 какие привилегии у него есть. Secret отрабатывается в лабах по конфигурации и безопасности.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 105 (Secret): [tasks/cka/labs/105](../../labs/105/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 18](../18/ru.md) · [Глава 20](../20/ru.md)

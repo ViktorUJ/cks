@@ -273,7 +273,7 @@ modes определяет архитектуру (RWO → StatefulSet, RWX → 
 динамический провижининг создают PV под запрос PVC сами, а также вернёмся к хранению в
 StatefulSet. PV/PVC отрабатываются в лабах по хранению.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 108 (PV/PVC): [tasks/cka/labs/108](../../labs/108/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 24](../24/ru.md) · [Глава 26](../26/ru.md)

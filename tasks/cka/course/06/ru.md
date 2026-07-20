@@ -344,7 +344,7 @@ kubectl annotate pod nginx owner-      # удалить аннотацию
 свяжем Service с подами по селектору. Namespaces, метки, селекторы, поды и Deployment
 сойдутся в первой объединённой лабораторной работе.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 101 (namespaces, метки, селекторы): [tasks/cka/labs/101](../../labs/101/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 5](../05/ru.md) · [Глава 7](../07/ru.md)

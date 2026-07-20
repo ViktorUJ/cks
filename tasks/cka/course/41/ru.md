@@ -300,7 +300,7 @@ aggregation layer (свой apiserver через `APIService`, как у metrics
 (Helm и Kustomize), которыми в том числе устанавливают операторы. CRD и операторы
 отрабатываются в лабах по администрированию.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 115 (CRD и операторы): [tasks/cka/labs/115](../../labs/115/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 40](../40/ru.md) · [Глава 42](../42/ru.md)

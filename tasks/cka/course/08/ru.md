@@ -289,7 +289,7 @@ Workloads/Deployment. Диагностика застрявшего rollout оп
 продвинутые стратегии - canary и blue/green - которые строятся поверх этих механизмов.
 Обновления и откаты Deployment отрабатываются в лабах по рабочим нагрузкам.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 102 (rolling update и rollback): [tasks/cka/labs/102](../../labs/102/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 7](../07/ru.md) · [Глава 9](../09/ru.md)

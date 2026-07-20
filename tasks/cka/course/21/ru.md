@@ -301,6 +301,8 @@ binding'и.
 ServiceAccount и проверка прав отрабатываются в лабах по безопасности; глубокий RBAC ждёт
 в главе 38.
 
+🧪 Лаба 113 (ServiceAccount, RBAC и CSR): [tasks/cka/labs/113](../../labs/113/README_RU.MD)
+
 🧪 Лаба 121 (RBAC-дриллы: SA, Role/ClusterRole, binding'и): [tasks/cka/labs/121](../../labs/121/README_RU.MD)
 
 ---

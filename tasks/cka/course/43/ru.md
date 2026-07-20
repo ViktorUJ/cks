@@ -248,7 +248,7 @@ CD). configMapGenerator решает проблему stale-конфига. По
 troubleshooting (CKA): систематический разбор сбоев приложений (глава 44), control plane и
 нод (45), сети (46). Kustomize отрабатывается в лабах по администрированию.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 115 (Kustomize): [tasks/cka/labs/115](../../labs/115/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 42](../42/ru.md) · [Глава 44](../44/ru.md)

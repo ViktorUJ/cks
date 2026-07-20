@@ -245,7 +245,7 @@ Prometheus + Grafana). Отладочный цикл get→describe→logs→top
 устаревания API (включая ephemeral-контейнеры для диагностики). Логи и метрики
 отрабатываются в лабах по наблюдаемости.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 109 (logs, metrics-server, kubectl top): [tasks/cka/labs/109](../../labs/109/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 27](../27/ru.md) · [Глава 29](../29/ru.md)

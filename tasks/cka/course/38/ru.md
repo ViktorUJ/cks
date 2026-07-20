@@ -283,6 +283,8 @@ namespace-ограничение через RoleBinding.
 kubeconfig и CSR API, то есть как пользователи и компоненты вообще получают удостоверения.
 RBAC отрабатывается в лабах по безопасности.
 
+🧪 Лаба 113 (RBAC + доступ человеку через CSR и приложению через SA): [tasks/cka/labs/113](../../labs/113/README_RU.MD)
+
 🧪 Лаба 121 (RBAC-дриллы + проверка через auth can-i): [tasks/cka/labs/121](../../labs/121/README_RU.MD)
 
 ---

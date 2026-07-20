@@ -357,7 +357,7 @@ cordon/drain/uncordon. Ошибка в порядке или пропуск drai
 и восстановление etcd, без которого потеря control plane означает потерю кластера.
 Обновление кластера отрабатывается в лабах по администрированию.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 111 (kubeadm upgrade): [tasks/cka/labs/111](../../labs/111/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 35](../35/ru.md) · [Глава 37](../37/ru.md)

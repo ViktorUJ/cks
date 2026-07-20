@@ -292,7 +292,7 @@ Always` в Job - частая ошибка.
 рабочих нагрузок - DaemonSet и StatefulSet. Job и CronJob отрабатываются в лабах по
 рабочим нагрузкам.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 103 (Jobs и CronJob): [tasks/cka/labs/103](../../labs/103/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 9](../09/ru.md) · [Глава 11](../11/ru.md)

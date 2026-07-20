@@ -253,7 +253,7 @@ Security. Нужно уверенно писать `securityContext` на нуж
 ServiceAccount и обзор аутентификации, авторизации и admission: как поды и пользователи
 получают доступ к API. SecurityContext отрабатывается в лабах по безопасности.
 
-🧪 Лаба 01: [tasks/cka/labs/01](../../labs/01/README_RU.MD)
+🧪 Лаба 106 (SecurityContext и capabilities): [tasks/cka/labs/106](../../labs/106/README_RU.MD)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 19](../19/ru.md) · [Глава 21](../21/ru.md)

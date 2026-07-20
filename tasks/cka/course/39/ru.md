@@ -295,6 +295,8 @@ flowchart TB
 CNI, CSI, CRI, - которые уже упоминались и определяют, как подключаются сеть, хранилище и
 рантайм. Сертификаты, kubeconfig и CSR отрабатываются в лабах по безопасности.
 
+🧪 Лаба 113 (выдача доступа человеку через CSR API: сертификат + Role/RoleBinding): [tasks/cka/labs/113](../../labs/113/README_RU.MD)
+
 🧪 Лаба 118 (в т.ч. health-check сертификатов): [tasks/cka/labs/118](../../labs/118/README_RU.MD)
 
 ---
