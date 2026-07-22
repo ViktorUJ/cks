@@ -35,35 +35,35 @@ TASK=125 make run_cka_task
 Работа ведётся с рабочей машины `worker` (там `kubectl` и `check_result`).
 
 ---
-|        **1**        | **Deployment**                                              |
+|        **1**        | **Namespace и Deployment**                                  |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Namespace `dns` + deployment `web` (`nginx`, 2 реплики) |
-| Критерии приёмки    | - `web`: 2 готовые реплики |
+| Что делаем          | Создайте namespace с именем `dns`. В этом namespace создайте Deployment с именем `web`, образ контейнера `nginx`, количество реплик — `2`. У Pods должен быть label `app=web` (у Deployment, созданного через `kubectl create deployment`, этот label ставится автоматически). |
+| Критерии приёмки    | - namespace `dns` существует;<br>- Deployment `web` в namespace `dns` имеет 2 готовые (ready) реплики. |
 ---
-|        **2**        | **ClusterIP (обычная A-запись)**                            |
+|        **2**        | **ClusterIP Service (обычная A-запись в DNS)**              |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Service `web-svc` (ClusterIP) для `web` на порту 80 |
-| Критерии приёмки    | - `web-svc`: Endpoints не пусты |
+| Что делаем          | В namespace `dns` создайте Service с именем `web-svc` типа **ClusterIP** (тип по умолчанию), который выбирает Pods Deployment `web` по label `app=web`. Порт Service — `80`, `targetPort` (порт на Pods) — тоже `80`. Такой Service получит в кластере DNS-имя `web-svc.dns.svc.cluster.local` с одной A-записью на ClusterIP. |
+| Критерии приёмки    | - Service `web-svc` в namespace `dns` существует;<br>- его Endpoints не пусты (Service нашёл Pods `web`). |
 ---
-|        **3**        | **Headless-сервис (A-записи на все Pods)**                  |
+|        **3**        | **Headless Service (A-записи на все Pods)**                 |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Service `web-h` c `clusterIP: None` и selector `app=web` |
-| Критерии приёмки    | - `web-h`: `clusterIP=None`, Endpoints не пусты |
+| Что делаем          | В namespace `dns` создайте **headless** Service с именем `web-h`: поле `clusterIP` должно быть равно `None`, selector — `app=web`, порт `80`. У headless Service нет единого виртуального IP: DNS-запрос к его имени возвращает IP **всех** Pods напрямую (по A-записи на каждый Pod). |
+| Критерии приёмки    | - Service `web-h` в namespace `dns` имеет `clusterIP: None`;<br>- его Endpoints не пусты (перечислены IP Pods `web`). |
 ---
-|        **4**        | **Pod с кастомным DNS (ndots)**                            |
+|        **4**        | **Pod с кастомной DNS-настройкой (ndots)**                 |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Pod `client` (`nginx`) с `dnsConfig.options ndots=2` |
-| Критерии приёмки    | - у `client` в spec задан `ndots=2` |
+| Что делаем          | В namespace `dns` создайте Pod с именем `client`, образ `nginx`. В его spec задайте `dnsConfig` с опцией `ndots` равной `2` (то есть `spec.dnsConfig.options` содержит запись `{name: ndots, value: "2"}`). `dnsPolicy` оставьте `ClusterFirst` (по умолчанию). Это уменьшает число лишних DNS-запросов для внешних имён (см. раздел 31.7 главы). |
+| Критерии приёмки    | - Pod `client` в namespace `dns` существует;<br>- в его spec задана опция `dnsConfig` `ndots=2`. |
 ---
-|        **5**        | **CoreDNS: пересылка домена**                              |
+|        **5**        | **CoreDNS: пересылка отдельного домена**                   |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | В Corefile (`configmap coredns`) добавить forward домена `mycorp.local` на `10.10.0.10` |
-| Критерии приёмки    | - Corefile содержит `mycorp.local` и `10.10.0.10` |
+| Что делаем          | Отредактируйте ConfigMap `coredns` в namespace `kube-system` и добавьте в Corefile отдельный блок (stub-домен), который **пересылает** (`forward`) все запросы к домену `mycorp.local` на внешний DNS-сервер с адресом `10.10.0.10`. После правки перезапустите Deployment `coredns` (`kubectl -n kube-system rollout restart deployment coredns`), чтобы изменения применились. |
+| Критерии приёмки    | - в Corefile (ConfigMap `coredns`) присутствует домен `mycorp.local` и адрес пересылки `10.10.0.10`. |
 ---
-|        **6**        | **JSONPath**                                               |
+|        **6**        | **JSONPath: сохранить ClusterIP в файл**                   |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Сохранить ClusterIP сервиса `web-svc` в `/home/ubuntu/answers/clusterip.txt` |
-| Критерии приёмки    | - Значение совпадает с `.spec.clusterIP` |
+| Что делаем          | С помощью `kubectl ... -o jsonpath` получите ClusterIP сервиса `web-svc` (поле `.spec.clusterIP`) и сохраните **только само значение** (без переносов и лишнего текста) в файл `/home/ubuntu/answers/clusterip.txt`. |
+| Критерии приёмки    | - содержимое `/home/ubuntu/answers/clusterip.txt` совпадает с `.spec.clusterIP` сервиса `web-svc`. |
 ---
 
 ## Проверка результата
