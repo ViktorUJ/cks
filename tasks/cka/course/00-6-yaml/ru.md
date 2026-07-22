@@ -54,7 +54,7 @@ containers:
 flowchart TB
     y["YAML"] --> s["скаляр<br>nginx, 80, true"]
     y --> m["словарь (map)<br>ключ: значение"]
-    y --> l["список (list)<br>- элемент"]
+    y --> l["список (list)<br>«- элемент»"]
     style y fill:#326ce5,color:#fff
     style s fill:#0f9d58,color:#fff
     style m fill:#673ab7,color:#fff
@@ -81,9 +81,9 @@ spec:
 
 ```mermaid
 flowchart TB
-    a["spec:"] --> b["  containers:  (2 пробела)"]
-    b --> c["    - name: app  (элемент списка)"]
-    c --> d["      image: nginx  (поле под name)"]
+    a["spec:  (уровень 0)"] --> b["containers:  (отступ 2 пробела)"]
+    b --> c["«- name: app»  (элемент списка, отступ 4)"]
+    c --> d["image: nginx  (поле под name, отступ 6)"]
     style a fill:#326ce5,color:#fff
     style b fill:#0f9d58,color:#fff
     style c fill:#673ab7,color:#fff

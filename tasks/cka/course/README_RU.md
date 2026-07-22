@@ -81,6 +81,7 @@ CKAD (домены и вес):
 - 0.5. [Linux и инструменты ноды с нуля: SSH, sudo, systemd, логи, файлы](00-5-linux/ru.md)
 - 0.6. [YAML с нуля: отступы, списки, словари и манифесты](00-6-yaml/ru.md)
 - 0.7. [Linux-сеть под капотом: network namespaces, veth и маршрутизация](00-7-netns/ru.md)
+- 0.8. [vim за 15 минут: выжить и настроить под YAML](00-8-vim/ru.md)
 
 ### Часть 1. Основы Kubernetes 🟪 CKA + CKAD
 

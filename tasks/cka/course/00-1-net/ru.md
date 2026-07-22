@@ -62,9 +62,9 @@ IP-адрес указывает на устройство, но на одном
 
 ```mermaid
 flowchart TB
-    host["Один сервер 10.0.0.7"] --> p80["порт 80 → веб-сервер (HTTP)"]
-    host --> p443["порт 443 → веб-сервер (HTTPS)"]
-    host --> p5432["порт 5432 → PostgreSQL"]
+    host["Один сервер<br>10.0.0.7"] --> p80["порт 80<br>веб-сервер (HTTP)"]
+    host --> p443["порт 443<br>веб-сервер (HTTPS)"]
+    host --> p5432["порт 5432<br>PostgreSQL"]
     style host fill:#326ce5,color:#fff
     style p80 fill:#0f9d58,color:#fff
     style p443 fill:#0f9d58,color:#fff
