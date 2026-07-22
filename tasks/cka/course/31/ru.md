@@ -356,6 +356,8 @@ DNS - одна из самых частых причин сетевых проб
 Ingress-контроллеры, дающие маршрутизацию по хостам и путям. CoreDNS и kube-proxy
 отрабатываются в лабах по сети и troubleshooting.
 
+🧪 Лаба 125 (DNS и CoreDNS: A-записи, headless, ndots/dnsConfig, Corefile): [tasks/cka/labs/125](../../labs/125/README_RU.MD)
+
 🧪 Лаба 118 (в т.ч. починка CoreDNS): [tasks/cka/labs/118](../../labs/118/README_RU.MD)
 
 ---

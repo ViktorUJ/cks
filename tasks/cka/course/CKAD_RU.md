@@ -94,7 +94,7 @@ Developer)**. Курс совместный (CKA + CKAD), и здесь собр
 | 🔵 Application Environment, Configuration and Security — 25% | [105](../labs/105/README_RU.MD) (ConfigMap/Secret/env), [106](../labs/106/README_RU.MD) (SecurityContext), [104](../labs/104/README_RU.MD) (ресурсы/квоты), [113](../labs/113/README_RU.MD) (ServiceAccount), [121](../labs/121/README_RU.MD) (RBAC-дриллы), [115](../labs/115/README_RU.MD) (CRD) |
 | 🟢 Application Design and Build — 20% | [101](../labs/101/README_RU.MD) (поды/Deployment), [103](../labs/103/README_RU.MD) (Jobs/CronJob), [107](../labs/107/README_RU.MD) (multi-container/образы/тома) |
 | 🟣 Application Deployment — 20% | [102](../labs/102/README_RU.MD) (rolling update/canary/blue-green), [115](../labs/115/README_RU.MD) (Helm/Kustomize) |
-| 🟠 Services and Networking — 20% | [101](../labs/101/README_RU.MD) (Service), [110](../labs/110/README_RU.MD) (Ingress/NetworkPolicy), [120](../labs/120/README_RU.MD) (networking-дриллы) |
+| 🟠 Services and Networking — 20% | [101](../labs/101/README_RU.MD) (Service), [110](../labs/110/README_RU.MD) (Ingress/NetworkPolicy), [125](../labs/125/README_RU.MD) (DNS/CoreDNS), [120](../labs/120/README_RU.MD) (networking-дриллы) |
 | 🔴 Application Observability and Maintenance — 15% | [109](../labs/109/README_RU.MD) (пробы/логи/отладка/deprecations), [119](../labs/119/README_RU.MD) (дриллы на скорость + JSONPath) |
 
 - 🧪 [tasks/cka/labs](../labs) - каталог всех лабораторных работ
