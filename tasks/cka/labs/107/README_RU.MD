@@ -29,8 +29,8 @@
 ```mermaid
 flowchart TB
     subgraph mp["Pod multi-pod"]
-        a["alpha: nginx (env name=alpha)"]
-        b["beta: busybox (env name=beta)"]
+        a["alpha: ping_pong:latest (env name=alpha)"]
+        b["beta: ping_pong:alpine (env name=beta)"]
     end
     subgraph lg["Pod logger (sidecar)"]
         app["app: пишет в /log"]
@@ -68,7 +68,7 @@ TASK=107 make run_cka_task
 |        **1**        | **Создать под с двумя контейнерами**                         |
 | :-----------------: | :----------------------------------------------------------- |
 | Что делаем          | Описываем multi-container под с разными образами и env        |
-| Критерии приёмки    | - Pod: `multi-pod`<br/>- Контейнер `alpha`: image `nginx`, env `name=alpha`<br/>- Контейнер `beta`: image `busybox`, command `sleep 4800`, env `name=beta` |
+| Критерии приёмки    | - Pod: `multi-pod`<br/>- Контейнер `alpha`: image `viktoruj/ping_pong:latest`, env `name=alpha`<br/>- Контейнер `beta`: image `viktoruj/ping_pong:alpine`, env `name=beta` |
 ---
 |        **2**        | **Собрать логи sidecar-контейнером**                         |
 | :-----------------: | :----------------------------------------------------------- |

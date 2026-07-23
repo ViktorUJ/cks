@@ -76,7 +76,7 @@ TASK=118 make run_cka_task
 |        **4**        | **Понизить ndots для пода (dnsConfig)**                     |
 | :-----------------: | :----------------------------------------------------------- |
 | Что делаем          | Создаём под с дефолтным DNS и под с настроенным `ndots`, чтобы увидеть разницу |
-| Критерии приёмки    | - Под `dns-default` (image `busybox:1.36`, `sleep`) — дефолтный DNS (`ndots:5` в resolv.conf)<br>- Под `dns-tuned` (image `busybox:1.36`, `sleep`) с `dnsConfig.options` `ndots=2` |
+| Критерии приёмки    | - Под `dns-default` (image `viktoruj/ping_pong:alpine`) — дефолтный DNS (`ndots:5` в resolv.conf)<br>- Под `dns-tuned` (image `viktoruj/ping_pong:alpine`) с `dnsConfig.options` `ndots=2` |
 ---
 |        **5**        | **Отчёт по ndots**                                          |
 | :-----------------: | :----------------------------------------------------------- |

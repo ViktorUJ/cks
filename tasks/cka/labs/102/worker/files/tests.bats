@@ -8,31 +8,31 @@ CTX="cluster1-admin@cluster1"
   echo '' > /var/work/tests/result/requests
 }
 
-@test "1. Deployment web (nginx:1.24, 3 replicas) exists and ready" {
+@test "1. Deployment web (viktoruj/ping_pong:latest, 3 replicas) exists and ready" {
   echo '1' >> /var/work/tests/result/all
   image=$(kubectl get deploy web --context $CTX -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
   ready=$(kubectl get deploy web --context $CTX -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
-  if [[ "$image" == "nginx:1.24" ]] && [[ "$ready" == "3" ]]; then
+  if [[ "$image" == "viktoruj/ping_pong:latest" ]] && [[ "$ready" == "3" ]]; then
     echo '1' >> /var/work/tests/result/ok; result=0
   else echo "web image=$image ready=$ready"; result=1; fi
   [ "$result" == "0" ]
 }
 
-@test "2. web rolled to nginx:1.25 with >=2 revisions" {
+@test "2. web rolled to viktoruj/ping_pong:alpine with >=2 revisions" {
   echo '1' >> /var/work/tests/result/all
   image=$(kubectl get deploy web --context $CTX -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
   revs=$(kubectl rollout history deploy web --context $CTX 2>/dev/null | grep -cE '^[0-9]+')
-  if [[ "$image" == "nginx:1.25" ]] && [[ "$revs" -ge 2 ]]; then
+  if [[ "$image" == "viktoruj/ping_pong:alpine" ]] && [[ "$revs" -ge 2 ]]; then
     echo '1' >> /var/work/tests/result/ok; result=0
   else echo "web image=$image revisions=$revs"; result=1; fi
   [ "$result" == "0" ]
 }
 
-@test "3. Deployment roll rolled back to nginx:1.24 (>=3 revisions history)" {
+@test "3. Deployment roll rolled back to viktoruj/ping_pong:latest (>=3 revisions history)" {
   echo '1' >> /var/work/tests/result/all
   image=$(kubectl get deploy roll --context $CTX -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
   gen=$(kubectl get deploy roll --context $CTX -o jsonpath='{.metadata.generation}' 2>/dev/null)
-  if [[ "$image" == "nginx:1.24" ]] && [[ "$gen" -ge 3 ]]; then
+  if [[ "$image" == "viktoruj/ping_pong:latest" ]] && [[ "$gen" -ge 3 ]]; then
     echo '1' >> /var/work/tests/result/ok; result=0
   else echo "roll image=$image generation=$gen"; result=1; fi
   [ "$result" == "0" ]

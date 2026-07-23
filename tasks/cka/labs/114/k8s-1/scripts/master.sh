@@ -23,12 +23,12 @@ spec:
     metadata: {labels: {app: rsapp}}
     spec:
       containers:
-      - {name: c, image: nginx:doesnotexist123}
+      - {name: c, image: viktoruj/ping_pong:doesnotexist123}
 EOF
 
 # 2) Service с неверным селектором (пустые Endpoints)
 kubectl create namespace tsvc || true
-kubectl -n tsvc create deployment tapp --image=nginx || true
+kubectl -n tsvc create deployment tapp --image=viktoruj/ping_pong:latest || true
 kubectl -n tsvc get deploy tapp -o yaml | sed 's/app: tapp/app: web/g' | kubectl apply -f - || true
 cat <<'EOF' | kubectl apply -f -
 apiVersion: v1
@@ -37,7 +37,7 @@ metadata: {name: svc-broken, namespace: tsvc}
 spec:
   selector: {app: WRONG}
   ports:
-  - {port: 80, targetPort: 80}
+  - {port: 80, targetPort: 8080}
 EOF
 
 # 3) Deployment ссылается на несуществующий ConfigMap (CreateContainerConfigError)
@@ -54,7 +54,7 @@ spec:
     spec:
       containers:
       - name: c
-        image: nginx
+        image: viktoruj/ping_pong:latest
         envFrom:
         - configMapRef: {name: missing-config}
 EOF

@@ -25,5 +25,5 @@ spec:
               matchLabels: {app: netprobe}
             topologyKey: kubernetes.io/hostname
       containers:
-      - {name: web, image: nginx}
+      - {name: web, image: viktoruj/ping_pong:latest}
 EOF

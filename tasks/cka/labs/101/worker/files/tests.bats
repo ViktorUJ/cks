@@ -17,11 +17,11 @@ CTX="cluster1-admin@cluster1"
   [ "$result" == "ckad-101" ]
 }
 
-@test "2. Pod web (image nginx, label tier=frontend) in ckad-101" {
+@test "2. Pod web (image viktoruj/ping_pong, label tier=frontend) in ckad-101" {
   echo '1' >> /var/work/tests/result/all
   image=$(kubectl get po web -n ckad-101 --context $CTX -o jsonpath='{.spec.containers[0].image}' 2>/dev/null)
   label=$(kubectl get po web -n ckad-101 --context $CTX -o jsonpath='{.metadata.labels.tier}' 2>/dev/null)
-  if [[ "$image" == nginx* ]] && [[ "$label" == "frontend" ]]; then
+  if [[ "$image" == *ping_pong* ]] && [[ "$label" == "frontend" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -31,11 +31,11 @@ CTX="cluster1-admin@cluster1"
   [ "$result" == "0" ]
 }
 
-@test "3. Deployment api in ckad-101 has 4 ready replicas (image nginx)" {
+@test "3. Deployment api in ckad-101 has 4 ready replicas (image viktoruj/ping_pong)" {
   echo '1' >> /var/work/tests/result/all
   image=$(kubectl get deploy api -n ckad-101 --context $CTX -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
   ready=$(kubectl get deploy api -n ckad-101 --context $CTX -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
-  if [[ "$image" == nginx* ]] && [[ "$ready" == "4" ]]; then
+  if [[ "$image" == *ping_pong* ]] && [[ "$ready" == "4" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else

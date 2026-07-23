@@ -37,12 +37,12 @@ TASK=125 make run_cka_task
 ---
 |        **1**        | **Namespace и Deployment**                                  |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Создайте namespace с именем `dns`. В этом namespace создайте Deployment с именем `web`, образ контейнера `nginx`, количество реплик — `2`. У Pods должен быть label `app=web` (у Deployment, созданного через `kubectl create deployment`, этот label ставится автоматически). |
+| Что делаем          | Создайте namespace с именем `dns`. В этом namespace создайте Deployment с именем `web`, образ контейнера `viktoruj/ping_pong:latest` (учебный HTTP-сервер на порту `8080`), количество реплик — `2`. У Pods должен быть label `app=web` (у Deployment, созданного через `kubectl create deployment`, этот label ставится автоматически). |
 | Критерии приёмки    | - namespace `dns` существует;<br>- Deployment `web` в namespace `dns` имеет 2 готовые (ready) реплики. |
 ---
 |        **2**        | **ClusterIP Service (обычная A-запись в DNS)**              |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | В namespace `dns` создайте Service с именем `web-svc` типа **ClusterIP** (тип по умолчанию), который выбирает Pods Deployment `web` по label `app=web`. Порт Service — `80`, `targetPort` (порт на Pods) — тоже `80`. Такой Service получит в кластере DNS-имя `web-svc.dns.svc.cluster.local` с одной A-записью на ClusterIP. |
+| Что делаем          | В namespace `dns` создайте Service с именем `web-svc` типа **ClusterIP** (тип по умолчанию), который выбирает Pods Deployment `web` по label `app=web`. Порт Service — `80`, `targetPort` (порт на Pods) — `8080` (HTTP-порт приложения ping_pong). Такой Service получит в кластере DNS-имя `web-svc.dns.svc.cluster.local` с одной A-записью на ClusterIP. |
 | Критерии приёмки    | - Service `web-svc` в namespace `dns` существует;<br>- его Endpoints не пусты (Service нашёл Pods `web`). |
 ---
 |        **3**        | **Headless Service (A-записи на все Pods)**                 |
@@ -52,7 +52,7 @@ TASK=125 make run_cka_task
 ---
 |        **4**        | **Pod с кастомной DNS-настройкой (ndots)**                 |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | В namespace `dns` создайте Pod с именем `client`, образ `nginx`. В его spec задайте `dnsConfig` с опцией `ndots` равной `2` (то есть `spec.dnsConfig.options` содержит запись `{name: ndots, value: "2"}`). `dnsPolicy` оставьте `ClusterFirst` (по умолчанию). Это уменьшает число лишних DNS-запросов для внешних имён (см. раздел 31.7 главы). |
+| Что делаем          | В namespace `dns` создайте Pod с именем `client`, образ `viktoruj/ping_pong:alpine` (тег `alpine` — с shell и утилитами, чтобы можно было `exec` внутрь и проверять DNS: `nslookup`, `wget`). В его spec задайте `dnsConfig` с опцией `ndots` равной `2` (то есть `spec.dnsConfig.options` содержит запись `{name: ndots, value: "2"}`). `dnsPolicy` оставьте `ClusterFirst` (по умолчанию). Это уменьшает число лишних DNS-запросов для внешних имён (см. раздел 31.7 главы). |
 | Критерии приёмки    | - Pod `client` в namespace `dns` существует;<br>- в его spec задана опция `dnsConfig` `ndots=2`. |
 ---
 |        **5**        | **CoreDNS: пересылка отдельного домена**                   |

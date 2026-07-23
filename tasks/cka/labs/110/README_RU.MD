@@ -64,7 +64,7 @@ TASK=110 make run_cka_task
 |        **1**        | **Резолвинг сервиса по DNS**                                 |
 | :-----------------: | :----------------------------------------------------------- |
 | Что делаем          | Создаём под и сервис, проверяем DNS и сохраняем записи        |
-| Критерии приёмки    | - Pod `nginx-resolver` (nginx) + Service `nginx-resolver-service` (Endpoints не пусты)<br/>- Записи сохранены в `/var/work/tests/artifacts/dns/nginx.svc` и `.../nginx.pod` |
+| Критерии приёмки    | - Pod `nginx-resolver` (viktoruj/ping_pong:latest) + Service `nginx-resolver-service` (Endpoints не пусты)<br/>- Записи сохранены в `/var/work/tests/artifacts/dns/nginx.svc` и `.../nginx.pod` |
 ---
 |        **2**        | **Опубликовать приложение через Ingress**                   |
 | :-----------------: | :----------------------------------------------------------- |

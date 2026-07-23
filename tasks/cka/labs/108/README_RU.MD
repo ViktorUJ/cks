@@ -65,7 +65,7 @@ TASK=108 make run_cka_task
 |        **3**        | **Подключить том к поду на нужной ноде**                     |
 | :-----------------: | :----------------------------------------------------------- |
 | Что делаем          | Монтируем PVC в под и сажаем его на ноду `node_2`             |
-| Критерии приёмки    | - Pod: `analytics`, image `busybox`, command `sleep 60000`<br/>- Использует PVC `pvc-analytics`, mountPath `/pv/analytics`<br/>- Работает на ноде с меткой `node=node_2` |
+| Критерии приёмки    | - Pod: `analytics`, image `viktoruj/ping_pong:alpine`<br/>- Использует PVC `pvc-analytics`, mountPath `/pv/analytics`<br/>- Работает на ноде с меткой `node=node_2` |
 ---
 
 ## Проверка результата

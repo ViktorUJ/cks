@@ -78,7 +78,7 @@ TASK=103 make run_cka_task
 |        **3**        | **Развернуть DaemonSet на всех нодах (включая control-plane)** |
 | :-----------------: | :------------------------------------------------------------ |
 | Что делаем          | Запускаем агент по поду на каждой ноде; на control-plane попадаем через toleration |
-| Критерии приёмки    | - Неймспейс: `app-system`<br/>- DaemonSet: `important-app`, image `nginx`<br/>- Под работает на **всех** нодах (desired = numberReady = число нод) |
+| Критерии приёмки    | - Неймспейс: `app-system`<br/>- DaemonSet: `important-app`, image `viktoruj/ping_pong:latest`<br/>- Под работает на **всех** нодах (desired = numberReady = число нод) |
 ---
 
 ## Проверка результата

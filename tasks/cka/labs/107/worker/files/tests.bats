@@ -8,13 +8,13 @@ CTX="cluster1-admin@cluster1"
   echo '' > /var/work/tests/result/requests
 }
 
-@test "1. multi-pod: alpha(nginx,env name=alpha) + beta(busybox,sleep,env name=beta)" {
+@test "1. multi-pod: alpha(ping_pong,env name=alpha) + beta(ping_pong,env name=beta)" {
   echo '1' >> /var/work/tests/result/all
   aimg=$(kubectl get po multi-pod --context $CTX -o jsonpath='{.spec.containers[?(@.name=="alpha")].image}' 2>/dev/null)
   bimg=$(kubectl get po multi-pod --context $CTX -o jsonpath='{.spec.containers[?(@.name=="beta")].image}' 2>/dev/null)
   aenv=$(kubectl get po multi-pod --context $CTX -o json 2>/dev/null | jq -r '.spec.containers[] | select(.name=="alpha") | .env[]? | select(.name=="name") | .value')
   benv=$(kubectl get po multi-pod --context $CTX -o json 2>/dev/null | jq -r '.spec.containers[] | select(.name=="beta") | .env[]? | select(.name=="name") | .value')
-  if [[ "$aimg" == nginx* ]] && [[ "$bimg" == busybox* ]] && [[ "$aenv" == "alpha" ]] && [[ "$benv" == "beta" ]]; then
+  if [[ "$aimg" == *ping_pong* ]] && [[ "$bimg" == *ping_pong* ]] && [[ "$aenv" == "alpha" ]] && [[ "$benv" == "beta" ]]; then
     echo '1' >> /var/work/tests/result/ok; result=0
   else echo "alpha=$aimg/$aenv beta=$bimg/$benv"; result=1; fi
   [ "$result" == "0" ]

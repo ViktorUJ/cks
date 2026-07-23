@@ -76,7 +76,7 @@ TASK=104 make run_cka_task
 |        **3**        | **Создать static pod на control-plane**                       |
 | :-----------------: | :------------------------------------------------------------ |
 | Что делаем          | Кладём манифест в `/etc/kubernetes/manifests/` на master      |
-| Критерии приёмки    | - Static pod: `static-busybox`, image `busybox`, command `sleep 60000`<br/>- Label: `pod-type=static-pod` |
+| Критерии приёмки    | - Static pod: `static-busybox`, image `viktoruj/ping_pong:alpine`<br/>- Label: `pod-type=static-pod` |
 ---
 |        **4**        | **Задать и применить приоритет**                              |
 | :-----------------: | :------------------------------------------------------------ |
@@ -91,12 +91,12 @@ TASK=104 make run_cka_task
 |        **6**        | **Разнести реплики по нодам и защитить PDB**                  |
 | :-----------------: | :------------------------------------------------------------ |
 | Что делаем          | podAntiAffinity + PodDisruptionBudget                         |
-| Критерии приёмки    | - Неймспейс: `app2-system`<br/>- Deployment `important-app2`: image `nginx`, `3` реплики, podAntiAffinity по `hostname`<br/>- PDB `important-app2`: minAvailable `1` |
+| Критерии приёмки    | - Неймспейс: `app2-system`<br/>- Deployment `important-app2`: image `viktoruj/ping_pong:latest`, `3` реплики, podAntiAffinity по `hostname`<br/>- PDB `important-app2`: minAvailable `1` |
 ---
 |        **7**        | **Строгое распределение по нодам (topologySpread)**           |
 | :-----------------: | :------------------------------------------------------------ |
 | Что делаем          | Ровно раскидываем реплики по нодам строгим правилом (`DoNotSchedule`) |
-| Критерии приёмки    | - Deployment `spread-app` (image `nginx`)<br/>- topologySpreadConstraints: `maxSkew: 1`, topologyKey `kubernetes.io/hostname`, `whenUnsatisfiable: DoNotSchedule` |
+| Критерии приёмки    | - Deployment `spread-app` (image `viktoruj/ping_pong:latest`)<br/>- topologySpreadConstraints: `maxSkew: 1`, topologyKey `kubernetes.io/hostname`, `whenUnsatisfiable: DoNotSchedule` |
 ---
 
 > **Строгое vs мягкое (глава 12).** В задании 7 используется **строгий** режим

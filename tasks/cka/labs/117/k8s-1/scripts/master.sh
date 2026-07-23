@@ -21,7 +21,7 @@ sleep 30
 
 # 2) Канарейка, требующая работающего планировщика (bare Pod, без контроллеров).
 #    Останется Pending, пока kube-scheduler не починят.
-kubectl run sched-check --image=nginx --restart=Never -n default || true
+kubectl run sched-check --image=viktoruj/ping_pong:latest --restart=Never -n default || true
 
 # 3) Битый статик-под на control plane: несуществующий образ.
 #    Симптом: mirror-под staticweb-<cp> в ImagePullBackOff.
@@ -34,5 +34,5 @@ metadata:
 spec:
   containers:
   - name: web
-    image: nginx:doesnotexist999
+    image: viktoruj/ping_pong:doesnotexist999
 EOF
