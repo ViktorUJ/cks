@@ -21,15 +21,32 @@ kubectl label namespace prod role=prod --overwrite || true
 kubectl create namespace stage || true
 kubectl -n prod-db run db --image=viktoruj/ping_pong:alpine --labels="app=db" || true
 
-# Gateway API: CRD + реализация (NGINX Gateway Fabric)
+# Gateway API: CRD (standard channel) + реализация (NGINX Gateway Fabric)
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml || true
-kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.4.0/nginx-gateway.yaml || true
+# NGINX Gateway Fabric v1.6.2 (репозиторий переехал в org nginx; ставим из raw-манифестов,
+# т.к. старый single-file asset в releases отдаёт 404). Создаёт GatewayClass `nginx`.
+kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.6.2/deploy/crds.yaml || true
+kubectl apply -f https://raw.githubusercontent.com/nginx/nginx-gateway-fabric/v1.6.2/deploy/default/deploy.yaml || true
 
 # сид-Ingress для задания «миграция на Gateway API»
 kubectl create namespace gw || true
 kubectl -n gw create deployment shop --image=viktoruj/ping_pong:alpine || true
 kubectl -n gw expose deployment shop --name=shop --port=8080 --target-port=8080 || true
-cat <<'EOF' | kubectl apply -f -
+
+# ingress-nginx поднимает admission-webhook; пока его endpoints пусты, создание Ingress
+# падает с "connection refused". Дожидаемся готовности контроллера и вебхука.
+kubectl -n ingress-nginx wait --for=condition=ready pod \
+  -l app.kubernetes.io/component=controller --timeout=180s || true
+for i in $(seq 1 30); do
+  ep=$(kubectl -n ingress-nginx get endpoints ingress-nginx-controller-admission \
+        -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null)
+  [ -n "$ep" ] && break
+  sleep 5
+done
+
+# создаём сид-Ingress с ретраями (на случай, если вебхук ещё прогревается)
+for i in $(seq 1 10); do
+cat <<'EOF' | kubectl apply -f - && break || sleep 6
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -50,3 +67,4 @@ spec:
             name: shop
             port: {number: 8080}
 EOF
+done
