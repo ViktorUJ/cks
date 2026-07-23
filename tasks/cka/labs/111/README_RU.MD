@@ -69,9 +69,10 @@ TASK=111 make run_cka_task
 ```
 
 После создания подключитесь к рабочей машине (worker) по SSH. Само обновление
-выполняется по SSH уже на нодах кластера — сначала на control plane
-(`ssh k8s1_controlPlane_1`), затем на worker (`ssh k8s1_node_1`). `kubectl` на рабочей
-машине настроен на контекст `cluster1-admin@cluster1`.
+выполняется по SSH уже на нодах кластера — сначала на control plane, затем на worker.
+Имена нод берите из `kubectl get nodes` (они же резолвятся для `ssh <имя-ноды>` и
+используются в `drain`/`uncordon`). `kubectl` на рабочей машине настроен на контекст
+`cluster1-admin@cluster1`.
 
 Полезные команды на рабочей машине:
 
