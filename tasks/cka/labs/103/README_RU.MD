@@ -36,15 +36,15 @@ Pod на каждую ноду. Каждый объект решает свою 
 
 ```mermaid
 flowchart TB
-    subgraph jobsub["Job hi-job"]
-        job["Job<br>completions 3"] --> jp["3 успешных Pods"]
+    subgraph jobsub["разовая задача"]
+        job["Job hi-job<br>completions 3, backoffLimit 6"] --> jp["3 успешно завершённых Pods"]
     end
-    subgraph cronsub["CronJob cron-job1 (ns rnd)"]
-        cj["CronJob<br>*/15, Forbid"] -->|"по расписанию"| j2["Job → Pod → echo"]
+    subgraph cronsub["namespace rnd"]
+        cj["CronJob cron-job1<br>*/15 * * * *, Forbid"] -->|"по расписанию"| j2["Job → Pod → echo"]
     end
-    subgraph dssub["DaemonSet important-app (ns app-system)"]
-        ds["DaemonSet<br>+ toleration control-plane"] --> m["master: Pod DS"]
-        ds --> w["worker: Pod DS"]
+    subgraph dssub["namespace app-system"]
+        ds["DaemonSet important-app<br>toleration control-plane"] --> m["master: Pod DaemonSet"]
+        ds --> w["worker: Pod DaemonSet"]
     end
     jp ~~~ cj
     j2 ~~~ ds
