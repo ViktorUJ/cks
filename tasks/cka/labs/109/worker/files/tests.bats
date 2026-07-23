@@ -19,7 +19,19 @@ CTX="cluster1-admin@cluster1"
   [ "$result" == "0" ]
 }
 
-@test "2. Logs of app-xyz3322 exported to /opt/logs/app-xyz123.log" {
+@test "2. Pod web-probes (web-ns) has startup+readiness+liveness httpGet :8080 and is Ready" {
+  echo '1' >> /var/work/tests/result/all
+  sp=$(kubectl get po web-probes -n web-ns --context $CTX -o jsonpath='{.spec.containers[0].startupProbe.httpGet.port}' 2>/dev/null)
+  rp=$(kubectl get po web-probes -n web-ns --context $CTX -o jsonpath='{.spec.containers[0].readinessProbe.httpGet.port}' 2>/dev/null)
+  lp=$(kubectl get po web-probes -n web-ns --context $CTX -o jsonpath='{.spec.containers[0].livenessProbe.httpGet.port}' 2>/dev/null)
+  ready=$(kubectl get po web-probes -n web-ns --context $CTX -o jsonpath='{.status.containerStatuses[0].ready}' 2>/dev/null)
+  if [[ "$sp" == "8080" ]] && [[ "$rp" == "8080" ]] && [[ "$lp" == "8080" ]] && [[ "$ready" == "true" ]]; then
+    echo '1' >> /var/work/tests/result/ok; result=0
+  else echo "web-probes startup=$sp readiness=$rp liveness=$lp ready=$ready"; result=1; fi
+  [ "$result" == "0" ]
+}
+
+@test "3. Logs of app-xyz3322 exported to /opt/logs/app-xyz123.log" {
   echo '1' >> /var/work/tests/result/all
   if [[ -s /opt/logs/app-xyz123.log ]]; then
     echo '1' >> /var/work/tests/result/ok; result=0
@@ -27,7 +39,7 @@ CTX="cluster1-admin@cluster1"
   [ "$result" == "0" ]
 }
 
-@test "3. CLI scripts: top pods by cpu, events sorted" {
+@test "4. CLI scripts: top pods by cpu, events sorted" {
   echo '1' >> /var/work/tests/result/all
   ok=1
   grep -qi "top" /var/work/artifact/top.sh 2>/dev/null && grep -qi "cpu" /var/work/artifact/top.sh 2>/dev/null || ok=0
@@ -38,7 +50,7 @@ CTX="cluster1-admin@cluster1"
   [ "$result" == "0" ]
 }
 
-@test "4. Deprecated manifest fixed and app-21 deployment is ready" {
+@test "5. Deprecated manifest fixed and app-21 deployment is ready" {
   echo '1' >> /var/work/tests/result/all
   api=$(kubectl get deploy app-21 --context $CTX -o jsonpath='{.apiVersion}' 2>/dev/null)
   ready=$(kubectl get deploy app-21 --context $CTX -o jsonpath='{.status.readyReplicas}' 2>/dev/null)

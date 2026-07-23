@@ -1,4 +1,4 @@
-# Lab 108 — Хранение: PersistentVolume, PersistentVolumeClaim, под с томом
+# Lab 108 — Хранение: PersistentVolume, PersistentVolumeClaim и монтирование тома в Pod
 
 ## Описание
 
