@@ -8,11 +8,13 @@ CTX="cluster1-admin@cluster1"
   echo '' > /var/work/tests/result/requests
 }
 
-@test "1. Deployment web (viktoruj/ping_pong:latest, 3 replicas) exists and ready" {
+@test "1. Deployment web (viktoruj/ping_pong, 3 replicas) exists and ready" {
   echo '1' >> /var/work/tests/result/all
   image=$(kubectl get deploy web --context $CTX -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
   ready=$(kubectl get deploy web --context $CTX -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
-  if [[ "$image" == "viktoruj/ping_pong:latest" ]] && [[ "$ready" == "3" ]]; then
+  # web стартует с :latest (задание 1), затем обновляется на :alpine (задание 2) —
+  # поэтому здесь проверяем только сам деплой и 3 готовые реплики, без привязки к тегу
+  if [[ "$image" == viktoruj/ping_pong:* ]] && [[ "$ready" == "3" ]]; then
     echo '1' >> /var/work/tests/result/ok; result=0
   else echo "web image=$image ready=$ready"; result=1; fi
   [ "$result" == "0" ]
