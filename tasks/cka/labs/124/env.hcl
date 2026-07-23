@@ -1,6 +1,6 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/124/README_RU.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/124/node-1/files/solutions/1.MD"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/AG-154/tasks/cka/labs/124/README_RU.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/AG-154/tasks/cka/labs/124/node-1/files/solutions/1.MD"
   solutions_video   = "Not ready yet"
   region            = "eu-central-1"
   vpc_default_cidr  = "10.20.0.0/16"
