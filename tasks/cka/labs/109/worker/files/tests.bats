@@ -8,14 +8,14 @@ CTX="cluster1-admin@cluster1"
   echo '' > /var/work/tests/result/requests
 }
 
-@test "1. Pod nginx1233 (web-ns) has livenessProbe exec ls /var/www/html/, delay 10, period 60" {
+@test "1. Pod app1233 (web-ns) has livenessProbe exec ls /etc, delay 10, period 60" {
   echo '1' >> /var/work/tests/result/all
-  cmd=$(kubectl get po nginx1233 -n web-ns --context $CTX -o json 2>/dev/null | jq -r '.spec.containers[0].livenessProbe.exec.command | join(" ")')
-  d=$(kubectl get po nginx1233 -n web-ns --context $CTX -o jsonpath='{.spec.containers[0].livenessProbe.initialDelaySeconds}' 2>/dev/null)
-  p=$(kubectl get po nginx1233 -n web-ns --context $CTX -o jsonpath='{.spec.containers[0].livenessProbe.periodSeconds}' 2>/dev/null)
-  if [[ "$cmd" == *"/var/www/html/"* ]] && [[ "$d" == "10" ]] && [[ "$p" == "60" ]]; then
+  cmd=$(kubectl get po app1233 -n web-ns --context $CTX -o json 2>/dev/null | jq -r '.spec.containers[0].livenessProbe.exec.command | join(" ")')
+  d=$(kubectl get po app1233 -n web-ns --context $CTX -o jsonpath='{.spec.containers[0].livenessProbe.initialDelaySeconds}' 2>/dev/null)
+  p=$(kubectl get po app1233 -n web-ns --context $CTX -o jsonpath='{.spec.containers[0].livenessProbe.periodSeconds}' 2>/dev/null)
+  if [[ "$cmd" == *"/etc"* ]] && [[ "$d" == "10" ]] && [[ "$p" == "60" ]]; then
     echo '1' >> /var/work/tests/result/ok; result=0
-  else echo "nginx1233 cmd=$cmd delay=$d period=$p"; result=1; fi
+  else echo "app1233 cmd=$cmd delay=$d period=$p"; result=1; fi
   [ "$result" == "0" ]
 }
 

@@ -29,7 +29,7 @@
 
 | Объект | Что это | Зачем в этой лабе |
 |--------|---------|-------------------|
-| **Pod `nginx1233`** с livenessProbe | Pod с проверкой живости | учимся настраивать exec-пробу с таймингом (глава 27) |
+| **Pod `app1233`** с livenessProbe | Pod с проверкой живости | учимся настраивать exec-пробу с таймингом (глава 27) |
 | **Pod `web-probes`** (медленный старт) | все три пробы сразу | startupProbe + readinessProbe + livenessProbe на приложении с `DELAY_START`; кейс startupProbe против `initialDelaySeconds` (глава 27) |
 | **Выгрузка логов** сид-Pod `app-xyz3322` | логи в файл | тренируем `kubectl logs` в файл и поиск Pod по namespaces (глава 28) |
 | **CLI-скрипты** (top, events) | команды мониторинга | сохраняем правильные команды `top`/events в файлы (глава 28) |
@@ -39,7 +39,7 @@
 
 ```mermaid
 flowchart TB
-    a["Pod nginx1233<br>livenessProbe: exec<br>ls /var/www/html/"]
+    a["Pod app1233<br>livenessProbe: exec<br>ls /etc"]
     e["Pod web-probes<br>DELAY_START=30<br>startup + readiness + liveness"]
     b["kubectl logs app-xyz3322<br>→ /opt/logs/app-xyz123.log"]
     c["top.sh / events.sh<br>CLI-команды мониторинга"]
@@ -90,8 +90,8 @@ check_result    # проверить решение
 ---
 |        **1**        | **livenessProbe: проверка живости контейнера**               |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | В namespace `web-ns` создайте Pod `nginx1233` (образ `nginx`) с livenessProbe (проба живости) типа `exec`, которая выполняет `ls /var/www/html/`. Задайте тайминги: `initialDelaySeconds: 10` (пауза перед первой проверкой) и `periodSeconds: 60` (интервал между проверками). livenessProbe отвечает на вопрос «жив ли контейнер»: если команда падает, kubelet перезапускает контейнер. |
-| Критерии приёмки    | - namespace `web-ns`;<br/>- Pod `nginx1233`, образ `nginx`;<br/>- livenessProbe: exec `ls /var/www/html/`, `initialDelaySeconds` `10`, `periodSeconds` `60`. |
+| Что делаем          | В namespace `web-ns` создайте Pod `app1233` (образ `viktoruj/ping_pong:alpine`) с livenessProbe (проба живости) типа `exec`, которая выполняет `ls /etc`. Задайте тайминги: `initialDelaySeconds: 10` (пауза перед первой проверкой) и `periodSeconds: 60` (интервал между проверками). livenessProbe отвечает на вопрос «жив ли контейнер»: если команда возвращает ненулевой код, kubelet перезапускает контейнер. |
+| Критерии приёмки    | - namespace `web-ns`;<br/>- Pod `app1233`, образ `viktoruj/ping_pong:alpine`;<br/>- livenessProbe: exec `ls /etc`, `initialDelaySeconds` `10`, `periodSeconds` `60`. |
 ---
 |        **2**        | **Три пробы для медленно стартующего приложения**            |
 | :-----------------: | :----------------------------------------------------------- |
