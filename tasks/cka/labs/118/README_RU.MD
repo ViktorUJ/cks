@@ -32,6 +32,7 @@
 | **Починить CoreDNS** | `kubectl -n kube-system scale/rollout` | диагностика и восстановление DNS кластера (глава 31) |
 | **Факты о сети** | `--cluster-cidr`, `calico-node` DaemonSet | понимать Pod CIDR и агент CNI (глава 40) |
 | **ndots и resolv.conf** | `cat /etc/resolv.conf`, `dnsConfig.options` | почему `ndots:5` замедляет внешние имена и как понизить порог (глава 31) |
+| **DNS-имя пода** | `kubectl get pod -o wide` + формула DNS | понимание A-записей подов (глава 31) |
 
 Итоговая картина того, что будет развёрнуто:
 
@@ -41,17 +42,21 @@ flowchart TB
     b["CoreDNS<br>0 реплик"] -->|"scale replicas=2"| b2["DNS работает"]
     c["Сеть кластера<br>cluster-cidr, CNI"] -->|"инспекция"| c2["net.txt"]
     d["resolv.conf ndots:5<br>dns-default / dns-tuned"] -->|"dnsConfig ndots=2"| d2["dns.txt"]
+    e["Pod dns-test<br>ns dns-lab"] -->|"IP → DNS-имя"| e2["pod-dns-name.txt"]
     a2 ~~~ b
     b2 ~~~ c
     c2 ~~~ d
+    d2 ~~~ e
     style a fill:#4a90d9,color:#fff
     style b fill:#db4437,color:#fff
     style c fill:#4a90d9,color:#fff
     style d fill:#4a90d9,color:#fff
+    style e fill:#4a90d9,color:#fff
     style a2 fill:#0f9d58,color:#fff
     style b2 fill:#0f9d58,color:#fff
     style c2 fill:#0f9d58,color:#fff
     style d2 fill:#0f9d58,color:#fff
+    style e2 fill:#0f9d58,color:#fff
 ```
 
 ## Инфраструктура
@@ -113,6 +118,11 @@ check_result    # проверить решение
 | :-----------------: | :----------------------------------------------------------- |
 | Что делаем          | Читаем значение `ndots` из `/etc/resolv.conf` Pod `dns-default` (`kubectl exec dns-default -- cat /etc/resolv.conf`) и записываем `/home/ubuntu/answers/dns.txt` в формате `default_ndots=<...>` и `tuned_ndots=<...>`. |
 | Критерии приёмки    | - `default_ndots` совпадает с `ndots` из `/etc/resolv.conf` Pod `dns-default`;<br/>- `tuned_ndots=2`. |
+---
+|        **6**        | **Найти DNS-имя пода**                                      |
+| :-----------------: | :----------------------------------------------------------- |
+| Что делаем          | Pod `dns-test` (namespace `dns-lab`) запущен при старте кластера. Узнайте его IP (`kubectl get pod dns-test -n dns-lab -o wide`) и составьте полное DNS-имя пода по формуле: `<ip-с-дефисами-вместо-точек>.<namespace>.pod.cluster.local` (например, для IP `10.0.1.5` → `10-0-1-5.dns-lab.pod.cluster.local`). Проверьте резолв из любого пода (`nslookup <dns-имя>`) и запишите DNS-имя пода в файл `/home/ubuntu/answers/pod-dns-name.txt`. |
+| Критерии приёмки    | - файл `/home/ubuntu/answers/pod-dns-name.txt` содержит корректное DNS-имя пода `dns-test` в формате `<ip-dashed>.dns-lab.pod.cluster.local`. |
 ---
 
 ## Проверка результата

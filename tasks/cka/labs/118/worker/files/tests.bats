@@ -63,3 +63,14 @@ SSH="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectT
   else echo "dns.txt: default_ndots='$got' (expected '$exp'), tuned_ndots='$tuned' (expected '2')"; result=1; fi
   [ "$result" == "0" ]
 }
+
+@test "6. Pod DNS name written correctly to /home/ubuntu/answers/pod-dns-name.txt" {
+  echo '1' >> /var/work/tests/result/all
+  pod_ip=$(kubectl get pod dns-test -n dns-lab --context $CTX -o jsonpath='{.status.podIP}' 2>/dev/null)
+  expected_dns="$(echo $pod_ip | tr '.' '-').dns-lab.pod.cluster.local"
+  actual=$(cat /home/ubuntu/answers/pod-dns-name.txt 2>/dev/null | tr -d '[:space:]')
+  if [[ -n "$pod_ip" ]] && [[ "$actual" == "$expected_dns" ]]; then
+    echo '1' >> /var/work/tests/result/ok; result=0
+  else echo "expected=$expected_dns actual=$actual"; result=1; fi
+  [ "$result" == "0" ]
+}
