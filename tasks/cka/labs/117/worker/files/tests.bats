@@ -8,7 +8,16 @@ CTX="cluster1-admin@cluster1"
   echo '' > /var/work/tests/result/requests
 }
 
-@test "1. kube-scheduler is healthy and scheduling works" {
+@test "1. kube-apiserver is healthy (API responds)" {
+  echo '1' >> /var/work/tests/result/all
+  api=$(kubectl get --raw='/healthz' --context $CTX 2>/dev/null)
+  if [[ "$api" == "ok" ]]; then
+    echo '1' >> /var/work/tests/result/ok; result=0
+  else echo "API healthz=$api (apiserver не отвечает — починить первым!)"; result=1; fi
+  [ "$result" == "0" ]
+}
+
+@test "2. kube-scheduler is healthy and scheduling works" {
   echo '1' >> /var/work/tests/result/all
   sched=$(kubectl -n kube-system get pods -l component=kube-scheduler --context $CTX -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
   ready=$(kubectl -n kube-system get pods -l component=kube-scheduler --context $CTX -o jsonpath='{.items[0].status.containerStatuses[0].ready}' 2>/dev/null)
@@ -19,7 +28,7 @@ CTX="cluster1-admin@cluster1"
   [ "$result" == "0" ]
 }
 
-@test "2. All nodes are Ready (worker kubelet fixed)" {
+@test "3. All nodes are Ready (worker kubelet fixed)" {
   echo '1' >> /var/work/tests/result/all
   total=$(kubectl get nodes --context $CTX --no-headers 2>/dev/null | wc -l)
   ready=$(kubectl get nodes --context $CTX -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null | tr ' ' '\n' | grep -c "^True$")
@@ -29,7 +38,7 @@ CTX="cluster1-admin@cluster1"
   [ "$result" == "0" ]
 }
 
-@test "3. Broken static pod on control plane is fixed and Running" {
+@test "4. Broken static pod on control plane is fixed and Running" {
   echo '1' >> /var/work/tests/result/all
   phase=$(kubectl get pods -n default --context $CTX -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' 2>/dev/null | grep '^staticweb-' | awk '{print $2}' | head -1)
   if [[ "$phase" == "Running" ]]; then

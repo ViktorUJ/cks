@@ -11,7 +11,7 @@ kubectl taint nodes $(hostname) node-role.kubernetes.io/control-plane:NoSchedule
 
 # === сид-поломки уровня control plane ===
 
-# 1) Ломаем kube-scheduler: подменяем образ статик-пода на несуществующий тег.
+# 2) Ломаем kube-scheduler: подменяем образ статик-пода на несуществующий тег.
 #    Симптом: под kube-scheduler-<cp> в ImagePullBackOff, планирование стоит.
 sed -i 's#\(image: registry.k8s.io/kube-scheduler:\).*#\1v0.0.0-broken#' \
   /etc/kubernetes/manifests/kube-scheduler.yaml
@@ -19,11 +19,11 @@ sed -i 's#\(image: registry.k8s.io/kube-scheduler:\).*#\1v0.0.0-broken#' \
 # даём kubelet время пересоздать статик-под с битым образом
 sleep 30
 
-# 2) Канарейка, требующая работающего планировщика (bare Pod, без контроллеров).
+# 3) Канарейка, требующая работающего планировщика (bare Pod, без контроллеров).
 #    Останется Pending, пока kube-scheduler не починят.
 kubectl run sched-check --image=viktoruj/ping_pong:latest --restart=Never -n default || true
 
-# 3) Битый статик-под на control plane: несуществующий образ.
+# 4) Битый статик-под на control plane: несуществующий образ.
 #    Симптом: mirror-под staticweb-<cp> в ImagePullBackOff.
 cat >/etc/kubernetes/manifests/staticweb.yaml <<'EOF'
 apiVersion: v1
@@ -36,3 +36,11 @@ spec:
   - name: web
     image: viktoruj/ping_pong:doesnotexist999
 EOF
+
+# 1) Ломаем kube-apiserver ПОСЛЕДНИМ (чтобы все предыдущие seed-действия прошли).
+#    Добавляем несуществующий флаг в манифест — apiserver падает при старте.
+#    kubectl перестаёт работать. Дебаг: crictl ps -a, crictl logs <id>.
+#    Симптом: connection refused на :6443.
+sleep 10
+sed -i '/- --tls-private-key-file/a\    - --invalid-nonexistent-flag=true' \
+  /etc/kubernetes/manifests/kube-apiserver.yaml

@@ -66,9 +66,31 @@ flowchart TB
 TASK=116 make run_cka_task
 ```
 
-После создания подключитесь по SSH к ноде `cp` (control plane) и выполняйте задания
-оттуда; worker доступен командой `ssh node`. Автоматическая проверка `check_result`
-запускается на `cp`.
+В output Terragrunt после `make run_cka_task` найдите строку `worker_pc_ssh` — это SSH
+к ноде `cp` (control plane). Рядом в `hosts_list` перечислены все ноды с их публичными
+IP. Подключайтесь к `cp` по SSH и работайте оттуда; worker доступен внутри окружения
+командой `ssh node`.
+
+Пример output (ключевые строки):
+
+```
+hosts_list = [
+  "cp=3.76.118.135",
+]
+worker_pc_ssh = "   ssh ubuntu@3.76.118.135 password= mcwKw0ZlRu   "
+```
+
+Здесь `3.76.118.135` — публичный IP ноды `cp`, `mcwKw0ZlRu` — пароль. Подключаемся:
+
+```bash
+ssh ubuntu@3.76.118.135     # вводим пароль из output
+```
+
+Изнутри ноды `cp` worker доступен по имени:
+
+```bash
+ssh node                    # переход на worker-ноду
+```
 
 Полезные команды на ноде `cp`:
 
