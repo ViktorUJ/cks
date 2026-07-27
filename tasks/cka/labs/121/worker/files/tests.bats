@@ -62,7 +62,7 @@ SA="system:serviceaccount:rbac:app-sa"
   echo '1' >> /var/work/tests/result/all
   can_pods=$(kubectl auth can-i get pods -n rbac --as=$SA --context $CTX 2>/dev/null)
   can_nodes=$(kubectl auth can-i get nodes --as=$SA --context $CTX 2>/dev/null)
-  cannot_del=$(kubectl auth can-i delete pods -n rbac --as=$SA --context $CTX 2>/dev/null)
+  cannot_del=$(kubectl auth can-i delete pods -n rbac --as=$SA --context $CTX 2>/dev/null || true)
   if [[ "$can_pods" == "yes" ]] && [[ "$can_nodes" == "yes" ]] && [[ "$cannot_del" == "no" ]]; then
     echo '1' >> /var/work/tests/result/ok; result=0
   else echo "can-i get pods=$can_pods, get nodes=$can_nodes, delete pods=$cannot_del"; result=1; fi
