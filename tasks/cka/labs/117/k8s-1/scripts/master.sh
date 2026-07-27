@@ -42,5 +42,10 @@ EOF
 #    kubectl перестаёт работать. Дебаг: crictl ps -a, crictl logs <id>.
 #    Симптом: connection refused на :6443.
 sleep 10
+
+# 5) Создаём Pod dns-test в namespace dns-lab для задания на DNS-имя пода
+kubectl create namespace dns-lab
+kubectl run dns-test -n dns-lab --image=viktoruj/ping_pong:alpine --restart=Never -- sleep 60000
+
 sed -i '/- --tls-private-key-file/a\    - --invalid-nonexistent-flag=true' \
   /etc/kubernetes/manifests/kube-apiserver.yaml

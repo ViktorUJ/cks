@@ -35,6 +35,7 @@ kube-apiserver, kube-scheduler, **kubelet** на worker-ноде и static pod. 
 | **kube-scheduler** (битый образ) | новые Pods в Pending | `/etc/kubernetes/manifests/kube-scheduler.yaml` | компоненты control plane как static pods (глава 15) |
 | **kubelet на worker** (битый drop-in) | нода NotReady | `journalctl -u kubelet` на ноде | диагностика ноды и systemd-юнита kubelet (глава 45) |
 | **битый static pod** (несуществующий образ) | mirror-Pod в ImagePullBackOff | `/etc/kubernetes/manifests/staticweb.yaml` | как работает static pod и его mirror (глава 15) |
+| **DNS-имя пода** | — | `kubectl get pod -o wide` + формула DNS | понимание DNS-записей подов в кластере |
 
 Итоговая картина того, что будет развёрнуто:
 
@@ -44,17 +45,21 @@ flowchart TB
     a["kube-scheduler<br>ImagePullBackOff"] -->|"fix образа"| a2["Running<br>Pods планируются"]
     b["worker-нода<br>NotReady"] -->|"убрать drop-in kubelet"| b2["Ready"]
     c["staticweb<br>ImagePullBackOff"] -->|"fix образа"| c2["Running"]
+    d["dns-test Pod"] -->|"составить DNS-имя"| d2["записать в файл"]
     api2 ~~~ a
     a2 ~~~ b
     b2 ~~~ c
+    c2 ~~~ d
     style api fill:#c0392b,color:#fff
     style a fill:#db4437,color:#fff
     style b fill:#db4437,color:#fff
     style c fill:#db4437,color:#fff
+    style d fill:#326ce5,color:#fff
     style api2 fill:#0f9d58,color:#fff
     style a2 fill:#0f9d58,color:#fff
     style b2 fill:#0f9d58,color:#fff
     style c2 fill:#0f9d58,color:#fff
+    style d2 fill:#0f9d58,color:#fff
 ```
 
 ## Инфраструктура
@@ -83,6 +88,12 @@ TASK=117 make run_cka_task
 с рабочей машины доступны `ssh k8s1_controlPlane_1` (control plane) и
 `ssh k8s1_node_node_1` (worker).
 
+> **Когда начинать.** Дождитесь, пока на рабочей машине появится файл
+> `~/.kube/config` (обычно ~2 мин после создания). Его наличие означает, что
+> инфраструктура готова и поломки внесены. При этом `kubectl get nodes` уже будет
+> возвращать ошибку (`connection refused`) — это ожидаемо, именно это вы и будете
+> чинить.
+
 Полезные команды на рабочей машине:
 
 ```bash
@@ -108,13 +119,18 @@ check_result    # проверить решение (работает тольк
 ---
 |        **3**        | **Вернуть worker-ноду в Ready**                             |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Worker-нода в NotReady, kubelet не докладывает статус. По SSH на ноду (`ssh k8s1_node_node_1`) через `systemctl status kubelet` и `journalctl -u kubelet` найдите причину — битый drop-in `/etc/systemd/system/kubelet.service.d/99-broken.conf` с несуществующим флагом. Удалите drop-in, выполните `systemctl daemon-reload` и перезапустите kubelet. |
+| Что делаем          | Worker-нода в NotReady, kubelet не докладывает статус. По SSH на ноду (`ssh k8s1_node_node_1`) через `systemctl status kubelet` и `journalctl -u kubelet` найдите причину — битый drop-in `/etc/systemd/system/kubelet.service.d/99-broken.conf` подменяет путь к конфигурации на несуществующий файл. Удалите drop-in, выполните `systemctl daemon-reload` и перезапустите kubelet. |
 | Критерии приёмки    | - Все ноды кластера (≥2) в статусе `Ready`. |
 ---
 |        **4**        | **Починить static pod на control plane**                    |
 | :-----------------: | :----------------------------------------------------------- |
 | Что делаем          | Mirror-Pod `staticweb-<cp>` (namespace `default`) в ImagePullBackOff из-за несуществующего образа `viktoruj/ping_pong:doesnotexist999`. По SSH на control plane поправьте `image:` в манифесте static pod `/etc/kubernetes/manifests/staticweb.yaml` на рабочий образ (`viktoruj/ping_pong:latest`). kubelet пересоздаст static pod. |
 | Критерии приёмки    | - Mirror-Pod `staticweb-<cp>` (namespace `default`) в статусе Running. |
+---
+|        **5**        | **Найти DNS-имя пода**                                      |
+| :-----------------: | :----------------------------------------------------------- |
+| Что делаем          | Pod `dns-test` (namespace `dns-lab`) запущен. Узнайте его IP (`kubectl get pod dns-test -n dns-lab -o wide`) и составьте полное DNS-имя пода по формуле: `<ip-с-дефисами-вместо-точек>.<namespace>.pod.cluster.local` (например, для IP `10.0.1.5` → `10-0-1-5.dns-lab.pod.cluster.local`). Проверьте резолв из любого пода (`nslookup <dns-имя>`) и запишите DNS-имя пода в файл `/var/work/tests/artifacts/pod-dns-name.txt` на рабочей машине. |
+| Критерии приёмки    | - файл `/var/work/tests/artifacts/pod-dns-name.txt` содержит корректное DNS-имя пода `dns-test` в формате `<ip-dashed>.dns-lab.pod.cluster.local`. |
 ---
 
 ## Проверка результата

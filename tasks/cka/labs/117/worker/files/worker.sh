@@ -2,6 +2,8 @@
 echo " *** worker pc cka lab 117 k8s-1"
 export KUBECONFIG=/root/.kube/config
 
+mkdir -p /var/work/tests/artifacts
+
 echo "Waiting for at least one node to be available..."
 while true; do
     node_count=$(kubectl get no --no-headers 2>/dev/null | wc -l)
