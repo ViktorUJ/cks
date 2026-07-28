@@ -17,8 +17,8 @@ SecurityContext - инструмент, чтобы этот минимум за�
 ```mermaid
 flowchart TB
     q["Контейнер запущен как..."]
-    q -->|"root (по умолчанию во многих образах)"| bad["больше поверхность атаки:<br>уязвимость → риск для ноды"]
-    q -->|"непривилегированный пользователь<br>(SecurityContext)"| good["принцип наименьших привилегий:<br>меньше риска"]
+    q -->|"root (по умолчанию<br>во многих образах)"| bad["больше поверхность<br>атаки:<br>уязвимость →<br>риск для ноды"]
+    q -->|"непривилегированный<br>пользователь<br>(SecurityContext)"| good["принцип наименьших<br>привилегий:<br>меньше риска"]
     style q fill:#f4b400,color:#000
     style bad fill:#db4437,color:#fff
     style good fill:#0f9d58,color:#fff
@@ -30,10 +30,11 @@ SecurityContext задаётся на **двух уровнях**, и это в�
 
 ```mermaid
 flowchart TB
-    pod["securityContext на уровне ПОДА<br>(spec.securityContext)<br>применяется ко всем контейнерам"]
-    c1["securityContext контейнера<br>(container.securityContext)<br>переопределяет для этого контейнера"]
+    pod["securityContext<br>на уровне ПОДА<br>(spec.securityContext)<br>применяется<br>ко всем контейнерам"]
+    c1["securityContext<br>контейнера<br>(container.securityContext)<br>переопределяет<br>для этого контейнера"]
     pod --> c1
-    note["Уровень контейнера ПОБЕЖДАЕТ<br>уровень пода при конфликте"]
+    c1 ~~~ note
+    note["Уровень контейнера<br>ПОБЕЖДАЕТ уровень<br>пода при конфликте"]
     style pod fill:#326ce5,color:#fff
     style c1 fill:#0f9d58,color:#fff
     style note fill:#f4b400,color:#000
