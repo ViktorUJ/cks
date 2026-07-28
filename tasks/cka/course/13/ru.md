@@ -61,9 +61,10 @@ kubectl describe node worker-1 | grep -i taint
 
 ```mermaid
 flowchart TB
-    ns["NoSchedule<br>новые поды без toleration<br>НЕ планируются сюда.<br>Уже запущенные — остаются"]
-    pns["PreferNoSchedule<br>планировщик СТАРАЕТСЯ не ставить,<br>но если больше некуда — поставит"]
-    ne["NoExecute<br>новые не планируются И<br>уже запущенные без toleration<br>ВЫСЕЛЯЮТСЯ с ноды"]
+    ns["NoSchedule<br>новые поды<br>без toleration<br>НЕ планируются сюда.<br>Уже запущенные —<br>остаются"]
+    pns["PreferNoSchedule<br>планировщик СТАРАЕТСЯ<br>не ставить,<br>но если больше некуда —<br>поставит"]
+    ne["NoExecute<br>новые не планируются И<br>уже запущенные<br>без toleration<br>ВЫСЕЛЯЮТСЯ с ноды"]
+    ns ~~~ pns ~~~ ne
     style ns fill:#f4b400,color:#000
     style pns fill:#0f9d58,color:#fff
     style ne fill:#db4437,color:#fff
@@ -159,8 +160,8 @@ Kubernetes сам ставит taints в важных случаях. Их на�
 
 ```mermaid
 flowchart LR
-    down["Нода теряет связь"] --> taint["node-контроллер ставит<br>unreachable:NoExecute"]
-    taint --> evict["поды без toleration<br>выселяются на другие ноды"]
+    down["Нода теряет связь"] --> taint["node-контроллер<br>ставит<br>unreachable:NoExecute"]
+    taint --> evict["поды без toleration<br>выселяются<br>на другие ноды"]
     style down fill:#db4437,color:#fff
     style taint fill:#f4b400,color:#000
     style evict fill:#0f9d58,color:#fff
