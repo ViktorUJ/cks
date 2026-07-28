@@ -56,10 +56,10 @@ spec:
 ```mermaid
 flowchart TB
     subgraph Pod["Под"]
-        main["Основной контейнер"]
-        helper["Вспомогательный контейнер"]
-        net["localhost (общая сеть)"]
-        vol["общий том (emptyDir)"]
+        main["Основной<br>контейнер"]
+        helper["Вспомогательный<br>контейнер"]
+        net["localhost<br>(общая сеть)"]
+        vol["общий том<br>(emptyDir)"]
         main --- net --- helper
         main --- vol --- helper
     end
@@ -80,12 +80,12 @@ flowchart TB
 ```mermaid
 flowchart LR
     subgraph Pod["Под"]
-        app["Приложение<br>(пишет логи в общий том)"]
-        sc["Sidecar: сборщик логов<br>(читает том, шлёт в хранилище)"]
+        app["Приложение<br>(пишет логи<br>в общий том)"]
+        sc["Sidecar: сборщик логов<br>(читает том,<br>шлёт в хранилище)"]
         vol["общий том"]
         app --> vol --> sc
     end
-    sc --> ext["внешнее хранилище логов"]
+    sc --> ext["внешнее<br>хранилище логов"]
     style Pod fill:#326ce5,color:#fff
     style app fill:#0f9d58,color:#fff
     style sc fill:#673ab7,color:#fff
@@ -116,10 +116,10 @@ flowchart LR
 flowchart LR
     subgraph Pod["Под"]
         app["Приложение<br>(свои логи/метрики<br>в нестандартном виде)"]
-        ad["Adapter<br>(преобразует в стандарт,<br>напр. формат Prometheus)"]
+        ad["Adapter<br>(преобразует<br>в стандарт, напр.<br>формат Prometheus)"]
         app --> ad
     end
-    ad --> mon["система мониторинга<br>ожидает стандартный формат"]
+    ad --> mon["система мониторинга<br>ожидает<br>стандартный формат"]
     style Pod fill:#326ce5,color:#fff
     style app fill:#0f9d58,color:#fff
     style ad fill:#673ab7,color:#fff
@@ -160,11 +160,11 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    q["Что нужно вспомогательному контейнеру?"]
-    q -->|"расширить/дополнить приложение<br>(логи, прокси, обновление)"| sc["Sidecar"]
-    q -->|"преобразовать ВЫВОД приложения<br>к нужному формату"| ad["Adapter"]
-    q -->|"посредник для ВЫХОДА приложения<br>во внешний мир"| amb["Ambassador"]
-    q -->|"подготовка ДО старта, разово"| init["Init-контейнер"]
+    q["Что нужно<br>вспомогательному<br>контейнеру?"]
+    q -->|"расширить/дополнить<br>приложение<br>(логи, прокси,<br>обновление)"| sc["Sidecar"]
+    q -->|"преобразовать<br>ВЫВОД приложения<br>к нужному формату"| ad["Adapter"]
+    q -->|"посредник для ВЫХОДА<br>приложения<br>во внешний мир"| amb["Ambassador"]
+    q -->|"подготовка ДО старта,<br>разово"| init["Init-контейнер"]
     style q fill:#f4b400,color:#000
     style sc fill:#0f9d58,color:#fff
     style ad fill:#326ce5,color:#fff
@@ -201,6 +201,83 @@ Adapter и ambassador по сути частные случаи sidecar (тож�
 - **Adapter/ambassador реже, но полезны.** Их применяют при интеграции легаси-приложений,
   которые нельзя переписать: adapter приводит их вывод к стандарту, ambassador прячет
   сложность внешних подключений.
+
+### Кейс: под с init-контейнером и sidecar
+
+Соберём типовой под, где есть оба паттерна: **init-контейнер** готовит данные до старта, а
+**sidecar** сопровождает приложение. Сценарий: init генерирует стартовую страницу в общий
+том, nginx её раздаёт и пишет логи в тот же том, а нативный sidecar-сборщик читает эти
+логи. Всё общение - через общий `emptyDir`.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-with-helpers
+spec:
+  volumes:
+  - name: content            # общий том: контент сайта
+    emptyDir: {}
+  - name: logs               # общий том: логи приложения
+    emptyDir: {}
+
+  initContainers:
+  # 1. Обычный init — выполняется и ЗАВЕРШАЕТСЯ до старта основного
+  - name: setup
+    image: busybox:1.36
+    command: ["sh", "-c", "echo '<h1>Hello from init</h1>' > /work/index.html"]
+    volumeMounts:
+    - name: content
+      mountPath: /work
+
+  # 2. Нативный sidecar — init с restartPolicy: Always: стартует до основного,
+  #    работает всё время жизни пода, завершается после основного
+  - name: log-shipper
+    image: busybox:1.36
+    restartPolicy: Always          # ← именно это делает init-контейнер sidecar'ом
+    command: ["sh", "-c", "tail -F /var/log/app/access.log"]
+    volumeMounts:
+    - name: logs
+      mountPath: /var/log/app
+
+  containers:
+  # Основное приложение: раздаёт контент, пишет логи в общий том
+  - name: nginx
+    image: nginx:1.27
+    volumeMounts:
+    - name: content
+      mountPath: /usr/share/nginx/html
+    - name: logs
+      mountPath: /var/log/nginx
+```
+
+Порядок запуска: `setup` (отработал и вышел) → `log-shipper` (поднялся как sidecar и
+остаётся) → `nginx`. Проверяем:
+
+```bash
+kubectl apply -f web-with-helpers.yaml
+kubectl get pod web-with-helpers                       # Init:… → Running, когда всё поднялось
+
+# логи основного и sidecar смотрят раздельно — по имени контейнера
+kubectl logs web-with-helpers -c nginx
+kubectl logs web-with-helpers -c log-shipper           # видим строки access.log, собранные sidecar'ом
+```
+
+Ключевые моменты кейса:
+
+- **Init vs sidecar - одно поле.** Оба живут в `initContainers`; sidecar отличается лишь
+  `restartPolicy: Always`. Обычный init обязан **завершиться**, а sidecar **работает всё
+  время** и корректно останавливается после основного контейнера (важно для сборщиков
+  логов и mesh-прокси при graceful-выключении).
+- **Обмен через тома.** Init и приложение общаются файлами в общем `emptyDir` (`content`),
+  приложение и sidecar - через второй том (`logs`). Это ровно те «общие ресурсы пода» из
+  22.2.
+- **Логи по контейнерам.** У многоконтейнерного пода `kubectl logs` требует `-c <имя>` -
+  частая мелочь на экзамене.
+
+Раньше (до нативных sidecar) сборщик логов клали в `containers` как обычный контейнер;
+проблема была в завершении - при остановке пода порядок не гарантировался, и sidecar мог
+упасть раньше приложения. `restartPolicy: Always` у init это чинит.
 
 ## 22.8. Мини-глоссарий
 
