@@ -1,0 +1,124 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD)
+
+# Лаба 109 — эталонное решение (наблюдаемость: пробы, логи, отладка, deprecations)
+
+## Задание 1. Под `app1233` с livenessProbe (exec)
+
+```bash
+kubectl create namespace web-ns
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app1233
+  namespace: web-ns
+spec:
+  containers:
+  - name: app1233
+    image: viktoruj/ping_pong:alpine
+    livenessProbe:
+      exec:
+        command: ["ls", "/etc"]
+      initialDelaySeconds: 10
+      periodSeconds: 60
+```
+
+## Задание 2. Три пробы для медленно стартующего приложения (`web-probes`)
+
+Приложение `ping_pong` с `DELAY_START=30` начинает слушать `:8080` только через 30 секунд —
+это имитация долгого старта. startupProbe даёт запас на запуск, а liveness/readiness
+включаются только после её успеха.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-probes
+  namespace: web-ns
+spec:
+  containers:
+  - name: web-probes
+    image: viktoruj/ping_pong:latest
+    ports:
+    - containerPort: 8080
+    env:
+    - name: DELAY_START
+      value: "30"
+    startupProbe:
+      httpGet:
+        path: /
+        port: 8080
+      periodSeconds: 5
+      failureThreshold: 12      # запас 5 × 12 = 60 c на старт
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 8080
+      periodSeconds: 10
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 8080
+      periodSeconds: 10
+```
+
+```bash
+kubectl apply -f web-probes.yaml
+# сразу 0/1 (идёт startupProbe), примерно через 30 c — Ready
+kubectl -n web-ns get pod web-probes -w
+```
+
+Кейс «startupProbe против `initialDelaySeconds`» разобран в README.
+
+## Задание 3. Экспорт логов пода в файл
+
+```bash
+# найти неймспейс пода
+kubectl get po -A | grep app-xyz3322
+# выгрузить логи
+kubectl logs app-xyz3322 -n app-logs > /opt/logs/app-xyz123.log
+cat /opt/logs/app-xyz123.log
+```
+
+## Задание 4. CLI-скрипты (top, events)
+
+```bash
+mkdir -p /var/work/artifact
+echo 'kubectl top pods -A --sort-by=cpu' > /var/work/artifact/top.sh
+echo "kubectl get events -A --sort-by='.metadata.creationTimestamp'" > /var/work/artifact/events.sh
+```
+
+## Задание 5. Починить устаревший манифест и задеплоить
+
+Файл `/var/work/109/app-old.yaml` использует удалённую `apps/v1beta1` и не содержит
+обязательного `selector`. Исправляем на актуальную версию:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-21
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-21
+  template:
+    metadata:
+      labels:
+        app: app-21
+    spec:
+      containers:
+      - name: app-21
+        image: viktoruj/ping_pong:alpine
+```
+
+```bash
+kubectl apply -f /var/work/109/app-old.yaml
+kubectl get deploy app-21
+```
+
+Актуальную версию API можно подсмотреть: `kubectl explain deployment` и
+`kubectl api-versions`.

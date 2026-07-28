@@ -1,0 +1,84 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD)
+
+# Лаба 107 — эталонное решение (multi-container, образы, тома)
+
+## Задание 1. Под `multi-pod` с двумя контейнерами
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-pod
+spec:
+  containers:
+  - name: alpha
+    image: viktoruj/ping_pong:latest
+    env:
+    - name: name
+      value: alpha
+  - name: beta
+    image: viktoruj/ping_pong:alpine
+    env:
+    - name: name
+      value: beta
+```
+
+## Задание 2. Sidecar-логгер: общий emptyDir, второй контейнер собирает логи
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: logger
+spec:
+  volumes:
+  - name: logs
+    emptyDir:
+      sizeLimit: 500Mi
+  containers:
+  - name: app
+    image: busybox
+    command: ["/bin/sh","-c","while true; do echo hi >> /log/app.log; sleep 5; done"]
+    volumeMounts:
+    - name: logs
+      mountPath: /log
+  - name: log
+    image: busybox
+    command: ["/bin/sh","-c","tail -F /log/app.log"]
+    volumeMounts:
+    - name: logs
+      mountPath: /log
+```
+
+`log`-контейнер читает из общего тома то, что пишет `app`, и выводит в stdout —
+классический паттерн sidecar-сборщика логов.
+
+## Задание 3. Под `redis-storage` с emptyDir
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-storage
+spec:
+  containers:
+  - name: redis-storage
+    image: redis:alpine
+    volumeMounts:
+    - name: data
+      mountPath: /data/redis
+  volumes:
+  - name: data
+    emptyDir:
+      sizeLimit: 500Mi
+```
+
+## Задание 4. Сборка образа podman + экспорт в oci-archive
+
+```bash
+cd /var/work/107
+sudo podman build -t ckad:0.0.1 -f Dockerfile .
+sudo podman save --format oci-archive -o /var/work/107/ckad.tar ckad:0.0.1
+sudo podman images | grep ckad
+ls -l /var/work/107/ckad.tar
+```

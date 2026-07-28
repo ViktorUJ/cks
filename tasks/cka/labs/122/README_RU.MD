@@ -1,3 +1,5 @@
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+
 # Lab 122 — Дриллы: планирование подов
 
 ## Описание
@@ -109,7 +111,7 @@ check_result
 
 ## Решение
 
-Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
+Эталонное решение: [worker/files/solutions/1_RU.MD](worker/files/solutions/1_RU.MD)
 
 ## Покрытие мок-экзаменов
 

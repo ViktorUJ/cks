@@ -1,3 +1,5 @@
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+
 # Lab 116 — kubeadm: поднять кластер с нуля (init + join)
 
 ## Описание
@@ -137,7 +139,7 @@ check_result
 
 ## Решение
 
-Эталонное решение: [node-1/files/solutions/1.MD](node-1/files/solutions/1.MD)
+Эталонное решение: [node-1/files/solutions/1_RU.MD](node-1/files/solutions/1_RU.MD)
 
 ## Покрытие мок-экзаменов
 
