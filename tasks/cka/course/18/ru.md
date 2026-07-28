@@ -15,14 +15,15 @@
 
 ```mermaid
 flowchart TB
-    cm["ConfigMap app-config<br>(конфигурация в одном месте)"]
+    cm["ConfigMap app-config<br>(конфигурация<br>в одном месте)"]
     p1["Под dev"]
     p2["Под stage"]
     p3["Под prod"]
     cm --> p1
     cm --> p2
     cm --> p3
-    note["Один образ + разные ConfigMap<br>= один артефакт на все среды"]
+    p2 ~~~ note
+    note["Один образ +<br>разные ConfigMap<br>= один артефакт<br>на все среды"]
     style cm fill:#326ce5,color:#fff
     style p1 fill:#0f9d58,color:#fff
     style p2 fill:#0f9d58,color:#fff
@@ -98,8 +99,8 @@ flowchart TB
 ```mermaid
 flowchart TB
     cm["ConfigMap"]
-    cm --> m1["1 · Отдельная переменная<br>configMapKeyRef<br>(один ключ → одна env)"]
-    cm --> m2["2 · Все ключи как переменные<br>envFrom<br>(весь CM → env целиком)"]
+    cm --> m1["1 · Отдельная переменная<br>configMapKeyRef<br>(один ключ →<br>одна env)"]
+    cm --> m2["2 · Все ключи как переменные<br>envFrom<br>(весь CM →<br>env целиком)"]
     cm --> m3["3 · Монтирование как тома<br>volume<br>(каждый ключ → файл)"]
     style cm fill:#326ce5,color:#fff
     style m1 fill:#0f9d58,color:#fff
@@ -159,9 +160,9 @@ spec:
 
 ```mermaid
 flowchart TB
-    q["Как приложение читает конфиг?"]
-    q -->|"из переменных окружения"| env["env / envFrom"]
-    q -->|"из файла (nginx.conf и т.п.)"| vol["монтировать томом"]
+    q["Как приложение<br>читает конфиг?"]
+    q -->|"из переменных<br>окружения"| env["env / envFrom"]
+    q -->|"из файла<br>(nginx.conf и т.п.)"| vol["монтировать томом"]
     style q fill:#f4b400,color:#000
     style env fill:#0f9d58,color:#fff
     style vol fill:#326ce5,color:#fff
@@ -180,7 +181,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    upd["Изменили ConfigMap"] --> vol["Том: файлы обновятся сами<br>(но приложение должно перечитать)"]
+    upd["Изменили ConfigMap"] --> vol["Том: файлы<br>обновятся сами<br>(но приложение<br>должно перечитать)"]
     upd --> env["Env: НЕ обновятся,<br>нужен рестарт пода"]
     style upd fill:#f4b400,color:#000
     style vol fill:#0f9d58,color:#fff
