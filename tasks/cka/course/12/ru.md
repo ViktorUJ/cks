@@ -99,8 +99,8 @@ affinity.
 ```mermaid
 flowchart TB
     na["nodeAffinity"]
-    na --> req["requiredDuringScheduling...<br><b>ЖЁСТКОЕ</b>: без такой ноды<br>под не запустится (Pending)"]
-    na --> pref["preferredDuringScheduling...<br><b>МЯГКОЕ</b>: предпочесть, но если<br>нет — запустить где получится"]
+    na --> req["requiredDuringScheduling...<br>ЖЁСТКОЕ:<br>без такой ноды<br>под не запустится<br>(Pending)"]
+    na --> pref["preferredDuringScheduling...<br>МЯГКОЕ:<br>предпочесть,<br>но если нет —<br>запустить где получится"]
     style na fill:#326ce5,color:#fff
     style req fill:#db4437,color:#fff
     style pref fill:#0f9d58,color:#fff
@@ -189,8 +189,8 @@ spec:
 ```mermaid
 flowchart TB
     q["podAntiAffinity: развести реплики по нодам"]
-    q --> req["requiredDuringScheduling...<br><b>СТРОГО</b>: если каждой реплике не хватает<br>своей ноды — лишние остаются Pending"]
-    q --> pref["preferredDuringScheduling...<br><b>МЯГКО (с допуском)</b>: планировщик старается<br>развести, но при нехватке нод посадит<br>несколько подов на одну — Pending не будет"]
+    q --> req["requiredDuringScheduling...<br>СТРОГО:<br>если реплике не хватает<br>своей ноды —<br>лишние остаются Pending"]
+    q --> pref["preferredDuringScheduling...<br>МЯГКО (с допуском):<br>планировщик старается развести,<br>но при нехватке нод<br>посадит несколько на одну —<br>Pending не будет"]
     style q fill:#f4b400,color:#000
     style req fill:#db4437,color:#fff
     style pref fill:#0f9d58,color:#fff
@@ -202,6 +202,16 @@ flowchart TB
 - **Мягко** (`preferredDuringSchedulingIgnoredDuringExecution` с весом `weight`):
   планировщик *старается* развести, но если нод не хватает - всё равно разместит поды
   (пусть и по несколько на ноду). Все реплики поднимутся, но без гарантии разноса.
+
+> **Оговорка про прод и автоскейлер нод.** В облачных кластерах поды в `Pending` обычно
+> не «зависают» надолго: за ними следит автоскейлер нод (Cluster Autoscaler, Karpenter и
+> подобные) - увидев неразмещённый под, он добавляет в кластер новую ноду. С `required`
+> это удобно (жёсткий разнос доводится до конца поднятием нод), но требует аккуратности:
+> при неудачных параметрах (слишком строгие правила antiAffinity, крупный `topologyKey`,
+> завышенные requests) автоскейлер будет поднимать всё новые ноды под каждый под, и
+> кластер разрастётся из недозагруженных нод - это напрямую увеличивает стоимость.
+> Поэтому `required` и настройки автоскейлера согласуют между собой, а для менее
+> критичных нагрузок предпочитают `preferred`.
 
 ```yaml
 spec:
@@ -224,10 +234,10 @@ spec:
 ```mermaid
 flowchart TB
     q["Как разместить под?"]
-    q -->|"жёстко на конкретную ноду"| nn["nodeName<br>(в обход планировщика)"]
-    q -->|"простой отбор по метке ноды"| ns["nodeSelector<br>(жёстко)"]
+    q -->|"жёстко на<br>конкретную ноду"| nn["nodeName<br>(в обход планировщика)"]
+    q -->|"простой отбор<br>по метке ноды"| ns["nodeSelector<br>(жёстко)"]
     q -->|"гибкий отбор по нодам,<br>жёстко или мягко"| na["nodeAffinity"]
-    q -->|"относительно других подов"| pa["podAffinity /<br>podAntiAffinity"]
+    q -->|"относительно<br>других подов"| pa["podAffinity /<br>podAntiAffinity"]
     style q fill:#f4b400,color:#000
     style nn fill:#db4437,color:#fff
     style ns fill:#326ce5,color:#fff
@@ -275,9 +285,9 @@ spec:
 
 ```mermaid
 flowchart TB
-    q["whenUnsatisfiable: если ровно разложить нельзя..."]
-    q --> dns["DoNotSchedule<br><b>СТРОГО</b>: не размещать под,<br>если он нарушит maxSkew → Pending"]
-    q --> sa["ScheduleAnyway<br><b>МЯГКО (с допуском)</b>: разместить всё равно,<br>стараясь минимизировать перекос"]
+    q["whenUnsatisfiable:<br>если ровно<br>разложить нельзя..."]
+    q --> dns["DoNotSchedule<br>СТРОГО:<br>не размещать под,<br>если он нарушит maxSkew<br>→ Pending"]
+    q --> sa["ScheduleAnyway<br>МЯГКО (с допуском):<br>разместить всё равно,<br>стараясь<br>минимизировать перекос"]
     style q fill:#f4b400,color:#000
     style dns fill:#db4437,color:#fff
     style sa fill:#0f9d58,color:#fff
