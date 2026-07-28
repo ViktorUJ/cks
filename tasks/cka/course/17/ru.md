@@ -16,11 +16,11 @@
 flowchart LR
     subgraph Docker["Dockerfile"]
         ep["ENTRYPOINT<br>= что запускать"]
-        cmd["CMD<br>= аргументы по умолчанию"]
+        cmd["CMD<br>= аргументы<br>по умолчанию"]
     end
     subgraph K8s["Манифест пода"]
-        command["command:<br>переопределяет ENTRYPOINT"]
-        args["args:<br>переопределяет CMD"]
+        command["command:<br>переопределяет<br>ENTRYPOINT"]
+        args["args:<br>переопределяет<br>CMD"]
     end
     ep -.->|"переопределяется"| command
     cmd -.->|"переопределяется"| args
@@ -60,10 +60,10 @@ spec:
 ```mermaid
 flowchart TB
     q["Что задано в поде?"]
-    q -->|"ничего"| a1["ENTRYPOINT + CMD образа"]
-    q -->|"только args"| a2["ENTRYPOINT образа + ваши args"]
-    q -->|"только command"| a3["ваш command (CMD образа игнор.)"]
-    q -->|"command и args"| a4["ваши command + args (образ игнор.)"]
+    q -->|"ничего"| a1["ENTRYPOINT + CMD<br>образа"]
+    q -->|"только args"| a2["ENTRYPOINT образа<br>+ ваши args"]
+    q -->|"только command"| a3["ваш command<br>(CMD образа игнор.)"]
+    q -->|"command и args"| a4["ваши command + args<br>(образ игнор.)"]
     style q fill:#f4b400,color:#000
     style a1 fill:#0f9d58,color:#fff
     style a2 fill:#326ce5,color:#fff
@@ -134,10 +134,10 @@ kubectl run web --image=nginx --env="COLOR=blue" --env="MODE=prod"
 flowchart TB
     env["Переменная окружения"]
     env --> v1["value:<br>прямая константа"]
-    env --> v2["fieldRef:<br>поле пода (имя, namespace, IP)"]
-    env --> v3["resourceFieldRef:<br>requests/limits контейнера"]
-    env --> v4["configMapKeyRef:<br>ключ из ConfigMap (глава 18)"]
-    env --> v5["secretKeyRef:<br>ключ из Secret (глава 19)"]
+    env --> v2["fieldRef:<br>поле пода<br>(имя, namespace, IP)"]
+    env --> v3["resourceFieldRef:<br>requests/limits<br>контейнера"]
+    env --> v4["configMapKeyRef:<br>ключ из ConfigMap<br>(глава 18)"]
+    env --> v5["secretKeyRef:<br>ключ из Secret<br>(глава 19)"]
     style env fill:#f4b400,color:#000
     style v1 fill:#0f9d58,color:#fff
     style v2 fill:#326ce5,color:#fff
@@ -172,6 +172,21 @@ flowchart TB
 
 Так приложение узнаёт своё имя, IP, ноду, лимиты - без хардкода. `configMapKeyRef` и
 `secretKeyRef` (взять значение из ConfigMap/Secret) разберём в следующих главах.
+
+> **Важно: а что увидит под, если поменять ConfigMap/Secret?** Переменные окружения
+> (`configMapKeyRef`, `secretKeyRef`, `envFrom`) подставляются **один раз - в момент
+> старта контейнера**. Если потом изменить ConfigMap или Secret, уже запущенный под
+> **продолжит видеть старое значение**: env-переменные задним числом не обновляются.
+> Чтобы подхватить новое, под надо пересоздать - например,
+> `kubectl rollout restart deployment/<name>`. Это частая ловушка: «поправил ConfigMap, а
+> приложение всё равно со старым значением».
+>
+> Иначе ведёт себя **монтирование** ConfigMap/Secret как том (глава 18): там kubelet
+> периодически обновляет файлы в контейнере при изменении объекта (с задержкой порядка
+> минуты), и перезапуск не нужен - но приложение должно **само перечитать файл**.
+> Исключение - монтирование через `subPath`: такие файлы не обновляются вовсе. То есть
+> «живое» обновление конфигурации без рестарта возможно только через том (не `subPath`) и
+> при условии, что приложение умеет перечитывать конфиг.
 
 ## 17.6. Переменные окружения и порядок раскрытия
 
