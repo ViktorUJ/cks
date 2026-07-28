@@ -274,7 +274,7 @@ kubectl get endpoints bg                          # теперь только Po
 kubectl patch svc bg -n rel -p '{"spec":{"selector":{"version":"blue"}}}'
 ```
 
-Уборка:
+Очистка:
 
 ```bash
 kubectl delete namespace rel

@@ -212,7 +212,7 @@ flowchart TB
     q -->|"stateless-сервис,<br>поды взаимозаменяемы"| dep["Deployment"]
     q -->|"нужны имена, порядок,<br>своё хранилище на под"| sts["StatefulSet"]
     q -->|"по поду на каждую ноду<br>(агенты, демоны)"| ds["DaemonSet"]
-    q -->|"разово выполнить и завершить"| job["Job"]
+    q -->|"разово выполнить<br>и завершить"| job["Job"]
     q -->|"по расписанию"| cron["CronJob"]
     style q fill:#f4b400,color:#000
     style dep fill:#0f9d58,color:#fff

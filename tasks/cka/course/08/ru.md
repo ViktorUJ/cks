@@ -16,16 +16,10 @@
 
 ```mermaid
 flowchart LR
-    subgraph Bad["Наивно (Recreate): простой"]
-        direction TB
-        b1["убить все v1"] --> b2["ПРОСТОЙ"] --> b3["поднять все v2"]
-    end
-    subgraph Good["RollingUpdate: без простоя"]
-        direction TB
-        g1["3×v1"] --> g2["2×v1 + 1×v2"] --> g3["1×v1 + 2×v2"] --> g4["3×v2"]
-    end
-    style Bad fill:#db4437,color:#fff
-    style Good fill:#0f9d58,color:#fff
+    b0["Наивно (Recreate): простой"] --> b1["убить все v1"] --> b2["ПРОСТОЙ"] --> b3["поднять все v2"]
+    g0["RollingUpdate: без простоя"] --> g1["3×v1"] --> g2["2×v1 + 1×v2"] --> g3["1×v1 + 2×v2"] --> g4["3×v2"]
+    style b0 fill:#db4437,color:#fff
+    style g0 fill:#0f9d58,color:#fff
     style b2 fill:#c0392b,color:#fff
     style g1 fill:#3cb371,color:#fff
     style g2 fill:#3cb371,color:#fff
@@ -280,7 +274,7 @@ kubectl get pods                      # новый Pod в ImagePullBackOff, ст
 kubectl rollout undo deployment/web
 kubectl rollout status deployment/web
 
-# 6. Уборка
+# 6. Очистка
 kubectl delete deployment web
 ```
 
@@ -303,12 +297,8 @@ Pods** обслуживались новой версией `myapp:2`, а ост
 ```mermaid
 flowchart TB
     svc["Service web<br>selector: app=web"]
-    subgraph stable["Deployment web (stable)"]
-        s["9 × Pod<br>myapp:1<br>app=web, track=stable"]
-    end
-    subgraph canary["Deployment web-canary"]
-        c["1 × Pod<br>myapp:2<br>app=web, track=canary"]
-    end
+    stable["Deployment web (stable)"] --> s["9 × Pod<br>myapp:1<br>app=web, track=stable"]
+    canary["Deployment web-canary"] --> c["1 × Pod<br>myapp:2<br>app=web, track=canary"]
     svc --> s
     svc --> c
     style svc fill:#326ce5,color:#fff
