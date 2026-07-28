@@ -13,16 +13,10 @@
 
 ```mermaid
 flowchart TB
-    subgraph CM["ConfigMap"]
-        direction TB
-        c1["открытые данные"] --> c2["значения текстом"] --> c3["для конфигурации"]
-    end
-    subgraph SEC["Secret"]
-        direction TB
-        s1["чувствительные данные"] --> s2["значения в base64"] --> s3["для паролей, токенов, ключей"]
-    end
-    style CM fill:#326ce5,color:#fff
-    style SEC fill:#db4437,color:#fff
+    c0["ConfigMap"] --> c1["открытые данные"] --> c2["значения текстом"] --> c3["для конфигурации"]
+    s0["Secret"] --> s1["чувствительные данные"] --> s2["значения в base64"] --> s3["для паролей,<br>токенов, ключей"]
+    style c0 fill:#326ce5,color:#fff
+    style s0 fill:#db4437,color:#fff
     style c1 fill:#5a8de0,color:#fff
     style c2 fill:#5a8de0,color:#fff
     style c3 fill:#5a8de0,color:#fff
@@ -165,10 +159,10 @@ spec:
 ```mermaid
 flowchart TB
     sec["Secret"]
-    sec --> e1["secretKeyRef → одна env"]
-    sec --> e2["envFrom secretRef → все env"]
-    sec --> e3["том → файлы (лучше для сертификатов)"]
-    sec --> e4["imagePullSecrets → доступ к реестру"]
+    sec --> e1["secretKeyRef →<br>одна env"]
+    sec --> e2["envFrom secretRef →<br>все env"]
+    sec --> e3["том → файлы<br>(лучше для сертификатов)"]
+    sec --> e4["imagePullSecrets →<br>доступ к реестру"]
     style sec fill:#db4437,color:#fff
     style e1 fill:#0f9d58,color:#fff
     style e2 fill:#326ce5,color:#fff
@@ -188,10 +182,10 @@ flowchart TB
 ```mermaid
 flowchart TB
     prot["Реальная защита Secret"]
-    prot --> rbac["RBAC: ограничить,<br>кто может читать Secret (глава 38)"]
-    prot --> enc["Encryption at rest:<br>шифрование Secret в etcd"]
-    prot --> ext["Внешние хранилища:<br>Vault, AWS/GCP Secrets Manager"]
-    prot --> git["Не хранить секреты в git<br>открытым текстом"]
+    prot --> rbac["RBAC: ограничить,<br>кто может читать<br>Secret (глава 38)"]
+    prot --> enc["Encryption at rest:<br>шифрование<br>Secret в etcd"]
+    prot --> ext["Внешние хранилища:<br>Vault, AWS/GCP<br>Secrets Manager"]
+    prot --> git["Не хранить секреты<br>в git открытым текстом"]
     style prot fill:#db4437,color:#fff
     style rbac fill:#0f9d58,color:#fff
     style enc fill:#326ce5,color:#fff
@@ -220,6 +214,16 @@ flowchart TB
 - **RBAC строго на Secret.** Доступ на чтение Secret дают минимально: обычный разработчик
   не должен читать прод-секреты. Это одна из первых вещей, которую проверяют при аудите
   безопасности.
+- **Ограничивают `exec` на поды с секретами.** Прав на чтение самого Secret мало -
+  секрет можно достать и через доступ к работающему поду: `kubectl exec` даёт shell,
+  откуда видно переменные окружения (`env`) и смонтированные файлы секретов, а
+  `kubectl debug` позволяет подсадить в под **эфемерный контейнер** и добраться до тех же
+  данных «сбоку». Поэтому в проде права `pods/exec`, `pods/attach` и
+  `pods/ephemeralcontainers` (эфемерные контейнеры) на неймспейсы с чувствительными
+  нагрузками выдают так же строго, как и чтение Secret, - иначе RBAC на сам Secret
+  обходится через доступ к поду. По той же причине секреты предпочитают монтировать
+  файлами, а не класть в env (переменные окружения проще случайно «утечь» в логи, дампы и
+  через `exec`).
 - **Монтирование томом и ротация.** Секреты монтируют файлами (обновляются автоматически),
   а приложения проектируют так, чтобы переподхватывать обновлённый секрет (например, при
   ротации TLS-сертификатов cert-manager'ом).
