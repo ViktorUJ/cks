@@ -74,8 +74,90 @@ kubectl top pods           # если работает — увидим потр
 > или не работает. Без него HPA слеп. Это первое, что проверяют при отладке HPA.
 
 Для метрик сложнее CPU/памяти (запросов в секунду, длины очереди) нужны **custom/external
-metrics** через адаптеры (например, Prometheus Adapter) - но это за пределами базового
-HPA.
+metrics** через адаптеры (например, Prometheus Adapter) - см. следующий раздел.
+
+### Кастомные и внешние метрики
+
+CPU и память - только базовый случай. HPA (`autoscaling/v2`) умеет масштабировать по трём
+типам метрик:
+
+| Тип метрики | Откуда | Пример | API |
+|-------------|--------|--------|-----|
+| `Resource` | metrics-server | CPU/память подов | `metrics.k8s.io` |
+| `Pods` / `Object` (custom) | из кластера | запросов/сек на под, глубина очереди в приложении | `custom.metrics.k8s.io` |
+| `External` | извне кластера | длина очереди SQS/Kafka, метрика облака | `external.metrics.k8s.io` |
+
+Metrics-server отдаёт только `Resource`-метрики. Для custom/external нужен **адаптер**,
+который регистрирует соответствующий metrics API. Самый распространённый - **Prometheus
+Adapter**: он берёт метрики из Prometheus и публикует их как `custom.metrics.k8s.io`,
+чтобы HPA мог по ним считать. Пример HPA по кастомной метрике «запросов в секунду на под»:
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  - type: Pods                         # кастомная метрика «на каждый под»
+    pods:
+      metric:
+        name: http_requests_per_second
+      target:
+        type: AverageValue
+        averageValue: "100"            # держать ~100 rps на под
+```
+
+Для метрик извне кластера (например, длины очереди) используют `type: External`. Логика
+HPA та же - сравнить текущее значение с целью и пересчитать реплики; меняется только
+источник метрики.
+
+### KEDA: event-driven автоскейлинг
+
+Настраивать Prometheus Adapter и писать правила под каждую внешнюю систему трудоёмко.
+**KEDA** (Kubernetes Event-driven Autoscaling) решает это: это надстройка, которая
+масштабирует нагрузку **по событиям из внешних источников** и умеет то, чего не может
+базовый HPA, - **масштабирование до нуля** (scale to zero), когда событий нет.
+
+Ключевые идеи KEDA:
+
+- **Скейлеры (scalers)** - готовые интеграции с десятками источников: Kafka, RabbitMQ,
+  AWS SQS, Prometheus, Redis, cron, облачные очереди и т.д. Не нужно вручную городить
+  адаптер под каждую систему.
+- **`ScaledObject`** - CRD, где описывают, что масштабировать и по какому триггеру:
+
+  ```yaml
+  apiVersion: keda.sh/v1alpha1
+  kind: ScaledObject
+  metadata:
+    name: consumer
+  spec:
+    scaleTargetRef:
+      name: consumer                 # какой Deployment масштабировать
+    minReplicaCount: 0               # KEDA умеет опускать до нуля
+    maxReplicaCount: 30
+    triggers:
+    - type: kafka                    # скейлер под конкретный источник
+      metadata:
+        topic: orders
+        lagThreshold: "100"          # 1 реплика на каждые 100 сообщений лага
+  ```
+
+- **Под капотом - тот же HPA.** KEDA не заменяет HPA, а управляет им: для `ScaledObject`
+  он сам создаёт HPA и кормит его метриками через `external.metrics.k8s.io`. Отдельный
+  случай - scale to zero: переход `0↔1` KEDA делает сам (HPA до нуля не умеет), а дальше
+  масштабированием `1→N` занимается созданный HPA.
+
+**Когда что выбирать.** По CPU/памяти - штатный HPA + metrics-server. По прикладным
+метрикам из Prometheus - HPA + Prometheus Adapter. По событиям очередей/брокеров и там,
+где нужен scale to zero (обработчики очередей, редкие батч-воркеры), - KEDA: меньше ручной
+настройки и экономия на простое, когда работы нет.
 
 ## 16.4. Создание HPA
 
