@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 36. Обновление кластера (lifecycle)
 
 > 🟦 **Глава для CKA** (домен Cluster Architecture, Installation & Configuration).

@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 34. NetworkPolicy
 
 > **Что дальше.** Закрываем часть 7. По умолчанию в Kubernetes **любой под может общаться

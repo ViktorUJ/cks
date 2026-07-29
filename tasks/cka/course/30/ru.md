@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 30. Сетевая модель Kubernetes, сеть подов и CNI
 
 > **Что дальше.** Начинаем часть 7 - сети. Мы уже пользовались Service и DNS (глава 7), но

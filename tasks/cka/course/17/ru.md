@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 17. Команды, аргументы и переменные окружения
 
 > **Что дальше.** Начинаем часть 3 - конфигурацию приложений. Прежде чем выносить

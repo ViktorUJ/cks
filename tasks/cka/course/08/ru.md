@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 8. Deployment: rolling update и rollback
 
 > **Что дальше.** В главе 5 мы поняли, что Deployment управляет ReplicaSet'ами и умеет

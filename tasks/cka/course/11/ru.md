@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 11. DaemonSet и StatefulSet
 
 > **Что дальше.** Мы разобрали Deployment (stateless-сервисы) и Job/CronJob (задачи).

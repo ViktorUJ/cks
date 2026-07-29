@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 39. TLS-сертификаты, kubeconfig и CSR API
 
 > 🟦 **Глава для CKA** (домены Cluster Architecture и безопасность).

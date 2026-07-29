@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 0.5. Linux и инструменты ноды с нуля: SSH, sudo, systemd, логи, файлы
 
 > **Для кого эта глава.** Часть 0, фундамент для новичков. Экзамен CKA и половина лаб -

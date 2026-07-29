@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 12. Планирование подов: nodeName, nodeSelector, affinity
 
 > **Что дальше.** До сих пор мы не задумывались, на какую ноду попадёт под - это решал

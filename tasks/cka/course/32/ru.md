@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 32. Ingress и Ingress-контроллеры
 
 > **Что дальше.** Service типа NodePort/LoadBalancer (глава 7) выставляет наружу один

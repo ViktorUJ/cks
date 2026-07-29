@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 27. Проверки состояния: liveness, readiness и startup probes
 
 > **Что дальше.** Начинаем часть 6 - наблюдаемость и обслуживание. Kubernetes сам не знает,

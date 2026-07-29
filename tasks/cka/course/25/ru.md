@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 25. Volumes, PersistentVolume и PersistentVolumeClaim
 
 > **Что дальше.** В прошлой главе тома жили вместе с подом. Теперь - хранилище, которое

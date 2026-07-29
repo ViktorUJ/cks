@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 28. Логирование и мониторинг: logs, metrics-server, kubectl top
 
 > **Что дальше.** Пробы (глава 27) сообщают кластеру о здоровье. А как **вы** смотрите,

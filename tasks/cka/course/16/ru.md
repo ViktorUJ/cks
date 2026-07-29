@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 16. Автомасштабирование нагрузок: HPA
 
 > **Что дальше.** До сих пор число реплик Deployment мы задавали руками (`scale`). Но

@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 0.2. DNS с нуля: как имена превращаются в адреса
 
 > **Для кого эта глава.** Продолжаем нулевой фундамент. Если вы понимаете, что такое

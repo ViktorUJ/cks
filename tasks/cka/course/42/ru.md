@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 42. Helm
 
 > 🟦 **Глава для CKA** (домен Cluster Architecture: «использовать Helm и Kustomize для

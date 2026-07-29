@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 44. Отладка сбоев приложений
 
 > 🟦 **Глава для CKA** (домен Troubleshooting - 30%, самый большой). Навыки полезны и для

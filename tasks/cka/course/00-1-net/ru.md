@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 0.1. Сеть с нуля: IP, порты, CIDR и NAT
 
 > **Для кого эта глава.** Это глава части 0 - «нулевого» фундамента для тех, кто

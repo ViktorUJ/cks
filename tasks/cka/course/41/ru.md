@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 41. CRD и операторы
 
 > 🟦 **Глава для CKA** (домен Cluster Architecture). Тема есть и в CKAD (расширения,

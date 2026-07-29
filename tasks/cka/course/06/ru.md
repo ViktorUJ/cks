@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 6. Namespaces, labels, selectors и annotations
 
 > **Что дальше.** Мы уже несколько раз натыкались на labels (метки) и namespace, но

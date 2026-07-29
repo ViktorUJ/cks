@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 0.7. Linux-сеть под капотом: network namespaces, veth и маршрутизация
 
 > **Для кого эта глава.** Завершаем часть 0. В главе 0.1 мы разобрали IP, порты, CIDR и

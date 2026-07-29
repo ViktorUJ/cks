@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 47. Экзамен CKAD: формат, тайм-менеджмент, JSONPath и продуктивность kubectl
 
 > 🟩 **Глава для CKAD.** Тактика экзамена CKA - в главе 48; многое общее.

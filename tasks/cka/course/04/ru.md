@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 4. Поды: жизненный цикл, создание и конфигурирование
 
 > **Что дальше.** Под (Pod) - это базовая единица запуска в Kubernetes и первый объект,

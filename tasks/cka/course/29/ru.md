@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 29. Отладка приложений и устаревание API
 
 > **Что дальше.** Завершаем часть 6. Соберём воедино навыки отладки уровня приложения

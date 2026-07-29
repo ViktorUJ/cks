@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 14. Ресурсы: requests, limits, LimitRange и ResourceQuota
 
 > **Что дальше.** Каждый под потребляет CPU и память. Если этим не управлять, один

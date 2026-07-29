@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 35A. Высокая доступность (HA): несколько control-plane нод, etcd-топологии и балансировщик
 
 > 🟦 **Глава для CKA** (домен Cluster Architecture, Installation & Configuration, 25%).

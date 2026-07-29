@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 31. Service изнутри, DNS и CoreDNS
 
 > **Что дальше.** В главе 7 мы узнали, что такое Service и его типы. В главе 30 разобрали

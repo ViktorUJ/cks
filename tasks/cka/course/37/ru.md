@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 37. Резервное копирование и восстановление etcd
 
 > 🟦 **Глава для CKA** (домен Cluster Architecture, Installation & Configuration).

@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 2. Архитектура Kubernetes: control plane и worker-ноды
 
 > **Что дальше.** В первой главе мы поняли, что Kubernetes приводит реальное

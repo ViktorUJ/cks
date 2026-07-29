@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 15. Static Pods, PriorityClass и несколько планировщиков
 
 > **Что дальше.** Закрываем блок планирования тремя темами, которые часто встречаются на

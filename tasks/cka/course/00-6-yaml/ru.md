@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 0.6. YAML с нуля: отступы, списки, словари и манифесты Kubernetes
 
 > **Для кого эта глава.** Часть 0, фундамент. Всё в Kubernetes описывается на **YAML**:

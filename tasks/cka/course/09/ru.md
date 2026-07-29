@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 9. Стратегии развёртывания: blue/green и canary
 
 > 🟩 **Это глава для CKAD** (домен Application Deployment). Для CKA она полезна как

@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 26. StorageClass, динамический провижининг и хранение в StatefulSet
 
 > **Что дальше.** В главе 25 PV создавал администратор вручную - это не масштабируется.

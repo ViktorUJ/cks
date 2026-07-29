@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 0.8. vim за 15 минут: выжить и настроить под YAML
 
 > **Для кого эта глава.** Короткий практический минимум по редактору `vim`. На экзаменах

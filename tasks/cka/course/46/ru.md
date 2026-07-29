@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 46. Отладка сервисов и сети
 
 > 🟦 **Глава для CKA** (домен Troubleshooting - 30%). Сетевые навыки полезны и для CKAD.

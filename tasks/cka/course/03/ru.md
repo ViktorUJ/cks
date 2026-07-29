@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 3. Работа с kubectl: императивный и декларативный подходы
 
 > **Что дальше.** Мы поняли, из чего состоит кластер. Теперь возьмём в руки главный

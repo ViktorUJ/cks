@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 7. Services: ClusterIP, NodePort, LoadBalancer и Endpoints
 
 > **Что дальше.** Pods - создания недолговечные: они умирают, пересоздаются, при каждом

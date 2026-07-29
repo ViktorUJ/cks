@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 33. Gateway API
 
 > **Что дальше.** Ingress (глава 32) прост, но у него предел: тонкая настройка идёт через

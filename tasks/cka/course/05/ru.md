@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 5. ReplicaSet и Deployment
 
 > **Что дальше.** В прошлой главе мы создавали поды напрямую и выяснили, что голый под

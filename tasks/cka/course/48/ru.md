@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md)
+
 # Глава 48. Экзамен CKA: формат, тайм-менеджмент и стратегия
 
 > 🟦 **Глава для CKA.** Общие приёмы скорости и организации - те же, что для CKAD (глава
