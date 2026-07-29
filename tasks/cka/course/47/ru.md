@@ -149,15 +149,18 @@ JSONPath не надо зубрить наизусть - но базовые ш�
 15-20 задач за 2 часа. Стратегия - не идти линейно, а в три прохода:
 
 ```mermaid
-flowchart LR
-    p1["Проход 1 (~70 мин):<br>лёгкие и быстрые задачи,<br>сложные — флажок и пропуск"] --> p2["Проход 2 (~40 мин):<br>отмеченные сложные"] --> p3["Проход 3 (~10 мин):<br>проверка всех ответов"]
+flowchart TB
+    p1["Проход 1 (~70 мин):<br>лёгкие и быстрые<br>задачи, сложные —<br>флажок и пропуск"] --> p2["Проход 2 (~40 мин):<br>отмеченные сложные"]
+    p2 --> p3["Проход 3 (~10 мин):<br>проверка всех ответов"]
     style p1 fill:#0f9d58,color:#fff
     style p2 fill:#326ce5,color:#fff
     style p3 fill:#673ab7,color:#fff
 ```
 
-- **Смотрите вес задачи** (указан у каждой) - высокий вес и быстрое решение делайте
-  первым.
+- **Приоритизируйте быстрые и знакомые задачи.** Раньше у каждой задачи показывали её
+  вес (процент), но в актуальном формате экзамена вес **не отображается**. Поэтому идите
+  от уверенности и скорости: сначала то, что решается быстро и наверняка, а трудоёмкое и
+  незнакомое - в следующий проход.
 - **Не застревайте.** Застряли на 5+ минут - флажок и дальше (частичные баллы уже могли
   быть получены).
 - **Оставьте время на проверку** - глупые ошибки (не тот namespace, опечатка) стоят баллов.
@@ -188,12 +191,13 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    e1["не тот namespace/контекст"] 
-    e2["табы в YAML (нет expandtab)"]
-    e3["застрял на одной задаче надолго"]
+    e1["не тот<br>namespace/контекст"]
+    e2["табы в YAML<br>(нет expandtab)"]
+    e3["застрял на одной<br>задаче надолго"]
     e4["не проверил результат"]
-    e5["путаница command/args, port/targetPort"]
-    e6["забыл про частичные баллы — бросил задачу целиком"]
+    e5["путаница command/args,<br>port/targetPort"]
+    e6["забыл про частичные баллы —<br>бросил задачу целиком"]
+    e1 ~~~ e2 ~~~ e3 ~~~ e4 ~~~ e5 ~~~ e6
     style e1 fill:#db4437,color:#fff
     style e2 fill:#db4437,color:#fff
     style e3 fill:#db4437,color:#fff
@@ -212,10 +216,10 @@ CKAD-домены и куда они ложатся в курсе:
 
 | Домен CKAD | Главы курса |
 |------------|-------------|
-| Application Design and Build (20%) | 4-5, 22-24 (поды, multi-container, образы, тома) |
+| Application Design and Build (20%) | 4-5, 10-11, 22-24 (поды, Jobs/CronJob, DaemonSet/StatefulSet, multi-container, образы, тома) |
 | Application Deployment (20%) | 8-9 (rolling update, canary/blue-green), 42-43 (Helm/Kustomize) |
 | Observability and Maintenance (15%) | 27-29 (пробы, логи/метрики, отладка, deprecations) |
-| Environment, Config, Security (25%) | 14, 17-21 (ресурсы, env, ConfigMap/Secret, SecurityContext, SA) |
+| Environment, Config, Security (25%) | 14, 17-21, 41 (ресурсы, env, ConfigMap/Secret, SecurityContext, SA, CRD) |
 | Services and Networking (20%) | 6-7, 32, 34 (метки, Service, Ingress, NetworkPolicy) |
 
 ## 47.10. Мини-глоссарий

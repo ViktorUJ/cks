@@ -30,12 +30,12 @@ STATUS сразу задаёт ветку разбора. Разберём ка�
 `describe` → Events (`FailedScheduling`).
 
 ```mermaid
-flowchart TB
+flowchart LR
     p["Pending"] --> c1["не хватает ресурсов<br>(CPU/память) на нодах"]
-    p --> c2["taint без toleration (гл.13)"]
-    p --> c3["nodeSelector/affinity не совпал (гл.12)"]
+    p --> c2["taint без toleration<br>(гл.13)"]
+    p --> c3["nodeSelector/affinity<br>не совпал (гл.12)"]
     p --> c4["PVC не связан (гл.25)"]
-    p --> c5["несуществующий schedulerName (гл.15)"]
+    p --> c5["несуществующий<br>schedulerName (гл.15)"]
     style p fill:#f4b400,color:#000
     style c1 fill:#db4437,color:#fff
     style c2 fill:#db4437,color:#fff
@@ -57,10 +57,10 @@ flowchart TB
 Контейнер не может скачать образ. Причина - в `describe` (Events: `Failed to pull image`).
 
 ```mermaid
-flowchart TB
-    i["ImagePullBackOff"] --> c1["опечатка в имени/теге образа"]
-    i --> c2["приватный реестр без imagePullSecret (гл.19,23)"]
-    i --> c3["нет доступа к реестру / сети"]
+flowchart LR
+    i["ImagePullBackOff"] --> c1["опечатка в имени/теге<br>образа"]
+    i --> c2["приватный реестр без<br>imagePullSecret (гл.19,23)"]
+    i --> c3["нет доступа<br>к реестру / сети"]
     i --> c4["тега не существует"]
     style i fill:#f4b400,color:#000
     style c1 fill:#db4437,color:#fff
@@ -78,12 +78,12 @@ flowchart TB
 растущей задержкой. **Ключ - логи упавшего контейнера** (`--previous`, глава 28).
 
 ```mermaid
-flowchart TB
-    cl["CrashLoopBackOff"] --> log["kubectl logs <pod> --previous<br>← смотреть ЗДЕСЬ"]
-    log --> c1["ошибка в приложении при старте<br>(конфиг, коннект к БД)"]
-    log --> c2["неверная команда/аргументы (гл.17)"]
-    log --> c3["нет обязательной env/ConfigMap/Secret"]
-    log --> c4["liveness убивает (гл.27) —<br>слишком строгая проба"]
+flowchart LR
+    cl["CrashLoopBackOff"] --> log["kubectl logs &lt;pod&gt;<br>--previous<br>← смотреть ЗДЕСЬ"]
+    log --> c1["ошибка в приложении<br>при старте<br>(конфиг, коннект к БД)"]
+    log --> c2["неверная<br>команда/аргументы<br>(гл.17)"]
+    log --> c3["нет обязательной<br>env/ConfigMap/Secret"]
+    log --> c4["liveness убивает (гл.27)<br>— слишком строгая проба"]
     log --> c5["OOMKilled (см. ниже)"]
     style cl fill:#f4b400,color:#000
     style log fill:#0f9d58,color:#fff
@@ -138,11 +138,11 @@ flowchart LR
 или доступе:
 
 ```mermaid
-flowchart TB
+flowchart LR
     run["Running, но не отвечает"] --> c1["readiness проваливается →<br>под не в Endpoints (гл.7,27)"]
-    run --> c2["приложение слушает не тот порт /<br>не тот интерфейс"]
+    run --> c2["приложение слушает<br>не тот порт /<br>не тот интерфейс"]
     run --> c3["Service selector не совпал →<br>пустой Endpoints (гл.7)"]
-    run --> c4["логика приложения / зависимость"]
+    run --> c4["логика приложения /<br>зависимость"]
     style run fill:#f4b400,color:#000
     style c1 fill:#db4437,color:#fff
     style c2 fill:#db4437,color:#fff
@@ -160,8 +160,8 @@ flowchart TB
 Собираем всё в одну карту «STATUS → куда смотреть»:
 
 ```mermaid
-flowchart TB
-    start["Под не работает: kubectl get pods"]
+flowchart LR
+    start["Под не работает:<br>kubectl get pods"]
     start -->|"Pending"| pending["ресурсы, taints, affinity, PVC<br>→ describe: FailedScheduling"]
     start -->|"ImagePullBackOff"| img["имя образа, реестр, secret<br>→ describe: Events"]
     start -->|"CrashLoopBackOff"| crash["logs --previous<br>→ причина падения"]

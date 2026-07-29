@@ -16,19 +16,16 @@ practices». Важно понимать границы его ответств�
 
 ```mermaid
 flowchart TB
-    subgraph Does["kubeadm делает"]
-        d1["поднимает control plane<br>(static pods: apiserver, etcd,<br>scheduler, controller-manager)"]
-        d2["генерирует сертификаты и kubeconfig"]
-        d3["настраивает bootstrap-токены<br>для join нод"]
-        d4["ставит kube-proxy и CoreDNS"]
-    end
-    subgraph NotDoes["kubeadm НЕ делает"]
-        n1["не ставит container runtime<br>(containerd — заранее)"]
-        n2["не ставит CNI<br>(Calico/Cilium — вручную)"]
-        n3["не настраивает ОС<br>(swap, модули, sysctl)"]
-    end
-    style Does fill:#0f9d58,color:#fff
-    style NotDoes fill:#db4437,color:#fff
+    does["kubeadm делает"] --> d1["поднимает control plane<br>(static pods:<br>apiserver, etcd,<br>scheduler,<br>controller-manager)"]
+    d1 --> d2["генерирует сертификаты<br>и kubeconfig"]
+    d2 --> d3["настраивает<br>bootstrap-токены<br>для join нод"]
+    d3 --> d4["ставит kube-proxy<br>и CoreDNS"]
+    notdoes["kubeadm НЕ делает"] --> n1["не ставит<br>container runtime<br>(containerd — заранее)"]
+    n1 --> n2["не ставит CNI<br>(Calico/Cilium — вручную)"]
+    n2 --> n3["не настраивает ОС<br>(swap, модули, sysctl)"]
+    d4 ~~~ notdoes
+    style does fill:#0f9d58,color:#fff
+    style notdoes fill:#db4437,color:#fff
     style d1 fill:#3cb371,color:#fff
     style d2 fill:#3cb371,color:#fff
     style d3 fill:#3cb371,color:#fff
@@ -47,8 +44,10 @@ CNI и настройку ОС. Забыть про CNI - причина, по �
 Прежде чем звать kubeadm, каждую ноду готовят:
 
 ```mermaid
-flowchart LR
-    s1["1 · Отключить swap<br>(swapoff -a)"] --> s2["2 · Модули ядра + sysctl<br>(br_netfilter, ip_forward)"] --> s3["3 · Установить container runtime<br>(containerd)"] --> s4["4 · Установить kubeadm,<br>kubelet, kubectl"]
+flowchart TB
+    s1["1 · Отключить swap<br>(swapoff -a)"] --> s2["2 · Модули ядра + sysctl<br>(br_netfilter, ip_forward)"]
+    s2 --> s3["3 · Установить<br>container runtime<br>(containerd)"]
+    s3 --> s4["4 · Установить kubeadm,<br>kubelet, kubectl"]
     style s1 fill:#f4b400,color:#000
     style s2 fill:#326ce5,color:#fff
     style s3 fill:#0f9d58,color:#fff
@@ -75,6 +74,10 @@ sudo apt-mark hold kubelet kubeadm kubectl    # зафиксировать ве�
 > стартует при включённом swap). Это первый пункт подготовки и частая причина, почему
 > `kubeadm init` падает.
 
+Полный и актуальный список требований и шагов подготовки ноды - в официальной документации:
+[Installing kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/)
+(swap, модули ядра и sysctl, container runtime, репозиторий и пакеты kubeadm/kubelet/kubectl).
+
 ## 35.3. Инициализация control plane: kubeadm init
 
 На будущей control plane ноде:
@@ -82,8 +85,25 @@ sudo apt-mark hold kubelet kubeadm kubectl    # зафиксировать ве�
 ```bash
 sudo kubeadm init \
   --pod-network-cidr=10.244.0.0/16 \        # диапазон подов (согласовать с CNI!)
-  --control-plane-endpoint=<адрес>          # для HA (глава 2)
+  --control-plane-endpoint=<адрес>          # стабильный адрес API (для HA)
 ```
+
+> **Какой адрес в `--control-plane-endpoint`?** Это **стабильная точка входа к
+> API-серверу**, общая для всех нод и попадающая в сертификаты. Указывать сюда IP
+> конкретной ноды - плохая идея: если это единственный control plane, вы уже не сможете
+> без пересоздания перейти на несколько control plane. Правильно указывать:
+>
+> - **DNS-имя** (например, `k8s-api.example.com`), которое вы контролируете, - самый
+>   гибкий вариант: позже за ним можно поставить балансировщик, не трогая кластер;
+> - **адрес балансировщика** (VIP/LB) перед control plane нодами - для настоящего HA
+>   (несколько API-серверов за одним адресом).
+>
+> Можно добавить порт: `--control-plane-endpoint=k8s-api.example.com:6443`. Флаг
+> **необязателен** для одноузлового control plane, но задать его (через DNS) сразу -
+> хорошая практика: это оставляет путь к HA открытым. Без флага endpoint'ом становится
+> адрес текущей ноды, и «вырасти» в HA потом не получится. Подробности -
+> [Creating a cluster with kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/)
+> и [HA topology](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/high-availability/).
 
 ```mermaid
 sequenceDiagram
@@ -107,6 +127,63 @@ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 ```
 2. команду `kubeadm join ...` с токеном - её выполняют на worker-нодах.
+
+### Сертификаты кластера: сроки, продление, свой CA
+
+`kubeadm init` сам генерирует всю PKI кластера в `/etc/kubernetes/pki`. Важно понимать
+сроки жизни, иначе **на проде можно словить простой**: когда сертификаты apiserver и
+компонентов истекают, control plane перестаёт работать, а `kubectl` начинает отвечать
+ошибками TLS.
+
+Сроки по умолчанию:
+
+- **листовые сертификаты** (apiserver, apiserver-kubelet-client, клиентские в
+  `admin.conf`/`controller-manager.conf`/`scheduler.conf` и т.д.) - **1 год**;
+- **сертификаты CA** (`ca`, `etcd-ca`, `front-proxy-ca`) - **10 лет**;
+- клиентский сертификат kubelet (`/var/lib/kubelet/pki`) **ротируется автоматически** -
+  его в списке ниже нет.
+
+Проверить сроки:
+
+```bash
+kubeadm certs check-expiration     # таблица EXPIRES / RESIDUAL TIME по всем сертификатам
+```
+
+Продление:
+
+- **автоматически при апгрейде** control plane: `kubeadm upgrade apply/node` продлевает
+  все сертификаты. Если обновлять кластер регулярно (чаще раза в год), об истечении можно
+  не думать;
+- **вручную** в любой момент: `kubeadm certs renew all` (выполнять на **каждой** control
+  plane ноде, затем перезапустить static-поды control plane - например, временно убрать и
+  вернуть их манифесты в `/etc/kubernetes/manifests/`). После продления `admin.conf`
+  не забудьте обновить `~/.kube/config`.
+
+Свои и внешние сертификаты (чтобы задать сроки и свой CA заранее):
+
+- **свой CA**: положите `ca.crt` и `ca.key` в `/etc/kubernetes/pki` **до** `kubeadm init` -
+  kubeadm не перезапишет их и подпишет остальное вашим CA;
+- **кастомные сроки** через конфиг kubeadm (передать `kubeadm init --config`):
+
+  ```yaml
+  apiVersion: kubeadm.k8s.io/v1beta4
+  kind: ClusterConfiguration
+  certificateValidityPeriod: 8760h      # листовые: по умолчанию 1 год
+  caCertificateValidityPeriod: 87600h   # CA: по умолчанию 10 лет
+  ```
+
+  (значения - в формате Go-длительностей, самая крупная единица - `h`);
+- **внешний CA** (external CA mode): положите только `ca.crt` без `ca.key` - kubeadm
+  распознает это и не будет держать ключ CA на диске, а выпуск/продление сертификатов вы
+  берёте на себя (свой signer). При этом `kubeadm certs renew` такими сертификатами уже
+  **не управляет**.
+
+Подробности и сценарии - в документации:
+[Certificate Management with kubeadm](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-certs/).
+
+> **Вывод для прода.** Либо регулярно апгрейдите кластер (сертификаты продлеваются сами),
+> либо мониторьте `check-expiration` и продлевайте заранее. «Кластер всё сломался ровно
+> через год после установки» - классика истёкших сертификатов kubeadm.
 
 ## 35.4. Установка CNI (обязательный шаг)
 
@@ -184,11 +261,12 @@ kubeadm раскладывает файлы предсказуемо - это н
 ```mermaid
 flowchart TB
     root["/etc/kubernetes/"]
-    root --> m["manifests/ → static pods control plane"]
-    root --> c["*.conf → kubeconfig'и"]
-    root --> pki["pki/ → сертификаты"]
-    etcd["/var/lib/etcd/ → данные etcd"]
-    kubelet["/var/lib/kubelet/ → kubelet"]
+    root --> m["manifests/ →<br>static pods<br>control plane"]
+    root --> c["*.conf →<br>kubeconfig'и"]
+    root --> pki["pki/ →<br>сертификаты"]
+    etcd["/var/lib/etcd/ →<br>данные etcd"]
+    kubelet["/var/lib/kubelet/ →<br>kubelet"]
+    pki ~~~ etcd ~~~ kubelet
     style root fill:#326ce5,color:#fff
     style m fill:#0f9d58,color:#fff
     style c fill:#0f9d58,color:#fff
@@ -206,13 +284,14 @@ flowchart TB
 ```mermaid
 flowchart TB
     ca["ca (CA кластера)<br>корень доверия"]
-    ca --> apis["apiserver<br>(серверный сертификат API)"]
-    ca --> akc["apiserver-kubelet-client<br>(apiserver → kubelet)"]
-    fca["front-proxy-ca"] --> fpc["front-proxy-client<br>(agregation layer)"]
-    eca["etcd/ca (отдельный CA etcd)"] --> es["etcd/server, etcd/peer"]
+    ca --> apis["apiserver<br>(серверный<br>сертификат API)"]
+    ca --> akc["apiserver-<br>kubelet-client<br>(apiserver →<br>kubelet)"]
+    fca["front-proxy-ca"] --> fpc["front-proxy-client<br>(aggregation layer)"]
+    eca["etcd/ca<br>(отдельный CA etcd)"] --> es["etcd/server,<br>etcd/peer"]
     eca --> ehc["etcd/healthcheck-client"]
-    eca --> aec["apiserver-etcd-client<br>(apiserver → etcd)"]
-    sa["sa.key / sa.pub<br>(подпись токенов ServiceAccount)"]
+    eca --> aec["apiserver-<br>etcd-client<br>(apiserver → etcd)"]
+    sa["sa.key / sa.pub<br>(подпись токенов<br>ServiceAccount)"]
+    ca ~~~ fca ~~~ eca ~~~ sa
     style ca fill:#f4b400,color:#000
     style fca fill:#f4b400,color:#000
     style eca fill:#f4b400,color:#000
@@ -274,9 +353,9 @@ kubeadm можно заставить использовать **ваш** CA в�
 
 ```mermaid
 flowchart TB
-    q["Что кладём в /etc/kubernetes/pki ДО init?"]
-    q -->|"ca.crt + ca.key"| own["Свой CA:<br>kubeadm НЕ генерирует свой,<br>подписывает всё вашим CA"]
-    q -->|"только ca.crt (без ca.key)"| ext["External CA mode:<br>kubeadm делает CSR,<br>вы подписываете сами"]
+    q["Что кладём в<br>/etc/kubernetes/pki<br>ДО init?"]
+    q -->|"ca.crt + ca.key"| own["Свой CA:<br>kubeadm НЕ<br>генерирует свой,<br>подписывает всё<br>вашим CA"]
+    q -->|"только ca.crt<br>(без ca.key)"| ext["External CA mode:<br>kubeadm делает CSR,<br>вы подписываете<br>сами"]
     style q fill:#f4b400,color:#000
     style own fill:#0f9d58,color:#fff
     style ext fill:#326ce5,color:#fff

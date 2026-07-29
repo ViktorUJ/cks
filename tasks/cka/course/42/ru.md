@@ -16,17 +16,17 @@
 
 ```mermaid
 flowchart TB
-    subgraph Without["Без Helm"]
-        direction TB
-        w1["deployment.yaml + service.yaml +<br>configmap.yaml + ingress.yaml + ..."] --> w2["копировать и править<br>под каждую среду вручную"]
-    end
-    subgraph With["С Helm"]
-        direction TB
-        h1["один chart (шаблоны)"] --> h2["values под среду →<br>установка одной командой"]
-    end
-    Without --> With
-    style Without fill:#db4437,color:#fff
-    style With fill:#0f9d58,color:#fff
+    noh["Без Helm"]
+    noh --> w1["deployment.yaml +<br>service.yaml +<br>configmap.yaml +<br>ingress.yaml + ..."]
+    w1 --> w2["копировать и править<br>под каждую среду вручную"]
+
+    yesh["С Helm"]
+    yesh --> h1["один chart (шаблоны)"]
+    h1 --> h2["values под среду →<br>установка одной командой"]
+
+    w2 --> yesh
+    style noh fill:#db4437,color:#fff
+    style yesh fill:#0f9d58,color:#fff
     style w1 fill:#e57373,color:#000
     style w2 fill:#e57373,color:#000
     style h1 fill:#3cb371,color:#fff
@@ -100,8 +100,8 @@ image:
 ```
 
 ```mermaid
-flowchart LR
-    tmpl["шаблон<br>replicas: {{ .Values.replicaCount }}"] --> render["Helm рендерит"]
+flowchart TB
+    tmpl["шаблон<br>replicas:<br>{{ .Values.replicaCount }}"] --> render["Helm рендерит"]
     vals["values.yaml<br>replicaCount: 3"] --> render
     render --> yaml["готовый манифест<br>replicas: 3"]
     style tmpl fill:#326ce5,color:#fff

@@ -15,11 +15,11 @@
 
 ```mermaid
 flowchart TB
-    l1["1 · Связность подов (CNI, глава 30)<br>под пингует под по IP?"]
+    l1["1 · Связность подов<br>(CNI, глава 30)<br>под пингует под по IP?"]
     l2["2 · DNS (CoreDNS, глава 31)<br>имя резолвится?"]
-    l3["3 · Service + Endpoints (глава 7)<br>сервис привязан к подам?"]
+    l3["3 · Service + Endpoints<br>(глава 7)<br>сервис привязан к подам?"]
     l4["4 · NetworkPolicy (глава 34)<br>не блокирует ли политика?"]
-    l5["5 · Ingress/Gateway (главы 32-33)<br>внешний доступ"]
+    l5["5 · Ingress/Gateway<br>(главы 32-33)<br>внешний доступ"]
     l1 --> l2 --> l3 --> l4 --> l5
     style l1 fill:#326ce5,color:#fff
     style l2 fill:#673ab7,color:#fff
@@ -72,11 +72,11 @@ kubectl logs -n kube-system -l k8s-app=kube-dns
 ```
 
 ```mermaid
-flowchart TB
+flowchart LR
     dns["имя не резолвится"] --> c1["CoreDNS не работает (гл.31)"]
     dns --> c2["resolv.conf неверный"]
-    dns --> c3["egress NetworkPolicy режет DNS:53 (гл.34)"]
-    dns --> c4["имя/namespace указаны неверно"]
+    dns --> c3["egress NetworkPolicy<br>режет DNS:53 (гл.34)"]
+    dns --> c4["имя/namespace<br>указаны неверно"]
     style dns fill:#db4437,color:#fff
     style c1 fill:#f4b400,color:#000
     style c2 fill:#f4b400,color:#000
@@ -101,8 +101,8 @@ kubectl describe svc backend            # selector и endpoints
 ```mermaid
 flowchart TB
     svc["сервис не отвечает"] --> ep{"kubectl get endpoints:<br>пусто?"}
-    ep -->|"пусто"| empty["selector не совпал с метками подов /<br>поды не проходят readiness (гл.7,27)"]
-    ep -->|"есть адреса"| notempty["проверить порт (port/targetPort, гл.7),<br>слушает ли приложение, NetworkPolicy"]
+    ep -->|"пусто"| empty["selector не совпал<br>с метками подов /<br>поды не проходят<br>readiness (гл.7,27)"]
+    ep -->|"есть адреса"| notempty["проверить порт<br>(port/targetPort, гл.7),<br>слушает ли приложение,<br>NetworkPolicy"]
     style svc fill:#db4437,color:#fff
     style ep fill:#f4b400,color:#000
     style empty fill:#0f9d58,color:#fff
@@ -124,10 +124,10 @@ kubectl describe networkpolicy <name> -n <namespace>
 ```
 
 ```mermaid
-flowchart TB
-    np["трафик блокируется, хотя DNS/Endpoints ОК"] --> c1["есть политика на под-получателя →<br>разрешён ли источник в ingress? (гл.34)"]
-    np --> c2["есть egress-политика на источнике →<br>разрешён ли получатель?"]
-    np --> c3["default-deny без нужного allow"]
+flowchart LR
+    np["трафик блокируется,<br>хотя DNS/Endpoints ОК"] --> c1["есть политика<br>на под-получателя →<br>разрешён ли источник<br>в ingress? (гл.34)"]
+    np --> c2["есть egress-политика<br>на источнике →<br>разрешён ли получатель?"]
+    np --> c3["default-deny<br>без нужного allow"]
     style np fill:#db4437,color:#fff
     style c1 fill:#f4b400,color:#000
     style c2 fill:#f4b400,color:#000
@@ -143,12 +143,12 @@ flowchart TB
 Если проблема с доступом **снаружи** (главы 32-33):
 
 ```mermaid
-flowchart TB
-    ext["снаружи не работает"] --> c1["установлен ли Ingress-контроллер? (гл.32)"]
-    ext --> c2["верный ingressClassName?"]
-    ext --> c3["Service за Ingress жив, Endpoints не пуст?"]
-    ext --> c4["TLS-секрет на месте? (гл.19,32)"]
-    ext --> c5["DNS/LB указывает на нужный вход?"]
+flowchart LR
+    ext["снаружи не работает"] --> c1["установлен ли<br>Ingress-контроллер?<br>(гл.32)"]
+    ext --> c2["верный<br>ingressClassName?"]
+    ext --> c3["Service за Ingress жив,<br>Endpoints не пуст?"]
+    ext --> c4["TLS-секрет на месте?<br>(гл.19,32)"]
+    ext --> c5["DNS/LB указывает<br>на нужный вход?"]
     style ext fill:#db4437,color:#fff
     style c1 fill:#f4b400,color:#000
     style c2 fill:#f4b400,color:#000
@@ -171,12 +171,12 @@ flowchart TB
     start --> l1{"под→под по IP?"}
     l1 -->|"нет"| fixcni["CNI/ноды (гл.30,45)"]
     l1 -->|"да"| l2{"имя резолвится?"}
-    l2 -->|"нет"| fixdns["CoreDNS / egress DNS (гл.31,34)"]
+    l2 -->|"нет"| fixdns["CoreDNS /<br>egress DNS (гл.31,34)"]
     l2 -->|"да"| l3{"Endpoints не пуст?"}
-    l3 -->|"пусто"| fixep["selector/readiness (гл.7,27)"]
+    l3 -->|"пусто"| fixep["selector/readiness<br>(гл.7,27)"]
     l3 -->|"есть"| l4{"NetworkPolicy режет?"}
     l4 -->|"да"| fixnp["разрешить трафик (гл.34)"]
-    l4 -->|"нет"| l5["внешний доступ: Ingress/Gateway (гл.32-33)"]
+    l4 -->|"нет"| l5["внешний доступ:<br>Ingress/Gateway<br>(гл.32-33)"]
     style start fill:#db4437,color:#fff
     style l1 fill:#326ce5,color:#fff
     style l2 fill:#673ab7,color:#fff

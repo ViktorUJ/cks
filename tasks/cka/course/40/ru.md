@@ -129,13 +129,11 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-    subgraph Three["Три интерфейса расширения"]
-        direction TB
-        cri["CRI — рантайм — containerd/CRI-O — crictl"]
-        cni["CNI — сеть подов — Calico/Cilium/Flannel — /etc/cni/net.d"]
-        csi["CSI — хранилище — EBS/Ceph/NFS-драйверы — StorageClass"]
-    end
-    style Three fill:#eeeeee,color:#000
+    three["Три интерфейса расширения"]
+    three --> cri["CRI — рантайм<br>containerd/CRI-O<br>crictl"]
+    cri ~~~ cni["CNI — сеть подов<br>Calico/Cilium/Flannel<br>/etc/cni/net.d"]
+    cni ~~~ csi["CSI — хранилище<br>EBS/Ceph/NFS-драйверы<br>StorageClass"]
+    style three fill:#eeeeee,color:#000
     style cri fill:#0f9d58,color:#fff
     style cni fill:#673ab7,color:#fff
     style csi fill:#f4b400,color:#000

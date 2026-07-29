@@ -17,10 +17,10 @@
 
 ```mermaid
 flowchart TB
-    l4["Слой 4: команда запуска (метаданные)"]
-    l3["Слой 3: код приложения"]
-    l2["Слой 2: зависимости (npm/pip install)"]
-    l1["Слой 1: базовый образ (ОС, рантайм)"]
+    l4["Слой 4:<br>команда запуска<br>(метаданные)"]
+    l3["Слой 3:<br>код приложения"]
+    l2["Слой 2:<br>зависимости<br>(npm/pip install)"]
+    l1["Слой 1:<br>базовый образ<br>(ОС, рантайм)"]
     l1 --> l2 --> l3 --> l4
     style l1 fill:#326ce5,color:#fff
     style l2 fill:#0f9d58,color:#fff
@@ -74,18 +74,10 @@ CMD ["node", "server.js"]     # что запускать
 
 ```mermaid
 flowchart TB
-    subgraph Bad["Плохо: код перед зависимостями"]
-        direction TB
-        b1["COPY . .  (весь код)"] --> b2["RUN npm ci"]
-        b3["любое изменение кода →<br>пересборка зависимостей ❌"]
-    end
-    subgraph Good["Хорошо: зависимости перед кодом"]
-        direction TB
-        g1["COPY package.json"] --> g2["RUN npm ci"] --> g3["COPY . .  (код)"]
-        g4["изменение кода → зависимости<br>берутся из кеша ✓"]
-    end
-    style Bad fill:#db4437,color:#fff
-    style Good fill:#0f9d58,color:#fff
+    bad0["Плохо:<br>код перед зависимостями"] --> b1["COPY . .  (весь код)"] --> b2["RUN npm ci"] --> b3["любое изменение кода →<br>пересборка зависимостей ❌"]
+    good0["Хорошо:<br>зависимости перед кодом"] --> g1["COPY package.json"] --> g2["RUN npm ci"] --> g3["COPY . .  (код)"] --> g4["изменение кода → зависимости<br>берутся из кеша ✓"]
+    style bad0 fill:#db4437,color:#fff
+    style good0 fill:#0f9d58,color:#fff
     style b1 fill:#e57373,color:#000
     style b2 fill:#e57373,color:#000
     style b3 fill:#c0392b,color:#fff
@@ -120,17 +112,9 @@ CMD ["/server"]
 
 ```mermaid
 flowchart LR
-    subgraph Stage1["Стадия builder (большая)"]
-        s1["компилятор + исходники + сборка"]
-    end
-    subgraph Stage2["Финальный образ (маленький)"]
-        s2["только готовый бинарник"]
-    end
-    s1 -->|"COPY --from=builder<br>только результат"| s2
-    style Stage1 fill:#db4437,color:#fff
-    style Stage2 fill:#0f9d58,color:#fff
-    style s1 fill:#e57373,color:#000
-    style s2 fill:#3cb371,color:#fff
+    s1["Стадия builder (большая):<br>компилятор + исходники + сборка"] -->|"COPY --from=builder<br>только результат"| s2["Финальный образ (маленький):<br>только готовый бинарник"]
+    style s1 fill:#db4437,color:#fff
+    style s2 fill:#0f9d58,color:#fff
 ```
 
 Результат: финальный образ содержит только исполняемый файл и минимум окружения - вместо

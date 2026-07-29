@@ -18,9 +18,9 @@
 flowchart TB
     q["Кто управляет control plane?"]
     q -->|"провайдер"| m["Managed:<br>EKS / GKE / AKS"]
-    q -->|"вы сами"| s["Self-managed:<br>kubeadm / Cluster API / on-prem"]
-    m --> mpro["control plane, etcd, апгрейды, HA — на провайдере"]
-    s --> spro["всё на вас: init, HA, бэкап etcd, апгрейды, сертификаты"]
+    q -->|"вы сами"| s["Self-managed:<br>kubeadm /<br>Cluster API /<br>on-prem"]
+    m --> mpro["control plane, etcd,<br>апгрейды, HA —<br>на провайдере"]
+    s --> spro["всё на вас:<br>init, HA, бэкап etcd,<br>апгрейды, сертификаты"]
     style q fill:#f4b400,color:#000
     style m fill:#0f9d58,color:#fff
     style s fill:#326ce5,color:#fff
@@ -47,7 +47,7 @@ self-managed - потому что там всё делаешь руками.
 ```mermaid
 flowchart TB
     subgraph dev["Dev / обучение"]
-        d1["1 control plane<br>(+ разтейнченный для подов)"]
+        d1["1 control plane<br>(без taint, чтобы шли поды)"]
     end
     subgraph prod["Prod"]
         p1["3 (или 5) control plane<br>в разных зонах (HA)"]
@@ -90,7 +90,7 @@ flowchart TB
 (глава 0.1, 30):
 
 ```mermaid
-flowchart LR
+flowchart TB
     node["Node CIDR<br>сеть нод/VPC"] -.не пересекать.- pod["Pod CIDR<br>--pod-network-cidr"]
     pod -.не пересекать.- svc["Service CIDR<br>--service-cidr"]
     svc -.не пересекать.- corp["корпоративная сеть"]
@@ -112,10 +112,10 @@ flowchart LR
 Кластеры не создают «кликами» - их описывают кодом для воспроизводимости и аудита.
 
 ```mermaid
-flowchart LR
-    tf["Terraform / OpenTofu<br>инфраструктура: VPC, ноды, LB"] --> prov["провижининг ОС<br>(cloud-init / Ansible / образы)"]
+flowchart TB
+    tf["Terraform / OpenTofu<br>инфраструктура:<br>VPC, ноды, LB"] --> prov["провижининг ОС<br>(cloud-init /<br>Ansible / образы)"]
     prov --> boot["bootstrap кластера<br>kubeadm / Cluster API"]
-    boot --> apps["приложения: Helm/Kustomize + GitOps (Argo CD/Flux)"]
+    boot --> apps["приложения:<br>Helm/Kustomize +<br>GitOps (Argo CD/Flux)"]
     style tf fill:#673ab7,color:#fff
     style prov fill:#326ce5,color:#fff
     style boot fill:#0f9d58,color:#fff
@@ -125,7 +125,7 @@ flowchart LR
 - **Инфраструктура** (VPC, подсети, ноды, балансировщик) - Terraform/OpenTofu (именно так
   устроены лабы курса).
 - **Подготовка ОС** (swap, модули, containerd, kube*) - cloud-init/Ansible/готовые образы
-  (glava 35), чтобы ноды были одинаковыми.
+  (глава 35), чтобы ноды были одинаковыми.
 - **Bootstrap кластера** - kubeadm (обёрнутый в автоматизацию) или **Cluster API** (K8s сам
   управляет жизненным циклом кластеров декларативно).
 - **Приложения** - Helm/Kustomize (главы 42, 43) через GitOps (Argo CD/Flux): git как

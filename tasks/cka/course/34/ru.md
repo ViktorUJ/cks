@@ -13,15 +13,14 @@
 подами разрешён** - любой под достучится до любого другого в кластере.
 
 ```mermaid
-flowchart LR
-    subgraph Default["Без NetworkPolicy"]
-        a["frontend"] --> b["backend"]
-        a --> c["database"]
-        x["любой под"] --> c
-    end
-    note["всё открыто: даже frontend<br>может напрямую лезть в БД"]
-    Default -.-> note
-    style Default fill:#db4437,color:#fff
+flowchart TB
+    d0["Без NetworkPolicy"] --> a["frontend"]
+    a --> b["backend"]
+    a --> c["database"]
+    x["любой под"] --> c
+    note["всё открыто:<br>даже frontend может<br>напрямую лезть в БД"]
+    c -.-> note
+    style d0 fill:#db4437,color:#fff
     style a fill:#e57373,color:#000
     style b fill:#e57373,color:#000
     style c fill:#e57373,color:#000
@@ -41,8 +40,8 @@ NetworkPolicy позволяет это ограничить: например, 
 ```mermaid
 flowchart TB
     q["Есть ли NetworkPolicy,<br>выбирающая этот под?"]
-    q -->|"нет ни одной"| all["весь трафик разрешён<br>(поведение по умолчанию)"]
-    q -->|"есть хотя бы одна"| restricted["разрешено ТОЛЬКО то, что<br>явно указано в политиках.<br>Остальное — запрещено"]
+    q -->|"нет ни одной"| all["весь трафик<br>разрешён<br>(поведение<br>по умолчанию)"]
+    q -->|"есть хотя бы одна"| restricted["разрешено ТОЛЬКО то,<br>что явно указано<br>в политиках.<br>Остальное — запрещено"]
     style q fill:#f4b400,color:#000
     style all fill:#0f9d58,color:#fff
     style restricted fill:#326ce5,color:#fff
@@ -65,7 +64,7 @@ flowchart TB
 ```mermaid
 flowchart LR
     np["NetworkPolicy создан"] --> cni{"CNI поддерживает политики?"}
-    cni -->|"Calico, Cilium — да"| work["политика работает"]
+    cni -->|"Calico, Cilium,<br>VPC CNI 1.14+ — да"| work["политика работает"]
     cni -->|"голый Flannel — нет"| ignore["политика игнорируется,<br>трафик не ограничен"]
     style np fill:#326ce5,color:#fff
     style cni fill:#f4b400,color:#000
@@ -75,6 +74,28 @@ flowchart LR
 
 Это коварная ловушка: думаешь, что закрыл трафик, а он открыт. Всегда проверяют, что CNI
 умеет NetworkPolicy (Calico, Cilium - да).
+
+> **AWS VPC CNI: раньше нет, теперь да (с оговоркой).** Дефолтный CNI в EKS - AWS VPC CNI -
+> долгое время сам **не применял** NetworkPolicy: объект создавался, но не действовал, и
+> для сегментации ставили поверх Calico. С версии VPC CNI **1.14** (2023) появилась
+> **встроенная** поддержка NetworkPolicy, но её нужно **явно включить** (параметр
+> `enableNetworkPolicy: true` у EKS-аддона либо переменная `ENABLE_NETWORK_POLICY` у
+> `aws-node`). По документации AWS для стандартных и admin-политик нужна версия VPC CNI
+> **1.21.0+**.
+>
+> Ограничения нативной поддержки (тоже из документации AWS):
+>
+> - только **Linux EC2-ноды** - не Fargate и не Windows;
+> - политики действуют для **IPv4 или IPv6**, но не для обоих сразу (правила «не той»
+>   версии игнорируются);
+> - применяются только к **основному интерфейсу пода** (`eth0`); при chained-плагинах
+>   (Multus) или IPv4-egress у IPv6-подов дополнительные интерфейсы не покрываются;
+> - enforcement оптимизирован для подов под контроллерами (есть `ownerReferences` -
+>   Deployment, StatefulSet и т.п.); для «одиночных» подов без контроллера может работать
+>   нестабильно.
+>
+> Вывод для EKS: сам факт «дефолтный CNI = не поддерживает» уже неверен - поддержка есть,
+> но её надо включить и держать в уме версию и перечисленные ограничения.
 
 ## 34.4. Структура NetworkPolicy
 
@@ -106,7 +127,7 @@ spec:
 ```mermaid
 flowchart LR
     be["Под app=backend"] -->|"разрешено :5432"| db["Под app=database<br>(цель политики)"]
-    fe["Под app=frontend"] -.->|"ЗАБЛОКировано<br>(нет разрешающего правила)"| db
+    fe["Под app=frontend"] -.->|"ЗАБЛОКировано<br>(нет разрешающего<br>правила)"| db
     style be fill:#0f9d58,color:#fff
     style db fill:#326ce5,color:#fff
     style fe fill:#db4437,color:#fff
@@ -140,45 +161,105 @@ flowchart LR
 
 ## 34.6. Типовые паттерны
 
-Несколько шаблонов, которые надо уметь писать.
+Несколько шаблонов, которые надо уметь писать. Ниже - полные манифесты, каждый со ссылкой
+на официальную документацию.
 
-**Default deny всего входящего в namespace** (пустой podSelector = все поды):
+**1. Default deny всего входящего в namespace** (пустой `podSelector` = все поды).
+Док: [Default deny all ingress traffic](https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-deny-all-ingress-traffic).
 
 ```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: prod
 spec:
   podSelector: {}          # все поды namespace
   policyTypes:
   - Ingress                # входящего не разрешено ничего → всё заблокировано
 ```
 
-**Разрешить трафик из определённого namespace** (`namespaceSelector`):
+**2. Разрешить трафик из определённого namespace** (`namespaceSelector`).
+Док: [Behavior of `to` and `from` selectors](https://kubernetes.io/docs/concepts/services-networking/network-policies/#behavior-of-to-and-from-selectors).
 
 ```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-prod-ns
+  namespace: prod
+spec:
+  podSelector:
+    matchLabels:
+      app: database        # цель — поды database
+  policyTypes:
+  - Ingress
   ingress:
   - from:
     - namespaceSelector:
         matchLabels:
           env: prod        # разрешить из подов namespace с меткой env=prod
+    ports:
+    - protocol: TCP
+      port: 5432
 ```
 
-**Разрешить egress только к DNS** (частый паттерн при default-deny egress):
+**3. Разрешить трафик с конкретных подов** (`podSelector` в `from`).
+Док: [Behavior of `to` and `from` selectors](https://kubernetes.io/docs/concepts/services-networking/network-policies/#behavior-of-to-and-from-selectors).
 
 ```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-to-db
+  namespace: prod
+spec:
+  podSelector:
+    matchLabels:
+      app: database
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: backend     # только поды с меткой app=backend
+    ports:
+    - protocol: TCP
+      port: 5432
+```
+
+**4. Разрешить egress только к DNS** (частый паттерн при default-deny egress).
+Док: [Default deny all egress traffic](https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-deny-all-egress-traffic)
+(там же предупреждение, что default-deny egress рвёт DNS).
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: prod
+spec:
+  podSelector: {}          # для всех подов namespace
+  policyTypes:
+  - Egress
   egress:
   - to:
-    - namespaceSelector: {}
+    - namespaceSelector: {} # DNS-сервис живёт в kube-system
     ports:
-    - {protocol: UDP, port: 53}
-    - {protocol: TCP, port: 53}
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
 ```
 
 ```mermaid
 flowchart TB
     q["Что нужно?"]
-    q -->|"запретить весь вход в namespace"| dd["podSelector: {} + Ingress без правил"]
-    q -->|"пустить из другого namespace"| ns["namespaceSelector"]
-    q -->|"пустить с конкретных подов"| ps["podSelector в from"]
-    q -->|"пустить egress к DNS"| dns["egress на порт 53 UDP/TCP"]
+    q -->|"запретить весь<br>вход в namespace"| dd["podSelector: {}<br>+ Ingress без правил"]
+    q -->|"пустить из<br>другого namespace"| ns["namespaceSelector"]
+    q -->|"пустить с<br>конкретных подов"| ps["podSelector в from"]
+    q -->|"пустить egress<br>к DNS"| dns["egress на порт 53<br>UDP/TCP"]
     style q fill:#f4b400,color:#000
     style dd fill:#db4437,color:#fff
     style ns fill:#326ce5,color:#fff

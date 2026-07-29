@@ -14,24 +14,15 @@
 RBAC строится на разделении «что можно» и «кому это дать». Отсюда четыре объекта, парами:
 
 ```mermaid
-flowchart TB
-    subgraph What["ЧТО можно (разрешения)"]
-        role["Role<br>права в ОДНОМ namespace"]
-        crole["ClusterRole<br>права на весь кластер<br>или на cluster-scoped ресурсы"]
-    end
-    subgraph Who["КОМУ дать (привязки)"]
-        rb["RoleBinding<br>привязка в namespace"]
-        crb["ClusterRoleBinding<br>привязка на весь кластер"]
-    end
-    role --> rb
-    crole --> rb
-    crole --> crb
-    style What fill:#326ce5,color:#fff
-    style Who fill:#0f9d58,color:#fff
-    style role fill:#5a8de0,color:#fff
-    style crole fill:#5a8de0,color:#fff
-    style rb fill:#3cb371,color:#fff
-    style crb fill:#3cb371,color:#fff
+flowchart LR
+    role["Role<br>(что можно в namespace)"] --> rb["RoleBinding<br>(кому дать в namespace)"]
+    crole["ClusterRole<br>(что можно в кластере)"] --> rb
+    crole --> crb["ClusterRoleBinding<br>(кому дать в кластере)"]
+
+    style role fill:#326ce5,color:#fff
+    style crole fill:#326ce5,color:#fff
+    style rb fill:#0f9d58,color:#fff
+    style crb fill:#0f9d58,color:#fff
 ```
 
 | Объект | Что описывает | Область |
@@ -69,9 +60,9 @@ rules:
 
 ```mermaid
 flowchart LR
-    role["Role"] --> ag["apiGroups: какая группа API"]
-    role --> res["resources: какие типы"]
-    role --> vb["verbs: какие действия"]
+    role["Role"] --> ag["apiGroups:<br>какая группа API"]
+    role --> res["resources:<br>какие типы"]
+    role --> vb["verbs:<br>какие действия"]
     style role fill:#326ce5,color:#fff
     style ag fill:#0f9d58,color:#fff
     style res fill:#0f9d58,color:#fff
@@ -119,8 +110,8 @@ namespaces - глава 6), которых нет в конкретном namesp
 ```mermaid
 flowchart TB
     cr["ClusterRole"]
-    cr -->|"+ ClusterRoleBinding"| all["права ВО ВСЕХ namespace<br>+ на cluster-scoped ресурсы"]
-    cr -->|"+ RoleBinding (в namespace)"| one["те же права, но ТОЛЬКО<br>в одном namespace"]
+    cr -->|"с ClusterRoleBinding"| all["права ВО ВСЕХ<br>namespace +<br>cluster-scoped ресурсы"]
+    cr -->|"с RoleBinding<br>(в namespace)"| one["те же права,<br>но ТОЛЬКО<br>в одном namespace"]
     style cr fill:#326ce5,color:#fff
     style all fill:#db4437,color:#fff
     style one fill:#0f9d58,color:#fff
@@ -197,8 +188,8 @@ RBAC - инструмент принципа минимальных привил
 
 ```mermaid
 flowchart TB
-    bad["cluster-admin всем<br>«чтобы работало»"] --> risk["огромный риск:<br>компрометация = весь кластер"]
-    good["точечные Role/RoleBinding<br>на конкретные ресурсы и namespace"] --> safe["минимальный ущерб<br>при компрометации"]
+    bad["cluster-admin всем<br>«чтобы работало»"] --> risk["огромный риск:<br>компрометация =<br>весь кластер"]
+    good["точечные Role/RoleBinding<br>на конкретные ресурсы<br>и namespace"] --> safe["минимальный ущерб<br>при компрометации"]
     style bad fill:#db4437,color:#fff
     style risk fill:#c0392b,color:#fff
     style good fill:#0f9d58,color:#fff

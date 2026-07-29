@@ -54,10 +54,10 @@ volumeBindingMode: WaitForFirstConsumer
 ```mermaid
 flowchart TB
     sc["StorageClass fast-ssd"]
-    sc --> p1["provisioner:<br>какой драйвер создаёт диск (CSI)"]
-    sc --> p2["parameters:<br>тип диска, шифрование, IOPS"]
+    sc --> p1["provisioner:<br>какой драйвер<br>создаёт диск (CSI)"]
+    sc --> p2["parameters:<br>тип диска,<br>шифрование, IOPS"]
     sc --> p3["reclaimPolicy:<br>Delete / Retain"]
-    sc --> p4["volumeBindingMode:<br>когда создавать/связывать том"]
+    sc --> p4["volumeBindingMode:<br>когда создавать/<br>связывать том"]
     style sc fill:#326ce5,color:#fff
     style p1 fill:#0f9d58,color:#fff
     style p2 fill:#0f9d58,color:#fff
@@ -129,8 +129,9 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    imm["Immediate<br>PV создаётся СРАЗУ при создании PVC<br>риск: том в одной зоне,<br>а под запланируют в другую"]
-    wfc["WaitForFirstConsumer<br>PV создаётся, когда под УЖЕ<br>запланирован → том в нужной зоне"]
+    imm["Immediate<br>PV создаётся<br>СРАЗУ при<br>создании PVC<br>риск: том<br>в одной зоне,<br>а под — в другой"]
+    wfc["WaitForFirstConsumer<br>PV создаётся,<br>когда под УЖЕ<br>запланирован →<br>том в нужной зоне"]
+    imm ~~~ wfc
     style imm fill:#f4b400,color:#000
     style wfc fill:#0f9d58,color:#fff
 ```
@@ -203,7 +204,128 @@ CSI подробнее (вместе с CNI/CRI) разберём в главе 
 `provisioner` стоит CSI-драйвер, который умеет создавать/удалять/монтировать тома
 конкретного типа хранилища.
 
-## 26.8. Как это применяют в продакшене
+## 26.8. Практический кейс: посмотреть, удалить, расширить
+
+Разберём типовые операции над хранилищем в двух разрезах: **локальный PV на ноде**
+(статический, без провизионера) и **облачный диск EBS** (динамический, с CSI). Разница
+между ними ярче всего видна как раз на удалении и расширении.
+
+### Посмотреть, какие PV и PVC есть
+
+```bash
+kubectl get pvc                 # PVC в текущем namespace
+kubectl get pvc -A              # во всех namespace
+kubectl get pv                  # PV — кластерные, без namespace
+
+# сразу видны ключевые поля:
+# PVC: STATUS (Bound/Pending), VOLUME (имя PV), CAPACITY, STORAGECLASS
+# PV:  STATUS (Bound/Available/Released), CLAIM (какой PVC), RECLAIMPOLICY
+
+kubectl describe pvc data       # события: почему Pending, к какому PV привязан
+kubectl describe pv <pv-name>   # тип тома (hostPath/local/csi), nodeAffinity
+
+# чем реально подкреплён том: путь на ноде или ID диска в облаке
+kubectl get pv <pv-name> -o jsonpath='{.spec.local.path}{.spec.csi.volumeHandle}'
+```
+
+### Вариант A. Локальный PV на ноде (статический)
+
+Локальный том - это каталог/диск конкретной ноды. Динамического провизионера нет: PV
+создаёт админ вручную и жёстко привязывает к ноде через `nodeAffinity`.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv-node1
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes: ["ReadWriteOnce"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /mnt/disks/data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values: ["node1"]
+```
+
+- **Посмотреть**: `kubectl get pv local-pv-node1 -o wide`; `kubectl describe pv ...`
+  покажет `Node Affinity` и путь `/mnt/disks/data`.
+- **Удалить**: удаляем под, затем PVC (`kubectl delete pvc <name>`). При `Retain` PV
+  переходит в `Released`, но сам НЕ освобождается для повторного использования, а данные
+  остаются в `/mnt/disks/data` на node1. Чтобы переиспользовать - вручную почистить
+  каталог на ноде и либо удалить PV (`kubectl delete pv local-pv-node1`), либо убрать у
+  него `spec.claimRef`, вернув в `Available`.
+- **Расширить**: локальный том **не поддерживает расширение** через Kubernetes
+  (провизионер `no-provisioner`, `allowVolumeExpansion` не действует). «Увеличение» - это
+  вручную дать больше места на ноде (диск/раздел) и при необходимости пересоздать PV с
+  новым `capacity`. Через `kubectl edit pvc` размер не вырастет.
+
+### Вариант B. Облачный диск EBS (динамический)
+
+Диск создаётся сам по StorageClass с CSI-провизионером AWS, и его можно расширять на лету.
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-sc
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+reclaimPolicy: Delete
+allowVolumeExpansion: true        # ← без этого расширить PVC нельзя
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: ebs-sc
+  resources:
+    requests:
+      storage: 10Gi
+```
+
+- **Посмотреть**: `kubectl get pvc data` (Bound, привязан PV), `kubectl get pv` покажет
+  автоматически созданный PV; `kubectl get pv <pv> -o jsonpath='{.spec.csi.volumeHandle}'`
+  даст ID тома EBS (`vol-0abc...`), который виден и в консоли AWS.
+- **Удалить**: `kubectl delete pvc data`. При `reclaimPolicy: Delete` PV и сам диск EBS
+  удаляются автоматически - платить за них перестаёте. При `Retain` PV останется
+  `Released`, а диск EBS сохранится (и продолжит стоить денег) - его убирают вручную.
+- **Расширить (онлайн)**: увеличиваем запрос в PVC - CSI расширяет реальный диск без
+  пересоздания пода:
+
+```bash
+kubectl patch pvc data -p '{"spec":{"resources":{"requests":{"storage":"20Gi"}}}}'
+# или: kubectl edit pvc data  →  storage: 20Gi
+
+kubectl get pvc data -w   # CAPACITY вырастет, условие FileSystemResizePending уйдёт
+```
+
+Тонкости расширения EBS:
+
+- размер можно только **увеличивать**, уменьшить нельзя;
+- нужен `allowVolumeExpansion: true` в StorageClass (задаётся заранее, до создания PVC);
+- расширение файловой системы обычно автоматическое; на части версий/ФС может
+  потребоваться перезапуск пода;
+- в AWS один том EBS можно изменять не более 4 раз за скользящие 24 часа, и каждое
+  следующее изменение возможно лишь после того, как предыдущее дойдёт до статуса
+  `completed` (само изменение занимает от минут до нескольких часов).
+
+Итог контраста: локальный PV дёшев и быстр, но привязан к ноде, чистится вручную и не
+расширяется; EBS - самообслуживаемый и расширяемый онлайн, но зональный и платный, пока
+существует.
+
+## 26.9. Как это применяют в продакшене
 
 - **Динамический провижининг - стандарт.** В облачных кластерах хранилище работает так:
   разработчик создаёт PVC, StorageClass + CSI создают диск сам. Ручные PV - редкость (для
@@ -222,7 +344,7 @@ CSI подробнее (вместе с CNI/CRI) разберём в главе 
   удаляются автоматически: это защищает данные БД, но требует осознанной очистки, чтобы
   не копить «осиротевшие» диски (и не платить за них).
 
-## 26.9. Мини-глоссарий
+## 26.10. Мини-глоссарий
 
 - **StorageClass** - шаблон создания томов: провизионер, параметры, reclaim-политика.
 - **Динамический провижининг** - автоматическое создание PV под запрос PVC.
@@ -234,7 +356,7 @@ CSI подробнее (вместе с CNI/CRI) разберём в главе 
 - **CSI (Container Storage Interface)** - стандарт подключения хранилищ к Kubernetes.
 - **allowVolumeExpansion** - разрешение на расширение томов класса.
 
-## 26.10. Итоги главы
+## 26.11. Итоги главы
 
 - Динамический провижининг избавляет от ручного создания PV: PVC появился - PV с реальным
   диском создаётся сам по StorageClass.
@@ -247,8 +369,13 @@ CSI подробнее (вместе с CNI/CRI) разберём в главе 
 - StatefulSet через `volumeClaimTemplates` создаёт свой PVC на каждый под; PVC привязан к
   поду и не удаляется автоматически при удалении StatefulSet.
 - За провизионером стоит CSI-драйвер - единый интерфейс к любому хранилищу.
+- PV/PVC смотрят через `kubectl get/describe pv,pvc`; удаление и расширение по-разному
+  работают у локального тома и облачного диска.
+- Локальный PV на ноде: привязан к ноде, при `Retain` чистится вручную, расширение не
+  поддерживается. EBS: удаляется автоматически при `Delete`, расширяется онлайн при
+  `allowVolumeExpansion: true` (только вверх).
 
-## 26.11. Как это пригодится: на экзамене и в реальной работе
+## 26.12. Как это пригодится: на экзамене и в реальной работе
 
 **На экзамене.** «Создай PVC с нужным StorageClass», «почему PVC в Pending» (нет
 дефолтного класса/провизионера), «разверни StatefulSet с volumeClaimTemplates» - типовые
@@ -261,7 +388,7 @@ reclaimPolicy, WaitForFirstConsumer) определяют производите
 сохранность данных. Управление PVC от StatefulSet - часть эксплуатации баз данных в
 кластере.
 
-## 26.12. Вопросы для самопроверки
+## 26.13. Вопросы для самопроверки
 
 1. Чем динамический провижининг лучше ручного создания PV?
 2. Что описывает StorageClass и что такое provisioner?
@@ -270,6 +397,8 @@ reclaimPolicy, WaitForFirstConsumer) определяют производите
 5. Как volumeClaimTemplates связывает под StatefulSet с его томом при пересоздании?
 6. Почему PVC от StatefulSet не удаляются автоматически и чем это важно?
 7. Что такое CSI и какую роль он играет в провижининге?
+8. Как посмотреть список PV и PVC и чем реально подкреплён том (путь на ноде или ID диска)?
+9. Чем отличаются удаление и расширение у локального PV на ноде и у облачного диска EBS?
 
 ## Практика
 

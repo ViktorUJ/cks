@@ -16,13 +16,13 @@ Kubernetes насквозь построен на TLS-сертификатах: 
 выпущенным доверенным **CA (Certificate Authority)** кластера.
 
 ```mermaid
-flowchart TB
+flowchart LR
     ca["CA кластера<br>/etc/kubernetes/pki/ca.crt"]
     ca --> apiserver["сертификат apiserver"]
     ca --> kubelet["сертификаты kubelet"]
-    ca --> etcd["сертификаты etcd (свой CA)"]
+    ca --> etcd["сертификаты etcd<br>(свой CA)"]
     ca --> user["клиентские сертификаты<br>пользователей"]
-    note["все доверяют одному CA →<br>проверяют подлинность друг друга"]
+    note["все доверяют одному CA →<br>проверяют подлинность<br>друг друга"]
     ca -.-> note
     style ca fill:#f4b400,color:#000
     style apiserver fill:#326ce5,color:#fff
@@ -41,12 +41,12 @@ CA кластера - корень доверия. Всё, что он подп�
 клиентского сертификата**:
 
 ```mermaid
-flowchart LR
+flowchart TB
     cert["Клиентский сертификат"] --> cn["CN (Common Name)<br>→ имя пользователя"]
     cert --> o["O (Organization)<br>→ группа"]
-    cn --> authn["API-сервер: это пользователь alice"]
-    o --> authn2["...из группы developers"]
-    authn --> rbac["RBAC решает, что можно (глава 38)"]
+    cn --> authn["API-сервер:<br>пользователь alice"]
+    o --> authn2["...из группы<br>developers"]
+    authn --> rbac["RBAC решает,<br>что можно (глава 38)"]
     style cert fill:#0f9d58,color:#fff
     style cn fill:#326ce5,color:#fff
     style o fill:#326ce5,color:#fff
@@ -69,14 +69,12 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    subgraph KC["kubeconfig"]
-        clusters["clusters:<br>адрес API + CA кластера"]
-        users["users:<br>удостоверения (сертификат/токен)"]
-        contexts["contexts:<br>связка cluster + user + namespace"]
-    end
-    current["current-context:<br>какой контекст активен"]
-    contexts --> current
-    style KC fill:#eeeeee,color:#000
+    kc["kubeconfig"]
+    kc --> clusters["clusters:<br>адрес API + CA кластера"]
+    kc --> users["users:<br>удостоверения<br>(сертификат/токен)"]
+    kc --> contexts["contexts:<br>связка cluster +<br>user + namespace"]
+    contexts --> current["current-context:<br>какой контекст активен"]
+    style kc fill:#eeeeee,color:#000
     style clusters fill:#326ce5,color:#fff
     style users fill:#0f9d58,color:#fff
     style contexts fill:#673ab7,color:#fff
@@ -157,11 +155,58 @@ kubectl certificate approve alice
 
 # 4. Забрать подписанный сертификат
 kubectl get csr alice -o jsonpath='{.status.certificate}' | base64 -d > alice.crt
+
+# 5. Привязать пользователя к роли через RBAC (иначе аутентифицируется, но получит 403)
+kubectl create role pod-reader --verb=get,list,watch --resource=pods -n dev
+kubectl create rolebinding alice-pod-reader \
+  --role=pod-reader --user=alice -n dev
+
+# проверить, что права появились
+kubectl auth can-i list pods -n dev --as=alice
+```
+
+Здесь субъект - **`--user=alice`**: имя должно совпадать с `CN` из сертификата
+(`/CN=alice`), тогда RBAC привяжет права именно к этому удостоверению. Если бы права
+давались группе, использовали бы `--group=developers` (значение `O` из сертификата).
+
+> **Важно: `--user=alice` берётся из `CN` сертификата, а НЕ из `metadata.name` CSR-объекта.**
+> При подключении kubectl предъявляет подписанный сертификат, а apiserver определяет
+> личность по полю **`CN`** (группы - по `O`). Именно с этим именем сверяется субъект в
+> RoleBinding. Поле `metadata.name: alice` у объекта `CertificateSigningRequest` - это лишь
+> имя ресурса CSR в кластере (чтобы сделать `kubectl certificate approve alice`); оно может
+> быть любым (`alice-csr`, `req-123`) и на личность не влияет. В примере оба значения
+> совпадают (`alice`) только для наглядности. Проверить, что зашито в сертификат:
+>
+> ```bash
+> openssl x509 -in alice.crt -noout -subject
+> # subject=CN = alice, O = developers
+> ```
+
+Тот же RoleBinding в виде манифеста:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alice-pod-reader
+  namespace: dev
+subjects:
+- kind: User                 # субъект - пользователь из CN сертификата
+  name: alice
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
 ```
 
 ```mermaid
-flowchart LR
-    gen["openssl: ключ + CSR"] --> obj["создать CSR-объект"] --> pend["Pending"] --> approve["kubectl certificate approve"] --> crt["забрать сертификат"] --> rbac["дать права через RBAC (глава 38)"]
+flowchart TB
+    gen["openssl: ключ + CSR"] --> obj["создать CSR-объект"]
+    obj --> pend["Pending"]
+    pend --> approve["kubectl certificate approve"]
+    approve --> crt["забрать сертификат"]
+    crt --> rbac["дать права через RBAC<br>(глава 38)"]
     style gen fill:#0f9d58,color:#fff
     style obj fill:#326ce5,color:#fff
     style pend fill:#f4b400,color:#000
@@ -204,11 +249,11 @@ flowchart LR
 Связка этой главы, главы 21 и 38 даёт полную картину «почему нет доступа»:
 
 ```mermaid
-flowchart TB
-    problem["kubectl / пользователь не может"]
-    problem --> c1["не подключается вообще →<br>kubeconfig (адрес/CA), сертификат истёк"]
-    problem --> c2["Unauthorized (401) →<br>проблема аутентификации (сертификат/CA)"]
-    problem --> c3["Forbidden (403) →<br>проблема авторизации: нет RBAC (глава 38)"]
+flowchart LR
+    problem["kubectl / пользователь<br>не может"]
+    problem --> c1["не подключается вообще →<br>kubeconfig (адрес/CA),<br>сертификат истёк"]
+    problem --> c2["Unauthorized (401) →<br>проблема аутентификации<br>(сертификат/CA)"]
+    problem --> c3["Forbidden (403) →<br>проблема авторизации:<br>нет RBAC (глава 38)"]
     style problem fill:#db4437,color:#fff
     style c1 fill:#f4b400,color:#000
     style c2 fill:#326ce5,color:#fff

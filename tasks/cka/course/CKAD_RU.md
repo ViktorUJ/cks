@@ -22,6 +22,7 @@ Developer)**. Курс совместный (CKA + CKAD), и здесь собр
 - [0.5. Linux и инструменты ноды: SSH, sudo, systemd, логи](00-5-linux/ru.md)
 - [0.6. YAML: отступы, списки, словари, манифесты](00-6-yaml/ru.md) - **важно для CKAD** (каждый манифест)
 - [0.7. Linux-сеть под капотом: network namespaces, veth, маршруты](00-7-netns/ru.md)
+- [0.8. vim за 15 минут: выжить и настроить под YAML](00-8-vim/ru.md) - **важно для CKAD** (быстрая правка манифестов)
 
 Дальше - фундамент курса:
 
@@ -105,7 +106,7 @@ Developer)**. Курс совместный (CKA + CKAD), и здесь собр
 ```mermaid
 flowchart TB
     a["Основы: главы 1-3"] --> b["Design & Build: 4-5, 10-11, 22-24"]
-    b --> c["Config & Security: 14, 17-21"]
+    b --> c["Config & Security: 14, 17-21, 41"]
     c --> d["Deployment: 8-9, 42-43"]
     d --> e["Services & Networking: 6-7, 32, 34"]
     e --> f["Observability: 27-29"]

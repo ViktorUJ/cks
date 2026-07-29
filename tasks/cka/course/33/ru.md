@@ -13,21 +13,11 @@
 
 ```mermaid
 flowchart TB
-    subgraph Ingress["Ограничения Ingress"]
-        direction TB
-        i1["тонкая настройка — через<br>непереносимые аннотации"]
-        i2["роли размыты: один объект<br>и для инфраструктуры, и для приложения"]
-        i3["в основном только HTTP;<br>TCP/gRPC — костыли"]
-    end
-    subgraph Gateway["Gateway API решает"]
-        direction TB
-        g1["настройки — поля типизированных<br>объектов, переносимо"]
-        g2["роли разделены:<br>GatewayClass / Gateway / Route"]
-        g3["протоколы: HTTP, TCP, gRPC, TLS"]
-    end
-    Ingress --> Gateway
-    style Ingress fill:#db4437,color:#fff
-    style Gateway fill:#0f9d58,color:#fff
+    ing0["Ограничения Ingress"] --> i1["тонкая настройка —<br>через непереносимые<br>аннотации"] --> i2["роли размыты:<br>один объект и для<br>инфраструктуры,<br>и для приложения"] --> i3["в основном только<br>HTTP; TCP/gRPC —<br>костыли"]
+    gw0["Gateway API решает"] --> g1["настройки — поля<br>типизированных<br>объектов, переносимо"] --> g2["роли разделены:<br>GatewayClass /<br>Gateway / Route"] --> g3["протоколы:<br>HTTP, TCP, gRPC, TLS"]
+    i3 ~~~ gw0
+    style ing0 fill:#db4437,color:#fff
+    style gw0 fill:#0f9d58,color:#fff
     style i1 fill:#e57373,color:#000
     style i2 fill:#e57373,color:#000
     style i3 fill:#e57373,color:#000
@@ -46,14 +36,7 @@ Gateway API строится вокруг трёх ролей, каждой со
 
 ```mermaid
 flowchart TB
-    subgraph Roles["Роли и объекты Gateway API"]
-        direction TB
-        gc["GatewayClass<br>👤 производитель инфраструктуры<br>«какой контроллер/реализация»"]
-        gw["Gateway<br>👤 оператор кластера<br>«точка входа: порты, протоколы, TLS»"]
-        rt["HTTPRoute (и др.)<br>👤 разработчик приложения<br>«правила маршрутизации на сервисы»"]
-    end
-    gc --> gw --> rt
-    style Roles fill:#eeeeee,color:#000
+    gc["GatewayClass<br>👤 производитель<br>инфраструктуры<br>«какой контроллер/<br>реализация»"] --> gw["Gateway<br>👤 оператор кластера<br>«точка входа: порты,<br>протоколы, TLS»"] --> rt["HTTPRoute (и др.)<br>👤 разработчик<br>приложения<br>«правила маршрутизации<br>на сервисы»"]
     style gc fill:#673ab7,color:#fff
     style gw fill:#326ce5,color:#fff
     style rt fill:#0f9d58,color:#fff
@@ -148,7 +131,7 @@ spec:
 
 ```mermaid
 flowchart TB
-    req["Запрос shop.example.com/api"]
+    req["Запрос<br>shop.example.com<br>/api"]
     req --> gw["Gateway main-gateway<br>(порт 443, TLS)"]
     gw --> route["HTTPRoute shop-route"]
     route -->|"/api"| api["Service api:8080"]
@@ -227,9 +210,9 @@ Gateway API не отменяет Ingress мгновенно - Ingress ещё д
 
 ```mermaid
 flowchart TB
-    ing["Ingress (один объект):<br>host + paths + TLS + аннотации"]
+    ing["Ingress (один объект):<br>host + paths +<br>TLS + аннотации"]
     ing -->|"разбивается на"| gw["Gateway<br>(порты, протокол, TLS)"]
-    ing -->|"разбивается на"| rt["HTTPRoute<br>(hostnames, matches, backendRefs)"]
+    ing -->|"разбивается на"| rt["HTTPRoute<br>(hostnames, matches,<br>backendRefs)"]
     style ing fill:#f4b400,color:#000
     style gw fill:#326ce5,color:#fff
     style rt fill:#0f9d58,color:#fff
@@ -270,7 +253,8 @@ spec:
         backend:
           service:
             name: api
-            port: {number: 8080}
+            port:
+              number: 8080
 ```
 
 Эквивалент на Gateway API - `Gateway` + `HTTPRoute`:
@@ -333,8 +317,11 @@ ingress2gateway print --providers ingress-nginx -A > gwapi.yaml
 ### Порядок безопасной миграции
 
 ```mermaid
-flowchart LR
-    a["1 · Установить Gateway API<br>(CRD + реализация)"] --> b["2 · Создать Gateway + HTTPRoute<br>(эквивалент Ingress)"] --> c["3 · Паритет-проверка<br>(сравнить ответы)"] --> d["4 · Переключить трафик<br>на новый путь"] --> e["5 · Удалить старый Ingress"]
+flowchart TB
+    a["1 · Установить Gateway API<br>(CRD + реализация)"] --> b["2 · Создать Gateway + HTTPRoute<br>(эквивалент Ingress)"]
+    b --> c["3 · Паритет-проверка<br>(сравнить ответы)"]
+    c --> d["4 · Переключить трафик<br>на новый путь"]
+    d --> e["5 · Удалить старый Ingress"]
     style a fill:#326ce5,color:#fff
     style b fill:#0f9d58,color:#fff
     style c fill:#f4b400,color:#000

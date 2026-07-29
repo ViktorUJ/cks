@@ -12,9 +12,9 @@
 
 ```mermaid
 flowchart TB
-    s1["Шаг 1 · kubectl get pods<br>какой STATUS?"] --> s2["Шаг 2 · kubectl describe pod<br>секция Events — что случилось?"]
-    s2 --> s3["Шаг 3 · kubectl logs (--previous)<br>что говорит приложение?"]
-    s3 --> s4["Шаг 4 · kubectl top / exec / debug<br>ресурсы, заглянуть внутрь"]
+    s1["Шаг 1<br>kubectl get pods<br>какой STATUS?"] --> s2["Шаг 2<br>kubectl describe pod<br>секция Events —<br>что случилось?"]
+    s2 --> s3["Шаг 3<br>kubectl logs<br>(--previous)<br>что говорит<br>приложение?"]
+    s3 --> s4["Шаг 4<br>kubectl top /<br>exec / debug<br>ресурсы,<br>заглянуть внутрь"]
     style s1 fill:#f4b400,color:#000
     style s2 fill:#326ce5,color:#fff
     style s3 fill:#0f9d58,color:#fff
@@ -48,10 +48,10 @@ kubectl describe pod <pod>
 ```mermaid
 flowchart LR
     desc["kubectl describe pod"] --> ev["секция Events"]
-    ev --> e1["FailedScheduling → проблема планирования"]
-    ev --> e2["Failed/ImagePull → проблема образа"]
-    ev --> e3["Unhealthy → провал пробы"]
-    ev --> e4["BackOff → перезапуски"]
+    ev --> e1["FailedScheduling →<br>проблема планирования"]
+    ev --> e2["Failed/ImagePull →<br>проблема образа"]
+    ev --> e3["Unhealthy →<br>провал пробы"]
+    ev --> e4["BackOff →<br>перезапуски"]
     style desc fill:#326ce5,color:#fff
     style ev fill:#f4b400,color:#000
     style e1 fill:#0f9d58,color:#fff
@@ -119,8 +119,25 @@ kubectl debug node/<node> -it --image=busybox
 ```
 
 Ephemeral-контейнеры нельзя добавить в манифест заранее - только через `kubectl debug` к
-живому поду. Они не перезапускаются и исчезают, когда не нужны. Это правильный способ
-отлаживать «тихие» минимальные образы, не пересобирая их.
+живому поду. Они не перезапускаются. Это правильный способ отлаживать «тихие» минимальные
+образы, не пересобирая их.
+
+> **Как «отключить» уже подсаженный ephemeral-контейнер?** Отдельной командой удалить его
+> **нельзя**: API не позволяет убирать записи из `spec.ephemeralContainers`, а команды
+> вроде `kubectl delete container` не существует. Что можно сделать:
+>
+> - **завершить процесс** внутри - выйти из шелла (`exit`) или прибить процесс. Ephemeral-
+>   контейнер перейдёт в `Terminated` и, поскольку не перезапускается, больше работать не
+>   будет. Но он **останется в описании пода** - его по-прежнему видно в `kubectl describe
+>   pod` (секция `Ephemeral Containers`) и в `kubectl get pod -o yaml`.
+> - **полностью убрать** его можно только **пересозданием пода**: `kubectl delete pod
+>   <pod>` (если под под контроллером - Deployment/StatefulSet - он поднимется заново уже
+>   без отладочного контейнера). Поэтому для отладки, которую хочется «выбросить»
+>   начисто, удобен вариант `--copy-to`: вы работаете с копией-подом и потом просто
+>   удаляете её, не трогая оригинал.
+>
+> Практический вывод: ephemeral-контейнер - «одноразовый». Его не гасят и не переиспользуют,
+> а живут с ним до пересоздания пода.
 
 ## 29.5. Устаревание API (API deprecations)
 
@@ -166,8 +183,8 @@ kubectl api-resources                 # ресурсы и их группы
 
 ```mermaid
 flowchart LR
-    before["Перед апгрейдом кластера"] --> scan["просканировать манифесты<br>на устаревшие apiVersion"]
-    scan --> fix["исправить на актуальные<br>(kubectl explain / api-versions)"]
+    before["Перед апгрейдом<br>кластера"] --> scan["просканировать<br>манифесты<br>на устаревшие<br>apiVersion"]
+    scan --> fix["исправить на<br>актуальные<br>(kubectl explain /<br>api-versions)"]
     fix --> apply["переприменить"]
     style before fill:#f4b400,color:#000
     style scan fill:#326ce5,color:#fff
@@ -183,17 +200,8 @@ open-source инструменты. Они работают в двух мест
 
 ```mermaid
 flowchart TB
-    subgraph cluster["По живому кластеру (что задеплоено)"]
-        kubent1["kubent"]
-        pluto1["pluto (in-cluster)"]
-        popeye["Popeye"]
-        metric["метрика apiserver<br>apiserver_requested_deprecated_apis"]
-    end
-    subgraph code["По коду (манифесты/чарты в CI)"]
-        pluto2["pluto (files/Helm)"]
-        kubepug["kubepug / kubectl deprecations"]
-        kubeconform["kubeconform"]
-    end
+    cluster["По живому кластеру<br>(что задеплоено)"] --> kubent1["kubent"] --> pluto1["pluto (in-cluster)"] --> popeye["Popeye"] --> metric["метрика apiserver:<br>apiserver_requested_<br>deprecated_apis"]
+    code["По коду<br>(манифесты/чарты в CI)"] --> pluto2["pluto (files/Helm)"] --> kubepug["kubepug /<br>kubectl deprecations"] --> kubeconform["kubeconform"]
     style cluster fill:#e8f0fe,color:#000
     style code fill:#fff3e0,color:#000
     style kubent1 fill:#0f9d58,color:#fff

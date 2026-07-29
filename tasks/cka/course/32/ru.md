@@ -14,20 +14,13 @@
 
 ```mermaid
 flowchart TB
-    subgraph Bad["Без Ingress: LB на каждый сервис"]
-        direction TB
-        lb1["LB 1 → shop"]
-        lb2["LB 2 → api"]
-        lb3["LB 3 → blog"]
-    end
-    subgraph Good["С Ingress: один вход"]
-        direction TB
-        ing["Ingress (L7)"] --> gshop["shop.example.com → shop"]
-        ing --> gapi["api.example.com → api"]
-        ing --> gblog["/blog → blog"]
-    end
-    style Bad fill:#db4437,color:#fff
-    style Good fill:#0f9d58,color:#fff
+    bad0["Без Ingress:<br>LB на каждый сервис"] --> lb1["LB 1 → shop"] --> lb2["LB 2 → api"] --> lb3["LB 3 → blog"]
+    good0["С Ingress:<br>один вход"] --> ing["Ingress (L7)"]
+    ing --> gshop["shop.example.com<br>→ shop"]
+    ing --> gapi["api.example.com<br>→ api"]
+    ing --> gblog["/blog → blog"]
+    style bad0 fill:#db4437,color:#fff
+    style good0 fill:#0f9d58,color:#fff
     style lb1 fill:#e57373,color:#000
     style lb2 fill:#e57373,color:#000
     style lb3 fill:#e57373,color:#000
@@ -46,8 +39,8 @@ L4-балансировки Service (глава 7).
 
 ```mermaid
 flowchart LR
-    res["Ingress-ресурс<br>(объект Kubernetes)<br>= ПРАВИЛА маршрутизации<br>(декларация)"]
-    ctrl["Ingress-контроллер<br>(работающий под, напр. nginx)<br>= ТОТ, КТО правила ИСПОЛНЯЕТ"]
+    res["Ingress-ресурс<br>(объект Kubernetes)<br>= ПРАВИЛА<br>маршрутизации<br>(декларация)"]
+    ctrl["Ingress-контроллер<br>(работающий под,<br>напр. nginx)<br>= ТОТ, КТО<br>правила ИСПОЛНЯЕТ"]
     res -->|"контроллер читает<br>и применяет"| ctrl
     style res fill:#326ce5,color:#fff
     style ctrl fill:#0f9d58,color:#fff
@@ -75,9 +68,77 @@ flowchart LR
 | **Cloud-специфичные** | GKE/AKS-контроллеры |
 
 Между контроллерами разграничивает **IngressClass** - объект, указывающий, какой
-контроллер обслуживает данный Ingress (`ingressClassName` в ресурсе).
+контроллер обслуживает данный Ingress (`ingressClassName` в ресурсе). Разберём его
+отдельно.
 
-## 32.4. Манифест Ingress: маршрутизация по хостам и путям
+## 32.4. IngressClass: какой контроллер обслуживает Ingress
+
+В кластере может работать **несколько** Ingress-контроллеров сразу (например, ingress-nginx
+для внутренних сервисов и облачный ALB для публичных). Чтобы каждый контроллер понимал,
+какие Ingress-ресурсы **его**, а какие чужие, есть объект **IngressClass**. Ingress-ресурс
+ссылается на него полем `spec.ingressClassName`.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: nginx
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "true"   # класс по умолчанию
+spec:
+  controller: k8s.io/ingress-nginx      # идентификатор реализации контроллера
+```
+
+```mermaid
+flowchart TB
+    ing["Ingress<br>ingressClassName: nginx"] -->|"указывает класс"| ic1["IngressClass nginx<br>controller:<br>k8s.io/ingress-nginx<br>(по умолчанию)"]
+    ic1 --> ctl1["контроллер<br>ingress-nginx"]
+    ic2["IngressClass alb<br>controller:<br>ingress.k8s.aws/alb"] --> ctl2["контроллер<br>AWS ALB"]
+    ing ~~~ ic2
+    style ing fill:#f4b400,color:#000
+    style ic1 fill:#326ce5,color:#fff
+    style ic2 fill:#326ce5,color:#fff
+    style ctl1 fill:#0f9d58,color:#fff
+    style ctl2 fill:#0f9d58,color:#fff
+```
+
+Посмотреть, какие классы есть в кластере и какой из них дефолтный:
+
+```bash
+# список классов и их контроллеров
+kubectl get ingressclass
+# NAME    CONTROLLER              PARAMETERS   AGE
+# nginx   k8s.io/ingress-nginx    <none>       10d
+
+# какой класс помечен как дефолтный (по аннотации is-default-class)
+kubectl get ingressclass -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.annotations.ingressclass\.kubernetes\.io/is-default-class}{"\n"}{end}'
+
+# детали конкретного класса (controller, параметры)
+kubectl describe ingressclass nginx
+
+# какой класс реально используют существующие Ingress
+kubectl get ingress -A -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,CLASS:.spec.ingressClassName
+```
+
+Что важно знать:
+
+- **`spec.controller`** - неизменяемый идентификатор реализации (например,
+  `k8s.io/ingress-nginx`), который «застолбил» сам контроллер. Вы выбираете класс по его
+  **имени** (`nginx`), а контроллер обслуживает все Ingress с этим классом.
+- **IngressClass - cluster-scoped** объект (не привязан к namespace, глава 6), а
+  Ingress-ресурсы - namespaced и ссылаются на класс из любого namespace.
+- **Класс по умолчанию.** Аннотация `ingressclass.kubernetes.io/is-default-class: "true"`
+  делает класс дефолтным: Ingress **без** `ingressClassName` тогда попадёт к нему.
+  Дефолтный класс должен быть один - иначе получите ошибку/неоднозначность.
+- **Если класса нет и дефолтного тоже нет** - Ingress остаётся «ничьим»: ни один
+  контроллер его не подхватит, и он молча не работает. Это одна из частых причин «создал
+  Ingress, а он не отвечает».
+- **Устаревшая аннотация.** Раньше класс задавали аннотацией
+  `kubernetes.io/ingress.class` прямо на Ingress. В `networking.k8s.io/v1` её заменило
+  поле `ingressClassName`; старую аннотацию некоторые контроллеры ещё понимают ради
+  совместимости, но в новых манифестах используют поле.
+
+## 32.5. Манифест Ingress: маршрутизация по хостам и путям
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -110,10 +171,10 @@ spec:
 
 ```mermaid
 flowchart TB
-    req["Запрос shop.example.com/api/x"]
+    req["Запрос<br>shop.example.com<br>/api/x"]
     req --> ing["Ingress-контроллер"]
-    ing -->|"host=shop, path=/api"| api["Service api:8080"]
-    ing -->|"host=shop, path=/"| fe["Service frontend:80"]
+    ing -->|"host=shop,<br>path=/api"| api["Service api:8080"]
+    ing -->|"host=shop,<br>path=/"| fe["Service frontend:80"]
     style req fill:#f4b400,color:#000
     style ing fill:#326ce5,color:#fff
     style api fill:#0f9d58,color:#fff
@@ -123,7 +184,7 @@ flowchart TB
 Ingress маршрутизирует на **Service** (не напрямую на поды) - то есть надстраивается над
 всем, что мы разбирали в главах 7 и 31.
 
-## 32.5. pathType: как сопоставляются пути
+## 32.6. pathType: как сопоставляются пути
 
 Поле `pathType` определяет способ сравнения пути - частая тонкость:
 
@@ -145,7 +206,7 @@ flowchart LR
     style impl fill:#673ab7,color:#fff
 ```
 
-## 32.6. TLS в Ingress
+## 32.7. TLS в Ingress
 
 Ingress умеет терминировать HTTPS: расшифровывать TLS на входе, дальше в кластер трафик
 идёт по HTTP. Сертификат и ключ берутся из Secret типа `kubernetes.io/tls` (глава 19).
@@ -175,7 +236,7 @@ flowchart LR
 **cert-manager** - оператор, который выпускает и продлевает сертификаты (например, от
 Let's Encrypt). В проде почти всегда cert-manager.
 
-## 32.7. Аннотации: тонкая настройка контроллера
+## 32.8. Аннотации: тонкая настройка контроллера
 
 Базовый Ingress-ресурс описывает только хосты/пути/TLS. Всё остальное (rewrite,
 редиректы, таймауты, rate limit, canary) настраивается **аннотациями**, специфичными для
@@ -203,7 +264,7 @@ flowchart TB
 эту проблему решает Gateway API (глава 33), где такие настройки становятся полями
 объектов, а не строками-аннотациями.
 
-## 32.8. Как это применяют в продакшене
+## 32.9. Как это применяют в продакшене
 
 - **Ingress - стандартный вход для HTTP(S).** В проде наружу выставляют один
   Ingress-контроллер (за одним LoadBalancer), а десятки сервисов маршрутизируют через
@@ -221,7 +282,7 @@ flowchart TB
   = либо не установлен контроллер, либо сервис за ним без готовых подов (пустой Endpoints,
   глава 7), либо неверный `ingressClassName`.
 
-## 32.9. Мини-глоссарий
+## 32.10. Мини-глоссарий
 
 - **Ingress-ресурс** - декларация правил L7-маршрутизации (хосты, пути, TLS).
 - **Ingress-контроллер** - приложение, исполняющее Ingress-правила (nginx, Traefik, ALB).
@@ -231,7 +292,7 @@ flowchart TB
 - **cert-manager** - оператор автоматического выпуска и продления сертификатов.
 - **аннотации Ingress** - настройки, специфичные для контроллера (rewrite, timeout и др.).
 
-## 32.10. Итоги главы
+## 32.11. Итоги главы
 
 - Ingress даёт один вход для многих сервисов с L7-маршрутизацией по хостам/путям и TLS -
   дешевле и гибче, чем LoadBalancer на каждый сервис.
@@ -246,7 +307,7 @@ flowchart TB
 - Тонкие настройки - через аннотации, но они непереносимы между контроллерами (эту
   проблему решает Gateway API, глава 33).
 
-## 32.11. Как это пригодится: на экзамене и в реальной работе
+## 32.12. Как это пригодится: на экзамене и в реальной работе
 
 **На экзамене.** «Создай Ingress с маршрутизацией по host/path», «настрой TLS для
 Ingress», «почему Ingress не отвечает» - типовые задания. Нужно писать Ingress-ресурс с
@@ -257,7 +318,7 @@ Ingress», «почему Ingress не отвечает» - типовые за�
 кластер. Связка с cert-manager автоматизирует TLS. Понимание «ресурс vs контроллер» и роли
 аннотаций - основа настройки входа и разбора инцидентов «сервис недоступен снаружи».
 
-## 32.12. Вопросы для самопроверки
+## 32.13. Вопросы для самопроверки
 
 1. Зачем нужен Ingress, если есть Service типа LoadBalancer?
 2. В чём разница между Ingress-ресурсом и Ingress-контроллером? Что будет без

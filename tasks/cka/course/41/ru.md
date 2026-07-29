@@ -18,9 +18,9 @@
 
 ```mermaid
 flowchart TB
-    builtin["Встроенные типы:<br>Pod, Deployment, Service"]
+    builtin["Встроенные типы:<br>Pod, Deployment,<br>Service"]
     crd["CRD добавляет свои типы:<br>Certificate, Prometheus,<br>KafkaCluster, ..."]
-    both["kubectl работает с обоими<br>одинаково: get/apply/describe"]
+    both["kubectl работает<br>с обоими одинаково:<br>get/apply/describe"]
     builtin --> both
     crd --> both
     style builtin fill:#326ce5,color:#fff
@@ -51,7 +51,8 @@ spec:
           spec:
             type: object
             properties:
-              schedule: {type: string}
+              schedule:
+                type: string
 ```
 
 После применения CRD появляется новый тип `Backup`, и можно создавать его экземпляры
@@ -70,7 +71,7 @@ kubectl explain backup.spec        # работает и для CRD
 etcd, бэкап сам не выполнится.
 
 ```mermaid
-flowchart LR
+flowchart TB
     crd["CRD: новый тип Backup"] --> cr["создаём Backup-объект"]
     cr --> nothing["...ничего не происходит<br>(это просто запись в etcd)"]
     nothing --> need["нужен КОНТРОЛЛЕР,<br>который на него реагирует"]
@@ -95,7 +96,7 @@ flowchart LR
 flowchart TB
     cr["Custom Resource<br>(напр. PostgresCluster:<br>3 узла, версия 16)"]
     op["Оператор (контроллер)<br>непрерывно сверяет<br>желаемое и реальное"]
-    actions["создаёт StatefulSet, Service,<br>настраивает репликацию,<br>делает бэкапы, failover"]
+    actions["создаёт StatefulSet<br>и Service,<br>настраивает репликацию,<br>делает бэкапы,<br>failover"]
     cr --> op --> actions
     actions -.->|"наблюдение"| op
     style cr fill:#673ab7,color:#fff
@@ -169,8 +170,8 @@ kubectl apply -f my-custom-resource.yaml  # создать CR — операто
 ```mermaid
 flowchart TB
     q["Нужно расширить Kubernetes?"]
-    q -->|"хранить произвольную конфигурацию,<br>без своей логики"| cm["ConfigMap (глава 18)"]
-    q -->|"новый ТИП объекта с валидацией,<br>своим поведением, kubectl-интеграцией"| crd["CRD + контроллер (оператор)"]
+    q -->|"хранить произвольную<br>конфигурацию,<br>без своей логики"| cm["ConfigMap (глава 18)"]
+    q -->|"новый ТИП объекта<br>с валидацией,<br>своим поведением,<br>kubectl-интеграцией"| crd["CRD + контроллер<br>(оператор)"]
     style q fill:#f4b400,color:#000
     style cm fill:#326ce5,color:#fff
     style crd fill:#673ab7,color:#fff
@@ -188,8 +189,8 @@ CRD - не единственный способ добавить в Kubernetes 
 ```mermaid
 flowchart TB
     api["kube-apiserver"]
-    api -->|"1. CRD"| crd["новый тип хранится<br>в etcd кластера,<br>обслуживает сам apiserver"]
-    api -->|"2. Aggregation layer"| agg["APIService → свой<br>extension-apiserver<br>(своё хранилище/логика)"]
+    api -->|"1 — CRD"| crd["новый тип хранится<br>в etcd кластера,<br>обслуживает сам apiserver"]
+    api -->|"2 — Aggregation layer"| agg["APIService → свой<br>extension-apiserver<br>(своё хранилище/логика)"]
     style api fill:#326ce5,color:#fff
     style crd fill:#0f9d58,color:#fff
     style agg fill:#673ab7,color:#fff

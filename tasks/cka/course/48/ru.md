@@ -16,18 +16,15 @@
 
 ```mermaid
 flowchart TB
-    subgraph CKAD["CKAD (глава 47)"]
-        direction TB
-        d1["приложения: манифесты,<br>конфиги, пробы"]
-    end
-    subgraph CKA["CKA (эта глава)"]
-        direction TB
-        a1["troubleshooting 30% —<br>чинить кластер, ноды, control plane"]
-        a2["установка/обновление kubeadm,<br>etcd backup"]
-        a3["работа по SSH на нодах,<br>systemctl/journalctl/crictl"]
-    end
-    style CKAD fill:#673ab7,color:#fff
-    style CKA fill:#0f9d58,color:#fff
+    ckad["CKAD (глава 47)"]
+    ckad --> d1["приложения: манифесты,<br>конфиги, пробы"]
+
+    cka["CKA (эта глава)"]
+    cka --> a1["troubleshooting 30% —<br>чинить кластер, ноды,<br>control plane"]
+    a1 ~~~ a2["установка/обновление<br>kubeadm, etcd backup"]
+    a2 ~~~ a3["работа по SSH на нодах,<br>systemctl/journalctl/crictl"]
+    style ckad fill:#673ab7,color:#fff
+    style cka fill:#0f9d58,color:#fff
     style d1 fill:#9c27b0,color:#fff
     style a1 fill:#3cb371,color:#fff
     style a2 fill:#3cb371,color:#fff
@@ -43,12 +40,12 @@ flowchart TB
 Распределяйте время по весам (глава 1):
 
 ```mermaid
-flowchart TB
+flowchart LR
     t["2 часа"]
-    t --> ts["Troubleshooting 30% → ~36 мин"]
-    t --> ca["Cluster Arch/Install 25% → ~30 мин"]
-    t --> sn["Services & Networking 20% → ~24 мин"]
-    t --> ws["Workloads & Scheduling 15% → ~18 мин"]
+    t --> ts["Troubleshooting 30%<br>→ ~36 мин"]
+    t --> ca["Cluster Arch/Install 25%<br>→ ~30 мин"]
+    t --> sn["Services & Networking 20%<br>→ ~24 мин"]
+    t --> ws["Workloads & Scheduling 15%<br>→ ~18 мин"]
     t --> st["Storage 10% → ~12 мин"]
     style t fill:#326ce5,color:#fff
     style ts fill:#e74c3c,color:#fff
@@ -74,9 +71,9 @@ echo 'set tabstop=2 shiftwidth=2 expandtab' >> ~/.vimrc; export KUBE_EDITOR=vim
 ```
 
 ```mermaid
-flowchart LR
-    env["стандартная настройка (гл.47)"] --> ssh["готовность работать по SSH:<br>ssh <node>, sudo -i"]
-    ssh --> tools["на ноде: systemctl, journalctl,<br>crictl, etcdctl, vim манифестов"]
+flowchart TB
+    env["стандартная<br>настройка (гл.47)"] --> ssh["готовность работать<br>по SSH:<br>ssh &lt;node&gt;, sudo -i"]
+    ssh --> tools["на ноде: systemctl,<br>journalctl, crictl,<br>etcdctl, vim манифестов"]
     style env fill:#326ce5,color:#fff
     style ssh fill:#0f9d58,color:#fff
     style tools fill:#f4b400,color:#000
@@ -106,11 +103,11 @@ flowchart LR
 | PV/PVC, StorageClass | 25-26 |
 
 ```mermaid
-flowchart TB
+flowchart LR
     core["Ядро подготовки CKA"]
-    core --> tshoot["troubleshooting: приложения (44),<br>control plane/ноды (45), сеть (46)"]
-    core --> install["kubeadm (35), upgrade (36), etcd (37)"]
-    core --> sec["RBAC (38), сертификаты (39)"]
+    core --> tshoot["troubleshooting:<br>приложения (44),<br>control plane/ноды (45),<br>сеть (46)"]
+    core --> install["kubeadm (35),<br>upgrade (36),<br>etcd (37)"]
+    core --> sec["RBAC (38),<br>сертификаты (39)"]
     style core fill:#326ce5,color:#fff
     style tshoot fill:#e74c3c,color:#fff
     style install fill:#4a90d9,color:#fff
@@ -122,12 +119,12 @@ flowchart TB
 Раз troubleshooting - 30%, отработайте алгоритмы до автоматизма (главы 44-46):
 
 ```mermaid
-flowchart TB
+flowchart LR
     q["Задача-troubleshooting"]
-    q -->|"под не работает"| pod["get→describe→logs --previous→exec (гл.44)"]
-    q -->|"kubectl не отвечает / компонент"| cp["на ноде: crictl/journalctl,<br>манифесты в /etc/kubernetes (гл.45)"]
-    q -->|"нода NotReady"| node["ssh: systemctl/journalctl kubelet,<br>runtime, CNI, swap (гл.45)"]
-    q -->|"сеть/сервис"| net["послойно: IP→DNS→Endpoints→политика (гл.46)"]
+    q -->|"под не работает"| pod["get → describe →<br>logs --previous →<br>exec (гл.44)"]
+    q -->|"kubectl не отвечает /<br>компонент"| cp["на ноде: crictl/journalctl,<br>манифесты<br>в /etc/kubernetes (гл.45)"]
+    q -->|"нода NotReady"| node["ssh: systemctl/journalctl<br>kubelet, runtime,<br>CNI, swap (гл.45)"]
+    q -->|"сеть/сервис"| net["послойно: IP → DNS →<br>Endpoints →<br>политика (гл.46)"]
     style q fill:#f4b400,color:#000
     style pod fill:#0f9d58,color:#fff
     style cp fill:#326ce5,color:#fff
@@ -163,12 +160,13 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    e1["забыл вернуться с ноды →<br>делает задачу не в том контексте"]
+    e1["забыл вернуться с ноды →<br>делает задачу<br>не в том контексте"]
     e2["не тот namespace/контекст"]
-    e3["застрял на etcd/upgrade, бросил лёгкие"]
-    e4["правит не тот манифест / не проверил,<br>что static pod поднялся"]
-    e5["деструктив без проверки (restore, drain)"]
-    e6["ищет основы в docs вместо знания наизусть"]
+    e3["застрял на etcd/upgrade,<br>бросил лёгкие"]
+    e4["правит не тот манифест /<br>не проверил, что<br>static pod поднялся"]
+    e5["деструктив без проверки<br>(restore, drain)"]
+    e6["ищет основы в docs<br>вместо знания наизусть"]
+    e1 ~~~ e2 ~~~ e3 ~~~ e4 ~~~ e5 ~~~ e6
     style e1 fill:#db4437,color:#fff
     style e2 fill:#db4437,color:#fff
     style e3 fill:#db4437,color:#fff

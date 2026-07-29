@@ -14,8 +14,8 @@
 
 ```mermaid
 flowchart TB
-    q["Проблема уровня кластера"]
-    q -->|"kubectl не отвечает,<br>компоненты не работают"| cp["Control plane<br>(apiserver, etcd, scheduler, cm)"]
+    q["Проблема уровня<br>кластера"]
+    q -->|"kubectl не отвечает,<br>компоненты не работают"| cp["Control plane<br>(apiserver, etcd,<br>scheduler, cm)"]
     q -->|"нода NotReady,<br>поды на ней зависли"| node["Worker-нода<br>(kubelet, runtime, сеть)"]
     style q fill:#f4b400,color:#000
     style cp fill:#326ce5,color:#fff
@@ -91,14 +91,14 @@ flowchart LR
 (он докладывает статус) или то, от чего он зависит.
 
 ```mermaid
-flowchart TB
+flowchart LR
     nr["Нода NotReady"] --> ssh["зайти на ноду по SSH"]
     ssh --> kubelet["systemctl status kubelet<br>journalctl -u kubelet"]
-    kubelet --> c1["kubelet не запущен/падает"]
-    kubelet --> c2["runtime не работает<br>(systemctl status containerd)"]
-    kubelet --> c3["нет CNI → сеть не готова (гл.30)"]
-    kubelet --> c4["сертификаты/подключение к apiserver"]
-    kubelet --> c5["ресурсы ноды: диск/память (pressure)"]
+    kubelet --> c1["kubelet<br>не запущен/падает"]
+    kubelet --> c2["runtime не работает<br>(systemctl status<br>containerd)"]
+    kubelet --> c3["нет CNI → сеть<br>не готова (гл.30)"]
+    kubelet --> c4["сертификаты/подключение<br>к apiserver"]
+    kubelet --> c5["ресурсы ноды:<br>диск/память (pressure)"]
     style nr fill:#db4437,color:#fff
     style ssh fill:#f4b400,color:#000
     style kubelet fill:#326ce5,color:#fff
@@ -131,8 +131,10 @@ free -m                           # память
 | disk/memory pressure | таинты pressure, эвикшн | освободить диск/память (глава 13) |
 
 ```mermaid
-flowchart LR
-    log["journalctl -u kubelet"] --> find["ищем конкретную ошибку"] --> fix["чиним источник:<br>runtime / CNI / swap / серт / диск"] --> restart["restart kubelet → нода Ready"]
+flowchart TB
+    log["journalctl -u kubelet"] --> find["ищем конкретную ошибку"]
+    find --> fix["чиним источник:<br>runtime / CNI / swap /<br>серт / диск"]
+    fix --> restart["restart kubelet → нода Ready"]
     style log fill:#326ce5,color:#fff
     style find fill:#f4b400,color:#000
     style fix fill:#0f9d58,color:#fff

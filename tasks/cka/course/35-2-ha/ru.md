@@ -17,10 +17,10 @@ Worker-ноды и так избыточны: упал воркер - поды �
 
 ```mermaid
 flowchart TB
-    down["Упал единственный control plane"]
-    down --> a["нет kube-apiserver → kubectl не работает"]
-    down --> b["нет scheduler/controller-manager → нет планирования и самовосстановления"]
-    down --> c["потерян etcd без бэкапа → потерян ВЕСЬ кластер"]
+    down["Упал единственный<br>control plane"]
+    down --> a["нет kube-apiserver<br>→ kubectl не работает"]
+    down --> b["нет scheduler<br>и controller-manager<br>→ нет планирования<br>и самовосстановления"]
+    down --> c["потерян etcd без бэкапа<br>→ потерян ВЕСЬ кластер"]
     style down fill:#db4437,color:#fff
     style a fill:#e57373,color:#000
     style b fill:#e57373,color:#000
@@ -37,16 +37,21 @@ flowchart TB
 HA control plane - это две независимые задачи:
 
 ```mermaid
-flowchart LR
-    subgraph api["Доступность API"]
-        lb["Балансировщик"] --> a1["apiserver #1"]
-        lb --> a2["apiserver #2"]
-        lb --> a3["apiserver #3"]
-    end
-    subgraph data["Доступность данных"]
-        e1["etcd #1"] --- e2["etcd #2"] --- e3["etcd #3"]
-        q["кворум raft: большинство узлов"]
-    end
+flowchart TB
+    api["Доступность API"]
+    api --> lb["Балансировщик"]
+    lb --> a1["apiserver #1"]
+    lb --> a2["apiserver #2"]
+    lb --> a3["apiserver #3"]
+
+    data["Доступность данных"]
+    data --> e1["etcd #1"]
+    e1 --- e2["etcd #2"]
+    e2 --- e3["etcd #3"]
+    e3 -.-> q["кворум raft:<br>большинство узлов"]
+
+    style api fill:#eceff1,color:#000
+    style data fill:#eceff1,color:#000
     style lb fill:#f4b400,color:#000
     style a1 fill:#326ce5,color:#fff
     style a2 fill:#326ce5,color:#fff

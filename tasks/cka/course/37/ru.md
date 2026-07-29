@@ -16,10 +16,10 @@ ConfigMap, ServiceAccount. API-сервер - лишь дверь к etcd; са�
 ```mermaid
 flowchart TB
     etcd[("etcd<br>ВСЁ состояние кластера")]
-    etcd --> o1["все поды, Deployment, Service"]
-    etcd --> o2["ConfigMap, Secret"]
-    etcd --> o3["RBAC, ServiceAccount"]
-    etcd --> o4["namespaces, PV/PVC, ..."]
+    etcd --> o1["все поды,<br>Deployment,<br>Service"]
+    etcd --> o2["ConfigMap,<br>Secret"]
+    etcd --> o3["RBAC,<br>ServiceAccount"]
+    etcd --> o4["namespaces,<br>PV/PVC, ..."]
     lost["Потеря etcd без бэкапа =<br>ПОТЕРЯ ВСЕГО КЛАСТЕРА"]
     etcd -.-> lost
     style etcd fill:#f4b400,color:#000
@@ -55,10 +55,10 @@ sudo cat /etc/kubernetes/manifests/etcd.yaml | grep -E 'listen-client|cert|key|t
 
 ```mermaid
 flowchart LR
-    etcdctl["etcdctl"] --> ep["--endpoints=https://127.0.0.1:2379"]
-    etcdctl --> ca["--cacert=.../etcd/ca.crt"]
-    etcdctl --> cert["--cert=.../etcd/server.crt"]
-    etcdctl --> key["--key=.../etcd/server.key"]
+    etcdctl["etcdctl"] --> ep["--endpoints=<br>127.0.0.1:2379"]
+    etcdctl --> ca["--cacert=<br>.../etcd/ca.crt"]
+    etcdctl --> cert["--cert=<br>.../etcd/server.crt"]
+    etcdctl --> key["--key=<br>.../etcd/server.key"]
     style etcdctl fill:#326ce5,color:#fff
     style ep fill:#0f9d58,color:#fff
     style ca fill:#0f9d58,color:#fff

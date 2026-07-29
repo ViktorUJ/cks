@@ -17,14 +17,14 @@ Helm шаблонизирует (`{{ .Values.x }}`), а Kustomize идёт др�
 
 ```mermaid
 flowchart LR
-    subgraph Helm["Helm-подход"]
-        h["шаблоны с {{ переменными }}<br>+ values"]
-    end
-    subgraph Kustomize["Kustomize-подход"]
-        base["base: обычные валидные YAML"] --> overlay["overlay: патчи поверх base"]
-    end
-    style Helm fill:#326ce5,color:#fff
-    style Kustomize fill:#0f9d58,color:#fff
+    helm["Helm-подход"]
+    helm --> h["шаблоны<br>с {{ переменными }}<br>и values"]
+
+    kust["Kustomize-подход"]
+    kust --> base["base: обычные<br>валидные YAML"]
+    base --> overlay["overlay: патчи<br>поверх base"]
+    style helm fill:#326ce5,color:#fff
+    style kust fill:#0f9d58,color:#fff
     style h fill:#5a8de0,color:#fff
     style base fill:#3cb371,color:#fff
     style overlay fill:#3cb371,color:#fff
@@ -89,7 +89,7 @@ Kustomize встроен в kubectl - применяют флагом `-k` (ук
 `kustomization.yaml`):
 
 ```bash
-# Посм, что получится (отрендерить)
+# Посмотреть, что получится (отрендерить, без применения)
 kubectl kustomize overlays/prod
 
 # Применить overlay
@@ -100,8 +100,10 @@ kustomize build overlays/prod | kubectl apply -f -
 ```
 
 ```mermaid
-flowchart LR
-    k["kubectl apply -k overlays/prod"] --> merge["Kustomize: base + патчи prod"] --> result["итоговые манифесты"] --> cluster["применены в кластер"]
+flowchart TB
+    k["kubectl apply -k<br>overlays/prod"] --> merge["Kustomize:<br>base + патчи prod"]
+    merge --> result["итоговые манифесты"]
+    result --> cluster["применены в кластер"]
     style k fill:#326ce5,color:#fff
     style merge fill:#f4b400,color:#000
     style result fill:#0f9d58,color:#fff
@@ -126,7 +128,7 @@ Kustomize умеет типовые преобразования без шабл
 | `configMapGenerator` / `secretGenerator` | генерировать ConfigMap/Secret из файлов/литералов |
 
 ```mermaid
-flowchart TB
+flowchart LR
     kust["kustomization.yaml"]
     kust --> t1["namespace / namePrefix"]
     kust --> t2["commonLabels"]
@@ -152,16 +154,17 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    subgraph Helm["Helm"]
-        direction TB
-        h1["шаблоны + переменные"] --> h2["пакеты, репозитории"] --> h3["релизы, rollback, экосистема"]
-    end
-    subgraph Kust["Kustomize"]
-        direction TB
-        k1["без шаблонов, наложение патчей"] --> k2["встроен в kubectl (-k)"] --> k3["base остаётся валидным YAML"]
-    end
-    style Helm fill:#326ce5,color:#fff
-    style Kust fill:#0f9d58,color:#fff
+    helm["Helm"]
+    helm --> h1["шаблоны + переменные"]
+    h1 --> h2["пакеты, репозитории"]
+    h2 --> h3["релизы, rollback,<br>экосистема"]
+
+    kust["Kustomize"]
+    kust --> k1["без шаблонов,<br>наложение патчей"]
+    k1 --> k2["встроен в kubectl (-k)"]
+    k2 --> k3["base остаётся<br>валидным YAML"]
+    style helm fill:#326ce5,color:#fff
+    style kust fill:#0f9d58,color:#fff
     style h1 fill:#5a8de0,color:#fff
     style h2 fill:#5a8de0,color:#fff
     style h3 fill:#5a8de0,color:#fff

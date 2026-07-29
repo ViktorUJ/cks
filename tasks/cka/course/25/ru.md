@@ -14,16 +14,10 @@
 
 ```mermaid
 flowchart LR
-    subgraph Admin["Администратор (инфраструктура)"]
-        pv["PersistentVolume (PV)<br>«вот кусок хранилища:<br>10Gi, такой-то диск»"]
-    end
-    subgraph Dev["Разработчик (приложение)"]
-        pvc["PersistentVolumeClaim (PVC)<br>«мне нужно 10Gi<br>с таким режимом доступа»"]
-    end
+    pv["Администратор (инфраструктура):<br>PersistentVolume (PV)<br>«вот кусок хранилища:<br>10Gi, такой-то диск»"]
+    pvc["Разработчик (приложение):<br>PersistentVolumeClaim (PVC)<br>«мне нужно 10Gi<br>с таким режимом доступа»"]
     pvc -->|"связывается (binding)"| pv
     pod["Под"] -->|"использует"| pvc
-    style Admin fill:#4a90d9,color:#fff
-    style Dev fill:#0f9d58,color:#fff
     style pv fill:#5a8de0,color:#fff
     style pvc fill:#3cb371,color:#fff
     style pod fill:#f4b400,color:#000
@@ -141,10 +135,11 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    rwo["ReadWriteOnce (RWO)<br>чтение-запись с ОДНОЙ ноды<br>(типично для блочных дисков: EBS, GCE PD)"]
-    rox["ReadOnlyMany (ROX)<br>только чтение с МНОГИХ нод"]
-    rwx["ReadWriteMany (RWX)<br>чтение-запись с МНОГИХ нод<br>(нужна сетевая ФС: NFS, CephFS)"]
-    rwop["ReadWriteOncePod (RWOP)<br>чтение-запись ровно ОДНИМ подом"]
+    rwo["ReadWriteOnce (RWO)<br>чтение-запись<br>с ОДНОЙ ноды<br>(блочные диски:<br>EBS, GCE PD)"]
+    rox["ReadOnlyMany (ROX)<br>только чтение<br>с МНОГИХ нод"]
+    rwx["ReadWriteMany (RWX)<br>чтение-запись<br>с МНОГИХ нод<br>(сетевая ФС:<br>NFS, CephFS)"]
+    rwop["ReadWriteOncePod (RWOP)<br>чтение-запись<br>ровно ОДНИМ подом"]
+    rwo ~~~ rox ~~~ rwx ~~~ rwop
     style rwo fill:#0f9d58,color:#fff
     style rox fill:#326ce5,color:#fff
     style rwx fill:#673ab7,color:#fff
@@ -170,8 +165,8 @@ flowchart TB
 ```mermaid
 flowchart TB
     del["PVC удалён"]
-    del --> retain["Retain<br>PV сохраняется с данными,<br>требует ручной очистки (Released)"]
-    del --> delete["Delete<br>PV и реальное хранилище<br>удаляются автоматически"]
+    del --> retain["Retain<br>PV сохраняется<br>с данными,<br>требует ручной<br>очистки (Released)"]
+    del --> delete["Delete<br>PV и реальное<br>хранилище<br>удаляются<br>автоматически"]
     style del fill:#f4b400,color:#000
     style retain fill:#0f9d58,color:#fff
     style delete fill:#db4437,color:#fff

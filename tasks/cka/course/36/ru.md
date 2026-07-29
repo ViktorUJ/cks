@@ -15,8 +15,8 @@
 
 ```mermaid
 flowchart TB
-    r1["Обновляться можно только на<br>СЛЕДУЮЩУЮ минорную версию<br>(1.31 → 1.32, НЕ через 1.33)"]
-    r2["kubelet не новее apiserver<br>(может отставать, но не опережать)"]
+    r1["Только на следующую<br>минорную версию<br>1.31 → 1.32<br>(не через 1.33)"]
+    r2["kubelet не новее apiserver<br>(отстаёт, но<br>не опережает)"]
     r3["Сначала control plane,<br>потом worker-ноды"]
     r1 --> r2 --> r3
     style r1 fill:#db4437,color:#fff
@@ -43,9 +43,9 @@ Helm-чарт, оператор или CRD используют версию API
 
 ```mermaid
 flowchart TB
-    up["Апгрейд кластера без проверки API"]
-    up --> rm["целевой релиз удалил apiVersion,<br>который используют приложения"]
-    rm --> broke["новые деплой/apply падают:<br>no matches for kind ... in version ...<br>CI/CD и выкаты сломаны"]
+    up["Апгрейд кластера<br>без проверки API"]
+    up --> rm["целевой релиз удалил<br>apiVersion, который<br>используют приложения"]
+    rm --> broke["новые деплой/apply падают:<br>no matches for kind ...<br>in version ...<br>CI/CD и выкаты сломаны"]
     style up fill:#f4b400,color:#000
     style rm fill:#db4437,color:#fff
     style broke fill:#b71c1c,color:#fff
@@ -59,10 +59,10 @@ flowchart TB
 **Чек-лист перед апгрейдом:**
 
 ```mermaid
-flowchart LR
-    rn["Шаг 1 · Release notes / deprecation guide<br>целевой версии: что удалено"] --> scan["Шаг 2 · Просканировать кластер и манифесты<br>pluto / kubent / kubepug (глава 29.7)"]
-    scan --> fix["Шаг 3 · Переписать манифесты/чарты<br>на актуальные apiVersion"]
-    fix --> plan["Шаг 4 · kubeadm upgrade plan<br>(тоже предупреждает)"]
+flowchart TB
+    rn["Шаг 1 · Release notes /<br>deprecation guide<br>целевой версии:<br>что удалено"] --> scan["Шаг 2 · Просканировать<br>кластер и манифесты<br>pluto / kubent / kubepug<br>(глава 29.7)"]
+    scan --> fix["Шаг 3 · Переписать<br>манифесты/чарты<br>на актуальные apiVersion"]
+    fix --> plan["Шаг 4 · kubeadm<br>upgrade plan<br>(тоже предупреждает)"]
     style rn fill:#326ce5,color:#fff
     style scan fill:#673ab7,color:#fff
     style fix fill:#0f9d58,color:#fff
@@ -142,8 +142,12 @@ kubectl uncordon <control-plane>
 ```
 
 ```mermaid
-flowchart LR
-    s1["обновить пакет kubeadm"] --> s2["kubeadm upgrade plan"] --> s3["kubeadm upgrade apply vX"] --> s4["drain control plane ноды"] --> s5["обновить kubelet+kubectl,<br>перезапустить kubelet"] --> s6["uncordon"]
+flowchart TB
+    s1["обновить пакет kubeadm"] --> s2["kubeadm upgrade plan"]
+    s2 --> s3["kubeadm upgrade apply vX"]
+    s3 --> s4["drain control plane ноды"]
+    s4 --> s5["обновить kubelet+kubectl,<br>перезапустить kubelet"]
+    s5 --> s6["uncordon"]
     style s1 fill:#f4b400,color:#000
     style s2 fill:#326ce5,color:#fff
     style s3 fill:#0f9d58,color:#fff
@@ -252,10 +256,10 @@ spec:
 ```
 
 ```mermaid
-flowchart LR
+flowchart TB
     drain["kubectl drain"] --> pdb{"PDB: хватит ли<br>доступных подов?"}
     pdb -->|"да"| evict["выселить под"]
-    pdb -->|"нет (упадём ниже minAvailable)"| wait["drain ждёт,<br>не выселяет"]
+    pdb -->|"нет: упадём<br>ниже minAvailable"| wait["drain ждёт,<br>не выселяет"]
     style drain fill:#f4b400,color:#000
     style pdb fill:#326ce5,color:#fff
     style evict fill:#0f9d58,color:#fff
