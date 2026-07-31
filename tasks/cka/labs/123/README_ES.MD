@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 123 — Red de bajo nivel: instalación del CNI desde cero
 
@@ -19,9 +19,9 @@ desde cero** — el paso obligatorio después de `kubeadm init`.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 30. Modelo de red de Kubernetes, red de pods y CNI](../../course/30/ru.md) — red plana de Pods, requisitos del modelo de red, papel del CNI
-- [Capítulo 40. Interfaces de extensión: CNI, CSI, CRI](../../course/40/ru.md) — qué es un plugin CNI y cómo se conecta al kubelet
-- [Capítulo 46. Depuración de servicios y de la red](../../course/46/ru.md) — diagnóstico de la red del nodo: rutas, network namespaces, veth
+- [Capítulo 30. Modelo de red de Kubernetes, red de pods y CNI](../../course/30/es.md) — red plana de Pods, requisitos del modelo de red, papel del CNI
+- [Capítulo 40. Interfaces de extensión: CNI, CSI, CRI](../../course/40/es.md) — qué es un plugin CNI y cómo se conecta al kubelet
+- [Capítulo 46. Depuración de servicios y de la red](../../course/46/es.md) — diagnóstico de la red del nodo: rutas, network namespaces, veth
 
 ## Qué hacemos y para qué
 

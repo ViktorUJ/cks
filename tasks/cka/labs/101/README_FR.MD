@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 101 — Bases de Kubernetes : pods, Deployment, namespaces, labels, Service
 
@@ -20,12 +20,12 @@ recommandé de les résoudre avec des commandes impératives (`kubectl run/creat
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 2. Architecture de Kubernetes](../../course/02/ru.md) — de quoi est constitué un cluster
-- [Chapitre 3. Travailler avec kubectl](../../course/03/ru.md) — style impératif, `--dry-run`, JSONPath
-- [Chapitre 4. Pods](../../course/04/ru.md) — l'unité d'exécution de base
-- [Chapitre 5. ReplicaSet et Deployment](../../course/05/ru.md) — gestion des réplicas
-- [Chapitre 6. Namespaces, labels, sélecteurs](../../course/06/ru.md) — organisation et liens
-- [Chapitre 7. Services](../../course/07/ru.md) — accès stable et répartition de charge
+- [Chapitre 2. Architecture de Kubernetes](../../course/02/fr.md) — de quoi est constitué un cluster
+- [Chapitre 3. Travailler avec kubectl](../../course/03/fr.md) — style impératif, `--dry-run`, JSONPath
+- [Chapitre 4. Pods](../../course/04/fr.md) — l'unité d'exécution de base
+- [Chapitre 5. ReplicaSet et Deployment](../../course/05/fr.md) — gestion des réplicas
+- [Chapitre 6. Namespaces, labels, sélecteurs](../../course/06/fr.md) — organisation et liens
+- [Chapitre 7. Services](../../course/07/fr.md) — accès stable et répartition de charge
 
 ## Ce que nous créons et pourquoi
 

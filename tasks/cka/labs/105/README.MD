@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 105 — Configuration: ConfigMap, Secret, Environment Variables
 
@@ -17,9 +17,9 @@ via the `check_result` command. The objects themselves are fastest to create imp
 
 Reinforce the material from the course chapters:
 
-- [Chapter 17. Commands, Arguments and Environment Variables](../../course/17/ru.md) — `env`, `envFrom`, `secretKeyRef`, `configMapKeyRef`
-- [Chapter 18. ConfigMap](../../course/18/ru.md) — configuration as variables and as files in a volume
-- [Chapter 19. Secret](../../course/19/ru.md) — storing sensitive data and passing it into a container
+- [Chapter 17. Commands, Arguments and Environment Variables](../../course/17/README.md) — `env`, `envFrom`, `secretKeyRef`, `configMapKeyRef`
+- [Chapter 18. ConfigMap](../../course/18/README.md) — configuration as variables and as files in a volume
+- [Chapter 19. Secret](../../course/19/README.md) — storing sensitive data and passing it into a container
 
 ## What We Build and Why
 

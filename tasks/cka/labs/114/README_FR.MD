@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 114 — Troubleshooting : on répare des ressources cassées
 
@@ -18,9 +18,9 @@ CKA/CKAD) avec une vérification automatique via la commande `check_result`.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 44. Débogage des pannes d'applications](../../course/44/ru.md) — le parcours `get` → `describe` → `logs`, analyse des statuts des Pods
-- [Chapitre 45. Débogage du control plane et des nœuds worker](../../course/45/ru.md) — diagnostic des nœuds et des composants système
-- [Chapitre 46. Débogage des services et du réseau](../../course/46/ru.md) — la chaîne Service ↔ Endpoints ↔ labels
+- [Chapitre 44. Débogage des pannes d'applications](../../course/44/fr.md) — le parcours `get` → `describe` → `logs`, analyse des statuts des Pods
+- [Chapitre 45. Débogage du control plane et des nœuds worker](../../course/45/fr.md) — diagnostic des nœuds et des composants système
+- [Chapitre 46. Débogage des services et du réseau](../../course/46/fr.md) — la chaîne Service ↔ Endpoints ↔ labels
 
 ## Ce que nous réparons et pourquoi
 

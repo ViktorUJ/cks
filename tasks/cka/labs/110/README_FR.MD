@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 110 — Réseau : Service/DNS, Ingress, NetworkPolicy
 
@@ -22,10 +22,10 @@ NetworkPolicy et les objets Gateway API se font plutôt avec des manifestes
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 31. Le Service de l'intérieur, DNS et CoreDNS](../../course/31/ru.md) — comment fonctionne un Service, les noms DNS et la résolution via CoreDNS
-- [Chapitre 32. Ingress et contrôleurs Ingress](../../course/32/ru.md) — entrée L7, règles de chemins, rewrite, contrôleur ingress
-- [Chapitre 33. Gateway API](../../course/33/ru.md) — Gateway, HTTPRoute et migration depuis Ingress
-- [Chapitre 34. NetworkPolicy](../../course/34/ru.md) — segmentation du trafic, default-deny et autorisations par selector
+- [Chapitre 31. Le Service de l'intérieur, DNS et CoreDNS](../../course/31/fr.md) — comment fonctionne un Service, les noms DNS et la résolution via CoreDNS
+- [Chapitre 32. Ingress et contrôleurs Ingress](../../course/32/fr.md) — entrée L7, règles de chemins, rewrite, contrôleur ingress
+- [Chapitre 33. Gateway API](../../course/33/fr.md) — Gateway, HTTPRoute et migration depuis Ingress
+- [Chapitre 34. NetworkPolicy](../../course/34/fr.md) — segmentation du trafic, default-deny et autorisations par selector
 
 ## Ce que nous créons et pourquoi
 

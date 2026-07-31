@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 106 — Application Security: SecurityContext and Capabilities
 
@@ -19,8 +19,8 @@ required fields.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 20. SecurityContext and capabilities](../../course/20/ru.md) — `runAsUser`, `fsGroup`, capabilities, `allowPrivilegeEscalation`, `privileged`
-- [Chapter 21. ServiceAccount; authn/authz/admission](../../course/21/ru.md) — the security context within the overall access model
+- [Chapter 20. SecurityContext and capabilities](../../course/20/README.md) — `runAsUser`, `fsGroup`, capabilities, `allowPrivilegeEscalation`, `privileged`
+- [Chapter 21. ServiceAccount; authn/authz/admission](../../course/21/README.md) — the security context within the overall access model
 
 ## What We Build and Why
 

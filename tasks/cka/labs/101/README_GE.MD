@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 101 — Kubernetes-ის საფუძვლები: pod-ები, Deployment, namespace-ები, ლეიბლები, Service
 
@@ -19,12 +19,12 @@ CKA + CKAD კურსის პირველი პრაქტიკულ�
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 2. Kubernetes-ის არქიტექტურა](../../course/02/ru.md) — რისგან შედგება კლასტერი
-- [თავი 3. მუშაობა kubectl-თან](../../course/03/ru.md) — იმპერატიული სტილი, `--dry-run`, JSONPath
-- [თავი 4. Pod-ები](../../course/04/ru.md) — გაშვების ბაზისური ერთეული
-- [თავი 5. ReplicaSet და Deployment](../../course/05/ru.md) — რეპლიკების მართვა
-- [თავი 6. Namespace-ები, ლეიბლები, სელექტორები](../../course/06/ru.md) — ორგანიზება და კავშირები
-- [თავი 7. Services](../../course/07/ru.md) — სტაბილური წვდომა და დატვირთვის ბალანსირება
+- [თავი 2. Kubernetes-ის არქიტექტურა](../../course/02/ge.md) — რისგან შედგება კლასტერი
+- [თავი 3. მუშაობა kubectl-თან](../../course/03/ge.md) — იმპერატიული სტილი, `--dry-run`, JSONPath
+- [თავი 4. Pod-ები](../../course/04/ge.md) — გაშვების ბაზისური ერთეული
+- [თავი 5. ReplicaSet და Deployment](../../course/05/ge.md) — რეპლიკების მართვა
+- [თავი 6. Namespace-ები, ლეიბლები, სელექტორები](../../course/06/ge.md) — ორგანიზება და კავშირები
+- [თავი 7. Services](../../course/07/ge.md) — სტაბილური წვდომა და დატვირთვის ბალანსირება
 
 ## რას ვქმნით და რისთვის
 

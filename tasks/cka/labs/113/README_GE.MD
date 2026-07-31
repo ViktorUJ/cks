@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 113 — RBAC და სერტიფიკატები: Role, ClusterRole, ServiceAccount, CSR
 
@@ -17,9 +17,9 @@
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 21. ServiceAccount; authn/authz/admission](../../course/21/ru.md) — როგორ ხდება აპლიკაციების აუთენტიფიკაცია, API-ზე მოთხოვნის დამუშავების სტადიები
-- [თავი 38. RBAC: Role, ClusterRole და binding-ები](../../course/38/ru.md) — უფლებები namespace-ში და კლასტერის დონეზე, სუბიექტებთან დაკავშირება
-- [თავი 39. TLS-სერტიფიკატები, kubeconfig და CSR API](../../course/39/ru.md) — კლიენტის სერტიფიკატის გაცემა ადამიანისთვის CSR-ის მეშვეობით
+- [თავი 21. ServiceAccount; authn/authz/admission](../../course/21/ge.md) — როგორ ხდება აპლიკაციების აუთენტიფიკაცია, API-ზე მოთხოვნის დამუშავების სტადიები
+- [თავი 38. RBAC: Role, ClusterRole და binding-ები](../../course/38/ge.md) — უფლებები namespace-ში და კლასტერის დონეზე, სუბიექტებთან დაკავშირება
+- [თავი 39. TLS-სერტიფიკატები, kubeconfig და CSR API](../../course/39/ge.md) — კლიენტის სერტიფიკატის გაცემა ადამიანისთვის CSR-ის მეშვეობით
 
 ## რას ვქმნით და რისთვის
 

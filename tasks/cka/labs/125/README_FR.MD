@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 125 — DNS et CoreDNS dans le cluster
 
@@ -16,9 +16,9 @@ questions CKA/CKAD) avec une vérification automatique par la commande `check_re
 
 Consolider le contenu du chapitre du cours :
 
-- [Chapitre 31. Le Service de l'intérieur, DNS et CoreDNS](../../course/31/ru.md) — enregistrements A d'un Service et d'un headless, `dnsConfig`/`ndots`, modification de CoreDNS (Corefile)
+- [Chapitre 31. Le Service de l'intérieur, DNS et CoreDNS](../../course/31/fr.md) — enregistrements A d'un Service et d'un headless, `dnsConfig`/`ndots`, modification de CoreDNS (Corefile)
 
-Chapitres connexes : [Chapitre 7. Services](../../course/07/ru.md) — types de Service et Endpoints, [Chapitre 30. Réseau et CNI](../../course/30/ru.md) — réseau des Pods.
+Chapitres connexes : [Chapitre 7. Services](../../course/07/fr.md) — types de Service et Endpoints, [Chapitre 30. Réseau et CNI](../../course/30/fr.md) — réseau des Pods.
 
 ## Ce que nous créons et pourquoi
 

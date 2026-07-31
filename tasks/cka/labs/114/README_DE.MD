@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 114 — Troubleshooting: Wir reparieren kaputte Ressourcen
 
@@ -18,9 +18,9 @@ Prüfung über den Befehl `check_result`.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 44. Debugging von Anwendungsfehlern](../../course/44/ru.md) — die Route `get` → `describe` → `logs`, Auswertung der Pod-Status
-- [Kapitel 45. Debugging von Control Plane und Worker-Nodes](../../course/45/ru.md) — Diagnose von Nodes und Systemkomponenten
-- [Kapitel 46. Debugging von Services und Netzwerk](../../course/46/ru.md) — die Kette Service ↔ Endpoints ↔ Labels
+- [Kapitel 44. Debugging von Anwendungsfehlern](../../course/44/de.md) — die Route `get` → `describe` → `logs`, Auswertung der Pod-Status
+- [Kapitel 45. Debugging von Control Plane und Worker-Nodes](../../course/45/de.md) — Diagnose von Nodes und Systemkomponenten
+- [Kapitel 46. Debugging von Services und Netzwerk](../../course/46/de.md) — die Kette Service ↔ Endpoints ↔ Labels
 
 ## Was wir reparieren und warum
 

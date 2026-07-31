@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 105 — Konfiguration: ConfigMap, Secret, Umgebungsvariablen
 
@@ -18,9 +18,9 @@ Manifest.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 17. Befehle, Argumente und Umgebungsvariablen](../../course/17/ru.md) — `env`, `envFrom`, `secretKeyRef`, `configMapKeyRef`
-- [Kapitel 18. ConfigMap](../../course/18/ru.md) — Konfiguration als Variablen und als Dateien in einem Volume
-- [Kapitel 19. Secret](../../course/19/ru.md) — sensible Daten speichern und in den Container durchreichen
+- [Kapitel 17. Befehle, Argumente und Umgebungsvariablen](../../course/17/de.md) — `env`, `envFrom`, `secretKeyRef`, `configMapKeyRef`
+- [Kapitel 18. ConfigMap](../../course/18/de.md) — Konfiguration als Variablen und als Dateien in einem Volume
+- [Kapitel 19. Secret](../../course/19/de.md) — sensible Daten speichern und in den Container durchreichen
 
 ## Was wir erstellen und warum
 

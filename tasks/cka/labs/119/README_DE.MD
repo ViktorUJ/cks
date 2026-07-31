@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 119 — Speed-Drills und JSONPath
 
@@ -18,9 +18,9 @@ Muskelgedächtnis: Routine bei imperativen Befehlen aufbauen und das Prüfungste
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 3. Arbeiten mit kubectl: imperativer und deklarativer Ansatz](../../course/03/ru.md) — schnelle imperative Befehle, `--dry-run=client -o yaml`, Objektgeneratoren
-- [Kapitel 47. CKAD-Prüfung: JSONPath und kubectl-Produktivität](../../course/47/ru.md) — Datenextraktion via `-o jsonpath`, custom-columns, `--sort-by`
-- [Kapitel 48. CKA-Prüfung: Zeitmanagement und Strategie](../../course/48/ru.md) — Zeiteinteilung und Reihenfolge der Aufgaben
+- [Kapitel 3. Arbeiten mit kubectl: imperativer und deklarativer Ansatz](../../course/03/de.md) — schnelle imperative Befehle, `--dry-run=client -o yaml`, Objektgeneratoren
+- [Kapitel 47. CKAD-Prüfung: JSONPath und kubectl-Produktivität](../../course/47/de.md) — Datenextraktion via `-o jsonpath`, custom-columns, `--sort-by`
+- [Kapitel 48. CKA-Prüfung: Zeitmanagement und Strategie](../../course/48/de.md) — Zeiteinteilung und Reihenfolge der Aufgaben
 
 ## Was wir tun und warum
 

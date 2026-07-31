@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 114 — Troubleshooting: reparamos recursos rotos
 
@@ -17,9 +17,9 @@ CKA/CKAD) con verificación automática mediante el comando `check_result`.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 44. Depuración de fallos de aplicaciones](../../course/44/ru.md) — la ruta `get` → `describe` → `logs`, análisis de los estados de los Pods
-- [Capítulo 45. Depuración del control plane y de los nodos worker](../../course/45/ru.md) — diagnóstico de nodos y componentes del sistema
-- [Capítulo 46. Depuración de servicios y red](../../course/46/ru.md) — la cadena Service ↔ Endpoints ↔ etiquetas
+- [Capítulo 44. Depuración de fallos de aplicaciones](../../course/44/es.md) — la ruta `get` → `describe` → `logs`, análisis de los estados de los Pods
+- [Capítulo 45. Depuración del control plane y de los nodos worker](../../course/45/es.md) — diagnóstico de nodos y componentes del sistema
+- [Capítulo 46. Depuración de servicios y red](../../course/46/es.md) — la cadena Service ↔ Endpoints ↔ etiquetas
 
 ## Qué reparamos y para qué
 

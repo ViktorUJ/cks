@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 116 — kubeadm : monter un cluster de zéro (init + join)
 
@@ -19,8 +19,8 @@ runtime — vous assemblez tout depuis un OS nu.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 35. Installation d'un cluster avec kubeadm](../../course/35/ru.md) — prerequisites, container runtime, `kubeadm init`/`join`
-- [Chapitre 30. Modèle réseau de Kubernetes et CNI](../../course/30/ru.md) — installation du CNI, sans lequel les nœuds ne passent pas en `Ready`
+- [Chapitre 35. Installation d'un cluster avec kubeadm](../../course/35/fr.md) — prerequisites, container runtime, `kubeadm init`/`join`
+- [Chapitre 30. Modèle réseau de Kubernetes et CNI](../../course/30/fr.md) — installation du CNI, sans lequel les nœuds ne passent pas en `Ready`
 
 ## Ce que nous faisons et pourquoi
 

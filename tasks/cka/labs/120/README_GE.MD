@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 120 — Drill-ები: სერვისები და ქსელი
 
@@ -17,10 +17,10 @@ Service-ების შექმნაზე (ClusterIP, NodePort, headless), I
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 7. Services: ClusterIP, NodePort, LoadBalancer, Endpoints](../../course/07/ru.md) — Service-ების ტიპები, გამოქვეყნება `expose`-ით, Endpoints
-- [თავი 31. Service შიგნიდან, DNS და CoreDNS](../../course/31/ru.md) — headless-Service (`clusterIP: None`), DNS-სახელები
-- [თავი 32. Ingress და Ingress-კონტროლერები](../../course/32/ru.md) — მარშრუტიზაცია ჰოსტისა და გზის მიხედვით backend-Service-ზე
-- [თავი 34. NetworkPolicy](../../course/34/ru.md) — default-deny, podSelector, policyTypes
+- [თავი 7. Services: ClusterIP, NodePort, LoadBalancer, Endpoints](../../course/07/ge.md) — Service-ების ტიპები, გამოქვეყნება `expose`-ით, Endpoints
+- [თავი 31. Service შიგნიდან, DNS და CoreDNS](../../course/31/ge.md) — headless-Service (`clusterIP: None`), DNS-სახელები
+- [თავი 32. Ingress და Ingress-კონტროლერები](../../course/32/ge.md) — მარშრუტიზაცია ჰოსტისა და გზის მიხედვით backend-Service-ზე
+- [თავი 34. NetworkPolicy](../../course/34/ge.md) — default-deny, podSelector, policyTypes
 
 ## რას ვაკეთებთ და რისთვის
 

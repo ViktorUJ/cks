@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 108 — Stockage : PersistentVolume, PersistentVolumeClaim et montage d'un volume dans un Pod
 
@@ -20,8 +20,8 @@ générer une base avec `--dry-run=client -o yaml`.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 25. Volumes, PersistentVolume et PersistentVolumeClaim](../../course/25/ru.md) — volumes, PV et PVC, modes d'accès, liaison de la demande au volume (Bound)
-- [Chapitre 26. StorageClass, provisionnement dynamique](../../course/26/ru.md) — StorageClass et allocation dynamique de volumes pour une demande
+- [Chapitre 25. Volumes, PersistentVolume et PersistentVolumeClaim](../../course/25/fr.md) — volumes, PV et PVC, modes d'accès, liaison de la demande au volume (Bound)
+- [Chapitre 26. StorageClass, provisionnement dynamique](../../course/26/fr.md) — StorageClass et allocation dynamique de volumes pour une demande
 
 ## Ce que nous créons et pourquoi
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 109 — Observabilité et maintenance : probes, logs, débogage, deprecations
 
@@ -22,9 +22,9 @@ tandis que les logs et les commandes de supervision se font de façon impérativ
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 27. Vérifications d'état : liveness, readiness, startup](../../course/27/ru.md) — les trois probes (startup/readiness/liveness), les timings `periodSeconds`/`failureThreshold`, startupProbe face à `initialDelaySeconds`
-- [Chapitre 28. Journalisation et supervision](../../course/28/ru.md) — `kubectl logs`, `kubectl top`, événements du cluster
-- [Chapitre 29. Débogage des applications et obsolescence de l'API](../../course/29/ru.md) — diagnostic des Pods et migration depuis les versions d'API obsolètes
+- [Chapitre 27. Vérifications d'état : liveness, readiness, startup](../../course/27/fr.md) — les trois probes (startup/readiness/liveness), les timings `periodSeconds`/`failureThreshold`, startupProbe face à `initialDelaySeconds`
+- [Chapitre 28. Journalisation et supervision](../../course/28/fr.md) — `kubectl logs`, `kubectl top`, événements du cluster
+- [Chapitre 29. Débogage des applications et obsolescence de l'API](../../course/29/fr.md) — diagnostic des Pods et migration depuis les versions d'API obsolètes
 
 ## Ce que nous créons et pourquoi
 

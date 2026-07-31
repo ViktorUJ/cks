@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 104 — Scheduling: nodeSelector, Taints, Ressourcen, Static Pod, PriorityClass, HPA
 
@@ -20,11 +20,11 @@ imperativ (`kubectl taint/autoscale/create priorityclass`).
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 12. Pod-Scheduling: Affinity](../../course/12/ru.md) — `nodeSelector`, podAntiAffinity, topologySpread, harter/weicher Modus
-- [Kapitel 13. Taints und Tolerations](../../course/13/ru.md) — Pods von einem Node abstoßen und per Toleration durchlassen
-- [Kapitel 14. Ressourcen: requests, limits, Quotas](../../course/14/ru.md) — CPU-`requests` als Grundlage für HPA
-- [Kapitel 15. Static Pods, PriorityClass](../../course/15/ru.md) — Pod unter Verwaltung von kubelet, Verdrängungsprioritäten
-- [Kapitel 16. Autoscaling: HPA](../../course/16/ru.md) — Skalierung nach CPU-Last
+- [Kapitel 12. Pod-Scheduling: Affinity](../../course/12/de.md) — `nodeSelector`, podAntiAffinity, topologySpread, harter/weicher Modus
+- [Kapitel 13. Taints und Tolerations](../../course/13/de.md) — Pods von einem Node abstoßen und per Toleration durchlassen
+- [Kapitel 14. Ressourcen: requests, limits, Quotas](../../course/14/de.md) — CPU-`requests` als Grundlage für HPA
+- [Kapitel 15. Static Pods, PriorityClass](../../course/15/de.md) — Pod unter Verwaltung von kubelet, Verdrängungsprioritäten
+- [Kapitel 16. Autoscaling: HPA](../../course/16/de.md) — Skalierung nach CPU-Last
 
 ## Was wir erstellen und warum
 

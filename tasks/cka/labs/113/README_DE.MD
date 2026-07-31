@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 113 — RBAC und Zertifikate: Role, ClusterRole, ServiceAccount, CSR
 
@@ -16,9 +16,9 @@ Prüfung über den Befehl `check_result` (u. a. über `kubectl auth can-i --as`)
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 21. ServiceAccount; authn/authz/admission](../../course/21/ru.md) — wie sich Anwendungen authentifizieren, die Stufen der Verarbeitung einer API-Anfrage
-- [Kapitel 38. RBAC: Role, ClusterRole und Bindings](../../course/38/ru.md) — Rechte im Namespace und auf Cluster-Ebene, Bindung an Subjekte
-- [Kapitel 39. TLS-Zertifikate, kubeconfig und CSR API](../../course/39/ru.md) — Ausgabe eines Client-Zertifikats an eine Person über CSR
+- [Kapitel 21. ServiceAccount; authn/authz/admission](../../course/21/de.md) — wie sich Anwendungen authentifizieren, die Stufen der Verarbeitung einer API-Anfrage
+- [Kapitel 38. RBAC: Role, ClusterRole und Bindings](../../course/38/de.md) — Rechte im Namespace und auf Cluster-Ebene, Bindung an Subjekte
+- [Kapitel 39. TLS-Zertifikate, kubeconfig und CSR API](../../course/39/de.md) — Ausgabe eines Client-Zertifikats an eine Person über CSR
 
 ## Was wir erstellen und warum
 

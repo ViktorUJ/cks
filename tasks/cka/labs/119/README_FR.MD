@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 119 — Exercices de vitesse et JSONPath
 
@@ -18,9 +18,9 @@ JSONPath sont enregistrés dans `/home/ubuntu/answers/`.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 3. Travailler avec kubectl : approches impérative et déclarative](../../course/03/ru.md) — commandes impératives rapides, `--dry-run=client -o yaml`, générateurs d'objets
-- [Chapitre 47. Examen CKAD : JSONPath et productivité avec kubectl](../../course/47/ru.md) — extraction de données via `-o jsonpath`, custom-columns, `--sort-by`
-- [Chapitre 48. Examen CKA : gestion du temps et stratégie](../../course/48/ru.md) — répartition du temps et ordre de résolution des tâches
+- [Chapitre 3. Travailler avec kubectl : approches impérative et déclarative](../../course/03/fr.md) — commandes impératives rapides, `--dry-run=client -o yaml`, générateurs d'objets
+- [Chapitre 47. Examen CKAD : JSONPath et productivité avec kubectl](../../course/47/fr.md) — extraction de données via `-o jsonpath`, custom-columns, `--sort-by`
+- [Chapitre 48. Examen CKA : gestion du temps et stratégie](../../course/48/fr.md) — répartition du temps et ordre de résolution des tâches
 
 ## Ce que nous faisons et pourquoi
 

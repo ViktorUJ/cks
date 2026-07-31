@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 117 — Troubleshooting: control plane და node-ები
 
@@ -23,8 +23,8 @@ control plane „მკვდარია“.
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 15. Static Pods, PriorityClass, რამდენიმე დამგეგმავი](../../course/15/ru.md) — static pod-ები `/etc/kubernetes/manifests/`-ში, control plane-ის კომპონენტები static pod-ების სახით
-- [თავი 45. Control plane-ისა და worker-node-ების გამართვა](../../course/45/ru.md) — kubelet-ის დიაგნოსტიკა `systemctl`/`journalctl`-ით, კონტეინერების დებაგი `crictl`-ით
+- [თავი 15. Static Pods, PriorityClass, რამდენიმე დამგეგმავი](../../course/15/ge.md) — static pod-ები `/etc/kubernetes/manifests/`-ში, control plane-ის კომპონენტები static pod-ების სახით
+- [თავი 45. Control plane-ისა და worker-node-ების გამართვა](../../course/45/ge.md) — kubelet-ის დიაგნოსტიკა `systemctl`/`journalctl`-ით, კონტეინერების დებაგი `crictl`-ით
 
 ## რას ვაკეთებთ და რისთვის
 

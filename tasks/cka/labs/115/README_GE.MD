@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 115 — გაფართოება და შეფუთვა: CRD, Helm, Kustomize
 
@@ -17,9 +17,9 @@ CRD/ოპერატორები) და გვხვდება CKAD-ი�
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 41. CRD და ოპერატორები](../../course/41/ru.md) — API-ს გაფართოება საკუთარი რესურსის ტიპით
-- [თავი 42. Helm](../../course/42/ru.md) — chart-ების რეპოზიტორიები, release-ების დაყენება
-- [თავი 43. Kustomize](../../course/43/ru.md) — base + overlay, ველების გადაფარვა შაბლონების გარეშე
+- [თავი 41. CRD და ოპერატორები](../../course/41/ge.md) — API-ს გაფართოება საკუთარი რესურსის ტიპით
+- [თავი 42. Helm](../../course/42/ge.md) — chart-ების რეპოზიტორიები, release-ების დაყენება
+- [თავი 43. Kustomize](../../course/43/ge.md) — base + overlay, ველების გადაფარვა შაბლონების გარეშე
 
 ## რას ვქმნით და რისთვის
 

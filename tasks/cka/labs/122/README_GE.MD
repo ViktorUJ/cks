@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 122 — დრილები: pod-ების დაგეგმვა
 
@@ -20,10 +20,10 @@ node-ზე ეკიდება.
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 12. Pod-ების დაგეგმვა: nodeName, nodeSelector, affinity](../../course/12/ru.md) — Pod-ების მიბმა node-ებზე nodeSelector-ითა და nodeAffinity-ით
-- [თავი 13. Taint-ები და toleration-ები](../../course/13/ru.md) — Pod-ების მოგერიება taint-ებით და მათი დაშვება toleration-ებით
-- [თავი 14. რესურსები: requests, limits, LimitRange, ResourceQuota](../../course/14/ru.md) — CPU/მეხსიერების requests და limits კონტეინერზე
-- [თავი 15. Static Pods, PriorityClass, რამდენიმე დამგეგმავი](../../course/15/ru.md) — Pod-ების პრიორიტეტი PriorityClass-ის მეშვეობით
+- [თავი 12. Pod-ების დაგეგმვა: nodeName, nodeSelector, affinity](../../course/12/ge.md) — Pod-ების მიბმა node-ებზე nodeSelector-ითა და nodeAffinity-ით
+- [თავი 13. Taint-ები და toleration-ები](../../course/13/ge.md) — Pod-ების მოგერიება taint-ებით და მათი დაშვება toleration-ებით
+- [თავი 14. რესურსები: requests, limits, LimitRange, ResourceQuota](../../course/14/ge.md) — CPU/მეხსიერების requests და limits კონტეინერზე
+- [თავი 15. Static Pods, PriorityClass, რამდენიმე დამგეგმავი](../../course/15/ge.md) — Pod-ების პრიორიტეტი PriorityClass-ის მეშვეობით
 
 ## რას ვაკეთებთ და რისთვის
 

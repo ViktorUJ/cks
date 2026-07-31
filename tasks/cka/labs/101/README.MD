@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 101 — Kubernetes Basics: Pods, Deployment, Namespaces, Labels, Service
 
@@ -19,12 +19,12 @@ commands (`kubectl run/create/expose`) — on the exam that is the fastest path.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 2. Kubernetes Architecture](../../course/02/ru.md) — what a cluster is made of
-- [Chapter 3. Working with kubectl](../../course/03/ru.md) — imperative style, `--dry-run`, JSONPath
-- [Chapter 4. Pods](../../course/04/ru.md) — the basic unit of execution
-- [Chapter 5. ReplicaSet and Deployment](../../course/05/ru.md) — managing replicas
-- [Chapter 6. Namespaces, Labels, Selectors](../../course/06/ru.md) — organization and relationships
-- [Chapter 7. Services](../../course/07/ru.md) — stable access and load balancing
+- [Chapter 2. Kubernetes Architecture](../../course/02/README.md) — what a cluster is made of
+- [Chapter 3. Working with kubectl](../../course/03/README.md) — imperative style, `--dry-run`, JSONPath
+- [Chapter 4. Pods](../../course/04/README.md) — the basic unit of execution
+- [Chapter 5. ReplicaSet and Deployment](../../course/05/README.md) — managing replicas
+- [Chapter 6. Namespaces, Labels, Selectors](../../course/06/README.md) — organization and relationships
+- [Chapter 7. Services](../../course/07/README.md) — stable access and load balancing
 
 ## What We Build and Why
 

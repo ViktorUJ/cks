@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 105 — Configuration : ConfigMap, Secret, variables d'environnement
 
@@ -19,9 +19,9 @@ raccordement au Pod se fait par manifeste.
 
 Consolider le matériel des chapitres du cours :
 
-- [Chapitre 17. Commandes, arguments et variables d'environnement](../../course/17/ru.md) — `env`, `envFrom`, `secretKeyRef`, `configMapKeyRef`
-- [Chapitre 18. ConfigMap](../../course/18/ru.md) — la configuration comme variables et comme fichiers dans un volume
-- [Chapitre 19. Secret](../../course/19/ru.md) — stockage des données sensibles et transmission dans le conteneur
+- [Chapitre 17. Commandes, arguments et variables d'environnement](../../course/17/fr.md) — `env`, `envFrom`, `secretKeyRef`, `configMapKeyRef`
+- [Chapitre 18. ConfigMap](../../course/18/fr.md) — la configuration comme variables et comme fichiers dans un volume
+- [Chapitre 19. Secret](../../course/19/fr.md) — stockage des données sensibles et transmission dans le conteneur
 
 ## Ce que nous créons et pourquoi
 

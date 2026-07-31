@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 107 — Diseño de aplicaciones: pods multi-container, imágenes, volúmenes
 
@@ -20,9 +20,9 @@ imperativa con `podman`.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 22. Pods multi-container](../../course/22/ru.md) — varios contenedores en un mismo Pod, volumen compartido, patrón sidecar
-- [Capítulo 23. Imágenes de contenedor](../../course/23/ru.md) — construcción de una imagen desde un Dockerfile, exportación a un archivo OCI
-- [Capítulo 24. Volúmenes para aplicaciones](../../course/24/ru.md) — `emptyDir` efímero, `sizeLimit`, montaje
+- [Capítulo 22. Pods multi-container](../../course/22/es.md) — varios contenedores en un mismo Pod, volumen compartido, patrón sidecar
+- [Capítulo 23. Imágenes de contenedor](../../course/23/es.md) — construcción de una imagen desde un Dockerfile, exportación a un archivo OCI
+- [Capítulo 24. Volúmenes para aplicaciones](../../course/24/es.md) — `emptyDir` efímero, `sizeLimit`, montaje
 
 ## Qué creamos y para qué
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 106 — Anwendungssicherheit: SecurityContext und Capabilities
 
@@ -19,8 +19,8 @@ nötigen Felder zu ergänzen.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 20. SecurityContext und Capabilities](../../course/20/ru.md) — `runAsUser`, `fsGroup`, Capabilities, `allowPrivilegeEscalation`, `privileged`
-- [Kapitel 21. ServiceAccount; authn/authz/admission](../../course/21/ru.md) — der Sicherheitskontext im gesamten Zugriffsmodell
+- [Kapitel 20. SecurityContext und Capabilities](../../course/20/de.md) — `runAsUser`, `fsGroup`, Capabilities, `allowPrivilegeEscalation`, `privileged`
+- [Kapitel 21. ServiceAccount; authn/authz/admission](../../course/21/de.md) — der Sicherheitskontext im gesamten Zugriffsmodell
 
 ## Was wir erstellen und warum
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 105 — კონფიგურაცია: ConfigMap, Secret, გარემოს ცვლადები
 
@@ -17,9 +17,9 @@ Pod-ებთან მიბმის ყველა გზას: გარ�
 
 კურსის თავების მასალის განმტკიცება:
 
-- [თავი 17. ბრძანებები, არგუმენტები და გარემოს ცვლადები](../../course/17/ru.md) — `env`, `envFrom`, `secretKeyRef`, `configMapKeyRef`
-- [თავი 18. ConfigMap](../../course/18/ru.md) — კონფიგი როგორც ცვლადები და როგორც ფაილები ტომში
-- [თავი 19. Secret](../../course/19/ru.md) — მგრძნობიარე მონაცემების შენახვა და კონტეინერში გადაცემა
+- [თავი 17. ბრძანებები, არგუმენტები და გარემოს ცვლადები](../../course/17/ge.md) — `env`, `envFrom`, `secretKeyRef`, `configMapKeyRef`
+- [თავი 18. ConfigMap](../../course/18/ge.md) — კონფიგი როგორც ცვლადები და როგორც ფაილები ტომში
+- [თავი 19. Secret](../../course/19/ge.md) — მგრძნობიარე მონაცემების შენახვა და კონტეინერში გადაცემა
 
 ## რას ვქმნით და რისთვის
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 121 — Drills: RBAC
 
@@ -16,8 +16,8 @@ used to creating RBAC objects imperatively and keep up with the exam pace.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 21. ServiceAccount; authentication, authorization, admission](../../course/21/ru.md) — ServiceAccount, the authn/authz/admission chain
-- [Chapter 38. RBAC: Role, ClusterRole and bindings](../../course/38/ru.md) — Role/ClusterRole, RoleBinding/ClusterRoleBinding, checking permissions with `auth can-i`
+- [Chapter 21. ServiceAccount; authentication, authorization, admission](../../course/21/README.md) — ServiceAccount, the authn/authz/admission chain
+- [Chapter 38. RBAC: Role, ClusterRole and bindings](../../course/38/README.md) — Role/ClusterRole, RoleBinding/ClusterRoleBinding, checking permissions with `auth can-i`
 
 ## What We Do and Why
 

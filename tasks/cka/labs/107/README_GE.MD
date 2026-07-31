@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 107 — აპლიკაციების დიზაინი: multi-container pod-ები, image-ები, ტომები
 
@@ -18,9 +18,9 @@
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 22. Multi-container pod-ები](../../course/22/ru.md) — რამდენიმე კონტეინერი ერთ Pod-ში, საერთო ტომი, sidecar პატერნი
-- [თავი 23. კონტეინერების image-ები](../../course/23/ru.md) — image-ის აწყობა Dockerfile-იდან, ექსპორტი OCI-არქივში
-- [თავი 24. ტომები აპლიკაციებისთვის](../../course/24/ru.md) — ეფემერული `emptyDir`, `sizeLimit`, მონტირება
+- [თავი 22. Multi-container pod-ები](../../course/22/ge.md) — რამდენიმე კონტეინერი ერთ Pod-ში, საერთო ტომი, sidecar პატერნი
+- [თავი 23. კონტეინერების image-ები](../../course/23/ge.md) — image-ის აწყობა Dockerfile-იდან, ექსპორტი OCI-არქივში
+- [თავი 24. ტომები აპლიკაციებისთვის](../../course/24/ge.md) — ეფემერული `emptyDir`, `sizeLimit`, მონტირება
 
 ## რას ვქმნით და რისთვის
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 119 — სიჩქარის დრილები და JSONPath
 
@@ -17,9 +17,9 @@ JSONPath-დავალებების პასუხების ფაი
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 3. მუშაობა kubectl-თან: იმპერატიული და დეკლარაციული მიდგომები](../../course/03/ru.md) — სწრაფი იმპერატიული ბრძანებები, `--dry-run=client -o yaml`, ობიექტების გენერატორები
-- [თავი 47. CKAD გამოცდა: JSONPath და kubectl-ის პროდუქტიულობა](../../course/47/ru.md) — მონაცემების ამოღება `-o jsonpath`-ით, custom-columns, `--sort-by`
-- [თავი 48. CKA გამოცდა: დროის მენეჯმენტი და სტრატეგია](../../course/48/ru.md) — დროის განაწილება და დავალებების ამოხსნის რიგი
+- [თავი 3. მუშაობა kubectl-თან: იმპერატიული და დეკლარაციული მიდგომები](../../course/03/ge.md) — სწრაფი იმპერატიული ბრძანებები, `--dry-run=client -o yaml`, ობიექტების გენერატორები
+- [თავი 47. CKAD გამოცდა: JSONPath და kubectl-ის პროდუქტიულობა](../../course/47/ge.md) — მონაცემების ამოღება `-o jsonpath`-ით, custom-columns, `--sort-by`
+- [თავი 48. CKA გამოცდა: დროის მენეჯმენტი და სტრატეგია](../../course/48/ge.md) — დროის განაწილება და დავალებების ამოხსნის რიგი
 
 ## რას ვაკეთებთ და რისთვის
 

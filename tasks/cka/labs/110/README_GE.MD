@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 110 — ქსელი: Service/DNS, Ingress, NetworkPolicy
 
@@ -21,10 +21,10 @@ API-ს ობიექტები — მანიფესტებით (`k
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 31. Service შიგნიდან, DNS და CoreDNS](../../course/31/ru.md) — როგორ მუშაობს Service, DNS-სახელები და რეზოლვინგი CoreDNS-ის გავლით
-- [თავი 32. Ingress და Ingress-კონტროლერები](../../course/32/ru.md) — L7-შესვლა, ბილიკების წესები, rewrite, ingress-კონტროლერი
-- [თავი 33. Gateway API](../../course/33/ru.md) — Gateway, HTTPRoute და მიგრაცია Ingress-იდან
-- [თავი 34. NetworkPolicy](../../course/34/ru.md) — ტრაფიკის სეგმენტაცია, default-deny და ნებართვები selector-ით
+- [თავი 31. Service შიგნიდან, DNS და CoreDNS](../../course/31/ge.md) — როგორ მუშაობს Service, DNS-სახელები და რეზოლვინგი CoreDNS-ის გავლით
+- [თავი 32. Ingress და Ingress-კონტროლერები](../../course/32/ge.md) — L7-შესვლა, ბილიკების წესები, rewrite, ingress-კონტროლერი
+- [თავი 33. Gateway API](../../course/33/ge.md) — Gateway, HTTPRoute და მიგრაცია Ingress-იდან
+- [თავი 34. NetworkPolicy](../../course/34/ge.md) — ტრაფიკის სეგმენტაცია, default-deny და ნებართვები selector-ით
 
 ## რას ვქმნით და რისთვის
 

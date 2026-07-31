@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 109 — Observability and Maintenance: Probes, Logs, Debugging, Deprecations
 
@@ -20,9 +20,9 @@ better done imperatively with `kubectl logs`/`kubectl top`.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 27. Health checks: liveness, readiness, startup](../../course/27/ru.md) — the three probes (startup/readiness/liveness), the `periodSeconds`/`failureThreshold` timings, startupProbe versus `initialDelaySeconds`
-- [Chapter 28. Logging and monitoring](../../course/28/ru.md) — `kubectl logs`, `kubectl top`, cluster events
-- [Chapter 29. Application debugging and API deprecations](../../course/29/ru.md) — Pod diagnostics and migration off deprecated API versions
+- [Chapter 27. Health checks: liveness, readiness, startup](../../course/27/README.md) — the three probes (startup/readiness/liveness), the `periodSeconds`/`failureThreshold` timings, startupProbe versus `initialDelaySeconds`
+- [Chapter 28. Logging and monitoring](../../course/28/README.md) — `kubectl logs`, `kubectl top`, cluster events
+- [Chapter 29. Application debugging and API deprecations](../../course/29/README.md) — Pod diagnostics and migration off deprecated API versions
 
 ## What We Build and Why
 

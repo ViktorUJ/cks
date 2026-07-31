@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 111 — kubeadm: კლასტერის განახლება (lifecycle)
 
@@ -18,8 +18,8 @@ node განახლებულია მიზნობრივ ვერ�
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 35. kubeadm კლასტერის ინსტალაცია](../../course/35/ru.md) — რისგან იკრიბება კლასტერი, control plane-ისა და worker-ის როლები
-- [თავი 36. კლასტერის განახლება (lifecycle)](../../course/36/ru.md) — განახლების რიგითობა, `upgrade apply`/`upgrade node`, `cordon`/`drain`
+- [თავი 35. kubeadm კლასტერის ინსტალაცია](../../course/35/ge.md) — რისგან იკრიბება კლასტერი, control plane-ისა და worker-ის როლები
+- [თავი 36. კლასტერის განახლება (lifecycle)](../../course/36/ge.md) — განახლების რიგითობა, `upgrade apply`/`upgrade node`, `cordon`/`drain`
 
 ## რას ვაკეთებთ და რისთვის
 

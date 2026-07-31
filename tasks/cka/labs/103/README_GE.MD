@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 103 — ერთჯერადი და პერიოდული ამოცანები: Job, CronJob, DaemonSet
 
@@ -19,8 +19,8 @@ worker), რომ თვალსაჩინოდ შევამოწმო
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 10. Jobs და CronJobs](../../course/10/ru.md) — ერთჯერადი და პერიოდული ამოცანები, `completions`, `backoffLimit`, `restartPolicy`, განრიგი, `concurrencyPolicy`
-- [თავი 11. DaemonSet და StatefulSet](../../course/11/ru.md) — Pod-ის გაშვება ყოველ node-ზე, toleration control-plane-ისთვის
+- [თავი 10. Jobs და CronJobs](../../course/10/ge.md) — ერთჯერადი და პერიოდული ამოცანები, `completions`, `backoffLimit`, `restartPolicy`, განრიგი, `concurrencyPolicy`
+- [თავი 11. DaemonSet და StatefulSet](../../course/11/ge.md) — Pod-ის გაშვება ყოველ node-ზე, toleration control-plane-ისთვის
 
 ## რას ვქმნით და რისთვის
 

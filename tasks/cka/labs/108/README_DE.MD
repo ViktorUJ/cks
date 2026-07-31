@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 108 — Storage: PersistentVolume, PersistentVolumeClaim und das Einbinden eines Volumes in einen Pod
 
@@ -19,8 +19,8 @@ beschreiben (`kubectl apply -f`), eine Vorlage bekommst du mit `--dry-run=client
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 25. Volumes, PersistentVolume und PersistentVolumeClaim](../../course/25/ru.md) — Volumes, PV und PVC, Access Modes, Bindung des Claims an das Volume (Bound)
-- [Kapitel 26. StorageClass, dynamisches Provisioning](../../course/26/ru.md) — StorageClass und dynamische Bereitstellung von Volumes für einen Claim
+- [Kapitel 25. Volumes, PersistentVolume und PersistentVolumeClaim](../../course/25/de.md) — Volumes, PV und PVC, Access Modes, Bindung des Claims an das Volume (Bound)
+- [Kapitel 26. StorageClass, dynamisches Provisioning](../../course/26/de.md) — StorageClass und dynamische Bereitstellung von Volumes für einen Claim
 
 ## Was wir erstellen und warum
 

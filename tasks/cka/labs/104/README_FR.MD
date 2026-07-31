@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 104 — Planification : nodeSelector, taints, ressources, static pod, PriorityClass, HPA
 
@@ -21,11 +21,11 @@ sont plus commodes à écrire dans un manifeste (canevas via
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 12. Planification des pods : affinity](../../course/12/ru.md) — `nodeSelector`, podAntiAffinity, topologySpread, mode strict/souple
-- [Chapitre 13. Taints et tolerations](../../course/13/ru.md) — repousser les Pods d'un nœud et les laisser passer via un toleration
-- [Chapitre 14. Ressources : requests, limits, quotas](../../course/14/ru.md) — les `requests` CPU comme base du HPA
-- [Chapitre 15. Static Pods, PriorityClass](../../course/15/ru.md) — Pod géré par kubelet, priorités d'éviction
-- [Chapitre 16. Autoscaling : HPA](../../course/16/ru.md) — mise à l'échelle selon la charge CPU
+- [Chapitre 12. Planification des pods : affinity](../../course/12/fr.md) — `nodeSelector`, podAntiAffinity, topologySpread, mode strict/souple
+- [Chapitre 13. Taints et tolerations](../../course/13/fr.md) — repousser les Pods d'un nœud et les laisser passer via un toleration
+- [Chapitre 14. Ressources : requests, limits, quotas](../../course/14/fr.md) — les `requests` CPU comme base du HPA
+- [Chapitre 15. Static Pods, PriorityClass](../../course/15/fr.md) — Pod géré par kubelet, priorités d'éviction
+- [Chapitre 16. Autoscaling : HPA](../../course/16/fr.md) — mise à l'échelle selon la charge CPU
 
 ## Ce que nous créons et pourquoi
 

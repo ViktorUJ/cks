@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 102 — Mises à jour et stratégies de déploiement : rolling update, rollback, canary, blue/green
 
@@ -20,8 +20,8 @@ recommandé de les résoudre avec des commandes impératives
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 8. Deployment : rolling update et rollback](../../course/08/ru.md) — déploiement progressif, historique des révisions, change-cause, rollback
-- [Chapitre 9. Stratégies de déploiement : blue/green et canary](../../course/09/ru.md) — répartition du trafic entre les versions et bascule des environnements
+- [Chapitre 8. Deployment : rolling update et rollback](../../course/08/fr.md) — déploiement progressif, historique des révisions, change-cause, rollback
+- [Chapitre 9. Stratégies de déploiement : blue/green et canary](../../course/09/fr.md) — répartition du trafic entre les versions et bascule des environnements
 
 ## Ce que nous créons et pourquoi
 

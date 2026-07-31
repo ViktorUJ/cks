@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 121 — Drills: RBAC
 
@@ -17,8 +17,8 @@ Prüfungstempo bleiben.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 21. ServiceAccount; Authentifizierung, Autorisierung, Admission](../../course/21/ru.md) — ServiceAccount, die Kette authn/authz/admission
-- [Kapitel 38. RBAC: Role, ClusterRole und Bindings](../../course/38/ru.md) — Role/ClusterRole, RoleBinding/ClusterRoleBinding, Rechteprüfung mit `auth can-i`
+- [Kapitel 21. ServiceAccount; Authentifizierung, Autorisierung, Admission](../../course/21/de.md) — ServiceAccount, die Kette authn/authz/admission
+- [Kapitel 38. RBAC: Role, ClusterRole und Bindings](../../course/38/de.md) — Role/ClusterRole, RoleBinding/ClusterRoleBinding, Rechteprüfung mit `auth can-i`
 
 ## Was wir tun und warum
 

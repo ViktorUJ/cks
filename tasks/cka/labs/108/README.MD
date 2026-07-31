@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 108 — Storage: PersistentVolume, PersistentVolumeClaim and mounting a volume into a Pod
 
@@ -18,8 +18,8 @@ via the `check_result` command. Storage objects are easier to describe with mani
 
 Reinforce the material from the course chapters:
 
-- [Chapter 25. Volumes, PersistentVolume and PersistentVolumeClaim](../../course/25/ru.md) — volumes, PV and PVC, access modes, binding a claim to a volume (Bound)
-- [Chapter 26. StorageClass, dynamic provisioning](../../course/26/ru.md) — StorageClass and dynamic volume provisioning for a claim
+- [Chapter 25. Volumes, PersistentVolume and PersistentVolumeClaim](../../course/25/README.md) — volumes, PV and PVC, access modes, binding a claim to a volume (Bound)
+- [Chapter 26. StorageClass, dynamic provisioning](../../course/26/README.md) — StorageClass and dynamic volume provisioning for a claim
 
 ## What We Build and Why
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 115 — Extension et empaquetage : CRD, Helm, Kustomize
 
@@ -18,9 +18,9 @@ CKA/CKAD) avec une vérification automatique via la commande `check_result`.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 41. CRD et opérateurs](../../course/41/ru.md) — étendre l'API avec son propre type de ressource
-- [Chapitre 42. Helm](../../course/42/ru.md) — dépôts de charts, installation de releases
-- [Chapitre 43. Kustomize](../../course/43/ru.md) — base + overlay, redéfinir des champs sans templates
+- [Chapitre 41. CRD et opérateurs](../../course/41/fr.md) — étendre l'API avec son propre type de ressource
+- [Chapitre 42. Helm](../../course/42/fr.md) — dépôts de charts, installation de releases
+- [Chapitre 43. Kustomize](../../course/43/fr.md) — base + overlay, redéfinir des champs sans templates
 
 ## Ce que nous créons et pourquoi
 

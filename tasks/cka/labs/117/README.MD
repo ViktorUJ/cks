@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 117 — Troubleshooting: control plane and nodes
 
@@ -23,8 +23,8 @@ validate any task — fix it first.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 15. Static Pods, PriorityClass, multiple schedulers](../../course/15/ru.md) — static pods in `/etc/kubernetes/manifests/`, control plane components as static pods
-- [Chapter 45. Debugging the control plane and worker nodes](../../course/45/ru.md) — kubelet diagnostics via `systemctl`/`journalctl`, container debugging via `crictl`
+- [Chapter 15. Static Pods, PriorityClass, multiple schedulers](../../course/15/README.md) — static pods in `/etc/kubernetes/manifests/`, control plane components as static pods
+- [Chapter 45. Debugging the control plane and worker nodes](../../course/45/README.md) — kubelet diagnostics via `systemctl`/`journalctl`, container debugging via `crictl`
 
 ## What We Fix and Why
 

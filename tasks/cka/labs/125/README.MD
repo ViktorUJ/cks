@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 125 — DNS and CoreDNS in the Cluster
 
@@ -15,9 +15,9 @@ with automatic validation via the `check_result` command.
 
 Reinforce the material from the course chapter:
 
-- [Chapter 31. Service internals, DNS and CoreDNS](../../course/31/ru.md) — A records of a Service and of a headless Service, `dnsConfig`/`ndots`, editing CoreDNS (Corefile)
+- [Chapter 31. Service internals, DNS and CoreDNS](../../course/31/README.md) — A records of a Service and of a headless Service, `dnsConfig`/`ndots`, editing CoreDNS (Corefile)
 
-Related chapters: [Chapter 7. Services](../../course/07/ru.md) — Service types and Endpoints, [Chapter 30. Networking and CNI](../../course/30/ru.md) — Pod networking.
+Related chapters: [Chapter 7. Services](../../course/07/README.md) — Service types and Endpoints, [Chapter 30. Networking and CNI](../../course/30/README.md) — Pod networking.
 
 ## What We Build and Why
 

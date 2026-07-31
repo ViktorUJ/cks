@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 118 — Diagnose: Zertifikate, CoreDNS und Cluster-Netzwerk
 
@@ -19,10 +19,10 @@ Prüfung über den Befehl `check_result`.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 31. Service von innen, DNS und CoreDNS](../../course/31/ru.md) — wie das Cluster-DNS funktioniert, die Rolle von CoreDNS, `ndots` und resolv.conf
-- [Kapitel 39. TLS-Zertifikate, kubeconfig und die CSR-API](../../course/39/ru.md) — Lesen der Control-Plane-Zertifikate, Gültigkeit und CN
-- [Kapitel 40. Erweiterungsschnittstellen: CNI, CSI, CRI](../../course/40/ru.md) — CNI, Pod CIDR und der Netzwerk-Agent
-- [Kapitel 46. Debugging von Services und Netzwerk](../../course/46/ru.md) — Diagnose von DNS und Netzwerkverbindungen
+- [Kapitel 31. Service von innen, DNS und CoreDNS](../../course/31/de.md) — wie das Cluster-DNS funktioniert, die Rolle von CoreDNS, `ndots` und resolv.conf
+- [Kapitel 39. TLS-Zertifikate, kubeconfig und die CSR-API](../../course/39/de.md) — Lesen der Control-Plane-Zertifikate, Gültigkeit und CN
+- [Kapitel 40. Erweiterungsschnittstellen: CNI, CSI, CRI](../../course/40/de.md) — CNI, Pod CIDR und der Netzwerk-Agent
+- [Kapitel 46. Debugging von Services und Netzwerk](../../course/46/de.md) — Diagnose von DNS und Netzwerkverbindungen
 
 ## Was wir tun und warum
 

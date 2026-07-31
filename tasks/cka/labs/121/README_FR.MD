@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 121 — Drills : RBAC
 
@@ -17,8 +17,8 @@ tenir le rythme de l'examen.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 21. ServiceAccount ; authentification, autorisation, admission](../../course/21/ru.md) — ServiceAccount, la chaîne authn/authz/admission
-- [Chapitre 38. RBAC : Role, ClusterRole et bindings](../../course/38/ru.md) — Role/ClusterRole, RoleBinding/ClusterRoleBinding, vérification des droits avec `auth can-i`
+- [Chapitre 21. ServiceAccount ; authentification, autorisation, admission](../../course/21/fr.md) — ServiceAccount, la chaîne authn/authz/admission
+- [Chapitre 38. RBAC : Role, ClusterRole et bindings](../../course/38/fr.md) — Role/ClusterRole, RoleBinding/ClusterRoleBinding, vérification des droits avec `auth can-i`
 
 ## Ce que nous faisons et pourquoi
 

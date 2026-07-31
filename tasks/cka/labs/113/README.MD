@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 113 — RBAC and Certificates: Role, ClusterRole, ServiceAccount, CSR
 
@@ -16,9 +16,9 @@ validation via the `check_result` command (including through `kubectl auth can-i
 
 Reinforce the material from the course chapters:
 
-- [Chapter 21. ServiceAccount; authn/authz/admission](../../course/21/ru.md) — how applications authenticate, the stages of processing an API request
-- [Chapter 38. RBAC: Role, ClusterRole and bindings](../../course/38/ru.md) — permissions in a namespace and at cluster level, binding to subjects
-- [Chapter 39. TLS certificates, kubeconfig and the CSR API](../../course/39/ru.md) — issuing a client certificate to a human through CSR
+- [Chapter 21. ServiceAccount; authn/authz/admission](../../course/21/README.md) — how applications authenticate, the stages of processing an API request
+- [Chapter 38. RBAC: Role, ClusterRole and bindings](../../course/38/README.md) — permissions in a namespace and at cluster level, binding to subjects
+- [Chapter 39. TLS certificates, kubeconfig and the CSR API](../../course/39/README.md) — issuing a client certificate to a human through CSR
 
 ## What We Build and Why
 

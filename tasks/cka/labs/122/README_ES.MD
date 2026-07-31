@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 122 — Ejercicios: planificación de pods
 
@@ -21,10 +21,10 @@ ajustarse al ritmo del examen.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 12. Planificación de pods: nodeName, nodeSelector, affinity](../../course/12/ru.md) — fijar Pods a nodos mediante nodeSelector y nodeAffinity
-- [Capítulo 13. Taints y tolerations](../../course/13/ru.md) — repeler Pods con taints y admitirlos con tolerations
-- [Capítulo 14. Recursos: requests, limits, LimitRange, ResourceQuota](../../course/14/ru.md) — requests y limits de CPU/memoria por contenedor
-- [Capítulo 15. Static Pods, PriorityClass, varios planificadores](../../course/15/ru.md) — prioridad de los Pods mediante PriorityClass
+- [Capítulo 12. Planificación de pods: nodeName, nodeSelector, affinity](../../course/12/es.md) — fijar Pods a nodos mediante nodeSelector y nodeAffinity
+- [Capítulo 13. Taints y tolerations](../../course/13/es.md) — repeler Pods con taints y admitirlos con tolerations
+- [Capítulo 14. Recursos: requests, limits, LimitRange, ResourceQuota](../../course/14/es.md) — requests y limits de CPU/memoria por contenedor
+- [Capítulo 15. Static Pods, PriorityClass, varios planificadores](../../course/15/es.md) — prioridad de los Pods mediante PriorityClass
 
 ## Qué hacemos y para qué
 

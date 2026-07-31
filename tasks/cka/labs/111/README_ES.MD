@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 111 — kubeadm: actualización del clúster (lifecycle)
 
@@ -18,8 +18,8 @@ todos los nodos están actualizados a la versión objetivo y en estado Ready.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 35. Instalación de un clúster con kubeadm](../../course/35/ru.md) — de qué se compone un clúster, los roles de control plane y worker
-- [Capítulo 36. Actualización del clúster (lifecycle)](../../course/36/ru.md) — el orden de la actualización, `upgrade apply`/`upgrade node`, `cordon`/`drain`
+- [Capítulo 35. Instalación de un clúster con kubeadm](../../course/35/es.md) — de qué se compone un clúster, los roles de control plane y worker
+- [Capítulo 36. Actualización del clúster (lifecycle)](../../course/36/es.md) — el orden de la actualización, `upgrade apply`/`upgrade node`, `cordon`/`drain`
 
 ## Qué hacemos y para qué
 

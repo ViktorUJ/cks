@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 101 — Kubernetes-Grundlagen: Pods, Deployment, Namespaces, Labels, Service
 
@@ -19,12 +19,12 @@ Prüfung über den Befehl `check_result`. Empfohlen wird die Lösung mit imperat
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 2. Kubernetes-Architektur](../../course/02/ru.md) — woraus ein Cluster besteht
-- [Kapitel 3. Arbeiten mit kubectl](../../course/03/ru.md) — imperativer Stil, `--dry-run`, JSONPath
-- [Kapitel 4. Pods](../../course/04/ru.md) — die Basiseinheit der Ausführung
-- [Kapitel 5. ReplicaSet und Deployment](../../course/05/ru.md) — Verwaltung von Replicas
-- [Kapitel 6. Namespaces, Labels, Selektoren](../../course/06/ru.md) — Organisation und Beziehungen
-- [Kapitel 7. Services](../../course/07/ru.md) — stabiler Zugriff und Lastverteilung
+- [Kapitel 2. Kubernetes-Architektur](../../course/02/de.md) — woraus ein Cluster besteht
+- [Kapitel 3. Arbeiten mit kubectl](../../course/03/de.md) — imperativer Stil, `--dry-run`, JSONPath
+- [Kapitel 4. Pods](../../course/04/de.md) — die Basiseinheit der Ausführung
+- [Kapitel 5. ReplicaSet und Deployment](../../course/05/de.md) — Verwaltung von Replicas
+- [Kapitel 6. Namespaces, Labels, Selektoren](../../course/06/de.md) — Organisation und Beziehungen
+- [Kapitel 7. Services](../../course/07/de.md) — stabiler Zugriff und Lastverteilung
 
 ## Was wir erstellen und warum
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 111 — kubeadm : mise à niveau du cluster (lifecycle)
 
@@ -18,8 +18,8 @@ s'assure que tous les nœuds sont mis à niveau vers la version cible et sont à
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 35. Installation d'un cluster kubeadm](../../course/35/ru.md) — de quoi se compose un cluster, les rôles control plane et worker
-- [Chapitre 36. Mise à niveau du cluster (lifecycle)](../../course/36/ru.md) — l'ordre de la mise à niveau, `upgrade apply`/`upgrade node`, `cordon`/`drain`
+- [Chapitre 35. Installation d'un cluster kubeadm](../../course/35/fr.md) — de quoi se compose un cluster, les rôles control plane et worker
+- [Chapitre 36. Mise à niveau du cluster (lifecycle)](../../course/36/fr.md) — l'ordre de la mise à niveau, `upgrade apply`/`upgrade node`, `cordon`/`drain`
 
 ## Ce que nous faisons et pourquoi
 

@@ -1,3 +1,5 @@
+[Eng version](GLOSSARY.md) · [Versión en español](GLOSSARY_ES.md) · [Version française](GLOSSARY_FR.md) · [Deutsche Version](GLOSSARY_DE.md) · [ქართული ვერსია](GLOSSARY_GE.md)
+
 # Глоссарий курса CKA + CKAD
 
 [← Оглавление курса](README_RU.md) · [CKA](CKA_RU.md) · [CKAD](CKAD_RU.md)

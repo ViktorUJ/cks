@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 108 — შენახვა: PersistentVolume, PersistentVolumeClaim და ტომის მიმაგრება Pod-ში
 
@@ -19,8 +19,8 @@ Pod-ს, რომელიც `nodeSelector`-ის (კვანძის ს�
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 25. Volumes, PersistentVolume და PersistentVolumeClaim](../../course/25/ru.md) — ტომები, PV და PVC, წვდომის რეჟიმები, განაცხადის მიბმა ტომთან (Bound)
-- [თავი 26. StorageClass, დინამიური provisioning](../../course/26/ru.md) — StorageClass და ტომების დინამიური გამოყოფა განაცხადისთვის
+- [თავი 25. Volumes, PersistentVolume და PersistentVolumeClaim](../../course/25/ge.md) — ტომები, PV და PVC, წვდომის რეჟიმები, განაცხადის მიბმა ტომთან (Bound)
+- [თავი 26. StorageClass, დინამიური provisioning](../../course/26/ge.md) — StorageClass და ტომების დინამიური გამოყოფა განაცხადისთვის
 
 ## რას ვქმნით და რისთვის
 

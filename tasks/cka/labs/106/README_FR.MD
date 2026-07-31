@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 106 — Sécurité des applications : SecurityContext et capabilities
 
@@ -20,8 +20,8 @@ squelette avec `--dry-run=client -o yaml` puis d'y ajouter les champs nécessair
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 20. SecurityContext et capabilities](../../course/20/ru.md) — `runAsUser`, `fsGroup`, capabilities, `allowPrivilegeEscalation`, `privileged`
-- [Chapitre 21. ServiceAccount ; authn/authz/admission](../../course/21/ru.md) — le contexte de sécurité dans le modèle d'accès global
+- [Chapitre 20. SecurityContext et capabilities](../../course/20/fr.md) — `runAsUser`, `fsGroup`, capabilities, `allowPrivilegeEscalation`, `privileged`
+- [Chapitre 21. ServiceAccount ; authn/authz/admission](../../course/21/fr.md) — le contexte de sécurité dans le modèle d'accès global
 
 ## Ce que nous créons et pourquoi
 

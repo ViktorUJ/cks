@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 121 — დრილები: RBAC
 
@@ -16,8 +16,8 @@ Role/RoleBinding-ზე, ClusterRole/ClusterRoleBinding-ზე და ეფე�
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 21. ServiceAccount; ავთენტიფიკაცია, ავტორიზაცია, admission](../../course/21/ru.md) — ServiceAccount, ჯაჭვი authn/authz/admission
-- [თავი 38. RBAC: Role, ClusterRole და binding-ები](../../course/38/ru.md) — Role/ClusterRole, RoleBinding/ClusterRoleBinding, უფლებების შემოწმება `auth can-i`-ით
+- [თავი 21. ServiceAccount; ავთენტიფიკაცია, ავტორიზაცია, admission](../../course/21/ge.md) — ServiceAccount, ჯაჭვი authn/authz/admission
+- [თავი 38. RBAC: Role, ClusterRole და binding-ები](../../course/38/ge.md) — Role/ClusterRole, RoleBinding/ClusterRoleBinding, უფლებების შემოწმება `auth can-i`-ით
 
 ## რას ვაკეთებთ და რისთვის
 

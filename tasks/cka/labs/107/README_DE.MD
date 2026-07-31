@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 107 — Anwendungsdesign: Multi-Container-Pods, Images, Volumes
 
@@ -18,9 +18,9 @@ Gerüst über `--dry-run=client -o yaml` vorbereiten, den Image-Bau führst du i
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 22. Multi-Container-Pods](../../course/22/ru.md) — mehrere Container in einem Pod, gemeinsames Volume, Sidecar-Pattern
-- [Kapitel 23. Container-Images](../../course/23/ru.md) — Image-Bau aus einem Dockerfile, Export in ein OCI-Archiv
-- [Kapitel 24. Volumes für Anwendungen](../../course/24/ru.md) — ephemeres `emptyDir`, `sizeLimit`, Mounten
+- [Kapitel 22. Multi-Container-Pods](../../course/22/de.md) — mehrere Container in einem Pod, gemeinsames Volume, Sidecar-Pattern
+- [Kapitel 23. Container-Images](../../course/23/de.md) — Image-Bau aus einem Dockerfile, Export in ein OCI-Archiv
+- [Kapitel 24. Volumes für Anwendungen](../../course/24/de.md) — ephemeres `emptyDir`, `sizeLimit`, Mounten
 
 ## Was wir erstellen und warum
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 115 — Erweiterung und Verpackung: CRD, Helm, Kustomize
 
@@ -17,9 +17,9 @@ Prüfung über den Befehl `check_result`.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 41. CRDs und Operatoren](../../course/41/ru.md) — die API mit einem eigenen Ressourcentyp erweitern
-- [Kapitel 42. Helm](../../course/42/ru.md) — Chart-Repositories, Installation von Releases
-- [Kapitel 43. Kustomize](../../course/43/ru.md) — base + overlay, Felder ohne Templates überschreiben
+- [Kapitel 41. CRDs und Operatoren](../../course/41/de.md) — die API mit einem eigenen Ressourcentyp erweitern
+- [Kapitel 42. Helm](../../course/42/de.md) — Chart-Repositories, Installation von Releases
+- [Kapitel 43. Kustomize](../../course/43/de.md) — base + overlay, Felder ohne Templates überschreiben
 
 ## Was wir erstellen und warum
 

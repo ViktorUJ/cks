@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 109 — დაკვირვებადობა და მომსახურება: probe-ები, ლოგები, გამართვა, deprecations
 
@@ -20,9 +20,9 @@
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 27. მდგომარეობის შემოწმებები: liveness, readiness, startup](../../course/27/ru.md) — სამი probe (startup/readiness/liveness), ტაიმინგები `periodSeconds`/`failureThreshold`, startupProbe `initialDelaySeconds`-ის წინააღმდეგ
-- [თავი 28. ლოგირება და მონიტორინგი](../../course/28/ru.md) — `kubectl logs`, `kubectl top`, კლასტერის მოვლენები
-- [თავი 29. აპლიკაციების გამართვა და API-ის მოძველება](../../course/29/ru.md) — Pod-ის დიაგნოსტიკა და მოძველებული API-ვერსიებიდან გადასვლა
+- [თავი 27. მდგომარეობის შემოწმებები: liveness, readiness, startup](../../course/27/ge.md) — სამი probe (startup/readiness/liveness), ტაიმინგები `periodSeconds`/`failureThreshold`, startupProbe `initialDelaySeconds`-ის წინააღმდეგ
+- [თავი 28. ლოგირება და მონიტორინგი](../../course/28/ge.md) — `kubectl logs`, `kubectl top`, კლასტერის მოვლენები
+- [თავი 29. აპლიკაციების გამართვა და API-ის მოძველება](../../course/29/ge.md) — Pod-ის დიაგნოსტიკა და მოძველებული API-ვერსიებიდან გადასვლა
 
 ## რას ვქმნით და რისთვის
 

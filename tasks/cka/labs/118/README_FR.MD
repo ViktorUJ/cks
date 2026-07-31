@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 118 — Diagnostic : certificats, CoreDNS et réseau du cluster
 
@@ -19,10 +19,10 @@ avec une vérification automatique par la commande `check_result`.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 31. Service de l'intérieur, DNS et CoreDNS](../../course/31/ru.md) — comment fonctionne le DNS du cluster, le rôle de CoreDNS, `ndots` et resolv.conf
-- [Chapitre 39. Certificats TLS, kubeconfig et l'API CSR](../../course/39/ru.md) — lecture des certificats du control plane, validité et CN
-- [Chapitre 40. Interfaces d'extension : CNI, CSI, CRI](../../course/40/ru.md) — CNI, Pod CIDR et l'agent réseau
-- [Chapitre 46. Débogage des services et du réseau](../../course/46/ru.md) — diagnostic du DNS et de la connectivité réseau
+- [Chapitre 31. Service de l'intérieur, DNS et CoreDNS](../../course/31/fr.md) — comment fonctionne le DNS du cluster, le rôle de CoreDNS, `ndots` et resolv.conf
+- [Chapitre 39. Certificats TLS, kubeconfig et l'API CSR](../../course/39/fr.md) — lecture des certificats du control plane, validité et CN
+- [Chapitre 40. Interfaces d'extension : CNI, CSI, CRI](../../course/40/fr.md) — CNI, Pod CIDR et l'agent réseau
+- [Chapitre 46. Débogage des services et du réseau](../../course/46/fr.md) — diagnostic du DNS et de la connectivité réseau
 
 ## Ce que nous faisons et pourquoi
 

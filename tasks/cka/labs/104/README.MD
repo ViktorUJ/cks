@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 104 — Scheduling: nodeSelector, taints, resources, static pod, PriorityClass, HPA
 
@@ -20,11 +20,11 @@ validation via the `check_result` command. Some objects are easier to build from
 
 Reinforce the material from the course chapters:
 
-- [Chapter 12. Pod scheduling: affinity](../../course/12/ru.md) — `nodeSelector`, podAntiAffinity, topologySpread, hard/soft mode
-- [Chapter 13. Taints and tolerations](../../course/13/ru.md) — repelling Pods from a node and letting them through with a toleration
-- [Chapter 14. Resources: requests, limits, quotas](../../course/14/ru.md) — CPU `requests` as the basis for HPA
-- [Chapter 15. Static Pods, PriorityClass](../../course/15/ru.md) — a Pod managed by kubelet, preemption priorities
-- [Chapter 16. Autoscaling: HPA](../../course/16/ru.md) — scaling by CPU load
+- [Chapter 12. Pod scheduling: affinity](../../course/12/README.md) — `nodeSelector`, podAntiAffinity, topologySpread, hard/soft mode
+- [Chapter 13. Taints and tolerations](../../course/13/README.md) — repelling Pods from a node and letting them through with a toleration
+- [Chapter 14. Resources: requests, limits, quotas](../../course/14/README.md) — CPU `requests` as the basis for HPA
+- [Chapter 15. Static Pods, PriorityClass](../../course/15/README.md) — a Pod managed by kubelet, preemption priorities
+- [Chapter 16. Autoscaling: HPA](../../course/16/README.md) — scaling by CPU load
 
 ## What We Build and Why
 

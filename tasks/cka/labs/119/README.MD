@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 119 — Speed Drills and JSONPath
 
@@ -17,9 +17,9 @@ per task). The answer files for the JSONPath tasks are saved to `/home/ubuntu/an
 
 Reinforce the material from the course chapters:
 
-- [Chapter 3. Working with kubectl: imperative and declarative approaches](../../course/03/ru.md) — fast imperative commands, `--dry-run=client -o yaml`, object generators
-- [Chapter 47. CKAD exam: JSONPath and kubectl productivity](../../course/47/ru.md) — extracting data with `-o jsonpath`, custom-columns, `--sort-by`
-- [Chapter 48. CKA exam: time management and strategy](../../course/48/ru.md) — allocating time and choosing the order of tasks
+- [Chapter 3. Working with kubectl: imperative and declarative approaches](../../course/03/README.md) — fast imperative commands, `--dry-run=client -o yaml`, object generators
+- [Chapter 47. CKAD exam: JSONPath and kubectl productivity](../../course/47/README.md) — extracting data with `-o jsonpath`, custom-columns, `--sort-by`
+- [Chapter 48. CKA exam: time management and strategy](../../course/48/README.md) — allocating time and choosing the order of tasks
 
 ## What We Do and Why
 

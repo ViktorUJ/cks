@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 102 — Actualizaciones y estrategias de despliegue: rolling update, rollback, canary, blue/green
 
@@ -19,8 +19,8 @@ examen es el camino más rápido.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 8. Deployment: rolling update y rollback](../../course/08/ru.md) — despliegue progresivo, historial de revisiones, change-cause, rollback
-- [Capítulo 9. Estrategias de despliegue: blue/green y canary](../../course/09/ru.md) — reparto del tráfico entre versiones y conmutación de entornos
+- [Capítulo 8. Deployment: rolling update y rollback](../../course/08/es.md) — despliegue progresivo, historial de revisiones, change-cause, rollback
+- [Capítulo 9. Estrategias de despliegue: blue/green y canary](../../course/09/es.md) — reparto del tráfico entre versiones y conmutación de entornos
 
 ## Qué creamos y para qué
 

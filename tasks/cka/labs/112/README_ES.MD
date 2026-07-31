@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 112 — etcd: snapshots y restauración
 
@@ -19,7 +19,7 @@ restauración y la existencia de los recursos restaurados.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 37. Copia de seguridad y restauración de etcd](../../course/37/ru.md) — `snapshot save`/`status`/`restore`, parada y arranque de los pods estáticos del control plane, restauración de los datos de etcd, comprobación de la salud del clúster
+- [Capítulo 37. Copia de seguridad y restauración de etcd](../../course/37/es.md) — `snapshot save`/`status`/`restore`, parada y arranque de los pods estáticos del control plane, restauración de los datos de etcd, comprobación de la salud del clúster
 
 ## Qué hacemos y para qué
 

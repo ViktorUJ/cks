@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 102 — განახლებები და განთავსების სტრატეგიები: rolling update, rollback, canary, blue/green
 
@@ -18,8 +18,8 @@ update), ცვლილების მიზეზის ჩაწერა (c
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 8. Deployment: rolling update და rollback](../../course/08/ru.md) — შეუფერხებელი გამოშვება, რევიზიების ისტორია, change-cause, დაბრუნება
-- [თავი 9. განთავსების სტრატეგიები: blue/green და canary](../../course/09/ru.md) — ტრაფიკის განაწილება ვერსიებს შორის და გარემოების გადართვა
+- [თავი 8. Deployment: rolling update და rollback](../../course/08/ge.md) — შეუფერხებელი გამოშვება, რევიზიების ისტორია, change-cause, დაბრუნება
+- [თავი 9. განთავსების სტრატეგიები: blue/green და canary](../../course/09/ge.md) — ტრაფიკის განაწილება ვერსიებს შორის და გარემოების გადართვა
 
 ## რას ვქმნით და რისთვის
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 114 — Troubleshooting: Fixing Broken Resources
 
@@ -17,9 +17,9 @@ validation via the `check_result` command.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 44. Debugging application failures](../../course/44/ru.md) — the `get` → `describe` → `logs` route, reading Pod statuses
-- [Chapter 45. Debugging the control plane and worker nodes](../../course/45/ru.md) — diagnosing nodes and system components
-- [Chapter 46. Debugging services and networking](../../course/46/ru.md) — the Service ↔ Endpoints ↔ labels chain
+- [Chapter 44. Debugging application failures](../../course/44/README.md) — the `get` → `describe` → `logs` route, reading Pod statuses
+- [Chapter 45. Debugging the control plane and worker nodes](../../course/45/README.md) — diagnosing nodes and system components
+- [Chapter 46. Debugging services and networking](../../course/46/README.md) — the Service ↔ Endpoints ↔ labels chain
 
 ## What We Fix and Why
 

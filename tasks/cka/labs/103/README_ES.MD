@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 103 — Tareas puntuales y periódicas: Job, CronJob, DaemonSet
 
@@ -19,8 +19,8 @@ plantilla): en el examen es el camino más rápido para objetos con muchos campo
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 10. Jobs y CronJobs](../../course/10/ru.md) — tareas puntuales y periódicas, `completions`, `backoffLimit`, `restartPolicy`, programación, `concurrencyPolicy`
-- [Capítulo 11. DaemonSet y StatefulSet](../../course/11/ru.md) — ejecutar un Pod en cada nodo, toleration para el control-plane
+- [Capítulo 10. Jobs y CronJobs](../../course/10/es.md) — tareas puntuales y periódicas, `completions`, `backoffLimit`, `restartPolicy`, programación, `concurrencyPolicy`
+- [Capítulo 11. DaemonSet y StatefulSet](../../course/11/es.md) — ejecutar un Pod en cada nodo, toleration para el control-plane
 
 ## Qué creamos y para qué
 

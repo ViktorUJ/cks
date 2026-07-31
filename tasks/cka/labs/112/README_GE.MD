@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 112 — etcd: snapshot-ები და აღდგენა
 
@@ -20,7 +20,7 @@ snapshot-ის არსებობას, კლასტერის ჯა�
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 37. etcd-ის სარეზერვო კოპირება და აღდგენა](../../course/37/ru.md) — `snapshot save`/`status`/`restore`, control plane-ის სტატიკური pod-ების გაჩერება და გაშვება, etcd-ის მონაცემების აღდგენა, კლასტერის ჯანმრთელობის შემოწმება
+- [თავი 37. etcd-ის სარეზერვო კოპირება და აღდგენა](../../course/37/ge.md) — `snapshot save`/`status`/`restore`, control plane-ის სტატიკური pod-ების გაჩერება და გაშვება, etcd-ის მონაცემების აღდგენა, კლასტერის ჯანმრთელობის შემოწმება
 
 ## რას ვაკეთებთ და რისთვის
 

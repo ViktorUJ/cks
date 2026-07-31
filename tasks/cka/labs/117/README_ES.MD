@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 117 — Troubleshooting: control plane y nodos
 
@@ -24,8 +24,8 @@ primero.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 15. Static Pods, PriorityClass, varios planificadores](../../course/15/ru.md) — static pods en `/etc/kubernetes/manifests/`, los componentes del control plane como static pods
-- [Capítulo 45. Depuración del control plane y de los nodos worker](../../course/45/ru.md) — diagnóstico de kubelet con `systemctl`/`journalctl`, depuración de contenedores con `crictl`
+- [Capítulo 15. Static Pods, PriorityClass, varios planificadores](../../course/15/es.md) — static pods en `/etc/kubernetes/manifests/`, los componentes del control plane como static pods
+- [Capítulo 45. Depuración del control plane y de los nodos worker](../../course/45/es.md) — diagnóstico de kubelet con `systemctl`/`journalctl`, depuración de contenedores con `crictl`
 
 ## Qué arreglamos y para qué
 

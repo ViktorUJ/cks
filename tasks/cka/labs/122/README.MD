@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 122 — Drills: Pod Scheduling
 
@@ -19,10 +19,10 @@ trained on Pod scheduling and keep up with the exam pace.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 12. Pod scheduling: nodeName, nodeSelector, affinity](../../course/12/ru.md) — binding Pods to nodes via nodeSelector and nodeAffinity
-- [Chapter 13. Taints and tolerations](../../course/13/ru.md) — repelling Pods with taints and admitting them with tolerations
-- [Chapter 14. Resources: requests, limits, LimitRange, ResourceQuota](../../course/14/ru.md) — CPU/memory requests and limits per container
-- [Chapter 15. Static Pods, PriorityClass, multiple schedulers](../../course/15/ru.md) — Pod priority via PriorityClass
+- [Chapter 12. Pod scheduling: nodeName, nodeSelector, affinity](../../course/12/README.md) — binding Pods to nodes via nodeSelector and nodeAffinity
+- [Chapter 13. Taints and tolerations](../../course/13/README.md) — repelling Pods with taints and admitting them with tolerations
+- [Chapter 14. Resources: requests, limits, LimitRange, ResourceQuota](../../course/14/README.md) — CPU/memory requests and limits per container
+- [Chapter 15. Static Pods, PriorityClass, multiple schedulers](../../course/15/README.md) — Pod priority via PriorityClass
 
 ## What We Do and Why
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 123 — Netzwerk auf niedriger Ebene: CNI von Null installieren
 
@@ -19,9 +19,9 @@ der verpflichtende Schritt nach `kubeadm init`.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 30. Kubernetes-Netzwerkmodell, Pod-Netzwerk und CNI](../../course/30/ru.md) — flaches Pod-Netzwerk, Anforderungen des Netzwerkmodells, Rolle des CNI
-- [Kapitel 40. Erweiterungsschnittstellen: CNI, CSI, CRI](../../course/40/ru.md) — was ein CNI-Plugin ist und wie es an das kubelet angebunden wird
-- [Kapitel 46. Debugging von Services und Netzwerk](../../course/46/ru.md) — Netzwerkdiagnose der Node: Routen, Network Namespaces, veth
+- [Kapitel 30. Kubernetes-Netzwerkmodell, Pod-Netzwerk und CNI](../../course/30/de.md) — flaches Pod-Netzwerk, Anforderungen des Netzwerkmodells, Rolle des CNI
+- [Kapitel 40. Erweiterungsschnittstellen: CNI, CSI, CRI](../../course/40/de.md) — was ein CNI-Plugin ist und wie es an das kubelet angebunden wird
+- [Kapitel 46. Debugging von Services und Netzwerk](../../course/46/de.md) — Netzwerkdiagnose der Node: Routen, Network Namespaces, veth
 
 ## Was wir tun und warum
 

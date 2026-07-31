@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 118 — დიაგნოსტიკა: სერტიფიკატები, CoreDNS და კლასტერის ქსელი
 
@@ -18,10 +18,10 @@
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 31. Service შიგნიდან, DNS და CoreDNS](../../course/31/ru.md) — როგორ მუშაობს კლასტერის DNS, CoreDNS-ის როლი, `ndots` და resolv.conf
-- [თავი 39. TLS-სერტიფიკატები, kubeconfig და CSR API](../../course/39/ru.md) — control plane-ის სერტიფიკატების წაკითხვა, ვადა და CN
-- [თავი 40. გაფართოების ინტერფეისები: CNI, CSI, CRI](../../course/40/ru.md) — CNI, Pod CIDR და ქსელის აგენტი
-- [თავი 46. სერვისებისა და ქსელის გამართვა](../../course/46/ru.md) — DNS-ისა და ქსელური კავშირის დიაგნოსტიკა
+- [თავი 31. Service შიგნიდან, DNS და CoreDNS](../../course/31/ge.md) — როგორ მუშაობს კლასტერის DNS, CoreDNS-ის როლი, `ndots` და resolv.conf
+- [თავი 39. TLS-სერტიფიკატები, kubeconfig და CSR API](../../course/39/ge.md) — control plane-ის სერტიფიკატების წაკითხვა, ვადა და CN
+- [თავი 40. გაფართოების ინტერფეისები: CNI, CSI, CRI](../../course/40/ge.md) — CNI, Pod CIDR და ქსელის აგენტი
+- [თავი 46. სერვისებისა და ქსელის გამართვა](../../course/46/ge.md) — DNS-ისა და ქსელური კავშირის დიაგნოსტიკა
 
 ## რას ვაკეთებთ და რისთვის
 

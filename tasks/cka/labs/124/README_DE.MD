@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 124 — HA Control Plane: Cluster aus 3 Control-Plane-Nodes aufbauen
 
@@ -28,8 +28,8 @@ ausfallsicheren Cluster **erweitert**.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 35A. Hochverfügbarkeit (HA)](../../course/35-2-ha/ru.md) — Topologie des HA Control Plane, Join von Control-Plane-Nodes, ungerades Quorum
-- [Kapitel 37. Backup und Wiederherstellung von etcd](../../course/37/ru.md) — Aufbau von etcd, Cluster-Mitglieder und Quorum, Arbeiten mit `etcdctl`
+- [Kapitel 35A. Hochverfügbarkeit (HA)](../../course/35-2-ha/de.md) — Topologie des HA Control Plane, Join von Control-Plane-Nodes, ungerades Quorum
+- [Kapitel 37. Backup und Wiederherstellung von etcd](../../course/37/de.md) — Aufbau von etcd, Cluster-Mitglieder und Quorum, Arbeiten mit `etcdctl`
 
 ## Was wir tun und warum
 

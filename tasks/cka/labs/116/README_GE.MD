@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 116 — kubeadm: კლასტერის აწყობა ნულიდან (init + join)
 
@@ -19,8 +19,8 @@ CNI-ს და აერთებთ worker-ს `kubeadm join`-ით.
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 35. კლასტერის დაყენება kubeadm-ის დახმარებით](../../course/35/ru.md) — prerequisites, container runtime, `kubeadm init`/`join`
-- [თავი 30. Kubernetes-ის ქსელური მოდელი და CNI](../../course/30/ru.md) — CNI-ს დაყენება, რომლის გარეშე node-ები `Ready`-ში არ გადადიან
+- [თავი 35. კლასტერის დაყენება kubeadm-ის დახმარებით](../../course/35/ge.md) — prerequisites, container runtime, `kubeadm init`/`join`
+- [თავი 30. Kubernetes-ის ქსელური მოდელი და CNI](../../course/30/ge.md) — CNI-ს დაყენება, რომლის გარეშე node-ები `Ready`-ში არ გადადიან
 
 ## რას ვაკეთებთ და რისთვის
 

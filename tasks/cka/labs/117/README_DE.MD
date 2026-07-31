@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 117 — Troubleshooting: Control Plane und Nodes
 
@@ -23,8 +23,8 @@ ist, kann `check_result` keine einzige Aufgabe prüfen — reparieren Sie ihn zu
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 15. Static Pods, PriorityClass, mehrere Scheduler](../../course/15/ru.md) — Static Pods in `/etc/kubernetes/manifests/`, Control-Plane-Komponenten als Static Pods
-- [Kapitel 45. Debugging von Control Plane und Worker-Nodes](../../course/45/ru.md) — kubelet-Diagnose über `systemctl`/`journalctl`, Container-Debugging über `crictl`
+- [Kapitel 15. Static Pods, PriorityClass, mehrere Scheduler](../../course/15/de.md) — Static Pods in `/etc/kubernetes/manifests/`, Control-Plane-Komponenten als Static Pods
+- [Kapitel 45. Debugging von Control Plane und Worker-Nodes](../../course/45/de.md) — kubelet-Diagnose über `systemctl`/`journalctl`, Container-Debugging über `crictl`
 
 ## Was wir reparieren und warum
 

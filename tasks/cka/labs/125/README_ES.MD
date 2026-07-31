@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 125 — DNS y CoreDNS en el clúster
 
@@ -16,9 +16,9 @@ reales de CKA/CKAD) con comprobación automática mediante el comando `check_res
 
 Consolidar el material del capítulo del curso:
 
-- [Capítulo 31. El Service por dentro, DNS y CoreDNS](../../course/31/ru.md) — registros A de un Service y de un headless, `dnsConfig`/`ndots`, edición de CoreDNS (Corefile)
+- [Capítulo 31. El Service por dentro, DNS y CoreDNS](../../course/31/es.md) — registros A de un Service y de un headless, `dnsConfig`/`ndots`, edición de CoreDNS (Corefile)
 
-Capítulos relacionados: [Capítulo 7. Services](../../course/07/ru.md) — tipos de Service y Endpoints, [Capítulo 30. Red y CNI](../../course/30/ru.md) — red de los Pods.
+Capítulos relacionados: [Capítulo 7. Services](../../course/07/es.md) — tipos de Service y Endpoints, [Capítulo 30. Red y CNI](../../course/30/es.md) — red de los Pods.
 
 ## Qué creamos y para qué
 

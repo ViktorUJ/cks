@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 124 — HA control plane: montar un clúster con 3 nodos de control plane
 
@@ -27,8 +27,8 @@ procedimiento correcto de join de nodos de control plane.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 35A. Alta disponibilidad (HA)](../../course/35-2-ha/ru.md) — topología del control plane HA, join de nodos de control plane, quórum impar
-- [Capítulo 37. Copia de seguridad y restauración de etcd](../../course/37/ru.md) — cómo funciona etcd, los miembros del clúster y el quórum, trabajo con `etcdctl`
+- [Capítulo 35A. Alta disponibilidad (HA)](../../course/35-2-ha/es.md) — topología del control plane HA, join de nodos de control plane, quórum impar
+- [Capítulo 37. Copia de seguridad y restauración de etcd](../../course/37/es.md) — cómo funciona etcd, los miembros del clúster y el quórum, trabajo con `etcdctl`
 
 ## Qué hacemos y para qué
 

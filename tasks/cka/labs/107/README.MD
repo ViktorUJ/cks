@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 107 — Application Design: multi-container Pods, images, volumes
 
@@ -18,9 +18,9 @@ imperatively with `podman`.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 22. Multi-container Pods](../../course/22/ru.md) — several containers in one Pod, a shared volume, the sidecar pattern
-- [Chapter 23. Container images](../../course/23/ru.md) — building an image from a Dockerfile, exporting to an OCI archive
-- [Chapter 24. Volumes for applications](../../course/24/ru.md) — ephemeral `emptyDir`, `sizeLimit`, mounting
+- [Chapter 22. Multi-container Pods](../../course/22/README.md) — several containers in one Pod, a shared volume, the sidecar pattern
+- [Chapter 23. Container images](../../course/23/README.md) — building an image from a Dockerfile, exporting to an OCI archive
+- [Chapter 24. Volumes for applications](../../course/24/README.md) — ephemeral `emptyDir`, `sizeLimit`, mounting
 
 ## What We Build and Why
 

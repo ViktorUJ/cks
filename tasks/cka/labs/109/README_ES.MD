@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 109 — Observabilidad y mantenimiento: probes, logs, depuración, deprecations
 
@@ -21,9 +21,9 @@ los logs y los comandos de monitorización se hacen de forma imperativa con
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 27. Comprobaciones de estado: liveness, readiness, startup](../../course/27/ru.md) — los tres probes (startup/readiness/liveness), los tiempos `periodSeconds`/`failureThreshold`, startupProbe frente a `initialDelaySeconds`
-- [Capítulo 28. Logging y monitorización](../../course/28/ru.md) — `kubectl logs`, `kubectl top`, eventos del clúster
-- [Capítulo 29. Depuración de aplicaciones y obsolescencia de la API](../../course/29/ru.md) — diagnóstico de Pods y migración desde versiones de API obsoletas
+- [Capítulo 27. Comprobaciones de estado: liveness, readiness, startup](../../course/27/es.md) — los tres probes (startup/readiness/liveness), los tiempos `periodSeconds`/`failureThreshold`, startupProbe frente a `initialDelaySeconds`
+- [Capítulo 28. Logging y monitorización](../../course/28/es.md) — `kubectl logs`, `kubectl top`, eventos del clúster
+- [Capítulo 29. Depuración de aplicaciones y obsolescencia de la API](../../course/29/es.md) — diagnóstico de Pods y migración desde versiones de API obsoletas
 
 ## Qué creamos y para qué
 

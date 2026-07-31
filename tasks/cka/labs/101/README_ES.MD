@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 101 — Fundamentos de Kubernetes: pods, Deployment, namespaces, etiquetas, Service
 
@@ -20,12 +20,12 @@ camino más rápido.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 2. Arquitectura de Kubernetes](../../course/02/ru.md) — de qué está compuesto el clúster
-- [Capítulo 3. Trabajar con kubectl](../../course/03/ru.md) — estilo imperativo, `--dry-run`, JSONPath
-- [Capítulo 4. Pods](../../course/04/ru.md) — la unidad básica de ejecución
-- [Capítulo 5. ReplicaSet y Deployment](../../course/05/ru.md) — gestión de réplicas
-- [Capítulo 6. Namespaces, etiquetas, selectores](../../course/06/ru.md) — organización y relaciones
-- [Capítulo 7. Services](../../course/07/ru.md) — acceso estable y balanceo
+- [Capítulo 2. Arquitectura de Kubernetes](../../course/02/es.md) — de qué está compuesto el clúster
+- [Capítulo 3. Trabajar con kubectl](../../course/03/es.md) — estilo imperativo, `--dry-run`, JSONPath
+- [Capítulo 4. Pods](../../course/04/es.md) — la unidad básica de ejecución
+- [Capítulo 5. ReplicaSet y Deployment](../../course/05/es.md) — gestión de réplicas
+- [Capítulo 6. Namespaces, etiquetas, selectores](../../course/06/es.md) — organización y relaciones
+- [Capítulo 7. Services](../../course/07/es.md) — acceso estable y balanceo
 
 ## Qué creamos y para qué
 

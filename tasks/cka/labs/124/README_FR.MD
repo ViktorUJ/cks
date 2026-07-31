@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 124 — HA control plane : construire un cluster à partir de 3 nœuds control plane
 
@@ -27,8 +27,8 @@ control plane.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 35A. Haute disponibilité (HA)](../../course/35-2-ha/ru.md) — topologie du control plane HA, join des nœuds control plane, quorum impair
-- [Chapitre 37. Sauvegarde et restauration d'etcd](../../course/37/ru.md) — fonctionnement d'etcd, membres du cluster et quorum, travail avec `etcdctl`
+- [Chapitre 35A. Haute disponibilité (HA)](../../course/35-2-ha/fr.md) — topologie du control plane HA, join des nœuds control plane, quorum impair
+- [Chapitre 37. Sauvegarde et restauration d'etcd](../../course/37/fr.md) — fonctionnement d'etcd, membres du cluster et quorum, travail avec `etcdctl`
 
 ## Ce que nous faisons et pourquoi
 

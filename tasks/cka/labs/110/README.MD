@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 110 — Networking: Service/DNS, Ingress, NetworkPolicy
 
@@ -20,10 +20,10 @@ objects are better done with manifests (`kubectl apply -f`).
 
 Reinforce the material from the course chapters:
 
-- [Chapter 31. Service internals, DNS and CoreDNS](../../course/31/ru.md) — how a Service works, DNS names and resolution through CoreDNS
-- [Chapter 32. Ingress and Ingress controllers](../../course/32/ru.md) — L7 entry point, path rules, rewrite, ingress controller
-- [Chapter 33. Gateway API](../../course/33/ru.md) — Gateway, HTTPRoute and migration from Ingress
-- [Chapter 34. NetworkPolicy](../../course/34/ru.md) — traffic segmentation, default-deny and allows by selector
+- [Chapter 31. Service internals, DNS and CoreDNS](../../course/31/README.md) — how a Service works, DNS names and resolution through CoreDNS
+- [Chapter 32. Ingress and Ingress controllers](../../course/32/README.md) — L7 entry point, path rules, rewrite, ingress controller
+- [Chapter 33. Gateway API](../../course/33/README.md) — Gateway, HTTPRoute and migration from Ingress
+- [Chapter 34. NetworkPolicy](../../course/34/README.md) — traffic segmentation, default-deny and allows by selector
 
 ## What We Build and Why
 

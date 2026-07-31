@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 102 — Updates und Deployment-Strategien: Rolling Update, Rollback, Canary, Blue/Green
 
@@ -19,8 +19,8 @@ Prüfung über den Befehl `check_result`. Empfohlen wird die Lösung mit imperat
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 8. Deployment: Rolling Update und Rollback](../../course/08/ru.md) — sanftes Ausrollen, Revisionshistorie, change-cause, Rollback
-- [Kapitel 9. Deployment-Strategien: Blue/Green und Canary](../../course/09/ru.md) — Traffic-Verteilung auf Versionen und Umschalten der Umgebungen
+- [Kapitel 8. Deployment: Rolling Update und Rollback](../../course/08/de.md) — sanftes Ausrollen, Revisionshistorie, change-cause, Rollback
+- [Kapitel 9. Deployment-Strategien: Blue/Green und Canary](../../course/09/de.md) — Traffic-Verteilung auf Versionen und Umschalten der Umgebungen
 
 ## Was wir erstellen und warum
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 120 — Drills: servicios y red
 
@@ -17,10 +17,10 @@ de las tareas de JSONPath se guardan en `/home/ubuntu/answers/`.
 
 Consolidar el material de los capítulos del curso:
 
-- [Capítulo 7. Services: ClusterIP, NodePort, LoadBalancer, Endpoints](../../course/07/ru.md) — tipos de Service, publicación con `expose`, Endpoints
-- [Capítulo 31. El Service por dentro, DNS y CoreDNS](../../course/31/ru.md) — Service headless (`clusterIP: None`), nombres DNS
-- [Capítulo 32. Ingress y controladores de Ingress](../../course/32/ru.md) — enrutado por host y ruta hacia el Service de backend
-- [Capítulo 34. NetworkPolicy](../../course/34/ru.md) — default-deny, podSelector, policyTypes
+- [Capítulo 7. Services: ClusterIP, NodePort, LoadBalancer, Endpoints](../../course/07/es.md) — tipos de Service, publicación con `expose`, Endpoints
+- [Capítulo 31. El Service por dentro, DNS y CoreDNS](../../course/31/es.md) — Service headless (`clusterIP: None`), nombres DNS
+- [Capítulo 32. Ingress y controladores de Ingress](../../course/32/es.md) — enrutado por host y ruta hacia el Service de backend
+- [Capítulo 34. NetworkPolicy](../../course/34/es.md) — default-deny, podSelector, policyTypes
 
 ## Qué hacemos y para qué
 

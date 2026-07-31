@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 110 — Netzwerk: Service/DNS, Ingress, NetworkPolicy
 
@@ -20,10 +20,10 @@ dagegen besser über Manifeste (`kubectl apply -f`).
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 31. Service von innen, DNS und CoreDNS](../../course/31/ru.md) — wie ein Service funktioniert, DNS-Namen und Auflösung über CoreDNS
-- [Kapitel 32. Ingress und Ingress-Controller](../../course/32/ru.md) — L7-Eingang, Pfadregeln, Rewrite, Ingress-Controller
-- [Kapitel 33. Gateway API](../../course/33/ru.md) — Gateway, HTTPRoute und Migration von Ingress
-- [Kapitel 34. NetworkPolicy](../../course/34/ru.md) — Traffic-Segmentierung, default-deny und Freigaben per Selector
+- [Kapitel 31. Service von innen, DNS und CoreDNS](../../course/31/de.md) — wie ein Service funktioniert, DNS-Namen und Auflösung über CoreDNS
+- [Kapitel 32. Ingress und Ingress-Controller](../../course/32/de.md) — L7-Eingang, Pfadregeln, Rewrite, Ingress-Controller
+- [Kapitel 33. Gateway API](../../course/33/de.md) — Gateway, HTTPRoute und Migration von Ingress
+- [Kapitel 34. NetworkPolicy](../../course/34/de.md) — Traffic-Segmentierung, default-deny und Freigaben per Selector
 
 ## Was wir erstellen und warum
 

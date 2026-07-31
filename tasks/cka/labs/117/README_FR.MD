@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 117 — Troubleshooting : control plane et nœuds
 
@@ -25,8 +25,8 @@ premier.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 15. Static Pods, PriorityClass, plusieurs planificateurs](../../course/15/ru.md) — static pods dans `/etc/kubernetes/manifests/`, composants du control plane en tant que static pods
-- [Chapitre 45. Débogage du control plane et des nœuds worker](../../course/45/ru.md) — diagnostic de kubelet via `systemctl`/`journalctl`, débogage des conteneurs via `crictl`
+- [Chapitre 15. Static Pods, PriorityClass, plusieurs planificateurs](../../course/15/fr.md) — static pods dans `/etc/kubernetes/manifests/`, composants du control plane en tant que static pods
+- [Chapitre 45. Débogage du control plane et des nœuds worker](../../course/45/fr.md) — diagnostic de kubelet via `systemctl`/`journalctl`, débogage des conteneurs via `crictl`
 
 ## Ce que nous réparons et pourquoi
 

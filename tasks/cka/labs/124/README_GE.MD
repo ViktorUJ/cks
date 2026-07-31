@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 124 — HA control plane: კლასტერის აწყობა 3 control-plane node-იდან
 
@@ -26,8 +26,8 @@
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 35A. მაღალი ხელმისაწვდომობა (HA)](../../course/35-2-ha/ru.md) — HA control plane-ის ტოპოლოგია, control-plane node-ების join, კენტი კვორუმი
-- [თავი 37. etcd-ის სარეზერვო კოპირება და აღდგენა](../../course/37/ru.md) — etcd-ის მოწყობა, კლასტერის წევრები და კვორუმი, მუშაობა `etcdctl`-თან
+- [თავი 35A. მაღალი ხელმისაწვდომობა (HA)](../../course/35-2-ha/ge.md) — HA control plane-ის ტოპოლოგია, control-plane node-ების join, კენტი კვორუმი
+- [თავი 37. etcd-ის სარეზერვო კოპირება და აღდგენა](../../course/37/ge.md) — etcd-ის მოწყობა, კლასტერის წევრები და კვორუმი, მუშაობა `etcdctl`-თან
 
 ## რას ვაკეთებთ და რისთვის
 

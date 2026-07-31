@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 123 — Réseau bas niveau : installation du CNI depuis zéro
 
@@ -19,9 +19,9 @@ zéro** — l'étape obligatoire après `kubeadm init`.
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 30. Modèle réseau de Kubernetes, réseau des pods et CNI](../../course/30/ru.md) — réseau plat des Pods, exigences du modèle réseau, rôle du CNI
-- [Chapitre 40. Interfaces d'extension : CNI, CSI, CRI](../../course/40/ru.md) — ce qu'est un plugin CNI et comment il se branche au kubelet
-- [Chapitre 46. Débogage des services et du réseau](../../course/46/ru.md) — diagnostic du réseau du nœud : routes, network namespaces, veth
+- [Chapitre 30. Modèle réseau de Kubernetes, réseau des pods et CNI](../../course/30/fr.md) — réseau plat des Pods, exigences du modèle réseau, rôle du CNI
+- [Chapitre 40. Interfaces d'extension : CNI, CSI, CRI](../../course/40/fr.md) — ce qu'est un plugin CNI et comment il se branche au kubelet
+- [Chapitre 46. Débogage des services et du réseau](../../course/46/fr.md) — diagnostic du réseau du nœud : routes, network namespaces, veth
 
 ## Ce que nous faisons et pourquoi
 

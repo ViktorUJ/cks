@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 115 — Extension and Packaging: CRD, Helm, Kustomize
 
@@ -17,9 +17,9 @@ validation via the `check_result` command.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 41. CRDs and Operators](../../course/41/ru.md) — extending the API with your own resource type
-- [Chapter 42. Helm](../../course/42/ru.md) — chart repositories, installing releases
-- [Chapter 43. Kustomize](../../course/43/ru.md) — base + overlay, overriding fields without templates
+- [Chapter 41. CRDs and Operators](../../course/41/README.md) — extending the API with your own resource type
+- [Chapter 42. Helm](../../course/42/README.md) — chart repositories, installing releases
+- [Chapter 43. Kustomize](../../course/43/README.md) — base + overlay, overriding fields without templates
 
 ## What We Build and Why
 

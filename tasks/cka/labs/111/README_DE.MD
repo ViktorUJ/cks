@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 111 — kubeadm: Cluster-Upgrade (lifecycle)
 
@@ -18,8 +18,8 @@ dass alle Nodes auf der Zielversion sind und den Status Ready haben.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 35. Installation eines kubeadm-Clusters](../../course/35/ru.md) — woraus ein Cluster besteht, die Rollen Control Plane und Worker
-- [Kapitel 36. Cluster-Upgrade (lifecycle)](../../course/36/ru.md) — Reihenfolge des Upgrades, `upgrade apply`/`upgrade node`, `cordon`/`drain`
+- [Kapitel 35. Installation eines kubeadm-Clusters](../../course/35/de.md) — woraus ein Cluster besteht, die Rollen Control Plane und Worker
+- [Kapitel 36. Cluster-Upgrade (lifecycle)](../../course/36/de.md) — Reihenfolge des Upgrades, `upgrade apply`/`upgrade node`, `cordon`/`drain`
 
 ## Was wir tun und warum
 

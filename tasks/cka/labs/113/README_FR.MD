@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 113 — RBAC et certificats : Role, ClusterRole, ServiceAccount, CSR
 
@@ -17,9 +17,9 @@ CKA/CKAD) avec une vérification automatique via la commande `check_result` (y c
 
 Consolider le contenu des chapitres du cours :
 
-- [Chapitre 21. ServiceAccount ; authn/authz/admission](../../course/21/ru.md) — comment les applications s'authentifient, les étapes de traitement d'une requête à l'API
-- [Chapitre 38. RBAC : Role, ClusterRole et bindings](../../course/38/ru.md) — droits dans un namespace et au niveau du cluster, liaison aux sujets
-- [Chapitre 39. Certificats TLS, kubeconfig et CSR API](../../course/39/ru.md) — délivrance d'un certificat client à une personne via CSR
+- [Chapitre 21. ServiceAccount ; authn/authz/admission](../../course/21/fr.md) — comment les applications s'authentifient, les étapes de traitement d'une requête à l'API
+- [Chapitre 38. RBAC : Role, ClusterRole et bindings](../../course/38/fr.md) — droits dans un namespace et au niveau du cluster, liaison aux sujets
+- [Chapitre 39. Certificats TLS, kubeconfig et CSR API](../../course/39/fr.md) — délivrance d'un certificat client à une personne via CSR
 
 ## Ce que nous créons et pourquoi
 

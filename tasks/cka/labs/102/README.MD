@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 102 — Updates and Deployment Strategies: rolling update, rollback, canary, blue/green
 
@@ -18,8 +18,8 @@ commands (`kubectl create/set image/rollout/patch`) — on the exam that is the 
 
 Reinforce the material from the course chapters:
 
-- [Chapter 8. Deployment: rolling update and rollback](../../course/08/ru.md) — smooth rollout, revision history, change-cause, rollback
-- [Chapter 9. Deployment strategies: blue/green and canary](../../course/09/ru.md) — splitting traffic across versions and switching environments
+- [Chapter 8. Deployment: rolling update and rollback](../../course/08/README.md) — smooth rollout, revision history, change-cause, rollback
+- [Chapter 9. Deployment strategies: blue/green and canary](../../course/09/README.md) — splitting traffic across versions and switching environments
 
 ## What We Build and Why
 

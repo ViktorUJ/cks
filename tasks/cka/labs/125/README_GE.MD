@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 125 — DNS და CoreDNS კლასტერში
 
@@ -15,9 +15,9 @@
 
 განამტკიცოთ კურსის თავის მასალა:
 
-- [თავი 31. Service შიგნიდან, DNS და CoreDNS](../../course/31/ru.md) — Service-ისა და headless-ის A-ჩანაწერები, `dnsConfig`/`ndots`, CoreDNS-ის რედაქტირება (Corefile)
+- [თავი 31. Service შიგნიდან, DNS და CoreDNS](../../course/31/ge.md) — Service-ისა და headless-ის A-ჩანაწერები, `dnsConfig`/`ndots`, CoreDNS-ის რედაქტირება (Corefile)
 
-მომიჯნავე თავები: [თავი 7. Services](../../course/07/ru.md) — Service-ის ტიპები და Endpoints, [თავი 30. ქსელი და CNI](../../course/30/ru.md) — Pod-ების ქსელი.
+მომიჯნავე თავები: [თავი 7. Services](../../course/07/ge.md) — Service-ის ტიპები და Endpoints, [თავი 30. ქსელი და CNI](../../course/30/ge.md) — Pod-ების ქსელი.
 
 ## რას ვქმნით და რისთვის
 

@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 123 — დაბალი დონის ქსელი: CNI-ის ინსტალაცია ნულიდან
 
@@ -19,9 +19,9 @@
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 30. Kubernetes-ის ქსელური მოდელი, pod-ების ქსელი და CNI](../../course/30/ru.md) — Pods-ის ბრტყელი ქსელი, ქსელური მოდელის მოთხოვნები, CNI-ის როლი
-- [თავი 40. გაფართოების ინტერფეისები: CNI, CSI, CRI](../../course/40/ru.md) — რა არის CNI-პლაგინი და როგორ უერთდება kubelet-ს
-- [თავი 46. სერვისებისა და ქსელის გამართვა](../../course/46/ru.md) — node-ის ქსელის დიაგნოსტიკა: მარშრუტები, network namespace-ები, veth
+- [თავი 30. Kubernetes-ის ქსელური მოდელი, pod-ების ქსელი და CNI](../../course/30/ge.md) — Pods-ის ბრტყელი ქსელი, ქსელური მოდელის მოთხოვნები, CNI-ის როლი
+- [თავი 40. გაფართოების ინტერფეისები: CNI, CSI, CRI](../../course/40/ge.md) — რა არის CNI-პლაგინი და როგორ უერთდება kubelet-ს
+- [თავი 46. სერვისებისა და ქსელის გამართვა](../../course/46/ge.md) — node-ის ქსელის დიაგნოსტიკა: მარშრუტები, network namespace-ები, veth
 
 ## რას ვაკეთებთ და რისთვის
 

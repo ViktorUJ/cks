@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 104 — დაგეგმვა: nodeSelector, taint-ები, რესურსები, static pod, PriorityClass, HPA
 
@@ -20,11 +20,11 @@ taint-ებთან/toleration-ებთან მუშაობას, stati
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 12. Pod-ების დაგეგმვა: affinity](../../course/12/ru.md) — `nodeSelector`, podAntiAffinity, topologySpread, მკაცრი/რბილი რეჟიმი
-- [თავი 13. Taint-ები და toleration-ები](../../course/13/ru.md) — Pod-ების node-იდან მოგერიება და გატარება toleration-ით
-- [თავი 14. რესურსები: requests, limits, კვოტები](../../course/14/ru.md) — CPU-ს `requests` როგორც HPA-ს საფუძველი
-- [თავი 15. Static Pod-ები, PriorityClass](../../course/15/ru.md) — kubelet-ის მართვის ქვეშ მყოფი Pod, ჩანაცვლების პრიორიტეტები
-- [თავი 16. ავტომასშტაბირება: HPA](../../course/16/ru.md) — მასშტაბირება CPU-ს დატვირთვის მიხედვით
+- [თავი 12. Pod-ების დაგეგმვა: affinity](../../course/12/ge.md) — `nodeSelector`, podAntiAffinity, topologySpread, მკაცრი/რბილი რეჟიმი
+- [თავი 13. Taint-ები და toleration-ები](../../course/13/ge.md) — Pod-ების node-იდან მოგერიება და გატარება toleration-ით
+- [თავი 14. რესურსები: requests, limits, კვოტები](../../course/14/ge.md) — CPU-ს `requests` როგორც HPA-ს საფუძველი
+- [თავი 15. Static Pod-ები, PriorityClass](../../course/15/ge.md) — kubelet-ის მართვის ქვეშ მყოფი Pod, ჩანაცვლების პრიორიტეტები
+- [თავი 16. ავტომასშტაბირება: HPA](../../course/16/ge.md) — მასშტაბირება CPU-ს დატვირთვის მიხედვით
 
 ## რას ვქმნით და რისთვის
 

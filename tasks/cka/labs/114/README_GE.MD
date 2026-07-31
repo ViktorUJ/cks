@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 114 — Troubleshooting: ვასწორებთ გატეხილ რესურსებს
 
@@ -17,9 +17,9 @@ CreateContainerConfigError არარსებული ConfigMap-ის გ�
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 44. აპლიკაციების ხარვეზების გამართვა](../../course/44/ru.md) — მარშრუტი `get` → `describe` → `logs`, Pod-ების სტატუსების გარჩევა
-- [თავი 45. control plane-ისა და worker-node-ების გამართვა](../../course/45/ru.md) — კვანძებისა და სისტემური კომპონენტების დიაგნოსტიკა
-- [თავი 46. სერვისებისა და ქსელის გამართვა](../../course/46/ru.md) — კავშირი Service ↔ Endpoints ↔ ლეიბლები
+- [თავი 44. აპლიკაციების ხარვეზების გამართვა](../../course/44/ge.md) — მარშრუტი `get` → `describe` → `logs`, Pod-ების სტატუსების გარჩევა
+- [თავი 45. control plane-ისა და worker-node-ების გამართვა](../../course/45/ge.md) — კვანძებისა და სისტემური კომპონენტების დიაგნოსტიკა
+- [თავი 46. სერვისებისა და ქსელის გამართვა](../../course/46/ge.md) — კავშირი Service ↔ Endpoints ↔ ლეიბლები
 
 ## რას ვასწორებთ და რისთვის
 

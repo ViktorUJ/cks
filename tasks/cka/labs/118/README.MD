@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 118 — Troubleshooting: Certificates, CoreDNS and Cluster Networking
 
@@ -18,10 +18,10 @@ via the `check_result` command.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 31. Service internals, DNS and CoreDNS](../../course/31/ru.md) — how cluster DNS works, the role of CoreDNS, `ndots` and resolv.conf
-- [Chapter 39. TLS certificates, kubeconfig and the CSR API](../../course/39/ru.md) — reading control plane certificates, expiration and CN
-- [Chapter 40. Extension interfaces: CNI, CSI, CRI](../../course/40/ru.md) — CNI, Pod CIDR and the network agent
-- [Chapter 46. Debugging services and networking](../../course/46/ru.md) — DNS and network connectivity troubleshooting
+- [Chapter 31. Service internals, DNS and CoreDNS](../../course/31/README.md) — how cluster DNS works, the role of CoreDNS, `ndots` and resolv.conf
+- [Chapter 39. TLS certificates, kubeconfig and the CSR API](../../course/39/README.md) — reading control plane certificates, expiration and CN
+- [Chapter 40. Extension interfaces: CNI, CSI, CRI](../../course/40/README.md) — CNI, Pod CIDR and the network agent
+- [Chapter 46. Debugging services and networking](../../course/46/README.md) — DNS and network connectivity troubleshooting
 
 ## What We Do and Why
 

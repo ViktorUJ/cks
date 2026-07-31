@@ -1,4 +1,4 @@
-[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 103 — Einmalige und periodische Aufgaben: Job, CronJob, DaemonSet
 
@@ -19,8 +19,8 @@ schnellste Weg für Objekte mit vielen Feldern.
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 10. Jobs und CronJobs](../../course/10/ru.md) — einmalige und periodische Aufgaben, `completions`, `backoffLimit`, `restartPolicy`, Zeitplan, `concurrencyPolicy`
-- [Kapitel 11. DaemonSet und StatefulSet](../../course/11/ru.md) — einen Pod auf jedem Node starten, Toleration für die Control-Plane
+- [Kapitel 10. Jobs und CronJobs](../../course/10/de.md) — einmalige und periodische Aufgaben, `completions`, `backoffLimit`, `restartPolicy`, Zeitplan, `concurrencyPolicy`
+- [Kapitel 11. DaemonSet und StatefulSet](../../course/11/de.md) — einen Pod auf jedem Node starten, Toleration für die Control-Plane
 
 ## Was wir erstellen und warum
 
