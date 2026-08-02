@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.34.1 (03.08.2026)
+### Features
+* CKA + CKAD joint [self-study course](../tasks/cka/course/README.md) is added: 58 chapters (Part 0 - an optional foundation on networking, DNS, TLS, containers, Linux, YAML and vim; Parts 1-10 - the exam program) tied to the hands-on labs. Every chapter is marked with the exam it belongs to (CKA / CKAD / both). Available in 8 languages: Russian (source), English, Spanish, French, German, Georgian, Traditional Chinese and Japanese.
+* CKA/CKAD labs [101-125](../docs/labs.MD#cka-labs) are added: 25 composite labs in the exam style with the automatic `check_result` validation and the reference solutions, in the same 8 languages.
+* Preparation route guides are added: [CKA program and labs](../tasks/cka/course/CKA.md) and [CKAD program and labs](../tasks/cka/course/CKAD.md) - the official exam domains with their weights mapped onto the chapters and the labs.
+* [Course glossary](../tasks/cka/course/GLOSSARY.md) is added: all the terms of the course grouped by the chapters with the links.
+### Improvements
+* Free Killercoda scenarios are cross-linked from 44 chapters of the CKA/CKAD course - an in-browser practice with no setup, placed next to our own lab in every chapter that has one.
+* [Course contents](../tasks/cka/course/README.md) is extended: a `Practice` section with the links to the labs and to the CKA/CKAD mock exams, a `Which labs to choose` section (our labs for the exam preparation, Killercoda for a quick start) and a `What to read next` section with the further reading.
+
 ## 0.33.1 (20.07.2026)
 ### Features
 * Lab 32 Istio.[gRPC: per-request load balancing, port naming, retries and timeouts](../tasks/ica/labs/32) is added.
