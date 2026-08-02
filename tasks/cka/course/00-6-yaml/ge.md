@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Русская версия](ru.md) · [Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # თავი 0.6. YAML ნულიდან: აცილება, სიები, ლექსიკონები და Kubernetes-ის მანიფესტები
 

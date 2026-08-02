@@ -1,4 +1,4 @@
-[Русская версия](CKAD_RU.md) · [Eng version](CKAD.md) · [Versión en español](CKAD_ES.md) · [Version française](CKAD_FR.md) · [Deutsche Version](CKAD_DE.md)
+[Русская версия](CKAD_RU.md) · [Eng version](CKAD.md) · [Versión en español](CKAD_ES.md) · [Version française](CKAD_FR.md) · [Deutsche Version](CKAD_DE.md) · [繁體中文版](CKAD_TW.md) · [日本語版](CKAD_JP.md)
 
 # CKAD-სთვის მომზადების გზამკვლევი
 

@@ -1,4 +1,4 @@
-[Русская версия](CKA_RU.md) · [Eng version](CKA.md) · [Versión en español](CKA_ES.md) · [Version française](CKA_FR.md) · [Deutsche Version](CKA_DE.md)
+[Русская версия](CKA_RU.md) · [Eng version](CKA.md) · [Versión en español](CKA_ES.md) · [Version française](CKA_FR.md) · [Deutsche Version](CKA_DE.md) · [繁體中文版](CKA_TW.md) · [日本語版](CKA_JP.md)
 
 # CKA-სთვის მომზადების გზამკვლევი
 

@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md)
+[Русская версия](ru.md) · [Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Kapitel 1. Einführung: Kubernetes, die Prüfungen CKA und CKAD und der Aufbau des Kurses
 
