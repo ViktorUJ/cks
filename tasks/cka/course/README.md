@@ -171,8 +171,17 @@ network labs).
 - 🧪 [CKA mock exams](../mock) - mock exams of the CKA under a timer (a multicluster, an SSH, the weights of the tasks)
 - 🧪 [CKAD mock exams](../../ckad/mock) - mock exams of the CKAD under a timer
 
-## Practice
+## What to read next
 
-- 🧪 [Labs](../labs) - 25 labs in the exam style with an automatic check `check_result`
-- 🧪 [CKA mock exams](../mock) - a rehearsal of the CKA under a timer (a multicluster, an SSH, the weights of the tasks)
-- 🧪 [CKAD mock exams](../../ckad/mock) - a rehearsal of the CKAD under a timer
+This course is focused on a preparation for the exams: every chapter is tied to a domain of
+the CKA or of the CKAD. An architectural philosophy, a history of the project and an overview
+of the ecosystem (a service mesh, GitOps, an observability) are deliberately not included here -
+these are the separate topics, which are not asked at the exam. If you want it wider and deeper:
+
+- **Kubernetes: Up and Running** (Burns, Beda, Hightower, O'Reilly) - why Kubernetes
+  appeared, an evolution from Borg, the architectural patterns of the applications.
+- **The Kubernetes Book** (Nigel Poulton) - an overview introduction with an accent on an
+  understanding of the platform as a whole; it is updated every year.
+- [The official documentation of Kubernetes](https://kubernetes.io/docs/) - a primary source,
+  it is allowed to be used at the exam itself.
+- [CNCF Landscape](https://landscape.cncf.io/) - a map of the cloud native ecosystem.

@@ -171,8 +171,18 @@ se aplican directamente en los laboratorios de nodos y de red).
 - 🧪 [Exámenes de simulación CKA](../mock) - exámenes de simulación del CKA con cronómetro (multiclúster, SSH, pesos de las tareas)
 - 🧪 [Exámenes de simulación CKAD](../../ckad/mock) - exámenes de simulación del CKAD con cronómetro
 
-## Práctica
+## Qué leer después
 
-- 🧪 [Laboratorios](../labs) - 25 laboratorios en estilo de examen con verificación automática `check_result`
-- 🧪 [Exámenes de simulación CKA](../mock) - ensayo del CKA con cronómetro (multiclúster, SSH, pesos de las tareas)
-- 🧪 [Exámenes de simulación CKAD](../../ckad/mock) - ensayo del CKAD con cronómetro
+Este curso está centrado en la preparación de los exámenes: cada capítulo está ligado a un
+dominio del CKA o del CKAD. La filosofía arquitectónica, la historia del proyecto y una
+panorámica del ecosistema (service mesh, GitOps, observabilidad) no se incluyen aquí de forma
+deliberada: son temas aparte que no se preguntan en el examen. Si quieres ir más ancho y
+más profundo:
+
+- **Kubernetes: Up and Running** (Burns, Beda, Hightower, O'Reilly) - por qué apareció
+  Kubernetes, la evolución desde Borg, los patrones arquitectónicos de las aplicaciones.
+- **The Kubernetes Book** (Nigel Poulton) - introducción panorámica con énfasis en entender
+  la plataforma en su conjunto; se actualiza cada año.
+- [Documentación oficial de Kubernetes](https://kubernetes.io/docs/) - la fuente primaria,
+  su uso está permitido en el propio examen.
+- [CNCF Landscape](https://landscape.cncf.io/) - mapa del ecosistema cloud native.

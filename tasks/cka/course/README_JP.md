@@ -170,3 +170,18 @@ CKAD (領域と重み)：
 - 🧪 [ラボ](../labs) - 試験スタイルの 25 のラボ。自動チェック `check_result` 付き
 - 🧪 [CKA モック試験](../mock) - タイマー付きの CKA モック試験（マルチクラスタ、SSH、課題の重み）
 - 🧪 [CKAD モック試験](../../ckad/mock) - タイマー付きの CKAD モック試験
+
+## 次に読むもの
+
+このコースは試験の準備に焦点を合わせています。各章は CKA または CKAD の領域に結びついて
+います。アーキテクチャの哲学、プロジェクトの歴史、エコシステムの概観（service mesh、
+GitOps、可観測性）は意図的に含めていません。これらは別のトピックであり、試験では問われ
+ません。もっと広く、もっと深く知りたい場合は：
+
+- **Kubernetes: Up and Running**（Burns、Beda、Hightower、O'Reilly） - Kubernetes が
+  なぜ生まれたか、Borg からの進化、アプリケーションのアーキテクチャパターン。
+- **The Kubernetes Book**（Nigel Poulton） - プラットフォーム全体の理解に重点を置いた
+  概観的な入門書。毎年更新されます。
+- [Kubernetes の公式ドキュメント](https://kubernetes.io/docs/) - 一次情報源。試験中に
+  参照することも許可されています。
+- [CNCF Landscape](https://landscape.cncf.io/) - cloud native エコシステムの地図。

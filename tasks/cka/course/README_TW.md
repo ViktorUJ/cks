@@ -169,3 +169,16 @@ CKAD(領域與權重):
 - 🧪 [實驗](../labs) - 25 個考試風格的實驗,附自動檢查 `check_result`
 - 🧪 [CKA 模擬考](../mock) - 計時的 CKA 模擬考(多叢集、SSH、題目權重)
 - 🧪 [CKAD 模擬考](../../ckad/mock) - 計時的 CKAD 模擬考
+
+## 接下來讀什麼
+
+本課程聚焦在考試準備上:每一章都對應到 CKA 或 CKAD 的某個領域。架構哲學、專案的歷史,
+以及生態系的概覽(service mesh、GitOps、可觀測性)刻意沒有放進來 - 那些是獨立的主題,
+考試不會問。如果你想看得更廣、更深:
+
+- **Kubernetes: Up and Running**(Burns、Beda、Hightower,O'Reilly) - Kubernetes 為何
+  出現、從 Borg 的演進、應用程式的架構模式。
+- **The Kubernetes Book**(Nigel Poulton) - 概覽式的入門,重點在於整體理解這個平台;
+  每年更新。
+- [Kubernetes 官方文件](https://kubernetes.io/docs/) - 第一手來源,考試當下也允許查閱。
+- [CNCF Landscape](https://landscape.cncf.io/) - cloud native 生態系的地圖。

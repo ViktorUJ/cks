@@ -171,8 +171,18 @@ direkt in den Node- und Netzwerk-Labs angewendet).
 - 🧪 [CKA-Mock-Prüfungen](../mock) - Mock-Prüfungen für CKA unter Zeitdruck (Multicluster, SSH, Gewichtung der Aufgaben)
 - 🧪 [CKAD-Mock-Prüfungen](../../ckad/mock) - Mock-Prüfungen für CKAD unter Zeitdruck
 
-## Praxis
+## Was man als Nächstes lesen sollte
 
-- 🧪 [Laborübungen](../labs) - 25 Labs im Prüfungsstil mit automatischer Prüfung `check_result`
-- 🧪 [CKA-Mock-Prüfungen](../mock) - Probelauf des CKA unter Zeitdruck (Multicluster, SSH, Aufgabengewichte)
-- 🧪 [CKAD-Mock-Prüfungen](../../ckad/mock) - Probelauf des CKAD unter Zeitdruck
+Dieser Kurs ist auf die Prüfungsvorbereitung fokussiert: jedes Kapitel ist an eine Domäne von
+CKA oder CKAD gebunden. Architekturphilosophie, die Geschichte des Projekts und ein Überblick
+über das Ökosystem (Service Mesh, GitOps, Observability) sind hier bewusst nicht enthalten -
+das sind eigene Themen, die in der Prüfung nicht gefragt werden. Wenn Sie es breiter und
+tiefer möchten:
+
+- **Kubernetes: Up and Running** (Burns, Beda, Hightower, O'Reilly) - warum Kubernetes
+  entstanden ist, die Evolution von Borg, die Architekturmuster der Anwendungen.
+- **The Kubernetes Book** (Nigel Poulton) - eine Überblickseinführung mit Betonung auf dem
+  Verständnis der Plattform als Ganzes; wird jedes Jahr aktualisiert.
+- [Offizielle Dokumentation von Kubernetes](https://kubernetes.io/docs/) - die Primärquelle,
+  ihre Nutzung ist in der Prüfung selbst erlaubt.
+- [CNCF Landscape](https://landscape.cncf.io/) - Karte des Cloud-native-Ökosystems.

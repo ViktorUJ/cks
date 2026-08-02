@@ -171,8 +171,18 @@ la fondation sur laquelle s'appuient les autres chapitres (les compétences des
 - 🧪 [Examens blancs CKA](../mock) - examens blancs CKA chronométrés (multicluster, SSH, poids des tâches)
 - 🧪 [Examens blancs CKAD](../../ckad/mock) - examens blancs CKAD chronométrés
 
-## Pratique
+## Quoi lire ensuite
 
-- 🧪 [Travaux pratiques](../labs) - 25 TP dans le style de l'examen avec vérification automatique `check_result`
-- 🧪 [Examens blancs CKA](../mock) - répétition du CKA chronométrée (multicluster, SSH, poids des tâches)
-- 🧪 [Examens blancs CKAD](../../ckad/mock) - répétition du CKAD chronométrée
+Ce cours est centré sur la préparation aux examens : chaque chapitre est rattaché à un domaine
+du CKA ou du CKAD. La philosophie architecturale, l'histoire du projet et un panorama de
+l'écosystème (service mesh, GitOps, observabilité) n'y sont volontairement pas inclus : ce sont
+des sujets à part, qui ne sont pas demandés à l'examen. Si vous voulez aller plus large et
+plus profond :
+
+- **Kubernetes: Up and Running** (Burns, Beda, Hightower, O'Reilly) - pourquoi Kubernetes est
+  apparu, l'évolution depuis Borg, les patterns architecturaux des applications.
+- **The Kubernetes Book** (Nigel Poulton) - introduction panoramique axée sur la compréhension
+  de la plateforme dans son ensemble ; mise à jour chaque année.
+- [Documentation officielle de Kubernetes](https://kubernetes.io/docs/) - la source primaire,
+  son usage est autorisé pendant l'examen lui-même.
+- [CNCF Landscape](https://landscape.cncf.io/) - carte de l'écosystème cloud native.
