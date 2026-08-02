@@ -164,3 +164,15 @@ se aplican directamente en los laboratorios de nodos y de red).
 
 47. [Examen CKAD: formato, gestión del tiempo, JSONPath y productividad con kubectl](47/es.md) 🟩 CKAD
 48. [Examen CKA: formato, gestión del tiempo y estrategia](48/es.md) 🟦 CKA
+
+## Práctica
+
+- 🧪 [Laboratorios](../labs) - 25 laboratorios en estilo examen con comprobación automática `check_result`
+- 🧪 [Exámenes de simulación CKA](../mock) - exámenes de simulación del CKA con cronómetro (multiclúster, SSH, pesos de las tareas)
+- 🧪 [Exámenes de simulación CKAD](../../ckad/mock) - exámenes de simulación del CKAD con cronómetro
+
+## Práctica
+
+- 🧪 [Laboratorios](../labs) - 25 laboratorios en estilo de examen con verificación automática `check_result`
+- 🧪 [Exámenes de simulación CKA](../mock) - ensayo del CKA con cronómetro (multiclúster, SSH, pesos de las tareas)
+- 🧪 [Exámenes de simulación CKAD](../../ckad/mock) - ensayo del CKAD con cronómetro

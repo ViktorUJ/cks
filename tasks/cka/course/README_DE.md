@@ -164,3 +164,15 @@ direkt in den Node- und Netzwerk-Labs angewendet).
 
 47. [Prüfung CKAD: Format, Zeitmanagement, JSONPath und Produktivität von kubectl](47/de.md) 🟩 CKAD
 48. [Prüfung CKA: Format, Zeitmanagement und Strategie](48/de.md) 🟦 CKA
+
+## Praxis
+
+- 🧪 [Laborübungen](../labs) - 25 Labs im Prüfungsstil mit automatischer Prüfung `check_result`
+- 🧪 [CKA-Mock-Prüfungen](../mock) - Mock-Prüfungen für CKA unter Zeitdruck (Multicluster, SSH, Gewichtung der Aufgaben)
+- 🧪 [CKAD-Mock-Prüfungen](../../ckad/mock) - Mock-Prüfungen für CKAD unter Zeitdruck
+
+## Praxis
+
+- 🧪 [Laborübungen](../labs) - 25 Labs im Prüfungsstil mit automatischer Prüfung `check_result`
+- 🧪 [CKA-Mock-Prüfungen](../mock) - Probelauf des CKA unter Zeitdruck (Multicluster, SSH, Aufgabengewichte)
+- 🧪 [CKAD-Mock-Prüfungen](../../ckad/mock) - Probelauf des CKAD unter Zeitdruck

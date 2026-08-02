@@ -164,3 +164,15 @@ network labs).
 
 47. [The exam CKAD: a format, a time management, JSONPath and a productivity of kubectl](47/README.md) 🟩 CKAD
 48. [The exam CKA: a format, a time management and a strategy](48/README.md) 🟦 CKA
+
+## Practice
+
+- 🧪 [Labs](../labs) - 25 labs in the exam style with an automatic check `check_result`
+- 🧪 [CKA mock exams](../mock) - mock exams of the CKA under a timer (a multicluster, an SSH, the weights of the tasks)
+- 🧪 [CKAD mock exams](../../ckad/mock) - mock exams of the CKAD under a timer
+
+## Practice
+
+- 🧪 [Labs](../labs) - 25 labs in the exam style with an automatic check `check_result`
+- 🧪 [CKA mock exams](../mock) - a rehearsal of the CKA under a timer (a multicluster, an SSH, the weights of the tasks)
+- 🧪 [CKAD mock exams](../../ckad/mock) - a rehearsal of the CKAD under a timer

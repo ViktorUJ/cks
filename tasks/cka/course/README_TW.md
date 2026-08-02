@@ -163,3 +163,9 @@ CKAD(領域與權重):
 
 47. [CKAD 考試:形式、時間管理、JSONPath 與 kubectl 生產力](47/tw.md) 🟩 CKAD
 48. [CKA 考試:形式、時間管理與策略](48/tw.md) 🟦 CKA
+
+## 實踐
+
+- 🧪 [實驗](../labs) - 25 個考試風格的實驗,附自動檢查 `check_result`
+- 🧪 [CKA 模擬考](../mock) - 計時的 CKA 模擬考(多叢集、SSH、題目權重)
+- 🧪 [CKAD 模擬考](../../ckad/mock) - 計時的 CKAD 模擬考

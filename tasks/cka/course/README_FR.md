@@ -164,3 +164,15 @@ la fondation sur laquelle s'appuient les autres chapitres (les compétences des
 
 47. [L'examen CKAD : format, gestion du temps, JSONPath et productivité kubectl](47/fr.md) 🟩 CKAD
 48. [L'examen CKA : format, gestion du temps et stratégie](48/fr.md) 🟦 CKA
+
+## Pratique
+
+- 🧪 [Travaux pratiques](../labs) - 25 TP dans le style de l'examen avec vérification automatique `check_result`
+- 🧪 [Examens blancs CKA](../mock) - examens blancs CKA chronométrés (multicluster, SSH, poids des tâches)
+- 🧪 [Examens blancs CKAD](../../ckad/mock) - examens blancs CKAD chronométrés
+
+## Pratique
+
+- 🧪 [Travaux pratiques](../labs) - 25 TP dans le style de l'examen avec vérification automatique `check_result`
+- 🧪 [Examens blancs CKA](../mock) - répétition du CKA chronométrée (multicluster, SSH, poids des tâches)
+- 🧪 [Examens blancs CKAD](../../ckad/mock) - répétition du CKAD chronométrée
