@@ -277,5 +277,7 @@ CKA (глава 48). Сетевой troubleshooting отрабатывается
 
 🧪 Лаба 123 (установка CNI с нуля + разбор netns/маршрутов): [tasks/cka/labs/123](../../labs/123/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Troubleshoot a Broken Network Path](https://killercoda.com/chadmcrowell/course/cka/broken-path) · [Debug services in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/debug-services) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 45](../45/ru.md) · [Глава 47](../47/ru.md)

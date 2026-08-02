@@ -513,5 +513,7 @@ junto con los objetos básicos.
 
 🧪 Práctica 119 (ejercicios de velocidad y JSONPath): [tasks/cka/labs/119](../../labs/119/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Explore pod spec with explain](https://killercoda.com/chadmcrowell/course/ckad/explain-spec-containers) · [List API Resources](https://killercoda.com/chadmcrowell/course/cka/api-resources) · [Create a Pod Declaratively](https://killercoda.com/chadmcrowell/course/cka/declarative-pod) · [Group pods by node](https://killercoda.com/chadmcrowell/course/ckad/list-pods-by-node)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 2](../02/es.md) · [Capítulo 4](../04/es.md)

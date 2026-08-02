@@ -271,5 +271,7 @@ spec:
 
 🧪 ლაბი 107 (კონტეინერების იმიჯები): [tasks/cka/labs/107](../../labs/107/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create Dockerfile with Args and Run](https://killercoda.com/chadmcrowell/course/ckad/dockerfile) · [Create a custom nginx container image](https://killercoda.com/chadmcrowell/course/ckad/nginx-custom)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 22](../22/ge.md) · [თავი 24](../24/ge.md)

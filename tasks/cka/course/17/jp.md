@@ -305,5 +305,7 @@ ENTRYPOINT/CMD と混同せず、結果を `kubectl exec -- env` で確認でき
 
 🧪 ラボ 105 (コマンド、引数、環境変数): [tasks/cka/labs/105](../../labs/105/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep)
+
 ---
 [目次](../README_JP.md) · [第 16 章](../16/jp.md) · [第 18 章](../18/jp.md)

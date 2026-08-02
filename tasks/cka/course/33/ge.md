@@ -416,5 +416,7 @@ Ingress და მათი მიგრაცია მუშავდება
 
 🧪 ლაბი 110: [tasks/cka/labs/110](../../labs/110/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create a Gateway and HTTPRoute](https://killercoda.com/chadmcrowell/course/cka/create-gateway-and-route)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 32](../32/ge.md) · [თავი 34](../34/ge.md)

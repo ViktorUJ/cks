@@ -467,5 +467,7 @@ ServiceAccount და უფლებების შემოწმება �
 
 🧪 ლაბი 121 (RBAC-დრილები: SA, Role/ClusterRole, binding-ები): [tasks/cka/labs/121](../../labs/121/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create ServiceAccount](https://killercoda.com/chadmcrowell/course/ckad/create-serviceaccount) · [Create Service Account For a Pod](https://killercoda.com/chadmcrowell/course/cka/create-sa-for-pod) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Restrict Pod Deletes with RBAC](https://killercoda.com/chadmcrowell/course/ckad/restrict-rbac)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 20](../20/ge.md) · [თავი 22](../22/ge.md)

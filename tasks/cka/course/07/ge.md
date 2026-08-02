@@ -570,5 +570,7 @@ Service-ს labels-ით, შეამოწმებთ Endpoints-სა დ�
 
 🧪 ლაბი 101 (Pods, Deployment, namespaces, Service - პირველი გაერთიანებული ლაბი): [tasks/cka/labs/101](../../labs/101/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create a ClusterIP service](https://killercoda.com/chadmcrowell/course/ckad/clusterip-service) · [NodePort Service](https://killercoda.com/chadmcrowell/course/ckad/nodeport-service) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 6](../06/ge.md) · [თავი 8](../08/ge.md)

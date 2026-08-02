@@ -331,5 +331,7 @@ de emular fallos de probes).
 
 🧪 Laboratorio 109 (probes liveness, readiness, startup): [tasks/cka/labs/109](../../labs/109/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [HTTP Readiness Probe](https://killercoda.com/chadmcrowell/course/ckad/readinessprobe-http) · [Liveness Probe Restart](https://killercoda.com/chadmcrowell/course/ckad/livenessprobe-restart) · [TCP Liveness Probe](https://killercoda.com/chadmcrowell/course/ckad/tcp-probe) · [Startup Probe](https://killercoda.com/chadmcrowell/course/ckad/startup-probe)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 26](../26/es.md) · [Capítulo 28](../28/es.md)

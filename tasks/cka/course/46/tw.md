@@ -269,5 +269,7 @@ troubleshooting 會在網路相關的實驗與模擬考中練習。
 
 🧪 實驗 123(從零安裝 CNI + 拆解 netns/路由):[tasks/cka/labs/123](../../labs/123/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Troubleshoot a Broken Network Path](https://killercoda.com/chadmcrowell/course/cka/broken-path) · [Debug services in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/debug-services) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [目錄](../README_TW.md) · [第 45 章](../45/tw.md) · [第 47 章](../47/tw.md)

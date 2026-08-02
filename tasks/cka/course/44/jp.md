@@ -259,5 +259,7 @@ troubleshooting のラボと模擬試験で練習します。
 
 🧪 ラボ 114（壊れたリソースのデバッグ）: [tasks/cka/labs/114](../../labs/114/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [目次](../README_JP.md) · [第 43 章](../43/jp.md) · [第 45 章](../45/jp.md)

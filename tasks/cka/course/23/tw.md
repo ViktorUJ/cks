@@ -259,5 +259,7 @@ spec:
 
 🧪 實驗 107(容器映像):[tasks/cka/labs/107](../../labs/107/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Create Dockerfile with Args and Run](https://killercoda.com/chadmcrowell/course/ckad/dockerfile) · [Create a custom nginx container image](https://killercoda.com/chadmcrowell/course/ckad/nginx-custom)
+
 ---
 [目錄](../README_TW.md) · [第 22 章](../22/tw.md) · [第 24 章](../24/tw.md)

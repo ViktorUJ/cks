@@ -248,5 +248,7 @@ ClusterRole, binding'и), углубляя обзор из главы 21. Бэк
 
 🧪 Лаба 112 (бэкап и восстановление etcd): [tasks/cka/labs/112](../../labs/112/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Backup and Restore Kubernetes etcd](https://killercoda.com/chadmcrowell/scenario/kubernetes-backup-etcd)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 36](../36/ru.md) · [Глава 38](../38/ru.md)

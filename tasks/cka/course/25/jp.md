@@ -278,5 +278,7 @@ Storage 領域の典型的な課題です。両方のマニフェストを書け
 
 🧪 ラボ 108 (PV/PVC): [tasks/cka/labs/108](../../labs/108/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Persistent Volumes](https://killercoda.com/chadmcrowell/course/cka/persistent-volumes) · [Using NFS volumes for Pods](https://killercoda.com/chadmcrowell/course/cka/nfs-vol) · [Troubleshoot a Stuck PVC](https://killercoda.com/chadmcrowell/course/cka/pvc-stuck)
+
 ---
 [目次](../README_JP.md) · [第 24 章](../24/jp.md) · [第 26 章](../26/jp.md)

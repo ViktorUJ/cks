@@ -255,5 +255,7 @@ troubleshooting-ის ლაბორატორიულებსა და �
 
 🧪 ლაბი 114 (გატეხილი რესურსების გამართვა): [tasks/cka/labs/114](../../labs/114/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 43](../43/ge.md) · [თავი 45](../45/ge.md)

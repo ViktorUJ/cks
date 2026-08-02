@@ -303,5 +303,7 @@ StatefulSet 決定了資料庫與叢集式系統在叢集中如何生存,而它�
 
 🧪 實驗 103(DaemonSet;StatefulSet 在實驗 108):[tasks/cka/labs/103](../../labs/103/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Kubernetes StatefulSets](https://killercoda.com/chadmcrowell/scenario/kubernetes-statefulset)
+
 ---
 [目錄](../README_TW.md) · [第 10 章](../10/tw.md) · [第 12 章](../12/tw.md)

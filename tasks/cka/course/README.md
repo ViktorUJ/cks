@@ -171,6 +171,24 @@ network labs).
 - 🧪 [CKA mock exams](../mock) - mock exams of the CKA under a timer (a multicluster, an SSH, the weights of the tasks)
 - 🧪 [CKAD mock exams](../../ckad/mock) - mock exams of the CKAD under a timer
 
+### Which labs to choose
+
+The labs of our platform are a main practice of the course, and they suit a preparation for
+the exam better: they are composite (several linked tasks in one environment, as at a real
+exam), they are deployed in a full-fledged cluster with an access to the nodes over an SSH,
+they are checked automatically by a `check_result`, and the mock exams go under a timer with
+the weights of the tasks. It is exactly this that reproduces the conditions of the CKA and
+of the CKAD.
+
+The scenarios of Killercoda in the chapters are a **quick start**: they open in a browser,
+they do not require an installation and they are free. It is convenient to go through them
+right after a reading of a chapter, in order to reinforce one narrow topic, or to practice,
+when there is no cluster at hand. But they are atomic (one scenario - one task), they are
+only in English and they give neither a work at the nodes nor a rehearsal under a timer.
+
+A recommended combination: Killercoda - for a fast reinforcement of a topic, our labs and
+the mock exams - for a preparation for the exam itself.
+
 ## What to read next
 
 This course is focused on a preparation for the exams: every chapter is tied to a domain of

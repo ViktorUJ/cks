@@ -251,5 +251,7 @@ ClusterRole、binding 類）に進み、第 21 章の概観を深めます。etc
 
 🧪 ラボ 112（etcd のバックアップとリストア）：[tasks/cka/labs/112](../../labs/112/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Backup and Restore Kubernetes etcd](https://killercoda.com/chadmcrowell/scenario/kubernetes-backup-etcd)
+
 ---
 [目次](../README_JP.md) · [第 36 章](../36/jp.md) · [第 38 章](../38/jp.md)

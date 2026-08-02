@@ -363,5 +363,7 @@ flowchart TB
 
 🧪 ლაბი 120 (მათ შორის დრილი NetworkPolicy-ზე): [tasks/cka/labs/120](../../labs/120/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Deny All Ingress](https://killercoda.com/chadmcrowell/course/ckad/default-deny-networkpolicy) · [Allow Namespace Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-namespace-traffic) · [Allow Label-Based Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-label-traffic) · [Block All Egress](https://killercoda.com/chadmcrowell/course/ckad/block-egress)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 33](../33/ge.md) · [თავი 35](../35/ge.md)

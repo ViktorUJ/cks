@@ -335,5 +335,7 @@ geübt.
 
 🧪 Lab 109 (Debuggen und Veralten von APIs): [tasks/cka/labs/109](../../labs/109/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug) · [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Port Forward to Pod](https://killercoda.com/chadmcrowell/course/ckad/port-forward-pod) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 28](../28/de.md) · [Kapitel 30](../30/de.md)

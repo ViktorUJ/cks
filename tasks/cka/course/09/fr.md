@@ -380,5 +380,7 @@ Service.
 
 🧪 TP 102 (canary et blue/green) : [tasks/cka/labs/102](../../labs/102/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Blue Green Deployments in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/blue-green) · [Canary Ingress Deployment](https://killercoda.com/chadmcrowell/course/ckad/canary-ingress)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 8](../08/fr.md) · [Chapitre 10](../10/fr.md)

@@ -505,5 +505,7 @@ Pod（第 4 章）、続いて ReplicaSet と Deployment（第 5 章）。この
 
 🧪 ラボ 119（速さと JSONPath のドリル）：[tasks/cka/labs/119](../../labs/119/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Explore pod spec with explain](https://killercoda.com/chadmcrowell/course/ckad/explain-spec-containers) · [List API Resources](https://killercoda.com/chadmcrowell/course/cka/api-resources) · [Create a Pod Declaratively](https://killercoda.com/chadmcrowell/course/cka/declarative-pod) · [Group pods by node](https://killercoda.com/chadmcrowell/course/ckad/list-pods-by-node)
+
 ---
 [目次](../README_JP.md) · [第 2 章](../02/jp.md) · [第 4 章](../04/jp.md)

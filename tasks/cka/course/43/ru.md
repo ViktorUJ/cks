@@ -255,5 +255,7 @@ troubleshooting (CKA): систематический разбор сбоев п
 
 🧪 Лаба 115 (Kustomize): [tasks/cka/labs/115](../../labs/115/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Apply Resources with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-apply) · [Kustomize Overlays for Environments](https://killercoda.com/chadmcrowell/course/ckad/kustomize-env-overlay) · [Patch Deployment Image with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-patch-image) · [Generate ConfigMap and Secret with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-configmap-secret)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 42](../42/ru.md) · [Глава 44](../44/ru.md)

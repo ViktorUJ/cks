@@ -280,5 +280,7 @@ dans les TP sur la planification.
 
 🧪 TP 122 (dont un drill sur taints/tolerations) : [tasks/cka/labs/122](../../labs/122/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Taints and Tolerations](https://killercoda.com/chadmcrowell/course/cka/taints-tolerations) · [Add a Toleration to a Pod YAML](https://killercoda.com/chadmcrowell/course/cka/add-toleration) · [Remove the Taint from Node](https://killercoda.com/chadmcrowell/course/cka/remove-taint)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 12](../12/fr.md) · [Chapitre 14](../14/fr.md)

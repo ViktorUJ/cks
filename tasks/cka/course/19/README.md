@@ -285,5 +285,7 @@ what privileges it has. A Secret is drilled in the labs on the configuration and
 
 🧪 Lab 105 (Secret): [tasks/cka/labs/105](../../labs/105/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Mount Secret into pod](https://killercoda.com/chadmcrowell/course/ckad/secret-volume) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Rotate Secret](https://killercoda.com/chadmcrowell/course/ckad/rotate-secret)
+
 ---
 [Contents](../README.md) · [Chapter 18](../18/README.md) · [Chapter 20](../20/README.md)

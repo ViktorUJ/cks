@@ -585,5 +585,7 @@ Endpoints と DNS 名でのアクセスを確認します。次は (第 8 章) -
 
 🧪 ラボ 101 (Pod、Deployment、namespaces、Service - 最初の統合ラボ): [tasks/cka/labs/101](../../labs/101/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create a ClusterIP service](https://killercoda.com/chadmcrowell/course/ckad/clusterip-service) · [NodePort Service](https://killercoda.com/chadmcrowell/course/ckad/nodeport-service) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [目次](../README_JP.md) · [第 6 章](../06/jp.md) · [第 8 章](../08/jp.md)

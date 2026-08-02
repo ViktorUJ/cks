@@ -270,5 +270,7 @@ CKAD 的領域,以及它們對應到課程的哪裡:
 
 🧪 CKAD 模擬考:[tasks/ckad/mock](../../../ckad/mock)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Playground](https://killercoda.com/chadmcrowell/course/ckad/playground)
+
 ---
 [目錄](../README_TW.md) · [第 46 章](../46/tw.md) · [第 48 章](../48/tw.md)

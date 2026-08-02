@@ -254,5 +254,7 @@ troubleshooting(CKA):系統性地拆解應用程式的故障(第 44 章)、contr
 
 🧪 實驗 115(Kustomize):[tasks/cka/labs/115](../../labs/115/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Apply Resources with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-apply) · [Kustomize Overlays for Environments](https://killercoda.com/chadmcrowell/course/ckad/kustomize-env-overlay) · [Patch Deployment Image with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-patch-image) · [Generate ConfigMap and Secret with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-configmap-secret)
+
 ---
 [目錄](../README_TW.md) · [第 42 章](../42/tw.md) · [第 44 章](../44/tw.md)

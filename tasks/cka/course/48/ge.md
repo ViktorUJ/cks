@@ -258,5 +258,7 @@ plane-ის ან ნოდის შეკეთება, ქსელურ
 
 🧪 CKA-ის მოკ-გამოცდები: [tasks/cka/mock](../../mock)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Single Node Cluster](https://killercoda.com/chadmcrowell/course/cka/single-node) · [Two Node Cluster](https://killercoda.com/chadmcrowell/course/cka/two-node)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 47](../47/ge.md)

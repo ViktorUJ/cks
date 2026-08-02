@@ -306,5 +306,7 @@ capítulo 26 (almacenamiento), y el DaemonSet en los laboratorios de cargas de t
 
 🧪 Práctica 103 (DaemonSet; el StatefulSet, en el laboratorio 108): [tasks/cka/labs/103](../../labs/103/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Kubernetes StatefulSets](https://killercoda.com/chadmcrowell/scenario/kubernetes-statefulset)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 10](../10/es.md) · [Capítulo 12](../12/es.md)

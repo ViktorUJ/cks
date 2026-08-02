@@ -574,5 +574,7 @@ Service по labels, проверите Endpoints и доступ по DNS-им�
 
 🧪 Лаба 101 (Pods, Deployment, namespaces, Service - первая объединённая лаба): [tasks/cka/labs/101](../../labs/101/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create a ClusterIP service](https://killercoda.com/chadmcrowell/course/ckad/clusterip-service) · [NodePort Service](https://killercoda.com/chadmcrowell/course/ckad/nodeport-service) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 6](../06/ru.md) · [Глава 8](../08/ru.md)

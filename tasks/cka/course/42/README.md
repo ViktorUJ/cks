@@ -260,5 +260,7 @@ at an installation of the components of a cluster).
 
 🧪 A lab 115 (Helm): [tasks/cka/labs/115](../../labs/115/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Installing NGINX Ingress with Helm](https://killercoda.com/chadmcrowell/course/cka/helm-install-nginx)
+
 ---
 [Contents](../README.md) · [Chapter 41](../41/README.md) · [Chapter 43](../43/README.md)

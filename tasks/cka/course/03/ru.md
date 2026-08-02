@@ -501,5 +501,7 @@ kubectl delete pod nginx --force --grace-period=0    # мгновенно, бе�
 
 🧪 Лаба 119 (дриллы на скорость и JSONPath): [tasks/cka/labs/119](../../labs/119/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Explore pod spec with explain](https://killercoda.com/chadmcrowell/course/ckad/explain-spec-containers) · [List API Resources](https://killercoda.com/chadmcrowell/course/cka/api-resources) · [Create a Pod Declaratively](https://killercoda.com/chadmcrowell/course/cka/declarative-pod) · [Group pods by node](https://killercoda.com/chadmcrowell/course/ckad/list-pods-by-node)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 2](../02/ru.md) · [Глава 4](../04/ru.md)

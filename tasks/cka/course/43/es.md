@@ -255,5 +255,7 @@ de los nodos (45), de la red (46). Kustomize se practica en los laboratorios de 
 
 🧪 Laboratorio 115 (Kustomize): [tasks/cka/labs/115](../../labs/115/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Apply Resources with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-apply) · [Kustomize Overlays for Environments](https://killercoda.com/chadmcrowell/course/ckad/kustomize-env-overlay) · [Patch Deployment Image with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-patch-image) · [Generate ConfigMap and Secret with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-configmap-secret)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 42](../42/es.md) · [Capítulo 44](../44/es.md)

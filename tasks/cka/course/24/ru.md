@@ -357,5 +357,7 @@ read-only корне», «смонтируй ConfigMap как том» - тип�
 
 🧪 Лаба 107 (тома приложений: emptyDir): [tasks/cka/labs/107](../../labs/107/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [NFS Volumes in Kubernetes Pods](https://killercoda.com/chadmcrowell/course/ckad/nfs-vol)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 23](../23/ru.md) · [Глава 25](../25/ru.md)

@@ -346,5 +346,7 @@ CNI, CSI, CRI, - რომლებიც უკვე ვახსენეთ 
 
 🧪 ლაბი 118 (მათ შორის სერტიფიკატების health-check): [tasks/cka/labs/118](../../labs/118/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Kubernetes PKI Essentials](https://killercoda.com/chadmcrowell/course/cka/pki-essentials) · [View the Kubelet Client Certificate](https://killercoda.com/chadmcrowell/course/cka/view-certificate) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 38](../38/ge.md) · [თავი 40](../40/ge.md)

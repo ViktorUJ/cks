@@ -248,5 +248,7 @@ restauración de etcd se practican en los laboratorios de administración.
 
 🧪 Laboratorio 112 (backup y restauración de etcd): [tasks/cka/labs/112](../../labs/112/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Backup and Restore Kubernetes etcd](https://killercoda.com/chadmcrowell/scenario/kubernetes-backup-etcd)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 36](../36/es.md) · [Capítulo 38](../38/es.md)

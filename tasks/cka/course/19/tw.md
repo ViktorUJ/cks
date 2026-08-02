@@ -274,5 +274,7 @@ capabilities:行程以哪個使用者身分執行,以及它有哪些特權。Sec
 
 🧪 實驗 105(Secret):[tasks/cka/labs/105](../../labs/105/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Mount Secret into pod](https://killercoda.com/chadmcrowell/course/ckad/secret-volume) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Rotate Secret](https://killercoda.com/chadmcrowell/course/ckad/rotate-secret)
+
 ---
 [目錄](../README_TW.md) · [第 18 章](../18/tw.md) · [第 20 章](../20/tw.md)

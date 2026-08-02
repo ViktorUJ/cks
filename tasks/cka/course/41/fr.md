@@ -310,5 +310,7 @@ Les CRD et les opérateurs se travaillent dans les TP d'administration.
 
 🧪 TP 115 (CRD et opérateurs) : [tasks/cka/labs/115](../../labs/115/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Install a Database Operator](https://killercoda.com/chadmcrowell/course/cka/database-operator) · [Create your own Operator in Kubernetes](https://killercoda.com/chadmcrowell/scenario/create-operator)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 40](../40/fr.md) · [Chapitre 42](../42/fr.md)

@@ -265,5 +265,7 @@ den Labs zur Administration geübt (u. a. bei der Installation von Cluster-Kompo
 
 🧪 Lab 115 (Helm): [tasks/cka/labs/115](../../labs/115/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Installing NGINX Ingress with Helm](https://killercoda.com/chadmcrowell/course/cka/helm-install-nginx)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 41](../41/de.md) · [Kapitel 43](../43/de.md)

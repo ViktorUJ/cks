@@ -278,5 +278,7 @@ tasks. Further is a last chapter: a tactics of the CKA (the chapter 48).
 
 🧪 The mock exams of the CKAD: [tasks/ckad/mock](../../../ckad/mock)
 
+🎮 Killercoda (in a browser, no setup): [Playground](https://killercoda.com/chadmcrowell/course/ckad/playground)
+
 ---
 [Contents](../README.md) · [Chapter 46](../46/README.md) · [Chapter 48](../48/README.md)

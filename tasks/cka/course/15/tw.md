@@ -486,5 +486,7 @@ spec:
 
 🧪 實驗 122(包含 PriorityClass 的操練):[tasks/cka/labs/122](../../labs/122/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Priority Class](https://killercoda.com/chadmcrowell/course/cka/priority-class)
+
 ---
 [目錄](../README_TW.md) · [第 14 章](../14/tw.md) · [第 16 章](../16/tw.md)

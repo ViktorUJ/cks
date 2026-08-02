@@ -352,5 +352,7 @@ réseau, le stockage et le runtime. Certificats, kubeconfig et CSR se travaillen
 
 🧪 TP 118 (dont le health-check des certificats) : [tasks/cka/labs/118](../../labs/118/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Kubernetes PKI Essentials](https://killercoda.com/chadmcrowell/course/cka/pki-essentials) · [View the Kubelet Client Certificate](https://killercoda.com/chadmcrowell/course/cka/view-certificate) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 38](../38/fr.md) · [Chapitre 40](../40/fr.md)

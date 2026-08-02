@@ -460,5 +460,7 @@ TP unifié.
 
 🧪 TP 101 (namespaces, labels, selectors) : [tasks/cka/labs/101](../../labs/101/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Label a pod](https://killercoda.com/chadmcrowell/course/ckad/label-pod) · [Deploy a pod to a new namespace](https://killercoda.com/chadmcrowell/course/ckad/namespace-pod) · [Delete all pods in a namespace](https://killercoda.com/chadmcrowell/course/ckad/delete-pods-namespace)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 5](../05/fr.md) · [Chapitre 7](../07/fr.md)

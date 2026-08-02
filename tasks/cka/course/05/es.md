@@ -425,5 +425,7 @@ namespace y el Service.
 
 🧪 Práctica 101 (ReplicaSet, Deployment, Service): [tasks/cka/labs/101](../../labs/101/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create a deployment for nginx](https://killercoda.com/chadmcrowell/course/ckad/nginx-deployment) · [Scale a deployment](https://killercoda.com/chadmcrowell/course/ckad/scale-deployment) · [Create and Scale Apache Deployment](https://killercoda.com/chadmcrowell/course/cka/create-apache-deployment)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 4](../04/es.md) · [Capítulo 6](../06/es.md)

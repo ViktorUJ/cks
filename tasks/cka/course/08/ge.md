@@ -456,5 +456,7 @@ Deployment-ის განახლებები და უკან და�
 
 🧪 ლაბი 102 (rolling update და rollback): [tasks/cka/labs/102](../../labs/102/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create and Update Deployments](https://killercoda.com/chadmcrowell/course/ckad/deploy-update) · [Update deployment image](https://killercoda.com/chadmcrowell/course/ckad/update-image) · [Rollback a Deployment](https://killercoda.com/chadmcrowell/course/cka/rollback-deployment) · [Change Rollout Strategy](https://killercoda.com/chadmcrowell/course/cka/change-rollout-strategy)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 7](../07/ge.md) · [თავი 9](../09/ge.md)

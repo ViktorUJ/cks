@@ -355,5 +355,7 @@ ResourceQuota и понимать OOMKilled vs throttling.
 
 🧪 Лаба 122 (в т.ч. дрилл на requests/limits): [tasks/cka/labs/122](../../labs/122/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Set CPU and memory limits](https://killercoda.com/chadmcrowell/course/ckad/cpu-mem-limits) · [LimitRange for Namespace](https://killercoda.com/chadmcrowell/course/ckad/limitrange-namespace) · [ResourceQuota for Namespace](https://killercoda.com/chadmcrowell/course/ckad/resourcequota-namespace) · [Default CPU/Memory Limits](https://killercoda.com/chadmcrowell/course/ckad/default-cpu-memory)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 13](../13/ru.md) · [Глава 15](../15/ru.md)

@@ -283,5 +283,7 @@ ConfigMap は設定関連のラボで練習します。
 
 🧪 ラボ 105 (ConfigMap): [tasks/cka/labs/105](../../labs/105/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Creating a pod with configMap](https://killercoda.com/chadmcrowell/course/ckad/create-configmap) · [Mount ConfigMap as volume](https://killercoda.com/chadmcrowell/course/ckad/configmap-file-volume) · [Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Update ConfigMap](https://killercoda.com/chadmcrowell/course/ckad/configmap-update)
+
 ---
 [目次](../README_JP.md) · [第 17 章](../17/jp.md) · [第 19 章](../19/jp.md)

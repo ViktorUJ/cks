@@ -474,5 +474,7 @@ plane.
 
 🧪 Лаба 116 (kubeadm init + join с нуля): [tasks/cka/labs/116](../../labs/116/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Prepare for Kubeadm Install](https://killercoda.com/chadmcrowell/course/cka/prepare-kubeadm)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 34](../34/ru.md) · [Глава 35A](../35-2-ha/ru.md)

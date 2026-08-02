@@ -338,5 +338,7 @@ diagnostic). Les logs et les métriques se travaillent dans les TP sur l'observa
 
 🧪 TP 109 (logs, metrics-server, kubectl top) : [tasks/cka/labs/109](../../labs/109/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Logging in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/logging) · [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 27](../27/fr.md) · [Chapitre 29](../29/fr.md)

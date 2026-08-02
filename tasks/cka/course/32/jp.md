@@ -344,5 +344,7 @@ flowchart TB
 
 🧪 ラボ 120（Ingress のドリルも含む）: [tasks/cka/labs/120](../../labs/120/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Install Ingress Controller](https://killercoda.com/chadmcrowell/course/ckad/ingress-controller) · [Ingress Host-Based Routing](https://killercoda.com/chadmcrowell/course/ckad/ingress-host-routing) · [Ingress with TLS](https://killercoda.com/chadmcrowell/course/ckad/ingress-tls) · [Create Ingress Resource](https://killercoda.com/chadmcrowell/course/cka/create-ingress)
+
 ---
 [目次](../README_JP.md) · [第 31 章](../31/jp.md) · [第 33 章](../33/jp.md)

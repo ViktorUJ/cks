@@ -349,5 +349,7 @@ HPA + Cluster Autoscaler の組み合わせは、クラウドにおける弾力�
 
 🧪 ラボ 104（HPA による自動スケーリング）：[tasks/cka/labs/104](../../labs/104/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server)
+
 ---
 [目次](../README_JP.md) · [第 15 章](../15/jp.md) · [第 17 章](../17/jp.md)

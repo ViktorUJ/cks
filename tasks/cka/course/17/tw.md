@@ -295,5 +295,7 @@ Secret 題目(第 18-19 章)的基礎。
 
 🧪 實驗 105(指令、參數、環境變數):[tasks/cka/labs/105](../../labs/105/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep)
+
 ---
 [目錄](../README_TW.md) · [第 16 章](../16/tw.md) · [第 18 章](../18/tw.md)

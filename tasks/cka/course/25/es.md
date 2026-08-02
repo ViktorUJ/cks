@@ -287,5 +287,7 @@ laboratorios de almacenamiento.
 
 🧪 Laboratorio 108 (PV/PVC): [tasks/cka/labs/108](../../labs/108/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Persistent Volumes](https://killercoda.com/chadmcrowell/course/cka/persistent-volumes) · [Using NFS volumes for Pods](https://killercoda.com/chadmcrowell/course/cka/nfs-vol) · [Troubleshoot a Stuck PVC](https://killercoda.com/chadmcrowell/course/cka/pvc-stuck)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 24](../24/es.md) · [Capítulo 26](../26/es.md)

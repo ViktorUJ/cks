@@ -480,5 +480,7 @@ hacen automáticamente nuestros laboratorios (se puede entrar en los nodos y ver
 
 🧪 Laboratorio 116 (kubeadm init + join desde cero): [tasks/cka/labs/116](../../labs/116/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Prepare for Kubeadm Install](https://killercoda.com/chadmcrowell/course/cka/prepare-kubeadm)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 34](../34/es.md) · [Capítulo 35A](../35-2-ha/es.md)

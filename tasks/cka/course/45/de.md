@@ -253,5 +253,7 @@ wird in den Labs zur Administration und in Mock-Prüfungen geübt.
 
 🧪 Lab 117 (Troubleshooting der Control Plane und der Nodes): [tasks/cka/labs/117](../../labs/117/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Troubleshoot a NotReady Node](https://killercoda.com/chadmcrowell/course/cka/node-notready) · [Kubelet Status](https://killercoda.com/chadmcrowell/course/cka/kubelet-status) · [Cordon and Drain the Node](https://killercoda.com/chadmcrowell/course/cka/cordon-drain-node)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 44](../44/de.md) · [Kapitel 46](../46/de.md)

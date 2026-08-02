@@ -332,5 +332,7 @@ observabilidad y troubleshooting.
 
 🧪 Laboratorio 109 (depuración y obsolescencia de API): [tasks/cka/labs/109](../../labs/109/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug) · [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Port Forward to Pod](https://killercoda.com/chadmcrowell/course/ckad/port-forward-pod) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 28](../28/es.md) · [Capítulo 30](../30/es.md)

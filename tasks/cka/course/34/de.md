@@ -376,5 +376,7 @@ NetworkPolicy wird in den Labs zu Netz und Sicherheit geübt.
 
 🧪 Lab 120 (u. a. Drill zu NetworkPolicy): [tasks/cka/labs/120](../../labs/120/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Deny All Ingress](https://killercoda.com/chadmcrowell/course/ckad/default-deny-networkpolicy) · [Allow Namespace Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-namespace-traffic) · [Allow Label-Based Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-label-traffic) · [Block All Egress](https://killercoda.com/chadmcrowell/course/ckad/block-egress)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 33](../33/de.md) · [Kapitel 35](../35/de.md)

@@ -284,5 +284,7 @@ geübt.
 
 🧪 Lab 107 (Container-Images): [tasks/cka/labs/107](../../labs/107/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Create Dockerfile with Args and Run](https://killercoda.com/chadmcrowell/course/ckad/dockerfile) · [Create a custom nginx container image](https://killercoda.com/chadmcrowell/course/ckad/nginx-custom)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 22](../22/de.md) · [Kapitel 24](../24/de.md)

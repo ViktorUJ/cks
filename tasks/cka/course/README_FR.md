@@ -171,6 +171,24 @@ la fondation sur laquelle s'appuient les autres chapitres (les compétences des
 - 🧪 [Examens blancs CKA](../mock) - examens blancs CKA chronométrés (multicluster, SSH, poids des tâches)
 - 🧪 [Examens blancs CKAD](../../ckad/mock) - examens blancs CKAD chronométrés
 
+### Quels TP choisir
+
+Les TP de notre plateforme sont la pratique principale du cours et conviennent mieux à la
+préparation de l'examen : ils sont composites (plusieurs tâches liées dans un même
+environnement, comme à l'examen réel), ils se déploient dans un cluster complet avec accès
+aux nœuds en SSH, ils sont vérifiés automatiquement par `check_result`, et les examens
+blancs se déroulent chronométrés avec des poids par tâche. C'est cela qui reproduit les
+conditions du CKA et du CKAD.
+
+Les scénarios Killercoda dans les chapitres sont un **démarrage rapide** : ils s'ouvrent
+dans le navigateur, ne demandent aucune installation et sont gratuits. Ils sont pratiques
+juste après la lecture d'un chapitre, pour ancrer un sujet précis, ou pour s'entraîner
+quand aucun cluster n'est disponible. Mais ils sont atomiques (un scénario, une tâche),
+uniquement en anglais, et n'offrent ni travail sur les nœuds ni répétition chronométrée.
+
+Combinaison recommandée : Killercoda pour ancrer rapidement un sujet, nos TP et les examens
+blancs pour préparer l'examen lui-même.
+
 ## Quoi lire ensuite
 
 Ce cours est centré sur la préparation aux examens : chaque chapitre est rattaché à un domaine

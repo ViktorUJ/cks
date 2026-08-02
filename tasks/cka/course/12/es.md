@@ -392,5 +392,7 @@ cargas de trabajo.
 
 🧪 Laboratorio 122 (drills de scheduling: nodeSelector, affinity, taints): [tasks/cka/labs/122](../../labs/122/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Apply node affinity to a pod](https://killercoda.com/chadmcrowell/course/ckad/node-affinity) · [Node Affinity: Required and Preferred](https://killercoda.com/chadmcrowell/course/cka/node-affinity-required-preferred) · [Scheduling a pod to a specific node](https://killercoda.com/chadmcrowell/course/cka/node-name) · [Cordon and Select Node](https://killercoda.com/chadmcrowell/course/cka/nodeselector-cordon)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 11](../11/es.md) · [Capítulo 13](../13/es.md)

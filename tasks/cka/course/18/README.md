@@ -281,5 +281,7 @@ A ConfigMap is drilled in the labs on the configuration.
 
 🧪 Lab 105 (ConfigMap): [tasks/cka/labs/105](../../labs/105/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Creating a pod with configMap](https://killercoda.com/chadmcrowell/course/ckad/create-configmap) · [Mount ConfigMap as volume](https://killercoda.com/chadmcrowell/course/ckad/configmap-file-volume) · [Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Update ConfigMap](https://killercoda.com/chadmcrowell/course/ckad/configmap-update)
+
 ---
 [Contents](../README.md) · [Chapter 17](../17/README.md) · [Chapter 19](../19/README.md)

@@ -480,5 +480,7 @@ plane の修復に必要です。
 
 🧪 ラボ 116 (kubeadm init + join をゼロから): [tasks/cka/labs/116](../../labs/116/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Prepare for Kubeadm Install](https://killercoda.com/chadmcrowell/course/cka/prepare-kubeadm)
+
 ---
 [目次](../README_JP.md) · [第 34 章](../34/jp.md) · [第 35A 章](../35-2-ha/jp.md)

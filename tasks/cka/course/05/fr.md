@@ -433,5 +433,7 @@ TP unifié reliera ensemble les pods, les Deployment, les namespaces et les Serv
 
 🧪 TP 101 (ReplicaSet, Deployment, Service) : [tasks/cka/labs/101](../../labs/101/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create a deployment for nginx](https://killercoda.com/chadmcrowell/course/ckad/nginx-deployment) · [Scale a deployment](https://killercoda.com/chadmcrowell/course/ckad/scale-deployment) · [Create and Scale Apache Deployment](https://killercoda.com/chadmcrowell/course/cka/create-apache-deployment)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 4](../04/fr.md) · [Chapitre 6](../06/fr.md)

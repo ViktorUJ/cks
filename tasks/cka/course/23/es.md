@@ -279,5 +279,7 @@ patrones. El trabajo con imágenes se practica en los laboratorios de diseño de
 
 🧪 Laboratorio 107 (imágenes de contenedores): [tasks/cka/labs/107](../../labs/107/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create Dockerfile with Args and Run](https://killercoda.com/chadmcrowell/course/ckad/dockerfile) · [Create a custom nginx container image](https://killercoda.com/chadmcrowell/course/ckad/nginx-custom)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 22](../22/es.md) · [Capítulo 24](../24/es.md)

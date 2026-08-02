@@ -258,5 +258,7 @@ For a targeted preparation for one exam use the guides:
 
 🧪 The mock exams of the CKA: [tasks/cka/mock](../../mock)
 
+🎮 Killercoda (in a browser, no setup): [Single Node Cluster](https://killercoda.com/chadmcrowell/course/cka/single-node) · [Two Node Cluster](https://killercoda.com/chadmcrowell/course/cka/two-node)
+
 ---
 [Contents](../README.md) · [Chapter 47](../47/README.md)

@@ -403,5 +403,7 @@ kube-proxy se travaillent dans les TP sur le réseau et le troubleshooting.
 
 🧪 TP 118 (y compris la réparation de CoreDNS) : [tasks/cka/labs/118](../../labs/118/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Test DNS Resolution](https://killercoda.com/chadmcrowell/course/ckad/dns-resolution) · [Modify Cluster DNS](https://killercoda.com/chadmcrowell/course/cka/modify-cluster-dns) · [Resolve Service IP from Pod](https://killercoda.com/chadmcrowell/course/cka/communicate-with-svc) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 30](../30/fr.md) · [Chapitre 32](../32/fr.md)

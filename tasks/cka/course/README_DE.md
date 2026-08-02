@@ -171,6 +171,24 @@ direkt in den Node- und Netzwerk-Labs angewendet).
 - 🧪 [CKA-Mock-Prüfungen](../mock) - Mock-Prüfungen für CKA unter Zeitdruck (Multicluster, SSH, Gewichtung der Aufgaben)
 - 🧪 [CKAD-Mock-Prüfungen](../../ckad/mock) - Mock-Prüfungen für CKAD unter Zeitdruck
 
+### Welche Labs man wählen sollte
+
+Die Labs unserer Plattform sind die Hauptpraxis des Kurses und eignen sich besser für die
+Prüfungsvorbereitung: sie sind zusammengesetzt (mehrere verbundene Aufgaben in einer
+Umgebung, wie in der echten Prüfung), sie werden in einem vollwertigen Cluster mit Zugriff
+auf die Nodes per SSH ausgerollt, sie werden automatisch über `check_result` geprüft, und
+die Mock-Prüfungen laufen unter Zeitdruck mit Aufgabengewichten. Genau das reproduziert die
+Bedingungen von CKA und CKAD.
+
+Die Killercoda-Szenarien in den Kapiteln sind ein **Schnellstart**: sie öffnen sich im
+Browser, brauchen keine Installation und sind kostenlos. Sie passen gut direkt nach dem
+Lesen eines Kapitels, um ein einzelnes Thema zu festigen, oder zum Üben, wenn kein Cluster
+zur Hand ist. Aber sie sind atomar (ein Szenario, eine Aufgabe), nur auf Englisch und
+bieten weder Arbeit an den Nodes noch einen Probelauf unter Zeitdruck.
+
+Empfohlene Kombination: Killercoda zum schnellen Festigen eines Themas, unsere Labs und die
+Mock-Prüfungen für die Vorbereitung auf die Prüfung selbst.
+
 ## Was man als Nächstes lesen sollte
 
 Dieser Kurs ist auf die Prüfungsvorbereitung fokussiert: jedes Kapitel ist an eine Domäne von

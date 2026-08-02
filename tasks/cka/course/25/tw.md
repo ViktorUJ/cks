@@ -263,5 +263,7 @@ Pending」、「該選哪個 accessMode」、「刪除 PVC 時資料會怎樣 (r
 
 🧪 實驗 108(PV/PVC):[tasks/cka/labs/108](../../labs/108/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Persistent Volumes](https://killercoda.com/chadmcrowell/course/cka/persistent-volumes) · [Using NFS volumes for Pods](https://killercoda.com/chadmcrowell/course/cka/nfs-vol) · [Troubleshoot a Stuck PVC](https://killercoda.com/chadmcrowell/course/cka/pvc-stuck)
+
 ---
 [目錄](../README_TW.md) · [第 24 章](../24/tw.md) · [第 26 章](../26/tw.md)

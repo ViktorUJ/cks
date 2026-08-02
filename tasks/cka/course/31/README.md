@@ -395,5 +395,7 @@ are drilled in the labs on a network and a troubleshooting.
 
 🧪 Lab 118 (incl. a fixing of a CoreDNS): [tasks/cka/labs/118](../../labs/118/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Test DNS Resolution](https://killercoda.com/chadmcrowell/course/ckad/dns-resolution) · [Modify Cluster DNS](https://killercoda.com/chadmcrowell/course/cka/modify-cluster-dns) · [Resolve Service IP from Pod](https://killercoda.com/chadmcrowell/course/cka/communicate-with-svc) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service)
+
 ---
 [Contents](../README.md) · [Chapter 30](../30/README.md) · [Chapter 32](../32/README.md)

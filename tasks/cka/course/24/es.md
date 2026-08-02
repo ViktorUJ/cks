@@ -375,5 +375,7 @@ aplicaciones y almacenamiento.
 
 🧪 Laboratorio 107 (volúmenes de aplicaciones: emptyDir): [tasks/cka/labs/107](../../labs/107/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [NFS Volumes in Kubernetes Pods](https://killercoda.com/chadmcrowell/course/ckad/nfs-vol)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 23](../23/es.md) · [Capítulo 25](../25/es.md)

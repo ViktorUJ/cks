@@ -289,5 +289,7 @@ dem Knoten Platz findet. Taints/tolerations werden in den Labs zur Planung geüb
 
 🧪 Lab 122 (u. a. Drill zu taints/tolerations): [tasks/cka/labs/122](../../labs/122/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Taints and Tolerations](https://killercoda.com/chadmcrowell/course/cka/taints-tolerations) · [Add a Toleration to a Pod YAML](https://killercoda.com/chadmcrowell/course/cka/add-toleration) · [Remove the Taint from Node](https://killercoda.com/chadmcrowell/course/cka/remove-taint)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 12](../12/de.md) · [Kapitel 14](../14/de.md)

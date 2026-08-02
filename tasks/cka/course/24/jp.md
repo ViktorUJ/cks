@@ -373,5 +373,7 @@ Pod の再作成でデータを失わないためにどこに置くかを決め�
 
 🧪 ラボ 107 (アプリケーションのボリューム: emptyDir): [tasks/cka/labs/107](../../labs/107/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [NFS Volumes in Kubernetes Pods](https://killercoda.com/chadmcrowell/course/ckad/nfs-vol)
+
 ---
 [目次](../README_JP.md) · [第 23 章](../23/jp.md) · [第 25 章](../25/jp.md)

@@ -416,5 +416,7 @@ StatefulSet のストレージはストレージ関連のラボで練習しま�
 
 🧪 ラボ 108 (StorageClass と StatefulSet におけるストレージ): [tasks/cka/labs/108](../../labs/108/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Dynamic Storage with StorageClass and PVC](https://killercoda.com/chadmcrowell/course/cka/storage-dynamic)
+
 ---
 [目次](../README_JP.md) · [第 25 章](../25/jp.md) · [第 27 章](../27/jp.md)

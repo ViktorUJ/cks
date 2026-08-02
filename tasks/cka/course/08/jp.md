@@ -463,5 +463,7 @@ Workloads/Deployment 領域の必須の最低限です。詰まった rollout �
 
 🧪 ラボ 102 (rolling update と rollback)：[tasks/cka/labs/102](../../labs/102/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create and Update Deployments](https://killercoda.com/chadmcrowell/course/ckad/deploy-update) · [Update deployment image](https://killercoda.com/chadmcrowell/course/ckad/update-image) · [Rollback a Deployment](https://killercoda.com/chadmcrowell/course/cka/rollback-deployment) · [Change Rollout Strategy](https://killercoda.com/chadmcrowell/course/cka/change-rollout-strategy)
+
 ---
 [目次](../README_JP.md) · [第 7 章](../07/jp.md) · [第 9 章](../09/jp.md)

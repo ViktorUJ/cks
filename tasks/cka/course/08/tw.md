@@ -454,5 +454,7 @@ Deployment 的更新與回滾會在工作負載相關的實驗中操練。
 
 🧪 實驗 102(rolling update 與 rollback):[tasks/cka/labs/102](../../labs/102/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Create and Update Deployments](https://killercoda.com/chadmcrowell/course/ckad/deploy-update) · [Update deployment image](https://killercoda.com/chadmcrowell/course/ckad/update-image) · [Rollback a Deployment](https://killercoda.com/chadmcrowell/course/cka/rollback-deployment) · [Change Rollout Strategy](https://killercoda.com/chadmcrowell/course/cka/change-rollout-strategy)
+
 ---
 [目錄](../README_TW.md) · [第 7 章](../07/tw.md) · [第 9 章](../09/tw.md)

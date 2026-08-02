@@ -326,5 +326,7 @@ drilled in the labs on an observability.
 
 🧪 Lab 109 (logs, metrics-server, kubectl top): [tasks/cka/labs/109](../../labs/109/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Logging in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/logging) · [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events)
+
 ---
 [Contents](../README.md) · [Chapter 27](../27/README.md) · [Chapter 29](../29/README.md)

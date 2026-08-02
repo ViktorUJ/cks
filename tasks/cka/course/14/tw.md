@@ -354,5 +354,7 @@ ResourceQuota,並理解 OOMKilled vs throttling。
 
 🧪 實驗 122(其中包含 requests/limits 的操練):[tasks/cka/labs/122](../../labs/122/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Set CPU and memory limits](https://killercoda.com/chadmcrowell/course/ckad/cpu-mem-limits) · [LimitRange for Namespace](https://killercoda.com/chadmcrowell/course/ckad/limitrange-namespace) · [ResourceQuota for Namespace](https://killercoda.com/chadmcrowell/course/ckad/resourcequota-namespace) · [Default CPU/Memory Limits](https://killercoda.com/chadmcrowell/course/ckad/default-cpu-memory)
+
 ---
 [目錄](../README_TW.md) · [第 13 章](../13/tw.md) · [第 15 章](../15/tw.md)

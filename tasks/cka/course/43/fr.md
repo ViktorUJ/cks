@@ -255,5 +255,7 @@ plane et des nœuds (45), du réseau (46). Kustomize se travaille dans les TP d'
 
 🧪 TP 115 (Kustomize) : [tasks/cka/labs/115](../../labs/115/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Apply Resources with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-apply) · [Kustomize Overlays for Environments](https://killercoda.com/chadmcrowell/course/ckad/kustomize-env-overlay) · [Patch Deployment Image with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-patch-image) · [Generate ConfigMap and Secret with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-configmap-secret)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 42](../42/fr.md) · [Chapitre 44](../44/fr.md)

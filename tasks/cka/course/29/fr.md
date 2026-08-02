@@ -336,5 +336,7 @@ troubleshooting.
 
 🧪 TP 109 (débogage et dépréciation des API) : [tasks/cka/labs/109](../../labs/109/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug) · [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Port Forward to Pod](https://killercoda.com/chadmcrowell/course/ckad/port-forward-pod) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 28](../28/fr.md) · [Chapitre 30](../30/fr.md)

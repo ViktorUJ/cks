@@ -474,5 +474,7 @@ works do automatically (one can enter the nodes and see everything).
 
 🧪 A lab 116 (kubeadm init + join from a scratch): [tasks/cka/labs/116](../../labs/116/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Prepare for Kubeadm Install](https://killercoda.com/chadmcrowell/course/cka/prepare-kubeadm)
+
 ---
 [Contents](../README.md) · [Chapter 34](../34/README.md) · [Chapter 35A](../35-2-ha/README.md)

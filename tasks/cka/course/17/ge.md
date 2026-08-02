@@ -303,5 +303,7 @@ kubectl describe pod <pod>
 
 🧪 ლაბი 105 (ბრძანებები, არგუმენტები, გარემოს ცვლადები): [tasks/cka/labs/105](../../labs/105/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 16](../16/ge.md) · [თავი 18](../18/ge.md)

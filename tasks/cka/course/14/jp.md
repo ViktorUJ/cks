@@ -356,5 +356,7 @@ Pod の食欲と namespace のクォータを管理できるようになりま�
 
 🧪 ラボ 122（requests/limits のドリルも含む）: [tasks/cka/labs/122](../../labs/122/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Set CPU and memory limits](https://killercoda.com/chadmcrowell/course/ckad/cpu-mem-limits) · [LimitRange for Namespace](https://killercoda.com/chadmcrowell/course/ckad/limitrange-namespace) · [ResourceQuota for Namespace](https://killercoda.com/chadmcrowell/course/ckad/resourcequota-namespace) · [Default CPU/Memory Limits](https://killercoda.com/chadmcrowell/course/ckad/default-cpu-memory)
+
 ---
 [目次](../README_JP.md) · [第 13 章](../13/jp.md) · [第 15 章](../15/jp.md)

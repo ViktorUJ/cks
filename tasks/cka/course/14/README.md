@@ -355,5 +355,7 @@ schedulers. The resources and the quotas are drilled in the labs on the workload
 
 🧪 Lab 122 (including a drill on requests/limits): [tasks/cka/labs/122](../../labs/122/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Set CPU and memory limits](https://killercoda.com/chadmcrowell/course/ckad/cpu-mem-limits) · [LimitRange for Namespace](https://killercoda.com/chadmcrowell/course/ckad/limitrange-namespace) · [ResourceQuota for Namespace](https://killercoda.com/chadmcrowell/course/ckad/resourcequota-namespace) · [Default CPU/Memory Limits](https://killercoda.com/chadmcrowell/course/ckad/default-cpu-memory)
+
 ---
 [Contents](../README.md) · [Chapter 13](../13/README.md) · [Chapter 15](../15/README.md)

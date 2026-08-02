@@ -485,5 +485,7 @@ font automatiquement nos travaux pratiques (on peut se connecter aux nœuds et t
 
 🧪 TP 116 (kubeadm init + join à partir de zéro) : [tasks/cka/labs/116](../../labs/116/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Prepare for Kubeadm Install](https://killercoda.com/chadmcrowell/course/cka/prepare-kubeadm)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 34](../34/fr.md) · [Chapitre 35A](../35-2-ha/fr.md)

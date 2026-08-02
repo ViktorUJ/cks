@@ -258,5 +258,7 @@ Helm 會保存 release 的修訂版歷史(存在叢集的 Secret 裡),所以 `he
 
 🧪 實驗 115(Helm):[tasks/cka/labs/115](../../labs/115/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Installing NGINX Ingress with Helm](https://killercoda.com/chadmcrowell/course/cka/helm-install-nginx)
+
 ---
 [目錄](../README_TW.md) · [第 41 章](../41/tw.md) · [第 43 章](../43/tw.md)

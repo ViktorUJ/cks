@@ -359,5 +359,7 @@ kubectl delete namespace rel
 
 🧪 Лаба 102 (canary и blue/green): [tasks/cka/labs/102](../../labs/102/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Blue Green Deployments in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/blue-green) · [Canary Ingress Deployment](https://killercoda.com/chadmcrowell/course/ckad/canary-ingress)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 8](../08/ru.md) · [Глава 10](../10/ru.md)

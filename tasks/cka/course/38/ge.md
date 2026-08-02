@@ -280,5 +280,7 @@ RBAC მუშავდება უსაფრთხოების ლაბ�
 
 🧪 ლაბი 121 (RBAC-დრილები + შემოწმება auth can-i-ით): [tasks/cka/labs/121](../../labs/121/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 37](../37/ge.md) · [თავი 39](../39/ge.md)

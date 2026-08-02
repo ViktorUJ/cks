@@ -359,5 +359,7 @@ cordon/drain/uncordon。順序弄錯或漏掉 drain - 就會扣分。
 
 🧪 實驗 111(kubeadm upgrade):[tasks/cka/labs/111](../../labs/111/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Upgrading Kubernetes](https://killercoda.com/chadmcrowell/course/cka/upgrade-k8s) · [Upgrade Kubelet](https://killercoda.com/chadmcrowell/course/cka/upgrade-kubelet)
+
 ---
 [目錄](../README_TW.md) · [第 35 章](../35/tw.md) · [第 37 章](../37/tw.md)

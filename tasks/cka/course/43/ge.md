@@ -255,5 +255,7 @@ troubleshooting (CKA): აპლიკაციების ავარიე�
 
 🧪 ლაბი 115 (Kustomize): [tasks/cka/labs/115](../../labs/115/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Apply Resources with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-apply) · [Kustomize Overlays for Environments](https://killercoda.com/chadmcrowell/course/ckad/kustomize-env-overlay) · [Patch Deployment Image with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-patch-image) · [Generate ConfigMap and Secret with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-configmap-secret)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 42](../42/ge.md) · [თავი 44](../44/ge.md)

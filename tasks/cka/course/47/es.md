@@ -278,5 +278,7 @@ reales. Luego viene el último capítulo: la táctica del CKA (capítulo 48).
 
 🧪 Exámenes simulados del CKAD: [tasks/ckad/mock](../../../ckad/mock)
 
+🎮 Killercoda (en el navegador, sin instalación): [Playground](https://killercoda.com/chadmcrowell/course/ckad/playground)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 46](../46/es.md) · [Capítulo 48](../48/es.md)

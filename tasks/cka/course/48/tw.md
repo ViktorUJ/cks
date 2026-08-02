@@ -255,5 +255,7 @@ flowchart LR
 
 🧪 CKA 模擬考:[tasks/cka/mock](../../mock)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Single Node Cluster](https://killercoda.com/chadmcrowell/course/cka/single-node) · [Two Node Cluster](https://killercoda.com/chadmcrowell/course/cka/two-node)
+
 ---
 [目錄](../README_TW.md) · [第 47 章](../47/tw.md)

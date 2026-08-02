@@ -266,5 +266,7 @@ el Pod cabe en el nodo. Taints/tolerations se practican en los laboratorios de p
 
 🧪 Laboratorio 122 (incluye drill de taints/tolerations): [tasks/cka/labs/122](../../labs/122/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Taints and Tolerations](https://killercoda.com/chadmcrowell/course/cka/taints-tolerations) · [Add a Toleration to a Pod YAML](https://killercoda.com/chadmcrowell/course/cka/add-toleration) · [Remove the Taint from Node](https://killercoda.com/chadmcrowell/course/cka/remove-taint)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 12](../12/es.md) · [Capítulo 14](../14/es.md)

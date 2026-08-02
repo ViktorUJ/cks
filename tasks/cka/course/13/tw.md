@@ -261,5 +261,7 @@ Pod 的資源 - requests、limits 與配額,它們同樣影響排程,以及 Pod 
 
 🧪 實驗 122(其中包含 taints/tolerations 的操練):[tasks/cka/labs/122](../../labs/122/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Taints and Tolerations](https://killercoda.com/chadmcrowell/course/cka/taints-tolerations) · [Add a Toleration to a Pod YAML](https://killercoda.com/chadmcrowell/course/cka/add-toleration) · [Remove the Taint from Node](https://killercoda.com/chadmcrowell/course/cka/remove-taint)
+
 ---
 [目錄](../README_TW.md) · [第 12 章](../12/tw.md) · [第 14 章](../14/tw.md)

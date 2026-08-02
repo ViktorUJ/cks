@@ -363,5 +363,7 @@ travaillent dans les TP sur les charges de travail.
 
 🧪 TP 103 (Jobs et CronJob) : [tasks/cka/labs/103](../../labs/103/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create a job and cronJob in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/jobs) · [Create a one-time Job](https://killercoda.com/chadmcrowell/course/ckad/create-job)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 9](../09/fr.md) · [Chapitre 11](../11/fr.md)

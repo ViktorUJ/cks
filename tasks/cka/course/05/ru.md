@@ -414,5 +414,7 @@ Deployment, namespaces и Service.
 
 🧪 Лаба 101 (ReplicaSet, Deployment, Service): [tasks/cka/labs/101](../../labs/101/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create a deployment for nginx](https://killercoda.com/chadmcrowell/course/ckad/nginx-deployment) · [Scale a deployment](https://killercoda.com/chadmcrowell/course/ckad/scale-deployment) · [Create and Scale Apache Deployment](https://killercoda.com/chadmcrowell/course/cka/create-apache-deployment)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 4](../04/ru.md) · [Глава 6](../06/ru.md)

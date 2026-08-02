@@ -395,5 +395,7 @@ Ingress-контроллеры, дающие маршрутизацию по х�
 
 🧪 Лаба 118 (в т.ч. починка CoreDNS): [tasks/cka/labs/118](../../labs/118/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Test DNS Resolution](https://killercoda.com/chadmcrowell/course/ckad/dns-resolution) · [Modify Cluster DNS](https://killercoda.com/chadmcrowell/course/cka/modify-cluster-dns) · [Resolve Service IP from Pod](https://killercoda.com/chadmcrowell/course/cka/communicate-with-svc) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 30](../30/ru.md) · [Глава 32](../32/ru.md)

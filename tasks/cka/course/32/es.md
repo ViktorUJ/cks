@@ -339,5 +339,7 @@ laboratorios de red.
 
 🧪 Laboratorio 120 (incluido el drill de Ingress): [tasks/cka/labs/120](../../labs/120/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Install Ingress Controller](https://killercoda.com/chadmcrowell/course/ckad/ingress-controller) · [Ingress Host-Based Routing](https://killercoda.com/chadmcrowell/course/ckad/ingress-host-routing) · [Ingress with TLS](https://killercoda.com/chadmcrowell/course/ckad/ingress-tls) · [Create Ingress Resource](https://killercoda.com/chadmcrowell/course/cka/create-ingress)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 31](../31/es.md) · [Capítulo 33](../33/es.md)

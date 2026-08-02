@@ -342,5 +342,7 @@ CPU/მეხსიერებაზე).
 
 🧪 ლაბი 104 (ავტომასშტაბირება HPA): [tasks/cka/labs/104](../../labs/104/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 15](../15/ge.md) · [თავი 17](../17/ge.md)

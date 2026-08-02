@@ -363,5 +363,7 @@ travail, avec le profil de charge de l'image `ping_pong`.
 
 🧪 TP 104 (autoscaling HPA) : [tasks/cka/labs/104](../../labs/104/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 15](../15/fr.md) · [Chapitre 17](../17/fr.md)

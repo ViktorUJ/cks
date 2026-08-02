@@ -275,5 +275,7 @@ ImagePullBackOff を診断する。ビルド自体を試験で行うことはま
 
 🧪 ラボ 107（コンテナイメージ）：[tasks/cka/labs/107](../../labs/107/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create Dockerfile with Args and Run](https://killercoda.com/chadmcrowell/course/ckad/dockerfile) · [Create a custom nginx container image](https://killercoda.com/chadmcrowell/course/ckad/nginx-custom)
+
 ---
 [目次](../README_JP.md) · [第 22 章](../22/jp.md) · [第 24 章](../24/jp.md)

@@ -260,5 +260,7 @@ para ajustar manifiestos sin plantillas: Kustomize. Helm se practica en los labo
 
 🧪 Laboratorio 115 (Helm): [tasks/cka/labs/115](../../labs/115/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Installing NGINX Ingress with Helm](https://killercoda.com/chadmcrowell/course/cka/helm-install-nginx)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 41](../41/es.md) · [Capítulo 43](../43/es.md)

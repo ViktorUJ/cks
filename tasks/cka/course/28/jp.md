@@ -335,5 +335,7 @@ metrics-server はモニタリングではないということの理解が、�
 
 🧪 ラボ 109 (logs, metrics-server, kubectl top): [tasks/cka/labs/109](../../labs/109/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Logging in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/logging) · [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events)
+
 ---
 [目次](../README_JP.md) · [第 27 章](../27/jp.md) · [第 29 章](../29/jp.md)

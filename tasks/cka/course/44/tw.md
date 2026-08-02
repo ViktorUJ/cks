@@ -246,5 +246,7 @@ Observability 的核心。
 
 🧪 實驗 114(修好壞掉的資源):[tasks/cka/labs/114](../../labs/114/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [目錄](../README_TW.md) · [第 43 章](../43/tw.md) · [第 45 章](../45/tw.md)

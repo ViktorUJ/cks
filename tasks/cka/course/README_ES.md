@@ -171,6 +171,24 @@ se aplican directamente en los laboratorios de nodos y de red).
 - 🧪 [Exámenes de simulación CKA](../mock) - exámenes de simulación del CKA con cronómetro (multiclúster, SSH, pesos de las tareas)
 - 🧪 [Exámenes de simulación CKAD](../../ckad/mock) - exámenes de simulación del CKAD con cronómetro
 
+### Qué laboratorios elegir
+
+Los laboratorios de nuestra plataforma son la práctica principal del curso y se ajustan
+mejor a la preparación del examen: son compuestos (varias tareas enlazadas en un mismo
+entorno, como en el examen real), se despliegan en un clúster completo con acceso a los
+nodos por SSH, se verifican automáticamente con `check_result`, y los exámenes de
+simulación corren con cronómetro y con pesos de las tareas. Es esto lo que reproduce las
+condiciones del CKA y del CKAD.
+
+Los escenarios de Killercoda en los capítulos son un **arranque rápido**: se abren en el
+navegador, no requieren instalación y son gratuitos. Van bien justo después de leer un
+capítulo, para afianzar un tema concreto, o para practicar cuando no hay un clúster a mano.
+Pero son atómicos (un escenario, una tarea), están solo en inglés y no ofrecen ni trabajo
+en los nodos ni ensayo con cronómetro.
+
+Combinación recomendada: Killercoda para afianzar rápido un tema; nuestros laboratorios y
+los exámenes de simulación para preparar el examen en sí.
+
 ## Qué leer después
 
 Este curso está centrado en la preparación de los exámenes: cada capítulo está ligado a un

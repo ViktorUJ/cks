@@ -568,5 +568,7 @@ kubectl delete deployment web
 
 🧪 實驗 101(Pod、Deployment、namespaces、Service - 第一個綜合實驗):[tasks/cka/labs/101](../../labs/101/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Create a ClusterIP service](https://killercoda.com/chadmcrowell/course/ckad/clusterip-service) · [NodePort Service](https://killercoda.com/chadmcrowell/course/ckad/nodeport-service) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [目錄](../README_TW.md) · [第 6 章](../06/tw.md) · [第 8 章](../08/tw.md)

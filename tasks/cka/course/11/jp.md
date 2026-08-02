@@ -314,5 +314,7 @@ StatefulSet は第 26 章 (ストレージ) で戻ってきて、DaemonSet は�
 
 🧪 ラボ 103 (DaemonSet；StatefulSet はラボ 108): [tasks/cka/labs/103](../../labs/103/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Kubernetes StatefulSets](https://killercoda.com/chadmcrowell/scenario/kubernetes-statefulset)
+
 ---
 [目次](../README_JP.md) · [第 10 章](../10/jp.md) · [第 12 章](../12/jp.md)

@@ -444,5 +444,7 @@ práctica de laboratorio unificada.
 
 🧪 Práctica 101 (namespaces, labels, selectors): [tasks/cka/labs/101](../../labs/101/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Label a pod](https://killercoda.com/chadmcrowell/course/ckad/label-pod) · [Deploy a pod to a new namespace](https://killercoda.com/chadmcrowell/course/ckad/namespace-pod) · [Delete all pods in a namespace](https://killercoda.com/chadmcrowell/course/ckad/delete-pods-namespace)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 5](../05/es.md) · [Capítulo 7](../07/es.md)

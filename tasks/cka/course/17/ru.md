@@ -303,5 +303,7 @@ kubectl describe pod <pod>
 
 🧪 Лаба 105 (команды, аргументы, переменные окружения): [tasks/cka/labs/105](../../labs/105/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 16](../16/ru.md) · [Глава 18](../18/ru.md)

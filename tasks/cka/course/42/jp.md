@@ -260,5 +260,7 @@ Helm によるパッケージングとインストールを身につけました
 
 🧪 ラボ 115 (Helm)：[tasks/cka/labs/115](../../labs/115/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Installing NGINX Ingress with Helm](https://killercoda.com/chadmcrowell/course/cka/helm-install-nginx)
+
 ---
 [目次](../README_JP.md) · [第 41 章](../41/jp.md) · [第 43 章](../43/jp.md)

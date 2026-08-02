@@ -280,5 +280,7 @@ RBAC отрабатывается в лабах по безопасности.
 
 🧪 Лаба 121 (RBAC-дриллы + проверка через auth can-i): [tasks/cka/labs/121](../../labs/121/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 37](../37/ru.md) · [Глава 39](../39/ru.md)

@@ -339,5 +339,7 @@ le réseau.
 
 🧪 TP 120 (y compris un drill sur Ingress) : [tasks/cka/labs/120](../../labs/120/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Install Ingress Controller](https://killercoda.com/chadmcrowell/course/ckad/ingress-controller) · [Ingress Host-Based Routing](https://killercoda.com/chadmcrowell/course/ckad/ingress-host-routing) · [Ingress with TLS](https://killercoda.com/chadmcrowell/course/ckad/ingress-tls) · [Create Ingress Resource](https://killercoda.com/chadmcrowell/course/cka/create-ingress)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 31](../31/fr.md) · [Chapitre 33](../33/fr.md)

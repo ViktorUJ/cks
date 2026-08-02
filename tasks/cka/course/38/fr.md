@@ -280,5 +280,7 @@ leurs identités. RBAC se travaille dans les TP de sécurité.
 
 🧪 TP 121 (drills RBAC + vérification via auth can-i) : [tasks/cka/labs/121](../../labs/121/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 37](../37/fr.md) · [Chapitre 39](../39/fr.md)

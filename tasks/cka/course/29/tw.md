@@ -312,5 +312,7 @@ troubleshooting 的實驗中練習。
 
 🧪 實驗 109(除錯與 API 淘汰):[tasks/cka/labs/109](../../labs/109/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug) · [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Port Forward to Pod](https://killercoda.com/chadmcrowell/course/ckad/port-forward-pod) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app)
+
 ---
 [目錄](../README_TW.md) · [第 28 章](../28/tw.md) · [第 30 章](../30/tw.md)

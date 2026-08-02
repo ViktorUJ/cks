@@ -255,5 +255,7 @@ troubleshooting and in the mock exams.
 
 🧪 A lab 114 (a debugging of the broken resources): [tasks/cka/labs/114](../../labs/114/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [Contents](../README.md) · [Chapter 43](../43/README.md) · [Chapter 45](../45/README.md)

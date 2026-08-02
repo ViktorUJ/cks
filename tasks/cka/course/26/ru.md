@@ -410,5 +410,7 @@ reclaimPolicy, WaitForFirstConsumer) определяют производите
 
 🧪 Лаба 108 (StorageClass и хранение в StatefulSet): [tasks/cka/labs/108](../../labs/108/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Dynamic Storage with StorageClass and PVC](https://killercoda.com/chadmcrowell/course/cka/storage-dynamic)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 25](../25/ru.md) · [Глава 27](../27/ru.md)

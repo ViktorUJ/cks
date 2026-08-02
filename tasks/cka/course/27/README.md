@@ -322,5 +322,7 @@ observability (including on the image `ping_pong`, which is able to emulate a fa
 
 🧪 Lab 109 (the liveness, readiness, startup probes): [tasks/cka/labs/109](../../labs/109/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [HTTP Readiness Probe](https://killercoda.com/chadmcrowell/course/ckad/readinessprobe-http) · [Liveness Probe Restart](https://killercoda.com/chadmcrowell/course/ckad/livenessprobe-restart) · [TCP Liveness Probe](https://killercoda.com/chadmcrowell/course/ckad/tcp-probe) · [Startup Probe](https://killercoda.com/chadmcrowell/course/ckad/startup-probe)
+
 ---
 [Contents](../README.md) · [Chapter 26](../26/README.md) · [Chapter 28](../28/README.md)

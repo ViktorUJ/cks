@@ -380,5 +380,7 @@ Ephemere Volumes werden in den Labs zum Design von Anwendungen und zum Speicher 
 
 🧪 Lab 107 (Volumes für Anwendungen: emptyDir): [tasks/cka/labs/107](../../labs/107/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [NFS Volumes in Kubernetes Pods](https://killercoda.com/chadmcrowell/course/ckad/nfs-vol)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 23](../23/de.md) · [Kapitel 25](../25/de.md)

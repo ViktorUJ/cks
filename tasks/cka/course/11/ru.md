@@ -306,5 +306,7 @@ Kubernetes и вы решаете, на какую ноду попадёт по�
 
 🧪 Лаба 103 (DaemonSet; StatefulSet — в лабе 108): [tasks/cka/labs/103](../../labs/103/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Kubernetes StatefulSets](https://killercoda.com/chadmcrowell/scenario/kubernetes-statefulset)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 10](../10/ru.md) · [Глава 12](../12/ru.md)

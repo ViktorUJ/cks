@@ -386,5 +386,7 @@ ImagePullBackOff)是 CKA troubleshooting 領域(30%)與 CKAD Observability 章�
 
 🧪 實驗 101(Pod 與它們的設定):[tasks/cka/labs/101](../../labs/101/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Create a simple nginx pod](https://killercoda.com/chadmcrowell/course/ckad/nginx-pod) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep) · [Pod Restart Policy](https://killercoda.com/chadmcrowell/course/cka/restart-policy) · [Add a preStop hook](https://killercoda.com/chadmcrowell/course/ckad/prestop-hook)
+
 ---
 [目錄](../README_TW.md) · [第 3 章](../03/tw.md) · [第 5 章](../05/tw.md)

@@ -290,5 +290,7 @@ Secret は設定とセキュリティのラボで練習します。
 
 🧪 ラボ 105 (Secret): [tasks/cka/labs/105](../../labs/105/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Mount Secret into pod](https://killercoda.com/chadmcrowell/course/ckad/secret-volume) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Rotate Secret](https://killercoda.com/chadmcrowell/course/ckad/rotate-secret)
+
 ---
 [目次](../README_JP.md) · [第 18 章](../18/jp.md) · [第 20 章](../20/jp.md)

@@ -322,5 +322,7 @@ cert-manager 可以自動化 TLS。理解「資源 vs 控制器」以及註解�
 
 🧪 實驗 120(其中包含 Ingress 的操練):[tasks/cka/labs/120](../../labs/120/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Install Ingress Controller](https://killercoda.com/chadmcrowell/course/ckad/ingress-controller) · [Ingress Host-Based Routing](https://killercoda.com/chadmcrowell/course/ckad/ingress-host-routing) · [Ingress with TLS](https://killercoda.com/chadmcrowell/course/ckad/ingress-tls) · [Create Ingress Resource](https://killercoda.com/chadmcrowell/course/cka/create-ingress)
+
 ---
 [目錄](../README_TW.md) · [第 31 章](../31/tw.md) · [第 33 章](../33/tw.md)

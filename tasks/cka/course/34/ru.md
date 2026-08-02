@@ -363,5 +363,7 @@ flowchart TB
 
 🧪 Лаба 120 (в т.ч. дрилл на NetworkPolicy): [tasks/cka/labs/120](../../labs/120/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Deny All Ingress](https://killercoda.com/chadmcrowell/course/ckad/default-deny-networkpolicy) · [Allow Namespace Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-namespace-traffic) · [Allow Label-Based Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-label-traffic) · [Block All Egress](https://killercoda.com/chadmcrowell/course/ckad/block-egress)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 33](../33/ru.md) · [Глава 35](../35/ru.md)

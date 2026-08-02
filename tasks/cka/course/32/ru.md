@@ -339,5 +339,7 @@ Ingress», «почему Ingress не отвечает» - типовые за�
 
 🧪 Лаба 120 (в т.ч. дрилл на Ingress): [tasks/cka/labs/120](../../labs/120/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Install Ingress Controller](https://killercoda.com/chadmcrowell/course/ckad/ingress-controller) · [Ingress Host-Based Routing](https://killercoda.com/chadmcrowell/course/ckad/ingress-host-routing) · [Ingress with TLS](https://killercoda.com/chadmcrowell/course/ckad/ingress-tls) · [Create Ingress Resource](https://killercoda.com/chadmcrowell/course/cka/create-ingress)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 31](../31/ru.md) · [Глава 33](../33/ru.md)

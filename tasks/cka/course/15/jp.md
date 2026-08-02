@@ -530,5 +530,7 @@ Static pods と PriorityClass はクラスタとスケジューリングのラ�
 
 🧪 ラボ 122（PriorityClass のドリルも含む）: [tasks/cka/labs/122](../../labs/122/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Priority Class](https://killercoda.com/chadmcrowell/course/cka/priority-class)
+
 ---
 [目次](../README_JP.md) · [第 14 章](../14/jp.md) · [第 16 章](../16/jp.md)

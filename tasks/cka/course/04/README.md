@@ -396,5 +396,7 @@ namespaces.
 
 🧪 Lab 101 (pods and their configuration): [tasks/cka/labs/101](../../labs/101/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Create a simple nginx pod](https://killercoda.com/chadmcrowell/course/ckad/nginx-pod) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep) · [Pod Restart Policy](https://killercoda.com/chadmcrowell/course/cka/restart-policy) · [Add a preStop hook](https://killercoda.com/chadmcrowell/course/ckad/prestop-hook)
+
 ---
 [Contents](../README.md) · [Chapter 3](../03/README.md) · [Chapter 5](../05/README.md)

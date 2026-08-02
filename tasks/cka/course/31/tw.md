@@ -377,5 +377,7 @@ nslookup/resolv.conf/endpoints 來除錯。這是網路 troubleshooting 的核�
 
 🧪 實驗 118(其中包含修好 CoreDNS):[tasks/cka/labs/118](../../labs/118/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Test DNS Resolution](https://killercoda.com/chadmcrowell/course/ckad/dns-resolution) · [Modify Cluster DNS](https://killercoda.com/chadmcrowell/course/cka/modify-cluster-dns) · [Resolve Service IP from Pod](https://killercoda.com/chadmcrowell/course/cka/communicate-with-svc) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service)
+
 ---
 [目錄](../README_TW.md) · [第 30 章](../30/tw.md) · [第 32 章](../32/tw.md)

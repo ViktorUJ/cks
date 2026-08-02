@@ -326,5 +326,7 @@ Prometheus + Grafana). Отладочный цикл get→describe→logs→top
 
 🧪 Лаба 109 (logs, metrics-server, kubectl top): [tasks/cka/labs/109](../../labs/109/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Logging in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/logging) · [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 27](../27/ru.md) · [Глава 29](../29/ru.md)

@@ -345,5 +345,7 @@ podSelector/from/to/ports,理解 allow 邏輯,而且寫 egress 政策時不要�
 
 🧪 實驗 120(包含 NetworkPolicy 的專項練習):[tasks/cka/labs/120](../../labs/120/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Deny All Ingress](https://killercoda.com/chadmcrowell/course/ckad/default-deny-networkpolicy) · [Allow Namespace Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-namespace-traffic) · [Allow Label-Based Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-label-traffic) · [Block All Egress](https://killercoda.com/chadmcrowell/course/ckad/block-egress)
+
 ---
 [目錄](../README_TW.md) · [第 33 章](../33/tw.md) · [第 35 章](../35/tw.md)

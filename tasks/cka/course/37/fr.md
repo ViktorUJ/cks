@@ -248,5 +248,7 @@ restauration d'etcd se travaillent dans les TP d'administration.
 
 🧪 TP 112 (sauvegarde et restauration d'etcd) : [tasks/cka/labs/112](../../labs/112/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Backup and Restore Kubernetes etcd](https://killercoda.com/chadmcrowell/scenario/kubernetes-backup-etcd)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 36](../36/fr.md) · [Chapitre 38](../38/fr.md)

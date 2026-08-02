@@ -533,5 +533,7 @@ le cluster et la planification.
 
 🧪 TP 122 (dont un drill sur la PriorityClass) : [tasks/cka/labs/122](../../labs/122/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Priority Class](https://killercoda.com/chadmcrowell/course/cka/priority-class)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 14](../14/fr.md) · [Chapitre 16](../16/fr.md)

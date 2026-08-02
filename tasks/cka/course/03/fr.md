@@ -524,5 +524,7 @@ temps que les objets de base.
 
 🧪 TP 119 (exercices de vitesse et JSONPath) : [tasks/cka/labs/119](../../labs/119/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Explore pod spec with explain](https://killercoda.com/chadmcrowell/course/ckad/explain-spec-containers) · [List API Resources](https://killercoda.com/chadmcrowell/course/cka/api-resources) · [Create a Pod Declaratively](https://killercoda.com/chadmcrowell/course/cka/declarative-pod) · [Group pods by node](https://killercoda.com/chadmcrowell/course/ckad/list-pods-by-node)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 2](../02/fr.md) · [Chapitre 4](../04/fr.md)

@@ -467,5 +467,7 @@ The updates and rollbacks of a Deployment are practised in the labs on workloads
 
 🧪 Lab 102 (a rolling update and a rollback): [tasks/cka/labs/102](../../labs/102/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Create and Update Deployments](https://killercoda.com/chadmcrowell/course/ckad/deploy-update) · [Update deployment image](https://killercoda.com/chadmcrowell/course/ckad/update-image) · [Rollback a Deployment](https://killercoda.com/chadmcrowell/course/cka/rollback-deployment) · [Change Rollout Strategy](https://killercoda.com/chadmcrowell/course/cka/change-rollout-strategy)
+
 ---
 [Contents](../README.md) · [Chapter 7](../07/README.md) · [Chapter 9](../09/README.md)

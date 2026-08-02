@@ -377,5 +377,7 @@ travail.
 
 🧪 TP 122 (dont un drill sur requests/limits) : [tasks/cka/labs/122](../../labs/122/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Set CPU and memory limits](https://killercoda.com/chadmcrowell/course/ckad/cpu-mem-limits) · [LimitRange for Namespace](https://killercoda.com/chadmcrowell/course/ckad/limitrange-namespace) · [ResourceQuota for Namespace](https://killercoda.com/chadmcrowell/course/ckad/resourcequota-namespace) · [Default CPU/Memory Limits](https://killercoda.com/chadmcrowell/course/ckad/default-cpu-memory)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 13](../13/fr.md) · [Chapitre 15](../15/fr.md)

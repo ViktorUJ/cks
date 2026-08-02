@@ -244,5 +244,7 @@ en los exámenes simulados.
 
 🧪 Laboratorio 117 (troubleshooting del control plane y de los nodos): [tasks/cka/labs/117](../../labs/117/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Troubleshoot a NotReady Node](https://killercoda.com/chadmcrowell/course/cka/node-notready) · [Kubelet Status](https://killercoda.com/chadmcrowell/course/cka/kubelet-status) · [Cordon and Drain the Node](https://killercoda.com/chadmcrowell/course/cka/cordon-drain-node)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 44](../44/es.md) · [Capítulo 46](../46/es.md)

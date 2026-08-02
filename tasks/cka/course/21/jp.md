@@ -483,5 +483,7 @@ ServiceAccount と権限の確認はセキュリティのラボで練習しま�
 
 🧪 ラボ 121 (RBAC ドリル：SA、Role/ClusterRole、binding)：[tasks/cka/labs/121](../../labs/121/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create ServiceAccount](https://killercoda.com/chadmcrowell/course/ckad/create-serviceaccount) · [Create Service Account For a Pod](https://killercoda.com/chadmcrowell/course/cka/create-sa-for-pod) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Restrict Pod Deletes with RBAC](https://killercoda.com/chadmcrowell/course/ckad/restrict-rbac)
+
 ---
 [目次](../README_JP.md) · [第 20 章](../20/jp.md) · [第 22 章](../22/jp.md)

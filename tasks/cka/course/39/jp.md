@@ -355,5 +355,7 @@ CNI、CSI、CRI - を分解します。すでに触れてきたもので、ネ�
 
 🧪 ラボ 118（証明書の health-check も含む）: [tasks/cka/labs/118](../../labs/118/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Kubernetes PKI Essentials](https://killercoda.com/chadmcrowell/course/cka/pki-essentials) · [View the Kubelet Client Certificate](https://killercoda.com/chadmcrowell/course/cka/view-certificate) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [目次](../README_JP.md) · [第 38 章](../38/jp.md) · [第 40 章](../40/jp.md)

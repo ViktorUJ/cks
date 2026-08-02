@@ -271,5 +271,7 @@ spec:
 
 🧪 Лаба 107 (образы контейнеров): [tasks/cka/labs/107](../../labs/107/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create Dockerfile with Args and Run](https://killercoda.com/chadmcrowell/course/ckad/dockerfile) · [Create a custom nginx container image](https://killercoda.com/chadmcrowell/course/ckad/nginx-custom)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 22](../22/ru.md) · [Глава 24](../24/ru.md)

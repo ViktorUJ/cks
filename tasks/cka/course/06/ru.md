@@ -429,5 +429,7 @@ Labels - это «клей» всей системы: маршрутизация
 
 🧪 Лаба 101 (namespaces, labels, selectors): [tasks/cka/labs/101](../../labs/101/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Label a pod](https://killercoda.com/chadmcrowell/course/ckad/label-pod) · [Deploy a pod to a new namespace](https://killercoda.com/chadmcrowell/course/ckad/namespace-pod) · [Delete all pods in a namespace](https://killercoda.com/chadmcrowell/course/ckad/delete-pods-namespace)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 5](../05/ru.md) · [Глава 7](../07/ru.md)

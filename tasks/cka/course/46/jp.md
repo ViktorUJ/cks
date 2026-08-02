@@ -276,5 +276,7 @@ kubectl get networkpolicy -A
 
 🧪 ラボ 123（CNI をゼロからインストール + netns/ルートの分析）: [tasks/cka/labs/123](../../labs/123/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Troubleshoot a Broken Network Path](https://killercoda.com/chadmcrowell/course/cka/broken-path) · [Debug services in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/debug-services) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [目次](../README_JP.md) · [第 45 章](../45/jp.md) · [第 47 章](../47/jp.md)

@@ -410,5 +410,7 @@ planification se travaille dans les TP sur les charges de travail.
 
 🧪 TP 122 (drills de scheduling : nodeSelector, affinity, taints) : [tasks/cka/labs/122](../../labs/122/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Apply node affinity to a pod](https://killercoda.com/chadmcrowell/course/ckad/node-affinity) · [Node Affinity: Required and Preferred](https://killercoda.com/chadmcrowell/course/cka/node-affinity-required-preferred) · [Scheduling a pod to a specific node](https://killercoda.com/chadmcrowell/course/cka/node-name) · [Cordon and Select Node](https://killercoda.com/chadmcrowell/course/cka/nodeselector-cordon)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 11](../11/fr.md) · [Chapitre 13](../13/fr.md)

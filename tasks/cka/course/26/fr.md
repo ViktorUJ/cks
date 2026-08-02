@@ -423,5 +423,7 @@ stockage.
 
 🧪 TP 108 (StorageClass et stockage dans un StatefulSet) : [tasks/cka/labs/108](../../labs/108/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Dynamic Storage with StorageClass and PVC](https://killercoda.com/chadmcrowell/course/cka/storage-dynamic)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 25](../25/fr.md) · [Chapitre 27](../27/fr.md)

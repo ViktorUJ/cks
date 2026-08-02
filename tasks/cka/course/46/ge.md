@@ -277,5 +277,7 @@ CKA (თავი 48). ქსელური troubleshooting მუშავდ�
 
 🧪 ლაბი 123 (CNI-ის დაყენება ნულიდან + netns/მარშრუტების განხილვა): [tasks/cka/labs/123](../../labs/123/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Troubleshoot a Broken Network Path](https://killercoda.com/chadmcrowell/course/cka/broken-path) · [Debug services in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/debug-services) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 45](../45/ge.md) · [თავი 47](../47/ge.md)

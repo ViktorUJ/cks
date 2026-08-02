@@ -283,5 +283,7 @@ identity との統合。適切な RBAC は侵害されたときの被害を抑�
 
 🧪 ラボ 121（RBAC ドリル + auth can-i による確認）: [tasks/cka/labs/121](../../labs/121/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [目次](../README_JP.md) · [第 37 章](../37/jp.md) · [第 39 章](../39/jp.md)

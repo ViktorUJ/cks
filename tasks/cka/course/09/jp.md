@@ -361,5 +361,7 @@ labels を持つ 2 つの Deployment を作り、Service の selector を設定�
 
 🧪 ラボ 102（canary と blue/green）：[tasks/cka/labs/102](../../labs/102/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Blue Green Deployments in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/blue-green) · [Canary Ingress Deployment](https://killercoda.com/chadmcrowell/course/ckad/canary-ingress)
+
 ---
 [目次](../README_JP.md) · [第 8 章](../08/jp.md) · [第 10 章](../10/jp.md)

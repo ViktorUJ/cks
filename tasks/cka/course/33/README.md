@@ -416,5 +416,7 @@ an Ingress and their migration are drilled in the lab on a network (110).
 
 🧪 Lab 110: [tasks/cka/labs/110](../../labs/110/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Create a Gateway and HTTPRoute](https://killercoda.com/chadmcrowell/course/cka/create-gateway-and-route)
+
 ---
 [Contents](../README.md) · [Chapter 32](../32/README.md) · [Chapter 34](../34/README.md)

@@ -474,5 +474,7 @@ plane-ის შეკეთებისთვის.
 
 🧪 ლაბი 116 (kubeadm init + join ნულიდან): [tasks/cka/labs/116](../../labs/116/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Prepare for Kubeadm Install](https://killercoda.com/chadmcrowell/course/cka/prepare-kubeadm)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 34](../34/ge.md) · [თავი 35A](../35-2-ha/ge.md)

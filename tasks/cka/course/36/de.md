@@ -380,5 +380,7 @@ Administration.
 
 🧪 Lab 111 (kubeadm upgrade): [tasks/cka/labs/111](../../labs/111/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Upgrading Kubernetes](https://killercoda.com/chadmcrowell/course/cka/upgrade-k8s) · [Upgrade Kubelet](https://killercoda.com/chadmcrowell/course/cka/upgrade-kubelet)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 35](../35/de.md) · [Kapitel 37](../37/de.md)

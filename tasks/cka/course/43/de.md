@@ -271,5 +271,7 @@ geübt.
 
 🧪 Lab 115 (Kustomize): [tasks/cka/labs/115](../../labs/115/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Apply Resources with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-apply) · [Kustomize Overlays for Environments](https://killercoda.com/chadmcrowell/course/ckad/kustomize-env-overlay) · [Patch Deployment Image with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-patch-image) · [Generate ConfigMap and Secret with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-configmap-secret)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 42](../42/de.md) · [Kapitel 44](../44/de.md)

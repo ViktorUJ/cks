@@ -258,5 +258,7 @@ Para una preparación centrada en un solo examen usa las guías:
 
 🧪 Exámenes simulados del CKA: [tasks/cka/mock](../../mock)
 
+🎮 Killercoda (en el navegador, sin instalación): [Single Node Cluster](https://killercoda.com/chadmcrowell/course/cka/single-node) · [Two Node Cluster](https://killercoda.com/chadmcrowell/course/cka/two-node)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 47](../47/es.md)

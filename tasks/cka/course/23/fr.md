@@ -283,5 +283,7 @@ applications.
 
 🧪 TP 107 (images de conteneurs) : [tasks/cka/labs/107](../../labs/107/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create Dockerfile with Args and Run](https://killercoda.com/chadmcrowell/course/ckad/dockerfile) · [Create a custom nginx container image](https://killercoda.com/chadmcrowell/course/ckad/nginx-custom)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 22](../22/fr.md) · [Chapitre 24](../24/fr.md)

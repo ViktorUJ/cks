@@ -258,5 +258,7 @@ Für die punktgenaue Vorbereitung auf eine einzelne Prüfung nutzen Sie die Wegw
 
 🧪 Mock-Prüfungen CKA: [tasks/cka/mock](../../mock)
 
+🎮 Killercoda (im Browser, ohne Installation): [Single Node Cluster](https://killercoda.com/chadmcrowell/course/cka/single-node) · [Two Node Cluster](https://killercoda.com/chadmcrowell/course/cka/two-node)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 47](../47/de.md)

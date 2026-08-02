@@ -363,5 +363,7 @@ in the labs on a network and a security.
 
 🧪 A lab 120 (incl. a drill on a NetworkPolicy): [tasks/cka/labs/120](../../labs/120/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Deny All Ingress](https://killercoda.com/chadmcrowell/course/ckad/default-deny-networkpolicy) · [Allow Namespace Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-namespace-traffic) · [Allow Label-Based Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-label-traffic) · [Block All Egress](https://killercoda.com/chadmcrowell/course/ckad/block-egress)
+
 ---
 [Contents](../README.md) · [Chapter 33](../33/README.md) · [Chapter 35](../35/README.md)

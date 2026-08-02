@@ -512,5 +512,7 @@ PriorityClass are drilled in the labs on the cluster and on the scheduling.
 
 🧪 Lab 122 (including a drill on PriorityClass): [tasks/cka/labs/122](../../labs/122/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Priority Class](https://killercoda.com/chadmcrowell/course/cka/priority-class)
+
 ---
 [Contents](../README.md) · [Chapter 14](../14/README.md) · [Chapter 16](../16/README.md)

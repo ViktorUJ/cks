@@ -321,5 +321,7 @@ containers are drilled in the labs on an observability and a troubleshooting.
 
 🧪 Lab 109 (a debugging and an obsolescence of an API): [tasks/cka/labs/109](../../labs/109/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug) · [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Port Forward to Pod](https://killercoda.com/chadmcrowell/course/ckad/port-forward-pod) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app)
+
 ---
 [Contents](../README.md) · [Chapter 28](../28/README.md) · [Chapter 30](../30/README.md)

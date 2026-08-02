@@ -274,5 +274,7 @@ SecurityContext se travaille dans les TP sur la sécurité.
 
 🧪 TP 106 (SecurityContext et capabilities) : [tasks/cka/labs/106](../../labs/106/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Drop Linux Capabilities](https://killercoda.com/chadmcrowell/course/ckad/drop-capabilities) · [Read-Only Root Filesystem](https://killercoda.com/chadmcrowell/course/ckad/readonly-rootfs) · [PodSecurity Restricted Namespace](https://killercoda.com/chadmcrowell/course/ckad/podsecurity-restricted)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 19](../19/fr.md) · [Chapitre 21](../21/fr.md)

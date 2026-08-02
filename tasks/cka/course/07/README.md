@@ -593,5 +593,7 @@ updates and rollbacks of a Deployment.
 
 🧪 Lab 101 (Pods, Deployment, namespaces, Service - the first combined lab): [tasks/cka/labs/101](../../labs/101/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Create a ClusterIP service](https://killercoda.com/chadmcrowell/course/ckad/clusterip-service) · [NodePort Service](https://killercoda.com/chadmcrowell/course/ckad/nodeport-service) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [Contents](../README.md) · [Chapter 6](../06/README.md) · [Chapter 8](../08/README.md)

@@ -266,5 +266,7 @@ practica en los laboratorios de seguridad.
 
 🧪 Laboratorio 106 (SecurityContext y capabilities): [tasks/cka/labs/106](../../labs/106/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Drop Linux Capabilities](https://killercoda.com/chadmcrowell/course/ckad/drop-capabilities) · [Read-Only Root Filesystem](https://killercoda.com/chadmcrowell/course/ckad/readonly-rootfs) · [PodSecurity Restricted Namespace](https://killercoda.com/chadmcrowell/course/ckad/podsecurity-restricted)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 19](../19/es.md) · [Capítulo 21](../21/es.md)

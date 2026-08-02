@@ -512,5 +512,7 @@ PriorityClass-ს ამუშავებენ ლაბებში კლა
 
 🧪 ლაბი 122 (მათ შორის დრილი PriorityClass-ზე): [tasks/cka/labs/122](../../labs/122/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Priority Class](https://killercoda.com/chadmcrowell/course/cka/priority-class)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 14](../14/ge.md) · [თავი 16](../16/ge.md)

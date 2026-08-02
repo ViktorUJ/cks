@@ -254,5 +254,7 @@ Kapitel 21. Backup und Wiederherstellung von etcd übt man in den Labs zur Admin
 
 🧪 Lab 112 (Backup und Wiederherstellung von etcd): [tasks/cka/labs/112](../../labs/112/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Backup and Restore Kubernetes etcd](https://killercoda.com/chadmcrowell/scenario/kubernetes-backup-etcd)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 36](../36/de.md) · [Kapitel 38](../38/de.md)

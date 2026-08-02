@@ -272,5 +272,7 @@ StatefulSet. PV/PVC отрабатываются в лабах по хранен
 
 🧪 Лаба 108 (PV/PVC): [tasks/cka/labs/108](../../labs/108/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Persistent Volumes](https://killercoda.com/chadmcrowell/course/cka/persistent-volumes) · [Using NFS volumes for Pods](https://killercoda.com/chadmcrowell/course/cka/nfs-vol) · [Troubleshoot a Stuck PVC](https://killercoda.com/chadmcrowell/course/cka/pvc-stuck)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 24](../24/ru.md) · [Глава 26](../26/ru.md)

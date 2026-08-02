@@ -321,5 +321,7 @@ ephemeral-контейнеры позволяют держать образы м
 
 🧪 Лаба 109 (отладка и устаревание API): [tasks/cka/labs/109](../../labs/109/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug) · [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Port Forward to Pod](https://killercoda.com/chadmcrowell/course/ckad/port-forward-pod) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 28](../28/ru.md) · [Глава 30](../30/ru.md)

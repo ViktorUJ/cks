@@ -537,5 +537,7 @@ geübt.
 
 🧪 Lab 122 (u. a. Drill zu PriorityClass): [tasks/cka/labs/122](../../labs/122/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Priority Class](https://killercoda.com/chadmcrowell/course/cka/priority-class)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 14](../14/de.md) · [Kapitel 16](../16/de.md)

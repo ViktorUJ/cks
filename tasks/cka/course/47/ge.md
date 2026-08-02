@@ -278,5 +278,7 @@ CKAD-ისთვის საუკეთესო მომზადება 
 
 🧪 CKAD-ის მოკ-გამოცდები: [tasks/ckad/mock](../../../ckad/mock)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Playground](https://killercoda.com/chadmcrowell/course/ckad/playground)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 46](../46/ge.md) · [თავი 48](../48/ge.md)

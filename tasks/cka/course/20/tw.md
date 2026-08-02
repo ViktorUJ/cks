@@ -251,5 +251,7 @@ API 存取權的。SecurityContext 會在安全相關的實驗中操練。
 
 🧪 實驗 106(SecurityContext 與 capabilities):[tasks/cka/labs/106](../../labs/106/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Drop Linux Capabilities](https://killercoda.com/chadmcrowell/course/ckad/drop-capabilities) · [Read-Only Root Filesystem](https://killercoda.com/chadmcrowell/course/ckad/readonly-rootfs) · [PodSecurity Restricted Namespace](https://killercoda.com/chadmcrowell/course/ckad/podsecurity-restricted)
+
 ---
 [目錄](../README_TW.md) · [第 19 章](../19/tw.md) · [第 21 章](../21/tw.md)

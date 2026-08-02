@@ -361,5 +361,7 @@ in den Labs zu den Workloads.
 
 🧪 Lab 103 (Jobs und CronJob): [tasks/cka/labs/103](../../labs/103/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Create a job and cronJob in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/jobs) · [Create a one-time Job](https://killercoda.com/chadmcrowell/course/ckad/create-job)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 9](../09/de.md) · [Kapitel 11](../11/de.md)

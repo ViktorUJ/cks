@@ -266,5 +266,7 @@ Pods-ის რესურსებზე - requests, limits და კვო�
 
 🧪 ლაბი 122 (მათ შორის დრილი taints/tolerations-ზე): [tasks/cka/labs/122](../../labs/122/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Taints and Tolerations](https://killercoda.com/chadmcrowell/course/cka/taints-tolerations) · [Add a Toleration to a Pod YAML](https://killercoda.com/chadmcrowell/course/cka/add-toleration) · [Remove the Taint from Node](https://killercoda.com/chadmcrowell/course/cka/remove-taint)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 12](../12/ge.md) · [თავი 14](../14/ge.md)

@@ -311,5 +311,7 @@ API の拡張を見てきました。第 42-43 章では、マニフェストの
 
 🧪 ラボ 115 (CRD とオペレーター)：[tasks/cka/labs/115](../../labs/115/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Install a Database Operator](https://killercoda.com/chadmcrowell/course/cka/database-operator) · [Create your own Operator in Kubernetes](https://killercoda.com/chadmcrowell/scenario/create-operator)
+
 ---
 [目次](../README_JP.md) · [第 40 章](../40/jp.md) · [第 42 章](../42/jp.md)

@@ -405,5 +405,7 @@ Service の内部と DNS を分解しました。第 32 章では L7 へ上が�
 
 🧪 ラボ 118（CoreDNS の修復を含む）：[tasks/cka/labs/118](../../labs/118/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Test DNS Resolution](https://killercoda.com/chadmcrowell/course/ckad/dns-resolution) · [Modify Cluster DNS](https://killercoda.com/chadmcrowell/course/cka/modify-cluster-dns) · [Resolve Service IP from Pod](https://killercoda.com/chadmcrowell/course/cka/communicate-with-svc) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service)
+
 ---
 [目次](../README_JP.md) · [第 30 章](../30/jp.md) · [第 32 章](../32/jp.md)

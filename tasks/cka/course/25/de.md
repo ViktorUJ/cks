@@ -288,5 +288,7 @@ Speicher geübt.
 
 🧪 Lab 108 (PV/PVC): [tasks/cka/labs/108](../../labs/108/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Persistent Volumes](https://killercoda.com/chadmcrowell/course/cka/persistent-volumes) · [Using NFS volumes for Pods](https://killercoda.com/chadmcrowell/course/cka/nfs-vol) · [Troubleshoot a Stuck PVC](https://killercoda.com/chadmcrowell/course/cka/pvc-stuck)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 24](../24/de.md) · [Kapitel 26](../26/de.md)

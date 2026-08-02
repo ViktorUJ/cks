@@ -366,5 +366,7 @@ etcd のバックアップと復元を扱います。これがなければ contr
 
 🧪 ラボ 111 (kubeadm upgrade): [tasks/cka/labs/111](../../labs/111/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Upgrading Kubernetes](https://killercoda.com/chadmcrowell/course/cka/upgrade-k8s) · [Upgrade Kubelet](https://killercoda.com/chadmcrowell/course/cka/upgrade-kubelet)
+
 ---
 [目次](../README_JP.md) · [第 35 章](../35/jp.md) · [第 37 章](../37/jp.md)

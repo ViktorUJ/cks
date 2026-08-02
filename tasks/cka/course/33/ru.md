@@ -416,5 +416,7 @@ Ingress и их миграция отрабатываются в лабе по �
 
 🧪 Лаба 110: [tasks/cka/labs/110](../../labs/110/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create a Gateway and HTTPRoute](https://killercoda.com/chadmcrowell/course/cka/create-gateway-and-route)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 32](../32/ru.md) · [Глава 34](../34/ru.md)

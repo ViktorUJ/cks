@@ -465,5 +465,7 @@ actualizaciones y reversiones de Deployment se practican en los laboratorios de 
 
 🧪 Práctica 102 (rolling update y rollback): [tasks/cka/labs/102](../../labs/102/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create and Update Deployments](https://killercoda.com/chadmcrowell/course/ckad/deploy-update) · [Update deployment image](https://killercoda.com/chadmcrowell/course/ckad/update-image) · [Rollback a Deployment](https://killercoda.com/chadmcrowell/course/cka/rollback-deployment) · [Change Rollout Strategy](https://killercoda.com/chadmcrowell/course/cka/change-rollout-strategy)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 7](../07/es.md) · [Capítulo 9](../09/es.md)

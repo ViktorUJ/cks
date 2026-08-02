@@ -284,5 +284,7 @@ les TP sur le stockage.
 
 🧪 TP 108 (PV/PVC) : [tasks/cka/labs/108](../../labs/108/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Persistent Volumes](https://killercoda.com/chadmcrowell/course/cka/persistent-volumes) · [Using NFS volumes for Pods](https://killercoda.com/chadmcrowell/course/cka/nfs-vol) · [Troubleshoot a Stuck PVC](https://killercoda.com/chadmcrowell/course/cka/pvc-stuck)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 24](../24/fr.md) · [Chapitre 26](../26/fr.md)

@@ -263,5 +263,7 @@ troubleshooting まで Kubernetes を解きほぐし、両方の試験の戦術�
 
 🧪 CKA のモック試験: [tasks/cka/mock](../../mock)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Single Node Cluster](https://killercoda.com/chadmcrowell/course/cka/single-node) · [Two Node Cluster](https://killercoda.com/chadmcrowell/course/cka/two-node)
+
 ---
 [目次](../README_JP.md) · [第 47 章](../47/jp.md)

@@ -312,5 +312,7 @@ metrics-server 與 `kubectl top`。探測會在可觀測性相關的實驗中操
 
 🧪 實驗 109(liveness、readiness、startup 探測):[tasks/cka/labs/109](../../labs/109/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[HTTP Readiness Probe](https://killercoda.com/chadmcrowell/course/ckad/readinessprobe-http) · [Liveness Probe Restart](https://killercoda.com/chadmcrowell/course/ckad/livenessprobe-restart) · [TCP Liveness Probe](https://killercoda.com/chadmcrowell/course/ckad/tcp-probe) · [Startup Probe](https://killercoda.com/chadmcrowell/course/ckad/startup-probe)
+
 ---
 [目錄](../README_TW.md) · [第 26 章](../26/tw.md) · [第 28 章](../28/tw.md)

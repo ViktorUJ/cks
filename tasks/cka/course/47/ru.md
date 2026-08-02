@@ -278,5 +278,7 @@ namespace, императивная генерация, JSONPath и тайм-м�
 
 🧪 Мок-экзамены CKAD: [tasks/ckad/mock](../../../ckad/mock)
 
+🎮 Killercoda (в браузере, без установки): [Playground](https://killercoda.com/chadmcrowell/course/ckad/playground)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 46](../46/ru.md) · [Глава 48](../48/ru.md)

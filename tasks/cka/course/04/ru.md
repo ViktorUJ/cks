@@ -386,5 +386,7 @@ ReplicaSet и Deployment (глава 5). Создание подов, разбо
 
 🧪 Лаба 101 (поды и их конфигурация): [tasks/cka/labs/101](../../labs/101/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create a simple nginx pod](https://killercoda.com/chadmcrowell/course/ckad/nginx-pod) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep) · [Pod Restart Policy](https://killercoda.com/chadmcrowell/course/cka/restart-policy) · [Add a preStop hook](https://killercoda.com/chadmcrowell/course/ckad/prestop-hook)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 3](../03/ru.md) · [Глава 5](../05/ru.md)

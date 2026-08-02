@@ -410,5 +410,7 @@ provisioning and a StatefulSet storage are drilled in the labs on the storage.
 
 🧪 Lab 108 (a StorageClass and a storing in a StatefulSet): [tasks/cka/labs/108](../../labs/108/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Dynamic Storage with StorageClass and PVC](https://killercoda.com/chadmcrowell/course/cka/storage-dynamic)
+
 ---
 [Contents](../README.md) · [Chapter 25](../25/README.md) · [Chapter 27](../27/README.md)

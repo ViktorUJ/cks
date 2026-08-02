@@ -467,5 +467,7 @@ ServiceAccount и проверка прав отрабатываются в ла
 
 🧪 Лаба 121 (RBAC-дриллы: SA, Role/ClusterRole, binding'и): [tasks/cka/labs/121](../../labs/121/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create ServiceAccount](https://killercoda.com/chadmcrowell/course/ckad/create-serviceaccount) · [Create Service Account For a Pod](https://killercoda.com/chadmcrowell/course/cka/create-sa-for-pod) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Restrict Pod Deletes with RBAC](https://killercoda.com/chadmcrowell/course/ckad/restrict-rbac)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 20](../20/ru.md) · [Глава 22](../22/ru.md)

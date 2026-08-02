@@ -266,5 +266,7 @@ Pending на экзамене объясняется именно taint'ом б�
 
 🧪 Лаба 122 (в т.ч. дрилл на taints/tolerations): [tasks/cka/labs/122](../../labs/122/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Taints and Tolerations](https://killercoda.com/chadmcrowell/course/cka/taints-tolerations) · [Add a Toleration to a Pod YAML](https://killercoda.com/chadmcrowell/course/cka/add-toleration) · [Remove the Taint from Node](https://killercoda.com/chadmcrowell/course/cka/remove-taint)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 12](../12/ru.md) · [Глава 14](../14/ru.md)

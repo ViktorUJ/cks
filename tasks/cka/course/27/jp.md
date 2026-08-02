@@ -323,5 +323,7 @@ startup は起動の遅いサービスを救います。誤って設定された
 
 🧪 ラボ 109 (liveness、readiness、startup プローブ): [tasks/cka/labs/109](../../labs/109/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[HTTP Readiness Probe](https://killercoda.com/chadmcrowell/course/ckad/readinessprobe-http) · [Liveness Probe Restart](https://killercoda.com/chadmcrowell/course/ckad/livenessprobe-restart) · [TCP Liveness Probe](https://killercoda.com/chadmcrowell/course/ckad/tcp-probe) · [Startup Probe](https://killercoda.com/chadmcrowell/course/ckad/startup-probe)
+
 ---
 [目次](../README_JP.md) · [第 26 章](../26/jp.md) · [第 28 章](../28/jp.md)

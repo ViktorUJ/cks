@@ -305,5 +305,7 @@ aggregation layer (საკუთარი apiserver `APIService`-ის მე
 
 🧪 ლაბი 115 (CRD და ოპერატორები): [tasks/cka/labs/115](../../labs/115/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Install a Database Operator](https://killercoda.com/chadmcrowell/course/cka/database-operator) · [Create your own Operator in Kubernetes](https://killercoda.com/chadmcrowell/scenario/create-operator)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 40](../40/ge.md) · [თავი 42](../42/ge.md)

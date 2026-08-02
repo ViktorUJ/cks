@@ -339,5 +339,7 @@ geht es darum, wie wir selbst den Cluster beobachten: Logs, metrics-server und
 
 🧪 Lab 109 (liveness, readiness, startup probes): [tasks/cka/labs/109](../../labs/109/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [HTTP Readiness Probe](https://killercoda.com/chadmcrowell/course/ckad/readinessprobe-http) · [Liveness Probe Restart](https://killercoda.com/chadmcrowell/course/ckad/livenessprobe-restart) · [TCP Liveness Probe](https://killercoda.com/chadmcrowell/course/ckad/tcp-probe) · [Startup Probe](https://killercoda.com/chadmcrowell/course/ckad/startup-probe)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 26](../26/de.md) · [Kapitel 28](../28/de.md)

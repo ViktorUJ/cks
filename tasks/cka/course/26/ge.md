@@ -410,5 +410,7 @@ reclaimPolicy, WaitForFirstConsumer) განსაზღვრავენ წ
 
 🧪 ლაბი 108 (StorageClass და შენახვა StatefulSet-ში): [tasks/cka/labs/108](../../labs/108/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Dynamic Storage with StorageClass and PVC](https://killercoda.com/chadmcrowell/course/cka/storage-dynamic)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 25](../25/ge.md) · [თავი 27](../27/ge.md)

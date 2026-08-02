@@ -342,5 +342,7 @@ scale up/down определяет, будет ли автоскейлинг п�
 
 🧪 Лаба 104 (автомасштабирование HPA): [tasks/cka/labs/104](../../labs/104/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 15](../15/ru.md) · [Глава 17](../17/ru.md)

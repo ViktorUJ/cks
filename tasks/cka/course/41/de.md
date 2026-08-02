@@ -317,5 +317,7 @@ geübt.
 
 🧪 Lab 115 (CRD und Operatoren): [tasks/cka/labs/115](../../labs/115/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Install a Database Operator](https://killercoda.com/chadmcrowell/course/cka/database-operator) · [Create your own Operator in Kubernetes](https://killercoda.com/chadmcrowell/scenario/create-operator)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 40](../40/de.md) · [Kapitel 42](../42/de.md)

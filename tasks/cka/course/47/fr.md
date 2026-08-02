@@ -278,5 +278,7 @@ l'auto-vérification sur des tâches réelles. Ensuite - le dernier chapitre : l
 
 🧪 Examens blancs CKAD : [tasks/ckad/mock](../../../ckad/mock)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Playground](https://killercoda.com/chadmcrowell/course/ckad/playground)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 46](../46/fr.md) · [Chapitre 48](../48/fr.md)

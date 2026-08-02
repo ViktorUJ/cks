@@ -285,5 +285,7 @@ flowchart TB
 
 🧪 Лаба 105 (Secret): [tasks/cka/labs/105](../../labs/105/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Mount Secret into pod](https://killercoda.com/chadmcrowell/course/ckad/secret-volume) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Rotate Secret](https://killercoda.com/chadmcrowell/course/ckad/rotate-secret)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 18](../18/ru.md) · [Глава 20](../20/ru.md)

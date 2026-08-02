@@ -286,5 +286,7 @@ privilegios tiene. El Secret se practica en los laboratorios de configuración y
 
 🧪 Laboratorio 105 (Secret): [tasks/cka/labs/105](../../labs/105/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Mount Secret into pod](https://killercoda.com/chadmcrowell/course/ckad/secret-volume) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Rotate Secret](https://killercoda.com/chadmcrowell/course/ckad/rotate-secret)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 18](../18/es.md) · [Capítulo 20](../20/es.md)

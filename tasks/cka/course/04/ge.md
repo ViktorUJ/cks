@@ -389,5 +389,7 @@ namespace-ებთან ერთად.
 
 🧪 ლაბი 101 (pod-ები და მათი კონფიგურაცია): [tasks/cka/labs/101](../../labs/101/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create a simple nginx pod](https://killercoda.com/chadmcrowell/course/ckad/nginx-pod) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep) · [Pod Restart Policy](https://killercoda.com/chadmcrowell/course/cka/restart-policy) · [Add a preStop hook](https://killercoda.com/chadmcrowell/course/ckad/prestop-hook)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 3](../03/ge.md) · [თავი 5](../05/ge.md)

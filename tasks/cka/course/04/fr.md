@@ -400,5 +400,7 @@ et les namespaces.
 
 🧪 TP 101 (les pods et leur configuration) : [tasks/cka/labs/101](../../labs/101/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create a simple nginx pod](https://killercoda.com/chadmcrowell/course/ckad/nginx-pod) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep) · [Pod Restart Policy](https://killercoda.com/chadmcrowell/course/cka/restart-policy) · [Add a preStop hook](https://killercoda.com/chadmcrowell/course/ckad/prestop-hook)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 3](../03/fr.md) · [Chapitre 5](../05/fr.md)

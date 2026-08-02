@@ -336,5 +336,7 @@ para diagnóstico). Los logs y las métricas se practican en los laboratorios de
 
 🧪 Laboratorio 109 (logs, metrics-server, kubectl top): [tasks/cka/labs/109](../../labs/109/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Logging in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/logging) · [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 27](../27/es.md) · [Capítulo 29](../29/es.md)

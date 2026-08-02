@@ -347,5 +347,7 @@ für die Diagnose). Logs und Metriken werden in den Labs zur Observability geüb
 
 🧪 Lab 109 (logs, metrics-server, kubectl top): [tasks/cka/labs/109](../../labs/109/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Logging in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/logging) · [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 27](../27/de.md) · [Kapitel 29](../29/de.md)

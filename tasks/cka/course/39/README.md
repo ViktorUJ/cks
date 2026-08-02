@@ -346,5 +346,7 @@ a runtime are connected. The certificates, a kubeconfig and a CSR are practiced 
 
 🧪 A lab 118 (including a health check of the certificates): [tasks/cka/labs/118](../../labs/118/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Kubernetes PKI Essentials](https://killercoda.com/chadmcrowell/course/cka/pki-essentials) · [View the Kubelet Client Certificate](https://killercoda.com/chadmcrowell/course/cka/view-certificate) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Contents](../README.md) · [Chapter 38](../38/README.md) · [Chapter 40](../40/README.md)

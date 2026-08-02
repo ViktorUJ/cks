@@ -280,5 +280,7 @@ RBAC is practiced in the labs on a security.
 
 🧪 A lab 121 (the RBAC drills + a check through an auth can-i): [tasks/cka/labs/121](../../labs/121/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Contents](../README.md) · [Chapter 37](../37/README.md) · [Chapter 39](../39/README.md)

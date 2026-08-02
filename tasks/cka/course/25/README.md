@@ -272,5 +272,7 @@ StatefulSet. A PV/PVC is drilled in the labs on the storage.
 
 🧪 Lab 108 (PV/PVC): [tasks/cka/labs/108](../../labs/108/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Persistent Volumes](https://killercoda.com/chadmcrowell/course/cka/persistent-volumes) · [Using NFS volumes for Pods](https://killercoda.com/chadmcrowell/course/cka/nfs-vol) · [Troubleshoot a Stuck PVC](https://killercoda.com/chadmcrowell/course/cka/pvc-stuck)
+
 ---
 [Contents](../README.md) · [Chapter 24](../24/README.md) · [Chapter 26](../26/README.md)

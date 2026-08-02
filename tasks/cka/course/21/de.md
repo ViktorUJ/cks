@@ -492,5 +492,7 @@ den Labs zur Sicherheit geübt; tiefes RBAC wartet in Kapitel 38.
 
 🧪 Lab 121 (RBAC-Drills: SA, Role/ClusterRole, Bindings): [tasks/cka/labs/121](../../labs/121/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Create ServiceAccount](https://killercoda.com/chadmcrowell/course/ckad/create-serviceaccount) · [Create Service Account For a Pod](https://killercoda.com/chadmcrowell/course/cka/create-sa-for-pod) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Restrict Pod Deletes with RBAC](https://killercoda.com/chadmcrowell/course/ckad/restrict-rbac)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 20](../20/de.md) · [Kapitel 22](../22/de.md)

@@ -271,5 +271,7 @@ is drilled in the labs on the design of the applications.
 
 🧪 Lab 107 (the images of the containers): [tasks/cka/labs/107](../../labs/107/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Create Dockerfile with Args and Run](https://killercoda.com/chadmcrowell/course/ckad/dockerfile) · [Create a custom nginx container image](https://killercoda.com/chadmcrowell/course/ckad/nginx-custom)
+
 ---
 [Contents](../README.md) · [Chapter 22](../22/README.md) · [Chapter 24](../24/README.md)

@@ -356,5 +356,7 @@ Multi-Container-Patterns werden in den Labs zum Design von Anwendungen geübt.
 
 🧪 Lab 107 (Multi-Container-Pods: sidecar, init): [tasks/cka/labs/107](../../labs/107/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [Logs from Sidecar](https://killercoda.com/chadmcrowell/course/ckad/kubectl-logs-sidecar) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 21](../21/de.md) · [Kapitel 23](../23/de.md)

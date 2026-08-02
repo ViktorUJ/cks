@@ -429,5 +429,7 @@ Pod 與 Deployment 會在第一個綜合實驗中匯合。
 
 🧪 實驗 101(namespaces、labels、selectors):[tasks/cka/labs/101](../../labs/101/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Label a pod](https://killercoda.com/chadmcrowell/course/ckad/label-pod) · [Deploy a pod to a new namespace](https://killercoda.com/chadmcrowell/course/ckad/namespace-pod) · [Delete all pods in a namespace](https://killercoda.com/chadmcrowell/course/ckad/delete-pods-namespace)
+
 ---
 [目錄](../README_TW.md) · [第 5 章](../05/tw.md) · [第 7 章](../07/tw.md)

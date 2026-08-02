@@ -419,5 +419,7 @@ Service-ის მეშვეობით, ხოლო 8-ე თავში -
 
 🧪 ლაბი 101 (ReplicaSet, Deployment, Service): [tasks/cka/labs/101](../../labs/101/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create a deployment for nginx](https://killercoda.com/chadmcrowell/course/ckad/nginx-deployment) · [Scale a deployment](https://killercoda.com/chadmcrowell/course/ckad/scale-deployment) · [Create and Scale Apache Deployment](https://killercoda.com/chadmcrowell/course/cka/create-apache-deployment)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 4](../04/ge.md) · [თავი 6](../06/ge.md)

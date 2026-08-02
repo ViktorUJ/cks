@@ -255,5 +255,7 @@ Debugging von Anwendungen wird in den Labs zum Troubleshooting und in Mock-Prüf
 
 🧪 Lab 114 (Debugging kaputter Ressourcen): [tasks/cka/labs/114](../../labs/114/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 43](../43/de.md) · [Kapitel 45](../45/de.md)

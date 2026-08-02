@@ -437,5 +437,7 @@ selectors, pods and Deployments will come together in the first combined lab.
 
 🧪 Lab 101 (namespaces, labels, selectors): [tasks/cka/labs/101](../../labs/101/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Label a pod](https://killercoda.com/chadmcrowell/course/ckad/label-pod) · [Deploy a pod to a new namespace](https://killercoda.com/chadmcrowell/course/ckad/namespace-pod) · [Delete all pods in a namespace](https://killercoda.com/chadmcrowell/course/ckad/delete-pods-namespace)
+
 ---
 [Contents](../README.md) · [Chapter 5](../05/README.md) · [Chapter 7](../07/README.md)

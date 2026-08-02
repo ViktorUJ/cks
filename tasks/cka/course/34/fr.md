@@ -369,5 +369,7 @@ NetworkPolicy se travaillent dans les TP sur le réseau et la sécurité.
 
 🧪 TP 120 (dont un drill sur NetworkPolicy) : [tasks/cka/labs/120](../../labs/120/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Deny All Ingress](https://killercoda.com/chadmcrowell/course/ckad/default-deny-networkpolicy) · [Allow Namespace Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-namespace-traffic) · [Allow Label-Based Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-label-traffic) · [Block All Egress](https://killercoda.com/chadmcrowell/course/ckad/block-egress)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 33](../33/fr.md) · [Chapitre 35](../35/fr.md)

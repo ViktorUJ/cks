@@ -273,5 +273,7 @@ namespace 裡讀取 Pod 的權限」、「檢查主體 X 是否可以」- 都是
 
 🧪 實驗 121(RBAC 演練 + 透過 auth can-i 檢查):[tasks/cka/labs/121](../../labs/121/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [目錄](../README_TW.md) · [第 37 章](../37/tw.md) · [第 39 章](../39/tw.md)

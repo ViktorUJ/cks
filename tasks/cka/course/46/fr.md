@@ -284,5 +284,7 @@ examens blancs.
 
 🧪 TP 123 (installation du CNI de zéro + analyse des netns/routes) : [tasks/cka/labs/123](../../labs/123/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Troubleshoot a Broken Network Path](https://killercoda.com/chadmcrowell/course/cka/broken-path) · [Debug services in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/debug-services) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 45](../45/fr.md) · [Chapitre 47](../47/fr.md)

@@ -498,5 +498,7 @@ Nodes einloggen und alles ansehen).
 
 🧪 Lab 116 (kubeadm init + join von null): [tasks/cka/labs/116](../../labs/116/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Prepare for Kubeadm Install](https://killercoda.com/chadmcrowell/course/cka/prepare-kubeadm)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 34](../34/de.md) · [Kapitel 35A](../35-2-ha/de.md)

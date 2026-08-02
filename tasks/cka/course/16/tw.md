@@ -336,5 +336,7 @@ Cluster Autoscaler 擴縮承載它的基礎設施。同時,HPA 與 VPA **不會�
 
 🧪 實驗 104(HPA 自動擴縮):[tasks/cka/labs/104](../../labs/104/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server)
+
 ---
 [目錄](../README_TW.md) · [第 15 章](../15/tw.md) · [第 17 章](../17/tw.md)

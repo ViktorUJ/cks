@@ -391,5 +391,7 @@ tolerations,節點用它們來**推開** Pod。排程會在工作負載相關的
 
 🧪 實驗 122(scheduling 演練:nodeSelector、affinity、taints):[tasks/cka/labs/122](../../labs/122/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Apply node affinity to a pod](https://killercoda.com/chadmcrowell/course/ckad/node-affinity) · [Node Affinity: Required and Preferred](https://killercoda.com/chadmcrowell/course/cka/node-affinity-required-preferred) · [Scheduling a pod to a specific node](https://killercoda.com/chadmcrowell/course/cka/node-name) · [Cordon and Select Node](https://killercoda.com/chadmcrowell/course/cka/nodeselector-cordon)
+
 ---
 [目錄](../README_TW.md) · [第 11 章](../11/tw.md) · [第 13 章](../13/tw.md)

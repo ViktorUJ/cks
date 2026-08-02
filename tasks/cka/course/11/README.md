@@ -313,5 +313,7 @@ come back in chapter 26 (the storage), and a DaemonSet - in the labs on workload
 
 🧪 Lab 103 (DaemonSet; StatefulSet - in lab 108): [tasks/cka/labs/103](../../labs/103/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Kubernetes StatefulSets](https://killercoda.com/chadmcrowell/scenario/kubernetes-statefulset)
+
 ---
 [Contents](../README.md) · [Chapter 10](../10/README.md) · [Chapter 12](../12/README.md)

@@ -299,5 +299,7 @@ Sicherheit geübt.
 
 🧪 Lab 105 (Secret): [tasks/cka/labs/105](../../labs/105/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Mount Secret into pod](https://killercoda.com/chadmcrowell/course/ckad/secret-volume) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Rotate Secret](https://killercoda.com/chadmcrowell/course/ckad/rotate-secret)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 18](../18/de.md) · [Kapitel 20](../20/de.md)

@@ -373,5 +373,7 @@ plane signifie perdre le cluster. La mise à jour du cluster se travaille dans l
 
 🧪 TP 111 (kubeadm upgrade) : [tasks/cka/labs/111](../../labs/111/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Upgrading Kubernetes](https://killercoda.com/chadmcrowell/course/cka/upgrade-k8s) · [Upgrade Kubelet](https://killercoda.com/chadmcrowell/course/cka/upgrade-kubelet)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 35](../35/fr.md) · [Chapitre 37](../37/fr.md)

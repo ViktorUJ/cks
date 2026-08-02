@@ -313,5 +313,7 @@ en los laboratorios de configuración.
 
 🧪 Laboratorio 105 (comandos, argumentos, variables de entorno): [tasks/cka/labs/105](../../labs/105/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 16](../16/es.md) · [Capítulo 18](../18/es.md)

@@ -392,5 +392,7 @@ tolerations, которыми ноды **отталкивают** поды. Пл
 
 🧪 Лаба 122 (scheduling-дриллы: nodeSelector, affinity, taints): [tasks/cka/labs/122](../../labs/122/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Apply node affinity to a pod](https://killercoda.com/chadmcrowell/course/ckad/node-affinity) · [Node Affinity: Required and Preferred](https://killercoda.com/chadmcrowell/course/cka/node-affinity-required-preferred) · [Scheduling a pod to a specific node](https://killercoda.com/chadmcrowell/course/cka/node-name) · [Cordon and Select Node](https://killercoda.com/chadmcrowell/course/cka/nodeselector-cordon)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 11](../11/ru.md) · [Глава 13](../13/ru.md)

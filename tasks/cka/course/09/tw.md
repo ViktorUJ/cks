@@ -356,5 +356,7 @@ labels 的 Deployment、設定 Service 的 selector、改副本數量或改 sele
 
 🧪 實驗 102(canary 與 blue/green):[tasks/cka/labs/102](../../labs/102/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Blue Green Deployments in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/blue-green) · [Canary Ingress Deployment](https://killercoda.com/chadmcrowell/course/ckad/canary-ingress)
+
 ---
 [目錄](../README_TW.md) · [第 8 章](../08/tw.md) · [第 10 章](../10/tw.md)

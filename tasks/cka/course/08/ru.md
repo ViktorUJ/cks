@@ -456,5 +456,7 @@ Workloads/Deployment. Диагностика застрявшего rollout оп
 
 🧪 Лаба 102 (rolling update и rollback): [tasks/cka/labs/102](../../labs/102/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create and Update Deployments](https://killercoda.com/chadmcrowell/course/ckad/deploy-update) · [Update deployment image](https://killercoda.com/chadmcrowell/course/ckad/update-image) · [Rollback a Deployment](https://killercoda.com/chadmcrowell/course/cka/rollback-deployment) · [Change Rollout Strategy](https://killercoda.com/chadmcrowell/course/cka/change-rollout-strategy)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 7](../07/ru.md) · [Глава 9](../09/ru.md)

@@ -244,5 +244,7 @@ crictl/journalctl-ით. HA, etcd-ის ბექაპები და Condit
 
 🧪 ლაბი 117 (control plane-ისა და ნოდების troubleshooting): [tasks/cka/labs/117](../../labs/117/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Troubleshoot a NotReady Node](https://killercoda.com/chadmcrowell/course/cka/node-notready) · [Kubelet Status](https://killercoda.com/chadmcrowell/course/cka/kubelet-status) · [Cordon and Drain the Node](https://killercoda.com/chadmcrowell/course/cka/cordon-drain-node)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 44](../44/ge.md) · [თავი 46](../46/ge.md)

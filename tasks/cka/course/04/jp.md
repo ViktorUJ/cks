@@ -398,5 +398,7 @@ STATUS はアプリケーションの健康状態の最初の指標です。当�
 
 🧪 ラボ 101 (Pod とその設定): [tasks/cka/labs/101](../../labs/101/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create a simple nginx pod](https://killercoda.com/chadmcrowell/course/ckad/nginx-pod) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep) · [Pod Restart Policy](https://killercoda.com/chadmcrowell/course/cka/restart-policy) · [Add a preStop hook](https://killercoda.com/chadmcrowell/course/ckad/prestop-hook)
+
 ---
 [目次](../README_JP.md) · [第 3 章](../03/jp.md) · [第 5 章](../05/jp.md)

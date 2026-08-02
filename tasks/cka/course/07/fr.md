@@ -607,5 +607,7 @@ DNS. Ensuite (chapitre 8) - les mises à jour progressives et les rollbacks des 
 
 🧪 TP 101 (pods, Deployment, namespaces, Service - premier TP unifié) : [tasks/cka/labs/101](../../labs/101/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create a ClusterIP service](https://killercoda.com/chadmcrowell/course/ckad/clusterip-service) · [NodePort Service](https://killercoda.com/chadmcrowell/course/ckad/nodeport-service) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 6](../06/fr.md) · [Chapitre 8](../08/fr.md)

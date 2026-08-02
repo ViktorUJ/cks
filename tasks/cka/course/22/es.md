@@ -349,5 +349,7 @@ practican en los laboratorios de diseño de aplicaciones.
 
 🧪 Laboratorio 107 (Pods multi-container: sidecar, init): [tasks/cka/labs/107](../../labs/107/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [Logs from Sidecar](https://killercoda.com/chadmcrowell/course/ckad/kubectl-logs-sidecar) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 21](../21/es.md) · [Capítulo 23](../23/es.md)

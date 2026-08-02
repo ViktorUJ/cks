@@ -461,5 +461,7 @@ sudo kubeadm init --config kubeadm-config.yaml
 
 🧪 實驗 116(從零開始 kubeadm init + join):[tasks/cka/labs/116](../../labs/116/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Prepare for Kubeadm Install](https://killercoda.com/chadmcrowell/course/cka/prepare-kubeadm)
+
 ---
 [目錄](../README_TW.md) · [第 34 章](../34/tw.md) · [第 35A 章](../35-2-ha/tw.md)

@@ -280,5 +280,7 @@ CKAD への最良の準備は、タイマー付きでのモック試験の通し
 
 🧪 CKAD のモック試験: [tasks/ckad/mock](../../../ckad/mock)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Playground](https://killercoda.com/chadmcrowell/course/ckad/playground)
+
 ---
 [目次](../README_JP.md) · [第 46 章](../46/jp.md) · [第 48 章](../48/jp.md)

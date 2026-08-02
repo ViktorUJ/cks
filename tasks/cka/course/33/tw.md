@@ -410,5 +410,7 @@ Ingress 與它們的遷移會在網路相關的實驗(110)中操練。
 
 🧪 實驗 110:[tasks/cka/labs/110](../../labs/110/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Create a Gateway and HTTPRoute](https://killercoda.com/chadmcrowell/course/cka/create-gateway-and-route)
+
 ---
 [目錄](../README_TW.md) · [第 32 章](../32/tw.md) · [第 34 章](../34/tw.md)

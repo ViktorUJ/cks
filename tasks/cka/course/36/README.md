@@ -365,5 +365,7 @@ An upgrade of a cluster is practiced in the labs on an administration.
 
 🧪 A lab 111 (kubeadm upgrade): [tasks/cka/labs/111](../../labs/111/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Upgrading Kubernetes](https://killercoda.com/chadmcrowell/course/cka/upgrade-k8s) · [Upgrade Kubelet](https://killercoda.com/chadmcrowell/course/cka/upgrade-kubelet)
+
 ---
 [Contents](../README.md) · [Chapter 35](../35/README.md) · [Chapter 37](../37/README.md)

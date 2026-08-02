@@ -512,5 +512,7 @@ Los static pods y PriorityClass se practican en los laboratorios de clúster y p
 
 🧪 Laboratorio 122 (incluye drill de PriorityClass): [tasks/cka/labs/122](../../labs/122/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Priority Class](https://killercoda.com/chadmcrowell/course/cka/priority-class)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 14](../14/es.md) · [Capítulo 16](../16/es.md)

@@ -280,5 +280,7 @@ ConfigMap 會在設定相關的實驗中操練。
 
 🧪 實驗 105(ConfigMap):[tasks/cka/labs/105](../../labs/105/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Creating a pod with configMap](https://killercoda.com/chadmcrowell/course/ckad/create-configmap) · [Mount ConfigMap as volume](https://killercoda.com/chadmcrowell/course/ckad/configmap-file-volume) · [Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Update ConfigMap](https://killercoda.com/chadmcrowell/course/ckad/configmap-update)
+
 ---
 [目錄](../README_TW.md) · [第 17 章](../17/tw.md) · [第 19 章](../19/tw.md)

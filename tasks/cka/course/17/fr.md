@@ -327,5 +327,7 @@ arguments et les variables se travaillent dans les TP sur la configuration.
 
 🧪 TP 105 (commandes, arguments, variables d'environnement) : [tasks/cka/labs/105](../../labs/105/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 16](../16/fr.md) · [Chapitre 18](../18/fr.md)

@@ -357,5 +357,7 @@ are drilled in the labs on the design of the applications and on the storage.
 
 🧪 Lab 107 (the volumes for the applications: an emptyDir): [tasks/cka/labs/107](../../labs/107/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [NFS Volumes in Kubernetes Pods](https://killercoda.com/chadmcrowell/course/ckad/nfs-vol)
+
 ---
 [Contents](../README.md) · [Chapter 23](../23/README.md) · [Chapter 25](../25/README.md)

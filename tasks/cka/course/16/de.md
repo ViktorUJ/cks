@@ -361,5 +361,7 @@ dem Lastprofil des Images `ping_pong` geübt.
 
 🧪 Lab 104 (Autoscaling HPA): [tasks/cka/labs/104](../../labs/104/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 15](../15/de.md) · [Kapitel 17](../17/de.md)

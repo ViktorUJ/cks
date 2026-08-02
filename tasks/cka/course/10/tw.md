@@ -349,5 +349,7 @@ Deployment → ReplicaSet → Pod 相互呼應,只是針對任務而不是服務
 
 🧪 實驗 103(Jobs 與 CronJob):[tasks/cka/labs/103](../../labs/103/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Create a job and cronJob in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/jobs) · [Create a one-time Job](https://killercoda.com/chadmcrowell/course/ckad/create-job)
+
 ---
 [目錄](../README_TW.md) · [第 9 章](../09/tw.md) · [第 11 章](../11/tw.md)

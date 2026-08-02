@@ -359,5 +359,7 @@ labels-ით, აწყვე Service-ის selector, შეცვალე �
 
 🧪 ლაბი 102 (canary და blue/green): [tasks/cka/labs/102](../../labs/102/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Blue Green Deployments in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/blue-green) · [Canary Ingress Deployment](https://killercoda.com/chadmcrowell/course/ckad/canary-ingress)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 8](../08/ge.md) · [თავი 10](../10/ge.md)

@@ -403,5 +403,7 @@ los laboratorios de red y troubleshooting.
 
 🧪 Laboratorio 118 (incluida la reparación de CoreDNS): [tasks/cka/labs/118](../../labs/118/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Test DNS Resolution](https://killercoda.com/chadmcrowell/course/ckad/dns-resolution) · [Modify Cluster DNS](https://killercoda.com/chadmcrowell/course/cka/modify-cluster-dns) · [Resolve Service IP from Pod](https://killercoda.com/chadmcrowell/course/cka/communicate-with-svc) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 30](../30/es.md) · [Capítulo 32](../32/es.md)

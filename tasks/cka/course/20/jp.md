@@ -262,5 +262,7 @@ ServiceAccount と認証・認可・admission の概観：Pod とユーザーは
 
 🧪 ラボ 106 (SecurityContext と capabilities): [tasks/cka/labs/106](../../labs/106/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Drop Linux Capabilities](https://killercoda.com/chadmcrowell/course/ckad/drop-capabilities) · [Read-Only Root Filesystem](https://killercoda.com/chadmcrowell/course/ckad/readonly-rootfs) · [PodSecurity Restricted Namespace](https://killercoda.com/chadmcrowell/course/ckad/podsecurity-restricted)
+
 ---
 [目次](../README_JP.md) · [第 19 章](../19/jp.md) · [第 21 章](../21/jp.md)

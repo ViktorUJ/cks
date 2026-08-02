@@ -352,5 +352,7 @@ travaillent dans les TP sur la conception des applications.
 
 🧪 TP 107 (Pods multi-conteneurs : sidecar, init) : [tasks/cka/labs/107](../../labs/107/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [Logs from Sidecar](https://killercoda.com/chadmcrowell/course/ckad/kubectl-logs-sidecar) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 21](../21/fr.md) · [Chapitre 23](../23/fr.md)

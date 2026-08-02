@@ -369,5 +369,7 @@ Release-Strategien übt man in den Labs zu den Workloads gemeinsam mit Deploymen
 
 🧪 Lab 102 (canary und blue/green): [tasks/cka/labs/102](../../labs/102/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Blue Green Deployments in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/blue-green) · [Canary Ingress Deployment](https://killercoda.com/chadmcrowell/course/ckad/canary-ingress)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 8](../08/de.md) · [Kapitel 10](../10/de.md)

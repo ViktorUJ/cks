@@ -255,5 +255,7 @@ troubleshooting и мок-экзаменах.
 
 🧪 Лаба 114 (отладка сломанных ресурсов): [tasks/cka/labs/114](../../labs/114/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 43](../43/ru.md) · [Глава 45](../45/ru.md)

@@ -305,5 +305,7 @@ y los operadores se practican en los laboratorios de administración.
 
 🧪 Laboratorio 115 (CRD y operadores): [tasks/cka/labs/115](../../labs/115/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Install a Database Operator](https://killercoda.com/chadmcrowell/course/cka/database-operator) · [Create your own Operator in Kubernetes](https://killercoda.com/chadmcrowell/scenario/create-operator)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 40](../40/es.md) · [Capítulo 42](../42/es.md)

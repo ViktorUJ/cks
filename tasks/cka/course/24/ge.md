@@ -357,5 +357,7 @@ read-only ფესვის დროს“, „მიამაგრე Config
 
 🧪 ლაბი 107 (აპლიკაციების ტომები: emptyDir): [tasks/cka/labs/107](../../labs/107/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [NFS Volumes in Kubernetes Pods](https://killercoda.com/chadmcrowell/course/ckad/nfs-vol)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 23](../23/ge.md) · [თავი 25](../25/ge.md)

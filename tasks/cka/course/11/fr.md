@@ -314,5 +314,7 @@ les charges de travail.
 
 🧪 TP 103 (DaemonSet ; StatefulSet - dans le TP 108) : [tasks/cka/labs/103](../../labs/103/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Kubernetes StatefulSets](https://killercoda.com/chadmcrowell/scenario/kubernetes-statefulset)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 10](../10/fr.md) · [Chapitre 12](../12/fr.md)

@@ -415,5 +415,7 @@ practican en los laboratorios de almacenamiento.
 
 🧪 Laboratorio 108 (StorageClass y almacenamiento en StatefulSet): [tasks/cka/labs/108](../../labs/108/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Dynamic Storage with StorageClass and PVC](https://killercoda.com/chadmcrowell/course/cka/storage-dynamic)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 25](../25/es.md) · [Capítulo 27](../27/es.md)

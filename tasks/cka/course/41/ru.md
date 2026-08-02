@@ -305,5 +305,7 @@ aggregation layer (свой apiserver через `APIService`, как у metrics
 
 🧪 Лаба 115 (CRD и операторы): [tasks/cka/labs/115](../../labs/115/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Install a Database Operator](https://killercoda.com/chadmcrowell/course/cka/database-operator) · [Create your own Operator in Kubernetes](https://killercoda.com/chadmcrowell/scenario/create-operator)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 40](../40/ru.md) · [Глава 42](../42/ru.md)

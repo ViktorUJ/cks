@@ -511,5 +511,7 @@ chapter you will drill in the first combined lab together with the basic objects
 
 🧪 Lab 119 (drills on speed and JSONPath): [tasks/cka/labs/119](../../labs/119/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Explore pod spec with explain](https://killercoda.com/chadmcrowell/course/ckad/explain-spec-containers) · [List API Resources](https://killercoda.com/chadmcrowell/course/cka/api-resources) · [Create a Pod Declaratively](https://killercoda.com/chadmcrowell/course/cka/declarative-pod) · [Group pods by node](https://killercoda.com/chadmcrowell/course/ckad/list-pods-by-node)
+
 ---
 [Contents](../README.md) · [Chapter 2](../02/README.md) · [Chapter 4](../04/README.md)

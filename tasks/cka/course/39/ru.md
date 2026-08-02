@@ -346,5 +346,7 @@ CNI, CSI, CRI, - которые уже упоминались и определ�
 
 🧪 Лаба 118 (в т.ч. health-check сертификатов): [tasks/cka/labs/118](../../labs/118/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Kubernetes PKI Essentials](https://killercoda.com/chadmcrowell/course/cka/pki-essentials) · [View the Kubelet Client Certificate](https://killercoda.com/chadmcrowell/course/cka/view-certificate) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 38](../38/ru.md) · [Глава 40](../40/ru.md)

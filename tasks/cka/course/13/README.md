@@ -266,5 +266,7 @@ a Pod will fit on a node. Taints/tolerations are drilled in the labs on the sche
 
 🧪 Lab 122 (including a drill on taints/tolerations): [tasks/cka/labs/122](../../labs/122/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Taints and Tolerations](https://killercoda.com/chadmcrowell/course/cka/taints-tolerations) · [Add a Toleration to a Pod YAML](https://killercoda.com/chadmcrowell/course/cka/add-toleration) · [Remove the Taint from Node](https://killercoda.com/chadmcrowell/course/cka/remove-taint)
+
 ---
 [Contents](../README.md) · [Chapter 12](../12/README.md) · [Chapter 14](../14/README.md)

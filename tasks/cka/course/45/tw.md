@@ -237,5 +237,7 @@ control plane 與節點的除錯會在管理相關的實驗與模擬考中練習
 
 🧪 實驗 117(control plane 與節點的 troubleshooting):[tasks/cka/labs/117](../../labs/117/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Troubleshoot a NotReady Node](https://killercoda.com/chadmcrowell/course/cka/node-notready) · [Kubelet Status](https://killercoda.com/chadmcrowell/course/cka/kubelet-status) · [Cordon and Drain the Node](https://killercoda.com/chadmcrowell/course/cka/cordon-drain-node)
+
 ---
 [目錄](../README_TW.md) · [第 44 章](../44/tw.md) · [第 46 章](../46/tw.md)

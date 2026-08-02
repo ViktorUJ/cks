@@ -322,5 +322,7 @@ Endpoints ↔ безопасный выкат - сквозная тема.
 
 🧪 Лаба 109 (liveness, readiness, startup пробы): [tasks/cka/labs/109](../../labs/109/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [HTTP Readiness Probe](https://killercoda.com/chadmcrowell/course/ckad/readinessprobe-http) · [Liveness Probe Restart](https://killercoda.com/chadmcrowell/course/ckad/livenessprobe-restart) · [TCP Liveness Probe](https://killercoda.com/chadmcrowell/course/ckad/tcp-probe) · [Startup Probe](https://killercoda.com/chadmcrowell/course/ckad/startup-probe)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 26](../26/ru.md) · [Глава 28](../28/ru.md)

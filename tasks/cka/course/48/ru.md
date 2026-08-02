@@ -258,5 +258,7 @@ plane или ноду, разобрать сетевой инцидент. Эк�
 
 🧪 Мок-экзамены CKA: [tasks/cka/mock](../../mock)
 
+🎮 Killercoda (в браузере, без установки): [Single Node Cluster](https://killercoda.com/chadmcrowell/course/cka/single-node) · [Two Node Cluster](https://killercoda.com/chadmcrowell/course/cka/two-node)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 47](../47/ru.md)

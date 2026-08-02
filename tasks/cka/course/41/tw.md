@@ -297,5 +297,7 @@ operator 的權限 - 是設計與保護一個成熟叢集的一部分。
 
 🧪 實驗 115(CRD 與 operator):[tasks/cka/labs/115](../../labs/115/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Install a Database Operator](https://killercoda.com/chadmcrowell/course/cka/database-operator) · [Create your own Operator in Kubernetes](https://killercoda.com/chadmcrowell/scenario/create-operator)
+
 ---
 [目錄](../README_TW.md) · [第 40 章](../40/tw.md) · [第 42 章](../42/tw.md)

@@ -343,5 +343,7 @@ kubectl logs web-with-helpers -c log-shipper           # sidecar が集めた ac
 
 🧪 ラボ 107（マルチコンテナ Pod：sidecar、init）：[tasks/cka/labs/107](../../labs/107/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [Logs from Sidecar](https://killercoda.com/chadmcrowell/course/ckad/kubectl-logs-sidecar) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [目次](../README_JP.md) · [第 21 章](../21/jp.md) · [第 23 章](../23/jp.md)

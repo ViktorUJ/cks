@@ -399,5 +399,7 @@ deployments y los namespace.
 
 🧪 Práctica 101 (pods y su configuración): [tasks/cka/labs/101](../../labs/101/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create a simple nginx pod](https://killercoda.com/chadmcrowell/course/ckad/nginx-pod) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep) · [Pod Restart Policy](https://killercoda.com/chadmcrowell/course/cka/restart-policy) · [Add a preStop hook](https://killercoda.com/chadmcrowell/course/ckad/prestop-hook)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 3](../03/es.md) · [Capítulo 5](../05/es.md)

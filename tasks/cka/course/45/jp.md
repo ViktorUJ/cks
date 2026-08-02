@@ -243,5 +243,7 @@ troubleshooting を締めます。control plane とノードのデバッグは�
 
 🧪 ラボ 117 (control plane とノードの troubleshooting)：[tasks/cka/labs/117](../../labs/117/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Troubleshoot a NotReady Node](https://killercoda.com/chadmcrowell/course/cka/node-notready) · [Kubelet Status](https://killercoda.com/chadmcrowell/course/cka/kubelet-status) · [Cordon and Drain the Node](https://killercoda.com/chadmcrowell/course/cka/cordon-drain-node)
+
 ---
 [目次](../README_JP.md) · [第 44 章](../44/jp.md) · [第 46 章](../46/jp.md)

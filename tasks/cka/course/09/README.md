@@ -377,5 +377,7 @@ practised in the labs on workloads together with Deployment and Service.
 
 🧪 Lab 102 (canary and blue/green): [tasks/cka/labs/102](../../labs/102/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Blue Green Deployments in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/blue-green) · [Canary Ingress Deployment](https://killercoda.com/chadmcrowell/course/ckad/canary-ingress)
+
 ---
 [Contents](../README.md) · [Chapter 8](../08/README.md) · [Chapter 10](../10/README.md)

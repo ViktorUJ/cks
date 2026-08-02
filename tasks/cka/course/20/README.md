@@ -258,5 +258,7 @@ get an access to the API. The SecurityContext is drilled in the labs on the secu
 
 🧪 Lab 106 (the SecurityContext and the capabilities): [tasks/cka/labs/106](../../labs/106/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Drop Linux Capabilities](https://killercoda.com/chadmcrowell/course/ckad/drop-capabilities) · [Read-Only Root Filesystem](https://killercoda.com/chadmcrowell/course/ckad/readonly-rootfs) · [PodSecurity Restricted Namespace](https://killercoda.com/chadmcrowell/course/ckad/podsecurity-restricted)
+
 ---
 [Contents](../README.md) · [Chapter 19](../19/README.md) · [Chapter 21](../21/README.md)

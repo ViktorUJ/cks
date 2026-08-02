@@ -329,5 +329,7 @@ Kubernetes のネットワークモデルと CNI (第 30 章) から始めます
 
 🧪 ラボ 109 (デバッグと API の廃止)：[tasks/cka/labs/109](../../labs/109/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug) · [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Port Forward to Pod](https://killercoda.com/chadmcrowell/course/ckad/port-forward-pod) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app)
+
 ---
 [目次](../README_JP.md) · [第 28 章](../28/jp.md) · [第 30 章](../30/jp.md)

@@ -244,5 +244,7 @@ flowchart TB
 
 🧪 Лаба 117 (troubleshooting control plane и нод): [tasks/cka/labs/117](../../labs/117/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Troubleshoot a NotReady Node](https://killercoda.com/chadmcrowell/course/cka/node-notready) · [Kubelet Status](https://killercoda.com/chadmcrowell/course/cka/kubelet-status) · [Cordon and Drain the Node](https://killercoda.com/chadmcrowell/course/cka/cordon-drain-node)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 44](../44/ru.md) · [Глава 46](../46/ru.md)

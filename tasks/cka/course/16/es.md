@@ -347,5 +347,7 @@ de carga de la imagen `ping_pong`.
 
 🧪 Laboratorio 104 (autoescalado con HPA): [tasks/cka/labs/104](../../labs/104/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 15](../15/es.md) · [Capítulo 17](../17/es.md)

@@ -416,5 +416,7 @@ Deployment、namespaces、Service を 1 つに結びます。
 
 🧪 ラボ 101 (ReplicaSet, Deployment, Service): [tasks/cka/labs/101](../../labs/101/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create a deployment for nginx](https://killercoda.com/chadmcrowell/course/ckad/nginx-deployment) · [Scale a deployment](https://killercoda.com/chadmcrowell/course/ckad/scale-deployment) · [Create and Scale Apache Deployment](https://killercoda.com/chadmcrowell/course/cka/create-apache-deployment)
+
 ---
 [目次](../README_JP.md) · [第 4 章](../04/jp.md) · [第 6 章](../06/jp.md)

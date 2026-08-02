@@ -260,5 +260,7 @@ Helm хранит историю ревизий релиза (в Secret'ах к�
 
 🧪 Лаба 115 (Helm): [tasks/cka/labs/115](../../labs/115/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Installing NGINX Ingress with Helm](https://killercoda.com/chadmcrowell/course/cka/helm-install-nginx)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 41](../41/ru.md) · [Глава 43](../43/ru.md)

@@ -433,5 +433,7 @@ selector で Service を Pod に結び付けます。Namespaces、labels、selec
 
 🧪 ラボ 101 (namespaces, labels, selectors)：[tasks/cka/labs/101](../../labs/101/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Label a pod](https://killercoda.com/chadmcrowell/course/ckad/label-pod) · [Deploy a pod to a new namespace](https://killercoda.com/chadmcrowell/course/ckad/namespace-pod) · [Delete all pods in a namespace](https://killercoda.com/chadmcrowell/course/ckad/delete-pods-namespace)
+
 ---
 [目次](../README_JP.md) · [第 5 章](../05/jp.md) · [第 7 章](../07/jp.md)

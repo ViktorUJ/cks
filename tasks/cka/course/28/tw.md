@@ -316,5 +316,7 @@ ephemeral 容器)這個主題收尾第 6 部分。日誌與指標會在可觀測
 
 🧪 實驗 109(logs、metrics-server、kubectl top):[tasks/cka/labs/109](../../labs/109/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Logging in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/logging) · [Monitoring Kubernetes with Metrics Server](https://killercoda.com/chadmcrowell/course/ckad/metrics-server) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events)
+
 ---
 [目錄](../README_TW.md) · [第 27 章](../27/tw.md) · [第 29 章](../29/tw.md)

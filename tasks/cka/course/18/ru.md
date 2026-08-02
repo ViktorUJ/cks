@@ -281,5 +281,7 @@ ConfigMap отрабатывается в лабах по конфигураци
 
 🧪 Лаба 105 (ConfigMap): [tasks/cka/labs/105](../../labs/105/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Creating a pod with configMap](https://killercoda.com/chadmcrowell/course/ckad/create-configmap) · [Mount ConfigMap as volume](https://killercoda.com/chadmcrowell/course/ckad/configmap-file-volume) · [Use ConfigMap as env vars](https://killercoda.com/chadmcrowell/course/ckad/configmap-envvars) · [Update ConfigMap](https://killercoda.com/chadmcrowell/course/ckad/configmap-update)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 17](../17/ru.md) · [Глава 19](../19/ru.md)

@@ -428,5 +428,7 @@ dynamisches Provisioning und Speicher im StatefulSet werden in den Labs zum Spei
 
 🧪 Lab 108 (StorageClass und Speicher im StatefulSet): [tasks/cka/labs/108](../../labs/108/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Dynamic Storage with StorageClass and PVC](https://killercoda.com/chadmcrowell/course/cka/storage-dynamic)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 25](../25/de.md) · [Kapitel 27](../27/de.md)

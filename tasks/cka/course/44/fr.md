@@ -255,5 +255,7 @@ travaille dans les TP de troubleshooting et les examens blancs.
 
 🧪 TP 114 (débogage de ressources cassées) : [tasks/cka/labs/114](../../labs/114/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Logs from CrashLoop Pod](https://killercoda.com/chadmcrowell/course/ckad/logs-crashloop) · [Describe Pod Events](https://killercoda.com/chadmcrowell/course/ckad/describe-events) · [Debug a Go App in Kubernetes](https://killercoda.com/chadmcrowell/course/cka/debug-go-app) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 43](../43/fr.md) · [Chapitre 45](../45/fr.md)

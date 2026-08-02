@@ -494,5 +494,7 @@ travaillent dans les TP sur la sécurité ; le RBAC en profondeur attend au chap
 
 🧪 TP 121 (drills RBAC : SA, Role/ClusterRole, bindings) : [tasks/cka/labs/121](../../labs/121/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create ServiceAccount](https://killercoda.com/chadmcrowell/course/ckad/create-serviceaccount) · [Create Service Account For a Pod](https://killercoda.com/chadmcrowell/course/cka/create-sa-for-pod) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Restrict Pod Deletes with RBAC](https://killercoda.com/chadmcrowell/course/ckad/restrict-rbac)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 20](../20/fr.md) · [Chapitre 22](../22/fr.md)

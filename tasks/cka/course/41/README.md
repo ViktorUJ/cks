@@ -305,5 +305,7 @@ are practised in the labs on an administration.
 
 🧪 A lab 115 (the CRD and the operators): [tasks/cka/labs/115](../../labs/115/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Install a Database Operator](https://killercoda.com/chadmcrowell/course/cka/database-operator) · [Create your own Operator in Kubernetes](https://killercoda.com/chadmcrowell/scenario/create-operator)
+
 ---
 [Contents](../README.md) · [Chapter 40](../40/README.md) · [Chapter 42](../42/README.md)

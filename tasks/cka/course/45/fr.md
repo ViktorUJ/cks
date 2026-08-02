@@ -244,5 +244,7 @@ d'administration et les examens blancs.
 
 🧪 TP 117 (troubleshooting du control plane et des nœuds) : [tasks/cka/labs/117](../../labs/117/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Troubleshoot a NotReady Node](https://killercoda.com/chadmcrowell/course/cka/node-notready) · [Kubelet Status](https://killercoda.com/chadmcrowell/course/cka/kubelet-status) · [Cordon and Drain the Node](https://killercoda.com/chadmcrowell/course/cka/cordon-drain-node)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 44](../44/fr.md) · [Chapitre 46](../46/fr.md)

@@ -366,5 +366,7 @@ de release se practican en los laboratorios de cargas de trabajo junto con Deplo
 
 🧪 Práctica 102 (canary y blue/green): [tasks/cka/labs/102](../../labs/102/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Blue Green Deployments in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/blue-green) · [Canary Ingress Deployment](https://killercoda.com/chadmcrowell/course/ckad/canary-ingress)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 8](../08/es.md) · [Capítulo 10](../10/es.md)

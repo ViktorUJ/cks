@@ -416,5 +416,7 @@ Gateway API、Ingress、そしてその移行は、ネットワークのラボ (
 
 🧪 ラボ 110：[tasks/cka/labs/110](../../labs/110/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create a Gateway and HTTPRoute](https://killercoda.com/chadmcrowell/course/cka/create-gateway-and-route)
+
 ---
 [目次](../README_JP.md) · [第 32 章](../32/jp.md) · [第 34 章](../34/jp.md)

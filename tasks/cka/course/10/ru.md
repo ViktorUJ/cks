@@ -350,5 +350,7 @@ Always` в Job - частая ошибка.
 
 🧪 Лаба 103 (Jobs и CronJob): [tasks/cka/labs/103](../../labs/103/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create a job and cronJob in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/jobs) · [Create a one-time Job](https://killercoda.com/chadmcrowell/course/ckad/create-job)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 9](../09/ru.md) · [Глава 11](../11/ru.md)

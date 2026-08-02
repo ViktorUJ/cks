@@ -365,5 +365,7 @@ cordon/drain/uncordon. Ошибка в порядке или пропуск drai
 
 🧪 Лаба 111 (kubeadm upgrade): [tasks/cka/labs/111](../../labs/111/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Upgrading Kubernetes](https://killercoda.com/chadmcrowell/course/cka/upgrade-k8s) · [Upgrade Kubelet](https://killercoda.com/chadmcrowell/course/cka/upgrade-kubelet)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 35](../35/ru.md) · [Глава 37](../37/ru.md)

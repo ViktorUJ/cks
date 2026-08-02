@@ -306,5 +306,7 @@ volumeClaimTemplates-ისა და headless-სერვისის ცო�
 
 🧪 ლაბი 103 (DaemonSet; StatefulSet - ლაბ 108-ში): [tasks/cka/labs/103](../../labs/103/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Kubernetes StatefulSets](https://killercoda.com/chadmcrowell/scenario/kubernetes-statefulset)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 10](../10/ge.md) · [თავი 12](../12/ge.md)

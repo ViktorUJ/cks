@@ -287,5 +287,7 @@ zu ihren Ausweisen kommen. RBAC übt man in den Labs zur Sicherheit.
 
 🧪 Lab 121 (RBAC-Drills + Prüfung über auth can-i): [tasks/cka/labs/121](../../labs/121/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 37](../37/de.md) · [Kapitel 39](../39/de.md)

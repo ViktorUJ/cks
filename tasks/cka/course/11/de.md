@@ -312,5 +312,7 @@ zu den Workloads.
 
 🧪 Lab 103 (DaemonSet; StatefulSet - in Lab 108): [tasks/cka/labs/103](../../labs/103/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Kubernetes StatefulSets](https://killercoda.com/chadmcrowell/scenario/kubernetes-statefulset)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 10](../10/de.md) · [Kapitel 12](../12/de.md)

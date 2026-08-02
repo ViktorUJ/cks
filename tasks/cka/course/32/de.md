@@ -350,5 +350,7 @@ wurde. Ingress wird in den Labs zum Netz geübt.
 
 🧪 Lab 120 (u. a. Drill zu Ingress): [tasks/cka/labs/120](../../labs/120/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Install Ingress Controller](https://killercoda.com/chadmcrowell/course/ckad/ingress-controller) · [Ingress Host-Based Routing](https://killercoda.com/chadmcrowell/course/ckad/ingress-host-routing) · [Ingress with TLS](https://killercoda.com/chadmcrowell/course/ckad/ingress-tls) · [Create Ingress Resource](https://killercoda.com/chadmcrowell/course/cka/create-ingress)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 31](../31/de.md) · [Kapitel 33](../33/de.md)

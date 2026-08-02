@@ -394,5 +394,7 @@ StatefulSet 儲存會在儲存相關的實驗中操練。
 
 🧪 實驗 108(StorageClass 與 StatefulSet 中的儲存):[tasks/cka/labs/108](../../labs/108/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Dynamic Storage with StorageClass and PVC](https://killercoda.com/chadmcrowell/course/cka/storage-dynamic)
+
 ---
 [目錄](../README_TW.md) · [第 25 章](../25/tw.md) · [第 27 章](../27/tw.md)

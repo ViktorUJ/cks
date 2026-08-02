@@ -277,5 +277,7 @@ CKA (capítulo 48). El troubleshooting de red se practica en los laboratorios de
 
 🧪 Laboratorio 123 (instalación de CNI desde cero + análisis de netns/rutas): [tasks/cka/labs/123](../../labs/123/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Troubleshoot a Broken Network Path](https://killercoda.com/chadmcrowell/course/cka/broken-path) · [Debug services in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/debug-services) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 45](../45/es.md) · [Capítulo 47](../47/es.md)

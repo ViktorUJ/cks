@@ -350,5 +350,7 @@ Always`-ის არევა Job-ში ხშირი შეცდომა�
 
 🧪 ლაბი 103 (Jobs და CronJob): [tasks/cka/labs/103](../../labs/103/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Create a job and cronJob in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/jobs) · [Create a one-time Job](https://killercoda.com/chadmcrowell/course/ckad/create-job)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 9](../09/ge.md) · [თავი 11](../11/ge.md)

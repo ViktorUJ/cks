@@ -346,5 +346,7 @@ emptyDir 被重新建立。
 
 🧪 實驗 107(應用程式的卷:emptyDir):[tasks/cka/labs/107](../../labs/107/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [NFS Volumes in Kubernetes Pods](https://killercoda.com/chadmcrowell/course/ckad/nfs-vol)
+
 ---
 [目錄](../README_TW.md) · [第 23 章](../23/tw.md) · [第 25 章](../25/tw.md)

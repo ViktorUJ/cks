@@ -414,5 +414,7 @@ Deployment 的更新與回滾。第一個綜合實驗會把 Pod、Deployment、n
 
 🧪 實驗 101(ReplicaSet、Deployment、Service):[tasks/cka/labs/101](../../labs/101/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Create a deployment for nginx](https://killercoda.com/chadmcrowell/course/ckad/nginx-deployment) · [Scale a deployment](https://killercoda.com/chadmcrowell/course/ckad/scale-deployment) · [Create and Scale Apache Deployment](https://killercoda.com/chadmcrowell/course/cka/create-apache-deployment)
+
 ---
 [目錄](../README_TW.md) · [第 4 章](../04/tw.md) · [第 6 章](../06/tw.md)

@@ -416,5 +416,7 @@ kommunizieren darf. Gateway API, Ingress und ihre Migration werden im Lab zum Ne
 
 🧪 Lab 110: [tasks/cka/labs/110](../../labs/110/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Create a Gateway and HTTPRoute](https://killercoda.com/chadmcrowell/course/cka/create-gateway-and-route)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 32](../32/de.md) · [Kapitel 34](../34/de.md)

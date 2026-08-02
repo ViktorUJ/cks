@@ -241,5 +241,7 @@ ClusterRole、binding),把第 21 章的概覽再深入一層。etcd 的備份與
 
 🧪 實驗 112(etcd 的備份與還原):[tasks/cka/labs/112](../../labs/112/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Backup and Restore Kubernetes etcd](https://killercoda.com/chadmcrowell/scenario/kubernetes-backup-etcd)
+
 ---
 [目錄](../README_TW.md) · [第 36 章](../36/tw.md) · [第 38 章](../38/tw.md)

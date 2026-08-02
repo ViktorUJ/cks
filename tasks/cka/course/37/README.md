@@ -248,5 +248,7 @@ are practiced in the labs on an administration.
 
 🧪 A lab 112 (a backup and a restore of etcd): [tasks/cka/labs/112](../../labs/112/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Backup and Restore Kubernetes etcd](https://killercoda.com/chadmcrowell/scenario/kubernetes-backup-etcd)
+
 ---
 [Contents](../README.md) · [Chapter 36](../36/README.md) · [Chapter 38](../38/README.md)

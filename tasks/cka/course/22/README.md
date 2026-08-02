@@ -336,5 +336,7 @@ the labs on the design of the applications.
 
 🧪 Lab 107 (the multi-container Pods: a sidecar, an init): [tasks/cka/labs/107](../../labs/107/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [Logs from Sidecar](https://killercoda.com/chadmcrowell/course/ckad/kubectl-logs-sidecar) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [Contents](../README.md) · [Chapter 21](../21/README.md) · [Chapter 23](../23/README.md)

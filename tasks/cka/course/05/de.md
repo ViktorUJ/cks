@@ -414,5 +414,7 @@ Deployment, Namespaces und Service zu einem Ganzen.
 
 🧪 Lab 101 (ReplicaSet, Deployment, Service): [tasks/cka/labs/101](../../labs/101/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Create a deployment for nginx](https://killercoda.com/chadmcrowell/course/ckad/nginx-deployment) · [Scale a deployment](https://killercoda.com/chadmcrowell/course/ckad/scale-deployment) · [Create and Scale Apache Deployment](https://killercoda.com/chadmcrowell/course/cka/create-apache-deployment)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 4](../04/de.md) · [Kapitel 6](../06/de.md)

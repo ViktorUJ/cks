@@ -344,5 +344,7 @@ runtime 如何接上。憑證、kubeconfig 與 CSR 會在安全相關的實驗�
 
 🧪 實驗 118(其中包含憑證的 health-check):[tasks/cka/labs/118](../../labs/118/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Kubernetes PKI Essentials](https://killercoda.com/chadmcrowell/course/cka/pki-essentials) · [View the Kubelet Client Certificate](https://killercoda.com/chadmcrowell/course/cka/view-certificate) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [目錄](../README_TW.md) · [第 38 章](../38/tw.md) · [第 40 章](../40/tw.md)

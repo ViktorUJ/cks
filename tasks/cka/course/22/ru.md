@@ -336,5 +336,7 @@ Application Design. Нужно уметь писать `initContainers`, общ�
 
 🧪 Лаба 107 (multi-container поды: sidecar, init): [tasks/cka/labs/107](../../labs/107/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Create a Pod with emptyDir volume](https://killercoda.com/chadmcrowell/course/ckad/volumes) · [Logs from Sidecar](https://killercoda.com/chadmcrowell/course/ckad/kubectl-logs-sidecar) · [Ephemeral Debug Container](https://killercoda.com/chadmcrowell/course/ckad/kubectl-debug)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 21](../21/ru.md) · [Глава 23](../23/ru.md)

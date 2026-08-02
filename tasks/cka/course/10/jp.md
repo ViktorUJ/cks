@@ -353,5 +353,7 @@ job/cronjob` コマンド、Job の `restartPolicy`、`completions`/`parallelism
 
 🧪 ラボ 103 (Jobs と CronJob): [tasks/cka/labs/103](../../labs/103/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Create a job and cronJob in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/jobs) · [Create a one-time Job](https://killercoda.com/chadmcrowell/course/ckad/create-job)
+
 ---
 [目次](../README_JP.md) · [第 9 章](../09/jp.md) · [第 11 章](../11/jp.md)

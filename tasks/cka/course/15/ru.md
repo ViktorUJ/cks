@@ -512,5 +512,7 @@ PriorityClass отрабатываются в лабах по кластеру �
 
 🧪 Лаба 122 (в т.ч. дрилл на PriorityClass): [tasks/cka/labs/122](../../labs/122/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Priority Class](https://killercoda.com/chadmcrowell/course/cka/priority-class)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 14](../14/ru.md) · [Глава 16](../16/ru.md)

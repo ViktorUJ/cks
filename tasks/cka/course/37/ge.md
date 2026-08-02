@@ -248,5 +248,7 @@ ClusterRole, binding-ები), გავიღრმავებთ თავ�
 
 🧪 ლაბი 112 (etcd-ს ბექაპი და აღდგენა): [tasks/cka/labs/112](../../labs/112/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Backup and Restore Kubernetes etcd](https://killercoda.com/chadmcrowell/scenario/kubernetes-backup-etcd)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 36](../36/ge.md) · [თავი 38](../38/ge.md)

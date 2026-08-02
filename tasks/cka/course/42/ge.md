@@ -260,5 +260,7 @@ Helm ინახავს რელიზის რევიზიების 
 
 🧪 ლაბი 115 (Helm): [tasks/cka/labs/115](../../labs/115/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Installing NGINX Ingress with Helm](https://killercoda.com/chadmcrowell/course/cka/helm-install-nginx)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 41](../41/ge.md) · [თავი 43](../43/ge.md)

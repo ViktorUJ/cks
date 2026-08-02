@@ -374,5 +374,7 @@ und CSR werden in den Labs zur Sicherheit geübt.
 
 🧪 Lab 118 (u. a. Health-Check der Zertifikate): [tasks/cka/labs/118](../../labs/118/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Kubernetes PKI Essentials](https://killercoda.com/chadmcrowell/course/cka/pki-essentials) · [View the Kubelet Client Certificate](https://killercoda.com/chadmcrowell/course/cka/view-certificate) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 38](../38/de.md) · [Kapitel 40](../40/de.md)

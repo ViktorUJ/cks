@@ -395,5 +395,7 @@ Pod をノードへ引き寄せる方法を学びました。第 13 章では逆
 
 🧪 ラボ 122 (scheduling ドリル: nodeSelector、affinity、taints): [tasks/cka/labs/122](../../labs/122/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Apply node affinity to a pod](https://killercoda.com/chadmcrowell/course/ckad/node-affinity) · [Node Affinity: Required and Preferred](https://killercoda.com/chadmcrowell/course/cka/node-affinity-required-preferred) · [Scheduling a pod to a specific node](https://killercoda.com/chadmcrowell/course/cka/node-name) · [Cordon and Select Node](https://killercoda.com/chadmcrowell/course/cka/nodeselector-cordon)
+
 ---
 [目次](../README_JP.md) · [第 11 章](../11/jp.md) · [第 13 章](../13/jp.md)

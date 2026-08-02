@@ -351,5 +351,7 @@ cargas de trabajo.
 
 🧪 Práctica 103 (Jobs y CronJob): [tasks/cka/labs/103](../../labs/103/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create a job and cronJob in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/jobs) · [Create a one-time Job](https://killercoda.com/chadmcrowell/course/ckad/create-job)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 9](../09/es.md) · [Capítulo 11](../11/es.md)

@@ -429,5 +429,7 @@ kommen in der ersten zusammengefassten Laborarbeit zusammen.
 
 🧪 Lab 101 (Namespaces, Labels, Selektoren): [tasks/cka/labs/101](../../labs/101/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Label a pod](https://killercoda.com/chadmcrowell/course/ckad/label-pod) · [Deploy a pod to a new namespace](https://killercoda.com/chadmcrowell/course/ckad/namespace-pod) · [Delete all pods in a namespace](https://killercoda.com/chadmcrowell/course/ckad/delete-pods-namespace)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 5](../05/de.md) · [Kapitel 7](../07/de.md)

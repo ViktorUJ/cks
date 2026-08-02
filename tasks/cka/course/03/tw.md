@@ -501,5 +501,7 @@ kubectl delete pod nginx --force --grace-period=0    # 立即,不等待
 
 🧪 實驗 119(速度與 JSONPath 的操練):[tasks/cka/labs/119](../../labs/119/README_TW.MD)
 
+🎮 Killercoda（在瀏覽器中，無需安裝）：[Explore pod spec with explain](https://killercoda.com/chadmcrowell/course/ckad/explain-spec-containers) · [List API Resources](https://killercoda.com/chadmcrowell/course/cka/api-resources) · [Create a Pod Declaratively](https://killercoda.com/chadmcrowell/course/cka/declarative-pod) · [Group pods by node](https://killercoda.com/chadmcrowell/course/ckad/list-pods-by-node)
+
 ---
 [目錄](../README_TW.md) · [第 2 章](../02/tw.md) · [第 4 章](../04/tw.md)

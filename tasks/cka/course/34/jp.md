@@ -369,5 +369,7 @@ egress ポリシーでは DNS を忘れないことが必要です。
 
 🧪 ラボ 120（NetworkPolicy のドリルを含む）: [tasks/cka/labs/120](../../labs/120/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Deny All Ingress](https://killercoda.com/chadmcrowell/course/ckad/default-deny-networkpolicy) · [Allow Namespace Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-namespace-traffic) · [Allow Label-Based Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-label-traffic) · [Block All Egress](https://killercoda.com/chadmcrowell/course/ckad/block-egress)
+
 ---
 [目次](../README_JP.md) · [第 33 章](../33/jp.md) · [第 35 章](../35/jp.md)

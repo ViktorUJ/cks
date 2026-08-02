@@ -357,5 +357,7 @@ laboratorios de seguridad.
 
 🧪 Laboratorio 118 (incluye health-check de certificados): [tasks/cka/labs/118](../../labs/118/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Kubernetes PKI Essentials](https://killercoda.com/chadmcrowell/course/cka/pki-essentials) · [View the Kubelet Client Certificate](https://killercoda.com/chadmcrowell/course/cka/view-certificate) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 38](../38/es.md) · [Capítulo 40](../40/es.md)

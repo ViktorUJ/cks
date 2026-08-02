@@ -427,5 +427,7 @@ will tie together pods, Deployments, namespaces and Services.
 
 🧪 Lab 101 (ReplicaSet, Deployment, Service): [tasks/cka/labs/101](../../labs/101/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Create a deployment for nginx](https://killercoda.com/chadmcrowell/course/ckad/nginx-deployment) · [Scale a deployment](https://killercoda.com/chadmcrowell/course/ckad/scale-deployment) · [Create and Scale Apache Deployment](https://killercoda.com/chadmcrowell/course/cka/create-apache-deployment)
+
 ---
 [Contents](../README.md) · [Chapter 4](../04/README.md) · [Chapter 6](../06/README.md)

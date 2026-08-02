@@ -386,5 +386,7 @@ im ersten zusammengefassten Lab gemeinsam mit den Deployments und den Namespaces
 
 🧪 Lab 101 (Pods und ihre Konfiguration): [tasks/cka/labs/101](../../labs/101/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Create a simple nginx pod](https://killercoda.com/chadmcrowell/course/ckad/nginx-pod) · [Run busybox with sleep](https://killercoda.com/chadmcrowell/course/ckad/busybox-sleep) · [Pod Restart Policy](https://killercoda.com/chadmcrowell/course/cka/restart-policy) · [Add a preStop hook](https://killercoda.com/chadmcrowell/course/ckad/prestop-hook)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 3](../03/de.md) · [Kapitel 5](../05/de.md)

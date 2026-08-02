@@ -273,5 +273,7 @@ Pending なのか」は典型的な課題です。`kubectl taint` コマンド�
 
 🧪 ラボ 122 (taints/tolerations のドリルを含む): [tasks/cka/labs/122](../../labs/122/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Taints and Tolerations](https://killercoda.com/chadmcrowell/course/cka/taints-tolerations) · [Add a Toleration to a Pod YAML](https://killercoda.com/chadmcrowell/course/cka/add-toleration) · [Remove the Taint from Node](https://killercoda.com/chadmcrowell/course/cka/remove-taint)
+
 ---
 [目次](../README_JP.md) · [第 12 章](../12/jp.md) · [第 14 章](../14/jp.md)

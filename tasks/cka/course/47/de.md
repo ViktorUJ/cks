@@ -278,5 +278,7 @@ Selbstüberprüfung an echten Aufgaben. Weiter: das letzte Kapitel - Taktik für
 
 🧪 Mock-Prüfungen CKAD: [tasks/ckad/mock](../../../ckad/mock)
 
+🎮 Killercoda (im Browser, ohne Installation): [Playground](https://killercoda.com/chadmcrowell/course/ckad/playground)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 46](../46/de.md) · [Kapitel 48](../48/de.md)

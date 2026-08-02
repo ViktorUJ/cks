@@ -406,5 +406,7 @@ wird in den Labs zu den Workloads geübt.
 
 🧪 Lab 122 (scheduling-Drills: nodeSelector, affinity, taints): [tasks/cka/labs/122](../../labs/122/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Apply node affinity to a pod](https://killercoda.com/chadmcrowell/course/ckad/node-affinity) · [Node Affinity: Required and Preferred](https://killercoda.com/chadmcrowell/course/cka/node-affinity-required-preferred) · [Scheduling a pod to a specific node](https://killercoda.com/chadmcrowell/course/cka/node-name) · [Cordon and Select Node](https://killercoda.com/chadmcrowell/course/cka/nodeselector-cordon)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 11](../11/de.md) · [Kapitel 13](../13/de.md)

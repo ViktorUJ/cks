@@ -244,5 +244,7 @@ mock exams.
 
 🧪 A lab 117 (a troubleshooting of a control plane and of the nodes): [tasks/cka/labs/117](../../labs/117/README.MD)
 
+🎮 Killercoda (in a browser, no setup): [Troubleshoot a NotReady Node](https://killercoda.com/chadmcrowell/course/cka/node-notready) · [Kubelet Status](https://killercoda.com/chadmcrowell/course/cka/kubelet-status) · [Cordon and Drain the Node](https://killercoda.com/chadmcrowell/course/cka/cordon-drain-node)
+
 ---
 [Contents](../README.md) · [Chapter 44](../44/README.md) · [Chapter 46](../46/README.md)

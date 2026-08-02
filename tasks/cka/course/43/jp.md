@@ -259,5 +259,7 @@ troubleshooting (CKA)：アプリケーションの障害（第 44 章）、cont
 
 🧪 ラボ 115 (Kustomize)：[tasks/cka/labs/115](../../labs/115/README_JP.MD)
 
+🎮 Killercoda（ブラウザ内、セットアップ不要）：[Apply Resources with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-apply) · [Kustomize Overlays for Environments](https://killercoda.com/chadmcrowell/course/ckad/kustomize-env-overlay) · [Patch Deployment Image with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-patch-image) · [Generate ConfigMap and Secret with Kustomize](https://killercoda.com/chadmcrowell/course/ckad/kustomize-configmap-secret)
+
 ---
 [目次](../README_JP.md) · [第 42 章](../42/jp.md) · [第 44 章](../44/jp.md)

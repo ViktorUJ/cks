@@ -258,5 +258,7 @@ ServiceAccount и обзор аутентификации, авторизаци�
 
 🧪 Лаба 106 (SecurityContext и capabilities): [tasks/cka/labs/106](../../labs/106/README_RU.MD)
 
+🎮 Killercoda (в браузере, без установки): [Drop Linux Capabilities](https://killercoda.com/chadmcrowell/course/ckad/drop-capabilities) · [Read-Only Root Filesystem](https://killercoda.com/chadmcrowell/course/ckad/readonly-rootfs) · [PodSecurity Restricted Namespace](https://killercoda.com/chadmcrowell/course/ckad/podsecurity-restricted)
+
 ---
 [Оглавление](../README_RU.md) · [Глава 19](../19/ru.md) · [Глава 21](../21/ru.md)

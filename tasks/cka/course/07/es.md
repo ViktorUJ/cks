@@ -591,5 +591,7 @@ de Deployment.
 
 🧪 Práctica 101 (Pods, Deployment, namespaces, Service - primera práctica unificada): [tasks/cka/labs/101](../../labs/101/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create a ClusterIP service](https://killercoda.com/chadmcrowell/course/ckad/clusterip-service) · [NodePort Service](https://killercoda.com/chadmcrowell/course/ckad/nodeport-service) · [Create a Headless Service](https://killercoda.com/chadmcrowell/course/ckad/headless-service) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 6](../06/es.md) · [Capítulo 8](../08/es.md)

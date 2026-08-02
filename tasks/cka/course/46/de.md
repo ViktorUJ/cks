@@ -288,5 +288,7 @@ zum Netzwerk und in Mock-Prüfungen geübt.
 
 🧪 Lab 123 (Installation von CNI von Null + Analyse von netns/Routen): [tasks/cka/labs/123](../../labs/123/README_DE.MD)
 
+🎮 Killercoda (im Browser, ohne Installation): [Troubleshoot a Broken Network Path](https://killercoda.com/chadmcrowell/course/cka/broken-path) · [Debug services in Kubernetes](https://killercoda.com/chadmcrowell/course/ckad/debug-services) · [Test Service Connectivity](https://killercoda.com/chadmcrowell/course/ckad/test-service-connectivity)
+
 ---
 [Inhalt](../README_DE.md) · [Kapitel 45](../45/de.md) · [Kapitel 47](../47/de.md)

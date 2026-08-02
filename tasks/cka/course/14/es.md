@@ -355,5 +355,7 @@ planificadores. Los recursos y las cuotas se practican en los laboratorios de ca
 
 🧪 Laboratorio 122 (incluye drill de requests/limits): [tasks/cka/labs/122](../../labs/122/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Set CPU and memory limits](https://killercoda.com/chadmcrowell/course/ckad/cpu-mem-limits) · [LimitRange for Namespace](https://killercoda.com/chadmcrowell/course/ckad/limitrange-namespace) · [ResourceQuota for Namespace](https://killercoda.com/chadmcrowell/course/ckad/resourcequota-namespace) · [Default CPU/Memory Limits](https://killercoda.com/chadmcrowell/course/ckad/default-cpu-memory)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 13](../13/es.md) · [Capítulo 15](../15/es.md)

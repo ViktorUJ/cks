@@ -416,5 +416,7 @@ Gateway API, Ingress et leur migration se travaillent dans le TP sur le réseau 
 
 🧪 TP 110 : [tasks/cka/labs/110](../../labs/110/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create a Gateway and HTTPRoute](https://killercoda.com/chadmcrowell/course/cka/create-gateway-and-route)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 32](../32/fr.md) · [Chapitre 34](../34/fr.md)

@@ -363,5 +363,7 @@ administración (CKA): la estructura y la instalación del clúster, empezando p
 
 🧪 Laboratorio 120 (incluido el drill de NetworkPolicy): [tasks/cka/labs/120](../../labs/120/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Deny All Ingress](https://killercoda.com/chadmcrowell/course/ckad/default-deny-networkpolicy) · [Allow Namespace Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-namespace-traffic) · [Allow Label-Based Traffic](https://killercoda.com/chadmcrowell/course/ckad/allow-label-traffic) · [Block All Egress](https://killercoda.com/chadmcrowell/course/ckad/block-egress)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 33](../33/es.md) · [Capítulo 35](../35/es.md)

@@ -262,5 +262,7 @@ d'administration (y compris lors de l'installation de composants du cluster).
 
 🧪 TP 115 (Helm) : [tasks/cka/labs/115](../../labs/115/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Installing NGINX Ingress with Helm](https://killercoda.com/chadmcrowell/course/cka/helm-install-nginx)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 41](../41/fr.md) · [Chapitre 43](../43/fr.md)

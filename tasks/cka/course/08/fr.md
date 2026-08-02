@@ -479,5 +479,7 @@ les TP sur les charges de travail.
 
 🧪 TP 102 (rolling update et rollback) : [tasks/cka/labs/102](../../labs/102/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Create and Update Deployments](https://killercoda.com/chadmcrowell/course/ckad/deploy-update) · [Update deployment image](https://killercoda.com/chadmcrowell/course/ckad/update-image) · [Rollback a Deployment](https://killercoda.com/chadmcrowell/course/cka/rollback-deployment) · [Change Rollout Strategy](https://killercoda.com/chadmcrowell/course/cka/change-rollout-strategy)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 7](../07/fr.md) · [Chapitre 9](../09/fr.md)

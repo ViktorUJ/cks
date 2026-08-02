@@ -418,5 +418,7 @@ Ingress y su migración se practican en el laboratorio de red (110).
 
 🧪 Laboratorio 110: [tasks/cka/labs/110](../../labs/110/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create a Gateway and HTTPRoute](https://killercoda.com/chadmcrowell/course/cka/create-gateway-and-route)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 32](../32/es.md) · [Capítulo 34](../34/es.md)

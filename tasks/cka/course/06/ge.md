@@ -431,5 +431,7 @@ pod-ები და Deployment პირველ გაერთიანე�
 
 🧪 ლაბი 101 (namespaces, labels, selectors): [tasks/cka/labs/101](../../labs/101/README_GE.MD)
 
+🎮 Killercoda (ბრაუზერში, ინსტალაციის გარეშე): [Label a pod](https://killercoda.com/chadmcrowell/course/ckad/label-pod) · [Deploy a pod to a new namespace](https://killercoda.com/chadmcrowell/course/ckad/namespace-pod) · [Delete all pods in a namespace](https://killercoda.com/chadmcrowell/course/ckad/delete-pods-namespace)
+
 ---
 [სარჩევი](../README_GE.md) · [თავი 5](../05/ge.md) · [თავი 7](../07/ge.md)

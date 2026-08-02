@@ -298,5 +298,7 @@ configuration et la sécurité.
 
 🧪 TP 105 (Secret) : [tasks/cka/labs/105](../../labs/105/README_FR.MD)
 
+🎮 Killercoda (dans le navigateur, sans installation) : [Mount Secret into pod](https://killercoda.com/chadmcrowell/course/ckad/secret-volume) · [Use Secret as env vars](https://killercoda.com/chadmcrowell/course/ckad/secret-envvars) · [Rotate Secret](https://killercoda.com/chadmcrowell/course/ckad/rotate-secret)
+
 ---
 [Sommaire](../README_FR.md) · [Chapitre 18](../18/fr.md) · [Chapitre 20](../20/fr.md)

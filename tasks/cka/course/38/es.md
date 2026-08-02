@@ -280,5 +280,7 @@ los componentes. RBAC se practica en los laboratorios de seguridad.
 
 🧪 Laboratorio 121 (drills de RBAC + comprobación con auth can-i): [tasks/cka/labs/121](../../labs/121/README_ES.MD)
 
+🎮 Killercoda (en el navegador, sin instalación): [Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding) · [Create New User](https://killercoda.com/chadmcrowell/course/cka/kubernetes-create-user)
+
 ---
 [Índice](../README_ES.md) · [Capítulo 37](../37/es.md) · [Capítulo 39](../39/es.md)
