@@ -1,0 +1,81 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 111 — эталонное решение (обновление кластера kubeadm)
+
+Кластер стартует на `1.33.1`. Задача — обновить control plane и worker до `1.33.2`.
+Порядок: сначала control plane, потом worker; ноды обновляем по одной, освобождая их
+через cordon/drain.
+
+Имена нод берём из `kubectl get nodes` — **эти же имена используем и для `ssh`, и для
+`drain`/`uncordon`** (в этом окружении они резолвятся: `ssh <имя-ноды>` работает):
+
+```bash
+kubectl get nodes
+# запомним имена, например:
+CP=ip-10-10-1-151        # control plane (роль control-plane в выводе)
+WORKER=ip-10-10-1-81     # worker (роль <none>)
+```
+
+## Шаг 1. Control plane
+
+```bash
+# заходим на control plane ноду
+ssh $CP
+
+# обновляем kubeadm до 1.33.2
+sudo apt-mark unhold kubeadm
+sudo apt-get update && sudo apt-get install -y kubeadm=1.33.2-1.1
+sudo apt-mark hold kubeadm
+kubeadm version -o short          # v1.33.2
+
+sudo kubeadm upgrade plan
+sudo kubeadm upgrade apply v1.33.2 -y
+exit
+```
+
+```bash
+# с рабочей машины освобождаем control plane
+kubectl drain $CP --ignore-daemonsets --delete-emptydir-data
+
+# обновляем kubelet и kubectl на самой ноде
+ssh $CP '
+  sudo apt-mark unhold kubelet kubectl
+  sudo apt-get install -y kubelet=1.33.2-1.1 kubectl=1.33.2-1.1
+  sudo apt-mark hold kubelet kubectl
+  sudo systemctl daemon-reload && sudo systemctl restart kubelet
+'
+
+kubectl uncordon $CP
+```
+
+## Шаг 2. Worker-нода
+
+```bash
+# с рабочей машины освобождаем worker
+kubectl drain $WORKER --ignore-daemonsets --delete-emptydir-data
+
+# на worker-ноде обновляем kubeadm и конфигурацию ноды
+ssh $WORKER '
+  sudo apt-mark unhold kubeadm
+  sudo apt-get update && sudo apt-get install -y kubeadm=1.33.2-1.1
+  sudo apt-mark hold kubeadm
+  sudo kubeadm upgrade node
+  sudo apt-mark unhold kubelet kubectl
+  sudo apt-get install -y kubelet=1.33.2-1.1 kubectl=1.33.2-1.1
+  sudo apt-mark hold kubelet kubectl
+  sudo systemctl daemon-reload && sudo systemctl restart kubelet
+'
+
+# с рабочей машины возвращаем worker в работу
+kubectl uncordon $WORKER
+```
+
+## Проверка
+
+```bash
+kubectl get nodes    # все ноды v1.33.2, Ready
+```
+
+> Примечание: если пакетов `1.33.2-1.1` нет, посмотрите доступные:
+> `apt-cache madison kubeadm` и используйте актуальный патч 1.33.x (тогда поправьте
+> `TARGET` в проверке).

@@ -1,0 +1,110 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 117 — эталонное решение (troubleshooting control plane и нод)
+
+Подключение к нодам с рабочей машины:
+
+```bash
+ssh k8s1_controlPlane_1     # control plane
+ssh k8s1_node_node_1        # worker (имя см. в /etc/hosts)
+```
+
+## Задание 1. Починить kube-apiserver (дебаг через crictl)
+
+`kubectl` не работает (`connection refused`) — API-сервер упал. Единственный способ
+разобраться — дебаг на уровне контейнеризации через `crictl`.
+
+```bash
+ssh k8s1_controlPlane_1
+sudo -i
+
+# посмотреть контейнеры — ищем kube-apiserver в состоянии Exited
+crictl ps -a | grep kube-apiserver
+# CONTAINER   IMAGE   CREATED   STATE    NAME                ATTEMPT
+# abc123...   ...     ...       Exited   kube-apiserver      5
+
+# читаем логи упавшего контейнера
+crictl logs <container-id>
+# Error: unknown flag: --invalid-nonexistent-flag
+
+# правим манифест — удаляем строку с битым флагом
+vi /etc/kubernetes/manifests/kube-apiserver.yaml
+# удалить строку:    - --invalid-nonexistent-flag=true
+```
+
+> **Альтернатива:** `grep -n "invalid" /etc/kubernetes/manifests/kube-apiserver.yaml`
+> чтобы найти строку, затем `sed -i '/--invalid-nonexistent-flag/d' /etc/kubernetes/manifests/kube-apiserver.yaml`.
+
+kubelet пересоздаёт статик-под после правки манифеста. Ждём ~30 c:
+
+```bash
+# на control plane
+crictl ps | grep kube-apiserver    # должен быть Running
+exit
+```
+
+```bash
+# на worker PC — проверяем
+kubectl get --raw='/healthz'       # ok
+```
+
+## Задание 2. Починить kube-scheduler
+
+```bash
+# симптом: новые поды не планируются
+kubectl get pod sched-check -n default            # Pending
+kubectl -n kube-system get pods -l component=kube-scheduler   # ImagePullBackOff
+
+# смотрим причину
+kubectl -n kube-system describe pod -l component=kube-scheduler   # bad image tag v0.0.0-broken
+
+# правим статик-под на control plane ноде
+ssh k8s1_controlPlane_1
+sudo vi /etc/kubernetes/manifests/kube-scheduler.yaml
+#   image: registry.k8s.io/kube-scheduler:v0.0.0-broken
+# ->image: registry.k8s.io/kube-scheduler:v1.35.2   (версия = версии кластера)
+```
+
+kubelet сам пересоздаёт статик-под после правки манифеста.
+Через ~30-60 c планировщик поднимется, `sched-check` перейдёт в Running.
+
+> Точную версию образа можно взять из рабочего компонента:
+> `kubectl -n kube-system get pod -l component=kube-apiserver -o jsonpath='{.items[0].spec.containers[0].image}'`
+
+## Задание 3. Починить worker-ноду (NotReady)
+
+```bash
+kubectl get nodes                     # worker в NotReady
+kubectl describe node <worker>        # kubelet не докладывает статус
+
+ssh k8s1_node_node_1
+sudo systemctl status kubelet         # activating/failed
+sudo journalctl -u kubelet -n 10      # failed to load kubelet config file ... NONEXISTENT-config.yaml
+
+# убираем битый drop-in (подменял путь к конфигу)
+sudo rm /etc/systemd/system/kubelet.service.d/99-broken.conf
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+sudo systemctl status kubelet         # active (running)
+```
+
+Через ~30 c нода вернётся в Ready.
+
+## Задание 4. Починить битый статик-под на control plane
+
+```bash
+kubectl get pods -n default           # staticweb-<cp> в ImagePullBackOff
+kubectl describe pod staticweb-<cp> -n default   # образ viktoruj/ping_pong:doesnotexist999
+
+ssh k8s1_controlPlane_1
+sudo vi /etc/kubernetes/manifests/staticweb.yaml
+#   image: viktoruj/ping_pong:doesnotexist999  ->  image: viktoruj/ping_pong:latest
+```
+
+kubelet пересоздаст статик-под, mirror-под `staticweb-<cp>` перейдёт в Running.
+
+## Проверка
+
+```bash
+check_result
+```

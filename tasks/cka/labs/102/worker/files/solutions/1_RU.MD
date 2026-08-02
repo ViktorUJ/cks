@@ -1,0 +1,194 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 102 — эталонное решение (обновления и стратегии деплоя)
+
+## Задание 1. Deployment `web` (viktoruj/ping_pong:latest, 3 реплики)
+
+```bash
+kubectl create deployment web --image=viktoruj/ping_pong:latest --replicas=3
+kubectl rollout status deploy web
+```
+
+## Задание 2. Rolling update `web` → viktoruj/ping_pong:alpine + запись причины
+
+`kubectl create deployment` даёт контейнеру автосгенерированное имя (например,
+`ping-pong-xxxxx`), поэтому в `set image` удобнее указывать `*=` — обновить образ во всех
+контейнерах, не зная точного имени.
+
+```bash
+kubectl set image deployment/web '*=viktoruj/ping_pong:alpine'
+kubectl annotate deployment/web kubernetes.io/change-cause="update to alpine" --overwrite
+kubectl rollout status deploy web
+kubectl rollout history deploy web
+```
+
+## Задание 3. Deployment `roll`: обновить и откатить на предыдущую версию
+
+```bash
+kubectl create deployment roll --image=viktoruj/ping_pong:latest
+kubectl set image deployment/roll '*=viktoruj/ping_pong:alpine'   # ревизия 2
+kubectl rollout status deploy roll
+kubectl rollout undo deployment/roll                 # откат к latest (ревизия 3)
+kubectl get deploy roll -o jsonpath='{.spec.template.spec.containers[0].image}'
+```
+
+## Задание 4. Canary в неймспейсе `canary` (v2 получает ~30%)
+
+Общий сервис `app` выбирает обе версии по метке `app=app`; доля трафика ≈ доле подов
+(v1=7, v2=3 → v2 ≈ 30%).
+
+```bash
+kubectl create namespace canary
+```
+
+```yaml
+# app.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: canary
+spec:
+  selector:
+    app: app            # ловит обе версии
+  ports:
+  - port: 8080
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-v1
+  namespace: canary
+spec:
+  replicas: 7
+  selector:
+    matchLabels:
+      app: app
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: app
+        version: v1
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+        ports:
+        - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-v2
+  namespace: canary
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: app
+        version: v2
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+        env:
+        - name: SERVER_NAME
+          value: appV2
+        ports:
+        - containerPort: 8080
+```
+
+```bash
+kubectl apply -f app.yaml
+kubectl get pods -n canary -l app=app --show-labels
+```
+
+## Задание 5. Стратегия раскатки (maxSurge=2, maxUnavailable=0)
+
+```bash
+kubectl patch deployment web -p '{"spec":{"strategy":{"type":"RollingUpdate","rollingUpdate":{"maxSurge":2,"maxUnavailable":0}}}}'
+kubectl get deploy web -o jsonpath='{.spec.strategy}'
+```
+
+`maxUnavailable: 0` + `maxSurge: 2` — сначала поднимаются новые поды, только потом гасятся
+старые: мощность не теряется в процессе выката.
+
+## Задание 6. Blue/Green (неймспейс `bg`)
+
+```bash
+kubectl create namespace bg
+```
+
+```yaml
+# bg.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bg-blue
+  namespace: bg
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bg
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: bg
+        version: blue
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bg-green
+  namespace: bg
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bg
+      version: green
+  template:
+    metadata:
+      labels:
+        app: bg
+        version: green
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bg-svc
+  namespace: bg
+spec:
+  selector:   # изначально трафик на blue
+    app: bg
+    version: blue
+  ports:
+  - port: 8080
+    targetPort: 8080
+```
+
+```bash
+kubectl apply -f bg.yaml
+# переключение blue -> green одним движением (смена селектора)
+kubectl patch svc bg-svc -n bg -p '{"spec":{"selector":{"app":"bg","version":"green"}}}'
+kubectl get endpoints bg-svc -n bg
+```
+
+Откат так же мгновенен — вернуть селектор на `version: blue`.

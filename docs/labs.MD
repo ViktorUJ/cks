@@ -54,6 +54,31 @@
 | **08** | [Cilium NetworkPolicy  L7](..%2Ftasks%2Fcka%2Flabs%2F08%2FREADME.MD)                                      | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F08%2Fworker%2Ffiles%2Fsolutions%2F1.MD) <br/>  [VIDEO SOLUTION](https://youtu.be/eFZQi6sy3SQ) |
 | **09** | [Gateway API in Kubernetes](..%2Ftasks%2Fcka%2Flabs%2F09%2FREADME.MD)                                     | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F09%2Fworker%2Ffiles%2Fsolutions%2F1.MD)  <br/>  [VIDEO SOLUTION](https://youtu.be/rjqmgYyYQ8U)                                                      |  
 | **10** | [Kubernetes resource orchestration (kro)](..%2Ftasks%2Fcka%2Flabs%2F10%2FREADME.MD)                       | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F10%2Fworker%2Ffiles%2Fsolutions%2F1.MD)    |
+| **101** | [Kubernetes Basics: Pods, Deployment, Namespaces, Labels, Service](..%2Ftasks%2Fcka%2Flabs%2F101%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F101%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **102** | [Updates and Deployment Strategies: rolling update, rollback, canary, blue/green](..%2Ftasks%2Fcka%2Flabs%2F102%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F102%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **103** | [One-off and Scheduled Tasks: Job, CronJob, DaemonSet](..%2Ftasks%2Fcka%2Flabs%2F103%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F103%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **104** | [Scheduling: nodeSelector, taints, resources, static pod, PriorityClass, HPA](..%2Ftasks%2Fcka%2Flabs%2F104%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F104%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **105** | [Configuration: ConfigMap, Secret, Environment Variables](..%2Ftasks%2Fcka%2Flabs%2F105%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F105%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **106** | [Application Security: SecurityContext and Capabilities](..%2Ftasks%2Fcka%2Flabs%2F106%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F106%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **107** | [Application Design: multi-container Pods, images, volumes](..%2Ftasks%2Fcka%2Flabs%2F107%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F107%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **108** | [Storage: PersistentVolume, PersistentVolumeClaim and mounting a volume into a Pod](..%2Ftasks%2Fcka%2Flabs%2F108%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F108%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **109** | [Observability and Maintenance: Probes, Logs, Debugging, Deprecations](..%2Ftasks%2Fcka%2Flabs%2F109%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F109%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **110** | [Networking: Service/DNS, Ingress, NetworkPolicy](..%2Ftasks%2Fcka%2Flabs%2F110%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F110%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **111** | [kubeadm: Cluster Upgrade (lifecycle)](..%2Ftasks%2Fcka%2Flabs%2F111%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F111%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **112** | [etcd: Snapshots and Restore](..%2Ftasks%2Fcka%2Flabs%2F112%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F112%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **113** | [RBAC and Certificates: Role, ClusterRole, ServiceAccount, CSR](..%2Ftasks%2Fcka%2Flabs%2F113%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F113%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **114** | [Troubleshooting: Fixing Broken Resources](..%2Ftasks%2Fcka%2Flabs%2F114%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F114%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **115** | [Extension and Packaging: CRD, Helm, Kustomize](..%2Ftasks%2Fcka%2Flabs%2F115%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F115%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **116** | [kubeadm: Build a Cluster from Scratch (init + join)](..%2Ftasks%2Fcka%2Flabs%2F116%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F116%2Fnode-1%2Ffiles%2Fsolutions%2F1.MD) |
+| **117** | [Troubleshooting: control plane and nodes](..%2Ftasks%2Fcka%2Flabs%2F117%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F117%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **118** | [Troubleshooting: Certificates, CoreDNS and Cluster Networking](..%2Ftasks%2Fcka%2Flabs%2F118%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F118%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **119** | [Speed Drills and JSONPath](..%2Ftasks%2Fcka%2Flabs%2F119%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F119%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **120** | [Drills: Services and Networking](..%2Ftasks%2Fcka%2Flabs%2F120%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F120%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **121** | [Drills: RBAC](..%2Ftasks%2Fcka%2Flabs%2F121%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F121%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **122** | [Drills: Pod Scheduling](..%2Ftasks%2Fcka%2Flabs%2F122%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F122%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **123** | [Low-Level Networking: Installing a CNI from Scratch](..%2Ftasks%2Fcka%2Flabs%2F123%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F123%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
+| **124** | [HA control plane: building a cluster out of 3 control-plane nodes](..%2Ftasks%2Fcka%2Flabs%2F124%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F124%2Fnode-1%2Ffiles%2Fsolutions%2F1.MD) |
+| **125** | [DNS and CoreDNS in the Cluster](..%2Ftasks%2Fcka%2Flabs%2F125%2FREADME.MD) | [SOLUTION](..%2Ftasks%2Fcka%2Flabs%2F125%2Fworker%2Ffiles%2Fsolutions%2F1.MD) |
 
 
 

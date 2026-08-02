@@ -1,0 +1,56 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 108 — эталонное решение (PV, PVC, под с томом)
+
+## Задания 1-3. PV + PVC + под на ноде node_2
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-analytics
+spec:
+  capacity:
+    storage: 100Mi
+  accessModes: ["ReadWriteOnce"]
+  hostPath:
+    path: /pv/analytics
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-analytics
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: analytics
+spec:
+  nodeSelector:
+    node: node_2
+  containers:
+  - name: analytics
+    image: viktoruj/ping_pong:alpine
+    volumeMounts:
+    - name: data
+      mountPath: /pv/analytics
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: pvc-analytics
+```
+
+```bash
+kubectl apply -f pv.yaml
+kubectl get pv,pvc
+kubectl get po analytics -o wide     # должен быть на ноде с меткой node=node_2
+```
+
+Примечания:
+- PV и PVC связываются автоматически по совпадению размера и accessMode.
+- `nodeSelector: node=node_2` сажает под на worker-ноду (там же hostPath `/pv/analytics`).

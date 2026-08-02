@@ -1,0 +1,85 @@
+# Mapping: course chapter -> existing free Killercoda scenarios (Chad M. Crowell)
+# Source repo: https://github.com/chadmcrowell/killercoda-scenarios
+# Verified against ckad/structure.json (73 items) and cka/structure.json (53 items)
+#
+# Format: <chapter-dir> TAB <slug>:<set> TAB ... (max 4 per chapter)
+#   set = d -> https://killercoda.com/chadmcrowell/course/ckad/<slug>
+#   set = a -> https://killercoda.com/chadmcrowell/course/cka/<slug>
+#   set = s -> https://killercoda.com/chadmcrowell/scenario/<slug>   (standalone)
+#
+# Chapters with no match are listed at the bottom as GAPS (labs to build ourselves).
+#
+# RULE: a Killercoda link goes ONLY into a chapter that already has our own lab
+# (the line starting with the test-tube emoji). Chapters without our own lab get
+# no Killercoda link, so practice always stays anchored to our own labs.
+#
+03	explain-spec-containers:d	api-resources:a	declarative-pod:a	list-pods-by-node:d
+04	nginx-pod:d	busybox-sleep:d	restart-policy:a	prestop-hook:d
+05	nginx-deployment:d	scale-deployment:d	create-apache-deployment:a
+06	label-pod:d	namespace-pod:d	delete-pods-namespace:d
+07	clusterip-service:d	nodeport-service:d	headless-service:d	test-service-connectivity:d
+08	deploy-update:d	update-image:d	rollback-deployment:a	change-rollout-strategy:a
+09	blue-green:d	canary-ingress:d
+10	jobs:d	create-job:d
+11	kubernetes-statefulset:s
+12	node-affinity:d	node-affinity-required-preferred:a	node-name:a	nodeselector-cordon:a
+13	taints-tolerations:a	add-toleration:a	remove-taint:a
+14	cpu-mem-limits:d	limitrange-namespace:d	resourcequota-namespace:d	default-cpu-memory:d
+15	priority-class:a
+16	metrics-server:d
+17	configmap-envvars:d	secret-envvars:d	busybox-sleep:d
+18	create-configmap:d	configmap-file-volume:d	configmap-envvars:d	configmap-update:d
+19	secret-volume:d	secret-envvars:d	rotate-secret:d
+20	drop-capabilities:d	readonly-rootfs:d	podsecurity-restricted:d
+21	create-serviceaccount:d	create-sa-for-pod:a	role-rolebinding:d	restrict-rbac:d
+22	volumes:d	kubectl-logs-sidecar:d	kubectl-debug:d
+23	dockerfile:d	nginx-custom:d
+24	volumes:d	nfs-vol:d
+25	persistent-volumes:a	nfs-vol:a	pvc-stuck:a
+26	storage-dynamic:a
+27	readinessprobe-http:d	livenessprobe-restart:d	tcp-probe:d	startup-probe:d
+28	logging:d	metrics-server:d	describe-events:d
+29	kubectl-debug:d	logs-crashloop:d	port-forward-pod:d	debug-go-app:a
+31	dns-resolution:d	modify-cluster-dns:a	communicate-with-svc:a	headless-service:d
+32	ingress-controller:d	ingress-host-routing:d	ingress-tls:d	create-ingress:a
+33	create-gateway-and-route:a
+34	default-deny-networkpolicy:d	allow-namespace-traffic:d	allow-label-traffic:d	block-egress:d
+35	prepare-kubeadm:a
+36	upgrade-k8s:a	upgrade-kubelet:a
+37	kubernetes-backup-etcd:s
+38	create-role:a	create-cluster-role:a	role-rolebinding:d	kubernetes-create-user:a
+39	pki-essentials:a	view-certificate:a	kubernetes-create-user:a
+41	database-operator:a	create-operator:s
+42	helm-install-nginx:a
+43	kustomize-apply:d	kustomize-env-overlay:d	kustomize-patch-image:d	kustomize-configmap-secret:d
+44	logs-crashloop:d	describe-events:d	debug-go-app:a	kubectl-debug:d
+45	node-notready:a	kubelet-status:a	cordon-drain-node:a
+46	broken-path:a	debug-services:d	test-service-connectivity:d
+47	playground:d
+48	single-node:a	two-node:a
+#
+# EXCLUDED BY DESIGN - Part 0 (preparatory chapters).
+# Part 0 comes BEFORE Pods are introduced (chapter 4) and the contents page states
+# explicitly that this part has no labs of its own. Every candidate scenario here
+# creates Pods or assumes a running cluster, so linking them would break the
+# teaching order. Do not re-add. Candidates that were considered and dropped:
+#   00-1-net         (none found)
+#   00-2-dns         dns-resolution:d          - resolves DNS between Pods
+#   00-3-tls         pki-essentials:a, ingress-tls:d - cluster PKI / Ingress + Pods
+#   00-4-containers  dockerfile:d, nginx-custom:d   - builds image, runs it as a Pod
+#   00-5-linux       linux-services:a, ssh-practice:a, kubelet-status:a - no Pods,
+#                    but still need a live cluster; dropped to keep "Part 0 has no labs"
+#   00-6-yaml        declarative-pod:a         - creates a Pod
+#   00-7-netns       (none found)
+#   00-8-vim         (none found)
+#
+# EXCLUDED - chapter has no lab of our own, so no Killercoda link either:
+#   01  Introduction          (candidates were playground:d, single-node:a, two-node:a)
+#   02  Cluster architecture  (candidates were api-resources:a, kubelet-status:a)
+#
+# GAPS - no suitable free Killercoda scenario found, build our own later:
+# 30            Kubernetes network model + CNI internals
+# 35-2-ha       HA control plane, etcd topologies, load balancer
+# 35-3-design   cluster design and sizing, IaC
+# 40            extension interfaces CNI / CSI / CRI
+# 16 (partial)  HPA autoscaling itself - only metrics-server prerequisite exists

@@ -1,0 +1,189 @@
+[Русская версия](1_RU.MD) · [Eng version](1.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Lab 104 — solución de referencia (planificación, recursos, HPA)
+
+## Tarea 1. Pod `alpine` en el nodo con la etiqueta `disk=ssd`
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alpine
+spec:
+  nodeSelector:
+    disk: ssd
+  containers:
+  - name: alpine
+    image: alpine:3.15
+    command: ["sleep", "6000"]
+```
+
+```bash
+kubectl apply -f alpine.yaml
+kubectl get po alpine -o wide
+```
+
+## Tarea 2. Taint del nodo + pod `alpha` con toleration
+
+```bash
+# ponemos el taint en el nodo worker (el que tiene la etiqueta disk=ssd)
+NODE=$(kubectl get nodes -l disk=ssd -o jsonpath='{.items[0].metadata.name}')
+kubectl taint nodes $NODE app_type=alpha:NoSchedule
+```
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alpha
+spec:
+  tolerations:
+  - key: app_type
+    operator: Equal
+    value: alpha
+    effect: NoSchedule
+  containers:
+  - name: alpha
+    image: redis
+```
+
+```bash
+kubectl apply -f alpha.yaml
+```
+
+## Tarea 3. Static pod `static-busybox` en el control-plane
+
+En el nodo control-plane (por SSH) coloca el manifiesto en `/etc/kubernetes/manifests/`:
+
+```yaml
+# /etc/kubernetes/manifests/static-busybox.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: static-busybox
+  labels:
+    pod-type: static-pod
+spec:
+  containers:
+  - name: static-busybox
+    image: viktoruj/ping_pong:alpine
+```
+
+kubelet levanta el pod por sí mismo; en la API aparece como `static-busybox-<nombre-del-nodo>`.
+
+## Tarea 4. PriorityClass + deployment
+
+```bash
+kubectl create priorityclass high-priority --value=1000000
+kubectl create deployment prio-app --image=viktoruj/ping_pong:latest
+kubectl patch deployment prio-app -p '{"spec":{"template":{"spec":{"priorityClassName":"high-priority"}}}}'
+```
+
+## Tarea 5. HPA
+
+```bash
+kubectl create deployment hpa-app --image=viktoruj/ping_pong:latest
+kubectl set resources deployment hpa-app --requests=cpu=100m
+kubectl autoscale deployment hpa-app --min=2 --max=10 --cpu-percent=50
+```
+
+## Tarea 6. Deployment con PodAntiAffinity + PDB
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: important-app2
+  namespace: app2-system
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: important-app2
+  template:
+    metadata:
+      labels:
+        app: important-app2
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: important-app2
+            topologyKey: kubernetes.io/hostname
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: important-app2
+        image: viktoruj/ping_pong:latest
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: important-app2
+  namespace: app2-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: important-app2
+```
+
+```bash
+kubectl create namespace app2-system
+kubectl apply -f app2.yaml
+```
+
+## Tarea 7. Distribución estricta mediante topologySpreadConstraints
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spread-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: spread-app
+  template:
+    metadata:
+      labels:
+        app: spread-app
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule       # ESTRICTO
+        labelSelector:
+          matchLabels:
+            app: spread-app
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: spread-app
+        image: viktoruj/ping_pong:latest
+```
+
+```bash
+kubectl apply -f spread.yaml
+kubectl get po -l app=spread-app -o wide     # uno por nodo
+```
+
+**Estricto vs flexible.** `whenUnsatisfiable: DoNotSchedule` es estricto: si no se puede
+repartir de forma uniforme (hay menos nodos de los necesarios), el pod sobrante se queda en
+`Pending`. Para que los pods arranquen igualmente admitiendo cierto desequilibrio, cámbialo
+al modo **flexible**:
+
+```yaml
+        whenUnsatisfiable: ScheduleAnyway      # FLEXIBLE (con tolerancia al desequilibrio)
+```
+
+Lo mismo ocurre con podAntiAffinity: `requiredDuringScheduling...` es estricto (riesgo de
+Pending), `preferredDuringScheduling...` (con `weight`) es flexible (todos los pods
+arrancarán).
