@@ -1,0 +1,69 @@
+# Mapping: EKS course chapter -> lab
+#
+# Format: <chapter> TAB <lab> TAB <status> TAB <title>
+#   status = ready   -> lab exists and is linked from the chapter
+#            todo    -> lab has to be built
+#
+# RULE (same as the CKA course): the test-tube marker in the contents page goes
+# ONLY into a chapter that has its own lab. New course labs are numbered 101+ to
+# keep them apart from the old EKS labs 01-04.
+#
+# Every lab follows the existing EKS lab layout:
+#   env.hcl, vpc/, eks_control_plane/, eks_addons/, worker/ with
+#   worker/files/{worker.sh,tests.bats,tasks/,solutions/}
+# check_result = bats /var/work/tests/tests.bats
+#
+12	02	ready	Karpenter Basics: NodePool, EC2NodeClass, consolidation, drift
+35	03	ready	Application autoscaling with KEDA and Prometheus
+#
+04,06,09,10	101	todo	Cluster as code: VPC, control plane, managed node group, kubeconfig
+05	102	todo	Cluster access: IAM to RBAC, access entries and access policies
+06,07,14	103	todo	IP address planning: ENI limits, prefix delegation, secondary CIDR
+16,17	104	todo	Workload identity: IRSA and Pod Identity for an app reading S3 and Secrets Manager
+18	105	todo	Secrets: External Secrets with Secrets Manager, KMS envelope encryption
+23	106	todo	EBS CSI: StatefulSet on gp3, volume expansion, snapshot, AZ affinity
+24	107	todo	EFS CSI: ReadWriteMany across AZ
+26	108	todo	AWS Load Balancer Controller: NLB for a Service of type LoadBalancer
+27,29	109	todo	ALB Ingress with ACM certificate, external-dns and Route 53
+30	110	todo	NetworkPolicy in EKS: VPC CNI network policy, default deny, egress rules
+13	111	todo	Spot nodes: diversification, interruption handling, graceful drain
+15	112	todo	Fargate profiles: what runs there, what breaks, cost comparison
+37,38,39	113	todo	Cluster upgrade and rollback: control plane, node groups, addons, deprecated API check, version rollback within the 7 day window
+33	114	todo	Observability: Container Insights and Managed Prometheus with Grafana
+34	115	todo	Logging: Fluent Bit to CloudWatch Logs, filtering and retention
+19	116	todo	Hardening: IMDSv2 hop limit, Pod Security Admission, private endpoint
+31,43	117	todo	Traffic cost and egress control: NAT versus VPC endpoints, OpenCost report
+44	118	todo	GitOps: Argo CD driving the cluster from git
+45	119	todo	Troubleshooting: node does not reach Ready (IAM, SG, user data, kubelet)
+46	120	todo	Troubleshooting: broken networking and unhealthy load balancer targets
+47	121	todo	Troubleshooting: access denied (access entries, IRSA, webhook, kubeconfig)
+41,42	122	todo	AWS Backup for EKS: on-demand backup of cluster state and EBS volumes, namespace restore, restore into a second cluster
+#
+# NO LAB BY DESIGN - theory or design chapters, no reproducible hands-on target:
+#   00-1 .. 00-5  Part 0, AWS fundamentals (mirrors "Part 0 has no labs" in CKA)
+#   01  what EKS takes over
+#   02  control plane internals            (covered indirectly by lab 101)
+#   03  version lifecycle                  (covered indirectly by lab 113)
+#   08  alternative CNI                    (candidate for a later lab)
+#   11  Cluster Autoscaler versus Karpenter (compared inside lab 02)
+#   20  ECR and supply chain               (candidate for a later lab)
+#   21  audit and detection                (needs GuardDuty, paid and slow)
+#   22  policies and multitenancy          (candidate for a later lab)
+#   25  Mountpoint for S3                  (candidate for a later lab)
+#   28  Gateway API and VPC Lattice        (candidate for a later lab)
+#   32  multicluster and multiaccount      (needs 2 accounts)
+#   36  tracing with ADOT and X-Ray        (candidate for a later lab)
+#   40  reliability: PDB, topology spread  (partly inside labs 101 and 113)
+#   48  production checklist
+#
+# NOTE on chapters 41-42 (AWS Backup for EKS). Lab prerequisites, taken from
+# https://docs.aws.amazon.com/aws-backup/latest/devguide/eks-backups.html :
+#   - cluster authentication mode must be API or API_AND_CONFIG_MAP, AWS Backup
+#     creates its own access entry
+#   - backup role: AWSBackupServiceRolePolicyForBackup, restore role:
+#     AWSBackupServiceRolePolicyForRestores
+#   - EBS CSI addon must be installed on the restore target
+#   - restores are non-destructive, existing objects are never overwritten, so the
+#     lab has to delete the namespace (or restore into a second cluster) to show it
+#   - not supported: in-tree volumes and CSI migration, FSx via CSI, S3 prefixes,
+#     cross-account EFS, EFS non-root subpath mounts, EKS on Outposts
