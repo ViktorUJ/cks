@@ -1,31 +1,34 @@
-# Mapping: EKS course chapter -> lab
+# Mapping: EKS course chapter -> course lab
 #
 # Format: <chapter> TAB <lab> TAB <status> TAB <title>
-#   status = ready   -> lab exists and is linked from the chapter
-#            todo    -> lab has to be built
+#   status = todo -> lab has to be built
+#            ready -> lab exists and is linked from the chapter
 #
-# RULE (same as the CKA course): the test-tube marker in the contents page goes
-# ONLY into a chapter that has its own lab. New course labs are numbered 101+ to
-# keep them apart from the old EKS labs 01-04.
+# INDEPENDENT SET. The course has its own lab set numbered 101+, exactly like the CKA
+# course got labs 101-125 next to the untouched older labs. The existing EKS labs 01-04
+# are NOT part of the course and MUST NOT be modified: no edits, no renames, no added
+# tasks. If a topic is already covered by an old lab, the course still gets its own lab.
+#
+# RULE: the test-tube marker in the contents page goes ONLY into a chapter whose own
+# course lab already exists. Until a lab is built, its chapter carries no marker.
 #
 # Every lab follows the existing EKS lab layout:
 #   env.hcl, vpc/, eks_control_plane/, eks_addons/, worker/ with
 #   worker/files/{worker.sh,tests.bats,tasks/,solutions/}
 # check_result = bats /var/work/tests/tests.bats
 #
-12	02	ready	Karpenter Basics: NodePool, EC2NodeClass, consolidation, drift
-35	03	ready	Application autoscaling with KEDA and Prometheus
+# Chapter numbers refer to tasks/eks/course/README_RU.md (48 chapters).
 #
 04,06,09,10	101	todo	Cluster as code: VPC, control plane, managed node group, kubeconfig
 05	102	todo	Cluster access: IAM to RBAC, access entries and access policies
 06,07,14	103	todo	IP address planning: ENI limits, prefix delegation, secondary CIDR
 16,17	104	todo	Workload identity: IRSA and Pod Identity for an app reading S3 and Secrets Manager
 18	105	todo	Secrets: External Secrets with Secrets Manager, KMS envelope encryption
-23	106	todo	EBS CSI: StatefulSet on gp3, volume expansion, snapshot, AZ affinity
+23	106	todo	EBS CSI: StatefulSet on gp3, volume expansion, snapshot - MUST include the Immediate versus WaitForFirstConsumer failure and fix (see .content-notes.md)
 24	107	todo	EFS CSI: ReadWriteMany across AZ
 26	108	todo	AWS Load Balancer Controller: NLB for a Service of type LoadBalancer
 27,29	109	todo	ALB Ingress with ACM certificate, external-dns and Route 53
-30	110	todo	NetworkPolicy in EKS: VPC CNI network policy, default deny, egress rules
+30	110	todo	NetworkPolicy in EKS: built-in VPC CNI network policy (eBPF), default deny, label and namespace rules, egress (see .content-notes.md)
 13	111	todo	Spot nodes: diversification, interruption handling, graceful drain
 15	112	todo	Fargate profiles: what runs there, what breaks, cost comparison
 37,38,39	113	todo	Cluster upgrade and rollback: control plane, node groups, addons, deprecated API check, version rollback within the 7 day window
@@ -38,14 +41,26 @@
 46	120	todo	Troubleshooting: broken networking and unhealthy load balancer targets
 47	121	todo	Troubleshooting: access denied (access entries, IRSA, webhook, kubeconfig)
 41,42	122	todo	AWS Backup for EKS: on-demand backup of cluster state and EBS volumes, namespace restore, restore into a second cluster
+12	123	todo	Karpenter: NodePool, EC2NodeClass, consolidation, drift, plus safe eviction of StatefulSet - PDB, karpenter.sh/do-not-disrupt, NodePool disruption budgets (see .content-notes.md)
+35	124	todo	Application autoscaling: HPA on external metrics, KEDA with a Prometheus trigger, load generator
+09	125	todo	EKS Auto Mode versus own stack: enable Auto Mode, default NodePools, no SSH or SSM on nodes, 21 day node lifetime, custom NodePool, where the own stack wins (see .content-notes.md)
+#
+# EXISTING LABS, OUT OF SCOPE - listed only so nobody wires them into the course:
+#   01  stub
+#   02  Karpenter Basics                  -> course covers the topic in lab 123
+#   03  App autoscaling with KEDA         -> course covers the topic in lab 124
+#   04  empty
+#   template  Karpenter workshop template
 #
 # NO LAB BY DESIGN - theory or design chapters, no reproducible hands-on target:
 #   00-1 .. 00-5  Part 0, AWS fundamentals (mirrors "Part 0 has no labs" in CKA)
 #   01  what EKS takes over
 #   02  control plane internals            (covered indirectly by lab 101)
 #   03  version lifecycle                  (covered indirectly by lab 113)
-#   08  alternative CNI                    (candidate for a later lab)
-#   11  Cluster Autoscaler versus Karpenter (compared inside lab 02)
+#   08  alternative CNI                    (candidate for a later lab; the chapter must
+#                                           compare VPC CNI network policy against Cilium
+#                                           in CNI chaining and full replacement modes)
+#   11  Cluster Autoscaler versus Karpenter (compared inside lab 123)
 #   20  ECR and supply chain               (candidate for a later lab)
 #   21  audit and detection                (needs GuardDuty, paid and slow)
 #   22  policies and multitenancy          (candidate for a later lab)
