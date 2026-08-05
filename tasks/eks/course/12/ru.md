@@ -1,0 +1,402 @@
+# Глава 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift
+
+> **Что дальше.** В главе 11 разобрали выбор между Cluster Autoscaler и Karpenter на уровне
+> подхода и связь Karpenter с Auto Mode. Здесь - предметная конфигурация: объекты `NodePool` и
+> `EC2NodeClass`, как Karpenter выбирает инстанс, и главное - disruption: consolidation, drift
+> и безопасное выселение нагрузок, включая StatefulSet. Spot предметно - глава 13, AMI и
+> bootstrap - глава 10, тома EBS и привязка к AZ - глава 23, сайзинг - глава 14, апгрейд
+> кластера - глава 38.
+
+## 12.1. «Консолидация уронила StatefulSet» и «ноды не обновляются»
+
+Karpenter включён, ноды поднимаются под нагрузку - на первый взгляд всё работает. А потом
+происходит одно из двух, и оба раза виноват один и тот же механизм.
+
+Сценарий первый: трафик спал, Karpenter уплотняет кластер и выселяет поды с недозагруженных
+нод. Доходит до реплики базы из StatefulSet - и та переезжает вместе с нодой, теряя локальные
+данные или разрывая кворум. Сценарий второй, зеркальный: вышел новый AMI с закрытыми CVE, ноды
+должны обновиться - но не меняются неделями, а что блокирует замену - неочевидно.
+
+```bash
+kubectl get nodeclaims
+kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i disrupt
+```
+
+Оба случая - про то, как Karpenter создаёт и убирает ноды: поднять ноду мало, нужно, чтобы её
+замена и удаление не роняли нагрузку и не застревали навсегда. Об этом глава.
+
+## 12.2. NodePool: рамки для создаваемых нод
+
+`NodePool` описывает границы, в которых Karpenter волен создавать ноды, и правила их жизненного
+цикла. Без хотя бы одного `NodePool` Karpenter не делает ничего. Ключевые части:
+
+- `template.spec.requirements` - разрешённые типы, зоны, архитектуры, capacity type через
+  well-known labels (`karpenter.k8s.aws/instance-category`, `kubernetes.io/arch`,
+  `topology.kubernetes.io/zone`, `karpenter.sh/capacity-type`).
+- `template.metadata.labels` и `template.spec.taints` - метки и taint для создаваемых нод.
+- `template.spec.nodeClassRef` - ссылка на `EC2NodeClass`; `disruption` - политика уплотнения и
+  бюджеты (раздел 12.5); `limits` - потолок пула; `weight` - приоритет пула (выше вес -
+  раньше).
+
+```yaml
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: default
+spec:
+  template:
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: karpenter.k8s.aws/instance-category
+          operator: In
+          values: ["c", "m", "r"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+      expireAfter: 720h
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m
+```
+
+Рекомендация документации: не сужать `requirements` больше необходимого. Чем шире набор типов,
+тем гибче укладка подов и тем устойчивее spot-нагрузки (глава 13).
+
+## 12.3. EC2NodeClass: AWS-специфика ноды
+
+`EC2NodeClass` описывает то, что относится именно к AWS. Каждый `NodePool` ссылается на один
+класс; несколько пулов могут делить один класс. Что задаётся:
+
+- `amiFamily` - семейство образа (`AL2023`, `Bottlerocket`, `AL2`, `Custom`): логика bootstrap
+  и дефолтные block device mappings; детали образов - глава 10.
+- `amiSelectorTerms` - какие AMI брать: по `alias` (`al2023@latest`), `id`, `name`, `tags`
+  (обязательное поле). `role` или `instanceProfile` - IAM-идентичность ноды (одно из двух).
+- `subnetSelectorTerms`, `securityGroupSelectorTerms` - подсети и SG по тегам или id (внутри
+  term условия по AND, разные terms по OR).
+- `blockDeviceMappings` - диски; `metadataOptions` - IMDS, по умолчанию `httpTokens: required`
+  (IMDSv2) и `httpPutResponseHopLimit: 1` (харденинг - глава 19).
+
+```yaml
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest
+  role: "KarpenterNodeRole-my-cluster"
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "my-cluster"
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "my-cluster"
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs: {volumeSize: 50Gi, volumeType: gp3, encrypted: true}
+  metadataOptions:
+    httpTokens: required          # IMDSv2
+    httpPutResponseHopLimit: 1
+```
+
+| Что настраивается | NodePool | EC2NodeClass |
+|---|---|---|
+| Типы, зоны, архитектуры, capacity type | да | нет |
+| Labels и taints нод, политика disruption | да | нет |
+| AMI, семейство образа, bootstrap | нет | да |
+| IAM-роль, подсети, SG, диски, IMDS | нет | да |
+
+Про `alias: al2023@latest`: удобно, но для продакшена не рекомендуется - новый AMI сразу
+поднимет drift на всех нодах. Лучше пинить версию и катить обновление осознанно (глава 38).
+
+## 12.4. Как Karpenter выбирает инстанс
+
+Логика подбора идёт от подов, а не от заранее нарезанных групп. Karpenter читает у
+неразмещённых подов `requests`, `nodeSelector`, `affinity`, `topologySpreadConstraints`,
+`tolerations`, пересекает их с `requirements` из `NodePool` и получает набор подходящих типов,
+из которого берёт вариант, что вмещает поды и обходится дешевле.
+
+```mermaid
+flowchart TB
+    pods["Неразмещённые<br>поды: requests"] --> merge["Пересечь с<br>requirements"]
+    merge --> set["Набор подходящих<br>типов и зон"]
+    set --> pick["Выбрать дешевле<br>по capacity type"]
+    pick --> launch["Запуск<br>через EC2"]
+    style merge fill:#4285f4,color:#fff
+    style pick fill:#0f9d58,color:#fff
+```
+
+Если разрешено несколько capacity type, приоритет фиксированный: `reserved` (capacity
+reservations), затем `spot`, затем `on-demand`; при нехватке ёмкости Karpenter откатывается на
+следующий тип. Отсюда правило: широкий `requirements` - это хорошо. Один-два типа не оставляют
+выбора: под spot растёт частота прерываний (глава 13), под on-demand - риск нехватки ёмкости
+типа в зоне.
+
+## 12.5. Disruption: как Karpenter убирает и заменяет ноды
+
+Disruption - это то, как Karpenter добровольно прекращает работу нод. Контроллер выполняет по
+одному методу за раз и в строгом порядке: **сначала Drift, потом Consolidation** (плюс
+форсированные Expiration и Interruption). Порядок важен для диагностики: если нода и дрейфует,
+и недозагружена, Karpenter сперва займётся дрейфом. При любом добровольном методе он ставит на
+ноду taint `karpenter.sh/disrupted:NoSchedule`, заранее поднимает замену и лишь потом дренирует
+старую ноду через Kubernetes Eviction API - то есть с уважением к PDB.
+
+**Consolidation** - активное уплотнение ради стоимости. Управляется `consolidationPolicy`
+(какие ноды рассматривать) и `consolidateAfter` (сколько ждать стабильности ноды; таймер
+сбрасывается при добавлении или удалении пода; `Never` отключает consolidation).
+
+| consolidationPolicy | Какие ноды трогает | Когда выбирать |
+|---|---|---|
+| `WhenEmpty` | только пустые (лишь DaemonSet и «дешёвые» поды) | нужен самый бережный режим |
+| `Balanced` | как ниже, но если экономия оправдывает прерывание | компромисс экономии и churn |
+| `WhenEmptyOrUnderutilized` | любые, что можно убрать или заменить дешевле | максимальная экономия |
+
+**Drift** - приведение ноды к желаемому состоянию: нода дрейфует, если значения в её
+`NodeClaim` разошлись с `NodePool` или `EC2NodeClass`. Drift-поля: `requirements` в `NodePool`
+и `subnetSelectorTerms`, `securityGroupSelectorTerms`, `amiSelectorTerms` в `EC2NodeClass`.
+Самый частый триггер - новый AMI. Поведенческие поля (`weight`, `limits`, `disruption.*`) на
+drift не влияют.
+
+## 12.6. Контроль выселения: чем тормозить и чем нет
+
+Здесь живёт разница между «уронили нагрузку» и «застряли навсегда». Инструментов четыре.
+
+**PodDisruptionBudget (PDB)** - основной тормоз. Karpenter дренирует ноду через Eviction API,
+поэтому под с блокирующим PDB не будет вытеснен при добровольном прерывании. Для StatefulSet
+типично `maxUnavailable: 1`. Пока PDB не даёт вытеснить под, нода уже помечена taint
+`karpenter.sh/disrupted:NoSchedule` (cordoned), но не удаляется - висит в этом состоянии:
+
+```bash
+kubectl describe node <node> | grep -A2 Unconsolidatable
+# Normal  Unconsolidatable  ...  pdb default/db-pdb prevents pod evictions
+```
+
+Тонкость: если под попадает под несколько PDB или на ноде поды из разных PDB, все эти PDB
+должны одновременно разрешать вытеснение. Один блокирующий PDB держит всю ноду.
+
+**Аннотация `karpenter.sh/do-not-disrupt` на поде** защищает всю ноду от добровольного
+прерывания, пока под жив: `"true"` - постоянно, длительность (`"30m"`) - временно после старта
+пода. Ту же аннотацию можно повесить на `NodeClaim` или ноду.
+
+**Disruption budgets в `NodePool`** ограничивают темп прерываний: доля или число одновременно
+прерываемых нод (`nodes: "20%"` или `nodes: "5"`), опционально с окном по расписанию
+(`schedule` в cron плюс `duration`) для тихих часов. По умолчанию действует бюджет
+`nodes: 10%`. Бюджет привязывается к причине через `reasons`: `Drifted`, `Underutilized`,
+`Empty`.
+
+```yaml
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    budgets:
+      - nodes: "20%"
+      - schedule: "0 9 * * mon-fri"
+        duration: 8h
+        nodes: "0"
+```
+
+**`terminationGracePeriod` и `expireAfter`** задают временные рамки. `expireAfter` (по
+умолчанию `720h`) - максимальный срок жизни ноды, после которого она форсированно дренируется.
+`terminationGracePeriod` - предел дренажа: по его истечении оставшиеся поды удаляются
+принудительно (связь с graceful shutdown приложения). Вместе они задают потолок жизни ноды.
+
+| Механизм | Уровень | Consolidation | Drift | Forceful (expiration/interruption) |
+|---|---|---|---|---|
+| PDB | под | тормозит | тормозит (без `terminationGracePeriod`) | нет |
+| `do-not-disrupt` на поде | под/нода | тормозит | тормозит (без `terminationGracePeriod`) | нет |
+| disruption budget | NodePool | тормозит | тормозит | нет (expiration игнорирует бюджеты) |
+| `terminationGracePeriod` | NodePool | ограничивает дренаж | снимает блок PDB/do-not-disrupt | ограничивает дренаж |
+
+Правая колонка критична: forceful-методы бюджетами и аннотациями не остановить. Expiration и
+Interruption начинают дренаж сразу; их можно только сгладить через PDB на уровне приложения.
+
+## 12.7. Безопасное выселение StatefulSet при консолидации
+
+Соберём сценарий из 12.1 правильно: StatefulSet базы данных, консолидация включена, уплотнение
+не должно ронять кворум. Без PDB реплика выселяется немедленно - кворум под угрозой. С PDB
+`maxUnavailable: 1` Karpenter вытесняет реплики строго по одной, дожидаясь восстановления
+каждой. Но если консолидация захочет убрать сразу несколько нод с репликами, PDB заблокирует
+часть вытеснений, и ноды повиснут cordoned.
+
+```mermaid
+flowchart TB
+    cons["Consolidation<br>выбрал ноду"] --> taint["Taint<br>NoSchedule"]
+    taint --> evict["Eviction API"]
+    evict --> pdb{"PDB<br>разрешает?"}
+    pdb -->|да| drain["Реплика переехала,<br>нода удалена"]
+    pdb -->|нет| stuck["Нода висит<br>cordoned"]
+    style cons fill:#4285f4,color:#fff
+    style stuck fill:#db4437,color:#fff
+    style drain fill:#0f9d58,color:#fff
+```
+
+Заблокированное выселение видно в логах и событиях:
+
+```bash
+kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter -f | grep -i pdb
+kubectl get pdb -A
+```
+
+Корректная конфигурация складывается из трёх частей, а не одной:
+
+- **PDB** `maxUnavailable: 1` на StatefulSet - поштучное выселение и сохранность кворума;
+- **disruption budget** в `NodePool` - ограничивает темп, чтобы Karpenter не тронул сразу все
+  ноды с репликами (`nodes: "20%"` плюс тихое окно на рабочие часы);
+- **`do-not-disrupt`** - точечно, только там, где прерывание недопустимо (лидер, миграция,
+  длинная batch-задача), а не на всём подряд.
+
+## 12.8. Ловушка: строгая защита блокирует не только consolidation, но и drift
+
+Самая коварная ошибка вытекает из таблицы 12.6. PDB и `do-not-disrupt` тормозят добровольные
+прерывания целиком - и consolidation, и **drift**. Инженер ставит `do-not-disrupt: "true"` на
+все поды или PDB `maxUnavailable: 0`, чтобы «ничего не трогалось», - и получает второй сценарий
+из 12.1: ноды не обновляются.
+
+Логика такая: вышел новый AMI, старые ноды помечены drifted, Karpenter хочет их заменить, но
+дренаж блокируется. Ноды остаются на старом образе неделями: копятся незакрытые CVE, отстают
+версии kubelet и компонентов, растёт долг. При апгрейде кластера (глава 38) это выливается в
+застрявшее обновление нод.
+
+Выход - `terminationGracePeriod` на `NodePool`: когда он задан, нода дрейфует даже при
+блокирующих PDB или аннотации `do-not-disrupt`, по истечении периода поды удаляются
+принудительно. Это предохранитель для критичных обновлений (AMI с исправлением CVE).
+Документация прямо предупреждает: не задавать `expireAfter` без `terminationGracePeriod` при
+наличии `do-not-disrupt`, иначе получите частично продренированные ноды, висящие вечно. Баланс:
+защищать нагрузку ровно настолько, насколько нужно, и всегда ставить `terminationGracePeriod`.
+
+## 12.9. Взаимодействие с томами EBS: привязка к зоне
+
+Отдельная ловушка касается StatefulSet с томами EBS. Том EBS живёт в конкретной AZ и не
+монтируется к инстансу в другой зоне, поэтому реплика через свой PVC привязана к зоне тома.
+
+Следствие для consolidation: Karpenter не может перенести такую реплику в другую AZ ради
+уплотнения - новая нода обязана подняться в той же зоне, где лежит том. Если уплотнять там
+нечего, реплика остаётся на месте - это норма, а не сбой. При замене ноды (drift, expiration)
+новая поднимается в той же AZ, том переприсоединяется, под возвращается.
+
+Отсюда практика: топологию закладывают заранее - разносят реплики по зонам через
+`topologySpreadConstraints`, а тома создают с `volumeBindingMode: WaitForFirstConsumer`, чтобы
+провижининг шёл в зону выбранной ноды. Механика StorageClass и `allowedTopologies` - глава 23.
+
+## 12.10. Эксплуатация: наблюдение и типовые ошибки
+
+Что смотреть на живом кластере, когда Karpenter ведёт себя не так, как ожидалось:
+
+```bash
+kubectl get nodepools
+kubectl get ec2nodeclasses
+kubectl get nodeclaims
+kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter -f
+kubectl describe node <node>            # события Unconsolidatable
+```
+
+`NodeClaim` - заявка Karpenter на конкретную ноду; связка `NodePool -> NodeClaim -> Node`
+показывает, чья это нода. Karpenter экспортирует метрики Prometheus (в том числе по
+consolidation) для дашбордов (глава 33). Типовые ошибки:
+
+- **Ноды не консолидируются** - событие `Unconsolidatable` с причиной
+  `pdb ... prevents pod evictions` (блокирующий PDB) или
+  `can't replace with a lower-priced node` (дешевле некуда).
+- **Ноды не обновляются (drift застрял)** - строгие PDB или `do-not-disrupt` без
+  `terminationGracePeriod` (раздел 12.8).
+- **`EC2NodeClass` not Ready** - не находятся подсети, SG или AMI; смотреть
+  `status.conditions`. Пока класс не Ready, ссылающиеся пулы не участвуют в планировании.
+- **Слишком узкий `requirements`** - тип не подобрать, поды висят в `Pending`.
+
+## 12.11. Как это применяют в продакшене
+
+- **`requirements` держат широким**, сужая только по необходимости: выбор типов, плотная
+  укладка, устойчивость spot (глава 13).
+- **Версию AMI пинят**, а не `@latest` в проде: обновление катят осознанно через контролируемый
+  drift (глава 38).
+- **StatefulSet защищают связкой PDB плюс disruption budget**: PDB даёт поштучное выселение,
+  бюджет ограничивает темп и задаёт тихие окна.
+- **`terminationGracePeriod` ставят всегда**, если есть `do-not-disrupt` или строгие PDB - как
+  предохранитель, чтобы drift и обновления не застревали.
+- **`do-not-disrupt` применяют точечно** - на конкретные критичные поды, а не на весь
+  namespace.
+- **Топологию по AZ закладывают заранее**, понимая, что консолидация не переносит тома EBS
+  между зонами.
+
+## 12.12. Мини-глоссарий
+
+- **NodePool** - CRD (`karpenter.sh/v1`), задающий границы нод: `requirements`, `limits`,
+  `weight`, labels/taints, политику disruption.
+- **EC2NodeClass** - CRD (`karpenter.k8s.aws/v1`) с AWS-настройками: AMI, IAM-роль, подсети и
+  SG, диски, IMDS.
+- **NodeClaim** - заявка Karpenter на конкретную ноду; связывает `NodePool` и реальный `Node`.
+- **Consolidation** - добровольное уплотнение ради стоимости; режимы `WhenEmpty`, `Balanced`,
+  `WhenEmptyOrUnderutilized`, параметр `consolidateAfter`.
+- **Drift** - расхождение ноды с желаемым состоянием (новый AMI, изменённые селекторы или
+  `requirements`); выполняется раньше consolidation.
+- **Disruption budget** - лимит темпа добровольных прерываний: доля/число нод, окна по
+  `schedule` и `duration`, привязка к `reasons`.
+- **`terminationGracePeriod`** - предел дренажа ноды; при его наличии drift идёт даже через
+  блокирующие PDB и `do-not-disrupt`.
+
+## 12.13. Итоги главы
+
+- `NodePool` задаёт рамки нод, `EC2NodeClass` - AWS-специфику (AMI, роль, подсети, SG, диски,
+  IMDS). Один класс могут делить несколько пулов.
+- Karpenter выбирает инстанс от подов: пересекает requests с `requirements`, берёт дешевле.
+  Приоритет capacity type: `reserved`, `spot`, `on-demand`.
+- Disruption идёт по одному методу за раз: сначала Drift, потом Consolidation (плюс
+  форсированные Expiration и Interruption). Consolidation управляется `consolidationPolicy` и
+  `consolidateAfter`.
+- Выселение тормозят PDB (основной тормоз), `do-not-disrupt` (защищает всю ноду) и disruption
+  budgets (темп и окна); forceful-методы этими средствами не остановить.
+- StatefulSet выселяют безопасно связкой PDB плюс disruption budget плюс точечный
+  `do-not-disrupt`; заблокированное выселение видно как cordoned-нода и событие
+  `Unconsolidatable`.
+- Слишком строгая защита блокирует не только consolidation, но и drift: ноды не обновляются,
+  копятся CVE. Предохранитель - `terminationGracePeriod`.
+- Консолидация не переносит реплики StatefulSet между AZ, так как том EBS привязан к зоне
+  (глава 23).
+
+## 12.14. Как это пригодится в реальной работе
+
+На дежурстве оба симптома из 12.1 диагностируются быстро. «Нода висит cordoned и не удаляется»
+- `kubectl describe node` на событие `Unconsolidatable` и `kubectl get pdb`: почти всегда
+блокирует PDB или аннотация `do-not-disrupt`. «Ноды не обновляются после нового AMI» - тот же
+корень со стороны drift; проверяете сплошную защиту без `terminationGracePeriod`. При
+проектировании глава удерживает от двух крайностей: StatefulSet без PDB (консолидация роняет
+нагрузку) и сплошной `do-not-disrupt` (встаёт drift). Середина - PDB под каждую критичную
+нагрузку, disruption budget с тихими окнами и `terminationGracePeriod` как предохранитель.
+
+## 12.15. Вопросы для самопроверки
+
+1. Что описывает `NodePool` и что - `EC2NodeClass`? Почему их разделили на два объекта?
+2. Как Karpenter выбирает тип инстанса и почему широкий `requirements` предпочтительнее узкого?
+3. В каком порядке выполняются методы disruption и почему это важно для диагностики?
+4. Чем отличаются `WhenEmpty`, `Balanced` и `WhenEmptyOrUnderutilized`? Что делает
+   `consolidateAfter`?
+5. Что такое drift, какие изменения его вызывают и какие поля на него не влияют?
+6. Как PDB тормозит выселение и что происходит с нодой, когда PDB не даёт вытеснить под?
+7. Что защищает `karpenter.sh/do-not-disrupt` и на каком уровне действует?
+8. Как работают disruption budgets и можно ли ими остановить expiration или interruption?
+9. Как безопасно выселять StatefulSet при консолидации? Из каких частей состоит конфигурация?
+10. Почему строгая защита блокирует не только consolidation, но и drift и чем это опасно?
+11. Как `terminationGracePeriod` снимает блокировку и почему консолидация не переносит том EBS
+    в другую AZ?
+
+## Практика
+
+Своей лабы у главы пока нет, но конфигурацию Karpenter видно на живом кластере (в том числе
+внутри Auto Mode, глава 11). Начните с инвентаризации: `kubectl get nodepools`,
+`kubectl get ec2nodeclasses`, `kubectl get nodeclaims`. Посмотрите блок `spec.disruption`
+своего `NodePool`: какая `consolidationPolicy`, есть ли `budgets` и `terminationGracePeriod`.
+
+Дальше пройдите диагностику из разделов 12.7 и 12.8 без вреда для кластера. Найдите StatefulSet
+и проверьте `kubectl get pdb -A` - есть ли у него PDB и что в `maxUnavailable`. Загляните в
+логи `kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` и в события нод на
+предмет `Unconsolidatable`. Отдельно разберите более раннюю лабу Karpenter из репозитория
+([Karpenter](../../labs/02/README_RUS.MD)) - она не входит в курс, но тема пересекается.
+
+---
+[Оглавление](../README_RU.md) · [Глава 11](../11/ru.md) · [Глава 13](../13/ru.md)
