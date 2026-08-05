@@ -40,6 +40,12 @@ flowchart LR
 настройка разовая, дальше вход по браузеру. Ответы API огромные, и два флага спасают:
 `--query` с выражением JMESPath и `--output table` для чтения человеком.
 
+Переключать профили и хранить сессии удобнее не голыми переменными, а утилитами. `aws-vault`
+держит креды в системном keychain и запускает команду во временной сессии, не выкладывая
+секрет в окружение: `aws-vault exec prod -- terraform apply`. `granted` (команда `assume`)
+быстро переключает SSO-профили и открывает консоль нужного аккаунта в отдельной вкладке
+браузера, что снимает путаницу «в каком аккаунте я сейчас».
+
 ```bash
 export AWS_PROFILE=dev             # какой профиль использовать
 export AWS_REGION=eu-central-1     # регион по умолчанию
@@ -194,7 +200,10 @@ helm get values aws-load-balancer-controller -n kube-system   # с какими 
 ```
 
 Две привычки: **никогда без `--version`** (иначе кластер меняется сам при следующем `upgrade`)
-и **values в файле**, а не в `--set` из чьей-то истории bash. Часть компонентов (VPC CNI,
+и **values в файле**, а не в `--set` из чьей-то истории bash. Когда чартов много, их держат
+декларативно: `helmfile` описывает список релизов с версиями и путями к `values.yaml` в одном
+`helmfile.yaml`, а `helmfile apply` приводит кластер к этому описанию - тот же принцип «код в
+git», что и у terraform, только для helm. Часть компонентов (VPC CNI,
 kube-proxy, CoreDNS, EBS CSI, Pod Identity Agent) AWS предлагает как **managed addons**:
 совместимость считает AWS, обновление идёт через API кластера. Меньше свободы, меньше работы.
 
@@ -256,14 +265,18 @@ aws eks describe-nodegroup --cluster-name demo --nodegroup-name ng-default | jq 
 - **aws cli v2** - основная CLI для AWS; конфигурация в `~/.aws/config`, доступ выбирается
   через `--profile` или `AWS_PROFILE`. **Профиль** - именованный набор параметров: регион,
   роль, SSO. **`aws sts get-caller-identity`** - команда «кто я»: аккаунт, ARN, userId.
+  **`aws-vault`** - хранение кредов в keychain и запуск команд во временной сессии;
+  **`granted`** (`assume`) - быстрое переключение SSO-профилей и вход в консоль.
 - **exec-плагин kubeconfig** - секция `exec`, вызывающая `aws eks get-token` при каждом
   обращении kubectl; долгоживущего токена в файле нет. **eksctl** - официальная CLI для EKS,
   работает через CloudFormation, императивна.
 - **State** - файл состояния terraform, для команды хранится удалённо с блокировкой.
   **Провайдер** - плагин terraform (`aws`, `kubernetes`, `helm`).
-- **terragrunt** - обёртка над terraform: общий backend, `env.hcl`, `dependency`, `run-all`.
-  **Стек** - каталог с одним `terragrunt.hcl`, применяемый как единица. **Managed addon** -
-  компонент кластера, версиями и обновлением которого управляет EKS.
+- **terragrunt** - обёртка над terraform: общий backend, `env.hcl`, `dependency`, `run-all`,
+  DRY-модули без копипасты. **Стек** - каталог с одним `terragrunt.hcl`, применяемый как
+  единица. **helmfile** - декларативное описание набора helm-релизов с версиями и values в
+  одном файле. **Managed addon** - компонент кластера, версиями и обновлением которого
+  управляет EKS.
 
 ## 0.5.12. Итоги главы
 

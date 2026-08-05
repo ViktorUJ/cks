@@ -192,6 +192,15 @@ spec:
 `aws-load-balancer-ssl-cert` (терминация TLS сертификатом из ACM) и
 `aws-load-balancer-attributes` (атрибуты NLB, например cross-zone).
 
+Две аннотации особенно выручают в проде. `aws-load-balancer-eip-allocations` привязывает к
+публичному NLB заранее выделенные Elastic IP (по одному allocation на подсеть) - внешние
+адреса сервиса становятся статическими и переживают пересоздание NLB. А
+`aws-load-balancer-target-group-attributes` задаёт атрибуты target group строкой вида
+`ключ=значение`; ключом `deregistration_delay.timeout_seconds` (например `15` или `30`
+вместо дефолтных `300`) укорачивают паузу вывода таргета из группы, чтобы при деплое NLB
+плавно допускал завершение TCP-сессий, не держа под draining лишние минуты (graceful
+deregistration).
+
 ## 26.5. target-type: instance против ip
 
 Ключевой выбор при работе с NLB - куда балансировщик шлёт трафик. Два режима.
@@ -309,6 +318,9 @@ LoadBalancer, как в этой главе.
   а доступ к NLB сужают через `spec.loadBalancerSourceRanges`, не оставляя `0.0.0.0/0`.
 - **Тип обработчика фиксируют при создании.** Аннотацию `aws-load-balancer-type` не меняют
   на живом Service, чтобы не словить утечку ресурсов или неожиданную публикацию NLB.
+- **Статические IP и плавный деплой.** Публичному NLB дают Elastic IP через
+  `aws-load-balancer-eip-allocations`, а `deregistration_delay.timeout_seconds` в
+  `aws-load-balancer-target-group-attributes` снижают, чтобы деплой не рвал TCP-сессии.
 
 ## 26.9. Мини-глоссарий
 
@@ -378,6 +390,7 @@ LoadBalancer, как в этой главе.
 11. Как сохранить исходный IP клиента в режиме `ip` и чем это отличается от режима `instance`?
 12. Когда выбирают NLB, а когда ALB, и в какой главе разбирается ALB?
 13. Service висит в `<pending>` без внешнего адреса - что проверяете и в каком порядке?
+14. Как дать публичному NLB статические адреса и как смягчить обрыв TCP-сессий при деплое?
 
 ## Практика
 

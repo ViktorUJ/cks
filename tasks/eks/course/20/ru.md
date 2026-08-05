@@ -56,10 +56,11 @@ registry policy на весь registry), разрешающую другому �
 `imagePullSecrets`.
 
 ```bash
-# создать репозиторий: неизменяемые теги + скан при пуше
+# создать репозиторий: неизменяемые теги + скан при пуше + шифрование своим ключом KMS
 aws ecr create-repository --repository-name payments/api \
   --image-tag-mutability IMMUTABLE \
   --image-scanning-configuration scanOnPush=true \
+  --encryption-configuration encryptionType=KMS,kmsKey=arn:aws:kms:eu-central-1:111122223333:key/abcd \
   --region eu-central-1
 ```
 
@@ -74,6 +75,12 @@ aws ecr create-repository --repository-name payments/api \
 | `latest` может смениться незаметно | да | нет (тег занят) |
 | Воспроизводимость по тегу | нет гарантии | тег = конкретный digest |
 | Где уместно | песочница, черновики | прод, релизные образы |
+
+Вторая настройка на создании и **тоже неизменяемая после** - шифрование at rest. По умолчанию
+слои шифруются ключами S3 (SSE-S3, AES-256, без действий с вашей стороны). Для контроля над
+ключом задают `encryptionType=KMS`: либо AWS-managed ключ `aws/ecr`, либо свой customer managed
+key (должен лежать в том же регионе, что и репозиторий). Как и мутабельность, encryption
+configuration после создания не меняется - только пересозданием репозитория.
 
 ## 20.3. Сканирование на уязвимости
 
@@ -141,8 +148,9 @@ spec:
 
 Digest защищает от **случайной** подмены, но не доказывает, **кто** собрал образ. Это решает
 **подпись**. Образ подписывают при сборке (`cosign` из проекта Sigstore или Notation/Notary
-Project; AWS Signer как управляемый сервис подписи), а на входе в кластер подпись **проверяют**
-на admission - политикой Kyverno или Gatekeeper (глава 22). Только образ с валидной подписью
+Project; AWS Signer как управляемый сервис подписи), а на входе в кластер подпись
+**проверяют** на admission - правилом Kyverno `verifyImages` или Sigstore
+policy-controller (глава 22). Только образ с валидной подписью
 доверенного ключа допускается к запуску - так закрываются подмена и typosquatting из 20.1.
 
 ## 20.5. Pull through cache
@@ -194,6 +202,21 @@ aws ecr create-pull-through-cache-rule --ecr-repository-prefix docker-hub \
 # было docker.io/library/nginx:1.27 - стало через кэш ECR
 image: 111122223333.dkr.ecr.eu-central-1.amazonaws.com/docker-hub/library/nginx:1.27
 ```
+
+Тонкость: репозитории, которые ECR заводит под кэш сам, по умолчанию идут с `MUTABLE`-тегами,
+шифрованием SSE-S3 и без lifecycle policy - настройки из 20.2 и 20.6 к ним не применяются
+сами собой. Чтобы кэш-репозитории наследовали ключ KMS, автоочистку и неизменность тега,
+заводят **repository creation template** с тем же префиксом, что и правило кэша:
+
+```bash
+# шаблон на префикс docker-hub: кэш-репозитории получат ключ KMS и lifecycle policy
+aws ecr create-repository-creation-template --prefix docker-hub --applied-for PULL_THROUGH_CACHE \
+  --encryption-configuration encryptionType=KMS,kmsKey=arn:aws:kms:eu-central-1:111122223333:key/abcd \
+  --lifecycle-policy file://lifecycle.json
+```
+
+Шаблон действует только в момент создания репозитория и через него же задают repository
+policy и неизменность тегов (с исключениями для подвижных тегов кэша вроде `latest`).
 
 ## 20.6. Lifecycle policy: автоочистка репозитория
 
@@ -265,7 +288,9 @@ flowchart TB
 - **Immutable-теги и деплой по digest.** Репозитории создают с `IMMUTABLE`, а нагрузки
   ссылаются на образ по `@sha256:` - тег не перезапишешь, и запускается ровно то, что собрали.
 - **Pull through cache вместо прямого Docker Hub.** Внешние образы тянут через кэш в ECR: нет
-  зависимости от rate limit и доступности апстрима, всё под единым сканом и политиками.
+  зависимости от rate limit и доступности апстрима, всё под единым сканом и политиками. А
+  настройки кэш-репозиториев (KMS, lifecycle, immutability) навешивают repository creation
+  template по префиксу правила.
 - **Lifecycle policy на каждый репозиторий.** Автоочистка старых и untagged-образов держит
   репозиторий в размере и не даёт поднять древний уязвимый образ.
 - **Подпись и её проверка на admission.** Образы подписывают в CI (cosign, Notation, AWS
@@ -286,6 +311,11 @@ flowchart TB
 - **Pull through cache** - правило ECR, кэширующее образы внешнего реестра (Docker Hub, Quay,
   `registry.k8s.io` и др.) в вашем приватном ECR по запросу.
 - **Lifecycle policy** - правила автоудаления образов по возрасту или количеству.
+- **Repository creation template** - шаблон настроек (шифрование, lifecycle, immutability,
+  policy) для репозиториев, которые ECR создаёт сам под pull through cache по префиксу; без
+  него кэш-репозиторий получает дефолты (`MUTABLE`, SSE-S3, без политик).
+- **Encryption at rest** - шифрование слоёв в ECR: по умолчанию SSE-S3 (AES-256), опционально
+  SSE-KMS ключом `aws/ecr` или своим customer managed key; задаётся на создании и неизменно.
 
 ## 20.11. Итоги главы
 
@@ -329,6 +359,8 @@ enhanced scanning нашёл её, а политика не пустила. А `
 11. Зачем pull through cache в приватном кластере без выхода в интернет?
 12. Зачем нужна lifecycle policy и по каким критериям она удаляет образы?
 13. Почему в приватном кластере для pull образа нужен ещё и S3 VPC endpoint, а не только ECR?
+14. Чем отличается шифрование ECR по умолчанию от SSE-KMS и когда конфигурацию уже не сменить?
+15. Какие настройки получают кэш-репозитории по умолчанию и чем задать им KMS и lifecycle?
 
 ## Практика
 

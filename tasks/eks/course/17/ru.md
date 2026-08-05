@@ -84,6 +84,10 @@ flowchart TB
 Роль ассумит **сервис EKS Auth один раз на ноду**, а не каждый SDK в каждом поде, поэтому
 нагрузка на STS ниже, чем в IRSA, где обмен токена делает SDK в каждом поде.
 
+Важная связка с NetworkPolicy: за кредами SDK ходит на link-local `169.254.170.23`. Под с
+`default-deny` egress их не получит, пока в политике нет egress-правила к `169.254.170.23/32`
+(порт `80`). Как открыть именно этот адрес, не распахивая egress целиком, - в (глава 30).
+
 ## 17.4. Trust policy для Pod Identity
 
 Вся суть переносимости - в trust policy. Она **единая** и не зависит от кластера.
@@ -120,7 +124,10 @@ flowchart TB
 
 Ограничить, какие namespace, `ServiceAccount` и кластеры могут принять роль, можно
 **условиями на session tags** в trust policy: EKS сам проставляет теги сессии с кластером,
-namespace и `ServiceAccount`, и на них навешивают `StringEquals`.
+namespace и `ServiceAccount`, и на них навешивают `StringEquals`. В политиках эти теги
+доступны как `aws:PrincipalTag/kubernetes-namespace`, `aws:PrincipalTag/eks-cluster-name`,
+`aws:PrincipalTag/kubernetes-service-account` - например условие
+`aws:PrincipalTag/kubernetes-namespace` равно `payments`.
 
 ## 17.5. Аддон-агент и ассоциации
 
@@ -263,6 +270,7 @@ kubectl -n payments exec deploy/my-app -- aws sts get-caller-identity
 | Под создан, а кредов нет | ассоциация создана после старта пода | пересоздать под (eventual consistency) |
 | Ходит под ролью IRSA | на SA осталась аннотация IRSA | снять аннотацию, пересоздать под |
 | `AccessDenied` на вызове сервиса | у роли нет нужной permissions policy | политику разрешений роли |
+| Таймаут при получении кредов | `default-deny` egress режет `169.254.170.23` | egress к `169.254.170.23/32` в NetworkPolicy (глава 30) |
 | Роль не видна для ассоциации | нет trust policy на `pods.eks` | trust policy роли (раздел 17.4) |
 | Агент не стартует | отключён IPv6 на ноде | конфигурацию IPv6 агента |
 
@@ -294,7 +302,8 @@ kubectl -n payments exec deploy/my-app -- aws sts get-caller-identity
 - **`pods.eks.amazonaws.com`** - принципал сервиса в trust policy роли Pod Identity; общий для
   всех кластеров и аккаунтов. Креды роли выдаёт EKS Auth API по `AssumeRoleForPodIdentity`.
 - **Session tags** - теги сессии (кластер, namespace, SA), которые Pod Identity добавляет в
-  запрос к STS и на которых строят ABAC; требуют `sts:TagSession` в trust policy.
+  запрос к STS и на которых строят ABAC; в политиках - `aws:PrincipalTag/kubernetes-namespace`
+  и `aws:PrincipalTag/eks-cluster-name`; требуют `sts:TagSession` в trust policy.
 
 ## 17.12. Итоги главы
 

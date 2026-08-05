@@ -61,6 +61,43 @@ admission-контроллер, но с фиксированными профи�
 своего), там начинается policy engine. На практике их **комбинируют**: PSA держит базовый
 уровень пода, движок добавляет остальное. Заменять PSA движком не нужно - это разные задачи.
 
+С Kubernetes 1.30 у apiserver есть **встроенная** альтернатива webhook'у -
+`ValidatingAdmissionPolicy`: правила пишут на **CEL** (Common Expression Language) прямо в
+ресурсе, а проверка идёт **внутри apiserver, без внешнего webhook**. Нет отдельного
+пода-движка - значит нет и сетевого вызова, который может не ответить и остановить admission
+(про этот риск и `failurePolicy` - в 22.9). Модель из двух ресурсов:
+`ValidatingAdmissionPolicy` (правило на CEL в `validations`) и
+`ValidatingAdmissionPolicyBinding` (к чему применить и
+реакция). Тот же запрет `:latest`, что и у Kyverno в 22.3, но без стороннего движка:
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: disallow-latest-tag
+spec:
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  validations:
+    - expression: "object.spec.containers.all(c, !c.image.endsWith(':latest'))"
+      message: "тег :latest запрещён"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: disallow-latest-tag-binding
+spec:
+  policyName: disallow-latest-tag
+  validationActions: ["Deny"]        # Audit/Warn на обкатке -> Deny
+```
+
+Встроенная валидация хороша для простых проверок без mutate/generate; сложную логику, подпись
+образа и генерацию ресурсов оставляют за Kyverno/Gatekeeper.
+
 ## 22.3. Kyverno: политики как YAML-ресурсы
 
 Kyverno - policy engine, где **политика это обычный YAML-ресурс Kubernetes**, без отдельного
@@ -282,10 +319,16 @@ ResourceQuota Kubernetes требует у каждого пода `requests`/`l
 
 ## 22.9. Как это применяют в продакшене
 
-- **Policy engine сначала в audit, потом в enforce.** Новую политику вводят в `Audit`
-  (Kyverno) или на dry-run-подобном режиме, смотрят policy report на реальном трафике и лишь
-  потом переводят в `Enforce` - иначе рискуют заблокировать легитимные деплои. Тот же путь, что
-  у PSA (глава 19).
+- **Раскатка правила: `Audit`/`Warn` -> `PolicyReport` -> `Enforce`.** Новую политику вводят в
+  `Audit` (Kyverno) или с предупреждением, собирают `PolicyReport` по реальному трафику и
+  находят нарушителей, и лишь потом переводят в `Enforce` - иначе блокируют легитимные деплои.
+  Тот же путь, что у PSA (глава 19); для `ValidatingAdmissionPolicyBinding` это те же
+  `validationActions`: `Audit`/`Warn` -> `Deny`.
+- **`failurePolicy`: сначала `Ignore`, потом `Fail`.** Webhook движка регистрируется с
+  `failurePolicy`: при `Fail` недоступный webhook **останавливает admission** и деплои встают,
+  при `Ignore` объект пропускается мимо проверки. На обкатке ставят `Ignore` плюс алерт на
+  ошибки и таймауты webhook, а в `Fail` переводят только после стабилизации. Встроенный
+  `ValidatingAdmissionPolicy` этого риска лишён - проверка идёт внутри apiserver (22.2).
 - **Политики как код в git.** `ClusterPolicy`/`ConstraintTemplate` лежат в репозитории и катятся
   через GitOps (глава 44), а не руками: история правил и ревью - в git.
 - **PSA для базовых уровней плюс policy engine для остального.** PSA держит baseline/restricted
@@ -306,6 +349,11 @@ ResourceQuota Kubernetes требует у каждого пода `requests`/`l
   правилами validate/mutate/generate/verifyImages; реакция - `Enforce`/`Audit`.
 - **Gatekeeper** - policy engine поверх OPA; правила на Rego, модель `ConstraintTemplate`
   (шаблон + схема) плюс `Constraint` (экземпляр).
+- **ValidatingAdmissionPolicy** - встроенная в apiserver валидация на CEL (Kubernetes 1.30+),
+  без внешнего webhook; пара с `ValidatingAdmissionPolicyBinding` (к чему применить и реакция
+  `Deny`/`Warn`/`Audit`).
+- **failurePolicy** - реакция на недоступный webhook: `Fail` останавливает admission, `Ignore`
+  пропускает объект мимо проверки.
 - **Soft multi-tenancy** - арендаторы в одном кластере (namespace, RBAC, ResourceQuota,
   LimitRange, NetworkPolicy, политики); общий control plane и ядро. **Hard multi-tenancy** -
   арендаторы в отдельных кластерах/аккаунтах; жёсткая граница ценой сложности (главы 0.1, 32).
@@ -318,7 +366,8 @@ ResourceQuota Kubernetes требует у каждого пода `requests`/`l
   реестр, обязательный label, StorageClass). Это закрывает policy engine - admission webhook с
   вашими правилами.
 - Admission control - точка контроля: mutating webhook меняет объект, validating пропускает или
-  отклоняет, оба до записи в etcd. PSA и policy engine комбинируют, а не заменяют один другим.
+  отклоняет, оба до записи в etcd. PSA и policy engine комбинируют, а не заменяют друг друга.
+  С 1.30 есть и встроенный `ValidatingAdmissionPolicy` на CEL - проверка без внешнего webhook.
 - Kyverno - политики как YAML (`ClusterPolicy`/`Policy`), правила validate/mutate/generate и
   verifyImages, реакция `Enforce`/`Audit`, низкий порог входа. Gatekeeper - политики на Rego,
   `ConstraintTemplate` плюс `Constraint`; мощнее и сложнее. Один движок на кластер, не оба.
@@ -351,6 +400,8 @@ multi-tenancy решается одним вопросом: доверяете �
 10. Чего soft multi-tenancy не даёт и когда из-за этого нужен hard?
 11. Зачем на namespace команды и ResourceQuota, и LimitRange - что делает каждый?
 12. Почему при наличии ResourceQuota LimitRange с дефолтами становится обязательным?
+13. Чем встроенный `ValidatingAdmissionPolicy` на CEL отличается от webhook-движка и при чём
+    тут `failurePolicy: Ignore`/`Fail` на обкатке?
 
 ## Практика
 
@@ -359,7 +410,9 @@ multi-tenancy решается одним вопросом: доверяете �
 Kyverno, `kubectl get constraints` для Gatekeeper. Примените `ClusterPolicy` из 22.3 с
 `validationFailureAction: Audit`, задеплойте под с `nginx:latest` и найдите нарушение в policy
 report (`kubectl get policyreport -A`). Переведите в `Enforce` и
-убедитесь, что такой под теперь отклоняется на admission.
+убедитесь, что такой под теперь отклоняется на admission. Тот же запрет без стороннего движка
+соберите на встроенном `ValidatingAdmissionPolicy` из 22.2 (`kubectl get
+validatingadmissionpolicy`), начав с `validationActions: ["Audit"]`.
 
 Дальше изоляция команды. Создайте namespace `team-a`, навесьте ResourceQuota и LimitRange из
 22.8, создайте под без `resources` - он должен получить дефолты от LimitRange. Превысьте квоту

@@ -82,6 +82,29 @@ flowchart TB
 HTTPRoute работают поверх любой реализации, а специфику инфраструктуры прячет Gateway. Часть
 вендорских настроек всё равно уезжает в CRD, но прикладная маршрутизация остаётся стандартной.
 
+Разделение ролей разводит команды по namespace, и тут всплывает кросс-namespace ссылка. Если
+HTTPRoute в своём namespace ссылается на backend Service в чужом (`backendRefs` с полем
+`namespace`), по умолчанию ссылка запрещена - иначе разработчик направил бы трафик на чужой
+сервис. Разрешение даёт владелец целевого namespace ресурсом **ReferenceGrant**: он лежит
+рядом с backend и называет, из каких namespace и видов ресурсов ссылка допустима.
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-from-app
+  namespace: backend        # namespace целевого backend
+spec:
+  from:
+    - {group: gateway.networking.k8s.io, kind: HTTPRoute, namespace: app}
+  to:
+    - {group: "", kind: Service}
+```
+
+Тот же механизм разрешает `certificateRefs` Gateway на Secret в другом namespace.
+Подключение же Route к Gateway через границу namespace разрешает не ReferenceGrant, а
+`allowedRoutes` на самом Gateway; грант нужен только для `backendRefs` и `certificateRefs`.
+
 ## 28.3. Две реализации Gateway API в AWS
 
 Gateway API - это только интерфейс (набор CRD). Кто именно приводит облако в соответствие,
@@ -317,6 +340,8 @@ Gateway API в LBC относительно новая, точные верси�
   для доступа к сервисам.
 - **IAM auth policy** - политика в формате IAM для авторизации трафика между сервисами; в
   контроллере - ресурс `IAMAuthPolicy`.
+- **ReferenceGrant** - ресурс Gateway API в namespace целевого ресурса; разрешает
+  кросс-namespace ссылки (`backendRefs`, `certificateRefs`) из перечисленных namespace.
 
 ## 28.11. Итоги главы
 
@@ -345,7 +370,9 @@ Gateway API в LBC относительно новая, точные верси�
 VPC Lattice, и дальше диагностика идёт по разным сервисам. Если Gateway не переходит в
 `PROGRAMMED: True`, проверяют, установлены ли CRD Gateway API и нужный контроллер, есть ли у
 его роли права (`AccessDenied` в логах), как в главах 26-27. Если HTTPRoute не принимается,
-смотрят `parentRefs` и `allowedRoutes` на Gateway - Route мог не пройти по namespace. Для VPC
+смотрят `parentRefs` и `allowedRoutes` на Gateway - Route мог не пройти по namespace. Если
+Route принят, но backend в чужом namespace не резолвится, у него условие `ResolvedRefs` встаёт
+в `False` с reason `RefNotPermitted` - рядом с backend не хватает ReferenceGrant. Для VPC
 Lattice добавляется своя проверка: появилось ли DNS-имя в аннотации
 `lattice-assigned-domain-name`, ассоциирован ли VPC клиента с Service Network и не режет ли
 запрос IAM auth policy.
@@ -372,6 +399,7 @@ Ingress. Второе - направление трафика: вход снар
 11. Как связать сервисы между разными аккаунтами без VPC peering?
 12. Что делают IAM auth policies и к каким объектам их привязывают?
 13. Почему VPC Lattice - это не замена ALB на периметре?
+14. Зачем нужен ReferenceGrant и в каком namespace его создают?
 
 ## Практика
 

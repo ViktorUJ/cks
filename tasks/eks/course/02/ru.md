@@ -109,9 +109,11 @@ aws eks describe-cluster --name demo \
 - **CI перестал деплоить.** Раннеры в SaaS живут вне вашей сети. Переключение на private-only
   ломает их гарантированно; чинится раннерами внутри VPC, self-hosted агентами или доступом
   через транзитную сеть. Проверять надо до переключения, а не после.
-- **`kubectl` из офиса не отвечает.** В private-only нужен путь в VPC: VPN, Direct Connect,
-  transit gateway, bastion, CloudShell в VPC. И в cluster security group нужен ingress 443 с
-  этого источника - без него путь есть, а доступа нет.
+- **`kubectl` из офиса не отвечает.** В private-only доступ к API идёт только из VPC или
+  связанной сети. Рабочие варианты: bastion host в подсети кластера с подключением через SSM
+  Session Manager (без открытого порта 22), AWS Client VPN, Direct Connect, transit gateway,
+  CloudShell в VPC. И в cluster security group нужен ingress 443 с этого источника - без него
+  путь есть, а доступа нет.
 - **Ноды в другой VPC.** Private endpoint резолвится в VPC кластера. Пиринг сам по себе не
   даёт разрешения имени: нужна ассоциация зоны или свой резолвер, иначе ноды не находят API.
 - **Hybrid nodes с двумя включёнными режимами.** Ноды вне VPC разрешают имя в публичные
@@ -228,7 +230,8 @@ control plane EKS её обслуживает. Для этого есть **plat
 API-сервера включены, какой набор admission-контроллеров активен, какой текущий patch-уровень
 Kubernetes. Нумерация независима для каждой минорной версии: начинается с `eks.1` и
 инкрементируется, когда AWS выпускает новые настройки control plane или исправления
-безопасности. Ключевое отличие от версии Kubernetes: **обновление platform version вы не
+безопасности; то есть `eks.1` в 1.30 и `eks.1` в 1.31 - это разные сборки control plane.
+Ключевое отличие от версии Kubernetes: **обновление platform version вы не
 запускаете**. AWS сам поднимает существующие кластеры до актуальной platform version их
 минорной версии, раскатывая это постепенно. Новые platform versions не приносят breaking
 changes и не вызывают простоя.
@@ -284,8 +287,10 @@ aws eks describe-cluster --name demo --query 'cluster.logging'
   CloudWatch Logs на ingestion, хранение и сканирование данных. Самый объёмный тип - `audit`;
   на активном кластере он способен стать заметной строкой в счёте.
 - Retention задаётся на стороне CloudWatch Logs, а не EKS. Log group, оставленная без
-  настроенного срока хранения, хранит данные бесконечно и платно. Практика: `audit` включён
-  всегда, retention выставлен явно, долгий архив уезжает в S3 (главы 34 и 43).
+  настроенного срока хранения, хранит данные бесконечно и платно. Поэтому сразу после
+  включения логов вызывают `aws logs put-retention-policy` на `/aws/eks/<cluster>/cluster` с
+  разумным сроком (обычно 7-14 дней в потоке), а долгий архив уезжает в S3 (главы 34 и 43).
+  Практика: `audit` включён всегда, retention выставлен явно.
 
 ```bash
 # Включить два типа; остальные добавляются в том же списке
@@ -300,6 +305,10 @@ aws eks update-cluster-config --name demo \
 # Есть ли log group и какой у неё retention
 aws logs describe-log-groups --log-group-name-prefix /aws/eks/demo \
   --query 'logGroups[].[logGroupName,retentionInDays]' --output table
+
+# Задать срок хранения: без него log group копит логи бесконечно
+aws logs put-retention-policy --log-group-name /aws/eks/demo/cluster \
+  --retention-in-days 14
 
 # Живой хвост аудита
 aws logs tail /aws/eks/demo/cluster \

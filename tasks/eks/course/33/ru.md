@@ -190,6 +190,25 @@ helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   -n monitoring --create-namespace
 ```
 
+Объём метрик - это стоимость и нагрузка на бэкенд, поэтому высококардинальные метрики и лейблы
+отбрасывают ещё на скрейпе, до записи и до remote-write в AMP. Делает это
+`metric_relabel_configs` в scrape config Prometheus; в ServiceMonitor и PodMonitor это поле
+`metricRelabelings`:
+
+```yaml
+metric_relabel_configs:
+  # отбросить высококардинальную метрику целиком по имени
+  - source_labels: [__name__]
+    regex: apiserver_request_duration_seconds_bucket
+    action: drop
+  # снять лишний высококардинальный лейбл, раздувающий число рядов
+  - action: labeldrop
+    regex: (pod_uid|container_id)
+```
+
+Без такой чистки число временных рядов растёт неконтролируемо, а с ним - стоимость приёма и
+хранения на managed-бэкенде и нагрузка на локальный Prometheus.
+
 Плюс подхода - полный контроль и переносимость: тот же чарт и те же ServiceMonitor работают в
 любом Kubernetes, не только в EKS, без привязки к AWS. Минус - вся эксплуатация на вас:
 хранение и retention (нужны PV, а их размер и срок хранения вы считаете сами), высокая
@@ -275,6 +294,8 @@ Duration) - частота запросов, доля ошибок, время �
   сбора через ServiceMonitor, но без забот о хранении метрик.
 - **Обязательно ставят kube-state-metrics.** Без состояния объектов (Pending, рестарты)
   мониторинг видит загрузку, но не видит «что-то не разворачивается».
+- **Объём метрик контролируют через `metric_relabel_configs`.** Высококардинальные метрики и
+  лейблы отбрасывают до записи и remote-write, иначе стоимость и нагрузка на бэкенд растут.
 - **Метрики сразу привязывают к алертам.** Дашборд, на который никто не смотрит, бесполезен;
   ключевые сигналы (нода под давлением, рост ошибок API server, OOMKilled) заводят в
   CloudWatch alarms или Alertmanager.
@@ -303,6 +324,9 @@ Duration) - частота запросов, доля ошибок, время �
   эндпоинты скрейпить.
 - **kube-state-metrics** - компонент, отдающий состояние объектов Kubernetes (Pending,
   реплики, рестарты) в виде метрик.
+- **metric_relabel_configs** - секция scrape config (в ServiceMonitor - `metricRelabelings`),
+  отбрасывающая высококардинальные метрики (`drop` по `__name__`) и лейблы (`labeldrop`) до
+  записи и remote-write; инструмент контроля объёма и стоимости.
 
 ## 33.11. Итоги главы
 

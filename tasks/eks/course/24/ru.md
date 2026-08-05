@@ -140,6 +140,7 @@ spec:
   accessModes: ["ReadWriteMany"]
   persistentVolumeReclaimPolicy: Retain
   storageClassName: efs-sc
+  mountOptions: ["tls"]             # шифрование NFS-трафика in-transit, держать всегда
   csi:
     driver: efs.csi.aws.com
     volumeHandle: fs-0123456789abcdef0
@@ -158,11 +159,17 @@ provisioner: efs.csi.aws.com
 parameters:
   provisioningMode: efs-ap
   fileSystemId: fs-0123456789abcdef0
-  directoryPerms: "700"
-  gidRangeStart: "1000"          # диапазон GID для access points
-  gidRangeEnd: "2000"
+  directoryPerms: "755"          # права root-каталога access point
+  uid: "1000"                    # OwnerUid access point root dir (не-root)
+  gid: "1000"                    # OwnerGid; gidRange не используется при заданных uid/gid
   basePath: "/dynamic"           # корень под каталоги access points
+mountOptions: ["tls"]            # in-transit шифрование и в динамическом пути тоже
 ```
+
+Параметры `uid`, `gid` и `directoryPerms` драйвер применяет к корневому каталогу access
+point - это его `creationInfo` (`OwnerUid`, `OwnerGid`, `Permissions`). Задавайте не-root
+владельца и права `0755`: иначе поды с `runAsNonRoot` упадут на `Permission Denied` при
+первой записи, потому что корень каталога окажется во владении чужой идентичности.
 
 PVC под этот класс - обычный, но с `ReadWriteMany`:
 

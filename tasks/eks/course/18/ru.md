@@ -119,6 +119,10 @@ flowchart TB
 **`ClusterSecretStore`** - то же на весь кластер. **`ExternalSecret`** объявляет, какой секрет
 тянуть и в какой `Secret` положить; по нему контроллер создаёт и обновляет целевой `Secret`.
 
+Изоляция: по умолчанию берите namespaced `SecretStore` - команда, владеющая namespace, читает
+только свои секреты. `ClusterSecretStore` доступен всем namespace и легко становится каналом к
+чужим секретам, поэтому его применяют точечно и ограничивают, а не как вариант по умолчанию.
+
 ```yaml
 apiVersion: external-secrets.io/v1
 kind: SecretStore
@@ -155,6 +159,17 @@ spec:
 Плюс ESO: результат - нативный `Secret`, совместимый с любым потребителем (env, том, чужой
 чарт). Минус важный: секрет **материализуется в etcd**, поэтому слой 1 (раздел 18.3) для ESO
 обязателен. Роль контроллеру для чтения из AWS дают IRSA или Pod Identity (главы 16, 17).
+
+Тонкость ротации: ESO обновит `Secret`, но под, прочитавший его в env при старте, нового
+значения не увидит - переменные фиксируются на запуске (тома kubelet обновляет сам, env - нет).
+Чтобы под перечитал секрет, его перезапускают; **Stakater Reloader** делает это автоматически -
+следит за `Secret` и `ConfigMap` и запускает rolling restart потребляющих их Deployment:
+
+```yaml
+metadata:
+  annotations:
+    reloader.stakater.com/auto: "true"   # рестарт при смене примонтированных Secret/ConfigMap
+```
 
 ```bash
 kubectl -n payments get externalsecret db-credentials   # STATUS SecretSynced?
@@ -225,6 +240,7 @@ kubectl -n payments exec deploy/app -- ls /mnt/secrets-store   # файлы се
 | Ротация | по `refreshInterval` | rotation reconciler обновляет том |
 | Нужен ли слой 1 (KMS) | да, секрет в etcd | не для тома; да при sync |
 | Роль для доступа к AWS | IRSA / Pod Identity | IRSA / Pod Identity |
+| Зависит от жизненного цикла пода | нет, `Secret` живёт сам | да, том и sync живут с подом |
 
 Коротко: ESO проще для приложений, которым нужен `Secret` (env, готовые чарты), ценой того,
 что он всегда в etcd. CSI без sync даёт минимальный след, но приложение должно читать файлы из
@@ -284,7 +300,10 @@ kubectl -n kube-system logs ds/csi-secrets-store-secrets-store-csi-driver -c sec
 - **Минимальный RBAC на `Secret`.** Envelope encryption не заменяет RBAC: доступ на чтение
   выдают точечно, иначе слой 1 защищает от всего, кроме валидного субъекта (глава 5).
 - **Ротация в источнике.** Секреты с ротацией держат в Secrets Manager, а `refreshInterval`
-  ESO или rotation reconciler CSI настраивают так, чтобы под получал свежее значение.
+  ESO или rotation reconciler CSI настраивают так, чтобы под получал свежее значение. Поды,
+  читающие `Secret` в env, обновляет rolling restart от Stakater Reloader.
+- **Изоляция хранилищ по namespace.** По умолчанию namespaced `SecretStore`;
+  `ClusterSecretStore` - точечно и с ограничениями, чтобы команды не читали чужие секреты.
 - **Разные хранилища под разные данные.** Secrets Manager - для секретов с ротацией, SSM
   Parameter Store - для конфигурации; это разделяет и права, и стоимость обращений.
 - **Роль - через IRSA или Pod Identity.** Контроллеру и драйверу дают отдельную роль с правами
@@ -300,6 +319,8 @@ kubectl -n kube-system logs ds/csi-secrets-store-secrets-store-csi-driver -c sec
   нативный `Secret`; объекты `SecretStore`/`ClusterSecretStore` и `ExternalSecret`.
 - **Secrets Store CSI Driver + AWS provider (ASCP)** - драйвер, монтирующий секрет из AWS как
   файлы в томе на ноде; объект `SecretProviderClass`, опциональный sync в `Secret`.
+- **Stakater Reloader** - контроллер, делающий rolling restart Deployment по аннотации при
+  изменении примонтированных `Secret` или `ConfigMap`, чтобы под подхватил новое значение.
 
 ## 18.12. Итоги главы
 
@@ -338,6 +359,8 @@ Secrets Manager и IAM-политикой роли, а не поиском по 
 9. Почему при использовании ESO слой 1 остаётся обязательным?
 10. Куда CSI Driver кладёт секрет по умолчанию и когда он всё же создаёт нативный `Secret`?
 11. `GetSecretValue` проходит, а секрет не читается. Какое право проверить и на каком ключе?
+12. ESO обновил `Secret`, но приложение видит старый пароль в env. Почему и что это решает?
+13. Почему namespaced `SecretStore` предпочтительнее `ClusterSecretStore` для изоляции?
 
 ## Практика
 

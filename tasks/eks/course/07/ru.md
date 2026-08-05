@@ -163,9 +163,23 @@ flowchart TB
     style sub fill:#0f9d58,color:#fff
 ```
 
-Обязательные шаги: две переменные у `aws-node` и по объекту `ENIConfig` на каждую AZ. В
+Обязательные шаги: по объекту `ENIConfig` на каждую AZ, затем две переменные у `aws-node`. В
 `ENIConfig` задают `spec.subnet` и `spec.securityGroups` (обычно cluster security group), а
 имя объекта делают равным имени зоны, если подсеть под поды в зоне одна.
+
+```yaml
+apiVersion: crd.k8s.amazonaws.com/v1alpha1
+kind: ENIConfig
+metadata:
+  name: eu-central-1a          # имя = имя зоны при одной подсети на AZ
+spec:
+  subnet: subnet-0123456789abcdef0   # подсеть 100.64.x в этой же AZ
+  securityGroups:
+    - sg-0123456789abcdef0           # cluster security group
+```
+
+Объект применяют по одному на каждую AZ с нодами, меняя имя и `subnet`, и только потом
+включают переменные - иначе нода в зоне без `ENIConfig` подам адреса не выдаст.
 
 ```bash
 kubectl set env daemonset aws-node -n kube-system AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG=true
@@ -188,6 +202,15 @@ kubectl get eniconfigs
 - **Диагностика усложняется**: адреса ноды и её подов из разных диапазонов, security groups
   могут различаться, и «почему под не достучался» требует смотреть, каким ENI ушёл пакет
   (раздел 7.8).
+
+**Когда SNAT снимают.** Тот же egress можно вывести из-под узлового SNAT: при
+`AWS_VPC_K8S_CNI_EXTERNALSNAT=true` правило маскарадинга не ставится, и пакет к адресам вне
+CIDR VPC уходит с реальным адресом пода, а не подменяется на primary-адрес ноды. Это нужно в
+двух случаях: под ходит в дата-центр, peered VPC или VPN через свой NAT gateway, Transit
+Gateway либо Direct Connect, и на той стороне требуется видеть адрес пода; либо внешний ресурс
+должен сам инициировать соединение к поду. Цена: связанные сети обязаны маршрутизировать
+диапазон подов, а прямой выход в интернет через internet gateway при `true` перестаёт работать
+- нужен маршрут на NAT gateway (глава 31).
 
 Есть инструмент попроще. **Enhanced subnet discovery**: VPC CNI `1.18.0` и новее по умолчанию
 (`ENABLE_SUBNET_DISCOVERY=true`) сам находит подсети своей VPC и AZ с тегом
@@ -306,7 +329,9 @@ aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=vpc-0123456789a
   6598). **Custom networking** - режим, где secondary ENI и адреса подов берутся из подсети и
   security groups объекта **`ENIConfig`**, по одному на AZ, с выбором по метке из
   `ENI_CONFIG_LABEL_DEF`. **Enhanced subnet discovery** - подсети с тегом
-  `kubernetes.io/role/cni=1` без `ENIConfig`. **`ipFamily`** - семейство адресов кластера,
+  `kubernetes.io/role/cni=1` без `ENIConfig`. **`AWS_VPC_K8S_CNI_EXTERNALSNAT`** - снимает
+  узловой SNAT egress подов (`true`), чтобы внешняя сторона видела реальный адрес пода; тогда
+  выход в интернет идёт только через NAT gateway. **`ipFamily`** - семейство адресов кластера,
   задаётся только при создании.
 
 ## 7.12. Итоги главы
@@ -352,6 +377,7 @@ delegation поднимет плотность, но не добавит адр�
 11. Чем enhanced subnet discovery отличается от custom networking и когда её недостаточно?
 12. Опишите порядок внедрения prefix delegation в живом кластере без даунтайма.
 13. Что проверить после обновления аддона VPC CNI и почему IPv6 не спасёт текущий кластер?
+14. Когда включают `AWS_VPC_K8S_CNI_EXTERNALSNAT=true` и что при этом ломается в egress?
 
 ## Практика
 

@@ -291,6 +291,19 @@ metadata:
 (`5`), `healthy-threshold-count` и `unhealthy-threshold-count` (`2`), `success-codes`
 (`200`). Значения по умолчанию заданы контроллером и переопределяются по необходимости.
 
+**Протокол до бэкенда** для HTTP-нагрузок уточняет
+`alb.ingress.kubernetes.io/backend-protocol-version`: `HTTP1` (по умолчанию), `HTTP2` или
+`GRPC`. Значение действует только при backend-протоколе HTTP или HTTPS и меняет application
+protocol таргет-группы. Для gRPC-сервиса ставят `GRPC` - тогда ALB проксирует gRPC-вызовы
+поверх HTTP/2 к подам; для обычного бэкенда на HTTP/2 берут `HTTP2`. Без этого ALB общается с
+таргетами по HTTP/1.1, и gRPC не проходит:
+
+```yaml
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol-version: GRPC
+```
+
 **Схема** балансировщика задаётся `alb.ingress.kubernetes.io/scheme`: `internal` (по
 умолчанию) или `internet-facing`. Как и у NLB, публичный ALB создают только с явным
 `internet-facing`. Смена схемы на живом Ingress не бесплатна: ALB нельзя переключить на месте,
@@ -351,6 +364,8 @@ L4, UDP, статические IP или максимальная пропус�
 - **wafv2-acl-arn** - аннотация привязки Web ACL из AWS WAF v2 к ALB для фильтрации запросов.
 - **actions / conditions** - аннотации кастомных действий (redirect, fixed-response, weighted
   forward) и дополнительных условий роутинга (заголовки, метод, query, source IP).
+- **backend-protocol-version** - application protocol таргет-группы: `HTTP1`, `HTTP2` или
+  `GRPC`; нужен, чтобы ALB проксировал gRPC и HTTP/2 к подам, а не по HTTP/1.1.
 
 ## 27.11. Итоги главы
 
@@ -369,7 +384,8 @@ L4, UDP, статические IP или максимальная пропус�
   группе защиту фиксируют через `IngressClassParams`.
 - Роутинг описывают правилами Ingress, а сложные сценарии - аннотациями `actions.*` (redirect,
   fixed-response, forward с весами) и `conditions.*`; health check - через `healthcheck-*`;
-  аутентификация - `auth-type` (Cognito или OIDC) на HTTPS.
+  аутентификация - `auth-type` (Cognito или OIDC) на HTTPS. Для gRPC и HTTP/2 к бэкенду
+  задают `backend-protocol-version` (`GRPC` или `HTTP2`).
 
 ## 27.12. Как это пригодится в реальной работе
 
@@ -401,6 +417,7 @@ ALB и кто отвечает за WAF. И помните про необрат
 11. Для чего нужны аннотации `actions.*` и `conditions.*` и как они связаны с правилами?
 12. Почему смену `scheme` на живом Ingress планируют как миграцию трафика?
 13. Когда выбирают ALB через Ingress, а когда NLB через Service (глава 26)?
+14. Зачем нужен `backend-protocol-version` и какое значение ставят для gRPC-бэкенда?
 
 ## Практика
 

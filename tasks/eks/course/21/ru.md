@@ -75,7 +75,10 @@ CloudTrail: для CloudTrail это не событие AWS. Расширени
 (`user.username` - IAM-принципал, отображённый через authenticator, глава 5), что сделал
 (`verb`: `get`, `list`, `create`, `delete`), над чем (`objectRef.resource`, `objectRef.name`,
 `objectRef.namespace`), откуда (`sourceIPs`), когда (`requestReceivedTimestamp`) и с каким
-результатом (`responseStatus.code`, решение авторизации в `annotations`).
+результатом (`responseStatus.code`, решение авторизации в `annotations`). Отдельно -
+`auditID`: уникальный идентификатор запроса. Один запрос порождает записи на разных stage
+(`RequestReceived`, `ResponseComplete`) с одним и тем же `auditID`, так по нему собираются все
+записи одной операции в единую картину.
 
 Пишется это в CloudWatch Logs в log group `/aws/eks/<cluster>/cluster`, поток -
 `kube-apiserver-audit-<id>`. Разбирают его через **CloudWatch Logs Insights**: язык запросов с
@@ -140,6 +143,20 @@ aws cloudtrail lookup-events \
 aws cloudtrail lookup-events \
   --lookup-attributes AttributeKey=ResourceName,AttributeValue=demo
 ```
+
+Когда инцидент задевает обе плоскости (сменили конфиг кластера через API AWS, а следом что-то
+сделали внутри кластера), картину собирают из двух источников сразу. Общего идентификатора у
+audit-лога и CloudTrail нет: внутри audit-лога записи связывает `auditID`, а между источниками
+события сшивают по принципалу (IAM-роль), IP (`sourceIPs` против поля CloudTrail) и окну
+времени. Так строится единый таймлайн «что в аккаунте -> что в кластере», а не два списка.
+
+Сшивают по трём совпадающим измерениям - вот их поля в каждом источнике:
+
+| Что сопоставляем | Поле в audit-логе | Поле в CloudTrail |
+|---|---|---|
+| Принципал | `user.username` | `userIdentity` (`Username` в `lookup-events`) |
+| IP источника | `sourceIPs` | `sourceIPAddress` |
+| Время | `requestReceivedTimestamp` | `eventTime` |
 
 ## 21.5. GuardDuty для EKS: EKS Protection и Runtime Monitoring
 
@@ -255,12 +272,15 @@ flowchart TB
   отдельный аккаунт-администратор (delegated administrator), который управляет сервисом на всю
   организацию и видит findings всех аккаунтов-членов. Назначение регионально: delegated
   administrator задаётся в каждом регионе. Так включение GuardDuty на новых аккаунтах и сбор
-  findings централизованы, а не зависят от доброй воли владельца рабочего аккаунта.
+  findings централизованы, а не зависят от доброй воли владельца рабочего аккаунта. Критичные
+  findings из delegated administrator экспортируют в S3-бакет аккаунта `log-archive` -
+  неизменяемая копия события переживёт зачистку в самом рабочем аккаунте.
 - **Отдельный аккаунт аудита.** Findings и дашборды безопасности живут в аккаунте, к которому у
   команд разработки доступа нет.
 - **Логи в log-archive.** CloudTrail организации и архив audit-логов складывают в отдельный
-  аккаунт `log-archive` (глава 0.1) с ограниченным доступом - чтобы администратор рабочего
-  аккаунта физически не мог удалить или подделать историю. Это условие доверия к логам при
+  аккаунт `log-archive` (глава 0.1) с ограниченным доступом и неизменяемым хранением
+  (S3 Object Lock, WORM) - чтобы администратор рабочего аккаунта физически не мог удалить или
+  подделать историю. Это условие доверия к логам при
   расследовании.
 
 ## 21.9. Как это применяют в продакшене
@@ -292,6 +312,8 @@ flowchart TB
   поток GuardDuty, без обязательного включения control plane logging.
 - **GuardDuty Runtime Monitoring** - наблюдение за поведением на нодах через агент
   `aws-guardduty-agent` (eBPF): процессы, сеть, файлы; не поддерживает Fargate и Hybrid Nodes.
+- **auditID** - уникальный идентификатор запроса в audit-логе; одинаков для всех stage одной
+  операции. Общего ID с CloudTrail нет - между источниками сшивают по принципалу, IP и времени.
 - **Finding** - находка GuardDuty; уходит в Security Hub и EventBridge для алертинга и реакции.
 - **Delegated administrator** - аккаунт организации, управляющий GuardDuty/Security Hub на всю
   организацию и видящий findings всех членов; назначается регионально.
@@ -340,6 +362,7 @@ GuardDuty на организацию и вынести логи в отдель
 10. Чем runtime-мониторинг отличается от сканирования образа и почему одно не заменяет другое?
 11. Куда GuardDuty отправляет findings и как из них строится реакция?
 12. Зачем в мультиаккаунте delegated administrator и отдельный аккаунт log-archive?
+13. Как связать события audit-лога и CloudTrail, если общего идентификатора у них нет?
 
 ## Практика
 

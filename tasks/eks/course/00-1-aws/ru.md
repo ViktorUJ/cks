@@ -390,6 +390,11 @@ AZ и монтируется только к инстансу из этой же
 ноды, в кластере ничего не появляется, а в событиях Karpenter или Auto Scaling group видно
 `VcpuLimitExceeded` или `MaxSpotInstanceCountExceeded`. Потолок стоит в AWS.
 
+Отдельный класс лимитов - **API rate limits** (throttling): частота вызовов к API сервиса,
+а не число ресурсов. При большом парке нод контроллеры и autoscaler часто дёргают EC2 и
+Auto Scaling, и в ответ прилетает `RequestLimitExceeded` или `Throttling`. Это тоже растёт
+вместе с EKS, но лечится не повышением квоты, а реже опросами и ретраями с backoff.
+
 ```bash
 # Все квоты EC2 с текущими значениями; коды сервисов - aws service-quotas list-services
 aws service-quotas list-service-quotas \
@@ -446,8 +451,9 @@ aws ec2 describe-subnets \
   --query 'Subnets[].[SubnetId,AvailabilityZone]' --output table
 ```
 
-Вторая роль тегов - учёт денег. Единая политика (`Environment`, `Team`, `CostCenter`,
-`Cluster`, `ManagedBy`) отвечает на вопрос «сколько стоит кластер команды X» и помогает найти
+Вторая роль тегов - учёт денег. Обязательный минимум `CostCenter`, `Owner`, `Environment` -
+это основа аллокации затрат: по ним счёт раскладывается в AWS Cost Explorer и в Kubecost
+(глава 43). Более полная политика добавляет `Team`, `Cluster`, `ManagedBy` и помогает найти
 забытые ресурсы. Теги задают в Terraform как `default_tags`, а в организации закрепляют
 через Tag Policies и проверяют AWS Config.
 

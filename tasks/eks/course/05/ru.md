@@ -262,6 +262,9 @@ kubectl auth whoami                    # кем меня видит apiserver: u
   назначения, а не перевыпуск CA.
 - **Группы Kubernetes, а не персональные записи.** Access entry заводится на роль команды, а не
   на человека: тридцать инженеров дают тридцать поводов забыть одну запись при увольнении.
+- **Аудит забытых записей.** Список `aws eks list-access-entries` регулярно сверяют с
+  актуальными ролями: запись, чей `principal-arn` ведёт на удалённую или давно не принимаемую
+  роль, - это забытый доступ на удаление, а принятия ролей видны в CloudTrail (глава 21).
 - **Break-glass отдельно.** Одна роль с `AmazonEKSClusterAdminPolicy` на scope `cluster`,
   которую в обычной работе никто не принимает: жёсткая trust policy, MFA, алерт на принятие
   в CloudTrail (глава 21). Это ваш выход из ситуации раздела 5.1.
@@ -340,6 +343,8 @@ kubectl auth whoami                    # кем меня видит apiserver: u
 Дальше сверьте два слоя: соберите группы из access entries и поищите их в
 `kubectl get clusterrolebindings,rolebindings -A -o wide`. Группы без привязок и без access
 policies ничего не дают, а привязки на группы, которых нет ни в одной записи, - мёртвый RBAC.
+Отдельно ищите забытые записи: пройдите `list-access-entries` и для каждого `principal-arn`
+проверьте `aws iam get-role`, - запись на несуществующую роль это мёртвый доступ на удаление.
 Проверьте себя через `kubectl auth whoami` и `kubectl auth can-i --list`, помня, что права из
 access policies в этом выводе не появятся. Если кластер ещё в режиме `CONFIG_MAP` или
 `API_AND_CONFIG_MAP`, снимите `kubectl -n kube-system get configmap aws-auth -o yaml` в файл.

@@ -124,9 +124,40 @@ spec:
   kubelet:
     config:
       maxPods: 110
+      systemReserved:
+        cpu: 100m
+        memory: 200Mi
+      kubeReserved:
+        cpu: 100m
+        memory: 500Mi
     flags:
       - --node-labels=role=apps
 ```
+
+Через `kubelet` резервируют ресурсы под системные процессы, чтобы поды не выдавливали демоны и
+нода не ушла в `NotReady`. `systemReserved` держит CPU и память под ОС (systemd, sshd),
+`kubeReserved` - под сам `kubelet` и `containerd`. На AL2023 их задают в `kubelet.config`
+(выше), на Bottlerocket - в тех же TOML-настройках, отдельными секциями:
+
+```toml
+[settings.kubernetes]
+cluster-name = "demo"
+api-server = "https://XXXXXXXX.gr7.us-west-2.eks.amazonaws.com"
+cluster-certificate = "<base64-CA>"
+cluster-dns-ip = "10.100.0.10"
+max-pods = 110
+
+[settings.kubernetes.system-reserved]
+cpu = "100m"
+memory = "200Mi"
+
+[settings.kubernetes.kube-reserved]
+cpu = "100m"
+memory = "500Mi"
+```
+
+Это тот же набор параметров, что и в `NodeConfig`, но записанный конфигуратором Bottlerocket:
+метаданные кластера и `max-pods` в `[settings.kubernetes]`, резервы - в дочерних секциях.
 
 Важная деталь эксплуатации: на AL2 метаданные кластера (`certificateAuthority`, service `cidr`)
 `bootstrap.sh` подтягивал сам через вызов `DescribeCluster`. На AL2023 при **своём launch
@@ -199,6 +230,21 @@ aws ec2 describe-launch-template-versions \
 aws eks describe-nodegroup --cluster-name demo --nodegroup-name apps \
   --query "nodegroup.launchTemplate"
 ```
+
+Настройки IMDS в launch template - это ещё и харденинг. По умолчанию hop limit равен 2, и под
+из контейнера может достучаться до метаданных ноды и её IAM-роли. Форсируют IMDSv2 и урезают
+путь до метаданных прямо в шаблоне:
+
+```bash
+# Новая версия шаблона: обязательный токен IMDSv2 и hop limit 1
+aws ec2 create-launch-template-version --launch-template-id lt-0abc123 \
+  --source-version 1 --launch-template-data \
+  'MetadataOptions={HttpTokens=required,HttpPutResponseHopLimit=1,HttpEndpoint=enabled}'
+```
+
+`HttpTokens=required` включает IMDSv2 (запрос токена вместо простого GET),
+`HttpPutResponseHopLimit=1` не даёт ответу метаданных уйти дальше самого хоста, так что под в
+контейнере до них не дотянется. Детальный харденинг ноды - глава 19.
 
 Практический вывод: настройки образа и загрузки (AMI, диск, user data, IMDS) живут в launch
 template и версионируются там; сеть, роль и масштаб - в конфиге node group. Не смешивать и не
@@ -312,6 +358,8 @@ sudo journalctl -u nodeadm-config -u nodeadm-run   # логи nodeadm на AL202
   template `certificateAuthority` и service `cidr` надо передавать явно.
 - ID AMI не хардкодят, а берут из SSM по минорной версии, региону и варианту, так `kubelet`
   совпадает с control plane. Managed node group всегда идёт через launch template.
+- В launch template форсируют IMDSv2 (`HttpTokens=required`) и hop limit 1, а через `kubelet`
+  резервируют ресурсы (`systemReserved`, `kubeReserved`), чтобы поды не выдавили демоны.
 - Кастомный AMI оправдан под аттестацию, агенты или драйверы, но приносит свой конвейер сборки,
   патчи, риск дрейфа и version skew; собирают golden image поверх оптимизированного.
 - Нода не Ready - смотреть IAM instance profile, SG и доступ к endpoint/ECR, корректность
@@ -341,6 +389,7 @@ template до регистрации kubelet, на дежурстве не га�
 10. Почему автогенерированный launch template и ASG под managed-группой нельзя править руками?
 11. Когда оправдан кастомный AMI и какую цену вы за него платите?
 12. Куда смотреть в первую очередь, если нода не появилась или висит `NotReady`?
+13. Зачем форсировать IMDSv2 и hop limit 1 и что дают `systemReserved`/`kubeReserved`?
 
 ## Практика
 

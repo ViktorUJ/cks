@@ -180,6 +180,44 @@ eksctl create iamserviceaccount \
 kubectl -n payments describe serviceaccount s3-reader   # видно аннотацию role-arn
 ```
 
+Тот же результат нативным Terraform, без `eksctl`: OIDC-провайдер и роль с trust policy на
+точный `sub`/`aud` (аннотацию на SA навешивают отдельно в манифесте из раздела 16.6).
+
+```hcl
+data "aws_eks_cluster" "demo" { name = "demo" }
+
+data "tls_certificate" "oidc" {
+  url = data.aws_eks_cluster.demo.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {          # один раз на кластер
+  url             = data.aws_eks_cluster.demo.identity[0].oidc[0].issuer
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.oidc.certificates[0].sha1_fingerprint]
+}
+
+locals { oidc = replace(aws_iam_openid_connect_provider.eks.url, "https://", "") }
+
+resource "aws_iam_role" "s3_reader" {
+  name = "payments-s3-reader"
+  assume_role_policy = jsonencode({
+    Version   = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = aws_iam_openid_connect_provider.eks.arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = { StringEquals = {
+        "${local.oidc}:sub" = "system:serviceaccount:payments:s3-reader"
+        "${local.oidc}:aud" = "sts.amazonaws.com"
+      } }
+    }]
+  })
+}
+```
+
+Permissions policy навешивают отдельно (`aws_iam_role_policy_attachment`); trust policy тут -
+ровно условие из раздела 16.5, только выраженное в HCL.
+
 Дальше под должен использовать этот SA (`spec.serviceAccountName: s3-reader`). При старте пода
 Pod Identity Webhook внедряет в контейнеры:
 
@@ -188,6 +226,15 @@ Pod Identity Webhook внедряет в контейнеры:
 | Переменная `AWS_ROLE_ARN` | ARN роли из аннотации SA | SDK знает, какую роль принимать |
 | Переменная `AWS_WEB_IDENTITY_TOKEN_FILE` | путь к файлу токена в поде | SDK знает, где взять токен |
 | Projected-том с токеном | JWT с `aud=sts.amazonaws.com` и expiry | предъявляется STS для обмена на креды |
+| Переменная `AWS_STS_REGIONAL_ENDPOINTS` | `regional` (дефолт в EKS) | SDK идёт в региональный STS, не в глобальный |
+
+Webhook по умолчанию выставляет `AWS_STS_REGIONAL_ENDPOINTS=regional`, и SDK обращается к
+региональному endpoint `sts.<region>.amazonaws.com` вместо глобального `sts.amazonaws.com`:
+ниже задержка, своя избыточность в регионе и более долгий срок жизни токена сессии. Для
+приватного кластера без выхода в интернет это обязательно - трафик STS идёт через VPC
+interface endpoint `com.amazonaws.<region>.sts`, а глобальный endpoint его минует. Режим
+переключается аннотацией SA `eks.amazonaws.com/sts-regional-endpoints` (`true`/`false`);
+ставить `false` практически никогда не нужно.
 
 Токен монтируется как projected service account token: у него есть audience и срок жизни,
 kubelet обновляет его до истечения. Приложение обязано использовать **совместимый AWS SDK** -

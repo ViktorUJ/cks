@@ -234,6 +234,9 @@ aws eks update-kubeconfig --name <cluster> --region <region> --profile <profile>
 - **Trust policy роли не та.** Роль должна доверять сервису `pods.eks.amazonaws.com` с
   действиями `sts:AssumeRole` и `sts:TagSession` (без последнего сессия не тегируется и
   ассоциация не работает).
+- **Токен не смонтирован в под.** При работающей association под получает проектируемый токен
+  по пути `/var/run/secrets/pods.eks.amazonaws.com/serviceaccount/eks-pod-identity-token`. Нет
+  файла - агент или association не сработали, либо под не пересоздан после её создания.
 
 Когда что: IRSA - зрелый механизм, работает и вне EKS-агента, но требует OIDC provider и
 аккуратной trust policy на каждый кластер. Pod Identity - новее и проще в эксплуатации: одна
@@ -268,6 +271,8 @@ kubectl get sa <sa> -n <ns> -o jsonpath='{.metadata.annotations.eks\.amazonaws\.
 aws eks list-pod-identity-associations --cluster-name <cluster>
 # запущен ли агент Pod Identity
 kubectl -n kube-system get pods -l app.kubernetes.io/name=eks-pod-identity-agent
+# смонтирован ли токен Pod Identity в самом поде (нет файла - агент/association не сработали)
+kubectl exec <pod> -n <ns> -- ls /var/run/secrets/pods.eks.amazonaws.com/serviceaccount/
 ```
 
 Если цепочка authentication молчит о причине, помогают логи authenticator - они входят в
@@ -283,7 +288,7 @@ control plane logging (главы 21 и 34) и показывают, замап�
 | `couldn't get server API group` | битый kubeconfig или регион | `update-kubeconfig`, `current-context`, профиль |
 | под `AccessDenied` при IRSA | trust policy, OIDC, аннотация SA | OIDC provider, `sub`/`aud`, аннотация `role-arn` |
 | под `WebIdentityErr` | токен не смонтирован, роль не та | пересоздать под, проверить trust policy |
-| под `AccessDenied` при Pod Identity | нет association или агента | `list-pod-identity-associations`, агент в kube-system |
+| под `AccessDenied` при Pod Identity | нет association, агента или токена | `list-pod-identity-associations`, агент, токен в поде |
 
 Логика: сначала `sts get-caller-identity` отвечает «кто я»; затем по коду отказа расходимся -
 `Unauthorized` в маппинг и kubeconfig, `Forbidden` в RBAC, `AccessDenied` из пода в IRSA или

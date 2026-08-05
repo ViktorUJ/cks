@@ -155,8 +155,12 @@ Disruption - это то, как Karpenter добровольно прекращ
 | consolidationPolicy | Какие ноды трогает | Когда выбирать |
 |---|---|---|
 | `WhenEmpty` | только пустые (лишь DaemonSet и «дешёвые» поды) | нужен самый бережный режим |
-| `Balanced` | как ниже, но если экономия оправдывает прерывание | компромисс экономии и churn |
-| `WhenEmptyOrUnderutilized` | любые, что можно убрать или заменить дешевле | максимальная экономия |
+| `WhenEmptyOrUnderutilized` | пустые плюс недозагруженные: убрать или заменить дешевле | максимальная экономия |
+
+Значений `consolidationPolicy` в v1 ровно два. «Компромиссного» режима как отдельной политики
+нет: при `WhenEmptyOrUnderutilized` Karpenter сам взвешивает выгоду и применяет три метода -
+удаление пустых нод, single-node и multi-node consolidation, - прерывая ноду, только если
+замена дешевле.
 
 **Drift** - приведение ноды к желаемому состоянию: нода дрейфует, если значения в её
 `NodeClaim` разошлись с `NodePool` или `EC2NodeClass`. Drift-поля: `requirements` в `NodePool`
@@ -331,8 +335,8 @@ consolidation) для дашбордов (глава 33). Типовые оши�
 - **EC2NodeClass** - CRD (`karpenter.k8s.aws/v1`) с AWS-настройками: AMI, IAM-роль, подсети и
   SG, диски, IMDS.
 - **NodeClaim** - заявка Karpenter на конкретную ноду; связывает `NodePool` и реальный `Node`.
-- **Consolidation** - добровольное уплотнение ради стоимости; режимы `WhenEmpty`, `Balanced`,
-  `WhenEmptyOrUnderutilized`, параметр `consolidateAfter`.
+- **Consolidation** - добровольное уплотнение ради стоимости; политики `WhenEmpty` и
+  `WhenEmptyOrUnderutilized`, методы empty/single/multi-node, параметр `consolidateAfter`.
 - **Drift** - расхождение ноды с желаемым состоянием (новый AMI, изменённые селекторы или
   `requirements`); выполняется раньше consolidation.
 - **Disruption budget** - лимит темпа добровольных прерываний: доля/число нод, окна по
@@ -374,8 +378,8 @@ consolidation) для дашбордов (глава 33). Типовые оши�
 1. Что описывает `NodePool` и что - `EC2NodeClass`? Почему их разделили на два объекта?
 2. Как Karpenter выбирает тип инстанса и почему широкий `requirements` предпочтительнее узкого?
 3. В каком порядке выполняются методы disruption и почему это важно для диагностики?
-4. Чем отличаются `WhenEmpty`, `Balanced` и `WhenEmptyOrUnderutilized`? Что делает
-   `consolidateAfter`?
+4. Чем отличаются `WhenEmpty` и `WhenEmptyOrUnderutilized` и какие методы применяет
+   consolidation? Что делает `consolidateAfter`?
 5. Что такое drift, какие изменения его вызывают и какие поля на него не влияют?
 6. Как PDB тормозит выселение и что происходит с нодой, когда PDB не даёт вытеснить под?
 7. Что защищает `karpenter.sh/do-not-disrupt` и на каком уровне действует?

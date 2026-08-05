@@ -182,6 +182,21 @@ target-type `ip` (главы 26-27). **Патчинг**: EKS периодиче�
 не удаётся вытеснить мягко, может его удалить - защищайтесь через PDB и корректный graceful
 shutdown (глава 40).
 
+Расширение эфемерного диска задаётся прямо в спеке пода через `ephemeral-storage` в requests и
+limits (они равны, под `Guaranteed`); прочие ступени vCPU и памяти при этом не меняются:
+
+```yaml
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+    ephemeral-storage: 100Gi   # до 175Gi, Fargate провижнит с запасом
+  limits:
+    cpu: "1"
+    memory: 2Gi
+    ephemeral-storage: 100Gi   # requests = limits
+```
+
 ## 15.6. Стоимость
 
 Модель оплаты Fargate отличается от нод по сути. За node group вы платите за **инстанс**
@@ -201,9 +216,12 @@ shutdown (глава 40).
 Вывод про экономику без чисел: за единицу ресурса Fargate **дороже** ноды, но вы не платите за
 простаивающую ёмкость ноды и не тратите труд на упаковку. На **непостоянной** нагрузке (job'ы,
 редкие сервисы) это часто выгоднее: нет нод, простаивающих между пиками. На **стабильной
-крупной** нагрузке 24/7 ноды обычно дешевле: ресурс дешевле, а простоя почти нет. Отдельная
-ловушка - завершённые Job'ы: их поды остаются, и на Fargate это капает в счёт, поэтому им
-ставят `ttlSecondsAfterFinished`. Детальный разбор стоимости кластера - глава 43.
+крупной** нагрузке 24/7 ноды обычно дешевле: ресурс дешевле, а простоя почти нет. Структурно
+соотношение задаёт утилизация: чем ниже средняя загрузка (разреженные, периодические, редкие
+задачи), тем выгоднее Fargate; при загрузке близко к 100% круглосуточно Fargate выходит кратно
+дороже нод, потому что наценка за единицу ресурса умножается на постоянно занятую ёмкость.
+Отдельная ловушка - завершённые Job'ы: их поды остаются, и на Fargate это капает в
+счёт, поэтому им ставят `ttlSecondsAfterFinished`. Детальный разбор стоимости - глава 43.
 
 ## 15.7. Где Fargate уместен, а где нет
 
@@ -255,6 +273,25 @@ namespace. Ещё вариант - целиком «безнодовый» ст�
 ```bash
 kubectl get pods -n batch -o wide      # NODE у Fargate-подов: fargate-ip-10-0-...
 kubectl describe pod -n batch <pod>    # смотреть аннотацию CapacityProvisioned
+```
+
+Если нужен полностью безнодовый кластер, на Fargate переносят и CoreDNS. По умолчанию его
+поды держит на EC2 аннотация `eks.amazonaws.com/compute-type: ec2`; перенос идёт в три шага:
+создать профиль на `kube-system` с селектором по метке CoreDNS, снять аннотацию, пересоздать
+поды.
+
+```bash
+# 1. профиль kube-system с селектором на CoreDNS (метка k8s-app=kube-dns)
+aws eks create-fargate-profile --cluster-name demo \
+  --fargate-profile-name fp-kube-system \
+  --pod-execution-role-arn arn:aws:iam::111122223333:role/eksFargatePodRole \
+  --subnets subnet-0abc subnet-0def \
+  --selectors namespace=kube-system,labels={k8s-app=kube-dns}
+# 2. снять аннотацию, которая держит CoreDNS на EC2
+kubectl patch deployment coredns -n kube-system --type json \
+  -p '[{"op":"remove","path":"/spec/template/metadata/annotations/eks.amazonaws.com~1compute-type"}]'
+# 3. пересоздать поды - они уедут на Fargate
+kubectl rollout restart deployment coredns -n kube-system
 ```
 
 ## 15.10. Как это применяют в продакшене

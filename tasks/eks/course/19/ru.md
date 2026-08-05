@@ -106,6 +106,9 @@ AL2023 и Bottlerocket по умолчанию требуют IMDSv2 и став
 - **Компоненту IMDS может быть нужен.** При hop limit 1 он кредов из IMDS не получит - роль
   дают через IRSA или Pod Identity. Поднять hop limit до 2 можно, но это снова открывает
   креды роли ноды. Крайний вариант - вовсе отключить IMDS (`--http-endpoint disabled`).
+- **Оговорка про `hostNetwork: true`.** Такой под живёт в сетевом namespace хоста, его пакет
+  до IMDS идёт за один hop - hop limit 1 его не блокирует, метаданные и креды роли ноды
+  доступны. Здесь спасает не hop limit, а PSA: baseline и restricted запрещают `hostNetwork`.
 
 ## 19.4. Pod Security Admission предметно
 
@@ -143,8 +146,13 @@ kubectl label namespace payments \
 Важный факт про EKS: PSA - upstream-механизм, он **встроен и включён**, но уровень для
 namespace без лейблов - **privileged**, то есть не ограничивает ничего. Защиту надо **задавать
 явно**: EKS не навешивает restricted за вас. Профиль вводят постепенно - сначала `warn` и
-`audit`, чтобы увидеть нарушителей, потом `enforce`. Системные namespace (`kube-system`) под
-restricted не загоняют: там живут привилегированные компоненты вроде CNI и Pod Identity Agent.
+`audit`, чтобы увидеть нарушителей, потом `enforce`. Боевые namespace держат под restricted,
+системные - как минимум под baseline, а `kube-system` под restricted не загоняют: там живут
+привилегированные компоненты вроде CNI и Pod Identity Agent.
+
+Нарушения удобно считать метрикой control plane `apiserver_pod_security_evaluations_total`: её
+лейблы `decision`, `policy_level` и `mode` показывают, сколько подов ловят `audit` и `warn` в
+каждом профиле - это и есть список того, что упадёт при переводе namespace в `enforce`.
 
 ## 19.5. securityContext пода и контейнера
 

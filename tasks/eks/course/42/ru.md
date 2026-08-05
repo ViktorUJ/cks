@@ -135,7 +135,11 @@ Availability Zone, где будет создан том; AWS Backup поста�
 Velero - открытый инструмент бэкапа и восстановления, живущий внутри кластера. В отличие от
 AWS Backup (внешний сервис AWS), Velero работает через Kubernetes API и ближе к самому
 кластеру. Его сильная сторона - портируемость: он умеет restore в **другой** кластер, что
-его инструментом и миграции, и DR. Как он устроен:
+его инструментом и миграции, и DR.
+
+Интеграция с AWS даётся официальным плагином velero-plugin-for-aws: он добавляет object store
+plugin для S3 (BSL) и volume snapshotter plugin для снапшотов EBS. Плагин указывают флагом
+`--plugins velero/velero-plugin-for-aws:<версия>` при `velero install`. Как он устроен:
 
 - **Backup объектов.** Velero читает объекты через Kubernetes API и складывает их тарболом в
   объектное хранилище - S3-бакет, заданный через BackupStorageLocation (BSL).
@@ -155,6 +159,15 @@ AWS Backup (внешний сервис AWS), Velero работает через
 (главы 16-17): ServiceAccount контроллера Velero связывается с IAM-ролью, у которой есть права
 на S3-бакет (BSL) и на снапшоты EBS. Это тот же принцип наименьших привилегий, что и для любого
 контроллера в кластере.
+
+**S3 Object Lock для бэкапов Velero.** Бэкапы Velero лежат в S3-бакете, и та же IAM-роль, что
+их пишет, по умолчанию может их и удалить: при компрометации кластера или ransomware бэкапы
+стирают или шифруют первыми. Защита бакета здесь целиком на вас: управляемого Vault Lock, как
+у AWS Backup, тут нет. Ответ - S3 Object Lock (WORM): включённый на бакете (нужен versioning),
+в режиме Compliance он делает версии объектов неизменяемыми на срок retention, и удалить их
+не может даже root. Так бэкап переживает и ошибочный `velero backup delete`, и атакующего
+с правами на бакет. Срок Object Lock согласуют с retention у Schedule, иначе GC Velero не
+удалит просроченные бэкапы до снятия блокировки.
 
 ```mermaid
 flowchart TB
@@ -180,7 +193,7 @@ flowchart TB
 |---|---|---|
 | Природа | управляемый сервис AWS | k8s-native, ставится в кластер |
 | Единица | composite recovery point | Backup (объекты + тома) |
-| Политики/защита | backup plan, vault, Vault Lock (WORM) | retention Schedule, защита бакета - на вас |
+| Политики/защита | backup plan, vault, Vault Lock (WORM) | retention Schedule; защита бакета - S3 Object Lock (WORM), на вас |
 | Портируемость | внутри AWS (cross-region/account) | между кластерами, дистрибутивами, облаками |
 | Selective | namespace restore (до 5) | тонко: namespace, label, ресурсы |
 | Миграция | не профильно | профильный сценарий |
@@ -272,6 +285,10 @@ game day - восстанавливают recovery point (или Velero backup) 
 - **Velero** - Kubernetes-native backup/restore; объекты в S3 (BackupStorageLocation),
   тома через CSI snapshots или File System Backup.
 - **BackupStorageLocation (BSL)** - место хранения бэкапов Velero (S3-бакет).
+- **velero-plugin-for-aws** - официальный плагин Velero для AWS: object store для S3 (BSL) и
+  volume snapshotter для снапшотов EBS.
+- **S3 Object Lock** - WORM-защита S3-бакета: неизменяемость версий объектов на срок retention
+  (Governance/Compliance), защищает бэкапы Velero от удаления и шифрования.
 - **Schedule** - объект Velero для периодического backup по cron; задаёт RPO.
 - **restore hook** - init-контейнер или exec-команда, запускаемая Velero при restore пода.
 - **RTO** - целевое время восстановления сервиса после аварии.
@@ -294,7 +311,7 @@ game day - восстанавливают recovery point (или Velero backup) 
 - Velero - Kubernetes-native backup/restore: объекты в S3 (BSL), тома через CSI или File System
   Backup, селекторы, Schedule, restore hooks и restore в другой кластер (миграция и DR).
 - AWS Backup - управляемый, composite, Vault Lock; Velero - портируемый, тонкий selective и
-  миграция между кластерами и облаками; часто держат оба.
+  миграция между кластерами и облаками; часто держат оба; бакет Velero защищает S3 Object Lock.
 - RPO задаётся частотой бэкапа, стратегии DR (backup and restore, pilot light, warm standby,
   multi-site) - компромисс RTO/RPO против стоимости.
 - Ловушки restore: AZ томов, non-destructive пропуски, переотображение IRSA/ARN, пересоздание
