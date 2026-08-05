@@ -255,11 +255,22 @@ aws ec2 describe-subnets --subnet-ids <subnet> \
 aws elbv2 describe-target-health --target-group-arn "$TG_ARN"
 # 6. проверка резолвинга из пода
 kubectl run dnstest --image=busybox:1.36 --rm -it --restart=Never -- nslookup <name>
+# 7. на ноде: собрать дамп сети VPC CNI (логи ipamd/plugin, ENI, eni-configs)
+aws ssm send-command --document-name "AWS-RunShellScript" --instance-ids <instance-id> \
+  --parameters 'commands=["/opt/cni/bin/aws-cni-support.sh"]'
 ```
 
 Отдельный инструмент для «молчаливых» обрывов - **VPC Flow Logs**: они пишут, ACCEPT или REJECT
 получил пакет на уровне ENI или подсети. `REJECT` в flow logs прямо указывает на SG или NACL, а
 отсутствие ответных пакетов при ушедшем запросе - на stateless NACL и ephemeral ports.
+
+Когда под висит с `failed to assign an IP address`, а неясно, кончились ли IP или ENI не
+поднялась, спускаются на ноду. VPC CNI держит логи в `/var/log/aws-routed-eni` (`ipamd.log`,
+`plugin.log`), а скрипт `/opt/cni/bin/aws-cni-support.sh` собирает их вместе с состоянием
+ENI/IP и конфигурацией в архив `/var/log/eks_<instance-id>_<...>.tar.gz`. Запускают его на
+ноде через SSM, без SSH. Состояние ipamd видно и напрямую:
+`curl http://localhost:61679/v1/enis` показывает выданные ENI и IP, `/v1/pods` - привязку
+адресов к подам.
 
 Чеклист «симптом - вероятная причина - что проверить»:
 

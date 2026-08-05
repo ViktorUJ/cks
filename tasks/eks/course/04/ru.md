@@ -221,8 +221,11 @@ aws eks describe-cluster --name demo --query 'cluster.{v:version,acc:accessConfi
 личной ролью инженера, доступ уровня администратора остаётся у неё навсегда, и убрать его через
 IAM нельзя: запись живёт в конфигурации доступа кластера. Флаг выставляют в `false` (в `aws eks
 create-cluster` это `--access-config bootstrapClusterCreatorAdminPermissions=false`, у eksctl -
-флаг `--bootstrap-cluster-creator-admin-permissions false` или то же поле в `accessConfig`), а
-доступ заводят через access entries явно, тогда права описаны кодом, а не историей создания.
+флаг `--bootstrap-cluster-creator-admin-permissions false` или то же поле в `accessConfig`, в
+модуле `terraform-aws-eks` - булев вход `enable_cluster_creator_admin_permissions = false`,
+который модуль мапит на `bootstrapClusterCreatorAdminPermissions` в `accessConfig`), а доступ
+заводят через access entries явно (в модуле - вход `access_entries`), тогда права описаны
+кодом, а не историей создания.
 Роль-создатель нужна ровно один раз при `create-cluster`; дальнейшее администрирование ведут
 отдельные роли, описанные access entries, чтобы права не наследовались из истории. Опция
 доступна на кластерах EKS 1.23 и новее вместе с режимом `API` (глава 5).

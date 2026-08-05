@@ -288,7 +288,50 @@ kubectl get pdb -A
 `topologySpreadConstraints`, а тома создают с `volumeBindingMode: WaitForFirstConsumer`, чтобы
 провижининг шёл в зону выбранной ноды. Механика StorageClass и `allowedTopologies` - глава 23.
 
-## 12.10. Эксплуатация: наблюдение и типовые ошибки
+## 12.10. GPU и AI-нагрузки: отдельный NodePool под ускорители
+
+GPU-инстансы (`g5`, `p4d`, `p5`) дороги и дефицитны, обычным подам там делать нечего. Приём тот
+же, что везде: отдельный `NodePool` с узким `requirements` по GPU-семейству плюс taint, чтобы
+ноду занимали только поды, которым GPU действительно нужен.
+
+```yaml
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata: {name: gpu}
+spec:
+  template:
+    spec:
+      nodeClassRef: {group: karpenter.k8s.aws, kind: EC2NodeClass, name: gpu}
+      requirements:
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: ["g5", "p4d", "p5"]
+      taints:
+        - key: nvidia.com/gpu
+          effect: NoSchedule
+```
+
+Под без toleration на такой ноде не разместится; GPU-под терпит taint и явно просит ресурс:
+
+```yaml
+  tolerations:
+    - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+  containers:
+    - name: train
+      resources:
+        limits: {nvidia.com/gpu: 1}
+```
+
+Ресурс `nvidia.com/gpu` публикует NVIDIA device plugin - DaemonSet на GPU-нодах (на
+EKS-оптимизированном GPU AMI или отдельным аддоном; в Auto Mode встроен, глава 11). Пока плагин
+не поднялся, GPU планировщику не виден. Karpenter замечает pending-под с `requests` на
+`nvidia.com/gpu` и поднимает под него GPU-ноду из этого пула.
+
+Под обучение с гарантией дефицитной ёмкости GPU связывают с EC2 Capacity Blocks for ML (глава
+0.4): зарезервированную ёмкость Karpenter берёт через `capacityReservationSelectorTerms` в
+`EC2NodeClass`, при этом `reserved` идёт первым в приоритете capacity type (раздел 12.4).
+
+## 12.11. Эксплуатация: наблюдение и типовые ошибки
 
 Что смотреть на живом кластере, когда Karpenter ведёт себя не так, как ожидалось:
 
@@ -313,7 +356,7 @@ consolidation) для дашбордов (глава 33). Типовые оши�
   `status.conditions`. Пока класс не Ready, ссылающиеся пулы не участвуют в планировании.
 - **Слишком узкий `requirements`** - тип не подобрать, поды висят в `Pending`.
 
-## 12.11. Как это применяют в продакшене
+## 12.12. Как это применяют в продакшене
 
 - **`requirements` держат широким**, сужая только по необходимости: выбор типов, плотная
   укладка, устойчивость spot (глава 13).
@@ -328,7 +371,7 @@ consolidation) для дашбордов (глава 33). Типовые оши�
 - **Топологию по AZ закладывают заранее**, понимая, что консолидация не переносит тома EBS
   между зонами.
 
-## 12.12. Мини-глоссарий
+## 12.13. Мини-глоссарий
 
 - **NodePool** - CRD (`karpenter.sh/v1`), задающий границы нод: `requirements`, `limits`,
   `weight`, labels/taints, политику disruption.
@@ -344,7 +387,7 @@ consolidation) для дашбордов (глава 33). Типовые оши�
 - **`terminationGracePeriod`** - предел дренажа ноды; при его наличии drift идёт даже через
   блокирующие PDB и `do-not-disrupt`.
 
-## 12.13. Итоги главы
+## 12.14. Итоги главы
 
 - `NodePool` задаёт рамки нод, `EC2NodeClass` - AWS-специфику (AMI, роль, подсети, SG, диски,
   IMDS). Один класс могут делить несколько пулов.
@@ -363,7 +406,7 @@ consolidation) для дашбордов (глава 33). Типовые оши�
 - Консолидация не переносит реплики StatefulSet между AZ, так как том EBS привязан к зоне
   (глава 23).
 
-## 12.14. Как это пригодится в реальной работе
+## 12.15. Как это пригодится в реальной работе
 
 На дежурстве оба симптома из 12.1 диагностируются быстро. «Нода висит cordoned и не удаляется»
 - `kubectl describe node` на событие `Unconsolidatable` и `kubectl get pdb`: почти всегда
@@ -373,7 +416,7 @@ consolidation) для дашбордов (глава 33). Типовые оши�
 нагрузку) и сплошной `do-not-disrupt` (встаёт drift). Середина - PDB под каждую критичную
 нагрузку, disruption budget с тихими окнами и `terminationGracePeriod` как предохранитель.
 
-## 12.15. Вопросы для самопроверки
+## 12.16. Вопросы для самопроверки
 
 1. Что описывает `NodePool` и что - `EC2NodeClass`? Почему их разделили на два объекта?
 2. Как Karpenter выбирает тип инстанса и почему широкий `requirements` предпочтительнее узкого?
