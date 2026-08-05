@@ -84,3 +84,17 @@ NS="eks-101"
   fi
   [ "$result" == "0" ]
 }
+
+@test "7. Responsibility boundary: fg-probe is Pending and artifact explains why not Fargate" {
+  echo '1' >> /var/work/tests/result/all
+  phase=$(kubectl get po fg-probe -n "$NS" -o jsonpath='{.status.phase}' 2>/dev/null)
+  f=/var/work/tests/artifacts/7/whyfargate.txt
+  if [[ "$phase" == "Pending" ]] && [[ -s "$f" ]] && grep -qi 'fargate' "$f" && grep -qiE 'профил|profile' "$f"; then
+    echo '1' >> /var/work/tests/result/ok
+    result=0
+  else
+    echo "fg-probe phase=$phase; file $f must exist and mention Fargate and профиль/profile"
+    result=1
+  fi
+  [ "$result" == "0" ]
+}
