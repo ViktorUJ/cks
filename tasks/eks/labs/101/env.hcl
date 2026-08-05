@@ -1,6 +1,10 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/eks/labs/101/README_RU.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/eks/labs/101/worker/files/solutions/1.MD"
+  # Ветка, из которой worker тянет tests.bats и worker.sh при загрузке.
+  # На время разработки - рабочая ветка; ПЕРЕД МЕРЖЕМ в master заменить на "master".
+  git_branch        = "AG-155"
+  raw_base_url      = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/${local.git_branch}"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/${local.git_branch}/tasks/eks/labs/101/README_RU.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/${local.git_branch}/tasks/eks/labs/101/worker/files/solutions/1.MD"
   solutions_video   = "Not ready yet"
   debug_output      = "false"
   region            = "eu-central-1"
