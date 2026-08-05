@@ -337,7 +337,12 @@ access entries) и хранение state за вас не решает, так 
 
 ## Практика
 
-Лабы у главы пока нет, но её содержание проверяется на любом кластере. Возьмите `aws eks
+🧪 Лаба курса к этой теме: [лаба 101 - кластер как код](../../labs/101/README_RU.MD). Она
+разворачивает кластер через Terragrunt (vpc, control plane, аддоны, Karpenter, рабочая
+машина), разбирает разделение control plane и вашей зоны ответственности и проверяется
+командой `check_result`. Запуск - `TASK=101 make run_eks_task`.
+
+Помимо лабы, содержание главы проверяется на любом кластере. Возьмите `aws eks
 describe-cluster --name <cluster>` и выпишите всё, что относится к созданию: `version`,
 `roleArn`, `resourcesVpcConfig` (подсети, security groups, флаги endpoint), а также
 `kubernetesNetworkConfig`, `accessConfig`, `logging`, `encryptionConfig` и `upgradePolicy`.

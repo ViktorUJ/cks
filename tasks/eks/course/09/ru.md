@@ -313,7 +313,12 @@ kubectl get pods -A -o wide --field-selector spec.nodeName=<node>
 
 ## Практика
 
-Лабы у главы пока нет, но типы вычислений видно на живом кластере. Начните с того, что уже
+🧪 Лаба курса к этой теме: [лаба 101 - кластер как код](../../labs/101/README_RU.MD). В ней
+видно разделение вычислений вживую: системные поды на Fargate, рабочая нагрузка на
+EC2-нодах Karpenter, масштаб под спрос; проверка - командой `check_result`. Запуск -
+`TASK=101 make run_eks_task`.
+
+Помимо лабы, типы вычислений видно на живом кластере. Начните с того, что уже
 работает: `kubectl get nodes -L eks.amazonaws.com/compute-type -L
 node.kubernetes.io/instance-type` покажет, какие ноды какого типа, а `kubectl get pods -A -o
 wide` - что где запущено. Для Auto Mode загляните в `aws eks describe-cluster --name <cluster>

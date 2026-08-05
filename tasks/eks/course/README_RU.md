@@ -52,16 +52,16 @@
 1. [Введение: что берёт на себя EKS и что остаётся на вас](01/ru.md)
 2. [Control plane EKS: endpoint public и private, platform versions, SLA, логи](02/ru.md)
 3. [Жизненный цикл версий: standard и extended support, стратегия обновлений](03/ru.md)
-4. [Создание кластера: eksctl, Terraform и Terragrunt, CloudFormation](04/ru.md)
+4. [Создание кластера: eksctl, Terraform и Terragrunt, CloudFormation](04/ru.md) 🧪
 5. [Доступ к кластеру: IAM и RBAC, access entries, миграция с aws-auth](05/ru.md)
-6. [Сеть кластера: VPC CNI, ENI и IP-адреса, планирование CIDR](06/ru.md)
+6. [Сеть кластера: VPC CNI, ENI и IP-адреса, планирование CIDR](06/ru.md) 🧪
 7. [Масштаб адресного плана: prefix delegation, secondary CIDR, custom networking](07/ru.md)
 8. [Альтернативы VPC CNI: Cilium, режимы сети, когда менять CNI](08/ru.md)
 
 ### Часть 2. Ноды и вычислительные ресурсы
 
-9. [Типы вычислений: managed node groups, self-managed, Fargate, Auto Mode](09/ru.md)
-10. [AMI и bootstrap: AL2023, Bottlerocket, launch templates, kubelet и user data](10/ru.md)
+9. [Типы вычислений: managed node groups, self-managed, Fargate, Auto Mode](09/ru.md) 🧪
+10. [AMI и bootstrap: AL2023, Bottlerocket, launch templates, kubelet и user data](10/ru.md) 🧪
 11. [Cluster Autoscaler и Karpenter: два подхода к масштабированию нод](11/ru.md)
 12. [Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift](12/ru.md)
 13. [Spot-инстансы: прерывания, диверсификация, обработка событий](13/ru.md)

@@ -19,7 +19,7 @@
 #
 # Chapter numbers refer to tasks/eks/course/README_RU.md (48 chapters).
 #
-04,06,09,10	101	todo	Cluster as code: VPC, control plane, managed node group, kubeconfig
+04,06,09,10	101	ready	Cluster as code: VPC, control plane, managed node group, kubeconfig
 05	102	todo	Cluster access: IAM to RBAC, access entries and access policies
 06,07,14	103	todo	IP address planning: ENI limits, prefix delegation, secondary CIDR
 16,17	104	todo	Workload identity: IRSA and Pod Identity for an app reading S3 and Secrets Manager

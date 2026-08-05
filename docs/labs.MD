@@ -152,6 +152,7 @@
 |--------| ------------------------------------------------- | ---------------------------------------------------------------------------- |
 | **02** | [Karpenter Basics](../tasks/eks/labs/02/README.MD)
 | **03** | [Application Autoscaling with KEDA and Prometheus](../tasks/eks/labs/03/README.MD)
+| **101** | [Cluster as code: VPC, control plane, nodes, kubeconfig](../tasks/eks/labs/101/README_RU.MD) | [SOLUTION](../tasks/eks/labs/101/worker/files/solutions/1.MD) |
 
 
 
