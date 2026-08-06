@@ -32,9 +32,9 @@
 
 ```mermaid
 flowchart TB
-    eni["Слот на ENI"] --> sec["Режим адресов:<br>слот = 1 IP"]
-    eni --> pfx["Режим префиксов:<br>слот = /28"]
-    pfx --> pfxr["Десятки подов,<br>но блоки по 16"]
+    eni["Слот на ENI"] --> sec["Режим адресов:<br/>слот = 1 IP"]
+    eni --> pfx["Режим префиксов:<br/>слот = /28"]
+    pfx --> pfxr["Десятки подов,<br/>но блоки по 16"]
     style pfx fill:#326ce5,color:#fff
     style pfxr fill:#f4b400,color:#000
 ```
@@ -68,8 +68,12 @@ addon, правка через `kubectl set env` живёт до следующ�
 **Managed node groups ограничивают `maxPods` сверху независимо от prefix delegation: 110 для
 инстансов меньше 30 vCPU и 250 для остальных.** Включение переменной потолок не поднимет:
 больше даст только свой AMI в launch template с `maxPods` в user data (глава 10) или
-self-managed node group. И главное: **`kubelet` узнаёт `max-pods` при старте**, поэтому нода
-из адресного режима останется с прежним значением, prefix delegation - это про новые ноды.
+self-managed node group. Причина в обратной совместимости: таблица `max-pods` по умолчанию
+рассчитана на адресный режим, поэтому в user data передают `--use-max-pods false` вместе с
+явным `--max-pods`, а само значение считают скриптом `max-pods-calculator.sh` с флагом
+`--cni-prefix-delegation-enabled`. И главное: **`kubelet` узнаёт `max-pods` при старте**,
+поэтому нода из адресного режима останется с прежним значением, prefix delegation - это про
+новые ноды.
 
 Вторая часть цены - фрагментация. Префикс требует **непрерывный блок из 16 адресов**, а там,
 где по подсети вразброс живут вторичные адреса, свободных адресов много, а непрерывных блоков
@@ -155,10 +159,10 @@ aws ec2 create-subnet --vpc-id $vpc_id --availability-zone eu-central-1a \
 
 ```mermaid
 flowchart TB
-    node["Нода в подсети<br>10.0.1.0/24"] --> p["primary ENI: адрес<br>ноды и hostNetwork"]
-    node --> s["secondary ENI<br>по ENIConfig"]
-    s --> sub["Подсеть 100.64.x:<br>адреса подов"]
-    p --> snat["SNAT для egress<br>подов"]
+    node["Нода в подсети<br/>10.0.1.0/24"] --> p["primary ENI: адрес<br/>ноды и hostNetwork"]
+    node --> s["secondary ENI<br/>по ENIConfig"]
+    s --> sub["Подсеть 100.64.x:<br/>адреса подов"]
+    p --> snat["SNAT для egress<br/>подов"]
     style s fill:#326ce5,color:#fff
     style sub fill:#0f9d58,color:#fff
 ```
@@ -180,6 +184,13 @@ spec:
 
 Объект применяют по одному на каждую AZ с нодами, меняя имя и `subnet`, и только потом
 включают переменные - иначе нода в зоне без `ENIConfig` подам адреса не выдаст.
+
+Важно не путать два механизма. `spec.securityGroups` в `ENIConfig` - это группы для secondary
+ENI, то есть **для всех подов этой ноды**, взявших данный `ENIConfig`: гранулярность здесь
+зональная, а не подовая. Если SG нужна конкретному поду или набору подов по селектору, это
+другой механизм - security groups for pods: ресурс `SecurityGroupPolicy` привязывает список SG
+по селектору, а VPC CNI выдаёт таким подам отдельную branch ENI (разбор и типовые сбои - глава
+46). В режиме префиксов, без `SecurityGroupPolicy`, поды делят security group ноды.
 
 ```bash
 kubectl set env daemonset aws-node -n kube-system AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG=true
@@ -287,6 +298,12 @@ aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=vpc-0123456789a
 - **Фрагментация вместо дефицита**: остаток адресов большой, `InsufficientCidrBlocks` в логах.
   **Смешанные типы инстансов**: не-Nitro инстанс префиксы не получит, а наименьший `max-pods`
   группы применяется ко всем её нодам.
+- **Широкий список типов в Karpenter.** Отдельный случай той же ловушки: в spot-пул с широкими
+  требованиями попадают старые семейства без Nitro (`t2`, `m4`, `c4`), и такие ноды поднимаются
+  в адресном режиме с заметно меньшей плотностью, чем остальной пул, - парк выглядит
+  однородным, а поды распределяются неравномерно. Лечится сужением требований NodePool: метка
+  `karpenter.k8s.aws/instance-hypervisor` со значением `nitro` либо отсечение старых поколений
+  через `karpenter.k8s.aws/instance-generation` (главы 12 и 13).
 
 ## 7.9. IPv6-кластер: обзор радикального выхода
 
@@ -365,14 +382,15 @@ delegation поднимет плотность, но не добавит адр�
 ## 7.14. Вопросы для самопроверки
 
 1. Почему prefix delegation не решает проблему исчерпанной подсети, а иногда усугубляет её?
-3. Вы включили `ENABLE_PREFIX_DELEGATION=true`, но `allocatable.pods` не изменился. Две
+2. Вы включили `ENABLE_PREFIX_DELEGATION=true`, но `allocatable.pods` не изменился. Две
    причины?
-4. Какие требования к типам инстансов у режима префиксов и чем это опасно в смешанной группе?
-5. Остаток адресов в подсети 400, а в логах `aws-node` - `InsufficientCidrBlocks`. Что делать?
-6. Как соотносятся `WARM_PREFIX_TARGET`, `WARM_IP_TARGET` и `MINIMUM_IP_TARGET`?
-7. Почему под поды берут `100.64.0.0/10`, а не свободный блок из `192.168.0.0/16`?
-8. Что сделать после `associate-vpc-cidr-block` для выхода подов в интернет и дата-центр?
-9. Какие элементы обязательны для custom networking и почему `ENIConfig` заводят на каждую AZ?
+3. Какие требования к типам инстансов у режима префиксов и чем это опасно в смешанной группе?
+4. Остаток адресов в подсети 400, а в логах `aws-node` - `InsufficientCidrBlocks`. Что делать?
+5. Как соотносятся `WARM_PREFIX_TARGET`, `WARM_IP_TARGET` и `MINIMUM_IP_TARGET`?
+6. Почему под поды берут `100.64.0.0/10`, а не свободный блок из `192.168.0.0/16`?
+7. Что сделать после `associate-vpc-cidr-block` для выхода подов в интернет и дата-центр?
+8. Какие элементы обязательны для custom networking и почему `ENIConfig` заводят на каждую AZ?
+9. Чем `spec.securityGroups` в `ENIConfig` отличается от `SecurityGroupPolicy` по охвату?
 10. Почему при custom networking падает `max-pods` и чем это компенсируют?
 11. Чем enhanced subnet discovery отличается от custom networking и когда её недостаточно?
 12. Опишите порядок внедрения prefix delegation в живом кластере без даунтайма.

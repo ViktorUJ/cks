@@ -57,8 +57,8 @@ NetworkPolicy - декларация желаемого: «в этот под п
 ```mermaid
 flowchart TB
     np["NetworkPolicy объект"]
-    ctrl["Network Policy Controller<br>control plane"]
-    agent["network-policy-agent<br>DaemonSet aws-node"]
+    ctrl["Network Policy Controller<br/>control plane"]
+    agent["network-policy-agent<br/>DaemonSet aws-node"]
     ebpf["eBPF правила в ядре"]
     pod["Трафик пода"]
     np --> ctrl
@@ -112,10 +112,10 @@ VPC CNI управляет этим переменной `NETWORK_POLICY_ENFORCI
 ```mermaid
 flowchart TB
     start["Под стартовал"]
-    mode{"NETWORK_POLICY_<br>ENFORCING_MODE"}
-    allow["standard:<br>default allow"]
-    deny["strict:<br>default deny"]
-    window["Окно без политик:<br>трафик проходит"]
+    mode{"NETWORK_POLICY_<br/>ENFORCING_MODE"}
+    allow["standard:<br/>default allow"]
+    deny["strict:<br/>default deny"]
+    window["Окно без политик:<br/>трафик проходит"]
     ready["Политики применены"]
     start --> mode
     mode --> allow
@@ -265,9 +265,9 @@ VPC-адреса) или **overlay** (свой оверлей поверх VXLAN
 flowchart TB
     pod["Под"]
     vpccni["VPC CNI: IPAM, ENI"]
-    cil["Cilium: policy, L7,<br>DNS, Hubble"]
-    chain["Chaining:<br>IP от VPC CNI"]
-    replace["Замена:<br>свой IPAM"]
+    cil["Cilium: policy, L7,<br/>DNS, Hubble"]
+    chain["Chaining:<br/>IP от VPC CNI"]
+    replace["Замена:<br/>свой IPAM"]
     pod --> chain
     chain --> vpccni
     chain --> cil

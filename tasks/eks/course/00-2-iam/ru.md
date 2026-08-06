@@ -21,12 +21,12 @@ IAM-роль, привязанная к ServiceAccount через IRSA (глав
 ServiceAccount отвечает за identity пода в кластере, IAM-роль - за identity того же пода в AWS.
 
 ```mermaid
-flowchart LR
-    human["Инженер<br>aws sso / роль"] --> iam["IAM<br>кто ты и что можно"]
-    pod["Под<br>ServiceAccount"] --> iam
-    iam --> eks["EKS API<br>access entry, глава 5"]
-    iam --> aws["S3, SQS, KMS...<br>главы 16-17"]
-    eks --> rbac["RBAC Kubernetes<br>что можно в кластере"]
+flowchart TB
+    human["Инженер"] --> iam["IAM:<br/>кто ты и что можно"]
+    pod["Под и ServiceAccount"] --> iam
+    iam --> eks["EKS API:<br/>access entry"]
+    iam --> aws["S3, SQS, KMS"]
+    eks --> rbac["RBAC:<br/>права в кластере"]
     style iam fill:#673ab7,color:#fff
     style rbac fill:#f4b400,color:#000
 ```
@@ -99,13 +99,13 @@ IAM** это привычный подход: под каждую роль пи�
 
 ```mermaid
 flowchart TB
-    req["Запрос к API<br>principal + action + resource"] --> deny1{"Явный Deny<br>в политиках?"}
-    deny1 -->|да| no["Отказ<br>AccessDenied"]
-    deny1 -->|нет| scp{"Разрешено SCP<br>и boundary?"}
-    scp -->|нет| no
-    scp -->|да| allow{"Есть явный Allow?"}
-    allow -->|нет| no2["Отказ<br>implicit deny"]
-    allow -->|да| yes["Разрешено"]
+    req["Запрос к API<br/>principal + action + resource"] --> deny1{"Явный Deny<br/>в политиках?"}
+    deny1 -->|"да"| no["Отказ<br/>AccessDenied"]
+    deny1 -->|"нет"| scp{"Разрешено SCP<br/>и boundary?"}
+    scp -->|"нет"| no
+    scp -->|"да"| allow{"Есть явный Allow?"}
+    allow -->|"нет"| no2["Отказ<br/>implicit deny"]
+    allow -->|"да"| yes["Разрешено"]
     style yes fill:#0f9d58,color:#fff
     style no fill:#db4437,color:#fff
 ```
@@ -189,16 +189,15 @@ AWS managed политики удобны, но часто шире, чем ну
 ```
 
 ```mermaid
-sequenceDiagram
-    participant Pod as Под с ServiceAccount
-    participant STS as AWS STS
-    participant IAM as IAM-роль (trust policy)
-    participant S3 as S3
-    Pod->>STS: AssumeRoleWithWebIdentity + OIDC-токен SA
-    STS->>IAM: токен и sub совпадают с trust policy?
-    STS-->>Pod: временные ключи + SessionToken
-    Pod->>S3: запрос, подписанный временными ключами
-    Note over Pod,S3: детали и подводные камни - глава 16
+flowchart TB
+    pod["Под с ServiceAccount"] --> sts["STS:<br/>AssumeRoleWithWebIdentity"]
+    sts --> chk["IAM-роль:<br/>sub и aud совпали?"]
+    chk --> keys["Временные ключи<br/>и SessionToken"]
+    keys --> s3["Запрос в S3<br/>подписан ключами"]
+    style pod fill:#326ce5,color:#fff
+    style chk fill:#673ab7,color:#fff
+    style keys fill:#0f9d58,color:#fff
+    style s3 fill:#f4b400,color:#000
 ```
 
 Типовая ошибка IRSA живёт не в permissions policy, а в trust policy: в условии указан не тот

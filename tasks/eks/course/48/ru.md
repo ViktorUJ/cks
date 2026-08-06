@@ -36,19 +36,13 @@ plane и проверялся ли DR. Нужен систематический
 
 ```mermaid
 flowchart TB
-    ready["готовность к проду"]
-    infra["кластер и ноды"]
-    sec["идентичность и безопасность"]
-    net["сеть и хранение"]
-    obs["наблюдаемость"]
-    ops["эксплуатация и DR"]
-    inc["готовность к инцидентам"]
-    ready --> infra
-    ready --> sec
-    ready --> net
-    ready --> obs
-    ready --> ops
-    ready --> inc
+    ready["Готовность к проду"] --> infra["Кластер, ноды,<br/>вычисления"]
+    ready --> sec["Идентичность,<br/>безопасность"]
+    infra --> net["Сеть и хранение"]
+    sec --> obs["Наблюдаемость"]
+    net --> ops["Эксплуатация и DR"]
+    obs --> inc["Готовность<br/>к инцидентам"]
+    ops --> inc
     style ready fill:#4285f4,color:#fff
     style inc fill:#0f9d58,color:#fff
 ```
@@ -179,27 +173,14 @@ EBS-том в другой, и под навсегда `Pending`.
 
 ## 48.10. Сводная картина и приоритеты
 
-Девять доменов выше - это оси готовности. Ни одну нельзя пропустить, но не все одинаково
+Восемь доменов выше - это оси готовности. Ни одну нельзя пропустить, но не все одинаково
 срочны для первого выхода в прод. Часть пунктов - «must have», без них включать боевой трафик
 опасно; часть - «nice to have», их доводят уже в проде, не блокируя запуск.
 
 ```mermaid
 flowchart TB
-    prod["выход в прод"]
-    must["must have до прода"]
-    nice["nice to have после"]
-    access["доступ не у одного"]
-    backup["restore проверен"]
-    deny["default-deny сеть"]
-    cost["аллокация стоимости"]
-    trace["трейсинг"]
-    prod --> must
-    prod --> nice
-    must --> access
-    must --> backup
-    must --> deny
-    nice --> cost
-    nice --> trace
+    prod["Выход в прод"] --> must["Must have: доступ не у одного,<br/>restore проверен, default-deny"]
+    prod --> nice["Nice to have: аллокация<br/>стоимости, трейсинг"]
     style must fill:#4285f4,color:#fff
     style nice fill:#0f9d58,color:#fff
 ```

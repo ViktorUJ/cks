@@ -42,17 +42,9 @@ POSIX. Причина глубже: S3 - объектное хранилище, 
 
 ```mermaid
 flowchart TB
-    subgraph blk["EBS: блочный"]
-        b["Диск, произвольная запись"]
-    end
-    subgraph fs["EFS: файловый"]
-        f["Дерево каталогов, POSIX"]
-    end
-    subgraph obj["S3: объектный"]
-        k["Ключ -> объект целиком"]
-        m["Нет частичной записи"]
-        k --> m
-    end
+    b["EBS: блочный<br/>произвольная запись"]
+    f["EFS: файловый<br/>дерево каталогов, POSIX"]
+    k["S3: объектный<br/>ключ -> объект целиком"] --> m["Нет частичной записи"]
     style b fill:#f4b400,color:#000
     style f fill:#0f9d58,color:#fff
     style k fill:#4285f4,color:#fff
@@ -88,8 +80,8 @@ flowchart TB
     csi["Mountpoint S3 CSI"]
     s3["Бакет S3"]
     iam["IRSA / Pod Identity"]
-    app -->|правильный путь| sdk
-    app -->|нельзя менять код| csi
+    app -->|"правильный путь"| sdk
+    app -->|"нельзя менять код"| csi
     sdk --> s3
     csi --> s3
     iam --> sdk

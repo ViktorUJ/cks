@@ -35,16 +35,10 @@ IRSA настроен, у приложения своя роль, роль но�
 
 ```mermaid
 flowchart TB
-    node["Узел: IMDSv2<br>hop limit, ОС"]
-    pod["Под: PSA<br>securityContext"]
-    net["Сеть: приватный<br>кластер, endpoints"]
-    identity["Идентичность:<br>IRSA, Pod Identity"]
-    secrets["Секреты: KMS,<br>внешние хранилища"]
-    node --> base["Baseline<br>харденинга"]
-    pod --> base
-    net --> base
-    identity --> base
-    secrets --> base
+    node["Узел: IMDSv2,<br/>hop limit, ОС"] --> pod["Под: PSA,<br/>securityContext"]
+    pod --> net["Сеть: приватный<br/>кластер, endpoints"]
+    net --> idn["Соседние слои: IRSA,<br/>Pod Identity, KMS"]
+    idn --> base["Baseline<br/>харденинга"]
     style base fill:#0f9d58,color:#fff
     style node fill:#f4b400,color:#000
 ```
@@ -198,19 +192,11 @@ spec:                              # фрагмент пода под профи
 
 ```mermaid
 flowchart TB
-    node["Нода в приватной<br>подсети"]
-    ecr["VPC endpoint<br>ECR api и dkr"]
-    s3["Gateway endpoint<br>S3: слои образов"]
-    sts["VPC endpoint<br>STS: IRSA"]
-    eks["VPC endpoint<br>EKS, eks-auth"]
-    logs["VPC endpoint<br>CloudWatch Logs"]
-    node --> ecr
-    node --> s3
-    node --> sts
-    node --> eks
-    node --> logs
+    node["Нода в приватной<br/>подсети"] --> img["Образы: ECR api, dkr<br/>и gateway endpoint S3"]
+    node --> idn["Идентичность:<br/>STS для IRSA"]
+    node --> ctl["Кластер и логи:<br/>EKS, eks-auth, Logs"]
     style node fill:#f4b400,color:#000
-    style s3 fill:#0f9d58,color:#fff
+    style img fill:#0f9d58,color:#fff
 ```
 
 Набор endpoints для приватного кластера (по документации AWS; регион подставляется в

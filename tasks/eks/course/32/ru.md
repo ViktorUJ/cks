@@ -201,15 +201,8 @@ Lattice; сети уже связаны и хватает простого об�
 
 ```mermaid
 flowchart TB
-    tgw["Transit Gateway (хаб)"]
-    dev["VPC dev"]
-    stage["VPC stage"]
-    prod["VPC prod"]
-    shared["VPC shared services"]
-    dev --> tgw
-    stage --> tgw
-    prod --> tgw
-    shared --> tgw
+    dev["VPC dev, stage, prod"] --> tgw["Transit Gateway (хаб)"]
+    shared["VPC shared services"] --> tgw
     style tgw fill:#f4b400,color:#000
     style shared fill:#34a853,color:#fff
 ```

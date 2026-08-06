@@ -78,11 +78,11 @@ Bottlerocket, но там образ вы не выбираете.
 
 ```mermaid
 flowchart TB
-    lt["Launch template:<br>AMI, тип, диск, SG"] --> ec2["EC2 запускает<br>инстанс"]
-    ec2 --> ud["User data<br>выполняет bootstrap"]
-    ud --> boot["nodeadm / bootstrap.sh<br>настраивает kubelet"]
-    boot --> reg["kubelet регистрируется<br>в API кластера"]
-    reg --> ready["Нода Ready,<br>принимает поды"]
+    lt["Launch template:<br/>AMI, тип, диск, SG"] --> ec2["EC2 запускает<br/>инстанс"]
+    ec2 --> ud["User data<br/>выполняет bootstrap"]
+    ud --> boot["nodeadm / bootstrap.sh<br/>настраивает kubelet"]
+    boot --> reg["kubelet регистрируется<br/>в API кластера"]
+    reg --> ready["Нода Ready,<br/>принимает поды"]
     style lt fill:#4285f4,color:#fff
     style ready fill:#0f9d58,color:#fff
 ```
@@ -158,6 +158,14 @@ memory = "500Mi"
 
 Это тот же набор параметров, что и в `NodeConfig`, но записанный конфигуратором Bottlerocket:
 метаданные кластера и `max-pods` в `[settings.kubernetes]`, резервы - в дочерних секциях.
+
+`maxPods` в `NodeConfig` - значение статическое, и `nodeadm` сам под prefix delegation его не
+пересчитывает: включили префиксы (глава 7) - посчитайте потолок и впишите его сюда. У нод,
+которые поднимает Karpenter, те же самые настройки `kubelet` живут не в user data, а в
+`EC2NodeClass` (`spec.kubelet`): `maxPods` там задаётся явно, либо вместо него берут
+`podsPerCore`, и тогда плотность считается от числа vCPU инстанса, не превышая `maxPods`.
+Karpenter сам генерирует `NodeConfig` и его значения перебивают то, что вы написали в
+`userData`, поэтому эти поля задают только через `EC2NodeClass` (механика - глава 12).
 
 Важная деталь эксплуатации: на AL2 метаданные кластера (`certificateAuthority`, service `cidr`)
 `bootstrap.sh` подтягивал сам через вызов `DescribeCluster`. На AL2023 при **своём launch
@@ -244,7 +252,15 @@ aws ec2 create-launch-template-version --launch-template-id lt-0abc123 \
 
 `HttpTokens=required` включает IMDSv2 (запрос токена вместо простого GET),
 `HttpPutResponseHopLimit=1` не даёт ответу метаданных уйти дальше самого хоста, так что под в
-контейнере до них не дотянется. Детальный харденинг ноды - глава 19.
+контейнере до них не дотянется.
+
+Ровно одна оговорка, о которой узнают поздно: приём работает потому, что пакет из пода идёт
+через свой сетевой namespace и делает лишний hop. Под с `hostNetwork: true` живёт в сетевом
+стеке ноды, его пакет укладывается в один hop, и **метаданные с кредами роли ноды такому поду
+доступны при любом hop limit**. Закрывается это не настройкой launch template, а двумя другими
+способами: запретом `hostNetwork` через Pod Security Admission и тем, что прикладных прав на
+роли ноды просто нет - они у пода через IRSA или Pod Identity (главы 16, 17 и 19). Детальный
+харденинг ноды - глава 19.
 
 Практический вывод: настройки образа и загрузки (AMI, диск, user data, IMDS) живут в launch
 template и версионируются там; сеть, роль и масштаб - в конфиге node group. Не смешивать и не
@@ -282,10 +298,10 @@ template и версионируются там; сеть, роль и масш�
 
 ```mermaid
 flowchart TB
-    nr["Нода не Ready<br>или не появилась"] --> iam["IAM instance profile<br>и его политики"]
-    nr --> net["SG и доступ к<br>endpoint / ECR"]
-    nr --> ud["Ошибка в user data<br>или NodeConfig"]
-    iam --> logs["Логи: nodeadm,<br>cloud-init, kubelet"]
+    nr["Нода не Ready<br/>или не появилась"] --> iam["IAM instance profile<br/>и его политики"]
+    nr --> net["SG и доступ к<br/>endpoint / ECR"]
+    nr --> ud["Ошибка в user data<br/>или NodeConfig"]
+    iam --> logs["Логи: nodeadm,<br/>cloud-init, kubelet"]
     net --> logs
     ud --> logs
     style nr fill:#db4437,color:#fff
@@ -393,7 +409,7 @@ template до регистрации kubelet, на дежурстве не га�
 
 ## Практика
 
-🧪 Лаба курса к этой теме: [лаба 101 - кластер как код](../../labs/101/README_RU.MD). В ней
+Лаба курса к этой теме: [лаба 101 - кластер как код](../../labs/101/README_RU.MD). В ней
 вы проверяете, на каком образе живут рабочие ноды (AL2023 из дефолтного NodePool
 Karpenter); проверка - командой `check_result`. Запуск - `TASK=101 make run_eks_task`.
 

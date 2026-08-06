@@ -63,17 +63,9 @@ S3 - объём набегает быстро. Причём трафик к се
 
 ```mermaid
 flowchart TB
-    subgraph azb["AZ b"]
-      nodeb["Ноды AZ b"]
-    end
-    subgraph aza["AZ a"]
-      nodea["Ноды AZ a"]
-      nat["NAT Gateway"]
-    end
-    igw["Internet Gateway"]
-    nodeb -->|"cross-AZ, платно"| nat
-    nodea --> nat
-    nat --> igw
+    nodeb["Ноды AZ b"] -->|"cross-AZ, платно"| nat["NAT Gateway в AZ a"]
+    nodea["Ноды AZ a"] --> nat
+    nat --> igw["Internet Gateway"]
     style nat fill:#f4b400,color:#000
     style nodeb fill:#ea4335,color:#fff
 ```
@@ -217,7 +209,7 @@ spread как инструменты надёжности разбираются
 flowchart TB
     client["Клиент в AZ a"]
     dflt["Default: любая зона"]
-    pref["PreferClose:<br>та же зона"]
+    pref["PreferClose:<br/>та же зона"]
     epa["Бэкенд AZ a"]
     epb["Бэкенд AZ b, cross-AZ"]
     client --> dflt

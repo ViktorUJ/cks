@@ -65,10 +65,10 @@ support это не бесплатная отсрочка**: он включён
 
 ```mermaid
 flowchart TB
-    rel["Версия вышла<br>в EKS"]
-    std["Standard support<br>~14 месяцев"]
-    ext["Extended support<br>~12 месяцев, плата"]
-    auto["Принудительный<br>auto-upgrade"]
+    rel["Версия вышла<br/>в EKS"]
+    std["Standard support<br/>~14 месяцев"]
+    ext["Extended support<br/>~12 месяцев, плата"]
+    auto["Принудительный<br/>auto-upgrade"]
     rel --> std
     std --> ext
     ext --> auto
@@ -93,10 +93,10 @@ policy Kubernetes (глава 37), которая ограничивает, на
 
 ```mermaid
 flowchart TB
-    ins["Upgrade insights<br>починить API заранее"]
-    cp["1. Control plane<br>+1 минор, катит AWS"]
-    add["2. Аддоны<br>совместимые версии"]
-    node["3. Ноды<br>kubelet, kube-proxy"]
+    ins["Upgrade insights<br/>починить API заранее"]
+    cp["Шаг один: control plane<br/>плюс один минор, катит AWS"]
+    add["Шаг два: аддоны<br/>совместимые версии"]
+    node["Шаг три: ноды<br/>kubelet, kube-proxy"]
     ins --> cp
     cp --> add
     add --> node
@@ -213,10 +213,10 @@ In-place - не единственный путь. Альтернатива - **
 
 ```mermaid
 flowchart TB
-    blue["Старый кластер blue<br>текущая версия"]
-    green["Новый кластер green<br>целевая версия"]
-    mig["Миграция нагрузок<br>GitOps"]
-    sw["Переключение трафика<br>DNS/балансировщик"]
+    blue["Старый кластер blue<br/>текущая версия"]
+    green["Новый кластер green<br/>целевая версия"]
+    mig["Миграция нагрузок<br/>GitOps"]
+    sw["Переключение трафика<br/>DNS/балансировщик"]
     dn["Погасить blue"]
     blue --> mig
     green --> mig

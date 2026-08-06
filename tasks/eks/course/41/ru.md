@@ -96,11 +96,11 @@ S3-бакетах за PVC добавляют `AWSBackupServiceRolePolicyForS3Ba
 
 ```mermaid
 flowchart TB
-    plan["backup plan<br>расписание, retention"]
-    role["IAM role<br>+ access entry"]
-    eks["EKS cluster<br>(ресурс по ARN)"]
-    vault["backup vault<br>KMS, Vault Lock"]
-    rp["recovery point<br>(composite)"]
+    plan["backup plan<br/>расписание, retention"]
+    role["IAM role<br/>и access entry"]
+    eks["EKS cluster<br/>(ресурс по ARN)"]
+    vault["backup vault<br/>KMS, Vault Lock"]
+    rp["recovery point<br/>(composite)"]
     plan --> role
     role --> eks
     eks --> rp
@@ -124,15 +124,8 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    comp["composite recovery point"]
-    state["child: состояние<br>(манифесты, full)"]
-    ebs["child: EBS-тома<br>(снапшоты)"]
-    efs["child: EFS<br>(бэкап ФС)"]
-    s3["child: S3<br>(snapshot)"]
-    comp --> state
-    comp --> ebs
-    comp --> efs
-    comp --> s3
+    comp["composite recovery point"] --> state["child: состояние<br/>(манифесты, full)"]
+    comp --> vols["child-точки томов:<br/>EBS, EFS, S3"]
     style comp fill:#4285f4,color:#fff
     style state fill:#0f9d58,color:#fff
 ```
@@ -221,11 +214,11 @@ EFS). Это основа DR: если весь регион или аккаун
 
 ```mermaid
 flowchart TB
-    src["vault (регион A)<br>KMS + Vault Lock"]
-    acct["vault (аккаунт-хранилище)<br>изолирован"]
-    dr["vault (регион B)<br>для DR"]
-    src -->|cross-account copy| acct
-    src -->|cross-region copy| dr
+    src["vault (регион A)<br/>KMS + Vault Lock"]
+    acct["vault (аккаунт-хранилище)<br/>изолирован"]
+    dr["vault (регион B)<br/>для DR"]
+    src -->|"cross-account copy"| acct
+    src -->|"cross-region copy"| dr
     style src fill:#4285f4,color:#fff
     style acct fill:#0f9d58,color:#fff
 ```

@@ -54,19 +54,13 @@ VPC Peering и Transit Gateway требуют непересекающихся C
 
 ```mermaid
 flowchart TB
-    igw["Internet Gateway"] --> alb["ALB или NLB<br>в публичных подсетях"]
-    subgraph az_a["AZ eu-central-1a"]
-        puba["public 10.0.0.0/20<br>NAT GW"]
-        pria["private 10.0.48.0/20<br>ноды и поды"]
-    end
-    subgraph az_b["AZ eu-central-1b"]
-        pubb["public 10.0.16.0/20<br>NAT GW"]
-        prib["private 10.0.64.0/20<br>ноды и поды"]
-    end
-    alb --> pria
-    alb --> prib
-    pria --> puba --> igw
-    prib --> pubb --> igw
+    igw["Internet Gateway"] --> alb["ALB или NLB<br/>в публичных подсетях"]
+    alb --> pria["AZ 1a private<br/>10.0.48.0/20, ноды"]
+    alb --> prib["AZ 1b private<br/>10.0.64.0/20, ноды"]
+    pria --> puba["AZ 1a public<br/>10.0.0.0/20, NAT GW"]
+    prib --> pubb["AZ 1b public<br/>10.0.16.0/20, NAT GW"]
+    puba --> igw
+    pubb --> igw
     style igw fill:#326ce5,color:#fff
     style alb fill:#0f9d58,color:#fff
     style pria fill:#f4b400,color:#000
@@ -100,15 +94,15 @@ aws ec2 describe-subnets --filters "Name=vpc-id,Values=vpc-0a1b2c3d4e5f6a7b8" \
 существует. Поэтому приватная подсеть не требует отдельной защиты от входящего трафика.
 
 ```mermaid
-sequenceDiagram
-    participant Pod as Под 10.0.48.20 (private)
-    participant NAT as NAT Gateway (public subnet, EIP)
-    participant Net as ECR или внешний API
-    Pod->>NAT: пакет на 0.0.0.0/0, маршрут ведёт на nat-...
-    NAT->>Net: запрос от публичного адреса NAT
-    Net->>NAT: ответ
-    NAT->>Pod: вернул ответ поду
-    Note over Net,Pod: снаружи инициировать соединение нельзя
+flowchart TB
+    pod["Под 10.0.48.20<br/>приватная подсеть"] --> rt["Маршрут 0.0.0.0/0<br/>ведёт на NAT"]
+    rt --> nat["NAT Gateway<br/>с EIP"]
+    nat --> net["ECR или<br/>внешний API"]
+    net --> back["Ответ возвращается<br/>тем же путём"]
+    style pod fill:#326ce5,color:#fff
+    style nat fill:#db4437,color:#fff
+    style net fill:#f4b400,color:#000
+    style back fill:#0f9d58,color:#fff
 ```
 
 NAT Gateway - одна из самых дорогих строк в счёте: платят и за час существования шлюза, и **за
@@ -227,6 +221,21 @@ aws ec2 describe-vpc-attribute --vpc-id vpc-0a1b2c3d4e5f6a7b8 --attribute enable
 aws ec2 modify-vpc-attribute --vpc-id vpc-0a1b2c3d4e5f6a7b8 --enable-dns-hostnames
 ```
 
+У встроенного резолвера есть потолок, о который бьются нагруженные кластеры: **1024 пакета в
+секунду на сетевой интерфейс**, и этот лимит **нельзя повысить** через Service Quotas. Две
+детали делают его коварнее, чем кажется. Во-первых, лимит **общий на все link-local сервисы**:
+в него складываются запросы к резолверу, обращения к IMDS на `169.254.169.254` и синхронизация
+времени по NTP. Во-вторых, считается он на интерфейс, а поды на ноде сидят на её ENI, то есть
+делят один бюджет с kubelet, CNI и всеми агентами. При превышении резолвер просто отбрасывает
+трафик, и симптом получается неприятный: не отказ, а **плавающие таймауты DNS** без привязки к
+конкретному имени. Усугубляет всё `ndots:5` в подах, из-за которого одно обращение к внешнему
+имени превращается в несколько запросов. Штатное смягчение - NodeLocal DNSCache, локальный
+кэш на ноде; диагностика и лечение этого класса инцидентов - в главе 46.
+
+Ещё одна особенность резолвера: **трафик к нему нельзя фильтровать ни security group, ни
+NACL**. Это упрощает жизнь в приватных кластерах, но означает, что запрет DNS строится не в
+сетевом слое, а политиками в кластере, где порт 53 приходится оставлять исключением (глава 30).
+
 ## 0.3.7. VPC endpoints: приватный доступ к сервисам AWS
 
 По умолчанию обращение к API AWS идёт на публичный адрес, то есть из приватной подсети - через
@@ -239,11 +248,11 @@ PrivateLink)** - ENI с приватным адресом в ваших подс
 каждой AZ и за гигабайты, и требует SG с разрешённым портом 443.
 
 ```mermaid
-flowchart LR
-    pod["Под в приватной подсети"] --> nat["NAT Gateway<br>час + гигабайты"]
-    nat --> pub["Публичный API AWS"]
-    pod --> vpce["VPC endpoint<br>ENI 443 или маршрут"]
-    vpce --> priv["Сервис AWS<br>трафик внутри сети AWS"]
+flowchart TB
+    pod["Под в приватной<br/>подсети"] --> nat["NAT Gateway:<br/>час и гигабайты"]
+    nat --> pub["Публичный<br/>API AWS"]
+    pod --> vpce["VPC endpoint:<br/>ENI 443 или маршрут"]
+    vpce --> priv["Сервис AWS:<br/>трафик внутри AWS"]
     style pod fill:#326ce5,color:#fff
     style nat fill:#db4437,color:#fff
     style vpce fill:#0f9d58,color:#fff
@@ -268,6 +277,21 @@ flowchart LR
 от интернета. Выгода считается просто: если через NAT в сервис идут десятки гигабайт в месяц,
 interface endpoint окупается сразу; если трафика почти нет, три ENI в трёх зонах могут
 оказаться дороже NAT (глава 31).
+
+Отдельно стоит знать про **endpoint policy** - политику ресурса на самом endpoint, которая
+есть и у gateway, и у interface типов. Важно: **по умолчанию она разрешает всё**, то есть
+endpoint, поднятый «чтобы не платить за NAT», не ограничивает ничего. А ограничивать полезно,
+потому что endpoint - единственная точка, где видно **направление** запроса. Взломанный под с
+валидными правами может выгрузить данные в **чужой** бакет S3, и IAM-политика роли этому не
+мешает, если в ней стоит `s3:PutObject` на `*`. Endpoint policy закрывает именно это: она
+разрешает доступ только к ресурсам своей организации (`aws:ResourceOrgID`) или перечисленных
+аккаунтов (`aws:PrincipalAccount`), и запрос в сторонний бакет через ваш endpoint не проходит.
+
+Обратную задачу решает уже политика бакета: условия `aws:SourceVpce` и `aws:PrincipalOrgID` в
+bucket policy отвечают на вопрос «кто может обращаться к **моему** бакету» и защищают его от
+доступа мимо вашей сети. Это два разных контроля, и путать их не стоит: от утечки наружу
+защищает endpoint policy, свой бакет закрывает bucket policy. Вместе они складываются в то, что
+AWS называет data perimeter; в приватном кластере это штатная часть харденинга (глава 19).
 
 ```bash
 # Gateway endpoint для S3: маршрут в указанные route tables, плата не берётся

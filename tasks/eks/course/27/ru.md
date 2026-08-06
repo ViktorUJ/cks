@@ -90,8 +90,8 @@ flowchart TB
     tgweb["Target group frontend"]
     ing --> lbc
     lbc --> alb
-    alb -->|path /api| tgapi
-    alb -->|path /| tgweb
+    alb -->|"path /api"| tgapi
+    alb -->|"path /"| tgweb
     style lbc fill:#4285f4,color:#fff
     style alb fill:#f4b400,color:#000
 ```
@@ -145,9 +145,9 @@ flowchart TB
     ing2["Ingress team-b"]
     ing3["Ingress status"]
     alb["Один общий ALB"]
-    ing1 -->|group.name web| alb
-    ing2 -->|group.name web| alb
-    ing3 -->|group.name web| alb
+    ing1 -->|"group.name web"| alb
+    ing2 -->|"group.name web"| alb
+    ing3 -->|"group.name web"| alb
     style alb fill:#f4b400,color:#000
 ```
 
@@ -244,7 +244,7 @@ flowchart TB
     tg["Target group подов"]
     client --> waf
     waf --> alb
-    alb -->|host и path| tg
+    alb -->|"host и path"| tg
     style waf fill:#db4437,color:#fff
     style alb fill:#f4b400,color:#000
 ```

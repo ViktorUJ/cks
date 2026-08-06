@@ -42,20 +42,8 @@ kubectl describe pod uploader-1
 
 ```mermaid
 flowchart TB
-    subgraph block["EBS: блочный, зональный"]
-        ebs["Том EBS в AZ-a"]
-        p1["Один под, RWO"]
-        ebs --> p1
-    end
-    subgraph file["EFS: файловый, региональный"]
-        efs["Файловая система EFS"]
-        pa["Под в AZ-a"]
-        pb["Под в AZ-b"]
-        pc["Под в AZ-c"]
-        efs --> pa
-        efs --> pb
-        efs --> pc
-    end
+    ebs["EBS: блочный, зональный<br/>том в AZ-a"] --> p1["Один под, RWO"]
+    efs["EFS: файловый,<br/>региональный"] --> pa["Поды в AZ-a, AZ-b, AZ-c:<br/>RWX одновременно"]
     style ebs fill:#f4b400,color:#000
     style efs fill:#0f9d58,color:#fff
 ```
@@ -87,7 +75,7 @@ Amazon EFS - управляемая файловая система по про�
 
 ```mermaid
 flowchart TB
-    efs["Файловая система EFS<br>регион"]
+    efs["Файловая система EFS<br/>регион"]
     mta["Mount target AZ-a"]
     mtb["Mount target AZ-b"]
     na["Нода + под AZ-a"]

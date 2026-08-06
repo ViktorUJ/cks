@@ -101,6 +101,16 @@ parameters:
 | `encrypted` | шифрование тома | включайте всегда |
 | `kmsKeyId` | ключ KMS | без него ключ по умолчанию |
 
+Про `kmsKeyId` есть отдельная засада. Если это свой customer managed key, одной IAM-политики у
+роли драйвера недостаточно: **политика самого ключа тоже должна разрешать эту роль**. Нужны
+`kms:GenerateDataKey*`, `kms:Decrypt`, `kms:DescribeKey`, `kms:ReEncrypt*` и, что важнее всего,
+`kms:CreateGrant`: шифрование EBS работает через гранты, и без права их создавать драйвер
+создаст том, но **не сможет примонтировать его к инстансу**. Симптом узнаваемый - PVC
+`Bound`, а под висит, и в событиях `AccessDenied` от KMS, хотя IAM-политика роли выглядит
+правильной. Грант обычно ограничивают условием `kms:GrantIsForAWSResource`. Проверять политику
+ключа нужно всегда, когда ключ создан не тем же кодом, что кластер, и особенно когда ключ живёт
+в другом аккаунте: там разрешение в key policy обязательно (роль драйвера - главы 16 и 17).
+
 Обычный PVC под этот класс и команда проверки дефолтного класса:
 
 ```yaml
@@ -127,18 +137,10 @@ kubectl get storageclass
 
 ```mermaid
 flowchart TB
-    subgraph imm["Immediate"]
-        pvc1["PVC создан"]
-        vol1["Том в случайной AZ"]
-        pod1["Под: Pending<br>affinity conflict"]
-        pvc1 --> vol1 --> pod1
-    end
-    subgraph wfc["WaitForFirstConsumer"]
-        pod2["Под ждёт планирования"]
-        node2["Планировщик выбрал ноду"]
-        vol2["Том в AZ этой ноды"]
-        pod2 --> node2 --> vol2
-    end
+    pvc1["Immediate:<br/>PVC создан"] --> vol1["Том в случайной AZ"]
+    vol1 --> pod1["Под Pending:<br/>affinity conflict"]
+    pod2["WaitForFirstConsumer:<br/>под ждёт"] --> node2["Планировщик выбрал ноду"]
+    node2 --> vol2["Том в AZ этой ноды"]
     style vol1 fill:#db4437,color:#fff
     style vol2 fill:#0f9d58,color:#fff
 ```
@@ -171,13 +173,13 @@ StorageClass задают `allowedTopologies` с ключом `topology.ebs.csi.
 ```mermaid
 flowchart TB
     ebs["Том EBS в AZ-a"]
-    pv["PV: nodeAffinity<br>zone = AZ-a"]
+    pv["PV: nodeAffinity<br/>zone = AZ-a"]
     pod["Под привязан к AZ-a"]
     nodeA["Нода в AZ-a"]
-    karp["Karpenter поднял<br>ноду в AZ-b"]
+    karp["Karpenter поднял<br/>ноду в AZ-b"]
     ebs --> pv --> pod
     nodeA --> pod
-    karp -. нельзя примонтировать .-> pod
+    karp -.->|"нельзя примонтировать"| pod
     style ebs fill:#f4b400,color:#000
     style karp fill:#db4437,color:#fff
 ```
@@ -194,6 +196,16 @@ flowchart TB
 Для StatefulSet с `volumeClaimTemplates` каждая реплика получает свой том и привязана к своей
 зоне. Чтобы реплики не собрались в одной AZ, их разносят через `topologySpreadConstraints` с
 `topologyKey: topology.kubernetes.io/zone` и `maxSkew: 1` (надёжность - глава 40).
+
+Вторая половина того же ограничения - **режим доступа**. Для EBS это практически всегда
+`ReadWriteOnce`: том монтируется на одну ноду, и `ReadWriteMany` в расчёте на «пусть несколько
+подов пишут в одни файлы» здесь не работает. Есть ещё `ReadWriteOncePod` - строгий вариант, где
+том получает ровно один под, полезный против случайного второго писателя. Исключение из правила
+одно и узкое: EBS Multi-Attach для типа `io2`, и драйвер поддерживает его **только в блочном
+режиме** (`volumeMode: Block`), в пределах одной AZ, без файловой системы - разделяемое блочное
+устройство приложение должно уметь использовать само, например через кластерную ФС. Замену EFS
+из этого не сделать: общий файловый доступ нескольких подов, тем более из разных зон, решается
+через EFS или FSx (глава 24).
 
 ## 23.6. Расширение тома
 
@@ -255,6 +267,7 @@ spec:
 | `Pending`, `volume node affinity conflict` | том в одной AZ, ноды в другой | зона в `nodeAffinity` PV |
 | PVC долго `Pending`, PV нет | нет роли у драйвера или `WaitForFirstConsumer` без пода | логи контроллера, есть ли под |
 | `Pending`, `gp3` не поддержан | StorageClass на in-tree провизионере | `provisioner` в StorageClass |
+| PVC `Bound`, под не стартует, `AccessDenied` от KMS | роли драйвера не разрешён `kms:CreateGrant` | политику самого ключа CMK, события пода |
 
 Первым делом смотрят режим существующего StorageClass - он объясняет большинство «зональных»
 инцидентов:
@@ -295,6 +308,11 @@ kubectl get storageclass gp3 -o jsonpath='{.volumeBindingMode}'
   `WaitForFirstConsumer` (при планировании пода).
 - **volume node affinity conflict** - событие планировщика, когда `nodeAffinity` тома
   указывает на зону без подходящей ноды.
+- **Режимы доступа EBS** - `ReadWriteOnce` (одна нода) и `ReadWriteOncePod` (ровно один под);
+  `ReadWriteMany` возможен лишь как Multi-Attach `io2` в режиме `volumeMode: Block` в одной
+  AZ и без файловой системы. Общий файловый доступ - EFS или FSx (глава 24).
+- **`kms:CreateGrant`** - право, без которого драйвер создаст том со своим CMK, но не
+  примонтирует его: шифрование EBS идёт через гранты, разрешение нужно и в политике ключа.
 - **VolumeSnapshot / Content / Class** - объекты CSI-снапшотов: запрос, снапшот в AWS, класс.
 - **`allowVolumeExpansion`** - флаг StorageClass, разрешающий увеличивать том через рост PVC.
 
@@ -339,6 +357,9 @@ kubectl get storageclass gp3 -o jsonpath='{.volumeBindingMode}'
 9. Какие ограничения у расширения тома EBS и что нельзя сделать в принципе?
 10. В какой зоне окажется том из снапшота и почему снапшот не решает задачу доступа между AZ?
 11. Как отличить правильную конфигурацию хранилища от «везучей», работающей на одной AZ?
+12. Том со своим ключом KMS создался, но под не стартует. Какое право проверить и где именно?
+13. Почему `ReadWriteMany` не даёт нескольким подам работать с файлами на томе EBS и что
+    остаётся единственным исключением?
 
 ## Практика
 

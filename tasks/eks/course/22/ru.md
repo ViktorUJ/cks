@@ -43,8 +43,8 @@ baseline/restricted не выражается. PSA отвечает на «бе�
 flowchart TB
     req["kubectl / контроллер"]
     api["kube-apiserver"]
-    mut["Mutating webhooks<br>дописать, дефолты"]
-    val["Validating webhooks<br>PSA + policy engine"]
+    mut["Mutating webhooks<br/>дописать, дефолты"]
+    val["Validating webhooks<br/>PSA + policy engine"]
     etcd["etcd: объект записан"]
     rej["Отклонено с ошибкой"]
     req --> api --> mut --> val

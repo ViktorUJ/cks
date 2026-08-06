@@ -23,17 +23,11 @@ aggregated API servers. Обратно, от нод к API-серверу, тр�
 
 ```mermaid
 flowchart TB
-    subgraph awsvpc["VPC AWS: control plane"]
-        api["kube-apiserver<br>минимум 2 экземпляра"]
-        etcd["etcd, 3 AZ"]
-    end
-    nlb["Публичный endpoint<br>через NLB"]
-    eni["Cross-account ENI<br>в ваших подсетях"]
-    nodes["Ваши ноды<br>и webhooks"]
-    api --- etcd
-    api --> nlb
-    api --> eni
-    nlb --> nodes
+    awsvpc["VPC AWS: control plane"] --> api["kube-apiserver,<br/>2+ экземпляра"]
+    awsvpc --> etcd["etcd, 3 AZ"]
+    api --> nlb["Публичный endpoint<br/>через NLB"]
+    api --> eni["Cross-account ENI<br/>в ваших подсетях"]
+    nlb --> nodes["Ваши ноды<br/>и webhooks"]
     eni --> nodes
     style awsvpc fill:#232f3e,color:#fff
     style api fill:#0f9d58,color:#fff
@@ -136,7 +130,7 @@ flowchart TB
     client["kubectl или CI"]
     dns["DNS-имя endpoint"]
     pub["Публичный адрес NLB"]
-    priv["Приватный адрес ENI<br>private hosted zone"]
+    priv["Приватный адрес ENI<br/>private hosted zone"]
     api["kube-apiserver"]
     client --> dns
     dns -->|"извне VPC"| pub
@@ -189,7 +183,7 @@ flowchart TB
     api["kube-apiserver"]
     hook["Webhook: нет живых подов"]
     fail["Ошибка admission"]
-    loop["Поды не создаются,<br>в том числе сам webhook"]
+    loop["Поды не создаются,<br/>в том числе сам webhook"]
     create --> api
     api --> hook
     hook --> fail

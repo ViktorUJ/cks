@@ -38,11 +38,11 @@
 flowchart TB
     node["Ёмкость ноды"] --> cpu["Потолок CPU"]
     node --> mem["Потолок памяти"]
-    node --> pods["Потолок max-pods<br>(ENI, глава 6)"]
-    cpu --> first["Заполнится<br>первым - предел ноды"]
+    node --> pods["Потолок max-pods<br/>(ENI, глава 6)"]
+    cpu --> first["Заполнится<br/>первым - предел ноды"]
     mem --> first
     pods --> first
-    first --> waste["Остальные два<br>простаивают"]
+    first --> waste["Остальные два<br/>простаивают"]
     style pods fill:#326ce5,color:#fff
     style waste fill:#db4437,color:#fff
 ```
@@ -129,11 +129,11 @@ choosing-instance-type). Без prefix delegation это порядок деся
 
 ```mermaid
 flowchart TB
-    cap["Capacity: вся<br>ёмкость инстанса"] --> sys["system-reserved:<br>демоны ОС"]
-    cap --> kube["kube-reserved:<br>kubelet, runtime"]
-    cap --> evict["eviction threshold:<br>порог вытеснения"]
-    cap --> alloc["Allocatable:<br>доступно подам"]
-    alloc --> sched["На это смотрит<br>планировщик"]
+    cap["Capacity: вся<br/>ёмкость инстанса"] --> sys["минус system-reserved:<br/>демоны ОС"]
+    sys --> kube["минус kube-reserved:<br/>kubelet, runtime"]
+    kube --> evict["минус eviction<br/>threshold"]
+    evict --> alloc["Allocatable:<br/>доступно подам"]
+    alloc --> sched["На это смотрит<br/>планировщик"]
     style cap fill:#326ce5,color:#fff
     style alloc fill:#0f9d58,color:#fff
 ```

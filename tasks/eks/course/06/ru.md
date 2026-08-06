@@ -62,13 +62,13 @@ VPC CNI работает как DaemonSet `aws-node` в `kube-system`. Внут�
 
 ```mermaid
 flowchart TB
-    kl["kubelet: нужен<br>sandbox для пода"] --> cni["Плагин aws-cni"]
-    cni --> ipd["ipamd: пул<br>адресов ноды"]
-    ipd --> pool["Свободный адрес<br>в пуле?"]
-    pool -->|да| ok["Адрес выдан,<br>под получает сеть"]
-    pool -->|нет| ec2["EC2 API: привязать<br>адреса или ENI"]
-    ec2 -->|успех| ok
-    ec2 -->|подсеть пуста| fail["Нет адресов:<br>ошибка sandbox"]
+    kl["kubelet: нужен<br/>sandbox для пода"] --> cni["Плагин aws-cni"]
+    cni --> ipd["ipamd: пул<br/>адресов ноды"]
+    ipd --> pool["Свободный адрес<br/>в пуле?"]
+    pool -->|"да"| ok["Адрес выдан,<br/>под получает сеть"]
+    pool -->|"нет"| ec2["EC2 API: привязать<br/>адреса или ENI"]
+    ec2 -->|"успех"| ok
+    ec2 -->|"подсеть пуста"| fail["Нет адресов:<br/>ошибка sandbox"]
     style ipd fill:#326ce5,color:#fff
     style fail fill:#db4437,color:#fff
 ```
@@ -213,11 +213,11 @@ kubectl -n kube-system get svc kube-dns -o jsonpath='{.spec.clusterIP}{"\n"}'
 
 ```mermaid
 flowchart TB
-    pod["Под: адрес<br>10.0.1.55"] --> node["ENI ноды:<br>SNAT по умолчанию"]
+    pod["Под: адрес<br/>10.0.1.55"] --> node["ENI ноды:<br/>SNAT по умолчанию"]
     node --> vpc["Маршрутизация VPC"]
-    vpc --> net["Интернет через<br>NAT gateway"]
-    vpc --> peer["Связанная сеть:<br>peering, TGW, VPN"]
-    ext["EXTERNALSNAT=true:<br>адрес пода сохранён"] --> peer
+    vpc --> net["Интернет через<br/>NAT gateway"]
+    vpc --> peer["Связанная сеть:<br/>peering, TGW, VPN"]
+    ext["EXTERNALSNAT=true:<br/>адрес пода сохранён"] --> peer
     style pod fill:#326ce5,color:#fff
     style ext fill:#f4b400,color:#000
 ```
@@ -362,7 +362,7 @@ warm-пул поджимается на месте, системное реше�
 
 ## Практика
 
-🧪 Лаба курса к этой теме: [лаба 101 - кластер как код](../../labs/101/README_RU.MD). В ней
+Лаба курса к этой теме: [лаба 101 - кластер как код](../../labs/101/README_RU.MD). В ней
 вы проверяете, что VPC CNI выдаёт подам адреса из CIDR вашей VPC, и смотрите на адресный
 план кластера; проверка - командой `check_result`. Запуск - `TASK=101 make run_eks_task`.
 

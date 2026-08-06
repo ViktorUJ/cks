@@ -66,17 +66,10 @@ Git автоматически. Дрейф из тихой проблемы ст
 
 ```mermaid
 flowchart TB
-    dev["инженер: коммит + PR"]
-    git["Git<br>желаемое состояние"]
-    agent["агент в кластере<br>Argo CD / Flux"]
-    cluster["кластер EKS<br>фактическое состояние"]
-    diff["сравнение<br>drift?"]
-    dev --> git
-    agent --> git
-    agent --> diff
-    cluster --> diff
-    diff --> agent
-    agent --> cluster
+    dev["Инженер: коммит и PR"] --> git["Git: желаемое<br/>состояние"]
+    git --> agent["Агент в кластере:<br/>Argo CD или Flux"]
+    agent --> cluster["Кластер EKS:<br/>фактическое состояние"]
+    cluster -->|"drift"| agent
     style git fill:#4285f4,color:#fff
     style agent fill:#0f9d58,color:#fff
 ```
@@ -212,15 +205,11 @@ app-центричная модель с ApplicationSet; Flux - когда бл�
 
 ```mermaid
 flowchart TB
-    repo["Git: манифесты<br>+ список кластеров"]
-    hub["hub-кластер<br>Argo CD / ApplicationSet"]
-    eu["spoke: prod-eu"]
-    us["spoke: prod-us"]
-    ap["spoke: prod-ap"]
-    repo --> hub
-    hub --> eu
-    hub --> us
-    hub --> ap
+    repo["Git: манифесты<br/>и список кластеров"]
+    repo --> hub["hub-кластер<br/>Argo CD, ApplicationSet"]
+    hub --> eu["spoke: prod-eu"]
+    hub --> us["spoke: prod-us"]
+    hub --> ap["spoke: prod-ap"]
     style hub fill:#0f9d58,color:#fff
     style repo fill:#4285f4,color:#fff
 ```

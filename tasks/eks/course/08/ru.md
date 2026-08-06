@@ -63,12 +63,12 @@ Cilium на EKS ставят принципиально по-разному, и 
 
 ```mermaid
 flowchart TB
-    need["Нужны L7/DNS-политики<br>или Hubble"] --> q{"Кто выдаёт<br>адреса подам?"}
-    q -->|VPC CNI| chain["CNI chaining:<br>Cilium поверх aws-node"]
-    q -->|Cilium| repl["Полная замена:<br>aws-node удалён"]
-    chain --> keep["Реальные адреса VPC,<br>политики и Hubble сверху"]
-    repl --> eni["ENI IPAM:<br>адреса VPC, свой IPAM"]
-    repl --> ovl["cluster-pool:<br>overlay VXLAN"]
+    need["Нужны L7/DNS-политики<br/>или Hubble"] --> q{"Кто выдаёт<br/>адреса подам?"}
+    q -->|"VPC CNI"| chain["CNI chaining:<br/>Cilium поверх aws-node"]
+    q -->|"Cilium"| repl["Полная замена:<br/>aws-node удалён"]
+    chain --> keep["Реальные адреса VPC,<br/>политики и Hubble сверху"]
+    repl --> eni["ENI IPAM:<br/>адреса VPC, свой IPAM"]
+    repl --> ovl["cluster-pool:<br/>overlay VXLAN"]
     style chain fill:#326ce5,color:#fff
     style repl fill:#f4b400,color:#000
 ```
@@ -165,7 +165,7 @@ Overlay оправдан, когда дефицит IPv4 неустраним д
   вы сами сверяете, что версия CNI поддерживает новую версию control plane, и обновляете в
   нужном порядке. Раньше это делал managed addon.
 - **Часть интеграций AWS перестаёт работать «из коробки».** **Security groups for pods**
-  (глава 19) и **видимость адресов подов в VPC Flow Logs** завязаны на VPC CNI и ENI-модель;
+  (глава 46) и **видимость адресов подов в VPC Flow Logs** завязаны на VPC CNI и ENI-модель;
   при overlay они не работают, а при чужом ENI-IPAM их надо проверять отдельно, не считая
   данностью.
 - **Диагностика усложняется.** Сетевой сбой теперь разбирается инструментами CNI (`cilium`,
@@ -188,11 +188,11 @@ kubectl get ciliumnetworkpolicies -A   # какие CiliumNetworkPolicy прим
 
 ```mermaid
 flowchart TB
-    start["Под запущен,<br>политики ещё не готовы"] --> mode{"NETWORK_POLICY<br>_ENFORCING_MODE"}
-    mode -->|standard| allow["default allow:<br>весь трафик разрешён"]
-    mode -->|strict| deny["default deny:<br>трафик закрыт"]
-    allow --> risk["Окно без политик:<br>под открыт"]
-    deny --> dep["Нужна политика<br>на CoreDNS и т.п."]
+    start["Под запущен,<br/>политики ещё не готовы"] --> mode{"NETWORK_POLICY<br/>_ENFORCING_MODE"}
+    mode -->|"standard"| allow["default allow:<br/>весь трафик разрешён"]
+    mode -->|"strict"| deny["default deny:<br/>трафик закрыт"]
+    allow --> risk["Окно без политик:<br/>под открыт"]
+    deny --> dep["Нужна политика<br/>на CoreDNS и т.п."]
     style allow fill:#db4437,color:#fff
     style deny fill:#0f9d58,color:#fff
 ```

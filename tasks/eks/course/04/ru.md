@@ -32,21 +32,11 @@
 
 ```mermaid
 flowchart TB
-    net["VPC, подсети,<br>обязательные теги"]
-    iam["IAM: роль кластера,<br>роль нод"]
-    cl["Кластер EKS"]
-    sg["Cluster SG<br>и cross-account ENI"]
-    oidc["OIDC-провайдер<br>для IRSA"]
-    acc["Access entries"]
-    add["Аддоны"]
-    nodes["Node groups<br>или Karpenter"]
-    net --> cl
-    iam --> cl
-    cl --> sg
-    cl --> oidc
-    cl --> acc
-    cl --> add
-    add --> nodes
+    net["VPC, подсети,<br/>обязательные теги"] --> cl["Кластер EKS"]
+    iam["IAM: роли кластера и нод,<br/>OIDC-провайдер"] --> cl
+    cl --> auto["Появляется само:<br/>cluster SG, ENI"]
+    cl --> you["Задаёте вы: доступ,<br/>логи, аддоны"]
+    you --> nodes["Node groups<br/>или Karpenter"]
     style cl fill:#326ce5,color:#fff
     style net fill:#0f9d58,color:#fff
     style nodes fill:#f4b400,color:#000
@@ -214,7 +204,7 @@ Kubernetes задают отдельным входом, а смена дефо�
 
 ```mermaid
 flowchart TB
-    net["Сеть: VPC,<br>подсети, теги"]
+    net["Сеть: VPC,<br/>подсети, теги"]
     cl["Кластер"]
     idn["OIDC и роли IRSA"]
     add["Аддоны"]
@@ -386,10 +376,28 @@ access entries) и хранение state за вас не решает, так 
 
 ## Практика
 
-🧪 Лаба курса к этой теме: [лаба 101 - кластер как код](../../labs/101/README_RU.MD). Она
+Лаба курса к этой теме: [лаба 101 - кластер как код](../../labs/101/README_RU.MD). Она
 разворачивает кластер через Terragrunt (vpc, control plane, аддоны, Karpenter, рабочая
 машина), разбирает разделение control plane и вашей зоны ответственности и проверяется
 командой `check_result`. Запуск - `TASK=101 make run_eks_task`.
+
+Для разового кластера на разведку (раздел 4.4) есть официальные материалы AWS: пошаговый
+сценарий на eksctl с созданием, осмотром и удалением кластера, полное руководство по eksctl с
+конфиг-файлом и аддонами, и воркшоп AWS с лабами поверх готового кластера.
+
+```bash
+# Get started with Amazon EKS - eksctl: кластер и ноды за один проход, затем удаление
+# https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html
+
+# Eksctl User Guide: установка, кластер из yaml-конфига, аддоны, Auto Mode
+# https://docs.aws.amazon.com/eks/latest/eksctl/tutorial.html
+
+# EKS Workshop (репозиторий aws-samples/eks-workshop-v2): лабы поверх готового кластера
+# https://www.eksworkshop.com/
+```
+
+Такой кластер создают и удаляют целиком, а прод по-прежнему живёт в вашем IaC: два владельца
+состояния - это то, из-за чего eksctl остаётся инструментом разведки, а не прода.
 
 Помимо лабы, содержание главы проверяется на любом кластере. Возьмите `aws eks
 describe-cluster --name <cluster>` и выпишите всё, что относится к созданию: `version`,

@@ -47,10 +47,10 @@ kubectl describe pod <pod> | grep -A5 Events
 
 ```mermaid
 flowchart TB
-    load["Рост нагрузки"] --> hpa["HPA добавил<br>поды"]
-    hpa --> pend["Подам нет места:<br>Pending"]
-    pend --> node["Автоскейлер нод<br>поднял ноду"]
-    node --> sched["Планировщик<br>разместил поды"]
+    load["Рост нагрузки"] --> hpa["HPA добавил<br/>поды"]
+    hpa --> pend["Подам нет места:<br/>Pending"]
+    pend --> node["Автоскейлер нод<br/>поднял ноду"]
+    node --> sched["Планировщик<br/>разместил поды"]
     style hpa fill:#4285f4,color:#fff
     style node fill:#0f9d58,color:#fff
 ```
@@ -71,10 +71,10 @@ Cluster Autoscaler (CA) - классический автоскейлер нод
 
 ```mermaid
 flowchart TB
-    pend["Pending-поды"] --> ca["Cluster<br>Autoscaler"]
-    ca --> exp["Expander выбрал<br>node group"]
-    exp --> asg["desiredSize++<br>в ASG"]
-    asg --> ec2["ASG подняла<br>инстанс"]
+    pend["Pending-поды"] --> ca["Cluster<br/>Autoscaler"]
+    ca --> exp["Expander выбрал<br/>node group"]
+    exp --> asg["desiredSize++<br/>в ASG"]
+    asg --> ec2["ASG подняла<br/>инстанс"]
     ec2 --> reg["Нода в кластере"]
     style ca fill:#4285f4,color:#fff
     style asg fill:#f4b400,color:#000
@@ -248,12 +248,20 @@ CA управляет своими node group, Karpenter - своими `NodePoo
 
 ```mermaid
 flowchart TB
-    ca["Ноды под CA"] --> new["Karpenter поднял<br>свои ноды"]
-    new --> drain["Дренаж старых<br>нод CA"]
-    drain --> off["Node group CA<br>сокращена в ноль"]
+    ca["Ноды под CA"] --> new["Karpenter поднял<br/>свои ноды"]
+    new --> drain["Дренаж старых<br/>нод CA"]
+    drain --> off["Node group CA<br/>сокращена в ноль"]
     style ca fill:#f4b400,color:#000
     style new fill:#0f9d58,color:#fff
 ```
+
+**Как прикрыть чувствительные нагрузки на время обкатки.** Пока Karpenter проверяют на первых
+подах, от незапланированного списания ноды защищает аннотация пода
+`karpenter.sh/do-not-disrupt: "true"` (в старом API она называлась
+`karpenter.sh/do-not-evict`). Важно понимать её охват: аннотация держит **всю ноду**, где живёт
+под, и тормозит любые добровольные прерывания, включая обновление по drift. Поэтому на
+время миграции её ставят точечно, на конкретные поды, и снимают, когда нагрузка обкатана,
+иначе вместе с консолидацией встанет и обновление AMI (глава 12).
 
 Детали конфигурации Karpenter, которые понадобятся при миграции (`NodePool`, `EC2NodeClass`,
 consolidation, disruption budgets), - в главе 12. Здесь важен принцип: миграция идёт

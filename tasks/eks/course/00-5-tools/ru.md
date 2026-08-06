@@ -13,11 +13,12 @@
 системные компоненты ставятся либо как managed addon, либо чартом.
 
 ```mermaid
-flowchart LR
-    cli["aws cli v2<br>профили, STS, разведка"] --> cfg["kubeconfig<br>с exec-плагином"]
-    tf["terraform + terragrunt<br>VPC, кластер, роли"] --> cfg
-    ek["eksctl<br>быстрый кластер, разведка"] --> cfg
-    cfg --> kc["kubectl + helm<br>привычные из CKA"] --> pl["плагины<br>k9s, stern, kubectx"]
+flowchart TB
+    cli["aws cli v2:<br/>профили и STS"] --> cfg["kubeconfig<br/>с exec-плагином"]
+    tf["terraform<br/>и terragrunt"] --> cfg
+    ek["eksctl"] --> cfg
+    cfg --> kc["kubectl и helm"]
+    kc --> pl["k9s, stern,<br/>kubectx"]
     style cli fill:#326ce5,color:#fff
     style tf fill:#0f9d58,color:#fff
     style cfg fill:#f4b400,color:#000
@@ -75,23 +76,42 @@ aws eks update-kubeconfig --region eu-central-1 --name demo \
 ```
 
 Дальше специфика EKS: в kubeconfig **нет ни токена, ни клиентского сертификата**. Вместо них
-секция `exec`, которая при каждом обращении запускает `aws eks get-token --cluster-name demo`.
-Тот подписывает запрос текущими кредами, а apiserver проверяет подпись через IAM и получает
-принципала, который дальше маппится на RBAC.
+секция `exec`, которая запускает `aws eks get-token --cluster-name demo`. Тот подписывает
+запрос текущими кредами, а apiserver проверяет подпись через IAM и получает принципала,
+который дальше маппится на RBAC.
 
 ```mermaid
-sequenceDiagram
-    participant K as kubectl
-    participant A as aws eks get-token
-    participant S as AWS STS / IAM
-    participant E as EKS apiserver
-    K->>A: exec-плагин, нужен токен
-    A->>S: подписать запрос кредами профиля
-    S->>A: короткоживущий токен
-    K->>E: запрос с Bearer-токеном
-    E->>S: проверить подпись, определить принципала
-    E->>K: ответ или Unauthorized
+flowchart TB
+    k["kubectl"] --> a["exec-плагин<br/>aws eks get-token"]
+    a --> s["Подпись кредами<br/>профиля локально"]
+    s --> tok["Токен: presigned<br/>запрос к STS"]
+    tok --> e["EKS apiserver<br/>проверяет принципала"]
+    e --> res["Ответ или<br/>Unauthorized"]
+    style k fill:#326ce5,color:#fff
+    style s fill:#673ab7,color:#fff
+    style e fill:#0f9d58,color:#fff
+    style res fill:#f4b400,color:#000
 ```
+
+Здесь легко напридумывать лишних страхов, поэтому уточним механику. Плагин **не обращается в
+STS за токеном**: он локально подписывает вашими кредами presigned-запрос к
+`sts:GetCallerIdentity`, и этот подписанный запрос и есть токен. Вызов в STS делает уже
+apiserver, когда проверяет предъявленное. Второе: плагин работает не на каждый HTTP-запрос -
+он возвращает объект `ExecCredential` с полем `status.expirationTimestamp`, и `client-go`
+держит полученные креды в памяти процесса до этого времени. Поэтому долгоживущий `k9s`,
+`kubectl get -w` или скрипт в цикле не упираются в лимиты частоты вызовов AWS API. Кэш живёт в
+рамках процесса: каждый новый `kubectl` снова запускает плагин, но это локальная подпись, не
+сетевой вызов.
+
+```bash
+# До какого момента client-go будет переиспользовать текущий токен
+aws eks get-token --cluster-name demo --query 'status.expirationTimestamp'
+```
+
+Оговорка про throttling всё же есть, но она не про сам токен: если креды профиля приходят из
+SSO или через `assume-role`, то за ними CLI ходит в IAM Identity Center и STS по-настоящему.
+Эти ответы кэшируются в `~/.aws/sso/cache` и `~/.aws/cli/cache`, поэтому удалять их «на всякий
+случай» - верный способ устроить себе шквал вызовов и получить `Throttling`.
 
 - **В kubeconfig нет секрета**, токен короткоживущий, права определяет IAM плюс RBAC.
 - **Токен зависит от профиля.** Смените `AWS_PROFILE` - и тот же контекст пойдёт в кластер от
@@ -155,11 +175,11 @@ Terragrunt - тонкая обёртка над terraform. Она снимает
 
 ```mermaid
 flowchart TB
-    env["env.hcl<br>region, cidr, subnets,<br>k8_version, instance_type, tags"]
-    vpc["vpc<br>public/private подсети, NAT,<br>теги elb и Karpenter"]
-    cp["eks_control_plane<br>кластер, версия, subnet_ids"]
+    env["env.hcl:<br/>регион, CIDR, версии"]
+    vpc["vpc:<br/>подсети, NAT, теги"]
+    cp["eks_control_plane:<br/>кластер и версия"]
     env --> vpc --> cp
-    cp --> add["eks_addons"] & karp["eks_karpenter"] & wrk["worker<br>машина для заданий лабы"]
+    cp --> add["eks_addons"] & karp["eks_karpenter"] & wrk["worker<br/>машина для заданий лабы"]
     style env fill:#326ce5,color:#fff
     style cp fill:#673ab7,color:#fff
     style wrk fill:#f4b400,color:#000
@@ -181,6 +201,20 @@ terragrunt run-all apply     # все стеки с учётом зависим�
 terragrunt run-all output    # собрать выходы всех стеков
 ```
 
+Отдельно про бинарь. Terragrunt одинаково работает и с terraform, и с **OpenTofu** - открытым
+форком, который часто выбирают, чтобы не зависеть от лицензии. Модули и `terragrunt.hcl` этого
+курса с ним совместимы, менять код не нужно, достаточно указать, чем оркестрировать:
+
+```hcl
+# terragrunt.hcl: чем именно запускать план и apply
+terraform_binary = "tofu"
+```
+
+То же задаётся переменной окружения (`TERRAGRUNT_TFPATH`, в новых версиях `TG_TF_PATH`), что
+удобно в CI. Свежие версии Terragrunt при наличии `tofu` предпочитают его сами, поэтому на
+машинах, где стоят оба бинаря, выбор фиксируют явно - иначе локально и в пайплайне план может
+считаться разными инструментами.
+
 ## 0.5.7. helm: чем ставят контроллеры, и когда лучше managed addon
 
 Helm вам знаком, поэтому только про EKS. Чартами ставится почти весь платформенный слой: AWS
@@ -198,6 +232,26 @@ helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-contro
 
 helm get values aws-load-balancer-controller -n kube-system   # с какими values стоит
 ```
+
+Публичные чарты тянутся без авторизации, а вот **свои платформенные чарты** компании обычно
+лежат в приватном ECR, и туда helm нужно логинить отдельно от docker. Реестр OCI, поэтому
+работает `helm registry login` с тем же токеном, что и у docker:
+
+```bash
+# Логин helm в приватный ECR; токен живёт часами, в CI шаг повторяют перед install
+aws ecr get-login-password --region eu-central-1 \
+  | helm registry login --username AWS --password-stdin \
+    123456789012.dkr.ecr.eu-central-1.amazonaws.com
+
+# Дальше чарт ставится как обычно, но по oci-ссылке и с явной версией
+helm upgrade --install platform-base \
+  oci://123456789012.dkr.ecr.eu-central-1.amazonaws.com/charts/platform-base \
+  --version 2.4.1 -n platform -f values-prod.yaml
+```
+
+Имя пользователя всегда буквально `AWS`, а пароль - временный токен, поэтому в пайплайне это
+шаг перед установкой, а не сохранённый секрет. Права на pull даёт та же IAM-роль, что и для
+образов, а cross-account доступ - политика репозитория (глава 20).
 
 Две привычки: **никогда без `--version`** (иначе кластер меняется сам при следующем `upgrade`)
 и **values в файле**, а не в `--set` из чьей-то истории bash. Когда чартов много, их держат
@@ -227,6 +281,7 @@ kube-proxy, CoreDNS, EBS CSI, Pod Identity Agent) AWS предлагает ка�
 | `krew` | менеджер плагинов kubectl, через него ставится остальное |
 | `kubectl-neat` | убирает служебный шум из `get -o yaml` |
 | `eks-node-viewer` | карта нод EKS с загрузкой и стоимостью, нужен при работе с Karpenter |
+| `kubectl-k8i` | таблица нод с загрузкой, типом инстанса, spot или on-demand, зоной и NodePool |
 | `jq` | фильтрация JSON от aws cli там, где `--query` уже неудобен |
 | `yq` | тот же приём для YAML: values чартов, манифесты, kubeconfig |
 
@@ -235,6 +290,52 @@ kubectx eks-demo && kubens kube-system   # контекст и namespace
 stern -n kube-system karpenter           # логи всех подов Karpenter
 aws eks describe-nodegroup --cluster-name demo --nodegroup-name ng-default | jq '.nodegroup'
 ```
+
+Про плагины стоит сказать отдельно, потому что половина повседневных удобств живёт именно там.
+Механика простая: **любой исполняемый файл с именем `kubectl-<имя>` в `PATH` становится
+подкомандой `kubectl <имя>`**. Ставить их руками не нужно, для этого есть **krew** - менеджер
+плагинов с индексом, поиском и обновлением:
+
+```bash
+kubectl krew update                  # обновить индекс плагинов
+kubectl krew search                  # весь каталог; или по слову: krew search node
+kubectl krew info k8i                # что это, версия, домашняя страница
+kubectl krew install k8i             # поставить
+kubectl krew list                    # что уже стоит
+kubectl krew upgrade                 # обновить все установленные
+kubectl krew uninstall k8i           # снять
+
+kubectl plugin list                  # взгляд со стороны kubectl: что он видит в PATH
+```
+
+Плагины бывают не только в основном индексе: свой или корпоративный подключается как
+дополнительный индекс, после чего плагин ставится с префиксом (`kubectl krew index add
+<имя> <git-url>`, затем `kubectl krew install <имя>/<плагин>`). Помните при этом, что плагин -
+это чужой исполняемый файл, который запускается с вашими правами и вашим kubeconfig: для
+прод-окружений список плагинов согласуют так же, как любую другую зависимость (глава 20).
+
+Пример плагина, полезного именно на EKS, - **`kubectl-k8i`**. Штатный `kubectl get nodes`
+показывает ноду как абстрактную машину, а на EKS вопросы обычно другие: это spot или
+on-demand, какой тип инстанса, в какой зоне, из какого NodePool, кто её создал (Karpenter,
+Cluster Autoscaler или Spot.io), и насколько она реально загружена против requests и limits.
+`k8i` собирает это в одну таблицу с процентами загрузки и умеет фильтровать и сортировать по
+любому из этих признаков, группировать ноды по taint, а подкомандой `analyze` показывать, какие
+именно нагрузки живут на выбранных нодах и насколько у них limits расходятся с requests.
+
+```bash
+# Плагин: github.com/ViktorUJ/kubectl-k8i (есть в krew, либо бинарь из releases)
+kubectl krew install k8i
+
+kubectl k8i                                    # все ноды: загрузка, тип, зона, пул
+kubectl k8i --filter ec2_type=spot             # только spot-ноды (глава 13)
+kubectl k8i --autoscaler karpenter --sort cpu_load=desc   # ноды Karpenter по загрузке
+kubectl k8i --group-by taint                   # какие логические группы нод есть
+kubectl k8i analyze --autoscaler karpenter --cpu-overcommit 100   # кто просит впятеро меньше
+```
+
+Значения usage приходят из metrics-server: без него столбцы загрузки будут нулевыми, а
+requests и limits видны всё равно. Пригодится это в главах 12 и 13 (NodePool, spot) и особенно
+в главе 14, где как раз разбирается разрыв между requests, limits и фактическим потреблением.
 
 ## 0.5.9. Гигиена рабочего окружения
 
@@ -247,6 +348,13 @@ aws eks describe-nodegroup --cluster-name demo --nodegroup-name ng-default | jq 
 - **Регион и аккаунт проверяются перед разрушающей командой.** `aws sts get-caller-identity` и
   `kubectl config current-context` перед `run-all destroy` стоят пять секунд, а подсветка
   аккаунта в приглашении shell снимает весь класс ошибок «удалил не там».
+- **Подсказки CLI включены.** У aws cli v2 есть встроенный auto-prompt: режим `on-partial`
+  подсказывает подкоманды и параметры, но вмешивается только когда команда неполная или не
+  прошла валидацию. На дежурстве это экономит время при сборке длинных `--query` и `--filters`.
+
+```bash
+aws configure set cli_auto_prompt on-partial   # режимы: on, on-partial, off
+```
 
 ## 0.5.10. Как это применяют в продакшене
 
@@ -267,16 +375,21 @@ aws eks describe-nodegroup --cluster-name demo --nodegroup-name ng-default | jq 
   роль, SSO. **`aws sts get-caller-identity`** - команда «кто я»: аккаунт, ARN, userId.
   **`aws-vault`** - хранение кредов в keychain и запуск команд во временной сессии;
   **`granted`** (`assume`) - быстрое переключение SSO-профилей и вход в консоль.
-- **exec-плагин kubeconfig** - секция `exec`, вызывающая `aws eks get-token` при каждом
-  обращении kubectl; долгоживущего токена в файле нет. **eksctl** - официальная CLI для EKS,
-  работает через CloudFormation, императивна.
+- **exec-плагин kubeconfig** - секция `exec`, вызывающая `aws eks get-token`; долгоживущего
+  токена в файле нет, а полученные креды `client-go` кэширует до
+  `status.expirationTimestamp`. **eksctl** - официальная CLI для EKS, работает через
+  CloudFormation, императивна.
+- **Плагин kubectl** - файл `kubectl-<имя>` в `PATH`, доступный как `kubectl <имя>`.
+  **krew** - менеджер плагинов: индекс, `search`, `install`, `upgrade`; поддерживает свои
+  индексы. **`kubectl plugin list`** - что kubectl видит в `PATH`.
 - **State** - файл состояния terraform, для команды хранится удалённо с блокировкой.
   **Провайдер** - плагин terraform (`aws`, `kubernetes`, `helm`).
 - **terragrunt** - обёртка над terraform: общий backend, `env.hcl`, `dependency`, `run-all`,
-  DRY-модули без копипасты. **Стек** - каталог с одним `terragrunt.hcl`, применяемый как
-  единица. **helmfile** - декларативное описание набора helm-релизов с версиями и values в
-  одном файле. **Managed addon** - компонент кластера, версиями и обновлением которого
-  управляет EKS.
+  DRY-модули без копипасты. **OpenTofu** - открытый форк terraform, совместимый с модулями
+  курса; выбирается атрибутом `terraform_binary = "tofu"`. **Стек** - каталог с одним
+  `terragrunt.hcl`, применяемый как единица. **helmfile** - декларативное описание набора
+  helm-релизов с версиями и values в одном файле. **Managed addon** - компонент кластера,
+  версиями и обновлением которого управляет EKS.
 
 ## 0.5.12. Итоги главы
 
@@ -307,6 +420,8 @@ nodegroup`, читаете логи через `stern`, сверяете тег�
 5. Для чего годится eksctl и почему им не создают продакшн-кластер?
 6. Что даёт terragrunt поверх terraform и как связаны стеки `vpc` и `eks_control_plane`?
 7. Когда компонент лучше поставить managed addon, а когда helm-чартом?
+8. Как kubectl находит плагины и чем в этом помогает krew? Какими командами искать и обновлять?
+9. Почему `kubectl get nodes` на EKS отвечает не на все вопросы о ноде и что добавляет `k8i`?
 
 ## Практика
 

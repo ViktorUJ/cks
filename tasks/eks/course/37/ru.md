@@ -82,10 +82,10 @@ aws eks describe-addon-configuration --addon-name coredns \
 ```mermaid
 flowchart TB
     eng["Инженер"]
-    api["EKS API<br>create/update-addon"]
-    ver["Курируемые версии<br>AWS"]
+    api["EKS API<br/>create/update-addon"]
+    ver["Курируемые версии<br/>AWS"]
     cfg["configurationValues"]
-    k8s["Компонент в кластере<br>kube-system"]
+    k8s["Компонент в кластере<br/>kube-system"]
     eng --> api
     ver --> api
     cfg --> api
@@ -221,9 +221,9 @@ control plane). Главное правило: компоненты на нод�
 
 ```mermaid
 flowchart TB
-    cp["1. Control plane<br>новый минор"]
-    add["2. Core-аддоны<br>kube-proxy, coredns, vpc-cni"]
-    node["3. Ноды<br>kubelet, kube-proxy"]
+    cp["Шаг один: control plane<br/>новый минор"]
+    add["Шаг два: core-аддоны<br/>kube-proxy, coredns, vpc-cni"]
+    node["Шаг три: ноды<br/>kubelet, kube-proxy"]
     skew["version skew policy"]
     cp --> add
     add --> node

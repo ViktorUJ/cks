@@ -64,11 +64,11 @@ Fargate profiles, pod identity associations. Для полного контро�
 
 ```mermaid
 flowchart TB
-    rp["composite recovery point<br>(глава 41)"]
+    rp["composite recovery point<br/>(глава 41)"]
     kind{"тип restore"}
-    exist["existing cluster<br>non-destructive"]
-    new["new cluster<br>создаёт AWS Backup"]
-    ns["namespace restore<br>до 5 namespace"]
+    exist["existing cluster<br/>non-destructive"]
+    new["new cluster<br/>создаёт AWS Backup"]
+    ns["namespace restore<br/>до 5 namespace"]
     rp --> kind
     kind --> exist
     kind --> new
@@ -172,10 +172,10 @@ plugin для S3 (BSL) и volume snapshotter plugin для снапшотов EB
 ```mermaid
 flowchart TB
     api["Kubernetes API"]
-    velero["Velero controller<br>IRSA / Pod Identity"]
-    s3["S3 bucket (BSL)<br>объекты + File System Backup"]
-    snap["CSI snapshots<br>тома EBS"]
-    dst["другой кластер<br>restore"]
+    velero["Velero controller<br/>IRSA / Pod Identity"]
+    s3["S3 bucket (BSL)<br/>объекты + File System Backup"]
+    snap["CSI snapshots<br/>тома EBS"]
+    dst["другой кластер<br/>restore"]
     api --> velero
     velero --> s3
     velero --> snap

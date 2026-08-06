@@ -44,9 +44,9 @@ flowchart TB
     q1["Что было в кластере?"]
     q2["Что было в аккаунте AWS?"]
     q3["Есть угроза сейчас?"]
-    audit["EKS audit log<br>плоскость Kubernetes"]
-    ct["CloudTrail<br>плоскость AWS"]
-    gd["GuardDuty<br>детект угроз"]
+    audit["EKS audit log<br/>плоскость Kubernetes"]
+    ct["CloudTrail<br/>плоскость AWS"]
+    gd["GuardDuty<br/>детект угроз"]
     inc --> q1 --> audit
     inc --> q2 --> ct
     inc --> q3 --> gd
@@ -201,9 +201,9 @@ Runtime-мониторинг легко перепутать со сканиро
 ```mermaid
 flowchart TB
     build["Сборка образа"]
-    scan["Скан на CVE<br>до запуска"]
+    scan["Скан на CVE<br/>до запуска"]
     run["Под запущен"]
-    rt["Runtime-мониторинг<br>поведение процесса"]
+    rt["Runtime-мониторинг<br/>поведение процесса"]
     threat["Майнер, reverse shell"]
     build --> scan --> run --> rt
     threat --> rt
@@ -227,7 +227,7 @@ Runtime-детект для EKS реализуют двумя путями. **Gu
 ```mermaid
 flowchart TB
     audit["EKS audit log"]
-    gd["GuardDuty<br>EKS Protection + Runtime"]
+    gd["GuardDuty<br/>EKS Protection + Runtime"]
     finding["Finding"]
     hub["Security Hub"]
     eb["EventBridge"]
@@ -255,8 +255,8 @@ Lambda (изолировать под, снять ноду, отозвать с�
 
 ```mermaid
 flowchart TB
-    work["Рабочие аккаунты<br>member"]
-    admin["Delegated admin<br>GuardDuty, Security Hub"]
+    work["Рабочие аккаунты<br/>member"]
+    admin["Delegated admin<br/>GuardDuty, Security Hub"]
     logacc["Аккаунт log-archive"]
     soc["Реакция / SOC"]
     work -->|"findings"| admin

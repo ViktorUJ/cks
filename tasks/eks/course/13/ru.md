@@ -68,8 +68,8 @@ Spot-ёмкость отзывается по пулам (пул = «тип ин
 
 ```mermaid
 flowchart TB
-    one["Один тип / одна AZ:<br>все ноды в одном пуле"] --> risk["Изъятие пула =<br>падение сервиса"]
-    many["Много типов<br>в нескольких AZ"] --> ok["Изъятие пула =<br>часть нод"]
+    one["Один тип / одна AZ:<br/>все ноды в одном пуле"] --> risk["Изъятие пула =<br/>падение сервиса"]
+    many["Много типов<br/>в нескольких AZ"] --> ok["Изъятие пула =<br/>часть нод"]
     style one fill:#db4437,color:#fff
     style risk fill:#db4437,color:#fff
     style many fill:#0f9d58,color:#fff
@@ -124,10 +124,10 @@ recommendation и жёсткий двухминутный interruption notice. �
 
 ```mermaid
 flowchart TB
-    aws["AWS: rebalance /<br>2-минутное уведомление"] --> h["Обработчик<br>события"]
-    h --> cordon["cordon:<br>нода закрыта"]
-    cordon --> drain["drain: выселение<br>подов, SIGTERM"]
-    drain --> repl["Замена ноды,<br>переразмещение подов"]
+    aws["AWS: rebalance /<br/>2-минутное уведомление"] --> h["Обработчик<br/>события"]
+    h --> cordon["cordon:<br/>нода закрыта"]
+    cordon --> drain["drain: выселение<br/>подов, SIGTERM"]
+    drain --> repl["Замена ноды,<br/>переразмещение подов"]
     style aws fill:#f4b400,color:#000
     style h fill:#4285f4,color:#fff
     style repl fill:#0f9d58,color:#fff
@@ -215,9 +215,9 @@ spot. Тогда изъятие spot-пула бьёт по пиковой ча�
 
 ```mermaid
 flowchart TB
-    base["База, системные<br>компоненты"] --> od["NodePool on-demand<br>стабильная база"]
-    peak["Пики, batch,<br>stateless-реплики"] --> spot["NodePool spot<br>широкий набор типов"]
-    spot --> div["Диверсификация<br>по типам и AZ"]
+    base["База, системные<br/>компоненты"] --> od["NodePool on-demand<br/>стабильная база"]
+    peak["Пики, batch,<br/>stateless-реплики"] --> spot["NodePool spot<br/>широкий набор типов"]
+    spot --> div["Диверсификация<br/>по типам и AZ"]
     style od fill:#4285f4,color:#fff
     style spot fill:#0f9d58,color:#fff
     style div fill:#0f9d58,color:#fff

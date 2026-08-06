@@ -37,12 +37,12 @@ IAM-принципала. Авторизация живёт в кластере:
 ```mermaid
 flowchart TB
     k["kubectl с kubeconfig"]
-    plg["exec-плагин<br>aws eks get-token"]
-    tok["Токен: подписанный<br>запрос к STS"]
+    plg["exec-плагин<br/>aws eks get-token"]
+    tok["Токен: подписанный<br/>запрос к STS"]
     api["apiserver EKS"]
-    idn["IAM-принципал<br>роль или пользователь"]
-    map["username и группы<br>Kubernetes"]
-    rbac["RBAC: bindings,<br>Role, ClusterRole"]
+    idn["IAM-принципал<br/>роль или пользователь"]
+    map["username и группы<br/>Kubernetes"]
+    rbac["RBAC: bindings,<br/>Role, ClusterRole"]
     res["Allow или Forbidden"]
     k --> plg --> tok --> api
     api --> idn --> map --> rbac --> res
@@ -125,11 +125,11 @@ IAM-принципал (роль или пользователя) с `username` 
 
 ```mermaid
 flowchart TB
-    p["IAM-принципал<br>роль или пользователь"]
-    ae["Access entry:<br>username, groups, type"]
-    ap["Access policy AWS<br>scope: cluster или ns"]
+    p["IAM-принципал<br/>роль или пользователь"]
+    ae["Access entry:<br/>username, groups, type"]
+    ap["Access policy AWS<br/>scope: cluster или ns"]
     grp["kubernetesGroups"]
-    rb["Ваш RBAC: bindings,<br>Role, ClusterRole"]
+    rb["Ваш RBAC: bindings,<br/>Role, ClusterRole"]
     perm["Итоговые права"]
     p --> ae
     ae --> ap --> perm

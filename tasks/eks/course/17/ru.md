@@ -52,13 +52,13 @@ EKS Pod Identity решает ту же задачу иначе, чем IRSA. В
 
 ```mermaid
 flowchart TB
-    sa["ServiceAccount<br>без аннотаций"]
-    assoc["Ассоциация в API EKS<br>ns + SA -> роль"]
-    pod["Под с projected<br>token"]
-    agent["Pod Identity Agent<br>DaemonSet на ноде"]
-    auth["EKS Auth API<br>AssumeRoleForPodIdentity"]
-    role["IAM-роль<br>trust на pods.eks"]
-    aws["Сервис AWS: S3,<br>DynamoDB"]
+    sa["ServiceAccount<br/>без аннотаций"]
+    assoc["Ассоциация в API EKS<br/>ns + SA -> роль"]
+    pod["Под с projected<br/>token"]
+    agent["Pod Identity Agent<br/>DaemonSet на ноде"]
+    auth["EKS Auth API<br/>AssumeRoleForPodIdentity"]
+    role["IAM-роль<br/>trust на pods.eks"]
+    aws["Сервис AWS: S3,<br/>DynamoDB"]
     assoc --> pod
     pod --> agent --> auth --> role
     agent --> aws
@@ -217,10 +217,10 @@ aws eks describe-pod-identity-association \
 flowchart TB
     a["Поставить аддон-агент"]
     b["Создать ассоциацию Pod Identity"]
-    c["Оба активны,<br>IRSA выигрывает"]
-    d["Убрать аннотацию IRSA<br>и пересоздать под"]
+    c["Оба активны,<br/>IRSA выигрывает"]
+    d["Убрать аннотацию IRSA<br/>и пересоздать под"]
     e["Работает Pod Identity"]
-    f["Удалить IAM OIDC provider<br>если не нужен"]
+    f["Удалить IAM OIDC provider<br/>если не нужен"]
     a --> b --> c --> d --> e --> f
     style c fill:#f4b400,color:#000
     style e fill:#0f9d58,color:#fff

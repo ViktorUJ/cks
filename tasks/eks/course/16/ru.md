@@ -54,14 +54,14 @@ IRSA (IAM Roles for Service Accounts) переворачивает модель:
 
 ```mermaid
 flowchart TB
-    sa["ServiceAccount<br>аннотация role-arn"]
-    pod["Под с projected<br>token"]
-    webhook["Pod Identity Webhook<br>внедряет env и том"]
-    sts["AWS STS<br>AssumeRoleWithWebIdentity"]
-    oidc["OIDC-провайдер<br>кластера"]
-    role["IAM-роль<br>trust policy на sub"]
-    creds["Временные креды<br>роли"]
-    aws["Сервис AWS: S3,<br>DynamoDB"]
+    sa["ServiceAccount<br/>аннотация role-arn"]
+    pod["Под с projected<br/>token"]
+    webhook["Pod Identity Webhook<br/>внедряет env и том"]
+    sts["AWS STS<br/>AssumeRoleWithWebIdentity"]
+    oidc["OIDC-провайдер<br/>кластера"]
+    role["IAM-роль<br/>trust policy на sub"]
+    creds["Временные креды<br/>роли"]
+    aws["Сервис AWS: S3,<br/>DynamoDB"]
     pod --> sts
     oidc --> sts
     sts --> role --> creds --> aws
@@ -276,24 +276,14 @@ kubectl -n payments get sa s3-reader -o yaml | grep role-arn
 
 ```mermaid
 flowchart TB
-    subgraph noderole["Роль ноды на всех"]
-        n["Node IAM role"]
-        p1["Под A"]
-        p2["Под B"]
-        n --> p1
-        n --> p2
-    end
-    subgraph irsa["IRSA: роль на под"]
-        ra["Роль A"]
-        rb["Роль B"]
-        pa["Под A"]
-        pb["Под B"]
-        ra --> pa
-        rb --> pb
-    end
+    q["Поду нужны<br/>права в AWS"] --> n["Роль ноды: одни права<br/>на все поды"]
+    q --> irsa["IRSA: своя роль<br/>каждому поду"]
+    n --> risk["Любой под берёт всё,<br/>в CloudTrail одна нода"]
+    irsa --> least["Минимум прав,<br/>в CloudTrail имя роли"]
     style n fill:#db4437,color:#fff
-    style ra fill:#0f9d58,color:#fff
-    style rb fill:#0f9d58,color:#fff
+    style irsa fill:#0f9d58,color:#fff
+    style risk fill:#db4437,color:#fff
+    style least fill:#0f9d58,color:#fff
 ```
 
 Разница принципиальная. Роль ноды - **общая** для всех подов на ноде: любые выданные ей права

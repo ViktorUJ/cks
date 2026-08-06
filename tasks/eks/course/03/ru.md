@@ -34,9 +34,9 @@ Upstream выпускает минорные версии в среднем ра
 ```mermaid
 flowchart TB
     rel["Релиз версии в EKS"]
-    std["Standard support<br>14 месяцев"]
+    std["Standard support<br/>14 месяцев"]
     eos["Конец standard support"]
-    ext["Extended support<br>12 месяцев, дороже"]
+    ext["Extended support<br/>12 месяцев, дороже"]
     eoe["Конец extended support"]
     auto["Автообновление AWS"]
     rel --> std

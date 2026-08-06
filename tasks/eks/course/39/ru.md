@@ -44,10 +44,10 @@ plane** на **одну предыдущую** минорную версию, в
 
 ```mermaid
 flowchart TB
-    upg["Апгрейд N-1 -> N<br>завершён"]
-    win["Окно отката<br>7 дней"]
-    ok["Откат на N-1<br>доступен"]
-    exp["Окно истекло<br>откат недоступен"]
+    upg["Апгрейд N-1 -> N<br/>завершён"]
+    win["Окно отката<br/>7 дней"]
+    ok["Откат на N-1<br/>доступен"]
+    exp["Окно истекло<br/>откат недоступен"]
     upg --> win
     win --> ok
     win --> exp
@@ -146,14 +146,10 @@ plane. Отсюда общий порядок.
 
 ```mermaid
 flowchart TB
-    ins["Проверить rollback<br>readiness insights"]
-    nodes["1. Ноды на N-1<br>MNG / Karpenter / self"]
-    add["2. Аддоны<br>совместимые версии"]
-    cp["3. Control plane<br>откат на N-1, AWS"]
-    ins --> nodes
-    nodes --> add
-    cp
-    add --> cp
+    ins["Проверить rollback<br/>readiness insights"]
+    ins --> nodes["Шаг один: ноды на N-1<br/>MNG, Karpenter, self"]
+    nodes --> add["Шаг два: аддоны<br/>совместимые версии"]
+    add --> cp["Шаг три: control plane<br/>откат на N-1, AWS"]
     style cp fill:#4285f4,color:#fff
     style ins fill:#f4b400,color:#000
 ```
@@ -178,13 +174,10 @@ disruption controls.
 
 ```mermaid
 flowchart TB
-    call["update-cluster-version<br>на N-1 (Auto Mode)"]
-    drift["Karpenter дрейфует<br>ноды на N-1"]
-    skew["Ноды в пределах<br>version skew"]
-    cprb["Откат control plane<br>на N-1"]
-    call --> drift
-    drift --> skew
-    skew --> cprb
+    req["update-cluster-version<br/>на N-1 (Auto Mode)"]
+    req --> drift["Karpenter дрейфует<br/>ноды на N-1"]
+    drift --> skew["Ноды в пределах<br/>version skew"]
+    skew --> cprb["Откат control plane<br/>на N-1"]
     style cprb fill:#4285f4,color:#fff
 ```
 

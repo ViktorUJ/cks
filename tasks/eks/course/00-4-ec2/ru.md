@@ -17,11 +17,11 @@ endpoint API-сервера, CA-сертификат и аргументы kubel
 AL2023 это cloud-init с секцией `NodeConfig`, в Bottlerocket - TOML (главы 10 и 45).
 
 ```mermaid
-flowchart LR
-    lt["Launch template<br>тип, AMI, SG, user data"] --> run["EC2 запускает инстанс<br>pending"]
-    run --> boot["user data<br>containerd + kubelet"]
-    boot --> reg["kubelet -> API EKS<br>регистрация"]
-    reg --> ready["Node Ready<br>поды планируются"]
+flowchart TB
+    lt["Launch template"] --> run["Инстанс pending"]
+    run --> boot["user data:<br/>containerd, kubelet"]
+    boot --> reg["Регистрация<br/>в API EKS"]
+    reg --> ready["Node Ready"]
     style lt fill:#326ce5,color:#fff
     style boot fill:#673ab7,color:#fff
     style ready fill:#f4b400,color:#000
@@ -53,10 +53,10 @@ aws ec2 modify-instance-metadata-options --instance-id i-0123456789abcdef0 \
 Имя типа - не бренд, а описание. `m7g.xlarge` разбирается по частям:
 
 ```mermaid
-flowchart LR
-    fam["m<br>семейство<br>general purpose"] --> gen["7<br>поколение<br>новее = дешевле за CPU"]
-    gen --> suf["g<br>суффикс<br>Graviton, arm64"]
-    suf --> size["xlarge<br>размер<br>4 vCPU / 16 GiB"]
+flowchart TB
+    fam["m - семейство:<br/>general purpose"] --> gen["7 - поколение:<br/>новее выгоднее"]
+    gen --> suf["g - суффикс:<br/>Graviton, arm64"]
+    suf --> size["xlarge - размер:<br/>4 vCPU, 16 GiB"]
     style fam fill:#326ce5,color:#fff
     style suf fill:#673ab7,color:#fff
     style size fill:#f4b400,color:#000
@@ -115,7 +115,10 @@ aws ec2 describe-instance-types --instance-types t3.medium m5.xlarge m7g.2xlarge
 «просто Linux»: AWS публикует **EKS-оптимизированные AMI** с containerd, kubelet нужной минорной
 версии, CNI-плагином и bootstrap-логикой. Варианты: **Amazon Linux 2023** (обычный дистрибутив,
 `dnf`, привычная отладка), **Bottlerocket** (минимальная ОС под контейнеры, read-only root,
-обновление целым образом), **Windows** и устаревающий **AL2**.
+обновление целым образом), **Windows** и устаревающий **AL2**. Разница между первыми двумя
+чувствуется на дежурстве: в Bottlerocket нет ни привычной оболочки, ни пакетного менеджера, и
+зайти на ноду по SSH, чтобы «посмотреть логи», не получится - отладка идёт через штатные
+control- и admin-контейнеры или через SSM Session Manager (главы 10 и 45).
 
 Главное свойство: **AMI привязана к минорной версии Kubernetes**. Образ для `1.33` не ставят в
 кластер `1.34` - у kubelet ограничен разрыв версий с API-сервером, поэтому обновление кластера
@@ -174,6 +177,32 @@ aws ec2 describe-launch-template-versions --launch-template-id lt-0123456789abcd
   --versions '$Latest' --query 'LaunchTemplateVersions[].LaunchTemplateData'
 ```
 
+Ещё один атрибут запуска, о котором стоит знать заранее, - **placement group**. По умолчанию
+EC2 сам раскидывает ваши инстансы по разному железу, чтобы снизить коррелированные отказы, и в
+большинстве случаев это то, что нужно. Вмешиваются, когда нагрузка либо очень чувствительна к
+задержке между нодами, либо сама умеет реплицировать данные и хочет знать, что реплики стоят на
+разных стойках. Платы за создание группы нет, стратегий четыре (есть ещё precision time под
+точное время), и для кластеров интересны три:
+
+| Стратегия | Что делает | Типичная нагрузка | Ограничение, о которое бьются |
+|-----------|-----------|-------------------|-------------------------------|
+| `cluster` | пакует инстансы рядом внутри одной AZ, минимальная задержка | HPC, распределённое обучение моделей | одна AZ на всю группу; смешивание типов снижает шанс найти ёмкость |
+| `partition` | разные партиции не делят стойки, до 7 партиций на AZ | Cassandra, HDFS, HBase, Kafka | число инстансов ограничено только лимитами аккаунта |
+| `spread` | каждый инстанс на отдельном железе | несколько критичных нод | жёстко **7 работающих инстансов на AZ** на группу |
+
+Три ловушки, которые проявляются именно в кластере. Первая: `spread` плюс автомасштабирование -
+восьмая нода в зоне просто не запустится, а Karpenter или ASG будут упираться в отказ, и по
+симптому это выглядит как нехватка ёмкости. Вторая: если подходящего уникального железа нет,
+запрос **падает**, а не встаёт в очередь, поэтому группу не делают обязательной для нод, без
+которых кластер не живёт. Третья: `cluster` по определению держит все ноды в одной AZ, что
+противоречит раскладке по трём зонам (глава 40), поэтому его берут под отдельный NodePool, а не
+под весь кластер. И отдельно про spot: инстанс, настроенный на stop или hibernate при изъятии,
+в placement group запустить нельзя (глава 13).
+
+Задаётся это в launch template для self-managed нод и managed node groups. В EKS Auto Mode для
+этого есть поле `placementGroupSelector` в `NodeClass`, и Karpenter тоже умеет запускать ноды в
+placement group - подробности в главах 9 и 12.
+
 ## 0.4.7. Модели оплаты: on-demand, spot, Savings Plans, Graviton
 
 **On-demand** - оплата за секунды работы по прайсу, без обязательств: база сравнения и дефолт.
@@ -182,20 +211,27 @@ aws ec2 describe-launch-template-versions --launch-template-id lt-0123456789abcd
 инстанс могут **прервать**, когда мощность понадобилась AWS: приходит уведомление через IMDS и
 EventBridge и даётся **две минуты**. Kubernetes переживает это спокойно, если нагрузки готовы:
 NodeTerminationHandler или Karpenter ловят событие, помечают ноду `NoSchedule` и делают drain.
+Разница в том, откуда именно берётся сигнал: с самой ноды через IMDS или централизованно, когда
+EventBridge складывает события в очередь SQS, а контроллер её читает. Второй путь и есть
+продакшен-вариант для Karpenter: он не зависит от живости конкретной ноды (главы 12 и 13).
 
 ```mermaid
-sequenceDiagram
-    participant EC2 as EC2 Spot
-    participant IMDS as IMDS / EventBridge
-    participant Ctl as NTH или Karpenter
-    participant K8s as Кластер
-    EC2->>IMDS: rebalance recommendation, затем interruption notice
-    IMDS->>Ctl: событие о прерывании (2 минуты)
-    Ctl->>K8s: cordon + drain ноды
-    K8s->>K8s: поды пересоздаются на других нодах
-    EC2->>K8s: инстанс terminated
-    Note over Ctl,K8s: уложиться надо в 120 секунд: PDB и graceful shutdown обязательны
+flowchart TB
+    ec2["AWS забирает<br/>spot-ёмкость"] --> sig["Сигнал: rebalance,<br/>затем 2 минуты"]
+    sig --> ctl["NTH или Karpenter<br/>принял событие"]
+    ctl --> cordon["cordon:<br/>нода закрыта"]
+    cordon --> drain["drain:<br/>поды получают SIGTERM"]
+    drain --> resch["Поды встают<br/>на других нодах"]
+    resch --> term["Инстанс terminated"]
+    style ec2 fill:#db4437,color:#fff
+    style ctl fill:#673ab7,color:#fff
+    style resch fill:#0f9d58,color:#fff
+    style term fill:#f4b400,color:#000
 ```
+
+Вся цепочка обязана уложиться в 120 секунд, и это не рекомендация, а физический дедлайн: по его
+истечении инстанс исчезает независимо от того, закончились ли ваши поды. Поэтому на спот-нодах
+PDB и корректная обработка SIGTERM в приложении - обязательная часть конфигурации (глава 40).
 
 **Savings Plans** и **Reserved Instances** - скидка за обязательство тратить
 фиксированную сумму (или держать конкретные инстансы) **1 или 3 года**. Планов Savings
@@ -288,6 +324,9 @@ capacity-ориентированные стратегии, а не `lowest-pric
   **EBS / instance store** - сетевой том в одной AZ / эфемерный локальный NVMe.
 - **Launch template / Auto Scaling group** - версионируемый шаблон запуска / группа инстансов с
   `min`, `desired`, `max` по подсетям AZ.
+- **Placement group** - управление размещением инстансов: `cluster` (рядом, минимальная
+  задержка, одна AZ), `partition` (разные стойки по партициям, до 7 на AZ), `spread` (каждый
+  на своём железе, не больше 7 работающих на AZ).
 - **On-demand / Spot** - оплата по факту / мощности со скидкой и прерыванием за две минуты.
   **Savings Plans / RI** - скидка 30-70% за обязательство на 1 или 3 года.
 - **Compute SP / EC2 Instance SP** - гибкий план (EC2, Fargate, Lambda) / более глубокий, но

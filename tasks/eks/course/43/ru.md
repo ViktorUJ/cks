@@ -57,12 +57,12 @@ namespace, team - по меткам. Это и называется аллока
 
 ```mermaid
 flowchart TB
-    bill["счёт AWS<br>EC2 / EBS / data transfer"]
-    q["сколько стоит<br>namespace / команда?"]
-    metrics["метрики потребления<br>Prometheus (глава 33)"]
+    bill["счёт AWS<br/>EC2 / EBS / data transfer"]
+    q["сколько стоит<br/>namespace / команда?"]
+    metrics["метрики потребления<br/>Prometheus (глава 33)"]
     price["цены ресурсов AWS"]
-    alloc["аллокация<br>OpenCost / Kubecost"]
-    ns["стоимость по<br>namespace / label"]
+    alloc["аллокация<br/>OpenCost / Kubecost"]
+    ns["стоимость по<br/>namespace / label"]
     bill --> q
     metrics --> alloc
     price --> alloc
@@ -204,7 +204,7 @@ Right-sizing и bin-packing идут первыми в порядке оптим
 ```mermaid
 flowchart TB
     base["устойчивый baseline"]
-    flex["прерываемые<br>batch / stateless"]
+    flex["прерываемые<br/>batch / stateless"]
     peak["пики и остаток"]
     sp["Compute Savings Plans"]
     spot["Spot (глава 13)"]

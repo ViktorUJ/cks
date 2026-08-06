@@ -50,16 +50,12 @@ Availability Zone - это отдельный набор дата-центров
 
 ```mermaid
 flowchart TB
-    r["Регион: 1 сервис, 3 реплики"]
-    a["AZ a<br>реплика 1"]
-    b["AZ b<br>реплика 2"]
-    c["AZ c<br>реплика 3"]
-    r --> a
-    r --> b
-    r --> c
-    style a fill:#0f9d58,color:#fff
-    style b fill:#0f9d58,color:#fff
-    style c fill:#0f9d58,color:#fff
+    svc["Сервис: 3 реплики"]
+    zones["AZ a, AZ b, AZ c<br/>по одной реплике"]
+    fail["Отказ одной AZ:<br/>две реплики живы"]
+    svc --> zones
+    zones --> fail
+    style fail fill:#0f9d58,color:#fff
 ```
 
 Отсюда главный принцип надёжности в AWS: нагрузка, которой важна доступность, должна быть
@@ -154,6 +150,45 @@ topologySpreadConstraints:
 поднять ноду в недостающей зоне (глава 12). Со статичным набором нод строгий spread может
 надолго подвесить под - тогда либо смягчают до `ScheduleAnyway`, либо чинят баланс нод по AZ.
 
+Отдельный случай - нагрузка со своим томом. Том EBS зональный, и его `nodeAffinity` навсегда
+привязывает под к той AZ, где том создан (глава 23). Поэтому раскладка StatefulSet по зонам
+работает на создании реплик, а не на их переезде: пересоздать под в другой зоне ради
+выравнивания перекоса нельзя - он встанет в `Pending` с событием `volume node affinity
+conflict`. Отсюда два следствия: `volumeBindingMode: WaitForFirstConsumer` в StorageClass
+обязателен, иначе том появится в произвольной зоне раньше пода, а для нагрузок с томами зону
+реплики фактически определяет её том, а не topology spread.
+
+### RollingUpdate: старые реплики портят расчёт перекоса
+
+Ещё одна ловушка видна только на выкатке. При `RollingUpdate` в кластере одновременно живут
+поды старого и нового ReplicaSet, а `labelSelector` ограничения обычно указывает на общую метку
+приложения (`app: web`) - значит планировщик считает в одном домене и старые, и новые поды. При
+`maxSkew: 1` и `DoNotSchedule` новый под не влезает в зону, где старая реплика ещё жива, и
+висит в `Pending`: выкатка топчется на месте, пока баланс не сойдётся сам.
+
+Лечится полем `matchLabelKeys`. Перечисленные в нём ключи меток берутся из самого создаваемого
+пода и добавляются к `labelSelector`, поэтому перекос считается только внутри своей ревизии.
+Для Deployment подходит `pod-template-hash` - метка, которую контроллер проставляет каждому
+ReplicaSet сам.
+
+```yaml
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels: { app: web }
+    matchLabelKeys:
+      - pod-template-hash          # считать перекос по подам своей ревизии
+```
+
+Условия, без которых поле не работает или работает не так, как ждут: `matchLabelKeys` задаётся
+только вместе с `labelSelector`; один и тот же ключ не может стоять в обоих полях; ключ,
+которого у пода нет, молча игнорируется, поэтому опечатка в имени превращает ограничение в
+обычное. Поле в статусе beta и включено по умолчанию с Kubernetes 1.27, то есть на актуальных
+версиях EKS доступно. Метки, которые правят прямо на живых подах, в `matchLabelKeys` не берут:
+такую правку kube-apiserver в объединённый селектор не перенесёт.
+
 ## 40.5. PodDisruptionBudget: защита при плановом выселении
 
 `PodDisruptionBudget` (PDB) - это объект, который ограничивает, сколько подов нагрузки можно
@@ -197,6 +232,42 @@ spec:
 которые обязаны переживать плановое обслуживание, минимум две реплики - предусловие: с одной
 репликой PDB либо бесполезен, либо намертво блокирует drain.
 
+### Упавший под держит drain: unhealthyPodEvictionPolicy
+
+Есть ловушка тоньше жёсткого бюджета, и она срабатывает именно тогда, когда с приложением уже
+плохо. Под, который не сообщает `Ready` (`CrashLoopBackOff` из-за бага или проваленная
+readiness probe), в статусе PDB здоровым не считается и в `status.currentHealthy` не входит.
+По умолчанию
+действует политика `IfHealthyBudget`: нездоровый под разрешено выселить только если само
+приложение не нарушено, то есть `currentHealthy` не меньше `desiredHealthy`. Замысел добрый -
+не отбирать последние реплики у приложения, которому и так тяжело.
+
+Получается замкнутый круг. Пусть из трёх реплик две в `CrashLoopBackOff`: `currentHealthy`
+равен 1, при `minAvailable: 2` значение `desiredHealthy` равно 2, приложение нарушено - и
+eviction API
+отказывает даже на сломанных подах. `kubectl drain` не двигается, апгрейд нод (глава 38) и
+консолидация Karpenter (глава 12) встают, а здоровыми поды сами не станут: сломано приложение,
+а не кластер. Разгребают руками - чинят нагрузку, удаляют поды напрямую или снимают PDB.
+
+Штатный выход - политика `AlwaysAllow`: нездоровые поды считаются нарушенными и выселяются
+независимо от бюджета, а здоровые остаются под защитой.
+
+```yaml
+spec:
+  minAvailable: 2
+  unhealthyPodEvictionPolicy: AlwaysAllow   # не держать drain из-за упавших подов
+  selector:
+    matchLabels: { app: web }
+```
+
+Поле стабильно с Kubernetes 1.31 и работает без feature gate; если его не задать, действует
+`IfHealthyBudget`. Оговорка про фазы: поды в `Pending`, `Succeeded` и `Failed` выселяются
+всегда, а политика решает судьбу подов в фазе `Running` без условия `Ready` - то есть ровно
+`CrashLoopBackOff` и не проходящих readiness. `IfHealthyBudget` оставляют там, где под
+сторожит ресурс или данные и его преждевременное удаление опаснее зависшего обслуживания
+(кворумные системы, хранилища). Для обычных прикладных нагрузок `AlwaysAllow` удобнее: он не
+даёт сломанному деплою заблокировать эксплуатацию всего кластера.
+
 ## 40.6. Корректное выключение нод
 
 Раскладка и PDB решают, где стоят поды и сколько выселять разом. Остаётся третья половина -
@@ -210,11 +281,11 @@ eviction API с уважением к PDB. Для каждого пода Kubern
 
 ```mermaid
 flowchart TB
-    ep["Под убран из Endpoints<br>(перестал получать трафик)"]
-    pre["preStop hook<br>(если задан)"]
-    term["SIGTERM<br>контейнерам"]
-    grace["Ожидание<br>terminationGracePeriodSeconds"]
-    kill["SIGKILL<br>если не завершился"]
+    ep["Под убран из Endpoints<br/>(перестал получать трафик)"]
+    pre["preStop hook<br/>(если задан)"]
+    term["SIGTERM<br/>контейнерам"]
+    grace["Ожидание<br/>terminationGracePeriodSeconds"]
+    kill["SIGKILL<br/>если не завершился"]
     ep --> pre
     pre --> term
     term --> grace
@@ -243,8 +314,40 @@ endpoints, и лишь потом умирать. readiness probe здесь - �
 течение этого окна балансировщик перестаёт слать новые запросы на target, но даёт завершиться
 уже открытым. Смысл: под не должен умереть раньше, чем балансировщик дерегистрирует его target
 и сольёт активные соединения. Если `terminationGracePeriodSeconds` меньше, чем нужно на
-дерегистрацию, часть соединений оборвётся. Для чистого слива используют pod readiness gates
-контроллера и согласуют grace period с дерегистрацией.
+дерегистрацию, часть соединений оборвётся. Поэтому grace period согласуют с дерегистрацией, а у
+той же задачи есть вторая половина - приход нового пода.
+
+### Pod readiness gates: под готов раньше, чем target
+
+`deregistration_delay` закрывает уход пода из балансировщика. На приходе остаётся симметричная
+дыра. Kubernetes считает под готовым по своей readiness probe и на этом основании продолжает
+выкатку - гасит очередной старый под. А в AWS новый target в target group ещё в состоянии
+`initial`: балансировщик прогоняет свои health checks и трафик на него пока не отдаёт. На
+быстрой выкатке с малым числом реплик возникает окно, где в target group нет ни одного target в
+состоянии `healthy` - старые уже `draining`, новые ещё `initial`. Снаружи это выглядит как
+отказ сервиса при штатном деплое, хотя в кластере все поды `Ready`.
+
+Закрывает окно pod readiness gate от AWS Load Balancer Controller. Контроллер добавляет поду
+дополнительное условие готовности с префиксом `target-health.elbv2.k8s.aws` и держит его
+ложным, пока target этого пода не станет `healthy` в target group. Под не `Ready` - контроллер
+Deployment не идёт дальше и не гасит старые поды. Включается это не в спецификации пода, а
+меткой на namespace: конфигурацию гейта контроллер вписывает сам мутирующим вебхуком.
+
+```bash
+# включить инъекцию гейтов для namespace
+kubectl label namespace prod elbv2.k8s.aws/pod-readiness-gate-inject=enabled
+# столбец READINESS GATES: 0/1 - target ещё не healthy, 1/1 - готов принимать трафик
+kubectl get pods -n prod -o wide
+```
+
+Условия, без которых гейт не сработает или сработает не там: он работает только при
+`target-type: ip`, потому что в режиме `instance` target group знает ноду, а не под (глава 26);
+в namespace должны существовать Service и ссылающийся на него TargetGroupBinding; гейт
+вписывается ТОЛЬКО при создании пода, поэтому метку на namespace и объекты Service или Ingress
+создают ДО подов, иначе уже запущенные поды остаются без гейта. Отдельно решают, что делать при
+недоступном контроллере: это задаёт `failurePolicy` вебхука - `Ignore` пропускает поды без
+гейта (доступность важнее), `Fail` не даёт создавать поды в помеченных namespace (гарантия
+важнее).
 
 Отдельная тема - **резкое** выключение ноды, когда шага `drain` не было. Тут помогает несколько
 механизмов, в зависимости от типа вычислений (глава 9):
@@ -273,13 +376,13 @@ interruption-очередь; NTH ставят для нод, которыми Ka
 
 ```mermaid
 flowchart TB
-    goal["Нагрузка переживает<br>отказ и обслуживание"]
-    az["multi-AZ +<br>topology spread"]
+    goal["Нагрузка переживает<br/>отказ и обслуживание"]
+    az["multi-AZ +<br/>topology spread"]
     pdb["PodDisruptionBudget"]
     grace["graceful shutdown"]
-    az -->|отказ зоны/ноды| goal
-    pdb -->|плановое выселение| goal
-    grace -->|без обрыва соединений| goal
+    az -->|"отказ зоны/ноды"| goal
+    pdb -->|"плановое выселение"| goal
+    grace -->|"без обрыва соединений"| goal
     style goal fill:#0f9d58,color:#fff
 ```
 
@@ -308,6 +411,14 @@ flowchart TB
   причина зависшего drain и заблокированной консолидации Karpenter (глава 12).
 - **Согласуют grace period с дерегистрацией балансировщика.** `terminationGracePeriodSeconds`
   и `preStop`-пауза учитывают `deregistration_delay` target group, чтобы не рвать соединения.
+- **Разрешают выселять нездоровые поды.** `unhealthyPodEvictionPolicy: AlwaysAllow` не даёт
+  подам в `CrashLoopBackOff` заблокировать drain нод и апгрейд кластера (глава 38).
+- **Считают перекос по своей ревизии.** `matchLabelKeys` с `pod-template-hash` в topology
+  spread, иначе поды прошлого ReplicaSet подвешивают выкатку в `Pending`.
+- **Включают pod readiness gates для нагрузок за ALB и NLB.** Метка на namespace и
+  `target-type: ip`: выкатка ждёт `healthy` в target group, а не только readiness probe.
+- **Помнят про зональную привязку томов.** Для StatefulSet с EBS зону реплики определяет её
+  том, а не topology spread (глава 23).
 - **Не экономят на трафике ценой единой зоны.** cross-AZ трафик (глава 31) дешевле простоя;
   `trafficDistribution` применяют там, где раскладка уже обеспечена.
 - **Полагаются на встроенную обработку прерываний.** Karpenter и EKS Auto Mode уводят поды с
@@ -326,6 +437,12 @@ flowchart TB
 - **maxSkew** - допустимый перекос числа подов между самым полным и самым пустым доменом.
 - **PodDisruptionBudget (PDB)** - объект, ограничивающий число одновременно выселяемых
   подов при добровольных нарушениях (`minAvailable`/`maxUnavailable`).
+- **`unhealthyPodEvictionPolicy`** - поле PDB: `IfHealthyBudget` (по умолчанию) не даёт
+  выселять нездоровые поды при уже нарушенном приложении, `AlwaysAllow` разрешает всегда.
+- **`matchLabelKeys`** - ключи меток пода, добавляемые к `labelSelector` ограничения
+  раскладки; с `pod-template-hash` перекос считается внутри одной ревизии Deployment.
+- **pod readiness gate** - дополнительное условие готовности пода; AWS Load Balancer
+  Controller держит `target-health.elbv2.k8s.aws` ложным, пока target не станет `healthy`.
 - **terminationGracePeriodSeconds** - время между SIGTERM и SIGKILL для завершения пода
   (по умолчанию 30).
 - **preStop** - hook, выполняемый до SIGTERM; используется для паузы перед остановкой.
@@ -347,6 +464,10 @@ flowchart TB
   ноды или зоны он не спасает - для этого нужна раскладка.
 - Слишком жёсткий PDB (равный числу реплик, `maxUnavailable: 0`) блокирует drain, апгрейд нод
   (глава 38) и консолидацию Karpenter (глава 12); держат запас и минимум две реплики.
+- По умолчанию нездоровый под нельзя выселить при уже нарушенном приложении, поэтому
+  `CrashLoopBackOff` держит drain до вмешательства руками; снимает это `AlwaysAllow`.
+- На выкатке есть две отдельные ловушки: старые реплики искажают расчёт перекоса (лечит
+  `matchLabelKeys`) и под становится `Ready` раньше, чем target - `healthy` (лечат гейты).
 - Корректное завершение: cordon, drain, уход из endpoints, preStop, SIGTERM, grace period,
   SIGKILL; на стороне AWS - connection draining через `deregistration_delay`.
 - Резкое выключение нод сглаживают graceful node shutdown в kubelet, NTH, встроенная обработка
@@ -387,6 +508,13 @@ flowchart TB
 12. Что такое connection draining и как `deregistration_delay` влияет на выбор grace period?
 13. Чем graceful node shutdown, NTH и обработка прерываний Karpenter решают проблему резкого
     выключения ноды?
+14. Почему под в `CrashLoopBackOff` способен намертво заблокировать `drain`, что меняет
+    `unhealthyPodEvictionPolicy: AlwaysAllow` и когда `IfHealthyBudget` оставляют осознанно?
+15. Почему при `RollingUpdate` новый под может висеть в `Pending` из-за topology spread и как
+    это лечит `matchLabelKeys` с `pod-template-hash`?
+16. Что даёт pod readiness gate контроллера и почему он бесполезен при `target-type: instance`?
+17. Почему раскладку StatefulSet с томами EBS нельзя выровнять пересозданием пода в другой
+    зоне и что из этого следует для `DoNotSchedule`?
 
 ## Практика
 
@@ -408,6 +536,8 @@ drain пройдёт, ноль - заблокирует):
 kubectl get pdb -A
 # детали конкретного PDB: minAvailable, текущие/ожидаемые поды
 kubectl describe pdb web-pdb
+# политика для нездоровых подов: пусто означает IfHealthyBudget
+kubectl get pdb -A -o custom-columns=NS:.metadata.namespace,PDB:.metadata.name,POLICY:.spec.unhealthyPodEvictionPolicy
 ```
 
 Гляньте, как выглядит плановое выселение, не выполняя его, - через dry-run drain, и загляните в
@@ -421,7 +551,10 @@ kubectl describe node <node>
 ```
 
 Сопоставьте три вещи: разложены ли реплики по зонам и нодам, оставляет ли PDB запас на
-выселение и заданы ли у подов `terminationGracePeriodSeconds` и `preStop`. Если реплики в одной
+выселение и заданы ли у подов `terminationGracePeriodSeconds` и `preStop`. Заодно посмотрите на
+столбец `READINESS GATES` в выводе `kubectl get pods -o wide` у нагрузок за ALB и NLB: пустой
+столбец означает, что метки на namespace нет и выкатка не ждёт `healthy` в target group. Если
+реплики в одной
 зоне или PDB блокирует любой drain - это будущий инцидент, который дешевле починить сейчас. Про
 disruption Karpenter - глава 12, про spot-прерывания и NTH - глава 13, про cross-AZ стоимость -
 глава 31.
