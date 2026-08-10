@@ -32,6 +32,7 @@ resource "kubernetes_manifest" "ec2nodeclass" {
       tags = merge(var.vng.tags, { "Name" = "${var.name}-${var.vng.name}" })
 
       blockDeviceMappings = var.vng.blockDeviceMappings
+      metadataOptions     = var.vng.metadataOptions
       kubelet = {
         systemReserved = {
           cpu                 = "100m"  # Resources reserved for system processes. Recommended: 100m-500m depending on node size

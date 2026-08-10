@@ -84,7 +84,14 @@ variable "vng" {
         throughput          = optional(number, 125)
       })
     })))
-
+    # IMDS hardening for EC2NodeClass (Karpenter). Leave null to omit the field
+    # entirely and keep provider defaults (httpTokens=optional, hop limit unset).
+    metadataOptions = optional(object({
+      httpEndpoint            = optional(string, "enabled")
+      httpProtocolIPv6        = optional(string, "disabled")
+      httpPutResponseHopLimit = optional(number, 2)
+      httpTokens              = optional(string, "required")
+    }), null)
 
   })
 

@@ -45,15 +45,14 @@ API-сервера по сети, отработать user data и bootstrap, �
 ```mermaid
 flowchart TB
     ec2["EC2 running"]
-    iam["IAM: права + авторизация"]
-    net["сеть до API: 443"]
-    boot["user data / bootstrap"]
-    kubelet["kubelet стартовал"]
-    reg["регистрация в кластере"]
-    node["Ready в kubectl"]
-    ec2 --> iam --> net --> boot --> kubelet --> reg --> node
+    iam["Слой IAM: права<br/>и авторизация"]
+    net["Слой сети: 443<br/>до endpoint"]
+    boot["Слой bootstrap: kubelet,<br/>регистрация, Ready"]
+    ec2 --> iam
+    iam --> net
+    net --> boot
     style iam fill:#4285f4,color:#fff
-    style reg fill:#0f9d58,color:#fff
+    style boot fill:#0f9d58,color:#fff
 ```
 
 ## 45.2. Слой IAM: права ноды и авторизация в кластере
@@ -120,7 +119,7 @@ flowchart TB
     node["нода / kubelet"]
     dns["DNS: резолв endpoint"]
     sg["security group: 443"]
-    route["маршрут: private / NAT / IGW"]
+    route["маршрут: внутренний,<br/>NAT или IGW"]
     api["API-сервер кластера"]
     node --> dns
     node --> sg

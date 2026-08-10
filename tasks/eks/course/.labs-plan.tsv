@@ -45,6 +45,18 @@
 35	124	todo	Application autoscaling: HPA on external metrics, KEDA with a Prometheus trigger, load generator
 09	125	todo	EKS Auto Mode versus own stack: enable Auto Mode, default NodePools, no SSH or SSM on nodes, 21 day node lifetime, custom NodePool, where the own stack wins (see .content-notes.md)
 #
+# SECOND WAVE, added after the text was finished. These close chapters that had no lab
+# and were only listed as "candidate for a later lab". All are doable in a single AWS
+# account without slow or paid extras. Ordered by cost of building, cheapest first.
+#
+22	127	todo	Policies without an extra controller: ValidatingAdmissionPolicy on CEL, Audit before Enforce, failurePolicy
+40	131	todo	Reliability: PDB blocks drain and the upgrade stalls, topology spread, unhealthyPodEvictionPolicy, matchLabelKeys
+46	126	todo	Security groups for pods: SecurityGroupPolicy and branch ENI, pod is Running but never Ready and cannot resolve - find the missing rules (see NOTE below)
+25	129	todo	Mountpoint for S3: where file semantics break (in-place write, rename) and why prefixes behind a PVC are not backed up
+28	128	todo	Gateway API and VPC Lattice: Gateway owner versus route owner, ReferenceGrant, route not applied
+20	130	todo	ECR and supply chain: immutable tags, scan on push, pull-through cache (needs upstream registry credentials as a secret)
+08	132	todo	Alternative CNI: Cilium in CNI chaining and in full replacement, VPC CNI network policy compared against Cilium policy (heaviest of the set)
+#
 # EXISTING LABS, OUT OF SCOPE - listed only so nobody wires them into the course:
 #   01  stub
 #   02  Karpenter Basics                  -> course covers the topic in lab 123
@@ -57,19 +69,18 @@
 #   01  what EKS takes over
 #   02  control plane internals            (covered indirectly by lab 101)
 #   03  version lifecycle                  (covered indirectly by lab 113)
-#   08  alternative CNI                    (candidate for a later lab; the chapter must
-#                                           compare VPC CNI network policy against Cilium
-#                                           in CNI chaining and full replacement modes)
 #   11  Cluster Autoscaler versus Karpenter (compared inside lab 123)
-#   20  ECR and supply chain               (candidate for a later lab)
 #   21  audit and detection                (needs GuardDuty, paid and slow)
-#   22  policies and multitenancy          (candidate for a later lab)
-#   25  Mountpoint for S3                  (candidate for a later lab)
-#   28  Gateway API and VPC Lattice        (candidate for a later lab)
 #   32  multicluster and multiaccount      (needs 2 accounts)
 #   36  tracing with ADOT and X-Ray        (candidate for a later lab)
-#   40  reliability: PDB, topology spread  (partly inside labs 101 and 113)
+#   44  managed Argo CD (EKS Capability)   (blocked for a personal account: the capability
+#                                           authenticates only through AWS Identity Center,
+#                                           which requires AWS Organizations; self-managed
+#                                           Argo CD is covered by lab 118)
 #   48  production checklist
+#
+# Chapters 08, 20, 22, 25, 28, 40, 46 used to be listed here as "candidate for a later
+# lab". They now have labs 132, 130, 127, 129, 128, 131, 126 in the second wave above.
 #
 # NOTE on chapters 41-42 (AWS Backup for EKS). Lab prerequisites, taken from
 # https://docs.aws.amazon.com/aws-backup/latest/devguide/eks-backups.html :
@@ -82,3 +93,17 @@
 #     lab has to delete the namespace (or restore into a second cluster) to show it
 #   - not supported: in-tree volumes and CSI migration, FSx via CSI, S3 prefixes,
 #     cross-account EFS, EFS non-root subpath mounts, EKS on Outposts
+#
+# NOTE on lab 126 (security groups for pods). Prerequisites, taken from
+# https://docs.aws.amazon.com/eks/latest/userguide/security-groups-pods-deployment.html :
+#   - Nitro instances only, no instance type from the t family is supported, so the
+#     NodePool requirements of the lab must exclude it
+#   - AmazonEKSVPCResourceController managed policy on the cluster IAM role
+#   - ENABLE_POD_ENI=true on the aws-node DaemonSet (creates the trunk interface)
+#   - DISABLE_TCP_EARLY_DEMUX=true in the aws-node init container, otherwise kubelet
+#     probes cannot reach pods on branch interfaces (not needed on VPC CNI 1.11.0+ with
+#     POD_SECURITY_GROUP_ENFORCING_MODE=standard)
+#   - the teaching moment is the missing rules: inbound from the node SG on probe ports,
+#     outbound 53 over TCP and UDP, plus the matching inbound 53 on the CoreDNS side
+#   - pod SG rules do not apply between pods on the same node, so the symptom flickers
+#     depending on where CoreDNS landed - the lab has to pin that down
