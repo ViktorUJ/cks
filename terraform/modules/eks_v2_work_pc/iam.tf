@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 resource "aws_iam_role" "server" {
   name               = "${local.prefix}-${var.app_name}"
   assume_role_policy = <<EOF
@@ -42,6 +44,15 @@ resource "aws_iam_policy" "server" {
                 "ec2:DescribeVolumes",
                 "ec2:DescribeSubnets",
                 "ec2:DescribeInstanceStatus",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSecurityGroupRules",
+                "elasticfilesystem:DescribeFileSystems",
+                "elasticfilesystem:DescribeMountTargets",
+                "elasticfilesystem:DescribeMountTargetSecurityGroups",
+                "elasticloadbalancing:DescribeLoadBalancers",
+                "elasticloadbalancing:DescribeListeners",
+                "elasticloadbalancing:DescribeTargetGroups",
+                "elasticloadbalancing:DescribeTargetHealth",
                 "ssm:GetParameter"
             ],
             "Resource": "*"
@@ -80,6 +91,116 @@ resource "aws_iam_policy" "server" {
                 "secretsmanager:DeleteSecret",
                 "secretsmanager:TagResource",
                 "secretsmanager:ListSecrets"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "TestRoleManagementForLabs",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateRole",
+                "iam:GetRole",
+                "iam:DeleteRole",
+                "iam:PutRolePolicy",
+                "iam:GetRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:TagRole",
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy",
+                "iam:ListAttachedRolePolicies"
+            ],
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-test-*"
+        },
+        {
+            "Sid": "AssumeTestRoleForLabs",
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-test-*"
+        },
+        {
+            "Sid": "PassTestRoleToEc2ForLabs",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-test-*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "ec2.amazonaws.com"
+                }
+            }
+        },
+        {
+            "Sid": "TestInstanceProfileManagementForLabs",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateInstanceProfile",
+                "iam:DeleteInstanceProfile",
+                "iam:GetInstanceProfile",
+                "iam:AddRoleToInstanceProfile",
+                "iam:RemoveRoleFromInstanceProfile",
+                "iam:TagInstanceProfile"
+            ],
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:instance-profile/*-test-*"
+        },
+        {
+            "Sid": "SelfManagedNodeLaunchDependenciesForLabs",
+            "Effect": "Allow",
+            "Action": "ec2:RunInstances",
+            "Resource": [
+                "arn:aws:ec2:*::image/*",
+                "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:subnet/*",
+                "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:network-interface/*",
+                "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:security-group/*",
+                "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:key-pair/*"
+            ]
+        },
+        {
+            "Sid": "SelfManagedNodeLaunchTaggedForLabs",
+            "Effect": "Allow",
+            "Action": "ec2:RunInstances",
+            "Resource": [
+                "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:instance/*",
+                "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:volume/*"
+            ],
+            "Condition": {
+                "StringLike": {
+                    "aws:RequestTag/Name": "*-test-*"
+                }
+            }
+        },
+        {
+            "Sid": "SelfManagedNodeTerminateForLabs",
+            "Effect": "Allow",
+            "Action": "ec2:TerminateInstances",
+            "Resource": "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:instance/*",
+            "Condition": {
+                "StringLike": {
+                    "ec2:ResourceTag/Name": "*-test-*"
+                }
+            }
+        },
+        {
+            "Sid": "SelfManagedNodeTagOnLaunchForLabs",
+            "Effect": "Allow",
+            "Action": "ec2:CreateTags",
+            "Resource": "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:*/*",
+            "Condition": {
+                "StringEquals": {
+                    "ec2:CreateAction": "RunInstances"
+                }
+            }
+        },
+        {
+            "Sid": "VpcCidrAndSubnetPlanningForLabs",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:AssociateVpcCidrBlock",
+                "ec2:DisassociateVpcCidrBlock",
+                "ec2:CreateSubnet",
+                "ec2:DeleteSubnet",
+                "ec2:CreateTags",
+                "eks:UpdateAddon",
+                "eks:DescribeAddon",
+                "eks:DescribeUpdate"
             ],
             "Resource": "*"
         }
