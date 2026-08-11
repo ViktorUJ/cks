@@ -57,12 +57,14 @@ define terragrint_run
 
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@cp -r $(base_dir)/tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand
-    @case "$(3)" in
-        delete)
-            @rm -rf $$terragrunt_env_dir
-            ;;
-    esac
+	@command_status=0
+	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand || command_status=$$?
+	    @case "$(3)" in
+	        delete)
+	            @if [ $$command_status -eq 0 ]; then rm -rf $$terragrunt_env_dir; fi
+	            ;;
+	    esac
+	@exit $$command_status
 endef
 
 # default action to run w\o params
