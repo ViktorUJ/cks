@@ -34,6 +34,7 @@ define terragrint_run
 	@terragrunt_env_dir="$(base_dir)/terraform/environments/${prefix_dir}$(1)-$$run_type"
 	@echo "**** base_dir = $(base_dir)"
 	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
+	@if [ -z "$(strip $(TASK))" ]; then echo "ERROR: TASK must be specified (for example, TASK=01)" >&2; exit 1; fi
     @case "$(3)" in
         run)
             @commnand="terragrunt run-all  apply   --terragrunt-parallelism=$(parallelism) "
