@@ -118,6 +118,17 @@ resource "aws_iam_policy" "server" {
             "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-test-*"
         },
         {
+            "Sid": "WorkloadIdentityRoleReadForLabs",
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetRole"
+            ],
+            "Resource": [
+                "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-irsa-role",
+                "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-pod-identity-role"
+            ]
+        },
+        {
             "Sid": "PassTestRoleToEc2ForLabs",
             "Effect": "Allow",
             "Action": "iam:PassRole",
