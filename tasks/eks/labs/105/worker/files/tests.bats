@@ -52,7 +52,12 @@ NS="eks-105"
     -o jsonpath='{.status.conditions[?(@.type=="Ready")].reason}' 2>/dev/null)
   value=$(kubectl get secret db-credentials -n "$NS" \
     -o jsonpath='{.data.password}' 2>/dev/null | base64 -d 2>/dev/null)
-  if [[ "$status" == "SecretSynced" ]] && [[ "$value" == "S3cr3tPass123" ]]; then
+  # RotatedPass456 разрешён отдельно от S3cr3tPass123: задание 7 намеренно меняет
+  # значение секрета прямо в Secrets Manager (put-secret-value), поэтому при полном
+  # прогоне check_result после выполнения всех заданий по порядку исходное значение
+  # уже недостижимо - ESO корректно синхронизировал новое.
+  if [[ "$status" == "SecretSynced" ]] \
+     && [[ "$value" == "S3cr3tPass123" || "$value" == "RotatedPass456" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
