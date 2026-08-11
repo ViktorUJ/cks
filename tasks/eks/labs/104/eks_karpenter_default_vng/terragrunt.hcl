@@ -82,5 +82,14 @@ inputs = {
     name     = "default"
     iam_role = dependency.eks_karpenter.outputs.karpenter_module.node_iam_role_name
     tags     = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks-infra" })
+    # AWS EC2 API default hop limit for IMDS is 1 - недостаточно для подов не на
+    # hostNetwork (лаба 104, задание 7 - роль ноды должна быть достижима из пода, чтобы
+    # получить AccessDenied от S3, а не "Unable to locate credentials" из-за IMDS).
+    metadataOptions = {
+      httpEndpoint            = "enabled"
+      httpProtocolIPv6        = "disabled"
+      httpPutResponseHopLimit = 2
+      httpTokens              = "required"
+    }
   }
 }
