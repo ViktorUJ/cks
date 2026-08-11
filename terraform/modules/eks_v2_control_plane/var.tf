@@ -40,5 +40,10 @@ variable "eks" {
       node_pools    = optional(list(string))
       node_role_arn = optional(string)
     }), null)
+    # Режим авторизации кластера (глава 5, лаба 102). По умолчанию null - используется
+    # дефолт upstream-модуля terraform-aws-modules/eks/aws ("API_AND_CONFIG_MAP"), как и
+    # раньше для всех лаб, которые этот параметр не передают. Лаба 102 передаёт "API"
+    # явно, чтобы учить access entries без aws-auth ConfigMap.
+    authentication_mode = optional(string, null)
   })
 }

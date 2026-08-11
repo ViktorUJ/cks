@@ -11,7 +11,10 @@ module "eks" {
   endpoint_private_access = true # Enable private access from all VPC subnets
   # Явно фиксируем access entries (не дефолт модуля): AWS Backup для EKS создаёт себе
   # access entry и читает объекты кластера через Kubernetes API только в этом режиме.
-  authentication_mode = "API_AND_CONFIG_MAP"
+  # Лаба 102 передаёт var.eks.authentication_mode = "API", чтобы учить access entries
+  # без aws-auth ConfigMap - для всех остальных лаб (var.eks.authentication_mode = null)
+  # сохраняется прежнее поведение "API_AND_CONFIG_MAP".
+  authentication_mode = coalesce(var.eks.authentication_mode, "API_AND_CONFIG_MAP")
 
   vpc_id                   = var.eks.vpc_id
   subnet_ids               = var.eks.subnet_ids
