@@ -64,6 +64,9 @@ define terragrint_run
     esac
 endef
 
+# default action to run w\o params
+help:
+	@echo "TODO: add help here"
 
 # CKA task
 run_cka_task:
