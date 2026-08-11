@@ -9,7 +9,9 @@ export KUBECONFIG=/root/.kube/config
 PREFIX="eks-task104"
 APP_NAME="workload_identity"
 REGION="eu-central-1"
-BUCKET_NAME="${PREFIX}-${APP_NAME}-bucket"
+# S3 bucket names allow only lowercase alphanumeric characters and hyphens - underscores
+# from APP_NAME must be replaced (must match terraform/modules/eks_v2_workload_identity_demo).
+BUCKET_NAME=$(echo "${PREFIX}-${APP_NAME}-bucket" | tr '_' '-')
 SECRET_NAME="${PREFIX}-${APP_NAME}-secret"
 IRSA_ROLE_NAME="${PREFIX}-${APP_NAME}-irsa-role"
 POD_IDENTITY_ROLE_NAME="${PREFIX}-${APP_NAME}-pod-identity-role"

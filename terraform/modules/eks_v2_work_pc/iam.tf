@@ -209,6 +209,7 @@ resource "aws_iam_policy" "server" {
                 "ec2:CreateSubnet",
                 "ec2:DeleteSubnet",
                 "ec2:CreateTags",
+                "ec2:DescribeInstanceTypes",
                 "eks:UpdateAddon",
                 "eks:DescribeAddon",
                 "eks:DescribeUpdate"

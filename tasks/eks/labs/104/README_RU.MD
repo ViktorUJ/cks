@@ -111,7 +111,7 @@ flowchart TB
 
 | Ресурс | Имя |
 |--------|-----|
-| S3 bucket | `eks-task104-workload_identity-bucket` |
+| S3 bucket | `eks-task104-workload-identity-bucket` (дефисы вместо `_` - требование S3) |
 | Secrets Manager secret | `eks-task104-workload_identity-secret` |
 | Роль IRSA | `eks-task104-workload_identity-irsa-role` |
 | Роль Pod Identity | `eks-task104-workload_identity-pod-identity-role` |

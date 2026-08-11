@@ -189,6 +189,27 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> Перед удалением. Подсеть `100.64.1.0/24` и secondary CIDR `100.64.0.0/16` из задания 4
+> созданы вручную через AWS CLI, а не terraform - state о них ничего не знает. Удалите их
+> сами, иначе `terragrunt destroy` откажется удалять VPC из-за оставшейся зависимой
+> подсети. Имя кластера - `<cluster>` в примере ниже - получите так:
+> `aws eks list-clusters --query 'clusters[0]' --output text`.
+>
+> ```bash
+> CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
+> VPC=$(aws eks describe-cluster --name "$CLUSTER" \
+>   --query 'cluster.resourcesVpcConfig.vpcId' --output text)
+> SUBNET=$(aws ec2 describe-subnets \
+>   --filters "Name=vpc-id,Values=$VPC" "Name=cidr-block,Values=100.64.1.0/24" \
+>   --query 'Subnets[0].SubnetId' --output text)
+> aws ec2 delete-subnet --subnet-id "$SUBNET"
+>
+> ASSOC=$(aws ec2 describe-vpcs --vpc-ids "$VPC" \
+>   --query "Vpcs[].CidrBlockAssociationSet[?CidrBlock=='100.64.0.0/16'].AssociationId" \
+>   --output text)
+> aws ec2 disassociate-vpc-cidr-block --association-id "$ASSOC"
+> ```
+
 ```bash
 TASK=103 make delete_eks_task
 ```

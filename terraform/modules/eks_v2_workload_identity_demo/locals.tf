@@ -9,7 +9,9 @@ locals {
   # OIDC issuer host/path without https://, used in StringEquals keys of the IRSA trust policy
   oidc_provider = replace(data.aws_iam_openid_connect_provider.this.url, "https://", "")
 
-  bucket_name = "${var.prefix}-${var.app_name}-bucket"
+  # S3 bucket names allow only lowercase alphanumeric characters and hyphens - app_name
+  # can contain underscores (e.g. "workload_identity"), so they must be replaced here.
+  bucket_name = replace("${var.prefix}-${var.app_name}-bucket", "_", "-")
   secret_name = "${var.prefix}-${var.app_name}-secret"
   irsa_role_name          = "${var.prefix}-${var.app_name}-irsa-role"
   pod_identity_role_name  = "${var.prefix}-${var.app_name}-pod-identity-role"
