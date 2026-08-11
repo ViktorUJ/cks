@@ -40,13 +40,13 @@ define terragrint_run
 	@if [ -z "$(strip $(TASK))" ]; then echo "ERROR: TASK must be specified (for example, TASK=01)" >&2; exit 1; fi
     @case "$(3)" in
         run)
-            @commnand="terragrunt run-all  apply   --terragrunt-parallelism=$(parallelism) "
+            @commnand="terragrunt run-all  apply   --parallelism=$(parallelism) "
             ;;
         delete)
-            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$(parallelism) "
+            @commnand="terragrunt run-all  destroy --parallelism=$(parallelism) "
             ;;
         output)
-            @commnand="terragrunt run-all  output  --terragrunt-parallelism=$(parallelism) "
+            @commnand="terragrunt run-all  output  --parallelism=$(parallelism) "
             ;;
     esac
 	@echo "**** command = $$commnand"
