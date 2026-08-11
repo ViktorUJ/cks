@@ -6,6 +6,7 @@ backend_bucket := $(shell grep '^  backend_bucket' terraform/environments/terrag
 dynamodb_table := $(backend_bucket)-lock
 base_dir := $(shell pwd)
 nproc := $(shell if [ "$(shell uname)" = "Darwin" ]; then sysctl -n hw.physicalcpu; else nproc; fi)
+parallelism := $(shell if [ "$(nproc)" -le 2 ]; then echo $$(( $(nproc) + 1 )); else echo $$(( ($(nproc) * 150 + 99) / 100 )); fi)
 BASE_PATH := $(shell pwd)
 VENV_PATH := $(BASE_PATH)/venv
 VENV_BIN_PATH := $(VENV_PATH)/bin/
@@ -31,13 +32,13 @@ define terragrint_run
 	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
     @case "$(3)" in
         run)
-            @commnand="terragrunt run-all  apply --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) )) "
+            @commnand="terragrunt run-all  apply   --terragrunt-parallelism=$(parallelism) "
             ;;
         delete)
-            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
+            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$(parallelism) "
             ;;
         output)
-            @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
+            @commnand="terragrunt run-all  output  --terragrunt-parallelism=$(parallelism) "
             ;;
     esac
 
