@@ -129,6 +129,17 @@ resource "aws_iam_policy" "server" {
             }
         },
         {
+            "Sid": "PassTestRoleForPodIdentityForLabs",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-test-*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "pods.eks.amazonaws.com"
+                }
+            }
+        },
+        {
             "Sid": "TestInstanceProfileManagementForLabs",
             "Effect": "Allow",
             "Action": [
@@ -201,6 +212,98 @@ resource "aws_iam_policy" "server" {
                 "eks:UpdateAddon",
                 "eks:DescribeAddon",
                 "eks:DescribeUpdate"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CloudWatchLogsReadForLoggingLabs",
+            "Effect": "Allow",
+            "Action": [
+                "logs:DescribeLogGroups",
+                "logs:PutRetentionPolicy",
+                "logs:FilterLogEvents",
+                "logs:GetLogEvents"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ObservabilityReadForMetricsLabs",
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:ListMetrics",
+                "cloudwatch:GetMetricData",
+                "cloudwatch:GetMetricStatistics",
+                "cloudwatch:DescribeAlarms",
+                "aps:ListWorkspaces",
+                "aps:DescribeWorkspace",
+                "aps:ListRuleGroupsNamespaces",
+                "aps:DescribeRuleGroupsNamespace"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SecurityGroupTroubleshootingForLabs",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSecurityGroupRules"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "AwsBackupForLabs",
+            "Effect": "Allow",
+            "Action": "backup:*",
+            "Resource": "*"
+        },
+        {
+            "Sid": "PassTestRoleForBackupForLabs",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-test-*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "backup.amazonaws.com"
+                }
+            }
+        },
+        {
+            "Sid": "KmsForAwsBackupVaultLabs",
+            "Effect": "Allow",
+            "Action": [
+                "kms:CreateGrant",
+                "kms:DescribeKey",
+                "kms:RetireGrant",
+                "kms:Decrypt",
+                "kms:GenerateDataKey"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "TrafficAndEndpointsForLabs",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateRoute",
+                "ec2:ReplaceRoute",
+                "ec2:DeleteRoute",
+                "ec2:CreateVpcEndpoint",
+                "ec2:DeleteVpcEndpoints",
+                "ec2:ModifyVpcEndpoint",
+                "ec2:DescribeVpcEndpoints",
+                "cloudwatch:GetMetricStatistics",
+                "cloudwatch:ListMetrics"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "VpcLatticeReadForLabs",
+            "Effect": "Allow",
+            "Action": [
+                "vpc-lattice:List*",
+                "vpc-lattice:Get*",
+                "ec2:DescribeManagedPrefixLists"
             ],
             "Resource": "*"
         }

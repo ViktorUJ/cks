@@ -9,10 +9,19 @@ module "eks" {
   kubernetes_version     = var.eks.version
   endpoint_public_access = true
   endpoint_private_access = true # Enable private access from all VPC subnets
+  # Явно фиксируем access entries (не дефолт модуля): AWS Backup для EKS создаёт себе
+  # access entry и читает объекты кластера через Kubernetes API только в этом режиме.
+  authentication_mode = "API_AND_CONFIG_MAP"
 
   vpc_id                   = var.eks.vpc_id
   subnet_ids               = var.eks.subnet_ids
   control_plane_subnet_ids = var.eks.control_plane_subnet_ids
+
+  # EKS Auto Mode (глава 9, лаба 125): compute_config = null по умолчанию, поэтому для
+  # всех лаб, которые его не передают, upstream-модуль ведёт себя точно как раньше -
+  # блок compute_config в aws_eks_cluster просто не создаётся (см. dynamic-блок в
+  # terraform-aws-modules/eks/aws версии 21).
+  compute_config = var.eks.compute_config
 
   create_security_group                    = true
   create_node_security_group = true
