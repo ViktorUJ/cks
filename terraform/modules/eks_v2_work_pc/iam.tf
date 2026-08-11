@@ -120,13 +120,22 @@ resource "aws_iam_policy" "server" {
         {
             "Sid": "WorkloadIdentityRoleReadForLabs",
             "Effect": "Allow",
-            "Action": [
-                "iam:GetRole"
-            ],
+            "Action": "iam:GetRole",
             "Resource": [
                 "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-irsa-role",
                 "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-pod-identity-role"
             ]
+        },
+        {
+            "Sid": "PassPodIdentityRoleForLabs",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-pod-identity-role",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "pods.eks.amazonaws.com"
+                }
+            }
         },
         {
             "Sid": "PassTestRoleToEc2ForLabs",
