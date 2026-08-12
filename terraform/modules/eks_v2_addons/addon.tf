@@ -6,7 +6,7 @@ resource "aws_eks_addon" "addons" {
   resolve_conflicts_on_create = each.value.resolve_conflicts
   resolve_conflicts_on_update=each.value.resolve_conflicts
   configuration_values = (
-    try(each.value.configuration, null) != null && try(each.value.configuration, {}) != {} ?
+    try(each.value.configuration, null) != null && length(try(each.value.configuration, {})) > 0 ?
     jsonencode(each.value.configuration) :
     null
   )

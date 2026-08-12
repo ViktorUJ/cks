@@ -24,7 +24,7 @@ variable "addons" {
   type = map(object({
   version=string
   resolve_conflicts=optional(string, "OVERWRITE")
-  configuration= optional(any)
+  configuration= optional(any, {})
   }))
 }
 variable "name" {
