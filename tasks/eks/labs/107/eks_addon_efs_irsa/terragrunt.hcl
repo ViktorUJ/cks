@@ -40,6 +40,19 @@ inputs = {
     name    = "aws-efs-csi-driver"
     # Версию проверить перед продом: значение подобрано как разумное для EKS 1.36,
     # сверить через `aws eks describe-addon-versions --addon-name aws-efs-csi-driver`.
-    version = "v2.1.4-eksbuild.1"
+    version = "v3.4.1-eksbuild.1"
+    # По умолчанию контроллер требует containerSecurityContext.privileged: true
+    # (нужно только для опции delete-access-point-root-dir, которая в этой лабе не
+    # используется). namespace kube-system целиком закрыт Fargate-профилем
+    # (eks_fargate_system), а Fargate не поддерживает privileged поды - без этого
+    # override под efs-csi-controller навечно остаётся FailedScheduling и managed
+    # addon висит в DEGRADED/CREATE_FAILED.
+    configuration = {
+      controller = {
+        containerSecurityContext = {
+          privileged = false
+        }
+      }
+    }
   }
 }

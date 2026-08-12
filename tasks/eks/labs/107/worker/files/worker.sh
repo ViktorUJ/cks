@@ -29,4 +29,27 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
+# Кластер стартует с нулём EC2-нод (только Fargate под системными подами, профиль
+# eks_fargate_system покрывает kube-system и karpenter) - "at least one node" выше
+# удовлетворяется Fargate-нодами. Но csi-provisioner (общий sidecar efs.csi.aws.com)
+# всё равно требует хотя бы одну CSINode с topology-ключами, чтобы сгенерировать
+# AccessibilityRequirements для CreateVolume, даже когда сам backend (EFS) региональный
+# и от зоны не зависит - без EC2-ноды провижининг первого PVC зависает навечно с
+# ошибкой "no available topology found" (тот же паттерн, что в лабе 106 для EBS).
+# Держим служебный под без PVC постоянно в отдельном namespace (НЕ kube-system/
+# karpenter - те под Fargate-профилем и не потянут EC2-ноду через Karpenter).
+echo "Warming up one EC2 node so efs.csi.aws.com CSINode topology is known..."
+kubectl create namespace efs-csi-warmup >/dev/null 2>&1
+kubectl run efs-csi-topology-warmup --image=viktoruj/ping_pong:latest --restart=Never \
+  -n efs-csi-warmup >/dev/null 2>&1
+
+echo "Waiting for at least one EC2 (non-Fargate) node to register..."
+for i in $(seq 1 60); do
+  ec2_nodes=$(kubectl get no --no-headers 2>/dev/null | grep -vc '^fargate-')
+  if [ "$ec2_nodes" -ge 1 ]; then
+    break
+  fi
+  sleep 5
+done
+
 echo "*** cluster is ready, you can start lab 107 ***"

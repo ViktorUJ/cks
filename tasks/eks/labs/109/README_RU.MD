@@ -199,7 +199,7 @@ check_result    # проверить решение
 ---
 |        **6**        | **Диагностика: неверный ingressClassName и IngressGroup**     |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Создайте второй Ingress `status` в `eks-109` с намеренно неверным `ingressClassName: wrong-class` (путь `/status` на Service `web` порт `80`). Убедитесь, что у него нет адреса (LBC не реконсилирует Ingress с чужим классом), и опишите причину в `/var/work/tests/artifacts/6/groupfix.txt`. Затем исправьте: поставьте `ingressClassName: alb`, добавьте `alb.ingress.kubernetes.io/scheme: internal`, `alb.ingress.kubernetes.io/target-type: ip`, `alb.ingress.kubernetes.io/group.name: eks-task109-web` (то же имя группы, что у Ingress `web`) и `group.order: '10'`. Дождитесь адреса и допишите в тот же файл, что адрес `status` совпал с адресом `web` - оба Ingress делят один ALB через IngressGroup. |
+| Что делаем          | Создайте `IngressClass` `wrong-class` с `spec.controller: example.com/not-alb` (реальный объект нужен, потому что admission webhook LBC отвергает Ingress со ссылкой на несуществующий класс), затем второй Ingress `status` в `eks-109` с `ingressClassName: wrong-class` (путь `/status` на Service `web` порт `80`). Убедитесь, что у него нет адреса (LBC следит только за классами с controller `ingress.k8s.aws/alb`), и опишите причину в `/var/work/tests/artifacts/6/groupfix.txt`. Затем исправьте: поставьте `ingressClassName: alb`, добавьте `alb.ingress.kubernetes.io/scheme: internal`, `alb.ingress.kubernetes.io/target-type: ip`, `alb.ingress.kubernetes.io/group.name: eks-task109-web` (то же имя группы, что у Ingress `web`) и `group.order: '10'`. Дождитесь адреса и допишите в тот же файл, что адрес `status` совпал с адресом `web` - оба Ingress делят один ALB через IngressGroup. |
 | Критерии приёмки    | - файл `groupfix.txt` не пуст, содержит `ingressClassName` и `wrong-class` (объяснение симптома);<br/>- Ingress `status` после фикса имеет `ingressClassName: alb` и тот же адрес, что Ingress `web` (`status.loadBalancer.ingress[0].hostname`). |
 ---
 
@@ -218,6 +218,54 @@ check_result
 Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
 ## Удаление кластера и ресурсов
+
+> Перед удалением. Ingress `web` и `status` создали реальный ALB и две security group
+> напрямую через ELBv2/EC2 API (AWS Load Balancer Controller) - ничего из этого не в
+> state terraform. Удалите Ingress'ы и дайте LBC самому вызвать AWS API на удаление ALB и
+> SG (finalizer не даст объектам удалиться из etcd, пока LBC не подтвердит очистку):
+>
+> ```bash
+> kubectl delete ingress web status -n eks-109
+> kubectl wait --for=delete ingress/web ingress/status -n eks-109 --timeout=120s
+> ```
+>
+> external-dns из задания 5 сам записи `A`/`AAAA`/`TXT` НЕ уберёт: политика
+> `policy: upsert-only`, которую вы явно указали при установке, - это осознанный режим
+> «только создавать и обновлять», без удаления, задокументированное поведение проекта
+> (защита от случайной потери DNS-записей при рестарте контроллера). Удалите их вручную
+> через AWS CLI - иначе в hosted zone останутся записи сверх `NS`/`SOA`, и terraform не
+> сможет удалить саму зону:
+>
+> ```bash
+> ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name eks-task109.internal \
+>   --query "HostedZones[0].Id" --output text)
+> aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" --change-batch '{
+>   "Changes": [
+>     {"Action": "DELETE", "ResourceRecordSet": {"Name": "app.eks-task109.internal.", "Type": "A", "AliasTarget": {"HostedZoneId": "<CanonicalHostedZoneId ALB>", "DNSName": "<DNSName ALB>.", "EvaluateTargetHealth": true}}},
+>     {"Action": "DELETE", "ResourceRecordSet": {"Name": "app.eks-task109.internal.", "Type": "AAAA", "AliasTarget": {"HostedZoneId": "<CanonicalHostedZoneId ALB>", "DNSName": "<DNSName ALB>.", "EvaluateTargetHealth": true}}},
+>     {"Action": "DELETE", "ResourceRecordSet": {"Name": "aaaa-app.eks-task109.internal.", "Type": "TXT", "TTL": 300, "ResourceRecords": [{"Value": "\"heritage=external-dns,external-dns/owner=eks-task109,external-dns/resource=ingress/eks-109/web\""}]}},
+>     {"Action": "DELETE", "ResourceRecordSet": {"Name": "cname-app.eks-task109.internal.", "Type": "TXT", "TTL": 300, "ResourceRecords": [{"Value": "\"heritage=external-dns,external-dns/owner=eks-task109,external-dns/resource=ingress/eks-109/web\""}]}}
+>   ]
+> }'
+> # проще: посмотрите точные значения перед удалением и подставьте их выше
+> aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID"
+> ```
+>
+> Обязательно удалите Ingress'ы ДО `terragrunt destroy`. Если control plane удалится
+> раньше них, ALB и его SG останутся осиротевшими (держат ENI в подсетях - VPC и Internet
+> Gateway зависнут в `Still destroying...`), и LBC уже не поможет - остаётся чистить
+> вручную через AWS CLI:
+>
+> ```bash
+> VPC_ID=<ID VPC этой лабы>
+> LB_ARN=$(aws elbv2 describe-load-balancers \
+>   --query "LoadBalancers[?contains(LoadBalancerName,'eks109')].LoadBalancerArn" --output text)
+> aws elbv2 delete-load-balancer --load-balancer-arn "$LB_ARN"
+> # подождите, пока ENI в подсетях освободятся, затем удалите оставшиеся SG:
+> aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" \
+>   --query "SecurityGroups[?GroupName!='default'].GroupId" --output text | \
+>   xargs -n1 aws ec2 delete-security-group --group-id
+> ```
 
 ```bash
 TASK=109 make delete_eks_task

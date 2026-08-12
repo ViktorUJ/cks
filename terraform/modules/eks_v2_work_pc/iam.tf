@@ -123,8 +123,15 @@ resource "aws_iam_policy" "server" {
             "Action": "iam:GetRole",
             "Resource": [
                 "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-irsa-role",
-                "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-pod-identity-role"
+                "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-pod-identity-role",
+                "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-lbc-irsa"
             ]
+        },
+        {
+            "Sid": "ListRolesForLabs",
+            "Effect": "Allow",
+            "Action": "iam:ListRoles",
+            "Resource": "*"
         },
         {
             "Sid": "PassPodIdentityRoleForLabs",
@@ -325,6 +332,17 @@ resource "aws_iam_policy" "server" {
                 "vpc-lattice:List*",
                 "vpc-lattice:Get*",
                 "ec2:DescribeManagedPrefixLists"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "AcmRoute53ReadForIngressLabs",
+            "Effect": "Allow",
+            "Action": [
+                "acm:ListCertificates",
+                "acm:DescribeCertificate",
+                "route53:ListHostedZones*",
+                "route53:ListResourceRecordSets"
             ],
             "Resource": "*"
         }

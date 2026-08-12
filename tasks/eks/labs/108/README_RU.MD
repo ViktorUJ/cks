@@ -158,7 +158,7 @@ check_result    # проверить решение
 ---
 |        **2**        | **ServiceAccount и установка AWS Load Balancer Controller**  |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Найдите ARN IAM-роли, созданной terraform для контроллера (имя роли `<cluster-name>-lbc-irsa`), и создайте ServiceAccount `aws-load-balancer-controller` в `kube-system` с аннотацией `eks.amazonaws.com/role-arn` на эту роль. Затем поставьте AWS Load Balancer Controller через Helm (репозиторий `https://aws.github.io/eks-charts`, чарт `aws-load-balancer-controller`) с флагами `--set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller` и `--set clusterName=<имя кластера>`. Дождитесь, пока Deployment `aws-load-balancer-controller` в `kube-system` станет `Running` (все реплики Ready). |
+| Что делаем          | Найдите ARN IAM-роли, созданной terraform для контроллера (имя роли `<cluster-name>-lbc-irsa`), и создайте ServiceAccount `aws-load-balancer-controller` в `kube-system` с аннотацией `eks.amazonaws.com/role-arn` на эту роль. Затем поставьте AWS Load Balancer Controller через Helm (репозиторий `https://aws.github.io/eks-charts`, чарт `aws-load-balancer-controller`) с флагами `--set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller`, `--set clusterName=<имя кластера>`, `--set region=eu-central-1` и `--set vpcId=<ID VPC лабы>`. Флаги `region`/`vpcId` обязательны: контроллер работает на Fargate (namespace `kube-system` под Fargate-профилем), а на Fargate нет EC2 instance metadata - без этих флагов контроллер пытается определить VPC ID через IMDS и падает в `CrashLoopBackOff`. VPC ID можно получить через `aws eks describe-cluster --name <cluster-name> --query 'cluster.resourcesVpcConfig.vpcId'`. Дождитесь, пока Deployment `aws-load-balancer-controller` в `kube-system` станет `Running` (все реплики Ready). |
 | Критерии приёмки    | - ServiceAccount `aws-load-balancer-controller` в `kube-system` с аннотацией на роль `lbc-irsa`;<br/>- Deployment `aws-load-balancer-controller` в `kube-system` имеет хотя бы одну готовую реплику. |
 ---
 |        **3**        | **Нагрузка для публикации наружу**                           |
@@ -197,6 +197,36 @@ check_result
 Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
 ## Удаление кластера и ресурсов
+
+> Перед удалением. Service `web` типа `LoadBalancer` из задания 4 создал реальный NLB и
+> две security group напрямую через ELBv2/EC2 API (AWS Load Balancer Controller), а не
+> terraform - state о них ничего не знает. Правильный способ их убрать - удалить Service
+> и дать LBC самому вызвать AWS API на удаление (finalizer на Service не даст объекту
+> удалиться из etcd, пока LBC не подтвердит, что NLB и обе SG реально снесены) - это
+> надёжнее и проще, чем чистить NLB/SG руками через AWS CLI:
+>
+> ```bash
+> kubectl delete svc web -n eks-108
+> # ждём, пока finalizer снимется - это и означает "LBC удалил NLB и SG"
+> kubectl wait --for=delete svc/web -n eks-108 --timeout=120s
+> ```
+>
+> Обязательно сделайте это ДО `terragrunt destroy`. Если control plane уже удалён раньше
+> Service (LBC больше не может выполнить finalizer), NLB и его SG останутся осиротевшими
+> и будут держать ENI в публичных подсетях - VPC и Internet Gateway зависнут в
+> `Still destroying...` навечно. В этом случае LBC уже не поможет, и остаётся только
+> чистить вручную через AWS CLI:
+>
+> ```bash
+> VPC_ID=<ID VPC этой лабы>
+> LB_ARN=$(aws elbv2 describe-load-balancers \
+>   --query "LoadBalancers[?contains(LoadBalancerName,'eks108')].LoadBalancerArn" --output text)
+> aws elbv2 delete-load-balancer --load-balancer-arn "$LB_ARN"
+> # подождите, пока ENI в подсетях освободятся, затем удалите оставшиеся SG:
+> aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" \
+>   --query "SecurityGroups[?GroupName!='default'].GroupId" --output text | \
+>   xargs -n1 aws ec2 delete-security-group --group-id
+> ```
 
 ```bash
 TASK=108 make delete_eks_task

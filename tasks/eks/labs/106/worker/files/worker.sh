@@ -28,4 +28,28 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
+# Кластер стартует с нулём EC2-нод (только Fargate под системными подами, профиль
+# eks_fargate_system покрывает kube-system и karpenter). Драйвер ebs.csi.aws.com с
+# volumeBindingMode: Immediate (задание 2-3) не может определить зону тома, пока
+# CSINode ни одной EC2-ноды не сообщил topology-ключи, а Karpenter явно отказывается
+# поднимать ноду под под с непривязанным Immediate PVC ("pvc with immediate volume
+# binding mode must be bound") - без прогрева это тупик навечно для обоих
+# контроллеров. Держим служебный под без PVC постоянно в отдельном namespace (НЕ
+# kube-system/karpenter - те под Fargate-профилем и не потянут EC2-ноду через
+# Karpenter). Не удаляем под - иначе Karpenter консолидирует пустую ноду через 30с
+# раньше, чем студент дойдёт до задания 3, и тупик вернётся.
+echo "Warming up one EC2 node so ebs.csi.aws.com CSINode topology is known..."
+kubectl create namespace ebs-csi-warmup >/dev/null 2>&1
+kubectl run ebs-csi-topology-warmup --image=viktoruj/ping_pong:latest --restart=Never \
+  -n ebs-csi-warmup >/dev/null 2>&1
+
+echo "Waiting for at least one EC2 (non-Fargate) node to register..."
+for i in $(seq 1 60); do
+  ec2_nodes=$(kubectl get no --no-headers 2>/dev/null | grep -vc '^fargate-')
+  if [ "$ec2_nodes" -ge 1 ]; then
+    break
+  fi
+  sleep 5
+done
+
 echo "*** cluster is ready, you can start lab 106 ***"
