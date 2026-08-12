@@ -1,8 +1,13 @@
 locals {
-  region                 = "eu-north-1"
-  backend_region         = "eu-north-1"
-  backend_bucket         = "sre-learning-platform-state-backet"
-  backend_dynamodb_table = "${local.backend_bucket}-lock"
+  # TODO: update the docs
+  # Resolve from the parent environment directory when this config is included by a child module.
+  variables_directory = dirname(find_in_parent_folders("variables.example.hcl", "${get_terragrunt_dir()}/variables.example.hcl"))
+  variables_file      = fileexists("${local.variables_directory}/variables.hcl") ? "${local.variables_directory}/variables.hcl" : "${local.variables_directory}/variables.example.hcl"
+  environment         = read_terragrunt_config(local.variables_file)
+  region              = local.environment.locals.region
+  backend_region      = local.environment.locals.backend_region
+  backend_bucket      = local.environment.locals.backend_bucket
+  cmdb_dynamodb_table = local.environment.locals.cmdb_dynamodb_table
 }
 
 generate "backend" {
@@ -25,8 +30,8 @@ terraform {
 variable "s3_k8s_config" {
 default="${local.backend_bucket}"
 }
-variable "backend_dynamodb_table" {
-default="${local.backend_dynamodb_table}"
+variable "cmdb_dynamodb_table" {
+default="${local.cmdb_dynamodb_table}"
 }
 
 variable "region_cmdb" {
@@ -39,15 +44,15 @@ EOF
 remote_state {
   backend = "s3"
   config = {
-    bucket         = local.backend_bucket
-    key            = "terragrunt${path_relative_to_include()}/terraform.tfstate"
-    region         = local.backend_region
-    encrypt        = true
-    dynamodb_table = local.backend_dynamodb_table
+    bucket       = local.backend_bucket
+    key          = "terragrunt${path_relative_to_include()}/terraform.tfstate"
+    region       = local.backend_region
+    encrypt      = true
+    use_lockfile = true
   }
 }
 inputs = {
-  region                 = local.backend_region
-  backend_bucket         = local.backend_bucket
-  backend_dynamodb_table = local.backend_dynamodb_table
+  region              = local.region
+  backend_bucket      = local.backend_bucket
+  cmdb_dynamodb_table = local.cmdb_dynamodb_table
 }

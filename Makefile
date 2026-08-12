@@ -4,9 +4,11 @@
 export TG_PROVIDER_CACHE := 1
 
 prefix_dir="${USER_ID}_${ENV_ID}_"
-region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl |grep -v 'local.'| awk -F '"' '{print $$2}')
-backend_bucket := $(shell grep '^  backend_bucket' terraform/environments/terragrunt.hcl | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
-dynamodb_table := $(backend_bucket)-lock
+terragrunt_variables_file := $(firstword $(wildcard terraform/environments/variables.hcl) terraform/environments/variables.example.hcl)
+region := $(shell grep '^  region' $(terragrunt_variables_file) | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
+backend_region := $(shell grep '^  backend_region' $(terragrunt_variables_file) | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
+backend_bucket := $(shell grep '^  backend_bucket' $(terragrunt_variables_file) | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
+cmdb_dynamodb_table := $(shell grep '^  cmdb_dynamodb_table' $(terragrunt_variables_file) | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
 base_dir := $(shell pwd)
 nproc := $(shell if [ "$(shell uname)" = "Darwin" ]; then sysctl -n hw.physicalcpu; else nproc; fi)
 parallelism := $(shell if [ "$(nproc)" -le 2 ]; then echo $$(( $(nproc) + 1 )); else echo $$(( ($(nproc) * 150 + 99) / 100 )); fi)
@@ -270,15 +272,15 @@ dev: venv install_git_hooks
 
 # CMDB
 cmdb_get_env_all:
-	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
+	@aws dynamodb scan  --table-name $(cmdb_dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_"}}'     --projection-expression "LockID"     --region $(backend_region) | jq -r '.Items[].LockID.S'
 # make cmdb_get_env_all
 
 cmdb_get_user_env_data:
-	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_data_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
+	@aws dynamodb scan  --table-name $(cmdb_dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_data_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(backend_region) | jq -r '.Items[].LockID.S'
 # USER_ID='myuser' ENV_ID='01' TASK=01 make cmdb_get_user_env_data
 
 cmdb_get_user_env_lock:
-	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_lock_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
+	@aws dynamodb scan  --table-name $(cmdb_dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_lock_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(backend_region) | jq -r '.Items[].LockID.S'
 # only 01 env by user vkfedorov
 # USER_ID='myuser' ENV_ID='01' TASK=01 make cmdb_get_user_env_lock
 
@@ -286,5 +288,5 @@ cmdb_get_user_env_lock:
 # USER_ID='myuser' ENV_ID='' TASK=01 make cmdb_get_user_env_lock
 
 cmdb_get_item:
-	@aws dynamodb get-item --table-name $(dynamodb_table) --region $(region)  --key '{"LockID": {"S": "'${CMDB_ITEM}'"}}'
+	@aws dynamodb get-item --table-name $(cmdb_dynamodb_table) --region $(backend_region)  --key '{"LockID": {"S": "'${CMDB_ITEM}'"}}'
 # CMDB_ITEM=CMDB_data_myuser_02_k8s_cluster1 make cmdb_get_item
