@@ -23,7 +23,7 @@ NS="eks-112"
   req_cpu=$(kubectl get deploy fg-app -n "$NS" -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}' 2>/dev/null)
   lim_cpu=$(kubectl get deploy fg-app -n "$NS" -o jsonpath='{.spec.template.spec.containers[0].resources.limits.cpu}' 2>/dev/null)
   nodes=$(kubectl get po -n "$NS" -l app=fg-app -o jsonpath='{.items[*].spec.nodeName}' 2>/dev/null)
-  non_fargate=$(echo "$nodes" | tr ' ' '\n' | grep -vc '^fargate-')
+  non_fargate=$(echo "$nodes" | tr ' ' '\n' | grep -vc '^fargate-' || true)
   if [[ "$image" == *ping_pong* ]] && [[ "$ready" == "2" ]] && [[ "$req_cpu" == "$lim_cpu" ]] \
     && [[ -n "$req_cpu" ]] && [[ -n "$nodes" ]] && [[ "$non_fargate" -eq 0 ]]; then
     echo '1' >> /var/work/tests/result/ok
@@ -50,7 +50,7 @@ NS="eks-112"
 
 @test "4. Privileged pod is rejected on Fargate, artifact explains why" {
   echo '1' >> /var/work/tests/result/all
-  phase=$(kubectl get po fg-privileged -n "$NS" -o jsonpath='{.status.phase}' 2>/dev/null)
+  phase=$(kubectl get po fg-privileged -n "$NS" -o jsonpath='{.status.phase}' 2>/dev/null || true)
   f=/var/work/tests/artifacts/4/privileged.txt
   if [[ "$phase" != "Running" ]] && [[ -s "$f" ]] && grep -qi 'privileged' "$f" && grep -qi 'fargate' "$f"; then
     echo '1' >> /var/work/tests/result/ok

@@ -23,6 +23,14 @@ dependency "eks_control_plane" {
   config_path = "../eks_control_plane"
 }
 
+# EKS позволяет только одну операцию создания/удаления Fargate-профиля на кластер
+# в один момент времени (ResourceInUseException при параллельном apply). Явная
+# зависимость от eks_fargate_system сериализует создание профилей: сначала
+# kube-system/karpenter, потом workload.
+dependency "eks_fargate_system" {
+  config_path = "../eks_fargate_system"
+}
+
 inputs = {
   region   = local.vars.locals.region
   aws      = local.vars.locals.aws

@@ -189,6 +189,37 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> Перед удалением. EC2-ноды NodePool `default` и `spot-lab` создаёт Karpenter напрямую
+> через EC2 API (`NodeClaim`) - в terraform state их нет. Если удалить control plane
+> раньше, чем Karpenter корректно завершит инстансы, ноды останутся осиротевшими: они
+> держат ENI в приватных подсетях, и `aws_subnet`/`aws_vpc` зависнут в
+> `Still destroying...` (тот же паттерн, что с ALB/NLB в лабах 108-109). Удалите нагрузку
+> и `NodeClaim`, дав Karpenter самому терминировать EC2-инстансы, ДО `terragrunt destroy`:
+>
+> ```bash
+> kubectl delete deployment spotapp -n eks-111 --ignore-not-found
+> kubectl delete pdb spotapp-pdb -n eks-111 --ignore-not-found
+> kubectl delete nodeclaim --all
+> kubectl wait --for=delete nodeclaim --all --timeout=180s
+> ```
+>
+> Проверьте, что ни одной EC2-ноды не осталось:
+>
+> ```bash
+> kubectl get nodes   # должны остаться только fargate-* ноды
+> ```
+>
+> Если control plane уже удалён раньше (Karpenter больше не может обработать удаление),
+> найдите и завершите осиротевшие инстансы вручную через AWS CLI:
+>
+> ```bash
+> CLUSTER=eks111--
+> aws ec2 describe-instances --filters "Name=tag:eks:eks-cluster-name,Values=${CLUSTER}" \
+>   "Name=instance-state-name,Values=running,pending" \
+>   --query 'Reservations[].Instances[].InstanceId' --output text | \
+>   xargs -r aws ec2 terminate-instances --instance-ids
+> ```
+
 ```bash
 TASK=111 make delete_eks_task
 ```
