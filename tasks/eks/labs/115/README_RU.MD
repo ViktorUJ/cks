@@ -186,7 +186,7 @@ cat ~/lab115_hints.txt   # имя роли IRSA и log group
 ---
 |        **7**        | **Многострочность: стектрейс - одна запись, а не четыре**    |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | В `values.yaml` измените `input.multilineParser` на `"cri, python"` (встроенный парсер `python` склеивает Traceback). Выполните `helm upgrade aws-for-fluent-bit eks/aws-for-fluent-bit -n amazon-cloudwatch -f values.yaml` и дождитесь перезапуска подов Fluent Bit. Только после этого создайте Pod `stacktrace-app` (образ `busybox:1.36`), который печатает четыре строки подряд: `Traceback (most recent call last):`, `  File "app.py", line 10, in <module>`, `    raise ValueError('CRASH_TRACE_LAB115')` и `ValueError: CRASH_TRACE_LAB115`, затем спит. Подождите отправки и через `aws logs filter-log-events --filter-pattern "CRASH_TRACE_LAB115"` получите запись. Сохраните в `/var/work/tests/artifacts/7/multiline.txt` найденное сообщение целиком и объяснение, что `multiline.parser` склеил четыре строки в одну запись CloudWatch. |
+| Что делаем          | В `values.yaml` добавьте FILTER `multiline` со встроенным типом `python` (склеивает Traceback) - он должен идти в конвейере раньше FILTER `kubernetes`, потому что склеенные записи заново эмитятся в начало пайплайна (иначе `python` не запустится вообще, если оставить его частью `input.multilineParser` вместе с `cri`: `cri` матчит любую CRI-строку как первую линию, и `python` до неё не доходит). Выполните `helm upgrade aws-for-fluent-bit eks/aws-for-fluent-bit -n amazon-cloudwatch -f values.yaml` и дождитесь перезапуска подов Fluent Bit. Только после этого создайте Pod `stacktrace-app` (образ `busybox:1.36`), который печатает четыре строки подряд: `Traceback (most recent call last):`, `  File "app.py", line 10, in <module>`, `    raise ValueError('CRASH_TRACE_LAB115')` и `ValueError: CRASH_TRACE_LAB115`, затем спит. Подождите отправки и через `aws logs filter-log-events --filter-pattern "CRASH_TRACE_LAB115"` получите запись. Сохраните в `/var/work/tests/artifacts/7/multiline.txt` найденное сообщение целиком и объяснение, что `multiline.parser` склеил четыре строки в одну запись CloudWatch. |
 | Критерии приёмки    | - файл `7/multiline.txt` не пуст, содержит `CRASH_TRACE_LAB115` и слово `multiline` или `Traceback`;<br/>- запись в CloudWatch Logs с `CRASH_TRACE_LAB115` содержит в том же сообщении и строку `Traceback` (то есть все четыре строки склеены в одну запись, а не разбиты на четыре). |
 ---
 
@@ -205,6 +205,35 @@ check_result
 Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
 ## Удаление кластера и ресурсов
+
+Fluent Bit в этой лабе поставлен вручную через Helm в `amazon-cloudwatch`, а не
+terraform-ом - под его DaemonSet и под нагрузку из `eks-115` Karpenter поднял EC2-ноду.
+Terraform не знает про неё и не удалит - если начать `destroy` раньше, осиротевшая
+EC2-нода держит ENI и блокирует удаление VPC/подсетей (тот же паттерн, что в лабах 108,
+109, 111, 114). Перед `destroy` снимите нагрузку и дождитесь, что Karpenter сам убрал
+EC2-инстанс:
+
+```bash
+# 1. Снимаем нагрузку, из-за которой Karpenter поднял EC2-ноду
+helm uninstall aws-for-fluent-bit -n amazon-cloudwatch
+kubectl delete namespace eks-115 amazon-cloudwatch
+
+# 2. Дожидаемся, пока Karpenter сам уберёт EC2-ноду (не просто удалит объект Node,
+#    а завершит сам EC2-инстанс) - должно быть пусто в обоих выводах
+for i in $(seq 1 30); do
+  nc=$(kubectl get nodeclaims --no-headers 2>/dev/null | wc -l)
+  ec2=$(aws ec2 describe-instances \
+    --filters "Name=tag:karpenter.sh/nodepool,Values=default" \
+      "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+    --query 'Reservations[].Instances[]' --output text)
+  echo "nodeclaims=$nc ec2_instances=[$ec2]"
+  [[ "$nc" == "0" ]] && [[ -z "$ec2" ]] && break
+  sleep 10
+done
+```
+
+Только после того как `nodeclaims=0` и список EC2-инстансов пуст, запускайте удаление
+terraform-ресурсов:
 
 ```bash
 TASK=115 make delete_eks_task

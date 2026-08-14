@@ -189,7 +189,7 @@ check_result    # проверить решение
 ---
 |        **6**        | **Откат control plane на `1.35`**                            |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Запустите откат: `aws eks update-cluster-version --name <cluster> --kubernetes-version 1.35`. Дождитесь `Successful` через `describe-update` - это снова 20-40 минут. Подтвердите, что `cluster.version` вернулся к `1.35`. Сохраните в файл `/var/work/tests/artifacts/6/rollback_update.txt` тип обновления из ответа `update-cluster-version` (или из `describe-update`) - должен быть `VersionRollback`, а не обычный апгрейд. |
+| Что делаем          | Из-за апгрейда `kube-proxy` в задании 4 прямой откат control plane заблокирует rollback readiness insight `kube-proxy version rollback compatibility` (`ERROR`: version skew, `kube-proxy` на `1.36` новее control plane на `1.35`). Сначала откатите сам `kube-proxy` на версию под `1.35` (`v1.35.3-eksbuild.13`) и дождитесь `ACTIVE`. Затем запустите откат control plane: `aws eks update-cluster-version --name <cluster> --kubernetes-version 1.35`. Дождитесь `Successful` через `describe-update` - это снова 20-40 минут. Подтвердите, что `cluster.version` вернулся к `1.35`. Сохраните в файл `/var/work/tests/artifacts/6/rollback_update.txt` тип обновления из ответа `update-cluster-version` (или из `describe-update`) - должен быть `VersionRollback`, а не обычный апгрейд. |
 | Критерии приёмки    | - `cluster.version` снова равен `1.35`;<br/>- файл `/var/work/tests/artifacts/6/rollback_update.txt` не пуст и содержит `VersionRollback`. |
 ---
 

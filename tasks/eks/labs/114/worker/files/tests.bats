@@ -36,7 +36,7 @@ NS="eks-114"
   result=1
   for i in $(seq 1 24); do
     status=$(aws eks describe-addon --cluster-name "$cluster" --addon-name metrics-server \
-      --query 'addon.addonStatus' --output text 2>/dev/null)
+      --query 'addon.status' --output text 2>/dev/null)
     top=$(kubectl top nodes 2>/dev/null)
     if [[ "$status" == "ACTIVE" ]] && [[ -n "$top" ]] && [[ "$top" != *"not available"* ]] && \
        [[ -s "$f" ]] && [[ "$(cat "$f")" != *"not available"* ]]; then
@@ -59,7 +59,7 @@ NS="eks-114"
   result=1
   for i in $(seq 1 30); do
     status=$(aws eks describe-addon --cluster-name "$cluster" \
-      --addon-name amazon-cloudwatch-observability --query 'addon.addonStatus' \
+      --addon-name amazon-cloudwatch-observability --query 'addon.status' \
       --output text 2>/dev/null)
     running=$(kubectl get pods -n amazon-cloudwatch -l app.kubernetes.io/name=cloudwatch-agent \
       -o jsonpath='{.items[*].status.phase}' 2>/dev/null)

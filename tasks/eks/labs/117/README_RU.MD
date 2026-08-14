@@ -36,10 +36,10 @@ NAT Gateway есть и в каких зонах, затем сознатель�
 
 | Объект | Что это | Зачем в этой лабе |
 |--------|---------|-------------------|
-| NAT Gateway в AZ `eu-central-1a` и `eu-central-1b` | уже создан модулем `vpc_v3` | правильная схема - по одному NAT на AZ, а не один на кластер (глава 31) |
+| NAT Gateway в AZ `eu-central-1a` и `eu-central-1b` | уже создан модулем `vpc_v3` (`nat_gateway = "SUBNET"`, по одной приватной подсети на зону) | правильная схема - по одному NAT на AZ, а не один на кластер (глава 31) |
 | Приватная подсеть `private-subnet-3` в `eu-central-1c` без NAT | создана без маршрута `0.0.0.0/0` | стартовая точка для воспроизведения ловушки cross-AZ NAT (глава 31) |
 | Route table `private-subnet-3` (правите руками) | маршрут на NAT соседней AZ | сам механизм ловушки: трафик идёт cross-AZ до чужого NAT (глава 31) |
-| Deployment `crossaz` (nodeSelector зоны `eu-central-1c`) | нагрузка, вынуждающая Karpenter поставить ноду именно в проблемной AZ | делает cross-AZ трафик наблюдаемым и воспроизводимым (глава 31) |
+| Deployment `crossaz` (образ `curlimages/curl`, nodeSelector зоны `eu-central-1c`) | нагрузка, вынуждающая Karpenter поставить ноду именно в проблемной AZ | делает cross-AZ трафик наблюдаемым и воспроизводимым, из пода проверяем egress через `curl` (глава 31) |
 | Gateway VPC endpoint для `s3` | запись в route table, бесплатно | первый шаг оптимизации - снимает трафик к S3 с NAT (главы 31, 43) |
 | Interface VPC endpoint (`ecr.api` или `sts`) | ENI с PrivateLink | снимает с NAT трафик сервиса с высокой частотой обращений (глава 31) |
 | Артефакты в `/var/work/tests/artifacts/*` | находки по NAT, маршрутам, endpoints, метрикам | фиксируют разбор без цифр в долларах, только структуру трафика (главы 31, 43) |
@@ -117,9 +117,11 @@ terraform-модулей: сеть уже раскладывает подсет�
 ### Сеть этой лабы: где правильная схема, а где ловушка
 
 Приватные подсети `private-subnet-1` (`eu-central-1a`) и `private-subnet-2`
-(`eu-central-1b`) созданы с `nat_gateway = "AZ"` - модуль `vpc_v3` строит для каждой такой
-AZ отдельный NAT Gateway в соответствующей публичной подсети. Это и есть правильная схема
-из главы 31: трафик ноды идёт до NAT в своей же зоне, без пересечения границы AZ.
+(`eu-central-1b`) созданы с `nat_gateway = "SUBNET"` - модуль `vpc_v3` строит отдельный
+NAT Gateway для каждой такой подсети, в публичной подсети её же зоны. Приватная подсеть
+здесь ровно одна на зону, поэтому «NAT на подсеть» даёт ту же инфраструктуру, что и «NAT
+на зону»: по одному NAT Gateway в `eu-central-1a` и `eu-central-1b`. Это и есть правильная
+схема из главы 31: трафик ноды идёт до NAT в своей же зоне, без пересечения границы AZ.
 
 Подсеть `private-subnet-3` (`eu-central-1c`) создана с `nat_gateway = "NONE"` - у неё есть
 своя route table, но в ней нет маршрута `0.0.0.0/0`. Все три подсети размечены тегом
@@ -131,15 +133,17 @@ cross-AZ до чужого NAT, и это тарифицируется дваж�
 
 ### Права worker для маршрутов, endpoints и метрик
 
-Роль worker (`eks_v2_work_pc/iam.tf`) уже имела широкие `ec2:Describe*`, `eks:*` и права на
-метрики CloudWatch для чтения (`cloudwatch:GetMetricStatistics`, `cloudwatch:ListMetrics`
-из `Sid` `ObservabilityReadForMetricsLabs`) - этого достаточно для всей диагностики. Для
-заданий 2-4 этой лабы, где нужно менять маршруты и создавать VPC endpoints, в политику
-добавлен один дополнительный `Sid` `TrafficAndEndpointsForLabs` с правами
-`ec2:CreateRoute`, `ec2:ReplaceRoute`, `ec2:DeleteRoute`, `ec2:CreateVpcEndpoint`,
-`ec2:DeleteVpcEndpoints`, `ec2:ModifyVpcEndpoint`, `ec2:DescribeVpcEndpoints`,
-`cloudwatch:GetMetricStatistics`, `cloudwatch:ListMetrics` - по аналогии с уже
-существующими `Sid` в этом файле, без изменения остальной политики.
+Роль worker (`eks_v2_work_pc/iam.tf`) уже имела `eks:*`, часть `ec2:Describe*` (подсети,
+security groups, инстансы, ENI), права на изменение правил security group
+(`ec2:AuthorizeSecurityGroupIngress`, `ec2:RevokeSecurityGroupIngress`) и чтение метрик
+CloudWatch (`cloudwatch:GetMetricStatistics`, `cloudwatch:ListMetrics` из `Sid`
+`ObservabilityReadForMetricsLabs`). Для заданий 1-4 этой лабы, где нужно читать NAT
+Gateway и route table, менять маршруты и создавать VPC endpoints, в политику добавлен один
+дополнительный `Sid` `TrafficAndEndpointsForLabs` с правами `ec2:CreateRoute`,
+`ec2:ReplaceRoute`, `ec2:DeleteRoute`, `ec2:CreateVpcEndpoint`, `ec2:DeleteVpcEndpoints`,
+`ec2:ModifyVpcEndpoint`, `ec2:DescribeVpcEndpoints`, `ec2:DescribeNatGateways`,
+`ec2:DescribeRouteTables`, `cloudwatch:GetMetricStatistics`, `cloudwatch:ListMetrics` - по
+аналогии с уже существующими `Sid` в этом файле, без изменения остальной политики.
 
 ## Развёртывание
 
@@ -173,7 +177,7 @@ check_result    # проверить решение
 ---
 |        **2**        | **Воспроизведение cross-AZ ловушки**                        |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Найдите route table подсети `private-subnet-3`: `aws ec2 describe-route-tables --filters "Name=tag:Name,Values=private-subnet-3" --query 'RouteTables[0].RouteTableId'`. Добавьте в неё маршрут на NAT Gateway одной из соседних AZ (из задания 1): `aws ec2 create-route --route-table-id <rtb-id> --destination-cidr-block 0.0.0.0/0 --nat-gateway-id <nat-id>`. В namespace `eks-117` создайте Deployment `crossaz` (образ `viktoruj/ping_pong:latest`, `1` реплика) с `nodeSelector: topology.kubernetes.io/zone: eu-central-1c`, чтобы Karpenter поднял ноду именно в этой зоне. Дождитесь `Running` и проверьте egress изнутри пода: `kubectl exec -n eks-117 <pod> -- curl -s -o /dev/null -w '%{http_code}' https://checkip.amazonaws.com`. Сохраните в `/var/work/tests/artifacts/2/crossaz.txt`: `subnet_c_route_table_id`, `nat_gateway_id_used`, `nat_gateway_az_used`, `pod_node`, `pod_node_zone`, `egress_http_code`, и объяснение (минимум одна строка) со словом `cross-AZ`: почему трафик ноды из `eu-central-1c` до NAT в другой зоне - это межзонный (cross-AZ) переход, тарифицируемый отдельно, и как правильно - NAT Gateway в каждой AZ, где есть ноды. |
+| Что делаем          | Найдите route table подсети `private-subnet-3`: `aws ec2 describe-route-tables --filters "Name=tag:Name,Values=private-subnet-3" --query 'RouteTables[0].RouteTableId'`. Добавьте в неё маршрут на NAT Gateway одной из соседних AZ (из задания 1): `aws ec2 create-route --route-table-id <rtb-id> --destination-cidr-block 0.0.0.0/0 --nat-gateway-id <nat-id>`. В namespace `eks-117` создайте Deployment `crossaz` (образ `curlimages/curl:latest`, команда `sleep 3600`, `1` реплика) с `nodeSelector: topology.kubernetes.io/zone: eu-central-1c`, чтобы Karpenter поднял ноду именно в этой зоне. Дождитесь `Running` и проверьте egress изнутри пода: `kubectl exec -n eks-117 <pod> -- curl -s -o /dev/null -w '%{http_code}' https://checkip.amazonaws.com`. Сохраните в `/var/work/tests/artifacts/2/crossaz.txt`: `subnet_c_route_table_id`, `nat_gateway_id_used`, `nat_gateway_az_used`, `pod_node`, `pod_node_zone`, `egress_http_code`, и объяснение (минимум одна строка) со словом `cross-AZ`: почему трафик ноды из `eu-central-1c` до NAT в другой зоне - это межзонный (cross-AZ) переход, тарифицируемый отдельно, и как правильно - NAT Gateway в каждой AZ, где есть ноды. |
 | Критерии приёмки    | - route table `private-subnet-3` содержит маршрут `0.0.0.0/0` на NAT Gateway, чья AZ не `eu-central-1c`;<br/>- Deployment `crossaz` готов (`1` реплика), под физически на ноде в зоне `eu-central-1c`;<br/>- файл упоминает `cross-AZ` и содержит `egress_http_code=200`. |
 ---
 |        **3**        | **Gateway VPC endpoint для S3 - бесплатный маршрут**         |
@@ -183,8 +187,20 @@ check_result    # проверить решение
 ---
 |        **4**        | **Interface VPC endpoint для сервиса с высоким трафиком**   |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Выберите один сервис - `ecr.api` (авторизация в реестр образов при каждом pull) или `sts` (обмен токена IRSA/Pod Identity на временные ключи при каждом старте пода) - и обоснуйте выбор в артефакте. Найдите security group по умолчанию VPC (`aws ec2 describe-security-groups --filters "Name=vpc-id,Values=<vpc-id>" "Name=group-name,Values=default" --query 'SecurityGroups[0].GroupId'`). Создайте interface endpoint: `aws ec2 create-vpc-endpoint --vpc-id <vpc-id> --vpc-endpoint-type Interface --service-name com.amazonaws.eu-central-1.<ecr.api\|sts> --subnet-ids <private-subnet-1-id> <private-subnet-2-id> --security-group-ids <sg-id> --private-dns-enabled`. Дождитесь `available`. Сохраните в `/var/work/tests/artifacts/4/interfaceendpoint.txt`: `service_chosen`, `vpc_endpoint_id`, `state`, `private_dns_enabled`, и обоснование выбора (минимум одна строка). |
+| Что делаем          | Выберите один сервис - `ecr.api` (авторизация в реестр образов при каждом pull) или `sts` (обмен токена IRSA/Pod Identity на временные ключи при каждом старте пода) - и обоснуйте выбор в артефакте. Найдите security group по умолчанию VPC (`aws ec2 describe-security-groups --filters "Name=vpc-id,Values=<vpc-id>" "Name=group-name,Values=default" --query 'SecurityGroups[0].GroupId'`). Разрешите в этой security group входящий HTTPS из CIDR VPC, иначе endpoint будет недоступен: `aws ec2 authorize-security-group-ingress --group-id <sg-id> --protocol tcp --port 443 --cidr 10.10.0.0/16`. Создайте interface endpoint: `aws ec2 create-vpc-endpoint --vpc-id <vpc-id> --vpc-endpoint-type Interface --service-name com.amazonaws.eu-central-1.<ecr.api\|sts> --subnet-ids <private-subnet-1-id> <private-subnet-2-id> --security-group-ids <sg-id> --private-dns-enabled`. Дождитесь `available`. Сохраните в `/var/work/tests/artifacts/4/interfaceendpoint.txt`: `service_chosen`, `vpc_endpoint_id`, `state`, `private_dns_enabled`, и обоснование выбора (минимум одна строка). |
 | Критерии приёмки    | - interface endpoint для `com.amazonaws.eu-central-1.ecr.api` либо `com.amazonaws.eu-central-1.sts` в состоянии `available`, с `PrivateDnsEnabled: true`;<br/>- файл упоминает выбранный сервис и `available`. |
+
+> Почему правило в security group обязательно. С `--private-dns-enabled` endpoint
+> перехватывает публичное имя сервиса внутри всей VPC: `sts.eu-central-1.amazonaws.com`
+> начинает резолвиться в приватные адреса ENI endpoint. Если security group endpoint не
+> пускает HTTPS от нод и подов, запросы к сервису перестают проходить по всей VPC - у
+> дефолтной security group входящее правило разрешает трафик только участникам этой же
+> группы, а ноды Karpenter живут в собственной группе. Симптом: `curl` к
+> `https://sts.eu-central-1.amazonaws.com` из пода отдаёт код `000` и таймаут, а
+> контроллеры с IRSA (тот же Karpenter) отваливаются при следующем обновлении
+> credentials. Правило `443` из CIDR VPC закрывает вопрос, в проде для endpoint делают
+> отдельную security group с тем же смыслом.
+
 ---
 |        **5**        | **Метрики NAT: сколько байт прошло через каждый шлюз**       |
 | :-----------------: | :---------------------------------------------------------- |
@@ -207,6 +223,50 @@ check_result
 Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
 ## Удаление кластера и ресурсов
+
+В этой лабе вы руками создали два VPC endpoint (gateway для S3 и interface для
+`sts`/`ecr.api`), а нагрузка задания 2 заставила Karpenter поднять EC2-ноду в
+`eu-central-1c`. Ни того, ни другого нет в terraform state, поэтому `destroy` без
+подготовки застревает: ENI interface endpoint держит подсеть, сами endpoints держат VPC, а
+осиротевшая EC2-нода держит подсеть и security group (тот же паттерн, что в лабах 108, 109,
+111, 114, 115, 116). Порядок уборки - endpoints и нагрузка, потом terraform:
+
+```bash
+# 1. Удаляем оба VPC endpoint, созданных вручную в заданиях 3 и 4
+CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
+VPC=$(aws eks describe-cluster --name "$CLUSTER" \
+  --query 'cluster.resourcesVpcConfig.vpcId' --output text)
+EPS=$(aws ec2 describe-vpc-endpoints --filters "Name=vpc-id,Values=$VPC" \
+  --query 'VpcEndpoints[].VpcEndpointId' --output text)
+echo "endpoints to delete: $EPS"
+aws ec2 delete-vpc-endpoints --vpc-endpoint-ids $EPS
+
+# 2. Снимаем нагрузку, из-за которой Karpenter поднял EC2-ноду
+kubectl delete namespace eks-117
+
+# 3. Дожидаемся, пока Karpenter сам завершит EC2-инстанс (а не просто удалит объект Node)
+#    и пока исчезнут ENI удалённого interface endpoint - должно быть пусто во всех выводах
+for i in $(seq 1 30); do
+  nc=$(kubectl get nodeclaims --no-headers 2>/dev/null | wc -l)
+  ec2=$(aws ec2 describe-instances \
+    --filters "Name=tag:karpenter.sh/nodepool,Values=default" \
+    "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+    --query 'Reservations[].Instances[].InstanceId' --output text)
+  eps=$(aws ec2 describe-vpc-endpoints --filters "Name=vpc-id,Values=$VPC" \
+    "Name=vpc-endpoint-state,Values=available,pending,deleting" \
+    --query 'VpcEndpoints[].VpcEndpointId' --output text)
+  echo "nodeclaims=$nc ec2_instances=[$ec2] endpoints=[$eps]"
+  [[ "$nc" == "0" ]] && [[ -z "$ec2" ]] && [[ -z "$eps" ]] && break
+  sleep 10
+done
+```
+
+Маршрут `0.0.0.0/0`, добавленный руками в route table `private-subnet-3`, и правило `443`
+в default security group отдельно убирать не нужно: route table и default security group
+удаляются вместе с VPC, а маршрут внутри route table - вместе с ней.
+
+Только после того как `nodeclaims=0`, а списки EC2-инстансов и endpoints пусты, запускайте
+удаление terraform-ресурсов:
 
 ```bash
 TASK=117 make delete_eks_task

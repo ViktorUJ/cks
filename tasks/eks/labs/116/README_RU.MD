@@ -191,7 +191,7 @@ check_result    # проверить решение
 ---
 |        **5**        | **Разрешённый путь: под, совместимый с restricted**          |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | В `eks-116` создайте Pod `safe-pod`, соответствующий профилю `restricted`: `securityContext.runAsNonRoot: true`, `seccompProfile.type: RuntimeDefault` на уровне пода, а на уровне контейнера `allowPrivilegeEscalation: false` и `capabilities.drop: ["ALL"]`. Под должен пройти admission и перейти в `Running`. |
+| Что делаем          | В `eks-116` создайте Pod `safe-pod`, соответствующий профилю `restricted`: `securityContext.runAsNonRoot: true`, `runAsUser` любым ненулевым UID (образ `busybox` по умолчанию запускается как root, и без явного `runAsUser` kubelet откажет в старте контейнера уже после admission), `seccompProfile.type: RuntimeDefault` на уровне пода, а на уровне контейнера `allowPrivilegeEscalation: false` и `capabilities.drop: ["ALL"]`. Под должен пройти admission и перейти в `Running`. |
 | Критерии приёмки    | - Pod `safe-pod` в `eks-116` в состоянии `Running`;<br/>- `spec.securityContext.runAsNonRoot` равно `true`. |
 ---
 |        **6**        | **Приватный доступ control plane и VPC endpoints**           |
@@ -215,6 +215,33 @@ check_result
 Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
 ## Удаление кластера и ресурсов
+
+Нагрузка заданий 2-5 (`probe`, `priv-test`, `safe-pod`) в namespace `eks-116` заставила
+Karpenter поднять EC2-ноду `hardened`. Terraform не знает про неё - если начать `destroy`
+раньше, осиротевшая EC2-нода держит ENI и блокирует удаление VPC/подсетей (тот же
+паттерн, что в лабах 108, 109, 111, 114, 115). Перед `destroy` снимите нагрузку и
+дождитесь, что Karpenter сам убрал EC2-инстанс:
+
+```bash
+# 1. Снимаем нагрузку, из-за которой Karpenter поднял EC2-ноду
+kubectl delete namespace eks-116
+
+# 2. Дожидаемся, пока Karpenter сам уберёт EC2-ноду (не просто удалит объект Node,
+#    а завершит сам EC2-инстанс) - должно быть пусто в обоих выводах
+for i in $(seq 1 30); do
+  nc=$(kubectl get nodeclaims --no-headers 2>/dev/null | wc -l)
+  ec2=$(aws ec2 describe-instances \
+    --filters "Name=tag:karpenter.sh/nodepool,Values=hardened" \
+      "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+    --query 'Reservations[].Instances[]' --output text)
+  echo "nodeclaims=$nc ec2_instances=[$ec2]"
+  [[ "$nc" == "0" ]] && [[ -z "$ec2" ]] && break
+  sleep 10
+done
+```
+
+Только после того как `nodeclaims=0` и список EC2-инстансов пуст, запускайте удаление
+terraform-ресурсов:
 
 ```bash
 TASK=116 make delete_eks_task

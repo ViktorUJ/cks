@@ -178,7 +178,7 @@ cat ~/lab114_hints.txt   # cluster_name, alias и endpoint AMP workspace
 ---
 |        **3**        | **Базовый слой: аддон metrics-server**                      |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Установите managed-аддон `metrics-server`: `aws eks create-addon --cluster-name <cluster> --addon-name metrics-server`. Дождитесь состояния аддона `ACTIVE` (`aws eks describe-addon ... --query addon.addonStatus`) и убедитесь, что `kubectl top nodes` начал отдавать загрузку (без строки «not available»). Сохраните вывод `kubectl top nodes` в `/var/work/tests/artifacts/3/kubectl_top_after.txt`. |
+| Что делаем          | Установите managed-аддон `metrics-server`: `aws eks create-addon --cluster-name <cluster> --addon-name metrics-server`. Дождитесь состояния аддона `ACTIVE` (`aws eks describe-addon ... --query addon.status`) и убедитесь, что `kubectl top nodes` начал отдавать загрузку (без строки «not available»). Сохраните вывод `kubectl top nodes` в `/var/work/tests/artifacts/3/kubectl_top_after.txt`. |
 | Критерии приёмки    | - аддон `metrics-server` в состоянии `ACTIVE`;<br/>- файл `3/kubectl_top_after.txt` не пуст и не содержит «not available». |
 ---
 |        **4**        | **Container Insights: аддон amazon-cloudwatch-observability** |
@@ -188,7 +188,7 @@ cat ~/lab114_hints.txt   # cluster_name, alias и endpoint AMP workspace
 ---
 |        **5**        | **kube-prometheus-stack: реальный сбор метрик приложения**  |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Установите `kube-prometheus-stack` через Helm в namespace `monitoring` (репозиторий `prometheus-community`), с values `prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false` (иначе Prometheus увидит только ServiceMonitor из своего Helm-релиза). Дождитесь готовности подов Prometheus. В `eks-114` создайте Deployment `ping-app` (образ `viktoruj/ping_pong:latest`, `1` реплика) и Service `ping-app`, публикующий порт `metrics` (`9090` -> `9090`, приложение отдаёт метрики Prometheus по `/metrics` на этом порту). Создайте `ServiceMonitor` `ping-app` в `eks-114` с `selector.matchLabels.app: ping-app`, `endpoints[0].port: metrics`, `path: /metrics`. Подождите, пока Prometheus подхватит таргет, затем через `kubectl exec` в под Prometheus (или `port-forward` + `curl`) выполните запрос к `/api/v1/query` с `query=requests_total` и сохраните JSON-ответ в `/var/work/tests/artifacts/5/prom_query.txt`. |
+| Что делаем          | Установите `kube-prometheus-stack` через Helm в namespace `monitoring` (репозиторий `prometheus-community`), с values `prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false` (иначе Prometheus увидит только ServiceMonitor из своего Helm-релиза). Дождитесь готовности подов Prometheus. В `eks-114` создайте Deployment `ping-app` (образ `viktoruj/ping_pong:latest`, `1` реплика) и Service `ping-app`, публикующий порт `metrics` (`9090` -> `9090`, приложение отдаёт метрики Prometheus по `/metrics` на этом порту). Создайте `ServiceMonitor` `ping-app` в `eks-114` с `selector.matchLabels.app: ping-app`, `endpoints[0].port: metrics`, `path: /metrics`. Подождите, пока Prometheus подхватит таргет, затем через `kubectl port-forward` на сервис `<имя-релиза>-prometheus` и `curl` (образ контейнера `prometheus` без shell-утилит, `kubectl exec` с `wget`/`curl` не сработает) выполните запрос к `/api/v1/query` с `query=requests_total` и сохраните JSON-ответ в `/var/work/tests/artifacts/5/prom_query.txt`. |
 | Критерии приёмки    | - поды Prometheus в `monitoring` `Running` и `Ready`;<br/>- Deployment `ping-app` в `eks-114`, образ `viktoruj/ping_pong`, `1` готовая реплика;<br/>- `ServiceMonitor` `ping-app` с `endpoints[0].port: metrics`;<br/>- файл `5/prom_query.txt` не пуст, содержит `requests_total` и `"metric"`. |
 ---
 |        **6**        | **Managed Prometheus: workspace готов принимать метрики**   |
@@ -213,6 +213,46 @@ check_result
 Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
 ## Удаление кластера и ресурсов
+
+В этой лабе несколько объектов созданы напрямую через AWS CLI/Helm, а не terraform-ом:
+managed-аддоны `metrics-server` и `amazon-cloudwatch-observability`, IAM-роль
+`eks-task114-test-cw-agent` и EC2-ноды, которые Karpenter поднял под DaemonSet CloudWatch
+agent и под kube-prometheus-stack. Terraform не знает про них и не удалит - если начать
+`destroy` раньше, осиротевшие EC2-ноды держат ENI и блокируют удаление VPC/подсетей (тот же
+паттерн, что в лабах 108, 109, 111). Перед `destroy` почистите их вручную:
+
+```bash
+CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
+
+# 1. Снимаем нагрузку, из-за которой Karpenter поднял EC2-ноды
+helm uninstall kube-prometheus-stack -n monitoring
+kubectl delete namespace eks-114 monitoring amazon-cloudwatch
+
+# 2. Удаляем managed-аддоны, поставленные вручную в заданиях 3 и 4
+aws eks delete-addon --cluster-name "$CLUSTER" --addon-name amazon-cloudwatch-observability
+aws eks delete-addon --cluster-name "$CLUSTER" --addon-name metrics-server
+
+# 3. Удаляем IAM-роль CloudWatch agent, созданную в задании 4
+aws iam detach-role-policy --role-name eks-task114-test-cw-agent \
+  --policy-arn arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+aws iam delete-role --role-name eks-task114-test-cw-agent
+
+# 4. Дожидаемся, пока Karpenter сам уберёт EC2-ноды (не просто удалит объект Node,
+#    а завершит сам EC2-инстанс) - должно быть пусто в обоих выводах
+for i in $(seq 1 30); do
+  nc=$(kubectl get nodeclaims --no-headers 2>/dev/null | wc -l)
+  ec2=$(aws ec2 describe-instances \
+    --filters "Name=tag:karpenter.sh/nodepool,Values=default" \
+      "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+    --query 'Reservations[].Instances[]' --output text)
+  echo "nodeclaims=$nc ec2_instances=[$ec2]"
+  [[ "$nc" == "0" ]] && [[ -z "$ec2" ]] && break
+  sleep 10
+done
+```
+
+Только после того как `nodeclaims=0` и список EC2-инстансов пуст, запускайте удаление
+terraform-ресурсов:
 
 ```bash
 TASK=114 make delete_eks_task

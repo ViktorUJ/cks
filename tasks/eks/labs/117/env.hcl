@@ -13,15 +13,24 @@ locals {
   user_id           = get_env("TF_VAR_USER_ID")
   env_id            = get_env("TF_VAR_ENV_ID")
   env_name          = "${local.stack_name}-${local.user_id}-${local.env_id}"
-  # Сеть этой лабы намеренно смешанная: приватные подсети в eu-central-1a и
-  # eu-central-1b получают nat_gateway = "AZ" (по одному NAT Gateway на каждую
-  # из этих двух AZ - правильная схема). Третья приватная подсеть, в
-  # eu-central-1c, получает nat_gateway = "NONE": у неё есть таблица маршрутов,
-  # но в ней нет маршрута 0.0.0.0/0 - модуль vpc_v3 создаёт NAT Gateway только
-  # для подсетей с "AZ"/"SINGLE"/"SUBNET". Студент сам добавит в эту таблицу
-  # маршрут на NAT Gateway соседней AZ - и получит ту самую ловушку cross-AZ
-  # NAT из задания 2. Все три приватные подсети помечены
-  # karpenter.sh/discovery, поэтому Karpenter умеет ставить ноды и в третью AZ.
+  # The network of this lab is intentionally mixed. Private subnets in
+  # eu-central-1a and eu-central-1b use nat_gateway = "SUBNET", one NAT Gateway
+  # per each of these two subnets. There is exactly one private subnet per zone
+  # here, so "NAT per subnet" produces the same infrastructure as "NAT per AZ":
+  # one NAT Gateway in eu-central-1a and one in eu-central-1b, the correct
+  # layout from chapter 31. Mode "AZ" is deliberately not used: it groups
+  # resources by AZ name, and the module resolves the AZ name through
+  # data.aws_availability_zones, which is deferred because of the depends_on on
+  # the module call inside vpc_v3. At plan time the zone name is unknown and
+  # terraform fails with Invalid for_each argument. Mode "SUBNET" keys resources
+  # by subnet keys, which are static, so the plan succeeds.
+  # The third private subnet, in eu-central-1c, uses nat_gateway = "NONE": it
+  # has a route table, but no 0.0.0.0/0 route in it, because vpc_v3 creates NAT
+  # Gateways only for subnets with "AZ"/"SINGLE"/"SUBNET". The student adds a
+  # route to the NAT Gateway of a neighbouring AZ by hand and gets the cross-AZ
+  # NAT trap of task 2. All three private subnets carry the
+  # karpenter.sh/discovery tag, so Karpenter can place nodes in the third AZ as
+  # well.
   subnets = {
     public = {
       "pub1" = {
@@ -48,7 +57,7 @@ locals {
         name        = "private-subnet-1"
         cidr        = "10.10.15.0/24"
         az          = "eu-central-1a"
-        nat_gateway = "AZ"
+        nat_gateway = "SUBNET"
         type        = "eks"
         tags = {
           "kubernetes.io/cluster/${local.env_name}" = "owned"
@@ -60,7 +69,7 @@ locals {
         name        = "private-subnet-2"
         cidr        = "10.10.16.0/24"
         az          = "eu-central-1b"
-        nat_gateway = "AZ"
+        nat_gateway = "SUBNET"
         type        = "eks"
         tags = {
           "kubernetes.io/cluster/${local.env_name}" = "owned"

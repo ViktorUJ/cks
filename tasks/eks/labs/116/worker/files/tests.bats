@@ -49,7 +49,7 @@ NS="eks-116"
 @test "4. Pod Security Admission rejects a privileged pod in the restricted namespace" {
   echo '1' >> /var/work/tests/result/all
   enforce=$(kubectl get ns "$NS" -o jsonpath='{.metadata.labels.pod-security\.kubernetes\.io/enforce}' 2>/dev/null)
-  privpod=$(kubectl get pod priv-test -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null)
+  privpod=$(kubectl get pod priv-test -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null || true)
   f=/var/work/tests/artifacts/4/psa_reject.txt
   if [[ "$enforce" == "restricted" ]] && [[ -z "$privpod" ]] && [[ -s "$f" ]] \
      && grep -qi 'privileged' "$f" && grep -qi 'restricted\|violat' "$f"; then

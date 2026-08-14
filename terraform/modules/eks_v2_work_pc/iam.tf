@@ -320,6 +320,8 @@ resource "aws_iam_policy" "server" {
                 "ec2:DeleteVpcEndpoints",
                 "ec2:ModifyVpcEndpoint",
                 "ec2:DescribeVpcEndpoints",
+                "ec2:DescribeNatGateways",
+                "ec2:DescribeRouteTables",
                 "cloudwatch:GetMetricStatistics",
                 "cloudwatch:ListMetrics"
             ],

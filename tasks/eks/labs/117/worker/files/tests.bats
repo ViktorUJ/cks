@@ -13,7 +13,7 @@ NS="eks-117"
   vpc=$(aws eks describe-cluster --name "$cluster" \
     --query 'cluster.resourcesVpcConfig.vpcId' --output text 2>/dev/null)
   real_count=$(aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=$vpc" \
-    --query 'length(NatGateways[?State==`available`])' --output text 2>/dev/null)
+    --query 'length(NatGateways[?State==`available`])' --output text 2>/dev/null || true)
   f=/var/work/tests/artifacts/1/natdiscovery.txt
   nat_count=$(grep '^nat_count=' "$f" 2>/dev/null | cut -d= -f2)
   no_nat_az=$(grep '^no_nat_az=' "$f" 2>/dev/null | cut -d= -f2)
@@ -42,13 +42,13 @@ NS="eks-117"
   if [[ -n "$rtb" ]] && [[ -n "$nat_used" ]]; then
     real_nat=$(aws ec2 describe-route-tables --route-table-ids "$rtb" \
       --query "RouteTables[0].Routes[?DestinationCidrBlock=='0.0.0.0/0'].NatGatewayId" \
-      --output text 2>/dev/null)
+      --output text 2>/dev/null || true)
     [[ "$real_nat" == "$nat_used" ]] && route_ok=1
   fi
-  ready=$(kubectl get deploy crossaz -n "$NS" -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
-  node=$(kubectl get po -n "$NS" -l app=crossaz -o jsonpath='{.items[0].spec.nodeName}' 2>/dev/null)
+  ready=$(kubectl get deploy crossaz -n "$NS" -o jsonpath='{.status.readyReplicas}' 2>/dev/null || true)
+  node=$(kubectl get po -n "$NS" -l app=crossaz -o jsonpath='{.items[0].spec.nodeName}' 2>/dev/null || true)
   node_zone=$(kubectl get node "$node" \
-    -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}' 2>/dev/null)
+    -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}' 2>/dev/null || true)
   if [[ "$route_ok" -eq 1 ]] && [[ "$nat_az_used" != "eu-central-1c" ]] \
      && [[ "$ready" == "1" ]] && [[ "$node_zone" == "eu-central-1c" ]] \
      && [[ "$http_code" == "200" ]] && [[ -s "$f" ]] && grep -qi 'cross-AZ' "$f"; then
@@ -73,7 +73,8 @@ NS="eks-117"
   rtb_count=$(aws ec2 describe-vpc-endpoints --filters "Name=vpc-id,Values=$vpc" \
     "Name=service-name,Values=com.amazonaws.eu-central-1.s3" \
     "Name=vpc-endpoint-type,Values=Gateway" \
-    --query 'length(VpcEndpoints[0].RouteTableIds)' --output text 2>/dev/null)
+    --query 'length(VpcEndpoints[0].RouteTableIds)' --output text 2>/dev/null || true)
+  [[ "$rtb_count" =~ ^[0-9]+$ ]] || rtb_count=0
   f=/var/work/tests/artifacts/3/s3endpoint.txt
   if [[ "$state" == "available" ]] && [[ "$rtb_count" -ge 3 ]] && [[ -s "$f" ]] \
      && grep -qi 'available' "$f" && grep -qi 'бесплат' "$f"; then

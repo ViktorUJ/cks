@@ -97,13 +97,24 @@ NS="eks-119"
   cluster=$(aws eks list-clusters --query 'clusters[0]' --output text 2>/dev/null)
   role_arn=$(cat /var/work/tests/artifacts/3/test_role_arn.txt 2>/dev/null | tr -d '[:space:]')
   atype=$(aws eks describe-access-entry --cluster-name "$cluster" --principal-arn "$role_arn" \
-    --query 'accessEntry.type' --output text 2>/dev/null)
-  ready_nodes=$(kubectl get nodes --no-headers 2>/dev/null | awk '$2=="Ready"' | wc -l)
-  if [[ "$atype" == "EC2_LINUX" ]] && [[ "$ready_nodes" -ge 2 ]]; then
+    --query 'accessEntry.type' --output text 2>/dev/null || true)
+  f=/var/work/tests/artifacts/7/node_ready.txt
+  node_name=$(grep '^node_name=' "$f" 2>/dev/null | cut -d= -f2)
+  node_status=$(grep '^node_status=' "$f" 2>/dev/null | cut -d= -f2)
+  # The node object disappears together with the instance terminated in task 9, so the
+  # live status is checked while it is still there and the recorded one afterwards.
+  live_status=$(kubectl get node "$node_name" --no-headers 2>/dev/null | awk '{print $2}' || true)
+  node_ok=0
+  if [[ "$live_status" == "Ready" ]]; then
+    node_ok=1
+  elif [[ "$node_status" == "Ready" ]] && [[ "$node_name" == ip-*.compute.internal ]]; then
+    node_ok=1
+  fi
+  if [[ "$atype" == "EC2_LINUX" ]] && [[ -s "$f" ]] && [[ "$node_ok" -eq 1 ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "access entry type=$atype ready_nodes=$ready_nodes (need EC2_LINUX and >=2)"
+    echo "access entry type=$atype node_name=$node_name recorded=$node_status live=$live_status"
     result=1
   fi
   [ "$result" == "0" ]
@@ -111,16 +122,27 @@ NS="eks-119"
 
 @test "8. Pod probe in eks-119 runs on the fixed self-managed node" {
   echo '1' >> /var/work/tests/result/all
-  iid=$(cat /var/work/tests/artifacts/4/instance_id.txt 2>/dev/null | tr -d '[:space:]')
-  node_dns=$(aws ec2 describe-instances --instance-ids "$iid" \
-    --query 'Reservations[0].Instances[0].PrivateDnsName' --output text 2>/dev/null)
-  phase=$(kubectl get po probe -n "$NS" -o jsonpath='{.status.phase}' 2>/dev/null)
-  pod_node=$(kubectl get po probe -n "$NS" -o jsonpath='{.spec.nodeName}' 2>/dev/null)
-  if [[ "$phase" == "Running" ]] && [[ -n "$node_dns" ]] && [[ "$pod_node" == "$node_dns" ]]; then
+  node_name=$(grep '^node_name=' /var/work/tests/artifacts/7/node_ready.txt 2>/dev/null | cut -d= -f2)
+  f=/var/work/tests/artifacts/8/probe.txt
+  rec_phase=$(grep '^pod_phase=' "$f" 2>/dev/null | cut -d= -f2)
+  rec_node=$(grep '^pod_node=' "$f" 2>/dev/null | cut -d= -f2)
+  # Terminating the instance in task 9 kills the node and the pod with it, so the live
+  # state counts while the pod is there and the recorded evidence counts afterwards.
+  live_phase=$(kubectl get po probe -n "$NS" -o jsonpath='{.status.phase}' 2>/dev/null || true)
+  live_node=$(kubectl get po probe -n "$NS" -o jsonpath='{.spec.nodeName}' 2>/dev/null || true)
+  ok=0
+  if [[ -n "$node_name" ]]; then
+    if [[ "$live_phase" == "Running" ]] && [[ "$live_node" == "$node_name" ]]; then
+      ok=1
+    elif [[ -s "$f" ]] && [[ "$rec_phase" == "Running" ]] && [[ "$rec_node" == "$node_name" ]]; then
+      ok=1
+    fi
+  fi
+  if [[ "$ok" -eq 1 ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "probe phase=$phase pod_node=$pod_node expected_node=$node_dns"
+    echo "expected_node=$node_name live_phase=$live_phase live_node=$live_node recorded_phase=$rec_phase recorded_node=$rec_node"
     result=1
   fi
   [ "$result" == "0" ]
@@ -131,12 +153,17 @@ NS="eks-119"
   f=/var/work/tests/artifacts/9/terminated.txt
   iid=$(cat /var/work/tests/artifacts/4/instance_id.txt 2>/dev/null | tr -d '[:space:]')
   state=$(aws ec2 describe-instances --instance-ids "$iid" \
-    --query 'Reservations[0].Instances[0].State.Name' --output text 2>/dev/null)
-  if [[ -s "$f" ]] && [[ "$state" == "terminated" || "$state" == "shutting-down" ]]; then
+    --query 'Reservations[0].Instances[0].State.Name' --output text 2>/dev/null || true)
+  # AWS stops listing a terminated instance after a while, and a running instance is
+  # always listed, so "not found any more" is proof of termination as well.
+  gone=0
+  [[ -z "$state" || "$state" == "None" ]] && gone=1
+  if [[ -s "$f" ]] \
+     && [[ "$state" == "terminated" || "$state" == "shutting-down" || "$gone" -eq 1 ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "file $f missing/empty or instance state=$state (expected terminated/shutting-down)"
+    echo "file $f missing/empty or instance state=$state (expected terminated/shutting-down/gone)"
     result=1
   fi
   [ "$result" == "0" ]

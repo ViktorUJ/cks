@@ -19,17 +19,23 @@ LOG_GROUP="/aws/eks/$(kubectl config current-context 2>/dev/null | sed 's|.*/||'
 
 @test "2. Symptom: flaky-before logs lost after pod recreation" {
   echo '1' >> /var/work/tests/result/all
-  ready=$(kubectl get deploy flaky-before -n "$NS" -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
+  replicas=$(kubectl get deploy flaky-before -n "$NS" -o jsonpath='{.spec.replicas}' 2>/dev/null)
+  restarts=$(kubectl get pod -n "$NS" -l app=flaky-before \
+    -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}' 2>/dev/null)
   f=/var/work/tests/artifacts/2/before_symptom.txt
   old_pod=$(grep -o 'OLD_POD_NAME=.*' "$f" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]')
-  if [[ "$ready" -ge 1 ]] && [[ -s "$f" ]] && grep -q 'OLD_POD_NAME=' "$f" \
+  # readyReplicas is not used here: the container crashes every ~5s with a growing
+  # CrashLoopBackOff delay, so live readiness is a brief flicker, not a stable state.
+  # restartCount stays put once the pod has recreated, so it is safe to check.
+  if [[ "$replicas" -ge 1 ]] && [[ "$restarts" -ge 1 ]] && [[ -s "$f" ]] \
+     && grep -q 'OLD_POD_NAME=' "$f" \
      && grep -q 'BEFORE_MARKER_LAB115' "$f" && grep -qi 'NotFound' "$f" \
      && [[ -n "$old_pod" ]] \
      && ! kubectl get pod "$old_pod" -n "$NS" >/dev/null 2>&1; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "flaky-before ready=$ready; file $f must hold OLD_POD_NAME, BEFORE_MARKER_LAB115, NotFound; old pod ($old_pod) must be gone"
+    echo "flaky-before replicas=$replicas restarts=$restarts; file $f must hold OLD_POD_NAME, BEFORE_MARKER_LAB115, NotFound; old pod ($old_pod) must be gone"
     result=1
   fi
   [ "$result" == "0" ]

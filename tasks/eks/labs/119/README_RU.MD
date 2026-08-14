@@ -31,7 +31,7 @@ self-managed EC2-инстанс с намеренно неполной наст�
 |--------|---------|-------------------|
 | Namespace `eks-119` | раздел кластера под нагрузку лабы | держим объекты лабы отдельно |
 | Managed node group `healthy` | здоровая нода с автоматической авторизацией | образец нормы: `describe-nodegroup` без issues |
-| Тестовая IAM-роль | роль self-managed инстанса | несёт `AmazonEKSWorkerNodePolicy` и `AmazonEC2ContainerRegistryReadOnly`, но без access entry |
+| Тестовая IAM-роль | роль self-managed инстанса | несёт те же три managed-политики, что и роль здоровой ноды, но без access entry |
 | Self-managed EC2-инстанс на AL2023 | инстанс с nodeadm/NodeConfig, без access entry | источник симптома: `running`, но не в `kubectl get nodes` |
 | Access entry `EC2_LINUX` | ручная авторизация роли в кластере | чинит симптом, нода доходит до `Ready` |
 | Pod `probe` | под, закреплённый на исправленной ноде | подтверждает, что нода реально принимает нагрузку |
@@ -106,6 +106,14 @@ flowchart TB
 системных подов, но задания сфокусированы на managed node group и на self-managed
 инстансе, а не на Karpenter.
 
+Тестовая роль из задания 3 получает тот же набор из трёх managed-политик, потому что
+сломанной в этой лабе должна быть ровно одна вещь - отсутствие access entry. В частности,
+`AmazonEKS_CNI_Policy` обязательна: аддон `vpc-cni` в этой лабе работает без собственной
+IRSA-роли (`serviceAccountRoleArn` пустой), поэтому `aws-node` берёт креды из роли ноды.
+Без этой политики IPAM не может выдать поду адрес, нода остаётся `NotReady` с сообщением
+`container runtime network not ready: cni plugin not initialized`, и симптом задания 5
+становится неотличим от совсем другой поломки.
+
 ### Права worker для self-managed сценария
 
 Роль worker (`eks_v2_work_pc/iam.tf`) уже умела управлять тестовыми IAM-ролями
@@ -165,12 +173,12 @@ check_result    # проверить решение
 ---
 |        **3**        | **Тестовая IAM-роль для self-managed инстанса**              |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Создайте IAM-роль (имя с `-test-`, например `eks-task119-test-node`) с trust policy на `ec2.amazonaws.com`, навесьте `AmazonEKSWorkerNodePolicy` и `AmazonEC2ContainerRegistryReadOnly`, создайте instance profile с той же ролью. Сохраните ARN роли в файл `/var/work/tests/artifacts/3/test_role_arn.txt`. НЕ создавайте access entry на этом шаге - это намеренно неполная настройка. |
+| Что делаем          | Создайте IAM-роль (имя с `-test-`, например `eks-task119-test-node`) с trust policy на `ec2.amazonaws.com`, навесьте `AmazonEKSWorkerNodePolicy`, `AmazonEC2ContainerRegistryReadOnly` и `AmazonEKS_CNI_Policy`, создайте instance profile с той же ролью. Сохраните ARN роли в файл `/var/work/tests/artifacts/3/test_role_arn.txt`. НЕ создавайте access entry на этом шаге - это намеренно неполная настройка. |
 | Критерии приёмки    | - файл не пуст, содержит ARN роли с `test` в имени;<br/>- роль существует (`aws iam get-role`). |
 ---
 |        **4**        | **Self-managed EC2-инстанс на AL2023**                       |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Получите EKS-оптимизированный AL2023 AMI для версии `1.36` через SSM (`/aws/service/eks/optimized-ami/1.36/amazon-linux-2023/x86_64/standard/recommended/image_id`). Запустите один EC2-инстанс на этом AMI в приватной подсети кластера с security group нод, instance profile из задания 3 и тегом `Name`, содержащим `-test-`. В user data передайте `NodeConfig` для `nodeadm` с `apiServerEndpoint`, `certificateAuthority` и service `cidr` из `aws eks describe-cluster`. Сохраните ID инстанса в файл `/var/work/tests/artifacts/4/instance_id.txt`. |
+| Что делаем          | Получите EKS-оптимизированный AL2023 AMI для версии `1.36` через SSM (`/aws/service/eks/optimized-ami/1.36/amazon-linux-2023/x86_64/standard/recommended/image_id`). Запустите один EC2-инстанс на этом AMI в приватной подсети кластера с security group нод, instance profile из задания 3 и тегом `Name`, содержащим `-test-`. Тег укажите в двух секциях `--tag-specifications` - и для `ResourceType=instance`, и для `ResourceType=volume`: политика worker разрешает `RunInstances` по условию `aws:RequestTag/Name`, а вместе с инстансом создаётся ещё и корневой том, поэтому без тега на томе запуск отклоняется с `UnauthorizedOperation`. В user data передайте `NodeConfig` для `nodeadm` с `apiServerEndpoint`, `certificateAuthority` и service `cidr` из `aws eks describe-cluster`. Сохраните ID инстанса в файл `/var/work/tests/artifacts/4/instance_id.txt`. |
 | Критерии приёмки    | - файл не пуст и содержит валидный `i-...` ID инстанса. |
 ---
 |        **5**        | **Симптом: `running` в EC2, но нет в `kubectl get nodes`**   |
@@ -185,18 +193,25 @@ check_result    # проверить решение
 ---
 |        **7**        | **Починка: access entry типа `EC2_LINUX`**                   |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | Выполните `aws eks create-access-entry --cluster-name <cluster> --principal-arn <role-arn> --type EC2_LINUX`. Подождите, пока нода зарегистрируется и перейдёт в `Ready` (обычно 1-2 минуты). |
-| Критерии приёмки    | - `aws eks describe-access-entry` для роли из задания 3 возвращает `type=EC2_LINUX`;<br/>- в `kubectl get nodes` не меньше `2` нод в статусе `Ready` (managed node group плюс исправленный self-managed инстанс). |
+| Что делаем          | Выполните `aws eks create-access-entry --cluster-name <cluster> --principal-arn <role-arn> --type EC2_LINUX`. Подождите, пока нода зарегистрируется и перейдёт в `Ready` (обычно 1-2 минуты). Имя ноды в кластере - это private DNS name инстанса. Зафиксируйте результат в файле `/var/work/tests/artifacts/7/node_ready.txt` построчно в виде `ключ=значение`: `node_name` (private DNS name) и `node_status` (`Ready`). |
+| Критерии приёмки    | - `aws eks describe-access-entry` для роли из задания 3 возвращает `type=EC2_LINUX`;<br/>- файл `7/node_ready.txt` содержит `node_name` исправленного инстанса и `node_status=Ready`, и пока нода жива её живой статус в кластере тоже `Ready`. |
 ---
 |        **8**        | **Проверка: нода реально принимает поды**                    |
 | :-----------------: | :----------------------------------------------------------- |
-| Что делаем          | `Ready` - не доказательство того, что нода рабочая. В namespace `eks-119` создайте Pod `probe` (образ `viktoruj/ping_pong:latest`) с `nodeSelector` по `kubernetes.io/hostname`, равным private DNS name исправленного инстанса. Дождитесь, пока под перейдёт в `Running`. |
-| Критерии приёмки    | - Pod `probe` в `eks-119` в состоянии `Running`;<br/>- `spec.nodeName` пода равен private DNS name self-managed инстанса. |
+| Что делаем          | `Ready` - не доказательство того, что нода рабочая. В namespace `eks-119` создайте Pod `probe` (образ `viktoruj/ping_pong:latest`) с `nodeSelector` по `kubernetes.io/hostname`, равным private DNS name исправленного инстанса. Дождитесь, пока под перейдёт в `Running`, и зафиксируйте результат в файле `/var/work/tests/artifacts/8/probe.txt` построчно в виде `ключ=значение`: `pod_phase` (`Running`) и `pod_node` (то же имя ноды, что в задании 7). |
+| Критерии приёмки    | - файл `8/probe.txt` содержит `pod_phase=Running` и `pod_node`, равный `node_name` из задания 7;<br/>- пока под жив, его живые `status.phase` и `spec.nodeName` совпадают с записанными. |
 ---
 |        **9**        | **Уборка: терминировать self-managed инстанс**                |
 | :-----------------: | :----------------------------------------------------------- |
 | Что делаем          | Этот EC2-инстанс не входит в состояние terraform лабы, `make delete_eks_task` его не тронет. Терминируйте инстанс из задания 4 через `aws ec2 terminate-instances` и сохраните факт в файл `/var/work/tests/artifacts/9/terminated.txt`. |
-| Критерии приёмки    | - файл не пуст;<br/>- состояние инстанса `terminated` или `shutting-down`. |
+| Критерии приёмки    | - файл не пуст;<br/>- состояние инстанса `terminated` или `shutting-down`, либо инстанса уже нет в `describe-instances` - AWS перестаёт показывать терминированные инстансы через некоторое время, а работающий показывает всегда. |
+
+> Почему задания 7 и 8 требуют артефактов. Терминирование инстанса уносит за собой и
+> объект Node, и под `probe`, а `describe-instances` у терминированного инстанса отдаёт
+> пустой `PrivateDnsName`. То есть после задания 9 живого состояния уже не существует, и
+> проверка опирается на то, что вы записали в момент наблюдения. Это ровно то, что делают
+> в инцидентах: фиксируют свидетельство до того, как оно пропадёт.
+
 ---
 
 ## Проверка результата
@@ -219,9 +234,25 @@ check_result
 TASK=119 make delete_eks_task
 ```
 
-Важно: self-managed EC2-инстанс из заданий 3-9 создан вручную через AWS CLI и НЕ
-входит в состояние terraform этой лабы. `make delete_eks_task` удалит только
-компоненты из каталогов лабы (VPC, кластер, managed node group и так далее), а
-инстанс, тестовую роль и access entry нужно убрать самостоятельно (задание 9 покрывает
-инстанс; тестовую роль и access entry можно оставить - они не тратят деньги, но при
-желании их можно удалить командами из решения).
+Важно: self-managed EC2-инстанс, тестовая IAM-роль и instance profile из заданий 3-9
+созданы вручную через AWS CLI и НЕ входят в состояние terraform этой лабы.
+`make delete_eks_task` удалит только компоненты из каталогов лабы (VPC, кластер, managed
+node group и так далее). Инстанс закрывает задание 9, а роль и instance profile нужно
+убрать до или после destroy самостоятельно - в отличие от инстанса, они не стоят денег, но
+имя у них статическое (`eks-task119-test-node`), поэтому в аккаунте они остаются насовсем
+и мешают следующему запуску этой же лабы. Access entry уходит вместе с кластером, но
+удалить её нужно раньше роли, иначе запись останется висеть на несуществующем принципале:
+
+```bash
+CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
+ROLE_ARN=$(cat /var/work/tests/artifacts/3/test_role_arn.txt)
+aws eks delete-access-entry --cluster-name "$CLUSTER" --principal-arn "$ROLE_ARN"
+aws iam remove-role-from-instance-profile --instance-profile-name eks-task119-test-node \
+  --role-name eks-task119-test-node
+aws iam delete-instance-profile --instance-profile-name eks-task119-test-node
+for p in AmazonEKSWorkerNodePolicy AmazonEC2ContainerRegistryReadOnly AmazonEKS_CNI_Policy; do
+  aws iam detach-role-policy --role-name eks-task119-test-node \
+    --policy-arn arn:aws:iam::aws:policy/$p
+done
+aws iam delete-role --role-name eks-task119-test-node
+```
