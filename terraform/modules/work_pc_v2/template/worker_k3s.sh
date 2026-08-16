@@ -1,4 +1,19 @@
 #!/bin/bash
+
+INITIALIZATION_MESSAGE_FILE="/etc/profile.d/instance-initializing.sh"
+SYSTEM_HELP_FILE="/etc/profile.d/instance-help.sh"
+cat > "$INITIALIZATION_MESSAGE_FILE" <<'EOF'
+#!/bin/sh
+echo
+echo "**********************************************************************"
+echo "WARNING: Instance initialization is still in progress."
+echo "Some commands and services may not be available yet. Please try later."
+echo "Initialization log: tail -f /var/log/cloud-init-output.log"
+echo "**********************************************************************"
+echo
+EOF
+chmod 644 "$INITIALIZATION_MESSAGE_FILE"
+
 ssh_password_enable_check=${ssh_password_enable}
 #-------------------
 for host in ${hosts} ; do
@@ -191,3 +206,30 @@ echo 'complete -F __start_kubectl k' >> /root/.bashrc
 curl "${task_script_url}" -o "task.sh"
 chmod +x  task.sh
 ./task.sh
+task_script_status=$?
+
+if [ "$task_script_status" -eq 0 ]; then
+  rm -f "$INITIALIZATION_MESSAGE_FILE"
+
+  cat > "$SYSTEM_HELP_FILE" <<'EOF'
+#!/bin/sh
+echo
+echo "System is ready. Quick reference:"
+echo "  Backup kubeconfig:  /home/ubuntu/.kube/_config"
+echo "  Initialization log: tail -f /var/log/cloud-init-output.log"
+echo "  Check result:       check_result"
+echo "  Check time:         time_left"
+echo
+EOF
+  chmod 644 "$SYSTEM_HELP_FILE"
+
+  /bin/sh "$SYSTEM_HELP_FILE"
+  echo "!!! If you are watching the cloud-init-output.log now, please re-load the profile with"
+  echo "!!!"
+  echo "!!! . ~/.profile"
+
+else
+  echo "Instance initialization failed; keeping the login warning in place."
+fi
+
+exit "$task_script_status"
