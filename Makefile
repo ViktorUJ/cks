@@ -72,7 +72,17 @@ endef
 
 # default action to run w\o params
 help:
-	@echo "TODO: add help here"
+	@printf '%s\n' \
+		'Usage: TASK=<number> [USER_ID=<user> ENV_ID=<env>] make <target>' \
+		'' \
+		'Lab targets: run_<family>_<type>, delete_<family>_<type>, output_<family>_<type>' \
+		'  family: cka, cks, ckad, lfcs, ica, hr, eks' \
+		'  type:   task or mock (availability depends on family)' \
+		'  Add _clean to run/delete to clear the Terragrunt environment first.' \
+		'' \
+		'Example: TASK=01 make run_cks_task' \
+		'Dev:     make dev | make lint | make clean' \
+		'Docs:    https://github.com/ViktorUJ/cks/tree/master/docs'
 
 # CKA task
 run_cka_task:
