@@ -33,15 +33,15 @@ BACKUP_ROLE_NAME="${CLUSTER_NAME}-backup"
 BACKUP_VAULT_NAME="${CLUSTER_NAME}-vault"
 
 echo "Waiting for the eks_backup_iam terraform component (IAM role, backup vault)..."
-BACKUP_ROLE_ARN=""
+# ARN роли собираем из account id, а не только через iam:GetRole: имя роли предсказуемо, и
+# такой способ не зависит от того, разрешён ли воркеру iam:GetRole на эту роль.
+ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text 2>/dev/null)
+BACKUP_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${BACKUP_ROLE_NAME}"
 VAULT_ARN=""
 for i in $(seq 1 60); do
-  BACKUP_ROLE_ARN=$(aws iam get-role --role-name "$BACKUP_ROLE_NAME" \
-    --query 'Role.Arn' --output text 2>/dev/null)
   VAULT_ARN=$(aws backup describe-backup-vault --backup-vault-name "$BACKUP_VAULT_NAME" \
     --query 'BackupVaultArn' --output text 2>/dev/null)
-  if [[ -n "$BACKUP_ROLE_ARN" ]] && [[ "$BACKUP_ROLE_ARN" != "None" ]] \
-     && [[ -n "$VAULT_ARN" ]] && [[ "$VAULT_ARN" != "None" ]]; then
+  if [[ -n "$VAULT_ARN" ]] && [[ "$VAULT_ARN" != "None" ]]; then
     break
   fi
   sleep 5

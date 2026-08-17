@@ -17,7 +17,8 @@ Kyverno, только без стороннего движка) и разбир�
 
 Закрепить материал главы курса:
 
-- [Глава 22. Политики и мультитенантность: Kyverno и Gatekeeper, изоляция команд](../../course/22/ru.md) - место ValidatingAdmissionPolicy среди policy engine
+- [Глава 22. Политики и мультитенантность: Kyverno и Gatekeeper, изоляция
+  команд](../../course/22/ru.md) - место ValidatingAdmissionPolicy среди policy engine
 
 ## Что мы создаём
 
@@ -164,8 +165,8 @@ check_result    # проверить решение
 ---
 |        **4**        | **Легитимный под с явным тегом проходит и при Deny**        |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Создайте Pod `tagged-pod` в `eks-127` с образом `viktoruj/ping_pong:1.0` (конкретный тег, не `:latest`). Убедитесь, что политика `disallow-latest-tag` в режиме `Deny` не мешает этому поду. |
-| Критерии приёмки    | - Pod `tagged-pod` в `eks-127` создан, образ не оканчивается на `:latest`. |
+| Что делаем          | Создайте Pod `tagged-pod` в `eks-127` с образом `viktoruj/ping_pong:53833ea` (конкретный тег, не `:latest`). Убедитесь, что политика `disallow-latest-tag` в режиме `Deny` не мешает этому поду, и что под доходит до `Running` - тег должен существовать в реестре, иначе допуск пройдёт, а под останется в `ErrImagePull`, и «политика не мешает» окажется непроверенным утверждением. |
+| Критерии приёмки    | - Pod `tagged-pod` в `eks-127` создан, образ не оканчивается на `:latest`;<br/>- под в состоянии `Running`. |
 ---
 |        **5**        | **Вторая CEL-политика: обязательные resources.requests**    |
 | :-----------------: | :---------------------------------------------------------- |
@@ -193,6 +194,32 @@ check_result
 Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
 ## Удаление кластера и ресурсов
+
+> **Политики допуска живут вне namespace.** `ValidatingAdmissionPolicy` и
+> `ValidatingAdmissionPolicyBinding` - объекты уровня кластера, поэтому удаление namespace
+> `eks-127` их НЕ снимает. На снос стенда это не влияет (они уходят вместе с control plane),
+> но если вы захотите повторить лабу на том же кластере, оставленная политика в режиме
+> `Deny` встретит вас отказом при создании подов в заново созданном namespace. AWS-ресурсов
+> руками эта лаба не создаёт.
+
+```bash
+# 1. Снять нагрузку
+kubectl delete namespace eks-127 --ignore-not-found
+
+# 2. Снять политики допуска и их привязки - они кластерные и namespace их не уносит
+kubectl delete validatingadmissionpolicybinding disallow-latest-tag-binding \
+  require-resources-requests-binding --ignore-not-found
+kubectl delete validatingadmissionpolicy disallow-latest-tag \
+  require-resources-requests --ignore-not-found
+
+# 3. Дождаться, пока Karpenter уберёт EC2-ноду под тестовыми подами (останутся fargate-*),
+#    иначе осиротевший вторичный ENI задержит удаление security group нод
+while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
+  echo "EC2-нода ещё жива, ждём..."; sleep 15
+done
+```
+
+Только после этого сносите стенд:
 
 ```bash
 TASK=127 make delete_eks_task

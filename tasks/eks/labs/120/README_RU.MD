@@ -1,4 +1,4 @@
-# Лаба 120 - Troubleshooting: broken networking and unhealthy load balancer targets
+# Лаба 120 - Troubleshooting: сетевые сбои и unhealthy targets в балансировщике
 
 ## Описание
 
@@ -191,12 +191,12 @@ cat ~/lab120_hints.txt   # имена и ARN ресурсов лабы
 ---
 |        **2**        | **Базовая связность и диагностика SG**                       |
 | :-----------------: | :------------------------------------------------------------ |
-| Что делаем          | Из пода `client` выполните запрос к `api` по DNS-имени сервиса (`wget -qO- --timeout=5 http://api.eks-120.svc.cluster.local` или аналог curl) и сохраните ответ в `/var/work/tests/artifacts/2/connectivity.txt` - он должен содержать строку с ответом приложения. Затем возьмите IP одного из подов `api` и выполните `aws ec2 describe-network-interfaces --filters "Name=private-ip-address,Values=<ip>" --query 'NetworkInterfaces[0].Groups'`, сохранив вывод в `/var/work/tests/artifacts/2/api_sg.txt`. Эта связность работает штатно: SG нод разрешает трафик между подами кластера, а SG - stateful, поэтому обратный трафик проходит сам (глава 46.3). |
+| Что делаем          | Из пода `client` выполните запрос к `api` по DNS-имени сервиса (`wget -qO- --timeout=5 http://api.eks-120.svc.cluster.local` или аналог curl) и сохраните ответ в `/var/work/tests/artifacts/2/connectivity.txt` - он должен содержать строку с ответом приложения. Затем возьмите IP одного из подов `api` и найдите его ENI: `aws ec2 describe-network-interfaces --filters "Name=addresses.private-ip-address,Values=<ip>" --query 'NetworkInterfaces[0].Groups'`, сохранив вывод в `/var/work/tests/artifacts/2/api_sg.txt`. Обратите внимание на фильтр: IP пода при VPC CNI - это вторичный адрес на ENI ноды, поэтому поиск по `private-ip-address` вернёт `null`, а искать надо по `addresses.private-ip-address`. Эта связность работает штатно: SG нод разрешает трафик между подами кластера, а SG - stateful, поэтому обратный трафик проходит сам (глава 46.3). |
 | Критерии приёмки    | - `2/connectivity.txt` не пуст, содержит `Server Name`;<br/>- `2/api_sg.txt` не пуст, содержит `GroupId` и id SG нод кластера. |
 ---
 |        **3**        | **Установка AWS Load Balancer Controller**                   |
 | :-----------------: | :------------------------------------------------------------ |
-| Что делаем          | Найдите ARN IAM-роли, созданной terraform для контроллера (имя роли `<cluster-name>-lbc-irsa`, есть в `~/lab120_hints.txt`), и создайте ServiceAccount `aws-load-balancer-controller` в `kube-system` с аннотацией `eks.amazonaws.com/role-arn` на эту роль. Поставьте AWS Load Balancer Controller через Helm (репозиторий `https://aws.github.io/eks-charts`, чарт `aws-load-balancer-controller`) с флагами `--set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller` и `--set clusterName=<имя кластера>`. Дождитесь готовности Deployment `aws-load-balancer-controller`. |
+| Что делаем          | Найдите ARN IAM-роли, созданной terraform для контроллера (имя роли `<cluster-name>-lbc-irsa`, есть в `~/lab120_hints.txt`), и создайте ServiceAccount `aws-load-balancer-controller` в `kube-system` с аннотацией `eks.amazonaws.com/role-arn` на эту роль. Поставьте AWS Load Balancer Controller через Helm (репозиторий `https://aws.github.io/eks-charts`, чарт `aws-load-balancer-controller`) с флагами `--set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller` и `--set clusterName=<имя кластера>`. Внимание: `kube-system` в этом стенде попадает под Fargate-профиль, а на Fargate нет IMDS, поэтому контроллер не сможет сам определить регион и VPC и упадёт с ошибкой про `ec2imds`. Задайте их явно: `--set region=eu-central-1` и `--set vpcId=<vpc-id>` (id берётся из `aws eks describe-cluster --name <cluster> --query 'cluster.resourcesVpcConfig.vpcId'`). Дождитесь готовности Deployment `aws-load-balancer-controller`. |
 | Критерии приёмки    | - ServiceAccount `aws-load-balancer-controller` в `kube-system` с аннотацией на роль `lbc-irsa`;<br/>- Deployment `aws-load-balancer-controller` имеет хотя бы одну готовую реплику. |
 ---
 |        **4**        | **Симптом: NLB с unhealthy targets**                          |
@@ -216,7 +216,7 @@ cat ~/lab120_hints.txt   # имена и ARN ресурсов лабы
 ---
 |        **7**        | **DNS работает: контрастная проверка**                        |
 | :-----------------: | :------------------------------------------------------------ |
-| Что делаем          | Выполните `kubectl run dnstest --image=busybox:1.36 --rm -it --restart=Never -- sh -c 'nslookup kubernetes.default; nslookup example.com'` и сохраните вывод в `/var/work/tests/artifacts/7/dns.txt`. В этой лабе DNS не является источником проблемы - оба имени резолвятся нормально, в отличие от SG из заданий 4-6 (глава 46.5, 46.7). |
+| Что делаем          | Выполните `kubectl run dnstest --image=busybox:1.36 --rm -i --restart=Never -- sh -c 'nslookup kubernetes.default.svc.cluster.local; nslookup example.com'` и сохраните вывод в `/var/work/tests/artifacts/7/dns.txt`. Внутреннее имя спрашивайте полным FQDN: короткое `kubernetes.default` из busybox отдаёт `NXDOMAIN`, потому что его `nslookup` не дописывает домены поиска, и такой ответ легко принять за поломку DNS, которой нет. В этой лабе DNS не является источником проблемы - оба имени резолвятся нормально, в отличие от security group из заданий 4-6 (глава 46.5, 46.7). |
 | Критерии приёмки    | - `7/dns.txt` не пуст, содержит `kubernetes.default` и `example.com`. |
 ---
 |        **8**        | **Итоговый чеклист: симптом - причина - что проверить**       |
@@ -241,6 +241,54 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала уберите то, что создал контроллер, и только потом запускайте terraform.** NLB
+> создал AWS Load Balancer Controller по вашему Service, terraform о нём не знает. Если
+> удалять стенд, не удалив Service, контроллер исчезнет вместе с кластером, NLB останется
+> висеть, его ENI продолжат держать security group - и `destroy` зависнет на
+> `aws_security_group.network_break: Still destroying...` на десятки минут.
+>
+> **Правило в SG нод из задания 6 контроллер за вами не уберёт**, и это прямое следствие
+> сценария лабы. Контроллер чистит только то, чем владеет сам: NLB и security group, которые
+> он создал. Здесь frontend security group задана вручную аннотацией
+> `aws-load-balancer-security-groups`, а в этом режиме LBC по умолчанию вообще не трогает
+> правила backend security group (то есть SG нод) - именно поэтому health check и не проходил.
+> Правило вы добавили руками через AWS CLI, владельца в кластере у него нет, поэтому снимать
+> его тоже придётся руками. Это важно: ссылка из чужой security group не даёт удалить целевую,
+> и `destroy` встанет уже на ней. Если бы вы поставили
+> `service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules: "true"`,
+> правила в SG нод добавлял и удалял бы сам контроллер.
+
+```bash
+# 1. Удалить Service, чтобы контроллер сам удалил NLB, и дождаться исчезновения ENI
+kubectl delete svc api-lb -n eks-120
+SG_ID=$(grep '^broken_sg_id' ~/lab120_hints.txt | awk '{print $3}')
+NODE_SG=$(grep '^node_sg_id' ~/lab120_hints.txt | awk '{print $3}')
+until [ "$(aws ec2 describe-network-interfaces \
+  --filters "Name=group-id,Values=${SG_ID}" --query 'length(NetworkInterfaces)' --output text)" = "0" ]; do
+  echo "NLB ещё держит ENI, ждём..."; sleep 15
+done
+
+# 2. Снять правило в SG нод, которое ссылается на SG балансировщика
+aws ec2 revoke-security-group-ingress --group-id "$NODE_SG" \
+  --protocol tcp --port 8080 --source-group "$SG_ID"
+
+# 3. Удалить namespace лабы и только теперь удалять стенд
+kubectl delete namespace eks-120
+```
+
 ```bash
 TASK=120 make delete_eks_task
+```
+
+Если `destroy` всё же зависает на удалении security group, найдите держателя и уберите его:
+
+```bash
+# кто держит SG: ENI осиротевшего балансировщика
+aws ec2 describe-network-interfaces --filters "Name=group-id,Values=<sg-id>" \
+  --query 'NetworkInterfaces[].[NetworkInterfaceId,Description]' --output table
+# осиротевший балансировщик виден по тегам service.k8s.aws/stack и elbv2.k8s.aws/cluster
+aws elbv2 delete-load-balancer --load-balancer-arn <arn>
+# какие security groups ссылаются на неё правилами
+aws ec2 describe-security-groups --filters "Name=ip-permission.group-id,Values=<sg-id>" \
+  --query 'SecurityGroups[].[GroupId,GroupName]' --output table
 ```

@@ -23,15 +23,17 @@ resource "aws_iam_role" "backup" {
 }
 
 # AWSBackupServiceRolePolicyForBackup - обязательна для backup job (глава 41, раздел 41.3).
+# Обе политики AWS Backup лежат в пути service-role/, без него AttachRolePolicy отвечает
+# NoSuchEntity: "policy does not exist or is not attachable".
 resource "aws_iam_role_policy_attachment" "backup_for_backup" {
   role       = aws_iam_role.backup.name
-  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AWSBackupServiceRolePolicyForBackup"
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
 }
 
 # AWSBackupServiceRolePolicyForRestores - обязательна для restore job (глава 42, раздел 42.2).
 resource "aws_iam_role_policy_attachment" "backup_for_restores" {
   role       = aws_iam_role.backup.name
-  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AWSBackupServiceRolePolicyForRestores"
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores"
 }
 
 # --- Backup vault: хранилище recovery points со своим ключом KMS (глава 41, раздел 41.6) ---

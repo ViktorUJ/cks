@@ -208,6 +208,32 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала удалите PVC, потом кластер.** При динамическом провижининге EFS CSI создаёт для
+> каждого PVC свою **access point** внутри файловой системы. Саму файловую систему создал
+> terraform, а access points - драйвер, и убирает их тоже он, по факту удаления PVC. Если
+> снести кластер вместе с живыми PVC, драйвера не будет, access points останутся, и удаление
+> файловой системы упадёт с `FileSystemInUse`, а `destroy` встанет на ней.
+
+```bash
+kubectl delete namespace eks-107 --ignore-not-found
+kubectl delete pvc --all -n eks-107 --ignore-not-found 2>/dev/null
+
+while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
+  echo "EC2-нода Karpenter ещё жива, ждём..."; sleep 15
+done
+```
+
+Проверьте, что в файловой системе не осталось access points, созданных драйвером:
+
+```bash
+FS_ID=$(aws efs describe-file-systems \
+  --query 'FileSystems[?contains(Name, `eks-task107`)].FileSystemId' --output text)
+aws efs describe-access-points --file-system-id "$FS_ID" \
+  --query 'AccessPoints[].[AccessPointId,RootDirectory.Path]' --output table
+# лишние удалить
+aws efs delete-access-point --access-point-id <fsap-id>
+```
+
 ```bash
 TASK=107 make delete_eks_task
 ```

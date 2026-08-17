@@ -84,7 +84,7 @@
 19. [Харденинг: IMDSv2 и hop limit, Pod Security Admission, приватный кластер](19/ru.md)
 20. [Образы и supply chain: ECR, сканирование, подписи, pull through cache](20/ru.md)
 21. [Аудит и детект: логи control plane, CloudTrail, GuardDuty, runtime-мониторинг](21/ru.md)
-22. [Политики и мультитенантность: Kyverno и Gatekeeper, изоляция команд](22/ru.md)
+22. [Политики и мультитенантность: Kyverno и Gatekeeper, изоляция команд](22/ru.md) 🧪
 
 ### Часть 4. Хранение данных
 
@@ -96,7 +96,7 @@
 
 26. [AWS Load Balancer Controller и Service типа LoadBalancer: NLB](26/ru.md)
 27. [Ingress через ALB: target-type, аннотации, TLS и ACM, WAF](27/ru.md)
-28. [Gateway API в AWS: ALB Gateway API и VPC Lattice](28/ru.md)
+28. [Gateway API в AWS: ALB Gateway API и VPC Lattice](28/ru.md) 🧪
 29. [DNS и сертификаты: external-dns, Route 53, cert-manager](29/ru.md)
 30. [NetworkPolicy в EKS: VPC CNI network policy и Cilium](30/ru.md)
 31. [Egress и стоимость трафика: NAT, VPC endpoints, PrivateLink](31/ru.md)
@@ -106,7 +106,7 @@
 
 33. [Метрики: Container Insights, Managed Prometheus и Grafana, kube-prometheus-stack](33/ru.md)
 34. [Логи: Fluent Bit, CloudWatch Logs, OpenSearch, контроль расходов](34/ru.md)
-35. [Автомасштабирование приложений: HPA, внешние метрики, KEDA](35/ru.md)
+35. [Автомасштабирование приложений: HPA, внешние метрики, KEDA](35/ru.md) 🧪
 36. [Трейсинг и профилирование: ADOT и X-Ray](36/ru.md)
 
 ### Часть 7. Эксплуатация
@@ -115,10 +115,10 @@
 38. [Обновление кластера: in-place по версиям, blue/green кластеры, устаревшие API](38/ru.md)
 39. [Откат версии кластера: rollback readiness insights, окно 7 дней, порядок отката](39/ru.md)
 40. [Надёжность: multi-AZ, PDB, topology spread, корректное выключение нод](40/ru.md)
-41. [Бэкап кластера через AWS Backup: состояние кластера, постоянные тома, composite recovery point](41/ru.md)
-42. [Восстановление и DR: restore в существующий и новый кластер, namespace-restore, Velero](42/ru.md)
+41. [Бэкап кластера через AWS Backup: состояние кластера, постоянные тома, composite recovery point](41/ru.md) 🧪
+42. [Восстановление и DR: restore в существующий и новый кластер, namespace-restore, Velero](42/ru.md) 🧪
 43. [Стоимость: OpenCost и Kubecost, right-sizing, Savings Plans, спот-микс, трафик](43/ru.md)
-44. [GitOps и доставка: Argo CD и Flux, управление парком кластеров](44/ru.md)
+44. [GitOps и доставка: Argo CD и Flux, управление парком кластеров](44/ru.md) 🧪
 
 К этой части идут два справочника: [модель затрат](COST_MODEL_RU.md) - форма оценки к главе 43,
 и [архитектурные решения](ADR_RU.md) - шаблоны ADR по развилкам всего курса.
@@ -126,8 +126,8 @@
 ### Часть 8. Troubleshooting
 
 45. [Нода не присоединилась к кластеру: IAM, SG, user data, bootstrap, kubelet](45/ru.md)
-46. [Сетевые сбои: ENI exhausted, SG и NACL, DNS, unhealthy targets в балансировщике](46/ru.md)
-47. [Доступ и IAM: access entries, IRSA и Pod Identity, webhook, kubeconfig](47/ru.md)
+46. [Сетевые сбои: ENI exhausted, SG и NACL, DNS, unhealthy targets в балансировщике](46/ru.md) 🧪
+47. [Доступ и IAM: access entries, IRSA и Pod Identity, webhook, kubeconfig](47/ru.md) 🧪
 
 Разделы «Порядок диагностики» этих трёх глав сведены в
 [диагностический справочник](RUNBOOK_RU.md): симптом, вероятная причина, что проверить. На

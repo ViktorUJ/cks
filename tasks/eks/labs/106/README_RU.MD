@@ -213,6 +213,69 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала удалите PVC и снапшоты, потом кластер.** Тома EBS за динамическими PVC создаёт
+> драйвер EBS CSI, и удаляет их тоже он - по факту удаления PVC (при `reclaimPolicy: Delete`).
+> Если снести кластер вместе с живыми PVC, драйвера уже не будет, и тома останутся в аккаунте
+> `available` навсегда, продолжая тарифицироваться: terraform о них не знает. То же с
+> `VolumeSnapshot` - за ним стоит снапшот EBS, который удаляет CSI-драйвер.
+>
+> **Порядок удаления снапшота важен.** PVC `data-restored` восстановлен из `db-snap`, и пока
+> этот PVC существует, на снапшоте висит finalizer
+> `snapshot.storage.kubernetes.io/volumesnapshot-as-source-protection` - `db-snap` уйдёт
+> только в `Terminating` и никуда дальше. Симметрично: на исходном PVC `data-db-fixed-0`
+> стоит `pvc-as-source-protection`, пока жив снапшот. Если удалить namespace целиком и сразу
+> запустить `destroy`, снапшот EBS переживёт кластер и останется в аккаунте (проверено на
+> живом стенде: после прогона лабы в регионе нашёлся снапшот на 10 GiB). Поэтому сначала PVC,
+> восстановленный из снапшота, потом сам снапшот, и только потом всё остальное.
+
+```bash
+# 1. Снять нагрузку: пока под держит том, PVC не удалится
+kubectl delete statefulset --all -n eks-106 --ignore-not-found
+kubectl delete pod --all -n eks-106 --ignore-not-found
+
+# 2. PVC, восстановленный из снапшота - он держит finalizer на db-snap
+kubectl delete pvc data-restored -n eks-106 --ignore-not-found
+
+# 3. Снапшот: за ним стоит снапшот EBS, его удаляет CSI-драйвер (deletionPolicy: Delete)
+kubectl delete volumesnapshot db-snap -n eks-106 --ignore-not-found
+kubectl wait --for=delete volumesnapshot/db-snap -n eks-106 --timeout=300s 2>/dev/null || true
+kubectl get volumesnapshot -n eks-106
+
+# 4. Остальные PVC: от volumeClaimTemplates они НЕ удаляются вместе со StatefulSet
+kubectl delete pvc --all -n eks-106 --ignore-not-found
+kubectl delete namespace eks-106 --ignore-not-found
+
+# 5. Дождаться, пока Karpenter уберёт свои EC2-ноды
+while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
+  echo "EC2-нода Karpenter ещё жива, ждём..."; sleep 15
+done
+```
+
+Если `db-snap` застрял в `Terminating`, значит на него всё ещё ссылается какой-то PVC -
+найдите его по `dataSource` и удалите, снимать finalizer руками не нужно:
+
+```bash
+kubectl get pvc -n eks-106 \
+  -o custom-columns=NAME:.metadata.name,SOURCE:.spec.dataSource.name
+kubectl get volumesnapshot db-snap -n eks-106 -o jsonpath='{.metadata.finalizers}'
+```
+
+Перед `destroy` убедитесь, что за лабой не осталось ни томов, ни снапшотов: тома от PVC
+помечены тегом `kubernetes.io/created-for/pvc/name`, снапшоты от CSI-драйвера - тегом
+`CSIVolumeSnapshotName`. Оба списка должны быть пустыми:
+
+```bash
+aws ec2 describe-volumes --filters Name=status,Values=available \
+  --query 'Volumes[].[VolumeId,Size,Tags[?Key==`kubernetes.io/created-for/pvc/name`]|[0].Value]' \
+  --output table
+aws ec2 describe-snapshots --owner-ids self \
+  --filters Name=tag-key,Values=CSIVolumeSnapshotName \
+  --query 'Snapshots[].[SnapshotId,VolumeSize,StartTime]' --output table
+# если что-то осталось - удалить вручную, terraform эти объекты не видит
+aws ec2 delete-volume --volume-id <vol-id>
+aws ec2 delete-snapshot --snapshot-id <snap-id>
+```
+
 ```bash
 TASK=106 make delete_eks_task
 ```

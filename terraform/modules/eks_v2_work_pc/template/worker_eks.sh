@@ -3,11 +3,13 @@ ssh_password_enable_check=${ssh_password_enable}
 
 
 wait_aws_cli() {
+  # Both kubeconfigs must be built: root and ubuntu. The IAM policy of the instance
+  # profile may still be propagating, so eks:DescribeCluster can be denied for a while.
+  # Retry until BOTH calls succeed - breaking out after the root one leaves the student
+  # without /home/ubuntu/.kube/config while the boot script reports the lab as ready.
   while true; do
-    # Try to get namespaces, suppress output
-    if (${eks_config_url} ); then
+    if (${eks_config_url} ) && (sudo -u ubuntu ${eks_config_url} ); then
       echo "*** aws cli  is ready"
-      sudo -u ubuntu ${eks_config_url}
       break
     else
       echo "*** aws cli..."
@@ -116,7 +118,22 @@ cd bats
 echo "*** download tests "
 mkdir /var/work/tests/result -p
 mkdir /var/work/tests/artifacts -p
-curl "${test_url}"  -o "tests.bats" -s
+# Раньше здесь был простой curl -s без -f: при ответе 404 или 429 от raw.githubusercontent
+# ТЕЛО ОШИБКИ сохранялось как tests.bats, и check_result падал непонятным образом
+# ("command not found", затем Divide by zero и "result =  %"). Поймано вживую на лабе 127:
+# GitHub отдал "429: Too Many Requests", файл получился на 199 байт. Теперь проверяем и код
+# ответа (-f), и то, что скачан именно bats-файл, с ретраями.
+for attempt in $(seq 1 10); do
+  if curl -fsSL --retry 3 --retry-delay 5 "${test_url}" -o tests.bats \
+     && head -1 tests.bats | grep -q bats; then
+    echo "*** tests.bats downloaded on attempt $attempt"
+    break
+  fi
+  echo "*** tests.bats download failed (attempt $attempt), retrying..."
+  head -2 tests.bats 2>/dev/null
+  rm -f tests.bats
+  sleep 15
+done
 chown ubuntu:ubuntu tests.bats
 mv tests.bats  /var/work/tests/
 chmod  -R 777 /var/work/tests/
@@ -125,6 +142,15 @@ chmod  -R 777 /var/work/tests/
 echo "**** add check_result"
 cat > /usr/bin/check_result <<EOF
 #!/bin/bash
+# Если файл тестов не скачался (404 или 429 от GitHub вместо содержимого), дальше идти
+# бессмысленно: bats выполнит мусор, счётчики не появятся, и деление даст "result =  %".
+if ! head -1 /var/work/tests/tests.bats 2>/dev/null | grep -q bats ; then
+  echo "ERROR: /var/work/tests/tests.bats is not a bats file - the download failed."
+  echo "First lines of the file:"
+  head -3 /var/work/tests/tests.bats 2>/dev/null
+  echo "Re-download it from the lab repository and run check_result again."
+  exit 1
+fi
 bats /var/work/tests/tests.bats
 sum_all=0; for i in \$(cat /var/work/tests/result/all) ; do sum_all=\$(echo "\$sum_all+\$i"| bc ) ; done
 sum_ok=0; for i in \$(cat /var/work/tests/result/ok) ; do sum_ok=\$(echo "\$sum_ok+\$i"| bc ) ; done
@@ -199,9 +225,33 @@ chmod +x /usr/bin/time_left
 wait_aws_cli
 
 # add additional script
-curl "${task_script_url}" -o "task.sh"
-chmod +x  task.sh
-./task.sh
+# Тот же дефект, что был у tests.bats выше: без -f curl сохраняет ТЕЛО ошибки HTTP как
+# task.sh, а следующая строка его ВЫПОЛНЯЕТ. Поймано вживую на лабе 128: raw.githubusercontent
+# отдал 429, в task.sh легли 199 байт с текстом "429: Too Many Requests", в логе
+# "./task.sh: line 1: 429:: command not found" плюс syntax error, cloud-init завершился с
+# status: error, а сидинг лабы и файл подсказок не создались. Проверка на шебанг НЕ подходит:
+# у старых лаб (02, 03, template) worker.sh начинается сразу с export, поэтому проверяем
+# синтаксис через bash -n и отсутствие HTML в начале файла.
+task_script_ok="false"
+for attempt in $(seq 1 10); do
+  if curl -fsSL --retry 3 --retry-delay 5 "${task_script_url}" -o task.sh \
+     && [ -s task.sh ] && ! head -c 1 task.sh | grep -q '<' && bash -n task.sh 2>/dev/null; then
+    echo "*** task.sh downloaded on attempt $attempt"
+    task_script_ok="true"
+    break
+  fi
+  echo "*** task.sh download failed (attempt $attempt), retrying..."
+  head -2 task.sh 2>/dev/null
+  rm -f task.sh
+  sleep 15
+done
+if [ "$task_script_ok" == "true" ]; then
+  chmod +x  task.sh
+  ./task.sh
+else
+  echo "*** ERROR: task.sh was not downloaded, the lab seeding step is skipped."
+  echo "*** Download it manually from the lab directory (worker/files/worker.sh) and run it."
+fi
 
 # Waits for 'kubectl get ns' to return namespaces, retries every 2 seconds
 

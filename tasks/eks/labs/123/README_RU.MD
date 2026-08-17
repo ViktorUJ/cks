@@ -32,7 +32,7 @@ NodePool `stateful` только на `on-demand` с taint. Вы развора�
 | Артефакт `inventory.txt` | срез `nodepools`, `ec2nodeclasses`, `nodeclaims` | инвентаризация: виден и `default`, и `stateful` (глава 12.11) |
 | StatefulSet `db` (3 реплики) | приложение ping_pong с toleration на пул `stateful` | нагрузка, которую консолидация может задеть |
 | PodDisruptionBudget `db-pdb` | `maxUnavailable: 1` на StatefulSet `db` | основной тормоз выселения (глава 12.6) |
-| Артефакт `consolidation.txt` | симптом блокировки в логах и `describe node` | наблюдаем `Unconsolidatable` и `pdb ... prevents pod evictions` |
+| Артефакт `consolidation.txt` | симптом блокировки в событиях ноды | наблюдаем `DisruptionBlocked` и `Pdb prevents pod evictions` |
 | Аннотация `do-not-disrupt` на `db-0` + `fix.txt` | точечная защита одной реплики | правильная связка PDB плюс budget плюс точечный `do-not-disrupt` (глава 12.7-12.8) |
 
 Итоговая картина кластера:
@@ -164,10 +164,10 @@ check_result    # проверить решение
 | Что делаем          | Создайте `PodDisruptionBudget` с именем `db-pdb` в namespace `eks-123`: `maxUnavailable: 1`, селектор по label `app: db`. Это основной тормоз добровольного выселения (глава 12.6). |
 | Критерии приёмки    | - объект `db-pdb` существует в `eks-123`;<br/>- `spec.maxUnavailable` равен `1`;<br/>- селектор указывает на `app: db`. |
 ---
-|        **5**        | **Симптом: форсированная консолидация и блокировка PDB**    |
+|        **5**        | **Симптом: PDB без права на выселение блокирует консолидацию** |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Форсируйте консолидацию: временно снизьте нагрузку так, чтобы освободить ноды пула `stateful` (например масштабируйте StatefulSet `db` вниз до `1` реплики примерно на `1-2` минуты, дождитесь таймера `consolidateAfter: 30s`, затем верните `3` реплики). Наблюдайте попытку Karpenter уплотнить сразу несколько нод пула `stateful` и заблокированное выселение: `kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter -f \| grep -i pdb` и `kubectl describe node <node> \| grep -A2 Unconsolidatable`. Сохраните наблюдение (лог или событие с `Unconsolidatable` и `pdb ... prevents pod evictions`) в файл `/var/work/tests/artifacts/5/consolidation.txt`. Блокировка не обязана держаться навечно: Karpenter может успеть вытеснить реплики по одной благодаря PDB - важно зафиксировать сам факт наблюдения. |
-| Критерии приёмки    | - файл `/var/work/tests/artifacts/5/consolidation.txt` не пуст;<br/>- содержит слово `pdb` и `Unconsolidatable` (или `prevents pod evict`). |
+| Что делаем          | Ноды пула `stateful` недогружены (`3` реплики по `250m` на двух нодах), поэтому Karpenter постоянно пробует их уплотнить. Затяните защиту до сплошной: переведите `db-pdb` на `minAvailable: 3` при `3` репликах, чтобы в `kubectl get pdb db-pdb -n eks-123` колонка `ALLOWED DISRUPTIONS` стала `0`. Через 1-2 минуты найдите на нодах пула событие блокировки: `kubectl describe node <node> \| grep -A2 DisruptionBlocked` - Karpenter пишет `Pdb prevents pod evictions (PodDisruptionBudget=[eks-123/db-pdb])`. Логи контроллера смотрите в namespace `karpenter`: `kubectl logs -n karpenter -l app.kubernetes.io/name=karpenter --tail=500`. Сохраните наблюдение (вывод `get pdb` плюс событие) в файл `/var/work/tests/artifacts/5/consolidation.txt`. После этого верните `db-pdb` к `maxUnavailable: 1` - `ALLOWED DISRUPTIONS` снова станет `1`, и консолидация разблокируется. Это и есть урок: пока PDB не разрешает ни одного выселения, добровольные прерывания стоят навсегда, а `maxUnavailable: 1` даёт дренировать ноду по одной реплике. |
+| Критерии приёмки    | - файл `/var/work/tests/artifacts/5/consolidation.txt` не пуст;<br/>- содержит слово `pdb` и текст `prevents pod evict` (либо `Unconsolidatable`);<br/>- после задания `db-pdb` снова с `maxUnavailable: 1` (иначе не пройдёт задание 4). |
 ---
 |        **6**        | **Починка: точечный `do-not-disrupt` вместо сплошной защиты** |
 | :-----------------: | :---------------------------------------------------------- |
@@ -191,6 +191,64 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала снимите защиту и нагрузку, потом сносите стенд.** Это та самая ловушка, которую
+> лаба и изучает, только с другой стороны: аннотация `karpenter.sh/do-not-disrupt` на `db-0`
+> запрещает Karpenter выселять этот под, поэтому при удалении NodeClaim контроллер
+> терминации ждёт бесконечно, нода не уходит, а её `EC2NodeClass` держится finalizer'ом.
+> В логе `destroy` это выглядит так: `kubernetes_manifest.ec2nodeclass: Still destroying...
+> [09m30s elapsed]` (поймано вживую). Второй тормоз - PDB: как только одна реплика уходит в
+> `Pending` (её нода уже удалена, а пул уже удаляется), `ALLOWED DISRUPTIONS` становится
+> `0`, и дренаж остальных нод тоже встаёт. AWS-ресурсов руками эта лаба не создаёт, всё
+> лишнее - объекты Kubernetes.
+
+```bash
+# 1. Снять PDB - он блокирует дренаж, если хоть одна реплика не Ready
+kubectl delete pdb db-pdb -n eks-123 --ignore-not-found
+
+# 2. Снять нагрузку вместе с аннотацией do-not-disrupt (она живёт на поде)
+kubectl delete namespace eks-123 --ignore-not-found
+
+# 3. Дождаться, пока Karpenter уберёт NodeClaim и EC2-ноды (останутся только fargate-*)
+while kubectl get nodeclaims --no-headers 2>/dev/null | grep -q .; do
+  echo "NodeClaim ещё жив, ждём..."; sleep 15
+done
+kubectl get nodes | grep -v fargate
+```
+
 ```bash
 TASK=123 make delete_eks_task
+```
+
+Если `destroy` уже запущен и встал на `kubernetes_manifest.ec2nodeclass`, прерывать его не
+нужно - разблокировать можно в другом терминале. Рабочая машина к этому моменту, скорее
+всего, уже удалена, поэтому kubeconfig собирают заново с админской машины:
+
+```bash
+aws eks update-kubeconfig --region eu-central-1 --name <cluster-name> --kubeconfig /tmp/kc
+export KUBECONFIG=/tmp/kc
+
+# что именно держит удаление: под с do-not-disrupt и PDB без права на выселение
+kubectl get po -A -o json | jq -r '.items[]
+  | select(.metadata.annotations["karpenter.sh/do-not-disrupt"]=="true")
+  | "\(.metadata.namespace)/\(.metadata.name)"'
+kubectl get pdb -A
+
+kubectl delete pdb db-pdb -n eks-123 --ignore-not-found
+kubectl delete namespace eks-123 --ignore-not-found
+```
+
+Как только NodeClaim исчезнет, finalizer с `EC2NodeClass` снимается и `terragrunt` доходит
+до конца сам. Проверено на живом стенде: после снятия PDB и namespace обе ноды пула ушли
+примерно за минуту.
+
+Если ноды успели умереть вместе с кластером, а не корректно уйти через Karpenter, останется
+вторичный ENI от VPC CNI: он держит security group нод, и `destroy` встанет уже на ней
+(`module.eks.aws_security_group.node[0]: Still destroying...`). Проверено на этой лабе -
+после аварийного дренажа остался один такой ENI. Найдите и удалите:
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=status,Values=available \
+  --query 'NetworkInterfaces[?Tags[?Key==`eks:eni:owner`]].[NetworkInterfaceId,Description,Groups[0].GroupName]' \
+  --output table
+aws ec2 delete-network-interface --network-interface-id <eni-id>
 ```

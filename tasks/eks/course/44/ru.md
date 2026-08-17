@@ -446,7 +446,12 @@ canary и blue/green деплой *приложений* с анализом м�
 
 ## Практика
 
-Своей лабы у главы нет, но и Argo CD, и Flux видно на живом кластере через их CRD и CLI.
+Лаба курса к этой теме: [лаба 118 - GitOps: Argo CD, дрейф и self-heal](../../labs/118/README_RU.MD).
+В ней вы ставите Argo CD, заводите Application на каталог в Git, ловите дрейф и self-heal,
+разбираете sync waves, границы prune и разницу между sync status и health status; проверка -
+командой `check_result`. Запуск - `TASK=118 make run_eks_task`.
+
+Помимо лабы, и Argo CD, и Flux видно на живом кластере через их CRD и CLI.
 Начните с того, какие приложения агент вообще знает и в каком они статусе.
 
 Если в кластере стоит Argo CD:

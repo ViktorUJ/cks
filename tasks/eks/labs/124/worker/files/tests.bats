@@ -25,7 +25,13 @@ NS="eks-124"
     ready=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus \
       -o jsonpath='{.items[*].status.containerStatuses[*].ready}' 2>/dev/null)
     fail_count=$(echo "$ready" | grep -o 'false' | wc -l)
-    if [[ -n "$svc" ]] && [[ -n "$ready" ]] && [[ "$fail_count" -eq 0 ]]; then
+    # Без requests под Prometheus остаётся BestEffort: Karpenter не учитывает его
+    # потребность при выборе ноды, а kubelet выселяет такие поды первыми при давлении
+    # памяти - метрика для KEDA исчезает вместе с подом.
+    qos=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=prometheus \
+      -o jsonpath='{.items[*].status.qosClass}' 2>/dev/null)
+    if [[ -n "$svc" ]] && [[ -n "$ready" ]] && [[ "$fail_count" -eq 0 ]] && \
+       [[ -n "$qos" ]] && [[ "$qos" != *BestEffort* ]]; then
       echo '1' >> /var/work/tests/result/ok
       result=0
       break
@@ -33,7 +39,7 @@ NS="eks-124"
     sleep 10
   done
   if [[ "$result" != "0" ]]; then
-    echo "monitoring svc=$svc prometheus ready=$ready (waited up to 5 minutes)"
+    echo "monitoring svc=$svc prometheus ready=$ready qos=$qos (waited up to 5 minutes)"
   fi
   [ "$result" == "0" ]
 }
@@ -108,8 +114,11 @@ NS="eks-124"
   echo '1' >> /var/work/tests/result/all
   fb=/var/work/tests/artifacts/6/hpa_before.txt
   fa=/var/work/tests/artifacts/6/hpa_after.txt
-  before_replicas=$(awk 'NR==2 {print $6}' "$fb" 2>/dev/null)
-  after_replicas=$(awk 'NR==2 {print $6}' "$fa" 2>/dev/null)
+  # REPLICAS - предпоследняя колонка. Позицию с начала строки брать нельзя: у внешней
+  # метрики kubectl печатает TARGETS как "378m/100m (avg)", это ДВА поля, и $6 попадает
+  # в MAXPODS. Последняя колонка всегда AGE, поэтому REPLICAS - это $(NF-1).
+  before_replicas=$(awk 'NR==2 {print $(NF-1)}' "$fb" 2>/dev/null)
+  after_replicas=$(awk 'NR==2 {print $(NF-1)}' "$fa" 2>/dev/null)
   result=1
   # Артефакты - основное доказательство: их сохраняют пока нагрузка ещё активна.
   if [[ -s "$fb" ]] && [[ -s "$fa" ]] && [[ -n "$after_replicas" ]] && \
@@ -139,7 +148,8 @@ NS="eks-124"
 @test "7. After removing load, demo-app scales back to minReplicaCount" {
   echo '1' >> /var/work/tests/result/all
   f=/var/work/tests/artifacts/7/hpa_after_cooldown.txt
-  cooldown_replicas=$(awk 'NR==2 {print $6}' "$f" 2>/dev/null)
+  # Та же ловушка с колонками, что и в тесте 6: REPLICAS - это $(NF-1), а не $6.
+  cooldown_replicas=$(awk 'NR==2 {print $(NF-1)}' "$f" 2>/dev/null)
   result=1
   if [[ -s "$f" ]] && [[ "$cooldown_replicas" == "1" ]]; then
     echo '1' >> /var/work/tests/result/ok

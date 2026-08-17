@@ -21,6 +21,11 @@ EOF
 
 }
 
+## ВНИМАНИЕ: managed-политика ограничена 6144 символами (пробелы AWS не считает).
+## Поэтому все statement с "Resource": "*" и без Condition собраны в ОДИН
+## statement AnyResourceForLabs, а read-only Describe свёрнуты в Describe*.
+## Добавляя права лабам, дописывайте action в этот statement, а не новый блок,
+## иначе CreatePolicy упадёт с LimitExceeded: Cannot exceed quota for PolicySize.
 resource "aws_iam_policy" "server" {
   name   = "${local.prefix}-${var.app_name}"
   policy = <<EOF
@@ -28,32 +33,81 @@ resource "aws_iam_policy" "server" {
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "VisualEditor0",
+            "Sid": "AnyResourceForLabs",
             "Effect": "Allow",
             "Action": [
-                "ec2:DescribeAddresses",
-                "ec2:DescribeInstances",
+                "eks:*",
+                "ecr:*",
+                "backup:*",
+
+                "ec2:Describe*",
+                "elasticfilesystem:Describe*",
+                "elasticloadbalancing:Describe*",
+                "ssm:GetParameter",
+                "ssm:DescribeInstanceInformation",
+                "ssm:GetConnectionStatus",
+                "iam:ListRoles",
+                "iam:ListAttachedRolePolicies",
+
                 "cloudwatch:PutMetricData",
-                "ec2:DescribeTags",
-                "ec2:DescribeRegions",
-                "ec2:DescribeHosts",
                 "cloudwatch:PutMetricStream",
-                "ec2:DescribeVolumeStatus",
-                "ec2:DescribeNetworkInterfaces",
-                "ec2:DescribeVpcs",
-                "ec2:DescribeVolumes",
-                "ec2:DescribeSubnets",
-                "ec2:DescribeInstanceStatus",
-                "ec2:DescribeSecurityGroups",
-                "ec2:DescribeSecurityGroupRules",
-                "elasticfilesystem:DescribeFileSystems",
-                "elasticfilesystem:DescribeMountTargets",
-                "elasticfilesystem:DescribeMountTargetSecurityGroups",
-                "elasticloadbalancing:DescribeLoadBalancers",
-                "elasticloadbalancing:DescribeListeners",
-                "elasticloadbalancing:DescribeTargetGroups",
-                "elasticloadbalancing:DescribeTargetHealth",
-                "ssm:GetParameter"
+                "cloudwatch:ListMetrics",
+                "cloudwatch:GetMetricData",
+                "cloudwatch:GetMetricStatistics",
+                "cloudwatch:DescribeAlarms",
+                "logs:DescribeLogGroups",
+                "logs:PutRetentionPolicy",
+                "logs:FilterLogEvents",
+                "logs:GetLogEvents",
+                "aps:ListWorkspaces",
+                "aps:DescribeWorkspace",
+                "aps:ListRuleGroupsNamespaces",
+                "aps:DescribeRuleGroupsNamespace",
+
+                "secretsmanager:CreateSecret",
+                "secretsmanager:PutSecretValue",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:DeleteSecret",
+                "secretsmanager:TagResource",
+                "secretsmanager:ListSecrets",
+
+                "ec2:AssociateVpcCidrBlock",
+                "ec2:DisassociateVpcCidrBlock",
+                "ec2:CreateSubnet",
+                "ec2:DeleteSubnet",
+                "ec2:CreateTags",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:AuthorizeSecurityGroupEgress",
+                "ec2:RevokeSecurityGroupEgress",
+                "ec2:CreateSecurityGroup",
+                "ec2:DeleteSecurityGroup",
+                "ec2:CreateRoute",
+                "ec2:ReplaceRoute",
+                "ec2:DeleteRoute",
+                "ec2:CreateVpcEndpoint",
+                "ec2:DeleteVpcEndpoints",
+                "ec2:ModifyVpcEndpoint",
+
+                "ec2:DeleteVolume",
+                "ec2:DeleteSnapshot",
+                "elasticfilesystem:DeleteAccessPoint",
+
+                "kms:CreateGrant",
+                "kms:DescribeKey",
+                "kms:RetireGrant",
+                "kms:Decrypt",
+                "kms:GenerateDataKey",
+
+                "vpc-lattice:List*",
+                "vpc-lattice:Get*",
+                "vpc-lattice:DeleteServiceNetwork",
+                "vpc-lattice:DeleteServiceNetworkVpcAssociation",
+                "acm:ListCertificates",
+                "acm:DescribeCertificate",
+                "route53:ListHostedZones*",
+                "route53:ListResourceRecordSets"
             ],
             "Resource": "*"
         },
@@ -66,33 +120,6 @@ resource "aws_iam_policy" "server" {
                 "arn:aws:s3:::${var.s3_k8s_config}/*",
                 "arn:aws:s3:::${var.s3_k8s_config}"
             ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "eks:*"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ecr:*"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "secretsmanager:CreateSecret",
-                "secretsmanager:PutSecretValue",
-                "secretsmanager:GetSecretValue",
-                "secretsmanager:DescribeSecret",
-                "secretsmanager:DeleteSecret",
-                "secretsmanager:TagResource",
-                "secretsmanager:ListSecrets"
-            ],
-            "Resource": "*"
         },
         {
             "Sid": "TestRoleManagementForLabs",
@@ -124,14 +151,9 @@ resource "aws_iam_policy" "server" {
             "Resource": [
                 "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-irsa-role",
                 "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-pod-identity-role",
-                "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-lbc-irsa"
+                "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-lbc-irsa",
+                "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-backup"
             ]
-        },
-        {
-            "Sid": "ListRolesForLabs",
-            "Effect": "Allow",
-            "Action": "iam:ListRoles",
-            "Resource": "*"
         },
         {
             "Sid": "PassPodIdentityRoleForLabs",
@@ -145,24 +167,42 @@ resource "aws_iam_policy" "server" {
             }
         },
         {
-            "Sid": "PassTestRoleToEc2ForLabs",
+            "Sid": "VpcResourceControllerPolicyForLabs",
             "Effect": "Allow",
-            "Action": "iam:PassRole",
-            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-test-*",
+            "Action": [
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy"
+            ],
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-cluster-*",
             "Condition": {
-                "StringEquals": {
-                    "iam:PassedToService": "ec2.amazonaws.com"
+                "ArnEquals": {
+                    "iam:PolicyARN": "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
                 }
             }
         },
         {
-            "Sid": "PassTestRoleForPodIdentityForLabs",
+            "Sid": "PassAutoModeNodeRoleForLabs",
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-eks-auto-*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:PassedToService": "eks.amazonaws.com"
+                }
+            }
+        },
+        {
+            "Sid": "PassTestRoleForLabs",
             "Effect": "Allow",
             "Action": "iam:PassRole",
             "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-test-*",
             "Condition": {
                 "StringEquals": {
-                    "iam:PassedToService": "pods.eks.amazonaws.com"
+                    "iam:PassedToService": [
+                        "ec2.amazonaws.com",
+                        "pods.eks.amazonaws.com",
+                        "backup.amazonaws.com"
+                    ]
                 }
             }
         },
@@ -217,136 +257,15 @@ resource "aws_iam_policy" "server" {
             }
         },
         {
-            "Sid": "SelfManagedNodeTagOnLaunchForLabs",
-            "Effect": "Allow",
-            "Action": "ec2:CreateTags",
-            "Resource": "arn:aws:ec2:*:${data.aws_caller_identity.current.account_id}:*/*",
-            "Condition": {
-                "StringEquals": {
-                    "ec2:CreateAction": "RunInstances"
-                }
-            }
-        },
-        {
-            "Sid": "VpcCidrAndSubnetPlanningForLabs",
-            "Effect": "Allow",
-            "Action": [
-                "ec2:AssociateVpcCidrBlock",
-                "ec2:DisassociateVpcCidrBlock",
-                "ec2:CreateSubnet",
-                "ec2:DeleteSubnet",
-                "ec2:CreateTags",
-                "ec2:DescribeInstanceTypes",
-                "eks:UpdateAddon",
-                "eks:DescribeAddon",
-                "eks:DescribeUpdate"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "CloudWatchLogsReadForLoggingLabs",
-            "Effect": "Allow",
-            "Action": [
-                "logs:DescribeLogGroups",
-                "logs:PutRetentionPolicy",
-                "logs:FilterLogEvents",
-                "logs:GetLogEvents"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "ObservabilityReadForMetricsLabs",
-            "Effect": "Allow",
-            "Action": [
-                "cloudwatch:ListMetrics",
-                "cloudwatch:GetMetricData",
-                "cloudwatch:GetMetricStatistics",
-                "cloudwatch:DescribeAlarms",
-                "aps:ListWorkspaces",
-                "aps:DescribeWorkspace",
-                "aps:ListRuleGroupsNamespaces",
-                "aps:DescribeRuleGroupsNamespace"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "SecurityGroupTroubleshootingForLabs",
-            "Effect": "Allow",
-            "Action": [
-                "ec2:AuthorizeSecurityGroupIngress",
-                "ec2:RevokeSecurityGroupIngress",
-                "ec2:DescribeSecurityGroups",
-                "ec2:DescribeSecurityGroupRules"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "AwsBackupForLabs",
-            "Effect": "Allow",
-            "Action": "backup:*",
-            "Resource": "*"
-        },
-        {
-            "Sid": "PassTestRoleForBackupForLabs",
+            "Sid": "PassBackupRoleForLabs",
             "Effect": "Allow",
             "Action": "iam:PassRole",
-            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-test-*",
+            "Resource": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*-backup",
             "Condition": {
                 "StringEquals": {
                     "iam:PassedToService": "backup.amazonaws.com"
                 }
             }
-        },
-        {
-            "Sid": "KmsForAwsBackupVaultLabs",
-            "Effect": "Allow",
-            "Action": [
-                "kms:CreateGrant",
-                "kms:DescribeKey",
-                "kms:RetireGrant",
-                "kms:Decrypt",
-                "kms:GenerateDataKey"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "TrafficAndEndpointsForLabs",
-            "Effect": "Allow",
-            "Action": [
-                "ec2:CreateRoute",
-                "ec2:ReplaceRoute",
-                "ec2:DeleteRoute",
-                "ec2:CreateVpcEndpoint",
-                "ec2:DeleteVpcEndpoints",
-                "ec2:ModifyVpcEndpoint",
-                "ec2:DescribeVpcEndpoints",
-                "ec2:DescribeNatGateways",
-                "ec2:DescribeRouteTables",
-                "cloudwatch:GetMetricStatistics",
-                "cloudwatch:ListMetrics"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "VpcLatticeReadForLabs",
-            "Effect": "Allow",
-            "Action": [
-                "vpc-lattice:List*",
-                "vpc-lattice:Get*",
-                "ec2:DescribeManagedPrefixLists"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "AcmRoute53ReadForIngressLabs",
-            "Effect": "Allow",
-            "Action": [
-                "acm:ListCertificates",
-                "acm:DescribeCertificate",
-                "route53:ListHostedZones*",
-                "route53:ListResourceRecordSets"
-            ],
-            "Resource": "*"
         }
     ]
 }

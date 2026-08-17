@@ -35,7 +35,7 @@ NS="eks-127"
   actions=$(kubectl get validatingadmissionpolicybinding disallow-latest-tag-binding \
     -o jsonpath='{.spec.validationActions}' 2>/dev/null)
   f=/var/work/tests/artifacts/3/denied.txt
-  denied_pod=$(kubectl get pod latest-deny-pod -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null)
+  denied_pod=$(kubectl get pod latest-deny-pod -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null || true)
   if [[ "$actions" == *Deny* ]] && [[ -s "$f" ]] && grep -qi 'latest' "$f" \
     && grep -q 'запрещён' "$f" && [[ -z "$denied_pod" ]]; then
     echo '1' >> /var/work/tests/result/ok
@@ -47,14 +47,23 @@ NS="eks-127"
   [ "$result" == "0" ]
 }
 
-@test "4. Legit pod with an explicit tag is not blocked by Deny" {
+@test "4. Legit pod with an explicit tag is not blocked by Deny and actually runs" {
   echo '1' >> /var/work/tests/result/all
   image=$(kubectl get pod tagged-pod -n "$NS" -o jsonpath='{.spec.containers[0].image}' 2>/dev/null)
-  if [[ -n "$image" ]] && [[ "$image" != *:latest ]]; then
+  # Проверять только имя образа недостаточно: под с несуществующим тегом тоже пройдёт
+  # допуск и останется в ErrImagePull. Ждём Running, иначе утверждение "политика не
+  # мешает легитимному поду" ничем не подтверждено.
+  phase=""
+  for i in $(seq 1 18); do
+    phase=$(kubectl get pod tagged-pod -n "$NS" -o jsonpath='{.status.phase}' 2>/dev/null)
+    [[ "$phase" == "Running" ]] && break
+    sleep 10
+  done
+  if [[ -n "$image" ]] && [[ "$image" != *:latest ]] && [[ "$phase" == "Running" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "tagged-pod image=$image"
+    echo "tagged-pod image=$image phase=$phase"
     result=1
   fi
   [ "$result" == "0" ]
@@ -65,15 +74,22 @@ NS="eks-127"
   pol=$(kubectl get validatingadmissionpolicy require-resources-requests -o jsonpath='{.metadata.name}' 2>/dev/null)
   actions=$(kubectl get validatingadmissionpolicybinding require-resources-requests-binding \
     -o jsonpath='{.spec.validationActions}' 2>/dev/null)
-  bad_pod=$(kubectl get pod no-requests-pod -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null)
+  bad_pod=$(kubectl get pod no-requests-pod -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null || true)
   req=$(kubectl get pod requests-ok-pod -n "$NS" \
     -o jsonpath='{.spec.containers[0].resources.requests}' 2>/dev/null)
+  # Тот же принцип, что в тесте 4: разрешённый под должен доехать до Running.
+  phase=""
+  for i in $(seq 1 18); do
+    phase=$(kubectl get pod requests-ok-pod -n "$NS" -o jsonpath='{.status.phase}' 2>/dev/null)
+    [[ "$phase" == "Running" ]] && break
+    sleep 10
+  done
   if [[ "$pol" == "require-resources-requests" ]] && [[ "$actions" == *Deny* ]] \
-    && [[ -z "$bad_pod" ]] && [[ -n "$req" ]]; then
+    && [[ -z "$bad_pod" ]] && [[ -n "$req" ]] && [[ "$phase" == "Running" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "policy=$pol actions=$actions bad_pod=$bad_pod requests-ok-pod requests=$req"
+    echo "policy=$pol actions=$actions bad_pod=$bad_pod requests=$req phase=$phase"
     result=1
   fi
   [ "$result" == "0" ]

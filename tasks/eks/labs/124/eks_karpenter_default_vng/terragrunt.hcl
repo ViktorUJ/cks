@@ -36,9 +36,15 @@ inputs = {
   name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   nodepool = {}
   taints   = []
+  # WhenEmpty вместо WhenEmptyOrUnderutilized сознательно, именно для этой лабы. Лаба
+  # масштабирует нагрузку вверх и вниз, а Prometheus держит TSDB в emptyDir. С агрессивной
+  # консолидацией (WhenEmptyOrUnderutilized плюс consolidateAfter 30s) Karpenter в момент
+  # scale-down переселяет Prometheus, история метрики теряется, и HPA получает
+  # <unknown>/100m вместо значения (проверено на живом стенде). Consolidation как тема
+  # разбирается в лабе 123, здесь она только мешает.
   disruption = {
-    consolidationPolicy = "WhenEmptyOrUnderutilized"
-    consolidateAfter    = "30s"
+    consolidationPolicy = "WhenEmpty"
+    consolidateAfter    = "1m"
   }
   requirements = [
     {
@@ -56,10 +62,14 @@ inputs = {
       operator = "In"
       values   = ["spot", "on-demand"]
     },
+    # Категория t исключена, а размеры начинаются с large: лабе нужен работающий стек
+    # мониторинга плюс постоянная нагрузка на CPU. На t3.small (allocatable памяти около
+    # 790 MiB) kubelet выселял Prometheus по memory pressure, а burstable-инстансы под
+    # постоянной нагрузкой упираются в кредиты CPU и метрика становится нестабильной.
     {
       key      = "karpenter.k8s.aws/instance-category"
       operator = "In"
-      values   = ["t", "m", "r", "c"]
+      values   = ["m", "r", "c"]
     },
     {
       key      = "karpenter.k8s.aws/instance-generation"
@@ -69,7 +79,7 @@ inputs = {
     {
       key      = "karpenter.k8s.aws/instance-size"
       operator = "In"
-      values   = ["small", "medium", "large", "xlarge", "2xlarge", "4xlarge"]
+      values   = ["large", "xlarge", "2xlarge"]
     }
   ]
   budgets = [

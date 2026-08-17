@@ -405,7 +405,15 @@ multi-tenancy решается одним вопросом: доверяете �
 
 ## Практика
 
-Своей лабы у главы пока нет, но всё проверяется на живом кластере. Поставьте один policy engine
+Лаба курса к этой теме: [лаба 127 - политики без движка:
+ValidatingAdmissionPolicy на CEL](../../labs/127/README_RU.MD). В ней вы пишете CEL-правило
+против тега `:latest`, проходите путь `Audit` -> `Deny` и видите текст отказа от apiserver,
+добавляете вторую политику на обязательные `resources.requests` и разбираетесь, почему у
+встроенной проверки нет риска «webhook не ответил»; проверка - командой `check_result`.
+Запуск - `TASK=127 make run_eks_task`.
+
+Kyverno и Gatekeeper лаба не ставит, но их поведение полезно сравнить руками на живом
+кластере. Поставьте один policy engine
 (Kyverno или Gatekeeper) через Helm и посмотрите ресурсы: `kubectl get clusterpolicy` для
 Kyverno, `kubectl get constraints` для Gatekeeper. Примените `ClusterPolicy` из 22.3 с
 `validationFailureAction: Audit`, задеплойте под с `nginx:latest` и найдите нарушение в policy

@@ -206,6 +206,33 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала уберите нагрузку и содержимое бакета.** Бакет создал terraform, но объекты в нём
+> появились из подов через Mountpoint - для terraform это посторонние данные. Непустой бакет
+> не удаляется, и `destroy` встанет на нём. Тома здесь статические (PV на CSI-драйвере
+> Mountpoint), но namespace всё равно удаляют первым, чтобы поды отпустили точки монтирования
+> и Karpenter успел вывести ноду до сноса кластера.
+
+```bash
+kubectl delete namespace eks-129 --ignore-not-found
+
+while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
+  echo "EC2-нода Karpenter ещё жива, ждём..."; sleep 15
+done
+
+BUCKET=$(grep '^bucket_name' ~/lab129_hints.txt | awk '{print $3}')
+# если у бакета включено версионирование, нужны и версии объектов, и delete markers
+aws s3 rm "s3://${BUCKET}" --recursive
+aws s3api list-object-versions --bucket "$BUCKET" \
+  --query '{Objects: Versions[].{Key:Key,VersionId:VersionId}}' --output json > /tmp/vers.json
+aws s3api delete-objects --bucket "$BUCKET" --delete file:///tmp/vers.json 2>/dev/null
+aws s3api list-object-versions --bucket "$BUCKET" \
+  --query '{Objects: DeleteMarkers[].{Key:Key,VersionId:VersionId}}' --output json > /tmp/dm.json
+aws s3api delete-objects --bucket "$BUCKET" --delete file:///tmp/dm.json 2>/dev/null
+
+# бакет должен стать пустым
+aws s3api list-object-versions --bucket "$BUCKET" --query 'length(Versions)' --output text
+```
+
 ```bash
 TASK=129 make delete_eks_task
 ```

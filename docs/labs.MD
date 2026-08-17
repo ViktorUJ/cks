@@ -142,10 +142,34 @@
 
 ## EKS labs
 
-- ``TASK=01 make run_eks_task`` - create ckad lab number 01
-- ``TASK=01 make delete_eks_task`` - delete ckad hands-on labs
-- ``TASK=01 make run_eks_task_clean`` - run cka_task with clean terragrunt cache  for  ckad_task
-- ``make output_eks_task `` - show **outputs** from   **ckad_task**
+- ``TASK=01 make run_eks_task`` - create eks lab number 01
+- ``TASK=01 make delete_eks_task`` - delete eks hands-on labs
+- ``TASK=01 make run_eks_task_clean`` - run eks_task with clean terragrunt cache
+- ``make output_eks_task `` - show **outputs** from   **eks_task**
+
+> **Before deleting a lab**, read the "Удаление" section of that lab's `README_RU.MD`. Labs that
+> create AWS resources through in-cluster controllers (load balancers, Gateway API, VPC Lattice),
+> through CSI drivers (EBS volumes, EFS access points), through AWS Backup (recovery points), or
+> by hand via AWS CLI (IAM roles, security groups) need those removed **first** - terraform does
+> not know about them, and `destroy` either hangs on `Still destroying...` or leaves resources
+> that keep costing money.
+>
+> **If `destroy` fails halfway**, re-running `make delete_eks_task` may abort with
+> `... is a dependency of ... but detected no outputs`: already destroyed modules have no outputs
+> for the remaining configs to read. Finish the teardown module by module in reverse dependency
+> order (recreate the env dir first, the Makefile removes it after a failed run):
+>
+> ```bash
+> mkdir -p terraform/environments/eks-labs
+> cp -r tasks/eks/labs/<NNN>/* terraform/environments/eks-labs/
+> export TF_VAR_STACK_TASK=<NNN> TF_VAR_STACK_NAME=eks-labs TF_VAR_USER_ID= TF_VAR_ENV_ID=
+> cd terraform/environments/eks-labs/eks_fargate_system && terragrunt destroy -auto-approve
+> cd ../eks_control_plane && terragrunt destroy -auto-approve
+> cd ../vpc && terragrunt destroy -auto-approve
+> ```
+>
+> `TF_VAR_USER_ID` and `TF_VAR_ENV_ID` must match the values used at creation time - they are
+> part of the cluster name (`eks<NNN>-<user>-<env>`).
 
 
 | Task   | Description                                       | Solution                                                                     |
@@ -153,6 +177,15 @@
 | **02** | [Karpenter Basics](../tasks/eks/labs/02/README.MD)
 | **03** | [Application Autoscaling with KEDA and Prometheus](../tasks/eks/labs/03/README.MD)
 | **101** | [Cluster as code: VPC, control plane, nodes, kubeconfig](../tasks/eks/labs/101/README_RU.MD) | [SOLUTION](../tasks/eks/labs/101/worker/files/solutions/1.MD) |
+| **118** | [GitOps: Argo CD, drift and self-heal, sync waves, prune](../tasks/eks/labs/118/README_RU.MD) | [SOLUTION](../tasks/eks/labs/118/worker/files/solutions/1.MD) |
+| **120** | [Troubleshooting: broken networking and unhealthy load balancer targets](../tasks/eks/labs/120/README_RU.MD) | [SOLUTION](../tasks/eks/labs/120/worker/files/solutions/1.MD) |
+| **121** | [Troubleshooting: access denied (access entries, IRSA, RBAC)](../tasks/eks/labs/121/README_RU.MD) | [SOLUTION](../tasks/eks/labs/121/worker/files/solutions/1.MD) |
+| **122** | [AWS Backup for EKS: composite recovery point, namespace restore](../tasks/eks/labs/122/README_RU.MD) | [SOLUTION](../tasks/eks/labs/122/worker/files/solutions/1.MD) |
+| **124** | [Application autoscaling: HPA, KEDA and a Prometheus trigger](../tasks/eks/labs/124/README_RU.MD) | [SOLUTION](../tasks/eks/labs/124/worker/files/solutions/1.MD) |
+| **125** | [EKS Auto Mode versus your own stack: built-in node pools, no node access](../tasks/eks/labs/125/README_RU.MD) | [SOLUTION](../tasks/eks/labs/125/worker/files/solutions/1.MD) |
+| **126** | [Security groups for pods: branch ENI, pod Running but never Ready](../tasks/eks/labs/126/README_RU.MD) | [SOLUTION](../tasks/eks/labs/126/worker/files/solutions/1.MD) |
+| **127** | [Policies without an extra controller: ValidatingAdmissionPolicy on CEL](../tasks/eks/labs/127/README_RU.MD) | [SOLUTION](../tasks/eks/labs/127/worker/files/solutions/1.MD) |
+| **128** | [Gateway API in AWS: ALB Gateway API and VPC Lattice, ReferenceGrant](../tasks/eks/labs/128/README_RU.MD) | [SOLUTION](../tasks/eks/labs/128/worker/files/solutions/1.MD) |
 
 
 

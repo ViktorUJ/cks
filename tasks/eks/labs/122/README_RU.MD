@@ -175,7 +175,7 @@ cat ~/lab122_hints.txt   # имя кластера, ARN роли AWS Backup, и�
 ---
 |        **5**        | **Namespace restore: non-destructive**                        |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Запустите `aws backup start-restore-job` по composite recovery point из задания 3 с метаданными EKS: `clusterName` (тот же кластер), `newCluster=false`, `namespaceLevelRestore=true`, `namespaces=["eks-122"]`. Дождитесь статуса `COMPLETED`. Убедитесь, что Deployment `web` и ConfigMap `marker` не задублировались и значение маркера совпадает с файлом из задания 1. Сохраните `restore_job_id`, `status` и объяснение non-destructive поведения (со словом `non-destructive` или `неразрушающий`) в `/var/work/tests/artifacts/5/restore_status.txt`. |
+| Что делаем          | Запустите `aws backup start-restore-job` по composite recovery point из задания 3 с метаданными EKS: `clusterName` (тот же кластер), `newCluster=false`, `namespaceLevelRestore=true`, `namespaces=["eks-122"]`. Этого набора **недостаточно**: в composite точке есть ещё снапшот EBS, а для его восстановления AWS Backup обязательно требует Availability Zone. Без неё дочерний restore job тома падает с `Restore Job failed as no restore metadata was provided`, а родительский - с `All PV restore jobs failed to restore`. Добавьте параметр `nestedRestoreJobs` - карту `ARN вложенной точки -> {"AvailabilityZone":"<зона>"}`, взяв зону существующей EC2-ноды (`topology.kubernetes.io/zone`), иначе том создастся там, где его нечем смонтировать. Учтите вложенность кодирования: значение `nestedRestoreJobs` - JSON-строка с картой, где значение элемента тоже JSON-строка; лишний уровень кавычек даёт `Invalid JSON format in NestedRestoreMetadata`. Дождитесь статуса `COMPLETED` (обычно 7-8 минут). Убедитесь, что Deployment `web` и ConfigMap `marker` не задублировались и значение маркера совпадает с файлом из задания 1. Сохраните `restore_job_id`, `status` и объяснение non-destructive поведения (со словом `non-destructive` или `неразрушающий`) в `/var/work/tests/artifacts/5/restore_status.txt`. |
 | Критерии приёмки    | - файл `5/restore_status.txt` содержит `restore_job_id=` и упоминает `non-destructive`/`неразрушающий`;<br/>- статус restore job `COMPLETED`;<br/>- Deployment `web` имеет хотя бы одну готовую реплику после restore. |
 ---
 |        **6**        | **Почему откат версии кластера не спасает от `kubectl delete namespace`** |
@@ -200,6 +200,51 @@ check_result
 Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
 ## Удаление кластера и ресурсов
+
+> **Здесь без подготовки `destroy` не пройдёт.** Backup vault создан terraform, а recovery
+> points в нём - нет: их сделали вы командой `start-backup-job`. Terraform не может удалить
+> непустой vault, поэтому сначала надо удалить точки восстановления. Порядок важен: сначала
+> вложенные (child), потом composite - родительскую точку AWS не даёт удалить, пока у неё есть
+> дети (`Parent recovery point cannot be deleted because it has child recovery points`).
+> Отдельно: restore создал **новый EBS-том** вне terraform (без тегов Kubernetes), и он
+> останется висеть и тарифицироваться. И как в других лабах с PVC - удалите namespace до
+> сноса кластера, иначе EBS CSI не успеет удалить том за PVC.
+
+```bash
+VAULT=$(grep '^vault_name' ~/lab122_hints.txt | awk '{print $3}')
+
+# 1. Снять нагрузку: EBS CSI удалит том за PVC, Karpenter уберёт ноду
+kubectl delete namespace eks-122 --ignore-not-found
+while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
+  echo "EC2-нода Karpenter ещё жива, ждём..."; sleep 15
+done
+
+# 2. Удалить сначала вложенные точки, потом composite
+for ARN in $(aws backup list-recovery-points-by-backup-vault --backup-vault-name "$VAULT" \
+    --query 'RecoveryPoints[?IsParent==`false`].RecoveryPointArn' --output text); do
+  aws backup delete-recovery-point --backup-vault-name "$VAULT" --recovery-point-arn "$ARN"
+done
+sleep 30
+for ARN in $(aws backup list-recovery-points-by-backup-vault --backup-vault-name "$VAULT" \
+    --query 'RecoveryPoints[?IsParent==`true`].RecoveryPointArn' --output text); do
+  aws backup delete-recovery-point --backup-vault-name "$VAULT" --recovery-point-arn "$ARN"
+done
+
+# vault должен стать пустым, иначе terraform не удалит его
+aws backup list-recovery-points-by-backup-vault --backup-vault-name "$VAULT" \
+  --query 'length(RecoveryPoints)' --output text
+```
+
+Дальше уберите том, созданный restore. Его легко узнать: он `available` и **вообще без тегов**
+(тома за PVC драйвер помечает `kubernetes.io/created-for/pvc/name` и снимает сам, а этот том
+создал AWS Backup, и владельца у него нет):
+
+```bash
+# тома без тегов - это и есть результат restore
+aws ec2 describe-volumes --filters Name=status,Values=available \
+  --query 'Volumes[?Tags==null].[VolumeId,Size,CreateTime]' --output table
+aws ec2 delete-volume --volume-id <vol-id>
+```
 
 ```bash
 TASK=122 make delete_eks_task

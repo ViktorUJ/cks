@@ -107,7 +107,7 @@ APP="demo-app"
 @test "6. Prune removes manual-extra while demo-app and demo-config survive" {
   echo '1' >> /var/work/tests/result/all
   f=/var/work/tests/artifacts/6/prune.txt
-  extra=$(kubectl get configmap manual-extra -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null)
+  extra=$(kubectl get configmap manual-extra -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null || true)
   demo_cm=$(kubectl get configmap demo-config -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null)
   demo_dep=$(kubectl get deploy demo-app -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null)
   if [[ -s "$f" ]] && grep -q 'manual-extra' "$f" && grep -qi 'prune' "$f" \

@@ -196,6 +196,51 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала уберите тестовые IAM-роли.** Роли `eks-task102-test-viewer` и
+> `eks-task102-test-nobody` вы создали вручную через AWS CLI, в state terraform их нет, и
+> `destroy` их не тронет. IAM-роли живут вне региона и вне кластера, поэтому они останутся в
+> аккаунте, а при повторном запуске лабы `aws iam create-role` упадёт с `EntityAlreadyExists`.
+> Access entries удалять отдельно не обязательно (они исчезают вместе с кластером), но если
+> хотите пройти лабу заново на том же кластере - снимите и их.
+
+```bash
+CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
+
+for ROLE in eks-task102-test-viewer eks-task102-test-nobody; do
+  ARN=$(aws iam get-role --role-name "$ROLE" --query 'Role.Arn' --output text 2>/dev/null) || continue
+  # access entry этой роли (нужно, если проходите лабу повторно)
+  aws eks delete-access-entry --cluster-name "$CLUSTER" --principal-arn "$ARN" 2>/dev/null
+  # инлайновые и присоединённые политики, если вы их добавляли
+  for P in $(aws iam list-role-policies --role-name "$ROLE" --query 'PolicyNames' --output text); do
+    aws iam delete-role-policy --role-name "$ROLE" --policy-name "$P"
+  done
+  for P in $(aws iam list-attached-role-policies --role-name "$ROLE" \
+      --query 'AttachedPolicies[].PolicyArn' --output text); do
+    aws iam detach-role-policy --role-name "$ROLE" --policy-arn "$P"
+  done
+  aws iam delete-role --role-name "$ROLE"
+done
+```
+
+> **Снимите нагрузку.** Если поды лабы заставили Karpenter поднять EC2-ноду, удалите нагрузку
+> и дождитесь, пока нода уйдёт: иначе VPC CNI не успеет убрать свои вторичные ENI, осиротевший
+> ENI останется в состоянии `available`, будет держать security group нод, и `destroy` зависнет
+> на `module.eks.aws_security_group.node[0]: Still destroying...`.
+
+```bash
+while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
+  echo "EC2-нода Karpenter ещё жива, ждём..."; sleep 15
+done
+```
+
 ```bash
 TASK=102 make delete_eks_task
+```
+
+Если `destroy` всё же встал на security group, найдите и удалите осиротевший ENI:
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=status,Values=available \
+  --query 'NetworkInterfaces[].[NetworkInterfaceId,Description,Groups[0].GroupName]' --output table
+aws ec2 delete-network-interface --network-interface-id <eni-id>
 ```

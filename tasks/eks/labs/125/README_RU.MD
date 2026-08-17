@@ -99,6 +99,14 @@ flowchart TB
 `compute_config = { enabled = true, node_pools = ["general-purpose"] }` - это единственное
 отличие входных данных от лабы 101.
 
+Модуль рабочей машины `terraform/modules/eks_v2_work_pc` получил три дополнительных права,
+все они нужны заданиям этой лабы: `ssm:GetConnectionStatus` и
+`ssm:DescribeInstanceInformation` (задание 4 доказывает, что нода не подключена к SSM) и
+`iam:PassRole` на роли `*-eks-auto-*` с условием `iam:PassedToService: eks.amazonaws.com` -
+без него `aws eks update-cluster-config` для Auto Mode отвечает `AccessDeniedException`, и
+студент не сможет ни включить второй встроенный пул, ни восстановить удалённый. Изменение
+аддитивное, на остальные лабы курса оно не влияет.
+
 Отдельного terraform-модуля под ноды или NodePool в этой лабе нет: встроенные NodePool
 `general-purpose` и `system` - часть самого EKS Auto Mode, а не ресурс, который создаёт
 terraform. Управление ими происходит только через `computeConfig.nodePools` на control
@@ -151,7 +159,7 @@ check_result    # проверить решение
 ---
 |        **1**        | **Подтверждение режима: Auto Mode включён**                  |
 | :-----------------: | :------------------------------------------------------------ |
-| Что делаем          | Выполните `aws eks describe-cluster --name <cluster> --query 'cluster.computeConfig'` и убедитесь, что `enabled: true`, а `nodePools` содержит `general-purpose`. Выполните `kubectl get nodepools` и убедитесь, что в списке есть `general-purpose`. Сохраните оба вывода в `/var/work/tests/artifacts/1/automode.txt`. |
+| Что делаем          | Определите имя кластера из kubeconfig (`kubectl config current-context \| awk -F/ '{print $NF}'`) - так надёжнее, чем `list-clusters[0]`, который в аккаунте с несколькими кластерами укажет на чужой. Выполните `aws eks describe-cluster --name <cluster> --query 'cluster.computeConfig'` и убедитесь, что `enabled: true`, а `nodePools` содержит `general-purpose`. Выполните `kubectl get nodepools` и убедитесь, что в списке есть `general-purpose`. Сохраните оба вывода в `/var/work/tests/artifacts/1/automode.txt`. |
 | Критерии приёмки    | - файл `1/automode.txt` не пуст, содержит `"enabled": true` и `general-purpose`. |
 ---
 |        **2**        | **Второй встроенный NodePool выключен**                       |
@@ -159,21 +167,60 @@ check_result    # проверить решение
 | Что делаем          | Проверьте, что `system` не входит в список активных NodePool: `kubectl get nodepools` не должен показывать `system` (built-in NodePool появляется как Kubernetes-ресурс, только когда включён в `computeConfig.nodePools`). Объясните в `/var/work/tests/artifacts/2/twopools.txt`, зачем нужен `system` NodePool в продакшене - у него таинт `CriticalAddonsOnly`, который толерируют системные компоненты вроде CoreDNS, и он позволяет отделить критичные для кластера поды от обычной нагрузки. В тексте должны быть слова `system` и `CriticalAddonsOnly`. |
 | Критерии приёмки    | - `kubectl get nodepools` не содержит `system`;<br/>- файл `2/twopools.txt` не пуст и содержит `system` и `CriticalAddonsOnly`. |
 ---
-|        **3**        | **Нагрузка на general-purpose и попытка починить встроенный NodePool** |
+|        **3**        | **Нагрузка на general-purpose и кто владеет встроенным NodePool** |
 | :-----------------: | :------------------------------------------------------------ |
-| Что делаем          | Создайте namespace `eks-125` и Deployment `web` (образ `viktoruj/ping_pong:latest`, `2` реплики). Дождитесь, пока Auto Mode поднимет под них ноду и оба под перейдут в `Running`. Затем попробуйте отредактировать встроенный NodePool: `kubectl patch nodepool general-purpose --type merge -p '{"spec":{"limits":{"cpu":"100"}}}'`. Сохраните код возврата и сообщение об ошибке в `/var/work/tests/artifacts/3/readonly.txt` - встроенные NodePool редактировать нельзя, разрешено только включать и выключать их в `computeConfig.nodePools`. |
-| Критерии приёмки    | - Deployment `web` в `eks-125`, `2` готовые реплики, ни один под не на Fargate;<br/>- файл `3/readonly.txt` не пуст и содержит признак отказа (`denied`, `forbidden` или `error`, без учёта регистра). |
+| Что делаем          | Создайте namespace `eks-125` и Deployment `web` (образ `viktoruj/ping_pong:latest`, `2` реплики). Дождитесь, пока Auto Mode поднимет под них ноду и оба под перейдут в `Running`. Затем попробуйте отредактировать встроенный NodePool: `kubectl patch nodepool general-purpose --type merge -p '{"spec":{"limits":{"cpu":"100"}}}'`. Правка ПРОЙДЁТ - запрета в admission нет. Выясните, кому объект принадлежит: посмотрите метку `app.kubernetes.io/managed-by` и список `metadata.managedFields[*].manager`. Сложите в `/var/work/tests/artifacts/3/builtin.txt` вывод patch, обе проверки владельца и вывод о том, почему такая правка не является поддерживаемым способом настройки. После этого верните пул в исходное состояние: `kubectl patch nodepool general-purpose --type merge -p '{"spec":{"limits":null}}'`. |
+| Критерии приёмки    | - Deployment `web` в `eks-125`, `2` готовые реплики, ни один под не на Fargate;<br/>- файл `3/builtin.txt` не пуст, содержит `patched` и владельца объекта (`managed-by` или `eks-auto-mode`). |
 ---
-|        **4**        | **Нет доступа на ноду: SSH и SSM закрыты by design**          |
+|        **4**        | **Доступа оператора на ноду нет, но хост не спрятан**         |
 | :-----------------: | :------------------------------------------------------------ |
-| Что делаем          | Определите ноду, на которой работает под `web` (`kubectl get pods -n eks-125 -o wide`), и её `providerID` или instance ID (`kubectl get node <node> -o jsonpath='{.spec.providerID}'`). Попробуйте открыть сессию SSM: `aws ssm start-session --target <instance-id>` - убедитесь, что команда завершается ошибкой (агент SSM на ноде Auto Mode не запущен, доступа нет by design, глава 9). Сохраните вывод в `/var/work/tests/artifacts/4/nossh.txt`. |
-| Критерии приёмки    | - файл `4/nossh.txt` не пуст и содержит признак отказа (`TargetNotConnected`, `error` или аналогичное сообщение SSM). |
+| Что делаем          | Определите ноду, на которой работает под `web` (`kubectl get pods -n eks-125 -o wide`) - в Auto Mode имя ноды и есть instance ID. Соберите три факта и положите их в `/var/work/tests/artifacts/4/nossh.txt`: (1) у инстанса нет ключевой пары - `aws ec2 describe-instances --instance-ids <node> --query 'Reservations[0].Instances[0].KeyName'` вернёт `null`, то есть SSH по ключу невозможен в принципе; (2) SSM не подключён - `aws ssm get-connection-status --target <node>` вернёт `notconnected`, а `aws ssm describe-instance-information` не покажет эту ноду; (3) при этом хост НЕ изолирован от кластера: запустите в `eks-125` под с `securityContext.privileged: true` и `hostPath` на `/`, смонтированный в `/host`, и прочитайте `/host/etc/os-release` - увидите `NAME=Bottlerocket`. Допишите вывод: Auto Mode закрывает дверь оператора (SSH, SSM), но не дверь cluster-admin - за неё отвечают Pod Security Admission и политики (главы 19 и 22). Под уберите после проверки. |
+| Критерии приёмки    | - файл `4/nossh.txt` не пуст и содержит все три доказательства: `KeyName`, `notconnected` и `Bottlerocket`. |
 ---
 |        **5**        | **Свой NodePool с явными limits**                              |
 | :-----------------: | :------------------------------------------------------------ |
 | Что делаем          | Встроенные NodePool не имеют `limits` - при неограниченном росте нагрузки это риск неконтролируемых расходов. Создайте свой NodePool `custom-limited`, использующий `nodeClassRef` на встроенный `NodeClass` `default` (`group: eks.amazonaws.com`, `kind: NodeClass`, `name: default`), с `requirements` на категории инстансов `c`, `m`, `r` и явным блоком `limits` (`cpu: "10"`, `memory: 10Gi`). Примените манифест и дождитесь `kubectl get nodepool custom-limited` со статусом `Ready`. |
 | Критерии приёмки    | - NodePool `custom-limited` существует, `spec.limits.cpu` равен `"10"`;<br/>- `spec.template.spec.nodeClassRef.name` равен `default`. |
 ---
+
+### Где именно проходит граница Auto Mode
+
+Два задания выше специально сделаны так, чтобы вы увидели факты, а не лозунги. Оба места
+формулируются неточно даже в пересказах документации, поэтому проверьте руками.
+
+**«Встроенные пулы править нельзя» - это контракт, а не запрет в admission.**
+Документация AWS говорит про built-in NodePool «can be enabled or disabled but not
+modified», и легко решить, что API отклонит правку. Он её примет: `kubectl patch` вернёт
+`nodepool.karpenter.sh/general-purpose patched`, и значение останется в объекте. Настоящая
+граница в другом: объект принадлежит сервису, у него метка
+`app.kubernetes.io/managed-by: eks` и владелец полей `eks-auto-mode`. Как только имя пула
+меняется в `computeConfig.nodePools`, ресурс удаляется вместе с нодами, а при возврате
+имени создаётся заново - с нуля, без ваших правок. Проверено на стенде: после выключения и
+включения пула `spec.limits` оказался пустым, хотя перед этим там стоял `cpu: 100`.
+
+> **Не удаляйте встроенный NodePool через kubectl.** `kubectl delete nodepool
+> general-purpose` проходит, ноды пула дренируются и терминируются, но EKS сам объект НЕ
+> пересоздаёт - проверено, за пять минут пул не вернулся, кластер остался без вычислений.
+> Восстановление только через изменение `computeConfig`: снять и снова добавить имя пула
+> (в вызов надо передавать `--compute-config`, `--storage-config` и
+> `--kubernetes-network-config` вместе, иначе EKS ответит `The type for cluster update was
+> not provided`, а пустой список `nodePools` вместе с `nodeRoleArn` он не принимает).
+
+**«Доступа на ноду нет» верно только про доступ оператора.** SSH невозможен: у инстанса
+нет ключевой пары (`KeyName` пустой), образ - Bottlerocket без оболочки и пакетного
+менеджера. SSM не подключён: `get-connection-status` отвечает `notconnected`, в инвентаре
+`describe-instance-information` ноды нет. Но привилегированный под с `hostPath` на `/`
+спокойно читает файловую систему хоста и показывает `NAME=Bottlerocket` и содержимое
+`/bin` (там `apiclient`, `aws-network-policy-agent`). Вывод для продакшена: Auto Mode
+снимает с вас обслуживание ноды и убирает интерактивный доступ, но не заменяет контроль
+над тем, кто в кластере может запустить привилегированный под - это по-прежнему ваша
+задача (главы 19 и 22).
+
+Ещё одна практическая деталь: `aws ssm start-session` в этой лабе не используется как
+доказательство намеренно. У рабочей машины нет прав `ssm:StartSession`, поэтому команда
+вернёт `AccessDeniedException` - и это скажет про политику воркера, а не про ноду. Права
+на чтение (`ssm:GetConnectionStatus`, `ssm:DescribeInstanceInformation`) в модуль
+рабочей машины добавлены, потому что именно они отвечают на вопрос задания.
 
 ## Проверка результата
 
@@ -191,6 +238,53 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала снимите нагрузку и дождитесь, пока уйдут ноды, потом сносите стенд.** Ноды
+> Auto Mode - это обычные EC2-инстансы со вторичными ENI от сети подов. Если удалять
+> кластер с работающей нагрузкой, ENI может остаться в состоянии `available` и держать
+> security group, а `destroy` зависнет на удалении этой SG на десятки минут. AWS-ресурсов
+> руками эта лаба не создаёт, всё лишнее - объекты Kubernetes.
+
+```bash
+# 1. Снять нагрузку и проверочный привилегированный под, если он ещё жив
+kubectl delete namespace eks-125 --ignore-not-found
+
+# 2. Убрать свой NodePool из задания 5 (встроенный general-purpose НЕ трогать)
+kubectl delete nodepool custom-limited --ignore-not-found
+
+# 3. Дождаться, пока Auto Mode уберёт ноды: список должен стать пустым
+while kubectl get nodes --no-headers 2>/dev/null | grep -q .; do
+  echo "ноды ещё есть, ждём..."; sleep 15
+done
+```
+
+Только после этого сносите стенд:
+
 ```bash
 TASK=125 make delete_eks_task
+```
+
+Если `destroy` встал на security group, найдите осиротевший ENI и удалите его:
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=status,Values=available \
+  --query 'NetworkInterfaces[].[NetworkInterfaceId,Description]' --output table
+aws ec2 delete-network-interface --network-interface-id <eni-id>
+```
+
+Отдельный случай - если в ходе экспериментов встроенный NodePool был удалён через
+`kubectl delete nodepool general-purpose`. Сам EKS его не вернёт, кластер останется без
+вычислений. Восстановление - через `computeConfig`, двумя вызовами: сначала список пулов
+меняем (например добавляем `system`), потом возвращаем только `general-purpose`. Имя роли
+берётся из `describe-cluster`:
+
+```bash
+CLUSTER=$(kubectl config current-context | awk -F/ '{print $NF}')
+ROLE=$(aws eks describe-cluster --name "$CLUSTER" \
+  --query 'cluster.computeConfig.nodeRoleArn' --output text)
+
+aws eks update-cluster-config --name "$CLUSTER" \
+  --compute-config "{\"enabled\":true,\"nodePools\":[\"system\",\"general-purpose\"],\"nodeRoleArn\":\"$ROLE\"}" \
+  --storage-config '{"blockStorage":{"enabled":true}}' \
+  --kubernetes-network-config '{"elasticLoadBalancing":{"enabled":true}}'
+# дождаться cluster.status = ACTIVE, затем вернуть только general-purpose
 ```

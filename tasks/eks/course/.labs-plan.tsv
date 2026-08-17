@@ -36,24 +36,24 @@
 34	115	todo	Logging: Fluent Bit to CloudWatch Logs, filtering and retention
 19	116	todo	Hardening: IMDSv2 hop limit, Pod Security Admission, private endpoint
 31,43	117	todo	Traffic cost and egress control: NAT versus VPC endpoints, OpenCost report
-44	118	todo	GitOps: Argo CD driving the cluster from git
+44	118	ready	GitOps: Argo CD driving the cluster from git
 45	119	todo	Troubleshooting: node does not reach Ready (IAM, SG, user data, kubelet)
-46	120	todo	Troubleshooting: broken networking and unhealthy load balancer targets
-47	121	todo	Troubleshooting: access denied (access entries, IRSA, webhook, kubeconfig)
-41,42	122	todo	AWS Backup for EKS: on-demand backup of cluster state and EBS volumes, namespace restore, restore into a second cluster
+46	120	ready	Troubleshooting: broken networking and unhealthy load balancer targets
+47	121	ready	Troubleshooting: access denied (access entries, IRSA, webhook, kubeconfig)
+41,42	122	ready	AWS Backup for EKS: on-demand backup of cluster state and EBS volumes, namespace restore, restore into a second cluster
 12	123	todo	Karpenter: NodePool, EC2NodeClass, consolidation, drift, plus safe eviction of StatefulSet - PDB, karpenter.sh/do-not-disrupt, NodePool disruption budgets (see .content-notes.md)
-35	124	todo	Application autoscaling: HPA on external metrics, KEDA with a Prometheus trigger, load generator
-09	125	todo	EKS Auto Mode versus own stack: enable Auto Mode, default NodePools, no SSH or SSM on nodes, 21 day node lifetime, custom NodePool, where the own stack wins (see .content-notes.md)
+35	124	ready	Application autoscaling: HPA on external metrics, KEDA with a Prometheus trigger, load generator
+09	125	ready	EKS Auto Mode versus own stack: enable Auto Mode, default NodePools, no SSH or SSM on nodes, 21 day node lifetime, custom NodePool, where the own stack wins (see .content-notes.md)
 #
 # SECOND WAVE, added after the text was finished. These close chapters that had no lab
 # and were only listed as "candidate for a later lab". All are doable in a single AWS
 # account without slow or paid extras. Ordered by cost of building, cheapest first.
 #
-22	127	todo	Policies without an extra controller: ValidatingAdmissionPolicy on CEL, Audit before Enforce, failurePolicy
+22	127	ready	Policies without an extra controller: ValidatingAdmissionPolicy on CEL, Audit before Enforce, failurePolicy
 40	131	todo	Reliability: PDB blocks drain and the upgrade stalls, topology spread, unhealthyPodEvictionPolicy, matchLabelKeys
-46	126	todo	Security groups for pods: SecurityGroupPolicy and branch ENI, pod is Running but never Ready and cannot resolve - find the missing rules (see NOTE below)
+46	126	ready	Security groups for pods: SecurityGroupPolicy and branch ENI, pod is Running but never Ready and cannot resolve - find the missing rules (see NOTE below)
 25	129	todo	Mountpoint for S3: where file semantics break (in-place write, rename) and why prefixes behind a PVC are not backed up
-28	128	todo	Gateway API and VPC Lattice: Gateway owner versus route owner, ReferenceGrant, route not applied
+28	128	ready	Gateway API and VPC Lattice: Gateway owner versus route owner, ReferenceGrant, route not applied
 20	130	todo	ECR and supply chain: immutable tags, scan on push, pull-through cache (needs upstream registry credentials as a secret)
 08	132	todo	Alternative CNI: Cilium in CNI chaining and in full replacement, VPC CNI network policy compared against Cilium policy (heaviest of the set)
 #

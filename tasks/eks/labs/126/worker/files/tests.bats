@@ -18,7 +18,9 @@ NS="eks-126"
 
 @test "2. AmazonEKSVPCResourceController is attached to the cluster IAM role" {
   echo '1' >> /var/work/tests/result/all
-  cluster=$(aws eks list-clusters --query 'clusters[0]' --output text 2>/dev/null)
+  # Имя кластера из kubeconfig, а не list-clusters[0]: второй кластер в аккаунте сбил бы
+  # индекс, и тест проверял бы роль чужого кластера.
+  cluster=$(kubectl config current-context 2>/dev/null | awk -F/ '{print $NF}')
   role_name=$(aws eks describe-cluster --name "$cluster" --query 'cluster.roleArn' --output text 2>/dev/null | sed 's|.*/||')
   attached=$(aws iam list-attached-role-policies --role-name "$role_name" \
     --query "AttachedPolicies[?PolicyName=='AmazonEKSVPCResourceController'].PolicyName" \
@@ -84,25 +86,64 @@ NS="eks-126"
   [ "$result" == "0" ]
 }
 
-@test "6. DNS fixed: artifact explains the missing return rule on port 53" {
+@test "6. DNS fixed: artifact explains the missing inbound rule on port 53" {
   echo '1' >> /var/work/tests/result/all
   f=/var/work/tests/artifacts/6/dns_fix.txt
-  if [[ -s "$f" ]] && grep -q '53' "$f" && grep -qiE 'обратн|return rule' "$f"; then
+  # Пакет теряется НЕ на egress пода (там дефолтный allow-all), а на входе принимающей
+  # стороны - cluster primary SG, за которой живёт CoreDNS на Fargate. Артефакт должен
+  # показывать именно это, поэтому ищем порт и признак входящего правила.
+  if [[ -s "$f" ]] && grep -q '53' "$f" && grep -qiE 'inbound|входящ|ingress' "$f"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "file $f missing/empty or does not mention 53 and the return rule"
+    echo "file $f missing/empty or does not mention 53 and the inbound rule side"
     result=1
   fi
+  [ "$result" == "0" ]
+}
+
+@test "6a. DNS really resolves from a pod covered by the SecurityGroupPolicy" {
+  echo '1' >> /var/work/tests/result/all
+  f=/var/work/tests/artifacts/6/dns_fix.txt
+  # Живая проверка вместо доверия артефакту: поднимаем свой под с меткой app=secured,
+  # то есть под тем же SecurityGroupPolicy, и требуем успешного резолва.
+  node_selector='{"spec":{"nodeSelector":{"work_type":"nitro"}}}'
+  kubectl delete pod dns-verify -n "$NS" --ignore-not-found >/dev/null 2>&1
+  kubectl run dns-verify -n "$NS" --image=busybox --restart=Never --labels='app=secured' \
+    --overrides="$node_selector" --command -- \
+    sh -c 'nslookup kubernetes.default.svc.cluster.local' >/dev/null 2>&1
+  result=1
+  for i in $(seq 1 20); do
+    phase=$(kubectl get pod dns-verify -n "$NS" -o jsonpath='{.status.phase}' 2>/dev/null)
+    if [[ "$phase" == "Succeeded" ]] || [[ "$phase" == "Failed" ]]; then
+      break
+    fi
+    sleep 5
+  done
+  logs=$(kubectl logs dns-verify -n "$NS" 2>/dev/null || true)
+  if grep -qi 'Address' <<< "$logs" && ! grep -qi 'timed out' <<< "$logs"; then
+    echo '1' >> /var/work/tests/result/ok
+    result=0
+  else
+    echo "dns-verify logs: $logs"
+  fi
+  kubectl delete pod dns-verify -n "$NS" --ignore-not-found --wait=false >/dev/null 2>&1
   [ "$result" == "0" ]
 }
 
 @test "7. Same-node trap: artifact compares secured-app and CoreDNS nodes" {
   echo '1' >> /var/work/tests/result/all
   f=/var/work/tests/artifacts/7/same_node_trap.txt
-  app_node=$(kubectl get pod -n "$NS" -l app=secured -o jsonpath='{.items[0].spec.nodeName}' 2>/dev/null)
+  # Берём под именно Deployment, а не диагностические поды: они в этой лабе тоже носят
+  # метку app=secured, чтобы на них действовал SecurityGroupPolicy.
+  app_node=$(kubectl get pod -n "$NS" -l app=secured \
+    -o jsonpath='{range .items[?(@.metadata.ownerReferences[0].kind=="ReplicaSet")]}{.spec.nodeName}{"\n"}{end}' \
+    2>/dev/null | head -1)
+  # Эксперимент должен быть ПРОВЕДЁН, а не описан: в артефакте ждём состояние до починки
+  # (timed out) и разбор разницы между режимами strict и standard.
   if [[ -s "$f" ]] && [[ -n "$app_node" ]] && grep -q "$app_node" "$f" \
-     && grep -qiE 'одной ноде|same node' "$f"; then
+     && grep -qiE 'timed out' "$f" \
+     && grep -qi 'strict' "$f" && grep -qi 'standard' "$f"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else

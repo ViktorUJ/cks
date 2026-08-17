@@ -167,7 +167,7 @@ cat ~/lab121_hints.txt   # имена и ARN бакета и IRSA-роли
 ---
 |        **2**        | **Симптом Unauthorized: роль без access entry**             |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Создайте тестовую IAM-роль с `-test-` в имени (например `eks-task121-test-noaccess`), доверяющую роли worker-а, без единой access entry в кластере. С worker выполните `aws sts assume-role` на эту роль и постройте отдельный kubeconfig (`aws eks update-kubeconfig --kubeconfig /tmp/...`) под её креденшелами. Выполните `kubectl --kubeconfig /tmp/... get pods -A` - должен вернуться `Unauthorized`. Сохраните вывод в `/var/work/tests/artifacts/2/unauthorized.txt`. |
+| Что делаем          | Создайте тестовую IAM-роль с `-test-` в имени (например `eks-task121-test-noaccess`), доверяющую роли worker-а, без единой access entry в кластере. Сначала, **кредами worker-а**, постройте отдельный kubeconfig: `aws eks update-kubeconfig --name <cluster> --kubeconfig /tmp/kubeconfig-test`. Порядок важен: эта команда вызывает `eks:DescribeCluster`, а у тестовой роли нет ни одной IAM-политики, поэтому под ней она упадёт с `AccessDeniedException` и файл не создастся (это третий тип отказа - от IAM, до кластера дело не доходит). Затем выполните `aws sts assume-role` на тестовую роль, экспортируйте её креды в переменные окружения и выполните `kubectl --kubeconfig /tmp/kubeconfig-test get pods -A`: токен через `aws eks get-token` уйдёт уже от тестовой роли, и API-сервер ответит `Unauthorized`. Сохраните вывод в `/var/work/tests/artifacts/2/unauthorized.txt`. |
 | Критерии приёмки    | - файл `2/unauthorized.txt` не пуст и содержит `Unauthorized`. |
 ---
 |        **3**        | **Починка Unauthorized: access entry и AmazonEKSViewPolicy** |
@@ -217,6 +217,61 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала уберите тестовую IAM-роль.** Роль `eks-task121-test-noaccess` вы создали вручную
+> через AWS CLI в задании 2, в state terraform её нет, и `destroy` её не тронет. IAM-роли
+> живут вне региона и вне кластера, поэтому она останется в аккаунте навсегда, а при повторном
+> запуске лабы `aws iam create-role` упадёт с `EntityAlreadyExists`. Access entry удалять
+> отдельно не обязательно (она исчезнет вместе с кластером), но если вы хотите пройти лабу
+> заново на том же кластере, снимите и её.
+
+```bash
+CLUSTER_NAME=$(grep '^cluster_name' ~/lab121_hints.txt | awk '{print $3}')
+TEST_ROLE_ARN=$(aws iam get-role --role-name eks-task121-test-noaccess \
+  --query 'Role.Arn' --output text)
+
+# access entry тестовой роли (нужно, если проходите лабу повторно)
+aws eks delete-access-entry --cluster-name "$CLUSTER_NAME" --principal-arn "$TEST_ROLE_ARN"
+
+# сама роль: политик на ней нет, поэтому удаляется сразу
+aws iam delete-role --role-name eks-task121-test-noaccess
+```
+
+> **Снимите нагрузку до destroy.** Поды `irsa-app` и `broken-app` заставили Karpenter поднять
+> EC2-ноду. Сами по себе поды и ServiceAccount AWS-ресурсов не создают, но нода - создаёт, и
+> если удалять стенд вместе с живой нагрузкой, VPC CNI не успевает убрать свои вторичные ENI.
+> Тогда ENI остаётся в состоянии `available`, держит security group нод, и `destroy` зависает
+> на `module.eks.aws_security_group.node[0]: Still destroying...`. Дайте Karpenter корректно
+> вывести ноду: удалите нагрузку и дождитесь, пока нода исчезнет.
+
+```bash
+kubectl delete pod irsa-app -n eks-121 --ignore-not-found
+kubectl delete pod broken-app -n default --ignore-not-found
+kubectl delete namespace eks-121 --ignore-not-found
+
+# ждём, пока Karpenter уберёт свои EC2-ноды (останутся только fargate-*)
+while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
+  echo "EC2-нода Karpenter ещё жива, ждём..."; sleep 15
+done
+```
+
 ```bash
 TASK=121 make delete_eks_task
+```
+
+Если роль не удаляется с ошибкой `DeleteConflict`, значит на ней остались политики -
+посмотрите их и снимите:
+
+```bash
+aws iam list-attached-role-policies --role-name eks-task121-test-noaccess
+aws iam list-role-policies --role-name eks-task121-test-noaccess
+```
+
+Если `destroy` всё же встал на security group нод, найдите осиротевший ENI и удалите его -
+после этого terraform дойдёт до конца сам:
+
+```bash
+# ENI в состоянии available с тегом eks:eni:owner=amazon-vpc-cni - это остаток VPC CNI
+aws ec2 describe-network-interfaces --filters Name=status,Values=available \
+  --query 'NetworkInterfaces[].[NetworkInterfaceId,Description,Groups[0].GroupName]' --output table
+aws ec2 delete-network-interface --network-interface-id <eni-id>
 ```
