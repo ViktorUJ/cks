@@ -58,7 +58,7 @@ L'environnement est déployé dans AWS (`eu-central-1`) via Terragrunt et se com
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, mono-nœud   |
 | `worker`   | Machine de travail avec `kubectl` et `check_result` ; au démarrage, elle installe `helm` et prépare les fichiers kustomize dans `/var/work/115/kustomize` |
 
-Instances : `t3.medium` (master), Ubuntu `22.04`. Le cluster est mono-nœud — le taint
+Instances : `t4g.medium` (master), Ubuntu `22.04`. Le cluster est mono-nœud — le taint
 `control-plane` a été retiré du master, les pods sont donc planifiés directement dessus.
 
 ## Déploiement

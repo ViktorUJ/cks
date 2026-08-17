@@ -73,7 +73,7 @@ El entorno se despliega en AWS (`eu-central-1`) mediante Terragrunt y consta de:
 
 Los ficheros de respuesta de JSONPath se guardan en `/home/ubuntu/answers/`.
 
-Instancias: `t3.medium` (master) Ubuntu `22.04`. El clúster es de un solo nodo: al master se
+Instancias: `t4g.medium` (master) Ubuntu `22.04`. El clúster es de un solo nodo: al master se
 le ha quitado el taint `control-plane`, por lo que los pods se planifican directamente en él.
 
 ## Despliegue

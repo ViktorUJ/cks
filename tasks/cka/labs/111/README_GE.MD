@@ -63,7 +63,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes **`1.33.1`** (kubeadm), CNI Calico, metrics-server, master + 1 worker |
 | `worker`   | სამუშაო მანქანა `kubectl`-ითა და `check_result`-ით; SSH-წვდომა კლასტერის node-ებზე |
 
-ინსტანსები: `t3.medium` Ubuntu `22.04`. კლასტერი ორკვანძიანია — master (control-plane) და
+ინსტანსები: `t4g.medium` Ubuntu `22.04`. კლასტერი ორკვანძიანია — master (control-plane) და
 ერთი worker.
 
 ## განთავსება

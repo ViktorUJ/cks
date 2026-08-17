@@ -68,7 +68,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server; ქმნის seed-Pod `app-xyz3322`-ს namespace `app-logs`-ში |
 | `worker`   | სამუშაო მანქანა `kubectl`-ით და `check_result`-ით; გაშვებისას ქმნის `/var/work/109/app-old.yaml`-ს და სამუშაო კატალოგებს |
 
-ინსტანსები: `t3.medium` (master), Ubuntu `22.04`. კლასტერი ერთკვანძიანია — master-ს მოშორებულია
+ინსტანსები: `t4g.medium` (master), Ubuntu `22.04`. კლასტერი ერთკვანძიანია — master-ს მოშორებულია
 taint `control-plane`, ამიტომ pod-ები პირდაპირ მასზე იგეგმება.
 
 ## განთავსება

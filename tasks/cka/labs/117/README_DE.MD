@@ -70,7 +70,7 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt ausgerollt und besteh
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), Calico, metrics-server, **Master + 1 Worker**; beim Start werden Störungen auf Cluster-Ebene eingebaut |
 | `worker`   | Arbeitsmaschine mit `kubectl` und `check_result`; SSH-Zugriff auf die Cluster-Nodes |
 
-Instanzen: `t3.medium`, Ubuntu `22.04`. Der Cluster hat zwei Nodes — Master
+Instanzen: `t4g.medium`, Ubuntu `22.04`. Der Cluster hat zwei Nodes — Master
 (Control-Plane) und einen Worker.
 
 ## Deployment

@@ -73,7 +73,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, **master + 1 worker** |
 | `worker`   | სამუშაო მანქანა `kubectl`-ით, კლასტერზე წვდომით და `check_result`-ით |
 
-ინსტანსები: `t3.medium`, Ubuntu `22.04`. კლასტერი **ორკვანძიანია** — master (control-plane)
+ინსტანსები: `t4g.medium`, Ubuntu `22.04`. კლასტერი **ორკვანძიანია** — master (control-plane)
 და ერთი worker. master-ზე შენარჩუნებულია taint `control-plane`, ამიტომ ჩვეულებრივი Pod-ები
 worker-ზე მიდიან, master-ზე კი მხოლოდ ისინი ხვდებიან, რომლებსაც შესაბამისი toleration აქვთ
 (როგორც DaemonSet-ს დავალება 3-ში).

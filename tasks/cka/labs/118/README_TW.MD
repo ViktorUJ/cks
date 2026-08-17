@@ -72,7 +72,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`(kubeadm),Calico,**master + 1 個 worker**;啟動時會把 CoreDNS 關掉 |
 | `worker`   | 工作機,具備 `kubectl` 與 `check_result`;可 SSH 連上 control plane      |
 
-執行個體:`t3.medium`,Ubuntu `22.04`。叢集有兩個節點 - master(control-plane)
+執行個體:`t4g.medium`,Ubuntu `22.04`。叢集有兩個節點 - master(control-plane)
 與一個 worker。
 
 ## 部署

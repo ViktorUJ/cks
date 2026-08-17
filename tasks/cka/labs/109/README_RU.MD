@@ -68,7 +68,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server; создаёт сид-Pod `app-xyz3322` в namespace `app-logs` |
 | `worker`   | Рабочая машина с `kubectl` и `check_result`; при старте создаёт `/var/work/109/app-old.yaml` и рабочие каталоги |
 
-Инстансы: `t3.medium` (master) Ubuntu `22.04`. Кластер одноузловой — master «разтейнчен»
+Инстансы: `t4g.medium` (master) Ubuntu `22.04`. Кластер одноузловой — master «разтейнчен»
 (снят taint `control-plane`), поэтому поды планируются прямо на него.
 
 ## Развёртывание

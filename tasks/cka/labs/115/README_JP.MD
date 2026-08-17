@@ -57,7 +57,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm）、CNI Calico、metrics-server、単一ノード   |
 | `worker`   | `kubectl` と `check_result` を備えた作業マシン。起動時に `helm` を導入し、`/var/work/115/kustomize` に kustomize ファイルを準備します |
 
-インスタンス：`t3.medium`（master）、Ubuntu `22.04`。クラスタは単一ノード構成で、master の
+インスタンス：`t4g.medium`（master）、Ubuntu `22.04`。クラスタは単一ノード構成で、master の
 taint は解除されています（`control-plane` taint を削除）。そのため Pod は master 上に直接スケジュールされます。
 
 ## デプロイ

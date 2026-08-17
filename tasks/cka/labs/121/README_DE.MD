@@ -39,7 +39,7 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt bereitgestellt und be
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, ein Node; der Namespace `rbac` ist bereits vorbereitet |
 | `worker`   | Arbeitsmaschine mit `kubectl` und `check_result`                                |
 
-Instanzen: `t3.medium` (master), Ubuntu `22.04`. Der Cluster hat nur einen Node — beim
+Instanzen: `t4g.medium` (master), Ubuntu `22.04`. Der Cluster hat nur einen Node — beim
 master wurde der Taint `control-plane` entfernt, daher werden Pods direkt darauf geplant.
 
 ## Bereitstellung

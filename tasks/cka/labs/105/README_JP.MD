@@ -70,7 +70,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm）、CNI Calico、metrics-server、単一ノード |
 | `worker`   | `kubectl` と `check_result` が入った作業マシン。起動時に課題 3 用のファイル `/var/work/105/config.yaml` を作成します |
 
-インスタンス: `t3.medium`（master）、Ubuntu `22.04`。クラスタは単一ノードで、master の
+インスタンス: `t4g.medium`（master）、Ubuntu `22.04`。クラスタは単一ノードで、master の
 テイントは外されています（`control-plane` taint を削除済み）。そのため Pod は master に直接スケジュールされます。
 
 ## デプロイ

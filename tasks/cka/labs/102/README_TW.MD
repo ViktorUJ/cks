@@ -80,7 +80,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm），CNI Calico，已安裝 metrics-server |
 | `worker`   | 工作機，具備 `kubectl`、叢集存取權與 `check_result`            |
 
-實例：`t3.medium`（master），Ubuntu `22.04`。叢集是單節點的 — master 已解除污點
+實例：`t4g.medium`（master），Ubuntu `22.04`。叢集是單節點的 — master 已解除污點
 （移除了 `control-plane` taint），因此 Pod 會直接被排程到它上面。
 
 ## 部署
