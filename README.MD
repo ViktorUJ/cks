@@ -30,7 +30,7 @@ Master Kubernetes concepts, gain practical experience, and excel in the CKA, CKS
   <summary style="font-weight: bold; font-size: 1.5em;">Requirements</summary>
 
 - [GNU Make](https://www.gnu.org/software/make/) >= 4.2.1
-- [terrafrom](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.11.0
+- [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)  >= v1.11.x
 - [terragrunt](https://terragrunt.gruntwork.io/docs/getting-started/install/) >= v0.54.8
 - [jq](https://jqlang.github.io/jq/download/) >= 1.6
 - [aws IAM user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html)  + [Access key](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html)  (or [IAM role](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html) ) with  [Admin privilege  for VPC, EC2, IAM, EKS](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html)
