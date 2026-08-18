@@ -1,11 +1,17 @@
 .ONESHELL:
 
+# enable Terragrunt Provider Cache Server to reduce disk space usage
+export TG_PROVIDER_CACHE := 1
+
 prefix_dir="${USER_ID}_${ENV_ID}_"
-region := $(shell grep 'backend_region' terraform/environments/terragrunt.hcl |grep -v 'local.'| awk -F '"' '{print $$2}')
-backend_bucket := $(shell grep '^  backend_bucket' terraform/environments/terragrunt.hcl | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
-dynamodb_table := $(backend_bucket)-lock
+terragrunt_variables_file := $(firstword $(wildcard terraform/environments/variables.hcl) terraform/environments/variables.example.hcl)
+region := $(shell grep '^  region' $(terragrunt_variables_file) | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
+backend_region := $(shell grep '^  backend_region' $(terragrunt_variables_file) | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
+backend_bucket := $(shell grep '^  backend_bucket' $(terragrunt_variables_file) | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
+cmdb_dynamodb_table := $(shell grep '^  cmdb_dynamodb_table' $(terragrunt_variables_file) | awk -F '=' '{gsub(/ /, "", $$2); print $$2}' | tr -d '"')
 base_dir := $(shell pwd)
 nproc := $(shell if [ "$(shell uname)" = "Darwin" ]; then sysctl -n hw.physicalcpu; else nproc; fi)
+parallelism := $(shell if [ "$(nproc)" -le 2 ]; then echo $$(( $(nproc) + 1 )); else echo $$(( ($(nproc) * 150 + 99) / 100 )); fi)
 BASE_PATH := $(shell pwd)
 VENV_PATH := $(BASE_PATH)/venv
 VENV_BIN_PATH := $(VENV_PATH)/bin/
@@ -16,7 +22,11 @@ ifneq ($(findstring __,$(prefix_dir)),)
   prefix_dir :=
 endif
 
-# family_tasks{cka,cks,ckad,eks}, type{mock,task},command{run,delete,output},type_run{clean,or  empty}
+### params:
+# 1: task_family {cka,cks,ckad,eks,...}
+# 2: run_type {mock,task}
+# 3: command {run,delete,output}
+# 4: type_run {clean}
 define terragrint_run
     @case "$(2)" in
         mock)
@@ -27,19 +37,21 @@ define terragrint_run
             ;;
     esac
 	@terragrunt_env_dir="$(base_dir)/terraform/environments/${prefix_dir}$(1)-$$run_type"
-	@echo "base_dir = $(base_dir)"
+	@echo "**** base_dir = $(base_dir)"
 	@echo "**** terragrunt_env_dir = $$terragrunt_env_dir"
+	@if [ -z "$(strip $(TASK))" ]; then echo "ERROR: TASK must be specified (for example, TASK=01)" >&2; exit 1; fi
     @case "$(3)" in
         run)
-            @commnand="terragrunt run-all  apply --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) )) "
+            @commnand="terragrunt run-all  apply   --parallelism=$(parallelism) "
             ;;
         delete)
-            @commnand="terragrunt run-all  destroy --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
+            @commnand="terragrunt run-all  destroy --parallelism=$(parallelism) "
             ;;
         output)
-            @commnand="terragrunt run-all  output --terragrunt-parallelism=$$(( $(nproc) + (($(nproc) <= 2 ? 1 : (($(nproc) * 150 + 99) / 100 - $(nproc)) )) ))  "
+            @commnand="terragrunt run-all  output  --parallelism=$(parallelism) "
             ;;
     esac
+	@echo "**** command = $$commnand"
 
     @case "$(4)" in
         clean)
@@ -48,17 +60,31 @@ define terragrint_run
             ;;
     esac
 
-	@echo "terragrunt_env_dir= $$terragrunt_env_dir command= $$commnand"
 	@mkdir $$terragrunt_env_dir -p >/dev/null
 	@cp -r $(base_dir)/tasks/$(1)/$$run_type/${TASK}/* $$terragrunt_env_dir
-	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand
-    @case "$(3)" in
-        delete)
-            @rm -rf $$terragrunt_env_dir
-            ;;
-    esac
+	@command_status=0
+	@export TF_VAR_STACK_TASK=${TASK} ;export TF_VAR_STACK_NAME="$(1)-$$run_type"; export TF_VAR_USER_ID=${USER_ID} ; export TF_VAR_ENV_ID=${ENV_ID} ; cd $$terragrunt_env_dir && $$commnand || command_status=$$?
+	    @case "$(3)" in
+	        delete)
+	            @if [ $$command_status -eq 0 ]; then rm -rf $$terragrunt_env_dir; fi
+	            ;;
+	    esac
+	@exit $$command_status
 endef
 
+# default action to run w\o params
+help:
+	@printf '%s\n' \
+		'Usage: TASK=<number> [USER_ID=<user> ENV_ID=<env>] make <target>' \
+		'' \
+		'Lab targets: run_<family>_<type>, delete_<family>_<type>, output_<family>_<type>' \
+		'  family: cka, cks, ckad, lfcs, ica, hr, eks' \
+		'  type:   task or mock (availability depends on family)' \
+		'  Add _clean to run/delete to clear the Terragrunt environment first.' \
+		'' \
+		'Example: TASK=01 make run_cks_task' \
+		'Dev:     make dev | make lint | make clean' \
+		'Docs:    https://github.com/ViktorUJ/cks/tree/master/docs'
 
 # CKA task
 run_cka_task:
@@ -246,15 +272,15 @@ dev: venv install_git_hooks
 
 # CMDB
 cmdb_get_env_all:
-	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
+	@aws dynamodb scan  --table-name $(cmdb_dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_"}}'     --projection-expression "LockID"     --region $(backend_region) | jq -r '.Items[].LockID.S'
 # make cmdb_get_env_all
 
 cmdb_get_user_env_data:
-	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_data_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
+	@aws dynamodb scan  --table-name $(cmdb_dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_data_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(backend_region) | jq -r '.Items[].LockID.S'
 # USER_ID='myuser' ENV_ID='01' TASK=01 make cmdb_get_user_env_data
 
 cmdb_get_user_env_lock:
-	@aws dynamodb scan  --table-name $(dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_lock_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(region) | jq -r '.Items[].LockID.S'
+	@aws dynamodb scan  --table-name $(cmdb_dynamodb_table)  --filter-expression "begins_with(LockID, :lockid)"     --expression-attribute-values '{":lockid":{"S":"CMDB_lock_'${USER_ID}'_'${ENV_ID}'"}}'     --projection-expression "LockID"     --region $(backend_region) | jq -r '.Items[].LockID.S'
 # only 01 env by user vkfedorov
 # USER_ID='myuser' ENV_ID='01' TASK=01 make cmdb_get_user_env_lock
 
@@ -262,5 +288,5 @@ cmdb_get_user_env_lock:
 # USER_ID='myuser' ENV_ID='' TASK=01 make cmdb_get_user_env_lock
 
 cmdb_get_item:
-	@aws dynamodb get-item --table-name $(dynamodb_table) --region $(region)  --key '{"LockID": {"S": "'${CMDB_ITEM}'"}}'
+	@aws dynamodb get-item --table-name $(cmdb_dynamodb_table) --region $(backend_region)  --key '{"LockID": {"S": "'${CMDB_ITEM}'"}}'
 # CMDB_ITEM=CMDB_data_myuser_02_k8s_cluster1 make cmdb_get_item

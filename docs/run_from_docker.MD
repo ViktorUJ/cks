@@ -21,12 +21,12 @@ cd cks
 ### Update S3 bucket
 
 ```hcl
-#vim terraform/environments/terragrunt.hcl
+# vim terraform/environments/variables.hcl
 locals {
   region                 = "eu-north-1"
   backend_region         = "eu-north-1"
   backend_bucket         = "sre-learning-platform-state-backet"  # update to your own name
-  backend_dynamodb_table = "${local.backend_bucket}-lock"
+  cmdb_dynamodb_table    = "sre-learning-platform-cmdb"
 }
 ```
 
