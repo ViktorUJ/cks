@@ -44,28 +44,37 @@ NS="eks-131"
   [ "$result" == "0" ]
 }
 
-@test "3. Artifact 3/drain_blocked.txt explains PDB minAvailable blocking drain" {
+@test "3. Artifact 3/drain_blocked.txt holds a real blocked drain, not just words" {
   echo '1' >> /var/work/tests/result/all
   f=/var/work/tests/artifacts/3/drain_blocked.txt
-  if [[ -s "$f" ]] && grep -qi 'pdb' "$f" && grep -qi 'minavailable' "$f"; then
+  # Слов PDB и minAvailable недостаточно: их можно написать, не запуская drain вовсе.
+  # Требуем вывод настоящей попытки выселения - вживую kubectl drain печатает
+  # "error when evicting pods/... global timeout reached" и/или
+  # "Cannot evict pod as it would violate the pod's disruption budget".
+  if [[ -s "$f" ]] && grep -qi 'pdb' "$f" && grep -qi 'minavailable' "$f" \
+     && grep -qiE 'global timeout reached|cannot evict pod|error when evicting' "$f"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "file $f missing/empty or does not mention PDB and minAvailable"
+    echo "file $f missing/empty or without PDB/minAvailable/eviction evidence"
     result=1
   fi
   [ "$result" == "0" ]
 }
 
-@test "4. PDB web-pdb relaxed to minAvailable=2 and drain confirmed" {
+@test "4. PDB relaxed to minAvailable=2, drain really evicted a pod, web is back to 3" {
   echo '1' >> /var/work/tests/result/all
   min=$(kubectl get pdb web-pdb -n "$NS" -o jsonpath='{.spec.minAvailable}' 2>/dev/null)
+  ready=$(kubectl get deploy web -n "$NS" -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
   f=/var/work/tests/artifacts/4/drain_ok.txt
-  if [[ "$min" == "2" ]] && [[ -s "$f" ]]; then
+  # Непустого файла мало: успешный drain печатает "pod/... evicted" и "node/... drained",
+  # а после лечения все три реплики обязаны снова быть готовы (замена встала на другой ноде).
+  if [[ "$min" == "2" ]] && [[ -s "$f" ]] && grep -qi 'evicted' "$f" \
+     && grep -qi 'drained' "$f" && [[ "$ready" == "3" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "pdb minAvailable=$min; file $f missing/empty"
+    echo "pdb minAvailable=$min ready=$ready; file $f missing/empty or without evicted/drained"
     result=1
   fi
   [ "$result" == "0" ]
@@ -86,19 +95,35 @@ NS="eks-131"
   [ "$result" == "0" ]
 }
 
-@test "6. Rolling update of web finished with no pods stuck Pending" {
+@test "6. Rolling update done, new revision is spread across zones within maxSkew" {
   echo '1' >> /var/work/tests/result/all
   ready=$(kubectl get deploy web -n "$NS" -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
   updated=$(kubectl get deploy web -n "$NS" -o jsonpath='{.status.updatedReplicas}' 2>/dev/null)
   pending=$(kubectl get po -n "$NS" -l app=web --field-selector=status.phase=Pending \
     --no-headers 2>/dev/null | wc -l)
   f=/var/work/tests/artifacts/6/rollout.txt
+  # Факт "выкатка прошла" сам по себе ничего не говорит про topology spread: она проходит и
+  # без matchLabelKeys (проверено на стенде). Поэтому считаем перекос НОВОЙ ревизии по зонам
+  # и требуем, чтобы он укладывался в maxSkew=1 - именно это обещает ограничение.
+  # все поды после выкатки принадлежат одной ревизии, поэтому hash берём с любого из них
+  hash=$(kubectl get po -n "$NS" -l app=web \
+    -o jsonpath='{.items[0].metadata.labels.pod-template-hash}' 2>/dev/null || true)
+  zones=""
+  for n in $(kubectl get po -n "$NS" -l app=web,pod-template-hash="$hash" \
+      -o jsonpath='{.items[*].spec.nodeName}' 2>/dev/null || true); do
+    zones="$zones $(kubectl get node "$n" \
+      -o jsonpath="{.metadata.labels['topology\.kubernetes\.io/zone']}" 2>/dev/null || true)"
+  done
+  counts=$(echo "$zones" | tr ' ' '\n' | grep . | sort | uniq -c | awk '{print $1}')
+  max=$(echo "$counts" | sort -n | tail -1)
+  min=$(echo "$counts" | sort -n | head -1)
+  skew=$(( ${max:-0} - ${min:-0} ))
   if [[ "$ready" == "3" ]] && [[ "$updated" == "3" ]] && [[ "$pending" -eq 0 ]] \
-     && [[ -s "$f" ]] && grep -qi 'rolled out' "$f"; then
+     && [[ -s "$f" ]] && grep -qi 'rolled out' "$f" && [[ "$skew" -le 1 ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "ready=$ready updated=$updated pending=$pending; file $f missing/empty"
+    echo "ready=$ready updated=$updated pending=$pending hash=$hash zones='$zones' skew=$skew"
     result=1
   fi
   [ "$result" == "0" ]

@@ -4,7 +4,7 @@ locals {
   git_branch        = "AG-155"
   raw_base_url      = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/${local.git_branch}"
   questions_list    = "https://github.com/ViktorUJ/cks/blob/${local.git_branch}/tasks/eks/labs/103/README_RU.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/${local.git_branch}/tasks/eks/labs/103/worker/files/solutions/1.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/${local.git_branch}/tasks/eks/labs/103/worker/files/solutions/1_RU.MD"
   solutions_video   = "Not ready yet"
   debug_output      = "false"
   region            = "eu-central-1"

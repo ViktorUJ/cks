@@ -36,11 +36,11 @@ EKS-томов и что защищает данные вместо снапшо
 
 ```mermaid
 flowchart TB
-    pv["s3-pv / s3-pvc на бакет"] --> pod["mountpoint-app: /data"]
-    pod --> ok["Новый файл + чтение: OK"]
-    pod --> rn["rename: Operation not permitted"]
-    pod --> ap["append/запись в середину: Operation not permitted"]
-    ok --> bk["Почему нет снапшота: versioning вместо него"]
+    pv["s3-pv и s3-pvc на бакет"] --> pod["mountpoint-app: /data"]
+    pod --> ok["Новый файл, чтение"]
+    pod --> rn["rename: ENOSYS"]
+    pod --> ap["append: EPERM"]
+    ok --> bk["Защита: versioning"]
     style ok fill:#0f9d58,color:#fff
     style rn fill:#db4437,color:#fff
     style ap fill:#db4437,color:#fff
@@ -123,8 +123,9 @@ flowchart TB
 | `eks_addon_s3_csi_irsa/terragrunt.hcl` | managed addon `aws-mountpoint-s3-csi-driver`, роль через IRSA на `oidc_provider_arn` кластера |
 | `worker/terragrunt.hcl` | `test_url` и `task_script_url` на файлы лабы 129, зависимость от `eks_addon_s3_csi_irsa` |
 
-> Версия managed addon `aws-mountpoint-s3-csi-driver` в модуле `eks_v2_s3_csi_irsa` - разумное
-> предположение с комментарием в коде. Перед продом сверьте её командой
+> Версия managed addon `aws-mountpoint-s3-csi-driver` в модуле `eks_v2_s3_csi_irsa` -
+> `v1.15.0-eksbuild.1`, проверена на EKS 1.36 (аддон переходит в `ACTIVE`). При смене минора
+> кластера сверяйте её командой
 > `aws eks describe-addon-versions --addon-name aws-mountpoint-s3-csi-driver`.
 
 ## Развёртывание
@@ -171,17 +172,17 @@ aws s3api list-buckets --query "Buckets[?contains(Name,'mountpoint-demo')].Name"
 ---
 |        **3**        | **Успешные операции: новый файл и чтение**                  |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | В `eks-129` создайте Deployment `mountpoint-app` (образ `viktoruj/ping_pong:latest`, `1` реплика) с PVC `s3-pvc`, смонтированным на `/data`. Через `kubectl exec` создайте новый файл `echo test > /data/newfile.txt` и прочитайте его назад. Отдельно прочитайте существующий тестовый объект бакета `readme.txt` через тот же том. Оба результата сохраните в артефакты: создание и чтение нового файла в `/var/work/tests/artifacts/3/create.txt`, содержимое `readme.txt` в `/var/work/tests/artifacts/3/read.txt`. |
+| Что делаем          | В `eks-129` создайте Deployment `mountpoint-app` (образ `busybox:1.36`, `command: ["sh", "-c", "sleep 86400"]`, `1` реплика) с PVC `s3-pvc`, смонтированным на `/data`. Образ нужен именно с shell и утилитами `mv`, `dd`, `cat` - вся лаба построена на операциях файловой системы внутри пода. Через `kubectl exec` создайте новый файл `echo test > /data/newfile.txt` и прочитайте его назад. Отдельно прочитайте существующий тестовый объект бакета `readme.txt` через тот же том. Оба результата сохраните в артефакты: создание и чтение нового файла в `/var/work/tests/artifacts/3/create.txt`, содержимое `readme.txt` в `/var/work/tests/artifacts/3/read.txt`. |
 | Критерии приёмки    | - Deployment `mountpoint-app` в `eks-129`, том `s3-pvc` смонтирован на `/data`, под `Running`;<br/>- `create.txt` не пуст и содержит `test`;<br/>- `read.txt` не пуст и содержит `mountpoint demo bucket`. |
 ---
 |        **4**        | **Симптом: `rename` падает**                                |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | В поде `mountpoint-app` попробуйте переименовать файл: `mv /data/newfile.txt /data/renamed.txt`. Команда обязана упасть. Сохраните полный вывод ошибки в `/var/work/tests/artifacts/4/rename.txt`. |
-| Критерии приёмки    | - файл `4/rename.txt` не пуст;<br/>- содержит `Operation not permitted`. |
+| Что делаем          | В поде `mountpoint-app` попробуйте переименовать файл: `mv /data/newfile.txt /data/renamed.txt`. Команда обязана упасть. Сохраните полный вывод ошибки в `/var/work/tests/artifacts/4/rename.txt`. Обратите внимание на текст ошибки: здесь это `Function not implemented`, то есть `ENOSYS` - Mountpoint не реализует системный вызов `rename` вовсе. Это другой отказ, чем в задании 5, где операция реализована, но запрещена (`EPERM`, `Operation not permitted`). Убедитесь, что бакет не перешёл в промежуточное состояние: объект `newfile.txt` на месте, объекта `renamed.txt` нет. |
+| Критерии приёмки    | - файл `4/rename.txt` не пуст;<br/>- содержит `Function not implemented` (или `Operation not permitted`, если версия драйвера отвечает иначе);<br/>- в бакете есть объект `newfile.txt` и нет объекта `renamed.txt`. |
 ---
 |        **5**        | **Симптом: дозапись и запись в середину файла падают**      |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | В поде `mountpoint-app` попробуйте дописать в существующий файл: `echo more >> /data/newfile.txt`. Затем попробуйте записать в середину того же файла: `dd of=/data/newfile.txt bs=1 seek=1 conv=notrunc` (данные на вход не важны). Обе команды обязаны упасть. Сохраните оба вывода вместе с коротким объяснением (объект S3 неизменяем и обновляется только целиком через новый `PutObject`) в `/var/work/tests/artifacts/5/writesemantics.txt`. |
+| Что делаем          | В поде `mountpoint-app` попробуйте дописать в существующий файл: `echo more >> /data/newfile.txt`. Затем попробуйте записать в середину того же файла: `dd of=/data/newfile.txt bs=1 seek=1 conv=notrunc` (данные на вход не важны). Обе команды обязаны упасть с `Operation not permitted`. Проверьте заодно две соседние операции и объясните их себе: перезапись существующего файла (`echo test2 > /data/newfile.txt`) и удаление (`rm /data/newfile.txt`) тоже падают с `Operation not permitted`, потому что по умолчанию Mountpoint не включает `allow-overwrite` и `allow-delete`, а `mkdir /data/sub` проходит молча, потому что каталоги в S3 виртуальные и объекта под них не создаётся. Сохраните выводы вместе с коротким объяснением (объект S3 неизменяем и обновляется только целиком через новый `PutObject`) в `/var/work/tests/artifacts/5/writesemantics.txt`. |
 | Критерии приёмки    | - файл `5/writesemantics.txt` не пуст;<br/>- содержит `Operation not permitted`;<br/>- содержит хотя бы одно из `append`, `rename`, `середин`. |
 ---
 |        **6**        | **Почему префиксы за этим PVC не бэкапятся через AWS Backup** |
@@ -229,9 +230,15 @@ aws s3api list-object-versions --bucket "$BUCKET" \
   --query '{Objects: DeleteMarkers[].{Key:Key,VersionId:VersionId}}' --output json > /tmp/dm.json
 aws s3api delete-objects --bucket "$BUCKET" --delete file:///tmp/dm.json 2>/dev/null
 
-# бакет должен стать пустым
-aws s3api list-object-versions --bucket "$BUCKET" --query 'length(Versions)' --output text
+# бакет должен стать пустым: обе команды выведут None (пустой список)
+# (length(Versions) тут не подходит - на пустом бакете поле null и jmespath ругается)
+aws s3api list-object-versions --bucket "$BUCKET" --query 'Versions[].Key' --output text
+aws s3api list-object-versions --bucket "$BUCKET" --query 'DeleteMarkers[].Key' --output text
 ```
+
+Удалять объекты приходится через AWS CLI, а не из пода: `rm` внутри тома падает с
+`Operation not permitted`, потому что Mountpoint по умолчанию монтируется без `allow-delete`
+(это же вы наблюдали в задании 5).
 
 ```bash
 TASK=129 make delete_eks_task

@@ -176,7 +176,7 @@
 |--------| ------------------------------------------------- | ---------------------------------------------------------------------------- |
 | **02** | [Karpenter Basics](../tasks/eks/labs/02/README.MD)
 | **03** | [Application Autoscaling with KEDA and Prometheus](../tasks/eks/labs/03/README.MD)
-| **101** | [Cluster as code: VPC, control plane, nodes, kubeconfig](../tasks/eks/labs/101/README_RU.MD) | [SOLUTION](../tasks/eks/labs/101/worker/files/solutions/1.MD) |
+| **101** | [Cluster as code: VPC, control plane, nodes, kubeconfig](../tasks/eks/labs/101/README_RU.MD) | [SOLUTION](../tasks/eks/labs/101/worker/files/solutions/1_RU.MD) |
 | **118** | [GitOps: Argo CD, drift and self-heal, sync waves, prune](../tasks/eks/labs/118/README_RU.MD) | [SOLUTION](../tasks/eks/labs/118/worker/files/solutions/1.MD) |
 | **120** | [Troubleshooting: broken networking and unhealthy load balancer targets](../tasks/eks/labs/120/README_RU.MD) | [SOLUTION](../tasks/eks/labs/120/worker/files/solutions/1.MD) |
 | **121** | [Troubleshooting: access denied (access entries, IRSA, RBAC)](../tasks/eks/labs/121/README_RU.MD) | [SOLUTION](../tasks/eks/labs/121/worker/files/solutions/1.MD) |
@@ -186,6 +186,10 @@
 | **126** | [Security groups for pods: branch ENI, pod Running but never Ready](../tasks/eks/labs/126/README_RU.MD) | [SOLUTION](../tasks/eks/labs/126/worker/files/solutions/1.MD) |
 | **127** | [Policies without an extra controller: ValidatingAdmissionPolicy on CEL](../tasks/eks/labs/127/README_RU.MD) | [SOLUTION](../tasks/eks/labs/127/worker/files/solutions/1.MD) |
 | **128** | [Gateway API in AWS: ALB Gateway API and VPC Lattice, ReferenceGrant](../tasks/eks/labs/128/README_RU.MD) | [SOLUTION](../tasks/eks/labs/128/worker/files/solutions/1.MD) |
+| **129** | [Mountpoint for S3: where file semantics break and why there is no snapshot](../tasks/eks/labs/129/README_RU.MD) | [SOLUTION](../tasks/eks/labs/129/worker/files/solutions/1.MD) |
+| **130** | [ECR and supply chain: immutable tags, scan on push, pull through cache](../tasks/eks/labs/130/README_RU.MD) | [SOLUTION](../tasks/eks/labs/130/worker/files/solutions/1.MD) |
+| **131** | [Reliability: PDB blocks drain, topology spread, unhealthyPodEvictionPolicy](../tasks/eks/labs/131/README_RU.MD) | [SOLUTION](../tasks/eks/labs/131/worker/files/solutions/1.MD) |
+| **132** | [Alternative CNI: Cilium in CNI chaining over VPC CNI, L7 and FQDN policy, Hubble](../tasks/eks/labs/132/README_RU.MD) | [SOLUTION](../tasks/eks/labs/132/worker/files/solutions/1.MD) |
 
 
 

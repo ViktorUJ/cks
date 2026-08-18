@@ -211,6 +211,33 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Дождитесь, пока control plane выйдет из состояния `UPDATING`, потом сносите стенд.**
+> Апгрейд и откат в этой лабе идут мимо terraform, напрямую через
+> `aws eks update-cluster-version`. Пока последняя такая операция не завершилась (`Successful`
+> в `describe-update`), EKS отвечает на другие вызовы `409 ResourceInUseException ...
+> currently has an update in progress`, и `destroy` будет либо падать на этой ошибке, либо
+> уходить в ретраи (в корневом `terraform/environments/terragrunt.hcl` настроен
+> `retryable_errors` именно на этот случай). Версию control plane перед удалением возвращать
+> не обязательно - terraform не хранит версию кластера как желаемое состояние для diff при
+> `destroy`, поэтому неоконченный апгрейд на `1.36` удалению не мешает, только замедляет его.
+
+```bash
+# 1. Снять артефакты лабы
+kubectl delete namespace eks-113 --ignore-not-found
+
+# 2. Дождаться, пока кластер выйдет из UPDATING (актуально, если апгрейд или откат
+#    из заданий 3/6 ещё идёт)
+CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
+while [ "$(aws eks describe-cluster --name "$CLUSTER" --query 'cluster.status' --output text)" != "ACTIVE" ]; do
+  echo "control plane ещё UPDATING, ждём..."; sleep 30
+done
+```
+
+Только после этого сносите стенд:
+
 ```bash
 TASK=113 make delete_eks_task
 ```
+
+Если `destroy` всё же упал с `409 ResourceInUseException`, кластер по-прежнему обновляется
+- подождите и повторите `TASK=113 make delete_eks_task`, команда идемпотентна.

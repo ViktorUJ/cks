@@ -212,6 +212,44 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала выключите `selfHeal`, потом снимайте объекты, иначе Argo CD восстановит их
+> сами.** Пока `Application` `demo-app` синхронизирован с `selfHeal: true`, удаление
+> `Deployment demo-app` или `ConfigMap demo-config` вручную (или через удаление namespace
+> `eks-118`) контроллер откатит за секунды - именно это поведение вы отрабатывали в задании
+> 4. AWS-ресурсов лаба не создаёт, риска с осиротевшим ENI здесь нет, но Argo CD ставился
+> вручную через Helm, и `TASK=118 make delete_eks_task` про него не знает.
+
+```bash
+# 1. Выключить autosync у Application, иначе снятие объектов ниже откатится само
+kubectl patch application demo-app -n argocd --type=merge \
+  -p '{"spec":{"syncPolicy":{"automated":null}}}'
+
+# 2. Снять Application (после этого Argo CD больше не следит за demo-app и demo-config)
+kubectl delete application demo-app -n argocd --ignore-not-found
+
+# 3. Снять сам Argo CD и обе нагрузки лабы
+helm uninstall argocd -n argocd
+kubectl delete namespace argocd eks-118 --ignore-not-found
+
+# 4. Дождаться, пока Karpenter уберёт NodeClaim и EC2-ноду (останутся только fargate-*)
+while kubectl get nodeclaims --no-headers 2>/dev/null | grep -q .; do
+  echo "NodeClaim ещё жив, ждём..."; sleep 15
+done
+kubectl get nodes | grep -v fargate
+```
+
+Только после этого сносите стенд:
+
 ```bash
 TASK=118 make delete_eks_task
+```
+
+Если `destroy` встал на security group нод, значит остался осиротевший ENI. Найдите и
+удалите его:
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=status,Values=available \
+  --query 'NetworkInterfaces[?Tags[?Key==`eks:eni:owner`]].[NetworkInterfaceId,Description]' \
+  --output table
+aws ec2 delete-network-interface --network-interface-id <eni-id>
 ```

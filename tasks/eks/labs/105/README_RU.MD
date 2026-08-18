@@ -212,6 +212,39 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала снимите нагрузку и Helm-релиз ESO, дождитесь ухода EC2-нод, потом сносите
+> стенд.** ESO поставлен вручную через Helm, а не terraform - `TASK=105 make
+> delete_eks_task` про него не знает. Если удалить кластер, пока живы поды `eks-105` и
+> контроллер ESO, EC2-нода Karpenter уходит вместе с кластером, а вторичный ENI от VPC CNI
+> остаётся в состоянии `available` и держит security group нод - `destroy` зависает на
+> `module.eks.aws_security_group.node[0]: Still destroying...` на десятки минут.
+
+```bash
+# 1. Снять нагрузку лабы и ESO
+kubectl delete namespace eks-105 --ignore-not-found
+helm uninstall external-secrets -n external-secrets
+kubectl delete namespace external-secrets --ignore-not-found
+
+# 2. Дождаться, пока Karpenter уберёт NodeClaim и EC2-ноду (останутся только fargate-*)
+while kubectl get nodeclaims --no-headers 2>/dev/null | grep -q .; do
+  echo "NodeClaim ещё жив, ждём..."; sleep 15
+done
+kubectl get nodes | grep -v fargate
+```
+
+Только после этого сносите стенд (секрет Secrets Manager и роль IRSA ESO уйдут вместе с
+компонентом `eso_secret`):
+
 ```bash
 TASK=105 make delete_eks_task
+```
+
+Если `destroy` всё же встал на security group нод, значит остался осиротевший ENI. Найдите
+и удалите его:
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=status,Values=available \
+  --query 'NetworkInterfaces[?Tags[?Key==`eks:eni:owner`]].[NetworkInterfaceId,Description]' \
+  --output table
+aws ec2 delete-network-interface --network-interface-id <eni-id>
 ```

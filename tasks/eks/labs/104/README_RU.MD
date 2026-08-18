@@ -214,6 +214,45 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала снимите нагрузку и дождитесь, пока уйдут EC2-ноды, потом сносите стенд.**
+> Поды `irsa-app`, `podid-app` и `plain-app` идут на EC2-ноды Karpenter (для `eks-104`
+> Fargate-профиля нет). Если удалять кластер с работающей нагрузкой, EC2-нода уходит вместе
+> с ним, а вторичный ENI от VPC CNI остаётся в состоянии `available` и держит security
+> group нод - `destroy` зависает на `module.eks.aws_security_group.node[0]: Still
+> destroying...` на десятки минут.
+
+```bash
+# 1. Снять нагрузку лабы
+kubectl delete namespace eks-104 --ignore-not-found
+
+# 2. Необязательно, но чище: снять ассоциацию Pod Identity - она живёт как объект EKS,
+#    а не в terraform state, и иначе останется до удаления самого кластера
+CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
+ASSOC_ID=$(aws eks list-pod-identity-associations --cluster-name "$CLUSTER" \
+  --namespace eks-104 --query 'associations[0].associationId' --output text)
+[ "$ASSOC_ID" != "None" ] && aws eks delete-pod-identity-association \
+  --cluster-name "$CLUSTER" --association-id "$ASSOC_ID"
+
+# 3. Дождаться, пока Karpenter уберёт NodeClaim и EC2-ноду (останутся только fargate-*)
+while kubectl get nodeclaims --no-headers 2>/dev/null | grep -q .; do
+  echo "NodeClaim ещё жив, ждём..."; sleep 15
+done
+kubectl get nodes | grep -v fargate
+```
+
+Только после этого сносите стенд (бакет S3, секрет и обе IAM-роли уйдут вместе с
+компонентом `workload_identity`):
+
 ```bash
 TASK=104 make delete_eks_task
+```
+
+Если `destroy` всё же встал на security group нод, значит остался осиротевший ENI. Найдите
+и удалите его:
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=status,Values=available \
+  --query 'NetworkInterfaces[?Tags[?Key==`eks:eni:owner`]].[NetworkInterfaceId,Description]' \
+  --output table
+aws ec2 delete-network-interface --network-interface-id <eni-id>
 ```

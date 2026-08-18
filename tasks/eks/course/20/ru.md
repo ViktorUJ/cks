@@ -422,7 +422,13 @@ enhanced scanning нашёл её, а политика не пустила. А `
 
 ## Практика
 
-Своей лабы у главы пока нет, но всё проверяется на живом кластере и в аккаунте. Создайте
+Лаба курса к этой теме: [лаба 130 - ECR и supply chain: неизменяемые теги, скан при пуше,
+pull through cache](../../labs/130/README_RU.MD). Там репозиторий с `IMMUTABLE` и
+`scanOnPush`, отказ реестра на повторный push тега, разбор findings и границы применимости
+сканера, деплой по digest из приватного ECR и два pull through cache - без аутентификации и с
+секретом. Результат проверяется командой `check_result`.
+
+Ниже - то же самое на своём аккаунте. Создайте
 репозиторий с `--image-tag-mutability IMMUTABLE` и `--image-scanning-configuration
 scanOnPush=true`, залогиньтесь через `aws ecr get-login-password | docker login`, запушите
 образ и посмотрите findings: `aws ecr describe-image-scan-findings --repository-name <repo>

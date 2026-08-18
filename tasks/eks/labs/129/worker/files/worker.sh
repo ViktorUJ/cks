@@ -19,10 +19,15 @@ while [ "$(kubectl get no --no-headers 2>/dev/null | wc -l)" -lt 1 ]; do
 done
 
 echo "Waiting for the aws-mountpoint-s3-csi-driver addon to become ACTIVE..."
+# Проверяем СТАТУС АДДОНА, а не поды: s3-csi-node - это DaemonSet, а нод у него нет, пока в
+# кластере нет EC2-нод (системные поды лабы живут на Fargate). Прежняя проверка на Running-под
+# не выполнялась никогда и просто добавляла 5 минут к загрузке воркера (поймано на стенде).
+CLUSTER_FOR_ADDON=$(kubectl config current-context 2>/dev/null | sed 's|.*/||')
 for i in $(seq 1 60); do
-  status=$(kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-mountpoint-s3-csi-driver \
-    --no-headers 2>/dev/null | grep -c Running)
-  if [ "$status" -ge 1 ]; then
+  status=$(aws eks describe-addon --cluster-name "$CLUSTER_FOR_ADDON" \
+    --addon-name aws-mountpoint-s3-csi-driver --query 'addon.status' --output text 2>/dev/null)
+  echo "addon status: ${status:-unknown}"
+  if [ "$status" == "ACTIVE" ]; then
     break
   fi
   sleep 5
@@ -40,4 +45,24 @@ for i in $(seq 1 30); do
     --output text 2>/dev/null | awk '{print $1}')"
 done
 
-echo "*** cluster is ready, bucket=$BUCKET, you can start lab 129 ***"
+# Файл подсказок: имя бакета нужно и в задании 2, и в разделе "Удаление" (там оно читается
+# именно из этого файла). Раньше файл не создавался вовсе, и процедура удаления брала пустое
+# имя бакета - поймано при проверке лабы на стенде.
+HINTS_FILE="/home/ubuntu/lab129_hints.txt"
+CLUSTER_NAME=$(kubectl config current-context 2>/dev/null | sed 's|.*/||')
+
+cat > "$HINTS_FILE" <<EOF
+Lab 129 - Mountpoint for S3. Бакет с versioning и объектом readme.txt уже создан terraform-ом,
+драйвер aws-mountpoint-s3-csi-driver установлен как managed addon с ролью через IRSA.
+
+cluster_name = ${CLUSTER_NAME}
+bucket_name  = ${BUCKET}
+region       = eu-central-1
+
+Как найти бакет самостоятельно, если файл потеряется:
+  aws s3api list-buckets --query "Buckets[?contains(Name,'mountpoint-demo')].Name" --output text
+EOF
+chown ubuntu:ubuntu "$HINTS_FILE"
+chmod 644 "$HINTS_FILE"
+
+echo "*** cluster is ready, bucket=$BUCKET, hints are in $HINTS_FILE, you can start lab 129 ***"

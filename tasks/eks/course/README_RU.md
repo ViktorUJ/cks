@@ -64,7 +64,7 @@
 5. [Доступ к кластеру: IAM и RBAC, access entries, миграция с aws-auth](05/ru.md)
 6. [Сеть кластера: VPC CNI, ENI и IP-адреса, планирование CIDR](06/ru.md) 🧪
 7. [Масштаб адресного плана: prefix delegation, secondary CIDR, custom networking](07/ru.md)
-8. [Альтернативы VPC CNI: Cilium, режимы сети, когда менять CNI](08/ru.md)
+8. [Альтернативы VPC CNI: Cilium, режимы сети, когда менять CNI](08/ru.md) 🧪
 
 ### Часть 2. Ноды и вычислительные ресурсы
 
@@ -82,7 +82,7 @@
 17. [EKS Pod Identity: агент, ассоциации, миграция с IRSA](17/ru.md)
 18. [Секреты: шифрование KMS, Secrets Manager и SSM через External Secrets и CSI](18/ru.md)
 19. [Харденинг: IMDSv2 и hop limit, Pod Security Admission, приватный кластер](19/ru.md)
-20. [Образы и supply chain: ECR, сканирование, подписи, pull through cache](20/ru.md)
+20. [Образы и supply chain: ECR, сканирование, подписи, pull through cache](20/ru.md) 🧪
 21. [Аудит и детект: логи control plane, CloudTrail, GuardDuty, runtime-мониторинг](21/ru.md)
 22. [Политики и мультитенантность: Kyverno и Gatekeeper, изоляция команд](22/ru.md) 🧪
 
@@ -90,7 +90,7 @@
 
 23. [EBS CSI: gp3, StorageClass, расширение, снапшоты, привязка к AZ](23/ru.md)
 24. [EFS и FSx: shared storage для нагрузок между AZ](24/ru.md)
-25. [S3 в приложениях: Mountpoint for Amazon S3 CSI и паттерны доступа](25/ru.md)
+25. [S3 в приложениях: Mountpoint for Amazon S3 CSI и паттерны доступа](25/ru.md) 🧪
 
 ### Часть 5. Сеть и трафик
 
@@ -114,7 +114,7 @@
 37. [Аддоны EKS: managed addons против Helm, версии и порядок обновления](37/ru.md)
 38. [Обновление кластера: in-place по версиям, blue/green кластеры, устаревшие API](38/ru.md)
 39. [Откат версии кластера: rollback readiness insights, окно 7 дней, порядок отката](39/ru.md)
-40. [Надёжность: multi-AZ, PDB, topology spread, корректное выключение нод](40/ru.md)
+40. [Надёжность: multi-AZ, PDB, topology spread, корректное выключение нод](40/ru.md) 🧪
 41. [Бэкап кластера через AWS Backup: состояние кластера, постоянные тома, composite recovery point](41/ru.md) 🧪
 42. [Восстановление и DR: restore в существующий и новый кластер, namespace-restore, Velero](42/ru.md) 🧪
 43. [Стоимость: OpenCost и Kubecost, right-sizing, Savings Plans, спот-микс, трафик](43/ru.md)

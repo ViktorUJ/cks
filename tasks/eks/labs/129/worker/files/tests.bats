@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 export KUBECONFIG=/home/ubuntu/.kube/config
 NS="eks-129"
+BUCKET=$(aws s3api list-buckets \
+  --query "Buckets[?contains(Name,'mountpoint-demo')].Name" --output text 2>/dev/null | awk '{print $1}')
 
 @test "0 Init" {
   echo '' > /var/work/tests/result/all
@@ -23,8 +25,9 @@ NS="eks-129"
   am=$(kubectl get pv s3-pv -o jsonpath='{.spec.accessModes[0]}' 2>/dev/null)
   sc=$(kubectl get pv s3-pv -o jsonpath='{.spec.storageClassName}' 2>/dev/null)
   mo=$(kubectl get pv s3-pv -o jsonpath='{.spec.mountOptions[0]}' 2>/dev/null)
-  real_bucket=$(aws s3api list-buckets --query "Buckets[?contains(Name,'mountpoint-demo')].Name" \
-    --output text 2>/dev/null | awk '{print $1}')
+  # Имя бакета берём из переменной наверху файла: она требует s3:ListAllMyBuckets, которого
+  # у воркера раньше не было - тест не мог пройти в принципе (real_bucket оставался пустым).
+  real_bucket="$BUCKET"
   phase=$(kubectl get pvc s3-pvc -n "$NS" -o jsonpath='{.status.phase}' 2>/dev/null)
   if [[ "$driver" == "s3.csi.aws.com" ]] && [[ "$bucket" == "$real_bucket" ]] \
     && [[ -n "$bucket" ]] && [[ "$am" == "ReadWriteMany" ]] && [[ "$sc" == "" ]] \
@@ -57,14 +60,21 @@ NS="eks-129"
   [ "$result" == "0" ]
 }
 
-@test "4. rename inside the volume fails with Operation not permitted" {
+@test "4. rename inside the volume fails and the bucket is untouched" {
   echo '1' >> /var/work/tests/result/all
   f=/var/work/tests/artifacts/4/rename.txt
-  if [[ -s "$f" ]] && grep -qi 'Operation not permitted' "$f"; then
+  # Вживую mv на Mountpoint отвечает "Function not implemented" (ENOSYS - вызов rename не
+  # реализован), а не "Operation not permitted" (EPERM из задания 5). Принимаем оба текста,
+  # но дополнительно проверяем факт со стороны AWS: newfile.txt на месте, renamed.txt нет.
+  # Эту часть артефактом не подделать.
+  keys=$(aws s3api list-objects-v2 --bucket "$BUCKET" --query 'Contents[].Key' \
+    --output text 2>/dev/null || true)
+  if [[ -s "$f" ]] && grep -qiE 'Function not implemented|Operation not permitted' "$f" \
+    && [[ "$keys" == *"newfile.txt"* ]] && [[ "$keys" != *"renamed.txt"* ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "file $f missing/empty or does not mention Operation not permitted"
+    echo "file=$f bucket=$BUCKET keys='$keys' (need newfile.txt present, renamed.txt absent)"
     result=1
   fi
   [ "$result" == "0" ]

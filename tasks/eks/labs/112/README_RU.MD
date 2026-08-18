@@ -211,6 +211,26 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала снимите нагрузку и дождитесь, пока Fargate-поды исчезнут, потом сносите
+> стенд.** Вся нагрузка `eks-112` живёт на Fargate, EC2-нод Karpenter эта лаба не поднимает
+> - риска с осиротевшим ENI от VPC CNI здесь нет. Но есть другой: AWS не даёт удалить
+> Fargate-профиль, пока на нём есть работающие поды (`terraform destroy` на компоненте
+> `eks_fargate_workload` упадёт с ошибкой, что профиль ещё используется).
+
+```bash
+# 1. Снять нагрузку лабы (fg-app, fg-privileged) и дождаться, пока Fargate-поды исчезнут
+kubectl delete namespace eks-112 --ignore-not-found
+while kubectl get pods -A -o wide 2>/dev/null | grep -q 'eks-112'; do
+  echo "поды eks-112 ещё завершаются, ждём..."; sleep 10
+done
+```
+
+Только после этого сносите стенд:
+
 ```bash
 TASK=112 make delete_eks_task
 ```
+
+Если `destroy` всё же упал на компоненте `eks_fargate_workload` с ошибкой про активные
+поды, значит namespace удалился не до конца - проверьте `kubectl get pods -n eks-112` и
+повторите `TASK=112 make delete_eks_task` после того, как подов не останется.

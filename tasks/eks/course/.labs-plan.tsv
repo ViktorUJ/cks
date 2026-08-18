@@ -50,12 +50,12 @@
 # account without slow or paid extras. Ordered by cost of building, cheapest first.
 #
 22	127	ready	Policies without an extra controller: ValidatingAdmissionPolicy on CEL, Audit before Enforce, failurePolicy
-40	131	todo	Reliability: PDB blocks drain and the upgrade stalls, topology spread, unhealthyPodEvictionPolicy, matchLabelKeys
+40	131	ready	Reliability: PDB blocks drain and the upgrade stalls, topology spread, unhealthyPodEvictionPolicy, matchLabelKeys
 46	126	ready	Security groups for pods: SecurityGroupPolicy and branch ENI, pod is Running but never Ready and cannot resolve - find the missing rules (see NOTE below)
-25	129	todo	Mountpoint for S3: where file semantics break (in-place write, rename) and why prefixes behind a PVC are not backed up
+25	129	ready	Mountpoint for S3: where file semantics break (in-place write, rename) and why prefixes behind a PVC are not backed up
 28	128	ready	Gateway API and VPC Lattice: Gateway owner versus route owner, ReferenceGrant, route not applied
-20	130	todo	ECR and supply chain: immutable tags, scan on push, pull-through cache (needs upstream registry credentials as a secret)
-08	132	todo	Alternative CNI: Cilium in CNI chaining and in full replacement, VPC CNI network policy compared against Cilium policy (heaviest of the set)
+20	130	ready	ECR and supply chain: immutable tags, scan on push, pull-through cache (needs upstream registry credentials as a secret)
+08	132	ready	Alternative CNI: Cilium in CNI chaining over VPC CNI, L7 and FQDN policy, Hubble; full replacement stays out of scope (blue/green, chapter 8.8)
 #
 # EXISTING LABS, OUT OF SCOPE - listed only so nobody wires them into the course:
 #   01  stub

@@ -58,25 +58,46 @@ REGION="eu-central-1"
   status=$(aws ecr describe-image-scan-findings --repository-name "$REPO" \
     --image-id imageTag=v1 --region "$REGION" \
     --query 'imageScanStatus.status' --output text 2>/dev/null)
-  if [[ -s "$f" ]] && [[ "$status" == "COMPLETE" ]]; then
+  # Статус проверяем и живьём, и в артефакте: у образа FROM scratch скан отдаёт FAILED с
+  # UnsupportedImageError, и такой отчёт не должен считаться успешной проверкой образа.
+  if [[ -s "$f" ]] && [[ "$status" == "COMPLETE" ]] && grep -q 'COMPLETE' "$f"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "file $f missing/empty or scan status=$status (expected COMPLETE)"
+    echo "file $f missing/empty/without COMPLETE or scan status=$status (expected COMPLETE)"
     result=1
   fi
   [ "$result" == "0" ]
 }
 
-@test "5. Pod referencing the image by @sha256 digest exists in eks-130" {
+@test "5. Pod pulled by @sha256 digest from private ECR and is Running" {
   echo '1' >> /var/work/tests/result/all
-  image=$(kubectl get po -n "$NS" -l app=digest-app -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null)
-  if [[ "$image" == *"$REPO@sha256:"* ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
-  else
-    echo "pod image=$image, expected it to reference $REPO@sha256:..."
-    result=1
+  # Ссылки по digest недостаточно: раньше тест проверял только строку образа и проходил при
+  # поде в CrashLoopBackOff. Вживую так и было - podman с x86_64 воркера пушит одноарочный
+  # манифест, Karpenter поднимал arm64-ноду, и контейнер умирал с exitCode 255 и пустыми
+  # логами. Поэтому требуем Running без перезапусков: это доказывает и pull из приватного
+  # ECR по digest, и то, что образ подходит ноде.
+  # ВАЖНО (errexit): bats выполняет тест с set -e, поэтому пустой список подов роняет тест на
+  # самом присваивании - вместо понятного сообщения студент видит ссылку на строку теста.
+  # Гасим через || true и читаем все поля ВНУТРИ цикла, иначе под, созданный позже, не увидим.
+  result=1
+  for i in $(seq 1 40); do
+    image=$(kubectl get po -n "$NS" -l app=digest-app \
+      -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null || true)
+    phase=$(kubectl get po -n "$NS" -l app=digest-app \
+      -o jsonpath='{.items[0].status.phase}' 2>/dev/null || true)
+    restarts=$(kubectl get po -n "$NS" -l app=digest-app \
+      -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}' 2>/dev/null || true)
+    if [[ "$image" == *"$REPO@sha256:"* ]] && [[ "$phase" == "Running" ]] \
+      && [[ "${restarts:-0}" == "0" ]]; then
+      echo '1' >> /var/work/tests/result/ok
+      result=0
+      break
+    fi
+    sleep 15
+  done
+  if [[ "$result" != "0" ]]; then
+    echo "pod image=$image phase=$phase restarts=$restarts (need $REPO@sha256:..., Running, 0 restarts)"
   fi
   [ "$result" == "0" ]
 }

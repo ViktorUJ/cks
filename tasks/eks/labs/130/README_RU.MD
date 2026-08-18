@@ -133,6 +133,12 @@ TASK=130 make run_eks_task
 работает без явного логина - через IAM-роль инстанса. На рабочей машине уже установлен
 `podman`, используйте его вместо `docker`.
 
+> Держите задания 2-6 в одной SSH-сессии. `podman login` кладёт токен в
+> `$XDG_RUNTIME_DIR/containers/auth.json`, а этот каталог живёт вместе с сессией
+> пользователя: после выхода и повторного входа push и pull начнут отвечать
+> `unauthorized: authentication required`, хотя 12-часовой токен ECR ещё действителен.
+> Лечится повторным `aws ecr get-login-password ... | podman login ...`.
+
 Полезные команды на рабочей машине:
 
 ```bash
@@ -156,27 +162,27 @@ check_result    # проверить решение
 ---
 |        **2**        | **Push образа с тегом v1**                                  |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Залогиньтесь в реестр через `aws ecr get-login-password` и `podman login`. Возьмите готовый небольшой образ (например `viktoruj/ping_pong:latest`), перетегируйте и запушьте его в `eks-lab130/app` с тегом `v1`. Убедитесь, что push прошёл через `aws ecr describe-images`. |
+| Что делаем          | Залогиньтесь в реестр через `aws ecr get-login-password` и `podman login`. Возьмите образ `alpine:3.19`, перетегируйте и запушьте его в `eks-lab130/app` с тегом `v1`. Убедитесь, что push прошёл через `aws ecr describe-images`. Образ взят не случайно: базовое сканирование ECR умеет разбирать пакетную базу Alpine, поэтому задание 4 получит настоящие находки. |
 | Критерии приёмки    | - в `eks-lab130/app` есть образ с тегом `v1`. |
 ---
 |        **3**        | **Симптом: IMMUTABLE отклоняет повторный push тега v1**     |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Возьмите другой образ (например `alpine:3.19`), перетегируйте тем же тегом `v1` и попытайтесь запушить его в `eks-lab130/app`. Push должен быть отклонён, так как тег `v1` уже занят и репозиторий IMMUTABLE. Сохраните вывод команды push (stdout и stderr) в файл `/var/work/tests/artifacts/3/denied.txt`. |
+| Что делаем          | Возьмите другой образ (`busybox:1.36`), перетегируйте тем же тегом `v1` и попытайтесь запушить его в `eks-lab130/app`. Push должен быть отклонён, так как тег `v1` уже занят и репозиторий IMMUTABLE. Сохраните вывод команды push (stdout и stderr) в файл `/var/work/tests/artifacts/3/denied.txt`. Вывод будет длинным: podman перебирает форматы манифеста и на каждом получает отказ - нужная строка есть в каждой попытке. |
 | Критерии приёмки    | - файл `denied.txt` не пуст;<br/>- содержит `v1` и упоминание immutable/already exists (например `ImageTagAlreadyExistsException`). |
 ---
 |        **4**        | **Findings сканирования**                                   |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Дождитесь завершения сканирования образа `v1` (статус `COMPLETE`, через `aws ecr wait image-scan-complete` или ручной retry-цикл). Сохраните сводку `aws ecr describe-image-scan-findings` (статус и количество находок по severity, либо отсутствие находок) в файл `/var/work/tests/artifacts/4/scan-summary.txt`. |
-| Критерии приёмки    | - файл `scan-summary.txt` не пуст;<br/>- статус сканирования образа `v1` - `COMPLETE`. |
+| Что делаем          | Дождитесь завершения сканирования образа `v1` (статус `COMPLETE`, через `aws ecr wait image-scan-complete` или ручной retry-цикл). Сохраните сводку `aws ecr describe-image-scan-findings` (статус и количество находок по severity) в файл `/var/work/tests/artifacts/4/scan-summary.txt`. Запомните границу применимости: базовое сканирование читает пакетную базу известных дистрибутивов, а образ, собранный `FROM scratch` или distroless, даёт статус `FAILED` с описанием `UnsupportedImageError: The operating system and/or package manager are not supported.` - то есть «скан не нашёл уязвимостей» и «скан не смог посмотреть» выглядят в отчётах по-разному, и это надо различать. |
+| Критерии приёмки    | - файл `scan-summary.txt` не пуст;<br/>- статус сканирования образа `v1` - `COMPLETE`;<br/>- в сводке видно распределение находок по severity. |
 ---
 |        **5**        | **Деплой по digest, а не по тегу**                           |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Получите digest образа `v1` (`aws ecr describe-images --image-ids imageTag=v1`). В namespace `eks-130` создайте Pod с label `app=digest-app`, у которого `image` указан как `<реестр>/eks-lab130/app@sha256:...` (по digest, а не по тегу). Роль ноды Karpenter уже несёт `AmazonEC2ContainerRegistryReadOnly`, поэтому pull из приватного ECR должен пройти и под должен запуститься. |
-| Критерии приёмки    | - под с label `app=digest-app` в `eks-130` существует;<br/>- его образ указан через `eks-lab130/app@sha256:`. |
+| Что делаем          | Получите digest образа `v1` (`aws ecr describe-images --image-ids imageTag=v1`). В namespace `eks-130` создайте Pod с label `app=digest-app`, у которого `image` указан как `<реестр>/eks-lab130/app@sha256:...` (по digest, а не по тегу), команда `["sh", "-c", "sleep 86400"]` и `nodeSelector: kubernetes.io/arch: amd64`. Селектор обязателен, и это отдельный урок: `podman` на рабочей машине (x86_64) пушит ОДНОАРОЧНЫЙ манифест, а NodePool лабы разрешает и `arm64`, поэтому без селектора под может попасть на `t4g` и падать в `CrashLoopBackOff` с `exitCode 255` без единой строки в логах. Роль ноды Karpenter уже несёт `AmazonEC2ContainerRegistryReadOnly`, поэтому pull из приватного ECR проходит без `imagePullSecrets`. |
+| Критерии приёмки    | - под с label `app=digest-app` в `eks-130` в состоянии `Running` без перезапусков;<br/>- его образ указан через `eks-lab130/app@sha256:`. |
 ---
 |        **6**        | **Pull through cache без аутентификации: registry.k8s.io**  |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Создайте pull through cache rule с префиксом `k8s-cache` и апстримом `registry.k8s.io`. Стяните через кэш образ `pause`: `podman pull <реестр>/k8s-cache/pause:3.9`. Подтвердите, что в ECR появился закэшированный репозиторий `k8s-cache/pause`. |
+| Что делаем          | Создайте pull through cache rule с префиксом `k8s-cache` и апстримом `registry.k8s.io`. При создании ПЕРВОГО правила в аккаунте ECR заводит service-linked role `AWSServiceRoleForECRPullThroughCache`, поэтому вызывающему нужно право `iam:CreateServiceLinkedRole` (у рабочей машины оно есть; без него ответ - `ValidationException ... The Amazon ECR action failed due to an IAM exception`). Стяните через кэш образ `pause`: `podman pull <реестр>/k8s-cache/pause:3.9`. Подтвердите, что в ECR появился закэшированный репозиторий `k8s-cache/pause`. |
 | Критерии приёмки    | - cache rule с префиксом `k8s-cache` и апстримом `registry.k8s.io` существует;<br/>- в ECR есть репозиторий, начинающийся с `k8s-cache/pause`. |
 ---
 |        **7**        | **Pull through cache с секретом: Docker Hub**                |
@@ -205,6 +211,18 @@ check_result
 Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
 
 ## Удаление кластера и ресурсов
+
+Сначала снимите нагрузку и дождитесь, пока EC2-нода Karpenter уйдёт: если удалять стенд с
+живой нодой, вторичный ENI от VPC CNI остаётся в состоянии `available` и держит security
+group нод, из-за чего `destroy` зависает на ней.
+
+```bash
+kubectl delete namespace eks-130 --ignore-not-found
+
+while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
+  echo "EC2-нода Karpenter ещё жива, ждём..."; sleep 15
+done
+```
 
 ```bash
 TASK=130 make delete_eks_task

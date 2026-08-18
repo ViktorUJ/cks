@@ -204,6 +204,37 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала снимите нагрузку и дождитесь, пока уйдут EC2-ноды, потом сносите стенд.**
+> AWS-ресурсов руками эта лаба не создаёт, всё лишнее - объекты Kubernetes (Deployment
+> `api`, `client`, `frontend`, `client-other` и NetworkPolicy в namespace `eks-110`).
+> Опасность одна: если удалять кластер с работающей нагрузкой, EC2-нода Karpenter уходит
+> вместе с ним, а вторичный ENI от VPC CNI остаётся в состоянии `available` и держит
+> security group нод - `destroy` зависает на
+> `module.eks.aws_security_group.node[0]: Still destroying...` на десятки минут.
+
+```bash
+# 1. Снять нагрузку лабы (NetworkPolicy уходят вместе с namespace)
+kubectl delete namespace eks-110 --ignore-not-found
+
+# 2. Дождаться, пока Karpenter уберёт NodeClaim и EC2-ноду (останутся только fargate-*)
+while kubectl get nodeclaims --no-headers 2>/dev/null | grep -q .; do
+  echo "NodeClaim ещё жив, ждём..."; sleep 15
+done
+kubectl get nodes | grep -v fargate
+```
+
+Только после этого сносите стенд:
+
 ```bash
 TASK=110 make delete_eks_task
+```
+
+Если `destroy` всё же встал на security group нод, значит остался осиротевший ENI. Найдите
+и удалите его:
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=status,Values=available \
+  --query 'NetworkInterfaces[?Tags[?Key==`eks:eni:owner`]].[NetworkInterfaceId,Description]' \
+  --output table
+aws ec2 delete-network-interface --network-interface-id <eni-id>
 ```

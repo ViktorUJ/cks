@@ -92,6 +92,7 @@ resource "aws_iam_policy" "server" {
 
                 "ec2:DeleteVolume",
                 "ec2:DeleteSnapshot",
+                "ec2:DeleteNetworkInterface",
                 "elasticfilesystem:DeleteAccessPoint",
 
                 "kms:CreateGrant",
@@ -104,6 +105,7 @@ resource "aws_iam_policy" "server" {
                 "vpc-lattice:Get*",
                 "vpc-lattice:DeleteServiceNetwork",
                 "vpc-lattice:DeleteServiceNetworkVpcAssociation",
+                "s3:ListAllMyBuckets",
                 "acm:ListCertificates",
                 "acm:DescribeCertificate",
                 "route53:ListHostedZones*",
@@ -119,6 +121,36 @@ resource "aws_iam_policy" "server" {
             "Resource": [
                 "arn:aws:s3:::${var.s3_k8s_config}/*",
                 "arn:aws:s3:::${var.s3_k8s_config}"
+            ]
+        },
+        {
+            "Sid": "EcrPullThroughCacheSlrForLabs",
+            "Effect": "Allow",
+            "Action": "iam:CreateServiceLinkedRole",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:AWSServiceName": "pullthroughcache.ecr.amazonaws.com"
+                }
+            }
+        },
+        {
+            "Sid": "LabDemoBucketsForLabs",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:ListBucketVersions",
+                "s3:GetBucketVersioning",
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion",
+                "s3:AbortMultipartUpload"
+            ],
+            "Resource": [
+                "arn:aws:s3:::*-mountpoint-demo",
+                "arn:aws:s3:::*-mountpoint-demo/*"
             ]
         },
         {

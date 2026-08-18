@@ -173,6 +173,29 @@ cat <<EOF | sudo tee /etc/containers/registries.conf
 registries = ['docker.io']
 EOF
 
+# ПОЧИНКА podman: пакет containers-common из репозитория kubic конфликтует по conffile с
+# ubuntu-овским golang-github-containers-common, поэтому dpkg оставляет файлы как
+# policy.json.dpkg-new и НЕ создаёт /etc/containers/policy.json. Без него podman не может
+# ни pull, ни push: "Error: open /etc/containers/policy.json: no such file or directory"
+# (поймано вживую на лабе 130, где podman - основной инструмент). Восстанавливаем файл.
+if [ ! -f /etc/containers/policy.json ]; then
+  if [ -f /etc/containers/policy.json.dpkg-new ]; then
+    cp /etc/containers/policy.json.dpkg-new /etc/containers/policy.json
+  else
+    cat <<EOF > /etc/containers/policy.json
+{
+    "default": [
+        {
+            "type": "insecureAcceptAnything"
+        }
+    ]
+}
+EOF
+  fi
+  echo "*** podman: /etc/containers/policy.json restored"
+fi
+podman info >/dev/null 2>&1 && echo "*** podman is ready" || echo "*** WARNING: podman is not usable"
+
 
 mkdir $configs_dir -p
 mkdir $default_configs_dir -p

@@ -32,8 +32,8 @@ variable "tags" {
 
 variable "addon_version" {
   type = string
-  # Best-guess default for the aws-mountpoint-s3-csi-driver managed addon version.
-  # Verify before production use:
+  # Проверено на живом стенде (лаба 129, EKS 1.36): аддон с этой версией существует и
+  # переходит в ACTIVE. Перед сменой минора кластера сверять:
   #   aws eks describe-addon-versions --addon-name aws-mountpoint-s3-csi-driver
   default     = "v1.15.0-eksbuild.1"
   description = "Version of the aws-mountpoint-s3-csi-driver managed addon"

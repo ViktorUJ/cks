@@ -8,8 +8,8 @@
 `topologySpreadConstraints`, воспроизведёте классический симптом - слишком жёсткий
 `PodDisruptionBudget`, который навсегда блокирует `kubectl drain`, - и почините его.
 Затем добавите `unhealthyPodEvictionPolicy: AlwaysAllow`, чтобы сломанный под не мог
-держать drain вечно, и проверите на rolling update, что `matchLabelKeys` не даёт старым
-репликам портить расчёт перекоса новой ревизии.
+держать drain вечно, и проведёте rolling update, проверив, что новая ревизия сама по себе
+осталась разложенной по зонам в пределах `maxSkew`.
 
 Задания в продакшн-стиле: короткая постановка плюс критерии приёмки. Проверка -
 автоматическая, командой `check_result`.
@@ -37,21 +37,16 @@
 
 ```mermaid
 flowchart TB
-    pdb["PDB web-pdb<br>minAvailable"]
-    subgraph az1["Zone eu-central-1a"]
-        w1["web pod"]
-    end
-    subgraph az2["Zone eu-central-1b"]
-        w2["web pod"]
-        w3["web pod"]
-    end
-    pdb --> w1
-    pdb --> w2
-    pdb --> w3
+    pdb["PDB web-pdb: minAvailable"]
+    dep["Deployment web: 3 реплики"]
+    az1["Зона 1a: 1 под"]
+    az2["Зона 1b: 2 пода"]
+    pdb --> dep
+    dep --> az1
+    dep --> az2
     style pdb fill:#f4b400,color:#000
-    style w1 fill:#3cb371,color:#fff
-    style w2 fill:#3cb371,color:#fff
-    style w3 fill:#3cb371,color:#fff
+    style az1 fill:#3cb371,color:#fff
+    style az2 fill:#3cb371,color:#fff
 ```
 
 ## Инфраструктура
@@ -188,8 +183,8 @@ check_result    # проверить решение
 ---
 |        **6**        | **Rolling update без зависших Pending**                     |
 | :-----------------: | :---------------------------------------------------------- |
-| Что делаем          | Обновите Deployment `web`, чтобы появилась новая ревизия (например `kubectl set env deployment/web -n eks-131 RELEASE=v2`). Убедитесь, что `kubectl rollout status deployment/web -n eks-131` завершается успешно без зависших `Pending` подов - `matchLabelKeys: [pod-template-hash]` не даёт старым подам мешать расчёту перекоса новой ревизии. Сохраните вывод `rollout status` в файл `/var/work/tests/artifacts/6/rollout.txt`. |
-| Критерии приёмки    | - все `3` реплики `web` готовы и обновлены;<br/>- ни один под `web` не в `Pending`;<br/>- файл `/var/work/tests/artifacts/6/rollout.txt` не пуст и подтверждает успешный rollout. |
+| Что делаем          | Обновите Deployment `web`, чтобы появилась новая ревизия (например `kubectl set env deployment/web -n eks-131 RELEASE=v2`). Дождитесь `kubectl rollout status deployment/web -n eks-131` без зависших `Pending` подов и проверьте, что поды НОВОЙ ревизии (одинаковый `pod-template-hash`) по-прежнему разложены по зонам в пределах `maxSkew: 1`. Сохраните вывод `rollout status` в файл `/var/work/tests/artifacts/6/rollout.txt`. Что тут делает `matchLabelKeys: [pod-template-hash]`: он добавляет к селектору перекоса метку ревизии, поэтому планировщик считает распределение ТОЛЬКО среди подов своей ревизии, а не вместе с уходящими старыми. Честная оговорка: на этом стенде выкатка проходит и без `matchLabelKeys` (проверено) - две зоны, три реплики и Karpenter, который добавит ноду под любой `Pending`. Разница видна там, где парк статичный, зон больше двух, а старые реплики разложены неровно: тогда перекос, посчитанный по обеим ревизиям сразу, не даёт новому поду место, и он ждёт удаления старого. |
+| Критерии приёмки    | - все `3` реплики `web` готовы и обновлены;<br/>- ни один под `web` не в `Pending`;<br/>- перекос подов новой ревизии по зонам не больше `1`;<br/>- файл `/var/work/tests/artifacts/6/rollout.txt` не пуст и подтверждает успешный rollout. |
 ---
 
 ## Проверка результата
@@ -208,6 +203,33 @@ check_result
 
 ## Удаление кластера и ресурсов
 
+> **Сначала снимите PDB и нагрузку.** Бюджет `web-pdb` ограничивает добровольные
+> прерывания, то есть замедляет и корректное выселение подов при выводе нод. Если удалять
+> стенд с живой нагрузкой, EC2-нода Karpenter уходит вместе с кластером, а вторичный ENI от
+> VPC CNI остаётся в состоянии `available` и держит security group нод - `destroy` зависает
+> на ней. Порядок: сначала PDB, затем namespace, затем ждём исчезновения EC2-нод.
+
+```bash
+kubectl delete pdb web-pdb -n eks-131 --ignore-not-found
+kubectl delete namespace eks-131 --ignore-not-found
+
+while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
+  echo "EC2-нода Karpenter ещё жива, ждём..."; sleep 15
+done
+kubectl get nodes --no-headers
+```
+
+Если в ходе лабы вы оставили ноду закордоненной (`kubectl drain` без последующего
+`uncordon`), это не мешает удалению: Karpenter всё равно терминирует пустую ноду.
+
 ```bash
 TASK=131 make delete_eks_task
+```
+
+Если `destroy` всё же зависает на security group нод, ищите осиротевший ENI:
+
+```bash
+aws ec2 describe-network-interfaces --filters Name=status,Values=available \
+  --query 'NetworkInterfaces[].[NetworkInterfaceId,Description]' --output table
+aws ec2 delete-network-interface --network-interface-id <eni-id>
 ```

@@ -332,7 +332,15 @@ flowchart TB
 
 ## Практика
 
-Лабы у главы пока нет, содержание проверяется на живом кластере. Начните с того, что стоит
+Лаба курса к этой теме: [лаба 132 - Альтернативный CNI: Cilium в режиме CNI chaining над
+VPC CNI](../../labs/132/README_RU.MD). Там Cilium ставится через Helm поверх работающего
+VPC CNI (`cni.chainingMode: aws-cni`), доказывается, что IPAM остался за VPC CNI, а поверх
+появляются L7-правило по HTTP-методу, политика по DNS-имени через `toFQDNs` и карта потоков
+с verdict в Hubble. Полная замена VPC CNI в объём лабы не входит осознанно: это blue/green
+через новые ноды (раздел 8.8), а не переключение флага. Результат проверяется командой
+`check_result`.
+
+Ниже - то же самое на любом своём кластере обычными командами. Начните с того, что стоит
 сейчас: `kubectl get ds aws-node -n kube-system` покажет, работает ли VPC CNI, а
 `kubectl get ds aws-node -n kube-system -o jsonpath='{.spec.template.spec.containers[*].name}'`
 - есть ли рядом контейнер `aws-network-policy-agent`, то есть включён ли встроенный
