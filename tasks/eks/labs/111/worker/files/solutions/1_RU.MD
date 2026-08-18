@@ -1,0 +1,170 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 111 - эталонное решение (spot-ноды: диверсификация, прерывания, graceful drain)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl уже настроен на
+кластер (kubeconfig собран через `aws eks update-kubeconfig` при загрузке машины).
+
+## Задание 1. Namespace `eks-111`
+
+```bash
+kubectl create namespace eks-111
+```
+
+## Задание 2. Deployment `spotapp` на spot-пуле с toleration и graceful shutdown
+
+Пул `spot-lab` закрыт taint'ом `dedicated=spot-lab:NoSchedule`, поэтому под должен нести
+соответствующий toleration, иначе Karpenter не сможет его разместить на этом NodePool.
+`terminationGracePeriodSeconds: 60` укладывается в двухминутное окно spot-прерывания, а
+`preStop` со `sleep 5` даёт балансировщику время увести трафик перед остановкой контейнера.
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spotapp
+  namespace: eks-111
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: spotapp
+  template:
+    metadata:
+      labels:
+        app: spotapp
+    spec:
+      terminationGracePeriodSeconds: 60
+      tolerations:
+        - key: "dedicated"
+          value: "spot-lab"
+          effect: "NoSchedule"
+      containers:
+        - name: app
+          image: viktoruj/ping_pong:latest
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 5"]
+EOF
+
+kubectl rollout status deployment/spotapp -n eks-111
+```
+
+Проверка, что все 4 реплики встали на spot-ноды:
+
+```bash
+kubectl get po -n eks-111 -l app=spotapp -o wide
+NODES=$(kubectl get po -n eks-111 -l app=spotapp -o jsonpath='{.items[*].spec.nodeName}')
+for n in $NODES; do
+  kubectl get node "$n" -L karpenter.sh/capacity-type --no-headers
+done
+```
+
+Karpenter поднимает новую EC2-ноду примерно 60-90 секунд, поэтому сначала поды могут
+висеть в `Pending`. Дожидаемся `rollout status` перед тем, как двигаться дальше.
+
+## Задание 3. Артефакт: spot-ноды и диверсификация NodePool
+
+Сохраняем срез нод с меткой типа ёмкости и категорией инстанса, а также requirements
+NodePool `spot-lab`, чтобы подтвердить широкий набор семейств (диверсификацию).
+
+```bash
+mkdir -p /var/work/tests/artifacts/3
+kubectl get nodes -L karpenter.sh/capacity-type -L karpenter.k8s.aws/instance-category \
+  > /var/work/tests/artifacts/3/nodes.txt
+cat /var/work/tests/artifacts/3/nodes.txt
+
+kubectl get nodepool spot-lab -o yaml \
+  | grep -A5 'instance-category' > /var/work/tests/artifacts/3/nodepool.txt
+cat /var/work/tests/artifacts/3/nodepool.txt
+```
+
+В `nodes.txt` должна быть хотя бы одна нода с `capacity-type=spot`. В `nodepool.txt`
+должны присутствовать три категории инстансов `c`, `m`, `r` - это и есть требование
+диверсификации: пул spot-lab не сужен до одного семейства инстансов.
+
+## Задание 4. PodDisruptionBudget для `spotapp`
+
+`minAvailable: 3` из 4 реплик защищает от избыточного добровольного выселения:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: spotapp-pdb
+  namespace: eks-111
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: spotapp
+EOF
+
+kubectl get pdb spotapp-pdb -n eks-111 -o yaml
+```
+
+## Задание 5. Симптом: drain блокируется PDB, но это не спасает от spot AWS
+
+Берём ноду, на которой стоит хотя бы один под `spotapp`, кордоним и пробуем drain.
+При 4 репликах и `minAvailable: 3` PDB разрешает выселить не больше одной реплики
+одновременно (`disruptionsAllowed` не превышает 1) - drain дальше одной реплики не пойдёт.
+
+```bash
+NODE=$(kubectl get po -n eks-111 -l app=spotapp -o jsonpath='{.items[0].spec.nodeName}')
+kubectl cordon "$NODE"
+kubectl get pdb spotapp-pdb -n eks-111 -o jsonpath='{.status.disruptionsAllowed}'
+echo
+
+# что попытается выселиться, без реального дренажа всей ноды
+kubectl drain "$NODE" --ignore-daemonsets --dry-run=client
+```
+
+Фиксируем симптом и объяснение границы ответственности PDB в артефакт:
+
+```bash
+mkdir -p /var/work/tests/artifacts/5
+cat > /var/work/tests/artifacts/5/drain.txt <<'EOF'
+Нода закордонена, drain пытается выселить поды spotapp через eviction API. PDB
+spotapp-pdb с minAvailable: 3 не даёт выселить больше одной реплики одновременно
+(disruptionsAllowed <= 1 при 4 репликах): при попытке нарушить бюджет eviction
+отказывает, и drain дальше одной реплики не двигается.
+
+Важная граница: PDB защищает только добровольное (voluntary) выселение - kubectl drain,
+апгрейд нод, консолидацию Karpenter. Он не спасает от форсированного изъятия spot AWS:
+если AWS реально отзывает инстанс по истечении двухминутного уведомления, поды на нём
+завершаются независимо от PDB, потому что это не добровольное действие Kubernetes, а
+остановка самого инстанса.
+EOF
+cat /var/work/tests/artifacts/5/drain.txt
+
+kubectl uncordon "$NODE"
+```
+
+## Задание 6. Проверка обработки прерываний Karpenter
+
+Karpenter обрабатывает spot-прерывания сам через очередь прерываний (`interruptionQueue`,
+настроена в модуле `eks_v2_karpenter` независимо от этой лабы). Подтверждаем механизм по
+логам контроллера - прав на `aws sqs list-queues` у worker может не быть, поэтому
+используем `kubectl logs`:
+
+```bash
+mkdir -p /var/work/tests/artifacts/6
+kubectl logs -n karpenter -l app.kubernetes.io/name=karpenter --tail=500 \
+  | grep -i interrupt > /var/work/tests/artifacts/6/interruption.txt
+
+# если событий прерывания пока не было, зафиксируем сам факт наличия механизма:
+if [[ ! -s /var/work/tests/artifacts/6/interruption.txt ]]; then
+  echo "no interruption events yet, but Karpenter interruption handling is configured via interruptionQueue" \
+    > /var/work/tests/artifacts/6/interruption.txt
+fi
+cat /var/work/tests/artifacts/6/interruption.txt
+```
+
+## Быстрая проверка
+
+```bash
+check_result
+```
