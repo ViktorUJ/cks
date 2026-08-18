@@ -60,7 +60,7 @@ The environment is deployed in AWS (`eu-central-1`) via Terragrunt and consists 
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), Calico CNI, metrics-server, master + worker |
 | `worker`   | Work machine with `kubectl` and `check_result`                |
 
-Instances: `t3.medium`, Ubuntu `22.04`. The cluster has two nodes — the master
+Instances: `t4g.medium`, Ubuntu `22.04`. The cluster has two nodes — the master
 (control-plane) and one worker. The worker carries the label `node=node_2` and the directory
 `/pv/analytics` for hostPath, so the Pod with the volume must be scheduled exactly there.
 

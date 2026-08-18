@@ -22,9 +22,9 @@ locals {
     type               = "calico"
     disable_kube_proxy = "false"
   }
-  instance_type        = "t3.medium"
-  instance_type_worker = "t3.medium"
-  spot_additional_types= [ "t3.medium" ]
+  instance_type        = "t4g.medium"
+  instance_type_worker = "t4g.medium"
+  spot_additional_types= [ "t4g.medium" ]
   all_spot_subnet      = "true"
   key_name             = ""
   ssh_password_enable  = "true"

@@ -63,7 +63,7 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt bereitgestellt und be
 | `k8s-1`    | Kubernetes **`1.33.1`** (kubeadm), CNI Calico, metrics-server, Master + 1 Worker |
 | `worker`   | Arbeitsmaschine mit `kubectl` und `check_result`; SSH-Zugriff auf die Cluster-Nodes |
 
-Instanzen: `t3.medium` Ubuntu `22.04`. Der Cluster hat zwei Nodes — den Master
+Instanzen: `t4g.medium` Ubuntu `22.04`. Der Cluster hat zwei Nodes — den Master
 (control-plane) und einen Worker.
 
 ## Bereitstellung

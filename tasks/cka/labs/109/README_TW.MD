@@ -68,7 +68,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`(kubeadm),CNI Calico,metrics-server;會在 namespace `app-logs` 中建立種子 Pod `app-xyz3322` |
 | `worker`   | 具備 `kubectl` 與 `check_result` 的工作機;啟動時會建立 `/var/work/109/app-old.yaml` 以及工作目錄 |
 
-執行個體:`t3.medium`(master),Ubuntu `22.04`。叢集為單節點 - master
+執行個體:`t4g.medium`(master),Ubuntu `22.04`。叢集為單節點 - master
 已解除污點(移除了 `control-plane` taint),因此 Pod 會直接排程到它上面。
 
 ## 部署

@@ -73,7 +73,7 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt ausgerollt und besteh
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, **Master + 1 Worker** |
 | `worker`   | Arbeitsmaschine mit `kubectl`, Cluster-Zugriff und `check_result`      |
 
-Instanzen: `t3.medium`, Ubuntu `22.04`. Der Cluster hat **zwei Nodes** — den Master
+Instanzen: `t4g.medium`, Ubuntu `22.04`. Der Cluster hat **zwei Nodes** — den Master
 (Control-Plane) und einen Worker. Auf dem Master bleibt der Taint `control-plane` erhalten,
 daher gehen normale Pods auf den Worker und auf dem Master landen nur solche mit passender
 Toleration (wie das DaemonSet in Aufgabe 3).

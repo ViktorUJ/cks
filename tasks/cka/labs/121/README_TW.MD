@@ -38,7 +38,7 @@ ClusterRole/ClusterRoleBinding,以及透過 `kubectl auth can-i` 檢查有效權
 | `k8s-1`    | Kubernetes `1.35.2`(kubeadm),CNI Calico,metrics-server,單節點;namespace `rbac` 已預先建立 |
 | `worker`   | 具備 `kubectl` 與 `check_result` 的工作機                                        |
 
-執行個體:`t3.medium`(master),Ubuntu `22.04`。叢集為單節點 - master
+執行個體:`t4g.medium`(master),Ubuntu `22.04`。叢集為單節點 - master
 已解除污點(移除了 `control-plane` taint),因此 Pod 會直接排程到它上面。
 
 ## 部署

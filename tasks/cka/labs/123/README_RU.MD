@@ -58,7 +58,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), **БЕЗ CNI**, master + 1 worker-нода; заранее развёрнут `netprobe` (Pods в `Pending` до установки CNI) |
 | `worker`   | Рабочая машина с `kubectl` и `check_result`; SSH-доступ к нодам кластера |
 
-Инстансы: `t3.medium` Ubuntu `22.04`. Кластер двухнодовый — master (control-plane) и
+Инстансы: `t4g.medium` Ubuntu `22.04`. Кластер двухнодовый — master (control-plane) и
 один worker; CNI не установлен, поэтому ноды стартуют в NotReady.
 
 ## Развёртывание

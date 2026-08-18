@@ -76,7 +76,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server; установлены **ingress-nginx (NodePort 30102)** и **Gateway API (CRD + NGINX Gateway Fabric)**; сид-namespaces `prod-db`/`prod`/`stage` и сид-`Ingress shop-ingress` в namespace `gw` для миграции |
 | `worker`   | Рабочая машина с `kubectl` и `check_result`                 |
 
-Инстансы: `t3.medium` (master) Ubuntu `22.04`. Кластер одноузловой — master «разтейнчен»
+Инстансы: `t4g.medium` (master) Ubuntu `22.04`. Кластер одноузловой — master «разтейнчен»
 (снят taint `control-plane`), поэтому поды планируются прямо на него.
 
 ## Развёртывание

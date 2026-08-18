@@ -72,7 +72,7 @@ flowchart TB
 
 Файлы-ответы для JSONPath сохраняются в `/home/ubuntu/answers/`.
 
-Инстансы: `t3.medium` (master) Ubuntu `22.04`. Кластер одноузловой — master
+Инстансы: `t4g.medium` (master) Ubuntu `22.04`. Кластер одноузловой — master
 «разтейнчен» (снят taint `control-plane`), поэтому поды планируются прямо на него.
 
 ## Развёртывание

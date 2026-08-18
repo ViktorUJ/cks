@@ -76,7 +76,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm）、CNI Calico、metrics-server、**master + worker(`disk=ssd`)** |
 | `worker`   | `kubectl`、クラスタへのアクセス、`check_result` を備えた作業マシン        |
 
-インスタンス: `t3.medium` Ubuntu `22.04`。クラスタは **2 ノード構成** - master（control-plane）と
+インスタンス: `t4g.medium` Ubuntu `22.04`。クラスタは **2 ノード構成** - master（control-plane）と
 label `disk=ssd` を持つ worker が 1 台です。metrics-server はインストール済み（HPA に必要）。master には
 `control-plane` taint が残されています - そこに配置するには toleration が必要です。
 

@@ -74,7 +74,7 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt ausgerollt und besteh
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), Calico, **Master + 1 Worker**; schaltet CoreDNS beim Start ab |
 | `worker`   | Arbeitsmaschine mit `kubectl` und `check_result`; SSH-Zugriff auf die Control Plane |
 
-Instanzen: `t3.medium` Ubuntu `22.04`. Der Cluster hat zwei Nodes — den Master
+Instanzen: `t4g.medium` Ubuntu `22.04`. Der Cluster hat zwei Nodes — den Master
 (Control-Plane) und einen Worker.
 
 ## Ausrollen

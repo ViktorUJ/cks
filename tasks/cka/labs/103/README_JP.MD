@@ -73,7 +73,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm)、CNI Calico、metrics-server、**master + 1 worker** |
 | `worker`   | `kubectl`、クラスターへのアクセス、`check_result` を備えた作業マシン     |
 
-インスタンス: `t3.medium` Ubuntu `22.04`。クラスターは **2 ノード構成** — master (control-plane) と
+インスタンス: `t4g.medium` Ubuntu `22.04`。クラスターは **2 ノード構成** — master (control-plane) と
 worker 1 台です。master には taint `control-plane` が残っているため、通常の Pods は
 worker に配置され、master には適切な toleration を持つものだけが載ります (課題 3 の
 DaemonSet のように)。

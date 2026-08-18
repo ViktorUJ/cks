@@ -58,7 +58,7 @@ El entorno se despliega en AWS (`eu-central-1`) mediante Terragrunt y consta de:
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), **SIN CNI**, master + 1 nodo worker; `netprobe` está desplegado de antemano (los Pods quedan en `Pending` hasta instalar el CNI) |
 | `worker`   | Máquina de trabajo con `kubectl` y `check_result`; acceso SSH a los nodos del clúster |
 
-Instancias: `t3.medium` Ubuntu `22.04`. El clúster tiene dos nodos — master (control plane) y
+Instancias: `t4g.medium` Ubuntu `22.04`. El clúster tiene dos nodos — master (control plane) y
 un worker; el CNI no está instalado, por eso los nodos arrancan en NotReady.
 
 ## Despliegue

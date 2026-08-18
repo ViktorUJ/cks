@@ -71,7 +71,7 @@ El entorno se despliega en AWS (`eu-central-1`) mediante Terragrunt y consta de:
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), Calico, metrics-server, **master + 1 worker**; al arrancar introduce los fallos a nivel de clúster |
 | `worker`   | Máquina de trabajo con `kubectl` y `check_result`; acceso SSH a los nodos del clúster |
 
-Instancias: `t3.medium`, Ubuntu `22.04`. El clúster tiene dos nodos: el master
+Instancias: `t4g.medium`, Ubuntu `22.04`. El clúster tiene dos nodos: el master
 (control-plane) y un worker.
 
 ## Despliegue

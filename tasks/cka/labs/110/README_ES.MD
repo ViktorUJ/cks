@@ -78,7 +78,7 @@ El entorno se despliega en AWS (`eu-central-1`) mediante Terragrunt y consta de:
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server; están instalados **ingress-nginx (NodePort 30102)** y **Gateway API (CRD + NGINX Gateway Fabric)**; namespaces semilla `prod-db`/`prod`/`stage` y un `Ingress shop-ingress` semilla en el namespace `gw` para la migración |
 | `worker`   | Máquina de trabajo con `kubectl` y `check_result`            |
 
-Instancias: `t3.medium` (master), Ubuntu `22.04`. El clúster es de un solo nodo: al master se
+Instancias: `t4g.medium` (master), Ubuntu `22.04`. El clúster es de un solo nodo: al master se
 le ha quitado el taint `control-plane`, por lo que los pods se planifican directamente en él.
 
 ## Despliegue
