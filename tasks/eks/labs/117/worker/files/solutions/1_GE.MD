@@ -200,7 +200,7 @@ vpc_endpoint_id=$S3_EP
 state=available
 route_tables=$RTB_A,$RTB_B,$RTB_C
 
-S3-ის gateway endpoint არის მხოლოდ ჩანაწერი route table-ში და ის უფასოა (бесплат):
+S3-ის gateway endpoint არის მხოლოდ ჩანაწერი route table-ში და ის უფასოა (free of charge):
 არ არსებობს არც საათობრივი გადასახადი, არც გადასახადი დამუშავებული მონაცემისთვის,
 interface endpoint-ისგან განსხვავებით.
 EOF

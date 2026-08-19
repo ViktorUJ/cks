@@ -82,7 +82,7 @@ NS="eks-112"
 @test "6. Artifact 6/costmodel.txt explains Fargate vs node group cost structure" {
   echo '1' >> /var/work/tests/result/all
   f=/var/work/tests/artifacts/6/costmodel.txt
-  if [[ -s "$f" ]] && grep -qi 'vCPU' "$f" && grep -qi 'под' "$f" \
+  if [[ -s "$f" ]] && grep -qi 'vCPU' "$f" && grep -qiE 'pod|под' "$f" \
     && grep -qiE 'node group|нод|инстанс' "$f"; then
     echo '1' >> /var/work/tests/result/ok
     result=0

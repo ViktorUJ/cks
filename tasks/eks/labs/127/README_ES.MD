@@ -169,8 +169,8 @@ check_result    # verificar la solución
 ---
 |        **3**        | **Cambio a Deny: un pod con `:latest` es rechazado**          |
 | :-----------------: | :---------------------------------------------------------- |
-| Qué hacer          | Actualiza `disallow-latest-tag-binding`, cambiando `validationActions` a `["Deny"]` (mediante `kubectl apply`). Intenta crear el Pod `latest-deny-pod` con la imagen `viktoruj/ping_pong:latest` en `eks-127` - el apiserver debe RECHAZAR la solicitud. Guarda el mensaje de rechazo (stderr de `kubectl apply`) en el archivo `/var/work/tests/artifacts/3/denied.txt`. El mensaje del apiserver lleva el texto propio de la política, que literalmente dice que el tag está `запрещён` (prohibido) - es esa palabra exacta la que verás en la salida y que debes conservar en el artefacto. |
-| Criterios de aceptación    | - `disallow-latest-tag-binding` tiene `validationActions: ["Deny"]`;<br/>- el Pod `latest-deny-pod` en `eks-127` NO existe;<br/>- el archivo `denied.txt` no está vacío y contiene las palabras `latest` y `запрещён`. |
+| Qué hacer          | Actualiza `disallow-latest-tag-binding`, cambiando `validationActions` a `["Deny"]` (mediante `kubectl apply`). Intenta crear el Pod `latest-deny-pod` con la imagen `viktoruj/ping_pong:latest` en `eks-127` - el apiserver debe RECHAZAR la solicitud. Guarda el mensaje de rechazo (stderr de `kubectl apply`) en el archivo `/var/work/tests/artifacts/3/denied.txt`. El mensaje del apiserver lleva el texto propio de la política, que literalmente dice que el tag está `forbidden` (prohibido) - es esa palabra exacta la que verás en la salida y que debes conservar en el artefacto. |
+| Criterios de aceptación    | - `disallow-latest-tag-binding` tiene `validationActions: ["Deny"]`;<br/>- el Pod `latest-deny-pod` en `eks-127` NO existe;<br/>- el archivo `denied.txt` no está vacío y contiene las palabras `latest` y `forbidden`. |
 ---
 |        **4**        | **Un pod legítimo con un tag explícito pasa incluso con Deny**        |
 | :-----------------: | :---------------------------------------------------------- |

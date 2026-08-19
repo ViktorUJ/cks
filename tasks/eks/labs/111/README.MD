@@ -170,8 +170,8 @@ check_result    # check the solution
 ---
 |        **5**        | **Symptom: drain gets blocked by PDB, but not a forced reclaim** |
 | :-----------------: | :---------------------------------------------------------- |
-| What to do          | Pick a node with a `spotapp` pod, run `kubectl cordon` on it and try `kubectl drain <node> --ignore-daemonsets --dry-run=client`. Check `kubectl get pdb spotapp-pdb -n eks-111 -o jsonpath='{.status.disruptionsAllowed}'` - with `4` replicas and `minAvailable: 3` the budget allows evicting no more than one replica at a time. Save an explanation to `/var/work/tests/artifacts/5/drain.txt`: PDB protects only voluntary eviction (drain, node upgrades, Karpenter consolidation), not a forced reclaim of a spot instance by AWS itself. The text must contain the words `PDB` and `добровольн` (or `voluntary`). |
-| Acceptance criteria    | - `spotapp-pdb.status.disruptionsAllowed` is no more than `1`;<br/>- file `/var/work/tests/artifacts/5/drain.txt` is not empty and contains `PDB` and `добровольн`/`voluntary`. |
+| What to do          | Pick a node with a `spotapp` pod, run `kubectl cordon` on it and try `kubectl drain <node> --ignore-daemonsets --dry-run=client`. Check `kubectl get pdb spotapp-pdb -n eks-111 -o jsonpath='{.status.disruptionsAllowed}'` - with `4` replicas and `minAvailable: 3` the budget allows evicting no more than one replica at a time. Save an explanation to `/var/work/tests/artifacts/5/drain.txt`: PDB protects only voluntary eviction (drain, node upgrades, Karpenter consolidation), not a forced reclaim of a spot instance by AWS itself. The text must contain the words `PDB` and `voluntary`. |
+| Acceptance criteria    | - `spotapp-pdb.status.disruptionsAllowed` is no more than `1`;<br/>- file `/var/work/tests/artifacts/5/drain.txt` is not empty and contains `PDB` and `voluntary`. |
 ---
 |        **6**        | **Checking Karpenter's interruption handling**                 |
 | :-----------------: | :---------------------------------------------------------- |

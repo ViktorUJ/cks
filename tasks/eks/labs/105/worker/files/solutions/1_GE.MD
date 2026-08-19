@@ -240,6 +240,8 @@ environment ცვლადები ფიქსირდება ერთხ
 ESO-ს გაუმართაობა, ეს არის env-ის თვისება Kubernetes-ში. Pod vol-reader (დავალება 5)
 კითხულობს იმავე Secret-ს volumeMount-ის მეშვეობით - ასეთ ტომს kubelet აახლებს დისკზე
 ავტომატურად, pod-ის ხელახლა შექმნის გარეშე.
+
+მოკლედ ინგლისურად: the env value is stale and does not update until the pod is recreated.
 EOF
 cat /var/work/tests/artifacts/7/rotation.txt
 ```

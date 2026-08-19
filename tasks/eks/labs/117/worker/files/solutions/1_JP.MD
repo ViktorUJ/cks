@@ -198,7 +198,7 @@ vpc_endpoint_id=$S3_EP
 state=available
 route_tables=$RTB_A,$RTB_B,$RTB_C
 
-S3 用の gateway endpoint は単なる route table のエントリであり、無料(бесплат)です:
+S3 用の gateway endpoint は単なる route table のエントリであり、無料(free of charge)です:
 interface endpoint とは異なり、時間単位の料金もデータ処理単位の料金もありません。
 EOF
 cat /var/work/tests/artifacts/3/s3endpoint.txt

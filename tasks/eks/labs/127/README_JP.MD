@@ -167,7 +167,7 @@ check_result    # 解答を確認する
 |        **3**        | **Denyへの切り替え: `:latest`のpodは拒否される**          |
 | :-----------------: | :---------------------------------------------------------- |
 | 何をするか          | `disallow-latest-tag-binding`を更新し、`validationActions`を`["Deny"]`に変更してください(`kubectl apply`経由)。`eks-127`にイメージ`viktoruj/ping_pong:latest`のPod `latest-deny-pod`を作成しようとしてください - apiserverはこのリクエストを拒否するはずです。拒否メッセージ(`kubectl apply`のstderr)をファイル`/var/work/tests/artifacts/3/denied.txt`に保存してください。 |
-| 受け入れ基準    | - `disallow-latest-tag-binding`の`validationActions`が`["Deny"]`である;<br/>- `eks-127`のPod `latest-deny-pod`が存在しない;<br/>- ファイル`denied.txt`が空でなく、`latest`と`запрещён`という単語を含んでいる。 |
+| 受け入れ基準    | - `disallow-latest-tag-binding`の`validationActions`が`["Deny"]`である;<br/>- `eks-127`のPod `latest-deny-pod`が存在しない;<br/>- ファイル`denied.txt`が空でなく、`latest`と`forbidden`という単語を含んでいる。 |
 ---
 |        **4**        | **明示的なタグを持つ正当なpodはDenyでも通過する**        |
 | :-----------------: | :---------------------------------------------------------- |

@@ -238,6 +238,8 @@ tras cambiar el Secret sin recrear el pod - esto no es un fallo de ESO, sino una
 particularidad de env en Kubernetes. El pod vol-reader (tarea 5) lee el mismo Secret
 mediante volumeMount - ese volumen kubelet lo actualiza en disco automáticamente, sin
 recrear el pod.
+
+Nota breve en inglés: the env value is stale and does not update until the pod is recreated.
 EOF
 cat /var/work/tests/artifacts/7/rotation.txt
 ```

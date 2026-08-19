@@ -37,7 +37,7 @@ spec:
         resources: ["pods"]
   validations:
     - expression: "object.spec.containers.all(c, !c.image.endsWith(':latest'))"
-      message: "тег :latest запрещён, укажите конкретную версию образа"
+      message: "the :latest tag is forbidden, specify a concrete image version"
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -115,7 +115,7 @@ cat /var/work/tests/artifacts/3/denied.txt
 ```
 
 ფაილში `denied.txt` უნდა იყოს apiserver-ის შეცდომის შესახებ შეტყობინება პოლიტიკის
-ტექსტით (სიტყვები `latest` და `запрещён`). პოდი `latest-deny-pod` ამასთანავე არ არის
+ტექსტით (სიტყვები `latest` და `forbidden`). პოდი `latest-deny-pod` ამასთანავე არ არის
 შექმნილი - `kubectl get pod latest-deny-pod -n eks-127` დააბრუნებს `NotFound`-ს.
 
 ## დავალება 4. ლეგიტიმური პოდი ცალსახა ტეგით გადის Deny-ის დროსაც

@@ -138,8 +138,7 @@ PDB spotapp-pdb avec minAvailable: 3 ne permet pas d'évincer plus d'une répliq
 (disruptionsAllowed <= 1 avec 4 réplicas) : en cas de tentative de dépasser le budget,
 l'éviction est refusée, et le drain ne progresse pas au-delà d'une réplique.
 
-Frontière importante : le PDB protège uniquement l'éviction volontaire (добровольн /
-voluntary) - kubectl drain, mise à niveau des nœuds, consolidation Karpenter. Il ne protège
+Frontière importante : le PDB protège uniquement l'éviction volontaire (voluntary) - kubectl drain, mise à niveau des nœuds, consolidation Karpenter. Il ne protège
 pas d'une reprise forcée du spot par AWS : si AWS reprend réellement l'instance à
 l'expiration du préavis de deux minutes, les pods qui s'y trouvent sont terminés
 indépendamment du PDB, car il ne s'agit pas d'une action volontaire de Kubernetes, mais de

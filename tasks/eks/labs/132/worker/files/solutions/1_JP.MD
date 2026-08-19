@@ -468,7 +468,7 @@ cat > /var/work/tests/artifacts/8/comparison.txt <<'EOF'
 
 5. VPC CNIの完全な置き換え（aws-nodeを削除し、Cilium自身がIPAMになる）はこのラボの
    範囲には含まれません：稼働中のクラスタでCNIを切り替えるのは、新しいノードを使った
-   blue/green操作であり、稼働中にフラグを切り替えるようなものではありません（第8章、
+   blue/green操作であり、稼働中にフラグを切り替えるようなものではありません（chapter 8、
    8.8節）。ここでは安全な方法であるCNI chainingだけを練習しました。
 EOF
 cat /var/work/tests/artifacts/8/comparison.txt

@@ -200,8 +200,8 @@ check_result    # verificar la solución
 ---
 |        **6**        | **Estructura de coste: Fargate contra node group**            |
 | :-----------------: | :---------------------------------------------------------- |
-| Qué hacemos          | Describe la diferencia del modelo de pago en `3-5` frases: Fargate tarifica la vCPU y la memoria del PROPIO POD durante el tiempo que vive, sin cobrar por capacidad ociosa; un node group tarifica la instancia entera, incluido el tiempo en que está infrautilizada. Guarda el texto en `/var/work/tests/artifacts/6/costmodel.txt`. Sin cifras en dólares - solo la estructura de tarificación. La verificación automática busca la palabra literal `под` (pod en ruso) junto a `vCPU`, así que asegúrate de incluir esa palabra literal `под` en el texto, además de tu explicación en español. |
-| Criterios de aceptación    | - el archivo no está vacío;<br/>- contiene `vCPU`, `под` (la palabra literal en ruso, exigida por la verificación automática) y al menos una de `node group` / `нод` / `инстанс`. |
+| Qué hacemos          | Describe la diferencia del modelo de pago en `3-5` frases: Fargate tarifica la vCPU y la memoria del PROPIO POD durante el tiempo que vive, sin cobrar por capacidad ociosa; un node group tarifica la instancia entera, incluido el tiempo en que está infrautilizada. Guarda el texto en `/var/work/tests/artifacts/6/costmodel.txt`. Sin cifras en dólares - solo la estructura de tarificación. La verificación automática busca la palabra `pod` junto a `vCPU`, así que asegúrate de que tu explicación mencione tanto `pod` como `vCPU`. |
+| Criterios de aceptación    | - el archivo no está vacío;<br/>- contiene `vCPU`, `pod` y `node group`. |
 ---
 
 ## Verificación del resultado

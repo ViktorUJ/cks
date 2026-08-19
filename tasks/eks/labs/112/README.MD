@@ -195,8 +195,8 @@ check_result    # check the solution
 ---
 |        **6**        | **Cost structure: Fargate versus node group**            |
 | :-----------------: | :---------------------------------------------------------- |
-| What to do          | Describe the difference in the payment model in `3-5` sentences: Fargate charges for the vCPU and memory of the POD ITSELF for its lifetime, with no charge for idle capacity; a node group charges for the whole instance, including the time it's under-utilized. Save the text to `/var/work/tests/artifacts/6/costmodel.txt`. No dollar amounts - just the billing structure. The check looks for the literal word `под` (Russian for "pod") alongside `vCPU`, so make sure the file includes that exact literal word `под` somewhere in the text, in addition to your explanation in English. |
-| Acceptance criteria    | - the file is not empty;<br/>- it contains the words `vCPU`, `под` (the literal Russian word, required by the automated check), and at least one of `node group` / `нод` / `инстанс`. |
+| What to do          | Describe the difference in the payment model in `3-5` sentences: Fargate charges for the vCPU and memory of the POD ITSELF for its lifetime, with no charge for idle capacity; a node group charges for the whole instance, including the time it's under-utilized. Save the text to `/var/work/tests/artifacts/6/costmodel.txt`. No dollar amounts - just the billing structure. The check looks for the word `pod` alongside `vCPU`, so make sure your explanation mentions both `pod` and `vCPU`. |
+| Acceptance criteria    | - the file is not empty;<br/>- it contains the words `vCPU`, `pod`, and `node group`. |
 ---
 
 ## Checking the result

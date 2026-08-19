@@ -177,13 +177,13 @@ Der Pod startet normal: `30Gi` liegt innerhalb der erlaubten `175 GiB`, und die 
 Der entscheidende Unterschied ist die Abrechnungseinheit. Fargate berechnet vCPU und
 Speicher eines konkreten Pods für die Dauer seiner Lebenszeit; eine Node Group berechnet
 die gesamte EC2-Instanz, unabhängig davon, wie stark sie ausgelastet ist. Die automatische
-Prüfung dieses Artefakts sucht das wörtliche russische Wort `под` neben `vCPU`, daher
-enthält das folgende Artefakt dieses wörtliche Wort zusätzlich zur deutschen Erklärung:
+Prüfung dieses Artefakts sucht das Wort `pod` neben `vCPU`, daher
+enthält das folgende Artefakt beides:
 
 ```bash
 mkdir -p /var/work/tests/artifacts/6
 cat > /var/work/tests/artifacts/6/costmodel.txt <<'EOF'
-Fargate berechnet vCPU und Speicher des Pods (под) selbst für die Zeit, in der er
+Fargate berechnet vCPU und Speicher des pod selbst für die Zeit, in der er
 tatsächlich läuft: läuft der Pod nicht, entstehen keine Kosten, und es wird nie für
 ungenutzte Kapazität bezahlt. Eine Node Group berechnet dagegen die gesamte Instanz: man
 zahlt auch für die Zeit, in der Nodes zwischen Pods leer laufen oder unterausgelastet sind.

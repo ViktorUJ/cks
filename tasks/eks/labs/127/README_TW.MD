@@ -163,7 +163,7 @@ check_result    # 檢查解答
 |        **3**        | **切換到 Deny:帶有 `:latest` 的 pod 被拒絕**          |
 | :-----------------: | :---------------------------------------------------------- |
 | 我們要做什麼          | 更新 `disallow-latest-tag-binding`,將 `validationActions` 改為 `["Deny"]`(透過 `kubectl apply`)。嘗試在 `eks-127` 中創建映像為 `viktoruj/ping_pong:latest` 的 Pod `latest-deny-pod` - apiserver 應該拒絕這個請求。把拒絕訊息(`kubectl apply` 的 stderr)保存到檔案 `/var/work/tests/artifacts/3/denied.txt`。 |
-| 驗收標準    | - `disallow-latest-tag-binding` 的 `validationActions` 為 `["Deny"]`;<br/>- `eks-127` 中的 Pod `latest-deny-pod` 不存在;<br/>- 檔案 `denied.txt` 不為空,且包含 `latest` 和 `запрещён` 這兩個詞。 |
+| 驗收標準    | - `disallow-latest-tag-binding` 的 `validationActions` 為 `["Deny"]`;<br/>- `eks-127` 中的 Pod `latest-deny-pod` 不存在;<br/>- 檔案 `denied.txt` 不為空,且包含 `latest` 和 `forbidden` 這兩個詞。 |
 ---
 |        **4**        | **帶有明確標籤的合法 pod 即使在 Deny 下也能通過**        |
 | :-----------------: | :---------------------------------------------------------- |

@@ -132,10 +132,10 @@ spotapp-pdb 的 minAvailable: 3 不允許一次驅逐超過一個副本(在 4 �
 disruptionsAllowed <= 1):一旦嘗試違反這個 budget,eviction 就會被拒絕,drain
 無法超過這一個副本繼續往下走。
 
-重要的邊界:PDB 只保護 добровольн(voluntary)eviction - kubectl drain、節點升級、
+重要的邊界:PDB 只保護 voluntary eviction - kubectl drain、節點升級、
 Karpenter 的 consolidation。它不能保護免受 AWS 對 spot 的強制回收:如果 AWS 在
 兩分鐘通知期滿後真的收回了這個 instance,上面的 pod 會不受 PDB 影響直接終止,因為
-這並不是 Kubernetes 的 добровольн(voluntary)行為,而是 instance 本身被停止。
+這並不是 Kubernetes 的 voluntary 行為,而是 instance 本身被停止。
 EOF
 cat /var/work/tests/artifacts/5/drain.txt
 

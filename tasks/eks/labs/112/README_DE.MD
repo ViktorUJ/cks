@@ -200,8 +200,8 @@ check_result    # Lösung prüfen
 ---
 |        **6**        | **Kostenstruktur: Fargate versus Node Group**            |
 | :-----------------: | :---------------------------------------------------------- |
-| Was wir tun          | Beschreiben Sie den Unterschied im Bezahlmodell in `3-5` Sätzen: Fargate berechnet vCPU und Speicher des PODS SELBST für die Dauer seiner Lebenszeit, ohne Gebühr für ungenutzte Kapazität; eine Node Group berechnet die ganze Instanz, einschließlich der Zeit, in der sie unterausgelastet ist. Speichern Sie den Text in `/var/work/tests/artifacts/6/costmodel.txt`. Ohne Dollarbeträge - nur die Abrechnungsstruktur. Die automatische Prüfung sucht das wörtliche Wort `под` (russisch für "Pod") neben `vCPU`, achten Sie also darauf, dieses wörtliche Wort `под` zusätzlich zu Ihrer deutschen Erklärung im Text zu haben. |
-| Abnahmekriterien    | - die Datei ist nicht leer;<br/>- sie enthält `vCPU`, `под` (das wörtliche russische Wort, von der automatischen Prüfung verlangt) und mindestens eines von `node group` / `нод` / `инстанс`. |
+| Was wir tun          | Beschreiben Sie den Unterschied im Bezahlmodell in `3-5` Sätzen: Fargate berechnet vCPU und Speicher des PODS SELBST für die Dauer seiner Lebenszeit, ohne Gebühr für ungenutzte Kapazität; eine Node Group berechnet die ganze Instanz, einschließlich der Zeit, in der sie unterausgelastet ist. Speichern Sie den Text in `/var/work/tests/artifacts/6/costmodel.txt`. Ohne Dollarbeträge - nur die Abrechnungsstruktur. Die automatische Prüfung sucht das Wort `pod` neben `vCPU`, achten Sie also darauf, dass Ihre Erklärung sowohl `pod` als auch `vCPU` enthält. |
+| Abnahmekriterien    | - die Datei ist nicht leer;<br/>- sie enthält `vCPU`, `pod` und `node group`. |
 ---
 
 ## Ergebnis prüfen

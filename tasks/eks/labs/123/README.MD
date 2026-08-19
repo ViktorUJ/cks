@@ -178,8 +178,8 @@ check_result    # check the solution
 ---
 |        **6**        | **Fix: a targeted `do-not-disrupt` instead of a full lockdown** |
 | :-----------------: | :---------------------------------------------------------- |
-| What to do          | Put the annotation `karpenter.sh/do-not-disrupt=true` on only one StatefulSet pod, for example `kubectl annotate pod db-0 -n eks-123 karpenter.sh/do-not-disrupt=true`. Do NOT put it on `db-1` and `db-2`. Save an explanation to `/var/work/tests/artifacts/6/fix.txt`: why the correct protection for a StatefulSet during consolidation is the combination of a PDB (task 4) plus the `stateful` pool's disruption budget (`nodes: 50%`) plus a targeted `do-not-disrupt`, rather than a blanket protection with no distinction - otherwise it blocks not only consolidation but also drift (chapter 12.8). The text must contain the words `pdb`, `do-not-disrupt` and `budget` (or `бюджет`). |
-| Acceptance criteria    | - the annotation `karpenter.sh/do-not-disrupt=true` is present only on pod `db-0`, `db-1` and `db-2` don't have it;<br/>- the file `/var/work/tests/artifacts/6/fix.txt` is not empty and contains `pdb`, `do-not-disrupt`, `budget`/`бюджет`. |
+| What to do          | Put the annotation `karpenter.sh/do-not-disrupt=true` on only one StatefulSet pod, for example `kubectl annotate pod db-0 -n eks-123 karpenter.sh/do-not-disrupt=true`. Do NOT put it on `db-1` and `db-2`. Save an explanation to `/var/work/tests/artifacts/6/fix.txt`: why the correct protection for a StatefulSet during consolidation is the combination of a PDB (task 4) plus the `stateful` pool's disruption budget (`nodes: 50%`) plus a targeted `do-not-disrupt`, rather than a blanket protection with no distinction - otherwise it blocks not only consolidation but also drift (chapter 12.8). The text must contain the words `pdb`, `do-not-disrupt` and `budget`. |
+| Acceptance criteria    | - the annotation `karpenter.sh/do-not-disrupt=true` is present only on pod `db-0`, `db-1` and `db-2` don't have it;<br/>- the file `/var/work/tests/artifacts/6/fix.txt` is not empty and contains `pdb`, `do-not-disrupt`, `budget`. |
 ---
 
 ## Checking the result

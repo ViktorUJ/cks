@@ -171,8 +171,8 @@ check_result    # 解答を確認する
 ---
 |        **8**        | **通常のHPAとKEDAが作成したHPAの比較**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| 何をするか          | `kubectl get hpa -A`を実行し、その出力をタスク5〜7で見たものと比較してください。ファイル`/var/work/tests/artifacts/8/hpa_compare.txt`に2〜3文を保存してください: この出力で通常のHPAとHPA `keda-hpa-demo-app`が何が違うか、そしてKEDAはHPAを置き換えるのではなく、それを`управляет`する、つまり管理・制御するという説明（単語`HPA`、`KEDA`、`keda-hpa`、および語根`управля`に言及してください）。 |
-| 受け入れ基準    | - ファイル`8/hpa_compare.txt`が空でない;<br/>- 単語`HPA`、`KEDA`、`keda-hpa`および語根「управля」を含んでいる。 |
+| 何をするか          | `kubectl get hpa -A`を実行し、その出力をタスク5〜7で見たものと比較してください。ファイル`/var/work/tests/artifacts/8/hpa_compare.txt`に2〜3文を保存してください: この出力で通常のHPAとHPA `keda-hpa-demo-app`が何が違うか、そしてKEDAはHPAを置き換えるのではなく、それを制御する（`control`）という説明（単語`HPA`、`KEDA`、`keda-hpa`、および`control`に言及してください）。 |
+| 受け入れ基準    | - ファイル`8/hpa_compare.txt`が空でない;<br/>- 単語`HPA`、`KEDA`、`keda-hpa`および`control`を含んでいる。 |
 ---
 
 ### なぜタスクにrequests、limit、nodeSelectorが登場したのか

@@ -218,7 +218,7 @@ check_result    # 檢查解答
 |        **8**        | **比較：Cilium 添加了什麼，代價是什麼**            |
 | :-----------------: | :---------------------------------------------------------- |
 | 要做什麼          | 將文字（3-5 點）保存到檔案 `/var/work/tests/artifacts/8/comparison.txt`，說明內建 VPC CNI NetworkPolicy 能做什麼，Cilium 在本實驗中添加了什麼，以及您為此付出了什麼代價。文字中必須包含 `L7`、`FQDN` 和 `Hubble` 這些詞。另外指出完全替換 VPC CNI 不在本實驗範圍內，並引用第 8 章（關於把 CNI 遷移視為 blue/green 操作的部分）。 |
-| 驗收標準    | - 檔案 `8/comparison.txt` 不為空;<br/>- 包含詞語 `L7`、`FQDN`、`Hubble`;<br/>- 包含對第 8 章的提及（`глава 8` 或 `chapter 8`）以及詞語 `blue`（來自 `blue/green`）。 |
+| 驗收標準    | - 檔案 `8/comparison.txt` 不為空;<br/>- 包含詞語 `L7`、`FQDN`、`Hubble`;<br/>- 包含對第 8 章的提及（`chapter 8`）以及詞語 `blue`（來自 `blue/green`）。 |
 ---
 
 ## 檢查結果

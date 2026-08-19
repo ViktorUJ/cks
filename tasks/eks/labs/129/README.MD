@@ -189,12 +189,12 @@ aws s3api list-buckets --query "Buckets[?contains(Name,'mountpoint-demo')].Name"
 |        **5**        | **Symptom: append and a write into the middle of a file fail**      |
 | :-----------------: | :---------------------------------------------------------- |
 | What to do          | In pod `mountpoint-app`, try to append to the existing file: `echo more >> /data/newfile.txt`. Then try to write into the middle of the same file: `dd of=/data/newfile.txt bs=1 seek=1 conv=notrunc` (the input data doesn't matter). Both commands must fail with `Operation not permitted`. While you're at it, check two neighboring operations and explain them to yourself: overwriting an existing file (`echo test2 > /data/newfile.txt`) and deletion (`rm /data/newfile.txt`) also fail with `Operation not permitted`, because by default Mountpoint doesn't enable `allow-overwrite` and `allow-delete`, while `mkdir /data/sub` succeeds silently, because directories in S3 are virtual and no object is created for them. Save the outputs together with a short explanation (an S3 object is immutable and is only updated whole, via a new `PutObject`) to `/var/work/tests/artifacts/5/writesemantics.txt`. |
-| Acceptance criteria    | - file `5/writesemantics.txt` is not empty;<br/>- contains `Operation not permitted`;<br/>- contains at least one of `append`, `rename`, `середин`. |
+| Acceptance criteria    | - file `5/writesemantics.txt` is not empty;<br/>- contains `Operation not permitted`;<br/>- contains at least one of `append`, `rename`. |
 ---
 |        **6**        | **Why prefixes behind this PVC aren't backed up via AWS Backup** |
 | :-----------------: | :---------------------------------------------------------- |
 | What to do          | AWS Backup for EKS (chapters 41-42) protects EBS volumes through CSI snapshots. A Mountpoint volume has no EBS under the hood: the data already lives in S3 as objects, not on a block device, so this kind of PVC has no snapshot in the same sense. Data protection here relies on plain S3 mechanisms, primarily bucket versioning (terraform enabled it on this bucket). Confirm this with `aws s3api get-bucket-versioning --bucket <bucket>` and save its output together with an explanation (the volume isn't EBS, there's no snapshot, protection is via versioning) to `/var/work/tests/artifacts/6/backup.txt`. |
-| Acceptance criteria    | - file `6/backup.txt` is not empty;<br/>- contains `versioning` and `snapshot` (or `снапшот`);<br/>- contains `Enabled` (the confirmed status of the bucket's versioning). |
+| Acceptance criteria    | - file `6/backup.txt` is not empty;<br/>- contains `versioning` and `snapshot`;<br/>- contains `Enabled` (the confirmed status of the bucket's versioning). |
 ---
 
 ## Checking the result

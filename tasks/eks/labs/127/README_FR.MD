@@ -169,7 +169,7 @@ check_result    # vérifier la solution
 |        **3**        | **Passage en Deny : un pod avec `:latest` est refusé**          |
 | :-----------------: | :---------------------------------------------------------- |
 | Ce qu'on fait          | Mettez à jour `disallow-latest-tag-binding`, en changeant `validationActions` en `["Deny"]` (via `kubectl apply`). Essayez de créer le Pod `latest-deny-pod` avec l'image `viktoruj/ping_pong:latest` dans `eks-127` - l'apiserver doit REFUSER la requête. Enregistrez le message de refus (stderr de `kubectl apply`) dans le fichier `/var/work/tests/artifacts/3/denied.txt`. |
-| Critères d'acceptation    | - `disallow-latest-tag-binding` a `validationActions: ["Deny"]`;<br/>- le Pod `latest-deny-pod` dans `eks-127` N'existe PAS;<br/>- le fichier `denied.txt` n'est pas vide et contient les mots `latest` et `запрещён`. |
+| Critères d'acceptation    | - `disallow-latest-tag-binding` a `validationActions: ["Deny"]`;<br/>- le Pod `latest-deny-pod` dans `eks-127` N'existe PAS;<br/>- le fichier `denied.txt` n'est pas vide et contient les mots `latest` et `forbidden`. |
 ---
 |        **4**        | **Un pod légitime avec un tag explicite passe même en Deny**        |
 | :-----------------: | :---------------------------------------------------------- |

@@ -242,6 +242,8 @@ Der Wert von env aktualisiert sich nach einer Änderung des Secret nicht ohne
 Neuerstellung des Pods - das ist kein Fehler von ESO, sondern eine Eigenschaft von env in
 Kubernetes. Der Pod vol-reader (Aufgabe 5) liest dasselbe Secret über volumeMount - so ein
 Volume aktualisiert kubelet automatisch auf der Festplatte, ohne den Pod neu zu erstellen.
+
+Kurz auf Englisch: the env value is stale and does not update until the pod is recreated.
 EOF
 cat /var/work/tests/artifacts/7/rotation.txt
 ```

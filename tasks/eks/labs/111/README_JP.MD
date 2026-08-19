@@ -169,8 +169,8 @@ check_result    # 解答の確認
 ---
 |        **5**        | **症状:drain は PDB によってブロックされるが、強制的な reclaim は防げない** |
 | :-----------------: | :---------------------------------------------------------- |
-| やること          | `spotapp` の Pod があるノードを選び、`kubectl cordon` を実行し、`kubectl drain <node> --ignore-daemonsets --dry-run=client` を試してください。`kubectl get pdb spotapp-pdb -n eks-111 -o jsonpath='{.status.disruptionsAllowed}'` を確認してください - `4` レプリカと `minAvailable: 3` では、この予算は一度に 1 つのレプリカしか eviction を許可しません。`/var/work/tests/artifacts/5/drain.txt` に説明を保存してください:PDB は voluntary eviction(drain、ノードのアップグレード、Karpenter の consolidation)のみを保護し、AWS 自身による spot インスタンスの強制的な reclaim は保護しません。テキストには `PDB` と `добровольн`(または `voluntary`)という単語を含める必要があります。 |
-| アクセプタンス基準    | - `spotapp-pdb.status.disruptionsAllowed` が `1` を超えない;<br/>- ファイル `/var/work/tests/artifacts/5/drain.txt` が空でなく、`PDB` と `добровольн`/`voluntary` を含む。 |
+| やること          | `spotapp` の Pod があるノードを選び、`kubectl cordon` を実行し、`kubectl drain <node> --ignore-daemonsets --dry-run=client` を試してください。`kubectl get pdb spotapp-pdb -n eks-111 -o jsonpath='{.status.disruptionsAllowed}'` を確認してください - `4` レプリカと `minAvailable: 3` では、この予算は一度に 1 つのレプリカしか eviction を許可しません。`/var/work/tests/artifacts/5/drain.txt` に説明を保存してください:PDB は voluntary eviction(drain、ノードのアップグレード、Karpenter の consolidation)のみを保護し、AWS 自身による spot インスタンスの強制的な reclaim は保護しません。テキストには `PDB` と `voluntary` という単語を含める必要があります。 |
+| アクセプタンス基準    | - `spotapp-pdb.status.disruptionsAllowed` が `1` を超えない;<br/>- ファイル `/var/work/tests/artifacts/5/drain.txt` が空でなく、`PDB` と `voluntary` を含む。 |
 ---
 |        **6**        | **Karpenter の割り込み処理の確認**                 |
 | :-----------------: | :---------------------------------------------------------- |

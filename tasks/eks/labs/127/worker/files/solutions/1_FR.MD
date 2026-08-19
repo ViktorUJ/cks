@@ -37,7 +37,7 @@ spec:
         resources: ["pods"]
   validations:
     - expression: "object.spec.containers.all(c, !c.image.endsWith(':latest'))"
-      message: "le tag :latest est запрещён, indiquez une version d'image précise"
+      message: "le tag :latest est forbidden, indiquez une version d'image précise"
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -115,7 +115,7 @@ cat /var/work/tests/artifacts/3/denied.txt
 ```
 
 Le fichier `denied.txt` doit contenir le message d'erreur de l'apiserver avec le texte de
-la politique (les mots `latest` et `запрещён`). Le pod `latest-deny-pod` n'est PAS créé -
+la politique (les mots `latest` et `forbidden`). Le pod `latest-deny-pod` n'est PAS créé -
 `kubectl get pod latest-deny-pod -n eks-127` renverra `NotFound`.
 
 ## Tâche 4. Un pod légitime avec un tag explicite passe même en Deny

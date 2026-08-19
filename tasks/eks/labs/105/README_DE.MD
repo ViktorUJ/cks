@@ -199,7 +199,7 @@ cat ~/lab105_hints.txt   # Namen und ARNs des Secrets und der IRSA-Rolle
 |        **7**        | **Rotations-Symptom: env aktualisiert sich nicht**                       |
 | :-----------------: | :---------------------------------------------------------- |
 | Was wir tun          | Ändern Sie den Wert des Secrets direkt in Secrets Manager: `aws secretsmanager put-secret-value --secret-id <secret_name> --secret-string '{"username":"appuser","password":"RotatedPass456"}'`. Warten Sie das `refreshInterval` plus etwas Reserve ab und prüfen Sie das `Secret` erneut über kubectl - der Wert wird aktualisiert, ESO hat neu synchronisiert. Prüfen Sie danach den Pod `env-reader` aus Aufgabe 6 - er sieht den alten Wert in env. Speichern Sie die Erklärung in `/var/work/tests/artifacts/7/rotation.txt`: warum sich das `Secret` aktualisiert hat, `env-reader` aber den alten Wert sieht (erwähnen Sie das Wort `env` und dass sich der Wert ohne Neuerstellung des Pods nicht aktualisiert). |
-| Abnahmekriterien    | - die Datei `7/rotation.txt` ist nicht leer, enthält `env` und die Erklärung, dass sich der Wert nicht aktualisiert. |
+| Abnahmekriterien    | - die Datei `7/rotation.txt` ist nicht leer, enthält `env` und die Erklärung, dass sich der Wert nicht aktualisiert (englischer Marker: `does not update`). |
 ---
 
 ## Ergebnis prüfen

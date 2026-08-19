@@ -169,7 +169,7 @@ check_result    # გადამოწმება
 |        **3**        | **გადართვა Deny-ზე: პოდი `:latest`-ით უარყოფილია**          |
 | :-----------------: | :---------------------------------------------------------- |
 | რას ვაკეთებთ          | განაახლეთ `disallow-latest-tag-binding`, შეცვალეთ `validationActions` `["Deny"]`-ზე (`kubectl apply`-ის მეშვეობით). სცადეთ შექმნათ Pod `latest-deny-pod` image-ით `viktoruj/ping_pong:latest` `eks-127`-ში - apiserver-მა უნდა უარყოს მოთხოვნა. შეინახეთ უარის შესახებ შეტყობინება (stderr `kubectl apply`-ისა) ფაილში `/var/work/tests/artifacts/3/denied.txt`. |
-| მიღების კრიტერიუმები    | - `disallow-latest-tag-binding`-ს აქვს `validationActions: ["Deny"]`;<br/>- Pod `latest-deny-pod` `eks-127`-ში არ არსებობს;<br/>- ფაილი `denied.txt` არ არის ცარიელი და შეიცავს სიტყვებს `latest` და `запрещён`. |
+| მიღების კრიტერიუმები    | - `disallow-latest-tag-binding`-ს აქვს `validationActions: ["Deny"]`;<br/>- Pod `latest-deny-pod` `eks-127`-ში არ არსებობს;<br/>- ფაილი `denied.txt` არ არის ცარიელი და შეიცავს სიტყვებს `latest` და `forbidden`. |
 ---
 |        **4**        | **ლეგიტიმური პოდი ცალსახა ტეგით გადის Deny-ის დროსაც**        |
 | :-----------------: | :---------------------------------------------------------- |

@@ -77,7 +77,7 @@ NS="eks-117"
   [[ "$rtb_count" =~ ^[0-9]+$ ]] || rtb_count=0
   f=/var/work/tests/artifacts/3/s3endpoint.txt
   if [[ "$state" == "available" ]] && [[ "$rtb_count" -ge 3 ]] && [[ -s "$f" ]] \
-     && grep -qi 'available' "$f" && grep -qi 'бесплат' "$f"; then
+     && grep -qi 'available' "$f" && grep -qiE 'free|no charge|бесплат' "$f"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else

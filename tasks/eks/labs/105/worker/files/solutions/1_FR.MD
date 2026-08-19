@@ -241,6 +241,8 @@ valeur de env ne se met pas à jour après un changement du Secret sans recréer
 ce n'est pas une panne d'ESO, mais une particularité d'env dans Kubernetes. Le pod
 vol-reader (tâche 5) lit le même Secret via volumeMount - un tel volume est mis à jour
 sur le disque automatiquement par kubelet, sans recréer le pod.
+
+Note brève en anglais : the env value is stale and does not update until the pod is recreated.
 EOF
 cat /var/work/tests/artifacts/7/rotation.txt
 ```

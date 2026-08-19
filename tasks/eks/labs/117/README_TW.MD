@@ -180,8 +180,8 @@ check_result    # 檢查解答
 ---
 |        **3**        | **S3 的 Gateway VPC endpoint - 一條免費路由**         |
 | :-----------------: | :---------------------------------------------------------- |
-| 我們要做什麼          | 為 S3 創建一個 gateway endpoint,立即把它掛接到全部三個私有路由表(`private-subnet-1`、`private-subnet-2`、`private-subnet-3`)上:`aws ec2 create-vpc-endpoint --vpc-id <vpc-id> --vpc-endpoint-type Gateway --service-name com.amazonaws.eu-central-1.s3 --route-table-ids <rtb-1> <rtb-2> <rtb-3>`。等待進入 `available` 狀態(`aws ec2 describe-vpc-endpoints --filters "Name=vpc-id,Values=<vpc-id>" "Name=vpc-endpoint-type,Values=Gateway" --query 'VpcEndpoints[].[VpcEndpointId,State,RouteTableIds]'`)。將 endpoint id、其狀態,以及路由表列表保存到 `/var/work/tests/artifacts/3/s3endpoint.txt`,並附上一段解釋,說明 S3 的 gateway endpoint 既不按小時計費也不按資料量計費(解釋中要包含單字 `бесплат`)。 |
-| 驗收標準    | - `com.amazonaws.eu-central-1.s3` 的 gateway endpoint 處於 `available` 狀態;<br/>- 其 `RouteTableIds` 包含這個實驗全部三個私有路由表;<br/>- 檔案中提到 `available` 和 `бесплат`。 |
+| 我們要做什麼          | 為 S3 創建一個 gateway endpoint,立即把它掛接到全部三個私有路由表(`private-subnet-1`、`private-subnet-2`、`private-subnet-3`)上:`aws ec2 create-vpc-endpoint --vpc-id <vpc-id> --vpc-endpoint-type Gateway --service-name com.amazonaws.eu-central-1.s3 --route-table-ids <rtb-1> <rtb-2> <rtb-3>`。等待進入 `available` 狀態(`aws ec2 describe-vpc-endpoints --filters "Name=vpc-id,Values=<vpc-id>" "Name=vpc-endpoint-type,Values=Gateway" --query 'VpcEndpoints[].[VpcEndpointId,State,RouteTableIds]'`)。將 endpoint id、其狀態,以及路由表列表保存到 `/var/work/tests/artifacts/3/s3endpoint.txt`,並附上一段解釋,說明 S3 的 gateway endpoint 既不按小時計費也不按資料量計費(解釋中要包含單字 `free`)。 |
+| 驗收標準    | - `com.amazonaws.eu-central-1.s3` 的 gateway endpoint 處於 `available` 狀態;<br/>- 其 `RouteTableIds` 包含這個實驗全部三個私有路由表;<br/>- 檔案中提到 `available` 和 `free`。 |
 ---
 |        **4**        | **高流量服務的 Interface VPC endpoint**   |
 | :-----------------: | :---------------------------------------------------------- |

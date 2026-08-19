@@ -176,8 +176,8 @@ check_result    # 檢查解答
 ---
 |        **6**        | **修復:用針對性的 `do-not-disrupt` 取代全面鎖定**                    |
 | :-----------------: | :---------------------------------------------------------- |
-| 要做什麼          | 只在 StatefulSet 的其中一個 pod 上加上 annotation `karpenter.sh/do-not-disrupt=true`,例如 `kubectl annotate pod db-0 -n eks-123 karpenter.sh/do-not-disrupt=true`。不要把它加在 `db-1` 與 `db-2` 上。把說明存到 `/var/work/tests/artifacts/6/fix.txt` 中:為什麼在 consolidation 期間保護 StatefulSet 的正確做法,是 PDB(任務 4)加上 `stateful` pool 的 disruption budget(`nodes: 50%`)再加上針對性的 `do-not-disrupt` 的組合,而不是不加區別的全面保護 - 否則不僅會阻擋 consolidation,還會阻擋 drift(第 12.8 章)。文字內容必須包含 `pdb`、`do-not-disrupt` 與 `budget`(或 `бюджет`)這幾個詞。 |
-| 驗收標準    | - annotation `karpenter.sh/do-not-disrupt=true` 只存在於 pod `db-0` 上,`db-1` 和 `db-2` 都沒有;<br/>- 檔案 `/var/work/tests/artifacts/6/fix.txt` 不是空的,且包含 `pdb`、`do-not-disrupt`、`budget`/`бюджет`。 |
+| 要做什麼          | 只在 StatefulSet 的其中一個 pod 上加上 annotation `karpenter.sh/do-not-disrupt=true`,例如 `kubectl annotate pod db-0 -n eks-123 karpenter.sh/do-not-disrupt=true`。不要把它加在 `db-1` 與 `db-2` 上。把說明存到 `/var/work/tests/artifacts/6/fix.txt` 中:為什麼在 consolidation 期間保護 StatefulSet 的正確做法,是 PDB(任務 4)加上 `stateful` pool 的 disruption budget(`nodes: 50%`)再加上針對性的 `do-not-disrupt` 的組合,而不是不加區別的全面保護 - 否則不僅會阻擋 consolidation,還會阻擋 drift(第 12.8 章)。文字內容必須包含 `pdb`、`do-not-disrupt` 與 `budget` 這幾個詞。 |
+| 驗收標準    | - annotation `karpenter.sh/do-not-disrupt=true` 只存在於 pod `db-0` 上,`db-1` 和 `db-2` 都沒有;<br/>- 檔案 `/var/work/tests/artifacts/6/fix.txt` 不是空的,且包含 `pdb`、`do-not-disrupt`、`budget`。 |
 ---
 
 ## 檢查結果

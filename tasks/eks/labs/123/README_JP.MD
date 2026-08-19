@@ -181,8 +181,8 @@ check_result    # 解答の確認
 ---
 |        **6**        | **修正:完全なロックダウンの代わりに狙いを定めた `do-not-disrupt`** |
 | :-----------------: | :---------------------------------------------------------- |
-| やること          | StatefulSet のうち 1 つの pod だけにアノテーション `karpenter.sh/do-not-disrupt=true` を設定してください。例:`kubectl annotate pod db-0 -n eks-123 karpenter.sh/do-not-disrupt=true`。`db-1` と `db-2` には設定しないでください。`/var/work/tests/artifacts/6/fix.txt` に説明を保存してください:consolidation の際に StatefulSet を正しく保護する方法が、PDB(タスク 4)と `stateful` プールの disruption budget(`nodes: 50%`)と狙いを定めた `do-not-disrupt` の組み合わせであり、無差別な全面的保護ではない理由 - そうしないと consolidation だけでなく drift もブロックされてしまいます(第 12.8 章)。テキストには `pdb`、`do-not-disrupt`、`budget`(または `бюджет`)という語を含める必要があります。 |
-| アクセプタンス基準    | - アノテーション `karpenter.sh/do-not-disrupt=true` が pod `db-0` だけに存在し、`db-1` と `db-2` にはない;<br/>- ファイル `/var/work/tests/artifacts/6/fix.txt` が空でなく、`pdb`、`do-not-disrupt`、`budget`/`бюджет` を含む。 |
+| やること          | StatefulSet のうち 1 つの pod だけにアノテーション `karpenter.sh/do-not-disrupt=true` を設定してください。例:`kubectl annotate pod db-0 -n eks-123 karpenter.sh/do-not-disrupt=true`。`db-1` と `db-2` には設定しないでください。`/var/work/tests/artifacts/6/fix.txt` に説明を保存してください:consolidation の際に StatefulSet を正しく保護する方法が、PDB(タスク 4)と `stateful` プールの disruption budget(`nodes: 50%`)と狙いを定めた `do-not-disrupt` の組み合わせであり、無差別な全面的保護ではない理由 - そうしないと consolidation だけでなく drift もブロックされてしまいます(第 12.8 章)。テキストには `pdb`、`do-not-disrupt`、`budget` という語を含める必要があります。 |
+| アクセプタンス基準    | - アノテーション `karpenter.sh/do-not-disrupt=true` が pod `db-0` だけに存在し、`db-1` と `db-2` にはない;<br/>- ファイル `/var/work/tests/artifacts/6/fix.txt` が空でなく、`pdb`、`do-not-disrupt`、`budget` を含む。 |
 ---
 
 ## 結果の確認

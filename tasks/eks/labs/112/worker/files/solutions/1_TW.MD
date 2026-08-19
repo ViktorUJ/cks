@@ -171,13 +171,12 @@ Pod 正常啟動:`30Gi` 在允許的 `175 GiB` 範圍內,並且滿足了 `reques
 
 關鍵的差異在於計費單位。Fargate 按某個具體 Pod 的 vCPU 和記憶體、按其生命週期收費;
 node group 則按整個 EC2 instance 收費,無論它的負載有多高。這個產物的自動檢查會在檔案
-中尋找字面的俄語詞 `под`,緊鄰 `vCPU`,所以下面的產物除了中文說明之外還包含這個字面
-詞:
+中尋找詞 `pod`,緊鄰 `vCPU`,所以下面的產物同時包含兩者:
 
 ```bash
 mkdir -p /var/work/tests/artifacts/6
 cat > /var/work/tests/artifacts/6/costmodel.txt <<'EOF'
-Fargate 是按 pod(под)自身的 vCPU 和記憶體、按它實際運行的時間收費:如果 pod 沒有運
+Fargate 是按 pod 自身的 vCPU 和記憶體、按它實際運行的時間收費:如果 pod 沒有運
 行,就不會產生費用,也絕不會為閒置容量多付錢。node group 則相反,是按整個 instance 收
 費:即使節點在 pod 之間閒置或未被充分利用,也要為那段時間付費。就單位資源而言,
 Fargate 通常比 node group 節點上等量的資源更貴,所以最終的經濟性取決於利用率:在負載

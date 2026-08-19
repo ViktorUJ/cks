@@ -258,8 +258,8 @@ In der Ausgabe sieht das HPA `keda-hpa-demo-app` spaltenweise identisch zu einem
 normalen HPA aus - dieselben `TARGETS`, `MINPODS`, `MAXPODS`, `REPLICAS`. Der einzige
 Unterschied ist der Name (Präfix `keda-hpa-`) und wer es steuert: Ein Ingenieur erstellt
 und bearbeitet ein normales HPA direkt über ein `HorizontalPodAutoscaler`-Manifest,
-während `keda-hpa-demo-app` erstellt wird und wird - auf Russisch, `управляется` -
-vom KEDA-Operator anhand der `ScaledObject`-Ressource gesteuert: Löschen Sie das
+während `keda-hpa-demo-app` vom KEDA-Operator anhand der `ScaledObject`-Ressource
+erstellt und gesteuert wird: Löschen Sie das
 `ScaledObject`, und KEDA löscht dieses HPA gleich mit.
 
 Wir speichern die Erklärung im Artefakt:
@@ -272,7 +272,7 @@ identisch aus: TARGETS/MINPODS/MAXPODS/REPLICAS - der einzige Unterschied liegt 
 und in der Herkunft des Objekts.
 
 KEDA ersetzt HPA nicht: der KEDA-Operator beobachtet das ScaledObject und erstellt und
-управляет (steuert) selbst ein gewöhnliches HorizontalPodAutoscaler mit dem Namen
+steuert (control) selbst ein gewöhnliches HorizontalPodAutoscaler mit dem Namen
 keda-hpa-<Name des ScaledObject>, während der KEDA-Metrics-Adapter ihm den Metrikwert
 über external.metrics.k8s.io liefert. Die Replikate berechnet weiterhin derselbe
 HPA-Mechanismus wie immer.

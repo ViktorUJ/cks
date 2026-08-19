@@ -250,7 +250,7 @@ kubectl get hpa -A
 `TARGETS`、`MINPODS`、`MAXPODS`、`REPLICAS`。唯一的差別是名稱(前綴 `keda-hpa-`)以及
 是誰在控制它:普通的 HPA 是工程師直接透過 `HorizontalPodAutoscaler` manifest 創建並
 編輯的,而 `keda-hpa-demo-app` 是由 KEDA operator 依據 `ScaledObject` 資源創建並控
-制 - 也就是用 `управляется` 它,即控制它 - 刪除 `ScaledObject`,KEDA 就會把這個 HPA
+制(control)它 - 刪除 `ScaledObject`,KEDA 就會把這個 HPA
 也一起刪掉。
 
 把解釋保存到產物中:
@@ -261,7 +261,7 @@ cat > /var/work/tests/artifacts/8/hpa_compare.txt <<'EOF'
 在 kubectl get hpa -A 的輸出中,普通 HPA 和 HPA keda-hpa-demo-app 在欄位上看起來一模一
 樣:TARGETS/MINPODS/MAXPODS/REPLICAS - 唯一的差別在於名稱,以及物件的來源出處。
 
-KEDA 並不會取代 HPA:KEDA operator 監看著 ScaledObject,並自己創建、управляет(控制)
+KEDA 並不會取代 HPA:KEDA operator 監看著 ScaledObject,並自己創建、控制(control)
 一個名為 keda-hpa-<ScaledObject 名稱> 的普通 HorizontalPodAutoscaler,而 KEDA 的
 metrics adapter 則透過 external.metrics.k8s.io 為它提供指標數值。副本數量仍然是由一
 直以來相同的 HPA 機制來計算的。

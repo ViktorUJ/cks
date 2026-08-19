@@ -199,7 +199,7 @@ cat ~/lab105_hints.txt   # nombres y ARN del secreto y del rol IRSA
 |        **7**        | **Síntoma de rotación: env no se actualiza**                       |
 | :-----------------: | :---------------------------------------------------------- |
 | Qué hacemos          | Cambia el valor del secreto directamente en Secrets Manager: `aws secretsmanager put-secret-value --secret-id <secret_name> --secret-string '{"username":"appuser","password":"RotatedPass456"}'`. Espera el `refreshInterval` más un margen y vuelve a comprobar el `Secret` mediante kubectl - el valor se habrá actualizado, ESO lo resincronizó. Luego comprueba el pod `env-reader` de la tarea 6 - sigue viendo el valor antiguo en env. Guarda la explicación en `/var/work/tests/artifacts/7/rotation.txt`: por qué el `Secret` se actualizó pero `env-reader` ve el valor antiguo (menciona la palabra `env` y que el valor no se actualiza sin recrear el pod). |
-| Criterios de aceptación    | - el archivo `7/rotation.txt` no está vacío, contiene `env` y la explicación de que el valor no se actualiza. |
+| Criterios de aceptación    | - el archivo `7/rotation.txt` no está vacío, contiene `env` y la explicación de que el valor no se actualiza (marcador en inglés: `does not update`). |
 ---
 
 ## Verificación del resultado

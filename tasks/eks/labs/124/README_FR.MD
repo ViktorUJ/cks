@@ -209,8 +209,8 @@ check_result    # vérifier la solution
 ---
 |        **8**        | **Un HPA classique face à un HPA créé par KEDA**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| Ce qu'on fait          | Exécutez `kubectl get hpa -A` et comparez la sortie avec ce que vous avez vu dans les tâches 5-7. Enregistrez dans le fichier `/var/work/tests/artifacts/8/hpa_compare.txt` 2-3 phrases : ce qui distingue, dans cette sortie, un HPA classique du HPA `keda-hpa-demo-app`, et une explication indiquant que KEDA ne remplace pas HPA - il le contrôle, c'est-à-dire qu'il `управляет` (mentionnez les mots `HPA`, `KEDA`, `keda-hpa` et la racine `управля`). |
-| Critères d'acceptation    | - le fichier `8/hpa_compare.txt` n'est pas vide;<br/>- il contient les mots `HPA`, `KEDA`, `keda-hpa` et la racine « управля ». |
+| Ce qu'on fait          | Exécutez `kubectl get hpa -A` et comparez la sortie avec ce que vous avez vu dans les tâches 5-7. Enregistrez dans le fichier `/var/work/tests/artifacts/8/hpa_compare.txt` 2-3 phrases : ce qui distingue, dans cette sortie, un HPA classique du HPA `keda-hpa-demo-app`, et une explication indiquant que KEDA ne remplace pas HPA - il le contrôle (`control`) (mentionnez les mots `HPA`, `KEDA`, `keda-hpa` et `control`). |
+| Critères d'acceptation    | - le fichier `8/hpa_compare.txt` n'est pas vide;<br/>- il contient les mots `HPA`, `KEDA`, `keda-hpa` et `control`. |
 ---
 
 ### Pourquoi requests, une limite et un nodeSelector sont apparus dans les tâches

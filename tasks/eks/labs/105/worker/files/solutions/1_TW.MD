@@ -230,6 +230,8 @@ Pod env-reader 透過 env(secretKeyRef)讀取密碼,而容器的環境變數只�
 一次。env 的值在 Secret 改變後,如果不重建 pod 就不會更新 - 這不是 ESO 的故障,而是
 Kubernetes 中 env 的特性。Pod vol-reader(任務 5)透過 volumeMount 讀取同一個
 Secret - 這種 volume 會由 kubelet 自動在磁碟上更新,不需要重建 pod。
+
+英文簡述:the env value is stale and does not update until the pod is recreated.
 EOF
 cat /var/work/tests/artifacts/7/rotation.txt
 ```

@@ -178,7 +178,7 @@ NS="eks-124"
   echo '1' >> /var/work/tests/result/all
   f=/var/work/tests/artifacts/8/hpa_compare.txt
   if [[ -s "$f" ]] && grep -qi 'keda-hpa' "$f" && grep -qi 'HPA' "$f" && \
-     grep -qi 'KEDA' "$f" && grep -qi 'управля' "$f"; then
+     grep -qi 'KEDA' "$f" && grep -qiE 'control|manage|управля' "$f"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else

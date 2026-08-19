@@ -192,7 +192,7 @@ vpc_endpoint_id=$S3_EP
 state=available
 route_tables=$RTB_A,$RTB_B,$RTB_C
 
-S3 的 gateway endpoint 只是一條路由表條目,完全免費(бесплат):既沒有按小時計費,也
+S3 的 gateway endpoint 只是一條路由表條目,完全免費(free of charge):既沒有按小時計費,也
 沒有按處理資料量計費,這一點和 interface endpoint 不同。
 EOF
 cat /var/work/tests/artifacts/3/s3endpoint.txt

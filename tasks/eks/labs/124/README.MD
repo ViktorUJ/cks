@@ -206,8 +206,8 @@ check_result    # check the solution
 ---
 |        **8**        | **A regular HPA versus an HPA created by KEDA**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| What to do          | Run `kubectl get hpa -A` and compare the output with what you saw in tasks 5-7. Save to the file `/var/work/tests/artifacts/8/hpa_compare.txt` 2-3 sentences: what makes a regular HPA different from HPA `keda-hpa-demo-app` in this output, and an explanation that KEDA does not replace HPA - it controls it, i.e. `управляет` it (mention the words `HPA`, `KEDA`, `keda-hpa` and the root `управля`). |
-| Acceptance criteria    | - file `8/hpa_compare.txt` is not empty;<br/>- it contains the words `HPA`, `KEDA`, `keda-hpa` and the root "управля". |
+| What to do          | Run `kubectl get hpa -A` and compare the output with what you saw in tasks 5-7. Save to the file `/var/work/tests/artifacts/8/hpa_compare.txt` 2-3 sentences: what makes a regular HPA different from HPA `keda-hpa-demo-app` in this output, and an explanation that KEDA does not replace HPA - it controls the HPA (mention the words `HPA`, `KEDA`, `keda-hpa` and `control`). |
+| Acceptance criteria    | - file `8/hpa_compare.txt` is not empty;<br/>- it contains the words `HPA`, `KEDA`, `keda-hpa` and `control`. |
 ---
 
 ### Why requests, a limit and a nodeSelector showed up in the tasks

@@ -225,7 +225,7 @@ cat /var/work/tests/artifacts/7/hpa_after_cooldown.txt
 kubectl get hpa -A
 ```
 
-出力を見ると、HPA `keda-hpa-demo-app`は列の内容としては通常のHPAと同一に見えます - 同じ`TARGETS`、`MINPODS`、`MAXPODS`、`REPLICAS`。唯一の違いは名前（プレフィックス`keda-hpa-`）と、誰がそれを`управляет`するか、つまり誰が管理・制御するかです: 通常のHPAはエンジニアが`HorizontalPodAutoscaler`マニフェストを通じて直接作成・編集しますが、`keda-hpa-demo-app`はKEDA operatorによって`ScaledObject`リソースに基づいて作成され`управляется`されます、つまり管理されます - `ScaledObject`を削除すると、KEDAはこのHPAも一緒に削除します。
+出力を見ると、HPA `keda-hpa-demo-app`は列の内容としては通常のHPAと同一に見えます - 同じ`TARGETS`、`MINPODS`、`MAXPODS`、`REPLICAS`。唯一の違いは名前（プレフィックス`keda-hpa-`）と、誰がそれを制御（control）するかです: 通常のHPAはエンジニアが`HorizontalPodAutoscaler`マニフェストを通じて直接作成・編集しますが、`keda-hpa-demo-app`はKEDA operatorによって`ScaledObject`リソースに基づいて作成・制御されます - `ScaledObject`を削除すると、KEDAはこのHPAも一緒に削除します。
 
 説明をアーティファクトに保存します:
 
@@ -237,7 +237,7 @@ TARGETS/MINPODS/MAXPODS/REPLICAS - 唯一の違いは名前とオブジェクト
 
 KEDAはHPAを置き換えるわけではない: KEDA operatorはScaledObjectを監視し、自ら
 keda-hpa-<ScaledObject名>という名前の通常のHorizontalPodAutoscalerを作成し
-управляет（管理・制御）する。一方でKEDAのmetrics adapterはexternal.metrics.k8s.io
+制御（control）する。一方でKEDAのmetrics adapterはexternal.metrics.k8s.io
 経由でそこにメトリクス値を供給する。レプリカ数は常と同じHPAの仕組みによって計算される。
 EOF
 cat /var/work/tests/artifacts/8/hpa_compare.txt

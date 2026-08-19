@@ -137,11 +137,11 @@ cat > /var/work/tests/artifacts/5/drain.txt <<'EOF'
 მეტის evict-ს (disruptionsAllowed <= 1, 4 რეპლიკის შემთხვევაში): ბიუჯეტის დარღვევის
 მცდელობისას eviction ითხოვს უარს, და drain ერთ რეპლიკაზე შორს არ წავა.
 
-მნიშვნელოვანი საზღვარი: PDB იცავს მხოლოდ добровольн (voluntary) evict-ს - kubectl
+მნიშვნელოვანი საზღვარი: PDB იცავს მხოლოდ voluntary evict-ს - kubectl
 drain, ნოუდების განახლება, Karpenter-ის კონსოლიდაცია. ის არ იხსნის AWS-ის ფორსირებული
 spot-ჩამორთმევისგან: თუ AWS რეალურად ჩამორთმევს instance-ს ორწუთიანი შეტყობინების
 ვადის გასვლის შემდეგ, პოდები მასზე დასრულდება PDB-ის მიუხედავად, რადგან ეს არ არის
-Kubernetes-ის добровольн მოქმედება, არამედ თავად instance-ის გაჩერება.
+Kubernetes-ის voluntary მოქმედება, არამედ თავად instance-ის გაჩერება.
 EOF
 cat /var/work/tests/artifacts/5/drain.txt
 

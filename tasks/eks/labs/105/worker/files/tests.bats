@@ -104,7 +104,7 @@ NS="eks-105"
   echo '1' >> /var/work/tests/result/all
   f=/var/work/tests/artifacts/7/rotation.txt
   if [[ -s "$f" ]] && grep -qi 'env' "$f" \
-     && grep -qiE 'не обновляется|не обновится|не увид|устарел' "$f"; then
+     && grep -qiE 'не обновляется|не обновится|не увид|устарел|stale|does not update|doesn.t update' "$f"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else

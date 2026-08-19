@@ -229,7 +229,7 @@ check_result    # check the solution
 |        **8**        | **Comparison: what Cilium added and what it costs you**            |
 | :-----------------: | :---------------------------------------------------------- |
 | What to do          | Save to the file `/var/work/tests/artifacts/8/comparison.txt` text (3-5 points) about what the built-in VPC CNI NetworkPolicy can do, what Cilium added in this lab, and what you pay for it. The text must contain the words `L7`, `FQDN` and `Hubble`. Separately state that a full replacement of VPC CNI is out of scope for this lab, referencing chapter 8 (the section on migrating CNI as a blue/green operation). |
-| Acceptance criteria    | - file `8/comparison.txt` is not empty;<br/>- contains the words `L7`, `FQDN`, `Hubble`;<br/>- contains a mention of chapter 8 (`глава 8` or `chapter 8`) and the word `blue` (from `blue/green`). |
+| Acceptance criteria    | - file `8/comparison.txt` is not empty;<br/>- contains the words `L7`, `FQDN`, `Hubble`;<br/>- contains a mention of chapter 8 (`chapter 8`) and the word `blue` (from `blue/green`). |
 ---
 
 ## Checking the result

@@ -191,12 +191,12 @@ aws s3api list-buckets --query "Buckets[?contains(Name,'mountpoint-demo')].Name"
 |        **5**        | **Symptôme : l'append et une écriture au milieu du fichier échouent**      |
 | :-----------------: | :---------------------------------------------------------- |
 | Ce qu'on fait          | Dans le pod `mountpoint-app`, essayez d'ajouter (append) au fichier existant : `echo more >> /data/newfile.txt`. Essayez ensuite d'écrire au milieu du même fichier : `dd of=/data/newfile.txt bs=1 seek=1 conv=notrunc` (les données d'entrée n'ont pas d'importance). Les deux commandes doivent échouer avec `Operation not permitted`. Vérifiez au passage deux opérations voisines et expliquez-les : réécrire un fichier existant (`echo test2 > /data/newfile.txt`) et le supprimer (`rm /data/newfile.txt`) échouent aussi avec `Operation not permitted`, car par défaut Mountpoint n'active pas `allow-overwrite` ni `allow-delete`, alors que `mkdir /data/sub` passe sans erreur, car les répertoires dans S3 sont virtuels et aucun objet n'est créé pour eux. Sauvegardez les sorties avec une courte explication (un objet S3 est immuable et n'est mis à jour qu'entièrement, via un nouveau `PutObject`) dans `/var/work/tests/artifacts/5/writesemantics.txt`. |
-| Critères d'acceptation    | - le fichier `5/writesemantics.txt` n'est pas vide;<br/>- contient `Operation not permitted`;<br/>- contient au moins un des mots `append`, `rename`, `середин`. |
+| Critères d'acceptation    | - le fichier `5/writesemantics.txt` n'est pas vide;<br/>- contient `Operation not permitted`;<br/>- contient au moins un des mots `append`, `rename`. |
 ---
 |        **6**        | **Pourquoi les préfixes derrière ce PVC ne sont pas sauvegardés via AWS Backup** |
 | :-----------------: | :---------------------------------------------------------- |
 | Ce qu'on fait          | AWS Backup pour EKS (chapitres 41-42) protège les volumes EBS via des snapshots CSI. Un volume Mountpoint n'a pas d'EBS sous le capot : les données se trouvent déjà dans S3 sous forme d'objets, pas sur un périphérique bloc, donc ce type de PVC n'a pas de snapshot dans ce sens. La protection des données ici repose sur les mécanismes classiques de S3, principalement le versioning du bucket (terraform l'a activé sur ce bucket). Confirmez-le avec `aws s3api get-bucket-versioning --bucket <bucket>` et sauvegardez sa sortie avec une explication (le volume n'est pas de l'EBS, pas de snapshot, protection via versioning) dans `/var/work/tests/artifacts/6/backup.txt`. |
-| Critères d'acceptation    | - le fichier `6/backup.txt` n'est pas vide;<br/>- contient `versioning` et `snapshot` (ou `снапшот`);<br/>- contient `Enabled` (le statut confirmé du versioning du bucket). |
+| Critères d'acceptation    | - le fichier `6/backup.txt` n'est pas vide;<br/>- contient `versioning` et `snapshot`;<br/>- contient `Enabled` (le statut confirmé du versioning du bucket). |
 ---
 
 ## Vérification du résultat

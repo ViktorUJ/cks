@@ -177,14 +177,13 @@ l'exigence `requests == limits` est respectée.
 
 La différence clé est l'unité de facturation. Fargate facture la vCPU et la mémoire d'un
 pod donné pendant sa durée de vie ; un node group facture l'instance EC2 entière, quelle que
-soit sa charge. La vérification automatique de cet artefact recherche le mot littéral russe
-`под` accolé à `vCPU`, donc l'artefact ci-dessous inclut ce mot littéral en plus de
-l'explication en français :
+soit sa charge. La vérification automatique de cet artefact recherche le mot
+`pod` accolé à `vCPU`, donc l'artefact ci-dessous inclut les deux :
 
 ```bash
 mkdir -p /var/work/tests/artifacts/6
 cat > /var/work/tests/artifacts/6/costmodel.txt <<'EOF'
-Fargate facture la vCPU et la mémoire du pod (под) lui-même pendant le temps où il tourne
+Fargate facture la vCPU et la mémoire du pod lui-même pendant le temps où il tourne
 réellement : si le pod n'est pas en cours d'exécution, il n'y a aucun coût, et on ne paie
 jamais de surcoût pour de la capacité inactive. Un node group, à l'inverse, facture
 l'instance entière : on paie même le temps où les nœuds restent inactifs entre les pods ou

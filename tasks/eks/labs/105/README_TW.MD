@@ -191,7 +191,7 @@ cat ~/lab105_hints.txt   # 密鑰與 IRSA role 的名稱與 ARN
 |        **7**        | **輪換症狀:env 不會更新**                       |
 | :-----------------: | :---------------------------------------------------------- |
 | 要做什麼          | 直接在 Secrets Manager 中修改密鑰的值:`aws secretsmanager put-secret-value --secret-id <secret_name> --secret-string '{"username":"appuser","password":"RotatedPass456"}'`。等待 `refreshInterval` 加上一些餘量,再透過 kubectl 重新檢查 `Secret` - 值會更新,ESO 已經重新同步過了。接著檢查任務 6 中的 `env-reader` pod - 它在 env 中看到的還是舊值。把解釋存到 `/var/work/tests/artifacts/7/rotation.txt`:為什麼 `Secret` 更新了,而 `env-reader` 看到的是舊值(提到 `env` 這個詞,以及不重建 pod 值就不會更新)。 |
-| 驗收標準    | - 檔案 `7/rotation.txt` 不為空,包含 `env` 以及值不會更新的解釋。 |
+| 驗收標準    | - 檔案 `7/rotation.txt` 不為空,包含 `env` 以及值不會更新的解釋(英文標記:`does not update`)。 |
 ---
 
 ## 檢查結果

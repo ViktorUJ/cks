@@ -164,8 +164,8 @@ check_result    # 檢查解答
 ---
 |        **5**        | **症狀:drain 被 PDB 阻擋,但強制回收不會被阻擋** |
 | :-----------------: | :---------------------------------------------------------- |
-| 我們要做什麼          | 找出一個帶有 `spotapp` pod 的節點,對它執行 `kubectl cordon`,並嘗試 `kubectl drain <node> --ignore-daemonsets --dry-run=client`。查看 `kubectl get pdb spotapp-pdb -n eks-111 -o jsonpath='{.status.disruptionsAllowed}'` - 在 `4` 個副本、`minAvailable: 3` 的情況下,budget 一次最多只允許驅逐一個副本。將說明保存到 `/var/work/tests/artifacts/5/drain.txt`:PDB 只保護 voluntary eviction(drain、節點升級、Karpenter consolidation),不保護 AWS 自身對 spot instance 的強制回收。文字中必須包含 `PDB` 和 `добровольн`(或 `voluntary`)這兩個詞。 |
-| 驗收標準    | - `spotapp-pdb.status.disruptionsAllowed` 不超過 `1`;<br/>- 檔案 `/var/work/tests/artifacts/5/drain.txt` 不為空,且包含 `PDB` 和 `добровольн`/`voluntary`。 |
+| 我們要做什麼          | 找出一個帶有 `spotapp` pod 的節點,對它執行 `kubectl cordon`,並嘗試 `kubectl drain <node> --ignore-daemonsets --dry-run=client`。查看 `kubectl get pdb spotapp-pdb -n eks-111 -o jsonpath='{.status.disruptionsAllowed}'` - 在 `4` 個副本、`minAvailable: 3` 的情況下,budget 一次最多只允許驅逐一個副本。將說明保存到 `/var/work/tests/artifacts/5/drain.txt`:PDB 只保護 voluntary eviction(drain、節點升級、Karpenter consolidation),不保護 AWS 自身對 spot instance 的強制回收。文字中必須包含 `PDB` 和 `voluntary` 這兩個詞。 |
+| 驗收標準    | - `spotapp-pdb.status.disruptionsAllowed` 不超過 `1`;<br/>- 檔案 `/var/work/tests/artifacts/5/drain.txt` 不為空,且包含 `PDB` 和 `voluntary`。 |
 ---
 |        **6**        | **檢查 Karpenter 的中斷處理**                 |
 | :-----------------: | :---------------------------------------------------------- |

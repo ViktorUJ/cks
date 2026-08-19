@@ -37,7 +37,7 @@ NS="eks-127"
   f=/var/work/tests/artifacts/3/denied.txt
   denied_pod=$(kubectl get pod latest-deny-pod -n "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null || true)
   if [[ "$actions" == *Deny* ]] && [[ -s "$f" ]] && grep -qi 'latest' "$f" \
-    && grep -q 'запрещён' "$f" && [[ -z "$denied_pod" ]]; then
+    && grep -qiE 'forbidden|denied|запрещён' "$f" && [[ -z "$denied_pod" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else

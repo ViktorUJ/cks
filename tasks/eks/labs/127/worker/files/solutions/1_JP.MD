@@ -37,7 +37,7 @@ spec:
         resources: ["pods"]
   validations:
     - expression: "object.spec.containers.all(c, !c.image.endsWith(':latest'))"
-      message: ":latestタグはзапрещёнです、具体的なイメージバージョンを指定してください"
+      message: ":latestタグは forbidden です、具体的なイメージバージョンを指定してください"
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -114,7 +114,7 @@ EOF
 cat /var/work/tests/artifacts/3/denied.txt
 ```
 
-`denied.txt`ファイルには、ポリシーのテキスト(`latest`と`запрещён`という単語)を含む
+`denied.txt`ファイルには、ポリシーのテキスト(`latest`と`forbidden`という単語)を含む
 apiserverのエラーメッセージが含まれているはずです。その際Pod `latest-deny-pod`は作成
 されません - `kubectl get pod latest-deny-pod -n eks-127`は`NotFound`を返します。
 

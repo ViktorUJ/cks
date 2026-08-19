@@ -139,7 +139,7 @@ gleichzeitig zu evicten (disruptionsAllowed <= 1 bei 4 Replicas): beim Versuch, 
 budget zu verletzen, verweigert die Eviction, und der drain kommt über eine Replica
 hinaus nicht weiter.
 
-Wichtige Grenze: PDB schützt nur eine freiwillige (добровольн/voluntary) Eviction -
+Wichtige Grenze: PDB schützt nur eine freiwillige (voluntary) Eviction -
 kubectl drain, Node-Upgrades, Karpenter-Konsolidierung. Es rettet nicht vor einem
 forcierten Reclaim einer Spot-Instance durch AWS: wenn AWS die Instance nach Ablauf der
 zweiminütigen Benachrichtigung tatsächlich zurückholt, werden die Pods darauf unabhängig

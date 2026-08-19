@@ -183,12 +183,12 @@ aws s3api list-buckets --query "Buckets[?contains(Name,'mountpoint-demo')].Name"
 |        **5**        | **症狀:append(追加寫入)和寫入文件中間會失敗**      |
 | :-----------------: | :---------------------------------------------------------- |
 | 我們要做什麼          | 在 pod `mountpoint-app` 中嘗試向現有文件追加內容(append):`echo more >> /data/newfile.txt`。然後嘗試寫入同一個文件的中間:`dd of=/data/newfile.txt bs=1 seek=1 conv=notrunc`(輸入的數據內容不重要)。這兩個命令都必須以 `Operation not permitted` 失敗。同時檢查兩個相鄰的操作並自行理解它們:覆寫現有文件(`echo test2 > /data/newfile.txt`)和刪除(`rm /data/newfile.txt`)也會以 `Operation not permitted` 失敗,因為 Mountpoint 預設不啟用 `allow-overwrite` 和 `allow-delete`;而 `mkdir /data/sub` 會靜默通過,因為 S3 中的目錄是虛擬的,不會為它創建物件。把輸出連同一段簡短的說明(S3 物件是不可變的,只能透過新的 `PutObject` 整體更新,對比任務 4 中的 rename)一起保存到 `/var/work/tests/artifacts/5/writesemantics.txt`。 |
-| 驗收標準    | - 檔案 `5/writesemantics.txt` 不為空;<br/>- 包含 `Operation not permitted`;<br/>- 至少包含 `append`、`rename`、`середин` 中的一個。 |
+| 驗收標準    | - 檔案 `5/writesemantics.txt` 不為空;<br/>- 包含 `Operation not permitted`;<br/>- 至少包含 `append`、`rename` 中的一個。 |
 ---
 |        **6**        | **為什麼這個 PVC 背後的前綴不會透過 AWS Backup 備份** |
 | :-----------------: | :---------------------------------------------------------- |
 | 我們要做什麼          | EKS 的 AWS Backup(第 41-42 章)透過 CSI 快照保護 EBS 卷。Mountpoint 卷底層根本沒有 EBS:數據已經以物件形式存放在 S3 中,而不是在區塊裝置上,所以這樣的 PVC 沒有同樣意義上的快照(snapshot)。這裡的數據保護依靠的是 S3 本身的常規機制,首先是 bucket 的 versioning(terraform 已經在這個 bucket 上啟用了它)。用命令 `aws s3api get-bucket-versioning --bucket <bucket>` 確認這一點,並把它的輸出連同說明(這個卷不是 EBS,沒有快照,靠 versioning 保護)一起保存到 `/var/work/tests/artifacts/6/backup.txt`。 |
-| 驗收標準    | - 檔案 `6/backup.txt` 不為空;<br/>- 包含 `versioning` 和 `snapshot`(或 `снапшот`);<br/>- 包含 `Enabled`(bucket versioning 已確認的狀態)。 |
+| 驗收標準    | - 檔案 `6/backup.txt` 不為空;<br/>- 包含 `versioning` 和 `snapshot`;<br/>- 包含 `Enabled`(bucket versioning 已確認的狀態)。 |
 ---
 
 ## 檢查結果

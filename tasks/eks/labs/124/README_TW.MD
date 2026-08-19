@@ -198,8 +198,8 @@ check_result    # 檢查解答
 ---
 |        **8**        | **普通 HPA 與 KEDA 創建的 HPA 對比**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| 我們要做什麼          | 執行 `kubectl get hpa -A`,並將輸出與任務 5-7 中看到的內容進行比較。把 2-3 句話保存到檔案 `/var/work/tests/artifacts/8/hpa_compare.txt`:這份輸出中普通 HPA 和 HPA `keda-hpa-demo-app` 有什麼不同,以及解釋 KEDA 並不會取代 HPA,而是控制它,也就是用 `управляет` 它(要提到 `HPA`、`KEDA`、`keda-hpa` 這幾個詞,以及詞根 `управля`)。 |
-| 驗收標準    | - 檔案 `8/hpa_compare.txt` 不為空;<br/>- 其中包含 `HPA`、`KEDA`、`keda-hpa` 這幾個詞,以及詞根「управля」。 |
+| 我們要做什麼          | 執行 `kubectl get hpa -A`,並將輸出與任務 5-7 中看到的內容進行比較。把 2-3 句話保存到檔案 `/var/work/tests/artifacts/8/hpa_compare.txt`:這份輸出中普通 HPA 和 HPA `keda-hpa-demo-app` 有什麼不同,以及解釋 KEDA 並不會取代 HPA,而是控制它,也就是 `control` 它(要提到 `HPA`、`KEDA`、`keda-hpa` 這幾個詞,以及 `control`)。 |
+| 驗收標準    | - 檔案 `8/hpa_compare.txt` 不為空;<br/>- 其中包含 `HPA`、`KEDA`、`keda-hpa` 這幾個詞,以及 `control`。 |
 ---
 
 ### 為什麼任務中出現了 requests、limit 和 nodeSelector

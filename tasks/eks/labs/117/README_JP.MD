@@ -194,8 +194,8 @@ check_result    # 解答の確認
 ---
 |        **3**        | **S3 用の gateway VPC endpoint - 無料の route**         |
 | :-----------------: | :---------------------------------------------------------- |
-| やること          | S3 用の gateway endpoint を作成し、すぐに 3 つすべての private route table(`private-subnet-1`、`private-subnet-2`、`private-subnet-3`)にアタッチしてください:`aws ec2 create-vpc-endpoint --vpc-id <vpc-id> --vpc-endpoint-type Gateway --service-name com.amazonaws.eu-central-1.s3 --route-table-ids <rtb-1> <rtb-2> <rtb-3>`。`available` 状態になるまで待ってください(`aws ec2 describe-vpc-endpoints --filters "Name=vpc-id,Values=<vpc-id>" "Name=vpc-endpoint-type,Values=Gateway" --query 'VpcEndpoints[].[VpcEndpointId,State,RouteTableIds]'`)。endpoint の id、状態、route table の一覧を `/var/work/tests/artifacts/3/s3endpoint.txt` に保存し、gateway endpoint for S3 は時間単位でもデータ量単位でも課金されない(説明の中に `бесплат` という単語)という説明を付けてください。 |
-| アクセプタンス基準    | - `com.amazonaws.eu-central-1.s3` 用の gateway endpoint が `available` 状態である;<br/>- その `RouteTableIds` にラボの 3 つの private route table すべてが含まれる;<br/>- ファイルが `available` と `бесплат` に言及している。 |
+| やること          | S3 用の gateway endpoint を作成し、すぐに 3 つすべての private route table(`private-subnet-1`、`private-subnet-2`、`private-subnet-3`)にアタッチしてください:`aws ec2 create-vpc-endpoint --vpc-id <vpc-id> --vpc-endpoint-type Gateway --service-name com.amazonaws.eu-central-1.s3 --route-table-ids <rtb-1> <rtb-2> <rtb-3>`。`available` 状態になるまで待ってください(`aws ec2 describe-vpc-endpoints --filters "Name=vpc-id,Values=<vpc-id>" "Name=vpc-endpoint-type,Values=Gateway" --query 'VpcEndpoints[].[VpcEndpointId,State,RouteTableIds]'`)。endpoint の id、状態、route table の一覧を `/var/work/tests/artifacts/3/s3endpoint.txt` に保存し、gateway endpoint for S3 は時間単位でもデータ量単位でも課金されない(説明の中に `free` という単語)という説明を付けてください。 |
+| アクセプタンス基準    | - `com.amazonaws.eu-central-1.s3` 用の gateway endpoint が `available` 状態である;<br/>- その `RouteTableIds` にラボの 3 つの private route table すべてが含まれる;<br/>- ファイルが `available` と `free` に言及している。 |
 ---
 |        **4**        | **高頻度サービス用の interface VPC endpoint**   |
 | :-----------------: | :---------------------------------------------------------- |

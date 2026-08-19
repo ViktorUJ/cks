@@ -262,7 +262,7 @@ output-ში HPA `keda-hpa-demo-app` სვეტების მიხედ�
 განსხვავება მხოლოდ სახელშია (პრეფიქსი `keda-hpa-`) და იმაში, ვინ მას მართავს:
 ჩვეულებრივ HPA-ს ინჟინერი ქმნის და რედაქტირებს პირდაპირ
 `HorizontalPodAutoscaler`-ის მანიფესტით, ხოლო `keda-hpa-demo-app` შექმნილია
-და `управляется` (ანუ იმართება) KEDA operator-ის მიერ `ScaledObject`-ის
+და იმართება (control) KEDA operator-ის მიერ `ScaledObject`-ის
 რესურსის მიხედვით - წაშალეთ `ScaledObject`, და KEDA ამ HPA-საც მასთან ერთად
 წაშლის.
 
@@ -276,7 +276,7 @@ kubectl get hpa -A-ის output-ში ჩვეულებრივი HPA �
 მხოლოდ სახელშია და ობიექტის წარმომავლობაშია.
 
 KEDA არ ცვლის HPA-ს: KEDA operator ადევნებს თვალს ScaledObject-ს და თავად ქმნის
-და управляет (მართავს) ჩვეულებრივ HorizontalPodAutoscaler-ს სახელით
+და მართავს (control) ჩვეულებრივ HorizontalPodAutoscaler-ს სახელით
 keda-hpa-<ScaledObject-ის სახელი>, ხოლო KEDA-ს metrics adapter მას მეტრიკის
 მნიშვნელობას აწვდის external.metrics.k8s.io-ის მეშვეობით. რეპლიკებს ჯერ
 კიდევ ითვლის იგივე HPA-ის მექანიზმი, რაც ყოველთვის.

@@ -193,12 +193,12 @@ aws s3api list-buckets --query "Buckets[?contains(Name,'mountpoint-demo')].Name"
 |        **5**        | **症状: append(追加書き込み)とファイルの途中への書き込みが失敗する**      |
 | :-----------------: | :---------------------------------------------------------- |
 | 何をするか          | pod `mountpoint-app`内で、既存のファイルへの追記(append)を試してください: `echo more >> /data/newfile.txt`。次に同じファイルの途中への書き込みを試してください: `dd of=/data/newfile.txt bs=1 seek=1 conv=notrunc`(入力データの内容自体は重要ではありません)。両方のコマンドは必ず`Operation not permitted`で失敗します。さらに2つの隣接する操作も確認して自分で理解してください: 既存ファイルの上書き(`echo test2 > /data/newfile.txt`)と削除(`rm /data/newfile.txt`)も`Operation not permitted`で失敗します。これはMountpointがデフォルトで`allow-overwrite`と`allow-delete`を有効にしていないためです。一方`mkdir /data/sub`は黙って通過します。S3内のディレクトリは仮想的なものであり、それに対してオブジェクトが作成されないためです。出力を、短い説明(S3オブジェクトは不変であり、新しい`PutObject`によって全体としてのみ更新される。タスク4のrenameとの対比として)と一緒に`/var/work/tests/artifacts/5/writesemantics.txt`に保存してください。 |
-| 受け入れ基準    | - ファイル`5/writesemantics.txt`が空でない;<br/>- `Operation not permitted`を含む;<br/>- `append`、`rename`、`середин`のうち少なくとも1つを含む。 |
+| 受け入れ基準    | - ファイル`5/writesemantics.txt`が空でない;<br/>- `Operation not permitted`を含む;<br/>- `append`、`rename`のうち少なくとも1つを含む。 |
 ---
 |        **6**        | **なぜこのPVCの背後にあるプレフィックスがAWS Backupでバックアップされないのか** |
 | :-----------------: | :---------------------------------------------------------- |
 | 何をするか          | EKS向けのAWS Backup(第41-42章)はCSIスナップショットを通じてEBSボリュームを保護します。MountpointボリュームはEBSを内部に持っていません: データはすでにS3内でオブジェクトとして保存されており、ブロックデバイス上にはないため、こうしたPVCには同じ意味でのスナップショット(snapshot)がありません。ここでデータを保護しているのは、通常のS3の仕組みです。まずbucketのversioningです(terraformがこのbucketで事前に有効にしています)。コマンド`aws s3api get-bucket-versioning --bucket <bucket>`でこれを確認し、その出力を説明(このボリュームはEBSではなく、スナップショットはなく、versioningによって保護されている)と一緒に`/var/work/tests/artifacts/6/backup.txt`に保存してください。 |
-| 受け入れ基準    | - ファイル`6/backup.txt`が空でない;<br/>- `versioning`と`snapshot`(または`снапшот`)を含む;<br/>- `Enabled`(bucketのversioningの確認済みステータス)を含む。 |
+| 受け入れ基準    | - ファイル`6/backup.txt`が空でない;<br/>- `versioning`と`snapshot`を含む;<br/>- `Enabled`(bucketのversioningの確認済みステータス)を含む。 |
 ---
 
 ## 結果の確認

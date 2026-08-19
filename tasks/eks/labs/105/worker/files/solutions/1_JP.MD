@@ -236,6 +236,8 @@ Pod env-reader は env(secretKeyRef)経由でパスワードを読み取るが�
 更新されない - これは ESO の不具合ではなく、Kubernetes における env の仕様上の特徴である。
 Pod vol-reader(課題5)は同じ Secret を volumeMount 経由で読み取る - このようなボリュームは
 kubelet が Pod を再作成せずにディスク上で自動的に更新する。
+
+英語で一言: the env value is stale and does not update until the pod is recreated.
 EOF
 cat /var/work/tests/artifacts/7/rotation.txt
 ```

@@ -199,7 +199,7 @@ cat ~/lab105_hints.txt   # シークレットと IRSA ロールの名前と ARN
 |        **7**        | **ローテーションの症状: env が更新されない**                       |
 | :-----------------: | :---------------------------------------------------------- |
 | やること          | Secrets Manager 上で直接シークレットの値を変更してください: `aws secretsmanager put-secret-value --secret-id <secret_name> --secret-string '{"username":"appuser","password":"RotatedPass456"}'`。`refreshInterval` プラス余裕を待ち、kubectl 経由で `Secret` を再確認してください - 値が更新され、ESO が再同期したことがわかります。次にタスク 6 の Pod `env-reader` を確認してください - env には古い値が見えています。`/var/work/tests/artifacts/7/rotation.txt` に、なぜ `Secret` は更新されたのに `env-reader` には古い値が見えるのかという説明を保存してください(`env` という単語と、Pod を再作成しない限り値が更新されないことに言及してください)。 |
-| アクセプタンス基準    | - ファイル `7/rotation.txt` が空でなく、`env` と値が更新されないことの説明を含むこと。 |
+| アクセプタンス基準    | - ファイル `7/rotation.txt` が空でなく、`env` と値が更新されないことの説明(英語マーカー: `does not update`)を含むこと。 |
 ---
 
 ## 結果の確認

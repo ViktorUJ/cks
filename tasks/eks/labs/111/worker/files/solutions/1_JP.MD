@@ -136,11 +136,11 @@ cat > /var/work/tests/artifacts/5/drain.txt <<'EOF'
 eviction を許可しません(4 レプリカのとき disruptionsAllowed <= 1):予算を破る
 eviction は拒否され、drain は 1 つのレプリカより先には進みません。
 
-重要な境界:PDB は保護するのは добровольн(voluntary、意図的な)eviction だけです -
+重要な境界:PDB は保護するのは voluntary(意図的な)eviction だけです -
 kubectl drain、ノードのアップグレード、Karpenter の consolidation。AWS による spot
 インスタンスの強制的な取り上げからは保護されません:AWS が 2 分間の通知期限の後に
 実際にインスタンスを回収する場合、そのインスタンス上の Pod は PDB に関係なく終了
-します。これは Kubernetes の добровольн(voluntary)な操作ではなく、インスタンス自体の
+します。これは Kubernetes の voluntary な操作ではなく、インスタンス自体の
 停止だからです。
 EOF
 cat /var/work/tests/artifacts/5/drain.txt

@@ -201,7 +201,7 @@ state=available
 route_tables=$RTB_A,$RTB_B,$RTB_C
 
 Un gateway endpoint pour S3 n'est qu'une entrée de table de routage, et il est gratuit
-(бесплат) : il n'y a ni frais horaire ni frais par donnée traitée, contrairement à un
+(free of charge) : il n'y a ni frais horaire ni frais par donnée traitée, contrairement à un
 interface endpoint.
 EOF
 cat /var/work/tests/artifacts/3/s3endpoint.txt

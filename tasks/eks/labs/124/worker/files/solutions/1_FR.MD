@@ -258,7 +258,7 @@ Dans la sortie, le HPA `keda-hpa-demo-app` ressemble colonne par colonne à un H
 mêmes `TARGETS`, `MINPODS`, `MAXPODS`, `REPLICAS`. La seule différence est le nom (préfixe
 `keda-hpa-`) et qui le contrôle : un ingénieur crée et modifie un HPA classique directement
 via un manifest `HorizontalPodAutoscaler`, tandis que `keda-hpa-demo-app` est créé et
-contrôlé - en russe, `управляется` - par l'operator KEDA à partir de la ressource
+contrôlé par l'operator KEDA à partir de la ressource
 `ScaledObject` - supprimez le `ScaledObject`, et KEDA supprime ce HPA avec lui.
 
 Sauvegardons l'explication dans l'artefact :
@@ -270,8 +270,8 @@ Dans kubectl get hpa -A, un HPA classique et le HPA keda-hpa-demo-app se ressemb
 colonne par colonne : TARGETS/MINPODS/MAXPODS/REPLICAS - la seule différence est le nom et
 l'origine de l'objet.
 
-KEDA ne remplace pas HPA : l'operator KEDA surveille le ScaledObject et crée et управляет
-(contrôle) lui-même un HorizontalPodAutoscaler classique nommé keda-hpa-<nom du
+KEDA ne remplace pas HPA : l'operator KEDA surveille le ScaledObject et crée et contrôle
+(control) lui-même un HorizontalPodAutoscaler classique nommé keda-hpa-<nom du
 ScaledObject>, tandis que le metrics adapter de KEDA lui fournit la valeur de la métrique
 via external.metrics.k8s.io. Les réplicas sont toujours calculés par le même mécanisme HPA
 que d'habitude.

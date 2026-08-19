@@ -36,7 +36,7 @@ spec:
         resources: ["pods"]
   validations:
     - expression: "object.spec.containers.all(c, !c.image.endsWith(':latest'))"
-      message: ":latest 標籤是запрещён的,請指定具體的映像版本"
+      message: ":latest 標籤是 forbidden 的,請指定具體的映像版本"
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -113,7 +113,7 @@ cat /var/work/tests/artifacts/3/denied.txt
 ```
 
 檔案 `denied.txt` 中應該包含來自 apiserver 的、帶有政策文字的錯誤訊息(`latest` 和
-`запрещён` 這兩個詞)。Pod `latest-deny-pod` 這時不會被創建 - `kubectl get pod
+`forbidden` 這兩個詞)。Pod `latest-deny-pod` 這時不會被創建 - `kubectl get pod
 latest-deny-pod -n eks-127` 會回傳 `NotFound`。
 
 ## 任務 4. 帶有明確標籤的合法 pod 即使在 Deny 下也能通過

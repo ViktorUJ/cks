@@ -178,8 +178,8 @@ check_result    # გადაწყვეტის შემოწმება
 ---
 |        **6**        | **ჩასწორება: წერტილოვანი `do-not-disrupt` სავსე დაცვის ნაცვლად** |
 | :-----------------: | :---------------------------------------------------------- |
-| რას ვაკეთებთ          | დაატანეთ ანოტაცია `karpenter.sh/do-not-disrupt=true` მხოლოდ StatefulSet-ის ერთ pod-ს, მაგალითად `kubectl annotate pod db-0 -n eks-123 karpenter.sh/do-not-disrupt=true`. არ დაატანოთ `db-1`-ს და `db-2`-ს. შეინახეთ `/var/work/tests/artifacts/6/fix.txt`-ში განმარტება: რატომ არის StatefulSet-ის სწორი დაცვა consolidation-ის დროს PDB-ის (დავალება 4) პლუს `stateful` pool-ის disruption budget-ის (`nodes: 50%`) პლუს წერტილოვანი `do-not-disrupt`-ის კომბინაცია, და არა სავსე დაცვა განსხვავების გარეშე - წინააღმდეგ შემთხვევაში ბლოკირდება არა მხოლოდ consolidation, არამედ drift-იც (თავი 12.8). ტექსტში უნდა იყოს სიტყვები `pdb`, `do-not-disrupt` და `budget` (ან `бюджет`). |
-| მიღების კრიტერიუმები    | - ანოტაცია `karpenter.sh/do-not-disrupt=true` არსებობს მხოლოდ pod `db-0`-ზე, `db-1`-სა და `db-2`-ს ის არ აქვთ;<br/>- ფაილი `/var/work/tests/artifacts/6/fix.txt` არ არის ცარიელი და შეიცავს `pdb`, `do-not-disrupt`, `budget`/`бюджет`. |
+| რას ვაკეთებთ          | დაატანეთ ანოტაცია `karpenter.sh/do-not-disrupt=true` მხოლოდ StatefulSet-ის ერთ pod-ს, მაგალითად `kubectl annotate pod db-0 -n eks-123 karpenter.sh/do-not-disrupt=true`. არ დაატანოთ `db-1`-ს და `db-2`-ს. შეინახეთ `/var/work/tests/artifacts/6/fix.txt`-ში განმარტება: რატომ არის StatefulSet-ის სწორი დაცვა consolidation-ის დროს PDB-ის (დავალება 4) პლუს `stateful` pool-ის disruption budget-ის (`nodes: 50%`) პლუს წერტილოვანი `do-not-disrupt`-ის კომბინაცია, და არა სავსე დაცვა განსხვავების გარეშე - წინააღმდეგ შემთხვევაში ბლოკირდება არა მხოლოდ consolidation, არამედ drift-იც (თავი 12.8). ტექსტში უნდა იყოს სიტყვები `pdb`, `do-not-disrupt` და `budget`. |
+| მიღების კრიტერიუმები    | - ანოტაცია `karpenter.sh/do-not-disrupt=true` არსებობს მხოლოდ pod `db-0`-ზე, `db-1`-სა და `db-2`-ს ის არ აქვთ;<br/>- ფაილი `/var/work/tests/artifacts/6/fix.txt` არ არის ცარიელი და შეიცავს `pdb`, `do-not-disrupt`, `budget`. |
 ---
 
 ## შედეგის შემოწმება

@@ -171,8 +171,8 @@ check_result    # გადამოწმება
 ---
 |        **5**        | **სიმპტომი: drain ბლოკირდება PDB-ის მიერ, მაგრამ ეს არ არის ფორსირებული ჩამორთმევა** |
 | :-----------------: | :---------------------------------------------------------- |
-| რას ვაკეთებთ          | აარჩიეთ ნოუდი `spotapp`-ის პოდით, გაუშვით მასზე `kubectl cordon` და მოსინჯეთ `kubectl drain <node> --ignore-daemonsets --dry-run=client`. შეამოწმეთ `kubectl get pdb spotapp-pdb -n eks-111 -o jsonpath='{.status.disruptionsAllowed}'` - `4` რეპლიკითა და `minAvailable: 3`-ით ბიუჯეტი უშვებს ერთდროულად არაუმეტეს ერთი რეპლიკის evict-ს. შეინახეთ განმარტება `/var/work/tests/artifacts/5/drain.txt`-ში: PDB იცავს მხოლოდ voluntary eviction-ს (drain, ნოუდების განახლება, Karpenter-ის კონსოლიდაცია), არა AWS-ის მიერ თავად spot-instance-ის ფორსირებულ ჩამორთმევას. ტექსტი უნდა შეიცავდეს სიტყვებს `PDB` და `добровольн` (ან `voluntary`). |
-| მიღების კრიტერიუმები    | - `spotapp-pdb.status.disruptionsAllowed` არაუმეტეს `1`-ისა;<br/>- ფაილი `/var/work/tests/artifacts/5/drain.txt` არ არის ცარიელი და შეიცავს `PDB`-ს და `добровольн`/`voluntary`-ს. |
+| რას ვაკეთებთ          | აარჩიეთ ნოუდი `spotapp`-ის პოდით, გაუშვით მასზე `kubectl cordon` და მოსინჯეთ `kubectl drain <node> --ignore-daemonsets --dry-run=client`. შეამოწმეთ `kubectl get pdb spotapp-pdb -n eks-111 -o jsonpath='{.status.disruptionsAllowed}'` - `4` რეპლიკითა და `minAvailable: 3`-ით ბიუჯეტი უშვებს ერთდროულად არაუმეტეს ერთი რეპლიკის evict-ს. შეინახეთ განმარტება `/var/work/tests/artifacts/5/drain.txt`-ში: PDB იცავს მხოლოდ voluntary eviction-ს (drain, ნოუდების განახლება, Karpenter-ის კონსოლიდაცია), არა AWS-ის მიერ თავად spot-instance-ის ფორსირებულ ჩამორთმევას. ტექსტი უნდა შეიცავდეს სიტყვებს `PDB` და `voluntary`. |
+| მიღების კრიტერიუმები    | - `spotapp-pdb.status.disruptionsAllowed` არაუმეტეს `1`-ისა;<br/>- ფაილი `/var/work/tests/artifacts/5/drain.txt` არ არის ცარიელი და შეიცავს `PDB`-ს და `voluntary`-ს. |
 ---
 |        **6**        | **Karpenter-ის წყვეტების დამუშავების შემოწმება**                 |
 | :-----------------: | :---------------------------------------------------------- |
