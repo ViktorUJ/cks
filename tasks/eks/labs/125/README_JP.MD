@@ -185,13 +185,7 @@ check_result    # 解答を確認する
 ---
 |        **5**        | **明示的な limits を持つ独自の NodePool**                              |
 | :-----------------: | :------------------------------------------------------------ |
-| やること          | 内蔵 NodePool には `limits` がありません - ワークロードが無制限に増加すると、コストが
-制御できなくなるリスクがあります。内蔵 `NodeClass` `default` を指す `nodeClassRef`
-（`group: eks.amazonaws.com`、`kind: NodeClass`、`name: default`）を使い、`c`、`m`、`r`
-というインスタンスカテゴリに対する `requirements` と、明示的な `limits` ブロック
-（`cpu: "10"`、`memory: 10Gi`）を持つ独自の NodePool `custom-limited` を作成してください。
-マニフェストを適用し、`kubectl get nodepool custom-limited` が `Ready` ステータスを
-表示するまで待ってください。 |
+| やること          | 内蔵 NodePool には `limits` がありません - ワークロードが無制限に増加すると、コストが制御できなくなるリスクがあります。内蔵 `NodeClass` `default` を指す `nodeClassRef`（`group: eks.amazonaws.com`、`kind: NodeClass`、`name: default`）を使い、`c`、`m`、`r` というインスタンスカテゴリに対する `requirements` と、明示的な `limits` ブロック（`cpu: "10"`、`memory: 10Gi`）を持つ独自の NodePool `custom-limited` を作成してください。マニフェストを適用し、`kubectl get nodepool custom-limited` が `Ready` ステータスを表示するまで待ってください。 |
 | 受け入れ基準    | - NodePool `custom-limited` が存在し、`spec.limits.cpu` が `"10"` に等しい；<br/>- `spec.template.spec.nodeClassRef.name` が `default` に等しい。 |
 ---
 

@@ -172,10 +172,7 @@ cat ~/lab114_hints.txt   # AMP workspace 的 cluster_name、alias 和 endpoint
 ---
 |        **2**        | **症狀:完全沒有指標**                              |
 | :-----------------: | :---------------------------------------------------------- |
-| 我們要做什麼          | 在剛部署好的集群上執行 `kubectl top nodes` 和 `kubectl top pods -A`。兩個命令都會失敗,
-報「Metrics API not available」- 集群中還沒有註冊 Metrics API(`metrics.k8s.io`),因為
-metrics-server 還沒安裝。將完整輸出(兩個命令)保存到
-`/var/work/tests/artifacts/2/kubectl_top_before.txt`。 |
+| 我們要做什麼          | 在剛部署好的集群上執行 `kubectl top nodes` 和 `kubectl top pods -A`。兩個命令都會失敗,報「Metrics API not available」- 集群中還沒有註冊 Metrics API(`metrics.k8s.io`),因為 metrics-server 還沒安裝。將完整輸出(兩個命令)保存到 `/var/work/tests/artifacts/2/kubectl_top_before.txt`。 |
 | 驗收標準    | - 檔案 `2/kubectl_top_before.txt` 不為空;<br/>- 包含 `Metrics API not available`。 |
 ---
 |        **3**        | **基礎層:附加元件 metrics-server**                      |
@@ -190,10 +187,7 @@ metrics-server 還沒安裝。將完整輸出(兩個命令)保存到
 ---
 |        **5**        | **kube-prometheus-stack:真正收集應用程式指標**  |
 | :-----------------: | :---------------------------------------------------------- |
-| 我們要做什麼          | 透過 Helm 在 namespace `monitoring` 中安裝 `kube-prometheus-stack`(倉庫
-`prometheus-community`),values 設定 `prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false`(否則 Prometheus 只會看到自己 Helm release 中的 ServiceMonitor)。等待 Prometheus 的 Pod 就緒。在 `eks-114` 中創建 Deployment `ping-app`(映像 `viktoruj/ping_pong:latest`,`1` 個副本)和 Service `ping-app`,對外公開 `metrics` 端口(`9090` -> `9090`,應用程式在這個端口上透過 `/metrics` 提供 Prometheus 指標)。在 `eks-114` 中創建 `ServiceMonitor` `ping-app`,設定
-`selector.matchLabels.app: ping-app`、`endpoints[0].port: metrics`、`path: /metrics`。等待 Prometheus 抓取到這個目標,然後透過 `kubectl port-forward` 連到服務
-`<release名稱>-prometheus`,再用 `curl`(容器 `prometheus` 的映像沒有 shell 工具,`kubectl exec` 配合 `wget`/`curl` 不會成功)向 `/api/v1/query` 發送請求,查詢 `query=requests_total`,並將 JSON 回應保存到 `/var/work/tests/artifacts/5/prom_query.txt`。 |
+| 我們要做什麼          | 透過 Helm 在 namespace `monitoring` 中安裝 `kube-prometheus-stack`(倉庫 `prometheus-community`),values 設定 `prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false`(否則 Prometheus 只會看到自己 Helm release 中的 ServiceMonitor)。等待 Prometheus 的 Pod 就緒。在 `eks-114` 中創建 Deployment `ping-app`(映像 `viktoruj/ping_pong:latest`,`1` 個副本)和 Service `ping-app`,對外公開 `metrics` 端口(`9090` -> `9090`,應用程式在這個端口上透過 `/metrics` 提供 Prometheus 指標)。在 `eks-114` 中創建 `ServiceMonitor` `ping-app`,設定 `selector.matchLabels.app: ping-app`、`endpoints[0].port: metrics`、`path: /metrics`。等待 Prometheus 抓取到這個目標,然後透過 `kubectl port-forward` 連到服務 `<release名稱>-prometheus`,再用 `curl`(容器 `prometheus` 的映像沒有 shell 工具,`kubectl exec` 配合 `wget`/`curl` 不會成功)向 `/api/v1/query` 發送請求,查詢 `query=requests_total`,並將 JSON 回應保存到 `/var/work/tests/artifacts/5/prom_query.txt`。 |
 | 驗收標準    | - `monitoring` 中的 Prometheus Pod 處於 `Running` 且 `Ready`;<br/>- Deployment `ping-app` 在 `eks-114` 中,映像為 `viktoruj/ping_pong`,`1` 個就緒副本;<br/>- `ServiceMonitor` `ping-app` 的 `endpoints[0].port: metrics`;<br/>- 檔案 `5/prom_query.txt` 不為空,包含 `requests_total` 和 `"metric"`。 |
 ---
 |        **6**        | **Managed Prometheus:workspace 已準備好接收指標**   |

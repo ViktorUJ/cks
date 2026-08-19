@@ -187,7 +187,7 @@ check_result
 
 ## Решение
 
-Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
+Эталонное решение: [worker/files/solutions/1_RU.MD](worker/files/solutions/1_RU.MD)
 
 ## Удаление кластера и ресурсов
 

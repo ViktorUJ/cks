@@ -171,12 +171,7 @@ check_result    # 檢查解答
 ---
 |        **5**        | **帶有明確 limits 的自建 NodePool**                              |
 | :-----------------: | :------------------------------------------------------------ |
-| 要做什麼          | 內建 NodePool 沒有 `limits` - 在工作負載無限增長的情況下，這是失控成本的風險。建立你自己的
-NodePool `custom-limited`，使用指向內建 `NodeClass` `default` 的 `nodeClassRef`
-（`group: eks.amazonaws.com`、`kind: NodeClass`、`name: default`），`requirements` 指定
-`c`、`m`、`r` 這些 instance 類別，並附上明確的 `limits` 區塊（`cpu: "10"`，
-`memory: 10Gi`）。套用這份 manifest，等待 `kubectl get nodepool custom-limited` 顯示
-`Ready` 狀態。 |
+| 要做什麼          | 內建 NodePool 沒有 `limits` - 在工作負載無限增長的情況下，這是失控成本的風險。建立你自己的 NodePool `custom-limited`，使用指向內建 `NodeClass` `default` 的 `nodeClassRef`（`group: eks.amazonaws.com`、`kind: NodeClass`、`name: default`），`requirements` 指定 `c`、`m`、`r` 這些 instance 類別，並附上明確的 `limits` 區塊（`cpu: "10"`，`memory: 10Gi`）。套用這份 manifest，等待 `kubectl get nodepool custom-limited` 顯示 `Ready` 狀態。 |
 | 驗收標準    | - NodePool `custom-limited` 存在，`spec.limits.cpu` 等於 `"10"`；<br/>- `spec.template.spec.nodeClassRef.name` 等於 `default`。 |
 ---
 

@@ -124,9 +124,7 @@ EOF
 `ClusterIP` 的話,負載平衡器會處於未完全配置的狀態:`Gateway` 會進入 `Accepted:
 False`,`reason: Invalid`,控制器日誌中會反覆出現 `TargetGroup port is empty. When
 using Instance targets, your service must be of type 'NodePort' or 'LoadBalancer'`
-(已在測試環境中重現)。在 Ingress 的世界裡,這是靠 `alb.ingress.kubernetes.io/
-target-type: ip` 這個註解解決的,在 Gateway API 中,取代註解的是一個獨立的類型化對
-象,它必須位於其 Service 所在的 namespace 中:
+(已在測試環境中重現)。在 Ingress 的世界裡,這是靠 `alb.ingress.kubernetes.io/target-type: ip` 這個註解解決的,在 Gateway API 中,取代註解的是一個獨立的類型化對象,它必須位於其 Service 所在的 namespace 中:
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -182,8 +180,7 @@ curl -s -o /dev/null -w "http=%{http_code}\n" "http://${ADDR}/"
 ```
 
 `http=200` 的回應會在 `Programmed: True` 後的一兩分鐘內出現:首先 ALB 變為啟用狀
-態,然後目標會通過 health check(目標的狀態可以在 `aws elbv2 describe-target-
-health` 中看到)。
+態,然後目標會通過 health check(目標的狀態可以在 `aws elbv2 describe-target-health` 中看到)。
 
 ## 任務 4. AWS Gateway API Controller 與 VPC Lattice 類別的 Gateway
 
