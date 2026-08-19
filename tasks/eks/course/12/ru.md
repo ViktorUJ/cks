@@ -507,7 +507,10 @@ consolidation) для дашбордов (глава 33). Типовые оши�
 
 ## Практика
 
-Своей лабы у главы пока нет, но конфигурацию Karpenter видно на живом кластере (в том числе
+Лаба курса к этой теме: [лаба 123 - Karpenter: NodePool, consolidation, drift и безопасное
+выселение StatefulSet](../../labs/123/README_RU.MD). Karpenter также разбирается в
+[лабе 106 - EBS CSI: gp3, привязка к AZ, расширение, снапшот](../../labs/106/README_RU.MD) в
+контексте зональных томов. Кроме них, конфигурацию Karpenter видно на живом кластере (в том числе
 внутри Auto Mode, глава 11). Начните с инвентаризации: `kubectl get nodepools`,
 `kubectl get ec2nodeclasses`, `kubectl get nodeclaims`. Посмотрите блок `spec.disruption`
 своего `NodePool`: какая `consolidationPolicy`, есть ли `budgets` и `terminationGracePeriod`.

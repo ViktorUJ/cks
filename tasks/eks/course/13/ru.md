@@ -346,7 +346,8 @@ kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interr
 
 ## Практика
 
-Своей лабы у главы пока нет, но поведение spot видно на живом кластере. Начните с
+Лаба курса к этой теме: [лаба 111 - Spot-ноды: диверсификация, обработка прерываний, graceful
+drain](../../labs/111/README_RU.MD). Кроме неё, поведение spot видно на живом кластере. Начните с
 инвентаризации ёмкости:
 `kubectl get nodes -L karpenter.sh/capacity-type -L eks.amazonaws.com/capacityType` покажет,
 какие ноды spot, а какие on-demand, и есть ли вообще диверсификация. Посмотрите

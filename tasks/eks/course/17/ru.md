@@ -350,7 +350,9 @@ Identity решается одной ролью и набором ассоциа
 
 ## Практика
 
-Своей лабы у главы пока нет, но всё проверяется на живом кластере. Поставьте аддон командой
+Лаба курса к этой теме: [лаба 104 - Workload identity: IRSA и Pod Identity для
+приложения](../../labs/104/README_RU.MD). Кроме неё, всё проверяется на живом кластере.
+Поставьте аддон командой
 `aws eks create-addon --cluster-name <cluster> --addon-name eks-pod-identity-agent` и
 убедитесь, что `kubectl get ds -n kube-system eks-pod-identity-agent` показывает запущенный
 `DaemonSet` на всех нодах. Заведите IAM-роль с trust policy на `pods.eks.amazonaws.com`

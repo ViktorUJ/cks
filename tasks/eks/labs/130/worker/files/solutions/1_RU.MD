@@ -1,0 +1,291 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 130 - эталонное решение (ECR и supply chain)
+
+Все команды выполняются на рабочей машине (worker) по SSH. AWS CLI уже настроен на нужный
+аккаунт через роль инстанса (лишний `aws configure` не нужен), kubectl - на кластер лабы.
+Вместо `docker` используем `podman` (уже установлен на воркере).
+
+Определим account id и адрес приватного реестра один раз:
+
+```bash
+export AWS_REGION=eu-central-1
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export ECR_HOST="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+echo "$ECR_HOST"
+```
+
+## Задание 1. Репозиторий с IMMUTABLE тегами и scanOnPush
+
+```bash
+aws ecr create-repository \
+  --repository-name eks-lab130/app \
+  --image-tag-mutability IMMUTABLE \
+  --image-scanning-configuration scanOnPush=true \
+  --region "$AWS_REGION"
+
+aws ecr describe-repositories --repository-names eks-lab130/app --region "$AWS_REGION"
+```
+
+Убедитесь, что в выводе `imageTagMutability: IMMUTABLE` и
+`imageScanningConfiguration.scanOnPush: true`.
+
+## Задание 2. Push образа с тегом v1
+
+Логинимся в реестр токеном на 12 часов и перетегируем публичный образ:
+
+```bash
+aws ecr get-login-password --region "$AWS_REGION" \
+  | podman login --username AWS --password-stdin "$ECR_HOST"
+
+podman pull docker.io/library/alpine:3.19
+podman tag docker.io/library/alpine:3.19 "$ECR_HOST/eks-lab130/app:v1"
+podman push "$ECR_HOST/eks-lab130/app:v1"
+
+aws ecr describe-images --repository-name eks-lab130/app --region "$AWS_REGION"
+```
+
+В выводе `describe-images` должен быть один образ с тегом `v1`.
+
+Два практических момента. Первый: `alpine` здесь выбран не для «поменьше весит», а потому
+что базовое сканирование ECR умеет разбирать его пакетную базу - в задании 4 будут настоящие
+находки (проверено: HIGH 1, MEDIUM 1, LOW 2 на `alpine:3.19`). Второй: держите задания 2-6 в
+одной SSH-сессии. `podman login` пишет токен в `$XDG_RUNTIME_DIR/containers/auth.json`, а
+этот каталог удаляется вместе с сессией пользователя, поэтому после переподключения push
+отвечает `unauthorized: authentication required` при живом 12-часовом токене ECR.
+
+## Задание 3. Симптом: повторный push тега v1 отклонён
+
+Берём другой образ, тегируем тем же `v1` и пытаемся перезаписать:
+
+```bash
+podman pull docker.io/library/busybox:1.36
+podman tag docker.io/library/busybox:1.36 "$ECR_HOST/eks-lab130/app:v1"
+
+mkdir -p /var/work/tests/artifacts/3
+podman push "$ECR_HOST/eks-lab130/app:v1" 2>&1 \
+  | tee /var/work/tests/artifacts/3/denied.txt
+```
+
+Push заканчивается отказом реестра (проверено на стенде):
+
+```
+tag invalid: The image tag 'v1' already exists in the 'eks-lab130/app' repository
+and cannot be overwritten because the tag is immutable.
+```
+
+Именно так работает IMMUTABLE: тег `v1` уже занят первым образом, и его нельзя перезаписать.
+Вывод будет длинным - `podman` последовательно пробует несколько форматов манифеста (OCI,
+docker v2, docker v1) и на каждом получает тот же отказ; в артефакте `denied.txt` нужная
+строка встречается в каждой попытке. Обратите внимание, что слои при этом уже загружены:
+IMMUTABLE защищает именно ПРИВЯЗКУ ТЕГА, а не blob-хранилище.
+
+## Задание 4. Findings сканирования (scan on push)
+
+Сканирование запускается автоматически при push (задание 2). Ждём завершения через
+retry-цикл (в этой версии CLI есть готовая команда ожидания):
+
+```bash
+aws ecr wait image-scan-complete \
+  --repository-name eks-lab130/app --image-id imageTag=v1 --region "$AWS_REGION"
+
+mkdir -p /var/work/tests/artifacts/4
+aws ecr describe-image-scan-findings \
+  --repository-name eks-lab130/app --image-id imageTag=v1 --region "$AWS_REGION" \
+  --query '{status: imageScanStatus.status, bySeverity: imageScanFindings.findingSeverityCounts}' \
+  > /var/work/tests/artifacts/4/scan-summary.txt
+
+cat /var/work/tests/artifacts/4/scan-summary.txt
+```
+
+Если `aws ecr wait image-scan-complete` недоступен в вашей версии CLI, замените ручным
+retry-циклом:
+
+```bash
+for i in $(seq 1 30); do
+  status=$(aws ecr describe-image-scan-findings \
+    --repository-name eks-lab130/app --image-id imageTag=v1 --region "$AWS_REGION" \
+    --query 'imageScanStatus.status' --output text 2>/dev/null)
+  [[ "$status" == "COMPLETE" ]] && break
+  sleep 5
+done
+```
+
+`findingSeverityCounts` покажет количество находок по severity - на `alpine:3.19` это было
+`{"HIGH": 1, "MEDIUM": 1, "LOW": 2}` (проверено на стенде, конкретные числа зависят от даты
+сканирования и базы уязвимостей).
+
+Важная граница применимости, которую стоит проверить самому. Базовое сканирование ECR читает
+пакетную базу известных дистрибутивов, поэтому образ, собранный `FROM scratch` (например
+статический Go-бинарник) или distroless, оно просканировать НЕ МОЖЕТ:
+
+```bash
+aws ecr describe-image-scan-findings --repository-name eks-lab130/app \
+  --image-id imageTag=<тег scratch-образа> --region "$AWS_REGION" \
+  --query 'imageScanStatus' --output json
+# {
+#   "status": "FAILED",
+#   "description": "UnsupportedImageError: The operating system and/or package manager
+#                   are not supported."
+# }
+```
+
+Отсюда практический вывод: «сканер не нашёл уязвимостей» и «сканер не смог посмотреть» - это
+разные вещи, а в сводных отчётах они легко сливаются в «замечаний нет». Если политика гейта
+требует чистый скан, проверяйте именно статус, а не только количество находок.
+
+## Задание 5. Деплой по digest
+
+Digest образа `v1` можно взять из ECR (надёжнее, чем `podman inspect`, так как это digest
+именно того манифеста, что лежит в реестре):
+
+```bash
+DIGEST=$(aws ecr describe-images --repository-name eks-lab130/app --image-ids imageTag=v1 \
+  --region "$AWS_REGION" --query 'imageDetails[0].imageDigest' --output text)
+echo "$DIGEST"
+
+kubectl create namespace eks-130 --dry-run=client -o yaml | kubectl apply -f -
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: digest-app
+  namespace: eks-130
+  labels:
+    app: digest-app
+spec:
+  nodeSelector:
+    kubernetes.io/arch: amd64
+  containers:
+  - name: app
+    image: ${ECR_HOST}/eks-lab130/app@${DIGEST}
+    command: ["sh", "-c", "sleep 86400"]
+EOF
+
+kubectl wait --for=condition=Ready pod/digest-app -n eks-130 --timeout=600s
+kubectl get po -n eks-130 digest-app -o wide
+```
+
+`nodeSelector` тут обязателен, и это ловушка, на которую легко попасться. Рабочая машина -
+x86_64, поэтому `podman push` отправил в ECR ОДНОАРОЧНЫЙ манифест (только `amd64`), а NodePool
+лабы разрешает и `arm64`. Проверено на стенде: без селектора Karpenter поднял `t4g.small`,
+образ спокойно скачался, а контейнер умер с `exitCode 255` и пустыми логами -
+`CrashLoopBackOff` без внятной причины. Тот же класс проблемы разбирается в лабе 124
+(образ `polinux/stress` был только `amd64`). Вывод для продакшена: либо собирайте мультиарочные манифесты, либо явно
+привязывайте нагрузку к архитектуре.
+
+Роль ноды Karpenter уже несёт managed policy `AmazonEC2ContainerRegistryReadOnly`
+(настроена в модуле `eks_v2_karpenter`), поэтому под успешно тянет образ и
+переходит в `Running` без `imagePullSecrets`. Ссылка по `@sha256:` фиксирует ровно тот
+байтовый набор, который вы
+просканировали и проверили в заданиях 2-4, - тег мог бы уехать, digest не может.
+
+## Задание 6. Pull through cache для registry.k8s.io
+
+Правило без аутентификации - апстрим публичный:
+
+```bash
+aws ecr create-pull-through-cache-rule \
+  --ecr-repository-prefix k8s-cache \
+  --upstream-registry-url registry.k8s.io \
+  --region "$AWS_REGION"
+```
+
+При создании ПЕРВОГО правила в аккаунте ECR заводит service-linked role
+`AWSServiceRoleForECRPullThroughCache`, поэтому вызывающему нужно право
+`iam:CreateServiceLinkedRole` (в политике рабочей машины оно есть, с условием
+`iam:AWSServiceName = pullthroughcache.ecr.amazonaws.com`). Без него ECR отвечает не про IAM
+пользователя напрямую, а обёрткой, которую легко принять за ошибку параметров:
+`ValidationException ... The Amazon ECR action failed due to an IAM exception: ... is not
+authorized to perform: iam:CreateServiceLinkedRole` (воспроизведено на стенде).
+
+Первый pull через кэш создаёт репозиторий `k8s-cache/pause` в вашем ECR и кэширует образ:
+
+```bash
+podman pull "${ECR_HOST}/k8s-cache/pause:3.9"
+
+aws ecr describe-repositories --region "$AWS_REGION" \
+  --query "repositories[?starts_with(repositoryName,'k8s-cache/pause')].repositoryName"
+```
+
+## Задание 7. Docker Hub pull through cache с секретом (без реального pull)
+
+Тема лабы просит именно секрет, поэтому создаём его по-настоящему, но с заглушкой
+вместо настоящего Docker Hub токена: реальный pull с такими кредами не пройдёт, а
+конфигурация (секрет плюс cache rule) от этого не портится и проверяется полностью.
+
+```bash
+aws secretsmanager create-secret \
+  --name ecr-pullthroughcache/dockerhub-creds \
+  --description "Docker Hub creds for ECR pull through cache (lab placeholder)" \
+  --secret-string '{"username":"lab-placeholder-user","accessToken":"lab-placeholder-token"}' \
+  --region "$AWS_REGION"
+
+SECRET_ARN=$(aws secretsmanager describe-secret \
+  --secret-id ecr-pullthroughcache/dockerhub-creds --region "$AWS_REGION" \
+  --query 'ARN' --output text)
+echo "$SECRET_ARN"
+
+aws ecr create-pull-through-cache-rule \
+  --ecr-repository-prefix docker-hub \
+  --upstream-registry-url registry-1.docker.io \
+  --credential-arn "$SECRET_ARN" \
+  --region "$AWS_REGION"
+
+aws ecr describe-pull-through-cache-rules --region "$AWS_REGION"
+```
+
+Секрет обязательно с префиксом `ecr-pullthroughcache/` - иначе ECR его не примет для
+cache rule. Реальный `podman pull` через `docker-hub/...` с этой заглушкой ожидаемо
+провалится (креды не настоящие) - задание проверяет конфигурацию (секрет и правило
+существуют), а не факт успешного pull. Для факта успешного pull через кэш служит
+задание 6 (registry.k8s.io, без аутентификации).
+
+Важно: не используйте здесь настоящие Docker Hub креды. Секрет только для проверки
+конфигурации самой лабы.
+
+## Задание 8. Lifecycle policy
+
+Правило: хранить не больше 5 образов с тегом `v.*`, остальное удалять по возрасту тега:
+
+```bash
+cat <<'EOF' > /tmp/lifecycle.json
+{
+  "rules": [
+    {
+      "rulePriority": 1,
+      "description": "keep last 5 tagged images",
+      "selection": {
+        "tagStatus": "tagged",
+        "tagPrefixList": ["v"],
+        "countType": "imageCountMoreThan",
+        "countNumber": 5
+      },
+      "action": { "type": "expire" }
+    }
+  ]
+}
+EOF
+
+aws ecr put-lifecycle-policy \
+  --repository-name eks-lab130/app \
+  --lifecycle-policy-text file:///tmp/lifecycle.json \
+  --region "$AWS_REGION"
+
+aws ecr get-lifecycle-policy --repository-name eks-lab130/app --region "$AWS_REGION"
+aws ecr start-lifecycle-policy-preview \
+  --repository-name eks-lab130/app --region "$AWS_REGION" >/dev/null
+sleep 5
+aws ecr get-lifecycle-policy-preview \
+  --repository-name eks-lab130/app --region "$AWS_REGION"
+```
+
+`get-lifecycle-policy-preview` может не сразу вернуть результат (превью считается
+асинхронно) - если статус ещё `IN_PROGRESS`, повторите запрос через несколько секунд.
+
+## Быстрая проверка
+
+```bash
+check_result
+```

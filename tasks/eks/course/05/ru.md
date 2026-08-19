@@ -334,7 +334,10 @@ kubectl auth whoami                    # кем меня видит apiserver: u
 
 ## Практика
 
-Лабы у главы пока нет, но содержание проверяется на любом кластере. Начните с инвентаризации:
+Лабы курса к этой теме: [лаба 102 - Доступ к кластеру: IAM и RBAC, access entries и access
+policies](../../labs/102/README_RU.MD) и [лаба 122 - AWS Backup для EKS: composite recovery
+point, восстановление namespace](../../labs/122/README_RU.MD). Помимо них, содержание
+проверяется на любом кластере. Начните с инвентаризации:
 `aws eks describe-cluster --name <cluster> --query 'cluster.accessConfig'` покажет режим и флаг
 прав создателя, `aws eks list-access-entries --cluster-name <cluster>` и
 `aws eks describe-access-entry` с `--principal-arn` - тип, `username` и группы записи. Для

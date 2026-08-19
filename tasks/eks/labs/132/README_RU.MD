@@ -1,3 +1,5 @@
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
+
 # Лаба 132 - Альтернативный CNI: Cilium в режиме CNI chaining над VPC CNI
 
 ## Описание
@@ -238,7 +240,7 @@ check_result
 
 ## Решение
 
-Эталонное решение: [worker/files/solutions/1.MD](worker/files/solutions/1.MD)
+Эталонное решение: [worker/files/solutions/1_RU.MD](worker/files/solutions/1_RU.MD)
 
 ## Удаление кластера и ресурсов
 

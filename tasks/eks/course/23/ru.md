@@ -363,7 +363,11 @@ kubectl get storageclass gp3 -o jsonpath='{.volumeBindingMode}'
 
 ## Практика
 
-Своей лабы у главы пока нет, но всё проверяется на живом кластере. Начните с `kubectl get
+Лаба курса к этой теме: [лаба 106 - EBS CSI: gp3, привязка к AZ, расширение,
+снапшот](../../labs/106/README_RU.MD). EBS CSI также участвует в
+[лабе 122 - AWS Backup для EKS](../../labs/122/README_RU.MD) как том за PVC, который попадает
+в бэкап, и сравнивается с EFS в [лабе 107 - EFS CSI: ReadWriteMany между зонами
+доступности](../../labs/107/README_RU.MD). Кроме них, всё проверяется на живом кластере. Начните с `kubectl get
 storageclass` - какой StorageClass дефолтный, какой у него `volumeBindingMode` и
 `provisioner`. Убедитесь, что стоит EBS CSI-драйвер: `aws eks list-addons --cluster-name
 <cluster>` и `kubectl get pods -n kube-system | grep ebs-csi`.

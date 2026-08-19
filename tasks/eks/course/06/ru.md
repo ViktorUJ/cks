@@ -365,8 +365,10 @@ warm-пул поджимается на месте, системное реше�
 Лаба курса к этой теме: [лаба 101 - кластер как код](../../labs/101/README_RU.MD). В ней
 вы проверяете, что VPC CNI выдаёт подам адреса из CIDR вашей VPC, и смотрите на адресный
 план кластера; проверка - командой `check_result`. Запуск - `TASK=101 make run_eks_task`.
+К этой же теме относится [лаба 103 - Адресный план: лимиты ENI, prefix delegation, secondary
+CIDR](../../labs/103/README_RU.MD), которая разбирает масштабирование адресного плана подробнее.
 
-Помимо лабы, содержание главы проверяется на живом кластере. Начните с адресного
+Помимо лаб, содержание главы проверяется на живом кластере. Начните с адресного
 плана: `aws eks describe-cluster --name <cluster> --query 'cluster.resourcesVpcConfig'` даст
 список подсетей, а `aws ec2 describe-subnets` с `--query
 'Subnets[].[SubnetId,AvailabilityZone,CidrBlock,AvailableIpAddressCount]'` покажет остаток по

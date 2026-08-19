@@ -1,0 +1,264 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 127 - эталонное решение (ValidatingAdmissionPolicy на CEL)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl уже настроен на
+кластер (kubeconfig собран через `aws eks update-kubeconfig` при загрузке машины).
+
+## Задание 1. Namespace `eks-127`
+
+```bash
+kubectl create namespace eks-127
+```
+
+## Задание 2. CEL-политика в режиме Audit пропускает под с `:latest`
+
+Создаём `ValidatingAdmissionPolicy` и `ValidatingAdmissionPolicyBinding` с
+`validationActions: ["Audit"]`. Политика применяется только к namespace `eks-127`
+через `namespaceSelector` (метка `kubernetes.io/metadata.name`, её k8s ставит на
+namespace автоматически):
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: disallow-latest-tag
+spec:
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: eks-127
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  validations:
+    - expression: "object.spec.containers.all(c, !c.image.endsWith(':latest'))"
+      message: "тег :latest запрещён, укажите конкретную версию образа"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: disallow-latest-tag-binding
+spec:
+  policyName: disallow-latest-tag
+  validationActions: ["Audit"]
+EOF
+```
+
+Проверяем, что оба объекта на месте:
+
+```bash
+kubectl get validatingadmissionpolicy disallow-latest-tag
+kubectl get validatingadmissionpolicybinding disallow-latest-tag-binding
+```
+
+Теперь создаём под с образом `:latest` в режиме `Audit` - он должен СОЗДАТЬСЯ, потому что
+`Audit` только пишет нарушение в audit-лог, но не блокирует запрос:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: latest-audit-pod
+  namespace: eks-127
+spec:
+  containers:
+  - name: app
+    image: viktoruj/ping_pong:latest
+EOF
+
+kubectl get pod latest-audit-pod -n eks-127
+```
+
+Под создан, хотя нарушает правило - это и есть смысл `Audit`: обкатать политику, не
+рискуя сломать существующую нагрузку.
+
+## Задание 3. Переключаем на Deny - под с `:latest` отклоняется
+
+Обновляем Binding, меняя только `validationActions`:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: disallow-latest-tag-binding
+spec:
+  policyName: disallow-latest-tag
+  validationActions: ["Deny"]
+EOF
+```
+
+Пытаемся создать ещё один под с `:latest` - теперь apiserver должен отклонить запрос:
+
+```bash
+mkdir -p /var/work/tests/artifacts/3
+cat <<'EOF' | kubectl apply -f - 2> /var/work/tests/artifacts/3/denied.txt
+apiVersion: v1
+kind: Pod
+metadata:
+  name: latest-deny-pod
+  namespace: eks-127
+spec:
+  containers:
+  - name: app
+    image: viktoruj/ping_pong:latest
+EOF
+
+cat /var/work/tests/artifacts/3/denied.txt
+```
+
+В файле `denied.txt` должно быть сообщение об ошибке от apiserver с текстом политики
+(слова `latest` и `запрещён`). Под `latest-deny-pod` при этом НЕ создан - `kubectl get pod
+latest-deny-pod -n eks-127` вернёт `NotFound`.
+
+## Задание 4. Легитимный под с явным тегом проходит и при Deny
+
+Политика проверяет только `:latest`, поэтому под с конкретной версией образа проходит без
+проблем. Тег `53833ea` - это реальный тег коммита в `viktoruj/ping_pong`, он существует и
+собран под amd64 и arm64. Тег важно брать существующий: допуск смотрит только на строку
+образа, поэтому под с выдуманным тегом будет создан и повиснет в `ErrImagePull` - политика
+формально «не помешала», но проверить это утверждение будет нечем:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tagged-pod
+  namespace: eks-127
+spec:
+  containers:
+  - name: app
+    image: viktoruj/ping_pong:53833ea
+EOF
+
+kubectl get pod tagged-pod -n eks-127
+```
+
+## Задание 5. Вторая CEL-политика: обязательные `resources.requests`
+
+Ещё одна `ValidatingAdmissionPolicy` сразу в режиме `Deny` - требуем, чтобы у каждого
+контейнера были заданы `resources.requests`:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: require-resources-requests
+spec:
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: eks-127
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  validations:
+    - expression: "object.spec.containers.all(c, has(c.resources) && has(c.resources.requests))"
+      message: "у каждого контейнера должны быть заданы resources.requests"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: require-resources-requests-binding
+spec:
+  policyName: require-resources-requests
+  validationActions: ["Deny"]
+EOF
+```
+
+Под без `requests` отклоняется:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: no-requests-pod
+  namespace: eks-127
+spec:
+  containers:
+  - name: app
+    image: viktoruj/ping_pong:53833ea
+EOF
+```
+
+Команда вернёт ошибку допуска, и `kubectl get pod no-requests-pod -n eks-127` покажет
+`NotFound`. Под с заданными `requests` проходит нормально:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: requests-ok-pod
+  namespace: eks-127
+spec:
+  containers:
+  - name: app
+    image: viktoruj/ping_pong:53833ea
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "64Mi"
+EOF
+
+kubectl get pod requests-ok-pod -n eks-127
+```
+
+## Задание 6. `failurePolicy: Fail` и отличие от внешнего webhook
+
+Явно выставляем `failurePolicy: Fail` на первой политике (это дефолт, но фиксируем явно):
+
+```bash
+kubectl patch validatingadmissionpolicy disallow-latest-tag --type merge \
+  -p '{"spec":{"failurePolicy":"Fail"}}'
+
+kubectl get validatingadmissionpolicy disallow-latest-tag -o jsonpath='{.spec.failurePolicy}'
+```
+
+`failurePolicy` реагирует на ошибку ВЫЧИСЛЕНИЯ CEL-выражения (например, обращение к полю,
+которого нет в объекте на старой версии API), а не на недоступность внешнего сервиса.
+У встроенной `ValidatingAdmissionPolicy` внешнего webhook нет вообще - CEL считается прямо
+внутри apiserver, поэтому у неё нет риска "webhook не ответил и admission встал", который
+есть у Kyverno и Gatekeeper (там правила выполняет отдельный сервис за webhook, и если он
+недоступен, `failurePolicy: Fail` встаёт в очередь или блокирует запросы).
+
+Сохраняем объяснение в артефакт:
+
+```bash
+mkdir -p /var/work/tests/artifacts/6
+cat > /var/work/tests/artifacts/6/failurepolicy.txt <<'EOF'
+failurePolicy у ValidatingAdmissionPolicy реагирует только на ошибку вычисления
+CEL-выражения (например, обращение к отсутствующему полю объекта), а не на
+недоступность внешнего сервиса.
+
+У встроенной ValidatingAdmissionPolicy нет внешнего webhook вообще: CEL-выражение
+вычисляется прямо внутри apiserver, без сетевого вызова наружу. Поэтому здесь нет
+риска "webhook не ответил и admission встал", характерного для Kyverno и Gatekeeper,
+где правила выполняет отдельный сервис за webhook, а apiserver ждёт его ответа.
+EOF
+cat /var/work/tests/artifacts/6/failurepolicy.txt
+```
+
+## Быстрая проверка
+
+```bash
+check_result
+```
+
+Полезные команды для разбора состояния политик:
+
+```bash
+kubectl get validatingadmissionpolicy
+kubectl get validatingadmissionpolicybinding
+kubectl get validatingadmissionpolicy disallow-latest-tag -o yaml
+```

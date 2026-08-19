@@ -383,7 +383,9 @@ kubectl rollout restart deployment coredns -n kube-system
 
 ## Практика
 
-Лабы у главы пока нет, но профили и поведение Fargate видно на живом кластере. Начните с
+Лаба курса к этой теме: [лаба 112 - Fargate-профили: что работает, что ломается, сравнение
+стоимости](../../labs/112/README_RU.MD). Кроме неё, профили и поведение Fargate видно на живом
+кластере. Начните с
 инвентаризации: `aws eks list-fargate-profiles --cluster-name <cluster>` покажет профили, а
 `aws eks describe-fargate-profile --cluster-name <cluster> --fargate-profile-name <name>` -
 селекторы по namespace и label, подсети и pod execution role. Сверьте, что подсети приватные и

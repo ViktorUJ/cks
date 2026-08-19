@@ -383,7 +383,9 @@ Windows File Server до того, как городить обходные пу
 
 ## Практика
 
-Своей лабы у главы пока нет, но всё проверяется на живом кластере. Убедитесь, что стоит EFS
+Лаба курса к этой теме: [лаба 107 - EFS CSI: ReadWriteMany между зонами
+доступности](../../labs/107/README_RU.MD). Кроме неё, всё проверяется на живом кластере.
+Убедитесь, что стоит EFS
 CSI-драйвер: `aws eks list-addons --cluster-name <cluster>` и `kubectl get pods -n kube-system
 | grep efs-csi`. Посмотрите на существующую файловую систему: `aws efs
 describe-file-systems`, затем `aws efs describe-mount-targets --file-system-id fs-...` - есть

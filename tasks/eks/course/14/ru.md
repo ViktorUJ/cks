@@ -398,7 +398,9 @@ kubectl top pods --all-namespaces --containers
 
 ## Практика
 
-Лабы у главы пока нет, но всё проверяется на живом кластере. Начните с разрыва Capacity против
+Лаба курса к этой теме: [лаба 103 - Адресный план: лимиты ENI, prefix delegation, secondary
+CIDR](../../labs/103/README_RU.MD), где формула max-pods из этой главы сверяется с фактом на
+живой ноде. Кроме неё, всё проверяется на живом кластере. Начните с разрыва Capacity против
 Allocatable: `kubectl describe node <node> | grep -A 12 -E 'Capacity:|Allocatable:'` покажет,
 сколько ёмкости инстанса недоступно подам, а `kubectl get node <node> -o
 jsonpath='{.status.allocatable.pods}'` - потолок подов. Сравните сумму requests всех подов ноды

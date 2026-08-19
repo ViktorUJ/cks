@@ -392,7 +392,10 @@ EKS), но настройка многословнее - на каждую ро�
 
 ## Практика
 
-Своей лабы у главы пока нет, но всё проверяется на живом кластере. Начните с
+Лаба курса к этой теме: [лаба 104 - Workload identity: IRSA и Pod Identity для
+приложения](../../labs/104/README_RU.MD). IRSA также встречается в
+[лабе 106 - EBS CSI](../../labs/106/README_RU.MD) и [лабе 107 - EFS CSI](../../labs/107/README_RU.MD)
+как способ выдать право драйверу. Кроме них, всё проверяется на живом кластере. Начните с
 `aws eks describe-cluster --name <cluster> --query 'cluster.identity.oidc.issuer'` и
 `aws iam list-open-id-connect-providers` - есть ли у кластера issuer URL и заведён ли под него
 IAM OIDC provider. Если провайдера нет, создайте его командой

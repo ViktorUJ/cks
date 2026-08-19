@@ -351,7 +351,9 @@ kubectl -n payments run bad --image=busybox --restart=Never \
 
 ## Практика
 
-Своей лабы у главы пока нет, но всё проверяется на живом кластере. Узел: `aws ec2
+Лаба курса к этой теме: [лаба 116 - Харденинг: IMDSv2 и hop limit, Pod Security Admission,
+приватный endpoint](../../labs/116/README_RU.MD). Кроме неё, всё проверяется на живом
+кластере. Узел: `aws ec2
 describe-instances --instance-ids <id> --query 'Reservations[].Instances[].MetadataOptions'` -
 убедитесь, что `HttpTokens` - `required`, `HttpPutResponseHopLimit` - `1`. Запустите под с
 `curlimages/curl` и `curl --max-time 5 http://169.254.169.254/latest/meta-data/` - при hop

@@ -1,0 +1,240 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 129 - эталонное решение (Mountpoint for S3: семантика файлов и бэкап)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl уже настроен на
+кластер. Драйвер `aws-mountpoint-s3-csi-driver` (провизионер `s3.csi.aws.com`) уже
+установлен как managed addon с ролью через IRSA (компонент `eks_addon_s3_csi_irsa`), бакет
+с включённым versioning и тестовым объектом `readme.txt` уже создан terraform-ом.
+
+## Задание 1. Namespace `eks-129`
+
+```bash
+kubectl create namespace eks-129
+```
+
+## Задание 2. Статический PV/PVC на реальный бакет
+
+Находим имя реального бакета:
+
+```bash
+BUCKET=$(aws s3api list-buckets \
+  --query "Buckets[?contains(Name,'mountpoint-demo')].Name" --output text)
+echo "$BUCKET"
+```
+
+Mountpoint поддерживает только статический провижининг: PV пишется вручную, ссылается на
+уже существующий бакет.
+
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: s3-pv
+spec:
+  capacity:
+    storage: 1200Gi
+  accessModes: ["ReadWriteMany"]
+  storageClassName: ""
+  claimRef:
+    namespace: eks-129
+    name: s3-pvc
+  mountOptions:
+    - region eu-central-1
+  csi:
+    driver: s3.csi.aws.com
+    volumeHandle: s3-csi-demo-volume
+    volumeAttributes:
+      bucketName: $BUCKET
+EOF
+
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: s3-pvc
+  namespace: eks-129
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: ""
+  resources:
+    requests:
+      storage: 1200Gi
+  volumeName: s3-pv
+EOF
+
+kubectl get pv s3-pv
+kubectl get pvc s3-pvc -n eks-129
+```
+
+`capacity`/`requests.storage` - значения-заглушки, схема требует их, но Mountpoint их
+игнорирует: реальный размер определяется содержимым бакета.
+
+## Задание 3. Успешные операции: новый файл и чтение
+
+Поднимаем под с этим PVC:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mountpoint-app
+  namespace: eks-129
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mountpoint-app
+  template:
+    metadata:
+      labels:
+        app: mountpoint-app
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh", "-c", "sleep 86400"]
+        volumeMounts:
+        - name: s3
+          mountPath: /data
+      volumes:
+      - name: s3
+        persistentVolumeClaim:
+          claimName: s3-pvc
+EOF
+
+kubectl rollout status deployment/mountpoint-app -n eks-129
+POD=$(kubectl get po -n eks-129 -l app=mountpoint-app -o jsonpath='{.items[0].metadata.name}')
+```
+
+Образ здесь именно `busybox`, а не приложение из других лаб курса: в `viktoruj/ping_pong` нет
+ни `sh`, ни `cat`, и `kubectl exec` в него отвечает
+`exec: "sh": executable file not found in $PATH` (проверено). Вся лаба - про операции файловой
+системы внутри пода, поэтому нужен образ с shell, `mv` и `dd`. Под должен просто жить, отсюда
+`command` со `sleep`.
+
+Создание нового файла - последовательная запись с начала, это укладывается в модель
+`PutObject` целого объекта, поэтому работает:
+
+```bash
+mkdir -p /var/work/tests/artifacts/3
+kubectl exec "$POD" -n eks-129 -- sh -c 'echo test > /data/newfile.txt && cat /data/newfile.txt' \
+  > /var/work/tests/artifacts/3/create.txt
+cat /var/work/tests/artifacts/3/create.txt
+```
+
+Чтение, в том числе существующего объекта бакета `readme.txt`, тоже работает - это
+`GetObject`:
+
+```bash
+kubectl exec "$POD" -n eks-129 -- cat /data/readme.txt \
+  > /var/work/tests/artifacts/3/read.txt
+cat /var/work/tests/artifacts/3/read.txt
+```
+
+## Задание 4. Симптом: `rename` падает
+
+Переименование - это не дешёвая операция на объектном хранилище, Mountpoint честно
+отклоняет её на обычных бакетах:
+
+```bash
+mkdir -p /var/work/tests/artifacts/4
+kubectl exec "$POD" -n eks-129 -- \
+  mv /data/newfile.txt /data/renamed.txt \
+  > /var/work/tests/artifacts/4/rename.txt 2>&1
+cat /var/work/tests/artifacts/4/rename.txt
+```
+
+В выводе - `mv: can't rename '/data/newfile.txt': Function not implemented` (проверено на
+стенде, драйвер v1.15.0-eksbuild.1, busybox 1.36). Обратите внимание на errno: это `ENOSYS`,
+Mountpoint не реализует системный вызов `rename` вовсе. В задании 5 будет другой отказ -
+`EPERM`, `Operation not permitted`: там операция реализована, но запрещена настройками
+монтирования. Различать полезно на дежурстве: `ENOSYS` означает «этого в драйвере нет и не
+будет», а `EPERM` - «может заработать при других mount options».
+
+Файл `newfile.txt` при этом остаётся на месте, а `renamed.txt` не появляется: операция не
+началась и не привела бакет в промежуточное состояние. Проверить можно со стороны AWS:
+
+```bash
+aws s3api list-objects-v2 --bucket "$BUCKET" --query 'Contents[].Key' --output text
+```
+
+## Задание 5. Симптом: дозапись и запись в середину падают
+
+Оба случая - это попытка частичного изменения уже существующего объекта, а объект в S3
+неизменяем и обновляется только целиком через новый `PutObject`:
+
+```bash
+mkdir -p /var/work/tests/artifacts/5
+
+{
+  echo "=== append (echo >>) ==="
+  kubectl exec "$POD" -n eks-129 -- sh -c 'echo more >> /data/newfile.txt' 2>&1
+
+  echo
+  echo "=== запись в середину файла (dd seek + conv=notrunc) ==="
+  kubectl exec "$POD" -n eks-129 -- sh -c \
+    'echo patched | dd of=/data/newfile.txt bs=1 seek=1 conv=notrunc' 2>&1
+
+  echo
+  echo "=== перезапись существующего файла (нужен allow-overwrite) ==="
+  kubectl exec "$POD" -n eks-129 -- sh -c 'echo test2 > /data/newfile.txt' 2>&1
+
+  echo
+  echo "=== удаление файла (нужен allow-delete) ==="
+  kubectl exec "$POD" -n eks-129 -- rm /data/newfile.txt 2>&1
+
+  echo
+  echo "Объяснение: объект S3 неизменяем. Обновление ключа - это новый PutObject целого"
+  echo "объекта, поэтому Mountpoint не может дописать в конец (append) или изменить"
+  echo "байты в середине уже загруженного файла - обе операции падают явно с"
+  echo "Operation not permitted, а не тихо портят данные. По той же причине по умолчанию"
+  echo "запрещены перезапись и удаление: они включаются mount options allow-overwrite и"
+  echo "allow-delete, и включать их стоит осознанно."
+} > /var/work/tests/artifacts/5/writesemantics.txt
+
+cat /var/work/tests/artifacts/5/writesemantics.txt
+```
+
+Четыре отказа выше - один и тот же `EPERM`, и все четыре снимаются или не снимаются
+настройками монтирования, в отличие от `rename` из задания 4. Полезный контраст:
+`mkdir /data/sub` проходит МОЛЧА и без ошибки, потому что каталог в S3 виртуальный - объекта
+под него не создаётся, и `aws s3api list-objects-v2` нового ключа не покажет. А вот запись в
+несуществующий вложенный префикс (`echo x > /data/sub2/nested.txt`) падает с
+`nonexistent directory`: сначала нужен `mkdir`. Это ровно та «почти файловая система», о
+которой предупреждает глава 25.
+
+## Задание 6. Почему нет бэкапа через AWS Backup, а есть versioning
+
+AWS Backup для EKS (главы 41-42) защищает данные через снапшоты EBS-томов CSI. У тома
+Mountpoint нет EBS под капотом вообще: файлы в `/data` - это объекты бакета S3, а не
+блоки на диске, поэтому у PVC `s3-pvc` нет снапшота в том смысле, в каком он есть у
+`gp3`-тома (глава 23). Защищает данные здесь сам S3 - в первую очередь versioning бакета,
+который terraform включил заранее (`aws_s3_bucket_versioning`):
+
+```bash
+mkdir -p /var/work/tests/artifacts/6
+
+{
+  echo "=== aws s3api get-bucket-versioning --bucket $BUCKET ==="
+  aws s3api get-bucket-versioning --bucket "$BUCKET"
+
+  echo
+  echo "Объяснение: PVC s3-pvc смонтирован через Mountpoint S3 CSI, а не EBS CSI. Данные"
+  echo "уже лежат в S3 как объекты, а не на блочном устройстве, поэтому у этого тома нет"
+  echo "снапшота через AWS Backup for EKS (тот механизм работает через EBS VolumeSnapshot,"
+  echo "глава 41). Защита от случайной перезаписи или удаления объектов на таком бакете -"
+  echo "это versioning (включён terraform-ом) и lifecycle-политики самого S3, а не бэкап"
+  echo "тома целиком."
+} > /var/work/tests/artifacts/6/backup.txt
+
+cat /var/work/tests/artifacts/6/backup.txt
+```
+
+## Быстрая проверка
+
+```bash
+check_result
+```

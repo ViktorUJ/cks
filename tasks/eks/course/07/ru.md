@@ -399,7 +399,8 @@ delegation поднимет плотность, но не добавит адр�
 
 ## Практика
 
-Лабы у главы пока нет, содержание проверяется на живом кластере. Начните с режима работы CNI:
+Лаба курса к этой теме: [лаба 103 - Адресный план: лимиты ENI, prefix delegation, secondary
+CIDR](../../labs/103/README_RU.MD). Кроме неё, содержание проверяется на живом кластере. Начните с режима работы CNI:
 `kubectl describe ds aws-node -n kube-system | grep -e PREFIX -e WARM_ -e CUSTOM_NETWORK -e
 SUBNET_DISCOVERY`. Затем проверьте префиксы на интерфейсах ноды через `aws ec2
 describe-network-interfaces` с фильтром `Name=attachment.instance-id` и запросом

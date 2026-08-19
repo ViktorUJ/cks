@@ -338,7 +338,9 @@ VPC CNI (`cni.chainingMode: aws-cni`), доказывается, что IPAM о�
 появляются L7-правило по HTTP-методу, политика по DNS-имени через `toFQDNs` и карта потоков
 с verdict в Hubble. Полная замена VPC CNI в объём лабы не входит осознанно: это blue/green
 через новые ноды (раздел 8.8), а не переключение флага. Результат проверяется командой
-`check_result`.
+`check_result`. К этой же теме относится [лаба 110 - NetworkPolicy в EKS: встроенная VPC CNI
+network policy](../../labs/110/README_RU.MD), где встроенная network policy VPC CNI
+проверяется отдельно, без Cilium.
 
 Ниже - то же самое на любом своём кластере обычными командами. Начните с того, что стоит
 сейчас: `kubectl get ds aws-node -n kube-system` покажет, работает ли VPC CNI, а

@@ -474,7 +474,8 @@ Secrets Manager и IAM-политикой роли, а не поиском по 
 
 ## Практика
 
-Своей лабы у главы пока нет, но всё проверяется на живом кластере. Слой 1: `aws eks
+Лаба курса к этой теме: [лаба 105 - Секреты: KMS envelope encryption и External Secrets
+Operator](../../labs/105/README_RU.MD). Кроме неё, всё проверяется на живом кластере. Слой 1: `aws eks
 describe-cluster --name <cluster> --query 'cluster.encryptionConfig'` покажет, включено ли
 шифрование и каким ключом. На 1.28+ оно работает и без CMK; свой ключ добавляют командой `aws
 eks associate-encryption-config` из раздела 18.3, помня о необратимости.

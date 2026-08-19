@@ -1,3 +1,5 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+
 # Глава 0.1. AWS для инженера Kubernetes: аккаунты, регионы, AZ, квоты, теги, биллинг
 
 > **Что дальше.** Вы пришли с CKA: kubectl, поды, Deployment, RBAC и PV - привычные
