@@ -189,14 +189,13 @@ role `eks-task119-test-node` 的 ARN 不在列表中。這個 role 有 managed p
 ```bash
 mkdir -p /var/work/tests/artifacts/6
 cat > /var/work/tests/artifacts/6/why_no_access_entry.txt <<EOF
-Instance $INSTANCE_ID is running in EC2, but did not appear in kubectl get nodes. The
-reason is that role $ROLE_ARN has managed policies (AmazonEKSWorkerNodePolicy,
-AmazonEC2ContainerRegistryReadOnly), but no access entry in the cluster. The role's IAM
-permissions and the role's authorization in the cluster are two different things
-(chapter 45.2). aws eks list-access-entries for $CLUSTER does not show this role. A
-managed node group creates such an entry automatically, while for self-managed nodes an
-access entry of type EC2_LINUX must be created manually with aws eks
-create-access-entry.
+Instance $INSTANCE_ID 在 EC2 中處於 running 狀態,但沒有出現在 kubectl get nodes 中。原因是
+role $ROLE_ARN 有 managed 政策(AmazonEKSWorkerNodePolicy、
+AmazonEC2ContainerRegistryReadOnly),但在叢集中沒有 access entry。role 的 IAM
+權限和 role 在叢集中的授權是兩件不同的事情(第 45.2 章)。針對 $CLUSTER 的 aws eks
+list-access-entries 不會顯示這個 role。managed node group 會自動建立這樣一筆記錄,
+而對於 self-managed 節點,類型為 EC2_LINUX 的 access entry 必須用 aws eks
+create-access-entry 手動建立。
 EOF
 cat /var/work/tests/artifacts/6/why_no_access_entry.txt
 ```

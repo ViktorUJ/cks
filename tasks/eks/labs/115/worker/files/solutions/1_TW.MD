@@ -209,11 +209,10 @@ aws logs filter-log-events --log-group-name "$LOG_GROUP" \
 ```bash
 mkdir -p /var/work/tests/artifacts/5
 cat > /var/work/tests/artifacts/5/filter_check.txt <<'EOF'
-FILTER grep with Exclude log /healthz dropped the line "GET /healthz 200" right on the
-node, before shipping to CloudWatch Logs - the log group has no such record at all. The
-normal line NORMAL_MARKER_LAB115 is untouched by the filter and reaches CloudWatch. Cutting
-noise this way is cheaper than cleaning up logs in storage after the fact: you pay for
-ingestion, and a filtered-out line never creates ingestion (section 34.6).
+FILTER grep 搭配 Exclude log /healthz 在節點上就把 "GET /healthz 200" 這一行丟棄了,
+在送往 CloudWatch Logs 之前 - 因此日誌組裡根本沒有這筆記錄。正常的行 NORMAL_MARKER_LAB115
+不會被過濾器影響,會抵達 CloudWatch。用這種方式削減雜訊,比事後在儲存中清理日誌更便宜:
+你要為 ingestion 付費,而被過濾掉的行不會產生 ingestion(第 34.6 節)。
 EOF
 cat /var/work/tests/artifacts/5/filter_check.txt
 ```

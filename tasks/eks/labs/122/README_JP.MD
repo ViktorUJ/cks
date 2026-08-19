@@ -81,7 +81,7 @@ flowchart TB
 | `eks_backup_iam` | `eks_v2_backup_iam` | `eks_control_plane` | AWS Backup の IAM ロールと backup vault |
 | `worker` | `eks_v2_work_pc` | `ssh-keys`, `vpc`, `eks_control_plane`, `eks_karpenter`, `eks_addon_ebs_irsa`, `eks_backup_iam` | kubectl、tests、`check_result` が入った作業マシン |
 
-依存関係グラフ（先に適用されるものが矢印の上流）:
+依存関係グラフ（先に適用されるものが矢印の下側）:
 
 ```mermaid
 flowchart TB

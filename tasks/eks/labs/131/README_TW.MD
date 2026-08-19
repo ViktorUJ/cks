@@ -174,7 +174,7 @@ check_result    # 檢查解答
 ---
 |        **5**        | **unhealthyPodEvictionPolicy: AlwaysAllow**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| 要做什麼          | 給 `web-pdb` 加上字段 `unhealthyPodEvictionPolicy: AlwaysAllow`（透過 `kubectl patch` 或重建）。用以下命令驗證該值：`kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`。將解釋保存到 `/var/work/tests/artifacts/5/unhealthy_policy.txt`，說明為何需要它：沒有 `AlwaysAllow`（即在默認策略 `IfHealthyBudget` 下），卡在 `crashloopbackoff` 中的故障 pod 本身就會阻塞預算計算，並可能永久阻塞 drain（詞語 `AlwaysAllow` 和 `crashloopbackoff`）。 |
+| 要做什麼          | 給 `web-pdb` 加上字段 `unhealthyPodEvictionPolicy: AlwaysAllow`（透過 `kubectl patch` 或重建）。用以下命令驗證該值：`kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`。將解釋保存到 `/var/work/tests/artifacts/5/unhealthy_policy.txt`，說明為何需要它：沒有 `AlwaysAllow`（即在默認策略 `IfHealthyBudget` 下），卡在 `CrashLoopBackOff` 中的故障 pod 本身就會阻塞預算計算，並可能永久阻塞 drain（詞語 `AlwaysAllow` 和 `CrashLoopBackOff`）。 |
 | 驗收標準    | - `web-pdb` 的 `unhealthyPodEvictionPolicy` 為 `AlwaysAllow`;<br/>- 檔案 `/var/work/tests/artifacts/5/unhealthy_policy.txt` 不為空且包含所需詞語。 |
 ---
 |        **6**        | **沒有卡住的 Pending 的滾動更新**                     |

@@ -158,7 +158,7 @@ kubectl rollout status deployment/web -n eks-131
 
 ნაგულისხმევად PDB იყენებს პოლიტიკას `IfHealthyBudget`: არაჯანსაღი (არა `Ready`) pod-ის
 გამოყვანა შესაძლებელია მხოლოდ იმ შემთხვევაში, თუ ბიუჯეტი მისი გარეშეც არ დაირღვევა. თუ
-აპლიკაცია გატეხილია და pod ჩარჩენილა `crashloopbackoff`-ში, ასეთი pod თავად ბლოკავს
+აპლიკაცია გატეხილია და pod ჩარჩენილა `CrashLoopBackOff`-ში, ასეთი pod თავად ბლოკავს
 ბიუჯეტის გამოთვლას და სამუდამოდ ხელს უშლის drain-ს. `AlwaysAllow` ხსნის ამ ბლოკირებას:
 არაჯანსაღი pod-ები ყოველთვის გამოვევდებიან, ჯანსაღები ბიუჯეტის დაცვის ქვეშ რჩება.
 
@@ -178,11 +178,11 @@ cat > /var/work/tests/artifacts/5/unhealthy_policy.txt <<'EOF'
 unhealthyPodEvictionPolicy: AlwaysAllow დაემატა web-pdb-ს.
 
 ნაგულისხმევად (IfHealthyBudget) არაჯანსაღი pod გამოვევდება მხოლოდ იმ შემთხვევაში, თუ
-currentHealthy არ ჩავარდება desiredHealthy-ის ქვემოთ, ამიტომ crashloopbackoff-ში
+currentHealthy არ ჩავარდება desiredHealthy-ის ქვემოთ, ამიტომ CrashLoopBackOff-ში
 ჩარჩენილი pod თავად ითვლება ბიუჯეტის ნაწილად და შესაძლოა სამუდამოდ დაბლოკოს drain, თუნდაც
 აპლიკაცია აღარ მუშაობდეს.
 
-AlwaysAllow ანებებს არაჯანსაღი pod-ის გამოვევას ბიუჯეტის მიუხედავად: crashloopbackoff-ში
+AlwaysAllow ანებებს არაჯანსაღი pod-ის გამოვევას ბიუჯეტის მიუხედავად: CrashLoopBackOff-ში
 გატეხილი pod უკვე არ აჭერს drain-ს, ხოლო ჯანსაღი რეპლიკები რჩება PDB-ის დაცვის ქვეშ.
 EOF
 cat /var/work/tests/artifacts/5/unhealthy_policy.txt

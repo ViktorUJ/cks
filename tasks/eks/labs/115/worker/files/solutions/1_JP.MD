@@ -216,11 +216,11 @@ aws logs filter-log-events --log-group-name "$LOG_GROUP" \
 ```bash
 mkdir -p /var/work/tests/artifacts/5
 cat > /var/work/tests/artifacts/5/filter_check.txt <<'EOF'
-FILTER grep with Exclude log /healthz dropped the line "GET /healthz 200" right on the
-node, before shipping to CloudWatch Logs - the log group has no such record at all. The
-normal line NORMAL_MARKER_LAB115 is untouched by the filter and reaches CloudWatch. Cutting
-noise this way is cheaper than cleaning up logs in storage after the fact: you pay for
-ingestion, and a filtered-out line never creates ingestion (section 34.6).
+FILTER grep の Exclude log /healthz は、"GET /healthz 200" という行をノード上で、
+CloudWatch Logs への送信前に破棄しました - ロググループにはこのレコードが一切ありません。
+通常の行 NORMAL_MARKER_LAB115 はフィルタに触れられず、CloudWatch に到達します。このように
+ノイズを削るほうが、後からストレージ内のログを掃除するより安価です: ingestion に対して課金
+され、フィルタで除外された行は ingestion を発生させません (セクション 34.6)。
 EOF
 cat /var/work/tests/artifacts/5/filter_check.txt
 ```

@@ -180,7 +180,7 @@ check_result    # 解答を確認する
 ---
 |        **5**        | **unhealthyPodEvictionPolicy: AlwaysAllow**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| やること          | `web-pdb`にフィールド`unhealthyPodEvictionPolicy: AlwaysAllow`を追加してください（`kubectl patch`または再作成）。値を確認：`kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`。`/var/work/tests/artifacts/5/unhealthy_policy.txt`に、なぜこれが必要かの説明を保存してください：`AlwaysAllow`がなければ（つまりデフォルトの`IfHealthyBudget`ポリシーでは）、`crashloopbackoff`に陥った壊れたpodがそれ自体で予算の計算をブロックし、drainを永久にブロックしかねません（単語`AlwaysAllow`と`crashloopbackoff`）。 |
+| やること          | `web-pdb`にフィールド`unhealthyPodEvictionPolicy: AlwaysAllow`を追加してください（`kubectl patch`または再作成）。値を確認：`kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`。`/var/work/tests/artifacts/5/unhealthy_policy.txt`に、なぜこれが必要かの説明を保存してください：`AlwaysAllow`がなければ（つまりデフォルトの`IfHealthyBudget`ポリシーでは）、`CrashLoopBackOff`に陥った壊れたpodがそれ自体で予算の計算をブロックし、drainを永久にブロックしかねません（単語`AlwaysAllow`と`CrashLoopBackOff`）。 |
 | 受け入れ基準    | - `web-pdb`の`unhealthyPodEvictionPolicy`が`AlwaysAllow`である;<br/>- ファイル`/var/work/tests/artifacts/5/unhealthy_policy.txt`が空でなく、必要な単語を含む。 |
 ---
 |        **6**        | **Pendingが詰まらないrolling update**                     |

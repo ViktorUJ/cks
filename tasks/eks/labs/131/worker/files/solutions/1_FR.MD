@@ -160,7 +160,7 @@ kubectl rollout status deployment/web -n eks-131
 
 Par défaut, le PDB utilise la politique `IfHealthyBudget` : un pod non sain (pas `Ready`)
 ne peut être évincé que si le budget ne serait pas violé de toute façon. Si l'application
-est cassée et qu'un pod reste bloqué en `crashloopbackoff`, ce pod bloque lui-même le calcul
+est cassée et qu'un pod reste bloqué en `CrashLoopBackOff`, ce pod bloque lui-même le calcul
 du budget et peut empêcher drain pour toujours. `AlwaysAllow` supprime ce blocage : les
 pods non sains peuvent toujours être évincés, les pods sains restent protégés par le
 budget.
@@ -181,12 +181,12 @@ cat > /var/work/tests/artifacts/5/unhealthy_policy.txt <<'EOF'
 unhealthyPodEvictionPolicy: AlwaysAllow ajouté à web-pdb.
 
 Par défaut (IfHealthyBudget), un pod non sain n'est évincé que si currentHealthy ne
-descend pas sous desiredHealthy, donc un pod en crashloopbackoff se compte lui-même comme
+descend pas sous desiredHealthy, donc un pod en CrashLoopBackOff se compte lui-même comme
 partie du budget et peut bloquer drain pour toujours, même si l'application ne fonctionne
 déjà plus.
 
 AlwaysAllow autorise l'éviction d'un pod non sain indépendamment du budget : un pod cassé
-en crashloopbackoff ne retient plus drain, et les réplicas sains restent protégés par le
+en CrashLoopBackOff ne retient plus drain, et les réplicas sains restent protégés par le
 PDB.
 EOF
 cat /var/work/tests/artifacts/5/unhealthy_policy.txt

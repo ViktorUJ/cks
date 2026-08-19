@@ -149,7 +149,7 @@ kubectl rollout status deployment/web -n eks-131
 ## 任務 5. unhealthyPodEvictionPolicy: AlwaysAllow
 
 默認情況下 PDB 使用 `IfHealthyBudget` 策略：只有在預算本來就不會被違反的情況下，才能驅逐
-不健康（非 `Ready`）的 pod。如果應用程式故障、pod 卡在 `crashloopbackoff` 中，這個 pod
+不健康（非 `Ready`）的 pod。如果應用程式故障、pod 卡在 `CrashLoopBackOff` 中，這個 pod
 本身就會阻塞預算的計算，並可能永久阻止 drain。`AlwaysAllow` 解除了這個阻塞：不健康的 pod
 永遠可以被驅逐，健康的 pod 仍受預算保護。
 
@@ -169,10 +169,10 @@ cat > /var/work/tests/artifacts/5/unhealthy_policy.txt <<'EOF'
 unhealthyPodEvictionPolicy: AlwaysAllow 已加到 web-pdb。
 
 默認情況下（IfHealthyBudget），只有當 currentHealthy 不會低於 desiredHealthy 時，不健康
-的 pod 才會被驅逐，因此處於 crashloopbackoff 的 pod 會把自己算作預算的一部分，即使應用程
+的 pod 才會被驅逐，因此處於 CrashLoopBackOff 的 pod 會把自己算作預算的一部分，即使應用程
 式已經不工作了，也可能永久阻塞 drain。
 
-AlwaysAllow 允許無視預算驅逐不健康的 pod：卡在 crashloopbackoff 中的故障 pod 不再拖住
+AlwaysAllow 允許無視預算驅逐不健康的 pod：卡在 CrashLoopBackOff 中的故障 pod 不再拖住
 drain，而健康的副本仍受 PDB 保護。
 EOF
 cat /var/work/tests/artifacts/5/unhealthy_policy.txt

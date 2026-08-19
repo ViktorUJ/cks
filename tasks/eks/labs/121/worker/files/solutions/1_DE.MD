@@ -156,13 +156,14 @@ Wir ergänzen in derselben Datei eine Erklärung des Unterschieds zwischen Aufga
 ```bash
 cat >> /var/work/tests/artifacts/4/forbidden.txt <<'EOF'
 
-Difference: in task 2 the role wasn't mapped into the cluster at all - the API server
-couldn't prove the identity, that's Unauthorized (an authentication failure, the authn
-layer). In task 4 the identity is already proven and mapped via an access entry, but RBAC
-(AmazonEKSViewPolicy only grants read) doesn't allow create namespace - that's Forbidden
-(an authorization failure, the authz layer). The fixes differ: Unauthorized is fixed in the
-mapping (access entry / aws-auth), Forbidden is fixed in RBAC (Role, ClusterRole, policy
-binding).
+Unterschied: In Aufgabe 2 war die Rolle überhaupt nicht in den Cluster gemappt - der
+API-Server konnte die Identität nicht nachweisen, das ist Unauthorized (ein Fehler der
+Authentifizierung, die authn-Schicht). In Aufgabe 4 ist die Identität bereits nachgewiesen
+und über einen access entry gemappt, aber RBAC (AmazonEKSViewPolicy gewährt nur Lesen)
+erlaubt kein create namespace - das ist Forbidden (ein Fehler der Autorisierung, die
+authz-Schicht). Die Behebung unterscheidet sich: Unauthorized wird im Mapping behoben
+(access entry / aws-auth), Forbidden wird in RBAC behoben (Role, ClusterRole,
+Policy-Bindung).
 EOF
 cat /var/work/tests/artifacts/4/forbidden.txt
 
@@ -285,14 +286,14 @@ mkdir -p /var/work/tests/artifacts/7
   echo
   echo
   cat <<'TXT'
-Both annotations point at the same IRSA role, but the role's trust policy checks the sub
-condition on the STS token: system:serviceaccount:<namespace>:<serviceaccount>. For
-demo-reader that's system:serviceaccount:eks-121:demo-reader - it matches the role's
-condition, so the exchange is allowed. For demo-reader-broken the token carries
-sub=system:serviceaccount:default:demo-reader-broken - a different namespace and a
-different SA name, so the StringEquals condition doesn't match, and
-sts:AssumeRoleWithWebIdentity is rejected regardless of the fact that the role ARN in the
-annotation is the same.
+Beide Annotationen zeigen auf dieselbe IRSA-Rolle, aber die trust policy der Rolle prüft
+die sub-Bedingung im STS-Token: system:serviceaccount:<namespace>:<serviceaccount>. Für
+demo-reader ist das system:serviceaccount:eks-121:demo-reader - es passt zur Bedingung der
+Rolle, also ist der Austausch erlaubt. Für demo-reader-broken trägt das Token
+sub=system:serviceaccount:default:demo-reader-broken - ein anderer namespace und ein
+anderer SA-Name, sodass die StringEquals-Bedingung nicht passt und
+sts:AssumeRoleWithWebIdentity abgelehnt wird, unabhängig davon, dass der Rollen-ARN in der
+Annotation derselbe ist.
 TXT
 } > /var/work/tests/artifacts/7/diagnostics.txt
 cat /var/work/tests/artifacts/7/diagnostics.txt
@@ -303,15 +304,17 @@ cat /var/work/tests/artifacts/7/diagnostics.txt
 ```bash
 mkdir -p /var/work/tests/artifacts/8
 cat > /var/work/tests/artifacts/8/summary.txt <<'EOF'
-The human axis (tasks 2-4) lives in the chain kubectl - IAM - EKS authenticator - RBAC:
-Unauthorized means the IAM identity couldn't be proven or mapped into the cluster at all
-(fixed via an access entry or aws-auth), while Forbidden means the identity is already
-known, but RBAC didn't allow that specific action (fixed via Role/ClusterRoleBinding). The
-pod axis (tasks 5-7) lives in the chain pod - ServiceAccount - STS - IAM role: AccessDenied
-or WebIdentityErr means the role's trust policy didn't match the ServiceAccount token's sub
-(fixed by editing the sub condition in the trust policy or the SA annotation). The key
-difference: on the first axis the fix is RBAC inside the cluster, on the second axis the fix
-is the IAM role's trust policy in AWS, and the two must not be confused.
+Die Mensch-Achse (Aufgaben 2-4) lebt in der Kette kubectl - IAM - EKS authenticator - RBAC:
+Unauthorized bedeutet, dass die IAM-Identität überhaupt nicht nachgewiesen oder in den
+Cluster gemappt werden konnte (behoben über einen access entry oder aws-auth), während
+Forbidden bedeutet, dass die Identität bereits bekannt ist, RBAC aber diese bestimmte
+Aktion nicht erlaubt hat (behoben über Role/ClusterRoleBinding). Die Pod-Achse (Aufgaben
+5-7) lebt in der Kette pod - ServiceAccount - STS - IAM role: AccessDenied oder
+WebIdentityErr bedeutet, dass die trust policy der Rolle nicht zum sub des
+ServiceAccount-Tokens passte (behoben durch Bearbeiten der sub-Bedingung in der trust
+policy oder der SA-Annotation). Der entscheidende Unterschied: Auf der ersten Achse ist die
+Behebung RBAC innerhalb des Clusters, auf der zweiten Achse ist die Behebung die trust
+policy der IAM-Rolle in AWS, und die beiden dürfen nicht verwechselt werden.
 EOF
 cat /var/work/tests/artifacts/8/summary.txt
 ```

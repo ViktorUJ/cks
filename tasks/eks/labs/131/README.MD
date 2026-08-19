@@ -182,7 +182,7 @@ check_result    # check the solution
 ---
 |        **5**        | **unhealthyPodEvictionPolicy: AlwaysAllow**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| What to do          | Add field `unhealthyPodEvictionPolicy: AlwaysAllow` to `web-pdb` (via `kubectl patch` or by recreating it). Verify the value: `kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`. Save an explanation to `/var/work/tests/artifacts/5/unhealthy_policy.txt` of why this is needed: without `AlwaysAllow` (i.e. under the default `IfHealthyBudget` policy) a broken pod stuck in `crashloopbackoff` blocks the budget calculation itself and can permanently block drain (words `AlwaysAllow` and `crashloopbackoff`). |
+| What to do          | Add field `unhealthyPodEvictionPolicy: AlwaysAllow` to `web-pdb` (via `kubectl patch` or by recreating it). Verify the value: `kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`. Save an explanation to `/var/work/tests/artifacts/5/unhealthy_policy.txt` of why this is needed: without `AlwaysAllow` (i.e. under the default `IfHealthyBudget` policy) a broken pod stuck in `CrashLoopBackOff` blocks the budget calculation itself and can permanently block drain (words `AlwaysAllow` and `CrashLoopBackOff`). |
 | Acceptance criteria    | - `web-pdb` has `unhealthyPodEvictionPolicy: AlwaysAllow`;<br/>- file `/var/work/tests/artifacts/5/unhealthy_policy.txt` is not empty and contains the required words. |
 ---
 |        **6**        | **Rolling update with no stuck Pending pods**                     |

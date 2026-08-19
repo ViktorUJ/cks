@@ -185,7 +185,7 @@ check_result    # vérifier la solution
 ---
 |        **5**        | **unhealthyPodEvictionPolicy: AlwaysAllow**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| Ce qu'il faut faire          | Ajoutez à `web-pdb` le champ `unhealthyPodEvictionPolicy: AlwaysAllow` (via `kubectl patch` ou recréation). Vérifiez la valeur : `kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`. Enregistrez dans `/var/work/tests/artifacts/5/unhealthy_policy.txt` une explication de pourquoi c'est nécessaire : sans `AlwaysAllow` (c'est-à-dire avec la politique par défaut `IfHealthyBudget`), un pod cassé bloqué en `crashloopbackoff` bloque lui-même le calcul du budget et peut bloquer drain pour toujours (mots `AlwaysAllow` et `crashloopbackoff`). |
+| Ce qu'il faut faire          | Ajoutez à `web-pdb` le champ `unhealthyPodEvictionPolicy: AlwaysAllow` (via `kubectl patch` ou recréation). Vérifiez la valeur : `kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`. Enregistrez dans `/var/work/tests/artifacts/5/unhealthy_policy.txt` une explication de pourquoi c'est nécessaire : sans `AlwaysAllow` (c'est-à-dire avec la politique par défaut `IfHealthyBudget`), un pod cassé bloqué en `CrashLoopBackOff` bloque lui-même le calcul du budget et peut bloquer drain pour toujours (mots `AlwaysAllow` et `CrashLoopBackOff`). |
 | Critères d'acceptation    | - `web-pdb` a `unhealthyPodEvictionPolicy: AlwaysAllow`;<br/>- le fichier `/var/work/tests/artifacts/5/unhealthy_policy.txt` n'est pas vide et contient les mots requis. |
 ---
 |        **6**        | **Rolling update sans Pending bloqués**                     |

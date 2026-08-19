@@ -183,7 +183,7 @@ check_result    # გადაწყვეტის შემოწმება
 ---
 |        **5**        | **unhealthyPodEvictionPolicy: AlwaysAllow**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| რას ვაკეთებთ          | დაამატეთ `web-pdb`-ს ველი `unhealthyPodEvictionPolicy: AlwaysAllow` (`kubectl patch`-ის ან ხელახალი შექმნის საშუალებით). გადაამოწმეთ მნიშვნელობა: `kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`. შეინახეთ `/var/work/tests/artifacts/5/unhealthy_policy.txt`-ში განმარტება, რატომ არის ეს საჭირო: `AlwaysAllow`-ის გარეშე (ანუ ნაგულისხმევი პოლიტიკით `IfHealthyBudget`) გატეხილი pod, რომელიც ჩარჩენილა `crashloopbackoff`-ში, თავად ბლოკავს ბიუჯეტის გამოთვლას და შესაძლოა სამუდამოდ დაბლოკოს drain (სიტყვები `AlwaysAllow` და `crashloopbackoff`). |
+| რას ვაკეთებთ          | დაამატეთ `web-pdb`-ს ველი `unhealthyPodEvictionPolicy: AlwaysAllow` (`kubectl patch`-ის ან ხელახალი შექმნის საშუალებით). გადაამოწმეთ მნიშვნელობა: `kubectl get pdb web-pdb -n eks-131 -o jsonpath='{.spec.unhealthyPodEvictionPolicy}'`. შეინახეთ `/var/work/tests/artifacts/5/unhealthy_policy.txt`-ში განმარტება, რატომ არის ეს საჭირო: `AlwaysAllow`-ის გარეშე (ანუ ნაგულისხმევი პოლიტიკით `IfHealthyBudget`) გატეხილი pod, რომელიც ჩარჩენილა `CrashLoopBackOff`-ში, თავად ბლოკავს ბიუჯეტის გამოთვლას და შესაძლოა სამუდამოდ დაბლოკოს drain (სიტყვები `AlwaysAllow` და `CrashLoopBackOff`). |
 | მიღების კრიტერიუმები    | - `web-pdb`-ს აქვს `unhealthyPodEvictionPolicy: AlwaysAllow`;<br/>- ფაილი `/var/work/tests/artifacts/5/unhealthy_policy.txt` არ არის ცარიელი და შეიცავს საჭირო სიტყვებს. |
 ---
 |        **6**        | **Rolling update ჩარჩენილი Pending-ის გარეშე**                     |

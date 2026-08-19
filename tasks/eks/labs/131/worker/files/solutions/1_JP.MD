@@ -158,7 +158,7 @@ kubectl rollout status deployment/web -n eks-131
 
 デフォルトでは、PDBは`IfHealthyBudget`ポリシーを使います：不健全な（`Ready`でない）pod
 は、それをevictしても予算が違反されない場合にのみevictできます。アプリケーションが壊れ
-ていて、podが`crashloopbackoff`にはまっている場合、そのpod自体が予算の計算をブロックし、
+ていて、podが`CrashLoopBackOff`にはまっている場合、そのpod自体が予算の計算をブロックし、
 drainを永遠に妨げることがあります。`AlwaysAllow`はこのブロックを取り除きます：不健全な
 podは常にevictでき、健全なpodは予算によって保護されたままです。
 
@@ -178,11 +178,11 @@ cat > /var/work/tests/artifacts/5/unhealthy_policy.txt <<'EOF'
 unhealthyPodEvictionPolicy: AlwaysAllowをweb-pdbに追加した。
 
 デフォルト（IfHealthyBudget）では、currentHealthyがdesiredHealthyを下回らない場合にの
-み不健全なpodがevictされる。そのため、crashloopbackoffに陥ったpodはそれ自体を予算の一
+み不健全なpodがevictされる。そのため、CrashLoopBackOffに陥ったpodはそれ自体を予算の一
 部として数えてしまい、アプリケーションが既に動作していなくてもdrainを永久にブロックし
 かねない。
 
-AlwaysAllowは予算に関係なく不健全なpodのevictionを許可する：crashloopbackoffに陥った
+AlwaysAllowは予算に関係なく不健全なpodのevictionを許可する：CrashLoopBackOffに陥った
 壊れたpodはもはやdrainを引き留めず、健全なレプリカはPDBによって保護されたままである。
 EOF
 cat /var/work/tests/artifacts/5/unhealthy_policy.txt

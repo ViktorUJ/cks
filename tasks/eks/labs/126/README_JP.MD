@@ -77,7 +77,7 @@ flowchart TB
 | `eks_karpenter_nitro_vng` | `eks_v2_karpenter_vng` | `vpc`, `eks_control_plane`, `eks_karpenter` | NodePool `nitro`、カテゴリ`c`/`m`/`r`、世代`>4`、taintなし |
 | `worker` | `eks_v2_work_pc` | `ssh-keys`, `vpc`, `eks_control_plane`, `eks_karpenter` | kubectl、テスト、`check_result`を備えたworker機 |
 
-依存関係グラフ(矢印の下にあるものほど後に適用されます):
+依存関係グラフ(矢印の下にあるものほど先に適用されます):
 
 ```mermaid
 flowchart TB

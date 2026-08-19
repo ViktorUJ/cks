@@ -176,7 +176,7 @@ check_result    # გადამოწმება
 ---
 |        **6**        | **Karpenter-ის წყვეტების დამუშავების შემოწმება**                 |
 | :-----------------: | :---------------------------------------------------------- |
-| რას ვაკეთებთ          | დაადასტურეთ, რომ Karpenter-ის spot-წყვეტის დამუშავების მექანიზმი კონფიგურირებულია: გადახედეთ კონტროლერის ლოგებს (`kubectl logs -n karpenter -l app.kubernetes.io/name=karpenter | grep -i interrupt`). თუ არ არის უფლება `aws sqs list-queues`-ზე - ეს მოსალოდნელია, გამოიყენეთ მხოლოდ `kubectl logs`. შეინახეთ შედეგი (event-ები, ან განმარტება, რომ მექანიზმი კონფიგურირებულია წყვეტის queue-ის მეშვეობით) ფაილში `/var/work/tests/artifacts/6/interruption.txt`. |
+| რას ვაკეთებთ          | დაადასტურეთ, რომ Karpenter-ის spot-წყვეტის დამუშავების მექანიზმი კონფიგურირებულია: გადახედეთ კონტროლერის ლოგებს (`kubectl logs -n karpenter -l app.kubernetes.io/name=karpenter \| grep -i interrupt`). თუ არ არის უფლება `aws sqs list-queues`-ზე - ეს მოსალოდნელია, გამოიყენეთ მხოლოდ `kubectl logs`. შეინახეთ შედეგი (event-ები, ან განმარტება, რომ მექანიზმი კონფიგურირებულია წყვეტის queue-ის მეშვეობით) ფაილში `/var/work/tests/artifacts/6/interruption.txt`. |
 | მიღების კრიტერიუმები    | - ფაილი `/var/work/tests/artifacts/6/interruption.txt` არ არის ცარიელი და შეიცავს სიტყვას `interrupt`. |
 ---
 

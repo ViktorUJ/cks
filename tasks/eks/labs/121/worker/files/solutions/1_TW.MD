@@ -148,13 +148,11 @@ cat /var/work/tests/artifacts/4/forbidden.txt
 ```bash
 cat >> /var/work/tests/artifacts/4/forbidden.txt <<'EOF'
 
-Difference: in task 2 the role wasn't mapped into the cluster at all - the API server
-couldn't prove the identity, that's Unauthorized (an authentication failure, the authn
-layer). In task 4 the identity is already proven and mapped via an access entry, but RBAC
-(AmazonEKSViewPolicy only grants read) doesn't allow create namespace - that's Forbidden
-(an authorization failure, the authz layer). The fixes differ: Unauthorized is fixed in the
-mapping (access entry / aws-auth), Forbidden is fixed in RBAC (Role, ClusterRole, policy
-binding).
+差異:在任務 2 中,role 根本沒有被映射到叢集中 - API server 無法證明 identity,這就是
+Unauthorized (認證失敗,authn 層)。在任務 4 中,identity 已經被證明並透過 access entry
+完成映射,但 RBAC (AmazonEKSViewPolicy 只授予讀取) 不允許建立 namespace - 這就是 Forbidden
+(授權失敗,authz 層)。修正方式不同:Unauthorized 是在映射 (access entry / aws-auth) 中修正,
+Forbidden 是在 RBAC (Role、ClusterRole、policy binding) 中修正。
 EOF
 cat /var/work/tests/artifacts/4/forbidden.txt
 
@@ -274,14 +272,12 @@ mkdir -p /var/work/tests/artifacts/7
   echo
   echo
   cat <<'TXT'
-Both annotations point at the same IRSA role, but the role's trust policy checks the sub
-condition on the STS token: system:serviceaccount:<namespace>:<serviceaccount>. For
-demo-reader that's system:serviceaccount:eks-121:demo-reader - it matches the role's
-condition, so the exchange is allowed. For demo-reader-broken the token carries
-sub=system:serviceaccount:default:demo-reader-broken - a different namespace and a
-different SA name, so the StringEquals condition doesn't match, and
-sts:AssumeRoleWithWebIdentity is rejected regardless of the fact that the role ARN in the
-annotation is the same.
+兩個註解都指向同一個 IRSA role,但 role 的 trust policy 會檢查 STS token 上的 sub 條件:
+system:serviceaccount:<namespace>:<serviceaccount>。對於 demo-reader 而言那是
+system:serviceaccount:eks-121:demo-reader - 它與 role 的條件相符,因此交換被允許。對於
+demo-reader-broken,token 帶有 sub=system:serviceaccount:default:demo-reader-broken - 這是
+不同的 namespace 和不同的 SA 名稱,因此 StringEquals 條件不相符,而且無論註解中的 role ARN
+是否相同,sts:AssumeRoleWithWebIdentity 都會被拒絕。
 TXT
 } > /var/work/tests/artifacts/7/diagnostics.txt
 cat /var/work/tests/artifacts/7/diagnostics.txt
@@ -292,15 +288,13 @@ cat /var/work/tests/artifacts/7/diagnostics.txt
 ```bash
 mkdir -p /var/work/tests/artifacts/8
 cat > /var/work/tests/artifacts/8/summary.txt <<'EOF'
-The human axis (tasks 2-4) lives in the chain kubectl - IAM - EKS authenticator - RBAC:
-Unauthorized means the IAM identity couldn't be proven or mapped into the cluster at all
-(fixed via an access entry or aws-auth), while Forbidden means the identity is already
-known, but RBAC didn't allow that specific action (fixed via Role/ClusterRoleBinding). The
-pod axis (tasks 5-7) lives in the chain pod - ServiceAccount - STS - IAM role: AccessDenied
-or WebIdentityErr means the role's trust policy didn't match the ServiceAccount token's sub
-(fixed by editing the sub condition in the trust policy or the SA annotation). The key
-difference: on the first axis the fix is RBAC inside the cluster, on the second axis the fix
-is the IAM role's trust policy in AWS, and the two must not be confused.
+人的軸線 (任務 2-4) 存在於這條鏈中:kubectl - IAM - EKS authenticator - RBAC:Unauthorized
+表示 IAM identity 根本無法被證明或映射到叢集中 (透過 access entry 或 aws-auth 修正),而
+Forbidden 表示 identity 已經是已知的,但 RBAC 不允許那個特定動作 (透過 Role/ClusterRoleBinding
+修正)。pod 的軸線 (任務 5-7) 存在於這條鏈中:pod - ServiceAccount - STS - IAM role:
+AccessDenied 或 WebIdentityErr 表示 role 的 trust policy 與 ServiceAccount token 的 sub
+不相符 (透過編輯 trust policy 或 SA 註解中的 sub 條件來修正)。關鍵差異:在第一條軸線上,修正的是
+叢集內部的 RBAC,在第二條軸線上,修正的是 AWS 中 IAM role 的 trust policy,這兩者絕不可混淆。
 EOF
 cat /var/work/tests/artifacts/8/summary.txt
 ```
