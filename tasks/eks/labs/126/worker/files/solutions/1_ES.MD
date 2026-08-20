@@ -391,18 +391,18 @@ ENI, y es la regla la que decide el resultado. Construye el artefacto:
 
 ```bash
 {
-  echo "=== Deployment's pod with SecurityGroupPolicy secured-sgp (branch ENI) ==="
+  echo "=== pod del Deployment con SecurityGroupPolicy secured-sgp (branch ENI) ==="
   kubectl get pod "$APP_POD" -n eks-126 -o wide
   echo
-  echo "=== pod with a DIFFERENT security group (other-sgp), same node ==="
+  echo "=== pod con una security group DISTINTA (other-sgp), el mismo nodo ==="
   kubectl get pod othersg -n eks-126 -o wide
   echo
-  echo "=== before the rule ==="
+  echo "=== antes de la regla ==="
   cat /var/work/tests/artifacts/7/before.txt
-  echo "=== after the inbound 8080 rule from the second SG ==="
+  echo "=== después de la regla inbound 8080 de la segunda SG ==="
   cat /var/work/tests/artifacts/7/after.txt
   echo
-  echo "=== where CoreDNS is ==="
+  echo "=== dónde está CoreDNS ==="
   kubectl get pods -n kube-system -l k8s-app=kube-dns -o wide
   cat <<'TXT'
 

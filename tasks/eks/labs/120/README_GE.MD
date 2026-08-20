@@ -59,8 +59,8 @@ flowchart LR
     client["client"]
     svc["Service api<br>ClusterIP"]
     api["Deployment api"]
-    nlb["NLB<br>created by LBC"]
-    brokensg["Balancer SG<br>no inbound"]
+    nlb["NLB<br>შექმნა LBC"]
+    brokensg["balancer-ის SG<br>ინბაუნდ გარეშე"]
     nodesg["Node SG"]
     client --> svc --> api
     nlb --> brokensg --> nodesg --> api

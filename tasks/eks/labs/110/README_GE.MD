@@ -45,7 +45,7 @@ flowchart LR
     fe["frontend<br>app: frontend"]
     api["api<br>app: api"]
     dns["CoreDNS<br>kube-system"]
-    other["client-other<br>no label"]
+    other["client-other<br>ლეიბლის გარეშე"]
     ext["გარეთა მისამართი"]
     fe -->|allow| api
     fe -->|allow 53| dns
@@ -225,7 +225,7 @@ kubectl delete namespace eks-110 --ignore-not-found
 
 # 2. დაველოდოთ, სანამ Karpenter მოხსნის NodeClaim-სა და EC2 ნოუდს (მხოლოდ fargate-* უნდა დარჩეს)
 while kubectl get nodeclaims --no-headers 2>/dev/null | grep -q .; do
-  echo "NodeClaim still alive, waiting..."; sleep 15
+  echo "NodeClaim ჯერ კიდევ ცოცხალია, ველოდებით..."; sleep 15
 done
 kubectl get nodes | grep -v fargate
 ```

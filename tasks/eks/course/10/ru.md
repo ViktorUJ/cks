@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 10. AMI и bootstrap: AL2023, Bottlerocket, launch templates, kubelet и user data
 
 > **Что дальше.** В главе 9 разобрали типы вычислений и выбор Auto Mode против своего стека.

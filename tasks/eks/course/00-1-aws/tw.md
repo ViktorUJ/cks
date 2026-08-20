@@ -1,5 +1,4 @@
 [Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
-
 # 第 0.1 章. 給 Kubernetes 工程師的 AWS 入門：帳戶、區域、AZ、配額、標籤、計費
 
 > **接下來會發生什麼。** 你是從 CKA 過來的：kubectl、Pod、Deployment、RBAC 和 PV - 這些都是熟悉的

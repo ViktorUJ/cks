@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 0.5. Инструменты: aws cli, eksctl, terraform и terragrunt, helm, полезные плагины
 
 > **Что дальше.** За спиной аккаунт и биллинг (глава 0.1), IAM (0.2), VPC (0.3) и EC2 (0.4).

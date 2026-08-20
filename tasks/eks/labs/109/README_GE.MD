@@ -59,9 +59,9 @@ flowchart TB
     client --> alb
     alb --> pod1
     alb --> pod2
-    lbc -.creates and watches.-> alb
-    extdns -.writes ALIAS and TXT.-> r53
-    r53 -.resolves the name to.-> alb
+    lbc -."ქმნის და აკვირდება".-> alb
+    extdns -."წერს ALIAS და TXT".-> r53
+    r53 -."სახელს არეზოლვებს".-> alb
     style alb fill:#f4b400,color:#000
     style lbc fill:#326ce5,color:#fff
     style extdns fill:#4285f4,color:#fff
@@ -242,7 +242,7 @@ check_result
 >
 > external-dns დავალება 5-იდან თავად არ წაშლის `A`/`AAAA`/`TXT` ჩანაწერებს:
 > `policy: upsert-only`, რომელიც ცალსახად დააყენეთ დაინსტალირებისას, არის განზრახ
-> "create and update only" რეჟიმი, წაშლის გარეშე - პროექტის დოკუმენტირებული ქცევა
+> „მხოლოდ შექმნა და განახლება" რეჟიმი, წაშლის გარეშე - პროექტის დოკუმენტირებული ქცევა
 > (დაცვა DNS ჩანაწერების უნებლიე დაკარგვისგან კონტროლერის გადატვირთვისას). წაშალეთ
 > ისინი ხელით AWS CLI-ის მეშვეობით - სხვაგვარად hosted zone შეინარჩუნებს ჩანაწერებს
 > `NS`/`SOA`-ს გარდა, და terraform არ შეძლებს თავად ზონის წაშლას:
@@ -269,7 +269,7 @@ check_result
 > CLI-ის მეშვეობით ერთადერთი დარჩენილი გამოსავალია:
 >
 > ```bash
-> VPC_ID=<ID of this lab's VPC>
+> VPC_ID=<ამ ლაბის VPC-ის ID>
 > LB_ARN=$(aws elbv2 describe-load-balancers \
 >   --query "LoadBalancers[?contains(LoadBalancerName,'eks109')].LoadBalancerArn" --output text)
 > aws elbv2 delete-load-balancer --load-balancer-arn "$LB_ARN"

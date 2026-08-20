@@ -41,7 +41,7 @@ NodePool-ით spot-დატვირთვისთვის, ზემოდ
 ```mermaid
 flowchart TB
     cp["Control plane EKS"]
-    subgraph fg["Fargate (system pods)"]
+    subgraph fg["Fargate (სისტემური პოდები)"]
         sys["kube-system<br>karpenter"]
     end
     subgraph spot["NodePool spot-lab"]

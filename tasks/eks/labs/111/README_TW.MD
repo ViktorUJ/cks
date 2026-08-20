@@ -39,7 +39,7 @@ PDB 在 voluntary eviction 期間實際上保護的是什麼,以及 voluntary dr
 ```mermaid
 flowchart TB
     cp["Control plane EKS"]
-    subgraph fg["Fargate (system pods)"]
+    subgraph fg["Fargate (系統 Pod)"]
         sys["kube-system<br>karpenter"]
     end
     subgraph spot["NodePool spot-lab"]

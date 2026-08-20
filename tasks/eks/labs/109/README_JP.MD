@@ -58,9 +58,9 @@ flowchart TB
     client --> alb
     alb --> pod1
     alb --> pod2
-    lbc -.creates and watches.-> alb
-    extdns -.writes ALIAS and TXT.-> r53
-    r53 -.resolves the name to.-> alb
+    lbc -."作成して監視する".-> alb
+    extdns -."ALIAS と TXT を書き込む".-> r53
+    r53 -."名前を解決する".-> alb
     style alb fill:#f4b400,color:#000
     style lbc fill:#326ce5,color:#fff
     style extdns fill:#4285f4,color:#fff

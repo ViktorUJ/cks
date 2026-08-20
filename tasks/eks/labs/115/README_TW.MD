@@ -42,12 +42,12 @@ Bit 本身,重現在沒有收集器和有收集器兩種情況下的日誌損失
 
 ```mermaid
 flowchart TB
-    app["Pods: stdout"]
+    app["pod: stdout"]
     files["/var/log/containers"]
-    fb["Fluent Bit DaemonSet<br>IRSA role"]
-    filt["FILTER grep<br>drop /healthz"]
+    fb["Fluent Bit DaemonSet<br>IRSA 角色"]
+    filt["FILTER grep<br>丟棄 /healthz"]
     cw["CloudWatch Logs<br>log group"]
-    ret["Retention<br>7 days"]
+    ret["Retention<br>7 天"]
     app --> files --> fb --> filt --> cw --> ret
     style fb fill:#0f9d58,color:#fff
     style filt fill:#f4b400,color:#000

@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 0.3. VPC с нуля: подсети, маршрутизация, IGW и NAT, security groups, VPC endpoints
 
 > **Что дальше.** В главе 0.1 появились регион, зоны доступности и функциональные теги на

@@ -242,7 +242,7 @@ kubectl delete namespace eks-113 --ignore-not-found
 #    des tâches 3/6 est encore en cours)
 CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
 while [ "$(aws eks describe-cluster --name "$CLUSTER" --query 'cluster.status' --output text)" != "ACTIVE" ]; do
-  echo "control plane still UPDATING, waiting..."; sleep 30
+  echo "control plane toujours UPDATING, en attente..."; sleep 30
 done
 ```
 

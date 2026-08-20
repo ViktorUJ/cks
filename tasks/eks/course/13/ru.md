@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 13. Spot-инстансы: прерывания, диверсификация, обработка событий
 
 > **Что дальше.** Автоскейлеры разобраны (глава 11), конфигурация Karpenter (`NodePool`,
@@ -358,7 +359,7 @@ drain](../../labs/111/README_RU.MD). Кроме неё, поведение spot 
 зонам. Загляните в логи обработчика прерываний
 (`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interrupt`) и
 оцените нормальный «шум» изъятий. Отдельно разберите раннюю лабу Karpenter из репозитория
-([Karpenter](../../labs/02/README_RUS.MD)) - она не входит в курс, но тема пересекается.
+([Karpenter](../../labs/02/README.MD)) - она не входит в курс, но тема пересекается.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 12](../12/ru.md) · [Глава 14](../14/ru.md)

@@ -166,37 +166,37 @@ cat ~/lab105_hints.txt   # საიდუმლოსა და IRSA როლ�
 |        **1**        | **Namespace ლაბის დატვირთვისთვის**                             |
 | :-----------------: | :---------------------------------------------------------- |
 | რას ვაკეთებთ          | შექმენით namespace სახელით `eks-105`. ლაბის ყველა ობიექტი იქმნება მის შიგნით. |
-| Acceptance criteria    | - namespace `eks-105` არსებობს. |
+| მიღების კრიტერიუმები    | - namespace `eks-105` არსებობს. |
 ---
 |        **2**        | **შრე 1: KMS envelope encryption-ის შემოწმება**                 |
 | :-----------------: | :---------------------------------------------------------- |
 | რას ვაკეთებთ          | გაუშვით `aws eks describe-cluster --name <cluster> --query 'cluster.encryptionConfig'` (კლასტერის სახელი არის `cluster_name` ფაილიდან `~/lab105_hints.txt`) და შეინახეთ output ფაილში `/var/work/tests/artifacts/2/encryption_config.txt`. დარწმუნდით, რომ დაშიფვრის კონფიგურაციაში არსებობს `resources` მნიშვნელობით `secrets` - ეს ადასტურებს, რომ `Secret` ობიექტები დაშიფრულია KMS გასაღებით etcd-ში ჩაწერისას (EKS 1.28+-ზე ჩართული ნაგულისხმევად). |
-| Acceptance criteria    | - ფაილი `2/encryption_config.txt` არ არის ცარიელი და შეიცავს `resources`-სა და `secrets`-ს. |
+| მიღების კრიტერიუმები    | - ფაილი `2/encryption_config.txt` არ არის ცარიელი და შეიცავს `resources`-სა და `secrets`-ს. |
 ---
 |        **3**        | **External Secrets Operator-ის დაყენება Helm-ის მეშვეობით**           |
 | :-----------------: | :---------------------------------------------------------- |
 | რას ვაკეთებთ          | დაამატეთ რეპოზიტორი `https://charts.external-secrets.io` და დააყენეთ chart `external-secrets` namespace `external-secrets`-ში (ფლაგი `--create-namespace`). დაყენებისას ანოტაციით მიაბამთ IRSA როლს (`role_arn` მინიშნებიდან): `--set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=<role_arn>`. დაელოდეთ, სანამ კონტროლერის pod გახდება `Running`. |
-| Acceptance criteria    | - ESO-ს Deployment `external-secrets`-ში აქვს მინიმუმ ერთი მზა replica;<br/>- კონტროლერის ServiceAccount-ს აქვს ანოტაცია `eks.amazonaws.com/role-arn` მნიშვნელობით, რომელიც შეიცავს `eso-irsa-role`-ს. |
+| მიღების კრიტერიუმები    | - ESO-ს Deployment `external-secrets`-ში აქვს მინიმუმ ერთი მზა replica;<br/>- კონტროლერის ServiceAccount-ს აქვს ანოტაცია `eks.amazonaws.com/role-arn` მნიშვნელობით, რომელიც შეიცავს `eso-irsa-role`-ს. |
 ---
 |        **4**        | **SecretStore და ExternalSecret**                              |
 | :-----------------: | :---------------------------------------------------------- |
 | რას ვაკეთებთ          | `eks-105`-ში შექმენით `SecretStore` `aws-sm` (`provider.aws.service: SecretsManager`, `region: eu-central-1`) და `ExternalSecret` `db-credentials`, რომელიც მიუთითებს დემო-საიდუმლოზე (`secret_name` მინიშნებიდან), ველი `password`, `target.name: db-credentials`, `refreshInterval` მცირე (მაგალითად `1m`, გამოგადგებათ დავალება 6-ში). დაელოდეთ სტატუსს `SecretSynced` და შეამოწმეთ, რომ ნატიური `Secret` `db-credentials` გამოჩნდა სწორი პაროლის მნიშვნელობით (`kubectl get secret ... -o jsonpath` პლუს `base64 -d`). |
-| Acceptance criteria    | - `ExternalSecret` `db-credentials` `eks-105`-ში სტატუსში `SecretSynced` არის;<br/>- `Secret` `db-credentials` შეიცავს პაროლს `S3cr3tPass123`. |
+| მიღების კრიტერიუმები    | - `ExternalSecret` `db-credentials` `eks-105`-ში სტატუსში `SecretSynced` არის;<br/>- `Secret` `db-credentials` შეიცავს პაროლს `S3cr3tPass123`. |
 ---
 |        **5**        | **Pod ტომით: სინქრონიზაციის მდგრადი გზა**                |
 | :-----------------: | :---------------------------------------------------------- |
 | რას ვაკეთებთ          | შექმენით Pod `vol-reader` (image `amazon/aws-cli:2.15.0`, ბრძანება `sleep 3600`), რომელიც ამაუნთებს `Secret` `db-credentials`-ს ტომად (`volumeMount`, არ არის env). წაიკითხეთ პაროლი ტომში არსებული ფაილიდან და შეინახეთ output ფაილში `/var/work/tests/artifacts/5/volume_password.txt`. |
-| Acceptance criteria    | - Pod `vol-reader` ამაუნთებს `Secret` `db-credentials`-ს ტომად;<br/>- ფაილი `5/volume_password.txt` არ არის ცარიელი და შეიცავს `S3cr3tPass123`-ს. |
+| მიღების კრიტერიუმები    | - Pod `vol-reader` ამაუნთებს `Secret` `db-credentials`-ს ტომად;<br/>- ფაილი `5/volume_password.txt` არ არის ცარიელი და შეიცავს `S3cr3tPass123`-ს. |
 ---
 |        **6**        | **Pod env-ით: საიდუმლოს წაკითხვა მეორედ**                       |
 | :-----------------: | :---------------------------------------------------------- |
 | რას ვაკეთებთ          | შექმენით Pod `env-reader` (image `amazon/aws-cli:2.15.0`, ბრძანება `sleep 3600`) ცვლადით `DB_PASSWORD` `secretKeyRef`-ის მეშვეობით `Secret` `db-credentials`-ზე. დარწმუნდით, რომ ცვლადი ჩანს pod-ის შიგნით (`kubectl exec env-reader -n eks-105 -- printenv DB_PASSWORD`). |
-| Acceptance criteria    | - Pod `env-reader` იყენებს `Secret` `db-credentials`-ს `secretKeyRef`-ის მეშვეობით ცვლადზე `DB_PASSWORD`. |
+| მიღების კრიტერიუმები    | - Pod `env-reader` იყენებს `Secret` `db-credentials`-ს `secretKeyRef`-ის მეშვეობით ცვლადზე `DB_PASSWORD`. |
 ---
 |        **7**        | **როტაციის სიმპტომი: env არ განახლდება**                       |
 | :-----------------: | :---------------------------------------------------------- |
 | რას ვაკეთებთ          | შეცვალეთ საიდუმლოს მნიშვნელობა პირდაპირ Secrets Manager-ში: `aws secretsmanager put-secret-value --secret-id <secret_name> --secret-string '{"username":"appuser","password":"RotatedPass456"}'`. დაელოდეთ `refreshInterval`-ს პლუს მარაგი და ხელახლა შეამოწმეთ `Secret` kubectl-ის მეშვეობით - მნიშვნელობა განახლდება, ESO-მ ხელახლა დაასინქრონა. შემდეგ შეამოწმეთ pod `env-reader` დავალება 6-იდან - ის ხედავს ძველ მნიშვნელობას env-ში. შეინახეთ განმარტება ფაილში `/var/work/tests/artifacts/7/rotation.txt`: რატომ განახლდა `Secret`, ხოლო `env-reader` ხედავს ძველ მნიშვნელობას (ახსენეთ სიტყვა `env` და ის, რომ მნიშვნელობა არ განახლდება pod-ის ხელახლა შექმნის გარეშე). |
-| Acceptance criteria    | - ფაილი `7/rotation.txt` არ არის ცარიელი, შეიცავს `env`-ს და განმარტებას, რომ მნიშვნელობა არ განახლდება (ინგლისური მარკერი: `does not update`). |
+| მიღების კრიტერიუმები    | - ფაილი `7/rotation.txt` არ არის ცარიელი, შეიცავს `env`-ს და განმარტებას, რომ მნიშვნელობა არ განახლდება (ინგლისური მარკერი: `does not update`). |
 ---
 
 ## შედეგის შემოწმება

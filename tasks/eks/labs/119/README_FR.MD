@@ -157,8 +157,8 @@ configurés pour le bon cluster et la bonne région.
 Commandes utiles sur la machine worker :
 
 ```bash
-time_left       # how much time is left in the environment
-check_result    # check the solution
+time_left       # combien de temps il reste dans l'environnement
+check_result    # vérifier la solution
 ```
 
 > Sécurité de l'environnement. `env.hcl` a `ssh_password_enable = true` et

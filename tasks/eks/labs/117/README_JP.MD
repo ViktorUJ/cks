@@ -58,7 +58,7 @@ flowchart TB
     ifep["Interface endpoint<br/>ecr.api または sts"]
     cwm["CloudWatch の<br/>NAT メトリクス"]
     podc -->|"0.0.0.0/0"| rtc
-    rtc -->|"cross-AZ route"| nata
+    rtc -->|"cross-AZ ルート"| nata
     podc -->|"S3 へのトラフィック"| gwep
     podc -->|"AWS API へのトラフィック"| ifep
     nata -->|"BytesOutToDestination"| cwm

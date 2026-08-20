@@ -205,17 +205,17 @@ cat ~/lab120_hints.txt   # ラボのリソースの名前と ARN
 ---
 |        **4**        | **症状:unhealthy な targets を持つ NLB**                          |
 | :-----------------: | :------------------------------------------------------------ |
-| やること          | 「壊れた」SG の id(名前 `eks-task120-network-break-sg`、`~/lab120_hints.txt` にある)を見つけてください。selector `app: api`、port `80` を `targetPort: 8080` に、アノテーション `service.beta.kubernetes.io/aws-load-balancer-type: external`、`aws-load-balancer-nlb-target-type: ip`、`aws-load-balancer-scheme: internet-facing`、`aws-load-balancer-security-groups: <broken SG id>` を持つ、`LoadBalancer` 型の Service `api-lb` を作成してください。このアノテーションによって「壊れた」SG が balancer 自身の SG になります - 受信ルールが一つもないため、LBC は health check のために不足しているルールを自動では追加しません。外部アドレスを待ち、それから `aws elbv2 describe-target-health --target-group-arn <arn> --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State,TargetHealth.Reason]'` を実行し、出力を `/var/work/tests/artifacts/4/unhealthy.txt` に保存してください。 |
+| やること          | 「壊れた」SG の id(名前 `eks-task120-network-break-sg`、`~/lab120_hints.txt` にある)を見つけてください。selector `app: api`、port `80` を `targetPort: 8080` に、アノテーション `service.beta.kubernetes.io/aws-load-balancer-type: external`、`aws-load-balancer-nlb-target-type: ip`、`aws-load-balancer-scheme: internet-facing`、`aws-load-balancer-security-groups: <壊れた SG の id>` を持つ、`LoadBalancer` 型の Service `api-lb` を作成してください。このアノテーションによって「壊れた」SG が balancer 自身の SG になります - 受信ルールが一つもないため、LBC は health check のために不足しているルールを自動では追加しません。外部アドレスを待ち、それから `aws elbv2 describe-target-health --target-group-arn <arn> --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State,TargetHealth.Reason]'` を実行し、出力を `/var/work/tests/artifacts/4/unhealthy.txt` に保存してください。 |
 | アクセプタンス基準    | - Service `api-lb` が 3 つのアノテーションと外部アドレスを持つ;<br/>- `4/unhealthy.txt` が空でなく `unhealthy` を含む。 |
 ---
 |        **5**        | **診断:どの SG が health check を遮断しているか**               |
 | :-----------------: | :------------------------------------------------------------ |
-| やること          | `aws ec2 describe-security-groups --group-ids <broken SG id>` を実行し、受信ルールが一つもないことを確認してください。Karpenter ノード SG の id(タグ `karpenter.sh/discovery=<cluster-name>`、コマンドは `~/lab120_hints.txt` にある)を見つけ、`/var/work/tests/artifacts/5/diagnosis.txt` に、NLB からの health check が `api` の pod に到達しない理由を説明してください:target の SG(node SG)が、check port への balancer の SG からの受信トラフィックを許可していない(第 46.6 章)。テキストには `security group` と `health check` という語を含める必要があります。 |
+| やること          | `aws ec2 describe-security-groups --group-ids <壊れた SG の id>` を実行し、受信ルールが一つもないことを確認してください。Karpenter ノード SG の id(タグ `karpenter.sh/discovery=<cluster-name>`、コマンドは `~/lab120_hints.txt` にある)を見つけ、`/var/work/tests/artifacts/5/diagnosis.txt` に、NLB からの health check が `api` の pod に到達しない理由を説明してください:target の SG(node SG)が、check port への balancer の SG からの受信トラフィックを許可していない(第 46.6 章)。テキストには `security group` と `health check` という語を含める必要があります。 |
 | アクセプタンス基準    | - `5/diagnosis.txt` が空でなく `security group` と `health check` を含む。 |
 ---
 |        **6**        | **修復:authorize-security-group-ingress、targets が healthy になる**    |
 | :-----------------: | :------------------------------------------------------------ |
-| やること          | 2 つのルールを追加してください:`aws ec2 authorize-security-group-ingress --group-id <node SG> --protocol tcp --port 8080 --source-group <broken SG>`(balancer の SG から node SG への health check とアプリケーショントラフィックを開く)と、`aws ec2 authorize-security-group-ingress --group-id <broken SG> --protocol tcp --port 80 --cidr 0.0.0.0/0`(クライアント向けに NLB のリスナーを開く)。`describe-target-health` で `healthy` になるまで、そして NLB の外部アドレスに対する `curl` が成功するまで待ってください。両方の出力を `/var/work/tests/artifacts/6/healthy.txt` に保存してください。 |
+| やること          | 2 つのルールを追加してください:`aws ec2 authorize-security-group-ingress --group-id <ノード SG> --protocol tcp --port 8080 --source-group <壊れた SG>`(balancer の SG から node SG への health check とアプリケーショントラフィックを開く)と、`aws ec2 authorize-security-group-ingress --group-id <壊れた SG> --protocol tcp --port 80 --cidr 0.0.0.0/0`(クライアント向けに NLB のリスナーを開く)。`describe-target-health` で `healthy` になるまで、そして NLB の外部アドレスに対する `curl` が成功するまで待ってください。両方の出力を `/var/work/tests/artifacts/6/healthy.txt` に保存してください。 |
 | アクセプタンス基準    | - `6/healthy.txt` が空でなく、`healthy` を含み、`FailedHealthChecks` を含まない;<br/>- ファイルにアプリケーションの応答の行(`Server Name`)がある。 |
 ---
 |        **7**        | **DNS は動作する:対比としてのチェック**                        |
@@ -273,7 +273,7 @@ SG_ID=$(grep '^broken_sg_id' ~/lab120_hints.txt | awk '{print $3}')
 NODE_SG=$(grep '^node_sg_id' ~/lab120_hints.txt | awk '{print $3}')
 until [ "$(aws ec2 describe-network-interfaces \
   --filters "Name=group-id,Values=${SG_ID}" --query 'length(NetworkInterfaces)' --output text)" = "0" ]; do
-  echo "NLB still holds the ENI, waiting..."; sleep 15
+  echo "NLB はまだ ENI を保持しています、待機中..."; sleep 15
 done
 
 # 2. balancer の SG を参照している、node SG 内のルールを削除する

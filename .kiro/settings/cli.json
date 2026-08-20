@@ -1,0 +1,4 @@
+{
+  "chat.defaultModel": "gpt-5.6-terra",
+  "chat.enableThinking": true
+}

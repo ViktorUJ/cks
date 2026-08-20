@@ -43,7 +43,7 @@ flowchart LR
     fe["frontend<br>app: frontend"]
     api["api<br>app: api"]
     dns["CoreDNS<br>kube-system"]
-    other["client-other<br>no label"]
+    other["client-other<br>無標籤"]
     ext["外部位址"]
     fe -->|allow| api
     fe -->|allow 53| dns
@@ -216,7 +216,7 @@ kubectl delete namespace eks-110 --ignore-not-found
 
 # 2. 等待 Karpenter 移除 NodeClaim 和 EC2 節點(只應該剩下 fargate-*)
 while kubectl get nodeclaims --no-headers 2>/dev/null | grep -q .; do
-  echo "NodeClaim still alive, waiting..."; sleep 15
+  echo "NodeClaim 仍存活,等待中..."; sleep 15
 done
 kubectl get nodes | grep -v fargate
 ```

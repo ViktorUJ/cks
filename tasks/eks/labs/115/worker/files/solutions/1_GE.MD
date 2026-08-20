@@ -216,7 +216,7 @@ aws logs filter-log-events --log-group-name "$LOG_GROUP" \
 ```bash
 mkdir -p /var/work/tests/artifacts/5
 cat > /var/work/tests/artifacts/5/filter_check.txt <<'EOF'
-FILTER grep with Exclude log /healthz ჩამოაშორა ხაზი "GET /healthz 200" ზუსტად ნოუდზე,
+FILTER grep-მა Exclude log /healthz-ით ჩამოაშორა ხაზი "GET /healthz 200" ზუსტად ნოუდზე,
 CloudWatch Logs-ში გადაგზავნის წინ - log group-ში ეს ჩანაწერი საერთოდ არ არსებობს.
 ჩვეულებრივი ხაზი NORMAL_MARKER_LAB115 ფილტრს არ ეხება და აღწევს CloudWatch-ში. ხმაურის
 ასეთი ჩამოკვეთა უფრო ეკონომიურია, ვიდრე ლოგების გასუფთავება საცავში ფაქტის შემდეგ:

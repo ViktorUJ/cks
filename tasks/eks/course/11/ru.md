@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 11. Cluster Autoscaler и Karpenter: два подхода к масштабированию нод
 
 > **Что дальше.** Типы вычислений и Auto Mode разобраны (глава 9), AMI и bootstrap нод - глава

@@ -31,8 +31,8 @@ Terraformが事前にS3バケットと、特定のServiceAccountに対するtrus
 
 ```mermaid
 flowchart TB
-    axis1["Axis 1: human/CI"]
-    axis2["Axis 2: pod"]
+    axis1["軸1: 人間/CI"]
+    axis2["軸2: pod"]
     u["Unauthorized/Forbidden"]
     a["AccessDenied"]
     fix1["Access entry + RBAC"]
@@ -219,7 +219,7 @@ kubectl delete namespace eks-121 --ignore-not-found
 
 # Karpenterがそのnode EC2ノードを削除するのを待つ (残るのはfargate-*だけのはず)
 while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
-  echo "Karpenter's EC2 node is still alive, waiting..."; sleep 15
+  echo "KarpenterのEC2ノードはまだ生きています、待機中..."; sleep 15
 done
 ```
 

@@ -5,7 +5,7 @@
 ## 說明
 
 EKS 的存取權會在兩個彼此獨立的層級上出問題,而這兩者很容易被混淆。第一個層級:一個
-人類使用者或 CI 完全無法進入集群 - `kubectl` 在還沒碰到具體資源之前就返回
+人員或 CI 完全無法進入集群 - `kubectl` 在還沒碰到具體資源之前就返回
 `Unauthorized` 或 `Forbidden`。第二個層級:一個已經配置好 IRSA 的 Pod 在呼叫 AWS API
 時得到 `AccessDenied`,即使 ServiceAccount 的註解看起來是正確的。在這個實驗中,你會
 從零重現這兩種症狀,用精確的命令診斷原因,並用專門為之設計的工具修復每一個問題:第
@@ -29,7 +29,7 @@ Terraform 預先創建了一個 S3 bucket 和一個信任特定 ServiceAccount �
 |--------|---------|-------------------|
 | Namespace `eks-121` | 供實驗負載使用的集群區塊 | 讓資源與系統資源保持分離 |
 | 組件 `eks_irsa_break_demo` | S3 bucket、信任 `demo-reader` 的 IRSA 角色 | 為正確與錯誤的註解提供現成的目標 |
-| 測試用 IAM 角色(名稱含 `-test-`) | 一個沒有 access entry 的主體 | 重現 `Unauthorized`(人類軸) |
+| 測試用 IAM 角色(名稱含 `-test-`) | 一個沒有 access entry 的主體 | 重現 `Unauthorized`(人員軸) |
 | Access entry + `AmazonEKSViewPolicy` | `Unauthorized` 的修復方式 | 把一個未映射的身份變成集群的讀取者 |
 | ServiceAccount `demo-reader`(eks-121) | IRSA 角色上正確的註解 | token 中的 `sub` 與 trust policy 相符 - Pod 能讀取 S3 |
 | ServiceAccount `demo-reader-broken`(default) | 同一個角色,不同的 namespace | `sub` 不相符 - `AccessDenied`(Pod 軸) |
@@ -38,8 +38,8 @@ Terraform 預先創建了一個 S3 bucket 和一個信任特定 ServiceAccount �
 
 ```mermaid
 flowchart TB
-    axis1["Axis 1: human/CI"]
-    axis2["Axis 2: pod"]
+    axis1["軸 1: 人員/CI"]
+    axis2["軸 2: pod"]
     u["Unauthorized/Forbidden"]
     a["AccessDenied"]
     fix1["Access entry + RBAC"]
@@ -155,7 +155,7 @@ cat ~/lab121_hints.txt   # bucket 和 IRSA 角色的名稱與 ARN
 
 ## 任務
 
-第一部分(任務 1-4)涵蓋人類/CI 這條軸線:為什麼 `kubectl` 無法進入集群,以及這條鏈
+第一部分(任務 1-4)涵蓋人員/CI 這條軸線:為什麼 `kubectl` 無法進入集群,以及這條鏈
 路中哪一部分是 401、哪一部分是 403。第二部分(任務 5-8)涵蓋 Pod 這條軸線:為什麼一個
 已經配置了 IRSA 的應用程式,即使 SA 註解已經到位,仍然會得到 `AccessDenied`。
 
@@ -197,7 +197,7 @@ cat ~/lab121_hints.txt   # bucket 和 IRSA 角色的名稱與 ARN
 ---
 |        **8**        | **總結:兩條存取軸線**                                  |
 | :-----------------: | :---------------------------------------------------------- |
-| 我們要做什麼          | 用 3-5 句話,把兩條軸線(人類的 `Unauthorized`/`Forbidden` 對比 Pod 的 `AccessDenied`)的對比保存到檔案 `/var/work/tests/artifacts/8/summary.txt`。要提到 `RBAC` 和 `trust policy` 這兩種針對不同層級的不同修復機制。 |
+| 我們要做什麼          | 用 3-5 句話,把兩條軸線(人員的 `Unauthorized`/`Forbidden` 對比 Pod 的 `AccessDenied`)的對比保存到檔案 `/var/work/tests/artifacts/8/summary.txt`。要提到 `RBAC` 和 `trust policy` 這兩種針對不同層級的不同修復機制。 |
 | 驗收標準    | - 檔案 `8/summary.txt` 不為空,且包含 `RBAC` 和 `trust policy`。 |
 ---
 
@@ -249,7 +249,7 @@ kubectl delete namespace eks-121 --ignore-not-found
 
 # 等待 Karpenter 移除它的 EC2 節點(應該只剩下 fargate-*)
 while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
-  echo "Karpenter's EC2 node is still alive, waiting..."; sleep 15
+  echo "Karpenter 的 EC2 節點仍然存活,等待中..."; sleep 15
 done
 ```
 

@@ -281,7 +281,7 @@ kubectl delete namespace monitoring keda --ignore-not-found
 
 # 3. 等待 Karpenter 移除 NodeClaim 和 EC2 節點(應該只剩下 fargate-*)
 while kubectl get nodeclaims --no-headers 2>/dev/null | grep -q .; do
-  echo "NodeClaim still alive, waiting..."; sleep 15
+  echo "NodeClaim 仍然存活,等待中..."; sleep 15
 done
 kubectl get nodes | grep -v fargate
 ```

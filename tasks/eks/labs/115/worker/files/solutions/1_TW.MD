@@ -311,8 +311,8 @@ mkdir -p /var/work/tests/artifacts/7
   echo "=== merged CloudWatch event ==="
   cat /tmp/multiline_msg.txt
   echo ""
-  echo "FILTER multiline with the built-in python type merged 4 Traceback lines into"
-  echo "one CloudWatch record instead of splitting them into 4 separate events."
+  echo "帶有內建 python 類型的 FILTER multiline 把四行 Traceback 合併成了"
+  echo "一筆 CloudWatch 記錄,而不是把它們拆成四筆獨立的事件。"
 } > /var/work/tests/artifacts/7/multiline.txt
 cat /var/work/tests/artifacts/7/multiline.txt
 ```

@@ -27,7 +27,7 @@ kubectl create namespace eks-119
 mkdir -p /var/work/tests/artifacts/2
 NODEGROUP=$(aws eks list-nodegroups --cluster-name "$CLUSTER" --query 'nodegroups[0]' --output text)
 {
-  echo "=== aws eks describe-nodegroup health.issues (norm - empty list) ==="
+  echo "=== aws eks describe-nodegroup health.issues (ნორმა - ცარიელი სია) ==="
   aws eks describe-nodegroup --cluster-name "$CLUSTER" --nodegroup-name "$NODEGROUP" \
     --query 'nodegroup.health.issues'
   echo "=== kubectl get nodes -o wide ==="

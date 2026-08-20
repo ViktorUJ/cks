@@ -55,7 +55,7 @@ flowchart TB
     ifep["Interface endpoint<br/>ecr.api ან sts"]
     cwm["NAT-ის მეტრიკები<br/>CloudWatch-ში"]
     podc -->|"0.0.0.0/0"| rtc
-    rtc -->|"cross-AZ route"| nata
+    rtc -->|"cross-AZ მარშრუტი"| nata
     podc -->|"ტრაფიკი S3-ზე"| gwep
     podc -->|"ტრაფიკი AWS API-ზე"| ifep
     nata -->|"BytesOutToDestination"| cwm

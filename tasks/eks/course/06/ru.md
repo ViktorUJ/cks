@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 6. Сеть кластера: VPC CNI, ENI и IP-адреса, планирование CIDR
 
 > **Что дальше.** Кластер создан (глава 4) и доступ настроен (глава 5), поды запускаются.

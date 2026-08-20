@@ -45,7 +45,7 @@ Ruta del log desde el pod hasta CloudWatch:
 
 ```mermaid
 flowchart TB
-    app["Pods: stdout"]
+    app["pods: stdout"]
     files["/var/log/containers"]
     fb["Fluent Bit DaemonSet<br>rol IRSA"]
     filt["FILTER grep<br>descarta /healthz"]

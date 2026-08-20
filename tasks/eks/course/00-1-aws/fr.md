@@ -1,5 +1,4 @@
 [Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
-
 # Chapitre 0.1. AWS pour l'ingénieur Kubernetes : comptes, régions, AZ, quotas, tags, facturation
 
 > **Ce qui suit.** Vous arrivez de CKA : kubectl, pods, Deployment, RBAC et PV sont des

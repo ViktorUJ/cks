@@ -63,8 +63,8 @@ flowchart LR
     client["client"]
     svc["Service api<br>ClusterIP"]
     api["Deployment api"]
-    nlb["NLB<br>created by LBC"]
-    brokensg["Balancer SG<br>no inbound"]
+    nlb["NLB<br>von LBC erstellt"]
+    brokensg["SG des Balancers<br>ohne inbound"]
     nodesg["Node SG"]
     client --> svc --> api
     nlb --> brokensg --> nodesg --> api
@@ -218,17 +218,17 @@ Checkliste.
 ---
 |        **4**        | **Symptom: NLB mit unhealthy targets**                          |
 | :-----------------: | :------------------------------------------------------------ |
-| Was zu tun ist          | Finden Sie die id der "kaputten" SG (Name `eks-task120-network-break-sg`, verfügbar in `~/lab120_hints.txt`). Erstellen Sie Service `api-lb` vom Typ `LoadBalancer` mit Selector `app: api`, Port `80` auf `targetPort: 8080`, und den Annotationen `service.beta.kubernetes.io/aws-load-balancer-type: external`, `aws-load-balancer-nlb-target-type: ip`, `aws-load-balancer-scheme: internet-facing`, `aws-load-balancer-security-groups: <broken SG id>`. Diese Annotation macht die "kaputte" SG zur eigenen SG des Balancers - sie hat keine inbound rules, deshalb fügt der LBC die fehlende Regel für den health check nicht automatisch hinzu. Warten Sie auf die externe Adresse, führen Sie dann `aws elbv2 describe-target-health --target-group-arn <arn> --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State,TargetHealth.Reason]'` aus und speichern Sie die Ausgabe in `/var/work/tests/artifacts/4/unhealthy.txt`. |
+| Was zu tun ist          | Finden Sie die id der "kaputten" SG (Name `eks-task120-network-break-sg`, verfügbar in `~/lab120_hints.txt`). Erstellen Sie Service `api-lb` vom Typ `LoadBalancer` mit Selector `app: api`, Port `80` auf `targetPort: 8080`, und den Annotationen `service.beta.kubernetes.io/aws-load-balancer-type: external`, `aws-load-balancer-nlb-target-type: ip`, `aws-load-balancer-scheme: internet-facing`, `aws-load-balancer-security-groups: <id der kaputten SG>`. Diese Annotation macht die "kaputte" SG zur eigenen SG des Balancers - sie hat keine inbound rules, deshalb fügt der LBC die fehlende Regel für den health check nicht automatisch hinzu. Warten Sie auf die externe Adresse, führen Sie dann `aws elbv2 describe-target-health --target-group-arn <arn> --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State,TargetHealth.Reason]'` aus und speichern Sie die Ausgabe in `/var/work/tests/artifacts/4/unhealthy.txt`. |
 | Abnahmekriterien    | - Service `api-lb` mit den drei Annotationen und einer externen Adresse;<br/>- `4/unhealthy.txt` ist nicht leer und enthält `unhealthy`. |
 ---
 |        **5**        | **Diagnostik: welche SG den health check blockiert**               |
 | :-----------------: | :------------------------------------------------------------ |
-| Was zu tun ist          | Führen Sie `aws ec2 describe-security-groups --group-ids <broken SG id>` aus und bestätigen Sie, dass sie überhaupt keine inbound rules hat. Finden Sie die id der Karpenter Node-SG (Tag `karpenter.sh/discovery=<cluster-name>`, der Befehl steht in `~/lab120_hints.txt`) und erklären Sie in `/var/work/tests/artifacts/5/diagnosis.txt`, warum der health check vom NLB den `api`-Pod nicht erreicht: die SG des Targets (die Node-SG) lässt keinen inbound Traffic von der SG des Balancers auf dem check port zu (Kapitel 46.6). Der Text muss die Wörter `security group` und `health check` enthalten. |
+| Was zu tun ist          | Führen Sie `aws ec2 describe-security-groups --group-ids <id der kaputten SG>` aus und bestätigen Sie, dass sie überhaupt keine inbound rules hat. Finden Sie die id der Karpenter Node-SG (Tag `karpenter.sh/discovery=<cluster-name>`, der Befehl steht in `~/lab120_hints.txt`) und erklären Sie in `/var/work/tests/artifacts/5/diagnosis.txt`, warum der health check vom NLB den `api`-Pod nicht erreicht: die SG des Targets (die Node-SG) lässt keinen inbound Traffic von der SG des Balancers auf dem check port zu (Kapitel 46.6). Der Text muss die Wörter `security group` und `health check` enthalten. |
 | Abnahmekriterien    | - `5/diagnosis.txt` ist nicht leer und enthält `security group` und `health check`. |
 ---
 |        **6**        | **Fix: authorize-security-group-ingress, targets healthy**    |
 | :-----------------: | :------------------------------------------------------------ |
-| Was zu tun ist          | Fügen Sie zwei Regeln hinzu: `aws ec2 authorize-security-group-ingress --group-id <node SG> --protocol tcp --port 8080 --source-group <broken SG>` (öffnet den health check und den Anwendungstraffic von der SG des Balancers zur Node-SG) und `aws ec2 authorize-security-group-ingress --group-id <broken SG> --protocol tcp --port 80 --cidr 0.0.0.0/0` (öffnet den NLB-Listener für Clients). Warten Sie auf `healthy` in `describe-target-health` und einen erfolgreichen `curl` gegen die externe Adresse des NLB. Speichern Sie beide Ausgaben in `/var/work/tests/artifacts/6/healthy.txt`. |
+| Was zu tun ist          | Fügen Sie zwei Regeln hinzu: `aws ec2 authorize-security-group-ingress --group-id <Node-SG> --protocol tcp --port 8080 --source-group <kaputte SG>` (öffnet den health check und den Anwendungstraffic von der SG des Balancers zur Node-SG) und `aws ec2 authorize-security-group-ingress --group-id <kaputte SG> --protocol tcp --port 80 --cidr 0.0.0.0/0` (öffnet den NLB-Listener für Clients). Warten Sie auf `healthy` in `describe-target-health` und einen erfolgreichen `curl` gegen die externe Adresse des NLB. Speichern Sie beide Ausgaben in `/var/work/tests/artifacts/6/healthy.txt`. |
 | Abnahmekriterien    | - `6/healthy.txt` ist nicht leer, enthält `healthy` und enthält nicht `FailedHealthChecks`;<br/>- die Datei hat eine Zeile mit der Antwort der Anwendung (`Server Name`). |
 ---
 |        **7**        | **DNS funktioniert: eine kontrastierende Prüfung**                        |
@@ -292,7 +292,7 @@ SG_ID=$(grep '^broken_sg_id' ~/lab120_hints.txt | awk '{print $3}')
 NODE_SG=$(grep '^node_sg_id' ~/lab120_hints.txt | awk '{print $3}')
 until [ "$(aws ec2 describe-network-interfaces \
   --filters "Name=group-id,Values=${SG_ID}" --query 'length(NetworkInterfaces)' --output text)" = "0" ]; do
-  echo "NLB still holds the ENI, waiting..."; sleep 15
+  echo "NLB hält die ENI noch, warten..."; sleep 15
 done
 
 # 2. Die Regel in der Node-SG entfernen, die auf die SG des Balancers verweist

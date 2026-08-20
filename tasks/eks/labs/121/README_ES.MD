@@ -27,7 +27,7 @@ Terraform crea de antemano un bucket de S3 y un rol IRSA con una trust policy so
 ServiceAccount específico. Tú recrearás ambas situaciones de denegación de acceso y ambos
 arreglos.
 
-| Object | What it is | Why it's in this lab |
+| Objeto | Qué es | Por qué está en este lab |
 |--------|---------|-------------------|
 | Namespace `eks-121` | una sección del cluster para la carga de trabajo del lab | mantiene los recursos separados de los del sistema |
 | Componente `eks_irsa_break_demo` | bucket de S3, rol IRSA que confía en `demo-reader` | un objetivo listo para la anotación correcta y la rota |
@@ -40,8 +40,8 @@ Los dos ejes de acceso y sus arreglos:
 
 ```mermaid
 flowchart TB
-    axis1["Axis 1: human/CI"]
-    axis2["Axis 2: pod"]
+    axis1["Eje 1: humano/CI"]
+    axis2["Eje 2: pod"]
     u["Unauthorized/Forbidden"]
     a["AccessDenied"]
     fix1["Access entry + RBAC"]
@@ -62,7 +62,7 @@ trabajo), más un componente separado para los recursos de la demo de IRSA.
 
 ### Módulos y dependencias
 
-| Directory (component) | Module (`terraform/modules/`) | Depends on | What it creates |
+| Directorio (componente) | Módulo (`terraform/modules/`) | Depende de | Qué crea |
 |---------------------|-------------------------------|------------|-------------|
 | `vpc` | `vpc_v3` | - | VPC `10.10.0.0/16`, subnets en dos AZs, NAT |
 | `ssh-keys` | `ssh-keys` | - | un par de claves SSH para la máquina worker y los nodos |
@@ -110,7 +110,7 @@ entre `eks_control_plane` y `eks_karpenter` (ver la tabla anterior).
 worker los encuentra sin leer la salida de terraform. Viven en el archivo
 `~/lab121_hints.txt` de la máquina worker:
 
-| Resource | Name |
+| Recurso | Nombre |
 |--------|-----|
 | Bucket de S3 | `eks-task121-irsa-break-demo-bucket` |
 | Rol IRSA | `eks-task121-irsa-break-demo-irsa-role` |
@@ -119,7 +119,7 @@ worker los encuentra sin leer la salida de terraform. Viven en el archivo
 
 `env.hcl` (parámetros compartidos del entorno):
 
-| Parameter | Value in the lab | What it affects |
+| Parámetro | Valor en el lab | En qué influye |
 |----------|-----------------|---------------|
 | `region` | `eu-central-1` | región para todos los recursos |
 | `prefix` | `eks-task121` | prefijo de nombre de recursos, incluidos el bucket y el rol |
@@ -128,7 +128,7 @@ worker los encuentra sin leer la salida de terraform. Viven en el archivo
 
 `inputs` en el `terragrunt.hcl` de cada componente:
 
-| File | Key settings |
+| Archivo | Ajustes clave |
 |------|--------------------|
 | `eks_irsa_break_demo/terragrunt.hcl` | `irsa.namespace = "eks-121"`, `irsa.service_account_name = "demo-reader"` |
 | `worker/terragrunt.hcl` | `test_url` y `task_script_url` para los archivos del lab 121, dependencia de `eks_irsa_break_demo` |
@@ -147,9 +147,9 @@ el cluster correcto, y los nombres y ARNs de los recursos del lab están en
 Comandos útiles en la máquina worker:
 
 ```bash
-time_left       # how much environment time is left
-check_result    # check the solution
-cat ~/lab121_hints.txt   # bucket and IRSA role names and ARNs
+time_left       # cuánto tiempo de entorno queda
+check_result    # comprobar la solución
+cat ~/lab121_hints.txt   # nombres y ARNs del bucket y del rol IRSA
 ```
 
 > Seguridad del entorno. `env.hcl` tiene habilitado `ssh_password_enable = true` y
@@ -237,10 +237,10 @@ CLUSTER_NAME=$(grep '^cluster_name' ~/lab121_hints.txt | awk '{print $3}')
 TEST_ROLE_ARN=$(aws iam get-role --role-name eks-task121-test-noaccess \
   --query 'Role.Arn' --output text)
 
-# the test role's access entry (needed if you're redoing the lab)
+# el access entry del rol de prueba (necesario si repites el lab)
 aws eks delete-access-entry --cluster-name "$CLUSTER_NAME" --principal-arn "$TEST_ROLE_ARN"
 
-# the role itself: it has no policies attached, so it's deleted right away
+# el rol en sí: no tiene políticas adjuntas, así que se elimina de inmediato
 aws iam delete-role --role-name eks-task121-test-noaccess
 ```
 
@@ -257,9 +257,9 @@ kubectl delete pod irsa-app -n eks-121 --ignore-not-found
 kubectl delete pod broken-app -n default --ignore-not-found
 kubectl delete namespace eks-121 --ignore-not-found
 
-# wait for Karpenter to remove its EC2 nodes (only fargate-* should remain)
+# espera a que Karpenter elimine sus nodos EC2 (solo deben quedar fargate-*)
 while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
-  echo "Karpenter's EC2 node is still alive, waiting..."; sleep 15
+  echo "El nodo EC2 de Karpenter sigue vivo, esperando..."; sleep 15
 done
 ```
 
@@ -279,7 +279,7 @@ Si `destroy` sigue atascado en el security group del nodo, busca la ENI huérfan
 elimínala - terraform terminará entonces por sí solo:
 
 ```bash
-# an ENI in available state tagged eks:eni:owner=amazon-vpc-cni is a leftover from VPC CNI
+# una ENI en estado available con el tag eks:eni:owner=amazon-vpc-cni es un residuo de VPC CNI
 aws ec2 describe-network-interfaces --filters Name=status,Values=available \
   --query 'NetworkInterfaces[].[NetworkInterfaceId,Description,Groups[0].GroupName]' --output table
 aws ec2 delete-network-interface --network-interface-id <eni-id>

@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 7. Масштаб адресного плана: prefix delegation, secondary CIDR, custom networking
 
 > **Что дальше.** В главе 6 разобрано, как VPC CNI выдаёт подам реальные адреса подсети и

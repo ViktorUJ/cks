@@ -18,7 +18,7 @@ export IRSA_ROLE_ARN=$(grep '^irsa_role_arn' ~/lab121_hints.txt | awk '{print $3
 export CLUSTER_NAME=$(grep '^cluster_name' ~/lab121_hints.txt | awk '{print $3}')
 ```
 
-這個實驗涵蓋了第 47 章中兩條彼此獨立的存取軸線:人類/CI 無法進入集群(任務 1-4),以
+這個實驗涵蓋了第 47 章中兩條彼此獨立的存取軸線:人員/CI 無法進入集群(任務 1-4),以
 及 Pod 在呼叫 AWS 時得到 `AccessDenied`(任務 5-8)。
 
 ## 任務 1。Namespace `eks-121`

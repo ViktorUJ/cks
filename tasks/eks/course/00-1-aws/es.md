@@ -1,5 +1,4 @@
 [Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
-
 # Capítulo 0.1. AWS para el ingeniero de Kubernetes: cuentas, regiones, AZ, cuotas, etiquetas, facturación
 
 > **Qué sigue.** Vienes de CKA: kubectl, pods, Deployment, RBAC y PV son herramientas

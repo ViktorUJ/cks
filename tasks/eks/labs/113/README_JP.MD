@@ -236,7 +236,7 @@ kubectl delete namespace eks-113 --ignore-not-found
 #    ロールバックがまだ進行中の場合に関係する)
 CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
 while [ "$(aws eks describe-cluster --name "$CLUSTER" --query 'cluster.status' --output text)" != "ACTIVE" ]; do
-  echo "control plane still UPDATING, waiting..."; sleep 30
+  echo "control plane はまだ UPDATING、待機中..."; sleep 30
 done
 ```
 

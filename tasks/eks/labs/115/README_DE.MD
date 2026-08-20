@@ -49,7 +49,7 @@ flowchart TB
     app["Pods: stdout"]
     files["/var/log/containers"]
     fb["Fluent Bit DaemonSet<br>IRSA-Rolle"]
-    filt["FILTER grep<br>drop /healthz"]
+    filt["FILTER grep<br>verwerfen /healthz"]
     cw["CloudWatch Logs<br>Log-Gruppe"]
     ret["Retention<br>7 Tage"]
     app --> files --> fb --> filt --> cw --> ret

@@ -220,7 +220,7 @@ kubectl delete namespace eks-123 --ignore-not-found
 
 # 3. Attendre que Karpenter retire le NodeClaim et les nodes EC2 (seuls fargate-* devraient rester)
 while kubectl get nodeclaims --no-headers 2>/dev/null | grep -q .; do
-  echo "NodeClaim still alive, waiting..."; sleep 15
+  echo "NodeClaim toujours vivant, en attente..."; sleep 15
 done
 kubectl get nodes | grep -v fargate
 ```

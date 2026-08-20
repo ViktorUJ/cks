@@ -41,8 +41,8 @@ Les deux axes d'accès et leurs corrections :
 
 ```mermaid
 flowchart TB
-    axis1["Axis 1: human/CI"]
-    axis2["Axis 2: pod"]
+    axis1["Axe 1: humain/CI"]
+    axis2["Axe 2: pod"]
     u["Unauthorized/Forbidden"]
     a["AccessDenied"]
     fix1["Access entry + RBAC"]
@@ -261,7 +261,7 @@ kubectl delete namespace eks-121 --ignore-not-found
 
 # attendre que Karpenter retire ses nœuds EC2 (seuls les fargate-* doivent rester)
 while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
-  echo "Karpenter's EC2 node is still alive, waiting..."; sleep 15
+  echo "Le nœud EC2 de Karpenter est toujours actif, en attente..."; sleep 15
 done
 ```
 

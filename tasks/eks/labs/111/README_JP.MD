@@ -41,7 +41,7 @@ reclaim との境界線がどこにあるのかを学びます。
 ```mermaid
 flowchart TB
     cp["Control plane EKS"]
-    subgraph fg["Fargate (system pods)"]
+    subgraph fg["Fargate (システムポッド)"]
         sys["kube-system<br>karpenter"]
     end
     subgraph spot["NodePool spot-lab"]

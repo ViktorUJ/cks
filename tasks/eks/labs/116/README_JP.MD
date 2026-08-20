@@ -45,7 +45,7 @@ AWS API を通じてそれを説明します。次に namespace 上で Pod Secur
 flowchart TB
     cp["EKS control plane<br>public+private endpoint"]
     node["Karpenter EC2 node<br>hop limit 1"]
-    probe["Pod probe<br>IMDS unreachable"]
+    probe["Pod probe<br>IMDS 到達不可"]
     ns["Namespace eks-116<br>PSA restricted"]
     safe["Pod safe-pod<br>restricted 対応"]
     cp --> node

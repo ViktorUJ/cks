@@ -1,6 +1,6 @@
 [Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
 
-# Lab 119 - solution de référence (troubleshooting: node not reaching Ready)
+# Lab 119 - solution de référence (troubleshooting: le nœud n'atteint pas Ready)
 
 Toutes les commandes s'exécutent sur la machine worker via SSH. kubectl est déjà
 configuré pour le cluster, l'`aws` CLI est configuré pour le même compte et la même

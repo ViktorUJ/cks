@@ -12,7 +12,7 @@ ServiceAccount-ის ანოტაცია სწორად გამო�
 აღადგენთ, დიაგნოსტიკას ატარებთ ზუსტი ბრძანებებით და თითოეულს გამოასწორებთ იმ ინსტრუმენტით,
 რომელიც ამისთვისაა შექმნილი: access entry - პირველი დონისთვის, trust policy - მეორესთვის.
 
-დავალებები დაწერილია production-სტილში: მოკლე დებულება პლუს acceptance criteria. შემოწმება
+დავალებები დაწერილია production-სტილში: მოკლე დებულება პლუს მიღების კრიტერიუმები. შემოწმება
 ავტომატურია, `check_result` ბრძანების საშუალებით.
 
 ## მიზანი
@@ -39,8 +39,8 @@ policy-ით. თქვენ ხელახლა ტესტავთ წ�
 
 ```mermaid
 flowchart TB
-    axis1["Axis 1: human/CI"]
-    axis2["Axis 2: pod"]
+    axis1["ღერძი 1: ადამიანი/CI"]
+    axis2["ღერძი 2: pod"]
     u["Unauthorized/Forbidden"]
     a["AccessDenied"]
     fix1["Access entry + RBAC"]
@@ -168,42 +168,42 @@ cat ~/lab121_hints.txt   # bucket-ისა და IRSA role-ის სახე
 |        **1**        | **Namespace ლაბორატორიის workload-ისთვის**                             |
 | :-----------------: | :---------------------------------------------------------- |
 | რა უნდა გავაკეთოთ          | შექმენით namespace სახელით `eks-121`. ამ ლაბორატორიის ყველა ობიექტი მასში იქმნება. |
-| Acceptance criteria    | - namespace `eks-121` არსებობს. |
+| მიღების კრიტერიუმები    | - namespace `eks-121` არსებობს. |
 ---
 |        **2**        | **Unauthorized სიმპტომი: role access entry-ის გარეშე**             |
 | :-----------------: | :---------------------------------------------------------- |
 | რა უნდა გავაკეთოთ          | შექმენით ტესტური IAM role სახელში `-test-`-ით (მაგ. `eks-task121-test-noaccess`), რომელიც ენდობა worker-ის role-ს, კლასტერში access entry-ის საერთოდ არარსებობის შემთხვევაში. პირველ ეტაპზე, **worker-ის credentials-ით**, ააგეთ ცალკე kubeconfig: `aws eks update-kubeconfig --name <cluster> --kubeconfig /tmp/kubeconfig-test`. თანმიმდევრობა მნიშვნელოვანია: ეს ბრძანება იძახებს `eks:DescribeCluster`-ს, ხოლო ტესტურ role-ს IAM policy საერთოდ არ აქვს, ამიტომ იმ role-ის ქვეშ ის ჩავარდებოდა `AccessDeniedException`-ით და ფაილი არ შეიქმნებოდა (ეს არის მესამე ტიპის შეცდომა - IAM-იდან, კლასტერამდე მისვლის გარეშეც). შემდეგ გაუშვით `aws sts assume-role` ტესტურ role-ზე, ექსპორტირება გაუკეთეთ მისი credentials-ს environment ცვლადებში და გაუშვით `kubectl --kubeconfig /tmp/kubeconfig-test get pods -A`: ტოკენი `aws eks get-token`-ის საშუალებით ახლა ტესტური role-იდან მოვა, და API server-ი `Unauthorized`-ით უპასუხებს. Output შეინახეთ `/var/work/tests/artifacts/2/unauthorized.txt`-ში. |
-| Acceptance criteria    | - ფაილი `2/unauthorized.txt` არ არის ცარიელი და შეიცავს `Unauthorized`-ს. |
+| მიღების კრიტერიუმები    | - ფაილი `2/unauthorized.txt` არ არის ცარიელი და შეიცავს `Unauthorized`-ს. |
 ---
 |        **3**        | **Unauthorized-ის გამოსწორება: access entry და AmazonEKSViewPolicy** |
 | :-----------------: | :---------------------------------------------------------- |
 | რა უნდა გავაკეთოთ          | შექმენით access entry ტესტური role-ისთვის (`aws eks create-access-entry ... --type STANDARD`) და დააკავშირეთ `AmazonEKSViewPolicy` policy-ს `cluster` scope-ზე. გაიმეორეთ `kubectl get pods -A` იმავე დროებითი kubeconfig-ით (შესაძლოა საჭირო გახდეს assume-role-ის ხელახლა გაშვება) - ის ახლა უკვე pod-ების სიას უნდა აბრუნებდეს, `Unauthorized`-ის გარეშე. Output შეინახეთ `/var/work/tests/artifacts/3/authorized.txt`-ში. |
-| Acceptance criteria    | - ფაილი `3/authorized.txt` არ არის ცარიელი, შეიცავს pod-ების სიის header-ს და არ შეიცავს `Unauthorized`-ს. |
+| მიღების კრიტერიუმები    | - ფაილი `3/authorized.txt` არ არის ცარიელი, შეიცავს pod-ების სიის header-ს და არ შეიცავს `Unauthorized`-ს. |
 ---
 |        **4**        | **Forbidden სიმპტომი: View role-ს ჩაწერა არ შეუძლია**             |
 | :-----------------: | :---------------------------------------------------------- |
 | რა უნდა გავაკეთოთ          | იმავე დროებითი kubeconfig-ით (role-ს მხოლოდ `AmazonEKSViewPolicy` აქვს), გაუშვით `kubectl create namespace test-forbidden` - მან `Forbidden` უნდა დააბრუნოს. Output შეინახეთ `/var/work/tests/artifacts/4/forbidden.txt`-ში და დაამატეთ განმარტება იმის შესახებ, რაშია განსხვავება დავალება 2-ის `Unauthorized`-სა და ამ დავალების `Forbidden`-ს შორის - ორივე სიტყვა ტექსტში უნდა გამოჩნდეს. |
-| Acceptance criteria    | - ფაილი `4/forbidden.txt` არ არის ცარიელი და შეიცავს ორივეს, `Unauthorized`-ს და `Forbidden`-ს. |
+| მიღების კრიტერიუმები    | - ფაილი `4/forbidden.txt` არ არის ცარიელი და შეიცავს ორივეს, `Unauthorized`-ს და `Forbidden`-ს. |
 ---
 |        **5**        | **ServiceAccount სწორი IRSA ანოტაციით**              |
 | :-----------------: | :---------------------------------------------------------- |
 | რა უნდა გავაკეთოთ          | შექმენით ServiceAccount `demo-reader` `eks-121`-ში, ანოტაციით `eks.amazonaws.com/role-arn`, დაყენებული IRSA role-ის ARN-ზე (`irsa_role_arn` `~/lab121_hints.txt`-იდან). შექმენით pod ამ SA-ით (image `amazon/aws-cli:2.15.0`, command `sleep 3600`), მის შიგნით გაუშვით `aws sts get-caller-identity` (მან უნდა გამოაჩინოს `assumed-role` ამ role-ისთვის) და წაიკითხეთ `hello.txt` ობიექტი bucket-იდან. ორივე output შეინახეთ `/var/work/tests/artifacts/5/irsa_ok.txt`-ში. |
-| Acceptance criteria    | - SA `demo-reader` `eks-121`-ში, `role-arn` ანოტაციით;<br/>- ფაილი `5/irsa_ok.txt` არ არის ცარიელი, შეიცავს `assumed-role`-ს და `hello from s3`-ს. |
+| მიღების კრიტერიუმები    | - SA `demo-reader` `eks-121`-ში, `role-arn` ანოტაციით;<br/>- ფაილი `5/irsa_ok.txt` არ არის ცარიელი, შეიცავს `assumed-role`-ს და `hello from s3`-ს. |
 ---
 |        **6**        | **AccessDenied სიმპტომი: გატეხილი ანოტაცია სხვა namespace-ში** |
 | :-----------------: | :---------------------------------------------------------- |
 | რა უნდა გავაკეთოთ          | შექმენით მეორე ServiceAccount `demo-reader-broken` namespace `default`-ში, ზუსტად იმავე ანოტაციით იმავე `role-arn`-ზე. role-ის trust policy ელოდება `sub`-ს namespace `eks-121`-ით, არა `default`-ით, ამიტომ ტოკენის გაცვლა ჩავარდნილი უნდა იყოს. შექმენით pod ამ SA-ით `default`-ში, გაუშვით `aws sts get-caller-identity` - მან `AccessDenied` ან ტოკენის გაცვლის შეცდომა (`WebIdentityErr`) უნდა დააბრუნოს. Output შეინახეთ `/var/work/tests/artifacts/6/broken.txt`-ში. |
-| Acceptance criteria    | - SA `demo-reader-broken` `default`-ში, ანოტაციით იმავე `role-arn`-ზე;<br/>- ფაილი `6/broken.txt` არ არის ცარიელი და შეიცავს `AccessDenied`-ს, `not authorized`-ს ან `WebIdentityErr`-ს. |
+| მიღების კრიტერიუმები    | - SA `demo-reader-broken` `default`-ში, ანოტაციით იმავე `role-arn`-ზე;<br/>- ფაილი `6/broken.txt` არ არის ცარიელი და შეიცავს `AccessDenied`-ს, `not authorized`-ს ან `WebIdentityErr`-ს. |
 ---
 |        **7**        | **დიაგნოსტიკა: ანოტაციების შედარება sub-ისა და namespace-ის მიხედვით**      |
 | :-----------------: | :---------------------------------------------------------- |
 | რა უნდა გავაკეთოთ          | შეადარეთ SA-ის `eks.amazonaws.com/role-arn` ანოტაცია ორივე namespace-ში (`kubectl get sa ... -o jsonpath=...role-arn`) და ფაილში `/var/work/tests/artifacts/7/diagnostics.txt` განმარტეთ, რატომ არ ემთხვევა role-ის trust policy-ის `sub` პირობა მეორე შემთხვევაში. ტექსტში აუცილებლად უნდა იყოს სიტყვები `sub` და `namespace`. |
-| Acceptance criteria    | - ფაილი `7/diagnostics.txt` არ არის ცარიელი და შეიცავს `sub`-ს და `namespace`-ს. |
+| მიღების კრიტერიუმები    | - ფაილი `7/diagnostics.txt` არ არის ცარიელი და შეიცავს `sub`-ს და `namespace`-ს. |
 ---
 |        **8**        | **შეჯამება: წვდომის ორი ღერძი**                                  |
 | :-----------------: | :---------------------------------------------------------- |
 | რა უნდა გავაკეთოთ          | ფაილში `/var/work/tests/artifacts/8/summary.txt` შეინახეთ ორი ღერძის შედარება (ადამიანის `Unauthorized`/`Forbidden` პოდის `AccessDenied`-ის წინააღმდეგ) 3-5 წინადადებაში. მოიხსენიეთ `RBAC` და `trust policy`, როგორც სხვადასხვა დონისთვის სხვადასხვა გამოსწორების მექანიზმები. |
-| Acceptance criteria    | - ფაილი `8/summary.txt` არ არის ცარიელი და შეიცავს `RBAC`-ს და `trust policy`-ს. |
+| მიღების კრიტერიუმები    | - ფაილი `8/summary.txt` არ არის ცარიელი და შეიცავს `RBAC`-ს და `trust policy`-ს. |
 ---
 
 ## შედეგის შემოწმება
@@ -218,7 +218,7 @@ check_result
 
 ## ამოხსნა
 
-Reference solution: [worker/files/solutions/1_GE.MD](worker/files/solutions/1_GE.MD)
+ეტალონური ამოხსნა: [worker/files/solutions/1_GE.MD](worker/files/solutions/1_GE.MD)
 
 ## კლასტერისა და რესურსების წაშლა
 
@@ -257,7 +257,7 @@ kubectl delete namespace eks-121 --ignore-not-found
 
 # დაუცადეთ, სანამ Karpenter თავის EC2 node-ებს არ მოაცილებს (მხოლოდ fargate-* უნდა დარჩეს)
 while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
-  echo "Karpenter's EC2 node is still alive, waiting..."; sleep 15
+  echo "Karpenter-ის EC2 node ჯერ კიდევ ცოცხალია, ველოდებით..."; sleep 15
 done
 ```
 

@@ -46,8 +46,8 @@ flowchart TB
     w1["writer (AZ a)"]
     w2["writer (AZ b)"]
     w3["writer (AZ c)"]
-    mt["Mount target in each AZ"]
-    efs["EFS - regional filesystem"]
+    mt["Mount target in jeder AZ"]
+    efs["EFS - regionales Dateisystem"]
     w1 --> mt
     w2 --> mt
     w3 --> mt
@@ -231,7 +231,7 @@ kubectl delete namespace eks-107 --ignore-not-found
 kubectl delete pvc --all -n eks-107 --ignore-not-found 2>/dev/null
 
 while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
-  echo "Karpenter's EC2 node is still alive, waiting..."; sleep 15
+  echo "Karpenters EC2-Node lebt noch, warte..."; sleep 15
 done
 ```
 
@@ -243,7 +243,7 @@ FS_ID=$(aws efs describe-file-systems \
   --query 'FileSystems[?contains(Name, `eks-task107`)].FileSystemId' --output text)
 aws efs describe-access-points --file-system-id "$FS_ID" \
   --query 'AccessPoints[].[AccessPointId,RootDirectory.Path]' --output table
-# delete any leftovers
+# Überbleibsel entfernen
 aws efs delete-access-point --access-point-id <fsap-id>
 ```
 

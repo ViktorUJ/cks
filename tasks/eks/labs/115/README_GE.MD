@@ -45,10 +45,10 @@ Terraform წინასწარ ქმნის IRSA-როლს Fluent Bit-
 
 ```mermaid
 flowchart TB
-    app["Pods: stdout"]
+    app["პოდები: stdout"]
     files["/var/log/containers"]
     fb["Fluent Bit DaemonSet<br>IRSA-როლი"]
-    filt["FILTER grep<br>drop /healthz"]
+    filt["FILTER grep<br>ჩამოშორება /healthz"]
     cw["CloudWatch Logs<br>log group"]
     ret["Retention<br>7 დღე"]
     app --> files --> fb --> filt --> cw --> ret

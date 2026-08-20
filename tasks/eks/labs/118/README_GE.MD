@@ -19,7 +19,7 @@ drift-ს კლასტერში ხელით რედაქტირ�
 
 ## მიზანი
 
-კურსის თავის მასალის გამოწერა:
+კურსის თავის მასალის გამტკიცება:
 
 - [თავი 44. GitOps და მიწოდება: Argo CD და Flux, კლასტერების ფლოტის
   მართვა](../../course/44/ru.md) - Git როგორც ჭეშმარიტების წყარო, sync და
@@ -88,7 +88,7 @@ flowchart TB
 | `eks_karpenter_default_vng` | `eks_v2_karpenter_vng` | `vpc`, `eks_control_plane`, `eks_karpenter` | ნაგულისხმევი NodePool `default` და EC2NodeClass AL2023-ზე |
 | `worker` | `eks_v2_work_pc` | `ssh-keys`, `vpc`, `eks_control_plane`, `eks_karpenter` | worker-მანქანა kubectl-ით, helm-ით, ტესტებით და `check_result`-ით |
 
-დამოკიდებულებების გრაფი (რაც უფრო ადრე გამოიცემა, ის ისრის ბოლოშია):
+დამოკიდებულებების გრაფი (რაც უფრო ადრე გამოიყენება, ის ისრის ბოლოშია):
 
 ```mermaid
 flowchart TB

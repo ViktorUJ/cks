@@ -267,7 +267,7 @@ SG_ID=$(grep '^broken_sg_id' ~/lab120_hints.txt | awk '{print $3}')
 NODE_SG=$(grep '^node_sg_id' ~/lab120_hints.txt | awk '{print $3}')
 until [ "$(aws ec2 describe-network-interfaces \
   --filters "Name=group-id,Values=${SG_ID}" --query 'length(NetworkInterfaces)' --output text)" = "0" ]; do
-  echo "NLB still holds the ENI, waiting..."; sleep 15
+  echo "NLB 仍持有 ENI,等待中..."; sleep 15
 done
 
 # 2. 移除 node SG 中引用負載平衡器 SG 的那條規則

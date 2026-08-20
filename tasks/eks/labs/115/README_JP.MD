@@ -45,10 +45,10 @@ Pod から CloudWatch までのログの経路:
 
 ```mermaid
 flowchart TB
-    app["Pods: stdout"]
+    app["Pod: stdout"]
     files["/var/log/containers"]
-    fb["Fluent Bit DaemonSet<br>IRSA role"]
-    filt["FILTER grep<br>drop /healthz"]
+    fb["Fluent Bit DaemonSet<br>IRSA ロール"]
+    filt["FILTER grep<br>/healthz を破棄"]
     cw["CloudWatch Logs<br>log group"]
     ret["Retention<br>7日"]
     app --> files --> fb --> filt --> cw --> ret

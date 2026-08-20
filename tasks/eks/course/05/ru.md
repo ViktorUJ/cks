@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 5. Доступ к кластеру: IAM и RBAC, access entries, миграция с aws-auth
 
 > **Что дальше.** Кластер создан (глава 4), и следующий вопрос - кто в него войдёт и с

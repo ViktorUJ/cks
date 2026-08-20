@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 8. Альтернативы VPC CNI: Cilium, режимы сети, когда менять CNI
 
 > **Что дальше.** В главах 6 и 7 разобран VPC CNI: реальные адреса подов, ENI, дефицит и

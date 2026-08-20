@@ -17,7 +17,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff des folgenden Kurskapitels vertiefen:
 
-- [Chapter 13. Spot instances: interruptions, diversification](../../course/13/ru.md) -
+- [Kapitel 13. Spot-Instances: Unterbrechungen, Diversifizierung](../../course/13/ru.md) -
   Umgang mit Events
 
 ## Was wir erstellen

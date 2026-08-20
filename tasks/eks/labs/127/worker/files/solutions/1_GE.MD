@@ -37,7 +37,7 @@ spec:
         resources: ["pods"]
   validations:
     - expression: "object.spec.containers.all(c, !c.image.endsWith(':latest'))"
-      message: "the :latest tag is forbidden, specify a concrete image version"
+      message: ":latest ტეგი forbidden, მიუთითეთ image-ის კონკრეტული ვერსია"
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

@@ -150,8 +150,8 @@ pod-ით namespace `efs-csi-warmup`-ში - ამის გარეშე c
 სასარგებლო ბრძანებები worker მანქანაზე:
 
 ```bash
-time_left       # how much environment time is left
-check_result    # check the solution
+time_left       # რამდენი დრო დარჩა გარემოს
+check_result    # გადაწყვეტის შემოწმება
 ```
 
 > გარემოს უსაფრთხოება. `env.hcl`-ში ჩართულია `ssh_password_enable = true` და
@@ -229,7 +229,7 @@ kubectl delete namespace eks-107 --ignore-not-found
 kubectl delete pvc --all -n eks-107 --ignore-not-found 2>/dev/null
 
 while kubectl get nodes --no-headers 2>/dev/null | grep -qv fargate; do
-  echo "Karpenter's EC2 node is still alive, waiting..."; sleep 15
+  echo "Karpenter-ის EC2 ნოდი ჯერ კიდევ ცოცხალია, ველოდებით..."; sleep 15
 done
 ```
 
@@ -240,7 +240,7 @@ FS_ID=$(aws efs describe-file-systems \
   --query 'FileSystems[?contains(Name, `eks-task107`)].FileSystemId' --output text)
 aws efs describe-access-points --file-system-id "$FS_ID" \
   --query 'AccessPoints[].[AccessPointId,RootDirectory.Path]' --output table
-# delete any leftovers
+# ზედმეტის წაშლა
 aws efs delete-access-point --access-point-id <fsap-id>
 ```
 
