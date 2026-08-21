@@ -398,3 +398,5 @@ aws iam simulate-principal-policy \
 
 ---
 [Оглавление](../README_RU.md) · [Глава 0.1](../00-1-aws/ru.md) · [Глава 0.3](../00-3-vpc/ru.md)
+
+
