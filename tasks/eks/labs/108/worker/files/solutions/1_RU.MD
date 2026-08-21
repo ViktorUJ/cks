@@ -1,0 +1,200 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 108 - эталонное решение (AWS Load Balancer Controller: NLB для Service)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl уже настроен на
+кластер. Terraform уже создал IAM-роль для контроллера (компонент `eks_lbc_irsa`,
+модуль `eks_v2_lbc_irsa`) - остаётся забрать её ARN и поставить сам контроллер.
+
+## Задание 1. Namespace `eks-108`
+
+```bash
+kubectl create namespace eks-108
+```
+
+## Задание 2. ServiceAccount и установка AWS Load Balancer Controller
+
+Находим ARN роли, которую создал terraform (имя роли `<cluster-name>-lbc-irsa`):
+
+```bash
+ROLE_ARN=$(aws iam list-roles \
+  --query "Roles[?contains(RoleName,'lbc-irsa')].Arn" --output text)
+echo "$ROLE_ARN"
+```
+
+Создаём ServiceAccount в `kube-system` с аннотацией на эту роль. LBC ставится через Helm с
+`serviceAccount.create=false`, поэтому ServiceAccount нужен заранее:
+
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aws-load-balancer-controller
+  namespace: kube-system
+  annotations:
+    eks.amazonaws.com/role-arn: ${ROLE_ARN}
+EOF
+```
+
+Ставим сам контроллер из официального чарта:
+
+```bash
+helm repo add eks https://aws.github.io/eks-charts
+helm repo update
+
+CLUSTER_NAME=$(kubectl config view --minify -o jsonpath='{.clusters[0].name}' | sed 's/.*\///')
+VPC_ID=$(aws eks describe-cluster --name "${CLUSTER_NAME}" \
+  --query 'cluster.resourcesVpcConfig.vpcId' --output text)
+echo "$VPC_ID"
+
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName="${CLUSTER_NAME}" \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller \
+  --set region=eu-central-1 \
+  --set vpcId="${VPC_ID}"
+
+kubectl rollout status deployment/aws-load-balancer-controller -n kube-system
+```
+
+Контроллер работает на Fargate (namespace `kube-system` под Fargate-профилем), а на
+Fargate физически нет EC2 instance metadata service (IMDS) - без явных `vpcId`/`region`
+контроллер пытается получить VPC ID через IMDS и падает в `CrashLoopBackOff` с ошибкой
+`failed to fetch VPC ID from instance metadata: ... context deadline exceeded`. На
+управляемых EC2-нодах эти флаги не нужны (IMDS доступен), но на Fargate их нужно передать
+явно всегда.
+
+Проверяем, что контроллер поднялся и видит роль:
+
+```bash
+kubectl get deploy aws-load-balancer-controller -n kube-system
+kubectl get sa aws-load-balancer-controller -n kube-system -o yaml | grep role-arn
+```
+
+## Задание 3. Deployment `web` (viktoruj/ping_pong, 2 реплики)
+
+```bash
+kubectl create deployment web --image=viktoruj/ping_pong:latest --replicas=2 -n eks-108
+kubectl rollout status deployment/web -n eks-108
+```
+
+## Задание 4. Service `web` типа LoadBalancer: NLB вместо CLB
+
+По умолчанию in-tree cloud provider создаёт устаревший Classic Load Balancer для Service
+типа LoadBalancer. Аннотация `aws-load-balancer-type: external` передаёт реконсиляцию AWS
+Load Balancer Controller, который создаёт современный Network Load Balancer:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: eks-108
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+spec:
+  type: LoadBalancer
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 8080
+EOF
+```
+
+Ждём внешний адрес:
+
+```bash
+kubectl get svc web -n eks-108 -w
+```
+
+Подтверждаем через AWS CLI, что создан именно NLB (тип `network`), а не CLB, и что схема
+`internet-facing`:
+
+```bash
+HOSTNAME=$(kubectl get svc web -n eks-108 \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+LB_ARN=$(aws elbv2 describe-load-balancers \
+  --query "LoadBalancers[?DNSName=='${HOSTNAME}'].LoadBalancerArn" --output text)
+
+mkdir -p /var/work/tests/artifacts/4
+aws elbv2 describe-load-balancers --load-balancer-arns "$LB_ARN" \
+  > /var/work/tests/artifacts/4/nlb.txt
+cat /var/work/tests/artifacts/4/nlb.txt
+```
+
+В выводе `Type` должен быть `network` (NLB), а `Scheme` - `internet-facing`. Если бы
+аннотации `aws-load-balancer-type` не было, in-tree provider создал бы `Type: classic` -
+это и есть симптом «просил LoadBalancer, получил CLB» из главы 26.
+
+## Задание 5. Проверка таргетов: IP подов, а не instance ID нод
+
+`target-type: ip` регистрирует в target group адреса подов из VPC CNI, а не ноды по
+`InstanceId`. Проверяем это через `describe-target-groups` и `describe-target-health`:
+
+```bash
+TG_ARN=$(aws elbv2 describe-target-groups --load-balancer-arn "$LB_ARN" \
+  --query 'TargetGroups[0].TargetGroupArn' --output text)
+
+mkdir -p /var/work/tests/artifacts/5
+{
+  aws elbv2 describe-target-groups --target-group-arns "$TG_ARN"
+  aws elbv2 describe-target-health --target-group-arn "$TG_ARN"
+} > /var/work/tests/artifacts/5/targets.txt
+
+cat /var/work/tests/artifacts/5/targets.txt
+```
+
+В файле `TargetType` должен быть `ip`, а `Target.Id` каждого таргета - адрес из
+`10.10.0.0/16` (подсеть VPC этой лабы), а не `i-...` (ID инстанса). Именно так и выглядит
+таргет-группа NLB с `target-type: ip`: контроллер регистрирует IP пода напрямую, минуя
+NodePort, что убирает лишний хоп через kube-proxy.
+
+## Задание 6. Диагностика: успешная реконсиляция против AccessDenied
+
+Смотрим лог контроллера, чтобы увидеть, как выглядит нормальная реконсиляция Service - в
+нём должен встретиться ARN созданного балансировщика:
+
+```bash
+kubectl logs -n kube-system deploy/aws-load-balancer-controller --tail=200 \
+  | grep -i 'successfully reconciled\|loadBalancerARN\|arn:aws:elasticloadbalancing' \
+  | tail -n 10
+```
+
+Если бы у ServiceAccount не было привязанной роли (или роль не имела нужных прав),
+контроллер не смог бы вызвать API ELBv2 и в логе появилось бы сообщение вида
+`AccessDenied: User: ... is not authorized to perform:
+elasticloadbalancing:CreateLoadBalancer`, а Service остался бы в `<pending>` без внешнего
+адреса - потому что реконсиляция завершается ошибкой на самом первом вызове API, до
+создания NLB.
+
+Сохраняем оба наблюдения в один артефакт:
+
+```bash
+mkdir -p /var/work/tests/artifacts/6
+{
+  echo "=== Успешная реконсиляция (реальный лог контроллера) ==="
+  kubectl logs -n kube-system deploy/aws-load-balancer-controller --tail=200 \
+    | grep -i 'successfully reconciled\|arn:aws:elasticloadbalancing'
+  echo
+  echo "=== Ожидаемый симптом без прав IAM (не воспроизводим на живой роли) ==="
+  echo "AccessDenied: User: arn:aws:sts::<account>:assumed-role/<cluster>-lbc-irsa/... " \
+       "is not authorized to perform: elasticloadbalancing:CreateLoadBalancer " \
+       "on resource: arn:aws:elasticloadbalancing:<region>:<account>:loadbalancer/*"
+  echo "При такой ошибке Service web остаётся в <pending>: EXTERNAL-IP не появляется," \
+       "потому что контроллер не смог создать NLB через API ELBv2."
+} > /var/work/tests/artifacts/6/reconcile.txt
+
+cat /var/work/tests/artifacts/6/reconcile.txt
+```
+
+## Быстрая проверка
+
+```bash
+check_result
+```

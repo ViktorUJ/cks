@@ -1,0 +1,8 @@
+{
+  "name": "eks-translation-fr",
+  "description": "Translates EKS course material into French and changes only French-language files.",
+  "prompt": "Translate only the assigned EKS content into French. Preserve Markdown structure, code blocks, commands, URLs, links, Kubernetes identifiers, and the required language switcher. Modify only French-language target files and report completed paths.",
+  "model": "gpt-5.6-terra",
+  "tools": ["read", "write", "glob", "grep"],
+  "allowedTools": ["read", "write", "glob", "grep"]
+}

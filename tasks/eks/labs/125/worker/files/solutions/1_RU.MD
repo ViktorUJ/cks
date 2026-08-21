@@ -1,0 +1,237 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 125 - эталонное решение (EKS Auto Mode против своего стека)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl уже настроен на
+кластер. Кластер создан с включённым Auto Mode и одним встроенным NodePool
+`general-purpose` - никакого Fargate-профиля, managed addons или Karpenter в этой лабе
+нет.
+
+Имя кластера берём из kubeconfig: `list-clusters[0]` вернёт первый кластер аккаунта, а он
+не обязательно наш.
+
+```bash
+export CLUSTER=$(kubectl config current-context | awk -F/ '{print $NF}')
+echo "$CLUSTER"
+```
+
+## Задание 1. Подтверждение режима: Auto Mode включён
+
+```bash
+mkdir -p /var/work/tests/artifacts/1
+{
+  echo "=== aws eks describe-cluster computeConfig ==="
+  aws eks describe-cluster --name "$CLUSTER" --query 'cluster.computeConfig'
+  echo
+  echo "=== kubectl get nodepools ==="
+  kubectl get nodepools
+} > /var/work/tests/artifacts/1/automode.txt
+cat /var/work/tests/artifacts/1/automode.txt
+```
+
+`computeConfig.enabled` должен быть `true`, а `nodePools` содержать `general-purpose`.
+`kubectl get nodepools` показывает тот же NodePool как обычный Kubernetes-ресурс - Auto
+Mode материализует включённые встроенные пулы через Kubernetes API (глава 9).
+
+## Задание 2. Второй встроенный NodePool выключен
+
+```bash
+kubectl get nodepools
+```
+
+В списке нет `system` - built-in NodePool появляется как ресурс кластера только тогда,
+когда его имя присутствует в `computeConfig.nodePools`; в этой лабе там указан только
+`general-purpose`.
+
+```bash
+mkdir -p /var/work/tests/artifacts/2
+cat > /var/work/tests/artifacts/2/twopools.txt <<'EOF'
+У EKS Auto Mode два встроенных NodePool: general-purpose и system. NodePool system несёт
+таинт CriticalAddonsOnly, который толерируют критичные для кластера компоненты (например
+CoreDNS) - это способ отделить их от обычной нагрузки, чтобы они не конкурировали за
+ресурсы с приложениями и не вытеснялись при консолидации узлов general-purpose.
+
+В этой лабе node_pools содержит только general-purpose, поэтому system не создаётся как
+ресурс кластера: kubectl get nodepools его не показывает. Включить его - это правка
+computeConfig.nodePools на control plane, а не создание объекта kubectl.
+EOF
+cat /var/work/tests/artifacts/2/twopools.txt
+```
+
+## Задание 3. Нагрузка на general-purpose и попытка починить встроенный NodePool
+
+```bash
+kubectl create namespace eks-125
+kubectl create deployment web --image=viktoruj/ping_pong:latest --replicas=2 -n eks-125
+kubectl rollout status deployment/web -n eks-125
+
+kubectl get pods -n eks-125 -o wide
+```
+
+Обе реплики переходят в `Running` на ноде, которую Auto Mode поднял сам под
+`general-purpose` - без Fargate-профиля и без внешнего Karpenter, которые нужны в базе
+лабы 101.
+
+Пробуем отредактировать встроенный NodePool. AWS документирует built-in NodePool как
+«enabled or disabled but not modified», но проверять надо руками - запрета в admission нет:
+
+```bash
+mkdir -p /var/work/tests/artifacts/3
+{
+  echo "=== kubectl patch встроенного пула ==="
+  kubectl patch nodepool general-purpose --type merge -p '{"spec":{"limits":{"cpu":"100"}}}'
+  echo "limits после правки: $(kubectl get nodepool general-purpose -o jsonpath='{.spec.limits}')"
+  echo
+  echo "=== кто владеет объектом ==="
+  kubectl get nodepool general-purpose -o jsonpath='labels={.metadata.labels}{"\n"}'
+  kubectl get nodepool general-purpose \
+    -o jsonpath='managedFields managers={range .metadata.managedFields[*]}{.manager}{","}{end}{"\n"}'
+  echo
+  echo "=== вывод ==="
+  echo "Правка принимается: команда вернула patched, значение осталось в объекте."
+  echo "Но объект принадлежит сервису: метка app.kubernetes.io/managed-by=eks, поля"
+  echo "принадлежат менеджеру eks-auto-mode. Поддерживаемый способ управления один -"
+  echo "включение и выключение имени пула в computeConfig.nodePools. При изменении этого"
+  echo "списка ресурс удаляется вместе с нодами и создаётся заново, уже без наших правок."
+} > /var/work/tests/artifacts/3/builtin.txt
+cat /var/work/tests/artifacts/3/builtin.txt
+```
+
+Возвращаем пул в исходное состояние - лишний `limits` в чужом объекте нам не нужен:
+
+```bash
+kubectl patch nodepool general-purpose --type merge -p '{"spec":{"limits":null}}'
+kubectl get nodepool general-purpose -o jsonpath='{.spec.limits}{"\n"}'
+```
+
+Внимание: `kubectl delete nodepool general-purpose` тоже проходит, но EKS объект НЕ
+пересоздаёт, а ноды пула при этом дренируются - кластер останется без вычислений.
+Восстановление только через `computeConfig` (рецепт в разделе «Удаление» README).
+
+## Задание 4. Нет доступа на ноду: SSH и SSM закрыты by design
+
+В Auto Mode имя ноды и есть instance ID, отдельно разбирать `providerID` не нужно:
+
+```bash
+NODE=$(kubectl get pods -n eks-125 -l app=web -o jsonpath='{.items[0].spec.nodeName}')
+echo "node=$NODE"
+```
+
+Собираем три доказательства. Первое - у инстанса нет ключевой пары (`KeyName`), значит SSH
+по ключу невозможно независимо от того, слушает ли кто-то порт 22:
+
+```bash
+mkdir -p /var/work/tests/artifacts/4
+{
+  echo "=== ключевая пара и образ ноды ==="
+  aws ec2 describe-instances --instance-ids "$NODE" \
+    --query 'Reservations[0].Instances[0].[KeyName,ImageId,PlatformDetails]' --output text
+  echo "KeyName пустой (None) - ключевой пары у ноды нет"
+  echo
+  echo "=== SSM: подключения нет ==="
+  aws ssm get-connection-status --target "$NODE" --output json
+  echo "инвентарь SSM (ноды в нём быть не должно):"
+  aws ssm describe-instance-information \
+    --query 'InstanceInformationList[].[InstanceId,PingStatus]' --output text
+} > /var/work/tests/artifacts/4/nossh.txt
+```
+
+Не используйте здесь `aws ssm start-session`: у рабочей машины нет права
+`ssm:StartSession`, поэтому команда вернёт `AccessDeniedException` - это факт про политику
+воркера, а не про ноду. Ответ на вопрос задания даёт `get-connection-status` со статусом
+`notconnected`.
+
+Третье доказательство - обратное по смыслу: хост от кластера не изолирован. Привилегированный
+под с `hostPath` на `/` читает файловую систему ноды:
+
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostprobe
+  namespace: eks-125
+spec:
+  nodeName: $NODE
+  restartPolicy: Never
+  containers:
+  - name: p
+    image: busybox
+    command: ["sh","-c","cat /host/etc/os-release; echo ---; ls /host/bin | head -5"]
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: h
+      mountPath: /host
+  volumes:
+  - name: h
+    hostPath:
+      path: /
+EOF
+
+kubectl wait --for=condition=Ready pod/hostprobe -n eks-125 --timeout=90s 2>/dev/null
+sleep 5
+{
+  echo
+  echo "=== хост изнутри привилегированного пода ==="
+  kubectl logs hostprobe -n eks-125
+  echo
+  echo "=== вывод ==="
+  echo "SSH невозможен (нет ключевой пары KeyName), SSM не подключён (notconnected) -"
+  echo "доступа оператора на ноду нет. Но образ Bottlerocket читается из привилегированного"
+  echo "пода: Auto Mode закрывает дверь оператора, а не дверь cluster-admin. За вторую"
+  echo "отвечают Pod Security Admission и политики допуска (главы 19 и 22)."
+} >> /var/work/tests/artifacts/4/nossh.txt
+
+kubectl delete pod hostprobe -n eks-125
+cat /var/work/tests/artifacts/4/nossh.txt
+```
+
+Ноды Auto Mode - это Bottlerocket с read-only root и SELinux в enforcing, без оболочки и
+пакетного менеджера, максимальный срок жизни ноды 21 день с автоматической заменой (глава
+9). Отлаживать её привычными средствами SSH и SSM невозможно принципиально - это цена
+минимума эксплуатации.
+
+## Задание 5. Свой NodePool с явными limits
+
+Встроенные пулы не имеют `limits` - при неограниченном спросе они будут расти без
+потолка (глава 9, раздел 9.7). Свой NodePool ссылается на встроенный `NodeClass`
+`default` и задаёт лимиты сам:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: custom-limited
+spec:
+  template:
+    spec:
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: default
+      requirements:
+        - key: "eks.amazonaws.com/instance-category"
+          operator: In
+          values: ["c", "m", "r"]
+        - key: "kubernetes.io/arch"
+          operator: In
+          values: ["amd64"]
+  limits:
+    cpu: "10"
+    memory: 10Gi
+EOF
+
+kubectl get nodepool custom-limited
+```
+
+Свои NodePool не наследуют ограничения встроенных пулов (только C/M/R, только on-demand,
+generation 5+) - их задают руками, включая `limits`, иначе пул растёт без потолка (глава
+9, раздел 9.7).
+
+## Быстрая проверка
+
+```bash
+check_result
+```

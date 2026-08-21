@@ -1,0 +1,341 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 118 - эталонное решение (GitOps: Argo CD, drift и self-heal, sync waves)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl уже настроен на
+кластер (kubeconfig собран через `aws eks update-kubeconfig` при загрузке машины).
+
+## Задание 1. Установка Argo CD через Helm
+
+```bash
+kubectl create namespace argocd
+
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+
+helm install argocd argo/argo-cd -n argocd
+
+kubectl rollout status deployment/argocd-server -n argocd
+```
+
+Проверяем, что сервер поднялся:
+
+```bash
+kubectl get deploy argocd-server -n argocd
+kubectl get pods -n argocd
+```
+
+## Задание 2. Namespace `eks-118` и объект Application
+
+```bash
+kubectl create namespace eks-118
+```
+
+Application связывает источник в Git (репозиторий самого курса, ветка `AG-155`, путь
+`tasks/eks/labs/118/gitops-demo`) с целевым кластером и namespace `eks-118`.
+`selfHeal: true` откатывает ручные правки, `prune: true` удаляет из кластера ресурсы,
+убранные из Git:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/ViktorUJ/cks.git
+    targetRevision: AG-155
+    path: tasks/eks/labs/118/gitops-demo
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: eks-118
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+EOF
+```
+
+Ждём, пока Application дойдёт до `Synced` и `Healthy`:
+
+```bash
+kubectl get application demo-app -n argocd -o jsonpath='{.status.sync.status}'
+echo
+kubectl get application demo-app -n argocd -o jsonpath='{.status.health.status}'
+echo
+```
+
+Обе команды должны в итоге вернуть `Synced` и `Healthy` соответственно (Argo CD
+опрашивает Git и применяет манифесты автоматически, auto-sync включён по умолчанию).
+
+## Задание 3. Проверка реального применения объектов
+
+```bash
+kubectl get deployment demo-app -n eks-118
+kubectl get configmap demo-config -n eks-118 -o yaml
+kubectl rollout status deployment/demo-app -n eks-118
+```
+
+Deployment `demo-app` (образ `viktoruj/ping_pong:latest`, 2 реплики) и ConfigMap
+`demo-config` пришли из Git через Argo CD, а не через ручной `kubectl apply` от студента.
+
+## Задание 4. Дрейф и self-heal
+
+Важная деталь, которую видно только на живом кластере: при включённом `selfHeal` контроллер
+откатывает дрейф за секунды, и застать `OutOfSync` глазами практически невозможно (ручной
+`kubectl scale` откатывается ещё до первого `kubectl get application`). Поэтому дрейф
+показывают в два шага: сначала выключают самолечение, ловят `OutOfSync`, затем включают
+самолечение обратно и наблюдают откат.
+
+Шаг 1. Выключаем только `selfHeal`, `prune` оставляем включённым:
+
+```bash
+kubectl patch application demo-app -n argocd --type=merge \
+  -p '{"spec":{"syncPolicy":{"automated":{"selfHeal":false,"prune":true}}}}'
+```
+
+Шаг 2. Ломаем живое состояние в обход Git и фиксируем дрейф:
+
+```bash
+kubectl scale deployment demo-app -n eks-118 --replicas=5
+
+for i in $(seq 1 20); do
+  status=$(kubectl get application demo-app -n argocd -o jsonpath='{.status.sync.status}')
+  [[ "$status" == "OutOfSync" ]] && break
+  sleep 3
+done
+
+mkdir -p /var/work/tests/artifacts/4
+{
+  echo "=== дрейф при selfHeal=false (ручной kubectl scale --replicas=5) ==="
+  kubectl get application demo-app -n argocd \
+    -o jsonpath='sync={.status.sync.status} health={.status.health.status}'
+  echo
+  kubectl get deploy demo-app -n eks-118 -o jsonpath='replicas={.spec.replicas}'
+  echo
+} > /var/work/tests/artifacts/4/drift.txt
+```
+
+Без self-heal Application остаётся `OutOfSync`: auto-sync реагирует на изменения в Git, а
+расхождение, созданное в кластере, лечит именно `selfHeal`.
+
+Шаг 3. Включаем `selfHeal` обратно и наблюдаем автоматический откат к состоянию из Git:
+
+```bash
+kubectl patch application demo-app -n argocd --type=merge \
+  -p '{"spec":{"syncPolicy":{"automated":{"selfHeal":true,"prune":true}}}}'
+
+for i in $(seq 1 40); do
+  status=$(kubectl get application demo-app -n argocd -o jsonpath='{.status.sync.status}')
+  replicas=$(kubectl get deploy demo-app -n eks-118 -o jsonpath='{.spec.replicas}')
+  [[ "$status" == "Synced" ]] && [[ "$replicas" == "2" ]] && break
+  sleep 3
+done
+
+{
+  echo "=== после включения selfHeal: откат к состоянию из Git ==="
+  kubectl get application demo-app -n argocd \
+    -o jsonpath='sync={.status.sync.status} health={.status.health.status}'
+  echo
+  kubectl get deploy demo-app -n eks-118 -o jsonpath='replicas={.spec.replicas}'
+  echo
+} >> /var/work/tests/artifacts/4/drift.txt
+
+cat /var/work/tests/artifacts/4/drift.txt
+```
+
+В файле есть и `OutOfSync` (дрейф без самолечения), и `Synced` (self-heal вернул состояние
+из Git). `replicas` в конце снова `2`.
+
+## Задание 5. Sync waves: порядок применения
+
+В `gitops-demo/configmap.yaml` стоит аннотация `argocd.argoproj.io/sync-wave: "0"`, а в
+`gitops-demo/deployment.yaml` - `argocd.argoproj.io/sync-wave: "1"`. Меньший номер волны
+применяется раньше, поэтому ConfigMap гарантированно попадает в кластер до Deployment
+(это важно, если Deployment читает значения из ConfigMap через `envFrom`):
+
+```bash
+kubectl get configmap demo-config -n eks-118 \
+  -o jsonpath='{.metadata.annotations.argocd\.argoproj\.io/sync-wave}'
+echo
+kubectl get deployment demo-app -n eks-118 \
+  -o jsonpath='{.metadata.annotations.argocd\.argoproj\.io/sync-wave}'
+echo
+```
+
+Убеждаемся, что оба объекта в итоге синхронизированы, несмотря на разные волны:
+
+```bash
+kubectl get application demo-app -n argocd -o jsonpath='{.status.sync.status}'
+echo
+kubectl get application demo-app -n argocd -o jsonpath='{.status.resources}' | head -c 400
+```
+
+## Задание 6. Что prune удаляет, а что нет: владение ресурсом
+
+`prune: true` уже включён в задании 2. Создаём в `eks-118` руками ConfigMap, которого нет в
+`gitops-demo/` - обычный ручной объект, как если бы кто-то создал его мимо Git:
+
+```bash
+kubectl create configmap manual-extra -n eks-118 --from-literal=note=manual
+
+kubectl patch application demo-app -n argocd --type=merge \
+  -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
+
+sleep 30
+kubectl get configmap manual-extra -n eks-118
+kubectl get application demo-app -n argocd -o jsonpath='{.status.sync.status}'; echo
+```
+
+Неожиданный результат: `prune=true` включён, но `manual-extra` **не удалён**, а Application
+остаётся `Synced`. Причина в модели владения: Argo CD управляет только теми объектами, которые
+помечены как принадлежащие приложению. В Argo CD 3.x это аннотация
+`argocd.argoproj.io/tracking-id` - посмотрите, как помечен объект, пришедший из Git:
+
+```bash
+kubectl get configmap demo-config -n eks-118 \
+  -o jsonpath='{.metadata.annotations.argocd\.argoproj\.io/tracking-id}'; echo
+# demo-app:/ConfigMap:eks-118/demo-config
+```
+
+Ручной объект такой пометки не имеет, для Argo CD он посторонний (orphaned) и в область
+prune не попадает. Фиксируем это наблюдение:
+
+```bash
+mkdir -p /var/work/tests/artifacts/6
+{
+  echo "=== без tracking-аннотации prune не трогает объект ==="
+  echo "manual-extra: $(kubectl get configmap manual-extra -n eks-118 -o jsonpath='{.metadata.name}')"
+  echo "sync: $(kubectl get application demo-app -n argocd -o jsonpath='{.status.sync.status}')"
+} > /var/work/tests/artifacts/6/prune.txt
+```
+
+Теперь помечаем ConfigMap как принадлежащий приложению. Формат значения -
+`<app>:<group>/<Kind>:<namespace>/<name>`, для core-ресурсов group пустая:
+
+```bash
+kubectl annotate configmap manual-extra -n eks-118 \
+  'argocd.argoproj.io/tracking-id=demo-app:/ConfigMap:eks-118/manual-extra' --overwrite
+
+kubectl patch application demo-app -n argocd --type=merge \
+  -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
+
+for i in $(seq 1 20); do
+  kubectl get configmap manual-extra -n eks-118 >/dev/null 2>&1 || break
+  sleep 5
+done
+
+kubectl get configmap manual-extra -n eks-118 2>&1
+```
+
+Теперь объект отслеживается приложением, в Git его нет - и prune его удаляет. При этом
+`demo-config` и `demo-app` остаются на месте, потому что они описаны в `gitops-demo/`:
+
+```bash
+{
+  echo "=== после добавления tracking-аннотации prune удалил объект ==="
+  echo "manual-extra: $(kubectl get configmap manual-extra -n eks-118 2>&1 | tail -n1)"
+  echo "demo-config: $(kubectl get configmap demo-config -n eks-118 -o jsonpath='{.metadata.name}')"
+  echo "demo-app: $(kubectl get deploy demo-app -n eks-118 -o jsonpath='{.metadata.name}')"
+  echo
+  echo "prune удаляет только ОТСЛЕЖИВАЕМЫЕ приложением ресурсы, которых нет в Git."
+  echo "Объект, созданный руками без tracking-аннотации, для Argo CD посторонний"
+  echo "(orphaned) и под prune не попадает - это и был первый наблюдаемый результат."
+  echo "demo-config и demo-app остались, потому что они описаны в gitops-demo/ и"
+  echo "Argo CD продолжает их синхронизировать."
+} >> /var/work/tests/artifacts/6/prune.txt
+
+cat /var/work/tests/artifacts/6/prune.txt
+```
+
+## Задание 7. Диагностика: sync status и health status - две разные оси
+
+Отключаем auto-sync (а с ним и self-heal, он живёт внутри того же блока), чтобы можно
+было спокойно вызвать симптом без немедленного откатывания:
+
+```bash
+kubectl patch application demo-app -n argocd --type=merge \
+  -p '{"spec":{"syncPolicy":{"automated":null}}}'
+```
+
+Ломаем readinessProbe у контейнера напрямую в кластере. Важно: учебный образ `ping_pong`
+отвечает `200` на любой путь, поэтому проба на «несуществующий URL» успешно проходит и
+симптома не даёт. Направляем пробу на закрытый порт `9999` - там никто не слушает:
+
+```bash
+kubectl patch deployment demo-app -n eks-118 --type=json -p='[
+  {"op":"add","path":"/spec/template/spec/containers/0/readinessProbe","value":{
+    "httpGet": {"path": "/healthz", "port": 9999},
+    "initialDelaySeconds": 2,
+    "periodSeconds": 3,
+    "failureThreshold": 2
+  }}
+]'
+```
+
+Ждём и снимаем статусы. Sync и health - независимые оси: sync отражает разницу между
+Git и живым состоянием, health - реальное здоровье ресурсов (готовность подов и т.п.):
+
+```bash
+sleep 30
+mkdir -p /var/work/tests/artifacts/7
+{
+  echo "=== наблюдаемые статусы после ручной правки readinessProbe ==="
+  kubectl get application demo-app -n argocd \
+    -o jsonpath='sync={.status.sync.status} health={.status.health.status}'
+  echo
+  echo
+  echo "=== объяснение: sync status и health status - разные оси ==="
+  echo "Sync status (Synced/OutOfSync) сравнивает живое состояние объектов с тем, что"
+  echo "записано в Git: совпадает - Synced, разошлось - OutOfSync."
+  echo "Health status (Healthy/Progressing/Degraded/Missing) - это реальное здоровье"
+  echo "ресурса прямо сейчас: готовы ли поды, прошли ли readiness/liveness пробы."
+  echo "Из-за пробы на закрытый порт новые поды demo-app не проходят readiness, поэтому"
+  echo "health уходит в Progressing (и станет Degraded после progressDeadlineSeconds),"
+  echo "а sync при этом остаётся Synced. Причина: поле readinessProbe в Git-манифесте"
+  echo "не описано, и добавленное вручную поле в расхождение не попадает; а вот replicas"
+  echo "в Git есть, поэтому их ручная правка в задании 4 дала OutOfSync."
+  echo "Это доказывает, что обе оси считаются независимо: можно быть Synced и"
+  echo "Degraded/Progressing одновременно, как и OutOfSync и Healthy одновременно."
+} > /var/work/tests/artifacts/7/health.txt
+
+cat /var/work/tests/artifacts/7/health.txt
+```
+
+Возвращаем auto-sync и self-heal:
+
+```bash
+kubectl patch application demo-app -n argocd --type=merge \
+  -p '{"spec":{"syncPolicy":{"automated":{"selfHeal":true,"prune":true}}}}'
+```
+
+Важное наблюдение: self-heal эту поломку **не вылечит**. Для Argo CD расхождения с Git нет
+(`sync=Synced`), значит и лечить нечего - а `health` при этом честно показывает `Progressing`,
+затем `Degraded`. Это практический вывод: `Synced` не означает, что кластер совпадает с Git
+побайтово; поля, которых нет в манифесте, остаются на ответственности оператора. Поэтому
+убираем пробу руками:
+
+```bash
+kubectl patch deployment demo-app -n eks-118 --type=json \
+  -p='[{"op":"remove","path":"/spec/template/spec/containers/0/readinessProbe"}]'
+
+for i in $(seq 1 20); do
+  health=$(kubectl get application demo-app -n argocd -o jsonpath='{.status.health.status}')
+  ready=$(kubectl get deploy demo-app -n eks-118 -o jsonpath='{.status.readyReplicas}')
+  [[ "$health" == "Healthy" ]] && [[ "$ready" == "2" ]] && break
+  sleep 5
+done
+
+kubectl get application demo-app -n argocd \
+  -o jsonpath='sync={.status.sync.status} health={.status.health.status}'
+echo
+```
+
+## Быстрая проверка
+
+```bash
+check_result
+```

@@ -23,10 +23,13 @@ variable "STACK_TASK" {
 
 variable "fargate" {
   type = object({
-    name        = string
-    subnet_ids=  list(string)
-    tags        = map(string)
-    selectors=list(map(string))
+    name       = string
+    subnet_ids = list(string)
+    tags       = map(string)
+    selectors = list(object({
+      namespace = string
+      labels    = optional(map(string))
+    }))
   })
 }
 variable "name" {

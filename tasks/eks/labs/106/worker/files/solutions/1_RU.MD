@@ -1,0 +1,291 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 106 - эталонное решение (EBS CSI: gp3, привязка к AZ, расширение, снапшот)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl уже настроен на
+кластер. Драйвер `aws-ebs-csi-driver` (провизионер `ebs.csi.aws.com`) уже установлен как
+managed addon с ролью через IRSA (компонент `eks_addon_ebs_irsa`) - создавать роль заново
+не нужно.
+
+## Задание 1. Namespace `eks-106`
+
+```bash
+kubectl create namespace eks-106
+```
+
+## Задание 2. StorageClass `gp3-immediate` (сломанная конфигурация)
+
+Намеренно берём `volumeBindingMode: Immediate` - именно он ловит том в случайной зоне:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3-immediate
+provisioner: ebs.csi.aws.com
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+parameters:
+  type: gp3
+  encrypted: "true"
+EOF
+```
+
+## Задание 3. StatefulSet `db` на `gp3-immediate`
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db
+  namespace: eks-106
+spec:
+  serviceName: db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      storageClassName: gp3-immediate
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+EOF
+
+kubectl get pvc -n eks-106
+kubectl get po db-0 -n eks-106 -o wide
+```
+
+Кластер лабы поднят в двух AZ (`eu-central-1a` и `eu-central-1b`). С `Immediate` драйвер
+создаёт том сразу после появления PVC, не дожидаясь, куда планировщик поставит под, поэтому
+зона тома выбирается независимо от того, где Karpenter на самом деле поднимет ноду. В двух
+AZ конфликт `volume node affinity conflict` реально возникает, но не гарантированно на
+каждом прогоне: том может случайно попасть в ту же зону, где уже есть подходящая нода.
+Именно поэтому в задании 4 диагностика обязательна независимо от исхода.
+
+## Задание 4. Диагностика: симптом Immediate против привязки к зоне
+
+```bash
+mkdir -p /var/work/tests/artifacts/4
+
+kubectl describe pod db-0 -n eks-106 | sed -n '/Events/,$p' \
+  > /var/work/tests/artifacts/4/describe.txt
+
+PV=$(kubectl get pvc data-db-0 -n eks-106 -o jsonpath='{.spec.volumeName}')
+kubectl get pv "$PV" -o yaml > /var/work/tests/artifacts/4/pv.yaml
+grep -A6 nodeAffinity /var/work/tests/artifacts/4/pv.yaml
+```
+
+Смотрим, куда реально попал под и совпадает ли зона тома с зоной ноды:
+
+```bash
+PHASE=$(kubectl get po db-0 -n eks-106 -o jsonpath='{.status.phase}')
+NODE=$(kubectl get po db-0 -n eks-106 -o jsonpath='{.spec.nodeName}')
+PV_ZONE=$(kubectl get pv "$PV" \
+  -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}')
+echo "phase=$PHASE node=$NODE pv_zone=$PV_ZONE"
+```
+
+Сохраняем объяснение в артефакт. Формулировка должна работать в обоих случаях - и когда
+под завис в `Pending`, и когда ему случайно повезло:
+
+```bash
+cat > /var/work/tests/artifacts/4/diagnosis.txt <<'EOF'
+StorageClass gp3-immediate использует volumeBindingMode: Immediate. Это значит, что
+CSI-драйвер ebs.csi.aws.com создаёт EBS-том сразу после появления PVC, до того как
+планировщик выбрал ноду для пода. Зона тома фиксируется в PV через
+spec.nodeAffinity.required.nodeSelectorTerms[].matchExpressions[].key:
+topology.ebs.csi.aws.com/zone, и планировщик обязан уважать эту привязку.
+
+Если под db-0 в Pending, kubectl describe pod показывает событие
+"0/N nodes are available: N node(s) had volume node affinity conflict" - том создан в
+зоне, где нет подходящей ноды.
+
+Если под db-0 в Running, это не значит, что конфигурация верна: в кластере всего две AZ
+(eu-central-1a, eu-central-1b), и с Immediate том попал в зону, где нода уже была, просто
+случайно. При другом прогоне, при консолидации Karpenter или при переносе на большее число
+AZ тот же StorageClass снова даст volume node affinity conflict. Гарантированно верно
+работает только WaitForFirstConsumer, где зона тома всегда равна зоне уже выбранной ноды -
+это задание 5.
+EOF
+cat /var/work/tests/artifacts/4/diagnosis.txt
+```
+
+## Задание 5. Починка: StorageClass `gp3` с `WaitForFirstConsumer`
+
+PVC привязывается к своему StorageClass один раз, поменять класс на существующем PVC
+нельзя, поэтому чинят не патчем `gp3-immediate`, а новым классом и новым StatefulSet:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+parameters:
+  type: gp3
+  encrypted: "true"
+EOF
+
+cat <<'EOF' | kubectl apply -f -
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db-fixed
+  namespace: eks-106
+spec:
+  serviceName: db-fixed
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-fixed
+  template:
+    metadata:
+      labels:
+        app: db-fixed
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      storageClassName: gp3
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+EOF
+
+kubectl rollout status statefulset/db-fixed -n eks-106
+```
+
+С `WaitForFirstConsumer` провижининг тома откладывается до тех пор, пока планировщик не
+выберет ноду для `db-fixed-0`. Только после этого драйвер создаёт том в зоне этой ноды, и
+конфликт `nodeAffinity` становится невозможным по построению. Проверяем, что зона тома
+совпадает с зоной ноды:
+
+```bash
+NODE=$(kubectl get po db-fixed-0 -n eks-106 -o jsonpath='{.spec.nodeName}')
+NODE_ZONE=$(kubectl get node "$NODE" \
+  -o jsonpath='{.metadata.labels.topology\.kubernetes\.io/zone}')
+PV=$(kubectl get pvc data-db-fixed-0 -n eks-106 -o jsonpath='{.spec.volumeName}')
+PV_ZONE=$(kubectl get pv "$PV" \
+  -o jsonpath='{.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0]}')
+echo "node_zone=$NODE_ZONE pv_zone=$PV_ZONE"
+```
+
+Значения `node_zone` и `pv_zone` должны совпасть - это признак корректной, а не случайной
+работы. Дополнительно можно ограничить набор зон явно через `allowedTopologies` в
+StorageClass (ключ `topology.ebs.csi.aws.com/zone`), если нужно исключить конкретную AZ из
+провижининга томов.
+
+## Задание 6. Расширение тома `data-db-fixed-0` с 5Gi до 10Gi
+
+`allowVolumeExpansion: true` в `gp3` разрешает расширение на лету, без пересоздания пода:
+
+```bash
+kubectl patch pvc data-db-fixed-0 -n eks-106 \
+  -p '{"spec":{"resources":{"requests":{"storage":"10Gi"}}}}'
+
+# ждём, пока CSI-драйвер завершит модификацию тома и файловой системы
+until [[ "$(kubectl get pvc data-db-fixed-0 -n eks-106 \
+  -o jsonpath='{.status.capacity.storage}')" == "10Gi" ]]; do
+  sleep 5
+done
+
+kubectl get pvc data-db-fixed-0 -n eks-106 \
+  -o jsonpath='{.status.capacity.storage}'
+echo
+```
+
+Уменьшить том нельзя - только увеличение, и не чаще, чем позволяет лимит модификаций EBS.
+
+## Задание 7. Снапшот тома и восстановление (best effort)
+
+Снапшот работает через три объекта: `VolumeSnapshotClass`, `VolumeSnapshot` и
+автоматически создаваемый `VolumeSnapshotContent`. Snapshot-controller и CRD в кластере
+уже установлены managed addon `snapshot-controller` (компонент `eks_addons`):
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: ebs-snapclass
+driver: ebs.csi.aws.com
+deletionPolicy: Delete
+EOF
+
+cat <<'EOF' | kubectl apply -f -
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: db-snap
+  namespace: eks-106
+spec:
+  volumeSnapshotClassName: ebs-snapclass
+  source:
+    persistentVolumeClaimName: data-db-fixed-0
+EOF
+
+kubectl get volumesnapshot db-snap -n eks-106
+```
+
+Ждём, пока снапшот станет готовым (`readyToUse: true`), и восстанавливаем его в новый PVC.
+Снапшот EBS - региональный объект, но восстановленный из него том снова зональный, поэтому
+класс с `WaitForFirstConsumer` нужен и здесь:
+
+```bash
+kubectl wait --for=jsonpath='{.status.readyToUse}'=true \
+  volumesnapshot/db-snap -n eks-106 --timeout=180s
+
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-restored
+  namespace: eks-106
+spec:
+  storageClassName: gp3
+  accessModes: ["ReadWriteOnce"]
+  dataSource:
+    kind: VolumeSnapshot
+    name: db-snap
+    apiGroup: snapshot.storage.k8s.io
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+
+kubectl get pvc data-restored -n eks-106
+```
+
+`data-restored` останется в `Pending`, пока к нему не обратится под (класс `gp3` -
+`WaitForFirstConsumer`), это ожидаемо: провижининг восстановленного тома тоже откладывается
+до планирования. Если в кластере по какой-то причине нет snapshot-controller или CRD, само
+задание не блокирует остальную лабу - это отдельный необязательный шаг проверки.
+
+## Быстрая проверка
+
+```bash
+check_result
+```

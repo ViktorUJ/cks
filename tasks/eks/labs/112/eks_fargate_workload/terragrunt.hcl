@@ -1,0 +1,47 @@
+include {
+  path = find_in_parent_folders()
+}
+
+locals {
+  vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+}
+
+terraform {
+  source = "../../..//modules/eks_v2_fargate/"
+
+  extra_arguments "retry_lock" {
+    commands  = get_terraform_commands_that_need_locking()
+    arguments = ["-lock-timeout=20m"]
+  }
+}
+
+dependency "vpc" {
+  config_path = "../vpc"
+}
+
+dependency "eks_control_plane" {
+  config_path = "../eks_control_plane"
+}
+
+# EKS позволяет только одну операцию создания/удаления Fargate-профиля на кластер
+# в один момент времени (ResourceInUseException при параллельном apply). Явная
+# зависимость от eks_fargate_system сериализует создание профилей: сначала
+# kube-system/karpenter, потом workload.
+dependency "eks_fargate_system" {
+  config_path = "../eks_fargate_system"
+}
+
+inputs = {
+  region   = local.vars.locals.region
+  aws      = local.vars.locals.aws
+  prefix   = local.vars.locals.prefix
+  vpc_id   = dependency.vpc.outputs.vpc_id
+  app_name = "eks_fargate_workload"
+  name     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
+  fargate = {
+    name       = "workload"
+    subnet_ids = dependency.vpc.outputs.private_subnets_by_type.eks.ids
+    selectors  = [{ namespace = "eks-112" }]
+    tags       = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
+  }
+}
