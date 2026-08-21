@@ -17,7 +17,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from this course chapter:
 
-- [Chapter 15. Fargate: profiles, limitations, cost, usage scenarios](../../course/15/ru.md)
+- [Chapter 15. Fargate: profiles, limitations, cost, usage scenarios](../../course/15/en.md)
 
 ## What we're creating
 

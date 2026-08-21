@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 37. Аддоны EKS: managed addons против Helm, версии и порядок обновления
 
 > **Что дальше.** Этой главой открывается Часть 7 - эксплуатация кластера, который уже

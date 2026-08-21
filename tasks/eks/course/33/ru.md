@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 33. Метрики: Container Insights, Managed Prometheus и Grafana, kube-prometheus-stack
 
 > **Что дальше.** Часть 6 - про наблюдаемость: как понять, что происходит внутри кластера и

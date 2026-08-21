@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 36. Трейсинг и профилирование: ADOT и X-Ray
 
 > **Что дальше.** Главы 33 и 34 дали метрики и логи - две из трёх опор наблюдаемости. Здесь

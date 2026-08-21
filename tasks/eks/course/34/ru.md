@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 34. Логи: Fluent Bit, CloudWatch Logs, OpenSearch, контроль расходов
 
 > **Что дальше.** Глава 33 дала метрики - числовые ряды о загрузке нод и подов. Здесь вторая

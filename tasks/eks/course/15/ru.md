@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 15. Fargate: профили, ограничения, стоимость, сценарии применения
 
 > **Что дальше.** Четыре типа вычислений и место Fargate среди них - глава 9, там он дан

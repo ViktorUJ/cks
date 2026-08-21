@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 14. Плотность и сайзинг: pods per node, лимиты ENI, requests и limits в облаке
 
 > **Что дальше.** Ноды уже умеют появляться под нагрузку: Cluster Autoscaler и Karpenter

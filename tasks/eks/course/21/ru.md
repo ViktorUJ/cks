@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 21. Аудит и детект: логи control plane, CloudTrail, GuardDuty, runtime-мониторинг
 
 > **Что дальше.** Часть 3 закрыла идентичность (главы 16-17), секреты (глава 18), харденинг
@@ -382,3 +383,4 @@ admission-политик, которые не пускают опасное ещ
 
 ---
 [Оглавление](../README_RU.md) · [Глава 20](../20/ru.md) · [Глава 22](../22/ru.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)

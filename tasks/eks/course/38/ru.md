@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 38. Обновление кластера: in-place по версиям, blue/green кластеры, устаревшие API
 
 > **Что дальше.** Глава 37 разобрала аддоны: кто владеет их жизненным циклом и как держать

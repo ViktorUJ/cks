@@ -18,7 +18,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material de este capítulo del curso:
 
-- [Capítulo 15. Fargate: perfiles, limitaciones, coste, escenarios de uso](../../course/15/ru.md)
+- [Capítulo 15. Fargate: perfiles, limitaciones, coste, escenarios de uso](../../course/15/es.md)
 
 ## Qué vamos a crear
 

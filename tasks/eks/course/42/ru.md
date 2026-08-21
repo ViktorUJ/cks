@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 42. Восстановление и DR: restore в существующий и новый кластер, namespace-restore, Velero
 
 > **Что дальше.** Глава 41 дала бэкап: AWS Backup, composite recovery point, состояние

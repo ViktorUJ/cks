@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 25. S3 в приложениях: Mountpoint for Amazon S3 CSI и паттерны доступа
 
 > **Что дальше.** Глава 23 показала блочный EBS (диск в одной AZ, один писатель), глава 24 -

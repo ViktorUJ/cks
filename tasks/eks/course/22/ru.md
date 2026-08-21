@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 22. Политики и мультитенантность: Kyverno и Gatekeeper, изоляция команд
 
 > **Что дальше.** Глава 19 включила Pod Security Admission (PSA) - три готовых уровня

@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 17. EKS Pod Identity: агент, ассоциации, миграция с IRSA
 
 > **Что дальше.** Глава 16 закрыла задачу «своя роль поду» через IRSA: OIDC-провайдер

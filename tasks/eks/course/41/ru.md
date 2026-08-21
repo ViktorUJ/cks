@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 41. Бэкап кластера через AWS Backup: состояние кластера, постоянные тома, composite recovery point
 
 > **Что дальше.** Главы 38-40 закрыли жизненный цикл кластера: апгрейд версий, откат в окне

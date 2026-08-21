@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 44. GitOps и доставка: Argo CD и Flux, управление парком кластеров
 
 > **Что дальше.** Части 5-7 много раз упоминали GitOps как способ раскатывать конфигурацию:

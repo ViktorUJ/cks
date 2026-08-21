@@ -18,7 +18,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Consolider le contenu de ce chapitre du cours :
 
-- [Chapitre 15. Fargate : profils, limitations, coût, scénarios d'usage](../../course/15/ru.md)
+- [Chapitre 15. Fargate : profils, limitations, coût, scénarios d'usage](../../course/15/fr.md)
 
 ## Ce que nous créons
 

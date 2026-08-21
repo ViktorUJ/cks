@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 39. Откат версии кластера: rollback readiness insights, окно 7 дней, порядок отката
 
 > **Что дальше.** Глава 38 разобрала обновление кластера: жизненный цикл версии, in-place

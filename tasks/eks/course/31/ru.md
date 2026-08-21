@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 31. Egress и стоимость трафика: NAT, VPC endpoints, PrivateLink
 
 > **Что дальше.** Главы 26-30 разбирали вход в кластер и изоляцию: NLB (глава 26), ALB (глава

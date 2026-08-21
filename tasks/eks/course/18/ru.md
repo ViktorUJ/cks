@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 18. Секреты: шифрование KMS, Secrets Manager и SSM через External Secrets и CSI
 
 > **Что дальше.** Главы 16 и 17 научили выдавать поду его собственную роль в AWS через IRSA

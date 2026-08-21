@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 35. Автомасштабирование приложений: HPA, внешние метрики, KEDA
 
 > **Что дальше.** Главы 33 и 34 дали метрики и логи - две опоры наблюдаемости. Здесь мы

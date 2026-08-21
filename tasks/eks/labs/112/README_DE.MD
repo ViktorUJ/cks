@@ -18,7 +18,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff dieses Kurskapitels vertiefen:
 
-- [Kapitel 15. Fargate: Profile, Einschränkungen, Kosten, Einsatzszenarien](../../course/15/ru.md)
+- [Kapitel 15. Fargate: Profile, Einschränkungen, Kosten, Einsatzszenarien](../../course/15/de.md)
 
 ## Was wir erstellen
 
