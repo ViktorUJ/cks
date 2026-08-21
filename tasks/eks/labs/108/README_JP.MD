@@ -19,7 +19,7 @@ Network Load Balancer(NLB、L4 ロードバランサー)を作成する現代的
 
 コースの以下の章の内容を定着させます:
 
-- [第 26 章。AWS Load Balancer Controller と LoadBalancer タイプの Service:NLB](../../course/26/ru.md) - コントローラ、アノテーション、NLB 対 CLB
+- [第 26 章。AWS Load Balancer Controller と LoadBalancer タイプの Service:NLB](../../course/26/jp.md) - コントローラ、アノテーション、NLB 対 CLB
 
 ## 作成するもの
 

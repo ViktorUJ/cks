@@ -21,7 +21,7 @@ La vérification est automatique, via la commande `check_result`.
 
 Consolider la matière du chapitre du cours :
 
-- [Chapitre 33. Métriques : Container Insights, Managed Prometheus et Grafana](../../course/33/ru.md)
+- [Chapitre 33. Métriques : Container Insights, Managed Prometheus et Grafana](../../course/33/fr.md)
 
 ## Ce que nous créons
 

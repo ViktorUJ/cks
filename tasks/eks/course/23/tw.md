@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 23 章。EBS CSI：gp3、StorageClass、擴容、快照與 AZ 綁定
 
 > **接下來。** 第 3 部分以安全性結束，第 4 部分由儲存開啟。本章探討 EBS 區塊儲存：磁碟區存在於一個可用區 (AZ)，只能掛載到該區的執行個體，所有特性都圍繞這個事實。多個 Pod 的共用寫入存取和跨 AZ 作業是 EFS 與 FSx（第 24 章），透過 Mountpoint 的物件儲存是第 25 章。CSI 驅動程式的角色透過 IRSA 或 Pod Identity（第 16-17 章）授予，這裡只會參照而不重複說明。Karpenter 以及使節點在 AZ 間移動的整併請見第 12 章，透過 AWS Backup 備份磁碟區請見第 41 章。您從 CKA 已了解 PV、PVC 和 StatefulSet；這裡介紹特定可用區中 EBS 的特性。
@@ -102,10 +102,10 @@ kubectl get storageclass
 
 ```mermaid
 flowchart TB
-    pvc1["Immediate:<br/>PVC created"] --> vol1["Volume in a random AZ"]
-    vol1 --> pod1["Pod Pending:<br/>affinity conflict"]
-    pod2["WaitForFirstConsumer:<br/>pod waits"] --> node2["Scheduler chose a node"]
-    node2 --> vol2["Volume in that node's AZ"]
+    pvc1["Immediate:<br/>PVC 已建立"] --> vol1["任意 AZ 中的磁碟區"]
+    vol1 --> pod1["Pod Pending:<br/>親和性衝突"]
+    pod2["WaitForFirstConsumer:<br/>Pod 等待"] --> node2["排程器選擇了節點"]
+    node2 --> vol2["該節點 AZ 中的磁碟區"]
     style vol1 fill:#db4437,color:#fff
     style vol2 fill:#0f9d58,color:#fff
 ```
@@ -129,11 +129,11 @@ EBS 磁碟區是區域資源：在特定 AZ 建立，且只能掛載到**同一�
 
 ```mermaid
 flowchart TB
-    ebs["EBS volume in AZ-a"]
+    ebs["AZ-a 中的 EBS 磁碟區"]
     pv["PV: nodeAffinity<br/>zone = AZ-a"]
-    pod["Pod bound to AZ-a"]
-    nodeA["Node in AZ-a"]
-    karp["Karpenter launched<br/>a node in AZ-b"]
+    pod["綁定至 AZ-a 的 Pod"]
+    nodeA["AZ-a 中的節點"]
+    karp["Karpenter 在 AZ-b<br/>啟動節點"]
     ebs --> pv --> pod
     nodeA --> pod
     karp -.->|"cannot attach"| pod

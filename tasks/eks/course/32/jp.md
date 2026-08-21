@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第32章. マルチクラスターとマルチアカウント: 接続性、共有リソース、パターン
 
 > **次は何か。** 第26章から第31章では、単一クラスター内のトラフィックを扱いました。NLB と ALB による入口（第26-27章）、Gateway API（第28章）、DNS と証明書（第29章）、NetworkPolicy（第30章）、egress とそのコスト（第31章）です。ここでは規模を広げます。複数のクラスターとアカウントの間の接続性です。VPC Lattice および ServiceExport/ServiceImport によるサービスレベルの接続は第28章で、egress、VPC endpoints、PrivateLink は第31章で、GitOps とクラスター群の管理（Argo CD、Flux）は第44章で、VPC、サブネット、ルートの基本構成はパート0（第00-3章）で詳しく扱います。ここで扱うのは1点です。異なる VPC とアカウントにあるクラスターをどう接続し、何を中央で共有するかです。

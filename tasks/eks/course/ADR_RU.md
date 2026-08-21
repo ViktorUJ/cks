@@ -1,3 +1,4 @@
+[Eng version](ADR.md) · [Versión en español](ADR_ES.md) · [Version française](ADR_FR.md) · [Deutsche Version](ADR_DE.md) · [ქართული ვერსია](ADR_GE.md) · [繁體中文版](ADR_TW.md) · [日本語版](ADR_JP.md)
 # Архитектурные решения курса EKS (ADR)
 
 [Оглавление курса](README_RU.md) · [Глоссарий](GLOSSARY_RU.md)

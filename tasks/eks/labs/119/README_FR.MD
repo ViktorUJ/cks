@@ -22,7 +22,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Renforcer le chapitre du cours :
 
-- [Chapitre 45. Le node n'a pas rejoint le cluster](../../course/45/ru.md) - IAM, SG,
+- [Chapitre 45. Le node n'a pas rejoint le cluster](../../course/45/fr.md) - IAM, SG,
   user data, bootstrap, kubelet, diagnostic systématique couche par couche
 
 ## Ce que nous créons

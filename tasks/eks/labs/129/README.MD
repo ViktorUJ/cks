@@ -21,8 +21,8 @@ Checking is automatic, via the `check_result` command.
 Reinforce the material from the course chapter:
 
 - [Chapter 25. S3 in applications: Mountpoint for Amazon S3 CSI and access
-  patterns](../../course/25/ru.md) - the main material of the lab
-- [Chapter 41-42. AWS Backup for EKS](../../course/41/ru.md) - why EBS snapshots don't
+  patterns](../../course/25/en.md) - the main material of the lab
+- [Chapter 41-42. AWS Backup for EKS](../../course/41/en.md) - why EBS snapshots don't
   apply here
 
 ## What we're creating

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第16章. IRSA: OIDC provider、trust policy、ServiceAccount の annotation
 
 > **この先。** 第2部はコンピュートで終わり、第3部はアイデンティティから始まります。クラスターへの**人間と CI**のアクセスは IAM と RBAC を通じ、access entry は第5章の内容であり、本章とは重複しません。ここで扱うのは別の課題、IRSA を通じた**Pod**の AWS サービス（S3、DynamoDB、Secrets Manager）へのアクセスです。同じ目的のより新しい仕組みである EKS Pod Identity は第17章で扱い、ここでは短い比較のみ示します。Secrets と External Secrets は第18章、IMDSv2 と hop limit のハードニングは第19章、Fargate の pod execution role は第15章です。

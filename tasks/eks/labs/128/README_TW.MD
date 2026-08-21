@@ -20,7 +20,7 @@ AWS Gateway API Controller 搭配 VPC Lattice - 並重現一個典型的症狀:r
 鞏固以下課程章節的內容:
 
 - [第 28 章。AWS 上的 Gateway API:ALB Gateway API 與 VPC
-  Lattice](../../course/28/ru.md)
+  Lattice](../../course/28/tw.md)
 
 ## 我們要創建什麼
 

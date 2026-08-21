@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 20 章。映像與 supply chain：ECR、掃描、簽章、pull through cache
 
 > **接下來。** 第 3 部分已涵蓋身分識別（第 16-17 章）、Secret（第 18 章）以及節點、Pod 與網路的強化（第 19 章）。本章討論叢集中實際執行的內容：映像從何而來、誰驗證過它，以及它是否就是 CI 建置的那個映像。我們將介紹作為 registry 的 ECR、弱點掃描、透過 digest 與簽章確保完整性、pull through cache 及 lifecycle policy。相關主題位於其他章節：具備從 ECR pull 權限的節點角色，以及 AMI 作為**節點**映像（不要與容器映像混淆），見第 10 章；Pod 對 AWS 的存取（IRSA、Pod Identity）見第 16-17 章；映像中的 Secret 見第 18 章；私有叢集與 VPC endpoints 見第 19 章；在 admission 時驗證簽章與 registry（Kyverno、Gatekeeper）見第 22 章；稽核、執行階段掃描與 GuardDuty 見第 21 章；共用 registry 所在的帳戶與 OU 結構見第 0.1 章。
@@ -77,8 +77,8 @@ aws ecr create-repository --repository-name payments/api \
 
 ECR 能尋找映像中已知的 CVE。有兩種模式，這是針對整個 registry 而非單一 repository 的選擇。
 
-- **Basic scanning**：ECR 使用 CVE 資料庫的技術，掃描**OS packages 的弱點**。有兩種頻率：手動與 scan on push（push 時）。Findings 透過 `DescribeImageScanFindings` 取得。
-- **Enhanced scanning**：與 **Amazon Inspector** 整合，掃描**OS 與程式語言 packages**（npm、pip、gem 等）的弱點，並且**持續進行**。出現新 CVE 時，既有映像的結果會自行更新，Inspector 會向 EventBridge 傳送事件。有兩種頻率：scan on push 與 continuous scan。
+- **基本掃描**：ECR 使用 CVE 資料庫的技術，掃描**作業系統套件的弱點**。有兩種頻率：手動與推送時掃描。Findings 透過 `DescribeImageScanFindings` 取得。
+- **增強掃描**：與 **Amazon Inspector** 整合，掃描**作業系統與程式語言套件**（npm、pip、gem 等）的弱點，並且**持續進行**。出現新 CVE 時，既有映像的結果會自行更新，Inspector 會向 EventBridge 傳送事件。有兩種頻率：scan on push 與 continuous scan。
 
 ```bash
 # 在 registry 層級啟用 basic scan on push
@@ -92,10 +92,10 @@ aws ecr describe-image-scan-findings --repository-name payments/api --image-id i
 
 Findings 包含 severity（`CRITICAL`、`HIGH`、`MEDIUM`、...）及 CVE 連結。掃描本身不會阻擋任何事，它只是訊號。為防止有嚴重 findings 的映像**進入 production**，要將掃描納入流程：在 CI 設置 gate（若有 `CRITICAL` 則不 push 或部署），並以 admission policy 驗證（Kyverno 或 Gatekeeper，見第 22 章）。ECR 找出弱點，policy 決定是否允許映像。
 
-| 特性 | Basic scanning | Enhanced scanning (Inspector) |
+| 特性 | 基本掃描 | 增強掃描（Inspector） |
 |---|---|---|
-| 掃描內容 | OS packages | OS + 程式語言 packages（npm、pip、...） |
-| 頻率 | 手動、scan on push | scan on push、持續掃描 |
+| 掃描內容 | 作業系統套件 | 作業系統 + 程式語言套件（npm、pip、...） |
+| 頻率 | 手動、推送時掃描 | 推送時掃描、持續掃描 |
 | 新 CVE 的重新評估 | 否 | 是，自動 |
 | 通知 | - | EventBridge 事件 |
 | 適用位置 | 最低限度、sandbox | production、持續控制 |
@@ -134,7 +134,7 @@ flowchart TB
     rule["Pull through<br/>cache rule"]
     up["上游：Docker Hub,<br/>Quay, registry.k8s.io"]
     pod -->|"依 ECR URI pull"| ecr
-    ecr -->|"cache miss"| rule
+    ecr -->|"快取未命中"| rule
     rule --> up
     up -->|"已快取"| ecr
     style ecr fill:#326ce5,color:#fff

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 32 章。多叢集與多帳戶：連線、共用資源、模式
 
 > **接下來。** 第 26-31 章討論單一叢集內的流量：透過 NLB 與 ALB 的進入流量（第 26-27
@@ -90,7 +90,7 @@ Gateway 的所有 VPC 都可以（若路由表允許）透過 hub 彼此通訊�
 來自已關聯 VPC 的用戶端可透過 DNS 名稱存取它，而無須關心 Pods 位於哪個 VPC、叢集或帳戶。
 Cross-account 透過 AWS RAM 實現（分享 service network）。重要特性是：連線經由服務，而不是
 IP 路由，因此 **CIDR 重疊不再造成問題** - Lattice 不會建立共用 L3 domain。適用於服務之間的
- east-west 流量；外部周邊與入口仍由 ALB 和 NLB 負責。
+東西向流量；外部周邊與入口仍由 ALB 和 NLB 負責。
 
 **PrivateLink。** 對單一服務的單向私有存取（第 31 章）：provider 在 NLB 後方發布 endpoint
 service，consumer 建立 interface endpoint。流量是私有的，CIDR 可重疊（透過 ENI 連線而不是
@@ -182,22 +182,22 @@ flowchart TB
     style shared fill:#34a853,color:#fff
 ```
 
-**Shared services account。** 獨立帳戶放置共用項目：集中式 ECR、Route 53 private zones、
-observability 堆疊（metrics 與 logs，第 33-34 章），有時還有共用 databases。團隊依 repository
-policy 從其 ECR pull images、解析其 private zones 的名稱，並將 metrics 傳送至其 Prometheus。
+**共用服務帳戶。** 獨立帳戶放置共用項目：集中式 ECR、Route 53 私有託管區域、
+可觀測性堆疊（指標與日誌，第 33-34 章），有時還有共用資料庫。團隊依 repository
+政策從其 ECR 拉取映像、解析其私有託管區域的名稱，並將指標推送至其 Prometheus。
 如此可消除重複並取得統一控制點。
 
 ```mermaid
 flowchart TB
     shared["Shared services account"]
-    ecr["ECR (images)"]
-    dns["Route 53 private zones"]
-    obs["Observability"]
-    team["Team accounts"]
+    ecr["ECR（映像）"]
+    dns["Route 53 私有託管區域"]
+    obs["可觀測性"]
+    team["團隊帳戶"]
     shared --> ecr
     shared --> dns
     shared --> obs
-    team -->|"pull, resolve, push metrics"| shared
+    team -->|"拉取、解析、推送指標"| shared
     style shared fill:#34a853,color:#fff
 ```
 
@@ -219,8 +219,8 @@ flowchart TB
   路由的 hub，取代按 N 平方成長的 peering graph。
 - **從第一天起集中規劃 CIDR。** 為每個帳戶與 VPC 配置不重疊 blocks，通常來自共用 IPAM pool；
   事後重新編址成本過高。
-- **將共用項目移至 shared services account。** 集中式 ECR（透過 repository policy 進行
-  cross-account pull）、Route 53 private zones 與 observability，使用一個控制點而不是多份副本。
+- **將共用項目移至共用服務帳戶。** 集中式 ECR（透過 repository 政策進行
+  跨帳戶拉取）、Route 53 私有託管區域與可觀測性，使用一個控制點而不是多份副本。
 - **CIDR 重疊時，透過 VPC Lattice 建置服務連線。** 它不需要共用 L3 domain，cross-account 透過
   RAM，跨叢集透過 ServiceExport/ServiceImport。
 - **透過 GitOps 管理叢集艦隊。** 從一個位置以 declarative 方式將 configuration 與 workloads

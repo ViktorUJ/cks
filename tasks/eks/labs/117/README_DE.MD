@@ -25,10 +25,10 @@ Abnahmekriterien. Die Prüfung ist automatisiert, über den Befehl `check_result
 Den Stoff aus diesen Kurskapiteln vertiefen:
 
 - [Kapitel 31. Egress und Traffic-Kosten: NAT, VPC endpoints,
-  PrivateLink](../../course/31/ru.md) - warum ein einziges NAT pro Cluster den cross-AZ
+  PrivateLink](../../course/31/de.md) - warum ein einziges NAT pro Cluster den cross-AZ
   Traffic doppelt bezahlt, und wie Gateway- und Interface-Endpoints das beheben
 - [Kapitel 43. Kosten: OpenCost und Kubecost, Right-Sizing, Savings Plans, Spot-Mix,
-  Traffic](../../course/43/ru.md) - wie Traffic und Endpoints in Cost Explorer nach
+  Traffic](../../course/43/de.md) - wie Traffic und Endpoints in Cost Explorer nach
   Usage-Type auftauchen
 
 ## Was wir erstellen

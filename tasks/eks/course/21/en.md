@@ -396,4 +396,3 @@ covers admission policies that prevent dangerous items at the point of entry.
 
 ---
 [Table of contents](../README.md) · [Chapter 20](../20/en.md) · [Chapter 22](../22/en.md)
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)

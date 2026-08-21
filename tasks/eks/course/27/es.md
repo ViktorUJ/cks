@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 27. Ingress mediante ALB: target-type, anotaciones, TLS y ACM, WAF
 
 > **Qué sigue.** El capítulo 26 mostró el balanceo L4: Service de tipo LoadBalancer y Network

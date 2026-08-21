@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 36. Trazado y perfilado: ADOT y X-Ray
 
 > **Qué sigue.** Los capítulos 33 y 34 aportaron métricas y logs, dos de los tres pilares de la observabilidad. Aquí está el tercero: el trazado distribuido, que une una solicitud en una única ruta a través de una cadena de servicios, y una breve introducción al perfilado. Los temas relacionados se tratan en otros capítulos: métricas, incluido ADOT como recopilador de métricas para Amazon Managed Prometheus, capítulo 33; logs, capítulo 34; y roles para exportar telemetría a AWS mediante IRSA y Pod Identity, capítulos 16 y 17. Este capítulo cierra la parte 6. A continuación viene la parte 7, operaciones: complementos, actualizaciones, fiabilidad, copias de seguridad y coste.

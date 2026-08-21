@@ -21,7 +21,7 @@ Abnahmekriterien. Die Prüfung ist automatisch, über den Befehl `check_result`.
 
 Das Kapitel des Kurses vertiefen:
 
-- [Kapitel 45. Node ist dem Cluster nicht beigetreten](../../course/45/ru.md) - IAM, SG,
+- [Kapitel 45. Node ist dem Cluster nicht beigetreten](../../course/45/de.md) - IAM, SG,
   user data, bootstrap, kubelet, systematische schichtweise Diagnostik
 
 ## Was wir erstellen

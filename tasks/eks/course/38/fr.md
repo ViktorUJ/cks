@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Русская версия](ru.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 38. Mise à niveau du cluster : versions in-place, clusters blue/green et API obsolètes
 
 > **La suite.** Le chapitre 37 a traité des add-ons : qui est responsable de leur cycle de vie et

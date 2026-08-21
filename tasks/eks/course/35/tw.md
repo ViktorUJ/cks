@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 35 章。應用程式自動擴展：HPA、外部指標、KEDA
 
 > **接下來。** 第 33 與 34 章提供了指標與日誌，這是可觀測性的兩根支柱。本章將指標用於實務：自動擴展應用程式本身，也就是依負載改變 Pod 副本數。相關內容交由其他章節說明：為這些 Pod 擴展節點（Cluster Autoscaler、Karpenter）見第 11 與 12 章；指標來源（metrics-server、Prometheus）見第 33 章；Pod 的垂直調整（requests/limits、VPA）見第 14 章；用於尋找瓶頸的追蹤見第 36 章。本章只聚焦一事：如何讓副本數跟隨真實負載，包括 HPA 以 CPU 看不見的事件。
@@ -273,7 +273,7 @@ kubectl get scaledobject -A
 kubectl get hpa -A | grep keda-hpa
 ```
 
-將結果相互對照：服務是按描述自身負載的指標擴展，還是「習慣性地」按 CPU；HPA 是否看見指標，還是顯示 `<unknown>`；以及新副本是否因節點不足而卡在 `Pending`。除了課程實驗外，儲存庫還有一個關於 KEDA 和 Prometheus 自動擴展的獨立非課程實驗（`../../labs/03/README_RUS.MD`）：它部署 Prometheus、安裝 KEDA，並按真實 RPS 擴展應用程式，是親眼看見整條鏈路的好方法。
+將結果相互對照：服務是按描述自身負載的指標擴展，還是「習慣性地」按 CPU；HPA 是否看見指標，還是顯示 `<unknown>`；以及新副本是否因節點不足而卡在 `Pending`。除了課程實驗外，儲存庫還有一個關於 KEDA 和 Prometheus 自動擴展的獨立非課程實驗（[實驗 03](../../labs/03/README_TW.MD)）：它部署 Prometheus、安裝 KEDA，並按真實 RPS 擴展應用程式，是親眼看見整條鏈路的好方法。
 
 ---
 [目錄](../README_TW.md) · [第 34 章](../34/tw.md) · [第 36 章](../36/tw.md)

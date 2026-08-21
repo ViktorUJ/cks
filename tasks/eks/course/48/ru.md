@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 48. Продакшн-чеклист EKS и что читать дальше
 
 > **Что дальше.** Это финал курса. За 47 глав кластер собран по всем измерениям: control

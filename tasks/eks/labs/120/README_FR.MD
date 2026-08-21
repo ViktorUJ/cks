@@ -38,7 +38,7 @@ critères d'acceptation. La vérification est automatique, via la commande
 
 Renforcer le chapitre du cours :
 
-- [Chapitre 46. Pannes réseau : SG, NACL, DNS, targets unhealthy](../../course/46/ru.md)
+- [Chapitre 46. Pannes réseau : SG, NACL, DNS, targets unhealthy](../../course/46/fr.md)
 
 ## Ce que nous créons
 

@@ -19,7 +19,7 @@ Manager-იდან და მისგან ქმნის ნატიუ�
 
 კურსის თავის მასალის გამტკიცება:
 
-- [თავი 18. საიდუმლოებები: KMS, Secrets Manager და SSM External Secrets-ის მეშვეობით](../../course/18/ru.md)
+- [თავი 18. საიდუმლოებები: KMS, Secrets Manager და SSM External Secrets-ის მეშვეობით](../../course/18/ge.md)
 
 ## რას ვქმნით
 

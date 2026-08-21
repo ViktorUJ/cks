@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第26章. AWS Load Balancer Controller と LoadBalancer 型 Service: NLB
 
 > **次は何か。** ここから第5部、ネットワークとトラフィックです。第3部と第4部で
@@ -431,7 +431,7 @@ groups による Pod ポートの到達性を調べます。アプリケーシ�
 13. Service が外部アドレスなしで `<pending>` のままです。何をどの順に確認しますか？
 14. パブリック NLB に静的アドレスを付ける方法と、デプロイ時の TCP セッション切断を緩和する方法は何ですか？
 
-## Practice
+## 実践
 
 このテーマに対応するコースラボ: [ラボ108: AWS Load Balancer Controller: LoadBalancer 型 Service 用 NLB](../../labs/108/README_JP.MD)。
 それ以外はすべて稼働中のクラスターで確認します。まずコントローラーがインストール済みで正常であることを確認し、

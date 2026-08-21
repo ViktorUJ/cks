@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Chapitre 13. Instances spot : interruptions, diversification et traitement des événements
 
@@ -371,7 +371,7 @@ Vérifiez ensuite la préparation aux interruptions. Prenez un Deployment essent
 et sont-elles réparties entre les zones ? Consultez les logs du gestionnaire d’interruptions
 (`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interrupt`) et évaluez le « bruit »
 normal des reprises. Étudiez séparément le premier lab Karpenter du dépôt
-([Karpenter](../../labs/02/README.MD)) : il ne fait pas partie du cours, mais le sujet se recoupe.
+([Karpenter](../../labs/02/README_FR.MD)) : il ne fait pas partie du cours, mais le sujet se recoupe.
 
 ---
 [Table des matières](../README_FR.md) · [Chapitre 12](../12/fr.md) · [Chapitre 14](../14/fr.md)

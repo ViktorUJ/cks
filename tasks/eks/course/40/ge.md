@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 40. საიმედოობა: multi-AZ, PDB, topology spread, ნოდების კორექტული გამორთვა
 
 > **რა არის შემდეგ.** 38-ე და 39-ე თავებში განვიხილეთ კლასტერის ვერსიები: control plane-ისა და ნოდების განახლება და

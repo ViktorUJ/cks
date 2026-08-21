@@ -1,4 +1,4 @@
-[Versión en español](es.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapter 42. Recovery and DR: restore to an existing and new cluster, namespace restore, Velero
 
 > **What is next.** Chapter 41 covered backup: AWS Backup, a composite recovery point, cluster and volume state at one consistent point. But a backup is only half the work: an unverified backup is not a backup. This chapter covers getting back from that point: restoring to an existing and a new cluster, targeted namespace recovery, Velero as a second tool, plus RTO/RPO and DR strategies. Related subjects belong to other chapters: backup itself and the composite recovery point are in chapter 41; EBS volume affinity to an AZ is in chapter 23; multi-cluster and multi-account connectivity for DR is in chapter 32; rolling back a cluster version (which is not data restore) is in chapter 39.

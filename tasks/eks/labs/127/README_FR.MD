@@ -22,7 +22,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 Consolider la matière du chapitre du cours :
 
 - [Chapitre 22. Politiques et multi-tenance : Kyverno et Gatekeeper, isolation des
-  équipes](../../course/22/ru.md) - la place de ValidatingAdmissionPolicy parmi les policy engines
+  équipes](../../course/22/fr.md) - la place de ValidatingAdmissionPolicy parmi les policy engines
 
 ## Ce que nous créons
 

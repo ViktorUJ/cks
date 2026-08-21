@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 9. Compute-Typen: Managed Node Groups, Self-Managed, Fargate, Auto Mode
 
 > **Wie geht es weiter?** Die Control Plane wird von AWS betrieben (Kapitel 1–2), der Cluster ist erstellt (Kapitel 4), Zugriff und Netzwerk sind eingerichtet (Kapitel 5–8). Als Nächstes stellt sich die Frage, worauf Pods ausgeführt werden: Es gibt nun vier Optionen, jede mit einem eigenen Betriebsmodell. Dieses Kapitel gibt einen Überblick über diese vier Typen und behandelt die zentrale Entscheidung von Teil 2 – EKS Auto Mode gegenüber dem eigenen Stack. AMI, Bootstrap und Launch Template behandelt Kapitel 10, Autoscaling und Karpenter die Kapitel 11–12, Spot Kapitel 13, Sizing und `max-pods` die Kapitel 6 und 14, Fargate im Detail (Profile, Einschränkungen) Kapitel 15.

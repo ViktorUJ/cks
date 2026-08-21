@@ -21,7 +21,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Consolider la matière du chapitre du cours :
 
-- [Chapitre 34. Logs : Fluent Bit, CloudWatch Logs, OpenSearch, contrôle des coûts](../../course/34/ru.md)
+- [Chapitre 34. Logs : Fluent Bit, CloudWatch Logs, OpenSearch, contrôle des coûts](../../course/34/fr.md)
 
 ## Ce que nous créons
 

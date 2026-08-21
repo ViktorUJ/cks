@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第 2 章. EKS control plane: public と private endpoint、platform version、SLA、logs
 
 > **この先の内容。** 責任境界は第 1 章で扱いました。ここからは AWS 側にあるものを具体的に見ます。control plane は `kubectl` には見えませんが、抽象概念ではありません。address、あなたの subnet 内の network interface、security group、独自の patch level、logs、SLA があります。「cluster にアクセスできない」や「pod が作成されない」という incident の半分は、Kubernetes ではなくこれらの設定で説明できます。第 3 章では version とその support 期間を続けて扱います。
@@ -52,11 +52,11 @@ aws eks describe-cluster --name demo \
   --query 'cluster.resourcesVpcConfig.clusterSecurityGroupId' --output text
 ```
 
-## 2.3. Endpoint access mode と、それぞれで壊れるもの
+## 2.3. エンドポイントアクセスモードと、それぞれで壊れるもの
 
 新しい cluster は default で public endpoint として作成されます。`endpointPublicAccess=true`、`endpointPrivateAccess=false` です。これは便利である一方、audit で最初に指摘される点でもあります。利用できる組み合わせは三つで、それぞれ traffic の流れが異なります。
 
-| Mode | Flags | traffic の流れ | access の制御 |
+| モード | フラグ | traffic の流れ | access の制御 |
 |-------|-------|------------------|------------------------|
 | Public のみ (default) | `endpointPublicAccess=true`, `endpointPrivateAccess=false` | VPC 内の node からの request は VPC を出るが Amazon network 内に留まる | `publicAccessCidrs` のみ |
 | Public と private | 両方 `true` | VPC 内からの request は private endpoint、外部からは public endpoint を通る | public は `publicAccessCidrs`、private は cluster security group |
@@ -87,8 +87,8 @@ aws eks describe-update --name demo --update-id <id> --query 'update.status'
 flowchart TB
     client["kubectl または CI"]
     dns["Endpoint の DNS name"]
-    pub["Public NLB address"]
-    priv["Private ENI address<br/>private hosted zone"]
+    pub["パブリック NLB アドレス"]
+    priv["プライベート ENI アドレス<br/>プライベートホストゾーン"]
     api["kube-apiserver"]
     client --> dns
     dns -->|"VPC 外部から"| pub
@@ -147,16 +147,16 @@ cycle は閉じます。webhook の pod が作成されないので webhook は�
 - webhook を複数 instance、異なる AZ、PDB とともに維持する (第 40 章)。
 - network を忘れない。control plane から webhook への path は開いている必要があります。default では control plane egress は AWS が管理します (`controlPlaneEgressMode=AWS_MANAGED`)。`CUSTOMER_ROUTED` mode は route、NACL、security group の責任とともにこの path をあなたに渡し、切り替えは片方向です。`AWS_MANAGED` には戻せません。境界を理解することが大切です。cluster ENI 経由の control plane と node の間の traffic (10250 の kubelet API を含む) はあなたの egress device に依存しません。壊れるのは webhook call と OIDC authentication のように外へ向かう traffic です。
 
-## 2.6. Platform version: 自動で上がる patch level
+## 2.6. プラットフォームバージョン: 自動で上がる patch level
 
 `kubectl get --raw /version` は Kubernetes version を表示しますが、それを提供する正確な EKS control plane は示しません。そのために `eks.14` のような **platform version** があります。
 
 これは Kubernetes minor version 内の EKS control plane capability を示します。どの API server flag が有効か、どの admission controller set が active か、現在の Kubernetes patch level は何かです。番号は minor version ごとに独立し、`eks.1` から始まります。AWS が新しい control plane setting や security fix を出すと increment されます。したがって、1.30 の `eks.1` と 1.31 の `eks.1` は異なる control plane build です。Kubernetes version との重要な違いは、**platform version update をあなたが開始しない**ことです。AWS が既存 cluster をその minor version の current platform version に徐々に上げます。新しい platform version は breaking change を持ち込まず、downtime も発生させません。
 
-| 質問 | Kubernetes version | Platform version |
+| 質問 | Kubernetes version | プラットフォームバージョン |
 |--------|-------------------|------------------|
 | 変更を開始するのは誰か | あなた。EKS API を呼び出す (第 38 章) | AWS。自動 |
-| Format | `1.33` | `eks.14` |
+| 形式 | `1.33` | `eks.14` |
 | 互換性のない変更を持ち込むか | はい。だから準備する | いいえ |
 | 内容 | Kubernetes version とその API | apiserver flag、admission plugin set、Kubernetes patch |
 | いつあなたの問題になるか | 常に。support 期間と update plan | cluster が platform version を二つ以上遅れた場合 |
@@ -178,7 +178,7 @@ master への `ssh` も `kubectl logs -n kube-system kube-apiserver-...` もあ�
 
 type はちょうど五つで、API の名称も `api`、`audit`、`authenticator`、`controllerManager`、`scheduler` です。
 
-| Type | 内容 | 役立つ場面 |
+| 種類 | 内容 | 役立つ場面 |
 |-----|-----------|---------------|
 | `api` | kube-apiserver component の log。cluster 作成時から有効にすると stream の始めに API server 起動 flag が見える | API error と timeout の調査、control plane configuration の理解 |
 | `audit` | 誰が、いつ、どの request と result で cluster object を変更したか。user、administrator、system component | 「誰が namespace を削除したか」、incident 調査、compliance (第 21 章) |
@@ -224,7 +224,7 @@ control plane metric は API から Prometheus format の `kubectl get --raw /me
 
 | 見るもの | Metrics | 増加が示すこと |
 |--------------|---------|--------------------|
-| API latency | `apiserver_request_duration_seconds` | control plane または etcd の負荷、pagination のない request、重い LIST |
+| API レイテンシ | `apiserver_request_duration_seconds` | control plane または etcd の負荷、pagination のない request、重い LIST |
 | Error と throttling | code 別の `apiserver_request_total` | 429 の spike は client が cluster を圧迫していること、5xx は `api` log を確認 |
 | Admission | `apiserver_admission_controller_admission_duration_seconds`, `apiserver_admission_webhook_rejection_count` | 遅いまたは拒否する webhook、あなた自身の bottleneck (section 2.5) |
 | etcd | `etcd_request_duration_seconds`, `apiserver_storage_size_bytes` | database size limit への接近。満杯になると cluster は read-only になる |
@@ -259,7 +259,7 @@ control plane の multi-AZ があなたに提供しないものは次です。
 | topology spread、PDB、適切な node shutdown | application availability は API availability を継承しない (第 40 章) |
 | EBS volume の AZ への attachment | volume は pod とともに AZ 間を移動しない (第 23 章) |
 | あなたの webhook と addon の availability | section 2.5 と第 37 章。停止させるのはあなたで、admission が影響を受ける |
-| Multi-Region | SLA は regional。cluster は一 Region にあり、DR は別の作業 (第 42 章) |
+| マルチリージョン | SLA は regional。cluster は一 Region にあり、DR は別の作業 (第 42 章) |
 
 business に説明するときの表現はこうです。SLA は **API server endpoint の availability** を対象とし、あなたの application の availability は対象としません。control plane が完全に動作していても application は停止でき、それは全面的にあなたの incident です。
 
@@ -268,7 +268,7 @@ business に説明するときの表現はこうです。SLA は **API server en
 - **両 endpoint mode を有効にし、public を絞る。** `endpointPrivateAccess=true` に office と VPN range の `publicAccessCidrs` を組み合わせます。完全な private-only は、CI、bastion、DNS を事前に準備した上での意識的な選択です。
 - **Endpoint configuration を code に置く。** mode、CIDR、security group、log type は Terraform または eksctl に置きます (第 4 章)。console での変更は次の `apply` までしか残りません。
 - **初日から log を有効にする。** 最低でも `audit` と `authenticator` を有効にし、retention を明示し、`audit` 内の疑わしい event に metric filter と alarm を設定します (第 21 章)。
-- **Dashboard に control plane metric を置く。** API latency、429 と 5xx の割合、admission duration、etcd database size です。429 の spike は incident として調査し、client を探します。
+- **Dashboard に control plane metric を置く。** API レイテンシ、429 と 5xx の割合、admission duration、etcd database size です。429 の spike は incident として調査し、client を探します。
 - **Webhook を control plane の一部として扱う。** 狭い scope、短い timeout、`kube-system` の除外、異なる AZ の複数 replica、PDB を使います。
 - **Cluster security group は「すべて許可」でも「すべて拒否」でもない。** documentation の最小 rule に、bastion と transit network 用の明示的な ingress 443 を追加します。
 
@@ -278,7 +278,7 @@ business に説明するときの表現はこうです。SLA は **API server en
 - **`endpointPublicAccess` / `endpointPrivateAccess`** は access mode の Boolean flag で、default は `true` と `false` です。**`publicAccessCidrs`** は public endpoint を利用できる CIDR の list で、default は `0.0.0.0/0` です。
 - **Cross-account ENI** は、control plane と node、kubelet API、webhook、OIDC の connectivity のため、EKS があなたの subnet に作成する network interface です。**Cluster security group** は cluster 用に自動作成され、これらの interface と managed node group の node に付加される group です。
 - **Private hosted zone** は endpoint name が private address に resolve されるよう、EKS が作成してあなたの VPC に関連付ける Route 53 zone です。
-- **Platform version** は Kubernetes minor version 内の EKS control plane の patch level と capability set です。format は `eks.<n>` で、AWS により自動 update されます。
+- **プラットフォームバージョン** は Kubernetes minor version 内の EKS control plane の patch level と capability set です。format は `eks.<n>` で、AWS により自動 update されます。
 - **Control plane log type** は `api`、`audit`、`authenticator`、`controllerManager`、`scheduler` です。有効にした後にのみ CloudWatch Logs へ書き込まれます。
 - **API Priority and Fairness** は concurrent request の quota を type 間に配分する Kubernetes mechanism です。quota が尽きると client は `429` を受け取ります。
 
@@ -289,7 +289,7 @@ business に説明するときの表現はこうです。SLA は **API server en
 - access mode は三つです。public のみ (default)、public と private、private のみです。mode の変更は VPC 外にあるものを壊します。SaaS CI runner、office の `kubectl`、peered VPC の node です。private access には private hosted zone と VPC の正しい DNS setting が必要です。
 - CIDR restriction は network filter であり authentication ではありません。IAM と RBAC は必須のままです。
 - API server はあなたの webhook を呼びます。広い rule を持つ利用不能な webhook は pod creation を止め、自身に対する cycle を作ります。
-- Platform version は control plane の patch level で自動的に上がります。cluster が二 version より遅れた場合だけ対応が必要です。
+- プラットフォームバージョン は control plane の patch level で自動的に上がります。cluster が二 version より遅れた場合だけ対応が必要です。
 - 五つの control plane log type は default で無効で、CloudWatch Logs に書き込まれ、費用がかかります。retention は CloudWatch で設定します。
 - Control plane は三つの AZ に分散され、standard mode の endpoint availability SLA は 99.95% です。application、volume、webhook の multi-AZ はあなたの責任として残ります。
 
@@ -308,7 +308,7 @@ on-call 中の三つの状況を考えます。一つ目は「cluster に access
 7. `publicAccessCidrs` の default value は何ですか。なぜ絞っても RBAC を置き換えられませんか。
 8. Public access を制限した後に node が登録しなくなりました。何を忘れましたか。
 9. 利用できない validating webhook が pod creation を停止する理由と、cycle を断つ方法は何ですか。
-10. Platform version は Kubernetes version と何が異なり、誰が update しますか。
+10. プラットフォームバージョン は Kubernetes version と何が異なり、誰が update しますか。
 11. Control plane log type を五つ挙げ、「誰が namespace を削除したか」をどれで探すか答えてください。
 12. API server が `429` を返します。これは何を意味し、どこから調査しますか。
 13. EKS SLA は何を対象とし、AZ failure 時に何があなたの責任として残りますか。

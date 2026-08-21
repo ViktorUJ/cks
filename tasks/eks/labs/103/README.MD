@@ -21,12 +21,12 @@ Checking is automatic, via the `check_result` command.
 Reinforce the material from these course chapters:
 
 - [Chapter 6. Cluster networking: VPC CNI, ENI and IP addresses, CIDR
-  planning](../../course/06/ru.md) - where pods get their addresses from and how the pod
+  planning](../../course/06/en.md) - where pods get their addresses from and how the pod
   limit is computed
 - [Chapter 7. Scaling the address plan: prefix delegation, secondary CIDR, custom
-  networking](../../course/07/ru.md) - what to do when addresses run low
+  networking](../../course/07/en.md) - what to do when addresses run low
 - [Chapter 14. Density and sizing: pods per node, ENI limits, requests and limits in the
-  cloud](../../course/14/ru.md) - how the address limit lines up with the resource limit
+  cloud](../../course/14/en.md) - how the address limit lines up with the resource limit
 
 ## What we're creating
 

@@ -22,8 +22,8 @@ IngressGroup 與 external-dns 記錄的運作方式,對私有場景和公開場�
 
 鞏固以下課程章節的內容:
 
-- [第 27 章。透過 ALB 的 Ingress:target-type、annotation、TLS 與 ACM、WAF](../../course/27/ru.md)
-- [第 29 章。DNS 與憑證:external-dns、Route 53、cert-manager](../../course/29/ru.md)
+- [第 27 章。透過 ALB 的 Ingress:target-type、annotation、TLS 與 ACM、WAF](../../course/27/tw.md)
+- [第 29 章。DNS 與憑證:external-dns、Route 53、cert-manager](../../course/29/tw.md)
 
 ## 我們要創建什麼
 

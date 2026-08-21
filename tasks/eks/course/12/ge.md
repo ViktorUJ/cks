@@ -549,7 +549,7 @@ consolidation-ის მეტრიკებს) აქვეყნებს (�
 იპოვეთ StatefulSet და შეასრულეთ `kubectl get pdb -A` - აქვს თუ არა მას PDB და რა წერია
 `maxUnavailable`-ში? `Unconsolidatable` მოძებნეთ `kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` ჟურნალებში და ნოდების მოვლენებში. ცალკე განიხილეთ
 რეპოზიტორიის ადრინდელი Karpenter-ის ლაბა
-([Karpenter](../../labs/02/README_RUS.MD)) - ის კურსის ნაწილი არ არის, მაგრამ თემები იკვეთება.
+([Karpenter](../../labs/02/README_GE.MD)) - ის კურსის ნაწილი არ არის, მაგრამ თემები იკვეთება.
 
 ---
 [სარჩევი](../README_GE.md) · [თავი 11](../11/ge.md) · [თავი 13](../13/ge.md)

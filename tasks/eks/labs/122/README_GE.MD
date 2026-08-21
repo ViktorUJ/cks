@@ -19,13 +19,13 @@ rollback წაშლილ namespace-ს - მოტივირებადი
 
 განამტკიცოთ კურსის თავების მასალა:
 
-- [თავი 41. კლასტერის backup AWS Backup-ით](../../course/41/ru.md) - composite
+- [თავი 41. კლასტერის backup AWS Backup-ით](../../course/41/ge.md) - composite
   recovery point, backup plan, vault, IAM role
-- [თავი 42. აღდგენა და DR](../../course/42/ru.md) - namespace restore,
+- [თავი 42. აღდგენა და DR](../../course/42/ge.md) - namespace restore,
   non-destructive restore
-- [თავი 23. EBS CSI](../../course/23/ru.md) - StorageClass gp3, PVC-ს უკან მდგარი ტომი,
+- [თავი 23. EBS CSI](../../course/23/ge.md) - StorageClass gp3, PVC-ს უკან მდგარი ტომი,
   რომელიც backup-ში ხვდება
-- [თავი 5. კლასტერზე წვდომა](../../course/05/ru.md) - ავტორიზაციის რეჟიმი
+- [თავი 5. კლასტერზე წვდომა](../../course/05/ge.md) - ავტორიზაციის რეჟიმი
   `API_AND_CONFIG_MAP` და access entries, რომელთა გარეშე AWS Backup ვერ კითხულობს
   კლასტერს
 

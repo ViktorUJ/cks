@@ -19,7 +19,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from the course chapter:
 
-- [Chapter 35. Application autoscaling: HPA, external metrics, KEDA](../../course/35/ru.md)
+- [Chapter 35. Application autoscaling: HPA, external metrics, KEDA](../../course/35/en.md)
 
 ## What we're creating
 

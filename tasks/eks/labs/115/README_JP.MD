@@ -21,7 +21,7 @@
 
 コースの以下の章の内容を定着させます:
 
-- [第 34 章。ログ:Fluent Bit、CloudWatch Logs、OpenSearch、コスト管理](../../course/34/ru.md)
+- [第 34 章。ログ:Fluent Bit、CloudWatch Logs、OpenSearch、コスト管理](../../course/34/jp.md)
 
 ## 作成するもの
 

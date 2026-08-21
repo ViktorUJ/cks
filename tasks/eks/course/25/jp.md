@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第25章. アプリケーションでの S3: Mountpoint for Amazon S3 CSI とアクセスパターン
 
 > **次は何か。** 第23章ではブロック EBS（1つの AZ 内のディスク、1ライター）、第24章では
@@ -409,7 +409,7 @@ kubectl logs -n kube-system -l app.kubernetes.io/name=aws-mountpoint-s3-csi-driv
 14. Mountpoint のローカルデータキャッシュを有効にするにはどうしますか？ `cacheEmptyDirSizeLimit` を設定するのはなぜですか？
 15. S3 Express One Zone は Mountpoint に何をもたらし、ゾーン性の代償は何ですか？
 
-## Practice
+## 実践
 
 このトピックに対応するコースラボ: [ラボ129 - Mountpoint for S3: ファイルセマンティクスが壊れる場所と、なぜ
 バックアップがないのか](../../labs/129/README_JP.MD)。実在するバケット上の静的 PV、成功する操作（新規オブジェクトと

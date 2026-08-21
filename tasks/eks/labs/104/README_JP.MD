@@ -20,8 +20,8 @@ Pod は `AccessDenied` を受け取ります。これはノードのロールが
 
 コースの以下の章の内容を定着させます:
 
-- [第 16 章。IRSA: OIDC プロバイダー、trust policy、ServiceAccount のアノテーション](../../course/16/ru.md)
-- [第 17 章。EKS Pod Identity: エージェント、アソシエーション、IRSA からの移行](../../course/17/ru.md)
+- [第 16 章。IRSA: OIDC プロバイダー、trust policy、ServiceAccount のアノテーション](../../course/16/jp.md)
+- [第 17 章。EKS Pod Identity: エージェント、アソシエーション、IRSA からの移行](../../course/17/jp.md)
 
 ## 作成するもの
 

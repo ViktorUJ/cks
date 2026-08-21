@@ -22,7 +22,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff dieses Kurskapitels vertiefen:
 
-- [Kapitel 34. Logs: Fluent Bit, CloudWatch Logs, OpenSearch, Kostenkontrolle](../../course/34/ru.md)
+- [Kapitel 34. Logs: Fluent Bit, CloudWatch Logs, OpenSearch, Kostenkontrolle](../../course/34/de.md)
 
 ## Was wir erstellen
 

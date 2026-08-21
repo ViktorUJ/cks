@@ -21,7 +21,7 @@ NodePool，並設定明確的 `limits` - 因為內建的 pool 沒有這些設定
 鞏固本課程這一章的內容：
 
 - [第 9 章。運算類型：managed node groups、self-managed、Fargate、Auto
-  Mode](../../course/09/ru.md) - 何時啟用 EKS Auto Mode，何時自建技術棧
+  Mode](../../course/09/tw.md) - 何時啟用 EKS Auto Mode，何時自建技術棧
 
 ## 我們要建立什麼
 

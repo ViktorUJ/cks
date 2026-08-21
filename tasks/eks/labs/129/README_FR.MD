@@ -22,8 +22,8 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 Renforcer le contenu du chapitre du cours :
 
 - [Chapitre 25. S3 dans les applications : Mountpoint for Amazon S3 CSI et les patterns
-  d'accès](../../course/25/ru.md) - matière principale du labo
-- [Chapitre 41-42. AWS Backup pour EKS](../../course/41/ru.md) - pourquoi les snapshots EBS
+  d'accès](../../course/25/fr.md) - matière principale du labo
+- [Chapitre 41-42. AWS Backup pour EKS](../../course/41/fr.md) - pourquoi les snapshots EBS
   ne s'appliquent pas ici
 
 ## Ce que nous créons

@@ -19,8 +19,8 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from these course chapters:
 
-- [Chapter 16. IRSA: the OIDC provider, trust policy, ServiceAccount annotations](../../course/16/ru.md)
-- [Chapter 17. EKS Pod Identity: the agent, associations, migrating from IRSA](../../course/17/ru.md)
+- [Chapter 16. IRSA: the OIDC provider, trust policy, ServiceAccount annotations](../../course/16/en.md)
+- [Chapter 17. EKS Pod Identity: the agent, associations, migrating from IRSA](../../course/17/en.md)
 
 ## What we're creating
 

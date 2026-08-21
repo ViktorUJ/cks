@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 41. კლასტერის ბექაპი AWS Backup-ის მეშვეობით: კლასტერის მდგომარეობა, მუდმივი ტომები, composite recovery point
 
 > **რა არის შემდეგ.** 38-40 თავებში კლასტერის სასიცოცხლო ციკლი განვიხილეთ: ვერსიების განახლება,

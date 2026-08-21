@@ -17,7 +17,7 @@
 
 鞏固課程章節的內容:
 
-- [第 20 章。映像與 supply chain:ECR、掃描、簽章、pull through cache](../../course/20/ru.md) - 映像從哪裡來,誰檢查過它
+- [第 20 章。映像與 supply chain:ECR、掃描、簽章、pull through cache](../../course/20/tw.md) - 映像從哪裡來,誰檢查過它
 
 ## 我們要建立什麼
 

@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第 1 章. はじめに: EKS が担うことと、あなたに残ること
 
 > **この先の内容。** Part 0 で AWS の用語を扱いました: account、IAM、VPC、EC2、tool です。ここからが本題です。"AWS が行うこと" と "あなたが行うこと" の境界はどこにあるのでしょうか。kubeadm の後では、EKS は誰かが `kube-apiserver` を再起動するだけの同じ cluster だと思いがちです。違いはもっと深いものです。一部の作業と慣れた tool がなくなり、新しい障害原因が現れます。第 2 章では control plane を具体的に扱い、第 3 章では version と upgrade を扱います。
@@ -74,7 +74,7 @@ user request と動作中の pod の間にあるものは、今もすべてあ�
 | minor version の選択と support 期間 | あなた | あなた、support 対象内で | 第 3 章 |
 | Node: AMI、bootstrap、OS patch、upgrade、scale | あなた | あなた | 第 10、11、12、38 章 |
 | CNI、address plan、pod の IP | あなた | あなた | 第 6、7、8 章 |
-| Authentication、RBAC、multi-tenancy | あなた、certificate | あなた、IAM と access entry | 第 5、22 章 |
+| 認証、RBAC、マルチテナンシー | あなた、certificate | あなた、IAM と access entry | 第 5、22 章 |
 | Addon: CoreDNS、kube-proxy、CSI、version | あなた | あなた、managed addon が補助 | 第 37 章 |
 | Load balancer、Ingress、DNS、TLS | あなた | あなた | 第 26-29 章 |
 | Storage: StorageClass、volume、snapshot | あなた | あなた | 第 23、24、25 章 |
@@ -115,8 +115,8 @@ flowchart TB
 
 | AWS の領域 (cloud の security) | 共同領域 | あなたの領域 (cloud 内の security) |
 |--------------------------------|-----------------|-----------------------------------|
-| control plane、etcd、hypervisor、physical infrastructure | IAM と RBAC、access entry | node、OS、AMI、kubelet、containerd |
-| control plane patch、platform version | endpoint access mode | application、requests/limits、NetworkPolicy |
+| control plane、etcd、hypervisor、物理インフラストラクチャ | IAM と RBAC、access entry | node、OS、AMI、kubelet、containerd |
+| control plane patch、platform version | エンドポイントアクセスモード | application、requests/limits、NetworkPolicy |
 | control plane の multi-AZ 配置 | KMS による secret encryption | volume 内の data とその backup |
 
 共同領域は多くの incident の原因です。tool は存在しても設定はあなたの担当だからです。代表例は Kubernetes API data の encryption です。AWS は etcd disk を暗号化します。version 1.28 以降では、KMS provider v2 による envelope encryption が AWS key でデフォルト動作し、あなたの操作は不要です。独自の customer managed key は暗号化の有無ではなく所有権を変えます。key policy、CloudTrail における decrypt の audit、key access を取り消す影響はあなたの責任です。一方、AWS は provider を `kube-apiserver` に統合しており、その統合は設定できません (第 18 章)。
@@ -202,7 +202,7 @@ aws eks describe-addon-versions --addon-name vpc-cni --kubernetes-version 1.33 \
 ## 1.10. ミニ用語集
 
 - **Amazon EKS** は AWS の managed Kubernetes です。control plane は AWS が保守し、node と周辺 infrastructure はあなたのものです。**Control plane** は API server、scheduler、controller manager、etcd であり、EKS では AWS account 内、VPC の外にあり、`kubectl get pods -n kube-system` には見えません。**Data plane** はあなたの node と、その上で動くすべてです。
-- **Platform version** は Kubernetes minor version 内の EKS control plane patch level で、あなたの操作なしに上がります。**Cluster endpoint** は API server の address で、public、private、または両方です (第 2 章)。
+- **プラットフォームバージョン** は Kubernetes minor version 内の EKS control plane patch level で、あなたの操作なしに上がります。**Cluster endpoint** は API server の address で、public、private、または両方です (第 2 章)。
 - **Access entry** は IAM principal を cluster 内の permission に対応付けるもので、`aws-auth` ConfigMap の現在の代替です (第 5 章)。
 - **Managed node group** は、あなたの command により EKS が lifecycle を管理する node group です。**Auto Mode** は AWS が node と基本 addon も担う mode です (第 9 章)。**Managed addon** は EKS があなたの要求に応じて version を管理する addon (VPC CNI、CoreDNS、kube-proxy、CSI) です (第 37 章)。
 - **Shared responsibility** は、AWS が cloud の security に、あなたが cloud 内の security に責任を持つことです。

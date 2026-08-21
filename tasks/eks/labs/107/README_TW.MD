@@ -18,10 +18,10 @@ security group 是否允許叢集節點的 NFS 流量(port 2049),以及移除這
 
 鞏固課程以下章節的內容:
 
-- [第 24 章。EFS 與 FSx:跨 AZ 的工作負載共用儲存](../../course/24/ru.md) - 這個 lab 的主要材料
-- [第 23 章。EBS CSI:gp3、StorageClass、擴容、快照、AZ 綁定](../../course/23/ru.md) - 用來對比的對象:區域性區塊 volume 與跨區域網路 volume
-- [第 9 章。運算類型:managed node group、Fargate、Auto Mode](../../course/09/ru.md) - 為什麼叢集有多個 AZ,節點又在哪裡
-- [第 16-17 章。IRSA 與 Pod Identity](../../course/16/ru.md) - driver 如何取得管理 EFS 的權限
+- [第 24 章。EFS 與 FSx:跨 AZ 的工作負載共用儲存](../../course/24/tw.md) - 這個 lab 的主要材料
+- [第 23 章。EBS CSI:gp3、StorageClass、擴容、快照、AZ 綁定](../../course/23/tw.md) - 用來對比的對象:區域性區塊 volume 與跨區域網路 volume
+- [第 9 章。運算類型:managed node group、Fargate、Auto Mode](../../course/09/tw.md) - 為什麼叢集有多個 AZ,節點又在哪裡
+- [第 16-17 章。IRSA 與 Pod Identity](../../course/16/tw.md) - driver 如何取得管理 EFS 的權限
 
 ## 我們要建立的內容
 

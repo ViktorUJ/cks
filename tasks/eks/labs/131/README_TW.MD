@@ -16,7 +16,7 @@
 
 鞏固課程章節內容：
 
-- [第 40 章。可靠性：multi-AZ、PDB、topology spread](../../course/40/ru.md) -
+- [第 40 章。可靠性：multi-AZ、PDB、topology spread](../../course/40/tw.md) -
   正確停用節點
 
 ## 我們要創建的內容

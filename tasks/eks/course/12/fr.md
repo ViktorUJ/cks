@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [English version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 12. Karpenter : NodePool, EC2NodeClass, disruption, consolidation, drift
 
 > **La suite.** Le chapitre 11 a traité le choix entre Cluster Autoscaler et Karpenter au niveau de
@@ -567,7 +567,7 @@ StatefulSet et vérifiez `kubectl get pdb -A` : possède-t-il un PDB et quelle e
 `maxUnavailable` ? Consultez les logs de
 `kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` et les événements des nœuds
 pour rechercher `Unconsolidatable`. Étudiez séparément le lab Karpenter plus ancien du dépôt
-([Karpenter](../../labs/02/README_RUS.MD)) : il ne fait pas partie du cours, mais le sujet se
+([Karpenter](../../labs/02/README_FR.MD)) : il ne fait pas partie du cours, mais le sujet se
 recoupe.
 
 ---

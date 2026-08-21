@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 25. S3 en aplicaciones: Mountpoint for Amazon S3 CSI y patrones de acceso
 
 > **Qué sigue.** El capítulo 23 mostró EBS de bloques (un disco en una AZ, un escritor), el capítulo 24

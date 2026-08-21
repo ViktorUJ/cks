@@ -1,3 +1,5 @@
+[Eng version](COST_MODEL.md) · [Versión en español](COST_MODEL_ES.md) · [Version française](COST_MODEL_FR.md) · [Deutsche Version](COST_MODEL_DE.md) · [ქართული ვერსია](COST_MODEL_GE.md) · [繁體中文版](COST_MODEL_TW.md) · [日本語版](COST_MODEL_JP.md)
+
 # Модель затрат кластера EKS: шаблон оценки
 
 [Оглавление курса](README_RU.md) · [Глава 43](43/ru.md) · [Глоссарий](GLOSSARY_RU.md)

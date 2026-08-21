@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第 3 章. バージョンのライフサイクル: standard と extended support、アップグレード戦略
 
 > **次に何をするか。** Control plane は AWS が運用しますが、Kubernetes のバージョンを選ぶのはあなたであり、その選択には有効期限があります。standard support は 14 か月、extended support は 12 か月で、期限後には関与しないまま cluster がアップグレードされます。本章はポリシーと計画について扱います。期間、料金、リスク、準備、チームのリズムです。アップグレードの仕組みは第 38 章、rollback は第 39 章、add-on のバージョンは第 37 章で説明します。ここで決めるのは、何をいつ行うかであり、どのように行うかではありません。
@@ -44,12 +44,12 @@ flowchart TB
 リリース日と両期間の終了日を含むカレンダーは EKS documentation と API で確認できます。日付を runbook に hardcode しないでください。日付は更新され、新しいバージョンも追加されます。
 
 ```bash
-# All EKS versions with support end dates
+# サポート終了日を含むすべての EKS バージョン
 aws eks describe-cluster-versions \
   --query 'clusterVersions[].[clusterVersion,versionStatus,endOfStandardSupportDate,endOfExtendedSupportDate]' \
   --output table
 
-# Only versions already in extended support
+# すでに extended support 中のバージョンのみ
 aws eks describe-cluster-versions --version-status extended-support
 ```
 
@@ -71,11 +71,11 @@ standard support の終了時に cluster に何が起きるかは、値が `supp
 三つの詳細があります。**Extended support は新規および既存の clusters でデフォルト有効**です。突然のアップグレードからは守られますが、請求額の増加は防げません。**ポリシーの切り替えでは extended support を終了できません**。無効にできるのはバージョンが standard support 中の場合だけです。**`EXTENDED` は事前に有効化する必要があります**。自動アップグレードが始まると、ポリシー変更が間に合わないことがあります。
 
 ```bash
-# Current cluster policy and version
+# 現在のクラスターのポリシーとバージョン
 aws eks describe-cluster --name demo \
   --query 'cluster.{version:version,platform:platformVersion,policy:upgradePolicy}'
 
-# Disable extended support: the cluster will be automatically upgraded at the end of standard support
+# extended support を無効化: standard support の終了時にクラスターは自動アップグレードされる
 aws eks update-cluster-config --name demo --upgrade-policy supportType=STANDARD
 ```
 
@@ -110,11 +110,11 @@ AMI の行は別格です。Kubernetes のバージョンと同時に node opera
 **1. API inventory。** Cluster 内に objects を作成するすべてのものを対象にします。manifests、charts、CI templates、operators です。目的は、target version に存在しなくなる `apiVersion` を見つけることです。Control plane audit logs（第 2 章）は、git の内容だけでなく、obsolete APIs への実際の calls を示します。
 
 ```bash
-# pluto: audit removed and deprecated apiVersions in manifests and charts; exits 2-3 when findings are present
+# pluto: manifests と charts 内の削除済みおよび非推奨 apiVersions を監査する。検出時は 2-3 で終了
 pluto detect-files -d ./manifests --target-versions k8s=v1.34.0
 helm template ./chart | pluto detect - --target-versions k8s=v1.34.0
 
-# kubent (kube-no-trouble): checks the live cluster and Helm releases; -e fails CI when findings are present
+# kubent (kube-no-trouble): 稼働中のクラスターと Helm リリースを確認する。検出がある場合は -e が CI を失敗させる
 kubent --target-version 1.34 --exit-error
 ```
 
@@ -123,22 +123,22 @@ kubent --target-version 1.34 --exit-error
 **2. Cluster insights。** EKS 自身が cluster に対して一連の checks を実行し、およそ一日ごと、または要求時に更新します。`UPGRADE_READINESS` は deprecated APIs を含め、アップグレード可能性に影響する checks を扱います。`ROLLBACK_READINESS` は rollback が可能な状態かを示し、更新後 7 日間利用できます（第 39 章）。
 
 ```bash
-# Upgrade readiness checks and their statuses
+# アップグレード準備状況のチェックとそのステータス
 aws eks list-insights --cluster-name demo --filter categories=UPGRADE_READINESS \
   --query 'insights[].[name,insightStatus.status,kubernetesVersion]' --output table
 
-# Details of a specific check: what was found and what is recommended
+# 特定のチェックの詳細: 検出内容と推奨事項
 aws eks describe-insight --cluster-name demo --id <insight-id>
 ```
 
 **3. Add-on と controller の matrix。** Target version と互換性のある add-on versions の一覧と、third-party controllers からのサポート確認です。
 
 ```bash
-# Which add-on versions are available for the target cluster version
+# 対象クラスターのバージョンで利用可能な add-on バージョン
 aws eks describe-addon-versions --addon-name vpc-cni --kubernetes-version 1.34 \
   --query 'addons[].addonVersions[].addonVersion' --output text
 
-# Which API groups are present in the cluster and whether the client lags behind the server
+# クラスターに存在する API グループと、クライアントがサーバーより遅れていないか
 kubectl api-resources --sort-by=name -o wide | head -30
 kubectl version
 ```
@@ -189,7 +189,7 @@ flowchart TB
 Rollback は正直に捉えてください。計画ではなく、限定的な保険です。アップグレード後 7 日間だけ、一つ前の minor version に対してのみ、かつアップグレードが in-place の場合にのみ可能です。extended support の終了時に自動アップグレードされた clusters は rollback できません（第 39 章）。更新は一つの command で開始します。
 
 ```bash
-# Start a control plane update by one minor version (details in Chapter 38)
+# control plane を 1 つの minor version だけ更新開始（詳細は第38章）
 aws eks update-cluster-version --name demo --kubernetes-version 1.34
 aws eks describe-update --name demo --update-id <update-id> --query 'update.[status,type]'
 ```
@@ -210,7 +210,7 @@ aws eks describe-update --name demo --update-id <update-id> --query 'update.[sta
 別の課題は、十数個の clusters を持つ fleet です。それぞれに異なるバージョンと add-on set があると、アップグレードは一つではなく十個の異なる projects になります。Fleet を整然と保つのは四つの習慣です。**バージョンと `supportType` を code で管理すること**、すべての clusters に一つの module を使うこと（第 4 章）。**environments ごとの rollout order**、dev、stage、production の順にし、問題の一部は二日目または三日目に現れるため観察の pause を入れること。**Fleet 全体で add-ons と controllers を一つのバージョンに揃えること**、そうでなければ検証結果を再利用できません（第 37 章）。そして、**可視性のツールとしての GitOps**です。これにより「どこで何が動いているか」を一つの repository query で答えられます（第 44 章）。
 
 ```bash
-# Inventory versions and policies for regional clusters: find forgotten and outdated clusters
+# リージョン内クラスターのバージョンとポリシーを一覧化: 忘れられた古いクラスターを検出
 for c in $(aws eks list-clusters --query 'clusters[]' --output text); do
   aws eks describe-cluster --name "$c" --output text \
     --query 'cluster.[name,version,upgradePolicy.supportType]'; done

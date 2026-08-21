@@ -273,7 +273,7 @@ kubectl get scaledobject -A
 kubectl get hpa -A | grep keda-hpa
 ```
 
-Compare the picture: is the service scaling on a metric that describes its load, or on CPU "out of habit"; can HPA see the metric, or does it show `<unknown>`; and are new replicas stuck in `Pending` because of insufficient nodes? In addition to the course lab, the repository has a separate, non-course lab on autoscaling with KEDA and Prometheus (`../../labs/03/README_RUS.MD`): it deploys Prometheus, installs KEDA, and scales an application by real RPS, a good way to see the entire chain in action.
+Compare the picture: is the service scaling on a metric that describes its load, or on CPU "out of habit"; can HPA see the metric, or does it show `<unknown>`; and are new replicas stuck in `Pending` because of insufficient nodes? In addition to the course lab, the repository has a separate, non-course lab on autoscaling with KEDA and Prometheus [lab 03](../../labs/03/README.MD): it deploys Prometheus, installs KEDA, and scales an application by real RPS, a good way to see the entire chain in action.
 
 ---
 [Table of contents](../README.md) · [Chapter 34](../34/en.md) · [Chapter 36](../36/en.md)

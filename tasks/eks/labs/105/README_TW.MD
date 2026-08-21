@@ -17,7 +17,7 @@ volume 會自動更新,而透過環境變數讀取同一密鑰的 pod 卻卡在�
 
 鞏固課程以下章節的內容:
 
-- [第 18 章。密鑰:KMS、Secrets Manager 以及透過 External Secrets 的 SSM](../../course/18/ru.md)
+- [第 18 章。密鑰:KMS、Secrets Manager 以及透過 External Secrets 的 SSM](../../course/18/tw.md)
 
 ## 我們要建立的內容
 

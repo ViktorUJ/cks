@@ -23,7 +23,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 Den Stoff aus dem Kurskapitel vertiefen:
 
 - [Kapitel 28. Gateway API auf AWS: ALB Gateway API und VPC
-  Lattice](../../course/28/ru.md)
+  Lattice](../../course/28/de.md)
 
 ## Was wir erstellen
 

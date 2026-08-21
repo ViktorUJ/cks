@@ -22,12 +22,12 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 Den Stoff dieser Kurskapitel vertiefen:
 
 - [Kapitel 6. Cluster-Netzwerk: VPC CNI, ENI und IP-Adressen, CIDR-
-  Planung](../../course/06/ru.md) - woher Pods ihre Adressen bekommen und wie das
+  Planung](../../course/06/de.md) - woher Pods ihre Adressen bekommen und wie das
   Pod-Limit berechnet wird
 - [Kapitel 7. Den Adressplan skalieren: prefix delegation, secondary CIDR, custom
-  networking](../../course/07/ru.md) - was zu tun ist, wenn Adressen knapp werden
+  networking](../../course/07/de.md) - was zu tun ist, wenn Adressen knapp werden
 - [Kapitel 14. Dichte und Sizing: pods per node, ENI-Limits, requests und limits in der
-  Cloud](../../course/14/ru.md) - wie das Adresslimit mit dem Ressourcenlimit
+  Cloud](../../course/14/de.md) - wie das Adresslimit mit dem Ressourcenlimit
   zusammenpasst
 
 ## Was wir erstellen

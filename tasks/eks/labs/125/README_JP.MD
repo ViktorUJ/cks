@@ -25,7 +25,7 @@ Auto Mode が同じことを自分で行うため、これらは冗長です。�
 このコースの章の内容を定着させます：
 
 - [第 9 章。コンピュートの種類：managed node groups、self-managed、Fargate、Auto
-  Mode](../../course/09/ru.md) - いつ EKS Auto Mode を有効にし、いつ自前のスタックを
+  Mode](../../course/09/jp.md) - いつ EKS Auto Mode を有効にし、いつ自前のスタックを
   構築するか
 
 ## 作成するもの

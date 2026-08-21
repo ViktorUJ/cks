@@ -20,10 +20,10 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from these course chapters:
 
-- [Chapter 23. EBS CSI: gp3, StorageClass, expansion, snapshots, AZ binding](../../course/23/ru.md) - the core material for this lab
-- [Chapter 9. Compute types: managed node groups, Fargate, Auto Mode](../../course/09/ru.md) - why the cluster has two AZs and where nodes live
-- [Chapter 12. Karpenter: NodePool, consolidation, disruption](../../course/12/ru.md) - why consolidation doesn't move a pod between AZs once it has a volume
-- [Chapters 16-17. IRSA and Pod Identity](../../course/16/ru.md) - how the driver gets permission for `CreateVolume`/`CreateSnapshot`
+- [Chapter 23. EBS CSI: gp3, StorageClass, expansion, snapshots, AZ binding](../../course/23/en.md) - the core material for this lab
+- [Chapter 9. Compute types: managed node groups, Fargate, Auto Mode](../../course/09/en.md) - why the cluster has two AZs and where nodes live
+- [Chapter 12. Karpenter: NodePool, consolidation, disruption](../../course/12/en.md) - why consolidation doesn't move a pod between AZs once it has a volume
+- [Chapters 16-17. IRSA and Pod Identity](../../course/16/en.md) - how the driver gets permission for `CreateVolume`/`CreateSnapshot`
 
 ## What we're creating
 

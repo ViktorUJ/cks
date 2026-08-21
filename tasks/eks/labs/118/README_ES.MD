@@ -21,7 +21,7 @@ aceptación. La verificación es automática, con el comando `check_result`.
 Reforzar el material del capítulo del curso:
 
 - [Capítulo 44. GitOps y entrega: Argo CD y Flux, gestión de una flota de
-  clústeres](../../course/44/ru.md) - Git como fuente de verdad, sync y health, self-heal
+  clústeres](../../course/44/es.md) - Git como fuente de verdad, sync y health, self-heal
 
 ## Qué vamos a crear
 

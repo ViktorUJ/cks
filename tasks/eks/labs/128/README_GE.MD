@@ -23,7 +23,7 @@ Gateway API Controller VPC Lattice-ის ზემოთ namespace-ებს �
 გავამყაროთ კურსის ამ თავის მასალა:
 
 - [თავი 28. Gateway API AWS-ში: ALB Gateway API და VPC
-  Lattice](../../course/28/ru.md)
+  Lattice](../../course/28/ge.md)
 
 ## რას ვქმნით
 

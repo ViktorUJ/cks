@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 8. Alternativen zu VPC CNI: Cilium, Netzwerkmodi und wann das CNI gewechselt werden sollte
 
 > **Wie geht es weiter?** In den Kapiteln 6 und 7 wurden VPC CNI behandelt: tatsächliche Pod-Adressen, ENIs, Engpässe und ihre systemischen Auswege. Hier geht es um eine andere Frage: Wann reicht das Standard-CNI funktional nicht aus, nicht wegen fehlender Adressen, und lohnt sich ein Wechsel? VPC CNI selbst, ENIs und CIDR-Planung behandelt Kapitel 6; prefix delegation, sekundäre CIDRs und custom networking Kapitel 7 – sie werden hier nicht wiederholt. NetworkPolicy im Detail und das default-deny-Lab stehen in Kapitel 30 und Lab 110; hier erfolgt nur ein Vergleich der Fähigkeiten. Die Analyse von Netzwerkfehlern behandelt Kapitel 46, die Mechanik von Upgrades und Blue/Green Kapitel 38.

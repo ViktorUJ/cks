@@ -160,7 +160,7 @@ kubectl version
 
 為 fleet 選擇一次，並針對個別 clusters 細化此決定（機制見第 38 章）。
 
-| Criterion | In-place | Blue/green |
+| 準則 | 原地升級 | 藍綠部署 |
 |---|---|---|
 | 會發生什麼及其成本 | 同一個 cluster 提升一個 minor version：數小時、一個 window、一個 cluster | 在旁建立新 version cluster 並將 traffic 切換至它：數天或數週、雙倍 resources |
 | 跳過 version | 不可能，只能一次一個 | 可以：新 cluster 建立在所需 version |
@@ -171,11 +171,11 @@ kubectl version
 
 ```mermaid
 flowchart TB
-    prep["就緒 checks"]
-    cp["Control plane"]
-    addons["Add-ons"]
-    nodes["Nodes：AMI 與 kubelet"]
-    rb["Rollback：7 天 window"]
+    prep["就緒度驗證"]
+    cp["控制平面"]
+    addons["附加元件"]
+    nodes["節點：AMI 與 kubelet"]
+    rb["復原：7 天時段"]
     prep --> cp
     cp --> addons
     addons --> nodes
@@ -200,9 +200,9 @@ aws eks describe-update --name demo --update-id <update-id> --query 'update.[sta
 
 「有時間再做」的升級永遠不會完成。只有節奏有效。
 
-| Policy | 意義 | 優缺點 |
+| 政策 | 意義 | 優缺點 |
 |---|---|---|
-| latest | EKS 一出現 version 就升級 | 距離 support 結束的時間最長，但你最先發現問題 |
+| 最新版本 | EKS 一出現版本就升級 | 距離支援結束的時間最長，但你最先發現問題 |
 | N-1 | 維持比 current 低一個 version | 已有 bug fixes 與 community reports，時間餘裕足夠 |
 | N-2 及更深 | 很少升級，集中追趕 | 每次升級需要多個步驟，可能進入 extended support |
 | extended 作為常態 | 版本維持到最後 | 對 application 可預期、昂貴，且最終仍是自動升級 |

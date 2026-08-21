@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 30. NetworkPolicy EKS-ში: VPC CNI network policy და Cilium
 
 > **რა არის შემდეგ.** 26-29-ე თავებმა აჩვენა, როგორ შედის ტრაფიკი კლასტერში გარედან: NLB (თავი 26),

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 32. Multiclúster y multicuenta: conectividad, recursos compartidos, patrones
 
 > **Qué sigue.** Los capítulos 26-31 analizaron el tráfico dentro de un clúster: entrada mediante NLB y ALB

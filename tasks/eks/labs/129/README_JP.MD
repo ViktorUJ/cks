@@ -22,8 +22,8 @@
 コースの章の内容を定着させます:
 
 - [第25章 アプリケーションでのS3: Mountpoint for Amazon S3 CSIとアクセスパター
-  ン](../../course/25/ru.md) - このラボの中心的な内容
-- [第41-42章 EKS向けのAWS Backup](../../course/41/ru.md) - なぜここでEBSスナップシ
+  ン](../../course/25/jp.md) - このラボの中心的な内容
+- [第41-42章 EKS向けのAWS Backup](../../course/41/jp.md) - なぜここでEBSスナップシ
   ョットが使えないのか
 
 ## 作成するもの

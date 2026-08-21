@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 19 章。強化：IMDSv2 與 hop limit、Pod Security Admission、私有叢集
 
 > **接下來。** 第 16-18 章為 Pod 賦予其角色（IRSA、Pod Identity）並保護 Secret（KMS、外部儲存庫）。本章完成第 3 部分，並將強化措施分為多個層級：節點（IMDS）、Pod（Pod Security Admission、securityContext）和網路（私有叢集、VPC endpoints）。IMDS 強化補足第 16-17 章：即使使用 IRSA，節點角色仍是目標。相關內容見其他章節：control plane 的私有 endpoint 與 public/private 模式（第 2 章）、Secret 與 KMS（第 18 章）、NetworkPolicy（第 30 章）、Kyverno 與 Gatekeeper 政策及多租戶（第 22 章）、稽核、CloudTrail 與 GuardDuty（第 21 章）、ECR（第 20 章）。

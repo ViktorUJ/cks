@@ -20,7 +20,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from this course chapter:
 
-- [Chapter 34. Logs: Fluent Bit, CloudWatch Logs, OpenSearch, cost control](../../course/34/ru.md)
+- [Chapter 34. Logs: Fluent Bit, CloudWatch Logs, OpenSearch, cost control](../../course/34/en.md)
 
 ## What we're creating
 

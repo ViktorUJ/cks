@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第 0.5 章. ツール: aws cli、eksctl、terraform と terragrunt、helm、便利な plugin
 
 > **次に進む内容。** アカウントと billing (第 0.1 章)、IAM (0.2)、VPC (0.3)、EC2 (0.4) を終えました。
@@ -48,7 +48,7 @@ profile の切り替えと session 保持は、素の変数より utility が便
 
 ```bash
 export AWS_PROFILE=dev             # 使用する profile
-export AWS_REGION=eu-central-1     # default region
+export AWS_REGION=eu-central-1     # デフォルトリージョン
 
 # 問題発生時に必ず最初に実行する command: account、ARN identity、userId
 aws sts get-caller-identity
@@ -136,7 +136,7 @@ IaC 外での変更は **drift** を生みます。一部を eksctl、一部を 
 
 | 方法 | 長所 | 短所 | 使用するとき |
 |--------|-------|--------|-----------------|
-| AWS console | 分かりやすく準備不要 | 再現性なし | 確認、試行 |
+| AWS コンソール | 分かりやすく準備不要 | 再現性なし | 確認、試行 |
 | `eksctl` | 一つの command で cluster | imperative、独自 CFN | 学習、ad hoc、偵察 |
 | terraform + terragrunt | git の code、review | 初動が遅く HCL が必要 | 長期間残るすべて |
 

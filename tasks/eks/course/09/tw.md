@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 9 章．運算類型：受管節點群組、自行管理、Fargate、Auto Mode
 
 > **接下來。** AWS 負責 control plane（第 1–2 章），叢集已建立（第 4 章），存取和網路已設定（第 5–8 章）。接下來的問題是 Pod 要執行在哪裡：現在有四種選項，每一種都有不同的營運模型。本章概覽這四種型別，以及第 2 部分的主要選擇--EKS Auto Mode 或自建堆疊。AMI、bootstrap 與 launch template 請見第 10 章；自動擴展與 Karpenter 請見第 11–12 章；spot 請見第 13 章；sizing 與 `max-pods` 請見第 6 與第 14 章；Fargate 的細節（profile、限制）請見第 15 章。

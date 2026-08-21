@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第13章 Spot インスタンス: 中断、分散化、イベント処理
 
 > **この後。** オートスケーラーは第11章で、Karpenter の設定（`NodePool`、`EC2NodeClass`、disruption、consolidation）は第12章で扱いました。ここでは Spot、すなわち AWS がいつでも回収できる安価なキャパシティと、回収をインシデントにしないワークロード設計を扱います。料金モデルは第0.4章、コスト全体（Savings Plans、right-sizing、ミックス）は第43章、サイジングは第14章、信頼性（PDB、topology spread）は第40章を参照してください。
@@ -252,7 +252,7 @@ kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interr
 
 このトピックのコースラボは、[ラボ111: Spot ノード、分散化、中断処理、graceful drain](../../labs/111/README_JP.MD)です。これに加え、実稼働クラスタで Spot の動作を確認できます。まずキャパシティのインベントリを確認します。`kubectl get nodes -L karpenter.sh/capacity-type -L eks.amazonaws.com/capacityType` は、どのノードが Spot でどれが on-demand か、分散化が実際にあるかを示します。`kubectl get nodeclaims` を見て、ノードを作成時刻順に並べ、どの頻度で入れ替わるかを確認してください。
 
-続いて、中断への備えを確認します。重要な Deployment を取り上げ、`terminationGracePeriodSeconds` が設定されているか、`preStop` と PDB があるか、レプリカ数はいくつか、AZ に分散されているかを確認してください。中断ハンドラーのログ（`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interrupt`）を確認し、回収に伴う通常の「ノイズ」を評価します。リポジトリにある初期の Karpenter ラボ（[Karpenter](../../labs/02/README.MD)）も個別に確認してください。これはコースには含まれませんが、テーマは重なっています。
+続いて、中断への備えを確認します。重要な Deployment を取り上げ、`terminationGracePeriodSeconds` が設定されているか、`preStop` と PDB があるか、レプリカ数はいくつか、AZ に分散されているかを確認してください。中断ハンドラーのログ（`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interrupt`）を確認し、回収に伴う通常の「ノイズ」を評価します。リポジトリにある初期の Karpenter ラボ（[Karpenter](../../labs/02/README_JP.MD)）も個別に確認してください。これはコースには含まれませんが、テーマは重なっています。
 
 ---
 [目次](../README_JP.md) · [第12章](../12/jp.md) · [第14章](../14/jp.md)

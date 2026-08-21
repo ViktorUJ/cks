@@ -18,10 +18,10 @@ StorageClass 上的 `volumeBindingMode: Immediate`,它會導致 EBS 卷在規劃
 
 鞏固以下課程章節的內容:
 
-- [第 23 章。EBS CSI: gp3、StorageClass、擴容、快照、AZ 綁定](../../course/23/ru.md) - 這個實驗的主要內容
-- [第 9 章。計算類型:managed node groups、Fargate、Auto Mode](../../course/09/ru.md) - 為什麼集群有兩個 AZ,以及節點在哪裡運行
-- [第 12 章。Karpenter: NodePool、consolidation、disruption](../../course/12/ru.md) - 為什麼 consolidation 不會在 Pod 有卷的情況下把它移到別的 AZ
-- [第 16-17 章。IRSA 與 Pod Identity](../../course/16/ru.md) - 驅動程式如何取得 `CreateVolume`/`CreateSnapshot` 的權限
+- [第 23 章。EBS CSI: gp3、StorageClass、擴容、快照、AZ 綁定](../../course/23/tw.md) - 這個實驗的主要內容
+- [第 9 章。計算類型:managed node groups、Fargate、Auto Mode](../../course/09/tw.md) - 為什麼集群有兩個 AZ,以及節點在哪裡運行
+- [第 12 章。Karpenter: NodePool、consolidation、disruption](../../course/12/tw.md) - 為什麼 consolidation 不會在 Pod 有卷的情況下把它移到別的 AZ
+- [第 16-17 章。IRSA 與 Pod Identity](../../course/16/tw.md) - 驅動程式如何取得 `CreateVolume`/`CreateSnapshot` 的權限
 
 ## 我們要創建什麼
 

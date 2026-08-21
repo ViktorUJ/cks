@@ -1,3 +1,5 @@
+[Eng version](RUNBOOK.md) · [Versión en español](RUNBOOK_ES.md) · [Version française](RUNBOOK_FR.md) · [Deutsche Version](RUNBOOK_DE.md) · [ქართული ვერსია](RUNBOOK_GE.md) · [繁體中文版](RUNBOOK_TW.md) · [日本語版](RUNBOOK_JP.md)
+
 # Диагностический справочник EKS: симптом, причина, проверка
 
 [Оглавление курса](README_RU.md) · [Глоссарий](GLOSSARY_RU.md)

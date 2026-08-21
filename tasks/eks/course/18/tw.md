@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 18 章。Secret：KMS 加密、Secrets Manager，以及透過 External Secrets 和 CSI 使用 SSM
 
 > **接下來。** 第 16 與第 17 章說明了如何透過 IRSA 或 Pod Identity 為 Pod 賦予其專屬的 AWS 角色。Secret 直接依賴此機制：External Secrets controller 與 CSI driver 都需要角色來讀取 Secrets Manager 和 SSM，本章只會引用這些機制而不重複說明。相關主題分屬其他章節：建立叢集時的加密（第 4 章）、對 `Secret` 的 RBAC 存取權（第 5 章）、supply chain 與 ECR（第 20 章）、強化與 Pod Security（第 19 章）、git 和 GitOps 中的 Secret（第 44 章）。

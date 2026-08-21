@@ -19,7 +19,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material del siguiente capítulo del curso:
 
-- [Capítulo 26. AWS Load Balancer Controller y un Service de tipo LoadBalancer: NLB](../../course/26/ru.md) - el controlador, anotaciones, NLB frente a CLB
+- [Capítulo 26. AWS Load Balancer Controller y un Service de tipo LoadBalancer: NLB](../../course/26/es.md) - el controlador, anotaciones, NLB frente a CLB
 
 ## Qué vamos a crear
 

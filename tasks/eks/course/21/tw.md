@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 21 章。稽核與偵測：control plane 日誌、CloudTrail、GuardDuty、執行階段監控
 
 > **接下來。** 第 3 部分已涵蓋身分識別（第 16-17 章）、Secret（第 18 章）、節點、Pod 與網路強化（第 19 章），以及映像 supply chain（第 20 章）。本章說明如何得知叢集與帳戶中曾發生及正在發生什麼，以及攻擊是否正在進行。我們會探討三個層面：EKS audit log、CloudTrail 與 GuardDuty（EKS Protection 和 Runtime Monitoring）。相關主題位於其他章節：啟用五種類型 control plane 日誌及其機制（第 2 章）、用於偵錯的 metrics 與 observability（第 33 章）、透過 Fluent Bit 的應用程式日誌（第 34 章）、強化（第 19 章）、admission policy（第 22 章）、RBAC 與 authenticator（第 5 章），以及日誌成本與 retention（第 34、43 章）。
@@ -245,4 +245,3 @@ flowchart TB
 
 ---
 [目錄](../README_TW.md) · [第 20 章](../20/tw.md) · [第 22 章](../22/tw.md)
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)

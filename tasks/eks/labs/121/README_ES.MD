@@ -19,7 +19,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material de este capítulo del curso:
 
-- [Capítulo 47. Acceso e IAM: access entries, IRSA, webhook, kubeconfig](../../course/47/ru.md)
+- [Capítulo 47. Acceso e IAM: access entries, IRSA, webhook, kubeconfig](../../course/47/es.md)
 
 ## Qué vamos a crear
 

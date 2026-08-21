@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 36. Tracing und Profiling: ADOT und X-Ray
 
 > **Wie es weitergeht.** Die Kapitel 33 und 34 lieferten Metriken und Logs, zwei der drei Säulen der Observability. Hier folgt die dritte: verteiltes Tracing, das eine Anfrage zu einem gemeinsamen Pfad durch eine Kette von Services verbindet, sowie kurz Profiling. Verwandte Themen behandeln andere Kapitel: Metriken, einschließlich ADOT als Metriksammler in Amazon Managed Prometheus, Kapitel 33; Logs Kapitel 34; Rollen für den Export von Telemetrie zu AWS über IRSA und Pod Identity die Kapitel 16 und 17. Dieses Kapitel schließt Teil 6 ab. Danach folgt Teil 7: Betrieb mit Add-ons, Upgrades, Zuverlässigkeit, Backups und Kosten.

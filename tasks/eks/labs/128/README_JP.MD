@@ -23,7 +23,7 @@ APIはロールと型付けを導入します: `GatewayClass`はプラットフ�
 コースの章の内容を定着させます:
 
 - [第28章 AWSにおけるGateway API: ALB Gateway APIとVPC
-  Lattice](../../course/28/ru.md)
+  Lattice](../../course/28/jp.md)
 
 ## 作成するもの
 

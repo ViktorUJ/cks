@@ -23,10 +23,10 @@ Checking is automatic, via the `check_result` command.
 Reinforce the material from these course chapters:
 
 - [Chapter 31. Egress and traffic cost: NAT, VPC endpoints,
-  PrivateLink](../../course/31/ru.md) - why a single NAT per cluster pays twice for
+  PrivateLink](../../course/31/en.md) - why a single NAT per cluster pays twice for
   cross-AZ traffic, and how gateway and interface endpoints fix that
 - [Chapter 43. Cost: OpenCost and Kubecost, right-sizing, Savings Plans, spot mix,
-  traffic](../../course/43/ru.md) - how traffic and endpoints show up in Cost Explorer by
+  traffic](../../course/43/en.md) - how traffic and endpoints show up in Cost Explorer by
   usage type
 
 ## What we're creating

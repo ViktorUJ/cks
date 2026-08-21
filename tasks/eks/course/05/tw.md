@@ -11,7 +11,7 @@
 
 **第二種，而且代價更高。** 有人編輯 `aws-auth` ConfigMap，為新團隊加入一個 role。yaml 的 indentation 偏移，`mapRoles` 無法再被解析，**所有人**都失去存取權，包括修改者自己。無法從內部修好：修復 ConfigMap 需要存取權，但存取權已不存在。
 
-兩種情況原因相同：**在 EKS 中，authentication 是外部的，而 authorization 是內部的**。它們是兩個獨立層，混淆它們會付出比本章其他問題更高的代價。
+兩種情況原因相同：**在 EKS 中，驗證是外部的，而授權是內部的**。它們是兩個獨立層，混淆它們會付出比本章其他問題更高的代價。
 
 ## 5.2. IAM 回答「你是誰」，RBAC 回答「你能做什麼」
 
@@ -146,11 +146,11 @@ aws eks list-associated-access-policies --cluster-name demo \
 | 屬性 | `aws-auth` ConfigMap | Access entries |
 |---|---|---|
 | 位於何處 | `kube-system` 中的 object | EKS API 中的 cluster configuration |
-| Validation | 無，field 內的 yaml string | 由 EKS API 執行 |
-| 錯誤會破壞 | 所有人的存取權，包含自己 | 一個 entry |
-| Change history | 無 | CloudTrail（第 21 章） |
-| AWS managed policies | 無 | 有，access policies |
-| IaC management | 透過 Kubernetes provider | 透過 AWS provider |
+| 驗證 | 無，欄位內的 YAML 字串 | 由 EKS API 執行 |
+| 錯誤會破壞 | 所有人的存取權，包含自己 | 一個項目 |
+| 變更記錄 | 無 | CloudTrail（第 21 章） |
+| AWS 受管政策 | 無 | 有，存取政策 |
+| IaC 管理 | 透過 Kubernetes 提供者 | 透過 AWS 提供者 |
 
 1. **Inventory。** 將 `aws-auth` 儲存為檔案：它同時是 migration plan 與 rollback。
 2. **`API_AND_CONFIG_MAP` 模式。** Access entries 會啟用，同時 ConfigMap 繼續運作；既有存取不會中斷。

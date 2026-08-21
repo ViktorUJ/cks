@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第9章 コンピューティングタイプ: managed node groups、self-managed、Fargate、Auto Mode
 
 > **この先の内容。** control plane は AWS が運用し（第1～2章）、クラスターは作成済み（第4章）、アクセスとネットワークは設定済みです（第5～8章）。次に問うのは、Pod を何の上で実行するかです。選択肢は4つあり、それぞれ運用モデルが異なります。本章では、この4つのコンピューティングタイプの概要と、第2部の主な選択である EKS Auto Mode と独自スタックの比較を扱います。AMI、bootstrap、launch template は第10章、オートスケーリングと Karpenter は第11～12章、spot は第13章、サイジングと `max-pods` は第6章と第14章、Fargate の詳細（プロファイル、制限）は第15章です。

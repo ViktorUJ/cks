@@ -21,7 +21,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Renforcer le contenu du chapitre du cours :
 
-- [Chapitre 40. Fiabilité : multi-AZ, PDB, topology spread](../../course/40/ru.md) -
+- [Chapitre 40. Fiabilité : multi-AZ, PDB, topology spread](../../course/40/fr.md) -
   arrêt correct des nœuds
 
 ## Ce que nous créons

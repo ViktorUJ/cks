@@ -38,7 +38,7 @@ flowchart TB
 
 完成 CKA 後，工程師在新集群做的第一件事就是尋找 control plane。`kubectl get pods -n kube-system` 不會顯示 `kube-apiserver` 或 `etcd`，`kubectl get nodes` 也不會顯示 master nodes。集群沒有壞掉：control plane 位於 AWS 帳戶中，不屬於你，也不在你的 VPC 裡。
 
-AWS 為你執行的工作包括：在數個 Availability Zones 運行 API server、scheduler 與 controller manager，擴展並替換故障 instance；保存、備份與還原 etcd；修補 control plane 元件，patch level 以 **platform version** 表示並會在你未介入時提高；針對 API server 可用性提供每月 99.95% SLA，這是服務等級規格而非價格；若你啟用，也會將 control plane logs 傳送至 CloudWatch（第 2 章）。作為交換，你會失去正是自己已習慣的工具：
+AWS 為你執行的工作包括：在數個 Availability Zones 運行 API server、scheduler 與 controller manager，擴展並替換故障 instance；保存、備份與還原 etcd；修補 control plane 元件，patch level 以 **platform version** 表示並會在你未介入時提高；針對 API server 可用性提供每月 99.95% SLA，這是服務等級規格而非價格；若你啟用，也會將控制平面日誌傳送至 CloudWatch（第 2 章）。作為交換，你會失去正是自己已習慣的工具：
 
 | kubeadm 慣例 | 在 EKS 中的作法 |
 |---------------------|-----------|
@@ -70,11 +70,11 @@ kubectl get --raw /version
 | 範圍 | kubeadm | EKS | 課程位置 |
 |---------|---------|-----|-------------|
 | API server、scheduler、controller manager、etcd | 你 | AWS | 第 2 章 |
-| Control plane patches、platform version | 你 | AWS | 第 2、3 章 |
-| 選擇 minor version 與其支援期限 | 你 | 你，在支援版本範圍內 | 第 3 章 |
-| Nodes：AMI、bootstrap、OS patches、升級、scaling | 你 | 你 | 第 10、11、12、38 章 |
-| CNI、address plan、Pod IP | 你 | 你 | 第 6、7、8 章 |
-| Authentication、RBAC、multi-tenancy | 你，certificates | 你，IAM 與 access entries | 第 5、22 章 |
+| 控制平面修補程式、平台版本 | 你 | AWS | 第 2、3 章 |
+| 選擇次要版本與其支援期限 | 你 | 你，在支援版本範圍內 | 第 3 章 |
+| 節點：AMI、啟動程序、作業系統修補程式、升級、擴縮 | 你 | 你 | 第 10、11、12、38 章 |
+| CNI、位址規劃、Pod IP | 你 | 你 | 第 6、7、8 章 |
+| 驗證、RBAC、多租戶 | 你，憑證 | 你，IAM 與存取項目 | 第 5、22 章 |
 | Add-ons：CoreDNS、kube-proxy、CSI、versions | 你 | 你，managed add-ons 能提供協助 | 第 37 章 |
 | Load balancers、Ingress、DNS、TLS | 你 | 你 | 第 26-29 章 |
 | Storage：StorageClass、volumes、snapshots | 你 | 你 | 第 23、24、25 章 |
@@ -115,8 +115,8 @@ flowchart TB
 
 | AWS 區域（雲端安全） | 共用區域 | 你的區域（雲端中的安全） |
 |--------------------------------|-----------------|-----------------------------------|
-| control plane、etcd、hypervisor、實體基礎設施 | IAM 與 RBAC、access entries | nodes、OS、AMI、kubelet、containerd |
-| control plane patches、platform version | endpoint access mode | applications、requests/limits、NetworkPolicy |
+| 控制平面、etcd、hypervisor、實體基礎設施 | IAM 與 RBAC、存取項目 | 節點、作業系統、AMI、kubelet、containerd |
+| 控制平面修補程式、平台版本 | 端點存取模式 | 應用程式、請求/限制、NetworkPolicy |
 | control plane 的 multi-AZ 部署 | 透過 KMS 的 secret encryption | volumes 中的資料及其 backup |
 
 共用區域是大部分 incidents 的來源：工具存在，但設定由你負責。代表性例子是 Kubernetes API data 的 encryption。AWS 會加密 etcd disks，而在 1.28 以上版本，透過 KMS provider v2 的 envelope encryption 預設使用 AWS key 運作，不需要你介入。你自己的 customer managed key 改變的不是是否加密，而是所有權：key policy、CloudTrail 對 decryptions 的 audit，以及撤銷 key access 的後果都由你負責；AWS 則將 provider 整合到 `kube-apiserver` 中，你無法設定該整合（第 18 章）。

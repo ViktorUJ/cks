@@ -21,9 +21,9 @@ Wartezeit - das ist normales Verhalten für eine managed control plane, kein hä
 
 Den Stoff dieser Kurskapitel vertiefen:
 
-- [Kapitel 37. EKS-Add-ons: managed add-ons vs. Helm, Versionen und Update-Reihenfolge](../../course/37/ru.md) - wem die Add-on-Version gehört
-- [Kapitel 38. Cluster-Upgrade: in-place nach Version, Blue/Green-Cluster, veraltete APIs](../../course/38/ru.md) - die Reihenfolge eines In-Place-Upgrades und das Finden veralteter APIs
-- [Kapitel 39. Cluster-Version-Rollback: rollback readiness insights, das 7-Tage-Fenster, Rollback-Reihenfolge](../../course/39/ru.md) - der Standard-Rollback der Control Plane
+- [Kapitel 37. EKS-Add-ons: managed add-ons vs. Helm, Versionen und Update-Reihenfolge](../../course/37/de.md) - wem die Add-on-Version gehört
+- [Kapitel 38. Cluster-Upgrade: in-place nach Version, Blue/Green-Cluster, veraltete APIs](../../course/38/de.md) - die Reihenfolge eines In-Place-Upgrades und das Finden veralteter APIs
+- [Kapitel 39. Cluster-Version-Rollback: rollback readiness insights, das 7-Tage-Fenster, Rollback-Reihenfolge](../../course/39/de.md) - der Standard-Rollback der Control Plane
 
 ## Was wir erstellen
 

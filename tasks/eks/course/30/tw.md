@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 30 章。EKS 中的 NetworkPolicy：VPC CNI network policy 與 Cilium
 
 > **接下來。** 第 26 至 29 章說明流量如何從外部進入叢集：NLB（第 26 章）、

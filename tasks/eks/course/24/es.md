@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 24. EFS y FSx: almacenamiento compartido para cargas de trabajo entre AZ
 
 > **Qué sigue.** El capítulo 23 mostró que EBS es zonal: un volumen en una AZ, un único escritor

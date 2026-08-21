@@ -20,8 +20,8 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 8. Networking in detail: VPC CNI and alternative CNIs](../../course/08/ru.md) - the boundaries of the built-in network policy versus Cilium
-- [Chapter 30. NetworkPolicy: rules, DNS, testing](../../course/30/ru.md) - default deny, allowing by label and namespace, egress
+- [Chapter 8. Networking in detail: VPC CNI and alternative CNIs](../../course/08/en.md) - the boundaries of the built-in network policy versus Cilium
+- [Chapter 30. NetworkPolicy: rules, DNS, testing](../../course/30/en.md) - default deny, allowing by label and namespace, egress
 
 ## What we're creating
 

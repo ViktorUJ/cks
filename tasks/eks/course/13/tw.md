@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 
 # 第 13 章：Spot 執行個體：中斷、多樣化、事件處理
 
@@ -342,7 +342,7 @@ drain](../../labs/111/README_TW.MD)。除此之外，也能在實際叢集觀察
 不同可用區。查看中斷處理器的 logs
 （`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interrupt`），
 評估收回事件的正常「雜訊」。另行研讀 repository 中較早的 Karpenter lab
-（[Karpenter](../../labs/02/README.MD)） - 它不屬於課程，但主題相關。
+（[Karpenter](../../labs/02/README_TW.MD)） - 它不屬於課程，但主題相關。
 
 ---
 [目錄](../README_TW.md) · [第 12 章](../12/tw.md) · [第 14 章](../14/tw.md)

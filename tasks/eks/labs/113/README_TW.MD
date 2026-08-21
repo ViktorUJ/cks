@@ -18,9 +18,9 @@ plane 的正常行為,不是命令卡住了。
 
 鞏固以下課程章節的內容:
 
-- [第 37 章。EKS 附加元件:managed add-ons 與 Helm 的對比、版本與更新順序](../../course/37/ru.md) - 附加元件版本由誰負責
-- [第 38 章。集群升級:按版本原地升級、blue/green 集群、已棄用的 API](../../course/38/ru.md) - 原地升級的順序,以及如何找出已棄用的 API
-- [第 39 章。集群版本回滾:rollback readiness insights、7 天視窗、回滾順序](../../course/39/ru.md) - 標準的 control plane 回滾
+- [第 37 章。EKS 附加元件:managed add-ons 與 Helm 的對比、版本與更新順序](../../course/37/tw.md) - 附加元件版本由誰負責
+- [第 38 章。集群升級:按版本原地升級、blue/green 集群、已棄用的 API](../../course/38/tw.md) - 原地升級的順序,以及如何找出已棄用的 API
+- [第 39 章。集群版本回滾:rollback readiness insights、7 天視窗、回滾順序](../../course/39/tw.md) - 標準的 control plane 回滾
 
 ## 我們要創建什麼
 

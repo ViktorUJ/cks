@@ -20,7 +20,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material de este capítulo del curso:
 
-- [Capítulo 18. Secretos: KMS, Secrets Manager y SSM mediante External Secrets](../../course/18/ru.md)
+- [Capítulo 18. Secretos: KMS, Secrets Manager y SSM mediante External Secrets](../../course/18/es.md)
 
 ## Qué vamos a crear
 

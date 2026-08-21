@@ -20,10 +20,10 @@ StorageClass-ში, რის გამოც EBS-ტომი იქმნე�
 
 გავამყაროთ კურსის ამ თავების მასალა:
 
-- [თავი 23. EBS CSI: gp3, StorageClass, გაფართოება, სნეპშოტები, AZ-ზე მიბმა](../../course/23/ru.md) - ლაბის ძირითადი მასალა
-- [თავი 9. Compute-ის ტიპები: managed node groups, Fargate, Auto Mode](../../course/09/ru.md) - რატომ არსებობს კლასტერში ორი AZ და სად ცხოვრობენ ნოუდები
-- [თავი 12. Karpenter: NodePool, consolidation, disruption](../../course/12/ru.md) - რატომ არ ატარებს consolidation პოდს AZ-ებს შორის, თუ მას აქვს ტომი
-- [თავები 16-17. IRSA და Pod Identity](../../course/16/ru.md) - როგორ იღებს დრაივერი უფლებას `CreateVolume`/`CreateSnapshot`-ზე
+- [თავი 23. EBS CSI: gp3, StorageClass, გაფართოება, სნეპშოტები, AZ-ზე მიბმა](../../course/23/ge.md) - ლაბის ძირითადი მასალა
+- [თავი 9. Compute-ის ტიპები: managed node groups, Fargate, Auto Mode](../../course/09/ge.md) - რატომ არსებობს კლასტერში ორი AZ და სად ცხოვრობენ ნოუდები
+- [თავი 12. Karpenter: NodePool, consolidation, disruption](../../course/12/ge.md) - რატომ არ ატარებს consolidation პოდს AZ-ებს შორის, თუ მას აქვს ტომი
+- [თავები 16-17. IRSA და Pod Identity](../../course/16/ge.md) - როგორ იღებს დრაივერი უფლებას `CreateVolume`/`CreateSnapshot`-ზე
 
 ## რას ვქმნით
 

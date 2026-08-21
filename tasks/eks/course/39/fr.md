@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Русская версия](ru.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 39. Retour de version du cluster : rollback readiness insights, fenêtre de 7 jours, ordre du retour
 
 > **La suite.** Le chapitre 38 a traité de la mise à niveau du cluster : cycle de vie des versions,
@@ -370,7 +370,7 @@ la fiabilité des charges grâce aux PDB et au multi-AZ (chapitre 40).
     situe la limite entre eux ?
 13. Qu'est-ce qu'une bake period, et comment aide-t-elle à maintenir le retour disponible ?
 
-## Practice
+## Pratique
 
 Le laboratoire du cours pour ce thème : [laboratoire 113 - Mise à niveau et retour du cluster :
 control plane, add-ons, API obsolètes](../../labs/113/README_FR.MD). En complément, il est facile

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Русская версия](ru.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 44. GitOps et livraison : Argo CD et Flux, gestion d'un parc de clusters
 
 > **La suite.** Les parties 5 à 7 ont souvent évoqué GitOps comme méthode de déploiement de la configuration : addons, contrôleurs, politiques, observabilité. Il est temps d'examiner le mécanisme lui-même. Les sujets connexes sont traités dans d'autres chapitres : connectivité multicluster et multicompte au chapitre 32, migration blue/green des clusters eux-mêmes au chapitre 38, secrets (`External Secrets`, `SecretStore`) aux chapitres 17-18, rôles pour l'accès depuis les pods (IRSA, Pod Identity) aux chapitres 16-17. Ici, nous voyons comment Git devient l'unique source de vérité du cluster et comment gérer un parc de clusters EKS depuis un seul dépôt.
@@ -10,7 +10,7 @@ L'application fonctionne dans deux clusters : `prod-eu` et `prod-us`. La release
 Cela empire ensuite. Dans `prod-us`, quelqu'un a un jour modifié le Deployment en direct :
 
 ```bash
-# кто-то поправил реплики и лимиты руками в инциденте, в Git этого нет
+# quelqu’un a modifié manuellement les réplicas et les limites pendant un incident ; Git ne le contient pas
 kubectl -n shop edit deployment checkout
 ```
 
@@ -64,12 +64,12 @@ spec:
     targetRevision: main
     path: apps/checkout/overlays/prod
   destination:
-    server: https://kubernetes.default.svc   # целевой кластер
+    server: https://kubernetes.default.svc   # cluster cible
     namespace: shop
   syncPolicy:
     automated:
-      selfHeal: true    # откатывать дрейф к состоянию из Git
-      prune: true       # удалять то, что убрали из Git
+      selfHeal: true    # ramener la dérive à l’état Git
+      prune: true       # supprimer ce qui a été retiré de Git
 ```
 
 Argo CD maintient deux statuts indépendants pour chaque `Application` :
@@ -110,7 +110,7 @@ metadata:
   name: shop
   namespace: flux-system
 spec:
-  interval: 1m           # как часто опрашивать репозиторий
+  interval: 1m           # fréquence d’interrogation du dépôt
   url: https://git.example.com/shop.git
   ref:
     branch: main
@@ -121,12 +121,12 @@ metadata:
   name: checkout
   namespace: flux-system
 spec:
-  interval: 10m          # как часто сверять кластер с источником
+  interval: 10m          # fréquence de comparaison entre le cluster et la source
   sourceRef:
     kind: GitRepository
     name: shop
   path: ./apps/checkout/overlays/prod
-  prune: true            # аналог prune в Argo CD
+  prune: true            # équivalent de prune dans Argo CD
 ```
 
 La réconciliation suit l'intervalle (`interval`) : le contrôleur vérifie périodiquement la source et aligne le cluster sur elle. `HelmRelease` offre la même chose pour les charts Helm de manière déclarative, sans `helm install` manuel.
@@ -306,11 +306,11 @@ Commencez par voir quelles applications l'agent connaît et quels sont leurs sta
 Si Argo CD est installé dans le cluster :
 
 ```bash
-# все Application и их sync/health статусы
+# toutes les Application et leurs statuts sync/health
 kubectl get applications -n argocd
-# то же через CLI Argo CD
+# même résultat via la CLI Argo CD
 argocd app list
-# детально по одному приложению: источник, дерево ресурсов, дрейф
+# détail d’une application : source, arbre des ressources, dérive
 argocd app get checkout
 ```
 
@@ -319,10 +319,10 @@ Regardez les colonnes sync (`Synced`/`OutOfSync`) et health (`Healthy`/`Degraded
 Si Flux est installé dans le cluster :
 
 ```bash
-# источники и их состояние
+# sources et leur état
 kubectl get gitrepository -A
 flux get sources git
-# что реально реконсилируется и когда была последняя сверка
+# éléments réellement réconciliés et date de la dernière comparaison
 flux get kustomizations -A
 kubectl get kustomization -A
 ```

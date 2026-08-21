@@ -19,7 +19,7 @@ StatefulSet სწორი დაცვის გარეშე თავი�
 
 გავიმყაროთ კურსის თავის მასალა:
 
-- [თავი 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/ru.md) -
+- [თავი 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/ge.md) -
   როგორ ვგამოძევოთ StatefulSet უსაფრთხოდ consolidation-ის დროს
 
 ## რას ვქმნით

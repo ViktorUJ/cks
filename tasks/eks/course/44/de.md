@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 44. GitOps und Auslieferung: Argo CD und Flux, Verwaltung einer Cluster-Flotte
 
 > **Wie es weitergeht.** Die Teile 5-7 erwähnten GitOps wiederholt als Weg zum Ausrollen von Konfigurationen: Add-ons, Controller, Richtlinien, Observability. Nun betrachten wir den Mechanismus selbst. Verwandte Themen behandeln andere Kapitel: Multi-Cluster- und Multi-Account-Konnektivität in Kapitel 32, die Blue/Green-Migration der Cluster selbst in Kapitel 38, Secrets (External Secrets, SecretStore) in den Kapiteln 17-18 sowie Rollen für den Zugriff aus Pods (IRSA, Pod Identity) in den Kapiteln 16-17. Hier geht es darum, wie Git zur einzigen Quelle der Wahrheit für den Cluster wird und wie ein Repository eine EKS-Cluster-Flotte verwaltet.

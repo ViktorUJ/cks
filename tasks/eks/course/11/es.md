@@ -1,4 +1,4 @@
-[English version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 11. Cluster Autoscaler y Karpenter: dos enfoques para el escalado de nodos
 
 > **Qué sigue.** Los tipos de cómputo y Auto Mode se tratan en el capítulo 9; las AMI y el bootstrap de nodos, en el capítulo 10. Ahora la cuestión es cómo aumentan y disminuyen los nodos según la carga sin ajustar manualmente `desiredSize`. En EKS hay dos herramientas para ello: Cluster Autoscaler y Karpenter; este capítulo trata sobre elegir entre ellas a nivel de enfoque. Karpenter en detalle (`NodePool`, `EC2NodeClass`, consolidation, drift, disruption budgets) se aborda en el capítulo 12; las instancias spot, en el capítulo 13; la densidad y el dimensionamiento, en el capítulo 14; y el escalado automático de los propios pods (HPA, VPA, KEDA), en el capítulo 35.

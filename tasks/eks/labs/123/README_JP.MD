@@ -19,7 +19,7 @@ Karpenter の運用を実践的なレベルで扱います:`NodePool` と `EC2No
 
 コースの以下の章の内容を定着させます:
 
-- [第 12 章。Karpenter:NodePool、EC2NodeClass、disruption、consolidation、drift](../../course/12/ru.md) -
+- [第 12 章。Karpenter:NodePool、EC2NodeClass、disruption、consolidation、drift](../../course/12/jp.md) -
   consolidation の際に StatefulSet を安全に排除する方法
 
 ## 作成するもの

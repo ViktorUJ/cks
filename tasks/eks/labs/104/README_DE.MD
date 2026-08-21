@@ -20,8 +20,8 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch mit dem Befehl `check_result`
 
 Den Stoff folgender Kurskapitel vertiefen:
 
-- [Kapitel 16. IRSA: OIDC-Provider, trust policy, ServiceAccount-Annotationen](../../course/16/ru.md)
-- [Kapitel 17. EKS Pod Identity: Agent, Assoziationen, Migration von IRSA](../../course/17/ru.md)
+- [Kapitel 16. IRSA: OIDC-Provider, trust policy, ServiceAccount-Annotationen](../../course/16/de.md)
+- [Kapitel 17. EKS Pod Identity: Agent, Assoziationen, Migration von IRSA](../../course/17/de.md)
 
 ## Was wir erstellen
 

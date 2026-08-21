@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 25 章。應用程式中的 S3：Mountpoint for Amazon S3 CSI 與存取模式
 
 > **接下來。** 第 23 章介紹了區塊式 EBS（一個 AZ 中的一個磁碟、一個寫入者），第 24 章則介紹

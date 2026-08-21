@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Русская версия](ru.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 40. Fiabilité : multi-AZ, PDB, topology spread, arrêt correct des nœuds
 
 > **La suite.** Les chapitres 38 et 39 ont traité des versions du cluster : la mise à niveau du control plane et des nœuds, ainsi que le rollback dans une fenêtre de 7 jours. Cela concerne la fiabilité du control plane. Ici, il s'agit de la fiabilité des charges : comment les pods survivent aussi bien à une panne soudaine (défaillance d'un nœud ou d'une zone) qu'à une maintenance planifiée (`drain`, mise à niveau, consolidation). Les sujets connexes sont couverts dans d'autres chapitres : disruption et consolidation de Karpenter, `do-not-disrupt`, chapitre 12 ; mise à jour des nœuds lors d'une mise à niveau, chapitre 38 ; interruptions spot, chapitre 13 ; coût cross-AZ et `trafficDistribution`, chapitre 31 ; mise à l'échelle des charges (HPA), chapitre 35.

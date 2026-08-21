@@ -1,4 +1,4 @@
-[Versión en español](es.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapter 41. Cluster backup with AWS Backup: cluster state, persistent volumes, composite recovery point
 
 > **What comes next.** Chapters 38-40 covered the cluster lifecycle: version upgrades, rollback within the 7-day window, and workload reliability. All of that concerns the control plane and availability, but none of it saves you from data corruption or deletion: a version rollback (Chapter 39) returns the control plane, not a deleted namespace or an overwritten volume. This chapter covers backups of both cluster state (Kubernetes objects) and persistent-volume data, taken consistently through AWS Backup. Related topics belong to other chapters: recovery, DR, and Velero, Chapter 42; version rollback (which is not a backup), Chapter 39; EBS snapshots and StorageClass, Chapter 23; EFS, Chapter 24.

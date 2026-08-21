@@ -26,7 +26,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 Reforzar el material de este capítulo del curso:
 
 - [Capítulo 9. Tipos de cómputo: managed node groups, self-managed, Fargate, Auto
-  Mode](../../course/09/ru.md) - cuándo activar EKS Auto Mode y cuándo construir tu
+  Mode](../../course/09/es.md) - cuándo activar EKS Auto Mode y cuándo construir tu
   propio stack
 
 ## Qué vamos a crear

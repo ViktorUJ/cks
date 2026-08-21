@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 37. EKS-Add-ons: Managed Add-ons versus Helm, Versionen und Aktualisierungsreihenfolge
 
 > **Wie es weitergeht.** Dieses Kapitel eröffnet Teil 7 - den Betrieb eines Clusters, der bereits erstellt wurde und läuft. Die erste Betriebsfrage lautet: Wer besitzt den Lebenszyklus der Systemkomponenten und wie bleiben ihre Versionen mit der Cluster-Version abgestimmt? Hier geht es um die Verwaltung von Add-ons und ihrer Versionen. Verwandte Themen behandeln andere Kapitel: das vollständige Cluster-Upgrade über Versionen in Kapitel 38, das Zurücksetzen einer Version in Kapitel 39, konkrete Add-ons in ihren eigenen Kapiteln (VPC CNI in Kapitel 8, EBS CSI in Kapitel 23, Load Balancer Controller in Kapitel 26, Observability in den Kapiteln 33-36) sowie Rollen für Add-ons über IRSA und Pod Identity in den Kapiteln 16 und 17.

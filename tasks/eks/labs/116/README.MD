@@ -21,7 +21,7 @@ Verification is automated, via the `check_result` command.
 
 Reinforce the course chapter:
 
-- [Chapter 19. Hardening: IMDSv2, PSA, private cluster](../../course/19/ru.md) - layers
+- [Chapter 19. Hardening: IMDSv2, PSA, private cluster](../../course/19/en.md) - layers
   of protection for the node, the pod and the network
 
 ## What we create

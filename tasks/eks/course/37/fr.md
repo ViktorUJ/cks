@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Русская версия](ru.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 37. Add-ons EKS : add-ons gérés contre Helm, versions et ordre de mise à niveau
 
 > **La suite.** Ce chapitre ouvre la partie 7, l’exploitation d’un cluster déjà créé et en cours

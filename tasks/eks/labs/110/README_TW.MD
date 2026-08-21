@@ -19,8 +19,8 @@
 
 鞏固以下課程章節的內容:
 
-- [第 8 章。深入了解網路:VPC CNI 與其他 CNI](../../course/08/ru.md) - 內建網路政策與 Cilium 的邊界
-- [第 30 章。NetworkPolicy:規則、DNS、測試](../../course/30/ru.md) - 預設拒絕、依標籤與 namespace 允許、egress
+- [第 8 章。深入了解網路:VPC CNI 與其他 CNI](../../course/08/tw.md) - 內建網路政策與 Cilium 的邊界
+- [第 30 章。NetworkPolicy:規則、DNS、測試](../../course/30/tw.md) - 預設拒絕、依標籤與 namespace 允許、egress
 
 ## 我們要創建什麼
 

@@ -20,7 +20,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the course chapter:
 
-- [Chapter 45. Node did not join the cluster](../../course/45/ru.md) - IAM, SG,
+- [Chapter 45. Node did not join the cluster](../../course/45/en.md) - IAM, SG,
   user data, bootstrap, kubelet, systematic layer-by-layer diagnostics
 
 ## What we create

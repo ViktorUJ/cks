@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 21. Audit et détection : journaux du control plane, CloudTrail, GuardDuty, surveillance du runtime
 
 > **La suite.** La partie 3 a couvert l'identité (chapitres 16-17), les secrets (chapitre 18), le durcissement
@@ -397,4 +397,3 @@ d'admission qui empêchent les éléments dangereux dès leur entrée.
 
 ---
 [Table des matières](../README_FR.md) · [Chapitre 20](../20/fr.md) · [Chapitre 22](../22/fr.md)
-[English version](en.md) · [Русская версия](ru.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)

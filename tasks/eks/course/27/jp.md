@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第27章. ALB 経由の Ingress: target-type、アノテーション、TLS と ACM、WAF
 
 > **次は何か。** 第26章では L4 負荷分散、すなわち AWS Load Balancer Controller による LoadBalancer 型 Service と Network Load Balancer を扱いました。本章でも同じコントローラーを使用しますが、対象は L7 です。Ingress から、host と path によるルーティング、TLS 終端、WAF 保護を備えた Application Load Balancer を作成します。NLB と LoadBalancer 型 Service は第26章で扱うため、そちらを参照します。Gateway API と VPC Lattice は第28章、external-dns、Route 53、cert-manager は第29章です。Pod が VPC で IP を取得する仕組み（VPC CNI）は第8章、IRSA または Pod Identity によるコントローラーのロールは第16-17章で扱います。これらのテーマは参照し、ここでは繰り返しません。
@@ -296,7 +296,7 @@ ALB の **認証** は組み込みです。`cognito` または `oidc` を値と�
 13. Ingress 経由の ALB と Service 経由の NLB（第26章）は、それぞれいつ選びますか？
 14. `backend-protocol-version` はなぜ必要で、gRPC バックエンドにはどの値を設定しますか？
 
-## Practice
+## 実践
 
 このテーマに対応するコースラボ: [ラボ109: ACM 証明書、external-dns、Route 53 を使った ALB 経由の Ingress](../../labs/109/README_JP.MD)。それ以外はすべて稼働中のクラスターで確認します。コントローラーは第26章と同じなので、まず正常であることを確認し、利用可能な IngressClass を調べます。
 

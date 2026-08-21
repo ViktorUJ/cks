@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第30章. EKS の NetworkPolicy: VPC CNI network policy と Cilium
 
 > **次は何か。** 第26章から第29章では、外部からトラフィックがクラスターに入る方法を扱いました。NLB（第26章）、ALB（第27章）、Gateway API（第28章）、DNS と証明書（第29章）です。ここでは、NetworkPolicy による Pod 間のトラフィック分離、すなわち east-west トラフィックを扱います。代替 CNI の概要と VPC CNI が Pod に IP を割り当てる方法は第8章、外部への egress とトラフィックコストは第31章、Kyverno と Gatekeeper によるマルチテナンシーとポリシーは第22章を参照してください（これは NetworkPolicy ではなく admission です）。ここで扱うのは1点だけです。EKS で誰が、どのように Pod 間のパケットを実際にブロックするのかです。

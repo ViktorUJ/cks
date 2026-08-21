@@ -20,7 +20,7 @@ criteria. Checking is automatic, via the `check_result` command.
 
 Reinforce the material from the course chapter:
 
-- [Chapter 33. Metrics: Container Insights, Managed Prometheus and Grafana](../../course/33/ru.md)
+- [Chapter 33. Metrics: Container Insights, Managed Prometheus and Grafana](../../course/33/en.md)
 
 ## What we're creating
 

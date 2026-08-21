@@ -21,7 +21,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Consolider le contenu du chapitre suivant du cours :
 
-- [Chapitre 18. Secrets : KMS, Secrets Manager et SSM via External Secrets](../../course/18/ru.md)
+- [Chapitre 18. Secrets : KMS, Secrets Manager et SSM via External Secrets](../../course/18/fr.md)
 
 ## Ce que nous créons
 

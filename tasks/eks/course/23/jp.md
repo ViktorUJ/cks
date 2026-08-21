@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第23章. EBS CSI: gp3、StorageClass、拡張、スナップショット、AZ への紐付け
 
 > **この先。** 第3部はセキュリティで終わり、第4部はストレージから始まります。この章は EBS ブロックストレージを扱います。ボリュームは1つのアベイラビリティーゾーン (AZ) に存在し、そのゾーンのインスタンスにのみマウントできます。ここで扱うすべての特性はこの事実を中心にしています。複数 Pod からの共有書き込みと AZ をまたぐ利用には EFS と FSx (第24章)、Mountpoint 経由のオブジェクトストレージには第25章を参照してください。CSI ドライバーのロールは IRSA または Pod Identity (第16、17章) で付与します。ここでは参照のみとし、繰り返しません。ノードを AZ 間で移動させる Karpenter と consolidation は第12章、AWS Backup によるボリュームのバックアップは第41章です。PV、PVC、StatefulSet は CKA で学習済みであり、ここでは特定ゾーンにおける EBS の特性を扱います。

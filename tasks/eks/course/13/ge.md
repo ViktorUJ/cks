@@ -387,7 +387,7 @@ drain](../../labs/111/README_GE.MD). გარდა ამისა, spot-ი�
 განაწილებულია თუ არა ისინი ზონებს შორის. ნახეთ შეწყვეტების დამმუშავებლის ჟურნალები
 (`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interrupt`) და
 შეაფასეთ სიმძლავრის წაღების ნორმალური „ხმაური“. ცალკე განიხილეთ რეპოზიტორიის ადრინდელი
-Karpenter-ის ლაბა ([Karpenter](../../labs/02/README.MD)). ის კურსის ნაწილი არ არის, მაგრამ
+Karpenter-ის ლაბა ([Karpenter](../../labs/02/README_GE.MD)). ის კურსის ნაწილი არ არის, მაგრამ
 თემები იკვეთება.
 
 ---

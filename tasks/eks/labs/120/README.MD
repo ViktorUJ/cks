@@ -35,7 +35,7 @@ criteria. Checking is automatic, via the `check_result` command.
 
 Reinforce the material from this course chapter:
 
-- [Chapter 46. Network failures: SG, NACL, DNS, unhealthy targets](../../course/46/ru.md)
+- [Chapter 46. Network failures: SG, NACL, DNS, unhealthy targets](../../course/46/en.md)
 
 ## What we're creating
 

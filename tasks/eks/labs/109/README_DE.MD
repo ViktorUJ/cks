@@ -26,8 +26,8 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff dieser Kurskapitel vertiefen:
 
-- [Kapitel 27. Ingress über ALB: target-type, Annotationen, TLS und ACM, WAF](../../course/27/ru.md)
-- [Kapitel 29. DNS und Zertifikate: external-dns, Route 53, cert-manager](../../course/29/ru.md)
+- [Kapitel 27. Ingress über ALB: target-type, Annotationen, TLS und ACM, WAF](../../course/27/de.md)
+- [Kapitel 29. DNS und Zertifikate: external-dns, Route 53, cert-manager](../../course/29/de.md)
 
 ## Was wir erstellen
 

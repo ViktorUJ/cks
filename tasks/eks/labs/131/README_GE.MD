@@ -21,7 +21,7 @@
 
 კურსის თავის მასალის გამტკიცება:
 
-- [თავი 40. საიმედოობა: multi-AZ, PDB, topology spread](../../course/40/ru.md) -
+- [თავი 40. საიმედოობა: multi-AZ, PDB, topology spread](../../course/40/ge.md) -
   ნოუდების სწორი გამორთვა
 
 ## რას ვქმნით

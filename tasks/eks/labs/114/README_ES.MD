@@ -20,7 +20,7 @@ verificación es automática, con el comando `check_result`.
 
 Consolidar el material del capítulo del curso:
 
-- [Capítulo 33. Métricas: Container Insights, Managed Prometheus y Grafana](../../course/33/ru.md)
+- [Capítulo 33. Métricas: Container Insights, Managed Prometheus y Grafana](../../course/33/es.md)
 
 ## Qué vamos a crear
 

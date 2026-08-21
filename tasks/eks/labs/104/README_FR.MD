@@ -19,8 +19,8 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Consolider la matière des chapitres du cours :
 
-- [Chapitre 16. IRSA : fournisseur OIDC, trust policy, annotations ServiceAccount](../../course/16/ru.md)
-- [Chapitre 17. EKS Pod Identity : agent, associations, migration depuis IRSA](../../course/17/ru.md)
+- [Chapitre 16. IRSA : fournisseur OIDC, trust policy, annotations ServiceAccount](../../course/16/fr.md)
+- [Chapitre 17. EKS Pod Identity : agent, associations, migration depuis IRSA](../../course/17/fr.md)
 
 ## Ce que nous créons
 

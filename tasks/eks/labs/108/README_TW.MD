@@ -18,7 +18,7 @@ provider 切換到現代化的控制器,由它創建 Network Load Balancer(NLB) 
 
 鞏固以下課程章節的內容:
 
-- [第 26 章。AWS Load Balancer Controller 與 LoadBalancer 類型的 Service:NLB](../../course/26/ru.md) - 控制器、註解、NLB 對比 CLB
+- [第 26 章。AWS Load Balancer Controller 與 LoadBalancer 類型的 Service:NLB](../../course/26/tw.md) - 控制器、註解、NLB 對比 CLB
 
 ## 我們要創建什麼
 

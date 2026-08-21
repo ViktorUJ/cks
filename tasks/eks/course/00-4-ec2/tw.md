@@ -39,9 +39,9 @@ type 的名稱不是品牌，而是描述。`m7g.xlarge` 可分解為：
 
 ```mermaid
 flowchart TB
-    fam["m - family:<br/>general purpose"] --> gen["7 - generation:<br/>越新越划算"]
-    gen --> suf["g - suffix:<br/>Graviton, arm64"]
-    suf --> size["xlarge - size:<br/>4 vCPU, 16 GiB"]
+    fam["m - 系列：<br/>general purpose"] --> gen["7 - 世代：<br/>越新越划算"]
+    gen --> suf["g - 後綴：<br/>Graviton, arm64"]
+    suf --> size["xlarge - 規格：<br/>4 vCPU, 16 GiB"]
     style fam fill:#326ce5,color:#fff
     style suf fill:#673ab7,color:#fff
     style size fill:#f4b400,color:#000
@@ -49,12 +49,12 @@ flowchart TB
 
 sizes 的價格幾乎線性成長：`large`、`xlarge`、`2xlarge`、`4xlarge`、`8xlarge`，而資源增加一倍的 `2xlarge` 比 `xlarge` 貴一倍。因此「兩個 `xlarge` 或一個 `2xlarge`」是 reliability 與 density 的問題，而不是價格問題（第 0.4.8 節）。suffixes：`g` 是 Graviton（arm64）、`i` 是 Intel、`a` 是 AMD、`d` 是 local NVMe、`n` 是增強網路。
 
-| Family | Class | Ratio | 在 cluster 中的用途 |
+| 系列 | 類別 | 比例 | 在叢集中的用途 |
 |-----------|-------|-------------|--------------------------|
-| `t3`, `t4g` | burstable | 1:2 / 1:4 | dev clusters 與學習，不作為 prod nodes |
-| `m5`, `m6i`, `m7g` | general purpose | 1 vCPU : 4 GiB | default nodes、system add-ons |
-| `c6i`, `c7g` | compute optimized | 1 vCPU : 2 GiB | CI runners、processing、codecs |
-| `r6i`, `r7g` | memory optimized | 1 vCPU : 8 GiB | JVM、caches、analytics |
+| `t3`, `t4g` | 可突發 | 1:2 / 1:4 | 開發叢集與學習，不作為正式環境節點 |
+| `m5`, `m6i`, `m7g` | 通用型 | 1 vCPU : 4 GiB | 預設節點、系統附加元件 |
+| `c6i`, `c7g` | 運算最佳化 | 1 vCPU : 2 GiB | CI 執行器、處理、編解碼器 |
+| `r6i`, `r7g` | 記憶體最佳化 | 1 vCPU : 8 GiB | JVM、快取、分析 |
 | `i4i`, `im4gn` | storage optimized | local NVMe | Kafka、Elasticsearch、disk caches |
 | `g5`, `p5` | accelerated | GPU | ML inference 與 training、專用 taints |
 
@@ -66,7 +66,7 @@ sizes 的價格幾乎線性成長：`large`、`xlarge`、`2xlarge`、`4xlarge`�
 
 使用 VPC CNI（default mode）時，**每個 Pod 都會從 VPC subnet 取得真實 IP**，addresses 透過 ENI（instance network interfaces）配置。每個 type 的 ENI 數量與每個 ENI 的 IP 數量皆固定，因此 instance size 決定 density：`max-pods = ENI * (IP per ENI - 1) + 2`。
 
-| Type | ENI | 每個 ENI 的 IP | 約略 max-pods |
+| 類型 | ENI | 每個 ENI 的 IP | 約略 max-pods |
 |-----|-----|-----------|--------------------|
 | `t3.small` | 3 | 4 | 11 |
 | `m5.large` | 3 | 10 | 29 |
@@ -124,7 +124,7 @@ aws ec2 describe-launch-template-versions --launch-template-id lt-0123456789abcd
 
 還有一項應及早了解的 launch attribute：**placement group**。預設 EC2 會將 instances 分散到不同 physical hardware，以降低 correlated failures，多數情況下這正是所需行為。只有 workload 對 nodes 間 latency 極敏感，或自身能 replication data 且希望確知 replicas 位於不同 racks 時，才需要干預。建立 group 沒有費用，有四種 strategies（另有用於精確 time 的 precision time），其中 clusters 關心三種：
 
-| Strategy | 作用 | 典型 workload | 會遇到的限制 |
+| 策略 | 作用 | 典型 workload | 會遇到的限制 |
 |-----------|-----------|-------------------|-------------------------------|
 | `cluster` | 將 instances 集中在同一 AZ，最低 latency | HPC、distributed model training | 整個 group 僅一個 AZ；混合 types 降低找到 capacity 的機率 |
 | `partition` | 不同 partitions 不共用 racks，每 AZ 最多 7 partitions | Cassandra、HDFS、HBase、Kafka | instances 的數量僅受 account limits 限制 |
@@ -160,14 +160,14 @@ flowchart TB
 
 對 GPU training 與大型 ML jobs，有 **EC2 Capacity Blocks for ML**：預訂未來日期開始、從一天到半年期間的 P-family 與 Trainium instance capacity，最早可提前八週，且保證可用性。這是稀缺 accelerators 的 reservation，而非 discount：nodes 只在有限 training window 啟動，不會永久維持（第 9 章）。
 
-| Model | Discount | Risk | 適合的 cluster nodes |
+| 模型 | 折扣 | 風險 | 適合的叢集節點 |
 |--------|------|------|------------------------|
-| **On-demand** | 無 | 無 | system nodes、controllers、cluster 中的 databases |
-| **Spot** | 60-90% | 兩分鐘後中斷 | stateless services、CI、batch、queues |
-| **Compute SP** | 更有彈性 | 1-3 年 commitment，EC2+Fargate+Lambda | predictable base、hybrid |
-| **EC2 Instance SP** | 更高 | region 內對 family 的 commitment | stable node profile |
-| **Reserved Instances** | 30-70% | 綁定 type 與 zone | 罕見 node profiles |
-| **Capacity Blocks** | capacity reservation | reservation window 與 date | 用於 training 的 GPU 與 Trainium |
+| **隨需** | 無 | 無 | 系統節點、控制器、叢集中的資料庫 |
+| **Spot** | 60-90% | 兩分鐘後中斷 | 無狀態服務、CI、批次、佇列 |
+| **Compute SP** | 更有彈性 | 1-3 年承諾，EC2+Fargate+Lambda | 可預測基礎容量、混合式 |
+| **EC2 Instance SP** | 更高 | 區域內對系列的承諾 | 穩定節點設定檔 |
+| **Reserved Instances** | 30-70% | 綁定類型與可用區 | 罕見節點設定檔 |
+| **Capacity Blocks** | 容量預留 | 預留時段與日期 | 用於訓練的 GPU 與 Trainium |
 | **Graviton** | 15-40% | 需要 arm64 images | 所有可建置 multi-arch 的項目 |
 
 ```bash
@@ -204,12 +204,12 @@ spot 還有一點：**homogeneous instance set 是 spot nodes 最大的敵人**�
 - **依 families 劃分。** `m` 用於 general workloads，`c` 用於 CI 與 processing，`r` 用於 JVM 與 caches，GPU nodes 有自己的 taints。使用一個 universal type 處理所有內容代表 overpayment。
 - **預設使用 Graviton。** 新 services 立即建置 multi-arch，舊 services 則依 image readiness 遷移：這是不改變 architecture 的最簡單節省方式。image ID 由 SSM 取得，AMI update 與 cluster update 一起規劃（第 10 與第 38 章），Savings Plans coverage 則每季檢視一次（第 43 章）。
 
-## 0.4.10. Mini glossary
+## 0.4.10. 迷你詞彙表
 
 - **EC2 instance** - virtual machine；在 EKS 中是執行 containerd 與 kubelet 的 node。
 - **User data** - instance 啟動時執行的 config；其中包含 node bootstrap。
 - **IMDS** - 位於 `169.254.169.254` 的 metadata service；提供 instance data 與 IAM role temporary credentials。production 僅使用 hop limit 為 1 的 IMDSv2。
-- **Instance type** - `family + generation + suffix . size`，例如 `m7g.xlarge`。**Graviton** - AWS 的 arm64 processors（suffix `g`），需要 multi-arch images。
+- **執行個體類型** - `family + generation + suffix . size`，例如 `m7g.xlarge`。**Graviton** - AWS 的 arm64 處理器（suffix `g`），需要 multi-arch 映像。
 - **Burstable (T-series)** - basic CPU share 加上 **CPU credits**；不適合 prod nodes。**max-pods** - node 的 Pod 上限，在 VPC CNI 中取決於 ENI 數量及每個 ENI 的 IP 數量。
 - **AMI** - instance boot image；AL2023 與 Bottlerocket 綁定 Kubernetes minor version。**EBS / instance store** - 單一 AZ 中的 network volume / ephemeral local NVMe。
 - **Launch template / Auto Scaling group** - versioned launch template / 依 AZ subnets 維持 `min`、`desired`、`max` instances 的 group。

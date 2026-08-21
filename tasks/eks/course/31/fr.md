@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 31. Egress et coût du trafic : NAT, VPC endpoints, PrivateLink
 
 > **La suite.** Les chapitres 26 à 30 ont traité de l'entrée dans le cluster et de l'isolation : NLB (chapitre 26), ALB (chapitre 27), Gateway API (chapitre 28), DNS et certificats (chapitre 29), NetworkPolicy (chapitre 30). Ici, la direction inverse : le trafic sortant vers l'extérieur et son coût, avec NAT Gateway, VPC endpoints, PrivateLink et le trafic cross-AZ. Les fondamentaux de VPC, des sous-réseaux et du NAT figurent dans la partie 0 (chapitre 00-3), le coût global du cluster et Kubecost/OpenCost au chapitre 43, la connectivité multi-cluster et multi-compte au chapitre 32, et l'accès privé à S3 pour Mountpoint a été évoqué au chapitre 25. Une seule question ici : où part le trafic egress des pods dans EKS et pourquoi est-il facturé.

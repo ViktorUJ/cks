@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 36. ტრეისინგი და პროფაილირება: ADOT და X-Ray
 
 > **რა არის შემდეგ.** 33-ე და 34-ე თავებმა მოგვცა მეტრიკები და ლოგები, დაკვირვებადობის სამი

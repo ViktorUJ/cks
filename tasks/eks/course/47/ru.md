@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 47. Доступ и IAM: access entries, IRSA и Pod Identity, webhook, kubeconfig
 
 > **Что дальше.** Главы 45 и 46 разбирали железо и сеть: нода не присоединилась, трафик не

@@ -21,7 +21,7 @@
 コースの章の内容を定着させます:
 
 - [第 44 章。GitOps とデリバリー: Argo CD と Flux、クラスター群の
-  管理](../../course/44/ru.md) - 信頼できる情報源としての Git、sync と
+  管理](../../course/44/jp.md) - 信頼できる情報源としての Git、sync と
   health、self-heal
 
 ## 何を作るか

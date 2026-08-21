@@ -19,7 +19,7 @@ health（資源是否真的健康），透過手動編輯 cluster 重現 drift�
 鞏固課程章節的內容：
 
 - [第 44 章。GitOps 與交付：Argo CD 與 Flux，管理一組
-  cluster](../../course/44/ru.md) - Git 作為唯一真實來源、sync 與 health、
+  cluster](../../course/44/tw.md) - Git 作為唯一真實來源、sync 與 health、
   self-heal
 
 ## 我們要建立什麼

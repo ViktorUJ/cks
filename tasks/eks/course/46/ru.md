@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 46. Сетевые сбои: ENI exhausted, SG и NACL, DNS, unhealthy targets в балансировщике
 
 > **Что дальше.** Глава 45 разбирала, почему нода вообще не присоединилась к кластеру. Здесь -

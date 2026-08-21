@@ -18,9 +18,9 @@
 
 鞏固以下課程章節的內容:
 
-- [第 25 章。應用中的 S3:Mountpoint for Amazon S3 CSI 與存取模式](../../course/25/ru.md) -
+- [第 25 章。應用中的 S3:Mountpoint for Amazon S3 CSI 與存取模式](../../course/25/tw.md) -
   這個實驗的核心內容
-- [第 41-42 章。EKS 的 AWS Backup](../../course/41/ru.md) - 為什麼 EBS 快照不適用於
+- [第 41-42 章。EKS 的 AWS Backup](../../course/41/tw.md) - 為什麼 EBS 快照不適用於
   這裡
 
 ## 我們要創建什麼

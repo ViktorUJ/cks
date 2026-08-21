@@ -19,7 +19,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from this course chapter:
 
-- [Chapter 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/ru.md) -
+- [Chapter 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/en.md) -
   how to safely evict a StatefulSet during consolidation
 
 ## What we're creating

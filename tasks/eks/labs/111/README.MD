@@ -17,7 +17,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from the course chapter:
 
-- [Chapter 13. Spot instances: interruptions, diversification](../../course/13/ru.md) -
+- [Chapter 13. Spot instances: interruptions, diversification](../../course/13/en.md) -
   event handling
 
 ## What we're creating

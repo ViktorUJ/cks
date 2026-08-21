@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 44. GitOps და მიწოდება: Argo CD და Flux, კლასტერების პარკის მართვა
 
 > **რა არის შემდეგ.** ნაწილებში 5-7 GitOps არაერთხელ ვახსენეთ, როგორც კონფიგურაციის გაშლის გზა:

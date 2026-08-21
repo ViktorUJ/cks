@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第 4 章. クラスターの作成: eksctl、Terraform と Terragrunt、CloudFormation
 
 > **次に何をするか。** クラスターは一度作成しますが、チームは何年もそれと付き合います。そのため、ツールの選択は、誰が infrastructure state を所有するか、そして別の account で production を再現できるかを決める選択です。本章では、クラスターの構成（API 呼び出し一つではなく 20-30 resources）、eksctl、CloudFormation、Terraform、Terragrunt の比較、作成順序、後から変更できない parameters を扱います。アクセスは第 5 章、network は第 6・7 章、nodes は第 9-12 章、add-ons は第 37 章です。
@@ -7,10 +7,10 @@
 
 クラスターを console で手作業で組み立て、稼働しており、applications も動いています。問題は障害ではなく、普通の依頼から始まります。「第 2 region 用に新しい account に同じものを立ててください」。
 
-- **再現できない。** Wizard で選んだ項目を誰も覚えていません。authentication mode、public endpoint の CIDR、logs のセット、custom services CIDR。二つ目の cluster は異なるものになります。
+- **再現できない。** Wizard で選んだ項目を誰も覚えていません。authentication mode、public endpoint の CIDR、ログ のセット、custom services CIDR。二つ目の cluster は異なるものになります。
 - **引き継げない。** Subnets には `kubernetes.io/role/internal-elb` tag があり、「なぜ」と聞かれても答えはありません。load balancer が作成されなかったため付けたのです。
 - **Owner が退職した。** クラスターは engineer 個人の role で作成され、その role には作成時に cluster 内の administrator 権限が与えられました（第 5 章）。その engineer はもう会社にいません。
-- **Production と dev が乖離した。** dev の public endpoint は全世界に公開され、production では閉じられています。audit logs は production でのみ有効です。差異を誰も列挙できず、dev での確認は何の証明にもなりません。
+- **Production と dev が乖離した。** dev の public endpoint は全世界に公開され、production では閉じられています。audit ログ は production でのみ有効です。差異を誰も列挙できず、dev での確認は何の証明にもなりません。
 - **削除できない。** Terraform code はありますが、何がそれで作成され、何が手作業で追加されたか不明です。`destroy` は半分を削除し、ENI、security group、roles、DNS 付き load balancer という orphan を残します。
 
 共通する問題は、クラスターは存在するのに、**クラスターの記述が存在しない**ことです。
@@ -24,7 +24,7 @@ flowchart TB
     net["VPC、subnets、<br/>必須 tags"] --> cl["EKS クラスター"]
     iam["IAM: cluster と nodes の roles、<br/>OIDC provider"] --> cl
     cl --> auto["自動的に作成:<br/>cluster SG、ENI"]
-    cl --> you["自分で指定: access、<br/>logs、add-ons"]
+    cl --> you["自分で指定: access、<br/>ログ、add-ons"]
     you --> nodes["Node groups<br/>または Karpenter"]
     style cl fill:#326ce5,color:#fff
     style net fill:#0f9d58,color:#fff
@@ -33,28 +33,28 @@ flowchart TB
 
 **Network。** VPC、少なくとも二つの availability zones にある二つの subnets、routes、NAT。さらに、ないと一部の機能が黙って動作しなくなる tags が必要です。public subnets の `kubernetes.io/role/elb`、private subnets の `kubernetes.io/role/internal-elb`、Karpenter 用に cluster 名を値とする `karpenter.sh/discovery` です（第 6、12 章）。**IAM。** Cluster role、node role、issuer に関連付く IAM OIDC provider。これがなければ IRSA はなく、API にアクセスする controllers も動作しません。
 
-**自動的に作成されるもの:** 指定した subnets 内の cross-account ENI（通常 2-4 個）と、`eks-cluster-sg-<cluster>-<id>` 形式の cluster security group（第 2 章）。これらは自分の code にはありませんが account に存在し、不注意な `destroy` の後も残ります。**作成時に指定するもの:** `authenticationMode`（`API`、`API_AND_CONFIG_MAP`、`CONFIG_MAP`）、access entries と creator permissions（第 5 章）、Kubernetes version と `supportType`（`STANDARD` または `EXTENDED`、第 3 章）、endpoint と `publicAccessCidrs`、control plane logs、add-ons、nodes、default StorageClass。
+**自動的に作成されるもの:** 指定した subnets 内の cross-account ENI（通常 2-4 個）と、`eks-cluster-sg-<cluster>-<id>` 形式の cluster security group（第 2 章）。これらは自分の code にはありませんが account に存在し、不注意な `destroy` の後も残ります。**作成時に指定するもの:** `authenticationMode`（`API`、`API_AND_CONFIG_MAP`、`CONFIG_MAP`）、access entries と creator permissions（第 5 章）、Kubernetes version と `supportType`（`STANDARD` または `EXTENDED`、第 3 章）、endpoint と `publicAccessCidrs`、control plane ログ、add-ons、nodes、default StorageClass。
 
 これは module を使わず raw resources で書く場合の Terraform における同じ最低限です。Control plane が作成される、かつ一つでも pod が起動するために必要な、まさにその内容です。
 
 | 内容 | Terraform resource | 必須である理由 |
 |---|---|---|
-| Control plane | `aws_eks_cluster` | cluster 自体: version、role、`vpc_config`、`kubernetes_network_config`、endpoint access、logs |
+| Control plane | `aws_eks_cluster` | cluster 自体: version、role、`vpc_config`、`kubernetes_network_config`、endpoint access、ログ |
 | Cluster role | `aws_iam_role` + `aws_iam_role_policy_attachment` (`AmazonEKSClusterPolicy`) | これがなければ EKS は account 内の resources を管理できない |
 | Node role | `aws_iam_role` + `aws_iam_role_policy_attachment` (`AmazonEKSWorkerNodePolicy`, `AmazonEKS_CNI_Policy`, `AmazonEC2ContainerRegistryReadOnly`) | node は register できず、images も pull できない |
 | IRSA 用 OIDC | `aws_iam_openid_connect_provider` (+ `data.tls_certificate`) | これがなければ IRSA と API access を持つ controllers がない |
 | Network | `aws_vpc`, `aws_subnet` (または `data` sources)、tags `kubernetes.io/role/*`、`aws_security_group` | 二つの zones に subnets と SG が必要 |
-| Compute | `aws_eks_node_group` または `aws_eks_fargate_profile` | さもなければ pods を起動する場所がない。labs では system を Fargate、追加分を Karpenter で実行する |
+| コンピューティング | `aws_eks_node_group` または `aws_eks_fargate_profile` | さもなければ pods を起動する場所がない。labs では system を Fargate、追加分を Karpenter で実行する |
 | Add-ons | `aws_eks_addon` (`vpc-cni`, `coredns`, `kube-proxy`, `eks-pod-identity-agent`) | pod networking、DNS、kube-proxy、pod identity |
-| Access | `aws_eks_access_entry`, `aws_eks_access_policy_association` (または obsolete な `aws-auth`) | さもなければ creator 以外は誰も cluster に入れない（第 5 章） |
+| アクセス | `aws_eks_access_entry`, `aws_eks_access_policy_association` (または obsolete な `aws-auth`) | さもなければ creator 以外は誰も cluster に入れない（第 5 章） |
 
 これを手作業で書くことはできますが、高コストで壊れやすいものです。subnet tag、node role policy、OIDC と role の関連付けを忘れやすく、欠けた関連付けは `apply` ではなく、後の pod failure として現れます。特別な例として、nodes がなければ pods を起動する場所がなく、node role に `AmazonEKS_CNI_Policy` がなければ node は IP を取得できず `Ready` になりません（第 45 章）。したがって、これらの resources を一つずつ書くことはほとんどありません。ready-made module を使います（4.7 節）。
 
 ## 4.3. クラスターを作るツール: 正直な比較
 
-| ツール | 再現性 | Review | Drift | 開始速度 | state の owner |
+| ツール | 再現性 | Review | ドリフト | 開始速度 | state の owner |
 |---|---|---|---|---|---|
-| AWS console | なし | 確認するものがない | 追跡されない | 数分 | 誰でもない |
+| AWS コンソール | なし | 確認するものがない | 追跡されない | 数分 | 誰でもない |
 | eksctl | yaml config により部分的 | git 内の config | 自分の IaC 外にある eksctl 独自の CloudFormation stacks | 最も高い | eksctl が作成した CloudFormation |
 | CloudFormation | あり | git 内の template | stack の drift detection | 中程度 | CloudFormation service |
 | Terraform | あり | pull request の `plan` | `plan` で可視化される | 中程度 | S3 内の自分の state |
@@ -83,13 +83,13 @@ eksctl utils describe-stacks --cluster demo   # eksctl が所有する CloudForm
 
 **Stacks への分割。** すべてを一つの stack に記述すると、subnet tag の変更に infrastructure 全体の `plan` が必要になり、workloads の `apply` failure が network を block します。境界は変更速度と owner によって決まります。
 
-| Stack | 内容 | 変更頻度 |
+| スタック | 内容 | 変更頻度 |
 |---|---|---|
 | Network | VPC、subnets、NAT、routes、tags | 低い。変更は痛みを伴う |
-| Cluster | control plane、roles、endpoint、logs、version | 低い。一部の parameters は immutable |
-| Platform | OIDC と IRSA roles、add-ons、controllers、StorageClass | 中程度。updates 時 |
+| Cluster | control plane、roles、endpoint、ログ、version | 低い。一部の parameters は immutable |
+| プラットフォーム | OIDC と IRSA roles、add-ons、controllers、StorageClass | 中程度。updates 時 |
 | Nodes | node groups、launch templates、Karpenter NodePool | 高い |
-| Workloads | applications、secrets、ingress | 常時。通常は Terraform ではない |
+| ワークロード | applications、secrets、ingress | 常時。通常は Terraform ではない |
 
 **Providers の鶏と卵。** `kubernetes` と `helm` providers は、特定の cluster の endpoint と CA に接続します。cluster を同じ stack に記述した場合、最初の `plan` 時点ではこれらの values はまだありません。Terraform は failure するか、さらに悪いことに空の values で正常に plan します。ここから規則が導かれます。**cluster と workloads を同じ stack に記述しない**。Providers は次の stack で既存 cluster に設定し、manifests は GitOps に渡します（第 44 章）。もう一つの理由は、Terraform は Kubernetes objects の owner として不向きであり、workload stack の `destroy` は service を止めるからです。
 
@@ -134,7 +134,7 @@ flowchart TB
     idn["OIDC と IRSA roles"]
     add["Add-ons"]
     nodes["Nodes"]
-    wl["Workloads"]
+    wl["ワークロード"]
     net --> cl
     cl --> idn
     idn --> add
@@ -158,7 +158,7 @@ flowchart TB
 | KMS key による secrets encryption | 既存 cluster で有効化できるが、無効化できない |
 | Subnets と security groups | はい。同じ VPC の異なる zones に最低二つの subnets が必要 |
 | Endpoint public と private、`publicAccessCidrs` | はい |
-| Control plane logs、`deletionProtection` | はい |
+| Control plane ログ、`deletionProtection` | はい |
 | `authenticationMode` | はい。API 方向へ（第 5 章） |
 | Kubernetes version と `supportType` | はい。version は一度に一つの minor だけ前進（第 3 章） |
 
@@ -180,9 +180,9 @@ Creator role が必要なのは `create-cluster` 時の一度だけです。以�
 
 **CI role 自体の permissions。** Cluster の作成には広範な permissions が必要です。EKS、IAM（roles と OIDC provider）、EC2、そしてしばしば KMS と CloudWatch Logs です。この role は人に与えず、pipeline が assume し、repository と branch への trust に制限し、CloudTrail で可視化します（第 0.2、21 章）。
 
-**Secrets と deletion protection。** State bucket は暗号化および versioning を行い、access は CI role だけに限定します。state は決して git に置かず、secrets を含む `terraform output` は pipeline logs に出力しません。`deletionProtection` flag は cluster の削除を防ぎます。Terraform では `lifecycle` の `prevent_destroy` が同じ役割を果たし、process 側では separate pipelines と plan の読み取りが対応します。
+**Secrets と deletion protection。** State bucket は暗号化および versioning を行い、access は CI role だけに限定します。state は決して git に置かず、secrets を含む `terraform output` は pipeline ログ に出力しません。`deletionProtection` flag は cluster の削除を防ぎます。Terraform では `lifecycle` の `prevent_destroy` が同じ役割を果たし、process 側では separate pipelines と plan の読み取りが対応します。
 
-## 4.10. Drift: `plan` が自分で行っていない変更を表示する理由
+## 4.10. ドリフト: `plan` が自分で行っていない変更を表示する理由
 
 作成後、cluster は自分の関与なしに変化します。AWS が service tags を追加し、EKS が cluster SG rules を変更し、controllers が load balancers、target groups、DNS records を作成します。
 
@@ -209,8 +209,8 @@ Clusters が三つを超えると、差異のコストは数より速く増加�
 
 ## 4.13. ミニ用語集
 
-- **State** は Terraform code と実在 resources の対応を示す file で、S3 に versioning と write lock を伴って格納されます。**Drift** は code と infrastructure の実際の state の差異です。
-- **Stack** は独自の state を持つ independently applicable な infrastructure unit であり、**stacks 間の dependency** は、ある stack の outputs を別の stack の inputs に渡すことです（Terragrunt では `dependency` block）。
+- **State** は Terraform code と実在 resources の対応を示す file で、S3 に versioning と write lock を伴って格納されます。**ドリフト** は code と infrastructure の実際の state の差異です。
+- **スタック** は独自の state を持つ independently applicable な infrastructure unit であり、**stacks 間の dependency** は、ある stack の outputs を別の stack の inputs に渡すことです（Terragrunt では `dependency` block）。
 - **`bootstrapClusterCreatorAdminPermissions`** は作成時の access configuration field です。`true`（デフォルト）では cluster creator がその cluster の administrator rights を得ます（第 5 章）。
 - **`authenticationMode`** は authentication mode で、`API`、`API_AND_CONFIG_MAP`、`CONFIG_MAP` があります。**`deletionProtection`** は cluster の削除を禁止する flag です。**Immutable parameter** は `ipFamily`、custom `serviceIpv4Cidr`、VPC、cluster IAM role と name です。
 

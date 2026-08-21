@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 29. DNS და სერტიფიკატები: external-dns, Route 53, cert-manager
 
 > **რა არის შემდეგ.** 26-28-ე თავებში ვისწავლეთ ბალანსირებლების შექმნა: NLB Service-იდან (თავი 26),

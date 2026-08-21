@@ -19,7 +19,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Renforcer le chapitre du cours :
 
-- [Chapitre 12. Karpenter : NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/ru.md) -
+- [Chapitre 12. Karpenter : NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/fr.md) -
   comment évincer un StatefulSet en toute sécurité pendant la consolidation
 
 ## Ce que nous créons

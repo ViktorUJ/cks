@@ -19,7 +19,7 @@ CoreDNS 實際落在哪裡而時隱時現。
 
 鞏固本課程這一章的內容：
 
-- [第 46 章。網路故障](../../course/46/ru.md) - security group 作為網路故障的一層
+- [第 46 章。網路故障](../../course/46/tw.md) - security group 作為網路故障的一層
 
 ## 我們要建立什麼
 

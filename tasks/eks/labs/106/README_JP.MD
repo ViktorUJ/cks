@@ -20,10 +20,10 @@ StorageClass の `volumeBindingMode: Immediate` です。これにより、ス�
 
 コースの以下の章の内容を定着させます:
 
-- [第 23 章。EBS CSI:gp3、StorageClass、拡張、スナップショット、AZ への紐付け](../../course/23/ru.md) - このラボの中心となる内容
-- [第 9 章。コンピュートの種類:managed node groups、Fargate、Auto Mode](../../course/09/ru.md) - クラスタに 2 つの AZ がある理由と、ノードがどこで動いているか
-- [第 12 章。Karpenter:NodePool、consolidation、disruption](../../course/12/ru.md) - ボリュームを持つ Pod が AZ をまたいで移動しない理由
-- [第 16-17 章。IRSA と Pod Identity](../../course/16/ru.md) - ドライバが `CreateVolume`/`CreateSnapshot` の権限をどのように取得するか
+- [第 23 章。EBS CSI:gp3、StorageClass、拡張、スナップショット、AZ への紐付け](../../course/23/jp.md) - このラボの中心となる内容
+- [第 9 章。コンピュートの種類:managed node groups、Fargate、Auto Mode](../../course/09/jp.md) - クラスタに 2 つの AZ がある理由と、ノードがどこで動いているか
+- [第 12 章。Karpenter:NodePool、consolidation、disruption](../../course/12/jp.md) - ボリュームを持つ Pod が AZ をまたいで移動しない理由
+- [第 16-17 章。IRSA と Pod Identity](../../course/16/jp.md) - ドライバが `CreateVolume`/`CreateSnapshot` の権限をどのように取得するか
 
 ## 作成するもの
 

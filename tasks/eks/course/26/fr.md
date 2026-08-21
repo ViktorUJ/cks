@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 26. AWS Load Balancer Controller et Service de type LoadBalancer : NLB
 
 > **La suite.** C'est le début de la partie 5, consacrée au réseau et au trafic. Les parties 3 et 4 ont traité

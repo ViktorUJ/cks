@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 26 章。AWS Load Balancer Controller 與 LoadBalancer 類型的 Service：NLB
 
 > **接下來。** 這是第 5 部分的開始，主題為網路與流量。第 3 和第 4 部分已涵蓋身分、
@@ -233,7 +233,7 @@ flowchart TB
 
 | 準則 | `instance` | `ip` |
 |---|---|---|
-| Target | node 的 `NodePort` | 直接使用 Pod IP |
+| 目標 | 節點的 `NodePort` | 直接使用 Pod IP |
 | 流量路徑 | NLB -> NodePort -> kube-proxy -> Pod | NLB -> Pod |
 | 額外的 node 間 hop | 可能 | 無 |
 | Service 類型 | `NodePort` 或 `LoadBalancer` | 使用 VPC CNI 時任意類型 |
@@ -301,15 +301,15 @@ websocket）也會有相同情況。
 kube-proxy 與 NLB 將 TCP connection 視為平衡單位，不解析其中可能有數百個獨立 requests。若要**依 request**
 分散負載，便需要理解 HTTP/2 的 L7。有三種選項。
 
-**選項 1：north-south gRPC 使用 L7 load balancer。** 外部 gRPC 透過 ALB 進入：在 Ingress 設定
-`alb.ingress.kubernetes.io/backend-protocol-version: GRPC`，ALB 會在 request 層級進行平衡，並支援 gRPC
+**選項 1：南北向 gRPC 使用 L7 負載平衡器。** 外部 gRPC 透過 ALB 進入：在 Ingress 設定
+`alb.ingress.kubernetes.io/backend-protocol-version: GRPC`，ALB 會在請求層級進行平衡，並支援 gRPC
 healthcheck。第 27 章介紹 ALB 與 Ingress；本章的重點是 L7 能解除進入流量的黏著。
 
 **選項 2：client-side balancing。** Headless Service（`clusterIP: None`）不會提供 client 單一 VIP，而是提供
 所有 Pod 位址。gRPC client 自己以 `round_robin` policy 將 RPC 分配到這些位址。代價是 client 必須支援
 client-side LB，且在擴展時重新 resolve DNS，否則新的 Pods 不會加入 pool。
 
-**選項 3：east-west 使用 service mesh。** 服務對服務的通訊採用 Istio 或 Linkerd：Pod 旁會出現 sidecar proxy
+**選項 3：東西向使用服務網格。** 服務對服務的通訊採用 Istio 或 Linkerd：Pod 旁會出現 sidecar proxy
 （Istio 也有不使用 sidecar 的 ambient mode），為 gRPC 和 HTTP/2 實現 per-request L7 balancing。同時，mesh
 也提供 mTLS、retries、timeouts、circuit breaking、traffic locality 與 observability（golden signals）。
 Istio 的深入內容在獨立的 ICA 課程中說明。
@@ -324,9 +324,9 @@ retries 與 observability 時使用 mesh。不要只為平衡一個 gRPC 而引�
 | 方法 | 平衡的對象 | 提供的能力 | 付出的代價 |
 |---|---|---|---|
 | NLB / Service (L4) | connections | 簡單 L4、高吞吐量 | gRPC 黏在 Pod 上 |
-| ALB gRPC (L7) | north-south requests | per-request LB、gRPC healthcheck | 僅 HTTP/2、外部入口 |
-| headless + client-side LB | client 端 requests | 無 proxy、最少 hops | client 支援、重新 resolve |
-| service mesh Istio/Linkerd | east-west requests | per-request LB、mTLS、retries、metrics | overhead、各自的 upgrades |
+| ALB gRPC (L7) | 南北向請求 | 每請求負載平衡、gRPC 健康檢查 | 僅 HTTP/2、外部入口 |
+| headless + 用戶端負載平衡 | 用戶端請求 | 無 Proxy、最少跳點 | 用戶端支援、重新解析 |
+| 服務網格 Istio/Linkerd | 東西向請求 | 每請求負載平衡、mTLS、重試、指標 | 額外負荷、各自的升級 |
 
 ## 26.9. 生產環境中的使用方式
 
@@ -405,7 +405,7 @@ port）以及 `ip` 模式中 security groups 對 Pod port 的可達性。應用�
 13. Service 停在 `<pending>` 且沒有外部位址時，應依什麼順序檢查哪些事項？
 14. 如何為 public NLB 提供靜態位址？如何減輕部署時 TCP sessions 中斷的問題？
 
-## Practice
+## 實作
 
 本課程與此主題相關的 lab：[lab 108 - AWS Load Balancer Controller：用於 LoadBalancer 類型
 Service 的 NLB](../../labs/108/README_TW.MD)。除此之外，所有內容都可在即時叢集上驗證。首先確認控制器

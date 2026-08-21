@@ -22,7 +22,7 @@ Unterschied live zu sehen.
 
 Den Stoff des Kurskapitels vertiefen:
 
-- [Kapitel 5. Zugriff auf den Cluster: IAM und RBAC, Access Entries](../../course/05/ru.md) -
+- [Kapitel 5. Zugriff auf den Cluster: IAM und RBAC, Access Entries](../../course/05/de.md) -
   Migration von aws-auth
 
 ## Was wir erstellen

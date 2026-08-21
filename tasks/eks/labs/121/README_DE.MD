@@ -20,7 +20,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Vertiefe den Stoff aus diesem Kurskapitel:
 
-- [Kapitel 47. Zugriff und IAM: access entries, IRSA, webhook, kubeconfig](../../course/47/ru.md)
+- [Kapitel 47. Zugriff und IAM: access entries, IRSA, webhook, kubeconfig](../../course/47/de.md)
 
 ## Was wir erstellen
 

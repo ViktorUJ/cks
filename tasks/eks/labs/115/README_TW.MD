@@ -19,7 +19,7 @@ IRSA 權限的 Fluent Bit DaemonSet,它會持續把日誌串流到 CloudWatch Lo
 
 鞏固以下課程章節的內容:
 
-- [第 34 章。日誌:Fluent Bit、CloudWatch Logs、OpenSearch、成本控制](../../course/34/ru.md)
+- [第 34 章。日誌:Fluent Bit、CloudWatch Logs、OpenSearch、成本控制](../../course/34/tw.md)
 
 ## 我們要創建什麼
 

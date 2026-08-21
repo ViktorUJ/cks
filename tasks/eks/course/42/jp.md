@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第42章. リストアと DR: 既存・新規クラスターへの restore、namespace restore、Velero
 
 > **次は何か。** 第41章ではバックアップを扱いました。AWS Backup、composite recovery point、クラスター状態とボリュームを一つの整合した時点にまとめる方法です。しかしバックアップは半分にすぎません。検証されていないバックアップはバックアップではありません。ここでは、この時点から戻す方法を扱います。既存クラスターと新規クラスターへの restore、粒度を絞った namespace の復元、第2のツールとしての Velero、さらに RTO/RPO と DR 戦略です。関連内容は他章で扱います。バックアップと composite recovery point は第41章、EBS volume の AZ への結び付きは第23章、DR のためのマルチクラスター・マルチアカウント接続性は第32章、クラスターのバージョンロールバック（データ restore ではない）は第39章です。
@@ -118,7 +118,7 @@ flowchart TB
 
 | 基準 | AWS Backup | Velero |
 |---|---|---|
-| 性質 | managed AWS service | k8s-native、クラスターに導入 |
+| 性質 | AWS マネージドサービス | k8s-native、クラスターに導入 |
 | 単位 | composite recovery point | Backup（オブジェクト + volume） |
 | policy/保護 | backup plan、vault、Vault Lock（WORM） | Schedule の retention、bucket の保護は S3 Object Lock（WORM）で利用者の責任 |
 | 可搬性 | AWS 内（cross-region/account） | クラスター、distribution、cloud 間 |

@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 18. Secretos: cifrado KMS, Secrets Manager y SSM mediante External Secrets y CSI
 
 > **Qué sigue.** Los capítulos 16 y 17 enseñaron a asignar al pod su propio rol en AWS mediante IRSA

@@ -1,3 +1,4 @@
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Глава 45. Нода не присоединилась к кластеру: IAM, SG, user data, bootstrap, kubelet
 
 > **Что дальше.** Здесь открывается Часть 8 - troubleshooting. Начинаем с самого частого

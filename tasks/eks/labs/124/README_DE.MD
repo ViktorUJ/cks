@@ -19,7 +19,7 @@ Abnahmekriterien. Die Kontrolle erfolgt automatisch über den Befehl `check_resu
 
 Den Stoff aus dem Kurskapitel vertiefen:
 
-- [Kapitel 35. Autoskalierung von Anwendungen: HPA, externe Metriken, KEDA](../../course/35/ru.md)
+- [Kapitel 35. Autoskalierung von Anwendungen: HPA, externe Metriken, KEDA](../../course/35/de.md)
 
 ## Was wir erstellen
 

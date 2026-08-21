@@ -22,7 +22,7 @@ CI-მ image ააწყო, push გააკეთა და deploy შეა
 არსებობდა. ეს ერთეული მარცხი კი არა, supply chain-ის პრობლემათა კლასია, ანუ ჯაჭვისა საწყისი
 კოდიდან გაშვებულ კონტეინერამდე. მის გვერდით იმავე ბუნების მონათესავე პრობლემებიც გვხვდება:
 
-- **Rate limit და upstream-ის მიუწვდომლობა.** Images-ის ნახევარი პირდაპირ Docker Hub-იდან
+- **Rate limit და წყარო რეესტრის მიუწვდომლობა.** Images-ის ნახევარი პირდაპირ Docker Hub-იდან
   იტვირთება. პიკურ საათში მოდის `429 Too Many Requests` (anonymous pull limit), ახალი პოდები
   `ImagePullBackOff`-ში იჭედება, rollout კი ჩერდება. გარე registry runtime-ში თქვენს
   დამოკიდებულებად იქცა.
@@ -51,7 +51,7 @@ Amazon ECR (Elastic Container Registry) არის OCI images-ის მარ
 `get-login-password` გასცემს 12-საათიან token-ს, რომლითაც docker-ში login სრულდება:
 
 ```bash
-# პრივატულ რეესტრში login: token 12 საათით, მომხმარებელი ყოველთვის AWS
+# კერძო რეესტრში შესვლა: ტოკენი 12 საათით, მომხმარებელი ყოველთვის AWS
 aws ecr get-login-password --region eu-central-1 \
   | docker login --username AWS --password-stdin 111122223333.dkr.ecr.eu-central-1.amazonaws.com
 ```
@@ -66,7 +66,7 @@ repository-სთვის (ვის შეუძლია `pull`/`push` სწ
 `imagePullSecrets`-ის გარეშე ტვირთავს.
 
 ```bash
-# repository-ის შექმნა: immutable tags + scan push-ზე + დაშიფვრა საკუთარი KMS key-ით
+# repository-ის შექმნა: უცვლელი tag-ები + სკანირება push-ისას + დაშიფვრა საკუთარი KMS გასაღებით
 aws ecr create-repository --repository-name payments/api \
   --image-tag-mutability IMMUTABLE \
   --image-scanning-configuration scanOnPush=true \
@@ -132,9 +132,9 @@ policy-ს შესწორების გარეშე კარგავ�
   წყაროს ანგარიშს `ecr:CreateRepository` და `ecr:ReplicateImage` უფლებებს აძლევს, ამასთან
   კოპირდება მხოლოდ წესის კონფიგურაციის შემდეგ push-ით ატვირთული images.
 
-ცენტრალიზაციის ფასი აშკარაა: registry საერთო დამოკიდებულება ხდება, რომელსაც საკუთარი owner,
-API quotas და blast radius აქვს. ამიტომ პროდი ხშირად საკუთარ ანგარიშში ან რეგიონში replica-ს
-ინახავს: source of truth ერთია, მაგრამ rollout-ის failure point ერთზე მეტია.
+ცენტრალიზაციის ფასი აშკარაა: registry საერთო დამოკიდებულება ხდება, რომელსაც საკუთარი მფლობელი,
+API-ის კვოტები და დაზიანების არეალი აქვს. ამიტომ პროდი ხშირად საკუთარ ანგარიშში ან რეგიონში replica-ს
+ინახავს: ჭეშმარიტების წყარო ერთია, მაგრამ rollout-ისას მარცხის წერტილი ერთზე მეტია.
 
 შექმნისას მეორე პარამეტრი, რომელიც **შემდგომშიც უცვლელია**, არის encryption at rest.
 ნაგულისხმევად layers იშიფრება S3 keys-ით (SSE-S3, AES-256, თქვენი მხრიდან მოქმედება საჭირო არ
@@ -148,21 +148,21 @@ API quotas და blast radius აქვს. ამიტომ პროდი 
 ECR-ს images-ში ცნობილი CVE-ების მოძებნა შეუძლია. ორი რეჟიმი არსებობს და ეს არჩევანი მთელი
 registry-სთვის კეთდება და არა ცალკეული repository-სთვის.
 
-- **Basic scanning** - ECR-ის ტექნოლოგია CVE database-ის საფუძველზე, რომელიც **OS packages-ის
+- **Basic scanning** - ECR-ის ტექნოლოგია CVE მონაცემთა ბაზის საფუძველზე, რომელიც **ოპერაციული სისტემის პაკეტების
   მოწყვლადობებს** ასკანირებს. აქვს ორი სიხშირე: ხელით და scan on push (push-ისას). Findings-ს
   `DescribeImageScanFindings` აბრუნებს.
-- **Enhanced scanning** - **Amazon Inspector**-თან ინტეგრაცია: ასკანირებს **OS-ისა და
-  programming language packages-ის** (npm, pip, gem და სხვ.) მოწყვლადობებს და ამას
+- **Enhanced scanning** - **Amazon Inspector**-თან ინტეგრაცია: ასკანირებს **ოპერაციული სისტემისა და
+  პროგრამირების ენების პაკეტების** (npm, pip, gem და სხვ.) მოწყვლადობებს და ამას
   **უწყვეტად** აკეთებს. ახალი CVE-ის გამოჩენისას უკვე შენახული images-ის შედეგები ავტომატურად
   განახლდება, Inspector კი EventBridge-ში event-ს აგზავნის. აქვს ორი სიხშირე: scan on push და
   continuous scan.
 
 ```bash
-# basic scan on push-ის ჩართვა registry-ის დონეზე
+# basic scan on push-ის ჩართვა რეესტრის დონეზე
 aws ecr put-registry-scanning-configuration --scan-type BASIC \
   --rules '[{"scanFrequency":"SCAN_ON_PUSH","repositoryFilters":[{"filter":"*","filterType":"WILDCARD"}]}]'
 
-# კონკრეტული image-ის ერთჯერადი scan და findings-ის ნახვა severity-ის მიხედვით
+# კონკრეტული image-ის ერთჯერადი სკანირება და findings-ის ნახვა severity-ის მიხედვით
 aws ecr start-image-scan --repository-name payments/api --image-id imageTag=1.4.2
 aws ecr describe-image-scan-findings --repository-name payments/api --image-id imageTag=1.4.2
 ```
@@ -175,10 +175,10 @@ ECR მოწყვლადობას პოულობს, policy კი �
 
 | თვისება | Basic scanning | Enhanced scanning (Inspector) |
 |---|---|---|
-| რას ასკანირებს | OS packages | OS + language packages (npm, pip, ...) |
+| რას ასკანირებს | ოპერაციული სისტემის პაკეტები | ოპერაციული სისტემისა და პროგრამირების ენების პაკეტები (npm, pip, ...) |
 | სიხშირე | ხელით, scan on push | scan on push, უწყვეტად |
 | ახალი CVE-ებით ხელახალი შეფასება | არა | დიახ, ავტომატურად |
-| შეტყობინებები | - | event EventBridge-ში |
+| შეტყობინებები | - | მოვლენა EventBridge-ში |
 | სად არის მიზანშეწონილი | მინიმუმი, sandbox | პროდი, მუდმივი კონტროლი |
 
 Basic-სა და enhanced-ს შორის გადართვა ადრე შესრულებულ scans-ს ანულებს: მათი თავიდან
@@ -192,7 +192,7 @@ Tag არის image-ის მოძრავი იარლიყი. Image
 შესრულდეს **digest-ით** და არა tag-ით.
 
 ```bash
-# pull digest-ით - გარანტია, რომ ეს ზუსტად ის image-ია, რომელიც CI-მ აგო
+# digest-ით ჩამოტვირთვა - გარანტია, რომ ეს ზუსტად ის image-ია, რომელიც CI-მ ააწყო
 docker pull 111122223333.dkr.ecr.eu-central-1.amazonaws.com/payments/api@sha256:9f2c...e41a
 ```
 
@@ -218,20 +218,20 @@ policy-controller-ით (თავი 22). გაშვება ნება�
 
 ## 20.5. Pull through cache
 
-Pull through cache Docker Hub-ის rate limit-ისა და upstream-ის მიუწვდომლობის პრობლემას
+Pull through cache Docker Hub-ის rate limit-ისა და წყარო რეესტრის მიუწვდომლობის პრობლემას
 აგვარებს. ECR **მოთხოვნისას გარე registry-ს images-ს თქვენს კერძო ECR-ში cache-ს უკეთებს**:
 თქვენ image-ს საკუთარი registry-ს URI-ით ტვირთავთ, პირველი მიმართვისას ECR repository-ს თავად
-ქმნის და image-ს cache-ში ინახავს, შემდგომ მოთხოვნებზე კი tag-ის ახალ ვერსიას upstream-ში სულ
+ქმნის და image-ს cache-ში ინახავს, შემდგომ მოთხოვნებზე კი tag-ის ახალ ვერსიას წყარო რეესტრში სულ
 მცირე **24 საათში ერთხელ** ამოწმებს და cache-ს აახლებს.
 
 ```mermaid
 flowchart TB
-    pod["Pod / kubelet"]
-    ecr["პრივატული ECR<br/>(cache)"]
-    rule["Pull through<br/>cache rule"]
-    up["Upstream: Docker Hub,<br/>Quay, registry.k8s.io"]
-    pod -->|"pull ECR URI-ით"| ecr
-    ecr -->|"cache miss"| rule
+    pod["პოდი / kubelet"]
+    ecr["კერძო ECR<br/>(ქეში)"]
+    rule["Pull through<br/>cache-ის წესი"]
+    up["წყარო: Docker Hub,<br/>Quay, registry.k8s.io"]
+    pod -->|"ჩამოტვირთვა ECR URI-ით"| ecr
+    ecr -->|"ქეშის აცდენა"| rule
     rule --> up
     up -->|"ქეშდება"| ecr
     style ecr fill:#326ce5,color:#fff
@@ -242,20 +242,20 @@ flowchart TB
 
 - **Docker Hub-ის rate limit-ის გვერდის ავლა** - image-ს საკუთარი ECR-იდან ტვირთავთ და არა
   ანონიმურად Docker Hub-იდან.
-- **ხელმისაწვდომობა** - upstream გაითიშა, cache-ში კი image უკვე არის.
+- **ხელმისაწვდომობა** - წყარო რეესტრი გაითიშა, cache-ში კი image უკვე არის.
 - **კერძო კლასტერი ინტერნეტში გასასვლელის გარეშე** (თავი 19) - კვანძები მხოლოდ ECR-ს
   უკავშირდება VPC endpoints-ის გავლით და გარე images-ისთვის ინტერნეტში არ გადის.
 - **სკანირების ერთიანი წერტილი** - cache-ში შენახული images თქვენს ECR-ში მდებარეობს და მათზე
   იგივე scan და policies ვრცელდება, რაც საკუთარ images-ზე.
 
-მხარდაჭერილი upstream-ები (AWS-ის დოკუმენტაციის მიხედვით): **ავთენტიფიკაციის გარეშე** - Amazon
+მხარდაჭერილი წყარო რეესტრები (AWS-ის დოკუმენტაციის მიხედვით): **ავთენტიფიკაციის გარეშე** - Amazon
 ECR Public, Kubernetes registry (`registry.k8s.io`) და Quay; **ავთენტიფიკაციით**, AWS Secrets
 Manager-ში შენახული secret-ის მეშვეობით - Docker Hub, Microsoft Azure Container Registry,
 GitHub Container Registry, GitLab (SaaS) და Chainguard; **Amazon ECR** (cross-account) - IAM
 role-ის მეშვეობით.
 
 ```bash
-# Docker Hub-ის წესი: docker-hub პრეფიქსი, credentials Secrets Manager-ში
+# Docker Hub-ის წესი: docker-hub პრეფიქსი, ავტორიზაციის მონაცემები Secrets Manager-ში
 aws ecr create-pull-through-cache-rule --ecr-repository-prefix docker-hub \
   --upstream-registry-url registry-1.docker.io \
   --credential-arn arn:aws:secretsmanager:eu-central-1:111122223333:secret:ecr-pullthroughcache/dh
@@ -271,11 +271,11 @@ image: 111122223333.dkr.ecr.eu-central-1.amazonaws.com/docker-hub/library/nginx:
 ერთი მნიშვნელოვანი დეტალი: repositories, რომლებსაც ECR cache-სთვის თავად ქმნის,
 ნაგულისხმევად იქმნება `MUTABLE` tags-ით, SSE-S3 encryption-ითა და lifecycle policy-ის გარეშე,
 ამიტომ 20.2 და 20.6 სექციების პარამეტრები მათზე ავტომატურად არ ვრცელდება. იმისათვის, რომ
-cache repositories-მა KMS key, ავტომატური გაწმენდა და tag-ის უცვლელობა მემკვიდრეობით მიიღოს,
+cache repositories-მა KMS გასაღები, ავტომატური გაწმენდა და tag-ის უცვლელობა მემკვიდრეობით მიიღოს,
 ქმნიან **repository creation template**-ს იმავე prefix-ით, რომელიც cache-ის წესს აქვს:
 
 ```bash
-# შაბლონი docker-hub პრეფიქსისთვის: cache-repository-ები მიიღებენ KMS key-სა და lifecycle policy-ს
+# შაბლონი docker-hub პრეფიქსისთვის: cache-repository-ები მიიღებენ KMS გასაღებსა და lifecycle policy-ს
 aws ecr create-repository-creation-template --prefix docker-hub --applied-for PULL_THROUGH_CACHE \
   --encryption-configuration encryptionType=KMS,kmsKey=arn:aws:kms:eu-central-1:111122223333:key/abcd \
   --lifecycle-policy file://lifecycle.json
@@ -326,11 +326,11 @@ VPC endpoints-ის გავლით** ტვირთავენ. `pull`-�
 
 ```mermaid
 flowchart TB
-    build["Build CI-ში"]
-    scan["CVE scan"]
-    sign["Image-ის ხელმოწერა"]
-    push["Push ECR-ში<br/>IMMUTABLE"]
-    pull["Pull digest-ით"]
+    build["აწყობა CI-ში"]
+    scan["CVE-ებზე შემოწმება"]
+    sign["იმიჯის ხელმოწერა"]
+    push["ECR-ში ატვირთვა<br/>IMMUTABLE"]
+    pull["digest-ით ჩამოტვირთვა"]
     adm["შემოწმება<br/>admission-ზე"]
     build --> scan --> sign --> push --> pull --> adm
     style push fill:#326ce5,color:#fff
@@ -339,9 +339,9 @@ flowchart TB
 
 | რგოლი | რას გვაძლევს | სად წყდება |
 |---|---|---|
-| CVE scan | ცნობილი მოწყვლადობები პროდამდე ჩანს | image საერთოდ არ სკანირდება |
-| Push `IMMUTABLE` ECR-ში | tag-ის გადაწერა შეუძლებელია | `MUTABLE`, tag შეუმჩნევლად შეიცვალა |
-| Pull digest-ით | ზუსტად აწყობილი არტეფაქტი ეშვება | deploy `latest`/tag-ით |
+| CVE-ებზე შემოწმება | ცნობილი მოწყვლადობები პროდამდე ჩანს | image საერთოდ არ სკანირდება |
+| `IMMUTABLE` ECR-ში ატვირთვა | tag-ის გადაწერა შეუძლებელია | `MUTABLE`, tag შეუმჩნევლად შეიცვალა |
+| digest-ით ჩამოტვირთვა | ზუსტად აწყობილი არტეფაქტი ეშვება | deploy `latest`/tag-ით |
 | ხელმოწერის შემოწმება admission-ზე | მხოლოდ სანდო image დაიშვება | ხელმოწერა არ მოწმდება |
 
 ეს ასე იკითხება: CI image-ს აწყობს, ასკანირებს (20.3), ხელს აწერს (20.4), `IMMUTABLE` ECR-ში
@@ -357,7 +357,7 @@ push-ს აკეთებს (20.2), კლასტერი digest-ით �
 - **Immutable tags და deploy digest-ით.** Repositories იქმნება `IMMUTABLE`-ით, workloads კი
   image-ზე `@sha256:`-ით მიუთითებს: tag ვერ გადაიწერება და ზუსტად ის ეშვება, რაც ააწყეს.
 - **Pull through cache პირდაპირი Docker Hub-ის ნაცვლად.** გარე images იტვირთება ECR cache-ის
-  გავლით: upstream-ის rate limit-სა და ხელმისაწვდომობაზე დამოკიდებულება აღარ არსებობს და
+  გავლით: წყარო რეესტრის rate limit-სა და ხელმისაწვდომობაზე დამოკიდებულება აღარ არსებობს და
   ყველაფერი ერთიანი scan-ისა და policies-ის ქვეშაა. Cache repositories-ის პარამეტრები (KMS,
   lifecycle, immutability) წესის prefix-ზე repository creation template-ით ედება.
 - **Lifecycle policy თითოეულ repository-ზე.** ძველი და untagged images-ის ავტომატური გაწმენდა
@@ -378,8 +378,8 @@ push-ს აკეთებს (20.2), კლასტერი digest-ით �
 - **Tag immutability** - repository-ს `IMMUTABLE` რეჟიმი, რომელიც tag-ის სხვა image-ით
   გადაწერას კრძალავს; `MUTABLE` (ნაგულისხმევი) გადაწერას უშვებს.
 - **Basic / Enhanced scanning** - ECR-ში CVE-ების ძებნის რეჟიმები: basic ნატიურად ასკანირებს
-  OS packages-ს; enhanced Amazon Inspector-ის მეშვეობით უწყვეტად ასკანირებს OS-სა და language
-  packages-ს.
+  ოპერაციული სისტემის პაკეტებს; enhanced Amazon Inspector-ის მეშვეობით უწყვეტად ასკანირებს ოპერაციულ სისტემასა და
+  პროგრამირების ენების პაკეტებს.
 - **Pull through cache** - ECR-ის წესი, რომელიც მოთხოვნისას გარე registry-ს (Docker Hub, Quay,
   `registry.k8s.io` და სხვ.) images-ს თქვენს კერძო ECR-ში cache-ს უკეთებს.
 - **Lifecycle policy** - ასაკის ან რაოდენობის მიხედვით images-ის ავტომატური წაშლის წესები.
@@ -411,8 +411,8 @@ push-ს აკეთებს (20.2), კლასტერი digest-ით �
 - Tag-ის mutability ძირითადი არჩევანია: `IMMUTABLE` tag-digest კავშირს აფიქსირებს, `MUTABLE` კი
   `latest`-ის შეუმჩნევლად შეცვლას უშვებს. პროდისთვის გამოიყენება `IMMUTABLE` და deploy
   `@sha256:`-ით.
-- სკანირება: basic (OS packages, ხელით/scan on push) და enhanced (OS + languages, უწყვეტად,
-  Inspector, events EventBridge-ში). თავად არაფერს ბლოკავს, გადაწყვეტილებას admission policy
+- სკანირება: basic (ოპერაციული სისტემის პაკეტები, ხელით/scan on push) და enhanced (ოპერაციული სისტემისა და პროგრამირების
+  ენების პაკეტები, უწყვეტად, Inspector, მოვლენები EventBridge-ში). თავად არაფერს ბლოკავს, გადაწყვეტილებას admission policy
   იღებს (თავი 22).
 - მთლიანობა: digest ჩანაცვლებისგან იცავს, ხელმოწერა (cosign, Notation, AWS Signer) კი განზრახ
   გაყალბებისგან; კლასტერში შესვლისას ხელმოწერას Kyverno/Gatekeeper policy ამოწმებს (თავი 22).
@@ -445,7 +445,7 @@ through cache-ის გავლით მოდის. მორიგეო�
 7. თავად სკანირება ბლოკავს მოწყვლადი image-ის deploy-ს? თუ არა, რა ბლოკავს და სად?
 8. რატომ არის digest-ით deploy tag-ით deploy-ზე საიმედო და რით განსხვავდება digest tag-ისგან?
 9. რისგან იცავს digest და რისგან ხელმოწერა, და სად მოწმდება ხელმოწერა?
-10. რას აკეთებს pull through cache და რომელი upstream-ები მოითხოვს ავთენტიფიკაციას, ხოლო
+10. რას აკეთებს pull through cache და რომელი წყარო რეესტრები მოითხოვს ავთენტიფიკაციას, ხოლო
     რომელი არა?
 11. რისთვის არის pull through cache საჭირო ინტერნეტში გასასვლელის არმქონე კერძო კლასტერში?
 12. რატომ არის საჭირო lifecycle policy და რომელი კრიტერიუმებით შლის ის images-ს?

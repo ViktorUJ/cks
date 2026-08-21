@@ -20,7 +20,7 @@
 
 コースの以下の章の内容を定着させます:
 
-- [第 5 章。クラスターアクセス:IAM と RBAC、access entries](../../course/05/ru.md) -
+- [第 5 章。クラスターアクセス:IAM と RBAC、access entries](../../course/05/jp.md) -
   aws-auth からの移行
 
 ## 作成するもの

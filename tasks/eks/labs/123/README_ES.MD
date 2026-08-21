@@ -19,7 +19,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material de este capítulo del curso:
 
-- [Capítulo 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/ru.md) -
+- [Capítulo 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/es.md) -
   cómo desalojar de forma segura un StatefulSet durante la consolidación
 
 ## Qué creamos

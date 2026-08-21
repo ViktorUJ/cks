@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第11章 Cluster Autoscaler と Karpenter: ノードスケーリングの二つのアプローチ
 
 > **この後。** コンピュートタイプと Auto Mode は第9章、AMI とノードの bootstrap は第10章で扱いました。次は、手動で `desiredSize` を調整せず、負荷に応じてノード数を増減させる方法です。EKS には Cluster Autoscaler と Karpenter という二つのツールがあり、本章ではアプローチの選択を扱います。Karpenter の詳細（NodePool、EC2NodeClass、consolidation、drift、disruption budgets）は第12章、spot インスタンスは第13章、密度とサイジングは第14章、Pod 自体のオートスケーリング（HPA、VPA、KEDA）は第35章で説明します。

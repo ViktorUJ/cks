@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 42. Recuperación y DR: restauración en un clúster existente y uno nuevo, restauración de namespace, Velero
 
 > **Qué sigue.** El capítulo 41 trató las copias de seguridad: AWS Backup, un composite recovery point y el estado del clúster y los volúmenes en un único punto coherente. Pero una copia de seguridad es solo la mitad del trabajo: una copia no verificada no es una copia de seguridad. Este capítulo explica cómo recuperarse desde ese punto: restaurar en un clúster existente y en uno nuevo, recuperación selectiva de namespace, Velero como segunda herramienta, además de RTO/RPO y estrategias de DR. Los temas relacionados pertenecen a otros capítulos: la copia de seguridad en sí y el composite recovery point están en el capítulo 41; la afinidad de un volumen EBS con una AZ está en el capítulo 23; la conectividad multiclúster y multicuenta para DR está en el capítulo 32; revertir una versión de clúster, que no es restaurar datos, está en el capítulo 39.
@@ -236,7 +236,7 @@ Al planificar un clúster, esto añade elementos obligatorios: RTO/RPO acordados
 15. ¿Por qué los Pods recuperados pueden permanecer para siempre en `Pending` en un clúster DR, y qué se puede y no se puede hacer con Velero y AWS Backup?
 16. ¿Qué protege exactamente S3 Object Lock para las copias de Velero, por qué un delete marker sobre una versión protegida tiene éxito y cómo se relaciona con el TTL de Schedule?
 
-## Practice
+## Práctica
 
 El laboratorio del curso para este tema es [laboratorio 122: AWS Backup para EKS](../../labs/122/README_ES.MD). En él realiza una restauración de namespace en un clúster activo, observa el comportamiento no destructivo, los objetos existentes no se sobrescriben, y analiza por qué revertir la versión del clúster no restaura un namespace eliminado; verifíquelo con el comando `check_result`. Inícielo con `TASK=122 make run_eks_task`.
 

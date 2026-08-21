@@ -25,8 +25,8 @@ external-dns ჩანაწერების მექანიკა ერ�
 
 გავამყაროთ კურსის ამ თავების მასალა:
 
-- [თავი 27. Ingress ALB-ის მეშვეობით: target-type, ანოტაციები, TLS და ACM, WAF](../../course/27/ru.md)
-- [თავი 29. DNS და სერტიფიკატები: external-dns, Route 53, cert-manager](../../course/29/ru.md)
+- [თავი 27. Ingress ALB-ის მეშვეობით: target-type, ანოტაციები, TLS და ACM, WAF](../../course/27/ge.md)
+- [თავი 29. DNS და სერტიფიკატები: external-dns, Route 53, cert-manager](../../course/29/ge.md)
 
 ## რას ვქმნით
 

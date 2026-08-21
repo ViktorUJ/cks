@@ -18,7 +18,7 @@ RBAC 進行的授權(authorization)。你會建立第二個 IAM 主體,透過 ac
 
 鞏固以下課程章節的內容:
 
-- [第 5 章。集群存取:IAM 與 RBAC、access entries](../../course/05/ru.md) -
+- [第 5 章。集群存取:IAM 與 RBAC、access entries](../../course/05/tw.md) -
   從 aws-auth 遷移
 
 ## 我們要創建什麼

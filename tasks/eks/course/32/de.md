@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 32. Multi-Cluster und Multi-Account: Konnektivität, gemeinsame Ressourcen, Muster
 
 > **Wie es weitergeht.** Die Kapitel 26-31 behandelten Traffic innerhalb eines einzelnen Clusters: Zugang über NLB und ALB

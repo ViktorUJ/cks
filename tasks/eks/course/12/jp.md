@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第12章 Karpenter: NodePool、EC2NodeClass、disruption、consolidation、drift
 
 > **この後。** 第11章では、アプローチの観点から Cluster Autoscaler と Karpenter の選択、および Karpenter と Auto Mode の関係を扱いました。本章では実際の設定、すなわち `NodePool` と `EC2NodeClass` オブジェクト、Karpenter がインスタンスを選択する方法、そして最も重要な disruption、つまり consolidation、drift、StatefulSet を含むワークロードの安全な退避を扱います。Spot は第13章、AMI と bootstrap は第10章、EBS ボリュームと AZ バインディングは第23章、サイジングは第14章、クラスタのアップグレードは第38章で詳しく扱います。
@@ -356,7 +356,7 @@ kubectl describe node <node>            # Unconsolidatable イベント
 
 このトピックのコースラボは、[ラボ123  -  Karpenter: NodePool、consolidation、drift、および StatefulSet の安全な退避](../../labs/123/README_JP.MD)です。Karpenter は、ゾーンボリュームの文脈で[ラボ106  -  EBS CSI: gp3、AZ バインディング、拡張、スナップショット](../../labs/106/README_JP.MD)でも扱います。さらに、稼働中クラスタで Karpenter の設定を確認できます（Auto Mode 内を含む、第11章）。まずインベントリから始めます。`kubectl get nodepools`、`kubectl get ec2nodeclasses`、`kubectl get nodeclaims` を実行してください。`NodePool` の `spec.disruption` ブロックを確認し、使用している `consolidationPolicy` と、`budgets` および `terminationGracePeriod` の有無を確認します。
 
-次に、クラスタに害を与えずに 12.7節と12.8節の診断を進めます。StatefulSet を見つけ、`kubectl get pdb -A` を実行します。PDB はあり、`maxUnavailable` には何が設定されていますか。`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` とノードイベントで `Unconsolidatable` を確認します。また、リポジトリ内の以前の Karpenter ラボ（[Karpenter](../../labs/02/README_RUS.MD)）も確認してください。コースの一部ではありませんが、テーマは重複しています。
+次に、クラスタに害を与えずに 12.7節と12.8節の診断を進めます。StatefulSet を見つけ、`kubectl get pdb -A` を実行します。PDB はあり、`maxUnavailable` には何が設定されていますか。`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` とノードイベントで `Unconsolidatable` を確認します。また、リポジトリ内の以前の Karpenter ラボ（[Karpenter](../../labs/02/README_JP.MD)）も確認してください。コースの一部ではありませんが、テーマは重複しています。
 
 ---
 [目次](../README_JP.md) · [第11章](../11/jp.md) · [第13章](../13/jp.md)

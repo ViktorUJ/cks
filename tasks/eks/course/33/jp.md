@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第33章. メトリクス: Container Insights、Managed Prometheus と Grafana、kube-prometheus-stack
 
 > **次は何か。** パート6はオブザーバビリティについてです。クラスターとワークロードの内部で何が起きているかを把握する方法を扱います。まず、ノード、Pod、control plane の使用状況を表す数値時系列であるメトリクスから始めます。ログ（Fluent Bit、CloudWatch Logs、OpenSearch）は第34章、メトリクスによるアプリケーションのオートスケーリング（HPA、外部メトリクス、KEDA）は第35章、ADOT と X-Ray による分散トレーシングは第36章、Kubecost と OpenCost によるコストの把握と最適化は第43章で扱います。この章で扱うのは1点です。EKS のメトリクスはどこから来て、どこに保存され、何で見るのかです。

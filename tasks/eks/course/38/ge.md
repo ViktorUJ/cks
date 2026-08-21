@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 38. კლასტერის განახლება: ვერსიების in-place განახლება, blue/green კლასტერები, მოძველებული API-ები
 
 > **რა არის შემდეგ.** 37-ე თავში განვიხილეთ ადონები: ვინ მართავს მათ სასიცოცხლო ციკლს და როგორ

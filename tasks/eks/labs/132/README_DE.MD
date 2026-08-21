@@ -26,9 +26,9 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff der Kurskapitel festigen:
 
-- [Kapitel 8. Alternativen zu VPC CNI: Cilium, Netzwerkmodi](../../course/08/ru.md) - CNI
+- [Kapitel 8. Alternativen zu VPC CNI: Cilium, Netzwerkmodi](../../course/08/de.md) - CNI
   Chaining gegenüber einem vollständigen Ersatz, die ehrlichen Kosten des Umstiegs
-- [Kapitel 30. NetworkPolicy: Regeln, DNS, Tests](../../course/30/ru.md) - die Grenzen der
+- [Kapitel 30. NetworkPolicy: Regeln, DNS, Tests](../../course/30/de.md) - die Grenzen der
   eingebauten VPC CNI Network Policy und was Cilium hinzufügt
 
 ## Was wir erstellen

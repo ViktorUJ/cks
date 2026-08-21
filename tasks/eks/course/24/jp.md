@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第24章. EFS と FSx: AZ をまたぐワークロードの共有ストレージ
 
 > **この先。** 第23章では EBS がゾーン単位であることを示しました。ボリュームは1つの AZ にあり、1つの書き込み元 (ReadWriteOnce) だけを許可し、Pod はゾーンに固定されます。この章は反対の種類の課題、つまり多数の Pod からの共有書き込みアクセス (ReadWriteMany) と AZ をまたぐ運用を扱います。対象は EFS (マネージド NFS、リージョナル) と FSx の概要です。CSI ドライバーのロールは IRSA または Pod Identity (第16、17章) 経由で付与します。Mountpoint for Amazon S3 は第25章、バックアップは第41章、Fargate は第15章を参照してください。PV、PVC、access modes は CKA で学習済みであり、ここでは EKS におけるネットワークファイルアクセスの特性を扱います。
@@ -264,7 +264,7 @@ aws efs describe-mount-targets --file-system-id fs-0123456789abcdef0 \
 12. EFS 上の Pod が `FailedMount` で停止した場合、どの原因をどの順序で確認しますか。
 13. EFS ではなく FSx が必要なのはどのような場合ですか。また ML 向けと Windows 向けの FSx はどれですか。
 
-## Practice
+## 実践
 
 このトピックのコースラボ: [ラボ 107: EFS CSI: アベイラビリティーゾーン間の ReadWriteMany](../../labs/107/README_JP.MD)。これ以外はすべて稼働中のクラスターで確認します。EFS CSI ドライバーがインストールされていることを確認してください。`aws eks list-addons --cluster-name <cluster>` と `kubectl get pods -n kube-system
 | grep efs-csi` を実行します。既存のファイルシステムを確認します。`aws efs

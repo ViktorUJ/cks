@@ -22,7 +22,7 @@ Kyverno და Gatekeeper გარეშე policy engine-ებია, რო�
 გავამყაროთ კურსის ამ თავის მასალა:
 
 - [თავი 22. პოლიტიკები და მულტიტენანტურობა: Kyverno და Gatekeeper, გუნდების
-  იზოლაცია](../../course/22/ru.md) - ValidatingAdmissionPolicy-ის ადგილი policy engine-ებში
+  იზოლაცია](../../course/22/ge.md) - ValidatingAdmissionPolicy-ის ადგილი policy engine-ებში
 
 ## რას ვქმნით
 

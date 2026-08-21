@@ -56,11 +56,11 @@ aws eks describe-cluster --name demo \
 
 新 cluster 預設以 public endpoint 建立：`endpointPublicAccess=true`、`endpointPrivateAccess=false`。這很方便，也是 audit 的第一項質疑。共有三種 combinations，每種都有自己的 traffic mechanics。
 
-| 模式 | Flags | Traffic 路徑 | Access 控制方式 |
+| 模式 | 旗標 | 流量路徑 | 存取控制方式 |
 |-------|-------|------------------|------------------------|
-| 僅 public（預設） | `endpointPublicAccess=true`、`endpointPrivateAccess=false` | VPC 內 nodes 的 requests 離開 VPC，但仍留在 Amazon network | 僅 `publicAccessCidrs` |
-| Public 與 private | 兩者皆為 `true` | VPC 內 requests 透過 private endpoint，外部 requests 透過 public endpoint | public 使用 `publicAccessCidrs`，private 使用 cluster security group |
-| 僅 private | `endpointPublicAccess=false`、`endpointPrivateAccess=true` | 所有至 API server 的 traffic 僅能從 VPC 或連接的 network 發出 | 僅 cluster security group；`publicAccessCidrs` 無效 |
+| 僅公開（預設） | `endpointPublicAccess=true`、`endpointPrivateAccess=false` | VPC 內節點的請求離開 VPC，但仍留在 Amazon 網路 | 僅 `publicAccessCidrs` |
+| 公開與私有 | 兩者皆為 `true` | VPC 內請求透過私有端點，外部請求透過公開端點 | 公開使用 `publicAccessCidrs`，私有使用叢集安全群組 |
+| 僅私有 | `endpointPublicAccess=false`、`endpointPrivateAccess=true` | 所有至 API server 的流量僅能從 VPC 或連接的網路發出 | 僅叢集安全群組；`publicAccessCidrs` 無效 |
 
 啟用 private access 時，EKS 會代表你建立 **Route 53 private hosted zone**，並將其關聯至 cluster VPC。此 zone 由服務管理，不會出現在你的 Route 53 resources 中。若要讓 endpoint name 解析為 private address，VPC 必須啟用 `enableDnsHostnames` 與 `enableDnsSupport`，且 DHCP options set 必須包含 `AmazonProvidedDNS`。這正是「cluster 已建立但 nodes 無法連線」由 VPC settings 而不是 EKS 設定所造成的情況（第 0.3 章）。
 
@@ -86,9 +86,9 @@ aws eks describe-update --name demo --update-id <id> --query 'update.status'
 ```mermaid
 flowchart TB
     client["kubectl 或 CI"]
-    dns["Endpoint DNS name"]
-    pub["NLB public address"]
-    priv["ENI private address<br/>private hosted zone"]
+    dns["端點 DNS 名稱"]
+    pub["NLB 公開位址"]
+    priv["ENI 私有位址<br/>私有託管區域"]
     api["kube-apiserver"]
     client --> dns
     dns -->|"VPC 外部"| pub
@@ -224,11 +224,11 @@ Control plane metrics 可透過 API 取得：`kubectl get --raw /metrics`，格�
 
 | 觀察項目 | Metrics | 增長代表什麼 |
 |--------------|---------|--------------------|
-| API latency | `apiserver_request_duration_seconds` | control plane 或 etcd 負載過高、沒有 pagination 的 requests、繁重的 LIST |
-| Errors 與 throttling | 按 code 的 `apiserver_request_total` | 429 暴增表示 client 正在壓垮 cluster；5xx 時查看 `api` logs |
-| Admission | `apiserver_admission_controller_admission_duration_seconds`、`apiserver_admission_webhook_rejection_count` | 緩慢或拒絕的 webhook，即你的自身 bottleneck（第 2.5 節） |
-| etcd | `etcd_request_duration_seconds`、`apiserver_storage_size_bytes` | 接近 database size limit：溢出時 cluster 轉為 read-only |
-| Clients | `rest_client_requests_total` | 哪個 controller 產生主要 request stream |
+| API 延遲 | `apiserver_request_duration_seconds` | 控制平面或 etcd 負載過高、沒有分頁的請求、繁重的 LIST |
+| 錯誤與節流 | 按 code 的 `apiserver_request_total` | 429 暴增表示用戶端正在壓垮叢集；5xx 時查看 `api` 日誌 |
+| 驗證控制 | `apiserver_admission_controller_admission_duration_seconds`、`apiserver_admission_webhook_rejection_count` | 緩慢或拒絕的 webhook，即你的自身瓶頸（第 2.5 節） |
+| etcd | `etcd_request_duration_seconds`、`apiserver_storage_size_bytes` | 接近資料庫大小限制：溢出時叢集轉為唯讀 |
+| 用戶端 | `rest_client_requests_total` | 哪個控制器產生主要請求串流 |
 
 ```bash
 # Prometheus format 的 API server metrics
@@ -259,7 +259,7 @@ Control plane 的 multi-AZ 不會給你以下保障：
 | topology spread、PDB、正確的 node shutdown | application availability 不會繼承 API availability（第 40 章） |
 | EBS volumes 與 AZ 的綁定 | volume 不會隨 Pod 一起跨 AZ 移動（第 23 章） |
 | 你的 webhooks 與 add-ons 的 availability | 第 2.5 節與第 37 章：由你讓它們失敗，但 admission 會受害 |
-| Multi-region | SLA 是 regional；一個 region 中的 cluster，其 DR 是另一項工作（第 42 章） |
+| 多區域 | SLA 是 regional；一個 region 中的 cluster，其 DR 是另一項工作（第 42 章） |
 
 與 business 溝通時的表述：SLA 涵蓋的是 **API server endpoint availability**，而不是你的 application availability。即使 control plane 完美運作，application 仍可能停擺，這完全是你的 incident。
 

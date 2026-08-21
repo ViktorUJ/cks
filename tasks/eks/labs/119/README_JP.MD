@@ -21,7 +21,7 @@ managed node group は最初から最後まで健全な状態を保ちます - �
 
 コースの以下の章の内容を定着させます:
 
-- [第 45 章。ノードがクラスタに参加しなかった](../../course/45/ru.md) - IAM、SG、
+- [第 45 章。ノードがクラスタに参加しなかった](../../course/45/jp.md) - IAM、SG、
   user data、bootstrap、kubelet、層ごとの体系的な診断
 
 ## 作成するもの

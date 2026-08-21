@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 37. Complementos de EKS: managed addons frente a Helm, versiones y orden de actualización
 
 > **Qué sigue.** Este capítulo abre la parte 7: operar un clúster que ya está creado y en funcionamiento. La primera pregunta operativa es quién posee el ciclo de vida de los componentes del sistema y cómo mantener sus versiones alineadas con la versión del clúster. Aquí se aborda la gestión de complementos y sus versiones. Los temas relacionados se tratan en otros capítulos: la actualización completa del clúster por versiones, capítulo 38; la reversión de versión, capítulo 39; los complementos concretos se analizan en sus propios capítulos (VPC CNI, capítulo 8; EBS CSI, capítulo 23; Load Balancer Controller, capítulo 26; observabilidad, capítulos 33-36), y los roles para complementos mediante IRSA y Pod Identity, capítulos 16 y 17.

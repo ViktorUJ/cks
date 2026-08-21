@@ -20,9 +20,9 @@ for a managed control plane, not a stuck command.
 
 Reinforce the material from these course chapters:
 
-- [Chapter 37. EKS add-ons: managed add-ons vs. Helm, versions and update order](../../course/37/ru.md) - who owns the add-on version
-- [Chapter 38. Cluster upgrade: in-place by version, blue/green clusters, deprecated APIs](../../course/38/ru.md) - the order of an in-place upgrade and finding deprecated APIs
-- [Chapter 39. Cluster version rollback: rollback readiness insights, the 7-day window, rollback order](../../course/39/ru.md) - the standard control plane rollback
+- [Chapter 37. EKS add-ons: managed add-ons vs. Helm, versions and update order](../../course/37/en.md) - who owns the add-on version
+- [Chapter 38. Cluster upgrade: in-place by version, blue/green clusters, deprecated APIs](../../course/38/en.md) - the order of an in-place upgrade and finding deprecated APIs
+- [Chapter 39. Cluster version rollback: rollback readiness insights, the 7-day window, rollback order](../../course/39/en.md) - the standard control plane rollback
 
 ## What we're creating
 

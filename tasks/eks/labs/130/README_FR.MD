@@ -18,7 +18,7 @@ La vérification est automatique, via la commande `check_result`.
 
 Consolider la matière du chapitre du cours :
 
-- [Chapitre 20. Images et supply chain : ECR, scan, signatures, pull through cache](../../course/20/ru.md) - d'où vient une image, qui l'a vérifiée
+- [Chapitre 20. Images et supply chain : ECR, scan, signatures, pull through cache](../../course/20/fr.md) - d'où vient une image, qui l'a vérifiée
 
 ## Ce que nous créons
 

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第10章 AMI と bootstrap: AL2023、Bottlerocket、launch template、kubelet、user data
 
 > **この先の内容。** 第9章ではコンピューティングタイプと、Auto Mode と独自スタックの選択を扱いました。managed node group または self-managed Node を選ぶと、Node 上のイメージは何か、どのように起動されクラスターに参加するのか、という問題に行き着きます。本章ではイメージ（AL2023、Bottlerocket、旧式化する AL2）、launch template、そして素の EC2 から稼働中の Node になる瞬間である bootstrap を扱います。オートスケーリングと Karpenter は第11～12章、spot は第13章、密度と `max-pods` は第6章と第14章、アップグレード時の AMI ローテーションは第38章、Node のハードニング（IMDSv2、hop limit）は第19章、Node の詳細なトラブルシューティングは第45章です。

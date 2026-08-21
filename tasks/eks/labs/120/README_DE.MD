@@ -38,7 +38,7 @@ plus Abnahmekriterien. Die Prüfung ist automatisch, über den Befehl
 
 Das Kapitel des Kurses vertiefen:
 
-- [Kapitel 46. Netzwerkausfälle: SG, NACL, DNS, unhealthy targets](../../course/46/ru.md)
+- [Kapitel 46. Netzwerkausfälle: SG, NACL, DNS, unhealthy targets](../../course/46/de.md)
 
 ## Was wir erstellen
 

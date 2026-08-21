@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 30. NetworkPolicy en EKS: network policy de VPC CNI y Cilium
 
 > **Qué sigue.** Los capítulos 26-29 mostraron cómo entra el tráfico al clúster desde fuera: NLB (capítulo 26),

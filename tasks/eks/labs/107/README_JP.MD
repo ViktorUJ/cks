@@ -21,10 +21,10 @@ PV になぜゾーンごとの `nodeAffinity` がないのかを調べます。�
 
 以下のコース章の内容を強化します:
 
-- [第 24 章。EFS と FSx: AZ をまたぐワークロード用の共有ストレージ](../../course/24/ru.md) - このラボの主要な材料
-- [第 23 章。EBS CSI: gp3、StorageClass、拡張、スナップショット、AZ バインディング](../../course/23/ru.md) - 比較対象: ゾーン単位のブロック volume とリージョン単位のネットワーク volume
-- [第 9 章。コンピュートタイプ: managed node group、Fargate、Auto Mode](../../course/09/ru.md) - クラスターに複数の AZ がある理由と、ノードがどこにあるか
-- [第 16-17 章。IRSA と Pod Identity](../../course/16/ru.md) - driver が EFS を管理する権限をどのように得るか
+- [第 24 章。EFS と FSx: AZ をまたぐワークロード用の共有ストレージ](../../course/24/jp.md) - このラボの主要な材料
+- [第 23 章。EBS CSI: gp3、StorageClass、拡張、スナップショット、AZ バインディング](../../course/23/jp.md) - 比較対象: ゾーン単位のブロック volume とリージョン単位のネットワーク volume
+- [第 9 章。コンピュートタイプ: managed node group、Fargate、Auto Mode](../../course/09/jp.md) - クラスターに複数の AZ がある理由と、ノードがどこにあるか
+- [第 16-17 章。IRSA と Pod Identity](../../course/16/jp.md) - driver が EFS を管理する権限をどのように得るか
 
 ## 作成するもの
 

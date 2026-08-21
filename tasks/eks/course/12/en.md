@@ -1,4 +1,4 @@
-[Russian version](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapter 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift
 
 > **What comes next.** Chapter 11 covered choosing between Cluster Autoscaler and Karpenter at the approach level, and Karpenter's relationship with Auto Mode. This chapter covers the actual configuration: `NodePool` and `EC2NodeClass` objects, how Karpenter selects an instance, and, most importantly, disruption: consolidation, drift, and safe workload eviction, including StatefulSet. Spot is covered specifically in Chapter 13, AMIs and bootstrap in Chapter 10, EBS volumes and AZ binding in Chapter 23, sizing in Chapter 14, and cluster upgrades in Chapter 38.
@@ -357,7 +357,7 @@ During an on-call shift, both symptoms from 12.1 can be diagnosed quickly. “A 
 
 The course lab for this topic is [lab 123  -  Karpenter: NodePool, consolidation, drift, and safe StatefulSet eviction](../../labs/123/README.MD). Karpenter is also covered in [lab 106  -  EBS CSI: gp3, AZ binding, expansion, snapshot](../../labs/106/README.MD) in the context of zonal volumes. In addition, you can see Karpenter configuration in a live cluster (including inside Auto Mode, Chapter 11). Start with inventory: `kubectl get nodepools`, `kubectl get ec2nodeclasses`, `kubectl get nodeclaims`. Examine your `NodePool`'s `spec.disruption` block: which `consolidationPolicy` it uses and whether `budgets` and `terminationGracePeriod` exist.
 
-Next, work through the diagnosis in Sections 12.7 and 12.8 without harming the cluster. Find a StatefulSet and run `kubectl get pdb -A` - does it have a PDB, and what is in `maxUnavailable`? Look in `kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` and node events for `Unconsolidatable`. Also review the earlier Karpenter lab in the repository ([Karpenter](../../labs/02/README_RUS.MD)) - it is not part of the course, but the topic overlaps.
+Next, work through the diagnosis in Sections 12.7 and 12.8 without harming the cluster. Find a StatefulSet and run `kubectl get pdb -A` - does it have a PDB, and what is in `maxUnavailable`? Look in `kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` and node events for `Unconsolidatable`. Also review the earlier Karpenter lab in the repository ([Karpenter](../../labs/02/README.MD)) - it is not part of the course, but the topic overlaps.
 
 ---
 [Table of contents](../README.md) · [Chapter 11](../11/en.md) · [Chapter 13](../13/en.md)

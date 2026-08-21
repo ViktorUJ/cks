@@ -19,7 +19,7 @@ you need to run yourself to see the difference live.
 
 Reinforce the material from this course chapter:
 
-- [Chapter 5. Cluster access: IAM and RBAC, access entries](../../course/05/ru.md) -
+- [Chapter 5. Cluster access: IAM and RBAC, access entries](../../course/05/en.md) -
   migrating away from aws-auth
 
 ## What we're creating

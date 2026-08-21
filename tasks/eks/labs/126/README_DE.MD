@@ -21,7 +21,7 @@ dem Sie die Lab bereitgestellt haben) - Details dazu im Abschnitt "Infrastruktur
 
 Den Stoff des Kurskapitels festigen:
 
-- [Kapitel 46. Netzwerkausfälle](../../course/46/ru.md) - security group als Schicht eines
+- [Kapitel 46. Netzwerkausfälle](../../course/46/de.md) - security group als Schicht eines
   Netzwerkausfalls
 
 ## Was wir erstellen

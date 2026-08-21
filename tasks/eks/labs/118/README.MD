@@ -20,7 +20,7 @@ Checking is automatic, via the `check_result` command.
 Reinforce the material from the course chapter:
 
 - [Chapter 44. GitOps and delivery: Argo CD and Flux, managing a fleet of
-  clusters](../../course/44/ru.md) - Git as the source of truth, sync and health, self-heal
+  clusters](../../course/44/en.md) - Git as the source of truth, sync and health, self-heal
 
 ## What we're creating
 

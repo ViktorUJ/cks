@@ -408,7 +408,7 @@ Berechtigung ist wo genau zu prüfen?
 13. Warum ermöglicht `ReadWriteMany` mehreren Pods nicht die Arbeit mit Dateien auf einem
 EBS-Volume, und was bleibt die einzige Ausnahme?
 
-## Practice
+## Praxis
 
 Das Kurs-Lab zu diesem Thema: [Lab 106 - EBS CSI: gp3, AZ-Bindung, Erweiterung,
 Snapshot](../../labs/106/README_DE.MD). EBS CSI wirkt auch in

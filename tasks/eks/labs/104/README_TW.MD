@@ -17,8 +17,8 @@ Pod Identity 的 pod 會得到 `AccessDenied`,因為節點角色完全不帶任�
 
 鞏固課程以下章節的內容:
 
-- [第 16 章。IRSA:OIDC 提供者、trust policy、ServiceAccount 註解](../../course/16/ru.md)
-- [第 17 章。EKS Pod Identity:代理程式、關聯、從 IRSA 遷移](../../course/17/ru.md)
+- [第 16 章。IRSA:OIDC 提供者、trust policy、ServiceAccount 註解](../../course/16/tw.md)
+- [第 17 章。EKS Pod Identity:代理程式、關聯、從 IRSA 遷移](../../course/17/tw.md)
 
 ## 我們要建立什麼
 

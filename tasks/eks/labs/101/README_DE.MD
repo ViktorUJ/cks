@@ -19,10 +19,10 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff dieser Kurskapitel vertiefen:
 
-- [Kapitel 4. Cluster erstellen: eksctl, Terraform und Terragrunt](../../course/04/ru.md) - Cluster als Code und kubeconfig
-- [Kapitel 6. Cluster-Netzwerk: VPC CNI, ENI und IP-Adressen](../../course/06/ru.md) - woher Pods ihre Adressen bekommen
-- [Kapitel 9. Compute-Typen: Managed Node Groups, Fargate, Auto Mode](../../course/09/ru.md) - was wo läuft
-- [Kapitel 10. AMI und Bootstrap: AL2023, Launch Templates, kubelet](../../course/10/ru.md) - auf welchem Image die Nodes laufen
+- [Kapitel 4. Cluster erstellen: eksctl, Terraform und Terragrunt](../../course/04/de.md) - Cluster als Code und kubeconfig
+- [Kapitel 6. Cluster-Netzwerk: VPC CNI, ENI und IP-Adressen](../../course/06/de.md) - woher Pods ihre Adressen bekommen
+- [Kapitel 9. Compute-Typen: Managed Node Groups, Fargate, Auto Mode](../../course/09/de.md) - was wo läuft
+- [Kapitel 10. AMI und Bootstrap: AL2023, Launch Templates, kubelet](../../course/10/de.md) - auf welchem Image die Nodes laufen
 
 ## Was wir erstellen
 

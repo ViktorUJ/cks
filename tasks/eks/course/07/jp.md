@@ -1,27 +1,27 @@
 [Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
-# 第7章. アドレス計画のスケーリング：prefix delegation、secondary CIDR、custom networking
+# 第7章. アドレス計画のスケーリング: prefix delegation、secondary CIDR、custom networking
 
-> **What is next.** Chapter 6 explained how VPC CNI assigns real subnet addresses to pods and why they run out. This chapter covers the system-level ways out: prefix delegation, a VPC secondary CIDR, custom networking through `ENIConfig`, the rollout order in a live cluster, and operational changes. Alternative CNIs and Cilium are in Chapter 8, NetworkPolicy in Chapter 30, node density and sizing in Chapter 14, and network-failure analysis in Chapter 46. An IPv6 cluster is named as a separate path but not examined in detail: `ipFamily` is set only at creation time (Chapter 4).
+> **この先の内容。** 第6章では、VPC CNI が Pod に実際のサブネットアドレスを割り当てる仕組みと、なぜそれが枯渇するのかを説明しました。本章では、その体系的な解決策として、prefix delegation、VPC の secondary CIDR、`ENIConfig` による custom networking、稼働中クラスターでの導入順序、そして運用上の変化を扱います。代替 CNI と Cilium は第8章、NetworkPolicy は第30章、ノード密度とサイジングは第14章、ネットワーク障害の分析は第46章で扱います。IPv6 クラスターは別の選択肢として触れますが、詳しくは扱いません。`ipFamily` は作成時にしか設定できないためです（第4章）。
 
-## 7.1. Three answers to “the subnet is exhausted and cannot be expanded”
+## 7.1. 「サブネットが尽き、拡張もできない」場合の3つの答え
 
-The Chapter 6 situation at its worst: node subnets are `/24`, `AvailableIpAddressCount` in a working AZ approaches zero, and a release hits `FailedCreatePodSandBox`. You cannot expand `/24` to `/22`, but the cluster must keep growing.
+第6章の最悪の状況を考えます。ノード用サブネットは `/24`、稼働中 AZ の `AvailableIpAddressCount` はゼロに近づき、リリースは `FailedCreatePodSandBox` で止まります。`/24` を `/22` に拡張することはできませんが、クラスターはさらに拡張する必要があります。
 
-- **Fit more pods onto a node using the same addresses** - prefix delegation: an ENI slot is assigned a `/28` block. It is inexpensive, but **does not add addresses to the subnet** and consumes them in large chunks.
-- **Bring new address space into the VPC** - secondary CIDR: associate a range, create subnets, and allocate pod addresses from them. The range must be propagated through routing, NAT, and connected networks.
-- **Move away from IPv4 scarcity as a class of problem** - an IPv6 cluster (Section 7.9) or an overlay CNI (Chapter 8), but only in a new cluster.
+- **同じノード上で同じアドレスからより多くの Pod を収容する** - prefix delegation: ENI スロットに `/28` ブロックを割り当てます。低コストですが、**サブネットのアドレス数は増えず**、大きな塊で消費します。
+- **VPC に新しいアドレス空間を持ち込む** - secondary CIDR: 範囲を関連付け、サブネットを作成し、そこから Pod アドレスを割り当てます。範囲はルーティング、NAT、接続先ネットワークに通す必要があります。
+- **IPv4 不足という問題自体から離れる** - IPv6 クラスター（7.9節）または overlay CNI（第8章）ですが、どちらも新しいクラスターでのみ可能です。
 
-The first two answers are usually combined. A criteria-based comparison is in Section 7.6.
+通常は最初の2つを組み合わせます。基準ごとの比較は7.6節にあります。
 
-## 7.2. Prefix delegation：ENI スロットに /28 ブロックを割り当てる
+## 7.2. Prefix delegation: ENI スロットに /28 ブロックを割り当てる
 
-In the regular mode, VPC CNI uses an ENI slot for one secondary IPv4 address, while the number of slots is set by the instance type (Chapter 6). Prefix delegation changes what the slot contains: instead of an address, it receives **a `/28` prefix, that is, 16 addresses**.
+通常モードでは、VPC CNI は ENI の1スロットを1つの secondary IPv4 アドレスに使用し、スロット数はインスタンスタイプで決まります（第6章）。Prefix delegation はスロットの内容を変えます。アドレスの代わりに、**`/28` プレフィックス、つまり16個のアドレス**を入れます。
 
 ```mermaid
 flowchart TB
-    eni["ENI slot"] --> sec["Address mode:<br/>slot = 1 IP"]
-    eni --> pfx["Prefix mode:<br/>slot = /28"]
-    pfx --> pfxr["Dozens of pods,<br/>but blocks of 16"]
+    eni["ENI のスロット"] --> sec["アドレスモード:<br/>スロット = 1 IP"]
+    eni --> pfx["プレフィックスモード:<br/>スロット = /28"]
+    pfx --> pfxr["数十個の Pod、<br/>ただし16個単位のブロック"]
     style pfx fill:#326ce5,color:#fff
     style pfxr fill:#f4b400,color:#000
 ```
@@ -33,21 +33,21 @@ aws eks update-addon --cluster-name demo --addon-name vpc-cni \
   --resolve-conflicts PRESERVE
 ```
 
-The first command is suitable for a self-installed CNI. **If VPC CNI is installed as a managed addon, a change through `kubectl set env` lasts only until the next addon update**, so variables are configured through its configuration, as in the second command. This applies to every variable in this chapter (Chapter 37).
+1つ目のコマンドは、独自にインストールした CNI に適しています。**VPC CNI が managed addon として導入されている場合、`kubectl set env` による変更は次回のアドオン更新までしか維持されません**。そのため、2つ目のコマンドのように設定を通じて変数を指定します。これは本章のすべての変数に当てはまります（第37章）。
 
-**Only Nitro-based instances support prefixes on network interfaces**: the rest continue taking secondary addresses one at a time, so nodes in a mixed node group behave differently. For large fleets, this mode has another benefit: **fewer EC2 API calls**, because one request provides 16 addresses, and attaching a prefix to an existing ENI is faster than creating a new one.
+**ネットワークインターフェイス上のプレフィックスをサポートするのは Nitro ベースのインスタンスだけです**。それ以外は secondary アドレスを1つずつ取得し続けるため、混在した node group ではノードの挙動が異なります。大規模なフリートでは別の利点もあります。**EC2 API 呼び出しが減ります**。1リクエストで16アドレスを取得でき、準備済み ENI へのプレフィックスの関連付けは、新しい ENI の作成より高速です。
 
-Every slot other than the address occupied by the interface itself supplies 16 addresses, so the pod ceiling is calculated with different numbers.
+インターフェイス自身のアドレスで占有されるスロット以外は、それぞれ16アドレスを提供するため、Pod 上限は異なる数値で計算されます。
 
-| Instance | ENI | IPs per ENI | Address mode | Prefix mode | Managed node group cap |
+| インスタンス | ENI | ENI あたりの IP | アドレスモード | プレフィックスモード | managed node group の上限 |
 |---|---|---|---|---|---|
 | `m5.large` | 3 | 10 | 29 | 434 | 110 |
 | `m5.xlarge` | 4 | 15 | 58 | 898 | 110 |
 | `m5.8xlarge` | 8 | 30 | 234 | 3714 | 250 |
 
-**Managed node groups cap `maxPods` independently of prefix delegation: 110 for instances below 30 vCPUs and 250 for the rest.** Enabling the variable does not raise that ceiling: exceeding it requires your own AMI in a launch template with `maxPods` in user data (Chapter 10), or a self-managed node group. The reason is backward compatibility: the default `max-pods` table is calculated for address mode, so user data passes `--use-max-pods false` together with an explicit `--max-pods`, while the value itself is calculated by `max-pods-calculator.sh` with the `--cni-prefix-delegation-enabled` flag. Most importantly, **`kubelet` learns `max-pods` at startup**, so a node from address mode retains its old value. Prefix delegation is for new nodes.
+**Managed node group は prefix delegation に関係なく `maxPods` の上限を設けます。30 vCPU 未満のインスタンスでは110、それ以外では250です。** 変数を有効にしてもこの上限は上がりません。上限を超えるには、user data に `maxPods` を入れた launch template の独自 AMI（第10章）か、self-managed node group が必要です。理由は後方互換性です。デフォルトの `max-pods` テーブルはアドレスモード用に計算されているため、user data では明示的な `--max-pods` とともに `--use-max-pods false` を渡し、値自体は `--cni-prefix-delegation-enabled` フラグ付きの `max-pods-calculator.sh` で計算します。さらに重要なのは、**`kubelet` が `max-pods` を起動時に取得する**点です。そのため、アドレスモードからのノードは以前の値のままであり、prefix delegation は新しいノードのためのものです。
 
-The other part of the cost is fragmentation. A prefix needs **a contiguous block of 16 addresses**, and where secondary addresses are scattered throughout a subnet, there may be many free addresses but no contiguous blocks: `AvailableIpAddressCount` shows hundreds of addresses, pods do not start, and ipamd logs show `InsufficientCidrBlocks`. Fix it with a new subnet or a **subnet CIDR reservation**.
+もう1つのコストは断片化です。プレフィックスには**連続した16アドレスのブロック**が必要です。サブネット内に secondary アドレスが散在していると、空きアドレスが多くても連続ブロックがない場合があります。`AvailableIpAddressCount` は数百アドレスを示していても Pod は起動せず、ipamd のログには `InsufficientCidrBlocks` が出ます。新しいサブネット、または **subnet CIDR reservation** で解決します。
 
 ```bash
 aws ec2 create-subnet-cidr-reservation --subnet-id subnet-0123456789abcdef0 \
@@ -57,30 +57,30 @@ aws ec2 describe-network-interfaces \
   --query 'NetworkInterfaces[].[NetworkInterfaceId,Ipv4Prefixes[].Ipv4Prefix]' --output text
 ```
 
-Addresses are allocated **in blocks of 16**: three nodes with one pod each consume 48 addresses rather than three. The rule is: prefix delegation improves pod density and API calls, not address scarcity, and when addresses are scarce it is enabled together with new space.
+アドレスは**16個単位のブロック**で割り当てられます。各1 Pod のノード3台は、3個ではなく48個のアドレスを占有します。原則は、prefix delegation が改善するのは Pod 密度と API 呼び出しであってアドレス不足ではなく、不足時には新しいアドレス空間とともに有効化することです。
 
-## 7.3. プレフィックスモードでの warm プール
+## 7.3. プレフィックスモードの warm プール
 
-The reserve logic is the same as in Chapter 6, but the unit of measurement differs.
+予備を持つロジックは第6章と同じですが、測定単位が異なります。
 
-| Environment variable | What it keeps in reserve | Priority |
+| 環境変数 | 予備として保持するもの | 優先順位 |
 |---|---|---|
-| `WARM_PREFIX_TARGET` | whole `/28` prefixes beyond current demand | baseline for prefix mode |
-| `WARM_IP_TARGET` | individual addresses beyond current demand | overrides `WARM_PREFIX_TARGET` |
-| `MINIMUM_IP_TARGET` | the lower address boundary on a node | overrides `WARM_PREFIX_TARGET` |
+| `WARM_PREFIX_TARGET` | 現在の必要量を超える完全な `/28` プレフィックス | プレフィックスモードの基本値 |
+| `WARM_IP_TARGET` | 現在の必要量を超える個別アドレス | `WARM_PREFIX_TARGET` を上書き |
+| `MINIMUM_IP_TARGET` | ノード上のアドレス数の下限 | `WARM_PREFIX_TARGET` を上書き |
 
-**`WARM_IP_TARGET` and `MINIMUM_IP_TARGET` apply in prefix mode and take priority over `WARM_PREFIX_TARGET`.** `WARM_PREFIX_TARGET=1` keeps one entire additional prefix, up to 16 unused addresses per node, whereas a `WARM_IP_TARGET` below 16 avoids attaching a whole extra prefix and saves addresses at the price of more frequent EC2 API calls.
+**`WARM_IP_TARGET` と `MINIMUM_IP_TARGET` はプレフィックスモードでも適用され、`WARM_PREFIX_TARGET` より優先されます。** `WARM_PREFIX_TARGET=1` は完全な余分のプレフィックスを1つ、ノードあたり最大16個の未使用アドレスとして保持します。一方、16未満の `WARM_IP_TARGET` は余分なプレフィックス全体の関連付けを避け、EC2 API 呼び出しが増える代わりにアドレスを節約します。
 
 ```bash
 kubectl set env ds aws-node -n kube-system WARM_PREFIX_TARGET=1
 kubectl set env ds aws-node -n kube-system WARM_IP_TARGET=8 MINIMUM_IP_TARGET=16
 ```
 
-In wide subnets, keep `WARM_PREFIX_TARGET=1` and fast pod startup; in narrow ones, add the `WARM_IP_TARGET` and `MINIMUM_IP_TARGET` pair. Setting all three without understanding priority is a way to get inexplicable behavior.
+広いサブネットでは `WARM_PREFIX_TARGET=1` と高速な Pod 起動を維持し、狭いサブネットでは `WARM_IP_TARGET` と `MINIMUM_IP_TARGET` の組み合わせを追加します。優先順位を理解しないまま3つすべてを設定することは、説明できない挙動を招く方法です。
 
-## 7.4. Secondary CIDR：既存 VPC への新アドレス空間
+## 7.4. Secondary CIDR: 既存 VPC の新しいアドレス空間
 
-Additional IPv4 blocks are associated with a VPC, and subnets are created in them. Existing subnets and nodes are unaffected, while the `local` route is added automatically.
+追加の IPv4 ブロックを VPC に関連付け、その中にサブネットを作成します。既存のサブネットとノードには触れず、`local` ルートは自動的に追加されます。
 
 ```bash
 vpc_id=$(aws eks describe-cluster --name demo \
@@ -92,46 +92,46 @@ aws ec2 create-subnet --vpc-id $vpc_id --availability-zone eu-central-1a \
   --cidr-block 100.64.0.0/19 --query Subnet.SubnetId --output text
 ```
 
-The block is usable only in the `associated` state. Creating subnets earlier is premature.
+ブロックが使用可能になるのは `associated` 状態になってからです。それ以前にサブネットを作成するのは早すぎます。
 
-**Why `100.64.0.0/10` is used.** It is shared address space from RFC 6598 for CG-NAT. Formally, it is not a private RFC 1918 range, so **it is almost never already occupied in corporate networks**. There is also a technical reason: a VPC whose primary CIDR is from `10.0.0.0/8` **cannot** add a block from `172.16.0.0/12` or `192.168.0.0/16`, but it can add one from `100.64.0.0/10`.
+**`100.64.0.0/10` を使う理由。** これは CG-NAT 用の RFC 6598 の shared address space です。正式には RFC 1918 のプライベート範囲ではないため、**企業ネットワークですでに使われていることはほとんどありません**。技術的な理由もあります。primary CIDR が `10.0.0.0/8` に含まれる VPC には、`172.16.0.0/12` や `192.168.0.0/16` のブロックを**追加できません**が、`100.64.0.0/10` のブロックは追加できます。
 
-- **New subnets inherit the main route table**: connectivity inside the VPC works, but internet egress must be configured explicitly. A pod in `100.64.x` needs a route to the NAT gateway that resides in a subnet of the primary range (Chapter 31).
-- **Connected networks may not know the range**: peering, Transit Gateway, VPN, and Direct Connect do not begin routing `100.64.0.0/16` on their own. Often that is the goal: pod addresses are not routable externally.
-- **Size and quotas**: blocks range from `/16` to `/28`; overlap with existing blocks and CIDRs of peered VPCs is not allowed.
+- **新しいサブネットは main route table を継承します**。VPC 内の接続性は確保されますが、インターネットへの egress は明示的に設定する必要があります。`100.64.x` の Pod には、primary 範囲のサブネットにある NAT gateway へのルートが必要です（第31章）。
+- **接続先ネットワークが範囲を認識しない場合があります**。peering、Transit Gateway、VPN、Direct Connect が自動で `100.64.0.0/16` をルーティングし始めることはありません。多くの場合、それが目的です。Pod アドレスは外部からルーティングできません。
+- **サイズとクォータ**: ブロックは `/16` から `/28` までです。既存ブロックや peered VPC の CIDR との重複は許可されません。
 
-The simplest way to use the new space is to **create a node group in the new subnets**: both nodes and pods receive addresses from `100.64.x` without a single variable on `aws-node`.
+新しい空間を利用する最も簡単な方法は、**新しいサブネットに node group を作成すること**です。ノードと Pod の両方が、`aws-node` に変数を1つも設定せず `100.64.x` からアドレスを取得します。
 
-## 7.5. Custom networking：Pod アドレスを別サブネットから取得
+## 7.5. Custom networking: 別サブネットから Pod アドレスを割り当てる
 
-By default, secondary ENIs are created in the subnet of the node primary ENI. Custom networking breaks that connection: **secondary ENIs are created in the subnet and with the security groups from an `ENIConfig` object**, pod addresses are allocated from there, and the subnets must be in the same VPC and AZ as the node.
+デフォルトでは、secondary ENI はノードの primary ENI があるサブネットに作成されます。Custom networking はこの結び付きを切り離します。**secondary ENI は `ENIConfig` オブジェクトで指定したサブネットと security groups に作成され**、Pod アドレスはそこから取得されます。サブネットはノードと同じ VPC、同じ AZ にある必要があります。
 
 ```mermaid
 flowchart TB
-    node["Node in subnet<br/>10.0.1.0/24"] --> p["primary ENI: node<br/>and hostNetwork address"]
-    node --> s["secondary ENI<br/>from ENIConfig"]
-    s --> sub["Subnet 100.64.x:<br/>pod addresses"]
-    p --> snat["SNAT for pod<br/>egress"]
+    node["サブネット内のノード<br/>10.0.1.0/24"] --> p["primary ENI: ノードと<br/>hostNetwork のアドレス"]
+    node --> s["secondary ENI<br/>ENIConfig に従う"]
+    s --> sub["サブネット 100.64.x:<br/>Pod アドレス"]
+    p --> snat["Pod egress 用の<br/>SNAT"]
     style s fill:#326ce5,color:#fff
     style sub fill:#0f9d58,color:#fff
 ```
 
-The required steps are one `ENIConfig` object per AZ, followed by two variables on `aws-node`. `ENIConfig` sets `spec.subnet` and `spec.securityGroups` (usually the cluster security group), and its object name is made equal to the zone name when there is one pod subnet in that zone.
+必須の手順は、AZ ごとに1つの `ENIConfig` オブジェクトを作成し、その後 `aws-node` に2つの変数を設定することです。`ENIConfig` では `spec.subnet` と `spec.securityGroups`（通常は cluster security group）を指定します。AZ に Pod 用サブネットが1つなら、オブジェクト名はゾーン名と同じにします。
 
 ```yaml
 apiVersion: crd.k8s.amazonaws.com/v1alpha1
 kind: ENIConfig
 metadata:
-  name: eu-central-1a          # name = AZ ごとに subnet が一つの場合は zone name
+  name: eu-central-1a          # AZ ごとにサブネットが1つなら、名前 = ゾーン名
 spec:
-  subnet: subnet-0123456789abcdef0   # 同じ AZ 内の 100.64.x subnet
+  subnet: subnet-0123456789abcdef0   # 同じ AZ の 100.64.x サブネット
   securityGroups:
     - sg-0123456789abcdef0           # cluster security group
 ```
 
-Apply one object for every AZ with nodes, changing the name and `subnet`, and only then enable the variables. Otherwise, a node in an AZ without `ENIConfig` cannot assign addresses to pods.
+ノードのある各 AZ にオブジェクトを1つずつ適用し、名前と `subnet` を変更してから、変数を有効にします。そうしなければ、`ENIConfig` がない AZ のノードは Pod にアドレスを割り当てられません。
 
-It is important not to confuse two mechanisms. `spec.securityGroups` in `ENIConfig` are groups for secondary ENIs, meaning **all pods on that node** that use this `ENIConfig`: the granularity is zonal, not per-pod. If an SG is required for a particular pod or a selector-defined group of pods, that is a different mechanism: security groups for pods, where a `SecurityGroupPolicy` resource associates an SG list by selector, and VPC CNI gives those pods a separate branch ENI (details and common failures are in Chapter 46). In prefix mode without `SecurityGroupPolicy`, pods share the node security group.
+2つの仕組みを混同しないことが重要です。`ENIConfig` 内の `spec.securityGroups` は secondary ENI 用のグループであり、その `ENIConfig` を使う**そのノード上のすべての Pod**に適用されます。ここでの粒度は Pod 単位ではなくゾーン単位です。特定の Pod、またはセレクターで定義した Pod 群に SG が必要な場合は、別の仕組みである security groups for pods を使います。`SecurityGroupPolicy` リソースがセレクターにより SG リストを関連付け、VPC CNI はそのような Pod に個別の branch ENI を割り当てます（詳細と典型的な障害は第46章）。プレフィックスモードで `SecurityGroupPolicy` がない場合、Pod はノードの security group を共有します。
 
 ```bash
 kubectl set env daemonset aws-node -n kube-system AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG=true
@@ -139,41 +139,41 @@ kubectl set env daemonset aws-node -n kube-system ENI_CONFIG_LABEL_DEF=topology.
 kubectl get eniconfigs
 ```
 
-`ENI_CONFIG_LABEL_DEF=topology.kubernetes.io/zone` enables automatic selection: a node reads its zone label and takes the `ENIConfig` with the same name. If there are several pod subnets in a zone, nodes must be labelled with the `k8s.amazonaws.com/eniConfig` annotation.
+`ENI_CONFIG_LABEL_DEF=topology.kubernetes.io/zone` は自動選択を有効にします。ノードはゾーンラベルを読み、同名の `ENIConfig` を取得します。ゾーン内に Pod 用サブネットが複数ある場合、ノードに `k8s.amazonaws.com/eniConfig` アノテーションを付ける必要があります。
 
-- **The node primary ENI does not allocate pod addresses**, so the effective `max-pods` falls: the formula loses a whole interface, making it 20 pods rather than 29 for `m5.large`. Prefixes compensate: `(3 - 1) * (10 - 1) * 16 + 2` yields 290.
-- **Existing nodes do not change behavior**: the mode works only on nodes brought up after variables are enabled, so the fleet must be recreated (Section 7.7). It is incompatible with IPv6.
-- **Egress uses the primary ENI by default**: with `AWS_VPC_K8S_CNI_EXTERNALSNAT=false`, traffic to addresses outside your VPC CIDR leaves using the primary ENI subnet and security groups, not those in `ENIConfig`. Pods with `hostNetwork: true` also remain on the node address.
-- **Diagnosis becomes harder**: node and pod addresses come from different ranges, security groups can differ, and answering “why could the pod not connect” requires seeing which ENI the packet used (Section 7.8).
+- **ノードの primary ENI は Pod アドレスの割り当てに使われません**。そのため実効的な `max-pods` は下がります。計算式からインターフェイス全体が1つ抜けるので、`m5.large` では29ではなく20 Pod になります。プレフィックスで補えます。`(3 - 1) * (10 - 1) * 16 + 2` は290になります。
+- **既存ノードの挙動は変わりません**。このモードは変数を有効にした後に起動したノードでのみ動作するため、フリートを再作成する必要があります（7.7節）。IPv6 とは互換性がありません。
+- **Egress はデフォルトで primary ENI を経由します**。`AWS_VPC_K8S_CNI_EXTERNALSNAT=false` の場合、VPC CIDR 外のアドレスへのトラフィックは、`ENIConfig` のものではなく primary ENI のサブネットと security groups を使用して送信されます。`hostNetwork: true` の Pod もノードアドレスのままです。
+- **診断が複雑になります**。ノードとその Pod のアドレスは異なる範囲にあり、security groups も異なる可能性があります。「なぜ Pod に到達できなかったのか」を調べるには、パケットがどの ENI を通ったかを見る必要があります（7.8節）。
 
-**When SNAT is removed.** You can take the same egress out from under node-level SNAT: with `AWS_VPC_K8S_CNI_EXTERNALSNAT=true`, the masquerade rule is not installed, and packets to addresses outside the VPC CIDR leave with the real pod address rather than being replaced with the node primary address. This is needed in two cases: a pod reaches a data center, peered VPC, or VPN through its own NAT gateway, Transit Gateway, or Direct Connect and the other side must see the pod address; or an external resource must initiate a connection to a pod. The cost is that connected networks must route the pod range, and direct internet egress through an internet gateway stops working with `true` - a route to a NAT gateway is required (Chapter 31).
+**SNAT を外す場合。** 同じ egress をノードレベルの SNAT から外すこともできます。`AWS_VPC_K8S_CNI_EXTERNALSNAT=true` ではマスカレードルールが設定されず、VPC CIDR 外のアドレスへのパケットはノードの primary アドレスに置き換えられず、実際の Pod アドレスのまま送信されます。これは2つの場合に必要です。Pod が独自の NAT gateway、Transit Gateway、または Direct Connect を経由してデータセンター、peered VPC、VPN に接続し、接続先が Pod アドレスを見る必要がある場合、または外部リソースが Pod への接続を開始する必要がある場合です。代償として、接続先ネットワークは Pod 範囲をルーティングしなければならず、`true` では internet gateway を通る直接のインターネット egress は動作しなくなります。NAT gateway へのルートが必要です（第31章）。
 
-There is a simpler tool. **Enhanced subnet discovery**: VPC CNI `1.18.0` and later, by default (`ENABLE_SUBNET_DISCOVERY=true`), automatically finds subnets in its VPC and AZ tagged `kubernetes.io/role/cni=1` (`aws ec2 create-tags --resources <subnet-id> --tags Key=kubernetes.io/role/cni,Value=1`). Pods receive addresses from new subnets **without `ENIConfig` and without losing the primary ENI**, hence without a `max-pods` penalty. Custom networking is for security-group and isolation requirements and takes priority if both mechanisms are enabled.
+より簡単な手段もあります。**Enhanced subnet discovery** です。VPC CNI `1.18.0` 以降はデフォルトで（`ENABLE_SUBNET_DISCOVERY=true`）、VPC と AZ 内で `kubernetes.io/role/cni=1` タグが付いたサブネットを自動検出します（`aws ec2 create-tags --resources <subnet-id> --tags Key=kubernetes.io/role/cni,Value=1`）。Pod は**`ENIConfig` なし、かつ primary ENI を失わずに**新しいサブネットからアドレスを取得するため、`max-pods` のペナルティはありません。Custom networking は security groups と分離の要件に用いるもので、両方が有効な場合は custom networking が優先されます。
 
-## 7.6. 選択基準
+## 7.6. 選び方
 
-| Criterion | Prefix delegation | Secondary CIDR plus node group | Custom networking | Subnet tag `cni=1` | IPv6 cluster |
+| 基準 | Prefix delegation | Secondary CIDR と node group | Custom networking | サブネットタグ `cni=1` | IPv6 クラスター |
 |---|---|---|---|---|---|
-| Deployment complexity | low | medium | high | low | new cluster only |
-| Provides new addresses | no | yes | yes | yes | yes |
-| Effect on `max-pods` | higher, up to the cap | none | lower, minus an ENI | none | higher, prefixes |
-| Node recreation | yes, for new `max-pods` | yes, new subnets | yes, required | no | yes |
-| Pod addresses in connected networks | as before | only with routes | only with routes | depends on subnet | through IPv6 routes |
-| Custom security groups for pods | no | no | yes | no | no |
-| Requirements | Nitro | VPC CIDR quota | `ENIConfig` per AZ | VPC CNI `1.18.0`+ | Nitro, new cluster |
+| 導入の複雑さ | 低い | 中程度 | 高い | 低い | 新規クラスターのみ |
+| 新しいアドレスを提供するか | いいえ | はい | はい | はい | はい |
+| `max-pods` への影響 | 上昇、上限まで | なし | 低下、ENI 1つ分減少 | なし | 上昇、プレフィックス |
+| ノードの再作成 | はい、新しい `max-pods` のため | はい、新しいサブネット | はい、必須 | いいえ | はい |
+| 接続先ネットワークでの Pod アドレス | 従来どおり | ルートがある場合のみ | ルートがある場合のみ | サブネットに依存 | IPv6 ルート経由 |
+| Pod 用の独自 security groups | いいえ | いいえ | はい | いいえ | いいえ |
+| 要件 | Nitro | VPC の CIDR クォータ | AZ ごとの `ENIConfig` | VPC CNI `1.18.0`+ | Nitro、新規クラスター |
 
-If subnets are wide but pods do not fit on a node, use prefix delegation and do not add complexity. If addresses are exhausted, use a secondary CIDR, then choose between a new node group, a subnet tag, and custom networking, which is chosen for isolation requirements rather than addresses. IPv6 belongs at cluster creation.
+サブネットが広く、Pod がノードに収まらないなら prefix delegation を使い、複雑にしません。アドレスが尽きたなら secondary CIDR を使い、その後に新しい node group、サブネットタグ、custom networking から選びます。custom networking を選ぶ理由はアドレスではなく分離要件です。IPv6 はクラスター作成時に選択します。
 
-## 7.7. ダウンタイムなしの本番クラスターでの導入順序
+## 7.7. ダウンタイムなしで稼働中クラスターへ導入する順序
 
-All three mechanisms share one property: **they change behavior only on new nodes**.
+3つの仕組みには共通の性質があります。**挙動を変えるのは新しいノードだけです**。
 
-1. **Prepare addresses.** Associate a secondary CIDR, create one subnet per AZ and routing tables, and create a subnet CIDR reservation if needed.
-2. **Change the CNI configuration** through the managed addon configuration (Chapter 37). For custom networking, first apply `ENIConfig` in every zone, and only then enable `AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG`.
-3. **Create a new node group** in the required subnets, on Nitro instances, with `maxPods` in user data if a ceiling above the cap is required. Verify pod addresses on new nodes.
-4. **Move workloads.** Cordon and drain old nodes one at a time while considering PDBs (Chapter 40), then remove the old node group. Rolling replacement is not recommended for a prefix transition: a node with a mixture of addresses and prefixes reports capacity inconsistently.
+1. **アドレスを準備する。** secondary CIDR を関連付け、AZ ごとに1つのサブネットとルーティングテーブルを作成し、必要に応じて subnet CIDR reservation を作成します。
+2. **CNI 設定を変更する。** managed addon の設定を通じて行います（第37章）。Custom networking では、まずすべてのゾーンに `ENIConfig` を適用し、その後に `AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG` を有効にします。
+3. **新しい node group を起動する。** 必要なサブネット上、Nitro インスタンス上に作成し、上限を超える `maxPods` が必要なら user data に指定します。新しいノード上の Pod アドレスを確認します。
+4. **ワークロードを移動する。** PDB を考慮しながら古いノードを1台ずつ cordon と drain し（第40章）、その後に古い node group を削除します。プレフィックスへの移行に rolling replacement は推奨しません。アドレスとプレフィックスが混在するノードは容量を一貫して報告しないためです。
 
-Check at every step rather than only at the end:
+最後だけでなく、各段階で確認します。
 
 ```bash
 kubectl get nodes -o custom-columns='NODE:.metadata.name,PODS:.status.allocatable.pods'
@@ -181,11 +181,11 @@ kubectl get pods -A -o wide | grep -c ' 100\.64\.'
 kubectl get eniconfigs -o custom-columns='NAME:.metadata.name,SUBNET:.spec.subnet'
 ```
 
-The commands show whether `max-pods` increased on new nodes, whether pod addresses come from the new range, and whether there is an `ENIConfig` for every zone with nodes. A node in a zone without `ENIConfig` cannot issue pod addresses, and the symptom is the same `FailedCreatePodSandBox`, only with a non-full subnet.
+これらのコマンドは、新しいノードで `max-pods` が上がったか、Pod アドレスが新しい範囲から取得されているか、ノードがある各ゾーンに `ENIConfig` があるかを示します。`ENIConfig` がないゾーンのノードは Pod にアドレスを割り当てられず、サブネットが完全には埋まっていないだけで、症状は同じ `FailedCreatePodSandBox` になります。
 
 ## 7.8. 導入後の運用
 
-Monitoring remaining addresses becomes more precise: count by every subnet and AZ, and in prefix mode watch not only the remaining count but also whether contiguous blocks exist.
+残りアドレスの監視はより精密になります。サブネットと AZ ごとに数え、プレフィックスモードでは残数だけでなく連続ブロックの有無も見ます。
 
 ```bash
 aws ec2 describe-subnets --filters Name=vpc-id,Values=vpc-0123456789abcdef0 --output table \
@@ -194,84 +194,78 @@ aws ec2 describe-network-interfaces --filters Name=vpc-id,Values=vpc-0123456789a
   --query 'NetworkInterfaces[].[NetworkInterfaceId,SubnetId,length(Ipv4Prefixes)]' --output text
 ```
 
-The main diagnostic change is that a pod address no longer reveals the node subnet, and the investigation order is now: node, its ENI, that ENI's subnet, and the subnet security groups.
+診断で変わる最も重要な点は、Pod アドレスがノードのサブネットを示さなくなることです。確認順序は、ノード、その ENI、その ENI のサブネット、サブネットの security groups となります。
 
-- **Old nodes without prefixes.** Part of the fleet retains the prior `max-pods`, and pods distribute unevenly. Fix it by replacing nodes, not by changing variables.
-- **The addon overwrote variables.** A managed addon update restored its values, and new nodes started in address mode. Check after every update.
-- **`ENIConfig` is not present in every AZ.** The cluster worked until Karpenter created a node in a fourth zone. A related problem is an `ENIConfig` that points at an exhausted subnet: the shortage returns.
-- **Fragmentation rather than shortage**: many addresses remain but logs show `InsufficientCidrBlocks`. **Mixed instance types**: a non-Nitro instance does not get prefixes, and the lowest `max-pods` in a group applies to all its nodes.
-- **A wide list of Karpenter instance types.** This is a distinct instance of the same trap: a spot pool with broad requirements can include old non-Nitro families (`t2`, `m4`, `c4`), and such nodes start in address mode with noticeably lower density than the rest of the pool. The fleet looks homogeneous, but pods distribute unevenly. Fix it by narrowing NodePool requirements: the `karpenter.k8s.aws/instance-hypervisor` label with value `nitro`, or excluding old generations through `karpenter.k8s.aws/instance-generation` (Chapters 12 and 13).
+- **プレフィックスなしの古いノード。** フリートの一部は以前の `max-pods` のままで、Pod の分散が不均一になります。変数を変更するのではなく、ノードを置き換えて解決します。
+- **アドオンが変数を上書きした。** managed addon の更新が値を戻し、新しいノードがアドレスモードで起動しました。各更新後に確認します。
+- **すべての AZ に `ENIConfig` がない。** Karpenter が4つ目のゾーンでノードを起動するまでは、クラスターは動作していました。隣り合わせの問題は「`ENIConfig` が満杯のサブネットを指している」ことで、不足が再発します。
+- **不足ではなく断片化**: 残りアドレスは多いのに、ログに `InsufficientCidrBlocks` が出ます。**混在するインスタンスタイプ**: 非 Nitro インスタンスはプレフィックスを取得できず、グループ内で最小の `max-pods` がすべてのノードに適用されます。
+- **Karpenter の広すぎるタイプ一覧。** 同じ罠の別の例です。広い要件を持つ spot プールには、Nitro を持たない古いファミリー（`t2`、`m4`、`c4`）が入り得ます。そのようなノードは、残りのプールより明らかに低い密度のアドレスモードで起動します。フリートは均一に見えても、Pod の分散は不均一になります。NodePool の要件を絞り、値を `nitro` とする `karpenter.k8s.aws/instance-hypervisor` ラベル、または `karpenter.k8s.aws/instance-generation` による古い世代の除外で解決します（第12章、第13章）。
 
-## 7.9. IPv6 クラスター：抜本的選択肢の概要
+## 7.9. IPv6 クラスター: 抜本的な選択肢の概要
 
-In a cluster with `ipFamily: ipv6`, pods and Services receive IPv6 addresses, and VPC CNI operates with `/80` prefixes. Scarcity is almost completely eliminated. The cost has three parts.
+`ipFamily: ipv6` のクラスターでは、Pod と Service が IPv6 アドレスを取得し、VPC CNI は `/80` プレフィックスモードで動作します。不足は実質的にほぼ解消されます。この選択には3つのコストがあります。
 
-- **Only at cluster creation.** `ipFamily` cannot change, EKS does not support dual-stack for pods and Services, and custom networking is incompatible with IPv6. The transition requires a new cluster and workload migration (Chapters 4 and 38).
-- **Application compatibility.** Address literals in configuration, libraries, agents, and external systems must all support IPv6. Nitro is mandatory, and Windows nodes are unsupported.
-- **IPv4 egress.** A pod receives an IPv6 address and also a host-local IPv4 address, invisible to the control plane. When it contacts an IPv4 resource, NAT on the node itself uses SNAT to the node primary IPv4 address, and **this built-in mechanism removes the need for DNS64 and NAT64** on the VPC side.
+- **クラスター作成時のみ。** `ipFamily` は変更できず、EKS は Pod と Service の dual-stack をサポートせず、custom networking は IPv6 と互換性がありません。移行には新しいクラスターとワークロードの移行が必要です（第4章、第38章）。
+- **アプリケーション互換性。** 設定内のアドレスリテラル、ライブラリ、エージェント、外部システムのすべてが IPv6 を扱える必要があります。Nitro は必須で、Windows ノードはサポートされません。
+- **IPv4 への egress。** Pod は IPv6 アドレスに加えて、control plane から見えない host-local IPv4 アドレスも取得します。IPv4 リソースに接続すると、ノード自身で NAT が動作してノードの primary IPv4 アドレスへ SNAT します。この**組み込みの仕組みにより、VPC 側で DNS64 と NAT64 は不要になります**。
 
-In short, IPv6 is a good answer to “how should we build the next cluster?” and a bad answer to “what should we do with this one on Friday?”.
+要するに IPv6 は「次のクラスターをどう構築するか」には良い答えですが、「金曜日にこのクラスターをどうするか」には悪い答えです。
 
-## 7.10. 本番での活用方法
+## 7.10. 本番環境での使い方
 
-- **Enable prefix delegation on new clusters by default** together with `WARM_PREFIX_TARGET` and Nitro instances: it is cheaper than returning to the topic under load.
-- **Allocate pod subnets from `100.64.0.0/10`** when designing the VPC: non-routable pod space leaves RFC 1918 for load balancers and NAT.
-- **Keep VPC CNI variables in managed addon configuration and Terraform code**, not in a live DaemonSet: a `kubectl set env` change lasts only to the next addon update.
-- **Alert on remaining addresses in every subnet and AZ**, and in prefix mode add an alert for `InsufficientCidrBlocks` in `aws-node` logs.
+- **新しいクラスターでは prefix delegation をデフォルトで有効にする**。`WARM_PREFIX_TARGET` と Nitro インスタンスも併用します。負荷がかかってからこの問題に戻るより低コストです。
+- **Pod 用サブネットは `100.64.0.0/10` から確保する**。VPC 設計時に行います。ルーティングされない Pod 用空間を使うことで、RFC 1918 をロードバランサーと NAT 用に残せます。
+- **VPC CNI の変数は、稼働中 DaemonSet ではなく managed addon の設定と Terraform コードで管理する**。`kubectl set env` による変更は次回のアドオン更新までしか持ちません。
+- **各サブネットと AZ の残りアドレスにアラートを設定する**。プレフィックスモードでは、`aws-node` のログにある `InsufficientCidrBlocks` にもアラートを追加します。
 
 ## 7.11. ミニ用語集
 
-- **Prefix delegation** - a mode where an ENI slot holds a `/28` prefix (16 addresses); enabled with `ENABLE_PREFIX_DELEGATION` and requires Nitro. **`WARM_PREFIX_TARGET`** is the prefix reserve on a node; `WARM_IP_TARGET` and `MINIMUM_IP_TARGET` take priority over it.
-- **Subnet CIDR reservation** - reservation of a contiguous subnet block for prefixes. **`InsufficientCidrBlocks`** - an EC2 API error about missing contiguous blocks despite formally free addresses.
-- **Secondary CIDR** - an additional IPv4 block on a VPC; for EKS, usually from `100.64.0.0/10` (RFC 6598). **Custom networking** - a mode where secondary ENIs and pod addresses are taken from a subnet and the security groups of an **`ENIConfig`** object, one per AZ, selected by the label in `ENI_CONFIG_LABEL_DEF`. **Enhanced subnet discovery** - subnets tagged `kubernetes.io/role/cni=1` without `ENIConfig`. **`AWS_VPC_K8S_CNI_EXTERNALSNAT`** removes node-level pod egress SNAT (`true`) so the external side sees the real pod address; internet egress then goes only through a NAT gateway. **`ipFamily`** is the cluster address family and is set only at creation.
+- **Prefix delegation** - ENI スロットが `/28` プレフィックス（16アドレス）を保持するモードです。`ENABLE_PREFIX_DELEGATION` で有効にし、Nitro が必要です。**`WARM_PREFIX_TARGET`** はノード上のプレフィックス予備で、`WARM_IP_TARGET` と `MINIMUM_IP_TARGET` がこれより優先されます。
+- **Subnet CIDR reservation** - プレフィックス用にサブネット内の連続ブロックを予約することです。**`InsufficientCidrBlocks`** - 形式上は空きアドレスがあるにもかかわらず連続ブロックがないことを示す EC2 API エラーです。
+- **Secondary CIDR** - VPC の追加 IPv4 ブロックです。EKS では通常 `100.64.0.0/10`（RFC 6598）から使います。**Custom networking** - secondary ENI と Pod アドレスを、AZ ごとに1つの **`ENIConfig`** オブジェクトで指定したサブネットと security groups から取得するモードで、選択には `ENI_CONFIG_LABEL_DEF` のラベルを使います。**Enhanced subnet discovery** - `ENIConfig` を使わず、`kubernetes.io/role/cni=1` タグを持つサブネットを使う仕組みです。**`AWS_VPC_K8S_CNI_EXTERNALSNAT`** - Pod egress のノード SNAT を外す（`true`）ため、外部側から実際の Pod アドレスが見えるようになります。この場合、インターネット egress は NAT gateway 経由のみになります。**`ipFamily`** - クラスターのアドレスファミリーで、作成時にのみ設定します。
 
 ## 7.12. 章のまとめ
 
-- A subnet cannot be expanded, so there are three exits: more addresses per ENI slot, new VPC address space, or leaving IPv4. The first two are often used together.
-- Prefix delegation is enabled with `ENABLE_PREFIX_DELEGATION=true` on `aws-node`, requires Nitro, and saves EC2 API calls. But managed node groups retain the 110 and 250 caps regardless of prefixes, `max-pods` is fixed at node startup, and addresses are allocated in blocks of 16, fragmenting the subnet.
-- `WARM_PREFIX_TARGET` sets the reserve, but `WARM_IP_TARGET` and `MINIMUM_IP_TARGET` also apply and override it, allowing you not to retain an entire extra prefix.
-- A secondary CIDR from `100.64.0.0/10` does not overlap corporate networks and is allowed where RFC 1918 blocks are prohibited, but it requires attention to routing and NAT.
-- Custom networking through `ENIConfig` gives pods separate subnets and security groups, but removes the primary ENI from address allocation, reduces `max-pods`, and requires node recreation. A simpler route is a node group in new subnets or the `kubernetes.io/role/cni=1` tag.
-- Every change applies only to new nodes: first addresses and configuration, then a new node group, then draining old nodes. IPv6 removes scarcity completely but is chosen only at cluster creation and carries application compatibility and IPv4 egress considerations.
+- サブネットは拡張できないため、選択肢は3つです。ENI スロットあたりのアドレスを増やす、VPC に新しいアドレス空間を追加する、IPv4 から離れることです。最初の2つはよく併用されます。
+- Prefix delegation は `aws-node` の `ENABLE_PREFIX_DELEGATION=true` で有効にし、Nitro が必要で、EC2 API 呼び出しを節約します。しかし managed node group はプレフィックスに関係なく110と250の上限を維持し、`max-pods` はノード起動時に固定されます。またアドレスは16個単位で割り当てられ、サブネットを断片化します。
+- 予備は `WARM_PREFIX_TARGET` で指定しますが、`WARM_IP_TARGET` と `MINIMUM_IP_TARGET` も適用され、これを上書きします。そのため、余分なプレフィックス全体を保持せずに済みます。
+- `100.64.0.0/10` の secondary CIDR は企業ネットワークと重複せず、RFC 1918 ブロックが禁止される場所でも許可されますが、ルーティングと NAT に注意が必要です。
+- `ENIConfig` による custom networking は Pod に別のサブネットと security groups を提供しますが、primary ENI をアドレス割り当てから外し、`max-pods` を下げ、ノードの再作成が必要です。より簡単な方法は、新しいサブネットの node group または `kubernetes.io/role/cni=1` タグです。
+- どの変更も新しいノードにしか適用されません。まずアドレスと設定、次に新しい node group、最後に古いノードを drain します。IPv6 は不足を完全に解消しますが、クラスター作成時にしか選択できず、アプリケーション互換性と IPv4 への egress を伴います。
 
 ## 7.13. 実務でどう役立つか
 
-Address scarcity arrives without warning and immediately appears as “the release will not roll out”. The difference between an engineer with a plan and one without is measured in hours of downtime: the first knows that prefix delegation raises density but does not add addresses, that a secondary CIDR can be associated in a minute while routes and NAT take longer, and that the change reaches the cluster only with new nodes. In calm periods, this informs design: pod subnets separate from nodes, prefixes from day one, and CNI variables in addon configuration in Git.
+アドレス不足は警告なしに発生し、すぐに「リリースが展開できない」という形で現れます。計画があるエンジニアとないエンジニアの差は、数時間の停止時間として現れます。前者は、prefix delegation が密度を上げてもアドレスは追加しないこと、secondary CIDR は1分で関連付けられてもルートと NAT にはより時間がかかること、変更がクラスターに届くのは新しいノードからであることを知っています。平時には、これが設計に生かされます。Pod 用サブネットをノードから分離し、初日からプレフィックスを使い、CNI 変数を Git 内のアドオン設定に置きます。
 
 ## 7.14. セルフチェック問題
 
-1. Why does prefix delegation not solve an exhausted subnet, and why can it sometimes make it worse?
-2. You enabled `ENABLE_PREFIX_DELEGATION=true`, but `allocatable.pods` did not change. What are two reasons?
-3. What are the instance-type requirements of prefix mode, and why is this dangerous in a mixed group?
-4. There are 400 addresses remaining in a subnet, but `aws-node` logs show `InsufficientCidrBlocks`. What should you do?
-5. How do `WARM_PREFIX_TARGET`, `WARM_IP_TARGET`, and `MINIMUM_IP_TARGET` relate to each other?
-6. Why are pod addresses taken from `100.64.0.0/10` rather than a free block in `192.168.0.0/16`?
-7. What must be done after `associate-vpc-cidr-block` so pods can reach the internet and a data center?
-8. Which elements are mandatory for custom networking, and why is an `ENIConfig` created for every AZ?
-9. How does `spec.securityGroups` in `ENIConfig` differ from `SecurityGroupPolicy` in scope?
-10. Why does `max-pods` fall with custom networking, and how can it be compensated?
-11. How does enhanced subnet discovery differ from custom networking, and when is it insufficient?
-12. Describe the rollout order for prefix delegation in a live cluster without downtime.
-13. What should be checked after a VPC CNI addon update, and why does IPv6 not save the current cluster?
-14. When is `AWS_VPC_K8S_CNI_EXTERNALSNAT=true` enabled, and what breaks in egress when it is?
+1. Prefix delegation が枯渇したサブネットの問題を解決せず、ときに悪化させるのはなぜですか？
+2. `ENABLE_PREFIX_DELEGATION=true` を有効にしましたが、`allocatable.pods` は変わりません。理由を2つ挙げてください。
+3. プレフィックスモードにおけるインスタンスタイプの要件は何で、混在グループではなぜ危険ですか？
+4. サブネットの残りアドレスは400ですが、`aws-node` のログには `InsufficientCidrBlocks` があります。何をしますか？
+5. `WARM_PREFIX_TARGET`、`WARM_IP_TARGET`、`MINIMUM_IP_TARGET` はどう関係しますか？
+6. Pod 用に `192.168.0.0/16` の空きブロックではなく、`100.64.0.0/10` を使うのはなぜですか？
+7. Pod がインターネットとデータセンターへ到達できるようにするには、`associate-vpc-cidr-block` の後で何をする必要がありますか？
+8. Custom networking に必須の要素は何で、なぜ各 AZ に `ENIConfig` を作成しますか？
+9. `ENIConfig` の `spec.securityGroups` は、対象範囲の点で `SecurityGroupPolicy` とどう異なりますか？
+10. Custom networking で `max-pods` が下がるのはなぜで、何で補えますか？
+11. Enhanced subnet discovery は custom networking とどう異なり、どのような場合に不十分ですか？
+12. ダウンタイムなしで、稼働中クラスターに prefix delegation を導入する順序を説明してください。
+13. VPC CNI アドオンの更新後に何を確認すべきで、IPv6 が現在のクラスターを救えないのはなぜですか？
+14. `AWS_VPC_K8S_CNI_EXTERNALSNAT=true` はいつ有効にし、その場合 egress で何が動かなくなりますか？
 
 ## 演習
 
-The course lab for this topic is [ラボ 103 - アドレス計画：ENI 制限、prefix delegation、secondary CIDR](../../labs/103/README_JP.MD). Beyond it, verify the content on a live cluster. Start with the CNI operating mode:
+このテーマのコースラボは、[ラボ 103 - アドレス計画: ENI 制限、prefix delegation、secondary CIDR](../../labs/103/README_JP.MD)です。これに加え、内容を稼働中クラスターで確認してください。まず CNI の動作モードから始めます。
 `kubectl describe ds aws-node -n kube-system | grep -e PREFIX -e WARM_ -e CUSTOM_NETWORK -e
-SUBNET_DISCOVERY`. Then check prefixes on a node interface through `aws ec2
-describe-network-interfaces` with the `Name=attachment.instance-id` filter and the
-`Ipv4Prefixes[].Ipv4Prefix` query: an empty prefix list with a non-empty secondary-address list
-means regular address mode. Verify the pod ceiling with `kubectl get nodes -o
-custom-columns='NODE:.metadata.name,PODS:.status.allocatable.pods'`: identical 110 values on different
-types indicate the managed node group cap.
+SUBNET_DISCOVERY`。次に、`Name=attachment.instance-id` フィルターと
+`Ipv4Prefixes[].Ipv4Prefix` クエリを指定した `aws ec2
+describe-network-interfaces` で、ノードのインターフェイス上のプレフィックスを確認します。secondary アドレス一覧が空でないのにプレフィックス一覧が空なら、通常のアドレスモードです。Pod 上限は、`kubectl get nodes -o
+custom-columns='NODE:.metadata.name,PODS:.status.allocatable.pods'` で確認します。異なるタイプで同じ110なら、それは managed node group の上限です。
 
-On a test cluster, walk through the complete path: associate `100.64.0.0/16` with `aws ec2
-associate-vpc-cidr-block`, create one subnet per AZ through `aws ec2 create-subnet`, apply
-`ENIConfig` in every zone, verify `kubectl get eniconfigs`, enable
-`AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG` and `ENI_CONFIG_LABEL_DEF`, create a new node group, and
-confirm that new pods received addresses from `100.64.x` while old nodes keep working as before.
-Also compare remaining addresses through `aws ec2 describe-subnets` with `AvailableIpAddressCount`.
+テストクラスターでは、全経路を実施してください。`aws ec2
+associate-vpc-cidr-block` で `100.64.0.0/16` を関連付け、`aws ec2 create-subnet` で AZ ごとにサブネットを作成し、各ゾーンに `ENIConfig` を適用して `kubectl get eniconfigs` を確認し、`AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG` と `ENI_CONFIG_LABEL_DEF` を有効にして、新しい node group を起動します。新しい Pod が `100.64.x` からアドレスを取得し、古いノードは従来どおり動作していることを確認します。あわせて、`AvailableIpAddressCount` を指定した `aws ec2 describe-subnets` で残りアドレスを比較します。
 
 ---
 [目次](../README_JP.md) · [第6章](../06/jp.md) · [第8章](../08/jp.md)

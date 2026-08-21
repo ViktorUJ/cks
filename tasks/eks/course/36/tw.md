@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 36 章。追蹤與剖析：ADOT 和 X-Ray
 
 > **接下來。** 第 33 與 34 章提供了指標和日誌，這是可觀測性的三根支柱中的兩根。本章介紹第三根：將一個請求串連成穿越服務鏈之單一路徑的分散式追蹤，以及簡要介紹剖析。相關主題交由其他章節說明：指標，包括作為 Amazon Managed Prometheus 指標收集器的 ADOT，見第 33 章；日誌見第 34 章；透過 IRSA 與 Pod Identity 將遙測資料匯出至 AWS 的角色見第 16 與 17 章。本章結束第 6 部分。接下來是第 7 部分，即附加元件、升級、可靠性、備份與成本等營運內容。

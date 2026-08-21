@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 28. Gateway API in AWS: ALB Gateway API und VPC Lattice
 
 > **Wie es weitergeht.** Die Kapitel 26 und 27 zeigten die Veröffentlichung über Annotationen: Ein Service vom Typ

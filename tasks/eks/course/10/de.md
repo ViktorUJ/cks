@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 10. AMI und Bootstrap: AL2023, Bottlerocket, Launch Templates, kubelet und User Data
 
 > **Wie es weitergeht.** In Kapitel 9 haben wir Rechentypen und die Entscheidung zwischen Auto Mode und dem eigenen Stack behandelt.

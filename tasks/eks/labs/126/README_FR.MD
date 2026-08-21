@@ -23,7 +23,7 @@ compte que celui utilisé pour déployer la lab) - les détails sont dans la sec
 
 Consolider la matière du chapitre du cours :
 
-- [Chapitre 46. Pannes réseau](../../course/46/ru.md) - la security group comme couche
+- [Chapitre 46. Pannes réseau](../../course/46/fr.md) - la security group comme couche
   de panne réseau
 
 ## Ce que nous créons

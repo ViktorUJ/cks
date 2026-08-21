@@ -21,8 +21,8 @@ IRSA-როლთან ანოტაციის მეშვეობით,
 
 გავამყაროთ კურსის ამ თავების მასალა:
 
-- [თავი 16. IRSA: OIDC-პროვაიდერი, trust policy, ServiceAccount-ის ანოტაციები](../../course/16/ru.md)
-- [თავი 17. EKS Pod Identity: აგენტი, ასოციაციები, IRSA-დან მიგრაცია](../../course/17/ru.md)
+- [თავი 16. IRSA: OIDC-პროვაიდერი, trust policy, ServiceAccount-ის ანოტაციები](../../course/16/ge.md)
+- [თავი 17. EKS Pod Identity: აგენტი, ასოციაციები, IRSA-დან მიგრაცია](../../course/17/ge.md)
 
 ## რას ვქმნით
 

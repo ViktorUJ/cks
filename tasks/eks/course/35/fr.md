@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Русская версия](ru.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 35. Autoscaling des applications : HPA, métriques externes, KEDA
 
 > **La suite.** Les chapitres 33 et 34 ont fourni les métriques et les logs, les deux piliers de l’observabilité. Ici, nous utilisons les métriques concrètement : nous faisons évoluer les applications elles-mêmes, c’est-à-dire le nombre de réplicas de pods selon la charge. Les sujets connexes sont traités dans d’autres chapitres : le dimensionnement des nœuds pour ces pods (Cluster Autoscaler, Karpenter), chapitres 11 et 12 ; l’origine des métriques (metrics-server, Prometheus), chapitre 33 ; le dimensionnement vertical d’un pod (requests/limits, VPA), chapitre 14 ; le tracing pour trouver les goulots d’étranglement, chapitre 36. Un seul sujet ici : faire suivre au nombre de réplicas la charge réelle, y compris les événements que le HPA basé sur le CPU ne voit pas.
@@ -378,7 +378,7 @@ kubectl get scaledobject -A
 kubectl get hpa -A | grep keda-hpa
 ```
 
-Comparez la situation : le service se dimensionne-t-il selon une métrique décrivant sa charge, ou selon le CPU « par habitude » ; le HPA voit-il sa métrique, ou contient-elle `<unknown>` ; et les nouveaux réplicas ne restent-ils pas en `Pending` par manque de nœuds ? Outre le laboratoire du cours, le dépôt contient un laboratoire distinct, hors cours, consacré à l’autoscaling avec KEDA et Prometheus (`../../labs/03/README_RUS.MD`) : il déploie Prometheus, installe KEDA et dimensionne une application selon les RPS réels, une bonne façon de voir toute la chaîne en action.
+Comparez la situation : le service se dimensionne-t-il selon une métrique décrivant sa charge, ou selon le CPU « par habitude » ; le HPA voit-il sa métrique, ou contient-elle `<unknown>` ; et les nouveaux réplicas ne restent-ils pas en `Pending` par manque de nœuds ? Outre le laboratoire du cours, le dépôt contient un laboratoire distinct, hors cours, consacré à l’autoscaling avec KEDA et Prometheus [laboratoire 03](../../labs/03/README_FR.MD) : il déploie Prometheus, installe KEDA et dimensionne une application selon les RPS réels, une bonne façon de voir toute la chaîne en action.
 
 ---
 [Table des matières](../README_FR.md) · [Chapitre 34](../34/fr.md) · [Chapitre 36](../36/fr.md)

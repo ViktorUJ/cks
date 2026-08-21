@@ -20,13 +20,13 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Consolider la matière des chapitres suivants du cours :
 
-- [Chapitre 41. Sauvegarde du cluster via AWS Backup](../../course/41/ru.md) - composite
+- [Chapitre 41. Sauvegarde du cluster via AWS Backup](../../course/41/fr.md) - composite
   recovery point, backup plan, vault, IAM role
-- [Chapitre 42. Restauration et DR](../../course/42/ru.md) - namespace restore,
+- [Chapitre 42. Restauration et DR](../../course/42/fr.md) - namespace restore,
   non-destructive restore
-- [Chapitre 23. EBS CSI](../../course/23/ru.md) - StorageClass gp3, le volume derrière le
+- [Chapitre 23. EBS CSI](../../course/23/fr.md) - StorageClass gp3, le volume derrière le
   PVC qui se retrouve dans le backup
-- [Chapitre 5. Accès au cluster](../../course/05/ru.md) - le mode d'authentification
+- [Chapitre 5. Accès au cluster](../../course/05/fr.md) - le mode d'authentification
   `API_AND_CONFIG_MAP` et les access entries, sans lesquels AWS Backup ne peut pas lire le
   cluster
 

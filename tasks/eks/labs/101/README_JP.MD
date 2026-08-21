@@ -19,10 +19,10 @@ AL2023 上で起動していることを確認します。
 
 コースの以下の章の内容を定着させます:
 
-- [第 4 章。クラスタの作成:eksctl、Terraform、Terragrunt](../../course/04/ru.md) - コードとしてのクラスタと kubeconfig
-- [第 6 章。クラスタネットワーク:VPC CNI、ENI、IP アドレス](../../course/06/ru.md) - Pod のアドレスがどこから来るか
-- [第 9 章。コンピュートの種類:managed node groups、Fargate、Auto Mode](../../course/09/ru.md) - 何がどこで動くか
-- [第 10 章。AMI と bootstrap:AL2023、launch templates、kubelet](../../course/10/ru.md) - ノードがどのイメージ上で動いているか
+- [第 4 章。クラスタの作成:eksctl、Terraform、Terragrunt](../../course/04/jp.md) - コードとしてのクラスタと kubeconfig
+- [第 6 章。クラスタネットワーク:VPC CNI、ENI、IP アドレス](../../course/06/jp.md) - Pod のアドレスがどこから来るか
+- [第 9 章。コンピュートの種類:managed node groups、Fargate、Auto Mode](../../course/09/jp.md) - 何がどこで動くか
+- [第 10 章。AMI と bootstrap:AL2023、launch templates、kubelet](../../course/10/jp.md) - ノードがどのイメージ上で動いているか
 
 ## 作成するもの
 

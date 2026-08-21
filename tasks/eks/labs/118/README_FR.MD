@@ -21,7 +21,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 Consolider la matière du chapitre du cours :
 
 - [Chapitre 44. GitOps et livraison : Argo CD et Flux, gestion d'une flotte de
-  clusters](../../course/44/ru.md) - Git comme source de vérité, sync et health, self-heal
+  clusters](../../course/44/fr.md) - Git comme source de vérité, sync et health, self-heal
 
 ## Ce que nous créons
 

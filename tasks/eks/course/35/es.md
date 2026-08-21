@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Capítulo 35. Autoescalado de aplicaciones: HPA, métricas externas, KEDA
 
@@ -462,7 +462,7 @@ Relaciona la información: si el servicio escala según una métrica que describ
 CPU «por costumbre»; si HPA ve la métrica o muestra `<unknown>`; y si las réplicas nuevas no
 quedan bloqueadas en `Pending` por falta de nodos. Además del laboratorio del curso, el
 repositorio incluye un laboratorio independiente, no perteneciente al curso, sobre autoescalado
-con KEDA y Prometheus (`../../labs/03/README_RUS.MD`): despliega Prometheus, instala KEDA y
+con KEDA y Prometheus [laboratorio 03](../../labs/03/README_ES.MD): despliega Prometheus, instala KEDA y
 escala una aplicación por RPS real, una buena forma de ver toda la cadena en acción.
 
 ---

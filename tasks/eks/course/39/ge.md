@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 39. კლასტერის ვერსიის უკან დაბრუნება: rollback readiness insights, 7-დღიანი ფანჯარა, უკან დაბრუნების თანმიმდევრობა
 
 > **რა არის შემდეგ.** 38-ე თავში განვიხილეთ კლასტერის განახლება: ვერსიის სასიცოცხლო ციკლი,

@@ -19,13 +19,13 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from these course chapters:
 
-- [Chapter 41. Cluster backup via AWS Backup](../../course/41/ru.md) - composite
+- [Chapter 41. Cluster backup via AWS Backup](../../course/41/en.md) - composite
   recovery point, backup plan, vault, IAM role
-- [Chapter 42. Restore and DR](../../course/42/ru.md) - namespace restore,
+- [Chapter 42. Restore and DR](../../course/42/en.md) - namespace restore,
   non-destructive restore
-- [Chapter 23. EBS CSI](../../course/23/ru.md) - StorageClass gp3, the volume behind
+- [Chapter 23. EBS CSI](../../course/23/en.md) - StorageClass gp3, the volume behind
   the PVC that ends up in the backup
-- [Chapter 5. Cluster access](../../course/05/ru.md) - the `API_AND_CONFIG_MAP`
+- [Chapter 5. Cluster access](../../course/05/en.md) - the `API_AND_CONFIG_MAP`
   authentication mode and access entries, without which AWS Backup cannot read the
   cluster
 

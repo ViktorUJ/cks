@@ -20,9 +20,9 @@ plane の正常な挙動であり、コマンドが止まっているわけで�
 
 コースの以下の章の内容を定着させます:
 
-- [第 37 章。EKS add-on:managed add-on と Helm の違い、バージョンと更新順序](../../course/37/ru.md) - add-on のバージョンを誰が管理しているか
-- [第 38 章。クラスタのアップグレード:バージョン単位のインプレース更新、blue/green クラスタ、非推奨 API](../../course/38/ru.md) - インプレースアップグレードの順序と非推奨 API の見つけ方
-- [第 39 章。クラスタバージョンのロールバック:rollback readiness insights、7 日間の期限、ロールバックの順序](../../course/39/ru.md) - 標準的な control plane のロールバック
+- [第 37 章。EKS add-on:managed add-on と Helm の違い、バージョンと更新順序](../../course/37/jp.md) - add-on のバージョンを誰が管理しているか
+- [第 38 章。クラスタのアップグレード:バージョン単位のインプレース更新、blue/green クラスタ、非推奨 API](../../course/38/jp.md) - インプレースアップグレードの順序と非推奨 API の見つけ方
+- [第 39 章。クラスタバージョンのロールバック:rollback readiness insights、7 日間の期限、ロールバックの順序](../../course/39/jp.md) - 標準的な control plane のロールバック
 
 ## 作成するもの
 

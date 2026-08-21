@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 34 章。日誌：Fluent Bit、CloudWatch Logs、OpenSearch、成本控制
 
 > **接下來。** 第 33 章介紹了指標，也就是節點與 Pod 使用量的數值時間序列。本章是可觀測性的第二個支柱：日誌，也就是應用程式做了什麼、為什麼失敗的文字記錄。指標回答「多少」，日誌回答「究竟發生了什麼」。相關主題由其他章節說明：指標見第 33 章；依指標自動擴展（HPA、KEDA）見第 35 章；透過 ADOT 和 X-Ray 的分散式追蹤見第 36 章；作為安全工具的 control plane 稽核（audit log）見第 21 章；整體成本核算與最佳化見第 43 章。本章只說明一件事：如何從短暫存在的節點與 Pod 匯出日誌、儲存到哪裡，以及如何避免為此付出高昂成本。
@@ -61,7 +61,7 @@ Fluent Bit 是以 C 撰寫的輕量日誌轉送器：CPU 與記憶體消耗很�
 
 AWS 提供現成映像檔 **aws-for-fluent-bit**。這是已內建輸出至 AWS 服務（CloudWatch Logs、Amazon Data Firehose 等）的 Fluent Bit，並使用 AWS 測試與更新的版本。使用它很方便：不必自行建置含所需外掛的映像檔。
 
-收集器的關鍵功能是**以 Kubernetes metadata 擴充**。原始日誌行本身不會說明它屬於誰。Fluent Bit 的 `kubernetes` filter 透過檔名及對叢集 API 的請求，為每筆記錄新增 namespace、Pod 名稱、container 名稱、labels 與 annotations。沒有這些資料，無法在整個串流中搜尋特定 Deployment 的日誌。
+收集器的關鍵功能是**以 Kubernetes 中繼資料擴充**。原始日誌行本身不會說明它屬於誰。Fluent Bit 的 `kubernetes` filter 透過檔名及對叢集 API 的請求，為每筆記錄新增 namespace、Pod 名稱、container 名稱、labels 與 annotations。沒有這些資料，無法在整個串流中搜尋特定 Deployment 的日誌。
 
 Fluent Bit 有兩種安裝方式：
 
@@ -98,9 +98,9 @@ Fluent Bit 可透過 OUTPUT plugins 寫入不同目的地。在 AWS 生態系中
 
 | 解決方案 | 索引什麼 | 查詢 | 日誌位置 | 維運 |
 |---|---|---|---|---|
-| CloudWatch Logs | 全部，managed | Logs Insights | AWS | 無 |
-| OpenSearch Service | 全文索引 | DSL、Dashboards | OpenSearch cluster | cluster sizing 與 upgrades |
-| Loki | 僅串流 labels | LogQL | object storage (S3) | Loki 元件與 labels 紀律 |
+| CloudWatch Logs | 全部，受管 | Logs Insights | AWS | 無 |
+| OpenSearch Service | 全文索引 | DSL、Dashboards | OpenSearch 叢集 | 叢集容量規劃與升級 |
+| Loki | 僅串流標籤 | LogQL | 物件儲存（S3） | Loki 元件與標籤紀律 |
 | VictoriaLogs | 不需要 schema | LogsQL | 你的 nodes 磁碟 | 元件最少，磁碟由你負責 |
 
 選擇通常歸結為三個問題。全部都在 AWS 且希望最少維運，選 CloudWatch，加上 S3 archive。需要高強度全文搜尋與現成 dashboards，選 OpenSearch，但要了解獨立 cluster 的成本。dashboards 已在 Grafana 且想在 S3 低成本儲存，選 Loki，同時注意 label cardinality。想要類似能力但更容易維運且不使用 object storage，選 VictoriaLogs。如同指標，自建堆疊不是免費的：你以磁碟、nodes 與值班取代 AWS 帳單（成本結構見 34.6 節與第 43 章）。

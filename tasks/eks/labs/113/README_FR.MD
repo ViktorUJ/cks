@@ -23,9 +23,9 @@ commande bloquée.
 
 Consolider le contenu des chapitres suivants du cours :
 
-- [Chapitre 37. Add-ons EKS : add-ons managés vs. Helm, versions et ordre de mise à jour](../../course/37/ru.md) - qui possède la version de l'add-on
-- [Chapitre 38. Mise à niveau du cluster : sur place par version, clusters blue/green, API dépréciées](../../course/38/ru.md) - l'ordre d'une mise à niveau sur place et la recherche des API dépréciées
-- [Chapitre 39. Rollback de la version du cluster : rollback readiness insights, la fenêtre de 7 jours, ordre du rollback](../../course/39/ru.md) - le rollback standard du control plane
+- [Chapitre 37. Add-ons EKS : add-ons managés vs. Helm, versions et ordre de mise à jour](../../course/37/fr.md) - qui possède la version de l'add-on
+- [Chapitre 38. Mise à niveau du cluster : sur place par version, clusters blue/green, API dépréciées](../../course/38/fr.md) - l'ordre d'une mise à niveau sur place et la recherche des API dépréciées
+- [Chapitre 39. Rollback de la version du cluster : rollback readiness insights, la fenêtre de 7 jours, ordre du rollback](../../course/39/fr.md) - le rollback standard du control plane
 
 ## Ce que nous créons
 

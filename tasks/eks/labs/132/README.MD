@@ -24,9 +24,9 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from the course chapters:
 
-- [Chapter 8. Alternatives to VPC CNI: Cilium, network modes](../../course/08/ru.md) - CNI
+- [Chapter 8. Alternatives to VPC CNI: Cilium, network modes](../../course/08/en.md) - CNI
   chaining versus a full replacement, the honest cost of switching
-- [Chapter 30. NetworkPolicy: rules, DNS, testing](../../course/30/ru.md) - the limits of
+- [Chapter 30. NetworkPolicy: rules, DNS, testing](../../course/30/en.md) - the limits of
   the built-in VPC CNI network policy and what Cilium adds
 
 ## What we're creating

@@ -18,7 +18,7 @@ managed Prometheus 相容儲存(Amazon Managed Prometheus)已經準備好接收�
 
 鞏固以下課程章節的內容:
 
-- [第 33 章。指標:Container Insights、Managed Prometheus 與 Grafana](../../course/33/ru.md)
+- [第 33 章。指標:Container Insights、Managed Prometheus 與 Grafana](../../course/33/tw.md)
 
 ## 我們要創建什麼
 

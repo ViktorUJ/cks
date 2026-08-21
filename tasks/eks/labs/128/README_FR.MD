@@ -23,7 +23,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 Consolider la matière du chapitre du cours :
 
 - [Chapitre 28. Gateway API sur AWS : ALB Gateway API et VPC
-  Lattice](../../course/28/ru.md)
+  Lattice](../../course/28/fr.md)
 
 ## Ce que nous créons
 

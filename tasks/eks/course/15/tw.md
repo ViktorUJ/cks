@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 15 章：Fargate：設定檔、限制、成本、使用情境
 
 > **接下來。** 四種運算類型及 Fargate 在其中的位置見第 9 章，該章僅作概覽。本章具體說明：pod 如何透過設定檔進入 Fargate、如何配置資源、哪些限制是硬性內建的，以及成本如何計算。requests 與 limits 的 sizing 見第 14 章，pod 透過 pod execution role 與 IRSA/Pod Identity 存取 AWS 見第 16 至 17 章，持久儲存用的 EFS 見第 24 章，負載平衡器與 target-type `ip` 見第 26 至 27 章，日誌與可觀測性見第 33 至 34 章。Auto Mode 作為獨立模式見第 9 章。

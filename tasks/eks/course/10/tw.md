@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 10 章．AMI 與 bootstrap：AL2023、Bottlerocket、launch template、kubelet 與 user data
 
 > **接下來。** 第 9 章討論了運算類型，以及在 Auto Mode 與自建堆疊之間的選擇。

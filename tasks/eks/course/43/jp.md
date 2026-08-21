@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第43章. コスト: OpenCost と Kubecost、right-sizing、Savings Plans、Spot ミックス、トラフィック
 
 > **次は何か。** 第33-36章で可観測性を扱いました。メトリクス、ログ、トレースにより、クラスターが何をしているかを確認できます。本章は、それにどれだけの費用がかかるか、そして「チーム X またはサービス Y のコストはいくらか」というビジネスからの問いにどう答えるかを扱います。関連内容は他章に委ねます。Spot とノードの購入モデルは第13章、requests/limits と VPA による Pod のサイジングは第14章、Karpenter の consolidation と bin-packing は第12章、トラフィックコスト（NAT、cross-AZ、endpoints）は第31章、ログとその費用は第34章、gp3 と EBS volume は第23章です。本章では、これらを一つの全体像にまとめ、Kubernetes オブジェクトへのコスト配賦と AWS のコミットメントモデルを追加します。

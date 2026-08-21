@@ -19,7 +19,7 @@ pasos manuales con assume-role que debes ejecutar tú mismo para ver la diferenc
 
 Reforzar el material de este capítulo del curso:
 
-- [Capítulo 5. Acceso al clúster: IAM y RBAC, access entries](../../course/05/ru.md) -
+- [Capítulo 5. Acceso al clúster: IAM y RBAC, access entries](../../course/05/es.md) -
   migración desde aws-auth
 
 ## Qué vamos a crear

@@ -20,7 +20,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff des folgenden Kurskapitels vertiefen:
 
-- [Kapitel 26. AWS Load Balancer Controller und ein Service vom Typ LoadBalancer: NLB](../../course/26/ru.md) - der Controller, Annotationen, NLB gegen CLB
+- [Kapitel 26. AWS Load Balancer Controller und ein Service vom Typ LoadBalancer: NLB](../../course/26/de.md) - der Controller, Annotationen, NLB gegen CLB
 
 ## Was wir erstellen
 

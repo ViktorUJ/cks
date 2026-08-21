@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第 5 章. クラスターへのアクセス: IAM と RBAC、access entries、aws-auth からの移行
 
 > **次に何をするか。** クラスターは作成済みです（第 4 章）。次の問いは、誰がどの権限で入れるかです。CKA で RBAC は学びましたが、EKS ではその前に IAM authentication という第二の層があります。本章では、二つの層の接点、三つの `authenticationMode`、legacy の `aws-auth` ConfigMap とそれを置き換える API access entries、access policies、アクセスを失わない移行を扱います。Pod から AWS API へアクセスするのは別の課題です: IRSA（第 16 章）と Pod Identity（第 17 章）を参照してください。
@@ -15,7 +15,7 @@ kubeadm では client certificate でアクセスを付与します。自分の 
 
 ## 5.2. IAM は「誰か」、RBAC は「何をしてよいか」に答える
 
-Authentication は AWS にあります。apiserver は signed STS request を検証し、IAM principal を取得します。Authorization は cluster にあります。通常の RBAC が subject に許可される操作を決定します。層の間には**mapping**があります。ARN が Kubernetes の `username` と groups になります。
+認証 は AWS にあります。apiserver は signed STS request を検証し、IAM principal を取得します。Authorization は cluster にあります。通常の RBAC が subject に許可される操作を決定します。層の間には**mapping**があります。ARN が Kubernetes の `username` と groups になります。
 
 ```mermaid
 flowchart TB
@@ -25,7 +25,7 @@ flowchart TB
     api["EKS apiserver"]
     idn["IAM principal<br/>role または user"]
     map["Kubernetes の<br/>username と groups"]
-    rbac["RBAC: bindings,<br/>Role, ClusterRole"]
+    rbac["RBAC: バインディング,<br/>Role, ClusterRole"]
     res["Allow または Forbidden"]
     k --> plg --> tok --> api
     api --> idn --> map --> rbac --> res
@@ -35,13 +35,13 @@ flowchart TB
 
 `kubectl` は kubeconfig の `exec` block を見て `aws eks get-token` を呼び出し、password や certificate ではなく、STS への**signed request**を受け取ります。network を通るのは secret ではなく signature です。plugin は通常の AWS provider chain から credentials を取得します: `AWS_PROFILE`、environment variables、SSO cache、instance role（第 0.5 章）。apiserver は signature を検証して principal ARN を取得し、ARN は `username` と `kubernetesGroups` に mapping され、RBAC が決定します。
 
-覚えるべき規則は次のとおりです。`AdministratorAccess` を持つ IAM policy は、**それだけでは cluster 内の権限を一切付与しません**。EKS API の呼び出し（cluster の describe、configuration の変更、完全な削除）は許可しますが、principal が cluster に mapping されるまで `kubectl get pods` は `Unauthorized` を返します。唯一の例外は access entries とともに現れました。EKS API は managed access policy を associate でき、その場合 AWS が権限を付与し、自分の `Role` と `ClusterRole` を経由しません（5.6 節）。Token は現在の AWS session に結び付くため、「朝は動いたのに昼過ぎは Unauthorized」は通常 SSO session の期限切れです。server 側は `authenticator` type の logs で確認できます（第 2 章）。
+覚えるべき規則は次のとおりです。`AdministratorAccess` を持つ IAM policy は、**それだけでは cluster 内の権限を一切付与しません**。EKS API の呼び出し（cluster の describe、configuration の変更、完全な削除）は許可しますが、principal が cluster に mapping されるまで `kubectl get pods` は `Unauthorized` を返します。唯一の例外は access entries とともに現れました。EKS API は managed access policy を associate でき、その場合 AWS が権限を付与し、自分の `Role` と `ClusterRole` を経由しません（5.6 節）。Token は現在の AWS session に結び付くため、「朝は動いたのに昼過ぎは Unauthorized」は通常 SSO session の期限切れです。server 側は `authenticator` 種類のログ で確認できます（第 2 章）。
 
 ## 5.3. 三つの authenticationMode
 
-Mode は cluster が principal mappings をどこから取得するかを決めます。作成時に設定し（第 4 章）、稼働中の cluster でも変更できます。
+モードは cluster が principal mappings をどこから取得するかを決めます。作成時に設定し（第 4 章）、稼働中の cluster でも変更できます。
 
-| Mode | Mapping source | 適する場面 |
+| モード | マッピング元 | 適する場面 |
 |---|---|---|
 | `CONFIG_MAP` | `aws-auth` ConfigMap のみ | legacy: 移行前の古い clusters |
 | `API_AND_CONFIG_MAP` | access entries と `aws-auth` の両方 | 移行中の transition mode |
@@ -90,7 +90,7 @@ flowchart TB
     ae["Access entry:<br/>username, groups, type"]
     ap["AWS access policy<br/>scope: cluster または ns"]
     grp["kubernetesGroups"]
-    rb["自分の RBAC: bindings,<br/>Role, ClusterRole"]
+    rb["自分の RBAC: バインディング,<br/>Role, ClusterRole"]
     perm["実効権限"]
     p --> ae
     ae --> ap --> perm
@@ -117,7 +117,7 @@ aws eks describe-access-entry --cluster-name demo \
 
 ## 5.6. Access policies: EKS API による cluster の権限
 
-Permissions を付与する二つ目の方法は、managed **access policy** を access entry に associate することです。これは IAM policies ではなく Kubernetes level の policies です。内部に verbs と resources を持ち、permissions の付与のみを行い、自分で変更または作成できません。RBAC を補完します。Principal の実効権限は、access policies の権限と groups および `username` への bindings の権限の和です。
+Permissions を付与する二つ目の方法は、managed **access policy** を access entry に associate することです。これは IAM policies ではなく Kubernetes level の policies です。内部に verbs と resources を持ち、permissions の付与のみを行い、自分で変更または作成できません。RBAC を補完します。Principal の実効権限は、access policies の権限と groups および `username` への バインディング の権限の和です。
 
 | Access policy | 付与するもの | 典型的な access scope |
 |---|---|---|
@@ -143,18 +143,18 @@ aws eks list-associated-access-policies --cluster-name demo \
 
 ## 5.7. aws-auth から access entries への移行
 
-| Property | `aws-auth` ConfigMap | Access entries |
+| 項目 | `aws-auth` ConfigMap | Access entries |
 |---|---|---|
 | 存在場所 | `kube-system` の object | EKS API の cluster configuration |
-| Validation | なし、field 内の yaml string | EKS API 側 |
+| 検証 | なし、field 内の yaml string | EKS API 側 |
 | Error が壊すもの | 自分を含む全員の access | 一つの entry |
-| Change history | なし | CloudTrail（第 21 章） |
+| 変更履歴 | なし | CloudTrail（第 21 章） |
 | AWS managed policies | なし | あり、access policies |
-| IaC management | Kubernetes provider 経由 | AWS provider 経由 |
+| IaC による管理 | Kubernetes provider 経由 | AWS provider 経由 |
 
 1. **Inventory。** `aws-auth` を file に保存します。これは migration plan であり rollback でもあります。
 2. **`API_AND_CONFIG_MAP` mode。** Access entries を有効にしつつ ConfigMap は動作し続け、既存 access は一つも壊れません。
-3. **People と services 用の entries。** 自分が追加した各 `mapRoles` と `mapUsers` の行に対して、同じ `username` と groups を持つ access entry を作成します。その背後には RBAC bindings があります。
+3. **People と services 用の entries。** 自分が追加した各 `mapRoles` と `mapUsers` の行に対して、同じ `username` と groups を持つ access entry を作成します。その背後には RBAC バインディング があります。
 4. **Nodes に触れない。** Managed node groups と Fargate profiles のために EKS が作成した行は service の責任のままです。同等の entries なしで削除すると cluster が壊れます。Self-managed nodes には同じ `username` と groups を持つ `EC2_LINUX` entry を作成します。
 5. **削除前に verify。** Migration role で**二つ目の**session を開き、一つ目を閉じずに動作を確認します。その後 ConfigMap の行を一つずつ削除します。
 6. **`API` mode** は自分の entries が ConfigMap に残っていないときに適用します。この step は不可逆です。
@@ -168,12 +168,12 @@ kubectl auth can-i list secrets -n kube-system --as-group platform-admins
 
 ## 5.8. よくある拒否: Unauthorized と Forbidden
 
-| Sign | `Unauthorized` (401) | `Forbidden` (403) |
+| 兆候 | `Unauthorized` (401) | `Forbidden` (403) |
 |---|---|---|
 | 壊れた layer | authentication、AWS | authorization、RBAC |
 | 意味 | cluster があなたを認識しなかった | 認識したが action を許可しなかった |
 | 典型的な原因 | 間違った profile、期限切れ SSO、未登録の role | group binding がない、policy scope が狭い |
-| 確認場所 | `get-caller-identity`、`list-access-entries`、`authenticator` logs | `auth can-i`、RBAC bindings、policy associations |
+| 確認場所 | `get-caller-identity`、`list-access-entries`、`authenticator` logs | `auth can-i`、RBAC バインディング、policy associations |
 | 修正方法 | access entry または `aws-auth` | binding、`ClusterRole`、access policy |
 
 ```bash
@@ -183,7 +183,7 @@ aws eks list-access-entries --cluster-name demo   # cluster はこの ARN を知
 kubectl auth whoami                    # apiserver から見た自分: username と groups
 ```
 
-`kubectl auth whoami` は境界の最速の確認です。Command が応答すれば authentication は通過しており、問題は permissions です。`Unauthorized` を返すなら RBAC には到達していません。別の pitfall は、`get-caller-identity` が**assume した**role を示す一方で、access entry には assumed-role session の ARN ではなく role 自体の ARN が必要なことです。`authenticator` type の logs（第 2 章）は client checks が一致しないときに server 側を示します。複雑な cases は第 47 章を参照してください。
+`kubectl auth whoami` は境界の最速の確認です。Command が応答すれば authentication は通過しており、問題は permissions です。`Unauthorized` を返すなら RBAC には到達していません。別の pitfall は、`get-caller-identity` が**assume した**role を示す一方で、access entry には assumed-role session の ARN ではなく role 自体の ARN が必要なことです。`authenticator` 種類のログ（第 2 章）は client checks が一致しないときに server 側を示します。複雑な cases は第 47 章を参照してください。
 
 ## 5.9. People と CI のアクセスを組織する
 
@@ -191,13 +191,13 @@ kubectl auth whoami                    # apiserver から見た自分: username 
 - **Personal entries ではなく Kubernetes groups。** Access entry は個人ではなく team role に作成します。30 人の engineers は退職処理で entry を一つ忘れる機会を 30 回作ります。
 - **忘れられた entries を audit する。** `aws eks list-access-entries` を current roles と定期的に比較します。`principal-arn` が削除済みまたは長く assume されていない role を指す entry は、削除すべき忘れられた access です。Role assumptions は CloudTrail に表示されます（第 21 章）。
 - **Break-glass を分離する。** 通常作業では誰も assume しない、`cluster` scope で `AmazonEKSClusterAdminPolicy` を持つ role を一つ設けます。厳格な trust policy、MFA、CloudTrail 内の assume に対する alert を設定します（第 21 章）。これは 5.1 節の状況から抜け出す手段です。
-- **CI 用の別 role。** Trust は特定の repository と branch に制限し（第 0.2 章）、permissions はその namespaces 内の `AmazonEKSEditPolicy` level にし、cluster access configuration の変更を許可しません。そうしないと pipeline が自分自身に permissions を付与できます。Access entries と policy associations 自体は cluster に隣接する通常の IaC resources です（第 4 章）。Team isolation は第 22 章です。
+- **CI 用の別 role。** Trust は特定の repository と branch に制限し（第 0.2 章）、permissions はその namespaces 内の `AmazonEKSEditPolicy` level にし、cluster access configuration の変更を許可しません。そうしないと pipeline が自分自身に permissions を付与できます。Access entries と ポリシー関連付け 自体は cluster に隣接する通常の IaC resources です（第 4 章）。Team isolation は第 22 章です。
 
 ## 5.10. Production での適用方法
 
 - **新しい clusters は直ちに `API` mode にする。** `bootstrapClusterCreatorAdminPermissions` を `false` にし、administrator access は code 内の explicit access entries で記述します。
 - **People は IAM Identity Center 経由で入る。** Permission set から role、role から access entry、rights から Kubernetes group へつなげます。Personal entries はなく、alert の下に break-glass role が一つだけあります。
-- **CI は専用 role を持つ。** Namespace level の rights を持ち、access configuration を変更する権限はありません。`authenticator` type の logs を有効にし、新しい clusters に `aws-auth` は一切存在させません。
+- **CI は専用 role を持つ。** Namespace level の rights を持ち、access configuration を変更する権限はありません。`authenticator` 種類のログ を有効にし、新しい clusters に `aws-auth` は一切存在させません。
 
 ## 5.11. ミニ用語集
 
@@ -208,14 +208,14 @@ kubectl auth whoami                    # apiserver から見た自分: username 
 
 ## 5.12. 本章のまとめ
 
-- Authentication は外部（IAM と STS）、authorization は内部（RBAC）であり、IAM の `AdministratorAccess` 自体は cluster 内の rights を付与しません。Chain は `kubectl`、`aws eks get-token` plugin、signed STS request、signature verification、ARN から `username` と groups への mapping、RBAC です。
+- 認証 は外部（IAM と STS）、authorization は内部（RBAC）であり、IAM の `AdministratorAccess` 自体は cluster 内の rights を付与しません。Chain は `kubectl`、`aws eks get-token` plugin、signed STS request、signature verification、ARN から `username` と groups への mapping、RBAC です。
 - Modes は `CONFIG_MAP`、`API_AND_CONFIG_MAP`、`API` の三つです。Target は `API` で、その方向への transition は不可逆です。Transition mode では access entry が `aws-auth` より優先されます。`aws-auth` は構造的に危険です。validation も history もなく、yaml error が変更者を含む全員の access を無効にし、その object は内側から直せなくなります。
 - Access entries は EKS API に存在し、validation され、CloudTrail で見え、code で記述されます。Permissions は `kubernetesGroups` と自分の RBAC、`cluster` または `namespace` scope の access policies、または両方で付与されます。Migration は `API_AND_CONFIG_MAP`、自分の行の entries、node entries は残す、二つ目の session で verify、行を削除、最後に `API` mode という順です。
 - `Unauthorized` は authentication、`Forbidden` は authorization を意味します。Diagnosis は RBAC manifests を読むのではなく、`aws sts get-caller-identity` と `kubectl auth whoami` から始めます。
 
 ## 5.13. 実務での役立ち方
 
-「退職した engineer のアクセスを revoke する」という task は、access が temporary roles と groups で構築されていれば数分で終わります。個人 entry を持ち、かつ cluster を自ら作成した場合は、どれだけ時間がかかるか分かりません。「production の namespace を誰が削除できるか」という問いには entries と bindings を列挙すれば答えられます。できなければまったく答えられません。Break-glass role と `API` mode があれば、最初の section の scenario は catastrophe ではなくなります。
+「退職した engineer のアクセスを revoke する」という task は、access が temporary roles と groups で構築されていれば数分で終わります。個人 entry を持ち、かつ cluster を自ら作成した場合は、どれだけ時間がかかるか分かりません。「production の namespace を誰が削除できるか」という問いには entries と バインディング を列挙すれば答えられます。できなければまったく答えられません。Break-glass role と `API` mode があれば、最初の section の scenario は catastrophe ではなくなります。
 
 ## 5.14. 自己確認の質問
 
@@ -233,7 +233,7 @@ kubectl auth whoami                    # apiserver から見た自分: username 
 
 この topic の labs は [lab 102 - クラスターへのアクセス: IAM と RBAC、access entries と access policies](../../labs/102/README_JP.MD) と [lab 122 - EKS の AWS Backup: composite recovery point、namespace recovery](../../labs/122/README_JP.MD) です。これ以外にも、内容は任意の cluster で確認できます。まず inventory から始めます。`aws eks describe-cluster --name <cluster> --query 'cluster.accessConfig'` は mode と creator flag を示します。`aws eks list-access-entries --cluster-name <cluster>` と `--principal-arn` を指定した `aws eks describe-access-entry` は entry の type、`username`、groups を示します。`STANDARD` entries には `aws eks list-associated-access-policies` を実行し、scope を確認してください。
 
-次に二つの層を比較します。Access entries から groups を集め、`kubectl get clusterrolebindings,rolebindings -A -o wide` で探します。Bindings も access policies もない groups は何も付与せず、どの entry にも存在しない groups への bindings は dead RBAC です。忘れられた entries も探してください。`list-access-entries` を順に調べ、各 `principal-arn` に対して `aws iam get-role` を実行します。存在しない role の entry は削除すべき dead access です。`kubectl auth whoami` と `kubectl auth can-i --list` で自分を確認します。ただし access-policy の rights はこの output に現れないことを忘れないでください。Cluster がまだ `CONFIG_MAP` または `API_AND_CONFIG_MAP` mode なら、`kubectl -n kube-system get configmap aws-auth -o yaml` を file に保存します。別途、access entry を持たない role を作り、login を試し、`authenticator` type の logs で確認して denial を練習します。
+次に二つの層を比較します。Access entries から groups を集め、`kubectl get clusterrolebindings,rolebindings -A -o wide` で探します。Bindings も access policies もない groups は何も付与せず、どの entry にも存在しない groups への バインディング は dead RBAC です。忘れられた entries も探してください。`list-access-entries` を順に調べ、各 `principal-arn` に対して `aws iam get-role` を実行します。存在しない role の entry は削除すべき dead access です。`kubectl auth whoami` と `kubectl auth can-i --list` で自分を確認します。ただし access-policy の rights はこの output に現れないことを忘れないでください。Cluster がまだ `CONFIG_MAP` または `API_AND_CONFIG_MAP` mode なら、`kubectl -n kube-system get configmap aws-auth -o yaml` を file に保存します。別途、access entry を持たない role を作り、login を試し、`authenticator` 種類のログ で確認して denial を練習します。
 
 ---
 [目次](../README_JP.md) · [第 4 章](../04/jp.md) · [第 6 章](../06/jp.md)

@@ -20,10 +20,10 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from these course chapters:
 
-- [Chapter 24. EFS and FSx: shared storage for workloads across AZs](../../course/24/ru.md) - the main material for this lab
-- [Chapter 23. EBS CSI: gp3, StorageClass, expansion, snapshots, AZ binding](../../course/23/ru.md) - what we're comparing against: a zonal block volume vs. a regional network one
-- [Chapter 9. Compute types: managed node groups, Fargate, Auto Mode](../../course/09/ru.md) - why the cluster has several AZs and where the nodes live
-- [Chapters 16-17. IRSA and Pod Identity](../../course/16/ru.md) - how the driver gets permission to manage EFS
+- [Chapter 24. EFS and FSx: shared storage for workloads across AZs](../../course/24/en.md) - the main material for this lab
+- [Chapter 23. EBS CSI: gp3, StorageClass, expansion, snapshots, AZ binding](../../course/23/en.md) - what we're comparing against: a zonal block volume vs. a regional network one
+- [Chapter 9. Compute types: managed node groups, Fargate, Auto Mode](../../course/09/en.md) - why the cluster has several AZs and where the nodes live
+- [Chapters 16-17. IRSA and Pod Identity](../../course/16/en.md) - how the driver gets permission to manage EFS
 
 ## What we're creating
 

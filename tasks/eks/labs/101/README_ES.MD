@@ -19,10 +19,10 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material de estos capítulos del curso:
 
-- [Capítulo 4. Creación de un clúster: eksctl, Terraform y Terragrunt](../../course/04/ru.md) - clúster como código y kubeconfig
-- [Capítulo 6. Red del clúster: VPC CNI, ENI y direcciones IP](../../course/06/ru.md) - de dónde vienen las direcciones de los pods
-- [Capítulo 9. Tipos de cómputo: managed node groups, Fargate, Auto Mode](../../course/09/ru.md) - qué se ejecuta y dónde
-- [Capítulo 10. AMI y bootstrap: AL2023, launch templates, kubelet](../../course/10/ru.md) - sobre qué imagen viven los nodos
+- [Capítulo 4. Creación de un clúster: eksctl, Terraform y Terragrunt](../../course/04/es.md) - clúster como código y kubeconfig
+- [Capítulo 6. Red del clúster: VPC CNI, ENI y direcciones IP](../../course/06/es.md) - de dónde vienen las direcciones de los pods
+- [Capítulo 9. Tipos de cómputo: managed node groups, Fargate, Auto Mode](../../course/09/es.md) - qué se ejecuta y dónde
+- [Capítulo 10. AMI y bootstrap: AL2023, launch templates, kubelet](../../course/10/es.md) - sobre qué imagen viven los nodos
 
 ## Qué vamos a crear
 

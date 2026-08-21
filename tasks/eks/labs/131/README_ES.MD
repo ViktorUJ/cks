@@ -20,7 +20,7 @@ aceptación. La verificación es automática, con el comando `check_result`.
 
 Reforzar el material del capítulo del curso:
 
-- [Capítulo 40. Fiabilidad: multi-AZ, PDB, topology spread](../../course/40/ru.md) -
+- [Capítulo 40. Fiabilidad: multi-AZ, PDB, topology spread](../../course/40/es.md) -
   desconexión correcta de nodos
 
 ## Qué creamos

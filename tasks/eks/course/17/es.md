@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 17. EKS Pod Identity: agente, asociaciones y migración desde IRSA
 
 > **Qué sigue.** El capítulo 16 resolvió la tarea de «un rol propio para el pod» mediante IRSA: el proveedor OIDC del clúster, una trust policy sobre `sub` y la anotación de `ServiceAccount`. Aquí veremos otro mecanismo para la misma tarea, EKS Pod Identity. Apareció más tarde y elimina el principal problema de IRSA: vincular la trust policy al proveedor OIDC de un clúster concreto. Veremos el agente, las asociaciones, una comparación directa con IRSA y la migración. Temas relacionados en otros capítulos: acceso de personas y CI (capítulo 5), secretos (capítulo 18), hardening de IMDSv2 (capítulo 19), add-ons de EKS (capítulo 37), Fargate (capítulo 15).

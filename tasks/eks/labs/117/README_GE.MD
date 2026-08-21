@@ -23,10 +23,10 @@ endpoint-ს მაღალტრაფიკიანი სერვისი
 გავიმყაროთ კურსის თავების მასალა:
 
 - [თავი 31. Egress და ტრაფიკის ღირებულება: NAT, VPC endpoints,
-  PrivateLink](../../course/31/ru.md) - რატომ იხდის ერთი NAT კლასტერზე ორმაგად cross-AZ
+  PrivateLink](../../course/31/ge.md) - რატომ იხდის ერთი NAT კლასტერზე ორმაგად cross-AZ
   ტრაფიკისთვის და როგორ ასწორებენ ამას gateway და interface endpoints
 - [თავი 43. ღირებულება: OpenCost და Kubecost, right-sizing, Savings Plans, spot-მიქსი,
-  ტრაფიკი](../../course/43/ru.md) - როგორ ჩანს ტრაფიკი და endpoints Cost Explorer-ში
+  ტრაფიკი](../../course/43/ge.md) - როგორ ჩანს ტრაფიკი და endpoints Cost Explorer-ში
   usage type-ის მიხედვით
 
 ## რას ვქმნით

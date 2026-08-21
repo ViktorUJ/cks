@@ -19,7 +19,7 @@ ServiceAccount-ის ანოტაცია სწორად გამო�
 
 გავიმეოროთ კურსის ამ თავის მასალა:
 
-- [თავი 47. წვდომა და IAM: access entries, IRSA, webhook, kubeconfig](../../course/47/ru.md)
+- [თავი 47. წვდომა და IAM: access entries, IRSA, webhook, kubeconfig](../../course/47/ge.md)
 
 ## რას ვქმნით
 

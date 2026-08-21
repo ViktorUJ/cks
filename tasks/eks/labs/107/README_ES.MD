@@ -21,10 +21,10 @@ aceptación. La comprobación es automática, mediante el comando `check_result`
 
 Reforzar el material de estos capítulos del curso:
 
-- [Capítulo 24. EFS y FSx: almacenamiento compartido para workloads entre AZ](../../course/24/ru.md) - el material principal para este laboratorio
-- [Capítulo 23. EBS CSI: gp3, StorageClass, expansión, snapshots, vinculación a AZ](../../course/23/ru.md) - con qué lo comparamos: un volumen de bloques zonal frente a uno de red regional
-- [Capítulo 9. Tipos de cómputo: managed node groups, Fargate, Auto Mode](../../course/09/ru.md) - por qué el clúster tiene varias AZ y dónde viven los nodos
-- [Capítulos 16-17. IRSA y Pod Identity](../../course/16/ru.md) - cómo obtiene el driver permiso para gestionar EFS
+- [Capítulo 24. EFS y FSx: almacenamiento compartido para workloads entre AZ](../../course/24/es.md) - el material principal para este laboratorio
+- [Capítulo 23. EBS CSI: gp3, StorageClass, expansión, snapshots, vinculación a AZ](../../course/23/es.md) - con qué lo comparamos: un volumen de bloques zonal frente a uno de red regional
+- [Capítulo 9. Tipos de cómputo: managed node groups, Fargate, Auto Mode](../../course/09/es.md) - por qué el clúster tiene varias AZ y dónde viven los nodos
+- [Capítulos 16-17. IRSA y Pod Identity](../../course/16/es.md) - cómo obtiene el driver permiso para gestionar EFS
 
 ## Qué creamos
 

@@ -12,7 +12,7 @@ EKSのアクセスは2つの独立したレイヤーで壊れることがあり�
 
 このコースの章の内容を強化します:
 
-- [第47章. アクセスとIAM: access entries, IRSA, webhook, kubeconfig](../../course/47/ru.md)
+- [第47章. アクセスとIAM: access entries, IRSA, webhook, kubeconfig](../../course/47/jp.md)
 
 ## 作成するもの
 

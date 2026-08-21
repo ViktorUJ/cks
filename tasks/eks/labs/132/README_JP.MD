@@ -24,9 +24,9 @@ VPC CNIの完全な置き換え（`aws-node`を削除し、Cilium自身がIPAM�
 
 コースの章の内容を定着させる：
 
-- [第8章。VPC CNIの代替：Cilium、ネットワークモード](../../course/08/ru.md) -
+- [第8章。VPC CNIの代替：Cilium、ネットワークモード](../../course/08/jp.md) -
   CNI chainingと完全な置き換えの比較、移行の正直なコスト
-- [第30章。NetworkPolicy：ルール、DNS、テスト](../../course/30/ru.md) - VPC CNIの
+- [第30章。NetworkPolicy：ルール、DNS、テスト](../../course/30/jp.md) - VPC CNIの
   組み込みnetwork policyの限界とCiliumが追加するもの
 
 ## 作成するもの

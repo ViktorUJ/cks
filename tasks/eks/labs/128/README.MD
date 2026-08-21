@@ -22,7 +22,7 @@ Checking is automatic, via the `check_result` command.
 Reinforce the material from the course chapter:
 
 - [Chapter 28. Gateway API on AWS: ALB Gateway API and VPC
-  Lattice](../../course/28/ru.md)
+  Lattice](../../course/28/en.md)
 
 ## What we're creating
 

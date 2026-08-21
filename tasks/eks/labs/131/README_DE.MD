@@ -21,7 +21,7 @@ Abnahmekriterien. Die Prüfung ist automatisch, über den Befehl `check_result`.
 
 Den Stoff des Kurskapitels vertiefen:
 
-- [Kapitel 40. Zuverlässigkeit: Multi-AZ, PDB, topology spread](../../course/40/ru.md) -
+- [Kapitel 40. Zuverlässigkeit: Multi-AZ, PDB, topology spread](../../course/40/de.md) -
   korrektes Abschalten von Knoten
 
 ## Was wir erstellen

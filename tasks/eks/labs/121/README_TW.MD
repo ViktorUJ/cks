@@ -18,7 +18,7 @@ EKS 的存取權會在兩個彼此獨立的層級上出問題,而這兩者很容
 
 鞏固以下課程章節的內容:
 
-- [第 47 章。存取與 IAM:access entries、IRSA、webhook、kubeconfig](../../course/47/ru.md)
+- [第 47 章。存取與 IAM:access entries、IRSA、webhook、kubeconfig](../../course/47/tw.md)
 
 ## 我們要創建什麼
 

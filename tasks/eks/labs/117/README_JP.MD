@@ -24,11 +24,11 @@ route を隣接 zone の gateway に向け、その zone のノードがトラ�
 コースの以下の章の内容を定着させます:
 
 - [第 31 章。Egress とトラフィックコスト:NAT、VPC endpoint、
-  PrivateLink](../../course/31/ru.md) - クラスタ全体で単一の NAT を使うと cross-AZ トラ
+  PrivateLink](../../course/31/jp.md) - クラスタ全体で単一の NAT を使うと cross-AZ トラ
   フィックに二重に課金される理由、そして gateway endpoint と interface endpoint がそれ
   をどう解決するか
 - [第 43 章。コスト:OpenCost と Kubecost、right-sizing、Savings Plans、spot mix、
-  トラフィック](../../course/43/ru.md) - トラフィックと endpoint が使用タイプ別に Cost
+  トラフィック](../../course/43/jp.md) - トラフィックと endpoint が使用タイプ別に Cost
   Explorer にどう現れるか
 
 ## 作成するもの

@@ -22,7 +22,7 @@ Checking is automatic, via the `check_result` command.
 Reinforce the material from the course chapter:
 
 - [Chapter 22. Policies and multi-tenancy: Kyverno and Gatekeeper, team
-  isolation](../../course/22/ru.md) - where ValidatingAdmissionPolicy sits among policy engines
+  isolation](../../course/22/en.md) - where ValidatingAdmissionPolicy sits among policy engines
 
 ## What we're creating
 

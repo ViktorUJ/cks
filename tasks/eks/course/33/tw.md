@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 33 章。指標：Container Insights、Managed Prometheus 與 Grafana、kube-prometheus-stack
 
 > **接下來。** 第 6 部分關於可觀測性：如何了解叢集和工作負載內部發生的狀況。我們從指標開始，也就是關於節點、Pod 和 control plane 使用量的數值時間序列。日誌（Fluent Bit、CloudWatch Logs、OpenSearch）見第 34 章；依指標進行應用程式自動擴展（HPA、外部指標、KEDA）見第 35 章；透過 ADOT 和 X-Ray 的分散式追蹤見第 36 章；使用 Kubecost 和 OpenCost 進行成本核算與最佳化見第 43 章。本章只討論：EKS 中的指標來自何處、儲存在哪裡，以及用什麼工具檢視。

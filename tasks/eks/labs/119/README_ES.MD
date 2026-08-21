@@ -21,7 +21,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el capítulo del curso:
 
-- [Capítulo 45. El node no se unió al cluster](../../course/45/ru.md) - IAM, SG,
+- [Capítulo 45. El node no se unió al cluster](../../course/45/es.md) - IAM, SG,
   user data, bootstrap, kubelet, diagnóstico sistemático por capas
 
 ## Qué creamos

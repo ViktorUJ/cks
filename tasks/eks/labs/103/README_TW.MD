@@ -19,11 +19,11 @@ VPC 掛上第二個、secondary CIDR 區塊 - 這是 VPC 主要位址範圍即�
 鞏固課程以下章節的內容:
 
 - [第 6 章。叢集網路:VPC CNI、ENI 與 IP 位址、CIDR
-  規劃](../../course/06/ru.md) - pod 的位址從何而來,以及 pod 上限如何計算
+  規劃](../../course/06/tw.md) - pod 的位址從何而來,以及 pod 上限如何計算
 - [第 7 章。擴展位址規劃:prefix delegation、secondary CIDR、custom
-  networking](../../course/07/ru.md) - 位址不足時該怎麼辦
+  networking](../../course/07/tw.md) - 位址不足時該怎麼辦
 - [第 14 章。密度與 sizing:pods per node、ENI 限制、雲端中的 requests 與
-  limits](../../course/14/ru.md) - 位址上限如何與資源上限相互呼應
+  limits](../../course/14/tw.md) - 位址上限如何與資源上限相互呼應
 
 ## 我們要建立什麼
 

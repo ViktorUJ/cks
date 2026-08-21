@@ -22,12 +22,12 @@ delegation を有効化して、既存のノードには変化がなく、新し
 コースの以下の章の内容を定着させます:
 
 - [第 6 章。クラスタネットワーク:VPC CNI、ENI、IP アドレス、CIDR
-  計画](../../course/06/ru.md) - Pod のアドレスがどこから来るか、Pod 上限がどう計算
+  計画](../../course/06/jp.md) - Pod のアドレスがどこから来るか、Pod 上限がどう計算
   されるか
 - [第 7 章。アドレスプランのスケール:prefix delegation、secondary CIDR、custom
-  networking](../../course/07/ru.md) - アドレスが足りなくなったときにどうするか
+  networking](../../course/07/jp.md) - アドレスが足りなくなったときにどうするか
 - [第 14 章。密度とサイジング:pods per node、ENI 上限、クラウドにおける requests と
-  limits](../../course/14/ru.md) - アドレス上限がリソース上限とどう対応するか
+  limits](../../course/14/jp.md) - アドレス上限がリソース上限とどう対応するか
 
 ## 作成するもの
 

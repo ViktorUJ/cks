@@ -30,7 +30,7 @@ SG(security groups for pods)這個情境是另一堂課程實驗的主題。
 
 鞏固這個課程章節的內容:
 
-- [第 46 章。網路故障:SG、NACL、DNS、目標不健康](../../course/46/ru.md)
+- [第 46 章。網路故障:SG、NACL、DNS、目標不健康](../../course/46/tw.md)
 
 ## 我們要建立什麼
 

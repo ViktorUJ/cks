@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 33. მეტრიკები: Container Insights, Managed Prometheus და Grafana, kube-prometheus-stack
 
 > **რა არის შემდეგ.** ნაწილი 6 ეხება დაკვირვებადობას: როგორ გავიგოთ, რა ხდება კლასტერისა და

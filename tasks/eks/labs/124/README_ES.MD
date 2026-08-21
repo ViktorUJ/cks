@@ -20,7 +20,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 Reforzar el material del capítulo del curso:
 
 - [Capítulo 35. Autoescalado de aplicaciones: HPA, métricas externas,
-  KEDA](../../course/35/ru.md)
+  KEDA](../../course/35/es.md)
 
 ## Qué vamos a crear
 

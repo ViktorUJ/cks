@@ -24,11 +24,11 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 Renforcer les chapitres du cours suivants :
 
 - [Chapitre 31. Egress et coût du trafic : NAT, VPC endpoints,
-  PrivateLink](../../course/31/ru.md) - pourquoi un NAT unique par cluster fait payer
+  PrivateLink](../../course/31/fr.md) - pourquoi un NAT unique par cluster fait payer
   deux fois le trafic cross-AZ, et comment les gateway et interface endpoints
   corrigent cela
 - [Chapitre 43. Coût : OpenCost et Kubecost, right-sizing, Savings Plans, mix spot,
-  trafic](../../course/43/ru.md) - comment le trafic et les endpoints apparaissent dans
+  trafic](../../course/43/fr.md) - comment le trafic et les endpoints apparaissent dans
   Cost Explorer par type d'usage
 
 ## Ce que nous créons

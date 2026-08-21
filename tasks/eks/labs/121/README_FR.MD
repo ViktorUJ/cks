@@ -20,7 +20,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Consolider les notions de ce chapitre du cours :
 
-- [Chapitre 47. Accès et IAM : access entries, IRSA, webhook, kubeconfig](../../course/47/ru.md)
+- [Chapitre 47. Accès et IAM : access entries, IRSA, webhook, kubeconfig](../../course/47/fr.md)
 
 ## Ce que nous créons
 

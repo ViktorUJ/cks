@@ -22,13 +22,13 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 Consolider le contenu de ces chapitres du cours :
 
 - [Chapitre 6. Réseau du cluster : VPC CNI, ENI et adresses IP, planification du
-  CIDR](../../course/06/ru.md) - d'où viennent les adresses des pods et comment la limite
+  CIDR](../../course/06/fr.md) - d'où viennent les adresses des pods et comment la limite
   de pods est calculée
 - [Chapitre 7. Faire évoluer le plan d'adressage : prefix delegation, secondary CIDR,
-  custom networking](../../course/07/ru.md) - quoi faire quand les adresses commencent à
+  custom networking](../../course/07/fr.md) - quoi faire quand les adresses commencent à
   manquer
 - [Chapitre 14. Densité et sizing : pods per node, limites d'ENI, requests et limits dans
-  le cloud](../../course/14/ru.md) - comment la limite d'adresses correspond à la limite
+  le cloud](../../course/14/fr.md) - comment la limite d'adresses correspond à la limite
   de ressources
 
 ## Ce que nous créons

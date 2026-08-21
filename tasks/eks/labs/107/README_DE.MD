@@ -22,10 +22,10 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff dieser Kurskapitel vertiefen:
 
-- [Kapitel 24. EFS und FSx: gemeinsamer Speicher für Workloads über AZ hinweg](../../course/24/ru.md) - das Hauptmaterial für dieses Lab
-- [Kapitel 23. EBS CSI: gp3, StorageClass, Erweiterung, Snapshots, AZ-Bindung](../../course/23/ru.md) - der Vergleichsmaßstab: ein zonales Block-Volume gegenüber einem regionalen Netzwerk-Volume
-- [Kapitel 9. Compute-Typen: Managed Node Groups, Fargate, Auto Mode](../../course/09/ru.md) - warum der Cluster mehrere AZ hat und wo die Nodes leben
-- [Kapitel 16-17. IRSA und Pod Identity](../../course/16/ru.md) - wie der Driver die Berechtigung erhält, EFS zu verwalten
+- [Kapitel 24. EFS und FSx: gemeinsamer Speicher für Workloads über AZ hinweg](../../course/24/de.md) - das Hauptmaterial für dieses Lab
+- [Kapitel 23. EBS CSI: gp3, StorageClass, Erweiterung, Snapshots, AZ-Bindung](../../course/23/de.md) - der Vergleichsmaßstab: ein zonales Block-Volume gegenüber einem regionalen Netzwerk-Volume
+- [Kapitel 9. Compute-Typen: Managed Node Groups, Fargate, Auto Mode](../../course/09/de.md) - warum der Cluster mehrere AZ hat und wo die Nodes leben
+- [Kapitel 16-17. IRSA und Pod Identity](../../course/16/de.md) - wie der Driver die Berechtigung erhält, EFS zu verwalten
 
 ## Was wir erstellen
 

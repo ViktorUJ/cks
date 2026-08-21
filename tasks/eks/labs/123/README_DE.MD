@@ -19,7 +19,7 @@ Abnahmekriterien. Die Prüfung ist automatisch, über den Befehl `check_result`.
 
 Das Kapitel des Kurses vertiefen:
 
-- [Kapitel 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/ru.md) -
+- [Kapitel 12. Karpenter: NodePool, EC2NodeClass, disruption, consolidation, drift](../../course/12/de.md) -
   wie man ein StatefulSet bei der Consolidation sicher evictet
 
 ## Was wir erstellen

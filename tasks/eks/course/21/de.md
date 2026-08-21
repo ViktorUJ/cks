@@ -245,4 +245,3 @@ Als Nächstes GuardDuty: `aws guardduty list-detectors` zeigt den Detector in de
 
 ---
 [Inhaltsverzeichnis](../README_DE.md) · [Kapitel 20](../20/de.md) · [Kapitel 22](../22/de.md)
-[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)

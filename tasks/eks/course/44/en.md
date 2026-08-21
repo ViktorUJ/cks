@@ -1,4 +1,4 @@
-[Versión en español](es.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapter 44. GitOps and delivery: Argo CD and Flux, fleet management
 
 > **What is next.** Parts 5-7 repeatedly mentioned GitOps as a way to roll out configuration:

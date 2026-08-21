@@ -20,13 +20,13 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff der folgenden Kurskapitel festigen:
 
-- [Kapitel 41. Cluster-Backup mit AWS Backup](../../course/41/ru.md) - composite
+- [Kapitel 41. Cluster-Backup mit AWS Backup](../../course/41/de.md) - composite
   recovery point, backup plan, vault, IAM role
-- [Kapitel 42. Wiederherstellung und DR](../../course/42/ru.md) - namespace restore,
+- [Kapitel 42. Wiederherstellung und DR](../../course/42/de.md) - namespace restore,
   non-destructive restore
-- [Kapitel 23. EBS CSI](../../course/23/ru.md) - StorageClass gp3, das Volume hinter dem
+- [Kapitel 23. EBS CSI](../../course/23/de.md) - StorageClass gp3, das Volume hinter dem
   PVC, das im Backup landet
-- [Kapitel 5. Zugriff auf den Cluster](../../course/05/ru.md) - der
+- [Kapitel 5. Zugriff auf den Cluster](../../course/05/de.md) - der
   Authentifizierungsmodus `API_AND_CONFIG_MAP` und access entries, ohne die AWS Backup den
   Cluster nicht lesen kann
 

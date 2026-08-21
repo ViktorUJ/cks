@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 27 章。透過 ALB 的 Ingress：target-type、annotation、TLS 與 ACM、WAF
 
 > **接下來。** 第 26 章介紹了 L4 負載平衡：透過 AWS Load Balancer Controller 的 LoadBalancer 類型 Service 與 Network Load Balancer。本章使用相同控制器，但層級為 L7：它會從 Ingress 建立 Application Load Balancer，提供依 host 與 path 的路由、TLS 終結與 WAF 保護。NLB 與 LoadBalancer 類型 Service 仍在第 26 章，本章會連結至該章。Gateway API 與 VPC Lattice 請見第 28 章，external-dns、Route 53 與 cert-manager 請見第 29 章。Pod 如何在 VPC 中取得 IP（VPC CNI）請見第 8 章，而控制器如何透過 IRSA 或 Pod Identity 取得角色請見第 16-17 章。本章會引用這些主題，不重複說明。

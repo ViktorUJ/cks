@@ -21,10 +21,10 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff dieser Kurskapitel vertiefen:
 
-- [Kapitel 23. EBS CSI: gp3, StorageClass, Erweiterung, Snapshots, Bindung an AZ](../../course/23/ru.md) - der Hauptstoff dieses Labs
-- [Kapitel 9. Compute-Typen: Managed Node Groups, Fargate, Auto Mode](../../course/09/ru.md) - warum der Cluster zwei AZ hat und wo die Nodes leben
-- [Kapitel 12. Karpenter: NodePool, Consolidation, Disruption](../../course/12/ru.md) - warum die Consolidation den Pod nicht zwischen AZ verschiebt, wenn er ein Volume hat
-- [Kapitel 16-17. IRSA und Pod Identity](../../course/16/ru.md) - wie der Driver das Recht für `CreateVolume`/`CreateSnapshot` erhält
+- [Kapitel 23. EBS CSI: gp3, StorageClass, Erweiterung, Snapshots, Bindung an AZ](../../course/23/de.md) - der Hauptstoff dieses Labs
+- [Kapitel 9. Compute-Typen: Managed Node Groups, Fargate, Auto Mode](../../course/09/de.md) - warum der Cluster zwei AZ hat und wo die Nodes leben
+- [Kapitel 12. Karpenter: NodePool, Consolidation, Disruption](../../course/12/de.md) - warum die Consolidation den Pod nicht zwischen AZ verschiebt, wenn er ein Volume hat
+- [Kapitel 16-17. IRSA und Pod Identity](../../course/16/de.md) - wie der Driver das Recht für `CreateVolume`/`CreateSnapshot` erhält
 
 ## Was wir erstellen
 

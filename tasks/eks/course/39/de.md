@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 39. Zurücksetzen der Cluster-Version: Rollback-Readiness-Insights, 7-Tage-Fenster, Reihenfolge des Rollbacks
 
 > **Wie es weitergeht.** Kapitel 38 behandelte das Cluster-Upgrade: Versionslebenszyklus,

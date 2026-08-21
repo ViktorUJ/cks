@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第18章. シークレット: External Secrets と CSI を介した KMS 暗号化、Secrets Manager、SSM
 
 > **この先。** 第16章と第17章では、IRSA または Pod Identity を通じて Pod に専用の AWS ロールを与える方法を学びました。シークレットはこれに直接依存します。External Secrets のコントローラーと CSI ドライバーには Secrets Manager および SSM を読み取るためのロールが必要であり、まさにそれらの仕組みで付与します。ここでは参照のみとし、繰り返しません。関連事項は他章で扱います。クラスター作成時の暗号化は第4章、`Secret` への RBAC アクセスは第5章、supply chain と ECR は第20章、ハードニングと Pod Security は第19章、git 内のシークレットと GitOps は第44章です。

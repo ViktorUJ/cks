@@ -21,7 +21,7 @@ KyvernoとGatekeeperは、admission webhookを通じて動作する外部のpoli
 
 コースの章の内容を定着させます:
 
-- [第22章 ポリシーとマルチテナンシー: KyvernoとGatekeeper、チームの分離](../../course/22/ru.md) -
+- [第22章 ポリシーとマルチテナンシー: KyvernoとGatekeeper、チームの分離](../../course/22/jp.md) -
   policy engineの中でのValidatingAdmissionPolicyの位置づけ
 
 ## 作成するもの

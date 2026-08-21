@@ -19,7 +19,7 @@
 
 コースの章の内容を定着させる：
 
-- [第40章。信頼性：multi-AZ、PDB、topology spread](../../course/40/ru.md) -
+- [第40章。信頼性：multi-AZ、PDB、topology spread](../../course/40/jp.md) -
   ノードの正しいドレイン
 
 ## 作成するもの

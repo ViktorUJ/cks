@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 26. AWS Load Balancer Controller und Service vom Typ LoadBalancer: NLB
 
 > **Wie es weitergeht.** Dies ist der Beginn von Teil 5, der sich mit Netzwerk und Traffic befasst. Die Teile 3 und 4 behandelten Identität, Sicherheit und Speicher; nun sehen wir uns an, wie externer Traffic in den Cluster gelangt. Die erste Schicht ist der Load Balancer vor den Pods. Dieses Kapitel behandelt L4-Load-Balancing über einen Network Load Balancer und einen Service vom Typ LoadBalancer. L7-Routing über Ingress und ALB behandelt Kapitel 27, Gateway API und VPC Lattice Kapitel 28, DNS und Zertifikate (external-dns, ACM, cert-manager) Kapitel 29. Wie ein Pod eine IP im VPC erhält (VPC CNI), behandelt Kapitel 8, die Rolle für den Controller über IRSA oder Pod Identity die Kapitel 16-17. Auf sie wird verwiesen, ohne sie zu wiederholen.

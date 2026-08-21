@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 8 章．VPC CNI 的替代方案：Cilium、網路模式，以及何時應更換 CNI
 
 > **接下來。** 第 6 與第 7 章介紹了 VPC CNI：Pod 的實際位址、ENI、位址不足及其系統性解法。本章討論另一個問題：預設 CNI 是功能不足而非位址不足時，是否應該更換它。VPC CNI、ENI 與 CIDR 規劃請見第 6 章；prefix delegation、secondary CIDR 與 custom networking 請見第 7 章，這裡不再重複。NetworkPolicy 的詳細說明與 default-deny 實驗在第 30 章和實驗 110；本章僅比較功能。網路故障排查請見第 46 章；升級和 blue/green 的機制請見第 38 章。

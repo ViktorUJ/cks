@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第15章. Fargate: プロファイル、制約、コスト、ユースケース
 
 > **この先。** 4 種類のコンピュートとその中での Fargate の位置付けは第9章で概説しています。本章では、Pod がプロファイル経由で Fargate に配置される仕組み、リソースの割り当て、固定された制約、コストを具体的に扱います。requests と limits のサイジングは第14章、pod execution role および IRSA/Pod Identity による Pod の AWS アクセスは第16-17章、永続ストレージの EFS は第24章、ロードバランサーと target-type `ip` は第26-27章、ログとオブザーバビリティは第33-34章を参照してください。独立したモードとしての Auto Mode は第9章です。

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 40. Zuverlässigkeit: Multi-AZ, PDB, Topology Spread, ordnungsgemäßes Herunterfahren von Nodes
 
 > **Wie es weitergeht.** Die Kapitel 38 und 39 behandelten Cluster-Versionen: Upgrade der Control Plane und Nodes sowie das Zurücksetzen im 7-Tage-Fenster. Das ist die Zuverlässigkeit der Control Plane. Hier geht es um die Zuverlässigkeit von Workloads: wie Pods sowohl einen plötzlichen Ausfall (Ausfall einer Node oder Zone) als auch geplante Wartung (`drain`, Upgrade, Konsolidierung) überstehen. Verwandte Themen behandeln andere Kapitel: Disruption und Konsolidierung von Karpenter sowie `do-not-disrupt` in Kapitel 12, Node-Aktualisierung beim Upgrade in Kapitel 38, Spot-Unterbrechungen in Kapitel 13, Cross-AZ-Kosten und `trafficDistribution` in Kapitel 31 sowie Workload-Skalierung (HPA) in Kapitel 35.

@@ -20,7 +20,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff des Kurskapitels vertiefen:
 
-- [Kapitel 33. Metriken: Container Insights, Managed Prometheus und Grafana](../../course/33/ru.md)
+- [Kapitel 33. Metriken: Container Insights, Managed Prometheus und Grafana](../../course/33/de.md)
 
 ## Was wir erstellen
 

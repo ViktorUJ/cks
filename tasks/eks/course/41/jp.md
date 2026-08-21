@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第41章. AWS Backup によるクラスターのバックアップ: クラスター状態、永続ボリューム、composite recovery point
 
 > **次は何か。** 第38-40章ではクラスターのライフサイクル、すなわちバージョンのアップグレード、7日間のウィンドウ内でのロールバック、ワークロードの信頼性を扱いました。これらは control plane と可用性に関するものですが、データの破損や削除は防げません。バージョンのロールバック（第39章）は control plane を戻しますが、削除された namespace や上書きされた volume は戻しません。ここでは AWS Backup を使い、クラスター状態（Kubernetes オブジェクト）と永続ボリュームのデータを整合的にバックアップします。関連する内容は他章で扱います。復元、DR、Velero は第42章、バージョンのロールバック（これはバックアップではない）は第39章、EBS snapshot と StorageClass は第23章、EFS は第24章です。
@@ -119,7 +119,7 @@ namespace を削除した人物が同じように削除できるバックアッ�
 
 **Vault Lock。** これは vault の WORM mode（write-once, read-many）であり、偶発的または悪意ある削除から recovery point を保護します。二つの mode があります。
 
-| Mode | lock を解除できる者 | 使用する場面 |
+| モード | lock を解除できる者 | 使用する場面 |
 |---|---|---|
 | governance mode | 必要な IAM 権限を持つユーザー | 偶発的削除からの保護、柔軟性 |
 | compliance mode | grace time 後は root や AWS を含め誰もできない | 厳格な immutability 要件 |
@@ -199,7 +199,7 @@ AWS Backup はクラスターをバックアップする唯一の方法ではあ
 13. クラスターのバックアップツールとして、Velero は AWS Backup とどう異なりますか。
 14. なぜ AWS Backup だけでは application-consistent な DBMS backup を得られないのですか。これを補う選択肢は何ですか。
 
-## Practice
+## 実践
 
 このテーマのコース lab は、[lab 122 - AWS Backup for EKS](../../labs/122/README_JP.MD) です。この lab では opt-in を有効化し、gp3 上の volume を含むクラスターの on-demand backup を取得し、composite recovery point（parent と nested EKS/EBS ポイント）を確認して namespace-restore を実行します。確認には `check_result` コマンドを使います。実行は `TASK=122 make run_eks_task` です。
 

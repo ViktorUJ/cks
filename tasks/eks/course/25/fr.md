@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 25. S3 dans les applications : Mountpoint for Amazon S3 CSI et modèles d'accès
 
 > **La suite.** Le chapitre 23 a montré le stockage bloc EBS (un disque dans une seule AZ, un seul écrivain), le chapitre 24 l'accès fichier EFS et FSx (NFS réseau, ReadWriteMany entre zones). Ce chapitre porte sur une troisième classe : le stockage objet S3. Son modèle est fondamentalement différent : ce n'est ni un disque ni un système de fichiers, mais un stockage clé-valeur. Mountpoint S3 permet de le monter comme volume, avec des limites, et c'est le cœur du chapitre. L'autorisation via IRSA ou Pod Identity est traitée aux chapitres 16-17, FSx for Lustre avec son intégration S3 est abordé au chapitre 24, l'accès privé via les VPC endpoints au chapitre 31 et la sauvegarde avec AWS Backup au chapitre 41. Nous y renvoyons sans les répéter.

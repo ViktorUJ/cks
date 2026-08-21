@@ -25,9 +25,9 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material de los capítulos del curso:
 
-- [Capítulo 8. Alternativas a VPC CNI: Cilium, modos de red](../../course/08/ru.md) - CNI
+- [Capítulo 8. Alternativas a VPC CNI: Cilium, modos de red](../../course/08/es.md) - CNI
   chaining frente a un reemplazo completo, el coste honesto del cambio
-- [Capítulo 30. NetworkPolicy: reglas, DNS, pruebas](../../course/30/ru.md) - los límites de
+- [Capítulo 30. NetworkPolicy: reglas, DNS, pruebas](../../course/30/es.md) - los límites de
   la network policy integrada de VPC CNI y qué añade Cilium
 
 ## Qué creamos

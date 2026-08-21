@@ -19,10 +19,10 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Consolider le contenu des chapitres suivants du cours :
 
-- [Chapitre 4. Création d'un cluster : eksctl, Terraform et Terragrunt](../../course/04/ru.md) - cluster en tant que code et kubeconfig
-- [Chapitre 6. Réseau du cluster : VPC CNI, ENI et adresses IP](../../course/06/ru.md) - d'où viennent les adresses des pods
-- [Chapitre 9. Types de compute : managed node groups, Fargate, Auto Mode](../../course/09/ru.md) - ce qui s'exécute et où
-- [Chapitre 10. AMI et bootstrap : AL2023, launch templates, kubelet](../../course/10/ru.md) - sur quelle image vivent les nœuds
+- [Chapitre 4. Création d'un cluster : eksctl, Terraform et Terragrunt](../../course/04/fr.md) - cluster en tant que code et kubeconfig
+- [Chapitre 6. Réseau du cluster : VPC CNI, ENI et adresses IP](../../course/06/fr.md) - d'où viennent les adresses des pods
+- [Chapitre 9. Types de compute : managed node groups, Fargate, Auto Mode](../../course/09/fr.md) - ce qui s'exécute et où
+- [Chapitre 10. AMI et bootstrap : AL2023, launch templates, kubelet](../../course/10/fr.md) - sur quelle image vivent les nœuds
 
 ## Ce que nous créons
 

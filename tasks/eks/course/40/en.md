@@ -1,4 +1,4 @@
-[Versión en español](es.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapter 40. Reliability: multi-AZ, PDB, topology spread, graceful node shutdown
 
 > **What comes next.** Chapters 38 and 39 covered cluster versions: control-plane and node upgrades,

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第31章. Egress とトラフィックコスト: NAT、VPC endpoints、PrivateLink
 
 > **次は何か。** 第26章から第30章では、クラスターへの ingress と分離を扱いました。NLB（第26章）、ALB（第27章）、Gateway API（第28章）、DNS と証明書（第29章）、NetworkPolicy（第30章）です。ここでは逆方向、すなわち外部への egress トラフィックとそのコストを扱います。NAT Gateway、VPC endpoints、PrivateLink、cross-AZ です。VPC、サブネット、NAT の基本構成はパート0（第00-3章）、クラスター全体のコストと Kubecost/OpenCost は第43章、マルチクラスターおよびマルチアカウントの接続性は第32章、Mountpoint の S3 へのプライベートアクセスは第25章で触れています。ここで扱うのは1点です。EKS の Pod の egress トラフィックはどこへ行き、なぜその請求が来るのかです。

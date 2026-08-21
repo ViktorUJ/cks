@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 28. Gateway API AWS-ში: ALB Gateway API და VPC Lattice
 
 > **რა არის შემდეგ.** 26-ე და 27-ე თავებში ანოტაციების მეშვეობით გამოქვეყნება ვაჩვენეთ:

@@ -18,7 +18,7 @@ Prüfung erfolgt automatisch über den Befehl `check_result`.
 
 Vertiefung des Kurskapitels:
 
-- [Kapitel 20. Images und supply chain: ECR, Scanning, Signaturen, pull through cache](../../course/20/ru.md) - woher das Image kommt und wer es geprüft hat
+- [Kapitel 20. Images und supply chain: ECR, Scanning, Signaturen, pull through cache](../../course/20/de.md) - woher das Image kommt und wer es geprüft hat
 
 ## Was wir erstellen
 

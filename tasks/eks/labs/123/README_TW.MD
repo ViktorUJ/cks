@@ -18,7 +18,7 @@ StatefulSet 會冒著失去 quorum 的風險。這個實驗的關鍵之處在於
 
 鞏固這個課程章節的內容:
 
-- [第 12 章。Karpenter:NodePool、EC2NodeClass、disruption、consolidation、drift](../../course/12/ru.md) -
+- [第 12 章。Karpenter:NodePool、EC2NodeClass、disruption、consolidation、drift](../../course/12/tw.md) -
   如何在 consolidation 期間安全地驅逐 StatefulSet
 
 ## 我們要建立什麼

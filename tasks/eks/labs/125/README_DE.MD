@@ -26,7 +26,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 Den Stoff dieses Kurskapitels vertiefen:
 
 - [Kapitel 9. Compute-Typen: managed node groups, self-managed, Fargate, Auto
-  Mode](../../course/09/ru.md) - wann EKS Auto Mode aktiviert wird und wann man den
+  Mode](../../course/09/de.md) - wann EKS Auto Mode aktiviert wird und wann man den
   eigenen Stack aufbaut
 
 ## Was wir erstellen

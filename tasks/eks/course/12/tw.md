@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 12 章：Karpenter：NodePool、EC2NodeClass、disruption、consolidation、drift
 
 > **接下來。** 第 11 章從方法層面探討 Cluster Autoscaler 與 Karpenter 的選擇，以及 Karpenter 與 Auto Mode 的關係。本章進入具體設定：`NodePool` 與 `EC2NodeClass` 物件、Karpenter 如何選擇執行個體，以及最重要的 disruption：consolidation、drift，以及安全驅逐工作負載（包括 StatefulSet）。Spot 詳見第 13 章，AMI 與 bootstrap 見第 10 章，EBS 磁碟區與 AZ 綁定見第 23 章，sizing 見第 14 章，叢集升級見第 38 章。
@@ -357,7 +357,7 @@ kubectl describe node <node>            # Unconsolidatable 事件
 
 本主題的課程 lab 是[實驗 123 -  - Karpenter：NodePool、consolidation、drift 與 StatefulSet 的安全驅逐](../../labs/123/README_TW.MD)。Karpenter 也會在[實驗 106 -  - EBS CSI：gp3、AZ 綁定、擴展、snapshot](../../labs/106/README_TW.MD)中，於分區磁碟區的脈絡下說明。除此之外，也能在實際叢集上觀察 Karpenter 設定（包括 Auto Mode 內，見第 11 章）。先進行 inventory：`kubectl get nodepools`、`kubectl get ec2nodeclasses`、`kubectl get nodeclaims`。查看 `NodePool` 的 `spec.disruption` 區塊：其 `consolidationPolicy` 是什麼，是否有 `budgets` 與 `terminationGracePeriod`。
 
-接著，在不傷害叢集的前提下完成第 12.7 與 12.8 節的診斷。找出 StatefulSet，並檢查 `kubectl get pdb -A` -  - 它是否有 PDB，`maxUnavailable` 為何。查看 `kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` 的 logs 與節點 events，尋找 `Unconsolidatable`。另行研讀 repository 中較早的 Karpenter lab（[Karpenter](../../labs/02/README_RUS.MD)） -  - 它不屬於課程，但主題相關。
+接著，在不傷害叢集的前提下完成第 12.7 與 12.8 節的診斷。找出 StatefulSet，並檢查 `kubectl get pdb -A` -  - 它是否有 PDB，`maxUnavailable` 為何。查看 `kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter` 的 logs 與節點 events，尋找 `Unconsolidatable`。另行研讀 repository 中較早的 Karpenter lab（[Karpenter](../../labs/02/README_TW.MD)） -  - 它不屬於課程，但主題相關。
 
 ---
 [目錄](../README_TW.md) · [第 11 章](../11/tw.md) · [第 13 章](../13/tw.md)

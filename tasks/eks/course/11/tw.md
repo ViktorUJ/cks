@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 11 章：Cluster Autoscaler 與 Karpenter：兩種節點擴展方法
 
 > **接下來。** 計算類型與 Auto Mode 已在第 9 章說明，節點 AMI 與 bootstrap 見第 10 章。現在的問題是：負載增加或減少時，無須手動調整 `desiredSize`，節點要如何隨之增減？EKS 有兩個工具可處理此事：Cluster Autoscaler 與 Karpenter；本章從方法論層面說明如何在兩者之間選擇。Karpenter 的具體內容（NodePool、EC2NodeClass、consolidation、drift、disruption budgets）請見第 12 章，spot 執行個體見第 13 章，密度與 sizing 見第 14 章，而 Pod 本身的自動擴展（HPA、VPA、KEDA）見第 35 章。

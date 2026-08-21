@@ -21,7 +21,7 @@ différence en direct.
 
 Consolider le contenu du chapitre suivant du cours :
 
-- [Chapitre 5. Accès au cluster : IAM et RBAC, access entries](../../course/05/ru.md) -
+- [Chapitre 5. Accès au cluster : IAM et RBAC, access entries](../../course/05/fr.md) -
   migration depuis aws-auth
 
 ## Ce que nous créons

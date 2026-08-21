@@ -21,8 +21,8 @@ Pod 間のすべてのトラフィックが許可されています。`vpc-cni` 
 
 コースの以下の章の内容を定着させます:
 
-- [第 8 章。詳解ネットワーキング:VPC CNI と代替 CNI](../../course/08/ru.md) - 組み込みのネットワークポリシーと Cilium の境界
-- [第 30 章。NetworkPolicy:ルール、DNS、テスト](../../course/30/ru.md) - default deny、ラベルと namespace による許可、egress
+- [第 8 章。詳解ネットワーキング:VPC CNI と代替 CNI](../../course/08/jp.md) - 組み込みのネットワークポリシーと Cilium の境界
+- [第 30 章。NetworkPolicy:ルール、DNS、テスト](../../course/30/jp.md) - default deny、ラベルと namespace による許可、egress
 
 ## 作成するもの
 

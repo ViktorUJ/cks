@@ -20,9 +20,9 @@ managed control plane-სთვის, არა გაჭედილი ბრ
 
 გავამყაროთ კურსის ამ თავების მასალა:
 
-- [თავი 37. EKS add-on-ები: managed add-on-ები vs. Helm, ვერსიები და განახლების რიგი](../../course/37/ru.md) - ვისი პასუხისმგებლობაა add-on-ის ვერსია
-- [თავი 38. კლასტერის upgrade: in-place ვერსიის მიხედვით, blue/green კლასტერები, deprecated API-ები](../../course/38/ru.md) - in-place upgrade-ის რიგი და deprecated API-ების პოვნა
-- [თავი 39. კლასტერის ვერსიის rollback: rollback readiness insights, 7-დღიანი ფანჯარა, rollback-ის რიგი](../../course/39/ru.md) - control plane-ის სტანდარტული rollback
+- [თავი 37. EKS add-on-ები: managed add-on-ები vs. Helm, ვერსიები და განახლების რიგი](../../course/37/ge.md) - ვისი პასუხისმგებლობაა add-on-ის ვერსია
+- [თავი 38. კლასტერის upgrade: in-place ვერსიის მიხედვით, blue/green კლასტერები, deprecated API-ები](../../course/38/ge.md) - in-place upgrade-ის რიგი და deprecated API-ების პოვნა
+- [თავი 39. კლასტერის ვერსიის rollback: rollback readiness insights, 7-დღიანი ფანჯარა, rollback-ის რიგი](../../course/39/ge.md) - control plane-ის სტანდარტული rollback
 
 ## რას ვქმნით
 

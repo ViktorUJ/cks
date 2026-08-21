@@ -20,7 +20,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff des Kurskapitels vertiefen:
 
-- [Kapitel 18. Secrets: KMS, Secrets Manager und SSM über External Secrets](../../course/18/ru.md)
+- [Kapitel 18. Secrets: KMS, Secrets Manager und SSM über External Secrets](../../course/18/de.md)
 
 ## Was wir erstellen
 

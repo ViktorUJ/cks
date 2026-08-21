@@ -18,7 +18,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from the course chapter:
 
-- [Chapter 20. Images and supply chain: ECR, scanning, signatures, pull through cache](../../course/20/ru.md) - where an image comes from and who checked it
+- [Chapter 20. Images and supply chain: ECR, scanning, signatures, pull through cache](../../course/20/en.md) - where an image comes from and who checked it
 
 ## What we're creating
 

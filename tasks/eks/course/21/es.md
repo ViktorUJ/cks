@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 21. Auditoría y detección: logs de control plane, CloudTrail, GuardDuty y monitoreo en runtime
 
 > **Qué sigue.** La Parte 3 cubrió la identidad (capítulos 16-17), los secretos (capítulo 18), el hardening
@@ -384,4 +384,3 @@ que bloquean lo peligroso antes de que entre, está en el capítulo 22.
 
 ---
 [Índice](../README_ES.md) · [Capítulo 20](../20/es.md) · [Capítulo 22](../22/es.md)
-[English version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)

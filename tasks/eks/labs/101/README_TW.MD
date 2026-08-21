@@ -17,10 +17,10 @@ Fargate 上與工作節點在 Karpenter 上的分離,驗證 VPC CNI 為 Pod 分�
 
 鞏固以下課程章節的內容:
 
-- [第 4 章。創建集群:eksctl、Terraform 與 Terragrunt](../../course/04/ru.md) - 集群即代碼與 kubeconfig
-- [第 6 章。集群網路:VPC CNI、ENI 與 IP 位址](../../course/06/ru.md) - Pod 位址從何而來
-- [第 9 章。計算類型:managed node groups、Fargate、Auto Mode](../../course/09/ru.md) - 什麼在哪裡運行
-- [第 10 章。AMI 與 bootstrap:AL2023、launch templates、kubelet](../../course/10/ru.md) - 節點運行在什麼映像上
+- [第 4 章。創建集群:eksctl、Terraform 與 Terragrunt](../../course/04/tw.md) - 集群即代碼與 kubeconfig
+- [第 6 章。集群網路:VPC CNI、ENI 與 IP 位址](../../course/06/tw.md) - Pod 位址從何而來
+- [第 9 章。計算類型:managed node groups、Fargate、Auto Mode](../../course/09/tw.md) - 什麼在哪裡運行
+- [第 10 章。AMI 與 bootstrap:AL2023、launch templates、kubelet](../../course/10/tw.md) - 節點運行在什麼映像上
 
 ## 我們要創建什麼
 

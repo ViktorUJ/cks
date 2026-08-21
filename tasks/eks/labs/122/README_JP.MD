@@ -19,13 +19,13 @@ point（クラスターの状態とボリュームを 1 つの整合した復旧
 
 コースの以下の章の内容を定着させます:
 
-- [第 41 章。AWS Backup によるクラスターのバックアップ](../../course/41/ru.md) - composite
+- [第 41 章。AWS Backup によるクラスターのバックアップ](../../course/41/jp.md) - composite
   recovery point、backup plan、vault、IAM role
-- [第 42 章。リストアと DR](../../course/42/ru.md) - namespace restore、
+- [第 42 章。リストアと DR](../../course/42/jp.md) - namespace restore、
   non-destructive restore
-- [第 23 章。EBS CSI](../../course/23/ru.md) - StorageClass gp3、バックアップに入る PVC の
+- [第 23 章。EBS CSI](../../course/23/jp.md) - StorageClass gp3、バックアップに入る PVC の
   背後のボリューム
-- [第 5 章。クラスターへのアクセス](../../course/05/ru.md) - 認可モード
+- [第 5 章。クラスターへのアクセス](../../course/05/jp.md) - 認可モード
   `API_AND_CONFIG_MAP` と access entries。これらがないと AWS Backup はクラスターを読み取れ
   ません
 

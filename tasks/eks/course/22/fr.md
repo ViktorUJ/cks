@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 22. Politiques et multi-tenancy : Kyverno et Gatekeeper, isolation des équipes
 
 > **La suite.** Le chapitre 19 a activé Pod Security Admission (PSA), avec trois niveaux prêts à l'emploi :

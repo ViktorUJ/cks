@@ -24,8 +24,8 @@ terraform によって作成され VPC にアタッチされており、証明�
 
 コースの以下の章の内容を定着させます:
 
-- [第 27 章。ALB 経由の Ingress: target-type、annotation、TLS と ACM、WAF](../../course/27/ru.md)
-- [第 29 章。DNS と証明書: external-dns、Route 53、cert-manager](../../course/29/ru.md)
+- [第 27 章。ALB 経由の Ingress: target-type、annotation、TLS と ACM、WAF](../../course/27/jp.md)
+- [第 29 章。DNS と証明書: external-dns、Route 53、cert-manager](../../course/29/jp.md)
 
 ## 作成するもの
 

@@ -18,10 +18,10 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from these course chapters:
 
-- [Chapter 4. Creating a cluster: eksctl, Terraform and Terragrunt](../../course/04/ru.md) - cluster as code and kubeconfig
-- [Chapter 6. Cluster networking: VPC CNI, ENI and IP addresses](../../course/06/ru.md) - where pods get their addresses from
-- [Chapter 9. Compute types: managed node groups, Fargate, Auto Mode](../../course/09/ru.md) - what runs where
-- [Chapter 10. AMI and bootstrap: AL2023, launch templates, kubelet](../../course/10/ru.md) - which image nodes run on
+- [Chapter 4. Creating a cluster: eksctl, Terraform and Terragrunt](../../course/04/en.md) - cluster as code and kubeconfig
+- [Chapter 6. Cluster networking: VPC CNI, ENI and IP addresses](../../course/06/en.md) - where pods get their addresses from
+- [Chapter 9. Compute types: managed node groups, Fargate, Auto Mode](../../course/09/en.md) - what runs where
+- [Chapter 10. AMI and bootstrap: AL2023, launch templates, kubelet](../../course/10/en.md) - which image nodes run on
 
 ## What we're creating
 

@@ -20,7 +20,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from this course chapter:
 
-- [Chapter 18. Secrets: KMS, Secrets Manager and SSM via External Secrets](../../course/18/ru.md)
+- [Chapter 18. Secrets: KMS, Secrets Manager and SSM via External Secrets](../../course/18/en.md)
 
 ## What we're creating
 

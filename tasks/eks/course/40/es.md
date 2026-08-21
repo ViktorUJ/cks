@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 40. Fiabilidad: multi-AZ, PDB, topology spread, apagado correcto de nodos
 
 > **Qué sigue.** Los capítulos 38 y 39 trataron las versiones del clúster: la actualización del control plane y de los nodos, y la reversión dentro de una ventana de 7 días. Eso es la fiabilidad del control plane. Aquí tratamos la fiabilidad de las cargas: cómo los pods sobreviven tanto a un fallo repentino (la caída de un nodo o una zona) como al mantenimiento planificado (drain, actualización, consolidación). El material relacionado se delega a otros capítulos: disruption y consolidación de Karpenter, `do-not-disrupt`, capítulo 12; actualización de nodos durante una actualización, capítulo 38; interrupciones spot, capítulo 13; coste cross-AZ y `trafficDistribution`, capítulo 31; escalado de cargas (HPA), capítulo 35.

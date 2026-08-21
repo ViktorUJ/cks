@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 27. Ingress über ALB: target-type, Annotationen, TLS und ACM, WAF
 
 > **Wie es weitergeht.** Kapitel 26 behandelte L4-Load-Balancing: einen Service vom Typ LoadBalancer und einen Network Load Balancer über den AWS Load Balancer Controller. Hier ist der Controller derselbe, aber auf L7: Aus einem Ingress erstellt er einen Application Load Balancer mit Routing nach Host und Pfad, TLS-Terminierung und WAF-Schutz. NLB und Services vom Typ LoadBalancer bleiben in Kapitel 26 und werden dort behandelt. Gateway API und VPC Lattice sind Thema von Kapitel 28, external-dns, Route 53 und cert-manager von Kapitel 29. Wie ein Pod eine IP im VPC erhält (VPC CNI), behandelt Kapitel 8, und die Rolle des Controllers über IRSA oder Pod Identity die Kapitel 16-17. Auf diese Themen wird verwiesen, ohne sie zu wiederholen.
@@ -209,7 +209,7 @@ metadata:
     alb.ingress.kubernetes.io/actions.maintenance: >
       {"type":"fixed-response","fixedResponseConfig":
       {"contentType":"text/plain","statusCode":"503","messageBody":"under maintenance"}}
-# in rules: backend.service.name: maintenance, port.name: use-annotation
+# in den Regeln: backend.service.name: maintenance, port.name: use-annotation
 ```
 
 **Health Checks** für Target Groups werden durch die Annotationsfamilie `healthcheck-*` konfiguriert: `healthcheck-protocol` (Standard `HTTP`), `healthcheck-port` (`traffic-port`), `healthcheck-path` (`/`), `healthcheck-interval-seconds` (`15`), `healthcheck-timeout-seconds` (`5`), `healthy-threshold-count` und `unhealthy-threshold-count` (`2`) sowie `success-codes` (`200`). Der Controller definiert diese Standardwerte, die bei Bedarf überschrieben werden können.

@@ -19,7 +19,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from the course chapter:
 
-- [Chapter 26. AWS Load Balancer Controller and a Service of type LoadBalancer: NLB](../../course/26/ru.md) - the controller, annotations, NLB vs. CLB
+- [Chapter 26. AWS Load Balancer Controller and a Service of type LoadBalancer: NLB](../../course/26/en.md) - the controller, annotations, NLB vs. CLB
 
 ## What we're creating
 

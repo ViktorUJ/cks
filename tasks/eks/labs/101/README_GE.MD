@@ -19,10 +19,10 @@ EKS კურსის პირველი ლაბა და საფუძ
 
 გავამყაროთ კურსის ამ თავების მასალა:
 
-- [თავი 4. კლასტერის შექმნა: eksctl, Terraform და Terragrunt](../../course/04/ru.md) - კლასტერი როგორც კოდი და kubeconfig
-- [თავი 6. კლასტერის ქსელი: VPC CNI, ENI და IP-მისამართები](../../course/06/ru.md) - საიდან იღებენ პოდები მისამართებს
-- [თავი 9. Compute-ის ტიპები: managed node groups, Fargate, Auto Mode](../../course/09/ru.md) - რა და სად სრულდება
-- [თავი 10. AMI და bootstrap: AL2023, launch templates, kubelet](../../course/10/ru.md) - რომელ image-ზე ცხოვრობენ ნოუდები
+- [თავი 4. კლასტერის შექმნა: eksctl, Terraform და Terragrunt](../../course/04/ge.md) - კლასტერი როგორც კოდი და kubeconfig
+- [თავი 6. კლასტერის ქსელი: VPC CNI, ENI და IP-მისამართები](../../course/06/ge.md) - საიდან იღებენ პოდები მისამართებს
+- [თავი 9. Compute-ის ტიპები: managed node groups, Fargate, Auto Mode](../../course/09/ge.md) - რა და სად სრულდება
+- [თავი 10. AMI და bootstrap: AL2023, launch templates, kubelet](../../course/10/ge.md) - რომელ image-ზე ცხოვრობენ ნოუდები
 
 ## რას ვქმნით
 

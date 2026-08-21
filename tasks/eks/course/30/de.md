@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 30. NetworkPolicy in EKS: VPC-CNI-Network-Policy und Cilium
 
 > **Wie es weitergeht.** Die Kapitel 26-29 zeigten, wie Datenverkehr von außen in den Cluster gelangt: NLB (Kapitel 26),
@@ -397,7 +397,7 @@ Chaining belässt IPAM und AWS-Support bei VPC CNI, beim Ersatz liegt der gesamt
 12. Nach welcher Regel wird zwischen VPC-CNI-Network-Policy und Cilium gewählt?
 13. Wozu dient `CiliumClusterwideNetworkPolicy`, wenn die normale NetworkPolicy an einen Namespace gebunden ist?
 
-## Practice
+## Praxis
 
 Zu diesem Thema gehören zwei Labs des Kurses: [Lab 110: NetworkPolicy in EKS: integrierte VPC-CNI-Network-Policy](../../labs/110/README_DE.MD)
 und [Lab 132: alternatives CNI: Cilium im CNI-Chaining-Modus über VPC CNI](../../labs/132/README_DE.MD). Darüber

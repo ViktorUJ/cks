@@ -21,10 +21,10 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Consolider le contenu des chapitres suivants du cours :
 
-- [Chapitre 23. EBS CSI : gp3, StorageClass, extension, snapshots, rattachement à l'AZ](../../course/23/ru.md) - le contenu principal du lab
-- [Chapitre 9. Types de compute : managed node groups, Fargate, Auto Mode](../../course/09/ru.md) - pourquoi le cluster a deux AZ et où vivent les nœuds
-- [Chapitre 12. Karpenter : NodePool, consolidation, disruption](../../course/12/ru.md) - pourquoi la consolidation ne déplace pas un pod entre AZ s'il a un volume
-- [Chapitres 16-17. IRSA et Pod Identity](../../course/16/ru.md) - comment le driver obtient le droit de `CreateVolume`/`CreateSnapshot`
+- [Chapitre 23. EBS CSI : gp3, StorageClass, extension, snapshots, rattachement à l'AZ](../../course/23/fr.md) - le contenu principal du lab
+- [Chapitre 9. Types de compute : managed node groups, Fargate, Auto Mode](../../course/09/fr.md) - pourquoi le cluster a deux AZ et où vivent les nœuds
+- [Chapitre 12. Karpenter : NodePool, consolidation, disruption](../../course/12/fr.md) - pourquoi la consolidation ne déplace pas un pod entre AZ s'il a un volume
+- [Chapitres 16-17. IRSA et Pod Identity](../../course/16/fr.md) - comment le driver obtient le droit de `CreateVolume`/`CreateSnapshot`
 
 ## Ce que nous créons
 

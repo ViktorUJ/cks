@@ -21,7 +21,7 @@ Logs-ში, და ადასტურებთ, რომ იგივე �
 
 გავამყაროთ კურსის ამ თავის მასალა:
 
-- [თავი 34. ლოგები: Fluent Bit, CloudWatch Logs, OpenSearch, ღირებულების კონტროლი](../../course/34/ru.md)
+- [თავი 34. ლოგები: Fluent Bit, CloudWatch Logs, OpenSearch, ღირებულების კონტროლი](../../course/34/ge.md)
 
 ## რას ვქმნით
 

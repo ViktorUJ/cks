@@ -61,7 +61,7 @@ flowchart TB
 max-pods = ENI * (每個 ENI 的 IP - 1) + 2
 ```
 
-| Instance type | ENI | 每個 ENI 的 IP | 依公式的 max-pods | vCPU |
+| 執行個體類型 | ENI | 每個 ENI 的 IP | 依公式的 max-pods | vCPU |
 |---|---|---|---|---|
 | `t3.small` | 3 | 4 | 11 | 2 |
 | `t3.medium` | 3 | 6 | 17 | 2 |
@@ -84,7 +84,7 @@ kubectl get node <node-name> -o jsonpath='{.status.allocatable.pods}{"\n"}'
 
 每個 node 的位址預留量由 `aws-node` DaemonSet 的 environment variables 設定。
 
-| Variable | 預設值 | 作用 |
+| 變數 | 預設值 | 作用 |
 |---|---|---|
 | `WARM_ENI_TARGET` | `1` | 預留一個完全未使用的 ENI 位址 |
 | `WARM_IP_TARGET` | 未設定 | 以指定數量的可用位址取代 ENI 預留 |

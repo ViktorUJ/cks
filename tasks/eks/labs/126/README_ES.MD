@@ -22,7 +22,7 @@ que desplegaste la lab) - los detalles están en la sección "Infraestructura".
 
 Reforzar el material de este capítulo del curso:
 
-- [Capítulo 46. Fallos de red](../../course/46/ru.md) - security group como una capa
+- [Capítulo 46. Fallos de red](../../course/46/es.md) - security group como una capa
   de fallo de red
 
 ## Qué creamos

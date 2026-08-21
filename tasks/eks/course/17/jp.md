@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第17章. EKS Pod Identity: agent、association、IRSA からの移行
 
 > **この先。** 第16章では、クラスターの OIDC provider、`sub` に対する trust policy、`ServiceAccount` annotation を使用して、IRSA による「Pod ごとに専用のロール」という課題を完了しました。ここでは、同じ課題に対する別の仕組み、EKS Pod Identity を扱います。これは後から登場し、IRSA の主な悩みである、特定クラスターの OIDC provider への trust policy の結び付きを解消します。agent、association、IRSA との直接比較、移行を説明します。関連トピックはほかの章で扱います。人間と CI のアクセスは第5章、Secrets は第18章、IMDSv2 のハードニングは第19章、EKS add-on は第37章、Fargate は第15章です。

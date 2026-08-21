@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 9. Types de calcul : managed node groups, self-managed, Fargate, Auto Mode
 
 > **La suite.** AWS gère le control plane (chapitres 1-2), le cluster est créé (chapitre 4), et

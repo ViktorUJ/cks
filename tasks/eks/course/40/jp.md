@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第40章. 信頼性: multi-AZ、PDB、topology spread、適切なノード停止
 
 > **次は何か。** 第38章と第39章ではクラスターのバージョン、すなわち control plane とノードのアップグレード、7日間のウィンドウ内でのロールバックを扱いました。これは control plane の信頼性です。ここではワークロードの信頼性、つまり Pod が突然の障害（ノードまたはゾーンの停止）と計画保守（drain、アップグレード、consolidation）の両方をどう生き残るかを扱います。関連内容は他章にあります。Karpenter の disruption と consolidation、および `do-not-disrupt` は第12章、アップグレード中のノード更新は第38章、spot interruption は第13章、cross-AZ コストと `trafficDistribution` は第31章、ワークロードのスケーリング（HPA）は第35章です。
@@ -197,9 +197,9 @@ AWS 側には load balancer という別レイヤーがあります。NLB また
 この穴は AWS Load Balancer Controller の pod readiness gate が閉じます。controller は `target-health.elbv2.k8s.aws` prefix の追加 readiness condition を Pod に加え、target group のその Pod の target が `healthy` になるまで false を保ちます。Pod が `Ready` でなければ Deployment controller は先へ進まず、古い Pod を停止しません。有効化は Pod specification ではなく namespace のラベルで行います。controller が mutating webhook により gate configuration を書き込みます。
 
 ```bash
-# enable gate injection for the namespace
+# namespace の gate injection を有効化
 kubectl label namespace prod elbv2.k8s.aws/pod-readiness-gate-inject=enabled
-# READINESS GATES column: 0/1 means target is not healthy yet; 1/1 means ready for traffic
+# READINESS GATES 列: 0/1 は target がまだ healthy でないこと、1/1 はトラフィックを受け付ける準備完了を示す
 kubectl get pods -n prod -o wide
 ```
 
@@ -309,7 +309,7 @@ flowchart TB
 16. controller の pod readiness gate は何を提供し、なぜ `target-type: instance` では役に立ちませんか。
 17. EBS volume を持つ StatefulSet の分散を、別ゾーンで Pod を再作成して均等化できない理由と、`DoNotSchedule` への影響は何ですか。
 
-## Practice
+## 実践
 
 このトピックのコースラボ: [ラボ131: 信頼性: PDB が drain をブロック、topology spread、matchLabelKeys](../../labs/131/README_JP.MD)。ここでは `topologySpreadConstraints` によるゾーン分散、`kubectl drain` を timeout で失敗させる厳しすぎる `PodDisruptionBudget` の症状と修正、`unhealthyPodEvictionPolicy: AlwaysAllow`、新しい revision の偏りを確認する rolling update を扱います。結果は `check_result` コマンドで確認します。
 
@@ -318,7 +318,7 @@ flowchart TB
 ```bash
 # nodes hosting the replicas
 kubectl get pods -l app=web -o wide
-# node zones: match NODE above with its zone label
+# ノードのゾーン: 上の NODE をそのゾーンラベルと対応付ける
 kubectl get nodes -L topology.kubernetes.io/zone
 ```
 
@@ -327,18 +327,18 @@ kubectl get nodes -L topology.kubernetes.io/zone
 ```bash
 # disruption budgets and allowed eviction count
 kubectl get pdb -A
-# details of a particular PDB: minAvailable, current/expected pods
+# 特定の PDB の詳細: minAvailable、現在/想定される Pod
 kubectl describe pdb web-pdb
-# policy for unhealthy pods: empty means IfHealthyBudget
+# 異常な Pod のポリシー: 空は IfHealthyBudget を意味する
 kubectl get pdb -A -o custom-columns=NS:.metadata.namespace,PDB:.metadata.name,POLICY:.spec.unhealthyPodEvictionPolicy
 ```
 
 実際には eviction せず、dry-run drain で計画的 eviction がどう見えるかを確認し、ノードの説明で status と taint も見ます。
 
 ```bash
-# pods that would be evicted by drain, without actual eviction
+# 実際には eviction せず、drain で退去される Pod
 kubectl drain <node> --ignore-daemonsets --dry-run=client
-# node status, zone labels, taints, and events
+# ノードの状態、ゾーンラベル、テイント、イベント
 kubectl describe node <node>
 ```
 

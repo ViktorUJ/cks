@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 38. Actualización del clúster: in-place por versiones, clústeres blue/green y API obsoletas
 
 > **Qué sigue.** El capítulo 37 abordó los complementos: quién es propietario de su ciclo de vida y cómo mantener sus versiones alineadas con la versión del clúster. Aquí se trata la actualización de todo el clúster por versiones de Kubernetes: el ciclo de vida de las versiones, el orden de una actualización in-place, las API obsoletas y la migración blue/green. Los temas relacionados se delegan a otros capítulos: los propios complementos y su orden de actualización, capítulo 37; la reversión de versión (rollback readiness), capítulo 39; fiabilidad, PDB y apagado correcto de nodos, capítulo 40; GitOps para la migración blue/green, capítulo 44; nodos administrados y drift de Karpenter, capítulos 11 y 12.

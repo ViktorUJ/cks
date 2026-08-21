@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 34. Logs: Fluent Bit, CloudWatch Logs, OpenSearch, control de costes
 
 > **Qué sigue.** El capítulo 33 cubrió las métricas: series numéricas sobre la utilización de nodos y pods. Aquí está el segundo pilar de la observabilidad: los logs, registros textuales de lo que hizo una aplicación y por qué falló. Las métricas responden «cuánto»; los logs, «qué ocurrió exactamente». Los temas relacionados se tratan en otros capítulos: métricas, capítulo 33; autoescalado por métricas (HPA, KEDA), capítulo 35; tracing distribuido mediante ADOT y X-Ray, capítulo 36; auditoría del control plane (`audit log`) como herramienta de seguridad, capítulo 21; y contabilidad y optimización general de costes, capítulo 43. Este capítulo se centra en una cosa: cómo exportar logs de nodos y pods efímeros, dónde almacenarlos y cómo no arruinarse con ello.

@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 22 章。政策與多租戶：Kyverno、Gatekeeper 與團隊隔離
 
 > **接下來。** 第 19 章啟用了 Pod Security Admission (PSA)，它有三個現成層級：privileged/baseline/restricted。它們足以進行基本的 Pod 強化，但無法滿足自訂規則，也無法避免叢集中的團隊彼此干擾。本章完成第 3 部分：使用 policy engine（Kyverno、Gatekeeper）處理 PSA 沒有的規則，以及叢集內的多租戶。相關主題位於其他章節：PSA（第 19 章）、映像簽署（第 20 章）、RBAC（第 5 章）、NetworkPolicy（第 30 章）、配額（第 14 章）、admission webhook（第 2 章），以及帳戶作為邊界（第 0.1、32 章）。

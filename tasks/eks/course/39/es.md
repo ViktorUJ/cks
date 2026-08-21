@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 39. Reversión de versión del clúster: rollback readiness insights, ventana de 7 días y orden de reversión
 
 > **Qué sigue.** El capítulo 38 analizó la actualización del clúster: el ciclo de vida de las versiones, la actualización in-place por un minor, las API obsoletas y la migración blue/green. Aquí se trata de la operación inversa: revertir el control plane al minor anterior cuando la actualización finalizó, pero algo se rompió en la nueva versión. Los temas relacionados se delegan a otros capítulos: la propia actualización y blue/green, capítulo 38; cluster insights en general, capítulo 38; fiabilidad, PDB y apagado correcto de nodos, capítulo 40; copia de seguridad y restauración del estado del clúster, capítulos 41 y 42; EKS Auto Mode, capítulo 9.

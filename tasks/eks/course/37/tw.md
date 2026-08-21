@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 37 章。EKS 附加元件：受管附加元件與 Helm、版本及更新順序
 
 > **接下來。** 本章開啟第 7 部分，即已建立並運作中叢集的營運。營運的第一個問題是：誰擁有系統元件的生命週期，以及如何讓其版本與叢集版本保持一致。本章說明附加元件及其版本的管理。相關內容交由其他章節介紹：依版本完整升級叢集見第 38 章，回復版本見第 39 章，特定附加元件分別見各自章節（VPC CNI 見第 8 章、EBS CSI 見第 23 章、Load Balancer Controller 見第 26 章、可觀測性見第 33 至 36 章），透過 IRSA 與 Pod Identity 為附加元件授權見第 16 與 17 章。

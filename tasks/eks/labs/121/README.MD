@@ -19,7 +19,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from this course chapter:
 
-- [Chapter 47. Access and IAM: access entries, IRSA, webhook, kubeconfig](../../course/47/ru.md)
+- [Chapter 47. Access and IAM: access entries, IRSA, webhook, kubeconfig](../../course/47/en.md)
 
 ## What we're creating
 

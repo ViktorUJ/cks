@@ -1,4 +1,4 @@
-[English version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 17 章。EKS Pod Identity：代理程式、關聯，以及從 IRSA 遷移
 
 > **接下來。** 第 16 章透過 IRSA 完成了「為 Pod 配置專屬角色」的任務：叢集 OIDC provider、對 `sub` 的 trust policy，以及 `ServiceAccount` 註解。本章介紹同一任務的另一種機制，即 EKS Pod Identity。它推出較晚，並消除了 IRSA 最主要的痛點：trust policy 與特定叢集 OIDC provider 的綁定。我們將介紹代理程式、關聯、直接比較，以及遷移。相關主題見其他章節：人員與 CI 存取權（第 5 章）、Secret（第 18 章）、IMDSv2 強化（第 19 章）、EKS addon（第 37 章）、Fargate（第 15 章）。

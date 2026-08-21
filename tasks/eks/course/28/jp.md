@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第28章. AWS の Gateway API: ALB Gateway API と VPC Lattice
 
 > **次は何か。** 第26章と第27章ではアノテーションによる公開を扱いました。LoadBalancer 型 Service は NLB を作成し（第26章）、`ingressClassName: alb` を持つ Ingress は ALB を作成します（第27章）。ここでは Gateway API を扱います。これは、プラットフォームと開発者のロールを明確に分離する、Ingress の標準化された型付き代替手段です。AWS における2つの実装、すなわち ALB と NLB 上の同じ AWS Load Balancer Controller と、VPC およびアカウント間で Service を接続する VPC Lattice 上の AWS Gateway API Controller を説明します。Ingress と ALB は第27章、NLB と Service は第26章、external-dns と証明書は第29章、マルチクラスターとマルチアカウントは第32章で扱います。Pod が IP を取得する仕組み（VPC CNI）は第8章、コントローラーのロール（IRSA、Pod Identity）は第16-17章を参照してください。これらのテーマは参照し、繰り返しません。

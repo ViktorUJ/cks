@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 35. Autoskalierung von Anwendungen: HPA, externe Metriken, KEDA
 
 > **Wie es weitergeht.** Die Kapitel 33 und 34 lieferten Metriken und Logs, die zwei Säulen der Observability. Hier nutzen wir Metriken praktisch: Wir skalieren die Anwendungen selbst, also die Anzahl der Pod-Replikate entsprechend der Last. Verwandte Themen behandeln andere Kapitel: das Skalieren von Nodes für diese Pods (Cluster Autoscaler, Karpenter) in den Kapiteln 11 und 12; die Herkunft der Metriken (metrics-server, Prometheus) in Kapitel 33; das vertikale Sizing eines Pods (requests/limits, VPA) in Kapitel 14; Tracing zum Auffinden von Engpässen in Kapitel 36. Hier geht es um eines: Die Anzahl der Replikate soll der tatsächlichen Last folgen, auch Ereignissen, die ein CPU-basierter HPA nicht erkennt.
@@ -275,7 +275,7 @@ kubectl get scaledobject -A
 kubectl get hpa -A | grep keda-hpa
 ```
 
-Ordnen Sie das Gesamtbild ein: Skaliert der Dienst nach einer Metrik, die seine Last beschreibt, oder aus Gewohnheit nach CPU; sieht der HPA die Metrik oder steht dort `<unknown>`; und bleiben neue Replikate wegen fehlender Nodes in `Pending` hängen? Neben der Kurslab gibt es im Repository ein separates, nicht zum Kurs gehörendes Lab zur Autoskalierung mit KEDA und Prometheus (`../../labs/03/README_RUS.MD`): Es installiert Prometheus, richtet KEDA ein und skaliert eine Anwendung nach tatsächlichen RPS. Das ist eine gute Möglichkeit, die gesamte Kette live zu sehen.
+Ordnen Sie das Gesamtbild ein: Skaliert der Dienst nach einer Metrik, die seine Last beschreibt, oder aus Gewohnheit nach CPU; sieht der HPA die Metrik oder steht dort `<unknown>`; und bleiben neue Replikate wegen fehlender Nodes in `Pending` hängen? Neben der Kurslab gibt es im Repository ein separates, nicht zum Kurs gehörendes Lab zur Autoskalierung mit KEDA und Prometheus [Lab 03](../../labs/03/README_DE.MD): Es installiert Prometheus, richtet KEDA ein und skaliert eine Anwendung nach tatsächlichen RPS. Das ist eine gute Möglichkeit, die gesamte Kette live zu sehen.
 
 ---
 [Inhaltsverzeichnis](../README_DE.md) · [Kapitel 34](../34/de.md) · [Kapitel 36](../36/de.md)

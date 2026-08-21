@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第8章 VPC CNI の代替: Cilium、ネットワークモード、CNI を変更するべき場合
 
 > **この先の内容。** 第6章と第7章では、Pod の実アドレス、ENI、不足、およびその体系的な解決策として VPC CNI を扱いました。本章では、アドレス不足ではなく機能面で標準 CNI が足りないのはいつか、そして変更する価値があるのかという別の問いを扱います。VPC CNI 自体、ENI、CIDR 計画は第6章、prefix delegation、secondary CIDR、custom networking は第7章で扱うため、ここでは繰り返しません。NetworkPolicy の詳細と default-deny ラボは第30章とラボ110で扱い、ここでは機能比較のみを行います。ネットワーク障害の分析は第46章、アップグレードと blue/green の仕組みは第38章です。

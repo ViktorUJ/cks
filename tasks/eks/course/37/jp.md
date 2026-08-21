@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第37章. EKS アドオン: managed addons と Helm、バージョン、更新順序
 
 > **次は何か。** この章から、すでに作成され稼働しているクラスターの運用である第7部が始まります。運用における最初の問いは、システムコンポーネントのライフサイクルを誰が所有し、クラスターのバージョンとの整合性をどう保つかです。ここではアドオンとそのバージョンの管理を扱います。関連する内容は他の章で扱います。バージョンに沿ったクラスター全体のアップグレードは第38章、バージョンのロールバックは第39章、個別のアドオンはそれぞれの章（VPC CNI は第8章、EBS CSI は第23章、Load Balancer Controller は第26章、オブザーバビリティは第33-36章）、IRSA と Pod Identity によるアドオン用ロールは第16章と第17章です。

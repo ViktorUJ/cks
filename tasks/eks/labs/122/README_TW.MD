@@ -16,13 +16,13 @@ Backup 中啟用 Amazon EKS 的 opt-in，對帶有 EBS 卷工作負載的叢集�
 
 鞏固以下課程章節的內容：
 
-- [第 41 章。透過 AWS Backup 備份叢集](../../course/41/ru.md) - composite
+- [第 41 章。透過 AWS Backup 備份叢集](../../course/41/tw.md) - composite
   recovery point、backup plan、vault、IAM role
-- [第 42 章。還原與 DR](../../course/42/ru.md) - namespace restore、
+- [第 42 章。還原與 DR](../../course/42/tw.md) - namespace restore、
   non-destructive restore
-- [第 23 章。EBS CSI](../../course/23/ru.md) - StorageClass gp3，PVC 背後那個會進入備份
+- [第 23 章。EBS CSI](../../course/23/tw.md) - StorageClass gp3，PVC 背後那個會進入備份
   的卷
-- [第 5 章。叢集存取](../../course/05/ru.md) - 授權模式 `API_AND_CONFIG_MAP` 與 access
+- [第 5 章。叢集存取](../../course/05/tw.md) - 授權模式 `API_AND_CONFIG_MAP` 與 access
   entries，少了它們 AWS Backup 就讀不到叢集
 
 ## 我們要建立什麼

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [Русская версия](ru.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [日本語版](jp.md)
 # 第 16 章：IRSA：OIDC provider、trust policy、ServiceAccount 註解
 
 > **接下來。** 第 2 部分以運算結束，第 3 部分從身分識別開始。
@@ -393,9 +393,7 @@ association 透過 EKS API 建立，角色未綁定至叢集 OIDC provider，但
 
 ## 實作練習
 
-本課程對應的 lab：[lab 104：應用程式的 Workload identity：IRSA 與 Pod Identity]
-(../../labs/104/README_TW.MD)。IRSA 也會出現在 [lab 106：EBS CSI]
-(../../labs/106/README_TW.MD) 和 [lab 107：EFS CSI](../../labs/107/README_TW.MD)，
+本課程對應的 lab：[lab 104：應用程式的 Workload identity：IRSA 與 Pod Identity](../../labs/104/README_TW.MD)。IRSA 也會出現在 [lab 106：EBS CSI](../../labs/106/README_TW.MD) 和 [lab 107：EFS CSI](../../labs/107/README_TW.MD)，
 作為授予 driver 權限的方式。此外，所有內容都可在實際叢集上驗證。先執行
 `aws eks describe-cluster --name <cluster> --query 'cluster.identity.oidc.issuer'` 與
 `aws iam list-open-id-connect-providers`，確認叢集是否有 issuer URL，以及是否已為它

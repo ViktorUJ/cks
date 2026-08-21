@@ -21,9 +21,9 @@ chaining - 獲得 L7/DNS 政策和 Hubble 最常見、風險最低的方式。
 
 鞏固課程章節內容：
 
-- [第 8 章。VPC CNI 的替代方案：Cilium、網絡模式](../../course/08/ru.md) - CNI
+- [第 8 章。VPC CNI 的替代方案：Cilium、網絡模式](../../course/08/tw.md) - CNI
   chaining 與完全替換的對比，遷移的真實代價
-- [第 30 章。NetworkPolicy：規則、DNS、測試](../../course/30/ru.md) - 內建 VPC CNI
+- [第 30 章。NetworkPolicy：規則、DNS、測試](../../course/30/tw.md) - 內建 VPC CNI
   network policy 的邊界以及 Cilium 添加了什麼
 
 ## 我們要創建的內容

@@ -1,3 +1,4 @@
+[Eng version](SCORECARD.md) · [Versión en español](SCORECARD_ES.md) · [Version française](SCORECARD_FR.md) · [Deutsche Version](SCORECARD_DE.md) · [ქართული ვერსია](SCORECARD_GE.md) · [繁體中文版](SCORECARD_TW.md) · [日本語版](SCORECARD_JP.md)
 # Матрица зрелости EKS: опросник готовности
 
 [Оглавление курса](README_RU.md) · [Глава 48](48/ru.md) · [Глоссарий](GLOSSARY_RU.md)

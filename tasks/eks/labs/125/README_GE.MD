@@ -25,7 +25,7 @@ NodePool `system` არ ავრცობს ნოუდებს, სან�
 გავიმეოროთ კურსის ამ თავის მასალა:
 
 - [თავი 9. გამოთვლის ტიპები: managed node groups, self-managed, Fargate, Auto
-  Mode](../../course/09/ru.md) - როდის ჩავრთოთ EKS Auto Mode და როდის ავაწყოთ საკუთარი
+  Mode](../../course/09/ge.md) - როდის ჩავრთოთ EKS Auto Mode და როდის ავაწყოთ საკუთარი
   სტეკი
 
 ## რას ვქმნით

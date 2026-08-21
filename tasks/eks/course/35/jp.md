@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第35章. アプリケーションの自動スケーリング: HPA、外部メトリクス、KEDA
 
 > **次は何か。** 第33章と第34章では、オブザーバビリティの2本柱であるメトリクスとログを扱いました。ここではメトリクスを実際に利用します。すなわち、負荷に応じて Pod レプリカ数を変える、アプリケーション自体のスケーリングです。関連する話題は別の章で扱います。これらの Pod を配置するノードのスケーリング（Cluster Autoscaler、Karpenter）は第11章と第12章、メトリクスの取得元（metrics-server、Prometheus）は第33章、Pod の垂直サイジング（requests/limits、VPA）は第14章、ボトルネックを探すためのトレーシングは第36章です。ここで扱うのは一つです。実際の負荷、さらに CPU ベースの HPA では見えないイベントにもレプリカ数を追従させる方法です。
@@ -245,7 +245,7 @@ Kubernetes のオートスケーリングは、独立した3つの軸で行わ�
 15. Pod はアプリケーションと proxy service mesh から成ります。`Resource` が不正確な見方を与えるのはなぜで、代わりに何を使いますか？
 16. KEDA が作成した HPA の `TARGETS` に `<unknown>` が現れ、ScaledObject は正しい状態です。AWS API 側で何を確認し、どの3つの設定がリスクを下げますか？
 
-## Practice
+## 実践
 
 このテーマのコースラボ: [ラボ124 - アプリケーションの自動スケーリング: HPA、KEDA、Prometheus](../../labs/124/README_JP.MD)。このラボでは kube-prometheus-stack と KEDA をインストールし、`prometheus` scaler を持つ `ScaledObject` を記述します。KEDA が HPA を置き換えるのではなく、通常の `keda-hpa-*` を作成して管理することを実際に確認します。次に、別の Pod の負荷を基にアプリケーションをスケールし、安定化ウィンドウを介して最小値へ戻る様子を観察します。検証は `check_result` コマンドで行います。起動は `TASK=124 make run_eks_task` です。
 
@@ -273,7 +273,7 @@ kubectl get scaledobject -A
 kubectl get hpa -A | grep keda-hpa
 ```
 
-状況を対応付けてください。サービスはその負荷を表すメトリクスでスケールしているか、それとも「慣習で」CPU に基づいているか。HPA はメトリクスを認識しているか、それとも `<unknown>` か。そして新しいレプリカはノード不足で `Pending` に留まっていないか。コースラボのほか、リポジトリには KEDA と Prometheus によるオートスケーリングのコース外ラボ（`../../labs/03/README_RUS.MD`）があります。これは Prometheus をデプロイし、KEDA をインストールし、実際の RPS に従ってアプリケーションをスケールします。チェーン全体を実際に見る良い方法です。
+状況を対応付けてください。サービスはその負荷を表すメトリクスでスケールしているか、それとも「慣習で」CPU に基づいているか。HPA はメトリクスを認識しているか、それとも `<unknown>` か。そして新しいレプリカはノード不足で `Pending` に留まっていないか。コースラボのほか、リポジトリには KEDA と Prometheus によるオートスケーリングのコース外ラボ（[ラボ 03](../../labs/03/README_JP.MD)）があります。これは Prometheus をデプロイし、KEDA をインストールし、実際の RPS に従ってアプリケーションをスケールします。チェーン全体を実際に見る良い方法です。
 
 ---
 [目次](../README_JP.md) · [第34章](../34/jp.md) · [第36章](../36/jp.md)

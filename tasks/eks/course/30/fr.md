@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Русская версия](ru.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 30. NetworkPolicy dans EKS : stratégie réseau VPC CNI et Cilium
 
 > **La suite.** Les chapitres 26 à 29 ont montré comment le trafic entre dans le cluster depuis l'extérieur : NLB (chapitre 26),

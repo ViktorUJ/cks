@@ -20,7 +20,7 @@ endpoints。
 
 鞏固課程章節內容:
 
-- [第 19 章。強化措施:IMDSv2、PSA、私有 cluster](../../course/19/ru.md) - node、pod
+- [第 19 章。強化措施:IMDSv2、PSA、私有 cluster](../../course/19/tw.md) - node、pod
   與網路的防護層
 
 ## 我們會建立什麼

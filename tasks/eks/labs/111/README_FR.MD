@@ -17,7 +17,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Consolider le contenu du chapitre suivant du cours :
 
-- [Chapitre 13. Instances spot : interruptions, diversification](../../course/13/ru.md) -
+- [Chapitre 13. Instances spot : interruptions, diversification](../../course/13/fr.md) -
   gestion des événements
 
 ## Ce que nous créons

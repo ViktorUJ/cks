@@ -22,7 +22,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff aus dem Kurskapitel vertiefen:
 
-- [Kapitel 22. Policies und Multi-Tenancy: Kyverno und Gatekeeper, Team-Isolation](../../course/22/ru.md) -
+- [Kapitel 22. Policies und Multi-Tenancy: Kyverno und Gatekeeper, Team-Isolation](../../course/22/de.md) -
   der Platz von ValidatingAdmissionPolicy unter den Policy-Engines
 
 ## Was wir erstellen

@@ -20,7 +20,7 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from the course chapter:
 
-- [Chapter 40. Reliability: multi-AZ, PDB, topology spread](../../course/40/ru.md) -
+- [Chapter 40. Reliability: multi-AZ, PDB, topology spread](../../course/40/en.md) -
   correct node draining
 
 ## What we're creating

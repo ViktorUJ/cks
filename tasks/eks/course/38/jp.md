@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
 # 第38章. クラスターのアップグレード: バージョン別の in-place、blue/green クラスター、廃止された API
 
 > **次は何か。** 第37章ではアドオンを扱いました。誰がそのライフサイクルを所有するのか、そしてクラスターのバージョンと整合させる方法です。ここでは Kubernetes バージョン別のクラスター全体のアップグレードを扱います。バージョンのライフサイクル、in-place アップグレードの順序、廃止された API、blue/green 移行です。関連する内容は他の章で扱います。アドオン自体とその更新順序は第37章、バージョンのロールバック（rollback readiness）は第39章、信頼性、PDB、適切なノード停止は第40章、blue/green 移行の GitOps は第44章、managed ノードと Karpenter drift は第11章と第12章です。

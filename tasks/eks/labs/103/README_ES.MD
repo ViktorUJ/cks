@@ -22,13 +22,13 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 Reforzar el material de estos capítulos del curso:
 
 - [Capítulo 6. Red del clúster: VPC CNI, ENI y direcciones IP, planificación de
-  CIDR](../../course/06/ru.md) - de dónde vienen las direcciones de los pods y cómo se
+  CIDR](../../course/06/es.md) - de dónde vienen las direcciones de los pods y cómo se
   calcula el límite de pods
 - [Capítulo 7. Escalar el plan de direcciones: prefix delegation, secondary CIDR, custom
-  networking](../../course/07/ru.md) - qué hacer cuando las direcciones empiezan a
+  networking](../../course/07/es.md) - qué hacer cuando las direcciones empiezan a
   escasear
 - [Capítulo 14. Densidad y sizing: pods per node, límites de ENI, requests y limits en la
-  nube](../../course/14/ru.md) - cómo el límite de direcciones coincide con el límite de
+  nube](../../course/14/es.md) - cómo el límite de direcciones coincide con el límite de
   recursos
 
 ## Qué vamos a crear

@@ -22,8 +22,8 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 Den Stoff aus dem Kurskapitel vertiefen:
 
 - [Kapitel 25. S3 in Anwendungen: Mountpoint for Amazon S3 CSI und
-  Zugriffsmuster](../../course/25/ru.md) - das Hauptmaterial des Labs
-- [Kapitel 41-42. AWS Backup für EKS](../../course/41/ru.md) - warum EBS-Snapshots hier
+  Zugriffsmuster](../../course/25/de.md) - das Hauptmaterial des Labs
+- [Kapitel 41-42. AWS Backup für EKS](../../course/41/de.md) - warum EBS-Snapshots hier
   nicht anwendbar sind
 
 ## Was wir erstellen

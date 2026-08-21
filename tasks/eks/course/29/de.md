@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 29. DNS und Zertifikate: external-dns, Route 53, cert-manager
 
 > **Wie es weitergeht.** Die Kapitel 26-28 zeigten, wie Load Balancer erstellt werden: NLB aus einem Service (Kapitel 26),

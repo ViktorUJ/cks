@@ -21,10 +21,10 @@ NAT Gateway(正確的模式),而第三個私有子網,在 `eu-central-1c`,則完
 鞏固以下課程章節的內容:
 
 - [第 31 章。Egress 與流量成本:NAT、VPC endpoint、
-  PrivateLink](../../course/31/ru.md) - 為什麼整個集群共用一個 NAT 會為 cross-AZ 流量
+  PrivateLink](../../course/31/tw.md) - 為什麼整個集群共用一個 NAT 會為 cross-AZ 流量
   付兩次錢,以及 gateway 和 interface endpoint 如何解決這個問題
 - [第 43 章。成本:OpenCost 與 Kubecost、right-sizing、Savings Plans、spot
-  mix、流量](../../course/43/ru.md) - 流量和 endpoint 在 Cost Explorer 中依 usage type
+  mix、流量](../../course/43/tw.md) - 流量和 endpoint 在 Cost Explorer 中依 usage type
   呈現的方式
 
 ## 我們要創建什麼

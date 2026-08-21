@@ -19,7 +19,7 @@ nodes` 依然是空的。接著透過 `aws eks create-access-entry` 修復它,�
 
 鞏固課程章節的內容:
 
-- [第 45 章。Node 沒有加入叢集](../../course/45/ru.md) - IAM、SG、
+- [第 45 章。Node 沒有加入叢集](../../course/45/tw.md) - IAM、SG、
   user data、bootstrap、kubelet、按層級系統化診斷
 
 ## 我們要建立什麼

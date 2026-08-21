@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 37. EKS-ის ადონები: managed addons და Helm, ვერსიები და განახლების თანმიმდევრობა
 
 > **რა არის შემდეგ.** ამ თავით იწყება მე-7 ნაწილი - უკვე შექმნილი და მოქმედი კლასტერის

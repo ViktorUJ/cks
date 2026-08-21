@@ -17,7 +17,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material del siguiente capítulo del curso:
 
-- [Capítulo 13. Instancias spot: interrupciones, diversificación](../../course/13/ru.md) -
+- [Capítulo 13. Instancias spot: interrupciones, diversificación](../../course/13/es.md) -
   gestión de eventos
 
 ## Qué vamos a crear

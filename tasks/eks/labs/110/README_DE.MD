@@ -21,8 +21,8 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 
 Den Stoff der folgenden Kurskapitel vertiefen:
 
-- [Kapitel 8. Netzwerk im Detail: VPC CNI und alternative CNIs](../../course/08/ru.md) - die Grenzen der eingebauten Netzwerkrichtlinie gegenüber Cilium
-- [Kapitel 30. NetworkPolicy: Regeln, DNS, Testen](../../course/30/ru.md) - Default Deny, Erlauben nach Label und Namespace, Egress
+- [Kapitel 8. Netzwerk im Detail: VPC CNI und alternative CNIs](../../course/08/de.md) - die Grenzen der eingebauten Netzwerkrichtlinie gegenüber Cilium
+- [Kapitel 30. NetworkPolicy: Regeln, DNS, Testen](../../course/30/de.md) - Default Deny, Erlauben nach Label und Namespace, Egress
 
 ## Was wir erstellen
 

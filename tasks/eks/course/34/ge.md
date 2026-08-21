@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 34. ლოგები: Fluent Bit, CloudWatch Logs, OpenSearch, ხარჯების კონტროლი
 
 > **რა არის შემდეგ.** 33-ე თავში განხილული იყო მეტრიკები - ნოდებისა და პოდების დატვირთვის

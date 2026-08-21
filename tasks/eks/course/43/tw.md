@@ -33,12 +33,12 @@ AWS billing 以資源層級運作：某個 EC2 instance 以某種規格運行了
 
 ```mermaid
 flowchart TB
-    bill["AWS 帳單<br/>EC2 / EBS / data transfer"]
-    q["多少成本<br/>namespace / 團隊？"]
-    metrics["用量 metrics<br/>Prometheus（第 33 章）"]
+    bill["AWS 帳單<br/>EC2 / EBS / 資料傳輸"]
+    q["依命名空間／團隊<br/>的成本？"]
+    metrics["使用量指標<br/>Prometheus（第 33 章）"]
     price["AWS 資源價格"]
     alloc["成本分攤<br/>OpenCost / Kubecost"]
-    ns["依 namespace / label<br/>的成本"]
+    ns["依命名空間／標籤<br/>的成本"]
     bill --> q
     metrics --> alloc
     price --> alloc
@@ -86,7 +86,7 @@ EKS 中最大的節省，通常不是 commitments 或 Spot，而是消除空白�
 診斷方式是比較 requested 與 used：
 
 ```bash
-# Pod requests
+# Pod 資源請求
 kubectl get pods -A -o custom-columns=\
 NS:.metadata.namespace,POD:.metadata.name,\
 CPU_REQ:.spec.containers[*].resources.requests.cpu,\
@@ -157,13 +157,13 @@ flowchart TB
 | Cross-AZ traffic | topology-aware routing、Pod locality | 第 31 章 |
 | NAT Gateway | NAT 處理費與 per-GB 費用昂貴 | 第 31 章 |
 | VPC endpoints / PrivateLink | 讓前往 AWS services 的流量避開 NAT | 第 31 章 |
-| Logs | volume、retention、sampling、filters | 第 34 章 |
-| EBS volumes | 以 gp3 取代 gp2、大小、snapshots | 第 23 章 |
+| 日誌 | 資料量、保留期、抽樣、篩選器 | 第 34 章 |
+| EBS 磁碟區 | 以 gp3 取代 gp2、大小、快照 | 第 23 章 |
 
 - **Cross-AZ。** 區域間流量雙向計費。一個 AZ 中的服務呼叫另一個 AZ 中的資料庫時，每 GB 都需付費。成本分攤與 network metrics 有助於發現此問題；解法（topology aware hints、locality）見第 31 章。
 - **NAT Gateway。** 同時收取每小時運行費與每個處理 GB 的費用。經由 NAT 前往網際網路或 AWS services 的 Pods 會增加帳單，而 VPC endpoints 與 PrivateLink 正可解決此問題（第 31 章）。
-- **Logs。** 對於冗長的 applications 及很長的 retention，CloudWatch Logs、OpenSearch 與 log delivery traffic 是顯著項目。控制 volume、retention 與 sampling 見第 34 章。
-- **儲存。** 在相同容量下，`gp3` 通常比 `gp2` 划算，並允許分別設定 IOPS 與 throughput；未使用的 volumes 與舊 snapshots 是無聲的洩漏（第 23 章）。
+- **日誌。** 對於冗長的應用程式及很長的保留期，CloudWatch Logs、OpenSearch 與日誌傳遞流量是顯著項目。控制資料量、保留期與抽樣見第 34 章。
+- **儲存。** 在相同容量下，`gp3` 通常比 `gp2` 划算，並允許分別設定 IOPS 與 throughput；未使用的磁碟區與舊快照是無聲的洩漏（第 23 章）。
 
 ## 43.7. FinOps 實務
 

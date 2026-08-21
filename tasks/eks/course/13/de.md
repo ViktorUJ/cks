@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Kapitel 13. Spot-Instances: Unterbrechungen, Diversifizierung, Ereignisverarbeitung
 
 > **Wie geht es weiter?** Autoscaler wurden in Kapitel 11 behandelt, die Karpenter-Konfiguration (`NodePool`,
@@ -385,7 +385,7 @@ Prüfen Sie als Nächstes die Unterbrechungsbereitschaft. Nehmen Sie ein zentral
 sind sie über Zonen verteilt? Sehen Sie in die Logs des Unterbrechungshandlers
 (`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interrupt`) und bewerten
 Sie den normalen „Lärm“ von Entzügen. Arbeiten Sie außerdem das frühe Karpenter-Lab aus dem Repository
-durch ([Karpenter](../../labs/02/README.MD)). Es gehört nicht zum Kurs, die Themen überschneiden sich
+durch ([Karpenter](../../labs/02/README_DE.MD)). Es gehört nicht zum Kurs, die Themen überschneiden sich
 aber.
 
 ---

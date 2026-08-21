@@ -26,8 +26,8 @@ Checking is automatic, via the `check_result` command.
 
 Reinforce the material from these course chapters:
 
-- [Chapter 27. Ingress through ALB: target-type, annotations, TLS and ACM, WAF](../../course/27/ru.md)
-- [Chapter 29. DNS and certificates: external-dns, Route 53, cert-manager](../../course/29/ru.md)
+- [Chapter 27. Ingress through ALB: target-type, annotations, TLS and ACM, WAF](../../course/27/en.md)
+- [Chapter 29. DNS and certificates: external-dns, Route 53, cert-manager](../../course/29/en.md)
 
 ## What we're creating
 

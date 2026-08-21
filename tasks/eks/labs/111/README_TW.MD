@@ -16,7 +16,7 @@ PDB 在 voluntary eviction 期間實際上保護的是什麼,以及 voluntary dr
 
 鞏固以下課程章節的內容:
 
-- [第 13 章。Spot instance:中斷、diversification](../../course/13/ru.md) - 事件處理
+- [第 13 章。Spot instance:中斷、diversification](../../course/13/tw.md) - 事件處理
 
 ## 我們要創建什麼
 

@@ -19,7 +19,7 @@ apiserver 內部計算,不需要外部服務,也沒有「webhook 沒有回應」
 
 鞏固以下課程章節的內容:
 
-- [第 22 章。政策與多租戶:Kyverno 與 Gatekeeper,團隊隔離](../../course/22/ru.md) -
+- [第 22 章。政策與多租戶:Kyverno 與 Gatekeeper,團隊隔離](../../course/22/tw.md) -
   ValidatingAdmissionPolicy 在 policy engine 中的位置
 
 ## 我們要創建什麼

@@ -87,9 +87,9 @@ aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=vpc-0a1b2c3d4e5f6a7b8
 | 屬性 | Security group | Network ACL |
 |----------|----------------|-------------|
 | 層級 | ENI（instance、Pod、load balancer） | 整個 subnet |
-| State | stateful，response 自動允許 | stateless，需要兩個方向 |
-| Rules | 僅 allow | allow 與 deny，依號碼 |
-| Rule 中的 source | CIDR **或另一個 SG** | 僅 CIDR |
+| 狀態 | 有狀態，回應自動允許 | 無狀態，需要兩個方向 |
+| 規則 | 僅允許 | 允許與拒絕，依編號 |
+| 規則中的來源 | CIDR **或另一個 SG** | 僅 CIDR |
 | EKS 實務 | 每個 ENI 多個 SG，主要工具 | 保持 default |
 
 預設使用 security groups 過濾，只有在 subnet 層級需要明確 deny 時才處理 NACL：stateless rules 很難診斷，而「traffic 恰好只在一個方向消失」是自行建立 NACL 的典型症狀（第 46 章）。
@@ -116,7 +116,7 @@ fields @timestamp, interfaceId, srcAddr, dstAddr, srcPort, dstPort, protocol, ac
 
 必須計算 addresses，因為 VPC CNI 中**每個 Pod 都占用 node subnet 中的一個 IP**。這不是 kubeadm 中「Pods 位於 overlay」的情況，而是字面上的事實：一個 node 上 40 個 Pods 就是 40 個 subnet addresses，加上 node 自身的 addresses。Plugin 還會預先保留一個 warm address pool，因此實際消耗高於運行中 Pod 數量。此外，AWS 在**每個 subnet 保留 5 個 addresses**：network address、VPC router、Route 53 Resolver（VPC 規模中那個 `.2`）、未來預留以及最後一個 address。因此 `/24` 可用 251 個 addresses，而非 256 個。
 
-| Mask | 總 addresses | 可用（減去 5） | 用途 |
+| 遮罩 | 位址總數 | 可用（減去 5） | 用途 |
 |-------|---------------|--------------------|---------------|
 | `/24` | 256 | 251 | 給 load balancers 的 public subnet |
 | `/22` | 1 024 | 1 019 | 小型 cluster、dev |

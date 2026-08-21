@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)
+[ロシア語版](ru.md) · [英語版](en.md) · [スペイン語版](es.md) · [フランス語版](fr.md) · [ドイツ語版](de.md) · [ジョージア語版](ge.md) · [繁体字中国語版](tw.md)
 # 第21章. 監査と検出: control plane ログ、CloudTrail、GuardDuty、runtime monitoring
 
 > **この先。** 第3部では、アイデンティティ（第16-17章）、シークレット（第18章）、ノード、Pod、
@@ -362,7 +362,7 @@ GuardDuty を有効化すること、ログを専用アカウントへ移すこ�
 12. マルチアカウントで delegated administrator と専用の log-archive アカウントが必要な理由は何ですか。
 13. 共通の識別子がない audit ログと CloudTrail の event を、どのように関連付けますか。
 
-## Practice
+## 実践
 
 この章には専用の lab はまだありませんが、すべて実際のクラスターとアカウントで確認できます。
 `audit` が有効であることを確認します。`aws eks describe-cluster --name demo --query 'cluster.logging'`。
@@ -381,4 +381,3 @@ AttributeKey=EventName,AttributeValue=UpdateClusterConfig`。EC2 上にテスト
 
 ---
 [目次](../README_JP.md) · [第20章](../20/jp.md) · [第22章](../22/jp.md)
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [Русская версия](ru.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md)

@@ -22,7 +22,7 @@ Abnahmekriterien. Die Prüfung erfolgt automatisch über den Befehl `check_resul
 Den Stoff aus dem Kurskapitel vertiefen:
 
 - [Kapitel 44. GitOps und Delivery: Argo CD und Flux, Verwaltung einer Cluster-
-  Flotte](../../course/44/ru.md) - Git als Quelle der Wahrheit, sync und health,
+  Flotte](../../course/44/de.md) - Git als Quelle der Wahrheit, sync und health,
   self-heal
 
 ## Was wir erstellen

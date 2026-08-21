@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md) · [Русская версия](ru.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 13. Instancias spot: interrupciones, diversificación y gestión de eventos
 
 > **Qué sigue.** Los autoescaladores se explican en el capítulo 11; la configuración de Karpenter (`NodePool`,
@@ -373,7 +373,7 @@ Después compruebe la preparación para las interrupciones. Tome un Deployment c
 Revise los registros del gestor de interrupciones
 (`kubectl logs -n kube-system -l app.kubernetes.io/name=karpenter | grep -i interrupt`) y evalúe el «ruido»
 normal de las retiradas. Revise por separado la práctica temprana de Karpenter del repositorio
-([Karpenter](../../labs/02/README.MD)): no forma parte del curso, pero el tema se relaciona.
+([Karpenter](../../labs/02/README_ES.MD)): no forma parte del curso, pero el tema se relaciona.
 
 ---
 [Índice](../README_ES.md) · [Capítulo 12](../12/es.md) · [Capítulo 14](../14/es.md)

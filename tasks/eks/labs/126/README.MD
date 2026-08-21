@@ -21,7 +21,7 @@ details are in the "Infrastructure" section.
 
 Reinforce the material from this course chapter:
 
-- [Chapter 46. Network failures](../../course/46/ru.md) - security group as a layer of
+- [Chapter 46. Network failures](../../course/46/en.md) - security group as a layer of
   network failure
 
 ## What we're creating

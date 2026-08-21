@@ -32,7 +32,7 @@ port へ balancer の SG からのトラフィックを通過させない」。�
 
 コースの以下の章の内容を定着させます:
 
-- [第 46 章。ネットワーク障害:SG、NACL、DNS、unhealthy な targets](../../course/46/ru.md)
+- [第 46 章。ネットワーク障害:SG、NACL、DNS、unhealthy な targets](../../course/46/jp.md)
 
 ## 作成するもの
 

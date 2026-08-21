@@ -20,7 +20,7 @@ Pod は古い値のまま固まってしまいます。
 
 コースの以下の章の内容を定着させます:
 
-- [第 18 章。シークレット: KMS、Secrets Manager、External Secrets 経由の SSM](../../course/18/ru.md)
+- [第 18 章。シークレット: KMS、Secrets Manager、External Secrets 経由の SSM](../../course/18/jp.md)
 
 ## 作成するもの
 

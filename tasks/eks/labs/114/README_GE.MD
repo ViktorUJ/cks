@@ -20,7 +20,7 @@ Prometheus) უკვე მზადაა მეტრიკების მ�
 
 გავამყაროთ კურსის თავის მასალა:
 
-- [თავი 33. მეტრიკები: Container Insights, Managed Prometheus და Grafana](../../course/33/ru.md)
+- [თავი 33. მეტრიკები: Container Insights, Managed Prometheus და Grafana](../../course/33/ge.md)
 
 ## რას ვქმნით
 

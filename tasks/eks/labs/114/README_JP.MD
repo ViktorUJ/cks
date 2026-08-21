@@ -20,7 +20,7 @@ Prometheus 互換のストレージ(Amazon Managed Prometheus)がすでにメト
 
 コースの以下の章の内容を定着させます:
 
-- [第 33 章。メトリクス:Container Insights、Managed Prometheus、Grafana](../../course/33/ru.md)
+- [第 33 章。メトリクス:Container Insights、Managed Prometheus、Grafana](../../course/33/jp.md)
 
 ## 作成するもの
 

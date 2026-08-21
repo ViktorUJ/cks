@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 31. Egress და ტრაფიკის ღირებულება: NAT, VPC endpoints, PrivateLink
 
 > **რა არის შემდეგ.** 26-30-ე თავებში განხილული იყო კლასტერში შესვლა და იზოლაცია: NLB (თავი 26), ALB (თავი

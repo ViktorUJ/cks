@@ -22,7 +22,7 @@ aceptación. La verificación es automática, con el comando `check_result`.
 
 Reforzar el material del capítulo del curso:
 
-- [Capítulo 19. Hardening: IMDSv2, PSA, cluster privado](../../course/19/ru.md) - capas
+- [Capítulo 19. Hardening: IMDSv2, PSA, cluster privado](../../course/19/es.md) - capas
   de protección del nodo, el pod y la red
 
 ## Qué creamos

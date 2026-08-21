@@ -20,13 +20,13 @@ kubeadm-ში წვდომა client certificate-ით გაიცემ�
 ```mermaid
 flowchart TB
     k["kubectl kubeconfig-ით"]
-    plg["exec plugin<br/>aws eks get-token"]
-    tok["Token: ხელმოწერილი<br/>მოთხოვნა STS-ზე"]
+    plg["exec პლაგინი<br/>aws eks get-token"]
+    tok["ტოკენი: ხელმოწერილი<br/>მოთხოვნა STS-ზე"]
     api["EKS apiserver"]
     idn["IAM principal<br/>role ან user"]
     map["Kubernetes<br/>username და ჯგუფები"]
-    rbac["RBAC: bindings,<br/>Role, ClusterRole"]
-    res["Allow ან Forbidden"]
+    rbac["RBAC: მიბმები,<br/>Role, ClusterRole"]
+    res["ნებადართულია ან Forbidden"]
     k --> plg --> tok --> api
     api --> idn --> map --> rbac --> res
     style api fill:#326ce5,color:#fff
@@ -35,13 +35,13 @@ flowchart TB
 
 `kubectl` kubeconfig-ში `exec` block-ს ხედავს, იძახებს `aws eks get-token`-ს და იღებს არა password-ს ან certificate-ს, არამედ STS-ის **ხელმოწერილ მოთხოვნას**: ქსელში signature მიდის და არა secret. Plugin credentials-ს AWS provider chain-იდან იღებს: `AWS_PROFILE`, environment variables, SSO cache და instance role (თავი 0.5). apiserver signature-ს ამოწმებს და principal ARN-ს იღებს; შემდეგ ARN `username`-ად და `kubernetesGroups`-ად map-დება, ხოლო გადაწყვეტილებას RBAC იღებს.
 
-დასამახსოვრებელი წესი ასეთია: `AdministratorAccess`-იანი IAM policy **თავისთავად კლასტერის შიგნით არანაირ უფლებას არ გაძლევთ**. ის EKS API გამოძახების საშუალებას იძლევა (კლასტერის აღწერა, configuration-ის შეცვლა, მთლიანად წაშლა), მაგრამ `kubectl get pods` `Unauthorized`-ს დააბრუნებს, სანამ principal კლასტერში არ იქნება map-ებული. ერთადერთი გამონაკლისი access entry-ებთან გაჩნდა: EKS API-ით შესაძლებელია managed access policy-ის ასოცირება და მაშინ AWS უფლებებს თქვენს `Role`-სა და `ClusterRole`-ს გვერდის ავლით გასცემს (ნაწილი 5.6). Token მიმდინარე AWS session-ზეა მიბმული, ამიტომ „დილით მუშაობდა, ლანჩის შემდეგ Unauthorized“ ჩვეულებრივ SSO session-ის ვადის გასვლას ნიშნავს; server-ის მხარე `authenticator` ტიპის logs-ში ჩანს (თავი 2).
+დასამახსოვრებელი წესი ასეთია: `AdministratorAccess`-იანი IAM policy **თავისთავად კლასტერის შიგნით არანაირ უფლებას არ გაძლევთ**. ის EKS API გამოძახების საშუალებას იძლევა (კლასტერის აღწერა, configuration-ის შეცვლა, მთლიანად წაშლა), მაგრამ `kubectl get pods` `Unauthorized`-ს დააბრუნებს, სანამ principal კლასტერში არ იქნება map-ებული. ერთადერთი გამონაკლისი access entry-ებთან გაჩნდა: EKS API-ით შესაძლებელია managed access policy-ის ასოცირება და მაშინ AWS უფლებებს თქვენს `Role`-სა და `ClusterRole`-ს გვერდის ავლით გასცემს (ნაწილი 5.6). Token მიმდინარე AWS session-ზეა მიბმული, ამიტომ „დილით მუშაობდა, ლანჩის შემდეგ Unauthorized“ ჩვეულებრივ SSO session-ის ვადის გასვლას ნიშნავს; server-ის მხარე `authenticator` ტიპის ლოგები-ში ჩანს (თავი 2).
 
 ## 5.3. სამი authenticationMode რეჟიმი
 
 რეჟიმი განსაზღვრავს, საიდან იღებს კლასტერი principal mapping-ებს. ის შექმნისას (თავი 4) ირჩევა და მოქმედ კლასტერზეც შეიძლება შეიცვალოს.
 
-| რეჟიმი | Mapping-ის წყარო | როდის შეეფერება |
+| რეჟიმი | ასახვის წყარო | როდის შეეფერება |
 |---|---|---|
 | `CONFIG_MAP` | მხოლოდ `aws-auth` ConfigMap | legacy: ძველი კლასტერები მიგრაციამდე |
 | `API_AND_CONFIG_MAP` | access entry-ებიც და `aws-auth`-ც | მიგრაციის გარდამავალი რეჟიმი |
@@ -76,9 +76,9 @@ data:
 
 მექანიზმი მუშაობს, მაგრამ მისი პრობლემები ზუსტად ხსნის, რატომ შექმნა AWS-მ ჩანაცვლება.
 
-- **yaml-ის ერთი შეცდომა ყველასთვის წვდომის დაკარგვას ნიშნავს.** `mapRoles` authenticator-ისთვის string-ია, schema validation არ არსებობს და ConfigMap-ის გამოსწორებას სწორედ იმ ConfigMap-ით მინიჭებული წვდომა სჭირდება.
-- **Object კლასტერშია და არა cluster configuration-ში.** ის `describe-cluster`-ში არ ჩანს, EKS API-ით ვერ იმართება, თქვენს IaC-ს სცილდება და history არ აქვს: ვერ გაიგებთ ვინ დაამატა `system:masters`-იანი role ან როდის. EKS API calls CloudTrail-ში ჩანს (თავი 21).
-- **წვდომას წინასწარ ვერ გასცემთ და managed policy-ები არ არის.** ARN-ში typo მხოლოდ მაშინ იპოვება, როცა ვინმე ვერ შევა, ხოლო ConfigMap entry-ს access policy საერთოდ ვერ ასოცირდება.
+- **yaml-ის ერთი შეცდომა ყველასთვის წვდომის დაკარგვას ნიშნავს.** `mapRoles` authenticator-ისთვის string-ია, სქემის ვალიდაცია არ არსებობს და ConfigMap-ის გამოსწორებას სწორედ იმ ConfigMap-ით მინიჭებული წვდომა სჭირდება.
+- **ობიექტი კლასტერშია და არა კლასტერის კონფიგურაციაში.** ის `describe-cluster`-ში არ ჩანს, EKS API-ით ვერ იმართება, თქვენს IaC-ს სცილდება და ცვლილებების ისტორია არ აქვს: ვერ გაიგებთ ვინ დაამატა `system:masters`-იანი role ან როდის. EKS API-ის გამოძახებები CloudTrail-ში ჩანს (თავი 21).
+- **წვდომას წინასწარ ვერ გასცემთ და მართვადი პოლიტიკები არ არსებობს.** ARN-ში typo მხოლოდ მაშინ იპოვება, როცა ვინმე ვერ შევა, ხოლო ConfigMap entry-ს access policy საერთოდ ვერ ასოცირდება.
 
 ## 5.5. Access entry-ები: mapping როგორც EKS API object
 
@@ -88,9 +88,9 @@ Access entry cluster access configuration-ში ცხოვრობს და
 flowchart TB
     p["IAM principal<br/>role ან user"]
     ae["Access entry:<br/>username, groups, type"]
-    ap["AWS access policy<br/>scope: cluster ან ns"]
+    ap["AWS access policy<br/>scope: cluster ან namespace"]
     grp["kubernetesGroups"]
-    rb["თქვენი RBAC: bindings,<br/>Role, ClusterRole"]
+    rb["თქვენი RBAC: მიბმები,<br/>Role, ClusterRole"]
     perm["ეფექტური უფლებები"]
     p --> ae
     ae --> ap --> perm
@@ -113,11 +113,11 @@ aws eks describe-access-entry --cluster-name demo \
 
 ამის შემდეგ `platform-admins` ჩვეულებრივი Kubernetes group-ია: მისთვის `ClusterRoleBinding` შექმენით და CKA-დან ცნობილი ყველაფერი მუშაობს. Access entry RBAC-ს არ ცვლის; ის RBAC subject-ს გაძლევთ.
 
-**Cluster creator entry.** `bootstrapClusterCreatorAdminPermissions` ნაგულისხმევად `true`-ია: cluster-ის შემქმნელი principal მის შიგნით administrator permissions-ს იღებს. ეს ერთდროულად escape hatch-იცაა და ხაფანგიც (თავი 4): entry ჩვეულებრივ მუშაობაში უხილავია, code-ში არ არის აღწერილი, IAM policies-ით ვერ წაიშლება და თუ cluster ინჟინრის პირადი role-ით შეიქმნა, role ინჟინრის წასვლის შემდეგაც ინარჩუნებს უფლებებს. პრაქტიკა: cluster-ს CI role ქმნის, flag `false`-ია და administrator permissions code-ში explicit access entry-ებითაა აღწერილი.
+**კლასტერის შემქმნელის ჩანაწერი.** `bootstrapClusterCreatorAdminPermissions` ნაგულისხმევად `true`-ია: cluster-ის შემქმნელი principal მის შიგნით administrator permissions-ს იღებს. ეს ერთდროულად escape hatch-იცაა და ხაფანგიც (თავი 4): entry ჩვეულებრივ მუშაობაში უხილავია, code-ში არ არის აღწერილი, IAM policies-ით ვერ წაიშლება და თუ cluster ინჟინრის პირადი role-ით შეიქმნა, role ინჟინრის წასვლის შემდეგაც ინარჩუნებს უფლებებს. პრაქტიკა: cluster-ს CI role ქმნის, flag `false`-ია და administrator permissions code-ში explicit access entry-ებითაა აღწერილი.
 
 ## 5.6. Access policy-ები: cluster უფლებები EKS API-ით
 
-უფლებების მინიჭების მეორე გზა access entry-სთან managed **access policy**-ის ასოცირებაა. ეს Kubernetes-level policies-ია და არა IAM policies: შიგნით verbs და resources აქვს, მხოლოდ უფლებებს იძლევა და მათი შეცნა ან შექმნა თქვენ არ შეგიძლიათ. ისინი RBAC-ს ავსებს: principal-ის effective rights არის access policy-ებიდან მიღებული და მისი groups-სა და `username`-თან bindings-ით მიღებული უფლებების ჯამი.
+უფლებების მინიჭების მეორე გზა access entry-სთან managed **access policy**-ის ასოცირებაა. ეს Kubernetes-level policies-ია და არა IAM policies: შიგნით verbs და resources აქვს, მხოლოდ უფლებებს იძლევა და მათი შეცნა ან შექმნა თქვენ არ შეგიძლიათ. ისინი RBAC-ს ავსებს: principal-ის effective rights არის access policy-ებიდან მიღებული და მისი groups-სა და `username`-თან მიბმებით მიღებული უფლებების ჯამი.
 
 | Access policy | რას იძლევა | ტიპური access scope |
 |---|---|---|
@@ -145,16 +145,16 @@ aws eks list-associated-access-policies --cluster-name demo \
 
 | თვისება | `aws-auth` ConfigMap | Access entry-ები |
 |---|---|---|
-| სად ცხოვრობს | object `kube-system`-ში | cluster configuration EKS API-ში |
-| Validation | არა, yaml string field-ის შიგნით | EKS API-ის მხარეს |
+| სად ცხოვრობს | ობიექტი `kube-system`-ში | კლასტერის კონფიგურაცია EKS API-ში |
+| ვალიდაცია | არა, yaml-ის სტრიქონულ ველში | EKS API-ის მხარეს |
 | შეცდომა რას აზიანებს | ყველას წვდომას, თქვენს ჩათვლით | ერთ entry-ს |
-| ცვლილებების history | არა | CloudTrail (თავი 21) |
-| AWS managed policies | არა | კი, access policy-ები |
-| IaC management | Kubernetes provider-ით | AWS provider-ით |
+| ცვლილებების ისტორია | არა | CloudTrail (თავი 21) |
+| AWS-ის მართვადი პოლიტიკები | არა | კი, access policy-ები |
+| მართვა IaC-იდან | Kubernetes provider-ით | AWS provider-ით |
 
 1. **ინვენტარიზაცია.** `aws-auth` ფაილში შეინახეთ: ეს მიგრაციის გეგმაცაა და rollback-იც.
 2. **`API_AND_CONFIG_MAP` რეჟიმი.** Access entry-ები აქტიურდება, ConfigMap მუშაობას აგრძელებს და არსებული წვდომა არ წყდება.
-3. **Entry-ები ადამიანებისა და სერვისებისთვის.** ყველა `mapRoles` და `mapUsers` ხაზისთვის, რომელიც **თქვენ** დაამატეთ, იგივე `username`-ითა და groups-ით access entry შექმენით: მათ უკან RBAC bindings დგას.
+3. **Entry-ები ადამიანებისა და სერვისებისთვის.** ყველა `mapRoles` და `mapUsers` ხაზისთვის, რომელიც **თქვენ** დაამატეთ, იგივე `username`-ითა და groups-ით access entry შექმენით: მათ უკან RBAC-ის მიბმები დგას.
 4. **Nodes არ შეეხოთ.** EKS-ის მიერ managed node groups-სა და Fargate profiles-ისთვის შექმნილი ხაზები სერვისის პასუხისმგებლობად რჩება; მათი წაშლა ექვივალენტური entry-ების გარეშე cluster-ს აზიანებს. Self-managed nodes-ისთვის იგივე `username`-ითა და groups-ით `EC2_LINUX` entry შექმენით.
 5. **წაშლამდე შეამოწმეთ.** მიგრაციის role-ით **მეორე** session გახსენით და დარწმუნდით, რომ მუშაობს, პირველის დახურვის გარეშე. შემდეგ ConfigMap-ის ხაზები სათითაოდ წაშალეთ.
 6. **`API` რეჟიმი** გამოიყენება მაშინ, როცა ConfigMap-ში თქვენ მიერ დამატებული entry აღარ დარჩება. ეს ნაბიჯი შეუქცევადია.
@@ -171,9 +171,9 @@ kubectl auth can-i list secrets -n kube-system --as-group platform-admins
 |---|---|---|
 | დაზიანებული ფენა | ავთენტიკაცია, AWS | ავტორიზაცია, RBAC |
 | მნიშვნელობა | კლასტერმა ვერ გაიგო ვინ ხართ | გაიგო ვინ ხართ, მაგრამ მოქმედება არ დაუშვა |
-| ტიპური მიზეზები | არასწორი profile, ვადაგასული SSO, role არ არის რეგისტრირებული | არ არის group binding, policy scope ვიწროა |
-| სად შევხედოთ | `get-caller-identity`, `list-access-entries`, `authenticator` logs | `auth can-i`, RBAC bindings, policy associations |
-| რა აგვარებს | access entry ან `aws-auth` | binding, `ClusterRole` ან access policy |
+| ტიპური მიზეზები | არასწორი profile, ვადაგასული SSO, role არ არის რეგისტრირებული | ჯგუფთან მიბმა არ არსებობს, policy scope ვიწროა |
+| სად შევხედოთ | `get-caller-identity`, `list-access-entries`, `authenticator`-ის ლოგები | `auth can-i`, RBAC-ის მიბმები, პოლიტიკების ასოციაციები |
+| რა აგვარებს | access entry ან `aws-auth` | მიბმა, `ClusterRole` ან access policy |
 
 ```bash
 aws sts get-caller-identity            # ვინ მხედავს AWS ამ მომენტში
@@ -182,7 +182,7 @@ aws eks list-access-entries --cluster-name demo   # იცნობს cluster �
 kubectl auth whoami                    # როგორ მხედავს apiserver: username და ჯგუფები
 ```
 
-`kubectl auth whoami` საზღვრის ყველაზე სწრაფი შემოწმებაა: თუ ბრძანება პასუხობს, ავთენტიკაცია გავლილია და პრობლემა უფლებებშია; თუ `Unauthorized`-ს აბრუნებს, RBAC-მდე საქმე ვერ მივიდა. ცალკე ხაფანგია, რომ `get-caller-identity` გიჩვენებთ role-ს, რომელიც **მიიღეთ**, ხოლო access entry-ში უნდა იყოს თვით role-ის ARN და არა assumed-role session-ის ARN. `authenticator` ტიპის logs (თავი 2) server-ის მხარეს აჩვენებს, როცა client checks არ ემთხვევა; რთული შემთხვევები თავ 47-შია.
+`kubectl auth whoami` საზღვრის ყველაზე სწრაფი შემოწმებაა: თუ ბრძანება პასუხობს, ავთენტიკაცია გავლილია და პრობლემა უფლებებშია; თუ `Unauthorized`-ს აბრუნებს, RBAC-მდე საქმე ვერ მივიდა. ცალკე ხაფანგია, რომ `get-caller-identity` გიჩვენებთ role-ს, რომელიც **მიიღეთ**, ხოლო access entry-ში უნდა იყოს თვით role-ის ARN და არა assumed-role session-ის ARN. `authenticator` ტიპის ლოგები (თავი 2) server-ის მხარეს აჩვენებს, როცა client checks არ ემთხვევა; რთული შემთხვევები თავ 47-შია.
 
 ## 5.9. ადამიანებისა და CI-ის წვდომის ორგანიზება
 
@@ -190,13 +190,13 @@ kubectl auth whoami                    # როგორ მხედავს a
 - **Kubernetes ჯგუფები და არა პერსონალური entry-ები.** Access entry team role-სთვის შექმენით და არა ადამიანისთვის: ოცდაათი ინჟინერი ნიშნავს ოცდაათ შესაძლებლობას, რომ offboarding-ისას ერთი entry დაგავიწყდეთ.
 - **დავიწყებული entry-ების audit.** `aws eks list-access-entries` რეგულარულად შეადარეთ მიმდინარე roles-ს: entry, რომლის `principal-arn` წაშლილ ან დიდი ხანია მიუღებელ role-ზე მიუთითებს, დავიწყებული deletion access-ია, ხოლო role assumptions CloudTrail-ში ჩანს (თავი 21).
 - **Break-glass ცალკე.** ერთი role `AmazonEKSClusterAdminPolicy`-ით `cluster` scope-ზე, რომელსაც ჩვეულებრივ მუშაობაში არავინ იღებს: მკაცრი trust policy, MFA და CloudTrail-ში მისი მიღების alert (თავი 21). ეს გამოსავალია ნაწილის 5.1 სიტუაციიდან.
-- **CI-ისთვის ცალკე role.** Trust კონკრეტული repository-ითა და branch-ით იზღუდება (თავი 0.2), უფლებები მის namespaces-ში `AmazonEKSEditPolicy` დონეზეა და cluster access configuration-ის შეცნა არ შეუძლია, თორემ pipeline საკუთარ თავს უფლებებს მიანიჭებს. თავად access entry-ები და policy associations cluster-ის გვერდით ჩვეულებრივი IaC resources-ია (თავი 4). გუნდის იზოლაცია თავი 22-ია.
+- **CI-ისთვის ცალკე role.** Trust კონკრეტული repository-ითა და branch-ით იზღუდება (თავი 0.2), უფლებები მის namespaces-ში `AmazonEKSEditPolicy` დონეზეა და cluster access configuration-ის შეცნა არ შეუძლია, თორემ pipeline საკუთარ თავს უფლებებს მიანიჭებს. თავად access entry-ები და პოლიტიკების ასოციაციები cluster-ის გვერდით ჩვეულებრივი IaC resources-ია (თავი 4). გუნდის იზოლაცია თავი 22-ია.
 
 ## 5.10. როგორ გამოიყენება production-ში
 
 - **ახალი clusters პირდაპირ `API` რეჟიმით იწყება**, `bootstrapClusterCreatorAdminPermissions` `false`-ზეა და administrator access explicit access entry-ებითაა აღწერილი code-ში.
 - **ადამიანები IAM Identity Center-ით შედიან**: permission set role-ზე, role access entry-ზე, უფლებები Kubernetes group-ზე; personal entry-ები არ არის, ხოლო ერთი break-glass role alert-ის ქვეშაა.
-- **CI-ს საკუთარი role აქვს** namespace-level უფლებებით და access configuration-ის შეცვლის უფლების გარეშე. `authenticator` ტიპის logs ჩართულია, ხოლო ახალ clusters-ზე `aws-auth` საერთოდ არ არსებობს.
+- **CI-ს საკუთარი role აქვს** namespace-level უფლებებით და access configuration-ის შეცვლის უფლების გარეშე. `authenticator` ტიპის ლოგები ჩართულია, ხოლო ახალ clusters-ზე `aws-auth` საერთოდ არ არსებობს.
 
 ## 5.11. მინი-გლოსარიუმი
 
@@ -208,13 +208,13 @@ kubectl auth whoami                    # როგორ მხედავს a
 ## 5.12. თავის შეჯამება
 
 - ავთენტიკაცია გარეა (IAM და STS), ავტორიზაცია შიდაა (RBAC), ხოლო IAM-ში `AdministratorAccess` თავისთავად cluster უფლებებს არ იძლევა. ჯაჭვია `kubectl`, `aws eks get-token` plugin, ხელმოწერილი STS request, signature verification, ARN-ის `username`-სა და groups-ში mapping, შემდეგ RBAC.
-- არსებობს სამი რეჟიმი: `CONFIG_MAP`, `API_AND_CONFIG_MAP` და `API`. მიზანი `API`-ა, მისკენ გადასვლა შეუქცევადია და გარდამავალ რეჟიმში access entry-ს პრიორიტეტი აქვს `aws-auth`-ზე. ეს უკანასკნელი სტრუქტურულად სახიფათოა: validation და history არ აქვს, yaml შეცდომა ყველასთვის წვდომას თიშავს, ცვლილების ავტორის ჩათვლით, და object შიგნიდან ვეღარ სწორდება.
+- არსებობს სამი რეჟიმი: `CONFIG_MAP`, `API_AND_CONFIG_MAP` და `API`. მიზანი `API`-ა, მისკენ გადასვლა შეუქცევადია და გარდამავალ რეჟიმში access entry-ს პრიორიტეტი აქვს `aws-auth`-ზე. ეს უკანასკნელი სტრუქტურულად სახიფათოა: ვალიდაცია და history არ აქვს, yaml შეცდომა ყველასთვის წვდომას თიშავს, ცვლილების ავტორის ჩათვლით, და object შიგნიდან ვეღარ სწორდება.
 - Access entry-ები EKS API-ში ცხოვრობს, ვალიდდება, CloudTrail-ში ჩანს და code-ში აღიწერება. უფლებები `kubernetesGroups`-ითა და თქვენი RBAC-ით, `cluster` ან `namespace` scope-ის access policies-ით, ან ორივეთი გაიცემა. მიგრაციაა `API_AND_CONFIG_MAP`, საკუთარი ხაზებისთვის entry-ები, node entry-ებს არ შეეხოთ, მეორე session-ით შეამოწმეთ, ხაზები წაშალეთ, შემდეგ `API` რეჟიმი გამოიყენეთ.
 - `Unauthorized` ავთენტიკაციას ნიშნავს, `Forbidden` ავტორიზაციას, და დიაგნოსტიკა `aws sts get-caller-identity`-ითა და `kubectl auth whoami`-თი იწყება, არა RBAC manifests-ის კითხვით.
 
 ## 5.13. როგორ გეხმარებათ ეს რეალურ სამუშაოში
 
-ამოცანა „წასული ინჟინრისთვის წვდომის გაუქმება“ წუთებს მოითხოვს, როცა წვდომა დროებით roles-სა და groups-ზეა აგებული, და გაურკვეველ დროს, როცა ადამიანს personal entry ჰქონდა და cluster-იც თავად შექმნა. კითხვას „ვის შეუძლია production-ში namespace-ის წაშლა“ ან entries-ისა და bindings-ის ჩამონათვალით პასუხობთ, ან საერთოდ ვერ პასუხობთ. პირველი ნაწილის სცენარი კატასტროფა აღარ არის, როცა break-glass role და `API` რეჟიმი არსებობს.
+ამოცანა „წასული ინჟინრისთვის წვდომის გაუქმება“ წუთებს მოითხოვს, როცა წვდომა დროებით roles-სა და groups-ზეა აგებული, და გაურკვეველ დროს, როცა ადამიანს personal entry ჰქონდა და cluster-იც თავად შექმნა. კითხვას „ვის შეუძლია production-ში namespace-ის წაშლა“ ან entry-ებისა და მიბმების ჩამონათვალით პასუხობთ, ან საერთოდ ვერ პასუხობთ. პირველი ნაწილის სცენარი კატასტროფა აღარ არის, როცა break-glass role და `API` რეჟიმი არსებობს.
 
 ## 5.14. თვითშემოწმების კითხვები
 
@@ -232,7 +232,7 @@ kubectl auth whoami                    # როგორ მხედავს a
 
 ამ თემის labs არის [lab 102 - cluster access: IAM და RBAC, access entry-ები და access policy-ები](../../labs/102/README_GE.MD) და [lab 122 - AWS Backup EKS-ისთვის: composite recovery point, namespace recovery](../../labs/122/README_GE.MD). მათ გარდა, შინაარსი ნებისმიერ cluster-ზე შეიძლება შემოწმდეს. დაიწყეთ ინვენტარიზაციით: `aws eks describe-cluster --name <cluster> --query 'cluster.accessConfig'` რეჟიმსა და creator flag-ს აჩვენებს; `aws eks list-access-entries --cluster-name <cluster>` და `aws eks describe-access-entry` `--principal-arn`-ით entry-ის type-ს, `username`-სა და groups-ს აჩვენებს. `STANDARD` entry-ებისთვის გაუშვით `aws eks list-associated-access-policies` და scope შეამოწმეთ.
 
-შემდეგ ორი ფენა შეადარეთ: access entry-ებიდან groups შეაგროვეთ და `kubectl get clusterrolebindings,rolebindings -A -o wide`-ში მოძებნეთ. Bindings-ისა და access policies-ის გარეშე groups არაფერს იძლევა, ხოლო ყველა entry-ში არმყოფ ჯგუფებზე bindings მკვდარი RBAC-ია. ასევე მოძებნეთ დავიწყებული entry-ები: `list-access-entries` გაიარეთ და ყოველ `principal-arn`-ზე `aws iam get-role` გაუშვით; არარსებული role-ის entry მკვდარი deletion access-ია. საკუთარი თავი `kubectl auth whoami`-ითა და `kubectl auth can-i --list`-ით შეამოწმეთ და გახსოვდეთ, რომ access policy უფლებები ამ output-ში არ ჩანს. თუ cluster ჯერ კიდევ `CONFIG_MAP` ან `API_AND_CONFIG_MAP` რეჟიმშია, `kubectl -n kube-system get configmap aws-auth -o yaml` ფაილში შეინახეთ. ცალკე ივარჯიშეთ უარზე: access entry-ის გარეშე role შექმენით, შესვლა სცადეთ და ის `authenticator` ტიპის logs-ში იპოვეთ (თავი 2).
+შემდეგ ორი ფენა შეადარეთ: access entry-ებიდან groups შეაგროვეთ და `kubectl get clusterrolebindings,rolebindings -A -o wide`-ში მოძებნეთ. მიბმებისა და access policy-ების გარეშე groups არაფერს იძლევა, ხოლო ყველა entry-ში არმყოფ ჯგუფებზე მიბმები მკვდარი RBAC-ია. ასევე მოძებნეთ დავიწყებული entry-ები: `list-access-entries` გაიარეთ და ყოველ `principal-arn`-ზე `aws iam get-role` გაუშვით; არარსებული role-ის entry მკვდარი deletion access-ია. საკუთარი თავი `kubectl auth whoami`-ითა და `kubectl auth can-i --list`-ით შეამოწმეთ და გახსოვდეთ, რომ access policy უფლებები ამ output-ში არ ჩანს. თუ cluster ჯერ კიდევ `CONFIG_MAP` ან `API_AND_CONFIG_MAP` რეჟიმშია, `kubectl -n kube-system get configmap aws-auth -o yaml` ფაილში შეინახეთ. ცალკე ივარჯიშეთ უარზე: access entry-ის გარეშე role შექმენით, შესვლა სცადეთ და ის `authenticator` ტიპის ლოგები-ში იპოვეთ (თავი 2).
 
 ---
 [სარჩევი](../README_GE.md) · [თავი 4](../04/ge.md) · [თავი 6](../06/ge.md)

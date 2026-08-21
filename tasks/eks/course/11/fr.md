@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [English version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 11. Cluster Autoscaler et Karpenter : deux approches de la mise à l’échelle des nœuds
 
 > **La suite.** Les types de calcul et Auto Mode ont été traités au chapitre 9, et les AMI ainsi que le bootstrap des nœuds au chapitre 10. La question suivante est : comment les nœuds augmentent-ils et diminuent-ils avec la charge sans ajuster manuellement `desiredSize` ? EKS propose deux outils pour cela : Cluster Autoscaler et Karpenter. Ce chapitre explique comment choisir entre leurs approches. Karpenter en détail (`NodePool`, `EC2NodeClass`, consolidation, drift et disruption budgets) est traité au chapitre 12, les instances Spot au chapitre 13, la densité et le dimensionnement au chapitre 14, et l’autoscaling des pods eux-mêmes (HPA, VPA, KEDA) au chapitre 35.

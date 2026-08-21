@@ -23,7 +23,7 @@ d'acceptation. La vérification est automatique, via la commande `check_result`.
 
 Renforcer le chapitre du cours :
 
-- [Chapitre 19. Hardening : IMDSv2, PSA, cluster privé](../../course/19/ru.md) - couches
+- [Chapitre 19. Hardening : IMDSv2, PSA, cluster privé](../../course/19/fr.md) - couches
   de protection du node, du pod et du réseau
 
 ## Ce que nous créons

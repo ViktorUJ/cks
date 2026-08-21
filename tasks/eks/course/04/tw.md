@@ -52,13 +52,13 @@ flowchart TB
 
 ## 4.3. 如何建立叢集：誠實的比較
 
-| 工具 | 可重現性 | Review | Drift | 啟動速度 | 誰擁有 state |
+| 工具 | 可重現性 | 審查 | 漂移 | 啟動速度 | 誰擁有狀態 |
 |---|---|---|---|---|---|
-| AWS console | 否 | 無內容可 review | 不追蹤 | 分鐘 | 無人 |
-| eksctl | 部分，透過 yaml configuration | git 中的 configuration | 位於你的 IaC 之外、由它建立的 CloudFormation stacks | 最高 | eksctl 建立的 CloudFormation |
-| CloudFormation | 是 | git 中的 template | stack drift detection | 中等 | CloudFormation service |
-| Terraform | 是 | pull request 中的 `plan` | 在 `plan` 可見 | 中等 | S3 中的你的 state |
-| Terragrunt | 是，另加跨 environments 的 DRY | 相同，`run-all plan` | 相同，按 stack | 中等 | 相同 state，拆分到 stacks |
+| AWS 主控台 | 否 | 無內容可審查 | 不追蹤 | 分鐘 | 無人 |
+| eksctl | 部分，透過 YAML 設定 | Git 中的設定 | 位於你的 IaC 之外、由它建立的 CloudFormation 堆疊 | 最高 | eksctl 建立的 CloudFormation |
+| CloudFormation | 是 | Git 中的範本 | 堆疊漂移偵測 | 中等 | CloudFormation 服務 |
+| Terraform | 是 | 提取請求中的 `plan` | 在 `plan` 可見 | 中等 | S3 中的你的狀態 |
+| Terragrunt | 是，另加跨環境的 DRY | 相同，`run-all plan` | 相同，按堆疊 | 中等 | 相同狀態，拆分到堆疊 |
 | CDK, Pulumi | 是 | programming-language code | 經由 CloudFormation 或自身 state | 中等 | CloudFormation (CDK) 或 Pulumi backend |
 | Crossplane, ACK | 是，在 cluster 中 declaratively | git 中的 manifests | controller 持續 reconcile | 初期低 | Kubernetes management cluster |
 
@@ -79,7 +79,7 @@ eksctl utils describe-stacks --cluster demo   # 它擁有的 CloudFormation stac
 
 ## 4.5. Terraform 細節：state、stacks、雞與蛋
 
-**State 與 locking。** State 是 code 與 real resources 的對應表。它存於 S3、具有 versioning，且寫入會被 lock，以免兩個同時進行的 `apply` 互相覆寫。DynamoDB table 為 `s3` backend 上鎖（`dynamodb_table` argument）；在 Terraform 1.10 及更新版本中，bucket 的 native lockfile（`use_lockfile`）承擔相同角色。State 還含有 sensitive attributes，因此 bucket 必須加密、access 限縮至 CI role，且在第一次 `apply` 前啟用 versioning。
+- **狀態與鎖定。** 狀態是程式碼與實際資源的對應表。它存於 S3、具有版本控制，且寫入會被鎖定，以免兩個同時進行的 `apply` 互相覆寫。DynamoDB 資料表為 `s3` backend 上鎖（`dynamodb_table` argument）；在 Terraform 1.10 及更新版本中，bucket 的原生 lockfile（`use_lockfile`）承擔相同角色。狀態還含有敏感屬性，因此 bucket 必須加密、存取限縮至 CI 角色，且在第一次 `apply` 前啟用版本控制。
 
 **拆分 stacks。** 若在一個 stack 描述所有內容，修改 subnet tag 需要對整個 infrastructure 執行 `plan`，而 workload `apply` 的失敗會阻塞 network。邊界應依變更速度與 owner 劃分。
 
@@ -180,7 +180,7 @@ Creator role 僅在 `create-cluster` 時需要一次；後續 administration 使
 
 **Secrets 與 deletion protection。** State bucket 已加密並具 versioning，僅 CI role 可 access，state 絕不放入 git，含 secrets 的 `terraform output` 不會輸出至 pipeline logs。`deletionProtection` flag 會阻止刪除 cluster；Terraform 端的 `lifecycle` 中 `prevent_destroy` 扮演相同角色，而流程端則是分離的 pipelines 與 plan review。
 
-## 4.10. Drift：為什麼 `plan` 顯示你未進行的項目
+## 4.10. 漂移：為什麼 `plan` 顯示你未進行的項目
 
 建立後，cluster 會在你未參與時改變：AWS 新增 service tags，EKS 調整 cluster SG rules，controllers 建立 load balancers、target groups 與 DNS records。
 

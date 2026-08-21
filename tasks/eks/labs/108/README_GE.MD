@@ -19,7 +19,7 @@ Load Balancer-ს (NLB) - L4-ბალანსერი, target-ებით �
 
 გავამყაროთ კურსის შემდეგი თავის მასალა:
 
-- [თავი 26. AWS Load Balancer Controller და LoadBalancer ტიპის Service: NLB](../../course/26/ru.md) - კონტროლერი, ანოტაციები, NLB vs CLB
+- [თავი 26. AWS Load Balancer Controller და LoadBalancer ტიპის Service: NLB](../../course/26/ge.md) - კონტროლერი, ანოტაციები, NLB vs CLB
 
 ## რას ვქმნით
 

@@ -20,9 +20,9 @@ espera - es el comportamiento normal de un control plane gestionado, no un coman
 
 Reforzar el material de estos capítulos del curso:
 
-- [Capítulo 37. Add-ons de EKS: add-ons gestionados frente a Helm, versiones y orden de actualización](../../course/37/ru.md) - quién es responsable de la versión del add-on
-- [Capítulo 38. Actualización del clúster: in-place por versión, clústeres blue/green, APIs obsoletas](../../course/38/ru.md) - el orden de una actualización in-place y cómo encontrar APIs obsoletas
-- [Capítulo 39. Rollback de versión del clúster: rollback readiness insights, la ventana de 7 días, orden del rollback](../../course/39/ru.md) - el rollback estándar del control plane
+- [Capítulo 37. Add-ons de EKS: add-ons gestionados frente a Helm, versiones y orden de actualización](../../course/37/es.md) - quién es responsable de la versión del add-on
+- [Capítulo 38. Actualización del clúster: in-place por versión, clústeres blue/green, APIs obsoletas](../../course/38/es.md) - el orden de una actualización in-place y cómo encontrar APIs obsoletas
+- [Capítulo 39. Rollback de versión del clúster: rollback readiness insights, la ventana de 7 días, orden del rollback](../../course/39/es.md) - el rollback estándar del control plane
 
 ## Qué vamos a crear
 

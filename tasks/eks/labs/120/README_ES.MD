@@ -34,7 +34,7 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material de este capítulo del curso:
 
-- [Capítulo 46. Fallos de red: SG, NACL, DNS, targets no saludables](../../course/46/ru.md)
+- [Capítulo 46. Fallos de red: SG, NACL, DNS, targets no saludables](../../course/46/es.md)
 
 ## Qué creamos
 

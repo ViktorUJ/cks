@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Русская версия](ru.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Chapitre 43. Coûts : OpenCost et Kubecost, right-sizing, Savings Plans, mix spot, trafic
 
 > **La suite.** Les chapitres 33 à 36 ont apporté l’observabilité : métriques, logs, traces, vous voyez ce que fait le cluster. Ce chapitre traite de ce qu’il coûte et de la réponse à la question métier « combien coûte l’équipe X ou le service Y ». Les thèmes connexes sont confiés à d’autres chapitres : spot et modèles d’achat des nœuds au chapitre 13, dimensionnement des pods via requests/limits et VPA au chapitre 14, consolidation et bin-packing de Karpenter au chapitre 12, coût du trafic (NAT, cross-AZ, endpoints) au chapitre 31, logs et leurs dépenses au chapitre 34, gp3 et volumes EBS au chapitre 23. Ici, nous réunissons ces éléments dans une même vue et ajoutons l’allocation des coûts aux objets Kubernetes et les modèles d’engagement AWS.

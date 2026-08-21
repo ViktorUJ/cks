@@ -34,7 +34,7 @@ SG-ით (security groups for pods) კურსის ცალკე ლა�
 
 გავიმყაროთ კურსის თავის მასალა:
 
-- [თავი 46. ქსელური სახსრები: SG, NACL, DNS, unhealthy targets](../../course/46/ru.md)
+- [თავი 46. ქსელური სახსრები: SG, NACL, DNS, unhealthy targets](../../course/46/ge.md)
 
 ## რას ვქმნით
 

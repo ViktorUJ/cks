@@ -21,8 +21,8 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Reforzar el material de los capítulos del curso:
 
-- [Capítulo 8. Redes en detalle: VPC CNI y CNIs alternativos](../../course/08/ru.md) - los límites de la política de red integrada frente a Cilium
-- [Capítulo 30. NetworkPolicy: reglas, DNS, pruebas](../../course/30/ru.md) - default deny, permitir por etiqueta y namespace, egress
+- [Capítulo 8. Redes en detalle: VPC CNI y CNIs alternativos](../../course/08/es.md) - los límites de la política de red integrada frente a Cilium
+- [Capítulo 30. NetworkPolicy: reglas, DNS, pruebas](../../course/30/es.md) - default deny, permitir por etiqueta y namespace, egress
 
 ## Qué vamos a crear
 

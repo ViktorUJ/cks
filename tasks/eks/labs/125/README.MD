@@ -25,7 +25,7 @@ Checking is automatic, via the `check_result` command.
 Reinforce the material from this course chapter:
 
 - [Chapter 9. Compute types: managed node groups, self-managed, Fargate, Auto
-  Mode](../../course/09/ru.md) - when to turn on EKS Auto Mode and when to build your
+  Mode](../../course/09/en.md) - when to turn on EKS Auto Mode and when to build your
   own stack
 
 ## What we're creating

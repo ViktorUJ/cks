@@ -25,8 +25,8 @@ aceptación. La verificación es automática, mediante el comando `check_result`
 
 Refuerza el material de estos capítulos del curso:
 
-- [Capítulo 27. Ingress a través de ALB: target-type, anotaciones, TLS y ACM, WAF](../../course/27/ru.md)
-- [Capítulo 29. DNS y certificados: external-dns, Route 53, cert-manager](../../course/29/ru.md)
+- [Capítulo 27. Ingress a través de ALB: target-type, anotaciones, TLS y ACM, WAF](../../course/27/es.md)
+- [Capítulo 29. DNS y certificados: external-dns, Route 53, cert-manager](../../course/29/es.md)
 
 ## Qué vamos a crear
 

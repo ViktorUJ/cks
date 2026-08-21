@@ -1,4 +1,4 @@
-[რუსული ვერსია](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # თავი 43. ღირებულება: OpenCost და Kubecost, right-sizing, Savings Plans, Spot-ის მიქსი, ტრაფიკი
 
 > **რა არის შემდეგ.** 33-36 თავებმა observability მოგვცა: მეტრიკები, ლოგები, ტრეისები - ხედავთ, რას

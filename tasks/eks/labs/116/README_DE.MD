@@ -23,7 +23,7 @@ Abnahmekriterien. Die Prüfung ist automatisiert, über den Befehl `check_result
 
 Den Kursabschnitt vertiefen:
 
-- [Kapitel 19. Hardening: IMDSv2, PSA, privater Cluster](../../course/19/ru.md) -
+- [Kapitel 19. Hardening: IMDSv2, PSA, privater Cluster](../../course/19/de.md) -
   Schutzschichten für Node, Pod und Netzwerk
 
 ## Was wir erstellen

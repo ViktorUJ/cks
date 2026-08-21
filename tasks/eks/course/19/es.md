@@ -1,4 +1,4 @@
-[English version](en.md) · [Русская версия](ru.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 # Capítulo 19. Hardening: IMDSv2 y hop limit, Pod Security Admission, clúster privado
 
 > **Qué sigue.** Los capítulos 16-18 asignaron al pod su rol (IRSA, Pod Identity) y protegieron los secretos
