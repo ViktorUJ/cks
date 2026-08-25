@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 12 - Troubleshooting: Diagnose und Reparatur von Istio
+
+> [Referenzlösung](worker/files/solutions/1_DE.MD)
 
 In der ICA-Prüfung gibt es eine eigene Domäne - **Troubleshooting**: Ihnen wird eine kaputte Umgebung gegeben, und Sie müssen schnell die Ursache finden und beheben. In diesem Lab ist die Umgebung bereits **in einem kaputten Zustand** bereitgestellt - die Anwendung funktioniert nicht. Ihre Aufgabe ist es, mithilfe der Werkzeuge von `istioctl` beide Konfigurationsfehler zu finden und zu beseitigen.
 

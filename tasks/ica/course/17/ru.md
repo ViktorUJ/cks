@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 17. Observability: Prometheus, Grafana, Jaeger, Kiali
 
@@ -279,4 +279,4 @@ kubectl apply -f https://raw.githubusercontent.com/istio/istio/$REL/samples/addo
 🧪 Лаба 08: [tasks/ica/labs/08](../../labs/08/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 16](../16/ru.md) · [Глава 18](../18/ru.md)
+[Оглавление](../README_RU.md) · [Глава 16](../16/ru.md) · [Глава 18](../18/ru.md)

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 16. Управление сертификатами: кастомный CA, cert-manager и istio-csr
 
@@ -568,4 +568,4 @@ flowchart LR
 🧪 Лаба 26: [tasks/ica/labs/26](../../labs/26/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 15](../15/ru.md) · [Глава 17](../17/ru.md)
+[Оглавление](../README_RU.md) · [Глава 15](../15/ru.md) · [Глава 17](../17/ru.md)

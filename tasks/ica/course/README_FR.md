@@ -1,4 +1,4 @@
-[RU version](README_RU.md) · [Eng version](README.md) · [Versión en español](README_ES.md) · [Deutsche Version](README_DE.md)
+[Русская версия](README_RU.md) · [Eng version](README.md) · [Versión en español](README_ES.md) · [Deutsche Version](README_DE.md) · [ქართული ვერსია](README_GE.md) · [繁體中文版](README_TW.md) · [日本語版](README_JP.md)
 
 # Istio : cours pratique en autoformation
 
@@ -18,6 +18,9 @@ entièrement traduits) :
 - 🇪🇸 Español - `es.md`
 - 🇫🇷 Français - `fr.md`
 - 🇩🇪 Deutsch - `de.md`
+- 🇬🇪 Géorgien - `ge.md`
+- 🇹🇼 Chinois traditionnel - `tw.md`
+- 🇯🇵 Japonais - `jp.md`
 
 Changez de langue via les liens de la première ligne de chaque chapitre et de l'en-tête de
 ce sommaire. Les examens blancs (`tasks/ica/mock`) sont uniquement en anglais.
@@ -33,7 +36,7 @@ ce sommaire. Les examens blancs (`tasks/ica/mock`) sont uniquement en anglais.
 5. [Gestion du trafic : Gateway, VirtualService, DestinationRule](05/fr.md)
 6. [Stratégies de déploiement : canary, header-routing, mirroring du trafic](06/fr.md)
 7. [Répartition de charge et failover selon la localité](07/fr.md)
-8. [Résilience : fault injection, timeouts, reintentos, circuit breaking](08/fr.md)
+8. [Résilience : fault injection, timeouts, retries, circuit breaking](08/fr.md)
 9. [TLS en périphérie : ingress en modes SIMPLE, MUTUAL, PASSTHROUGH](09/fr.md)
 10. [Routage du trafic TCP, gRPC et WebSocket](10/fr.md)
 11. [Kubernetes Gateway API](11/fr.md)

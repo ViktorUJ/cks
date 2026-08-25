@@ -1,4 +1,4 @@
-[RU version](README_RU.md) · [Eng version](README.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md)
+[Русская версия](README_RU.md) · [Eng version](README.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md) · [ქართული ვერსია](README_GE.md) · [繁體中文版](README_TW.md) · [日本語版](README_JP.md)
 
 # Istio: praktischer Selbstlernkurs
 
@@ -16,6 +16,9 @@ Verfügbare Lokalisierungen (Kurskapitel und Übungen sind vollständig überset
 - 🇪🇸 Español - `es.md`
 - 🇫🇷 Français - `fr.md`
 - 🇩🇪 Deutsch - `de.md`
+- 🇬🇪 Georgisch - `ge.md`
+- 🇹🇼 Traditionelles Chinesisch - `tw.md`
+- 🇯🇵 Japanisch - `jp.md`
 
 Zwischen den Sprachen wechseln Sie über die Links in der ersten Zeile jedes Kapitels und in
 der Kopfzeile dieses Inhaltsverzeichnisses. Die Mock-Prüfungen (`tasks/ica/mock`) gibt es

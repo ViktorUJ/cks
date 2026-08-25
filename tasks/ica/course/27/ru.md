@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 27. Istio на EKS: продакшн-установка
 
@@ -334,4 +334,4 @@ ingress gateway через NLB/ALB, istio-cni и проверку HA.
 🧪 Лаба: **TODO (EKS)**.
 
 ---
-[Оглавление](../README.md) · [Глава 26](../26/ru.md) · [Глава 28](../28/ru.md)
+[Оглавление](../README_RU.md) · [Глава 26](../26/ru.md) · [Глава 28](../28/ru.md)

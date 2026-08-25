@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 8. Устойчивость: fault injection, timeouts, retries, circuit breaking
 
@@ -363,4 +363,4 @@ Readiness/liveness - это «здоров ли я по собственной �
 🧪 Лаба 10: [tasks/ica/labs/10](../../labs/10/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 7](../07/ru.md) · [Глава 9](../09/ru.md)
+[Оглавление](../README_RU.md) · [Глава 7](../07/ru.md) · [Глава 9](../09/ru.md)

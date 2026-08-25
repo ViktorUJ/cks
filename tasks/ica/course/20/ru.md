@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 20. Rate limiting: локальное ограничение запросов
 
@@ -386,4 +386,4 @@ spec:
 🧪 Лаба 17: [tasks/ica/labs/17](../../labs/17/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 19](../19/ru.md) · [Глава 21](../21/ru.md)
+[Оглавление](../README_RU.md) · [Глава 19](../19/ru.md) · [Глава 21](../21/ru.md)

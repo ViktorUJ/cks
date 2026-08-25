@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 06 - Load Balancing + Traffic Mirroring
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 Представьте: у вас есть сервис `ping-pong` с тремя репликами стабильной версии **v1** и новой версией **v2**, которую вы хотите обкатать. Возникают два вопроса. Первый - **как именно** трафик распределяется между репликами и можно ли это настроить (round-robin, наименее загруженный и т.д.). Второй - как протестировать **v2** на реальном «боевом» трафике, **не рискуя** при этом пользователями.
 

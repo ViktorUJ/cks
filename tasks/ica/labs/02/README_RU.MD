@@ -1,5 +1,7 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 # Dark Launch (Теневой запуск)
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 Разработчики выкатили абсолютно новую, экспериментальную версию приложения - v3. Она еще сырая, и обычные пользователи ни в коем случае не должны ее увидеть (они должны оставаться на стабильной v1). Однако вам нужно пустить туда QA-инженеров, чтобы они проверили логику работы на реальном "боевом" кластере. Тестировщики будут идентифицироваться с помощью специального HTTP-заголовка: `x-user: tester`.
 

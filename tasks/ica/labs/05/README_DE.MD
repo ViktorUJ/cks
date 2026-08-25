@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 05 - Kontrollierter Egress: ServiceEntry + Egress Gateway + Sidecar-Scope
+
+> [Referenzlösung](worker/files/solutions/1_DE.MD)
 
 Stellen Sie sich vor: Innerhalb des Clusters lebt ein Service, der eine externe API (`httpbin.org`) erreichen muss. Standardmäßig arbeitet Istio im Modus `ALLOW_ANY` - jeder Pod kann überallhin ins Internet zugreifen. Aus Sicherheitssicht ist das schlecht: Ein kompromittierter Pod könnte Daten an eine beliebige externe Adresse "abfließen" lassen. Wir brauchen einen **kontrollierten Ausgang** nach außen: nur den genehmigten externen Service erlauben, seinen Datenverkehr durch einen einzigen Punkt (Egress Gateway) leiten und alles andere verbieten.
 

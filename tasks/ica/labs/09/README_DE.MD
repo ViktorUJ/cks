@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 09 - Advanced: Ambient mode (data plane ohne Sidecars)
+
+> [Referenzlösung](worker/files/solutions/1_DE.MD)
 
 Bisher lief Istio in allen Labs nach dem klassischen Sidecar-Modell: In jeden Pod wurde ein Container `istio-proxy` (Envoy) hinzugefügt. Das ist zuverlässig, aber aufwendig - ein Proxy in jedem Pod verbraucht Speicher und CPU, und jede Aktualisierung des data plane erfordert einen Neustart der Pods.
 

@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Istio Certified Associate (ICA) - Supports de formation
 
@@ -40,7 +40,8 @@ correspondant.
 
 35 travaux pratiques (`labs/01` .. `labs/35`), chacun entièrement localisé : anglais
 (`README.MD`), russe (`README_RU.MD`), espagnol (`README_ES.MD`), français
-(`README_FR.MD`) et allemand (`README_DE.MD`). Ils déploient de vrais clusters sur AWS
+(`README_FR.MD`), allemand (`README_DE.MD`), géorgien (`README_GE.MD`), chinois traditionnel
+(`README_TW.MD`) et japonais (`README_JP.MD`). Ils déploient de vrais clusters sur AWS
 via Terragrunt :
 
 ```bash

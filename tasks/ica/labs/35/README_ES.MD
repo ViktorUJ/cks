@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 35 - Mesh multiclúster (multi-primary, multi-network)
 
@@ -69,7 +69,7 @@ Montar un mesh único a partir de dos clústeres y demostrar el balanceo entre c
 5. **Verificación**: desplegar `helloworld` (v1 en cluster1, v2 en cluster2) y `sleep`, confirmar
    que el cliente de cluster1 recibe respuestas tanto de v1 como de v2.
 
-> El conjunto completo de comandos - en [reference solution](worker/files/solutions/1.MD). A continuación - los
+> El conjunto completo de comandos - en [reference solution](worker/files/solutions/1_ES.MD). A continuación - los
 > pasos de referencia.
 
 ## Pasos de referencia

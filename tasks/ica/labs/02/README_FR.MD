@@ -1,5 +1,7 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 # Dark Launch (Lancement fantôme)
+
+> [Solution de référence](worker/files/solutions/1_FR.MD)
 
 Les développeurs ont déployé une version totalement nouvelle et expérimentale de l'application - v3. Elle est encore instable, et les utilisateurs ordinaires ne doivent en aucun cas la voir (ils doivent rester sur la v1 stable). Cependant, vous devez y donner accès aux ingénieurs QA afin qu'ils vérifient la logique de fonctionnement sur un véritable cluster « de production ». Les testeurs seront identifiés à l'aide d'un en-tête HTTP spécial : `x-user: tester`.
 

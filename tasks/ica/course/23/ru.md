@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 23. StatefulSet и headless-сервисы в mesh
 
@@ -192,4 +192,4 @@ spec:
 🧪 Лаба 30: [tasks/ica/labs/30](../../labs/30/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 22](../22/ru.md) · [Глава 24](../24/ru.md)
+[Оглавление](../README_RU.md) · [Глава 22](../22/ru.md) · [Глава 24](../24/ru.md)

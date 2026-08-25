@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 12. Egress: ServiceEntry, egress gateway, TLS origination
 
@@ -536,4 +536,4 @@ flowchart LR
 🧪 Лаба 22: [tasks/ica/labs/22](../../labs/22/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 11](../11/ru.md) · [Глава 13](../13/ru.md)
+[Оглавление](../README_RU.md) · [Глава 11](../11/ru.md) · [Глава 13](../13/ru.md)

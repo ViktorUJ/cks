@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 25. Прогрессивная доставка с Flagger
 
@@ -575,4 +575,4 @@ API. Логика анализа и отката при этом та же.
 🧪 Лаба 25: [tasks/ica/labs/25](../../labs/25/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 24](../24/ru.md) · [Глава 26](../26/ru.md)
+[Оглавление](../README_RU.md) · [Глава 24](../24/ru.md) · [Глава 26](../26/ru.md)

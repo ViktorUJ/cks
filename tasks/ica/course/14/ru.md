@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 14. AuthorizationPolicy: авторизация service-to-service
 
@@ -511,4 +511,4 @@ mTLS - это продолжение лабы из главы 13:
 🧪 Лаба 04: [tasks/ica/labs/04](../../labs/04/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 13](../13/ru.md) · [Глава 15](../15/ru.md)
+[Оглавление](../README_RU.md) · [Глава 13](../13/ru.md) · [Глава 15](../15/ru.md)

@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Chapitre 32. L'examen ICA : format et préparation
 
@@ -90,7 +90,7 @@ La meilleure préparation est de passer des examens réalistes en temps limité.
   [tasks/ica/mock/02](../../mock/02/README.MD)
 
 Description générale de l'environnement, commandes (`check_result`, `time_left`, `hosts`) et conseils -
-dans le README racine de l'infrastructure : [tasks/ica/README.MD](../../README.MD).
+dans le README racine de l'infrastructure : [tasks/ica/README.MD](../../README_FR.MD).
 
 Comment utiliser les mocks :
 

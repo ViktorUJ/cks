@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 19 - Кастомный CA: подключение своего корневого и промежуточного CA в istiod
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 ## Обзор
 

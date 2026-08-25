@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Kapitel 10. Routing von TCP, gRPC und WebSocket
 
@@ -109,7 +109,7 @@ Ein zweiteiliges Schema:
 1. **Internes Ingress-Gateway** - ein separates Gateway, dessen Service einen NLB mit
    `scheme: internal` erhält (die Adresse wird nur in private IPs der VPC aufgelöst, aus
    dem Internet nicht erreichbar). Wie man ein zweites Gateway ausrollt und einen internen
-   NLB daran hängt, haben wir in [Kapitel 5](../05/ru.md) besprochen.
+   NLB daran hängt, haben wir in [Kapitel 5](../05/de.md) besprochen.
 2. **Gateway + VirtualService auf den TCP-Port** dieses Services, ausgerichtet auf das
    interne Gateway.
 

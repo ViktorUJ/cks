@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 11 - Authentifizierung von Endnutzern: RequestAuthentication + JWT
+
+> [Referenzlösung](worker/files/solutions/1_DE.MD)
 
 In Lab 04 haben wir die Authentifizierung von **Services** untereinander behandelt (mTLS, `PeerAuthentication`). Es gibt aber noch einen zweiten Typ der Authentifizierung - den des **Endnutzers** (end-user): wenn eine Anfrage ein **JWT-Token** trägt (zum Beispiel ausgestellt von Ihrem Identity Provider - Auth0, Keycloak, Google usw.) und der Service dieses Token prüfen und den Nutzer anhand seines Inhalts autorisieren muss.
 

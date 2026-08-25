@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 10 - Resilience: Timeout + Circuit Breaker
+
+> [Reference solution](worker/files/solutions/1.MD)
 
 Imagine one of your backends starts to "hang" or degrade. Without protection, a slow service holds up every request to it, threads/connections pile up, and the degradation spreads across the whole mesh (a cascading failure). Istio gives you two mechanisms to prevent this:
 - **Timeout** - a limit on how long to wait for a response. If the backend doesn't answer in time, the request is aborted with `504` instead of hanging forever.

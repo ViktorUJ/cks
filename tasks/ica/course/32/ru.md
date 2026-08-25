@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 32. Экзамен ICA: формат и подготовка
 
@@ -90,7 +90,7 @@ troubleshooting (по 20%) - не пропускайте установку и �
   [tasks/ica/mock/02](../../mock/02/README.MD)
 
 Общее описание окружения, команды (`check_result`, `time_left`, `hosts`) и советы - в
-корневом README инфраструктуры: [tasks/ica/README.MD](../../README.MD).
+корневом README инфраструктуры: [tasks/ica/README.MD](../../README_RU.MD).
 
 Как использовать моки:
 
@@ -139,4 +139,4 @@ Istio: управление трафиком, устойчивость, безо
 сценарии, troubleshooting, реальные миграции, харденинг - и подготовку к экзамену.
 Возвращайтесь к главам, лабам и мокам по мере надобности. Удачи с ICA и с Istio в бою.
 
-[Оглавление](../README.md) · [Глава 31](../31/ru.md)
+[Оглавление](../README_RU.md) · [Глава 31](../31/ru.md)

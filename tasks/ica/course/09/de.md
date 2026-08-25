@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Kapitel 9. Edge TLS: Ingress in den Modi SIMPLE, MUTUAL, PASSTHROUGH
 
@@ -222,7 +222,7 @@ fertiges Zertifikat aus dem **AWS Certificate Manager (ACM)** direkt an den Netw
 Balancer hängen, dann wird TLS **am Load Balancer** terminiert, noch vor Envoy. Technisch
 geschieht das über Annotationen am Service des Gateways (`aws-load-balancer-ssl-cert` +
 `aws-load-balancer-ssl-ports`) - eine ausführliche Betrachtung der Annotationen findet
-sich in [Kapitel 5](../05/ru.md). Hier ist es wichtig zu verstehen, **was man wählt**.
+sich in [Kapitel 5](../05/de.md). Hier ist es wichtig zu verstehen, **was man wählt**.
 
 ```mermaid
 flowchart LR

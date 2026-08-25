@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 04 - Zero Trust: mTLS (PeerAuthentication) + AuthorizationPolicy
+
+> [Solución de referencia](worker/files/solutions/1_ES.MD)
 
 Imagina: tienes un backend `ping-pong` en el que hay datos sensibles. Por defecto, dentro del clúster cualquier pod puede alcanzar cualquier servicio por la red: es una red de confianza "plana". Necesitamos construir un modelo **Zero Trust** ("no confíes en nadie"): en primer lugar, todo el tráfico entre servicios debe estar cifrado y autenticado (mTLS), y en segundo lugar, tiene derecho a comunicarse con el backend **solo** el frontend y **solo** mediante `GET`. Todo lo demás está prohibido.
 

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 31. Харденинг и модель угроз mesh
 
@@ -246,4 +246,4 @@ Gatekeeper audit для соответствия политикам, плюс о
 🧪 Лаба 34: [tasks/ica/labs/34](../../labs/34/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 30](../30/ru.md) · [Глава 32](../32/ru.md)
+[Оглавление](../README_RU.md) · [Глава 30](../30/ru.md) · [Глава 32](../32/ru.md)

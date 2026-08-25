@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 35 - Multi-Cluster-Mesh (multi-primary, multi-network)
 
@@ -70,7 +70,7 @@ Aus zwei Clustern ein einheitliches Mesh bauen und das Cross-Cluster-Load-Balanc
 5. **Prüfung**: `helloworld` bereitstellen (v1 in cluster1, v2 in cluster2) und `sleep`,
    sicherstellen, dass ein Client aus cluster1 Antworten sowohl von v1 als auch von v2 erhält.
 
-> Der vollständige Befehlssatz ist in der [reference solution](worker/files/solutions/1.MD). Unten
+> Der vollständige Befehlssatz ist in der [reference solution](worker/files/solutions/1_DE.MD). Unten
 > die Leitschritte.
 
 ## Leitschritte

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 29. Не-Kubernetes нагрузки: VM в mesh
 
@@ -294,4 +294,4 @@ DNS-резолвинг кластерных сервисов.
 🧪 Лаба: **TODO (EKS + VM)**.
 
 ---
-[Оглавление](../README.md) · [Глава 28](../28/ru.md) · [Глава 30](../30/ru.md)
+[Оглавление](../README_RU.md) · [Глава 28](../28/ru.md) · [Глава 30](../30/ru.md)

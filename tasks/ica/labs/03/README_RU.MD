@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 03 - Fault Injection и Retry
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 Представьте: бэкенд-сервис нестабилен - он периодически отдаёт HTTP 503. Вместо того чтобы лезть в код приложения, вы хотите решить проблему на уровне инфраструктуры. В этой лабораторной мы сначала **сломаем** бэкенд с помощью Istio Fault Injection, убедимся что фронтенд получает ошибки, а затем **починим** это, настроив автоматические ретраи на уровне Envoy-прокси - без единого изменения в коде.
 

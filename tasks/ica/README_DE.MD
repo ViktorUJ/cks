@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Istio Certified Associate (ICA) - Schulungsmaterialien
 
@@ -39,7 +39,8 @@ verlinkt.
 
 35 praktische Übungen (`labs/01` .. `labs/35`), jede vollständig lokalisiert: Englisch
 (`README.MD`), Russisch (`README_RU.MD`), Spanisch (`README_ES.MD`), Französisch
-(`README_FR.MD`) und Deutsch (`README_DE.MD`). Sie stellen echte Cluster in AWS über
+(`README_FR.MD`), Deutsch (`README_DE.MD`), Georgisch (`README_GE.MD`), traditionelles
+Chinesisch (`README_TW.MD`) und Japanisch (`README_JP.MD`). Sie stellen echte Cluster in AWS über
 Terragrunt bereit:
 
 ```bash

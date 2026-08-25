@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Istio Certified Associate (ICA) - Training Materials
 
@@ -12,7 +12,7 @@ self-study course, hands-on labs, and full mock exams - all in one place.
 | Part | Path | What it is |
 |------|------|-----------|
 | **Course** | [`course/`](course/README.md) | 32-chapter self-study course: from the idea of a service mesh to production operations |
-| **Labs** | [`labs/`](labs/) | 31 hands-on labs on real AWS clusters, each tied to a course chapter |
+| **Labs** | [`labs/`](labs/) | 35 hands-on labs on real AWS clusters, each tied to a course chapter |
 | **Mock exams** | [`mock/`](mock/) | 2 full mock exams that simulate the real ICA experience |
 
 Recommended path: study a course chapter, reinforce it with its lab, then run the mock
@@ -35,8 +35,11 @@ Each chapter ends with a **Practice** section linking to the matching lab.
 
 ## The labs
 
-31 hands-on labs (`labs/01` .. `labs/31`), each with an English (`README.MD`) and Russian
-(`README_RU.MD`) version. They deploy real clusters in AWS via Terragrunt:
+35 hands-on labs (`labs/01` .. `labs/35`), each fully localized into 8 languages: English
+(`README.MD`), Russian (`README_RU.MD`), Spanish (`README_ES.MD`), French
+(`README_FR.MD`), German (`README_DE.MD`), Georgian (`README_GE.MD`), Traditional Chinese
+(`README_TW.MD`), and Japanese (`README_JP.MD`). They deploy real clusters in AWS via
+Terragrunt:
 
 ```bash
 TASK=01 make run_ica_task      # deploy lab 01
@@ -78,6 +81,10 @@ Lab topics (and the course chapter that covers the theory):
 | 29 | Ingress TLS: MUTUAL and PASSTHROUGH | 9 |
 | 30 | StatefulSet and headless services | 23 |
 | 31 | Zero-downtime migration: ingress-nginx to Istio | 26 |
+| 32 | gRPC: per-request load balancing, port naming, retries | 10 |
+| 33 | Control plane: performance and operations | 30 |
+| 34 | Hardening and threat model | 31 |
+| 35 | Multi-cluster mesh (multi-primary, multi-network) | 28 |
 
 ## Mock exams
 

@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Istio Certified Associate (ICA) - Materiales de formación
 
@@ -40,7 +40,8 @@ correspondiente.
 
 35 laboratorios prácticos (`labs/01` .. `labs/35`), cada uno completamente localizado:
 inglés (`README.MD`), ruso (`README_RU.MD`), español (`README_ES.MD`), francés
-(`README_FR.MD`) y alemán (`README_DE.MD`). Despliegan clústeres reales en AWS mediante
+(`README_FR.MD`), alemán (`README_DE.MD`), georgiano (`README_GE.MD`), chino tradicional
+(`README_TW.MD`) y japonés (`README_JP.MD`). Despliegan clústeres reales en AWS mediante
 Terragrunt:
 
 ```bash

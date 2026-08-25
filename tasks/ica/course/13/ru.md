@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 13. mTLS и PeerAuthentication: модель Zero Trust
 
@@ -441,4 +441,4 @@ sidecar. Но любой сервис в mesh со своим валидным m
 🧪 Лаба 20: [tasks/ica/labs/20](../../labs/20/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 12](../12/ru.md) · [Глава 14](../14/ru.md)
+[Оглавление](../README_RU.md) · [Глава 12](../12/ru.md) · [Глава 14](../14/ru.md)

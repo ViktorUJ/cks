@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 11 - Аутентификация конечных пользователей: RequestAuthentication + JWT
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 В лабе 04 мы разбирали аутентификацию **сервисов** между собой (mTLS, `PeerAuthentication`). Но есть и второй тип аутентификации - **конечного пользователя** (end-user): когда запрос несёт **JWT-токен** (например, выданный вашим Identity Provider - Auth0, Keycloak, Google и т.д.), и сервис должен проверить этот токен и авторизовать пользователя по его содержимому.
 

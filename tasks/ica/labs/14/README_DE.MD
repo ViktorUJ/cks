@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 14 - Locality-aware Failover (Ausfallsicherheit nach Zonen)
+
+> [Referenzlösung](worker/files/solutions/1_DE.MD)
 
 Stellen Sie sich vor: Ihr Service läuft in zwei Availability Zones (`eu-central-1a` und `eu-central-1b`). Im Normalbetrieb möchte man, dass der Client zur **nächstgelegenen** Instanz (in seiner Zone) geht - das verringert Latenz und Traffic zwischen den Zonen. Aber wenn die lokale Instanz ausfällt, soll der Traffic **automatisch** auf die andere Zone umschalten. Genau das ist **Locality-aware Load Balancing + Failover**.
 

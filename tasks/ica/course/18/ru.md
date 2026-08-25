@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 18. Telemetry API: access logs и распределённый трейсинг
 
@@ -374,4 +374,4 @@ Istio добавляет сетевые спаны - и всё связано о
 🧪 Лаба 18: [tasks/ica/labs/18](../../labs/18/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 17](../17/ru.md) · [Глава 19](../19/ru.md)
+[Оглавление](../README_RU.md) · [Глава 17](../17/ru.md) · [Глава 19](../19/ru.md)
