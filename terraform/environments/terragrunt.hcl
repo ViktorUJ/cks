@@ -47,11 +47,11 @@ remote_state {
   }
 }
 
-# EKS сериализует изменения кластера: пока идёт одно обновление (например удаление аддона),
-# другие операции над кластером отвечают 409 ResourceInUseException "currently has an update
-# in progress". На destroy это даёт гонку между удалением аддонов и удалением Fargate-профиля
-# или node group. Ошибка транзиентная - через минуту обновление завершается и та же операция
-# проходит, поэтому ретраим её автоматически, а не просим перезапускать destroy руками.
+# EKS serializes cluster changes: while one update is running (for example, add-on deletion),
+# other cluster operations return 409 ResourceInUseException "currently has an update
+# in progress". During destroy, this creates a race between removing add-ons and removing a
+# Fargate profile or node group. The error is transient: the update completes within a minute,
+# so we retry the operation automatically instead of requiring a manual destroy restart.
 retryable_errors = [
   "(?s).*ResourceInUseException.*currently has an update in progress.*",
   "(?s).*ResourceInUseException.*Cannot Delete Fargate Profile.*",
