@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 14 - Locality-aware Failover (tolerancia a fallos por zonas)
+
+> [Solución de referencia](worker/files/solutions/1_ES.MD)
 
 Imagina: tu servicio funciona en dos zonas de disponibilidad (`eu-central-1a` y `eu-central-1b`). En condiciones normales quieres que el cliente vaya a la instancia **más cercana** (en su propia zona) - esto reduce la latencia y el tráfico entre zonas. Pero si la instancia local falla, el tráfico debe **conmutar automáticamente** a otra zona. Esto es precisamente el **balanceo de carga locality-aware + failover**.
 

@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md)
+[Eng version](README.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md) · [ქართული ვერსია](README_GE.md) · [繁體中文版](README_TW.md) · [日本語版](README_JP.md)
 
 # Istio: практический самоучитель
 
@@ -16,6 +16,9 @@
 - 🇪🇸 Español - `es.md`
 - 🇫🇷 Français - `fr.md`
 - 🇩🇪 Deutsch - `de.md`
+- 🇬🇪 Грузинский - `ge.md`
+- 🇹🇼 Традиционный китайский - `tw.md`
+- 🇯🇵 Японский - `jp.md`
 
 Переключение между языками - по ссылкам в первой строке каждой главы и в шапке
 этого оглавления. Мок-экзамены (`tasks/ica/mock`) доступны только на английском.

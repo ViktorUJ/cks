@@ -1,0 +1,35 @@
+include {
+  path = find_in_parent_folders()
+}
+
+locals {
+  vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+}
+
+terraform {
+  source = "../../..//modules/eks_v2_fluentbit_irsa/"
+
+  extra_arguments "retry_lock" {
+    commands  = get_terraform_commands_that_need_locking()
+    arguments = ["-lock-timeout=20m"]
+  }
+}
+
+dependency "eks_control_plane" {
+  config_path = "../eks_control_plane"
+}
+
+inputs = {
+  region            = local.vars.locals.region
+  aws               = local.vars.locals.aws
+  prefix            = local.vars.locals.prefix
+  app_name          = "fluentbit_irsa"
+  name              = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
+  oidc_provider_arn = dependency.eks_control_plane.outputs.eks_mudule.oidc_provider_arn
+  fluent_bit = {
+    namespace            = "amazon-cloudwatch"
+    service_account_name = "aws-for-fluent-bit"
+    log_group_name       = null
+  }
+  tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-fluentbit-irsa" })
+}

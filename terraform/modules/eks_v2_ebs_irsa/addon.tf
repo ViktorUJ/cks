@@ -7,7 +7,7 @@ resource "aws_eks_addon" "addons" {
   resolve_conflicts_on_update=var.addons.resolve_conflicts
   service_account_role_arn = aws_iam_role.ebs_csi_irsa.arn
   configuration_values = (
-    try(var.addons.configuration, null) != null && try(var.addons.configuration, {}) != {} ?
+    try(var.addons.configuration, null) != null && length(try(var.addons.configuration, {})) > 0 ?
     jsonencode(var.addons.configuration) :
     null
   )

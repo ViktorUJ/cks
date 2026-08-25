@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 08 - Observability: Prometheus / Jaeger / Kiali
+
+> [Reference solution](worker/files/solutions/1.MD)
 
 Imagine several services running in the cluster and suddenly something is "slow". Where exactly? Which service calls which, how many errors, what latency? Istio collects all this telemetry automatically (the sidecar proxy sees every request), but to actually see it you need tools:
 - **Prometheus** - collects and stores metrics (RPS, response codes, latency).

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 10. Маршрутизация TCP, gRPC и WebSocket
 
@@ -519,4 +519,4 @@ WebSocket в этой таблице - это столбец HTTP (L7): марш
 🧪 Лаба 32: [tasks/ica/labs/32](../../labs/32/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 9](../09/ru.md) · [Глава 11](../11/ru.md)
+[Оглавление](../README_RU.md) · [Глава 9](../09/ru.md) · [Глава 11](../11/ru.md)

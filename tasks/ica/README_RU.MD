@@ -1,4 +1,4 @@
-[Eng version](README.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Istio Certified Associate (ICA) - учебные материалы
 
@@ -12,7 +12,7 @@
 | Часть | Путь | Что это |
 |-------|------|---------|
 | **Курс** | [`course/`](course/README_RU.md) | Самоучитель из 32 глав: от идеи service mesh до продакшн-эксплуатации |
-| **Лабы** | [`labs/`](labs/) | 31 практическая лаба на реальных кластерах AWS, каждая привязана к главе курса |
+| **Лабы** | [`labs/`](labs/) | 35 практических лаб на реальных кластерах AWS, каждая привязана к главе курса |
 | **Пробные экзамены** | [`mock/`](mock/) | 2 полноценных mock-экзамена, имитирующих настоящий ICA |
 
 Рекомендуемый маршрут: изучаете главу курса, закрепляете её лабой, затем прогоняете
@@ -35,9 +35,11 @@ mock-экзамены на время.
 
 ## Лабы
 
-31 практическая лаба (`labs/01` .. `labs/31`), у каждой есть английская (`README.MD`) и
-русская (`README_RU.MD`) версии. Они разворачивают реальные кластеры в AWS через
-Terragrunt:
+35 практических лаб (`labs/01` .. `labs/35`), каждая полностью локализована на 8 языков:
+английский (`README.MD`), русский (`README_RU.MD`), испанский (`README_ES.MD`),
+французский (`README_FR.MD`), немецкий (`README_DE.MD`), грузинский (`README_GE.MD`),
+традиционный китайский (`README_TW.MD`) и японский (`README_JP.MD`). Они разворачивают
+реальные кластеры в AWS через Terragrunt:
 
 ```bash
 TASK=01 make run_ica_task      # развернуть лабу 01
@@ -79,6 +81,10 @@ TASK=01 make delete_ica_task   # удалить
 | 29 | Ingress TLS: MUTUAL и PASSTHROUGH | 9 |
 | 30 | StatefulSet и headless-сервисы | 23 |
 | 31 | Миграция без даунтайма: ingress-nginx → Istio | 26 |
+| 32 | gRPC: балансировка per-request, именование портов, ретраи | 10 |
+| 33 | Control plane: производительность и эксплуатация | 30 |
+| 34 | Харденинг и модель угроз | 31 |
+| 35 | Мультикластерный mesh (multi-primary, multi-network) | 28 |
 
 ## Пробные экзамены (mock)
 

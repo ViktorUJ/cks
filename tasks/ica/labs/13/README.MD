@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 13 - Securing Edge Traffic with TLS
+
+> [Reference solution](worker/files/solutions/1.MD)
 
 So far, traffic from the outside entered the cluster over **HTTP** (`http://myapp.local:32080`). In production that's not acceptable - edge traffic must be encrypted with **TLS/HTTPS**. Istio can terminate TLS right at the ingress gateway: the client connects over HTTPS, the gateway decrypts the traffic, and then forwards it to the service inside the mesh.
 

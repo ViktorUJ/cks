@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 1. Введение в service mesh и архитектуру Istio
 
@@ -443,4 +443,4 @@ Zero Trust) и observability, а к управлению релизами (canar
 🧪 Лаба 01: [tasks/ica/labs/01](../../labs/01/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 2](../02/ru.md)
+[Оглавление](../README_RU.md) · [Глава 2](../02/ru.md)

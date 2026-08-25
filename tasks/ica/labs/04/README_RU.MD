@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 04 - Zero Trust: mTLS (PeerAuthentication) + AuthorizationPolicy
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 Представьте: у вас есть бэкенд `ping-pong`, в котором лежат чувствительные данные. По умолчанию внутри кластера любой под может достучаться до любого сервиса по сети - это «плоская» доверенная сеть. Нам нужно построить модель **Zero Trust** («не доверяй никому»): во-первых, весь трафик между сервисами должен быть зашифрован и аутентифицирован (mTLS), а во-вторых, обращаться к бэкенду имеет право **только** фронтенд и **только** через `GET`. Всё остальное - запрещено.
 

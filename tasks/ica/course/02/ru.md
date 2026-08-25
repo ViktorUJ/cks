@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 2. Установка и конфигурация Istio
 
@@ -345,4 +345,4 @@ kubectl label namespace default istio-injection-
 🧪 Лаба 15: [tasks/ica/labs/15](../../labs/15/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 1](../01/ru.md) · [Глава 3](../03/ru.md)
+[Оглавление](../README_RU.md) · [Глава 1](../01/ru.md) · [Глава 3](../03/ru.md)

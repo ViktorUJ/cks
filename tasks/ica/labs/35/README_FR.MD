@@ -1,4 +1,4 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 35 - Mesh multi-cluster (multi-primary, multi-network)
 
@@ -71,7 +71,7 @@ inter-cluster :
 5. **Vérification** : déployer `helloworld` (v1 sur cluster1, v2 sur cluster2) et `sleep`, et
    vérifier que le client de cluster1 reçoit des réponses à la fois de v1 et de v2.
 
-> Le jeu complet de commandes est dans la [reference solution](worker/files/solutions/1.MD). Les
+> Le jeu complet de commandes est dans la [reference solution](worker/files/solutions/1_FR.MD). Les
 > étapes de référence sont ci-dessous.
 
 ## Étapes de référence

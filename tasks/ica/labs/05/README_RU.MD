@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 05 - Контролируемый egress: ServiceEntry + Egress Gateway + Sidecar scope
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 Представьте: внутри кластера живёт сервис, которому нужно обращаться к внешнему API (`httpbin.org`). По умолчанию Istio работает в режиме `ALLOW_ANY` - любой под может стучаться куда угодно в интернет. С точки зрения безопасности это плохо: скомпрометированный под сможет «слить» данные на любой внешний адрес. Нам нужен **контролируемый выход** наружу: разрешить только одобренный внешний сервис, пропустить его трафик через единую точку (egress gateway) и запретить всё остальное.
 

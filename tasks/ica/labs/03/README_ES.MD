@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 03 - Fault Injection y Retry
+
+> [Solución de referencia](worker/files/solutions/1_ES.MD)
 
 Imagina: un servicio backend es inestable, periódicamente devuelve HTTP 503. En lugar de meterte en el código de la aplicación, quieres resolver el problema a nivel de infraestructura. En este laboratorio primero **romperemos** el backend con Istio Fault Injection, comprobaremos que el frontend recibe errores y luego lo **arreglaremos** configurando reintentos automáticos a nivel del proxy Envoy, sin un solo cambio en el código.
 

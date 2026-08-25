@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 06 - Load Balancing + Traffic Mirroring
+
+> [Referenzlösung](worker/files/solutions/1_DE.MD)
 
 Stellen Sie sich vor: Sie haben einen Service `ping-pong` mit drei Replikaten der stabilen Version **v1** und einer neuen Version **v2**, die Sie erproben möchten. Es entstehen zwei Fragen. Die erste - **wie genau** wird der Datenverkehr zwischen den Replikaten verteilt und lässt sich das konfigurieren (round-robin, am wenigsten ausgelastet usw.). Die zweite - wie testet man **v2** mit echtem "produktivem" Datenverkehr, **ohne** dabei die Benutzer zu gefährden.
 

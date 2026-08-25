@@ -1,5 +1,7 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 # Dark Launch (Schattenstart)
+
+> [Referenzlösung](worker/files/solutions/1_DE.MD)
 
 Die Entwickler haben eine völlig neue, experimentelle Version der Anwendung ausgerollt - v3. Sie ist noch unausgereift, und normale Benutzer dürfen sie auf keinen Fall zu sehen bekommen (sie sollen auf der stabilen v1 bleiben). Sie müssen jedoch QA-Ingenieure dorthin lassen, damit sie die Logik auf einem echten "produktiven" Cluster überprüfen können. Die Tester werden mithilfe eines speziellen HTTP-Headers identifiziert: `x-user: tester`.
 

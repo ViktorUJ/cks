@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Chapitre 9. Edge TLS : ingress en modes SIMPLE, MUTUAL, PASSTHROUGH
 
@@ -216,7 +216,7 @@ certificat prêt à l'emploi issu d'**AWS Certificate Manager (ACM)** directemen
 Balancer, et alors TLS est terminé **sur le balanceur**, avant même Envoy. Techniquement, cela
 se fait via des annotations sur le Service du gateway (`aws-load-balancer-ssl-cert` +
 `aws-load-balancer-ssl-ports`) - l'analyse détaillée des annotations se trouve au
-[chapitre 5](../05/ru.md). Ici, l'important est de comprendre **quoi choisir**.
+[chapitre 5](../05/fr.md). Ici, l'important est de comprendre **quoi choisir**.
 
 ```mermaid
 flowchart LR

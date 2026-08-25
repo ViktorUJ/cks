@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 11. Kubernetes Gateway API
 
@@ -419,4 +419,4 @@ API или, если нужны фичи Istio, - Istio `Gateway` + `VirtualServ
 🧪 Лаба 16: [tasks/ica/labs/16](../../labs/16/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 10](../10/ru.md) · [Глава 12](../12/ru.md)
+[Оглавление](../README_RU.md) · [Глава 10](../10/ru.md) · [Глава 12](../12/ru.md)

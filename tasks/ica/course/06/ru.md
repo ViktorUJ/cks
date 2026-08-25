@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 6. Релизные стратегии: canary, header-routing, traffic mirroring
 
@@ -222,4 +222,4 @@ flowchart LR
 🧪 Лаба 06: [tasks/ica/labs/06](../../labs/06/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 5](../05/ru.md) · [Глава 7](../07/ru.md)
+[Оглавление](../README_RU.md) · [Глава 5](../05/ru.md) · [Глава 7](../07/ru.md)

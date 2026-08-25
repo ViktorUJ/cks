@@ -1,4 +1,4 @@
-[RU version](README_RU.md) · [Eng version](README.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md)
+[Русская версия](README_RU.md) · [Eng version](README.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md) · [ქართული ვერსია](README_GE.md) · [繁體中文版](README_TW.md) · [日本語版](README_JP.md)
 
 # Istio: curso práctico de autoaprendizaje
 
@@ -17,6 +17,9 @@ por completo):
 - 🇪🇸 Español - `es.md`
 - 🇫🇷 Français - `fr.md`
 - 🇩🇪 Deutsch - `de.md`
+- 🇬🇪 Georgiano - `ge.md`
+- 🇹🇼 Chino tradicional - `tw.md`
+- 🇯🇵 Japonés - `jp.md`
 
 Cambia de idioma con los enlaces de la primera línea de cada capítulo y de la cabecera de
 este índice. Los exámenes de práctica (`tasks/ica/mock`) están solo en inglés.

@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 24. Troubleshooting Istio
 
@@ -382,4 +382,4 @@ waypoint**. Помните из главы 22 - ztunnel работает тол�
 🧪 Лаба 12: [tasks/ica/labs/12](../../labs/12/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 23](../23/ru.md) · [Глава 25](../25/ru.md)
+[Оглавление](../README_RU.md) · [Глава 23](../23/ru.md) · [Глава 25](../25/ru.md)

@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 07 - Installation von Istio über Helm + Canary-Upgrade mit Revisionen
+
+> [Referenzlösung](worker/files/solutions/1_DE.MD)
 
 Stellen Sie sich vor: Sie sind für einen Production-Cluster verantwortlich, in dem Istio bereits läuft. Es erscheint eine neue Version, und Sie müssen den Control Plane **ohne Ausfallzeit und mit Rollback-Möglichkeit** aktualisieren. Einfach "abreißen und den neuen aufsetzen" ist zu riskant: Wenn der neue istiod inkompatibel ist, fällt das gesamte mesh aus. Der richtige Ansatz ist ein **Canary-Upgrade**: Neben dem alten Control Plane wird ein neuer bereitgestellt (eine andere *Revision*), anschließend werden die Namespaces einer nach dem anderen mit einem Neustart der Pods auf ihn umgestellt. Wenn etwas schiefgeht - setzen wir das Label einfach zurück.
 

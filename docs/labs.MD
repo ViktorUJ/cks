@@ -142,17 +142,74 @@
 
 ## EKS labs
 
-- ``TASK=01 make run_eks_task`` - create ckad lab number 01
-- ``TASK=01 make delete_eks_task`` - delete ckad hands-on labs
-- ``TASK=01 make run_eks_task_clean`` - run cka_task with clean terragrunt cache  for  ckad_task
-- ``make output_eks_task `` - show **outputs** from   **ckad_task**
+- ``TASK=01 make run_eks_task`` - create eks lab number 01
+- ``TASK=01 make delete_eks_task`` - delete eks hands-on labs
+- ``TASK=01 make run_eks_task_clean`` - run eks_task with clean terragrunt cache
+- ``make output_eks_task `` - show **outputs** from   **eks_task**
+
+> **Before deleting a lab**, read the deletion section of that lab's `README.MD`. Labs that
+> create AWS resources through in-cluster controllers (load balancers, Gateway API, VPC Lattice),
+> through CSI drivers (EBS volumes, EFS access points), through AWS Backup (recovery points), or
+> by hand via AWS CLI (IAM roles, security groups) need those removed **first** - terraform does
+> not know about them, and `destroy` either hangs on `Still destroying...` or leaves resources
+> that keep costing money.
+>
+> **If `destroy` fails halfway**, re-running `make delete_eks_task` may abort with
+> `... is a dependency of ... but detected no outputs`: already destroyed modules have no outputs
+> for the remaining configs to read. Finish the teardown module by module in reverse dependency
+> order (recreate the env dir first, the Makefile removes it after a failed run):
+>
+> ```bash
+> mkdir -p terraform/environments/eks-labs
+> cp -r tasks/eks/labs/<NNN>/* terraform/environments/eks-labs/
+> export TF_VAR_STACK_TASK=<NNN> TF_VAR_STACK_NAME=eks-labs TF_VAR_USER_ID= TF_VAR_ENV_ID=
+> cd terraform/environments/eks-labs/eks_fargate_system && terragrunt destroy -auto-approve
+> cd ../eks_control_plane && terragrunt destroy -auto-approve
+> cd ../vpc && terragrunt destroy -auto-approve
+> ```
+>
+> `TF_VAR_USER_ID` and `TF_VAR_ENV_ID` must match the values used at creation time - they are
+> part of the cluster name (`eks<NNN>-<user>-<env>`).
 
 
-| Task   | Description                                       | Solution                                                                     |
-|--------| ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **02** | [Karpenter Basics](../tasks/eks/labs/02/README.MD)
-| **03** | [Application Autoscaling with KEDA and Prometheus](../tasks/eks/labs/03/README.MD)
-
+| Task | Description | Solution |
+|---|---|---|
+| **01** | [EKS lab 01](../tasks/eks/labs/01/README.MD) | N/A |
+| **02** | [Karpenter Basics](../tasks/eks/labs/02/README.MD) | N/A |
+| **03** | [Application Autoscaling with KEDA and Prometheus](../tasks/eks/labs/03/README.MD) | N/A |
+| **04** | Legacy EKS lab 04 (no README or solution file) | N/A |
+| **101** | [Cluster as code: VPC, control plane, nodes, kubeconfig](../tasks/eks/labs/101/README.MD) | [SOLUTION](../tasks/eks/labs/101/worker/files/solutions/1.MD) |
+| **102** | [Cluster access: IAM and RBAC, access entries and access policies](../tasks/eks/labs/102/README.MD) | [SOLUTION](../tasks/eks/labs/102/worker/files/solutions/1.MD) |
+| **103** | [Address plan: ENI limits, prefix delegation, secondary CIDR](../tasks/eks/labs/103/README.MD) | [SOLUTION](../tasks/eks/labs/103/worker/files/solutions/1.MD) |
+| **104** | [Workload identity: IRSA and Pod Identity for an application](../tasks/eks/labs/104/README.MD) | [SOLUTION](../tasks/eks/labs/104/worker/files/solutions/1.MD) |
+| **105** | [Secrets: KMS envelope encryption and External Secrets Operator](../tasks/eks/labs/105/README.MD) | [SOLUTION](../tasks/eks/labs/105/worker/files/solutions/1.MD) |
+| **106** | [EBS CSI: gp3, AZ binding, expansion, snapshot](../tasks/eks/labs/106/README.MD) | [SOLUTION](../tasks/eks/labs/106/worker/files/solutions/1.MD) |
+| **107** | [EFS CSI: ReadWriteMany across availability zones](../tasks/eks/labs/107/README.MD) | [SOLUTION](../tasks/eks/labs/107/worker/files/solutions/1.MD) |
+| **108** | [AWS Load Balancer Controller: NLB for a Service of type LoadBalancer](../tasks/eks/labs/108/README.MD) | [SOLUTION](../tasks/eks/labs/108/worker/files/solutions/1.MD) |
+| **109** | [Ingress through ALB with an ACM certificate, external-dns and Route 53](../tasks/eks/labs/109/README.MD) | [SOLUTION](../tasks/eks/labs/109/worker/files/solutions/1.MD) |
+| **110** | [NetworkPolicy in EKS: the built-in VPC CNI network policy](../tasks/eks/labs/110/README.MD) | [SOLUTION](../tasks/eks/labs/110/worker/files/solutions/1.MD) |
+| **111** | [Spot nodes: diversification, interruption handling, graceful drain](../tasks/eks/labs/111/README.MD) | [SOLUTION](../tasks/eks/labs/111/worker/files/solutions/1.MD) |
+| **112** | [Fargate profiles: what works, what breaks, cost comparison](../tasks/eks/labs/112/README.MD) | [SOLUTION](../tasks/eks/labs/112/worker/files/solutions/1.MD) |
+| **113** | [Cluster upgrade and rollback: control plane, add-ons, deprecated APIs](../tasks/eks/labs/113/README.MD) | [SOLUTION](../tasks/eks/labs/113/worker/files/solutions/1.MD) |
+| **114** | [Observability: Container Insights and Managed Prometheus with Grafana](../tasks/eks/labs/114/README.MD) | [SOLUTION](../tasks/eks/labs/114/worker/files/solutions/1.MD) |
+| **115** | [Logging: Fluent Bit to CloudWatch Logs, filtering and retention](../tasks/eks/labs/115/README.MD) | [SOLUTION](../tasks/eks/labs/115/worker/files/solutions/1.MD) |
+| **116** | [Hardening: IMDSv2 and hop limit, Pod Security Admission, private endpoint](../tasks/eks/labs/116/README.MD) | [SOLUTION](../tasks/eks/labs/116/worker/files/solutions/1.MD) |
+| **117** | [Traffic and cost: per-AZ NAT vs. a single NAT, VPC endpoints, cross-AZ](../tasks/eks/labs/117/README.MD) | [SOLUTION](../tasks/eks/labs/117/worker/files/solutions/1.MD) |
+| **118** | [GitOps: Argo CD, drift and self-heal, sync waves, prune](../tasks/eks/labs/118/README.MD) | [SOLUTION](../tasks/eks/labs/118/worker/files/solutions/1.MD) |
+| **119** | [Troubleshooting: node not reaching Ready (IAM, SG, user data, kubelet)](../tasks/eks/labs/119/README.MD) | [SOLUTION](../tasks/eks/labs/119/worker/files/solutions/1.MD) |
+| **120** | [Troubleshooting: broken networking and unhealthy load balancer targets](../tasks/eks/labs/120/README.MD) | [SOLUTION](../tasks/eks/labs/120/worker/files/solutions/1.MD) |
+| **121** | [Troubleshooting: access denied (access entries, IRSA, RBAC)](../tasks/eks/labs/121/README.MD) | [SOLUTION](../tasks/eks/labs/121/worker/files/solutions/1.MD) |
+| **122** | [AWS Backup for EKS: composite recovery point, namespace restore](../tasks/eks/labs/122/README.MD) | [SOLUTION](../tasks/eks/labs/122/worker/files/solutions/1.MD) |
+| **123** | [Karpenter: NodePool, consolidation, drift and safe StatefulSet eviction](../tasks/eks/labs/123/README.MD) | [SOLUTION](../tasks/eks/labs/123/worker/files/solutions/1.MD) |
+| **124** | [Application autoscaling: HPA, KEDA and a Prometheus trigger](../tasks/eks/labs/124/README.MD) | [SOLUTION](../tasks/eks/labs/124/worker/files/solutions/1.MD) |
+| **125** | [EKS Auto Mode versus your own stack: built-in node pools, no node access](../tasks/eks/labs/125/README.MD) | [SOLUTION](../tasks/eks/labs/125/worker/files/solutions/1.MD) |
+| **126** | [Security groups for pods: branch ENI, pod Running but never Ready](../tasks/eks/labs/126/README.MD) | [SOLUTION](../tasks/eks/labs/126/worker/files/solutions/1.MD) |
+| **127** | [Policies without an extra controller: ValidatingAdmissionPolicy on CEL](../tasks/eks/labs/127/README.MD) | [SOLUTION](../tasks/eks/labs/127/worker/files/solutions/1.MD) |
+| **128** | [Gateway API in AWS: ALB Gateway API and VPC Lattice, ReferenceGrant](../tasks/eks/labs/128/README.MD) | [SOLUTION](../tasks/eks/labs/128/worker/files/solutions/1.MD) |
+| **129** | [Mountpoint for S3: where file semantics break and why there is no snapshot](../tasks/eks/labs/129/README.MD) | [SOLUTION](../tasks/eks/labs/129/worker/files/solutions/1.MD) |
+| **130** | [ECR and supply chain: immutable tags, scan on push, pull through cache](../tasks/eks/labs/130/README.MD) | [SOLUTION](../tasks/eks/labs/130/worker/files/solutions/1.MD) |
+| **131** | [Reliability: PDB blocks drain, topology spread, unhealthyPodEvictionPolicy](../tasks/eks/labs/131/README.MD) | [SOLUTION](../tasks/eks/labs/131/worker/files/solutions/1.MD) |
+| **132** | [Alternative CNI: Cilium in CNI chaining over VPC CNI, L7 and FQDN policy, Hubble](../tasks/eks/labs/132/README.MD) | [SOLUTION](../tasks/eks/labs/132/worker/files/solutions/1.MD) |
 
 
 

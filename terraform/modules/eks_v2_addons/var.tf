@@ -22,9 +22,18 @@ variable "STACK_TASK" {
 }
 variable "addons" {
   type = map(object({
-  version=string
-  resolve_conflicts=optional(string, "OVERWRITE")
-  configuration= optional(any)
+    version           = string
+    resolve_conflicts = optional(string, "OVERWRITE")
+    # configuration - простая карта, где ВСЕ значения одного типа. Из-за optional(any)
+    # terraform обязан свести типы всех элементов addons к общему, поэтому смешивать
+    # внутри configuration плоские значения и вложенные блоки нельзя: получите
+    # "Unsuitable value for var.addons ... cannot find a common base type for all
+    # elements" (поймано на лабе 126, где к env добавили init.env).
+    configuration = optional(any, {})
+    # Для вложенных схем (например init.env.DISABLE_TCP_EARLY_DEMUX у vpc-cni) передавайте
+    # готовый JSON строкой: configuration_json = jsonencode({ env = {...}, init = {...} }).
+    # Тип string сводится всегда, поэтому проблемы выше не возникает.
+    configuration_json = optional(string)
   }))
 }
 variable "name" {

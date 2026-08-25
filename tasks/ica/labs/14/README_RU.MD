@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 14 - Locality-aware Failover (отказоустойчивость по зонам)
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 Представьте: ваш сервис работает в двух зонах доступности (`eu-central-1a` и `eu-central-1b`). В нормальном режиме хочется, чтобы клиент ходил в **ближайший** (в своей зоне) экземпляр - это снижает задержку и трафик между зонами. Но если локальный экземпляр отказал - трафик должен **автоматически переключиться** на другую зону. Это и есть **locality-aware load balancing + failover**.
 

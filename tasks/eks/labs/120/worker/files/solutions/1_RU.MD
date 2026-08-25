@@ -1,0 +1,243 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 120 - эталонное решение (сетевые сбои, unhealthy targets в балансировщике)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl уже настроен на
+кластер. Terraform уже создал "битую" security group (компонент
+`eks_network_break_demo`) и роль IRSA для AWS Load Balancer Controller
+(`eks_lbc_irsa`) - имена и id лежат в `~/lab120_hints.txt`.
+
+```bash
+cat ~/lab120_hints.txt
+export SG_ID=$(grep '^broken_sg_id' ~/lab120_hints.txt | awk '{print $3}')
+export NODE_SG=$(grep '^node_sg_id' ~/lab120_hints.txt | awk '{print $3}')
+export CLUSTER=$(grep '^cluster_name' ~/lab120_hints.txt | awk '{print $3}')
+```
+
+## Задание 1. Namespace и нагрузка лабы
+
+```bash
+kubectl create namespace eks-120
+
+kubectl create deployment api --image=viktoruj/ping_pong:latest --replicas=2 -n eks-120
+kubectl rollout status deployment/api -n eks-120
+
+kubectl expose deployment api -n eks-120 --port=80 --target-port=8080 --name=api
+
+kubectl create deployment client --image=busybox:1.36 -n eks-120 -- sleep 3600
+kubectl rollout status deployment/client -n eks-120
+```
+
+## Задание 2. Базовая связность и диагностика SG
+
+```bash
+CLIENT_POD=$(kubectl get pod -n eks-120 -l app=client -o jsonpath='{.items[0].metadata.name}')
+
+mkdir -p /var/work/tests/artifacts/2
+kubectl exec -n eks-120 "$CLIENT_POD" -- \
+  wget -qO- --timeout=5 http://api.eks-120.svc.cluster.local \
+  > /var/work/tests/artifacts/2/connectivity.txt
+cat /var/work/tests/artifacts/2/connectivity.txt
+```
+
+Связность работает штатно: SG нод разрешает трафик между подами кластера, а SG -
+stateful, поэтому ответ на этот запрос проходит сам (глава 46.3). Смотрим, какие SG
+реально висят на ENI пода `api`:
+
+```bash
+API_IP=$(kubectl get pod -n eks-120 -l app=api -o jsonpath='{.items[0].status.podIP}')
+
+Важно, каким фильтром искать ENI. IP пода при VPC CNI - это **вторичный** адрес на ENI ноды,
+поэтому фильтр `private-ip-address` (он смотрит основной адрес интерфейса) вернёт `null`.
+Нужен `addresses.private-ip-address`, который ищет по всем адресам интерфейса:
+
+```bash
+aws ec2 describe-network-interfaces \
+  --filters "Name=addresses.private-ip-address,Values=${API_IP}" \
+  --query 'NetworkInterfaces[0].Groups' \
+  > /var/work/tests/artifacts/2/api_sg.txt
+cat /var/work/tests/artifacts/2/api_sg.txt
+```
+
+## Задание 3. Установка AWS Load Balancer Controller
+
+```bash
+LBC_ROLE_ARN=$(aws iam get-role --role-name "${CLUSTER}-lbc-irsa" \
+  --query 'Role.Arn' --output text)
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aws-load-balancer-controller
+  namespace: kube-system
+  annotations:
+    eks.amazonaws.com/role-arn: ${LBC_ROLE_ARN}
+EOF
+
+helm repo add eks https://aws.github.io/eks-charts
+helm repo update
+
+Важная деталь этого стенда: namespace `kube-system` попадает под Fargate-профиль, поэтому поды
+контроллера запускаются на Fargate, а там **нет IMDS**. Без IMDS контроллер не может сам
+определить регион и VPC и падает с `failed to get VPC ID: ... ec2imds ... context deadline
+exceeded`. Поэтому `region` и `vpcId` задают явно:
+
+```bash
+REGION=eu-central-1
+VPC_ID=$(aws eks describe-cluster --name "${CLUSTER}" \
+  --query 'cluster.resourcesVpcConfig.vpcId' --output text)
+
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName="${CLUSTER}" \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller \
+  --set region="${REGION}" \
+  --set vpcId="${VPC_ID}"
+
+kubectl rollout status deployment/aws-load-balancer-controller -n kube-system
+```
+
+## Задание 4. Симптом: NLB с unhealthy targets
+
+Задаём "битую" SG собственной security group балансировщика. Как только SG указана
+явно через аннотацию, LBC больше не добавляет за нас недостающее inbound-правило в
+SG нод - это и есть поломка (глава 46.6):
+
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-lb
+  namespace: eks-120
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-security-groups: ${SG_ID}
+spec:
+  type: LoadBalancer
+  selector:
+    app: api
+  ports:
+    - port: 80
+      targetPort: 8080
+EOF
+
+kubectl get svc api-lb -n eks-120 -w
+```
+
+Ждём внешний адрес, находим target group и смотрим здоровье таргетов:
+
+```bash
+HOSTNAME=$(kubectl get svc api-lb -n eks-120 \
+  -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+LB_ARN=$(aws elbv2 describe-load-balancers \
+  --query "LoadBalancers[?DNSName=='${HOSTNAME}'].LoadBalancerArn" --output text)
+TG_ARN=$(aws elbv2 describe-target-groups --load-balancer-arn "$LB_ARN" \
+  --query 'TargetGroups[0].TargetGroupArn' --output text)
+
+mkdir -p /var/work/tests/artifacts/4
+aws elbv2 describe-target-health --target-group-arn "$TG_ARN" \
+  --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State,TargetHealth.Reason]' \
+  --output table > /var/work/tests/artifacts/4/unhealthy.txt
+cat /var/work/tests/artifacts/4/unhealthy.txt
+```
+
+Все таргеты `unhealthy` - SG балансировщика не пускает health check к SG нод, а
+значит и до пода `api` он не доходит.
+
+## Задание 5. Диагностика: чья SG не пускает health check
+
+```bash
+aws ec2 describe-security-groups --group-ids "$SG_ID" \
+  --query 'SecurityGroups[0].IpPermissions'
+```
+
+Пустой список подтверждает: у SG балансировщика нет ни одного inbound-правила.
+
+```bash
+mkdir -p /var/work/tests/artifacts/5
+cat > /var/work/tests/artifacts/5/diagnosis.txt <<EOF
+Security group балансировщика (${SG_ID}) назначена api-lb через аннотацию
+aws-load-balancer-security-groups и не содержит inbound-правил. Health check от NLB
+идёт как новое TCP-соединение от security group балансировщика к security group нод
+(${NODE_SG}) на порт приложения 8080. Security group нод не разрешает входящий трафик
+от security group балансировщика на этот порт, поэтому health check не проходит и
+таргеты остаются unhealthy (глава 46.6).
+EOF
+cat /var/work/tests/artifacts/5/diagnosis.txt
+```
+
+## Задание 6. Fix: authorize-security-group-ingress, targets healthy
+
+Два правила: разрешаем health check и трафик приложения от SG балансировщика к SG
+нод, и открываем слушатель NLB для клиентов на порт 80:
+
+```bash
+aws ec2 authorize-security-group-ingress \
+  --group-id "$NODE_SG" \
+  --protocol tcp --port 8080 \
+  --source-group "$SG_ID"
+
+aws ec2 authorize-security-group-ingress \
+  --group-id "$SG_ID" \
+  --protocol tcp --port 80 \
+  --cidr 0.0.0.0/0
+```
+
+Ждём, пока таргеты станут `healthy` (обычно 1-2 минуты), и проверяем curl-ом:
+
+```bash
+sleep 90
+
+mkdir -p /var/work/tests/artifacts/6
+{
+  aws elbv2 describe-target-health --target-group-arn "$TG_ARN" \
+    --query 'TargetHealthDescriptions[].[Target.Id,TargetHealth.State]' --output table
+  echo
+  curl -s --max-time 5 "http://${HOSTNAME}"
+} > /var/work/tests/artifacts/6/healthy.txt
+cat /var/work/tests/artifacts/6/healthy.txt
+```
+
+## Задание 7. DNS работает: контрастная проверка
+
+```bash
+mkdir -p /var/work/tests/artifacts/7
+kubectl run dnstest --image=busybox:1.36 --rm -i --restart=Never -- \
+  sh -c 'nslookup kubernetes.default.svc.cluster.local; nslookup example.com' \
+  > /var/work/tests/artifacts/7/dns.txt
+cat /var/work/tests/artifacts/7/dns.txt
+```
+
+Внутреннее имя спрашиваем полным FQDN. Короткое `kubernetes.default` через `nslookup` из
+busybox отдаёт `NXDOMAIN`: этот резолвер не дописывает домены поиска из `/etc/resolv.conf`
+так, как это делает обычный клиент, и такой ответ легко принять за поломку DNS, которой нет.
+
+Оба имени резолвятся нормально (`kubernetes.default.svc.cluster.local` в адрес сервиса
+`kubernetes`, `example.com` во внешние адреса) - DNS не является источником проблемы в этой
+лабе (глава 46.5, 46.7), в отличие от security group из заданий 4-6.
+
+## Задание 8. Итоговый чеклист: симптом - причина - что проверить
+
+```bash
+mkdir -p /var/work/tests/artifacts/8
+cat > /var/work/tests/artifacts/8/summary.txt <<EOF
+Симптом: таргеты в target group NLB unhealthy, сервис api-lb отдаёт 503.
+Вероятная причина: security group балансировщика не разрешает входящий трафик к SG
+нод на порт health check (глава 46.6).
+Что проверить: aws elbv2 describe-target-health --target-group-arn <arn> покажет
+TargetHealth.Reason=Target.FailedHealthChecks, а aws ec2 describe-security-groups
+подтвердит отсутствие inbound-правила у SG балансировщика.
+EOF
+cat /var/work/tests/artifacts/8/summary.txt
+```
+
+## Быстрая проверка
+
+```bash
+check_result
+```

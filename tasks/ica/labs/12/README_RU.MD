@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 12 - Troubleshooting: диагностика и починка Istio
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 На экзамене ICA есть отдельный домен - **troubleshooting**: вам дают сломанное окружение, и нужно быстро найти причину и починить. В этой лабораторной окружение уже развёрнуто **в сломанном состоянии** - приложение не работает. Ваша задача - с помощью инструментов `istioctl` найти обе ошибки конфигурации и устранить их.
 

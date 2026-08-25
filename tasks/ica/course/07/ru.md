@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 7. Балансировка нагрузки и locality-aware failover
 
@@ -348,4 +348,4 @@ spec:
 🧪 Лаба 14: [tasks/ica/labs/14](../../labs/14/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 6](../06/ru.md) · [Глава 8](../08/ru.md)
+[Оглавление](../README_RU.md) · [Глава 6](../06/ru.md) · [Глава 8](../08/ru.md)

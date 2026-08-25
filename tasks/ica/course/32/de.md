@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Kapitel 32. Die ICA-Prüfung: Format und Vorbereitung
 
@@ -96,7 +96,7 @@ Repository gibt es **zwei Mock-Prüfungen**, die das ICA-Format imitieren:
 
 Eine allgemeine Beschreibung der Umgebung, die Befehle (`check_result`, `time_left`, `hosts`)
 und Tipps findest du im Root-README der Infrastruktur:
-[tasks/ica/README.MD](../../README.MD).
+[tasks/ica/README.MD](../../README_DE.MD).
 
 So nutzt du die Mocks:
 

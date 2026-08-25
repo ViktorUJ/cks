@@ -1,0 +1,126 @@
+[Русская версия](1_RU.MD) · [Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Lab 08 - Referenzlösung
+
+## Schritt 1. Sidecar-Injektion aktivieren
+
+```bash
+kubectl label namespace default istio-injection=enabled --overwrite
+```
+
+## Schritt 2. Die App + Gateway/VirtualService bereitstellen
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/08/k8s-1/scripts/1.yaml
+kubectl rollout restart deployment -n default
+```
+
+```yaml
+# gateway.yaml
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: main-gateway
+  namespace: default
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "myapp.local"
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: frontend-vs
+  namespace: default
+spec:
+  hosts:
+  - "myapp.local"
+  gateways:
+  - main-gateway
+  http:
+  - route:
+    - destination:
+        host: frontend
+        port:
+          number: 8080
+```
+
+```bash
+kubectl apply -f gateway.yaml
+```
+
+## Schritt 3. Die Observability-Add-ons installieren
+
+```bash
+REL=release-1.29
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/$REL/samples/addons/prometheus.yaml
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/$REL/samples/addons/grafana.yaml
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/$REL/samples/addons/jaeger.yaml
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/$REL/samples/addons/kiali.yaml
+
+kubectl rollout status deployment/prometheus -n istio-system
+kubectl rollout status deployment/kiali -n istio-system
+```
+
+## Schritt 4. Trace-Sampling auf 100 % setzen
+
+```yaml
+# telemetry.yaml
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: mesh-default
+  namespace: istio-system
+spec:
+  tracing:
+  - providers:
+    - name: zipkin
+    randomSamplingPercentage: 100.0
+```
+
+```bash
+kubectl apply -f telemetry.yaml
+```
+
+## Schritt 5. Traffic erzeugen
+
+```bash
+for i in $(seq 50); do curl -s -o /dev/null http://myapp.local:32080; done
+```
+
+## Schritt 6. Metriken (Prometheus)
+
+```bash
+kubectl exec -n default deploy/curl-client -c curl -- \
+  curl -s 'http://prometheus.istio-system:9090/api/v1/query?query=istio_requests_total{destination_service_name="ping-pong"}' | jq '.data.result | length'
+```
+
+Browser (optional): `kubectl -n istio-system port-forward svc/prometheus 9090:9090`
+
+## Schritt 7. Tracing (Jaeger)
+
+```bash
+kubectl exec -n default deploy/curl-client -c curl -- \
+  curl -s 'http://tracing.istio-system/jaeger/api/services' | jq .
+```
+
+Browser (optional): `kubectl -n istio-system port-forward svc/tracing 8080:80`, dann `/jaeger` öffnen
+
+## Schritt 8. Service-Graph (Kiali)
+
+```bash
+kubectl -n istio-system port-forward svc/kiali 20001:20001
+# open http://localhost:20001 -> Graph -> namespace "default"
+```
+
+## Überprüfen
+
+```bash
+kubectl get pods -n istio-system | grep -E 'prometheus|grafana|jaeger|kiali'
+```

@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Eng version](README.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 07 - Instalación de Istio con Helm + Canary upgrade con revisiones
+
+> [Solución de referencia](worker/files/solutions/1_ES.MD)
 
 Imagina lo siguiente: eres responsable de un clúster de producción en el que ya funciona Istio. Sale una nueva versión y necesitas actualizar el control plane **sin tiempo de inactividad y con posibilidad de revertir**. Simplemente «tirarlo abajo y poner el nuevo» es demasiado arriesgado: si el nuevo istiod resulta incompatible, se cae toda la malla. El enfoque correcto es el **canary upgrade**: junto al control plane antiguo se despliega uno nuevo (otra *revisión*), y luego los namespaces se van pasando de uno en uno a él, reiniciando los pods. Si algo sale mal, simplemente devolvemos la etiqueta a su valor anterior.
 

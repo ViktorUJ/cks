@@ -1,4 +1,4 @@
-[RU version](README_RU.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md)
+[Русская версия](README_RU.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md) · [ქართული ვერსია](README_GE.md) · [繁體中文版](README_TW.md) · [日本語版](README_JP.md)
 
 # Istio: a hands-on self-study course
 
@@ -16,6 +16,9 @@ Available localizations (course chapters and labs are fully translated):
 - 🇪🇸 Español - `es.md`
 - 🇫🇷 Français - `fr.md`
 - 🇩🇪 Deutsch - `de.md`
+- 🇬🇪 Georgian - `ge.md`
+- 🇹🇼 Traditional Chinese - `tw.md`
+- 🇯🇵 Japanese - `jp.md`
 
 Switch between languages via the links in the first line of every chapter and in the
 header of this contents page. The mock exams (`tasks/ica/mock`) are English-only.

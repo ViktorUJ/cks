@@ -1,6 +1,8 @@
-[RU version](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 14 - Locality-aware Failover
+
+> [Reference solution](worker/files/solutions/1.MD)
 
 Imagine your service runs across two availability zones (`eu-central-1a` and `eu-central-1b`). Normally you want a client to reach the **nearest** (same-zone) instance - it lowers latency and cross-zone traffic. But if the local instance fails, traffic must **automatically fail over** to the other zone. That's **locality-aware load balancing + failover**.
 

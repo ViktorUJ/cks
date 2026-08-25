@@ -1,4 +1,4 @@
-[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md)
+[Eng version](en.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 28. Мультикластерный mesh
 
@@ -278,4 +278,4 @@ gateway, cross-cluster discovery через remote-секреты и межкл�
 🧪 Лаба 35: [tasks/ica/labs/35](../../labs/35/README_RU.MD)
 
 ---
-[Оглавление](../README.md) · [Глава 27](../27/ru.md) · [Глава 29](../29/ru.md)
+[Оглавление](../README_RU.md) · [Глава 27](../27/ru.md) · [Глава 29](../29/ru.md)

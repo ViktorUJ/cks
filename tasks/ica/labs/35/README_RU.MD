@@ -1,4 +1,4 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 35 - Мультикластерный mesh (multi-primary, multi-network)
 
@@ -69,7 +69,7 @@ TASK=35 make run_ica_task
 5. **Проверка**: развернуть `helloworld` (v1 в cluster1, v2 в cluster2) и `sleep`, убедиться,
    что клиент из cluster1 получает ответы и от v1, и от v2.
 
-> Полный набор команд - в [reference solution](worker/files/solutions/1.MD). Ниже - опорные
+> Полный набор команд - в [reference solution](worker/files/solutions/1_RU.MD). Ниже - опорные
 > шаги.
 
 ## Опорные шаги

@@ -1,0 +1,341 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 102 - эталонное решение (доступ к кластеру: IAM, RBAC, access entries)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl уже настроен на
+кластер. Роль worker имеет `eks:*` (достаточно для всех access entry/access policy
+команд) и точечные права `iam:CreateRole/GetRole/DeleteRole/PutRolePolicy` плюс
+`sts:AssumeRole`, ограниченные на роли с именем вида `*-test-*` - этого достаточно, чтобы
+создать тестовую роль и реально в неё assume-role, не трогая права других лаб.
+
+## Выбор второго принципала
+
+Кластер уже создаётся модулем `eks_v2_control_plane` в режиме `authenticationMode = API`
+(v21 `terraform-aws-modules/eks/aws` с `enable_cluster_creator_admin_permissions = true`).
+Роль worker уже имеет собственную access entry с `AmazonEKSClusterAdminPolicy`
+(`terraform/modules/eks_v2_work_pc/iam.tf`) - это подтверждает, что API access entries в
+кластере включены и рабочие.
+
+Для заданий этой лабы нужен **второй** IAM-принципал, у которого пока нет доступа к
+кластеру. Роль ноды Karpenter для этого не годится: submodule
+`terraform-aws-modules/eks/aws//modules/karpenter` создаёт для неё access entry типа
+`EC2_LINUX` автоматически (`create_access_entry = true` по умолчанию), а один IAM-принципал
+не может быть в двух access entry сразу. Поэтому лаба создаёт отдельную тестовую роль
+через AWS CLI прямо с worker, с доверием только на саму роль worker (`sts:AssumeRole`
+разрешён исключительно ARN роли worker, никому больше).
+
+## Задание 1. Инвентаризация: authenticationMode
+
+```bash
+mkdir -p /var/work/tests/artifacts/1
+CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
+aws eks describe-cluster --name "$CLUSTER" --query 'cluster.accessConfig' \
+  > /var/work/tests/artifacts/1/accessconfig.json
+cat /var/work/tests/artifacts/1/accessconfig.json
+```
+
+Ожидаемый вывод похож на:
+
+```json
+{
+    "authenticationMode": "API",
+    "bootstrapClusterCreatorAdminPermissions": true
+}
+```
+
+`authenticationMode` равен `API` - в кластере нет `aws-auth` ConfigMap, все отображения
+принципалов идут через access entries.
+
+## Задание 2. Тестовая IAM-роль как второй принципал
+
+Узнаём ARN и account id роли worker (её мы разрешим ассьюмить тестовую роль):
+
+```bash
+WORKER_ARN=$(aws sts get-caller-identity --query Arn --output text)
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+echo "$WORKER_ARN"
+```
+
+`get-caller-identity` для инстанса на EC2-профиле показывает ARN **сессии**
+(`assumed-role/.../i-...`), а не ARN самой роли. Для trust policy и access entry нужен ARN
+роли, поэтому собираем его из сессии:
+
+```bash
+ROLE_NAME=$(echo "$WORKER_ARN" | sed -E 's#.*assumed-role/([^/]+)/.*#\1#')
+ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${ROLE_NAME}"
+echo "$ROLE_ARN"
+```
+
+Создаём тестовую роль. Имя обязательно содержит `-test-`, иначе worker не сможет её
+ни создать, ни ассьюмить (её IAM-политика ограничена по этой подстроке):
+
+```bash
+TEST_ROLE_NAME="eks-task102-test-viewer"
+
+cat > /tmp/trust.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Principal": { "AWS": "${ROLE_ARN}" }
+    }
+  ]
+}
+EOF
+
+aws iam create-role --role-name "$TEST_ROLE_NAME" \
+  --assume-role-policy-document file:///tmp/trust.json
+
+TEST_ROLE_ARN=$(aws iam get-role --role-name "$TEST_ROLE_NAME" \
+  --query 'Role.Arn' --output text)
+
+mkdir -p /var/work/tests/artifacts/2
+echo "$TEST_ROLE_ARN" > /var/work/tests/artifacts/2/test_role_arn.txt
+cat /var/work/tests/artifacts/2/test_role_arn.txt
+```
+
+Роли не нужны никакие IAM-права внутри, кроме assume - все её реальные полномочия задаёт
+кластер через access entry и access policy/RBAC, а не IAM.
+
+## Задание 3. Access entry для тестовой роли, группа viewers
+
+```bash
+CLUSTER=$(aws eks list-clusters --query 'clusters[0]' --output text)
+
+aws eks create-access-entry --cluster-name "$CLUSTER" \
+  --principal-arn "$TEST_ROLE_ARN" \
+  --kubernetes-groups viewers \
+  --type STANDARD
+
+aws eks describe-access-entry --cluster-name "$CLUSTER" \
+  --principal-arn "$TEST_ROLE_ARN"
+```
+
+`username` не задаём - EKS подставит его сам, как рекомендует документация. Теперь
+принципал известен кластеру и попадает в группу Kubernetes `viewers`, но пока без единого
+права: сама запись прав не даёт, она только даёт субъект для RBAC.
+
+## Задание 4. ClusterRole и ClusterRoleBinding на группу viewers
+
+Классический RBAC поверх access entry, без access policy:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: viewers-pod-reader
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+EOF
+
+cat <<'EOF' | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: viewers-pod-reader
+subjects:
+- kind: Group
+  name: viewers
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: viewers-pod-reader
+  apiGroup: rbac.authorization.k8s.io
+EOF
+
+kubectl get clusterrole viewers-pod-reader -o yaml
+kubectl get clusterrolebinding viewers-pod-reader -o yaml
+```
+
+Группа `viewers` теперь может читать поды во всех namespace, и больше ничего.
+
+## Задание 5. Ручная проверка прав через assume-role
+
+Это шаг, который студент выполняет руками - автотест проверяет только артефакт с
+результатом, а не сам assume-role (временные креды внутри `tests.bats` не нужны).
+
+Получаем временные креды тестовой роли и отдельный kubeconfig под alias:
+
+```bash
+CREDS=$(aws sts assume-role --role-arn "$TEST_ROLE_ARN" \
+  --role-session-name test-viewer-session)
+
+export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | python3 -c \
+  'import json,sys;print(json.load(sys.stdin)["Credentials"]["AccessKeyId"])')
+export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | python3 -c \
+  'import json,sys;print(json.load(sys.stdin)["Credentials"]["SecretAccessKey"])')
+export AWS_SESSION_TOKEN=$(echo "$CREDS" | python3 -c \
+  'import json,sys;print(json.load(sys.stdin)["Credentials"]["SessionToken"])')
+
+aws eks update-kubeconfig --name "$CLUSTER" --region eu-central-1 \
+  --alias test-viewer --kubeconfig /tmp/test-viewer.kubeconfig
+
+kubectl --kubeconfig /tmp/test-viewer.kubeconfig get pods -A
+kubectl --kubeconfig /tmp/test-viewer.kubeconfig create namespace test
+```
+
+Ожидаемый результат: `get pods -A` отрабатывает (только чтение разрешено RBAC-биндингом
+на группу `viewers`), а `create namespace test` падает с `Forbidden` - RBAC для группы
+`viewers` не содержит прав на `namespaces`. Возвращаемся к правам worker:
+
+```bash
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+```
+
+Сохраняем результат ручной проверки в артефакт:
+
+```bash
+mkdir -p /var/work/tests/artifacts/5
+cat > /var/work/tests/artifacts/5/rbac_check.txt <<'EOF'
+kubectl --kubeconfig /tmp/test-viewer.kubeconfig get pods -A
+  -> сработало: RBAC-биндинг viewers-pod-reader даёт get/list на pods.
+
+kubectl --kubeconfig /tmp/test-viewer.kubeconfig create namespace test
+  -> Forbidden: группа viewers не имеет прав на создание namespace,
+     access entry дала субъект, но RBAC не дал это действие.
+EOF
+cat /var/work/tests/artifacts/5/rbac_check.txt
+```
+
+## Задание 6. Access policy AmazonEKSViewPolicy поверх access entry
+
+```bash
+aws eks associate-access-policy --cluster-name "$CLUSTER" \
+  --principal-arn "$TEST_ROLE_ARN" \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy \
+  --access-scope type=cluster
+
+aws eks list-associated-access-policies --cluster-name "$CLUSTER" \
+  --principal-arn "$TEST_ROLE_ARN"
+```
+
+Теперь у тестовой роли есть два независимых источника прав: RBAC-группа `viewers`
+(get/list подов) и access policy `AmazonEKSViewPolicy` (чтение большинства ресурсов
+кластера, без секретов). Обратите внимание: `kubectl --kubeconfig /tmp/test-viewer.kubeconfig
+auth can-i --list` не покажет права из access policy - она не выражена объектами RBAC,
+единственный способ её увидеть - `list-associated-access-policies`.
+
+## Задание 7. Диагностика: Unauthorized против Forbidden
+
+Показываем разницу на реальных командах. Заводим ещё одну роль **без** access entry -
+она будет неизвестна кластеру:
+
+```bash
+NOBODY_ROLE_NAME="eks-task102-test-nobody"
+aws iam create-role --role-name "$NOBODY_ROLE_NAME" \
+  --assume-role-policy-document file:///tmp/trust.json
+NOBODY_ARN=$(aws iam get-role --role-name "$NOBODY_ROLE_NAME" --query 'Role.Arn' --output text)
+
+CREDS2=$(aws sts assume-role --role-arn "$NOBODY_ARN" --role-session-name nobody-session)
+export AWS_ACCESS_KEY_ID=$(echo "$CREDS2" | python3 -c \
+  'import json,sys;print(json.load(sys.stdin)["Credentials"]["AccessKeyId"])')
+export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS2" | python3 -c \
+  'import json,sys;print(json.load(sys.stdin)["Credentials"]["SecretAccessKey"])')
+export AWS_SESSION_TOKEN=$(echo "$CREDS2" | python3 -c \
+  'import json,sys;print(json.load(sys.stdin)["Credentials"]["SessionToken"])')
+
+aws eks update-kubeconfig --name "$CLUSTER" --region eu-central-1 \
+  --alias test-nobody --kubeconfig /tmp/test-nobody.kubeconfig
+
+kubectl --kubeconfig /tmp/test-nobody.kubeconfig get pods -A
+# error: You must be logged in to the server (Unauthorized)
+
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+aws iam delete-role --role-name "$NOBODY_ROLE_NAME"
+```
+
+Сравниваем с попыткой создать namespace той же тестовой ролью из задания 5
+(`test-viewer.kubeconfig`) - там кластер принципала знает, но RBAC не разрешает действие,
+то есть `Forbidden`. Разница в одном: `Unauthorized` значит кластер не нашёл access entry
+для этого ARN (`aws eks list-access-entries` не покажет такой ARN вообще), `Forbidden`
+значит access entry есть, а RBAC/access policy этого действия не разрешают.
+
+```bash
+aws eks list-access-entries --cluster-name "$CLUSTER"
+```
+
+Сохраняем объяснение в артефакт:
+
+```bash
+mkdir -p /var/work/tests/artifacts/7
+cat > /var/work/tests/artifacts/7/unauthorized_vs_forbidden.txt <<'EOF'
+Unauthorized (401): роль eks-task102-test-nobody не имеет access entry в кластере.
+kubectl get pods -A с её kubeconfig отвечает "You must be logged in to the server
+(Unauthorized)" - до RBAC дело не дошло, аутентификация не прошла. Проверка:
+aws eks list-access-entries --cluster-name <cluster> не содержит её ARN.
+
+Forbidden (403): роль eks-task102-test-viewer имеет access entry (группа viewers) и
+может читать поды, но kubectl create namespace test с той же ролью отвечает Forbidden -
+кластер принципала узнал, но RBAC группы viewers не разрешает создание namespace.
+EOF
+cat /var/work/tests/artifacts/7/unauthorized_vs_forbidden.txt
+```
+
+## Задание 8. Удаление access entry и восстановление
+
+Убираем access entry и убеждаемся, что доступ пропал, затем создаём запись снова (кластер
+остаётся в рабочем состоянии для проверки):
+
+```bash
+aws eks delete-access-entry --cluster-name "$CLUSTER" --principal-arn "$TEST_ROLE_ARN"
+
+CREDS=$(aws sts assume-role --role-arn "$TEST_ROLE_ARN" --role-session-name test-viewer-2)
+export AWS_ACCESS_KEY_ID=$(echo "$CREDS" | python3 -c \
+  'import json,sys;print(json.load(sys.stdin)["Credentials"]["AccessKeyId"])')
+export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS" | python3 -c \
+  'import json,sys;print(json.load(sys.stdin)["Credentials"]["SecretAccessKey"])')
+export AWS_SESSION_TOKEN=$(echo "$CREDS" | python3 -c \
+  'import json,sys;print(json.load(sys.stdin)["Credentials"]["SessionToken"])')
+
+kubectl --kubeconfig /tmp/test-viewer.kubeconfig get pods -A
+# error: You must be logged in to the server (Unauthorized)
+
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+
+aws eks create-access-entry --cluster-name "$CLUSTER" \
+  --principal-arn "$TEST_ROLE_ARN" \
+  --kubernetes-groups viewers --type STANDARD
+
+aws eks describe-access-entry --cluster-name "$CLUSTER" --principal-arn "$TEST_ROLE_ARN"
+```
+
+`delete-access-entry` удаляет вместе с записью и все её ассоциации access policy - policy
+из задания 6 (`AmazonEKSViewPolicy`) после удаления записи не восстанавливается сама.
+Возвращаем её явно, чтобы стенд остался в состоянии, пройденном в задании 6:
+
+```bash
+aws eks associate-access-policy --cluster-name "$CLUSTER" \
+  --principal-arn "$TEST_ROLE_ARN" \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy \
+  --access-scope type=cluster
+
+aws eks list-associated-access-policies --cluster-name "$CLUSTER" --principal-arn "$TEST_ROLE_ARN"
+```
+
+Сохраняем итог цикла удаление/восстановление в артефакт:
+
+```bash
+mkdir -p /var/work/tests/artifacts/8
+cat > /var/work/tests/artifacts/8/delete_recreate.txt <<'EOF'
+aws eks delete-access-entry --cluster-name <cluster> --principal-arn <test_role_arn>
+kubectl --kubeconfig /tmp/test-viewer.kubeconfig get pods -A
+  -> error: You must be logged in to the server (Unauthorized): удалённая access entry
+     сделала принципала неизвестным кластеру немедленно.
+
+aws eks create-access-entry --cluster-name <cluster> --principal-arn <test_role_arn> \
+  --kubernetes-groups viewers --type STANDARD
+  -> доступ восстановлен, RBAC-биндинг на группу viewers не менялся и снова работает.
+EOF
+cat /var/work/tests/artifacts/8/delete_recreate.txt
+```
+
+## Быстрая проверка
+
+```bash
+check_result
+```

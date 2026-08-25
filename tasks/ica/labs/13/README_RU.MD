@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 13 - Securing Edge Traffic with TLS
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 До сих пор трафик снаружи приходил в кластер по **HTTP** (`http://myapp.local:32080`). В продакшене так нельзя - трафик на входе (edge) должен быть зашифрован по **TLS/HTTPS**. Istio позволяет терминировать TLS прямо на ingress-шлюзе: клиент подключается по HTTPS, шлюз расшифровывает трафик и дальше внутри mesh передаёт его сервису.
 

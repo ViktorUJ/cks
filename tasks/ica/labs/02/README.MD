@@ -1,5 +1,7 @@
-[RU version](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Русская версия](README_RU.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 # Dark Launch
+
+> [Reference solution](worker/files/solutions/1.MD)
 
 The dev team has rolled out a brand-new, experimental version of the application - v3. It's still rough around the edges, and regular users should never see it (they must stay on the stable v1). However, you need to give QA engineers access so they can test it against real production-like traffic. Testers will identify themselves using a special HTTP header: `x-user: tester`.
 

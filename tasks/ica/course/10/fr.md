@@ -1,4 +1,4 @@
-[RU version](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md)
+[Русская версия](ru.md) · [Eng version](en.md) · [Versión en español](es.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Chapitre 10. Routage TCP, gRPC et WebSocket
 
@@ -109,7 +109,7 @@ Un schéma en deux parties :
 1. **Ingress gateway interne** - un gateway distinct dont le Service reçoit un NLB avec `scheme:
    internal` (l'adresse ne se résout qu'en IP privées du VPC, inaccessibles depuis internet).
    Comment déployer un second gateway et lui attacher un NLB interne - nous l'avons vu au
-   [chapitre 5](../05/ru.md).
+   [chapitre 5](../05/fr.md).
 2. **Gateway + VirtualService sur le port TCP** de ce service, dirigés vers le gateway interne.
 
 ```mermaid

@@ -1,6 +1,8 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD)
+[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
 
 # Lab 07 - Установка Istio через Helm + Canary upgrade с ревизиями
+
+> [Решение](worker/files/solutions/1_RU.MD)
 
 Представьте: вы отвечаете за production-кластер, в котором уже работает Istio. Выходит новая версия, и вам нужно обновить control plane **без простоя и с возможностью отката**. Просто «снести и поставить новый» - слишком рискованно: если новый istiod окажется несовместим, упадёт весь mesh. Правильный подход - **canary upgrade**: рядом со старым control plane разворачивается новый (другая *ревизия*), затем namespace'ы по одному переводятся на него с перезапуском подов. Если что-то идёт не так - просто возвращаем метку обратно.
 

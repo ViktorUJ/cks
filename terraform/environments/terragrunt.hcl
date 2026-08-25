@@ -46,8 +46,23 @@ remote_state {
     dynamodb_table = local.backend_dynamodb_table
   }
 }
+
+# EKS serializes cluster changes: while one update is running (for example, add-on deletion),
+# other cluster operations return 409 ResourceInUseException "currently has an update
+# in progress". During destroy, this creates a race between removing add-ons and removing a
+# Fargate profile or node group. The error is transient: the update completes within a minute,
+# so we retry the operation automatically instead of requiring a manual destroy restart.
+retryable_errors = [
+  "(?s).*ResourceInUseException.*currently has an update in progress.*",
+  "(?s).*ResourceInUseException.*Cannot Delete Fargate Profile.*",
+  "(?s).*ResourceInUseException.*because cluster.*is in.*UPDATING.*",
+  "(?s).*error waiting for.*EKS.*(update|delete).*",
+]
+retry_max_attempts       = 5
+retry_sleep_interval_sec = 30
 inputs = {
   region                 = local.backend_region
   backend_bucket         = local.backend_bucket
   backend_dynamodb_table = local.backend_dynamodb_table
 }
+

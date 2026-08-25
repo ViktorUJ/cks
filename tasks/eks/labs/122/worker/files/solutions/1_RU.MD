@@ -1,0 +1,304 @@
+[Eng version](1.MD) · [Versión en español](1_ES.MD) · [Version française](1_FR.MD) · [Deutsche Version](1_DE.MD) · [ქართული ვერსია](1_GE.MD) · [繁體中文版](1_TW.MD) · [日本語版](1_JP.MD)
+
+# Лаба 122 - эталонное решение (AWS Backup для EKS: composite recovery point,
+восстановление namespace)
+
+Все команды выполняются на рабочей машине (worker) по SSH. kubectl и aws CLI уже
+настроены на кластер и регион лабы. Terraform уже создал IAM-роль для AWS Backup и
+backup vault (компонент `eks_backup_iam`, модуль `eks_v2_backup_iam`) - их ARN и имена
+лежат в файле-подсказке `~/lab122_hints.txt`.
+
+```bash
+cat ~/lab122_hints.txt
+export CLUSTER_NAME=$(grep '^cluster_name' ~/lab122_hints.txt | awk '{print $3}')
+export CLUSTER_ARN=$(grep '^cluster_arn' ~/lab122_hints.txt | awk '{print $3}')
+export ROLE_ARN=$(grep '^backup_role_arn' ~/lab122_hints.txt | awk '{print $3}')
+export VAULT_NAME=$(grep '^vault_name' ~/lab122_hints.txt | awk '{print $3}')
+```
+
+## Задание 1. Namespace `eks-122`, нагрузка на EBS-томе и маркер
+
+Namespace, Deployment, PVC на классе `gp3` (аддон `aws-ebs-csi-driver` уже установлен
+компонентом `eks_addon_ebs_irsa`) и ConfigMap с маркером, который потом подтвердит, что
+восстановленный объект пришёл именно из бэкапа:
+
+```bash
+kubectl create namespace eks-122
+
+cat <<'EOF' | kubectl apply -f -
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  type: gp3
+  encrypted: "true"
+EOF
+
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data
+  namespace: eks-122
+spec:
+  storageClassName: gp3
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+EOF
+
+cat <<'EOF' | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: eks-122
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: app
+        image: viktoruj/ping_pong:latest
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: data
+EOF
+
+kubectl rollout status deployment/web -n eks-122
+
+MARKER="MARKER_LAB122_$(tr -dc a-z0-9 </dev/urandom | head -c 8)"
+kubectl create configmap marker -n eks-122 --from-literal=marker="$MARKER"
+
+mkdir -p /var/work/tests/artifacts/1
+echo -n "$MARKER" > /var/work/tests/artifacts/1/marker.txt
+cat /var/work/tests/artifacts/1/marker.txt
+```
+
+`volumeBindingMode: WaitForFirstConsumer` откладывает создание тома до планирования
+пода (глава 23) - PVC переходит в `Bound` только после того, как под `web` реально
+запланирован. Маркер в артефакте позднее докажет, что восстановленный ConfigMap пришёл
+из бэкапа, а не создан заново вручную.
+
+## Задание 2. Opt-in Amazon EKS в AWS Backup для региона
+
+```bash
+mkdir -p /var/work/tests/artifacts/2
+BEFORE=$(aws backup describe-region-settings \
+  --query "ResourceTypeOptInPreference.EKS" --output text)
+echo "before=$BEFORE" > /var/work/tests/artifacts/2/optin.txt
+
+if [[ "$BEFORE" != "True" ]]; then
+  aws backup update-region-settings \
+    --resource-type-opt-in-preference '{"EKS":true}'
+fi
+
+AFTER=$(aws backup describe-region-settings \
+  --query "ResourceTypeOptInPreference.EKS" --output text)
+echo "after=$AFTER" >> /var/work/tests/artifacts/2/optin.txt
+cat /var/work/tests/artifacts/2/optin.txt
+```
+
+Без этого opt-in AWS Backup не видит кластер EKS как защищаемый ресурс и `start-backup-job`
+для кластера завершится ошибкой (глава 41, раздел 41.4).
+
+## Задание 3. On-demand backup кластера
+
+Кластер уже создан с явным `authentication_mode = "API_AND_CONFIG_MAP"` (модуль
+`eks_v2_control_plane`), поэтому требование AWS Backup к режиму авторизации выполнено
+заранее - сервис сам создаст себе access entry при первом backup job.
+
+```bash
+BACKUP_JOB_ID=$(aws backup start-backup-job \
+  --backup-vault-name "$VAULT_NAME" \
+  --resource-arn "$CLUSTER_ARN" \
+  --iam-role-arn "$ROLE_ARN" \
+  --query 'BackupJobId' --output text)
+
+echo "backup_job_id=$BACKUP_JOB_ID"
+
+while true; do
+  STATE=$(aws backup describe-backup-job --backup-job-id "$BACKUP_JOB_ID" \
+    --query 'State' --output text)
+  echo "backup job state: $STATE"
+  case "$STATE" in
+    COMPLETED|PARTIAL|FAILED|ABORTED|EXPIRED) break ;;
+  esac
+  sleep 15
+done
+
+RECOVERY_POINT_ARN=$(aws backup describe-backup-job --backup-job-id "$BACKUP_JOB_ID" \
+  --query 'RecoveryPointArn' --output text)
+```
+
+EBS-снапшот тома `data` может собираться дольше, чем состояние кластера, поэтому ждём
+терминального статуса, а не именно `COMPLETED`: `PARTIAL` (глава 41, раздел 41.4) тоже
+означает, что backup job завершился и recovery point создан, просто часть вложенных
+точек могла не собраться. Сохраняем артефакт:
+
+```bash
+mkdir -p /var/work/tests/artifacts/3
+{
+  echo "backup_job_id=$BACKUP_JOB_ID"
+  echo "status=$STATE"
+  echo "recovery_point_arn=$RECOVERY_POINT_ARN"
+} > /var/work/tests/artifacts/3/backup_status.txt
+cat /var/work/tests/artifacts/3/backup_status.txt
+```
+
+## Задание 4. Диагностика composite recovery point
+
+`RECOVERY_POINT_ARN` из задания 3 - это composite recovery point: родительская точка
+группирует child recovery point состояния кластера и child recovery point тома `data`
+как одну согласованную единицу (глава 41, раздел 41.4). Смотрим на неё и на вложенные
+точки:
+
+```bash
+aws backup list-recovery-points-by-backup-vault --backup-vault-name "$VAULT_NAME" \
+  --query 'RecoveryPoints[].{Arn:RecoveryPointArn,Parent:ParentRecoveryPointArn,IsParent:IsParent,Status:Status}'
+
+aws backup list-recovery-points-by-backup-vault --backup-vault-name "$VAULT_NAME" \
+  --by-parent-recovery-point-arn "$RECOVERY_POINT_ARN"
+```
+
+Сохраняем объяснение разницы между composite и child точками в артефакт:
+
+```bash
+mkdir -p /var/work/tests/artifacts/4
+cat > /var/work/tests/artifacts/4/composite.txt <<'EOF'
+Composite recovery point - это составная точка восстановления для EKS-кластера: она
+группирует под собой несколько вложенных (nested/child) точек как одну согласованную
+единицу. Для этой лабы это child recovery point состояния кластера (манифесты объектов
+Kubernetes namespace eks-122) и child recovery point тома data (снапшот EBS за PVC).
+
+У composite точки нет собственного ParentRecoveryPointArn - это верхний уровень. У каждой
+child точки поле ParentRecoveryPointArn ссылается на ARN composite точки, а IsParent=true
+стоит именно у composite. Child состояния кластера держит связь 1:1 с родителем: его
+нельзя отдельно скопировать, удалить или отвязать. Child-точка тома, наоборот, можно
+копировать, удалять и восстанавливать отдельно от composite.
+
+Именно поэтому composite нельзя удалить, пока в нём есть вложенные точки - сначала удаляют
+или отвязывают nested точки, а потом сам composite.
+EOF
+cat /var/work/tests/artifacts/4/composite.txt
+```
+
+## Задание 5. Namespace restore (non-destructive)
+
+Запускаем restore composite recovery point с указанием namespace `eks-122` в тот же
+(живой) кластер:
+
+Одного `namespaceLevelRestore` здесь недостаточно. В composite точке лежит ещё и снапшот EBS,
+а для его восстановления AWS Backup **обязательно требует Availability Zone**, где создать том.
+Если её не передать, дочерний restore job тома падает с `Restore Job failed as no restore
+metadata was provided`, а родительский - с `All PV restore jobs failed to restore`. Передаётся
+это параметром `nestedRestoreJobs`: карта `ARN вложенной точки -> её метаданные`. Зону берут по
+существующей ноде, иначе том создастся там, где его некому смонтировать.
+
+Обратите внимание на вложенность кодирования: значение `nestedRestoreJobs` - это JSON-строка,
+внутри которой карта, а значение каждого элемента карты - тоже JSON-строка. Лишний уровень
+кавычек даёт ошибку `Invalid JSON format in NestedRestoreMetadata`, поэтому собираем через
+`jq` (обратите внимание на `-r` в первом вызове - он и убирает лишний уровень):
+
+```bash
+AZ=$(kubectl get nodes -l 'eks.amazonaws.com/compute-type notin (fargate)' \
+  -o jsonpath='{.items[0].metadata.labels.topology\.kubernetes\.io/zone}')
+
+SNAP_ARN=$(aws backup list-recovery-points-by-backup-vault --backup-vault-name "$VAULT_NAME" \
+  --by-parent-recovery-point-arn "$RECOVERY_POINT_ARN" \
+  --query 'RecoveryPoints[?ResourceType==`EBS`].RecoveryPointArn' --output text)
+
+NESTED=$(jq -rn --arg s "$SNAP_ARN" --arg az "$AZ" \
+  '{($s): ({AvailabilityZone: $az} | tostring)} | tostring')
+
+METADATA=$(jq -cn --arg c "$CLUSTER_NAME" --arg n "$NESTED" \
+  '{clusterName: $c, newCluster: "false", namespaceLevelRestore: "true",
+    namespaces: "[\"eks-122\"]", nestedRestoreJobs: $n}')
+
+RESTORE_JOB_ID=$(aws backup start-restore-job \
+  --recovery-point-arn "$RECOVERY_POINT_ARN" \
+  --iam-role-arn "$ROLE_ARN" \
+  --resource-type EKS \
+  --metadata "$METADATA" \
+  --query 'RestoreJobId' --output text)
+
+echo "restore_job_id=$RESTORE_JOB_ID"
+
+while true; do
+  STATUS=$(aws backup describe-restore-job --restore-job-id "$RESTORE_JOB_ID" \
+    --query 'Status' --output text)
+  echo "restore job status: $STATUS"
+  case "$STATUS" in
+    COMPLETED|FAILED|ABORTED) break ;;
+  esac
+  sleep 15
+done
+```
+
+Проверяем, что Deployment `web` и ConfigMap `marker` не задублировались и маркер совпал
+с сохранённым в задании 1 - это доказывает non-destructive поведение restore (глава 42,
+раздел 42.2): объекты, которые уже есть в кластере с тем же именем, не перезаписываются,
+а пропускаются, поэтому restore поверх живого namespace не создаёт вторую копию.
+
+```bash
+kubectl rollout status deployment/web -n eks-122
+kubectl get cm marker -n eks-122 -o jsonpath='{.data.marker}'; echo
+cat /var/work/tests/artifacts/1/marker.txt; echo
+```
+
+Сохраняем артефакт с объяснением:
+
+```bash
+mkdir -p /var/work/tests/artifacts/5
+cat > /var/work/tests/artifacts/5/restore_status.txt <<EOF
+restore_job_id=$RESTORE_JOB_ID
+status=$STATUS
+Restore в AWS Backup всегда non-destructive: существующие объекты Kubernetes в целевом
+namespace не перезаписываются, а пропускаются. Deployment web и ConfigMap marker уже
+существовали в eks-122 в момент restore с тем же содержимым, поэтому restore не создал
+их дублей и не изменил значение маркера - объекты просто совпали и были пропущены.
+EOF
+cat /var/work/tests/artifacts/5/restore_status.txt
+```
+
+## Задание 6. Почему откат версии кластера не отменяет `kubectl delete namespace`
+
+Мотивирующий пример раздела 41.1 главы 41: инженер по ошибке выполняет
+`kubectl delete namespace prod` не в том кластере, и первая мысль - «откатимся». Но
+откатывать нечего.
+
+```bash
+mkdir -p /var/work/tests/artifacts/6
+cat > /var/work/tests/artifacts/6/whynonrollback.txt <<'EOF'
+Откат версии кластера (глава 39) работает с control plane и его версией Kubernetes -
+он не хранит и не возвращает объекты Kubernetes и содержимое томов. Объекты, которые
+удалил kubectl delete namespace, живут в etcd, а etcd в EKS managed: прямого доступа к
+нему нет, снять дамп etcd и восстановить его вручную, как на самостоятельном кластере,
+нельзя. Никакой команды "верни как было вчера" у managed control plane тоже нет.
+
+Именно поэтому единственный рабочий путь вернуть удалённый namespace - заранее сделанный
+бэкап состояния кластера через AWS Backup (задания 3-4) и последующий restore (задание 5),
+а не откат версии control plane.
+EOF
+cat /var/work/tests/artifacts/6/whynonrollback.txt
+```
+
+## Быстрая проверка
+
+```bash
+check_result
+```

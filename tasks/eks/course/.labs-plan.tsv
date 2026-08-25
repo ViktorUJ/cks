@@ -1,0 +1,109 @@
+# Mapping: EKS course chapter -> course lab
+#
+# Format: <chapter> TAB <lab> TAB <status> TAB <title>
+#   status = todo -> lab has to be built
+#            ready -> lab exists and is linked from the chapter
+#
+# INDEPENDENT SET. The course has its own lab set numbered 101+, exactly like the CKA
+# course got labs 101-125 next to the untouched older labs. The existing EKS labs 01-04
+# are NOT part of the course and MUST NOT be modified: no edits, no renames, no added
+# tasks. If a topic is already covered by an old lab, the course still gets its own lab.
+#
+# RULE: the test-tube marker in the contents page goes ONLY into a chapter whose own
+# course lab already exists. Until a lab is built, its chapter carries no marker.
+#
+# Every lab follows the existing EKS lab layout:
+#   env.hcl, vpc/, eks_control_plane/, eks_addons/, worker/ with
+#   worker/files/{worker.sh,tests.bats,tasks/,solutions/}
+# check_result = bats /var/work/tests/tests.bats
+#
+# Chapter numbers refer to tasks/eks/course/README_RU.md (48 chapters).
+#
+04,06,09,10	101	ready	Cluster as code: VPC, control plane, managed node group, kubeconfig
+05	102	todo	Cluster access: IAM to RBAC, access entries and access policies
+06,07,14	103	todo	IP address planning: ENI limits, prefix delegation, secondary CIDR
+16,17	104	todo	Workload identity: IRSA and Pod Identity for an app reading S3 and Secrets Manager
+18	105	todo	Secrets: External Secrets with Secrets Manager, KMS envelope encryption
+23	106	todo	EBS CSI: StatefulSet on gp3, volume expansion, snapshot - MUST include the Immediate versus WaitForFirstConsumer failure and fix (see .content-notes.md)
+24	107	todo	EFS CSI: ReadWriteMany across AZ
+26	108	todo	AWS Load Balancer Controller: NLB for a Service of type LoadBalancer
+27,29	109	todo	ALB Ingress with ACM certificate, external-dns and Route 53
+30	110	todo	NetworkPolicy in EKS: built-in VPC CNI network policy (eBPF), default deny, label and namespace rules, egress (see .content-notes.md)
+13	111	todo	Spot nodes: diversification, interruption handling, graceful drain
+15	112	todo	Fargate profiles: what runs there, what breaks, cost comparison
+37,38,39	113	todo	Cluster upgrade and rollback: control plane, node groups, addons, deprecated API check, version rollback within the 7 day window
+33	114	todo	Observability: Container Insights and Managed Prometheus with Grafana
+34	115	todo	Logging: Fluent Bit to CloudWatch Logs, filtering and retention
+19	116	todo	Hardening: IMDSv2 hop limit, Pod Security Admission, private endpoint
+31,43	117	todo	Traffic cost and egress control: NAT versus VPC endpoints, OpenCost report
+44	118	ready	GitOps: Argo CD driving the cluster from git
+45	119	todo	Troubleshooting: node does not reach Ready (IAM, SG, user data, kubelet)
+46	120	ready	Troubleshooting: broken networking and unhealthy load balancer targets
+47	121	ready	Troubleshooting: access denied (access entries, IRSA, webhook, kubeconfig)
+41,42	122	ready	AWS Backup for EKS: on-demand backup of cluster state and EBS volumes, namespace restore, restore into a second cluster
+12	123	todo	Karpenter: NodePool, EC2NodeClass, consolidation, drift, plus safe eviction of StatefulSet - PDB, karpenter.sh/do-not-disrupt, NodePool disruption budgets (see .content-notes.md)
+35	124	ready	Application autoscaling: HPA on external metrics, KEDA with a Prometheus trigger, load generator
+09	125	ready	EKS Auto Mode versus own stack: enable Auto Mode, default NodePools, no SSH or SSM on nodes, 21 day node lifetime, custom NodePool, where the own stack wins (see .content-notes.md)
+#
+# SECOND WAVE, added after the text was finished. These close chapters that had no lab
+# and were only listed as "candidate for a later lab". All are doable in a single AWS
+# account without slow or paid extras. Ordered by cost of building, cheapest first.
+#
+22	127	ready	Policies without an extra controller: ValidatingAdmissionPolicy on CEL, Audit before Enforce, failurePolicy
+40	131	ready	Reliability: PDB blocks drain and the upgrade stalls, topology spread, unhealthyPodEvictionPolicy, matchLabelKeys
+46	126	ready	Security groups for pods: SecurityGroupPolicy and branch ENI, pod is Running but never Ready and cannot resolve - find the missing rules (see NOTE below)
+25	129	ready	Mountpoint for S3: where file semantics break (in-place write, rename) and why prefixes behind a PVC are not backed up
+28	128	ready	Gateway API and VPC Lattice: Gateway owner versus route owner, ReferenceGrant, route not applied
+20	130	ready	ECR and supply chain: immutable tags, scan on push, pull-through cache (needs upstream registry credentials as a secret)
+08	132	ready	Alternative CNI: Cilium in CNI chaining over VPC CNI, L7 and FQDN policy, Hubble; full replacement stays out of scope (blue/green, chapter 8.8)
+#
+# EXISTING LABS, OUT OF SCOPE - listed only so nobody wires them into the course:
+#   01  stub
+#   02  Karpenter Basics                  -> course covers the topic in lab 123
+#   03  App autoscaling with KEDA         -> course covers the topic in lab 124
+#   04  empty
+#   template  Karpenter workshop template
+#
+# NO LAB BY DESIGN - theory or design chapters, no reproducible hands-on target:
+#   00-1 .. 00-5  Part 0, AWS fundamentals (mirrors "Part 0 has no labs" in CKA)
+#   01  what EKS takes over
+#   02  control plane internals            (covered indirectly by lab 101)
+#   03  version lifecycle                  (covered indirectly by lab 113)
+#   11  Cluster Autoscaler versus Karpenter (compared inside lab 123)
+#   21  audit and detection                (needs GuardDuty, paid and slow)
+#   32  multicluster and multiaccount      (needs 2 accounts)
+#   36  tracing with ADOT and X-Ray        (candidate for a later lab)
+#   44  managed Argo CD (EKS Capability)   (blocked for a personal account: the capability
+#                                           authenticates only through AWS Identity Center,
+#                                           which requires AWS Organizations; self-managed
+#                                           Argo CD is covered by lab 118)
+#   48  production checklist
+#
+# Chapters 08, 20, 22, 25, 28, 40, 46 used to be listed here as "candidate for a later
+# lab". They now have labs 132, 130, 127, 129, 128, 131, 126 in the second wave above.
+#
+# NOTE on chapters 41-42 (AWS Backup for EKS). Lab prerequisites, taken from
+# https://docs.aws.amazon.com/aws-backup/latest/devguide/eks-backups.html :
+#   - cluster authentication mode must be API or API_AND_CONFIG_MAP, AWS Backup
+#     creates its own access entry
+#   - backup role: AWSBackupServiceRolePolicyForBackup, restore role:
+#     AWSBackupServiceRolePolicyForRestores
+#   - EBS CSI addon must be installed on the restore target
+#   - restores are non-destructive, existing objects are never overwritten, so the
+#     lab has to delete the namespace (or restore into a second cluster) to show it
+#   - not supported: in-tree volumes and CSI migration, FSx via CSI, S3 prefixes,
+#     cross-account EFS, EFS non-root subpath mounts, EKS on Outposts
+#
+# NOTE on lab 126 (security groups for pods). Prerequisites, taken from
+# https://docs.aws.amazon.com/eks/latest/userguide/security-groups-pods-deployment.html :
+#   - Nitro instances only, no instance type from the t family is supported, so the
+#     NodePool requirements of the lab must exclude it
+#   - AmazonEKSVPCResourceController managed policy on the cluster IAM role
+#   - ENABLE_POD_ENI=true on the aws-node DaemonSet (creates the trunk interface)
+#   - DISABLE_TCP_EARLY_DEMUX=true in the aws-node init container, otherwise kubelet
+#     probes cannot reach pods on branch interfaces (not needed on VPC CNI 1.11.0+ with
+#     POD_SECURITY_GROUP_ENFORCING_MODE=standard)
+#   - the teaching moment is the missing rules: inbound from the node SG on probe ports,
+#     outbound 53 over TCP and UDP, plus the matching inbound 53 on the CoreDNS side
+#   - pod SG rules do not apply between pods on the same node, so the symptom flickers
+#     depending on where CoreDNS landed - the lab has to pin that down

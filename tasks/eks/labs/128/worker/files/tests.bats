@@ -1,0 +1,186 @@
+#!/usr/bin/env bats
+export KUBECONFIG=/home/ubuntu/.kube/config
+NS="eks-128"
+NSB="eks-128-backend"
+GWL="eks-task128-mesh"
+
+@test "0 Init" {
+  echo '' > /var/work/tests/result/all
+  echo '' > /var/work/tests/result/ok
+}
+
+@test "1. Gateway API CRDs installed and both namespaces exist" {
+  echo '1' >> /var/work/tests/result/all
+  crd=$(kubectl get crd gateways.gateway.networking.k8s.io \
+    -o jsonpath='{.metadata.name}' 2>/dev/null)
+  ns1=$(kubectl get ns "$NS" -o jsonpath='{.metadata.name}' 2>/dev/null)
+  ns2=$(kubectl get ns "$NSB" -o jsonpath='{.metadata.name}' 2>/dev/null)
+  result=1
+  if [[ "$crd" == "gateways.gateway.networking.k8s.io" ]] && [[ "$ns1" == "$NS" ]] && \
+     [[ "$ns2" == "$NSB" ]]; then
+    echo '1' >> /var/work/tests/result/ok
+    result=0
+  else
+    echo "crd=$crd ns1=$ns1 ns2=$ns2"
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "2. AWS Load Balancer Controller and Gateway class ALB (L7)" {
+  echo '1' >> /var/work/tests/result/all
+  lbc_ready=$(kubectl get deploy aws-load-balancer-controller -n kube-system \
+    -o jsonpath='{.status.readyReplicas}' 2>/dev/null)
+  gc_controller=$(kubectl get gatewayclass aws-alb \
+    -o jsonpath='{.spec.controllerName}' 2>/dev/null)
+  result=1
+  for i in $(seq 1 30); do
+    programmed=$(kubectl get gateway web -n "$NS" \
+      -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null)
+    if [[ "${lbc_ready:-0}" -ge 1 ]] && \
+       [[ "$gc_controller" == "gateway.k8s.aws/alb" ]] && [[ "$programmed" == "True" ]]; then
+      echo '1' >> /var/work/tests/result/ok
+      result=0
+      break
+    fi
+    sleep 10
+  done
+  if [[ "$result" != "0" ]]; then
+    echo "lbc_ready=$lbc_ready gc_controller=$gc_controller programmed=$programmed"
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "3. HTTPRoute app on ALB is Accepted and the ALB answers 200" {
+  echo '1' >> /var/work/tests/result/all
+  f=/var/work/tests/artifacts/3/alb.txt
+  # Одного Accepted у маршрута недостаточно: с ClusterIP-сервисом и типом целей instance
+  # (значение по умолчанию) ALB остаётся недопрограммированным, Gateway висит в
+  # Accepted: False / reason: Invalid, а в логе контроллера "TargetGroup port is empty".
+  # Поэтому проверяем targetType ip в TargetGroupConfiguration и живой ответ балансировщика.
+  tgc_type=$(kubectl get targetgroupconfiguration frontend -n "$NS" \
+    -o jsonpath='{.spec.defaultConfiguration.targetType}' 2>/dev/null || true)
+  result=1
+  for i in $(seq 1 40); do
+    accepted=$(kubectl get httproute app -n "$NS" \
+      -o jsonpath='{.status.parents[0].conditions[?(@.type=="Accepted")].status}' 2>/dev/null)
+    addr=$(kubectl get gateway web -n "$NS" \
+      -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+    programmed=$(kubectl get gateway web -n "$NS" \
+      -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null)
+    code=""
+    if [[ -n "$addr" ]]; then
+      code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://${addr}/" 2>/dev/null || true)
+    fi
+    if [[ "$accepted" == "True" ]] && [[ "$programmed" == "True" ]] && \
+       [[ "$tgc_type" == "ip" ]] && [[ "$code" == "200" ]] && [[ -s "$f" ]] && \
+       grep -q '"Type": "application"' "$f"; then
+      echo '1' >> /var/work/tests/result/ok
+      result=0
+      break
+    fi
+    sleep 15
+  done
+  if [[ "$result" != "0" ]]; then
+    echo "accepted=$accepted programmed=$programmed addr=$addr tgc_type=$tgc_type http=$code file=$f"
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "4. AWS Gateway API Controller and Gateway class amazon-vpc-lattice" {
+  echo '1' >> /var/work/tests/result/all
+  ready=$(kubectl get deploy -n aws-application-networking-system \
+    -o jsonpath='{.items[0].status.readyReplicas}' 2>/dev/null)
+  gc_controller=$(kubectl get gatewayclass amazon-vpc-lattice \
+    -o jsonpath='{.spec.controllerName}' 2>/dev/null)
+  result=1
+  for i in $(seq 1 30); do
+    # Имя Gateway обязано совпадать с именем Service Network: контроллер ищет сеть по имени
+    # объекта, а не по значению defaultServiceNetwork. При несовпадении Programmed остаётся
+    # False с сообщением "VPC Lattice Service Network not found", поэтому проверяем и ARN
+    # сети в сообщении условия - это доказывает, что Gateway реально привязан к сети.
+    programmed=$(kubectl get gateway "$GWL" -n "$NS" \
+      -o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null)
+    message=$(kubectl get gateway "$GWL" -n "$NS" \
+      -o jsonpath='{.status.conditions[?(@.type=="Programmed")].message}' 2>/dev/null)
+    if [[ "${ready:-0}" -ge 1 ]] && \
+       [[ "$gc_controller" == "application-networking.k8s.aws/gateway-api-controller" ]] && \
+       [[ "$programmed" == "True" ]] && [[ "$message" == *"servicenetwork/"* ]]; then
+      echo '1' >> /var/work/tests/result/ok
+      result=0
+      break
+    fi
+    sleep 10
+  done
+  if [[ "$result" != "0" ]]; then
+    echo "ready=$ready gc_controller=$gc_controller programmed=$programmed message=$message"
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "5. Symptom: cross-namespace ref is RefNotPermitted on ALB but allowed on VPC Lattice" {
+  echo '1' >> /var/work/tests/result/all
+  f=/var/work/tests/artifacts/5/refnotpermitted.txt
+  # ВАЖНО про порядок: живое состояние rates после задания 6 становится True, поэтому симптом
+  # проверяется по артефакту (запись момента), а живьём проверяются два ДОЛГОВЕЧНЫХ факта:
+  # кросс-namespace ссылка у rates и то, что контроллер VPC Lattice ту же ссылку принимает
+  # без ReferenceGrant (проверено на стенде: aws-alb даёт RefNotPermitted, lattice - True).
+  backend_ns=$(kubectl get httproute rates -n "$NS" \
+    -o jsonpath='{.spec.rules[0].backendRefs[0].namespace}' 2>/dev/null)
+  parent=$(kubectl get httproute rates -n "$NS" \
+    -o jsonpath='{.spec.parentRefs[0].name}' 2>/dev/null)
+  lat_backend_ns=$(kubectl get httproute rates-lattice -n "$NS" \
+    -o jsonpath='{.spec.rules[0].backendRefs[0].namespace}' 2>/dev/null)
+  result=1
+  for i in $(seq 1 20); do
+    lat_status=$(kubectl get httproute rates-lattice -n "$NS" \
+      -o jsonpath='{.status.parents[0].conditions[?(@.type=="ResolvedRefs")].status}' 2>/dev/null)
+    if [[ "$backend_ns" == "$NSB" ]] && [[ "$parent" == "web" ]] && \
+       [[ "$lat_backend_ns" == "$NSB" ]] && [[ "$lat_status" == "True" ]] && \
+       [[ -s "$f" ]] && grep -q 'RefNotPermitted' "$f" && grep -q 'rates-lattice' "$f"; then
+      echo '1' >> /var/work/tests/result/ok
+      result=0
+      break
+    fi
+    sleep 5
+  done
+  if [[ "$result" != "0" ]]; then
+    echo "backend_ns=$backend_ns parent=$parent lat_backend_ns=$lat_backend_ns lat_status=$lat_status file=$f"
+  fi
+  [ "$result" == "0" ]
+}
+
+@test "6. Fix: ReferenceGrant resolves the cross-namespace reference" {
+  echo '1' >> /var/work/tests/result/all
+  f=/var/work/tests/artifacts/6/resolved.txt
+  rg_from_kind=$(kubectl get referencegrant -n "$NSB" \
+    -o jsonpath='{.items[0].spec.from[0].kind}' 2>/dev/null)
+  rg_from_ns=$(kubectl get referencegrant -n "$NSB" \
+    -o jsonpath='{.items[0].spec.from[0].namespace}' 2>/dev/null)
+  rg_to_kind=$(kubectl get referencegrant -n "$NSB" \
+    -o jsonpath='{.items[0].spec.to[0].kind}' 2>/dev/null)
+  addr=$(kubectl get gateway web -n "$NS" -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+  result=1
+  for i in $(seq 1 30); do
+    status=$(kubectl get httproute rates -n "$NS" \
+      -o jsonpath='{.status.parents[0].conditions[?(@.type=="ResolvedRefs")].status}' 2>/dev/null)
+    # Живой запрос на /rates - доказательство, что грант не просто поменял условие, а открыл
+    # путь: маршрут разрешён, target group типа ip создана, цели прошли health check.
+    code=""
+    if [[ -n "$addr" ]]; then
+      code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://${addr}/rates" 2>/dev/null || true)
+    fi
+    if [[ "$rg_from_kind" == "HTTPRoute" ]] && [[ "$rg_from_ns" == "$NS" ]] && \
+       [[ "$rg_to_kind" == "Service" ]] && [[ "$status" == "True" ]] && \
+       [[ "$code" == "200" ]] && [[ -s "$f" ]] && \
+       grep -q 'ResolvedRefs' "$f" && grep -q 'True' "$f"; then
+      echo '1' >> /var/work/tests/result/ok
+      result=0
+      break
+    fi
+    sleep 10
+  done
+  if [[ "$result" != "0" ]]; then
+    echo "rg_from_kind=$rg_from_kind rg_from_ns=$rg_from_ns rg_to_kind=$rg_to_kind status=$status http=$code file=$f"
+  fi
+  [ "$result" == "0" ]
+}
