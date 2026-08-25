@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.35.1 (25.08.2026)
+### Features
+* Amazon EKS [self-study course](../tasks/eks/course/README.md) is added: 48 chapters (Part 0 - an optional foundation on AWS accounts, IAM, VPC, EC2 and tooling; Parts 1-9 - cluster architecture, nodes and compute, identity and security, storage, networking, observability, operations and troubleshooting) tied to the hands-on labs. Available in 8 languages: Russian (source), English, Spanish, French, German, Georgian, Traditional Chinese and Japanese.
+* EKS labs [101-132](../docs/labs.MD#eks-labs) are added: 32 composite labs deployed through Terragrunt with automatic `check_result` validation and reference solutions, in the same 8 languages.
+* EKS course reference guides are added: [Glossary](../tasks/eks/course/GLOSSARY.md), [Runbook](../tasks/eks/course/RUNBOOK.md), [ADRs](../tasks/eks/course/ADR.md), [Maturity scorecard](../tasks/eks/course/SCORECARD.md) and [Cost model](../tasks/eks/course/COST_MODEL.md), also in 8 languages.
+### Improvements
+* Istio [self-study course](../tasks/ica/course) and ICA labs [01-35](../tasks/ica/labs) are now fully localized: Georgian, Traditional Chinese and Japanese translations are added, bringing the course and labs to 8 languages (Russian, English, Spanish, French, German, Georgian, Traditional Chinese and Japanese).
+
 ## 0.34.1 (03.08.2026)
 ### Features
 * CKA + CKAD joint [self-study course](../tasks/cka/course/README.md) is added: 58 chapters (Part 0 - an optional foundation on networking, DNS, TLS, containers, Linux, YAML and vim; Parts 1-10 - the exam program) tied to the hands-on labs. Every chapter is marked with the exam it belongs to (CKA / CKAD / both). Available in 8 languages: Russian (source), English, Spanish, French, German, Georgian, Traditional Chinese and Japanese.
