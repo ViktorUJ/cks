@@ -1,10 +1,10 @@
 locals {
-  questions_list = "https://github.com/ViktorUJ/cks/tree/master/tasks/cks/labs/20"
-  solutions_scripts="https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/20/worker/files/solutions/22.MD"
-  solutions_video="https://www.youtube.com/watch?v=IZsqAPpbBxM"
-  region = "eu-north-1"
-  aws    = "default"
-  prefix = "cks-mock"
+  questions_list    = "https://github.com/ViktorUJ/cks/tree/master/tasks/cks/labs/20"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/20/worker/files/solutions/22.MD"
+  solutions_video   = "https://www.youtube.com/watch?v=IZsqAPpbBxM"
+  region            = "eu-north-1"
+  aws               = "default"
+  prefix            = "cks-mock"
   tags = {
     "env_name"        = "cks-mock"
     "env_type"        = "dev"

@@ -23,17 +23,17 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  questions_list      = local.vars.locals.questions_list
-  region              = local.vars.locals.region
-  aws                 = local.vars.locals.aws
-  prefix              = "cluster1"
-  tags_common         = local.vars.locals.tags
-  app_name            = "k8s"
-  subnets             = dependency.vpc.outputs.subnets
-  vpc_id              = dependency.vpc.outputs.vpc_id
-  cluster_name        = "k8s1"
-  node_type           = local.vars.locals.node_type
-  ssh_password_enable = local.vars.locals.ssh_password_enable
+  questions_list        = local.vars.locals.questions_list
+  region                = local.vars.locals.region
+  aws                   = local.vars.locals.aws
+  prefix                = "cluster1"
+  tags_common           = local.vars.locals.tags
+  app_name              = "k8s"
+  subnets               = dependency.vpc.outputs.subnets
+  vpc_id                = dependency.vpc.outputs.vpc_id
+  cluster_name          = "k8s1"
+  node_type             = local.vars.locals.node_type
+  ssh_password_enable   = local.vars.locals.ssh_password_enable
   spot_additional_types = local.vars.locals.spot_additional_types
   all_spot_subnet       = local.vars.locals.all_spot_subnet
 
@@ -44,7 +44,7 @@ inputs = {
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
     ami_id             = local.vars.locals.ami_id
-    subnet_number      = "0"      # eu-central-1a
+    subnet_number      = "0" # eu-central-1a
     ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/master.sh"
     pod_network_cidr   = "10.0.0.0/16"
@@ -68,7 +68,7 @@ inputs = {
       key_name           = local.vars.locals.key_name
       ami_id             = local.vars.locals.ami_id
       ubuntu_version     = local.vars.locals.ubuntu_version
-      subnet_number      = "0"    # eu-central-1a
+      subnet_number      = "0" # eu-central-1a
       user_data_template = "template/worker.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/14/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=worker,topology.kubernetes.io/region=eu-central-1,topology.kubernetes.io/zone=eu-central-1a"
@@ -87,7 +87,7 @@ inputs = {
       key_name           = local.vars.locals.key_name
       ami_id             = local.vars.locals.ami_id
       ubuntu_version     = local.vars.locals.ubuntu_version
-      subnet_number      = "1"    # eu-central-1b
+      subnet_number      = "1" # eu-central-1b
       user_data_template = "template/worker.sh"
       task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/ica/labs/14/k8s-1/scripts/worker.sh"
       node_labels        = "work_type=worker,topology.kubernetes.io/region=eu-central-1,topology.kubernetes.io/zone=eu-central-1b"

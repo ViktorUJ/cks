@@ -26,18 +26,18 @@ dependency "eks_fargate_system" {
 }
 
 inputs = {
-  region                    = local.vars.locals.region
-  aws                       = local.vars.locals.aws
-  prefix                    = local.vars.locals.prefix
-  app_name                  = "eks_v2_efs_irsa"
-  name                      = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
-  oidc_provider_arn         = dependency.eks_control_plane.outputs.eks_mudule.oidc_provider_arn
-  vpc_id                    = dependency.vpc.outputs.vpc_id
-  subnet_ids                = dependency.vpc.outputs.private_subnets_by_type.eks.ids
-  security_group_source_id  = dependency.eks_control_plane.outputs.eks_mudule.node_security_group_id
-  tags                      = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
+  region                   = local.vars.locals.region
+  aws                      = local.vars.locals.aws
+  prefix                   = local.vars.locals.prefix
+  app_name                 = "eks_v2_efs_irsa"
+  name                     = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
+  oidc_provider_arn        = dependency.eks_control_plane.outputs.eks_mudule.oidc_provider_arn
+  vpc_id                   = dependency.vpc.outputs.vpc_id
+  subnet_ids               = dependency.vpc.outputs.private_subnets_by_type.eks.ids
+  security_group_source_id = dependency.eks_control_plane.outputs.eks_mudule.node_security_group_id
+  tags                     = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
   addons = {
-    name    = "aws-efs-csi-driver"
+    name = "aws-efs-csi-driver"
     # Версию проверить перед продом: значение подобрано как разумное для EKS 1.36,
     # сверить через `aws eks describe-addon-versions --addon-name aws-efs-csi-driver`.
     version = "v3.4.1-eksbuild.1"

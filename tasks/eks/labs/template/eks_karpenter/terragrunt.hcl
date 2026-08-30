@@ -10,7 +10,7 @@ terraform {
   source = "../../..//modules/eks_v2_karpenter/"
 
   extra_arguments "retry_lock" {
-    commands = get_terraform_commands_that_need_locking()
+    commands  = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -48,7 +48,7 @@ inputs = {
     controller_resources_requests_memory = "0.5Gi"
     controller_resources_limits_cpu      = "0.4"
     controller_resources_limits_memory   = "0.5Gi"
-    tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
+    tags                                 = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
   }
 
 }

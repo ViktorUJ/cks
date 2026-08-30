@@ -27,8 +27,8 @@ inputs = {
   name              = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   oidc_provider_arn = dependency.eks_control_plane.outputs.eks_mudule.oidc_provider_arn
   irsa = {
-    namespace             = "eks-121"
-    service_account_name  = "demo-reader"
+    namespace            = "eks-121"
+    service_account_name = "demo-reader"
   }
   tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-irsa-break-demo" })
 }

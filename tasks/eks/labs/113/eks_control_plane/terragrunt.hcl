@@ -26,7 +26,7 @@ inputs = {
   vpc_id   = dependency.vpc.outputs.vpc_id
   app_name = "eks"
   eks = {
-    name                     = local.vars.locals.env_name
+    name = local.vars.locals.env_name
     # Стартовая версия лабы - 1.35 (на минор ниже 1.36), чтобы студент мог
     # реально апгрейднуть control plane на 1.36 и потом откатить обратно
     # в течение 7-дневного окна rollback (главы 38, 39).

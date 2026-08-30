@@ -37,7 +37,7 @@ dependency "workload_identity" {
 inputs = {
   questions_list               = local.vars.locals.questions_list
   solutions_scripts            = local.vars.locals.solutions_scripts
-  solutions_video               = local.vars.locals.solutions_video
+  solutions_video              = local.vars.locals.solutions_video
   debug_output                 = local.vars.locals.debug_output
   region                       = local.vars.locals.region
   aws                          = local.vars.locals.aws

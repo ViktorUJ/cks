@@ -1,10 +1,10 @@
 locals {
-  questions_list = "https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/01/README.MD"
-  solutions_scripts="https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/01/worker/files/solutions/1.MD"
-  solutions_video="xyz"
-  debug_output   = "false"
-  region = "eu-north-1"
-  vpc_default_cidr =  "10.2.0.0/16"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/01/README.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/cka/labs/01/worker/files/solutions/1.MD"
+  solutions_video   = "xyz"
+  debug_output      = "false"
+  region            = "eu-north-1"
+  vpc_default_cidr  = "10.2.0.0/16"
   az_ids = {
     "10.2.0.0/19"  = "eun1-az3"
     "10.2.32.0/19" = "eun1-az2"
@@ -24,7 +24,7 @@ locals {
   instance_type        = "t4g.medium"
   instance_type_worker = "t4g.small"
   key_name             = ""
-  ssh_password_enable  = "true" # false |  true
+  ssh_password_enable  = "true"        # false |  true
   access_cidrs         = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
   ubuntu_version       = "20.04"
   ami_id               = ""

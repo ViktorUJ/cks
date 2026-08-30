@@ -27,8 +27,8 @@ inputs = {
   name              = dependency.eks_control_plane.outputs.eks_mudule.cluster_name
   oidc_provider_arn = dependency.eks_control_plane.outputs.eks_mudule.oidc_provider_arn
   eso = {
-    namespace             = "external-secrets"
-    service_account_name  = "external-secrets"
+    namespace            = "external-secrets"
+    service_account_name = "external-secrets"
   }
   kms_key_arn = null
   tags        = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eso-secret" })

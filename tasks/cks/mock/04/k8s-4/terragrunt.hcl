@@ -23,17 +23,17 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  questions_list      = local.vars.locals.questions_list
-  region              = local.vars.locals.region
-  aws                 = local.vars.locals.aws
-  prefix              = "cluster4"
-  tags_common         = local.vars.locals.tags
-  app_name            = "k8s"
-  subnets             = dependency.vpc.outputs.subnets
-  vpc_id              = dependency.vpc.outputs.vpc_id
-  cluster_name        = "k8s4"
-  node_type           = local.vars.locals.node_type
-  ssh_password_enable = local.vars.locals.ssh_password_enable
+  questions_list        = local.vars.locals.questions_list
+  region                = local.vars.locals.region
+  aws                   = local.vars.locals.aws
+  prefix                = "cluster4"
+  tags_common           = local.vars.locals.tags
+  app_name              = "k8s"
+  subnets               = dependency.vpc.outputs.subnets
+  vpc_id                = dependency.vpc.outputs.vpc_id
+  cluster_name          = "k8s4"
+  node_type             = local.vars.locals.node_type
+  ssh_password_enable   = local.vars.locals.ssh_password_enable
   spot_additional_types = local.vars.locals.spot_additional_types
   all_spot_subnet       = local.vars.locals.all_spot_subnet
 
@@ -53,7 +53,7 @@ inputs = {
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/mock/04/k8s-4/scripts/master.sh"
     cni = {
-      type = "cilium" #calico , cilium
+      type               = "cilium" #calico , cilium
       disable_kube_proxy = "false"
     }
     ssh = {

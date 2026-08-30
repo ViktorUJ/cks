@@ -11,7 +11,7 @@ terraform {
   #
 
   extra_arguments "retry_lock" {
-    commands = get_terraform_commands_that_need_locking()
+    commands  = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -25,23 +25,23 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  questions_list      = local.vars.locals.questions_list
-  region              = local.vars.locals.region
-  aws                 = local.vars.locals.aws
-  prefix              = "cluster1"
-  tags_common         = local.vars.locals.tags
-  app_name            = "k8s"
-  subnets             = dependency.vpc.outputs.subnets
-  vpc_id              = dependency.vpc.outputs.vpc_id
-  cluster_name        = "k8s1"
-  node_type           = local.vars.locals.node_type
-  ssh_password_enable = local.vars.locals.ssh_password_enable
+  questions_list        = local.vars.locals.questions_list
+  region                = local.vars.locals.region
+  aws                   = local.vars.locals.aws
+  prefix                = "cluster1"
+  tags_common           = local.vars.locals.tags
+  app_name              = "k8s"
+  subnets               = dependency.vpc.outputs.subnets
+  vpc_id                = dependency.vpc.outputs.vpc_id
+  cluster_name          = "k8s1"
+  node_type             = local.vars.locals.node_type
+  ssh_password_enable   = local.vars.locals.ssh_password_enable
   spot_additional_types = local.vars.locals.spot_additional_types
   all_spot_subnet       = local.vars.locals.all_spot_subnet
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
-    runtime = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
+    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name

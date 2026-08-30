@@ -21,15 +21,15 @@ locals {
     type               = "cilium" #calico , cilium
     disable_kube_proxy = "true"
   }
-  instance_type        = "t4g.medium"
-  instance_type_worker = "t4g.small"
-  spot_additional_types= [ "t4g.medium" , "t4g.large" , "t4g.xlarge" ]
-  all_spot_subnet      = "true"
-  key_name             = ""
-  ssh_password_enable  = "true"        # false |  true
-  access_cidrs         = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
-  ubuntu_version       = "22.04"
-  ami_id               = ""
+  instance_type         = "t4g.medium"
+  instance_type_worker  = "t4g.small"
+  spot_additional_types = ["t4g.medium", "t4g.large", "t4g.xlarge"]
+  all_spot_subnet       = "true"
+  key_name              = ""
+  ssh_password_enable   = "true"        # false |  true
+  access_cidrs          = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
+  ubuntu_version        = "22.04"
+  ami_id                = ""
 
   root_volume = {
     type = "gp3"

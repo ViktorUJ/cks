@@ -22,7 +22,7 @@ locals {
         nat_gateway = "DEFAULT"
         tags = {
           "kubernetes.io/cluster/${local.env_name}" = "owned"
-          "kubernetes.io/role/elb"                   = "1"
+          "kubernetes.io/role/elb"                  = "1"
         }
       }
       "pub2" = {
@@ -31,7 +31,7 @@ locals {
         az   = "eu-central-1b"
         tags = {
           "kubernetes.io/cluster/${local.env_name}" = "owned"
-          "kubernetes.io/role/elb"                   = "1"
+          "kubernetes.io/role/elb"                  = "1"
         }
       }
     }
@@ -89,9 +89,9 @@ locals {
   # Кластер стартует на 1.35 (на минор ниже последней GA 1.36), чтобы в лабе
   # можно было выполнить реальный апгрейд на 1.36 и затем откат обратно на 1.35
   # в течение 7-дневного окна rollback.
-  k8_version           = "1.35.0"
-  node_type            = "ondemand"   # ondemand | spot
-  runtime              = "containerd" # docker , cri-o , containerd
+  k8_version = "1.35.0"
+  node_type  = "ondemand"   # ondemand | spot
+  runtime    = "containerd" # docker , cri-o , containerd
   cni = {
     type               = "calico" # calico , cilium
     disable_kube_proxy = "false"
