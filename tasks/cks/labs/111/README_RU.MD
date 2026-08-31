@@ -4,7 +4,7 @@
 
 В этой CKS-лабе вы соберёте воспроизводимые evidence-артефакты для контейнерного
 приложения: отчёты уязвимостей и статических анализаторов, безопасные исправления
-`Dockerfile` и workload-манифеста, два SBOM, поиск версий зависимостей и проверку
+`Dockerfile` и манифеста рабочей нагрузки, два SBOM, поиск версий зависимостей и проверку
 подписи образа. Результат — не просто вывод терминала: каждый отчёт должен быть
 сохранён в указанном месте и пригоден для аудита.
 
@@ -34,8 +34,8 @@ Kubernetes-ресурсы: файлы анализируются локальн�
 | kubesec | `2.14.0` | security score Kubernetes YAML |
 | kube-linter | `0.7.1` | policy lint Kubernetes YAML |
 | Hadolint | `2.12.0` | lint Dockerfile |
-| Syft | `1.18.1` | SBOM SPDX JSON |
-| bom | `0.7.0` | SBOM CycloneDX JSON |
+| Syft | `1.18.1` | SBOM CycloneDX JSON |
+| bom | `0.7.0` | SBOM SPDX JSON (нативный формат `bom`) |
 | Cosign | `2.4.1` | verification подписи OCI-образа |
 
 ## Развёртывание
@@ -88,16 +88,16 @@ check_result
 | Критерии приёмки | Артефакт содержит команду, `nginx:1.27.3-alpine`, минимум три пары package/version и упоминание digest из результата inspect. |
 
 ---
-| **6** | **CycloneDX SBOM через bom** |
+| **6** | **SPDX SBOM через bom** |
 | :---: | :--- |
-| Что делаем | Сгенерируйте CycloneDX JSON SBOM для `nginx:1.27.3-alpine` инструментом `bom`; сохраните в `/var/work/tests/artifacts/6/bom.cdx.json`. В файл `6/bom-command.txt` запишите выполненную команду. |
-| Критерии приёмки | SBOM — валидный JSON, имеет `bomFormat: CycloneDX`, содержит `components`; command evidence использует `bom generate`. |
+| Что делаем | Сгенерируйте SPDX JSON SBOM для `nginx:1.27.3-alpine` инструментом `bom` (его нативный формат — SPDX); сохраните в `/var/work/tests/artifacts/6/bom.spdx.json`. В файл `6/bom-command.txt` запишите выполненную команду. |
+| Критерии приёмки | SBOM — валидный JSON, имеет `spdxVersion`, содержит массив `packages`; command evidence использует `bom generate`. |
 
 ---
-| **7** | **SPDX SBOM через Syft и проверка Cosign** |
+| **7** | **CycloneDX SBOM через Syft и проверка Cosign** |
 | :---: | :--- |
-| Что делаем | Сгенерируйте SPDX JSON Syft для `nginx:1.27.3-alpine` в `7/syft.spdx.json`. Затем проверьте подпись публичного образа `gcr.io/distroless/static:nonroot` через keyless Cosign и сохраните полный успешный вывод в `7/cosign-verify.txt`. Для Distroless используйте issuer `https://accounts.google.com` и identity `keyless@distroless.iam.gserviceaccount.com`. |
-| Критерии приёмки | Syft SBOM имеет `spdxVersion` и packages; в выводе Cosign есть `Verified OK` и reference `gcr.io/distroless/static:nonroot`. |
+| Что делаем | Сгенерируйте CycloneDX JSON SBOM Syft для `nginx:1.27.3-alpine` в `7/syft.cdx.json`. Затем проверьте подпись публичного образа `gcr.io/distroless/static:nonroot` через keyless Cosign и сохраните полный успешный вывод в `7/cosign-verify.txt`. Для Distroless используйте issuer `https://accounts.google.com` и identity `keyless@distroless.iam.gserviceaccount.com`. |
+| Критерии приёмки | Syft SBOM имеет `bomFormat: CycloneDX` и `components`; в выводе Cosign есть `Verified OK` и reference `gcr.io/distroless/static:nonroot`. |
 
 ## Проверка
 

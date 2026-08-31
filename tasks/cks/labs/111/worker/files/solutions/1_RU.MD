@@ -119,23 +119,24 @@ trivy image --list-all-pkgs --format json "$IMAGE" > /tmp/cks-111/packages.json
 cat "$ART/5/version-search.txt"
 ```
 
-## 6. CycloneDX SBOM (bom)
+## 6. SPDX SBOM (bom)
 
 ```bash
 mkdir -p "$ART/6"
-echo "bom generate --format cyclonedx-json --output $ART/6/bom.cdx.json --image $IMAGE" > "$ART/6/bom-command.txt"
-bom generate --format cyclonedx-json --output "$ART/6/bom.cdx.json" --image "$IMAGE"
-jq '.bomFormat, (.components | length)' "$ART/6/bom.cdx.json"
+echo "bom generate --format json --output $ART/6/bom.spdx.json --image $IMAGE" > "$ART/6/bom-command.txt"
+bom generate --format json --output "$ART/6/bom.spdx.json" --image "$IMAGE"
+jq '.spdxVersion, (.packages | length)' "$ART/6/bom.spdx.json"
 ```
 
-## 7. SPDX SBOM (Syft) и keyless Cosign
+## 7. CycloneDX SBOM (Syft) и keyless Cosign
 
+Syft умеет и SPDX, и CycloneDX; здесь берём CycloneDX (`bom` уже дал SPDX в задании 6).
 Проверяется публичный образ Distroless и его ожидаемая Google workload identity; не
 используйте `--insecure-ignore-tlog` или пропуск certificate identity.
 
 ```bash
 mkdir -p "$ART/7"
-syft "$IMAGE" -o "spdx-json=$ART/7/syft.spdx.json"
+syft "$IMAGE" -o "cyclonedx-json=$ART/7/syft.cdx.json"
 cosign verify \
   --certificate-oidc-issuer https://accounts.google.com \
   --certificate-identity keyless@distroless.iam.gserviceaccount.com \
@@ -143,7 +144,7 @@ cosign verify \
   | tee "$ART/7/cosign-verify.txt"
 # Сохранить также reference, который может отсутствовать в компактном JSON-выводе cosign.
 printf '\nreference=gcr.io/distroless/static:nonroot\n' >> "$ART/7/cosign-verify.txt"
-jq '.spdxVersion, (.packages | length)' "$ART/7/syft.spdx.json"
+jq '.bomFormat, (.components | length)' "$ART/7/syft.cdx.json"
 grep -E 'Verified OK|gcr.io/distroless/static:nonroot' "$ART/7/cosign-verify.txt"
 ```
 

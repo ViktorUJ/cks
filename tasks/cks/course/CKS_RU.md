@@ -6,7 +6,7 @@
 
 Этот маршрут собирает главы и практику для **CKS (Certified Kubernetes Security Specialist)**. Он рассчитан на инженера с уровнем CKA и организован по официальным доменам экзамена.
 
-> **Формат экзамена.** CKS - практический, performance-based экзамен: 2 часа, проходной балл 67%, Kubernetes `v1.36`. Нужно быстро работать с несколькими контекстами, конфигурацией control plane и нодами по SSH. Тактика, разрешённая документация и финальный чеклист - в [главе 33](33/ru.md).
+> **Формат экзамена.** CKS - практический, performance-based экзамен: 2 часа, проходной балл 67%. Нужно быстро работать с несколькими контекстами, конфигурацией control plane и нодами по SSH. Материалы и лабы курса построены на Kubernetes `v1.36`, но **это версия обучения, а не гарантированно версия экзамена**: актуальная программа CNCF - `CKS Curriculum v1.34`, а версию экзаменационной среды и проходной балл сверяйте с официальными страницами LF перед регистрацией. Тактика, разрешённая документация и финальный чеклист - в [главе 33](33/ru.md).
 
 ## С чего начать
 
@@ -71,47 +71,47 @@ CKS не повторяет CKA. До начала уверенно освежи
 
 ## Компетенция → глава
 
-| Домен | Компетенция | Главы |
-|-------|-------------|-------|
-| Cluster Setup | Network security policies для ограничения доступа на уровне кластера | [04](04/ru.md), [05](05/ru.md), [06](06/ru.md) |
-| Cluster Setup | CIS Benchmark для компонентов etcd, kubelet, kube-dns и kube-apiserver | [07](07/ru.md) |
-| Cluster Setup | Правильная настройка Ingress с TLS | [08](08/ru.md) |
-| Cluster Setup | Защита node metadata и endpoints | [05](05/ru.md), [09](09/ru.md) |
-| Cluster Setup | Проверка бинарников платформы перед деплоем | [09](09/ru.md) |
-| Cluster Hardening | RBAC для минимизации доступа | [10](10/ru.md) |
-| Cluster Hardening | Осторожная работа с ServiceAccount: отключение default и минимальные права | [11](11/ru.md) |
-| Cluster Hardening | Ограничение доступа к Kubernetes API | [12](12/ru.md), [09](09/ru.md) |
-| Cluster Hardening | Обновление Kubernetes для устранения уязвимостей | [13](13/ru.md) |
-| System Hardening | Минимизация footprint хостовой ОС | [14](14/ru.md) |
-| System Hardening | Least-privilege identity and access management | [15](15/ru.md) |
-| System Hardening | Минимизация внешнего доступа к сети | [14](14/ru.md), [15](15/ru.md) |
-| System Hardening | Hardening ядра: AppArmor | [16](16/ru.md), [03](03/ru.md) |
-| System Hardening | Hardening ядра: seccomp | [17](17/ru.md), [03](03/ru.md) |
-| Microservice | Pod Security Standards | [18](18/ru.md), [19](19/ru.md) |
-| Microservice | Управление Secret Kubernetes | [21](21/ru.md) |
-| Microservice | Изоляция: multi-tenancy и sandboxed containers | [22](22/ru.md) |
-| Microservice | Pod-to-Pod шифрование с Cilium | [23](23/ru.md) |
-| Supply Chain | Минимизация footprint базового образа | [24](24/ru.md) |
-| Supply Chain | Supply chain: SBOM, CI/CD, artifact repositories | [25](25/ru.md) |
-| Supply Chain | Разрешённые реестры, подпись и валидация артефактов | [26](26/ru.md) |
-| Supply Chain | Статический анализ нагрузок и образов: kubesec, kube-linter, hadolint | [27](27/ru.md) |
-| Supply Chain | Сканирование известных уязвимостей и SBOM | [28](28/ru.md), [25](25/ru.md) |
-| Runtime | Поведенческий анализ вредоносной активности | [29](29/ru.md) |
-| Runtime | Детект угроз в инфраструктуре, приложениях, сети, данных, пользователях и нагрузках | [30](30/ru.md), [29](29/ru.md) |
-| Runtime | Расследование и определение фаз атаки и злоумышленников | [02](02/ru.md), [30](30/ru.md) |
-| Runtime | Иммутабельность контейнеров во время выполнения | [31](31/ru.md), [18](18/ru.md) |
-| Runtime | Audit-логи Kubernetes для мониторинга доступа | [32](32/ru.md) |
+| Домен        | Компетенция                                                                                                                                    | Главы                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Cluster Setup     | Network security policies для ограничения доступа на уровне кластера                                                 | [04](04/ru.md), [05](05/ru.md), [06](06/ru.md) |
+| Cluster Setup     | CIS Benchmark для компонентов etcd, kubelet, kube-dns и kube-apiserver                                                                     | [07](07/ru.md)                               |
+| Cluster Setup     | Правильная настройка Ingress с TLS                                                                                                    | [08](08/ru.md)                               |
+| Cluster Setup     | Защита node metadata и endpoints                                                                                                                   | [05](05/ru.md), [09](09/ru.md)                |
+| Cluster Setup     | Проверка бинарников платформы перед деплоем                                                                        | [09](09/ru.md)                               |
+| Cluster Hardening | RBAC для минимизации доступа                                                                                                         | [10](10/ru.md)                               |
+| Cluster Hardening | Осторожная работа с ServiceAccount: отключение default и минимальные права                                    | [11](11/ru.md)                               |
+| Cluster Hardening | Ограничение доступа к Kubernetes API                                                                                                   | [12](12/ru.md), [09](09/ru.md)                |
+| Cluster Hardening | Обновление Kubernetes для устранения уязвимостей                                                                        | [13](13/ru.md)                               |
+| System Hardening  | Минимизация footprint хостовой ОС                                                                                                    | [14](14/ru.md)                               |
+| System Hardening  | Least-privilege identity and access management                                                                                                            | [15](15/ru.md)                               |
+| System Hardening  | Минимизация внешнего доступа к сети                                                                                        | [14](14/ru.md), [15](15/ru.md)                |
+| System Hardening  | Hardening ядра: AppArmor                                                                                                                              | [16](16/ru.md), [03](03/ru.md)                |
+| System Hardening  | Hardening ядра: seccomp                                                                                                                               | [17](17/ru.md), [03](03/ru.md)                |
+| Microservice      | Pod Security Standards                                                                                                                                    | [18](18/ru.md), [19](19/ru.md)                |
+| Microservice      | Управление Secret Kubernetes                                                                                                                    | [21](21/ru.md)                               |
+| Microservice      | Изоляция: multi-tenancy и sandboxed containers                                                                                                   | [22](22/ru.md)                               |
+| Microservice      | Pod-to-Pod шифрование с Cilium                                                                                                                 | [23](23/ru.md)                               |
+| Supply Chain      | Минимизация footprint базового образа                                                                                            | [24](24/ru.md)                               |
+| Supply Chain      | Supply chain: SBOM, CI/CD, artifact repositories                                                                                                          | [25](25/ru.md)                               |
+| Supply Chain      | Разрешённые реестры, подпись и валидация артефактов                                                          | [26](26/ru.md)                               |
+| Supply Chain      | Статический анализ нагрузок и образов: kubesec, kube-linter, hadolint                                                    | [27](27/ru.md)                               |
+| Supply Chain      | Сканирование известных уязвимостей и SBOM                                                                                | [28](28/ru.md), [25](25/ru.md)                |
+| Runtime           | Поведенческий анализ вредоносной активности                                                                       | [29](29/ru.md)                               |
+| Runtime           | Детект угроз в инфраструктуре, приложениях, сети, данных, пользователях и нагрузках | [30](30/ru.md), [29](29/ru.md)                |
+| Runtime           | Расследование и определение фаз атаки и злоумышленников                                                  | [02](02/ru.md), [30](30/ru.md)                |
+| Runtime           | Иммутабельность контейнеров во время выполнения                                                                | [31](31/ru.md), [18](18/ru.md)                |
+| Runtime           | Audit-логи Kubernetes для мониторинга доступа                                                                                    | [32](32/ru.md)                               |
 
 ## Домен → лабы
 
-| Домен | Лабы |
-|-------|------|
-| 🟦 Cluster Setup | [101](../labs/101/README_RU.MD) NetworkPolicy и metadata, [102](../labs/102/README_RU.MD) Cilium L3/L4/L7, [103](../labs/103/README_RU.MD) CIS, TLS и binary verification |
-| 🟥 Cluster Hardening | [104](../labs/104/README_RU.MD) RBAC, ServiceAccount и API access |
-| 🟧 System Hardening | [105](../labs/105/README_RU.MD) ОС, сеть и Docker daemon, [106](../labs/106/README_RU.MD) AppArmor и seccomp |
-| 🟩 Minimize Microservice Vulnerabilities | [107](../labs/107/README_RU.MD) PSA и SecurityContext, [108](../labs/108/README_RU.MD) admission policies, [109](../labs/109/README_RU.MD) encryption at rest, [110](../labs/110/README_RU.MD) gVisor, Cilium и Istio |
-| 🟪 Supply Chain Security | [108](../labs/108/README_RU.MD) allowlist, [111](../labs/111/README_RU.MD) images, SBOM, scan и signing |
-| 🟨 Monitoring, Logging & Runtime Security | [112](../labs/112/README_RU.MD) Falco, audit-логи и иммутабельность |
+| Домен                                | Лабы                                                                                                                                                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🟦 Cluster Setup                          | [101](../labs/101/README_RU.MD) NetworkPolicy и metadata, [102](../labs/102/README_RU.MD) Cilium L3/L4/L7, [103](../labs/103/README_RU.MD) CIS, TLS и binary verification                                            |
+| 🟥 Cluster Hardening                      | [104](../labs/104/README_RU.MD) RBAC, ServiceAccount и API access                                                                                                                                                   |
+| 🟧 System Hardening                       | [105](../labs/105/README_RU.MD) ОС, сеть и Docker daemon, [106](../labs/106/README_RU.MD) AppArmor и seccomp                                                                                                  |
+| 🟩 Minimize Microservice Vulnerabilities  | [107](../labs/107/README_RU.MD) PSA и SecurityContext, [108](../labs/108/README_RU.MD) admission policies, [109](../labs/109/README_RU.MD) encryption at rest, [110](../labs/110/README_RU.MD) gVisor, Cilium и Istio |
+| 🟪 Supply Chain Security                  | [108](../labs/108/README_RU.MD) allowlist, [111](../labs/111/README_RU.MD) images, SBOM, scan и signing                                                                                                              |
+| 🟨 Monitoring, Logging & Runtime Security | [112](../labs/112/README_RU.MD) Falco, audit-логи и иммутабельность                                                                                                                              |
 
 ## Рекомендуемый порядок подготовки
 

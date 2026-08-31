@@ -61,10 +61,12 @@ record_result() {
   sudo etcdctl-109 get "$ENCRYPTED_KEY" --print-value-only 2>/dev/null | grep -aq '^k8s:enc:aescbc:v1:'
   fresh_cipher=$?
   set +o pipefail
-  if [[ "$legacy_value" == 'cks-109-legacy-plaintext' && "$fresh_value" == 'cks-109-fresh-ciphertext' && "$legacy_cipher" -eq 0 && "$fresh_cipher" -eq 0 ]]; then
+  final_config=$(ssh -o BatchMode=yes control-plane 'sudo cat /etc/kubernetes/enc/encryption-config.yaml' 2>/dev/null || true)
+  ready=$(kubectl --context "$CTX" get --raw='/readyz' 2>/dev/null || true)
+  if [[ "$legacy_value" == 'cks-109-legacy-plaintext' && "$fresh_value" == 'cks-109-fresh-ciphertext' && "$legacy_cipher" -eq 0 && "$fresh_cipher" -eq 0 && "$final_config" != *'identity:'* && "$ready" == 'ok' ]]; then
     result=0
   else
-    echo "legacy_value=$legacy_value fresh_value=$fresh_value legacy_cipher=$legacy_cipher fresh_cipher=$fresh_cipher"
+    echo "legacy_value=$legacy_value fresh_value=$fresh_value legacy_cipher=$legacy_cipher fresh_cipher=$fresh_cipher identity_present=$([[ "$final_config" == *'identity:'* ]] && echo yes || echo no) ready=$ready"
     result=1
   fi
   record_result "$result"

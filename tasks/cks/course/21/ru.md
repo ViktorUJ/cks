@@ -113,11 +113,14 @@ Kubernetes поддерживает несколько providers. Для product
 | Provider | Механизм | Когда уместен | Главное ограничение |
 |---|---|---|---|
 | `identity` | plaintext | временный fallback для старых данных | не шифрует вообще |
-| `aescbc` | AES-CBC с HMAC | совместимый локальный вариант | ключ хранится рядом с control plane; нужна ручная ротация |
-| `aesgcm` | AES-GCM, AEAD | локальное шифрование с аутентификацией | есть ограничение безопасного числа записей на ключ; нужна ротация |
+| `aescbc` | AES-CBC с PKCS#7 padding | учебная/legacy-механика; для новых production-конфигураций не рекомендуется | слабый: риск padding-oracle атак; ключ хранится на control plane |
+| `aesgcm` | AES-GCM, AEAD | только с автоматизированной ротацией | не рекомендуется без ротации; лимит 200 000 записей на ключ |
 | `kms` | envelope encryption через KMS plugin | production с внешним key manager/HSM/облачным KMS | доступность plugin/KMS становится зависимостью API server |
 
-`aescbc` использует 32-байтный ключ AES-256, закодированный base64. Получить значение можно так:
+`aescbc` использует ключ AES, закодированный base64; в примере это 32-байтный ключ (AES-256).
+Kubernetes принимает ключи длиной 16, 24 или 32 байта. Этот пример нужен для экзаменационной
+механики и совместимости, а не как production recommendation: актуальная документация Kubernetes
+считает `aescbc` слабым. Получить 32-байтное значение для лаборатории можно так:
 
 ```bash
 head -c 32 /dev/urandom | base64
@@ -228,24 +231,23 @@ kubectl -n kube-system get pods -l component=kube-apiserver
 
 ## 21.5. KMS и envelope encryption
 
-Provider `kms` передаёт криптографическую операцию внешнему KMS plugin по Unix socket. API server
-не обязан хранить основной ключ в `EncryptionConfiguration`: внешний manager (например, облачный KMS,
-HSM или Vault) управляет key encryption key (KEK). Kubernetes получает data encryption key (DEK),
-шифрует им объект, а в etcd сохраняет ciphertext и зашифрованный DEK. Это называется envelope
-encryption.
+Provider `kms` связывает API server с локальным KMS plugin по Unix socket; plugin общается с
+внешним KMS/HSM, где хранится key encryption key (KEK). В `EncryptionConfiguration` нет KEK.
+KMS v1 и v2 используют envelope encryption, но по-разному получают data encryption key (DEK),
+поэтому их нельзя описывать одной последовательностью.
 
 ```mermaid
 flowchart LR
-    api["kube-apiserver"] -->|"Encrypt/Decrypt DEK\nUnix socket"| plugin["KMS plugin"]
-    plugin -->|"ключевая операция"| manager["внешний KMS / HSM\nKEK не в etcd"]
-    api -->|"ciphertext + encrypted DEK"| etcd[("etcd")]
+    api["kube-apiserver"] -->|"gRPC по Unix socket"| plugin["KMS plugin"]
+    plugin -->|"wrap/unwrap через KEK"| manager["внешний KMS / HSM\nKEK не в Kubernetes"]
+    api -->|"encrypted payload + wrapped material"| etcd[("etcd")]
     style api fill:#326ce5,color:#fff
     style plugin fill:#673ab7,color:#fff
     style manager fill:#0f9d58,color:#fff
     style etcd fill:#f4b400,color:#000
 ```
 
-Концептуальный фрагмент KMS v2:
+Концептуальный фрагмент KMS **v2**:
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -258,16 +260,40 @@ resources:
       apiVersion: v2
       name: production-kms
       endpoint: unix:///var/run/kmsplugin/socket.sock
-      cachesize: 1000
       timeout: 3s
   - identity: {}
 ```
+
+Различия нужно фиксировать явно:
+
+| Свойство | KMS v1 | KMS v2 |
+|---|---|---|
+| Статус | deprecated с Kubernetes 1.28; с 1.29 выключен по умолчанию | stable с Kubernetes 1.29, рекомендуемый API |
+| DEK | новый случайный DEK для каждой операции шифрования; plugin оборачивает каждый DEK KEK | API server хранит secret seed и через KDF выводит одноразовый DEK для каждой операции; seed оборачивается KEK и меняется при ротации KEK |
+| Поля config | `apiVersion: v1` или поле отсутствует; `name`, `endpoint`, `cachesize`, `timeout` | `apiVersion: v2`, `name`, `endpoint`, `timeout`; `cachesize` недопустим |
+| Производительность | больше gRPC/KMS-вызовов; cache хранит unwrapped DEK | нет KMS-вызова для оборачивания отдельного DEK при каждой записи |
+| Идентификация ключа | зависит от v1 plugin | `Status` возвращает `version: v2`, `healthz: ok` и `key_id` текущего KEK |
+
+В v2 в etcd сохраняются encrypted payload и material, достаточный API server для получения
+одноразового DEK из защищённого seed; это не модель «plugin выдаёт новый wrapped DEK на каждую
+запись». Ротация `key_id` заставляет API server получить новый seed, защитить его новым KEK и
+использовать его для последующих записей. Старые данные переписываются отдельной контролируемой
+re-encryption процедурой.
 
 Точные поля и доступная API-версия зависят от версии Kubernetes и выбранного plugin. Проверяйте
 официальную документацию вашей версии и deployment plugin; не копируйте на production произвольный
 пример KMS v1/v2. Socket должен быть доступен контейнеру API server через явный volume mount, а доступ
 к нему ограничен. Сам plugin должен использовать TLS/аутентификацию к удалённому manager, иметь
 минимальные KMS permissions и не печатать plaintext в logs.
+
+Для KMS полезны два эксплуатационных механизма. Флаг
+`--encryption-provider-config-automatic-reload=true` заставляет API server перечитывать
+конфигурацию без рестарта (удобно при ротации ключей). Здоровье plugin проверяется endpoint
+`/healthz/kms-providers` и общим `/healthz`; при automatic reload отдельные health checks
+сворачиваются в один. API server опрашивает KMS v2 `Status` примерно раз в минуту в healthy
+состоянии и чаще при сбое. Не рассчитывайте на cache как на HA: недоступность plugin/KEK может
+сорвать чтение ещё не раскрытого material, запись, ротацию и восстановление snapshot. Plugin и
+удалённый manager должны быть в HA, а restore требует того же KEK или документированной миграции.
 
 KMS улучшает разделение секретов, но добавляет эксплуатационные требования:
 
@@ -537,7 +563,7 @@ restore и минимизируйте количество людей, identitie
 static-Pod manifest может временно лишить кластер API.
 
 🧪 Лаборатория 109 (EncryptionConfiguration, шифрование Secret в etcd и проверка):
-[tasks/cka/labs/109](../../../cka/labs/109/README_RU.MD)
+[tasks/cks/labs/109](../../labs/109/README_RU.MD)
 
 📘 Связанные материалы: [глава 19 CKA - Secret](../../../cka/course/19/ru.md) ·
 [глава 37 CKA - резервное копирование и восстановление etcd](../../../cka/course/37/ru.md)

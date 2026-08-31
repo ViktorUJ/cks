@@ -4,7 +4,7 @@
 
 [← Оглавление курса](README_RU.md) · [Путеводитель CKS](CKS_RU.md)
 
-Единый алфавитный справочник терминов CKS. Термин приведён на английском, описание — на русском, а в колонке «Главы» даны ссылки на места, где он разобран.
+Единый алфавитный справочник терминов CKS. Термин приведён на английском, описание - на русском, а в колонке «Главы» даны ссылки на места, где он разобран.
 
 | Термин | Описание | Главы |
 |--------|----------|-------|
@@ -36,7 +36,7 @@
 | **Build context** | Набор файлов, передаваемых builder; его сокращает `.dockerignore`. | [24](24/ru.md) |
 | **CAP_SYS_ADMIN** | Чрезмерно широкая Linux capability, опасная для обычной нагрузки. | [03](03/ru.md) |
 | **capability** | Отдельная Linux-привилегия из полномочий root; безопасный baseline убирает `ALL` и возвращает только необходимое. | [03](03/ru.md), [18](18/ru.md) |
-| **CEL** | Common Expression Language — язык выражений встроенной ValidatingAdmissionPolicy. | [20](20/ru.md) |
+| **CEL** | Common Expression Language - язык выражений встроенной ValidatingAdmissionPolicy. | [20](20/ru.md) |
 | **cgroup** | Группа процессов с ограничениями и учётом CPU, memory, PID и других ресурсов. | [03](03/ru.md) |
 | **CI gate** | Обязательная проверка, блокирующая следующий этап pipeline при non-zero exit code. | [27](27/ru.md), [28](28/ru.md) |
 | **Cilium** | CNI и security-платформа Kubernetes на eBPF. | [06](06/ru.md), [23](23/ru.md) |
@@ -44,7 +44,7 @@
 | **CiliumNetworkPolicy (CNP)** | Namespaced ресурс политики Cilium с правилами L3/L4/L7. | [06](06/ru.md) |
 | **cipher suite** | Набор криптографических алгоритмов TLS, совместимый с certificate и клиентами. | [09](09/ru.md) |
 | **CIS Kubernetes Benchmark** | Рекомендации CIS по безопасной конфигурации Kubernetes-компонентов и нод. | [01](01/ru.md), [07](07/ru.md) |
-| **CKS** | Certified Kubernetes Security Specialist — практическая сертификация по безопасности Kubernetes. | [01](01/ru.md), [33](33/ru.md) |
+| **CKS** | Certified Kubernetes Security Specialist - практическая сертификация по безопасности Kubernetes. | [01](01/ru.md), [33](33/ru.md) |
 | **Clair** | Сервисный scanner и indexer уязвимостей container images. | [28](28/ru.md) |
 | **complain** | Режим AppArmor, в котором нарушения policy журналируются, но не блокируются. | [16](16/ru.md) |
 | **condition** | Булево выражение Falco по полям события, определяющее срабатывание rule. | [29](29/ru.md) |
@@ -68,7 +68,7 @@
 | **docker group** | Группа с доступом к Docker socket, которую следует считать root-equivalent. | [14](14/ru.md) |
 | **Docker socket** | `/var/run/docker.sock`, локальный API Docker daemon; доступ к нему почти равен root на host. | [14](14/ru.md) |
 | **drop-in** | Отдельный конфигурационный файл, дополняющий базовую конфигурацию, например systemd или SSH. | [15](15/ru.md) |
-| **eBPF** | Механизм ядра Linux для ограниченных программ; Cilium применяет его для datapath, Falco — для событий. | [06](06/ru.md), [29](29/ru.md) |
+| **eBPF** | Механизм ядра Linux для ограниченных программ; Cilium применяет его для datapath, Falco - для событий. | [06](06/ru.md), [29](29/ru.md) |
 | **egress policy** | NetworkPolicy, задающая допустимые исходящие соединения Pod. | [04](04/ru.md), [05](05/ru.md) |
 | **encryption at rest** | Шифрование данных, сохранённых в etcd, на диске, в snapshot и backup. | [21](21/ru.md) |
 | **EncryptionConfiguration** | Конфигурация providers шифрования, читаемая kube-apiserver. | [21](21/ru.md) |
@@ -96,11 +96,11 @@
 | **Hubble** | Наблюдаемость сетевых flows Cilium. | [06](06/ru.md) |
 | **identity** | Идентификатор endpoint Cilium, построенный из labels; не следует путать с provider `identity`. | [06](06/ru.md), [21](21/ru.md) |
 | **ImagePolicyWebhook** | Admission plugin, делегирующий решение об image внешнему backend через `ImageReview`. | [26](26/ru.md) |
-| **IMDS** | Instance Metadata Service — endpoint metadata экземпляра cloud provider. | [05](05/ru.md) |
+| **IMDS** | Instance Metadata Service - endpoint metadata экземпляра cloud provider. | [05](05/ru.md) |
 | **IMDSv2** | Вариант AWS IMDS с обязательным временным token для metadata-запросов. | [05](05/ru.md) |
 | **Immutable infrastructure** | Подход, при котором production artifact не меняют в runtime, а заменяют новой проверенной версией. | [02](02/ru.md), [31](31/ru.md) |
 | **include** | Директива подключения внешнего файла: `Include` в SSH, `#include` в AppArmor или `include:` в конфигурации проверок. | [15](15/ru.md), [16](16/ru.md), [27](27/ru.md) |
-| **Ingress** | Трафик, входящий в Pod, либо Kubernetes API-объект маршрутизации внешнего HTTP/HTTPS к Service — значение определяется контекстом. | [04](04/ru.md), [08](08/ru.md) |
+| **Ingress** | Трафик, входящий в Pod, либо Kubernetes API-объект маршрутизации внешнего HTTP/HTTPS к Service - значение определяется контекстом. | [04](04/ru.md), [08](08/ru.md) |
 | **IngressClass** | Выбор реализации Ingress, например NGINX Ingress Controller. | [08](08/ru.md) |
 | **Inner packet** | Исходный Pod-to-Pod flow, видимый до encryption или после decryption. | [23](23/ru.md) |
 | **ipBlock** | Правило ingress/egress для CIDR или отдельного IP; `except` исключает адреса и подсети. | [04](04/ru.md), [05](05/ru.md) |
@@ -116,7 +116,7 @@
 | **kubesec** | Scanner Kubernetes manifests, выводящий security score и controls. | [27](27/ru.md) |
 | **Kyverno** | Kubernetes-native policy engine с YAML rules `validate`, `mutate`, `generate` и `verifyImages`. | [20](20/ru.md), [26](26/ru.md), [31](31/ru.md) |
 | **L3/L4** | Сетевой уровень и транспортный протокол/порт в политике Cilium. | [06](06/ru.md) |
-| **L7** | Протокольный уровень, например HTTP method/path, Kafka или DNS. | [06](06/ru.md) |
+| **L7** | Протокольный уровень, например HTTP method/path или DNS (Kafka-фильтрация в Cilium устарела). | [06](06/ru.md) |
 | **lateral movement** | Перемещение атакующего от скомпрометированной нагрузки к другим системам, данным или identity. | [02](02/ru.md), [04](04/ru.md) |
 | **least privilege** | Выдача identity только минимально необходимых прав, области действия и срока. | [02](02/ru.md), [10](10/ru.md), [15](15/ru.md) |
 | **legacy annotation** | Устаревшая beta-аннотация AppArmor; её читают для миграции, но не используют для новых Pod. | [16](16/ru.md) |
@@ -125,7 +125,7 @@
 | **live-restore** | Режим Docker, сохраняющий работающие containers при рестарте daemon. | [14](14/ru.md) |
 | **Localhost** | Kubernetes type для AppArmor/seccomp profile, заранее загруженного на node. | [16](16/ru.md), [17](17/ru.md) |
 | **localhostProfile** | Относительный к kubelet seccomp root путь JSON-profile. | [17](17/ru.md) |
-| **MAC** | Mandatory Access Control — обязательная policy доступа поверх UID/GID и mode bits. | [03](03/ru.md), [16](16/ru.md) |
+| **MAC** | Mandatory Access Control - обязательная policy доступа поверх UID/GID и mode bits. | [03](03/ru.md), [16](16/ru.md) |
 | **macro** | Переиспользуемый именованный фрагмент Falco condition. | [29](29/ru.md) |
 | **mTLS** | TLS, в котором certificate предъявляют и client, и server. | [23](23/ru.md) |
 | **Multi-stage build** | Dockerfile с отдельными stage сборки и runtime, соединёнными `COPY --from=`. | [24](24/ru.md) |
@@ -139,7 +139,7 @@
 | **NodeRestriction** | Admission plugin, дополнительно ограничивающий kubelet его node и назначенными ей Pod. | [12](12/ru.md) |
 | **Notary Project / Notation** | OCI signing ecosystem с X.509 trust policy; для Kubernetes enforcement ему нужна admission integration. | [26](26/ru.md) |
 | **OCI** | Открытый стандарт формата container image и artifact, используемый registry и signing-инструментами. | [25](25/ru.md), [26](26/ru.md) |
-| **OPA** | Open Policy Agent — policy engine, исполняющий декларативные правила Rego. | [20](20/ru.md), [27](27/ru.md) |
+| **OPA** | Open Policy Agent - policy engine, исполняющий декларативные правила Rego. | [20](20/ru.md), [27](27/ru.md) |
 | **Outer packet** | Зашифрованный packet между node IP в физической сети. | [23](23/ru.md) |
 | **partial credit** | Частичный зачёт независимых корректно выполненных частей задачи. | [33](33/ru.md) |
 | **PeerAuthentication** | Istio policy inbound mTLS; режим `STRICT` отклоняет plaintext. | [23](23/ru.md) |
@@ -153,10 +153,10 @@
 | **projected volume** | Volume, собирающий token, ConfigMap, downward API и другие источники в файлы Pod. | [11](11/ru.md) |
 | **provenance** | Metadata о source, inputs, builder и процессе создания artifact; доказуемое происхождение. | [09](09/ru.md), [25](25/ru.md), [26](26/ru.md) |
 | **provider** | Механизм шифрования и дешифрования определённых API-resources. | [21](21/ru.md) |
-| **PSA** | Pod Security Admission — встроенный validating admission controller для PSS. | [19](19/ru.md), [31](31/ru.md) |
-| **PSP** | PodSecurityPolicy — удалённый в Kubernetes 1.25 предшественник PSA. | [19](19/ru.md) |
+| **PSA** | Pod Security Admission - встроенный validating admission controller для PSS. | [19](19/ru.md), [31](31/ru.md) |
+| **PSP** | PodSecurityPolicy - удалённый в Kubernetes 1.25 предшественник PSA. | [19](19/ru.md) |
 | **PSS** | Pod Security Standards: готовые профили `privileged`, `baseline` и `restricted`. | [19](19/ru.md) |
-| **purl** | Package URL — идентификатор package с ecosystem и version. | [25](25/ru.md) |
+| **purl** | Package URL - идентификатор package с ecosystem и version. | [25](25/ru.md) |
 | **re-encryption** | Переписывание старых API-объектов через новый provider или ключ. | [21](21/ru.md) |
 | **read-only kubelet port** | Legacy неаутентифицированный port kubelet, который должен быть отключён значением `0`. | [07](07/ru.md), [09](09/ru.md), [12](12/ru.md) |
 | **read-only root filesystem** | Режим, в котором image layer нельзя изменять; допустимые записи выносят в volumes. | [18](18/ru.md), [31](31/ru.md), [33](33/ru.md) |
@@ -192,7 +192,7 @@
 | **SLSA** | Модель зрелости практик защиты software supply chain. | [25](25/ru.md) |
 | **Software supply chain** | Путь source, dependencies, build systems и artifacts до running workload. | [25](25/ru.md) |
 | **SPDX** | Открытый стандарт описания packages, licenses и их отношений в SBOM. | [25](25/ru.md), [28](28/ru.md) |
-| **SSRF** | Server-Side Request Forgery — уязвимость, заставляющая сервер запрашивать выбранный атакующим адрес. | [05](05/ru.md) |
+| **SSRF** | Server-Side Request Forgery - уязвимость, заставляющая сервер запрашивать выбранный атакующим адрес. | [05](05/ru.md) |
 | **stage** | Момент создания audit event: `RequestReceived`, `ResponseStarted`, `ResponseComplete` или `Panic`. | [32](32/ru.md) |
 | **static analysis** | Проверка Dockerfile, manifests и policy без запуска workload. | [27](27/ru.md) |
 | **static Pod** | Pod из локального манифеста node, которым kubelet управляет без scheduler через Kubernetes API. | [07](07/ru.md), [09](09/ru.md), [12](12/ru.md), [32](32/ru.md), [33](33/ru.md) |

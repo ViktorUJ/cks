@@ -4,7 +4,10 @@ set -euo pipefail
 export KUBECONFIG=/root/.kube/config
 CTX="cluster1-admin@cluster1"
 HELM_VERSION="v3.17.3"
-KYVERNO_CHART_VERSION="3.4.2"
+# Kyverno 1.19 / chart 3.9.0: current supported branch verified 2026-08-31.
+# This is the first release with full CEL-policy feature parity; legacy ClusterPolicy is
+# deprecated and scheduled for removal in 1.20.
+KYVERNO_CHART_VERSION="3.9.0"
 
 echo "*** worker pc cks lab 108 k8s-1"
 until kubectl get nodes --context "$CTX" --no-headers 2>/dev/null | grep -q .; do

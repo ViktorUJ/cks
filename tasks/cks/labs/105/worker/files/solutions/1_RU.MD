@@ -40,17 +40,54 @@ ssh "$CP" 'sudo ss -ltn | grep -qE "[:.]8080([[:space:]]|$)"' \
 
 ## 3. Ограничить входящий трафик UFW
 
-Оставляем только SSH, чтобы не потерять доступ к ноде. Политика по умолчанию закрывает
-остальной входящий трафик; исходящий трафик остаётся разрешённым.
+Сначала определяем топологию и необходимые источники. Это одноузловой control-plane,
+который также запускает workload. Worker должен иметь SSH и API access; Pod CIDR и сам
+узел — API access. Межнодовых kubelet/CNI flows здесь нет. Не открываем `22`/`6443` для
+`Anywhere`.
 
 ```bash
-ssh "$CP" 'sudo ufw default deny incoming && sudo ufw default allow outgoing && sudo ufw allow 22/tcp && sudo ufw --force enable'
+WORKER_IP=$(ssh "$CP" 'printf "%s\n" "${SSH_CONNECTION%% *}"')
+NODE_IP=$(kubectl get node "$CP" --context "$CTX" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
+POD_CIDR=$(kubectl get node "$CP" --context "$CTX" -o jsonpath='{.spec.podCIDR}')
+printf 'role=control-plane,workload\nworker_ip=%s\nnode_ip=%s\npod_cidr=%s\n' \
+  "$WORKER_IP" "$NODE_IP" "$POD_CIDR" \
+  | tee /var/work/tests/artifacts/3/preflight.txt
+
+# Allow recovery and required API sources before changing the default.
+ssh "$CP" "sudo ufw allow from '$WORKER_IP' to any port 22 proto tcp comment 'CKS105 worker SSH recovery'"
+ssh "$CP" "sudo ufw allow from '$WORKER_IP' to any port 6443 proto tcp comment 'CKS105 worker API'"
+ssh "$CP" "sudo ufw allow from '$NODE_IP' to any port 6443 proto tcp comment 'CKS105 node API'"
+ssh "$CP" "sudo ufw allow from '$POD_CIDR' to any port 6443 proto tcp comment 'CKS105 Pod API'"
+ssh "$CP" 'sudo ufw allow in on lo comment "CKS105 loopback"; sudo ufw default allow outgoing; sudo ufw default deny incoming; sudo ufw --force enable'
 ssh "$CP" 'sudo ufw status verbose; sudo ufw status' \
   | tee /var/work/tests/artifacts/3/ufw.txt
+
+cat > /var/work/tests/artifacts/3/recovery.txt <<'EOF'
+# Выполнять из ещё открытой SSH/console session при потере API:
+sudo ufw disable
+sudo ufw status verbose
+# исправить узкие allow rules, проверить source IP/CIDR
+sudo ufw --force enable
+# Если правила повреждены полностью, только через console/recovery channel:
+sudo ufw --force reset
+EOF
+
+kubectl get --raw=/readyz --context "$CTX"
+kubectl get nodes --context "$CTX"
+kubectl rollout status deployment/health-probe -n cks-105-health --timeout=60s
+kubectl exec -n cks-105-health deploy/health-probe -- \
+  sh -c 'code=$(curl -ksS -o /dev/null -w "%{http_code}" --max-time 5 https://kubernetes.default.svc/readyz); test "$code" != 000'
+
+# Нежелательный worker -> kubelet flow не должен дать HTTP response.
+set +e
+curl -ksS -o /dev/null -w 'kubelet_http=%{http_code}\n' --connect-timeout 2 --max-time 3 \
+  "https://${NODE_IP}:10250/healthz"
+set -e
 ```
 
-В выводе должны быть `Status: active`, `Default: deny (incoming)` и правило
-`22/tcp ALLOW`.
+В выводе должны быть `Status: active`, `Default: deny (incoming)` и source-scoped rules.
+Не закрывайте исходную SSH session, пока `/readyz`, nodes, workload и отрицательная
+проверка `10250` не дали ожидаемый результат.
 
 ## 4. Защитить kubeconfig администратора
 

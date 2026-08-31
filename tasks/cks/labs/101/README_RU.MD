@@ -100,13 +100,17 @@ kubectl config current-context
 ---
 | **5** | **Защита metadata endpoint** |
 | :---: | :--- |
-| Что делаем | Убедитесь, что политики не разрешают egress к `169.254.169.254`. Проверьте из Pod с `app=frontend`, что `curl --max-time 3 http://169.254.169.254/` завершается ошибкой или timeout, и сохраните код команды в `/var/work/tests/artifacts/5/metadata.exit-code`. |
-| Критерии приёмки | Запрос к metadata endpoint не проходит; артефакт содержит ненулевой код. |
+| Что делаем | Убедитесь, что политики не разрешают egress к `169.254.169.254`. Запускайте `curl` **без `-f`**, сохраняйте одновременно exit code, `%{http_code}` и stderr в `/var/work/tests/artifacts/5/metadata.output`. Классифицируйте результат: DNS failure, TCP refusal, connect/timeout либо HTTP response. HTTP `401/403` означает, что endpoint сетево доступен, и не доказывает действие `NetworkPolicy`. |
+| Критерии приёмки | Metadata не возвращает HTTP-ответ (`http_code=000`), а `curl` завершается сетевым timeout/connect failure; артефакт явно указывает уровень отказа. Контрольный HTTP `401/403` распознаётся как HTTP-level response, а не как network deny. |
 ---
 
 Для проверки из временного client Pod используйте `curlimages/curl` или `busybox` и назначьте
 ему `--labels=app=frontend`: policy сопоставляет именно identity Pod, а образ
 `viktoruj/ping_pong:latest` является минимальным и не содержит shell/curl.
+
+Не используйте один только ненулевой exit code `curl -f` как доказательство сетевого
+запрета: `-f` возвращает ошибку и для доступного HTTP endpoint с ответом `401`, `403` или
+другим `4xx`. Для `NetworkPolicy` важно отсутствие HTTP response и сетевой тип ошибки.
 
 ## Проверка результата
 

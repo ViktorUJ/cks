@@ -21,6 +21,9 @@ admission. Работайте только с объектами и именам
 Control-plane разрешает обычные Pod, поэтому отдельный Kubernetes worker не создаётся.
 Kyverno намеренно **не установлен** в начальном состоянии: это часть задания 1. На
 рабочей машине подготовлен закреплённый installer, не требующий подбирать chart вручную.
+Лаба закрепляет Kyverno `1.19` (Helm chart `3.9.0`) и использует стабильные CEL-based API
+`policies.kyverno.io/v1`. Legacy `Policy`/`ClusterPolicy` в `kyverno.io/v1` с этой версии
+deprecated и рассматривается только как migration material.
 
 ## Развёртывание
 
@@ -41,30 +44,30 @@ check_result
 | **1** | **Установить Kyverno** |
 | :---: | :--- |
 | Что делаем | Установите Kyverno в namespace `kyverno`. Используйте подготовленную на worker команду `/usr/local/bin/install-kyverno`; она применяет закреплённый Helm chart. Дождитесь доступности admission controller. |
-| Критерии приёмки | В кластере есть CRD `clusterpolicies.kyverno.io`; минимум один Deployment namespace `kyverno` имеет доступную реплику. |
+| Критерии приёмки | В кластере есть CRD `validatingpolicies.policies.kyverno.io`; версия Kyverno — `1.19.x`; минимум один Deployment namespace `kyverno` имеет доступную реплику. |
 
 ---
 | **2** | **Запретить image с тегом `latest`** |
 | :---: | :--- |
-| Что делаем | Создайте `ClusterPolicy` `deny-latest-tag` с `validationFailureAction: Enforce`. Она должна применяться к Pod namespace `policy-108` и отклонять каждый container, чей image заканчивается на `:latest`. |
-| Критерии приёмки | Policy существует и включена в режиме Enforce; server-side admission отклоняет Pod с `registry.k8s.io/pause:latest`. |
+| Что делаем | Создайте CEL-based `ValidatingPolicy` `deny-latest-tag` (`policies.kyverno.io/v1`) с `validationActions: [Deny]`. Она должна применяться к Pod и subresource `pods/ephemeralcontainers` namespace `policy-108` и отклонять любой image в `containers`, `initContainers` или `ephemeralContainers`, который заканчивается на `:latest`. |
+| Критерии приёмки | Policy существует и работает в режиме Deny; admission отклоняет `:latest` в каждом из трёх списков, а versioned trusted images принимает. |
 
 ---
 | **3** | **Требовать запуск не от root** |
 | :---: | :--- |
-| Что делаем | Создайте `ClusterPolicy` `require-run-as-non-root` в режиме Enforce. Для каждого Pod в `policy-108` поле `spec.securityContext.runAsNonRoot` должно быть явно равно `true`. |
-| Критерии приёмки | Policy существует и Enforce; Pod с `runAsNonRoot: false` не проходит server-side admission. |
+| Что делаем | Создайте CEL-based `ValidatingPolicy` `require-run-as-non-root` в режиме Deny. Для каждого Pod в `policy-108` поле `spec.securityContext.runAsNonRoot` должно быть явно равно `true`. |
+| Критерии приёмки | Policy существует и Deny; Pod с `runAsNonRoot: false` не проходит server-side admission. |
 
 ---
 | **4** | **Allowlist container registry** |
 | :---: | :--- |
-| Что делаем | Создайте `ClusterPolicy` `allow-approved-registries` в режиме Enforce. Для каждого container разрешайте только `registry.k8s.io/*` или `ghcr.io/cks-lab/*`; остальные image registry запретите. |
-| Критерии приёмки | Policy существует и Enforce; Pod с `docker.io/library/busybox:1.36` отклоняется admission webhook. |
+| Что делаем | Создайте CEL-based `ValidatingPolicy` `allow-approved-registries` в режиме Deny. Для каждого контейнера (`containers`, `initContainers`, `ephemeralContainers`) разрешайте только `registry.k8s.io/*` или `ghcr.io/cks-lab/*`; остальные image registry запретите. |
+| Критерии приёмки | Policy существует и Deny; untrusted image отклоняется во всех трёх списках, trusted image допускается во всех трёх списках. |
 
 ---
 | **5** | **Опционально: mutate label через Kyverno** |
 | :---: | :--- |
-| Что делаем | Создайте `ClusterPolicy` `add-kyverno-managed-label`, которая добавляет к Pod namespace `policy-108` label `security.cks.io/managed-by: kyverno`, если он отсутствует. Используйте mutation, а не validation. |
+| Что делаем | Создайте CEL-based `MutatingPolicy` `add-kyverno-managed-label` (`policies.kyverno.io/v1`), которая добавляет к Pod namespace `policy-108` label `security.cks.io/managed-by: kyverno`, если он отсутствует. Используйте mutation, а не validation. |
 | Критерии приёмки | Server-side dry-run Pod с разрешённым registry и `runAsNonRoot: true` возвращает добавленный label. Этот этап отображается в `check_result`, но его пропуск допустим. |
 
 ## Проверка

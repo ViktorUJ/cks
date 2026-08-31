@@ -75,7 +75,14 @@ pod_node_has_label() {
   encrypt_status=$(kubectl -n kube-system exec "$agent" --context "$CTX" -- cilium encrypt status 2>&1 || true)
   agent_status=$(kubectl -n kube-system exec "$agent" --context "$CTX" -- cilium status 2>&1 || true)
   status="$encrypt_status"$'\n'"$agent_status"
+  client_version=$(cilium version --client 2>&1 || true)
+  versions="$ARTIFACTS/4/tool-versions.txt"
   if [[ -n "$agent" && "$status" =~ [Ww]ire[Gg]uard ]] \
+    && ! grep -Eqi 'IPsec.*enabled|Encryption:.*IPsec' <<<"$status" \
+    && [[ "$client_version" == *0.19.7* ]] \
+    && grep -Eq 'Kubernetes[=: ]+v?1[.]36' "$versions" \
+    && grep -Eqi 'Cilium agent=.*:v?1[.](19|20)' "$versions" \
+    && grep -Eq 'Cilium CLI[=: ]+v?0[.]19[.]7' "$versions" \
     && grep -Eqi 'WireGuard|Encryption:.*Wireguard' "$ARTIFACTS/4/cilium-encrypt-status.txt"; then
     result=0
   else
@@ -101,20 +108,29 @@ pod_node_has_label() {
   record_result "$result"
 }
 
-@test "6. market PeerAuthentication STRICT allows mesh client (200) and resets plaintext outside client" {
+@test "6. market PeerAuthentication STRICT allows mesh client and denies plaintext client" {
   mode=$(kubectl get peerauthentication market-strict -n market --context "$CTX" -o jsonpath='{.spec.mtls.mode}' 2>/dev/null)
   injection=$(kubectl get namespace market --context "$CTX" -o jsonpath='{.metadata.labels.istio-injection}' 2>/dev/null)
+  istiod_image=$(kubectl get deployment istiod -n istio-system --context "$CTX" -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
+  outside_sidecar=$(kubectl get pod mesh-outside -n default --context "$CTX" -o json | jq -r '[.spec.containers[]? | select(.name == "istio-proxy")] | length' 2>/dev/null)
   inside=$(kubectl exec -n market deploy/market-client --context "$CTX" -- curl -sS -o /dev/null -w '%{http_code}' http://market-api 2>&1 || true)
   set +e
   outside=$(kubectl exec -n default mesh-outside --context "$CTX" -- curl -sS --max-time 10 http://market-api.market.svc.cluster.local 2>&1)
   outside_status=$?
   set -e
-  if [[ "$mode" == "STRICT" && "$injection" == "enabled" && "$inside" == "200" && "$outside_status" -ne 0 ]] \
-    && grep -Fq 'HTTP/1.1 200 OK' "$ARTIFACTS/6/market-inside.txt" \
-    && grep -Eqi 'connection reset by peer|recv failure.*reset' "$ARTIFACTS/6/market-outside.txt"; then
+  # Outcome-based check, not a literal socket-error string (wording is implementation- and
+  # version-dependent). STRICT mTLS is proven by: policy is STRICT, in-mesh client gets 200,
+  # and the plaintext outside client does NOT get a successful HTTP response (curl fails and
+  # no 2xx status is returned).
+  outside_ok=1
+  if [[ "$outside_status" -ne 0 ]] && ! grep -Eq 'HTTP/[0-9.]+ 2[0-9][0-9]' "$ARTIFACTS/6/market-outside.txt"; then
+    outside_ok=0
+  fi
+  if [[ "$mode" == "STRICT" && "$injection" == "enabled" && "$istiod_image" == *1.30.4* && "$outside_sidecar" == "0" && "$inside" == "200" && "$outside_ok" -eq 0 ]] \
+    && grep -Fq 'HTTP/1.1 200 OK' "$ARTIFACTS/6/market-inside.txt"; then
     result=0
   else
-    echo "mode=$mode injection=$injection inside=$inside outside_status=$outside_status outside=$outside"
+    echo "mode=$mode injection=$injection istiod_image=$istiod_image outside_sidecar=$outside_sidecar inside=$inside outside_status=$outside_status outside=$outside"
     result=1
   fi
   record_result "$result"

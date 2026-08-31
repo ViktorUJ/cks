@@ -76,7 +76,7 @@ TLS и RBAC образуют один контроль. Но следующие 
 конфликтующие флаги усложняют диагностику.
 
 ```bash
-# На control-plane ноде: static Pod-манифесты и аргументы запущенных контейнеров.
+# На узле control plane: static Pod-манифесты и аргументы запущенных контейнеров.
 sudo grep -nE -- '--(anonymous-auth|authorization-mode|profiling|tls-|cipher|insecure)' \
   /etc/kubernetes/manifests/{kube-apiserver,kube-controller-manager,kube-scheduler,etcd}.yaml
 sudo crictl ps -a
@@ -463,7 +463,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 
 ## 09.11. Как это пригодится: на экзамене и в реальной работе
 
-**На экзамене.** Задание CKS может дать SSH на control-plane ноду и попросить исправить
+**На экзамене.** Задание CKS может дать SSH на узел control plane и попросить исправить
 небезопасный флаг, TLS policy или hash binary. Быстро установите, static Pod это или
 kubelet service; сохраните backup вне `/etc/kubernetes/manifests`; внесите одну правку;
 дождитесь перезапуска и докажите и настройку, и здоровье. Для checksum не сравнивайте

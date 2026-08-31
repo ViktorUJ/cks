@@ -36,7 +36,11 @@ flowchart TB
 
 Проверки сгруппированы по ролям и компонентам. Названия профилей и номера рекомендаций
 меняются между версиями benchmark, поэтому ориентируйтесь на профиль, который выбрал
-`kube-bench` для установленной версии Kubernetes.
+`kube-bench` для установленной версии Kubernetes. Версии Kubernetes и версии CIS Benchmark
+не связаны один к одному: одна версия benchmark может покрывать несколько версий Kubernetes
+и наоборот. Не полагайтесь на «CIS для Kubernetes 1.36» как на готовое соответствие -
+`kube-bench` сам подбирает профиль, а его вместе с версиями Kubernetes и `kube-bench`
+фиксируют в артефакте отчёта (см. лабу 103).
 
 | Раздел CIS | Что проверяется | Типовые объекты |
 |---|---|---|
@@ -52,15 +56,15 @@ flowchart TB
 
 ## 07.2. Запуск kube-bench и чтение отчёта
 
-Запускайте `kube-bench` на той ноде, чьи файлы он должен читать. На control-plane ноде
+Запускайте `kube-bench` на том узле, чьи файлы он должен читать. На узле control plane
 обычно нужны разделы `master` и `etcd`, на worker - `node`. В учебном кластере или при SSH
 доступе к ноде самый прозрачный вариант - локальный запуск:
 
 ```bash
-# На control-plane ноде; доступные targets зависят от версии kube-bench.
+# На узле control plane; доступные targets зависят от версии kube-bench.
 sudo kube-bench run --targets master,etcd | tee kube-bench-control-plane.txt
 
-# На worker-ноде.
+# На рабочем узле.
 sudo kube-bench run --targets node | tee kube-bench-worker.txt
 
 # Быстро найти непрошедшие пункты и их идентификаторы.

@@ -10,7 +10,7 @@ CKS - performance-based экзамен: проверяется состояни�
 
 ## 33.1. Формат и среда: контексты, кластеры и SSH
 
-На CKS отведено **2 часа**. Задачи могут относиться к нескольким кластерам и namespace. Часть решается с рабочей машины через `kubectl`, часть - после SSH на control-plane или worker-ноду: профиль AppArmor, `kubelet`, `kube-apiserver` static Pod, файлы runtime или результаты `kube-bench` находятся не в Kubernetes API.
+На CKS отведено **2 часа**. Задачи могут относиться к нескольким кластерам и namespace. Часть решается с рабочей машины через `kubectl`, часть - после SSH на узел control plane или рабочий узел: профиль AppArmor, `kubelet`, `kube-apiserver` static Pod, файлы runtime или результаты `kube-bench` находятся не в Kubernetes API.
 
 ```mermaid
 flowchart LR
@@ -68,20 +68,28 @@ sudo crictl ps -a
 
 ## 33.2. Разрешённая документация: использовать поиск, а не читать всё
 
-Разрешённые ресурсы отображаются в экзаменационной среде. Ниже приведён список сайтов из условий CKS; не рассчитывайте на сайт, которого нет в разрешённом списке конкретного экзамена, и не открывайте сторонние поисковики, форумы или личные заметки.
+Разрешённые ресурсы отображаются в экзаменационной среде и поддерживаются LF независимо от
+curriculum. На дату последней проверки, **2026-08-31**, глобальный список CKS включает
+**Quick Reference** задачи, документацию и блог Kubernetes, документацию Falco, `bom`, etcd,
+NGINX Ingress Controller, Cilium и Istio, а также документацию, man-страницы и пакеты
+установленного дистрибутива. Список меняется: непосредственно перед экзаменом заново
+сверьтесь со страницей [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed).
+Не открывайте поисковики, форумы, личные заметки и сайты вне актуального списка.
 
-| Разрешённый источник | Когда открывать | Быстрый запрос или ориентир |
+Ниже - учебный справочник по документации инструментов курса: что и где искать, если ссылка доступна (обычно через Quick Reference соответствующей задачи).
+
+| Источник | Когда открывать | Ориентир поиска |
 |---|---|---|
 | [Kubernetes Documentation](https://kubernetes.io/docs/) | поля API, `kubectl`, Pod Security, admission, audit | искать точное поле: `securityContext appArmorProfile`, `seccompProfile`, `audit logging` |
-| [Kubernetes Blog](https://kubernetes.io/blog/) | изменения поведения и release-заметки | `site:kubernetes.io/blog <термин>` |
-| [Trivy](https://trivy.dev/) | сканирование image, filesystem, config | `trivy image`, `trivy config` |
-| [Falco](https://falco.org/docs/) | правило, поле события, вывод alert | `Falco rule condition`, `Falco fields` |
-| [AppArmor](https://apparmor.net/) | синтаксис профиля и режимы enforce/complain | `AppArmor profile syntax`, `aa-status` |
+| [Kubernetes Blog](https://kubernetes.io/blog/) | изменения поведения и release-заметки | искать термин во встроенном поиске сайта, не во внешнем поисковике |
 | [Cilium](https://docs.cilium.io/) | `CiliumNetworkPolicy`, entities, DNS, encryption | `CiliumNetworkPolicy toFQDNs`, `transparent encryption` |
 | [Istio](https://istio.io/latest/docs/) | `PeerAuthentication`, mTLS, проверка mesh | `PeerAuthentication STRICT` |
-| [bom](https://github.com/kubernetes-sigs/bom) | SBOM и команды `bom` | `bom generate`, `SPDX`, `CycloneDX` |
 | [etcd](https://etcd.io/docs/) | здоровье, TLS и операции `etcdctl` | `etcdctl endpoint health`, `snapshot` |
-| [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) | TLS и конфигурация Ingress Controller | `Ingress TLS`, `annotations` |
+| [bom](https://kubernetes-sigs.github.io/bom/cli-reference/) | SBOM в формате SPDX командой `bom` | `bom generate` (SPDX); CycloneDX - через syft/trivy |
+| [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) | TLS и конфигурация Ingress Controller | `Ingress TLS`, `annotations` (controller retired, см. гл. 08) |
+| [Falco](https://falco.org/docs/) | правило, поле события, вывод alert | `Falco rule condition`, `Falco fields` |
+| [Trivy](https://trivy.dev/) | учебное сканирование image, filesystem, config | не считать глобально разрешённым без актуального списка или Quick Reference |
+| [AppArmor](https://gitlab.com/apparmor/apparmor/-/wikis/Documentation) | учебный синтаксис профиля и режимы enforce/complain | не считать глобально разрешённым без актуального списка или Quick Reference |
 
 Документация нужна для точного флага, структуры ресурса или редкого синтаксиса, а не как замена навыка. Если поиск не дал ответ примерно за минуту, поставьте флаг у задачи и возьмите следующую. Вкладка с документацией должна отвечать на один конкретный вопрос: «какое поле задаёт профиль», «какой selector соответствует policy», «какой флаг включает audit backend».
 
@@ -382,7 +390,7 @@ EOF
 | [Лаба 103](../../labs/103/README_RU.MD) | CIS/kube-bench, TLS Ingress, флаги компонентов и проверка бинарников |
 | [Лаба 104](../../labs/104/README_RU.MD) | RBAC, ServiceAccount и ограничение доступа к API |
 | [Лаба 105](../../labs/105/README_RU.MD) | hardening ОС, сервисы, порты, firewall и runtime-демон |
-| [Лаба 106](../../labs/106/README_RU.MD) | AppArmor и seccomp на worker-ноде |
+| [Лаба 106](../../labs/106/README_RU.MD) | AppArmor и seccomp на рабочем узле |
 | [Лаба 107](../../labs/107/README_RU.MD) | Pod Security Standards, PSA и SecurityContext |
 | [Лаба 108](../../labs/108/README_RU.MD) | admission policy и allowlist реестров |
 | [Лаба 109](../../labs/109/README_RU.MD) | Secret encryption at rest и доступ к etcd |

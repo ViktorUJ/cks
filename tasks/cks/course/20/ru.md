@@ -222,164 +222,143 @@ violation[{"msg": msg}] {
 покрывает этот класс требований - используйте custom Rego только когда нужны свои scope,
 исключения или расширенная логика.
 
-## 20.4. Kyverno: policy как Kubernetes YAML
+## 20.4. Kyverno 1.19: CEL-based policy types
 
-Kyverno хранит policy в обычных Kubernetes-ресурсах и использует YAML-паттерны вместо Rego.
-`ClusterPolicy` действует на весь кластер, `Policy` - внутри одного namespace. Для многих
-платформенных правил это снижает порог входа: security engineer видит match, YAML-условие и
-изменяемые поля в одном документе.
+Начиная с Kyverno 1.19 основной путь - отдельные CEL-based типы группы
+`policies.kyverno.io/v1`: `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy` и
+`ImageValidatingPolicy`. Старые `Policy`/`ClusterPolicy` группы `kyverno.io/v1` в 1.19
+помечены deprecated и предназначены только для миграции; их удаление запланировано в 1.20.
+Не смешивайте поля двух моделей в одном объекте.
 
-| Тип правила | Что делает | Типичный пример |
-|---|---|---|
-| `validate` | разрешает или отклоняет объект, либо сообщает нарушение | обязательный `runAsNonRoot`, trusted registry |
-| `mutate` | добавляет или меняет поля до сохранения | default `allowPrivilegeEscalation: false` |
-| `generate` | создаёт или синхронизирует связанный ресурс | default-deny `NetworkPolicy` при создании Namespace |
-| `verifyImages` | проверяет подпись/attestation образа | допуск только образов, подписанных доверенным keyless identity |
-
-Устанавливайте один policy engine как управляемый platform component. Как и у Gatekeeper,
-фиксируйте версию chart, затем проверьте контроллер, webhook и CRD:
+В курсе проверена связка Kyverno `v1.19.x` и Helm chart `3.9.0`. После установки проверьте
+именно новые CRD и фактический image контроллера:
 
 ```bash
-helm repo add kyverno https://kyverno.github.io/kyverno/
-helm repo update
 helm upgrade --install kyverno kyverno/kyverno \
-  --namespace kyverno --create-namespace \
-  --version <pinned-chart-version>
-
-kubectl -n kyverno get pods
-kubectl get clusterpolicy,policy -A
+  --namespace kyverno --create-namespace --version 3.9.0
+kubectl get crd validatingpolicies.policies.kyverno.io \
+  mutatingpolicies.policies.kyverno.io \
+  generatingpolicies.policies.kyverno.io \
+  imagevalidatingpolicies.policies.kyverno.io
+kubectl -n kyverno get deploy -o jsonpath='{..image}'
 ```
 
-### `validate`: требовать `runAsNonRoot`
+### `ValidatingPolicy`: требовать `runAsNonRoot`
 
-Следующая `ClusterPolicy` требует явный pod-level baseline. Такая проверка не заменяет
-полную `restricted`-проверку: container-level `securityContext` всё ещё может быть
-важен, а `runAsNonRoot` не гарантирует безопасный UID образа. Для rollout используйте
-`Audit`, найдите offenders, затем переведите policy в `Enforce`.
+Начните с `Audit`, устраните нарушения и только затем переключите действие на `Deny`.
+Проверка ниже требует явный pod-level baseline; она не заменяет полный PSS `restricted`.
 
 ```yaml
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
 metadata:
   name: require-pod-run-as-non-root
 spec:
-  validationFailureAction: Audit
-  background: true
-  rules:
-  - name: require-pod-security-context
-    match:
-      any:
-      - resources:
-          kinds: ["Pod"]
-    validate:
-      message: "Pod spec.securityContext.runAsNonRoot must be true"
-      pattern:
-        spec:
-          securityContext:
-            runAsNonRoot: true
+  validationActions: [Audit]
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods"]
+  validations:
+  - message: "Pod spec.securityContext.runAsNonRoot must be true"
+    expression: >-
+      has(object.spec.securityContext) &&
+      object.spec.securityContext.?runAsNonRoot.orValue(false)
 ```
 
 ```bash
 kubectl apply -f kyverno-run-as-non-root.yaml
-kubectl get clusterpolicy require-pod-run-as-non-root
-kubectl get policyreport -A 2>/dev/null || true
-
-# После обработки результатов Audit:
-kubectl patch clusterpolicy require-pod-run-as-non-root --type merge \
-  -p '{"spec":{"validationFailureAction":"Enforce"}}'
+kubectl get validatingpolicy require-pod-run-as-non-root
+kubectl patch validatingpolicy require-pod-run-as-non-root --type merge \
+  -p '{"spec":{"validationActions":["Deny"]}}'
 ```
 
-В новых версиях Kyverno часть policy-level полей меняется или помечается deprecated.
-Проверяйте schema установленной версии командой `kubectl explain clusterpolicy.spec` и
-официальную compatibility matrix, а не смешивайте примеры из разных release.
+### `MutatingPolicy`: прозрачная маркировка
 
-### `mutate`: безопасный default для контейнеров
-
-Mutation не должна скрывать небезопасную архитектуру. Например, безусловно поставить
-`runAsNonRoot: true` может сломать образ, который запускается от root. Но default
-`allowPrivilegeEscalation: false` обычно уместен как baseline, если приложению не нужна
-такая возможность. Оператор `+()` добавляет значение лишь при отсутствии поля.
+Mutation не должна маскировать небезопасный image. Для security-critical полей чаще лучше
+явная validation. Безопасный учебный пример добавляет только audit-label и показывает
+современный `ApplyConfiguration` вместо legacy `patchStrategicMerge`:
 
 ```yaml
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
 metadata:
-  name: default-no-privilege-escalation
+  name: mark-kyverno-managed-pods
 spec:
-  rules:
-  - name: set-no-privilege-escalation
-    match:
-      any:
-      - resources:
-          kinds: ["Pod"]
-    mutate:
-      foreach:
-      - list: "request.object.spec.containers[]"
-        patchStrategicMerge:
-          spec:
-            containers:
-            - (name): "{{ element.name }}"
-              securityContext:
-                +(allowPrivilegeEscalation): false
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE"]
+      resources: ["pods"]
+  mutations:
+  - patchType: ApplyConfiguration
+    applyConfiguration:
+      expression: >-
+        Object{
+          metadata: Object.metadata{
+            labels: {"security.example.com/policy": "kyverno"}
+          }
+        }
 ```
 
-Проверьте результат именно после admission, а не только YAML до `apply`:
+### `GeneratingPolicy`: default-deny для нового Namespace
 
-```bash
-kubectl apply -f kyverno-no-escalation.yaml
-kubectl run mutated --image=nginx:1.27.4 --restart=Never
-kubectl get pod mutated -o jsonpath='{.spec.containers[0].securityContext.allowPrivilegeEscalation}{"\n"}'
-kubectl delete pod mutated
-```
-
-### `generate`: создать default-deny вместе с Namespace
-
-`generate` закрывает частую операционную дыру: команда создала новый namespace, но до
-первой NetworkPolicy её workload находится в плоской сети. Правило ниже создаёт
-`default-deny-ingress` в новом namespace. `synchronize: true` означает, что Kyverno
-поддерживает generated resource в соответствии с policy; это надо явно учитывать в
-ownership и GitOps, иначе controller вернёт вручную удалённый объект.
+YAML template остаётся читаемым, а CEL подставляет имя Namespace. `synchronize.enabled`
+означает, что Kyverno сохраняет ownership generated object; не используйте тот же объект
+одновременно с другим GitOps-controller.
 
 ```yaml
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+apiVersion: policies.kyverno.io/v1
+kind: GeneratingPolicy
 metadata:
   name: generate-default-deny-ingress
 spec:
-  rules:
-  - name: default-deny-for-new-namespace
-    match:
-      any:
-      - resources:
-          kinds: ["Namespace"]
-    exclude:
-      any:
-      - resources:
-          names: ["kube-system", "kube-public", "kube-node-lease", "kyverno"]
-    generate:
-      apiVersion: networking.k8s.io/v1
-      kind: NetworkPolicy
-      name: default-deny-ingress
-      namespace: "{{ request.object.metadata.name }}"
-      synchronize: true
-      data:
+  evaluation:
+    synchronize:
+      enabled: true
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE"]
+      resources: ["namespaces"]
+  matchConditions:
+  - name: skip-system-namespaces
+    expression: >-
+      !(object.metadata.name in
+      ["kube-system", "kube-public", "kube-node-lease", "kyverno"])
+  variables:
+  - name: namespaceName
+    expression: object.metadata.name
+  generate:
+  - template:
+      interpolate: cel
+      value: |
+        apiVersion: networking.k8s.io/v1
+        kind: NetworkPolicy
         metadata:
+          name: default-deny-ingress
+          namespace: (( variables.namespaceName ))
           labels:
             app.kubernetes.io/managed-by: kyverno
         spec:
           podSelector: {}
-          policyTypes: ["Ingress"]
+          policyTypes: [Ingress]
 ```
 
-```bash
-kubectl apply -f kyverno-generate-default-deny.yaml
-kubectl create namespace team-example
-kubectl -n team-example get networkpolicy default-deny-ingress
-```
+Это только ingress default deny. Egress, DNS и разрешённые связи задавайте отдельными
+`NetworkPolicy` - см. [главу 04](../04/ru.md).
 
-Это только ingress default deny. Egress, DNS и разрешённые связи задают отдельными
-NetworkPolicy - см. [главу 04](../04/ru.md). Не включайте auto-generation в namespace,
-где другой controller уже владеет тем же объектом.
+### Миграция legacy policy
+
+Инвентаризируйте `policy.kyverno.io` и `clusterpolicy.kyverno.io`, зафиксируйте поведение
+положительными и отрицательными тестами, перенесите validate/mutate/generate/image rules в
+соответствующий новый тип и удалите legacy объект только после проверки admission и
+background reports. Для production сверяйте [руководство миграции Kyverno](https://kyverno.io/docs/guides/migrating-to-cel-policies/)
+с установленной minor-версией.
 
 ## 20.5. Gatekeeper и Kyverno: что выбрать
 
@@ -388,11 +367,11 @@ admission webhook. Различается язык, модель и удобст
 
 | Критерий | Gatekeeper / OPA | Kyverno |
 |---|---|---|
-| Язык проверки | Rego | YAML patterns, CEL/conditions и JMESPath expressions |
-| Модель ресурса | `ConstraintTemplate` + `Constraint` | `ClusterPolicy`/`Policy` с rules |
+| Язык проверки | Rego | CEL и YAML templates |
+| Модель ресурса | `ConstraintTemplate` + `Constraint` | отдельные CEL-based policy types |
 | Validate | да | да |
-| Mutate | ограниченные mutation patterns зависят от версии | основной сценарий `mutate`, включая `foreach` |
-| Generate | не основной сценарий | встроенный `generate` |
+| Mutate | ограниченные mutation patterns зависят от версии | `MutatingPolicy` |
+| Generate | не основной сценарий | `GeneratingPolicy` |
 | Сложная логика и внешнее использование OPA | сильная сторона Rego | возможна, но YAML читается проще для K8s policy |
 | Порог для команды, привыкшей к Kubernetes YAML | выше | ниже |
 
@@ -404,8 +383,8 @@ generation и review в привычном Kubernetes YAML, Kyverno часто �
 документировано: например, Gatekeeper для сложных Rego constraints, Kyverno для mutation и
 image verification.
 
-В обоих случаях policy - код: храните `ConstraintTemplate`/`Constraint` или
-`ClusterPolicy` в Git, назначайте владельца и тесты, применяйте в staging, начинайте с
+В обоих случаях policy - код: храните `ConstraintTemplate`/`Constraint` или CEL-based
+Kyverno policy в Git, назначайте владельца и тесты, применяйте в staging, начинайте с
 audit/warn и сохраняйте evidence нарушений. Исключение должно быть узким, ограниченным по
 времени и видимым в review - не глобальным `excludedNamespaces: ["*"]`.
 
@@ -589,8 +568,8 @@ v1.36, certificate rotation, resource requests/limits и PDB. Admission outage -
   `Constraint`.
 - **ConstraintTemplate** - Rego template и schema параметров для нового constraint type.
 - **Constraint** - экземпляр Gatekeeper template с параметрами, match scope и реакцией.
-- **Kyverno** - Kubernetes-native policy engine с YAML rules `validate`, `mutate`,
-  `generate` и `verifyImages`.
+- **Kyverno** - Kubernetes-native policy engine; в 1.19 основной API использует
+  `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy` и `ImageValidatingPolicy`.
 - **ValidatingAdmissionPolicy** - встроенная API server validation на CEL без внешнего
   webhook; применяется binding-ом.
 - **CEL** - Common Expression Language, язык выражений для ValidatingAdmissionPolicy.
@@ -603,8 +582,8 @@ v1.36, certificate rotation, resource requests/limits и PDB. Admission outage -
   или отклоняет его. RBAC отвечает не на тот же вопрос и не заменяет policy.
 - Gatekeeper строит policy из `ConstraintTemplate` с Rego и `Constraint` с scope/params;
   сначала полезно использовать `dryrun`, затем `deny`.
-- Kyverno описывает `validate`, `mutate` и `generate` в Kubernetes YAML. Mutation удобна
-  для безопасных defaults, но не заменяет validation обязательных требований.
+- Kyverno 1.19 описывает validation, mutation, generation и image verification отдельными
+  CEL-based policy types. Mutation удобна для безопасных defaults, но не заменяет validation.
 - Gatekeeper и Kyverno - webhook engines, поэтому их availability, TLS, replicas,
   `timeoutSeconds` и `failurePolicy` являются частью security design.
 - `ValidatingAdmissionPolicy` с CEL работает в API server без внешнего webhook и подходит
@@ -616,7 +595,7 @@ v1.36, certificate rotation, resource requests/limits и PDB. Admission outage -
 
 **На экзамене.** Быстро определяйте, где находится контроль: RBAC отвечает за право
 отправить запрос, admission - за содержимое объекта. Умейте прочитать `ConstraintTemplate`
-и `Constraint`, создать/проверить `ClusterPolicy`, отличить audit от enforce и найти
+и `Constraint`, создать/проверить `ValidatingPolicy`, отличить `Audit` от `Deny` и найти
 причину `denied the request`. В Kubernetes 1.36 полезно знать пару
 `ValidatingAdmissionPolicy` + `ValidatingAdmissionPolicyBinding` и CEL expression.
 

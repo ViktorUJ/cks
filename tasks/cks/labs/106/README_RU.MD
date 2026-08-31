@@ -33,7 +33,7 @@ placement Pod и фактическое поведение процесса.
 Для экономии ресурсов control-plane является единственной workload-нодой: с неё снят
 `NoSchedule` taint. Она помечена label
 `security.cks.io/localhost-profiles-106=true`. Все Pod этой лабы должны выбирать именно
-эту ноду — profile не переносится scheduler'ом на другую ноду.
+эту ноду — plan-профиль не переносится планировщиком (scheduler) на другую ноду.
 
 Bootstrap уже подготовил **только на этой ноде**:
 
@@ -90,14 +90,20 @@ ssh control-plane sudo jq empty \
 ---
 | **4** | **Custom Localhost seccomp profile** |
 | :---: | :--- |
-| Что делаем | Создайте Pod `localhost-seccomp` в `security-106` на подготовленной ноде. На уровне Pod укажите `seccompProfile.type: Localhost` и относительный путь `profiles/cks-106-deny-unshare.json` — без `/var/lib/kubelet/seccomp/`. Контейнер `app` должен использовать `busybox:1.36`, иметь `CAP_SYS_ADMIN`, `allowPrivilegeEscalation: false` и остаться запущенным после проверки. Capability выдана только для controlled test: так `unshare -m` был бы допустим по capability, но обязан быть остановлен seccomp. |
+| Что делаем | Создайте Pod `localhost-seccomp` в `security-106` на подготовленной ноде. На уровне Pod укажите `seccompProfile.type: Localhost` и относительный путь `profiles/cks-106-deny-unshare.json` — без `/var/lib/kubelet/seccomp/`. Контейнер `app` должен использовать `busybox:1.36`, получить capability `SYS_ADMIN` и остаться запущенным после проверки. **Не выдавайте эту комбинацию за hardened baseline:** `SYS_ADMIN` остаётся одной из самых опасных capabilities, а `allowPrivilegeEscalation: false` не отнимает уже выданные права. Это capability-focused experiment, где безопасность показывает конкретный seccomp deny. |
 | Критерии приёмки | Pod с правильным nodeSelector использует profile `Localhost:profiles/cks-106-deny-unshare.json`; JSON profile существует на ноде и содержит `SCMP_ACT_ERRNO`/`errnoRet: 1` для `unshare`; в контейнере добавлен только требуемый для эксперимента `SYS_ADMIN`. |
 
 ---
 | **5** | **Доказать отказ syscall `unshare(2)`** |
 | :---: | :--- |
-| Что делаем | В команде контейнера `localhost-seccomp` выполните `unshare -m true`, сохраните успешное подтверждение ожидаемого отказа в `/tmp/unshare-result` как строку `unshare denied by seccomp`, затем удерживайте контейнер через `sleep 3600`. Повторная команда `kubectl exec ... -- unshare -m true` должна вернуть ненулевой код и `Operation not permitted` либо `Permission denied`. |
-| Критерии приёмки | Pod запущен; `/tmp/unshare-result` содержит точную строку подтверждения; `Seccomp: 2`; повторный `unshare -m true` блокируется. |
+| Что делаем | В команде контейнера `localhost-seccomp` выполните `unshare -m true`, сохраните успешное подтверждение ожидаемого отказа в `/tmp/unshare-result` как строку `unshare denied by seccomp`, затем удерживайте контейнер через `sleep 3600`. Повторная команда `kubectl exec ... -- unshare -m true` должна вернуть ненулевой код. Для attack-minded negative control создайте Pod `sysadmin-control` на той же ноде с `seccompProfile.type: Unconfined` и той же единственной capability `SYS_ADMIN`; его `unshare -m true` должен завершиться успешно. Удалите control Pod после проверки. |
+| Критерии приёмки | Localhost Pod запущен; `Seccomp: 2`; `unshare` блокируется custom profile. В control Pod тот же syscall с той же capability и без seccomp filter проходит. Это доказывает kernel behavior, а не только наличие YAML. |
+
+Linux capabilities и privilege escalation — разные оси. `allowPrivilegeEscalation: false`
+включает `no_new_privs` и запрещает получать **новые** права через `execve` (setuid/setgid и
+file capabilities), но не удаляет `SYS_ADMIN`, уже добавленную в bounding/effective set.
+Для обычной рабочей нагрузки используйте `capabilities.drop: ["ALL"]` и отдельно
+`allowPrivilegeEscalation: false`; эксперимент выше намеренно не является таким baseline.
 
 ## Проверка
 

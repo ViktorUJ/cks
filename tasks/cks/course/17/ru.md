@@ -173,7 +173,7 @@ manifest переносит намерение вместе с workload, admissi
 ### `Localhost`: path не является абсолютным
 
 `Localhost` выбирает custom JSON profile. Kubernetes не передаёт JSON через Pod и не копирует
-его scheduler'ом: kubelet читает файл **на выбранной ноде** из каталога seccomp profiles.
+его планировщиком: kubelet читает файл **на выбранной ноде** из каталога seccomp profiles.
 По умолчанию это `/var/lib/kubelet/seccomp`, то есть подкаталог `profiles` и файл
 `audit.json` физически будут такими:
 
@@ -377,7 +377,7 @@ sudo grep '^Seccomp:' /proc/<pid>/status
 ```
 
 `strace` полезен для локального воспроизводимого исследования, но сам меняет timing и
-создаёт нагрузку. Не attach'тесь надолго к высоконагруженному production PID. На test node
+создаёт нагрузку. Не подключайтесь надолго к высоконагруженному production PID. На test node
 можно запустить короткий trace процесса или команды и сопоставить имена syscalls с
 профилем:
 

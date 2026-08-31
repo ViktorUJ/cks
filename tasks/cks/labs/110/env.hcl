@@ -20,6 +20,8 @@ locals {
   cni = {
     type               = "cilium"
     disable_kube_proxy = "false"
+    cilium_version      = "v0.19.7"
+    cilium_helm_version = "1.20.1"
   }
   instance_type         = "t3.medium"
   instance_type_worker  = "t3.medium"

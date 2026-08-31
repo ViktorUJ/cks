@@ -206,7 +206,12 @@ PF_PID=$!
 sleep 3
 
 mkdir -p /var/work/tests/artifacts/5
-hubble observe --namespace cks-102 --protocol http --output json --follow \
+START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+printf 'start=%s source=cks-102/frontend destination=cks-102/backend\nallowed=GET / denied=POST /\n' \
+  "$START" > /var/work/tests/artifacts/5/test-window.txt
+
+hubble observe --from-pod cks-102/frontend --to-pod cks-102/backend \
+  --protocol http --since "$START" --output json --follow \
   > /var/work/tests/artifacts/5/hubble-observe.json &
 OBSERVE_PID=$!
 sleep 2
@@ -218,6 +223,9 @@ kill "$OBSERVE_PID" "$PF_PID" 2>/dev/null || true
 
 head -n 3 /var/work/tests/artifacts/5/hubble-observe.json
 ```
+
+Здесь verdict сам по себе недостаточен: evidence связывает временное окно, source/destination,
+HTTP method/path и ожидаемый результат policy. Поток другого Pod не подтверждает этот test case.
 
 Проверка всех заданий:
 

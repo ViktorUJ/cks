@@ -12,7 +12,7 @@
 > **Что нужно знать из CKA.** В self-managed kubeadm-кластере `kube-apiserver` - static
 > Pod, а его манифест находится в `/etc/kubernetes/manifests/`; это разобрано в
 > [главе 35 CKA](../../../cka/course/35/ru.md). Для тренировки безопасной работы на
-> control-plane ноде полезна [лаба 112 CKA](../../../cka/labs/112/README_RU.MD): она про
+> узле control plane полезна [лаба 112 CKA](../../../cka/labs/112/README_RU.MD): она про
 > etcd snapshot/restore, а не про audit, но использует те же SSH-доступ, static Pod и
 > проверку здоровья API.
 
@@ -113,12 +113,13 @@ Kubernetes поддерживает четыре уровня. Правило в
 | `None` | ничего | health/readiness, слишком шумные или заведомо неценные запросы | появится blind spot, если исключить широкий шаблон |
 | `Metadata` | метаданные запроса и ответа: identity, URI, verb, objectRef, timestamps, status; без body | безопасный default для основной массы API | нельзя увидеть содержимое изменённого объекта |
 | `Request` | `Metadata` + `.requestObject` | узко для создания/patch чувствительных объектов, когда нужен intent | request body может содержать Secret/PII; большой объём |
-| `RequestResponse` | `Request` + `.responseObject` | только для короткого, явно нужного forensic-сценария | максимальный объём и риск; нельзя задавать для `watch` |
+| `RequestResponse` | `Request` + `.responseObject` | только для короткого, явно нужного forensic-сценария | максимальный объём и риск; для `watch` практически не оправдан |
 
-Для `watch` использовать `RequestResponse` нельзя: response бесконечен, а policy не
-должна пытаться записать его целиком. Для читательских и health-запросов особенно важен
-`None`/`Metadata`; иначе кластер с активными controllers быстро создаст дорогой и шумный
-журнал.
+Для обычного `watch` не используйте `RequestResponse` без специальной forensic-причины:
+long-running запросы имеют стадию `ResponseStarted`, а высокий уровень аудита создаёт
+ненужный объём и нагрузку на storage/память. Для routine watch и health-запросов обычно
+достаточно `Metadata` либо осознанного исключения шумных запросов; иначе кластер с
+активными controllers быстро создаст дорогой и шумный журнал.
 
 Практичный baseline:
 
@@ -228,8 +229,8 @@ sudo sed -n '1,220p' /etc/kubernetes/audit/audit-policy.yaml
 
 В kubeadm-кластере API server - static Pod. Kubelet наблюдает
 `/etc/kubernetes/manifests/kube-apiserver.yaml`: после правки валидного манифеста он
-пересоздаёт API server. Работайте через консоль control-plane ноды, подготовьте rollback
-и не правьте сразу несколько control-plane нод в HA-кластере.
+пересоздаёт API server. Работайте через консоль узла control plane, подготовьте rollback
+и не правьте сразу несколько узлов control plane в HA-кластере.
 
 Сначала сохраните копию и убедитесь в фактическом источнике конфигурации:
 
@@ -311,7 +312,7 @@ policy с предсказуемыми правами.
 активный процесс, и health API:
 
 ```bash
-# На control-plane ноде: kubelet пересоздаёт static Pod.
+# На узле control plane: kubelet пересоздаёт static Pod.
 watch -n 2 'sudo crictl ps -a --name kube-apiserver'
 
 # После старта, с настроенным kubectl.
@@ -383,7 +384,7 @@ latency и может ухудшить доступность API. Это арх
 
 Помимо `--audit-log-path`, API server может отправлять события в HTTPS webhook. Webhook
 полезен, когда SIEM/collector должен получить событие с control plane без node agent. API
-server передаёт audit events (в batch режиме - списками) endpoint'у из kubeconfig.
+server передаёт audit events (в batch режиме - списками) на endpoint из kubeconfig.
 
 ```mermaid
 flowchart LR
@@ -472,7 +473,7 @@ policy не создаёт полезного расследовательско
 kubectl get --raw='/readyz?verbose'
 kubectl -n kube-system get pods -l component=kube-apiserver -o wide
 
-# На control-plane ноде:
+# На узле control plane:
 sudo grep -nE -- '--audit-(policy-file|log-path|log-format|log-mode|max)' \
   /etc/kubernetes/manifests/kube-apiserver.yaml
 sudo test -s /var/log/kubernetes/audit/audit.log && echo 'audit log is non-empty'
@@ -660,9 +661,9 @@ backup манифеста → policy и directories → флаги/mounts → д
 ## Практика
 
 Лаба CKS 112 объединяет Falco, audit и иммутабельность; если она доступна в вашем
-окружении, выполните её после глав 29–32. Для подготовки control-plane навыка используйте
+окружении, выполните её после глав 29-32. Для подготовки control-plane навыка используйте
 [лабу 112 CKA: etcd snapshots and restore](../../../cka/labs/112/README_RU.MD): она
-тренирует SSH на control-plane ноду, static Pod и проверку API после рискованной операции.
+тренирует SSH на узел control plane, static Pod и проверку API после рискованной операции.
 
 Полезная документация: [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/)
 · [Audit Policy](https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/)

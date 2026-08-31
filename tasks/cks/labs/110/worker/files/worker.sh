@@ -13,13 +13,20 @@ case "$arch" in
   *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
 esac
 
-CILIUM_CLI_VERSION=v0.16.24
-curl -fsSL "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${arch}.tar.gz" \
-  | sudo tar -xz -C /usr/local/bin cilium
-
-ISTIO_VERSION=1.24.2
+CILIUM_CLI_VERSION=v0.19.7
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
+curl -fsSL -o "$tmpdir/cilium-linux-${arch}.tar.gz" \
+  "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${arch}.tar.gz"
+curl -fsSL -o "$tmpdir/cilium-linux-${arch}.tar.gz.sha256sum" \
+  "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${arch}.tar.gz.sha256sum"
+(cd "$tmpdir" && sha256sum --check "cilium-linux-${arch}.tar.gz.sha256sum")
+sudo tar -xzf "$tmpdir/cilium-linux-${arch}.tar.gz" -C /usr/local/bin cilium
+
+# Istio latest verified 2026-08-31 (1.30.4, published 2026-08-27); linux-amd64/arm64
+# assets confirmed present. Istio 1.30 supports Kubernetes 1.32-1.36 (compatible with the
+# lab cluster). Verify the newest supported release before each course build.
+ISTIO_VERSION=1.30.4
 curl -fsSL "https://github.com/istio/istio/releases/download/${ISTIO_VERSION}/istio-${ISTIO_VERSION}-linux-${arch}.tar.gz" \
   | tar -xz -C "$tmpdir"
 sudo install -m 0755 "$tmpdir/istio-${ISTIO_VERSION}/bin/istioctl" /usr/local/bin/istioctl

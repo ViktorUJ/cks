@@ -45,17 +45,18 @@ flowchart LR
     style nb fill:#0f9d58,color:#fff
 ```
 
-При cross-node запросе эти механизмы можно совмещать: mesh защищает канал от client
-proxy до server proxy, а Cilium дополнительно скрывает пакеты от наблюдателя сети между
-нодами. При same-node трафике node encryption может не участвовать, но mTLS продолжает
-защищать связь между meshed workload. Обратно, Cilium encryption не заменяет mTLS:
-компрометированная workload на доверенной ноде не получает проверяемую identity клиента.
+При трафике между узлами эти механизмы можно совмещать: service mesh защищает соединение
+между прокси рабочих нагрузок, а шифрование Cilium дополнительно защищает пакеты на
+межузловом участке сети. При трафике внутри одного узла межузловое шифрование может не
+участвовать, но mTLS по-прежнему защищает соединение между рабочими нагрузками в mesh. И
+наоборот, шифрование Cilium не заменяет mTLS: скомпрометированная рабочая нагрузка на
+доверенной ноде не получает проверяемую identity клиента.
 
 | Вопрос | Cilium WireGuard/IPsec | Istio/Linkerd mTLS | NetworkPolicy |
 |---|---|---|---|
-| Где действует | путь между нодами | между proxy workload | ingress/egress Pod |
+| Где действует | путь между узлами | между прокси рабочих нагрузок | ingress/egress Pod |
 | Шифрует HTTP payload на физической сети | да | да | нет |
-| Аутентифицирует | криптографических peers-ноды | identity workload | не identity, а selector/IP/port |
+| Аутентифицирует | криптографические узлы-пиры | идентичность рабочей нагрузки | не identity, а selector/IP/port |
 | Нужен sidecar/proxy в Pod | нет | да (или ambient/eBPF режим конкретного mesh) | нет |
 | Видит приложение сертификат | нет | обычно нет | нет |
 | Защищает same-node Pod-to-Pod | не обязательно | да, если оба в mesh | ограничивает, но не шифрует |
@@ -79,7 +80,7 @@ kubectl get networkpolicy -A
 
 1. Cilium уже является CNI, а версия Cilium и kernel поддерживают выбранный режим по
    официальной compatibility matrix. Не устанавливайте второй CNI поверх работающего.
-2. Между всеми worker-ноды разрешён UDP-порт WireGuard (по умолчанию Cilium использует
+2. Между всеми рабочими узлами должен быть разрешён UDP-порт WireGuard (по умолчанию Cilium использует
    `51871`, но значение проверяют в установленной конфигурации) либо ESP/IPsec и при NAT
    UDP/4500. Security group, firewall и маршруты - часть решения.
 3. У физической сети есть запас MTU. Encapsulation добавляет заголовки; при path-MTU
@@ -149,7 +150,7 @@ WireGuard использует пару private/public key на peer. Cilium а�
 ключами и распространяет нужные public keys между Cilium agents через Kubernetes API.
 Нода принимает зашифрованный пакет только если он проходит криптографическую проверку
 ожидаемого peer; подделать node IP без ключа недостаточно. Поэтому на транспортном уровне
-это одновременно конфиденциальность и **взаимная аутентификация peers-ноды**.
+это одновременно конфиденциальность и **взаимная аутентификация узлов-пиров**.
 
 Это не workload identity: два Pod на одной ноде не имеют разных WireGuard identities, а
 сервер не узнаёт ServiceAccount клиента из WireGuard key. Для такого взаимного доверия
@@ -790,7 +791,7 @@ upgrade Kubernetes/Cilium/mesh.
   Security Associations.
 - **Node encryption** - защита трафика между нодами; не тождественна workload identity.
 - **mTLS** - TLS, в котором certificate предъявляют и client, и server.
-- **Workload identity** - криптографически проверяемая identity workload, обычно связанная
+- **Workload identity** - криптографически проверяемая идентичность рабочей нагрузки, обычно связанная
   с ServiceAccount/namespace в mesh.
 - **Sidecar** - proxy container рядом с приложением, который перехватывает трафик.
 - **`PeerAuthentication`** - Istio policy inbound mTLS; `STRICT` отклоняет plaintext.
@@ -810,7 +811,7 @@ upgrade Kubernetes/Cilium/mesh.
   печатают в логи, а IPsec rotation делают с перекрытием key по процедуре версии.
 - Istio `PeerAuthentication: STRICT` требует mTLS на server inbound, injection добавляет
   `istio-proxy`, а `DestinationRule` с `ISTIO_MUTUAL` явно настраивает client side.
-- Linkerd автоматически даёт mTLS meshed workload и связывает identity с ServiceAccount;
+- Linkerd автоматически даёт mTLS рабочим нагрузкам в mesh и связывает identity с ServiceAccount;
   не смешивайте его sidecar с Istio в одном Pod.
 - Убедительное доказательство содержит meshed `200`, plaintext outside reset/failure,
   `cilium encrypt status` и tcpdump outer WireGuard/IPsec на physical NIC без HTTP payload.
@@ -851,7 +852,7 @@ underlay даже если application protocol не менялся.
 ## Практика
 
 Основная практика - **лаба 110 CKS: gVisor, Cilium и Istio**. В ней отработайте
-безопасное изменение CNI/mesh, проверьте service flow из meshed workload и зафиксируйте
+безопасное изменение CNI/mesh, проверьте service flow из рабочей нагрузки в mesh и зафиксируйте
 результат `check_result`:
 [ tasks/cks/labs/110 ](../../labs/110/README_RU.MD).
 

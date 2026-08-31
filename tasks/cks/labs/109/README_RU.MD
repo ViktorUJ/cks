@@ -7,6 +7,13 @@ etcd как читаемые bytes (base64 — не шифрование), вк�
 `EncryptionConfiguration`, подключите его к static `kube-apiserver`, перепишете старые
 Secret и ограничите доступ к данным RBAC и `automountServiceAccountToken`.
 
+`aescbc` выбран здесь только для отработки экзаменационной механики
+`EncryptionConfiguration` и re-encryption. Текущая документация Kubernetes считает AES-CBC
+слабым и не рекомендует его из-за риска padding-oracle атак; `aesgcm` также требует
+автоматизированной ротации ключа. Для production выбирайте provider по актуальной
+документации и threat model; при внешнем key manager предпочтителен KMS v2
+(см. [главу 21](../../course/21/ru.md)).
+
 ## Инфраструктура
 
 Окружение разворачивается Terragrunt в AWS `eu-central-1`:
@@ -64,8 +71,8 @@ check_result
 ---
 | **4** | **Re-encrypt и доказать ciphertext** |
 | :---: | :--- |
-| Что делаем | После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`. Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`). Проверьте оба Secret через API и raw etcd. |
-| Критерии приёмки | `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями; raw value каждого начинается с `k8s:enc:aescbc:v1:`. Legacy marker больше не виден в raw etcd. |
+| Что делаем | После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`. Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`). Проверьте оба Secret через API и raw etcd. Только после этой проверки удалите временный `identity` fallback, перезапустите static kube-apiserver и снова проверьте `/readyz` и чтение обоих Secret. |
+| Критерии приёмки | `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями; raw value каждого начинается с `k8s:enc:aescbc:v1:`; legacy marker больше не виден в raw etcd; в финальной конфигурации отсутствует `identity`, API healthy. |
 
 ---
 | **5** | **Минимизировать RBAC и отключить automount** |
@@ -81,7 +88,7 @@ check_result
 
 Проверка содержит Init и пять обязательных тестов. Тест 4 проверяет не только наличие
 файла конфигурации, а реальный ciphertext `k8s:enc:aescbc:v1:` для новой и прежней
-etcd-записи. Перед массовым re-encryption в реальной среде требуется snapshot, план
+etcd-записи и отсутствие migration-only `identity` в финальной конфигурации. Перед массовым re-encryption в реальной среде требуется snapshot, план
 ротации ключей и контролируемое окно; эта лаба не является production runbook.
 
 ## Статический DoD

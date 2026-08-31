@@ -24,6 +24,13 @@ Terragrunt создаёт Kubernetes `1.36.0` в `eu-central-1`:
 | CNI | **Cilium**; WireGuard намеренно выключен до задания 4 |
 | `worker` | рабочая машина с `kubectl`, `cilium`, `istioctl`, `check_result` и SSH aliases к нодам |
 
+Проверенная 2026-08-31 матрица (сверяйте перед каждой сборкой): Kubernetes обучения
+`1.36.0`; Cilium data plane `1.20.1`, чья официальная requirements matrix включает
+Kubernetes `1.36`; Cilium CLI `0.19.7` (совместим с
+Cilium `1.17+`); Istio `1.30.4` (ветка `1.30` официально поддерживает Kubernetes
+`1.32–1.36`). Версия экзамена здесь не определяет совместимость lab tooling; по данным LF
+она сейчас `v1.34` и проверяется отдельно перед экзаменом.
+
 После bootstrap доступны два workload placement label:
 
 ```text
@@ -80,8 +87,8 @@ mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
 ---
 | **4** | **Включить Cilium transparent encryption** |
 | :---: | :--- |
-| Что делаем | Включите WireGuard через `cilium encrypt enable`. Дождитесь готовности агентов и сохраните результат `cilium encrypt status` в `/var/work/tests/artifacts/4/cilium-encrypt-status.txt`. |
-| Критерии приёмки | `cilium encrypt status` либо `cilium status` внутри Cilium agent показывает WireGuard; артефакт содержит `WireGuard`/`Encryption: Wireguard`. Не включайте IPsec одновременно с WireGuard. |
+| Что делаем | Сначала зафиксируйте версии Kubernetes, Cilium agent и Cilium CLI в `/var/work/tests/artifacts/4/tool-versions.txt` и убедитесь, что data plane поддерживает Kubernetes `1.36`. Включите WireGuard через source-of-truth конфигурацию: Helm upgrade с `encryption.enabled=true,encryption.type=wireguard` для Helm-managed установки либо documented ConfigMap key `enable-wireguard: true` с rollout агентов. Не используйте удалённый workflow `cilium encrypt enable`. Сохраните agent-side `cilium encrypt status` и `cilium status` в `/var/work/tests/artifacts/4/cilium-encrypt-status.txt`. |
+| Критерии приёмки | Version evidence существует; Cilium agents готовы; status показывает WireGuard и не показывает одновременно IPsec; настройка переживает restart агента. |
 
 ---
 | **5** | **Доказать отсутствие plaintext между нодами** |
@@ -92,8 +99,8 @@ mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
 ---
 | **6** | **Istio PeerAuthentication STRICT** |
 | :---: | :--- |
-| Что делаем | Установите Istio из подготовленного `istioctl` (достаточен minimal profile). В `market` создайте `market-api` Deployment и Service `market-api`: приложение слушает `8080`; service port назовите `http`. Создайте injected Deployment `market-client` в `market` и plaintext Pod `mesh-outside` в `default`; все три workload должны быть Running. Примените `PeerAuthentication` `market-strict` namespace `market` с `mtls.mode: STRICT`. Внутренний вызов из `market-client` к `http://market-api` должен вернуть `HTTP/1.1 200 OK`, plaintext вызов из `mesh-outside` к `market-api.market.svc.cluster.local` - `Connection reset by peer`. Сохраните полный вывод в `artifacts/6/market-inside.txt` и `market-outside.txt`. |
-| Критерии приёмки | Namespace сохраняет `istio-injection=enabled`; `PeerAuthentication market-strict` имеет `STRICT`; внутри mesh есть HTTP 200, вне mesh curl завершается ошибкой reset; оба доказательства сохранены. Не заменяйте plaintext client sidecar-ом: именно отсутствие sidecar доказывает отказ STRICT. |
+| Что делаем | Установите закреплённый Istio `1.30.4` из подготовленного `istioctl` (достаточен minimal profile) и зафиксируйте версию control plane. В `market` создайте `market-api` Deployment и Service `market-api`: приложение слушает `8080`; service port назовите `http`. Создайте injected Deployment `market-client` в `market` и plaintext Pod `mesh-outside` в `default`; все три workload должны быть Running. Примените `PeerAuthentication` `market-strict` namespace `market` с `mtls.mode: STRICT`. In-mesh запрос должен получить HTTP 200, а plaintext client без sidecar — не получить успешный application response. Сохраните status/headers/exit code в `artifacts/6/market-inside.txt` и `market-outside.txt`; не сопоставляйте конкретную строку socket error. |
+| Критерии приёмки | Namespace сохраняет `istio-injection=enabled`; `PeerAuthentication market-strict` имеет `STRICT`; внутри mesh есть HTTP 200, а plaintext-вызов вне mesh не получает успешный HTTP-ответ (curl падает, нет 2xx) - независимо от точного текста ошибки; оба доказательства сохранены. Не заменяйте plaintext client sidecar-ом: именно отсутствие sidecar доказывает отказ STRICT. |
 
 ## Проверка
 

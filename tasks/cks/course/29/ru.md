@@ -150,9 +150,10 @@ sudo falco --version
 ### Установка DaemonSet через Helm
 
 Официальный chart развёртывает Falco как DaemonSet. Значения chart и driver backend нужно
-сверять с версией chart: названия ключей могут меняться. В примере выбран eBPF и namespace
-`falco`; перед production-install используйте зафиксированную версию chart, совместимую с
-вашим Kubernetes и kernel.
+сверять с версией chart: названия ключей могут меняться. В примере выбран современный
+драйвер **modern eBPF** (`modern_ebpf`, CO-RE - не требует kernel headers и сборки модуля)
+и namespace `falco`; перед production-install используйте зафиксированную версию chart,
+совместимую с вашим Kubernetes и kernel.
 
 ```bash
 helm repo add falcosecurity https://falcosecurity.github.io/charts
@@ -162,7 +163,7 @@ helm repo update
 helm upgrade --install falco falcosecurity/falco \
   --namespace falco --create-namespace \
   --version <chart-version> \
-  --set driver.kind=ebpf
+  --set driver.kind=modern_ebpf
 
 kubectl -n falco get daemonset,pods -o wide
 kubectl -n falco rollout status daemonset/falco --timeout=5m
@@ -427,7 +428,7 @@ kubectl -n falco logs daemonset/falco -c falco --tail=100
 - **Развёртывайте на всех нужных нодах.** DaemonSet должен учитывать taint, nodeSelector,
   control-plane и отдельные worker pools. Нода без Falco - слепая зона, а не «частично
   установленный агент».
-- **Храните local rules как код.** Rule, исключения, severity и output review-ятся в Git,
+- **Храните local rules как код.** Rule, исключения, severity и output проходят ревью в Git,
   применяются GitOps/Helm и проверяются в тестовой среде. Upstream rules не редактируют.
 - **Сохраняйте контекст и evidence.** Отправляйте структурированный alert в централизованную
   logging/SIEM-систему, сохраняйте event time, node, container ID, image digest, Pod,

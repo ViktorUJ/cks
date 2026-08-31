@@ -267,7 +267,7 @@ podman build \
 
 ### `.dockerignore` - граница build context
 
-Перед запуском Dockerfile клиент отправляет build context builder-у. Без
+Перед запуском Dockerfile клиент отправляет build context сборщику (builder). Без
 `.dockerignore` `COPY . .` может захватить `.git`, локальный `.env`, SSH keys, test
 artifacts и большие каталоги. `.dockerignore` уменьшает трафик, ускоряет build и не даёт
 этим файлам стать доступными инструкциям Dockerfile. Это важная защита, но не substitute
@@ -408,7 +408,7 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 
 - **Build и runtime разделены.** Builder может быть тяжёлым, но final stage допускает
   только artifact, runtime libraries и нужные public data. Стадии, dependencies и base
-  images review-ятся как production code.
+  images проходят ревью как production-код.
 - **Версии и digest фиксируются.** `latest` запрещают линтером/policy. Release связывает
   человеческий tag с immutable digest; тот же digest проходит SBOM, scan, подпись и
   deployment.
@@ -430,7 +430,7 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 - **Attack surface (поверхность атаки)** - компоненты, файлы и интерфейсы, которые могут
   содержать уязвимость или быть использованы при атаке.
 - **Base image** - образ в инструкции `FROM`, задающий начальную filesystem stage.
-- **Build context** - файлы, переданные builder-у; ограничивается `.dockerignore`.
+- **Build context** - файлы, переданные сборщику (builder); ограничивается `.dockerignore`.
 - **distroless** - минимальный runtime image без package manager и обычно без shell.
 - **`scratch`** - пустой base image без filesystem; подходит статическим artifact.
 - **Multi-stage build** - Dockerfile с отдельными stage сборки и runtime, соединёнными
@@ -455,7 +455,7 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 - Base images, packages и application releases фиксируются версией, а production
   deployment - проверенным immutable digest, не `latest`.
 - `USER` в Dockerfile и `runAsNonRoot` в Pod - дополняющие проверки запуска non-root.
-- Docker и rootless Podman собирают один Dockerfile; права builder-а не отменяют правил
+- Docker и rootless Podman собирают один Dockerfile; права сборщика (builder) не отменяют правил
   для context и secrets.
 - Secret нельзя передавать через `ARG`, `ENV`, `COPY` или удалять поздним layer;
   используйте BuildKit/Podman secret mount и `.dockerignore`.

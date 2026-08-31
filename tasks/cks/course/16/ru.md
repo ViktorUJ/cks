@@ -454,7 +454,7 @@ scheduling/profile delivery от настоящего denial. Старую annot
 
 Сначала отработайте `securityContext`, non-root запуск и capabilities в
 [лабе 106 CKA](../../../cka/labs/106/README_RU.MD). Затем на test-ноде создайте profile
-`k8s-demo`, загрузите его parser'ом, назначьте Pod с
+`k8s-demo`, загрузите его через `apparmor_parser`, назначьте Pod с
 `appArmorProfile.type: Localhost` и сравните поведение в `complain` и `enforce`. В следующей [главе 17](../17/ru.md) добавьте
 seccomp: AppArmor ограничит объекты и операции profile, а seccomp - доступный процессу
 набор syscalls.

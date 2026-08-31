@@ -211,20 +211,32 @@ kubectl -n cks-101 run check-dns --rm -i --restart=Never \
 
 ```bash
 mkdir -p /var/work/tests/artifacts/5
-set +e
 kubectl -n cks-101 run check-metadata --rm -i --restart=Never \
   --image=curlimages/curl:8.11.1 --labels=app=frontend --command -- \
-  sh -c 'curl -fsS --max-time 3 http://169.254.169.254/' \
-  > /var/work/tests/artifacts/5/metadata.output 2>&1
-rc=$?
-set -e
+  sh -c 'set +e; out=$(curl -sS -o /dev/null -w "HTTPCODE:%{http_code}" --connect-timeout 2 --max-time 3 http://169.254.169.254/ 2>&1); rc=$?; printf "CURL_EXIT:%s\n%s\n" "$rc" "$out"' \
+  | tee /var/work/tests/artifacts/5/metadata.output
+
+rc=$(sed -n 's/.*CURL_EXIT:\([0-9][0-9]*\).*/\1/p' /var/work/tests/artifacts/5/metadata.output | tail -1)
+http_code=$(sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' /var/work/tests/artifacts/5/metadata.output | tail -1)
 printf '%s\n' "$rc" | tee /var/work/tests/artifacts/5/metadata.exit-code
-[ "$rc" -ne 0 ]
+
+case "$rc" in
+  6) echo 'level=dns outcome=name-resolution-failure' ;;
+  7) echo 'level=network outcome=tcp-connect-failure' ;;
+  28) echo 'level=network outcome=timeout' ;;
+  0) echo "level=http outcome=response status=$http_code" ;;
+  *) echo "level=other outcome=curl-exit-$rc" ;;
+esac | tee -a /var/work/tests/artifacts/5/metadata.output
+
+test "$http_code" = 000
+case "$rc" in 7|28) ;; *) exit 1 ;; esac
 ```
 
-Ненулевой `rc` означает timeout или отказ соединения. Если запрос проходит, проверьте, что
-не создана широкая egress policy (`ipBlock: 0.0.0.0/0`, пустая `to` или разрешение всей
-подсети metadata).
+`curl -f` здесь намеренно не используется: доступный endpoint с HTTP `401/403` тоже дал бы
+ненулевой exit code и создал ложное доказательство network deny. Только `http_code=000`
+вместе с connect failure/timeout подтверждает сетевой уровень отказа. Если приходит любой
+HTTP status, проверьте, что не создана широкая egress policy (`ipBlock: 0.0.0.0/0`, пустая
+`to` или разрешение всей подсети metadata).
 
 ## Быстрая самопроверка
 

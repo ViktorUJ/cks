@@ -57,66 +57,36 @@ rollout. Allowlist не заменяет signature verification: атакующ�
 поскольку они создают Pod. Начните с режима Audit, исправьте существующие manifests, затем
 переведите правило в Enforce.
 
-### Kyverno
+### Kyverno 1.19
 
-Kyverno хранит policy как Kubernetes CRD и умеет сопоставлять image с регулярным
-выражением. Ниже отдельные `foreach`-правила проверяют обычные, init- и ephemeral-
-контейнеры. Empty-массив ничего не нарушает.
+Основной путь использует CEL-based `ValidatingPolicy` из `policies.kyverno.io/v1`.
+Переменная объединяет все три списка контейнеров; ресурс `pods/ephemeralcontainers`
+нужен, чтобы та же проверка выполнялась при `kubectl debug`.
 
 ```yaml
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
 metadata:
   name: allow-approved-registries
 spec:
-  validationFailureAction: Enforce
-  background: false
-  rules:
-  - name: containers-from-approved-registry
-    match:
-      any:
-      - resources:
-          kinds: [Pod]
-    validate:
-      message: "Разрешены только образы registry.example.com/platform/."
-      foreach:
-      - list: "request.object.spec.containers[]"
-        deny:
-          conditions:
-            any:
-            - key: "{{ element.image }}"
-              operator: NotMatches
-              value: "^registry\\.example\\.com/platform/.+"
-  - name: init-containers-from-approved-registry
-    match:
-      any:
-      - resources:
-          kinds: [Pod]
-    validate:
-      message: "Init-контейнер должен быть из разрешённого registry."
-      foreach:
-      - list: "request.object.spec.initContainers[]"
-        deny:
-          conditions:
-            any:
-            - key: "{{ element.image }}"
-              operator: NotMatches
-              value: "^registry\\.example\\.com/platform/.+"
-  - name: ephemeral-containers-from-approved-registry
-    match:
-      any:
-      - resources:
-          kinds: [Pod]
-    validate:
-      message: "Ephemeral-контейнер должен быть из разрешённого registry."
-      foreach:
-      - list: "request.object.spec.ephemeralContainers[]"
-        deny:
-          conditions:
-            any:
-            - key: "{{ element.image }}"
-              operator: NotMatches
-              value: "^registry\\.example\\.com/platform/.+"
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods", "pods/ephemeralcontainers"]
+  variables:
+  - name: allContainers
+    expression: >-
+      object.spec.containers +
+      object.spec.?initContainers.orValue([]) +
+      object.spec.?ephemeralContainers.orValue([])
+  validations:
+  - message: "Разрешены только образы registry.example.com/platform/."
+    expression: >-
+      variables.allContainers.all(container,
+        container.image.startsWith("registry.example.com/platform/"))
 ```
 
 Проверьте положительный и отрицательный случаи до rollout:
@@ -124,12 +94,16 @@ spec:
 ```bash
 kubectl apply -f allowed-pod.yaml
 kubectl apply -f forbidden-pod.yaml  # ожидается admission denial
+kubectl debug allowed-pod --image=evil.example/debug:1.0 --target=app  # denial
 kubectl get policyreport -A          # если в кластере включены Policy Reports
 ```
 
 Не добавляйте `docker.io` целиком «на время»: это превращает allowlist в allow-all.
 Для системных компонентов задайте узкие отдельные prefixes, например
-`registry.k8s.io/*`, и зафиксируйте исключение в review.
+`registry.k8s.io/*`, и зафиксируйте исключение при проверке изменения.
+
+Legacy `ClusterPolicy` с `foreach` относится только к миграционному материалу: в Kyverno
+1.19 этот тип deprecated, а в 1.20 запланировано его удаление.
 
 ### OPA Gatekeeper
 
@@ -358,45 +332,46 @@ cosign verify \
 
 Проверка до deployment полезна, но не является enforcement: пользователь может обойти
 локальный CI script и обратиться к API напрямую. Поэтому проверка должна жить на
-admission path. В Kyverno `verifyImages` может проверять Cosign-подпись и отклонять Pod
-до сохранения. В примере ключ - только public key; private key в cluster не монтируется.
+admission path. В Kyverno 1.19 это делает CEL-based `ImageValidatingPolicy`; legacy
+`ClusterPolicy.verifyImages` оставлен только для миграции. В примере в кластер попадает
+только public key, private key не монтируется.
 
 ```yaml
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
 metadata:
   name: require-signed-platform-images
 spec:
-  validationFailureAction: Enforce
-  background: false
-  rules:
-  - name: verify-release-signature
-    match:
-      any:
-      - resources:
-          kinds: [Pod]
-    verifyImages:
-    - imageReferences:
-      - "registry.example.com/platform/*"
-      mutateDigest: true
-      verifyDigest: true
-      required: true
-      attestors:
-      - count: 1
-        entries:
-        - keys:
-            publicKeys: |-
-              -----BEGIN PUBLIC KEY-----
-              <публичный-ключ-release-подписанта>
-              -----END PUBLIC KEY-----
+  failurePolicy: Fail
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods"]
+  matchImageReferences:
+  - glob: "registry.example.com/platform/*"
+  attestors:
+  - name: releaseKey
+    cosign:
+      key:
+        data: |-
+          -----BEGIN PUBLIC KEY-----
+          <публичный-ключ-release-подписанта>
+          -----END PUBLIC KEY-----
+  validations:
+  - message: "Image must have a valid release signature"
+    expression: >-
+      images.containers.map(image,
+        verifyImageSignatures(image, [attestors.releaseKey])).all(count, count > 0)
 ```
 
-Смысл полей критичен: `mutateDigest: true` переводит tag к разрешённому digest,
-`verifyDigest: true` запрещает незафиксированную ссылку после мутации, `required: true`
-не даёт пропустить отсутствие подписи. Для keyless вместо static key настраивают trusted
-issuer и subject attestor конкретного CI workflow. Во всех вариантах ограничьте policy
-на namespace/repository и тестируйте: допустимый подписанный digest создаётся, а
-неподписанный digest и образ из чужого registry получают denial.
+`failurePolicy: Fail` не пропускает объект при ошибке проверки. Для keyless вместо static
+key настройте `cosign.keyless.identities` с точными issuer и subject конкретного CI
+workflow. Отдельно требуйте digest в `ValidatingPolicy` или настройках image validation:
+подпись не делает плавающий tag неизменяемым. Тестируйте подписанный и неподписанный digest,
+ошибочный signer и недоступность registry.
 
 **Notary Project** и CLI `notation` - альтернативная экосистема OCI signing с X.509
 trust stores и trust policy. `notation verify` полезен в CI/CD:
@@ -439,7 +414,7 @@ kubectl logs -n kyverno deploy/kyverno-admission-controller
 
 Если legitimate deployment отклонён, проверьте его digest, repository prefix, signer
 identity, сертификат/ключ и network/TLS до registry. Не исправляйте incident временным
-`validationFailureAction: Audit`, `defaultAllow: true` или broad allowlist в production:
+`validationActions: [Audit]`, `failurePolicy: Ignore` или broad allowlist в production:
 так пропадёт именно контроль, который должен обнаружить compromise. Для аварийного
 исключения используйте короткоживущее, namespace- и digest-scoped решение с владельцем,
 сроком и последующим удалением.

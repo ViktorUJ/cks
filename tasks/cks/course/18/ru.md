@@ -475,7 +475,7 @@ smoke-test Pod или безобидный путь, заранее исключ
 | Симптом | Вероятная причина | Исправление |
 |---|---|---|
 | `container has runAsNonRoot and image will run as root` | image не указывает non-root USER, а UID не задан | собрать образ с non-root USER или явно задать подтверждённый nonzero UID |
-| `Permission denied` на mounted volume | UID/GID не совпадают, `fsGroup` не применён driver'ом | проверить ownership, storage driver, `fsGroup`; не делать blanket `chmod 777` |
+| `Permission denied` на mounted volume | UID/GID не совпадают, `fsGroup` не применён драйвером | проверить ownership, storage driver, `fsGroup`; не делать blanket `chmod 777` |
 | `Read-only file system` | app пишет PID/cache/temp в image layer | добавить узкий `emptyDir` или PVC ровно на нужный путь |
 | Pod не создаётся с `Localhost` seccomp | profile отсутствует на выбранной ноде | доставить profile и ограничить placement либо вернуться к `RuntimeDefault` |
 | порт 80 не открывается | non-root и нет `NET_BIND_SERVICE` | слушать high port и поставить Service `targetPort`; capability - лишь обоснованное исключение |

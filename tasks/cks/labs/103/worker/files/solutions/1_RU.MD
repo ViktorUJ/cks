@@ -15,14 +15,23 @@ ssh control-plane sudo hostname
 
 ## Задание 1. Отчёт kube-bench
 
-`kube-bench` на worker уже расположен в `/opt/kube-bench`. Скопируйте полный каталог,
-чтобы на ноде были и binary, и `cfg`, затем выполните проверку на control-plane.
+`kube-bench` `0.16.0` на worker уже расположен в `/opt/kube-bench`. Скопируйте полный
+каталог, чтобы на узле были и binary, и `cfg`. Kubernetes `1.36` пока отсутствует в
+официальной support table kube-bench; `cis-2.0` официально сопоставлен с `1.34–1.35`.
+Поэтому мы запускаем его принудительно как approximate hardening signal, а не как
+authoritative CIS compliance assessment.
 
 ```bash
 mkdir -p /var/work/tests/artifacts/1
 scp -r /opt/kube-bench control-plane:/tmp/kube-bench
-ssh control-plane 'sudo rm -rf /opt/kube-bench && sudo mv /tmp/kube-bench /opt/kube-bench && sudo /opt/kube-bench/kube-bench run --targets master,controlplane,node' \
-  | tee /var/work/tests/artifacts/1/kube-bench.txt
+ssh control-plane 'sudo rm -rf /opt/kube-bench && sudo mv /tmp/kube-bench /opt/kube-bench'
+{
+  printf 'kubernetes_version=%s\n' "$(kubectl version -o json | jq -r '.serverVersion.gitVersion')"
+  printf 'kube_bench_version=%s\n' "$(ssh control-plane 'sudo /opt/kube-bench/kube-bench version' | awk 'NF {print $NF}' | tail -1)"
+  printf 'benchmark=cis-2.0\n'
+  printf 'mapping_status=forced-approximate\n'
+  ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-2.0 --targets master,controlplane,node'
+} | tee /var/work/tests/artifacts/1/kube-bench.txt
 
 test -s /var/work/tests/artifacts/1/kube-bench.txt
 grep -E '\[(PASS|WARN|FAIL)\]' /var/work/tests/artifacts/1/kube-bench.txt | head

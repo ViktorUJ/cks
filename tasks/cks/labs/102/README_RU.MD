@@ -95,8 +95,8 @@ cilium status --wait
 ---
 | **5** | **Hubble: evidence HTTP-потоков** |
 | :---: | :--- |
-| Что делаем | На worker запустите `cilium hubble port-forward` в фоне, затем `hubble observe --namespace cks-102 --protocol http --output json --follow` и перенаправьте его в `/var/work/tests/artifacts/5/hubble-observe.json`. Пока наблюдение активно, выполните разрешённый GET и запрещённый POST из `frontend`, после чего корректно остановите процессы. |
-| Критерии приёмки | - файл `/var/work/tests/artifacts/5/hubble-observe.json` не пуст;<br>- в нём есть как минимум один Hubble flow. |
+| Что делаем | Зафиксируйте UTC-время начала контролируемого теста. На worker запустите `cilium hubble port-forward`, затем `hubble observe` с фильтрами `--from-pod cks-102/frontend`, `--to-pod cks-102/backend`, `--protocol http`, `--since <время-начала>`, `--output json --follow` и перенаправьте его в `/var/work/tests/artifacts/5/hubble-observe.json`. Пока наблюдение активно, выполните ровно два test case: разрешённый `GET /` и запрещённый `POST /` из `frontend`. Сохраните время и описание test case в `test-window.txt`, затем остановите процессы. |
+| Критерии приёмки | - оба артефакта непусты;<br>- JSON содержит flow именно `cks-102/frontend` → `cks-102/backend` для `GET /` с verdict `FORWARDED`;<br>- тот же source/destination содержит `POST /` с verdict `DROPPED`;<br>- generic flow другого Pod или без соответствующего метода не засчитывается. |
 ---
 
 ## Проверка результата

@@ -11,7 +11,7 @@ control plane и подтверждаете целостность устано�
 
 Это не повторение базовой настройки Kubernetes из CKA. Здесь важны места применения
 настроек: `KubeletConfiguration`, static Pod manifests control plane, TLS-параметры etcd
-и проверяемые артефакты работы. Работайте с control-plane нодой через SSH-имя
+и проверяемые артефакты работы. Работайте с узлом control plane через SSH-имя
 `control-plane`, подготовленное на worker.
 
 ## Цель
@@ -90,8 +90,8 @@ ssh control-plane sudo hostname
 ---
 | **1** | **Отчёт CIS Benchmark** |
 | :---: | :--- |
-| Что делаем | На control-plane ноде прогоните `kube-bench` для Kubernetes `1.36.0`. Сохраните полный отчёт в `/var/work/tests/artifacts/1/kube-bench.txt` на worker. Установленный на worker `kube-bench` можно скопировать или установить на ноду; отчёт должен проверять именно ноду, а не рабочую машину. |
-| Критерии приёмки | - файл `/var/work/tests/artifacts/1/kube-bench.txt` существует и не пуст;<br>- в нём есть результат `kube-bench` (`[PASS]`, `[WARN]` или `[FAIL]`). |
+| Что делаем | На узле `control-plane` прогоните `kube-bench` для Kubernetes `1.36.0`. Сохраните полный evidence в `/var/work/tests/artifacts/1/kube-bench.txt`: `kubernetes_version`, `kube_bench_version`, выбранный `benchmark`, `mapping_status`, затем сам отчёт. Установленный на worker `kube-bench` можно скопировать на узел; проверяться должен именно узел. На дату проверки официальный mapping kube-bench заканчивается Kubernetes `1.35` (`cis-2.0` покрывает `1.34–1.35`), поэтому запуск `cis-2.0` на `1.36` помечайте `forced-approximate`, а не authoritative compliance. |
+| Критерии приёмки | - evidence содержит все четыре version/mapping поля;<br>- `mapping_status=forced-approximate` явно объясняет отсутствие официального покрытия `1.36`;<br>- в отчёте есть `[PASS]`, `[WARN]` или `[FAIL]`;<br>- текст не выдаёт результат за authoritative CIS compliance для Kubernetes `1.36`. |
 ---
 | **2** | **Hardening kubelet: read-only port и anonymous auth** |
 | :---: | :--- |
@@ -105,12 +105,12 @@ ssh control-plane sudo hostname
 ---
 | **4** | **Secure Ingress с TLS** |
 | :---: | :--- |
-| Что делаем | Создайте namespace `cks-103` и TLS-Secret `secure-ingress-tls` типа `kubernetes.io/tls` для хоста `secure.cks.local`. Создайте Service `secure-app` и Ingress `secure-ingress` с `ingressClassName: nginx`, TLS-секцией для этого хоста и ссылкой на Secret. Включите аннотацию `nginx.ingress.kubernetes.io/ssl-redirect: "true"`. Для проверки сертификата допустим самоподписанный сертификат. |
+| Что делаем | Создайте namespace `cks-103` и TLS-Secret `secure-ingress-tls` типа `kubernetes.io/tls` для хоста `secure.cks.local`. Создайте Service `secure-app` и Ingress `secure-ingress` с `ingressClassName: nginx`, TLS-секцией для этого хоста и ссылкой на Secret. Включите аннотацию `nginx.ingress.kubernetes.io/ssl-redirect: "true"`. Для проверки сертификата допустим самоподписанный сертификат. NGINX Ingress Controller здесь - экзаменационный fixture; сам проект retired (см. [главу 08](../../course/08/ru.md)), навык же `spec.tls` + TLS Secret универсален. |
 | Критерии приёмки | - Secret `secure-ingress-tls` в `cks-103` имеет тип `kubernetes.io/tls` и поля `tls.crt`, `tls.key`;<br>- Ingress `secure-ingress` содержит `spec.tls`, хост `secure.cks.local` и ссылку на `secure-ingress-tls`;<br>- Ingress направляет `HTTPS`-хост на Service `secure-app`. |
 ---
 | **5** | **TLS hardening control plane** |
 | :---: | :--- |
-| Что делаем | В `/etc/kubernetes/manifests/kube-apiserver.yaml` задайте `--tls-min-version=VersionTLS13` и `--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`. В `/etc/kubernetes/manifests/etcd.yaml` задайте `--cipher-suites` с тем же набором. После пересоздания компонентов подтвердите TLS 1.3 командой `openssl s_client` и сохраните вывод в `/var/work/tests/artifacts/5/tls13.txt`. |
+| Что делаем | В `/etc/kubernetes/manifests/kube-apiserver.yaml` задайте `--tls-min-version=VersionTLS13` и `--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`. В `/etc/kubernetes/manifests/etcd.yaml` задайте `--cipher-suites` с тем же набором. После пересоздания компонентов подтвердите, что согласуется `TLSv1.3` (`openssl s_client -tls1_3`) и что `TLSv1.2` отклоняется (`openssl s_client -tls1_2` завершается ошибкой handshake), и сохраните вывод в `/var/work/tests/artifacts/5/tls13.txt`. Важно понимать семантику: в Go флаг `--tls-cipher-suites` действует только для TLS ≤ 1.2, а при `--tls-min-version=VersionTLS13` конкретные TLS 1.3 cipher suites этим флагом не настраиваются (Go выбирает их сам). Поэтому для kube-apiserver фактическую защиту здесь даёт именно min-version 1.3; cipher-suites значимы там, где допускается TLS 1.2 (например, для etcd). |
 | Критерии приёмки | - оба требуемых TLS-флага есть в manifest kube-apiserver;<br>- cipher suites есть в manifest etcd;<br>- kube-apiserver и etcd здоровы;<br>- артефакт TLS содержит подтверждение `TLSv1.3`. |
 ---
 | **6** | **Проверка целостности kubelet и kubectl** |
@@ -128,7 +128,7 @@ check_result
 ```
 
 Проверка содержит Init и шесть независимых заданий. Системные задания проверяются по
-состоянию control-plane ноды через SSH и по артефактам, а не только по объектам API.
+состоянию узла control plane через SSH и по артефактам, а не только по объектам API.
 
 ## Решение
 

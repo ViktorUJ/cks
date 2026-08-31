@@ -85,7 +85,7 @@ flowchart TB
 ```
 
 **Version skew** ограничивает порядок. `kubelet` не может быть новее `kube-apiserver`,
-поэтому сначала обновляют control plane, затем worker-ноды. Допустимый диапазон для других
+поэтому сначала обновляют control plane, затем рабочие узлы. Допустимый диапазон для других
 компонентов зависит от версии и роли; перед изменением сверяйтесь с официальной
 [policy version skew](https://kubernetes.io/releases/version-skew-policy/). Не используйте
 допустимый skew как нормальное постоянное состояние: он нужен для короткого rolling upgrade,
@@ -128,7 +128,7 @@ uname -r
 ```
 
 `kubectl version` видит API server, но не заменяет инвентаризацию control-plane пакетов и
-worker-ноды. В managed Kubernetes control plane может обновлять провайдер: всё равно нужно
+рабочего узла. В managed Kubernetes control plane может обновлять провайдер: всё равно нужно
 сверить версию control plane, support calendar, node image/AMI и deadline, после которого
 поставщик прекращает поддержку ветки.
 
@@ -159,7 +159,7 @@ security-последовательность, которая не пропус�
 flowchart TB
     plan["Advisory, fixed version,\nсовместимость и backup"] --> cp["Control plane:\nkubeadm -> plan/apply -> kubelet"]
     cp --> health["Проверка API, nodes,\nsystem Pods и alerts"]
-    health --> drain["Одна worker-нода:\ncordon + drain"]
+    health --> drain["Один рабочий узел:\ncordon + drain"]
     drain --> node["kubeadm -> upgrade node ->\nkubelet/runtime при необходимости"]
     node --> verify["Ready, версия, workload"]
     verify --> uncordon["uncordon и следующая нода"]
@@ -177,8 +177,8 @@ flowchart TB
 На первом control-plane обновите пакет `kubeadm` до целевой ветки, выполните только
 предварительный расчёт, затем примените обновление. После `apply` обновите `kubelet` и
 `kubectl` до согласованного patch-релиза и перезапустите `kubelet`. В HA-кластере остальные
-control-plane ноды обновляются по одной через `kubeadm upgrade node`, с проверкой quorum и
-API между нодами. Не обновляйте все control-plane ноды одновременно.
+узлы control plane обновляются по одному через `kubeadm upgrade node`, с проверкой quorum и
+API между узлами. Не обновляйте все узлы control plane одновременно.
 
 ```bash
 # Пример для Debian/Ubuntu: точный suffix пакета и репозиторий сверяйте с документацией
@@ -200,7 +200,7 @@ sudo systemctl restart kubelet
 
 ### Worker-ноды
 
-На worker-ноды переходят только после healthy control plane. Ноду выводят из планирования и
+К рабочим узлам переходят только после healthy control plane. Узел выводят из планирования и
 освобождают, обновляют `kubeadm`, запускают `kubeadm upgrade node` - **не** `apply`, затем
 обновляют и перезапускают `kubelet`. Возвращают ноду лишь после проверки `Ready` и версии.
 Повторяют по одной ноде, соблюдая PDB и требуемую capacity.
@@ -328,7 +328,7 @@ regression и безопасно откатиться.
 - Соблюдайте version skew: control plane обновляется первым, kubelet не должен быть новее
   API server, минорные версии проходят последовательно.
 - Безопасный `kubeadm` rollout: preflight и backup -> control plane -> health check ->
-  `cordon`/`drain` одной worker-ноды -> `kubeadm upgrade node` и kubelet -> проверка ->
+  `cordon`/`drain` одного рабочего узла -> `kubeadm upgrade node` и kubelet -> проверка ->
   `uncordon`.
 - Kubernetes-патч не исправляет CVE в `containerd`, `runc`, kernel и ОС; runtime и node image
   требуют отдельной compatibility-проверки и patch policy.
@@ -337,8 +337,8 @@ regression и безопасно откатиться.
 
 **На экзамене.** Задание может попросить безопасно обновить кластер или объяснить порядок
 версий. Сначала определите текущую и целевую версии, не нарушайте version skew, обновите
-control plane до worker-ноды, используйте `drain` перед обновлением kubelet и верните ноду
-через `uncordon`. Помните разницу: на первой control-plane ноде применяется `kubeadm upgrade
+control plane до рабочего узла, используйте `drain` перед обновлением kubelet и верните узел
+через `uncordon`. Помните разницу: на первом узле control plane применяется `kubeadm upgrade
 apply`, на worker - `kubeadm upgrade node`.
 
 **В реальной работе.** Ценность навыка не в механическом запуске `kubeadm`, а в сокращении
@@ -346,7 +346,116 @@ apply`, на worker - `kubeadm upgrade node`.
 версии, проверяет EOL и зависимости, тестирует node image, идёт rolling-волной и доказывает
 после неё и исправленную версию, и работоспособность сервисов.
 
-## 13.11. Вопросы для самопроверки
+## 13.11. Самостоятельная практика: security upgrade gate
+
+Это self-contained контролируемая simulation для kubeadm-кластера. Она не заменяет
+реальное обновление пакетов: цель - пройти все security gates и получить артефакты до/после,
+не меняя версию учебного кластера. Выполняйте её только в одноразовом стенде; пути
+сертификатов etcd сначала сверяйте с manifest вашего control plane.
+
+Создайте каталог evidence и зафиксируйте исходное состояние:
+
+```bash
+export UPGRADE_EVIDENCE=/tmp/cks-upgrade-security
+mkdir -p "$UPGRADE_EVIDENCE"/{before,after}
+
+kubectl version -o yaml > "$UPGRADE_EVIDENCE/before/version.yaml"
+kubectl get nodes -o wide > "$UPGRADE_EVIDENCE/before/nodes.txt"
+kubectl get --raw='/readyz?verbose' > "$UPGRADE_EVIDENCE/before/readyz.txt"
+kubectl get ns -o json > "$UPGRADE_EVIDENCE/before/namespaces.json"
+kubectl get clusterrole,clusterrolebinding -o yaml > "$UPGRADE_EVIDENCE/before/rbac.yaml"
+kubectl get validatingadmissionpolicy,validatingadmissionpolicybinding -o yaml \
+  > "$UPGRADE_EVIDENCE/before/admission.yaml" 2>/dev/null || true
+```
+
+### Gate 1: version skew и план
+
+Скрипт не предполагает номер версии: он сравнивает каждый kubelet с текущим API server и
+останавливается, если kubelet новее. Затем `kubeadm upgrade plan` проверяет доступные цели,
+preflight и порядок обновления. Для реального перехода выберите ровно следующую minor-ветку.
+
+```bash
+SERVER_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor | sub("[^0-9].*$"; "") | tonumber')
+kubectl get nodes -o json | jq -e --argjson server "$SERVER_MINOR" \
+  '[.items[] | (.status.nodeInfo.kubeletVersion | capture("v1\\.(?<m>[0-9]+)").m | tonumber)] |
+   all(. <= $server)' \
+  | tee "$UPGRADE_EVIDENCE/before/skew-check.txt"
+sudo kubeadm upgrade plan | tee "$UPGRADE_EVIDENCE/before/kubeadm-upgrade-plan.txt"
+```
+
+### Gate 2: backup и проверяемое восстановление
+
+На узле control plane создайте snapshot с TLS-параметрами из
+`/etc/kubernetes/manifests/etcd.yaml`, затем проверьте его через `etcdutl snapshot status`.
+Не запускайте restore поверх работающего etcd: запишите точную restore-команду в runbook и
+репетируйте её в отдельном кластере.
+
+```bash
+sudo ETCDCTL_API=3 etcdctl snapshot save /var/backups/etcd-pre-upgrade.db \
+  --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt \
+  --key=/etc/kubernetes/pki/etcd/healthcheck-client.key
+sudo etcdutl snapshot status /var/backups/etcd-pre-upgrade.db -w json \
+  | tee "$UPGRADE_EVIDENCE/before/etcd-snapshot-status.json"
+sudo sha256sum /var/backups/etcd-pre-upgrade.db \
+  | tee "$UPGRADE_EVIDENCE/before/etcd-snapshot.sha256"
+```
+
+### Gate 3: deprecated API и security configuration
+
+Проверьте не только manifests в Git, но и фактическое использование deprecated APIs по
+метрике API server. Любая строка со значением больше нуля получает владельца и remediation
+до upgrade. Зафиксируйте PSS, admission и критические RBAC-разрешения.
+
+```bash
+kubectl get --raw /metrics \
+  | awk '/^apiserver_requested_deprecated_apis/ && $NF > 0' \
+  | tee "$UPGRADE_EVIDENCE/before/deprecated-apis.txt"
+
+kubectl auth can-i --list --as=system:serviceaccount:default:default \
+  > "$UPGRADE_EVIDENCE/before/default-sa-can-i.txt"
+kubectl get ns -L pod-security.kubernetes.io/enforce,pod-security.kubernetes.io/enforce-version \
+  > "$UPGRADE_EVIDENCE/before/pss.txt"
+kubectl api-resources --api-group=admissionregistration.k8s.io \
+  > "$UPGRADE_EVIDENCE/before/admission-resources.txt"
+```
+
+### Контролируемая simulation и post-upgrade validation
+
+Отметьте simulation, ещё раз выполните те же probes как если бы control plane и один
+рабочий узел уже прошли rolling upgrade. Сравнение должно показать неизменившийся security
+posture; health обязан быть успешным. При реальном upgrade между блоками выполняются
+`kubeadm upgrade apply` для первого control plane и `kubeadm upgrade node` для остальных
+узлов в порядке из 13.4.
+
+```bash
+printf 'mode=controlled-simulation\nserver_minor=%s\ntarget_minor=%s\n' \
+  "$SERVER_MINOR" "$((SERVER_MINOR + 1))" > "$UPGRADE_EVIDENCE/simulation.txt"
+
+kubectl get --raw='/readyz?verbose' > "$UPGRADE_EVIDENCE/after/readyz.txt"
+kubectl get nodes -o wide > "$UPGRADE_EVIDENCE/after/nodes.txt"
+kubectl get ns -o json > "$UPGRADE_EVIDENCE/after/namespaces.json"
+kubectl get clusterrole,clusterrolebinding -o yaml > "$UPGRADE_EVIDENCE/after/rbac.yaml"
+kubectl get validatingadmissionpolicy,validatingadmissionpolicybinding -o yaml \
+  > "$UPGRADE_EVIDENCE/after/admission.yaml" 2>/dev/null || true
+kubectl auth can-i --list --as=system:serviceaccount:default:default \
+  > "$UPGRADE_EVIDENCE/after/default-sa-can-i.txt"
+
+grep -q 'readyz check passed' "$UPGRADE_EVIDENCE/after/readyz.txt"
+diff -u "$UPGRADE_EVIDENCE/before/rbac.yaml" "$UPGRADE_EVIDENCE/after/rbac.yaml"
+diff -u "$UPGRADE_EVIDENCE/before/admission.yaml" "$UPGRADE_EVIDENCE/after/admission.yaml"
+diff -u "$UPGRADE_EVIDENCE/before/default-sa-can-i.txt" \
+  "$UPGRADE_EVIDENCE/after/default-sa-can-i.txt"
+kubectl get pods -A --field-selector=status.phase!=Running
+```
+
+Simulation считается принятой, если skew check успешен, `kubeadm upgrade plan` сохранён,
+snapshot валиден, deprecated API inventory разобран, `/readyz` успешен, все узлы `Ready`,
+а RBAC/admission/PSS не стали слабее. Для реального upgrade дополнительно приложите точные
+версии до/после и smoke test критической рабочей нагрузки.
+
+## 13.12. Вопросы для самопроверки
 
 1. Почему CVE в kubelet или `runc` может быть критичным, даже если API server не доступен
    из интернета?
@@ -354,20 +463,20 @@ apply`, на worker - `kubeadm upgrade node`.
 3. Какие ветки обычно входят в upstream support window `N`/`N-1`/`N-2`, и что означает
    `N-3`?
 4. Почему CVSS и CVE feed недостаточны для решения о срочности обновления?
-5. Почему control plane обновляют раньше worker-ноды и почему kubelet не должен быть новее
+5. Почему control plane обновляют раньше рабочих узлов и почему kubelet не должен быть новее
    API server?
-6. Назовите безопасную последовательность обновления worker-ноды через `kubeadm`.
+6. Назовите безопасную последовательность обновления рабочего узла через `kubeadm`.
 7. Какие проверки нужны после успешного `kubeadm upgrade`, чтобы доказать и security patch,
    и работоспособность кластера?
 8. Почему обновление Kubernetes не закрывает автоматически CVE в `containerd`, `runc` или
    kernel, и как их обновлять безопасно?
 
-## Практика
+## Дополнительная практика
 
-Отдельная CKS-лаба для этой главы не запланирована: практикуйте полный `kubeadm` lifecycle
-в CKA-лабе, а перед каждым шагом добавляйте security-проверки из этой главы - advisory,
-поддерживаемую ветку, inventory runtime/ОС и health после rollout. В главе 14 перейдём к
-минимизации поверхности самой ноды и безопасности runtime-демона.
+Упражнение 13.11 полностью покрывает CKS-oriented security gates без внешнего материала.
+Для тренировки самого изменения пакетов можно дополнительно пройти полный `kubeadm`
+lifecycle в CKA-лабе. В главе 14 перейдём к минимизации поверхности узла и безопасности
+runtime-демона.
 
 🧪 Лаба 111 (kubeadm upgrade): [tasks/cka/labs/111](../../../cka/labs/111/README_RU.MD)
 

@@ -183,6 +183,8 @@ Service или готовность Pod.
 
 ## 08.5. NGINX Ingress: обязательный редирект HTTP -> HTTPS
 
+> **NGINX Ingress Controller retired.** Проект `ingress-nginx` объявлен retired (март 2026) и больше не получает релизов и security-фиксов ([анонс](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)). Экзамен CKS сохраняет компетенцию «Ingress с TLS» и может использовать NGINX Ingress как готовый fixture, поэтому его синтаксис (`ingressClassName: nginx`, аннотации) нужен для экзамена. Но для production не разворачивайте retired-controller на новых кластерах: выбирайте поддерживаемый Ingress Controller или мигрируйте на Gateway API. Навык `spec.tls` + TLS Secret универсален и от конкретного controller не зависит.
+
 Даже корректный TLS Ingress оставляет риск, если HTTP остаётся доступным: пользователь может
 перейти по старой ссылке, а cookie или форма уйдут до первого HTTPS-ответа. NGINX Ingress
 Controller при TLS обычно включает redirect, но безопасность не должна зависеть от значения

@@ -145,20 +145,46 @@ cat /var/work/tests/artifacts/3/runtime-comparison.txt
 ## 4. Включить Cilium WireGuard
 
 Cilium управляет WireGuard keys и peers сам. Включаем один backend шифрования - не
-добавляем IPsec.
-
-```bash
-cilium status --wait
-cilium encrypt enable
-cilium status --wait
-cilium encrypt status | tee /var/work/tests/artifacts/4/cilium-encrypt-status.txt
-```
-
-Альтернативная диагностика из agent:
+добавляем IPsec. Важно: у **клиентского** `cilium` CLI (установлен на worker) нет
+подкоманды `encrypt enable`; WireGuard включается через конфигурацию Cilium, а не
+рантайм-командой. Сначала зафиксируем версии и сверим agent с requirements matrix:
 
 ```bash
 agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}')
-kubectl -n kube-system exec "$agent" -- cilium encrypt status
+{
+  printf 'Kubernetes='
+  kubectl version -o json | jq -r '.serverVersion.gitVersion'
+  printf 'Cilium agent='
+  kubectl -n kube-system get pod "$agent" -o jsonpath='{.spec.containers[?(@.name=="cilium-agent")].image}'
+  printf '\n'
+  cilium version --client
+  printf 'Cilium CLI=v0.19.7\n'
+  printf 'Istio=1.30.4\n'
+} | tee /var/work/tests/artifacts/4/tool-versions.txt
+```
+
+Для Helm-managed Cilium source of truth — Helm values:
+`helm upgrade cilium cilium/cilium -n kube-system --reuse-values --set encryption.enabled=true --set encryption.type=wireguard`.
+В учебной установке Cilium не имеет Helm release, поэтому используем documented ConfigMap
+key и перезапускаем agents:
+
+```bash
+kubectl -n kube-system patch configmap cilium-config --type merge \
+  -p '{"data":{"enable-wireguard":"true"}}'
+kubectl -n kube-system rollout restart daemonset/cilium
+kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
+cilium status --wait || true
+```
+
+Статус шифрования читаем у агента: подкоманда `encrypt status` есть именно в agent-side
+CLI (внутри Cilium pod), а не в клиентском `cilium`.
+
+```bash
+agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}')
+{
+  kubectl -n kube-system exec "$agent" -- cilium encrypt status
+  kubectl -n kube-system exec "$agent" -- cilium status
+} | tee /var/work/tests/artifacts/4/cilium-encrypt-status.txt
 ```
 
 ## 5. Захват межнодового WireGuard пакета

@@ -101,9 +101,12 @@ kubectl exec -n security-106 runtime-default -- grep '^Seccomp:' /proc/1/status
 `/var/lib/kubelet/seccomp/profiles/cks-106-deny-unshare.json`. В API указываем путь
 относительно seccomp root: `profiles/cks-106-deny-unshare.json`.
 
-`SYS_ADMIN` здесь — узкое, намеренное исключение для лабораторного опыта: без custom
-filter `unshare -m` потребовал бы эту capability и мог бы сработать. Seccomp возвращает
-`EPERM` раньше, поэтому capability не превращается в обход policy.
+`SYS_ADMIN` здесь — намеренное опасное исключение только для laboratory control. Без custom
+filter `unshare -m` с этой capability может сработать; seccomp должен вернуть `EPERM`.
+Это не hardened combination. `allowPrivilegeEscalation: false` включает `no_new_privs`, но
+не отнимает capabilities, уже выданные процессу, поэтому мы не используем это поле как
+«компенсацию» для `SYS_ADMIN`. В production такую capability удаляют, если нет доказанной
+необходимости. В Kubernetes capability записывается как `SYS_ADMIN`, без префикса `CAP_`.
 
 ```yaml
 # localhost-seccomp.yaml
@@ -135,7 +138,6 @@ spec:
       echo 'unshare denied by seccomp' >/tmp/unshare-result
       exec sleep 3600
     securityContext:
-      allowPrivilegeEscalation: false
       capabilities:
         add: ["SYS_ADMIN"]
 ```
@@ -151,6 +153,16 @@ kubectl exec -n security-106 localhost-seccomp -- grep '^Seccomp:' /proc/1/statu
 
 kubectl exec -n security-106 localhost-seccomp -- unshare -m true
 # ожидается ненулевой код: Operation not permitted / Permission denied
+```
+
+Теперь выполните negative control: тот же syscall с той же capability, но без seccomp
+filter. Успех control Pod доказывает, что отказ выше дал именно custom profile.
+
+```bash
+kubectl run sysadmin-control -n security-106 --rm -i --restart=Never \
+  --image=busybox:1.36 \
+  --overrides='{"spec":{"nodeSelector":{"security.cks.io/localhost-profiles-106":"true"},"securityContext":{"seccompProfile":{"type":"Unconfined"}},"containers":[{"name":"sysadmin-control","image":"busybox:1.36","securityContext":{"capabilities":{"add":["SYS_ADMIN"]}},"command":["unshare","-m","true"]}]}}'
+# ожидается exit 0; Pod удаляется из-за --rm
 ```
 
 В конце запустите:

@@ -33,25 +33,36 @@ flowchart TB
 
 ## 01.2 Формат экзамена, версия и документация
 
-В рамках этого курса целевая версия Kubernetes - **v1.36** (`k8_version = "1.36.0"` в лабораторных окружениях). Конкретные версии образов, флаги и поведение admission-механизмов надо сверять с документацией версии, доступной в экзаменационной среде.
+Экзамен CKS performance-based: задачи выполняются в терминале на предоставленных кластерах и нодах. Рабочая модель подготовки - уложиться в 2 часа, переключать context осознанно и после каждого изменения проверять фактическое состояние. Проходной балл и состав разрешённых ресурсов могут меняться.
 
-Экзамен CKS performance-based: задачи выполняются в терминале на предоставленных кластерах и нодах. Рабочая модель подготовки - уложиться в 2 часа, переключать context осознанно и после каждого изменения проверять фактическое состояние. Проходной балл и состав разрешённых ресурсов могут меняться, поэтому перед регистрацией сверяйте их с [официальной страницей CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/).
+Версии Kubernetes нужно различать:
 
-На экзаменационных задачах особенно важны документация и быстрый поиск по ней. В наряде курса закреплён следующий набор ссылок:
+- **Версия обучения и лаб этого курса - `v1.36`** (`k8_version = "1.36.0"` в лабораторных окружениях): на ней проверены команды, флаги и поведение admission-механизмов курса.
+- **Версию экзаменационной среды задаёт Linux Foundation, и она может отставать от версии курса.** На момент последней проверки актуальная программа CNCF - [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), а страница LF [«Important Instructions: CKS»](https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks) указывает Kubernetes **v1.34** для экзамена CKS. Поэтому **не считайте `v1.36` версией экзамена**: перед регистрацией сверяйте версию и проходной балл с официальными страницами LF ([Important Instructions](https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks), [FAQ](https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks)).
 
-| Ресурс | Для чего искать |
-|---|---|
-| [Kubernetes Documentation](https://kubernetes.io/docs/) и [Kubernetes Blog](https://kubernetes.io/blog/) | API объектов, SecurityContext, PSA, audit, kubeadm, флаги компонентов |
-| [Trivy](https://trivy.dev/latest/docs/) | Сканирование image, filesystem, config и SBOM |
-| [Falco](https://falco.org/docs/) | Runtime-правила, события и диагностика |
-| [AppArmor](https://documentation.ubuntu.com/server/how-to/security/apparmor/) | Профили MAC и их загрузка на ноду |
-| [Cilium](https://docs.cilium.io/en/stable/) | CiliumNetworkPolicy, Hubble, encryption и mutual authentication |
-| [Istio](https://istio.io/latest/docs/) | `PeerAuthentication` и mTLS |
-| [kubernetes-sigs/bom](https://github.com/kubernetes-sigs/bom) | Генерация SPDX SBOM |
-| [etcd](https://etcd.io/docs/) | `etcdctl`, TLS и эксплуатация etcd |
-| [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) | TLS termination и HTTP-to-HTTPS redirect |
+Различие практическое: синтаксис объекта и поведение admission сверяйте с документацией той версии, которая открыта в экзаменационной среде, а не с версией курса.
 
-Не полагайтесь на сохранённые локальные заметки как на источник синтаксиса. Сначала определите объект и версию API, затем найдите точный пример в разрешённой документации. Для экзаменационной стратегии и финального чеклиста предназначена глава 33.
+Разрешённые ресурсы LF поддерживает отдельно от curriculum и его весов. На дату последней
+проверки, **2026-08-31**, глобальный список CKS включает ссылки из **Quick Reference** задачи,
+документацию и блог Kubernetes, а также документацию Falco, `bom`, etcd, NGINX Ingress
+Controller, Cilium и Istio. Разрешены также документация, man-страницы и пакеты
+дистрибутива экзаменационного терминала. Список может измениться независимо от curriculum:
+непосредственно перед экзаменом заново проверьте страницу LF
+[Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed).
+
+| Ресурс | Для чего | Доступность |
+|---|---|---|
+| [Kubernetes Documentation](https://kubernetes.io/docs/) и [Kubernetes Blog](https://kubernetes.io/blog/) | API объектов, SecurityContext, PSA, audit, kubeadm, флаги компонентов | разрешена |
+| [Cilium](https://docs.cilium.io/en/stable/) | `CiliumNetworkPolicy`, Hubble, encryption и mutual authentication | разрешена |
+| [Istio](https://istio.io/latest/docs/) | `PeerAuthentication` и mTLS | разрешена |
+| [etcd](https://etcd.io/docs/) | `etcdctl`, TLS и эксплуатация etcd | разрешена |
+| [kubernetes-sigs/bom](https://kubernetes-sigs.github.io/bom/cli-reference/) | Генерация SPDX SBOM | разрешена |
+| [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) | TLS termination и HTTP-to-HTTPS redirect (см. 08.5 про retirement) | разрешена |
+| [Falco](https://falco.org/docs/) | Runtime-правила, события и диагностика | разрешена |
+| [Trivy](https://trivy.dev/latest/docs/) | Сканирование image, filesystem, config и SBOM | учебный ресурс; не в глобальном списке LF на дату проверки |
+| [AppArmor](https://gitlab.com/apparmor/apparmor/-/wikis/Documentation) | Профили MAC и их загрузка на узел | учебный ресурс; не в глобальном списке LF на дату проверки |
+
+Не полагайтесь на сохранённые локальные заметки как на источник синтаксиса и не пытайтесь открывать внешние поисковики или сторонние сайты вне разрешённого списка. Сначала определите объект и версию API, затем найдите точный пример в разрешённой документации. Для экзаменационной стратегии и финального чеклиста предназначена глава 33.
 
 ## 01.3 Официальная программа CKS
 
@@ -154,7 +165,7 @@ flowchart TB
 4. Отдельно тренируйтесь на ноде: static Pod manifest, kubelet config, AppArmor/seccomp profile, audit policy и проверка systemd.
 5. Перед экзаменом пройдите главы 29-33 и повторите задачи с ограничением времени.
 
-Типичная ошибка - применять средство защиты без проверки пути атаки. Например, наличие `NetworkPolicy` в namespace ещё не доказывает, что CNI её применил; `EncryptionConfiguration` ещё не означает, что старые Secret перешифрованы; Falco rule ещё не означает, что оно загружено и генерирует событие. В этом курсе проверка - часть решения.
+Типичная ошибка - применять средство защиты без проверки пути атаки. Например, наличие `NetworkPolicy` в namespace ещё не доказывает, что CNI её применил; `EncryptionConfiguration` ещё не означает, что старые Secret перешифрованы; наличие правила Falco ещё не означает, что оно загружено и действительно генерирует событие. В этом курсе проверка - часть решения.
 
 ## 01.7 Как это применяют в продакшене
 

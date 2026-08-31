@@ -523,14 +523,14 @@ namespaces RBAC и регулярно пересматривайте исклю�
 
 ## 31.9. Kyverno: требование read-only root для всех containers
 
-Kyverno дополняет PSA конкретным организационным правилом. Следующая ClusterPolicy требует
-`readOnlyRootFilesystem: true` у regular и init containers. Условие `validationFailureAction:
-Audit` - безопасный rollout: нарушение становится policy report/evidence, но пока не
-блокирует delivery. После устранения нарушений замените на `Enforce` через review change.
+Kyverno дополняет PSA конкретным организационным правилом. Для Kyverno 1.19 используйте
+CEL-based `ValidatingPolicy`: legacy `ClusterPolicy` deprecated. Пример объединяет regular,
+init и ephemeral containers и начинает с `Audit`; после устранения нарушений действие
+меняют на `Deny` через проверяемое изменение.
 
 ```yaml
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
 metadata:
   name: require-readonly-rootfs
   annotations:
@@ -538,46 +538,35 @@ metadata:
     policies.kyverno.io/category: Runtime Security
     policies.kyverno.io/severity: medium
 spec:
-  validationFailureAction: Audit
-  background: true
-  rules:
-  - name: readonly-root-for-containers
-    match:
-      any:
-      - resources:
-          kinds:
-          - Pod
-    validate:
-      message: "Every container must set securityContext.readOnlyRootFilesystem: true. Use a bounded explicit volume for required writes."
-      pattern:
-        spec:
-          containers:
-          - securityContext:
-              readOnlyRootFilesystem: true
-  - name: readonly-root-for-initcontainers
-    match:
-      any:
-      - resources:
-          kinds:
-          - Pod
-    validate:
-      message: "Every initContainer must set securityContext.readOnlyRootFilesystem: true."
-      pattern:
-        spec:
-          =(initContainers):
-          - securityContext:
-              readOnlyRootFilesystem: true
+  validationActions: [Audit]
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods", "pods/ephemeralcontainers"]
+  variables:
+  - name: allContainers
+    expression: >-
+      object.spec.containers +
+      object.spec.?initContainers.orValue([]) +
+      object.spec.?ephemeralContainers.orValue([])
+  validations:
+  - message: "Every container must set securityContext.readOnlyRootFilesystem: true."
+    expression: >-
+      variables.allContainers.all(container,
+        has(container.securityContext) &&
+        container.securityContext.?readOnlyRootFilesystem.orValue(false))
 ```
 
-Проверьте syntax и доступные API вашей установленной версии Kyverno перед применением:
-policy CRD развиваются, а некоторые установки используют новые поля validation actions.
-Не копируйте policy в production с `Enforce`, не проверив её в non-production namespace и
+Проверьте schema CRD установленной версии Kyverno перед применением. Не копируйте policy
+в production с `Deny`, не проверив её в non-production namespace и
 не определив исключения.
 
 ```bash
 kubectl apply -f require-readonly-rootfs.yaml
-kubectl get clusterpolicy require-readonly-rootfs
-kubectl describe clusterpolicy require-readonly-rootfs
+kubectl get validatingpolicy require-readonly-rootfs
+kubectl describe validatingpolicy require-readonly-rootfs
 
 # PolicyReport API зависит от установленной версии Kyverno; сначала discover.
 kubectl api-resources | grep -i policyreport
@@ -588,7 +577,7 @@ kubectl get clusterpolicyreports 2>/dev/null || true
 Позитивный и негативный tests должны различаться ровно одним relevant field:
 
 ```yaml
-# bad-rootfs.yaml: ожидается audit failure сейчас, rejection после Enforce
+# bad-rootfs.yaml: ожидается audit failure сейчас, rejection после Deny
 apiVersion: v1
 kind: Pod
 metadata:
@@ -633,8 +622,8 @@ kubectl apply -f good-rootfs.yaml
 kubectl get pod -n payments good-rootfs
 
 # Только после чистого Audit-периода: policy становится admission gate.
-kubectl patch clusterpolicy require-readonly-rootfs --type merge \
-  -p '{"spec":{"validationFailureAction":"Enforce"}}'
+kubectl patch validatingpolicy require-readonly-rootfs --type merge \
+  -p '{"spec":{"validationActions":["Deny"]}}'
 
 kubectl delete pod -n payments bad-rootfs --ignore-not-found
 kubectl apply -f bad-rootfs.yaml
@@ -671,8 +660,8 @@ PSA и Kyverno работают в admission path, но решают разны�
 kubectl get ns payments -o jsonpath='{.metadata.labels}{"\n"}'
 
 # 2. Kyverno policy существует и перешла в ожидаемое action.
-kubectl get clusterpolicy require-readonly-rootfs \
-  -o jsonpath='{.spec.validationFailureAction}{"\n"}'
+kubectl get validatingpolicy require-readonly-rootfs \
+  -o jsonpath='{.spec.validationActions}{"\n"}'
 
 # 3. Хороший Pod создан, плохой был отклонён после Enforce.
 kubectl get pod -n payments good-rootfs

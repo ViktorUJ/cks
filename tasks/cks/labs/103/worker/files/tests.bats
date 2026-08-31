@@ -30,10 +30,15 @@ record_result() {
 
 @test "1. kube-bench report was collected from the control-plane" {
   report=/var/work/tests/artifacts/1/kube-bench.txt
-  if [[ -s "$report" ]] && grep -Eq '\[(PASS|WARN|FAIL)\]' "$report"; then
+  if [[ -s "$report" ]] \
+    && grep -Eq '^kubernetes_version=v1[.]36([.]|$)' "$report" \
+    && grep -Eq '^kube_bench_version=v?0[.]16[.]0$' "$report" \
+    && grep -qx 'benchmark=cis-2.0' "$report" \
+    && grep -qx 'mapping_status=forced-approximate' "$report" \
+    && grep -Eq '\[(PASS|WARN|FAIL)\]' "$report"; then
     result=0
   else
-    echo "Missing or invalid kube-bench report: $report"
+    echo "Report must record Kubernetes, kube-bench, CIS config, forced/approximate mapping, and scan results: $report"
     result=1
   fi
   record_result 1 "$result"

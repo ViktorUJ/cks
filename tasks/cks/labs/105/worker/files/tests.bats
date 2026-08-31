@@ -6,8 +6,15 @@ ARTIFACTS="/var/work/tests/artifacts"
 SSH_OPTS=(-oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=8)
 
 control_plane() {
-  kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane \
-    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null
+  # Prefer the name cached before the firewall exercise so a broken student rule does not
+  # make the recovery-oriented diagnostics depend on Kubernetes API availability.
+  local name
+  name=$(cat /var/work/tests/cp-name 2>/dev/null)
+  if [[ -z "$name" ]]; then
+    name=$(kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane \
+      -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  fi
+  printf '%s' "$name"
 }
 
 @test "0 Init" {
@@ -46,21 +53,43 @@ control_plane() {
   [ "$result" -eq 0 ]
 }
 
-@test "3. UFW permits SSH only and denies other incoming traffic" {
+@test "3. UFW keeps source-scoped Kubernetes flows healthy and blocks worker-to-kubelet" {
   echo '1' >> /var/work/tests/result/all
   cp=$(control_plane)
+  worker_ip=$(ssh "${SSH_OPTS[@]}" "$cp" 'printf "%s" "${SSH_CONNECTION%% *}"' 2>/dev/null || true)
+  node_ip=$(kubectl get node "$cp" --context "$CTX" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null || true)
+  pod_cidr=$(kubectl get node "$cp" --context "$CTX" -o jsonpath='{.spec.podCIDR}' 2>/dev/null || true)
   run ssh "${SSH_OPTS[@]}" "$cp" 'sudo ufw status verbose; sudo ufw status'
   firewall="$output"
-  if [[ "$status" -eq 0 ]] \
+  firewall_status=$status
+  ready=$(kubectl get --raw=/readyz --context "$CTX" 2>/dev/null || true)
+  node_ready=$(kubectl get node "$cp" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+  workload_ready=$(kubectl get deployment health-probe -n cks-105-health --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null || true)
+  pod_http=$(kubectl exec -n cks-105-health deploy/health-probe --context "$CTX" -- sh -c 'curl -ksS -o /dev/null -w "%{http_code}" --max-time 5 https://kubernetes.default.svc/readyz' 2>/dev/null || true)
+  set +e
+  kubelet_http=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 "https://${node_ip}:10250/healthz" 2>/dev/null)
+  kubelet_status=$?
+  set -e
+
+  broad_rule=$(grep -E '^(22|6443)/tcp[[:space:]]+ALLOW( IN)?[[:space:]]+Anywhere([[:space:]]|$)' <<<"$firewall" || true)
+  if [[ "$firewall_status" -eq 0 ]] \
     && grep -q 'Status: active' <<<"$firewall" \
     && grep -q 'Default: deny (incoming)' <<<"$firewall" \
-    && grep -Eq '^22/tcp[[:space:]]+ALLOW' <<<"$firewall" \
+    && grep -Eq "^22/tcp[[:space:]]+ALLOW( IN)?[[:space:]]+${worker_ip//./\\.}([[:space:]]|$)" <<<"$firewall" \
+    && grep -Eq "^6443/tcp[[:space:]]+ALLOW( IN)?[[:space:]]+${worker_ip//./\\.}([[:space:]]|$)" <<<"$firewall" \
+    && grep -Fq "$pod_cidr" <<<"$firewall" \
+    && [[ -z "$broad_rule" && "$ready" == "ok" && "$node_ready" == "True" ]] \
+    && [[ "${workload_ready:-0}" -ge 1 && -n "$pod_http" && "$pod_http" != "000" ]] \
+    && [[ "$kubelet_status" -ne 0 && ( -z "$kubelet_http" || "$kubelet_http" == "000" ) ]] \
     && grep -q 'Status: active' "$ARTIFACTS/3/ufw.txt" \
-    && grep -q 'Default: deny (incoming)' "$ARTIFACTS/3/ufw.txt"; then
+    && grep -q 'Default: deny (incoming)' "$ARTIFACTS/3/ufw.txt" \
+    && grep -q 'role=control-plane,workload' "$ARTIFACTS/3/preflight.txt" \
+    && grep -q 'sudo ufw disable' "$ARTIFACTS/3/recovery.txt" \
+    && grep -q 'sudo ufw --force enable' "$ARTIFACTS/3/recovery.txt"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "UFW is not active with default incoming deny and an allow rule for 22/tcp"
+    echo "firewall_status=$firewall_status worker_ip=$worker_ip node_ip=$node_ip pod_cidr=$pod_cidr readyz=$ready node_ready=$node_ready workload_ready=$workload_ready pod_http=$pod_http kubelet_status=$kubelet_status kubelet_http=$kubelet_http broad_rule=${broad_rule:-none}"
     result=1
   fi
   [ "$result" -eq 0 ]

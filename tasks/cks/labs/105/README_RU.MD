@@ -79,8 +79,13 @@ check_result
 ---
 | **3** | **Ограничить входящий трафик firewall** |
 | :---: | :--- |
-| Что делаем | На control-plane настройте UFW по принципу deny-by-default: запретите входящий трафик по умолчанию, оставьте исходящий разрешённым и разрешите только SSH `22/tcp`. Включите UFW. Не закрывайте SSH до добавления правила, иначе потеряете доступ. |
-| Критерии приёмки | UFW активен; `Default: deny (incoming)`; есть правило `22/tcp ALLOW`; в `/var/work/tests/artifacts/3/ufw.txt` сохранён вывод проверки. |
+| Что делаем | До включения UFW зафиксируйте роль узла, worker source IP, node InternalIP и `spec.podCIDR`. Это одноузловой control-plane + workload node: нужны loopback, SSH recovery от worker, API `6443/tcp` от worker, самого узла и Pod CIDR; etcd/scheduler/controller-manager используют локальные flows, а межнодовых CNI/kubelet flows в этой топологии нет. Добавьте source-scoped allow rules **до** `ufw default deny incoming`; не используйте широкие `ALLOW Anywhere`. Затем включите UFW и сохраните правила, preflight и recovery-команды в `/var/work/tests/artifacts/3/`. |
+| Критерии приёмки | UFW active/default-deny; `22` и `6443` разрешены только нужным источникам; `/readyz=ok`; ожидаемая нода `Ready`; `health-probe` остаётся Ready и достигает Kubernetes Service; worker не достигает kubelet `10250`; артефакт содержит команды recovery (`ufw disable`, проверка, исправление и повторное включение). |
+
+> **Recovery сначала.** Держите текущую SSH-сессию открытой до полной проверки. Если API
+> пропал, из неё выполните `sudo ufw disable`, исправьте allow rules и только затем снова
+> включите firewall. Если SSH уже потерян, используйте console/recovery channel провайдера;
+> не пытайтесь «лечить» ситуацию широким `allow from any`.
 
 ---
 | **4** | **Исправить права kubeconfig** |

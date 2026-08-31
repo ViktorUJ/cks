@@ -459,7 +459,7 @@ package/version для конкретного image digest, а команды и
 - **CycloneDX** - формат OWASP для component inventory и security analysis.
 - **Syft** - инструмент генерации SBOM из image, filesystem или archive.
 - **bom** - инструмент `kubernetes-sigs/bom` для генерации и работы со SPDX SBOM.
-- **Provenance** - metadata о source, inputs, builder-е и процессе создания artifact.
+- **Provenance** - metadata о source, inputs, сборщике (builder) и процессе создания artifact.
 - **SLSA** - модель зрелости практик защиты supply chain.
 - **Digest** - неизменяемый content identifier image, обычно `sha256`.
 - **purl** - package URL, идентификатор package с ecosystem и version.
@@ -510,7 +510,7 @@ mock-сценарий. Не путайте формат Syft, название J
 7. Как получить `imageID` контейнера и зачем сравнивать его с digest SBOM?
 8. Почему CI не должен собирать один image, а CD - незаметно пересобирать его в другом
    environment?
-9. Какой смысл SLSA придаёт provenance и изолированному builder-у?
+9. Какой смысл SLSA придаёт provenance и изолированному сборщику (builder)?
 10. Какие проверки должны пройти между fixed dependency и production rollout?
 
 ## Практика

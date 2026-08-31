@@ -88,12 +88,27 @@ record_result() {
   fi
 }
 
-@test "5. Hubble observe output for cks-102 is saved and non-empty" {
+@test "5. Hubble evidence correlates exact frontend-to-backend GET and POST test cases" {
   artifact=/var/work/tests/artifacts/5/hubble-observe.json
-  if [[ -s "$artifact" ]] && (grep -q '"flow"' "$artifact" || grep -q -- '->' "$artifact"); then
+  window=/var/work/tests/artifacts/5/test-window.txt
+  allowed=$(jq -s '[.[] | (.flow // .) as $f | select(
+    $f.source.namespace == "cks-102" and $f.source.pod_name == "frontend" and
+    $f.destination.namespace == "cks-102" and $f.destination.pod_name == "backend" and
+    $f.l7.http.method == "GET" and ($f.l7.http.url | endswith("/")) and
+    ($f.l7.http.url | contains("backend")) and $f.verdict == "FORWARDED"
+  )] | length' "$artifact" 2>/dev/null || echo 0)
+  denied=$(jq -s '[.[] | (.flow // .) as $f | select(
+    $f.source.namespace == "cks-102" and $f.source.pod_name == "frontend" and
+    $f.destination.namespace == "cks-102" and $f.destination.pod_name == "backend" and
+    $f.l7.http.method == "POST" and ($f.l7.http.url | endswith("/")) and
+    ($f.l7.http.url | contains("backend")) and $f.verdict == "DROPPED"
+  )] | length' "$artifact" 2>/dev/null || echo 0)
+  if [[ -s "$artifact" && -s "$window" && "$allowed" -ge 1 && "$denied" -ge 1 ]] \
+    && grep -q 'source=cks-102/frontend destination=cks-102/backend' "$window" \
+    && grep -q 'allowed=GET / denied=POST /' "$window"; then
     record_result 0
   else
-    echo "Hubble artifact is missing, empty, or does not contain a flow: $artifact"
+    echo "exact Hubble correlation missing: allowed=$allowed denied=$denied artifact=$artifact window=$window"
     record_result 1
   fi
 }

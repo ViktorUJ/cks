@@ -47,14 +47,14 @@ record_result() {
   record_result "$result"
 }
 
-@test "6. bom generated a CycloneDX SBOM and command evidence" {
-  sbom="$ART/6/bom.cdx.json"; command_file="$ART/6/bom-command.txt"
-  if jq -e '.bomFormat == "CycloneDX" and (.components | type == "array")' "$sbom" >/dev/null 2>&1 && grep -q 'bom generate' "$command_file" 2>/dev/null; then result=0; else echo "Missing valid bom CycloneDX SBOM or command evidence"; result=1; fi
+@test "6. bom generated an SPDX SBOM and command evidence" {
+  sbom="$ART/6/bom.spdx.json"; command_file="$ART/6/bom-command.txt"
+  if jq -e '(.spdxVersion | startswith("SPDX-")) and (.packages | type == "array")' "$sbom" >/dev/null 2>&1 && grep -q 'bom generate' "$command_file" 2>/dev/null; then result=0; else echo "Missing valid bom SPDX SBOM or command evidence"; result=1; fi
   record_result "$result"
 }
 
-@test "7. Syft SPDX SBOM and keyless Cosign verification evidence are present" {
-  sbom="$ART/7/syft.spdx.json"; verify="$ART/7/cosign-verify.txt"
-  if jq -e '(.spdxVersion | startswith("SPDX-")) and (.packages | type == "array") and (.packages | length > 0)' "$sbom" >/dev/null 2>&1 && grep -q 'Verified OK' "$verify" 2>/dev/null && grep -q 'gcr.io/distroless/static:nonroot' "$verify" 2>/dev/null; then result=0; else echo "Missing Syft SPDX SBOM or successful Cosign verification evidence"; result=1; fi
+@test "7. Syft CycloneDX SBOM and keyless Cosign verification evidence are present" {
+  sbom="$ART/7/syft.cdx.json"; verify="$ART/7/cosign-verify.txt"
+  if jq -e '.bomFormat == "CycloneDX" and (.components | type == "array") and (.components | length > 0)' "$sbom" >/dev/null 2>&1 && grep -q 'Verified OK' "$verify" 2>/dev/null && grep -q 'gcr.io/distroless/static:nonroot' "$verify" 2>/dev/null; then result=0; else echo "Missing Syft CycloneDX SBOM or successful Cosign verification evidence"; result=1; fi
   record_result "$result"
 }

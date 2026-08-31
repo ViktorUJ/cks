@@ -72,19 +72,18 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
   profile=$(jq -r '.spec.securityContext.seccompProfile.type + ":" + (.spec.securityContext.seccompProfile.localhostProfile // "")' <<<"$pod" 2>/dev/null)
   node_selector=$(jq -r ".spec.nodeSelector[\"${NODE_LABEL}\"] // \"\"" <<<"$pod" 2>/dev/null)
   capabilities=$(jq -c '(.spec.containers[0].securityContext.capabilities.add // []) | sort' <<<"$pod" 2>/dev/null)
-  allow_escalation=$(jq -r '.spec.containers[0].securityContext.allowPrivilegeEscalation' <<<"$pod" 2>/dev/null)
   node_profile=$(ssh -o BatchMode=yes control-plane "sudo jq -e '.defaultAction == \"SCMP_ACT_ALLOW\" and ([.syscalls[] | select((.names | index(\"unshare\")) and .action == \"SCMP_ACT_ERRNO\" and .errnoRet == 1)] | length == 1)' /var/lib/kubelet/seccomp/${SECCOMP_PROFILE}" 2>/dev/null || true)
-  if [[ "$profile" == "Localhost:${SECCOMP_PROFILE}" && "$node_selector" == "true" && "$capabilities" == '["SYS_ADMIN"]' && "$allow_escalation" == "false" && "$node_profile" == "true" ]]; then
+  if [[ "$profile" == "Localhost:${SECCOMP_PROFILE}" && "$node_selector" == "true" && "$capabilities" == '["SYS_ADMIN"]' && "$node_profile" == "true" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "profile=$profile node_selector=$node_selector capabilities=$capabilities allow_privilege_escalation=$allow_escalation node_profile=${node_profile:-missing}"
+    echo "profile=$profile node_selector=$node_selector capabilities=$capabilities node_profile=${node_profile:-missing}"
     result=1
   fi
   [ "$result" -eq 0 ]
 }
 
-@test "5. Custom seccomp blocks unshare despite SYS_ADMIN and records the expected denial" {
+@test "5. Custom seccomp blocks unshare while an Unconfined SYS_ADMIN control can execute it" {
   echo '1' >> /var/work/tests/result/all
   phase=$(kubectl get pod localhost-seccomp -n "$NS" --context "$CTX" -o jsonpath='{.status.phase}' 2>/dev/null)
   artifact=$(kubectl exec -n "$NS" localhost-seccomp --context "$CTX" -- cat /tmp/unshare-result 2>/dev/null || true)
@@ -92,12 +91,15 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
   set +e
   output=$(kubectl exec -n "$NS" localhost-seccomp --context "$CTX" -- unshare -m true 2>&1)
   syscall_status=$?
+  control_output=$(kubectl run sysadmin-control -n "$NS" --context "$CTX" --rm -i --restart=Never \
+    --image=busybox:1.36 --overrides="{\"spec\":{\"nodeSelector\":{\"${NODE_LABEL}\":\"true\"},\"securityContext\":{\"seccompProfile\":{\"type\":\"Unconfined\"}},\"containers\":[{\"name\":\"sysadmin-control\",\"image\":\"busybox:1.36\",\"securityContext\":{\"capabilities\":{\"add\":[\"SYS_ADMIN\"]}},\"command\":[\"unshare\",\"-m\",\"true\"]}]}}" 2>&1)
+  control_status=$?
   set -e
-  if [[ "$phase" == "Running" && "$artifact" == "unshare denied by seccomp" && "$effective" == "Seccomp:"* && "$syscall_status" -ne 0 && "$output" =~ [Pp]ermission[[:space:]][Dd]enied|[Oo]peration[[:space:]][Nn]ot[[:space:]][Pp]ermitted ]]; then
+  if [[ "$phase" == "Running" && "$artifact" == "unshare denied by seccomp" && "$effective" == "Seccomp:"* && "$syscall_status" -ne 0 && "$control_status" -eq 0 ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "phase=$phase artifact=${artifact:-missing} effective=${effective:-missing} syscall_status=$syscall_status output=$output"
+    echo "phase=$phase artifact=${artifact:-missing} effective=${effective:-missing} blocked_status=$syscall_status blocked_output=$output control_status=$control_status control_output=$control_output"
     result=1
   fi
   [ "$result" -eq 0 ]

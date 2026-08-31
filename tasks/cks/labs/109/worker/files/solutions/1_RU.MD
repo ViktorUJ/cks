@@ -29,6 +29,11 @@ sudo etcdctl-109 get /registry/secrets/encryption-109/legacy-secret \
 
 ## 2. Создать EncryptionConfiguration
 
+`aescbc` выбран только для учебной механики CKS. Kubernetes считает AES-CBC слабым из-за
+риска padding-oracle атак и не рекомендует его как production default. Для внешнего key
+manager используйте KMS v2; локальный provider выбирайте только с актуальным threat model
+и процедурой ротации.
+
 Сгенерируем 32-byte ключ AES-256, закодируем base64 и передадим конфигурацию на
 control-plane. `aescbc` стоит первым: им будут записываться новые Secret. `identity`
 последним позволяет API server прочитать старую plaintext запись только до миграции.
@@ -122,8 +127,25 @@ sudo etcdctl-109 get /registry/secrets/encryption-109/encrypted-secret --print-v
 
 API возвращает plaintext авторизованному клиенту — это нормально и не доказывает
 шифрование at rest. Здесь доказательство — raw etcd содержит `k8s:enc:aescbc:v1:` для
-старой и новой записи и больше не содержит legacy marker. После подтверждённой миграции
-`identity: {}` можно удалить только по отдельной процедуре с backup и проверкой чтения.
+старой и новой записи и больше не содержит legacy marker.
+
+Теперь migration fallback больше не нужен. Удаляем `identity`, принудительно перезапускаем
+static kube-apiserver через CRI и ещё раз проверяем здоровье и чтение. Делайте это только
+после snapshot и подтверждения ciphertext всех затронутых типов ресурсов.
+
+```bash
+ssh control-plane \
+  "sudo sed -i '/^[[:space:]]*- identity: {}/d' /etc/kubernetes/enc/encryption-config.yaml"
+ssh control-plane \
+  "sudo crictl ps --name kube-apiserver -q | head -n1 | xargs -r sudo crictl stop"
+
+until kubectl get --raw=/readyz 2>/dev/null | grep -qx ok; do sleep 2; done
+kubectl -n "$NS" get secret legacy-secret encrypted-secret
+ssh control-plane 'sudo grep -n identity /etc/kubernetes/enc/encryption-config.yaml || true'
+```
+
+Финальное состояние этой лабы: encrypted provider первый и единственный, `identity`
+удалён. Временный fallback нельзя оставлять постоянной «страховкой».
 
 ## 5. Ограничить API-доступ и отключить token automount
 

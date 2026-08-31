@@ -129,27 +129,29 @@ pod-security.kubernetes.io/<mode>=<level>
 pod-security.kubernetes.io/<mode>-version=<version>
 ```
 
-`<mode>` - `enforce`, `audit` или `warn`; `<level>` - `privileged`, `baseline` либо `restricted`. Значение версии - Kubernetes minor version, например `v1.31`, или `latest`. Для каждого режима версию можно задать отдельно.
+`<mode>` - `enforce`, `audit` или `warn`; `<level>` - `privileged`, `baseline` либо `restricted`. Значение версии - Kubernetes minor version, например `v1.36`, или `latest`. Для каждого режима версию можно задать отдельно.
 
 ```bash
 # Сначала наблюдаем restricted, но уже запрещаем самые опасные Pod.
 kubectl label namespace payments \
   pod-security.kubernetes.io/enforce=baseline \
-  pod-security.kubernetes.io/enforce-version=v1.31 \
+  pod-security.kubernetes.io/enforce-version=v1.36 \
   pod-security.kubernetes.io/warn=restricted \
-  pod-security.kubernetes.io/warn-version=v1.31 \
+  pod-security.kubernetes.io/warn-version=v1.36 \
   pod-security.kubernetes.io/audit=restricted \
-  pod-security.kubernetes.io/audit-version=v1.31
+  pod-security.kubernetes.io/audit-version=v1.36
 
-# После исправления workloads включаем реальный запрет restricted.
+# После исправления рабочих нагрузок включаем реальный запрет restricted.
 kubectl label namespace payments \
   pod-security.kubernetes.io/enforce=restricted \
-  pod-security.kubernetes.io/enforce-version=v1.31 --overwrite
+  pod-security.kubernetes.io/enforce-version=v1.36 --overwrite
 ```
 
 Лейбл применяется к **новым и обновляемым** Pod. Не ожидайте, что смена лейбла удалит уже работающие Pod: PSA не является controller, не сканирует и не исправляет существующие объекты. При изменении namespace PSA также проверяет существующие Pods для предупреждений, поэтому label change может показать workload, который надо мигрировать.
 
-`latest` удобно для небольшого test-кластера, но в production создаёт риск: после обновления Kubernetes содержание стандарта может стать строже, и ранее работающий rollout будет отклонён. Практичный путь - во время миграции pin на поддерживаемую версию, например `v1.31`; после проверки новой версии сознательно обновить label. Не используйте версию выше фактической версии API server.
+`latest` удобно для небольшого test-кластера, но в production создаёт риск: после обновления Kubernetes содержание стандарта может стать строже, и ранее работающий rollout будет отклонён. Поэтому в примерах выше версия зафиксирована на версии обучающего кластера (`v1.36`). Не используйте версию выше фактической версии API server.
+
+**Version drift PSS.** Профили `baseline`/`restricted` со временем ужесточаются: например, в Kubernetes `v1.34` в Baseline/Restricted добавили ограничения host-полей в probes и lifecycle hooks. Из-за этого Pod, проходящий более старый pin (скажем, `v1.31`), может быть отклонён под более новой версией стандарта. Практичный путь миграции: зафиксировать текущую поддерживаемую версию, сначала оценить эффект в `warn`/`audit`, при необходимости сравнить со старым pin (`v1.31`) как миграционным примером, затем сознательно поднять `enforce`. Именно поэтому «работает на старой версии PSS» не значит «пройдёт на новой».
 
 Проверка эффективной конфигурации начинается с namespace, а не с манифеста Pod:
 
@@ -241,7 +243,7 @@ plugins:
     kind: PodSecurityConfiguration
     defaults:
       enforce: restricted
-      enforce-version: v1.31
+      enforce-version: v1.36
     exemptions:
       namespaces:
       - platform-system
@@ -251,7 +253,7 @@ plugins:
       - system:serviceaccount:platform-system:node-agent
 ```
 
-Не копируйте этот пример в управляемый кластер вслепую: способ задания admission configuration зависит от того, кто управляет kube-apiserver. Перед добавлением exemption документируйте причину, identity/namespace, owner, компенсирующие controls и дату удаления. Не добавляйте широкую группу пользователей и не exempt'ите прикладной namespace только потому, что один Deployment не прошёл migration.
+Не копируйте этот пример в управляемый кластер вслепую: способ задания admission configuration зависит от того, кто управляет kube-apiserver. Перед добавлением exemption документируйте причину, identity/namespace, owner, компенсирующие controls и дату удаления. Не добавляйте широкую группу пользователей и не вносите прикладной namespace в исключения только потому, что один Deployment не прошёл migration.
 
 Также не путайте exemption PSA с RBAC. Exemption не даёт право создать Pod; он лишь пропускает PSS-проверку, если RBAC уже разрешил запрос. Поэтому системный ServiceAccount должен иметь и минимальный RBAC, и узкую область exemption.
 
@@ -350,8 +352,8 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 2. Почему namespace без PSA-лейблов не стоит считать защищённым?
 3. Какие три PSS-профиля существуют и когда оправдан каждый из них?
 4. Чем `warn` и `audit` отличаются от `enforce`, и почему они не являются защитой?
-5. Как записать label для `enforce=restricted` с PSS `v1.31`?
-6. Почему перед обновлением Kubernetes лучше pin'ить PSS version, а не оставлять `latest`?
+5. Как записать label для `enforce=restricted` с зафиксированной PSS version (версией обучающего кластера)?
+6. Почему перед обновлением Kubernetes лучше фиксировать PSS version, а не оставлять `latest`?
 7. Почему исправляют Deployment template, а не уже созданный Pod?
 8. Чем admission rejection PSA отличается от `ImagePullBackOff` и отказа RBAC?
 9. Почему отдельный namespace лучше широкого exemption для CNI или CSI?

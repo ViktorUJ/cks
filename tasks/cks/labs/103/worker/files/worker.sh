@@ -4,7 +4,11 @@ set -euo pipefail
 echo "*** worker pc cks lab 103 k8s-1"
 export KUBECONFIG=/root/.kube/config
 CTX="cluster1-admin@cluster1"
-KUBE_BENCH_VERSION="0.10.0"
+# Latest kube-bench release verified 2026-08-31 (published 2026-08-05); asset
+# kube-bench_${VERSION}_linux_${arch}.tar.gz confirmed present. kube-bench auto-detects the
+# Kubernetes version and maps it to a CIS profile (K8s and CIS versions are not 1:1).
+# Verify the newest release before each course build.
+KUBE_BENCH_VERSION="0.16.0"
 
 # Do not prepare the lab until the single control-plane node is visible through the
 # same context used by tests and students.

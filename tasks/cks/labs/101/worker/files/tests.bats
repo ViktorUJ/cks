@@ -117,15 +117,44 @@ client_run() {
   echo '1' >> /var/work/tests/result/all
   mkdir -p /var/work/tests/artifacts/5
 
-  run client_run policy-metadata frontend "curl -fsS --max-time 3 http://169.254.169.254/"
-  metadata_status=$status
-  printf '%s\n' "$metadata_status" > /var/work/tests/artifacts/5/metadata.exit-code
-  printf '%s\n' "$output" > /var/work/tests/artifacts/5/metadata.output
+  # Do not use curl -f here: it maps a reachable HTTP 401/403 to a non-zero exit code.
+  # Preserve curl's own exit code and http_code so the failure layer stays visible.
+  run client_run policy-metadata frontend "set +e; body=\$(curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --connect-timeout 2 --max-time 3 http://169.254.169.254/ 2>&1); rc=\$?; printf 'CURL_EXIT:%s\\n%s\\n' \"\$rc\" \"\$body\"; exit 0"
+  metadata_output=$output
+  metadata_rc=$(printf '%s\n' "$metadata_output" | sed -n 's/.*CURL_EXIT:\([0-9][0-9]*\).*/\1/p' | tail -n1)
+  http_code=$(printf '%s\n' "$metadata_output" | sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' | tail -n1)
 
-  if [[ "$metadata_status" -ne 0 ]] && [[ -s /var/work/tests/artifacts/5/metadata.exit-code ]]; then
+  case "$metadata_rc" in
+    6) outcome="level=dns outcome=name-resolution-failure" ;;
+    7) outcome="level=network outcome=tcp-connect-failure" ;;
+    28) outcome="level=network outcome=timeout" ;;
+    0) outcome="level=http outcome=response status=${http_code:-unknown}" ;;
+    *) outcome="level=other outcome=curl-exit-${metadata_rc:-missing}" ;;
+  esac
+  {
+    printf '%s\n' "$metadata_output"
+    printf 'http_code=%s\n' "${http_code:-missing}"
+    printf '%s\n' "$outcome"
+  } > /var/work/tests/artifacts/5/metadata.output
+  printf '%s\n' "${metadata_rc:-missing}" > /var/work/tests/artifacts/5/metadata.exit-code
+
+  # Negative control for the original false positive: the unauthenticated API request is
+  # expected to return HTTP 401/403. Its response must never be classified as a
+  # NetworkPolicy deny because a real HTTP response proves network reachability.
+  run kubectl --context "$CTX" run policy-http-control -n default --rm -i --restart=Never \
+    --image=curlimages/curl:8.11.1 --command -- sh -c \
+    "curl -ksS -o /dev/null -w 'HTTPCODE:%{http_code}\\n' --max-time 5 https://kubernetes.default.svc/"
+  control_output=$output
+  control_code=$(printf '%s\n' "$control_output" | sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' | tail -n1)
+  printf 'level=http outcome=response status=%s\n' "${control_code:-missing}" \
+    > /var/work/tests/artifacts/5/http-false-positive-control.txt
+
+  if [[ "$http_code" == "000" && ( "$metadata_rc" == "7" || "$metadata_rc" == "28" ) ]] \
+    && [[ "$control_code" == "401" || "$control_code" == "403" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
+    echo "metadata: curl_exit=${metadata_rc:-missing} http_code=${http_code:-missing} ($outcome); HTTP negative-control=${control_code:-missing}"
     result=1
   fi
   [ "$result" -eq 0 ]
