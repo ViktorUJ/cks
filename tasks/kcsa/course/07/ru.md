@@ -40,9 +40,9 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    R["HTTPS-запрос"] --> AU["Authentication\nКто отправитель?"]
-    AU --> AZ["Authorization\nРазрешено ли действие?"]
-    AZ --> AD["Admission\nСоответствует ли объект политике?"]
+    R["HTTPS-запрос"] --> AU["Authentication<br/>Кто отправитель?"]
+    AU --> AZ["Authorization<br/>Разрешено ли действие?"]
+    AZ --> AD["Admission<br/>Соответствует ли объект политике?"]
     AD --> API["Обработка API-запроса"]
     API --> ETCD[("etcd")]
     style R fill:#326ce5,color:#fff
@@ -73,13 +73,13 @@ flowchart LR
 
 ## 07.3 Etcd: состояние кластера, секреты и восстановление
 
-`etcd` - распределённое key-value хранилище Kubernetes. В нём находятся описания `Pod`, `Deployment`, `Service`, RBAC-объекты, ServiceAccount-токены и многие другие API-объекты. Потеря целостности или доступности `etcd` влияет на весь кластер.
+`etcd` - распределённое key-value хранилище Kubernetes. В нём находятся описания `Pod`, `Deployment`, `Service`, RBAC-объекты, `Secret` и многие другие API-объекты. В современных кластерах `Pod` обычно получает короткоживущий bound ServiceAccount token через `TokenRequest` как projected volume; такой токен не хранится отдельным token `Secret` в `etcd`. Вручную созданный legacy `kubernetes.io/service-account-token` `Secret`, напротив, сохраняется как `Secret`. Потеря целостности или доступности `etcd` влияет на весь кластер.
 
 Особое свойство `Secret`: Kubernetes кодирует обычные данные `Secret` в base64, а не шифрует их. Без encryption at rest значение `Secret`, сохранённое в `etcd`, доступно тому, кто получил доступ к хранилищу или его резервной копии. Base64 не является криптографической защитой.
 
 | Риск | Последствие | Концептуальный контроль |
 |---|---|---|
-| Чтение `etcd` посторонним | Кража секретов, токенов и конфигурации | Не публиковать endpoint, ограничить сеть и локальный доступ, использовать TLS и authentication |
+| Чтение `etcd` посторонним | Кража `Secret`, persisted legacy token Secrets, конфигурации и другого чувствительного состояния Kubernetes. | Не публиковать endpoint, ограничить сеть и локальный доступ, использовать TLS и authentication |
 | Изменение ключей | Создание или изменение объектов, нарушение целостности кластера | Минимум административных доступов, защищённые учётные данные, аудит |
 | Потеря данных | Невозможность восстановить состояние кластера | Регулярные проверенные snapshots и защищённое хранение копий |
 | Хранение секретов без encryption at rest | Секреты читаемы из хранилища и backup | Encryption at rest, при необходимости KMS, ограничение доступа к ключам |
@@ -181,13 +181,13 @@ Snapshot `etcd` содержит то же чувствительное сост
 
 ### 1. В каком порядке API Server в упрощённой модели обрабатывает запрос?
 
-a. authentication → admission → authorization
+   - a. authentication → admission → authorization
 
-b. admission → authorization → authentication
+   - b. admission → authorization → authentication
 
-c. authorization → admission → authentication
+   - c. authorization → admission → authentication
 
-d. authentication → authorization → admission
+   - d. authentication → authorization → admission
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -198,64 +198,55 @@ d. authentication → authorization → admission
 
 ### 2. Почему прямой доступ постороннего к `etcd` является критичным риском?
 
-a. `etcd` хранит только журналы kubelet.
-
-b. `etcd` нужен лишь Scheduler и не содержит данных workload.
-
-c. Доступ к `etcd` позволяет только просматривать metrics.
-
-d. В `etcd` хранится состояние кластера, включая чувствительные объекты; без encryption at rest данные `Secret` не защищены шифрованием в хранилище.
+   - a. Он позволяет управлять только локальными журналами kubelet и не затрагивает API state.
+   - b. Он предоставляет доступ только к scheduler cache и не содержит workload-конфигурации.
+   - c. Он открывает только метрики control plane, но не позволяет читать или менять объекты Kubernetes.
+   - d. Он может открыть состояние Kubernetes API, включая чувствительные объекты, и позволить читать или изменять критичные данные кластера.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: d.** `etcd` является хранилищем Kubernetes API. Компрометация его данных или записей может привести к утечке секретов и изменению состояния всего кластера.
+**Верный ответ: d.** `etcd` хранит состояние Kubernetes API. Поэтому несанкционированный прямой доступ к нему может затронуть конфиденциальность и целостность критичных данных; защита включает строгую сетевую доступность, mTLS и encryption at rest для чувствительных ресурсов.
 
 </details>
 
-### 3. Что лучше всего описывает риск `--anonymous-auth`?
+### 3. Что лучше всего описывает риск `--anonymous-auth` у kube-apiserver?
 
-a. Он разрешает запускать `privileged`-контейнеры.
-
-b. Он разрешает API Server принять запрос без идентификации, поэтому ошибочная authorization-конфигурация может открыть данные или операции неаутентифицированному клиенту.
-
-c. Он автоматически назначает всем анонимным клиентам права `cluster-admin`.
-
-d. Он отключает TLS между API Server и `etcd`.
+   - a. Неаутентифицированные запросы автоматически получают права любого ServiceAccount в namespace.
+   - b. Неаутентифицированный запрос получает anonymous identity, а ошибочная authorization-конфигурация может разрешить ей нежелательные API-действия.
+   - c. Анонимный клиент автоматически становится `system:masters`, независимо от authorizer configuration.
+   - d. Включение anonymous authentication отключает TLS-проверку сертификата между API Server и `etcd`.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: b.** Анонимный запрос получает идентичность `system:anonymous`; его фактические права определяет authorization. Риск состоит в увеличении поверхности атаки и последствиях ошибочных разрешений.
+**Верный ответ: b.** Anonymous authentication определяет identity неаутентифицированного запроса; фактические permissions всё равно определяет authorization. Риск возникает, когда anonymous identity получает ненужные права или когда анонимный endpoint увеличивает поверхность атаки.
 
 </details>
 
-### 4. Какой контроль наиболее непосредственно защищает данные `Secret`, сохранённые в `etcd`, от чтения из самого хранилища или его backup?
+### 4. Какой контроль наиболее непосредственно защищает данные `Secret`, сохранённые в `etcd` или его backup, от чтения из самого хранилища?
 
-a. `NetworkPolicy` между `Pod`.
-
-b. Добавление label к `Namespace`.
-
-c. Encryption at rest для соответствующих ресурсов и ограничение доступа к `etcd` и backup.
-
-d. Замена base64 на более длинную строку.
+   - a. `NetworkPolicy`, ограничивающая сетевые соединения между выбранными application Pods.
+   - b. Namespace labels, используемые для организационной классификации workloads.
+   - c. Encryption at rest для `Secret` вместе с ограничением доступа к `etcd`, ключам и snapshots.
+   - d. Base64-кодирование Secret data перед сохранением Kubernetes API object.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: c.** Сетевая сегментация полезна, но не шифрует данные в хранилище. Base64 - кодирование. Нужны encryption at rest и защита путей доступа к рабочему `etcd` и snapshots.
+**Верный ответ: c.** Encryption at rest защищает сохранённые API data, а доступ к `etcd`, snapshots и ключевому материалу должен быть отдельно ограничен. `NetworkPolicy` не шифрует storage, labels не обеспечивают confidentiality, а base64 является кодированием, а не шифрованием.
 
 </details>
 
 ### 5. Как следует относиться к credentials `kube-controller-manager` и `kube-scheduler`?
 
-a. Как к общим credentials для всех администраторов.
+   - a. Как к общим credentials для всех администраторов.
 
-b. Как к замене TLS-сертификата API Server.
+   - b. Как к замене TLS-сертификата API Server.
 
-c. Как к чувствительным служебным credentials с API-правами, которые нужно ограничивать, защищать и не использовать для повседневной работы человека.
+   - c. Как к чувствительным служебным credentials с API-правами, которые нужно ограничивать, защищать и не использовать для повседневной работы человека.
 
-d. Как к несекретным данным, потому что компоненты работают внутри control plane.
+   - d. Как к несекретным данным, потому что компоненты работают внутри control plane.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -264,6 +255,6 @@ d. Как к несекретным данным, потому что компо
 
 </details>
 
-> **Куда дальше.** Для практической проверки конфигурации изучите [главу 07 CKS о CIS Benchmark и `kube-bench`](../../../cks/course/07/ru.md), [главу 09 CKS о защите control plane и TLS](../../../cks/course/09/ru.md) и [главу 21 CKS об управлении секретами и `etcd`](../../../cks/course/21/ru.md).
+> **Куда дальше.** Для практической проверки конфигурации изучите главу 07 CKS о CIS Benchmark и `kube-bench`, главу 09 CKS о защите control plane и TLS и главу 21 CKS об управлении секретами и `etcd`.
 
 [Оглавление](../README_RU.md) · [Глава 06](../06/ru.md) · [Глава 08](../08/ru.md)

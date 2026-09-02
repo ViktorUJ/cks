@@ -24,9 +24,9 @@ Managed сервис уменьшает объём операционной ра
 
 ```mermaid
 flowchart TB
-    cloud["Облачный провайдер\nфизическая инфраструктура и сервисы"] --> managed["Managed Kubernetes\nпровайдер: control plane\nклиент: IAM, сеть, workloads"]
-    cloud --> self["Self-managed Kubernetes\nпровайдер: инфраструктура\nклиент: control plane, узлы, workloads"]
-    managed --> app["Данные и приложение\nвсегда зона ответственности клиента"]
+    cloud["Облачный провайдер<br/>физическая инфраструктура и сервисы"] --> managed["Managed Kubernetes<br/>провайдер: control plane<br/>клиент: IAM, сеть, workloads"]
+    cloud --> self["Self-managed Kubernetes<br/>провайдер: инфраструктура<br/>клиент: control plane, узлы, workloads"]
+    managed --> app["Данные и приложение<br/>всегда зона ответственности клиента"]
     self --> app
     style cloud fill:#326ce5,color:#fff
     style managed fill:#0f9d58,color:#fff
@@ -77,11 +77,11 @@ IAM определяет, какая identity может выполнять де
 
 ```mermaid
 flowchart LR
-    attacker["Атакующий"] --> app["Уязвимое приложение\nв Pod"]
-    app -->|"SSRF-запрос"| imds["IMDS\n169.254.169.254"]
+    attacker["Атакующий"] --> app["Уязвимое приложение<br/>в Pod"]
+    app -->|"SSRF-запрос"| imds["IMDS<br/>169.254.169.254"]
     imds --> creds["Credentials роли узла"]
     creds --> cloud["Ресурсы облака"]
-    app -. "ограничение egress и\nworkload identity" .-> imds
+    app -. "ограничение egress и<br/>workload identity" .-> imds
     style attacker fill:#db4437,color:#fff
     style app fill:#f4b400,color:#000
     style imds fill:#326ce5,color:#fff
@@ -157,10 +157,10 @@ Security groups, firewall rules и ACL формируют сетевой пер�
 
 ### 1. Какая обязанность обычно остаётся у клиента managed Kubernetes?
 
-   a. Физическая охрана дата-центра провайдера.
-   b. Ремонт серверов control plane провайдера.
-   c. Замена сетевого оборудования провайдера.
-   d. Конфигурация IAM, workloads и доступа к данным.
+   - a. Физическая охрана дата-центра провайдера.
+   - b. Ремонт серверов control plane провайдера.
+   - c. Замена сетевого оборудования провайдера.
+   - d. Конфигурация IAM, workloads и доступа к данным.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -171,10 +171,10 @@ Security groups, firewall rules и ACL формируют сетевой пер�
 
 ### 2. Какой подход лучше всего соответствует least privilege для приложения, которому нужен доступ к одному bucket?
 
-   a. Дать каждому `Pod` права администратора, чтобы избежать ошибок доступа.
-   b. Поместить ключ администратора аккаунта в образ контейнера.
-   c. Выдать приложению отдельную роль с действиями только для нужного bucket.
-   d. Использовать общую роль рабочего узла с полным доступом к хранилищу.
+   - a. Дать каждому `Pod` права администратора, чтобы избежать ошибок доступа.
+   - b. Поместить ключ администратора аккаунта в образ контейнера.
+   - c. Выдать приложению отдельную роль с действиями только для нужного bucket.
+   - d. Использовать общую роль рабочего узла с полным доступом к хранилищу.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -185,10 +185,10 @@ Security groups, firewall rules и ACL формируют сетевой пер�
 
 ### 3. Почему доступ из `Pod` к `169.254.169.254` может быть опасен?
 
-   a. Этот адрес автоматически удаляет `Pod`.
-   b. Адрес используется только Kubernetes API server и всегда недоступен из сети.
-   c. Он отключает TLS для внешних сервисов.
-   d. Через SSRF приложение может получить credentials роли узла.
+   - a. Этот адрес автоматически удаляет `Pod`.
+   - b. Адрес используется только Kubernetes API server и всегда недоступен из сети.
+   - c. Он отключает TLS для внешних сервисов.
+   - d. Через SSRF приложение может получить credentials роли узла.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -199,10 +199,10 @@ Security groups, firewall rules и ACL формируют сетевой пер�
 
 ### 4. Какое утверждение верно различает encryption at rest и encryption in transit?
 
-   a. Первое защищает данные в хранилище, второе - данные при передаче по сети.
-   b. Первое применяется только к `Pod`, второе - только к control plane.
-   c. Это два названия одного и того же контроля.
-   d. Первое заменяет IAM, второе заменяет RBAC.
+   - a. Первое защищает данные в хранилище, второе - данные при передаче по сети.
+   - b. Первое применяется только к `Pod`, второе - только к control plane.
+   - c. Это два названия одного и того же контроля.
+   - d. Первое заменяет IAM, второе заменяет RBAC.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -213,19 +213,19 @@ Security groups, firewall rules и ACL формируют сетевой пер�
 
 ### 5. Какой контроль прежде всего ограничивает подключение из интернета к порту рабочей виртуальной машины в облаке?
 
-   a. Security group или firewall rule на уровне облачной сети.
-   b. `ConfigMap` с адресом сервиса.
-   c. Base64-кодирование credentials.
-   d. `NetworkPolicy` внутри namespace.
+   - a. Ограничивающая ingress security group или firewall rule на уровне облачной сети.
+   - b. Kubernetes `NetworkPolicy`, применённая только к Pod внутри overlay-сети кластера.
+   - c. RBAC `Role`, разрешающая приложению читать только собственный `ConfigMap`.
+   - d. Encryption at rest для Kubernetes API objects, сохранённых в `etcd`.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: a.** Security group или firewall rule управляет доступом к облачному ресурсу. `NetworkPolicy` обычно ограничивает трафик workloads в кластере.
+**Верный ответ: a.** Доступ из интернета к сетевому интерфейсу облачной VM прежде всего контролируется cloud/network firewall механизмами. `NetworkPolicy` управляет поддерживаемым CNI трафиком workloads, RBAC регулирует Kubernetes API authorization, а encryption at rest защищает сохранённые данные.
 
 </details>
 
-> **Куда дальше.** Практические приёмы ограничения доступа к metadata service разобраны в [главе 05 CKS](../../../cks/course/05/ru.md). Hardening рабочего узла и container runtime продолжается в [главе 14 CKS](../../../cks/course/14/ru.md), а защита ОС и хоста - в [главе 15 CKS](../../../cks/course/15/ru.md).
+> **Куда дальше.** Практические приёмы ограничения доступа к metadata service разобраны в главе 05 CKS. Hardening рабочего узла и container runtime продолжается в главе 14 CKS, а защита ОС и хоста - в главе 15 CKS.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 03](../03/ru.md) · [Глава 05](../05/ru.md)

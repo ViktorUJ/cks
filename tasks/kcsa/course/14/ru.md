@@ -98,7 +98,7 @@ Kubernetes поддерживает два основных направлени
 | `responseStatus` | код и причина итогового ответа |
 | `auditID` | идентификатор, объединяющий стадии одного запроса |
 
-`sourceIPs` и `userAgent` особенно полезны, когда нужно решить, соответствует ли обращение известному, ожидаемому клиенту (например, регулярному `CronJob` или контроллеру с типичным адресом и версией клиента) или выглядит нетипично из-за незнакомого адреса либо клиента. Само по себе совпадение identity не исключает кражи credential: сетевой контекст добавляет дополнительный сигнал для такого расследования.
+`sourceIPs` и `userAgent` полезны только как **коррелирующий контекст**, а не как доказательство конкретного workload. `userAgent` задаётся клиентом и не должен считаться доверенным; в `sourceIPs` значения из `X-Forwarded-For` / `X-Real-Ip` могут быть подставлены клиентом, кроме фактического remote address в конце цепочки. Для attribution к конкретному `Pod` или `CronJob` сопоставляйте audit event с authenticated identity, workload metadata, trusted proxy/network telemetry и другими журналами.
 
 ```json
 {
@@ -165,13 +165,13 @@ Runtime-детектор, например Falco, отвечает на друг
 
 ### 1. Какая возможность audit logging наиболее прямо помогает установить, кто удалил `Deployment`?
 
-a. Автоматическое блокирование всех удалений.
+   - a. Автоматическое блокирование всех удалений.
 
-b. Запись identity, `verb`, `objectRef` и статуса API-запроса.
+   - b. Запись identity, `verb`, `objectRef` и статуса API-запроса.
 
-c. Ограничение CPU у `Pod`.
+   - c. Ограничение CPU у `Pod`.
 
-d. Шифрование образа контейнера.
+   - d. Шифрование образа контейнера.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -182,13 +182,13 @@ d. Шифрование образа контейнера.
 
 ### 2. Какой уровень audit записывает метаданные запроса и ответа без body?
 
-a. `Request`.
+   - a. `Request`.
 
-b. `RequestResponse`.
+   - b. `RequestResponse`.
 
-c. `None`.
+   - c. `None`.
 
-d. `Metadata`.
+   - d. `Metadata`.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -199,13 +199,13 @@ d. `Metadata`.
 
 ### 3. Почему для обращений к `Secret` обычно не выбирают `RequestResponse`?
 
-a. Request или response body могут раскрыть пароль, токен или ключ в audit-логе.
+   - a. Request или response body могут раскрыть пароль, токен или ключ в audit-логе.
 
-b. Этот уровень нельзя использовать с Kubernetes `v1.36`.
+   - b. Этот уровень нельзя использовать с Kubernetes `v1.36`.
 
-c. Он не сохраняет response status.
+   - c. Он не сохраняет response status.
 
-d. Он отключает authentication API Server.
+   - d. Он отключает authentication API Server.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -216,13 +216,13 @@ d. Он отключает authentication API Server.
 
 ### 4. Какой источник лучше обнаружит запуск интерактивной shell внутри уже работающего контейнера, если это действие не вызвало Kubernetes API?
 
-a. Audit logging API Server.
+   - a. Audit logging API Server.
 
-b. `NetworkPolicy`.
+   - b. `NetworkPolicy`.
 
-c. Runtime-детектор, например Falco.
+   - c. Runtime-детектор, например Falco.
 
-d. `RoleBinding`.
+   - d. `RoleBinding`.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -231,6 +231,6 @@ d. `RoleBinding`.
 
 </details>
 
-> **Куда дальше.** Для практической настройки audit policy, backend, ротации, webhook и проверки событий изучите [главу 32 CKS об audit-логах Kubernetes](../../../cks/course/32/ru.md).
+> **Куда дальше.** Для практической настройки audit policy, backend, ротации, webhook и проверки событий изучите главу 32 CKS об audit-логах Kubernetes.
 
 [Оглавление](../README_RU.md) · [Глава 13](../13/ru.md) · [Глава 15](../15/ru.md)

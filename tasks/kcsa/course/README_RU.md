@@ -2,9 +2,9 @@
 
 # KCSA: практический самоучитель по безопасности cloud native и Kubernetes
 
-KCSA (Kubernetes and Cloud Native Security Associate) - associate-уровень, пре-профессиональная и концептуальная сертификация CNCF и Linux Foundation по безопасности cloud native и Kubernetes. Курс занимает место в учебной траектории KCNA (optional) → KCSA → [CKA](../../cka/course/README_RU.md) → [CKS](../../cks/course/README_RU.md): KCSA объясняет основы и модели угроз, CKA даёт обязательный для CKS практический фундамент, а CKS развивает security skills hands-on. Формальных пререквизитов нет; достаточно базово понимать, что такое `Pod`, `Deployment`, `Service` и `kubectl`.
+KCSA (Kubernetes and Cloud Native Security Associate) - associate-уровень, пре-профессиональная и концептуальная сертификация CNCF и Linux Foundation по безопасности cloud native и Kubernetes. Курс занимает место в учебной траектории KCNA (optional) → KCSA → CKA → CKS: KCSA объясняет основы и модели угроз, CKA даёт обязательный для CKS практический фундамент, а CKS развивает security skills hands-on. Формальных пререквизитов нет; достаточно базово понимать, что такое `Pod`, `Deployment`, `Service` и `kubectl`.
 
-> **О ссылках на CKA и CKS.** Этот курс - самостоятельный модуль KCSA. Ссылки на главы CKA и CKS ведут на соседние курсы этого же репозитория и предназначены как необязательное дополнительное чтение для дальнейшей траектории; они не входят в состав самостоятельного архива KCSA и не резолвятся, если каталог `kcsa` распакован отдельно от `cka` и `cks`. Отсутствие соседних каталогов не является дефектом содержимого KCSA.
+> **О ссылках на CKA и CKS.** Самостоятельный архив KCSA не включает каталоги CKA и CKS. Поэтому в standalone-distribution ссылки внутри самого KCSA остаются кликабельными, а cross-course references на CKA/CKS публикуются как обычный текст без относительных URL. В monorepo-build их можно генерировать как рабочие ссылки на соседние курсы или как стабильные absolute URLs.
 
 > **Формат экзамена и версия примеров.** KCSA - экзамен с выбором ответа: около 60 вопросов за 90 минут, hands-on заданий нет. По состоянию на 2026-09-01 LF Multiple Choice FAQ указывает проходной балл `75% or above`; перед регистрацией обязательно повторно проверьте актуальные требования LF. Примеры курса ориентированы на Kubernetes `v1.36`. Актуальные веса, источники и дрейф программы зафиксированы в [политике версий](../VERSION_POLICY.md).
 
@@ -20,7 +20,7 @@ KCSA (Kubernetes and Cloud Native Security Associate) - associate-уровень
 - 🟫 Compliance and Security Frameworks - 10%
 - ⬜ введение, фундамент и подготовка к экзамену
 
-Практика KCSA - это вопросы с выбором ответа и мок-экзамены, а не лабораторные работы. Для маршрута по экзамену используйте [путеводитель KCSA](KCSA_RU.md). Термины будут собраны в [глоссарии](GLOSSARY_RU.md).
+Практика KCSA - это вопросы с выбором ответа и мок-экзамены, а не лабораторные работы. Этот файл содержит единый маршрут подготовки и навигацию по экзамену. Термины собраны в [глоссарии](GLOSSARY_RU.md).
 
 ## Официальная программа экзамена
 
@@ -81,7 +81,7 @@ KCSA (Kubernetes and Cloud Native Security Associate) - associate-уровень
 
 ## Практика
 
-- 📝 [Мок-экзамены KCSA](../mock) - доступный английский Mock 01 в формате MCQ под таймером; Mock 02 зарезервирован для независимой репетиции. Вопросы распределены по весам доменов; лабы terragrunt/bats для KCSA не создаются.
+- 📝 [Мок-экзамены KCSA](../mock) - доступны английские Mock 01 и Mock 02 в формате MCQ для независимых репетиций. Вопросы распределены по весам доменов; лабы terragrunt/bats для KCSA не создаются.
 
 Начните с глав 01-02, затем проходите домены по порядку. Финальная тактика и чеклист собраны в [главе 20](20/ru.md).
 
@@ -92,4 +92,4 @@ KCSA (Kubernetes and Cloud Native Security Associate) - associate-уровень
 - [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes)
 - [OWASP Kubernetes Top 10](https://owasp.org/www-project-kubernetes-top-ten/)
 - [MITRE ATT&CK for Containers](https://attack.mitre.org/matrices/enterprise/containers/)
-- [Курс CKS](../../cks/course/README_RU.md) - следующий шаг для углубления в практический hardening и расследование.
+- Курс CKS - следующий шаг для углубления в практический hardening и расследование.

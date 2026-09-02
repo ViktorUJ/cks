@@ -38,13 +38,13 @@
 
 ```mermaid
 flowchart LR
-    client["Разработчик, CI или контроллер\nклиентские credentials"]
-    api["API Server\nauthentication, authorization, admission"]
-    etcd[("etcd\nсостояние кластера и Secret")]
-    kubelet["kubelet\nрабочий узел"]
-    runtime["container runtime\ncontainerd или CRI-O"]
-    pod["Pod\nпроцессы и данные приложения"]
-    net["внешняя сеть, Service\nили другой Pod"]
+    client["Разработчик, CI или контроллер<br/>клиентские credentials"]
+    api["API Server<br/>authentication, authorization, admission"]
+    etcd[("etcd<br/>состояние кластера и Secret")]
+    kubelet["kubelet<br/>рабочий узел"]
+    runtime["container runtime<br/>containerd или CRI-O"]
+    pod["Pod<br/>процессы и данные приложения"]
+    net["внешняя сеть, Service<br/>или другой Pod"]
 
     client <-->|"TLS: запрос к API"| api
     api <-->|"TLS: чтение и запись состояния"| etcd
@@ -207,13 +207,13 @@ Goal: получить production secrets
 
 ### 1. Какой компонент обычно является центральной границей доверия для запросов управления Kubernetes?
 
-a. `Pod` приложения.
+   - a. `Pod` приложения.
 
-b. container runtime.
+   - b. container runtime.
 
-c. API Server.
+   - c. API Server.
 
-d. CNI-плагин.
+   - d. CNI-плагин.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -224,13 +224,13 @@ d. CNI-плагин.
 
 ### 2. Какой контроль наиболее прямо уменьшает риск, что субъект с украденным kubeconfig создаст произвольный `Deployment` во всём кластере?
 
-a. RBAC с минимальными полномочиями для этой идентичности.
+   - a. RBAC с минимальными полномочиями для этой идентичности.
 
-b. `ResourceQuota`.
+   - b. `ResourceQuota`.
 
-c. Encryption at rest для etcd.
+   - c. Encryption at rest для etcd.
 
-d. `NetworkPolicy` для namespace приложения.
+   - d. `NetworkPolicy` для namespace приложения.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -241,13 +241,13 @@ d. `NetworkPolicy` для namespace приложения.
 
 ### 3. Какая категория STRIDE лучше всего описывает чтение `Secret` из незащищённого snapshot etcd?
 
-a. Information Disclosure.
+   - a. Information Disclosure.
 
-b. Denial of Service.
+   - b. Denial of Service.
 
-c. Tampering.
+   - c. Tampering.
 
-d. Repudiation.
+   - d. Repudiation.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -258,13 +258,13 @@ d. Repudiation.
 
 ### 4. Как точнее всего соотносятся STRIDE и MITRE ATT&CK for Containers?
 
-a. STRIDE классифицирует классы угроз, а ATT&CK for Containers описывает тактики и техники действий атакующего.
+   - a. STRIDE классифицирует классы угроз, а ATT&CK for Containers описывает тактики и техники действий атакующего.
 
-b. Оба фреймворка автоматически блокируют `privileged` `Pod`.
+   - b. Оба фреймворка автоматически блокируют `privileged` `Pod`.
 
-c. STRIDE является способом шифрования данных, а ATT&CK заменяет RBAC.
+   - c. STRIDE является способом шифрования данных, а ATT&CK заменяет RBAC.
 
-d. ATT&CK применяется только к облачной инфраструктуре вне Kubernetes.
+   - d. ATT&CK применяется только к облачной инфраструктуре вне Kubernetes.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -275,21 +275,18 @@ d. ATT&CK применяется только к облачной инфраст
 
 ### 5. Какой сценарий лучше всего иллюстрирует lateral movement после компрометации `Pod`?
 
-a. Приложение запускает свой штатный HTTP-сервер.
-
-b. API Server сохраняет объект в etcd.
-
-c. Администратор включает encryption at rest для `Secret`.
-
-d. Скомпрометированный `Pod` обращается к внутреннему сервису другого namespace с целью получить доступ к его данным.
+   - a. Скомпрометированный процесс повторно запускает штатный HTTP listener внутри того же контейнера после локального сбоя.
+   - b. Атакующий изменяет файл приложения внутри уже скомпрометированного `Pod`, не обращаясь к другим workloads или systems.
+   - c. Внешний клиент сканирует публичный Ingress endpoint, но ещё не получил доступ ни к одному workload.
+   - d. Скомпрометированный `Pod` использует доступный сетевой путь или credential, чтобы обратиться к внутреннему сервису другой workload-зоны.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: d.** Lateral movement - переход от уже скомпрометированного ресурса к другому ресурсу. Сегментация, точечные `NetworkPolicy`, mTLS и минимальные права уменьшают такие пути.
+**Верный ответ: d.** Lateral movement — это переход от уже скомпрометированной точки к другим workloads, сервисам или зонам доверия. Сетевое сегментирование, узкие identities и least privilege уменьшают такие пути.
 
 </details>
 
-> **Куда дальше.** Для обзора фреймворков, STRIDE, MITRE ATT&CK for Containers и комплаенса перейдите к [главе 19 KCSA](../19/ru.md). Практические границы безопасности и model 4C разобраны в [главе 02 CKS](../../../cks/course/02/ru.md), а корреляция сигналов и расследование фаз атаки - в [главе 30 CKS](../../../cks/course/30/ru.md).
+> **Куда дальше.** Для обзора фреймворков, STRIDE, MITRE ATT&CK for Containers и комплаенса перейдите к [главе 19 KCSA](../19/ru.md). Практические границы безопасности и модель 4C разобраны в главе 02 CKS, а корреляция сигналов и расследование фаз атаки - в главе 30 CKS.
 
 [Оглавление](../README_RU.md) · [Глава 14](../14/ru.md) · [Глава 16](../16/ru.md)

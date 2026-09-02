@@ -26,11 +26,11 @@
 
 ```mermaid
 flowchart LR
-    source["Исходный код\nи зависимости"] --> ci["CI собирает\nи тестирует image"]
-    ci --> registry["Registry\ntag + digest"]
-    registry --> manifest["Манифест Kubernetes\nфиксирует digest"]
-    manifest --> kubelet["Kubelet скачивает\nточный artifact"]
-    registry -. "tag может измениться" .-> risk["Другой image\nпри следующем pull"]
+    source["Исходный код<br/>и зависимости"] --> ci["CI собирает<br/>и тестирует image"]
+    ci --> registry["Registry<br/>tag + digest"]
+    registry --> manifest["Манифест Kubernetes<br/>фиксирует digest"]
+    manifest --> kubelet["Kubelet скачивает<br/>точный artifact"]
+    registry -. "tag может измениться" .-> risk["Другой image<br/>при следующем pull"]
     style source fill:#326ce5,color:#fff
     style ci fill:#f4b400,color:#000
     style registry fill:#673ab7,color:#fff
@@ -50,7 +50,7 @@ flowchart LR
 1. Разрешать registry и repository по allowlist, а не любой адрес из интернета.
 2. Ограничить push в production repository отдельными service accounts и минимальными правами.
 3. Проверять образ сканером на известные уязвимости и учитывать критичность, эксплуатируемость и наличие исправления.
-4. Подписывать артефакты и проверять подпись до запуска. Подпись связывает digest с доверенным издателем, но не заменяет сканирование.
+4. Подписывать артефакты и проверять подпись до запуска. Подпись создаёт криптографическое утверждение, связанное с конкретным artifact/digest и signing key или signing identity. При verification система отдельно применяет trust policy: считается ли данный key/identity/issuer доверенным для этого артефакта. Подпись не доказывает отсутствие уязвимостей и не заменяет provenance или vulnerability scanning.
 5. Фиксировать digest в deployment-артефакте и сохранять сведения о сборке, например SBOM и provenance.
 6. Применять admission policy, которая отклоняет образы из неразрешённых registry или без нужной подписи.
 
@@ -151,14 +151,14 @@ Kubernetes `Secret` не делает допустимым хранение кл
 
 ```mermaid
 flowchart TB
-    code["Исходный код\nsecure coding + review"] --> sca["SCA\nзависимости и CVE"]
-    code --> sast["SAST\nопасные конструкции"]
-    code --> secrets["Secret scanning\nhardcoded credentials"]
+    code["Исходный код<br/>secure coding + review"] --> sca["SCA<br/>зависимости и CVE"]
+    code --> sast["SAST<br/>опасные конструкции"]
+    code --> secrets["Secret scanning<br/>hardcoded credentials"]
     sca --> build["Контролируемая сборка"]
     sast --> build
     secrets --> build
-    build --> image["Минимальный image\nс фиксированным digest"]
-    image --> policy["Проверка policy\nперед запуском"]
+    build --> image["Минимальный image<br/>с фиксированным digest"]
+    image --> policy["Проверка policy<br/>перед запуском"]
     style code fill:#326ce5,color:#fff
     style sca fill:#673ab7,color:#fff
     style sast fill:#673ab7,color:#fff
@@ -200,7 +200,7 @@ flowchart TB
 6. Admission control разрешает только одобренные registry и, где принято, требует подпись или другие attestations.
 7. Для обнаруженной CVE оценивают реальную экспозицию, наличие исправления и критичность рабочей нагрузки, затем обновляют зависимость или base image.
 
-На associate-уровне полезно отличать средство от гарантии. Scanner находит известные проблемы, но не все уязвимости. Подпись подтверждает издателя и целостность подписи, но не отсутствие дефекта. Private registry ограничивает доступ, но не заменяет review. Комбинация контролей образует defense in depth.
+На associate-уровне полезно отличать средство от гарантии. Scanner находит известные проблемы, но не все уязвимости. Успешная verification подтверждает, что криптографическое утверждение над проверяемым artifact валидируется под ожидаемым signing key/identity; доверие к signer определяется отдельной verification policy. Она не доказывает отсутствие дефекта. Private registry ограничивает доступ, но не заменяет review. Комбинация контролей образует defense in depth.
 
 ## 06.6 Exam vocabulary / Мини-глоссарий
 
@@ -241,13 +241,13 @@ flowchart TB
 
 ### 1. Какой способ ссылки на image лучше всего фиксирует конкретный набор байтов для production deployment?
 
-a. `registry.example/app:stable`
+   - a. `registry.example/app:stable`
 
-b. `registry.example/app:latest`
+   - b. `registry.example/app:latest`
 
-c. Любой tag при `imagePullPolicy: Always`
+   - c. Любой tag при `imagePullPolicy: Always`
 
-d. `registry.example/app@sha256:...`
+   - d. `registry.example/app@sha256:...`
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -258,13 +258,13 @@ d. `registry.example/app@sha256:...`
 
 ### 2. Что точнее всего описывает `:latest`?
 
-a. Неизменяемый digest последней сборки.
+   - a. Неизменяемый digest последней сборки.
 
-b. Обычный tag, который может указывать на разные образы в разное время.
+   - b. Обычный tag, который может указывать на разные образы в разное время.
 
-c. Специальный Kubernetes-режим, который гарантирует самый новый безопасный образ.
+   - c. Специальный Kubernetes-режим, который гарантирует самый новый безопасный образ.
 
-d. Политика, запрещающая запуск без подписи.
+   - d. Политика, запрещающая запуск без подписи.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -275,13 +275,13 @@ d. Политика, запрещающая запуск без подписи.
 
 ### 3. Какое утверждение о multi-stage build верно?
 
-a. Он переносит compiler и исходный код в production image для отладки.
+   - a. Он переносит compiler и исходный код в production image для отладки.
 
-b. Он автоматически подписывает final image.
+   - b. Он автоматически подписывает final image.
 
-c. Он заменяет SCA и image scanning.
+   - c. Он заменяет SCA и image scanning.
 
-d. Он позволяет собирать artifact в builder stage и копировать в final stage только нужные файлы.
+   - d. Он позволяет собирать artifact в builder stage и копировать в final stage только нужные файлы.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -292,30 +292,27 @@ d. Он позволяет собирать artifact в builder stage и коп�
 
 ### 4. Для чего прежде всего применяют SCA?
 
-a. Для поиска сетевых соединений между `Pod`.
-
-b. Для инвентаризации зависимостей и сопоставления их версий с известными уязвимостями и политиками.
-
-c. Для предоставления shell в distroless image.
-
-d. Для шифрования секретов в etcd.
+   - a. Для анализа runtime-сетевых потоков между `Pod` и определения фактически установленных соединений.
+   - b. Для инвентаризации software dependencies и сопоставления их версий с известными vulnerabilities и policy.
+   - c. Для предоставления интерактивного shell в контейнерах, где отсутствуют стандартные debugging tools.
+   - d. Для шифрования Kubernetes `Secret` data перед сохранением API-объектов в `etcd`.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: b.** SCA анализирует состав программного обеспечения: прямые и транзитивные зависимости, CVE и нередко лицензии. Сеть, etcd и интерактивная отладка относятся к другим областям.
+**Верный ответ: b.** SCA анализирует состав программного обеспечения: прямые и транзитивные зависимости, их версии, известные уязвимости и часто лицензии/policy. Runtime network visibility, debugging и encryption at rest решают другие задачи.
 
 </details>
 
 ### 5. В Git-репозитории найден действующий cloud API key. Что должно быть первоочередным действием?
 
-a. Удалить строку в следующем коммите и продолжить использовать ключ.
+   - a. Удалить строку в следующем коммите и продолжить использовать ключ.
 
-b. Закодировать ключ в base64 и сохранить в repository.
+   - b. Закодировать ключ в base64 и сохранить в repository.
 
-c. Отозвать или заменить ключ, затем удалить его из кода и проверить историю и артефакты.
+   - c. Отозвать или заменить ключ, затем удалить его из кода и проверить историю и артефакты.
 
-d. Добавить ключ в `Dockerfile`, чтобы CI не терял его.
+   - d. Добавить ключ в `Dockerfile`, чтобы CI не терял его.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -324,6 +321,6 @@ d. Добавить ключ в `Dockerfile`, чтобы CI не терял ег
 
 </details>
 
-> **Куда дальше.** Для практической минимизации образов перейдите к [главе 24 CKS](../../../cks/course/24/ru.md). Цепочку поставки, SBOM и registry рассматривает [глава 25 CKS](../../../cks/course/25/ru.md), подписи - [глава 26 CKS](../../../cks/course/26/ru.md), сканирование - [глава 27 CKS](../../../cks/course/27/ru.md), а policy для supply chain - [глава 28 CKS](../../../cks/course/28/ru.md). Концепции supply chain и admission control на уровне KCSA продолжает [глава 17](../17/ru.md).
+> **Куда дальше.** Для практической минимизации образов перейдите к главе 24 CKS. Цепочку поставки, SBOM и registry рассматривает глава 25 CKS, подписи - глава 26 CKS, статический анализ - глава 27 CKS, сканирование образов - глава 28 CKS. Концепции supply chain и admission control на уровне KCSA продолжает [глава 17](../17/ru.md).
 
 [Оглавление](../README_RU.md) · [Глава 05](../05/ru.md) · [Глава 07](../07/ru.md)

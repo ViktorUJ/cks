@@ -76,7 +76,7 @@ Labels на `Namespace` - не единственный способ включ�
 
 1. если у namespace есть свои labels PSA - действуют они;
 2. если labels нет, но кластер явно сконфигурирован с cluster-wide defaults через `PodSecurityConfiguration` - действуют они;
-3. если нет ни labels namespace, ни явно заданных cluster-wide defaults - действует встроенное значение по умолчанию самого admission-контроллера, которое соответствует профилю `privileged` в режиме `enforce` (`latest` версии). Такой permissive-по-умолчанию профиль практически не блокирует Pod, но формально это тоже применяемая политика PSS, а не «отсутствие всякой проверки».
+3. если нет ни labels namespace, ни явно заданных cluster-wide defaults - действует встроенное значение по умолчанию самого admission-контроллера, которое соответствует профилю `privileged` для всех трёх режимов (`enforce`, `audit` и `warn`), версии `latest`. Такой permissive-по-умолчанию профиль практически не блокирует и не отмечает Pod, но формально это тоже применяемая политика PSS, а не «отсутствие всякой проверки».
 
 Labels namespace обычно имеют приоритет над cluster-wide defaults там, где они заданы явно: они переопределяют (override) применимый по умолчанию профиль или режим для конкретного namespace. Поэтому вопрос «что произойдёт с Pod в namespace без labels» не имеет единственного универсального ответа без указания, сконфигурированы ли в этом кластере явные cluster-wide defaults: KCSA-уровня рассуждение должно явно называть это допущение и не путать «эффективно permissive default `privileged`» с «отсутствием любой проверки PSS».
 
@@ -118,16 +118,23 @@ Admission выполняется **после** authentication и authorization,
 
 ```text
 Admission control
-├── built-in plugins: NodeRestriction, LimitRanger, ResourceQuota,
-│   ServiceAccount, AlwaysPullImages, PodSecurity
+├── built-in admission plugins
+│   ├── LimitRanger
+│   ├── ResourceQuota
+│   ├── ServiceAccount
+│   ├── AlwaysPullImages
+│   └── NodeRestriction
+├── MutatingAdmissionPolicy + CEL
 ├── MutatingAdmissionWebhook
-├── ValidatingAdmissionWebhook
-└── ValidatingAdmissionPolicy + CEL
+├── ValidatingAdmissionPolicy + CEL
+└── ValidatingAdmissionWebhook
 ```
 
 `LimitRanger` применяет ограничения и defaults `LimitRange`; `ResourceQuota` не допускает превышение namespace quota; `ServiceAccount` выполняет связанную с service account автоматизацию; `AlwaysPullImages` требует pull image перед запуском; `NodeRestriction` сужает изменения от kubelet. Это примеры admission plugins, а не список, который нужно заучивать целиком.
 
-OPA/Gatekeeper и Kyverno - policy engines, которые могут участвовать в admission path. Они **не** являются встроенным Kubernetes authorizer и **не** аутентифицируют клиента. `Gatekeeper`/Kyverno проверяют или изменяют API-объект в соответствии с policy после того, как identity уже установлена и запрос авторизован. Для простых встроенных проверок используют `ValidatingAdmissionPolicy` с CEL без внешнего HTTP webhook.
+В Kubernetes `v1.36` доступны два встроенных declarative policy API на CEL: `MutatingAdmissionPolicy` для изменения подходящих API-объектов и `ValidatingAdmissionPolicy` для проверки и отклонения неподходящих запросов. `MutatingAdmissionPolicy` stable с `v1.36` и enabled by default. Admission webhooks остаются внешними HTTP-сервисами и нужны, когда policy требует логики или интеграций, которые нельзя выразить встроенной CEL-политикой. Эти механизмы не заменяют authentication, authorization или PSA.
+
+OPA/Gatekeeper и Kyverno - policy engines, которые могут участвовать в admission path. Они **не** являются встроенным Kubernetes authorizer и **не** аутентифицируют клиента. `Gatekeeper`/Kyverno проверяют или изменяют API-объект в соответствии с policy после того, как identity уже установлена и запрос авторизован.
 
 | Сценарий | Лучший механизм | Почему не близкий distractor |
 |---|---|---|
@@ -176,13 +183,13 @@ OPA/Gatekeeper и Kyverno - policy engines, которые могут участ
 
 ### 1. Какой режим PSA не даёт создать `Pod`, нарушающий выбранный профиль?
 
-a. `warn`
+   - a. `warn`
 
-b. `privileged`
+   - b. `privileged`
 
-c. `audit`
+   - c. `audit`
 
-d. `enforce`
+   - d. `enforce`
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -193,13 +200,13 @@ d. `enforce`
 
 ### 2. Какой профиль PSS обычно выбирают для обычного прикладного `Pod`, которому нужен least privilege?
 
-a. `privileged`
+   - a. `privileged`
 
-b. `restricted`
+   - b. `restricted`
 
-c. `baseline`
+   - c. `baseline`
 
-d. `audit`
+   - d. `audit`
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -210,13 +217,13 @@ d. `audit`
 
 ### 3. Что из перечисленного PSA не заменяет?
 
-a. Проверку RBAC, имеет ли субъект право `create pods`
+   - a. Проверку RBAC, имеет ли субъект право `create pods`
 
-b. Проверку параметров `Pod` по PSS
+   - b. Проверку параметров `Pod` по PSS
 
-c. Отказ неподходящего `Pod` в режиме `enforce`
+   - c. Отказ неподходящего `Pod` в режиме `enforce`
 
-d. Применение labels `pod-security.kubernetes.io/enforce`
+   - d. Применение labels `pod-security.kubernetes.io/enforce`
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -227,13 +234,13 @@ d. Применение labels `pod-security.kubernetes.io/enforce`
 
 ### 4. Зачем указывать `pod-security.kubernetes.io/enforce-version: v1.36`?
 
-a. Чтобы закрепить версию PSS, по которой PSA оценивает `Pod`.
+   - a. Чтобы закрепить версию PSS, по которой PSA оценивает `Pod`.
 
-b. Чтобы включить шифрование трафика `Pod`.
+   - b. Чтобы включить шифрование трафика `Pod`.
 
-c. Чтобы выдать контейнеру Linux capability `NET_ADMIN`.
+   - c. Чтобы выдать контейнеру Linux capability `NET_ADMIN`.
 
-d. Чтобы заменить Kubernetes на версию `v1.36`.
+   - d. Чтобы заменить Kubernetes на версию `v1.36`.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -242,23 +249,20 @@ d. Чтобы заменить Kubernetes на версию `v1.36`.
 
 </details>
 
-### 5. Какой механизм уместен для требования «разрешать только образы из внутреннего registry»?
+### 5. Какой механизм уместен для требования «разрешать только образы из утверждённых registry»?
 
-a. `warn` PSA без дополнительных правил.
-
-b. Только профиль `restricted` PSA.
-
-c. Policy engine или admission policy, например Kyverno, Gatekeeper или ValidatingAdmissionPolicy.
-
-d. `PodSecurityPolicy`.
+   - a. PSA `warn`, который сообщает о нарушениях Pod Security Standards, но не задаёт registry allowlist.
+   - b. PSA `restricted`, который ограничивает Pod security fields, но не проверяет организационный список registry.
+   - c. Admission policy или policy engine с правилом, проверяющим image registry и отклоняющим неразрешённые значения.
+   - d. Удалённый `PodSecurityPolicy`, который исторически ограничивал Pod security fields, а не современный registry allowlist.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: c.** PSA применяет лишь фиксированные PSS и не задаёт allowlist registry. PSP удалён, а `warn` не блокирует объект. Специфическое правило реализует отдельная admission-политика.
+**Верный ответ: c.** Registry allowlist является отдельным admission-требованием. PSA применяет фиксированные Pod Security Standards и не выполняет произвольную организационную проверку registry, а PodSecurityPolicy удалён из Kubernetes.
 
 </details>
 
-> **Куда дальше.** Для практического применения стандартов изучите [главу 19 CKS: Pod Security Admission и Pod Security Standards](../../../cks/course/19/ru.md), а для правил организации поверх PSS - [главу 20 CKS: admission-контроллеры и policy-движки](../../../cks/course/20/ru.md). Полезная база по полям контейнера есть в [главе 20 CKA: SecurityContext и capabilities](../../../cka/course/20/ru.md). Затем перейдите к [главе 12](../12/ru.md) о `Secret`.
+> **Куда дальше.** Для практического применения стандартов изучите главу 19 CKS: Pod Security Admission и Pod Security Standards, а для правил организации поверх PSS - главу 20 CKS: admission-контроллеры и policy-движки. Полезная база по полям контейнера есть в главе 20 CKA: SecurityContext и capabilities. Затем перейдите к [главе 12](../12/ru.md) о `Secret`.
 
 [Оглавление](../README_RU.md) · [Глава 10](../10/ru.md) · [Глава 12](../12/ru.md)

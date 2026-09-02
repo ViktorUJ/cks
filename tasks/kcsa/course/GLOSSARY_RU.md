@@ -169,4 +169,4 @@
 - [Logging](18/ru.md) сохраняет события, [monitoring](18/ru.md) отслеживает известные показатели, [observability](18/ru.md) позволяет объяснять состояние по разным сигналам.
 - [CIA triad](02/ru.md) объединяет [confidentiality](12/ru.md), [integrity](19/ru.md) и [availability](16/ru.md).
 
-[Оглавление](README_RU.md) · [Путеводитель KCSA](KCSA_RU.md)
+[Оглавление и маршрут подготовки](README_RU.md)

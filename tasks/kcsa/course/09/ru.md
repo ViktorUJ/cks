@@ -20,7 +20,7 @@
 
 `runAsNonRoot` не делает контейнер безопасным сам по себе. Процесс без UID 0 всё ещё может быть опасен при `privileged: true`, избыточных capabilities, `hostPID` или опасном томе. Аналогично, отказ от `privileged` не исправляет уязвимый код. Надёжная модель строится из нескольких независимых ограничений.
 
-Ниже минимальный пример для HTTP-приложения в Kubernetes `v1.36`. Он запускается от непривилегированного UID, отбрасывает все capabilities и не использует host namespaces.
+Ниже минимальный пример для HTTP-приложения в Kubernetes `v1.36`. Используется образ `nginx-unprivileged`, который подготовлен для непривилегированного запуска и по умолчанию слушает порт `8080`. Поле `containerPort` лишь описывает порт контейнера для Kubernetes и читателя манифеста; оно само по себе не меняет порт, который слушает процесс внутри image.
 
 ```yaml
 apiVersion: v1
@@ -30,10 +30,11 @@ metadata:
 spec:
   securityContext:
     runAsNonRoot: true
-    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
   containers:
   - name: web
-    image: nginx:1.27-alpine
+    image: nginxinc/nginx-unprivileged:1.27-alpine
     ports:
     - containerPort: 8080
     securityContext:
@@ -42,13 +43,13 @@ spec:
         drop: ["ALL"]
 ```
 
-У манифеста нет `privileged`, `hostPID` и `hostNetwork`, поскольку их значение по умолчанию `false`. Пример иллюстрирует направление, а не универсальный профиль: некоторые приложения требуют записи во временный каталог, определённого UID или дополнительной capability. Такие исключения должны быть коротко обоснованы и проверены.
+Этот baseline уменьшает привилегии процесса: workload запускается non-root, не получает дополнительные Linux capabilities, не может повышать привилегии через `no_new_privs`-совместимый путь и использует `RuntimeDefault` seccomp. Это не универсальный профиль для любого image: приложение всё равно должно быть совместимо с non-root UID и writable paths. `containerPort` не является security control и не перенастраивает приложение.
 
 ```mermaid
 flowchart LR
-    app["Процесс в Pod"] --> sc["securityContext\nUID и capabilities"]
+    app["Процесс в Pod"] --> sc["securityContext<br/>UID и capabilities"]
     sc --> kernel["Ядро рабочего узла"]
-    risky["privileged, hostPID, hostNetwork\nили опасный том"] --> host["Более широкий доступ к узлу"]
+    risky["privileged, hostPID, hostNetwork<br/>или опасный том"] --> host["Более широкий доступ к узлу"]
     sc --> limited["Меньший радиус поражения"]
     style app fill:#326ce5,color:#fff
     style sc fill:#0f9d58,color:#fff
@@ -61,7 +62,7 @@ flowchart LR
 
 Контейнер - не VM и не отдельное ядро, а Linux process с набором ограничений. Namespaces определяют, какие PID, сеть, mounts и другие объекты он видит; cgroups ограничивают доступные ресурсы; capabilities выдают отдельные privileged действия; seccomp фильтрует system calls; AppArmor/SELinux применяют mandatory access control policy. `securityContext` связывает часть этих решений с `Pod`.
 
-> **Не путать.** Namespace не равен security policy; cgroup не является sandbox; capability не равна полному root; seccomp не является `NetworkPolicy`; AppArmor/SELinux не фильтруют syscalls вместо seccomp. `gVisor` и Kata Containers добавляют другую runtime/VM boundary и не являются обычным OCI runtime. Полная сравнительная карта и ресурсная изоляция даны в [главе 05](../05/ru.md).
+> **Не путать.** Namespace не равен security policy; cgroup не является sandbox; capability не равна полному root; seccomp не является `NetworkPolicy`; AppArmor/SELinux не фильтруют syscalls вместо seccomp. `gVisor` и Kata Containers используют OCI-compatible runtime interfaces, но дают более сильную execution boundary, чем типичный `runc`: gVisor `runsc` реализует OCI Runtime Specification и помещает workload за userspace application-kernel boundary, а Kata Containers запускает container workload внутри lightweight VM. Это runtime-isolation механизмы, а не замена RBAC, PSS/PSA или NetworkPolicy. Полная сравнительная карта и ресурсная изоляция даны в [главе 05](../05/ru.md).
 
 Внутри одного `Pod` контейнеры намеренно разделяют network namespace и могут общаться через localhost. Поэтому `Pod` - релевантная workload boundary по отношению к другим `Pod`, но не обещание отдельной сети между его sidecar-контейнерами.
 
@@ -91,13 +92,13 @@ flowchart LR
 | Тип хранения или подход | Когда уместен | Риск и контроль |
 |---|---|---|
 | `emptyDir` | Временные данные на время жизни `Pod` | Не предназначен для долговременной тайны; данные доступны контейнерам того же `Pod` с mount. |
-| PersistentVolume через CSI | Данные приложения, которые должны пережить `Pod` | Ограничивают доступ через namespace, `PersistentVolumeClaim`, режим доступа и права файлов. |
+| PersistentVolume через CSI | Данные приложения, которые должны пережить `Pod` | API-доступ к PVC/PV ограничивают RBAC; admission policy может ограничивать допустимые volume references и `storageClassName`; `accessModes` описывают поддерживаемую модель mount/attachment и не являются security ACL; доступ к данным после mount определяется filesystem/backend permissions и identity. |
 | `hostPath` | Узловой агент с явным доверием | Прямо связывает `Pod` с узлом, нужен строгий контроль создания таких подов. |
 | `Secret` volume | Передача секрета процессу как файла | Не отменяет RBAC и риск чтения секрета скомпрометированным контейнером. |
 
 Шифрование тома at rest обычно обеспечивает storage backend или CSI-драйвер: он шифрует данные на диске, а ключи могут находиться в KMS провайдера. Это защищает носитель, snapshot или украденный диск, но не скрывает данные от контейнера, которому том уже смонтирован. Для защиты трафика к удалённому хранилищу нужен отдельный защищённый канал, обычно TLS.
 
-Разделяйте три вопроса: кто может создать `Pod` с томом, кто может смонтировать конкретное хранилище и кто может прочитать данные после mount. RBAC, `Pod Security Admission`, storage class и права файловой системы отвечают на разные части этой модели.
+Разделяйте четыре вопроса: (1) кто может создавать или изменять `Pod` и `PVC` — RBAC; (2) какие типы volume и StorageClass разрешены — admission/policy; (3) где и в каком режиме volume технически можно attach/mount — CSI, topology и `accessModes`; (4) кто может читать или изменять данные после mount — filesystem/backend permissions, workload identity и encryption. `StorageClass` и `accessModes` сами по себе не являются authorization policy.
 
 ## 09.4 Клиентская безопасность: `kubeconfig` и `kubectl`
 
@@ -153,13 +154,13 @@ flowchart LR
 
 ### 1. Какой набор настроек лучше всего уменьшает привилегии обычного контейнера?
 
-a. `hostNetwork: true` и `NET_ADMIN`
+   - a. `hostNetwork: true` и `NET_ADMIN`
 
-b. `privileged: true` и `hostPID: true`
+   - b. `privileged: true` и `hostPID: true`
 
-c. `runAsNonRoot: true` и `capabilities.drop: ["ALL"]`
+   - c. `runAsNonRoot: true` и `capabilities.drop: ["ALL"]`
 
-d. Только `containerPort: 8080`
+   - d. Только `containerPort: 8080`
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -170,13 +171,13 @@ d. Только `containerPort: 8080`
 
 ### 2. Что необходимо, чтобы `NetworkPolicy` реально ограничивала трафик `Pod`?
 
-a. Хранение DNS-записей в `ConfigMap`
+   - a. Хранение DNS-записей в `ConfigMap`
 
-b. `hostNetwork: true` у каждого `Pod`
+   - b. `hostNetwork: true` у каждого `Pod`
 
-c. Поддержка `NetworkPolicy` используемым CNI
+   - c. Поддержка `NetworkPolicy` используемым CNI
 
-d. Включённый `kube-proxy` в режиме IPVS
+   - d. Включённый `kube-proxy` в режиме IPVS
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -187,13 +188,13 @@ d. Включённый `kube-proxy` в режиме IPVS
 
 ### 3. Почему `hostPath` требует особого контроля?
 
-a. Он всегда шифрует данные на диске.
+   - a. Он всегда шифрует данные на диске.
 
-b. Он создаёт отдельный persistent disk для каждого `Pod`.
+   - b. Он создаёт отдельный persistent disk для каждого `Pod`.
 
-c. Он может открыть контейнеру файлы и привилегированные сокеты рабочего узла.
+   - c. Он может открыть контейнеру файлы и привилегированные сокеты рабочего узла.
 
-d. Он запрещает контейнеру обращаться к сети.
+   - d. Он запрещает контейнеру обращаться к сети.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -204,21 +205,18 @@ d. Он запрещает контейнеру обращаться к сети
 
 ### 4. Какая практика лучше всего снижает риск ошибочной команды `kubectl` в production?
 
-a. Разделять contexts и identities для сред, проверять текущий context и выдавать минимум нужных прав.
-
-b. Добавить `privileged: true` в административный `Pod`.
-
-c. Копировать bearer token в каждую команду.
-
-d. Использовать один cluster-admin `kubeconfig` для всех сред.
+   - a. Использовать отдельные contexts и identities для сред, проверять активный context и выдавать минимально необходимые права.
+   - b. Использовать один context для всех сред, но полагаться только на разные имена namespace перед выполнением команд.
+   - c. Отключить TLS certificate verification, чтобы ошибки доверия не мешали быстро переключаться между cluster endpoints.
+   - d. Использовать один `cluster-admin` kubeconfig для всех сред и различать production только с помощью shell aliases.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: a.** Разделение contexts и least privilege уменьшают вероятность и последствия ошибки. Общий cluster-admin, токены в командах и привилегированный `Pod` увеличивают риск утечки или чрезмерного доступа.
+**Верный ответ: a.** Раздельные contexts/identities, проверка активного context и least privilege уменьшают вероятность ошибочного действия и его последствия. Общий администраторский credential или отключение TLS-проверки увеличивают риск.
 
 </details>
 
-> **Куда дальше.** Для практического hardened `SecurityContext` изучите [главу 18 CKS](../../../cks/course/18/ru.md) и [главу 20 CKA](../../../cka/course/20/ru.md). Для сетевой изоляции продолжите с [главой 13](../13/ru.md), [главами 04-06 CKS](../../../cks/course/04/ru.md), [05 CKS](../../../cks/course/05/ru.md), [06 CKS](../../../cks/course/06/ru.md) и [главой 34 CKA](../../../cka/course/34/ru.md). Для защиты данных и credentials полезна [глава 21 CKS](../../../cks/course/21/ru.md), а базовая работа с `Secret` разобрана в [главе 19 CKA](../../../cka/course/19/ru.md).
+> **Куда дальше.** Для практического hardened `SecurityContext` изучите главу 18 CKS и главу 20 CKA. Для сетевой изоляции используйте главы 04-06 CKS и главу 34 CKA. Для защиты данных и credentials полезна глава 21 CKS, а базовая работа с `Secret` разобрана в главе 19 CKA. В KCSA продолжите с [главой 10](../10/ru.md).
 
 [Оглавление](../README_RU.md) · [Глава 08](../08/ru.md) · [Глава 10](../10/ru.md)

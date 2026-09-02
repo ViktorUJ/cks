@@ -43,7 +43,7 @@ flowchart LR
     api -->|"сохраняет"| etcd[("etcd")]
     api -->|"выдаёт по правам"| pod["Pod"]
     pod --> mount["том или env"]
-    attacker["слишком широкие права\nили скомпрометированный Pod"] -. "читает" .-> api
+    attacker["слишком широкие права<br/>или скомпрометированный Pod"] -. "читает" .-> api
     attacker -. "извлекает" .-> mount
     style api fill:#326ce5,color:#fff
     style etcd fill:#f4b400,color:#000
@@ -162,13 +162,13 @@ kubectl auth can-i get secrets \
 
 ### 1. Что означает base64 в поле `data` объекта `Secret`?
 
-a. Данные представлены в обратимом кодировании.
+   - a. Данные представлены в обратимом кодировании.
 
-b. Данные автоматически шифруются KMS.
+   - b. Данные автоматически шифруются KMS.
 
-c. Данные зашифрованы ключом API Server.
+   - c. Данные зашифрованы ключом API Server.
 
-d. Данные доступны только `ServiceAccount` из того же namespace.
+   - d. Данные доступны только `ServiceAccount` из того же namespace.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -179,13 +179,13 @@ d. Данные доступны только `ServiceAccount` из того ж�
 
 ### 2. Какой контроль прежде всего защищает `Secret` в snapshot etcd при краже файла backup?
 
-a. `NetworkPolicy`.
+   - a. `NetworkPolicy`.
 
-b. `automountServiceAccountToken: false`.
+   - b. `automountServiceAccountToken: false`.
 
-c. Переменная окружения вместо volume.
+   - c. Переменная окружения вместо volume.
 
-d. Encryption at rest через `EncryptionConfiguration`.
+   - d. Encryption at rest через `EncryptionConfiguration`.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -196,30 +196,27 @@ d. Encryption at rest через `EncryptionConfiguration`.
 
 ### 3. Пользователь имеет разрешение `get` для `secrets` в namespace. Что изменит включение KMS для этого запроса к API Server?
 
-a. KMS автоматически отзовёт разрешение RBAC.
-
-b. API Server перестанет возвращать секрет.
-
-c. Пользователь увидит только base64, но не значение.
-
-d. Ничего в решении авторизации: API Server расшифрует объект и вернёт его разрешённому пользователю.
+   - a. KMS добавит отдельный authorization check и отклонит `get`, если пользователь не имеет прямого доступа к encryption key.
+   - b. API Server вернёт разрешённому пользователю ciphertext вместо исходного значения, потому что KMS запрещает server-side decryption.
+   - c. KMS преобразует `Secret` в объект, который больше нельзя прочитать через обычный Kubernetes API даже при разрешающем RBAC.
+   - d. Решение authorization не изменится: API Server расшифрует сохранённые данные и вернёт объект субъекту, которому RBAC разрешает чтение.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: d.** KMS и encryption at rest защищают хранение. Право читать через API определяет RBAC, поэтому его следует ограничивать отдельно.
+**Верный ответ: d.** Encryption at rest и KMS защищают сохранённые данные, а не заменяют Kubernetes authorization. Если API-запрос разрешён, API Server выполняет необходимую расшифровку и возвращает объект. Поэтому least-privilege RBAC остаётся обязательным.
 
 </details>
 
 ### 4. Почему `list` для ресурса `secrets` обычно опаснее, чем точечный `get`?
 
-a. `list` нельзя использовать с `ServiceAccount`.
+   - a. `list` нельзя использовать с `ServiceAccount`.
 
-b. `list` отключает TLS для API Server.
+   - b. `list` отключает TLS для API Server.
 
-c. `list` нужен только для шифрования etcd.
+   - c. `list` нужен только для шифрования etcd.
 
-d. `list` может раскрыть значения многих секретов сразу.
+   - d. `list` может раскрыть значения многих секретов сразу.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -230,13 +227,13 @@ d. `list` может раскрыть значения многих секрет
 
 ### 5. Какое утверждение об `External Secrets Operator` верно?
 
-a. Он может синхронизировать значение из внешнего хранилища в Kubernetes `Secret`.
+   - a. Он может синхронизировать значение из внешнего хранилища в Kubernetes `Secret`.
 
-b. Он делает base64 криптографическим шифрованием.
+   - b. Он делает base64 криптографическим шифрованием.
 
-c. Он заменяет RBAC для `Secret`.
+   - c. Он заменяет RBAC для `Secret`.
 
-d. Он гарантирует, что значение никогда не попадёт в Kubernetes.
+   - d. Он гарантирует, что значение никогда не попадёт в Kubernetes.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -245,6 +242,6 @@ d. Он гарантирует, что значение никогда не по
 
 </details>
 
-> **Куда дальше.** Для практической настройки encryption at rest, KMS, ротации ключей и проверки сохранённых записей изучите [главу 21 CKS о шифровании etcd и безопасном хранении `Secret`](../../../cks/course/21/ru.md). Для административной основы `Secret` и способов передачи значений в `Pod` полезна [глава 19 CKA](../../../cka/course/19/ru.md).
+> **Куда дальше.** Для практической настройки encryption at rest, KMS, ротации ключей и проверки сохранённых записей изучите главу 21 CKS о шифровании etcd и безопасном хранении `Secret`. Для административной основы `Secret` и способов передачи значений в `Pod` полезна глава 19 CKA.
 
 [Оглавление](../README_RU.md) · [Глава 11](../11/ru.md) · [Глава 13](../13/ru.md)

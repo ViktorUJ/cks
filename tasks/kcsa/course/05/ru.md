@@ -24,10 +24,10 @@ CIS и OWASP дополняют друг друга: CIS обычно подск
 
 ```mermaid
 flowchart LR
-    Risk["Сценарий риска"] --> OWASP["OWASP K8s Top 10\nкатегория угрозы"]
-    OWASP --> Control["Control\nRBAC, PSS, NetworkPolicy..."]
-    CIS["CIS Kubernetes Benchmark\nконфигурационные рекомендации"] --> Control
-    Control --> Evidence["Проверка и доказательство\nаудит, отчёт, исключение"]
+    Risk["Сценарий риска"] --> OWASP["OWASP K8s Top 10<br/>категория угрозы"]
+    OWASP --> Control["Control<br/>RBAC, PSS, NetworkPolicy..."]
+    CIS["CIS Kubernetes Benchmark<br/>конфигурационные рекомендации"] --> Control
+    Control --> Evidence["Проверка и доказательство<br/>аудит, отчёт, исключение"]
     style Risk fill:#db4437,color:#fff
     style OWASP fill:#f4b400,color:#000
     style CIS fill:#326ce5,color:#fff
@@ -117,7 +117,7 @@ Sandbox runtime полезен не для каждого `Pod`. Он особе
 | Linux capabilities | Какие отдельные root-like действия разрешены процессу | Capability - не полный root и не замена MAC policy. |
 | seccomp | Какие system calls разрешены процессу | Не регулирует Pod-to-Pod traffic. |
 | AppArmor / SELinux | Какие действия и ресурсы разрешает mandatory access control (MAC) policy | Не являются фильтром system calls: это роль seccomp. |
-| gVisor / Kata Containers | Добавляют границу sandbox или VM для недоверенного кода | Не являются обычным OCI runtime и не заменяют RBAC, PSS или NetworkPolicy. |
+| gVisor / Kata Containers | OCI-совместимые sandboxed runtimes: gVisor `runsc` реализует OCI Runtime Specification и изолирует workload через userspace application kernel; Kata Containers сохраняет OCI/CRI compatibility, но запускает workload внутри lightweight VM. | Усиливают execution boundary, но не заменяют RBAC, PSS/PSA или NetworkPolicy. |
 
 `AppArmor` и `SELinux` - Linux Security Modules с mandatory access control: политика способна запретить действие даже тогда, когда обычные Unix permissions позволили бы его. AppArmor обычно применяет profile к программе, SELinux - labels и policy к субъектам и объектам. На KCSA нужно связывать их с ограничением действий процесса, а не писать собственные profile/policy: это дальнейший CKS-level навык.
 
@@ -195,10 +195,10 @@ Sandbox runtime полезен не для каждого `Pod`. Он особе
 
 ### 1. Как точнее всего описать назначение CIS Kubernetes Benchmark?
 
-a. Это runtime для изоляции контейнеров через виртуальные машины.
-b. Это механизм аутентификации Kubernetes API.
-c. Это набор рекомендаций по безопасной конфигурации Kubernetes.
-d. Это список CVE в контейнерных образах.
+   - a. Это runtime для изоляции контейнеров через виртуальные машины.
+   - b. Это механизм аутентификации Kubernetes API.
+   - c. Это набор рекомендаций по безопасной конфигурации Kubernetes.
+   - d. Это список CVE в контейнерных образах.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -209,10 +209,10 @@ d. Это список CVE в контейнерных образах.
 
 ### 2. Какой control в первую очередь ограничивает сетевой трафик между `Pod`?
 
-a. `RoleBinding`
-b. `NetworkPolicy`
-c. Pod Security Admission
-d. `Namespace`
+   - a. `RoleBinding`
+   - b. `NetworkPolicy`
+   - c. Pod Security Admission
+   - d. `Namespace`
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -223,10 +223,10 @@ d. `Namespace`
 
 ### 3. Команды одной организации используют общий кластер и доверяют друг другу, но должны видеть только свои объекты и сетевые сервисы. Какой подход наиболее уместен как базовый?
 
-a. Только Kata Containers для всех `Pod`.
-b. Только `Namespace`, без иных controls.
-c. Soft multi-tenancy: `Namespace`, least-privilege RBAC, PSS и `NetworkPolicy`.
-d. Только отдельный кластер для каждой команды.
+   - a. Только Kata Containers для всех `Pod`.
+   - b. Только `Namespace`, без иных controls.
+   - c. Soft multi-tenancy: `Namespace`, least-privilege RBAC, PSS и `NetworkPolicy`.
+   - d. Только отдельный кластер для каждой команды.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -237,10 +237,10 @@ d. Только отдельный кластер для каждой коман
 
 ### 4. В какой ситуации gVisor или Kata Containers дают наибольшую дополнительную пользу?
 
-a. Когда запускается код с повышенной недоверенностью и требуется усилить границу исполнения.
-b. Когда нужно предоставить ServiceAccount доступ на чтение `ConfigMap`.
-c. Когда необходимо найти CVE в опубликованном образе.
-d. Когда нужно переименовать объекты в разных `Namespace`.
+   - a. Когда запускается код с повышенной недоверенностью и требуется усилить границу исполнения.
+   - b. Когда нужно предоставить ServiceAccount доступ на чтение `ConfigMap`.
+   - c. Когда необходимо найти CVE в опубликованном образе.
+   - d. Когда нужно переименовать объекты в разных `Namespace`.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -251,10 +251,10 @@ d. Когда нужно переименовать объекты в разны
 
 ### 5. Какое утверждение о `kube-bench` верно?
 
-a. Он автоматически исправляет все небезопасные параметры control plane.
-b. Он блокирует неподходящий `Pod` на admission этапе.
-c. Он заменяет модель угроз и security review.
-d. Он сопоставляет конфигурацию с проверками CIS и требует интерпретации результатов.
+   - a. Он автоматически исправляет все небезопасные параметры control plane.
+   - b. Он блокирует неподходящий `Pod` на admission этапе.
+   - c. Он заменяет модель угроз и security review.
+   - d. Он сопоставляет конфигурацию с проверками CIS и требует интерпретации результатов.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -263,6 +263,6 @@ d. Он сопоставляет конфигурацию с проверкам�
 
 </details>
 
-> **Куда дальше.** Для настройки и интерпретации CIS-проверок перейдите к [главе 07 CKS: CIS Benchmarks и kube-bench](../../../cks/course/07/ru.md). Для sandbox runtimes и более глубокой изоляции - к [главе 22 CKS: RuntimeClass и sandbox](../../../cks/course/22/ru.md). Внутри KCSA продолжите с [главой 11 о PSS и Pod Security Admission](../11/ru.md) и [главой 13 о NetworkPolicy и сегментации](../13/ru.md).
+> **Куда дальше.** Для настройки и интерпретации CIS-проверок перейдите к главе 07 CKS: CIS Benchmarks и kube-bench. Для sandbox runtimes и более глубокой изоляции - к главе 22 CKS: RuntimeClass и sandbox. Внутри KCSA продолжите с [главой 11 о PSS и Pod Security Admission](../11/ru.md) и [главой 13 о NetworkPolicy и сегментации](../13/ru.md).
 
 [Оглавление](../README_RU.md) · [Глава 04](../04/ru.md) · [Глава 06](../06/ru.md)

@@ -118,9 +118,11 @@ flowchart LR
 
 **Mutating admission webhook** может изменить объект, например добавить обязательную label, annotation или sidecar. Он полезен для стандартизации, но изменение объекта должно быть предсказуемым: неясная мутация затрудняет расследование и может конфликтовать с другой политикой.
 
-**Validating admission webhook** оценивает финальный вариант объекта и разрешает или отклоняет запрос. Он не должен менять объект. И mutating, и validating webhook работают как внешние сервисы, поэтому их доступность и TLS-доверие важны: неверная настройка может либо остановить deploy, либо оставить нежелательный путь обхода.
+**Validating admission webhook** оценивает финальный вариант объекта и разрешает или отклоняет запрос. Он не должен менять объект. И mutating, и validating webhook работают как внешние сервисы, поэтому их доступность и TLS-доверие важны: неверная настройка может либо остановить deploy, либо оставить нежелательный путь обхода. Именно это поведение при недоступности webhook регулирует поле `failurePolicy` в `ValidatingWebhookConfiguration`/`MutatingWebhookConfiguration`: `Fail` останавливает запрос, если webhook недоступен или вернул ошибку (безопаснее, но может заблокировать deploy при сбое webhook), а `Ignore` пропускает запрос без применения проверки webhook в этом случае — то есть сбой или временная недоступность webhook при `failurePolicy: Ignore` молча отключает контроль, который должен был сработать, без каких-либо изменений в самом объекте.
 
-Kubernetes также предлагает встроенный механизм **ValidatingAdmissionPolicy**. Он задаёт проверку декларативно в API и использует **CEL** (Common Expression Language) для выражений над объектом запроса. Это уменьшает потребность запускать отдельный webhook для некоторых проверок, но CEL-политика всё равно нуждается в ясном scope, тестировании и режиме внедрения. Она не предназначена для выполнения произвольной внешней логики, например сетевого запроса к registry.
+Kubernetes также предлагает встроенные declarative admission policies на CEL. `MutatingAdmissionPolicy` изменяет подходящие API-объекты без отдельного HTTP webhook; feature stable с Kubernetes `v1.36` и enabled by default. `ValidatingAdmissionPolicy` выполняет встроенную declarative validation и может отклонить запрос. Оба механизма используют CEL, но решают разные задачи: mutation изменяет объект, validation принимает или отклоняет его. Для внешней логики — например, сетевого запроса к registry или отдельному verifier — всё ещё нужен внешний admission webhook / policy engine либо заранее полученный доверенный verification result, доступный самой policy.
+
+`ValidatingAdmissionPolicy` задаёт validation logic и является cluster-scoped policy object. Чтобы policy реально применялась, создают отдельный `ValidatingAdmissionPolicyBinding`: binding ссылается на policy, задаёт `validationActions` и может сузить применение через `matchResources`, включая `namespaceSelector`. Поэтому нельзя говорить, что `ValidatingAdmissionPolicy` находится «в namespace»; namespace scope задают через binding/matchResources.
 
 ### Policy-движки: OPA/Gatekeeper и Kyverno
 
@@ -142,7 +144,7 @@ Kubernetes также предлагает встроенный механизм
 1. Разработчик фиксирует зависимости и не помещает secrets в код или image.
 2. CI собирает образ из контролируемого исходного кода, формирует SBOM, сканирует его и публикует artifact в приватный registry.
 3. CI подписывает digest и сохраняет provenance, чтобы release можно было связать с конкретной сборкой.
-4. Admission policy разрешает только корпоративный registry, проверяет подпись по принятому policy и отклоняет явно опасные настройки, например `privileged: true`.
+4. Admission-control слой ограничивает разрешённые registry; проверку подписи выполняет admission webhook / внешний verifier либо policy проверяет уже предоставленный доверенный verification result. Отдельная validating policy или PSA может независимо отклонять опасные workload-поля, например `privileged: true`.
 5. После deploy команда следит за новыми CVE, пересканирует существующие образы и обновляет затронутые workload.
 
 Политику безопаснее вводить поэтапно: сначала наблюдать нарушения и согласовать исключения, затем включить отклонение. Исключение должно быть узким, иметь владельца и срок пересмотра. Постоянная глобальная «дырка» для старой рабочей нагрузки превращает policy в формальность.
@@ -153,7 +155,9 @@ Kubernetes также предлагает встроенный механизм
 |---|---|
 | admission control | этап обработки запроса API после authentication и authorization, до записи объекта |
 | artifact | результат сборки, например container image, SBOM или подпись |
-| CEL | язык выражений для встроенных проверок `ValidatingAdmissionPolicy` |
+| `MutatingAdmissionPolicy` | Встроенная declarative admission policy, которая использует CEL для mutation API-объектов; stable с Kubernetes v1.36. |
+| `ValidatingAdmissionPolicy` | Встроенная declarative admission policy, которая использует CEL для validation API-объектов. |
+| CEL | Common Expression Language; используется встроенными `MutatingAdmissionPolicy` и `ValidatingAdmissionPolicy`. |
 | digest | неизменяемый криптографический идентификатор конкретного содержимого образа |
 | image registry | хранилище container images и связанных metadata |
 | provenance | сведения о происхождении artifact и процессе его сборки |
@@ -167,25 +171,25 @@ Kubernetes также предлагает встроенный механизм
 - Подпись через `cosign`/sigstore подтверждает подлинность (association с доверенной signing identity) и целостность по policy, но не подтверждает происхождение сборки и не заменяет сканирование CVE и безопасную конфигурацию.
 - SLSA v1.2 задаёт независимые tracks Build и Source, а provenance описывает происхождение artifact; ни SLSA, ни provenance не взаимозаменяемы с SBOM или подписью. Reproducible build не является универсальным синонимом уровня SLSA.
 - Доверенный или приватный registry снижает риск неподконтрольного источника, а `Trivy` помогает обнаружить известные уязвимости.
-- Mutating admission меняет объект, validating admission разрешает или отклоняет его. OPA/Gatekeeper, Kyverno и `ValidatingAdmissionPolicy` с CEL применяют организационные правила до создания объекта.
+- Mutation может выполняться как внешним `MutatingAdmissionWebhook`, так и встроенной `MutatingAdmissionPolicy` на CEL; validation — внешним validating webhook или встроенной `ValidatingAdmissionPolicy` на CEL.
 
 ## 17.7 Не путать и как это встречается на экзамене
 
 Вопросы KCSA обычно проверяют назначение и границы средств контроля. Различайте: SBOM инвентаризирует состав, scanner ищет известные уязвимости, подпись связывает artifact с identity, provenance описывает заявленный путь сборки, а admission policy решает, допустить ли объект в кластер. SLSA v1.2 задаёт независимые tracks Build и Source, а не заменяет SBOM, подпись или provenance. Не путайте приватный registry с гарантией безопасности, digest с подписью и reproducible build с универсальным уровнем SLSA.
 
-Частая формулировка предлагает выбрать контроль для конкретной угрозы. Для запрета образов из публичных источников подходит allowlist registry в admission policy. Для запрета `privileged` - validating policy или Pod Security Admission с подходящим профилем. Для добавления обязательной metadata - mutating admission. Встроенная `ValidatingAdmissionPolicy` использует CEL, а Gatekeeper связан с OPA и Rego.
+Частая формулировка предлагает выбрать контроль для конкретной угрозы. Для запрета образов из публичных источников подходит allowlist registry в admission policy. Для запрета `privileged` - validating policy или Pod Security Admission с подходящим профилем. Для добавления обязательной metadata - mutating admission. Встроенные `MutatingAdmissionPolicy` и `ValidatingAdmissionPolicy` используют CEL, но первая изменяет объект, а вторая валидирует его. Webhook нужен не потому, что Kubernetes не умеет declarative mutation/validation, а когда требуется внешняя логика или интеграция, недоступная встроенной CEL-policy.
 
 ## 17.8 Вопросы для самопроверки
 
 ### 1. Какую задачу прежде всего решает SBOM для container image?
 
-a. Перечисляет компоненты и версии, чтобы определить затронутые уязвимостью artifacts.
+   - a. Перечисляет компоненты и версии, чтобы определить затронутые уязвимостью artifacts.
 
-b. Не позволяет `Pod` получить привилегированный режим.
+   - b. Не позволяет `Pod` получить привилегированный режим.
 
-c. Автоматически исправляет CVE в базовом образе.
+   - c. Автоматически исправляет CVE в базовом образе.
 
-d. Шифрует image при передаче в registry.
+   - d. Шифрует image при передаче в registry.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -194,32 +198,29 @@ d. Шифрует image при передаче в registry.
 
 </details>
 
-### 2. Что наиболее точно подтверждает подпись образа, проверенная по policy?
+### 2. Что наиболее точно подтверждает подпись образа, успешно проверенная по организационной trust policy?
 
-a. Что в образе нет ни одной CVE.
-
-b. Что registry является приватным.
-
-c. Что конкретный artifact связан с разрешённой identity и не был незаметно изменён после подписи.
-
-d. Что образ всегда будет запускаться без root-пользователя.
+   - a. Что scanner гарантировал отсутствие известных и неизвестных уязвимостей в artifact.
+   - b. Что приватный registry сам по себе доказал происхождение и integrity каждого сохранённого image.
+   - c. Что cryptographic assertion над конкретным artifact успешно проверена для разрешённого key/identity согласно trust policy.
+   - d. Что runtime гарантированно запустит контейнер как non-root независимо от его Pod configuration.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: c.** Подпись подтверждает подлинность (association с доверенной identity) и целостность (что artifact не был незаметно изменён после подписания) - но не происхождение сборки: это отдельная задача provenance/attestation. Для CVE нужен scanner, а безопасный runtime-конфиг проверяют отдельные контроли.
+**Верный ответ: c.** Успешная signature verification подтверждает cryptographic assertion над конкретным artifact в контексте настроенной trust policy. Она не доказывает отсутствие CVE, не заменяет provenance и не определяет runtime securityContext.
 
 </details>
 
 ### 3. Какая мера лучше всего предотвращает запуск образа из случайного публичного registry?
 
-a. Включить `privileged: true` для диагностического контейнера.
+   - a. Включить `privileged: true` для диагностического контейнера.
 
-b. Сохранить credentials registry внутри Dockerfile.
+   - b. Сохранить credentials registry внутри Dockerfile.
 
-c. Использовать только тег `latest`.
+   - c. Использовать только тег `latest`.
 
-d. Настроить validating policy с allowlist разрешённых registry.
+   - d. Настроить validating policy с allowlist разрешённых registry.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -230,13 +231,13 @@ d. Настроить validating policy с allowlist разрешённых regi
 
 ### 4. В чём основное различие mutating и validating admission webhook?
 
-a. Validating webhook шифрует `Secret`, mutating webhook создаёт SBOM.
+   - a. Validating webhook шифрует `Secret`, mutating webhook создаёт SBOM.
 
-b. Mutating webhook меняет объект, validating webhook принимает решение разрешить или отклонить его.
+   - b. Mutating webhook меняет объект, validating webhook принимает решение разрешить или отклонить его.
 
-c. Между ними нет различия, это два названия одного механизма.
+   - c. Между ними нет различия, это два названия одного механизма.
 
-d. Mutating webhook работает только с `Service`, validating - только с `Pod`.
+   - d. Mutating webhook работает только с `Service`, validating - только с `Pod`.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -247,13 +248,13 @@ d. Mutating webhook работает только с `Service`, validating - т�
 
 ### 5. Какой компонент позволяет описать часть встроенных validating-проверок Kubernetes выражениями CEL без отдельного webhook?
 
-a. `PodDisruptionBudget`.
+   - a. `PodDisruptionBudget`.
 
-b. `imagePullSecret`.
+   - b. `imagePullSecret`.
 
-c. `ValidatingAdmissionPolicy`.
+   - c. `ValidatingAdmissionPolicy`.
 
-d. `NetworkPolicy`.
+   - d. `NetworkPolicy`.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -262,6 +263,6 @@ d. `NetworkPolicy`.
 
 </details>
 
-> **Куда дальше.** Для практической настройки admission и policy-движков перейдите к [главе 20 CKS: Admission-контроллеры и policy-движки](../../../cks/course/20/ru.md). Цепочка поставки подробно разобрана в главах CKS: [25: SBOM, CI/CD и artifact repositories](../../../cks/course/25/ru.md), [26: реестры, подпись и валидация](../../../cks/course/26/ru.md), [27: статический анализ](../../../cks/course/27/ru.md), [28: сканирование образов](../../../cks/course/28/ru.md). Для базового устройства images и API admission полезны [глава 23 CKA](../../../cka/course/23/ru.md) и [глава 21 CKA](../../../cka/course/21/ru.md).
+> **Куда дальше.** Для практической настройки admission и policy-движков используйте главу 20 CKS. Цепочка поставки подробно разобрана в главах 25-28 CKS: SBOM/CI/CD/artifact repositories, registry/signature/validation, статический анализ и image scanning. Для базового устройства images и API admission полезны главы 23 и 21 CKA.
 
 [Оглавление](../README_RU.md) · [Глава 16](../16/ru.md) · [Глава 18](../18/ru.md)

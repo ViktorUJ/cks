@@ -116,7 +116,7 @@ flowchart LR
 | Рискованная настройка | Возможное последствие | Предпочтительный контроль |
 |---|---|---|
 | `privileged: true` | широкий доступ к устройствам и возможностям хоста | PSS/PSA, admission, явное исключение только при необходимости |
-| `hostPath` | чтение или изменение файлов рабочего узла | не монтировать host path, ограничить policy и RBAC |
+| `hostPath` | чтение/изменение файлов рабочего узла | не использовать для обычных workloads; запрещать или ограничивать через PSS/PSA либо admission policy; RBAC отдельно ограничивает, кто может создавать или изменять workload API-объекты. |
 | лишняя capability | действие ядра сверх нужд приложения | drop capabilities, добавить только необходимую |
 | `hostPID` или runtime socket | доступ к процессам хоста или управление контейнерами | запретить host namespaces и доступ к socket |
 | отсутствующий seccomp/AppArmor | меньше барьеров после эксплуатации | `RuntimeDefault` seccomp, profile AppArmor где поддерживается |
@@ -167,13 +167,13 @@ flowchart LR
 
 ### 1. Какой контроль наиболее прямо ограничит совокупное число `Pod` и ресурсный бюджет одного namespace?
 
-a. `ResourceQuota`
+   - a. `ResourceQuota`
 
-b. `NetworkPolicy`
+   - b. `NetworkPolicy`
 
-c. `MutatingAdmissionWebhook`
+   - c. `MutatingAdmissionWebhook`
 
-d. mTLS
+   - d. mTLS
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -184,13 +184,13 @@ d. mTLS
 
 ### 2. Какое утверждение об encryption at rest для `Secret` верно?
 
-a. Оно запрещает любому пользователю с `get secrets` прочитать значение через API.
+   - a. Оно запрещает любому пользователю с `get secrets` прочитать значение через API.
 
-b. Оно заменяет защиту рабочего узла.
+   - b. Оно заменяет защиту рабочего узла.
 
-c. Оно превращает base64 в шифрование.
+   - c. Оно превращает base64 в шифрование.
 
-d. Оно защищает данные в etcd и backup, но RBAC всё равно нужен для API-доступа.
+   - d. Оно защищает данные в etcd и backup, но RBAC всё равно нужен для API-доступа.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -201,30 +201,27 @@ d. Оно защищает данные в etcd и backup, но RBAC всё ра
 
 ### 3. В скомпрометированном `Pod` замечены соединения к сервисам других команд. Какой контроль прежде всего уменьшает возможность такого латерального движения?
 
-a. `NetworkPolicy` с default-deny и точечными разрешениями
-
-b. `ResourceQuota`
-
-c. увеличение числа реплик
-
-d. base64 для `Secret`
+   - a. Default-deny NetworkPolicy с минимальными ingress/egress allow rules для необходимых workload paths.
+   - b. ResourceQuota, ограничивающая суммарные CPU, memory и object counts внутри namespace.
+   - c. Horizontal scaling, увеличивающий число replicas приложения при росте нагрузки.
+   - d. Base64-кодирование Secret data перед передачей значения приложению.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: a.** Сетевая policy ограничивает ingress и egress до явно разрешённых `Pod` и сервисов при поддержке CNI. Quota защищает доступность, но не определяет, куда можно подключаться.
+**Верный ответ: a.** При поддержке CNI NetworkPolicy позволяет ограничить сетевые пути workload только необходимыми направлениями и тем самым уменьшить возможности латерального движения. Quota защищает availability, scaling меняет capacity, а base64 не является сетевым контролем.
 
 </details>
 
 ### 4. Какой пример лучше всего описывает persistence в Kubernetes?
 
-a. Контейнер достиг memory limit и был завершён с `OOMKilled`.
+   - a. Контейнер достиг memory limit и был завершён с `OOMKilled`.
 
-b. Сканер нашёл уязвимую библиотеку в образе.
+   - b. Сканер нашёл уязвимую библиотеку в образе.
 
-c. Клиент не прошёл проверку сертификата TLS.
+   - c. Клиент не прошёл проверку сертификата TLS.
 
-d. Атакующий создал `CronJob`, который регулярно создаёт новый `Pod`.
+   - d. Атакующий создал `CronJob`, который регулярно создаёт новый `Pod`.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -235,13 +232,13 @@ d. Атакующий создал `CronJob`, который регулярно 
 
 ### 5. Какой набор мер лучше снижает риск container escape и повышения привилегий?
 
-a. Запустить каждый контейнер как `privileged`, но включить audit log.
+   - a. Запустить каждый контейнер как `privileged`, но включить audit log.
 
-b. Убрать лишние capabilities и host access, применять PSS/PSA, seccomp и AppArmor там, где он поддерживается.
+   - b. Убрать лишние capabilities и host access, применять PSS/PSA, seccomp и AppArmor там, где он поддерживается.
 
-c. Хранить секреты в base64.
+   - c. Хранить секреты в base64.
 
-d. Разрешить `hostPath` всем `Pod`, но использовать mTLS.
+   - d. Разрешить `hostPath` всем `Pod`, но использовать mTLS.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -250,6 +247,6 @@ d. Разрешить `hostPath` всем `Pod`, но использовать m
 
 </details>
 
-> **Куда дальше.** Для практической защиты runtime и `securityContext` перейдите к [главе 16 CKS](../../../cks/course/16/ru.md), [главе 17 CKS](../../../cks/course/17/ru.md), [главе 18 CKS](../../../cks/course/18/ru.md), [главе 19 CKS](../../../cks/course/19/ru.md) и [главе 22 CKS](../../../cks/course/22/ru.md). Для runtime detection, расследования и связанных сигналов читайте [главу 29 CKS](../../../cks/course/29/ru.md), [главу 30 CKS](../../../cks/course/30/ru.md) и [главу 31 CKS](../../../cks/course/31/ru.md).
+> **Куда дальше.** Для практической защиты runtime и `securityContext` используйте главы 16-19 и 22 CKS. Для runtime detection, расследования и связанных сигналов используйте главы 29-31 CKS.
 
 [Оглавление](../README_RU.md) · [Глава 15](../15/ru.md) · [Глава 17](../17/ru.md)

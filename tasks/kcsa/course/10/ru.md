@@ -155,13 +155,13 @@ kubectl auth can-i get configmap/site-config -n shop \
 
 ### 1. Какое утверждение о `ServiceAccount` верно?
 
-a. Он автоматически получает `cluster-admin` в своём namespace.
+   - a. Он автоматически получает `cluster-admin` в своём namespace.
 
-b. Это Kubernetes-идентичность для процессов в `Pod`; её права задают RBAC-привязки.
+   - b. Это Kubernetes-идентичность для процессов в `Pod`; её права задают RBAC-привязки.
 
-c. Он заменяет `NetworkPolicy` для сетевого доступа.
+   - c. Он заменяет `NetworkPolicy` для сетевого доступа.
 
-d. Это внешний пользователь, который всегда аутентифицируется через OIDC.
+   - d. Это внешний пользователь, который всегда аутентифицируется через OIDC.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -172,13 +172,13 @@ d. Это внешний пользователь, который всегда �
 
 ### 2. Что уменьшает риск для `Pod`, которому не нужен Kubernetes API?
 
-a. Включить анонимную аутентификацию API Server.
+   - a. Включить анонимную аутентификацию API Server.
 
-b. Добавить `verbs: ["*"]` в `ClusterRole`.
+   - b. Добавить `verbs: ["*"]` в `ClusterRole`.
 
-c. Назначить `default` `ServiceAccount` с `cluster-admin`.
+   - c. Назначить `default` `ServiceAccount` с `cluster-admin`.
 
-d. Задать `automountServiceAccountToken: false`.
+   - d. Задать `automountServiceAccountToken: false`.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -189,13 +189,13 @@ d. Задать `automountServiceAccountToken: false`.
 
 ### 3. Какой объект определяет разрешения, ограниченные одним `Namespace`?
 
-a. `Role`
+   - a. `Role`
 
-b. `ClusterRoleBinding`
+   - b. `ClusterRoleBinding`
 
-c. `NetworkPolicy`
+   - c. `NetworkPolicy`
 
-d. `ServiceAccount`
+   - d. `ServiceAccount`
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -206,13 +206,13 @@ d. `ServiceAccount`
 
 ### 4. Какой механизм Kubernetes является основным выбором для управления разрешениями пользователей и `ServiceAccount`?
 
-a. Node authorizer
+   - a. Node authorizer
 
-b. ABAC
+   - b. ABAC
 
-c. RBAC
+   - c. RBAC
 
-d. OIDC
+   - d. OIDC
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -223,21 +223,18 @@ d. OIDC
 
 ### 5. Почему разрешение `get` на `secrets` требует особой осторожности?
 
-a. Оно может открыть содержимое учётных данных, ключей и токенов.
-
-b. Оно нужно для работы `kube-proxy`.
-
-c. Оно запрещает использование TLS.
-
-d. Оно меняет IP-адреса `Pod`.
+   - a. Оно может раскрыть credentials, ключи и токены, которые затем дают доступ к Kubernetes или внешним системам.
+   - b. Оно возвращает только metadata Secret и никогда не позволяет API-клиенту получить сохранённое значение.
+   - c. Оно автоматически даёт субъекту право создавать `Pod`, даже если RBAC не содержит соответствующего разрешения.
+   - d. Оно заставляет API Server повторно зашифровать Secret при каждом чтении и поэтому увеличивает права клиента.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: a.** `Secret` часто хранит конфиденциальные данные. Их чтение может дать атакующему новые учётные данные, поэтому такое разрешение выдают только при реальной необходимости.
+**Верный ответ: a.** `Secret` часто содержит данные, которые открывают доступ к другим ресурсам. Поэтому `get`, а особенно более широкие `list/watch`, должны выдаваться по least privilege. Чтение Secret не создаёт другие RBAC-разрешения автоматически.
 
 </details>
 
-> **Куда дальше.** Углубите практические навыки в [главе 10 CKS: RBAC и минимизация доступа](../../../cks/course/10/ru.md), [главе 11 CKS: ServiceAccounts и токены](../../../cks/course/11/ru.md) и [главе 12 CKS: ограничение доступа к Kubernetes API](../../../cks/course/12/ru.md). Базовый синтаксис ролей также есть в [главе 38 CKA: RBAC](../../../cka/course/38/ru.md), а цепочка `ServiceAccount` и admission - в [главе 21 CKA](../../../cka/course/21/ru.md). В KCSA продолжите с [главой 11](../11/ru.md) о Pod Security Standards и Pod Security Admission.
+> **Куда дальше.** Углубите практические навыки в главе 10 CKS: RBAC и минимизация доступа, главе 11 CKS: ServiceAccounts и токены и главе 12 CKS: ограничение доступа к Kubernetes API. Базовый синтаксис ролей также есть в главе 38 CKA: RBAC, а цепочка `ServiceAccount` и admission - в главе 21 CKA. В KCSA продолжите с [главой 11](../11/ru.md) о Pod Security Standards и Pod Security Admission.
 
 [Оглавление](../README_RU.md) · [Глава 09](../09/ru.md) · [Глава 11](../11/ru.md)

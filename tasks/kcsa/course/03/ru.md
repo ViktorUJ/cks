@@ -17,10 +17,10 @@
 
 ```mermaid
 flowchart TB
-    cloud["Cloud\nаккаунт, IAM, сеть, вычисления"]
-    cluster["Cluster\nKubernetes API, узлы, RBAC, policy"]
-    container["Container\nобраз, runtime, Pod isolation"]
-    code["Code\nприложение, зависимости, секреты"]
+    cloud["Cloud<br/>аккаунт, IAM, сеть, вычисления"]
+    cluster["Cluster<br/>Kubernetes API, узлы, RBAC, policy"]
+    container["Container<br/>образ, runtime, Pod isolation"]
+    code["Code<br/>приложение, зависимости, секреты"]
     cloud --> cluster --> container --> code
     style cloud fill:#326ce5,color:#fff
     style cluster fill:#673ab7,color:#fff
@@ -53,10 +53,10 @@ Kubernetes API - центральная точка управления. Есл�
 
 ```mermaid
 flowchart LR
-    user["Пользователь, CI или Pod"] --> authn["Authentication\nкто делает запрос"]
-    authn --> authz["Authorization\nчто разрешено"]
-    authz --> admission["Admission\nдопустим ли объект"]
-    admission --> api["Kubernetes API\nи состояние кластера"]
+    user["Пользователь, CI или Pod"] --> authn["Authentication<br/>кто делает запрос"]
+    authn --> authz["Authorization<br/>что разрешено"]
+    authz --> admission["Admission<br/>допустим ли объект"]
+    admission --> api["Kubernetes API<br/>и состояние кластера"]
     style authn fill:#326ce5,color:#fff
     style authz fill:#673ab7,color:#fff
     style admission fill:#0f9d58,color:#fff
@@ -124,13 +124,13 @@ Code - это собственный исходный код, библиотек
 
 ```mermaid
 flowchart TB
-    cloud["Cloud\nвнешний слой: IAM, сеть, инфраструктура"]
-    cluster["Cluster\nAPI, RBAC, policies, узлы"]
-    container["Container\nобраз, runtime, privileges"]
-    code["Code\nлогика приложения и зависимости"]
-    cloud -->|"компрометация IAM или сети\nвлияет на весь кластер"| cluster
-    cluster -->|"избыточный RBAC или слабая policy\nвлияют на контейнеры"| container
-    container -->|"уязвимый образ или лишние права\nувеличивают ущерб коду"| code
+    cloud["Cloud<br/>внешний слой: IAM, сеть, инфраструктура"]
+    cluster["Cluster<br/>API, RBAC, policies, узлы"]
+    container["Container<br/>образ, runtime, privileges"]
+    code["Code<br/>логика приложения и зависимости"]
+    cloud -->|"компрометация IAM или сети<br/>влияет на весь кластер"| cluster
+    cluster -->|"избыточный RBAC или слабая policy<br/>влияют на контейнеры"| container
+    container -->|"уязвимый образ или лишние права<br/>увеличивают ущерб коду"| code
     style cloud fill:#db4437,color:#fff
     style cluster fill:#673ab7,color:#fff
     style container fill:#0f9d58,color:#fff
@@ -234,19 +234,20 @@ flowchart TB
 </details>
 
 ### 5. Какое утверждение о `Namespace` верно?
-   - a. Он разделяет объекты и служит областью политик, но не создаёт полную изоляцию сам по себе
-   - b. Он делает все контейнеры non-root
-   - c. Он автоматически запрещает весь межсервисный трафик
-   - d. Он заменяет RBAC и Pod Security Admission
+
+   - a. Он группирует namespaced-объекты и задаёт область для политик, но сам по себе не создаёт полную security boundary.
+   - b. Он автоматически заставляет все контейнеры работать non-root и удаляет у них все Linux capabilities.
+   - c. Он автоматически создаёт deny-all ingress и egress между workload без отдельной `NetworkPolicy`.
+   - d. Он запрещает cluster-scoped RBAC-привязкам выдавать права на ресурсы внутри этого namespace.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: a.** Для полной защиты нужны дополнительные controls: RBAC, `NetworkPolicy`, Pod Security Admission и безопасные настройки рабочих нагрузок.
+**Верный ответ: a.** `Namespace` даёт область имён и удобный scope для RBAC, quota, PSA labels и сетевых селекторов, но сам по себе не является полной границей безопасности. Изоляцию создают конкретные controls, а не наличие Namespace как такового.
 
 </details>
 
-> **Куда дальше.** В [главе 02 CKS - модель безопасности кластера](../../../cks/course/02/ru.md) модель 4C используется глубже для разбора границ доверия и практических механизмов защиты. Следующая глава этого курса рассматривает Cloud-слой подробнее: shared responsibility, IAM, узлы и metadata service.
+> **Куда дальше.** В главе 02 CKS модель 4C используется глубже для разбора границ доверия и практических механизмов защиты. Следующая глава этого курса рассматривает Cloud-слой подробнее: shared responsibility, IAM, узлы и metadata service.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 02](../02/ru.md) · [Глава 04](../04/ru.md)
