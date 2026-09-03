@@ -150,7 +150,7 @@ Goal: получить production secrets
 | Attack path | Preventive control | Detective control | Evidence |
 |---|---|---|---|
 | Stolen `ServiceAccount` token читает `Secret` | отдельный workload identity и least-privilege RBAC | Kubernetes API audit | audit event: identity, `get`, `secrets`, response status |
-| Shell в контейнере ищет credentials | PSS, seccomp и минимальные capabilities | Falco или другой runtime detector | runtime event о shell/доступе к файлу |
+| Shell в контейнере ищет credentials | минимизировать доступные workload credentials: не монтировать ненужные `Secret`, использовать `automountServiceAccountToken: false`, если Kubernetes API не нужен, и назначать отдельную workload identity с least-privilege RBAC | Falco или другой runtime detector | runtime event о shell/доступе к credential-файлу |
 | Malicious image проходит CI | digest, SBOM, signature/provenance и admission verification | registry/CI/admission logs | проверенная attestation и admission decision |
 | Etcd backup раскрывает данные | encryption at rest, защита backup и доступа | audit доступа к backup и review storage controls | отчёт backup/access trail |
 

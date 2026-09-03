@@ -76,20 +76,19 @@ Recurring vulnerability scanning checks the components in a deployed image again
 
 A vulnerability scanner reports findings within its data and scan coverage at a particular point in time. A clean scan does not establish signature trust, prove absence of malicious or unknown flaws, or satisfy unrelated deployment controls. See [chapter 06](../../course/06/ru.md).
 </details>
-### 6. **A team wants to know, before merging a pull request, whether a proposed dependency upgrade introduces a newly known vulnerability. At which point in the pipeline should this check run to be most useful?**
+### 6. **A team wants to know, before merging a pull request, whether a proposed dependency upgrade introduces a newly known vulnerability. When is this check most useful?**
 
-- A. Only manually, after the artifact has already been deployed to production
-- B. Only once a year during an annual audit
-- C. Only by asking end users to report problems after release
-- D. As an automated dependency/vulnerability check during CI, before the change is merged or built into an artifact
+- A. Run the dependency check only after the changed artifact reaches production and the deployment has completed successfully.
+- B. Run the dependency check only during a scheduled annual audit, independent of when dependency changes are proposed.
+- C. Rely on post-release user reports to identify whether a dependency change introduced a security problem into the application.
+- D. Run an automated dependency and vulnerability check in CI before merge or artifact creation so the risky change can be stopped early.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** D
 
-Running an automated dependency/vulnerability check during CI, before a change is merged or built, catches a newly introduced risk while it is cheapest and fastest to address, rather than after it is already running. a: checking only after production deployment delays detection past the point where prevention was possible. b: an annual audit leaves long windows where new dependency vulnerabilities go unnoticed. c: relying on end-user reports is reactive and does not prevent the vulnerable dependency from shipping in the first place. See [chapter 05](../../course/05/ru.md).
+A dependency check is most useful before the change is accepted and packaged, because the pipeline can block or remediate the risk before deployment. Production-only checks, annual reviews, and user reports are later detection points rather than an effective pre-merge gate. See [chapter 05](../../course/05/ru.md).
 </details>
-
 ### 7. **A production image still contains the compiler, package manager, build caches, and source tree even though the application only needs one compiled binary at runtime. Which change most directly reduces that unnecessary runtime attack surface?**
 
 - A. Keep the complete build toolchain in the final image and grant the container additional Linux capabilities for maintenance.
@@ -123,10 +122,10 @@ A source-level vulnerability is primarily a Code-layer problem. Secure coding, r
 
 ### 9. **A production cluster exposes its `etcd` client endpoint to a broad internal network. Which control most directly reduces the resulting risk?**
 
-- A. Add a Pod Security Standard label to every namespace.
-- B. Enable a ServiceAccount token in every Pod.
+- A. Enforce the restricted Pod Security Standard across application namespaces and reject privileged workload specifications.
+- B. Require short-lived projected ServiceAccount tokens for application Pods that call the Kubernetes API.
 - C. Restrict network reachability to intended control-plane clients and require mutually authenticated TLS.
-- D. Use a ResourceQuota for API requests.
+- D. Apply namespace ResourceQuota policies to cap aggregate CPU, memory, and workload object consumption.
 
 <details><summary>Answer</summary>
 
@@ -189,18 +188,18 @@ A dedicated etcd CA or CA chain keeps etcd client/peer trust independent from un
 Kubernetes documents `NetworkPolicy` behavior for `hostNetwork` Pods as implementation-dependent. A network plugin may be able to distinguish and apply policy to that traffic, or it may treat the traffic like ordinary node-IP traffic. Therefore `NetworkPolicy` must not be presented as a universal host firewall for `hostNetwork` Pods. Limit `hostNetwork` through RBAC/admission and validate the behavior of the selected network implementation. See [chapter 13](../../course/13/ru.md).
 </details>
 
-### 14. **Why should `kube-scheduler` and `kube-controller-manager` use distinct authenticated identities instead of sharing one broadly privileged client identity?**
+### 14. **Why should `kube-scheduler` and `kube-controller-manager` use distinct authenticated identities rather than one shared broadly privileged identity?**
 
-- A. Separate identities allow each component to receive only the API permissions it needs and make audit attribution clearer.
-- B. A shared identity is required for Kubernetes leader election to work correctly.
-- C. Separate identities automatically encrypt all Pod-to-Pod traffic.
-- D. A shared identity prevents admission controllers from evaluating control-plane requests.
+- A. Separate identities let each component receive only required API permissions and make audit records attributable to the component that performed the action.
+- B. A shared identity is required for Kubernetes leader election and prevents either component from operating when separate credentials are configured.
+- C. Separate component identities automatically encrypt Pod-to-Pod traffic and therefore remove the need for workload transport-security controls.
+- D. A shared identity causes admission controllers to skip control-plane requests and therefore reduces the amount of authorization required.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** A
 
-Control-plane components should have distinct authenticated identities and least-privilege authorization appropriate to their functions. Separate identities also improve audit attribution because actions can be tied to the component that performed them. Leader election does not require a single shared identity, component identity does not provide Pod network encryption, and admission does not require control-plane components to share credentials. See [chapter 07](../../course/07/ru.md).
+Separate component identities support least privilege and better audit attribution. Leader election does not require a single shared identity, and API identity does not provide Pod transport encryption or bypass admission. See [chapter 07](../../course/07/ru.md).
 </details>
 ### 15. **Which practice best supports evidence of unexpected kubelet-configuration changes after an approved hardening baseline is established?**
 
@@ -349,18 +348,22 @@ A ServiceAccount's core role is to provide a workload with an API identity; sepa
 Configured Kubernetes authorizers are evaluated in order. Once one returns a decisive `Allow` or `Deny`, evaluation stops; later authorizers are not consulted. Admission runs only after successful authorization and cannot overturn an authorization denial. See [chapter 10](../../course/10/ru.md).
 </details>
 
-### 25. **Which is validating admission, not authorization?**
+### 25. **A `RoleBinding` in namespace `team-a` references a `ClusterRole` that grants `get` and `list` on Pods. What access does that binding grant?**
 
-- A. RBAC
-- B. Webhook authorizer
-- C. Node authorizer
-- D. NodeRestriction
+- A. The permissions apply cluster-wide because the referenced `ClusterRole` is a cluster-scoped object.
+- B. The permissions apply only to node identities because a namespaced binding cannot grant access to ordinary users or ServiceAccounts.
+- C. No permissions are granted because a `RoleBinding` is not allowed to reference a `ClusterRole`.
+- D. The referenced permissions are granted only within `team-a`; a `ClusterRoleBinding` would be required to grant them cluster-wide.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** D
 
-NodeRestriction is a validating admission plugin that limits what a kubelet's own identity can modify (for example preventing it from labeling arbitrary nodes or pods outside its own), rather than being an authorization decision itself. a: RBAC is an authorization mechanism, not an admission plugin. b: a webhook authorizer is explicitly part of the authorization chain. c: the Node authorizer is also an authorization-chain component that grants kubelets access to their own resources — it is the authorization-side counterpart to NodeRestriction's admission-side enforcement. See [chapter 10](../../course/10/ru.md).
+A `RoleBinding` is namespaced. It may reference either a `Role` in the same namespace or a `ClusterRole`, but the permissions granted by that binding apply only within the `RoleBinding`'s namespace.
+
+A `ClusterRoleBinding` grants the referenced `ClusterRole` permissions at cluster scope. The fact that the role object itself is a `ClusterRole` does not make a namespaced `RoleBinding` cluster-wide.
+
+See [chapter 10](../../course/10/ru.md).
 </details>
 
 ### 26. **A namespace has no Pod Security Admission labels, and the cluster has no explicit PSA defaults in `PodSecurityConfiguration`. What built-in PSA default is effectively used?**
@@ -498,18 +501,17 @@ After synchronization into a Kubernetes `Secret`, the value is subject to the sa
 
 ### 35. **An attacker compromises a CI job and publishes a malicious but syntactically valid image to the approved registry using legitimate pipeline credentials. What should the Kubernetes threat model conclude?**
 
-- A. Successful registry authentication proves the image content is trustworthy.
-- B. The incident is only a storage-capacity problem because the registry accepted the image.
-- C. NetworkPolicy at runtime proves the build pipeline could not have been compromised.
-- D. A compromised build/deployment pipeline is an attack path for malicious code, so artifact trust must not rely on registry authentication alone.
+- A. Treat successful registry authentication as sufficient artifact trust because the approved registry recorded a legitimate pipeline identity.
+- B. Treat the event only as a registry-storage problem because a syntactically valid artifact was accepted through normal repository controls.
+- C. Treat runtime NetworkPolicy as proof that the build path remained trustworthy because policy limits traffic after the image starts.
+- D. Treat the compromised build and deployment pipeline as a malicious-code path and require artifact trust evidence beyond successful registry authentication.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** D
 
-Legitimate credentials prove who authenticated to the registry, not that the produced artifact is benign. Threat modeling must include a compromised build pipeline as a path for malicious code and connect it to provenance, signing/verification, admission and runtime controls. See [chapter 16](../../course/16/ru.md).
+Registry authentication establishes which credential was used; it does not prove that a compromised builder produced benign content. The threat model must include the pipeline as a malicious-code path and use independent artifact trust evidence plus deployment/runtime controls. See [chapter 16](../../course/16/ru.md).
 </details>
-
 ### 36. **A threat model identifies production Secrets as sensitive assets. What should the team determine next to make the model actionable?**
 
 - A. Identify identities, data paths, and trust boundaries that can expose or modify the Secrets, then map controls and evidence.
@@ -537,18 +539,18 @@ An actionable threat model connects a sensitive asset to realistic identities, a
 API permissions must be analyzed together with the objects those permissions can create. If a user can create an admitted privileged Pod with a sensitive host mount, workload creation can become a path to node-level privilege escalation even without direct node API permissions. See [chapter 16](../../course/16/ru.md).
 </details>
 
-### 38. **A namespace has CPU and memory `ResourceQuota`, but a compromised credential can still generate a very high rate of API requests that overloads the control plane. Which conclusion is most accurate?**
+### 38. **A namespace has CPU and memory `ResourceQuota`, but a compromised credential can still generate a very high rate of Kubernetes API requests. Which conclusion is most accurate?**
 
-- A. `ResourceQuota` guarantees that kube-apiserver request load remains below a safe rate.
-- B. Pod CPU limits automatically rate-limit every authenticated Kubernetes API request from the same identity.
-- C. Workload resource quotas and API/control-plane request exhaustion are different paths, so API abuse may require separate rate, identity, and access controls.
-- D. Encryption at rest for Secrets prevents control-plane request flooding.
+- A. Namespace workload quota also guarantees a safe kube-apiserver request rate because both controls ultimately account for Kubernetes resource usage.
+- B. Pod CPU limits automatically impose an equivalent request-rate limit on all authenticated API calls made with credentials from that workload.
+- C. Workload quota and API request exhaustion are different availability paths, so API abuse needs controls appropriate to identity and request processing.
+- D. Encryption at rest for Kubernetes Secrets prevents request flooding because encrypted API objects require less control-plane processing capacity.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-`ResourceQuota` constrains selected namespace resources, but it is not a general per-identity API request-rate limiter. A threat model should treat control-plane/API exhaustion as a separate availability path and apply appropriate identity, authorization, request-prioritization/rate controls, and monitoring. Secret encryption protects stored confidentiality, not API availability. See [chapter 16](../../course/16/ru.md).
+`ResourceQuota` constrains selected namespace resources; it is not a general per-identity API request-rate control. API/control-plane exhaustion is a different availability path and requires controls appropriate to request processing, identity, authorization, prioritization/rate handling, and monitoring. See [chapter 16](../../course/16/ru.md).
 </details>
 ### 39. **A compromised frontend Pod attempts to contact an unexpected external address. Which pair provides prevention plus useful network evidence?**
 
@@ -590,21 +592,20 @@ Effective persistence removal addresses the mechanisms that can recreate attacke
 
 A compromised worker node crosses a high-trust boundary. Host root can potentially access Pod files, mounted credentials, runtime state, and other sensitive material belonging to workloads on that node, so responders should contain the node and evaluate credential rotation/revocation. RBAC, etcd encryption at rest, and NetworkPolicy protect different boundaries and do not make a compromised host root trustworthy. See [chapter 16](../../course/16/ru.md).
 </details>
-### 42. **A compromised workload reads a credential and writes it to stdout; centralized logging then collects that output. Which threat-model conclusion is most accurate?**
+### 42. **A compromised workload reads a credential and writes it to stdout; centralized logging then collects that output. Which conclusion is most accurate?**
 
-- A. TLS to the log collector makes the credential non-sensitive once it is transmitted.
-- B. Pod RBAC automatically removes secret values from application stdout before collection.
-- C. etcd encryption at rest prevents credentials from appearing in application logs.
-- D. The logging/telemetry pipeline becomes an information-disclosure path, so sensitive values should be avoided or redacted and access to collected logs constrained.
+- A. TLS to the log collector makes the credential safe to retain because transport encryption removes its sensitivity after successful delivery.
+- B. Kubernetes RBAC automatically redacts secret values from application stdout before log agents can read and forward the generated output.
+- C. etcd encryption at rest prevents a credential from appearing in application logs after an authorized workload obtains the value.
+- D. The logging pipeline becomes another sensitive-data path, so secrets should be avoided or redacted and access to retained logs restricted.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** D
 
-A credential written to logs has crossed into another data store and access path. Transport encryption protects the channel but does not make the logged value safe; teams should avoid/redact sensitive output and restrict access to centralized logs. See [chapter 16](../../course/16/ru.md).
+Once a credential is written to logs, it exists in another data path and storage system. TLS protects transport but not the retained plaintext value; RBAC and etcd encryption do not automatically redact application output. See [chapter 16](../../course/16/ru.md).
 </details>
-
-### 43. **A web application Pod is exploited through an RCE. Its mounted ServiceAccount can create `ClusterRoleBinding` objects. What is the most important threat-model conclusion?**
+### 43. **A web application Pod is exploited through an RCE. Its mounted ServiceAccount can create `ClusterRoleBinding` objects and is explicitly allowed to `bind` the built-in `cluster-admin` `ClusterRole`. What is the most important threat-model conclusion?**
 
 - A. The RCE remains confined to the application because Kubernetes API permissions are unrelated to workload compromise.
 - B. The compromised workload identity can turn application compromise into cluster privilege escalation; reduce its RBAC permissions and avoid unnecessary credentials.
@@ -615,7 +616,9 @@ A credential written to logs has crossed into another data store and access path
 
 **Correct answer:** B
 
-A compromised application inherits the effective permissions of credentials available to the workload. If that identity can create privileged RBAC bindings, an application-level RCE can become a cluster-level privilege-escalation path. Workload identities should therefore use least-privilege RBAC, and unnecessary API credentials should not be mounted. Image signing and CPU limits do not revoke excessive Kubernetes API permissions. See [chapter 10](../../course/10/ru.md).
+A compromised application inherits the effective permissions of credentials available to the workload. Here the identity can both create a `ClusterRoleBinding` and bind the privileged `cluster-admin` role, so an application-level RCE can become cluster-level privilege escalation.
+
+Mere `create` permission on `ClusterRoleBinding` alone would not necessarily be sufficient: Kubernetes normally requires the caller to already hold the permissions in the referenced role or to have explicit `bind` permission on that role. Workload identities should therefore use least-privilege RBAC, and unnecessary API credentials should not be mounted. See [chapter 10](../../course/10/ru.md).
 </details>
 ### 44. **Why should an `etcd` backup be identified as a high-value asset in a Kubernetes threat model?**
 
@@ -777,19 +780,17 @@ Falco focuses on runtime detection, Hubble on Cilium network-flow observability,
 
 ### 55. **A CIS Kubernetes Benchmark check targets a control-plane setting that a managed provider does not expose to the customer. What is the best compliance treatment?**
 
-- A. Automatically fail the entire cluster.
-- B. Automatically mark it passed with no evidence.
-- C. Document applicability and provider ownership/evidence for that control, then assess customer-owned controls separately.
-- D. Grant workloads cluster-admin so the setting can be inspected.
+- A. Mark the whole cluster failed regardless of applicability, because every CIS recommendation must be directly configurable by the customer.
+- B. Mark the control passed without evidence, because provider ownership alone proves that the managed setting satisfies the benchmark.
+- C. Document applicability and provider ownership or evidence for that control, then assess the customer-owned controls separately.
+- D. Grant application workloads cluster-admin so they can inspect or modify the provider-managed control-plane setting themselves.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-A managed-service control can be provider-owned or not customer-configurable. Document its applicability and obtain appropriate provider evidence while assessing the controls the customer owns. See [chapter 19](../../course/19/ru.md).
+A managed-service control can be provider-owned or not customer-configurable. Document applicability and obtain appropriate provider evidence while assessing the controls the customer actually owns. Provider ownership alone is not proof of compliance, and broad workload privilege is not an acceptable inspection mechanism. See [chapter 19](../../course/19/ru.md).
 </details>
-
-
 ### 56. **What is a strong compliance mapping?**
 
 - A. Requirement to HPA metric

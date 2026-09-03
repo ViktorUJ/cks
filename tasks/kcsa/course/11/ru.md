@@ -95,7 +95,7 @@ spec:
       type: RuntimeDefault
   containers:
   - name: web
-    image: nginxinc/nginx-unprivileged:1.27
+    image: nginxinc/nginx-unprivileged:1.30.4-alpine-slim
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:

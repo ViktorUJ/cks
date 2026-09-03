@@ -165,13 +165,13 @@ Runtime-детектор, например Falco, отвечает на друг
 
 ### 1. Какая возможность audit logging наиболее прямо помогает установить, кто удалил `Deployment`?
 
-   - a. Автоматическое блокирование всех удалений.
+   - a. Audit policy, автоматически запрещающая любые операции `delete` для всех API-клиентов кластера.
 
-   - b. Запись identity, `verb`, `objectRef` и статуса API-запроса.
+   - b. Audit event с identity, `verb`, `objectRef` и результатом обработки конкретного API-запроса.
 
-   - c. Ограничение CPU у `Pod`.
+   - c. Runtime metric с CPU и memory удалённого `Pod`, собранная после завершения запроса.
 
-   - d. Шифрование образа контейнера.
+   - d. Image metadata с digest и временем сборки контейнера удалённого workload.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -199,18 +199,18 @@ Runtime-детектор, например Falco, отвечает на друг
 
 ### 3. Почему для обращений к `Secret` обычно не выбирают `RequestResponse`?
 
-   - a. Request или response body могут раскрыть пароль, токен или ключ в audit-логе.
+   - a. Этот уровень может записать request и response bodies, в которых для Secret могут находиться чувствительные значения.
 
-   - b. Этот уровень нельзя использовать с Kubernetes `v1.36`.
+   - b. Этот уровень сохраняет только metadata события и поэтому не способен записывать request или response body вообще.
 
-   - c. Он не сохраняет response status.
+   - c. Этот уровень отключает authentication для запросов к Secret до того, как событие попадёт в audit pipeline.
 
-   - d. Он отключает authentication API Server.
+   - d. Этот уровень запрещает API Server возвращать Secret объект клиенту, даже если Kubernetes authorization разрешил чтение.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: a.** Полный уровень полезен лишь для узких forensic-сценариев. Для `Secret` безопаснее сохранить факт обращения на уровне `Metadata`, не записывая значение секрета.
+**Верный ответ: a.** `RequestResponse` может сохранять тела запросов и ответов. Для Secret это создаёт риск попадания чувствительных значений в audit storage. Обычно безопаснее сохранять достаточный audit context без содержимого Secret, например через `Metadata`, если forensic requirements не требуют большего.
 
 </details>
 

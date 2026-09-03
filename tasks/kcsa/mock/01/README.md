@@ -24,32 +24,30 @@ The 4C model divides the attack surface and controls into Cloud, Cluster, Contai
 
 ### 2. **What most accurately describes shared responsibility in managed Kubernetes?**
 
-- A. The customer is responsible only for paying for resources
-- B. The provider is responsible for every workload configuration
-- C. Shared responsibility eliminates the need for IAM
-- D. Responsibility boundaries depend on the service, while the customer still secures its data and configuration
+- A. The provider secures the managed control plane, so the customer no longer needs to secure workload identities, configuration, or application data.
+- B. The customer remains responsible for every platform layer, including provider-managed control-plane hosts and the provider physical infrastructure.
+- C. Responsibility is divided only by namespace: the provider secures system namespaces and the customer secures all other Kubernetes namespaces.
+- D. The boundary depends on the managed service: the provider operates defined platform layers while the customer still secures its workloads, identities, configuration, and data.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** D
 
-In a managed service, the provider operates part of the platform, but the customer remains responsible for workload, identity, and data configuration, so responsibility boundaries depend on the service while the customer still secures its own data and configuration. Options a, b, and c each deny or oversimplify shared responsibility by assigning it entirely to one party or dismissing IAM. See [chapter 04](../../course/04/ru.md).
+Managed Kubernetes changes which platform layers the provider operates; it does not transfer all security responsibility. The customer still owns controls that remain inside its service boundary, including workload configuration, identities, and data. See [chapter 04](../../course/04/ru.md).
 </details>
-
 ### 3. **What risk does workload access to a cloud provider metadata service create?**
 
-- A. NetworkPolicy encrypts requests to the metadata service
-- B. The Pod automatically receives cluster-admin privileges
-- C. The image registry stops checking signatures
-- D. A process may obtain temporary cloud credentials if access is not restricted
+- A. The metadata service automatically encrypts every request from a Pod and prevents the workload from receiving any cloud credential.
+- B. Access to the metadata service automatically converts the Pod ServiceAccount into a Kubernetes cluster-admin identity.
+- C. A workload reaching the metadata service causes the image registry to stop verifying signatures for that deployed artifact.
+- D. A workload process may obtain temporary cloud credentials from the metadata service if network and identity access are not sufficiently restricted.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** D
 
-A metadata service can issue temporary cloud credentials to a workload, so unrestricted access to it lets a process obtain those credentials — this is the risk. Options a, b, and c describe unrelated or incorrect mechanisms (NetworkPolicy encrypting requests, automatic cluster-admin grants, and registries no longer checking signatures) rather than the metadata-access risk. See [chapter 04](../../course/04/ru.md).
+Cloud metadata services can expose temporary cloud credentials to eligible workloads. If a compromised process can reach an overly permissive metadata endpoint, those credentials can become an escalation path into the cloud boundary. The metadata service does not grant Kubernetes `cluster-admin`, alter registry verification, or automatically provide transport protection. See [chapter 04](../../course/04/ru.md).
 </details>
-
 ### 4. **Which is an example of a preventive control?**
 
 - A. A postmortem after an incident
@@ -66,18 +64,17 @@ An admission policy prevents an unsafe object from being created, which makes it
 
 ### 5. **What is the primary purpose of a sandbox runtime such as gVisor or Kata?**
 
-- A. Make all images trusted without inspection
-- B. Automatically create an SBOM
-- C. Replace RBAC for API users
-- D. Strengthen the isolation boundary between a workload and the host
+- A. A sandbox runtime verifies image signatures and establishes artifact provenance before the image is pulled onto a worker node.
+- B. A sandbox runtime generates an SBOM for every container and blocks packages that are missing from the inventory.
+- C. A sandbox runtime replaces Kubernetes RBAC by deciding which authenticated API users may create or update workload objects.
+- D. A sandbox runtime strengthens the execution-isolation boundary between a workload and the host compared with a typical shared-kernel runtime.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** D
 
-A sandbox runtime strengthens workload isolation from the host. Image inspection, RBAC, and SBOMs solve different problems. See [chapter 05](../../course/05/ru.md).
+gVisor and Kata Containers strengthen the execution boundary between workload and host using different isolation designs. They do not replace artifact signing/provenance, SBOM generation, or Kubernetes API authorization. See [chapter 05](../../course/05/ru.md).
 </details>
-
 ### 6. **Why is an immutable digest preferable to the `latest` tag when pinning an image?**
 
 - A. A digest always contains fewer vulnerabilities
@@ -94,18 +91,17 @@ A digest identifies specific, immutable image content by its cryptographic hash,
 
 ### 7. **Which approach best reduces the risk of a secret accidentally committed to source code?**
 
-- A. Store the secret only in a private Git branch
-- B. Rename the file containing the secret
-- C. Remove the secret from the code, revoke it, and use managed secret storage
-- D. Base64-encode the secret before committing it
+- A. Move the secret to a private branch, keep the same credential active, and rely on repository visibility to prevent further exposure.
+- B. Rename the file, add it to `.gitignore`, keep the exposed credential active, and leave the existing repository history unchanged.
+- C. Remove the secret from source, revoke or rotate the exposed credential, and deliver the replacement through appropriate secret management.
+- D. Base64-encode the secret, recommit the encoded value, keep the original credential active, and restrict access to the repository.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-Remove the secret from the code and revoke it, then deliver it through appropriate secret management. Base64, a private branch, and renaming do not resolve an exposure. See [chapter 06](../../course/06/ru.md).
+Once a credential has been committed, removing the visible line is not enough: the credential should be revoked or rotated and the replacement should be delivered through an appropriate secret-management path. Private branches, renaming, `.gitignore`, or base64 do not invalidate an exposed credential. See [chapter 06](../../course/06/ru.md).
 </details>
-
 ### 8. **Which statement about isolation and segmentation is correct?**
 
 - A. A single `Service` provides complete tenant isolation
@@ -138,18 +134,17 @@ The API server is the central API pipeline point: authentication, authorization,
 
 ### 10. **Why does etcd access require strict protection?**
 
-- A. Compromise of etcd can expose cluster state and sensitive data
-- B. etcd applies Pod Security Standards
-- C. etcd replaces kube-apiserver for user authentication
-- D. etcd stores only temporary metrics
+- A. etcd stores critical Kubernetes state and can contain sensitive API data, so compromise can affect both confidentiality and cluster integrity.
+- B. etcd applies Pod Security Standards to new workloads and therefore directly decides whether privileged Pods may be admitted.
+- C. etcd authenticates end users instead of kube-apiserver and therefore holds the primary login policy for every Kubernetes client.
+- D. etcd stores only temporary monitoring metrics, so strict protection is required mainly to preserve historical observability data.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** A
 
-etcd stores critical cluster state, including sensitive data, so its compromise is very serious and justifies strict protection. Options b, c, and d assign etcd an incorrect role: etcd does not apply Pod Security Standards, does not replace kube-apiserver for authentication, and stores far more than temporary metrics. See [chapter 07](../../course/07/ru.md).
+etcd stores Kubernetes API state and can contain sensitive objects. Direct compromise can therefore expose data and undermine cluster integrity. Pod Security Admission, user authentication, and monitoring storage are different functions. See [chapter 07](../../course/07/ru.md).
 </details>
-
 ### 11. **Which kubelet configuration is especially dangerous without additional protection?**
 
 - A. Using `containerd` rather than Docker
@@ -207,18 +202,17 @@ Kubernetes deprecated kube-proxy IPVS mode beginning with v1.35, but it remains 
 </details>
 ### 15. **What is true about kube-proxy and NetworkPolicy?**
 
-- A. kube-proxy encrypts ingress traffic
-- B. NetworkPolicy is needed only for LoadBalancer Services
-- C. kube-proxy provides Service routing but does not replace CNI policy enforcement
-- D. kube-proxy replaces NetworkPolicy for Pod-to-Pod isolation
+- A. kube-proxy encrypts Pod ingress traffic, so a CNI does not need to implement NetworkPolicy enforcement on worker nodes.
+- B. NetworkPolicy applies only to LoadBalancer Services, and kube-proxy evaluates those policies before forwarding Service traffic.
+- C. kube-proxy handles Service traffic, while NetworkPolicy enforcement is provided by a network implementation that supports the policy API.
+- D. kube-proxy replaces NetworkPolicy for Pod isolation whenever its Service backend uses iptables, nftables, or IPVS mode.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-kube-proxy implements Service networking, whereas the CNI enforces NetworkPolicy — these are separate mechanisms, which matches option c. Option a incorrectly assigns encryption to kube-proxy, option b wrongly limits NetworkPolicy to LoadBalancer Services only, and option d incorrectly claims kube-proxy replaces NetworkPolicy for Pod isolation. See [chapter 08](../../course/08/ru.md).
+kube-proxy implements Service traffic handling; it is not the NetworkPolicy enforcement engine. NetworkPolicy needs a network implementation that supports that API. See [chapter 08](../../course/08/ru.md).
 </details>
-
 ### 16. **Which measure best reduces the risk of worker node compromise?**
 
 - A. Disable node audit and runtime telemetry to reduce local security overhead.
@@ -305,18 +299,17 @@ The scheduler and controller manager are control-plane components. kubelet, kube
 
 ### 22. **How does authentication differ from authorization in Kubernetes?**
 
-- A. Authentication determines permissions; authorization verifies identity
-- B. Authorization runs only in etcd
-- C. Authentication verifies who makes a request; authorization determines the permitted action
-- D. They are two names for admission control
+- A. Authentication decides which API actions are permitted, while authorization proves the credential belongs to the claimed identity.
+- B. Authorization evaluates requests only inside etcd, while authentication is the only access decision made by kube-apiserver.
+- C. Authentication establishes who is making the request, while authorization decides whether that identity may perform the requested action.
+- D. Authentication and authorization are two names for admission control and both operate only after the object has been stored.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-Authentication establishes identity and authorization determines permitted actions, which matches option c. Option a reverses the two concepts, option b incorrectly claims authorization runs only in etcd, and option d incorrectly conflates authentication/authorization with admission control, which is a separate later stage. See [chapter 10](../../course/10/ru.md).
+Authentication establishes the caller identity. Authorization then determines whether that identity is allowed to perform the requested action. Admission is a separate later stage of API request processing. See [chapter 10](../../course/10/ru.md).
 </details>
-
 ### 23. **Which mechanism is suitable for federating a user's identity with the Kubernetes API?**
 
 - A. `hostPath`
@@ -427,20 +420,21 @@ EncryptionConfiguration protects stored API data such as Secrets; KMS can separa
 With default-deny, NetworkPolicy opens only explicitly allowed flows for selected Pods. Options a, c, and d concern other functions. See [chapter 13](../../course/13/ru.md).
 </details>
 
-### 31. **Which statement about NetworkPolicy is true?**
+### 31. **A source Pod and a destination Pod are both isolated by NetworkPolicy. The source Pod's egress policy allows the destination, but the destination Pod's ingress policies do not allow the source. Assuming a supporting network plugin, what happens?**
 
-- A. It replaces TLS
-- B. It applies only to `NodePort`
-- C. Effective enforcement requires a CNI that supports NetworkPolicy
-- D. Every CNI must implement it without exception
+- A. The connection is allowed because an allowed source egress rule is sufficient even when destination ingress does not allow the source.
+- B. The connection is allowed whenever both Pods are in namespaces that contain at least one NetworkPolicy object.
+- C. The connection is denied because the source egress policy and the destination ingress policy must both allow the connection.
+- D. The connection result is decided by kube-proxy, which overrides Pod ingress and egress isolation when a Service is involved.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-The NetworkPolicy API is insufficient without CNI implementation. Option a is too absolute, while b and d incorrectly limit its purpose. See [chapter 13](../../course/13/ru.md).
-</details>
+For a connection between two Pods, the source Pod's applicable egress policy and the destination Pod's applicable ingress policy must both allow the connection. An allow on only one side is not sufficient.
 
+This tests the two-sided connection rule rather than repeating the separate competency that a supporting network plugin is required for NetworkPolicy enforcement. See [chapter 13](../../course/13/ru.md).
+</details>
 ### 32. **What does Kubernetes audit logging record?**
 
 - A. Events and requests processed by the Kubernetes API server
@@ -470,16 +464,16 @@ Kubernetes audit logging records API activity. Runtime detection observes execut
 </details>
 ### 34. **A Role grants `list` on `secrets` in one namespace but does not grant `get` on any specifically named Secret. What is the security consequence?**
 
-- A. `list` returns only Secret names and never returns Secret data.
-- B. `list` is equivalent to `get` on exactly one named Secret.
-- C. `list` can return many Secret objects and their data in that namespace, so it is broad sensitive-data access.
-- D. `list` reads only encrypted bytes directly from etcd and cannot expose API-level Secret values.
+- A. `list` returns only Secret names and metadata, so it cannot expose any Secret data values from the namespace.
+- B. `list` is equivalent to `get` on one specifically named Secret and cannot return other Secret objects in the namespace.
+- C. `list` can return multiple Secret objects and their data, so namespace-wide `list secrets` is broad sensitive-data access.
+- D. Encryption at rest makes `list secrets` return only ciphertext, even when the API caller is authorized to read Secret objects.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-A successful Kubernetes `list` request returns Secret objects visible to that request, including their API data fields, so namespace-wide `list secrets` can expose many sensitive values at once. It is not a metadata-only permission and is broader than a resource-name-scoped `get`. Encryption at rest protects storage in etcd but does not hide Secret values from an API caller that is authorized to read them. See [chapter 12](../../course/12/ru.md).
+An authorized list operation can return multiple Secret objects, including their API data fields. That makes namespace-wide `list secrets` broad sensitive-data access. Encryption at rest protects storage, not values returned to an authorized API reader. See [chapter 12](../../course/12/ru.md).
 </details>
 
 ## Kubernetes Threat Model - questions 35-44
@@ -713,18 +707,17 @@ An admission policy can reject a workload whose image comes from an unapproved r
 
 ### 51. **How does a validating admission webhook differ from a mutating admission webhook?**
 
-- A. Both work only with Secrets
-- B. Mutating can modify an object before storage; validating accepts or rejects it
-- C. There is no difference between them
-- D. Validating changes the object; mutating only audits it
+- A. Mutating and validating admission webhooks both only inspect Secret objects and neither webhook type can change an admitted object.
+- B. A mutating webhook can modify an object during admission, while a validating webhook decides whether the resulting request is accepted.
+- C. Mutating and validating admission webhooks have the same behavior; the distinction changes only the name of the configuration object.
+- D. A validating webhook modifies the object before storage, while a mutating webhook can only record an audit event about the request.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** B
 
-A mutating webhook changes an object in the admission chain; a validating webhook decides whether to accept or reject it. Option d reverses these roles (it assigns object-changing to validating and audit-only to mutating), option a incorrectly limits both webhook types to Secrets only, and option c incorrectly claims there is no difference between them. See [chapter 17](../../course/17/ru.md).
+Mutating admission can modify an object during admission. Validating admission evaluates the resulting request and accepts or rejects it. The webhook types do not have identical behavior and are not limited to Secrets. See [chapter 17](../../course/17/ru.md).
 </details>
-
 ### 52. **Which task is part of security observability?**
 
 - A. Rely on a dashboard instead of collecting the underlying security signals.

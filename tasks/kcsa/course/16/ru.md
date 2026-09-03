@@ -184,13 +184,13 @@ flowchart LR
 
 ### 2. Какое утверждение об encryption at rest для `Secret` верно?
 
-   - a. Оно запрещает любому пользователю с `get secrets` прочитать значение через API.
+   - a. Оно запрещает чтение `Secret` через API даже субъекту, которому RBAC разрешает `get secrets`.
 
-   - b. Оно заменяет защиту рабочего узла.
+   - b. Оно защищает `Secret` только после монтирования в `Pod` и заменяет защиту рабочего узла.
 
-   - c. Оно превращает base64 в шифрование.
+   - c. Оно делает base64 криптографическим шифрованием и поэтому устраняет необходимость управлять ключами.
 
-   - d. Оно защищает данные в etcd и backup, но RBAC всё равно нужен для API-доступа.
+   - d. Оно защищает сохранённые данные в etcd/backup, но не отменяет RBAC для разрешённого API-доступа.
 
 <details>
 <summary>Ответ и разбор</summary>
@@ -232,18 +232,20 @@ flowchart LR
 
 ### 5. Какой набор мер лучше снижает риск container escape и повышения привилегий?
 
-   - a. Запустить каждый контейнер как `privileged`, но включить audit log.
+   - a. Оставить контейнер `privileged`, но добавить audit logging, resource limits и запуск образа только по immutable digest.
 
    - b. Убрать лишние capabilities и host access, применять PSS/PSA, seccomp и AppArmor там, где он поддерживается.
 
-   - c. Хранить секреты в base64.
+   - c. Сохранить широкие Linux capabilities, но включить encryption at rest для `Secret` и обязательную проверку подписи образа.
 
-   - d. Разрешить `hostPath` всем `Pod`, но использовать mTLS.
+   - d. Разрешить `hostPath` и runtime socket, но ограничить внешний egress через `NetworkPolicy` и использовать mTLS.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: b.** Это независимые профилактические барьеры: они сокращают доступ к хосту, допустимые действия ядра и опасные настройки `Pod`. Audit полезен для расследования, но не делает `privileged` контейнер безопасным.
+**Верный ответ: b.** Для уменьшения риска escape и privilege escalation прежде всего сокращают доступ контейнера к возможностям ядра и узла: убирают ненужные capabilities и host-level access, ограничивают опасные Pod-настройки через PSS/PSA и применяют seccomp/AppArmor там, где они поддерживаются.
+
+Audit logging, immutable images, encryption at rest, signature verification, `NetworkPolicy` и mTLS полезны для других слоёв защиты, но не компенсируют `privileged`, широкие capabilities, `hostPath` или доступ к runtime socket.
 
 </details>
 

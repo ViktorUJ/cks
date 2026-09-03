@@ -34,6 +34,16 @@ flowchart LR
 
 На схеме нет одной-единственной точки, после которой безопасность «закончилась». Компрометация исходного кода, CI/CD, registry или Kubernetes может привести к запуску вредоносной рабочей нагрузки. Следующие главы разложат эту систему на слои и конкретные контроли.
 
+CNCF сейчас развивает это направление через **TAG Security and Compliance** (Technical Advisory Group for Security and Compliance). В текущей структуре CNCF прежний **TAG-Security** архивирован. Один из ключевых материалов, созданных прежним TAG-Security, — **Cloud Native Security Whitepaper**; он описывает жизненный цикл безопасности артефакта через четыре стадии: **Develop → Distribute → Deploy → Runtime**. На associate-уровне важна сама идея — контроли встроены в каждую стадию поставки, а не добавлены только в конце, — а не номера версий документа.
+
+Экосистема CNCF классифицирует проекты по уровню зрелости: **Sandbox** (ранняя или экспериментальная стадия) → **Incubating** (растущее внедрение и зрелость проекта) → **Graduated** (высокая зрелость, устойчивое governance и подтверждённое production adoption).
+
+На текущую дату Falco, Open Policy Agent (OPA), Kyverno и Cilium имеют статус CNCF Graduated, поэтому их удобно использовать в курсе как примеры зрелых cloud-native реализаций runtime detection, policy-as-code и networking/security.
+
+При этом **Graduated не означает «официальный отраслевой стандарт» и не гарантирует, что KCSA будет проверять конкретный продукт**. Для экзамена сначала запоминают competency и границу контроля: runtime detection, admission/policy engine, container networking, observability и т. п. Конкретный инструмент является примером реализации этой функции.
+
+Maturity level проекта может изменяться, поэтому перед использованием в реальной архитектуре проверяйте актуальный статус на [странице проектов CNCF](https://www.cncf.io/projects/).
+
 ## 02.2. Почему безопасность критична
 
 Cloud native сокращает путь от изменения кода до production. Это полезно, но ошибка распространяется так же быстро: один неверный template `Deployment`, токен в переменной CI или публично доступный registry способны попасть во множество сред за минуты.
@@ -186,15 +196,18 @@ flowchart TB
 
 ### 3. Разработчику нужен доступ только на чтение `ConfigMap` в одном `Namespace`. Какое решение соответствует least privilege?
 
-   - a. Создать `ClusterRoleBinding` с `cluster-admin`, чтобы чтение точно не блокировалось.
-   - b. Разрешить неаутентифицированный доступ к API из внутренней сети.
-   - c. Создать `Role` только с нужными verb для `ConfigMap` в этом `Namespace` и привязать её к identity.
-   - d. Дать workload расширенные Linux capabilities, чтобы он мог читать Kubernetes API.
+   - a. Создать `ClusterRoleBinding` с `cluster-admin`, чтобы разработчик мог читать ConfigMap в любом namespace без дополнительных ограничений.
+
+   - b. Создать Role в нужном namespace, но выдать ей `create`, `update`, `delete` и `patch` для ConfigMap.
+
+   - c. Создать Role в нужном namespace только с необходимыми read verbs для ConfigMap и привязать её к identity разработчика.
+
+   - d. Добавить разработчику Linux capabilities на рабочем узле, чтобы эти host privileges заменили Kubernetes API authorization.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: c.** Least privilege ограничивает права нужным ресурсом, нужными действиями и минимальной областью. `cluster-admin` существенно шире требования, отключение authentication ослабляет контроль доступа, а Linux capabilities не предоставляют Kubernetes API permissions.
+**Верный ответ: c.** Least privilege ограничивает API permissions нужным ресурсом, нужными действиями и минимальной областью. Cluster-wide `cluster-admin` существенно шире требования, write verbs не соответствуют read-only задаче, а Linux capabilities не предоставляют Kubernetes API permissions.
 
 </details>
 

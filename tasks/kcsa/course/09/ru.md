@@ -34,7 +34,7 @@ spec:
       type: RuntimeDefault
   containers:
   - name: web
-    image: nginxinc/nginx-unprivileged:1.27-alpine
+    image: nginxinc/nginx-unprivileged:1.30.4-alpine-slim
     ports:
     - containerPort: 8080
     securityContext:

@@ -230,15 +230,18 @@ Snapshot `etcd` содержит то же чувствительное сост
 
 ### 4. Какой контроль наиболее непосредственно защищает данные `Secret`, сохранённые в `etcd` или его backup, от чтения из самого хранилища?
 
-   - a. `NetworkPolicy`, ограничивающая сетевые соединения между выбранными application Pods.
-   - b. Namespace labels, используемые для организационной классификации workloads.
-   - c. Encryption at rest для `Secret` вместе с ограничением доступа к `etcd`, ключам и snapshots.
-   - d. Base64-кодирование Secret data перед сохранением Kubernetes API object.
+   - a. Ограничить application traffic через NetworkPolicy и использовать TLS между пользовательскими сервисами, оставив storage data без encryption at rest.
+
+   - b. Ограничить Kubernetes API через RBAC и хранить Secret data в base64, считая кодирование достаточной защитой storage.
+
+   - c. Использовать encryption at rest и отдельно ограничить доступ к etcd, snapshots и ключевому материалу для расшифровки.
+
+   - d. Использовать mTLS между API Server и etcd, но хранить snapshots и ключи без отдельного access control.
 
 <details>
 <summary>Ответ и разбор</summary>
 
-**Верный ответ: c.** Encryption at rest защищает сохранённые API data, а доступ к `etcd`, snapshots и ключевому материалу должен быть отдельно ограничен. `NetworkPolicy` не шифрует storage, labels не обеспечивают confidentiality, а base64 является кодированием, а не шифрованием.
+**Верный ответ: c.** Encryption at rest защищает сохранённые записи, а `etcd`, backup/snapshots и decryption key material должны иметь отдельный access control. NetworkPolicy и transport mTLS защищают другие границы, а base64 не является encryption.
 
 </details>
 
