@@ -107,6 +107,16 @@ kubectl auth can-i get configmap/site-config -n shop \
 
 Команда полезна для проверки, но не заменяет ревью манифестов и фактических привязок. Особого внимания требуют права `get`, `list` и `watch` на `secrets`, а также `create`, `update`, `patch` и `delete` для рабочих нагрузок. Доступ к RBAC-ресурсам, `bind`, `escalate` и `impersonate` может позволить выдать или использовать дополнительные права. `cluster-admin`, `verbs: ["*"]` и `resources: ["*"]` не являются безопасным стартовым вариантом.
 
+Эти специальные authorization checks решают разные задачи:
+
+- `bind` относится к созданию или изменению `RoleBinding` / `ClusterRoleBinding`. Обычно caller должен уже обладать permissions, содержащимися в привязываемой `Role`/`ClusterRole`, на соответствующем scope. Явное разрешение `bind` на конкретную роль позволяет выполнить binding даже без собственного набора всех этих permissions.
+
+- `escalate` относится не к binding, а к созданию или изменению `Role` / `ClusterRole`. Обычно caller не может записать в роль permissions, которыми сам не обладает. Явное разрешение `escalate` является исключением из этой защиты.
+
+- classic `impersonate` разрешает отправлять запросы от имени указанного user/group/ServiceAccount или другого поддерживаемого identity attribute. Это отдельная возможность и её нельзя смешивать с `bind` или `escalate`.
+
+В Kubernetes v1.36 также доступен beta-механизм `ConstrainedImpersonation`, enabled by default. Он добавляет более узкие verbs семейства `impersonate:*` и `impersonate-on:*`, чтобы ограничивать не только identity, но и действия, выполняемые от её имени. Существующие RBAC rules с classic `impersonate` продолжают работать; API Server может использовать constrained checks и при необходимости fallback к classic `impersonate`.
+
 Разрешение `create` на `pods` заслуживает отдельного внимания: сама возможность создать `Pod` может стать шагом к повышению влияния субъекта, даже если этот субъект не имеет прямого доступа к целевым данным. Цепочка рассуждения такая: у субъекта есть право создать `Pod` → новый `Pod` может указать `serviceAccountName` любого `ServiceAccount`, доступного в namespace, если явный запрет не настроен отдельно → через выбранный `ServiceAccount` или через смонтированные `Secret`/`ConfigMap`/тома этот `Pod` может получить доступ к данным или API-правам, которых у исходного субъекта не было напрямую. Итоговый масштаб зависит от того, какие `ServiceAccount` и тома фактически доступны в namespace, и от отдельных ограничивающих controls (например, `automountServiceAccountToken: false`, PSA/PSS, ограниченные привязки RBAC для существующих `ServiceAccount`). Право на создание workload не следует трактовать как безусловный путь к любому `Secret` или любой `ServiceAccount` кластера - оно расширяет возможное влияние ровно настолько, насколько позволяет остальная конфигурация namespace.
 
 ## 10.5 Как это применяют на практике
@@ -129,6 +139,9 @@ kubectl auth can-i get configmap/site-config -n shop \
 | RBAC | Управление доступом через роли и привязки ролей. |
 | `Role` / `ClusterRole` | Набор правил в одном namespace / на уровне кластера. |
 | `RoleBinding` / `ClusterRoleBinding` | Привязка роли к пользователю, группе или `ServiceAccount`. |
+| `bind` | Специальное RBAC-разрешение на привязку Role/ClusterRole без необходимости самому обладать всеми permissions привязываемой роли. |
+| `escalate` | Специальное RBAC-разрешение на создание/изменение Role/ClusterRole с permissions сверх собственных permissions caller. |
+| `impersonate` | Classic Kubernetes permission на impersonation другой identity; в v1.36 также существует beta ConstrainedImpersonation с более узкими verbs. |
 
 ## 10.7 Exam Essentials / Итоги главы
 

@@ -75,9 +75,9 @@ flowchart LR
 | Overview of Cloud Native Security - 14% | 4C, shared responsibility, изоляцию, образы и код | [03](../03/ru.md)-[06](../06/ru.md) |
 | Kubernetes Cluster Component Security - 22% | API Server, etcd, kubelet, runtime, kubeconfig, сеть и storage | [07](../07/ru.md)-[09](../09/ru.md) |
 | Kubernetes Security Fundamentals - 22% | authentication, RBAC, PSS/PSA, `Secret`, `NetworkPolicy`, audit levels | [10](../10/ru.md)-[14](../14/ru.md) |
-| Kubernetes Threat Model - 16% | границы доверия, STRIDE-вопросы, persistence, DoS, lateral movement, escalation | [15](../15/ru.md)-[16](../16/ru.md) |
+| Kubernetes Threat Model - 16% | trust boundaries и data flows, persistence, DoS, malicious code / compromised applications, attacker on the network, access to sensitive data, privilege escalation | [15](../15/ru.md)-[16](../16/ru.md) |
 | Platform Security - 16% | SBOM, подписи, registry, admission, observability, PKI, TLS, mTLS и service mesh | [17](../17/ru.md)-[18](../18/ru.md) |
-| Compliance and Security Frameworks - 10% | PCI DSS, NIST, HIPAA, SOC 2, MITRE ATT&CK, SLSA, автоматизацию проверок | [19](../19/ru.md) |
+| Compliance and Security Frameworks - 10% | compliance frameworks, threat-modelling frameworks (например STRIDE), supply-chain compliance, automation и tooling | [19](../19/ru.md) |
 
 Короткий чеклист перед экзаменом:
 

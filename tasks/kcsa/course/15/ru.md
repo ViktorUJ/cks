@@ -77,6 +77,22 @@ flowchart LR
 
 ## 15.3 STRIDE, MITRE ATT&CK for Containers и kill chain
 
+> **Важно для KCSA domain mapping.**
+> Linux Foundation относит **Threat Modelling Frameworks** к домену
+> **Compliance and Security Frameworks**, а не к домену
+> **Kubernetes Threat Model**.
+>
+> STRIDE, MITRE ATT&CK for Containers и kill chain используются в этой главе
+> как cross-domain аналитический контекст для работы с уже определёнными
+> trust boundaries и data flows. На экзамене вопросы именно о назначении
+> threat-modelling frameworks следует относить к Compliance.
+>
+> Сам домен **Kubernetes Threat Model** проверяет trust boundaries/data flow,
+> persistence, denial of service, malicious code / compromised applications,
+> attacker on the network, access to sensitive data и privilege escalation.
+> Детальное exam-oriented повторение framework competencies находится в
+> [главе 19](../19/ru.md).
+
 Фреймворки не являются взаимозаменяемыми списками настроек. **STRIDE** помогает спросить, какие классы угроз есть у каждого потока и границы. **MITRE ATT&CK for Containers** описывает наблюдаемые тактики и техники против контейнерной среды. **Kill chain** упорядочивает развитие атаки от подготовки до достижения цели. Вместе они помогают перейти от абстрактной угрозы к приоритетам детекта и защиты. Подробное сопоставление с фреймворками и комплаенсом дано в главе 19.
 
 ### STRIDE: шесть вопросов к каждому элементу
@@ -184,7 +200,7 @@ Goal: получить production secrets
 - Модель угроз связывает активы, участников, потоки данных, границы доверия, угрозы и контроли.
 - В Kubernetes ключевые границы проходят между клиентом и API Server, API Server и etcd, API Server и kubelet, kubelet и runtime, runtime и `Pod`, а также между `Pod`, сетью и данными.
 - TLS защищает канал передачи, но для решения «разрешено ли действие» нужны аутентификация, авторизация и admission.
-- STRIDE систематизирует классы угроз, а MITRE ATT&CK for Containers и kill chain помогают описать поведение и этапы атаки.
+- STRIDE, MITRE ATT&CK for Containers и kill chain помогают анализировать угрозы и развитие атаки, но в официальной KCSA domain mapping **Threat Modelling Frameworks относятся к Compliance and Security Frameworks**; здесь они используются как cross-domain контекст.
 - Один контроль не закрывает всю атаку: RBAC, PSA, encryption, сегментация, аудит, runtime-детект и backup работают слоями.
 - Рабочая модель угроз должна быть короткой, привязанной к реальным потокам и обновляемой при изменении архитектуры.
 
@@ -239,6 +255,8 @@ Goal: получить production secrets
 
 </details>
 
+#### Cross-domain повторение: Compliance and Security Frameworks
+
 ### 3. Какая категория STRIDE лучше всего описывает чтение `Secret` из незащищённого snapshot etcd?
 
    - a. Information Disclosure.
@@ -272,6 +290,8 @@ Goal: получить production secrets
 **Верный ответ: a.** STRIDE помогает систематически анализировать угрозы на границах и потоках. ATT&CK for Containers даёт язык для описания наблюдаемого поведения противника. Ни один из них не является механизмом принудительного применения политики.
 
 </details>
+
+#### Возврат к Kubernetes Threat Model
 
 ### 5. Какой сценарий лучше всего иллюстрирует lateral movement после компрометации `Pod`?
 

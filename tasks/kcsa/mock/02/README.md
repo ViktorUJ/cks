@@ -90,18 +90,20 @@ A vulnerability scanner reports findings within its data and scan coverage at a 
 Running an automated dependency/vulnerability check during CI, before a change is merged or built, catches a newly introduced risk while it is cheapest and fastest to address, rather than after it is already running. a: checking only after production deployment delays detection past the point where prevention was possible. b: an annual audit leaves long windows where new dependency vulnerabilities go unnoticed. c: relying on end-user reports is reactive and does not prevent the vulnerable dependency from shipping in the first place. See [chapter 05](../../course/05/ru.md).
 </details>
 
-### 7. **An image is stored in an access-controlled artifact repository. Which additional evidence most directly establishes that the exact bytes being deployed are the approved artifact?**
+### 7. **A production image still contains the compiler, package manager, build caches, and source tree even though the application only needs one compiled binary at runtime. Which change most directly reduces that unnecessary runtime attack surface?**
 
-- A. The repository's retention period
-- B. The repository project or namespace name
-- C. Permission for the deployment system to pull the image
-- D. Digest/signature verification against the organization's approved artifact-trust policy
+- A. Keep the complete build toolchain in the final image and grant the container additional Linux capabilities for maintenance.
+- B. Replace the immutable image digest with a mutable `latest` tag so build tools can be updated after deployment.
+- C. Give the runtime registry credential push permission so the running Pod can rebuild and republish its own image.
+- D. Use a multi-stage build and copy only the required runtime artifact and dependencies into a minimal final image.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** D
 
-Repository storage and access control do not by themselves establish that the exact bytes being deployed are the approved artifact. An immutable digest identifies the content, while signature verification evaluated under the organization's trust policy provides the relevant authenticity/integrity evidence. Retention, repository naming, and pull permission address different repository properties. See [chapter 06](../../course/06/ru.md).
+A multi-stage build keeps compilers and other build-only tooling in a builder stage while copying only the required runtime artifact and dependencies into the final image. Reducing unnecessary packages and tools decreases runtime attack surface.
+
+This does not replace SCA, image scanning, signing, provenance, or runtime hardening; it addresses a different image-minimization competency. See [chapter 06](../../course/06/ru.md).
 </details>
 ### 8. **A source review finds unsafe deserialization logic that could process attacker-controlled data before the application image is built. Which action most directly addresses the risk at the Code layer?**
 
@@ -175,16 +177,16 @@ A dedicated etcd CA or CA chain keeps etcd client/peer trust independent from un
 </details>
 ### 13. **A Pod uses `hostNetwork: true`. Which statement is the safest assumption about ordinary Kubernetes `NetworkPolicy`?**
 
-- A. It always acts as a host firewall for that Pod on every CNI.
-- B. It gives every container a separate network namespace.
-- C. It automatically blocks kubelet access from the Pod.
-- D. Its effect on `hostNetwork` traffic depends on the network plugin, so it must not be treated as a universal host-firewall control.
+- A. Every CNI must enforce Pod selectors for `hostNetwork` Pods exactly as it does for ordinary pod-network traffic.
+- B. Every CNI must ignore `hostNetwork` Pods, so NetworkPolicy can never affect their traffic.
+- C. `hostNetwork` creates another isolated network namespace and therefore separates the Pod from node interfaces.
+- D. Behavior is network-plugin dependent, so ordinary NetworkPolicy must not be assumed to provide a universal host firewall for `hostNetwork` Pods.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** D
 
-`hostNetwork` removes the usual Pod network namespace boundary. Kubernetes documents that `NetworkPolicy` behavior for such Pods depends on the network plugin; ordinary policy therefore cannot be taught as a universal host firewall. Limit `hostNetwork` through RBAC and admission controls, then validate the chosen CNI behavior. See [chapter 13](../../course/13/ru.md).
+Kubernetes documents `NetworkPolicy` behavior for `hostNetwork` Pods as implementation-dependent. A network plugin may be able to distinguish and apply policy to that traffic, or it may treat the traffic like ordinary node-IP traffic. Therefore `NetworkPolicy` must not be presented as a universal host firewall for `hostNetwork` Pods. Limit `hostNetwork` through RBAC/admission and validate the behavior of the selected network implementation. See [chapter 13](../../course/13/ru.md).
 </details>
 
 ### 14. **Why should `kube-scheduler` and `kube-controller-manager` use distinct authenticated identities instead of sharing one broadly privileged client identity?**
@@ -242,18 +244,20 @@ Continuous configuration/FIM monitoring can detect and record deviations relativ
 `hostNetwork: true` makes a Pod share the node's network namespace instead of getting its own, giving it visibility into host network interfaces and ports. a: hostNetwork does not grant RBAC permissions. b: it does not create a NetworkPolicy object. d: sharing the host network namespace does not itself encrypt any traffic. See [chapter 09](../../course/09/ru.md).
 </details>
 
-### 18. **What protects a stolen storage snapshot?**
+### 18. **An attacker obtains a copy of a storage snapshot but does not have the storage decryption keys. Which control most directly protects the data contained in that snapshot?**
 
-- A. A label
-- B. A rollout
-- C. Storage encryption with key access control
-- D. A ServiceAccount
+- A. A Namespace label that identifies the application team responsible for the stored workload data.
+- B. A Deployment rollout that replaces running Pods after the snapshot has already been copied.
+- C. Encryption of the stored data at rest with decryption keys protected separately from the snapshot.
+- D. A ServiceAccount that gives the application read-only access to selected Kubernetes API resources.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-Encrypting the storage backend and controlling access to the decryption keys is what protects data if a storage snapshot is stolen — without the key, the stolen snapshot's contents remain unreadable. a: a label is metadata and provides no protection for snapshot contents. b: a rollout replaces running Pods but has no effect on an already-stolen snapshot. d: a ServiceAccount provides API identity, unrelated to protecting storage snapshot contents. See [chapter 09](../../course/09/ru.md).
+Encryption at rest protects snapshot contents when the attacker obtains the storage data but not the required decryption key material. Key access and storage encryption therefore have to be protected separately.
+
+Namespace labels, Pod rollouts, and Kubernetes API identities do not make an already copied storage snapshot confidential. See [chapter 09](../../course/09/ru.md).
 </details>
 
 ### 19. **An administrator uses `kubectl` from one workstation to manage both test and production clusters. Which practice most directly reduces wrong-cluster actions and limits credential blast radius?**
@@ -269,18 +273,20 @@ Encrypting the storage backend and controlling access to the decryption keys is 
 
 `kubeconfig` contexts select the cluster, user, and namespace used by `kubectl`. Separate contexts and identities, explicit context checks, and least-privilege permissions reduce both accidental production actions and the impact of credential compromise. Shared administrator credentials, disabled TLS verification, and copied bearer tokens increase risk. See [chapter 09](../../course/09/ru.md).
 </details>
-### 20. **Why is direct etcd user access dangerous?**
+### 20. **An administrator receives a `kubeconfig` from an untrusted source. Its user entry contains an `exec` credential plugin that points to a local executable. What is the main security concern?**
 
-- A. It rotates certificates
-- B. It scans images
-- C. It bypasses normal API-server controls
-- D. It creates Services
+- A. The `exec` entry only changes the default namespace and cannot run code on the administrator's workstation.
+- B. Kubernetes automatically converts the executable into a CNI plugin and runs it only inside cluster Pods.
+- C. A Kubernetes client may execute the configured credential helper locally, so untrusted kubeconfig files and exec plugins must be reviewed before use.
+- D. The `exec` entry automatically disables certificate verification for every cluster listed in the kubeconfig.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-Direct user access to etcd bypasses the API server entirely, which means authentication, authorization, and admission controls configured at the API server are never evaluated for that access — this is the danger. a: direct etcd access does not itself rotate certificates. b: it does not scan images. d: it does not create Service objects. See [chapter 07](../../course/07/ru.md).
+A kubeconfig can reference an exec-based credential plugin. A client such as `kubectl` may execute that configured helper on the administrator's workstation to obtain credentials. Therefore a kubeconfig from an untrusted source is not merely passive connection metadata and must be reviewed before use.
+
+The exec plugin is not a CNI plugin, does not merely select a namespace, and does not inherently disable TLS verification. See [chapter 09](../../course/09/ru.md).
 </details>
 
 ### 21. **A kubelet does not need its legacy unauthenticated read-only HTTP endpoint. Which configuration most directly removes that exposure?**
@@ -301,16 +307,18 @@ The kubelet legacy read-only port provides an unauthenticated endpoint and shoul
 
 ### 22. **A user may create RoleBindings in a namespace but must not be able to bind permissions they do not already hold. Which Kubernetes authorization rule is relevant?**
 
-- A. Anyone who may create a RoleBinding may bind any Role or ClusterRole without another permission check.
-- B. Kubernetes normally requires the caller to already hold the referenced permissions, unless the caller is explicitly authorized with the `bind` verb on that Role or ClusterRole.
-- C. NetworkPolicy determines which Role or ClusterRole a RoleBinding is allowed to reference.
-- D. ResourceQuota prevents RBAC privilege expansion by limiting the number of RoleBindings.
+- A. Creating a RoleBinding permits any Role or ClusterRole to be referenced without checking the caller's effective permissions.
+- B. The caller normally needs the referenced permissions unless explicitly authorized to `bind` that Role or ClusterRole.
+- C. NetworkPolicy decides which Role or ClusterRole a RoleBinding may reference based on the source namespace.
+- D. ResourceQuota prevents privilege expansion by limiting the number and scope of RoleBinding objects.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** B
 
-Binding a Role or ClusterRole is guarded so ordinary RoleBinding creation cannot grant permissions the caller does not already possess. The exceptional permission for that operation is `bind`. The `escalate` verb is a different RBAC safeguard used when creating or updating Role/ClusterRole rules. See [chapter 10](../../course/10/ru.md).
+Kubernetes prevents privilege escalation through role binding: a caller normally needs to already hold the permissions contained in the referenced Role or ClusterRole at the relevant scope. Explicit `bind` permission on that role is the special authorization that can bypass that normal restriction.
+
+`bind` applies to RoleBinding/ClusterRoleBinding. `escalate` instead applies to creating or modifying Role/ClusterRole rules beyond the caller's own permissions. See [chapter 10](../../course/10/ru.md).
 </details>
 
 ### 23. **What does a ServiceAccount provide?**
@@ -327,18 +335,18 @@ Binding a Role or ClusterRole is guarded so ordinary RoleBinding creation cannot
 A ServiceAccount's core role is to provide a workload with an API identity; separate RoleBindings or ClusterRoleBindings then grant that identity permissions. b: a ServiceAccount has no effect on network isolation. c: it does not automatically carry any permissions by itself. d: it plays no role in at-rest encryption. See [chapter 10](../../course/10/ru.md).
 </details>
 
-### 24. **An earlier authorizer returns Deny. A later one would Allow. What is the decision?**
+### 24. **An earlier configured authorizer returns `Deny`, while a later authorizer would have returned `Allow`. What result does kube-apiserver use?**
 
-- A. Deny; the first decisive verdict wins
-- B. NoOpinion
-- C. Admission changes it
-- D. Allow; any Allow wins
+- A. `Deny`, because a decisive authorization verdict ends evaluation before later authorizers are consulted.
+- B. `Allow`, because any later `Allow` overrides an earlier `Deny` in the configured authorizer chain.
+- C. `NoOpinion`, because conflicting decisive verdicts cancel and force authorization to restart without either result.
+- D. Admission decides the final authorization result after both authorizers have returned their independent verdicts.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** A
 
-In the Kubernetes authorization chain, configured authorizers are evaluated in order, and the first decisive `Allow` or `Deny` wins immediately — later authorizers are not consulted once a decisive verdict is reached, so an earlier `Deny` stands even if a later authorizer would have said `Allow`. b: `NoOpinion` is what non-decisive authorizers return, not the outcome once a Deny has already occurred. c: admission control runs after authorization and cannot override an authorization Deny. d: the chain is not an 'any Allow wins' model; a decisive Deny immediately ends evaluation. See [chapter 10](../../course/10/ru.md).
+Configured Kubernetes authorizers are evaluated in order. Once one returns a decisive `Allow` or `Deny`, evaluation stops; later authorizers are not consulted. Admission runs only after successful authorization and cannot overturn an authorization denial. See [chapter 10](../../course/10/ru.md).
 </details>
 
 ### 25. **Which is validating admission, not authorization?**
@@ -397,10 +405,10 @@ Pod Security Admission validates Pod specification fields against a Pod Security
 A Secret's data can be delivered to a container process by injecting it as an environment variable, which is one of the standard consumption mechanisms alongside volume mounts. a: a Secret does not itself grant RBAC permissions. b: using a Secret does not automatically encrypt etcd; that requires a separate EncryptionConfiguration. c: a Secret can in fact be exposed as an environment variable, so this option is factually false. See [chapter 12](../../course/12/ru.md).
 </details>
 
-### 29. **A troubleshooting user needs to send Kubernetes API requests while acting as another user, group, or ServiceAccount. Which RBAC verb is specifically sensitive because it authorizes that capability?**
+### 29. **For classic broad Kubernetes impersonation, which RBAC verb can authorize a caller to act as another user, group, or ServiceAccount?**
 
 - A. `bind` on a referenced Role or ClusterRole.
-- B. `impersonate` on the relevant user, group, or ServiceAccount resource.
+- B. `impersonate` on the relevant identity resource.
 - C. `escalate` on a Role or ClusterRole being created or modified.
 - D. `update` on a namespaced `NetworkPolicy` resource.
 
@@ -408,7 +416,11 @@ A Secret's data can be delivered to a container process by injecting it as an en
 
 **Correct answer:** B
 
-Kubernetes impersonation requires explicit authorization for the `impersonate` verb on the identity attribute being impersonated. This permission is sensitive because the caller can act with the effective rights of the impersonated identity. `bind` governs attaching RBAC roles, while `escalate` governs creating or changing RBAC roles with permissions the caller does not already hold. See [chapter 10](../../course/10/ru.md).
+The classic Kubernetes impersonation mechanism uses the `impersonate` verb on the relevant identity attribute. This permission is sensitive because, once the impersonation request is accepted, authorization evaluates the request using the impersonated identity.
+
+Kubernetes v1.36 also has beta `ConstrainedImpersonation`, enabled by default, with narrower `impersonate:*` and `impersonate-on:*` permissions. Existing classic `impersonate` RBAC rules continue to work, so B is the correct answer to the classic broad-impersonation question.
+
+`bind` governs RBAC role binding, while `escalate` governs creation or modification of Role/ClusterRole rules containing permissions beyond those held by the caller. See [chapter 10](../../course/10/ru.md).
 </details>
 ### 30. **Two NetworkPolicy objects both select the same Pod: one denies all ingress, and another explicitly allows ingress from a specific label selector on port 443. What is the resulting behavior for that Pod, assuming a supporting CNI?**
 
@@ -424,18 +436,20 @@ Kubernetes impersonation requires explicit authorization for the `impersonate` v
 Multiple NetworkPolicy objects selecting the same Pod are additive: the union of all matching allow rules applies, so the specific allow on port 443 opens exactly that path while everything else remains blocked by the deny-all baseline. b and c both wrongly assume one policy type universally overrides another; NetworkPolicy has no such precedence rule. d is incorrect because Kubernetes does not reject a second NetworkPolicy for overlapping selection. See [chapter 13](../../course/13/ru.md).
 </details>
 
-### 31. **A namespace has default-deny egress. Pods must still resolve internal Kubernetes DNS names. What is typically required?**
+### 31. **A NetworkPolicy ingress rule contains one `from` entry with both a `namespaceSelector` and a `podSelector`. Which sources match that single entry?**
 
-- A. No additional rule, because DNS is automatically exempt from egress policy.
-- B. A larger `ResourceQuota` so DNS packets are admitted by the API server.
-- C. An explicit egress allowance to the cluster DNS resolver on the required DNS port/protocol.
-- D. Disabling NetworkPolicy for the cluster so DNS can bypass the CNI.
+- A. Any Pod that matches either selector, even when its Namespace does not match the namespace selector.
+- B. Every Pod in the policy's own Namespace, because `podSelector` in `from` cannot select remote namespaces.
+- C. Pods that match the `podSelector` and are located in Namespaces that match the `namespaceSelector`.
+- D. No Pods; Kubernetes rejects a `from` item whenever both selectors appear in the same list element.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-Default-deny egress can block DNS queries too. The policy must permit the required traffic to the cluster DNS resolver, commonly UDP/TCP 53 depending on the environment. ResourceQuota does not control packets and cluster-wide policy removal is unnecessary. See [chapter 13](../../course/13/ru.md).
+When `namespaceSelector` and `podSelector` are present in the same `from` entry, they are combined: the source Pod must match the Pod selector **and** belong to a Namespace matching the Namespace selector. Separate list entries represent alternative allowed sources.
+
+This tests selector composition rather than repeating the default-deny/explicit-allow competency. See [chapter 13](../../course/13/ru.md).
 </details>
 
 ### 32. **Beyond the authenticated caller identity, which audit fields provide useful **corroborating context** about the reported client and network origin during investigation?**
@@ -743,18 +757,20 @@ Short-lived credentials reduce the exposure window after theft, and separate wor
 `ValidatingAdmissionPolicy` provides built-in declarative validation with CEL and can reject a request. Kubernetes v1.36 also has stable `MutatingAdmissionPolicy`, which uses CEL for mutation rather than validation; therefore the question specifies validation to make `ValidatingAdmissionPolicy` uniquely correct. See [chapter 17](../../course/17/ru.md).
 </details>
 
-### 54. **An Istio workload is selected by `PeerAuthentication` with mode `STRICT`. What does that setting establish by itself?**
+### 54. **A security team wants a numeric time series of Kubernetes API authentication failures so it can graph the rate over time and alert on an unusual increase. Which component is primarily suited to collecting and storing those metrics?**
 
-- A. It grants Kubernetes API permissions to every peer that presents a valid mesh certificate.
-- B. It allows plaintext and mTLS connections equally, while only adding telemetry to the request.
-- C. It requires matching inbound mesh traffic to use mTLS, but does not by itself authorize which authenticated identity may call the application.
-- D. It replaces `NetworkPolicy`, Kubernetes RBAC, and application authorization for the selected workload.
+- A. Falco, which primarily detects runtime behavior such as suspicious process or syscall activity.
+- B. Hubble, which primarily provides Cilium network-flow visibility and policy-verdict context.
+- C. Prometheus, which collects and stores numeric time-series metrics that can feed queries, dashboards, and alerts.
+- D. NetworkPolicy, which defines allowed network flows but is not a time-series metrics datastore.
 
 <details><summary>Answer</summary>
 
 **Correct answer:** C
 
-Istio `PeerAuthentication` in `STRICT` mode requires mTLS for matching inbound mesh traffic. mTLS establishes protected peer identity and transport, but `STRICT` alone does not decide which authenticated workload identity is authorized to call a service or operation. Separate authorization and segmentation controls are still needed. See [chapter 18](../../course/18/ru.md).
+Prometheus is designed to collect and store numeric time-series metrics. Those metrics can then be queried directly or visualized and alerted on through tools such as Grafana.
+
+Falco focuses on runtime detection, Hubble on Cilium network-flow observability, and NetworkPolicy on traffic enforcement. See [chapter 18](../../course/18/ru.md).
 </details>
 
 ## Compliance and Security Frameworks - questions 55-60

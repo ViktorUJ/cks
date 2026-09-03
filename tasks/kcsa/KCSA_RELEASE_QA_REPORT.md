@@ -8,22 +8,25 @@
 
 ## Confirmed fixes (most recent independent fixes-only audit round)
 
-### P1 — domain placement and semantic duplicates
+### P1 — Threat Modelling Frameworks domain mapping
 
-- **Mock01 Q20** replaced: no longer duplicates a Kubernetes Security Fundamentals NetworkPolicy-application question inside the Cluster Component Security domain; now tests the CNI plugin's Pod-networking role, a genuine Cluster Component / Container Networking competency. Key position B preserved.
-- **Mock02 Q8** replaced: no longer tests Secrets-handling (a Security Fundamentals competency) inside Overview of Cloud Native Security; now tests Workload and Application Code Security, a genuine Overview competency. Key position B preserved.
-- **Mock02 Q19** replaced: no longer tests PKI/certificate-rotation evidence (a Platform Security competency) inside Cluster Component Security; now tests Client Security (`kubeconfig` contexts and credential blast radius). Key position D preserved.
-- **Mock02 Q47/Q48** deduplicated: Q47 keeps the fail-closed `failurePolicy: Fail` webhook competency; Q48 no longer tests the inverse of the same fact and now tests Hubble/Cilium flow-visibility evidence. Key positions B and A preserved respectively.
-- **Mock02 Q29** replaced: no longer restates Mock01 Q24's unnecessary-ServiceAccount-token competency; now tests the sensitivity of the `impersonate` RBAC verb. Key position B preserved.
-- **Mock02 Q54** replaced: the prior "admission rejection record" answer was not a concrete taught evidence object and was tautological; now tests Istio `PeerAuthentication` `STRICT` mode as a mTLS boundary that does not by itself authorize callers. Key position C preserved.
+- **`course/15/ru.md`**: added an explicit KCSA domain-mapping note after the §15.3 heading stating that Linux Foundation places Threat Modelling Frameworks (STRIDE, MITRE ATT&CK for Containers, kill chain) under **Compliance and Security Frameworks**, not Kubernetes Threat Model; the frameworks are used here only as cross-domain analytical context. Updated the §15.8 Exam Essentials bullet to match. Added `#### Cross-domain повторение: Compliance and Security Frameworks` immediately before self-check Q3 and `#### Возврат к Kubernetes Threat Model` immediately before Q5, so the STRIDE/ATT&CK self-check questions are explicitly marked as cross-domain rather than implied Threat Model competencies. Q3–Q5 content and keys unchanged.
+- **`course/20/ru.md`**: corrected the §20.4 domain-review table. The `Kubernetes Threat Model - 16%` row no longer lists "STRIDE-вопросы"; it now lists only genuine Threat Model competencies (trust boundaries/data flows, persistence, DoS, malicious code/compromised applications, attacker on the network, access to sensitive data, privilege escalation). The `Compliance and Security Frameworks - 10%` row now explicitly names threat-modelling frameworks (e.g., STRIDE) as part of that domain instead of only listing compliance-standard names.
 
-### P2 — structure, typos, and answer-shape leakage
+### P2 — answer-shape leakage
 
-- Inserted the missing `## Kubernetes Security Fundamentals - questions 22-34` heading before Mock02 Q22.
-- Corrected two typos: `course/01/ru.md` glossary ("ключевы" → "ключевые") and `course/17/ru.md` self-check Q2 stem ("организациионной" → "организационной").
-- Rebalanced answer-shape leakage (correct option uniquely longer/more qualified than every distractor) in: `course/03` Q5, `course/06` Q4, `course/09` Q4, `course/10` Q5, `course/12` Q3, `course/13` Q5, `course/15` Q5, Mock01 Q14/Q24/Q26/Q33/Q42, Mock02 Q5/Q10/Q34/Q52/Q60 — all existing key positions preserved.
-- Regenerated `KCSA_THEORY_IMPROVEMENT_REPORT.md` Mock01/Mock02 summary so it matches the corrected live questions instead of describing superseded content.
-- This report's header was made release-number-neutral so it cannot become stale merely because the ZIP iteration number changes; prior round-specific changelog content has been superseded by this version.
+- **`course/07/ru.md` self-check Q5** replaced: the correct option no longer bundles a complete, uniquely detailed security rule against three short categorical distractors; all four options are now comparable length/structure. Key position c preserved.
+- **Mock02 Q13** replaced: the correct option no longer stands out as the only long, heavily qualified statement; distractors were rewritten to comparable length and specificity. Key position D preserved.
+- **Mock02 Q22** replaced: the correct option no longer spells out the complete `bind` semantics at much greater length than the distractors; option lengths rebalanced. Key position B preserved.
+
+### Prior rounds
+
+- Theory traceability/currentness fixes for etcd PKI trust separation and RBAC `bind`/`escalate`/`impersonate`/`ConstrainedImpersonation` semantics (`course/07`, `course/10`).
+- Mock01↔Mock02 semantic-duplicate removals across signature verification, etcd exposure, NetworkPolicy DNS/selector composition, and service-mesh mTLS competencies.
+- Domain-placement corrections for Mock01/Mock02 CNI, Code-layer, Client Security, and admission-webhook competencies.
+- Root question bank removed from release scope by explicit user decision; this is documented, not treated as an open defect.
+
+### Mock01 и Mock02
 
 ## Required regression and packaging evidence
 
