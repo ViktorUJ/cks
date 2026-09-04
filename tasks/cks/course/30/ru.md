@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 30. Обнаружение угроз и расследование фаз атаки
 
@@ -66,16 +66,18 @@ kubectl get events -A --sort-by='.lastTimestamp'
 
 ```bash
 sudo systemctl cat falco
-sudo grep -nE '^(rules_file|rules_files):|falco_rules' /etc/falco/falco.yaml
+sudo grep -nE '^(rules_files):|falco_rules' /etc/falco/falco.yaml
 sudo ls -l /etc/falco/falco_rules*.yaml /etc/falco/rules.d 2>/dev/null || true
-sudo falco --list | grep -Ei 'shell|sensitive|dev.mem|read.*shadow'
+
+# Имена и описания rules.
+sudo falco -L | grep -Ei 'shell|sensitive|dev.mem|read.*shadow'
 ```
 
 Порядок обработки важен: базовые rules и lists должны быть доступны до local-файла. При Helm/DaemonSet путь может находиться в `ConfigMap`, а проверка делается через `kubectl -n falco get configmap`, `kubectl -n falco get pods` и логи конкретного Falco Pod. Не создавайте второй независимый конфиг без понимания, какой из них запускает service.
 
 ### Безопасное изменение существующего правила
 
-Если нужно усилить существующее правило, используйте его имя и `override`, а не копируйте vendor rule целиком. Ниже пример добавляет к существующему правилу `Terminal shell in container` условие: alert нужен только для контейнеров вне namespace `debug`. Точное имя правила и допустимые поля сначала сверяют с `falco --list` и установленной версией ruleset.
+Если нужно усилить существующее правило, используйте его имя и `override`, а не копируйте vendor rule целиком. Ниже пример добавляет к существующему правилу `Terminal shell in container` условие: alert нужен только для контейнеров вне namespace `debug`. Точное имя готового правила сверяют через `falco -L` или `falco -l '<rule>'`, а допустимые event fields - через `falco --list=syscall` и документацию установленной версии.
 
 ```yaml
 # /etc/falco/falco_rules.local.yaml
@@ -112,7 +114,7 @@ sudo falco --list | grep -Ei 'shell|sensitive|dev.mem|read.*shadow'
 Перед reload валидируйте полный конфиг. В systemd-варианте после успешной проверки reload/restart нужен, чтобы service перечитал local-file. На production node согласуйте окно и следите за health агента: неисправное YAML-правило может оставить runtime detection без работающего процесса.
 
 ```bash
-sudo falco --validate /etc/falco/falco.yaml
+sudo falco -c /etc/falco/falco.yaml --dry-run
 sudo systemctl restart falco
 sudo systemctl is-active falco
 sudo journalctl -u falco --since '2 minutes ago' --no-pager
@@ -160,7 +162,8 @@ output: >
 
 ```bash
 # Документация доступных полей на установленной версии.
-sudo falco --list | grep -E '^(proc\.|container\.|k8s\.|fd\.|evt\.|user\.)'
+sudo falco --list=syscall | \
+  grep -E '^(proc\.|container\.|k8s\.|fd\.|evt\.|user\.)'
 
 # После controlled test убедиться, что alert действительно содержит Kubernetes metadata.
 sudo journalctl -u falco --since '10 minutes ago' --no-pager | \
@@ -331,7 +334,7 @@ flowchart LR
 Проверьте YAML и загрузку, затем создайте изолированный test workload. `emptyDir` даёт writable path без записи в root filesystem образа.
 
 ```bash
-sudo falco --validate /etc/falco/falco.yaml
+sudo falco -c /etc/falco/falco.yaml --dry-run
 sudo systemctl restart falco
 
 kubectl create namespace runtime-lab
@@ -380,7 +383,7 @@ kubectl -n falco logs <falco-pod-on-test-node> --since=5m | \
 kubectl delete namespace runtime-lab
 ```
 
-Если alert отсутствует, не повышайте priority и не переписывайте condition вслепую. Проверьте: local-file реально загружен, `falco --validate` успешен, Falco работает на node тестового Pod, path совпадает с `fd.name`, event type поддержан driver-ом и Kubernetes metadata integration доступна. Если fields присутствуют, но пусты, расследуйте CRI integration отдельно и всё равно сопоставьте container ID через `crictl`.
+Если alert отсутствует, не повышайте priority и не переписывайте condition вслепую. Проверьте: local-file реально загружен, `falco -c /etc/falco/falco.yaml --dry-run` успешен, Falco работает на node тестового Pod, path совпадает с `fd.name`, event type поддержан driver-ом и Kubernetes metadata integration доступна. Если fields присутствуют, но пусты, расследуйте CRI integration отдельно и всё равно сопоставьте container ID через `crictl`.
 
 ## 30.7. Как это применяют в продакшене
 

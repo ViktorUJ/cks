@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 24. Минимизация базового образа
 
@@ -65,9 +65,11 @@ libraries.
 
 | Runtime base | Что внутри | Хорошо подходит | Ограничения и риск |
 |---|---|---|---|
-| `scratch` | пустой образ, 0 файлов | статический Go/Rust/C++ binary, в который встроены нужные данные | нет shell, CA, timezone, DNS-конфига и dynamic loader; dynamic binary не запустится |
+| `scratch` | пустой base image: в самом image нет runtime-файлов | статический Go/Rust/C++ binary, которому не нужны отсутствующие runtime-библиотеки | нет shell, CA bundle, timezone data и dynamic loader; Kubernetes/runtime обычно предоставляет Pod `/etc/resolv.conf`, но приложение всё равно должно иметь совместимый DNS resolver и необходимые runtime-данные |
 | distroless | только выбранный runtime/библиотеки, без shell и package manager | Go/Java/Node/Python приложения, когда нужен минимальный поддерживаемый runtime | обычный `kubectl exec -- sh` невозможен; отладка через logs, metrics и `kubectl debug` |
 | Alpine | минимальный Linux с BusyBox и `apk` | приложение или диагностика, которым реально нужны shell/пакеты | shell и package manager остаются; `musl` вместо glibc может быть несовместим с native dependency |
+
+`/etc/resolv.conf`, `/etc/hosts` и hostname-related files могут быть предоставлены kubelet/container runtime при запуске Pod и не являются файлами, которые нужно автоматически копировать в `scratch`.
 
 ```mermaid
 flowchart TB
@@ -118,7 +120,7 @@ compiler, package cache и исходники. Последний stage полу
 ```dockerfile
 # syntax=docker/dockerfile:1.7
 # Dockerfile
-FROM golang:1.23.6-alpine3.21 AS builder
+FROM golang:1.27.1-alpine3.24 AS builder
 WORKDIR /src
 
 # Редко меняющиеся dependency manifests выше кода: лучше cache.

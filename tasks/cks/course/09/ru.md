@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 09. Небезопасные аргументы компонентов, TLS-хардненинг и проверка бинарников
 
@@ -61,7 +61,7 @@ TLS и RBAC образуют один контроль. Но следующие 
 |---|---|---|---|
 | `kube-apiserver` | `--anonymous-auth=true` | запрос становится `system:anonymous`; при ошибочном RBAC получает доступ | `--anonymous-auth=false` |
 | `kube-apiserver` | `--authorization-mode=AlwaysAllow` или добавленный `AlwaysAllow` | любой аутентифицированный запрос проходит authorization | для kubeadm обычно `Node,RBAC` |
-| `kube-apiserver` | `--profiling=true`, `--enable-profiling=true` | profiling может раскрыть состояние процесса и не нужен на публичной границе | `--profiling=false` |
+| `kube-apiserver` | `--profiling=true` | profiling может раскрыть состояние процесса и не нужен на публичной границе | `--profiling=false` |
 | `kube-apiserver` | legacy `--insecure-port`/`--insecure-bind-address` | API без TLS и authentication | не включать; в современных Kubernetes эти legacy-опции удалены |
 | `kubelet` | `--read-only-port` не равен `0` | неаутентифицированный endpoint может раскрыть Pod и node data | `--read-only-port=0` или `readOnlyPort: 0` |
 | `kubelet` | `--anonymous-auth=true` | анонимный клиент попадает на kubelet API | `--anonymous-auth=false` или поле config API |
@@ -113,7 +113,7 @@ Kubelet не является static Pod: его конфигурация обы
 ```mermaid
 flowchart TB
     inspect["Определить активный файл\nи сохранить состояние"] --> edit["Одна минимальная правка"]
-    edit --> reload["kubelet пересоздаёт static Pod\nили systemctl restart kubelet"]
+    edit --> reload["kubelet пересоздаёт static Pod\nпо изменению manifest"]
     reload --> health["Проверить logs, Ready, /readyz"]
     health --> test["Проверить запрет и TLS"]
     test --> pass["Зафиксировать результат\nили откатить"]
@@ -151,10 +151,7 @@ sudo crictl ps -a --name kube-apiserver
 sudo crictl logs "$(sudo crictl ps -aq --name kube-apiserver | head -n1)"
 ```
 
-Для kubelet сначала проверьте значения sysctl и конфигурацию, затем перезапустите только
-его. После `systemctl restart kubelet` статические Pod на этой ноде также кратко
-пересоздаются, поэтому не выполняйте такую операцию одновременно на всех control-plane
-нодах.
+Для kubelet сначала проверьте значения sysctl и конфигурацию, затем перезапустите только его. Обычный `systemctl restart kubelet` сам по себе не останавливает уже запущенные Pod и контейнеры: container runtime продолжает их выполнять, а kubelet после старта восстанавливает reconciliation. Тем не менее на control-plane меняйте kubelet по одной ноде и контролируйте Node heartbeat, kubelet logs и `/readyz`: ошибка конфигурации может оставить ноду `NotReady` или помешать дальнейшему управлению static Pod.
 
 ```yaml
 # /var/lib/kubelet/config.yaml - пример фрагмента конфигурационного API.

@@ -16,9 +16,9 @@ Audit logging записывает события о запросах к `kube-a
 | Каков результат? | код и причина ответа в `responseStatus` |
 
 ```mermaid
-flowchart LR
-    client["пользователь, controller или ServiceAccount"] -->|"запрос к API"| api["kube-apiserver"]
-    api --> auth["authentication, authorization, admission"]
+flowchart TB
+    client["Пользователь, controller<br/>или ServiceAccount"] -->|"запрос к API"| api["kube-apiserver"]
+    api --> auth["authentication, authorization,<br/>admission"]
     auth --> object["API-объект и etcd"]
     api --> policy["audit policy"]
     policy --> log["log backend"]

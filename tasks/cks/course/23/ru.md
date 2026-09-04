@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 23. Pod-to-Pod шифрование и mTLS: Cilium, Istio и Linkerd
 

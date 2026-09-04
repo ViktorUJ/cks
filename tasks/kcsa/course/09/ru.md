@@ -46,11 +46,11 @@ spec:
 Этот baseline уменьшает привилегии процесса: workload запускается non-root, не получает дополнительные Linux capabilities, не может повышать привилегии через `no_new_privs`-совместимый путь и использует `RuntimeDefault` seccomp. Это не универсальный профиль для любого image: приложение всё равно должно быть совместимо с non-root UID и writable paths. `containerPort` не является security control и не перенастраивает приложение.
 
 ```mermaid
-flowchart LR
-    app["Процесс в Pod"] --> sc["securityContext<br/>UID и capabilities"]
-    sc --> kernel["Ядро рабочего узла"]
-    risky["privileged, hostPID, hostNetwork<br/>или опасный том"] --> host["Более широкий доступ к узлу"]
-    sc --> limited["Меньший радиус поражения"]
+flowchart TB
+    app["Процесс<br/>в Pod"] --> sc["securityContext<br/>UID и<br/>capabilities"]
+    sc --> kernel["Ядро<br/>рабочего узла"]
+    risky["privileged,<br/>hostPID,<br/>hostNetwork или<br/>опасный том"] --> host["Более широкий<br/>доступ к узлу"]
+    sc --> limited["Меньший<br/>радиус<br/>поражения"]
     style app fill:#326ce5,color:#fff
     style sc fill:#0f9d58,color:#fff
     style risky fill:#db4437,color:#fff

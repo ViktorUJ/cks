@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 33. Экзамен CKS: формат, тайм-менеджмент, документация и чеклист
 
@@ -152,7 +152,7 @@ alias k=kubectl
 export do="--dry-run=client -o yaml"
 
 # Каркас Pod, затем добавить securityContext и volumes в vim.
-k run hardened --image=nginx:stable $do > pod.yaml
+k run hardened --image=nginxinc/nginx-unprivileged:1.30.4-alpine-slim $do > pod.yaml
 vim pod.yaml
 k apply -f pod.yaml
 k get pod hardened -o yaml
@@ -172,12 +172,14 @@ spec:
       type: RuntimeDefault
   containers:
   - name: app
-    image: nginx:stable
+    image: nginxinc/nginx-unprivileged:1.30.4-alpine-slim
     securityContext:
       allowPrivilegeEscalation: false
       readOnlyRootFilesystem: true
       capabilities:
         drop: ["ALL"]
+    ports:
+    - containerPort: 8080
     volumeMounts:
     - name: tmp
       mountPath: /tmp
@@ -210,8 +212,9 @@ k get pod <pod> -o wide
 
 ```bash
 ssh <control-plane>
+sudo install -d -m 700 /root/k8s-manifest-backup
 sudo cp -a /etc/kubernetes/manifests/kube-apiserver.yaml \
-  /etc/kubernetes/manifests/kube-apiserver.yaml.before-cks
+  /root/k8s-manifest-backup/kube-apiserver.yaml.before-cks
 sudo vim /etc/kubernetes/manifests/kube-apiserver.yaml
 
 # Kubelet замечает изменение manifest; не надо создавать обычный Pod через kubectl.

@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 19. Pod Security Admission и Pod Security Standards
 
@@ -58,7 +58,7 @@ Pod Security Standards определяют три cumulative-профиля. У
 
 ### `baseline`: отсечь очевидный breakout
 
-`baseline` запрещает опасные механизмы, которые редко нужны приложению: `privileged: true`, `hostNetwork`, `hostPID`, `hostIPC`, большинство `hostPath`, небезопасные SELinux/AppArmor/seccomp-настройки и опасные Linux capabilities. Он подходит как переходный минимум, в том числе для namespace со старыми workloads.
+`baseline` запрещает опасные механизмы, которые редко нужны приложению: `privileged: true`, `hostNetwork`, `hostPID`, `hostIPC`, `hostPath` volumes, небезопасные SELinux/AppArmor/seccomp-настройки и опасные Linux capabilities. Он подходит как переходный минимум, в том числе для namespace со старыми workloads.
 
 Baseline не обещает, что процесс не root и не требует полного hardening `securityContext`; его задача - не допустить наиболее известных путей выхода к хосту. Для прикладного production namespace это обычно промежуточное состояние, а не конечная цель.
 
@@ -79,7 +79,9 @@ spec:
       type: RuntimeDefault
   containers:
   - name: web
-    image: nginx:1.27.4
+    image: nginxinc/nginx-unprivileged:1.30.4-alpine-slim
+    ports:
+    - containerPort: 8080
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -88,7 +90,7 @@ spec:
 
 | Проверка restricted | Почему важна |
 |---|---|
-| `runAsNonRoot: true` либо ненулевой UID | container не должен стартовать от root |
+| `runAsNonRoot: true` (обязательно) и `runAsUser` не `0`, если задан | container не должен стартовать от root: PSS restricted это две отдельные проверки, а не альтернативы |
 | `allowPrivilegeEscalation: false` | процесс не получает права через setuid/setgid и родственные механизмы |
 | `capabilities.drop: ["ALL"]` | нет неявных Linux capabilities; добавляют только явно допустимое исключение |
 | `seccompProfile.type: RuntimeDefault` или `Localhost` | ядро фильтрует доступные syscalls |

@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 27. Статический анализ нагрузок и образов
 
@@ -219,7 +219,7 @@ CMD python /app/server.py
 
 ```dockerfile
 # syntax=docker/dockerfile:1.7
-FROM golang:1.23.6-alpine3.21 AS build
+FROM golang:1.27.1-alpine3.24 AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

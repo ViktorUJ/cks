@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 01. Введение: экзамен CKS, отличия от CKA и устройство курса
 
@@ -37,8 +37,8 @@ flowchart TB
 
 Версии Kubernetes нужно различать:
 
-- **Версия обучения и лаб этого курса - `v1.36`** (`k8_version = "1.36.0"` в лабораторных окружениях): на ней проверены команды, флаги и поведение admission-механизмов курса.
-- **Версию экзаменационной среды задаёт Linux Foundation, и она может отставать от версии курса.** На момент последней проверки актуальная программа CNCF - [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), а страница LF [«Important Instructions: CKS»](https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks) указывает Kubernetes **v1.34** для экзамена CKS. Поэтому **не считайте `v1.36` версией экзамена**: перед регистрацией сверяйте версию и проходной балл с официальными страницами LF ([Important Instructions](https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks), [FAQ](https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks)).
+- **Версия обучения и лаб этого курса - `v1.36`** (`k8_version = "1.36.0"` в лабораторных окружениях): на ней проверяются Kubernetes-native команды, флаги и API-поведение курса; compatibility third-party компонентов необходимо сверять с их собственной support matrix.
+- **Версию экзаменационной среды задаёт Linux Foundation, и она может отставать от версии курса.** На дату проверки `2026-09-04` официальные страницы LF - основная страница [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/), [«Important Instructions: CKS»](https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks) и [FAQ](https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks) - согласованно указывают Kubernetes **v1.35** для экзамена CKS. Опубликованный CNCF curriculum overview по имени файла остаётся [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), но это не отменяет более новую version, зафиксированную непосредственно на страницах LF. Поэтому **не считайте `v1.36` версией экзамена** и не полагайтесь на версию, зафиксированную в этом курсе как постоянную: непосредственно перед попыткой сверяйте версию, проходной балл и формат с официальными страницами LF и с версией, показанной в ExamUI.
 
 Различие практическое: синтаксис объекта и поведение admission сверяйте с документацией той версии, которая открыта в экзаменационной среде, а не с версией курса.
 

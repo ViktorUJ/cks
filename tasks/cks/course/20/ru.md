@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 20. Admission-контроллеры и policy-движки: OPA/Gatekeeper и Kyverno
 
@@ -223,6 +223,13 @@ violation[{"msg": msg}] {
 исключения или расширенная логика.
 
 ## 20.4. Kyverno 1.19: CEL-based policy types
+
+> **Compatibility note.** Kyverno v1.19 официально поддерживает Kubernetes v1.33-v1.35
+> (`kyverno.io/docs/installation/releases/`, released Aug 2026). Целевая версия курса
+> - v1.36: она может работать с Kyverno v1.19, но не входит в протестированную и
+> гарантированную support matrix проекта. Compatibility third-party admission-компонентов
+> (Kyverno, Gatekeeper и аналоги) необходимо сверять с их собственной release matrix
+> отдельно от версии Kubernetes курса.
 
 Начиная с Kyverno 1.19 основной путь - отдельные CEL-based типы группы
 `policies.kyverno.io/v1`: `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy` и
@@ -479,7 +486,7 @@ spec:
     runAsNonRoot: true
   containers:
   - name: nginx
-    image: nginx:1.27.4
+    image: nginxinc/nginx-unprivileged:1.30.4-alpine-slim
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -498,7 +505,7 @@ metadata:
 spec:
   containers:
   - name: nginx
-    image: nginx:1.27.4
+    image: nginx:1.30.4
 EOF
 # Ожидается: admission webhook или ValidatingAdmissionPolicy ... denied the request
 ```

@@ -7,11 +7,11 @@
 Модель угроз не обещает устранить весь риск. Она помогает связать сценарий атаки с наблюдаемым проявлением и несколькими независимыми контролями. Один контроль может дать сбой, поэтому Kubernetes защищают слоями: от исходного кода и образа до `Pod`, API, сети и рабочего узла.
 
 ```mermaid
-flowchart LR
+flowchart TB
     attacker["атакующий"] --> vector["вектор атаки"]
-    vector --> impact["последствие для кластера"]
-    controls["контроли: policy, RBAC, сеть, runtime, аудит"] -. "уменьшают вероятность и ущерб" .-> vector
-    detect["логи и runtime detection"] -. "дают сигнал" .-> impact
+    vector --> impact["последствие<br/>для кластера"]
+    controls["контроли: policy, RBAC,<br/>сеть, runtime, аудит"] -. "уменьшают вероятность<br/>и ущерб" .-> vector
+    detect["логи и runtime<br/>detection"] -. "дают сигнал" .-> impact
     style attacker fill:#db4437,color:#fff
     style vector fill:#f4b400,color:#000
     style impact fill:#673ab7,color:#fff
@@ -91,12 +91,12 @@ spec:
 **Чем закрывается.** RBAC выдаёт доступ к `Secret` конкретным identity и только нужными глаголами; особенно опасны широкие `list` и `watch`. Encryption at rest защищает данные в etcd и backup при потере носителя или прямом доступе к хранилищу, но не защищает от субъекта, которому API уже разрешает `get`. Шифрование томов, защита backup, минимизация числа монтируемых секретов, разделение `ServiceAccount` и безопасная работа с логами сужают последствия. Для особо чувствительных данных внешние secret manager и KMS дают отдельный контур управления ключами.
 
 ```mermaid
-flowchart LR
+flowchart TB
     client["identity с RBAC"] --> api["API Server"]
     api --> etcd[("etcd")]
-    api --> pod["Pod: volume или env"]
-    encrypt["encryption at rest"] -. "защищает сохранённые данные" .-> etcd
-    rbac["least-privilege RBAC"] -. "ограничивает чтение API" .-> api
+    api --> pod["Pod: volume<br/>или env"]
+    encrypt["encryption<br/>at rest"] -. "защищает<br/>сохранённые данные" .-> etcd
+    rbac["least-privilege<br/>RBAC"] -. "ограничивает<br/>чтение API" .-> api
     style client fill:#326ce5,color:#fff
     style api fill:#f4b400,color:#000
     style etcd fill:#673ab7,color:#fff

@@ -6,18 +6,19 @@
 
 ## 08.1 Kubelet и его API
 
-`kubelet` - агент Kubernetes на каждом рабочем узле. Он получает назначенные ему `Pod` через API Server, следит за их жизненным циклом и обращается к container runtime через CRI. Для диагностики и управления `kubelet` предоставляет HTTPS API, обычно на порту `10250`.
+`kubelet` - агент Kubernetes на каждом рабочем узле. Он не получает `Pod` через push-уведомление: kubelet сам открывает watch-соединение к API Server (`GET .../pods?fieldSelector=spec.nodeName=<узел>&watch=true`) и подписывается на изменения `Pod`, у которых `spec.nodeName` совпадает с именем его узла. Когда `kube-scheduler` назначает `Pod` на этот узел и API Server сохраняет обновлённый объект в `etcd`, kubelet получает событие через уже открытый watch, забирает описание `Pod` и обращается к container runtime через CRI, чтобы его запустить. Для диагностики и управления `kubelet` также предоставляет собственный HTTPS API, обычно на порту `10250`.
 
 Этот API полезен администратору, но опасен при неправильной защите. Через него можно получить сведения о подах узла, выполнить диагностические действия и в зависимости от разрешений взаимодействовать с контейнерами. Доступ к API Kubelet не должен быть побочным следствием того, что клиент находится в сети кластера.
 
 ```mermaid
-flowchart LR
-    api["API Server<br/>назначает Pod"] --> kubelet["Kubelet<br/>рабочего узла"]
+flowchart TB
+    scheduler["Scheduler<br/>выбирает узел"] --> api["API Server<br/>сохраняет решение"]
+    api -.->|"watch Pod"| kubelet["Kubelet<br/>рабочего узла"]
     kubelet --> cri["CRI"]
-    cri --> runtime["containerd или CRI-O"]
-    runtime --> pod["Контейнеры Pod"]
-    admin["Администратор или компонент"] -->|"HTTPS API: аутентификация и авторизация"| kubelet
-    attacker["Недоверенный клиент"] -. "запрос без прав" .-> kubelet
+    cri --> runtime["containerd<br/>или CRI-O"]
+    runtime --> pod["Контейнеры<br/>Pod"]
+    admin["Администратор<br/>или компонент"] -->|"HTTPS API:<br/>аутентификация<br/>и авторизация"| kubelet
+    attacker["Недоверенный<br/>клиент"] -. "запрос<br/>без прав" .-> kubelet
     style kubelet fill:#326ce5,color:#fff
     style runtime fill:#0f9d58,color:#fff
     style attacker fill:#db4437,color:#fff
@@ -55,7 +56,7 @@ Docker исторически был распространённым runtime, �
 
 ## 08.3 KubeProxy и поверхность сетевой атаки
 
-`kube-proxy` работает на узлах и реализует сетевую часть абстракции `Service`: перенаправляет трафик с виртуального `ClusterIP` и портов `NodePort` к подходящим endpoint. В Linux доступны режимы `iptables`, `nftables` и IPVS. В текущей документации Kubernetes v1.37 default остаётся `iptables`; `nftables` (Linux kernel 5.13+) рекомендуется как замена deprecated с v1.35 IPVS. `kube-proxy` не является шифрующим прокси приложений и не заменяет `NetworkPolicy`.
+`kube-proxy` работает на узлах и конфигурирует правила уровня ядра для маршрутизации трафика к абстракции `Service`: программирует `iptables`, `nftables` или IPVS так, чтобы пакеты к виртуальному `ClusterIP` и портам `NodePort` перенаправлялись к подходящим endpoint. В Linux доступны режимы `iptables`, `nftables` и IPVS. В текущей документации Kubernetes v1.37 default остаётся `iptables`; `nftables` (Linux kernel 5.13+) рекомендуется как замена deprecated с v1.35 IPVS. `kube-proxy` не является traffic proxy в userspace: он не пересылает пакеты сам, а только настраивает netfilter/IPVS в ядре, которое затем обрабатывает трафик. Он также не является шифрующим прокси приложений и не заменяет `NetworkPolicy`.
 
 | Механизм | Что делает | Что не делает |
 |---|---|---|
@@ -104,7 +105,7 @@ Defense in depth уменьшает радиус поражения: разме�
 | CRI | Стандартный интерфейс Kubernetes между `kubelet` и container runtime. |
 | container runtime | Компонент, создающий и запускающий контейнеры, например `containerd` или CRI-O. |
 | runtime socket | Unix-сокет, через который клиент управляет container runtime. |
-| `kube-proxy` | Компонент, реализующий сетевую абстракцию `Service` на узлах. |
+| `kube-proxy` | Компонент, конфигурирующий правила ядра (`iptables`, `nftables` или IPVS) для маршрутизации трафика к `Service` на узлах; сам не выступает traffic proxy в userspace, реальную пересылку пакетов делает ядро. |
 | `iptables` | Режим реализации перенаправления трафика `Service` в `kube-proxy`. |
 | `nftables` | Режим `kube-proxy`; на поддерживаемом Linux рекомендован как замена deprecated IPVS. |
 | IPVS | Устаревающий с Kubernetes v1.35 режим балансировки `Service` в `kube-proxy`. |
@@ -119,7 +120,7 @@ Defense in depth уменьшает радиус поражения: разме�
 
 ## 08.8 Не путать и как это встречается на экзамене
 
-В MCQ обычно проверяют соответствие между компонентом и его функцией, а также наиболее безопасный вариант из нескольких. Типичные ловушки:
+В MCQ (multiple choice question, вопрос с выбором ответа) обычно проверяют соответствие между компонентом и его функцией, а также наиболее безопасный вариант из нескольких. Типичные ловушки:
 
 - путать Kubelet с API Server: Kubelet управляет подами конкретного узла, API Server является центральной точкой API;
 - считать, что read-only port подходит для безопасной диагностики: отсутствие полноценной проверки доступа делает его ненужным риском;

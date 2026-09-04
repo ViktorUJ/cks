@@ -4,7 +4,7 @@
 
 Практический курс подготовки к **CKS (Certified Kubernetes Security Specialist)** - сертификации CNCF и Linux Foundation по защите Kubernetes. Это продолжение [курса CKA + CKAD](../../cka/course/README_RU.md): предполагается, что вы уже умеете администрировать кластер, работать с `kubectl`, RBAC, NetworkPolicy, SecurityContext, kubeadm и TLS. CKS не повторяет эту базу, а применяет её к моделям угроз, hardening и расследованию инцидентов.
 
-> **Версия Kubernetes и экзамен.** Материалы и лабы курса построены на Kubernetes `v1.36` - это **версия обучения**, на которой всё проверено. На дату проверки 2026-08-31 LF указывает Kubernetes `v1.34` для экзамена, а актуальная программа CNCF - `CKS Curriculum v1.34`; эти три версии поддерживаются независимо. Перед экзаменом перепроверьте LF. Подробный release-процесс описан в [политике версий](../VERSION_POLICY.md), русский стиль - в [STYLE_RU.md](../STYLE_RU.md).
+> **Версия Kubernetes и экзамен.** Материалы и лабы курса построены на Kubernetes `v1.36` - это **версия обучения**, на которой всё проверено. На дату проверки 2026-09-04 официальные страницы LF (основная страница CKS, «Important Instructions: CKS» и FAQ) согласованно указывают Kubernetes `v1.35` для экзаменационной среды CKS; актуальная программа CNCF по имени файла остаётся `CKS Curriculum v1.34` - curriculum version и exam environment version поддерживаются независимо. Перед экзаменом перепроверьте основную страницу CKS, Important Instructions и FAQ, а также версию, показанную в ExamUI. Подробный release-процесс описан в [политике версий](../VERSION_POLICY.md), русский стиль - в [STYLE_RU.md](../STYLE_RU.md).
 
 ## Как устроен курс
 

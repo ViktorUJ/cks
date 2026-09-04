@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 07. CIS Benchmark и kube-bench
 
@@ -38,9 +38,17 @@ flowchart TB
 меняются между версиями benchmark, поэтому ориентируйтесь на профиль, который выбрал
 `kube-bench` для установленной версии Kubernetes. Версии Kubernetes и версии CIS Benchmark
 не связаны один к одному: одна версия benchmark может покрывать несколько версий Kubernetes
-и наоборот. Не полагайтесь на «CIS для Kubernetes 1.36» как на готовое соответствие -
-`kube-bench` сам подбирает профиль, а его вместе с версиями Kubernetes и `kube-bench`
-фиксируют в артефакте отчёта (см. лабу 103).
+и наоборот, а `kube-bench` умеет автоматически выбрать benchmark только тогда, когда
+установленная версия Kubernetes присутствует в его опубликованной version mapping.
+
+> **Снимок currentness на 2026-09-04.** Upstream `kube-bench` сопоставляет CIS `1.12` с
+> Kubernetes `1.32-1.33` и CIS `2.0` с Kubernetes `1.34-1.35`; Kubernetes `1.36` (версия
+> курса) в текущей mapping отсутствует. Перед запуском определите версию Kubernetes,
+> сверьте её с актуальной [version mapping `kube-bench`](https://github.com/aquasecurity/kube-bench/blob/main/docs/platforms.md)
+> и используйте только опубликованный benchmark, который её действительно покрывает. Если
+> версия кластера ещё не поддерживается автоопределением, не интерпретируйте обычный
+> запуск как авторитетную CIS-оценку: используйте отдельную поддерживаемую лабораторную
+> версию для CIS-упражнения либо явно укажите выбранный вручную `--benchmark`.
 
 | Раздел CIS | Что проверяется | Типовые объекты |
 |---|---|---|
@@ -55,6 +63,10 @@ flowchart TB
 пунктов неприменима к managed control plane, альтернативному CNI или конкретной архитектуре.
 
 ## 07.2. Запуск kube-bench и чтение отчёта
+
+Следующие команды применяйте только после подтверждения, что установленная версия
+`kube-bench` имеет поддерживаемый benchmark mapping для вашего кластера: на снимке
+2026-09-04 Kubernetes `1.36` в generic mapping отсутствует (см. §07.1).
 
 Запускайте `kube-bench` на том узле, чьи файлы он должен читать. На узле control plane
 обычно нужны разделы `master` и `etcd`, на worker - `node`. В учебном кластере или при SSH
@@ -147,8 +159,10 @@ kubectl -n kube-system delete pod kube-bench
 пересоздаст Pod. Сначала сохраните копию и определите существующий список аргументов:
 
 ```bash
-sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml \
-  /etc/kubernetes/manifests/kube-apiserver.yaml.bak
+sudo install -d -m 700 /root/k8s-manifest-backup
+sudo cp -p /etc/kubernetes/manifests/kube-apiserver.yaml \
+  "/root/k8s-manifest-backup/kube-apiserver.yaml.$(date +%F-%H%M%S)"
+
 sudo grep -nE -- '--(anonymous-auth|authorization-mode|audit-|profiling)' \
   /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
@@ -201,9 +215,11 @@ kubectl -n kube-system get pods -l component=kube-apiserver -o wide
 работают как static Pod.
 
 ```bash
+sudo install -d -m 700 /root/k8s-manifest-backup
+
 for component in kube-controller-manager kube-scheduler; do
-  sudo cp "/etc/kubernetes/manifests/${component}.yaml" \
-    "/etc/kubernetes/manifests/${component}.yaml.bak"
+  sudo cp -p "/etc/kubernetes/manifests/${component}.yaml" \
+    "/root/k8s-manifest-backup/${component}.yaml.$(date +%F-%H%M%S)"
   sudo grep -n -- '--profiling' "/etc/kubernetes/manifests/${component}.yaml" || true
 done
 ```

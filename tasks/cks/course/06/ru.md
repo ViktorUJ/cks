@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 06. Cilium NetworkPolicy
 
@@ -348,8 +348,8 @@ kubectl -n cks-102 get ciliumnetworkpolicy -o yaml
 kubectl -n kube-system get pods -l k8s-app=cilium
 
 # Выполняется в Pod cilium на выбранной ноде.
-kubectl -n kube-system exec ds/cilium -- cilium endpoint list
-kubectl -n kube-system exec ds/cilium -- cilium policy get
+kubectl -n kube-system exec ds/cilium -- cilium-dbg endpoint list
+kubectl -n kube-system exec ds/cilium -- cilium-dbg policy get
 ```
 
 Если `hubble observe` пуст, сначала проверьте `hubble status`, наличие Hubble Relay,

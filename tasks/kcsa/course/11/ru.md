@@ -6,6 +6,12 @@
 
 ## 11.1 Назначение Pod Security Standards
 
+> **PSS и PSA - это разные объекты, их легко перепутать.** **Pod Security Standards (PSS)** - это стандарт: три профиля (`privileged`, `baseline`, `restricted`), которые описывают, *какие* настройки `Pod` считаются допустимыми. PSS сам по себе ничего не проверяет и не применяет - это просто определение уровней. **Pod Security Admission (PSA)** - это механизм: встроенный admission-контроллер, который *применяет* выбранный профиль PSS к конкретному `Namespace` через режимы `enforce`, `audit` и `warn` (см. §11.3). Иначе: PSS отвечает на вопрос «что разрешено», PSA - на вопрос «как это проверяется и что происходит при нарушении».
+
+**Как включается PSA и с какой версии он работает по умолчанию.** PSA встроен в `kube-apiserver` как обычный admission-контроллер и не требует установки отдельного компонента или webhook. Он появился как beta и был включён по умолчанию, начиная с Kubernetes v1.23; начиная с v1.25 PSA - стабильная (GA) функциональность, доступна по умолчанию во всех современных кластерах, включая целевую версию курса `v1.36`. Включённость PSA на уровне apiserver не означает автоматическое ограничение: без labels `pod-security.kubernetes.io/<mode>: <level>` на конкретном `Namespace` PSA не применяет ни одного профиля к этому namespace - фактическое поведение эквивалентно `privileged` (см. точный синтаксис labels в §11.3).
+
+**Что было до PSS/PSA.** PSS и PSA - не первый механизм такого рода: они заменили **PodSecurityPolicy (PSP)** - более старый и более сложный кластерный admission-контроллер, который решал ту же задачу через отдельный API-объект `PodSecurityPolicy` и RBAC-биндинги к нему. PSP объявлен deprecated в Kubernetes v1.21 и полностью удалён в v1.25; на `v1.36` он недоступен ни в каком виде. Детали устройства PSP и почему от него отказались - в §11.4.
+
 **Pod Security Standards**, или PSS, задают три готовых профиля безопасности для `Pod`. Они ограничивают настройки, которые могут связать контейнер с рабочим узлом, повысить его привилегии или ослабить изоляцию. Примеры таких настроек: `privileged: true`, host namespaces, опасные Linux capabilities и небезопасные типы томов.
 
 PSS отвечают на вопрос: «Какой уровень привилегий допустим для этой рабочей нагрузки?» Они не заменяют проверку кода, RBAC или сетевую изоляцию. Например, RBAC решает, вправе ли субъект создать `Pod`, а PSS проверяет, соответствует ли сам `Pod` выбранному профилю.
@@ -13,10 +19,9 @@ PSS отвечают на вопрос: «Какой уровень привил
 В Kubernetes PSS применяет встроенный admission-контроллер **Pod Security Admission** (PSA). Он проверяет запрос до сохранения объекта: манифест, нарушающий включённый режим `enforce`, не будет принят API Server.
 
 ```mermaid
-flowchart LR
+flowchart TB
     client["Клиент создаёт Pod"] --> api["API Server"]
-    api --> psa["PSA проверяет PSS
-для Namespace"]
+    api --> psa["PSA проверяет<br/>PSS для Namespace"]
     psa -->|"соответствует"| stored["Pod сохранен"]
     psa -->|"нарушает enforce"| denied["Запрос отклонен"]
     style psa fill:#673ab7,color:#fff
@@ -52,6 +57,8 @@ PSA выбирает профиль и режим через labels у `Namespac
 
 Каждому режиму можно задать собственный профиль и версию: например, строго применять `baseline`, но предупреждать о несоответствии `restricted`. Label с версией фиксирует ожидаемое поведение при обновлении Kubernetes, а значение `latest` использует текущую версию стандартов.
 
+Каждый режим включается отдельным label и работает независимо от других - можно задать только один режим. Например, только `enforce`:
+
 ```yaml
 apiVersion: v1
 kind: Namespace
@@ -60,17 +67,33 @@ metadata:
   labels:
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/enforce-version: v1.36
+```
+
+Такой namespace отклоняет несовместимые `Pod` при создании или изменении, и на этом всё - никаких audit-записей или предупреждений он не добавляет, потому что режимы `audit` и `warn` для него не заданы.
+
+На практике часто включают все три режима сразу, но не для одной и той же миграции: типичный сценарий - `audit` и `warn` уже стоят на `restricted`, чтобы заранее увидеть нарушения, а `enforce` временно остаётся на менее строгом `baseline`, пока команда не устранит найденные несовместимости:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: v1.36
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/audit-version: v1.36
     pod-security.kubernetes.io/warn: restricted
     pod-security.kubernetes.io/warn-version: v1.36
 ```
 
-Такой namespace отклоняет несовместимые `Pod`, одновременно оставляя след в аудите и предупреждение для клиента. Перед включением `enforce: restricted` в существующем namespace обычно сначала используют `audit` и `warn`: это показывает несовместимые манифесты без неожиданного отказа production-поставки.
+Такой namespace уже блокирует нарушения `baseline`, но лишь показывает (через audit log и предупреждение клиенту) несовместимость с `restricted`, не отклоняя запрос. Это и есть постепенная миграция: сначала `audit`/`warn` на целевом профиле, затем, после того как несовместимые манифесты исправлены, `enforce` поднимают до того же `restricted`.
 
 ### Namespace labels и cluster-wide defaults - два разных способа настройки PSA
 
-Labels на `Namespace` - не единственный способ включить PSA. Сам admission-контроллер PSA можно настроить через `AdmissionConfiguration` (`PodSecurityConfiguration`) на уровне `kube-apiserver`, задав **cluster-wide defaults**: профиль и режим `enforce`/`audit`/`warn`, которые применяются по умолчанию к namespace, если у него нет собственных labels. Кластер может также определить исключения (`exemptions`) для отдельных namespace, `RuntimeClass` или `User`, независимо от их labels.
+Labels на `Namespace` - не единственный способ включить PSA, но на практике доступность второго способа зависит от того, кто управляет control plane. Сам admission-контроллер PSA можно настроить через `AdmissionConfiguration` (`PodSecurityConfiguration`) - это файл конфигурации, который передают `kube-apiserver` флагом `--admission-control-config-file`, задав **cluster-wide defaults**: профиль и режим `enforce`/`audit`/`warn`, которые применяются по умолчанию к namespace, если у него нет собственных labels. Кластер может также определить исключения (`exemptions`) для отдельных namespace, `RuntimeClass` или `User`, независимо от их labels.
+
+**Это требует доступа к `kube-apiserver`, которого нет в managed-кластерах.** Флаг `--admission-control-config-file` меняет процесс `kube-apiserver`, а в managed control plane (Amazon EKS, GKE, AKS) этот процесс администратору кластера недоступен - его конфигурацию контролирует облачный провайдер. Поэтому в managed-кластерах `PodSecurityConfiguration` для cluster-wide defaults обычно не настраивают: остаются только namespace labels, либо сторонний dynamic admission webhook (например, `pod-security-webhook` от сообщества Kubernetes), который эмулирует cluster-wide default без изменения `kube-apiserver`. Cluster-wide defaults через `AdmissionConfiguration` реалистичны только там, где control plane администрирует сам пользователь - например, кластер, развёрнутый через `kubeadm`.
 
 Из этого следует важное уточнение модели: если в namespace **нет** labels PSA, это **не означает автоматически**, что для него нет никакой политики PSS вообще. Правильная модель такая:
 

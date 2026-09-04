@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 26. Защита supply chain: реестры, подпись и валидация артефактов
 
@@ -58,6 +58,10 @@ rollout. Allowlist не заменяет signature verification: атакующ�
 переведите правило в Enforce.
 
 ### Kyverno 1.19
+
+> **Compatibility note.** Kyverno v1.19 официально поддерживает Kubernetes v1.33-v1.35;
+> целевая версия курса v1.36 не входит в протестированную support matrix проекта
+> (см. главу 20 §20.4).
 
 Основной путь использует CEL-based `ValidatingPolicy` из `policies.kyverno.io/v1`.
 Переменная объединяет все три списка контейнеров; ресурс `pods/ephemeralcontainers`
@@ -238,7 +242,7 @@ current-context: image-policy
 
 Добавьте plugin к `kube-apiserver` и передайте admission configuration. Не заменяйте
 имеющийся список включённых admission plugins: добавьте `ImagePolicyWebhook` к текущему
-значению, иначе можно случайно выключить обязательные встроенные контроллеры.
+значению, иначе можно случайно выключить обязательные встроенные контроллеры. Дополнительно включите API `imagepolicy.k8s.io/v1alpha1`, которое использует `ImageReview`: без него приведённый fragment неполон и backend не будет вызываться. Если `--runtime-config` уже присутствует, добавьте `imagepolicy.k8s.io/v1alpha1=true` к его текущему значению, не затирая другие настройки.
 
 ```yaml
 # фрагмент /etc/kubernetes/manifests/kube-apiserver.yaml
@@ -248,6 +252,7 @@ spec:
     command:
     - kube-apiserver
     - --enable-admission-plugins=NodeRestriction,ServiceAccount,ImagePolicyWebhook
+    - --runtime-config=imagepolicy.k8s.io/v1alpha1=true
     - --admission-control-config-file=/etc/kubernetes/admission-control/image-policy.yaml
     volumeMounts:
     - name: image-policy-config
@@ -267,7 +272,10 @@ spec:
       type: DirectoryOrCreate
 ```
 
-Правка static Pod перезапустит API-сервер. Сделайте backup manifest, держите консоль
+Правка static Pod перезапустит API-сервер. Сохраните backup manifest **вне**
+`/etc/kubernetes/manifests/` (например в `/root/k8s-manifest-backup/`): файл с любым
+расширением внутри этого каталога kubelet может прочитать как ещё один static Pod
+manifest. Держите консоль
 control-plane и заранее проверьте backend TLS: ошибочные endpoint, CA, client key или
 fail-open настройка могут соответственно заблокировать все новые Pod либо снять защиту.
 После перезапуска проверьте `/readyz`, логи API-сервера и явный allow/deny test. Для

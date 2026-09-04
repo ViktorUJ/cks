@@ -17,10 +17,10 @@
 
 ```mermaid
 flowchart TB
-    cloud["Cloud<br/>аккаунт, IAM, сеть, вычисления"]
-    cluster["Cluster<br/>Kubernetes API, узлы, RBAC, policy"]
-    container["Container<br/>образ, runtime, Pod isolation"]
-    code["Code<br/>приложение, зависимости, секреты"]
+    cloud["Cloud<br/>аккаунт, IAM,<br/>сеть, вычисления"]
+    cluster["Cluster<br/>Kubernetes API,<br/>узлы, RBAC, policy"]
+    container["Container<br/>образ, runtime,<br/>Pod isolation"]
+    code["Code<br/>приложение,<br/>зависимости, секреты"]
     cloud --> cluster --> container --> code
     style cloud fill:#326ce5,color:#fff
     style cluster fill:#673ab7,color:#fff
@@ -52,8 +52,8 @@ Cluster охватывает Kubernetes-компоненты и правила, 
 Kubernetes API - центральная точка управления. Если identity имеет право создавать `Pod`, читать `Secret` или менять `RoleBinding`, последствия могут быть больше, чем у компрометации одного контейнера. Поэтому в кластере важны аутентификация, авторизация и admission control:
 
 ```mermaid
-flowchart LR
-    user["Пользователь, CI или Pod"] --> authn["Authentication<br/>кто делает запрос"]
+flowchart TB
+    user["Пользователь,<br/>CI или Pod"] --> authn["Authentication<br/>кто делает запрос"]
     authn --> authz["Authorization<br/>что разрешено"]
     authz --> admission["Admission<br/>допустим ли объект"]
     admission --> api["Kubernetes API<br/>и состояние кластера"]
@@ -110,7 +110,7 @@ Code - это собственный исходный код, библиотек
 
 Основные меры на слое Code:
 
-- проверять зависимости и своевременно обновлять их; SCA-инструменты помогают сопоставлять версии библиотек с известными уязвимостями;
+- проверять зависимости и своевременно обновлять их; инструменты **SCA** (Software Composition Analysis, анализ состава программного обеспечения) помогают сопоставлять версии библиотек с известными уязвимостями;
 - не хранить токены, пароли и private keys в репозитории, Dockerfile или логах; секреты передают через предназначенный механизм и ограничивают доступ к ним;
 - валидировать входные данные и применять безопасные API, чтобы уменьшить риск injection и RCE;
 - проводить review, тестирование и статический анализ до сборки образа;
@@ -124,13 +124,13 @@ Code - это собственный исходный код, библиотек
 
 ```mermaid
 flowchart TB
-    cloud["Cloud<br/>внешний слой: IAM, сеть, инфраструктура"]
-    cluster["Cluster<br/>API, RBAC, policies, узлы"]
-    container["Container<br/>образ, runtime, privileges"]
-    code["Code<br/>логика приложения и зависимости"]
-    cloud -->|"компрометация IAM или сети<br/>влияет на весь кластер"| cluster
-    cluster -->|"избыточный RBAC или слабая policy<br/>влияют на контейнеры"| container
-    container -->|"уязвимый образ или лишние права<br/>увеличивают ущерб коду"| code
+    cloud["Cloud<br/>внешний слой<br/>IAM, сеть,<br/>инфраструктура"]
+    cluster["Cluster<br/>API, RBAC,<br/>policies, узлы"]
+    container["Container<br/>образ, runtime,<br/>privileges"]
+    code["Code<br/>логика приложения<br/>и зависимости"]
+    cloud -->|"компрометация<br/>IAM или сети<br/>влияет на весь<br/>кластер"| cluster
+    cluster -->|"избыточный RBAC<br/>или слабая policy<br/>влияют на<br/>контейнеры"| container
+    container -->|"уязвимый образ<br/>или лишние права<br/>увеличивают<br/>ущерб коду"| code
     style cloud fill:#db4437,color:#fff
     style cluster fill:#673ab7,color:#fff
     style container fill:#0f9d58,color:#fff
@@ -177,7 +177,7 @@ flowchart TB
 
 В вопросах KCSA модель 4C помогает выбрать слой, к которому относится риск или контроль. Не путайте сканирование образа с защитой Code: оно относится к Container и supply chain, хотя может выявить зависимость приложения. `NetworkPolicy`, RBAC и Pod Security Admission относятся к Cluster. IAM, security groups и KMS находятся на Cloud-слое.
 
-Частая ловушка MCQ - вариант с полезным, но недостаточным контролем. Например, `NetworkPolicy` ограничит сетевое перемещение после RCE, но не исправит уязвимость в приложении. Наиболее правильный ответ обычно устраняет риск на его слое и при необходимости дополняется защитой соседних слоёв.
+Частая ловушка MCQ (multiple choice question, вопрос с выбором ответа) - вариант с полезным, но недостаточным контролем. Например, `NetworkPolicy` ограничит сетевое перемещение после RCE, но не исправит уязвимость в приложении. Наиболее правильный ответ обычно устраняет риск на его слое и при необходимости дополняется защитой соседних слоёв.
 
 ## 03.11. Вопросы для самопроверки
 

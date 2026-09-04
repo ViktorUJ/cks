@@ -17,13 +17,13 @@
 `Prometheus` собирает и хранит числовые метрики, например число запросов, задержку и потребление ресурсов. `Grafana` строит по этим данным панели и может показывать alert. Панель не является контролем доступа: она даёт видимость, на основании которой команда проверяет причину и реагирует.
 
 ```mermaid
-flowchart LR
-    app["приложение и Kubernetes"] --> logs["логи"]
+flowchart TB
+    app["приложение<br/>и Kubernetes"] --> logs["логи"]
     app --> metrics["метрики"]
     app --> traces["трейсы"]
     metrics --> prom["Prometheus"]
-    prom --> grafana["Grafana: панель и alert"]
-    logs --> investigate["корреляция и расследование"]
+    prom --> grafana["Grafana: панель<br/>и alert"]
+    logs --> investigate["корреляция<br/>и расследование"]
     traces --> investigate
     grafana --> investigate
     style app fill:#326ce5,color:#fff
@@ -101,18 +101,17 @@ PKI-цепочка для экзамена: **CA** подписывает certif
 mTLS (mutual TLS) отличается от обычного server-side TLS: сертификат предъявляет не только сервер, но и клиент. Поэтому сервис может проверить, какая рабочая нагрузка обращается к нему, а клиент - удостовериться в identity сервиса.
 
 ```mermaid
-flowchart LR
+flowchart TB
     client["client Pod"] --> cp["proxy клиента"]
-    cp -->|"mTLS: клиентская и серверная identity"| sp["proxy сервера"]
+    cp -->|"mTLS: клиентская<br/>и серверная identity"| sp["proxy сервера"]
     sp --> server["server Pod"]
-    policy["политика трафика<br/>allow, timeout, retry"] -. "применяется прокси" .-> cp
-    policy -. "применяется прокси" .-> sp
     style client fill:#326ce5,color:#fff
     style server fill:#326ce5,color:#fff
     style cp fill:#673ab7,color:#fff
     style sp fill:#673ab7,color:#fff
-    style policy fill:#0f9d58,color:#fff
 ```
+
+Traffic policy (allow, timeout, retry, circuit breaking) применяется тем же proxy на обеих сторонах соединения - её не показываем отдельным узлом на диаграмме, чтобы не смешивать два разных механизма в одном графе; подробнее о её роли и ограничениях - в конце этого параграфа.
 
 В Istio ресурс `PeerAuthentication` задаёт режим приема mTLS для mesh или его части. Режим `STRICT` требует, чтобы входящий mesh-трафик к выбранной рабочей нагрузке использовал mTLS. Это полезно против случайного незашифрованного вызова и неаутентифицированного peer, но само по себе не определяет, **кто именно** вправе вызвать сервис и какой URL разрешён. Для этого нужны политики авторизации, `NetworkPolicy` и прикладная авторизация, в зависимости от границы.
 
@@ -158,7 +157,7 @@ Mesh оправдан, когда много сервисов нуждаются
 
 ## 18.8 Не путать и как это встречается на экзамене
 
-В MCQ различайте назначение инструментов: Prometheus собирает метрики, Grafana показывает их, Falco видит runtime-поведение, Hubble наблюдает потоки Cilium. Вопрос о TLS может проверять границу termination: сертификат на Ingress не доказывает шифрование до backend.
+В MCQ (multiple choice question, вопрос с выбором ответа) различайте назначение инструментов: Prometheus собирает метрики, Grafana показывает их, Falco видит runtime-поведение, Hubble наблюдает потоки Cilium. Вопрос о TLS может проверять границу termination: сертификат на Ingress не доказывает шифрование до backend.
 
 Частая ловушка - считать mTLS или `PeerAuthentication` заменой `NetworkPolicy` и RBAC. mTLS проверяет и защищает соединение, `NetworkPolicy` определяет допустимый сетевой поток, а RBAC управляет доступом к Kubernetes API. Также не путайте `STRICT` с «разрешить весь трафик»: это требование использовать mTLS для подходящих входящих соединений.
 

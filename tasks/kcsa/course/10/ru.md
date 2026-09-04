@@ -154,7 +154,7 @@ kubectl auth can-i get configmap/site-config -n shop \
 
 ## 10.8 Не путать и как это встречается на экзамене
 
-В MCQ обычно нужно отличить authentication от authorization и выбрать самый узкий безопасный доступ. Частые ловушки:
+В MCQ (multiple choice question, вопрос с выбором ответа) обычно нужно отличить authentication от authorization и выбрать самый узкий безопасный доступ. Частые ловушки:
 
 - считать, что `ServiceAccount` или токен сам по себе выдаёт права; права определяют RBAC-привязки;
 - путать `RoleBinding` с `ClusterRoleBinding`: первый ограничен своим namespace;

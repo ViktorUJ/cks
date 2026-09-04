@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 29. Поведенческий анализ во время выполнения: Falco
 
@@ -196,16 +196,17 @@ kubectl -n falco describe daemonset falco
 | `/etc/falco/falco.yaml` | основной configuration: event sources, outputs, порядок rules files | менять осознанно, валидировать и перезапускать service |
 | `/etc/falco/falco_rules.yaml` | upstream standard rules, macros и lists | читать и обновлять пакетом; не хранить свои правки здесь |
 | `/etc/falco/falco_rules.local.yaml` | локальные override и custom rules | предпочтительное место для своих правил |
-| `/etc/falco/rules.d/` | дополнительные rule files в некоторых пакетах/configuration | использовать, только если путь включён в `rules_file` вашей конфигурации |
+| `/etc/falco/rules.d/` | дополнительные rule files в package/container configuration | использовать, только если каталог включён в `rules_files` текущей конфигурации |
 
-Фактический список файлов - это `rules_file` в применённом configuration и строки startup
-log. Путь может отличаться у контейнерной установки, Helm chart или новой версии Falco;
-проверьте его, прежде чем создавать файл:
+Фактический список и порядок загружаемых rules задаёт `rules_files` в применённой конфигурации Falco и подтверждает startup log. Старое имя `rules_file` относится к Falco до 0.38 и сейчас deprecated; в новых конфигурациях и материалах используйте `rules_files`.
 
 ```bash
-sudo grep -n 'rules_file' /etc/falco/falco.yaml
-sudo sed -n '1,80p' /etc/falco/falco_rules.local.yaml
-sudo falco --validate /etc/falco/falco_rules.local.yaml
+sudo grep -n '^rules_files:' /etc/falco/falco.yaml
+sudo falco --support
+sudo sed -n '1,120p' /etc/falco/falco_rules.local.yaml
+
+# Проверить main config и весь ruleset, который он реально загружает.
+sudo falco -c /etc/falco/falco.yaml --dry-run
 ```
 
 Сначала ищут готовое стандартное правило и его поля. Это быстрее и безопаснее, чем писать
@@ -258,7 +259,7 @@ flowchart LR
   items: [/etc/shadow, /etc/sudoers]
 
 - macro: container_process_exec
-  condition: evt.type in (execve, execveat) and evt.dir=< and container
+  condition: evt.type in (execve, execveat) and container
 
 - rule: Shell in container
   desc: Detect an interactive shell process started in a container
@@ -285,13 +286,15 @@ flowchart LR
 `open_read` в примере - macro из standard Falco rules. Поэтому порядок rules files имеет
 значение: upstream rules с этим macro должны загрузиться раньше local file. Если ваш
 configuration использует другое имя macro или не включает standard rules, либо определите
-нужное условие локально, либо исправьте порядок `rules_file` - не обходите ошибку простым
+нужное условие локально, либо исправьте порядок `rules_files` - не обходите ошибку простым
 удалением condition.
+
+В современных Falco не используйте `evt.dir`: поле deprecated с 0.42. Для этого detector достаточно ограничить syscall через `evt.type` и container context.
 
 После изменения всегда выполняют проверку до restart. Для package-install:
 
 ```bash
-sudo falco --validate /etc/falco/falco_rules.local.yaml
+sudo falco -c /etc/falco/falco.yaml --dry-run
 sudo systemctl restart falco
 sudo journalctl -u falco -n 80 --no-pager
 ```

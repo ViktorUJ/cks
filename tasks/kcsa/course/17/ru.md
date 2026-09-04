@@ -7,15 +7,15 @@
 Безопасность supply chain не сводится к одному сканеру или подписи. Это цепочка доказательств: понятно, **что** вошло в образ, **кем и как** он собран, откуда он получен и соответствует ли объект правилам организации в момент создания. Если хотя бы один участок не контролируется, доверие к артефакту ослабевает.
 
 ```mermaid
-flowchart LR
-    code["исходный код и зависимости"] --> ci["CI: сборка и тесты"]
-    ci --> sbom["SBOM и provenance"]
+flowchart TB
+    code["исходный код<br/>и зависимости"] --> ci["CI: сборка<br/>и тесты"]
+    ci --> sbom["SBOM<br/>и provenance"]
     sbom --> sign["подпись artifact"]
     sign --> registry["доверенный registry"]
     registry --> admission["admission control"]
     admission --> runtime["Pod в runtime"]
-    scan["сканирование CVE"] -. "сигнал для исправления" .-> ci
-    policy["policy: registry, подпись, privileged"] -. "разрешает или отклоняет" .-> admission
+    scan["сканирование CVE"] -. "сигнал для<br/>исправления" .-> ci
+    policy["policy: registry,<br/>подпись, privileged"] -. "разрешает<br/>или отклоняет" .-> admission
     style code fill:#326ce5,color:#fff
     style ci fill:#f4b400,color:#000
     style sbom fill:#673ab7,color:#fff
@@ -100,14 +100,14 @@ flowchart LR
 После authentication и authorization Kubernetes API Server выполняет admission control перед сохранением объекта в etcd. На этом этапе можно оценить не только пользователя, но и сам запрошенный объект: образ, поля `securityContext`, labels и соответствие корпоративным правилам.
 
 ```mermaid
-flowchart LR
+flowchart TB
     client["kubectl или CI"] --> authn["authentication"]
     authn --> authz["authorization"]
     authz --> mutate["mutating admission"]
     mutate --> validate["validating admission"]
     validate --> etcd["etcd"]
     mutate -. "меняет объект" .-> validate
-    validate -. "разрешает или отклоняет" .-> etcd
+    validate -. "разрешает<br/>или отклоняет" .-> etcd
     style client fill:#326ce5,color:#fff
     style authn fill:#673ab7,color:#fff
     style authz fill:#673ab7,color:#fff
@@ -120,7 +120,7 @@ flowchart LR
 
 **Validating admission webhook** оценивает финальный вариант объекта и разрешает или отклоняет запрос. Он не должен менять объект. И mutating, и validating webhook работают как внешние сервисы, поэтому их доступность и TLS-доверие важны: неверная настройка может либо остановить deploy, либо оставить нежелательный путь обхода. Именно это поведение при недоступности webhook регулирует поле `failurePolicy` в `ValidatingWebhookConfiguration`/`MutatingWebhookConfiguration`: `Fail` останавливает запрос, если webhook недоступен или вернул ошибку (безопаснее, но может заблокировать deploy при сбое webhook), а `Ignore` пропускает запрос без применения проверки webhook в этом случае — то есть сбой или временная недоступность webhook при `failurePolicy: Ignore` молча отключает контроль, который должен был сработать, без каких-либо изменений в самом объекте.
 
-Kubernetes также предлагает встроенные declarative admission policies на CEL. `MutatingAdmissionPolicy` изменяет подходящие API-объекты без отдельного HTTP webhook; feature stable с Kubernetes `v1.36` и enabled by default. `ValidatingAdmissionPolicy` выполняет встроенную declarative validation и может отклонить запрос. Оба механизма используют CEL, но решают разные задачи: mutation изменяет объект, validation принимает или отклоняет его. Для внешней логики — например, сетевого запроса к registry или отдельному verifier — всё ещё нужен внешний admission webhook / policy engine либо заранее полученный доверенный verification result, доступный самой policy.
+Kubernetes также предлагает встроенные declarative admission policies на **CEL** (Common Expression Language - язык выражений, встроенный в Kubernetes API для описания условий и правил без выполнения произвольного кода: policy задаёт CEL-выражение, а API server сам его вычисляет для конкретного объекта). `MutatingAdmissionPolicy` изменяет подходящие API-объекты без отдельного HTTP webhook; feature stable с Kubernetes `v1.36` и enabled by default. `ValidatingAdmissionPolicy` выполняет встроенную declarative validation и может отклонить запрос. Оба механизма используют CEL, но решают разные задачи: mutation изменяет объект, validation принимает или отклоняет его. Для внешней логики — например, сетевого запроса к registry или отдельному verifier — всё ещё нужен внешний admission webhook / policy engine либо заранее полученный доверенный verification result, доступный самой policy.
 
 `ValidatingAdmissionPolicy` задаёт validation logic и является cluster-scoped policy object. Чтобы policy реально применялась, создают отдельный `ValidatingAdmissionPolicyBinding`: binding ссылается на policy, задаёт `validationActions` и может сузить применение через `matchResources`, включая `namespaceSelector`. Поэтому нельзя говорить, что `ValidatingAdmissionPolicy` находится «в namespace»; namespace scope задают через binding/matchResources.
 

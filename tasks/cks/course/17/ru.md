@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 17. seccomp: минимальный набор системных вызовов
 
@@ -68,7 +68,9 @@ securityContext:
     type: RuntimeDefault
 containers:
 - name: app
-  image: nginx:1.27.4
+  image: nginxinc/nginx-unprivileged:1.30.4-alpine-slim
+  ports:
+  - containerPort: 8080
   securityContext:
     allowPrivilegeEscalation: false
     capabilities:
@@ -147,7 +149,7 @@ spec:
       type: RuntimeDefault
   containers:
   - name: app
-    image: nginx:1.27.4
+    image: nginx:1.30.4
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:

@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 02. Модель безопасности Kubernetes: 4C, поверхность атаки, фазы атаки
 
@@ -178,7 +178,7 @@ sudo journalctl -u falco --since '15 minutes ago' --no-pager
 
 ## 02.4. Принципы, которые связывают controls
 
-Security controls не следует добавлять случайно. Четыре принципа позволяют оценить любое решение.
+Security controls не следует добавлять случайно. Пять принципов позволяют оценить любое решение.
 
 1. **Defense in depth.** Один отказ не должен открывать весь путь. Например, исправленный образ уменьшает вероятность RCE, `SecurityContext` ограничивает процесс после RCE, NetworkPolicy сдерживает lateral movement, а Falco и audit помогают заметить остаточный риск.
 2. **Least privilege.** Идентичность, workload и процесс получают только необходимые права. Практически это означает точные `verbs` в RBAC, выделенный ServiceAccount, `drop: [ALL]`, отсутствие `privileged`, минимум IAM permissions и короткоживущие credentials.

@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 32. Audit-логи Kubernetes
 
@@ -235,8 +235,10 @@ sudo sed -n '1,220p' /etc/kubernetes/audit/audit-policy.yaml
 Сначала сохраните копию и убедитесь в фактическом источнике конфигурации:
 
 ```bash
+sudo install -d -m 700 /root/k8s-manifest-backup
 sudo cp -a /etc/kubernetes/manifests/kube-apiserver.yaml \
-  /etc/kubernetes/manifests/kube-apiserver.yaml.bak
+  "/root/k8s-manifest-backup/kube-apiserver.yaml.$(date +%F-%H%M%S)"
+
 sudo grep -nE -- '--audit-|volumeMounts:|volumes:' \
   /etc/kubernetes/manifests/kube-apiserver.yaml
 sudo ls -ld /etc/kubernetes/audit /var/log/kubernetes

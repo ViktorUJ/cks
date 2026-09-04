@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 05. Защита node metadata и endpoints; защита GUI
 
@@ -181,11 +181,13 @@ sudo grep -R -- '--read-only-port\|--anonymous-auth\|--authorization-mode' \
 
 Обычная `NetworkPolicy` полезна для Pod-to-Pod traffic, но не является универсальным firewall для host endpoints. Трафик к IP ноды может изменить source из-за SNAT, а hostNetwork Pod может обходить pod dataplane. Для защиты ноды сочетайте CNI policy с host firewall, cloud network controls и настройками компонентов. Cilium может дать дополнительные host-aware controls, но они зависят от режима CNI и требуют отдельного проектирования.
 
-## 05.4. Kubernetes Dashboard: GUI без лишних привилегий
+## 05.4. GUI endpoints: legacy Kubernetes Dashboard и принцип минимального доступа
+
+> **Актуальность на 2026-09-04.** Upstream Kubernetes Dashboard архивирован (21 января 2026) и больше не поддерживается: репозиторий перенесён в `kubernetes-retired/dashboard`, новых security-патчей и обновлений не будет. Для новых production-установок Kubernetes рекомендует рассматривать поддерживаемый GUI, например Headlamp. Этот раздел сохраняет Dashboard как legacy/exam-style пример общего security-принципа: GUI является ещё одним Kubernetes API client и web endpoint, поэтому его доступ нужно минимизировать - принцип актуален независимо от конкретного продукта.
 
 Kubernetes Dashboard - удобный GUI, но одновременно ещё один API client и web endpoint. Опасный сценарий: Dashboard опубликован через public `LoadBalancer` или Ingress, пользователь входит токеном `cluster-admin`, а украденный token даёт атакующему полный контроль над кластером.
 
-Правило по умолчанию: не устанавливайте Dashboard, если он не нужен. Если GUI требуется, держите его private, публикуйте через VPN или authenticated access proxy, применяйте TLS и выдавайте отдельному пользователю минимальные RBAC-права. Не используйте `cluster-admin` как повседневный Dashboard account.
+Если в существующей среде или учебном задании уже присутствует legacy Kubernetes Dashboard: не публикуйте его через открытый `LoadBalancer` или Internet-facing Ingress и не используйте `cluster-admin` как повседневную identity. Держите GUI private, публикуйте через VPN или authenticated access proxy, применяйте TLS и выдавайте отдельному пользователю минимальные RBAC-права. Не устанавливайте архивированный Dashboard как рекомендуемый GUI для новой production-среды; если используется другой поддерживаемый web UI (например Headlamp), применяйте те же controls: private exposure, TLS, strong authentication, минимальный RBAC и аудит административных действий.
 
 Безопасный путь для краткой административной сессии - port-forward с локальной машины, уже прошедшей контроль доступа. Сначала проверьте фактическое имя Service версии Dashboard:
 

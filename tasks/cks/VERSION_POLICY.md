@@ -1,20 +1,23 @@
 # Политика версий и весов курса CKS
 
-Последняя проверка: **2026-08-31**.
+Последняя проверка: **2026-09-04**.
 
 Три версии независимы и не должны автоматически выравниваться:
 
 | Контур | Текущее значение | Источник истины |
 |---|---:|---|
 | Учебные лаборатории | Kubernetes `v1.36` | `env.hcl` лабораторий и проверенная совместимость инструментов |
-| Экзаменационная среда CKS | Kubernetes `v1.34` | LF «Important Instructions: CKS» и FAQ |
+| Экзаменационная среда CKS | Kubernetes `v1.35` | LF CKS product page + LF «Important Instructions: CKS» + LF FAQ |
 | Программа CKS | `CKS Curriculum v1.34` | root-level CKS curriculum PDF в `cncf/curriculum` |
 
 Несовпадение версий само по себе не является дефектом. Перед выпуском курса нужно отдельно:
 
 1. проверить training version во всех лабораториях и compatibility matrix Cilium, Istio,
    Kyverno, Falco и kube-bench;
-2. проверить exam version по актуальной странице Linux Foundation;
+2. проверить exam version минимум по основной странице CKS, «Important Instructions: CKS»
+   и LF FAQ; если официальные источники расходятся, зафиксировать все значения и не
+   объявлять одно из них согласованным source of truth; непосредственно перед попыткой
+   дополнительно сверить ExamUI;
 3. найти актуальный root-level CKS curriculum PDF в `cncf/curriculum`, записать filename,
    размер и SHA-256, затем извлечь из него веса;
 4. проверить LF `Resources Allowed` независимо от curriculum и записать дату;

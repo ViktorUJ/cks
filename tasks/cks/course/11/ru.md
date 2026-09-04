@@ -1,4 +1,4 @@
-[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
 
 # Глава 11. ServiceAccounts: минимизация и токены
 
@@ -106,7 +106,7 @@ spec:
   automountServiceAccountToken: false
   containers:
   - name: app
-    image: nginx:1.27.4
+    image: nginx:1.30.4
 ```
 
 Не путайте отсутствие token с отсутствием ServiceAccount. Pod всё равно имеет identity

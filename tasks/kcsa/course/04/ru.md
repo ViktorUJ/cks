@@ -24,9 +24,9 @@ Managed сервис уменьшает объём операционной ра
 
 ```mermaid
 flowchart TB
-    cloud["Облачный провайдер<br/>физическая инфраструктура и сервисы"] --> managed["Managed Kubernetes<br/>провайдер: control plane<br/>клиент: IAM, сеть, workloads"]
-    cloud --> self["Self-managed Kubernetes<br/>провайдер: инфраструктура<br/>клиент: control plane, узлы, workloads"]
-    managed --> app["Данные и приложение<br/>всегда зона ответственности клиента"]
+    cloud["Облачный провайдер<br/>физическая<br/>инфраструктура<br/>и сервисы"] --> managed["Managed<br/>Kubernetes<br/>провайдер:<br/>control plane<br/>клиент: IAM,<br/>сеть, workloads"]
+    cloud --> self["Self-managed<br/>Kubernetes<br/>провайдер:<br/>инфраструктура<br/>клиент: control<br/>plane, узлы,<br/>workloads"]
+    managed --> app["Данные и<br/>приложение<br/>всегда зона<br/>ответственности<br/>клиента"]
     self --> app
     style cloud fill:#326ce5,color:#fff
     style managed fill:#0f9d58,color:#fff
@@ -73,15 +73,15 @@ IAM определяет, какая identity может выполнять де
 
 Многие облачные платформы предоставляют metadata service по link-local адресу `169.254.169.254`. Виртуальная машина запрашивает там метаданные и, в некоторых моделях, временные credentials своей облачной роли. Это удобно для автоматизации, но опасно, если приложение в `Pod` может свободно делать запросы к metadata service.
 
-Уязвимость SSRF иллюстрирует риск. Атакующий не получает shell на узле, но заставляет веб-приложение отправить HTTP-запрос к `169.254.169.254`. Если запрос разрешён, приложение может вернуть credentials роли узла. При слишком широких правах этой роли компрометация одного `Pod` превращается в доступ к ресурсам облачного аккаунта.
+Уязвимость SSRF (Server-Side Request Forgery, подделка запроса на стороне сервера) иллюстрирует риск. Атакующий не получает shell на узле, но заставляет веб-приложение отправить HTTP-запрос к `169.254.169.254`. Если запрос разрешён, приложение может вернуть credentials роли узла. При слишком широких правах этой роли компрометация одного `Pod` превращается в доступ к ресурсам облачного аккаунта.
 
 ```mermaid
-flowchart LR
-    attacker["Атакующий"] --> app["Уязвимое приложение<br/>в Pod"]
+flowchart TB
+    attacker["Атакующий"] --> app["Уязвимое<br/>приложение<br/>в Pod"]
     app -->|"SSRF-запрос"| imds["IMDS<br/>169.254.169.254"]
-    imds --> creds["Credentials роли узла"]
-    creds --> cloud["Ресурсы облака"]
-    app -. "ограничение egress и<br/>workload identity" .-> imds
+    imds --> creds["Credentials<br/>роли узла"]
+    creds --> cloud["Ресурсы<br/>облака"]
+    app -. "ограничение<br/>egress и workload<br/>identity" .-> imds
     style attacker fill:#db4437,color:#fff
     style app fill:#f4b400,color:#000
     style imds fill:#326ce5,color:#fff
