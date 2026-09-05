@@ -91,7 +91,7 @@ metadata:
 
 ### Namespace labels 與 cluster-wide defaults：兩種不同的 PSA 設定方式
 
-`Namespace` 上的 labels 並非啟用 PSA 的唯一方式，但實務上第二種方式是否可用，取決於 control plane 的管理者。PSA admission controller 本身可使用 `AdmissionConfiguration` (`PodSecurityConfiguration`) 設定，這是透過 `--admission-control-config-file` flag 傳遞給 `kube-apiserver` 的設定檔，可設定 **cluster-wide defaults**：當 namespace 沒有自己的 labels 時，預設會對其套用的 `enforce`/`audit`/`warn` 設定檔與模式。叢集也可以針對個別 namespace、`RuntimeClass` 或 `User` 定義 exemptions，且不受其 labels 影響。
+`Namespace` 上的 labels 並非啟用 PSA 的唯一方式，但實務上第二種方式是否可用，取決於 control plane 的管理者。PSA admission controller 本身可使用 `AdmissionConfiguration` (`PodSecurityConfiguration`) 設定，這是透過 `--admission-control-config-file` flag 傳遞給 `kube-apiserver` 的設定檔，可設定 **cluster-wide defaults**：當 namespace 沒有自己的 labels 時，預設會對其套用的 `enforce`/`audit`/`warn` 設定檔與模式。叢集也可以針對個別 namespace、`RuntimeClass` 或 `User` 定義 `exemptions`，且不受其 labels 影響。
 
 **這需要存取 `kube-apiserver`，而 managed clusters 無法提供此存取。** `--admission-control-config-file` flag 會變更 `kube-apiserver` 程序，而在 managed control plane (Amazon EKS、GKE、AKS) 中，叢集管理員無法存取此程序，其設定由雲端供應商控制。因此，在 managed clusters 中通常不會設定用於 cluster-wide defaults 的 `PodSecurityConfiguration`：只剩下 namespace labels，或第三方 dynamic admission webhook (例如 Kubernetes 社群的 `pod-security-webhook`)，它不需變更 `kube-apiserver` 即可模擬 cluster-wide default。透過 `AdmissionConfiguration` 設定 cluster-wide defaults，僅適合 control plane 由使用者自行管理的環境，例如透過 `kubeadm` 部署的叢集。
 

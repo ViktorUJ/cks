@@ -238,7 +238,7 @@ Pièges fréquents : un `Secret` avec base64 n'est pas chiffré ; encryption at 
 
    - c. Conserver de larges Linux capabilities, mais activer encryption at rest pour le `Secret` et la vérification obligatoire de la signature d'image.
 
-   - d. Autoriser `hostPath` et runtime socket, mais limiter l'egress externe avec NetworkPolicy et utiliser mTLS.
+   - d. Autoriser `hostPath` et runtime socket, mais limiter l'egress externe avec `NetworkPolicy` et utiliser mTLS.
 
 <details>
 <summary>Réponse et explication</summary>

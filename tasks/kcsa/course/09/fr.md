@@ -208,7 +208,7 @@ Pièges fréquents : penser que `NetworkPolicy` fonctionne sans le support du CN
    - a. Utiliser des contexts et identities distincts pour les environnements, vérifier le context actif et accorder les droits minimaux nécessaires.
    - b. Utiliser un seul context pour tous les environnements, mais se fier uniquement à des noms de namespace différents avant d'exécuter les commandes.
    - c. Désactiver la vérification des certificats TLS afin que les erreurs de confiance ne gênent pas les changements rapides entre les endpoints de cluster.
-   - d. Utiliser un unique `kubeconfig` cluster-admin pour tous les environnements et distinguer production uniquement à l'aide de shell aliases.
+   - d. Utiliser un unique kubeconfig `cluster-admin` pour tous les environnements et distinguer production uniquement à l'aide de shell aliases.
 
 <details>
 <summary>Réponse et explication</summary>

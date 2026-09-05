@@ -231,6 +231,6 @@ KCSA の問題は通常、大きな manifest の構文ではなくモデルを�
 
 </details>
 
-> **この次へ。** default-deny と allow ポリシーの実践的な設計については、CKS の第04章 `NetworkPolicy` を学んでください。metadata services とサービス endpoints の保護は CKS の第05章で、Cilium の L3/L4/L7 と DNS-aware ポリシーは CKS の第06章で説明します。Pod ネットワークと CNI の管理基盤については、CKA の第34章が役立ちます。
+> **この次へ。** default-deny と allow ポリシーの実践的な設計については、CKS の第04章 `NetworkPolicy` を学んでください。metadata services とサービス endpoints の保護は CKS の第05章で、Cilium の L3/L4/L7 と DNS-aware ポリシーは CKS の第06章で説明します。`Pod` ネットワークと CNI の管理基盤については、CKA の第34章が役立ちます。
 
 [目次](../README_JP.md) · [第12章](../12/jp.md) · [第14章](../14/jp.md)

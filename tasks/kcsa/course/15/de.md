@@ -2,7 +2,8 @@
 
 # Kapitel 15. Vertrauensgrenzen, Datenflüsse und Bedrohungsmodell
 
-> **Was als Nächstes kommt.** Die Kapitel 10-14 behandelten einzelne Kontrollen: Identitäten und RBAC, Pod-Sicherheit, Secret, Netzwerksegmentierung und Audit. Nun müssen wir sie mit dem verbinden, was wir schützen, vor wem und an welcher Stelle des Datenflusses. Ein Bedrohungsmodell macht diese Auswahl explizit. Dies ist ein Thema der KCSA-Domain **Kubernetes Threat Model** mit einer Gewichtung von 16 %. Die Beispiele im Kurs beziehen sich auf Kubernetes `v1.36`.
+> **Was als Nächstes kommt.** Die Kapitel 10-14 behandelten einzelne Kontrollen: Identitäten und RBAC, `Pod`-Sicherheit, `Secret`, Netzwerksegmentierung und Audit. Nun müssen wir sie mit dem verbinden, was wir schützen, vor wem und an welcher Stelle des Datenflusses. Ein Bedrohungsmodell macht diese Auswahl explizit. Dies ist ein Thema der KCSA-Domain **Kubernetes Threat Model** mit einer Gewichtung von 16 %. Die Beispiele im Kurs beziehen sich auf Kubernetes `v1.36`.
+
 
 ## 15.1 Was ein Bedrohungsmodell ist und warum es in Kubernetes benötigt wird
 
@@ -17,7 +18,7 @@ Es ist sinnvoll, mit vier Fragen zu beginnen:
 3. **Welche Wege sind verfügbar?** Kubernetes API, Netzwerk zwischen `Pod`, kubelet API, Container-Runtime-Socket, Volume, etcd-Backup, Registry.
 4. **Wo vertraut die Entscheidung Eingabedaten oder einer Identität?** An den Grenzen Client-API, API-etcd, API-kubelet, Runtime-`Pod`, zwischen Namespace und beim Netzwerk-Egress.
 
-Das Ergebnis muss kein großes Dokument sein. Für ein kleines Team reichen ein Diagramm, eine Bedrohungstabelle und eine Liste der Verantwortlichen für Kontrollen. Wichtig ist, das Modell zu aktualisieren, wenn ein neuer Namespace, externer Ingress, Webhook, eine Cloud-Rolle oder Zugriff auf sensible Daten hinzugefügt wird.
+Das Ergebnis muss kein großes Dokument sein. Für ein kleines Team reichen ein Diagramm, eine Bedrohungstabelle und eine Liste der Verantwortlichen für Kontrollen. Wichtig ist, das Modell zu aktualisieren, wenn ein neuer `Namespace`, externer Ingress, Webhook, eine Cloud-Rolle oder Zugriff auf sensible Daten hinzugefügt wird.
 
 | Element des Modells | Frage | Kubernetes-Beispiel |
 |---|---|---|
@@ -130,7 +131,7 @@ MITRE ATT&CK for Containers gruppiert Angreiferverhalten in Taktiken und Technik
 | Privilege Escalation | Container erhält `privileged`, `hostPath` oder Zugriff auf den Runtime-Socket | PSA, Admission, `securityContext`, Node-Einschränkungen |
 | Defense Impairment | ein Schutzmittel wird deaktiviert oder verändert | Schutz der Konfiguration, separate Log-Speicherung, Änderungs-Audit |
 | Credential Access | `Secret`, Token oder kubeconfig wird gelesen | RBAC, Encryption at rest, sichere Bereitstellung und Rotation |
-| Discovery | Namespace, Pod, Services und API-Ressourcen werden aufgelistet | Least Privilege, Audit ungewöhnlicher `list` und `watch` |
+| Discovery | `Namespace`, `Pod`, Services und API-Ressourcen werden aufgelistet | Least Privilege, Audit ungewöhnlicher `list` und `watch` |
 | Lateral Movement | kompromittierter `Pod` greift auf einen anderen Service oder Node zu | Segmentierung, `NetworkPolicy`, mTLS, kubelet-Schutz |
 | Datenzugriff und Exfiltration (Data-Flow-Linse, keine Taktik der Containers Matrix) | Daten werden aus einem Volume gelesen und an einen externen Endpoint übertragen | Egress beschränken, TLS, Netzwerk- und Daten-Monitoring |
 | Impact | Workloads werden gelöscht, Daten verschlüsselt oder Ressourcen erschöpft | Backup, Quotas, Einschränkungen, Alerts und Reaktionsplan |

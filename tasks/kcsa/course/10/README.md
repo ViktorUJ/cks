@@ -2,7 +2,7 @@
 
 # Chapter 10. Authentication and authorization
 
-> **What is next.** In chapters 07-09, we secured cluster components, worker nodes, Pods, and network boundaries. Now we will examine the path of a request to the Kubernetes API: first, the cluster establishes an identity, then it decides whether that identity is allowed to perform the action. This is part of the KCSA domain **Kubernetes Security Fundamentals**, weighted at 22%.
+> **What is next.** In chapters 07-09, we secured cluster components, worker nodes, `Pod` objects, and network boundaries. Now we will examine the path of a request to the Kubernetes API: first, the cluster establishes an identity, then it decides whether that identity is allowed to perform the action. This is part of the KCSA domain **Kubernetes Security Fundamentals**, weighted at 22%.
 
 ## 10.1 Who calls the API: users and `ServiceAccount`
 
@@ -71,7 +71,7 @@ Do not confuse RBAC with authentication. A `RoleBinding` does not verify identit
 
 ### Node authorizer and `NodeRestriction`: adjacent but distinct layers
 
-**Node authorizer** is a special authorizer for the kubelet/node identity `system:node:<nodeName>` in the `system:nodes` group. It limits which API operations kubelet can perform for its node and the Pods assigned to it, including the required `Secret`, `ConfigMap`, and volume information. This is **authorization**.
+**Node authorizer** is a special authorizer for the kubelet/node identity `system:node:<nodeName>` in the `system:nodes` group. It limits which API operations kubelet can perform for its node and the `Pod` objects assigned to it, including the required `Secret`, `ConfigMap`, and volume information. This is **authorization**.
 
 **`NodeRestriction`** is a validating admission plugin. It additionally limits which `Node` objects and related `Pod` objects kubelet can modify: a correctly identified kubelet must not modify another node or Pod, or independently set protected labels. This is **admission**, not an authorizer.
 
