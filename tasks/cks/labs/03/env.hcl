@@ -1,7 +1,7 @@
 locals {
-  region = "eu-north-1"
-  aws    = "default"
-  prefix = "cks-lab"
+  region           = "eu-north-1"
+  aws              = "default"
+  prefix           = "cks-lab"
   vpc_default_cidr = "10.2.0.0/16"
   az_ids = {
     "10.2.0.0/19"  = "eun1-az3"
@@ -31,6 +31,6 @@ locals {
     private_key = ""
     pub_key     = ""
   }
-  ssh_password_enable  = "true" # false |  true
-  access_cidrs         = ["0.0.0.0/0"]
+  ssh_password_enable = "true" # false |  true
+  access_cidrs        = ["0.0.0.0/0"]
 }
