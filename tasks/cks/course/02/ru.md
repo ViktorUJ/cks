@@ -2,7 +2,7 @@
 
 # Глава 02. Модель безопасности Kubernetes: 4C, поверхность атаки, фазы атаки
 
-> **Что дальше.** В главе 01 определены формат CKS, домены и инструменты. Теперь нужна общая модель, по которой принимают технические решения: что именно защищать, от кого и каким слоем. Эта глава - фундамент для всех шести доменов CKS: Cluster Setup (15%), Cluster Hardening (15%), System Hardening (10%), Minimize Microservice Vulnerabilities (20%), Supply Chain Security (20%) и Monitoring, Logging and Runtime Security (20%).
+> **Что дальше.** В главе 01 определены формат CKS, домены и инструменты. Теперь нужна общая модель, по которой принимают технические решения: что именно защищать, от кого и каким слоем. Эта глава - фундамент для всех шести доменов CKS: Cluster Setup (10%), Cluster Hardening (15%), System Hardening (15%), Minimize Microservice Vulnerabilities (20%), Supply Chain Security (20%) и Monitoring, Logging and Runtime Security (20%).
 
 > **Что нужно из CKA.** Устройство control plane, worker node, kubelet, CNI и путь запроса к API разобраны в [главе 02 CKA](../../../cka/course/02/ru.md). Здесь они рассматриваются только как объекты защиты и источники риска.
 
@@ -44,17 +44,29 @@ kubectl get --raw=/version
 # Кто имеет широкие cluster-wide права
 kubectl get clusterrolebinding -o jsonpath='{range .items[?(@.roleRef.name=="cluster-admin")]}{.metadata.name}{"\t"}{range .subjects[*]}{.kind}:{.name}{" "}{end}{"\n"}{end}'
 
-# Нагрузки с явными опасными признаками
+# Нагрузки с явными опасными признаками. Команда выводит только найденные риски.
 kubectl get pods -A -o json | jq -r '
+  def containers: ((.spec.containers // []) + (.spec.initContainers // []) + (.spec.ephemeralContainers // []));
   .items[]
-  | select(.spec.hostNetwork == true or .spec.hostPID == true or .spec.hostIPC == true)
-  | "\(.metadata.namespace)/\(.metadata.name) uses host namespace"'
+  | select(
+      .spec.hostNetwork == true or .spec.hostPID == true or .spec.hostIPC == true
+      or ([.spec.volumes[]? | select(.hostPath != null)] | length > 0)
+      or ([containers[]?
+          | select(
+              .securityContext.privileged == true
+              or .securityContext.allowPrivilegeEscalation == true
+              or ((.securityContext.capabilities.add // []) | length > 0)
+              or .securityContext.runAsUser == 0
+            )] | length > 0)
+      or .spec.securityContext.runAsUser == 0
+    )
+  | "\(.metadata.namespace)/\(.metadata.name) requires review"'
 
 # На ноде: слушающие TCP/UDP-порты и процессы-владельцы
 sudo ss -tulpn
 ```
 
-`cluster-admin` не всегда ошибка: он нужен отдельным системным компонентам и контролируемым администраторам. Результат инвентаризации - список субъектов, обоснование доступа, владелец и дата следующего пересмотра. Не удаляйте binding только потому, что его имя выглядит подозрительно: сначала проверьте назначение и протестируйте замену минимальной ролью.
+`cluster-admin` не всегда ошибка: он нужен отдельным системным компонентам и контролируемым администраторам. Для каждой нагрузки из инвентаризации зафиксируйте конкретный признак: `privileged`, `allowPrivilegeEscalation`, `hostPath`, добавленные capabilities или явно заданный UID 0. Это список для review, а не автоматическое доказательство уязвимости: например, UID образа может быть неизвестен из `PodSpec`, а оправданное исключение должно иметь владельца и срок. Результат инвентаризации - список субъектов, обоснование доступа, владелец и дата следующего пересмотра. Не удаляйте binding только потому, что его имя выглядит подозрительно: сначала проверьте назначение и протестируйте замену минимальной ролью.
 
 ## 02.2. Поверхность атаки Kubernetes
 
@@ -84,7 +96,7 @@ flowchart LR
 
 Рассматривайте следующие зоны отдельно.
 
-- **Control plane.** `kube-apiserver` принимает запросы управления. Слабые authentication/authorization настройки, оставленный `--anonymous-auth=true`, небезопасные admission rules или доступ API из интернета превращают его в основной вход в кластер. `etcd` содержит состояние кластера и Secret-данные, поэтому его клиентский порт и сертификаты нельзя делать доступными workload.
+- **Control plane.** `kube-apiserver` принимает запросы управления. Слабые authentication/authorization настройки, `--anonymous-auth=true` при авторизованной identity `system:anonymous` или доступных небезопасных endpoint, небезопасные admission rules или доступ API из интернета превращают его в основной вход в кластер. Расширяемость control plane также является поверхностью: admission webhooks, aggregated API, CRD/operators и их ServiceAccount должны быть проверены как код, endpoint и RBAC-идентичность. `etcd` содержит состояние кластера и Secret-данные, поэтому его клиентский порт и сертификаты нельзя делать доступными workload.
 - **kubelet и нода.** Kubelet запускает контейнеры и имеет учётные данные ноды. Доступ к `10250`, сокету container runtime, SSH или write-доступ к static Pod manifests часто равнозначен контролю над нодой. Нода - часть доверенной базы, а не просто место исполнения Pod.
 - **Сеть Pod.** В плоской сети скомпрометированный Pod может сканировать сервисы, обращаться к DNS, API, metadata или другим рабочим нагрузкам. Защитой являются default-deny, точечные ingress/egress правила, сегментация namespace и шифрование там, где оно требуется.
 - **Образы и supply chain.** Тег `latest`, неизвестный registry, зависимость с CVE или подменённый build artifact создают угрозу ещё до запуска Pod. Нужны digest, сканирование, SBOM, подпись и policy допуска.
@@ -129,7 +141,7 @@ kubectl delete pod 4c-demo
 
 ## 02.3. Фазы атаки: от initial access до exfiltration
 
-Один инцидент обычно проходит через несколько фаз. Удобная упрощённая kill chain для Kubernetes основана на тактиках MITRE ATT&CK for Containers. Она нужна не для механического навешивания меток, а чтобы определить, где предотвратить действие и какой сигнал сохранить для расследования.
+Один инцидент обычно проходит через несколько фаз. Ниже приведена авторская упрощённая Kubernetes attack chain, использующая терминологию MITRE ATT&CK for Containers, но не являющаяся точной матрицей его тактик. Она нужна не для механического навешивания меток, а чтобы определить, где предотвратить действие и какой сигнал сохранить для расследования.
 
 ```mermaid
 flowchart LR
@@ -156,6 +168,54 @@ flowchart LR
 | Exfiltration | Secret отправлен во внешний сервис или загружен в shell | ограничить `secrets` RBAC и egress, encryption at rest, DLP на границе | audit event чтения Secret, DNS/proxy logs, network flow |
 
 Пример корреляции: неожиданное создание `ClusterRoleBinding` после `kubectl exec` в application Pod - это не три независимые записи. Это вероятная последовательность execution → persistence/privilege escalation. Сохраняйте контекст: identity из audit log, UID Pod, node, время в UTC, образ по digest и исходящий адрес.
+
+### Воспроизводимая модель угроз
+
+Threat model должен давать проверяемые решения, а не только перечень рисков. Для изменения Ingress, namespace, operator или cloud-интеграции пройдите следующие шаги:
+
+1. Зафиксируйте **активы**: данные, Secret, ServiceAccount, API и cloud-роль.
+2. Определите **акторов**: внешний пользователь, workload, CI, оператор и администратор.
+3. Отметьте **границы доверия** между интернетом, Ingress, namespace, нодой, control plane и cloud.
+4. Перечислите **точки входа**: DNS/Ingress, API, registry, webhook, kubelet и CI credentials.
+5. Нарисуйте **потоки** данных и идентичностей, включая обращение Pod к API и metadata.
+6. Явно укажите **допущения**: поддерживает ли CNI policy, кто управляет нодой, какие endpoints считаются доверенными.
+7. Оцените **ущерб**: чтение Secret, создание workload, доступ к cloud-ресурсам, простой или эксфильтрация.
+8. Свяжите каждый риск с **control и evidence**: policy/RBAC/admission/IAM и audit, flow log, webhook log либо runtime alert, которые подтвердят срабатывание.
+
+Компактная DFD для типового внешнего сервиса показывает, где пересекаются доверенные границы:
+
+```mermaid
+flowchart LR
+    internet["Internet"] --> ingress["Ingress"] --> pod["Pod"]
+    pod --> sa["ServiceAccount"] --> api["Kubernetes API"]
+    pod --> metadata["cloud metadata"]
+```
+
+Это не утверждение, что каждый Pod имеет доступ к metadata или может изменить API. Это два потока, которые нужно отдельно разрешить или запретить, а затем подтвердить их наблюдаемостью.
+
+Рабочее сопоставление с OWASP Kubernetes Top 10 помогает не потерять класс риска. Это не замена threat model: один поток может относиться к нескольким категориям.
+
+| Риск в модели | Категория OWASP Kubernetes Top 10 | Пример control и evidence |
+|---|---|---|
+| избыточная авторизация ServiceAccount или пользователя | K03 Overly Permissive RBAC Configurations | минимальная Role/ClusterRole, review bindings, API audit `allowed`/`forbidden` |
+| отсутствие сегментации между Pod и namespace | K07 Missing Network Segmentation Controls | default-deny и точечная `NetworkPolicy`, CNI flow/deny events |
+| открытый API, kubelet, etcd, webhook или другой компонент | K09 Misconfigured Cluster Components | закрытая сеть, TLS и безопасная конфигурация, scanner/config audit и access logs |
+| lateral movement из кластера в cloud через API или metadata | K07 Missing Network Segmentation Controls, K03 Overly Permissive RBAC Configurations и K08 Secret Management Failures | egress policy, минимальный IAM и ServiceAccount, flow logs и cloud audit |
+| слабая аутентификация или неуместный anonymous access | K06 Broken Authentication Mechanisms | проверенные issuer/audience, отключённая или неавторизованная anonymous identity, authentication/audit events |
+| отсутствие сигналов о действиях и нарушениях | K05 Inadequate Logging and Monitoring | audit policy, runtime и network telemetry, сохранённые alerts с identity и временем |
+
+### Безопасный walkthrough: проверка барьеров и доказательств
+
+Проводите его только в выделенном test namespace и с согласованной командой эксплуатации; не используйте реальные Secret, production endpoint или exploit. Для заранее известного test Pod с отдельным ServiceAccount проверьте цепочку без RCE:
+
+| Шаг | Ожидаемый барьер | Доказательство |
+|---|---|---|
+| Попытаться выполнить разрешённый запрос к известному внутреннему test endpoint | точечный ingress/egress policy пропускает нужный поток | успешный ответ и CNI flow с точными source/destination labels |
+| Попытаться обратиться к заранее подготовленному запрещённому test endpoint | default-deny или egress policy блокирует поток | timeout/отказ и CNI deny event |
+| Проверить права той же ServiceAccount на чтение `Secrets` через `kubectl auth can-i --as=system:serviceaccount:<namespace>:<serviceaccount> get secrets -A` | least-privilege RBAC отвечает `no` | вывод `no` и при фактическом API-запросе audit `forbidden` |
+| Отправить в test namespace заведомо запрещённый privileged-манифест без hostPath и без запуска контейнера | admission policy отклоняет конфигурацию | текст отказа webhook/PSA и соответствующий audit event |
+
+Такой сценарий воспроизводит последовательность reconnaissance → попытка lateral movement/privilege escalation, но проверяет controls без закрепления, доступа к данным или эксплуатации уязвимости.
 
 ### Проверка наблюдаемости до инцидента
 
@@ -199,7 +259,7 @@ flowchart TB
     style detect fill:#326ce5,color:#fff
 ```
 
-Принципы могут конфликтовать с удобством. Например, `readOnlyRootFilesystem` требует writable volume для `/tmp`; default-deny egress требует отдельного разрешения DNS; отказ от общего `cluster-admin` требует несколько ролей. Это нормальная инженерная работа: сначала задать ограничение, затем добавлять только измеримо нужные исключения.
+Принципы могут конфликтовать с удобством. Например, `readOnlyRootFilesystem` требует writable volume для `/tmp` только если приложению действительно нужна временная запись; default-deny egress требует отдельного разрешения DNS; отказ от общего `cluster-admin` требует несколько ролей. Это нормальная инженерная работа: сначала задать ограничение, затем добавлять только измеримо нужные исключения.
 
 ## 02.5. Как домены экзамена ложатся на модель угроз
 
@@ -207,9 +267,9 @@ flowchart TB
 
 | Слой или фаза | Домен CKS | Главы курса | Основной результат |
 |---|---|---|---|
-| Cloud, Pod network, initial access и lateral movement | Cluster Setup - 15% | [04](../04/ru.md), [05](../05/ru.md), [06](../06/ru.md), [07](../07/ru.md), [08](../08/ru.md), [09](../09/ru.md) | сегментация сети, защита metadata/endpoints, CIS и TLS hardening |
+| Cloud, Pod network, initial access и lateral movement | Cluster Setup - 10% | [04](../04/ru.md), [05](../05/ru.md), [06](../06/ru.md), [07](../07/ru.md), [08](../08/ru.md), [09](../09/ru.md) | сегментация сети, защита metadata/endpoints, CIS и TLS hardening |
 | Cluster API, persistence и privilege escalation | Cluster Hardening - 15% | [10](../10/ru.md), [11](../11/ru.md), [12](../12/ru.md), [13](../13/ru.md) | минимальные права, безопасные ServiceAccount, закрытый API, своевременные обновления |
-| Node и container runtime, privilege escalation | System Hardening - 10% | [14](../14/ru.md), [15](../15/ru.md), [16](../16/ru.md), [17](../17/ru.md) | сокращение поверхности ноды, MAC и syscall filtering |
+| Node и container runtime, privilege escalation | System Hardening - 15% | [14](../14/ru.md), [15](../15/ru.md), [16](../16/ru.md), [17](../17/ru.md) | сокращение поверхности ноды, MAC и syscall filtering |
 | Container, данные и lateral movement | Minimize Microservice Vulnerabilities - 20% | [18](../18/ru.md), [19](../19/ru.md), [20](../20/ru.md), [21](../21/ru.md), [22](../22/ru.md), [23](../23/ru.md) | hardened workloads, policy admission, защита Secret, sandbox и mTLS |
 | Code и build pipeline, initial access | Supply Chain Security - 20% | [24](../24/ru.md), [25](../25/ru.md), [26](../26/ru.md), [27](../27/ru.md), [28](../28/ru.md) | доверенный и проверяемый artifact до запуска |
 | Execution, persistence, exfiltration и расследование | Monitoring, Logging and Runtime Security - 20% | [29](../29/ru.md), [30](../30/ru.md), [31](../31/ru.md), [32](../32/ru.md) | обнаружение, расследование, иммутабельность и доказательства действий |

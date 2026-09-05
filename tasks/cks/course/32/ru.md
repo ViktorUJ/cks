@@ -28,7 +28,7 @@ flowchart LR
     client["kubectl / controller / SA"] --> api["kube-apiserver\nauthn → authz → admission"]
     api --> etcd["API-объект / etcd"]
     api --> policy["audit Policy\nвыбирает level"]
-    policy --> local["локальный JSON log"]
+    policy --> local["локальный audit log"]
     policy --> webhook["центральный collector\nчерез webhook"]
     local --> investigation["поиск и расследование"]
     webhook --> investigation
@@ -44,9 +44,9 @@ flowchart LR
 
 | Вопрос расследования | Поля события |
 |---|---|
-| **Кто?** | `.user.username`, `.user.groups`, `.user.uid`; при impersonation - `.impersonatedUser` |
-| **Откуда и чем?** | `.sourceIPs`, `.userAgent` |
-| **Что хотел сделать?** | `.verb`, `.requestURI`, `.objectRef` (group/resource/namespace/name) |
+| **Кто и как аутентифицирован?** | `.user.username`, `.user.groups`, `.user.uid`; при impersonation - `.impersonatedUser`; при наличии - `.authenticationMetadata` |
+| **Откуда и чем?** | `.sourceIPs`, `.userAgent` - данные, сообщаемые клиентом/proxy, а не самостоятельное доказательство источника |
+| **Что хотел сделать?** | `.verb`, `.requestURI`, `.objectRef` (group/resource/namespace/name); audit-аннотации `.annotations` от authn/authz/admission plugins |
 | **Когда и в какой фазе?** | `.requestReceivedTimestamp`, `.stageTimestamp`, `.stage` |
 | **Успешно ли?** | `.responseStatus.code`, `.responseStatus.reason` |
 | **Как связать несколько записей?** | `.auditID` - один идентификатор для стадий одного запроса |
@@ -61,7 +61,7 @@ SQL-запрос внутри Pod или shell-команду, которая н
 Особенно ценны audit-логи для:
 
 - расследования удаления Deployment, RoleBinding, NetworkPolicy или изменения Secret;
-- поиска украденной identity ServiceAccount и необычного `sourceIPs`/`userAgent`;
+- поиска украденной identity ServiceAccount по необычной комбинации identity, времени, scope и сетевого контекста; `sourceIPs`/`userAgent` сверяют с доверенными proxy и другими telemetry, а не считают доказательством сами по себе;
 - контроля привилегированных операций и изменения security-sensitive ресурсов;
 - подтверждения, какой пользователь и с каким response code выполнил действие;
 - передачи событий в SIEM, где их сопоставляют с cloud, node и application telemetry.
@@ -69,7 +69,14 @@ SQL-запрос внутри Pod или shell-команду, которая н
 > **Граница конфиденциальности.** Audit может записать request/response body. В них часто
 > находятся Secret, токены, kubeconfig и персональные данные. Поэтому «логировать всё на
 > `RequestResponse`» почти всегда хуже, чем узкая policy с `Metadata` и контролируемым
-> доступом к журналу.
+> доступом к audit log.
+
+`sourceIPs` содержит IP из `X-Forwarded-For`/`X-Real-IP` и адрес соединения: все значения,
+кроме последнего, клиент может задать произвольно. `userAgent` также сообщает клиент. Это
+полезные pivot-поля, но их нужно corroborate с доверенным ingress/proxy, identity и временем.
+Для более полного контекста смотрите `.authenticationMetadata` и `.annotations`: последние
+могут быть добавлены authn/authz/admission plugins и относятся к audit event, а не к
+`metadata.annotations` объекта.
 
 ## 32.2. Как событие проходит стадии audit pipeline
 
@@ -115,6 +122,10 @@ Kubernetes поддерживает четыре уровня. Правило в
 | `Request` | `Metadata` + `.requestObject` | узко для создания/patch чувствительных объектов, когда нужен intent | request body может содержать Secret/PII; большой объём |
 | `RequestResponse` | `Request` + `.responseObject` | только для короткого, явно нужного forensic-сценария | максимальный объём и риск; для `watch` практически не оправдан |
 
+У non-resource запросов body не записываются даже на `Request`/`RequestResponse`; у `list`
+и non-resource запросов нет `.objectRef`. Поэтому для таких запросов опирайтесь на
+`.requestURI`, `.verb`, identity, timestamps, status и annotations, а не ожидайте имя объекта.
+
 Для обычного `watch` не используйте `RequestResponse` без специальной forensic-причины:
 long-running запросы имеют стадию `ResponseStarted`, а высокий уровень аудита создаёт
 ненужный объём и нагрузку на storage/память. Для routine watch и health-запросов обычно
@@ -155,6 +166,9 @@ kind: Policy
 # Для коротких запросов достаточно финального outcome.
 omitStages:
   - RequestReceived
+
+# Не дублировать managedFields в body rules уровня Request/RequestResponse.
+omitManagedFields: true
 
 rules:
   # 1. Не засорять журнал endpoints проверки доступности API.
@@ -209,6 +223,10 @@ yq e '.' /etc/kubernetes/audit/audit-policy.yaml >/dev/null
 sudo sed -n '1,220p' /etc/kubernetes/audit/audit-policy.yaml
 ```
 
+`omitManagedFields: true` уменьшает объём `managedFields` в `.requestObject` и
+`.responseObject`; rule может переопределить это глобальное значение. Это не скрывает другие
+поля body, поэтому не заменяет `Metadata` для Secret.
+
 `Policy` - конфигурация API server на ноде, а не Kubernetes object: её не применяют через
 `kubectl apply`. Доступ к этому файлу и к audit log должен быть ограничен: тот, кто может
 поменять policy, способен выключить evidence; тот, кто читает log уровня `Request`, может
@@ -258,7 +276,7 @@ spec:
         - --audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml
         - --audit-log-path=/var/log/kubernetes/audit/audit.log
         - --audit-log-format=json
-        - --audit-log-mode=batch
+        # Не задаём --audit-log-mode: для file backend default - blocking.
         - --audit-log-maxage=30
         - --audit-log-maxbackup=10
         - --audit-log-maxsize=100
@@ -297,9 +315,9 @@ sudo stat -c '%A %a %U:%G %n' \
 | Флаг | Назначение |
 |---|---|
 | `--audit-policy-file` | путь к policy, которую API server загружает при старте |
-| `--audit-log-path` | локальный файл audit backend; без него локальный журнал не пишется |
+| `--audit-log-path` | локальный файл audit backend; без него локальный audit log не пишется |
 | `--audit-log-format=json` | JSON Lines, удобный для `jq` и shipper; это нормальный production format |
-| `--audit-log-mode=batch` | буферизует события и периодически записывает batch; снижает cost на запрос, но требует планировать буфер/потерю при аварии |
+| `--audit-log-mode` | для file backend default - `blocking`: обработка каждого события блокирует ответ API server. `batch` буферизует и пишет асинхронно, но для log backend не рекомендован; `blocking-strict` дополнительно отклоняет весь запрос, если audit на стадии `RequestReceived` завершился ошибкой |
 | `--audit-log-maxage` | хранить rotated files не дольше указанного числа дней; `0` отключает age-based limit |
 | `--audit-log-maxbackup` | максимальное число старых rotated files; `0` отключает count-based limit |
 | `--audit-log-maxsize` | размер активного audit file в MiB, после которого он ротируется; `0` отключает size-based limit |
@@ -336,7 +354,8 @@ sudo ls -l /var/log/kubernetes/audit/audit.log
 sudo journalctl -u kubelet -n 120 --no-pager
 sudo crictl ps -a --name kube-apiserver
 # Для найденного остановленного container ID:
-sudo crictl logs <container-id>
+CONTAINER_ID="${CONTAINER_ID:?set container ID}"
+sudo crictl logs "$CONTAINER_ID"
 ```
 
 ## 32.6. Локальная ротация, retention и доставка за пределы ноды
@@ -362,7 +381,7 @@ flowchart LR
 
 Проектируйте storage отдельно от флагов:
 
-- **Локальный журнал - буфер, не источник истины.** Нода может быть скомпрометирована,
+- **Локальный audit log - буфер, не источник истины.** Нода может быть скомпрометирована,
   удалена или заполнена. Отправляйте JSON в централизованное, контролируемое хранилище.
 - **Не запускайте независимый `logrotate` для того же активного файла**, пока не
   согласована интеграция с API server. Встроенные audit rotation flags уже управляют
@@ -371,16 +390,23 @@ flowchart LR
   collector использует TLS и отдельную identity. Не давайте workload `hostPath` на audit
   directory.
 - **Наблюдайте за самим audit.** Алерты нужны на отсутствие свежих событий, рост disk,
-  ошибку backend, падение collector и изменение policy/static Pod манифеста.
+  ошибку backend, падение collector и изменение policy/static Pod манифеста. Сверяйте
+  `apiserver_audit_event_total` (экспортированные события) и
+  `apiserver_audit_error_total` (события, отброшенные при ошибке экспорта).
 - **Определите retention и tamper resistance.** Период хранения, legal hold, encryption,
   доступ на чтение и неизменяемость определяются организацией. Локальные `30` дней могут
   быть лишь operational window.
 
-`batch` повышает throughput, но события находятся в памяти до отправки/записи. Если
-нужен более строгий evidence для узкой критичной категории, оценивайте `blocking`: backend
-участвует в пути запроса, поэтому медленный или недоступный storage/webhook увеличивает
-latency и может ухудшить доступность API. Это архитектурный trade-off, а не универсальный
-«безопасный» переключатель.
+Для file backend оставляйте default `blocking`: upstream не рекомендует `batch` для этого
+backend. Если `batch` всё же включён после нагрузочного теста, события находятся в памяти до
+записи, а переполнение `--audit-log-batch-buffer-size` отбрасывает события. Наблюдайте
+`apiserver_audit_event_total` и `apiserver_audit_error_total`, а также backlog/ошибки backend.
+
+`blocking` включает backend в путь ответа и поэтому медленный или недоступный storage/webhook
+увеличивает latency и может ухудшить доступность API. `blocking-strict` идёт дальше: при
+ошибке audit на стадии `RequestReceived` kube-apiserver отклоняет сам запрос. Это усиливает
+fail-closed evidence, но превращает сбой audit backend в отказ API для клиентов; выбирайте его
+только с проверенными capacity, HA и recovery, а не как универсальный «безопасный» режим.
 
 ## 32.7. Webhook backend: отправить audit в центральный collector
 
@@ -444,8 +470,12 @@ webhook kubeconfig и CA лежат там. Если client key находитс
 
 У webhook есть свои флаги batching/truncation (`--audit-webhook-batch-*`,
 `--audit-webhook-truncate-*`), если нужно настроить размер очереди, задержку и предельный
-размер event. Не копируйте числа из чужого кластера вслепую: оцените audit rate, latency
-collector, допустимую потерю при рестарте и нагрузку API server.
+размер event. Truncation для обоих backend по умолчанию выключен; включайте
+`--audit-log-truncate-enabled` или `--audit-webhook-truncate-enabled` только осознанно и
+задайте соответствующие `*-truncate-max-event-size` и `*-truncate-max-batch-size`. Слишком
+большой event сначала теряет request/response body, а если этого недостаточно - отбрасывается.
+Не копируйте числа из чужого кластера вслепую: оцените audit rate, latency collector,
+допустимую потерю при рестарте и нагрузку API server.
 
 Безопасная эксплуатация webhook:
 
@@ -454,9 +484,11 @@ collector, допустимую потерю при рестарте и нагр
    security telemetry, но не должен обладать правами на Kubernetes API.
 3. Оставьте локальный audit log как краткоживущий fallback, если требования допускают;
    затем сравнивайте доставку и задержку централизованного потока.
-4. Сначала включите `batch` и измерьте failure/latency. `blocking` связывает доступность
-   API request с backend и требует отдельного capacity/DR решения.
-5. Тестируйте отказ collector: API server не должен неожиданно стать недоступным, а
+4. Для webhook `batch` является default, но переполнение его buffer отбрасывает события;
+   измерьте rate, failure/latency и следите за audit metrics. `blocking` связывает доступность
+   API request с backend, а `blocking-strict` отклоняет запрос при ошибке audit на
+   `RequestReceived`; оба требуют отдельного capacity/DR решения.
+5. Тестируйте отказ collector: ожидаемое поведение выбранного mode должно быть известно, а
    мониторинг должен явно показать retry/backlog/loss-risk.
 
 Webhook не меняет policy: одна policy выбирает level/stage, а log и webhook backends
@@ -512,10 +544,11 @@ sudo jq -r '
 ```
 
 Ожидаются строки уровня `Request`, с вашим username, `create`/`delete`, объектом
-`payments/configmaps/audit-check` и response code `201`/`200`. Если policy использует
+`payments/configmaps/audit-check` и успешным response code класса `2xx`. Конкретный код
+зависит от операции и API. Если policy использует
 другой namespace/resource, тест и фильтр должны соответствовать именно ей.
 
-Проверить, что body Secret не утёк в локальный journal, можно создать или прочитать
+Проверить, что body Secret не утёк в локальный audit log, можно создать или прочитать
 тестовый Secret и смотреть event: у `Metadata` не должно быть `.requestObject` или
 `.responseObject`.
 
@@ -542,7 +575,12 @@ kubectl -n payments delete secret audit-secret-check
 
 ### 4. Найти подозрительное действие в расследовании
 
-Например, вывести все завершённые изменения RBAC за период и не терять response status:
+Начинайте с узких, high-signal действий: успешных изменений RBAC, создания
+ClusterRoleBinding, доступа через `pods/exec` и добавления `ephemeralcontainers`. Не делайте
+вывод об источнике только по `sourceIPs`/`userAgent`: сопоставьте их с identity,
+`.authenticationMetadata`, `.annotations` и доверенными log proxy/ingress.
+
+Например, вывести завершённые изменения RBAC за период и не терять response status:
 
 ```bash
 sudo jq -r '
@@ -552,8 +590,24 @@ sudo jq -r '
            or .verb == "delete" or .verb == "deletecollection")
   | [.stageTimestamp, .auditID, .user.username,
      (.sourceIPs[0] // "-"), .verb,
-     (.objectRef.namespace // "<cluster>"),
+     (.objectRef.namespace // "cluster"),
      .objectRef.resource, (.objectRef.name // "-"),
+     (.responseStatus.code | tostring)]
+  | @tsv
+' /var/log/kubernetes/audit/audit.log | column -t -s $'\t'
+```
+
+Отдельно выделите интерактивный доступ и изменение Pod через subresource:
+
+```bash
+sudo jq -r '
+  select(.stage == "ResponseComplete")
+  | select(.objectRef.resource == "pods")
+  | select(.objectRef.subresource == "exec" or .objectRef.subresource == "ephemeralcontainers")
+  | select(.verb == "create" or .verb == "update" or .verb == "patch")
+  | select((.responseStatus.code // 0) >= 200 and (.responseStatus.code // 0) < 300)
+  | [.stageTimestamp, .auditID, .user.username, .verb,
+     .objectRef.namespace, .objectRef.name, .objectRef.subresource,
      (.responseStatus.code | tostring)]
   | @tsv
 ' /var/log/kubernetes/audit/audit.log | column -t -s $'\t'
@@ -572,7 +626,20 @@ sudo jq -r '
 | Есть log, но нет тестового object | порядок rules, namespace/verb/group/resource, только ли `ResponseComplete` ищется |
 | У Secret есть body | Secret rule расположен после широкого `Request`/`RequestResponse`; перенести его выше и перезапустить API server |
 | Webhook не получает события | `--audit-webhook-config-file`, DNS/network, CA/client cert, collector HTTP/TLS log и режим batch |
-| Journal слишком велик | `watch`/read noise на высоком level, отсутствие `omitStages`, нет rotation/retention, слишком широкий `RequestResponse` |
+| Audit log слишком велик | `watch`/read noise на высоком level, отсутствие `omitStages`, нет rotation/retention, слишком широкий `RequestResponse` |
+
+### Компактный timed lab checklist - 20 минут
+
+1. **0-3 мин:** сохранить manifest, создать policy и host directories; проверить YAML.
+2. **3-8 мин:** добавить policy/log mounts и audit flags, оставить file backend в default
+   `blocking`; дождаться restart и `/readyz`.
+3. **8-12 мин:** выполнить безопасные create/delete ConfigMap в `payments`; через `jq`
+   проверить `ResponseComplete`, identity, objectRef и успешный `2xx`.
+4. **12-15 мин:** создать тестовый Secret и доказать `Metadata` без request/response body.
+5. **15-18 мин:** найти high-signal RBAC или `pods/exec`/`ephemeralcontainers` event; сверить
+   `auditID`, status, annotations и только затем сетевой контекст.
+6. **18-20 мин:** проверить rotation, актуальность `apiserver_audit_event_total` /
+   `apiserver_audit_error_total` и записать rollback path.
 
 ## 32.9. Как это применяют в продакшене
 
@@ -625,8 +692,9 @@ sudo jq -r '
   Pod; после каждой правки подтверждают restart и `/readyz`.
 - `--audit-log-maxsize`, `--audit-log-maxbackup` и `--audit-log-maxage` ограничивают
   локальный буфер; центральная защищённая доставка и retention остаются отдельной задачей.
-- Webhook требует корректного kubeconfig, TLS, мониторинга и анализа trade-off между
-  batch и blocking mode.
+- File backend по умолчанию использует `blocking`; `batch` для него не рекомендован. Для
+  webhook mode, truncation, metrics и отказ backend выбирают после нагрузочной проверки, а
+  `blocking-strict` означает fail-closed запросов при ошибке audit на `RequestReceived`.
 - Доказательство работы - не конфигурационный файл, а контролируемый API запрос и
   найденный `jq` event правильного level, identity, objectRef и response status.
 
@@ -656,8 +724,9 @@ backup манифеста → policy и directories → флаги/mounts → д
 5. Какие флаги и какие два mounts нужны static Pod `kube-apiserver` для file backend?
 6. Что ограничивают `--audit-log-maxsize`, `--audit-log-maxbackup` и
    `--audit-log-maxage` и почему этого недостаточно для compliance retention?
-7. Почему webhook в `blocking` mode может создать availability risk для Kubernetes API?
-8. Как через `jq` доказать, что policy записала действие нужной identity с нужным level,
+7. Чем `blocking-strict` отличается от `blocking` и какой availability trade-off создаёт?
+8. Почему `sourceIPs` и `userAgent` нельзя считать самостоятельным доказательством источника?
+9. Как через `jq` доказать, что policy записала действие нужной identity с нужным level,
    но не раскрыла Secret body?
 
 ## Практика

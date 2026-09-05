@@ -158,8 +158,11 @@ WireGuard использует пару private/public key на peer. Cilium а�
 
 Ниже показана типовая Helm-конфигурация. Выполняйте её через ваш version-pinned GitOps или
 зафиксированный Helm release, предварительно сверив values конкретного Cilium release.
-`encryption.nodeEncryption=true` расширяет защиту на node-to-node трафик; включайте его
-только после понимания его влияния на control-plane и host traffic.
+`encryption.nodeEncryption=true` расширяет защиту на node-to-node трафик. Для WireGuard
+Cilium по умолчанию исключает ноды с label `node-role.kubernetes.io/control-plane` из
+node-to-node encryption: это предотвращает bootstrap-проблему при обновлении public key.
+Не считайте control-plane автоматически покрытым этой настройкой; включайте её только после
+понимания влияния на control-plane и host traffic.
 
 ```bash
 # Пример: подставьте уже утверждённую версию и values из репозитория.
@@ -191,7 +194,7 @@ helm upgrade cilium cilium/cilium \
 
 ```bash
 kubectl -n kube-system exec ds/cilium -- cilium status --verbose
-kubectl -n kube-system exec ds/cilium -- cilium encrypt status
+kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status
 kubectl -n kube-system get pods -l k8s-app=cilium -o wide
 ```
 
@@ -200,6 +203,32 @@ kubectl -n kube-system get pods -l k8s-app=cilium -o wide
 счётчики. Если CLI не поддерживает ожидаемый subcommand, сначала выполните
 `cilium --help` внутри именно этого agent и используйте документацию совпадающей версии,
 а не отключайте encryption ради «зелёного» вывода.
+
+### Strict mode: не допустить первый plaintext packet
+
+При обычном node-to-node WireGuard новый remote endpoint может стать известен agent не сразу;
+до этого первые egress-пакеты к нему потенциально могут уйти без туннеля. Если threat model
+этого не допускает, используйте strict mode после отдельной проверки совместимости версии:
+
+```yaml
+encryption:
+  strictMode:
+    egress:
+      enabled: true
+      # IPv4 Pod CIDR данного кластера - замените на фактический.
+      cidr: 10.244.0.0/16
+    ingress:
+      enabled: true
+```
+
+`encryption.strictMode.egress` поддерживается только для IPv4, поэтому `cidr` должен быть
+фактическим IPv4 Pod CIDR; у режима также есть ограничения для direct routing, node CIDR и
+выбранных интерфейсов. `encryption.strictMode.ingress` отбрасывает cluster-internal Pod
+traffic, пришедший не через WireGuard tunnel; это не универсальный strict mode для IPsec.
+Перед включением сверьте требования release Cilium к native/direct routing и device
+configuration, затем отрицательным тестом подтвердите, что plaintext packet между нодами не
+проходит. Не включайте strict mode как замену проверки NetworkPolicy, firewall и доступности
+control-plane.
 
 ### Ротация и инцидент с ключом WireGuard
 
@@ -236,7 +265,7 @@ helm upgrade cilium cilium/cilium \
   --set encryption.type=ipsec
 
 kubectl -n kube-system rollout status daemonset/cilium --timeout=10m
-kubectl -n kube-system exec ds/cilium -- cilium encrypt status
+kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status
 ```
 
 Cilium хранит IPsec key material в Secret `cilium-ipsec-keys` в `kube-system`. Не выводите
@@ -249,28 +278,52 @@ kubectl -n kube-system get secret cilium-ipsec-keys \
 kubectl -n kube-system get secret cilium-ipsec-keys -o jsonpath='{.metadata.resourceVersion}{"\n"}'
 ```
 
-Ротация IPsec key должна соответствовать официальной процедуре Cilium для конкретной
-версии. Смысл процедуры - на короткий период дать agents принять старый и новый key,
-дождаться rollout всех нод и только потом убрать старый key. Нельзя вручную заменить
-Secret одной случайной строкой: рассинхронизация peers вызывает packet loss. Практический
-минимум для change request:
+Для поддерживаемого version-matched Cilium CLI штатный путь ротации IPsec key -
+`cilium encryption rotate-key`; состояние ключей проверяйте через `cilium encryption
+key-status`. Выполняйте эти команды с административной машины, где CLI имеет kubeconfig к
+кластеру, а не из container Cilium agent:
+
+```bash
+# Административная машина с Cilium CLI той же версии, что и release.
+cilium encryption key-status
+cilium encryption rotate-key
+cilium encryption key-status
+```
+
+При нескольких кластерах или нестандартном release добавьте к командам нужные параметры
+`--context`, `--namespace kube-system` и `--helm-release-name`. Для node-local диагностики
+используйте `kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status`, но не
+выполняйте ротацию из Pod. Сверьте доступность subcommand с версией CLI через `cilium
+encryption --help` и наблюдайте rollout на всех нодах. Ручная работа с Secret допустима
+только как version-specific fallback из документации Cilium. Смысл процедуры - на короткий
+период дать agents принять старый и новый key, дождаться rollout всех нод и только потом
+убрать старый key. Нельзя вручную заменить Secret одной случайной строкой: рассинхронизация
+peers вызывает packet loss. Практический минимум для change request:
 
 - новый key генерируется криптографически случайно и передаётся защищённым каналом;
 - порядок и формат key Secret берутся из документации установленного Cilium;
 - rollout DaemonSet наблюдается до completion на всех нодах;
 - есть измерение потерь/ошибок и откат до удаления старого key;
-- после ротации проверяются `cilium encrypt status`, приложение и physical capture.
+- после ротации проверяются `cilium-dbg encrypt status`, приложение и physical capture.
 
 **Не путайте IPsec key с mTLS CA.** IPsec key защищает transport peers, а сертификат mesh
 подтверждает workload identity. Их владелец, rotation interval, audit и blast radius могут
 быть разными.
 
-## 23.6. Istio: sidecar, SPIFFE-like identity и `PeerAuthentication`
+## 23.6. Istio: sidecar, SPIFFE workload identity и `PeerAuthentication`
 
 Istio sidecar (`istio-proxy`, Envoy) перехватывает inbound/outbound workload traffic.
 Istiod выдаёт workload сертификат на основе Kubernetes ServiceAccount; proxy устанавливают
-mTLS и проверяют identity peer. Приложение обычно продолжает слушать обычный HTTP порт,
-потому что TLS завершается в sidecar, а не в app container.
+mTLS и проверяют identity peer. Workload identity имеет форму SPIFFE ID:
+`spiffe://<trust-domain>/ns/<namespace>/sa/<service-account>`. Приложение обычно продолжает
+слушать обычный HTTP порт, потому что TLS завершается в sidecar, а не в app container.
+
+В ambient mode Istio не добавляет sidecar в каждый Pod: node-level `ztunnel` переносит
+workload traffic по HBONE и обеспечивает mTLS. Поэтому отсутствие `istio-proxy` не всегда
+означает plaintext client. В обеих моделях `PeerAuthentication` с `STRICT` не допускает
+plaintext inbound traffic: в ambient mode сервер ожидает защищённый HBONE/mTLS поток.
+Проверяйте mode mesh перед диагностикой и сверяйте особенности `PeerAuthentication` с
+версией Istio.
 
 ```mermaid
 flowchart LR
@@ -608,8 +661,30 @@ linkerd -n linkerd-demo viz stat deploy
 ```
 
 Как и в Istio, проверяйте не только наличие annotation, но и фактический proxy container,
-identity/certificate status и успешный запрос между meshed Pod. Linkerd policy API и
-поведение unauthorized traffic менялись между версиями: прежде чем строить default-deny,
+identity/certificate status и успешный запрос между meshed Pod. Важно различать automatic
+mTLS и strict inbound: Linkerd автоматически использует mTLS между meshed workload, но без
+inbound authorization по умолчанию принимает plaintext от non-meshed source
+(`all-unauthenticated`). Само наличие automatic mTLS не означает, что сервер принимает
+только mTLS.
+
+Для минимального strict inbound policy задайте `all-authenticated` до создания workload в
+учебном namespace:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: linkerd-demo
+  annotations:
+    linkerd.io/inject: enabled
+    config.linkerd.io/default-inbound-policy: all-authenticated
+```
+
+После применения создайте non-meshed client в namespace без Linkerd injection и проверьте,
+что его plaintext `curl` к Service не возвращает HTTP `200`; meshed client с допустимой
+identity должен остаться работоспособным. Для более узких правил используйте policy API
+релиза, например `AuthorizationPolicy` вместе с `MeshTLSAuthentication`. Linkerd policy API
+и поведение unauthorized traffic менялись между версиями: прежде чем строить default-deny,
 сверьте CRD и policy mode установленного release. mTLS подтверждает identity и защищает
 канал, но не обязательно означает «каждый identity может вызвать каждый endpoint» -
 авторизацию надо настроить отдельно.
@@ -642,11 +717,12 @@ physical interface, ведущий в cluster network. Не используйт
 облачной ноде интерфейс может называться `ens5`, `ens192` или иначе.
 
 ```bash
+NODE_B_IP="${NODE_B_IP:?set the second node IP}"
 kubectl get pods -A -o wide
 kubectl get nodes -o wide
 # На выбранной ноде:
 ip -br link
-ip route get <IP-второй-ноды>
+ip route get "${NODE_B_IP}"
 ```
 
 На первой ноде запустите capture именно на physical интерфейсе. Команды ниже предполагают
@@ -694,7 +770,7 @@ sudo tcpdump -ni ens5 -vv 'host <NODE_B_IP> and udp port 4500'
 readable HTTP. После capture сопоставьте результат с agent:
 
 ```bash
-kubectl -n kube-system exec ds/cilium -- cilium encrypt status
+kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status
 kubectl -n kube-system logs ds/cilium --since=10m | grep -Ei 'encrypt|wireguard|ipsec|error'
 ```
 
@@ -710,7 +786,7 @@ protocol на physical NIC без payload.
   проверьте placement.
 - **Нет UDP/51871, но curl работает.** Возможно Pod на одной ноде, другой Cilium port,
   encryption выключен, либо используется другой transport. Сначала проверьте values и
-  `cilium encrypt status`, потом routes/interface.
+  `cilium-dbg encrypt status`, потом routes/interface.
 - **Есть ESP/UDP, но capture не совпадает с тестом.** На ноде идёт другой encrypted
   traffic. Ограничьте BPF filter парой node IP и повторите запрос в коротком временном
   окне.
@@ -728,7 +804,7 @@ protocol на physical NIC без payload.
 
 | Симптом | Вероятный слой | Первые проверки | Безопасное исправление |
 |---|---|---|---|
-| Pod на разных нодах не обмениваются трафиком после rollout | Cilium/underlay | `cilium encrypt status`, agent logs, UDP/ESP firewall, MTU | восстановить совместимые values/сеть по rollback plan |
+| Pod на разных нодах не обмениваются трафиком после rollout | Cilium/underlay | `cilium-dbg encrypt status`, agent logs, UDP/ESP firewall, MTU | восстановить совместимые values/сеть по rollback plan |
 | DNS Service не резолвится | CoreDNS/Service, не mTLS | `nslookup`, Endpoints, CKA chapter 31 | исправить DNS/Service до анализа TLS |
 | Meshed client не получает 200 | Istio/Linkerd или NetworkPolicy | sidecar/proxy, cert/identity, endpoints, policy | исправить injection/identity/rule, не ставить global `DISABLE` |
 | Outside client получает reset | Istio `STRICT` | отсутствие sidecar, effective PeerAuthentication | это ожидаемое доказательство; мигрировать client в mesh |
@@ -742,7 +818,7 @@ protocol на physical NIC без payload.
 kubectl -n mesh-demo get pod,svc,endpointslice -o wide
 kubectl -n mesh-demo get peerauthentication,destinationrule -o yaml
 kubectl -n kube-system get pods -l k8s-app=cilium -o wide
-kubectl -n kube-system exec ds/cilium -- cilium encrypt status
+kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status
 istioctl proxy-status 2>/dev/null || true
 linkerd check 2>/dev/null || true
 ```
@@ -814,11 +890,11 @@ upgrade Kubernetes/Cilium/mesh.
 - Linkerd автоматически даёт mTLS рабочим нагрузкам в mesh и связывает identity с ServiceAccount;
   не смешивайте его sidecar с Istio в одном Pod.
 - Убедительное доказательство содержит meshed `200`, plaintext outside reset/failure,
-  `cilium encrypt status` и tcpdump outer WireGuard/IPsec на physical NIC без HTTP payload.
+  `cilium-dbg encrypt status` и tcpdump outer WireGuard/IPsec на physical NIC без HTTP payload.
 
 ## 23.15. Как это применяют в продакшене
 
-В production Cilium encryption и mesh mTLS вводят через инвентаризацию потоков, canary-неймспейс, контроль MTU и firewall, защиту key material RBAC-правами и проверяемый rotation/rollback runbook. Наблюдаемые доказательства - `cilium encrypt status`, policy events и успешные mTLS-запросы - собирают до расширения охвата.
+В production Cilium encryption и mesh mTLS вводят через инвентаризацию потоков, canary-неймспейс, контроль MTU и firewall, защиту key material RBAC-правами и проверяемый rotation/rollback runbook. Наблюдаемые доказательства - `cilium-dbg encrypt status`, policy events и успешные mTLS-запросы - собирают до расширения охвата.
 
 ## 23.16. Как это пригодится: на экзамене и в реальной работе
 

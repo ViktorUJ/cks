@@ -5,7 +5,7 @@
 > **Что дальше.** В главах 14-15 мы уменьшили поверхность хоста и доступ к нему. Теперь
 > добавим обязательный контроль доступа (MAC) для процессов контейнера: AppArmor разрешает
 > только явно описанные действия с файлами, capabilities, сетью и другими объектами ядра.
-> Это домен **System Hardening** CKS (10%). В следующей главе тот же defence-in-depth
+> Это домен **System Hardening** CKS (15%). В следующей главе тот же defence-in-depth
 > достроит seccomp, фильтрующий системные вызовы.
 
 > **Что нужно из CKA.** Базовый `securityContext`, non-root запуск, capabilities и
@@ -19,7 +19,9 @@
 Обычные права Linux (DAC) проверяют UID, GID и mode bits. Если процесс получил подходящий
 UID либо capability, одной DAC-проверки может быть недостаточно. **AppArmor** добавляет
 Mandatory Access Control: ядро сверяет действие процесса с profile, и даже процесс с
-привилегиями не может сам отменить отказ policy.
+привилегиями не может сам отменить отказ policy. В Kubernetes важен отдельный случай:
+`privileged` container игнорирует назначенный AppArmor profile и запускается без этого
+ограничения, поэтому privileged не является AppArmor-барьером.
 
 ```mermaid
 flowchart LR
@@ -36,8 +38,10 @@ flowchart LR
 ```
 
 AppArmor - path-based MAC: правила описывают пути и операции, например чтение `r`, запись
-`w`, выполнение `ix`/`px`, создание `c`, rename `k`, lock `l` и mount. Profile применяют к
-процессу при `exec` или при старте контейнера; дочерние процессы обычно наследуют либо
+`w`, добавление `a`, `l` (link), `k` (lock), `m` (memory map), а также переходы выполнения
+`ix`/`px`/`cx`. Операции mount относятся к отдельному классу правил, а не к file
+permissions. Profile применяют к процессу при `exec` или при старте контейнера; дочерние
+процессы обычно наследуют либо
 переходят в policy по её правилам. Это не замена UID, capability, seccomp, NetworkPolicy или
 RBAC: каждый слой ограничивает другой путь атаки.
 
@@ -158,6 +162,11 @@ policy. Не выдавайте одному Pod разные profiles без н
 | `Localhost` | named profile, заранее загруженный на ноде | проверенная application-specific policy |
 | `Unconfined` | AppArmor не ограничивает контейнер | только диагностическое временное исключение с явным владельцем риска |
 
+Явно указанное `type: RuntimeDefault` требует доступного AppArmor: без него такой Pod не
+будет допущен. Если `appArmorProfile` не задан, runtime default применяется только при
+доступном AppArmor; иначе контейнер запускается без AppArmor-ограничения. Поэтому отсутствие
+поля не эквивалентно явному `RuntimeDefault`.
+
 Для обычной нагрузки начните с runtime profile и других базовых ограничений:
 
 ```yaml
@@ -224,7 +233,7 @@ YAML: YAML может быть корректным, а container мог не с
 
 ## 16.5. Legacy annotation: читать, мигрировать, не смешивать
 
-До появления API-поля Kubernetes задавал AppArmor per-container через beta-аннотацию:
+До Kubernetes v1.30 AppArmor задавали per-container через beta-аннотацию:
 
 ```yaml
 metadata:

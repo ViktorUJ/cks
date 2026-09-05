@@ -2,7 +2,7 @@
 
 # Глава 05. Защита node metadata и endpoints; защита GUI
 
-> **Что дальше.** В главе 04 мы превратили плоскую pod-сеть в набор разрешённых связей. Теперь применим egress isolation к особенно опасным назначениям: cloud metadata, control plane и GUI. Это домен Cluster Setup (15%) CKS. Ошибка в одном таком разрешении может превратить компрометацию Pod в компрометацию cloud identity или кластера.
+> **Что дальше.** В главе 04 мы превратили плоскую pod-сеть в набор разрешённых связей. Теперь применим egress isolation к особенно опасным назначениям: cloud metadata, control plane и GUI. Это домен Cluster Setup (10%) CKS. Ошибка в одном таком разрешении может превратить компрометацию Pod в компрометацию cloud identity или кластера.
 
 > **Что нужно из CKA.** Базовый синтаксис egress `NetworkPolicy`, `ipBlock` и работа CNI разобраны в [главе 34 CKA](../../../cka/course/34/ru.md). Здесь рассматриваем угрозы node metadata и служебных endpoints, а не повторяем основу политик.
 
@@ -25,7 +25,7 @@ flowchart LR
 
 Metadata - не Kubernetes API и не Service. Это endpoint инфраструктуры ноды, поэтому Pod может обойти RBAC, ServiceAccount и policy приложения, если сеть разрешает запрос. Угроза особенно актуальна для workload с доступом к входному HTTP: SSRF заставляет приложение выполнить запрос к адресу, недоступному пользователю извне.
 
-Проверьте, достижим ли endpoint из диагностического Pod. В production не выводите в терминал и логи credentials или полный metadata-ответ. Для проверки достаточно HTTP-кода или безопасного пути, например имени экземпляра.
+Проверьте, достижим ли endpoint из диагностического Pod. Он должен воспроизводить namespace, labels и существенные сетевые характеристики целевого workload, включая `hostNetwork`, если оно используется: иначе selector или dataplane могут проверить не тот путь. В production не выводите в терминал и логи credentials или полный metadata-ответ. Для проверки достаточно HTTP-кода или безопасного пути, например имени экземпляра.
 
 ```bash
 kubectl -n payments run metadata-check \
@@ -120,7 +120,13 @@ spec:
 
 Это миграционный компромисс, а не хороший final state: правило всё ещё открывает почти весь IPv4 Internet. `except` исключает адрес только из данного правила. Политики аддитивны, поэтому другое egress allow с `0.0.0.0/0`, более широким CIDR или адресом IMDS снова разрешит metadata. Устойчивый вариант - точечные правила для DNS, egress proxy, CIDR или endpoint каждой требуемой зависимости. Если IPv6 используется, спроектируйте и проверьте отдельные IPv6-пути, а не считайте IPv4-политику полной защитой.
 
-Сетевая политика защищает только при CNI, который реально применяет `NetworkPolicy`. Кроме того, реализация трафика к ноде и SNAT различается между CNI и managed Kubernetes. Не заменяйте этой политикой защиту cloud instance и firewall ноды.
+Сетевая политика защищает только при CNI, который реально применяет `NetworkPolicy`. `ipBlock.except` для metadata - распространённый exam-style и переходный паттерн, но его enforcement для link-local и host endpoints зависит от CNI и dataplane. Кроме того, реализация трафика к ноде и SNAT различается между CNI и managed Kubernetes. Не заменяйте этой политикой защиту cloud instance и firewall ноды: в production основная граница - provider metadata settings и workload identity, а policy служит дополнительным слоем.
+
+| Provider | Metadata endpoint | Рекомендуемая workload identity | Provider-native защита node credentials |
+|---|---|---|---|
+| AWS | `169.254.169.254` (IMDS) | EKS Pod Identity или IRSA | Обязательный IMDSv2, ограничение доступа Pod к IMDS и минимальная IAM-роль ноды |
+| GCP | `metadata.google.internal` / `169.254.169.254` | Workload Identity Federation for GKE | GKE metadata server и минимальные service account/access scopes ноды |
+| Azure | `169.254.169.254/metadata/identity/oauth2/token` | Microsoft Entra Workload ID | AKS IMDS restriction для не-`hostNetwork` Pod, где доступен, и минимальная managed identity ноды |
 
 На AWS включайте IMDSv2 на уровне instance template или instance: `HttpTokens=required` заставляет клиента сначала получить временный token через `PUT`, а затем передать его в заголовке. Это уменьшает класс SSRF-атак, рассчитанных на простой `GET`, но не заменяет egress policy: скомпрометированный Pod всё ещё может выполнить корректный IMDSv2 exchange, если endpoint доступен. Когда metadata не нужна, отключайте endpoint; значение hop limit выбирайте после теста workload и контейнерной сети.
 
@@ -129,8 +135,9 @@ spec:
 aws ec2 modify-instance-metadata-options \
   --instance-id i-0123456789abcdef0 \
   --http-tokens required \
-  --http-put-response-hop-limit 1
+  --http-put-response-hop-limit 2
 
+# Значение 2 требуется, если containers действительно используют IMDS. Значение 1 - намеренно restrictive вариант: IMDSv2 response может не дойти до Pod через container network. Проверяйте workload и предпочитайте provider-native workload identity вместо выдачи node credentials Pod.
 # IMDSv2 требует token. Команду используйте только в изолированном тесте.
 TOKEN=$(curl --noproxy '*' -sS -X PUT \
   -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' \
@@ -148,14 +155,14 @@ Metadata - не единственная цель. После доступа в 
 |---|---:|---|---|
 | kubelet HTTPS | `10250` | Выполнение команд, доступ к данным Pod или node API при слабой authn/authz | Закрыть firewall, отключить anonymous access, включить Webhook authorization, использовать TLS |
 | kubelet read-only | `10255` | Исторически раскрывал информацию о Pod без аутентификации | Не включать, `--read-only-port=0` |
-| etcd client/peer | `2379` / `2380` | Чтение или изменение состояния кластера, включая Secrets | Только control plane, mTLS, firewall, без public exposure |
+| etcd client/peer | `2379` / `2380` | Чтение или изменение состояния кластера, включая Secrets | `2379` только от авторизованных etcd clients (прежде всего kube-apiserver), `2380` только между etcd members; mTLS, firewall, без public exposure |
 | kube-apiserver | `6443` | Точка входа в весь Kubernetes API | TLS, сильные authn/authz, private endpoint или allowlist, audit |
 
 ```mermaid
 flowchart TB
     external["Internet или чужой Pod"] --> fw["Security group / firewall<br>и private network"]
     fw --> api["kube-apiserver :6443"]
-    cp["Только control-plane nodes"] --> etcd["etcd :2379/:2380"]
+    cp["kube-apiserver и<br/>authorised etcd clients"] --> etcd["etcd client :2379<br/>peer :2380"]
     api --> kubelet["kubelet :10250<br>аутентифицированный доступ"]
     external -. "запрещено" .-> etcd
     external -. "запрещено" .-> kubelet
@@ -171,13 +178,26 @@ flowchart TB
 
 ```bash
 sudo ss -lntp | grep -E ':(10250|10255|2379|2380|6443)\b' || true
+# Process flags и KubeletConfiguration проверяют раздельно: флаги не обязаны быть в YAML-конфиге.
 sudo grep -R -- '--read-only-port\|--anonymous-auth\|--authorization-mode' \
-  /var/lib/kubelet/config.yaml /etc/kubernetes/manifests 2>/dev/null
+  /etc/systemd/system /usr/lib/systemd/system /etc/default /var/lib/kubelet 2>/dev/null || true
+sudo grep -nE 'readOnlyPort|anonymous:|authorization:|webhook:' \
+  /var/lib/kubelet/config.yaml 2>/dev/null || true
 ```
 
 Ожидайте, что `10250`, `2379`, `2380` и `6443` могут слушать нужный интерфейс в зависимости от topology. Критерий не в том, чтобы выключить все порты, а в том, чтобы ограничить источники и включить аутентификацию. Для kubelet проверьте `--read-only-port=0`, `--anonymous-auth=false` и `--authorization-mode=Webhook`; подробно флаги и CIS-настройки разбираются в главе 07.
 
-На уровне cloud применяйте security group или firewall: `2379` и `2380` разрешены только между control-plane nodes, `10250` - только control plane и явно нужным monitoring, `6443` - только trusted networks, VPN, bastion или private endpoint. Не публикуйте etcd через `NodePort`, `LoadBalancer`, reverse proxy или public DNS. Для etcd обязательны client/peer TLS и клиентские сертификаты, а не только фильтрация портов.
+Отдельно review RBAC: право `nodes/proxy` может дать субъекту доступ к kubelet API через API server и тем самым к чувствительным операциям ноды. Найдите роли с этим правом и проверьте их bindings:
+
+```bash
+kubectl get clusterrole -o yaml | grep -n -C 3 'nodes/proxy' || true
+kubectl get clusterrolebinding \
+  -o custom-columns=NAME:.metadata.name,ROLE:.roleRef.name,SUBJECTS:.subjects[*].name
+```
+
+`Webhook` authorization - необходимый baseline, но не доказательство безопасности kubelet. Fine-grained kubelet authorization зависит от версии и включённой конфигурации; он не заменяет удаление лишнего `nodes/proxy`, TLS, network controls и review RBAC.
+
+На уровне cloud применяйте security group или firewall: `2379` разрешён только от авторизованных etcd clients, прежде всего kube-apiserver; `2380` - только между etcd members. Это различие важно для external etcd. `10250` - только control plane и явно нужным monitoring, `6443` - только trusted networks, VPN, bastion или private endpoint. Не публикуйте etcd через `NodePort`, `LoadBalancer`, reverse proxy или public DNS. Для etcd обязательны client/peer TLS и клиентские сертификаты, а не только фильтрация портов.
 
 Обычная `NetworkPolicy` полезна для Pod-to-Pod traffic, но не является универсальным firewall для host endpoints. Трафик к IP ноды может изменить source из-за SNAT, а hostNetwork Pod может обходить pod dataplane. Для защиты ноды сочетайте CNI policy с host firewall, cloud network controls и настройками компонентов. Cilium может дать дополнительные host-aware controls, но они зависят от режима CNI и требуют отдельного проектирования.
 
@@ -251,7 +271,7 @@ kubectl auth can-i create pods/exec -n apps \
   --as=system:serviceaccount:kubernetes-dashboard:dashboard-viewer
 ```
 
-Первый запрос должен вернуть `yes`; два последних - `no`. Для read-only обзора нескольких namespace создавайте отдельные RoleBinding или, только когда это обосновано, ограниченный ClusterRole без `secrets`. `ClusterRoleBinding` к `cluster-admin` для Dashboard - аварийная, краткоживущая мера под отдельным контролем, а не шаблон установки.
+Первый запрос должен вернуть `yes`; два последних - `no`. Для read-only обзора нескольких namespace создавайте отдельные RoleBinding или, только когда это обосновано, ограниченный ClusterRole без `secrets`. Не выдавайте Dashboard `ClusterRoleBinding` к `cluster-admin`, даже как break-glass меру: аварийный admin-доступ выполняют отдельной контролируемой identity, а не GUI ServiceAccount.
 
 ## 05.5. Проверка, диагностика и типичные ошибки
 
@@ -264,7 +284,8 @@ kubectl -n payments describe networkpolicy default-deny-egress
 kubectl -n payments get pod --show-labels
 kubectl -n kube-system get pod --show-labels | grep -E 'coredns|kube-dns'
 
-# Запустить диагностический Pod с labels защищаемого приложения.
+# Pod должен повторять namespace и labels защищаемого приложения.
+# Для target с hostNetwork или иными особыми сетевыми настройками создайте отдельный manifest с теми же характеристиками.
 kubectl -n payments run egress-test \
   --image=curlimages/curl:8.22.0 --labels=app=legacy-client \
   --restart=Never -- sleep 3600
@@ -284,8 +305,8 @@ kubectl -n payments exec egress-test -- \
 |---|---|
 | Metadata всё ещё доступна | Pod не выбран selector, CNI не применяет policy или другая аддитивная policy разрешает широкий CIDR |
 | После default-deny не работает DNS | Нет allow для фактического CoreDNS или NodeLocal DNSCache, забыты UDP/TCP `53` |
-| `except` не даёт ожидаемой блокировки | В другом правиле есть более широкий allow, metadata идёт по IPv6 или трафик к host endpoint обрабатывается особенностью CNI |
-| Kubelet доступен извне | Firewall/security group открыт, anonymous access включён или endpoint слушает не тот интерфейс |
+| `except` не даёт ожидаемой блокировки | В другом правиле есть более широкий allow, metadata идёт по IPv6 или enforcement link-local/host endpoint зависит от CNI и dataplane |
+| Kubelet доступен извне | Firewall/security group открыт, anonymous access включён, endpoint слушает не тот интерфейс или RBAC даёт лишнее `nodes/proxy` |
 | Dashboard открывается из Internet | Service имеет `LoadBalancer`/`NodePort`, Ingress public или отсутствует authentication proxy |
 | Dashboard user видит слишком много | Выдан `cluster-admin`, `view` применён cluster-wide без необходимости или Role содержит `secrets`/опасные subresources |
 
@@ -315,8 +336,8 @@ kubectl -n payments exec egress-test -- \
 
 - Cloud metadata по `169.254.169.254` - критичный путь от скомпрометированного Pod к cloud identity ноды.
 - Начинайте с default-deny egress и разрешайте только DNS и необходимые назначения. `ipBlock` с `except: 169.254.169.254/32` полезен для переходного широкого allow, но не заменяет точечный allowlist.
-- IMDSv2 уменьшает риск простого SSRF, но не заменяет сетевую изоляцию, cloud identity с минимальными правами и защиту instance metadata.
-- kubelet, etcd и kube-apiserver защищаются сочетанием private network, firewall, TLS, authentication, authorization и безопасных флагов, а не только Pod policy.
+- IMDSv2 уменьшает риск простого SSRF, но не заменяет provider metadata settings, workload identity, сетевую изоляцию и cloud identity с минимальными правами.
+- kubelet, etcd и kube-apiserver защищаются сочетанием private network, firewall, TLS, authentication, authorization, review `nodes/proxy` и безопасных флагов, а не только Pod policy.
 - Dashboard не должен быть public и не должен работать от `cluster-admin`; используйте private access, короткие tokens и namespace-scoped RBAC.
 - Проверяйте реальный трафик: разрешённые DNS и зависимости работают, metadata недоступна, а endpoint ноды не открыт лишним источникам.
 

@@ -5,14 +5,17 @@
 > **Что дальше.** `Secret` - это объект для чувствительных данных, но его поля `data` всего лишь
 > закодированы в base64. Если не включено шифрование at rest, тот, кто получил доступ к данным etcd,
 > snapshot или резервной копии, сможет прочитать пароль, токен и закрытый ключ. В этой главе настраиваем
-> шифрование ресурсов в etcd через `EncryptionConfiguration`, разбираем `aescbc`, `aesgcm` и `kms`,
-> безопасную ротацию ключей и проверяем результат. Это практическое продолжение
+> шифрование выбранных API-ресурсов перед записью в etcd через `EncryptionConfiguration`, разбираем
+> `aescbc`, `aesgcm`, `secretbox` и `kms`, безопасную ротацию ключей и проверяем результат. Это практическое продолжение
 > [главы 19 CKA о Secret](../../../cka/course/19/ru.md) и связи etcd с данными кластера из
 > [главы 37 CKA](../../../cka/course/37/ru.md).
 
-> **Граница защиты.** Encryption at rest защищает запись в etcd, его диски, snapshots и backups. Оно
-> не шифрует трафик между клиентом и API server (для этого TLS), не отменяет RBAC и не спасает от
-> пользователя, который уже может выполнить `get secret` или `exec` в Pod с секретом.
+> **Граница защиты.** `EncryptionConfiguration` шифрует выбранные API-данные перед их записью в etcd.
+> Это не full-disk encryption и не самостоятельное шифрование дисков, snapshot или backup: snapshot
+> содержит зашифрованные значения защищённых ресурсов, но сам всё равно требует отдельной защиты,
+> контроля доступа и при необходимости шифрования storage. Encryption at rest не шифрует трафик между
+> клиентом и API server (для этого TLS), не отменяет RBAC и не спасает от пользователя, который уже
+> может выполнить `get secret` или `exec` в Pod с секретом.
 
 ## 21.1. Модель угроз: почему etcd - особенно ценная цель
 
@@ -50,15 +53,16 @@ flowchart LR
 |---|---|---|
 | TLS API server/etcd | перехват трафика | не шифрует данные на диске |
 | RBAC | ограничивает API-доступ к Secret | не защищает украденный snapshot |
-| Encryption at rest | чтение данных в etcd, snapshot, backup | не скрывает Secret от разрешённого API-клиента |
+| Encryption at rest | ciphertext выбранных API-данных в etcd и его snapshot | не шифрует диски, snapshot или backup целиком и не скрывает Secret от разрешённого API-клиента |
 | внешний secrets manager | отделяет master keys и lifecycle от кластера | не заменяет RBAC, TLS и безопасный Pod |
 
 ## 21.2. Как работает шифрование API-данных
 
 `kube-apiserver` применяет цепочку providers, описанную в `EncryptionConfiguration`. При **записи**
 он использует первый provider, подходящий ресурсу. При **чтении** он пробует providers по порядку,
-пока один не сможет расшифровать существующее значение. Поэтому новый key или provider добавляют
-в начало, а старый сохраняют ниже до завершения re-encryption.
+пока один не сможет расшифровать существующее значение. При ротации локального ключа в HA сначала
+добавляют новый key вторым на всех API servers, а первым делают только после того, как новая
+конфигурация применена везде; старый key сохраняют до завершения re-encryption.
 
 ```mermaid
 flowchart TB
@@ -105,7 +109,7 @@ resources:
 > способен сделать часть объектов нечитаемыми и нарушить работу control plane. Конфигурация и ключи
 > нуждаются в резервировании, контроле доступа и заранее отрепетированной ротации.
 
-## 21.3. Провайдеры: `aescbc`, `aesgcm`, `kms` и `identity`
+## 21.3. Провайдеры: `aescbc`, `aesgcm`, `secretbox`, `kms` и `identity`
 
 Kubernetes поддерживает несколько providers. Для production не выбирайте `identity` как единственную
 защиту: это сознательное отключение encryption at rest.
@@ -113,14 +117,16 @@ Kubernetes поддерживает несколько providers. Для product
 | Provider | Механизм | Когда уместен | Главное ограничение |
 |---|---|---|---|
 | `identity` | plaintext | временный fallback для старых данных | не шифрует вообще |
-| `aescbc` | AES-CBC с PKCS#7 padding | учебная/legacy-механика; для новых production-конфигураций не рекомендуется | слабый: риск padding-oracle атак; ключ хранится на control plane |
+| `aescbc` | AES-CBC с PKCS#7 padding | учебная/legacy-механика; для новых production-конфигураций не рекомендуется | слабый: нет встроенной аутентификации/MAC, возможны padding-oracle атаки; ключ хранится на control plane |
 | `aesgcm` | AES-GCM, AEAD | только с автоматизированной ротацией | не рекомендуется без ротации; лимит 200 000 записей на ключ |
+| `secretbox` | XSalsa20 + Poly1305, AEAD | сильный и быстрый локальный provider | 32-байтный ключ хранится на control plane |
 | `kms` | envelope encryption через KMS plugin | production с внешним key manager/HSM/облачным KMS | доступность plugin/KMS становится зависимостью API server |
 
 `aescbc` использует ключ AES, закодированный base64; в примере это 32-байтный ключ (AES-256).
-Kubernetes принимает ключи длиной 16, 24 или 32 байта. Этот пример нужен для экзаменационной
-механики и совместимости, а не как production recommendation: актуальная документация Kubernetes
-считает `aescbc` слабым. Получить 32-байтное значение для лаборатории можно так:
+Kubernetes принимает ключи длиной 16, 24 или 32 байта. У `aescbc` нет встроенной
+аутентификации/MAC, в отличие от AEAD-provider `aesgcm`; поэтому актуальная документация Kubernetes
+считает CBC-вариант слабым. Этот пример нужен для экзаменационной механики и совместимости, а не как
+production recommendation. Получить 32-байтное значение для лаборатории можно так:
 
 ```bash
 head -c 32 /dev/urandom | base64
@@ -147,6 +153,11 @@ Kubernetes для одного ключа AES-GCM задан практичес�
 ключ необходимо ротировать. Поэтому этот provider подходит при контролируемом объёме и автоматизированной
 ротации, а при высоком потоке Secret-записей следует предпочесть KMS или проектировать lifecycle ключей
 особенно внимательно.
+
+`secretbox` использует XSalsa20 и Poly1305, относится к AEAD-provider и требует 32-байтный ключ.
+Kubernetes помечает его как сильный и быстрый вариант. В лаборатории далее используется `aescbc`, чтобы
+разобрать legacy-механику и её ограничения; в production выбор локального provider должен учитывать
+требования к ротации и хранению ключей.
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -320,8 +331,35 @@ Operator, но тщательно проверяют их RBAC и синхрон
 
 ### Ротация ключа `aescbc`/`aesgcm`
 
-Пусть сначала использовался `key-old`. Добавьте новый key первым, старый оставьте вторым. API server
-читает old ciphertext обоими ключами, но все новые записи создаёт с `key-new`.
+Пусть сначала использовался `key-old`. На HA control plane нельзя сразу ставить `key-new` первым:
+уже обновлённый API server сможет записать объект новым ключом, пока другой API server ещё не умеет
+его расшифровать. Выполняйте ротацию в две фазы.
+
+1. Добавьте `key-new` **вторым** после `key-old` в конфигурацию на каждом control-plane node.
+2. Перезапустите API server или примените reload конфигурации на **всех** API servers. Теперь каждый из
+   них умеет расшифровать оба ключа, а новые записи пока используют `key-old`.
+3. Сделайте `key-new` **первым**, сохранив `key-old` вторым, и снова примените конфигурацию на всех
+   API servers. Только теперь новые записи создаются с `key-new`.
+
+Фаза 1 - новый key вторым на всех API servers:
+
+```yaml
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- resources:
+  - secrets
+  providers:
+  - aescbc:
+      keys:
+      - name: key-old-2026-01
+        secret: <old-base64-32-byte-key>
+      - name: key-new-2026-08
+        secret: <new-base64-32-byte-key>
+  - identity: {}
+```
+
+Фаза 2 - после применения фазы 1 на всех API servers сделайте новый key первым:
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -339,9 +377,9 @@ resources:
   - identity: {}
 ```
 
-После restart API server перепишите все Secrets. Команда ниже получает каждый объект и отправляет его
-обратно в API; именно новый provider первым зашифрует запись. Перед массовой операцией создайте snapshot
-и начните с тестового namespace.
+После применения фазы 2 на всех API servers перепишите все Secrets. Команда ниже получает каждый
+объект и отправляет его обратно в API; именно новый provider первым зашифрует запись. Перед массовой
+операцией создайте snapshot и начните с тестового namespace.
 
 ```bash
 # Перезаписать все Secrets через API server.
@@ -507,11 +545,15 @@ Kubernetes Secret - меньше копий в etcd, но появляются t
 
 ## 21.10. Мини-глоссарий
 
-- **Encryption at rest** - шифрование данных, сохранённых в etcd, на диске, в snapshot и backup.
-- **EncryptionConfiguration** - конфигурация providers, которую читает kube-apiserver.
+- **Encryption at rest** - шифрование выбранных API-данных перед записью в etcd; не является
+  шифрованием диска, snapshot или backup целиком.
+- **EncryptionConfiguration** - конфигурация providers, которую читает kube-apiserver для выбранных
+  API-ресурсов.
 - **provider** - механизм шифрования/дешифрования для конкретных API-ресурсов.
-- **`aescbc`** - локальный AES-CBC provider с HMAC и ключом из конфигурации.
+- **`aescbc`** - локальный AES-CBC provider с PKCS#7 padding и ключом из конфигурации; без
+  встроенной аутентификации/MAC, поэтому слабый.
 - **`aesgcm`** - AEAD provider AES-GCM; ключи надо ротировать с учётом лимита записей.
+- **`secretbox`** - AEAD provider XSalsa20 + Poly1305 с 32-байтным ключом.
 - **`kms`** - provider, передающий криптографические операции внешнему KMS plugin.
 - **envelope encryption** - объект шифруется DEK, а DEK защищён внешним KEK.
 - **KEK/DEK** - key encryption key / data encryption key.
@@ -523,10 +565,11 @@ Kubernetes Secret - меньше копий в etcd, но появляются t
 - etcd хранит Secret и значительную часть состояния Kubernetes; base64 не защищает это содержимое.
 - `EncryptionConfiguration` применяется kube-apiserver flag `--encryption-provider-config`; для новых
   записей используется первый provider, для чтения providers перебираются по порядку.
-- `aescbc` и `aesgcm` - локальные варианты с ключом в защищённом файле; `kms` позволяет вынести KEK
-  во внешний manager и использовать envelope encryption.
-- Ротация безопасна только в порядке: backup -> новый provider/key первым, старый ниже -> restart ->
-  re-encryption всех старых объектов -> проверки -> удаление старого ключа.
+- `aescbc`, `aesgcm` и `secretbox` - локальные варианты с ключом в защищённом файле; `kms` позволяет
+  вынести KEK во внешний manager и использовать envelope encryption.
+- В HA локальный key ротируют в порядке: backup -> новый key вторым на всех API servers -> применить
+  конфигурацию на всех -> новый key первым на всех -> снова применить конфигурацию -> re-encryption
+  старых объектов -> проверки -> удаление старого ключа.
 - Проверяйте configuration, API health, API read и отсутствие canary plaintext в raw etcd lab-значении.
 - Шифрование at rest дополняют RBAC, TLS, secrets hygiene, безопасные backup и external secret manager.
 

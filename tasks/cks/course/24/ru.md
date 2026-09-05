@@ -131,13 +131,19 @@ COPY . ./
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" \
     -o /out/server ./cmd/server
 
-# В scratch нет /etc/passwd: numeric UID/GID обязателен и достаточен.
+# В scratch numeric UID/GID достаточно, чтобы задать non-root credentials;
+# отдельно проверяйте runtime-зависимости приложения.
 FROM scratch
 COPY --from=builder /out/server /server
 USER 65532:65532
 EXPOSE 8080
 ENTRYPOINT ["/server"]
 ```
+
+Числовой UID/GID позволяет runtime запустить процесс без записи пользователя в
+`/etc/passwd`, но не гарантирует работоспособность приложения: ему могут требоваться
+lookup пользователя или группы, `HOME`, timezone data, CA bundle, NSS либо другие
+runtime-файлы.
 
 `USER` в образе является первым барьером: процесс по умолчанию не root, в том числе при
 локальном `docker run`. Закрепите его в Pod-level policy и SecurityContext, чтобы
@@ -199,10 +205,15 @@ podman run --rm --user 65532:65532 \
   registry.example.com/training/minimal-api:1.0.0
 ```
 
+Multi-stage уменьшает runtime, но сам по себе не делает builder доверенным и build
+воспроизводимым. Для release фиксируйте и проверяйте base-image digest, версии
+modules/packages и источник зависимостей; не позволяйте сборке бесконтрольно зависеть от
+mutable внешних репозиториев. Секреты для private dependencies передавайте только через
+BuildKit/Podman secret mounts.
+
 Не используйте `--no-cache` как постоянную «security-проверку»: он лишь отключает cache,
-увеличивает время и трафик, но не делает зависимости воспроизводимыми. Для повторяемой
-сборки фиксируйте base-image digest, версии modules/packages и источник зависимостей;
-затем проверяйте созданный digest перед публикацией.
+увеличивает время и трафик, но не делает зависимости воспроизводимыми. Затем проверяйте
+созданный digest перед публикацией.
 
 ### Вариант с distroless
 
@@ -351,9 +362,12 @@ dive "$IMAGE"
 - `User` пустой или равный `root` - Dockerfile не установил non-root user.
 
 `dive` видит только то, что доступно image. Он не заменяет vulnerability scan, secret
-scan или SBOM. В CI полезный порядок такой: build -> inspect/lint -> SBOM -> scan ->
-sign -> push -> admission verification. Следующая глава добавит SBOM, главы 26-28 -
-подпись, policy и scanners.
+scan или SBOM. В CI полезный порядок такой: build -> inspect/lint -> SBOM/scan -> push
+immutable digest -> sign/attest digest -> verify -> deploy/admission. В обычном
+Cosign/Sigstore workflow сначала публикуют image и получают его immutable digest, затем
+Cosign подписывает этот digest и создаёт attestation в registry; deployment/admission
+проверяют эту связку. Следующая глава добавит SBOM, главы 26-28 - подпись, policy и
+scanners.
 
 ## 24.6. Проверка без shell: distroless ведёт себя иначе намеренно
 

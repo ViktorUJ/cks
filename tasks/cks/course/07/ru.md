@@ -6,7 +6,7 @@
 > проверим, насколько безопасно настроены сами control plane и ноды. **CIS Kubernetes
 > Benchmark** переводит рекомендации по hardening в проверяемые пункты, а `kube-bench`
 > автоматически сопоставляет их с конфигурацией кластера. Это часть домена **Cluster Setup**
-> (CKS, 15%): нужно не только найти небезопасную настройку, но и исправить её без потери
+> (CKS, 10%): нужно не только найти небезопасную настройку, но и исправить её без потери
 > работоспособности кластера.
 
 > **Что нужно знать из CKA.** Эта глава не повторяет устройство `kubeadm`, static Pod и
@@ -87,58 +87,123 @@ sudo kube-bench run --targets node | tee kube-bench-worker.txt
 grep -E '\[FAIL\]|\[WARN\]' kube-bench-control-plane.txt
 ```
 
-Если в образе ноды нет бинаря, его можно запускать как привилегированный Pod, которому
-видны host filesystem и PID namespace. Такой Pod сам является чувствительным инструментом:
-используйте его только в доверенном административном namespace и удаляйте после проверки.
+Если в образе ноды нет бинаря, его можно запускать как Job с `hostPID: true`: этот
+namespace нужен `kube-bench` для проверки процессов, но привилегированный режим для
+чтения указанных ниже путей не нужен. Job всё равно чувствителен из-за `hostPath`: используйте его
+только в доверенном административном namespace и удаляйте после проверки. Ниже - набор
+конкретных read-only путей из upstream Job для control plane, а не широкие `/etc` и
+`/var/lib`. Монтирование `/usr/bin` нужно только для автоматического определения версии;
+его можно убрать, если версия передана `kube-bench` явно через `--version`.
 
 ```yaml
-apiVersion: v1
-kind: Pod
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: kube-bench
   namespace: kube-system
 spec:
-  hostPID: true
-  nodeName: control-plane
-  restartPolicy: Never
-  containers:
-  - name: kube-bench
-    image: aquasec/kube-bench:v0.16.0 # зафиксируйте точный digest через `docker inspect --format='{{index .RepoDigests 0}}'` перед использованием в production и учебном manifest - `latest` недопустим для Pod с `privileged: true` и `hostPID: true`
-    command: ["kube-bench", "run", "--targets", "master,etcd"]
-    securityContext:
-      privileged: true
-    volumeMounts:
-    - name: etc
-      mountPath: /etc
-      readOnly: true
-    - name: var-lib
-      mountPath: /var/lib
-      readOnly: true
-    - name: usr-bin
-      mountPath: /usr/bin
-      readOnly: true
-    - name: usr-local-bin
-      mountPath: /usr/local/bin
-      readOnly: true
-  volumes:
-  - name: etc
-    hostPath:
-      path: /etc
-  - name: var-lib
-    hostPath:
-      path: /var/lib
-  - name: usr-bin
-    hostPath:
-      path: /usr/bin
-  - name: usr-local-bin
-    hostPath:
-      path: /usr/local/bin
+  backoffLimit: 0
+  template:
+    spec:
+      hostPID: true
+      nodeName: control-plane
+      restartPolicy: Never
+      containers:
+      - name: kube-bench
+        image: aquasec/kube-bench:v0.16.0 # зафиксируйте точный digest перед production; `latest` недопустим для Job с hostPID и hostPath
+        command: ["kube-bench", "run", "--targets", "master,etcd"]
+        volumeMounts:
+        - name: var-lib-cni
+          mountPath: /var/lib/cni
+          readOnly: true
+        - name: var-lib-etcd
+          mountPath: /var/lib/etcd
+          readOnly: true
+        - name: var-lib-kubelet
+          mountPath: /var/lib/kubelet
+          readOnly: true
+        - name: var-lib-kube-scheduler
+          mountPath: /var/lib/kube-scheduler
+          readOnly: true
+        - name: var-lib-kube-controller-manager
+          mountPath: /var/lib/kube-controller-manager
+          readOnly: true
+        - name: etc-systemd
+          mountPath: /etc/systemd
+          readOnly: true
+        - name: lib-systemd
+          mountPath: /lib/systemd
+          readOnly: true
+        - name: srv-kubernetes
+          mountPath: /srv/kubernetes
+          readOnly: true
+        - name: etc-kubernetes
+          mountPath: /etc/kubernetes
+          readOnly: true
+        - name: usr-bin
+          mountPath: /usr/local/mount-from-host/bin
+          readOnly: true
+        - name: etc-cni-netd
+          mountPath: /etc/cni/net.d
+          readOnly: true
+        - name: opt-cni-bin
+          mountPath: /opt/cni/bin
+          readOnly: true
+        - name: etc-passwd
+          mountPath: /etc/passwd
+          readOnly: true
+        - name: etc-group
+          mountPath: /etc/group
+          readOnly: true
+      volumes:
+      - name: var-lib-cni
+        hostPath:
+          path: /var/lib/cni
+      - name: var-lib-etcd
+        hostPath:
+          path: /var/lib/etcd
+      - name: var-lib-kubelet
+        hostPath:
+          path: /var/lib/kubelet
+      - name: var-lib-kube-scheduler
+        hostPath:
+          path: /var/lib/kube-scheduler
+      - name: var-lib-kube-controller-manager
+        hostPath:
+          path: /var/lib/kube-controller-manager
+      - name: etc-systemd
+        hostPath:
+          path: /etc/systemd
+      - name: lib-systemd
+        hostPath:
+          path: /lib/systemd
+      - name: srv-kubernetes
+        hostPath:
+          path: /srv/kubernetes
+      - name: etc-kubernetes
+        hostPath:
+          path: /etc/kubernetes
+      - name: usr-bin
+        hostPath:
+          path: /usr/bin
+      - name: etc-cni-netd
+        hostPath:
+          path: /etc/cni/net.d
+      - name: opt-cni-bin
+        hostPath:
+          path: /opt/cni/bin
+      - name: etc-passwd
+        hostPath:
+          path: /etc/passwd
+      - name: etc-group
+        hostPath:
+          path: /etc/group
 ```
 
 ```bash
 kubectl apply -f kube-bench.yaml
-kubectl -n kube-system logs kube-bench | tee kube-bench-control-plane.txt
-kubectl -n kube-system delete pod kube-bench
+kubectl -n kube-system logs job/kube-bench | tee kube-bench-control-plane.txt
+kubectl -n kube-system delete job kube-bench
 ```
 
 Читайте результат в таком порядке: зафиксируйте номер рекомендации, путь или флаг,
@@ -172,7 +237,17 @@ sudo grep -nE -- '--(anonymous-auth|authorization-mode|audit-|profiling)' \
 ```
 
 Добавьте или скорректируйте аргументы в массиве `command` static Pod. Не оставляйте два
-экземпляра одного флага с конфликтующими значениями.
+экземпляра одного флага с конфликтующими значениями. До изменения манифеста подготовьте
+на ноде валидный audit policy (см. главу 32) и каталог журнала: `hostPath` типа `File` не
+создаёт policy-файл, а apiserver должен иметь возможность создать log-файл.
+
+```bash
+sudo test -f /etc/kubernetes/audit-policy.yaml
+sudo install -d -o root -g root -m 700 /var/log/kubernetes/audit
+```
+
+Добавьте к существующим `volumeMounts` и `volumes` static Pod следующие записи вместе с
+аргументами (не заменяя остальные монтирования манифеста):
 
 ```yaml
 spec:
@@ -188,13 +263,31 @@ spec:
     - --audit-log-maxage=30
     - --audit-log-maxbackup=10
     - --audit-log-maxsize=100
+    volumeMounts:
+    - name: audit-policy
+      mountPath: /etc/kubernetes/audit-policy.yaml
+      readOnly: true
+    - name: audit-log
+      mountPath: /var/log/kubernetes/audit
+  volumes:
+  - name: audit-policy
+    hostPath:
+      path: /etc/kubernetes/audit-policy.yaml
+      type: File
+  - name: audit-log
+    hostPath:
+      path: /var/log/kubernetes/audit
+      type: Directory
 ```
 
 - `--anonymous-auth=false` не даёт неаутентифицированному запросу стать
   `system:anonymous`.
 - `--authorization-mode=Node,RBAC` включает обычную модель авторизации для kubeadm.
   Не добавляйте `AlwaysAllow`; порядок и список modes нужно согласовать с архитектурой
-  кластера.
+  кластера. Не путайте этот флаг с `--authorization-config`: первый выбирает authorizer
+  modes, второй указывает файл `AuthorizationConfiguration` для настраиваемых authorizer
+  (например, Webhook). Это не взаимозаменяемые настройки; при использовании config-файла
+  проверьте API/version и не дублируйте или не конфликтуйте с modes.
 - `--profiling=false` убирает profiling endpoints, которые могут раскрывать сведения о
   процессе и не должны быть доступны без необходимости.
 - `--audit-*` подключают audit policy и сохраняют журнал. Сама policy подробно разбирается
@@ -381,9 +474,18 @@ sudo ss -lntp | grep -E ':(2379|2380)'
 
 ## 07.7. Повторный прогон, диагностика и доказательство исправления
 
-Каждое изменение конфигурации состоит из четырёх шагов: изменить фактический источник,
-дождаться рестарта компонента, проверить доступность кластера, затем повторить именно тот
-CIS target, который сообщил о проблеме.
+Для каждого `FAIL` или осознанного `WARN` действуйте по короткой процедуре: (1)
+зафиксируйте версию Kubernetes, версию или digest `kube-bench`, выбранный профиль и CIS
+check ID из отчёта; (2) сделайте резервную копию активного файла или объекта; (3) измените
+ровно один control; (4) дождитесь рестарта и проверьте здоровье компонента и кластера;
+(5) повторите только затронутый target или check; (6) при ошибке здоровья немедленно
+верните резервную копию, дождитесь восстановления и повторите health check. Не объявляйте
+исправление успешным до targeted rerun.
+
+В self-managed кластере эта процедура относится к control plane, нодам и их файлам, за
+которые отвечает оператор. В managed Kubernetes provider обычно владеет control plane:
+не пытайтесь обходить это через hostPath или прямую правку, а сверяйте provider-owned
+контроли с документацией и фиксируйте customer-/provider-owned ответственность.
 
 ```mermaid
 flowchart LR

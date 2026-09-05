@@ -2,7 +2,7 @@
 
 # Глава 04. NetworkPolicy для безопасности
 
-> **Что дальше.** В предыдущих главах мы разобрали модель угроз и механизмы изоляции Linux. Теперь ограничим один из главных путей lateral movement: сеть между Pod. **NetworkPolicy** превращает плоскую pod-сеть в набор явно разрешённых связей. Это домен Cluster Setup (15%) CKS.
+> **Что дальше.** В предыдущих главах мы разобрали модель угроз и механизмы изоляции Linux. Теперь ограничим один из главных путей lateral movement: сеть между Pod. **NetworkPolicy** превращает плоскую pod-сеть в набор явно разрешённых связей. Это домен Cluster Setup (10%) CKS.
 
 > **Что нужно из CKA.** Базовый синтаксис `NetworkPolicy`, селекторы и модель сети Pod разобраны в [главе 34 CKA](../../../cka/course/34/ru.md). Устройство pod-сети и роль CNI - в [главе 30 CKA](../../../cka/course/30/ru.md). Здесь рассматриваем применение этих механизмов как средства защиты, а не повторяем основу.
 
@@ -69,7 +69,7 @@ spec:
   - Egress
 ```
 
-Порядок важен для эксплуатации: сначала определите карту допустимых связей и подготовьте allow-политики, затем примените default-deny и сразу нужные разрешения в контролируемом rollout. Иначе приложения потеряют DNS, доступ к зависимостям, probes или внешнему API. Для нового изолированного namespace полезно создавать deny до запуска рабочих Pod.
+Порядок важен для эксплуатации: сначала определите карту допустимых связей и подготовьте allow-политики, затем примените default-deny и сразу нужные разрешения в контролируемом rollout. Иначе приложения потеряют DNS, доступ к зависимостям, ingress/monitoring-трафику или внешнему API. Обычные kubelet liveness/readiness/startup probes между Pod и его нодой в стандартной модели NetworkPolicy не являются типичным трафиком, который блокирует default-deny; особенности host/CNI всё равно проверяйте в своём окружении. Для нового изолированного namespace полезно создавать deny до запуска рабочих Pod.
 
 Политики аддитивны: Kubernetes не имеет порядка `deny`/`allow` и приоритета между объектами `NetworkPolicy`. Для каждого `Pod` и каждого направления отдельно объединяются allow-правила всех применимых политик. Для соединения `source Pod → destination Pod` стороны проверяются независимо: если source `Pod` изолирован для `Egress`, его egress rules должны разрешать назначение; если destination `Pod` изолирован для `Ingress`, его ingress rules должны разрешать источник. Когда изолированы обе стороны, нужны оба разрешения. Направление, для которого `Pod` не изолирован ни одной применимой `NetworkPolicy`, дополнительного allow-правила не требует.
 
@@ -237,26 +237,45 @@ spec:
 
 Сначала убедитесь, что CNI вообще реализует `NetworkPolicy`. Сам API-объект принимается Kubernetes независимо от возможностей CNI; при отсутствии поддержки объект существует, но трафик не меняется. Сверьте документацию установленного CNI и создайте контролируемый тест.
 
+> **Граница NetworkPolicy.** Это фильтрация сетевого трафика Pod, а не полная изоляция tenant. Трафик Pod с node, на которой он размещён, включая node-local агенты, kubelet probes и host endpoints, обрабатывается CNI по-разному и не образует переносимой границы. Поведение для `hostNetwork` Pod также CNI-специфично: такой трафик нередко выглядит как node IP, поэтому `podSelector` и `namespaceSelector` могут не сработать ожидаемым образом. Порядок применения NAT и policy зависит от реализации: не делайте переносимое правило `ipBlock` для Service `ClusterIP`, pod CIDR или адреса после SNAT. Для Pod выбирайте источник и назначение селекторами, а `ipBlock` оставляйте для документированных внешних адресов. Помимо сети нужны отдельные controls для kernel и node, API/RBAC, Secret, admission и scheduler; также применяйте TLS, host firewall и возможности конкретного CNI.
+
+Перед тестом подготовьте известный исправный контрольный endpoint: например, Service `control`, который выбирает listener Pod с точной меткой `app=control` и отвечает на TCP 8080. Проверьте его без новых policy или из заранее разрешённого диагностического Pod. Не используйте для отрицательного теста несуществующее DNS-имя: так будет проверен DNS, а не политика. Затем сверьте реальные labels всех участников:
+
 ```bash
-# Найти CNI и DNS-поды, затем проверить созданные политики
+# Найти CNI и DNS-поды, затем проверить созданные политики и labels
 kubectl -n kube-system get pods -o wide
 kubectl -n kube-system get pod --show-labels | grep -E 'coredns|kube-dns'
 kubectl -n payments get networkpolicy
 kubectl -n payments describe networkpolicy default-deny
+kubectl -n payments get pod --show-labels
 
-# Временно создать диагностический Pod в изолированном namespace
+# Временно создать источники с теми же точными labels, что в policy
 kubectl -n payments run netshoot \
   --image=nicolaka/netshoot:v0.16 \
+  --labels=app=frontend \
+  --restart=Never -- sleep 3600
+kubectl -n payments run netshoot-untrusted \
+  --image=nicolaka/netshoot:v0.16 \
+  --labels=app=untrusted \
   --restart=Never -- sleep 3600
 kubectl -n payments wait --for=condition=Ready pod/netshoot --timeout=90s
+kubectl -n payments wait --for=condition=Ready pod/netshoot-untrusted --timeout=90s
 
-# DNS, разрешённый путь и ожидаемо запрещённый путь
-kubectl -n payments exec netshoot -- nslookup backend.payments.svc.cluster.local
-kubectl -n payments exec netshoot -- nc -vz -w 3 backend 8080
-kubectl -n payments exec netshoot -- nc -vz -w 3 forbidden-service.other 80
+# Сначала подтвердить DNS и известный исправный контрольный endpoint
+kubectl -n payments exec netshoot -- nslookup control.payments.svc.cluster.local
+kubectl -n payments exec netshoot -- nc -vz -w 3 control 8080
 ```
 
-Для проверки именно роли источника запускайте тест из Pod с теми же labels и ServiceAccount, что у приложения. Для проверки ingress создайте Pod-источник в другом namespace. Результат запрещённого соединения зависит от CNI и приложения: это может быть timeout, `connection refused` или сообщение CNI. Проверяйте ожидаемую недоступность вместе с успешным разрешённым соединением.
+Для воспроизводимого результата выполняйте четыре случая. В таблице `backend`, `control` и `egress-denied-control` - Service с listener Pod, выбранными соответственно точными метками `app=backend`, `app=control` и `app=egress-denied-control`. Для отрицательного ingress временно разрешите только egress `app=untrusted` к `app=backend:8080`; для отрицательного egress разрешите ingress в `app=egress-denied-control` от `app=frontend`, но не создавайте egress rule для этого назначения. Тогда отказ можно отнести к проверяемому направлению, а не к политике другой стороны.
+
+| Случай | Точные labels и требуемые policy | Команда и ожидаемый результат |
+|---|---|---|
+| Разрешённый ingress | `app=frontend` -> `app=backend`; backend ingress разрешает frontend, frontend egress разрешает backend на TCP 8080 | `kubectl -n payments exec netshoot -- nc -vz -w 3 backend 8080` - успех |
+| Запрещённый ingress | `app=untrusted` -> `app=backend`; egress untrusted временно разрешён, но backend ingress допускает только `app=frontend` | `kubectl -n payments exec netshoot-untrusted -- nc -vz -w 3 backend 8080` - отказ |
+| Разрешённый egress | `app=frontend` -> `app=control`; control ingress допускает frontend, frontend egress разрешает control на TCP 8080 | `kubectl -n payments exec netshoot -- nc -vz -w 3 control 8080` - успех |
+| Запрещённый egress | `app=frontend` -> `app=egress-denied-control`; ingress назначения допускает frontend, но frontend egress не разрешает это назначение | `kubectl -n payments exec netshoot -- nc -vz -w 3 egress-denied-control 8080` - отказ |
+
+Для проверки роли источника используйте те же labels и ServiceAccount, что у приложения. Результат запрещённого соединения зависит от CNI и listener: это может быть timeout, `connection refused` или сообщение CNI. Фиксируйте вместе успешный контрольный запрос и ожидаемую недоступность, а временные test-policy и Pod удаляйте после проверки.
 
 | Симптом | Проверка и вероятная причина |
 |---|---|
@@ -264,9 +283,7 @@ kubectl -n payments exec netshoot -- nc -vz -w 3 forbidden-service.other 80
 | Все запросы перестали работать | Default-deny egress применён без DNS или без allow к обязательной зависимости |
 | Между namespace трафик разрешён слишком широко | `namespaceSelector` и `podSelector` записаны отдельными элементами списка, поэтому сработал OR |
 | Policy не выбирает Pod | Метка задана у Deployment template иначе, чем в `podSelector`; сверить `kubectl get pod --show-labels` |
-| Внешний адрес не блокируется | Не задана egress isolation, `ipBlock` не соответствует фактическому адресу или трафик обходит ожидаемую точку |
-
-Поведение `NetworkPolicy` для `hostNetwork` Pod не определено единообразно Kubernetes API и зависит от реализации CNI. Некоторые сетевые плагины способны различать `hostNetwork` Pod и применять к ним policy, однако распространённый вариант - такой трафик рассматривается как трафик node IP, а `podSelector`/`namespaceSelector` для него не работают ожидаемым образом. Поэтому не полагайтесь на обычную `NetworkPolicy` как на единственный control для `hostNetwork` и host endpoints: используйте документированные возможности конкретного CNI, host firewall и сетевые controls ноды. `NetworkPolicy` также не заменяет защиту ноды, TLS или API authorization.
+| Внешний адрес не блокируется | Не задана egress isolation, `ipBlock` не соответствует фактическому адресу, порядок NAT отличается от ожидания или трафик обходит ожидаемую точку |
 
 ## 04.7. Как это применяют в продакшене
 

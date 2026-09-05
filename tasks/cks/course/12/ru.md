@@ -42,7 +42,10 @@ flowchart LR
   самый дешёвый барьер, но он не заменяет identity и RBAC.
 - **Authentication** сопоставляет сертификат, bearer token или другой credential с
   субъектом. Если anonymous access включён, запрос без credential получает субъект
-  `system:anonymous` и группу `system:unauthenticated`.
+  `system:anonymous` и группу `system:unauthenticated`. В актуальном
+  `AuthenticationConfiguration` anonymous access можно разрешить только для заданных
+  путей health endpoints, например `/livez`, `/readyz` и `/healthz`, а не обязательно
+  для всего API.
 - **Authorization** проверяет допустимый verb, resource и scope. В обычном kubeadm-кластере
   это `Node,RBAC`.
 - **Admission** действует после authorization: может изменить объект или отклонить его по
@@ -62,6 +65,14 @@ Anonymous access иногда оставляют ради устаревшего
 доступным без ключа, сертификата или токена. Сначала закрывают вход, затем удаляют уже
 выданные права: отключённый сейчас anonymous access не делает опасную binding безопасной
 навсегда.
+
+Полное отключение через `--anonymous-auth=false` остаётся безопасным baseline. Но
+стабильный `AuthenticationConfiguration`, подключаемый через `--authentication-config`,
+может оставить anonymous access только для явного списка health endpoints, например
+`/livez`, `/readyz` и `/healthz`; остальные пути не станут anonymous даже при разрешающей
+binding. Эти два способа настройки взаимоисключающие: при поле `anonymous` в файле не
+задавайте `--anonymous-auth` одновременно. Такой exception требует отдельного ревью
+маршрутов, сетевого доступа и прав anonymous-субъекта.
 
 На kubeadm control-plane `kube-apiserver` обычно является static Pod. Правьте активный
 манифест локально на control-plane, имея доступ к консоли ноды и сохранённый путь отката.
@@ -162,8 +173,11 @@ kubectl get rolebinding -A -o json | jq -r '
 После ревью удаление адресно выглядит так:
 
 ```bash
-kubectl delete clusterrolebinding <reviewed-clusterrolebinding>
-kubectl delete rolebinding -n <namespace> <reviewed-rolebinding>
+REVIEWED_CLUSTERROLEBINDING='reviewed-clusterrolebinding'
+NAMESPACE='reviewed-namespace'
+REVIEWED_ROLEBINDING='reviewed-rolebinding'
+kubectl delete clusterrolebinding "$REVIEWED_CLUSTERROLEBINDING"
+kubectl delete rolebinding -n "$NAMESPACE" "$REVIEWED_ROLEBINDING"
 ```
 
 Проверьте также любые binding, выдающие право группе `system:unauthenticated`: отключение
@@ -172,9 +186,11 @@ anonymous access останавливает обычный путь к ней, �
 
 ## 12.3. Authorization modes и NodeRestriction
 
-`--authorization-mode` задаёт цепочку модулей авторизации. Авторизация разрешает запрос, если
-хотя бы один mode его разрешил; она не является упорядоченным набором «запретов». Поэтому
-`AlwaysAllow` рядом с RBAC обнуляет смысл остальных проверок.
+`--authorization-mode` задаёт упорядоченную цепочку модулей авторизации. Каждый модуль
+возвращает `Allow`, `Deny` или `NoOpinion`: `Allow` **или** `Deny` немедленно завершают
+цепочку, и только `NoOpinion` передаёт запрос следующему модулю; если все модули вернули
+`NoOpinion`, запрос отклоняется. Поэтому порядок значим, а `AlwaysAllow` в достижимой части
+цепочки обнуляет least privilege для запросов, которые до него дошли.
 
 | Mode | Назначение | Решение для hardening |
 |---|---|---|
@@ -183,6 +199,13 @@ anonymous access останавливает обычный путь к ней, �
 | `Webhook` | спрашивает внешний authorization webhook | использовать только с доступным и проверенным внешним сервисом |
 | `ABAC` | правила из локального файла policy | legacy-вариант; сложен для аудита, избегать в новых кластерах |
 | `AlwaysAllow` | разрешает всё | не использовать в production |
+
+Structured `AuthorizationConfiguration` стабилен начиная с Kubernetes v1.32 и задаётся
+флагом `--authorization-config`. Выбирают **один** подход: этот файл нельзя совмещать с
+CLI-настройкой `--authorization-mode` и `--authorization-webhook-*`; при смешении
+`kube-apiserver` завершит работу с ошибкой. Файл полезен, когда нужны параметры и несколько
+webhook authorizer, но переход на него планируют и проверяют как изменение control plane, а
+не добавляют второй параллельный источник конфигурации.
 
 Проверьте активный аргумент в static Pod-манифесте и задайте безопасную базовую цепочку,
 если она соответствует архитектуре кластера:
@@ -231,14 +254,21 @@ sudo crictl ps --name kube-apiserver
 Если plugin отсутствует, добавьте `NodeRestriction` к существующему
 `--enable-admission-plugins` после проверки совместимости. Не путайте это с RBAC: RBAC
 выдаёт права всем субъектам, а NodeRestriction вводит дополнительное предметное
-ограничение именно для kubelet-идентичности.
+ограничение именно для kubelet-идентичности. Рядом с ним учитывайте feature gate
+`ServiceAccountNodeAudienceRestriction`: когда он включён, NodeRestriction также сужает
+аудитории, для которых kubelet может запрашивать ServiceAccount-токены через `TokenRequest`,
+до аудиторий, уже используемых Pod на этой ноде, либо явно выданных через RBAC. Это не
+замена NodeRestriction, а дополнительное ограничение для node-originated token requests.
 
 ## 12.4. Сетевое ограничение доступа к apiserver
 
-Даже корректный TLS и RBAC не оправдывают публичный API endpoint. Каждый доступный извне
-адрес `:6443` даёт атакующему возможность перебирать credentials, использовать будущую
-уязвимость или получать сведения по ошибкам. Нормальная модель - API доступен только из
-административной сети, control-plane, worker nodes и согласованных automation endpoints.
+Даже при корректных TLS и RBAC публичный API endpoint расширяет поверхность: адрес `:6443`
+даёт атакующему возможность перебирать credentials, использовать будущую уязвимость или
+получать сведения по ошибкам. Private endpoint - сильная и часто предпочтительная опция, но
+не универсальный абсолют: public endpoint может быть обоснован, если доступны строгие
+сетевые ограничения (узкий allowlist CIDR, firewall/WAF по архитектуре) и сильная
+аутентификация. В любом варианте доступ дают только административной сети, control-plane,
+worker nodes и согласованным automation endpoints.
 
 ```mermaid
 flowchart LR
@@ -268,8 +298,18 @@ flowchart LR
 - **NetworkPolicy**: ограничьте egress Pod к `kubernetes.default.svc`/API только для
   namespace и workload, которым API действительно нужен. Это сокращает lateral movement
   после компрометации Pod.
-- **Маршрутизация и DNS**: убедитесь, что control-plane endpoint не попал в публичный DNS
-  без необходимости, а private endpoint разрешается только из нужных сетей.
+- **Маршрутизация и DNS**: убедитесь, что control-plane endpoint публикуется и разрешается
+  только так, как требует выбранная модель доступа; private endpoint часто упрощает это, но
+  public endpoint требует особенно строгого контроля источников и аутентификации.
+
+**kubeadm discovery - отдельный случай.** При token-based discovery ConfigMap
+`kube-public/cluster-info` по умолчанию содержит публично доступную discovery-информацию
+(адрес API и данные CA); это не Secret и не следует выдавать или защищать как Secret.
+Bootstrap token, напротив, является временной учётной информацией для discovery/TLS bootstrap
+и требует отдельного контроля: ограниченного распространения, короткого срока жизни,
+отзыва и ревью CSR/auto-approval. При необходимости public access к `cluster-info` отключают
+или применяют file/HTTPS discovery с подходящим каналом доверия; не смешивайте защиту
+публичной информации и защиту токена.
 
 NetworkPolicy не заменяет Security Group или host firewall: она применяется CNI к трафику
 Pod и не обязана покрывать хостовый, внешний или control-plane трафик одинаково в каждой
@@ -310,11 +350,13 @@ done
 ```
 
 `--service-account-lookup` относится к проверке существования ServiceAccount при
-аутентификации legacy ServiceAccount token. Без явного решения не выключайте эту проверку:
-значение `false` может позволить пользоваться ранее выпущенным legacy token до его
-истечения даже после удаления ServiceAccount. В современных кластерах предпочитают
-bound, short-lived projected tokens из главы 11, а наличие и поведение флага сверяют с
-версией через `kube-apiserver --help` и документацию используемой версии.
+аутентификации legacy ServiceAccount token. Значение `false` отключает API-based revocation:
+удалённый ServiceAccount или удалённый legacy token больше не отзывают уже выпущенный token
+через эту проверку. Это **не** механизм задания или гарантии короткого TTL для legacy tokens;
+срок их действия определяется способом выпуска и claims токена. Без явного решения lookup не
+выключают. В современных кластерах предпочитают bound, short-lived projected tokens из главы
+11, а наличие и поведение флага сверяют с версией через `kube-apiserver --help` и документацию
+используемой версии.
 
 Проверяйте конфигурацию как набор рисков, а не только один флаг:
 
@@ -334,7 +376,7 @@ sudo grep -nE 'readOnlyPort|anonymous:|authorization:' /var/lib/kubelet/config.y
 | отсутствует `NodeRestriction` | скомпрометированный kubelet получает более широкий путь к API | включить plugin, сохранив существующие defaults |
 | profiling включён без нужды | лишние диагностические endpoints | `--profiling=false` на control plane компонентах |
 | `readOnlyPort` не равен `0` | legacy kubelet API без authentication | `readOnlyPort: 0` |
-| публичный `6443` | поверхность для credentials attacks и уязвимостей API | private endpoint и allowlist на сетевом периметре |
+| публичный `6443` | увеличенная поверхность для credentials attacks и уязвимостей API | private endpoint либо строгий CIDR allowlist, firewall и сильная authentication |
 
 После правки static Pod подтверждайте не только строку в YAML. Kubelet должен запустить
 новый контейнер, а API - стать Ready. При ошибке YAML или неподдерживаемом флаге используйте
@@ -396,13 +438,15 @@ HTTP status и изменённые config sources в change record: это до
 
 ## 12.8. Как это применяют в продакшене
 
-- **Несколько слоёв, один baseline.** `--anonymous-auth=false`, `Node,RBAC`,
-  NodeRestriction, закрытый kubelet read-only port и private/allowlisted API endpoint
-  описывают в kubeadm config, image ноды или IaC. Ручная правка static Pod допустима для
+- **Несколько слоёв, один baseline.** `--anonymous-auth=false` (или узкие health-only
+  conditions в `AuthenticationConfiguration`), `Node,RBAC`, NodeRestriction с оценкой
+  `ServiceAccountNodeAudienceRestriction`, закрытый kubelet read-only port и
+  private/строго allowlisted API endpoint описывают в kubeadm config, image ноды или IaC. Ручная правка static Pod допустима для
   аварийной задачи, но не должна быть единственным источником истины.
 - **Сеть по назначению.** Администраторы работают через VPN/bastion, CI/CD имеет отдельные
-  исходящие адреса, а worker и control-plane получают только необходимые правила. Публичный
-  endpoint включают лишь с явным владельцем риска и ограниченным CIDR.
+  исходящие адреса, а worker и control-plane получают только необходимые правила. Public
+  endpoint допустим лишь при явном владельце риска, строгом ограничении источников и сильной
+  authentication; private endpoint остаётся сильным, но не единственным вариантом.
 - **Права пересматривают после изменения identity.** Регулярно ищут bindings для
   `system:anonymous`, `system:unauthenticated`, устаревших пользователей и ServiceAccount,
   удаляют неиспользуемые и тестируют `kubectl auth can-i`.
@@ -422,7 +466,9 @@ HTTP status и изменённые config sources в change record: это до
 - **Node authorizer** - authorizer для действий kubelet-идентичностей над нужными им Node
   и Pod объектами.
 - **NodeRestriction** - admission plugin, дополнительно ограничивающий действия kubelet
-  его собственной нодой и назначенными ей Pod.
+  его собственной нодой и назначенными ей Pod; с feature gate
+  `ServiceAccountNodeAudienceRestriction` также сужает допустимые аудитории TokenRequest от
+  kubelet.
 - **allowlist** - явный список допустимых источников, портов или назначений вместо
   разрешения всем.
 - **read-only port** - устаревший неаутентифицированный kubelet API, выключаемый через
@@ -443,10 +489,12 @@ HTTP status и изменённые config sources в change record: это до
   authentication, `Webhook` authorization и сетевым ограничением.
 - Безопасная базовая authorizer-цепочка kubeadm - `Node,RBAC`; `AlwaysAllow` несовместим с
   least privilege. NodeRestriction сужает последствия захвата kubelet credential.
-- API `:6443` не выставляют в интернет: используют private endpoint, firewall/Security
-  Group allowlist и точечные NetworkPolicy для Pod egress.
-- `--profiling=false`, проверка ServiceAccount lookup и аудит флагов уменьшают поверхность
-  и помогают не вернуть старую небезопасную конфигурацию.
+- Для API `:6443` предпочитают private endpoint; при public endpoint обязательны строгий
+  firewall/Security Group allowlist и сильная authentication. В любом случае точечные
+  NetworkPolicy для Pod egress уменьшают lateral movement.
+- `--profiling=false`, включённый ServiceAccount lookup для API revocation legacy tokens и
+  аудит флагов уменьшают поверхность; короткий TTL обеспечивают bound projected tokens, а не
+  `--service-account-lookup=false`.
 - Результат доказывают отдельными проверками: anonymous `curl` должен дать API `401`, а
   `kubectl auth can-i --as=system:anonymous` - `no`.
 
@@ -459,9 +507,10 @@ API и проверьте `/readyz`. Затем используйте `curl` б
 --as=system:anonymous`; не ограничивайтесь поиском текста в файле.
 
 **В реальной работе.** Ограничение API - часть проектирования сети и идентичности, а не
-разовая CIS-правка. Private endpoint, управляемый allowlist, короткоживущие токены,
-минимальные bindings и автоматическая проверка конфигурационного дрейфа делают
-компрометацию одной ноды или одного Pod существенно менее разрушительной.
+разовая CIS-правка. Private endpoint - сильная опция; если endpoint public, его компенсируют
+строгим allowlist и сильной authentication. Короткоживущие bound tokens, минимальные
+bindings и автоматическая проверка конфигурационного дрейфа делают компрометацию одной ноды
+или одного Pod существенно менее разрушительной.
 
 ## 12.12. Вопросы для самопроверки
 
@@ -471,8 +520,10 @@ API и проверьте `/readyz`. Затем используйте `curl` б
    `system:anonymous` и `system:unauthenticated`?
 3. Чем `10255` отличается от `10250` и какие настройки нужны kubelet API?
 4. Почему `AlwaysAllow` нельзя добавлять рядом с `RBAC` как «запасной» mode?
-5. Как NodeRestriction снижает последствия компрометации kubelet certificate?
-6. Почему NetworkPolicy не заменяет firewall или Security Group для API server?
+5. Как NodeRestriction и `ServiceAccountNodeAudienceRestriction` снижают последствия
+   компрометации kubelet credential?
+6. Почему NetworkPolicy не заменяет firewall или Security Group для API server и при каких
+   условиях public endpoint может быть оправдан?
 7. Какие две проверки докажут отдельно сетевую доступность API и отсутствие anonymous
    авторизации?
 

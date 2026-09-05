@@ -310,20 +310,26 @@ builder и входные материалы участвовали в сбор�
 сильной цепочки release должен связывать одни и те же digest в manifest, SBOM, provenance
 и registry.
 
-[SLSA](https://slsa.dev/) (Supply-chain Levels for Software Artifacts) предлагает модель
-зрелости защиты supply chain. Для CKS достаточно понимать направление уровней, а не
-заучивать номера полей конкретной версии specification:
+[SLSA](https://slsa.dev/) (Supply-chain Levels for Software Artifacts) в версии 1.2
+разделяет требования на независимые tracks. Поэтому единой шкалы «начальный - высокий»
+у SLSA нет: Build Track описывает гарантии build и provenance, а Source Track имеет
+собственные требования к source.
 
-| Уровень зрелости | Практический смысл |
-|---|---|
-| начальный | есть build и фиксируется хотя бы базовая информация о том, что было создано |
-| воспроизводимый и документированный | build process и inputs определены, provenance доступен для проверки |
-| защищённый | builder изолирован, provenance создаётся доверенным процессом и защищена от подмены |
-| высокий | процесс устойчивее к компрометации source и platform благодаря сильным review, controlled build и verification practices |
+| Track | Уровни SLSA v1.2 | Практический смысл |
+|---|---|---|
+| Build | L0 | Нет гарантий SLSA. |
+| Build | L1 | Provenance существует. |
+| Build | L2 | Подписанная provenance создаётся hosted build platform. |
+| Build | L3 | Используется hardened build platform. |
+| Source | L1-L4 | Отдельные уровни требований к source; их нельзя выводить из уровня Build Track. |
 
-Не объявляйте проект «SLSA Level N» только потому, что он генерирует SBOM. Уровень зависит
-от требований конкретной версии SLSA и доказательств того, как защищены source, build и
-provenance. На практике улучшения выглядят так:
+Для требований каждого уровня сверяйтесь со спецификациями [Build Track](https://slsa.dev/spec/v1.2/build-track-basics)
+и [Source Track](https://slsa.dev/spec/v1.2/source-requirements), а не с авторской
+четырёхступенчатой шкалой. Не объявляйте проект «SLSA Level N» только потому, что он
+генерирует SBOM: нужно указывать track, версию specification и доказательства выполнения
+соответствующих требований.
+
+На практике улучшения выглядят так:
 
 - lock dependencies и review изменения build definition;
 - запускайте release build в ephemeral/isolated runner, а не на общей рабочей машине;
@@ -332,10 +338,39 @@ provenance. На практике улучшения выглядят так:
 - используйте protected branches, required review и audit log registry/CI;
 - в CD разворачивайте digest, не выполняйте повторный build из другого environment.
 
-Проверка digest проста и обязательна: после pull/reference в manifest должны быть именно
-те байты, для которых выпускались SBOM и attestations. Подпись artifact и криптографическую
-проверку `cosign verify` подробно рассматривает [глава 26](../26/ru.md); SBOM не заменяет
-эту проверку.
+Минимальная SLSA/in-toto provenance является statement с `subject`, привязанным к
+выпущенному image digest. Например, структура может выглядеть так:
+
+```json
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "subject": [{
+    "name": "registry.example.com/payments/api",
+    "digest": {"sha256": "<64-hex-release-image-digest>"}
+  }],
+  "predicateType": "https://slsa.dev/provenance/v1",
+  "predicate": {
+    "buildDefinition": {
+      "buildType": "https://ci.example.com/buildtypes/release/v1",
+      "externalParameters": {}, "resolvedDependencies": []
+    },
+    "runDetails": {"builder": {"id": "https://ci.example.com/builders/release"}}
+  }
+}
+```
+
+До использования provenance сравните её `subject.digest.sha256` с digest release image,
+полученным из доверенного registry или manifest. Это можно проверить без угадывания tag:
+
+```bash
+RELEASE_DIGEST='sha256:<64-hex-release-image-digest>'
+jq -e --arg digest "${RELEASE_DIGEST#sha256:}" \
+  '.subject[] | select(.digest.sha256 == $digest)' provenance.intoto.json >/dev/null
+```
+
+Успешный `jq` доказывает привязку statement к ожидаемому digest, но не подлинность самого
+statement. Подпись artifact и криптографическую проверку `cosign verify` подробно
+рассматривает [глава 26](../26/ru.md); SBOM не заменяет эту проверку.
 
 ## 25.6. SBOM в поиске уязвимых компонентов
 
@@ -371,6 +406,12 @@ SBOM не заменяет vulnerability scanner. Он даёт inventory, а sc
 правила сопоставления и severity. В [главе 28](../28/ru.md) мы применим Trivy и Grype к
 image и готовому SBOM. До этого полезно уметь вручную доказать наличие package/version
 через `jq`: это диагностирует формат, данные scanner-а и ошибки автоматизации.
+
+**VEX** (Vulnerability Exploitability eXchange) дополняет эту модель: SBOM отвечает, что
+входит в artifact, scanner или advisory сопоставляет компонент с CVE, а VEX фиксирует
+подтверждённый статус применимости или эксплуатируемости конкретной уязвимости для данного
+продукта. Наличие package/version и CVE ещё не означает, что уязвимость применима или
+эксплуатируема; VEX не отменяет проверку и исправление, а делает решение проверяемым.
 
 Также не путайте «не найдено в SBOM» и «безопасно». Причины отсутствия могут быть
 неполный detector, static link, неверный image, устаревший SBOM или package под другим
@@ -430,8 +471,12 @@ package/version для конкретного image digest, а команды и
 ## 25.8. Как это применяют в продакшене
 
 - **SBOM создают на release build.** Генерация происходит автоматически в CI для каждого
-  publishable digest, а не вручную после инцидента. SBOM хранится как artifact/attestation
-  рядом с image и имеет retention не короче самого release.
+  publishable digest, а не вручную после инцидента. SBOM может быть самостоятельным
+  SPDX/CycloneDX-файлом или OCI artifact/referrer, связанным с image digest. Подписанная
+  attestation - отдельное утверждение о `subject` с predicate: она может нести SBOM или
+  provenance, но не любой SBOM является attestation. Практическая модель: `image digest
+  <- OCI SBOM artifact/referrer` и `image digest <- signed attestation
+  (predicate=SBOM/provenance)`. Retention этих данных не должен быть короче самого release.
 - **Digest - идентификатор релиза.** Manifest/GitOps, SBOM, scan report, provenance и
   change record ссылаются на один immutable digest. Release tag можно оставить для людей,
   но им не заменяют доказательство содержимого.
@@ -460,7 +505,8 @@ package/version для конкретного image digest, а команды и
 - **Syft** - инструмент генерации SBOM из image, filesystem или archive.
 - **bom** - инструмент `kubernetes-sigs/bom` для генерации и работы со SPDX SBOM.
 - **Provenance** - metadata о source, inputs, сборщике (builder) и процессе создания artifact.
-- **SLSA** - модель зрелости практик защиты supply chain.
+- **SLSA** - модель требований защиты supply chain с отдельными Build и Source tracks.
+- **VEX** - statement о применимости или эксплуатируемости конкретной CVE для продукта.
 - **Digest** - неизменяемый content identifier image, обычно `sha256`.
 - **purl** - package URL, идентификатор package с ecosystem и version.
 
@@ -478,8 +524,8 @@ package/version для конкретного image digest, а команды и
   `.version`.
 - CI должен выпускать image, SBOM и provenance для одного digest, а CD - продвигать этот
   digest из доверенного artifact repository без повторной сборки.
-- SLSA направляет развитие к документированному, изолированному и проверяемому build
-  process; генерация SBOM сама по себе не доказывает уровень SLSA.
+- SLSA v1.2 разделяет Build Track (L0-L3) и Source Track (L1-L4); генерация SBOM сама
+  по себе не доказывает выполнение требований ни одного из tracks.
 - После CVE цикл выглядит так: query SBOM → подтвердить running digest → fixed rebuild →
   новый SBOM/scan/verify → controlled rollout.
 

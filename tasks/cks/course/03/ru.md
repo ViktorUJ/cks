@@ -2,7 +2,7 @@
 
 # Глава 03. Linux-механизмы безопасности под капотом
 
-> **Что дальше.** В главе 02 мы разложили поверхность атаки Kubernetes по слоям. Теперь рассмотрим механизмы Linux, которыми container runtime изолирует процесс пода: namespaces, cgroups, capabilities и фильтрацию syscalls. Это фундамент CKS, но не отдельный экзаменационный домен: он объясняет, почему ограничения из System Hardening (10%) и Minimize Microservice Vulnerabilities (20%) работают и где у них границы.
+> **Что дальше.** В главе 02 мы разложили поверхность атаки Kubernetes по слоям. Теперь рассмотрим механизмы Linux, которыми container runtime изолирует процесс пода: namespaces, cgroups, capabilities и фильтрацию syscalls. Это фундамент CKS, но не отдельный экзаменационный домен: он объясняет, почему ограничения из System Hardening (15%) и Minimize Microservice Vulnerabilities (20%) работают и где у них границы.
 
 > **Что нужно из CKA.** Базовое устройство контейнеров, namespaces, cgroups и runtime разобрано в CKA: [контейнеры](../../../cka/course/00-4-containers/ru.md), [Linux](../../../cka/course/00-5-linux/ru.md) и [network namespaces](../../../cka/course/00-7-netns/ru.md). Здесь не повторяем создание контейнера и базовые команды CKA, а рассматриваем security-свойства, проверку изоляции и пути её обхода.
 
@@ -66,6 +66,25 @@ Namespace даёт процессу отдельное представлени�
 | `USER` | UID/GID mapping и capabilities | UID, отображённый в user namespace | UID 0 внутри можно отобразить в непривилегированный UID хоста |
 
 Граница не абсолютна. Например, несколько контейнеров одного пода обычно разделяют `NET` namespace и могут общаться через `localhost`. Поля `hostNetwork`, `hostPID` и `hostIPC` отключают соответствующую границу. Их следует запрещать обычным workload через Pod Security Admission или policy engine.
+
+### User namespaces: отдельное отображение UID/GID
+
+User namespace не включается автоматически. В Kubernetes это opt-in: `spec.hostUsers: false` запрашивает user namespace для Pod. При поддержке со стороны kubelet, container runtime и ноды UID 0 внутри контейнера отображается в непривилегированный UID на хосте. Это уменьшает последствия компрометации, но не отменяет `runAsNonRoot`, capabilities, seccomp и MAC.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: userns-web
+  namespace: demo
+spec:
+  hostUsers: false
+  containers:
+  - name: web
+    image: nginx:1.30.4
+```
+
+Перед включением проверьте поддержку user namespaces в используемых версии Kubernetes, runtime и образе ноды, а также совместимость volumes и workload. Не комбинируйте это с host namespaces: такое Pod должен оставаться обычной изолированной нагрузкой.
 
 На ноде namespaces можно посмотреть утилитой `lsns`. Это диагностическая команда для администратора ноды, а не команда, которую надо давать приложению:
 
@@ -172,7 +191,7 @@ stat -fc %T /sys/fs/cgroup
 # cgroup2fs означает cgroup v2.
 ```
 
-`requests` влияют на scheduler и QoS, но сами по себе не останавливают прожорливый процесс. За жёсткое ограничение отвечают `limits`. Ограничение PID настраивается на ноде и через механизм Pod-level PID limits, а не полем `resources`; его наличие проверяют в конфигурации kubelet и в cgroup. Не пытайтесь доказывать работу memory limit запуском намеренного OOM на production-ноде.
+`requests` влияют на scheduler и QoS, но сами по себе не останавливают прожорливый процесс. За жёсткое ограничение отвечают `limits`. Лимит PID задаётся параметром kubelet `podPidsLimit`, а не полем PodSpec workload; его наличие проверяют в конфигурации kubelet и в cgroup. При memory pressure OOM обрабатывается в области соответствующей cgroup: ядро может завершить процесс в контейнере, а если завершается основной процесс, kubelet перезапустит контейнер согласно `restartPolicy`. Не пытайтесь доказывать работу memory limit запуском намеренного OOM на production-ноде.
 
 ## 03.4. Linux capabilities: root надо дробить
 
@@ -200,7 +219,13 @@ sudo getpcaps "$PID"
 
 `getcap` показывает file capabilities, которые executable получает при запуске. `capsh --print` и `getpcaps` показывают состояние процесса. Команды требуют права на ноде для чужого процесса; это ожидаемо и само является защитой.
 
-В Kubernetes безопасная отправная точка - удалить всё и добавить одну capability только при документированной необходимости. Например, legacy-приложению, которое действительно должно слушать TCP 80, может потребоваться `NET_BIND_SERVICE`:
+Перед добавлением `NET_BIND_SERVICE` проверьте значение `net.ipv4.ip_unprivileged_port_start` в network namespace целевого Pod. Если порог равен `0`, непривилегированный процесс уже может слушать низкий порт, и capability не нужна:
+
+```bash
+kubectl exec -n demo <pod> -- cat /proc/sys/net/ipv4/ip_unprivileged_port_start
+```
+
+В Kubernetes безопасная отправная точка - удалить всё и добавить одну capability только при документированной необходимости. Только если настройка sysctl и требования приложения это подтверждают, legacy-приложению для TCP 80 может потребоваться `NET_BIND_SERVICE`:
 
 ```yaml
 apiVersion: v1
@@ -237,7 +262,7 @@ capsh --decode=0000000000000400
 # Пример: 0x400 соответствует cap_net_bind_service.
 ```
 
-`privileged: true` не является заменой настройки capabilities. Такой контейнер получает почти все privileges хоста и обходит обычную модель least privilege. Для CKS это красный флаг: сначала удалите `privileged`, затем оцените необходимость каждой capability отдельно.
+`privileged: true` не является заменой настройки capabilities. Такой контейнер получает все Linux capabilities, а обычное confinement seccomp, AppArmor и SELinux для него снимается или игнорируется. Для CKS это красный флаг: сначала удалите `privileged`, затем оцените необходимость каждой capability отдельно.
 
 ## 03.5. Syscalls и seccomp: сокращаем доступный API ядра
 
@@ -258,6 +283,8 @@ flowchart LR
 ```
 
 seccomp не определяет, кто может читать Kubernetes API, и не исправляет небезопасный образ. Это последний фильтр между скомпрометированным процессом и API ядра. Он особенно полезен вместе с `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false` и MAC-профилем.
+
+Если `seccompProfile` не задан, Pod может остаться `Unconfined`. Исключение - нода, где в kubelet включён `seccompDefault: true`: там отсутствующий профиль получает `RuntimeDefault`. Не считайте это универсальным свойством кластера - проверьте конфигурацию ноды и явным образом задавайте профиль для workload.
 
 Для большинства workload начните с runtime-профиля вместо `Unconfined`:
 
@@ -319,7 +346,9 @@ securityContext:
     type: RuntimeDefault
 ```
 
-Для `Localhost` профиль должен быть заранее загружен на целевую ноду и указан через `localhostProfile`. Это node-local dependency: scheduler не переносит файл профиля между нодами. Поэтому в production профиль доставляют конфигурационным управлением, проверяют на каждом node pool и ограничивают размещение Pod. Реализацию профиля и разбор `DENIED` изучим в главе 16.
+`RuntimeDefault` требует, чтобы container runtime на ноде предоставлял совместимый default profile; проверяйте это на фактическом node pool, а не только в YAML. Для `Localhost` профиль должен быть заранее загружен на целевую ноду и указан через `localhostProfile`. Это node-local dependency: scheduler не переносит профиль между нодами. Поэтому в production профиль доставляют конфигурационным управлением, проверяют на каждом node pool и ограничивают размещение Pod. Реализацию профиля и разбор `DENIED` изучим в главе 16.
+
+Для SELinux параметры метки задают через `securityContext.seLinuxOptions` только в соответствии с policy образа ноды. При отказе сначала изучайте AVC denial, а не отключайте SELinux. Volumes и файлы на filesystem должны иметь подходящие SELinux labels; особенно внимательно проверяйте hostPath, persistent volumes и общие writable volumes.
 
 ## 03.7. Границы изоляции, sandboxed runtime и диагностика escape-рисков
 
@@ -394,11 +423,11 @@ sudo cat /proc/<pid>/cgroup
 ## 03.10. Итоги главы
 
 - Контейнер использует общее ядро ноды; его защита складывается из нескольких Linux-механизмов, а не из одной «песочницы».
-- `PID`, `NET`, `MNT`, `UTS`, `IPC` и `USER` namespaces ограничивают видимость ресурсов, но host namespaces, `hostPath` и `privileged` могут эту границу обойти.
-- cgroups ограничивают CPU, memory и PID, защищая ноду и соседние workload от DoS.
-- Capabilities дробят полномочия root. Безопасный baseline - удалить `ALL` и вернуть только документированную минимальную capability.
-- seccomp с `RuntimeDefault` уменьшает доступный процессу API ядра; custom profiles требуют тестирования и доставки на ноду.
-- AppArmor и SELinux дополняют обычные права файлов обязательной policy. Для сильно недоверенной нагрузки дополнительно рассматривают gVisor или Kata.
+- `PID`, `NET`, `MNT`, `UTS`, `IPC` и `USER` namespaces ограничивают видимость ресурсов, но host namespaces, `hostPath` и `privileged` могут эту границу обойти. User namespace включается отдельно через `spec.hostUsers: false` и требует поддержки ноды и runtime.
+- cgroups ограничивают CPU, memory и PID, защищая ноду и соседние workload от DoS; PID limit задаёт kubelet через `podPidsLimit`, а cgroup OOM может завершить процесс и привести к restart контейнера.
+- Capabilities дробят полномочия root. Безопасный baseline - удалить `ALL` и вернуть только документированную минимальную capability после проверки sysctl и реальной потребности.
+- seccomp с `RuntimeDefault` уменьшает доступный процессу API ядра; без явно заданного профиля возможен `Unconfined`, если на ноде не включён `seccompDefault`.
+- AppArmor и SELinux дополняют обычные права файлов обязательной policy; для них важны runtime/node profile, AVC и labels volumes. Для сильно недоверенной нагрузки дополнительно рассматривают gVisor или Kata.
 
 ## 03.11. Как это пригодится: на экзамене и в реальной работе
 

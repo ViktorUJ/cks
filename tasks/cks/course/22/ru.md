@@ -137,6 +137,47 @@ kubectl get runtimeclass gvisor -o yaml
 должен запускать изолированный или дорогой runtime, ограничьте `runtimeClassName` через
 admission-policy и назначайте его платформенным шаблоном.
 
+Например, эта `ValidatingAdmissionPolicy` разрешает `gvisor` только в `tenant-a`.
+Ограничение namespace - лишь пример: в production его связывают с утверждёнными namespace
+и при необходимости с ServiceAccount. Проверяйте policy server-side до rollout:
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: restrict-gvisor-runtimeclass
+spec:
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods"]
+  validations:
+  - expression: "!has(object.spec.runtimeClassName) || object.spec.runtimeClassName != 'gvisor' || object.metadata.namespace == 'tenant-a'"
+    message: "runtimeClassName gvisor is allowed only in tenant-a"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: restrict-gvisor-runtimeclass
+spec:
+  policyName: restrict-gvisor-runtimeclass
+  validationActions: [Deny]
+```
+
+```bash
+kubectl apply -f restrict-gvisor-runtimeclass.yaml
+
+# Отрицательная проверка: API server должен отклонить Pod до scheduler.
+kubectl -n tenant-b run gvisor-not-allowed \
+  --image=nginxinc/nginx-unprivileged:1.30.4-alpine-slim \
+  --restart=Never \
+  --overrides='{"spec":{"runtimeClassName":"gvisor"}}' \
+  --dry-run=server
+# Expected: runtimeClassName gvisor is allowed only in tenant-a
+```
+
 ## 22.4. Scheduling в RuntimeClass: `nodeSelector`, taints и tolerations
 
 Не ставьте gVisor или Kata на все nodes «на всякий случай». Отделите sandbox pool: в нём
@@ -146,8 +187,10 @@ workloads не должны случайно занять этот pool, а sand
 
 RuntimeClass может содержать `scheduling`. Kubernetes добавляет его `nodeSelector` и
 `tolerations` к Pod, который ссылается на этот class. Selector RuntimeClass и selector Pod
-объединяются: конфликтующие значения делают Pod unschedulable. Tolerations добавляются, но
-не заменяют taint - node остаётся закрытой для Pod без toleration.
+объединяются на admission: конфликтующие значения приводят к отклонению Pod API server,
+а не к принятому Pod в состоянии `Pending`/`Unschedulable`. Поэтому при такой ошибке ищите
+admission error, а не только Events scheduler. Tolerations добавляются, но не заменяют
+taint - node остаётся закрытой для Pod без toleration.
 
 ```bash
 # Выполняет platform administrator только на подготовленном worker.
@@ -247,7 +290,7 @@ pinned release, проверьте checksum/signature и установите с
 показывают форму установки; `<VERSION>` и `<ARCH>` заменяются утверждёнными значениями.
 
 ```bash
-VERSION=<approved-gvisor-version>
+VERSION="${VERSION:?set an approved gVisor version}"
 ARCH=$(uname -m)
 BASE_URL="https://storage.googleapis.com/gvisor/releases/release/${VERSION}/${ARCH}"
 
@@ -274,24 +317,37 @@ workers.
 
 ### 2. Добавить runtime handler containerd
 
-Сначала сохраните рабочую конфигурацию и посмотрите используемую версию containerd. Путь
-плагина в config и допустимые options могут различаться между версиями и дистрибутивами;
-проверяйте документацию **вашей** версии и не заменяйте целиком vendor-managed `config.toml`.
+Сначала сохраните рабочую конфигурацию и определите generation containerd. Не заменяйте
+целиком vendor-managed `config.toml`: путь CRI plugin зависит от version configuration.
 
 ```bash
 sudo cp -a /etc/containerd/config.toml \
   "/etc/containerd/config.toml.before-runsc.$(date +%F-%H%M%S)"
 containerd --version
-sudo grep -n -A12 -B2 'runtimes' /etc/containerd/config.toml
+sudo sed -n '1,180p' /etc/containerd/config.toml
 ```
 
-Для containerd CRI plugin с runtime v1 configuration добавьте handler `runsc` рядом с
-остальными `[...runtimes.<name>]`:
+Для containerd 1.x используйте config version 2 и CRI plugin path v2:
 
 ```toml
+version = 2
+
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runsc]
   runtime_type = "io.containerd.runsc.v1"
 ```
+
+Для containerd 2.x gVisor требует config version 3 и путь CRI plugin v3:
+
+```toml
+version = 3
+
+[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runsc]
+  runtime_type = "io.containerd.runsc.v1"
+```
+
+Не копируйте блок v2 в configuration v3 или наоборот. Сверьте generation по
+`containerd --version`, первой строке `version = ...` и документации gVisor для вашей
+поставки containerd.
 
 Не меняйте `default_runtime_name` на `runsc`: системные DaemonSet, CNI, CSI и отлаженные
 обычные workload могут требовать `runc`. RuntimeClass должен выбирать sandbox явно.
@@ -364,8 +420,9 @@ representative workload.
    configuration.
 3. **Запустить positive test.** Непривилегированный Pod c `runtimeClassName` должен стать
    `Running` на sandbox node.
-4. **Проверить negative test.** Pod с конфликтующим selector или node без handler не должен
-   quietly перейти на обычный runtime; ожидается `Pending` или явный create error.
+4. **Проверить negative test.** Pod с selector, конфликтующим с RuntimeClass, должен быть
+   отклонён на admission. Pod на node без handler не должен quietly перейти на обычный runtime:
+   ожидается явный `FailedCreatePodSandBox`, а не fallback на `runc`.
 5. **Проверить приложение.** Readiness, egress, DNS, volumes, latency, shutdown и метрики
    должны соответствовать SLO.
 6. **Расширять scope.** Deployment/Job переводят канареечно; admission policy запрещает

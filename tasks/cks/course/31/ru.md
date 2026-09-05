@@ -43,10 +43,13 @@ flowchart LR
 ```
 
 Важно не переоценивать защиту. `readOnlyRootFilesystem: true` запрещает запись в root
-filesystem **контейнера**, но не в mounted volumes, не в другой container того же Pod и не
-в API Kubernetes. Процесс всё ещё может читать доступные ему секреты, отправить данные по
-сети или эксплуатировать уязвимость ядра. Поэтому это один слой вместе с non-root,
-capabilities, seccomp, NetworkPolicy, минимальным ServiceAccount и runtime detection.
+filesystem **конкретного контейнера**, но не в writable mounted volumes и не в API
+Kubernetes. У каждого контейнера свой root filesystem: процесс не получает прямую запись в
+root filesystem другого контейнера. Однако контейнеры могут намеренно обмениваться данными
+через один и тот же writable volume, смонтированный в оба контейнера. Процесс всё ещё может
+читать доступные ему секреты, отправить данные по сети или эксплуатировать уязвимость ядра.
+Поэтому это один слой вместе с non-root, capabilities, seccomp, NetworkPolicy, минимальным
+ServiceAccount и runtime detection.
 
 | Сценарий после compromise | Writable root | Read-only root + узкие volumes |
 |---|---|---|
@@ -187,10 +190,31 @@ flowchart TB
 
 | Вариант | Где лежат bytes | Полезен для | Риск и контроль |
 |---|---|---|---|
-| `emptyDir: {}` | ephemeral storage ноды | cache, build artefact во время Pod life | поставить `sizeLimit`, помнить об eviction при давлении disk |
-| `medium: Memory` | tmpfs, memory ноды | small secret-derived temp, socket, быстрый `/tmp` | расходует memory budget; заполнение может вызвать OOM/eviction |
+| `emptyDir: {}` | local ephemeral-storage ноды | cache, build artefact во время Pod life | поставить `sizeLimit`, помнить об eviction при давлении disk |
+| `medium: Memory` | tmpfs, memory ноды | small secret-derived temp, socket, быстрый `/tmp` | bytes учитываются в memory того container-а, который их записал; заполнение может вызвать OOM/eviction |
 | ConfigMap/Secret volume | kubelet-projected files | конфигурация и credential, читаемые приложением | это не scratch space и не место для generated output |
 | PVC | постоянное хранилище | state, данные с требованием survival | отдельная модель доступа, backup и lifecycle |
+
+`medium: Memory` создаёт tmpfs: запись учитывается в memory container-а-писателя, а не в
+`ephemeral-storage`. Обычный disk-backed `emptyDir`, writable layer контейнера и container
+logs используют local `ephemeral-storage`. `sizeLimit` ограничивает том, но не резервирует
+место на ноде: scheduler учитывает только requests, а при disk pressure Pod всё равно может
+быть evicted. Для disk-backed scratch задайте и request, и limit на container:
+
+```yaml
+containers:
+- name: api
+  image: registry.example.invalid/payments/api:1.4.2
+  resources:
+    requests:
+      ephemeral-storage: 128Mi
+    limits:
+      ephemeral-storage: 512Mi
+```
+
+Это budget всего local ephemeral-storage container-а, включая writable layer и logs, а не
+гарантия ёмкости одного `emptyDir`. Размер каждого нужного тома ограничивайте отдельно
+через `emptyDir.sizeLimit`.
 
 Пример безопасного обмена между initContainer и приложением: initContainer рендерит файл в
 узкий общий каталог, а приложение читает его из того же `emptyDir`.
@@ -352,12 +376,15 @@ metadata:
   namespace: payments
 spec:
   automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+    fsGroup: 10001
   containers:
   - name: api
     image: registry.example.invalid/payments/api:1.4.2
     securityContext:
-      runAsNonRoot: true
-      runAsUser: 10001
       readOnlyRootFilesystem: true
       allowPrivilegeEscalation: false
       capabilities:
@@ -379,7 +406,8 @@ spec:
   - name: tls
     secret:
       secretName: api-tls
-      defaultMode: 0400
+      # fsGroup делает group-readable файл доступным UID/GID 10001.
+      defaultMode: 0440
   - name: tmp
     emptyDir:
       medium: Memory
@@ -387,8 +415,15 @@ spec:
 ```
 
 В примере application configuration читается из `/etc/api/config.yaml`, TLS files - из
-`/var/run/secrets/api-tls`, а `/tmp` - единственное scratch-место. При mount через
-`subPath` важно помнить: обновление ConfigMap/Secret не появится автоматически в уже
+`/var/run/secrets/api-tls`, а `/tmp` - единственное scratch-место. `fsGroup: 10001` вместе
+с `defaultMode: 0440` даёт non-root процессу с group `10001` право чтения Secret, не делая
+его world-readable. После rollout это нужно проверить от имени приложения:
+
+```bash
+kubectl exec -n payments api -c api -- sh -c   'id; test -r /var/run/secrets/api-tls/tls.crt && head -c 1 /var/run/secrets/api-tls/tls.crt >/dev/null'
+```
+
+Команда проверяет доступ, но не выводит Secret. При mount через `subPath` важно помнить: обновление ConfigMap/Secret не появится автоматически в уже
 смонтированном файле. Если конфигурация должна обновляться динамически, монтируйте каталог
 без `subPath` и проверьте, поддерживает ли приложение reload; иначе применяйте controlled
 rollout.
@@ -404,6 +439,10 @@ Secret защищён доступом Kubernetes API и admission/RBAC, но п
 - применяйте `defaultMode` и подходящие UID/GID; не ставьте `0777` ради быстрого запуска;
 - отдельно ограничивайте namespace access и encryption at rest; read-only root не заменяет
   эти меры.
+
+Эта граница не защищает Secret от privileged workload или от компрометации ноды: такой
+субъект может получить доступ к данным Pod или kubelet/runtime. Secret volume ограничивает
+обычный процесс в Pod и API/RBAC-доступ, но не является защитой от node-level compromise.
 
 Если приложение преобразует Secret в runtime-формат (например, template для proxy),
 initContainer может записать результат в memory `emptyDir`, а main container может получить
@@ -429,6 +468,10 @@ kubectl get pod -n "$namespace" "$pod" \
 kubectl get pod -n "$namespace" "$pod" \
   -o jsonpath='{range .spec.initContainers[*]}init/{.name}{"\t"}{.securityContext.readOnlyRootFilesystem}{"\n"}{end}'
 
+# Проверить ephemeral containers: они добавляются отдельным subresource и тоже входят в baseline.
+kubectl get pod -n "$namespace" "$pod" \
+  -o jsonpath='{range .spec.ephemeralContainers[*]}ephemeral/{.name}{"\t"}{.securityContext.readOnlyRootFilesystem}{"\n"}{end}'
+
 # Smoke test должен вернуть ненулевой код: корень не принимает файл.
 kubectl exec -n "$namespace" "$pod" -c api -- sh -c 'touch /rootfs-write-test' \
   && { echo "ERROR: root filesystem is writable"; exit 1; } \
@@ -444,21 +487,23 @@ test endpoint, отдельный compatibility Pod с тем же securityConte
 container. Не превращайте отсутствие shell в failure hardening - это как раз ожидаемый
 результат distroless design.
 
-Полезный cluster-wide audit для обычных containers:
+Полезный cluster-wide audit для всех типов containers:
 
 ```bash
 kubectl get pods -A -o json | jq -r '
   .items[]
   | .metadata.namespace as $ns
   | .metadata.name as $pod
-  | .spec.containers[]?
+  | ([.spec.containers[]? | {kind: "container", name, image, securityContext}]
+     + [.spec.initContainers[]? | {kind: "init", name, image, securityContext}]
+     + [.spec.ephemeralContainers[]? | {kind: "ephemeral", name, image, securityContext}])[]
   | select(.securityContext.readOnlyRootFilesystem != true)
-  | [$ns, $pod, .name, (.image // "<no image>")] | @tsv
+  | [$ns, $pod, .kind, .name, (.image // "no-image")] | @tsv
 '
 ```
 
-Пустой output означает лишь, что у обычных containers поле явно `true`; отдельно оцените
-исключённые namespaces, initContainers, ephemeral containers и статус policy. Не запускайте
+Пустой output означает, что у regular, init и уже добавленных ephemeral containers поле
+явно `true`; отдельно оцените исключённые namespaces и статус policy. Не запускайте
 такой audit с выводом Secret: эта команда читает только Pod spec и image reference.
 
 ## 31.8. Pod Security Admission: baseline и enforce
@@ -468,30 +513,32 @@ kubectl get pods -A -o json | jq -r '
 `restricted` требует ряд hardened-настроек, включая `allowPrivilegeEscalation: false`,
 non-root и seccomp; `readOnlyRootFilesystem` в стандарт Pod Security Standards **не
 обязателен**. Следовательно, PSA `restricted` - важный baseline, но не достаточное правило
-для runtime immutability. Нужна дополнительная policy (например, Kyverno) или собственный
-validating admission policy.
+для runtime immutability. Нужна дополнительная native validating admission policy; Kyverno
+остаётся optional extension поверх этого vendor-neutral core.
 
 ```bash
-# Сначала режим предупреждения: существующие workload не ломаются,
+# CKS v1.35: сначала режим предупреждения; существующие workload не ломаются,
 # но create/update неподходящего Pod вернёт предупреждения.
 kubectl label namespace payments \
   pod-security.kubernetes.io/warn=restricted \
-  pod-security.kubernetes.io/warn-version=latest
+  pod-security.kubernetes.io/warn-version=v1.35
 
-# После remediation включить блокировку и audit evidence.
+# CKS v1.35: после remediation включить блокировку и audit evidence.
 kubectl label namespace payments \
   pod-security.kubernetes.io/enforce=restricted \
-  pod-security.kubernetes.io/enforce-version=latest \
+  pod-security.kubernetes.io/enforce-version=v1.35 \
   pod-security.kubernetes.io/audit=restricted \
-  pod-security.kubernetes.io/audit-version=latest
+  pod-security.kubernetes.io/audit-version=v1.35
 
 kubectl get namespace payments --show-labels
 ```
 
 `enforce` отклоняет будущие операции create/update, `warn` показывает предупреждение
-клиенту, `audit` пишет annotation в audit event. PSA не переписывает уже запущенные Pod и
-не заменяет test workload: сначала инвентаризируйте exceptions и исправьте template
-Deployment/Job, а не один уже созданный Pod.
+клиенту, `audit` пишет annotation в audit event. Версию PSS pin-ят, а не оставляют `latest`:
+при обновлении Kubernetes сначала тестируют новую версию в `warn`/`audit`, затем осознанно
+обновляют все три labels. PSA не переписывает уже запущенные Pod и не заменяет test
+workload: сначала инвентаризируйте exceptions и исправьте template Deployment/Job, а не
+один уже созданный Pod.
 
 Проверка должна быть намеренно негативной. Пример ниже не проходит `restricted` из-за
 `runAsUser: 0`, escalation и отсутствующих ограничений:
@@ -521,165 +568,135 @@ kubectl apply -f rejected.yaml
 пользовательские namespaces и documented platform exceptions, ограничивайте доступ к таким
 namespaces RBAC и регулярно пересматривайте исключения.
 
-## 31.9. Kyverno: требование read-only root для всех containers
+## 31.9. Native ValidatingAdmissionPolicy: vendor-neutral admission gate
 
-> **Compatibility note.** Kyverno v1.19 официально поддерживает Kubernetes v1.33-v1.35;
-> целевая версия курса v1.36 не входит в протестированную support matrix проекта
-> (см. главу 20 §20.4).
-
-Kyverno дополняет PSA конкретным организационным правилом. Для Kyverno 1.19 используйте
-CEL-based `ValidatingPolicy`: legacy `ClusterPolicy` deprecated. Пример объединяет regular,
-init и ephemeral containers и начинает с `Audit`; после устранения нарушений действие
-меняют на `Deny` через проверяемое изменение.
+PSA `restricted` не требует `readOnlyRootFilesystem`. Для этого требования используйте
+стабильные встроенные `ValidatingAdmissionPolicy` и `ValidatingAdmissionPolicyBinding` с
+CEL: это vendor-neutral core, не требующий policy engine. Policy описывает правило, а
+Binding задаёт его область и действие. Начните с `Warn` и `Audit`, затем после remediation
+переключите Binding на `Deny`.
 
 ```yaml
-apiVersion: policies.kyverno.io/v1
-kind: ValidatingPolicy
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
 metadata:
   name: require-readonly-rootfs
-  annotations:
-    policies.kyverno.io/title: Require read-only root filesystem
-    policies.kyverno.io/category: Runtime Security
-    policies.kyverno.io/severity: medium
 spec:
-  validationActions: [Audit]
+  failurePolicy: Fail
   matchConstraints:
     resourceRules:
     - apiGroups: [""]
       apiVersions: ["v1"]
       operations: ["CREATE", "UPDATE"]
       resources: ["pods", "pods/ephemeralcontainers"]
-  variables:
-  - name: allContainers
-    expression: >-
-      object.spec.containers +
-      object.spec.?initContainers.orValue([]) +
-      object.spec.?ephemeralContainers.orValue([])
   validations:
-  - message: "Every container must set securityContext.readOnlyRootFilesystem: true."
+  - message: "Every regular, init, and ephemeral container must set readOnlyRootFilesystem: true."
     expression: >-
-      variables.allContainers.all(container,
-        has(container.securityContext) &&
-        container.securityContext.?readOnlyRootFilesystem.orValue(false))
+      object.spec.containers.all(c,
+        has(c.securityContext) && has(c.securityContext.readOnlyRootFilesystem) &&
+        c.securityContext.readOnlyRootFilesystem) &&
+      (!has(object.spec.initContainers) || object.spec.initContainers.all(c,
+        has(c.securityContext) && has(c.securityContext.readOnlyRootFilesystem) &&
+        c.securityContext.readOnlyRootFilesystem)) &&
+      (!has(object.spec.ephemeralContainers) || object.spec.ephemeralContainers.all(c,
+        has(c.securityContext) && has(c.securityContext.readOnlyRootFilesystem) &&
+        c.securityContext.readOnlyRootFilesystem))
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: require-readonly-rootfs-payments
+spec:
+  policyName: require-readonly-rootfs
+  validationActions: [Warn, Audit]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: payments
 ```
 
-Проверьте schema CRD установленной версии Kyverno перед применением. Не копируйте policy
-в production с `Deny`, не проверив её в non-production namespace и
-не определив исключения.
+`pods/ephemeralcontainers` важен: debug container добавляют через subresource после
+создания Pod, поэтому проверка только `pods` не контролирует этот путь. После чистого
+периода audit замените в **Binding**, а не в Policy, действие на `Deny`:
 
 ```bash
 kubectl apply -f require-readonly-rootfs.yaml
-kubectl get validatingpolicy require-readonly-rootfs
-kubectl describe validatingpolicy require-readonly-rootfs
-
-# PolicyReport API зависит от установленной версии Kyverno; сначала discover.
-kubectl api-resources | grep -i policyreport
-kubectl get policyreports -A 2>/dev/null || true
-kubectl get clusterpolicyreports 2>/dev/null || true
+kubectl patch validatingadmissionpolicybinding require-readonly-rootfs-payments \
+  --type merge -p '{"spec":{"validationActions":["Deny"]}}'
 ```
 
-Позитивный и негативный tests должны различаться ровно одним relevant field:
+Проверьте это позитивным и негативным manifest в целевом namespace. В negative test
+`readOnlyRootFilesystem` отсутствует, поэтому после `Deny` API должен отклонить Pod. Для
+временного исключения создавайте отдельный узкий Binding с namespace/name scope, владельцем
+и сроком, а не bypass-label, который может поставить любой developer.
 
-```yaml
-# bad-rootfs.yaml: ожидается audit failure сейчас, rejection после Deny
-apiVersion: v1
-kind: Pod
-metadata:
-  name: bad-rootfs
-  namespace: payments
-spec:
-  containers:
-  - name: app
-    image: registry.example.invalid/demo:1.0.0
-    securityContext:
-      runAsNonRoot: true
-      # readOnlyRootFilesystem намеренно отсутствует
----
-# good-rootfs.yaml: ожидается допуск
-apiVersion: v1
-kind: Pod
-metadata:
-  name: good-rootfs
-  namespace: payments
-spec:
-  containers:
-  - name: app
-    image: registry.example.invalid/demo:1.0.0
-    securityContext:
-      runAsNonRoot: true
-      readOnlyRootFilesystem: true
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop: ["ALL"]
-    volumeMounts:
-    - name: tmp
-      mountPath: /tmp
-  volumes:
-  - name: tmp
-    emptyDir:
-      sizeLimit: 16Mi
-```
+## 31.10. Kyverno: optional production extension и autogen controller rules
 
-```bash
-kubectl apply -f bad-rootfs.yaml
-kubectl apply -f good-rootfs.yaml
-kubectl get pod -n payments good-rootfs
+> **Compatibility note (только production для v1.36).** Kyverno v1.19 официально
+> поддерживает Kubernetes v1.33-v1.35. Kubernetes v1.36 здесь относится только к production
+> cluster, а не к подтверждённой CKS-среде v1.35, и не входит в протестированную support
+> matrix проекта (см. главу 20 §20.4). Поэтому в production на v1.36 сначала проверяют
+> совместимость в test cluster; native ValidatingAdmissionPolicy выше остаётся переносимым
+> baseline.
 
-# Только после чистого Audit-периода: policy становится admission gate.
-kubectl patch validatingpolicy require-readonly-rootfs --type merge \
-  -p '{"spec":{"validationActions":["Deny"]}}'
+Kyverno v1.19 - optional production extension поверх native gate, когда нужны его
+PolicyReport, централизованные exceptions, mutation или более широкий policy lifecycle.
+Его CEL-based `ValidatingPolicy` может повторить правило для regular, init и ephemeral
+containers, но не заменяет native пример без явной операционной причины. Перед применением
+сверьте CRD schema установленной версии и начинайте с `Audit`; точное действие enforcement
+зависит от API Kyverno этой версии.
 
-kubectl delete pod -n payments bad-rootfs --ignore-not-found
-kubectl apply -f bad-rootfs.yaml
-# Expected: admission webhook "require-readonly-rootfs" denies the request.
-```
+У Pod-oriented rules Kyverno может включать **autogen**: он генерирует эквивалентные
+проверки template Pod у controller-ов, например Deployment, StatefulSet, DaemonSet, Job и
+CronJob. Для `ValidatingPolicy` это требует явно задать
+`spec.autogen.podControllers` с нужными controller-ами. Без
+`spec.autogen.podControllers` Pod-only policy проверяет только поданный Pod и **не
+отклоняет сам Deployment или другой controller**. Это не изменение уже работающих Pod и не
+«наследование» securityContext между containers: Kyverno валидирует template controller-а,
+а созданный из него Pod затем также проходит обычный admission. Проверьте сгенерированные
+правила/status у установленной версии и не рассчитывайте на autogen для rule, которая не
+match-ит Pod или намеренно отключила generation. В частности, subresource
+`pods/ephemeralcontainers` проверяется отдельным admission path, как в native policy выше.
 
-Если policy неожиданно блокирует workload, не отключайте cluster-wide admission наугад.
-Посмотрите имя правила, Pod spec и ожидаемый mount; при необходимости сделайте короткое,
-явное namespace/name-based исключение с владельцем и сроком, а затем устраните техническую
-причину. Исключение по label, который может поставить любой developer, не является
-границей безопасности.
+## 31.10.1. PSA, native CEL и Kyverno: что именно проверять
 
-## 31.10. PSA и Kyverno: что именно проверять
+| Вопрос | PSA | Native VAP + Binding | Kyverno extension |
+|---|---|---|---|
+| Не допустить standard privileged/host/non-root violations | да, PSS levels | только если описать CEL | да, если явно описать правила |
+| Потребовать `readOnlyRootFilesystem: true` | нет, не входит в PSS restricted | да, vendor-neutral CEL | да, custom policy |
+| Быстро включить проверенный platform baseline | да, namespace labels | требуется создать Policy и Binding | требуется установить и обслуживать engine |
+| Проверять admission Pod и `ephemeralcontainers` | PSA admission | да, если match-ить оба resources | да, при явном правиле/resource scope |
+| Policy reports, mutation, generated controller rules | нет | нет | да, если это поддержано и настроено |
 
-PSA и Kyverno работают в admission path, но решают разные задачи.
-
-| Вопрос | PSA | Kyverno policy |
-|---|---|---|
-| Не допустить privileged/host namespaces/non-root violations | да, стандартные уровни | да, если явно описать правила |
-| Потребовать `readOnlyRootFilesystem: true` | нет, не входит в PSS restricted | да, custom policy |
-| Быстро включить проверенный platform baseline | да, namespace labels | нужно создать и обслуживать policy |
-| Проверять existing resources в Audit/report | audit mode в API audit trail | background scan и PolicyReport при поддержке установки |
-| Mutate/default fields | нет | возможно отдельными Kyverno rules, но validate проще проверять |
-
-Рабочий порядок: PSA `restricted` защищает общий нижний порог namespace; Kyverno формализует
-узкие требования организации (read-only root, approved registry, labels); CI/static checks
-дают feedback до API; runtime tool (Falco в [главе 29](../29/ru.md)) наблюдает то, что всё
-же произошло. Ни один уровень не делает остальные избыточными.
+Рабочий порядок: PSA `restricted` с pinned version защищает общий нижний порог namespace;
+native VAP + Binding формализует read-only root; Kyverno добавляют только при нужных
+production-возможностях; CI/static checks дают feedback до API; runtime tool (Falco в
+[главе 29](../29/ru.md)) наблюдает то, что всё же произошло. Ни один уровень не делает
+остальные избыточными.
 
 Минимальный verification checklist после rollout:
 
 ```bash
-# 1. Namespace действительно защищён PSA.
+# 1. Namespace действительно защищён PSA с явно pinned PSS version.
 kubectl get ns payments -o jsonpath='{.metadata.labels}{"\n"}'
 
-# 2. Kyverno policy существует и перешла в ожидаемое action.
-kubectl get validatingpolicy require-readonly-rootfs \
+# 2. Native policy и её Binding существуют и имеют ожидаемое действие.
+kubectl get validatingadmissionpolicy require-readonly-rootfs
+kubectl get validatingadmissionpolicybinding require-readonly-rootfs-payments \
   -o jsonpath='{.spec.validationActions}{"\n"}'
 
-# 3. Хороший Pod создан, плохой был отклонён после Enforce.
+# 3. Хороший Pod создан, плохой был отклонён после Deny.
 kubectl get pod -n payments good-rootfs
 kubectl get events -n payments --sort-by=.lastTimestamp | tail -n 20
 
-# 4. Running workload имеет expected settings.
+# 4. Running workload имеет expected settings у regular и init containers.
 kubectl get deploy -n payments api \
-  -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{"\t"}{.securityContext.readOnlyRootFilesystem}{"\n"}{end}'
+  -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{"\t"}{.securityContext.readOnlyRootFilesystem}{"\n"}{end}{range .spec.template.spec.initContainers[*]}init/{.name}{"\t"}{.securityContext.readOnlyRootFilesystem}{"\n"}{end}'
 ```
 
-Запись в policy report полезна для очереди remediation, но не заменяет admission test:
-после `Enforce` должно быть проверено именно отклонение bad manifest, а после rollout -
-готовность good workload. Так команда доказывает не только существование YAML policy, но и
-effective outcome.
+После `Deny` нужно доказать именно отклонение bad manifest, а после rollout - готовность
+good workload. Для Kyverno отдельно проверяют report и сгенерированные controller rules,
+если это заявленная часть его production design.
 
 ## 31.11. Как это применяют в продакшене
 
@@ -691,8 +708,10 @@ effective outcome.
   или другой минимальный проверенный runtime. SBOM и scan относятся к final digest.
 - **Конфигурация отделена от artefact.** ConfigMap и Secret монтируются read-only; sensitive
   output не пишется в image layer. Нужный render делается до старта main process.
-- **Policy вводят поэтапно.** Сначала inventory и `Audit`, затем исправление и
-  `Enforce`. System exceptions ограничены namespace/RBAC, имеют владельца, ticket и expiry.
+- **Policy вводят поэтапно.** PSA version pin-ят; native VAP Binding сначала даёт
+  `Warn`/`Audit`, затем после исправления - `Deny`. Kyverno добавляют только для нужных
+  extension-возможностей. System exceptions ограничены namespace/RBAC, имеют владельца,
+  ticket и expiry.
 - **Проверяют и наблюдают.** CI проверяет manifest, admission блокирует нарушение, runtime
   detection сигнализирует о записи в неожиданном месте и процессе. Обновлённую policy
   тестируют позитивным и негативным Pod.
@@ -700,10 +719,16 @@ effective outcome.
 ## 31.12. Как это пригодится: на экзамене и в реальной работе
 
 На экзамене CKS важно быстро отличить базовый hardening от доказанной защиты: проверьте
-`readOnlyRootFilesystem` у каждого regular и init container, назовите нужные writable
-mount paths и объясните lifecycle `emptyDir`. В рабочем кластере этот же подход помогает
-разобрать ошибку `EROFS` без ослабления защиты: найдите точный путь записи, дайте ему
-минимальный bounded volume и подтвердите результат позитивной и негативной проверкой.
+`readOnlyRootFilesystem` у каждого regular, init и уже добавленного ephemeral container,
+назовите нужные writable mount paths и объясните lifecycle `emptyDir`. В рабочем кластере
+этот же подход помогает разобрать ошибку `EROFS` без ослабления защиты: найдите точный путь
+записи, дайте ему минимальный bounded volume и подтвердите результат позитивной и
+негативной проверкой.
+
+**Короткий сценарий на 6 минут.** У Pod с `EROFS` сначала найдите точный path в log, затем
+добавьте узкий `emptyDir` только к нему, проверьте restart и запрет записи в `/`. В конце
+проверьте regular/init/ephemeral containers в effective Pod spec и примените bad manifest:
+после `Deny` native Binding обязан его отклонить.
 
 ## 31.13. Мини-глоссарий, итоги и самопроверка
 
@@ -717,24 +742,30 @@ mount paths и объясните lifecycle `emptyDir`. В рабочем кла
 - **Distroless** - минимальный runtime image без обычной ОС userland и shell.
 - **PSA** - встроенный admission controller Kubernetes для Pod Security Standards через
   labels namespace.
-- **Kyverno** - policy engine, способный validate/mutate/generate Kubernetes resources.
-- **PolicyReport** - report об outcome policy checks, если этот API установлен policy engine.
+- **ValidatingAdmissionPolicy/Binding** - встроенные Kubernetes API для CEL validation и
+  области/действия admission policy.
+- **Kyverno** - optional policy engine, способный validate/mutate/generate Kubernetes
+  resources и PolicyReport.
+- **Autogen** - генерация Kyverno проверок Pod template controller-ов для применимых
+  Pod-oriented rules.
 
 **Итоги главы.**
 
 - Writable root помогает атакующему записать tools и подменить files в уже запущенном
   container; read-only root сужает эту поверхность, но не заменяет patching и network/RBAC
   controls.
-- `readOnlyRootFilesystem: true` задаётся на каждом container. Легитимная запись выносится
-  в узкие named volumes, обычно bounded `emptyDir`.
+- `readOnlyRootFilesystem: true` задаётся на каждом regular, init и ephemeral container.
+  Легитимная запись выносится в узкие named volumes, обычно bounded `emptyDir`.
 - `emptyDir` сохраняется при restart container, но удаляется вместе с Pod; это временный
-  scratch space, а не persistent storage.
+  scratch space, а не persistent storage. Memory `emptyDir` расходует memory писателя,
+  disk `emptyDir`, writable layer и logs - local ephemeral-storage.
 - Distroless final image уменьшает packages и post-exploitation tools. Нормальная
   диагностика организована отдельным debug workflow, а не shell в production artefact.
 - ConfigMap и Secret дают read-only configuration; `subPath` не получает live updates.
   Secret следует защищать RBAC, Unix permissions и отсутствием лишних token/mounts.
-- PSA `restricted` даёт общий baseline, но не требует read-only root. Custom Kyverno policy
-  закрывает это требование, а её работоспособность доказывают positive/negative tests.
+- PSA `restricted` с pinned version даёт общий baseline, но не требует read-only root.
+  Native ValidatingAdmissionPolicy + Binding закрывает это требование; Kyverno остаётся
+  optional extension. Работоспособность доказывают positive/negative admission tests.
 
 **Вопросы для самопроверки.**
 
@@ -743,12 +774,14 @@ mount paths и объясните lifecycle `emptyDir`. В рабочем кла
 2. Какие три каталога ваше приложение пишет при старте и почему каждый должен быть отдельным
    mount либо устранён?
 3. Чем `emptyDir.medium: Memory` отличается от обычного `emptyDir` по ресурсу и риску?
-4. Почему нельзя применять `readOnlyRootFilesystem` только к главному container Deployment?
+4. Почему нельзя применять `readOnlyRootFilesystem` только к главному container Deployment,
+   и почему отдельно проверяют `ephemeralcontainers`?
 5. Какая разница между ConfigMap volume с `subPath` и монтированием всего каталога при
    обновлении config?
 6. Что distroless image уменьшает, а какие классы атак не устраняет?
-7. Почему PSA `restricted` не доказывает runtime immutability workload?
-8. Как доказать, что Kyverno policy действительно блокирует нарушение, а не просто создана?
+7. Почему PSA `restricted` с `latest` не является стабильным production baseline?
+8. Как доказать, что native Policy Binding действительно блокирует нарушение, а не просто
+   создана?
 
 ## Практика
 

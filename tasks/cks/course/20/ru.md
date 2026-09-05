@@ -31,26 +31,35 @@ Admission control получает уже аутентифицированный
 flowchart LR
     client["kubectl / CI / controller"] --> authn["authentication\nкто отправил запрос"]
     authn --> authz["authorization / RBAC\nможно ли выполнить verb"]
-    authz --> mutate["mutating admission\nвстроенные плагины + webhook"]
-    mutate --> schema["defaulting и schema validation"]
-    schema --> validate["validating admission\nPSA / VAP / webhook"]
+    authz --> mutate["mutating admission\nвстроенные плагины / MAP / webhook"]
+    mutate --> validate["validating admission\nPSA / VAP / webhook"]
     validate -->|"allow"| etcd["etcd"]
     validate -->|"deny"| rejected["запрос отклонён\nобъект не создан"]
+
+    subgraph api["Обработка объекта API server - концептуально"]
+        conversion["conversion, defaulting и API validation"]
+    end
+    authz -. "зависит от API и типа запроса" .-> conversion
+    conversion -. "объект участвует в admission" .-> mutate
+    conversion -. "объект участвует в admission" .-> validate
+
     style client fill:#326ce5,color:#fff
     style authn fill:#673ab7,color:#fff
     style authz fill:#673ab7,color:#fff
     style mutate fill:#f4b400,color:#000
-    style schema fill:#326ce5,color:#fff
+    style conversion fill:#326ce5,color:#fff
     style validate fill:#f4b400,color:#000
     style etcd fill:#0f9d58,color:#fff
     style rejected fill:#db4437,color:#fff
 ```
 
-Порядок важен. Mutation выполняется до validation, поэтому validating-policy видит
-получившийся объект. Встроенные admission plugins и webhooks имеют свой порядок и могут
-вызываться повторно при изменении объекта другим mutating webhook. Mutation должна быть
-идемпотентной: повторное применение не должно добавлять второй одинаковый volume, label
-или sidecar.
+Порядок admission важен: mutating-контроллеры выполняются до validating, поэтому
+validating-policy видит получившийся объект. Conversion, defaulting и API validation на
+диаграмме показаны как концептуальная обработка объекта, а не как один жёстко расположенный
+этап: детали зависят от API и типа запроса. Встроенные admission plugins и webhooks имеют
+свой порядок и могут вызываться повторно при изменении объекта другим mutating webhook.
+Mutation должна быть идемпотентной: повторное применение не должно добавлять второй
+одинаковый volume, label или sidecar.
 
 | Слой | Вопрос | Пример |
 |---|---|---|
@@ -103,15 +112,17 @@ supply-chain проверки из глав 25-28; уже запущенный �
 **OPA** - Open Policy Agent, общий движок решений на Rego. **Gatekeeper** использует OPA
 в Kubernetes и даёт ему Kubernetes-native модель из двух объектов:
 
-1. `ConstraintTemplate` описывает новый тип policy: Rego-правило, целевой admission
-   handler и OpenAPI schema параметров. После применения Gatekeeper создаёт CRD для
-   constraint kind.
+1. `ConstraintTemplate` описывает новый тип policy: Rego или CEL-код в
+   `spec.targets[].rego` либо `spec.targets[].code[]`, целевой admission handler и OpenAPI
+   schema параметров. После применения Gatekeeper создаёт CRD для constraint kind.
 2. `Constraint` - экземпляр этого типа: параметры, scope `match` и режим реакции. Один
    template можно переиспользовать для разных namespace или наборов labels.
 
-Это разделение похоже на класс и экземпляр. Template должен быть reviewable code: именно в
-нём находится логика, поэтому изменение Rego требует тестов и code review. Constraint
-обычно меняют чаще, когда policy надо включить для новой команды или namespace.
+Это разделение похоже на класс и экземпляр. Template содержит reviewable policy code:
+изменение Rego или CEL требует тестов и code review. В одном target выбирайте один движок:
+у legacy `rego` выше приоритет, а в `code[]` CEL (`K8sNativeValidation`) имеет приоритет над
+Rego. Constraint обычно меняют чаще, когда policy надо включить для новой команды или
+namespace.
 
 ### Установка и быстрая проверка Gatekeeper
 
@@ -122,9 +133,10 @@ release сначала зафиксируйте версию chart в GitOps-м�
 ```bash
 helm repo add gatekeeper https://open-policy-agent.github.io/gatekeeper/charts
 helm repo update
+GATEKEEPER_CHART_VERSION="${GATEKEEPER_CHART_VERSION:?set exact chart version}"
 helm upgrade --install gatekeeper gatekeeper/gatekeeper \
   --namespace gatekeeper-system --create-namespace \
-  --version <pinned-chart-version>
+  --version "$GATEKEEPER_CHART_VERSION"
 
 kubectl -n gatekeeper-system get deploy,pods
 kubectl get crd | grep -E 'gatekeeper|constraints.gatekeeper' 
@@ -231,11 +243,14 @@ violation[{"msg": msg}] {
 > (Kyverno, Gatekeeper и аналоги) необходимо сверять с их собственной release matrix
 > отдельно от версии Kubernetes курса.
 
-Начиная с Kyverno 1.19 основной путь - отдельные CEL-based типы группы
-`policies.kyverno.io/v1`: `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy` и
-`ImageValidatingPolicy`. Старые `Policy`/`ClusterPolicy` группы `kyverno.io/v1` в 1.19
-помечены deprecated и предназначены только для миграции; их удаление запланировано в 1.20.
-Не смешивайте поля двух моделей в одном объекте.
+Начиная с Kyverno 1.19 основной путь - отдельные CEL-based cluster-wide типы группы
+`policies.kyverno.io/v1`: `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`,
+`DeletingPolicy` и `ImageValidatingPolicy`. Для каждого есть namespaced-вариант
+`NamespacedValidatingPolicy`, `NamespacedMutatingPolicy`, `NamespacedGeneratingPolicy`,
+`NamespacedDeletingPolicy` или `NamespacedImageValidatingPolicy`, действующий только в
+своём namespace. Legacy `Policy` и `ClusterPolicy` (`kyverno.io/v1`), а также
+`CleanupPolicy` (`kyverno.io/v2`) deprecated в 1.19 и будут удалены в 1.20. Не смешивайте
+поля двух моделей в одном объекте.
 
 В курсе проверена связка Kyverno `v1.19.x` и Helm chart `3.9.0`. После установки проверьте
 именно новые CRD и фактический image контроллера:
@@ -246,6 +261,7 @@ helm upgrade --install kyverno kyverno/kyverno \
 kubectl get crd validatingpolicies.policies.kyverno.io \
   mutatingpolicies.policies.kyverno.io \
   generatingpolicies.policies.kyverno.io \
+  deletingpolicies.policies.kyverno.io \
   imagevalidatingpolicies.policies.kyverno.io
 kubectl -n kyverno get deploy -o jsonpath='{..image}'
 ```
@@ -313,9 +329,11 @@ spec:
 
 ### `GeneratingPolicy`: default-deny для нового Namespace
 
-YAML template остаётся читаемым, а CEL подставляет имя Namespace. `synchronize.enabled`
-означает, что Kyverno сохраняет ownership generated object; не используйте тот же объект
-одновременно с другим GitOps-controller.
+YAML template остаётся читаемым, а CEL подставляет имя Namespace. При
+`synchronize.enabled: true` Kyverno продолжает сверять и синхронизировать сгенерированный
+объект с policy. Это не утверждение о Kubernetes `ownerReferences` и не заменяет явного
+распределения ответственности: не поручайте GitOps-controller и Kyverno одновременно
+синхронизировать один и тот же объект.
 
 ```yaml
 apiVersion: policies.kyverno.io/v1
@@ -361,10 +379,12 @@ spec:
 
 ### Миграция legacy policy
 
-Инвентаризируйте `policy.kyverno.io` и `clusterpolicy.kyverno.io`, зафиксируйте поведение
-положительными и отрицательными тестами, перенесите validate/mutate/generate/image rules в
-соответствующий новый тип и удалите legacy объект только после проверки admission и
-background reports. Для production сверяйте [руководство миграции Kyverno](https://kyverno.io/docs/guides/migrating-to-cel-policies/)
+Инвентаризируйте legacy ресурсы командой
+`kubectl get policies.kyverno.io,clusterpolicies.kyverno.io` (или `kubectl get pol,cpol`),
+а также `CleanupPolicy`, зафиксируйте поведение положительными и отрицательными тестами.
+Перенесите validate/mutate/generate/delete/image rules в соответствующий новый тип и удалите
+legacy объект только после проверки admission и background reports. Для production сверяйте
+[руководство миграции Kyverno](https://kyverno.io/docs/guides/migration-to-cel/)
 с установленной minor-версией.
 
 ## 20.5. Gatekeeper и Kyverno: что выбрать
@@ -374,11 +394,12 @@ admission webhook. Различается язык, модель и удобст
 
 | Критерий | Gatekeeper / OPA | Kyverno |
 |---|---|---|
-| Язык проверки | Rego | CEL и YAML templates |
-| Модель ресурса | `ConstraintTemplate` + `Constraint` | отдельные CEL-based policy types |
+| Язык проверки | Rego или CEL в `ConstraintTemplate` | CEL и YAML templates |
+| Модель ресурса | `ConstraintTemplate` с Rego/CEL + `Constraint` | отдельные CEL-based policy types, включая namespaced variants |
 | Validate | да | да |
-| Mutate | ограниченные mutation patterns зависят от версии | `MutatingPolicy` |
+| Mutate | отдельные mutator resources, возможности зависят от версии | `MutatingPolicy` |
 | Generate | не основной сценарий | `GeneratingPolicy` |
+| Delete / cleanup | не основной сценарий | `DeletingPolicy` |
 | Сложная логика и внешнее использование OPA | сильная сторона Rego | возможна, но YAML читается проще для K8s policy |
 | Порог для команды, привыкшей к Kubernetes YAML | выше | ниже |
 
@@ -395,17 +416,98 @@ Kyverno policy в Git, назначайте владельца и тесты, п
 audit/warn и сохраняйте evidence нарушений. Исключение должно быть узким, ограниченным по
 времени и видимым в review - не глобальным `excludedNamespaces: ["*"]`.
 
-## 20.6. `ValidatingAdmissionPolicy`: CEL без внешнего webhook
+## 20.6. Native CEL: validation и mutation без внешнего webhook
 
-Начиная с Kubernetes 1.30 API server поддерживает встроенный
-`ValidatingAdmissionPolicy` (VAP). Логика пишется на **CEL** (Common Expression Language),
-а policy соединяется с областью действия и реакцией отдельным
-`ValidatingAdmissionPolicyBinding`. Проверка выполняется внутри API server: нет отдельного
-engine Pod, Service, TLS-сертификата и сетевого round-trip webhook.
+`ValidatingAdmissionPolicy` (VAP) и `ValidatingAdmissionPolicyBinding` задают встроенную
+validation на CEL. В Kubernetes 1.36 `MutatingAdmissionPolicy` (MAP) и
+`MutatingAdmissionPolicyBinding` стали stable и включены по умолчанию. MAP - это
+in-process mutation внутри API server: CEL возвращает либо `ApplyConfiguration`, который
+сливается по правилам server-side apply, либо `JSONPatch`. Для обоих native API binding
+обязателен: именно он привязывает policy к scope, а без binding policy не действует.
+
+VAP остаётся только validating-механизмом: он не меняет и не генерирует объекты. В связке
+VAP + MAP native stack уже умеет mutation и validation без webhook, но не заменяет engine
+для generate, policy reports, image signature verification, сложных внешних данных или
+Rego.
+
+### `MutatingAdmissionPolicy`: добавить безопасную метку в ограниченном scope
+
+Пример ниже применяется только к Pod в namespace с label
+`policy.example.com/native-mutation=true`. `ApplyConfiguration` удобен для добавления
+поля; для точных операций над массивами или путями используйте `JSONPatch` с CEL-списком
+`JSONPatch{...}`. Не применяйте mutation как замену обязательной security validation.
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicy
+metadata:
+  name: add-native-admission-label
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE"]
+      resources: ["pods"]
+  mutations:
+  - patchType: ApplyConfiguration
+    applyConfiguration:
+      expression: >-
+        Object{
+          metadata: Object.metadata{
+            labels: {"admission.example.com/mutated": "true"}
+          }
+        }
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingAdmissionPolicyBinding
+metadata:
+  name: add-native-admission-label
+spec:
+  policyName: add-native-admission-label
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        policy.example.com/native-mutation: "true"
+```
+
+Практика должна проверить и scope, и его отрицательную границу. Сохраните YAML выше как
+`map-add-label.yaml`, затем выполните:
+
+```bash
+kubectl apply -f map-add-label.yaml
+kubectl create namespace native-map-on
+kubectl label namespace native-map-on policy.example.com/native-mutation=true
+kubectl create namespace native-map-off
+
+cat <<'EOF' >/tmp/native-map-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: native-map-test
+spec:
+  containers:
+  - name: pause
+    image: registry.k8s.io/pause:3.10
+EOF
+
+# Scope binding совпал: server-side dry-run возвращает добавленную метку.
+kubectl -n native-map-on create --dry-run=server -o yaml -f /tmp/native-map-pod.yaml
+
+# Отрицательный тест binding: в namespace без selector-метки mutation отсутствует.
+if kubectl -n native-map-off create --dry-run=server -o yaml \
+  -f /tmp/native-map-pod.yaml | grep -q 'admission.example.com/mutated: "true"'; then
+  echo "MAP применился вне scope"
+  exit 1
+fi
+```
+
+### `ValidatingAdmissionPolicy`: требовать `runAsNonRoot`
 
 VAP подходит для локальных проверок объекта: labels, поля PodSpec, requests/limits,
-запрет `:latest`, namespace scope. Он не умеет mutation или generate и не заменяет
-Kyverno/Gatekeeper для сложного Rego, внешних данных или image signature verification.
+запрет `:latest` и namespace scope. Ниже policy и binding разделены так же, как у MAP,
+но binding выбирает реакцию validation.
 
 ```yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -438,31 +540,34 @@ spec:
 ```
 
 `object` в CEL - проверяемый объект; также доступны контекст запроса и, в нужных
-сценариях, `oldObject` и параметры binding. `failurePolicy` VAP относится к ошибке оценки
-policy, а не к доступности сети: самого webhook здесь нет. Тем не менее не публикуйте
-непроверенное CEL выражение сразу с `Deny` на весь кластер. Сузьте `namespaceSelector`,
-начните с `Audit`/`Warn`, прочитайте warnings и только затем выберите `Deny`.
+сценариях, `oldObject` и параметры binding. `failurePolicy` VAP/MAP относится к ошибке
+оценки policy, а не к доступности сети: внешнего webhook здесь нет. Тем не менее не
+публикуйте непроверенное CEL выражение сразу с `Deny` на весь кластер. Сузьте selector,
+начните с `Audit`/`Warn` для VAP и проверьте положительный и отрицательный случаи.
 
 ```bash
 kubectl apply -f vap-run-as-non-root.yaml
 kubectl label namespace team-example policy.example.com/enforce-non-root=true
 kubectl get validatingadmissionpolicy,validatingadmissionpolicybinding
+kubectl get mutatingadmissionpolicy,mutatingadmissionpolicybinding
 ```
 
-### Сравнение встроенного CEL и webhook engine
+### Сравнение native CEL и webhook engine
 
-| Возможность | ValidatingAdmissionPolicy + CEL | Gatekeeper / Kyverno webhook |
-|---|---|---|
-| Где исполняется | внутри API server | отдельные controller/webhook Pod |
-| Сетевой отказ webhook | отсутствует | зависит от доступности и `failurePolicy` |
-| Validate | да | да |
-| Mutate / generate | нет | Kyverno - да; Gatekeeper - иная модель и возможности версии |
-| Сложная логика | ограничена CEL и API context | Rego или policy engine features |
-| Жизненный цикл | upstream Kubernetes API | отдельная установка, обновление и CRD |
+| Возможность | VAP | MAP + VAP native stack | Gatekeeper / Kyverno webhook |
+|---|---|---|---|
+| Где исполняется | внутри API server | внутри API server | отдельные controller/webhook Pod |
+| Сетевой отказ webhook | отсутствует | отсутствует | зависит от доступности и `failurePolicy` |
+| Validate | да | да | да |
+| Mutate | нет | да, `ApplyConfiguration` или `JSONPatch` | Kyverno - да; Gatekeeper - отдельные mutator resources |
+| Generate / reports / signature verification | нет | нет | доступны в зависимости от engine |
+| Сложная логика | ограничена CEL и API context | ограничена CEL и API context | Rego или policy engine features |
+| Жизненный цикл | upstream Kubernetes API | upstream Kubernetes API | отдельная установка, обновление и CRD |
 
-Встроенный CEL - хорошая первая опция для небольшой чистой validation. Engine оправдан,
-когда требуются mutation, generate, signature verification, policy reports или общая policy
-платформа. В обоих вариантах обязательны scope, тест отрицательного случая и план rollout.
+Native CEL - хорошая первая опция для небольшой чистой validation или mutation. Engine
+оправдан, когда требуются generation, signature verification, policy reports или общая
+policy-платформа. В обоих вариантах обязательны scope, положительный и отрицательный тест,
+а также план rollout.
 
 ## 20.7. Проверка: доказать allow, deny и mutation
 
@@ -512,7 +617,8 @@ EOF
 
 После `Enforce` в Kyverno нарушение ищут в ответе API и policy report, если reports
 включены. У Gatekeeper проверяют `status.violations` Constraint и сообщение отказа. У VAP
-достаточно статуса policy/binding и отказа API server.
+достаточно статуса policy/binding и отказа API server; у MAP дополнительно сравнивают объект
+из server-side dry-run с исходным и проверяют отрицательный scope binding.
 
 ```bash
 kubectl get events -n admission-test --sort-by=.lastTimestamp
@@ -538,7 +644,7 @@ controller. Затем сверяйте selector, `match`/`exclude`, namespace l
 | `failurePolicy: Ignore` навсегда | при outage policy обходится | alert, HA, контроль rollout, затем осознанный `Fail` для критичных правил |
 | Полагаться на `Audit` как на запрет | нарушающий объект всё равно запускается | применять `Audit` лишь как этап миграции |
 | Одновременно завести одинаковый deny в PSA, Gatekeeper и Kyverno | дублирующие ошибки и сложная поддержка | назначить одному слою владельца каждого требования |
-| Включить `synchronize: true` без ownership | controller восстанавливает вручную удалённый объект | документировать managed resources и GitOps ownership |
+| Включить `synchronize.enabled: true` без распределения ответственности | Kyverno продолжает синхронизацию объекта, а GitOps может с ним конфликтовать | документировать, какой controller синхронизирует ресурс; это не вопрос `ownerReferences` |
 
 Перед обновлением Gatekeeper/Kyverno проверяйте CRD migration, compatibility с Kubernetes
 v1.36, certificate rotation, resource requests/limits и PDB. Admission outage - incident:
@@ -573,12 +679,16 @@ v1.36, certificate rotation, resource requests/limits и PDB. Admission outage -
 - **OPA** - Open Policy Agent, движок policy на Rego.
 - **Gatekeeper** - Kubernetes policy engine на OPA с моделью `ConstraintTemplate` +
   `Constraint`.
-- **ConstraintTemplate** - Rego template и schema параметров для нового constraint type.
+- **ConstraintTemplate** - Rego или CEL policy code и schema параметров для нового
+  constraint type.
 - **Constraint** - экземпляр Gatekeeper template с параметрами, match scope и реакцией.
 - **Kyverno** - Kubernetes-native policy engine; в 1.19 основной API использует
-  `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy` и `ImageValidatingPolicy`.
+  `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`, `DeletingPolicy` и
+  `ImageValidatingPolicy`, а также их namespaced-варианты.
 - **ValidatingAdmissionPolicy** - встроенная API server validation на CEL без внешнего
   webhook; применяется binding-ом.
+- **MutatingAdmissionPolicy** - встроенная API server mutation на CEL через
+  `ApplyConfiguration` или `JSONPatch`; применяется binding-ом.
 - **CEL** - Common Expression Language, язык выражений для ValidatingAdmissionPolicy.
 - **`failurePolicy`** - действие API server, когда webhook/оценка policy недоступны или
   завершаются ошибкой: обычно `Fail` либо `Ignore`.
@@ -587,30 +697,35 @@ v1.36, certificate rotation, resource requests/limits и PDB. Admission outage -
 
 - Admission - последний барьер перед etcd: mutation изменяет объект, validation разрешает
   или отклоняет его. RBAC отвечает не на тот же вопрос и не заменяет policy.
-- Gatekeeper строит policy из `ConstraintTemplate` с Rego и `Constraint` с scope/params;
-  сначала полезно использовать `dryrun`, затем `deny`.
-- Kyverno 1.19 описывает validation, mutation, generation и image verification отдельными
-  CEL-based policy types. Mutation удобна для безопасных defaults, но не заменяет validation.
+- Gatekeeper строит policy из `ConstraintTemplate` с Rego или CEL и `Constraint` с
+  scope/params; сначала полезно использовать `dryrun`, затем `deny`.
+- Kyverno 1.19 описывает validation, mutation, generation, delete/cleanup и image
+  verification отдельными CEL-based policy types. Mutation удобна для безопасных defaults,
+  но не заменяет validation.
 - Gatekeeper и Kyverno - webhook engines, поэтому их availability, TLS, replicas,
   `timeoutSeconds` и `failurePolicy` являются частью security design.
-- `ValidatingAdmissionPolicy` с CEL работает в API server без внешнего webhook и подходит
-  для простой validation, но не умеет mutation/generation.
+- VAP с CEL работает в API server без внешнего webhook и подходит только для validation.
+  В Kubernetes 1.36 stable MAP дополняет native stack mutation через `ApplyConfiguration`
+  или `JSONPatch`, но не умеет generation.
 - Надёжный rollout: малый scope -> audit/warn -> исправление violations ->
   `Enforce`/`Deny`, с проверкой принятого и отклонённого manifest.
 
 ## 20.12. Как это пригодится: на экзамене и в реальной работе
 
-**На экзамене.** Быстро определяйте, где находится контроль: RBAC отвечает за право
-отправить запрос, admission - за содержимое объекта. Умейте прочитать `ConstraintTemplate`
-и `Constraint`, создать/проверить `ValidatingPolicy`, отличить `Audit` от `Deny` и найти
-причину `denied the request`. В Kubernetes 1.36 полезно знать пару
-`ValidatingAdmissionPolicy` + `ValidatingAdmissionPolicyBinding` и CEL expression.
+**На экзамене.** Экзаменационный минимум следует опубликованной публичной программе CKS
+v1.34: быстро определяйте, где находится контроль, читайте `ConstraintTemplate` и
+`Constraint`, создавайте/проверяйте policy, отличайте `Audit` от `Deny` и находите причину
+`denied the request`. Не приписывайте экзамену расширения курса: Kubernetes 1.36 native MAP
+и Kyverno 1.19 - production-ориентированные дополнения этой главы, а не заявленный минимум
+публичной программы.
 
 **В реальной работе.** Admission policy предотвращает небезопасную конфигурацию до запуска
-workload, а не ищет её после инцидента. Наиболее ценный результат - не число политик, а
-понятный, тестируемый baseline с узкими исключениями, наблюдаемостью и ownership. Это также
-входная точка supply-chain контроля: следующая часть курса применит policy к registry,
-подписям и артефактам.
+workload, а не ищет её после инцидента. Kubernetes 1.36 native MAP/VAP и Kyverno 1.19
+полезны как production extension после проверки compatibility конкретного кластера и engine.
+Наиболее ценный результат - не число политик, а понятный, тестируемый baseline с узкими
+исключениями, наблюдаемостью и распределением ответственности. Это также входная точка
+supply-chain контроля: следующая часть курса применит policy к registry, подписям и
+артефактам.
 
 ## 20.13. Вопросы для самопроверки
 
@@ -627,10 +742,12 @@ workload, а не ищет её после инцидента. Наиболее 
 
 ## Практика
 
-Основная практика этой темы - [лаба 108 CKS: admission-политики Kyverno/OPA](../../labs/108/README_RU.MD).
+Основная практика этой темы - [лаба 108 CKS: admission-политики Kyverno](../../labs/108/README_RU.MD).
 В ней примените policy для trusted registry и restricted workload, проверьте audit и deny,
-а также найдите причину отклонения в ответе admission. Структура лабы появится в CKS
-каталоге вместе с автоматической проверкой `check_result`.
+а также найдите причину отклонения в ответе admission. Опциональный этап лабы проверяет
+Kyverno mutation; native in-process mutation отдельно отработайте по
+[MAP policy и binding из раздела 20.6](#206-native-cel-validation-и-mutation-без-внешнего-webhook).
+Автоматическая проверка лабы запускается командой `check_result`.
 
 Для самостоятельного sandbox подготовьте отдельный кластер или namespace: admission policy
 может блокировать системные controller. Начните с `dryrun`/`Audit`, заранее запишите команду

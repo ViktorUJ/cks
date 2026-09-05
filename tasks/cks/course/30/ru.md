@@ -49,11 +49,15 @@ flowchart TB
 Сразу после alert сохраните неизменяемую копию исходной строки и добавьте к ней: время в UTC с точностью источника, rule name/priority, node, container ID, Pod UID, namespace/Pod/container, image digest, процесс с аргументами, файл или сеть, а также identity из audit-log. По одному имени Pod расследование не строят: Pod может быть пересоздан с тем же префиксом.
 
 ```bash
-# Список container image и фактических imageID для корреляции с alert.
+# Список normal-контейнеров, их image и фактических imageID для корреляции с alert.
+NAMESPACE="${NAMESPACE:?set NAMESPACE to the affected Pod namespace}"
+POD="${POD:?set POD to the affected Pod name}"
 kubectl get pods -A -o custom-columns='NS:.metadata.namespace,POD:.metadata.name,NODE:.spec.nodeName,IMAGE:.spec.containers[*].image,IMAGE-ID:.status.containerStatuses[*].imageID'
 
+# Нужны также init- и ephemeral-контейнеры: alert мог исходить не от normal-контейнера.
+kubectl get pod -n "$NAMESPACE" "$POD" -o jsonpath='{range .status.initContainerStatuses[*]}init{"\t"}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}{range .status.containerStatuses[*]}normal{"\t"}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}{range .status.ephemeralContainerStatuses[*]}ephemeral{"\t"}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}'
 # Найти controller подозрительного Pod.
-kubectl get pod -n <namespace> <pod> \
+kubectl get pod -n "$NAMESPACE" "$POD" \
   -o jsonpath='{range .metadata.ownerReferences[*]}{.kind}{"/"}{.name}{"\n"}{end}'
 
 # Недавние API-действия рядом со временем alert. Events - только вспомогательный источник.
@@ -103,9 +107,10 @@ sudo falco -L | grep -Ei 'shell|sensitive|dev.mem|read.*shadow'
     container.id != host
   output: >
     Container attempted to open /dev/mem
-    (time=%evt.time evt=%evt.type user=%user.name proc=%proc.name cmd=%proc.cmdline
-    parent=%proc.pname file=%fd.name container_id=%container.id
-    container=%container.name image=%container.image.repository
+    (time=%evt.time.iso8601 node=%evt.hostname evt=%evt.type user=%user.name
+    proc=%proc.name pid=%proc.pid cmd=%proc.cmdline parent=%proc.pname file=%fd.name
+    container_id=%container.id container_full_id=%container.full_id container=%container.name
+    image=%container.image.repository:%container.image.tag image_digest=%container.image.digest
     k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name k8s_pod_uid=%k8s.pod.uid)
   priority: CRITICAL
   tags: [container, mitre_privilege_escalation, mitre_defense_evasion]
@@ -134,13 +139,14 @@ kubectl -n falco logs daemonset/falco --since=5m
 
 | Поле Falco | Что даёт расследованию | Ограничение или проверка |
 |---|---|---|
-| `%evt.time`, `%evt.type` | время и тип системного события для корреляции | привести все источники к UTC и учесть точность часов |
+| `%evt.time.iso8601`, `%evt.type`, `%evt.hostname` | UTC-время, тип системного события и node для корреляции | `evt.hostname` должен быть настроен как имя node в DaemonSet, а не случайное имя Falco Pod |
 | `%proc.name`, `%proc.cmdline` | executable и аргументы подозрительного процесса | аргументы могут содержать Secret; ограничьте доступ к log и redaction |
 | `%proc.pid`, `%proc.pname`, `%proc.aname[1]` | PID и ближайшая process tree | PID переиспользуется, поэтому нужен timestamp и container ID |
 | `%user.name`, `%user.uid` | effective Linux user процесса | это не Kubernetes user из API audit |
 | `%fd.name`, `%fd.typechar` | файл/дескриптор, с которым работал syscall | путь может быть относительным или resolved runtime-ом |
 | `%fd.sip`, `%fd.sport`, `%fd.dip`, `%fd.dport` | source/destination сетевого события | применимы к сетевым событиям, не к file open |
-| `%container.id`, `%container.name`, `%container.image.repository` | контейнер и образ для связи с CRI | ID может быть сокращён в downstream; храните исходный alert |
+| `%container.id`, `%container.full_id`, `%container.name` | контейнер для связи с CRI | `container.id` обычно усечён; сохраняйте `full_id`, когда enrichment его предоставил |
+| `%container.image.repository`, `%container.image.tag`, `%container.image.digest` | ссылка на образ и immutable digest | digest может быть пуст при задержке или отсутствии runtime enrichment; подтвердите его через Kubernetes status/CRI inspect |
 | `%k8s.ns.name`, `%k8s.pod.name`, `%k8s.pod.uid` | Kubernetes scope и стабильный Pod UID | поля требуют корректной интеграции runtime/Kubernetes metadata |
 
 Полный формат для file-правила уже показан в разделе 30.2. Для network detection не используйте `fd.name` как единственное доказательство: добавьте адрес и порт. Например, локальное правило для исходящего соединения внешнего контейнерного процесса может начинаться с такого output:
@@ -148,13 +154,14 @@ kubectl -n falco logs daemonset/falco --since=5m
 ```yaml
 output: >
   Unexpected outbound connection
-  (time=%evt.time proc=%proc.name cmd=%proc.cmdline
+  (time=%evt.time.iso8601 node=%evt.hostname proc=%proc.name pid=%proc.pid cmd=%proc.cmdline
   src=%fd.sip:%fd.sport dst=%fd.dip:%fd.dport
-  container_id=%container.id container=%container.name
+  container_id=%container.id container_full_id=%container.full_id container=%container.name
+  image_digest=%container.image.digest
   k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name k8s_pod_uid=%k8s.pod.uid)
 ```
 
-Не добавляйте все поля «на всякий случай». `proc.cmdline`, environment и request body могут раскрыть passwords, bearer tokens и PII. Определите redact policy, ограничьте доступ к SIEM и журналу Falco, срок хранения и процедуру передачи evidence. При этом нельзя вырезать container ID, Pod UID, node и время: без них alert почти невозможно надёжно связать с другими источниками.
+Не добавляйте все поля «на всякий случай». `proc.cmdline`, environment и request body могут раскрыть passwords, bearer tokens и PII. Определите redact policy, ограничьте доступ к SIEM и журналу Falco, срок хранения и процедуру передачи evidence. При этом нельзя вырезать container ID, Pod UID, node, UTC-время и, когда runtime его предоставил, image digest: без них alert почти невозможно надёжно связать с другими источниками. Если digest или `container_full_id` пуст, сохраните исходный alert и дополните его результатами `kubectl get pod` и `crictl inspect`, а не подставляйте догадку.
 
 ### Проверить доступные поля и фактическое обогащение
 
@@ -211,54 +218,106 @@ sequenceDiagram
 
 ```bash
 # Сохранить desired state и owner для incident case до remediation.
-kubectl get pod -n <namespace> <pod> -o yaml > pod-evidence.yaml
-kubectl get pod -n <namespace> <pod> \
+NAMESPACE="${NAMESPACE:?set NAMESPACE to the affected Pod namespace}"
+POD="${POD:?set POD to the affected Pod name}"
+kubectl get pod -n "$NAMESPACE" "$POD" -o yaml > pod-evidence.yaml
+kubectl get pod -n "$NAMESPACE" "$POD" \
   -o jsonpath='{.metadata.uid}{"\t"}{.spec.nodeName}{"\t"}{.spec.serviceAccountName}{"\n"}'
-kubectl get pod -n <namespace> <pod> \
-  -o jsonpath='{range .status.containerStatuses[*]}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}'
+kubectl get pod -n "$NAMESPACE" "$POD" \
+  -o jsonpath='{range .status.initContainerStatuses[*]}init{"\t"}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}{range .status.containerStatuses[*]}normal{"\t"}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}{range .status.ephemeralContainerStatuses[*]}ephemeral{"\t"}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}'
+```
+
+### Целостность и chain of custody
+
+Для каждого файла evidence зафиксируйте case ID, UTC-время сбора, node, сборщика, источник и команду. Сразу вычислите SHA-256, сохраните manifest вместе с evidence в хранилище с ограничением записи и журналом передачи. При передаче фиксируйте время UTC, отправителя, получателя и hash: это позволяет проверить целостность, но не заменяет утверждённую процедуру хранения.
+
+```bash
+CASE="IR-$(date -u +%Y%m%dT%H%M%SZ)"
+EVIDENCE="/var/tmp/$CASE"
+NAMESPACE="${NAMESPACE:?set NAMESPACE to the affected Pod namespace}"
+POD="${POD:?set POD to the affected Pod name}"
+CONTAINER_ID="${CONTAINER_ID:?set CONTAINER_ID to the exact CRI container ID}"
+umask 077
+mkdir -p "$EVIDENCE"
+{
+  printf 'case=%s\n' "$CASE"
+  date -u --iso-8601=seconds
+  hostname -f
+  id -un
+  printf 'source=kubectl, Falco, CRI; command=pre-containment collection\n'
+} > "$EVIDENCE/collection.txt"
+
+kubectl get pod -n "$NAMESPACE" "$POD" -o yaml > "$EVIDENCE/pod.yaml"
+sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
+(
+  cd "$EVIDENCE"
+  find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\0' |
+    sort -z | xargs -0 sha256sum
+) > "$EVIDENCE/SHA256SUMS"
+(
+  cd "$EVIDENCE"
+  sha256sum --check SHA256SUMS
+)
 ```
 
 ## 30.5. Расследование на node: `crictl` → PID → `/proc` → `strace`
 
 Falco сообщает container context, но host-level проверка отвечает, что реально запускалось и какими были namespaces, cgroup, mounts и arguments процесса. Работайте на node, указанной в alert, с approved privileged access. Команды ниже предназначены для controlled incident или test environment; для production следуйте incident runbook и политике доступа.
 
-### 1. Сопоставить Pod с CRI-контейнером
+### 1. Сопоставить Pod с CRI sandbox и контейнером
 
-Kubernetes `containerID` обычно содержит runtime prefix (`containerd://...`). Для `crictl inspect` нужен фактический ID. Сначала получите список контейнеров и сверяйте полный ID, имя, image и время создания с alert.
+Kubernetes `containerID` обычно содержит runtime prefix (`containerd://...`). Для `crictl inspect` нужен фактический ID. Сначала найдите **sandbox Pod**, затем передайте его ID в `crictl ps -a --pod`; `ps --name` фильтрует имя **контейнера**, а не имя Pod.
 
 ```bash
-# На node из alert. При необходимости явно задайте CRI endpoint вашей ноды.
-sudo crictl ps -a --name <pod>
-sudo crictl ps -a --name <pod> -o json
+# На node из alert. Явно используйте endpoint, настроенный для kubelet этой node.
+# Типичные текущие Unix sockets: containerd - unix:///run/containerd/containerd.sock,
+# CRI-O - unix:///run/crio/crio.sock, cri-dockerd - unix:///run/cri-dockerd.sock.
+# /var/run обычно является ссылкой на /run; не угадывайте socket, проверьте /etc/crictl.yaml и kubelet.
+CRI_ENDPOINT='unix:///run/containerd/containerd.sock'
+NAMESPACE="${NAMESPACE:?set NAMESPACE to the affected Pod namespace}"
+POD="${POD:?set POD to the affected Pod name}"
+POD_UID="${POD_UID:?set POD_UID to the affected Pod UID}"
+CONTAINER_ID="${CONTAINER_ID:?set CONTAINER_ID to the exact CRI container ID}"
+sudo cat /etc/crictl.yaml 2>/dev/null || true
+sudo crictl --runtime-endpoint "$CRI_ENDPOINT" --image-endpoint "$CRI_ENDPOINT" pods --name "$POD" -o json
+
+# Выбрать sandbox именно этого namespace и Pod UID, затем получить его полный ID.
+SANDBOX_ID=$(sudo crictl --runtime-endpoint "$CRI_ENDPOINT" pods --name "$POD" -o json | \
+  jq -er --arg ns "$NAMESPACE" --arg uid "$POD_UID" \
+  '.items[] | select(.metadata.namespace == $ns and .metadata.uid == $uid) | .id')
+sudo crictl --runtime-endpoint "$CRI_ENDPOINT" ps -a --pod "$SANDBOX_ID"
 
 # Полный inspect выбранного container ID.
-sudo crictl inspect <container-id> | jq '{id: .status.id, pid: .info.pid, image: .status.image, labels: .status.labels}'
-
-# Если container уже завершён, ищите его и sandbox в historical CRI records.
-sudo crictl ps -a --name <pod>
-sudo crictl pods --name <pod>
+sudo crictl --runtime-endpoint "$CRI_ENDPOINT" inspect "$CONTAINER_ID" | \
+  jq '{id: .status.id, image: .status.image, labels: .status.labels, info: .info}'
 ```
 
-Не выбирайте «первый ID из `grep`» в multi-container Pod: sidecar, init container и основной container имеют разные PID и image. Сверьте `%container.id`, `%container.name`, Pod UID и timestamp. Если Falco ID усечён, сопоставьте его уникальный prefix с выводом `crictl`.
+Не выбирайте «первый ID из `grep`» в multi-container Pod: sidecar, init, ephemeral и основной container имеют разные PID и image. Сверьте `%container.id`/`%container.full_id`, `%container.name`, Pod UID, container status type и timestamp. Если Falco ID усечён, сопоставьте его уникальный prefix с выводом `crictl`. `crictl ps -a` может показать ещё не очищенные stopped records, но это оперативные данные runtime, а не долговечный forensic-архив: сохраняйте Falco, audit, CRI inspect и логи отдельно до их очистки.
 
 ### 2. Зафиксировать `/proc`-контекст процесса
 
-`PID` из `.info.pid` - host PID root-process контейнера на момент inspect. PID может исчезнуть при restart или быть переиспользован, поэтому сразу запишите timestamp и снова сверяйте `cmdline`, cgroup и container ID.
+Поле `.info` в выводе `crictl inspect` - runtime-specific: CRI не стандартизирует его внутреннюю структуру. У containerd в ней часто есть `.info.pid`, но другой runtime может не предоставить этот путь или PID. Сначала сохраните и посмотрите структуру, затем извлекайте PID только если он действительно присутствует. Даже найденный PID обычно относится к root-process контейнера, а не обязательно к процессу, который вызвал alert.
 
 ```bash
-PID=$(sudo crictl inspect <container-id> | jq -r '.info.pid')
-test "$PID" != "0" && test -d "/proc/$PID" || { echo 'container is not running'; exit 1; }
+# Сначала проверить runtime-specific структуру и сохранить её как evidence.
+CONTAINER_ID="${CONTAINER_ID:?set CONTAINER_ID to the exact CRI container ID}"
+sudo crictl --runtime-endpoint "$CRI_ENDPOINT" inspect "$CONTAINER_ID" | \
+  jq '{status: .status, info: .info}'
+
+# Этот вариант применим только если просмотр выше подтвердил числовой .info.pid.
+PID=$(sudo crictl --runtime-endpoint "$CRI_ENDPOINT" inspect "$CONTAINER_ID" | \
+  jq -er '.info.pid | select(type == "number" and . > 0)')
+sudo test -d "/proc/$PID" || { echo 'container is not running or PID is unavailable'; exit 1; }
 
 # Executable, аргументы, credentials, namespaces и resource placement.
 sudo readlink -f "/proc/$PID/exe"
-sudo tr '\0' ' ' < "/proc/$PID/cmdline"; echo
+# Redirection выполняет elevated shell, а не исходный shell пользователя.
+sudo sh -c 'tr "\0" " " < "/proc/$1/cmdline"; printf "\n"' sh "$PID"
 sudo grep -E '^(Name|Pid|PPid|Uid|Gid|CapEff|NoNewPrivs|Seccomp):' "/proc/$PID/status"
 sudo cat "/proc/$PID/cgroup"
 sudo lsns -p "$PID"
 sudo readlink "/proc/$PID/ns/pid"
 sudo readlink "/proc/$PID/ns/net"
-
-# Проверить mounts без изменения процесса.
 sudo sed -n '1,80p' "/proc/$PID/mountinfo"
 ```
 
@@ -269,26 +328,31 @@ sudo sed -n '1,80p' "/proc/$PID/mountinfo"
 `strace` полезен для короткого наблюдения за конкретным подозрительным действием: файл, network, process creation. Он добавляет overhead, меняет timing, может захватывать чувствительные аргументы и не восстановит прошлое. Не запускайте длительный trace на загруженном production workload и не используйте его вместо уже сохранённого Falco evidence.
 
 ```bash
-# Ограничить классы syscalls и сохранить trace в защищённый incident file.
-sudo timeout 20s strace -ff -ttt -s 256 -p "$PID" \
-  -e trace=%file,%network,%process \
-  -o "/var/tmp/incident-${PID}.strace"
+# Attach к точному host PID (%proc.pid) из сохранённого Falco alert, а не к PID 1 контейнера.
+SUSPICIOUS_HOST_PID="${SUSPICIOUS_HOST_PID:?set SUSPICIOUS_HOST_PID to the host PID from the Falco alert}"
+sudo test -d "/proc/$SUSPICIOUS_HOST_PID" || { echo 'suspicious process has exited'; exit 1; }
+sudo grep -F "$SANDBOX_ID" "/proc/$SUSPICIOUS_HOST_PID/cgroup" || \
+  echo 'проверьте cgroup и container ID вручную перед attach'
 
-# Коротко посмотреть результаты; файл может содержать чувствительные данные.
+# Ограничить классы syscalls и сохранить trace в защищённый incident file.
+sudo timeout 20s strace -ff -ttt -s 256 -p "$SUSPICIOUS_HOST_PID" \
+  -e trace=%file,%network,%process \
+  -o "/var/tmp/incident-${SUSPICIOUS_HOST_PID}.strace"
+
 sudo grep -E 'openat|openat2|connect|execve|clone' \
-  "/var/tmp/incident-${PID}.strace"* 2>/dev/null
+  "/var/tmp/incident-${SUSPICIOUS_HOST_PID}.strace"* 2>/dev/null
 ```
 
-`strace` на PID 1 контейнера не всегда покажет child process, который породил alert; используйте `-f`/`-ff` и сверяйте `%proc.pid`, `%proc.pname` с process tree. Если процесс уже завершился, переходите к Falco, CRI logs, audit, flow и application logs, а не пытайтесь «повторить» вредоносное действие на production.
+`strace -f` следует только за `fork`/`vfork`/`clone`, созданными **после** attach к уже трассируемому процессу; `-ff` делает то же и пишет отдельный файл на процесс. Уже существующих descendants он не находит. Поэтому attach делают к точному живому host PID `%proc.pid` из alert; PID 1 контейнера используют лишь для базового `/proc`-контекста. Если процесс уже завершился, переходите к Falco, CRI logs, audit, flow и application logs, а не пытайтесь «повторить» вредоносное действие на production.
 
 ### Короткий порядок диагностики
 
 ```mermaid
 flowchart LR
     alert["Falco alert\ncontainer ID + time"] --> node["node из alert"]
-    node --> cri["crictl ps/inspect\ncontainer -> host PID"]
+    node --> cri["sandbox через crictl pods\ncontainer через ps --pod"]
     cri --> proc["/proc, lsns, cgroup, mounts\nчто реально запущено?"]
-    proc --> trace["короткий strace\nтолько controlled/live case"]
+    proc --> trace["короткий strace к точному host PID\nтолько controlled/live case"]
     trace --> correlate["audit + flow + app logs\nkill chain и scope"]
     style alert fill:#db4437,color:#fff
     style node fill:#326ce5,color:#fff
@@ -324,8 +388,10 @@ flowchart LR
     k8s.ns.name = runtime-lab
   output: >
     Runtime lab marker opened
-    (time=%evt.time evt=%evt.type proc=%proc.name cmd=%proc.cmdline
-    file=%fd.name container_id=%container.id container=%container.name
+    (time=%evt.time.iso8601 node=%evt.hostname evt=%evt.type proc=%proc.name
+    pid=%proc.pid cmd=%proc.cmdline file=%fd.name container_id=%container.id
+    container_full_id=%container.full_id container=%container.name
+    image_digest=%container.image.digest
     k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name k8s_pod_uid=%k8s.pod.uid)
   priority: NOTICE
   tags: [runtime, test]
@@ -372,12 +438,13 @@ sudo journalctl -u falco --since '5 minutes ago' --no-pager | \
   grep 'Runtime lab marker opened'
 
 # При Falco DaemonSet: выбрать Falco Pod на той же node, что marker-reader.
+FALCO_POD="${FALCO_POD:?set FALCO_POD to the Falco Pod on the test Pod node}"
 kubectl -n falco get pods -o wide
-kubectl -n falco logs <falco-pod-on-test-node> --since=5m | \
+kubectl -n falco logs "$FALCO_POD" --since=5m | \
   grep 'Runtime lab marker opened'
 ```
 
-**Критерии успешной проверки:** Falco service/Pod healthy; alert содержит имя собственного rule; `file=/tmp/runtime-lab/marker`; имеются `%container.id`, `k8s_ns=runtime-lab`, `k8s_pod=marker-reader` и `k8s_pod_uid`; UID и container ID совпадают с `kubectl get pod`; rule не создаёт alert в иных namespace. После теста удалите только controlled объект:
+**Критерии успешной проверки:** Falco service/Pod healthy; alert содержит имя собственного rule; `file=/tmp/runtime-lab/marker`; имеются UTC-время, node, `%proc.pid`, `%container.id`, `k8s_ns=runtime-lab`, `k8s_pod=marker-reader` и `k8s_pod_uid`; при доступном runtime enrichment также `container_full_id` и `image_digest`. UID, container ID, статус `normal`/`init`/`ephemeral` и imageID совпадают с `kubectl get pod`; rule не создаёт alert в иных namespace. После теста удалите только controlled объект:
 
 ```bash
 kubectl delete namespace runtime-lab
@@ -388,7 +455,7 @@ kubectl delete namespace runtime-lab
 ## 30.7. Как это применяют в продакшене
 
 - **Пишут detection use cases, а не собирают случайные rules.** Для каждого правила фиксируют актив, threat hypothesis, kill-chain phase, expected signal, owner, severity, suppression policy и ответное действие. Rule без владельца и runbook быстро становится ignored noise.
-- **Делают output схемой событий.** SIEM получает нормализованные `event.time`, rule, priority, node, container ID, Pod UID, namespace, workload owner, image digest, process и network/file target. Поля версионируют: изменение output не должно бесшумно ломать parser и correlation.
+- **Делают output схемой событий.** SIEM получает нормализованные UTC `event.time`, rule, priority, node, host PID, container ID, Pod UID, namespace, workload owner, image digest, process и network/file target. Поля версионируют: изменение output не должно бесшумно ломать parser и correlation.
 - **Тестируют rules как код.** Custom rules лежат в Git, проходят YAML/Falco validation, review и controlled positive/negative tests на staging. Vendor rules обновляют отдельно, после чего повторяют тесты local overrides.
 - **Сохраняют источники раздельно, коррелируют централизованно.** Falco, API audit, application logs и network flows имеют разные retention, доступ и точность. В incident platform связывают их по времени и устойчивым IDs, но исходные записи не переписывают.
 - **Ограничивают доступ к telemetry.** Runtime logs могут содержать command line, path к credentials и сетевые адреса. Доступ к ним - privileged production access; применяют redaction, encryption, retention и audit читателей.
@@ -410,7 +477,7 @@ kubectl delete namespace runtime-lab
 
 - Угроза должна наблюдаться на нескольких слоях: infrastructure, application, network, data, users и workloads; один alert редко достаточен для вывода.
 - Local Falco rules размещают в `falco_rules.local.yaml` или эквивалентном подключённом файле, валидируют и тестируют, не редактируя vendor ruleset.
-- Attribution-ready output включает время, rule/event, process, file/network target, container ID, Pod UID, namespace, Pod, image и node-контекст.
+- Attribution-ready output включает UTC-время, rule/event, host PID, process, file/network target, container ID, Pod UID, namespace, Pod, image digest и node-контекст; runtime enrichment и image digest проверяют по фактическому alert.
 - Kill chain превращает несвязанные Falco, audit и network события в проверяемую гипотезу о фазе и scope атаки.
 - На node путь расследования: alert → `crictl` → host PID → `/proc`/namespaces/cgroup → короткий controlled `strace` → корреляция с audit и flow.
 - Собственное rule следует подтверждать безопасным positive test и negative boundary, а затем удалять test workload.

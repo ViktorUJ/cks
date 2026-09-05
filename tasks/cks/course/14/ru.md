@@ -5,8 +5,8 @@
 > **Что дальше.** Kubernetes защищает Pod политиками, RBAC и SecurityContext, но всё это
 > стоит на Linux-ноде. Лишний сервис, пакет, открытый порт или доступ к socket runtime
 > дают атакующему путь в обход Kubernetes API. В этом разделе домена **System Hardening**
-> CKS (10%) уменьшаем поверхность атаки самой ноды: оставляем только нужные службы,
-> пакеты и сетевые точки, а Docker/containerd даём только тем, кому это действительно
+> CKS (15%) уменьшаем поверхность атаки самой ноды: оставляем только нужные службы,
+> пакеты и сетевые точки, а современный CRI runtime containerd даём только тем, кому это действительно
 > необходимо.
 
 > **Что нужно знать из CKA.** Работа с `systemd`, процессами, файлами и журналом - в
@@ -75,10 +75,11 @@ sudo systemctl list-units --type=service --state=running
 sudo systemctl list-unit-files --type=service
 
 # Откуда взялся конкретный service и чем он запускается.
-sudo systemctl status <service>
-sudo systemctl cat <service>
-sudo systemctl show <service> -p FragmentPath -p ExecStart -p User
-sudo journalctl -u <service> --since '24 hours ago'
+SERVICE='service-to-review.service'
+sudo systemctl status "$SERVICE"
+sudo systemctl cat "$SERVICE"
+sudo systemctl show "$SERVICE" -p FragmentPath -p ExecStart -p User
+sudo journalctl -u "$SERVICE" --since '24 hours ago'
 ```
 
 Полезна таблица решения до какой-либо команды:
@@ -110,10 +111,11 @@ sudo systemctl is-enabled avahi-daemon.service || true
 понимания последствий.
 
 ```bash
-sudo systemctl mask <confirmed-unwanted.service>
+UNIT='confirmed-unwanted.service'
+sudo systemctl mask "$UNIT"
 # Откат:
-sudo systemctl unmask <confirmed-unwanted.service>
-sudo systemctl enable --now <confirmed-unwanted.service>
+sudo systemctl unmask "$UNIT"
+sudo systemctl enable --now "$UNIT"
 ```
 
 ## 14.3. Лишние пакеты и минимальный образ ОС
@@ -123,10 +125,12 @@ sudo systemctl enable --now <confirmed-unwanted.service>
 проверьте reverse dependencies. На Debian/Ubuntu:
 
 ```bash
+PACKAGE='package-to-review'
+BINARY='binary-to-review'
 apt list --installed 2>/dev/null | less
-apt-cache policy <package>
-dpkg -S "$(command -v <binary>)"
-apt-cache rdepends --installed <package>
+apt-cache policy "$PACKAGE"
+dpkg -S "$(command -v "$BINARY")"
+apt-cache rdepends --installed "$PACKAGE"
 
 # Вывести пакеты, установленные вручную: отправная точка для ревью образа.
 apt-mark showmanual | sort
@@ -137,7 +141,8 @@ apt-mark showmanual | sort
 нужную библиотеку или инструмент диагностики.
 
 ```bash
-sudo apt purge <confirmed-unneeded-package>
+PACKAGE='confirmed-unneeded-package'
+sudo apt purge "$PACKAGE"
 sudo apt autoremove --dry-run
 sudo apt autoremove
 sudo apt update && sudo apt upgrade
@@ -160,7 +165,50 @@ image version и rollback должны идти через обычный про
 | Immutable/minimal OS | меньше пакетов и изменений в runtime | заранее предусмотреть debug и обновление |
 | «Удалить всё неизвестное» | нет | может сломать kubelet, CNI, storage, monitoring или доступ |
 
-## 14.4. Открытые порты: слушатель, назначение и сетевой периметр
+## 14.4. Модули ядра: инвентаризация и контролируемое отключение
+
+Модуль ядра - часть attack surface, но не «лишний пакет», который можно удалить без
+последствий. Сначала зафиксируйте загруженные модули, их параметры и правила загрузки;
+проверяйте назначение модуля у владельца образа и в документации ОС.
+
+```bash
+MODULE='example_module'
+lsmod | sort
+sudo modinfo "$MODULE"
+sudo find /etc/modprobe.d /usr/lib/modprobe.d -type f -print 2>/dev/null | sort
+sudo grep -RnsE "^(blacklist|install)[[:space:]]+${MODULE}\b" \
+  /etc/modprobe.d /usr/lib/modprobe.d 2>/dev/null || true
+```
+
+`modprobe -r <module>` выгружает модуль **только временно**: он не переживает reboot и
+завершится ошибкой, если модуль используется или удерживается зависимостью. Постоянное
+запрещение задают в управляемой конфигурации `modprobe`; `blacklist` препятствует обычной
+autoload-загрузке, а `install ... /bin/false` также блокирует явный `modprobe` через это
+правило. Оба механизма применяют вместе только после проверки, что модуль действительно
+не нужен.
+
+```bash
+MODULE='example_module'
+# В change window: временная проверка; не пытайтесь принудительно выгрузить используемый модуль.
+sudo modprobe -r "$MODULE"
+
+# Постоянное правило в image/IaC, а не ручной дрейф ноды.
+sudo tee "/etc/modprobe.d/disable-${MODULE}.conf" >/dev/null <<EOF
+blacklist $MODULE
+install $MODULE /bin/false
+EOF
+
+# Для Debian/Ubuntu обновите initramfs, если модуль может быть в ранней загрузке.
+sudo update-initramfs -u
+sudo modprobe -n -v "$MODULE"       # ожидается правило install /bin/false
+```
+
+После планового reboot проверьте `lsmod`, `modprobe -n -v` и здоровье ноды. Модули могут
+быть необходимы CNI, storage-драйверу, runtime или сетевой/дисковой аппаратуре. Сначала
+тестируйте на одной drained/staging-ноде, затем выполняйте rollout node-by-node с проверкой
+`kubelet`, containerd, CNI и workload; не применяйте blacklist ко всему пулу одновременно.
+
+## 14.5. Открытые порты: слушатель, назначение и сетевой периметр
 
 Порт опасен не сам по себе - опасен неизвестный либо доступный не тем источникам сервис.
 Сначала установите соответствие «слушатель - PID - unit - нужные источники», затем
@@ -185,7 +233,7 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | etcd `2379`, `2380/tcp` | только control-plane/etcd peers | не публиковать на worker или внешнюю сеть |
 | Docker `2375/tcp` | нигде в безопасном baseline | не слушать |
 | Docker TLS `2376/tcp` | только при обоснованном удалённом управлении | mTLS и точный firewall; по умолчанию не нужен |
-| Docker/containerd Unix socket | локально на ноде | `root` и минимальный набор системных потребителей |
+| containerd/NRI Unix socket | локально на ноде | `root` и минимальный набор разрешённых системных потребителей |
 
 Не делайте вывод из номера порта без процесса: например, `6443` на control-plane ожидаем,
 но на worker может быть ошибкой; `10250` нужен kubelet, но не должен быть публичным.
@@ -193,35 +241,38 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 ограничение внешнего доступа и SSH - в главе 15.
 
 ```bash
+SERVICE='service-owning-the-listener.service'
+PORT='10250'
 # Сначала проверьте конкретный listener и его unit.
 sudo ss -lntp | grep -E ':(22|10250|6443|2379|2380|2375|2376)\b' || true
-sudo systemctl status <service-owning-the-listener>
+sudo systemctl status "$SERVICE"
 
 # После удаления/отключения service порт должен исчезнуть.
-sudo ss -lntp | grep ':<port>' || echo 'listener is absent'
+sudo ss -lntp | grep -F ":${PORT}" || echo 'listener is absent'
 ```
 
-## 14.5. Безопасность демона container runtime: Docker и containerd
+## 14.6. Безопасность containerd и необязательного Docker
 
+На современной Kubernetes-ноде containerd - основной CRI runtime; Docker daemon и его
+socket не являются CRI baseline и нужны только для отдельной подтверждённой задачи.
 Runtime daemon имеет больше прав, чем обычный контейнер. Клиент, способный обратиться к
-Docker API или CRI socket, часто может запустить привилегированный контейнер, смонтировать
-host filesystem или получить credential ноды. Поэтому локальный socket - граница доступа,
-а не безобидная деталь реализации.
+containerd, NRI или Docker API, часто может запустить привилегированный контейнер,
+смонтировать filesystem хоста или получить credentials ноды. Поэтому Unix socket - граница
+доступа, а не безобидная деталь реализации.
 
 ```mermaid
 flowchart TB
     user["обычный пользователь"] -->|"не должен иметь доступ"| deny["runtime socket"]
-    root["root / разрешённый системный процесс"] -->|"локальный Unix socket"| allow["Docker или containerd daemon"]
-    docker["docker group"] -. "членство ~= root" .-> allow
-    tcp["TCP 2375 без TLS"] -. "удалённый root" .-> allow
-    allow --> node["создание контейнера<br>и доступ к ноде"]
+    root["root / разрешённый системный процесс"] -->|"локальный Unix socket"| containerd["containerd CRI (основной)"]
+    docker["docker group"] -. "членство ~= root" .-> dockerDaemon["Docker (опционально)"]
+    tcp["TCP 2375 без TLS"] -. "удалённый root" .-> dockerDaemon
+    containerd --> node["создание контейнеров<br>и доступ к ноде"]
+    dockerDaemon --> node
     style user fill:#f4b400,color:#000
     style deny fill:#db4437,color:#fff
     style root fill:#0f9d58,color:#fff
-    style allow fill:#673ab7,color:#fff
-    style docker fill:#db4437,color:#fff
-    style tcp fill:#db4437,color:#fff
-    style node fill:#db4437,color:#fff
+    style containerd fill:#673ab7,color:#fff
+    style dockerDaemon fill:#673ab7,color:#fff
 ```
 
 ### Docker: никакого неаутентифицированного TCP API
@@ -264,93 +315,74 @@ sudo journalctl -u docker.service -n 50 --no-pager
 выделенный management network. Это исключение с владельцем риска, а не default для
 Kubernetes-ноды.
 
-### `/var/run/docker.sock` и группа `docker`
+### containerd, NRI и файловые границы runtime
 
-`/var/run/docker.sock` (часто симлинк на `/run/docker.sock`) - Unix API Docker. Безопасный
-baseline для ноды, на которой Docker необходим: владелец `root:root`, режим `660`.
-Тогда обращаться к socket могут root и процессы, которым root явно делегировал доступ;
-обычный пользователь не может выполнить `docker ps`.
+Основной CRI socket обычно расположен в `/run/containerd/containerd.sock`; путь NRI socket
+настраивается и часто равен `/run/nri/nri.sock` (эквивалентно `/var/run/nri/nri.sock`). Доступ
+к **любому** из них root-equivalent.
+Оставляйте его только `root` и минимальному набору системных процессов. Если для
+эксплуатации необходима группа, это должна быть выделенная системная группа без обычных
+пользователей; не добавляйте туда разработчиков, CI-учётные записи или workload identity.
+Никогда не монтируйте `containerd.sock` или `nri.sock` в непривилегированный контейнер.
 
-```bash
-# Сначала разрешаем симлинк до фактического socket и фиксируем owner/mode.
-readlink -f /var/run/docker.sock
-sudo stat -Lc '%A %a %U:%G %n' /var/run/docker.sock
-# Ожидаем: srw-rw---- 660 root:root /var/run/docker.sock
-
-# Аудит группы и её членов. Любой член docker должен рассматриваться как root-equivalent.
-getent group docker || true
-getent group docker | awk -F: '{print $4}'
-id <user>
-```
-
-Исторически пакеты Docker часто создают socket с группой `docker`. Это не безопасная
-«группа разработчиков»: членство в `docker` **эквивалентно root**. Пользователь может
-создать контейнер с монтированием `/` хоста и получить root на ноде. Удалите обычных
-пользователей и не выдавайте членство automation без отдельного решения.
-
-```bash
-# Снимает доступ у конкретного обычного пользователя; новая login-сессия обязательна.
-sudo gpasswd -d <user> docker
-
-# Проверка под учётной записью без root и без docker-group должна завершиться отказом.
-sudo -u <user> docker ps
-# Ожидается: permission denied при подключении к Docker daemon socket.
-```
-
-Не исправляйте owner/mode разовым `chown`/`chmod`, если `docker.socket` создаётся
-systemd: при перезапуске unit вернёт свои настройки. Для управляемого systemd socket
-задайте их устойчиво через drop-in, затем перезапустите только после окна работ и
-проверьте, что Docker поднялся.
-
-```bash
-sudo systemctl edit docker.socket
-```
-
-```ini
-# /etc/systemd/system/docker.socket.d/override.conf
-[Socket]
-SocketUser=root
-SocketGroup=root
-SocketMode=0660
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart docker.socket
-sudo systemctl restart docker.service
-sudo stat -Lc '%A %a %U:%G %n' /var/run/docker.sock
-```
-
-Если Docker не нужен на Kubernetes-ноде, надёжнее не hardening неиспользуемого daemon, а
-удалить пакет либо отключить и замаскировать `docker.service` и `docker.socket` после
-проверки, что ни kubelet, ни эксплуатационная задача от него не зависят.
-
-### containerd socket и CRI
-
-Современный kubeadm-кластер обычно использует containerd через
-`/run/containerd/containerd.sock`. Это также привилегированный gRPC socket. На baseline
-он доступен `root:root` с режимом `660`; kubelet и системные инструменты обращаются к
-нему с root-правами. Не добавляйте пользователей в группу ради `crictl` и не ставьте
-`chmod 666`: диагностику выполняйте через `sudo`.
+Не существует универсального `chmod` для Docker или containerd socket: путь, владелец,
+группа и режим задаются пакетом, systemd unit и политикой конкретной ноды. Не используйте
+world-writable режимы и не исправляйте права разовой командой, если socket пересоздаёт
+systemd. Сначала определите владельца конфигурации, затем закрепите минимально нужный
+доступ через поддерживаемую конфигурацию образа/IaC и проверьте его после рестарта.
 
 ```bash
 sudo systemctl status containerd.service --no-pager
 sudo systemctl cat containerd.service
-sudo stat -Lc '%A %a %U:%G %n' /run/containerd/containerd.sock
-sudo ss -lxnp | grep 'containerd.sock' || true
+sudo stat -Lc '%A %a %U:%G %n' /run/containerd/containerd.sock \
+  /run/nri/nri.sock 2>/dev/null || true
+sudo ss -lxnp | grep -E 'containerd\.sock|nri\.sock' || true
 
-# Проверка CRI только локально и с root; endpoint можно сверить с kubelet config.
+# CRI-диагностика выполняется локально и с root; endpoint сверяют с kubelet config.
 sudo crictl --runtime-endpoint unix:///run/containerd/containerd.sock ps
 sudo grep -Rns -- '--container-runtime-endpoint\|containerRuntimeEndpoint' \
   /var/lib/kubelet /etc/systemd/system /usr/lib/systemd/system 2>/dev/null || true
 ```
 
-Не путайте CRI socket с TCP endpoint приложения: он не должен быть проброшен в Pod,
-экспортирован через SSH tunnel «для удобства» или примонтирован в доверенный workload.
-Отдельно проверьте, что `containerd.service` не запускается с неожиданным TCP listener.
-Изменение `/etc/containerd/config.toml`, cgroup driver или CRI plugin делают только с
-пониманием конфигурации kubelet и планом восстановления - неправильная правка переводит
-ноду в `NotReady`.
+Защищайте не только socket. `/run/containerd` содержит runtime-состояние и sockets, а
+`/var/lib/containerd` - persistent content и metadata; оба пути не должны быть доступны
+обычным пользователям или writable контейнерам. Конфигурация, plugins и CNI также должны
+быть root-owned и защищены от записи неавторизованных субъектов: обычно это
+`/etc/containerd`, каталоги plugins runtime и `/etc/cni/net.d`, а CNI binaries -
+`/opt/cni/bin` (конкретные пути сверяйте с дистрибутивом и конфигом). Не меняйте их
+широким `chmod -R`: проверяйте ownership и writable-биты точечно.
+
+```bash
+sudo find /run/containerd /var/lib/containerd /etc/containerd /etc/cni/net.d /opt/cni/bin \
+  -xdev -printf '%m %u:%g %p\n' 2>/dev/null | sort
+```
+
+Debug и metrics - отдельные API поверхности. Unix debug socket ограничивают `root` и
+разрешёнными системными потребителями; TCP debug endpoint никогда не публикуют. Metrics
+containerd нередко не имеют TLS и аутентификации: привязывайте их только к loopback или
+выделенному management interface и дополнительно ограничивайте firewall/маршрутизацию.
+Перед изменением сверяйте поддерживаемые параметры именно вашей версии containerd и
+проверяйте listeners через `ss` после рестарта.
+
+### Docker: только если он действительно нужен
+
+Если Docker оставлен для отдельной задачи, его socket и группа `docker` также
+root-equivalent. Не выдавайте членство обычным пользователям, не монтируйте socket в
+непривилегированный workload и не предполагаете единые owner/mode для всех установок:
+следуйте unit/package policy и проверяйте доступ от имени запрещённой учётной записи.
+
+```bash
+readlink -f /var/run/docker.sock 2>/dev/null || true
+sudo stat -Lc '%A %a %U:%G %n' /var/run/docker.sock 2>/dev/null || true
+getent group docker || true
+getent group docker | awk -F: '{print $4}'
+UNPRIVILEGED_USER='unprivileged-user'
+sudo -u "$UNPRIVILEGED_USER" docker ps  # для неразрешённого пользователя ожидается отказ
+```
+
+Если Docker не нужен на Kubernetes-ноде, надёжнее удалить пакет либо отключить и
+замаскировать `docker.service` и `docker.socket` после проверки, что от них не зависят
+kubelet или эксплуатационные задачи.
 
 ### Hardening `/etc/docker/daemon.json`
 
@@ -388,7 +420,7 @@ sudo systemctl restart docker.service
 sudo docker info --format '{{json .SecurityOptions}}'
 ```
 
-## 14.6. Проверка результата: доказать минимальную ноду
+## 14.7. Проверка результата: доказать минимальную ноду
 
 Проверка состоит из факта конфигурации и факта доступа. Недостаточно увидеть нужную
 строку в файле: service мог не перечитать конфиг, а socket мог быть пересоздан с прежней
@@ -411,15 +443,16 @@ diff -u /root/hardening-before/listeners.txt \
 # 3. Docker API не слушает неаутентифицированный TCP 2375.
 sudo ss -tulpn | grep ':2375' && exit 1 || echo 'OK: TCP 2375 is absent'
 
-# 4. Если Docker установлен, socket должен быть root:root 660.
-if [ -S /var/run/docker.sock ]; then
-  sudo stat -Lc '%a %U:%G %n' /var/run/docker.sock
-fi
+# 4. Socket runtime остаётся локальным; owner/mode соответствуют policy unit/package,
+#    не дают доступа обычным пользователям и не являются world-writable.
+for socket in /run/containerd/containerd.sock /run/nri/nri.sock /var/run/docker.sock; do
+  if [ -S "$socket" ]; then
+    sudo stat -Lc '%A %a %U:%G %n' "$socket"
+  fi
+done
 
-# 5. containerd socket остаётся локальным и не world-writable.
-if [ -S /run/containerd/containerd.sock ]; then
-  sudo stat -Lc '%a %U:%G %n' /run/containerd/containerd.sock
-fi
+# 5. Debug не должен быть публичным, metrics - не на всех интерфейсах без TLS/auth.
+sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 ```
 
 **DoD - минимальная нода:**
@@ -433,27 +466,29 @@ fi
   только там и тем источникам, где это требуется архитектурой.
 - [ ] `ss -tulpn | grep ':2375'` ничего не выводит; в unit/drop-in/`daemon.json` нет
   `tcp://0.0.0.0:2375`.
-- [ ] При установленном Docker `/var/run/docker.sock` имеет `root:root` и `660`; обычный
-  пользователь без root не может выполнить `docker ps`; никто не добавлен в `docker`
-  «для удобства», потому что эта группа root-equivalent.
-- [ ] `/run/containerd/containerd.sock` не доступен обычным пользователям и не проброшен
-  в workload; `sudo crictl` продолжает работать.
-- [ ] `daemon.json` прошёл `dockerd --validate`, Docker/containerd и kubelet healthy, а
-  изменения занесены в image/IaC/change record.
+- [ ] `/run/containerd/containerd.sock` и при наличии `/run/nri/nri.sock` не
+  доступны обычным пользователям, не примонтированы в непривилегированный workload, а
+  `sudo crictl` продолжает работать; разрешённые группы состоят только из системных субъектов.
+- [ ] `/run/containerd`, `/var/lib/containerd`, конфигурация/plugins/CNI root-owned и не
+  writable неавторизованными субъектами; публичных TCP debug endpoint нет, а metrics без
+  TLS/auth ограничены loopback или management interface.
+- [ ] При установленном Docker его доступ ограничен policy unit/package и обычный
+  пользователь не может выполнить `docker ps`; `daemon.json` прошёл `dockerd --validate`.
+- [ ] Docker/containerd и kubelet healthy, а изменения занесены в image/IaC/change record.
 
-## 14.7. Типичные ошибки и диагностика
+## 14.8. Типичные ошибки и диагностика
 
 | Симптом | Вероятная причина | Что проверить и исправить |
 |---|---|---|
 | `docker` всё ещё слушает `2375` | TCP задан в systemd drop-in, `ExecStart` или `daemon.json` | `systemctl cat docker.service docker.socket`, `ps -ef`, поиск `tcp://`; убрать активный источник и рестартовать daemon |
 | Docker не стартует после правки | конфликт `hosts` в JSON и `-H` в unit или неверный JSON | `dockerd --validate`, `journalctl -u docker`, оставить один источник hosts |
-| `chmod 660` исчез после рестарта | socket создаёт systemd с прежним `SocketGroup` | override для `docker.socket`, `daemon-reload`, повторная проверка `stat` |
-| пользователь всё ещё делает `docker ps` | старая login-сессия содержит supplementary group или socket всё ещё `root:docker` | `id <user>`, новая сессия, `getent group docker`, устойчиво настроить socket |
+| разовая правка прав socket исчезла после рестарта | socket пересоздаёт systemd или runtime | найти unit/package-владельца через `systemctl cat`, закрепить policy в IaC/drop-in, повторно проверить `stat` |
+| пользователь всё ещё делает `docker ps` или обращается к runtime | старая login-сессия содержит привилегированную группу либо policy слишком широка | `id <user>`, новая сессия, `getent group`, удалить не-системных членов и проверить доступ |
 | worker стал `NotReady` | удалён/остановлен containerd, kubelet или сломана CRI config | `systemctl status kubelet containerd`, `journalctl -u kubelet`, сверить endpoint и восстановить из снимка |
 | закрыли нужный порт | порт отключали по номеру без проверки PID и назначения | `ss -lntp`, unit-владелец, источники/назначение; откатить точечно |
 | после `apt autoremove` нет нужной утилиты | список не был просмотрен, package dependency неверно оценена | восстановить пакет, закрепить allowlist образа, использовать `--dry-run` |
 
-## 14.8. Как это применяют в продакшене
+## 14.9. Как это применяют в продакшене
 
 - **Baseline задают как код.** Список пакетов, enabled services, systemd drop-in, firewall
   и проверка socket входят в immutable image, Ansible/Cloud-Init или другой IaC. Ручной
@@ -461,9 +496,9 @@ fi
 - **Ноды разделяют по роли.** Control-plane, worker, build-host и Docker-host не получают
   одинаковый набор пакетов и портов. Особенно не ставят Docker daemon на worker только
   ради интерактивного `docker ps`, если CRI - containerd.
-- **Runtime доступ проверяют как привилегированный доступ.** Изменение членов `docker`
-  group, прав Docker/containerd socket и systemd override проходит тот же review, что и
-  выдача `sudo`.
+- **Runtime доступ проверяют как привилегированный доступ.** Изменение членов групп,
+  прав containerd/NRI/Docker socket и systemd override проходит тот же review, что и
+  выдача `sudo`; в разрешённых системных группах нет обычных пользователей.
 - **Проверяют дрейф.** Регулярный CIS/OS scan, inventory пакетов, enabled unit и listeners
   сравнивают с baseline. Новый listener без владельца - инцидент либо change, а не
   «обычное состояние».
@@ -471,7 +506,7 @@ fi
   `kubelet`/`containerd`, только после этого rollout. Для control-plane держат out-of-band
   console и tested rollback.
 
-## 14.9. Мини-глоссарий
+## 14.10. Мини-глоссарий
 
 - **footprint** - набор пакетов, процессов, портов, socket и конфигурации, увеличивающий
   поверхность атаки ноды.
@@ -481,17 +516,19 @@ fi
   systemd.
 - **Unix socket** - локальная файловая точка IPC; права файла определяют, кто обращается к
   API daemon.
-- **Docker socket** - `/var/run/docker.sock`, локальный API Docker daemon; доступ к нему
-  эквивалентен очень широким правам на хосте.
+- **Docker socket** - `/var/run/docker.sock`, локальный API Docker daemon; если Docker
+  установлен, доступ к нему root-equivalent и ограничен политикой конкретного unit/package.
 - **`docker` group** - группа, дающая доступ к Docker socket; рассматривается как
   root-equivalent, а не как обычная рабочая группа.
-- **CRI socket** - endpoint между kubelet и runtime, например
-  `/run/containerd/containerd.sock`.
+- **CRI socket** - endpoint между kubelet и основным runtime containerd, например
+  `/run/containerd/containerd.sock`; доступ к нему root-equivalent.
+- **NRI socket** - Unix API Node Resource Interface containerd; доступ к нему также
+  root-equivalent.
 - **`daemon.json`** - конфигурационный файл Docker daemon, обычно `/etc/docker/daemon.json`.
 - **`live-restore`** - режим Docker, сохраняющий контейнеры работающими при рестарте daemon.
 - **`userns-remap`** - user namespace remapping UID/GID контейнера на хосте.
 
-## 14.10. Итоги главы
+## 14.11. Итоги главы
 
 - Минимальная нода начинается с инвентаризации: каждый service, пакет, listener и socket
   имеет назначение и владельца; всё остальное удаляют или отключают.
@@ -501,14 +538,18 @@ fi
   открыты всему интернету, а Docker `2375` не должен слушаться вовсе.
 - `-H tcp://0.0.0.0:2375` - неаутентифицированный удалённый root. Оставляйте Docker на
   Unix socket; `2376` допустим только как обоснованное TLS/mTLS-исключение.
-- `/var/run/docker.sock` в baseline - `root:root`, `660`; членство в `docker` group
-  эквивалентно root и не выдаётся обычным пользователям.
-- `/run/containerd/containerd.sock` - такой же привилегированный локальный endpoint:
-  root-only, без world-writable прав и без монтирования в workload.
-- `live-restore`, `no-new-privileges` и `userns-remap` в `daemon.json` усиливают Docker,
-  но требуют validation, теста совместимости и контролируемого rollout.
+- containerd - основной современный CRI runtime; доступ к его socket и NRI socket
+  root-equivalent, ограничен системными субъектами и никогда не монтируется в
+  непривилегированный workload.
+- Права Docker/containerd socket не задают универсальным `chmod`: их закрепляют через
+  policy соответствующего unit/package, без world-writable режима и без обычных пользователей.
+- `/run/containerd`, `/var/lib/containerd`, config/plugins/CNI - защищённые root-owned
+  поверхности; Unix debug ограничен, TCP debug не бывает публичным, а metrics без TLS/auth
+  слушают только loopback или management interface.
+- `live-restore`, `no-new-privileges` и `userns-remap` в `daemon.json` применимы только к
+  обоснованному Docker-хосту и требуют validation, теста совместимости и rollout.
 
-## 14.11. Как это пригодится: на экзамене и в реальной работе
+## 14.12. Как это пригодится: на экзамене и в реальной работе
 
 **На экзамене.** Сначала найдите активный источник: `systemctl cat`, `systemctl show`,
 `ss -tulpn`, `stat` и `ps` надёжнее догадки по пути файла. Задание может требовать убрать
@@ -523,26 +564,27 @@ Docker TCP, исправить права socket или отключить servi
 источников и постоянная проверка дрейфа уменьшают шанс такой ошибки и радиус поражения,
 если она всё же произошла.
 
-## 14.12. Вопросы для самопроверки
+## 14.13. Вопросы для самопроверки
 
 1. Почему выключенный, но не удалённый лишний пакет всё ещё увеличивает поверхность атаки?
 2. Чем `systemctl disable --now` отличается от `mask`, и когда нужен каждый вариант?
 3. Как установить владельца listener, прежде чем закрывать его порт?
 4. Почему `10250` и `6443` нельзя одинаково «закрыть везде», а `2375` должен отсутствовать?
 5. Почему `tcp://0.0.0.0:2375` равнозначен удалённому root, даже если сейчас есть firewall?
-6. Какие owner и mode ожидаются у `/var/run/docker.sock`, и почему `docker` group
-   root-equivalent?
-7. Почему разовый `chmod` Docker socket может не пережить restart, и как сделать настройку
-   устойчивой?
-8. Как проверить, что пользователь действительно потерял доступ к Docker, а kubelet всё ещё
-   может работать с containerd?
-9. Какие риски нужно проверить до `userns-remap` в `daemon.json`?
+6. Почему доступ к containerd/NRI socket root-equivalent и кому допустимо его выдать?
+7. Почему нельзя назначить universal `chmod` runtime socket, и как закрепить policy
+   устойчиво?
+8. Почему TCP debug endpoint не должен быть публичным, а metrics без TLS/auth ограничивают
+   loopback или management interface?
+9. Чем временный `modprobe -r` отличается от `blacklist` и `install ... /bin/false`?
+10. Почему отключение модуля тестируют node-by-node до rollout?
+11. Какие риски нужно проверить до `userns-remap` в `daemon.json`?
 
 ## Практика
 
 Лаба 105 объединяет системный hardening: инвентаризацию сервисов, пакетов и портов,
 минимизацию доступа к ноде и безопасность Docker daemon. Выполняйте её с контрольным
-снимком до изменений и запускайте `check_result` только после всех проверок из 14.6.
+снимком до изменений и запускайте `check_result` только после всех проверок из 14.7.
 
 🧪 Лаба 105 (System Hardening ОС и безопасность Docker-демона):
 [tasks/cks/labs/105](../../labs/105/README_RU.MD)

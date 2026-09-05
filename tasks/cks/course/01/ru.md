@@ -33,25 +33,22 @@ flowchart TB
 
 ## 01.2 Формат экзамена, версия и документация
 
-Экзамен CKS performance-based: задачи выполняются в терминале на предоставленных кластерах и нодах. Рабочая модель подготовки - уложиться в 2 часа, переключать context осознанно и после каждого изменения проверять фактическое состояние. Проходной балл и состав разрешённых ресурсов могут меняться.
+Экзамен CKS performance-based: это примерно 15-20 практических задач, которые выполняются в терминале на предоставленных кластерах и нодах. Отводится 2 часа, проходной балл - 67%. Для регистрации и сдачи CKS требуется ранее сданный CKA, но срок его действия к моменту CKS может истечь: сертификат CKA не обязан оставаться активным. Рабочая модель подготовки - осознанно переключать context и после каждого изменения проверять фактическое состояние.
 
 Версии Kubernetes нужно различать:
 
 - **Версия обучения и лаб этого курса - `v1.36`** (`k8_version = "1.36.0"` в лабораторных окружениях): на ней проверяются Kubernetes-native команды, флаги и API-поведение курса; compatibility third-party компонентов необходимо сверять с их собственной support matrix.
-- **Версию экзаменационной среды задаёт Linux Foundation, и она может отставать от версии курса.** На дату проверки `2026-09-04` официальные страницы LF - основная страница [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/), [«Important Instructions: CKS»](https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks) и [FAQ](https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks) - согласованно указывают Kubernetes **v1.35** для экзамена CKS. Опубликованный CNCF curriculum overview по имени файла остаётся [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), но это не отменяет более новую version, зафиксированную непосредственно на страницах LF. Поэтому **не считайте `v1.36` версией экзамена** и не полагайтесь на версию, зафиксированную в этом курсе как постоянную: непосредственно перед попыткой сверяйте версию, проходной балл и формат с официальными страницами LF и с версией, показанной в ExamUI.
+- **Версию экзаменационной среды задаёт Linux Foundation, и она может отставать от версии курса.** На дату проверки `2026-09-04` официальные страницы LF - основная страница [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/), [«Important Instructions: CKS»](https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks) и [FAQ](https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks) - согласованно указывают Kubernetes **v1.35** для экзамена CKS. Опубликованный CNCF curriculum overview по имени файла остаётся [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), но это не отменяет более новую версию, указанную на страницах LF. Поэтому **не считайте `v1.36` версией экзамена**.
+
+Страницы CKS и FAQ обновляются независимо и могут временно расходиться. Непосредственно перед попыткой подтвердите версию Kubernetes, количество и формат задач, проходной балл, пререквизит и разрешённые ресурсы сначала на основной странице [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/), затем в ExamUI для назначенной попытки. Не полагайтесь на версию или правила, зафиксированные в курсе, как на постоянные.
 
 Различие практическое: синтаксис объекта и поведение admission сверяйте с документацией той версии, которая открыта в экзаменационной среде, а не с версией курса.
 
-Разрешённые ресурсы LF поддерживает отдельно от curriculum и его весов. На дату последней
-проверки, **2026-08-31**, глобальный список CKS включает ссылки из **Quick Reference** задачи,
-документацию и блог Kubernetes, а также документацию Falco, `bom`, etcd, NGINX Ingress
-Controller, Cilium и Istio. Разрешены также документация, man-страницы и пакеты
-дистрибутива экзаменационного терминала. Список может измениться независимо от curriculum:
-непосредственно перед экзаменом заново проверьте страницу LF
-[Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed).
+Разрешённые ресурсы LF поддерживает отдельно от curriculum и его весов. Это привязанный ко времени снимок: на дату последней проверки, **2026-08-31**, глобальный список CKS включает **Quick Reference** из задачи, документацию и блог Kubernetes, а также документацию Falco, `bom`, etcd, NGINX Ingress Controller, Cilium и Istio. Разрешены также документация, man-страницы и пакеты дистрибутива экзаменационного терминала. Список может измениться независимо от curriculum: непосредственно перед экзаменом заново проверьте страницу LF [Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed) и ссылки, доступные в ExamUI.
 
 | Ресурс | Для чего | Доступность |
 |---|---|---|
+| **Quick Reference** задачи | Краткие справочные материалы, предоставленные в экзаменационной среде | разрешена |
 | [Kubernetes Documentation](https://kubernetes.io/docs/) и [Kubernetes Blog](https://kubernetes.io/blog/) | API объектов, SecurityContext, PSA, audit, kubeadm, флаги компонентов | разрешена |
 | [Cilium](https://docs.cilium.io/en/stable/) | `CiliumNetworkPolicy`, Hubble, encryption и mutual authentication | разрешена |
 | [Istio](https://istio.io/latest/docs/) | `PeerAuthentication` и mTLS | разрешена |
@@ -59,6 +56,7 @@ Controller, Cilium и Istio. Разрешены также документац�
 | [kubernetes-sigs/bom](https://kubernetes-sigs.github.io/bom/cli-reference/) | Генерация SPDX SBOM | разрешена |
 | [NGINX Ingress Controller](https://kubernetes.github.io/ingress-nginx/) | TLS termination и HTTP-to-HTTPS redirect (см. 08.5 про retirement) | разрешена |
 | [Falco](https://falco.org/docs/) | Runtime-правила, события и диагностика | разрешена |
+| Документация, man-страницы и пакеты дистрибутива экзаменационного терминала | Локальная справка и сведения об установленном ПО | разрешены |
 | [Trivy](https://trivy.dev/latest/docs/) | Сканирование image, filesystem, config и SBOM | учебный ресурс; не в глобальном списке LF на дату проверки |
 | [AppArmor](https://gitlab.com/apparmor/apparmor/-/wikis/Documentation) | Профили MAC и их загрузка на узел | учебный ресурс; не в глобальном списке LF на дату проверки |
 
@@ -66,21 +64,21 @@ Controller, Cilium и Istio. Разрешены также документац�
 
 ## 01.3 Официальная программа CKS
 
-Редакция программы от 15 октября 2024 распределяет задачи по шести доменам. Вес домена - ориентир для распределения времени, но не замена проверке всех компетенций.
+Редакция программы от 15 октября 2024 - исторический снимок curriculum, а не текущий источник параметров экзамена. Она распределяет задачи по шести доменам. Вес домена - ориентир для распределения времени, но не замена проверке всех компетенций.
 
 | Домен | Вес | Главы курса |
 |---|---:|---|
-| Cluster Setup | 15% | 04-09 |
+| Cluster Setup | 10% | 04-09 |
 | Cluster Hardening | 15% | 10-13 |
-| System Hardening | 10% | 14-17 |
+| System Hardening | 15% | 14-17 |
 | Minimize Microservice Vulnerabilities | 20% | 18-23 |
 | Supply Chain Security | 20% | 24-28 |
 | Monitoring, Logging and Runtime Security | 20% | 29-32 |
 
 ```mermaid
 flowchart LR
-    setup["Cluster Setup<br>15%"] --> hardening["Cluster Hardening<br>15%"]
-    hardening --> system["System Hardening<br>10%"]
+    setup["Cluster Setup<br>10%"] --> hardening["Cluster Hardening<br>15%"]
+    hardening --> system["System Hardening<br>15%"]
     system --> workload["Microservice<br>20%"]
     workload --> supply["Supply Chain<br>20%"]
     supply --> runtime["Monitoring, Logging<br>and Runtime<br>20%"]

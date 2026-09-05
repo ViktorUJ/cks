@@ -5,8 +5,11 @@
 > **Что дальше.** AppArmor ограничил, к каким объектам может обращаться процесс, а seccomp -
 > какие системные вызовы он может сделать. Теперь соберём эти и базовые ограничения процесса
 > в один воспроизводимый контракт Pod: non-root, пустой набор capabilities, запрет повышения
-> привилегий, неизменяемый root filesystem и профиль seccomp. Это домен **Cluster Setup** и
-> **Microservice Vulnerability Mitigation** CKS. Цель не в том, чтобы «поставить все true/false»,
+> привилегий, root filesystem только для чтения и профиль seccomp. Это материал официального
+> домена **Minimize Microservice Vulnerabilities (20%)** CKS: `SecurityContext` и Pod Security
+> Standards. Cluster Setup относится к нему
+> косвенно: kubelet и runtime нод должны поддерживать и применять эти настройки. Цель не в том,
+> чтобы «поставить все true/false»,
 > а в том, чтобы каждый контейнер получил ровно нужные ему права и это можно было доказать.
 
 > **Что нужно из CKA.** Поля `SecurityContext`, UID/GID, capabilities и уровни Pod/контейнера
@@ -51,7 +54,7 @@ flowchart TB
 | UID/GID и `runAsNonRoot` | последствия запуска от root, ошибки прав доступа | отсутствие Linux capabilities и host-доступа |
 | `capabilities.drop: ["ALL"]` | отдельные привилегии ядра | безопасность приложения и сети |
 | `allowPrivilegeEscalation: false` | переход через setuid/setgid и file capabilities | отсутствие уже выданных capabilities |
-| `readOnlyRootFilesystem: true` | запись в image layer, persistence и подмену бинарников | запрет записи в тома, `emptyDir` и memory |
+| `readOnlyRootFilesystem: true` | запись в writable rootfs layer, persistence и подмену бинарников | запрет записи в тома, `emptyDir` и memory |
 | `seccompProfile` | набор доступных syscalls | доступ к разрешённым файлам или API |
 | отсутствие `privileged`, `host*`, `hostPath` | прямой путь к namespaces, устройствам и данным ноды | корректную авторизацию Kubernetes API |
 
@@ -123,9 +126,12 @@ ServiceAccount и минимальный RBAC, а не возвращайте de
   приложение на 8080 и оставить набор пустым.
 - **`allowPrivilegeEscalation: false`** выставляет Linux `no_new_privs`: exec не может получить
   больше прав через setuid/setgid бинарник или file capabilities. Это не отнимает права,
-  уже выданные контейнеру, и не заменяет `drop: ALL`.
-- **`readOnlyRootFilesystem: true`** делает image layer неизменяемым. Приложение по-прежнему
-  может писать в явно смонтированные тома, поэтому writable mount не должен быть `hostPath`.
+  уже выданные контейнеру, и не заменяет `drop: ALL`. Kubernetes делает это значение effective
+  `true`, если контейнер `privileged` или имеет `CAP_SYS_ADMIN`.
+- **`readOnlyRootFilesystem: true`** монтирует root filesystem контейнера read-only и запрещает
+  запись в его writable rootfs layer. Это не делает immutable image layers. Приложение
+  по-прежнему может писать в явно смонтированные тома, поэтому writable mount не должен быть
+  `hostPath`.
 - **`seccompProfile.type: RuntimeDefault`** включает профиль runtime по умолчанию для всех
   контейнеров Pod. Он отсекает ряд редко нужных и рискованных syscalls, но совместимость
   проверяют на настоящей нагрузке.
@@ -159,7 +165,7 @@ flowchart TB
 |---|---|---|
 | `runAsUser`, `runAsGroup`, `runAsNonRoot` | Pod и container | container override действует только на него; не прячьте исключение в sidecar |
 | `seccompProfile` | Pod и container | container profile override сильнее; задайте `RuntimeDefault` на Pod и документируйте любой `Localhost` override |
-| `fsGroup`, `fsGroupChangePolicy`, `supplementalGroups` | только Pod | это контекст общего Pod и его volumes; контейнерный `fsGroup` не существует |
+| `fsGroup`, `fsGroupChangePolicy`, `supplementalGroups`, `supplementalGroupsPolicy` | только Pod | это контекст общего Pod и его volumes; контейнерный `fsGroup` не существует |
 | `capabilities`, `privileged`, `allowPrivilegeEscalation`, `readOnlyRootFilesystem` | только container | повторите hardened-настройки у **каждого** container и initContainer |
 | `hostNetwork`, `hostPID`, `hostIPC`, `hostUsers` | Pod spec | это не `securityContext`; контейнер не может безопасно «переопределить» доступ к host namespace |
 
@@ -186,6 +192,37 @@ spec:
 унаследован, если его не переопределили. Это не ошибка само по себе, но `Localhost` требует,
 чтобы профиль уже был установлен на **каждой** ноде, куда может попасть Pod; иначе контейнер
 не создастся. Не судите по одному `spec.securityContext`: inspect каждого container.
+
+### `supplementalGroupsPolicy: Strict`: без неявных групп образа
+
+По умолчанию `Merge` добавляет к supplementary groups членство primary user из `/etc/group`
+образа. `Strict` не делает этот merge: остаются только GID из `fsGroup`, `supplementalGroups`
+и `runAsGroup`. Это полезно, когда группа, объявленная в образе, не должна дать процессу
+неожиданный доступ к volume.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: strict-groups
+spec:
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 4000
+    supplementalGroups: [5000]
+    supplementalGroupsPolicy: Strict
+  containers:
+  - name: app
+    image: registry.example.invalid/app:1.4.2
+```
+
+В Kubernetes v1.36 функция beta и включена по умолчанию. Если feature gate отключали, его
+нужно включить у API server и kubelet; также нужен CRI: известная поддержка есть у containerd
+с v2.0 и CRI-O с
+v1.31. Проверяйте ноду по `status.features.supplementalGroupsPolicy: true`. Начиная с v1.33
+kubelet отклоняет Pod с `Strict` на неподдерживаемой ноде, а не молча применяет `Merge`; в
+событиях будет `SupplementalGroupsPolicyNotSupported`.
 
 ### Init, sidecar и ephemeral container - отдельные процессы
 
@@ -216,13 +253,15 @@ admission policy, ограничьте время жизни и зафиксир
 | `hostNetwork: true` | network namespace ноды, host ports и её IP | обход изоляции Pod-сети, конфликты портов, доступ к localhost сервисам ноды | Service, Ingress, NetworkPolicy и обычная Pod-сеть |
 | `hostIPC: true` | IPC namespace ноды | доступ к разделяемой памяти и IPC host-процессов | volume, Service или очередь сообщений с auth |
 | `hostPath` volume | выбранный путь filesystem ноды | чтение kubelet credentials, container sockets, runtime state или запись в host | PVC, ConfigMap, Secret, `emptyDir`; узкий read-only путь только доверенному daemon |
-| `hostUsers: false` | включает user namespace для Pod, если поддержано кластером | это **дополнительный** барьер, но не замена остальным ограничениям | включать там, где образ/runtime совместимы, не отменяя baseline |
 
-`privileged: true` принудительно делает `allowPrivilegeEscalation` эффективным и конфликтует
-с целью hardened workload. Не пытайтесь «исправить» это соседним `allowPrivilegeEscalation:
-false`: контейнер остаётся привилегированным. Аналогично, `hostNetwork: true` нельзя сделать
-безопасным одним `NetworkPolicy`, поскольку NetworkPolicy обычно рассчитана на обычную
-Pod-сеть, а не на сетевой namespace ноды.
+`privileged: true` принудительно делает `allowPrivilegeEscalation` effective `true` и
+конфликтует с целью hardened workload. Такой контейнер также получает seccomp `Unconfined`,
+AppArmor для него игнорируется, а SELinux context становится `unconfined_t`. Не пытайтесь
+«исправить» это соседним `allowPrivilegeEscalation: false`: контейнер остаётся
+привилегированным. То же effective-правило для `allowPrivilegeEscalation` действует при
+`CAP_SYS_ADMIN`. Аналогично, `hostNetwork: true` нельзя сделать безопасным одним
+`NetworkPolicy`, поскольку NetworkPolicy обычно рассчитана на обычную Pod-сеть, а не на
+сетевой namespace ноды.
 
 ```yaml
 # Красные флаги для обычного приложения
@@ -263,6 +302,37 @@ kubectl get pods -A -o json | jq -r '
 Команда показывает кандидатов, но не verdict. Системный namespace и DaemonSet требуют
 контекстного review: владелец, назначение, node placement, минимальный доступ, manifest и
 контроль admission.
+
+### `hostUsers: false`: user namespaces в Kubernetes v1.36
+
+В Kubernetes v1.36 user namespaces stable. `hostUsers: false` просит kubelet создать для Pod
+user namespace и подобрать непересекающееся отображение UID/GID: UID 0 или `runAsUser` внутри
+контейнера отображается на непривилегированный UID/GID ноды. Capabilities действуют только в
+этом namespace: например, `CAP_SYS_ADMIN` не даёт прав за его пределами. Это дополнительный
+барьер для workload, которому нужен root внутри контейнера, но не нужен доступ к host
+namespaces или ресурсам ноды.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: userns-tool
+spec:
+  hostUsers: false
+  containers:
+  - name: tool
+    image: registry.example.invalid/tool:1.4.2
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+```
+
+Это Linux-only режим. Нельзя совместить его с `hostNetwork`, `hostPID` или `hostIPC`, а raw
+block volumes через `volumeDevices` также запрещены. Нужны idmapped mounts на filesystem ноды
+и всех volume, поддерживающий CRI/OCI runtime и совместимое ядро; в актуальной документации
+указаны containerd v2.0+, CRI-O v1.25+, runc v1.2+ или crun v1.9+. NFS не поддерживает
+idmapped mounts. Перед rollout проверьте эти условия на всех нодах, куда может попасть Pod.
 
 ## 18.5. Read-only root filesystem без поломки приложения
 
@@ -461,7 +531,7 @@ kubectl exec hardened-web -c app -- sh -c 'grep -E "^(Cap(Inh|Prm|Eff|Bnd|Amb)|N
 | `id -u` в app | не `0` | образ/override запускает root; проверьте Pod и container contexts |
 | запись в `/` | `Read-only file system` | root filesystem не read-only или запись попала в широкий mount |
 | запись в `/tmp` | успешна в выделенном `emptyDir` | нет mount, неверные UID/GID или `fsGroup` не поддержан volume driver |
-| попытка setuid escalation | нет новых прав, `NoNewPrivs: 1` | `allowPrivilegeEscalation` отсутствует/true, container privileged или runtime policy не та |
+| попытка setuid escalation | нет новых прав, `NoNewPrivs: 1` | `allowPrivilegeEscalation` отсутствует/true, container privileged, имеет `CAP_SYS_ADMIN` или runtime policy не та |
 | небезопасный syscall в test Pod | отказ seccomp | profile не применён, test не тот syscall или запущен другой container |
 | Pod с `privileged: true` в restricted namespace | admission reject | PSA/политика не enforce либо namespace имеет исключение |
 
@@ -544,7 +614,7 @@ capabilities, изолируют от application namespaces и пересмат
 | **SecurityContext** | Kubernetes-поля, задающие identity и ограничения процесса или Pod. |
 | **capability** | Отдельная привилегия Linux; `drop: ["ALL"]` убирает стартовый набор. |
 | **no_new_privs** | Флаг ядра, запрещающий получить дополнительные права через `exec`; его включает `allowPrivilegeEscalation: false`. |
-| **read-only root filesystem** | Режим, в котором image layer нельзя изменять; разрешённые записи выносят в тома. |
+| **read-only root filesystem** | Root filesystem контейнера смонтирована read-only; запись в writable rootfs layer запрещена, а разрешённые записи выносят в тома. |
 | **seccomp** | Фильтр системных вызовов процесса; `RuntimeDefault` - поддерживаемый runtime baseline. |
 | **effective state** | Реальные UID, capabilities, mounts и seccomp процесса после запуска, а не только поля манифеста. |
 | **host namespace** | Namespace ноды, который Pod может разделять через `hostPID`, `hostNetwork` или `hostIPC`. |
@@ -595,6 +665,7 @@ baseline находится в template, admission предотвращает р
 - [Kubernetes: Restrict a Container's Syscalls with seccomp](https://kubernetes.io/docs/tutorials/security/seccomp/)
 - [Kubernetes: Volumes - emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir)
 - [Kubernetes: Linux kernel security constraints](https://kubernetes.io/docs/concepts/security/linux-kernel-security-constraints/)
+- [Kubernetes: User Namespaces](https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 17](../17/ru.md) · [Глава 19](../19/ru.md)

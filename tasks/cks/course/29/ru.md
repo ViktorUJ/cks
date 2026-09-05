@@ -54,7 +54,8 @@ Falco особенно полезен для следующих сигналов
 
 - shell или package manager внутри application container;
 - доступ к чувствительным путям, устройствам и socket (`/etc/shadow`, `/dev/mem`,
-  `/var/run/docker.sock`);
+  `/var/run/docker.sock`); путь `/etc/shadow` обычно относится к файловой системе
+  контейнера и означает файл ноды только при явном монтировании host filesystem;
 - запуск процесса с неожиданной командой, capability или namespace;
 - попытки записать в системный путь, загрузить kernel module или изменить сеть;
 - подозрительные сетевые соединения, если соответствующий event source и правило включены.
@@ -75,10 +76,10 @@ container runtime и Kubernetes и проверяет против rules.
 flowchart TB
     app["процесс в контейнере\nsh / curl / приложение"] --> syscall["syscall: execve, openat, connect"]
     syscall --> kernel["ядро Linux ноды"]
-    kernel --> driver["Falco driver\nkernel module или eBPF probe"]
+    kernel --> driver["Falco driver\nkmod или modern eBPF"]
     driver --> userspace["Falco userspace\nfields + rule engine"]
     runtime["containerd / CRI\nPod и container metadata"] --> userspace
-    userspace --> output["stdout, syslog, journal,\nwebhook или plugin"]
+    userspace --> output["stdout, syslog, journal,\nHTTP(S) или Falcosidekick"]
     style app fill:#f4b400,color:#000
     style syscall fill:#db4437,color:#fff
     style kernel fill:#326ce5,color:#fff
@@ -88,18 +89,27 @@ flowchart TB
     style output fill:#0f9d58,color:#fff
 ```
 
-Два распространённых способа захвата syscall-событий:
+В Falco 0.44 legacy eBPF probe удалён. Для syscall event source выбирают один из
+поддерживаемых driver: `kmod` или `modern_ebpf`.
 
 | Способ | Как работает | Плюсы | Ограничения и проверка |
 |---|---|---|---|
-| kernel module | модуль Falco загружается в ядро и передаёт события userspace | привычный путь для поддерживаемого kernel | нужны совместимость kernel/header и право загрузить модуль; после обновления ядра driver может перестать собираться |
-| eBPF probe | программа eBPF загружается в ядро и получает события через BPF-механизм | обычно не требует сборки отдельного kernel module; удобен на immutable/minimal host | требуются kernel capabilities и совместимость; часть окружений запрещает BPF или требует privileged agent |
+| `kmod` | модуль Falco загружается в ядро и передаёт события userspace | привычный путь для поддерживаемого kernel | нужны совместимость kernel/header и право загрузить модуль; после обновления ядра driver может перестать собираться |
+| `modern_ebpf` | современный eBPF driver Falco использует CO-RE и не собирает отдельный kernel module | не требует kernel headers и сборки модуля; удобен на immutable/minimal host | требуются поддерживаемый kernel и BPF-возможности; часть окружений запрещает BPF или требует privileged agent |
 
-Современные варианты Falco также могут использовать eBPF tracepoints или BPF CO-RE. Не
-выбирайте backend только по названию: сверяйте поддерживаемую версию Falco, kernel ноды,
-политику хоста и фактический startup log. Строки вроде `Opening 'syscall' source with
-Kernel module` или информация об eBPF backend - доказательство выбранного пути, а не
-достаточно только параметра Helm.
+Не выбирайте backend только по названию: сверяйте поддерживаемую версию Falco, kernel ноды,
+политику хоста и фактический startup log. Строки о `Kernel module` или `modern eBPF` в
+startup log - доказательство выбранного пути, а не достаточно только параметра Helm.
+
+Для обогащения CRI metadata Falco нужен фактический socket runtime ноды. Современные
+обычные пути: containerd - `/run/containerd/containerd.sock`, CRI-O - `/run/crio/crio.sock`;
+`/var/run` на Linux часто является ссылкой на `/run`, но путь и доступ надо подтвердить на
+каждой ноде. Не монтируйте socket по памяти: найдите его и сопоставьте с runtime.
+
+```bash
+sudo find /run /var/run -type s \( -name containerd.sock -o -name crio.sock \) -print 2>/dev/null
+kubectl get nodes -o wide
+```
 
 Агент наблюдения имеет повышенные права, поскольку читает системные события и часто
 использует host namespaces, `/proc`, runtime socket или eBPF. Это обоснованное исключение
@@ -109,8 +119,9 @@ Kernel module` или информация об eBPF backend - доказате�
 
 ## 29.3. Установка: пакет на ноде или DaemonSet
 
-Выбор зависит от модели эксплуатации. Для экзамена или одной ноды пакетный сервис проще
-диагностировать через `systemctl` и `journalctl`. Для Kubernetes-кластера обычно выбирают
+Выбор зависит от модели эксплуатации. Для экзамена или одной ноды пакетную установку
+проще диагностировать через доступный service manager и его журнал; `systemctl` и
+`journalctl` применимы только на systemd-системах. Для Kubernetes-кластера обычно выбирают
 DaemonSet: один Falco Pod размещается на каждой ноде и получает доступ к событиям именно
 этой ноды.
 
@@ -121,24 +132,29 @@ DaemonSet: один Falco Pod размещается на каждой ноде 
 архитектуру и поддерживаемый kernel. В production закрепляйте проверенную версию пакета в
 системе управления конфигурацией, а не обновляйте agent непроверенным latest.
 
+Имя unit и даже наличие systemd зависят от дистрибутива и способа установки: не считайте
+`falco.service` универсальным. Если пакет зарегистрировал systemd unit, обнаружьте его;
+иначе используйте service manager и журналы, поставленные с пакетом.
+
 ```bash
 # На ноде: добавить официальный Falco repository согласно текущей документации Falco.
-# После установки проверить service и выбранный драйвер.
 sudo apt-get update
 sudo apt-get install -y falco
-sudo systemctl enable --now falco
 
-sudo systemctl is-active falco
-sudo systemctl status falco --no-pager
-sudo journalctl -u falco -b --no-pager | tail -n 80
+falco_unit="$(systemctl list-unit-files --no-legend 2>/dev/null   | awk '$1 ~ /^falco.*\.service$/ {print $1; exit}')"
+test -n "$falco_unit" || { echo 'Falco systemd unit не найден'; exit 1; }
+sudo systemctl enable --now "$falco_unit"
+sudo systemctl is-active "$falco_unit"
+sudo systemctl status "$falco_unit" --no-pager
+sudo journalctl -u "$falco_unit" -b --no-pager | tail -n 80
 ```
 
-Если сервис не стартует, сначала смотрят журнал, kernel и загруженные модули, а не меняют
-правила вслепую:
+Если агент не стартует, сначала смотрят его журнал, kernel и загруженные модули, а не
+меняют правила вслепую. Для systemd-варианта:
 
 ```bash
 uname -r
-sudo journalctl -u falco -b --no-pager | grep -Ei 'driver|ebpf|module|error|fail'
+sudo journalctl -u "$falco_unit" -b --no-pager | grep -Ei 'driver|ebpf|module|error|fail'
 lsmod | grep -i falco || true
 sudo falco --version
 ```
@@ -159,10 +175,11 @@ sudo falco --version
 helm repo add falcosecurity https://falcosecurity.github.io/charts
 helm repo update
 
-# Укажите проверенную версию chart вместо <chart-version>.
+# Укажите проверенную версию chart через переменную CHART_VERSION.
+CHART_VERSION="${CHART_VERSION:?set chart version}"
 helm upgrade --install falco falcosecurity/falco \
   --namespace falco --create-namespace \
-  --version <chart-version> \
+  --version "$CHART_VERSION" \
   --set driver.kind=modern_ebpf
 
 kubectl -n falco get daemonset,pods -o wide
@@ -247,8 +264,9 @@ flowchart LR
     style priority fill:#db4437,color:#fff
 ```
 
-Пример локального файла ниже ловит запуск `sh` или `bash` внутри контейнера. Он намеренно
-пишет Pod/namespace, image и команду: alert без этих полей мало пригоден для triage.
+Пример локального файла ниже ловит интерактивный запуск `sh` или `bash` внутри
+контейнера: `proc.tty != 0` требует выделенный TTY. Он намеренно пишет Pod/namespace,
+image, доступный image digest, host и команду: alert без этих полей мало пригоден для triage.
 
 ```yaml
 # /etc/falco/falco_rules.local.yaml
@@ -261,27 +279,35 @@ flowchart LR
 - macro: container_process_exec
   condition: evt.type in (execve, execveat) and container
 
-- rule: Shell in container
-  desc: Detect an interactive shell process started in a container
-  condition: container_process_exec and proc.name in (interactive_shell_names)
+- rule: Interactive shell in container
+  desc: Detect an interactive shell with a TTY started in a container
+  condition: >
+    container_process_exec and proc.name in (interactive_shell_names) and proc.tty != 0
   output: >
-    Shell in container (user=%user.name command=%proc.cmdline process=%proc.name
+    Interactive shell in container (user=%user.name command=%proc.cmdline process=%proc.name
     container_id=%container.id container_image=%container.image
+    container_image_digest=%container.image.digest host=%host.name
     namespace=%k8s.ns.name pod=%k8s.pod.name)
   priority: WARNING
   tags: [container, shell, mitre_execution]
 
 - rule: Sensitive file opened in container
-  desc: Detect a sensitive host-like file opened by a container process
+  desc: Detect a container-local sensitive file opened by a container process
   condition: >
     open_read and container and fd.name in (sensitive_files)
   output: >
     Sensitive file opened in container (file=%fd.name user=%user.name
-    command=%proc.cmdline container_id=%container.id namespace=%k8s.ns.name
-    pod=%k8s.pod.name)
+    command=%proc.cmdline container_id=%container.id container_image=%container.image
+    container_image_digest=%container.image.digest host=%host.name
+    namespace=%k8s.ns.name pod=%k8s.pod.name)
   priority: WARNING
   tags: [container, filesystem, mitre_credential_access]
 ```
+
+`/etc/shadow` в этом правиле - путь, наблюдаемый в mount namespace контейнера. Он не
+доказывает чтение `/etc/shadow` ноды, если в контейнер не смонтирована host filesystem.
+`%container.image.digest` зависит от metadata runtime и может быть `<NA>`; `%host.name`
+связывает alert с хостом, на котором Falco увидел событие.
 
 `open_read` в примере - macro из standard Falco rules. Поэтому порядок rules files имеет
 значение: upstream rules с этим macro должны загрузиться раньше local file. Если ваш
@@ -295,8 +321,9 @@ configuration использует другое имя macro или не вкл�
 
 ```bash
 sudo falco -c /etc/falco/falco.yaml --dry-run
-sudo systemctl restart falco
-sudo journalctl -u falco -n 80 --no-pager
+# Если Falco установлен как systemd unit, используйте ранее обнаруженное имя unit.
+sudo systemctl restart "$falco_unit"
+sudo journalctl -u "$falco_unit" -n 80 --no-pager
 ```
 
 Для DaemonSet проверка происходит в Pod startup log. Добавьте file декларативно через
@@ -340,19 +367,20 @@ kubectl -n runtime-demo run falco-shell \
   --command -- sleep 600
 kubectl -n runtime-demo wait --for=condition=Ready pod/falco-shell --timeout=90s
 
-# Это действие должно соответствовать custom rule "Shell in container".
-kubectl -n runtime-demo exec falco-shell -- sh -c 'id; echo falco-rule-test'
+# -it выделяет TTY и соответствует условию proc.tty != 0 в правиле.
+kubectl -n runtime-demo exec -it falco-shell -- sh -c 'id; echo falco-rule-test'
 ```
 
-При package-install смотрят unit journal; на системах с syslog Falco output также может
-попасть в `/var/log/syslog`. Фильтр ищет имя правила из `output`, а не случайное слово из
-startup log.
+При package-install смотрят журнал, заданный service manager. Для systemd unit это
+`journalctl`; на системах с настроенным syslog Falco output также может попасть в
+`/var/log/syslog`. Фильтр ищет имя правила из `output`, а не случайное слово из startup log.
 
 ```bash
-sudo journalctl -u falco --since '5 minutes ago' --no-pager \
-  | grep 'Shell in container'
+sudo journalctl -u "$falco_unit" --since '5 minutes ago' --no-pager \
+  | grep 'Interactive shell in container'
 
-sudo grep 'Shell in container' /var/log/syslog | tail -n 20
+# Проверяйте syslog только если он настроен как output Falco в этой системе.
+sudo grep 'Interactive shell in container' /var/log/syslog | tail -n 20
 ```
 
 При DaemonSet alert будет в stdout конкретного Falco Pod на ноде, где исполнялся
@@ -366,13 +394,13 @@ falco_pod="$(kubectl -n falco get pods -l app.kubernetes.io/name=falco \
   --field-selector spec.nodeName="$node" \
   -o jsonpath='{.items[0].metadata.name}')"
 kubectl -n falco logs "$falco_pod" -c falco --since=5m \
-  | grep 'Shell in container'
+  | grep 'Interactive shell in container'
 ```
 
 Ожидаемый смысл строки, а не фиксированные значения, такой:
 
 ```text
-Warning Shell in container (user=root command=sh -c id; echo falco-rule-test process=sh container_id=... container_image=busybox:1.36 namespace=runtime-demo pod=falco-shell)
+Warning Interactive shell in container (user=root command=sh -c id; echo falco-rule-test process=sh container_id=... container_image=busybox:1.36 container_image_digest=... host=worker-1 namespace=runtime-demo pod=falco-shell)
 ```
 
 Значения `user`, container ID, имя Pod и timestamp всегда зависят от окружения. Сохраните
@@ -395,35 +423,75 @@ startup log успешны; название поля совместимо с в
 
 Минимальная operational-проверка после установки или изменения rules:
 
-1. **Покрытие нод.** Package service активен на каждой ноде либо DaemonSet имеет ready Pod
-   на каждой intended node.
-2. **Backend.** Startup log подтверждает загрузку kernel module/eBPF и event source
+1. **Покрытие нод.** Для package-install агент и выбранный driver подтверждены на каждой
+   ноде. Для DaemonSet число `READY` должно совпасть с `DESIRED`, а список Falco Pod должен
+   явно содержать ровно один ready Pod на каждой intended node; отдельно проверяют ноды,
+   исключённые selector, taint или toleration.
+2. **Backend.** Startup log подтверждает загрузку `kmod` или `modern_ebpf` и event source
    `syscall`; в нём нет driver/schema errors.
 3. **Rules.** `falco_rules.local.yaml` валиден, подключён после standard rules, его
    изменения хранятся декларативно.
 4. **Событие.** Контролируемое действие - shell в test Pod - создаёт alert с именем rule.
-5. **Контекст.** Alert содержит минимум namespace, Pod, container/image, process/command и
-   время; инженер может найти владельца workload.
+5. **Контекст.** Alert содержит минимум namespace, Pod, container/image, доступный image
+   digest, host/node, process/command и время; инженер может найти владельца workload.
 6. **Реакция.** Определено, кто получает alert и что происходит дальше: triage, escalation,
    изоляция, evidence preservation и closure.
 
 Пример быстрой проверки package-install:
 
 ```bash
-sudo systemctl is-active --quiet falco && echo 'falco service: active'
+sudo systemctl is-active --quiet "$falco_unit" && echo 'Falco systemd unit: active'
 sudo falco --validate /etc/falco/falco_rules.local.yaml
-sudo journalctl -u falco -b --no-pager | tail -n 100
+sudo journalctl -u "$falco_unit" -b --no-pager | tail -n 100
 ```
 
 И DaemonSet:
 
 ```bash
 kubectl -n falco rollout status daemonset/falco --timeout=5m
-kubectl -n falco get pods -l app.kubernetes.io/name=falco -o wide
+kubectl -n falco get daemonset falco \
+  -o custom-columns='NAME:.metadata.name,DESIRED:.status.desiredNumberScheduled,CURRENT:.status.currentNumberScheduled,READY:.status.numberReady'
+kubectl -n falco get pods -l app.kubernetes.io/name=falco \
+  -o custom-columns='POD:.metadata.name,NODE:.spec.nodeName,PHASE:.status.phase,FALCO_READY:.status.containerStatuses[?(@.name=="falco")].ready'
+kubectl get nodes -o wide
 kubectl -n falco logs daemonset/falco -c falco --tail=100
 ```
 
+Сопоставьте колонку `NODE` с каждой intended node, а `FALCO_READY` - с `true`. Если node
+отсутствует, `READY < DESIRED` или Pod не ready, это непокрытая нода, а не успешная установка.
+
+```bash
+# Показать selector и scheduling-причины для отсутствующих нод.
+kubectl -n falco describe daemonset falco
+```
+
 ## 29.8. Как это применяют в продакшене
+
+### Production extension: lifecycle rules и доставка alert
+
+Следующие практики дополняют базовую установку и проверку выше как production extension:
+они нужны для управляемого жизненного цикла rules и централизованной доставки, но не
+заменяют проверку локального alert на каждой ноде.
+
+- **Управляйте rule artifact через `falcoctl`.** Устанавливайте проверенный artifact с
+  точной версией, проверяйте установленный набор и включение его файлов в `rules_files`.
+  Не выполняйте массовое обновление artifact без теста совместимости с версией Falco и
+  review изменений rules.
+
+  ```bash
+  falcoctl artifact install falco-rules:<verified-rules-version>
+  falcoctl artifact list
+  sudo falco -c /etc/falco/falco.yaml --dry-run
+  ```
+
+  Фиксируйте в Git и configuration management версии Falco package/chart, `falcoctl` и
+  каждого rules artifact. Обновление сначала проверяют в test-кластере, затем закрепляют
+  новую совместимую версию, а не оставляют плавающий `latest`.
+- **Доставляйте alert штатным output.** Для прямой интеграции используйте native HTTP(S)
+  output Falco; для fan-out в SIEM, chat или incident system используйте Falcosidekick как
+  downstream получатель Falco events. Falco plugins - отдельный механизм для event source и
+  связанных полей/обработки, а не универсальный output channel. Подключайте plugin только
+  по его совместимой документации и проверяйте его отдельно.
 
 - **Проектируйте сигнал вместе с реакцией.** Каждое high-priority rule должно иметь owner,
   канал доставки, runbook и понятный способ отличить expected action от incident. Alert без
@@ -465,13 +533,14 @@ kubectl -n falco logs daemonset/falco -c falco --tail=100
 
 - Falco наблюдает поведение во время выполнения и дополняет, но не заменяет image scan,
   admission policy и Kubernetes audit logs.
-- Он получает события syscall через kernel module или eBPF backend, затем обогащает их
+- Он получает события syscall через `kmod` или `modern_ebpf`, затем обогащает их
   container/Kubernetes metadata и проверяет rules.
-- Для одной ноды подходит пакет и systemd service; для кластера используют DaemonSet,
-  проверяя coverage каждой ноды и startup log driver.
+- Для одной ноды подходит пакет с доступным в системе service manager; для кластера
+  используют DaemonSet, проверяя coverage каждой intended node и startup log driver.
 - Rule состоит из `condition`, `output` и `priority`; `macro` и `list` предотвращают
   копирование логики. Свои правила хранят в `falco_rules.local.yaml`, а не в upstream file.
-- Полезный alert несёт rule name, время, process/command, container/image, namespace и Pod.
+- Полезный alert несёт rule name, время, process/command, container/image, доступный image
+  digest, host/node, namespace и Pod.
 - Установка считается проверенной только после контролируемого runtime-события и найденного
   alert с ожидаемым output.
 

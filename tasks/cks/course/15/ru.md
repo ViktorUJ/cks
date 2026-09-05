@@ -6,7 +6,7 @@
 > пакеты и небезопасный доступ к container runtime. Теперь ограничим последствия оставшейся
 > точки входа: кому разрешено войти на хост, что пользователь может сделать через `sudo`,
 > какие файлы он может читать или менять и откуда вообще доступна нода. Это домен
-> **System Hardening** CKS (10%).
+> **System Hardening** CKS (15%).
 
 > **Что нужно знать из CKA.** Базовые пользователи, группы, права файлов, процессы,
 > systemd и сетевые команды разобраны в [главе Linux CKA](../../../cka/course/00-5-linux/ru.md).
@@ -56,14 +56,16 @@ Least privilege означает не «никому ничего не дава�
 
 ```bash
 # Инвентаризация локальных пользователей и групп.
+USER_TO_REVIEW='user-to-review'
+SERVICE_USER='service-user'
 getent passwd
 getent group
-id <user>
-groups <user>
+id "$USER_TO_REVIEW"
+groups "$USER_TO_REVIEW"
 
 # Заблокировать неиспользуемую интерактивную учётную запись, не удаляя её данные.
-sudo usermod --lock <user>
-sudo usermod --shell /usr/sbin/nologin <service-user>
+sudo usermod --lock "$USER_TO_REVIEW"
+sudo usermod --shell /usr/sbin/nologin "$SERVICE_USER"
 ```
 
 Сервисным аккаунтам не нужен интерактивный shell, домашний каталог и членство в
@@ -79,13 +81,33 @@ sudo usermod --shell /usr/sbin/nologin <service-user>
 даёт сохранить файл с небезопасным режимом.
 
 ```bash
+# Разрешите путь через предсказуемый системный PATH, а не предполагая фиксированный путь systemctl.
+SYSTEMCTL_PATH="$(env -i PATH=/usr/sbin:/usr/bin:/sbin:/bin sh -c 'command -v systemctl')"
+test -n "$SYSTEMCTL_PATH" && SYSTEMCTL_PATH="$(readlink -f -- "$SYSTEMCTL_PATH")"
+sudo test -x "$SYSTEMCTL_PATH"
+sudo stat -c '%U:%G %a %n' "$SYSTEMCTL_PATH"  # ожидаются root:root и отсутствие записи для других
+```
+
+Надёжнее не предоставлять `systemctl` напрямую: даже узкое сопоставление аргументов легко
+расширить ошибочной правкой. Создайте root-владельческий wrapper без аргументов; он вызывает
+**ровно** путь, разрешённый выше, и всегда отключает pager. Перед созданием убедитесь, что
+`/usr/local/sbin` принадлежит root и недоступен для записи непривилегированным пользователям.
+
+```bash
+sudo sh -c 'cat > /usr/local/sbin/k8s-kubelet-status' <<'"'"'EOF'"'"'
+#!/bin/sh
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+SYSTEMCTL_PATH="$(command -v systemctl)" || exit 1
+exec "$SYSTEMCTL_PATH" --no-pager status kubelet
+EOF'
+sudo chown root:root /usr/local/sbin/k8s-kubelet-status
+sudo chmod 0755 /usr/local/sbin/k8s-kubelet-status
 sudo visudo -f /etc/sudoers.d/k8s-operator
 ```
 
 ```sudoers
-# /etc/sudoers.d/k8s-operator
-# Разрешена только проверка состояния kubelet без интерактивной root-shell.
-Cmnd_Alias KUBELET_STATUS = /bin/systemctl status kubelet
+# /etc/sudoers.d/k8s-operator - точный wrapper, без wildcard и без аргументов.
+Cmnd_Alias KUBELET_STATUS = /usr/local/sbin/k8s-kubelet-status
 k8s-operator ALL=(root) KUBELET_STATUS
 ```
 
@@ -93,7 +115,7 @@ k8s-operator ALL=(root) KUBELET_STATUS
 
 ```bash
 sudo -l -U k8s-operator
-sudo -u k8s-operator sudo /bin/systemctl status kubelet
+sudo -u k8s-operator sudo /usr/local/sbin/k8s-kubelet-status
 sudo -u k8s-operator sudo /bin/bash    # должно завершиться отказом
 ```
 
@@ -163,8 +185,9 @@ sudo stat -c '%U %G %a %n' /etc/kubernetes/admin.conf
 сначала установите, какому пакету они принадлежат и нужен ли он на ноде.
 
 ```bash
+BINARY_PATH='/path/to/reviewed-binary'
 sudo find / -xdev -type f -perm /6000 -printf '%m %u:%g %p\n' 2>/dev/null
-sudo dpkg -S <path-to-reviewed-binary> 2>/dev/null || true
+sudo dpkg -S "$BINARY_PATH" 2>/dev/null || true
 ```
 
 ## 15.4. Firewall: внешнему источнику доступны только нужные порты
@@ -177,7 +200,7 @@ worker и monitoring-источниками. Полный список порт�
 
 ```bash
 sudo ss -lntup
-sudo ss -lntup | grep -E ':(22|6443|10250|2379|2380)\b' || true
+sudo ss -lntup | grep -E ':(22|6443|10250|10256|10257|10259|2379|2380)\b' || true
 ```
 
 | Порт | Обычное назначение | Кто должен иметь доступ |
@@ -185,7 +208,12 @@ sudo ss -lntup | grep -E ':(22|6443|10250|2379|2380)\b' || true
 | `22/tcp` | SSH | только bastion/VPN/административный CIDR |
 | `6443/tcp` | kube-apiserver | worker/control-plane и разрешённые администраторы |
 | `10250/tcp` | защищённый kubelet API | control plane и нужный monitoring, не интернет |
+| `10256/tcp` | kube-proxy healthz | только назначенные health-check/monitoring-источники, если порт не loopback-only |
+| `10257/tcp` | kube-controller-manager | control-plane/monitoring только при необходимости и не из интернета |
+| `10259/tcp` | kube-scheduler | control-plane/monitoring только при необходимости и не из интернета |
 | `2379-2380/tcp` | etcd client/peer | только control-plane/etcd peers |
+| `30000-32767/tcp`, `30000-32767/udp` (default) | NodePort | только CIDR клиентов/LB, которым нужны опубликованные Service; фактический диапазон сверяют с `--service-node-port-range` API server |
+| порты CNI (переменные) | overlay, node-to-node и Pod-трафик | ровно CIDR и протоколы из документации выбранного CNI |
 
 Не смешивайте три менеджера правил без понимания backend. `ufw` является высокоуровневой
 обёрткой, а современные `iptables` часто работают поверх `nf_tables`; параллельное ручное
@@ -195,9 +223,13 @@ sudo ss -lntup | grep -E ':(22|6443|10250|2379|2380)\b' || true
 
 ### Вариант A: `ufw`
 
-На Ubuntu с `ufw` сначала разрешите текущий административный источник и только после этого
-включайте default deny. Выполняйте это из отдельной консоли или с доступом к out-of-band
-console.
+**До `default deny` составьте allowlist по реальной топологии:** bastion/VPN, control-plane,
+worker, etcd, load balancer, monitoring, Pod/Service CIDR и именно ваш CNI. Добавьте все
+нужные роли, NodePort и CNI-порты из матрицы; их нельзя угадать универсальным правилом.
+Сохраните текущую SSH-сессию, откройте вторую независимую сессию и до включения enforcement
+проверьте адрес источника, будущие правила (`ufw status numbered`) и out-of-band console.
+После включения не закрывайте сохранённую сессию, пока не подтвердите новый SSH-вход и
+работу kubelet/API из разрешённых сетей.
 
 ```bash
 # Пример: SSH разрешён только из административной сети.
@@ -205,6 +237,7 @@ sudo ufw allow from 203.0.113.0/24 to any port 22 proto tcp
 
 # Пример: API доступен только из сети нод и администраторов.
 sudo ufw allow from 10.0.0.0/16 to any port 6443 proto tcp
+# До этой точки добавьте роль- и CNI-специфичные allow-правила своей установки.
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw enable
@@ -214,8 +247,9 @@ sudo ufw status numbered
 Перед удалением правила просмотрите номер и назначение, затем удаляйте адресно:
 
 ```bash
+RULE_NUMBER='1'
 sudo ufw status numbered
-sudo ufw delete <rule-number>
+sudo ufw delete "$RULE_NUMBER"
 ```
 
 ### Вариант B: `iptables`
@@ -292,8 +326,11 @@ SSH часто является единственным удалённым вх
 упрощает brute force и убирает индивидуальную идентичность в журналах.
 
 На современных OpenSSH удобнее создать небольшой drop-in, а не редактировать большой
-vendor-файл. Сначала проверьте, что каталог включается вашей конфигурацией через
-`Include`; затем создайте файл с правами root и валидируйте итоговую конфигурацию.
+vendor-файл. Сначала проверьте, что каталог включается вашей конфигурацией через `Include`.
+Выберите **один** профиль ниже: оба запрещают парольный вход, но MFA-профиль дополнительно
+требует ключ и PAM keyboard-interactive. Не включайте два профиля одновременно.
+
+**Профиль A - только ключ.**
 
 ```bash
 sudo install -d -m 755 /etc/ssh/sshd_config.d
@@ -309,18 +346,34 @@ sudo sshd -t
 sudo systemctl reload ssh
 ```
 
-`AllowUsers` - сильное ограничение, но оно блокирует всех неуказанных пользователей. Не
-применяйте его, пока не добавили все необходимые break-glass и automation-аккаунты. Если
-нужны несколько групп или пользователей, документируйте их владельцев и пересматривайте
-список вместе с выдачей доступа.
+**Профиль B - ключ + MFA через PAM keyboard-interactive.** Используйте его только после
+настройки и проверки PAM-модуля MFA; `AuthenticationMethods` требует оба фактора, а не
+заменяет ключ одноразовым кодом.
+
+```text
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+KbdInteractiveAuthentication yes
+UsePAM yes
+AuthenticationMethods publickey,keyboard-interactive:pam
+AllowUsers k8s-operator
+```
+
+Сохраните профиль B в том же `/etc/ssh/sshd_config.d/99-hardening.conf`, затем выполните
+`sudo sshd -t` и `sudo systemctl reload ssh`. `AllowUsers` - сильное ограничение, но оно
+блокирует всех неуказанных пользователей. Не применяйте его, пока не добавили необходимые
+break-glass и automation-аккаунты; документируйте владельцев и пересматривайте список.
 
 Перед закрытием текущей SSH-сессии проверьте итоговые значения и войдите второй сессией
-под разрешённым пользователем с ключом:
+под разрешённым пользователем. Для профиля A используйте только ключ; для B проверьте и
+ключ, и MFA:
 
 ```bash
-sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication|kbdinteractiveauthentication|pubkeyauthentication|allowusers'
+sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication|kbdinteractiveauthentication|pubkeyauthentication|usepam|authenticationmethods|allowusers'
+NODE_ADDRESS='node-address.example.internal'
 ssh -o PreferredAuthentications=publickey -o PasswordAuthentication=no \
-  k8s-operator@<node-address> true
+  "k8s-operator@${NODE_ADDRESS}" true
 ```
 
 Не отключайте password authentication, пока не убедились, что ключ целевого пользователя
@@ -363,10 +416,11 @@ sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication|pubkeyauthenticat
 
 ```bash
 # С хоста вне разрешённого CIDR: соединение не должно устанавливаться.
-nc -vz -w 3 <node-address> 22
+NODE_ADDRESS='node-address.example.internal'
+nc -vz -w 3 "$NODE_ADDRESS" 22
 
 # Из разрешённой административной сети: ключевой SSH должен работать.
-ssh -o BatchMode=yes k8s-operator@<node-address> 'id && sudo -l'
+ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'id && sudo -l'
 ```
 
 | Симптом | Вероятная причина | Что проверить |

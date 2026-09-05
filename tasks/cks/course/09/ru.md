@@ -6,7 +6,7 @@
 > сами компоненты control plane и kubelet: один небезопасный аргумент может открыть
 > анонимный API, диагностический endpoint или слабый TLS-канал. Затем проверим, что
 > запускаем именно опубликованные Kubernetes-бинарники и образы. Это домен **Cluster
-> Setup** (CKS, 15%).
+> Setup** (CKS, 10%).
 
 > **Что нужно из CKA.** Устройство control plane, kubeadm и static Pod разобраны в
 > [главе 35 CKA](../../../cka/course/35/ru.md), а поверхность компонентов Kubernetes - в
@@ -33,7 +33,7 @@ flowchart LR
     file["Подменённый binary\nили image"] --> runtime["Код с правами компонента"]
     api --> impact["Secrets, workload,\nэскалация прав"]
     runtime --> impact
-    harden["Минимальные флаги + TLS\nsha256 + image digest"] --> verify["Проверка здоровья\nи происхождения"]
+    harden["Минимальные флаги + TLS\nподпись + sha256 + image digest"] --> verify["Проверка здоровья\nи происхождения"]
     verify --> impact
     style net fill:#db4437,color:#fff
     style weak fill:#f4b400,color:#000
@@ -180,41 +180,47 @@ TLS уже защищает канал, но версия и набор cipher s
 обычно совместим с современными Kubernetes-клиентами; `TLS 1.3` сильнее ограничивает
 клиентов и требует отдельной проверки всего control plane, automation и monitoring.
 
+Современные defaults Go и Kubernetes уже исключают устаревшие протоколы и небезопасные
+suites; универсального «короткого безопасного списка» нет. Не закрепляйте cipher suites
+по умолчанию. Это делают только когда конкретная policy, benchmark или совместимость
+компонента требует воспроизводимого списка, после inventory сертификатов и клиентов.
+RSA-only список не является безопасным default: он ломает endpoint с ECDSA-сертификатом
+и без необходимости сужает совместимость. TLS 1.3 suites в Go обычно не управляются
+`--tls-cipher-suites`: их выбирает TLS-реализация, поэтому этот флаг касается главным
+образом TLS 1.2 и старше.
+
 Для Kubernetes-компонентов допустимые строковые значения флага обычно имеют вид
 `VersionTLS12` и `VersionTLS13`. Для etcd имя значения зависит от версии etcd: актуальный
 help часто использует `TLS1.2`/`TLS1.3`. Не переносите значение между программами по
 догадке - перед правкой проверьте `etcd --help` запущенной версии или документацию именно
-её пакета.
-
-Пример ниже использует TLS 1.2 как минимальную совместимую версию и RSA cipher suites из
-наряда. Если сертификаты компонента ECDSA, добавьте совместимые `TLS_ECDHE_ECDSA_*`
-suites. TLS 1.3 cipher suites в Go обычно не управляются `--tls-cipher-suites`: они
-выбираются реализацией TLS, поэтому этот флаг ограничивает главным образом TLS 1.2 и
-старше.
+её пакета. Например, доказательством требования benchmark «etcd принимает не ниже TLS
+1.2» служат активный `--tls-min-version` и проверенный handshake, а не произвольный
+RSA-only cipher list; сверяйте точную формулировку и версию применяемого benchmark.
 
 ```yaml
-# /etc/kubernetes/manifests/kube-apiserver.yaml, фрагмент command
+# /etc/kubernetes/manifests/kube-apiserver.yaml, фрагмент command.
+# Современные Go defaults оставляют suites без явного pinning.
 - kube-apiserver
 - --tls-min-version=VersionTLS12
-- --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+# Добавляйте --tls-cipher-suites только при утверждённой policy/совместимости.
+# Если policy требует списка, включите и ECDSA, и RSA suites, нужные вашим сертификатам:
+# - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 ```
 
 Для kubelet предпочтителен его config API; если установка передаёт параметры через
-systemd, используйте эквивалентные флаги в единственном активном источнике.
+systemd, используйте эквивалентные флаги в единственном активном источнике. Аналогично,
+`tlsCipherSuites` оставляют незаданным, пока его не требует документированная policy.
 
 ```yaml
 # /var/lib/kubelet/config.yaml, фрагмент; поддержка точных полей зависит от версии kubelet.
 tlsMinVersion: VersionTLS12
-tlsCipherSuites:
-- TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-- TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 ```
 
 ```yaml
-# /etc/kubernetes/manifests/etcd.yaml, пример для etcd, принимающего значение TLS1.2
+# /etc/kubernetes/manifests/etcd.yaml, пример для etcd, принимающего значение TLS1.2.
+# --cipher-suites не добавлен: defaults Go безопасны, если policy не требует иного.
 - etcd
 - --tls-min-version=TLS1.2
-- --cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 ```
 
 Не ограничивайте TLS только server endpoint. У etcd есть client и peer traffic, а у
@@ -260,17 +266,18 @@ kubectl get nodes
 | etcd не healthy | peer/client не может согласовать TLS или потерял доступ к key | проверка всех членских endpoint с mTLS, логи etcd, откат одной ноды |
 | `openssl` показывает TLS 1.3 cipher не из списка | TLS 1.3 ciphers контролирует TLS-библиотека | проверять minimum version и документацию версии, не считать это обходом флага |
 
-## 09.5. Verify platform binaries и образы: sha256 и digest
+## 09.5. Verify platform binaries и образы: подпись, sha256 и digest
 
-HTTPS при скачивании защищает транспорт, но не доказывает, что файл совпадает с ожидаемым
-релизом. Проверка SHA-256 связывает скачанный binary с digest, опубликованным создателем
-релиза. Она обнаруживает повреждение и случайную/злонамеренную подмену, **если** checksum
-получен по независимому доверенному каналу. Хеш, скачанный вместе с скомпрометированным
-файлом с того же недоверенного источника, не создаёт доверия.
+HTTPS при скачивании защищает транспорт, но не доказывает, кто выпустил файл. SHA-256
+проверяет **целостность**: скачанный binary равен байтам, описанным выбранным digest.
+Это не доказательство provenance: хеш, полученный вместе с файлом с того же
+недоверенного источника, или неутверждённый baseline не создаёт доверия.
 
-Для Kubernetes берите version-specific официальный release artifact и его файл
-`*.sha256`/`sha256sum` из официального release. Затем сравните именно загруженный файл,
-а не имя или размер. Фиксируйте версию в переменной: `latest` нельзя надёжно воспроизвести.
+Для Kubernetes берите version-specific официальный release artifact. Kubernetes публикует
+keyless cosign signature и certificate рядом с binary; `verify-blob` проверяет подпись и
+привязку certificate к ожидаемым identity и OIDC issuer, то есть происхождение релиза.
+Проверяйте identity и issuer явно, а не принимайте произвольный сертификат. Фиксируйте
+версию в переменной: `latest` нельзя надёжно воспроизвести.
 
 ```bash
 export K8S_VERSION=v1.36.0
@@ -278,24 +285,33 @@ export ARCH=amd64
 export BIN=kubectl
 export BASE="https://dl.k8s.io/release/${K8S_VERSION}/bin/linux/${ARCH}"
 
-# В доверенной рабочей среде получить binary и опубликованный digest.
-curl -fL --retry 3 -o "${BIN}" "${BASE}/${BIN}"
-curl -fL --retry 3 -o "${BIN}.sha256" "${BASE}/${BIN}.sha256"
+# Получить binary и опубликованные keyless signature/certificate из version-specific release.
+for FILE in "${BIN}" "${BIN}.sig" "${BIN}.cert" "${BIN}.sha256"; do
+  curl -fsSL --retry 3 --retry-delay 3 "${BASE}/${FILE}" -o "${FILE}"
+done
 
-# Нормализовать официальный digest в стандартный вход sha256sum и проверить.
+# Официальные значения Kubernetes Release Engineering для binary artifacts.
+# cosign 2+ требует оба ограничения; не убирайте их ради «успешной» проверки.
+cosign verify-blob "${BIN}" \
+  --signature "${BIN}.sig" \
+  --certificate "${BIN}.cert" \
+  --certificate-identity krel-staging@k8s-releng-prod.iam.gserviceaccount.com \
+  --certificate-oidc-issuer https://accounts.google.com
+
+# SHA-256 - дополнительная проверка равенства байтов с утверждённым release digest.
 printf '%s  %s\n' "$(tr -d '[:space:]' < "${BIN}.sha256")" "${BIN}" > "${BIN}.sha256sum"
 sha256sum --check "${BIN}.sha256sum"
 # kubectl: OK
 
-# Для уже установленного файла получить наблюдаемый digest и сверить с опубликованным.
+# Для уже установленного файла получить наблюдаемый digest и сверить с approved inventory.
 sha256sum /usr/bin/kubelet
 ```
 
-SHA-256 доказывает равенство байтов, но не заменяет проверку происхождения release.
-Когда поставщик публикует signature/checksum manifest и public key, используйте также
-его документированный механизм подписи. В production получение, проверка, approval и
-распространение binary должны быть частью CI/CD или управления пакетами, а не ручным
-копированием с произвольного URL.
+Таким образом, signature/certificate с ожидаемыми identity/issuer дают provenance, а
+checksum даёт integrity относительно доверенного release digest. Kubernetes также
+публикует подписанные SBOM (SPDX): их можно аналогично проверить `verify-blob` при
+аудите состава релиза. Это полезная компактная связь артефакта с составом, но не заменяет
+политику допуска, CI controls и остальную supply-chain практику из соответствующих глав.
 
 Container image tag изменяем: `nginx:1.27` сегодня и завтра может указывать на разные
 байты. Digest неизменяем и связывает workload с точным content-addressed объектом.
@@ -336,9 +352,10 @@ kubectl get pod digest-pinned \
 не обнаружит проблему: вредоносный binary может вернуть ожидаемую версию, а tag не
 идентифицирует content.
 
-Действуйте как при инциденте: остановите дальнейшее распространение, сохраните наблюдаемые
-хеши и imageID, сопоставьте с утверждённым release manifest, затем замените ноду или
-артефакт из доверенного источника. Не «исправляйте» mismatch изменением эталонного хеша.
+Сначала сохраните наблюдаемые хеши и imageID, сопоставьте их с утверждённым release
+manifest и проведите evidence/provenance/baseline/authorized-change triage перед выбором
+containment. Не «исправляйте» mismatch изменением эталонного хеша: при неподтверждённом
+изменении или иных признаках подмены эскалируйте по incident runbook.
 
 ```bash
 # 1. Зафиксировать доказательства на ноде до замены файла.
@@ -354,12 +371,23 @@ sudo sha256sum --check /root/approved-kubelet.sha256
 kubectl get pods -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.metadata.name}{"\t"}{range .status.containerStatuses[*]}{.name}{"="}{.imageID}{" "}{end}{"\n"}{end}'
 ```
 
-`sha256sum --check` с `FAILED` означает инцидент до доказательства обратного. Изолируйте
-скомпрометированную ноду согласно runbook, не удаляйте логи, сверяйте package/release
-provenance и заменяйте ноду или binary контролируемым способом. Если mismatch относится к
-image, остановите rollout, закрепите известный хороший digest и проверьте registry audit
-logs, CI logs и admission records. Один хеш не объясняет путь подмены - он даёт надёжный
-сигнал, что ожидаемые байты не совпали.
+`sha256sum --check` с `FAILED` - сигнал для расследования, но сам по себе не доказывает
+компрометацию и не задаёт единственный ответ «изолировать». Сначала сохраните evidence и
+проведите triage: (1) подтвердите путь, версию и ожидаемый approved baseline, исключив
+ошибку inventory или обновление не того файла; (2) проверьте provenance релиза через
+`cosign verify-blob` с ожидаемыми certificate identity/issuer и сверяйте package/release
+metadata; (3) найдите authorized change - change record, rollout, package-manager и CI
+логи - и сопоставьте время, владельца и digest; (4) сравните с предыдущим известным
+хорошим baseline и scope на других нодах. Не «исправляйте» mismatch изменением эталонного
+хеша.
+
+Если evidence не подтверждает authorised change, provenance/baseline не сходятся или есть
+иные признаки подмены, эскалируйте по incident runbook: остановите дальнейшее
+распространение, примените соразмерное containment (вплоть до cordon/drain или изоляции
+ноды), сохраните логи и замените ноду либо binary контролируемым способом. Для image
+остановите rollout, закрепите известный хороший digest и проверьте registry audit logs,
+CI logs и admission records. Один хеш надёжно сообщает о несовпадении ожидаемых байтов,
+но не объясняет его причину или путь изменения.
 
 ## 09.7. Проверка результата и диагностика
 
@@ -416,9 +444,10 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   suites. Исключения имеют срок, владельца и компенсирующий контроль.
 - **Drift detection.** Регулярно запускают `kube-bench`, проверяют process args и alert на
   открытые `10255`, `2379`, `2380` и неожиданные слушающие адреса.
-- **Проверяемая поставка.** Pipeline проверяет SHA-256/signature release binary, сохраняет
-  утверждённые digests в inventory и deploy-манифестах, запрещает mutable tags policy.
-  Registry access, CI logs и admission events дают audit trail.
+- **Проверяемая поставка.** Pipeline проверяет keyless signature/certificate binary с
+  ожидаемыми identity/issuer и SHA-256 как integrity check, сохраняет утверждённые digests
+  в inventory и deploy-манифестах, запрещает mutable tags policy. Registry access, CI logs
+  и admission events дают audit trail.
 - **Безопасный rollback.** Backup manifest хранится вне static Pod directory, а rollback
   проверен в non-production. При подозрении на подмену предпочтительнее переустановить
   ноду из доверенного образа, чем продолжать работу с потенциально изменённым хостом.
@@ -450,11 +479,13 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   API и/или аргументами.
 - Static Pod меняют по одному, с backup вне watched directory, наблюдением `kubelet`/CRI
   и немедленной проверкой `/readyz`.
-- Для apiserver и kubelet ограничивают `--tls-min-version` и `--tls-cipher-suites`; для
-  etcd - `--tls-min-version` и `--cipher-suites`, сверяя точные значения с версией etcd.
-  Набор suites обязан подходить certificate key algorithm и клиентам.
-- `sha256sum --check` сравнивает binary с опубликованным trusted checksum. Для образов
-  фиксируют и сверяют immutable digest, а не только tag.
+- Для apiserver и kubelet задают TLS minimum version, а для etcd - соответствующий
+  `--tls-min-version`, сверяя точные значения с версией etcd. Современные Go/Kubernetes
+  defaults suites безопасны; список suites закрепляют только для утверждённой policy,
+  benchmark или совместимости и проверяют его с certificate key algorithm и клиентами.
+- `cosign verify-blob` с ожидаемыми certificate identity/issuer проверяет происхождение
+  Kubernetes binary; `sha256sum --check` дополнительно сравнивает байты с trusted
+  checksum. Для образов фиксируют и сверяют immutable digest, а не только tag.
 - Доказательство hardening включает активные arguments, отрицательную проверку опасного
   поведения, TLS handshake, health control plane и повторный `kube-bench`.
 
@@ -484,7 +515,8 @@ kubelet service; сохраните backup вне `/etc/kubernetes/manifests`; �
 6. Какими командами вы подтвердите, что TLS 1.1 отвергнут, TLS 1.2 разрешён, а apiserver
    после изменения здоров?
 7. Почему tag container image не доказывает его содержимое и что доказывает image digest?
-8. Почему опубликованный SHA-256 нужно получать по доверенному независимому каналу?
+8. Почему SHA-256 подтверждает integrity, но не provenance, и какие certificate identity и
+   OIDC issuer должен проверять `cosign verify-blob` для Kubernetes binary?
 
 ## Практика
 

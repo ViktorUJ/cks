@@ -66,16 +66,18 @@ release notes конкретной ветки, а не из старого runbo
 у managed-сервиса или enterprise-дистрибутива окно может отличаться, и его нужно проверять
 отдельно.
 
-Для целевой версии курса - Kubernetes `v1.36` - это означает: не ждать накопления большого
-числа минорных обновлений. Переход делают последовательно, по одной минорной версии,
-например `v1.34` -> `v1.35` -> `v1.36`; патч внутри ветки можно обновлять напрямую до
-исправленной версии. Такой ритм оставляет время на тесты и не превращает срочный CVE в
-многоверсионный migration-проект.
+В этой лаборатории Kubernetes `v1.36` обозначает **целевую (target) версию примера**, а не
+«текущую stable» версию Kubernetes и не обещание её актуального support window. Перед
+реальным change window сверяйте фактическую поддерживаемую target-ветку и fixed patch из
+advisory. Переход делают последовательно, по одной minor-версии, например `v1.34` ->
+`v1.35` -> `v1.36`; patch внутри ветки можно обновлять напрямую до исправленной версии.
+Такой ритм оставляет время на тесты и не превращает срочный CVE в многоверсионный
+migration-проект.
 
 ```mermaid
 flowchart TB
     n["N: текущая минорная ветка"] --> n1["N-1: поддерживается"] --> n2["N-2: последняя\nupstream-поддерживаемая"] --> n3["N-3: обычно EOL\nнет новых upstream-патчей"]
-    cp["kube-apiserver\nобновляется первым"] --> worker["kubelet на worker\nне новее apiserver"]
+    cp["kube-apiserver\nобновляется первым"] --> worker["kubelet: не новее apiserver\nи не более 3 minor старше"]
     style n fill:#0f9d58,color:#fff
     style n1 fill:#0f9d58,color:#fff
     style n2 fill:#f4b400,color:#000
@@ -84,12 +86,13 @@ flowchart TB
     style worker fill:#673ab7,color:#fff
 ```
 
-**Version skew** ограничивает порядок. `kubelet` не может быть новее `kube-apiserver`,
-поэтому сначала обновляют control plane, затем рабочие узлы. Допустимый диапазон для других
-компонентов зависит от версии и роли; перед изменением сверяйтесь с официальной
-[policy version skew](https://kubernetes.io/releases/version-skew-policy/). Не используйте
-допустимый skew как нормальное постоянное состояние: он нужен для короткого rolling upgrade,
-а не для жизни старых нод месяцами.
+**Version skew** ограничивает порядок. Для каждого kubelet проверяйте обе границы относительно
+его `kube-apiserver`: kubelet **не новее** API server и **не более чем на три minor-версии
+старше** него. Поэтому сначала обновляют control plane, затем рабочие узлы. Допустимый
+диапазон для других компонентов зависит от версии и роли; перед изменением сверяйтесь с
+официальной [policy version skew](https://kubernetes.io/releases/version-skew-policy/). Не
+используйте допустимый skew как нормальное постоянное состояние: он нужен для короткого
+rolling upgrade, а не для жизни старых нод месяцами.
 
 Перед целевым минорным обновлением также проверьте удаляемые API у приложений, Helm-чартов,
 операторов и аддонов. Устранение CVE не должно сломать следующий deploy из-за удалённого
@@ -141,8 +144,9 @@ CVE с меньшим CVSS, но без authentication в доступном и�
 
 Командную процедуру целиком берите из [главы 36 CKA](../../../cka/course/36/ru.md). Ниже -
 security-последовательность, которая не пропускает ни исправление CVE, ни проверку его
-результата. Значение `v1.36.x` - пример целевого поддерживаемого patch-релиза; используйте
-ровно версию из проверенного advisory и своего репозитория пакетов.
+результата. `v1.36.x` здесь является **lab target**: замените его на точный поддерживаемый
+patch из проверенного advisory и своего репозитория пакетов; это не утверждение, что
+`v1.36` является текущей stable-версией.
 
 ### До изменения
 
@@ -174,63 +178,105 @@ flowchart TB
 
 ### Control plane
 
-На первом control-plane обновите пакет `kubeadm` до целевой ветки, выполните только
-предварительный расчёт, затем примените обновление. После `apply` обновите `kubelet` и
-`kubectl` до согласованного patch-релиза и перезапустите `kubelet`. В HA-кластере остальные
-узлы control plane обновляются по одному через `kubeadm upgrade node`, с проверкой quorum и
-API между узлами. Не обновляйте все узлы control plane одновременно.
+На первом control-plane обновите пакет `kubeadm` до target-версии, выполните только
+предварительный расчёт, затем примените обновление. При **minor**-обновлении перед заменой
+`kubelet` на control-plane сначала сделайте `cordon` и `drain` этой ноды: это даёт PDB и
+capacity возможность остановить небезопасный rollout. Проверяйте, что в кластере есть
+ёмкость для выселенных workload; не добавляйте `--force` и не обходите PDB. Static Pods
+control plane не выселяются через `drain`.
+
+После `apply` установите target `kubelet` и `kubectl`, перезапустите kubelet, убедитесь в
+`Ready` и только тогда сделайте `uncordon`. В HA-кластере остальные control-plane ноды
+обновляют по одной через `kubeadm upgrade node`, с проверкой quorum и API между нодами. Не
+обновляйте все control-plane ноды одновременно.
 
 ```bash
-# Пример для Debian/Ubuntu: точный suffix пакета и репозиторий сверяйте с документацией
-# целевой версии. Снимайте hold только на время контролируемого изменения.
+# Пример Debian/Ubuntu. Это lab target, а не current stable: перед запуском задайте
+# точный доступный package version из своего доверенного репозитория/advisory.
+export TARGET_K8S_PACKAGE_VERSION='1.36.x-*'
+
+# На control-plane-1: kubeadm можно обновить до drain, kubelet -- нет.
 sudo apt-mark unhold kubeadm
 sudo apt-get update
-sudo apt-get install -y kubeadm='1.36.x-*'
+sudo apt-get install -y kubeadm="$TARGET_K8S_PACKAGE_VERSION"
 sudo apt-mark hold kubeadm
-
 sudo kubeadm upgrade plan
-sudo kubeadm upgrade apply v1.36.x --yes
 
+# С административной машины: до minor-обновления kubelet на control-plane-1.
+kubectl cordon control-plane-1
+kubectl drain control-plane-1 --ignore-daemonsets
+
+# На control-plane-1.
+sudo kubeadm upgrade apply v1.36.x --yes
 sudo apt-mark unhold kubelet kubectl
-sudo apt-get install -y kubelet='1.36.x-*' kubectl='1.36.x-*'
+sudo apt-get install -y kubelet="$TARGET_K8S_PACKAGE_VERSION" kubectl="$TARGET_K8S_PACKAGE_VERSION"
 sudo apt-mark hold kubelet kubectl
 sudo systemctl daemon-reload
 sudo systemctl restart kubelet
+
+# С административной машины: только после Ready и проверки версии.
+kubectl get node control-plane-1 -o wide
+kubectl uncordon control-plane-1
 ```
 
 ### Worker-ноды
 
 К рабочим узлам переходят только после healthy control plane. Узел выводят из планирования и
-освобождают, обновляют `kubeadm`, запускают `kubeadm upgrade node` - **не** `apply`, затем
-обновляют и перезапускают `kubelet`. Возвращают ноду лишь после проверки `Ready` и версии.
-Повторяют по одной ноде, соблюдая PDB и требуемую capacity.
+освобождают, **устанавливают target-пакеты** `kubeadm` и `kubelet`, запускают `kubeadm upgrade
+node` - **не** `apply`, перезапускают kubelet и возвращают ноду лишь после проверки `Ready` и
+версии. Повторяют по одной ноде, соблюдая PDB и требуемую capacity.
 
 ```bash
-# С рабочей машины или control plane.
+# С административной машины: --delete-emptydir-data добавляйте только если потеря этих
+# данных ожидаема. Не добавляйте --force и не обходите PDB ради ускорения.
 kubectl cordon worker-1
-kubectl drain worker-1 --ignore-daemonsets --delete-emptydir-data
+kubectl drain worker-1 --ignore-daemonsets
 
-# На worker-1: обновить kubeadm до согласованной версии, затем конфигурацию ноды.
+# На worker-1, пример Debian/Ubuntu. Задайте точную target package version; значение ниже
+# относится только к lab target v1.36, а не к «current stable».
+export TARGET_K8S_PACKAGE_VERSION='1.36.x-*'
+sudo apt-mark unhold kubeadm
+sudo apt-get update
+sudo apt-get install -y kubeadm="$TARGET_K8S_PACKAGE_VERSION"
+sudo apt-mark hold kubeadm
 sudo kubeadm upgrade node
+
+sudo apt-mark unhold kubelet
+sudo apt-get install -y kubelet="$TARGET_K8S_PACKAGE_VERSION"
+sudo apt-mark hold kubelet
 sudo systemctl daemon-reload
 sudo systemctl restart kubelet
 
-# После проверки состояния ноды.
+# С административной машины: только после Ready, версии и workload smoke test.
 kubectl get node worker-1 -o wide
 kubectl uncordon worker-1
 ```
 
-Команды `drain` и флаги зависят от workload. `--delete-emptydir-data` удаляет локальные
-`emptyDir`-данные и допустим только когда это ожидаемо; `--force` и обход PDB не являются
-безопасным default. Если `drain` ждёт PDB, это сигнал проверить число реплик и доступность,
-а не повод ломать защиту ради скорости.
+Для RPM-дистрибутива используйте эквивалент пакетного менеджера с **явной точной** версией
+из доверенного vendor-репозитория (например, `kubeadm-<TARGET_K8S_PACKAGE_VERSION>` и
+`kubelet-<TARGET_K8S_PACKAGE_VERSION>`), затем тот же порядок: `kubeadm upgrade node`,
+restart kubelet, проверка и `uncordon`. Не оставляйте worker на старом kubelet из-за того,
+что `kubeadm upgrade node` завершился успешно: эта команда не устанавливает пакеты.
 
 ### Проверка результата и диагностика
 
 ```bash
 kubectl get nodes -o wide
 kubectl get --raw='/readyz?verbose'
-kubectl get pods -A --field-selector=status.phase!=Running
+
+# Gate завершается с ненулевым кодом для Failed/Pending/Unknown Pod или Ready=False.
+# Успешно завершённые Pods Job имеют phase=Succeeded и намеренно не считаются ошибкой.
+kubectl get pods -A -o json | jq -e '
+  [ .items[]
+    | select(
+        .status.phase == "Failed" or
+        .status.phase == "Pending" or
+        .status.phase == "Unknown" or
+        (.status.phase == "Running" and
+          any(.status.conditions[]?; .type == "Ready" and .status == "False"))
+      )
+  ] | length == 0
+'
 kubectl get events -A --sort-by=.lastTimestamp
 kubectl version --output=yaml
 ```
@@ -254,6 +300,27 @@ workload и нодой. Поэтому inventory и patch policy должны о
 | kernel и ОС-пакеты | privilege escalation, network/filesystem CVE | Поддержку ОС, vendor security update, необходимость reboot и node image |
 | cgroups/systemd | kubelet/runtime не запускаются либо получают разные cgroup | Единый cgroup driver и поддержку cgroup v2 в ОС и runtime |
 | CNI, CSI, CoreDNS | сеть, storage или DNS не восстановятся после change | Compatibility matrix и smoke test на stage |
+
+### Cgroup v2 preflight перед target `v1.37`
+
+До планирования перехода на `v1.37` выполните preflight **на каждой ноде**: kubelet и runtime
+должны работать с cgroup v2 и согласованным `systemd` cgroup driver. В Kubernetes feature gate
+`FailCgroupV1` по умолчанию имеет значение `true`; не отключайте его через
+`FailCgroupV1=false`, чтобы продлить жизнь cgroup v1. Если проверка не проходит, сначала
+мигрируйте ОС/runtime в stage и проверьте node image, а не обходите preflight в production.
+
+```bash
+# На каждой ноде; ненулевой exit code означает, что target v1.37 пока небезопасен.
+set -euo pipefail
+test "$(stat -fc %T /sys/fs/cgroup)" = 'cgroup2fs'
+sudo grep -Eq '^[[:space:]]*cgroupDriver:[[:space:]]*systemd[[:space:]]*$' \
+  /var/lib/kubelet/config.yaml
+sudo grep -Eq '^[[:space:]]*SystemdCgroup[[:space:]]*=[[:space:]]*true[[:space:]]*$' \
+  /etc/containerd/config.toml
+```
+
+Для CRI-O или нестандартных путей конфигурации проверьте тот же `systemd` driver в
+конфигурации используемого runtime; не копируйте путь `containerd` вслепую.
 
 Безопасная стратегия - разделить риск: сначала проверить совместимую связку Kubernetes +
 runtime + ОС в stage, затем раскатывать по нодам. Если urgent runtime/OS CVE требует
@@ -309,7 +376,7 @@ regression и безопасно откатиться.
 - **release cadence** - регулярность выхода минорных и patch-релизов.
 - **support window** - диапазон поддерживаемых веток; upstream Kubernetes обычно держит
   `N`, `N-1` и `N-2`.
-- **version skew** - допустимая разница версий компонентов; kubelet не новее API server.
+- **version skew** - допустимая разница версий компонентов; kubelet не новее API server и не более чем на три minor-версии старше него.
 - **`kubeadm upgrade plan` / `apply` / `node`** - план обновления / применение на первом
   control plane / обновление конфигурации конкретной ноды.
 - **rolling upgrade** - обновление по одной ноде с проверкой между шагами.
@@ -325,8 +392,8 @@ regression и безопасно откатиться.
   только `N`, `N-1` и `N-2`, а `N-3` уже EOL.
 - Advisory и release notes - первичный источник fixed version и условий CVE; CVE feed
   помогает уведомлять, но не заменяет чтение advisory и инвентаризацию нод.
-- Соблюдайте version skew: control plane обновляется первым, kubelet не должен быть новее
-  API server, минорные версии проходят последовательно.
+- Соблюдайте version skew: control plane обновляется первым, kubelet не новее API server
+  и не более чем на три minor-версии старше него; minor-версии проходят последовательно.
 - Безопасный `kubeadm` rollout: preflight и backup -> control plane -> health check ->
   `cordon`/`drain` одного рабочего узла -> `kubeadm upgrade node` и kubelet -> проверка ->
   `uncordon`.
@@ -371,14 +438,16 @@ kubectl get validatingadmissionpolicy,validatingadmissionpolicybinding -o yaml \
 ### Gate 1: version skew и план
 
 Скрипт не предполагает номер версии: он сравнивает каждый kubelet с текущим API server и
-останавливается, если kubelet новее. Затем `kubeadm upgrade plan` проверяет доступные цели,
-preflight и порядок обновления. Для реального перехода выберите ровно следующую minor-ветку.
+останавливается, если kubelet нарушает любую границу: новее API server **либо** более чем на
+три minor-версии старше. Затем `kubeadm upgrade plan` проверяет доступные цели, preflight и
+порядок обновления. Для реального перехода выберите ровно следующую minor-ветку.
 
 ```bash
+set -euo pipefail
 SERVER_MINOR=$(kubectl version -o json | jq -r '.serverVersion.minor | sub("[^0-9].*$"; "") | tonumber')
 kubectl get nodes -o json | jq -e --argjson server "$SERVER_MINOR" \
   '[.items[] | (.status.nodeInfo.kubeletVersion | capture("v1\\.(?<m>[0-9]+)").m | tonumber)] |
-   all(. <= $server)' \
+   all(. >= ($server - 3) and . <= $server)' \
   | tee "$UPGRADE_EVIDENCE/before/skew-check.txt"
 sudo kubeadm upgrade plan | tee "$UPGRADE_EVIDENCE/before/kubeadm-upgrade-plan.txt"
 ```
@@ -425,11 +494,14 @@ kubectl api-resources --api-group=admissionregistration.k8s.io \
 
 Отметьте simulation, ещё раз выполните те же probes как если бы control plane и один
 рабочий узел уже прошли rolling upgrade. Сравнение должно показать неизменившийся security
-posture; health обязан быть успешным. При реальном upgrade между блоками выполняются
+posture; health обязан быть успешным. Node gate ниже возвращает ненулевой код, если у любой
+ноды condition `Ready=False` (а также если condition `Ready=True` отсутствует). При реальном
+upgrade между блоками выполняются
 `kubeadm upgrade apply` для первого control plane и `kubeadm upgrade node` для остальных
 узлов в порядке из 13.4.
 
 ```bash
+set -euo pipefail
 printf 'mode=controlled-simulation\nserver_minor=%s\ntarget_minor=%s\n' \
   "$SERVER_MINOR" "$((SERVER_MINOR + 1))" > "$UPGRADE_EVIDENCE/simulation.txt"
 
@@ -443,11 +515,32 @@ kubectl auth can-i --list --as=system:serviceaccount:default:default \
   > "$UPGRADE_EVIDENCE/after/default-sa-can-i.txt"
 
 grep -q 'readyz check passed' "$UPGRADE_EVIDENCE/after/readyz.txt"
+# Любое Ready=False (или отсутствие Ready=True) даёт jq exit code 1 и останавливает gate.
+kubectl get nodes -o json | jq -e '
+  [ .items[]
+    | {name: .metadata.name,
+       ready: [.status.conditions[]? | select(.type == "Ready") | .status]}
+    | select((.ready | index("False")) != null or
+             (.ready | index("True")) == null)
+  ] | length == 0
+' > "$UPGRADE_EVIDENCE/after/nodes-ready-gate.txt"
 diff -u "$UPGRADE_EVIDENCE/before/rbac.yaml" "$UPGRADE_EVIDENCE/after/rbac.yaml"
 diff -u "$UPGRADE_EVIDENCE/before/admission.yaml" "$UPGRADE_EVIDENCE/after/admission.yaml"
 diff -u "$UPGRADE_EVIDENCE/before/default-sa-can-i.txt" \
   "$UPGRADE_EVIDENCE/after/default-sa-can-i.txt"
-kubectl get pods -A --field-selector=status.phase!=Running
+
+# Succeeded Pods завершённых Job не являются health failure.
+kubectl get pods -A -o json | jq -e '
+  [ .items[]
+    | select(
+        .status.phase == "Failed" or
+        .status.phase == "Pending" or
+        .status.phase == "Unknown" or
+        (.status.phase == "Running" and
+          any(.status.conditions[]?; .type == "Ready" and .status == "False"))
+      )
+  ] | length == 0
+'
 ```
 
 Simulation считается принятой, если skew check успешен, `kubeadm upgrade plan` сохранён,
@@ -463,8 +556,8 @@ snapshot валиден, deprecated API inventory разобран, `/readyz` у
 3. Какие ветки обычно входят в upstream support window `N`/`N-1`/`N-2`, и что означает
    `N-3`?
 4. Почему CVSS и CVE feed недостаточны для решения о срочности обновления?
-5. Почему control plane обновляют раньше рабочих узлов и почему kubelet не должен быть новее
-   API server?
+5. Почему control plane обновляют раньше рабочих узлов, почему kubelet не должен быть новее
+   API server и не может отставать от него более чем на три minor-версии?
 6. Назовите безопасную последовательность обновления рабочего узла через `kubeadm`.
 7. Какие проверки нужны после успешного `kubeadm upgrade`, чтобы доказать и security patch,
    и работоспособность кластера?

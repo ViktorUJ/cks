@@ -52,10 +52,11 @@ rollout. Allowlist не заменяет signature verification: атакующ�
 ## 26.2. Allowlist реестров через Kyverno и Gatekeeper
 
 Проверка должна покрывать `containers`, `initContainers` и, если они разрешены,
-`ephemeralContainers`: иначе init- или debug-контейнер станет обходом policy. Правило
-должно применяться к объекту `Pod`; admission применяет его также к workload-контроллерам,
-поскольку они создают Pod. Начните с режима Audit, исправьте существующие manifests, затем
-переведите правило в Enforce.
+`ephemeralContainers`: иначе init- или debug-контейнер станет обходом policy. Pod-only
+policy сама проверяет только Pod. Чтобы Kyverno `ValidatingPolicy` отклоняла Deployment и
+другие workload-контроллеры до создания Pod, явно включите `spec.autogen.podControllers`;
+без него controller будет принят, а отказ случится только при создании Pod. Начните с
+режима Audit, исправьте существующие manifests, затем переведите правило в Enforce.
 
 ### Kyverno 1.19
 
@@ -74,6 +75,9 @@ metadata:
   name: allow-approved-registries
 spec:
   validationActions: [Deny]
+  autogen:
+    podControllers:
+      controllers: [deployments, daemonsets, statefulsets, jobs, cronjobs]
   matchConstraints:
     resourceRules:
     - apiGroups: [""]
@@ -112,9 +116,11 @@ Legacy `ClusterPolicy` с `foreach` относится только к мигр�
 ### OPA Gatekeeper
 
 Gatekeeper отделяет логику ConstraintTemplate от конкретного Constraint. Шаблон ниже
-принимает allowlist prefixes и отвергает каждый container, image которого не начинается с
-одного из них. В production добавьте такую же проверку init/ephemeral containers либо
-запретите их отдельным Constraint.
+проверяет regular, init и ephemeral containers. Его `match` ограничен `Pod`: такой
+Constraint **не отклоняет сам Deployment**. Он отклонит Pod, который позже создаст
+контроллер; для раннего отказа добавьте отдельные правила для workload templates. Для
+`kubectl debug` webhook Gatekeeper должен получать `UPDATE` subresource
+`pods/ephemeralcontainers`, а Rego ниже проверяет именно этот контекст.
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1
@@ -139,13 +145,29 @@ spec:
     rego: |
       package k8sallowedrepos
 
-      violation[{"msg": msg}] {
+      import rego.v1
+
+      violation contains {"msg": msg} if {
         container := input.review.object.spec.containers[_]
         not starts_with_allowed(container.image, input.parameters.repos)
         msg := sprintf("image %q is not from an approved registry", [container.image])
       }
 
-      starts_with_allowed(image, repos) {
+      violation contains {"msg": msg} if {
+        container := input.review.object.spec.initContainers[_]
+        not starts_with_allowed(container.image, input.parameters.repos)
+        msg := sprintf("init image %q is not from an approved registry", [container.image])
+      }
+
+      violation contains {"msg": msg} if {
+        input.review.operation == "UPDATE"
+        input.review.subResource == "ephemeralcontainers"
+        container := input.review.object.spec.ephemeralContainers[_]
+        not starts_with_allowed(container.image, input.parameters.repos)
+        msg := sprintf("ephemeral image %q is not from an approved registry", [container.image])
+      }
+
+      starts_with_allowed(image, repos) if {
         repo := repos[_]
         startswith(image, repo)
       }
@@ -193,8 +215,11 @@ sequenceDiagram
     end
 ```
 
-Backend обязан быть доступен *из API-сервера*, проверять TLS-сертификат клиента и
-принимать решение fail-closed. Он не должен выполнять pull образа на каждый запрос:
+Backend обязан быть доступен *из API-сервера* и принимать решение fail-closed. Ниже
+выбрана конфигурация mTLS: API-сервер предъявляет client certificate, а backend проверяет
+его и CA. mTLS - не универсальное требование `ImagePolicyWebhook`; способ аутентификации
+backend задаётся его kubeconfig и инфраструктурой. Backend не должен выполнять pull образа
+на каждый запрос:
 проверяйте reference/digest, подпись и доверенную identity, а результаты кешируйте лишь
 на короткий, обоснованный TTL. Долгий allow-cache после revoke подписи оставит окно для
 нежелательного запуска.
@@ -278,8 +303,29 @@ spec:
 manifest. Держите консоль
 control-plane и заранее проверьте backend TLS: ошибочные endpoint, CA, client key или
 fail-open настройка могут соответственно заблокировать все новые Pod либо снять защиту.
-После перезапуска проверьте `/readyz`, логи API-сервера и явный allow/deny test. Для
-нового кластера сопоставьте доступность и поддержку plugin с версией Kubernetes: это
+После перезапуска проверьте `/readyz`, логи API-сервера и явный allow/deny test.
+Ниже - минимальные концептуальные ответы backend, не объекты для `kubectl apply`:
+
+```yaml
+# allow: reason оставляют пустым, auditAnnotations имеют ключи без prefix
+apiVersion: imagepolicy.k8s.io/v1alpha1
+kind: ImageReview
+status:
+  allowed: true
+  auditAnnotations:
+    decision: "approved signed digest"
+---
+# deny: короткая причина попадёт в admission error
+apiVersion: imagepolicy.k8s.io/v1alpha1
+kind: ImageReview
+status:
+  allowed: false
+  reason: "image is not signed by an approved identity"
+  auditAnnotations:
+    decision: "signature verification failed"
+```
+
+Для нового кластера сопоставьте доступность и поддержку plugin с версией Kubernetes: это
 старый специализированный механизм; webhook/policy engine с поддержкой signature
 verification обычно проще сопровождать.
 
@@ -291,9 +337,10 @@ Cosign создаёт и проверяет подписи OCI-artifacts. Под
 так же важны, как ключ.
 
 ```bash
-IMAGE='registry.example.com/platform/payments-api:1.4.2@sha256:<digest>'
+IMAGE="${IMAGE:?set image reference}"
 
-# Один раз: private key хранится в защищённом KMS/secret store, не в Git.
+# Лаба: эта команда создаёт локальную пару cosign.key/cosign.pub.
+# Созданный здесь private key не используйте как production key и не добавляйте в Git.
 cosign generate-key-pair
 
 # CI получает ключ кратковременно; пароль не печатается в логах.
@@ -303,8 +350,11 @@ cosign sign --key cosign.key "$IMAGE"
 cosign verify --key cosign.pub "$IMAGE"
 ```
 
-Успех `cosign verify` означает криптографическую проверку подписи для указанного image
-reference. Политика должна дополнительно ограничить, **какой** public key/identity
+`cosign generate-key-pair` выше - только локальная пара для лабы. В production
+используйте keyless OIDC flow ниже либо отдельный ключ, созданный и удерживаемый в KMS;
+не переносите локально созданный `cosign.key` в CI. Успех `cosign verify` означает
+криптографическую проверку подписи для указанного image reference. Политика должна
+дополнительно ограничить, **какой** public key/identity
 допустимы для данного repository. Один общий ключ для всех environments и проектов
 превращает компрометацию CI одного сервиса в риск для всех остальных. Ротируйте ключи,
 отзывайте доступ к старому ключу и сохраняйте audit trail: кто, когда и какой digest
@@ -318,7 +368,7 @@ Sigstore keyless flow получает краткоживущий сертифи
 release workflow.
 
 ```bash
-IMAGE='registry.example.com/platform/payments-api:1.4.2@sha256:<digest>'
+IMAGE="${IMAGE:?set image reference}"
 
 # В CI с OIDC (например, GitHub Actions): интерактивного подтверждения нет.
 cosign sign --yes "$IMAGE"
@@ -341,8 +391,12 @@ cosign verify \
 Проверка до deployment полезна, но не является enforcement: пользователь может обойти
 локальный CI script и обратиться к API напрямую. Поэтому проверка должна жить на
 admission path. В Kyverno 1.19 это делает CEL-based `ImageValidatingPolicy`; legacy
-`ClusterPolicy.verifyImages` оставлен только для миграции. В примере в кластер попадает
-только public key, private key не монтируется.
+`ClusterPolicy.verifyImages` оставлен только для миграции.
+
+**Экзаменационное ядро** - allowlist repository, immutable digest, fail-closed admission
+и диагностика denial. `ImageValidatingPolicy` Kyverno, Notary и signed SBOM/in-toto
+attestations - **production extension**: они связывают policy с доверенным signer и
+release evidence. В примере private key не попадает в кластер.
 
 ```yaml
 apiVersion: policies.kyverno.io/v1
@@ -360,6 +414,10 @@ spec:
       resources: ["pods"]
   matchImageReferences:
   - glob: "registry.example.com/platform/*"
+  validationConfigurations:
+    mutateDigest: true
+    required: true
+    verifyDigest: true
   attestors:
   - name: releaseKey
     cosign:
@@ -368,18 +426,36 @@ spec:
           -----BEGIN PUBLIC KEY-----
           <публичный-ключ-release-подписанта>
           -----END PUBLIC KEY-----
+  - name: releaseNotary
+    notary:
+      certs:
+        value: |-
+          -----BEGIN CERTIFICATE-----
+          <X.509-сертификат-Notary-release-подписанта>
+          -----END CERTIFICATE-----
+  attestations:
+  - name: signedSbom
+    referrer:
+      type: sbom/cyclone-dx
   validations:
   - message: "Image must have a valid release signature"
     expression: >-
       images.containers.map(image,
-        verifyImageSignatures(image, [attestors.releaseKey])).all(count, count > 0)
+        verifyImageSignatures(image, [attestors.releaseKey, attestors.releaseNotary]) > 0).all(ok, ok)
+  - message: "Image must have a signed CycloneDX SBOM for this digest"
+    expression: >-
+      images.containers.map(image,
+        verifyAttestationSignatures(image, attestations.signedSbom, [attestors.releaseKey]) > 0).all(ok, ok)
 ```
 
-`failurePolicy: Fail` не пропускает объект при ошибке проверки. Для keyless вместо static
-key настройте `cosign.keyless.identities` с точными issuer и subject конкретного CI
-workflow. Отдельно требуйте digest в `ValidatingPolicy` или настройках image validation:
-подпись не делает плавающий tag неизменяемым. Тестируйте подписанный и неподписанный digest,
-ошибочный signer и недоступность registry.
+`failurePolicy: Fail` не пропускает объект при ошибке проверки.
+`validationConfigurations` сначала разрешает Kyverno дописать digest, затем требует и
+проверяет его; поэтому signature и `signedSbom` относятся к одному immutable digest.
+`releaseNotary` - нативный Notary attestor, а условие signature допускает один из явно
+выбранных trust roots; не смешивайте их без документированного периода миграции. Для keyless
+вместо static key настройте `cosign.keyless.identities` с точными issuer и subject
+конкретного CI workflow. Тестируйте подписанный и неподписанный digest, ошибочный signer,
+отсутствующий signed SBOM и недоступность registry.
 
 **Notary Project** и CLI `notation` - альтернативная экосистема OCI signing с X.509
 trust stores и trust policy. `notation verify` полезен в CI/CD:
@@ -387,7 +463,8 @@ trust stores и trust policy. `notation verify` полезен в CI/CD:
 ```bash
 notation cert add --type ca --store platform-ca company-root-ca.pem
 notation policy import --force trustpolicy.json
-notation verify 'registry.example.com/platform/payments-api@sha256:<digest>'
+IMAGE="${IMAGE:?set image reference}"
+notation verify "$IMAGE"
 ```
 
 Notary сам по себе не является Kubernetes admission controller. Его trust policy должна
@@ -414,7 +491,8 @@ rotation, а миграцию ведите с явным периодом дво
 Диагностику начинайте с фактов, а не с ослабления policy:
 
 ```bash
-kubectl describe pod <pod>             # Events: причина admission denial
+POD="${POD:?set pod}"
+kubectl describe pod "$POD"             # Events: причина admission denial
 kubectl get events -A --sort-by=.lastTimestamp
 cosign verify --key cosign.pub "$IMAGE"
 kubectl logs -n kyverno deploy/kyverno-admission-controller
@@ -443,7 +521,8 @@ identity, сертификат/ключ и network/TLS до registry. Не ис�
 - Kyverno и Gatekeeper могут запретить неутверждённые image references; проверка обязана
   учитывать обычные, init- и ephemeral-контейнеры.
 - `ImagePolicyWebhook` требует защищённого доступного backend, конфигурации
-  API-сервера, client TLS и fail-closed `defaultAllow: false`.
+  API-сервера и fail-closed `defaultAllow: false`; mTLS в примере - выбранный вариант
+  аутентификации backend.
 - Cosign подписывает и проверяет immutable digest; private key не должен попадать в Git,
   manifest или cluster policy.
 - Keyless Sigstore verification доверяет конкретному OIDC issuer и CI workflow identity,
@@ -453,10 +532,11 @@ identity, сертификат/ключ и network/TLS до registry. Не ис�
 
 ## 26.9. Как это пригодится: на экзамене и в реальной работе
 
-**На экзамене.** Нужно распознать разницу между registry policy, tag и digest, настроить
-или диагностировать validating admission, найти API-server admission configuration и
-объяснить, почему fail-open опасен. Умение прочитать denial event и проверить exact image
-reference быстрее и безопаснее, чем отключение контроллера.
+**На экзамене.** Короткое ядро - разница между registry policy, tag и digest,
+настройка или диагностика validating admission, API-server admission configuration и риск
+fail-open. Умение прочитать denial event и проверить exact image reference быстрее и
+безопаснее, чем отключение контроллера. Kyverno `ImageValidatingPolicy`, Notary и
+attestations - production extension, для которой достаточно понимать назначение.
 
 **В реальной работе.** Подпись связывает production workload с release workflow и
 конкретным artifact, а admission делает это правило обязательным для каждого пути

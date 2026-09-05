@@ -52,7 +52,7 @@ Pod Security Standards определяют три cumulative-профиля. У
 
 ### `privileged`: не политика, а отсутствие ограничений
 
-`privileged` полезен там, где Kubernetes-компонент действительно должен управлять нодой: CNI, CSI, node agent. Это **не** разумный default для прикладного namespace. Namespace без PSA-лейблов фактически ведёт себя как `privileged`: admission не ограничивает Pod.
+`privileged` полезен там, где Kubernetes-компонент действительно должен управлять нодой: CNI, CSI, node agent. Это **не** разумный default для прикладного namespace. Namespace без PSA-лейблов фактически ведёт себя как `privileged` только при стандартной конфигурации PSA, где `PodSecurityConfiguration.defaults` имеет `enforce: privileged`. Администратор кластера может задать в `defaults` `baseline` или `restricted` и их версию, поэтому effective policy всегда проверяют по namespace и конфигурации admission controller, а не по отсутствию лейбла.
 
 Даже для системного namespace не выдавайте `privileged` прикладной команде «для починки». Сначала выясните нужную capability, volume или syscall; иначе временная отладка превращается в постоянный обход границы безопасности.
 
@@ -88,15 +88,25 @@ spec:
         drop: ["ALL"]
 ```
 
-| Проверка restricted | Почему важна |
+Ниже компактная матрица для **PSS `restricted` v1.36**. Она включает `baseline`; правило для каждого container распространяется также на `initContainers` и `ephemeralContainers`, если не сказано иное.
+
+| Контроль v1.36 | Допустимое значение или требование |
 |---|---|
-| `runAsNonRoot: true` (обязательно) и `runAsUser` не `0`, если задан | container не должен стартовать от root: PSS restricted это две отдельные проверки, а не альтернативы |
-| `allowPrivilegeEscalation: false` | процесс не получает права через setuid/setgid и родственные механизмы |
-| `capabilities.drop: ["ALL"]` | нет неявных Linux capabilities; добавляют только явно допустимое исключение |
-| `seccompProfile.type: RuntimeDefault` или `Localhost` | ядро фильтрует доступные syscalls |
-| допустимые типы volume | нет прямого монтирования файловой системы ноды |
+| Host namespaces и Windows HostProcess | `hostNetwork`, `hostPID`, `hostIPC` - только `false`/не заданы; `windowsOptions.hostProcess` - `false`/не задан |
+| Privileged | `securityContext.privileged` - `false`/не задан |
+| Capabilities | добавить можно только `NET_BIND_SERVICE`; обязательно `capabilities.drop: ["ALL"]` |
+| Host storage и ports | `hostPath` запрещён; каждый `hostPort` - не задан/`0` или заранее определённый allowlist (встроенный PSA поддерживает только не задан/`0`) |
+| AppArmor | `appArmorProfile.type` - не задан, `RuntimeDefault` или `Localhost`; legacy annotation - только `runtime/default` или `localhost/*` |
+| SELinux | `type`: не задан/пустой, `container_t`, `container_init_t`, `container_kvm_t` или `container_engine_t`; `user` и `role` не задают |
+| `procMount`, seccomp и sysctls | `procMount` - не задан или `Default`; seccomp явно `RuntimeDefault`/`Localhost`; sysctls - только safe allowlist v1.36: `kernel.shm_rmid_forced`, `net.ipv4.ip_local_port_range`, `net.ipv4.ip_unprivileged_port_start`, `net.ipv4.tcp_syncookies`, `net.ipv4.ping_group_range`, `net.ipv4.ip_local_reserved_ports`, `net.ipv4.tcp_keepalive_time`, `net.ipv4.tcp_fin_timeout`, `net.ipv4.tcp_keepalive_intvl`, `net.ipv4.tcp_keepalive_probes` |
+| Probes и lifecycle | поля `host` в `httpGet`/`tcpSocket` probes и в `httpGet`/`tcpSocket` lifecycle hooks не задают |
+| Volumes | только `configMap`, `csi`, `downwardAPI`, `emptyDir`, `ephemeral`, `persistentVolumeClaim`, `projected`, `secret` |
+| APE | `allowPrivilegeEscalation: false` |
+| Run as | `runAsNonRoot: true` на Pod или каждом container; `runAsUser`, если задан, не `0` |
 
 `readOnlyRootFilesystem: true` - сильная практика защиты, но не самостоятельное требование PSS restricted. Не подменяйте им обязательные поля. Если приложению нужен порт ниже 1024, после `drop: ["ALL"]` допускается точечно вернуть `NET_BIND_SERVICE`, если это разрешает выбранная версия PSS и оправдано задачей.
+
+**User namespaces в v1.36.** Для Linux Pod с `spec.hostUsers: false` PSA ослабляет именно проверки `runAsNonRoot` и `runAsUser` даже при `baseline`/`restricted`: root внутри отдельного user namespace сопоставлен с непривилегированным UID хоста. Это не отменяет остальные правила матрицы и не разрешает host namespaces. Не переносите это исключение на обычный Pod с `hostUsers` не заданным или `true`.
 
 ## 19.3. Режимы PSA: enforce, audit и warn
 
@@ -151,7 +161,9 @@ kubectl label namespace payments \
 
 Лейбл применяется к **новым и обновляемым** Pod. Не ожидайте, что смена лейбла удалит уже работающие Pod: PSA не является controller, не сканирует и не исправляет существующие объекты. При изменении namespace PSA также проверяет существующие Pods для предупреждений, поэтому label change может показать workload, который надо мигрировать.
 
-`latest` удобно для небольшого test-кластера, но в production создаёт риск: после обновления Kubernetes содержание стандарта может стать строже, и ранее работающий rollout будет отклонён. Поэтому в примерах выше версия зафиксирована на версии обучающего кластера (`v1.36`). Не используйте версию выше фактической версии API server.
+`latest` удобно для небольшого test-кластера, но в production создаёт риск: после обновления Kubernetes содержание стандарта может стать строже, и ранее работающий rollout будет отклонён. Поэтому в примерах выше версия зафиксирована на версии production-current расширения (`v1.36`). Не используйте версию выше фактической версии API server.
+
+> **Версионная граница обучения.** Гарантированный публичный CKS curriculum ориентирован на Kubernetes `v1.34`. Матрица, user namespaces и примеры с pin `v1.36` выше - дополнительный актуальный production-контекст, а не обещание требований экзамена. Для подготовки к CKS сверяйте формулировку задания и используйте PSS `v1.34`; для работающего кластера фиксируйте его реальную поддерживаемую minor-версию.
 
 **Version drift PSS.** Профили `baseline`/`restricted` со временем ужесточаются: например, в Kubernetes `v1.34` в Baseline/Restricted добавили ограничения host-полей в probes и lifecycle hooks. Из-за этого Pod, проходящий более старый pin (скажем, `v1.31`), может быть отклонён под более новой версией стандарта. Практичный путь миграции: зафиксировать текущую поддерживаемую версию, сначала оценить эффект в `warn`/`audit`, при необходимости сравнить со старым pin (`v1.31`) как миграционным примером, затем сознательно поднять `enforce`. Именно поэтому «работает на старой версии PSS» не значит «пройдёт на новой».
 
@@ -217,15 +229,20 @@ kubectl -n payments run privileged-test --image=busybox:1.36.1 \
   }'
 ```
 
-Ожидается отказ с перечислением нарушений PodSecurity. Сообщение полезно как чеклист: оно укажет, например, `privileged`, отсутствующий `runAsNonRoot`, `allowPrivilegeEscalation`, capabilities или seccomp. Для шаблона контроллера используйте dry run до rollout:
+Ожидается отказ с перечислением нарушений PodSecurity. Сообщение полезно как чеклист: оно укажет, например, `privileged`, отсутствующий `runAsNonRoot`, `allowPrivilegeEscalation`, capabilities или seccomp. Для шаблона контроллера используйте dry run до rollout, но не считайте его доказательством enforce:
 
 ```bash
+# Для Deployment PSA применит warn/audit к spec.template, но не enforce.
 kubectl apply --dry-run=server -f deployment.yaml
+
+# Для проверки enforce создайте из spec.template отдельный Pod manifest
+# и проверьте его в namespace с теми же PSA labels.
+kubectl -n payments apply --dry-run=server -f rendered-pod.yaml
 kubectl auth can-i create pods -n payments
 kubectl get deployment -n payments api -o yaml
 ```
 
-`--dry-run=server` выполняет admission-проверку, но не сохраняет объект; `kubectl auth can-i` отделяет отказ RBAC от отказа PSA. Если Pod уже был создан контроллером и не стартует, сначала смотрите `kubectl describe pod` и Events: PSA-отказ происходит до запуска, а ошибка image, node, seccomp или AppArmor - позже и на другом слое.
+`--dry-run=server` выполняет admission-проверку, но не сохраняет объект. Для workload resources PSA применяет к Pod template `warn` и `audit`, однако `enforce` проверит Pod только позднее, когда его создаст controller. Поэтому успешный dry-run Deployment не доказывает, что controller-created Pod пройдёт `enforce`: проверяйте отдельный Pod из того же template либо делайте реальный rollout в изолированном test namespace с идентичными PSA labels и контролируйте `kubectl rollout status` и Events. `kubectl auth can-i` отделяет отказ RBAC от отказа PSA. Если Pod уже был создан контроллером и не стартует, сначала смотрите `kubectl describe pod` и Events: PSA-отказ происходит до запуска, а ошибка image, node, seccomp или AppArmor - позже и на другом слое.
 
 ## 19.7. Исключения: точечно, с владельцем и сроком
 
@@ -292,13 +309,18 @@ NS=payments
 # 1. Назначенный уровень и pin версии.
 kubectl get ns "$NS" -o jsonpath='{.metadata.labels}{"\n"}'
 
-# 2. Безопасный Pod проходит server-side admission.
+# 2. Прямой безопасный Pod проходит server-side admission, включая enforce.
 kubectl -n "$NS" apply --dry-run=server -f restricted-pod.yaml
 
-# 3. Нарушающий Pod получает warning/audit либо rejection - согласно режиму.
+# 3. Прямой нарушающий Pod получает warning/audit либо rejection - согласно режиму.
 kubectl -n "$NS" apply --dry-run=server -f privileged-pod.yaml
 
-# 4. Effective securityContext у созданного Pod.
+# 4. Для Deployment server dry-run показывает warn/audit для spec.template,
+# но enforce подтвердит только Pod. Проверяйте rendered Pod или rollout в test namespace.
+kubectl -n "$NS" apply --dry-run=server -f deployment.yaml
+kubectl -n "$NS" apply --dry-run=server -f rendered-pod.yaml
+
+# 5. Effective securityContext у созданного Pod.
 kubectl -n "$NS" get pod web -o jsonpath='{.spec.securityContext}{"\n"}'
 kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{"\n"}'
 ```
@@ -311,7 +333,7 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 | `kubectl apply` отвечает Forbidden, Pod не создан | PSA или RBAC отказал до persistence | сравните текст ошибки с `auth can-i` и labels namespace |
 | System component сломан после restricted | компоненту нужен допустимый отдельный namespace или узкое exemption | не ослабляйте прикладной namespace; зафиксируйте исключение |
 
-Для observability собирайте audit logs API server и метрики `apiserver_pod_security_evaluations_total`, если они доступны в вашей дистрибуции. Разрез по `decision`, `mode` и `policy_level` показывает, какие команды и workloads ещё не готовы к следующему уровню. В CI добавьте `kubectl apply --dry-run=server` против test namespace с теми же PSA-лейблами, что и production.
+Для observability собирайте audit logs API server и метрики PSA `pod_security_evaluations_total`, `pod_security_errors_total` и `pod_security_exemptions_total`, если они доступны в вашей дистрибуции. Первая показывает результаты проверок, вторая - ошибки проверки, третья - применения exemption; разрез по labels метрик, включая `decision`, `mode` и policy, показывает, какие команды и workloads ещё не готовы к следующему уровню. В CI добавьте `kubectl apply --dry-run=server` прямого Pod против test namespace с теми же PSA-лейблами, что и production; template workload дополнительно проверяйте реальным rollout там же.
 
 ## 19.10. Как это применяют в продакшене
 
@@ -341,10 +363,10 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 ## 19.13. Итоги главы
 
 - PSA проверяет Pod до записи в etcd; он дополняет RBAC и `securityContext`, но не заменяет другие security controls.
-- PSS даёт три профиля: `privileged` без ограничений, `baseline` против явных node-breakout путей, `restricted` для non-root приложения с least privilege.
+- PSS даёт три профиля: `privileged` без ограничений, `baseline` против явных node-breakout путей, `restricted` для non-root приложения с least privilege; отсутствие namespace labels означает `privileged` только при стандартных PSA defaults.
 - `enforce`, `audit` и `warn` независимы и задаются namespace labels `pod-security.kubernetes.io/<mode>`; к каждому можно добавить `<mode>-version`.
 - Надёжная migration идёт от `warn`/`audit` к `enforce=baseline`, затем к `enforce=restricted`, с исправлением templates, а не живых Pod.
-- Rejection PSA происходит до создания Pod. Проверяйте labels namespace, server-side dry run, RBAC и текст admission error.
+- Rejection PSA происходит до создания Pod. Проверяйте labels namespace, effective defaults, прямой Pod через server-side dry run, RBAC и текст admission error; успешный dry-run Deployment не подтверждает enforce для Pod, который позднее создаст controller.
 - PSP удалён в 1.25. Его нельзя вернуть манифестом: стандартные правила переносят в PSA, а организационные - в policy engine.
 - Исключения должны быть узкими, отдельными от application namespaces, документированными и временными.
 

@@ -187,14 +187,29 @@ spec:
 ```
 
 `expirationSeconds` - запрос желаемого времени жизни, а не способ получить бессрочный
-credential: предел определяет control plane. Не печатайте token в терминал, CI-логи,
-описание инцидента или ticket. Для временной ручной проверки выдайте отдельный token и
-задайте короткую duration:
+credential: значение должно быть не меньше `600`, а предел всё равно определяет control
+plane. Kubelet обновляет файл token до `exp`, но точный универсальный интервал ротации не
+гарантирован. Поэтому приложение должно переоткрывать путь к token при каждом новом
+подключении или при обновлении credential, а не хранить старое содержимое или дескриптор
+файла в памяти. Не печатайте token в терминал, CI-логи, описание инцидента или ticket.
+Для временной ручной проверки выдайте отдельный token и задайте короткую duration:
 
 ```bash
 kubectl -n cks-104 create token app-sa \
   --audience=https://kubernetes.default.svc --duration=10m
 ```
+
+Для внешнего сервиса, которому важна актуальность привязки, рекомендуется `TokenReview`
+через apiserver: он проверяет наличие ServiceAccount и bound Pod, Secret или Node и
+немедленно отклоняет bound token после удаления соответствующего объекта. Offline-проверка
+OIDC/JWT проверяет подпись и claims, но не узнаёт об удалении: такой token остаётся
+валидным только до `exp`. Если объект лишь помечен на удаление (`deletionTimestamp`),
+authenticator отклонит token не позднее чем через 60 секунд.
+
+В Kubernetes v1.33 `ServiceAccountNodeAudienceRestriction` - beta-функция, включённая по
+умолчанию. Она ограничивает audiences, которые kubelet запрашивает через TokenRequest,
+теми, что уже указаны у workloads на этом Node; для обоснованных исключений требуется
+новый RBAC verb `request-serviceaccounts-token-audience`.
 
 Legacy-вариант - Secret типа `kubernetes.io/service-account-token`, созданный намеренно
 с аннотацией SA. Он создаёт долгоживущий credential и нужен только для старой внешней
