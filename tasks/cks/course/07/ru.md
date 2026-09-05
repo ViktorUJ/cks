@@ -45,10 +45,14 @@ flowchart TB
 > Kubernetes `1.32-1.33` и CIS `2.0` с Kubernetes `1.34-1.35`; Kubernetes `1.36` (версия
 > курса) в текущей mapping отсутствует. Перед запуском определите версию Kubernetes,
 > сверьте её с актуальной [version mapping `kube-bench`](https://github.com/aquasecurity/kube-bench/blob/main/docs/platforms.md)
-> и используйте только опубликованный benchmark, который её действительно покрывает. Если
-> версия кластера ещё не поддерживается автоопределением, не интерпретируйте обычный
-> запуск как авторитетную CIS-оценку: используйте отдельную поддерживаемую лабораторную
-> версию для CIS-упражнения либо явно укажите выбранный вручную `--benchmark`.
+> и используйте только benchmark, для которого upstream явно заявляет совместимость с этой
+> версией Kubernetes. Если версия кластера отсутствует в published mapping, не считайте
+> принудительный `--benchmark` авторитетной CIS-оценкой: `--benchmark` меняет только
+> набор применяемых тестов, но не делает его валидным для непокрытой версии. Для
+> CIS-упражнения используйте отдельную Kubernetes-версию, которую mapping действительно
+> покрывает; `--benchmark` задавайте вручную только когда применимость выбранного
+> benchmark уже подтверждена документацией, а автоматический выбор по версии использовать
+> нельзя или он не сработал.
 
 | Раздел CIS | Что проверяется | Типовые объекты |
 |---|---|---|
@@ -99,7 +103,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: kube-bench
-    image: aquasec/kube-bench:latest # для production зафиксируйте digest
+    image: aquasec/kube-bench:v0.16.0 # зафиксируйте точный digest через `docker inspect --format='{{index .RepoDigests 0}}'` перед использованием в production и учебном manifest - `latest` недопустим для Pod с `privileged: true` и `hostPID: true`
     command: ["kube-bench", "run", "--targets", "master,etcd"]
     securityContext:
       privileged: true

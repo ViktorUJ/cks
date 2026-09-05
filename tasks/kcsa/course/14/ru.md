@@ -1,4 +1,4 @@
-> **Язык:** русский. Переводы будут добавлены после публикации соответствующих файлов.
+[Eng version](README.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
 
 # Глава 14. Audit Logging
 

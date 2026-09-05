@@ -1,4 +1,4 @@
-> **Язык:** русский. Переводы будут добавлены после публикации соответствующих файлов.
+[Eng version](README.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md) · [ქართული ვერსია](README_GE.md) · [繁體中文版](README_TW.md) · [日本語版](README_JP.md)
 
 # KCSA: практический самоучитель по безопасности cloud native и Kubernetes
 
@@ -10,7 +10,7 @@ KCSA (Kubernetes and Cloud Native Security Associate) - associate-уровень
 
 ## Как устроен курс
 
-Каждая тема — каталог с номером и русским исходником `ru.md`. Пока опубликована только русская версия, поэтому навигация не показывает несуществующие переводы. Главы сгруппированы по доменам KCSA и помечены цветом:
+Каждая тема - каталог с номером и каноническим русским исходником `ru.md`. Для каждой главы также опубликованы переводы: English `README.md`, Español `es.md`, Français `fr.md`, Deutsch `de.md`, ქართული `ge.md`, 繁體中文 `tw.md` и 日本語 `jp.md`. Главы сгруппированы по доменам KCSA и помечены цветом:
 
 - 🟦 Overview of Cloud Native Security - 14%
 - 🟥 Kubernetes Cluster Component Security - 22%

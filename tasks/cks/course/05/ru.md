@@ -29,7 +29,7 @@ Metadata - не Kubernetes API и не Service. Это endpoint инфрастр
 
 ```bash
 kubectl -n payments run metadata-check \
-  --image=curlimages/curl:8.12.1 --restart=Never -- sleep 3600
+  --image=curlimages/curl:8.22.0 --restart=Never -- sleep 3600
 kubectl -n payments wait --for=condition=Ready pod/metadata-check --timeout=90s
 
 # --noproxy исключает влияние HTTP_PROXY и HTTPS_PROXY.
@@ -266,7 +266,7 @@ kubectl -n kube-system get pod --show-labels | grep -E 'coredns|kube-dns'
 
 # Запустить диагностический Pod с labels защищаемого приложения.
 kubectl -n payments run egress-test \
-  --image=curlimages/curl:8.12.1 --labels=app=legacy-client \
+  --image=curlimages/curl:8.22.0 --labels=app=legacy-client \
   --restart=Never -- sleep 3600
 kubectl -n payments wait --for=condition=Ready pod/egress-test --timeout=90s
 

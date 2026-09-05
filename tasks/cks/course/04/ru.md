@@ -246,7 +246,7 @@ kubectl -n payments describe networkpolicy default-deny
 
 # Временно создать диагностический Pod в изолированном namespace
 kubectl -n payments run netshoot \
-  --image=nicolaka/netshoot:latest \
+  --image=nicolaka/netshoot:v0.16 \
   --restart=Never -- sleep 3600
 kubectl -n payments wait --for=condition=Ready pod/netshoot --timeout=90s
 
