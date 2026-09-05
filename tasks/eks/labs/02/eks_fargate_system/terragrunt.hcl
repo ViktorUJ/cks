@@ -10,7 +10,7 @@ terraform {
   source = "../../..//modules/eks_v2_fargate/"
 
   extra_arguments "retry_lock" {
-    commands  = get_terraform_commands_that_need_locking()
+    commands = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -33,8 +33,8 @@ inputs = {
   fargate = {
     name       = "kube-system"
     subnet_ids = dependency.vpc.outputs.private_subnets_by_type.eks.ids
-    selectors  = [{ namespace = "kube-system" }, { namespace = "karpenter" }]
-    tags       = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
+    selectors = [{ namespace = "kube-system" },{ namespace = "karpenter" }]
+    tags = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
   }
 
 }

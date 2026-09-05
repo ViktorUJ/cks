@@ -46,17 +46,17 @@ dependency "cluster5" {
 }
 
 inputs = {
-  questions_list      = local.vars.locals.questions_list
-  solutions_scripts   = local.vars.locals.solutions_scripts
-  solutions_video     = local.vars.locals.solutions_video
-  region              = local.vars.locals.region
-  aws                 = local.vars.locals.aws
-  prefix              = local.vars.locals.prefix
-  tags_common         = local.vars.locals.tags
-  app_name            = "worker"
-  subnets_az          = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id              = dependency.vpc.outputs.vpc_id
-  ssh_password_enable = local.vars.locals.ssh_password_enable
+  questions_list=local.vars.locals.questions_list
+  solutions_scripts=local.vars.locals.solutions_scripts
+  solutions_video=local.vars.locals.solutions_video
+  region      = local.vars.locals.region
+  aws         = local.vars.locals.aws
+  prefix      = local.vars.locals.prefix
+  tags_common = local.vars.locals.tags
+  app_name    = "worker"
+  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id      = dependency.vpc.outputs.vpc_id
+  ssh_password_enable =local.vars.locals.ssh_password_enable
 
   host_list = concat(
     dependency.cluster1.outputs.hosts,
@@ -81,17 +81,17 @@ inputs = {
     subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version
     user_data_template = "template/worker.sh"
-    util = {
+    util               = {
       kubectl_version = local.vars.locals.k8_version
     }
     exam_time_minutes = "120"
     test_url          = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/02/worker/files/tests.bats"
     task_script_url   = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cka/mock/02/worker/files/worker.sh"
-    ssh = {
+    ssh               = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
-    root_volume      = local.vars.locals.root_volume
+    root_volume = local.vars.locals.root_volume
     non_root_volumes = {}
   }
 

@@ -10,7 +10,7 @@ terraform {
   source = "../../..//modules/eks_v2_work_pc/"
 
   extra_arguments "retry_lock" {
-    commands  = get_terraform_commands_that_need_locking()
+    commands = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -67,7 +67,7 @@ inputs = {
       private_key = dependency.ssh-keys.outputs.private_key
       pub_key     = dependency.ssh-keys.outputs.pub_key
     }
-    root_volume      = local.vars.locals.root_volume
+    root_volume = local.vars.locals.root_volume
     non_root_volumes = {}
   }
 

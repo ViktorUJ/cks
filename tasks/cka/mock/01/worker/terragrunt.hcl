@@ -35,17 +35,17 @@ dependency "cluster2" {
 
 
 inputs = {
-  questions_list      = local.vars.locals.questions_list
-  solutions_scripts   = local.vars.locals.solutions_scripts
-  solutions_video     = local.vars.locals.solutions_video
-  region              = local.vars.locals.region
-  aws                 = local.vars.locals.aws
-  prefix              = local.vars.locals.prefix
-  tags_common         = local.vars.locals.tags
-  app_name            = "worker"
-  subnets_az          = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id              = dependency.vpc.outputs.vpc_id
-  ssh_password_enable = local.vars.locals.ssh_password_enable
+  questions_list=local.vars.locals.questions_list
+  solutions_scripts=local.vars.locals.solutions_scripts
+  solutions_video=local.vars.locals.solutions_video
+  region      = local.vars.locals.region
+  aws         = local.vars.locals.aws
+  prefix      = local.vars.locals.prefix
+  tags_common = local.vars.locals.tags
+  app_name    = "worker"
+  subnets_az  = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id      = dependency.vpc.outputs.vpc_id
+  ssh_password_enable =local.vars.locals.ssh_password_enable
 
   host_list = concat(
     dependency.cluster1.outputs.hosts,

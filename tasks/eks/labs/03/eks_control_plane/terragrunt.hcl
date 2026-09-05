@@ -21,17 +21,17 @@ dependency "vpc" {
 }
 
 inputs = {
-  region   = local.vars.locals.region
-  aws      = local.vars.locals.aws
-  prefix   = local.vars.locals.prefix
-  vpc_id   = dependency.vpc.outputs.vpc_id
-  app_name = "eks"
+  region = local.vars.locals.region
+  aws    = local.vars.locals.aws
+  prefix = local.vars.locals.prefix
+  vpc_id = dependency.vpc.outputs.vpc_id
+  app_name         = "eks"
   eks = {
-    name                     = local.vars.locals.env_name
-    version                  = regex("^(\\d+\\.\\d+)", local.vars.locals.k8_version)[0]
-    vpc_id                   = dependency.vpc.outputs.vpc_id
-    subnet_ids               = dependency.vpc.outputs.private_subnets_by_type.eks.ids
+    name        = local.vars.locals.env_name
+    version     = regex("^(\\d+\\.\\d+)", local.vars.locals.k8_version)[0]
+    vpc_id      = dependency.vpc.outputs.vpc_id
+    subnet_ids  = dependency.vpc.outputs.private_subnets_by_type.eks.ids
     control_plane_subnet_ids = dependency.vpc.outputs.public_subnets_by_type.public.ids
-    tags                     = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
+    tags        = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
   }
 }

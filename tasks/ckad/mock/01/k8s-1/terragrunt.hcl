@@ -25,17 +25,17 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  questions_list      = local.vars.locals.questions_list
-  region              = local.vars.locals.region
-  aws                 = local.vars.locals.aws
-  prefix              = "cluster1"
-  tags_common         = local.vars.locals.tags
-  app_name            = "k8s"
-  subnets_az          = dependency.vpc.outputs.subnets_az_cmdb
-  vpc_id              = dependency.vpc.outputs.vpc_id
-  cluster_name        = "k8s1"
-  node_type           = local.vars.locals.node_type
-  ssh_password_enable = local.vars.locals.ssh_password_enable
+  questions_list=local.vars.locals.questions_list
+  region       = local.vars.locals.region
+  aws          = local.vars.locals.aws
+  prefix       = "cluster1"
+  tags_common  = local.vars.locals.tags
+  app_name     = "k8s"
+  subnets_az   = dependency.vpc.outputs.subnets_az_cmdb
+  vpc_id       = dependency.vpc.outputs.vpc_id
+  cluster_name = "k8s1"
+  node_type    = local.vars.locals.node_type
+  ssh_password_enable =local.vars.locals.ssh_password_enable
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
@@ -78,7 +78,7 @@ inputs = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }
-      cidrs       = local.vars.locals.access_cidrs
+      cidrs              = local.vars.locals.access_cidrs
       root_volume = local.vars.locals.root_volume
     }
     "node_1" = {
@@ -97,7 +97,7 @@ inputs = {
         private_key = dependency.ssh-keys.outputs.private_key
         pub_key     = dependency.ssh-keys.outputs.pub_key
       }
-      cidrs       = local.vars.locals.access_cidrs
+      cidrs              = local.vars.locals.access_cidrs
       root_volume = local.vars.locals.root_volume
     }
   }

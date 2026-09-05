@@ -26,13 +26,13 @@ inputs = {
   vpc_id   = dependency.vpc.outputs.vpc_id
   app_name = "eks"
   eks = {
-    name                     = local.vars.locals.env_name
-    version                  = "1.36"
-    vpc_id                   = dependency.vpc.outputs.vpc_id
-    subnet_ids               = dependency.vpc.outputs.private_subnets_by_type.eks.ids
+    name                 = local.vars.locals.env_name
+    version              = "1.36"
+    vpc_id               = dependency.vpc.outputs.vpc_id
+    subnet_ids           = dependency.vpc.outputs.private_subnets_by_type.eks.ids
     control_plane_subnet_ids = dependency.vpc.outputs.public_subnets_by_type.public.ids
-    tags                     = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
+    tags                 = merge(local.vars.locals.tags, { "Name" = "${local.vars.locals.prefix}-eks" })
     # Лаба 102 разбирает access entries без aws-auth ConfigMap - режим API обязателен.
-    authentication_mode = "API"
+    authentication_mode  = "API"
   }
 }

@@ -15,21 +15,21 @@ locals {
     "owner"           = "viktoruj@gmail.com"
   }
   k8_version = "1.35.2"
-  node_type  = "ondemand"   # ondemand | spot
+  node_type  = "ondemand" # ondemand | spot
   runtime    = "containerd" # docker, cri-o, containerd ( need test it )
   cni = {
     type               = "cilium" #calico , cilium
     disable_kube_proxy = "true"
   }
-  instance_type         = "t3.medium"
-  instance_type_worker  = "t3.small"
-  spot_additional_types = ["t3.medium"]
-  all_spot_subnet       = "true"
-  key_name              = ""
-  ssh_password_enable   = "true"        # false |  true
-  access_cidrs          = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
-  ubuntu_version        = "22.04"
-  ami_id                = ""
+  instance_type        = "t3.medium"
+  instance_type_worker = "t3.small"
+  spot_additional_types= [ "t3.medium" ]
+  all_spot_subnet      = "true"
+  key_name             = ""
+  ssh_password_enable  = "true"        # false |  true
+  access_cidrs         = ["0.0.0.0/0"] #  "93.177.191.10/32"  | "0.0.0.0/0"
+  ubuntu_version       = "22.04"
+  ami_id               = ""
 
   root_volume = {
     type = "gp3"
