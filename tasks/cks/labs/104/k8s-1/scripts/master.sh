@@ -60,4 +60,78 @@ subjects:
   namespace: security-104
 EOF
 
+# Стартовая уязвимость для задания 6: секрет передаётся приложению через env/envFrom,
+# что оставляет его в /proc/1/environ и в выводе describe/logs любого, кто может делать
+# kubectl exec или читать логи Pod.
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-creds
+  namespace: security-104
+type: Opaque
+stringData:
+  DB_PASSWORD: "training-only-password"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-vulnerable
+  namespace: security-104
+spec:
+  automountServiceAccountToken: false
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 3600"]
+    envFrom:
+    - secretRef:
+        name: db-creds
+EOF
+
+# Стартовая уязвимость для задания 7: скрытые пути privilege escalation через RBAC verbs
+# impersonate/escalate/bind и certificatesigningrequests/approval, а не через wildcard
+# resources/verbs (это уже задание 4). ServiceAccount имеет минимальный явный набор прав
+# на первый взгляд, но impersonate/escalate позволяют получить куда больше эффективных
+# прав, чем показывает сам ClusterRole.
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: build-agent
+  namespace: security-104
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: build-agent-hidden-privesc
+rules:
+- apiGroups: [""]
+  resources: ["users", "groups", "serviceaccounts"]
+  verbs: ["impersonate"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles"]
+  verbs: ["bind", "escalate"]
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["certificatesigningrequests/approval"]
+  verbs: ["update"]
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["signers"]
+  resourceNames: ["kubernetes.io/kube-apiserver-client"]
+  verbs: ["approve"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: build-agent-hidden-privesc
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: build-agent-hidden-privesc
+subjects:
+- kind: ServiceAccount
+  name: build-agent
+  namespace: security-104
+EOF
+
 echo "*** CKS lab 104 bootstrap is ready ***"

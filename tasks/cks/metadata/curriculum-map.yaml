@@ -9,10 +9,46 @@ checked_at: "2026-09-06"
 #            deep_dive - помогает решать/troubleshoot CKS, выходит за формальный minimum;
 #            production - выходит за экзамен, но усиливает инженера.
 
+# weight_sources: два официальных публичных источника весов CKS расходятся между собой на
+# дату проверки (проверено вручную 2026-09-06). Поле weight: у каждого домена ниже
+# использует linux_foundation_product_page (candidate-facing страница регистрации на
+# экзамен) как operational source, но расхождение с cncf_certification_page сохранено
+# здесь явно, а не скрыто - целостность обучения не должна автоматически подстраиваться
+# под один источник без учёта другого.
+weight_sources:
+  linux_foundation_product_page:
+    url: "https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/"
+    checked_at: "2026-09-06"
+    weights:
+      cluster_setup: 15
+      cluster_hardening: 15
+      system_hardening: 10
+      minimize_microservice_vulnerabilities: 20
+      supply_chain_security: 20
+      monitoring_logging_runtime_security: 20
+  cncf_certification_page:
+    url: "https://www.cncf.io/training/certification/cks/"
+    checked_at: "2026-09-06"
+    weights:
+      cluster_setup: 10
+      cluster_hardening: 15
+      system_hardening: 15
+      minimize_microservice_vulnerabilities: 20
+      supply_chain_security: 20
+      monitoring_logging_runtime_security: 20
+  agreement_status: disagreement
+  note: >
+    LF и CNCF расходятся именно по Cluster Setup (15% vs 10%) и System Hardening
+    (10% vs 15%); Cluster Hardening, Microservice, Supply Chain и Runtime совпадают
+    у обоих источников. Каждый domain-раздел ниже использует LF-вес как operational
+    default (кандидаты регистрируются через LF), но при планировании времени на
+    экзамене стоит учитывать оба варианта, особенно для Cluster Setup/System Hardening.
+
 domains:
 
   cluster_setup:
     weight: 15
+    weight_source: linux_foundation_product_page
     chapters: ["04", "05", "06", "07", "08", "09"]
     competencies:
       network_policy:
@@ -29,7 +65,7 @@ domains:
         relevance: core
         theory: ["course/08/ru.md"]
         labs: ["labs/103"]
-        mocks: []
+        mocks: ["mock/02", "mock/03", "mock/04"]
       node_metadata_endpoints:
         relevance: core
         theory: ["course/05/ru.md", "course/09/ru.md"]
@@ -40,9 +76,26 @@ domains:
         theory: ["course/09/ru.md"]
         labs: ["labs/103"]
         mocks: []
+      gui_dashboard_access:
+        relevance: legacy_deep_dive
+        current_lf_product_page: false
+        historical_curriculum: true
+        theory: ["course/05/ru.md#05.4"]
+        labs: []
+        mocks: []
+        note: >
+          Официальный пункт "Minimize use of, and access to, GUI elements" присутствовал в
+          более ранних версиях curriculum, но текущая Linux Foundation product page (проверено
+          2026-09-06) не перечисляет отдельную GUI/Dashboard competency в Cluster Setup.
+          upstream Kubernetes Dashboard архивирован и не является приоритетом текущего CKS.
+          relevance помечена legacy_deep_dive (не core), чтобы не создавать противоречие
+          "core, но не приоритет" - покрытие сознательно ограничено принципом
+          least-privilege для любого web UI поверх API (RBAC read-only role, private
+          exposure), без отдельной лабы.
 
   cluster_hardening:
     weight: 15
+    weight_source: linux_foundation_product_page
     chapters: ["10", "11", "12", "13"]
     competencies:
       rbac:
@@ -59,7 +112,7 @@ domains:
         relevance: core
         theory: ["course/12/ru.md", "course/09/ru.md"]
         labs: ["labs/104"]
-        mocks: []
+        mocks: ["mock/04"]
       upgrade_kubernetes:
         relevance: core
         theory: ["course/13/ru.md"]
@@ -68,6 +121,7 @@ domains:
 
   system_hardening:
     weight: 10
+    weight_source: linux_foundation_product_page
     chapters: ["14", "15", "16", "17"]
     competencies:
       host_os_footprint:
@@ -93,6 +147,7 @@ domains:
 
   minimize_microservice_vulnerabilities:
     weight: 20
+    weight_source: linux_foundation_product_page
     chapters: ["18", "19", "20", "21", "22", "23"]
     competencies:
       pod_security_standards:
@@ -114,16 +169,17 @@ domains:
         relevance: core
         theory: ["course/22/ru.md"]
         labs: ["labs/110"]
-        mocks: []
+        mocks: ["mock/01", "mock/02", "mock/03"]
       pod_to_pod_encryption:
         relevance: core
         theory: ["course/23/ru.md"]
         labs: ["labs/110"]
         implementations: ["cilium", "istio"]
-        mocks: []
+        mocks: ["mock/03", "mock/04"]
 
   supply_chain_security:
     weight: 20
+    weight_source: linux_foundation_product_page
     chapters: ["24", "25", "26", "27", "28"]
     competencies:
       base_image_minimization:
@@ -135,7 +191,7 @@ domains:
         relevance: core
         theory: ["course/25/ru.md"]
         labs: ["labs/111"]
-        mocks: []
+        mocks: ["mock/02", "mock/03"]
       artifact_signing_verification:
         relevance: core
         theory: ["course/26/ru.md"]
@@ -150,22 +206,23 @@ domains:
         relevance: core
         theory: ["course/28/ru.md", "course/25/ru.md"]
         labs: ["labs/111"]
-        mocks: []
+        mocks: ["mock/01", "mock/02", "mock/03"]
 
   monitoring_logging_runtime_security:
     weight: 20
+    weight_source: linux_foundation_product_page
     chapters: ["29", "30", "31", "32"]
     competencies:
       behavioral_analytics:
         relevance: core
         theory: ["course/29/ru.md"]
         labs: ["labs/112"]
-        mocks: []
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
       threat_detection:
         relevance: core
         theory: ["course/30/ru.md", "course/29/ru.md"]
         labs: ["labs/112"]
-        mocks: []
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
       attack_phase_investigation:
         relevance: core
         theory: ["course/02/ru.md", "course/30/ru.md"]
@@ -180,7 +237,7 @@ domains:
         relevance: core
         theory: ["course/32/ru.md"]
         labs: ["labs/112"]
-        mocks: []
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
 
 foundation:
   # Главы 01-03 - словарь модели угроз и Linux-механизмы, не привязаны к одному домену
@@ -207,9 +264,228 @@ coverage_gaps:
     competency: upgrade_kubernetes
     note: "Компетенция upgrade_kubernetes (глава 13) не имеет отдельной лабы; проверяется частично моками."
   - id: no_mock_coverage_several_competencies
+    checked_at: "2026-09-06"
     note: >
-      Несколько core-компетенций (ingress_tls, node_metadata_endpoints, verify_platform_binaries,
-      restrict_api_access, upgrade_kubernetes, admission_policies, isolation_multitenancy,
-      pod_to_pod_encryption, все Supply Chain и все Runtime competencies) не имеют явного
-      mock-покрытия в этой карте. Это может отражать реальное покрытие моков 01-04 (нужна
-      отдельная проверка содержания каждого mock) либо пробел, который стоит устранить.
+      Проверено вручную построчным чтением README/tests.bats всех mock/01-04 (2026-09-06):
+      ingress_tls, isolation_multitenancy, pod_to_pod_encryption, image_vulnerability_scanning,
+      sbom_cicd_artifact_repos, behavioral_analytics, threat_detection, audit_logs и
+      restrict_api_access реально покрыты одним или несколькими mock/0N - поля mocks: выше
+      обновлены с конкретными списками. Остаются без mock-покрытия и это подтверждено
+      отсутствием соответствующих задач (не просто "не проверено"): node_metadata_endpoints,
+      verify_platform_binaries, upgrade_kubernetes, admission_policies (Kyverno/OPA - в mocks
+      не встречается вовсе), base_image_minimization, artifact_signing_verification (cosign/
+      signature verification - в mocks не встречается), static_analysis (hadolint/kube-linter/
+      kubesec - в mocks не встречается).
+
+interleaving_bank:
+  # Машиночитаемый банк вопросов и заданий, тегированных по пересекающимся доменам/главам.
+  # Источник для будущей автогенерации смешанных квизов. Добавлен по итогам отзыва про
+  # отсутствие interleaving между доменами (2026-09-06): курс до этого был строго
+  # single-domain внутри каждой главы, без смешанной практики между главами.
+  #
+  # kind: flashback_question - 1 вопрос в конце self-check секции главы, ссылающийся на
+  #                             несмежный домен;
+  #       mixed_checkpoint    - блок из 4-5 заданий в конце последней главы домена,
+  #                             минимум одно задание явно смешанное;
+  #       integration_task    - задание внутри существующей лабы, требующее техники
+  #                             из другого домена для выполнения.
+  questions:
+    - id: fb_10_04
+      kind: flashback_question
+      domains: [cluster_hardening, cluster_setup]
+      chapters: ["10", "04"]
+      location: "course/10/ru.md"
+      summary: "RBAC default-deny как та же allow-list логика, что NetworkPolicy default-deny."
+    - id: fb_11_21
+      kind: flashback_question
+      domains: [cluster_hardening, minimize_microservice_vulnerabilities]
+      chapters: ["11", "21"]
+      location: "course/11/ru.md"
+      summary: "ServiceAccount token как Secret: чем угроза токена отличается от угрозы обычного Secret."
+    - id: fb_12_32
+      kind: flashback_question
+      domains: [cluster_hardening, monitoring_logging_runtime_security]
+      chapters: ["12", "32"]
+      location: "course/12/ru.md"
+      summary: "Точечная проверка curl/401 vs audit log как request-level evidence (не continuous config-state monitor)."
+    - id: fb_13_26
+      kind: flashback_question
+      domains: [cluster_hardening, supply_chain_security]
+      chapters: ["13", "26"]
+      location: "course/13/ru.md"
+      summary: "Version skew (compatible) vs image digest pinning (identical) - два способа доверия версии."
+    - id: fb_14_29
+      kind: flashback_question
+      domains: [system_hardening, monitoring_logging_runtime_security]
+      chapters: ["14", "29"]
+      location: "course/14/ru.md"
+      summary: "Static host hardening vs Falco runtime detection нового процесса."
+    - id: fb_15_10
+      kind: flashback_question
+      domains: [system_hardening, cluster_hardening]
+      chapters: ["15", "10"]
+      location: "course/15/ru.md"
+      summary: "Два уровня least privilege: Linux host и Kubernetes API (RBAC)."
+    - id: fb_16_18
+      kind: flashback_question
+      domains: [system_hardening, minimize_microservice_vulnerabilities]
+      chapters: ["16", "18"]
+      location: "course/16/ru.md"
+      summary: "Где заканчивается AppArmor и начинается зона PSA."
+    - id: fb_17_20
+      kind: flashback_question
+      domains: [system_hardening, minimize_microservice_vulnerabilities]
+      chapters: ["17", "20"]
+      location: "course/17/ru.md"
+      summary: "Почему admission policy не гарантирует enforcement seccomp без node support."
+    - id: fb_18_10
+      kind: flashback_question
+      domains: [minimize_microservice_vulnerabilities, cluster_hardening]
+      chapters: ["18", "10"]
+      location: "course/18/ru.md"
+      summary: "Обход PSA через RBAC-право create namespaces без ограничения labels."
+    - id: fb_19_30
+      kind: flashback_question
+      domains: [minimize_microservice_vulnerabilities, monitoring_logging_runtime_security]
+      chapters: ["19", "30"]
+      location: "course/19/ru.md"
+      summary: "PSA не останавливает runtime-угрозы после успешного admission."
+    - id: fb_20_04
+      kind: flashback_question
+      domains: [minimize_microservice_vulnerabilities, cluster_setup]
+      chapters: ["20", "04"]
+      location: "course/20/ru.md"
+      summary: "Admission policy enforce/Deny и NetworkPolicy default-deny - одна allow-list логика."
+    - id: fb_21_14
+      kind: flashback_question
+      domains: [minimize_microservice_vulnerabilities, system_hardening]
+      chapters: ["21", "14"]
+      location: "course/21/ru.md"
+      summary: "Secret через tmpfs-backed volume после монтирования (не durable disk) vs Secret в encrypted etcd."
+    - id: fb_22_10
+      kind: flashback_question
+      domains: [minimize_microservice_vulnerabilities, cluster_hardening]
+      chapters: ["22", "10"]
+      location: "course/22/ru.md"
+      summary: "Multi-tenancy изоляция на двух уровнях: kernel sandbox и RBAC/Kubernetes API."
+    - id: fb_23_06
+      kind: flashback_question
+      domains: [minimize_microservice_vulnerabilities, cluster_setup]
+      chapters: ["23", "06"]
+      location: "course/23/ru.md"
+      summary: "Один CNI (Cilium), две разные задачи: NetworkPolicy и transparent encryption."
+    - id: fb_24_14
+      kind: flashback_question
+      domains: [supply_chain_security, system_hardening]
+      chapters: ["24", "14"]
+      location: "course/24/ru.md"
+      summary: "Минимизация поверхности атаки на двух уровнях: base image и host footprint."
+    - id: fb_25_32
+      kind: flashback_question
+      domains: [supply_chain_security, monitoring_logging_runtime_security]
+      chapters: ["25", "32"]
+      location: "course/25/ru.md"
+      summary: "SBOM/provenance ('из чего собран') vs audit log ('кто и когда взаимодействовал')."
+    - id: fb_26_20
+      kind: flashback_question
+      domains: [supply_chain_security, minimize_microservice_vulnerabilities]
+      chapters: ["26", "20"]
+      location: "course/26/ru.md"
+      summary: "Signature verification в CI недостаточно - admission policy как enforcement point."
+    - id: fb_27_07
+      kind: flashback_question
+      domains: [supply_chain_security, cluster_setup]
+      chapters: ["27", "07"]
+      location: "course/27/ru.md"
+      summary: "Статическая проверка конфигурации на двух этапах: pre-deploy manifest vs running cluster (CIS)."
+    - id: fb_28_29
+      kind: flashback_question
+      domains: [supply_chain_security, monitoring_logging_runtime_security]
+      chapters: ["28", "29"]
+      location: "course/28/ru.md"
+      summary: "Scan-time vulnerability detection vs runtime behavior detection (Falco)."
+    - id: fb_29_17
+      kind: flashback_question
+      domains: [monitoring_logging_runtime_security, system_hardening]
+      chapters: ["29", "17"]
+      location: "course/29/ru.md"
+      summary: "Syscall-level detection (Falco) vs syscall-level prevention (seccomp)."
+    - id: fb_30_11
+      kind: flashback_question
+      domains: [monitoring_logging_runtime_security, cluster_hardening]
+      chapters: ["30", "11"]
+      location: "course/30/ru.md"
+      summary: "Token theft как attack vector: отличить легитимный запрос Pod от кражи его токена."
+    - id: fb_31_24
+      kind: flashback_question
+      domains: [monitoring_logging_runtime_security, supply_chain_security]
+      chapters: ["31", "24"]
+      location: "course/31/ru.md"
+      summary: "Immutable образ (build-time) vs immutable runtime (readOnlyRootFilesystem)."
+    - id: fb_32_12
+      kind: flashback_question
+      domains: [monitoring_logging_runtime_security, cluster_hardening]
+      chapters: ["32", "12"]
+      location: "course/32/ru.md"
+      summary: "Audit log как request-level evidence (кто/когда/verb/result), а не continuous config-state monitor для restriction."
+  checkpoints:
+    - id: cp_cluster_setup
+      kind: mixed_checkpoint
+      domain: cluster_setup
+      chapters: ["04", "05", "06", "07", "08", "09"]
+      location: "course/09/ru.md"
+      cross_domain_task_refs: ["04", "08"]
+    - id: cp_cluster_hardening
+      kind: mixed_checkpoint
+      domain: cluster_hardening
+      chapters: ["10", "11", "12", "13"]
+      location: "course/13/ru.md"
+      cross_domain_task_refs: ["04", "10"]
+    - id: cp_system_hardening
+      kind: mixed_checkpoint
+      domain: system_hardening
+      chapters: ["14", "15", "16", "17"]
+      location: "course/17/ru.md"
+      cross_domain_task_refs: ["10", "16", "17"]
+    - id: cp_minimize_microservice_vulnerabilities
+      kind: mixed_checkpoint
+      domain: minimize_microservice_vulnerabilities
+      chapters: ["18", "19", "20", "21", "22", "23"]
+      location: "course/23/ru.md"
+      cross_domain_task_refs: ["10", "18", "19", "04"]
+    - id: cp_supply_chain_security
+      kind: mixed_checkpoint
+      domain: supply_chain_security
+      chapters: ["24", "25", "26", "27", "28"]
+      location: "course/28/ru.md"
+      cross_domain_task_refs: ["20", "26"]
+    - id: cp_monitoring_logging_runtime_security
+      kind: mixed_checkpoint
+      domain: monitoring_logging_runtime_security
+      chapters: ["29", "30", "31", "32"]
+      location: "course/32/ru.md"
+      cross_domain_task_refs: ["12", "10", "30", "31", "32"]
+      note: >
+        Последний чек-поинт курса содержит "Итоговое интеграционное задание", объединяющее
+        3 домена в одной цепочке: RBAC privilege escalation (cluster_hardening) → audit log
+        detection (monitoring) → containment.
+  integration_tasks:
+    # Задания внутри существующих лаб, требующие техники из другого домена для выполнения
+    # (компромисс между полноценными новыми интеграционными лабами и точечной правкой).
+    - id: it_lab104_task9
+      kind: integration_task
+      domains: [cluster_hardening, monitoring_logging_runtime_security]
+      location: "labs/104/README_RU.MD#9"
+      summary: >
+        RBAC privilege escalation (ClusterRoleBinding к cluster-admin) обнаруживается через
+        целевой audit policy на rbac.authorization.k8s.io и локализуется через удаление
+        binding с подтверждённым отзывом доступа.
+    - id: it_lab112_task9
+      kind: integration_task
+      domains: [supply_chain_security, monitoring_logging_runtime_security]
+      location: "labs/112/README_RU.MD#9"
+      summary: >
+        Kyverno ValidatingPolicy блокирует untrusted registry image на admission (Supply
+        Chain); Falco custom rule на container.image.repository обнаруживает попытку
+        обойти эту policy через прямой запуск контейнера в containerd (ctr), минуя
+        kube-apiserver и admission controller целиком.

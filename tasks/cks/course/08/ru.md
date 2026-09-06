@@ -28,7 +28,7 @@ TLS защищает канал от клиента до точки **TLS termin
 transparent encryption, которая рассматривается в главе 23.
 
 ```mermaid
-flowchart LR
+flowchart TB
     client["Клиент"] -->|"HTTP: пароль и cookie<br>видны в сети"| bad["Перехватчик"]
     client -->|"HTTPS: TLS handshake<br>и шифрование"| ingress["Ingress/Gateway controller<br>TLS termination"]
     ingress -->|"HTTP или TLS<br>внутри кластера"| service["Service"]

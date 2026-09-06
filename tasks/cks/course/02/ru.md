@@ -73,7 +73,7 @@ sudo ss -tulpn
 **Поверхность атаки** - все точки, через которые злоумышленник может получить доступ, выполнить действие, закрепиться или извлечь данные. Она не ограничена `kubectl`: у кластера есть сеть, ноды, образы, CI/CD, DNS и внешние облачные API.
 
 ```mermaid
-flowchart LR
+flowchart TB
     user["Пользователь или CI"] --> api["Kubernetes API"]
     api --> etcd["etcd"]
     api --> kubelet["kubelet"]
@@ -144,7 +144,7 @@ kubectl delete pod 4c-demo
 Один инцидент обычно проходит через несколько фаз. Ниже приведена авторская упрощённая Kubernetes attack chain, использующая терминологию MITRE ATT&CK for Containers, но не являющаяся точной матрицей его тактик. Она нужна не для механического навешивания меток, а чтобы определить, где предотвратить действие и какой сигнал сохранить для расследования.
 
 ```mermaid
-flowchart LR
+flowchart TB
     access["Initial access<br>уязвимый Ingress, украденный token"] --> exec["Execution<br>команда в Pod или RCE"]
     exec --> persist["Persistence<br>новый workload, CronJob, RBAC binding"]
     persist --> privesc["Privilege escalation<br>privileged Pod, bind, escalate"]
@@ -185,7 +185,7 @@ Threat model должен давать проверяемые решения, а
 Компактная DFD для типового внешнего сервиса показывает, где пересекаются доверенные границы:
 
 ```mermaid
-flowchart LR
+flowchart TB
     internet["Internet"] --> ingress["Ingress"] --> pod["Pod"]
     pod --> sa["ServiceAccount"] --> api["Kubernetes API"]
     pod --> metadata["cloud metadata"]

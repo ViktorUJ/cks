@@ -26,7 +26,7 @@
 майнинга или продолжения атаки.
 
 ```mermaid
-flowchart LR
+flowchart TB
     vuln["Уязвимость или<br>скомпрометированный процесс"] --> write["Writable layer<br>/app, /etc, /tmp"]
     write --> tool["Скачать tool / изменить script"]
     tool --> persist["Пережить restart процесса<br>в том же container"]
@@ -313,7 +313,7 @@ package manager, shell и большинства обычных userland tools. 
 что production образ случайно содержит compiler, `curl`, `bash` или package manager.
 
 ```mermaid
-flowchart LR
+flowchart TB
     src["Source + lock file"] --> build["Builder stage<br>compiler, tests, tools"]
     build --> artifact["Статический binary<br>или application artefact"]
     artifact --> final["Distroless final image<br>app + runtime libs"]
@@ -888,6 +888,11 @@ good workload. Для Kyverno отдельно проверяют report и сг
 7. Почему PSA `restricted` с `latest` не является стабильным production baseline?
 8. Как доказать, что native Policy Binding действительно блокирует нарушение, а не просто
    создана?
+9. **Flashback (глава 24).** Distroless image (глава 24) убирает shell/package manager из
+   образа - это immutable **build-time**. `readOnlyRootFilesystem` (эта глава) запрещает
+   запись в runtime - это immutable **runtime**. Если у приложения нет ни shell в образе,
+   ни возможности писать в root filesystem, какой практический шаг post-exploitation всё
+   ещё возможен для атакующего с RCE, а какой уже точно закрыт этой комбинацией?
 
 ## Практика
 

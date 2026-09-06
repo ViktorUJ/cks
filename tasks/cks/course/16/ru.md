@@ -24,7 +24,7 @@ Mandatory Access Control: ядро сверяет действие процес�
 ограничения, поэтому privileged не является AppArmor-барьером.
 
 ```mermaid
-flowchart LR
+flowchart TB
     app["Процесс в контейнере"] --> request["open /etc/shadow\nили другая операция"]
     request --> dac["DAC: UID/GID/mode bits"]
     dac --> aa["AppArmor profile\nallow / deny"]
@@ -411,6 +411,21 @@ change record. `complain`-лог показывает, что приложени
   `capabilities.drop: [ALL]`, `seccompProfile: RuntimeDefault`, readonly filesystem,
   NetworkPolicy и минимальным RBAC. Ни один из них не заменяет остальные.
 
+> **Production note, не экзаменационный материал.** Ручное написание AppArmor profile с
+> нуля (задание 1-2 этой главы) особенно болезненно в масштабе кластера: profile нужно
+> доставить на каждую подходящую ноду и поддерживать синхронно с версией приложения.
+> **Security Profiles Operator (SPO)** - тот же оператор, что упомянут в
+> [главе 17](../17/ru.md#17.8) для seccomp - управляет также AppArmor: CRD
+> `AppArmorProfile` хранит profile как Kubernetes-объект и синхронизирует его по нодам,
+> а `ProfileRecording` умеет **записать** profile из поведения реально работающего Pod
+> вместо ручного `aa-genprof`/`aa-logprof`, использованных в 16.9 выше. `ProfileBinding`
+> привязывает записанный profile к workload декларативно. Итоговый профиль всё равно
+> проверяется тем же `aa-status` на ноде, что и вручную написанный - SPO меняет способ
+> доставки и recording, а не механизм enforce в ядре. Установку, lifecycle и общий
+> recording workflow SPO для seccomp/AppArmor/SELinux см. в [главе 17, §17.8](../17/ru.md#17.8);
+> здесь показана только AppArmor-специфика: имена CRD и то, что итог проверяется
+> идентично ручному profile.
+
 ## 16.10. Мини-глоссарий
 
 - **AppArmor** - path-based Linux MAC, ограничивающий операции процесса profile.
@@ -583,17 +598,24 @@ kubectl describe pod -n "$NS" "$POD"
    `k8s-demo`?
 7. Какие команды докажут одновременно выбранную ноду, effective profile процесса и
    заблокированное действие?
+8. **Flashback (глава 18).** PSA `restricted` из главы 18 требует `RuntimeDefault`/
+   `Localhost` для seccomp, но **не** требует конкретного AppArmor profile сверх
+   `RuntimeDefault`/не отключённого default. Где именно заканчивается то, что проверяет
+   встроенный PSA, и начинается зона, которую может закрыть только явно назначенный
+   `Localhost` AppArmor profile из этой главы?
 
 ## Практика
 
 Сначала отработайте `securityContext`, non-root запуск и capabilities в
-[лабе 106 CKA](../../../cka/labs/106/README_RU.MD). Затем на test-ноде создайте profile
-`k8s-demo`, загрузите его через `apparmor_parser`, назначьте Pod с
-`appArmorProfile.type: Localhost` и сравните поведение в `complain` и `enforce`. В следующей [главе 17](../17/ru.md) добавьте
-seccomp: AppArmor ограничит объекты и операции profile, а seccomp - доступный процессу
-набор syscalls.
+[лабе 106 CKA](../../../cka/labs/106/README_RU.MD) - это prerequisite, а не основная
+практика темы главы. Затем на test-ноде создайте profile `k8s-demo`, загрузите его через
+`apparmor_parser`, назначьте Pod с `appArmorProfile.type: Localhost` и сравните поведение
+в `complain` и `enforce`. В следующей [главе 17](../17/ru.md) добавьте seccomp: AppArmor
+ограничит объекты и операции profile, а seccomp - доступный процессу набор syscalls.
 
-🧪 Лаба 106 (SecurityContext и capabilities):
+🧪 Основная CKS-практика: [Лаба 106 - AppArmor и seccomp](../../labs/106/README_RU.MD)
+
+📘 Prerequisite / вспомогательная практика (SecurityContext и capabilities):
 [tasks/cka/labs/106](../../../cka/labs/106/README_RU.MD)
 🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [apparmor](https://killercoda.com/killer-shell-cks/scenario/apparmor)
 

@@ -21,7 +21,7 @@ Dockerfile: в цепочке есть dependency registry, build runner, CI/CD 
 registry, manifest/GitOps repository, admission policy и kubelet, скачивающий image.
 
 ```mermaid
-flowchart LR
+flowchart TB
     src["Исходный код<br>и lock files"] --> deps["Зависимости<br>package registry"]
     deps --> build["CI build и test"]
     src --> build
@@ -197,7 +197,7 @@ jq '.packages | length' out.spdx.json
 credentials или неправильного имени artifact.
 
 ```mermaid
-flowchart LR
+flowchart TB
     image["Image по digest"] --> syft["syft\nSPDX или CycloneDX"]
     image --> bom["bom generate\nSPDX 2.3 JSON"]
     syft --> store["SBOM рядом с artifact\nи digest"]
@@ -407,7 +407,7 @@ statement. Подпись artifact и криптографическую про�
 6. сохранить SBOM, результат scan и rollout как evidence для incident response и audit.
 
 ```mermaid
-flowchart LR
+flowchart TB
     cve["Advisory: package\n+ affected version"] --> sbom["Поиск в SBOM\nпо digest"]
     sbom --> affected["Affected image\nи running Pod"]
     affected --> fixed["Fixed dependency\nили base image"]
@@ -579,6 +579,12 @@ mock-сценарий. Не путайте формат Syft, название J
    environment?
 9. Какой смысл SLSA придаёт provenance и изолированному сборщику (builder)?
 10. Какие проверки должны пройти между fixed dependency и production rollout?
+11. **Flashback (глава 32).** SBOM/provenance (эта глава) отвечают на вопрос "из чего
+    состоит этот artifact и как он был собран". Kubernetes audit log (глава 32) отвечает
+    на вопрос "кто и когда взаимодействовал с API server". Если нужно доказать полную
+    цепочку "кто задеплоил именно этот image, с этим SBOM, в это время" - какого из двух
+    источников евиденс недостаточно самого по себе, и как их совместное использование
+    закрывает то, что не закрывает каждый по отдельности?
 
 ## Практика
 

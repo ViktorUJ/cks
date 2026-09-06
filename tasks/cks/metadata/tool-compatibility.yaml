@@ -26,7 +26,8 @@ cilium:
   source: labs/110/env.hcl
 
 kyverno:
-  course_version: "1.19.2+"
+  course_version: "1.19.0"
+  helm_chart_version: "3.9.0"
   kubernetes:
     officially_tested:
       - "1.33"
@@ -35,11 +36,13 @@ kyverno:
     training_cluster: "1.36"
   status: intentionally_outside_official_matrix
   note: >
-    Lab 108 и глава 26 используют Kyverno 1.19.2+ на training-кластере Kubernetes 1.36.
-    Это forward-looking training-комбинация вне официально протестированной support matrix
-    Kyverno 1.19 (v1.33-v1.35). Её нельзя представлять как officially supported связку.
-    Минимальная patch-версия 1.19.2 обязательна для fix #17427 (pods/ephemeralcontainers
-    debug bypass); на 1.19.0/1.19.1 negative test может не сработать.
+    Lab 108 и Lab 111 устанавливают Kyverno через Helm chart 3.9.0, что соответствует
+    релизу Kyverno 1.19.0, на training-кластере Kubernetes 1.36. Это forward-looking
+    training-комбинация вне официально протестированной support matrix Kyverno 1.19
+    (v1.33-v1.35). Её нельзя представлять как officially supported связку. Если для
+    конкретного negative test требуется более новый patch внутри ветки 1.19.x, сверяйте
+    актуальный fixed release в kyverno/kyverno перед тем, как объявлять его pinned - этот
+    файл описывает версию, которую лабы реально устанавливают, а не желаемый минимум.
   source: course/26/ru.md
 
 trivy:
@@ -53,7 +56,7 @@ syft:
   source: labs/111/worker/files/worker.sh
 
 cosign:
-  course_version: "3.0.6"
+  course_version: "3.1.3"
   verify_before_release: true
   source: labs/111/worker/files/worker.sh
 

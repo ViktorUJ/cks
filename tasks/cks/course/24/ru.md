@@ -31,7 +31,7 @@
 права процесса, `SecurityContext`, NetworkPolicy и runtime detection остаются нужны.
 
 ```mermaid
-flowchart LR
+flowchart TB
     src["Исходники + зависимости"] --> build["builder stage\nкомпилятор, тесты, git"]
     build -->|"весь stage попал в runtime ❌"| fat["shell + package manager\nлишние пакеты и CVE"]
     build -->|"COPY только artifact ✓"| runtime["минимальный runtime\nбинарник + нужные данные"]
@@ -520,6 +520,12 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 8. Какие признаки в `dive` указывают на слишком широкий context или waste в layers?
 9. Как доказать, что distroless Pod работоспособен, если `/bin/sh` намеренно отсутствует?
 10. Чем rootless Podman полезен для build pipeline и чего он не защищает?
+11. **Flashback (глава 14).** Минимизация base image (эта глава: distroless, отсутствие
+    shell/package manager) и минимизация host footprint (глава 14: отключение лишних
+    сервисов/пакетов на ноде) - это один и тот же принцип "меньше поверхность атаки",
+    применённый на двух разных уровнях. Если у вас ограничено время перед экзаменом/
+    инцидентом, какой из этих двух уровней минимизации снижает риск для **уже
+    скомпрометированного** container быстрее - и почему ни один не заменяет другой?
 
 ## Практика
 

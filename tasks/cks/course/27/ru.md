@@ -13,7 +13,7 @@ Kubernetes API принимает syntactically valid manifest, даже есл�
 Статический анализ читает исходные файлы без запуска workload. Он не заменяет admission policy, signature verification, vulnerability scanning или runtime detection: инструменты отвечают на разные вопросы.
 
 ```mermaid
-flowchart LR
+flowchart TB
     dev["Разработчик меняет\nDockerfile и manifests"] --> pr["Pull request"]
     pr --> lint["Инструменты практики: kubesec, kube-linter,\nhadolint, conftest"]
     lint -->|"нарушение"| block["CI завершается ошибкой\nartifact не публикуется"]
@@ -624,6 +624,11 @@ kubectl apply --dry-run=server -f manifests/
 6. Почему CI должен сканировать rendered Helm/Kustomize output, а не только templates?
 7. Что нужно сделать после finding: отключить rule, исправить source или принять узкое исключение?
 8. Почему `set -o pipefail` важен для команды scanner, вывод которой передаётся в `tee`?
+9. **Flashback (глава 07).** `kube-bench`/CIS Benchmark (глава 07) и `kubesec`/`kube-linter`
+   (эта глава) оба статически проверяют конфигурацию, но на разных стадиях: одно - уже
+   работающий control plane/node, другое - манифест перед деплоем. Если оба инструмента
+   технически доступны, какой из них раньше поймает опасную настройку и почему более раннее
+   обнаружение обычно дешевле?
 
 ## Практика
 
@@ -632,7 +637,7 @@ kubectl apply --dry-run=server -f manifests/
 🧪 Лаба 111 (Supply chain: анализ, Trivy, SBOM, signing): [tasks/cks/labs/111](../../labs/111/README_RU.MD)
 🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [static-manual-analysis-k8s](https://killercoda.com/killer-shell-cks/scenario/static-manual-analysis-k8s) · [static-manual-analysis-docker](https://killercoda.com/killer-shell-cks/scenario/static-manual-analysis-docker)
 
-📘 CKA-опора: [SecurityContext и capabilities](../../../cka/course/20/ru.md)
+📘 База CKA: [SecurityContext и capabilities](../../../cka/course/20/ru.md)
 
 ## Справочные материалы
 

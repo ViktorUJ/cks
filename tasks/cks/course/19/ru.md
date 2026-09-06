@@ -28,7 +28,7 @@ spec:
 Такой контейнер получает почти неограниченный доступ к ядру и устройствам ноды; вместе с `hostPID`, `hostNetwork` или `hostPath` это обычный путь от компрометации приложения к данным ноды и соседних Pod. Review YAML недостаточен: манифест может прийти из CI, Helm chart или API. Нужен контроль **на admission**, до запуска контейнера.
 
 ```mermaid
-flowchart LR
+flowchart TB
     author["Пользователь или CI\nсоздаёт Pod"] --> api["kube-apiserver"]
     api --> psa["Pod Security Admission\nPSS для namespace"]
     psa -->|"соответствует"| etcd["etcd → scheduler\nи container runtime"]
@@ -127,7 +127,7 @@ spec:
 `warn` и `audit` **не защищают**: нарушающий Pod всё ещё запускается. Их цель - инвентаризация до перехода к `enforce`. Режимы независимы: на одном namespace можно `enforce=baseline`, но уже собирать `warn` и `audit` для `restricted`.
 
 ```mermaid
-flowchart LR
+flowchart TB
     pod["Новый Pod"] --> base["enforce=baseline"]
     base -->|"нарушение"| rejected["отклонён"]
     base -->|"прошёл"| strict["warn/audit=restricted"]
@@ -394,6 +394,11 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 8. Чем admission rejection PSA отличается от `ImagePullBackOff` и отказа RBAC?
 9. Почему отдельный namespace лучше широкого exemption для CNI или CSI?
 10. Что случилось с PodSecurityPolicy и чем закрывают правила, которых нет в PSS?
+11. **Flashback (глава 30).** PSA принимает решение один раз - на admission, при создании
+    Pod. Если Pod прошёл `enforce=restricted` честно, но процесс внутри контейнера позже
+    попытается выполнить нечто подозрительное (например, downloaded binary), сможет ли PSA
+    это остановить? Какой слой из главы 30 покрывает именно этот - runtime, а не
+    admission-time - момент?
 
 ## Практика
 

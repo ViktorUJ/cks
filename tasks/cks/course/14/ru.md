@@ -27,7 +27,7 @@
 - журналы, учётные записи, unit-файлы и путь для ошибочной конфигурации.
 
 ```mermaid
-flowchart LR
+flowchart TB
     pkg["лишний пакет или service"] --> vuln["CVE / слабая конфигурация"]
     vuln --> access["доступ к ноде"]
     access --> runtime["runtime socket или kubelet credential"]
@@ -516,6 +516,16 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
   `kubelet`/`containerd`, только после этого rollout. Для control-plane держат out-of-band
   console и tested rollback.
 
+> **Для тех, кто хочет глубже, не экзаменационный материал.** Эта главы и главы 16-17
+> объясняют namespaces, capabilities, cgroups и MAC ровно в объёме, который нужен для CKS:
+> распознать риск, применить нужное поле `securityContext` или policy и проверить эффект.
+> Если нужен более глубокий разбор самого механизма - как ядро реализует syscall
+> interception, что происходит на уровне cgroup v2 controller или как устроена изоляция
+> namespace на уровне kernel structures - собственно этому посвящена отдельная книга:
+> Liz Rice, *Container Security*, 2nd edition (O'Reilly, 2025). Курс не пытается
+> конкурировать с ней по глубине Linux internals; это осознанная граница объёма, а не
+> сигнал, что тема исчерпана главами 14-17.
+
 ## 14.10. Мини-глоссарий
 
 - **footprint** - набор пакетов, процессов, портов, socket и конфигурации, увеличивающий
@@ -589,6 +599,11 @@ Docker TCP, исправить права socket или отключить servi
 9. Чем временный `modprobe -r` отличается от `blacklist` и `install ... /bin/false`?
 10. Почему отключение модуля тестируют node-by-node до rollout?
 11. Какие риски нужно проверить до `userns-remap` в `daemon.json`?
+12. **Flashback (глава 29).** Эта глава закрывает известные лишние процессы и порты
+    заранее (static hardening, "до инцидента"). Как Falco из главы 29 обнаружит **новый**,
+    ранее не учтённый процесс на ноде уже после hardening - какой сигнал детекции дополняет
+    static inventory, если злоумышленник запустит нечто, чего не было в исходном списке
+    сервисов?
 
 ## Практика
 
@@ -605,6 +620,7 @@ Docker TCP, исправить права socket или отключить servi
 - [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes)
 - [Kubernetes: Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/)
 - [containerd: Operations and administration](https://github.com/containerd/containerd/blob/main/docs/ops.md)
+- [Liz Rice, Container Security, 2nd Edition (O'Reilly, 2025)](https://www.oreilly.com/library/view/container-security-2nd/9798341627697/) - глубокий разбор Linux internals (syscalls, capabilities, cgroups, namespaces) за пределами объёма CKS.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 13](../13/ru.md) · [Глава 15](../15/ru.md)

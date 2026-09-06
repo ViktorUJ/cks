@@ -27,6 +27,15 @@ record_result() {
   if [[ "$ns" == "$NS" && "$frontend" == "frontend" && "$backend" == "backend" && "$client" == "untrusted" && "$service_port" == "80" ]]; then
     record_result 0
   else
+    if [[ "$frontend" != "frontend" ]]; then
+      echo "HINT: Pod 'frontend' must carry label 'role: frontend'."
+    elif [[ "$backend" != "backend" ]]; then
+      echo "HINT: Pod 'backend' must carry label 'app: backend'."
+    elif [[ "$client" != "untrusted" ]]; then
+      echo "HINT: Pod 'client' must carry label 'role: untrusted' - this distinguishes it from the trusted frontend identity for the CiliumNetworkPolicy in the next task."
+    elif [[ "$service_port" != "80" ]]; then
+      echo "HINT: Service 'backend' must expose port 80."
+    fi
     echo "ns=$ns frontend.role=$frontend backend.app=$backend client.role=$client backend.port=$service_port"
     record_result 1
   fi
@@ -46,6 +55,13 @@ record_result() {
   if [[ "$policy_ok" == "true" && "$allowed_rc" -eq 0 && "$allowed" == "200" ]] && [[ "$blocked_rc" -ne 0 || "$blocked" != "200" ]]; then
     record_result 0
   else
+    if [[ "$policy_ok" != "true" ]]; then
+      echo "HINT: CiliumNetworkPolicy 'backend-policy' must select endpoint label 'app: backend', allow ingress fromEndpoints matching label 'role: frontend', and permit toPorts port 80/TCP. Check each of these three conditions separately."
+    elif [[ "$allowed_rc" -ne 0 || "$allowed" != "200" ]]; then
+      echo "HINT: 'frontend' could not reach backend on port 80 (rc=$allowed_rc status=$allowed) even though it should be allowed. Check the fromEndpoints selector actually matches the frontend Pod's real labels."
+    elif [[ "$blocked_rc" -eq 0 && "$blocked" == "200" ]]; then
+      echo "HINT: 'client' (role: untrusted) was able to reach backend on port 80 - the policy is too permissive. Check that fromEndpoints is scoped to role=frontend only, not matching all Pods in the namespace."
+    fi
     cat /var/work/tests/artifacts/2/l3-l4.txt
     record_result 1
   fi
@@ -64,6 +80,13 @@ record_result() {
   if [[ "$l7_ok" == "true" && "$get_rc" -eq 0 && "$get_code" == "200" && "$post_rc" -eq 0 && "$post_code" == "403" ]]; then
     record_result 0
   else
+    if [[ "$l7_ok" != "true" ]]; then
+      echo "HINT: The policy's L7 HTTP rule must specify method 'GET' and path '/' exactly - a missing or wrong toPorts.rules.http entry means Cilium is not enforcing L7 at all."
+    elif [[ "$get_rc" -ne 0 || "$get_code" != "200" ]]; then
+      echo "HINT: GET / from frontend did not return 200 (rc=$get_rc status=$get_code). Check the L7 rule's method/path match the actual request exactly - Cilium L7 policy is stricter than L3/L4 and denies anything not explicitly allowed."
+    elif [[ "$post_rc" -ne 0 || "$post_code" != "403" ]]; then
+      echo "HINT: POST / did not return 403 (rc=$post_rc status=$post_code) - it should be denied by the L7 policy since only GET was allowed. A denied L7 request from an already-allowed L3/L4 endpoint results in HTTP 403, not a connection failure."
+    fi
     cat /var/work/tests/artifacts/3/l7-http.txt
     record_result 1
   fi
@@ -89,6 +112,19 @@ record_result() {
     && [[ "$blocked_rc" -ne 0 || ! "$blocked" =~ ^[23][0-9][0-9]$ ]]; then
     record_result 0
   else
+    if [[ "$fqdn_ok" != "true" ]]; then
+      echo "HINT: The policy must have an egress rule with toFQDNs.matchName == 'example.com' exactly - a wildcard or wrong domain will not match this check."
+    elif [[ "$dns_ok" != "true" || "$dns_proxy_ok" != "true" ]]; then
+      echo "HINT: A toFQDNs rule requires a companion egress rule allowing DNS to kube-dns (label k8s-app: kube-dns) with a toPorts.rules.dns matchPattern '*' - Cilium needs to observe the DNS answer to resolve the FQDN policy dynamically."
+    elif [[ "$fqdn_https_ok" != "true" ]]; then
+      echo "HINT: The toFQDNs rule for example.com must restrict toPorts to 443/TCP only - allowing all ports defeats the purpose of a DNS-aware egress allowlist."
+    elif [[ "$allowed_rc" -ne 0 || ! "$allowed" =~ ^[23][0-9][0-9]$ ]]; then
+      echo "HINT: HTTPS to example.com did not succeed (rc=$allowed_rc status=$allowed) even though it should be allowed. Give Cilium's FQDN cache a moment after applying the policy, or check the DNS-visibility rule is correctly matching kube-dns."
+    elif [[ "$same_fqdn_http_rc" -eq 0 && "$same_fqdn_http" =~ ^[23][0-9][0-9]$ ]]; then
+      echo "HINT: Plain HTTP (port 80) to example.com succeeded - the policy should only allow port 443 for this FQDN, not all ports on the same domain."
+    elif [[ "$blocked_rc" -eq 0 && "$blocked" =~ ^[23][0-9][0-9]$ ]]; then
+      echo "HINT: HTTPS to a DIFFERENT domain (www.google.com) succeeded - toFQDNs.matchName must be scoped to example.com specifically, not to any FQDN."
+    fi
     cat /var/work/tests/artifacts/4/fqdn.txt
     echo "policy: toFQDNs=$fqdn_ok kube-dns=$dns_ok dns-proxy=$dns_proxy_ok https-443=$fqdn_https_ok"
     record_result 1
@@ -115,6 +151,17 @@ record_result() {
     && grep -q 'allowed=GET / denied=POST /' "$window"; then
     record_result 0
   else
+    if ! [[ -s "$artifact" ]]; then
+      echo "HINT: hubble-observe.json is missing or empty. Run 'hubble observe -o jsonpath'/'--output json' filtered on this namespace WHILE task 2/3 requests are happening, not after they finish."
+    elif [[ "$allowed" -lt 1 ]]; then
+      echo "HINT: No FORWARDED flow found matching frontend->backend GET /. Capture Hubble output during (not before) the actual GET request from task 3."
+    elif [[ "$denied" -lt 1 ]]; then
+      echo "HINT: No DROPPED flow found matching frontend->backend POST /. Capture Hubble output during the actual POST request that gets the L7 403."
+    elif ! [[ -s "$window" ]] || ! grep -q 'source=cks-102/frontend destination=cks-102/backend' "$window"; then
+      echo "HINT: test-window.txt must contain a line starting with 'source=cks-102/frontend destination=cks-102/backend' - use this exact format to summarize the correlated flow."
+    else
+      echo "HINT: test-window.txt must also contain a line 'allowed=GET / denied=POST /' summarizing both outcomes in this exact format."
+    fi
     echo "exact Hubble correlation missing: allowed=$allowed denied=$denied artifact=$artifact window=$window"
     record_result 1
   fi

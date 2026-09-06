@@ -23,7 +23,7 @@ Pod к данным, Kubernetes API или самой ноде. Типичная
 NetworkPolicy уменьшают экспозицию, но не исправляют дефект в коде.
 
 ```mermaid
-flowchart LR
+flowchart TB
     cve["Опубликован CVE\nв kubelet / runtime / ОС"] --> inv["Инвентаризация:\nкакая версия установлена?"]
     inv --> risk["Оценка экспозиции:\nдостижим ли компонент,\nнужны ли права?"]
     risk --> fix["Патч или обновление\nв проверенном окне"]
@@ -577,6 +577,32 @@ kubectl api-resources --api-group=admissionregistration.k8s.io \
   > "$UPGRADE_EVIDENCE/before/admission-resources.txt"
 ```
 
+### Gate 4: security-флаги static Pod manifests не должны исчезнуть
+
+Главная экзаменационная ловушка `kubeadm upgrade`: команда переписывает static Pod
+manifests control plane из своей собственной конфигурации (`ClusterConfiguration` в
+`kubeadm-config` ConfigMap), а не просто патчит существующий файл. Кастомные флаги
+`--audit-policy-file`, `--audit-log-path`, `--encryption-provider-config` (KMS/at-rest
+encryption) и `--profiling=false`, добавленные вручную в manifest **после** первоначальной
+установки кластера, но не отражённые в `kubeadm-config`, могут быть потеряны при следующем
+`kubeadm upgrade apply` - кластер останется API-совместим и `Ready`, но de facto потеряет
+audit trail, шифрование Secret at rest или debug-профилирование останется включённым.
+Зафиксируйте полный список аргументов **до** upgrade:
+
+```bash
+kubectl -n kube-system get pod -l component=kube-apiserver \
+  -o jsonpath='{.items[0].spec.containers[0].command}' \
+  | jq -r '.[]' | sort > "$UPGRADE_EVIDENCE/before/apiserver-flags.txt"
+grep -E '^--(audit-policy-file|audit-log-path|encryption-provider-config|profiling)' \
+  "$UPGRADE_EVIDENCE/before/apiserver-flags.txt" \
+  | tee "$UPGRADE_EVIDENCE/before/apiserver-security-flags.txt"
+```
+
+Если этот список пуст в вашем кластере - это отдельная находка: значит, audit/KMS/profiling
+hardening ещё не применены, и сравнение после upgrade окажется тривиальным. В таком случае
+сначала настройте нужные флаги (главы 07, 09, 32) и только после этого выполняйте upgrade
+gate осмысленно.
+
 ### Контролируемая simulation и post-upgrade validation
 
 Отметьте simulation, ещё раз выполните те же probes как если бы control plane и один
@@ -605,6 +631,12 @@ kubectl get ns -o json | jq -S '[.items[] | {
   enforce: (.metadata.labels["pod-security.kubernetes.io/enforce"] // ""),
   enforceVersion: (.metadata.labels["pod-security.kubernetes.io/enforce-version"] // "")
 }] | sort_by(.namespace)' > "$UPGRADE_EVIDENCE/after/pss.txt"
+kubectl -n kube-system get pod -l component=kube-apiserver \
+  -o jsonpath='{.items[0].spec.containers[0].command}' \
+  | jq -r '.[]' | sort > "$UPGRADE_EVIDENCE/after/apiserver-flags.txt"
+grep -E '^--(audit-policy-file|audit-log-path|encryption-provider-config|profiling)' \
+  "$UPGRADE_EVIDENCE/after/apiserver-flags.txt" \
+  > "$UPGRADE_EVIDENCE/after/apiserver-security-flags.txt"
 
 grep -q 'readyz check passed' "$UPGRADE_EVIDENCE/after/readyz.txt"
 # Любое Ready=False (или отсутствие Ready=True) даёт jq exit code 1 и останавливает gate.
@@ -620,6 +652,16 @@ diff -u "$UPGRADE_EVIDENCE/before/rbac.yaml" "$UPGRADE_EVIDENCE/after/rbac.yaml"
 diff -u "$UPGRADE_EVIDENCE/before/admission.yaml" "$UPGRADE_EVIDENCE/after/admission.yaml"
 diff -u "$UPGRADE_EVIDENCE/before/default-sa-can-i.txt" \
   "$UPGRADE_EVIDENCE/after/default-sa-can-i.txt"
+# Gate: любой security-флаг, присутствовавший до upgrade, обязан остаться после него.
+# Пустой diff -u не обязателен (после upgrade список может стать шире), но exit code
+# comm -23 (строки только в before) обязан быть нулевой длины.
+missing_flags=$(comm -23 "$UPGRADE_EVIDENCE/before/apiserver-security-flags.txt" \
+  "$UPGRADE_EVIDENCE/after/apiserver-security-flags.txt")
+if [[ -n "$missing_flags" ]]; then
+  echo "ERROR: security flags disappeared after upgrade:" >&2
+  printf '%s\n' "$missing_flags" >&2
+  exit 1
+fi
 
 # Несуществующий enforce — самый слабый уровень; latest считаем новее числовой версии.
 # Gate завершается ненулевым кодом только если у сохранённого namespace PSS ослаблен.
@@ -664,8 +706,9 @@ kubectl get pods -A -o json | jq -e '
 
 Simulation считается принятой, если skew check успешен, `kubeadm upgrade plan` сохранён,
 snapshot валиден, deprecated API inventory разобран, `/readyz` успешен, все узлы `Ready`,
-а RBAC/admission/PSS не стали слабее. Для реального upgrade дополнительно приложите точные
-версии до/после и smoke test критической рабочей нагрузки.
+а RBAC/admission/PSS не стали слабее, и ни один security-флаг apiserver (audit, encryption
+provider, profiling) не исчез из static Pod manifest после upgrade. Для реального upgrade
+дополнительно приложите точные версии до/после и smoke test критической рабочей нагрузки.
 
 ## 13.12. Вопросы для самопроверки
 
@@ -682,6 +725,11 @@ snapshot валиден, deprecated API inventory разобран, `/readyz` у
    и работоспособность кластера?
 8. Почему обновление Kubernetes не закрывает автоматически CVE в `containerd`, `runc` или
    kernel, и как их обновлять безопасно?
+9. **Flashback (глава 26).** Version skew (эта глава) и image digest pinning (глава 26) -
+   оба механизма про то, что "какая именно версия сейчас работает" должно быть проверяемым
+   фактом, а не предположением. В чём разница между "версия compatible" (version skew) и
+   "версия identical" (digest), и почему для kubelet/API server достаточно первого, а для
+   container image в production - обязательно второе?
 
 ## Дополнительная практика
 
@@ -693,6 +741,26 @@ runtime-демона.
 🧪 Лаба 111 (kubeadm upgrade): [tasks/cka/labs/111](../../../cka/labs/111/README_RU.MD)
 
 🎮 Killercoda (в браузере, без установки): [Upgrading Kubernetes](https://killercoda.com/chadmcrowell/course/cka/upgrade-k8s) · [Upgrade Kubelet](https://killercoda.com/chadmcrowell/course/cka/upgrade-kubelet)
+
+## Смешанный чек-поинт: Cluster Hardening завершён
+
+Прежде чем перейти к System Hardening, проверьте 15-20 минут без подсказок, что домен
+Cluster Hardening (главы 10-13) закрепился:
+
+1. Создайте узкую Role/RoleBinding для тестового subject и покажите двумя `can-i`
+   проверками, что разрешён `get pods`, но запрещён `delete pods` (глава 10).
+2. Отключите `automount` у `default` ServiceAccount в тестовом namespace и докажите, что
+   новый Pod без явного SA не получает token-файл (глава 11).
+3. Проверьте, включён ли anonymous access на API server, и объясните разницу между `401`
+   и `403` в ответе (глава 12).
+4. **Смешанное задание.** Возьмите NetworkPolicy default-deny (глава 04, домен Cluster
+   Setup) и RBAC default-deny (глава 10, этот домен): объясните, почему отсутствие явного
+   правила в обоих случаях означает запрет, а не разрешение, и в чём разница между тем, кто
+   принимает это решение (API server RBAC authorizer vs CNI plugin).
+5. Назовите безопасную последовательность обновления control plane через `kubeadm` и
+   объясните, почему kubelet не должен быть новее API server (глава 13).
+
+Если задание 4 вызвало затруднение - вернитесь к главам 04 и 10 вместе.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 12](../12/ru.md) · [Глава 14](../14/ru.md)

@@ -147,3 +147,124 @@ ssh docker-host 'if sudo -u developer docker ps >/dev/null 2>&1; then echo "deve
 ```
 
 После выполнения всех шагов запустите `check_result`.
+
+## 7. Запретить загрузку модуля `sctp`
+
+`sctp` загружен, но не нужен ни kubeadm, ни containerd, ни Calico на этой ноде. Сначала
+выгружаем уже загруженный модуль, затем блокируем повторную загрузку и через `blacklist`,
+и через `install` override. Обе директивы действуют на уровне `modprobe` (alias resolution
+и явный `modprobe sctp`) и устраняют обычный путь загрузки; они не заменяют kernel-level
+enforcement (`insmod` вставляет модуль напрямую через syscall и не читает `modprobe.d`,
+а `modprobe --ignore-install` может обойти `install` при равном root-доступе) - для этой
+лабы важно устранить именно ожидаемый путь автозагрузки, а не смоделировать защиту от
+пользователя, уже имеющего root на ноде.
+
+```bash
+ssh "$CP" 'sudo modprobe -r sctp || true'
+ssh "$CP" "printf 'blacklist sctp\ninstall sctp /bin/true\n' | sudo tee /etc/modprobe.d/60-cks-sctp.conf"
+```
+
+Подтверждаем оба свойства: модуль реально отсутствует в ядре, а не только удалён из
+файла конфигурации, и override виден в effective modprobe config:
+
+```bash
+ssh "$CP" '
+{
+  if sudo lsmod | grep -q sctp; then echo "lsmod: present"; else echo "lsmod: absent"; fi
+  sudo modprobe --show-config | grep sctp
+}' | tee /var/work/tests/artifacts/7/sctp.txt
+# lsmod: absent
+# install sctp /bin/true
+```
+
+## 8. `protectKernelDefaults` и безопасные sysctl
+
+Сначала исправляем sysctl - `protectKernelDefaults: true` заставит kubelet **упасть при
+старте**, если текущие значения ядра не совпадают с его ожиданиями, поэтому sysctl
+обязаны быть применены раньше, чем перезапуск kubelet.
+
+```bash
+ssh "$CP" "printf 'kernel.unprivileged_bpf_disabled = 1\nvm.overcommit_memory = 1\n' | sudo tee /etc/sysctl.d/99-kubernetes.conf"
+ssh "$CP" 'sudo sysctl --system'
+ssh "$CP" 'sysctl kernel.unprivileged_bpf_disabled vm.overcommit_memory'
+```
+
+Теперь включаем `protectKernelDefaults` в конфигурации kubelet и перезапускаем сервис:
+
+```bash
+ssh "$CP" 'sudo grep -q "^protectKernelDefaults:" /var/lib/kubelet/config.yaml \
+  && sudo sed -i "s/^protectKernelDefaults:.*/protectKernelDefaults: true/" /var/lib/kubelet/config.yaml \
+  || echo "protectKernelDefaults: true" | sudo tee -a /var/lib/kubelet/config.yaml'
+ssh "$CP" 'sudo systemctl restart kubelet'
+ssh "$CP" 'sudo systemctl is-active kubelet'
+kubectl get node "$CP" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}'
+```
+
+Если kubelet не поднимается после этого шага - проверьте именно порядок: sysctl должны
+быть применены (`sysctl --system`), а не только записаны в файл, прежде чем kubelet
+проверит их при старте.
+
+## 9. Найти и обезвредить лишний SUID-бинарник
+
+`find` покажет и системные SUID-бинарники (`sudo`, `passwd`, `mount` - их не трогаем), и
+учебный `/usr/local/bin/cks-lab105-suid-tool`, который не требуется ни одному компоненту
+Kubernetes на этой ноде.
+
+```bash
+mkdir -p /var/work/tests/artifacts/9
+ssh "$CP" 'sudo find / -xdev -perm -4000 -type f 2>/dev/null' \
+  | tee /var/work/tests/artifacts/9/suid-before.txt
+grep cks-lab105-suid-tool /var/work/tests/artifacts/9/suid-before.txt
+```
+
+Снимаем SUID-бит только с учебного файла:
+
+```bash
+ssh "$CP" 'sudo chmod u-s /usr/local/bin/cks-lab105-suid-tool'
+ssh "$CP" "sudo stat -c '%a' /usr/local/bin/cks-lab105-suid-tool" \
+  | tee /var/work/tests/artifacts/9/suid-after.txt
+# 755
+```
+
+Подтвердите, что системные SUID-бинарники не задеты - `sudo`/`passwd` обязаны остаться с
+SUID-битом, иначе базовая функциональность ОС ломается:
+
+```bash
+ssh "$CP" "sudo stat -c '%a %n' /usr/bin/sudo /usr/bin/passwd"
+```
+
+После выполнения всех шагов запустите `check_result`.
+
+## 10. Отключить core dumps и защитить SUID-процессы
+
+Core dump может содержать секреты и ключи из памяти процесса на момент crash - его нужно
+запретить как для обычных, так и для SUID-процессов. `fs.suid_dumpable` добавляем в тот же
+файл `/etc/sysctl.d/99-kubernetes.conf`, что уже создан в задании 8 - не создаём отдельный
+конфликтующий конфиг:
+
+```bash
+ssh "$CP" "printf 'fs.suid_dumpable = 0\n' | sudo tee -a /etc/sysctl.d/99-kubernetes.conf"
+ssh "$CP" 'sudo sysctl --system'
+ssh "$CP" 'sysctl -n fs.suid_dumpable'
+```
+
+Ограничиваем размер core dump на уровне лимитов процессов - это отдельный механизм от
+`suid_dumpable` (soft limit для обычных crash, `suid_dumpable` специально для setuid/setgid
+процессов):
+
+```bash
+ssh "$CP" "printf '* hard core 0\n* soft core 0\n' | sudo tee -a /etc/security/limits.conf"
+```
+
+`limits.conf` применяется к новым login-сессиям через PAM, а не к уже открытым shell -
+проверяем именно в новой сессии:
+
+```bash
+mkdir -p /var/work/tests/artifacts/10
+ssh "$CP" "sysctl -n fs.suid_dumpable; su - ubuntu -c 'ulimit -c'" \
+  | tee /var/work/tests/artifacts/10/coredump.txt
+ssh "$CP" "cat /etc/sysctl.d/99-kubernetes.conf; cat /etc/security/limits.conf" \
+  | tee -a /var/work/tests/artifacts/10/coredump.txt
+```
+
+После выполнения всех шагов запустите `check_result`.

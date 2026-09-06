@@ -22,6 +22,26 @@ Encryption at rest защищает от storage compromise: предполож�
 
 Если у атакующего есть законный API-доступ с правами на чтение Secret, encryption at rest от этой угрозы не защищает: API вернёт значение после расшифровки. Поэтому задание 5 отдельно ограничивает RBAC и automount, уменьшая blast radius identity workload с такими правами.
 
+## Проверьте себя перед стартом
+
+<details>
+<summary>1. Почему base64 в `Secret.data` не является шифрованием?</summary>
+
+base64 - это просто кодирование, обратимое без ключа: любой, у кого есть доступ к самим байтам (например, через raw чтение etcd), может декодировать значение мгновенно, без каких-либо криптографических операций. Шифрование требует ключа для обратного преобразования - base64 этого свойства не имеет вообще.
+</details>
+
+<details>
+<summary>2. Почему `identity` provider должен идти ПОСЛЕДНИМ в списке providers, а не первым?</summary>
+
+Провайдеры в `EncryptionConfiguration` пробуются по порядку для ЧТЕНИЯ существующих записей, а первый provider используется для ЗАПИСИ новых данных. Если `identity` (то есть "без шифрования") стоит первым, все новые записи будут писаться НЕзашифрованными, несмотря на наличие `aescbc` в списке. `identity` последним позволяет читать старые (ещё не мигрированные) plaintext-записи, но гарантирует, что все новые записи шифруются первым provider'ом.
+</details>
+
+<details>
+<summary>3. Почему нельзя просто удалить старый ключ шифрования сразу после добавления нового?</summary>
+
+Существующие записи в etcd остаются зашифрованными СТАРЫМ ключом до тех пор, пока их не перепишут явно (re-encryption). Если удалить старый ключ раньше, чем все записи переписаны новым, API server не сможет расшифровать оставшиеся старые записи - они станут навсегда нечитаемыми. Порядок: добавить новый ключ первым → переписать все Secret → подтвердить, что все записи используют новый ключ → только потом удалить старый.
+</details>
+
 ## Инфраструктура
 
 Окружение разворачивается Terragrunt в AWS `eu-central-1`:
@@ -64,11 +84,23 @@ check_result
 | Что делаем | До включения шифрования запросите raw запись `/registry/secrets/encryption-109/legacy-secret` через `sudo etcdctl-109 get ... --print-value-only`, пропустите через `strings` и сохраните результат в `/var/work/109/plaintext-proof.txt`. |
 | Критерии приёмки | Файл непустой, содержит ровно marker `cks-109-legacy-plaintext` и не содержит `k8s:enc:`. Это доказательство исходного состояния: `Secret.data` — base64, не encryption at rest. |
 
+<details>
+<summary>💡 Подсказка к заданию 1</summary>
+
+Это задание нужно выполнить ПЕРВЫМ, до задания 2 - как только вы включите EncryptionConfiguration и перепишете Secret, plaintext-доказательство исчезнет и вы не сможете зафиксировать его post-hoc. `etcdctl-109` уже настроен на SSH tunnel и TLS - используйте именно этот helper, а не пытайтесь подключиться к etcd напрямую.
+</details>
+
 ---
 | **2** | **Создать EncryptionConfiguration для Secret** |
 | :---: | :--- |
 | Что делаем | На control-plane создайте `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`. Формат: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`; для `secrets` первым provider задайте `aescbc` с именованным base64-ключом из **32 случайных bytes**, затем `identity: {}`. |
 | Критерии приёмки | Файл защищён mode `0600`; config содержит `secrets`, `aescbc` и корректный 32-byte key. `identity` допустим только последним временным fallback для legacy plaintext. |
+
+<details>
+<summary>💡 Подсказка к заданию 2</summary>
+
+Сгенерируйте ключ через `head -c 32 /dev/urandom | base64` - именно 32 БАЙТА (не 32 символа base64-строки, которая будет длиннее из-за кодирования). Проверьте себя: `echo -n "<ваш-base64-ключ>" | base64 -d | wc -c` должен вернуть ровно `32`.
+</details>
 
 ---
 | **3** | **Подключить config к static kube-apiserver** |
@@ -76,17 +108,35 @@ check_result
 | Что делаем | Аккуратно измените `/etc/kubernetes/manifests/kube-apiserver.yaml`: добавьте flag `--encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml`, read-only `volumeMount` `/etc/kubernetes/enc` и соответствующий `hostPath` volume `/etc/kubernetes/enc`. Сохраните backup manifest до правки. |
 | Критерии приёмки | Работающий manifest содержит flag, mount и hostPath; после restart static Pod `kubectl get --raw='/readyz'` возвращает `ok`. |
 
+<details>
+<summary>💡 Подсказка к заданию 3</summary>
+
+Три отдельных изменения нужны одновременно: сам флаг `--encryption-provider-config`, `volumeMounts` (внутри контейнера) И `volumes` (hostPath на уровне Pod spec) - забыть любое из трёх приведёт либо к CrashLoopBackOff (флаг указывает на файл, которого контейнер не видит), либо к тому, что флаг просто не будет передан. Сохраните копию оригинального manifest (`sudo cp kube-apiserver.yaml kube-apiserver.yaml.bak`) перед правкой - если что-то пойдёт не так, у вас будет путь для быстрого восстановления.
+</details>
+
 ---
 | **4** | **Re-encrypt и доказать ciphertext** |
 | :---: | :--- |
 | Что делаем | После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`. Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`). Проверьте оба Secret через API и raw etcd. Только после этой проверки удалите временный `identity` fallback, перезапустите static kube-apiserver и снова проверьте `/readyz` и чтение обоих Secret. |
 | Критерии приёмки | `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями; raw value каждого начинается с `k8s:enc:aescbc:v1:`; legacy marker больше не виден в raw etcd; в финальной конфигурации отсутствует `identity`, API healthy. |
 
+<details>
+<summary>💡 Подсказка к заданию 4</summary>
+
+Порядок критичен: создать `encrypted-secret` → переписать ВСЕ существующие Secret через `kubectl replace` → проверить raw etcd для ОБОИХ (legacy и encrypted) → ТОЛЬКО ПОТОМ убрать `identity` из конфига. Если убрать `identity` раньше, чем `legacy-secret` перезаписан, API server больше не сможет прочитать старую plaintext-запись через provider chain, и `legacy-secret` станет недоступен.
+</details>
+
 ---
 | **5** | **Минимизировать RBAC и отключить automount** |
 | :---: | :--- |
 | Что делаем | Создайте ServiceAccount `secret-reader` в `encryption-109` с `automountServiceAccountToken: false`. Role `secret-reader-109` должна давать только `get` только Secret `encrypted-secret`; привяжите её одноимённым RoleBinding. Создайте Pod `secret-reader-109` c этим ServiceAccount, `automountServiceAccountToken: false`, образом `registry.k8s.io/pause:3.10`. |
 | Критерии приёмки | ServiceAccount может `get encrypted-secret`, но не `list secrets` и не `get legacy-secret`; Pod Running и не имеет автоматически добавленного `kube-api-access-*` volume. |
+
+<details>
+<summary>💡 Подсказка к заданию 5</summary>
+
+Используйте `resourceNames: ["encrypted-secret"]` в Role - без этого поля `get`/`list` на ресурсе `secrets` дало бы доступ ко ВСЕМ Secret в namespace, включая `legacy-secret`, что нарушает требование least-privilege. `pause:3.10` - образ-заглушка, не требующий Kubernetes API вообще, поэтому automount отключается на двух уровнях (SA и Pod) без функциональных последствий.
+</details>
 
 ## Проверка
 

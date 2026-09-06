@@ -22,7 +22,7 @@ language dependency или самом приложении. Сканер соп�
 версию и, если известна, исправленную версию.
 
 ```mermaid
-flowchart LR
+flowchart TB
     build["Dockerfile + зависимости"] --> image["image\nпакеты и библиотеки"]
     image --> inventory["инвентаризация компонентов"]
     db["vulnerability database\nCVE и fixed version"] --> match["сопоставление версий"]
@@ -299,7 +299,7 @@ images. Allowlist registry и verification signatures рассмотрены в
 путь release. Пример последовательности:
 
 ```mermaid
-flowchart LR
+flowchart TB
     commit["commit / dependency update"] --> source["trivy fs + config\nлинтеры"]
     source --> build["build image"]
     build --> scan["trivy image по digest\nSBOM CycloneDX/SPDX"]
@@ -493,6 +493,11 @@ artifact, безопасно заменить его и доказать, что
 5. Как создать CycloneDX и SPDX JSON SBOM через Trivy и когда нужен `trivy sbom`?
 6. Почему admission webhook не стоит синхронно сканировать image при каждом запросе API?
 7. Какие три проверки доказывают, что remediation CVE действительно завершено?
+8. **Flashback (глава 29).** Вопрос 1 этой главы уже указывает, что успешный scan вчера не
+   доказывает отсутствие CVE сегодня - то есть vulnerability scanning - snapshot в момент
+   проверки, не continuous monitoring. Falco из главы 29 работает по другому принципу
+   (runtime behavior detection). Какой конкретный класс атак поймает Falco, но не поймает
+   даже самый свежий `trivy image` scan, и почему?
 
 ## Практика
 
@@ -506,6 +511,26 @@ allowlist artifact. В ней scan-отчёт, SBOM и проверка испр
 Полезная документация: [Trivy image](https://trivy.dev/latest/docs/target/container_image/)
 · [Trivy SBOM](https://trivy.dev/latest/docs/target/sbom/) · [Trivy databases](https://trivy.dev/latest/docs/configuration/db/)
 · [Trivy VEX](https://trivy.dev/latest/docs/supply-chain/vex/) · [Trivy Operator reports](https://aquasecurity.github.io/trivy-operator/latest/docs/vulnerability-scanning/)
+
+## Смешанный чек-поинт: Supply Chain Security завершён
+
+Прежде чем перейти к Monitoring, Logging & Runtime Security, проверьте 15-20 минут без
+подсказок, что домен Supply Chain Security (главы 24-28) закрепился:
+
+1. Постройте образ на `distroless` вместо полнофункциональной базы и объясните, какую
+   конкретную post-exploitation технику это убирает у атакующего с RCE (глава 24).
+2. Сгенерируйте SBOM (SPDX или CycloneDX) через `syft` или `trivy sbom` и найдите в нём
+   один конкретный пакет с версией (глава 25).
+3. Подпишите тестовый образ через `cosign` и объясните, почему `cosign verify` в CI не
+   мешает прямому `kubectl apply` неподписанного образа без admission-контроля (глава 26).
+4. **Смешанное задание.** Возьмите admission policy (глава 20, домен Minimize Microservice
+   Vulnerabilities) и signature verification (глава 26, этот домен): опишите, как
+   admission policy становится enforcement point для проверки подписи образа, и почему без
+   неё подпись - это просто метаданные, которые никто не обязан проверять.
+5. Запустите `trivy image` на тестовый образ с флагами `--severity HIGH,CRITICAL` и
+   объясните, почему успешный scan вчера не доказывает отсутствие CVE сегодня (глава 28).
+
+Если задание 4 вызвало затруднение - вернитесь к главам 20 и 26 вместе.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 27](../27/ru.md) · [Глава 29](../29/ru.md)

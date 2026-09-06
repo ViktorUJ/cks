@@ -2,8 +2,18 @@ schema_version: 1
 
 checked_at: "2026-09-06"
 
-# Три контура версии независимы и не выравниваются автоматически.
+# Четыре контура версии независимы и не выравниваются автоматически.
 # Подробное объяснение политики - см. ../VERSION_POLICY.md.
+
+upstream:
+  # Актуальный upstream-релиз Kubernetes - самостоятельный сигнал, отдельный от
+  # training/exam/curriculum ниже. Подтверждено live: kubernetes.io/blog/2026/08/26/
+  # kubernetes-v1-37-release/ ("Garhwal", released 2026-08-26) и kubernetes.io/releases/.
+  # Не переводить core labs на latest_stable автоматически только из-за номера версии -
+  # только если это реально нужно compatibility/security причинам.
+  latest_stable: "1.37"
+  checked_at: "2026-09-06"
+  url: "https://kubernetes.io/releases/"
 
 training:
   # Реальный разброс версий подтверждён grep по всем labs/*/env.hcl (проверено 2026-09-06):
@@ -59,8 +69,12 @@ curriculum:
   checked_at: "2026-09-06"
 
 weights:
-  # Оба сигнала фиксируются независимо; расхождение не разрешается выбором "истинного"
-  # значения без проверки первичного источника. Подробности - см. ../VERSION_POLICY.md.
+  # Три независимых публичных сигнала фиксируются отдельно; расхождение не разрешается
+  # выбором "истинного" значения без проверки первичного источника. Подробности - см.
+  # ../VERSION_POLICY.md. lf_product_page и curriculum_pdf согласны друг с другом, но
+  # cncf_certification_page расходится по Cluster Setup (10% vs 15%) и System Hardening
+  # (15% vs 10%) - см. selected_sources_agreement/public_signal_agreement ниже: это два
+  # разных вопроса, и смешивать их в одном поле agreement было бы неточно.
   lf_product_page:
     cluster_setup: 15
     cluster_hardening: 15
@@ -77,7 +91,28 @@ weights:
     supply_chain_security: 20
     monitoring_logging_runtime_security: 20
     checked_at: "2026-09-06"
-  agreement: consistent
+  cncf_certification_page:
+    cluster_setup: 10
+    cluster_hardening: 15
+    system_hardening: 15
+    minimize_microservice_vulnerabilities: 20
+    supply_chain_security: 20
+    monitoring_logging_runtime_security: 20
+    checked_at: "2026-09-06"
+    url: "https://www.cncf.io/training/certification/cks/"
+  selected_sources_agreement: consistent
+  # selected_sources_agreement описывает только lf_product_page vs curriculum_pdf (два
+  # источника, выбранных как operational default для этого курса - см. domains.*.weight
+  # в curriculum-map.yaml). Она НЕ означает, что все публичные источники согласны между
+  # собой в целом.
+  public_signal_agreement:
+    status: disagreement
+    note: >
+      lf_product_page и cncf_certification_page расходятся именно по Cluster Setup
+      (15% vs 10%) и System Hardening (10% vs 15%); Cluster Hardening, Microservice,
+      Supply Chain и Runtime совпадают у всех трёх источников. curriculum-map.yaml
+      хранит оба набора весов явно в секции weight_sources и использует
+      linux_foundation_product_page как operational default для каждого домена.
 
 allowed_resources:
   checked_at: "2026-09-06"
@@ -97,7 +132,10 @@ allowed_resources:
 
 interpretation: >
   Official LF pages в данный момент показывают согласованную версию Kubernetes (v1.35)
-  для exam environment; training baseline курса (v1.36) и curriculum filename (v1.34)
-  остаются самостоятельными контурами и не должны схлопываться в одно число. Перед
-  использованием значений из этого файла для принятия решений - сверьте checked_at
-  с текущей датой и переопределите устаревшие поля через первичные источники.
+  для exam environment; upstream latest_stable (v1.37), training baseline core labs
+  (v1.36) и curriculum filename (v1.34) остаются самостоятельными контурами и не должны
+  схлопываться в одно число. Domain weights: lf_product_page согласна с curriculum_pdf,
+  но CNCF certification page публикует другой набор (Cluster Setup 10% вместо 15%,
+  System Hardening 15% вместо 10%) - см. weights.public_signal_agreement. Перед
+  использованием значений из этого файла для принятия решений - сверьте checked_at с
+  текущей датой и переопределите устаревшие поля через первичные источники.

@@ -248,9 +248,194 @@ case "$rc" in 7|28) ;; *) exit 1 ;; esac
 HTTP status, проверьте, что не создана широкая egress policy (`ipBlock: 0.0.0.0/0`, пустая
 `to` или разрешение всей подсети metadata).
 
+## Задание 6. Ловушка AND vs OR и `ipBlock.except`
+
+Два отдельных элемента массива `from`/`to` означают логическое OR: любой из них по
+отдельности открывает доступ. Чтобы получить AND ("только этот Pod внутри этого
+namespace"), `namespaceSelector` и `podSelector` должны быть полями **одного и того же**
+элемента - без второго дефиса перед `podSelector`.
+
+```yaml
+# legacy-client.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cks-101-legacy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-client
+  namespace: cks-101-legacy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-client
+  template:
+    metadata:
+      labels:
+        app: legacy-client
+    spec:
+      containers:
+        - name: app
+          image: curlimages/curl:8.11.1
+          command: ["sleep", "3600"]
+```
+
+```bash
+kubectl apply -f legacy-client.yaml
+kubectl -n cks-101-legacy rollout status deployment/legacy-client
+```
+
+Ingress policy на `backend` в `cks-101` разрешает **только** Pod с `app=legacy-client`,
+находящийся именно в `cks-101-legacy`. Namespace выбирается через её immutable label
+`kubernetes.io/metadata.name`, который назначает сам API server:
+
+```yaml
+# allow-backend-ingress-from-legacy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backend-ingress-from-legacy
+  namespace: cks-101
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cks-101-legacy
+          podSelector:
+            matchLabels:
+              app: legacy-client
+      ports:
+        - protocol: TCP
+          port: 8080
+```
+
+Ловушка выглядела бы так и означала бы совсем другое правило - "любой Pod из
+`cks-101-legacy` ИЛИ любой Pod с `app=legacy-client` в любом namespace":
+
+```yaml
+    # НЕ делайте так - это OR, а не AND:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cks-101-legacy
+        - podSelector:
+            matchLabels:
+              app: legacy-client
+```
+
+Egress policy в `cks-101-legacy` открывает широкий внешний доступ, но явно исключает
+metadata через `except`. `except` действует только внутри своего правила: другое allow
+с более широким CIDR или без `except` снова разрешит адрес.
+
+```yaml
+# allow-legacy-egress.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-legacy-egress
+  namespace: cks-101-legacy
+spec:
+  podSelector:
+    matchLabels:
+      app: legacy-client
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 169.254.169.254/32
+```
+
+```bash
+kubectl apply -f allow-backend-ingress-from-legacy.yaml
+kubectl apply -f allow-legacy-egress.yaml
+mkdir -p /var/work/tests/artifacts/6
+
+BACKEND_IP=$(kubectl -n cks-101 get svc backend -o jsonpath='{.spec.clusterIP}')
+
+# AND верно применён: Pod с той же меткой, но в другом namespace, не проходит.
+kubectl -n cks-101-legacy run policy-legacy-allowed --rm -i --restart=Never \
+  --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- \
+  sh -c "curl -fsS --max-time 5 http://${BACKEND_IP}:8080/"
+kubectl -n default run policy-legacy-foreign --rm -i --restart=Never \
+  --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- \
+  sh -c "curl -fsS --max-time 5 http://${BACKEND_IP}:8080/" || true
+
+# except исключил именно metadata, остальной IPv4 остаётся доступен.
+kubectl -n cks-101-legacy run policy-legacy-external --rm -i --restart=Never \
+  --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- \
+  sh -c "curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 https://1.1.1.1/"
+kubectl -n cks-101-legacy run policy-legacy-metadata --rm -i --restart=Never \
+  --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- \
+  sh -c "curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --connect-timeout 2 --max-time 3 http://169.254.169.254/" || true
+```
+
+## Задание 7. `hostNetwork` и границы portability `NetworkPolicy`
+
+Официальная документация Kubernetes прямо называет поведение `NetworkPolicy` для
+`hostNetwork` Pod **undefined** и допускает ровно два варианта реализации CNI:
+плагин либо различает трафик `hostNetwork` Pod и применяет к нему ту же `NetworkPolicy`,
+либо не различает его и обрабатывает как обычный трафик ноды - это самая распространённая
+реализация. Ниже мы не доказываем универсальное свойство Kubernetes, а фиксируем
+фактически наблюдаемое поведение конкретно для Calico в этой lab-инфраструктуре.
+
+```yaml
+# hostnetwork-probe.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostnetwork-probe
+  namespace: cks-101
+  labels:
+    app: frontend
+spec:
+  hostNetwork: true
+  containers:
+    - name: probe
+      image: curlimages/curl:8.11.1
+      command: ["sleep", "3600"]
+```
+
+```bash
+kubectl apply -f hostnetwork-probe.yaml
+kubectl -n cks-101 wait --for=condition=Ready pod/hostnetwork-probe --timeout=60s
+mkdir -p /var/work/tests/artifacts/7
+
+kubectl -n cks-101 exec hostnetwork-probe -- \
+  sh -c "curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --connect-timeout 2 --max-time 3 http://169.254.169.254/" \
+  | tee /var/work/tests/artifacts/7/hostnetwork-metadata.output
+
+{
+  echo "task5_result=network-deny (http_code=000), обычный Pod с app=frontend"
+  echo "task7_result=observed HTTP response for hostNetwork Pod in this Calico/AWS lab (environment-specific, not a universal NetworkPolicy guarantee)"
+  cat /var/work/tests/artifacts/7/hostnetwork-metadata.output
+} > /var/work/tests/artifacts/7/comparison.txt
+```
+
+`NetworkPolicy` из задания 2/5 не изменяется и продолжает верно защищать обычные Pod
+Pod-сети. Для `hostNetwork: true` официальный контракт Kubernetes не гарантирует ни
+защиту, ни её отсутствие - фактическое поведение зависит от конкретного CNI. В этой
+lab-конфигурации на Calico наблюдаемый результат - трафик `hostNetwork` Pod обрабатывается
+как трафик самой ноды и не проходит через тот же dataplane, что обычный Pod-to-Pod трафик.
+Не переносите этот наблюдаемый результат на другой CNI без отдельной проверки; закрывать
+`hostNetwork` как класс риска нужно на уровне PSA/admission (запрет `hostNetwork` в
+namespace) или host firewall, а не полагаться на конкретное поведение одного CNI.
+
 ## Быстрая самопроверка
 
 ```bash
 kubectl -n cks-101 get networkpolicy
+kubectl -n cks-101-legacy get networkpolicy
 check_result
 ```

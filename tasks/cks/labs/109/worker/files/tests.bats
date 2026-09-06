@@ -23,6 +23,7 @@ record_result() {
   if [[ -s "$proof" ]] && grep -Fqx 'cks-109-legacy-plaintext' "$proof" && ! grep -Fq 'k8s:enc:' "$proof"; then
     result=0
   else
+    echo "HINT: plaintext-proof.txt must contain the exact line 'cks-109-legacy-plaintext' and must NOT contain 'k8s:enc:' (that prefix means the value was already encrypted). Capture this evidence BEFORE creating any EncryptionConfiguration."
     echo "Expected a pre-encryption strings proof in $proof containing only the legacy marker."
     result=1
   fi
@@ -34,6 +35,15 @@ record_result() {
   if [[ "$config_check" == *$'600'* && "$config_check" == *'apiVersion: apiserver.config.k8s.io/v1'* && "$config_check" == *'kind: EncryptionConfiguration'* && "$config_check" == *'  - secrets'* && "$config_check" == *'  - aescbc:'* && "$config_check" == *$'\n32' ]]; then
     result=0
   else
+    if [[ "$config_check" != *$'600'* ]]; then
+      echo "HINT: /etc/kubernetes/enc/encryption-config.yaml must be mode 600 - it contains the encryption key material."
+    elif [[ "$config_check" != *'  - aescbc:'* ]]; then
+      echo "HINT: The config must use the 'aescbc' provider, not identity-only or a different algorithm."
+    elif [[ "$config_check" != *$'\n32' ]]; then
+      echo "HINT: The base64-decoded 'secret:' value must be exactly 32 bytes for AES-256-CBC - check your key generation command (e.g. 'head -c 32 /dev/urandom | base64')."
+    else
+      echo "HINT: One of the required YAML markers (apiVersion, kind, resources: secrets) is missing or misspelled - check the file structure matches EncryptionConfiguration exactly."
+    fi
     echo "EncryptionConfiguration check failed: ${config_check:-missing}"
     result=1
   fi
@@ -46,6 +56,13 @@ record_result() {
   if [[ "$manifest" == *'--encryption-provider-config=/etc/kubernetes/enc/encryption-config.yaml'* && "$manifest" == *'mountPath: /etc/kubernetes/enc'* && "$manifest" == *'path: /etc/kubernetes/enc'* && "$ready" == 'ok' ]]; then
     result=0
   else
+    if [[ "$manifest" != *'--encryption-provider-config='* ]]; then
+      echo "HINT: kube-apiserver.yaml is missing the --encryption-provider-config flag pointing at the config file."
+    elif [[ "$manifest" != *'mountPath: /etc/kubernetes/enc'* || "$manifest" != *'path: /etc/kubernetes/enc'* ]]; then
+      echo "HINT: The static Pod manifest also needs a hostPath volume + volumeMount for /etc/kubernetes/enc - the flag alone is not enough, the container must actually see the file inside its filesystem."
+    else
+      echo "HINT: API server is not ready after the manifest edit. Check for a YAML syntax error or a missing/wrong path in the volume definition."
+    fi
     echo "apiserver_manifest=$(tr '\n' ' ' <<<"$manifest") ready=${ready:-missing}"
     result=1
   fi
@@ -66,6 +83,15 @@ record_result() {
   if [[ "$legacy_value" == 'cks-109-legacy-plaintext' && "$fresh_value" == 'cks-109-fresh-ciphertext' && "$legacy_cipher" -eq 0 && "$fresh_cipher" -eq 0 && "$final_config" != *'identity:'* && "$ready" == 'ok' ]]; then
     result=0
   else
+    if [[ "$legacy_cipher" -ne 0 ]]; then
+      echo "HINT: The pre-existing 'legacy-secret' is still plaintext in etcd. Encryption at rest only applies to NEW writes - you must trigger a re-encryption (e.g. 'kubectl get secrets --all-namespaces -o json | kubectl replace -f -', or the standard rotation procedure) for existing Secrets to be rewritten."
+    elif [[ "$fresh_cipher" -ne 0 ]]; then
+      echo "HINT: A freshly created Secret ('encrypted-secret') is NOT stored as k8s:enc:aescbc ciphertext - check the EncryptionConfiguration from tasks 2-3 actually applied before this Secret was created."
+    elif [[ "$final_config" == *'identity:'* ]]; then
+      echo "HINT: encryption-config.yaml still lists 'identity:' as a provider - if it comes before aescbc, new writes may still use plaintext identity. For this task the final config should not offer identity as an active provider ahead of aescbc."
+    elif [[ "$ready" != 'ok' ]]; then
+      echo "HINT: API server is not ready after your re-encryption changes."
+    fi
     echo "legacy_value=$legacy_value fresh_value=$fresh_value legacy_cipher=$legacy_cipher fresh_cipher=$fresh_cipher identity_present=$([[ "$final_config" == *'identity:'* ]] && echo yes || echo no) ready=$ready"
     result=1
   fi
@@ -84,6 +110,17 @@ record_result() {
   if [[ "$allowed" == yes && "$list_denied" == no && "$other_denied" == no && "$sa" == secret-reader && "$automount" == false && "$phase" == Running && "$no_token_volume" == true ]]; then
     result=0
   else
+    if [[ "$allowed" != yes ]]; then
+      echo "HINT: ServiceAccount 'secret-reader' cannot get secret 'encrypted-secret' - it needs a Role/RoleBinding granting 'get' on that specific resource name."
+    elif [[ "$list_denied" != no ]]; then
+      echo "HINT: ServiceAccount 'secret-reader' can 'list' secrets - this is broader than needed. Grant only 'get' on the specific named Secret via resourceNames, not a blanket 'list'/'get' on all secrets."
+    elif [[ "$other_denied" != no ]]; then
+      echo "HINT: ServiceAccount 'secret-reader' can read 'legacy-secret' too - the Role must use resourceNames to scope access to 'encrypted-secret' ONLY."
+    elif [[ "$sa" != secret-reader || "$phase" != Running ]]; then
+      echo "HINT: Pod 'secret-reader-109' must use serviceAccountName 'secret-reader' and be Running."
+    elif [[ "$automount" != false || "$no_token_volume" != true ]]; then
+      echo "HINT: Pod must have automountServiceAccountToken: false with no kube-api-access token volume - if this Pod does not call the Kubernetes API directly (it reads the Secret via env/volume, not via client-go), it does not need a token at all."
+    fi
     echo "allowed=$allowed list=$list_denied other=$other_denied sa=$sa automount=$automount phase=$phase token_volume_absent=$no_token_volume"
     result=1
   fi

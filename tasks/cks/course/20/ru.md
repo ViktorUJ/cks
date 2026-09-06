@@ -28,7 +28,7 @@ Admission control получает уже аутентифицированный
 или отклоняет его. Если любой validating этап ответит отказом, объект в etcd не появится.
 
 ```mermaid
-flowchart LR
+flowchart TB
     client["kubectl / CI / controller"] --> authn["authentication\nкто отправил запрос"]
     authn --> authz["authorization / RBAC\nможно ли выполнить verb"]
     authz --> mutate["mutating admission\nвстроенные плагины / MAP / webhook"]
@@ -36,7 +36,7 @@ flowchart LR
     validate -->|"allow"| etcd["etcd"]
     validate -->|"deny"| rejected["запрос отклонён\nобъект не создан"]
 
-    subgraph api["Обработка объекта API server - концептуально"]
+    subgraph api["Обработка объекта API server<br/>концептуально"]
         conversion["conversion, defaulting и API validation"]
     end
     authz -. "зависит от API и типа запроса" .-> conversion
@@ -303,12 +303,15 @@ violation[{"msg": msg}] {
 ## 20.4. Kyverno 1.19: CEL-based policy types
 
 > **Compatibility note.** Kyverno v1.19 официально поддерживает Kubernetes v1.33-v1.35
-> (`kyverno.io/docs/installation/releases/`, released Aug 2026). Поэтому лаборатория этой
-> главы выполняется на Kubernetes v1.35. v1.36 может работать, но не входит в
-> протестированную и гарантированную support matrix Kyverno v1.19; используйте её только как
-> optional/preview и не делайте успешную установку обязательным критерием. Compatibility
-> third-party admission-компонентов (Kyverno, Gatekeeper и аналоги) необходимо сверять с
-> их собственной release matrix отдельно от версии Kubernetes курса.
+> (`kyverno.io/docs/installation/releases/`, released Aug 2026). Core-лаба этой главы
+> (Lab108) выполняется на Kubernetes v1.36 - это осознанная forward-looking комбинация,
+> которая **не входит** в протестированную и гарантированную support matrix Kyverno v1.19.
+> Установка и базовые сценарии обычно работают, но именно эта пара версий не покрыта
+> officially tested compatibility, поэтому не считайте успешную установку доказательством
+> полной поддержки v1.36. Для подготовки к текущему экзамену (ориентированному на v1.35)
+> сверьте поведение отдельно на v1.35, где Kyverno v1.19 официально протестирован.
+> Compatibility third-party admission-компонентов (Kyverno, Gatekeeper и аналоги)
+> необходимо сверять с их собственной release matrix отдельно от версии Kubernetes курса.
 
 Начиная с Kyverno 1.19 основной путь - отдельные CEL-based cluster-wide типы группы
 `policies.kyverno.io/v1`: `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`,
@@ -955,6 +958,11 @@ supply-chain контроля: следующая часть курса прим
 6. Почему policy сначала запускают в `Audit`/`dryrun`, а не сразу в `Enforce`/`Deny`?
 7. В чём ограничения `ValidatingAdmissionPolicy` на CEL по сравнению с Kyverno?
 8. Какие container lists нельзя забыть при самописной проверке `privileged`?
+9. **Flashback (глава 04).** `NetworkPolicy` default-deny (глава 04) и `failurePolicy: Fail`
+   с `enforce`/`Deny` в admission policy (эта глава) - оба реализуют один и тот же
+   allow-list принцип на разных уровнях стека. Сформулируйте эту аналогию явно: что в
+   admission-policy соответствует "default-deny всем ingress/egress", а что соответствует
+   "узкому разрешённому правилу"?
 
 ## Практика
 

@@ -11,15 +11,31 @@ kubectl config use-context "$CTX"
 mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
 ```
 
-## 1. Проверить runsc и создать RuntimeClass
+## 1. Восстановить containerd runtime и создать RuntimeClass
 
-Нода `k8s110_node_gvisor` уже доставлена как dedicated pool: `runsc` и containerd
-handler предустановлены bootstrap. Это не означает, что Kubernetes сам выберет этот
-handler: Pod получает его только через `RuntimeClass`.
+Нода `k8s110_node_gvisor` уже доставлена как dedicated pool с установленным `runsc`, но
+bootstrap намеренно убрал runtime-секцию `runsc` из `/etc/containerd/config.toml` -
+типичная экзаменационная ситуация, когда бинарник есть, а containerd про него не знает.
 
 ```bash
-ssh k8s110_node_gvisor 'runsc --version; sudo systemctl is-active containerd'
+ssh k8s110_node_gvisor 'runsc --version; sudo systemctl is-active containerd; grep -c runsc /etc/containerd/config.toml || true'
 ```
+
+Допишите секцию `runsc` в `config.toml` (значение `runtime_type` обязательно точное) и
+перезапустите containerd:
+
+```bash
+ssh k8s110_node_gvisor 'sudo tee -a /etc/containerd/config.toml > /dev/null <<EOF
+[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runsc]
+  runtime_type = "io.containerd.runsc.v1"
+EOF
+sudo systemctl restart containerd
+sudo systemctl is-active containerd
+grep -A1 "runtimes.runsc" /etc/containerd/config.toml'
+```
+
+Kubelet не нужно перезапускать: `RuntimeClass` вызывает containerd runtime handler по
+имени при каждом создании Pod, а не при старте kubelet.
 
 ```yaml
 # runtimeclass-gvisor.yaml

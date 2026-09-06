@@ -2,7 +2,7 @@
 
 # Путеводитель по подготовке к CKS
 
-[← Оглавление курса](README_RU.md) · [Глоссарий](GLOSSARY_RU.md)
+[← Оглавление курса](README_RU.md) · [Глоссарий](GLOSSARY_RU.md) · [Шпаргалка](CHEATSHEET_RU.md) · [Справочник ошибок](TROUBLESHOOTING_INDEX_RU.md)
 
 Этот маршрут собирает главы и практику для **CKS (Certified Kubernetes Security Specialist)**. Он рассчитан на инженера с уровнем CKA и организован по официальным доменам экзамена.
 
@@ -112,6 +112,24 @@ CKS не повторяет CKA. До начала уверенно освежи
 | 🟩 Minimize Microservice Vulnerabilities  | [107](../labs/107/README_RU.MD) PSA и SecurityContext, [108](../labs/108/README_RU.MD) admission policies, [109](../labs/109/README_RU.MD) encryption at rest, [110](../labs/110/README_RU.MD) gVisor, Cilium и Istio |
 | 🟪 Supply Chain Security                  | [108](../labs/108/README_RU.MD) allowlist, [111](../labs/111/README_RU.MD) images, SBOM, scan и signing                                                                                                              |
 | 🟨 Monitoring, Logging & Runtime Security | [112](../labs/112/README_RU.MD) Falco, audit-логи и иммутабельность                                                                                                                              |
+
+## Четыре уровня практики
+
+Внутри глав вы встретите Killercoda-ссылки и лабы 101-112 рядом друг с другом - это не
+дублирование, а разные уровни одного навыка:
+
+| Уровень | Что | Сколько времени | Что проверяет |
+|---|---|---:|---|
+| ⚡ 1. Быстрая практика | Killercoda-сценарии в каждой главе | 5-15 мин | Один конкретный факт или команду сразу после теории |
+| 🔬 2. Глубокая лаборатория | Лабы 101-112 (`../labs`) | 30-120+ мин | Механизм, failure modes, effective state, security evidence |
+| 🎯 3. Экзаменационная практика | Моки 01-04 (`../mock`) | 120 мин | Скорость, task recognition, context switching, exam workflow |
+| 🧭 4. Внешняя валидация | [Killer.sh](https://killer.sh/cks) | 2 × 36 ч окно, 17 заданий за прогон | Timer, stress, непривычное окружение - финальная проверка |
+
+Killercoda-сценарий по RBAC за 10 минут не заменяет лабу 104, где та же RBAC-граница
+развивается через несколько заданий, ломается и восстанавливается, а результат нужно
+доказать evidence-артефактом, а не только увидеть `Success`. Моки и Killer.sh не привязаны
+к отдельной главе - они смешивают все домены сразу, под давлением времени, и должны идти
+**после**, а не вместо уровней 1-2.
 
 ## Рекомендуемый порядок подготовки
 

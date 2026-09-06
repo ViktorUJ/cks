@@ -29,7 +29,7 @@ SA также монтируется в Pod. Сам по себе token не о�
 должен лежать в его файловой системе.
 
 ```mermaid
-flowchart LR
+flowchart TB
     vuln["Уязвимость в<br/>web Pod"] --> shell["Shell в контейнере"]
     shell --> token["Смонтированный<br/>token default SA"]
     token --> api["Kubernetes API"]
@@ -130,7 +130,7 @@ ServiceAccount, имеет ограниченный срок жизни (`exp`) 
 годится для аутентификации.
 
 ```mermaid
-flowchart LR
+flowchart TB
     sa["ServiceAccount api-reader"] --> kubelet["kubelet / TokenRequest"]
     kubelet --> jwt["Bound token<br/>exp + aud + pod binding"]
     jwt --> volume["projected volume<br/>в Pod"]
@@ -425,6 +425,10 @@ audience делает credential более узким и управляемым
 6. Как отличить истёкший или неверный token (`401`) от недостаточных RBAC-прав (`403`)?
 7. Какие три проверки докажут, что Pod без API-задачи действительно не может использовать
    ServiceAccount token?
+8. **Flashback (глава 21).** Legacy ServiceAccount token хранился как Kubernetes `Secret`.
+   Чем угроза для такого token отличается от угрозы для обычного application `Secret` из
+   главы 21 (например, `db-password`), и почему bound projected token эту угрозу снижает
+   иначе, чем encryption at rest снижает угрозу для `Secret` в etcd?
 
 ## Практика
 

@@ -32,6 +32,13 @@ policy_enforced() {
   if [[ "$crd" == "customresourcedefinition.apiextensions.k8s.io/validatingpolicies.policies.kyverno.io" && "$version" == *v1.19.* && "$available" -ge 1 ]]; then
     result=0
   else
+    if [[ "$crd" != "customresourcedefinition.apiextensions.k8s.io/validatingpolicies.policies.kyverno.io" ]]; then
+      echo "HINT: Kyverno CRDs are missing - run 'install-kyverno' and wait for the Helm release to finish before running any test."
+    elif [[ "$version" != *v1.19.* ]]; then
+      echo "HINT: Installed Kyverno image is not the expected v1.19.x - check the Helm chart version pin was not changed."
+    else
+      echo "HINT: No Kyverno Deployment has availableReplicas > 0 yet. Wait longer for the admission controller Pods to become Ready, or check 'kubectl get pods -n kyverno' for a crash/pending state."
+    fi
     echo "validatingpolicy_crd=$crd kyverno_image=$version available_kyverno_deployments=$available"
     result=1
   fi
@@ -102,6 +109,19 @@ EOF
   kubectl delete pod ephemeral-policy-base -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   set -e
   if [[ "$policy_status" -eq 0 && "$main_status" -ne 0 && "$untagged_status" -ne 0 && "$init_status" -ne 0 && "$base_status" -eq 0 && "$ephemeral_latest_status" -ne 0 && "$ephemeral_trusted_status" -eq 0 ]]; then result=0; else
+    if [[ "$policy_status" -ne 0 ]]; then
+      echo "HINT: ValidatingPolicy 'deny-latest-tag' does not exist, is not apiVersion policies.kyverno.io/v1, or does not have validationActions: [Deny]."
+    elif [[ "$main_status" -eq 0 ]]; then
+      echo "HINT: A Pod with image tag ':latest' was admitted - it should be denied. Check your CEL expression actually parses the tag, not just checks for the string 'latest' loosely."
+    elif [[ "$untagged_status" -eq 0 ]]; then
+      echo "HINT: A Pod with NO tag at all (implicit latest) was admitted - an image reference without ':tag' defaults to 'latest' and must be denied the same way as an explicit ':latest'."
+    elif [[ "$init_status" -eq 0 ]]; then
+      echo "HINT: A Pod with a ':latest' initContainer (but a pinned main container) was admitted - your policy must check spec.initContainers, not only spec.containers."
+    elif [[ "$ephemeral_latest_status" -eq 0 ]]; then
+      echo "HINT: 'kubectl debug' adding an ephemeral container with ':latest' was admitted - your policy must also cover spec.ephemeralContainers, which uses the pods/ephemeralcontainers subresource."
+    elif [[ "$base_status" -ne 0 || "$ephemeral_trusted_status" -ne 0 ]]; then
+      echo "HINT: A correctly pinned image was unexpectedly rejected - check your policy is not too broad (e.g. accidentally matching any image string containing digits, or blocking all debug/ephemeral operations)."
+    fi
     echo "policy_enforced=$policy_status main=$main_status untagged=$untagged_status init=$init_status base=$base_status ephemeral_latest=$ephemeral_latest_status ephemeral_trusted=$ephemeral_trusted_status"; result=1
   fi
   record_result "$result"
@@ -127,6 +147,11 @@ EOF
   admission_status=$?
   set -e
   if [[ "$policy_status" -eq 0 && "$admission_status" -ne 0 ]]; then result=0; else
+    if [[ "$policy_status" -ne 0 ]]; then
+      echo "HINT: ValidatingPolicy 'require-run-as-non-root' does not exist or is not enforced (Deny)."
+    else
+      echo "HINT: A Pod with securityContext.runAsNonRoot: false was admitted - it should be denied. Check your CEL expression is actually evaluating spec.securityContext.runAsNonRoot, and that a false value (not just a missing value) is caught."
+    fi
     echo "policy_enforced=$policy_status root_admission_status=$admission_status"; result=1
   fi
   record_result "$result"
@@ -200,6 +225,19 @@ EOF
   kubectl delete pod registry-ephemeral-base -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   set -e
   if [[ "$policy_status" -eq 0 && "$main_status" -ne 0 && "$init_status" -ne 0 && "$trusted_lists_status" -eq 0 && "$base_status" -eq 0 && "$ephemeral_untrusted_status" -ne 0 && "$ephemeral_trusted_status" -eq 0 ]]; then result=0; else
+    if [[ "$policy_status" -ne 0 ]]; then
+      echo "HINT: ValidatingPolicy 'allow-approved-registries' does not exist or is not enforced (Deny)."
+    elif [[ "$main_status" -eq 0 ]]; then
+      echo "HINT: An image from docker.io (not in the approved registry allowlist) was admitted - check your registry match logic actually restricts to the approved prefix(es)."
+    elif [[ "$init_status" -eq 0 ]]; then
+      echo "HINT: An unapproved initContainer image was admitted even though the main container was trusted - your policy must check spec.initContainers too, not just spec.containers."
+    elif [[ "$trusted_lists_status" -ne 0 ]]; then
+      echo "HINT: A Pod with BOTH main and init containers from approved registries was rejected - it should be allowed. Check your allowlist actually covers both 'registry.k8s.io' and 'ghcr.io/cks-lab' if both are meant to be trusted."
+    elif [[ "$ephemeral_untrusted_status" -eq 0 ]]; then
+      echo "HINT: 'kubectl debug' adding an ephemeral container from an unapproved registry was admitted - check your policy also covers spec.ephemeralContainers."
+    elif [[ "$base_status" -ne 0 || "$ephemeral_trusted_status" -ne 0 ]]; then
+      echo "HINT: A Pod/ephemeral container from an approved registry was unexpectedly rejected - your allowlist match may be too narrow (e.g. exact string match instead of prefix match)."
+    fi
     echo "policy_enforced=$policy_status main=$main_status init=$init_status trusted_lists=$trusted_lists_status base=$base_status ephemeral_untrusted=$ephemeral_untrusted_status ephemeral_trusted=$ephemeral_trusted_status"; result=1
   fi
   record_result "$result"
@@ -230,6 +268,11 @@ EOF
   if [[ "$admission_status" -eq 0 && "$label" == "kyverno" && "$has_mutate" -ge 1 ]]; then
     echo '1' >> /var/work/tests/result/ok
   else
+    if [[ "$has_mutate" -lt 1 ]]; then
+      echo "OPTIONAL HINT: MutatingPolicy 'add-kyverno-managed-label' has no mutations defined - add a mutation adding label 'security.cks.io/managed-by: kyverno'."
+    elif [[ "$label" != "kyverno" ]]; then
+      echo "OPTIONAL HINT: The dry-run admission response Pod is missing label 'security.cks.io/managed-by: kyverno' - check the mutation's applyConfiguration/patch actually sets this exact key/value."
+    fi
     echo "OPTIONAL: mutation not ready (admission_status=$admission_status label=$label mutate_rules=$has_mutate)"
   fi
   # Последний этап опционален: check_result его проверяет, но не делает лабу неуспешной.

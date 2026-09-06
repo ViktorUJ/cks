@@ -21,7 +21,7 @@
 ненужный порт даёт атакующему возможность начать эту цепочку извне.
 
 ```mermaid
-flowchart LR
+flowchart TB
     net["Внешняя сеть"] --> ssh["SSH или другой\nоткрытый сервис"]
     ssh --> user["Обычный пользователь"]
     user --> weak["Слабый sudo, группа\nили права файла"]
@@ -317,7 +317,7 @@ sudo nft list ruleset
 ```
 
 ```mermaid
-flowchart LR
+flowchart TB
     admin["admin VPN\n203.0.113.0/24"] --> ssh["22/tcp: allow"]
     nodes["cluster CIDR\n10.0.0.0/16"] --> api["6443/tcp: allow"]
     internet["прочие источники"] -. "deny" .-> node["Kubernetes-нода"]
@@ -549,6 +549,11 @@ ssh -o PreferredAuthentications=publickey,keyboard-interactive \
 5. Чем отличаются области ответственности host firewall, Security Group и NetworkPolicy?
 6. Почему перед отключением password authentication надо открыть вторую SSH-сессию?
 7. Какие команды докажут, что SSH- и firewall-настройки не только записаны, но и работают?
+8. **Flashback (глава 10).** Эта глава про least privilege на уровне **хоста** (Linux
+   пользователи, группы, доступ к сокетам). Глава 10 - про least privilege на уровне
+   **Kubernetes API** (RBAC). Приведите конкретный пример, где узкий RBAC не защищает от
+   атаки, реализуемой через избыточный host access (и наоборот) - то есть почему одного из
+   этих двух уровней least privilege никогда не достаточно самого по себе.
 
 ## Практика
 

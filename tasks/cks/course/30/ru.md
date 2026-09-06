@@ -294,9 +294,12 @@ workload. Автоматическое **evict** ноды (`kubectl drain`) от
 
 ```bash
 # Шаг 1: NetworkPolicy quarantine - обратимо, не убивает процесс и его evidence.
+# Не угадывайте существующий label скомпрометированного Pod: назначьте отдельный
+# quarantine-marker, который не пересекается с обычными label workload.
 NAMESPACE="${NAMESPACE:?set NAMESPACE to the affected Pod namespace}"
 POD="${POD:?set POD to the affected Pod name}"
-POD_LABEL_VALUE="${POD_LABEL_VALUE:?set the value of a stable label on the affected Pod, e.g. app=$POD}"
+kubectl -n "$NAMESPACE" label pod "$POD" security.cks/quarantine=true --overwrite
+
 kubectl apply -f - <<YAML
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -306,7 +309,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      ${POD_LABEL_VALUE}
+      security.cks/quarantine: "true"
   policyTypes: ["Ingress", "Egress"]
 YAML
 kubectl -n "$NAMESPACE" get networkpolicy incident-quarantine
@@ -320,9 +323,31 @@ kubectl get node "$NODE"
 kubectl delete pod -n "$NAMESPACE" "$POD"
 ```
 
+Policy выше без разрешающих ingress/egress rules - это **полный deny-all**, включая DNS:
+скомпрометированный Pod не резолвит имена и не может делать exfiltration ни под каким
+видом трафика. Для incident containment это осознанный выбор, а не недосмотр - на этом
+этапе Pod уже не должен обслуживать обычный трафик, поэтому потеря DNS не мешает
+изоляции. Если нужна **частичная** quarantine, где Pod продолжает резолвить имена (это
+уже не полная изоляция, а осознанный компромисс, например для продолжения диагностики
+изнутри контролируемого Pod), явно добавьте allow-правило на `kube-dns`/`CoreDNS`:
+
+```yaml
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+```
+
 Проверьте результат негативным тестом, а не только отсутствием ошибки в команде: после
 NetworkPolicy повторите тот же исходящий запрос, который видел Falco/audit, и подтвердите
-`DENIED`/timeout, а разрешённый служебный трафик (например, DNS) - что он не пострадал.
+`DENIED`/timeout. Если применена полная quarantine выше (без allow-правил), тот же тест
+подтвердит недоступность и DNS - это ожидаемо и не является регрессией.
 
 ### Автоматизация реакции: Falco Talon и Tetragon enforcement
 
@@ -446,7 +471,7 @@ production.
 ### Короткий порядок диагностики
 
 ```mermaid
-flowchart LR
+flowchart TB
     alert["Falco alert\ncontainer ID + time"] --> node["node из alert"]
     node --> cri["sandbox через crictl pods\ncontainer через ps --pod"]
     cri --> proc["/proc, lsns, cgroup, mounts\nчто реально запущено?"]
@@ -597,6 +622,11 @@ kubectl delete namespace runtime-lab
 6. Как сопоставить `%container.id` из alert с host PID и что проверять в `/proc/<pid>`?
 7. Почему `strace` не следует использовать как постоянный production monitoring или как способ восстановить уже завершённый процесс?
 8. Какие evidence нужно сохранить перед containment, если риск и процедура позволяют это сделать?
+9. **Flashback (глава 11).** В главе 11 bound projected token снижает последствия кражи
+   token по сравнению с legacy Secret token. Спроектируйте investigation-сценарий для этой
+   главы: как через `%user.name`/audit log отличить легитимный запрос от Pod с его
+   собственным ServiceAccount от запроса, использующего **украденный** token того же SA
+   с другого источника (например, с хоста снаружи кластера)?
 
 ## Практика
 

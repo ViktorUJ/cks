@@ -39,14 +39,14 @@ flowchart TB
 
 Версии Kubernetes нужно различать:
 
-- **Версия обучения и лаб этого курса - `v1.36`** (`k8_version = "1.36.0"` в лабораторных окружениях): на ней проверяются Kubernetes-native команды, флаги и API-поведение курса; compatibility third-party компонентов необходимо сверять с их собственной support matrix.
+- **Версия обучения и core labs `101-112` этого курса - `v1.36`** (`k8_version = "1.36.0"` в их лабораторных окружениях): на ней проверяются Kubernetes-native команды, флаги и API-поведение курса; compatibility third-party компонентов необходимо сверять с их собственной support matrix. Legacy labs `01-30` сохраняют отдельные исторические exam-pattern стенды на Kubernetes `v1.28-v1.34` и не входят в единый v1.36 compatibility baseline.
 - **Версию экзаменационной среды задаёт Linux Foundation, и она может отставать от версии курса.** Основная страница [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) указывает Kubernetes **v1.35**, однако Important Instructions и FAQ обновляются независимо и могут временно показывать другую версию. Для конкретной попытки приоритет имеют ExamUI и инструкции назначенного экзамена. Опубликованный CNCF curriculum overview по имени файла остаётся [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), но это не отменяет параметров, указанных Linux Foundation для попытки. Поэтому **не считайте `v1.36` версией экзамена**.
 
 Страницы CKS и FAQ обновляются независимо и могут временно расходиться. Непосредственно перед попыткой подтвердите версию Kubernetes, количество и формат задач, проходной балл, пререквизит и разрешённые ресурсы сначала на основной странице [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/), затем в ExamUI для назначенной попытки. Не полагайтесь на версию или правила, зафиксированные в курсе, как на постоянные.
 
 Различие практическое: синтаксис объекта и поведение admission сверяйте с документацией той версии, которая открыта в экзаменационной среде, а не с версией курса.
 
-| Область | Лабы курса: v1.36 | Экзамен: v1.35 или фактическая версия попытки |
+| Область | Core labs `101-112`: v1.36 | Экзамен: v1.35 или фактическая версия попытки |
 |---|---|---|
 | Базовые Kubernetes API и CKS-приёмы | Отрабатывайте обычный синтаксис, но проверяйте поддержку CNI/runtime | Сверяйте с документацией и ExamUI конкретной попытки |
 | User Namespaces | `hostUsers: false` стал Stable/GA в v1.36; лаба может опираться на это поведение | Не переносите это поведение на попытку автоматически: проверьте версию, runtime и доступность функции |
@@ -84,7 +84,7 @@ flowchart TB
 | Monitoring, Logging and Runtime Security | 20% | 29-32 |
 
 ```mermaid
-flowchart LR
+flowchart TB
     setup["Cluster Setup<br>15%"] --> hardening["Cluster Hardening<br>15%"]
     hardening --> system["System Hardening<br>10%"]
     system --> workload["Microservice<br>20%"]
@@ -194,7 +194,7 @@ flowchart TB
 ## 01.9 Итоги главы
 
 - CKS продолжает CKA и проверяет практическую защиту кластера, workloads, нод и supply chain.
-- Целевая версия курса и лабораторных окружений - Kubernetes v1.36.
+- Целевая версия курса и core labs `101-112` - Kubernetes v1.36; legacy labs `01-30` остаются на v1.28-v1.34 и не входят в этот baseline.
 - Экзамен требует уверенной работы в терминале, с несколькими кластерами и конфигурацией нод.
 - Шесть доменов охватывают настройку кластера, hardening, workload, supply chain и runtime-защиту.
 - Новые акценты программы 2024 - Cilium, CIS, SBOM, KubeLinter и sandboxed containers.

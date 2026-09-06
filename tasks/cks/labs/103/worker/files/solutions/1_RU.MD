@@ -195,3 +195,48 @@ cat /var/work/tests/artifacts/6/binaries.sha256.txt
 
 Обе строки должны завершаться `: OK`. Если путь к бинарнику отличается от `/usr/bin`,
 `command -v` всё равно формирует корректный вход для `sha256sum -c`.
+
+## Задание 7. Remediation cycle: конкретный kube-bench FAIL до PASS
+
+В отличие от задания 1 (снимок всего отчёта), здесь нужно связать один конкретный check
+с его исправлением. `kube-bench` поддерживает точечный запуск через `--check`, поэтому
+не нужно перечитывать весь отчёт вручную:
+
+```bash
+mkdir -p /var/work/tests/artifacts/7
+
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-2.0 --check 1.1.1' \
+  | tee /var/work/tests/artifacts/7/before.txt
+grep -A1 '1.1.1' /var/work/tests/artifacts/7/before.txt
+# [FAIL] 1.1.1 Ensure that the API server pod specification file permissions ...
+```
+
+Проверьте фактическое право доступа на ноде и исправьте его до `600` - это file-only
+изменение, kubelet не пересоздаёт static Pod из-за смены прав, только из-за смены
+содержимого манифеста:
+
+```bash
+ssh control-plane 'sudo stat -c "%a %n" /etc/kubernetes/manifests/kube-apiserver.yaml'
+# 644 /etc/kubernetes/manifests/kube-apiserver.yaml
+
+ssh control-plane 'sudo chmod 600 /etc/kubernetes/manifests/kube-apiserver.yaml'
+ssh control-plane 'sudo stat -c "%a %n" /etc/kubernetes/manifests/kube-apiserver.yaml'
+# 600 /etc/kubernetes/manifests/kube-apiserver.yaml
+```
+
+Повторный точечный запуск того же check должен показать `PASS`:
+
+```bash
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-2.0 --check 1.1.1' \
+  | tee /var/work/tests/artifacts/7/after.txt
+grep -A1 '1.1.1' /var/work/tests/artifacts/7/after.txt
+# [PASS] 1.1.1 Ensure that the API server pod specification file permissions ...
+```
+
+Подтвердите, что kube-apiserver остался здоров: правка прав файла не меняет его
+содержимое, поэтому kubelet не должен пересоздавать static Pod.
+
+```bash
+kubectl get --raw='/readyz'
+kubectl -n kube-system get pods -l component=kube-apiserver
+```

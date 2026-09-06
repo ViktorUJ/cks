@@ -553,7 +553,7 @@ check ID из отчёта; (2) сделайте резервную копию �
 контроли с документацией и фиксируйте customer-/provider-owned ответственность.
 
 ```mermaid
-flowchart LR
+flowchart TB
     report["kube-bench: FAIL/WARN"] --> locate["Определить файл, флаг<br>и владельца процесса"]
     locate --> change["Минимальная правка<br>+ резервная копия"]
     change --> health["Component Ready?<br>kubelet/etcd/API healthy?"]

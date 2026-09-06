@@ -23,7 +23,7 @@
 или использует команду, которой нет в manifest.
 
 ```mermaid
-flowchart LR
+flowchart TB
     build["image scan и подпись\nдо запуска"] --> admit["admission policy\nразрешить или отклонить Pod"]
     admit --> runtime["контейнер выполняется\nна ноде"]
     runtime --> events["syscalls / eBPF события\nпроцесс, файл, сеть"]
@@ -270,7 +270,7 @@ Falco rules - YAML-документы. `rule` определяет детект�
 короче, облегчает review и позволяет менять allowlist/denylist без копирования выражений.
 
 ```mermaid
-flowchart LR
+flowchart TB
     event["syscall event\nproc, fd, container"] --> condition["condition\nсопоставить поля"]
     macro["macro\nобщая часть условия"] --> condition
     list["list\nнабор имён или путей"] --> condition
@@ -627,6 +627,12 @@ kubectl -n falco describe daemonset falco
 7. Как воспроизводимо проверить правило на shell в контейнере и где читать его alert для
    package-install и DaemonSet?
 8. Почему исключение целого namespace из детектора хуже точного временного исключения?
+9. **Flashback (глава 17).** Falco (эта глава) и seccomp (глава 17) оба работают на
+   уровне syscall, но с разными гарантиями: seccomp может **заблокировать** syscall до его
+   выполнения, а Falco **обнаруживает** его уже после срабатывания. Если критичный syscall
+   (например, `unshare`) уже заблокирован seccomp профилем из главы 17, есть ли смысл
+   всё равно писать для него Falco rule - и если да, что докажет такая комбинация, чего не
+   докажет одно успешное seccomp denial?
 
 ## Практика
 

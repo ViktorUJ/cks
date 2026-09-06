@@ -38,6 +38,19 @@ record_result() {
     && grep -Eq '\[(PASS|WARN|FAIL)\]' "$report"; then
     result=0
   else
+    if ! [[ -s "$report" ]]; then
+      echo "HINT: kube-bench.txt is missing or empty - save the report at exactly $report."
+    elif ! grep -Eq '^kubernetes_version=v1[.]36([.]|$)' "$report"; then
+      echo "HINT: Report must include a line 'kubernetes_version=v1.36.x' - check kube-bench actually detected this cluster's version."
+    elif ! grep -Eq '^kube_bench_version=v?0[.]16[.]0$' "$report"; then
+      echo "HINT: Report must include 'kube_bench_version=v0.16.0' (or without 'v') matching the tool version installed in this lab."
+    elif ! grep -qx 'benchmark=cis-2.0' "$report"; then
+      echo "HINT: Report must include a line 'benchmark=cis-2.0' exactly - check which CIS benchmark profile kube-bench auto-selected or was told to use."
+    elif ! grep -qx 'mapping_status=forced-approximate' "$report"; then
+      echo "HINT: Report must include 'mapping_status=forced-approximate' exactly - this documents that v1.36 is newer than kube-bench's built-in version map."
+    else
+      echo "HINT: Report must contain at least one line with [PASS], [WARN], or [FAIL] - check kube-bench actually ran the full scan, not just the config check."
+    fi
     echo "Report must record Kubernetes, kube-bench, CIS config, forced/approximate mapping, and scan results: $report"
     result=1
   fi
@@ -48,6 +61,7 @@ record_result() {
   run node_ssh "sudo awk '/^[[:space:]]*readOnlyPort:[[:space:]]*0[[:space:]]*$/ {port=1} /^[[:space:]]*anonymous:[[:space:]]*$/ {anonymous=1; next} anonymous && /^[[:space:]]*enabled:[[:space:]]*false[[:space:]]*$/ {auth=1} END {exit !(port && auth)}' /var/lib/kubelet/config.yaml && sudo systemctl is-active --quiet kubelet"
   result=$status
   if [[ "$result" -ne 0 ]]; then
+    echo "HINT: Either readOnlyPort: 0 or authentication.anonymous.enabled: false is missing from /var/lib/kubelet/config.yaml (or kubelet failed to restart cleanly). Check indentation matters here - the awk pattern expects the exact YAML nesting used by kubelet's own config file."
     echo "$output"
   fi
   record_result 2 "$result"
@@ -62,6 +76,13 @@ record_result() {
   if [[ "$manifest_status" -eq 0 && "$ready" == "ok" && "$phase" == "Running" ]]; then
     result=0
   else
+    if [[ "$manifest_status" -ne 0 ]]; then
+      echo "HINT: /etc/kubernetes/manifests/kube-apiserver.yaml must contain the exact line '    - --profiling=false' (4-space indent, matching the existing flag list format)."
+    elif [[ "$ready" != "ok" ]]; then
+      echo "HINT: API server is not ready after the manifest edit. Wait longer for kubelet to pick up the change and restart the static Pod, or check for a YAML syntax error in the manifest."
+    elif [[ "$phase" != "Running" ]]; then
+      echo "HINT: kube-apiserver Pod is not Running (phase=$phase). Check 'kubectl describe pod' events on this Pod for the actual startup error."
+    fi
     echo "$manifest_output"
     echo "readyz=$ready phase=$phase"
     result=1
@@ -79,6 +100,17 @@ record_result() {
   if [[ "$secret_type" == "kubernetes.io/tls" && -n "$cert" && -n "$key" && "$host" == "secure.cks.local" && "$secret_name" == "secure-ingress-tls" && "$service" == "secure-app" ]]; then
     result=0
   else
+    if [[ "$secret_type" != "kubernetes.io/tls" ]]; then
+      echo "HINT: Secret 'secure-ingress-tls' must have type 'kubernetes.io/tls' - a generic Opaque Secret with tls.crt/tls.key keys does not satisfy Ingress TLS requirements the same way."
+    elif [[ -z "$cert" || -z "$key" ]]; then
+      echo "HINT: Secret 'secure-ingress-tls' is missing tls.crt or tls.key data - both must be present and base64-encoded (kubectl handles this automatically with 'kubectl create secret tls')."
+    elif [[ "$host" != "secure.cks.local" ]]; then
+      echo "HINT: Ingress 'secure-ingress' spec.tls[0].hosts[0] must be exactly 'secure.cks.local'."
+    elif [[ "$secret_name" != "secure-ingress-tls" ]]; then
+      echo "HINT: Ingress 'secure-ingress' spec.tls[0].secretName must reference 'secure-ingress-tls' exactly."
+    elif [[ "$service" != "secure-app" ]]; then
+      echo "HINT: Ingress backend service.name must be 'secure-app' exactly."
+    fi
     echo "secret type=$secret_type host=$host secret=$secret_name backend=$service"
     result=1
   fi
@@ -100,6 +132,15 @@ record_result() {
     && grep -Fq 'TLS 1.2 correctly rejected' "$report"; then
     result=0
   else
+    if [[ "$manifest_status" -ne 0 ]]; then
+      echo "HINT: kube-apiserver.yaml and/or etcd.yaml are missing the exact TLS flag lines. Check --tls-min-version, --tls-cipher-suites on kube-apiserver, and --cipher-suites on etcd match the required strings byte-for-byte, including indentation."
+    elif [[ "$ready" != "ok" || "$etcd_phase" != "Running" ]]; then
+      echo "HINT: API server or etcd is not healthy after the TLS change. A too-restrictive cipher list can break internal component communication - double check the exact cipher suite strings for typos."
+    elif [[ "$tls12_status" -eq 0 ]]; then
+      echo "HINT: A TLS 1.2 handshake to :6443 succeeded - it should be rejected once --tls-min-version=VersionTLS13 is active. Confirm the static Pod actually restarted with the new manifest."
+    else
+      echo "HINT: TLS handshake succeeded/failed as expected, but the evidence file $report does not contain 'TLSv1.3' and/or 'TLS 1.2 correctly rejected' - save both proofs in that exact wording."
+    fi
     echo "$manifest_output"
     echo "readyz=$ready etcd_phase=$etcd_phase tls12_exit=$tls12_status"
     echo "$tls12_output"
@@ -113,8 +154,32 @@ record_result() {
   if [[ -s "$report" ]] && grep -Eq 'kubelet.*: OK' "$report" && grep -Eq 'kubectl.*: OK' "$report"; then
     result=0
   else
+    echo "HINT: binaries.sha256.txt must contain lines matching 'kubelet...: OK' and 'kubectl...: OK' - this is the standard 'sha256sum --check' output format. If a check shows FAILED, the downloaded binary does not match the expected checksum - re-download from the official source."
     echo "Expected successful kubelet and kubectl checks in $report"
     result=1
   fi
   record_result 6 "$result"
+}
+
+@test "7. kube-bench check 1.1.1 goes from FAIL to PASS after fixing manifest permissions" {
+  before=/var/work/tests/artifacts/7/before.txt
+  after=/var/work/tests/artifacts/7/after.txt
+  perm=$(node_ssh "sudo stat -c '%a' /etc/kubernetes/manifests/kube-apiserver.yaml" 2>/dev/null)
+  if [[ -s "$before" ]] && grep -q '1.1.1' "$before" && grep -q '\[FAIL\]' "$before" \
+    && [[ -s "$after" ]] && grep -q '1.1.1' "$after" && grep -q '\[PASS\]' "$after" \
+    && ! grep -A2 '1.1.1' "$after" | grep -q '\[FAIL\]' \
+    && [[ "$perm" == "600" ]]; then
+    result=0
+  else
+    if ! [[ -s "$before" ]] || ! grep -q '1.1.1' "$before" || ! grep -q '\[FAIL\]' "$before"; then
+      echo "HINT: before.txt must be captured BEFORE any fix, containing check 1.1.1 with a [FAIL] result - this is the CIS check for kube-apiserver manifest file permissions."
+    elif [[ "$perm" != "600" ]]; then
+      echo "HINT: /etc/kubernetes/manifests/kube-apiserver.yaml permissions are '$perm', not 600. Run 'chmod 600' on this file - CIS 1.1.1 requires it to be readable/writable only by its owner."
+    else
+      echo "HINT: after.txt must show check 1.1.1 as [PASS] with no lingering [FAIL] nearby - re-run kube-bench after the chmod and save the fresh output."
+    fi
+    echo "Expected FAIL in $before and PASS in $after for check 1.1.1, and node permission exactly 600 (actual: ${perm:-missing})"
+    result=1
+  fi
+  record_result 7 "$result"
 }

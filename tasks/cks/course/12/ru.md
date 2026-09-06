@@ -22,7 +22,7 @@
 оставить последующие проверки.
 
 ```mermaid
-flowchart LR
+flowchart TB
     net["Сеть<br>firewall / Security Group / allowlist"] --> tls["TLS и endpoint<br>доступен только нужным клиентам"]
     tls --> authn["Authentication<br>кто это?"]
     authn --> authz["Authorization<br>что ему можно?"]
@@ -290,7 +290,7 @@ sudo crictl ps --name kube-apiserver
 worker nodes и согласованным automation endpoints.
 
 ```mermaid
-flowchart LR
+flowchart TB
     admin["admin VPN / bastion"] --> allowed["allowlist\nTCP 6443"]
     node["worker nodes"] --> allowed
     cicd["CI/CD runner\nесли нужен"] --> allowed
@@ -562,6 +562,17 @@ bindings и автоматическая проверка конфигураци
    условиях public endpoint может быть оправдан?
 7. Какие две проверки докажут отдельно сетевую доступность API и отсутствие anonymous
    авторизации?
+8. **Flashback (глава 32).** Разовый `curl`/`401` из задания 7 этой главы доказывает
+   отсутствие anonymous-доступа только **в момент проверки**. Kubernetes audit log
+   фиксирует **API requests** (кто, когда, какой resource, какой verb, какой result) - он
+   не является непрерывным монитором состояния файла
+   `/etc/kubernetes/manifests/kube-apiserver.yaml` или флага `--anonymous-auth`. Что тогда
+   реально может показать audit log из главы 32 ретроспективно про anonymous-запросы, и
+   почему отсутствие anonymous-события в логе **не доказывает**, что configuration не
+   менялась весь интервал между двумя проверками (например, если flag на короткое время
+   включили, но никто не сделал anonymous-запрос именно в этот момент)? Какие
+   дополнительные механизмы (periodic checks, file integrity monitoring, GitOps drift
+   detection) нужны для continuous assurance, которую сам audit log не даёт?
 
 ## Практика
 

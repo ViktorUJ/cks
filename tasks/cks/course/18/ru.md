@@ -369,7 +369,7 @@ idmapped mounts. Перед rollout проверьте эти условия н�
 образом описать каждый writable путь и его жизненный цикл.
 
 ```mermaid
-flowchart LR
+flowchart TB
     app["app<br>root filesystem: read-only"] --> bin["/app и библиотеки<br>из image: только чтение"]
     app --> tmp["/tmp<br>emptyDir Memory"]
     app --> cache["/var/cache/app<br>emptyDir с sizeLimit"]
@@ -620,6 +620,10 @@ container того же Pod, которому этот том тоже смон�
 7. Почему `allowPrivilegeEscalation: false` не заменяет `capabilities.drop: ["ALL"]`?
 8. Какие три независимые проверки нужны, чтобы доказать hardening после `kubectl apply`?
 9. Почему `hostNetwork` и `hostPID` требуют review даже при non-root UID?
+10. **Flashback (глава 10).** PSA действует через labels namespace. Если RBAC (глава 10)
+    разрешает пользователю `create namespaces` без ограничения на labels, что мешает этому
+    пользователю создать новый namespace **без** `enforce=restricted` и обойти PSA целиком,
+    и какое RBAC-ограничение из главы 10 закрывает именно этот путь?
 
 ## 18.11. Как это применяют в продакшене
 

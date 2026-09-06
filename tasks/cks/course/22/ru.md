@@ -29,7 +29,7 @@ multi-tenancy доверие другое: одна команда, customer wor
 при этом остаются опасными **даже в sandbox**.
 
 ```mermaid
-flowchart LR
+flowchart TB
     tenantA["tenant A\nобычный Pod"] --> kubelet["kubelet + containerd"]
     tenantB["tenant B\nнедоверенный Pod"] --> kubelet
     kubelet --> runc["runc\nпроцесс близко к ядру ноды"]
@@ -104,7 +104,7 @@ API server не проверяет наличие handler на каждой но
 создания workload.
 
 ```mermaid
-flowchart LR
+flowchart TB
     pod["Pod\nruntimeClassName: gvisor"] --> api["kube-apiserver\nRuntimeClass gvisor"]
     api --> rc["handler: runsc\nscheduling constraints"]
     rc --> scheduler["scheduler\nвыбирает sandbox node"]
@@ -689,6 +689,10 @@ team не подтвердит другой допустимый RuntimeClass и
    sandbox execution?
 9. Что означает, если `uname` внутри Kata Pod отличается от `uname` host, и почему этого
    недостаточно как единственного доказательства?
+10. **Flashback (глава 10).** gVisor/Kata (эта глава) изолируют tenant на уровне kernel
+    syscall surface. RBAC (глава 10) изолирует tenant на уровне Kubernetes API access.
+    Для multi-tenant кластера с недоверенными namespace приведите конкретный сценарий
+    атаки, который останавливает только один из этих двух уровней, но не другой.
 10. Почему удаление `runtimeClassName` ради быстрого восстановления - security downgrade?
 
 ## Практика

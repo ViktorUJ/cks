@@ -29,7 +29,7 @@ backend принимает только `GET /`, то `POST /admin` или `DELE
 внешнему IP после DNS-resolve и отправляет данные атакующему.
 
 ```mermaid
-flowchart LR
+flowchart TB
     attacker["скомпрометированный<br>frontend"] -->|"TCP/80 разрешён"| backend["backend API"]
     attacker -->|"DNS + HTTPS"| evil["внешний сервер<br>атакующего"]
     cnp["CiliumNetworkPolicy"] --> l34["L3/L4:<br>frontend → backend:80"]

@@ -25,7 +25,7 @@ API server - обычный путь к состоянию Kubernetes, а etcd -
 > authentication, authorization и audit.
 
 ```mermaid
-flowchart LR
+flowchart TB
     user["пользователь / Pod"] --> api["kube-apiserver\nTLS + authn/authz"]
     api -->|"записывает объект"| enc["EncryptionConfiguration\nпровайдер шифрования"]
     enc --> etcd[("etcd / диск / snapshot")]
@@ -248,7 +248,7 @@ KMS v1 и v2 используют envelope encryption, но по-разному 
 поэтому их нельзя описывать одной последовательностью.
 
 ```mermaid
-flowchart LR
+flowchart TB
     api["kube-apiserver"] -->|"gRPC по Unix socket"| plugin["KMS plugin"]
     plugin -->|"wrap/unwrap через KEK"| manager["внешний KMS / HSM\nKEK не в Kubernetes"]
     api -->|"encrypted payload + wrapped material"| etcd[("etcd")]
@@ -609,6 +609,15 @@ restore и минимизируйте количество людей, identitie
 7. Как доказать, что старый Secret реально прошёл re-encryption?
 8. Какие действия с Pod могут обойти запрет `get secrets` и почему?
 9. Что должно быть проверено для восстановления зашифрованного etcd snapshot?
+10. **Flashback (глава 14).** Encryption at rest защищает Secret именно в etcd. После
+    монтирования Secret kubelet предоставляет его Pod через **tmpfs-backed volume**
+    (Kubernetes официально не пишет Secret volume на durable storage именно чтобы
+    confidential data не оказались на постоянном диске) - то есть Secret уже доступен на
+    ноде в расшифрованном виде, хотя и не как обычный файл на persistent disk. Какие меры
+    из главы 14 (host footprint, least-privilege host) ограничивают риск для секрета на
+    этом этапе - когда он уже расшифрован и доступен авторизованному процессу на ноде через
+    tmpfs, - и почему host compromise или privileged workload на той же ноде остаются
+    серьёзной угрозой даже без durable-disk копии?
 
 ## Практика
 

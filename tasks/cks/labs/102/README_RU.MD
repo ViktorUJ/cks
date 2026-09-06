@@ -20,6 +20,26 @@
 - DNS-aware egress через `toFQDNs` с отдельным правилом DNS;
 - проверку разрешённых и запрещённых потоков через Hubble.
 
+## Проверьте себя перед стартом
+
+<details>
+<summary>1. Чем L3/L4 policy в Cilium принципиально отличается от L7 policy на одном и том же правиле?</summary>
+
+L3/L4 разрешает или запрещает соединение целиком по source/destination identity и порту - Cilium не смотрит внутрь трафика. L7-правило (`rules.http`) добавляется на тот же TCP-порт, но проверяет содержимое запроса (метод, path) - соединение может быть разрешено на L4, но конкретный HTTP-запрос всё равно получит `403`, если не совпадёт с L7-правилом. Если оставить отдельное широкое L4-правило без L7, оно "выключит" фильтрацию L7 для этого порта.
+</details>
+
+<details>
+<summary>2. Почему `toFQDNs` egress-правило не работает без отдельного правила на DNS?</summary>
+
+`toFQDNs` строится на том, что Cilium **видит DNS-ответ** и запоминает, каким IP соответствует разрешённое имя (`example.com`). Если DNS-запрос к `kube-dns` заблокирован, Cilium никогда не узнает актуальный IP для FQDN и не сможет построить allow-правило для egress к нему - весь трафик к этому FQDN будет заблокирован, даже если сама FQDN-политика написана верно.
+</details>
+
+<details>
+<summary>3. Почему для доказательства L7-denial через Hubble важно captur'ить трафик именно во время теста, а не после?</summary>
+
+Hubble показывает flow-события в момент их возникновения; после завершения запроса событие может уже не попасть в буфер `hubble observe`, если вы не были подписаны на поток в момент отказа. Нужно запустить `hubble observe --follow` ДО выполнения тестового запроса и остановить после - иначе конкретное `FORWARDED`/`DROPPED` событие для нужного `GET`/`POST` не попадёт в сохранённый JSON.
+</details>
+
 ## Что мы создаём и зачем
 
 | Объект | Назначение | Зачем нужен |
@@ -77,26 +97,56 @@ cilium status --wait
 | :---: | :--- |
 | Что делаем | Создайте namespace `cks-102`. В нём создайте: Pod `backend` с label `app=backend` и образом `nginx:1.27-alpine`; Service `backend`, выбирающий этот Pod на порту `80`; Pod `frontend` с label `role=frontend` и образом `curlimages/curl:8.10.1`; Pod `client` с label `role=untrusted` и тем же образом. У client-подов команда должна удерживать контейнер запущенным, например `sleep 3600`. Дождитесь Ready. |
 | Критерии приёмки | - существует namespace `cks-102`;<br>- существуют Pods `backend`, `frontend`, `client` с указанными labels;<br>- Service `backend` имеет порт `80`. |
+
+<details>
+<summary>💡 Подсказка к заданию 1</summary>
+
+Обратите внимание, что метки разные по стилю: `backend` использует `app=backend`, а `frontend`/`client` используют `role=frontend`/`role=untrusted` - это сделано намеренно, чтобы последующие CiliumNetworkPolicy явно указывали, по какому именно label они матчат identity. Перепутать `app`/`role` для одного из Pod - частая причина, почему policy "не работает".
+</details>
 ---
 | **2** | **Cilium L3/L4: только frontend к backend:80** |
 | :---: | :--- |
 | Что делаем | В `cks-102` создайте `CiliumNetworkPolicy` с именем `backend-policy`. Она должна выбирать `app=backend` и разрешать ingress только от endpoint с `role=frontend` на TCP-порт `80`. Не добавляйте широкого разрешения для всех endpoint. Проверьте `curl` из `frontend` к `http://backend/` и из `client` к тому же адресу; сохраните результаты в `/var/work/tests/artifacts/2/l3-l4.txt`. |
 | Критерии приёмки | - `backend-policy` выбирает `app=backend`, source `role=frontend`, TCP `80`;<br>- запрос из `frontend` получает `200`;<br>- запрос из `client` не получает `200`;<br>- артефакт существует. |
+
+<details>
+<summary>💡 Подсказка к заданию 2</summary>
+
+`endpointSelector.matchLabels` в самой policy должен матчить `backend` (`app: backend`), а `fromEndpoints[].matchLabels` внутри `ingress` должен матчить `frontend` (`role: frontend`) - это два РАЗНЫХ селектора в одном объекте, легко перепутать местами. Проверьте себя через `kubectl exec` в `client`: запрос должен либо не отвечать вовсе, либо получать таймаут - не `200`.
+</details>
 ---
 | **3** | **Cilium L7 HTTP: только GET /** |
 | :---: | :--- |
 | Что делаем | Измените **тот же** `backend-policy`: для TCP/80 разрешите от `frontend` только HTTP `GET` с path `/`. Не оставляйте отдельное широкое L4 allow-правило, иначе L7-фильтр не будет ограничивать POST. Запишите HTTP-коды GET и POST в `/var/work/tests/artifacts/3/l7-http.txt`. |
 | Критерии приёмки | - у правила TCP/80 есть `rules.http` с `method: GET` и `path: /`;<br>- `GET http://backend/` из `frontend` возвращает `200`;<br>- `POST http://backend/` из `frontend` возвращает `403`;<br>- артефакт существует. |
+
+<details>
+<summary>💡 Подсказка к заданию 3</summary>
+
+Самая частая ошибка этого задания - оставить исходное L4-only правило из задания 2 РЯДОМ с новым L7-правилом, вместо того чтобы заменить его. Если в policy одновременно есть "разрешить TCP/80 без L7-фильтра" и "разрешить TCP/80 с L7 GET /", Cilium применит более широкое разрешение, и `POST` пройдёт, а должен получить `403`. Убедитесь, что `toPorts.rules.http` находится ВНУТРИ того же правила, что и `toPorts.ports` с портом 80, а не в отдельном дублирующем правиле.
+</details>
 ---
 | **4** | **DNS-aware egress: разрешён только один FQDN** |
 | :---: | :--- |
 | Что делаем | Создайте `CiliumNetworkPolicy` `frontend-fqdn`, выбирающую `role=frontend`. Разрешите ей DNS к `kube-dns` на порту `53` **через L7 DNS proxy rule** `toPorts.rules.dns` (например, `matchPattern: "*"`): Cilium по этому DNS-трафику формирует FQDN-to-IP mapping для `toFQDNs`. Разрешите egress через `toFQDNs` только к `example.com` и только на TCP `443`. Проверьте HTTPS-запрос к `https://example.com/`, отказ `http://example.com:80` и отказ `https://www.google.com/`; сохраните результаты в `/var/work/tests/artifacts/4/fqdn.txt`. |
 | Критерии приёмки | - политика содержит `toFQDNs.matchName: example.com` и `toPorts` с TCP `443`;<br>- DNS к `kube-dns` разрешён отдельным правилом с `rules.dns`;<br>- `example.com` по HTTPS возвращает 2xx/3xx, но его TCP `80` запрещён;<br>- `www.google.com` не возвращает 2xx/3xx;<br>- артефакт существует. |
+
+<details>
+<summary>💡 Подсказка к заданию 4</summary>
+
+Два egress-правила нужны в одном объекте policy: (1) DNS к kube-dns с `rules.dns.matchPattern: "*"`, БЕЗ этого Cilium не сможет отследить, какой IP соответствует `example.com`; (2) `toFQDNs` с `matchName: example.com` и `toPorts` строго на 443. Если после apply первый запрос к `example.com` не проходит - подождите несколько секунд, DNS resolution и FQDN mapping в Cilium не мгновенные.
+</details>
 ---
 | **5** | **Hubble: evidence HTTP-потоков** |
 | :---: | :--- |
 | Что делаем | Зафиксируйте UTC-время начала контролируемого теста. На worker запустите `cilium hubble port-forward`, затем `hubble observe` с фильтрами `--from-pod cks-102/frontend`, `--to-pod cks-102/backend`, `--protocol http`, `--since <время-начала>`, `--output json --follow` и перенаправьте его в `/var/work/tests/artifacts/5/hubble-observe.json`. Пока наблюдение активно, выполните ровно два test case: разрешённый `GET /` и запрещённый `POST /` из `frontend`. Сохраните время и описание test case в `test-window.txt`, затем остановите процессы. |
 | Критерии приёмки | - оба артефакта непусты;<br>- JSON содержит flow именно `cks-102/frontend` → `cks-102/backend` для `GET /` с verdict `FORWARDED`;<br>- тот же source/destination содержит `POST /` с verdict `DROPPED`;<br>- generic flow другого Pod или без соответствующего метода не засчитывается. |
+
+<details>
+<summary>💡 Подсказка к заданию 5</summary>
+
+Запустите `hubble observe --follow` В ФОНЕ (`&`) ДО того, как выполните `GET`/`POST` запросы из задания 3 - если сначала выполнить запросы и только потом начать наблюдение, соответствующие flow-события будут упущены. Формат `test-window.txt` важен для проверки: запишите `source=cks-102/frontend destination=cks-102/backend` и `allowed=GET / denied=POST /` именно в этом виде.
+</details>
 ---
 
 ## Проверка результата

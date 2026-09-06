@@ -52,4 +52,23 @@ echo 'PermitRootLogin yes' >>/etc/ssh/sshd_config
 sshd -t
 systemctl reload ssh || true
 
+# Task 7: load an unused kernel module (sctp) that the student must blacklist and unload.
+# sctp is not required by kubeadm/containerd/Calico in this lab and is a common exam-style
+# attack-surface item (also dccp, cramfs, freevxfs in the same family).
+modprobe sctp || true
+
+# Task 8: an insecure sysctl the student must correct, and a kubelet not yet hardened with
+# protectKernelDefaults. sysctl is applied through a file so it is reproducible and greppable.
+mkdir -p /etc/sysctl.d
+cat >/etc/sysctl.d/98-cks-lab105-insecure.conf <<'EOF'
+kernel.unprivileged_bpf_disabled = 0
+EOF
+sysctl --system >/dev/null 2>&1 || true
+
+# Task 9: an extra SUID binary that is not required for this node's Kubernetes role. The
+# student must find it among genuine system SUID binaries and remove only this bit.
+cp /bin/true /usr/local/bin/cks-lab105-suid-tool
+chmod 4755 /usr/local/bin/cks-lab105-suid-tool
+chown root:root /usr/local/bin/cks-lab105-suid-tool
+
 echo "*** CKS lab 105 control-plane preparation complete"

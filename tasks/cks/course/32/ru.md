@@ -25,8 +25,8 @@
 webhook создаёт отдельный audit request лишь если его код дополнительно обращается к API.
 
 ```mermaid
-flowchart LR
-    client["kubectl / controller / SA / иной API client"] --> api["kube-apiserver\nauthn → authz → admission webhook"]
+flowchart TB
+    client["kubectl / controller / SA\nиной API client"] --> api["kube-apiserver\nauthn → authz → admission webhook"]
     api --> etcd["API-объект / etcd"]
     api --> policy["audit Policy\nвыбирает level"]
     policy --> local["локальный audit log"]
@@ -85,7 +85,7 @@ SQL-запрос внутри Pod или shell-команду, которая н
 разными `stage`. Policy решает не только уровень данных, но и какие стадии не писать.
 
 ```mermaid
-flowchart LR
+flowchart TB
     rr["RequestReceived\nзапрос принят"] --> rs["ResponseStarted\nlong-running response"]
     rs --> rc["ResponseComplete\nзапрос завершён"]
     rr --> panic["Panic\nсервер аварийно завершил обработку"]
@@ -387,7 +387,7 @@ level, размер request/response, file I/O и webhook queue могут ув�
 к retention расследований или compliance.
 
 ```mermaid
-flowchart LR
+flowchart TB
     event["audit event"] --> active["audit.log\nактивный файл"]
     active -->|"maxsize"| rotated["rotated copies\nmaxbackup / maxage"]
     active --> shipper["agent / collector"]
@@ -436,7 +436,7 @@ fail-closed evidence, но превращает сбой audit backend в отк
 server передаёт audit events (в batch режиме - списками) на endpoint из kubeconfig.
 
 ```mermaid
-flowchart LR
+flowchart TB
     api["kube-apiserver"] -->|"HTTPS + mTLS/CA"| collector["audit collector\n/webhook"]
     collector --> queue["durable queue / SIEM"]
     queue --> search["поиск, correlation, alerting"]
@@ -782,6 +782,10 @@ backup манифеста → policy и directories → флаги/mounts → д
 8. Почему `sourceIPs` и `userAgent` нельзя считать самостоятельным доказательством источника?
 9. Как через `jq` доказать, что policy записала действие нужной identity с нужным level,
    но не раскрыла Secret body?
+10. **Flashback (глава 12).** Глава 12 отключает `--anonymous-auth` и проверяет это
+    HTTP-запросом в моменте. Как audit log из этой главы даст **непрерывное** доказательство
+    того же факта - что за произвольный прошедший период anonymous access оставался
+    отключённым, а не только был отключён в момент разового теста?
 
 ## Практика
 
@@ -795,6 +799,34 @@ backup манифеста → policy и directories → флаги/mounts → д
 Полезная документация: [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/)
 · [Audit Policy](https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/)
 · [kube-apiserver flags](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/)
+
+## Смешанный чек-поинт: Monitoring, Logging & Runtime Security завершён
+
+Это последний из 6 доменов - проверьте 15-20 минут без подсказок, что весь курс
+складывается в одну картину, а не в шесть изолированных блоков:
+
+1. Запустите Falco (или прочитайте существующий alert) и свяжите одно alert с конкретным
+   Kubernetes workload через поля output (глава 29).
+2. Опишите последовательность сигналов execution → persistence → exfiltration и укажите,
+   какой сигнал в этой цепочке заметили бы вы первым (глава 30).
+3. Примените `readOnlyRootFilesystem: true` к тестовому Pod и объясните, какую конкретную
+   post-exploitation технику это ограничивает (глава 31).
+4. **Смешанное задание.** Возьмите ограничение доступа к API (глава 12, домен Cluster
+   Hardening) и audit log (глава 32, этот домен): объясните, почему разовая проверка через
+   `curl`/`401` доказывает состояние **в моменте**, а audit log фиксирует **API requests**
+   (кто, когда, какой resource/verb/result), а не непрерывное состояние static
+   `kube-apiserver` configuration. Почему отсутствие anonymous-запроса в логе за интервал
+   между двумя проверками **не доказывает**, что flag `--anonymous-auth` не менялся весь
+   этот интервал, и какие дополнительные controls (periodic config check, file integrity
+   monitoring, GitOps drift detection) нужны для continuous assurance?
+5. **Итоговое интеграционное задание.** Смоделируйте цепочку из двух доменов: RBAC-
+   привязка (глава 10) даёт subject избыточное право `bind`/`escalate`; опишите, (а) как
+   вы обнаружите факт эскалации через audit log (глава 32), и (б) какое немедленное
+   containment-действие вы предпримете, пока не подготовили постоянный fix RBAC.
+
+Если итоговое задание вызвало затруднение - вернитесь к главам 10, 12 и 30-32 вместе:
+это ядро связи между Cluster Hardening и Runtime Security, которую экзамен проверяет чаще
+остальных междоменных связей.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 31](../31/ru.md) · [Глава 33](../33/ru.md)

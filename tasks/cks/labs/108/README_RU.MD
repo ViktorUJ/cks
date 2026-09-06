@@ -7,6 +7,26 @@
 `runAsNonRoot`, allowlist registry; в последнем, опциональном этапе — mutation Pod при
 admission. Работайте только с объектами и именами, указанными в заданиях.
 
+## Проверьте себя перед стартом
+
+<details>
+<summary>1. Почему запрет только явного тега `:latest` не закрывает весь риск mutable-tag?</summary>
+
+Если image указан без тега вообще (например, `nginx`), Docker/OCI по умолчанию резолвит его как `nginx:latest` - implicit latest. Policy, проверяющая только буквальное совпадение строки `:latest`, пропустит такой image, хотя семантически это то же самое, что явный `:latest`. Правильная policy должна отклонять и явный, и implicit latest - либо требовать явный versioned tag/digest.
+</details>
+
+<details>
+<summary>2. Зачем validating policy проверять `ephemeralContainers` отдельно от `containers`/`initContainers`?</summary>
+
+`kubectl debug` добавляет ephemeral container в УЖЕ существующий Pod через отдельный subresource API (`pods/ephemeralcontainers`), а не через обычный CREATE/UPDATE Pod. Если policy матчит только на ресурс `pods` без явного включения этого subresource, попытка добавить непроверенный/untrusted ephemeral container может пройти мимо всех validating policies, написанных для обычных containers.
+</details>
+
+<details>
+<summary>3. В чём принципиальная разница между `ValidatingPolicy` и `MutatingPolicy` в Kyverno?</summary>
+
+`ValidatingPolicy` только проверяет запрос и либо разрешает, либо отклоняет его (Allow/Deny) - объект не изменяется. `MutatingPolicy` МЕНЯЕТ объект перед сохранением (добавляет/меняет поля, например label) - запрос всё равно проходит, но с изменённым содержимым. Задание 5 использует mutation именно потому, что цель - добавить label автоматически, а не отклонить Pod.
+</details>
+
 ## Инфраструктура
 
 Окружение разворачивается Terragrunt в AWS `eu-central-1`:
@@ -46,11 +66,23 @@ check_result
 | Что делаем | Установите Kyverno в namespace `kyverno`. Используйте подготовленную на worker команду `/usr/local/bin/install-kyverno`; она применяет закреплённый Helm chart. Дождитесь доступности admission controller. |
 | Критерии приёмки | В кластере есть CRD `validatingpolicies.policies.kyverno.io`; версия Kyverno — `1.19.x`; минимум один Deployment namespace `kyverno` имеет доступную реплику. |
 
+<details>
+<summary>💡 Подсказка к заданию 1</summary>
+
+`/usr/local/bin/install-kyverno` уже настроен на закреплённую версию - не пытайтесь ставить Kyverno через `helm install` вручную с другим chart, это может привести к несовместимой версии CRD. После установки подождите: admission controller Pod должен стать `Available`, это происходит не мгновенно.
+</details>
+
 ---
 | **2** | **Запретить image с тегом `latest`** |
 | :---: | :--- |
 | Что делаем | Создайте CEL-based `ValidatingPolicy` `deny-latest-tag` (`policies.kyverno.io/v1`) с `validationActions: [Deny]`. Она должна применяться к Pod и subresource `pods/ephemeralcontainers` namespace `policy-108` и отклонять любой image в `containers`, `initContainers` или `ephemeralContainers`, который заканчивается на `:latest`. |
 | Критерии приёмки | Policy существует и работает в режиме Deny; admission отклоняет `:latest` в каждом из трёх списков, а versioned trusted images принимает. |
+
+<details>
+<summary>💡 Подсказка к заданию 2</summary>
+
+Готовое CEL-выражение для "запретить и явный, и implicit latest" уже приведено в конце README этой лабы (секция "Совместимость и точная семантика запрета образов") - используйте его как основу, не изобретайте свою логику с нуля. Не забудьте `matchConstraints.resourceRules` покрывает и `pods`, и subresource `pods/ephemeralcontainers` отдельно.
+</details>
 
 ---
 | **3** | **Требовать запуск не от root** |
@@ -58,17 +90,35 @@ check_result
 | Что делаем | Создайте CEL-based `ValidatingPolicy` `require-run-as-non-root` в режиме Deny. Для каждого Pod в `policy-108` поле `spec.securityContext.runAsNonRoot` должно быть явно равно `true`. |
 | Критерии приёмки | Policy существует и Deny; Pod с `runAsNonRoot: false` не проходит server-side admission. |
 
+<details>
+<summary>💡 Подсказка к заданию 3</summary>
+
+Проверяйте именно ЯВНОЕ значение `true`, а не "отсутствие `false`" - CEL-выражение вида `object.spec.securityContext.runAsNonRoot == true` не пройдёт, если поле вообще не задано (`null != true`). Если хотите разрешить Pod без явного значения, это отдельное решение дизайна policy - но задание требует явную проверку.
+</details>
+
 ---
 | **4** | **Allowlist container registry** |
 | :---: | :--- |
 | Что делаем | Создайте CEL-based `ValidatingPolicy` `allow-approved-registries` в режиме Deny. Для каждого контейнера (`containers`, `initContainers`, `ephemeralContainers`) разрешайте только `registry.k8s.io/*` или `ghcr.io/cks-lab/*`; остальные image registry запретите. |
 | Критерии приёмки | Policy существует и Deny; untrusted image отклоняется во всех трёх списках, trusted image допускается во всех трёх списках. |
 
+<details>
+<summary>💡 Подсказка к заданию 4</summary>
+
+`startsWith('registry.k8s.io/')` - самая надёжная проверка префикса, но убедитесь, что оба разрешённых registry проверяются через OR (любой из двух подходит), а не AND (оба одновременно, что невозможно для одного image). Как и в задании 2, не забудьте про `ephemeralContainers` - это тот же паттерн проверки трёх списков контейнеров.
+</details>
+
 ---
 | **5** | **Опционально: mutate label через Kyverno** |
 | :---: | :--- |
 | Что делаем | Создайте CEL-based `MutatingPolicy` `add-kyverno-managed-label` (`policies.kyverno.io/v1`), которая добавляет к Pod namespace `policy-108` label `security.cks.io/managed-by: kyverno`, если он отсутствует. Используйте mutation, а не validation. |
 | Критерии приёмки | Server-side dry-run Pod с разрешённым registry и `runAsNonRoot: true` возвращает добавленный label. Этот этап отображается в `check_result`, но его пропуск допустим. |
+
+<details>
+<summary>💡 Подсказка к заданию 5</summary>
+
+Этот этап опциональный - если у вас закончилось время, можно его пропустить без риска для остальной лабы. Тестовый Pod для проверки mutation должен уже проходить policies из заданий 2-4 (trusted registry, non-root) - если он сам будет отклонён одной из предыдущих policy, вы не увидите результат mutation вообще.
+</details>
 
 ## Проверка
 

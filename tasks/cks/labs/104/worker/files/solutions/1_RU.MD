@@ -177,3 +177,255 @@ kubectl -n kube-system get pods -l component=kube-apiserver
 ```
 
 В конце выполните `check_result`.
+
+## 6. Secret через env раскрывается в `/proc/1/environ`: рефакторинг на volume
+
+`app-vulnerable` получает `db-creds` через `envFrom`, поэтому значение попадает в
+environment процесса PID 1 контейнера. Любой, у кого есть право на `kubectl exec` в этот
+Pod, может прочитать секрет напрямую из `/proc`, без обращения к Kubernetes API и без RBAC
+на `get secrets`:
+
+```bash
+mkdir -p /var/work/tests/artifacts/6
+kubectl exec -n security-104 app-vulnerable -- cat /proc/1/environ \
+  | tr '\0' '\n' | tee /var/work/tests/artifacts/6/env-leak-before.txt
+grep DB_PASSWORD /var/work/tests/artifacts/6/env-leak-before.txt
+```
+
+Пересоздаём Pod с тем же именем: убираем `envFrom`, монтируем тот же Secret как volume
+`db-creds-vol` в `/etc/secrets`, read-only, с `defaultMode: 0400` (`256` в decimal, как его
+показывает `kubectl get pod -o json`). `0400` — это read-only только для владельца файла
+внутри контейнера; сам процесс приложения всё равно должен запускаться под этим UID, иначе
+он не сможет прочитать файл.
+
+```yaml
+# app-vulnerable-fixed.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-vulnerable
+  namespace: security-104
+spec:
+  automountServiceAccountToken: false
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - name: db-creds-vol
+      mountPath: /etc/secrets
+      readOnly: true
+  volumes:
+  - name: db-creds-vol
+    secret:
+      secretName: db-creds
+      defaultMode: 0400
+```
+
+Поле - неизменяемое; Pod нужно удалить и создать заново с тем же именем:
+
+```bash
+kubectl delete pod app-vulnerable -n security-104
+kubectl apply -f app-vulnerable-fixed.yaml
+kubectl wait -n security-104 --for=condition=Ready pod/app-vulnerable --timeout=120s
+```
+
+Подтверждаем оба итоговых свойства: секрета нет в environment, а файловые права на
+смонтированный секрет ограничены владельцем:
+
+```bash
+kubectl exec -n security-104 app-vulnerable -- cat /proc/1/environ | tr '\0' '\n' | grep DB_PASSWORD
+# ничего не найдено - это ожидаемо
+
+kubectl exec -n security-104 app-vulnerable -- stat -c '%a' /etc/secrets/DB_PASSWORD \
+  | tee /var/work/tests/artifacts/6/secret-file-mode.txt
+# 400
+```
+
+`defaultMode: 0400` защищает от чтения другими UID на этом же Pod (например, соседним
+sidecar-container без нужного UID), но не заменяет encryption at rest у etcd и не мешает
+процессу, запущенному под ожидаемым UID, прочитать сам файл — mount разрешает именно это.
+
+В конце выполните `check_result`.
+
+## 7. Аудит и отзыв скрытых RBAC-путей privilege escalation
+
+`build-agent-hidden-privesc` не содержит wildcard `*` и на вид ограничен тремя ресурсами,
+но `impersonate`/`bind`/`escalate`/CSR-approval — отдельная категория опасных verbs: они
+не расширяют список видимых ресурсов, а дают возможность **действовать от чужого имени**
+или **выдать себе дополнительные права**. Находим все ClusterRoleBinding, чьи ClusterRole
+разрешают любой из этих verbs:
+
+```bash
+mkdir -p /var/work/tests/artifacts/7
+kubectl get clusterrole -o json \
+  | jq '[.items[] | select([.rules[]?.verbs[]?] | any(. == "impersonate" or . == "bind" or . == "escalate")) | .metadata.name]' \
+  > /tmp/dangerous-clusterroles.json
+cat /tmp/dangerous-clusterroles.json
+
+kubectl get clusterrolebinding -o json \
+  | jq -r --slurpfile roles /tmp/dangerous-clusterroles.json \
+    '.items[] | select(.roleRef.kind == "ClusterRole" and (.roleRef.name | IN($roles[0][]))) | .metadata.name' \
+  | tee /var/work/tests/artifacts/7/dangerous-bindings-before.txt
+```
+
+Отдельно фиксируем CSR-approval - это не в `verbs` того же ClusterRole по имени ресурса
+`clusterroles`, а отдельное правило на `certificatesigningrequests/approval` и `signers`:
+
+```bash
+kubectl get clusterrole -o json \
+  | jq -r '.items[] | select([.rules[]? | select(.resources[]? == "certificatesigningrequests/approval")] | length > 0) | .metadata.name' \
+  >> /var/work/tests/artifacts/7/dangerous-bindings-before.txt
+```
+
+`build-agent-hidden-privesc` должен быть в обоих списках. Удаляем именно этот
+ClusterRoleBinding (и ClusterRole, чтобы шаблон не остался для повторного использования),
+не трогая `system:*` bindings, которые дают core-компонентам Kubernetes необходимый
+`impersonate`/CSR доступ:
+
+```bash
+kubectl delete clusterrolebinding build-agent-hidden-privesc
+kubectl delete clusterrole build-agent-hidden-privesc
+```
+
+Подтверждаем отзыв всех трёх путей:
+
+```bash
+kubectl auth can-i impersonate users --as=system:serviceaccount:security-104:build-agent
+kubectl auth can-i update certificatesigningrequests/approval --as=system:serviceaccount:security-104:build-agent
+kubectl auth can-i escalate clusterroles --as=system:serviceaccount:security-104:build-agent
+# no / no / no
+```
+
+В конце выполните `check_result`.
+
+## 8. Namespace-level baseline: `default` SA без automount
+
+Задание 3 отключало automount точечно, у конкретного Pod и его собственного SA. Здесь
+нужен системный baseline: правим `default` SA namespace **до** создания в нём каких-либо
+Pod, чтобы ни один новый workload не получил токен по умолчанию, даже если разработчик
+забудет явное поле в манифесте.
+
+```bash
+kubectl create namespace security-104-baseline
+kubectl -n security-104-baseline patch serviceaccount default \
+  -p '{"automountServiceAccountToken":false}'
+kubectl -n security-104-baseline get serviceaccount default \
+  -o jsonpath='{.automountServiceAccountToken}{"\n"}'
+# false
+```
+
+Создаём Pod, который **не** задаёт ни `serviceAccountName`, ни `automountServiceAccountToken` -
+это самый частый в реальности случай, когда разработчик просто не думает про SA:
+
+```yaml
+# implicit-default-sa.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: implicit-default-sa
+  namespace: security-104-baseline
+spec:
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 3600"]
+```
+
+```bash
+kubectl apply -f implicit-default-sa.yaml
+kubectl wait -n security-104-baseline --for=condition=Ready pod/implicit-default-sa --timeout=60s
+kubectl get pod implicit-default-sa -n security-104-baseline -o jsonpath='{.spec.serviceAccountName}{"\n"}'
+# default
+
+kubectl exec -n security-104-baseline implicit-default-sa -- \
+  cat /var/run/secrets/kubernetes.io/serviceaccount/token
+# cat: can't open '/var/run/secrets/kubernetes.io/serviceaccount/token': No such file or directory
+```
+
+Значение SA действует, только если Pod не переопределяет его сам. Если тому же namespace
+понадобится Pod с API-доступом, добавьте `automountServiceAccountToken: true` явно в
+конкретном манифесте после проверки, что доступ действительно нужен - не меняйте baseline
+`default` SA обратно на `true` для всего namespace.
+
+В конце выполните `check_result`.
+
+## 9. Интеграционное задание: RBAC-эскалация → audit log → containment
+
+Задания 1-8 закрывали конкретные пути (wildcard, impersonate/bind/escalate, automount).
+Здесь нужен способ увидеть **попытку** повторной эскалации, а не только текущий снимок
+RBAC. Подключаемся к control-plane по SSH и готовим минимальный audit backend:
+
+```bash
+ssh control-plane
+sudo mkdir -p /etc/kubernetes/audit /var/log/kubernetes/audit
+```
+
+```yaml
+# /etc/kubernetes/audit/policy.yaml
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: RequestResponse
+  resources:
+  - group: "rbac.authorization.k8s.io"
+    resources: ["clusterroles", "clusterrolebindings"]
+- level: Metadata
+```
+
+Правило RBAC стоит первым - более специфичное правило должно предшествовать общему
+catch-all, иначе `Metadata` перехватит событие раньше. Правим static manifest API server:
+
+```bash
+sudo sed -i \
+  -e '/- kube-apiserver/a\    - --audit-policy-file=/etc/kubernetes/audit/policy.yaml\n    - --audit-log-path=/var/log/kubernetes/audit/audit.log' \
+  /etc/kubernetes/manifests/kube-apiserver.yaml
+```
+
+Добавляем hostPath volume/volumeMount для каталогов policy и логов (редактируем секции
+`volumes`/`volumeMounts` того же манифеста, аналогично тому, как в задании 5 менялся
+только аргумент - здесь дополнительно нужен volume, потому что kube-apiserver читает
+policy-файл и пишет log-файл на файловой системе ноды). После сохранения kubelet
+перезапустит static Pod автоматически.
+
+```bash
+until kubectl get --raw=/readyz >/dev/null 2>&1; do sleep 2; done
+kubectl -n kube-system get pods -l component=kube-apiserver
+```
+
+Возвращаемся на рабочую машину и симулируем эскалацию, которую audit log должен поймать
+как воспроизводимое evidence:
+
+```bash
+kubectl create clusterrolebinding incident-simulated-escalation \
+  --clusterrole=cluster-admin \
+  --serviceaccount=security-104:build-agent
+```
+
+Ищем именно это событие в audit log (на control-plane) и сохраняем его целиком:
+
+```bash
+mkdir -p /var/work/tests/artifacts/9
+ssh control-plane "sudo cat /var/log/kubernetes/audit/audit.log" \
+  | jq -c 'select(.verb == "create" and .objectRef.resource == "clusterrolebindings" and .objectRef.name == "incident-simulated-escalation")' \
+  | tail -n1 | tee /var/work/tests/artifacts/9/audit-escalation-event.json
+jq '.requestObject.subjects' /var/work/tests/artifacts/9/audit-escalation-event.json
+```
+
+Containment: удаляем привязку и подтверждаем, что доступ реально отозван, а не просто
+объект недоступен для чтения:
+
+```bash
+kubectl delete clusterrolebinding incident-simulated-escalation
+kubectl auth can-i '*' '*' --as=system:serviceaccount:security-104:build-agent \
+  | tee /var/work/tests/artifacts/9/containment-result.txt
+# no
+```
+
+Разница с заданием 7: там мы находили и отзывали **уже существующий** скрытый путь через
+статический анализ RBAC-объектов. Здесь source of truth - **событие во времени** (audit
+log), которое доказывает, что попытка эскалации произошла именно в этот момент, кем и с
+каким итоговым объектом - это то, что нужно для реального инцидента, когда объект могли
+уже удалить сами атакующие после использования.
+
+В конце выполните `check_result`.

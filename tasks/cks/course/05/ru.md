@@ -11,7 +11,7 @@
 Cloud provider часто предоставляет экземпляру виртуальной машины metadata service по link-local адресу. Наиболее известный IPv4-адрес - `169.254.169.254`. Если Pod может обратиться к нему через сеть ноды, уязвимость в приложении, SSRF или доступ к shell дают атакующему новый путь: получить сведения об экземпляре, а при неверно настроенной cloud identity - временные credentials роли ноды.
 
 ```mermaid
-flowchart LR
+flowchart TB
     attacker["SSRF или shell<br>в скомпрометированном Pod"] --> imds["IMDS<br>169.254.169.254"]
     imds --> identity["Identity ноды и<br>временные credentials"]
     identity --> cloud["API cloud provider:<br>lateral movement и exfiltration"]
@@ -235,7 +235,7 @@ rules:
 
 > **Не приоритет текущего CKS.** В актуальном списке компетенций CKS Dashboard/GUI не указан; приоритет этой главы — endpoints и provider-specific metadata scenarios. Upstream Kubernetes Dashboard архивирован и не должен устанавливаться в новых production-средах. Этот блок оставлен только для уже существующей установки и как пример least privilege для любого web UI.
 
-Не публикуйте legacy Dashboard через public `LoadBalancer` или Internet-facing Ingress и не используйте `cluster-admin` как повседневную identity. Держите существующий UI за VPN или authenticated access proxy, применяйте TLS и минимальный namespace-scoped RBAC. Для нового поддерживаемого UI действуют те же требования: private exposure, strong authentication, короткие сессии и audit.
+Не публикуйте legacy Dashboard через public `LoadBalancer` или Internet-facing Ingress и не используйте `cluster-admin` как повседневную identity. Держите существующий UI за VPN или authenticated access proxy, применяйте TLS и минимальный namespace-scoped RBAC. Для нового поддерживаемого UI действуют те же требования: private exposure, strong authentication, короткие сессии и audit. Тот же принцип применим и к современным преемникам upstream Dashboard - например, **Headlamp** или **Lens**: это отдельные web/desktop UI поверх Kubernetes API, а не встроенный компонент кластера, и им нужен точно такой же minimal-scope kubeconfig или ServiceAccount, а не `cluster-admin`.
 
 В read-only роли для общего списка ресурсов нужны `get/list/watch`, а для subresource `pods/log` практически нужен только `get`:
 
@@ -358,6 +358,7 @@ kubectl -n payments exec egress-test -- \
 6. Какие настройки kubelet нужно проверить наряду с firewall для endpoint `10250`?
 7. Почему даже `get` на `nodes/proxy` рискованнее, чем минимальные права `get` на `nodes/metrics` или `nodes/stats`?
 8. Как различаются metadata endpoint, node identity и workload identity для AWS/EKS, GKE и AKS, и почему для GKE нельзя безусловно блокировать metadata path?
+9. Почему read-only роль для Dashboard или другого web UI обычно требует `get/list/watch` на ресурсах, но только `get` на `pods/log`, и как проверить это через `kubectl auth can-i` без реального доступа к UI?
 
 ## Практика
 

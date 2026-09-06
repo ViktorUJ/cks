@@ -35,6 +35,20 @@ EOF
 apparmor_parser -r -W "$profile"
 aa-complain "$profile"
 
+# Task 8 seed: a second profile with a genuine syntax error, written to disk but never
+# loaded. The student must fix the syntax and load it with apparmor_parser -r -v.
+broken_profile=/etc/apparmor.d/k8s-106-broken-profile
+cat > "$broken_profile" <<'EOF'
+#include <tunables/global>
+
+profile k8s-106-broken-profile flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  /** rix,
+  deny /work/** w
+}
+EOF
+
 seccomp_dir=/var/lib/kubelet/seccomp/profiles
 install -d -m 0755 "$seccomp_dir"
 cat > "$seccomp_dir/cks-106-deny-unshare.json" <<'EOF'

@@ -30,7 +30,7 @@ seccomp (secure computing mode) - механизм Linux kernel, который 
 фильтр процессам контейнера через `securityContext.seccompProfile`.
 
 ```mermaid
-flowchart LR
+flowchart TB
     process["Процесс контейнера"] --> call["syscall: mount, clone, openat ..."]
     call --> filter["seccomp BPF filter"]
     filter -->|"ALLOW"| kernel["Ядро выполняет syscall"]
@@ -599,7 +599,7 @@ flowchart TB
     seccomp -->|"нет"| denied1["EPERM / KILL + audit"]
     seccomp -->|"да"| cap["capabilities: есть CAP_SYS_ADMIN?"]
     cap -->|"нет"| denied2["EPERM"]
-    cap -->|"да"| mac["AppArmor / SELinux: policy допускает mount?"]
+    cap -->|"да"| mac["AppArmor / SELinux:\npolicy допускает mount?"]
     mac -->|"нет"| denied3["MAC denial + audit"]
     mac -->|"да"| kernel["Ядро выполняет операцию"]
     style app fill:#326ce5,color:#fff
@@ -735,6 +735,10 @@ workflow: measured syscalls, review угрозы, versioned JSON, canary, audit 
    AppArmor denial?
 7. Что доказывает `Seccomp: 2` в `/proc/1/status`, а чего он не доказывает?
 8. Почему allow-list profile нельзя строить по одному запуску приложения?
+9. **Flashback (глава 20).** Представьте `ValidatingAdmissionPolicy` из главы 20, которая
+   требует `seccompProfile.type` в манифесте. Почему прохождение такой policy на admission
+   всё равно не гарантирует реальную защиту syscall - что именно на уровне node/kubelet
+   должно совпасть с требованием policy, чтобы seccomp filter действительно заработал?
 
 ## 17.13. Как это применяют в продакшене
 
@@ -775,6 +779,26 @@ Pod с `Localhost`, найдите `SECCOMP`/kernel record и замените a
 - [Kubernetes API: SeccompProfile](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#SeccompProfile)
 - [Kubernetes: Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
 - [Linux kernel: Seccomp BPF (SECure COMPuting with filters)](https://docs.kernel.org/userspace-api/seccomp_filter.html)
+
+## Смешанный чек-поинт: System Hardening завершён
+
+Прежде чем перейти к Minimize Microservice Vulnerabilities, проверьте 15-20 минут без
+подсказок, что домен System Hardening (главы 14-17) закрепился:
+
+1. Найдите на тестовой ноде один лишний слушающий порт или сервис и объясните, как решить,
+   можно ли его отключить (глава 14).
+2. Назовите два уровня least privilege - Linux-пользователь на хосте и Kubernetes API - и
+   приведите по одному конкретному примеру для каждого (глава 15).
+3. Переключите AppArmor profile Pod из `enforce` в `complain` и объясните, почему `complain`
+   нельзя показывать как доказательство защиты на экзамене (глава 16).
+4. **Смешанное задание.** Возьмите RBAC (глава 10, домен Cluster Hardening) и AppArmor/
+   seccomp (главы 16-17, этот домен): если пользователь имеет право `create pods` без
+   ограничения на `securityContext`, какая из двух защит - RBAC или AppArmor/seccomp -
+   реально остановит Pod с опасным syscall-профилем, и почему RBAC здесь бессилен?
+5. Задайте `seccompProfile.type: RuntimeDefault` для тестового Pod и объясните, чем это
+   отличается от `Unconfined` в терминах allow-list/deny-list (глава 17).
+
+Если задание 4 вызвало затруднение - вернитесь к главам 10 и 16-17 вместе.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 16](../16/ru.md)

@@ -27,7 +27,7 @@ Control plane принимает решения за весь кластер. `k
 компонента.
 
 ```mermaid
-flowchart LR
+flowchart TB
     net["Сеть или доступ к ноде"] --> weak["Опасный аргумент\nили слабый TLS"]
     weak --> api["Доступ к API/kubelet/etcd"]
     file["Подменённый binary\nили image"] --> runtime["Код с правами компонента"]
@@ -534,6 +534,26 @@ kubelet service; сохраните backup вне `/etc/kubernetes/manifests`; �
 🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [verify-platform-binaries-kubelet](https://killercoda.com/killer-shell-cks/scenario/verify-platform-binaries-kubelet)
 
 🎮 Killercoda (в браузере, без установки): [Kubernetes Security - Kube-bench](https://killercoda.com/killer-shell-cks/scenario/kube-bench) · [Kubernetes Certificates](https://killercoda.com/kubernetes-basics/course/kubernetes-fundamentals/certificates)
+
+## Смешанный чек-поинт: Cluster Setup завершён
+
+Прежде чем перейти к Cluster Hardening, проверьте 15-20 минут без подсказок, что домен
+Cluster Setup (главы 04-09) закрепился, а не просто был прочитан по порядку:
+
+1. Создайте `NetworkPolicy` с default-deny ingress/egress в новом namespace и докажите
+   одним разрешённым и одним запрещённым запросом, что правило реально применилось (глава 04).
+2. Запустите `kube-bench` (или прочитайте существующий отчёт) и укажите один `FAIL`, который
+   вы бы исправили первым, и почему (глава 07).
+3. Объясните, какую конкретную угрозу устраняет `hostNetwork: false` в сочетании с
+   NetworkPolicy, если Pod пытается обойти правило через host-сеть (главы 04 и 05 - разные
+   главы одного домена, но проверьте, что вы не путаете уровни).
+4. **Смешанное задание.** Возьмите Secure Ingress с TLS (глава 08) и объясните, что
+   произойдёт, если у backend Pod при этом нет NetworkPolicy: какой обход стал бы возможен,
+   если TLS terminate на Ingress, а трафик от Ingress к Pod внутри кластера не ограничен?
+5. Без подсказки назовите команду, которой вы бы проверили sha256/подпись platform binary
+   на ноде (глава 09), и объясните, почему digest важнее tag.
+
+Если задание 4 вызвало затруднение - вернитесь к главам 04 и 08 вместе, а не по отдельности.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 08](../08/ru.md) · [Глава 10](../10/ru.md)

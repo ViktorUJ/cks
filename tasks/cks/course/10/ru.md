@@ -32,7 +32,7 @@ load balancer или NetworkPolicy, где это применимо. Admission 
 namespace превращается в компрометацию кластера.
 
 ```mermaid
-flowchart LR
+flowchart TB
     token["Скомпрометированный<br>токен ServiceAccount"] --> broad["Широкая ClusterRole<br>* / cluster-admin"]
     broad --> cluster["Secrets, workloads и RBAC<br>во всём кластере"]
     token --> narrow["Role: get/list pods<br>только в namespace app"]
@@ -551,6 +551,10 @@ workload.
 7. Почему `get nodes/proxy` не является read-only правом и кому его допустимо выдавать?
 8. Как label `rbac.authorization.k8s.io/aggregate-to-view=true` меняет effective access и
    почему wildcard в агрегированной роли особенно рискован?
+9. **Flashback (глава 04).** `NetworkPolicy` из главы 04 - allow-list: сначала default-deny,
+   затем узкие разрешения. Где в дизайне RBAC работает та же логика "запретить всё, затем
+   явно разрешить", и почему отсутствие явного `Role`/`RoleBinding` для subject эквивалентно
+   default-deny, а не default-allow?
 
 ## Практика
 

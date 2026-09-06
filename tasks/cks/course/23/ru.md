@@ -30,7 +30,7 @@
   ни mTLS не дают allow/deny по namespace и Pod selector вместо NetworkPolicy.
 
 ```mermaid
-flowchart LR
+flowchart TB
     appa["client app"] --> pa["sidecar / mesh proxy"]
     pa -->|"mTLS: identity workload↔workload"| pb["sidecar / mesh proxy"]
     pb --> appb["server app"]
@@ -332,7 +332,7 @@ plaintext inbound traffic: в ambient mode сервер ожидает защи�
 версией Istio.
 
 ```mermaid
-flowchart LR
+flowchart TB
     ca["client app\nHTTP localhost/Pod IP"] --> cp["client istio-proxy\nполучает workload cert"]
     cp -->|"mTLS + SAN identity"| sp["server istio-proxy\nпроверяет client cert"]
     sp --> sa["server app\nобычный HTTP"]
@@ -931,6 +931,11 @@ underlay даже если application protocol не менялся.
 8. Как доказать, что capture на physical NIC относится к нужному cross-node flow?
 9. Почему нельзя запускать Istio и Linkerd sidecar в одном workload?
 10. Какие четыре факта составляют минимальное runtime evidence для node encryption?
+11. **Flashback (глава 06).** Cilium из главы 06 реализует `NetworkPolicy` (allow/deny по
+    identity, L3/L4/L7). Эта же глава использует Cilium для transparent encryption
+    (WireGuard/IPsec). Это одна и та же задача под разными названиями или две независимые
+    возможности одного CNI? Может ли `NetworkPolicy` разрешить трафик, который при этом не
+    зашифрован transparent encryption, и наоборот?
 
 ## Практика
 
@@ -958,6 +963,26 @@ payload на общей ноде.
 - [Istio: mTLS migration](https://istio.io/latest/docs/tasks/security/authentication/mtls-migration/)
 - [Linkerd: Automatic mTLS](https://linkerd.io/2/reference/automatic-mtls/)
 - [Kubernetes: Debugging Services](https://kubernetes.io/docs/tasks/debug/debug-application/debug-service/)
+
+## Смешанный чек-поинт: Minimize Microservice Vulnerabilities завершён
+
+Прежде чем перейти к Supply Chain Security, проверьте 15-20 минут без подсказок, что домен
+Minimize Microservice Vulnerabilities (главы 18-23) закрепился:
+
+1. Примените `enforce=restricted` PSA label к тестовому namespace и покажите, что заведомо
+   привилегированный Pod получает admission rejection, а безопасный - создаётся (главы 18-19).
+2. Напишите или примените одну admission policy (native VAP или Kyverno), которая блокирует
+   `privileged: true`, и объясните разницу между `Audit` и `Enforce` (глава 20).
+3. Создайте `Secret`, смонтируйте его как volume в Pod и объясните, почему это безопаснее
+   переменной окружения (глава 21).
+4. **Смешанное задание.** Возьмите RBAC (глава 10, домен Cluster Hardening) и PSA (главы
+   18-19, этот домен): если пользователь имеет право `create namespaces` без ограничения на
+   labels, как он может создать namespace без `enforce=restricted` и полностью обойти PSA -
+   какое конкретное RBAC-ограничение из главы 10 закрывает этот путь?
+5. Назовите одну конкретную атаку, от которой защищает pod-to-pod encryption (глава 23), но
+   не защищает NetworkPolicy (глава 04, домен Cluster Setup).
+
+Если задание 4 вызвало затруднение - вернитесь к главам 10 и 18-19 вместе.
 
 ---
 [Оглавление](../README_RU.md) · [Глава 22](../22/ru.md) · [Глава 24](../24/ru.md)

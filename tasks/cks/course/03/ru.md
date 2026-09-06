@@ -38,9 +38,9 @@ flowchart TB
 Типичный путь атаки выглядит так:
 
 ```mermaid
-flowchart LR
+flowchart TB
     exploit["Уязвимость приложения\nили вредоносный образ"] --> shell["Shell в контейнере"]
-    shell --> probe["Разведка: uid, capabilities, mounts, сеть"]
+    shell --> probe["Разведка: uid, capabilities,\nmounts, сеть"]
     probe --> weak["Слабая конфигурация:\nprivileged, hostPath, опасная capability\nили уязвимость runtime"]
     weak --> escape["Выход из ожидаемой изоляции\nи захват ноды"]
     style exploit fill:#db4437,color:#fff
@@ -288,7 +288,7 @@ capsh --decode=0000000000000400
 Любое действие пользовательского процесса в итоге приходит в ядро через syscall: открыть файл, создать сокет, выделить память, сменить namespace. Даже если приложению не нужна опасная операция, уязвимый процесс может попытаться вызвать соответствующий syscall. seccomp позволяет ядру разрешить, запретить, логировать или завершить процесс по правилу syscall.
 
 ```mermaid
-flowchart LR
+flowchart TB
     process["Процесс контейнера"] --> syscall["syscall: openat, clone, mount, ..."]
     syscall --> filter["seccomp profile"]
     filter -->|"allow"| kernel["Ядро выполняет syscall"]

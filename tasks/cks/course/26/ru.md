@@ -21,7 +21,7 @@ Supply chain начинается до Kubernetes: исходный код и CI
 код.
 
 ```mermaid
-flowchart LR
+flowchart TB
     build["CI: build + test"] --> sign["SBOM / scan / подпись"]
     sign --> reg["разрешённый registry\nimage@sha256:..."]
     reg --> deploy["GitOps / kubectl"]
@@ -112,7 +112,7 @@ policy сама проверяет только Pod. Чтобы Kyverno `Validat
 без него controller будет принят, а отказ случится только при создании Pod. Начните с
 режима Audit, исправьте существующие manifests, затем переведите правило в Enforce.
 
-### Kyverno 1.19.2+
+### Kyverno 1.19 (chart 3.9.0, installed release)
 
 > **Compatibility note.** Основной exam/lab track курса -- Kubernetes v1.35: Kyverno
 > v1.19 официально поддерживает Kubernetes v1.33-v1.35. Общий training baseline курса
@@ -121,10 +121,15 @@ policy сама проверяет только Pod. Чтобы Kyverno `Validat
 > 20 §20.4). Не путайте три независимых контура: exam-версия, training-версия кластера и
 > vendor-supported версия конкретного инструмента могут отличаться одновременно.
 >
-> Для negative test с `pods/ephemeralcontainers` нужна как минимум Kyverno **1.19.2**:
-> в неё вошёл fix #17427 для debug bypass. На 1.19.0 или 1.19.1 запрос может дойти до
-> image verification, но `validations` не будут применены, поэтому отрицательный тест
-> `kubectl debug` не гарантированно будет отклонён.
+> Лабы 108 и 111 устанавливают Kyverno через Helm chart `3.9.0`, что соответствует релизу
+> **Kyverno 1.19.0**. Если для конкретного negative test с `pods/ephemeralcontainers`
+> требуется более новый patch этой ветки (например, для fix, вошедшего после 1.19.0),
+> сверяйте actual fixed version в release notes `github.com/kyverno/kyverno/releases`
+> перед тем, как считать поведение гарантированным: не объявляйте patch-версию
+> pinned/available, пока лаба не устанавливает именно её. На 1.19.0 запрос может дойти до
+> image verification, но `validations` могут не примениться для `pods/ephemeralcontainers`,
+> поэтому отрицательный тест `kubectl debug` не гарантированно будет отклонён - проверяйте
+> это поведение эмпирически на установленной версии, а не по номеру patch из документации.
 
 Основной путь использует CEL-based `ValidatingPolicy` из `policies.kyverno.io/v1`.
 Переменная объединяет все три списка контейнеров; ресурс `pods/ephemeralcontainers`
@@ -651,6 +656,11 @@ deployment. Вместе с least-privilege правами CI, защищённ�
    ограничить при проверке?
 6. Почему `cosign verify` в CI не предотвращает прямой `kubectl apply`?
 7. Что требуется, чтобы Notary/Notation стал enforcement point Kubernetes?
+8. **Flashback (глава 20).** Вопрос 6 этой главы уже показал, что `cosign verify` в CI не
+   мешает прямому `kubectl apply` неподписанного образа. Как admission policy из главы 20
+   (native `ValidatingAdmissionPolicy` или Kyverno `ImageValidatingPolicy`) закрывает именно
+   этот путь обхода, и чем "signature verification как admission policy" отличается по
+   надёжности от "signature verification только в CI pipeline"?
 
 ## Практика
 
