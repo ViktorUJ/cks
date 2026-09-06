@@ -215,3 +215,47 @@ check_result
 
 `automountServiceAccountToken: false` уменьшает доступный Pod credential surface, но не
 ограничивает RBAC самого ServiceAccount, если приложение получит другие credentials.
+
+## Дополнительно: как выглядит KMS v2 и полная ротация ключа
+
+### KMS v2: envelope encryption без локального ключа в config
+
+`aescbc` выше нужен только для учебной механики. В production KMS v2 подключает
+поддерживаемый KMS-plugin через локальный Unix socket в `EncryptionConfiguration`.
+API server создаёт уникальный data-encryption key (**DEK**) для записи Secret и шифрует
+его внешним key-encryption key (**KEK**) через plugin; в etcd сохраняются ciphertext
+ресурса и wrapped DEK. KEK остаётся во внешнем KMS, а не в etcd или в Git. Схема
+конфигурации зависит от версии Kubernetes и plugin, но принципиально нужны provider `kms`,
+стабильное имя key и endpoint socket. Не копируйте примерный endpoint из чужого кластера:
+сверьте формат KMS v2 и health/ACL требования с документацией своей версии Kubernetes.
+
+### Полный lifecycle ротации aescbc key
+
+Переход `identity -> aescbc` в задании 4 — это migration, а не ротация уже
+зашифрованного ключа. Перед ротацией сделайте зашифрованный etcd snapshot и сохраните
+старый ключ для rollback. Добавьте новый ключ **первым**, а старый временно оставьте
+вторым: providers читаются по порядку, а новые записи пишутся первым ключом.
+
+```yaml
+- aescbc:
+    keys:
+    - name: cks-109-aescbc-2026-rotation
+      secret: <base64-32-byte-new-key>
+    - name: cks-109-aescbc
+      secret: <base64-32-byte-old-key>
+```
+
+После перезапуска API server перепишите ресурсы и проверьте именно имя нового key в raw
+ciphertext, а не только общий `k8s:enc` prefix:
+
+```bash
+kubectl get secrets --all-namespaces -o json | kubectl replace -f -
+sudo etcdctl-109 get /registry/secrets/encryption-109/legacy-secret \
+  --print-value-only | strings | grep -F 'k8s:enc:aescbc:v1:cks-109-aescbc-2026-rotation:'
+```
+
+Когда migration всех Secret подтверждена, backup сделан, API читает данные и `/readyz`
+возвращает `ok`, удалите старый key из списка, перезапустите API server и повторите
+проверки. Не удаляйте старый key раньше: записи, не переписанные новым provider, станут
+нечитаемыми. Для KMS v2 порядок тот же: сначала новый primary KEK/plugin, затем
+re-encryption, проверка и только после миграции вывод старого KEK из эксплуатации.

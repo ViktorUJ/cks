@@ -116,13 +116,19 @@ sudo falco -L | grep -Ei 'shell|sensitive|dev.mem|read.*shadow'
   tags: [container, mitre_privilege_escalation, mitre_defense_evasion]
 ```
 
-Перед reload валидируйте полный конфиг. В systemd-варианте после успешной проверки reload/restart нужен, чтобы service перечитал local-file. На production node согласуйте окно и следите за health агента: неисправное YAML-правило может оставить runtime detection без работающего процесса.
+Перед reload валидируйте полный конфиг. При включённом `watch_config_files` Falco hot-reload-ит
+rule/config file; сначала проверьте успешную перезагрузку в журнале. Restart — fallback, если
+watching выключен, reload не произошёл или изменение этого требует. На production node
+согласуйте окно и следите за health агента: неисправное YAML-правило может оставить runtime
+detection без работающего процесса.
 
 ```bash
 sudo falco -c /etc/falco/falco.yaml --dry-run
+sudo grep -n '^watch_config_files:' /etc/falco/falco.yaml
+sudo journalctl -u falco --since '2 minutes ago' --no-pager
+# Только fallback при выключенном/неуспешном watching:
 sudo systemctl restart falco
 sudo systemctl is-active falco
-sudo journalctl -u falco --since '2 minutes ago' --no-pager
 ```
 
 Для DaemonSet вместо `systemctl` применяют обновлённый `ConfigMap`/Helm release и ждут rollout. Затем проверяют каждый нужный node pool, а не один случайный Pod:
@@ -179,9 +185,12 @@ sudo journalctl -u falco --since '10 minutes ago' --no-pager | \
 
 Если `k8s_ns`/`k8s_pod` пусты, не делайте вывод, что это host process. Сначала проверьте CRI socket, права Falco и версию/метаданные plugin, затем сопоставьте `%container.id` вручную через `crictl`.
 
-## 30.4. От alert к kill chain: практический разбор
+## 30.4. От alert к MITRE ATT&CK tactics: практический разбор
 
-Один syscall не обозначает фазу атаки автоматически. Фазу определяют по последовательности, identity и цели. Ниже - пример controlled incident: web-Pod получает shell, читает service-account token, обращается к API и пытается открыть `/dev/mem`. Последнее действие не доказывает успешный escape, но повышает приоритет расследования.
+Один syscall не обозначает фазу атаки автоматически. Термины `Initial Access`, `Execution`,
+`Credential Access`, `Lateral Movement`, `Persistence`, `Privilege Escalation`, `Defense
+Evasion` и `Exfiltration` ниже — это tactics MITRE ATT&CK, а не классическая Lockheed Martin
+Cyber Kill Chain. Фазу определяют по последовательности, identity и цели. Ниже - пример controlled incident: web-Pod получает shell, читает service-account token, обращается к API и пытается открыть `/dev/mem`. Последнее действие не доказывает успешный escape, но повышает приоритет расследования.
 
 ```mermaid
 sequenceDiagram
@@ -260,7 +269,84 @@ sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
 )
 ```
 
-## 30.5. Расследование на node: `crictl` → PID → `/proc` → `strace`
+## 30.5. После alert: containment, а не только evidence
+
+Раздел выше строит доказательную цепочку от alert до workload, но расследование само по
+себе не останавливает атакующего. После того как Pod, node и identity определены, нужен
+конкретный шаг реагирования - не абстрактное "изолировать", а один из проверяемых
+механизмов ниже. Это мост к [главе 32](../32/ru.md): там разобраны Kubernetes audit logs,
+а действия containment порождают собственные audit-события, которые тоже нужно фиксировать
+как evidence инцидента.
+
+### Три уровня изоляции, от менее к более разрушительному
+
+| Действие | Что делает | Когда уместно | Что теряете |
+|---|---|---|---|
+| **NetworkPolicy quarantine** | `podSelector` на скомпрометированный Pod/label, `policyTypes: [Ingress, Egress]` без разрешающих правил | наиболее частый первый шаг: разрывает C2/exfiltration и lateral movement, Pod и его evidence остаются доступны | не останавливает локальную активность внутри уже скомпрометированного namespace, если policy написана слишком узко |
+| **Cordon ноды** | `kubectl cordon <node>` останавливает scheduling новых Pod на неё; существующие Pod продолжают работать | подозрение на компрометацию самой ноды (не только одного Pod), например через host-level Falco alert или `/dev/mem` попытку | не изолирует уже работающий процесс; нужен вместе с NetworkPolicy или removal подозрительного workload |
+| **Удаление/scale-to-zero workload** | `kubectl delete pod` или `kubectl scale --replicas=0` для owning controller | подтверждённый активный риск, evidence уже сохранён (см. раздел «Containment не должен уничтожить доказательства» выше) | безвозвратно теряете live-процесс, `/proc`-контекст и возможность повторного `strace`; controller может пересоздать Pod, если сам workload не остановлен на уровне Deployment/DaemonSet |
+
+Порядок обычно такой: сначала NetworkPolicy (обратимо, не удаляет evidence), затем при
+необходимости cordon ноды, и только после сохранения evidence - удаление или остановка
+workload. Автоматическое **evict** ноды (`kubectl drain`) относится к тому же уровню, что
+удаление Pod: оно пересоздаёт workload на другой ноде, если не остановлен сам controller,
+и должно применяться после, а не вместо, сохранения evidence.
+
+```bash
+# Шаг 1: NetworkPolicy quarantine - обратимо, не убивает процесс и его evidence.
+NAMESPACE="${NAMESPACE:?set NAMESPACE to the affected Pod namespace}"
+POD="${POD:?set POD to the affected Pod name}"
+POD_LABEL_VALUE="${POD_LABEL_VALUE:?set the value of a stable label on the affected Pod, e.g. app=$POD}"
+kubectl apply -f - <<YAML
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: incident-quarantine
+  namespace: ${NAMESPACE}
+spec:
+  podSelector:
+    matchLabels:
+      ${POD_LABEL_VALUE}
+  policyTypes: ["Ingress", "Egress"]
+YAML
+kubectl -n "$NAMESPACE" get networkpolicy incident-quarantine
+
+# Шаг 2 (если компрометация подозревается на уровне ноды, не только Pod):
+NODE="${NODE:?set NODE to the node from the Falco alert}"
+kubectl cordon "$NODE"
+kubectl get node "$NODE"
+
+# Шаг 3 (только после сохранения evidence из разделов выше):
+kubectl delete pod -n "$NAMESPACE" "$POD"
+```
+
+Проверьте результат негативным тестом, а не только отсутствием ошибки в команде: после
+NetworkPolicy повторите тот же исходящий запрос, который видел Falco/audit, и подтвердите
+`DENIED`/timeout, а разрешённый служебный трафик (например, DNS) - что он не пострадал.
+
+### Автоматизация реакции: Falco Talon и Tetragon enforcement
+
+Ручной containment по runbook - обязательный baseline, но при высоком объёме alert его
+дополняют автоматизацией. **Falco Talon** - response engine community Falco: он подписывается
+на alert (по имени rule, priority или tags) и выполняет заранее заданное действие -
+например, автоматически применить `NetworkPolicy`, добавить label для изоляции или
+завершить Pod - без написания кода, только конфигурацией правил реакции. Он не заменяет
+review инцидента, но убирает задержку между alert и первым containment-шагом.
+
+Альтернативный путь на уровне enforcement, а не пост-реакции, - **Cilium Tetragon** (см.
+production note в [главе 29](../29/ru.md)): вместо того чтобы ждать alert и затем
+применять NetworkPolicy, Tetragon policy может заблокировать конкретный syscall или
+файловый доступ inline, до того как действие завершится. Разница принципиальна для
+runbook: Talon автоматизирует реакцию **после** detection Falco, Tetragon убирает
+необходимость реакции для тех конкретных действий, которые его policy покрывает **до**
+их выполнения. Ни один из них не заменяет остальные controls этой главы (RBAC, admission,
+audit) - оба остаются production-расширением, не экзаменационным материалом CKS.
+
+Не автоматизируйте безусловное удаление Pod по одному general-purpose rule: false positive
+на broad severity превращает шум в самостоятельный outage. Автоматическую реакцию
+включают только для узких, проверенных на staging условий с понятным owner и откатом.
+
+## 30.6. Расследование на node: `crictl` → PID → `/proc` → `strace`
 
 Falco сообщает container context, но host-level проверка отвечает, что реально запускалось и какими были namespaces, cgroup, mounts и arguments процесса. Работайте на node, указанной в alert, с approved privileged access. Команды ниже предназначены для controlled incident или test environment; для production следуйте incident runbook и политике доступа.
 
@@ -331,8 +417,12 @@ sudo sed -n '1,80p' "/proc/$PID/mountinfo"
 # Attach к точному host PID (%proc.pid) из сохранённого Falco alert, а не к PID 1 контейнера.
 SUSPICIOUS_HOST_PID="${SUSPICIOUS_HOST_PID:?set SUSPICIOUS_HOST_PID to the host PID from the Falco alert}"
 sudo test -d "/proc/$SUSPICIOUS_HOST_PID" || { echo 'suspicious process has exited'; exit 1; }
-sudo grep -F "$SANDBOX_ID" "/proc/$SUSPICIOUS_HOST_PID/cgroup" || \
-  echo 'проверьте cgroup и container ID вручную перед attach'
+# В containerd + systemd cgroup scope приложения содержит CONTAINER_ID, а не SANDBOX_ID:
+# sandbox нужен для связи с Pod, но это отдельная cgroup от application container.
+sudo grep -F "$CONTAINER_ID" "/proc/$SUSPICIOUS_HOST_PID/cgroup" || {
+  echo 'cgroup не подтверждает CONTAINER_ID; повторно сопоставьте Pod UID, container identity и host PID перед attach'
+  exit 1
+}
 
 # Ограничить классы syscalls и сохранить trace в защищённый incident file.
 sudo timeout 20s strace -ff -ttt -s 256 -p "$SUSPICIOUS_HOST_PID" \
@@ -343,7 +433,15 @@ sudo grep -E 'openat|openat2|connect|execve|clone' \
   "/var/tmp/incident-${SUSPICIOUS_HOST_PID}.strace"* 2>/dev/null
 ```
 
-`strace -f` следует только за `fork`/`vfork`/`clone`, созданными **после** attach к уже трассируемому процессу; `-ff` делает то же и пишет отдельный файл на процесс. Уже существующих descendants он не находит. Поэтому attach делают к точному живому host PID `%proc.pid` из alert; PID 1 контейнера используют лишь для базового `/proc`-контекста. Если процесс уже завершился, переходите к Falco, CRI logs, audit, flow и application logs, а не пытайтесь «повторить» вредоносное действие на production.
+`strace -f` следует только за `fork`/`vfork`/`clone`, созданными **после** attach к уже трассируемому процессу; `-ff` делает то же и пишет отдельный файл на процесс. Уже существующих descendants он не находит. Поэтому attach делают к точному живому host PID `%proc.pid` из alert; PID 1 контейнера используют лишь для базового `/proc`-контекста.
+
+**Если контейнер уже завершён или перезапущен:** отсутствие текущего PID не опровергает alert.
+Сразу сохраните durable evidence — исходную строку Falco, audit/flow IDs, timestamps, Pod UID,
+image digest, `kubectl get pod -o yaml`, `kubectl logs --previous` (если применимо), CRI/journal
+logs и restart count. `/proc/<pid>`, текущий cgroup и runtime record — volatile evidence и
+могут исчезнуть при cleanup; Falco/audit/application logs и сохранённый CRI inspect нужно
+выгрузить до destructive containment. Не пытайтесь «повторить» вредоносное действие на
+production.
 
 ### Короткий порядок диагностики
 
@@ -371,7 +469,7 @@ flowchart LR
 - Делать `strace` постоянным мониторингом или запускать его на каждом процессе node.
 - Править `falco_rules.yaml` vendor-файла либо выключать rule глобально ради одного noisy workload.
 
-## 30.6. Проверка: controlled alert от своего правила до workload
+## 30.7. Проверка: controlled alert от своего правила до workload
 
 Проверка имеет две части: Falco должен загрузить правило, а controlled action должен породить alert с достаточными полями. Не используйте `/dev/mem` test на production node: доступ к устройству зависит от privileges и может создавать лишний риск. Для безопасной воспроизводимой демонстрации ниже используется файл-маркер в writable `emptyDir`; правило ограничено namespace `runtime-lab`.
 
@@ -401,7 +499,8 @@ flowchart LR
 
 ```bash
 sudo falco -c /etc/falco/falco.yaml --dry-run
-sudo systemctl restart falco
+# При watch_config_files: true проверить hot reload в журнале; restart — только fallback.
+sudo journalctl -u falco --since '2 minutes ago' --no-pager
 
 kubectl create namespace runtime-lab
 kubectl apply -f - <<'YAML'
@@ -452,7 +551,7 @@ kubectl delete namespace runtime-lab
 
 Если alert отсутствует, не повышайте priority и не переписывайте condition вслепую. Проверьте: local-file реально загружен, `falco -c /etc/falco/falco.yaml --dry-run` успешен, Falco работает на node тестового Pod, path совпадает с `fd.name`, event type поддержан driver-ом и Kubernetes metadata integration доступна. Если fields присутствуют, но пусты, расследуйте CRI integration отдельно и всё равно сопоставьте container ID через `crictl`.
 
-## 30.7. Как это применяют в продакшене
+## 30.8. Как это применяют в продакшене
 
 - **Пишут detection use cases, а не собирают случайные rules.** Для каждого правила фиксируют актив, threat hypothesis, kill-chain phase, expected signal, owner, severity, suppression policy и ответное действие. Rule без владельца и runbook быстро становится ignored noise.
 - **Делают output схемой событий.** SIEM получает нормализованные UTC `event.time`, rule, priority, node, host PID, container ID, Pod UID, namespace, workload owner, image digest, process и network/file target. Поля версионируют: изменение output не должно бесшумно ломать parser и correlation.
@@ -461,7 +560,7 @@ kubectl delete namespace runtime-lab
 - **Ограничивают доступ к telemetry.** Runtime logs могут содержать command line, path к credentials и сетевые адреса. Доступ к ним - privileged production access; применяют redaction, encryption, retention и audit читателей.
 - **Автоматизируют containment осторожно.** CRITICAL alert может создать ticket, page или временно изолировать Pod только по заранее согласованному playbook. Автоматическое удаление всех Pod по одному rule часто уничтожает evidence и превращает false positive в outage.
 
-## 30.8. Мини-глоссарий
+## 30.9. Мини-глоссарий
 
 - **Attribution** - привязка события к процессу, container, Pod, identity, node и времени.
 - **Correlation** - связывание событий разных источников в единую хронологию инцидента.
@@ -473,7 +572,7 @@ kubectl delete namespace runtime-lab
 - **Runtime detection** - обнаружение действий уже работающего процесса по syscall/eBPF и runtime metadata.
 - **`strace`** - диагностическая трассировка syscalls процесса; инструмент точечного расследования, не постоянный мониторинг.
 
-## 30.9. Итоги главы
+## 30.10. Итоги главы
 
 - Угроза должна наблюдаться на нескольких слоях: infrastructure, application, network, data, users и workloads; один alert редко достаточен для вывода.
 - Local Falco rules размещают в `falco_rules.local.yaml` или эквивалентном подключённом файле, валидируют и тестируют, не редактируя vendor ruleset.
@@ -482,13 +581,13 @@ kubectl delete namespace runtime-lab
 - На node путь расследования: alert → `crictl` → host PID → `/proc`/namespaces/cgroup → короткий controlled `strace` → корреляция с audit и flow.
 - Собственное rule следует подтверждать безопасным positive test и negative boundary, а затем удалять test workload.
 
-## 30.10. Как это пригодится: на экзамене и в реальной работе
+## 30.11. Как это пригодится: на экзамене и в реальной работе
 
 **На экзамене.** Нужно быстро отличить rule от output, сохранить custom YAML в local-file, проверить syntax, сгенерировать controlled event и по `namespace`/`pod` определить workload. Если дан доступ к node, начинайте с `crictl ps` и `crictl inspect`, затем связывайте PID с `/proc`; не ищите процесс по имени вслепую. При задаче на Falco всегда подтверждайте не только наличие файла rules, но и реальный alert нужного формата.
 
 **В реальной работе.** Security team получает полезный сигнал только тогда, когда SRE может за минуты найти владеющую команду, image digest, process, node и историю API/network действий. Такая цепочка уменьшает MTTR, помогает ограничить incident без массового outage и оставляет evidence для postmortem и исправления исходной причины.
 
-## 30.11. Вопросы для самопроверки
+## 30.12. Вопросы для самопроверки
 
 1. Почему Falco alert с одним именем процесса не позволяет надёжно определить владельца workload?
 2. Какие поля должны быть в output file-rule, чтобы сопоставить его с Pod после restart?
@@ -502,6 +601,13 @@ kubectl delete namespace runtime-lab
 ## Практика
 
 🧪 [Лаба 112 - Falco, audit-логи и иммутабельность](../../labs/112/README_RU.MD): создайте и проверьте Falco rule, свяжите alert с runtime и подготовьте evidence для расследования.
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [syscall-activity-strace](https://killercoda.com/killer-shell-cks/scenario/syscall-activity-strace)
+
+## Справочные материалы
+
+- [Falco: документация](https://falco.org/docs/)
+- [Kubernetes: Debugging Kubernetes nodes with crictl](https://kubernetes.io/docs/tasks/debug/debug-cluster/crictl/)
+- [Kubernetes: Troubleshooting Applications](https://kubernetes.io/docs/tasks/debug/debug-application/)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 29](../29/ru.md) · [Глава 31](../31/ru.md)

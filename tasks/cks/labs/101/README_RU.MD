@@ -10,6 +10,11 @@
 поток к backend и DNS. В результате Pod не должен получить доступ к cloud metadata endpoint
 `169.254.169.254`.
 
+> **Граница ответственности.** API Kubernetes задаёт `NetworkPolicy`, но фактически её
+> реализует CNI. Поведение трафика host/node и cloud metadata зависит от CNI и cloud provider.
+> В production одних policy недостаточно: применяйте дополнительные механизмы IMDS hardening,
+> предоставляемые провайдером и инфраструктурой.
+
 > **Что нужно знать из CKA.** Базовый синтаксис `NetworkPolicy`, selectors, Services и
 > namespaces разобран в [главе CKA 34](../../../cka/course/34/ru.md).
 
@@ -25,7 +30,7 @@
 | Объект | Назначение |
 |---|---|
 | Namespace `cks-101` | Граница ресурсов и действия политик лабы. |
-| Deployments `frontend` и `backend` | Учебные приложения `viktoruj/ping_pong` с метками `app=frontend` и `app=backend`. |
+| Deployments `frontend` и `backend` | Учебные приложения `viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}` с метками `app=frontend` и `app=backend`. |
 | Service `backend` | Стабильная точка доступа к backend на TCP `8080`. |
 | default-deny NetworkPolicy | Закрывает ingress и egress всем Pod namespace. |
 | allow policy для backend | Открывает TCP `8080` только от Pod с `app=frontend`. |
@@ -80,7 +85,7 @@ kubectl config current-context
 ---
 | **1** | **Приложение в отдельном namespace** |
 | :---: | :--- |
-| Что делаем | Создайте namespace `cks-101`. В нём создайте Deployments `frontend` и `backend` с образом `viktoruj/ping_pong:latest`, метками `app=frontend` и `app=backend` соответственно. Создайте Service `backend`, выбирающий `app=backend` и направляющий TCP `8080` на `8080`. |
+| Что делаем | Создайте namespace `cks-101`. В нём создайте Deployments `frontend` и `backend` с образом `viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}`, заменив `${PING_PONG_DIGEST}` на **реальный** digest образа перед применением, и метками `app=frontend` и `app=backend` соответственно. Создайте Service `backend`, выбирающий `app=backend` и направляющий TCP `8080` на `8080`. `:latest` и прочие tags mutable: тот же tag может указывать на другой образ; digest фиксирует неизменяемый content-addressed образ. |
 | Критерии приёмки | Namespace и Pod обоих приложений существуют; Service `backend` имеет endpoint. |
 ---
 | **2** | **Default-deny ingress и egress** |
@@ -105,8 +110,8 @@ kubectl config current-context
 ---
 
 Для проверки из временного client Pod используйте `curlimages/curl` или `busybox` и назначьте
-ему `--labels=app=frontend`: policy сопоставляет именно identity Pod, а образ
-`viktoruj/ping_pong:latest` является минимальным и не содержит shell/curl.
+ему `--labels=app=frontend`: policy сопоставляет именно identity Pod, а закреплённый по digest образ
+`viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}` не содержит shell/curl.
 
 Не используйте один только ненулевой exit code `curl -f` как доказательство сетевого
 запрета: `-f` возвращает ошибку и для доступного HTTP endpoint с ответом `401`, `403` или

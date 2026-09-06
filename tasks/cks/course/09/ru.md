@@ -5,8 +5,8 @@
 > **Что дальше.** В главе 08 мы защитили внешний HTTP-вход TLS. Теперь нужно защитить
 > сами компоненты control plane и kubelet: один небезопасный аргумент может открыть
 > анонимный API, диагностический endpoint или слабый TLS-канал. Затем проверим, что
-> запускаем именно опубликованные Kubernetes-бинарники и образы. Это домен **Cluster
-> Setup** (CKS, 10%).
+> запускаем именно опубликованные Kubernetes-бинарники. Это домен **Cluster
+> Setup** (CKS, 15%).
 
 > **Что нужно из CKA.** Устройство control plane, kubeadm и static Pod разобраны в
 > [главе 35 CKA](../../../cka/course/35/ru.md), а поверхность компонентов Kubernetes - в
@@ -33,7 +33,7 @@ flowchart LR
     file["Подменённый binary\nили image"] --> runtime["Код с правами компонента"]
     api --> impact["Secrets, workload,\nэскалация прав"]
     runtime --> impact
-    harden["Минимальные флаги + TLS\nподпись + sha256 + image digest"] --> verify["Проверка здоровья\nи происхождения"]
+    harden["Минимальные флаги + TLS\nпроверка подписи и sha256 binary"] --> verify["Проверка здоровья\nи происхождения"]
     verify --> impact
     style net fill:#db4437,color:#fff
     style weak fill:#f4b400,color:#000
@@ -66,10 +66,33 @@ TLS и RBAC образуют один контроль. Но следующие 
 | `kubelet` | `--read-only-port` не равен `0` | неаутентифицированный endpoint может раскрыть Pod и node data | `--read-only-port=0` или `readOnlyPort: 0` |
 | `kubelet` | `--anonymous-auth=true` | анонимный клиент попадает на kubelet API | `--anonymous-auth=false` или поле config API |
 | `kubelet` | `--authorization-mode=AlwaysAllow` | любой аутентифицированный клиент получает слишком широкий доступ к kubelet API | `--authorization-mode=Webhook` |
-| `kubelet` | `--protect-kernel-defaults=false` | kubelet может молча работать при дрейфе security sysctl baseline | `--protect-kernel-defaults=true` после проверки sysctl |
+| `kubelet` | `--protect-kernel-defaults=false` | при несовпадении baseline kubelet не завершится fail-fast и может пытаться менять host-level kernel flags до ожидаемых значений | `--protect-kernel-defaults=true` после проверки sysctl |
 | `kube-controller-manager` | `--profiling=true` или `--use-service-account-credentials=false` | лишняя диагностика или использование широких учётных данных вместо отдельных SA | `--profiling=false`, отдельные service account credentials |
-| `kube-scheduler` | `--profiling=true` или endpoint на широком `--bind-address` | диагностический endpoint становится доступен лишней сети | `--profiling=false`, доступ только из административной сети |
+| `kube-scheduler` | profiling включён или endpoint на широком `--bind-address` | диагностический endpoint становится доступен лишней сети | в component config `enableProfiling: false`; deprecated CLI `--profiling=false` проверять только как legacy-источник |
 | `etcd` | `--client-cert-auth=false`, небезопасный `--listen-client-urls` | клиент без mTLS или внешняя сеть получает доступ к хранилищу кластера | mTLS, localhost/внутренняя сеть, firewall |
+
+Для CIS/CKS-лабы простой ожидаемый baseline apiserver — `--anonymous-auth=false`: ни один
+неаутентифицированный запрос не становится `system:anonymous`. В production Kubernetes
+1.34+ доступна более узкая альтернатива `AuthenticationConfiguration`: можно разрешить
+anonymous access только health endpoints, а не всему API. Например, отдельный файл,
+подключённый в static Pod через `--authentication-config=<path>` и соответствующее
+монтирование, может содержать:
+
+```yaml
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+anonymous:
+  enabled: true
+  conditions:
+  - path: /livez
+  - path: /readyz
+  - path: /healthz
+```
+
+Если в `AuthenticationConfiguration` задано поле `anonymous`, одновременно использовать
+`--anonymous-auth` нельзя. Endpoint-scoped вариант не делает пройденным benchmark, который
+явно требует `--anonymous-auth=false`; выберите и документируйте модель, применимую к
+вашему кластеру.
 
 Сначала инвентаризируйте активные параметры, а не только шаблонный файл. Ищите
 дубликаты: последнее или фактически использованное значение зависит от реализации, а
@@ -106,9 +129,16 @@ authorization. То же правило относится к метрикам: 
 
 Kubelet не является static Pod: его конфигурация обычно находится в
 `/var/lib/kubelet/config.yaml`, а дополнительные аргументы - в
-`/var/lib/kubelet/kubeadm-flags.env` и systemd drop-in. Реальный путь определяется
-`systemctl cat kubelet` и process arguments. Не задавайте один параметр одновременно в
-`config.yaml` и флаге.
+`/var/lib/kubelet/kubeadm-flags.env` и systemd drop-in. В Kubernetes 1.36 также ищите
+`--config-dir`: kubelet применяет основной config, затем только drop-in-файлы `*.conf`
+(включая подкаталоги) из этого каталога в лексическом порядке; `*.yaml` в нём игнорируются.
+CLI-флаги имеют наивысший приоритет. Реальный путь определяется `systemctl cat kubelet` и
+process arguments. Не задавайте один параметр одновременно в `config.yaml` и флаге.
+
+Для scheduler и controller-manager сначала определите, используется ли component config
+или legacy CLI flags. Например, scheduler `--profiling` deprecated; в component config
+проверяют `enableProfiling: false`. Найдите фактический config-file/manifest и единственный
+активный источник значения.
 
 ```mermaid
 flowchart TB
@@ -131,16 +161,22 @@ kubelet за ещё один static Pod. Работайте через конс�
 control plane; в HA-кластере меняйте одну ноду и дождитесь её здоровья перед следующей.
 
 ```bash
-# 1. Сохранить манифест вне watched directory и проверить синтаксис до изменения.
+# 1. Создать candidate вне watched directory; kubelet не увидит его до атомарной замены.
 sudo install -d -m 700 /root/k8s-manifest-backup
+CANDIDATE=$(sudo mktemp /etc/kubernetes/.kube-apiserver.yaml.candidate.XXXXXX)
+sudo cp -p /etc/kubernetes/manifests/kube-apiserver.yaml "$CANDIDATE"
 sudo cp -p /etc/kubernetes/manifests/kube-apiserver.yaml \
   /root/k8s-manifest-backup/kube-apiserver.yaml.$(date +%F-%H%M%S)
-sudo kubeadm init phase control-plane all --help >/dev/null 2>&1 || true
+sudoedit "$CANDIDATE"
 
-# 2. Отредактировать только command kube-apiserver.
-sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml
+# 2. Реально проверить YAML/API-структуру candidate, не затрагивая running static Pod.
+sudo kubectl apply --dry-run=client --validate=strict -f "$CANDIDATE"
 
-# 3. Наблюдать пересоздание с консоли ноды, затем проверить API.
+# 3. Только после успешной проверки атомарно заменить watched manifest.
+# Candidate создан в /etc/kubernetes, поэтому rename остаётся в той же файловой системе.
+sudo mv -f "$CANDIDATE" /etc/kubernetes/manifests/kube-apiserver.yaml
+
+# 4. Наблюдать пересоздание с консоли ноды, затем проверить API.
 watch -n 2 'sudo crictl ps -a --name kube-apiserver'
 kubectl get --raw='/readyz?verbose'
 kubectl get nodes
@@ -170,6 +206,11 @@ sudo systemctl --no-pager --full status kubelet
 sudo journalctl -u kubelet -n 100 --no-pager
 sudo ss -lntp | grep ':10255' || echo 'read-only kubelet port is closed'
 kubectl get nodes
+
+# Итог после base config, *.conf drop-ins и CLI overrides; нужен авторизованный доступ.
+NODE="${NODE:?set target node name from kubectl get nodes}"
+kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" \
+  | jq '.kubeletconfig | {readOnlyPort, authentication, authorization, protectKernelDefaults}'
 ```
 
 ## 09.4. TLS-хардненинг apiserver, kubelet и etcd
@@ -181,9 +222,10 @@ TLS уже защищает канал, но версия и набор cipher s
 клиентов и требует отдельной проверки всего control plane, automation и monitoring.
 
 Современные defaults Go и Kubernetes уже исключают устаревшие протоколы и небезопасные
-suites; универсального «короткого безопасного списка» нет. Не закрепляйте cipher suites
-по умолчанию. Это делают только когда конкретная policy, benchmark или совместимость
-компонента требует воспроизводимого списка, после inventory сертификатов и клиентов.
+suites; универсального «короткого безопасного списка» нет. Не переносите случайный
+короткий список между компонентами или версиями. Если policy организации либо конкретный
+CIS profile требует утверждённый список, применяйте именно его после inventory
+сертификатов и клиентов, а не противопоставляйте список hardening baseline.
 RSA-only список не является безопасным default: он ломает endpoint с ECDSA-сертификатом
 и без необходимости сужает совместимость. TLS 1.3 suites в Go обычно не управляются
 `--tls-cipher-suites`: их выбирает TLS-реализация, поэтому этот флаг касается главным
@@ -266,7 +308,7 @@ kubectl get nodes
 | etcd не healthy | peer/client не может согласовать TLS или потерял доступ к key | проверка всех членских endpoint с mTLS, логи etcd, откат одной ноды |
 | `openssl` показывает TLS 1.3 cipher не из списка | TLS 1.3 ciphers контролирует TLS-библиотека | проверять minimum version и документацию версии, не считать это обходом флага |
 
-## 09.5. Verify platform binaries и образы: подпись, sha256 и digest
+## 09.5. Проверка Kubernetes platform binaries: подпись и sha256
 
 HTTPS при скачивании защищает транспорт, но не доказывает, кто выпустил файл. SHA-256
 проверяет **целостность**: скачанный binary равен байтам, описанным выбранным digest.
@@ -308,53 +350,23 @@ sha256sum /usr/bin/kubelet
 ```
 
 Таким образом, signature/certificate с ожидаемыми identity/issuer дают provenance, а
-checksum даёт integrity относительно доверенного release digest. Kubernetes также
-публикует подписанные SBOM (SPDX): их можно аналогично проверить `verify-blob` при
-аудите состава релиза. Это полезная компактная связь артефакта с составом, но не заменяет
-политику допуска, CI controls и остальную supply-chain практику из соответствующих глав.
+checksum даёт integrity относительно доверенного release digest. Kubernetes также публикует подписанные SBOM (SPDX), но image digest pinning, подпись
+container image, SBOM и admission policy относятся к домену **Supply Chain Security
+(20%)**, а не к Cluster Setup этой главы. Практику этих контролей см. в
+[главах 24-28](../24/ru.md); здесь проверяем только release artifacts и binaries самой
+Kubernetes-платформы.
 
-Container image tag изменяем: `nginx:1.27` сегодня и завтра может указывать на разные
-байты. Digest неизменяем и связывает workload с точным content-addressed объектом.
-Сначала разрешите tag в digest, затем закрепите digest в манифесте или проверьте digest
-уже работающего Pod.
-
-```bash
-# Получить digest образа инструментом, который есть в вашей среде.
-crane digest registry.k8s.io/pause:3.10
-# Пример результата: sha256:<64-hex>
-
-# Манифест фиксирует exact image, а не плавающий tag.
-cat <<'EOF' | kubectl apply -f -
-apiVersion: v1
-kind: Pod
-metadata:
-  name: digest-pinned
-spec:
-  containers:
-  - name: pause
-    image: registry.k8s.io/pause@sha256:<ожидаемый-64-символьный-digest>
-EOF
-
-# Сверить digest, который kubelet реально зафиксировал в imageID.
-kubectl get pod digest-pinned \
-  -o jsonpath='{.status.containerStatuses[0].imageID}{"\n"}'
-# containerd://registry.k8s.io/pause@sha256:<ожидаемый-digest>
-```
-
-Не вставляйте строку с угловыми скобками в рабочий манифест: замените placeholder на
-проверенный 64-hex digest. Для критичного production workload digest полезно дополнять
-подписью образа и admission-политикой - это рассматривается в главах supply chain.
+Подробные проверки container image, включая digest, signing и SBOM, намеренно не
+дублируются здесь: это Supply Chain Security, см. [главы 24-28](../24/ru.md).
 
 ## 09.6. Практический сценарий: обнаружить подмену до ущерба
 
-Представьте, что на worker попал `kubelet`, подменённый после загрузки, или CI получил
-образ с тем же tag, но другим digest. Обычная проверка `kubelet --version` либо имя tag
-не обнаружит проблему: вредоносный binary может вернуть ожидаемую версию, а tag не
-идентифицирует content.
+Представьте, что на worker попал `kubelet`, подменённый после загрузки. Обычная проверка
+`kubelet --version` не обнаружит проблему: вредоносный binary может вернуть ожидаемую
+версию.
 
-Сначала сохраните наблюдаемые хеши и imageID, сопоставьте их с утверждённым release
-manifest и проведите evidence/provenance/baseline/authorized-change triage перед выбором
-containment. Не «исправляйте» mismatch изменением эталонного хеша: при неподтверждённом
+Сначала сохраните наблюдаемые хеши, сопоставьте их с утверждённым release manifest и
+проведите evidence/provenance/baseline/authorized-change triage перед выбором containment. Не «исправляйте» mismatch изменением эталонного хеша: при неподтверждённом
 изменении или иных признаках подмены эскалируйте по incident runbook.
 
 ```bash
@@ -367,8 +379,7 @@ sudo systemctl cat kubelet
 # Формат inventory: '<digest>  /usr/bin/kubelet'. Команда вернёт FAIL при несовпадении.
 sudo sha256sum --check /root/approved-kubelet.sha256
 
-# 3. Найти фактические образы workload по imageID, а не только spec.image.
-kubectl get pods -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.metadata.name}{"\t"}{range .status.containerStatuses[*]}{.name}{"="}{.imageID}{" "}{end}{"\n"}{end}'
+# Дальнейшую проверку imageID/digest выполняйте по supply-chain процедуре глав 24-28.
 ```
 
 `sha256sum --check` с `FAILED` - сигнал для расследования, но сам по себе не доказывает
@@ -384,10 +395,10 @@ metadata; (3) найдите authorized change - change record, rollout, package
 Если evidence не подтверждает authorised change, provenance/baseline не сходятся или есть
 иные признаки подмены, эскалируйте по incident runbook: остановите дальнейшее
 распространение, примените соразмерное containment (вплоть до cordon/drain или изоляции
-ноды), сохраните логи и замените ноду либо binary контролируемым способом. Для image
-остановите rollout, закрепите известный хороший digest и проверьте registry audit logs,
-CI logs и admission records. Один хеш надёжно сообщает о несовпадении ожидаемых байтов,
-но не объясняет его причину или путь изменения.
+ноды), сохраните логи и замените ноду либо binary контролируемым способом. Один хеш
+надёжно сообщает о несовпадении ожидаемых байтов, но не объясняет его причину или путь
+изменения. Реагирование на container image и registry/CI evidence относится к
+supply-chain процедурам глав 24-28.
 
 ## 09.7. Проверка результата и диагностика
 
@@ -422,7 +433,6 @@ sudo crictl ps | grep -E 'kube-apiserver|kube-controller-manager|kube-scheduler|
 | порт `10255` всё ещё слушает | systemd drop-in и `ps` kubelet | правился не тот config file или старый flag переопределяет YAML |
 | TLS 1.2 клиент перестал подключаться | certificate algorithm, cipher list, client TLS | слишком узкий набор suites или несовместимый client |
 | `sha256sum --check` возвращает FAIL | approved manifest, путь и version | неверный binary, повреждённая загрузка или подмена |
-| imageID не совпадает с allowlist digest | resolved registry digest и rollout history | mutable tag был перезаписан или применён другой manifest |
 
 `kube-bench` полезен как контроль регрессии, но его профиль должен совпадать с версией
 Kubernetes и архитектурой. Повторите релевантные targets после исправления и сохраните
@@ -445,9 +455,9 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 - **Drift detection.** Регулярно запускают `kube-bench`, проверяют process args и alert на
   открытые `10255`, `2379`, `2380` и неожиданные слушающие адреса.
 - **Проверяемая поставка.** Pipeline проверяет keyless signature/certificate binary с
-  ожидаемыми identity/issuer и SHA-256 как integrity check, сохраняет утверждённые digests
-  в inventory и deploy-манифестах, запрещает mutable tags policy. Registry access, CI logs
-  и admission events дают audit trail.
+  ожидаемыми identity/issuer и SHA-256 как integrity check, сохраняет утверждённый
+  platform baseline отдельно. Image signing, SBOM, registry и admission controls —
+  supply-chain тема глав 24-28.
 - **Безопасный rollback.** Backup manifest хранится вне static Pod directory, а rollback
   проверен в non-production. При подозрении на подмену предпочтительнее переустановить
   ноду из доверенного образа, чем продолжать работу с потенциально изменённым хостом.
@@ -465,8 +475,6 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   совместим с certificate algorithm и клиентами.
 - **SHA-256 checksum** - 256-битный digest файла, используемый для проверки точного
   совпадения байтов с опубликованным артефактом.
-- **image digest** - неизменяемый content-addressed идентификатор container image вида
-  `sha256:<hash>`, в отличие от mutable tag.
 - **provenance** - доказуемое происхождение артефакта: кто и из какого доверенного release
   или pipeline его выпустил.
 
@@ -485,7 +493,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   benchmark или совместимости и проверяют его с certificate key algorithm и клиентами.
 - `cosign verify-blob` с ожидаемыми certificate identity/issuer проверяет происхождение
   Kubernetes binary; `sha256sum --check` дополнительно сравнивает байты с trusted
-  checksum. Для образов фиксируют и сверяют immutable digest, а не только tag.
+  checksum. Image digest, signing и SBOM относятся к Supply Chain Security — главам 24-28.
 - Доказательство hardening включает активные arguments, отрицательную проверку опасного
   поведения, TLS handshake, health control plane и повторный `kube-bench`.
 
@@ -522,6 +530,8 @@ kubelet service; сохраните backup вне `/etc/kubernetes/manifests`; �
 
 🧪 Лаба 103 (CIS, Secure Ingress TLS, TLS hardening и проверка бинарников):
 [tasks/cks/labs/103](../../labs/103/README_RU.MD)
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [verify-platform-binaries-kubelet](https://killercoda.com/killer-shell-cks/scenario/verify-platform-binaries-kubelet)
 
 🎮 Killercoda (в браузере, без установки): [Kubernetes Security - Kube-bench](https://killercoda.com/killer-shell-cks/scenario/kube-bench) · [Kubernetes Certificates](https://killercoda.com/kubernetes-basics/course/kubernetes-fundamentals/certificates)
 

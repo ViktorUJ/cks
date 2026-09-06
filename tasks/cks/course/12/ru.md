@@ -66,13 +66,14 @@ Anonymous access иногда оставляют ради устаревшего
 выданные права: отключённый сейчас anonymous access не делает опасную binding безопасной
 навсегда.
 
-Полное отключение через `--anonymous-auth=false` остаётся безопасным baseline. Но
-стабильный `AuthenticationConfiguration`, подключаемый через `--authentication-config`,
-может оставить anonymous access только для явного списка health endpoints, например
-`/livez`, `/readyz` и `/healthz`; остальные пути не станут anonymous даже при разрешающей
-binding. Эти два способа настройки взаимоисключающие: при поле `anonymous` в файле не
-задавайте `--anonymous-auth` одновременно. Такой exception требует отдельного ревью
-маршрутов, сетевого доступа и прав anonymous-субъекта.
+Для стандартного kubeadm полный `--anonymous-auth=false` нельзя считать универсальным
+baseline: его health probes обращаются к `/livez` и `/readyz` без credentials, поэтому при
+глобальном запрете anonymous они могут получать `401` и перезапускать API server. Основной
+вариант для такого кластера — стабильный `AuthenticationConfiguration`, подключаемый через
+`--authentication-config`: anonymous разрешён только для действительно используемых
+`/livez` и `/readyz`, а остальные пути не становятся anonymous даже при разрешающей binding.
+`/healthz` добавляют лишь если его реально использует health check. Этот узкий exception
+требует отдельного ревью маршрутов, сетевого доступа и прав anonymous-субъекта.
 
 На kubeadm control-plane `kube-apiserver` обычно является static Pod. Правьте активный
 манифест локально на control-plane, имея доступ к консоли ноды и сохранённый путь отката.
@@ -85,19 +86,37 @@ sudo install -d -m 700 /root/k8s-manifest-backup
 sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml \
   /root/k8s-manifest-backup/kube-apiserver.yaml
 
-# Найти уже заданное значение; конфликтующих повторов флага быть не должно.
-sudo grep -n -- '--anonymous-auth' /etc/kubernetes/manifests/kube-apiserver.yaml || true
+# Создать явную health-only authentication configuration вне каталога static Pod-манифестов.
+sudo install -d -m 700 /etc/kubernetes/authentication
+sudo tee /etc/kubernetes/authentication/apiserver-authentication.yaml >/dev/null <<'EOF'
+apiVersion: apiserver.config.k8s.io/v1beta1
+kind: AuthenticationConfiguration
+anonymous:
+  enabled: true
+  conditions:
+  - path: /livez
+  - path: /readyz
+EOF
+sudo chmod 0600 /etc/kubernetes/authentication/apiserver-authentication.yaml
+
+# Найти уже заданные authn-флаги; конфликтующих повторов быть не должно.
+sudo grep -nE -- '--(anonymous-auth|authentication-config)' \
+  /etc/kubernetes/manifests/kube-apiserver.yaml || true
 sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
-В `spec.containers[].command` должен остаться ровно один аргумент:
+В `spec.containers[].command` укажите ровно один путь к файлу и не задавайте одновременно
+`--anonymous-auth` (эти способы настройки взаимоисключающие):
 
 ```yaml
-- --anonymous-auth=false
+- --authentication-config=/etc/kubernetes/authentication/apiserver-authentication.yaml
 ```
 
-После сохранения kubelet пересоздаёт static Pod. Не перезапускайте одновременно все
-control-plane компоненты и не завершайте SSH-сессию, пока API не восстановился.
+Полное отключение через `--anonymous-auth=false` допустимо только после предварительного
+изменения kubeadm health probes на аутентифицированные либо иной проверенный механизм и
+проверки bootstrap-зависимостей. После сохранения kubelet пересоздаёт static Pod. Не
+перезапускайте одновременно все control-plane компоненты и не завершайте SSH-сессию, пока
+API не восстановился.
 
 ```bash
 watch -n 2 'sudo crictl ps --name kube-apiserver'
@@ -295,9 +314,13 @@ flowchart LR
   кластере используйте private endpoint или tunnel.
 - **Host firewall** (`nftables`, `iptables`, `ufw`) на self-managed control-plane: дублирует
   сетевой периметр и ограничивает источники, если cloud firewall ошибочно расширят.
-- **NetworkPolicy**: ограничьте egress Pod к `kubernetes.default.svc`/API только для
-  namespace и workload, которым API действительно нужен. Это сокращает lateral movement
-  после компрометации Pod.
+- **NetworkPolicy**: `kubernetes.default.svc` — логическое имя Service, а стандартная
+  NetworkPolicy не выбирает destination Service по имени. Ограничение egress к API строят
+  через `ipBlock`/endpoint CIDR с проверкой реального datapath либо через CNI-specific
+  entity, FQDN или Service policy. Не переносите `ipBlock` между CNI вслепую: DNAT Service
+  может происходить до или после policy и не имеет универсальной семантики. Разрешайте API
+  только namespace и workload, которым он действительно нужен — это сокращает lateral
+  movement после компрометации Pod.
 - **Маршрутизация и DNS**: убедитесь, что control-plane endpoint публикуется и разрешается
   только так, как требует выбранная модель доступа; private endpoint часто упрощает это, но
   public endpoint требует особенно строгого контроля источников и аутентификации.
@@ -329,6 +352,17 @@ sudo ss -lntp | grep ':6443'
 kubectl cluster-info
 kubectl get --raw='/livez?verbose'
 ```
+
+## 12.4.1. Локальные API-шлюзы: `kubectl proxy` и `port-forward`
+
+`kubectl proxy` и `kubectl port-forward` используют полномочия kubeconfig пользователя, а
+не создают новую ограниченную identity. По умолчанию `kubectl proxy` слушает `127.0.0.1`,
+что ограничивает риск локальной машиной. Не расширяйте его `--address` без необходимости;
+широкий `--accept-hosts`, а особенно `--disable-filter`, могут превратить proxy в доступный
+другим клиентам шлюз к API с правами оператора. Аналогично не используйте
+`kubectl port-forward --address 0.0.0.0`, если не требуется краткое, отдельно согласованное
+подключение через защищённую сеть. Завершайте временный туннель после диагностики и не
+считайте его заменой firewall, RBAC или NetworkPolicy.
 
 ## 12.5. Profiling, ServiceAccount lookup и аудит флагов
 
@@ -482,8 +516,10 @@ HTTP status и изменённые config sources в change record: это до
 
 - API защищают последовательно: сеть, TLS, authentication, authorization и admission;
   один слой не заменяет остальные.
-- `--anonymous-auth=false` нужен на kube-apiserver и kubelet. После него нужно проверить и
-  удалить ненужные RoleBinding/ClusterRoleBinding для `system:anonymous` и
+- Для kubelet отключают anonymous-доступ (`--anonymous-auth=false`). На kube-apiserver
+  либо полностью отключают anonymous authentication, либо явно ограничивают его только
+  необходимыми health endpoints через `AuthenticationConfiguration`; в обоих случаях
+  проверяют и удаляют ненужные RoleBinding/ClusterRoleBinding для `system:anonymous` и
   `system:unauthenticated`.
 - Legacy kubelet read-only port отключают `readOnlyPort: 0`; `10250` оставляют только с
   authentication, `Webhook` authorization и сетевым ограничением.
@@ -535,6 +571,13 @@ bindings и автоматическая проверка конфигураци
 
 🧪 Лаба 104 (RBAC-минимизация, ServiceAccount-токены и ограничение API):
 [tasks/cks/labs/104](../../labs/104/README_RU.MD)
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [apiserver-crash](https://killercoda.com/killer-shell-cks/scenario/apiserver-crash) · [apiserver-misconfigured](https://killercoda.com/killer-shell-cks/scenario/apiserver-misconfigured) · [apiserver-node-restriction](https://killercoda.com/killer-shell-cks/scenario/apiserver-node-restriction)
+
+## Справочные материалы
+
+- [Kubernetes: аутентификация](https://kubernetes.io/docs/reference/access-authn-authz/authentication/)
+- [Kubernetes: kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 11](../11/ru.md) · [Глава 13](../13/ru.md)

@@ -65,8 +65,11 @@ SSH на worker node.
 
 **gVisor** запускает контейнер через `runsc`. Его userspace kernel (`Sentry`) перехватывает
 большую часть системных вызовов и реализует их в userspace, снижая прямую поверхность атаки
-ядра host. В зависимости от платформы gVisor использует platform `systrap` или `ptrace`.
-Это обычно легче виртуальной машины, но не полностью отдельное guest kernel.
+ядра host. Поддерживаемые platform -- `systrap` (default) и `kvm`: `systrap` -- универсальный
+выбор по умолчанию, а `kvm` уместен при доступной аппаратной виртуализации и совместимой
+инфраструктуре. `ptrace` -- legacy platform, больше не поддерживается и планируется к удалению;
+не выбирайте его для новой конфигурации. Это обычно легче виртуальной машины, но не полностью
+отдельное guest kernel.
 
 **Kata Containers** запускает Pod sandbox в lightweight VM: отдельное guest kernel и
 hypervisor boundary. Container внутри VM видит guest kernel, а не kernel ноды. Граница
@@ -253,9 +256,17 @@ kubectl -n tenant-a describe pod untrusted-web
 
 ### Kata RuntimeClass
 
-Kata class устроен так же, но handler обязан совпадать с containerd. Не называйте class
-`kata`, если handler на node называется `kata-qemu`, иначе конфигурация станет неясной.
-Один из понятных вариантов - одинаковое короткое имя:
+Для Kubernetes рекомендуемый путь установки Kata -- Helm chart `kata-deploy`: он
+разворачивает runtime на node и создаёт RuntimeClass для фактических shim. В современных
+релизах runtime-rs имена таких class/handler могут выглядеть как
+`kata-qemu-runtime-rs`; используйте имя, которое создал chart, а не старый пример из
+другой поставки. Перед rollout проверьте `kubectl get runtimeclass` и `crictl info` на
+целевой node.
+
+Ручная конфигурация ниже -- упрощённый вариант для уже подготовленного отдельного pool.
+В ней Kata class устроен так же, но handler обязан совпадать с containerd. Не называйте
+class `kata`, если handler на node называется `kata-qemu`, иначе конфигурация станет
+неясной. Один из понятных вариантов -- одинаковое короткое имя:
 
 ```yaml
 apiVersion: node.k8s.io/v1
@@ -284,35 +295,43 @@ production runtime командой `latest` в середине incident.
 
 ### 1. Установить `runsc` и shim
 
-У gVisor binary и containerd shim должны соответствовать одной проверенной версии и
-архитектуре node. Получите release из доверенного внутреннего repository или официального
-pinned release, проверьте checksum/signature и установите с root-only правами. Команды ниже
-показывают форму установки; `<VERSION>` и `<ARCH>` заменяются утверждёнными значениями.
+У gVisor binary, shim и каталог sidecar binaries должны соответствовать одной
+проверенной версии и архитектуре node. Предпочтительный способ установки -- пакет `runsc`
+из официального (либо одобренного внутреннего) apt repository: он устанавливает полный
+набор файлов согласованно. Не смешивайте этот package с вручную скачанным shim.
+
+Для pinned manual installation используйте актуальный архив `gvisor.tar.zstd`, а не
+устаревшую схему из двух отдельных binary. Архив содержит `runsc`, shim и каталог
+`gvisor-bin/`; последний должен остаться рядом с `runsc`, потому что runtime использует
+его при запуске sandbox. Проверьте checksum/signature именно утверждённого release и
+распакуйте все файлы с root-only правами. Команды показывают форму установки;
+`<VERSION>` и `<ARCH>` заменяются утверждёнными значениями.
 
 ```bash
 VERSION="${VERSION:?set an approved gVisor version}"
 ARCH=$(uname -m)
 BASE_URL="https://storage.googleapis.com/gvisor/releases/release/${VERSION}/${ARCH}"
 
-curl -fsSLO "${BASE_URL}/runsc"
-curl -fsSLO "${BASE_URL}/runsc.sha512"
-sha512sum -c runsc.sha512
-sudo install -o root -g root -m 0755 runsc /usr/local/bin/runsc
-
-curl -fsSLO "${BASE_URL}/containerd-shim-runsc-v1"
-curl -fsSLO "${BASE_URL}/containerd-shim-runsc-v1.sha512"
-sha512sum -c containerd-shim-runsc-v1.sha512
-sudo install -o root -g root -m 0755 containerd-shim-runsc-v1 \
+curl -fsSLO "${BASE_URL}/gvisor.tar.zstd"
+curl -fsSLO "${BASE_URL}/gvisor.tar.zstd.sha512"
+sha512sum -c gvisor.tar.zstd.sha512
+mkdir gvisor
+zstd -d -c gvisor.tar.zstd | tar -xf - -C gvisor
+sudo install -d -o root -g root -m 0755 /usr/local/lib/gvisor
+sudo cp -a gvisor/. /usr/local/lib/gvisor/
+sudo ln -sf /usr/local/lib/gvisor/runsc /usr/local/bin/runsc
+sudo ln -sf /usr/local/lib/gvisor/containerd-shim-runsc-v1 \
   /usr/local/bin/containerd-shim-runsc-v1
 
 runsc --version
 command -v containerd-shim-runsc-v1
+ls -ld /usr/local/lib/gvisor/gvisor-bin
 ```
 
-Для package-managed installation используйте пакет из одобренного repository вместо
-смешивания package и вручную скачанного shim. В любом варианте путь к shim должен быть в
-`PATH` systemd service containerd; проверьте `systemctl show containerd -p Environment` и
-unit/drop-in. Не устанавливайте runtime только на control-plane, если Pod планируется на
+В любом варианте путь к shim должен быть в `PATH` systemd service containerd; проверьте
+`systemctl show containerd -p Environment` и unit/drop-in. Для archive installation
+сохраните относительное соседство `runsc` и `gvisor-bin/`, а не копируйте один `runsc`
+отдельно. Не устанавливайте runtime только на control-plane, если Pod планируется на
 workers.
 
 ### 2. Добавить runtime handler containerd
@@ -388,12 +407,29 @@ ls -l /dev/kvm
 запрещённая nested virtualization или несовместимый instance type означают, что node нельзя
 маркировать как `sandbox.runtime/kata=true`.
 
-Контейнеру нужен отдельный CRI handler. Для распространённого Kata v2 shim:
+Контейнеру нужен отдельный CRI handler. Путь зависит от поколения containerd: для
+containerd 1.x с config version 2 используйте старый CRI plugin path:
 
 ```toml
+version = 2
+
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.kata]
   runtime_type = "io.containerd.kata.v2"
 ```
+
+Для containerd 2.x используйте config version 3 и новый путь runtime plugin:
+
+```toml
+version = 3
+
+[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.kata]
+  runtime_type = "io.containerd.kata.v2"
+```
+
+В современных Kata Containers runtime-rs является runtime по умолчанию, а Go runtime
+deprecated. Пути к `kata-runtime`, shim и выбранному hypervisor зависят от способа установки;
+перед rollout сверяйте их с package/release вашей платформы, а не предполагаемым путём из
+старого примера.
 
 После change/restart containerd проверьте handler так же, как для gVisor:
 
@@ -663,6 +699,8 @@ team не подтвердит другой допустимый RuntimeClass и
 label/taint, переведите workload в namespace `team-purple` на этот class и подтвердите
 размещение. Для учебного сценария сохраните `dmesg` успешно стартовавшего Pod в требуемый
 артефакт и сопоставьте его с данными host/containerd.
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [sandbox-gvisor](https://killercoda.com/killer-shell-cks/scenario/sandbox-gvisor)
 
 Полезные официальные справки: [RuntimeClass](https://kubernetes.io/docs/concepts/containers/runtime-class/),
 [RuntimeClass scheduling](https://kubernetes.io/docs/concepts/containers/runtime-class/#scheduling),

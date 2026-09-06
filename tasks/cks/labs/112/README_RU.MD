@@ -44,6 +44,12 @@ ssh control-plane 'sudo -n true'
 
 ## Задания
 
+Перед containment полезно мысленно оценить blast radius: может ли ServiceAccount
+скомпрометированного Pod читать Secrets, создавать workload или достигать других
+namespace. Это можно и стоит быстро проверить `kubectl auth can-i` от имени
+ServiceAccount `falco-shell` как дополнительный шаг; он не обязателен, не влияет на
+критерии приёмки и не тестируется.
+
 ---
 | **1** | **Установить и запустить Falco на workload-ноде** |
 | :---: | :--- |
@@ -65,7 +71,7 @@ ssh control-plane 'sudo -n true'
 ---
 | **4** | **Включить audit-логирование: RequestResponse для ConfigMap, Metadata для Secret** |
 | :---: | :--- |
-| Что делаем | На `control-plane` создайте `/etc/kubernetes/audit/policy.yaml`. Policy должна: записывать `RequestResponse` для core resource `configmaps` (контролируемый forensic-пример на нечувствительном ресурсе); для core resource `secrets` использовать только `Metadata`, **чтобы тело Secret не попадало в журнал**; завершаться безопасным шумоподавляющим catch-all `Metadata`. В static manifest `/etc/kubernetes/manifests/kube-apiserver.yaml` добавьте `--audit-policy-file=/etc/kubernetes/audit/policy.yaml`, `--audit-log-path=/var/log/kubernetes/audit/audit.log`, ротацию (`--audit-log-maxage`, `--audit-log-maxbackup`, `--audit-log-maxsize`) и необходимые hostPath volume/volumeMount для policy-каталога и каталога логов. Дождитесь восстановления API. Создайте ConfigMap `audit-config` в `runtime-112`, прочитайте его (`kubectl get configmap audit-config -n runtime-112 -o json`) и сохраните RequestResponse event в `/var/work/tests/artifacts/4/configmap-request-response.json`. Затем прочитайте `kubectl get secret audit-secret -n runtime-112 -o json` и сохраните его Metadata event в `/var/work/tests/artifacts/4/secret-metadata.json`. |
+| Что делаем | На `control-plane` создайте `/etc/kubernetes/audit/policy.yaml`. Policy должна: записывать `RequestResponse` **только в namespace `runtime-112`** для core resource `configmaps` (контролируемый forensic-пример на нечувствительном ресурсе); для core resource `secrets` использовать только `Metadata`, **чтобы тело Secret не попадало в журнал**; реально снижать шум явными `None` rules для high-volume/low-risk traffic и `omitStages: [RequestReceived]`; завершаться безопасным catch-all `Metadata` как *fallback logging*, а не как шумоподавлением. В static manifest `/etc/kubernetes/manifests/kube-apiserver.yaml` добавьте `--audit-policy-file=/etc/kubernetes/audit/policy.yaml`, `--audit-log-path=/var/log/kubernetes/audit/audit.log`, ротацию (`--audit-log-maxage`, `--audit-log-maxbackup`, `--audit-log-maxsize`) и необходимые hostPath volume/volumeMount для policy-каталога и каталога логов. Дождитесь восстановления API. Создайте ConfigMap `audit-config` в `runtime-112`, прочитайте его (`kubectl get configmap audit-config -n runtime-112 -o json`) и сохраните RequestResponse event в `/var/work/tests/artifacts/4/configmap-request-response.json`. Затем прочитайте `kubectl get secret audit-secret -n runtime-112 -o json` и сохраните его Metadata event в `/var/work/tests/artifacts/4/secret-metadata.json`. |
 | Критерии приёмки | kube-apiserver healthy; static manifest содержит оба audit-флага и монтирования; policy задаёт `RequestResponse` для `configmaps` и `Metadata` для `secrets`; в `/var/work/tests/artifacts/4/configmap-request-response.json` — RequestResponse event для ConfigMap; в `/var/work/tests/artifacts/4/secret-metadata.json` — событие Secret уровня `Metadata` **без полей `requestObject`/`responseObject`** (тело Secret не залогировано). |
 
 ---
@@ -75,9 +81,9 @@ ssh control-plane 'sudo -n true'
 | Критерии приёмки | Pod Running; root filesystem read-only; `/tmp` - writable `emptyDir`; в Pod нет `hostPath`; запись в rootfs блокируется, в `/tmp` разрешена; артефакт не пуст. |
 
 ---
-| **6** | **Полная цепочка расследования и containment** |
+| **6** | **Минимальная цепочка containment от alert до изоляции** |
 | :---: | :--- |
-| Что делаем | После включения audit backend запустите в `falco-shell` контролируемый долгоживущий процесс с аргументом `CKS112_CUSTOM_EVENT`. **Начните расследование с нового Falco alert**, а не с Pod manifest. Из alert извлеките short container ID и host PID. На `control-plane` через `crictl ps/inspect/inspectp` сопоставьте container → Pod sandbox → namespace/Pod; через Kubernetes API определите ноду. Сохраните `crictl inspect` и `inspectp`. Пока процесс жив, сохраните `/proc/<PID>/status`, `cmdline`, `cgroup` и дерево PID/PPID/user. В audit log найдите `pods/exec` event для `runtime-112/falco-shell` и сохраните его без request/response body. Классифицируйте фазу как `Execution`, технику как `Container Administration Command`, составьте `evidence-summary.txt`. Затем примените default-deny ingress+egress `NetworkPolicy` `incident-quarantine`, удалите скомпрометированный Pod и сохраните отрицательную проверку: повторный `kubectl exec` не проходит. |
+| Что делаем | После включения audit backend запустите в `falco-shell` контролируемый долгоживущий процесс с аргументом `CKS112_CUSTOM_EVENT`. **Начните расследование с нового Falco alert**, а не с Pod manifest. Из alert извлеките short container ID и host PID. На `control-plane` через `crictl ps/inspect/inspectp` сопоставьте container → Pod sandbox → namespace/Pod; через Kubernetes API определите ноду. Сохраните `crictl inspect` и `inspectp`. Пока процесс жив, сохраните `/proc/<PID>/status`, `cmdline`, `cgroup` и дерево PID/PPID/user. В audit log найдите `pods/exec` event для `runtime-112/falco-shell` и сохраните его без request/response body. Классифицируйте фазу как `Execution`, технику как `Container Administration Command`, составьте `evidence-summary.txt`. Затем примените default-deny ingress+egress `NetworkPolicy` `incident-quarantine`, удалите скомпрометированный Pod и сохраните отрицательную проверку: повторный `kubectl exec` не проходит. Это минимальная containment-цепочка: credential revocation/rotation и полное remediation требуют отдельного incident-response процесса. |
 | Критерии приёмки | В `/var/work/tests/artifacts/6/` есть настоящий Falco alert, CRI inspect/inspectp, три `/proc`-артефакта, process lineage, Metadata audit event для `pods/exec`, итоговая сводка и результат containment; Pod `falco-shell` отсутствует; `incident-quarantine` выбирает все Pod и закрывает ingress+egress; повторный exec имеет non-zero exit code. |
 
 ## Проверка

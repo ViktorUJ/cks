@@ -69,21 +69,28 @@ record_result() {
   fi
 }
 
-@test "4. DNS-aware Cilium policy allows example.com and blocks another external FQDN" {
+@test "4. DNS-aware Cilium policy resolves example.com and permits only HTTPS" {
   mkdir -p /var/work/tests/artifacts/4
   policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy frontend-fqdn -n "$NS" -o json 2>/dev/null)
   fqdn_ok=$(printf '%s' "$policy" | jq -r '[.spec.egress[]?.toFQDNs[]?.matchName] | index("example.com") != null' 2>/dev/null)
   dns_ok=$(printf '%s' "$policy" | jq -r '[.spec.egress[]?.toEndpoints[]?.matchLabels["k8s:k8s-app"]] | index("kube-dns") != null' 2>/dev/null)
+  dns_proxy_ok=$(printf '%s' "$policy" | jq -r '[.spec.egress[]? | select(.toEndpoints != null) | .toPorts[]?.rules.dns[]?.matchPattern | select(. == "*")] | length > 0' 2>/dev/null)
+  fqdn_https_ok=$(printf '%s' "$policy" | jq -r '[.spec.egress[]? | select(.toFQDNs[]?.matchName == "example.com") | .toPorts[]?.ports[]? | select(.port == "443" and .protocol == "TCP")] | length > 0' 2>/dev/null)
   allowed=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -k -sS --max-time 10 -o /dev/null -w '%{http_code}' https://example.com/ 2>&1)
   allowed_rc=$?
+  same_fqdn_http=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://example.com:80/ 2>&1)
+  same_fqdn_http_rc=$?
   blocked=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -k -sS --max-time 5 -o /dev/null -w '%{http_code}' https://www.google.com/ 2>&1)
   blocked_rc=$?
-  printf 'example.com: rc=%s status=%s\nwww.google.com: rc=%s status=%s\n' "$allowed_rc" "$allowed" "$blocked_rc" "$blocked" > /var/work/tests/artifacts/4/fqdn.txt
+  printf 'example.com HTTPS: rc=%s status=%s\nexample.com HTTP: rc=%s status=%s\nwww.google.com HTTPS: rc=%s status=%s\n' "$allowed_rc" "$allowed" "$same_fqdn_http_rc" "$same_fqdn_http" "$blocked_rc" "$blocked" > /var/work/tests/artifacts/4/fqdn.txt
 
-  if [[ "$fqdn_ok" == "true" && "$dns_ok" == "true" && "$allowed_rc" -eq 0 && "$allowed" =~ ^[23][0-9][0-9]$ ]] && [[ "$blocked_rc" -ne 0 || ! "$blocked" =~ ^[23][0-9][0-9]$ ]]; then
+  if [[ "$fqdn_ok" == "true" && "$dns_ok" == "true" && "$dns_proxy_ok" == "true" && "$fqdn_https_ok" == "true" && "$allowed_rc" -eq 0 && "$allowed" =~ ^[23][0-9][0-9]$ ]] \
+    && [[ "$same_fqdn_http_rc" -ne 0 || ! "$same_fqdn_http" =~ ^[23][0-9][0-9]$ ]] \
+    && [[ "$blocked_rc" -ne 0 || ! "$blocked" =~ ^[23][0-9][0-9]$ ]]; then
     record_result 0
   else
     cat /var/work/tests/artifacts/4/fqdn.txt
+    echo "policy: toFQDNs=$fqdn_ok kube-dns=$dns_ok dns-proxy=$dns_proxy_ok https-443=$fqdn_https_ok"
     record_result 1
   fi
 }

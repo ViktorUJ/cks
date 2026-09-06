@@ -58,10 +58,28 @@ spec:
 ```bash
 kubectl apply -f apparmor-writer.yaml
 kubectl wait -n security-106 --for=condition=Ready pod/apparmor-writer --timeout=120s
+
+# Evidence: профиль действительно назначен процессу PID 1, а не только записан в Pod YAML.
+kubectl exec -n security-106 apparmor-writer -- cat /proc/1/attr/current
+# k8s-106-deny-write (enforce)
+
+# Положительный контроль: разрешённая операция чтения по-прежнему работает.
+kubectl exec -n security-106 apparmor-writer -- sh -c 'cat /etc/hostname >/dev/null'
+
+# Отрицательный контроль: denial должен быть именно отказом записи AppArmor.
 kubectl exec -n security-106 apparmor-writer -- \
   sh -c 'printf blocked >/work/cks-106-denied.txt'
 # ожидается ненулевой код: Permission denied / Operation not permitted
+
+# На ноде свяжите отказ с profile в kernel/audit log. Выполняйте сразу после попытки выше.
+ssh control-plane 'sudo journalctl -k --since "5 minutes ago" | grep -i apparmor || sudo dmesg | grep -i apparmor'
+# ожидается запись с apparmor="DENIED" и profile="k8s-106-deny-write"
 ```
+
+Если `/proc/1/attr/current` недоступен в конкретном runtime, зафиксируйте это и опирайтесь
+на назначение Localhost profile вместе с kernel `apparmor="DENIED"` для данного profile;
+один ненулевой код без этих evidence недостаточен, так как его может дать mount или обычное
+Unix permission.
 
 ## 3. RuntimeDefault для обычного Pod
 

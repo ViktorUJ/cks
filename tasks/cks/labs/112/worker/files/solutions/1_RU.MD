@@ -101,26 +101,35 @@ cat /var/work/tests/artifacts/3/falco-custom.log
 ## 4. Audit: RequestResponse для ConfigMap, Metadata для Secret
 
 Создадим policy по правилу главы 32: полный request/response пишем только для
-нечувствительного ресурса `configmaps`; для `secrets` берём `Metadata`, чтобы тело Secret
-(токены, пароли) не попало в журнал; завершаем безопасным catch-all `Metadata`. Порядок
-правил важен: специфичные правила идут до catch-all.
+нечувствительного `configmaps` в `runtime-112`; для `secrets` берём `Metadata`, чтобы тело Secret
+(токены, пароли) не попало в журнал. `None` и `omitStages` действительно сокращают high-volume
+noise; финальный catch-all `Metadata` — fallback logging, а не шумоподавление. Порядок правил важен: специфичные правила идут до catch-all.
 
 ```bash
 ssh control-plane 'sudo tee /etc/kubernetes/audit/policy.yaml >/dev/null' <<'YAML'
 apiVersion: audit.k8s.io/v1
 kind: Policy
+omitStages: ["RequestReceived"]
 rules:
-# 1. ConfigMap: контролируемый forensic-пример на нечувствительном ресурсе.
+# 1. Noise reduction: high-volume events and health probes are not forensic evidence here.
+- level: None
+  resources:
+  - group: ""
+    resources: ["events"]
+- level: None
+  nonResourceURLs: ["/healthz*", "/livez*", "/readyz*", "/version"]
+# 2. ConfigMap: constrained forensic RequestResponse example.
 - level: RequestResponse
+  namespaces: ["runtime-112"]
   resources:
   - group: ""
     resources: ["configmaps"]
-# 2. Secret важен для расследования, но его body в журнал не пишем.
+# 3. Secret matters for investigation, but its body must not be logged.
 - level: Metadata
   resources:
   - group: ""
     resources: ["secrets"]
-# 3. Безопасный default для остального API.
+# 4. Fallback logging for the rest of the API (not noise reduction).
 - level: Metadata
 YAML
 ssh control-plane 'sudo install -d -m 0750 /var/log/kubernetes/audit'
@@ -238,7 +247,7 @@ set -e
 kubectl exec -n "$NS" immutable-app -- sh -c 'touch /tmp/allowed && test -f /tmp/allowed'
 ```
 
-## 6. Расследование от alert до containment
+## 6. Минимальная цепочка containment от alert до изоляции
 
 Audit backend уже работает, поэтому новый `kubectl exec` оставит API evidence. Запускаем
 контролируемый долгоживущий процесс: marker остаётся в command line достаточно долго для
@@ -312,8 +321,8 @@ EOF
 ```
 
 Сначала сохраняем evidence, затем изолируем namespace на сетевом уровне и удаляем
-скомпрометированный Pod. Последняя команда доказывает отрицательный outcome, а не ищет
-конкретный текст ошибки.
+скомпрометированный Pod. Это минимальная containment-цепочка, а не полное расследование:
+credential revocation/rotation, поиск других workload и восстановление owner/controller выполняются отдельным IR-процессом. Последняя команда доказывает отрицательный outcome, а не ищет конкретный текст ошибки.
 
 ```bash
 cat <<'EOF' | kubectl apply -f -

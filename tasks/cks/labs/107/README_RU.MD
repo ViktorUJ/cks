@@ -93,3 +93,19 @@ restricted namespace — ожидаемый и правильный резуль
 ```bash
 TASK=107 make delete_cks_task
 ```
+
+## Примечание о версии PSA и наблюдаемости audit
+
+Лаба намеренно закрепляет PSA labels на `v1.36`, поскольку сам учебный кластер работает
+на Kubernetes 1.36.0. На 2026-09-06 официальный blueprint CKS ориентирован на Kubernetes
+`v1.35`; поэтому это **forward-looking** учебная конфигурация, а не утверждение о версии
+экзамена. Для подготовки к текущему экзамену замените суффиксы `*-version` на `v1.35` и
+сверьте поведение с документацией этой версии.
+
+Режим `audit` добавляет в **audit event kube-apiserver** annotation
+`pod-security.kubernetes.io/audit-violations` для нарушившего Pod. Учебная инфраструктура
+не настраивает и не предоставляет audit-log sink, поэтому эту annotation здесь нельзя
+прочитать через `kubectl`. Наблюдаемое доказательство в задании 4 — предупреждение PSA
+(`Warning: ... would violate PodSecurity "baseline"`) при server-side admission и успешное
+создание Pod без `enforce`; audit mode объяснён, но его log annotation этой лабой не
+проверяется.

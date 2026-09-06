@@ -14,6 +14,14 @@ Secret и ограничите доступ к данным RBAC и `automountSe
 документации и threat model; при внешнем key manager предпочтителен KMS v2
 (см. [главу 21](../../course/21/ru.md)).
 
+## Threat model
+
+Encryption at rest защищает от storage compromise: предположим, что атакующий получил read-only доступ к etcd snapshot или storage layer, например через backup или volume snapshot, но не имеет авторизованного API-доступа. Задание 1 доказывает именно этот исходный риск через raw чтение etcd.
+
+После включения encryption at rest задания 2–4 уменьшают blast radius такого доступа: прочитанные напрямую данные не должны раскрывать Secret. Это не универсальная защита и не замена контролю доступа к API.
+
+Если у атакующего есть законный API-доступ с правами на чтение Secret, encryption at rest от этой угрозы не защищает: API вернёт значение после расшифровки. Поэтому задание 5 отдельно ограничивает RBAC и automount, уменьшая blast radius identity workload с такими правами.
+
 ## Инфраструктура
 
 Окружение разворачивается Terragrunt в AWS `eu-central-1`:
@@ -113,3 +121,40 @@ etcd-записи и отсутствие migration-only `identity` в фина�
 ```bash
 TASK=109 make delete_cks_task
 ```
+
+## Дополнительно: KMS v2 и полный жизненный цикл ротации
+
+**KMS v2 (опциональный walkthrough).** Внешний KMS-plugin подключается к API server как
+provider `kms` в `EncryptionConfiguration`; его endpoint — локальный Unix socket, а ключ
+provider получает стабильное имя, например `kms-v2-primary`. API server генерирует
+случайный **DEK** для шифрования каждой записи Secret, KMS-plugin шифрует (wrap) этот DEK
+своим **KEK** (ключом, управляемым внешним key manager), а etcd хранит ciphertext Secret
+и wrapped DEK. Таким образом, KEK не лежит в etcd; availability, ACL и backup KMS становятся
+частью модели безопасности. Минимальный **иллюстративный** provider (endpoint должен
+соответствовать установленному plugin) выглядит так:
+
+```yaml
+resources:
+- resources: [secrets]
+  providers:
+  - kms:
+      apiVersion: v2
+      name: kms-v2-primary
+      endpoint: unix:///var/run/kms-plugin/socket.sock
+```
+
+Добавьте provider первым для новых записей, смонтируйте socket в static `kube-apiserver`
+и дождитесь health plugin до re-encryption. Для реальной конфигурации используйте
+поддерживаемый plugin и актуальный формат `kms` v2 из документации используемой версии
+Kubernetes; эта лаба не поднимает KMS-plugin и не выдаёт рабочий socket.
+
+**Полная ротация ключа provider.** Выполненная в задании 4 миграция plaintext в первый
+`aescbc`-ключ — не полная ротация ключа. Для неё: (1) сделайте защищённый etcd snapshot и
+проверьте, что старый ключ сохранён и доступен для rollback; (2) добавьте новый ключ
+первым в `aescbc.keys`, оставив старый вторым, затем перезапустите API server; (3)
+перезапишите существующие Secret через API, чтобы они были зашифрованы новым первым ключом;
+(4) для выборочных и затем всех raw etcd записей подтвердите префикс
+`k8s:enc:aescbc:v1:<имя-нового-ключа>:`; (5) только после полной миграции, backup и
+проверки чтения удалите старый ключ, перезапустите API server и снова проверьте `/readyz`
+и Secret. Для KMS v2 эквивалентно сначала переключают primary KEK/plugin, проводят
+re-encryption и только затем выводят старый KEK из использования по процедуре KMS.

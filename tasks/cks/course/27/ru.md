@@ -258,7 +258,7 @@ Generic linters знают общие best practices. Организации о�
     └── main.rego
 ```
 
-Следующая Rego policy проверяет каждый container в `Deployment`. Она не пытается заменить все checks `kube-linter`; задача policy - явно зафиксировать локальные неизменяемые требования: trusted registry prefix, отсутствие mutable `latest`, non-root, read-only root filesystem и запрет privilege escalation. `object.get` даёт безопасное значение по умолчанию для необязательных объектов: поэтому отсутствие `securityContext` тоже создаёт violation, а не делает правило undefined.
+Следующая Rego policy намеренно сопоставляет только `Deployment`, но проверяет его regular и init containers. Это учебная ограниченная область, а не готовая cluster-wide policy: для production отдельно добавляют Pod, StatefulSet, DaemonSet, Job/CronJob и соответствующие template paths либо применяют тот же intent в admission policy. Задача policy - явно зафиксировать локальные неизменяемые требования: trusted registry prefix, валидный immutable digest, effective non-root, read-only root filesystem и запрет privilege escalation. `object.get` даёт безопасное значение по умолчанию для необязательных объектов: поэтому отсутствие `securityContext` тоже создаёт violation, а не делает правило undefined.
 
 ```rego
 # policy/main.rego
@@ -274,34 +274,47 @@ pod_template := object.get(object.get(input, "spec", {}), "template", {})
 pod_spec := object.get(pod_template, "spec", {})
 pod_security_context := object.get(pod_spec, "securityContext", {})
 containers := object.get(pod_spec, "containers", [])
+init_containers := object.get(pod_spec, "initContainers", [])
+all_containers := array.concat(containers, init_containers)
 
 violation contains msg if {
   workload
-  container := containers[_]
+  container := all_containers[_]
   image := object.get(container, "image", "")
   not startswith(image, "registry.example.com/")
   name := object.get(container, "name", "<unnamed>")
   msg := sprintf("container %q uses an unapproved registry: %s", [name, image])
 }
 
+# Требуем фактически immutable OCI reference. Образ без tag Kubernetes трактует как
+# :latest, а короткий/некорректный digest не является SHA-256 pin.
 violation contains msg if {
   workload
-  container := containers[_]
+  container := all_containers[_]
   image := object.get(container, "image", "")
-  endswith(image, ":latest")
+  not regex.match(`^.+@sha256:[A-Fa-f0-9]{64}$`, image)
   name := object.get(container, "name", "<unnamed>")
-  msg := sprintf("container %q uses mutable latest tag", [name])
+  msg := sprintf("container %q must use an image pinned by a valid SHA-256 digest", [name])
+}
+
+# Container-level securityContext имеет приоритет над пересекающимся Pod-level полем.
+violation contains msg if {
+  workload
+  container := all_containers[_]
+  container_security_context := object.get(container, "securityContext", {})
+  effective_run_as_non_root := object.get(
+    container_security_context,
+    "runAsNonRoot",
+    object.get(pod_security_context, "runAsNonRoot", false)
+  )
+  effective_run_as_non_root != true
+  name := object.get(container, "name", "<unnamed>")
+  msg := sprintf("container %q must effectively runAsNonRoot: true", [name])
 }
 
 violation contains msg if {
   workload
-  object.get(pod_security_context, "runAsNonRoot", false) != true
-  msg := "pod template must set securityContext.runAsNonRoot: true"
-}
-
-violation contains msg if {
-  workload
-  container := containers[_]
+  container := all_containers[_]
   container_security_context := object.get(container, "securityContext", {})
   object.get(container_security_context, "readOnlyRootFilesystem", false) != true
   name := object.get(container, "name", "<unnamed>")
@@ -310,7 +323,7 @@ violation contains msg if {
 
 violation contains msg if {
   workload
-  container := containers[_]
+  container := all_containers[_]
   container_security_context := object.get(container, "securityContext", {})
   object.get(container_security_context, "allowPrivilegeEscalation", true) != false
   name := object.get(container, "name", "<unnamed>")
@@ -351,7 +364,7 @@ test_denies_missing_security_context if {
     }}},
   }
   result := violation with input as resource
-  "pod template must set securityContext.runAsNonRoot: true" in result
+  "container \"api\" must effectively runAsNonRoot: true" in result
   "container \"api\" must set readOnlyRootFilesystem: true" in result
   "container \"api\" must set allowPrivilegeEscalation: false" in result
 }
@@ -373,10 +386,54 @@ test_denies_dangerous_variants if {
   }
   result := violation with input as resource
   "container \"api\" uses an unapproved registry: docker.io/library/api:latest" in result
-  "container \"api\" uses mutable latest tag" in result
-  "pod template must set securityContext.runAsNonRoot: true" in result
+  "container \"api\" must use an image pinned by a valid SHA-256 digest" in result
+  "container \"api\" must effectively runAsNonRoot: true" in result
   "container \"api\" must set readOnlyRootFilesystem: true" in result
   "container \"api\" must set allowPrivilegeEscalation: false" in result
+}
+
+test_denies_unapproved_registry_in_init_container if {
+  resource := {
+    "kind": "Deployment",
+    "spec": {"template": {"spec": {
+      "securityContext": {"runAsNonRoot": true},
+      "initContainers": [{
+        "name": "untrusted-init",
+        "image": "docker.io/library/init@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "securityContext": {"readOnlyRootFilesystem": true, "allowPrivilegeEscalation": false},
+      }],
+      "containers": [{
+        "name": "api",
+        "image": "registry.example.com/payments/api@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "securityContext": {"readOnlyRootFilesystem": true, "allowPrivilegeEscalation": false},
+      }],
+    }}},
+  }
+  result := violation with input as resource
+  "container \"untrusted-init\" uses an unapproved registry: docker.io/library/init@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" in result
+}
+
+test_denies_untagged_image_container_override_and_unsafe_init if {
+  resource := {
+    "kind": "Deployment",
+    "spec": {"template": {"spec": {
+      "securityContext": {"runAsNonRoot": true},
+      "initContainers": [{
+        "name": "init",
+        "image": "registry.example.com/payments/init",
+        "securityContext": {"readOnlyRootFilesystem": false, "allowPrivilegeEscalation": false},
+      }],
+      "containers": [{
+        "name": "api",
+        "image": "registry.example.com/payments/api@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "securityContext": {"runAsNonRoot": false, "readOnlyRootFilesystem": true, "allowPrivilegeEscalation": false},
+      }],
+    }}},
+  }
+  result := violation with input as resource
+  "container \"init\" must use an image pinned by a valid SHA-256 digest" in result
+  "container \"api\" must effectively runAsNonRoot: true" in result
+  "container \"init\" must set readOnlyRootFilesystem: true" in result
 }
 
 test_allows_hardened_workload if {
@@ -386,7 +443,7 @@ test_allows_hardened_workload if {
       "securityContext": {"runAsNonRoot": true},
       "containers": [{
         "name": "api",
-        "image": "registry.example.com/payments/api:1.4.2@sha256:0123456789abcdef",
+        "image": "registry.example.com/payments/api:1.4.2@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         "securityContext": {
           "readOnlyRootFilesystem": true,
           "allowPrivilegeEscalation": false,
@@ -573,8 +630,16 @@ kubectl apply --dry-run=server -f manifests/
 В этой главе мы остановили небезопасный Dockerfile или manifest до build и deploy. Далее в [главе 28](../28/ru.md) проверим уже собранный image на CVE: lint говорит о configuration, scanner - о known vulnerabilities в bytes и packages. Полная цепочка lab 111 объединяет static analysis, SBOM, image scan и signing.
 
 🧪 Лаба 111 (Supply chain: анализ, Trivy, SBOM, signing): [tasks/cks/labs/111](../../labs/111/README_RU.MD)
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [static-manual-analysis-k8s](https://killercoda.com/killer-shell-cks/scenario/static-manual-analysis-k8s) · [static-manual-analysis-docker](https://killercoda.com/killer-shell-cks/scenario/static-manual-analysis-docker)
 
 📘 CKA-опора: [SecurityContext и capabilities](../../../cka/course/20/ru.md)
+
+## Справочные материалы
+
+- [kubesec: анализ безопасности Kubernetes-ресурсов](https://kubesec.io/)
+- [kube-linter documentation](https://docs.kubelinter.io/)
+- [hadolint: Dockerfile linter](https://github.com/hadolint/hadolint)
+- [Open Policy Agent: документация Rego](https://www.openpolicyagent.org/docs/latest/)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 26](../26/ru.md) · [Глава 28](../28/ru.md)

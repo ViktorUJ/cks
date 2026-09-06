@@ -94,7 +94,7 @@ flowchart TB
 
 | Способ | Как работает | Плюсы | Ограничения и проверка |
 |---|---|---|---|
-| `kmod` | модуль Falco загружается в ядро и передаёт события userspace | привычный путь для поддерживаемого kernel | нужны совместимость kernel/header и право загрузить модуль; после обновления ядра driver может перестать собираться |
+| `kmod` | модуль Falco загружается в ядро и передаёт события userspace | привычный путь для поддерживаемого kernel | нужны совместимость kernel и право загрузить модуль; headers/build toolchain требуются только если нет подходящего prebuilt driver и модуль приходится собирать; после обновления ядра driver может перестать собираться |
 | `modern_ebpf` | современный eBPF driver Falco использует CO-RE и не собирает отдельный kernel module | не требует kernel headers и сборки модуля; удобен на immutable/minimal host | требуются поддерживаемый kernel и BPF-возможности; часть окружений запрещает BPF или требует privileged agent |
 
 Не выбирайте backend только по названию: сверяйте поддерживаемую версию Falco, kernel ноды,
@@ -132,22 +132,43 @@ DaemonSet: один Falco Pod размещается на каждой ноде 
 архитектуру и поддерживаемый kernel. В production закрепляйте проверенную версию пакета в
 системе управления конфигурацией, а не обновляйте agent непроверенным latest.
 
-Имя unit и даже наличие systemd зависят от дистрибутива и способа установки: не считайте
-`falco.service` универсальным. Если пакет зарегистрировал systemd unit, обнаружьте его;
-иначе используйте service manager и журналы, поставленные с пакетом.
+Имя engine unit и даже наличие systemd зависят от дистрибутива и способа установки. После
+package configuration Falco создаёт `falco.service` как alias фактического driver-specific
+engine unit. Alias удобен для runtime-команд, но не для `enable`: `systemctl enable
+falco.service` может завершиться ошибкой `Refusing to operate on alias name or linked unit
+file`. Для включения всегда выбирайте реальный unit выбранного driver; не выбирайте просто
+первый unit с префиксом `falco`, потому что это может быть `falcoctl`, injector или custom
+unit. Без systemd используйте service manager и журналы, поставленные с пакетом.
 
 ```bash
 # На ноде: добавить официальный Falco repository согласно текущей документации Falco.
 sudo apt-get update
 sudo apt-get install -y falco
 
-falco_unit="$(systemctl list-unit-files --no-legend 2>/dev/null   | awk '$1 ~ /^falco.*\.service$/ {print $1; exit}')"
-test -n "$falco_unit" || { echo 'Falco systemd unit не найден'; exit 1; }
-sudo systemctl enable --now "$falco_unit"
+# Выберите driver через package configuration. Для выбранного driver задайте РЕАЛЬНЫЙ unit:
+# falco-modern-bpf.service для modern eBPF, falco-kmod.service для kmod,
+# falco-custom.service для custom driver.
+falco_enable_unit="falco-modern-bpf.service"  # пример: выбран modern eBPF
+systemctl cat "$falco_enable_unit" 2>/dev/null | grep -q '^ExecStart=' \
+  || { echo "Не найден выбранный Falco engine unit: $falco_enable_unit"; exit 1; }
+
+# Не выполняйте enable для falco.service, даже если alias уже создан package configuration.
+sudo systemctl enable --now "$falco_enable_unit"
+
+# После enable пакетный alias используется только для runtime-команд.
+falco_unit="falco.service"
+systemctl cat "$falco_unit" 2>/dev/null | grep -q '^ExecStart=' \
+  || { echo 'Falco engine alias falco.service не настроен'; exit 1; }
 sudo systemctl is-active "$falco_unit"
 sudo systemctl status "$falco_unit" --no-pager
 sudo journalctl -u "$falco_unit" -b --no-pager | tail -n 80
 ```
+
+Если alias уже существует после package configuration, используйте его для `start`, `restart`,
+`status` и `journalctl`, но не для `enable`. При ручной или noninteractive-настройке сначала
+явно выберите один driver-specific unit, выполните для него `enable --now`, затем переходите на
+созданный alias для последующих runtime-команд. Актуальные имена unit и поток выбора driver
+сверяйте с [установкой Falco packages](https://falco.org/docs/setup/packages/).
 
 Если агент не стартует, сначала смотрят его журнал, kernel и загруженные модули, а не
 меняют правила вслепую. Для systemd-варианта:
@@ -201,8 +222,9 @@ kubectl -n falco describe daemonset falco
 Для package-install custom rule находится на самой ноде. Для DaemonSet правило обычно
 передают через values/ConfigMap chart или монтируют как отдельный файл. Не редактируйте
 файл внутри живого Falco Pod: изменение исчезнет после restart/rollout и не пройдёт review.
-Сохраняйте правило в Git, применяйте декларативно и перезапускайте/rollout restart только
-после проверки синтаксиса.
+Сохраняйте правило в Git и применяйте декларативно. При включённом `watch_config_files`
+Falco hot-reload-ит изменённые config/rule files; restart или rollout restart — fallback, если
+watching выключен, reload не произошёл или изменение этого требует.
 
 ## 29.4. Файлы конфигурации и стандартные правила
 
@@ -210,7 +232,7 @@ kubectl -n falco describe daemonset falco
 
 | Путь | Назначение | Как с ним работать |
 |---|---|---|
-| `/etc/falco/falco.yaml` | основной configuration: event sources, outputs, порядок rules files | менять осознанно, валидировать и перезапускать service |
+| `/etc/falco/falco.yaml` | основной configuration: event sources, outputs, порядок rules files | менять осознанно, валидировать, подтвердить hot reload; restart только если watching выключен, reload не удался или изменение требует restart |
 | `/etc/falco/falco_rules.yaml` | upstream standard rules, macros и lists | читать и обновлять пакетом; не хранить свои правки здесь |
 | `/etc/falco/falco_rules.local.yaml` | локальные override и custom rules | предпочтительное место для своих правил |
 | `/etc/falco/rules.d/` | дополнительные rule files в package/container configuration | использовать, только если каталог включён в `rules_files` текущей конфигурации |
@@ -317,13 +339,18 @@ configuration использует другое имя macro или не вкл�
 
 В современных Falco не используйте `evt.dir`: поле deprecated с 0.42. Для этого detector достаточно ограничить syscall через `evt.type` и container context.
 
-После изменения всегда выполняют проверку до restart. Для package-install:
+После изменения сначала валидируют **полную** фактическую конфигурацию. Это сохраняет
+порядок зависимостей `falco_rules.yaml` → `falco_rules.local.yaml` → подключённые `rules.d`;
+проверка одного local-файла через `--validate` может не увидеть upstream macro, например
+`open_read`.
 
 ```bash
+sudo grep -n '^watch_config_files:' /etc/falco/falco.yaml
 sudo falco -c /etc/falco/falco.yaml --dry-run
-# Если Falco установлен как systemd unit, используйте ранее обнаруженное имя unit.
-sudo systemctl restart "$falco_unit"
+# При watch_config_files: true дождитесь и проверьте successful reload в журнале.
 sudo journalctl -u "$falco_unit" -n 80 --no-pager
+# Если watching выключен или reload не удался, только тогда используйте найденный ранее unit:
+sudo systemctl restart "$falco_unit"
 ```
 
 Для DaemonSet проверка происходит в Pod startup log. Добавьте file декларативно через
@@ -348,7 +375,7 @@ shell, ограничивайте исключение по конкретном
 | output без namespace/Pod | alert нельзя быстро связать с workload | добавить `%k8s.ns.name`, `%k8s.pod.name`, container и process fields |
 | condition только по `proc.name=sh` | много ложных срабатываний вне контейнеров | добавить `container`, тип события и точный контекст |
 | исключить весь namespace навсегда | злоумышленник получает тихую зону | делать минимальное, документированное и временное исключение |
-| не валидировать rule | Falco может не запуститься после restart | запускать validation и читать startup log до rollout |
+| валидировать только local-file или всегда делать restart | macro из upstream rules может быть не загружен, а restart создаёт ненужный разрыв detection | валидировать полный config в реальном порядке, проверить hot reload; restart использовать как fallback |
 
 ## 29.6. Сгенерировать shell-событие и прочитать alert
 
@@ -441,7 +468,8 @@ startup log успешны; название поля совместимо с в
 
 ```bash
 sudo systemctl is-active --quiet "$falco_unit" && echo 'Falco systemd unit: active'
-sudo falco --validate /etc/falco/falco_rules.local.yaml
+sudo falco -c /etc/falco/falco.yaml --dry-run
+# Убедитесь по журналу, что watch_config_files применил local rules без restart.
 sudo journalctl -u "$falco_unit" -b --no-pager | tail -n 100
 ```
 
@@ -479,7 +507,8 @@ kubectl -n falco describe daemonset falco
   review изменений rules.
 
   ```bash
-  falcoctl artifact install falco-rules:<verified-rules-version>
+  FALCO_RULES_VERSION="${FALCO_RULES_VERSION:?set verified falco-rules artifact version}"
+  falcoctl artifact install "falco-rules:${FALCO_RULES_VERSION}"
   falcoctl artifact list
   sudo falco -c /etc/falco/falco.yaml --dry-run
   ```
@@ -510,6 +539,26 @@ kubectl -n falco describe daemonset falco
 - **Комбинируйте контроли.** Falco обнаруживает действие, но не исправляет CVE и не
   запрещает опасный Pod сам по себе. Его связывают с image scan, admission policy,
   read-only filesystem, audit logs, NetworkPolicy и incident response.
+
+> **Production note, не экзаменационный материал.** Falco - детектор: он видит syscall и
+> сообщает о нём alert'ом уже **после** того, как действие произошло. **Cilium Tetragon** -
+> принципиально другая модель: используя eBPF LSM hooks, он может **заблокировать** действие
+> **inline**, в момент попытки, а не только сообщить о нём постфактум - например, запретить
+> сам `execve` или открытие файла, а не просто зафиксировать его выполнение. Это тот же
+> класс различия, что между Gatekeeper/Kyverno как admission-контролем и логированием после
+> факта: detection и enforcement - разные гарантии, и одно не заменяет другое.
+>
+> Экосистема eBPF runtime-инструментов шире одного Tetragon: **Aqua Tracee** и **Inspektor
+> Gadget** - тоже eBPF-based, но остаются в модели observability/detection, как и Falco;
+> ни один из них не даёт inline-блокировку, сравнимую с Tetragon. Полноценный runtime
+> hardening обычно комбинирует detection-слой (Falco или аналог, для широкого покрытия
+> известных паттернов через community rules) с enforcement-слоем (Tetragon LSM policy, для
+> узкого набора критичных операций, которые нужно не просто увидеть, а не допустить).
+>
+> Tetragon не входит в CKS curriculum и не заменяет Falco как экзаменационный материал этой
+> главы. Упомянут здесь как production-расширение модели threat detection: если задача
+> требует не просто увидеть подозрительное действие, а гарантированно его не допустить,
+> Falco для этого не предназначен по архитектуре, а не по недостатку правил.
 
 ## 29.9. Мини-глоссарий
 
@@ -556,6 +605,15 @@ kubectl -n falco describe daemonset falco
 процесс. Ценность создаёт не сам агент, а полное покрытие нод, versioned rules, качественный
 контекст, управляемый уровень шума и связка alert с incident-response процессом.
 
+> ### 🔴 Взгляд атакующего
+> **Asset:** видимость runtime-аномалий для security team.
+> **Starting foothold:** RCE в container с возможностью выбрать выполняемое действие.
+> **Attacker objective:** выполнить подозрительное действие — например, запись в `/etc` или сетевое соединение с C2 — без alert.
+> **Abuse path:** выбрать действие, не покрытое активным rule set/driver, либо воспользоваться неверно выбранным systemd unit, из-за которого engine не запустился.
+> **Expected evidence:** Falco alert/event с корректным container/process context.
+> **Control:** включённый и active правильный driver-specific unit, а также custom/tuned rules без избыточного false-positive suppression.
+> **Retest:** та же подозрительная операция генерирует alert после исправления.
+
 ## 29.12. Вопросы для самопроверки
 
 1. Почему успешный image scan не заменяет runtime detection?
@@ -577,6 +635,7 @@ kubectl -n falco describe daemonset falco
 custom rule с проверяемым output и сохранить evidence для `check_result`.
 
 🧪 Лаба 112 (Runtime: Falco, audit-логи и иммутабельность): [tasks/cks/labs/112](../../labs/112/README_RU.MD)
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [falco-change-rule](https://killercoda.com/killer-shell-cks/scenario/falco-change-rule)
 
 Для формата экзаменационных заданий и работы с `check_result` используйте также
 [лабораторные материалы CKA](../../../cka/labs/112/README_RU.MD). Содержание CKS-лабы

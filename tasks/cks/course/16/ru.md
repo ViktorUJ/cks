@@ -5,7 +5,7 @@
 > **Что дальше.** В главах 14-15 мы уменьшили поверхность хоста и доступ к нему. Теперь
 > добавим обязательный контроль доступа (MAC) для процессов контейнера: AppArmor разрешает
 > только явно описанные действия с файлами, capabilities, сетью и другими объектами ядра.
-> Это домен **System Hardening** CKS (15%). В следующей главе тот же defence-in-depth
+> Это домен **System Hardening** CKS (10%). В следующей главе тот же defence-in-depth
 > достроит seccomp, фильтрующий системные вызовы.
 
 > **Что нужно из CKA.** Базовый `securityContext`, non-root запуск, capabilities и
@@ -72,7 +72,9 @@ Profile - policy с уникальным именем, загружаемая в
 | `complain` | операция разрешается, но нарушение записывается в audit/log | наблюдение за реальной нагрузкой и доработка policy |
 
 `complain` не является защитой: он собирает данные для построения минимальной policy.
-Нельзя оставить его как постоянную компенсацию ошибок приложения. После ревью разрешений
+Операции, не разрешённые profile, в этом режиме обычно пропускаются и журналируются, но
+**явный `deny` продолжает блокировать** совпавшую операцию. Нельзя оставить `complain`
+как постоянную компенсацию ошибок приложения. После ревью разрешений
 переводите profile в `enforce` и проверяйте полезный сценарий вместе с ожидаемым отказом.
 
 Минимальный демонстрационный profile показывает принцип. Правило `/** rix,` намеренно
@@ -132,7 +134,9 @@ sudo aa-enforce /etc/apparmor.d/k8s-demo
 sudo apparmor_parser -R /etc/apparmor.d/k8s-demo
 ```
 
-`-r` заменяет загруженную версию; `-R` выгружает её. Перед удалением найдите Pod и процессы,
+`-r` заменяет загруженную версию; `-R` выгружает её. `aa-complain` и `aa-enforce`
+переключают режим уже загруженного profile и сами выполняют его reload: restart Pod для
+самой смены режима не требуется. Перед удалением найдите Pod и процессы,
 которые ещё могут её использовать. Не редактируйте policy на production-ноде наугад: ошибка
 может не дать workload стартовать либо сломать приложение после reload. Сначала проверяйте
 синтаксис и rollout на выделенной ноде.
@@ -349,21 +353,22 @@ sudo journalctl -k --since '10 minutes ago' | \
   grep -E 'apparmor="DENIED"|profile="k8s-demo"'
 ```
 
-В `complain` та же операция пройдёт, но станет telemetry. Переводить profile в complain
-надо до создания **нового** test Pod или контролируемого restart workload: уже работающий
-процесс не является надёжной проверкой того, какой profile назначит runtime следующему
-container.
+В `complain` операция, для которой **нет разрешающего правила**, обычно пройдёт и
+станет telemetry. Однако в демонстрационном profile есть `deny /etc/shadow r,`, поэтому
+`cat /etc/shadow` остаётся заблокированным и в `complain`: это корректная проверка силы
+явного запрета, а не демонстрация telemetry. `aa-complain` сразу меняет режим уже
+загруженного profile; restart Pod для этого не нужен. Новый Pod или restart нужны отдельно,
+если надо проверить назначение profile runtime при **новом** старте контейнера.
 
 ```bash
-# На целевой ноде: наблюдение, test/restart Pod, сбор событий.
+# На целевой ноде: переключить уже загруженный profile и подтвердить explicit deny.
 sudo aa-complain /etc/apparmor.d/k8s-demo
 sudo aa-status | grep -F 'k8s-demo'
-
-kubectl delete pod -n demo apparmor-localhost
-kubectl apply -f apparmor-localhost.yaml
-kubectl wait -n demo --for=condition=Ready pod/apparmor-localhost --timeout=120s
 kubectl exec -n demo apparmor-localhost -- cat /etc/shadow
+# Ожидается Permission denied: explicit deny действует и в complain.
 
+# Для telemetry используйте отдельный учебный profile без explicit deny для тестируемого пути
+# либо временно сузьте его allow-правила на изолированной test-ноде; не убирайте deny в production.
 sudo journalctl -k --since '10 minutes ago' | grep -Ei 'apparmor|k8s-demo'
 
 # После review минимальных разрешений вернуть настоящий барьер.
@@ -396,7 +401,10 @@ change record. `complain`-лог показывает, что приложени
   совместимого workload. Кастомный `Localhost` profile вводите для измеренной угрозы и
   известного процесса, а не как необоснованный deny-list.
 - **Complain ограничен по времени.** Соберите требуемые операции на representative
-  traffic, проведите review, включите enforce и поставьте alert на новые denials.
+  traffic, проведите review, включите enforce и поставьте alert на новые denials. Для
+  начальной policy запустите приложение под `aa-genprof`, затем обработайте журнал через
+  `aa-logprof` (или вручную); не принимайте предлагаемые разрешения автоматически,
+  повторите positive/negative tests и только затем включайте enforce.
 - **Policy и scheduling связаны.** AppArmor зависит от ноды. Либо доставляйте profile на
   все допустимые ноды, либо явно ограничивайте placement и проверяйте label/node pool.
 - **Не один барьер.** Profile сочетается с non-root, `allowPrivilegeEscalation: false`,
@@ -446,6 +454,123 @@ scheduling/profile delivery от настоящего denial. Старую annot
 разрешений и alert на `DENIED` создают проверяемую boundary вместо «файла policy где-то на
 ноде».
 
+### 16.12.1. Troubleshooting: «Профиль не работает, потому что…»
+
+Ниже `NS`, `POD` и `CTR` обозначают namespace, Pod и container. Сначала всегда выясните
+фактическую ноду: диагностика AppArmor на другой ноде не доказывает ничего о контейнере.
+
+#### Profile не загружен на ноде, куда scheduler поместил Pod
+
+В multi-node кластере `apparmor_parser` мог быть успешно выполнен на `worker-1`, но Pod
+оказался на `worker-2`. Kubernetes не переносит profile между нодами и scheduler не читает
+содержимое kernel policy. В результате `Localhost` обычно даёт ошибку создания container,
+либо rollout работает только у части реплик.
+
+```bash
+NS=demo
+POD=apparmor-localhost
+
+kubectl get pod -n "$NS" "$POD" -o wide
+kubectl describe pod -n "$NS" "$POD"
+# Подключитесь именно к node из столбца NODE.
+sudo aa-status | grep -F 'k8s-demo'
+sudo journalctl -u kubelet --since '15 minutes ago'
+```
+
+Исправление: доставьте и загрузите profile через `sudo apparmor_parser -r -W` на каждой
+ноде допустимого pool до rollout либо закрепите Pod `nodeSelector`/affinity за pool с
+управляемой доставкой. Не исправляйте это заменой `Localhost` на `Unconfined`.
+
+#### Имя в manifest не совпадает с именем внутри profile
+
+`localhostProfile` и legacy-значение `localhost/<name>` ссылаются на имя, объявленное в
+самом profile, а не обязательно на имя файла. Для файла `/etc/apparmor.d/k8s-demo` это
+именно строка `profile k8s-demo {`; запись `profile web-app {` требует
+`localhostProfile: web-app`, даже если имя файла осталось `k8s-demo`.
+
+```bash
+# На фактической node: сравните имя в policy и реально загруженное имя.
+sudo grep -nE '^[[:space:]]*profile[[:space:]]+' /etc/apparmor.d/k8s-demo
+sudo aa-status | grep -F 'k8s-demo'
+sudo aa-status | grep -F 'web-app'
+
+# В Kubernetes: проверьте и новый API, и legacy annotation при миграции.
+kubectl get pod -n "$NS" "$POD" \
+  -o jsonpath='{.spec.securityContext.appArmorProfile.localhostProfile}{"\n"}'
+kubectl describe pod -n "$NS" "$POD"
+```
+
+Исправление: приведите к одному точному имени declaration, `localhostProfile` и, если она
+ещё используется, legacy annotation. Затем reload profile через `apparmor_parser -r -W` и
+создайте новый Pod; старый процесс не является доказательством назначения исправленной
+policy.
+
+#### В `complain` приложение работает, а в `enforce` получает `Permission denied`
+
+Обычно в policy нет необходимого `allow` для пути или операции, например для каталога
+runtime, сертификата, Unix-socket или файла, который приложение читает только после
+старта. В `complain` отсутствие allow обычно только журналируется; в `enforce` оно
+блокируется. Явный `deny` отличается: он блокирует и в `complain`, поэтому не удаляйте его
+ради проверки.
+
+```bash
+# На фактической node после контролируемого воспроизведения отказа.
+sudo aa-status | grep -F 'k8s-demo'
+sudo journalctl -k --since '10 minutes ago' | \
+  grep -E 'apparmor="DENIED"|profile="k8s-demo"' || true
+sudo dmesg | grep -i apparmor || true
+
+# В Kubernetes зафиксируйте container и наблюдаемый симптом.
+kubectl describe pod -n "$NS" "$POD"
+kubectl logs -n "$NS" "$POD" -c "$CTR" --tail=100
+```
+
+Исправление: сопоставьте `operation=` и `name=` из denial с контрактом приложения,
+добавьте минимальное обоснованное allow-правило на test-ноде, проверьте positive и negative
+сценарии и только затем включайте `aa-enforce`. Не добавляйте широкое `/** rw,` и не
+переводите production workload в бессрочный `complain`.
+
+#### Нода или runtime не поддерживает AppArmor, либо profile только лежит в файле
+
+AppArmor требует Linux kernel с включённым и активным LSM; на не-Linux ноде, ядре без
+AppArmor или runtime без поддержки назначение profile не станет работающим барьером.
+Отдельно, kubelet **не** сканирует каталог и не загружает AppArmor policy: файл в
+`/etc/apparmor.d/` сам по себе бесполезен, пока `apparmor_parser` не передал его kernel.
+Проверьте это до поиска ошибки в YAML.
+
+```bash
+# На фактической node.
+uname -s
+sudo cat /sys/module/apparmor/parameters/enabled 2>/dev/null || true
+sudo aa-status
+sudo dmesg | grep -i apparmor || true
+sudo journalctl -k --since '15 minutes ago' | grep -Ei 'apparmor|lsm' || true
+sudo journalctl -u kubelet --since '15 minutes ago'
+
+# Kubernetes event часто указывает на неподдерживаемый runtime или незагруженный profile.
+kubectl describe pod -n "$NS" "$POD"
+```
+
+Исправление: используйте Linux node pool с включённым AppArmor и совместимым runtime либо
+не объявляйте AppArmor как обязательный control на такой платформе. Для поддерживаемой ноды
+храните файл в управляемой конфигурации и явно загружайте его `apparmor_parser` на каждой
+целевой ноде; не рассчитывайте на kubelet directory как на механизм доставки policy.
+
+> ### 🔴 Взгляд атакующего
+> **Asset:** host filesystem и syscalls, доступные контейнеру.
+>
+> **Starting foothold:** RCE в контейнере.
+>
+> **Attacker objective:** выполнить действие за пределами приложения: обратиться к защищённому path или выполнить запрещённый syscall.
+>
+> **Abuse path:** попытаться выйти за границы profile, если он неправильно загружен, назван или находится в `complain` вместо `enforce`.
+>
+> **Expected evidence:** `aa-status`, denial events в `dmesg` и `journalctl -k`.
+>
+> **Control:** верифицированный profile в режиме `enforce` и проверка через `aa-status`.
+>
+> **Retest:** запрещённая операция остаётся заблокированной после исправления.
+
 ## 16.13. Вопросы для самопроверки
 
 1. Почему AppArmor не заменяет UID/GID, capabilities, seccomp или RBAC?
@@ -470,6 +595,15 @@ seccomp: AppArmor ограничит объекты и операции profile,
 
 🧪 Лаба 106 (SecurityContext и capabilities):
 [tasks/cka/labs/106](../../../cka/labs/106/README_RU.MD)
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [apparmor](https://killercoda.com/killer-shell-cks/scenario/apparmor)
+
+## Ссылки
+
+- [Kubernetes: Restrict a Container's Access to Resources with AppArmor](https://kubernetes.io/docs/tutorials/security/apparmor/)
+- [Kubernetes API: AppArmorProfile](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#AppArmorProfile)
+- [AppArmor: официальная документация](https://apparmor.net/)
+- [AppArmor project: Wiki](https://gitlab.com/apparmor/apparmor/-/wikis/home)
+- [Kubernetes: Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 15](../15/ru.md) · [Глава 17](../17/ru.md)

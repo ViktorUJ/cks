@@ -5,7 +5,7 @@
 > **Что дальше.** В главе 07 мы проверяли и усиливали конфигурацию компонентов кластера.
 > Теперь защитим публичную точку входа приложений. **Ingress с TLS** шифрует HTTP-трафик
 > между клиентом и ingress controller, подтверждает имя сервера и не даёт перехватчику
-> незаметно прочитать или подменить запрос. Это домен Cluster Setup (10%) CKS.
+> незаметно прочитать или подменить запрос. Это домен Cluster Setup (15%) CKS.
 
 > **Что нужно из CKA.** Базовый синтаксис Ingress, Service и маршрутизация по host/path
 > разобраны в [главе 32 CKA](../../../cka/course/32/ru.md). Устройство TLS, сертификат,
@@ -30,7 +30,7 @@ transparent encryption, которая рассматривается в гла�
 ```mermaid
 flowchart LR
     client["Клиент"] -->|"HTTP: пароль и cookie<br>видны в сети"| bad["Перехватчик"]
-    client -->|"HTTPS: TLS handshake<br>и шифрование"| ingress["NGINX Ingress Controller<br>TLS termination"]
+    client -->|"HTTPS: TLS handshake<br>и шифрование"| ingress["Ingress/Gateway controller<br>TLS termination"]
     ingress -->|"HTTP или TLS<br>внутри кластера"| service["Service"]
     service --> pod["Pod приложения"]
     style client fill:#326ce5,color:#fff
@@ -202,9 +202,9 @@ Secret. Событие об ошибке чтения Secret, пустое по�
 означают, что запрос ещё не готов проверять TLS: сначала исправьте controller, Secret,
 Service или готовность Pod.
 
-## 08.5. ingress-nginx для экзамена: redirect и границы аннотаций
+## 08.5. ingress-nginx: retired-controller и границы аннотаций
 
-> **NGINX Ingress Controller retired.** Проект `ingress-nginx` объявлен retired (март 2026) и больше не получает релизов и security-фиксов ([анонс](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)). Экзамен CKS сохраняет компетенцию «Ingress с TLS» и может использовать NGINX Ingress как готовый fixture, поэтому его синтаксис (`ingressClassName: nginx`, аннотации) нужен для экзамена. Но для production не разворачивайте retired-controller на новых кластерах: выбирайте поддерживаемый Ingress Controller или мигрируйте на Gateway API. Навык `spec.tls` + TLS Secret универсален и от конкретного controller не зависит.
+> **NGINX Ingress Controller retired.** С марта 2026 проект `ingress-nginx` retired и больше не получает релизов и security-фиксов ([анонс](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)). CKS требует корректно настроенный Ingress с TLS, но публичная компетенция не гарантирует конкретный controller или nginx-specific annotations. На экзамене сначала проверяйте controller, данный лабораторией; синтаксис `ingressClassName: nginx` и его аннотации — лишь возможный fixture. Для production не разворачивайте retired-controller на новых кластерах: выбирайте поддерживаемую реализацию или Gateway API. Переносимая часть — TLS Secret, `spec.tls`, host/SNI, SAN, Service endpoints и проверка HTTPS — не зависит от controller.
 
 Даже корректный TLS Ingress оставляет риск, если HTTP остаётся доступным: пользователь может
 перейти по старой ссылке, а cookie или форма уйдут до первого HTTPS-ответа. Для
@@ -258,6 +258,12 @@ spec:
 
 ### Gateway API: текущий production-путь
 
+Gateway API описывает три TLS-модели: **edge termination** (HTTPS listener расшифровывает
+трафик на Gateway), **TLS passthrough** (Gateway передаёт TLS-handshake backend без
+termination) и TLS к backend после termination (ре-encryption). Для последней модели
+`BackendTLSPolicy` из Gateway API v1.4.0 — GA в Standard Channel — задаёт SNI и проверку
+certificate backend. Поддержка конкретной модели зависит от Gateway controller.
+
 Для нового production-кластера используйте поддерживаемую реализацию Gateway API. В примере
 ниже `platform-gateway` - **implementation-specific** имя `GatewayClass`: его предоставляет
 выбранный Gateway controller, это не стандартное значение Kubernetes. `certificateRefs`
@@ -306,42 +312,94 @@ spec:
 
 Если Gateway также открывает порт 80, добавьте отдельный HTTP listener и `HTTPRoute` с
 стандартным фильтром `RequestRedirect` на `https`; не смешивайте его с HTTPS-route к backend.
+
+### TLS passthrough: `TLSRoute`
+
+Для backend, который сам завершает TLS (например, ему нужен собственный certificate или
+mTLS), Gateway не расшифровывает соединение: listener имеет `protocol: TLS` и
+`tls.mode: Passthrough`, а маршрут выбирается по SNI. `TLSRoute` является GA в Standard
+Channel Gateway API v1.5.0. Минимальный пример ниже передаёт TLS для `app.example.test`
+Service `web-tls` на порт 443; controller обязан поддерживать TLSRoute и passthrough.
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: passthrough-gateway
+  namespace: web
+spec:
+  gatewayClassName: platform-gateway
+  listeners:
+  - name: tls
+    protocol: TLS
+    port: 443
+    hostname: app.example.test
+    tls:
+      mode: Passthrough
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: web-tls-passthrough
+  namespace: web
+spec:
+  parentRefs:
+  - name: passthrough-gateway
+    sectionName: tls
+  hostnames:
+  - app.example.test
+  rules:
+  - backendRefs:
+    - name: web-tls
+      port: 443
+```
+
+При passthrough Secret с certificate находится у backend, а не в `certificateRefs` Gateway;
+проверьте SNI/SAN certificate именно backend и его endpoints.
+
+Ссылке Gateway на `Secret` в другом namespace необходим явный `ReferenceGrant` **в
+namespace Secret**; без него controller не должен принять cross-namespace reference.
+Не переносите эту логику на `BackendTLSPolicy`: cross-namespace ссылки на certificate/CA
+для backend TLS не разрешены, даже при наличии `ReferenceGrant`.
+
 Проверьте поддерживаемые `GatewayClass` через `kubectl get gatewayclass` и статус Gateway
 перед миграцией трафика.
 
-## 08.6. Проверка: redirect, HTTPS, host и сертификат
+## 08.6. Проверка: controller-neutral HTTPS, host и сертификат
 
-Получите IP или hostname ingress controller. Для локального кластера может понадобиться
-адрес NodePort или `kubectl port-forward`; для LoadBalancer дождитесь внешнего адреса.
+Сначала определите реальную публичную точку входа: адрес Service выбранного Ingress/Gateway
+controller, hostname LoadBalancer либо адрес, опубликованный используемым fixture. Для
+локального кластера может понадобиться адрес NodePort или `kubectl port-forward`; для
+LoadBalancer дождитесь внешнего адреса. Не предполагается namespace или имя Service
+конкретного controller.
 
 ```bash
-kubectl -n ingress-nginx get service ingress-nginx-controller
-kubectl -n web get ingress web-secure
+kubectl get ingressclass
+kubectl get gatewayclass
+kubectl -n web get ingress,gateway,httproute,tlsroute
+kubectl -n web get endpointslices -l kubernetes.io/service-name=web
 
 export HOST=app.example.test
-export INGRESS_IP=203.0.113.10  # замените на адрес ingress controller
+export ENTRYPOINT_IP=203.0.113.10  # замените на адрес выбранного controller
 ```
 
 Если тестовый host не опубликован в DNS, `--resolve` заставит `curl` использовать
-`INGRESS_IP`, сохранив правильный Host header и SNI. Первая команда должна показать
-`308` и `Location: https://app.example.test/...`; `-I` не следует за redirect.
+`ENTRYPOINT_IP`, сохранив правильный Host header и SNI. Переносимая проверка — успешный
+HTTPS-вызов к backend с правильным SNI и host; `-k` допустим здесь только потому, что
+сертификат self-signed:
 
 ```bash
-# HTTP не обслуживает приложение: постоянный redirect на HTTPS
-curl -kvI --resolve "${HOST}:80:${INGRESS_IP}" "http://${HOST}/"
-
-# Следовать redirect. Оба --resolve нужны для портов 80 и 443.
-curl -kvL \
-  --resolve "${HOST}:80:${INGRESS_IP}" \
-  --resolve "${HOST}:443:${INGRESS_IP}" \
-  "http://${HOST}/"
-
-# TLS-запрос приходит к backend и должен вернуть 200.
-# -k допустим здесь только потому, что сертификат self-signed.
 curl -kvsS -o /dev/null -w 'HTTP %{http_code}\n' \
-  --resolve "${HOST}:443:${INGRESS_IP}" \
+  --resolve "${HOST}:443:${ENTRYPOINT_IP}" \
   "https://${HOST}/"
 # HTTP 200
+```
+
+HTTP -> HTTPS redirect и его статус зависят от controller. **Только если fixture использует
+`ingress-nginx`** с `spec.tls`, можно отдельно ожидать `308` и `Location`:
+
+```bash
+curl -kvI --resolve "${HOST}:80:${ENTRYPOINT_IP}" "http://${HOST}/"
 ```
 
 Проверяйте не только статус `200`, но и сертификат, который получил клиент. `-servername`
@@ -349,7 +407,7 @@ curl -kvsS -o /dev/null -w 'HTTP %{http_code}\n' \
 certificate.
 
 ```bash
-openssl s_client -connect "${INGRESS_IP}:443" -servername "${HOST}" </dev/null 2>/dev/null \
+openssl s_client -connect "${ENTRYPOINT_IP}:443" -servername "${HOST}" </dev/null 2>/dev/null \
   | openssl x509 -noout -subject -issuer -ext subjectAltName
 # subject=CN = app.example.test
 # X509v3 Subject Alternative Name:
@@ -422,18 +480,21 @@ controller действительно перечитал обновлённый 
   можно задать как явное переопределение только для ingress-nginx; `force-ssl-redirect`
   нужен для external TLS offload без блока `spec.tls`.
 - Для новых production-кластеров используйте Gateway API: HTTPS listener с
-  `certificateRefs` и `HTTPRoute`; `GatewayClass` выбирается реализацией.
+  `certificateRefs` и `HTTPRoute`; выберите edge termination, TLS passthrough или
+  re-encryption к backend через `BackendTLSPolicy`. `GatewayClass` выбирается реализацией,
+  а cross-namespace Secret требует `ReferenceGrant` в namespace Secret.
 - Проверка должна включать SNI и SAN сертификата, Service endpoints и события Ingress, а не
   только наличие YAML-объектов.
 
 ## 08.10. Как это пригодится: на экзамене и в реальной работе
 
-**На экзамене.** Нужно быстро сгенерировать certificate для заданного host, до создания
-Secret сверить public key certificate/key и цепочку, сослаться на Secret в `spec.tls` Ingress
-и подтвердить конфигурацию. Внимательно проверяйте namespace, `secretName`, `hosts` и
-`ingressClassName`. Для ingress-nginx TLS Ingress по умолчанию перенаправляет HTTP на HTTPS;
-в задаче с external TLS offload без `spec.tls` может понадобиться `force-ssl-redirect`.
-Ожидайте 308 на HTTP и успешный HTTPS-вызов через `curl --resolve`.
+**На экзамене.** Переносимый минимум: сгенерировать certificate для заданного host и
+проверить SAN, создать TLS Secret, сослаться на него через `spec.tls`, сверить host/SNI/SAN,
+убедиться, что выбранные controller и backend endpoints существуют, и выполнить успешный
+HTTPS-вызов через `curl --resolve`. Всегда проверяйте namespace, `secretName`, `hosts` и
+`ingressClassName` либо Gateway route. `308`, `ssl-redirect` и
+`force-ssl-redirect` — детали **только fixture с ingress-nginx**: используйте их лишь если
+задача явно предоставляет этот controller и требует соответствующую топологию.
 
 **В реальной работе.** Secure Ingress - граница между недоверенным клиентом и приложением.
 Надёжная конфигурация объединяет автоматическую ротацию certificate, минимальный доступ к
@@ -462,6 +523,8 @@ endpoint без ожидаемой защиты.
 
 🧪 Лаба 103 (CIS, Secure Ingress TLS, TLS hardening и проверка бинарников):
 [tasks/cks/labs/103](../../labs/103/README_RU.MD)
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [ingress-create](https://killercoda.com/killer-shell-cks/scenario/ingress-create) · [ingress-secure](https://killercoda.com/killer-shell-cks/scenario/ingress-secure)
 
 🎮 Killercoda (в браузере, без установки): [Ingress Controller](https://killercoda.com/kubernetes-basics/course/kubernetes-fundamentals/ingress-controller) · [Create TLS Certificate](https://killercoda.com/kubernetes-basics/course/kubernetes-fundamentals/create-tls-certificate)
 

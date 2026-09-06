@@ -120,7 +120,7 @@ compiler, package cache и исходники. Последний stage полу
 ```dockerfile
 # syntax=docker/dockerfile:1.7
 # Dockerfile
-FROM golang:1.27.1-alpine3.24 AS builder
+FROM golang:1.27.1-alpine3.24@sha256:<проверенный-digest> AS builder
 WORKDIR /src
 
 # Редко меняющиеся dependency manifests выше кода: лучше cache.
@@ -223,7 +223,7 @@ BuildKit/Podman secret mounts.
 `USER` указан явно, чтобы намерение было видно в Dockerfile.
 
 ```dockerfile
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:<проверенный-digest>
 COPY --from=builder /out/server /server
 USER 65532:65532
 ENTRYPOINT ["/server"]
@@ -256,10 +256,13 @@ RUN rm /root/.npmrc
 FROM node:22.14.0-alpine3.21 AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
+# Build-инструменты (TypeScript, Vite, webpack и т. п.) обычно находятся в devDependencies.
 RUN --mount=type=secret,id=npmrc,target=/root/.npmrc \
-    npm ci --omit=dev
+    npm ci
 COPY . .
 RUN npm run build
+# Удаляем devDependencies только после сборки; в runtime-stage копируют artefacts и нужные зависимости.
+RUN npm prune --omit=dev
 ```
 
 ```bash
@@ -293,6 +296,7 @@ artifacts и большие каталоги. `.dockerignore` уменьшает
 .gitignore
 .env
 .env.*
+.npmrc
 *.pem
 *.key
 id_rsa
@@ -491,6 +495,15 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 содержимое, UID и историю проверки. Это позволяет следующему шагу supply chain - SBOM,
 сканированию, подписи и admission policy - работать с точно определённым образом.
 
+> ### 🔴 Взгляд атакующего
+> **Asset:** секреты и credentials в build-временных файлах, например `.npmrc` и token.
+> **Starting foothold:** доступ к Dockerfile/build context либо возможность исследовать собранный image.
+> **Attacker objective:** найти credential, забытый в промежуточных слоях image.
+> **Abuse path:** исследовать `docker history` и извлечь layers image, чтобы восстановить credential из предыдущих стадий multi-stage build, если secret не исключён через `.dockerignore` или передан в build stage не через `--mount=type=secret`.
+> **Expected evidence:** `docker history` и `trivy image` не находят secret в layers.
+> **Control:** BuildKit `--mount=type=secret`, `.dockerignore` для файлов с credentials и multi-stage build без secret в финальном слое.
+> **Retest:** повторное извлечение layers не даёт credential.
+
 ## 24.11. Вопросы для самопроверки
 
 1. Почему shell и package manager в runtime image увеличивают последствия RCE, хотя их
@@ -512,6 +525,8 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 
 🧪 Лаба 111 (минимальный образ, multi-stage, non-root и инспекция artifact):
 [tasks/cks/labs/111](../../labs/111/README_RU.MD)
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [container-image-footprint-user](https://killercoda.com/killer-shell-cks/scenario/container-image-footprint-user) · [container-hardening](https://killercoda.com/killer-shell-cks/scenario/container-hardening)
 
 Для базы Dockerfile и образов повторите [главу 23 CKA](../../../cka/course/23/ru.md);
 для ограничений процесса в Pod - [главу 20 CKA](../../../cka/course/20/ru.md).

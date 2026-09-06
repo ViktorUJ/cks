@@ -1,0 +1,215 @@
+schema_version: 1
+checked_at: "2026-09-06"
+
+# Источник структуры: tasks/cks/course/CKS_RU.md ("Домены CKS и главы",
+# "Компетенция → глава", "Домен → лабы"). Обновляйте эту карту вручную при изменении
+# CKS_RU.md - файл не генерируется автоматически.
+#
+# relevance: core - прямо требуется curriculum и должен уметь кандидат;
+#            deep_dive - помогает решать/troubleshoot CKS, выходит за формальный minimum;
+#            production - выходит за экзамен, но усиливает инженера.
+
+domains:
+
+  cluster_setup:
+    weight: 15
+    chapters: ["04", "05", "06", "07", "08", "09"]
+    competencies:
+      network_policy:
+        relevance: core
+        theory: ["course/04/ru.md", "course/05/ru.md", "course/06/ru.md"]
+        labs: ["labs/101", "labs/102"]
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
+      cis_benchmark:
+        relevance: core
+        theory: ["course/07/ru.md"]
+        labs: ["labs/103"]
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
+      ingress_tls:
+        relevance: core
+        theory: ["course/08/ru.md"]
+        labs: ["labs/103"]
+        mocks: []
+      node_metadata_endpoints:
+        relevance: core
+        theory: ["course/05/ru.md", "course/09/ru.md"]
+        labs: ["labs/101"]
+        mocks: []
+      verify_platform_binaries:
+        relevance: core
+        theory: ["course/09/ru.md"]
+        labs: ["labs/103"]
+        mocks: []
+
+  cluster_hardening:
+    weight: 15
+    chapters: ["10", "11", "12", "13"]
+    competencies:
+      rbac:
+        relevance: core
+        theory: ["course/10/ru.md"]
+        labs: ["labs/104"]
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
+      service_accounts:
+        relevance: core
+        theory: ["course/11/ru.md"]
+        labs: ["labs/104"]
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
+      restrict_api_access:
+        relevance: core
+        theory: ["course/12/ru.md", "course/09/ru.md"]
+        labs: ["labs/104"]
+        mocks: []
+      upgrade_kubernetes:
+        relevance: core
+        theory: ["course/13/ru.md"]
+        labs: []
+        mocks: []
+
+  system_hardening:
+    weight: 10
+    chapters: ["14", "15", "16", "17"]
+    competencies:
+      host_os_footprint:
+        relevance: core
+        theory: ["course/14/ru.md"]
+        labs: ["labs/105"]
+        mocks: []
+      least_privilege_host:
+        relevance: core
+        theory: ["course/15/ru.md"]
+        labs: ["labs/105"]
+        mocks: []
+      apparmor:
+        relevance: core
+        theory: ["course/16/ru.md", "course/03/ru.md"]
+        labs: ["labs/106"]
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
+      seccomp:
+        relevance: core
+        theory: ["course/17/ru.md", "course/03/ru.md"]
+        labs: ["labs/106"]
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
+
+  minimize_microservice_vulnerabilities:
+    weight: 20
+    chapters: ["18", "19", "20", "21", "22", "23"]
+    competencies:
+      pod_security_standards:
+        relevance: core
+        theory: ["course/18/ru.md", "course/19/ru.md"]
+        labs: ["labs/107"]
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
+      admission_policies:
+        relevance: core
+        theory: ["course/20/ru.md"]
+        labs: ["labs/108"]
+        mocks: []
+      secrets_management:
+        relevance: core
+        theory: ["course/21/ru.md"]
+        labs: ["labs/109"]
+        mocks: ["mock/01", "mock/02", "mock/03", "mock/04"]
+      isolation_multitenancy:
+        relevance: core
+        theory: ["course/22/ru.md"]
+        labs: ["labs/110"]
+        mocks: []
+      pod_to_pod_encryption:
+        relevance: core
+        theory: ["course/23/ru.md"]
+        labs: ["labs/110"]
+        implementations: ["cilium", "istio"]
+        mocks: []
+
+  supply_chain_security:
+    weight: 20
+    chapters: ["24", "25", "26", "27", "28"]
+    competencies:
+      base_image_minimization:
+        relevance: core
+        theory: ["course/24/ru.md"]
+        labs: ["labs/111"]
+        mocks: []
+      sbom_cicd_artifact_repos:
+        relevance: core
+        theory: ["course/25/ru.md"]
+        labs: ["labs/111"]
+        mocks: []
+      artifact_signing_verification:
+        relevance: core
+        theory: ["course/26/ru.md"]
+        labs: ["labs/108", "labs/111"]
+        mocks: []
+      static_analysis:
+        relevance: core
+        theory: ["course/27/ru.md"]
+        labs: []
+        mocks: []
+      image_vulnerability_scanning:
+        relevance: core
+        theory: ["course/28/ru.md", "course/25/ru.md"]
+        labs: ["labs/111"]
+        mocks: []
+
+  monitoring_logging_runtime_security:
+    weight: 20
+    chapters: ["29", "30", "31", "32"]
+    competencies:
+      behavioral_analytics:
+        relevance: core
+        theory: ["course/29/ru.md"]
+        labs: ["labs/112"]
+        mocks: []
+      threat_detection:
+        relevance: core
+        theory: ["course/30/ru.md", "course/29/ru.md"]
+        labs: ["labs/112"]
+        mocks: []
+      attack_phase_investigation:
+        relevance: core
+        theory: ["course/02/ru.md", "course/30/ru.md"]
+        labs: ["labs/112"]
+        mocks: []
+      immutability:
+        relevance: core
+        theory: ["course/31/ru.md", "course/18/ru.md"]
+        labs: ["labs/112"]
+        mocks: []
+      audit_logs:
+        relevance: core
+        theory: ["course/32/ru.md"]
+        labs: ["labs/112"]
+        mocks: []
+
+foundation:
+  # Главы 01-03 - словарь модели угроз и Linux-механизмы, не привязаны к одному домену
+  # с весом на экзамене, но являются prerequisite для всех доменов выше.
+  chapters: ["01", "02", "03"]
+  relevance: core
+  note: >
+    Глава 01 - формат экзамена и exam snapshot. Глава 02 - threat model/OWASP Kubernetes
+    Top 10 2025, также используется в attack_phase_investigation (monitoring domain).
+    Глава 03 - Linux-изоляция (namespaces, cgroups, capabilities, User Namespaces),
+    prerequisite для apparmor/seccomp (system_hardening) и sandboxed containers
+    (minimize_microservice_vulnerabilities).
+
+tactics:
+  # Глава 33 - тактика экзамена, разрешённая документация, финальный чеклист.
+  chapters: ["33"]
+  relevance: core
+
+coverage_gaps:
+  # Известные несоответствия между официальной 6-доменной моделью и curriculum-map:
+  # заполняется вручную при аудите, не является автоматическим выводом.
+  - id: no_lab_for_rbac_upgrade
+    domain: cluster_hardening
+    competency: upgrade_kubernetes
+    note: "Компетенция upgrade_kubernetes (глава 13) не имеет отдельной лабы; проверяется частично моками."
+  - id: no_mock_coverage_several_competencies
+    note: >
+      Несколько core-компетенций (ingress_tls, node_metadata_endpoints, verify_platform_binaries,
+      restrict_api_access, upgrade_kubernetes, admission_policies, isolation_multitenancy,
+      pod_to_pod_encryption, все Supply Chain и все Runtime competencies) не имеют явного
+      mock-покрытия в этой карте. Это может отражать реальное покрытие моков 01-04 (нужна
+      отдельная проверка содержания каждого mock) либо пробел, который стоит устранить.

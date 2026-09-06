@@ -4,7 +4,7 @@
 
 Практический курс подготовки к **CKS (Certified Kubernetes Security Specialist)** - сертификации CNCF и Linux Foundation по защите Kubernetes. Это продолжение [курса CKA + CKAD](../../cka/course/README_RU.md): предполагается, что вы уже умеете администрировать кластер, работать с `kubectl`, RBAC, NetworkPolicy, SecurityContext, kubeadm и TLS. CKS не повторяет эту базу, а применяет её к моделям угроз, hardening и расследованию инцидентов.
 
-> **Версия Kubernetes и экзамен.** Материалы и лабы курса построены на Kubernetes `v1.36` - это **версия обучения**, на которой всё проверено. На дату проверки 2026-09-04 официальные страницы LF (основная страница CKS, «Important Instructions: CKS» и FAQ) согласованно указывают Kubernetes `v1.35` для экзаменационной среды CKS; актуальная программа CNCF по имени файла остаётся `CKS Curriculum v1.34` - curriculum version и exam environment version поддерживаются независимо. Перед экзаменом перепроверьте основную страницу CKS, Important Instructions и FAQ, а также версию, показанную в ExamUI. Подробный release-процесс описан в [политике версий](../VERSION_POLICY.md), русский стиль - в [STYLE_RU.md](../STYLE_RU.md).
+> **Версия Kubernetes и экзамен.** Основные комплексные лабораторные `101-112` проверены на Kubernetes `v1.36` - это **версия обучения** для core labs. Legacy labs `01-30` сохраняют отдельные exam-pattern стенды на Kubernetes `v1.28-v1.34` (разброс по `env.hcl` каждой лабы) и не входят в единый v1.36 compatibility baseline. На дату проверки 2026-09-06 официальные страницы LF (основная страница CKS, «Important Instructions: CKS» и FAQ) согласованно указывают Kubernetes `v1.35` для экзаменационной среды CKS; актуальная программа CNCF по имени файла остаётся `CKS Curriculum v1.34` - curriculum version и exam environment version поддерживаются независимо. Перед экзаменом перепроверьте основную страницу CKS, Important Instructions и FAQ, а также версию, показанную в ExamUI. Подробный release-процесс описан в [политике версий](../VERSION_POLICY.md), русский стиль - в [STYLE_RU.md](../STYLE_RU.md).
 
 ## Как устроен курс
 
@@ -18,7 +18,7 @@
 - 🟨 Monitoring, Logging & Runtime Security - 20%
 - ⬜ фундамент и подготовка к экзамену
 
-Для маршрута по экзамену используйте [путеводитель CKS](CKS_RU.md). Термины будут собраны в [глоссарии](GLOSSARY_RU.md).
+Для маршрута по экзамену используйте [путеводитель CKS](CKS_RU.md). Термины будут собраны в [глоссарии](GLOSSARY_RU.md). Production-current изменения Kubernetes v1.36, которые не привязаны к одному домену, собраны в [приложении Security Delta](APPENDIX_K8S_136_SECURITY_DELTA_RU.md).
 
 ## Официальная программа экзамена
 

@@ -156,8 +156,10 @@ mkdir -p /var/work/tests/artifacts/3
 
 ## Задание 4. DNS-aware egress через toFQDNs
 
-DNS разрешается отдельно: `toFQDNs` разрешает соединение с IP, полученными для FQDN, но не
-заменяет доступ к DNS-серверу.
+DNS разрешается отдельным L7 DNS proxy rule: `toFQDNs` разрешает соединение с IP,
+полученными для FQDN, но именно `toPorts.rules.dns` позволяет Cilium надёжно наблюдать DNS и
+формировать FQDN-to-IP mapping. Для FQDN отдельно ограничиваем разрешённый транспорт HTTPS
+(TCP/443), чтобы resolved IP не был доступен на произвольных портах.
 
 ```bash
 kubectl apply -f - <<'EOF'
@@ -179,21 +181,31 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
     - toFQDNs:
         - matchName: example.com
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
 EOF
 
 mkdir -p /var/work/tests/artifacts/4
 {
-  printf 'example.com: '
+  printf 'example.com HTTPS: '
   kubectl exec -n cks-102 frontend -- curl -k -sS --max-time 10 -o /dev/null -w '%{http_code}' https://example.com/
-  printf '\nwww.google.com: '
+  printf '\nexample.com HTTP: '
+  kubectl exec -n cks-102 frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://example.com:80/ || true
+  printf '\nwww.google.com HTTPS: '
   kubectl exec -n cks-102 frontend -- curl -k -sS --max-time 5 -o /dev/null -w '%{http_code}' https://www.google.com/ || true
   printf '\n'
 } > /var/work/tests/artifacts/4/fqdn.txt
 ```
 
-`example.com` возвращает успешный HTTP-статус, а `www.google.com` не должен вернуть 2xx/3xx.
+`example.com` по HTTPS возвращает успешный HTTP-статус; запрос к тому же FQDN по HTTP/TCP 80 и
+`www.google.com` не должны вернуть 2xx/3xx.
 
 ## Задание 5. Evidence из Hubble
 

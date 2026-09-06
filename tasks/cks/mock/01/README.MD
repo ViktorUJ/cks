@@ -9,13 +9,14 @@ This includes all available language translations of these pages (e.g. https://k
 
 **Tools:**
 
-**Trivy** documentation https://aquasecurity.github.io/trivy/
-
 **Falco** documentation https://falco.org/docs/
 This includes all available language translations of these pages (e.g. https://falco.org/zh/docs/)
 
-**App Armor**:
-Documentation https://gitlab.com/apparmor/apparmor/-/wikis/Documentation
+> **Note.** Trivy and AppArmor documentation are training-only references for this mock
+> and are **not** part of the official CKS globally allowed resources (see
+> [LF Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed#certified-kubernetes-security-specialist-cks)).
+> The current official global list is tracked in
+> [`../../metadata/cks-exam-snapshot.yaml`](../../metadata/cks-exam-snapshot.yaml).
 
 ![preview](./preview.png)
 

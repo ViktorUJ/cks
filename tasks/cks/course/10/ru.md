@@ -16,7 +16,14 @@
 RBAC отвечает на запрос API server сочетанием identity, `verb`, ресурса, namespace и иногда
 имени объекта. Разрешения **аддитивны**: если любой `RoleBinding` или `ClusterRoleBinding`
 даёт доступ, более узкая роль его не отнимает. Поэтому запрет нельзя выразить второй ролью:
-нужно удалить или сузить существующую привязку.
+нужно удалить или сузить существующую привязку. Kubernetes RBAC — **allow-only** модель: в ней нет отрицательных deny-правил и условий
+наподобие времени суток или source IP. Такие требования нельзя в общем случае переложить
+на admission: он запускается после authentication/authorization только для
+create/delete/modify (и некоторых custom verbs), а `get`, `list` и `watch` обходят admission
+layer. Для условной **авторизации API** нужен внешний/Webhook authorizer либо иной
+authorization/policy layer; source IP дополнительно ограничивают сетью — firewall,
+load balancer или NetworkPolicy, где это применимо. Admission policy подходит лишь для
+запросов, которые она действительно перехватывает, а не как замена RBAC conditions.
 
 Сценарий атаки типичен: разработчику или ServiceAccount дали `cluster-admin` «временно»,
 либо контроллер получил `verbs: ["*"]`. После компрометации его токена атакующий может
@@ -90,6 +97,9 @@ kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
 `impersonate`.
 
 ### 10.2.1. Constrained Impersonation: ограничить identity и действие
+
+> **Kubernetes 1.36+ / advanced.** Это production-материал сверх обязательного ядра CKS:
+> экзаменационный приоритет — точные обычные Role/Binding и минимальный `impersonate`.
 
 **Constrained Impersonation** - Beta в Kubernetes v1.36+ и включена по умолчанию. В отличие
 от обычного `impersonate`, она не даёт выполнять от имени цели всё, что та может. Для
@@ -187,7 +197,7 @@ kubectl get clusterrole "$ROLE_NAME" -o yaml
 |---|---|---|
 | `escalate` на `roles`/`clusterroles` | Позволяет создать или изменить роль с правами, которых нет у вызывающего субъекта. Без него API server не даст передать себе больше прав при обновлении роли. | Не выдавать workload и обычным администраторам namespace; выделить контролируемую identity для управления RBAC. |
 | `bind` на `roles`/`clusterroles` | Позволяет привязать роль, которой субъект сам не обладает, и передать её другому субъекту или себе. | Разрешать только узкой автоматизации и только на явно нужные роли. |
-| `impersonate` на `users`, `groups`, `serviceaccounts` или `userextras` | Позволяет выполнять запросы от имени другой identity, в том числе более привилегированной. | Давать аудитору только при необходимости и ограничивать `resourceNames`. |
+| `impersonate` на `users`, `groups`, `serviceaccounts`, `uids` или `userextras/<имя>` | Позволяет выполнять запросы от имени другой identity, в том числе более привилегированной. Extra-поля задают точным resource name, например `userextras/scopes`, в API group `authentication.k8s.io`. | Давать аудитору только при необходимости и ограничивать `resourceNames`. |
 | `create`/`update`/`patch` RoleBinding и ClusterRoleBinding | В сочетании с доступной ролью может передать права; ClusterRoleBinding делает это для всего кластера. | Запретить приложению; отделить выдачу доступа от разработки workload. |
 | `get`/`list`/`watch` `secrets` | Secret часто содержит пароль, registry credential, ключ или bearer token; `list`/`watch` раскрывают значения многих Secret. | Указать конкретный Secret через `resourceNames` для `get`, либо не давать API-доступ приложению. |
 | `create` `serviceaccounts/token` | Выпускает токен выбранного ServiceAccount и может стать способом воспользоваться его правами. | Разрешать только доверенной автоматизации, на конкретные ServiceAccount. |
@@ -202,6 +212,20 @@ Subresource пишется через косую черту: `resources: ["pods/
 `resources: ["pods/exec"]` правилом на все `pods`: это разные API-пути и разные риски.
 Напротив, `get` на `nodes/proxy` - отдельное опасное разрешение на kubelet proxy, а не
 безобидное чтение node.
+
+В Kubernetes 1.36 `KubeletFineGrainedAuthz` — GA и включён постоянно. Для законной
+операционной задачи выдавайте узкий subresource вместо `nodes/proxy`: например
+`nodes/stats`, `nodes/metrics`, `nodes/log`, `nodes/pods`, `nodes/healthz` или
+`nodes/configz`. Kubelet проверяет именно эти пути отдельно; для остальных запросов и
+ради совместимости остаётся fallback `nodes/proxy`.
+
+```yaml
+# Пример для monitoring identity; не заменяйте этим правилом произвольные операции kubelet.
+rules:
+- apiGroups: [""]
+  resources: ["nodes/metrics", "nodes/stats"]
+  verbs: ["get"]
+```
 
 Wildcards особенно опасны в трёх местах: `apiGroups: ["*"]`, `resources: ["*"]` и
 `verbs: ["*"]`. Они захватывают новые API-группы, CRD, subresource и verbs, которые появятся
@@ -267,7 +291,7 @@ roleRef:
 объекта. Это полезно для одного известного ConfigMap или Secret. Для **верхнеуровневого
 ресурса** оно не ограничивает `create` и `deletecollection`: в этих запросах имя объекта не
 служит частью URL. Это не правило для всех subresource: именованные subresource, например
-`pods/exec`, могут быть ограничены `resourceNames`. `list`/`watch` с `resourceNames`
+`pods/exec`, могут быть ограничены `resourceNames` (см. [RBAC reference](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)). `list`/`watch` с `resourceNames`
 требуют field selector `metadata.name=<name>` у клиента и часто неудобны; не считайте их
 полноценной заменой namespace-изоляции.
 
@@ -497,6 +521,23 @@ workload.
 `can-i`-аудит, review aggregation labels и явный контракт доступа превращают RBAC в
 проверяемую security-границу.
 
+> ### 🔴 Взгляд атакующего
+> **Asset:** ресурсы Kubernetes API.
+>
+> **Starting foothold:** выполнение кода внутри Pod.
+>
+> **Attacker objective:** использовать identity workload для доступа к API.
+>
+> **Abuse path:** проверить наличие token, его audience и TTL, затем RBAC permissions и возможность `list` Pod, читать Secret либо создавать/выполнять workload через `pods/exec`.
+>
+> **Expected evidence:** audit events и SubjectAccessReview.
+>
+> **Control:** `automountServiceAccountToken: false` там, где API не нужен; projected short-lived token там, где нужен; минимальный RBAC.
+>
+> **Retest:** разрешённый API call работает, а запрещённый возвращает `403`.
+>
+> **ATT&CK:** [T1528 — Steal Application Access Token](https://attack.mitre.org/techniques/T1528/).
+
 ## 10.11. Вопросы для самопроверки
 
 1. Почему более узкая Role не может отменить разрешение, выданное другой привязкой?
@@ -517,6 +558,8 @@ workload.
 Pod, докажите через `auth can-i`, что `delete pods` запрещён, и удалите избыточную
 привязку. В той же лабе вы отключите автомонтирование токена ServiceAccount и ограничите
 анонимный доступ к API server - следующие главы развивают эту RBAC-границу.
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [rbac-serviceaccount-permissions](https://killercoda.com/killer-shell-cks/scenario/rbac-serviceaccount-permissions) · [rbac-user-permissions](https://killercoda.com/killer-shell-cks/scenario/rbac-user-permissions) · [certificate-signing-requests-sign-manually](https://killercoda.com/killer-shell-cks/scenario/certificate-signing-requests-sign-manually) · [certificate-signing-requests-sign-k8s](https://killercoda.com/killer-shell-cks/scenario/certificate-signing-requests-sign-k8s)
 
 🎮 Killercoda (в браузере, без установки): [Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role)
 

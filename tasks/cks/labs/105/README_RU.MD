@@ -86,6 +86,11 @@ check_result
 > пропал, из неё выполните `sudo ufw disable`, исправьте allow rules и только затем снова
 > включите firewall. Если SSH уже потерян, используйте console/recovery channel провайдера;
 > не пытайтесь «лечить» ситуацию широким `allow from any`.
+>
+> **Граница применимости.** Этот UFW allowlist рассчитан только на одноузловую fixture.
+> Его нельзя буквально переносить в multi-node cluster: до default-deny нужно инвентаризовать
+> kubelet и межнодовые потоки, CNI overlay, BGP/VXLAN/WireGuard, LoadBalancer/NodePort и
+> provider firewall/security groups для конкретной топологии.
 
 ---
 | **4** | **Исправить права kubeconfig** |
@@ -104,6 +109,39 @@ check_result
 | :---: | :--- |
 | Что делаем | На отдельном `docker-host` прекратите публикацию Docker API по TCP/2375: уберите `-H tcp://...` из учебного systemd override, но сохраните доступ только через unix-сокет. Настройте `/var/run/docker.sock` как `root:root` с режимом `660`; для устойчивости после restart задайте это через override `docker.socket`. Удалите `developer` из группы `docker`. |
 | Критерии приёмки | На TCP/2375 нет listener; `stat -c '%U %G %a' /var/run/docker.sock` возвращает `root root 660`; `developer` не состоит в группе `docker`, а `sudo -u developer docker ps` завершается ошибкой доступа. Создайте `/var/work/tests/artifacts/6/docker-tcp.txt`, `/var/work/tests/artifacts/6/docker-socket.txt`, `/var/work/tests/artifacts/6/developer-access.txt` со строками `tcp/2375: closed`, `root root 660`, `developer docker ps: denied`. |
+
+## Дополнительно: kernel и containerd/CRI hardening
+
+Это короткая node-local практика, не входящая в автоматические критерии fixture. Перед
+отключением модуля подтвердите, что он не нужен ОС и workload. Например, для неиспользуемой
+legacy filesystem можно выгрузить модуль и запретить его повторную загрузку:
+
+```bash
+ssh "$CP" 'sudo modprobe -r cramfs || true'
+ssh "$CP" "printf 'blacklist cramfs\ninstall cramfs /bin/false\n' | sudo tee /etc/modprobe.d/60-cks-hardening.conf"
+```
+
+Безопасные sysctl также задавайте явно и сохраняйте вне `/etc/sysctl.conf`, затем
+перечитывайте конфигурацию. Конкретные значения должны пройти проверку совместимости с CNI
+и workload:
+
+```bash
+ssh "$CP" "printf 'kernel.kptr_restrict = 2\nkernel.dmesg_restrict = 1\n' | sudo tee /etc/sysctl.d/60-cks-hardening.conf"
+ssh "$CP" 'sudo sysctl --system'
+```
+
+В этой лабе Kubernetes использует **containerd**, а не Docker. Поэтому те же принципы
+надо применять к CRI: проверьте права `/run/containerd/containerd.sock` и
+`/etc/containerd/config.toml`, не добавляйте обычных пользователей в группу, дающую доступ
+к сокету, и разрешайте `ctr`/`crictl` с этим endpoint только привилегированным
+администраторам. Не меняйте владельца или режим работающего CRI-сокета вслепую: ошибочная
+настройка остановит kubelet и workload.
+
+```bash
+ssh "$CP" "sudo stat -c '%U %G %a %n' /run/containerd/containerd.sock /etc/containerd/config.toml"
+ssh "$CP" 'sudo -u nobody crictl --runtime-endpoint unix:///run/containerd/containerd.sock ps'
+# ожидается отказ доступа для непривилегированного пользователя
+```
 
 ## Проверка
 

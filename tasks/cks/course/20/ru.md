@@ -95,6 +95,72 @@ TLS и alert на ошибки/latency. Новый запрет безопасн
 обычно выбирают `Fail`; для первого rollout важнее не остановить кластер и не принять это за
 доказательство работающей защиты.
 
+Минимальная конфигурация webhook должна явно задавать endpoint, доверие TLS и контракт
+`AdmissionReview`. Например, validating webhook ниже использует Service; для mutating
+webhook структура аналогична, но добавьте `reinvocationPolicy: IfNeeded` или `Never` и
+сделайте mutation идемпотентной. `caBundle` здесь сокращён: в рабочем manifest это
+base64-кодированный CA сертификат webhook.
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: require-owner.example.com
+webhooks:
+- name: require-owner.example.com
+  clientConfig:
+    service:
+      namespace: policy-system
+      name: policy-webhook
+      path: /validate
+      port: 443
+    caBundle: <base64-ca>
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    operations: ["CREATE", "UPDATE"]
+    resources: ["pods"]
+    scope: "*"
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  failurePolicy: Fail
+  timeoutSeconds: 5
+  matchPolicy: Equivalent
+  namespaceSelector:
+    matchLabels:
+      policy.example.com/enforce-owner: "true"
+  matchConditions:
+  - name: skip-kube-system
+    expression: "request.namespace != 'kube-system'"
+```
+
+Для mutating webhook к тому же контракту добавляется правило повторного вызова:
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: default-security.example.com
+webhooks:
+- name: default-security.example.com
+  clientConfig:
+    service:
+      namespace: policy-system
+      name: policy-webhook
+      path: /mutate
+    caBundle: <base64-ca>
+  rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    operations: ["CREATE"]
+    resources: ["pods"]
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  reinvocationPolicy: IfNeeded
+  failurePolicy: Fail
+  timeoutSeconds: 5
+```
+
 ```bash
 # Какие webhook реально зарегистрированы и как они ведут себя при ошибке.
 kubectl get validatingwebhookconfigurations,mutatingwebhookconfigurations
@@ -237,11 +303,12 @@ violation[{"msg": msg}] {
 ## 20.4. Kyverno 1.19: CEL-based policy types
 
 > **Compatibility note.** Kyverno v1.19 официально поддерживает Kubernetes v1.33-v1.35
-> (`kyverno.io/docs/installation/releases/`, released Aug 2026). Целевая версия курса
-> - v1.36: она может работать с Kyverno v1.19, но не входит в протестированную и
-> гарантированную support matrix проекта. Compatibility third-party admission-компонентов
-> (Kyverno, Gatekeeper и аналоги) необходимо сверять с их собственной release matrix
-> отдельно от версии Kubernetes курса.
+> (`kyverno.io/docs/installation/releases/`, released Aug 2026). Поэтому лаборатория этой
+> главы выполняется на Kubernetes v1.35. v1.36 может работать, но не входит в
+> протестированную и гарантированную support matrix Kyverno v1.19; используйте её только как
+> optional/preview и не делайте успешную установку обязательным критерием. Compatibility
+> third-party admission-компонентов (Kyverno, Gatekeeper и аналоги) необходимо сверять с
+> их собственной release matrix отдельно от версии Kubernetes курса.
 
 Начиная с Kyverno 1.19 основной путь - отдельные CEL-based cluster-wide типы группы
 `policies.kyverno.io/v1`: `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`,
@@ -413,8 +480,52 @@ image verification.
 
 В обоих случаях policy - код: храните `ConstraintTemplate`/`Constraint` или CEL-based
 Kyverno policy в Git, назначайте владельца и тесты, применяйте в staging, начинайте с
-audit/warn и сохраняйте evidence нарушений. Исключение должно быть узким, ограниченным по
-времени и видимым в review - не глобальным `excludedNamespaces: ["*"]`.
+audit/warn и сохраняйте evidence нарушений. До кластера добавьте CI mini-lab с разрешённым
+и запрещённым fixture. Для Gatekeeper используйте декларативные Suite/Test/Case
+(`apiVersion: test.gatekeeper.sh/v1alpha1`, `kind: Suite`), а не прямой `gator test` denied
+fixture: у deny Constraint найденное нарушение даёт `gator test` exit code 1, хотя policy
+работает правильно. Kyverno проверяйте через `kyverno test --require-tests`, чтобы отсутствие
+test manifest не давало зелёный pipeline. CI должен завершаться ошибкой, если allowed manifest
+отклонён или denied manifest принят. Исключение должно быть узким, ограниченным по времени и
+видимым в review - не глобальным `excludedNamespaces: ["*"]`.
+
+### CI mini-lab: проверка policy до rollout
+
+Положительный и отрицательный manifests должны жить рядом с policy в Git. Сохраните template
+и constraint в `templates-and-constraints/template.yaml` и
+`templates-and-constraints/constraint.yaml`, fixtures — в `allowed.yaml` и `denied.yaml`, а
+рядом создайте `suite.yaml`:
+
+```yaml
+apiVersion: test.gatekeeper.sh/v1alpha1
+kind: Suite
+tests:
+- name: require-owner
+  template: templates-and-constraints/template.yaml
+  constraint: templates-and-constraints/constraint.yaml
+  cases:
+  - name: allowed-has-owner
+    object: allowed.yaml
+    assertions:
+    - violations: no
+  - name: denied-missing-owner
+    object: denied.yaml
+    assertions:
+    - violations: yes
+```
+
+```bash
+# Оба ожидаемых результата дают успешный exit code: deny fixture обязан иметь violation.
+gator verify suite.yaml                    # либо: gator verify ./...
+
+# Kyverno: pipeline падает, если kyverno-test.yaml не найден.
+kyverno test --require-tests ./policy/kyverno
+```
+
+`gator verify` рассматривает `violations: no` для allowed и `violations: yes` для denied как
+ожидаемые assertions, поэтому job станет красным лишь при регрессии policy или fixtures.
+Используйте команды и структуру файлов, соответствующие закреплённой версии CLI; cluster
+admission test остаётся отдельным этапом интеграционного CI.
 
 ## 20.6. Native CEL: validation и mutation без внешнего webhook
 
@@ -435,7 +546,10 @@ Rego.
 Пример ниже применяется только к Pod в namespace с label
 `policy.example.com/native-mutation=true`. `ApplyConfiguration` удобен для добавления
 поля; для точных операций над массивами или путями используйте `JSONPatch` с CEL-списком
-`JSONPatch{...}`. Не применяйте mutation как замену обязательной security validation.
+`JSONPatch{...}`. `spec.reinvocationPolicy` обязателен: `Never` не вызывает MAP повторно,
+а `IfNeeded` допускает повторную оценку после mutation других admission-этапов. Порядок с
+другими mutating plugins/webhooks не гарантирован, поэтому mutation должна быть
+идемпотентной. Не применяйте mutation как замену обязательной security validation.
 
 ```yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -444,6 +558,7 @@ metadata:
   name: add-native-admission-label
 spec:
   failurePolicy: Fail
+  reinvocationPolicy: IfNeeded
   matchConstraints:
     resourceRules:
     - apiGroups: [""]
@@ -503,11 +618,12 @@ if kubectl -n native-map-off create --dry-run=server -o yaml \
 fi
 ```
 
-### `ValidatingAdmissionPolicy`: требовать `runAsNonRoot`
+### `ValidatingAdmissionPolicy`: требовать effective non-root
 
-VAP подходит для локальных проверок объекта: labels, поля PodSpec, requests/limits,
-запрет `:latest` и namespace scope. Ниже policy и binding разделены так же, как у MAP,
-но binding выбирает реакцию validation.
+VAP должен проверять effective-настройку каждого процесса, а не только Pod-level default:
+container-level `securityContext.runAsNonRoot` имеет приоритет. Выражение ниже допускает
+container-level `true` либо отсутствие этого поля при Pod-level `true`, но отклоняет явный
+`false` и `runAsUser: 0` как на Pod-level, так и у обычных, init- и ephemeral containers.
 
 ```yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -522,9 +638,31 @@ spec:
       apiVersions: ["v1"]
       operations: ["CREATE", "UPDATE"]
       resources: ["pods"]
+  variables:
+  - name: podRunAsNonRoot
+    expression: >-
+      has(object.spec.securityContext) &&
+      has(object.spec.securityContext.runAsNonRoot) &&
+      object.spec.securityContext.runAsNonRoot == true
+  - name: allContainers
+    expression: >-
+      object.spec.containers +
+      (has(object.spec.initContainers) ? object.spec.initContainers : []) +
+      (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers : [])
   validations:
-  - expression: "object.spec.securityContext != null && object.spec.securityContext.runAsNonRoot == true"
-    message: "Pod spec.securityContext.runAsNonRoot must be true"
+  - expression: >-
+      !has(object.spec.securityContext) ||
+      !has(object.spec.securityContext.runAsUser) ||
+      object.spec.securityContext.runAsUser != 0
+    message: "Pod-level runAsUser: 0 is forbidden"
+  - expression: >-
+      variables.allContainers.all(c,
+        (!has(c.securityContext) || !has(c.securityContext.runAsUser) ||
+          c.securityContext.runAsUser != 0) &&
+        ((has(c.securityContext) && has(c.securityContext.runAsNonRoot)) ?
+          c.securityContext.runAsNonRoot == true : variables.podRunAsNonRoot)
+      )
+    message: "Every app, init and ephemeral container must effectively run non-root; runAsUser: 0 is forbidden"
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -539,11 +677,11 @@ spec:
         policy.example.com/enforce-non-root: "true"
 ```
 
-`object` в CEL - проверяемый объект; также доступны контекст запроса и, в нужных
-сценариях, `oldObject` и параметры binding. `failurePolicy` VAP/MAP относится к ошибке
-оценки policy, а не к доступности сети: внешнего webhook здесь нет. Тем не менее не
-публикуйте непроверенное CEL выражение сразу с `Deny` на весь кластер. Сузьте selector,
-начните с `Audit`/`Warn` для VAP и проверьте положительный и отрицательный случаи.
+`object` в CEL - проверяемый объект; также доступны контекст запроса, `oldObject` и
+параметры binding. `failurePolicy` VAP/MAP относится к ошибке оценки policy, а не к
+доступности сети: внешнего webhook здесь нет. Не публикуйте непроверенное CEL выражение
+сразу с `Deny` на весь кластер: сузьте selector, начните с `Audit`/`Warn` и проверьте
+положительный и отрицательный случаи.
 
 ```bash
 kubectl apply -f vap-run-as-non-root.yaml
@@ -551,6 +689,82 @@ kubectl label namespace team-example policy.example.com/enforce-non-root=true
 kubectl get validatingadmissionpolicy,validatingadmissionpolicybinding
 kubectl get mutatingadmissionpolicy,mutatingadmissionpolicybinding
 ```
+
+### Параметризованный VAP: policy logic отдельно от лимита команды
+
+`paramKind` определяет тип parameter resource, binding выбирает конкретный объект через
+`paramRef`, а CEL получает его как `params`. Здесь один `ConfigMap` ограничивает replicas;
+`matchConditions` не оценивает policy для запросов kubelet.
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: deployment-replica-limit
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ConfigMap
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["apps"]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["deployments"]
+  matchConditions:
+  - name: exclude-kubelet
+    expression: '!("system:nodes" in request.userInfo.groups)'
+  variables:
+  - name: limit
+    expression: 'int(params.data["maxReplicas"])'
+  validations:
+  - expression: "params != null && object.spec.replicas <= variables.limit"
+    message: "replicas exceed the team limit"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: team-a-replica-limit
+  namespace: policy-system
+data:
+  maxReplicas: "5"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: deployment-replica-limit-team-a
+spec:
+  policyName: deployment-replica-limit
+  validationActions: [Deny]
+  paramRef:
+    name: team-a-replica-limit
+    namespace: policy-system
+    parameterNotFoundAction: Deny
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        team: a
+```
+
+Один policy может иметь несколько bindings и parameter resources для разных команд; все
+совпавшие combinations должны пройти. `parameterNotFoundAction: Deny` вместе с
+`failurePolicy: Fail` не превращает отсутствующую конфигурацию в bypass.
+
+> **Advanced — Manifest-Based Admission Control (v1.36 alpha).** Эта выключенная по
+> умолчанию функция загружает webhook и CEL policy manifests с диска API server: включите
+> feature gate `ManifestBasedAdmissionControlConfig` и передайте через
+> `--admission-control-config-file` `AdmissionConfiguration` с отдельным абсолютным
+> `staticManifestsDir` для нужного admission plugin. Такие policies активны при старте,
+> независимы от etcd и могут защищать API-based admission configuration от удаления или
+> изменения. Это экспериментальная control-plane функция: `metadata.name` **каждого** static
+> admission object в v1.36 обязан оканчиваться на `.static.k8s.io`; невалидный static manifest
+> при первоначальной загрузке способен не дать API server стать ready. Static manifests
+> ограничены поддерживаемыми admission resources; policy не могут использовать `paramKind`, а
+> у `ValidatingAdmissionPolicyBinding` и `MutatingAdmissionPolicyBinding` запрещён
+> `spec.paramRef`. Static webhook допускает `clientConfig.url`, но не
+> `clientConfig.service`. Каждый HA API server должен получать одинаковые файлы; не вводите
+> эту функцию без теста startup/reload и управляемой доставки конфигурации.
 
 ### Сравнение native CEL и webhook engine
 
@@ -712,12 +926,14 @@ v1.36, certificate rotation, resource requests/limits и PDB. Admission outage -
 
 ## 20.12. Как это пригодится: на экзамене и в реальной работе
 
-**На экзамене.** Экзаменационный минимум следует опубликованной публичной программе CKS
-v1.34: быстро определяйте, где находится контроль, читайте `ConstraintTemplate` и
-`Constraint`, создавайте/проверяйте policy, отличайте `Audit` от `Deny` и находите причину
-`denied the request`. Не приписывайте экзамену расширения курса: Kubernetes 1.36 native MAP
-и Kyverno 1.19 - production-ориентированные дополнения этой главы, а не заявленный минимум
-публичной программы.
+**На экзамене.** Связанный публичный файл curriculum сейчас называется `CKS_Curriculum
+v1.34`, тогда как экзаменационная среда CKS сейчас использует Kubernetes v1.35. Это разные
+версии: curriculum описывает темы, а runtime определяет доступные API и поведение кластера.
+Быстро определяйте, где находится контроль, читайте `ConstraintTemplate` и `Constraint`,
+создавайте/проверяйте policy, отличайте `Audit` от `Deny` и находите причину `denied the
+request`. Не приписывайте экзамену расширения курса: Kubernetes 1.36 native MAP и Kyverno
+1.19 — production-ориентированные дополнения этой главы, а не гарантированные задания
+linked curriculum. Перед экзаменом сверяйте актуальную публикацию Linux Foundation/CNCF.
 
 **В реальной работе.** Admission policy предотвращает небезопасную конфигурацию до запуска
 workload, а не ищет её после инцидента. Kubernetes 1.36 native MAP/VAP и Kyverno 1.19

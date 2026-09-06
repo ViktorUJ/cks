@@ -6,8 +6,8 @@
 > его конфиденциальным. В этой главе строим два разных слоя защиты Pod-to-Pod трафика:
 > прозрачное шифрование сети между нодами через Cilium (WireGuard или IPsec) и взаимную
 > TLS-аутентификацию workload через service mesh (Istio или Linkerd). Это компетенция
-> **Pod-to-Pod encryption with Cilium** домена *Minimize Microservice Vulnerabilities*
-> CKS (20%).
+> **Implement Pod-to-Pod encryption (Cilium, Istio)** домена *Minimize Microservice
+> Vulnerabilities* CKS (20%).
 
 > **Что нужно знать из CKA.** Базовая модель Pod-сети и CNI разобрана в
 > [главе 30 CKA](../../../cka/course/30/ru.md), Service/DNS - в
@@ -47,10 +47,10 @@ flowchart LR
 
 При трафике между узлами эти механизмы можно совмещать: service mesh защищает соединение
 между прокси рабочих нагрузок, а шифрование Cilium дополнительно защищает пакеты на
-межузловом участке сети. При трафике внутри одного узла межузловое шифрование может не
-участвовать, но mTLS по-прежнему защищает соединение между рабочими нагрузками в mesh. И
-наоборот, шифрование Cilium не заменяет mTLS: скомпрометированная рабочая нагрузка на
-доверенной ноде не получает проверяемую identity клиента.
+межузловом участке сети. **Pod-to-Pod traffic на одном node Cilium WireGuard и IPsec по дизайну не шифруют**:
+межузлового outer packet нет. mTLS по-прежнему защищает соединение между рабочими
+нагрузками в mesh. И наоборот, шифрование Cilium не заменяет mTLS: скомпрометированная
+рабочая нагрузка на доверенной ноде не получает проверяемую identity клиента.
 
 | Вопрос | Cilium WireGuard/IPsec | Istio/Linkerd mTLS | NetworkPolicy |
 |---|---|---|---|
@@ -59,7 +59,7 @@ flowchart LR
 | Аутентифицирует | криптографические узлы-пиры | идентичность рабочей нагрузки | не identity, а selector/IP/port |
 | Нужен sidecar/proxy в Pod | нет | да (или ambient/eBPF режим конкретного mesh) | нет |
 | Видит приложение сертификат | нет | обычно нет | нет |
-| Защищает same-node Pod-to-Pod | не обязательно | да, если оба в mesh | ограничивает, но не шифрует |
+| Защищает same-node Pod-to-Pod | нет: Cilium WireGuard/IPsec не шифруют такой трафик по дизайну | да, если оба в mesh | ограничивает, но не шифрует |
 
 ## 23.2. Перед изменением: scope, совместимость и исходное состояние
 
@@ -81,8 +81,9 @@ kubectl get networkpolicy -A
 1. Cilium уже является CNI, а версия Cilium и kernel поддерживают выбранный режим по
    официальной compatibility matrix. Не устанавливайте второй CNI поверх работающего.
 2. Между всеми рабочими узлами должен быть разрешён UDP-порт WireGuard (по умолчанию Cilium использует
-   `51871`, но значение проверяют в установленной конфигурации) либо ESP/IPsec и при NAT
-   UDP/4500. Security group, firewall и маршруты - часть решения.
+   `51871`, но значение проверяют в установленной конфигурации) либо для Cilium IPsec -- ESP
+   (IP protocol 50). Типичный IKE/NAT-T сценарий UDP/4500 не относится к описываемому
+   механизму Cilium IPsec. Security group, firewall и маршруты -- часть решения.
 3. У физической сети есть запас MTU. Encapsulation добавляет заголовки; при path-MTU
    проблеме маленький `curl` может работать, а большие ответы зависать.
 4. Есть два тестовых Pod на разных нодах. Иначе tcpdump не докажет node-to-node
@@ -133,11 +134,15 @@ Cilium поддерживает два распространённых backend:
 | Свойство | WireGuard | IPsec |
 |---|---|---|
 | Криптографическая модель | современный компактный VPN-протокол | IPsec ESP; часто стандарт организации/сети |
-| Передача на сети | UDP, обычно `51871` | ESP (IP protocol 50), при NAT часто UDP/4500 |
+| Передача на сети | UDP, обычно `51871` | ESP (IP protocol 50) |
 | Ключи/peer | key pair каждого peer; публичный ключ идентифицирует разрешённую ноду | key material в Cilium IPsec Secret, Security Association между peers |
 | Аутентификация | пакет принимается только от известного public key/allowed peer | ESP integrity + ключи Security Association |
 | Эксплуатационный выбор | обычно простой выбор для поддерживаемой Linux-среды | нужен, если это требует existing IPsec/сетевой стандарт |
-| Что проверять tcpdump | UDP к WireGuard port, без HTTP payload | `esp` либо UDP/4500, без HTTP payload |
+| Что проверять tcpdump | UDP к WireGuard port, без HTTP payload | `esp`, без HTTP payload |
+
+В Cilium 1.20 также документирован **beta** backend `ztunnel` encryption. Это
+forward-looking production extension, а не основной путь CKS; для экзаменационного
+сценария здесь достаточно WireGuard или IPsec.
 
 Выбирают **один** backend. Одновременное включение WireGuard и IPsec как способ «двойной
 защиты» не является нормальной конфигурацией Cilium и только усложняет отладку. Точные
@@ -252,7 +257,8 @@ material, но и к множеству иных секретов. Ограни�
 IPsec в Cilium также даёт прозрачное node-to-node encryption, но использует IPsec ESP
 Security Associations. Его часто выбирают, когда корпоративные требования или уже
 существующая сетевая инфраструктура требуют IPsec. Пакет на physical interface выглядит
-как ESP, а при NAT traversal - как UDP/4500; прикладной HTTP в нём не должен читаться.
+как ESP (IP protocol 50); прикладной HTTP в нём не должен читаться. Не переносите сюда
+общую IKE/NAT-T модель с UDP/4500: она не является частью этого Cilium-механизма.
 
 Типовой переход для Cilium release с поддержкой IPsec выглядит так:
 
@@ -619,10 +625,12 @@ test "$RC" -ne 0 || test "$OUT" != 200
 действительно без sidecar; затем ищите более специфичную `PeerAuthentication` policy,
 которая переопределила тест.
 
-## 23.8. Linkerd: mTLS по умолчанию и identity ServiceAccount
+## 23.8. Linkerd: production-вариант mTLS и identity ServiceAccount
 
-Linkerd решает задачу workload mTLS похожим образом, но использует собственный лёгкий
-proxy и identity model. После injection Pod получает `linkerd-proxy`; meshed traffic между
+Linkerd -- полноценный production-вариант service mesh для workload mTLS, но это
+дополнительный материал: в основных CKS competencies для Pod-to-Pod encryption прямо
+названы Cilium и Istio, а не Linkerd. Linkerd использует собственный лёгкий proxy и
+identity model. После injection Pod получает `linkerd-proxy`; meshed traffic между
 Linkerd workload автоматически шифруется и аутентифицируется mTLS. Identity обычно
 связывается с Kubernetes ServiceAccount и имеет DNS-like вид:
 
@@ -635,9 +643,13 @@ Linkerd workload автоматически шифруется и аутенти
 iptables/ports, неопределённая observability и сложный incident response. Выберите один
 mesh для namespace или проведите документированную миграцию.
 
-Перед установкой Linkerd проверьте cluster prerequisites и используйте pinned release:
+Перед установкой Linkerd проверьте cluster prerequisites, наличие совместимых Gateway API
+CRDs и используйте pinned release. Современный Linkerd требует Gateway API CRDs; если их
+нет, сначала установите совместимую с вашим release версию по официальной инструкции.
 
 ```bash
+kubectl get crd gateways.gateway.networking.k8s.io
+# Если CRD отсутствует, установите совместимый Gateway API CRD release до linkerd install.
 linkerd check --pre
 linkerd install --crds | kubectl apply -f -
 linkerd install | kubectl apply -f -
@@ -755,19 +767,14 @@ done
 
 ### IPsec capture
 
-При native ESP capture фильтрует IP protocol 50. При NAT traversal надо смотреть UDP/4500.
-Конкретный режим зависит от сети и Cilium/IPsec setup.
+Для Cilium IPsec capture фильтрует ESP, то есть IP protocol 50:
 
 ```bash
-# На node-a: native ESP.
+# На node-a: Cilium IPsec ESP.
 sudo tcpdump -ni ens5 -vv 'host <NODE_B_IP> and esp'
-
-# Если используется NAT-T:
-sudo tcpdump -ni ens5 -vv 'host <NODE_B_IP> and udp port 4500'
 ```
 
-Снова запустите повторяемый application flow. Ожидаются ESP или UDP/4500 packets, но не
-readable HTTP. После capture сопоставьте результат с agent:
+Снова запустите повторяемый application flow. Ожидаются ESP packets, но не readable HTTP. После capture сопоставьте результат с agent:
 
 ```bash
 kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status
@@ -914,8 +921,8 @@ underlay даже если application protocol не менялся.
 
 1. Почему Cilium WireGuard/IPsec не заменяет mTLS между workload?
 2. Что именно аутентифицирует WireGuard peer и почему это не identity ServiceAccount?
-3. Какие внешние firewall правила и сетевые особенности надо проверить для WireGuard и
-   IPsec NAT traversal?
+3. Какие firewall-протоколы надо разрешить между нодами: UDP/51871 для Cilium
+   WireGuard и ESP (IP protocol 50) для Cilium IPsec?
 4. Чем опасна ручная замена IPsec Secret без key-overlap rollout?
 5. Какова разница между Istio `PeerAuthentication: STRICT` и `DestinationRule` с
    `ISTIO_MUTUAL`?

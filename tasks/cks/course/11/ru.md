@@ -145,8 +145,12 @@ flowchart LR
 
 Ниже Pod не получает неявный стандартный mount. Вместо него монтируется ровно один
 projected volume, нужный для вызова Kubernetes API: короткоживущий token, CA и namespace.
-`https://kubernetes.default.svc` - обычная audience API в кластере; при нестандартной
-конфигурации apiserver используйте его фактически разрешённую audience.
+Не фиксируйте `https://kubernetes.default.svc` как универсальную audience API: apiserver
+принимает значения из `--api-audiences`, а при отсутствии этого флага список выводится из
+`--service-account-issuer`. Поэтому token с этой строкой в части кластеров даст `401`.
+Для token именно к Kubernetes API не задавайте `audience` явно либо сначала подтвердите
+фактические `--api-audiences`/`--service-account-issuer`; отдельную audience задавайте для
+Vault или другого внешнего сервиса.
 
 ```yaml
 apiVersion: v1
@@ -172,7 +176,8 @@ spec:
       sources:
       - serviceAccountToken:
           path: token
-          audience: https://kubernetes.default.svc
+          # Для Kubernetes API audience не задаётся: её выбирает API server.
+          # Явное значение допустимо только после сверки с --api-audiences.
           expirationSeconds: 3600
       - configMap:
           name: kube-root-ca.crt
@@ -195,8 +200,8 @@ plane. Kubelet обновляет файл token до `exp`, но точный �
 Для временной ручной проверки выдайте отдельный token и задайте короткую duration:
 
 ```bash
-kubectl -n cks-104 create token app-sa \
-  --audience=https://kubernetes.default.svc --duration=10m
+# Для Kubernetes API не задавайте --audience без проверки --api-audiences.
+kubectl -n cks-104 create token app-sa --duration=10m
 ```
 
 Для внешнего сервиса, которому важна актуальность привязки, рекомендуется `TokenReview`
@@ -284,6 +289,29 @@ RoleBinding ограничивает область namespace `cks-104`. Не з
 kubectl auth can-i --list -n cks-104 \
   --as=system:serviceaccount:cks-104:app-sa
 ```
+
+## 11.4.1. RBAC: права на workload могут стать эскалацией ServiceAccount
+
+Право создавать или изменять workload — не только право на запуск приложения. Если субъект
+может создать Pod/Deployment с `serviceAccountName` другого, более привилегированного SA в
+том же namespace, он может выполнить код с token и API-правами этого SA. Поэтому встроенную
+роль `edit` нельзя считать безобидной: помимо изменения workload и чтения Secret она может
+запускать Pod от имени любого ServiceAccount namespace. Разделяйте права deployer и права
+управления ServiceAccount, а чувствительные SA не оставляйте доступными обычным создателям
+workload.
+
+Проверяйте и другие RBAC escalation paths отдельно от обычных read/write прав: создание
+`PersistentVolume` может дать Pod доступ к данным или пути хоста; создание/одобрение CSR —
+выдать новую identity; изменение `ValidatingWebhookConfiguration` или
+`MutatingWebhookConfiguration` — изменить admission-контроль. Права `bind`, `escalate`,
+`impersonate`, управление RoleBinding/ClusterRoleBinding и эти пути выдают только отдельным
+административным ролям. Не добавляйте пользователей в `system:masters`: эта группа получает
+неограниченный superuser-доступ и обходит RBAC и authorization webhooks.
+
+В Kubernetes 1.36+ Constrained Impersonation расширяет старую модель одного verb
+`impersonate`: применяются отдельные разрешения, включая `impersonate:user-info` и
+`impersonate-on:*`. Это не причина выдавать impersonation шире — ограничивайте субъект,
+группы и scope, а для проверки используйте отдельную минимальную admin-role.
 
 ## 11.5. Проверка и диагностика: token, API и RBAC
 
@@ -407,6 +435,8 @@ API: anonymous access, authorization modes и сетевые границы.
 
 🧪 Лаба 104 (RBAC, ServiceAccount и ограничение API):
 [tasks/cks/labs/104](../../labs/104/README_RU.MD)
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [serviceaccount-token-mounting](https://killercoda.com/killer-shell-cks/scenario/serviceaccount-token-mounting)
 
 🎮 Killercoda (в браузере, без установки): [Create Service Account For a Pod](https://killercoda.com/chadmcrowell/course/cka/create-sa-for-pod) · [Role and RoleBinding](https://killercoda.com/chadmcrowell/course/ckad/role-rolebinding)
 

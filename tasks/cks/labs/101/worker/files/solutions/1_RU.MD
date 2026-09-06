@@ -8,6 +8,16 @@
 
 ## Задание 1. Namespace, frontend/backend и Service
 
+Перед применением получите и укажите **реальный** digest одобренного образа. `${PING_PONG_DIGEST}`
+ниже — намеренно заметный placeholder: не заменяйте его на mutable tag (`:latest`), а закрепите
+64-символьный SHA-256 digest. Digest content-addressed и не может незаметно сменить образ, в
+отличие от tag.
+
+```bash
+export PING_PONG_DIGEST='<real-64-hex-sha256-digest>'
+PING_PONG_IMAGE="viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}"
+```
+
 Сохраните следующий манифест как `app.yaml` и примените его:
 
 ```yaml
@@ -33,7 +43,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: viktoruj/ping_pong:latest
+          image: ${PING_PONG_IMAGE}
           ports:
             - containerPort: 8080
 ---
@@ -54,7 +64,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: viktoruj/ping_pong:latest
+          image: ${PING_PONG_IMAGE}
           ports:
             - containerPort: 8080
 ---
@@ -74,7 +84,7 @@ spec:
 ```
 
 ```bash
-kubectl apply -f app.yaml
+envsubst < app.yaml | kubectl apply -f -
 kubectl -n cks-101 rollout status deployment/frontend
 kubectl -n cks-101 rollout status deployment/backend
 kubectl -n cks-101 get pods,svc,endpoints
@@ -163,8 +173,8 @@ kubectl -n cks-101 run check-foreign --rm -i --restart=Never \
 ```
 
 Временный client Pod имеет ту же security identity (`app=frontend`), что и frontend.
-Это необходимо, потому что минимальный образ `viktoruj/ping_pong:latest` не содержит shell
-и `curl`.
+Это необходимо, потому что минимальный закреплённый по digest образ
+`viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}` не содержит shell и `curl`.
 
 ## Задание 4. Разрешить DNS только к kube-dns
 

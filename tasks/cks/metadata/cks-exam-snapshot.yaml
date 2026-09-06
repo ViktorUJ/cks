@@ -1,0 +1,103 @@
+schema_version: 1
+
+checked_at: "2026-09-06"
+
+# Три контура версии независимы и не выравниваются автоматически.
+# Подробное объяснение политики - см. ../VERSION_POLICY.md.
+
+training:
+  # Реальный разброс версий подтверждён grep по всем labs/*/env.hcl (проверено 2026-09-06):
+  # только core labs 101-112 построены на 1.36; legacy labs 01-30 остаются на 1.28-1.34.
+  # Не сворачивать это в единое число "1.36" - см. VERSION_POLICY.md.
+  core_labs:
+    ids: "101-112"
+    kubernetes: "1.36"
+    status: current
+    source: "labs/101-112/*/env.hcl"
+  legacy_labs:
+    ids: "01-30 (не все номера присутствуют)"
+    kubernetes_versions_observed: ["1.28.0", "1.29.0", "1.30.0", "1.31.0", "1.32.0", "1.33.0", "1.34.0"]
+    status: legacy_exam_pattern_bank
+    source: "labs/01-30/*/env.hcl"
+    note: >
+      Legacy labs сохраняют исторические exam-pattern стенды и не входят в единый
+      Kubernetes v1.36 compatibility baseline core labs.
+
+exam:
+  linux_foundation:
+    product_page:
+      kubernetes: "1.35"
+      checked_at: "2026-09-06"
+      url: "https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/"
+
+    important_instructions:
+      kubernetes: "1.35"
+      checked_at: "2026-09-06"
+      url: "https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks"
+
+    faq:
+      checked_at: "2026-09-06"
+      url: "https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks"
+      notes:
+        - "CKS-SINGLE registration не включает доступ к Killer.sh exam simulator."
+        - "Стандартная регистрация включает две попытки Killer.sh simulator (36 часов каждая)."
+
+  duration_minutes: 120
+  task_count:
+    min: 15
+    max: 20
+  retakes:
+    included: 1
+    label: "One Retake"
+  eligibility_window_months: 12
+  certificate_validity_years: 2
+
+curriculum:
+  repository: "https://github.com/cncf/curriculum"
+  filename: "CKS_Curriculum v1.34.pdf"
+  kubernetes_version_in_filename: "1.34"
+  checked_at: "2026-09-06"
+
+weights:
+  # Оба сигнала фиксируются независимо; расхождение не разрешается выбором "истинного"
+  # значения без проверки первичного источника. Подробности - см. ../VERSION_POLICY.md.
+  lf_product_page:
+    cluster_setup: 15
+    cluster_hardening: 15
+    system_hardening: 10
+    minimize_microservice_vulnerabilities: 20
+    supply_chain_security: 20
+    monitoring_logging_runtime_security: 20
+    checked_at: "2026-09-06"
+  curriculum_pdf:
+    cluster_setup: 15
+    cluster_hardening: 15
+    system_hardening: 10
+    minimize_microservice_vulnerabilities: 20
+    supply_chain_security: 20
+    monitoring_logging_runtime_security: 20
+    checked_at: "2026-09-06"
+  agreement: consistent
+
+allowed_resources:
+  checked_at: "2026-09-06"
+  url: "https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed"
+  global:
+    - kubernetes_documentation
+    - kubernetes_blog
+    - falco_documentation
+    - bom_documentation
+    - etcd_documentation
+    - nginx_ingress_controller_documentation
+    - cilium_documentation
+    - istio_documentation
+  notes:
+    - "task-specific Quick Reference может добавлять ресурсы для конкретной задачи."
+    - "Trivy/AppArmor training-ссылки в курсе - не являются глобально разрешёнными exam resources."
+
+interpretation: >
+  Official LF pages в данный момент показывают согласованную версию Kubernetes (v1.35)
+  для exam environment; training baseline курса (v1.36) и curriculum filename (v1.34)
+  остаются самостоятельными контурами и не должны схлопываться в одно число. Перед
+  использованием значений из этого файла для принятия решений - сверьте checked_at
+  с текущей датой и переопределите устаревшие поля через первичные источники.

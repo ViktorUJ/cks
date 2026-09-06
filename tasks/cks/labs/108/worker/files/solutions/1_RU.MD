@@ -60,8 +60,11 @@ spec:
       + object.spec.?initContainers.orValue([]).map(c, c.image)
       + object.spec.?ephemeralContainers.orValue([]).map(c, c.image)
   validations:
-  - message: Images tagged latest are not allowed.
-    expression: variables.images.all(image, !image.endsWith(':latest'))
+  - message: Images must use an explicit non-latest tag or a digest.
+    expression: >-
+      variables.images.all(image,
+        image.contains('@') ||
+        (image.matches('^(?:.*/)?[^/:]+:[^/]+$') && !image.endsWith(':latest')))
 ```
 
 ```bash

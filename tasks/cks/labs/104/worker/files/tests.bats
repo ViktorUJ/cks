@@ -26,19 +26,24 @@ NS="security-104"
   [ "$result" -eq 0 ]
 }
 
-@test "2. token-client uses a bounded projected ServiceAccount token" {
+@test "2. token-client uses a bounded API-default projected token that authenticates and has no secret deletion right" {
   echo '1' >> /var/work/tests/result/all
   pod=$(kubectl get pod token-client -n "$NS" --context "$CTX" -o json 2>/dev/null)
   sa=$(kubectl get serviceaccount api-client -n "$NS" --context "$CTX" -o name 2>/dev/null)
-  token=$(jq -r '[.spec.volumes[]?.projected.sources[]?.serviceAccountToken | select(.path == "api-token" and .audience == "kubernetes.default.svc" and (.expirationSeconds | tonumber) <= 3600)] | length' <<<"$pod" 2>/dev/null)
-  mounted=$(jq -r '. as $pod | [$pod.spec.volumes[]? | select(.projected != null) | . as $volume | ([.projected.sources[]?.serviceAccountToken | select(.path == "api-token" and .audience == "kubernetes.default.svc" and (.expirationSeconds | tonumber) <= 3600)] | length) as $tokens | select($tokens > 0) | $pod.spec.containers[]?.volumeMounts[]? | select(.name == $volume.name and .mountPath == "/var/run/secrets/tokens" and .readOnly == true)] | length' <<<"$pod" 2>/dev/null)
+  token_spec=$(jq -r '[.spec.volumes[]?.projected.sources[]?.serviceAccountToken | select(.path == "api-token" and (.audience == null) and (.expirationSeconds | tonumber) <= 3600)] | length' <<<"$pod" 2>/dev/null)
+  mounted=$(jq -r '. as $pod | [$pod.spec.volumes[]? | select(.projected != null) | . as $volume | ([.projected.sources[]?.serviceAccountToken | select(.path == "api-token" and (.audience == null) and (.expirationSeconds | tonumber) <= 3600)] | length) as $tokens | select($tokens > 0) | $pod.spec.containers[]?.volumeMounts[]? | select(.name == $volume.name and .mountPath == "/var/run/secrets/tokens" and .readOnly == true)] | length' <<<"$pod" 2>/dev/null)
   auto=$(jq -r '.spec.automountServiceAccountToken' <<<"$pod" 2>/dev/null)
   client_sa=$(jq -r '.spec.serviceAccountName' <<<"$pod" 2>/dev/null)
-  if [[ "$sa" == "serviceaccount/$NS/api-client" && "$client_sa" == "api-client" && "$auto" == "false" && "$token" -ge 1 && "$mounted" -ge 1 ]]; then
+  projected_token=$(kubectl exec -n "$NS" token-client --context "$CTX" -- cat /var/run/secrets/tokens/api-token 2>/dev/null || true)
+  review=$(jq -n --arg token "$projected_token" '{apiVersion:"authentication.k8s.io/v1",kind:"TokenReview",spec:{token:$token}}' | kubectl create --context "$CTX" -f - -o json 2>/dev/null || true)
+  authenticated=$(jq -r '.status.authenticated // false' <<<"$review" 2>/dev/null)
+  username=$(jq -r '.status.user.username // ""' <<<"$review" 2>/dev/null)
+  cannot_delete=$(kubectl auth can-i delete secrets -n "$NS" --as="system:serviceaccount:$NS:api-client" --context "$CTX" 2>/dev/null)
+  if [[ "$sa" == "serviceaccount/$NS/api-client" && "$client_sa" == "api-client" && "$auto" == "false" && "$token_spec" -ge 1 && "$mounted" -ge 1 && "$authenticated" == "true" && "$username" == "system:serviceaccount:$NS:api-client" && "$cannot_delete" == "no" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "sa=$sa pod_sa=$client_sa automount=$auto projected_tokens=$token mounted_projected_tokens=$mounted"
+    echo "sa=$sa pod_sa=$client_sa automount=$auto projected_tokens=$token_spec mounted_projected_tokens=$mounted tokenreview_authenticated=$authenticated tokenreview_username=$username api_client_can_delete_secrets=$cannot_delete"
     result=1
   fi
   [ "$result" -eq 0 ]

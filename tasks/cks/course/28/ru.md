@@ -51,6 +51,26 @@ Severity - приоритет для очереди, а не доказател�
 `LOW` у exposed component не следует автоматически игнорировать. CVSS, контекст workload,
 наличие фикса и срок устранения фиксируют в vulnerability-management процессе.
 
+Для production-triage добавьте два внешних сигнала к этому анализу. [CISA Known Exploited
+Vulnerabilities (KEV)](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) —
+авторитетный каталог CVE с подтверждённой эксплуатацией *in the wild*; он является важным
+входом для приоритизации. [FIRST EPSS](https://www.first.org/epss/) оценивает вероятность
+эксплуатации CVE в ближайшие 30 дней, но не является самостоятельным risk score. Confirmed
+exploitation или присутствие в KEV должно резко повышать приоритет. EPSS используйте вместе с
+достижимостью уязвимого кода, impact и контекстом среды — например, exposure, privileges и
+компенсирующими контролями. Ни KEV, ни EPSS не являются экзаменационным gate и не заменяют
+анализ достижимости или экспозиции конкретного workload.
+
+### Почему Trivy severity может отличаться от NVD
+
+Для OS-пакетов Trivy предпочитает advisory поставщика дистрибутива: дистрибутив может
+backport-ить исправление, не меняя «upstream» версию так, как ожидает NVD. Поэтому `NVD HIGH`
+и более низкая (или уже закрытая) оценка vendor не обязательно противоречат друг другу. В JSON
+результате смотрите `SeveritySource` и `VendorSeverity` вместе с `InstalledVersion` и
+`FixedVersion`, а при споре проверяйте advisory именно того package source. Для пакетов,
+установленных вне штатных репозиториев дистрибутива, matching может быть неполным: отсутствие
+finding не доказывает отсутствия уязвимости.
+
 Образ надо сканировать регулярно, даже если Dockerfile не менялся: базы CVE обновляются, а
 вчерашний «чистый» digest сегодня может получить новую запись. Минимальные точки контроля:
 после build, перед push или promotion, перед deploy и по расписанию для уже опубликованных
@@ -308,8 +328,11 @@ CRITICAL CVE:
 set -euo pipefail
 image="registry.example.com/payments/api:${GIT_SHA}"
 
-# build и push здесь должны быть выполнены отдельными шагами; дальше используйте digest из registry.
-digest="$(crane digest "$image")"
+# Build/push шаг обязан вернуть digest созданного manifest напрямую. Например, Buildx
+# записывает его в metadata file; не разрешайте уже опубликованный tag отдельным crane-запросом:
+# другой writer может переназначить tag в интервале между push и lookup.
+docker buildx build --push --metadata-file build-metadata.json -t "$image" .
+digest="$(jq -er '."containerimage.digest"' build-metadata.json)"
 immutable_image="${image}@${digest}"
 
 scan_started_at="$(date -u +%FT%TZ)"
@@ -322,8 +345,10 @@ trivy image --severity HIGH,CRITICAL --ignore-unfixed \
 trivy image --format cyclonedx --output sbom.cdx.json "$immutable_image"
 ```
 
-`crane digest` приведён как пример получения immutable reference; используйте доступный в
-вашем CI registry CLI, а не подменяйте его тегом. Сохраните `trivy-db-update.log`, timestamp
+Digest должен приходить непосредственно из результата build/push (например, metadata
+Buildx или эквивалентный output CI), а не из отдельного lookup тега после push: это исключает
+TOCTOU при параллельном переназначении тега. Затем scan, SBOM, signature и deploy используют
+только сохранённый digest. Сохраните `trivy-db-update.log`, timestamp
 scan и identifier или версию базы из лога вместе с `trivy.json`: это evidence свежести базы,
 а не только факт успешного job. Если gate временно ослаблен, исключение
 должно быть узким: CVE ID, package, обоснование, владелец, дата окончания и ссылка на
@@ -367,8 +392,10 @@ CVE, но и убедиться, что уязвимый artifact больше �
 ```bash
 namespace=payments
 deployment=api
-image_digest="${IMAGE_DIGEST:?set verified image digest}"
-new_image="registry.example.com/payments/api:1.4.3@sha256:${image_digest}"
+# Контракт: IMAGE_DIGEST — canonical OCI digest вида sha256:<64-hex>,
+# например значение containerimage.digest, возвращённое Buildx после push.
+image_digest="${IMAGE_DIGEST:?set verified image digest (sha256:<64-hex>)}"
+new_image="registry.example.com/payments/api:1.4.3@${image_digest}"
 
 kubectl -n "$namespace" set image deployment/"$deployment" api="$new_image"
 kubectl -n "$namespace" rollout status deployment/"$deployment" --timeout=5m
@@ -474,6 +501,7 @@ allowlist artifact. В ней scan-отчёт, SBOM и проверка испр
 проверяемыми артефактами.
 
 🧪 Лаба 111 (Supply chain: Trivy, SBOM, signing): [tasks/cks/labs/111](../../labs/111/README_RU.MD)
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [image-vulnerability-scanning-trivy](https://killercoda.com/killer-shell-cks/scenario/image-vulnerability-scanning-trivy)
 
 Полезная документация: [Trivy image](https://trivy.dev/latest/docs/target/container_image/)
 · [Trivy SBOM](https://trivy.dev/latest/docs/target/sbom/) · [Trivy databases](https://trivy.dev/latest/docs/configuration/db/)

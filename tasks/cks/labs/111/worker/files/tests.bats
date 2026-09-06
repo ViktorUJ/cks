@@ -29,18 +29,28 @@ record_result() {
 
 @test "3. Dockerfile is pinned, has no secret or remote ADD, and runs non-root" {
   file="$ROOT/Dockerfile"; report="$ART/3/hadolint-after.txt"
-  if [[ -f "$file" ]] && grep -qx 'FROM nginx:1.27.3-alpine' "$file" && ! grep -Eqi '^[[:space:]]*ADD[[:space:]]+https?://|^[[:space:]]*ENV[[:space:]].*(API_TOKEN|TOKEN)|sudo|:latest' "$file" && grep -Eq '^[[:space:]]*USER[[:space:]]+[^[:space:]0][^[:space:]]*' "$file" && [[ -f "$report" ]] && ! grep -Eq 'DL3007|DL3013|DL3020|DL3045' "$report"; then result=0; else echo "Dockerfile remediation or Hadolint after-report is incomplete"; result=1; fi
+  if [[ -f "$file" ]] && grep -Eq '^FROM[[:space:]]+nginx:1[.]27[.]3-alpine@sha256:[a-f0-9]{64}$' "$file" && ! grep -Eqi '^[[:space:]]*ADD[[:space:]]+https?://|^[[:space:]]*ENV[[:space:]].*(API_TOKEN|TOKEN)|sudo|:latest' "$file" && grep -Eq '^[[:space:]]*USER[[:space:]]+[^[:space:]0][^[:space:]]*' "$file" && [[ -f "$report" ]] && ! grep -Eq 'DL3007|DL3013|DL3020|DL3045' "$report"; then result=0; else echo "Dockerfile remediation or Hadolint after-report is incomplete"; result=1; fi
   record_result "$result"
 }
 
 @test "4. Deployment applies required pod and container hardening and has after reports" {
   file="$ROOT/deployment.yaml"; k="$ART/4/kubesec-after.json"; l="$ART/4/kube-linter-after.json"
   required='nginx:1.27.3-alpine|automountServiceAccountToken: false|runAsNonRoot: true|type: RuntimeDefault|allowPrivilegeEscalation: false|readOnlyRootFilesystem: true|drop: \["ALL"\]|cpu:|memory:'
-  if [[ -f "$file" ]] && ! grep -Eq 'privileged:[[:space:]]*true|:latest' "$file" && grep -Eq 'image:[[:space:]]*nginx:1.27.3-alpine' "$file" && grep -q 'automountServiceAccountToken: false' "$file" && grep -q 'runAsNonRoot: true' "$file" && grep -q 'type: RuntimeDefault' "$file" && grep -q 'allowPrivilegeEscalation: false' "$file" && grep -q 'readOnlyRootFilesystem: true' "$file" && grep -Eq 'drop:[[:space:]]*\["ALL"\]' "$file" && grep -q 'requests:' "$file" && grep -q 'limits:' "$file" && jq -e 'type == "array"' "$k" >/dev/null 2>&1 && jq -e 'type == "array"' "$l" >/dev/null 2>&1; then result=0; else echo "Deployment hardening or after-fix static reports are incomplete"; result=1; fi
+  if [[ -f "$file" ]] && ! grep -Eq 'privileged:[[:space:]]*true|:latest' "$file" && grep -Eq 'image:[[:space:]]*[^[:space:]]+@sha256:[a-f0-9]{64}' "$file" && ! grep -Eq 'image:[[:space:]]*nginx:1[.]27[.]3-alpine([[:space:]]|$)' "$file" && grep -q 'prepare-nginx-config' "$file" && grep -q 'nginx-cache' "$file" && grep -q 'nginx-config' "$file" && grep -q 'automountServiceAccountToken: false' "$file" && grep -q 'runAsNonRoot: true' "$file" && grep -q 'type: RuntimeDefault' "$file" && grep -q 'allowPrivilegeEscalation: false' "$file" && grep -q 'readOnlyRootFilesystem: true' "$file" && grep -Eq 'drop:[[:space:]]*\["ALL"\]' "$file" && grep -q 'requests:' "$file" && grep -q 'limits:' "$file" && jq -e 'type == "array"' "$k" >/dev/null 2>&1 && jq -e 'type == "array"' "$l" >/dev/null 2>&1; then result=0; else echo "Deployment hardening or after-fix static reports are incomplete"; result=1; fi
+  if [[ "$result" -eq 0 ]]; then
+    kubectl apply -f "$file" >/dev/null 2>&1 && kubectl rollout status deployment/catalog -n cks-111 --timeout=180s >/dev/null 2>&1
+    runtime_status=$?
+    ready=$(kubectl get deployment/catalog -n cks-111 -o jsonpath='{.status.availableReplicas}' 2>/dev/null || true)
+    run kubectl run catalog-http-smoke -n cks-111 --rm -i --restart=Never --image=curlimages/curl:8.11.0 -- curl -fsS --max-time 10 http://catalog
+    if [[ "$runtime_status" -ne 0 || "$ready" != "1" || "$status" -ne 0 ]]; then
+      echo "Hardened Deployment must become Available and serve an HTTP smoke request"
+      result=1
+    fi
+  fi
   record_result "$result"
 }
 
-@test "5. Version search evidence comes from Trivy package listing and includes digest" {
+@test "5. Version search evidence comes from Trivy package listing and includes canonical RepoDigest" {
   report="$ART/5/version-search.txt"
   packages=$(grep -Ec '^[[:alnum:]_.+/-]+=[[:alnum:].+~:_-]+$' "$report" 2>/dev/null || true)
   if [[ -s "$report" ]] && grep -q 'trivy image --list-all-pkgs' "$report" && grep -q 'nginx:1.27.3-alpine' "$report" && grep -q 'sha256:' "$report" && [[ "$packages" -ge 3 ]]; then result=0; else echo "Version-search evidence must include command, image, digest, and three package=version lines"; result=1; fi

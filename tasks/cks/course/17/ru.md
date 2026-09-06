@@ -6,7 +6,7 @@
 > объектами ядра может работать процесс. Теперь добавим фильтр на ещё более низком уровне:
 > **seccomp** сопоставляет системные вызовы (syscalls) процесса с правилами profile и для
 > каждого выбирает действие, например разрешение, ошибку, завершение или журналирование.
-> Это домен **System Hardening** CKS (15%). В следующей части курса эти же ограничения
+> Это домен **System Hardening** CKS (10%). В следующей части курса эти же ограничения
 > станут частью защищённого `SecurityContext` и Pod Security Standards.
 
 > **Что нужно из CKA.** Базовые `securityContext`, non-root запуск,
@@ -327,11 +327,11 @@ kubectl exec -n "$NS" "$POD" -c "$CTR" -- grep '^Seccomp:' /proc/1/status
 
 Старые manifest могут использовать annotation
 `seccomp.security.alpha.kubernetes.io/pod` или
-`container.seccomp.security.alpha.kubernetes.io/<container>`. Это legacy-интерфейс:
-распознайте его при audit, но для новых workload используйте `seccompProfile`. Не смешивайте
-annotation и API-поле, особенно с разными значениями. При миграции сначала проверьте версию
-кластера и runtime, перенесите назначение в `securityContext`, протестируйте новый Pod и
-проверьте его effective mode.
+`container.seccomp.security.alpha.kubernetes.io/<container>`. Это исторический интерфейс: начиная с Kubernetes v1.25 эти annotations **нефункциональны**
+и не назначают seccomp profile. Их наличие в современном кластере — сигнал для audit, а не
+работающая совместимость; замените их на `securityContext.seccompProfile`. Не смешивайте
+annotation и API-поле, особенно с разными значениями. После миграции протестируйте новый Pod
+и проверьте его effective mode.
 
 ## 17.4. JSON-профиль: структура и безопасный пример
 
@@ -358,6 +358,23 @@ kernel журналировать попытки `unshare`, `setns`, `mount` и 
   ]
 }
 ```
+
+OCI seccomp умеет сопоставлять не только имя syscall, но и его аргументы через
+`syscalls[].args` (`index`, `value`, необязательный `valueTwo`, `op`). Например,
+следующее правило возвращает `EPERM` только для `socket(2)` с domain `AF_PACKET` (17),
+не запрещая другие socket domains:
+
+```json
+{
+  "names": ["socket"],
+  "action": "SCMP_ACT_ERRNO",
+  "errnoRet": 1,
+  "args": [{"index": 0, "value": 17, "op": "SCMP_CMP_EQ"}]
+}
+```
+
+Номера аргументов и значения зависят от syscall ABI, поэтому такой фильтр тестируют на
+каждой целевой архитектуре/runtime и не переносят между платформами без проверки.
 
 Для ARM64 набор `architectures` должен соответствовать архитектуре node (например,
 `SCMP_ARCH_AARCH64`); не копируйте x86_64 JSON на ARM node. В heterogeneous cluster profile
@@ -646,6 +663,12 @@ workload. Делайте узкий эксперимент в отдельном
 Для production обычной нагрузки часто достаточно комбинации `RuntimeDefault`, non-root,
 `allowPrivilegeEscalation: false`, drop capabilities и MAC policy. Custom profile оправдан
 там, где риск и контракт хорошо известны; сложность profile - тоже operational risk.
+
+Когда custom seccomp/AppArmor/SELinux profiles нужно распространять и записывать в масштабе
+кластера, рассмотрите **Security Profiles Operator (SPO)** как production-путь: он
+управляет lifecycle и recording workflow профилей вместо ручного копирования JSON в
+каталог kubelet на каждой ноде. Это не отменяет тестов, versioning и контроля placement,
+но делает delivery профиля управляемым платформой.
 
 Pod Security Standards уровня `restricted` требуют seccomp `RuntimeDefault` или
 `Localhost`; `Unconfined` этому baseline не соответствует. Admission policy полезна для

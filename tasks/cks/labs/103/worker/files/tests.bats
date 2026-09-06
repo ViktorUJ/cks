@@ -85,18 +85,24 @@ record_result() {
   record_result 4 "$result"
 }
 
-@test "5. TLS 1.3 and cipher hardening are active in control-plane manifests" {
+@test "5. TLS 1.3 is active and TLS 1.2 is rejected by the control plane" {
   report=/var/work/tests/artifacts/5/tls13.txt
   run node_ssh "sudo grep -qx -- '    - --tls-min-version=VersionTLS13' /etc/kubernetes/manifests/kube-apiserver.yaml && sudo grep -qx -- '    - --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384' /etc/kubernetes/manifests/kube-apiserver.yaml && sudo grep -qx -- '    - --cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384' /etc/kubernetes/manifests/etcd.yaml"
   manifest_status=$status
   manifest_output=$output
   ready=$(kubectl get --raw='/readyz' --context "$CTX" 2>/dev/null)
   etcd_phase=$(kubectl get pods -n kube-system --context "$CTX" -l component=etcd -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
-  if [[ "$manifest_status" -eq 0 && "$ready" == "ok" && "$etcd_phase" == "Running" ]] && grep -Eq 'TLSv1[.]3' "$report"; then
+  run node_ssh "openssl s_client -connect 127.0.0.1:6443 -tls1_2 -brief </dev/null"
+  tls12_status=$status
+  tls12_output=$output
+  if [[ "$manifest_status" -eq 0 && "$ready" == "ok" && "$etcd_phase" == "Running" && "$tls12_status" -ne 0 ]] \
+    && grep -Eq 'TLSv1[.]3' "$report" \
+    && grep -Fq 'TLS 1.2 correctly rejected' "$report"; then
     result=0
   else
     echo "$manifest_output"
-    echo "readyz=$ready etcd_phase=$etcd_phase"
+    echo "readyz=$ready etcd_phase=$etcd_phase tls12_exit=$tls12_status"
+    echo "$tls12_output"
     result=1
   fi
   record_result 5 "$result"

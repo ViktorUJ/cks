@@ -25,9 +25,9 @@ Terragrunt создаёт Kubernetes `1.36.0` в `eu-central-1`:
 | `worker` | рабочая машина с `kubectl`, `cilium`, `istioctl`, `check_result` и SSH aliases к нодам |
 
 Проверенная 2026-08-31 матрица (сверяйте перед каждой сборкой): Kubernetes обучения
-`1.36.0`; Cilium data plane `1.20.1`, чья официальная requirements matrix включает
-Kubernetes `1.36`; Cilium CLI `0.19.7` (совместим с
-Cilium `1.17+`); Istio `1.30.4` (ветка `1.30` официально поддерживает Kubernetes
+`1.36.0`; Cilium data plane — поддерживаемая lab-сборка, совместимость которой с
+Kubernetes `1.36` надо подтвердить по актуальной requirements matrix; Cilium CLI `0.19.7`
+(совместим с Cilium `1.17+`); Istio `1.30.4` (ветка `1.30` официально поддерживает Kubernetes
 `1.32–1.36`). Версия экзамена здесь не определяет совместимость lab tooling; по данным LF
 она сейчас `v1.34` и проверяется отдельно перед экзаменом.
 
@@ -87,8 +87,8 @@ mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
 ---
 | **4** | **Включить Cilium transparent encryption** |
 | :---: | :--- |
-| Что делаем | Сначала зафиксируйте версии Kubernetes, Cilium agent и Cilium CLI в `/var/work/tests/artifacts/4/tool-versions.txt` и убедитесь, что data plane поддерживает Kubernetes `1.36`. Включите WireGuard через source-of-truth конфигурацию: Helm upgrade с `encryption.enabled=true,encryption.type=wireguard` для Helm-managed установки либо documented ConfigMap key `enable-wireguard: true` с rollout агентов. Не используйте удалённый workflow `cilium encrypt enable`. Сохраните agent-side `cilium encrypt status` и `cilium status` в `/var/work/tests/artifacts/4/cilium-encrypt-status.txt`. |
-| Критерии приёмки | Version evidence существует; Cilium agents готовы; status показывает WireGuard и не показывает одновременно IPsec; настройка переживает restart агента. |
+| Что делаем | Сначала зафиксируйте версии Kubernetes, Cilium agent и Cilium CLI в `/var/work/tests/artifacts/4/tool-versions.txt` и убедитесь, что data plane поддерживает Kubernetes `1.36`. Включите WireGuard через source-of-truth конфигурацию: Helm upgrade с `encryption.enabled=true,encryption.type=wireguard` для Helm-managed установки либо documented ConfigMap key `enable-wireguard: true` с rollout агентов. Не используйте удалённый workflow `cilium encrypt enable`. Сохраните agent-side `cilium-dbg encrypt status` и `cilium-dbg status --all-encryption` в `/var/work/tests/artifacts/4/cilium-encrypt-status.txt`. `cilium-dbg` установлен вместе с Cilium agent и вызывается через `kubectl exec`; локальный `cilium` CLI предназначен для install/cluster-level операций. |
+| Критерии приёмки | Version evidence существует; Cilium agents готовы; status показывает WireGuard и не показывает одновременно IPsec; `--all-encryption` содержит evidence peer/allowed-IP (или remote-node) для межнодового состояния; настройка переживает restart агента. |
 
 ---
 | **5** | **Доказать отсутствие plaintext между нодами** |

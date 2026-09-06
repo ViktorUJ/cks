@@ -23,7 +23,9 @@
 процесс скомпрометирован, лишний UID 0, capability, writable root filesystem или доступ к
 namespace ноды расширяют последствия. `SecurityContext` передаёт runtime конкретные границы
 процесса; он не заменяет исправление уязвимостей образа, RBAC, NetworkPolicy, AppArmor или
-seccomp.
+seccomp. Он также **не задаёт** CPU, memory или ephemeral-storage requests/limits и не
+защищает от resource exhaustion/noisy-neighbor: это отдельные поля Pod и controls вроде
+`LimitRange`/`ResourceQuota`.
 
 ```mermaid
 flowchart TB
@@ -128,10 +130,10 @@ ServiceAccount и минимальный RBAC, а не возвращайте de
   больше прав через setuid/setgid бинарник или file capabilities. Это не отнимает права,
   уже выданные контейнеру, и не заменяет `drop: ALL`. Kubernetes делает это значение effective
   `true`, если контейнер `privileged` или имеет `CAP_SYS_ADMIN`.
-- **`readOnlyRootFilesystem: true`** монтирует root filesystem контейнера read-only и запрещает
-  запись в его writable rootfs layer. Это не делает immutable image layers. Приложение
-  по-прежнему может писать в явно смонтированные тома, поэтому writable mount не должен быть
-  `hostPath`.
+- **`readOnlyRootFilesystem: true`** делает writable root filesystem контейнера недоступной
+  для записи; image layers и так immutable. Это не ограничивает явно смонтированные volumes:
+  они остаются writable или read-only согласно своим mount options и permissions, поэтому
+  writable mount не должен быть `hostPath`.
 - **`seccompProfile.type: RuntimeDefault`** включает профиль runtime по умолчанию для всех
   контейнеров Pod. Он отсекает ряд редко нужных и рискованных syscalls, но совместимость
   проверяют на настоящей нагрузке.
@@ -217,12 +219,38 @@ spec:
     image: registry.example.invalid/app:1.4.2
 ```
 
-В Kubernetes v1.36 функция beta и включена по умолчанию. Если feature gate отключали, его
-нужно включить у API server и kubelet; также нужен CRI: известная поддержка есть у containerd
-с v2.0 и CRI-O с
-v1.31. Проверяйте ноду по `status.features.supplementalGroupsPolicy: true`. Начиная с v1.33
+`supplementalGroupsPolicy` — GA/stable в Kubernetes v1.35 (lifecycle: alpha v1.31 → beta
+v1.33 → GA v1.35), согласно официальному release blog Kubernetes. Feature gate
+`SupplementalGroupsPolicy` зафиксирован в состоянии enabled by default. Всё равно нужен CRI с
+поддержкой: известная поддержка есть у containerd с v2.0 и CRI-O с v1.31. Проверяйте ноду по `status.features.supplementalGroupsPolicy: true`. Начиная с v1.33
 kubelet отклоняет Pod с `Strict` на неподдерживаемой ноде, а не молча применяет `Merge`; в
 событиях будет `SupplementalGroupsPolicyNotSupported`.
+
+### Advanced: SELinux, `/proc`, sysctls и Windows scope
+
+Это поля того же `SecurityContext`, но они не являются универсальным Linux baseline выше.
+`seLinuxOptions` на Pod или container задаёт SELinux label процесса; container-level значение
+перекрывает Pod-level. При обычном рекурсивном SELinux relabel именно **container runtime**
+меняет label inode содержимого тома перед его использованием контейнером — не kubelet.
+Pod-level `seLinuxChangePolicy: MountOption` запрашивает relabel через mount option
+`-o context=`, но сам по себе его не гарантирует. Для PVC с access mode, отличным от
+`ReadWriteOncePod`, в Kubernetes v1.36 нужны включённый feature gate `SELinuxMount` (он
+выключен по умолчанию) и `CSIDriver.spec.seLinuxMount: true` у CSI-драйвера; иначе Kubernetes
+использует обычный recursive relabel. Не меняйте label или policy ради скорости без теста
+изоляции и совместимости конкретного CSI/файловой системы.
+
+`procMount` — только container-level Linux option: безопасный default `Default` оставляет
+маскированные чувствительные части `/proc`; `Unmasked` расширяет обзор процесса и не подходит
+для restricted workload. Начиная с Kubernetes v1.30 `Unmasked` допустим только для Pod в user
+namespace, то есть при `spec.hostUsers: false`. Pod-level `securityContext.sysctls` задаёт
+sysctls для network/IPC namespace Pod. Используйте только safe sysctls из документации
+Kubernetes; unsafe sysctls требуют allowlist kubelet и могут конфликтовать с host namespaces,
+поэтому это осознанное node-level исключение, а не настройка приложения.
+
+Для Windows эти Linux controls не применимы. Identity Windows-container задают через
+`windowsOptions.runAsUserName` на Pod или container (container override имеет приоритет);
+при необходимости там же настраивают GMSA. Проверяйте имя пользователя, образ и поддержку
+Windows-ноды отдельно: Linux `runAsUser`/UID и SELinux не являются заменой `runAsUserName`.
 
 ### Init, sidecar и ephemeral container - отдельные процессы
 
@@ -657,6 +685,8 @@ baseline находится в template, admission предотвращает р
 
 🧪 Лаба 107 (multi-container Pod, `emptyDir` и writable-path debugging):
 [tasks/cka/labs/107](../../../cka/labs/107/README_RU.MD)
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [privileged-containers](https://killercoda.com/killer-shell-cks/scenario/privileged-containers) · [privilege-escalation-containers](https://killercoda.com/killer-shell-cks/scenario/privilege-escalation-containers)
 
 ## Справочные материалы
 

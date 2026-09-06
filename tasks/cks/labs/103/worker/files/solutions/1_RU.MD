@@ -158,10 +158,20 @@ ssh control-plane "sudo grep -- '--cipher-suites=' /etc/kubernetes/manifests/etc
 mkdir -p /var/work/tests/artifacts/5
 ssh control-plane 'openssl s_client -connect 127.0.0.1:6443 -tls1_3 -brief </dev/null' \
   > /var/work/tests/artifacts/5/tls13.txt 2>&1
+if ssh control-plane 'openssl s_client -connect 127.0.0.1:6443 -tls1_2 -brief </dev/null' \
+  >> /var/work/tests/artifacts/5/tls13.txt 2>&1; then
+  echo 'TLS 1.2 unexpectedly succeeded' | tee -a /var/work/tests/artifacts/5/tls13.txt
+  exit 1
+else
+  echo 'TLS 1.2 correctly rejected (non-zero exit / handshake failure)' \
+    | tee -a /var/work/tests/artifacts/5/tls13.txt
+fi
 cat /var/work/tests/artifacts/5/tls13.txt
 ```
 
-Ожидается строка вида `Protocol version: TLSv1.3` или `Protocol : TLSv1.3`.
+Ожидается строка вида `Protocol version: TLSv1.3` или `Protocol : TLSv1.3`, а завершение
+`openssl s_client -tls1_2` с ошибкой handshake/non-zero exit должно быть записано как
+`TLS 1.2 correctly rejected`.
 
 ## Задание 6. Проверить SHA-256 kubelet и kubectl
 

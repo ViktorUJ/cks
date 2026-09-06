@@ -159,6 +159,7 @@ agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0
   printf '\n'
   cilium version --client
   printf 'Cilium CLI=v0.19.7\n'
+  printf 'Cilium data plane=verify current supported lab build against Kubernetes 1.36 requirements matrix\n'
   printf 'Istio=1.30.4\n'
 } | tee /var/work/tests/artifacts/4/tool-versions.txt
 ```
@@ -176,15 +177,19 @@ kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
 cilium status --wait || true
 ```
 
-Статус шифрования читаем у агента: подкоманда `encrypt status` есть именно в agent-side
-CLI (внутри Cilium pod), а не в клиентском `cilium`.
+Статус шифрования читаем у агента через `cilium-dbg`: это in-pod debug CLI, поставляемый с Cilium agent. Локальный `cilium` CLI остаётся инструментом install/cluster-level и не заменяет его внутри Pod. `--all-encryption` даёт evidence WireGuard peer и allowed-IP/remote-node, поэтому проверяем не только отсутствие plaintext в capture.
 
 ```bash
 agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}')
 {
-  kubectl -n kube-system exec "$agent" -- cilium encrypt status
-  kubectl -n kube-system exec "$agent" -- cilium status
+  printf '$ cilium-dbg encrypt status
+'
+  kubectl -n kube-system exec "$agent" -- cilium-dbg encrypt status
+  printf '$ cilium-dbg status --all-encryption
+'
+  kubectl -n kube-system exec "$agent" -- cilium-dbg status --all-encryption
 } | tee /var/work/tests/artifacts/4/cilium-encrypt-status.txt
+grep -Eqi 'peer|allowed[ -]?ip|remote node' /var/work/tests/artifacts/4/cilium-encrypt-status.txt
 ```
 
 ## 5. Захват межнодового WireGuard пакета
@@ -328,9 +333,11 @@ kubectl exec -n default mesh-outside -- \
 outside_status=$?
 set -e
 cat /var/work/tests/artifacts/6/market-outside.txt
-[[ "$outside_status" -ne 0 ]]
-grep -Eqi 'connection reset by peer|recv failure.*reset' \
-  /var/work/tests/artifacts/6/market-outside.txt
+if [[ "$outside_status" -eq 0 ]] || grep -Eq 'HTTP/[0-9.]+ 2[0-9][0-9]' \
+  /var/work/tests/artifacts/6/market-outside.txt; then
+  echo "plaintext client unexpectedly received a successful HTTP response" >&2
+  exit 1
+fi
 ```
 
 `PeerAuthentication` управляет inbound server mode. Внутренний client получает

@@ -2,7 +2,7 @@
 
 # Глава 04. NetworkPolicy для безопасности
 
-> **Что дальше.** В предыдущих главах мы разобрали модель угроз и механизмы изоляции Linux. Теперь ограничим один из главных путей lateral movement: сеть между Pod. **NetworkPolicy** превращает плоскую pod-сеть в набор явно разрешённых связей. Это домен Cluster Setup (10%) CKS.
+> **Что дальше.** В предыдущих главах мы разобрали модель угроз и механизмы изоляции Linux. Теперь ограничим один из главных путей lateral movement: сеть между Pod. **NetworkPolicy** превращает плоскую pod-сеть в набор явно разрешённых связей. Это домен Cluster Setup (15%) CKS.
 
 > **Что нужно из CKA.** Базовый синтаксис `NetworkPolicy`, селекторы и модель сети Pod разобраны в [главе 34 CKA](../../../cka/course/34/ru.md). Устройство pod-сети и роль CNI - в [главе 30 CKA](../../../cka/course/30/ru.md). Здесь рассматриваем применение этих механизмов как средства защиты, а не повторяем основу.
 
@@ -71,7 +71,7 @@ spec:
 
 Порядок важен для эксплуатации: сначала определите карту допустимых связей и подготовьте allow-политики, затем примените default-deny и сразу нужные разрешения в контролируемом rollout. Иначе приложения потеряют DNS, доступ к зависимостям, ingress/monitoring-трафику или внешнему API. Обычные kubelet liveness/readiness/startup probes между Pod и его нодой в стандартной модели NetworkPolicy не являются типичным трафиком, который блокирует default-deny; особенности host/CNI всё равно проверяйте в своём окружении. Для нового изолированного namespace полезно создавать deny до запуска рабочих Pod.
 
-Политики аддитивны: Kubernetes не имеет порядка `deny`/`allow` и приоритета между объектами `NetworkPolicy`. Для каждого `Pod` и каждого направления отдельно объединяются allow-правила всех применимых политик. Для соединения `source Pod → destination Pod` стороны проверяются независимо: если source `Pod` изолирован для `Egress`, его egress rules должны разрешать назначение; если destination `Pod` изолирован для `Ingress`, его ingress rules должны разрешать источник. Когда изолированы обе стороны, нужны оба разрешения. Направление, для которого `Pod` не изолирован ни одной применимой `NetworkPolicy`, дополнительного allow-правила не требует.
+Политики аддитивны: Kubernetes не имеет порядка `deny`/`allow` и приоритета между объектами `NetworkPolicy`. Для каждого `Pod` и каждого направления отдельно объединяются allow-правила всех применимых политик. Для соединения `source Pod → destination Pod` стороны проверяются независимо: если source `Pod` изолирован для `Egress`, его egress rules должны разрешать назначение; если destination `Pod` изолирован для `Ingress`, его ingress rules должны разрешать источник. Когда изолированы обе стороны, нужны оба разрешения. Reply traffic для разрешённого соединения не требует отдельного обратного правила: он неявно разрешён. Направление, для которого `Pod` не изолирован ни одной применимой `NetworkPolicy`, дополнительного allow-правила не требует.
 
 | Политика | Что изолирует | Когда применять |
 |---|---|---|
@@ -173,7 +173,7 @@ spec:
       port: 3128
 ```
 
-Ограничивайте одновременно источник, назначение и порт. Политика только с `podSelector` без `ports` допускает все порты выбранного назначения и обычно шире необходимого.
+Ограничивайте одновременно источник, назначение и порт. Политика только с `podSelector` без `ports` допускает все порты выбранного назначения и обычно шире необходимого. Для числовых портов API также поддерживает диапазон `endPort` (Stable с v1.25): `endPort` должен быть не меньше `port`, и оба значения должны быть числовыми. Реальное применение диапазона зависит от CNI, поэтому проверяйте его в своей среде.
 
 ## 04.4. Сетевая изоляция namespace и multi-tenancy
 
@@ -199,6 +199,8 @@ flowchart TB
 ```
 
 На практике полезно применять baseline автоматически шаблоном namespace или policy-движком. Но обычная `NetworkPolicy` имеет область namespace и не заменяет cluster-wide policy конкретного CNI. Если нужны общекластерные запреты, FQDN-правила или L7-фильтрация, рассмотрите Cilium и его политики в главе 06.
+
+> **Production note, не экзаменационный материал.** Core `networking.k8s.io/v1` `NetworkPolicy` остаётся основным переносимым API для CKS. SIG Network развивает отдельный cross-CNI API `ClusterNetworkPolicy` (`policy.networking.k8s.io/v1alpha2`), но это emerging/экспериментальный API с зависящей от CNI поддержкой; он не заменяет ни core API, ни vendor-specific расширения Cilium/Calico.
 
 ## 04.5. Ловушка egress: DNS перестаёт работать
 
@@ -237,7 +239,7 @@ spec:
 
 Сначала убедитесь, что CNI вообще реализует `NetworkPolicy`. Сам API-объект принимается Kubernetes независимо от возможностей CNI; при отсутствии поддержки объект существует, но трафик не меняется. Сверьте документацию установленного CNI и создайте контролируемый тест.
 
-> **Граница NetworkPolicy.** Это фильтрация сетевого трафика Pod, а не полная изоляция tenant. Трафик Pod с node, на которой он размещён, включая node-local агенты, kubelet probes и host endpoints, обрабатывается CNI по-разному и не образует переносимой границы. Поведение для `hostNetwork` Pod также CNI-специфично: такой трафик нередко выглядит как node IP, поэтому `podSelector` и `namespaceSelector` могут не сработать ожидаемым образом. Порядок применения NAT и policy зависит от реализации: не делайте переносимое правило `ipBlock` для Service `ClusterIP`, pod CIDR или адреса после SNAT. Для Pod выбирайте источник и назначение селекторами, а `ipBlock` оставляйте для документированных внешних адресов. Помимо сети нужны отдельные controls для kernel и node, API/RBAC, Secret, admission и scheduler; также применяйте TLS, host firewall и возможности конкретного CNI.
+> **Граница NetworkPolicy.** Это фильтрация сетевого трафика Pod, а не полная изоляция tenant. **Local-node exception задана спецификацией Kubernetes:** трафик в Pod и из Pod с node, на которой этот Pod запущен, всегда разрешён независимо от IP Pod или node; ingress из локальной node к изолированному Pod также разрешён. Это отдельное гарантированное правило, а не различие CNI. Напротив, поведение `hostNetwork` Pod и других host-aware controls CNI-специфично: такой трафик нередко выглядит как node IP, поэтому `podSelector` и `namespaceSelector` могут не сработать ожидаемым образом. Стандартная NetworkPolicy задаёт переносимую семантику для TCP, UDP и SCTP (SCTP — при поддержке CNI); для ICMP, ARP и других протоколов allow/deny implementation-defined. Поэтому `ping` нельзя использовать как переносимое доказательство того, что default-deny сработал или не сработал. Порядок применения NAT и policy зависит от реализации: не делайте переносимое правило `ipBlock` для Service `ClusterIP`, pod CIDR или адреса после SNAT. Для Pod выбирайте источник и назначение селекторами, а `ipBlock` оставляйте для документированных внешних адресов. Помимо сети нужны отдельные controls для kernel и node, API/RBAC, Secret, admission и scheduler; также применяйте TLS, host firewall и возможности конкретного CNI. Поведение уже установленных соединений после изменения policy или labels implementation-defined: CNI может разорвать их или оставить до закрытия. Учитывайте это при rollout, incident response и тестах.
 
 Перед тестом подготовьте известный исправный контрольный endpoint: например, Service `control`, который выбирает listener Pod с точной меткой `app=control` и отвечает на TCP 8080. Проверьте его без новых policy или из заранее разрешённого диагностического Pod. Не используйте для отрицательного теста несуществующее DNS-имя: так будет проверен DNS, а не политика. Затем сверьте реальные labels всех участников:
 
@@ -249,7 +251,9 @@ kubectl -n payments get networkpolicy
 kubectl -n payments describe networkpolicy default-deny
 kubectl -n payments get pod --show-labels
 
-# Временно создать источники с теми же точными labels, что в policy
+# Временно создать источники с теми же точными labels, что в policy.
+# Для стандартной NetworkPolicy ServiceAccount не является selector: он важен
+# только для CNI-specific identity policy или других расширений.
 kubectl -n payments run netshoot \
   --image=nicolaka/netshoot:v0.16 \
   --labels=app=frontend \
@@ -275,7 +279,7 @@ kubectl -n payments exec netshoot -- nc -vz -w 3 control 8080
 | Разрешённый egress | `app=frontend` -> `app=control`; control ingress допускает frontend, frontend egress разрешает control на TCP 8080 | `kubectl -n payments exec netshoot -- nc -vz -w 3 control 8080` - успех |
 | Запрещённый egress | `app=frontend` -> `app=egress-denied-control`; ingress назначения допускает frontend, но frontend egress не разрешает это назначение | `kubectl -n payments exec netshoot -- nc -vz -w 3 egress-denied-control 8080` - отказ |
 
-Для проверки роли источника используйте те же labels и ServiceAccount, что у приложения. Результат запрещённого соединения зависит от CNI и listener: это может быть timeout, `connection refused` или сообщение CNI. Фиксируйте вместе успешный контрольный запрос и ожидаемую недоступность, а временные test-policy и Pod удаляйте после проверки.
+Для стандартной `NetworkPolicy` для проверки роли источника используйте те же labels, namespace, IP-путь и порты, что у приложения; тот же ServiceAccount нужен только для CNI-specific identity policy. Отрицательный тест выполняйте к заранее подтверждённому listener: `connection refused` сам по себе не доказывает блокировку, потому что возможны отсутствие listener, неверный Service/backend или отказ приложения. Фиксируйте успешный контрольный запрос, ожидаемую недоступность и, если CNI предоставляет telemetry, deny/drop event или flow log; затем удаляйте временные test-policy и Pod.
 
 | Симптом | Проверка и вероятная причина |
 |---|---|
@@ -285,11 +289,14 @@ kubectl -n payments exec netshoot -- nc -vz -w 3 control 8080
 | Policy не выбирает Pod | Метка задана у Deployment template иначе, чем в `podSelector`; сверить `kubectl get pod --show-labels` |
 | Внешний адрес не блокируется | Не задана egress isolation, `ipBlock` не соответствует фактическому адресу, порядок NAT отличается от ожидания или трафик обходит ожидаемую точку |
 
+Для учебной диагностики выше используется tag `nicolaka/netshoot:v0.16`; tag может измениться или отсутствовать в offline-среде. В production и воспроизводимых лабах pin-ьте образ по digest и заранее обеспечьте его pre-pull/доступность registry.
+
 ## 04.7. Как это применяют в продакшене
 
 - **Baseline как код.** Default-deny и минимальные allow-правила хранят рядом с манифестами рабочих нагрузок, проверяют как код и применяют при создании namespace.
 - **Карта зависимостей до включения deny.** Команда фиксирует входящие и исходящие связи, включая DNS, health checks, metrics, registry, proxy и внешние SaaS API. Это уменьшает риск аварии при rollout.
-- **Метки как контракт.** Стабильные labels для роли приложения и tenant документируют и проверяют. Случайные или слишком общие метки делают политику шире ожидаемого.
+- **Метки как контракт.** Стабильные labels для роли приложения и tenant документируют и проверяют; изменение схемы labels проходит review как API-контракт. Случайные или слишком общие метки делают политику шире ожидаемого.
+- **Preview до enforcement.** До включения новой policy оцените impact по карте потоков, протестируйте в staging и, если CNI поддерживает, используйте audit/observe mode. Проверяйте разрешённые и запрещённые пути до rollout enforcement.
 - **Наблюдаемость.** До и после изменения политики смотрят flow logs CNI, метрики ошибок и latency. Для Cilium это Hubble; подход разобран в главе 06.
 - **Многоуровневая защита.** Egress policy дополняют cloud firewall, private endpoints, identity и TLS. Особенно чувствительные назначения, включая metadata, защищают на нескольких уровнях.
 
@@ -320,6 +327,21 @@ kubectl -n payments exec netshoot -- nc -vz -w 3 control 8080
 
 **В реальной работе.** NetworkPolicy ограничивает ущерб при компрометации приложения и отделяет tenant друг от друга. Наиболее полезный навык - не написание большого правила, а составление минимальной карты фактических сетевых зависимостей и безопасный rollout без нарушения работы сервиса.
 
+> ### 🔴 Взгляд атакующего
+> **Asset:** backend Service и внутренние API.
+>
+> **Starting foothold:** RCE в Pod `frontend`.
+>
+> **Attacker objective:** обнаружить внутренние endpoints и достучаться до backend.
+>
+> **Abuse path:** DNS discovery -> доступ через Service -> прямой доступ к Pod/IP, если сеть не изолирована.
+>
+> **Expected evidence:** CNI/Hubble flows, DNS-запросы и dropped packets при блокировке.
+>
+> **Control:** default-deny для ingress и egress плюс явные правила по identity/labels и портам.
+>
+> **Retest:** тот же запрос из `frontend` проходит только к разрешённому backend; запрос из постороннего Pod блокируется.
+
 ## 04.11. Вопросы для самопроверки
 
 1. Почему отсутствие NetworkPolicy помогает lateral movement после компрометации Pod?
@@ -333,6 +355,13 @@ kubectl -n payments exec netshoot -- nc -vz -w 3 control 8080
 ## Практика
 
 🧪 Лаба 101 (NetworkPolicy: default-deny, изоляция, metadata): [tasks/cks/labs/101](../../labs/101/README_RU.MD)
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [networkpolicy-create-default-deny](https://killercoda.com/killer-shell-cks/scenario/networkpolicy-create-default-deny) · [networkpolicy-namespace-communication](https://killercoda.com/killer-shell-cks/scenario/networkpolicy-namespace-communication)
+
+## Справочные материалы
+
+- [Kubernetes: Network Policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+- [Kubernetes Network Policy API](https://network-policy-api.sigs.k8s.io/)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 03](../03/ru.md) · [Глава 05](../05/ru.md)

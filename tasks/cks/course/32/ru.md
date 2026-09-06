@@ -19,13 +19,14 @@
 ## 32.1. Зачем нужен audit: ответить «кто, что, когда и с каким результатом»
 
 **Audit event** - запись `kube-apiserver` о запросе к Kubernetes API. Каждый запрос от
-`kubectl`, controller, ServiceAccount, admission webhook или стороннего клиента проходит
-через API server, поэтому audit позволяет восстановить административное действие и его
-исход.
+`kubectl`, controller, ServiceAccount или стороннего клиента проходит через API server,
+поэтому audit позволяет восстановить административное действие и его исход. Admission webhook
+не является обычным initiator такого запроса: API server вызывает его во время admission; сам
+webhook создаёт отдельный audit request лишь если его код дополнительно обращается к API.
 
 ```mermaid
 flowchart LR
-    client["kubectl / controller / SA"] --> api["kube-apiserver\nauthn → authz → admission"]
+    client["kubectl / controller / SA / иной API client"] --> api["kube-apiserver\nauthn → authz → admission webhook"]
     api --> etcd["API-объект / etcd"]
     api --> policy["audit Policy\nвыбирает level"]
     policy --> local["локальный audit log"]
@@ -97,7 +98,7 @@ flowchart LR
 | Стадия | Когда появляется | Практический смысл |
 |---|---|---|
 | `RequestReceived` | сразу после принятия запроса, до обработки | раннее evidence; для обычных запросов часто избыточно |
-| `ResponseStarted` | API начал отправлять response | типично важно для long-running запросов (`watch`); у обычного короткого запроса может не появиться |
+| `ResponseStarted` | API начал отправлять response | типично важно для long-running `watch` и streaming `exec`/`attach`/`port-forward`; для WebSocket это может быть первое полезное evidence успешного upgrade (`101 Switching Protocols`), тогда как `ResponseComplete` появится лишь после закрытия stream |
 | `ResponseComplete` | обработка полностью закончилась | главная стадия для расследования: есть status и окончательный outcome |
 | `Panic` | обработчик API server завершился panic | важная аварийная диагностика |
 
@@ -125,6 +126,12 @@ Kubernetes поддерживает четыре уровня. Правило в
 У non-resource запросов body не записываются даже на `Request`/`RequestResponse`; у `list`
 и non-resource запросов нет `.objectRef`. Поэтому для таких запросов опирайтесь на
 `.requestURI`, `.verb`, identity, timestamps, status и annotations, а не ожидайте имя объекта.
+
+`Metadata` не означает, что event лишён чувствительных данных: `.requestURI` остаётся в нём.
+У `pods/exec` command и arguments передаются query string, поэтому password, token или другой
+secret из CLI arguments может попасть в audit log даже без request/response body. Не передавайте
+secrets через `kubectl exec ... -- command secret`; используйте Secret volume/stdin-процедуру,
+ограничьте доступ к audit log и при необходимости санитизируйте downstream pipeline.
 
 Для обычного `watch` не используйте `RequestResponse` без специальной forensic-причины:
 long-running запросы имеют стадию `ResponseStarted`, а высокий уровень аудита создаёт
@@ -357,6 +364,20 @@ sudo crictl ps -a --name kube-apiserver
 CONTAINER_ID="${CONTAINER_ID:?set container ID}"
 sudo crictl logs "$CONTAINER_ID"
 ```
+
+### HA: завершить rollout на всех API server
+
+После canary-проверки одного control-plane узла в HA-кластере применяйте идентичные policy,
+flags и mounts **rolling-образом** ко всем остальным `kube-apiserver` instances: по одному
+узлу, дождаться `/readyz`, проверить audit event именно через этот instance, затем переходить
+к следующему. Иначе часть запросов, попавшая на ещё не обновлённый API server, получит другое
+или отсутствующее audit coverage. Не обновляйте все static Pod манифесты одновременно;
+сохраняйте отдельный rollback и фиксируйте версию policy на каждом узле.
+
+Перед production rollout проведите load test с ожидаемым API rate и пиковыми body: выбранные
+level, размер request/response, file I/O и webhook queue могут увеличить latency/memory либо
+сбросить batch events при overflow. Измеряйте audit metrics, backend latency и loss/retry
+сценарии, а не переносите tuning numbers из другого кластера.
 
 ## 32.6. Локальная ротация, retention и доставка за пределы ноды
 
@@ -597,14 +618,32 @@ sudo jq -r '
 ' /var/log/kubernetes/audit/audit.log | column -t -s $'\t'
 ```
 
-Отдельно выделите интерактивный доступ и изменение Pod через subresource:
+Отдельно выделите streaming-доступ и изменение Pod через subresource. Начиная с Kubernetes
+v1.31 `kubectl exec` по умолчанию использует WebSocket: HTTP upgrade — `GET` с успешным
+`101 Switching Protocols`. В v1.35 authorization для `pods/exec` требует также permission
+`create`, но audit verb WebSocket request может быть `get`; учитывайте оба варианта.
+`ResponseStarted` — первое полезное evidence активного upgrade, не ждите `ResponseComplete`,
+пока сессия ещё открыта.
 
 ```bash
+# exec: WebSocket GET/101 и legacy/create варианты; сохраняем streaming stages.
+sudo jq -r '
+  select(.objectRef.resource == "pods" and .objectRef.subresource == "exec")
+  | select(.verb == "get" or .verb == "create")
+  | select(.stage == "ResponseStarted" or .stage == "ResponseComplete")
+  | select((.responseStatus.code // 0) == 101 or
+           ((.responseStatus.code // 0) >= 200 and (.responseStatus.code // 0) < 300))
+  | [.stageTimestamp, .stage, .auditID, .user.username, .verb,
+     .objectRef.namespace, .objectRef.name, .objectRef.subresource,
+     (.responseStatus.code | tostring)]
+  | @tsv
+' /var/log/kubernetes/audit/audit.log | column -t -s $'\t'
+
+# ephemeralcontainers — обычная update/patch операция с окончательным 2xx outcome.
 sudo jq -r '
   select(.stage == "ResponseComplete")
-  | select(.objectRef.resource == "pods")
-  | select(.objectRef.subresource == "exec" or .objectRef.subresource == "ephemeralcontainers")
-  | select(.verb == "create" or .verb == "update" or .verb == "patch")
+  | select(.objectRef.resource == "pods" and .objectRef.subresource == "ephemeralcontainers")
+  | select(.verb == "update" or .verb == "patch")
   | select((.responseStatus.code // 0) >= 200 and (.responseStatus.code // 0) < 300)
   | [.stageTimestamp, .auditID, .user.username, .verb,
      .objectRef.namespace, .objectRef.name, .objectRef.subresource,
@@ -612,6 +651,10 @@ sudo jq -r '
   | @tsv
 ' /var/log/kubernetes/audit/audit.log | column -t -s $'\t'
 ```
+
+Применяйте ту же streaming-логику (`ResponseStarted` и code `101` как evidence upgrade) к
+`pods/attach` и `pods/portforward`; их `ResponseComplete` может появиться только при закрытии
+соединения.
 
 Используйте `auditID` как ключ correlation: им связывают разные стадии одного запроса и
 события из разных систем. Когда ищете по времени, учитывайте timezone в RFC3339 timestamp,
@@ -636,8 +679,9 @@ sudo jq -r '
 3. **8-12 мин:** выполнить безопасные create/delete ConfigMap в `payments`; через `jq`
    проверить `ResponseComplete`, identity, objectRef и успешный `2xx`.
 4. **12-15 мин:** создать тестовый Secret и доказать `Metadata` без request/response body.
-5. **15-18 мин:** найти high-signal RBAC или `pods/exec`/`ephemeralcontainers` event; сверить
-   `auditID`, status, annotations и только затем сетевой контекст.
+5. **15-18 мин:** найти high-signal RBAC или `pods/exec`/`ephemeralcontainers` event; для
+   `exec` учитывать `get`/`create`, streaming `ResponseStarted` и WebSocket `101`, затем
+   сверить `auditID`, status, annotations и только потом сетевой контекст.
 6. **18-20 мин:** проверить rotation, актуальность `apiserver_audit_event_total` /
    `apiserver_audit_error_total` и записать rollback path.
 
@@ -683,7 +727,8 @@ sudo jq -r '
 - Audit logging отвечает на «кто, что, когда, откуда и с каким результатом» для запросов
   Kubernetes API; это evidence, а не замена runtime/application/network telemetry.
 - `ResponseComplete` обычно главная стадия расследования; `omitStages: RequestReceived`
-  уменьшает дублирование, не убирая outcome.
+  уменьшает дублирование, не убирая outcome. Для streaming `exec`/`attach`/`port-forward`
+  `ResponseStarted` с `101 Switching Protocols` может быть первым полезным evidence upgrade.
 - `Metadata` - безопасный default; `Request`/`RequestResponse` надо применять узко,
   особенно никогда не писать Secret body без исключительной причины.
 - Rules policy упорядочены: первое совпадение побеждает, поэтому исключения и sensitive
@@ -714,6 +759,15 @@ backup манифеста → policy и directories → флаги/mounts → д
 безопасностной команде действие identity, его scope и outcome, не превратив audit log в
 новый источник утечки.
 
+> ### 🔴 Взгляд атакующего
+> **Asset:** доказательная история API-действий атакующего.
+> **Starting foothold:** доступ к API через скомпрометированный credential/token.
+> **Attacker objective:** выполнить действие, например `kubectl exec`, так, чтобы detector не распознал его как успешное.
+> **Abuse path:** использовать WebSocket-семантику `kubectl exec` (v1.31+), если detection rule ожидает только verb `create` или только stage `ResponseComplete`.
+> **Expected evidence:** audit log с корректными verb и stage.
+> **Control:** detection rule учитывает verb `get` или `create`, streaming stages и code `101`.
+> **Retest:** известный exec-сценарий генерирует ожидаемое audit-событие.
+
 ## 32.13. Вопросы для самопроверки
 
 1. Какие поля audit event отвечают на «кто», «что», «откуда» и «успешно ли»?
@@ -730,6 +784,8 @@ backup манифеста → policy и directories → флаги/mounts → д
    но не раскрыла Secret body?
 
 ## Практика
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [auditing-enable-audit-logs](https://killercoda.com/killer-shell-cks/scenario/auditing-enable-audit-logs)
 
 Лаба CKS 112 объединяет Falco, audit и иммутабельность; если она доступна в вашем
 окружении, выполните её после глав 29-32. Для подготовки control-plane навыка используйте

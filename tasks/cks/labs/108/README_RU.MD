@@ -92,3 +92,16 @@ Pod не остаются в namespace.
 ```bash
 TASK=108 make delete_cks_task
 ```
+
+## Совместимость и точная семантика запрета образов
+
+Лаба фиксирует Kubernetes 1.36.0 и Kyverno 1.19 для знакомства с новыми
+`policies.kyverno.io/v1` API. Это **forward-looking / unsupported combination**: Kyverno
+1.19 официально тестируется с Kubernetes 1.33–1.35, а не 1.36. Перед применением вне
+лаборатории выбирайте поддерживаемую матрицу версий и сверяйте release notes.
+
+В задании 2 под «запретом `latest`» понимается также запрет неявного `latest`: `nginx`
+без tag и digest недопустим так же, как `nginx:latest`. Разрешены только image с явным
+тегом, отличным от `latest`, либо с digest (`@sha256:...`). Безопасная CEL-проверка для
+каждого image: `image.contains('@') || (image.matches('^(?:.*/)?[^/:]+:[^/]+$') &&
+!image.endsWith(':latest'))`.

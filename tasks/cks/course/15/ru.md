@@ -6,7 +6,7 @@
 > пакеты и небезопасный доступ к container runtime. Теперь ограничим последствия оставшейся
 > точки входа: кому разрешено войти на хост, что пользователь может сделать через `sudo`,
 > какие файлы он может читать или менять и откуда вообще доступна нода. Это домен
-> **System Hardening** CKS (15%).
+> **System Hardening** CKS.
 
 > **Что нужно знать из CKA.** Базовые пользователи, группы, права файлов, процессы,
 > systemd и сетевые команды разобраны в [главе Linux CKA](../../../cka/course/00-5-linux/ru.md).
@@ -68,17 +68,19 @@ sudo usermod --lock "$USER_TO_REVIEW"
 sudo usermod --shell /usr/sbin/nologin "$SERVICE_USER"
 ```
 
-Сервисным аккаунтам не нужен интерактивный shell, домашний каталог и членство в
-административных группах. Проверьте также группы, которые фактически означают широкую
-эскалацию: `sudo`, `wheel`, `docker`, `lxd`, а на конкретной системе - группы владельцев
+Сервисным аккаунтам не нужен интерактивный shell и членство в административных группах.
+Домашний либо state-каталог создавайте только если он нужен сервису, с минимальными owner/mode.
+Проверьте также группы, которые фактически означают широкую эскалацию: `sudo`, `wheel`, `docker`, `lxd`, а на конкретной системе - группы владельцев
 сокетов container runtime. Членство в такой группе нельзя выдавать «для удобства».
 
 ### `sudo`: минимальный набор команд
 
 Правило `user ALL=(ALL) ALL` удобно, но даёт полный root. Если оператору требуется одна
 операция, разрешайте конкретную команду и её фиксированные аргументы в отдельном файле
-`/etc/sudoers.d/`. Редактируйте его только через `visudo`: утилита проверяет синтаксис и не
-даёт сохранить файл с небезопасным режимом.
+`/etc/sudoers.d/`. Редактируйте его через `visudo`, но не приписывайте ему лишнюю защиту:
+при `visudo -f <альтернативный-путь>` owner и permissions автоматически не проверяются без
+явных `-O` и `-P`. После создания вручную задайте `root:root` и `0440`, затем валидируйте всю
+policy через `visudo -cf /etc/sudoers` (проверка одного include-файла недостаточна).
 
 ```bash
 # Разрешите путь через предсказуемый системный PATH, а не предполагая фиксированный путь systemctl.
@@ -94,15 +96,19 @@ sudo stat -c '%U:%G %a %n' "$SYSTEMCTL_PATH"  # ожидаются root:root и 
 `/usr/local/sbin` принадлежит root и недоступен для записи непривилегированным пользователям.
 
 ```bash
-sudo sh -c 'cat > /usr/local/sbin/k8s-kubelet-status' <<'"'"'EOF'"'"'
+sudo tee /usr/local/sbin/k8s-kubelet-status >/dev/null <<'EOF'
 #!/bin/sh
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 SYSTEMCTL_PATH="$(command -v systemctl)" || exit 1
 exec "$SYSTEMCTL_PATH" --no-pager status kubelet
-EOF'
+EOF
 sudo chown root:root /usr/local/sbin/k8s-kubelet-status
 sudo chmod 0755 /usr/local/sbin/k8s-kubelet-status
 sudo visudo -f /etc/sudoers.d/k8s-operator
+sudo chown root:root /etc/sudoers.d/k8s-operator
+sudo chmod 0440 /etc/sudoers.d/k8s-operator
+sudo visudo -c -O -P -f /etc/sudoers.d/k8s-operator
+sudo visudo -cf /etc/sudoers
 ```
 
 ```sudoers
@@ -114,9 +120,8 @@ k8s-operator ALL=(root) KUBELET_STATUS
 Проверьте правило именно от имени целевого пользователя:
 
 ```bash
-sudo -l -U k8s-operator
-sudo -u k8s-operator sudo /usr/local/sbin/k8s-kubelet-status
-sudo -u k8s-operator sudo /bin/bash    # должно завершиться отказом
+sudo -l -U k8s-operator /usr/local/sbin/k8s-kubelet-status
+sudo -l -U k8s-operator /bin/bash || echo 'root shell is denied by policy as expected'
 ```
 
 Не пытайтесь ограничить опасную программу поверхностным списком аргументов. Редактор,
@@ -228,8 +233,12 @@ worker, etcd, load balancer, monitoring, Pod/Service CIDR и именно ваш
 нужные роли, NodePort и CNI-порты из матрицы; их нельзя угадать универсальным правилом.
 Сохраните текущую SSH-сессию, откройте вторую независимую сессию и до включения enforcement
 проверьте адрес источника, будущие правила (`ufw status numbered`) и out-of-band console.
-После включения не закрывайте сохранённую сессию, пока не подтвердите новый SSH-вход и
-работу kubelet/API из разрешённых сетей.
+Отдельно проверьте forwarded/routed трафик: CNI и Pod traffic часто требуют IPv4/IPv6 forwarding и правил
+`ufw route`; одной пары `ufw allow ... to any port ...` недостаточно. Сверьте
+`DEFAULT_FORWARD_POLICY`, `net.ipv4.ip_forward`, IPv6 forwarding и CNI-specific потоки,
+иначе SSH/API останутся живыми, а Pod networking сломается. После включения не закрывайте
+сохранённую сессию, пока не подтвердите новый SSH-вход и работу kubelet/API из разрешённых
+сетей.
 
 ```bash
 # Пример: SSH разрешён только из административной сети.
@@ -257,7 +266,9 @@ sudo ufw delete "$RULE_NUMBER"
 Для учебного примера с `iptables` разрешаем established-трафик, loopback, SSH из
 allowlist и затем запрещаем остальной входящий трафик. В реальном кластере добавьте все
 документированные Kubernetes/CNI-потоки до установки `DROP`, иначе можно оборвать связь
-между нодами или pod networking.
+между нодами или Pod networking. Отдельно проверьте цепочки `FORWARD`, IPv4 и IPv6: CNI
+может маршрутизировать Pod traffic не через `INPUT`, а финальный `DROP` в `INPUT` не создаёт
+безопасную политику forwarding и не заменяет CNI-specific rules.
 
 ```bash
 sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
@@ -267,6 +278,12 @@ sudo iptables -A INPUT -p tcp -s 10.0.0.0/16 --dport 6443 -j ACCEPT
 sudo iptables -A INPUT -j DROP
 sudo iptables -S INPUT
 ```
+
+`-A` добавляет правила в конец цепочки: если существующее правило выше уже принимает
+трафик, финальный `DROP` не гарантирует deny-by-default. Эти IPv4-правила также не покрывают
+IPv6. Сначала просмотрите порядок всего ruleset, а для постоянной политики управляйте
+выделенной цепочкой с явным jump либо используйте `nftables` с явной policy; не смешивайте
+ручные append-правила с правилами CNI или firewall manager.
 
 Правила, добавленные командой, не всегда переживают перезагрузку. Сохраняйте их штатным
 механизмом дистрибутива или через декларативную конфигурацию; не рассчитывайте, что
@@ -319,6 +336,17 @@ Host firewall дополняет, но не заменяет cloud Security Grou
 трафиком Pod, а firewall ноды - host traffic; проверяйте границу ответственности своего
 CNI и облачной сети.
 
+## 15.4.1. Cloud/node IAM: отдельная минимальная роль для workload
+
+Least privilege распространяется на cloud IAM. Node/instance role не должна получать broad
+cloud-admin permissions только потому, что на ноде работает Kubernetes; выдавайте ей лишь
+права bootstrap, сети, storage и telemetry, необходимые этой роли. Workload не должен
+автоматически наследовать credentials node role: используйте workload identity, IRSA или
+аналог с отдельной минимальной cloud-role для конкретного ServiceAccount. Там, где это
+поддерживает платформа, ограничьте доступ Pod к instance metadata и node credentials.
+Ревью cloud-role проводят отдельно от Kubernetes RBAC: наличие минимальной RoleBinding не
+доказывает минимальность прав в облаке.
+
 ## 15.5. SSH-хардненинг: защищаем главный путь администрирования
 
 SSH часто является единственным удалённым входом на ноду. Предпочитайте отдельный
@@ -327,21 +355,25 @@ SSH часто является единственным удалённым вх
 
 На современных OpenSSH удобнее создать небольшой drop-in, а не редактировать большой
 vendor-файл. Сначала проверьте, что каталог включается вашей конфигурацией через `Include`.
-Выберите **один** профиль ниже: оба запрещают парольный вход, но MFA-профиль дополнительно
+Имя `99-hardening.conf` не гарантирует приоритет: drop-ins обрабатываются по алфавиту, а
+OpenSSH обычно использует первое встретившееся значение каждого keyword. Инвентаризируйте
+более ранние файлы (например, cloud-init) и устраните конфликт либо используйте осознанно
+ранний `00-hardening.conf`; итог всегда подтверждайте `sshd -T` (и при `Match` —
+`sshd -T -C user=...,host=...,addr=...`). Выберите **один** профиль ниже: оба запрещают парольный вход, но MFA-профиль дополнительно
 требует ключ и PAM keyboard-interactive. Не включайте два профиля одновременно.
 
 **Профиль A - только ключ.**
 
 ```bash
 sudo install -d -m 755 /etc/ssh/sshd_config.d
-sudo tee /etc/ssh/sshd_config.d/99-hardening.conf >/dev/null <<'EOF'
+sudo tee /etc/ssh/sshd_config.d/00-hardening.conf >/dev/null <<'EOF'
 PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 PubkeyAuthentication yes
 AllowUsers k8s-operator
 EOF
-sudo chmod 600 /etc/ssh/sshd_config.d/99-hardening.conf
+sudo chmod 600 /etc/ssh/sshd_config.d/00-hardening.conf
 sudo sshd -t
 sudo systemctl reload ssh
 ```
@@ -360,7 +392,7 @@ AuthenticationMethods publickey,keyboard-interactive:pam
 AllowUsers k8s-operator
 ```
 
-Сохраните профиль B в том же `/etc/ssh/sshd_config.d/99-hardening.conf`, затем выполните
+Сохраните профиль B в том же `/etc/ssh/sshd_config.d/00-hardening.conf`, затем выполните
 `sudo sshd -t` и `sudo systemctl reload ssh`. `AllowUsers` - сильное ограничение, но оно
 блокирует всех неуказанных пользователей. Не применяйте его, пока не добавили необходимые
 break-glass и automation-аккаунты; документируйте владельцев и пересматривайте список.
@@ -372,7 +404,14 @@ break-glass и automation-аккаунты; документируйте вла�
 ```bash
 sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication|kbdinteractiveauthentication|pubkeyauthentication|usepam|authenticationmethods|allowusers'
 NODE_ADDRESS='node-address.example.internal'
-ssh -o PreferredAuthentications=publickey -o PasswordAuthentication=no \
+# Профиль A (только ключ): проверка неинтерактивна и не должна предлагать password/MFA.
+ssh -o BatchMode=yes -o PreferredAuthentications=publickey \
+  -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no \
+  "k8s-operator@${NODE_ADDRESS}" true
+
+# Профиль B (ключ + MFA): не используйте BatchMode; пройдите prompt второго фактора.
+ssh -o PreferredAuthentications=publickey,keyboard-interactive \
+  -o PasswordAuthentication=no -o KbdInteractiveAuthentication=yes \
   "k8s-operator@${NODE_ADDRESS}" true
 ```
 
@@ -394,9 +433,9 @@ sudo stat -c '%U %G %a %n' \
   /etc/kubernetes/admin.conf \
   /etc/kubernetes/pki/ca.key
 
-# 2. Проверить, что пользователь не получил лишний root-доступ.
-sudo -l -U k8s-operator
-sudo -u k8s-operator sudo -n /bin/bash || echo 'root shell is denied as expected'
+# 2. Проверить policy без смешивания с аутентификацией пользователя.
+sudo -l -U k8s-operator /usr/local/sbin/k8s-kubelet-status
+sudo -l -U k8s-operator /bin/bash || echo 'root shell is denied by policy as expected'
 
 # 3. Проверить фактический firewall выбранного механизма.
 sudo ufw status verbose             # если используется ufw
@@ -419,8 +458,15 @@ sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication|pubkeyauthenticat
 NODE_ADDRESS='node-address.example.internal'
 nc -vz -w 3 "$NODE_ADDRESS" 22
 
-# Из разрешённой административной сети: ключевой SSH должен работать.
-ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'id && sudo -l'
+# Из разрешённой административной сети: профиль A проверяется key-only без prompt.
+ssh -o BatchMode=yes -o PreferredAuthentications=publickey \
+  -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no \
+  "k8s-operator@${NODE_ADDRESS}" 'id && sudo -l'
+
+# Профиль B проверяется с ключом и интерактивным вторым фактором; не задавайте BatchMode.
+ssh -o PreferredAuthentications=publickey,keyboard-interactive \
+  -o PasswordAuthentication=no -o KbdInteractiveAuthentication=yes \
+  "k8s-operator@${NODE_ADDRESS}" 'id && sudo -l'
 ```
 
 | Симптом | Вероятная причина | Что проверить |
@@ -462,7 +508,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'id && sudo -l'
 - **host firewall** - правила фильтрации на самой ноде, например `ufw`, `iptables` или
   `nftables`.
 - **drop-in** - отдельный конфигурационный файл, дополняющий базовую конфигурацию, например
-  `/etc/ssh/sshd_config.d/99-hardening.conf`.
+  `/etc/ssh/sshd_config.d/00-hardening.conf`.
 - **break-glass access** - контролируемый аварийный доступ, используемый только при
   инциденте или потере штатного пути администрирования.
 
@@ -513,6 +559,11 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'id && sudo -l'
 
 🧪 Лаба 105 (System Hardening ОС и Docker daemon):
 [tasks/cks/labs/105](../../labs/105/README_RU.MD)
+
+## Справочные материалы
+
+- [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes)
+- [OpenSSH: sshd_config(5)](https://man.openbsd.org/sshd_config)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 14](../14/ru.md) · [Глава 16](../16/ru.md)

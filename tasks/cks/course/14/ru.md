@@ -5,7 +5,7 @@
 > **Что дальше.** Kubernetes защищает Pod политиками, RBAC и SecurityContext, но всё это
 > стоит на Linux-ноде. Лишний сервис, пакет, открытый порт или доступ к socket runtime
 > дают атакующему путь в обход Kubernetes API. В этом разделе домена **System Hardening**
-> CKS (15%) уменьшаем поверхность атаки самой ноды: оставляем только нужные службы,
+> CKS уменьшаем поверхность атаки самой ноды: оставляем только нужные службы,
 > пакеты и сетевые точки, а современный CRI runtime containerd даём только тем, кому это действительно
 > необходимо.
 
@@ -53,12 +53,12 @@ flowchart LR
 
 ```bash
 sudo install -d -m 700 /root/hardening-before
-sudo systemctl list-unit-files --type=service > /root/hardening-before/services-enabled.txt
+sudo systemctl list-unit-files --type=service | sudo tee /root/hardening-before/services-enabled.txt >/dev/null
 sudo systemctl list-units --type=service --state=running \
-  > /root/hardening-before/services-running.txt
-sudo ss -tulpn > /root/hardening-before/listeners.txt
+  | sudo tee /root/hardening-before/services-running.txt >/dev/null
+sudo ss -tulpn | sudo tee /root/hardening-before/listeners.txt >/dev/null
 sudo dpkg-query -W -f='${binary:Package}\t${Version}\n' \
-  | sort > /root/hardening-before/packages.txt
+  | sort | sudo tee /root/hardening-before/packages.txt >/dev/null
 ```
 
 ## 14.2. Инвентаризация и отключение ненужных сервисов
@@ -144,8 +144,9 @@ apt-mark showmanual | sort
 PACKAGE='confirmed-unneeded-package'
 sudo apt purge "$PACKAGE"
 sudo apt autoremove --dry-run
+# Выполняйте autoremove только после ревью его списка.
 sudo apt autoremove
-sudo apt update && sudo apt upgrade
+# Массовое apt upgrade здесь намеренно не выполняется: patching идёт в отдельное change window.
 ```
 
 На RPM-системах эквиваленты - `rpm -qa`, `dnf repoquery --installed` и `dnf remove`.
@@ -345,8 +346,12 @@ sudo grep -Rns -- '--container-runtime-endpoint\|containerRuntimeEndpoint' \
 ```
 
 Защищайте не только socket. `/run/containerd` содержит runtime-состояние и sockets, а
-`/var/lib/containerd` - persistent content и metadata; оба пути не должны быть доступны
-обычным пользователям или writable контейнерам. Конфигурация, plugins и CNI также должны
+`/var/lib/containerd` - persistent content и metadata. Для containerd ориентир — `0700` для
+`/var/lib/containerd` и `0711` для корня `/run/containerd`: второй режим допускает traversal,
+который может требоваться user-namespaced workload, но не раскрывает содержимое каталога.
+Чувствительные подкаталоги должны быть `0700`, sockets — `0660` с системной группой без
+непривилегированных пользователей; ни один путь не должен быть writable обычным пользователям
+или контейнерам. Конфигурация, plugins и CNI также должны
 быть root-owned и защищены от записи неавторизованных субъектов: обычно это
 `/etc/containerd`, каталоги plugins runtime и `/etc/cni/net.d`, а CNI binaries -
 `/opt/cni/bin` (конкретные пути сверяйте с дистрибутивом и конфигом). Не меняйте их
@@ -356,6 +361,11 @@ sudo grep -Rns -- '--container-runtime-endpoint\|containerRuntimeEndpoint' \
 sudo find /run/containerd /var/lib/containerd /etc/containerd /etc/cni/net.d /opt/cni/bin \
   -xdev -printf '%m %u:%g %p\n' 2>/dev/null | sort
 ```
+
+В containerd 2.0 NRI включён по умолчанию. Это явная точка решения: если NRI не
+используется, отключите plugin в проверенной конфигурации (`[plugins."io.containerd.nri.v1.nri"]`
+и `disable = true`); если используется, считайте NRI plugins, их конфигурацию и внешние
+plugin connections частью runtime TCB, ограничьте пути и доступ к ним.
 
 Debug и metrics - отдельные API поверхности. Unix debug socket ограничивают `root` и
 разрешёнными системными потребителями; TCP debug endpoint никогда не публикуют. Metrics
@@ -429,15 +439,15 @@ sudo docker info --format '{{json .SecurityOptions}}'
 ```bash
 # 1. Сервисы: сохранённый снимок против текущего состояния.
 sudo systemctl list-units --type=service --state=running | sort \
-  > /root/hardening-after-services.txt
-diff -u /root/hardening-before/services-running.txt \
+  | sudo tee /root/hardening-after-services.txt >/dev/null
+sudo diff -u /root/hardening-before/services-running.txt \
   /root/hardening-after-services.txt || true
 
 # 2. Пакеты и сетевые listeners: изменения должны быть объяснимы.
 dpkg-query -W -f='${binary:Package}\t${Version}\n' | sort \
-  > /root/hardening-after-packages.txt
-sudo ss -tulpn | sort > /root/hardening-after-listeners.txt
-diff -u /root/hardening-before/listeners.txt \
+  | sudo tee /root/hardening-after-packages.txt >/dev/null
+sudo ss -tulpn | sort | sudo tee /root/hardening-after-listeners.txt >/dev/null
+sudo diff -u /root/hardening-before/listeners.txt \
   /root/hardening-after-listeners.txt || true
 
 # 3. Docker API не слушает неаутентифицированный TCP 2375.
@@ -588,6 +598,13 @@ Docker TCP, исправить права socket или отключить servi
 
 🧪 Лаба 105 (System Hardening ОС и безопасность Docker-демона):
 [tasks/cks/labs/105](../../labs/105/README_RU.MD)
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [system-hardening-close-open-ports](https://killercoda.com/killer-shell-cks/scenario/system-hardening-close-open-ports) · [system-hardening-manage-packages](https://killercoda.com/killer-shell-cks/scenario/system-hardening-manage-packages)
+
+## Справочные материалы
+
+- [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes)
+- [Kubernetes: Container Runtimes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/)
+- [containerd: Operations and administration](https://github.com/containerd/containerd/blob/main/docs/ops.md)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 13](../13/ru.md) · [Глава 15](../15/ru.md)

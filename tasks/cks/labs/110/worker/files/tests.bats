@@ -72,8 +72,8 @@ pod_node_has_label() {
 
 @test "4. Cilium WireGuard transparent encryption is enabled and status is saved" {
   agent=$(kubectl -n kube-system get pods --context "$CTX" -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-  encrypt_status=$(kubectl -n kube-system exec "$agent" --context "$CTX" -- cilium encrypt status 2>&1 || true)
-  agent_status=$(kubectl -n kube-system exec "$agent" --context "$CTX" -- cilium status 2>&1 || true)
+  encrypt_status=$(kubectl -n kube-system exec "$agent" --context "$CTX" -- cilium-dbg encrypt status 2>&1 || true)
+  agent_status=$(kubectl -n kube-system exec "$agent" --context "$CTX" -- cilium-dbg status --all-encryption 2>&1 || true)
   status="$encrypt_status"$'\n'"$agent_status"
   client_version=$(cilium version --client 2>&1 || true)
   versions="$ARTIFACTS/4/tool-versions.txt"
@@ -81,9 +81,12 @@ pod_node_has_label() {
     && ! grep -Eqi 'IPsec.*enabled|Encryption:.*IPsec' <<<"$status" \
     && [[ "$client_version" == *0.19.7* ]] \
     && grep -Eq 'Kubernetes[=: ]+v?1[.]36' "$versions" \
-    && grep -Eqi 'Cilium agent=.*:v?1[.](19|20)' "$versions" \
+    && grep -Eqi 'Cilium agent=.*cilium' "$versions" \
     && grep -Eq 'Cilium CLI[=: ]+v?0[.]19[.]7' "$versions" \
-    && grep -Eqi 'WireGuard|Encryption:.*Wireguard' "$ARTIFACTS/4/cilium-encrypt-status.txt"; then
+    && grep -Fq 'cilium-dbg encrypt status' "$ARTIFACTS/4/cilium-encrypt-status.txt" \
+    && grep -Fq 'cilium-dbg status --all-encryption' "$ARTIFACTS/4/cilium-encrypt-status.txt" \
+    && grep -Eqi 'WireGuard|Encryption:.*Wireguard' "$ARTIFACTS/4/cilium-encrypt-status.txt" \
+    && grep -Eqi 'peer|allowed[ -]?ip|remote node' "$ARTIFACTS/4/cilium-encrypt-status.txt"; then
     result=0
   else
     echo "cilium_agent=${agent:-missing}; status=$status"

@@ -6,7 +6,7 @@
 > проверим, насколько безопасно настроены сами control plane и ноды. **CIS Kubernetes
 > Benchmark** переводит рекомендации по hardening в проверяемые пункты, а `kube-bench`
 > автоматически сопоставляет их с конфигурацией кластера. Это часть домена **Cluster Setup**
-> (CKS, 10%): нужно не только найти небезопасную настройку, но и исправить её без потери
+> (CKS, 15%): нужно не только найти небезопасную настройку, но и исправить её без потери
 > работоспособности кластера.
 
 > **Что нужно знать из CKA.** Эта глава не повторяет устройство `kubeadm`, static Pod и
@@ -85,6 +85,10 @@ sudo kube-bench run --targets node | tee kube-bench-worker.txt
 
 # Быстро найти непрошедшие пункты и их идентификаторы.
 grep -E '\[FAIL\]|\[WARN\]' kube-bench-control-plane.txt
+
+# После исправления повторите check ID из отчёта, а не весь target.
+# Синтаксис подтвердите через `kube-bench run --help` вашей версии.
+sudo kube-bench run --targets master --check 1.2.1
 ```
 
 Если в образе ноды нет бинаря, его можно запускать как Job с `hostPID: true`: этот
@@ -106,6 +110,8 @@ spec:
   template:
     spec:
       hostPID: true
+      # Лабораторное значение: замените на фактическое имя control-plane node.
+      # Получите его: kubectl get nodes -l node-role.kubernetes.io/control-plane
       nodeName: control-plane
       restartPolicy: Never
       containers:
@@ -354,12 +360,19 @@ Kubelet запущен на каждой ноде и имеет полномоч
 молча менять параметры ядра за администратора.
 
 На kubeadm-ноде основной файл обычно `/var/lib/kubelet/config.yaml`, а дополнительные
-аргументы задаются в `/var/lib/kubelet/kubeadm-flags.env` и systemd drop-in. Убедитесь в
-реальном источнике конфигурации, а не предполагайте путь:
+аргументы задаются в `/var/lib/kubelet/kubeadm-flags.env` и systemd drop-in. В Kubernetes
+1.36 также проверьте `--config-dir`: kubelet применяет основной config, затем только
+файлы `*.conf` из этого каталога (включая подкаталоги) в лексическом порядке; `*.yaml`
+там не загружаются. CLI-флаги имеют более высокий приоритет. Убедитесь в реальном источнике
+конфигурации, а не предполагайте путь:
 
 ```bash
 sudo systemctl cat kubelet
 sudo ps -ef | grep '[k]ubelet'
+# Получите фактические --config и --config-dir из unit/process.
+# Основной config читается отдельно; в config-dir kubelet загружает только *.conf.
+sudo find "${KUBELET_CONFIG_DIR:-/etc/kubernetes/kubelet.conf.d}" -type f -name '*.conf' \
+  2>/dev/null
 sudo grep -nE 'readOnlyPort|anonymous:|authorization:|protectKernelDefaults' \
   /var/lib/kubelet/config.yaml
 ```
@@ -400,19 +413,71 @@ sudo journalctl -u kubelet -n 100 --no-pager
 ```
 
 Проверьте, что read-only порт действительно не слушается, а защищённый API отвечает только
-с корректными credentials и authorization:
+с корректными credentials и authorization. В конце сверяйте не только файлы: `/configz`
+показывает итоговую конфигурацию после base config, `*.conf` drop-ins и CLI overrides.
+Для этого запрос должен быть авторизован для kubelet API (например, административным
+kubeconfig через API-server proxy):
 
 ```bash
 sudo ss -lntp | grep ':10255' || echo 'read-only kubelet port is closed'
 sudo ss -lntp | grep ':10250'
 kubectl get nodes
+
+NODE="${NODE:?set target node name from kubectl get nodes}"
+kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" \
+  | jq '.kubeletconfig | {readOnlyPort, authentication, authorization, protectKernelDefaults}'
 ```
 
 Для внешнего пользователя доступ к `10250` всё равно должен быть ограничен firewall и
 сетевой топологией. `authorization-mode=Webhook` не делает порт безопасным сам по себе -
 он заставляет kubelet спрашивать Kubernetes API о правах аутентифицированного субъекта.
 
-## 07.6. etcd и файловые права: ключи не должны быть общими
+## 07.6. kube-dns/CoreDNS: отдельная граница cluster DNS
+
+Актуальная компетенция CKS отдельно называет `kubedns`; в современных кластерах его
+обычно реализует CoreDNS. Проверьте deployment/DaemonSet, Service, ConfigMap `Corefile`,
+образ и версию, а также минимальные права ServiceAccount/RBAC. DNS не должен быть
+случайно опубликован наружу, а изменение `Corefile` (например, forwarding на недоверенный
+resolver) требует security-review и сверки с конкретным CIS profile.
+
+```bash
+kubectl -n kube-system get deploy,ds,svc,sa,cm | grep -Ei 'coredns|kube-dns'
+kubectl -n kube-system get configmap coredns -o yaml
+kubectl -n kube-system get deploy coredns -o jsonpath='{.spec.template.spec.serviceAccountName}{"\n"}{.spec.template.spec.containers[*].image}{"\n"}'
+kubectl -n kube-system get rolebinding,clusterrolebinding -o yaml | grep -n -C 3 coredns
+```
+
+Минимальный законченный сценарий — проверить и устранить недоверенный DNS-forwarder.
+Сначала сохраните `Corefile`, проверьте, куда CoreDNS передаёт внешние запросы, и подтвердите
+разрешение имени из временного Pod. Если адрес не соответствует утверждённому resolver,
+замените его на разрешённый адрес или внутренний DNS организации, перезапустите rollout и
+повторите тот же DNS-запрос:
+
+```bash
+# Check: зафиксировать текущую конфигурацию и найти forwarding target.
+kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}{"\n"}' \
+  | tee coredns-corefile.before
+kubectl -n kube-system get configmap coredns -o yaml | grep -nE '^\s*forward\s+\.'
+kubectl -n default run dns-check --rm -i --restart=Never \
+  --image=busybox:1.36.1 -- nslookup kubernetes.default.svc.cluster.local
+
+# Remediation: отредактируйте только target `forward . ...` на утверждённый resolver.
+kubectl -n kube-system edit configmap coredns
+kubectl -n kube-system rollout restart deployment/coredns
+kubectl -n kube-system rollout status deployment/coredns --timeout=120s
+
+# Recheck: новый Corefile и тот же запрос подтверждают изменение без поломки DNS.
+kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}{"\n"}' \
+  | grep -nE '^\s*forward\s+\.'
+kubectl -n default run dns-check-after --rm -i --restart=Never \
+  --image=busybox:1.36.1 -- nslookup kubernetes.default.svc.cluster.local
+```
+
+Не подставляйте публичный адрес по шаблону: target должен следовать вашему утверждённому
+DNS baseline. В managed Kubernetes DNS-компонентом может владеть provider: не исправляйте
+его только ради `PASS`, если benchmark не применим к данной реализации.
+
+## 07.7. etcd и файловые права: ключи не должны быть общими
 
 etcd хранит состояние кластера: Secrets, ServiceAccount-токены, RBAC и спецификации
 workload. Чтение data directory или TLS private key равнозначно серьёзной компрометации
@@ -472,13 +537,13 @@ sudo grep -nE -- '--(cert-file|key-file|trusted-ca-file|client-cert-auth|listen-
 sudo ss -lntp | grep -E ':(2379|2380)'
 ```
 
-## 07.7. Повторный прогон, диагностика и доказательство исправления
+## 07.8. Повторный прогон, диагностика и доказательство исправления
 
 Для каждого `FAIL` или осознанного `WARN` действуйте по короткой процедуре: (1)
 зафиксируйте версию Kubernetes, версию или digest `kube-bench`, выбранный профиль и CIS
 check ID из отчёта; (2) сделайте резервную копию активного файла или объекта; (3) измените
 ровно один control; (4) дождитесь рестарта и проверьте здоровье компонента и кластера;
-(5) повторите только затронутый target или check; (6) при ошибке здоровья немедленно
+(5) повторите только затронутый target или check (например, `kube-bench run --targets master --check <ID>` для версии, поддерживающей этот синтаксис); (6) при ошибке здоровья немедленно
 верните резервную копию, дождитесь восстановления и повторите health check. Не объявляйте
 исправление успешным до targeted rerun.
 
@@ -531,7 +596,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 | etcd не стартует после смены прав | пользователь процесса потерял доступ к data directory или key | `stat`, владельца процесса, логи etcd |
 | Проверка в managed Kubernetes не проходит | control plane не принадлежит пользователю и часть рекомендаций не применима | документацию провайдера, разделить customer- и provider-owned controls |
 
-## 07.8. Как это применяют в продакшене
+## 07.9. Как это применяют в продакшене
 
 - **Hardening как baseline.** Конфигурацию control plane, kubelet и права PKI описывают в
   kubeadm-конфигурации, image ноды или automation, а не правят вручную после каждого
@@ -548,7 +613,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   доступны только сервисному пользователю и администраторам, которым это действительно
   необходимо. Права регулярно проверяют средствами управления конфигурацией.
 
-## 07.9. Мини-глоссарий
+## 07.10. Мини-глоссарий
 
 - **CIS Kubernetes Benchmark** - рекомендации CIS по безопасной конфигурации Kubernetes.
 - **kube-bench** - инструмент, который проверяет конфигурацию по профилям CIS Benchmark.
@@ -564,7 +629,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 - **private key** - секретная часть TLS-идентичности; для неё нужен ограниченный режим
   доступа, обычно `0600`.
 
-## 07.10. Итоги главы
+## 07.11. Итоги главы
 
 - CIS Benchmark задаёт проверяемый baseline hardening для control plane, etcd, worker и
   политик; `kube-bench` показывает конкретные `PASS`, `WARN` и `FAIL`.
@@ -581,7 +646,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   минимальных прав. Владельца `/var/lib/etcd` определяют по реальному пользователю
   процесса.
 
-## 07.11. Как это пригодится: на экзамене и в реальной работе
+## 07.12. Как это пригодится: на экзамене и в реальной работе
 
 **На экзамене.** Задание обычно называет один или несколько `FAIL` из `kube-bench` и даёт
 доступ к ноде. Быстро найдите, является ли компонент static Pod, kubelet service или etcd,
@@ -594,7 +659,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 а воспроизводимые проверки и документированные исключения делают обновления кластера
 предсказуемыми.
 
-## 07.12. Вопросы для самопроверки
+## 07.13. Вопросы для самопроверки
 
 1. Чем `WARN` в отчёте `kube-bench` отличается от `FAIL` и почему их нельзя исправлять
    одинаково?
@@ -613,6 +678,8 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 исправите настройки kubelet и `kube-apiserver`, настроите TLS для Ingress и проверите хеш
 бинарника. Из-за правки static Pod и системных конфигураций выполняйте задания с консоли
 контрольной ноды и проверяйте состояние кластера после каждого шага.
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [cis-benchmarks-kube-bench-fix-controlplane](https://killercoda.com/killer-shell-cks/scenario/cis-benchmarks-kube-bench-fix-controlplane)
 
 Дополнительно: [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes)
 и [kube-bench](https://github.com/aquasecurity/kube-bench) - первоисточники профилей и

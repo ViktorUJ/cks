@@ -60,6 +60,8 @@ flowchart TB
 | `k8s-1` | Одноузловой Kubernetes `1.36.0` (kubeadm), containerd и Calico |
 | `worker` | Рабочая машина с `kubectl`, `kube-bench`, SSH-доступом и `check_result` |
 
+> **Версия и экзамен.** На 2026-09-06 официальный CKS exam исходит из Kubernetes `v1.35`. Эта лаба использует `1.36.0`, поэтому всё, что относится к этой версии, является forward-looking учебным сценарием, а не заявлением о текущей экзаменационной версии.
+
 Control-plane разтаинчен, поэтому при необходимости на нём можно запустить учебный Pod.
 Для заданий 2, 3 и 5 static Pods автоматически пересоздаются kubelet после сохранения
 изменённого манифеста или конфигурации. Не удаляйте control-plane Pods вручную.
@@ -111,7 +113,7 @@ ssh control-plane sudo hostname
 | **5** | **TLS hardening control plane** |
 | :---: | :--- |
 | Что делаем | В `/etc/kubernetes/manifests/kube-apiserver.yaml` задайте `--tls-min-version=VersionTLS13` и `--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`. В `/etc/kubernetes/manifests/etcd.yaml` задайте `--cipher-suites` с тем же набором. После пересоздания компонентов подтвердите, что согласуется `TLSv1.3` (`openssl s_client -tls1_3`) и что `TLSv1.2` отклоняется (`openssl s_client -tls1_2` завершается ошибкой handshake), и сохраните вывод в `/var/work/tests/artifacts/5/tls13.txt`. Важно понимать семантику: в Go флаг `--tls-cipher-suites` действует только для TLS ≤ 1.2, а при `--tls-min-version=VersionTLS13` конкретные TLS 1.3 cipher suites этим флагом не настраиваются (Go выбирает их сам). Поэтому для kube-apiserver фактическую защиту здесь даёт именно min-version 1.3; cipher-suites значимы там, где допускается TLS 1.2 (например, для etcd). |
-| Критерии приёмки | - оба требуемых TLS-флага есть в manifest kube-apiserver;<br>- cipher suites есть в manifest etcd;<br>- kube-apiserver и etcd здоровы;<br>- артефакт TLS содержит подтверждение `TLSv1.3`. |
+| Критерии приёмки | - оба требуемых TLS-флага есть в manifest kube-apiserver;<br>- cipher suites есть в manifest etcd;<br>- kube-apiserver и etcd здоровы;<br>- артефакт TLS содержит подтверждение `TLSv1.3` и зафиксированный отказ TLS 1.2 (non-zero exit/handshake failure). |
 ---
 | **6** | **Проверка целостности kubelet и kubectl** |
 | :---: | :--- |

@@ -11,6 +11,16 @@
 намеренно опасная связка `legacy-operator-admin` уже подготовлены стартовым скриптом.
 Это учебная конфигурация, а не пример для production.
 
+## Threat model
+
+Предположим, что атакующий уже выполняет код в Pod и пытается использовать identity workload либо отсутствие authentication для движения к Kubernetes API. В таком случае важен не только начальный доступ, но и blast radius после compromise.
+
+Задание 1 закрывает излишний RBAC scope, задание 2 — долгоживущий token, а задание 3 — ненужный API-доступ из Pod. Это уменьшает возможности использовать identity workload после compromise.
+
+Задание 4 устраняет wildcard cluster-wide права, а задание 5 — anonymous access. Каждый из этих путей по отдельности может расширить blast radius до Kubernetes API.
+
+ATT&CK T1528 (Steal Application Access Token) и T1613 дают контекст этому сценарию: задания не моделируют отдельную атаку, а ограничивают последствия уже скомпрометированного workload.
+
 ## Инфраструктура
 
 Окружение разворачивается через Terragrunt в AWS `eu-central-1`:
@@ -50,8 +60,8 @@ check_result
 ---
 | **2** | **Короткоживущий projected ServiceAccount token** |
 | :---: | :--- |
-| Что делаем | Создайте ServiceAccount `api-client` и Pod `token-client` в `security-104`. Не используйте legacy Secret-токен. Отключите обычное автомонтирование токена, а нужный токен смонтируйте через projected volume в `/var/run/secrets/tokens/api-token`: `audience: kubernetes.default.svc`, `expirationSeconds: 3600` (или меньше). |
-| Критерии приёмки | Pod использует `api-client`, имеет `automountServiceAccountToken: false`, а projected `serviceAccountToken` с указанным audience, path и временем жизни не более часа присутствует в спецификации. |
+| Что делаем | Создайте ServiceAccount `api-client` и Pod `token-client` в `security-104`. Не используйте legacy Secret-токен. Отключите обычное автомонтирование токена, а нужный токен смонтируйте через projected volume в `/var/run/secrets/tokens/api-token` с `path: api-token` и `expirationSeconds: 3600` (или меньше). **Не задавайте `audience`**, чтобы kubelet запросил identifier API server по умолчанию. Если приложению необходима отдельная audience, сначала сверьте её с `--api-audiences` (либо default из `--service-account-issuer`) на API server и только затем задавайте явно. |
+| Критерии приёмки | Pod использует `api-client`, имеет `automountServiceAccountToken: false`, а projected `serviceAccountToken` без жёстко заданной audience, с указанными path и временем жизни не более часа присутствует в спецификации. TokenReview, выполненный от admin-контекста для смонтированного токена, возвращает `authenticated: true` и имя `system:serviceaccount:security-104:api-client`; отдельная RBAC-проверка подтверждает, что этот ServiceAccount не может удалять `secrets`. |
 
 ---
 | **3** | **Pod без токена Kubernetes API** |

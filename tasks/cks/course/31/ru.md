@@ -605,30 +605,136 @@ spec:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
-  name: require-readonly-rootfs-payments
+  name: require-readonly-rootfs-default
 spec:
   policyName: require-readonly-rootfs
   validationActions: [Warn, Audit]
   matchResources:
+    # Default-enforce: Binding действует во всех workload namespaces.
+    # Исключены только явные platform-controlled namespace names.
     namespaceSelector:
-      matchLabels:
-        kubernetes.io/metadata.name: payments
+      matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: NotIn
+        values:
+        - kube-system
+        - kube-public
+        - kube-node-lease
+        - rootfs-temporary-exception
 ```
 
 `pods/ephemeralcontainers` важен: debug container добавляют через subresource после
-создания Pod, поэтому проверка только `pods` не контролирует этот путь. После чистого
-периода audit замените в **Binding**, а не в Policy, действие на `Deny`:
+создания Pod, поэтому проверка только `pods` не контролирует этот путь.
+
+> **Граница coverage native VAP.** Эти `resourceRules` сопоставляют только `pods` и
+> `pods/ephemeralcontainers`. Они не отклоняют `CREATE`/`UPDATE` самого Deployment,
+> StatefulSet, DaemonSet, Job или CronJob с небезопасным template: controller будет принят,
+> а созданный им Pod позднее отклонён. Это допустимый минимальный Pod-level gate, но создаёт
+> «принятый, но неработающий» controller. Для controller-level fail-fast добавьте отдельные
+> VAP/resourceRules и CEL paths `spec.template.spec` (и
+> `spec.jobTemplate.spec.template.spec` у CronJob), либо используйте явно проверенный Kyverno
+> autogen из следующего раздела; native VAP не получает эту coverage автоматически.
+
+После чистого периода audit замените в **Binding**, а не в Policy, действие на `Deny`:
 
 ```bash
 kubectl apply -f require-readonly-rootfs.yaml
-kubectl patch validatingadmissionpolicybinding require-readonly-rootfs-payments \
+kubectl patch validatingadmissionpolicybinding require-readonly-rootfs-default \
   --type merge -p '{"spec":{"validationActions":["Deny"]}}'
 ```
 
 Проверьте это позитивным и негативным manifest в целевом namespace. В negative test
-`readOnlyRootFilesystem` отсутствует, поэтому после `Deny` API должен отклонить Pod. Для
-временного исключения создавайте отдельный узкий Binding с namespace/name scope, владельцем
-и сроком, а не bypass-label, который может поставить любой developer.
+`readOnlyRootFilesystem` отсутствует, поэтому после `Deny` API должен отклонить Pod.
+
+**Default-enforce и exception.** Отдельный узкий Binding не отменяет исходный `Deny`: если оба
+Binding совпадают с request, запрет всё равно действует. Поэтому основной Deny-binding
+матчит все workload namespaces, а исключения задаются *до* rollout явным непересекающимся
+списком `NotIn` по защищённому `kubernetes.io/metadata.name`. Это label, который API server
+назначает имени namespace, а не opt-in label, который отсутствие или изменение может превратить
+в bypass. В список включают только системные namespaces и одобренные временные scopes, которыми
+platform-команда управляет через RBAC: разработчик не должен иметь возможность создать namespace
+с зарезервированным именем, менять Binding или расширять этот список. Owner, ticket и expiry
+временного exception хранят рядом с изменением Binding и регулярно пересматривают. Не
+используйте bypass-label на Pod или opt-in enforcement-label на namespace.
+
+Проверяйте границу exception отдельно: небезопасный Pod должен быть отклонён в обычном
+namespace и в соседнем namespace, но пройти только в явно указанном временном scope. Negative
+тест захватывает stdout/stderr `kubectl apply` и принимает ненулевой код только вместе с
+уникальным validation message этой Policy; ошибка сети, API, quota, RBAC или другого webhook
+не будет выдана за подтверждённый Deny.
+
+```bash
+kubectl create namespace rootfs-temporary-exception
+kubectl annotate namespace rootfs-temporary-exception \
+  security.example.com/exception-ticket=IR-1234 \
+  security.example.com/exception-expires=2026-12-31
+kubectl create namespace rootfs-neighbor
+
+unsafe_rootfs() {
+  kubectl apply -n "$1" -f - 2>&1 <<'YAML'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unsafe-rootfs
+spec:
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: nginx:1.30.4
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      # Единственное намеренное нарушение — readOnlyRootFilesystem отсутствует.
+YAML
+}
+
+expect_rootfs_deny() {
+  local namespace="$1" output status
+  output="$(unsafe_rootfs "$namespace")"
+  status=$?
+  if [ "$status" -eq 0 ]; then
+    echo "ERROR: $namespace allowed unsafe Pod" >&2
+    return 1
+  fi
+  case "$output" in
+    *'Every regular, init, and ephemeral container must set readOnlyRootFilesystem: true.'*)
+      echo "OK: $namespace Deny confirmed" ;;
+    *)
+      echo "ERROR: $namespace failed for an unexpected reason:" >&2
+      printf '%s\n' "$output" >&2
+      return 1 ;;
+  esac
+}
+
+expect_rootfs_deny payments
+unsafe_rootfs rootfs-temporary-exception \
+  || { echo 'ERROR: approved exception namespace rejected unsafe Pod'; exit 1; }
+kubectl delete pod -n rootfs-temporary-exception unsafe-rootfs
+expect_rootfs_deny rootfs-neighbor
+```
+
+Обязателен также negative test controller semantics: примените небезопасный Deployment с
+`readOnlyRootFilesystem` отсутствующим. С показанным Pod-only Binding сам Deployment
+**примется**, но его Pod будет отклонён; это подтверждает указанную границу. После добавления
+controller-level VAP или Kyverno autogen ожидаемое поведение меняется: API отклоняет уже
+сам Deployment.
+
+```bash
+kubectl apply -n payments -f unsafe-deployment.yaml
+kubectl get deployment -n payments unsafe-rootfs
+kubectl get events -n payments --sort-by=.lastTimestamp | tail -n 20
+# Pod-only VAP: Deployment есть, ReplicaSet не создаёт допустимый Pod.
+# Controller-level policy/autogen: kubectl apply должен завершиться Deny.
+```
+
+Для временного исключения меняйте `matchResources` исходного Deny-binding или разделяйте
+Bindings на непересекающиеся scopes с platform-controlled `namespaceSelector`; отдельный
+«allow Binding» не отменяет совпадающий Deny. У exception должны быть владелец, ticket, expiry
+и RBAC, не позволяющий developer-у самостоятельно расширить scope.
 
 ## 31.10. Kyverno: optional production extension и autogen controller rules
 
@@ -682,7 +788,7 @@ kubectl get ns payments -o jsonpath='{.metadata.labels}{"\n"}'
 
 # 2. Native policy и её Binding существуют и имеют ожидаемое действие.
 kubectl get validatingadmissionpolicy require-readonly-rootfs
-kubectl get validatingadmissionpolicybinding require-readonly-rootfs-payments \
+kubectl get validatingadmissionpolicybinding require-readonly-rootfs-default \
   -o jsonpath='{.spec.validationActions}{"\n"}'
 
 # 3. Хороший Pod создан, плохой был отклонён после Deny.
@@ -788,6 +894,8 @@ good workload. Для Kyverno отдельно проверяют report и сг
 🧪 Лаба 112 (Falco, audit-логи и иммутабельность контейнеров):
 [tasks/cks/labs/112](../../labs/112/README_RU.MD). В ней отработайте обнаружение и
 проверку runtime-ограничений под условия, близкие к CKS.
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [immutability-readonly-fs](https://killercoda.com/killer-shell-cks/scenario/immutability-readonly-fs)
 
 Для базы повторите [SecurityContext - главу 20 CKA](../../../cka/course/20/ru.md),
 [`emptyDir` и тома - главу 24 CKA](../../../cka/course/24/ru.md),

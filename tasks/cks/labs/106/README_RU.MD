@@ -13,6 +13,14 @@ baseline `RuntimeDefault` и custom **seccomp Localhost**-профиль, кот
 YAML. Localhost-профили живут на Kubernetes-ноде, поэтому нужно проверить ноду,
 placement Pod и фактическое поведение процесса.
 
+## Threat model
+
+Предположим RCE в контейнере. Вопрос после compromise — не «мог ли атакующий получить shell», а «что этот shell может сделать дальше» и насколько велик его blast radius.
+
+AppArmor в заданиях 1–2 ограничивает объекты и операции: профиль переводится в enforce и затем доказывается отказ записи. Так уже скомпрометированный процесс не получает неограниченное действие только потому, что он выполняется в контейнере.
+
+seccomp в заданиях 3–5 ограничивает доступный системный вызов: сначала применяется baseline, затем custom profile, а затем проверяется реальный отказ `unshare(2)`. Задание 5 уже содержит negative control через Pod `sysadmin-control`: при той же capability без seccomp filter вызов проходит, поэтому сравнение показывает именно границу после compromise.
+
 ## Связь с курсом
 
 - [Глава 16. AppArmor](../../course/16/ru.md)
@@ -78,8 +86,8 @@ ssh control-plane sudo jq empty \
 ---
 | **2** | **Localhost AppArmor Pod и блокировка записи** |
 | :---: | :--- |
-| Что делаем | Создайте namespace `security-106` и Pod `apparmor-writer`. Pod должен выбрать label ноды из инфраструктуры, отключить automount ServiceAccount token и на уровне Pod задать `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Используйте `busybox:1.36`, контейнер `app`, команду сна `sleep 3600` и `emptyDir`, смонтированный в `/work`. После запуска попытайтесь записать файл в `/work`; операция обязана завершиться отказом. |
-| Критерии приёмки | Pod запущен, использует именно Localhost profile и правильный nodeSelector; команда записи в `/work/cks-106-denied.txt` завершилась неуспешно. |
+| Что делаем | Создайте namespace `security-106` и Pod `apparmor-writer`. Pod должен выбрать label ноды из инфраструктуры, отключить automount ServiceAccount token и на уровне Pod задать `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Используйте `busybox:1.36`, контейнер `app`, команду сна `sleep 3600` и `emptyDir`, смонтированный в `/work`. После запуска подтвердите эффективный profile командой `cat /proc/1/attr/current` (если интерфейс доступен), выполните разрешённую операцию чтения, например `cat /etc/hostname >/dev/null`, и затем попытайтесь записать файл в `/work`; операция обязана завершиться отказом. На ноде зафиксируйте AppArmor denial для profile/process из `journalctl -k | grep -i apparmor` либо `dmesg | grep -i apparmor`. |
+| Критерии приёмки | Pod запущен, использует именно Localhost profile и правильный nodeSelector; effective profile процесса показывает `k8s-106-deny-write` в enforce mode (когда `/proc/.../attr/current` доступен); разрешённая операция проходит, а запись в `/work/cks-106-denied.txt` завершается AppArmor-отказом. В kernel journal/audit log есть относящееся к попытке событие `apparmor="DENIED"` с этим profile. |
 
 ---
 | **3** | **Безопасный baseline seccomp RuntimeDefault** |

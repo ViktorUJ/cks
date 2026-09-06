@@ -1,0 +1,117 @@
+schema_version: 1
+checked_at: "2026-09-06"
+
+# Карта существующих блоков "Взгляд атакующего" (Adversary Lens) в главах курса.
+# Правило: ATT&CK ID указывается только там, где mapping реально присутствует в тексте
+# главы и осмыслен; не приклеивать technique ID декоративно ради заполнения поля.
+# Обновляйте эту карту вручную при добавлении новых Adversary Lens блоков.
+
+adversary_lens_blocks:
+
+  - chapter: "course/04/ru.md"
+    title: "NetworkPolicy: lateral movement после компрометации Pod"
+    asset: "backend Service и внутренние API"
+    starting_foothold: "RCE в Pod frontend"
+    attacker_objective: "обнаружить внутренние endpoints и достучаться до backend"
+    control: "default-deny ingress/egress + явные правила identity/labels/портов"
+    evidence: ["cni_flow_logs", "hubble_flows", "dns_queries"]
+    attck: []
+    attck_note: "Mapping не указан в тексте главы; техника близка к T1046 (Network Service Discovery), но не процитирована как таковая - не добавлена сюда, чтобы не приклеивать decorative ID."
+
+  - chapter: "course/05/ru.md"
+    title: "kubelet: monitoring credential → kubelet blast radius"
+    asset: "kubelet API и контейнеры на ноде"
+    starting_foothold: "скомпрометированный monitoring agent"
+    attacker_objective: "превратить read-only nodes/proxy доступ в управление контейнерами"
+    control: "замена широкого nodes/proxy на точные nodes/metrics, nodes/stats"
+    evidence: ["subject_access_review", "kubernetes_audit", "kubelet_access_telemetry"]
+    attck:
+      - id: T1609
+        name: "Container Administration Command"
+        url: "https://attack.mitre.org/techniques/T1609/"
+      - id: T1613
+        name: "Container and Resource Discovery"
+        url: "https://attack.mitre.org/techniques/T1613/"
+
+  - chapter: "course/10/ru.md"
+    title: "RBAC/ServiceAccount: compromised Pod → API blast radius"
+    asset: "ресурсы Kubernetes API"
+    starting_foothold: "выполнение кода внутри Pod"
+    attacker_objective: "использовать identity workload для доступа к API"
+    control: "automountServiceAccountToken: false / projected short-lived token / минимальный RBAC"
+    evidence: ["kubernetes_audit", "subject_access_review"]
+    attck:
+      - id: T1528
+        name: "Steal Application Access Token"
+        url: "https://attack.mitre.org/techniques/T1528/"
+
+  - chapter: "course/16/ru.md"
+    title: "AppArmor: bypass профиля"
+    asset: "host filesystem и syscalls, доступные контейнеру"
+    starting_foothold: "RCE в контейнере"
+    attacker_objective: "выполнить действие за пределами profile (защищённый path/запрещённый syscall)"
+    control: "верифицированный enforce profile + проверка через aa-status"
+    evidence: ["aa_status", "dmesg_denial", "journalctl_k_denial"]
+    attck: []
+    attck_note: "Mapping не указан в тексте главы; техника близка к T1611 (Escape to Host), но profile bypass сам по себе не гарантирует host escape - не добавлена сюда без прямой цитаты из главы."
+
+  - chapter: "course/24/ru.md"
+    title: "Минимизация image: утечка build-time секретов"
+    asset: "секреты/credentials в build-временных файлах (.npmrc, token)"
+    starting_foothold: "доступ к Dockerfile/build context либо возможность исследовать image"
+    attacker_objective: "найти credential, забытый в промежуточных слоях image"
+    control: "BuildKit --mount=type=secret + .dockerignore + multi-stage без secret в финальном слое"
+    evidence: ["docker_history", "trivy_image_scan"]
+    attck: []
+    attck_note: "Mapping не указан в тексте главы; техника близка к T1552.001 (Credentials In Files), но не процитирована - не добавлена сюда декоративно."
+
+  - chapter: "course/26/ru.md"
+    title: "Supply chain: mutable-tag tampering"
+    asset: "reference production workload на image"
+    starting_foothold: "push в registry или скомпрометированный CI"
+    attacker_objective: "обойти registry allowlist/admission через retarget mutable tag без изменения digest"
+    control: "digest pinning + registry allowlist + admission signature verification (ImagePolicyWebhook/Kyverno)"
+    evidence: ["admission_denial_event", "audit_log_unapproved_registry_or_invalid_signature"]
+    attck: []
+    attck_note: "Mapping не указан в тексте главы; техника близка к T1195.002 (Compromise Software Supply Chain), но не процитирована - не добавлена сюда декоративно."
+
+  - chapter: "course/29/ru.md"
+    title: "Falco: обход runtime detection"
+    asset: "видимость runtime-аномалий для security team"
+    starting_foothold: "RCE в container с возможностью выбрать выполняемое действие"
+    attacker_objective: "выполнить подозрительное действие без срабатывания alert"
+    control: "правильный driver-specific unit включён и активен + tuned rules без избыточного false-positive suppression"
+    evidence: ["falco_alert_with_container_process_context"]
+    attck: []
+    attck_note: "Mapping не указан в тексте главы; техника зависит от конкретного abuse action (write/network) и не сводится к одному ID - не добавлена сюда декоративно."
+
+  - chapter: "course/32/ru.md"
+    title: "Audit: уклонение через WebSocket kubectl exec"
+    asset: "доказательная история API-действий атакующего"
+    starting_foothold: "доступ к API через скомпрометированный credential/token"
+    attacker_objective: "выполнить kubectl exec так, чтобы detection rule не распознал его как успешное"
+    control: "detection rule учитывает verb get/create, streaming stages, code 101"
+    evidence: ["audit_log_with_correct_verb_and_stage"]
+    attck:
+      - id: T1609
+        name: "Container Administration Command"
+        url: "https://attack.mitre.org/techniques/T1609/"
+
+# Обратная карта technique -> главы, для случаев когда нужно найти все главы,
+# затрагивающие конкретную ATT&CK technique.
+techniques_index:
+  T1528:
+    name: "Steal Application Access Token"
+    chapters: ["course/10/ru.md"]
+  T1609:
+    name: "Container Administration Command"
+    chapters: ["course/05/ru.md", "course/32/ru.md"]
+  T1613:
+    name: "Container and Resource Discovery"
+    chapters: ["course/05/ru.md"]
+
+coverage_note: >
+  8 из 10 предложенных report'ом целевых глав (04, 05, 10, 16, 24, 26, 29, 32) сейчас
+  имеют Adversary Lens блок. Только 3 блока (05, 10, 32) содержат явный ATT&CK mapping,
+  потому что остальные пять тем не имеют однозначной 1:1 привязки к конкретной технике
+  без риска decorative tagging - см. attck_note у каждой записи выше.

@@ -38,7 +38,7 @@ policy_enforced() {
   record_result "$result"
 }
 
-@test "2. deny-latest-tag rejects latest in containers, initContainers, and ephemeralContainers" {
+@test "2. deny-latest-tag rejects explicit and implicit latest in all container lists" {
   set +e
   policy_enforced deny-latest-tag
   policy_status=$?
@@ -56,6 +56,20 @@ spec:
     image: registry.k8s.io/pause:latest
 EOF
   main_status=$?
+  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+apiVersion: v1
+kind: Pod
+metadata:
+  name: implicit-latest-must-fail
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: app
+    image: registry.k8s.io/pause
+EOF
+  untagged_status=$?
   cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
 apiVersion: v1
 kind: Pod
@@ -87,8 +101,8 @@ EOF
   ephemeral_trusted_status=$?
   kubectl delete pod ephemeral-policy-base -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   set -e
-  if [[ "$policy_status" -eq 0 && "$main_status" -ne 0 && "$init_status" -ne 0 && "$base_status" -eq 0 && "$ephemeral_latest_status" -ne 0 && "$ephemeral_trusted_status" -eq 0 ]]; then result=0; else
-    echo "policy_enforced=$policy_status main=$main_status init=$init_status base=$base_status ephemeral_latest=$ephemeral_latest_status ephemeral_trusted=$ephemeral_trusted_status"; result=1
+  if [[ "$policy_status" -eq 0 && "$main_status" -ne 0 && "$untagged_status" -ne 0 && "$init_status" -ne 0 && "$base_status" -eq 0 && "$ephemeral_latest_status" -ne 0 && "$ephemeral_trusted_status" -eq 0 ]]; then result=0; else
+    echo "policy_enforced=$policy_status main=$main_status untagged=$untagged_status init=$init_status base=$base_status ephemeral_latest=$ephemeral_latest_status ephemeral_trusted=$ephemeral_trusted_status"; result=1
   fi
   record_result "$result"
 }

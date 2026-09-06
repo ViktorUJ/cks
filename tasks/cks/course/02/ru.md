@@ -2,13 +2,13 @@
 
 # Глава 02. Модель безопасности Kubernetes: 4C, поверхность атаки, фазы атаки
 
-> **Что дальше.** В главе 01 определены формат CKS, домены и инструменты. Теперь нужна общая модель, по которой принимают технические решения: что именно защищать, от кого и каким слоем. Эта глава - фундамент для всех шести доменов CKS: Cluster Setup (10%), Cluster Hardening (15%), System Hardening (15%), Minimize Microservice Vulnerabilities (20%), Supply Chain Security (20%) и Monitoring, Logging and Runtime Security (20%).
+> **Что дальше.** В главе 01 определены формат CKS, домены и инструменты. Теперь нужна общая модель, по которой принимают технические решения: что именно защищать, от кого и каким слоем. Эта глава - фундамент для всех шести доменов CKS: Cluster Setup (15%), Cluster Hardening (15%), System Hardening (10%), Minimize Microservice Vulnerabilities (20%), Supply Chain Security (20%) и Monitoring, Logging and Runtime Security (20%).
 
 > **Что нужно из CKA.** Устройство control plane, worker node, kubelet, CNI и путь запроса к API разобраны в [главе 02 CKA](../../../cka/course/02/ru.md). Здесь они рассматриваются только как объекты защиты и источники риска.
 
 ## 02.1. Модель 4C: что защищаем
 
-Модель **4C** делит безопасность Kubernetes на четыре вложенных слоя: Cloud, Cluster, Container и Code. Внешний слой не заменяет внутренний. Скомпрометированный workload можно ограничить `NetworkPolicy` и `SecurityContext`, но это не исправит публичный API endpoint или доступный всем `docker.sock`. И наоборот, защищённая сеть не исправит уязвимость в приложении.
+Модель **4C** делит безопасность Kubernetes на четыре вложенных слоя: Cloud, Cluster, Container и Code. Внешний слой не заменяет внутренний. Скомпрометированный workload можно ограничить `NetworkPolicy` и `SecurityContext`, но это не исправит публичный API endpoint или доступный workload container-runtime/CRI socket. `docker.sock` - лишь частный случай для нод, где действительно используется Docker; в современных кластерах типичны сокеты containerd или CRI-O. И наоборот, защищённая сеть не исправит уязвимость в приложении.
 
 ```mermaid
 flowchart TB
@@ -25,7 +25,7 @@ flowchart TB
 
 | Слой | Что является активом | Типичный путь атаки | Базовый контроль |
 |---|---|---|---|
-| Cloud | учётные данные cloud provider, VPC, metadata, диски и snapshots | Pod запрашивает `169.254.169.254` и получает роль ноды | закрыть metadata на сетевом уровне, использовать минимальные IAM-права, ограничить security group |
+| Cloud | учётные данные cloud provider, VPC, metadata, диски и snapshots | Pod запрашивает `169.254.169.254` и получает роль ноды | не допускать получения Pod credentials/identity ноды; использовать provider-specific workload identity и metadata controls, минимальные IAM-права и security group |
 | Cluster | Kubernetes API, etcd, kubelet, PKI, RBAC | анонимный или избыточно авторизованный запрос к API | TLS, `RBAC`, отключение anonymous access, audit, актуальные версии |
 | Container | образ, container runtime, namespaces, процессы и файловая система | уязвимый образ, `privileged` Pod, container escape | минимальный образ, `SecurityContext`, seccomp, AppArmor, `RuntimeClass` |
 | Code | исходный код, зависимости, конфигурация и секреты | RCE в приложении, утечка Secret, вредоносная зависимость | review, dependency scan, SBOM, не хранить секреты в коде, безопасная конфигурация |
@@ -193,16 +193,22 @@ flowchart LR
 
 Это не утверждение, что каждый Pod имеет доступ к metadata или может изменить API. Это два потока, которые нужно отдельно разрешить или запретить, а затем подтвердить их наблюдаемостью.
 
-Рабочее сопоставление с OWASP Kubernetes Top 10 помогает не потерять класс риска. Это не замена threat model: один поток может относиться к нескольким категориям.
+Рабочее сопоставление с **OWASP Kubernetes Top 10 — 2025** помогает не потерять класс риска. Это не замена threat model: один поток может относиться к нескольким категориям. Редакция 2022 ниже оставлена только как **legacy mapping** для старых книг и курсов; это не всегда соответствие один к одному.
 
-| Риск в модели | Категория OWASP Kubernetes Top 10 | Пример control и evidence |
-|---|---|---|
-| избыточная авторизация ServiceAccount или пользователя | K03 Overly Permissive RBAC Configurations | минимальная Role/ClusterRole, review bindings, API audit `allowed`/`forbidden` |
-| отсутствие сегментации между Pod и namespace | K07 Missing Network Segmentation Controls | default-deny и точечная `NetworkPolicy`, CNI flow/deny events |
-| открытый API, kubelet, etcd, webhook или другой компонент | K09 Misconfigured Cluster Components | закрытая сеть, TLS и безопасная конфигурация, scanner/config audit и access logs |
-| lateral movement из кластера в cloud через API или metadata | K07 Missing Network Segmentation Controls, K03 Overly Permissive RBAC Configurations и K08 Secret Management Failures | egress policy, минимальный IAM и ServiceAccount, flow logs и cloud audit |
-| слабая аутентификация или неуместный anonymous access | K06 Broken Authentication Mechanisms | проверенные issuer/audience, отключённая или неавторизованная anonymous identity, authentication/audit events |
-| отсутствие сигналов о действиях и нарушениях | K05 Inadequate Logging and Monitoring | audit policy, runtime и network telemetry, сохранённые alerts с identity и временем |
+| Риск в модели | Основная категория OWASP Kubernetes Top 10 (2025) | Legacy mapping: OWASP 2022 | Пример control и evidence |
+|---|---|---|---|
+| небезопасная конфигурация workload: `privileged`, host namespaces или опасный `SecurityContext` | K01 Insecure Workload Configurations | не имеет точного отдельного соответствия | PSS/PSA, hardening и admission evidence |
+| избыточная авторизация ServiceAccount или пользователя | K02 Overly Permissive Authorization Configurations | K03 Overly Permissive RBAC Configurations | минимальная Role/ClusterRole, review bindings, API audit `allowed`/`forbidden` |
+| хранение, выдача или использование Secret и токенов без достаточной защиты | K03 Secrets Management Failures | K08 Secret Management Failures | минимальный доступ к `Secrets`, short-lived tokens, encryption at rest и audit чтения |
+| отсутствие единого cluster-level enforcement небезопасных manifest | K04 Lack Of Cluster Level Policy Enforcement | не имеет точного отдельного соответствия | PSA, `ValidatingAdmissionPolicy` или policy engine + admission/audit evidence |
+| отсутствие сегментации между Pod и namespace | K05 Missing Network Segmentation Controls | K07 Missing Network Segmentation Controls | default-deny и точечная `NetworkPolicy`, CNI flow/deny events |
+| открытый API, kubelet, etcd, webhook или другой Kubernetes-компонент | K06 Overly Exposed Kubernetes Components | K09 Misconfigured Cluster Components | закрытая сеть, TLS, ограничение endpoints и access logs |
+| небезопасная или уязвимая конфигурация control plane, node либо runtime | K07 Misconfigured And Vulnerable Cluster Components | 2022 K09 + K10 | безопасная конфигурация, обновления, scanner/config audit и access logs |
+| переход из кластера в cloud через metadata, node credentials или неверно выданную identity | K08 Cluster-To-Cloud Lateral Movement | K07 Missing Network Segmentation Controls, K03 Overly Permissive RBAC Configurations и K08 Secret Management Failures | egress policy, минимальные права node identity и **workload identity**, flow logs и cloud audit |
+| слабая аутентификация или неуместный anonymous access | K09 Broken Authentication Mechanisms | K06 Broken Authentication Mechanisms | проверенные issuer/audience, отключённая или неавторизованная anonymous identity, authentication/audit events |
+| отсутствие сигналов о действиях и нарушениях | K10 Inadequate Logging And Monitoring | K05 Inadequate Logging and Monitoring | audit policy, runtime и network telemetry, сохранённые alerts с identity и временем |
+
+K08 связывает cloud-слой с последующими главами: metadata endpoint и credentials ноды не должны быть неявным путём для Pod, а workload identity должна выдавать отдельную краткоживущую identity с минимальными правами. Поэтому metadata, IAM и egress рассматривайте как одну границу lateral movement, а не как независимые темы.
 
 ### Безопасный walkthrough: проверка барьеров и доказательств
 
@@ -244,7 +250,7 @@ Security controls не следует добавлять случайно. Пя�
 2. **Least privilege.** Идентичность, workload и процесс получают только необходимые права. Практически это означает точные `verbs` в RBAC, выделенный ServiceAccount, `drop: [ALL]`, отсутствие `privileged`, минимум IAM permissions и короткоживущие credentials.
 3. **Immutability.** Production workload не должен «чиниться» установкой пакета внутри работающего контейнера. Образ пересобирают, сканируют, подписывают и развёртывают по digest. Это уменьшает поверхность и делает состояние воспроизводимым.
 4. **Minimize attack surface.** Неустановленный пакет, закрытый порт, отключённый endpoint и невыданный token нельзя использовать. Инвентаризация сервисов, открытых портов, RBAC и образов должна быть регулярной.
-5. **Zero trust в сети.** Нахождение в одном cluster или namespace не должно автоматически давать доверие. Сеть начинается с default-deny, затем добавляются узкие разрешения по identity, порту, направлению и при необходимости L7.
+5. **Zero trust в сети.** Нахождение в одном cluster или namespace не должно автоматически давать доверие. Стандартная `NetworkPolicy` выбирает Pod/Namespace по labels, IP/CIDR и портам; это не аутентифицированная workload identity и не ServiceAccount-aware authorization. Сеть начинается с default-deny, затем добавляются узкие разрешения по selectors, адресу, порту и направлению. Если нужна identity-aware сетевая защита, применяйте отдельные механизмы CNI/service mesh, например Cilium identity/mTLS или Istio mTLS.
 
 ```mermaid
 flowchart TB
@@ -267,17 +273,23 @@ flowchart TB
 
 | Слой или фаза | Домен CKS | Главы курса | Основной результат |
 |---|---|---|---|
-| Cloud, Pod network, initial access и lateral movement | Cluster Setup - 10% | [04](../04/ru.md), [05](../05/ru.md), [06](../06/ru.md), [07](../07/ru.md), [08](../08/ru.md), [09](../09/ru.md) | сегментация сети, защита metadata/endpoints, CIS и TLS hardening |
+| Cloud, Pod network, initial access и lateral movement | Cluster Setup - 15% | [04](../04/ru.md), [05](../05/ru.md), [06](../06/ru.md), [07](../07/ru.md), [08](../08/ru.md), [09](../09/ru.md) | сегментация сети, защита metadata/endpoints, CIS и TLS hardening |
 | Cluster API, persistence и privilege escalation | Cluster Hardening - 15% | [10](../10/ru.md), [11](../11/ru.md), [12](../12/ru.md), [13](../13/ru.md) | минимальные права, безопасные ServiceAccount, закрытый API, своевременные обновления |
-| Node и container runtime, privilege escalation | System Hardening - 15% | [14](../14/ru.md), [15](../15/ru.md), [16](../16/ru.md), [17](../17/ru.md) | сокращение поверхности ноды, MAC и syscall filtering |
+| Node и container runtime, privilege escalation | System Hardening - 10% | [14](../14/ru.md), [15](../15/ru.md), [16](../16/ru.md), [17](../17/ru.md) | сокращение поверхности ноды, MAC и syscall filtering |
 | Container, данные и lateral movement | Minimize Microservice Vulnerabilities - 20% | [18](../18/ru.md), [19](../19/ru.md), [20](../20/ru.md), [21](../21/ru.md), [22](../22/ru.md), [23](../23/ru.md) | hardened workloads, policy admission, защита Secret, sandbox и mTLS |
 | Code и build pipeline, initial access | Supply Chain Security - 20% | [24](../24/ru.md), [25](../25/ru.md), [26](../26/ru.md), [27](../27/ru.md), [28](../28/ru.md) | доверенный и проверяемый artifact до запуска |
 | Execution, persistence, exfiltration и расследование | Monitoring, Logging and Runtime Security - 20% | [29](../29/ru.md), [30](../30/ru.md), [31](../31/ru.md), [32](../32/ru.md) | обнаружение, расследование, иммутабельность и доказательства действий |
 
 Одна угроза часто относится к нескольким строкам. Например, риск кражи ServiceAccount token уменьшают меры главы 11: не монтировать ненужный token, использовать короткоживущий projected token и отдельный ServiceAccount. NetworkPolicy из главы 04 может ограничить использование или эксфильтрацию уже скомпрометированного token, например запретив ненужный egress к Kubernetes API и внешним endpoints; RBAC из главы 10 ограничивает его последствия, а чтение `Secret` фиксирует audit из главы 32. Не выбирайте один «лучший» control: используйте набор независимых барьеров.
 
+### Мини-практика: DFD как проверяемый артефакт
+
+Для одного test namespace нарисуйте DFD `Internet -> Ingress -> Pod -> ServiceAccount/API` и, если актуально, `Pod -> cloud metadata`. Отметьте границы доверия, затем выпишите 5–10 угроз. Для каждой укажите control, evidence и остаточный риск: например, SSRF -> egress allowlist + workload identity -> CNI flow/Cloud audit -> риск ошибки в policy. Артефакт готов только после того, как хотя бы один разрешённый и один запрещённый путь проверены тестом.
+
 ## 02.6. Как это применяют в продакшене
 
+- **Shared responsibility в managed Kubernetes.** Provider отвечает за часть управляемой инфраструктуры, но владелец EKS/GKE/AKS по-прежнему отвечает за workload IAM, RBAC, NetworkPolicy, node pools, exposure metadata, supply chain и audit. Граница ответственности конкретного сервиса должна быть записана, а не предполагаться.
+- **Controls по жизненному циклу.** На build-time проверяют код, зависимости, image, SBOM и подпись; на deploy/admission-time блокируют небезопасный manifest и RBAC; на runtime ограничивают процесс и сеть, собирают audit/flow/runtime-сигналы. Один этап не заменяет другой.
 - **Threat model как артефакт изменения.** Для нового namespace, Ingress или внешнего registry команда фиксирует активы, доверенные границы, entry points, возможный ущерб и controls. Такой документ должен обновляться вместе с архитектурой, а не лежать отдельным PDF.
 - **Baseline и исключения.** Вводят безопасный baseline: non-root, `RuntimeDefault`, default-deny, точечные RBAC roles, запрет небезопасных image registries. Исключение оформляют с владельцем, сроком и проверкой, а не как постоянный `cluster-admin`.
 - **Наблюдаемость связана с идентичностью.** Audit logs, network flow и runtime alerts должны позволять связать действие с user, ServiceAccount, Pod, node и image digest. Без этого kill chain нельзя подтвердить.
@@ -323,6 +335,11 @@ flowchart TB
 ## Практика
 
 Для этой фундаментальной главы отдельной лабораторной работы нет. Используйте модель как чеклист в следующих работах: [лаба 101 - NetworkPolicy и защита metadata](../../labs/101/README_RU.MD), [лаба 104 - RBAC, ServiceAccount и API](../../labs/104/README_RU.MD), [лаба 107 - PSA и SecurityContext](../../labs/107/README_RU.MD) и [лаба 112 - Falco, audit и иммутабельность](../../labs/112/README_RU.MD).
+
+## Справочные материалы
+
+- [OWASP: Kubernetes Top 10](https://owasp.org/www-project-kubernetes-top-ten/)
+- [Kubernetes: обзор безопасности](https://kubernetes.io/docs/concepts/security/overview/)
 
 ---
 [Оглавление](../README_RU.md) · [Глава 01](../01/ru.md) · [Глава 03](../03/ru.md)

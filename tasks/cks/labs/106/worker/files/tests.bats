@@ -28,22 +28,23 @@ SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
   [ "$result" -eq 0 ]
 }
 
-@test "2. apparmor-writer uses the Localhost profile and a write to /work is denied" {
+@test "2. apparmor-writer has the effective Localhost profile and receives an AppArmor write denial" {
   echo '1' >> /var/work/tests/result/all
   pod=$(kubectl get pod apparmor-writer -n "$NS" --context "$CTX" -o json 2>/dev/null)
   profile=$(jq -r '.spec.securityContext.appArmorProfile.type + ":" + (.spec.securityContext.appArmorProfile.localhostProfile // "")' <<<"$pod" 2>/dev/null)
   node_selector=$(jq -r ".spec.nodeSelector[\"${NODE_LABEL}\"] // \"\"" <<<"$pod" 2>/dev/null)
   automount=$(jq -r '.spec.automountServiceAccountToken' <<<"$pod" 2>/dev/null)
   phase=$(jq -r '.status.phase' <<<"$pod" 2>/dev/null)
+  effective_profile=$(kubectl exec -n "$NS" apparmor-writer --context "$CTX" -- cat /proc/1/attr/current 2>/dev/null || true)
   set +e
   output=$(kubectl exec -n "$NS" apparmor-writer --context "$CTX" -- sh -c 'printf blocked >/work/cks-106-denied.txt' 2>&1)
   write_status=$?
   set -e
-  if [[ "$profile" == "Localhost:${AA_PROFILE}" && "$node_selector" == "true" && "$automount" == "false" && "$phase" == "Running" && "$write_status" -ne 0 ]]; then
+  if [[ "$profile" == "Localhost:${AA_PROFILE}" && "$node_selector" == "true" && "$automount" == "false" && "$phase" == "Running" && "$effective_profile" == "${AA_PROFILE}"* && "$effective_profile" == *"(enforce)"* && "$write_status" -ne 0 ]] && grep -Eqi 'permission denied|operation not permitted' <<<"$output"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "profile=$profile node_selector=$node_selector automount=$automount phase=$phase write_status=$write_status output=$output"
+    echo "profile=$profile node_selector=$node_selector automount=$automount phase=$phase effective_profile=${effective_profile:-missing} write_status=$write_status output=$output"
     result=1
   fi
   [ "$result" -eq 0 ]

@@ -90,7 +90,8 @@ kubectl apply -f restricted-app.yaml
 ## 3. Audit и warn для baseline
 
 Эти режимы не запрещают запрос. `warn` возвращает предупреждение клиенту, а `audit`
-добавляет annotation в audit event API server. Для поэтапного внедрения не задавайте
+добавляет в audit event API server annotation
+`pod-security.kubernetes.io/audit-violations`. Для поэтапного внедрения не задавайте
 `enforce` в namespace наблюдения:
 
 ```bash
@@ -100,6 +101,15 @@ kubectl label namespace psa-observe-107 \
   pod-security.kubernetes.io/warn=baseline \
   pod-security.kubernetes.io/warn-version=v1.36
 ```
+
+> **Версионная оговорка.** `v1.36` закреплена для Kubernetes 1.36.0 в этой учебной
+> инфраструктуре. На 2026-09-06 официальный CKS ориентирован на `v1.35`; это
+> forward-looking пример, а при подготовке к экзамену используйте `*-version=v1.35`.
+
+> **Граница доказательства audit.** Лаба не настраивает audit-log sink, поэтому
+> `pod-security.kubernetes.io/audit-violations` нельзя извлечь командой `kubectl`.
+> Реально проверяемым результатом ниже служит PSA Warning и успешный admission; audit
+> annotation объяснена, но не является проверяемым артефактом этой инфраструктуры.
 
 ## 4. Убедиться, что warn/audit не блокируют Pod
 

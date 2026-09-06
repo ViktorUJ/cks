@@ -310,7 +310,8 @@ KMS улучшает разделение секретов, но добавля�
 
 - KMS plugin и удалённый key manager - часть критического пути записи/чтения; мониторьте latency,
   ошибки, доступность, quota и срок действия credentials;
-- проектируйте HA plugin и KMS до включения `failurePolicy`-подобного «fail closed» поведения;
+- проектируйте HA plugin и KMS: это критическая зависимость, поэтому недоступность plugin/KEK
+  может привести к ошибкам чтения и записи зашифрованных ресурсов; заранее проверьте recovery-процесс;
 - делайте backup metadata и документируйте key IDs, но **не** экспортируйте master keys в backup etcd;
 - ограничьте IAM/ACL: API server получает лишь требуемые encrypt/decrypt операции, а администратор
   кластера не обязательно получает права на управление KEK;
@@ -388,6 +389,17 @@ kubectl get secrets --all-namespaces -o json | kubectl replace -f -
 # Если защищены ConfigMaps, их переписывают отдельной осознанной операцией.
 # kubectl get configmaps --all-namespaces -o json | kubectl replace -f -
 ```
+
+### Production extension: Storage Version Migration
+
+Для массовой перезаписи в production есть Kubernetes-native альтернатива: **Storage Version
+Migration**. В Kubernetes 1.36 она имеет статус beta и по умолчанию выключена; после явного
+включения и настройки по документации вашей версии миграция переписывает объекты через API
+storage path. Это подходит, в частности, для re-encryption после изменения
+`EncryptionConfiguration` или ключей. Для CKS достаточно понимать порядок providers и
+принудительную перезапись объектов; `kubectl replace` выше остаётся простым экзаменационным
+путём, а Storage Version Migration требует отдельного operational rollout, наблюдения и
+проверенного rollback/recovery-процесса.
 
 `kubectl replace` требует актуальный `resourceVersion`; при высокой конкуренции возможны конфликты.
 В production запускайте controlled script с retry, наблюдением за API latency и согласованным окном,
@@ -607,6 +619,8 @@ static-Pod manifest может временно лишить кластер API.
 
 🧪 Лаборатория 109 (EncryptionConfiguration, шифрование Secret в etcd и проверка):
 [tasks/cks/labs/109](../../labs/109/README_RU.MD)
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [secret-pod-access](https://killercoda.com/killer-shell-cks/scenario/secret-pod-access) · [secret-read-secrets](https://killercoda.com/killer-shell-cks/scenario/secret-read-secrets) · [secret-serviceaccount-pod](https://killercoda.com/killer-shell-cks/scenario/secret-serviceaccount-pod) · [secret-etcd-encryption](https://killercoda.com/killer-shell-cks/scenario/secret-etcd-encryption)
 
 📘 Связанные материалы: [глава 19 CKA - Secret](../../../cka/course/19/ru.md) ·
 [глава 37 CKA - резервное копирование и восстановление etcd](../../../cka/course/37/ru.md)

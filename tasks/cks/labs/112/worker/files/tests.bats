@@ -87,6 +87,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
         && "$manifest" == *'/etc/kubernetes/audit'* \
         && "$manifest" == *'/var/log/kubernetes/audit'* \
         && "$policy" == *'level: RequestResponse'* \
+        && "$policy" == *'namespaces: ["runtime-112"]'* \
         && "$policy" == *'resources: ["configmaps"]'* \
         && "$policy" == *'resources: ["secrets"]'* \
         && -n "$cm_event" && -n "$secret_event" && -s "$cm_artifact" && -s "$secret_artifact" ]] \
@@ -125,7 +126,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   [ "$result" -eq 0 ]
 }
 
-@test "6. Falco alert is correlated through CRI, proc, audit, classification, and containment" {
+@test "6. Minimal containment chain correlates Falco alert through CRI, proc, audit, and isolation" {
   echo '1' >> /var/work/tests/result/all
   dir=/var/work/tests/artifacts/6
   summary="$dir/evidence-summary.txt"

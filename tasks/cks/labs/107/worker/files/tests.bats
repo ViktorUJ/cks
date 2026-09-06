@@ -85,16 +85,30 @@ EOF_POD
   [ "$result" -eq 0 ]
 }
 
-@test "4. baseline-audit-sample is admitted for audit and warn observation" {
+@test "4. baseline-audit-sample is admitted and warn reports the baseline violation" {
   echo '1' >> /var/work/tests/result/all
   pod=$(kubectl get pod baseline-audit-sample -n "$OBSERVE_NS" --context "$CTX" -o json 2>/dev/null)
   host_network=$(jq -r '.spec.hostNetwork == true' <<<"$pod" 2>/dev/null)
   phase=$(jq -r '.status.phase // ""' <<<"$pod" 2>/dev/null)
-  if [[ "$host_network" == "true" && ( "$phase" == "Running" || "$phase" == "Pending" ) ]]; then
+  warning=$(kubectl apply --context "$CTX" --dry-run=server -f - 2>&1 <<EOF_POD
+apiVersion: v1
+kind: Pod
+metadata:
+  name: baseline-warning-check
+  namespace: $OBSERVE_NS
+spec:
+  hostNetwork: true
+  containers:
+  - name: legacy
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+EOF_POD
+)
+  if [[ "$host_network" == "true" && ( "$phase" == "Running" || "$phase" == "Pending" ) && "$warning" =~ Warning:.*[Vv]iolat.*PodSecurity.*baseline ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    echo "hostNetwork=$host_network phase=$phase"
+    echo "hostNetwork=$host_network phase=$phase psa_warning=$warning"
     result=1
   fi
   [ "$result" -eq 0 ]

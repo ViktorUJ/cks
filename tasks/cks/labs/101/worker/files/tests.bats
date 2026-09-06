@@ -28,8 +28,10 @@ client_run() {
   backend_label=$(kubectl --context "$CTX" get deployment backend -n "$NS" -o jsonpath='{.spec.template.metadata.labels.app}' 2>/dev/null)
   endpoints=$(kubectl --context "$CTX" get endpoints backend -n "$NS" -o jsonpath='{.subsets[*].addresses[*].ip}' 2>/dev/null | wc -w)
 
-  if [[ "$namespace" == "$NS" ]] && [[ "$frontend_image" == *viktoruj/ping_pong* ]] && \
-     [[ "$backend_image" == *viktoruj/ping_pong* ]] && [[ "$frontend_label" == "frontend" ]] && \
+  # A mutable tag (including :latest) is not an accepted security-lab reference.
+  # The repository and a full SHA-256 digest form the exact allowed reference format.
+  if [[ "$namespace" == "$NS" ]] && [[ "$frontend_image" =~ ^viktoruj/ping_pong@sha256:[a-f0-9]{64}$ ]] && \
+     [[ "$backend_image" =~ ^viktoruj/ping_pong@sha256:[a-f0-9]{64}$ ]] && [[ "$frontend_label" == "frontend" ]] && \
      [[ "$backend_label" == "backend" ]] && [[ "$endpoints" -ge 1 ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0

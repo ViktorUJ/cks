@@ -68,7 +68,7 @@ flowchart LR
 policy не допускает artifact, который не соответствует правилам. Эти механизмы дополняют
 друг друга.
 
-## 25.2. SBOM: инвентарь компонентов и форматы SPDX/CycloneDX
+## 25.2. SBOM: инвентарь компонентов и форматы SPDX 2.3 JSON/CycloneDX
 
 **SBOM** (Software Bill of Materials) - машиночитаемый список компонентов artifact: пакетов,
 библиотек, их версий, идентификаторов, лицензий и иногда dependency relationships. Для
@@ -80,14 +80,15 @@ container image генератор читает filesystem и package metadata �
 
 | Формат | Назначение и сильная сторона | Где чаще встречается |
 |---|---|---|
-| **SPDX** | Стандарт Linux Foundation для состава software, лицензий, пакетов и отношений; хорошо подходит для compliance и обмена inventory | OCI artifacts, дистрибутивы, CI и Kubernetes ecosystem |
+| **SPDX 2.3 JSON** | Стандарт Linux Foundation для состава software, лицензий, пакетов и отношений; хорошо подходит для compliance и обмена inventory | OCI artifacts, дистрибутивы, CI и Kubernetes ecosystem |
 | **CycloneDX** | Формат OWASP, ориентированный на component analysis и security tooling; удобен для vulnerability management | scanners, dependency analysis, security dashboards |
 
-Оба формата могут описать один image, но их JSON-поля различаются. В SPDX пакеты обычно
-находятся в `.packages`, а версия - в `versionInfo`; в CycloneDX компоненты находятся в
-`.components`, а версия - в `version`. Не пишите универсальный `jq`-запрос, не зная
-формата файла: отсутствие результата может означать неверный путь JSON, а не отсутствие
-пакета.
+Оба формата могут описать один image, но их JSON-поля различаются. Все примеры SPDX ниже --
+**SPDX 2.3 JSON**: в этой схеме пакеты обычно находятся в `.packages`, а версия -- в
+`versionInfo`; в CycloneDX компоненты находятся в
+`.components`, а версия - в `version`. Не переносите эти пути на SPDX 3.0: у него другая
+модель данных. Не пишите универсальный `jq`-запрос, не зная формата и версии файла: отсутствие
+результата может означать неверный путь JSON, а не отсутствие пакета.
 
 У SBOM есть и границы точности:
 
@@ -99,6 +100,13 @@ container image генератор читает filesystem и package metadata �
   создают новый SBOM;
 - один version string ещё не означает уязвимость: важно сопоставить его с vendor advisory,
   OS distribution, архитектурой и статусом исправления.
+
+**Runtime SBOM и полная цепочка сборки -- разные инвентари.** SBOM final multi-stage image
+описывает то, что дошло до runtime; зависимости из отброшенных builder stages в нём
+закономерно отсутствуют. Даже анализ `--scope all-layers` охватывает слои конечного image,
+а не все исчезнувшие стадии сборки. Для полного inventory supply chain нужны также source,
+lock files, build attestations и provenance: отсутствие package в final SBOM не доказывает,
+что его не было в процессе сборки.
 
 Практическое правило: храните SBOM рядом с тем artifact и тем immutable digest, для
 которого он создан. Файл `api-1.4.2.spdx.json`, созданный для `api:1.4.2`, недостаточен,
@@ -118,7 +126,7 @@ IMAGE='registry.example.com/payments/api:1.4.2@sha256:<64-hex-digest>'
 потребоваться registry credential для private image; передавать пароль в history shell или
 в commit нельзя.
 
-### `syft`: SPDX и CycloneDX из одного image
+### `syft`: SPDX 2.3 JSON и CycloneDX из одного image
 
 [Syft](https://github.com/anchore/syft) каталогизирует packages в image, directory или
 archive и умеет выводить несколько форматов. Следующие команды создают два независимых
@@ -145,16 +153,16 @@ jq -e '.bomFormat == "CycloneDX" and (.components | type == "array")' \
   api.cyclonedx.json >/dev/null
 ```
 
-Первый запрос ожидает SPDX JSON, второй - CycloneDX JSON. Конкретный SBOM может не иметь
+Первый запрос ожидает SPDX 2.3 JSON, второй - CycloneDX JSON. Конкретный SBOM может не иметь
 какого-либо поля, не обязательного для вашего generator version; однако JSON parser,
 формат и наличие списка компонентов должны быть проверены явно. Не выдавайте HTML-ошибку
 registry или пустой файл за SBOM только потому, что команда вернула файл.
 
-### `bom`: Kubernetes-ориентированный путь к SPDX JSON
+### `bom`: Kubernetes-ориентированный путь к SPDX 2.3 JSON
 
 [`bom`](https://github.com/kubernetes-sigs/bom) - инструмент Kubernetes SIGs для работы с
 software bill of materials. Это важный практический инструмент CKS: его документация
-разрешена на экзамене, а в lab 111 он применяется для генерации SPDX JSON. В актуальной
+разрешена на экзамене, а в lab 111 он применяется для генерации SPDX 2.3 JSON. В актуальной
 среде сначала смотрите доступные flags, а не угадывайте синтаксис:
 
 ```bash
@@ -191,7 +199,7 @@ credentials или неправильного имени artifact.
 ```mermaid
 flowchart LR
     image["Image по digest"] --> syft["syft\nSPDX или CycloneDX"]
-    image --> bom["bom generate\nSPDX JSON"]
+    image --> bom["bom generate\nSPDX 2.3 JSON"]
     syft --> store["SBOM рядом с artifact\nи digest"]
     bom --> store
     store --> query["Поиск package/version\nи vulnerability analysis"]
@@ -209,7 +217,7 @@ flowchart LR
 делать вывод по имени image или tag. Нужно найти package **и его version** в SBOM конкретного
 digest, затем сопоставить результат с running workload.
 
-Для SPDX JSON, созданного `bom` или `syft`, покажите имя и версию exact package:
+Для SPDX 2.3 JSON, созданного `bom` или `syft`, покажите имя и версию exact package:
 
 ```bash
 jq -r '
@@ -329,6 +337,18 @@ builder и входные материалы участвовали в сбор�
 генерирует SBOM: нужно указывать track, версию specification и доказательства выполнения
 соответствующих требований.
 
+BuildKit может создать и опубликовать SBOM/provenance attestations вместе с image/index:
+
+```bash
+IMAGE_TAG='registry.example.com/payments/api:1.4.2'
+docker buildx build --sbom=true --provenance=mode=max --push \
+  --tag "$IMAGE_TAG" .
+```
+
+После push получите и сохраните immutable digest. Эти build-native attestations полезны для
+связи output с build, но не отменяют отдельные проверку signature, SBOM final image и
+inventory всей цепочки по source/lock files.
+
 На практике улучшения выглядят так:
 
 - lock dependencies и review изменения build definition;
@@ -421,17 +441,17 @@ release notes и runtime image ID.
 ## 25.7. Проверка: SBOM через `bom` и поиск заданного package/version
 
 В lab 111 проверяем полный минимум, который нужен для задания CKS: сгенерировать SBOM
-через `bom`, убедиться, что это валидный SPDX JSON, и найти в нём заданный package/version.
+через `bom`, убедиться, что это валидный SPDX 2.3 JSON, и найти в нём заданный package/version.
 Работайте с training image, выданным лабораторной работой, либо со своим разрешённым image;
 не используйте mutable `latest` как evidence.
 
 ```bash
 IMAGE='<image-from-lab-or-registry>@sha256:<64-hex-digest>'
 
-# 1. Создать SPDX JSON с Kubernetes SIGs bom.
+# 1. Создать SPDX 2.3 JSON с Kubernetes SIGs bom.
 bom generate --image "$IMAGE" --format json --output out.spdx.json
 
-# 2. Доказать, что output - SPDX JSON с packages.
+# 2. Доказать, что output - SPDX 2.3 JSON с packages.
 jq -e '.spdxVersion and (.packages | type == "array") and (.packages | length > 0)' \
   out.spdx.json >/dev/null
 
@@ -464,7 +484,7 @@ jq -e '.spdxVersion and (.packages | type == "array")' syft.spdx.json >/dev/null
 | package найден, но версия не совпала | image собран из другого base/dependency или advisory применён к иной distribution | `versionInfo`, purl, base image, lock file и условия advisory |
 | SBOM есть, но deploy всё ещё уязвим | CD применил tag/старый digest или rollout не завершён | manifest `image:`, Pod `imageID`, rollout status и registry digest |
 
-Критерий готовности проверки: есть непустой валидный SPDX JSON, в нём зафиксирован
+Критерий готовности проверки: есть непустой валидный SPDX 2.3 JSON, в нём зафиксирован
 package/version для конкретного image digest, а команды и файлы можно передать другому
 инженеру для повторения результата.
 
@@ -500,7 +520,8 @@ package/version для конкретного image digest, а команды и
 - **Artifact repository** - контролируемое хранилище artifacts: registry, package или chart
   repository.
 - **SBOM** - машиночитаемый inventory компонентов и версий software artifact.
-- **SPDX** - открытый стандарт описания packages, licenses и их отношений.
+- **SPDX 2.3 JSON** - используемое в этой главе JSON-представление стандарта SPDX для packages,
+  licenses и их отношений; не следует смешивать его JSON-модель со SPDX 3.0.
 - **CycloneDX** - формат OWASP для component inventory и security analysis.
 - **Syft** - инструмент генерации SBOM из image, filesystem или archive.
 - **bom** - инструмент `kubernetes-sigs/bom` для генерации и работы со SPDX SBOM.
@@ -517,8 +538,8 @@ package/version для конкретного image digest, а команды и
   во множество кластеров.
 - SBOM - inventory компонентов artifact. SPDX и CycloneDX описывают один предмет разными
   JSON schema; SBOM не является ни scan report, ни proof происхождения.
-- `syft` генерирует SPDX JSON и CycloneDX JSON; `bom` из Kubernetes ecosystem генерирует
-  SPDX JSON командой `bom generate --image ... --format json --output ...`.
+- `syft` генерирует SPDX 2.3 JSON и CycloneDX JSON; `bom` из Kubernetes ecosystem генерирует
+  SPDX 2.3 JSON командой `bom generate --image ... --format json --output ...`.
 - Поиск уязвимого компонента требует package, exact version и image digest. Для SPDX это
   обычно `.packages[].name` и `.versionInfo`, для CycloneDX - `.components[].name` и
   `.version`.
@@ -532,7 +553,7 @@ package/version для конкретного image digest, а команды и
 ## 25.11. Как это пригодится: на экзамене и в реальной работе
 
 **На экзамене.** Уметь быстро запустить `bom generate --image ... --format json`,
-проверить SPDX JSON и найти package/version - практический навык lab 111 и типовой
+проверить SPDX 2.3 JSON и найти package/version - практический навык lab 111 и типовой
 mock-сценарий. Не путайте формат Syft, название JSON-поля и image tag с digest. При
 необходимости документация `kubernetes-sigs/bom` разрешена: сначала проверяйте `--help`,
 затем сохраняйте требуемый artifact и покажите результат поиска.
@@ -551,7 +572,7 @@ mock-сценарий. Не путайте формат Syft, название J
 3. Почему SBOM для `app:1.4.2` без digest может не быть доказательством состава running
    image?
 4. Какие JSON paths используют для package/version в SPDX и CycloneDX?
-5. Как сгенерировать SPDX JSON через `syft` и через `kubernetes-sigs/bom`?
+5. Как сгенерировать SPDX 2.3 JSON через `syft` и через `kubernetes-sigs/bom`?
 6. Почему поиск только по имени `ca-certificates-bundle` не достаточен для решения по CVE?
 7. Как получить `imageID` контейнера и зачем сравнивать его с digest SBOM?
 8. Почему CI не должен собирать один image, а CD - незаметно пересобирать его в другом

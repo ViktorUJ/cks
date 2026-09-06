@@ -50,8 +50,11 @@ kubectl auth can-i delete secrets -n security-104 \
 
 ## 2. Projected токен ServiceAccount
 
-TokenRequest volume выдаёт ограниченный по audience и времени токен. Обычный токен
-автомонтирования отключён.
+TokenRequest volume выдаёт короткоживущий токен; обычное автомонтирование отключено.
+Не фиксируем `audience: kubernetes.default.svc`: для kubeadm это не гарантированно
+значение, принимаемое API server. Если `audience` опущена, kubelet использует identifier
+API server по умолчанию. Отдельную audience допустимо указать только после проверки
+`--api-audiences` (либо default из `--service-account-issuer`) на control-plane.
 
 ```yaml
 # token-client.yaml
@@ -83,14 +86,29 @@ spec:
       sources:
       - serviceAccountToken:
           path: api-token
-          audience: kubernetes.default.svc
           expirationSeconds: 3600
 ```
 
 ```bash
 kubectl apply -f token-client.yaml
+kubectl wait -n security-104 --for=condition=Ready pod/token-client --timeout=120s
 kubectl exec -n security-104 token-client -- \
   ls -l /var/run/secrets/tokens/api-token
+
+# Это реальный запрос к API TokenReview с токеном из volume; он должен подтвердить
+# именно ServiceAccount api-client, а не только наличие поля в YAML.
+TOKEN=$(kubectl exec -n security-104 token-client -- cat /var/run/secrets/tokens/api-token)
+jq -n --arg token "$TOKEN" \
+  '{apiVersion:"authentication.k8s.io/v1", kind:"TokenReview", spec:{token:$token}}' \
+  | kubectl create -f - -o json \
+  | jq '{authenticated: .status.authenticated, username: .status.user.username}'
+# {"authenticated": true, "username": "system:serviceaccount:security-104:api-client"}
+
+# Это отдельная authorization-проверка: аутентифицированный токен не получает
+# избыточное RBAC-разрешение.
+kubectl auth can-i delete secrets -n security-104 \
+  --as=system:serviceaccount:security-104:api-client
+# no
 ```
 
 ## 3. Pod без токена API
