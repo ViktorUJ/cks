@@ -27,11 +27,11 @@
 
 ```mermaid
 flowchart TB
-    vuln["Уязвимость или<br>скомпрометированный процесс"] --> write["Writable layer<br>/app, /etc, /tmp"]
+    vuln["Уязвимость или<br/>скомпрометированный процесс"] --> write["Writable layer<br/>/app, /etc, /tmp"]
     write --> tool["Скачать tool / изменить script"]
-    tool --> persist["Пережить restart процесса<br>в том же container"]
-    ro["readOnlyRootFilesystem: true"] --> deny["Запись в image layer<br>получает EROFS"]
-    deny --> volume["Явный writable volume<br>с лимитом и назначением"]
+    tool --> persist["Пережить restart процесса<br/>в том же container"]
+    ro["readOnlyRootFilesystem: true"] --> deny["Запись в image layer<br/>получает EROFS"]
+    deny --> volume["Явный writable volume<br/>с лимитом и назначением"]
     vuln --> ro
     style vuln fill:#db4437,color:#fff
     style write fill:#f4b400,color:#000
@@ -178,7 +178,7 @@ flowchart TB
     pod["Pod создан на ноде"] --> ed["emptyDir создан"]
     ed --> c1["app: /tmp"]
     ed --> c2["sidecar: /shared"]
-    c1 --> restart["restart container<br>данные остаются"]
+    c1 --> restart["restart container<br/>данные остаются"]
     c2 --> delete["Pod удалён / пересоздан"]
     delete --> gone["emptyDir удалён"]
     style pod fill:#326ce5,color:#fff
@@ -314,10 +314,10 @@ package manager, shell и большинства обычных userland tools. 
 
 ```mermaid
 flowchart TB
-    src["Source + lock file"] --> build["Builder stage<br>compiler, tests, tools"]
-    build --> artifact["Статический binary<br>или application artefact"]
-    artifact --> final["Distroless final image<br>app + runtime libs"]
-    final --> pod["non-root Pod<br>read-only root"]
+    src["Source + lock file"] --> build["Builder stage<br/>compiler, tests, tools"]
+    build --> artifact["Статический binary<br/>или application artefact"]
+    artifact --> final["Distroless final image<br/>app + runtime libs"]
+    final --> pod["non-root Pod<br/>read-only root"]
     style src fill:#326ce5,color:#fff
     style build fill:#f4b400,color:#000
     style artifact fill:#673ab7,color:#fff
@@ -875,24 +875,59 @@ good workload. Для Kyverno отдельно проверяют report и сг
 
 **Вопросы для самопроверки.**
 
-1. Почему изменение файла в writable layer не обязательно переживёт replacement Pod, но всё
-   равно опасно для расследуемого инцидента?
-2. Какие три каталога ваше приложение пишет при старте и почему каждый должен быть отдельным
-   mount либо устранён?
-3. Чем `emptyDir.medium: Memory` отличается от обычного `emptyDir` по ресурсу и риску?
-4. Почему нельзя применять `readOnlyRootFilesystem` только к главному container Deployment,
-   и почему отдельно проверяют `ephemeralcontainers`?
-5. Какая разница между ConfigMap volume с `subPath` и монтированием всего каталога при
-   обновлении config?
-6. Что distroless image уменьшает, а какие классы атак не устраняет?
-7. Почему PSA `restricted` с `latest` не является стабильным production baseline?
-8. Как доказать, что native Policy Binding действительно блокирует нарушение, а не просто
-   создана?
-9. **Flashback (глава 24).** Distroless image (глава 24) убирает shell/package manager из
-   образа - это immutable **build-time**. `readOnlyRootFilesystem` (эта глава) запрещает
-   запись в runtime - это immutable **runtime**. Если у приложения нет ни shell в образе,
-   ни возможности писать в root filesystem, какой практический шаг post-exploitation всё
-   ещё возможен для атакующего с RCE, а какой уже точно закрыт этой комбинацией?
+<details>
+<summary>1. Почему изменение файла в writable layer не обязательно переживёт replacement Pod, но всё равно опасно для расследуемого инцидента?</summary>
+
+Writable layer обычно исчезает при пересоздании Pod, поэтому не даёт гарантированной persistence после replacement. Но пока container жив, атакующий может положить tool, изменить script или startup-файл, сохранить token и использовать это для lateral movement либо продолжения атаки. Это также меняет evidence и требует расследования до destructive containment.
+</details>
+
+<details>
+<summary>2. Какие три каталога ваше приложение пишет при старте и почему каждый должен быть отдельным mount либо устранён?</summary>
+
+Глава приводит типичные пути `/tmp`, `/run` или `/var/run`, `/var/cache/<app>`, а также `/var/log/<app>`, `/home/<user>` и generated `/etc/<app>`; конкретные три нужно установить по log и поведению приложения. Каждый оправданный путь выносят в узкий named volume с назначением, owner и size limit, а не делают writable `/` или `/app`. Необязательную запись, например runtime install или file log, устраняют либо заменяют stdout/stderr.
+</details>
+
+<details>
+<summary>3. Чем `emptyDir.medium: Memory` отличается от обычного `emptyDir` по ресурсу и риску?</summary>
+
+`medium: Memory` создаёт tmpfs, а bytes учитываются как memory того container-а, который пишет; заполнение может привести к OOM или eviction. Обычный `emptyDir` использует local ephemeral-storage node вместе с writable layer и container logs. `sizeLimit` ограничивает том, но не резервирует node capacity; для disk-backed scratch также задают requests/limits `ephemeral-storage`.
+</details>
+
+<details>
+<summary>4. Почему нельзя применять `readOnlyRootFilesystem` только к главному container Deployment, и почему отдельно проверяют `ephemeralcontainers`?</summary>
+
+Это container-level field, поэтому hardened app не делает initContainer или sidecar read-only автоматически. Все regular, init и sidecar containers требуют собственного `securityContext`. Ephemeral container добавляется позже через отдельный subresource и без проверки может стать debug-обходом baseline, поэтому его включают в audit и VAP rules.
+</details>
+
+<details>
+<summary>5. Какая разница между ConfigMap volume с `subPath` и монтированием всего каталога при обновлении config?</summary>
+
+Файл ConfigMap/Secret, смонтированный через `subPath`, не получает автоматическое обновление в уже работающем Pod. При mount всего каталога kubelet может обновить projected files, но приложение всё равно должно поддерживать reload. Если dynamic update не нужен, применяют controlled rollout; ConfigMap/Secret не используют как mutable scratch space.
+</details>
+
+<details>
+<summary>6. Что distroless image уменьшает, а какие классы атак не устраняет?</summary>
+
+Distroless final image уменьшает число packages, SBOM surface и доступность shell, package manager, compiler, `curl` и других post-exploitation tools. Он не устраняет уязвимость приложения, runtime или kernel, чтение доступных secrets, network exfiltration и kernel exploit. Поэтому его сочетают с non-root, read-only root, seccomp, NetworkPolicy и runtime detection.
+</details>
+
+<details>
+<summary>7. Почему PSA `restricted` с `latest` не является стабильным production baseline?</summary>
+
+PSA version следует pin-ить через labels, потому что стандарт может меняться с версией Kubernetes. Сначала новую version проверяют в `warn`/`audit`, затем осознанно переводят labels в `enforce`. Кроме того, PSS `restricted` не требует `readOnlyRootFilesystem`, поэтому для runtime immutability нужна дополнительная ValidatingAdmissionPolicy.
+</details>
+
+<details>
+<summary>8. Как доказать, что native Policy Binding действительно блокирует нарушение, а не просто создана?</summary>
+
+После перевода `validationActions` Binding в `Deny` подают bad Pod, у которого единственное намеренное нарушение — отсутствует `readOnlyRootFilesystem`. `kubectl apply` обязан завершиться non-zero с уникальным message policy, а не с сетевой, RBAC или quota ошибкой. Позитивно проверяют good Pod и отдельно границу temporary exception namespace; для Pod-only VAP небезопасный Deployment может быть принят, но его Pod будет отклонён.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 24).** Distroless image (глава 24) убирает shell/package manager из образа - это immutable **build-time**. `readOnlyRootFilesystem` (эта глава) запрещает запись в runtime - это immutable **runtime**. Если у приложения нет ни shell в образе, ни возможности писать в root filesystem, какой практический шаг post-exploitation всё ещё возможен для атакующего с RCE, а какой уже точно закрыт этой комбинацией?</summary>
+
+С RCE атакующий всё ещё может выполнять доступный application binary, читать доступные ему данные и отправлять их по сети, поэтому нужны NetworkPolicy, минимальный ServiceAccount и другие controls. Комбинация закрывает скачивание/установку package через shell и запись tools либо подмену файлов в image layer, включая `/app` и `/etc`. Если существует явно writable mounted volume, действия в нём всё ещё возможны и должны быть отдельно ограничены.
+</details>
 
 ## Практика
 

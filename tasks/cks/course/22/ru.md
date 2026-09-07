@@ -30,10 +30,10 @@ multi-tenancy доверие другое: одна команда, customer wor
 
 ```mermaid
 flowchart TB
-    tenantA["tenant A\nобычный Pod"] --> kubelet["kubelet + containerd"]
-    tenantB["tenant B\nнедоверенный Pod"] --> kubelet
-    kubelet --> runc["runc\nпроцесс близко к ядру ноды"]
-    kubelet --> sandbox["gVisor или Kata\nдополнительная граница"]
+    tenantA["tenant A<br/>обычный Pod"] --> kubelet["kubelet + containerd"]
+    tenantB["tenant B<br/>недоверенный Pod"] --> kubelet
+    kubelet --> runc["runc<br/>процесс близко к ядру ноды"]
+    kubelet --> sandbox["gVisor или Kata<br/>дополнительная граница"]
     runc --> kernel["ядро ноды"]
     sandbox --> kernel
     kernel --> host["нода и другие Pod"]
@@ -105,11 +105,11 @@ API server не проверяет наличие handler на каждой но
 
 ```mermaid
 flowchart TB
-    pod["Pod\nruntimeClassName: gvisor"] --> api["kube-apiserver\nRuntimeClass gvisor"]
-    api --> rc["handler: runsc\nscheduling constraints"]
-    rc --> scheduler["scheduler\nвыбирает sandbox node"]
+    pod["Pod<br/>runtimeClassName: gvisor"] --> api["kube-apiserver<br/>RuntimeClass gvisor"]
+    api --> rc["handler: runsc<br/>scheduling constraints"]
+    rc --> scheduler["scheduler<br/>выбирает sandbox node"]
     scheduler --> kubelet["kubelet на node"]
-    kubelet --> cri["containerd CRI\nruntime handler runsc"]
+    kubelet --> cri["containerd CRI<br/>runtime handler runsc"]
     cri --> shim["containerd-shim-runsc-v1"]
     shim --> sentry["runsc / gVisor Sentry"]
     style pod fill:#326ce5,color:#fff
@@ -675,25 +675,71 @@ team не подтвердит другой допустимый RuntimeClass и
 
 ## 22.14. Вопросы для самопроверки
 
-1. Почему namespaces и cgroups не делают обычный контейнер полноценной kernel security
-   boundary для недоверенного tenant?
-2. В чём ключевая разница между userspace kernel gVisor и guest kernel Kata?
-3. Чем отличаются `RuntimeClass.metadata.name`, `handler` и `runtime_type` containerd?
-4. Почему API server не может гарантировать, что handler доступен на выбранной node?
-5. Как `RuntimeClass.scheduling.nodeSelector` и tolerations взаимодействуют с labels и taints
-   sandbox node pool?
-6. Почему опасно установить `runsc` default runtime для всего кластера без compatibility
-   testing?
-7. Какие файлы/binaries должны быть согласованы для gVisor и containerd?
-8. Почему `runtimeClassName: gvisor` и `Running` ещё не являются полным доказательством
-   sandbox execution?
-9. Что означает, если `uname` внутри Kata Pod отличается от `uname` host, и почему этого
-   недостаточно как единственного доказательства?
-10. **Flashback (глава 10).** gVisor/Kata (эта глава) изолируют tenant на уровне kernel
-    syscall surface. RBAC (глава 10) изолирует tenant на уровне Kubernetes API access.
-    Для multi-tenant кластера с недоверенными namespace приведите конкретный сценарий
-    атаки, который останавливает только один из этих двух уровней, но не другой.
-10. Почему удаление `runtimeClassName` ради быстрого восстановления - security downgrade?
+<details>
+<summary>1. Почему namespaces и cgroups не делают обычный контейнер полноценной kernel security boundary для недоверенного tenant?</summary>
+
+Обычный контейнер изолирует namespaces и ограничивает ресурсы cgroups, но его процесс обычно вызывает то же ядро Linux, что node и соседние Pods. Уязвимость ядра/runtime либо неверная capability может стать container escape. Для недоверенного tenant нужна дополнительная граница gVisor или Kata вместе с остальными controls.
+</details>
+
+<details>
+<summary>2. В чём ключевая разница между userspace kernel gVisor и guest kernel Kata?</summary>
+
+gVisor `runsc` перехватывает большую часть syscalls и реализует их userspace kernel Sentry поверх host kernel. Kata запускает Pod sandbox в lightweight VM, где workload видит отдельный guest kernel и hypervisor boundary. Kata обычно даёт более сильную и близкую к VM изоляцию, но требует virtualization и дороже по памяти и startup.
+</details>
+
+<details>
+<summary>3. Чем отличаются `RuntimeClass.metadata.name`, `handler` и `runtime_type` containerd?</summary>
+
+`metadata.name`, например `gvisor`, — значение для `spec.runtimeClassName` в Pod. `handler`, например `runsc`, должен точно совпадать с именем runtime в CRI configuration node. `runtime_type`, например `io.containerd.runsc.v1`, — implementation runtime в конфигурации containerd и не является именем RuntimeClass.
+</details>
+
+<details>
+<summary>4. Почему API server не может гарантировать, что handler доступен на выбранной node?</summary>
+
+API server хранит RuntimeClass, но не проверяет binary, shim и CRI handler на каждой node. Ошибка проявляется, когда kubelet пытается создать sandbox, например как `FailedCreatePodSandBox` или unknown runtime handler. Поэтому handler и compatible pool готовят и проверяют до создания workload.
+</details>
+
+<details>
+<summary>5. Как `RuntimeClass.scheduling.nodeSelector` и tolerations взаимодействуют с labels и taints sandbox node pool?</summary>
+
+RuntimeClass добавляет свой `nodeSelector` и tolerations к Pod, который на него ссылается. Selector должен совпасть с label подготовленной sandbox node, а toleration позволяет пройти `NoSchedule` taint; taint остаётся защитой от Pod без toleration. Конфликт selector RuntimeClass и Pod отклоняется на admission, а не превращается в Pending.
+</details>
+
+<details>
+<summary>6. Почему опасно установить `runsc` default runtime для всего кластера без compatibility testing?</summary>
+
+Системные DaemonSet, CNI, CSI и привычные workload могут требовать features, которые sandbox реализует иначе или не поддерживает. Глава предписывает сохранять default `runc` и выбирать sandbox явно через RuntimeClass для канареечного совместимого pool. Иначе blast radius затронет всю платформу.
+</details>
+
+<details>
+<summary>7. Какие файлы/binaries должны быть согласованы для gVisor и containerd?</summary>
+
+Должны совпадать проверенные версии `runsc`, `containerd-shim-runsc-v1` и каталога `gvisor-bin/`; при archive install их соседство с `runsc` сохраняют. Shim обязан быть в `PATH` systemd service containerd. В `config.toml` handler `runsc` должен указывать `runtime_type = "io.containerd.runsc.v1"` по правильному plugin path для поколения containerd.
+</details>
+
+<details>
+<summary>8. Почему `runtimeClassName: gvisor` и `Running` ещё не являются полным доказательством sandbox execution?</summary>
+
+Поле показывает намерение, а `Running` доказывает, что scheduler и kubelet приняли Pod, но не показывает implementation конкретного sandbox. Нужны placement на sandbox node, CRI configuration и containerd/shim logs, связанные с Pod UID или container ID, где видно `runsc`/Kata handler. Затем подтверждают workload view и application smoke test.
+</details>
+
+<details>
+<summary>9. Что означает, если `uname` внутри Kata Pod отличается от `uname` host, и почему этого недостаточно как единственного доказательства?</summary>
+
+Это полезный признак того, что workload видит guest kernel, отдельный от kernel node. Но output зависит от runtime версии и сам по себе не связывает конкретный Pod с нужным CRI handler. Надёжное evidence объединяет RuntimeClass, node, containerd/shim logs и функциональную проверку приложения.
+</details>
+
+<details>
+<summary>10. **Flashback (глава 10).** gVisor/Kata (эта глава) изолируют tenant на уровне kernel syscall surface. RBAC (глава 10) изолирует tenant на уровне Kubernetes API access. Для multi-tenant кластера с недоверенными namespace приведите конкретный сценарий атаки, который останавливает только один из этих двух уровней, но не другой.</summary>
+
+RBAC может запретить tenant ServiceAccount читать Secrets другого namespace или создавать privileged Pod, но не остановит exploit syscall в уже запущенном разрешённом container; здесь полезен sandbox. И наоборот, gVisor/Kata не запрещает identity выполнить разрешённый `get secrets` через API или изменить собственный Deployment. Поэтому API least privilege и kernel isolation закрывают разные attack paths.
+</details>
+
+<details>
+<summary>11. Почему удаление `runtimeClassName` ради быстрого восстановления - security downgrade?</summary>
+
+Удаление поля переводит workload с заявленной sandbox boundary на обычный runtime, то есть убирает защиту именно при проблеме совместимости. Глава прямо запрещает такой тихий fallback: Pod должен оставаться остановленным, пока platform team не подтвердит другой допустимый RuntimeClass или отдельное risk acceptance. Иначе recovery скрывает снижение безопасности.
+</details>
 
 ## Практика
 

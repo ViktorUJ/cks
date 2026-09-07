@@ -1,13 +1,14 @@
-[← Оглавление курса](README_RU.md) · [Путеводитель CKS](CKS_RU.md) · [Глоссарий](GLOSSARY_RU.md) · [Справочник ошибок](TROUBLESHOOTING_INDEX_RU.md)
+[← Оглавление курса](README_RU.md) · [Глоссарий](GLOSSARY_RU.md) · [Справочник ошибок](TROUBLESHOOTING_INDEX_RU.md)
 
 # Шпаргалка CKS: готовые YAML и CLI-команды
 
 Один файл без теории и длинных пояснений - только канонические, реально работающие сниппеты
-из решений лаб `101-112` этого курса. Каждый блок отмечен источником (лаба/задание), чтобы
+из решений лаб `101-113` этого курса. Каждый блок отмечен источником (лаба/задание), чтобы
 при необходимости можно было прочитать полное объяснение "почему" в `worker/files/solutions/1_RU.MD`
 соответствующей лабы. Используйте `Ctrl+F`/поиск по странице во время лабы или на экзамене.
 
-> Все примеры скопированы из фактических файлов решений курса, а не выдуманы заново - если
+> Сниппеты адаптированы и сокращены из решений лаб `101-113` для формата быстрого
+> справочника (переменные, отступы и вспомогательные шаги могли быть упрощены) - если
 > что-то не совпадает с последней версией лабы, полагайтесь на README/solution конкретной лабы.
 
 ## Как пользоваться этим файлом
@@ -41,27 +42,31 @@ flowchart TD
 ```mermaid
 flowchart TD
     A["Задача: защитить pod-to-pod трафик"] --> B{"Что нужно?"}
-    B -->|"Ограничить, КТО может подключаться (L3/L4/L7)"| C["NetworkPolicy / CiliumNetworkPolicy"]
+    B -->|"Ограничить, КТО может подключаться (L3/L4)"| C["Kubernetes NetworkPolicy"]
+    B -->|"L3/L4 + условие на HTTP method/path или другой L7 (только Cilium)"| C2["CiliumNetworkPolicy"]
     B -->|"Зашифровать трафик МЕЖДУ нодами прозрачно для приложений"| D["Cilium WireGuard/IPsec transparent encryption<br/>ConfigMap enable-wireguard / Helm encryption.enabled"]
     B -->|"Требовать mTLS и identity-based auth МЕЖДУ сервисами"| E["Service mesh (Istio) PeerAuthentication STRICT"]
+    C --> C3["Kubernetes NetworkPolicy - только L3/L4,<br/>без понимания HTTP/протокольного содержимого"]
     D --> F["Не проверяет identity приложения -<br/>только защищает трафик на уровне ноды"]
-    E --> G["Не заменяет NetworkPolicy -<br/>PeerAuthentication работает только внутри mesh с sidecar"]
+    E --> G["Не заменяет NetworkPolicy -<br/>в Lab110 работает в sidecar mode;<br/>в современном Istio также применяется в ambient mode (ztunnel)"]
 ```
 
-### Supply chain: сканирование vs подпись vs SBOM vs admission enforcement
+### Supply chain: сканирование vs подпись vs provenance/attestation vs SBOM vs admission enforcement
 
 ```mermaid
 flowchart TD
     A["Задача: защитить supply chain образа"] --> B{"Какое свойство нужно доказать?"}
     B -->|"Известные уязвимости в OS/library"| C["trivy image --scanners vuln"]
     B -->|"Состав пакетов (inventory), не уязвимости"| D["SBOM: bom generate (SPDX) / syft (CycloneDX)"]
-    B -->|"Кто и когда собрал/подписал образ (provenance)"| E["cosign sign / cosign verify"]
+    B -->|"Подпись соответствует digest и доверенному key/identity"| E["cosign sign / cosign verify"]
+    B -->|"Как именно и из чего собран образ (provenance/attestation)"| E2["cosign attest / cosign verify-attestation"]
     B -->|"Обязательное условие допуска в кластер"| F{"Что проверяем на admission?"}
     F -->|"Подпись (Cosign)"| G["Kyverno ImageValidatingPolicy<br/>verifyImageSignatures"]
     F -->|"Registry/repository allowlist"| H["Kyverno ValidatingPolicy CEL<br/>image().registry()/.repository() == exact"]
     C --> I["Не доказывает происхождение - только известные CVE"]
     D --> J["Не доказывает безопасность - только состав"]
-    E --> K["cosign verify локально в CI не блокирует kubectl apply -<br/>для этого нужен admission enforcement (F)"]
+    E --> K["cosign verify доказывает подпись/identity,<br/>НЕ provenance - это отдельное утверждение (E2)"]
+    E --> L["cosign verify локально в CI не блокирует kubectl apply -<br/>для этого нужен admission enforcement (F)"]
 ```
 
 ### Runtime-обнаружение: audit log vs Falco vs both
@@ -178,10 +183,15 @@ spec:
 mkdir -p /var/work/tests/artifacts/1
 scp -r /opt/kube-bench control-plane:/tmp/kube-bench
 ssh control-plane 'sudo rm -rf /opt/kube-bench && sudo mv /tmp/kube-bench /opt/kube-bench'
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-2.0 --targets master,controlplane,node' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --targets master,controlplane,node' \
   | tee /var/work/tests/artifacts/1/kube-bench.txt
 grep -E '\[(PASS|WARN|FAIL)\]' /var/work/tests/artifacts/1/kube-bench.txt | head
 ```
+
+> Пиннутый `kube-bench 0.16.0` не содержит профиля новее `cis-1.12` (его встроенный
+> `version_mapping` заканчивается `"1.34": "cis-1.12"`) - явно укажите этот профиль, а не
+> полагайтесь на автоопределение, и помечайте результат для более новых версий Kubernetes
+> как `forced-approximate`.
 
 ---
 
@@ -275,6 +285,36 @@ spec:
     secret:
       secretName: db-creds
       defaultMode: 0400
+```
+
+### kubeadm minor upgrade: control-plane сначала, worker потом
+*Источник: лаба 113, задания 1-2.*
+
+> Порядок принципиален: control-plane ПОЛНОСТЬЮ обновлён (включая uncordon) до начала
+> upgrade worker-узла - иначе нарушается version skew policy. На control-plane -
+> `kubeadm upgrade apply`, на worker-узлах - `kubeadm upgrade node` (не `apply`).
+> `pkgs.k8s.io` хранит отдельный apt-репозиторий на каждую minor-версию - переключите
+> `sources.list.d/kubernetes.list` на целевой minor ПЕРЕД `apt install kubeadm`.
+
+```bash
+# Переключить репозиторий на целевой minor (пример: 1.36)
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update -qq
+
+# control-plane: обновить kubeadm, посмотреть план, выполнить upgrade
+sudo apt-mark unhold kubeadm && sudo apt-get install -y --allow-change-held-packages kubeadm && sudo apt-mark hold kubeadm
+sudo kubeadm upgrade plan
+sudo kubeadm upgrade apply v1.36.1 -y
+
+# только ПОСЛЕ успешного apply: drain -> обновить kubelet/kubectl -> restart -> uncordon
+kubectl drain <control-plane-node> --ignore-daemonsets --delete-emptydir-data
+sudo apt-mark unhold kubelet kubectl && sudo apt-get install -y --allow-change-held-packages kubelet kubectl && sudo apt-mark hold kubelet kubectl
+sudo systemctl daemon-reload && sudo systemctl restart kubelet
+kubectl uncordon <control-plane-node>
+
+# worker-узел (после того как control-plane Ready на целевой версии): kubeadm upgrade NODE, не apply
+sudo kubeadm upgrade node
 ```
 
 ---
@@ -532,7 +572,7 @@ trivy sbom --format json --output sbom-scan.json bom.spdx.json
 ```bash
 cosign generate-key-pair
 cosign sign --key cosign.key --yes "$HARDENED_IMAGE"
-cosign verify --key cosign.pub "$IMAGE"
+cosign verify --key cosign.pub "$HARDENED_IMAGE"
 ```
 
 Keyless verify публичного OIDC-подписанного artifact:
@@ -732,4 +772,4 @@ spec:
 
 ---
 
-[← Оглавление курса](README_RU.md) · [Путеводитель CKS](CKS_RU.md) · [Глоссарий](GLOSSARY_RU.md) · [Справочник ошибок](TROUBLESHOOTING_INDEX_RU.md)
+[← Оглавление курса](README_RU.md) · [Глоссарий](GLOSSARY_RU.md) · [Справочник ошибок](TROUBLESHOOTING_INDEX_RU.md)

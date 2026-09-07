@@ -14,12 +14,12 @@ Kubernetes API принимает syntactically valid manifest, даже есл�
 
 ```mermaid
 flowchart TB
-    dev["Разработчик меняет\nDockerfile и manifests"] --> pr["Pull request"]
-    pr --> lint["Инструменты практики: kubesec, kube-linter,\nhadolint, conftest"]
-    lint -->|"нарушение"| block["CI завершается ошибкой\nartifact не публикуется"]
+    dev["Разработчик меняет<br/>Dockerfile и manifests"] --> pr["Pull request"]
+    pr --> lint["Инструменты практики: kubesec, kube-linter,<br/>hadolint, conftest"]
+    lint -->|"нарушение"| block["CI завершается ошибкой<br/>artifact не публикуется"]
     lint -->|"проверки пройдены"| build["build, SBOM, scan, sign"]
     build --> deploy["admission и deploy"]
-    bad["root, latest, writable rootfs\nили запрещённый registry"] --> lint
+    bad["root, latest, writable rootfs<br/>или запрещённый registry"] --> lint
     style dev fill:#326ce5,color:#fff
     style pr fill:#f4b400,color:#000
     style lint fill:#673ab7,color:#fff
@@ -472,10 +472,10 @@ Static analysis полезен только тогда, когда его рез
 flowchart TB
     change["Изменение Dockerfile или YAML"] --> local["Локально: lint и conftest"]
     local --> pr["Pull request"]
-    pr --> ci["CI: hadolint + kube-linter\n+ kubesec + conftest"]
-    ci -->|"failure"| fix["Исправить исходник или\nузкое документированное исключение"]
+    pr --> ci["CI: hadolint + kube-linter<br/>+ kubesec + conftest"]
+    ci -->|"failure"| fix["Исправить исходник или<br/>узкое документированное исключение"]
     fix --> ci
-    ci -->|"all passed"| next["build -> SBOM -> CVE scan\n-> sign -> push -> admission"]
+    ci -->|"all passed"| next["build -> SBOM -> CVE scan<br/>-> sign -> push -> admission"]
     style change fill:#326ce5,color:#fff
     style local fill:#f4b400,color:#000
     style pr fill:#326ce5,color:#fff
@@ -616,19 +616,59 @@ kubectl apply --dry-run=server -f manifests/
 
 ## 27.11. Вопросы для самопроверки
 
-1. Почему успешно применяемый Kubernetes YAML всё ещё может быть небезопасным?
-2. Чем `kubesec` score отличается от обязательной policy вашей организации?
-3. Какие типовые finding показывает `kube-linter` для обычного application container?
-4. Почему `hadolint` не заменяет vulnerability scanner и зачем читать конкретный `DL####`?
-5. Как `conftest` и Rego помогают проверить trusted registry или обязательный `securityContext`?
-6. Почему CI должен сканировать rendered Helm/Kustomize output, а не только templates?
-7. Что нужно сделать после finding: отключить rule, исправить source или принять узкое исключение?
-8. Почему `set -o pipefail` важен для команды scanner, вывод которой передаётся в `tee`?
-9. **Flashback (глава 07).** `kube-bench`/CIS Benchmark (глава 07) и `kubesec`/`kube-linter`
-   (эта глава) оба статически проверяют конфигурацию, но на разных стадиях: одно - уже
-   работающий control plane/node, другое - манифест перед деплоем. Если оба инструмента
-   технически доступны, какой из них раньше поймает опасную настройку и почему более раннее
-   обнаружение обычно дешевле?
+<details>
+<summary>1. Почему успешно применяемый Kubernetes YAML всё ещё может быть небезопасным?</summary>
+
+API проверяет синтаксис и schema, но не считает root-процесс, writable root filesystem, `privileged: true` или `:latest` ошибкой. Такой manifest может успешно создать workload, хотя нарушает secure-by-default практику. Static analysis находит эти риски до merge и deploy, а admission и runtime controls дополняют его позже.
+</details>
+
+<details>
+<summary>2. Чем `kubesec` score отличается от обязательной policy вашей организации?</summary>
+
+`kubesec` даёт score и finding по известным controls, то есть быстрый общий сигнал, а не authority для конкретной организации. Организационная policy может требовать, например, internal registry, valid digest или owner label, чего generic score не доказывает. Такие инварианты формализуют в versioned Rego через `conftest` и при необходимости дублируют в admission.
+</details>
+
+<details>
+<summary>3. Какие типовые finding показывает `kube-linter` для обычного application container?</summary>
+
+Для примера без hardening типичны checks `run-as-non-root`, `no-read-only-root-fs` и `latest-tag`. Также полезны checks для `allowPrivilegeEscalation`, `privileged`, capabilities, sensitive host mounts и docker socket. Точный набор зависит от закреплённой версии и enabled checks, поэтому его проверяют через `kube-linter checks list`.
+</details>
+
+<details>
+<summary>4. Почему `hadolint` не заменяет vulnerability scanner и зачем читать конкретный `DL####`?</summary>
+
+Hadolint разбирает Dockerfile, но не строит image, не исполняет `RUN` и не сопоставляет packages с CVE database. Scanner нужен для final image и его зависимостей, тогда как hadolint ловит structural issues вроде root final user, mutable base tag или shell-form `CMD`. Код `DL####` надо читать, потому что его смысл может относиться к безопасности, воспроизводимости, размеру image либо обработке signals.
+</details>
+
+<details>
+<summary>5. Как `conftest` и Rego помогают проверить trusted registry или обязательный `securityContext`?</summary>
+
+`conftest test` передаёт YAML в Rego policy и возвращает non-zero, когда правило создаёт `deny`. Пример policy проверяет prefix `registry.example.com/`, SHA-256 digest и effective `runAsNonRoot`, `readOnlyRootFilesystem`, `allowPrivilegeEscalation` у regular и init containers. Tests `opa test` защищают саму policy от случайного ослабления.
+</details>
+
+<details>
+<summary>6. Почему CI должен сканировать rendered Helm/Kustomize output, а не только templates?</summary>
+
+Templates ещё не являются тем ресурсом, который отправится в API: values, Kustomize и GitOps могут изменить image или `securityContext`. Linter и policy должны видеть итоговый rendered manifest. Иначе CI может быть зелёным для template, а deploy получит другую небезопасную конфигурацию.
+</details>
+
+<details>
+<summary>7. Что нужно сделать после finding: отключить rule, исправить source или принять узкое исключение?</summary>
+
+Обычный путь — исправить исходный Dockerfile, manifest или policy и повторить проверки. Глобальный `--ignore` скрывает системное нарушение; legitimate exception ограничивают конкретным rule и scope, документируют причиной, owner и сроком пересмотра. После правки lint, `conftest`, policy tests и server dry-run должны вновь пройти.
+</details>
+
+<details>
+<summary>8. Почему `set -o pipefail` важен для команды scanner, вывод которой передаётся в `tee`?</summary>
+
+Без `pipefail` shell может вернуть статус последней успешной команды `tee`, скрыв падение scanner. Он сохраняет failure исходной команды во всём pipeline. Однако для `kubesec` этого недостаточно: JSON нужно явно проверить `jq -e`, включая score каждого элемента массива.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 07).** `kube-bench`/CIS Benchmark (глава 07) и `kubesec`/`kube-linter` (эта глава) оба статически проверяют конфигурацию, но на разных стадиях: одно - уже работающий control plane/node, другое - манифест перед деплоем. Если оба инструмента технически доступны, какой из них раньше поймает опасную настройку и почему более раннее обнаружение обычно дешевле?</summary>
+
+`kubesec` и `kube-linter` проверят manifest до build/deploy, тогда как `kube-bench` видит уже работающий control plane или node. Ранний finding исправляется в pull request до публикации artifact и запуска workload, без incident response, rollout или простоя. `kube-bench` всё равно нужен как проверка фактической инфраструктурной конфигурации, которую manifest не покрывает.
+</details>
 
 ## Практика
 

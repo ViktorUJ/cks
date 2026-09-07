@@ -26,11 +26,11 @@ webhook создаёт отдельный audit request лишь если его
 
 ```mermaid
 flowchart TB
-    client["kubectl / controller / SA\nиной API client"] --> api["kube-apiserver\nauthn → authz → admission webhook"]
+    client["kubectl / controller / SA<br/>иной API client"] --> api["kube-apiserver<br/>authn → authz → admission webhook"]
     api --> etcd["API-объект / etcd"]
-    api --> policy["audit Policy\nвыбирает level"]
+    api --> policy["audit Policy<br/>выбирает level"]
     policy --> local["локальный audit log"]
-    policy --> webhook["центральный collector\nчерез webhook"]
+    policy --> webhook["центральный collector<br/>через webhook"]
     local --> investigation["поиск и расследование"]
     webhook --> investigation
     style client fill:#326ce5,color:#fff
@@ -86,9 +86,9 @@ SQL-запрос внутри Pod или shell-команду, которая н
 
 ```mermaid
 flowchart TB
-    rr["RequestReceived\nзапрос принят"] --> rs["ResponseStarted\nlong-running response"]
-    rs --> rc["ResponseComplete\nзапрос завершён"]
-    rr --> panic["Panic\nсервер аварийно завершил обработку"]
+    rr["RequestReceived<br/>запрос принят"] --> rs["ResponseStarted<br/>long-running response"]
+    rs --> rc["ResponseComplete<br/>запрос завершён"]
+    rr --> panic["Panic<br/>сервер аварийно завершил обработку"]
     style rr fill:#326ce5,color:#fff
     style rs fill:#f4b400,color:#000
     style rc fill:#0f9d58,color:#fff
@@ -388,11 +388,11 @@ level, размер request/response, file I/O и webhook queue могут ув�
 
 ```mermaid
 flowchart TB
-    event["audit event"] --> active["audit.log\nактивный файл"]
-    active -->|"maxsize"| rotated["rotated copies\nmaxbackup / maxage"]
+    event["audit event"] --> active["audit.log<br/>активный файл"]
+    active -->|"maxsize"| rotated["rotated copies<br/>maxbackup / maxage"]
     active --> shipper["agent / collector"]
     rotated --> retention["локальное удаление"]
-    shipper --> immutable["центральное хранилище\nsearch + longer retention"]
+    shipper --> immutable["центральное хранилище<br/>search + longer retention"]
     style event fill:#326ce5,color:#fff
     style active fill:#f4b400,color:#000
     style rotated fill:#0f9d58,color:#fff
@@ -437,10 +437,10 @@ server передаёт audit events (в batch режиме - списками) 
 
 ```mermaid
 flowchart TB
-    api["kube-apiserver"] -->|"HTTPS + mTLS/CA"| collector["audit collector\n/webhook"]
+    api["kube-apiserver"] -->|"HTTPS + mTLS/CA"| collector["audit collector<br/>/webhook"]
     collector --> queue["durable queue / SIEM"]
     queue --> search["поиск, correlation, alerting"]
-    api --> local["опционально:\nлокальный audit.log"]
+    api --> local["опционально:<br/>локальный audit.log"]
     style api fill:#326ce5,color:#fff
     style collector fill:#f4b400,color:#000
     style queue fill:#673ab7,color:#fff
@@ -770,22 +770,65 @@ backup манифеста → policy и directories → флаги/mounts → д
 
 ## 32.13. Вопросы для самопроверки
 
-1. Какие поля audit event отвечают на «кто», «что», «откуда» и «успешно ли»?
-2. Почему `ResponseComplete` обычно полезнее `RequestReceived` для расследования?
-3. Чем `Metadata` отличается от `Request` и почему Secret не следует писать на
-   `RequestResponse`?
-4. Как API server выбирает правило policy, если подходят несколько rules?
-5. Какие флаги и какие два mounts нужны static Pod `kube-apiserver` для file backend?
-6. Что ограничивают `--audit-log-maxsize`, `--audit-log-maxbackup` и
-   `--audit-log-maxage` и почему этого недостаточно для compliance retention?
-7. Чем `blocking-strict` отличается от `blocking` и какой availability trade-off создаёт?
-8. Почему `sourceIPs` и `userAgent` нельзя считать самостоятельным доказательством источника?
-9. Как через `jq` доказать, что policy записала действие нужной identity с нужным level,
-   но не раскрыла Secret body?
-10. **Flashback (глава 12).** Глава 12 отключает `--anonymous-auth` и проверяет это
-    HTTP-запросом в моменте. Как audit log из этой главы даст **непрерывное** доказательство
-    того же факта - что за произвольный прошедший период anonymous access оставался
-    отключённым, а не только был отключён в момент разового теста?
+<details>
+<summary>1. Какие поля audit event отвечают на «кто», «что», «откуда» и «успешно ли»?</summary>
+
+«Кто» дают `.user.username`, `.user.groups`, `.user.uid` и при наличии `.impersonatedUser`; «что» — `.verb`, `.requestURI` и `.objectRef`. Для «откуда» используют `.sourceIPs` и `.userAgent`, но сверяют их с доверенным proxy и другими источниками. Успех показывает `.responseStatus.code` и `.responseStatus.reason`.
+</details>
+
+<details>
+<summary>2. Почему `ResponseComplete` обычно полезнее `RequestReceived` для расследования?</summary>
+
+`ResponseComplete` содержит окончательный outcome и response status, поэтому показывает, завершилось ли действие и чем. `RequestReceived` появляется до обработки и для коротких операций часто лишь дублирует событие. Обычно `RequestReceived` исключают через `omitStages`, сохраняя финальную стадию; для streaming exec отдельную ценность может иметь `ResponseStarted` с `101`.
+</details>
+
+<details>
+<summary>3. Чем `Metadata` отличается от `Request` и почему Secret не следует писать на `RequestResponse`?</summary>
+
+`Metadata` сохраняет identity, URI, verb, objectRef, timestamps и status без request/response body. `Request` добавляет `.requestObject`, а `RequestResponse` — ещё и `.responseObject`. Body Secret может содержать токены и passwords, поэтому для Secrets ставят `Metadata`, а высокий level применяют только в узком согласованном forensic case.
+</details>
+
+<details>
+<summary>4. Как API server выбирает правило policy, если подходят несколько rules?</summary>
+
+Rules проверяются сверху вниз, и API server применяет первое совпавшее. Поэтому health exclusions и sensitive resources ставят выше широкого catch-all. Последующее rule не добавляет данные к уже выбранному, а filters одного rule должны быть выполнены одновременно.
+</details>
+
+<details>
+<summary>5. Какие флаги и какие два mounts нужны static Pod `kube-apiserver` для file backend?</summary>
+
+Нужны `--audit-policy-file`, `--audit-log-path`, обычно `--audit-log-format=json` и rotation flags `--audit-log-maxage`, `--audit-log-maxbackup`, `--audit-log-maxsize`. Static Pod монтирует read-only каталог policy, например `/etc/kubernetes/audit`, и writable каталог log, например `/var/log/kubernetes/audit`. Пути флагов должны совпасть с `mountPath` внутри контейнера и `hostPath` на node.
+</details>
+
+<details>
+<summary>6. Что ограничивают `--audit-log-maxsize`, `--audit-log-maxbackup` и `--audit-log-maxage` и почему этого недостаточно для compliance retention?</summary>
+
+`maxsize` задаёт размер активного файла до rotation, `maxbackup` — число старых копий, а `maxage` — максимальный возраст copies. Это ограничивает локальный operational buffer, но node может быть скомпрометирована, удалена или заполнена. Compliance требует отдельно определённых central storage, доступа, encryption, retention, legal hold и tamper resistance.
+</details>
+
+<details>
+<summary>7. Чем `blocking-strict` отличается от `blocking` и какой availability trade-off создаёт?</summary>
+
+`blocking` пишет audit event в пути обработки ответа и медленный/недоступный backend может увеличить API latency. `blocking-strict` дополнительно отклоняет запрос, если audit на `RequestReceived` завершился ошибкой. Это усиливает fail-closed evidence, но превращает сбой audit backend в отказ API для клиентов, поэтому требует capacity, HA и recovery design.
+</details>
+
+<details>
+<summary>8. Почему `sourceIPs` и `userAgent` нельзя считать самостоятельным доказательством источника?</summary>
+
+`sourceIPs` включает значения из `X-Forwarded-For`/`X-Real-IP`, которые клиент может подделать, и адрес соединения; `userAgent` также сообщает сам клиент. Это полезные pivot-поля, но не самостоятельное доказательство. Их corroborate с identity, временем, `.authenticationMetadata`, annotations и логами доверенного proxy/ingress.
+</details>
+
+<details>
+<summary>9. Как через `jq` доказать, что policy записала действие нужной identity с нужным level, но не раскрыла Secret body?</summary>
+
+В JSON Lines фильтруют `stage == "ResponseComplete"`, нужные `objectRef` namespace/resource/name и выводят `level`, `.user.username`, verb и `.responseStatus.code`. Для test Secret выводят также `has("requestObject")` и `has("responseObject")`; при rule `Metadata` оба должны быть `false`. Отсутствие одной строки через `grep token` не доказывает корректный level/policy.
+</details>
+
+<details>
+<summary>10. **Flashback (глава 12).** Глава 12 отключает `--anonymous-auth` и проверяет это HTTP-запросом в моменте. Почему audit log **не может** сам по себе дать непрерывное доказательство, что за произвольный прошедший период этот flag не менялся? Что именно он может подтвердить об anonymous API-запросах за интервал и какие дополнительные controls нужны для continuous assurance конфигурации?</summary>
+
+Audit фиксирует API requests, а не непрерывное состояние static Pod manifest или флага kube-apiserver. За доступный и сохранённый интервал он может показать anonymous requests, их время, verb, объект и response, но отсутствие таких строк не доказывает, что `--anonymous-auth` не менялся. Для continuous assurance нужны periodic config checks, file-integrity monitoring, GitOps drift detection и alert на изменение policy/static Pod manifest.
+</details>
 
 ## Практика
 

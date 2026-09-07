@@ -71,68 +71,92 @@ record_result() {
 }
 
 @test "8. trivy sbom scans the generated SBOM file for vulnerabilities" {
-  report="$ART/8/sbom-scan.json"
-  if [[ -s "$report" ]] && jq -e '(.Results | type == "array")' "$report" >/dev/null 2>&1 && grep -q 'trivy sbom' "$report" 2>/dev/null; then result=0
-  elif [[ -s "$report" ]] && jq -e '(.Results | type == "array")' "$report" >/dev/null 2>&1; then result=0
-  else echo "HINT: sbom-scan.json must be valid Trivy JSON with a 'Results' array. Check you ran 'trivy sbom' against the SBOM FILE from task 6 ($ART/6/bom.spdx.json), not 'trivy image' against \$IMAGE again - the whole point is scanning the SBOM artifact itself."; echo "Missing or invalid trivy sbom scan report: $report"; result=1
+  report="$ART/8/sbom-scan.json"; input_sbom="$ART/6/bom.spdx.json"
+  if [[ -s "$report" ]] && jq -e --arg input "$input_sbom" '
+    (.Results | type == "array") and
+    (.ScanCommand | type == "string") and
+    (.ScanCommand | test("(^|[[:space:]])trivy[[:space:]]+sbom([[:space:]]|$)")) and
+    (.ScanCommand | contains($input))
+  ' "$report" >/dev/null 2>&1; then result=0
+  else echo "HINT: sbom-scan.json must be valid Trivy JSON with a 'Results' array and a ScanCommand that runs 'trivy sbom' on the task-6 SBOM file ($input_sbom), not 'trivy image' against \$IMAGE."; echo "Missing or impure trivy sbom scan evidence: $report"; result=1
   fi
   record_result "$result"
 }
 
-@test "9a. Kyverno is installed and ImageValidatingPolicy requires a valid signature" {
+@test "9a. Kyverno policy has exact repository scope and a verifiable Cosign signature" {
   sign="$ART/9a/cosign-sign.txt"
   crd=$(kubectl get crd imagevalidatingpolicies.policies.kyverno.io -o name 2>/dev/null)
   policy=$(kubectl get imagevalidatingpolicy require-signed-catalog-images -o json 2>/dev/null)
-  policy_ok=0
-  if [[ -n "$policy" ]] && echo "$policy" | jq -e '.apiVersion == "policies.kyverno.io/v1" and (.spec.validationActions | index("Deny") != null)' >/dev/null 2>&1; then policy_ok=1; fi
+  hardened_image=$(kubectl get deployment catalog -n cks-111 -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+  hardened_repo=${hardened_image%@*}
+  policy_ok=0; cosign_ok=0
+  if [[ -n "$policy" && -n "$hardened_repo" ]] && echo "$policy" | jq -e --arg repo "$hardened_repo" '
+    .apiVersion == "policies.kyverno.io/v1" and
+    (.spec.validationActions | index("Deny") != null) and
+    ([.spec.matchImageReferences[]?.glob] | sort == [$repo + ":*", $repo + "@*"]) and
+    (any(.spec.attestors[]?; .cosign.key.data? | type == "string" and length > 0)) and
+    (any(.spec.validations[]?; (.expression // "") | contains("verifyImageSignatures")))
+  ' >/dev/null 2>&1; then policy_ok=1; fi
+  if [[ -n "$hardened_image" && -s "$ROOT/cosign.pub" ]] \
+    && cosign verify --key "$ROOT/cosign.pub" "$hardened_image" >/dev/null 2>&1; then cosign_ok=1; fi
   admission_ready=$(kubectl -n kyverno get deployment -l app.kubernetes.io/part-of=kyverno -o jsonpath='{.items[*].status.availableReplicas}' 2>/dev/null || true)
-  if [[ -n "$crd" && "$policy_ok" -eq 1 && -n "$admission_ready" ]] && [[ -s "$sign" ]] && grep -Eiq 'signing|pushing|tlog|signed' "$sign"; then
+  if [[ -n "$crd" && "$policy_ok" -eq 1 && -n "$admission_ready" && "$cosign_ok" -eq 1 ]] \
+    && [[ -s "$sign" ]] && grep -Eiq 'signing|pushing|tlog|signed' "$sign"; then
     result=0
   else
     if [[ -z "$crd" ]]; then
       echo "HINT: ImageValidatingPolicy CRD is missing - run 'sudo install-kyverno' and wait for the Helm release/CRDs to finish installing."
     elif [[ "$policy_ok" -ne 1 ]]; then
-      echo "HINT: ImageValidatingPolicy 'require-signed-catalog-images' does not exist, is not apiVersion policies.kyverno.io/v1, or is missing validationActions: [Deny]."
+      echo "HINT: Policy must deny, contain a Cosign key and verifyImageSignatures expression, and match exactly \$HARDENED_REPO:* plus \$HARDENED_REPO@* (not the unsafe \$HARDENED_REPO* prefix)."
     elif [[ -z "$admission_ready" ]]; then
       echo "HINT: No Kyverno admission controller Deployment has availableReplicas set - wait longer for the Pods to become Ready."
+    elif [[ "$cosign_ok" -ne 1 ]]; then
+      echo "HINT: Direct 'cosign verify --key cosign.pub \$HARDENED_IMAGE' must succeed; a plausible cosign-sign.txt alone is not signature proof."
     else
-      echo "HINT: cosign-sign.txt does not look like a successful 'cosign sign' output for \$HARDENED_IMAGE - check you signed YOUR hardened image, not upstream nginx, and that the command actually succeeded (no key/permission errors)."
+      echo "HINT: cosign-sign.txt does not look like a successful 'cosign sign' output for \$HARDENED_IMAGE - check you signed YOUR hardened image, not upstream nginx."
     fi
-    echo "crd=${crd:-missing} policy_ok=$policy_ok admission_ready=${admission_ready:-none} sign=$sign"
+    echo "crd=${crd:-missing} policy_ok=$policy_ok admission_ready=${admission_ready:-none} hardened_image=${hardened_image:-missing} cosign_ok=$cosign_ok sign=$sign"
     result=1
   fi
   record_result "$result"
 }
 
-@test "9b. A fresh Pod created after the policy is admitted with the signed image" {
+@test "9b. A fresh Pod is admitted with the exact Cosign-verified signed image" {
   evidence="$ART/9b/signed-admission-check.json"
   policy_created=$(kubectl get imagevalidatingpolicy require-signed-catalog-images -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null)
+  catalog_image=$(kubectl get deployment catalog -n cks-111 -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
   pod=$(kubectl get pod signed-admission-check -n cks-111 -o json 2>/dev/null)
   pod_created=$(jq -r '.metadata.creationTimestamp // ""' <<<"$pod" 2>/dev/null)
   pod_phase=$(jq -r '.status.phase // ""' <<<"$pod" 2>/dev/null)
   pod_ready=$(jq -r '[.status.conditions[]? | select(.type == "Ready") | .status] | any(. == "True")' <<<"$pod" 2>/dev/null)
-  image_ok=$(jq -r '[.spec.containers[]?.image] | any(. | test("@sha256:[a-f0-9]{64}$"))' <<<"$pod" 2>/dev/null)
+  pod_image=$(jq -r '.spec.containers[0].image // ""' <<<"$pod" 2>/dev/null)
+  image_ok=0; cosign_ok=0
+  if [[ -n "$catalog_image" && "$pod_image" == "$catalog_image" && "$pod_image" =~ @sha256:[a-f0-9]{64}$ ]]; then image_ok=1; fi
+  if [[ "$image_ok" -eq 1 && -s "$ROOT/cosign.pub" ]] \
+    && cosign verify --key "$ROOT/cosign.pub" "$pod_image" >/dev/null 2>&1; then cosign_ok=1; fi
   evidence_ok=0
-  if [[ -s "$evidence" ]] && jq -e --arg policy "$policy_created" '(.creationTimestamp // "") > $policy' "$evidence" >/dev/null 2>&1; then evidence_ok=1; fi
+  if [[ -s "$evidence" ]] && jq -e --arg policy "$policy_created" --arg image "$pod_image" '(.creationTimestamp // "") > $policy and (.image // "") == $image' "$evidence" >/dev/null 2>&1; then evidence_ok=1; fi
   if [[ -n "$policy_created" && -n "$pod_created" ]] \
     && [[ "$pod_created" > "$policy_created" ]] \
-    && [[ "$pod_phase" != "Failed" && "$image_ok" == "true" ]] \
+    && [[ "$pod_phase" != "Failed" && "$image_ok" -eq 1 && "$cosign_ok" -eq 1 ]] \
     && [[ "$pod_ready" == "true" || "$pod_phase" == "Succeeded" ]] \
     && [[ "$evidence_ok" -eq 1 ]]; then
     result=0
   else
     if [[ -z "$pod_created" ]]; then
-      echo "HINT: Pod 'signed-admission-check' does not exist - create it with 'kubectl run' AFTER the ImageValidatingPolicy from task 9a, using \$HARDENED_IMAGE."
+      echo "HINT: Pod 'signed-admission-check' does not exist - create it with 'kubectl run' AFTER the ImageValidatingPolicy, using \$HARDENED_IMAGE."
     elif [[ "$pod_created" < "$policy_created" ]]; then
-      echo "HINT: This Pod was created BEFORE the policy (pod_created=$pod_created <= policy_created=$policy_created). Re-run 'kubectl run signed-admission-check' now, after the policy exists - only a genuinely fresh Pod proves fresh admission, not a Deployment's stale ReplicaSet."
-    elif [[ "$image_ok" != "true" ]]; then
-      echo "HINT: Pod's container image is not digest-pinned (@sha256:...) - use the exact \$HARDENED_IMAGE reference, not a tag."
+      echo "HINT: This Pod was created BEFORE the policy (pod_created=$pod_created <= policy_created=$policy_created). Re-run the new Pod after policy creation."
+    elif [[ "$image_ok" -ne 1 ]]; then
+      echo "HINT: Pod must use the exact digest-pinned hardened image configured by deployment/catalog, not merely any digest-pinned image."
+    elif [[ "$cosign_ok" -ne 1 ]]; then
+      echo "HINT: Direct 'cosign verify --key cosign.pub' for the Pod image must succeed; Ready alone is not signature proof."
     elif [[ "$pod_ready" != "true" && "$pod_phase" != "Succeeded" ]]; then
       echo "HINT: Pod is not Ready/Succeeded (phase=$pod_phase) - check it was actually admitted and started."
     else
-      echo "HINT: signed-admission-check.json evidence file must contain a creationTimestamp field that is LATER than the policy's creationTimestamp - re-save the Pod's JSON after creating it, not before."
+      echo "HINT: signed-admission-check.json must record this Pod image and a creationTimestamp later than the policy."
     fi
-    echo "policy_created=$policy_created pod_created=$pod_created pod_phase=$pod_phase pod_ready=$pod_ready image_ok=$image_ok evidence_ok=$evidence_ok"
+    echo "policy_created=$policy_created pod_created=$pod_created pod_phase=$pod_phase pod_ready=$pod_ready catalog_image=${catalog_image:-missing} pod_image=${pod_image:-missing} image_ok=$image_ok cosign_ok=$cosign_ok evidence_ok=$evidence_ok"
     result=1
   fi
   record_result "$result"

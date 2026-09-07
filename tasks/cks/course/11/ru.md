@@ -84,8 +84,9 @@ kubectl -n cks-104 get serviceaccount default \
 ```
 
 Изменение не удаляет volume у уже созданного Pod: пересоздайте workload и проверьте новый
-Pod. Следующий манифест защищает Pod дважды: у его SA выключен automount, и Pod также
-явно запрещает монтирование. Это правильный вариант для приложения, которое не вызывает
+Pod. Следующий манифест закрывает этот путь дважды: у его SA выключен automount, и Pod также
+явно запрещает монтирование. Токен не попадает в контейнер вовсе, поэтому его нечего украсть
+при компрометации приложения. Это правильный вариант для приложения, которое не вызывает
 Kubernetes API.
 
 ```yaml
@@ -416,19 +417,58 @@ audience делает credential более узким и управляемым
 
 ## 11.10. Вопросы для самопроверки
 
-1. Почему token `default` SA опасен даже в Pod, который сейчас не делает запросов к API?
-2. Как соотносятся `automountServiceAccountToken` на ServiceAccount и на Pod? Какое
-   значение применяется при конфликте?
-3. Почему bound projected token безопаснее legacy Secret с ServiceAccount token?
-4. Что ограничивает `audience` и что обязан проверить сервис, принимающий token?
-5. Почему `app-sa` из примера получает RoleBinding, а не ClusterRoleBinding?
-6. Как отличить истёкший или неверный token (`401`) от недостаточных RBAC-прав (`403`)?
-7. Какие три проверки докажут, что Pod без API-задачи действительно не может использовать
-   ServiceAccount token?
-8. **Flashback (глава 21).** Legacy ServiceAccount token хранился как Kubernetes `Secret`.
+<details>
+<summary>1. Почему token `default` SA опасен даже в Pod, который сейчас не делает запросов к API?</summary>
+
+Token является credential для identity `default` ServiceAccount, даже если текущее приложение API не вызывает. После RCE атакующий может прочитать смонтированный token и использовать все права, которые SA имеет сейчас или получит позднее через RBAC. Обычному HTTP-сервису такой credential не нужен в filesystem, поэтому automount отключают.
+</details>
+
+<details>
+<summary>2. Как соотносятся `automountServiceAccountToken` на ServiceAccount и на Pod? Какое
+   значение применяется при конфликте?</summary>
+
+Если Pod не указывает это поле, применяется значение его ServiceAccount. Значение в `spec` самого Pod имеет приоритет, поэтому Pod может явно включить или выключить mount независимо от default на SA. Изменение SA не удаляет volume уже созданного Pod: workload нужно пересоздать и проверить новый Pod.
+</details>
+
+<details>
+<summary>3. Почему bound projected token безопаснее legacy Secret с ServiceAccount token?</summary>
+
+Bound token выпускается TokenRequest API, связан с конкретными ServiceAccount и Pod, имеет `exp` и автоматически ротируется kubelet до истечения. Legacy Secret создаёт долгоживущий credential без такой штатной короткой ротации и потому увеличивает ущерб утечки. При удалении привязанного Pod bound credential также нельзя считать доверенным действующим credential.
+</details>
+
+<details>
+<summary>4. Что ограничивает `audience` и что обязан проверить сервис, принимающий token?</summary>
+
+`audience` ограничивает получателя token: token для Kubernetes API не должен без проверки становиться token для внешнего Vault или другого сервиса. Принимающий внешний сервис обязан проверить подпись, `iss`, свою `aud`, срок действия и subject. Для API Kubernetes явную audience не задают без подтверждения фактических `--api-audiences` или `--service-account-issuer`.
+</details>
+
+<details>
+<summary>5. Почему `app-sa` из примера получает RoleBinding, а не ClusterRoleBinding?</summary>
+
+`app-sa` должен читать Pod только в namespace `cks-104`, поэтому namespaced RoleBinding задаёт требуемую границу. ClusterRoleBinding сделал бы те же permissions cluster-wide, хотя задача не требует такого scope. Отдельный SA с минимальной Role уменьшает blast radius в случае утечки token.
+</details>
+
+<details>
+<summary>6. Как отличить истёкший или неверный token (`401`) от недостаточных RBAC-прав (`403`)?</summary>
+
+`401 Unauthorized` означает, что API server не принял credential: проверяют expiry, audience, issuer, CA и путь к token. `403 Forbidden` означает, что аутентификация прошла, но Role или RoleBinding не дают нужный resource/verb в нужном namespace. Для второго случая применяют `kubectl auth can-i` от имени ServiceAccount.
+</details>
+
+<details>
+<summary>7. Какие три проверки докажут, что Pod без API-задачи действительно не может использовать
+   ServiceAccount token?</summary>
+
+Нужно подтвердить `automountServiceAccountToken: false` у ServiceAccount и в spec нового Pod, учитывая приоритет поля Pod. Затем в контейнере выполняют `test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token`. Наконец, Pod/workload пересоздают после изменения и повторяют эту проверку, потому что старый volume не удаляется автоматически.
+</details>
+
+<details>
+<summary>8. **Flashback (глава 21).** Legacy ServiceAccount token хранился как Kubernetes `Secret`.
    Чем угроза для такого token отличается от угрозы для обычного application `Secret` из
    главы 21 (например, `db-password`), и почему bound projected token эту угрозу снижает
-   иначе, чем encryption at rest снижает угрозу для `Secret` в etcd?
+   иначе, чем encryption at rest снижает угрозу для `Secret` в etcd?</summary>
+
+Legacy ServiceAccount token — bearer credential, позволяющий действовать как identity в Kubernetes API в пределах её RBAC; `db-password` обычно открывает доступ к конкретной прикладной системе. Bound projected token уменьшает риск использования украденного credential сроком, audience, привязкой к Pod и ротацией. Encryption at rest защищает данные Secret в etcd, но не ограничивает уже смонтированный или прочитанный token и не заменяет его короткий lifecycle.
+</details>
 
 ## Практика
 

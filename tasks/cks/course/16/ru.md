@@ -25,9 +25,9 @@ Mandatory Access Control: ядро сверяет действие процес�
 
 ```mermaid
 flowchart TB
-    app["Процесс в контейнере"] --> request["open /etc/shadow\nили другая операция"]
+    app["Процесс в контейнере"] --> request["open /etc/shadow<br/>или другая операция"]
     request --> dac["DAC: UID/GID/mode bits"]
-    dac --> aa["AppArmor profile\nallow / deny"]
+    dac --> aa["AppArmor profile<br/>allow / deny"]
     aa -->|"allow"| kernel["Ядро выполняет операцию"]
     aa -->|"deny"| blocked["EPERM/EACCES и audit denial"]
     style app fill:#326ce5,color:#fff
@@ -588,21 +588,60 @@ kubectl describe pod -n "$NS" "$POD"
 
 ## 16.13. Вопросы для самопроверки
 
-1. Почему AppArmor не заменяет UID/GID, capabilities, seccomp или RBAC?
-2. Чем `enforce` отличается от `complain`, и почему второй режим нельзя считать защитой?
-3. Как `aa-status` и `apparmor_parser -r` доказывают разные части состояния profile?
-4. Почему `Localhost` profile может дать `CreateContainerError` после успешного
-   `kubectl apply`?
-5. Какие значения `appArmorProfile.type` допустимы и когда оправдан `Unconfined`?
-6. Как записывается legacy AppArmor annotation для container с именем `app` и profile
-   `k8s-demo`?
-7. Какие команды докажут одновременно выбранную ноду, effective profile процесса и
-   заблокированное действие?
-8. **Flashback (глава 18).** PSA `restricted` из главы 18 требует `RuntimeDefault`/
+<details>
+<summary>1. Почему AppArmor не заменяет UID/GID, capabilities, seccomp или RBAC?</summary>
+
+Эти контроли отвечают на разные вопросы: DAC проверяет UID/GID и mode bits, capabilities — отдельные привилегии ядра, seccomp — допустимые syscalls, а RBAC — Kubernetes API-доступ identity. AppArmor добавляет path-based MAC для действий процесса по profile. Поэтому profile дополняет, но не отменяет необходимости non-root, dropped capabilities, seccomp и минимального RBAC.
+</details>
+
+<details>
+<summary>2. Чем `enforce` отличается от `complain`, и почему второй режим нельзя считать защитой?</summary>
+
+В `enforce` операция вне policy блокируется, а kernel записывает denial. В `complain` неразрешённая операция обычно выполняется и журналируется, чтобы собрать фактические требования приложения; явный `deny` всё равно продолжает блокировать совпадение. Такой режим полезен временно для доработки policy, но не является постоянным защитным барьером.
+</details>
+
+<details>
+<summary>3. Как `aa-status` и `apparmor_parser -r` доказывают разные части состояния profile?</summary>
+
+`aa-status` показывает состояние AppArmor на ноде: включённый module, загруженные profiles, их режимы и процессы. `apparmor_parser -r -W <file>` синтаксически читает policy и добавляет либо заменяет её загруженную версию в kernel. Наличие файла само по себе ничего не доказывает; после parser нужно подтвердить имя и режим через `aa-status`.
+</details>
+
+<details>
+<summary>4. Почему `Localhost` profile может дать `CreateContainerError` после успешного
+   `kubectl apply`?</summary>
+
+`kubectl apply` принимает manifest, но container runtime может применить `Localhost` только если profile с точным именем уже загружен в kernel ноды, выбранной scheduler. Profile может отсутствовать на этой ноде, AppArmor/runtime может не поддерживать нужный режим либо Pod может попасть на другой node pool. Причину ищут в `kubectl describe pod`, событиях, фактической ноде, `aa-status` и логах kubelet.
+</details>
+
+<details>
+<summary>5. Какие значения `appArmorProfile.type` допустимы и когда оправдан `Unconfined`?</summary>
+
+Допустимы `RuntimeDefault`, `Localhost` и `Unconfined`. `RuntimeDefault` служит общим baseline при доступном AppArmor, а `Localhost` — для проверенного application-specific profile, заранее загруженного на ноде. `Unconfined` оправдан только как временное диагностическое исключение с явным владельцем риска, а не как способ исправить profile failure.
+</details>
+
+<details>
+<summary>6. Как записывается legacy AppArmor annotation для container с именем `app` и profile
+   `k8s-demo`?</summary>
+
+Ключ обязан оканчиваться точным именем контейнера, а для Localhost значение получает legacy-префикс. В этом случае запись: `container.apparmor.security.beta.kubernetes.io/app: localhost/k8s-demo`. Это beta-аннотация для audit и миграции; в новых manifest используют `securityContext.appArmorProfile` и не смешивают оба интерфейса.
+</details>
+
+<details>
+<summary>7. Какие команды докажут одновременно выбранную ноду, effective profile процесса и
+   заблокированное действие?</summary>
+
+Выбранную ноду показывают `kubectl get pod -n demo apparmor-localhost -o wide`, а на этой ноде наличие profile проверяют `sudo aa-status | grep -F 'k8s-demo'`. Effective profile PID 1 подтверждает `kubectl exec -n demo apparmor-localhost -- cat /proc/1/attr/current`. Отказ проверяют `kubectl exec ... -- cat /etc/shadow` с ожидаемым `Permission denied` и соответствующим `apparmor="DENIED"` в `journalctl -k` на ноде.
+</details>
+
+<details>
+<summary>8. **Flashback (глава 18).** PSA `restricted` из главы 18 требует `RuntimeDefault`/
    `Localhost` для seccomp, но **не** требует конкретного AppArmor profile сверх
    `RuntimeDefault`/не отключённого default. Где именно заканчивается то, что проверяет
    встроенный PSA, и начинается зона, которую может закрыть только явно назначенный
-   `Localhost` AppArmor profile из этой главы?
+   `Localhost` AppArmor profile из этой главы?</summary>
+
+PSA проверяет допустимость Pod-spec по встроенному стандарту, включая неотключённый AppArmor default и `RuntimeDefault`/`Localhost` для seccomp, но не моделирует контракт путей и операций конкретного приложения. Он не доставляет и не проверяет node-local named AppArmor policy. Явный `Localhost` profile закрывает эту следующую зону: kernel enforce конкретных разрешённых path, file operations, capabilities, network или mount-правил на выбранной ноде.
+</details>
 
 ## Практика
 

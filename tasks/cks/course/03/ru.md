@@ -12,12 +12,12 @@
 
 ```mermaid
 flowchart TB
-    app["Процесс приложения\nв контейнере"]
-    ns["namespaces\nвидимость процессов, сети, mount и hostname"]
-    cg["cgroups\nCPU, memory, PID и другие ресурсы"]
-    caps["capabilities\nотдельные привилегии вместо полного root"]
-    mac["AppArmor или SELinux\nобязательный контроль доступа"]
-    sc["seccomp\nразрешённый набор syscalls"]
+    app["Процесс приложения<br/>в контейнере"]
+    ns["namespaces<br/>видимость процессов, сети, mount и hostname"]
+    cg["cgroups<br/>CPU, memory, PID и другие ресурсы"]
+    caps["capabilities<br/>отдельные привилегии вместо полного root"]
+    mac["AppArmor или SELinux<br/>обязательный контроль доступа"]
+    sc["seccomp<br/>разрешённый набор syscalls"]
     kernel["Общее ядро Linux ноды"]
     app --> ns --> kernel
     app --> cg
@@ -39,10 +39,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    exploit["Уязвимость приложения\nили вредоносный образ"] --> shell["Shell в контейнере"]
-    shell --> probe["Разведка: uid, capabilities,\nmounts, сеть"]
-    probe --> weak["Слабая конфигурация:\nprivileged, hostPath, опасная capability\nили уязвимость runtime"]
-    weak --> escape["Выход из ожидаемой изоляции\nи захват ноды"]
+    exploit["Уязвимость приложения<br/>или вредоносный образ"] --> shell["Shell в контейнере"]
+    shell --> probe["Разведка: uid, capabilities,<br/>mounts, сеть"]
+    probe --> weak["Слабая конфигурация:<br/>privileged, hostPath, опасная capability<br/>или уязвимость runtime"]
+    weak --> escape["Выход из ожидаемой изоляции<br/>и захват ноды"]
     style exploit fill:#db4437,color:#fff
     style shell fill:#f4b400,color:#000
     style probe fill:#326ce5,color:#fff
@@ -133,12 +133,12 @@ kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.met
 flowchart TB
     pod["Pod"] --> app["Контейнер приложения"]
     pod --> sidecar["Sidecar"]
-    app --> cga["cgroup приложения\nCPU, memory, pids"]
-    sidecar --> cgs["cgroup sidecar\nCPU, memory, pids"]
+    app --> cga["cgroup приложения<br/>CPU, memory, pids"]
+    sidecar --> cgs["cgroup sidecar<br/>CPU, memory, pids"]
     cga --> node["Ресурсы ноды"]
     cgs --> node
-    attacker["Бесконечное выделение памяти\nили fork bomb"] --> cga
-    cga --> limited["limit срабатывает:\nOOM только для cgroup\nили отказ создания PID"]
+    attacker["Бесконечное выделение памяти<br/>или fork bomb"] --> cga
+    cga --> limited["limit срабатывает:<br/>OOM только для cgroup<br/>или отказ создания PID"]
     style pod fill:#326ce5,color:#fff
     style attacker fill:#db4437,color:#fff
     style limited fill:#0f9d58,color:#fff
@@ -375,10 +375,10 @@ namespaces, cgroups, capabilities, seccomp и MAC работают в одном
 
 ```mermaid
 flowchart TB
-    normal["Обычный container runtime\nпроцесс -> host kernel"]
-    gvisor["gVisor\nпроцесс -> Sentry -> host kernel"]
-    kata["Kata Containers\nпроцесс -> guest kernel -> VM boundary -> host"]
-    risk["Недоверенный tenant\nили высокорисковая нагрузка"] --> gvisor
+    normal["Обычный container runtime<br/>процесс -> host kernel"]
+    gvisor["gVisor<br/>процесс -> Sentry -> host kernel"]
+    kata["Kata Containers<br/>процесс -> guest kernel -> VM boundary -> host"]
+    risk["Недоверенный tenant<br/>или высокорисковая нагрузка"] --> gvisor
     risk --> kata
     style normal fill:#f4b400,color:#000
     style gvisor fill:#326ce5,color:#fff
@@ -461,14 +461,53 @@ sudo cat "/proc/$PID/cgroup"
 
 ## 03.12. Вопросы для самопроверки
 
-1. Почему контейнер не равен виртуальной машине и какая роль у общего kernel ноды?
-2. Какие namespaces разделяют процессы, сеть и mount points, и какие поля Pod могут убрать эти границы?
-3. Чем `requests` отличаются от `limits` в сценарии защиты ноды от DoS?
-4. Почему `CAP_SYS_ADMIN` нельзя выдавать для исправления произвольной ошибки приложения?
-5. Какие команды помогут сопоставить container с host PID, namespaces и cgroup?
-6. Чем seccomp дополняет capabilities и почему `RuntimeDefault` лучше, чем `Unconfined` для обычного workload?
-7. В чём эксплуатационная разница между AppArmor и SELinux?
-8. Когда одной контейнерной изоляции недостаточно и зачем нужен sandboxed runtime?
+<details>
+<summary>1. Почему контейнер не равен виртуальной машине и какая роль у общего kernel ноды?</summary>
+
+Обычный OCI workload под runc/containerd — это Linux-процесс с общим ядром ноды, а не отдельная VM. Namespaces, cgroups, capabilities, MAC и seccomp создают несколько границ, но уязвимость ядра или runtime может привести от выполнения кода в контейнере к container escape.
+</details>
+
+<details>
+<summary>2. Какие namespaces разделяют процессы, сеть и mount points, и какие поля Pod могут убрать эти границы?</summary>
+
+`PID` namespace изолирует дерево процессов, `NET` — интерфейсы, маршруты и порты, а `MNT` — mount points и файловую иерархию. Поля `hostPID`, `hostNetwork` и `hostIPC` отключают соответствующие границы; `hostPath` и `privileged: true` также меняют модель доступа к ресурсам ноды.
+</details>
+
+<details>
+<summary>3. Чем `requests` отличаются от `limits` в сценарии защиты ноды от DoS?</summary>
+
+`requests` влияют на scheduling и QoS, но сами по себе не останавливают прожорливый процесс. Жёсткую границу задают `limits`: memory limit ограничивает последствия memory pressure/OOM, а CPU limit даёт ceiling через throttling; PID limit задаётся kubelet параметром `podPidsLimit`.
+</details>
+
+<details>
+<summary>4. Почему `CAP_SYS_ADMIN` нельзя выдавать для исправления произвольной ошибки приложения?</summary>
+
+`CAP_SYS_ADMIN` даёт широкий набор административных операций, включая mount и namespace-операции, и часто участвует в escape-цепочках. Вместо исправления симптома нужно определить реально необходимую операцию, удалить `ALL` capabilities и вернуть только одну узкую capability при документированной необходимости.
+</details>
+
+<details>
+<summary>5. Какие команды помогут сопоставить container с host PID, namespaces и cgroup?</summary>
+
+На ноде используют `sudo crictl ps`, затем `sudo crictl inspect "$CONTAINER_ID" | jq '.info.pid'`, чтобы получить PID контейнера. Для проверки применяют `sudo lsns -p "$PID"` и `sudo cat "/proc/$PID/cgroup"`; inode PID namespace можно сравнить командами `readlink /proc/1/ns/pid` и `readlink /proc/"$PID"/ns/pid`.
+</details>
+
+<details>
+<summary>6. Чем seccomp дополняет capabilities и почему `RuntimeDefault` лучше, чем `Unconfined` для обычного workload?</summary>
+
+Capabilities ограничивают отдельные привилегии, а seccomp фильтрует доступный процессу API ядра на уровне syscalls. Явный `RuntimeDefault` сокращает этот набор для обычной нагрузки, тогда как при отсутствии профиля Pod может остаться `Unconfined`, если на ноде не включён `seccompDefault`.
+</details>
+
+<details>
+<summary>7. В чём эксплуатационная разница между AppArmor и SELinux?</summary>
+
+AppArmor использует profile-based policy по путям и операциям и типичен для Ubuntu/Debian, а SELinux применяет labels и type enforcement на RHEL/Fedora/OpenShift. Их профили не взаимозаменяемы: перед настройкой проверяют `aa-status` либо `getenforce` и разбирают AppArmor `DENIED` или SELinux AVC denial, а не отключают MAC.
+</details>
+
+<details>
+<summary>8. Когда одной контейнерной изоляции недостаточно и зачем нужен sandboxed runtime?</summary>
+
+Для недоверенных tenant-ов или высокорисковой нагрузки общая с нодой kernel boundary может быть недостаточной. gVisor перехватывает значительную часть syscalls в user space, а Kata запускает workload в лёгкой VM, уменьшая риск прямого использования ядра ценой совместимости, latency и операционной сложности.
+</details>
 
 ## Практика
 

@@ -30,11 +30,11 @@ backend принимает только `GET /`, то `POST /admin` или `DELE
 
 ```mermaid
 flowchart TB
-    attacker["скомпрометированный<br>frontend"] -->|"TCP/80 разрешён"| backend["backend API"]
-    attacker -->|"DNS + HTTPS"| evil["внешний сервер<br>атакующего"]
-    cnp["CiliumNetworkPolicy"] --> l34["L3/L4:<br>frontend → backend:80"]
-    cnp --> l7["L7:<br>только GET /"]
-    cnp --> fqdn["DNS-aware:<br>только разрешённое FQDN"]
+    attacker["скомпрометированный<br/>frontend"] -->|"TCP/80 разрешён"| backend["backend API"]
+    attacker -->|"DNS + HTTPS"| evil["внешний сервер<br/>атакующего"]
+    cnp["CiliumNetworkPolicy"] --> l34["L3/L4:<br/>frontend → backend:80"]
+    cnp --> l7["L7:<br/>только GET /"]
+    cnp --> fqdn["DNS-aware:<br/>только разрешённое FQDN"]
     l34 --> backend
     l7 --> backend
     fqdn --> evil
@@ -496,16 +496,53 @@ frontend не получает произвольный доступ к backend,
 
 ## 06.12. Вопросы для самопроверки
 
-1. Чем CNP отличается от нативной `NetworkPolicy`, кроме формата ресурса?
-2. Что произойдёт с ingress endpoint, если его выбирает CNP, но трафик не совпал ни с
-   одним allow-правилом?
-3. Как в одном правиле CNP выразить «только frontend к backend TCP/80»?
-4. Почему разрешение TCP/80 ещё не ограничивает `POST /admin`, и как это сделать?
-5. Как работают `toFQDNs` и почему вместе с ними нужно отдельно разрешить DNS?
-6. Когда подходят entities `world`, `cluster` и `host`, и почему `host` требует особой
-   осторожности?
-7. Какие Hubble-команды помогут доказать, что Cilium отбросил запрещённый поток?
-8. Почему опасно начать внедрение CCNP с `endpointSelector: {}` в production-кластере?
+<details>
+<summary>1. Чем CNP отличается от нативной `NetworkPolicy`, кроме формата ресурса?</summary>
+
+CNP использует Cilium identities, построенные из labels, и добавляет L7-фильтрацию HTTP/DNS, `toFQDNs`, entities (`world`, `cluster`, `host`) и наблюдаемость Hubble. Нативная NetworkPolicy остаётся переносимым L3/L4 control, а CNP/CCNP дополняют его; явный Cilium deny имеет приоритет над allow из обоих типов policy.
+</details>
+
+<details>
+<summary>2. Что произойдёт с ingress endpoint, если его выбирает CNP, но трафик не совпал ни с одним allow-правилом?</summary>
+
+В `policyEnforcementMode: default` endpoint становится изолирован для направления, которое описано применимой policy. Если CNP содержит `ingress`, ingress действует как default-deny до совпадения с allow-правилом; аналогично `egress` изолирует только исходящий трафик.
+</details>
+
+<details>
+<summary>3. Как в одном правиле CNP выразить «только frontend к backend TCP/80»?</summary>
+
+CNP выбирает backend через `endpointSelector` с `app: backend`, а в `ingress` использует `fromEndpoints` с `app: frontend`. В `toPorts` задают порт `"80"` и `protocol: TCP`; для межnamespace-связи к `matchLabels` источника добавляют `k8s:io.kubernetes.pod.namespace`.
+</details>
+
+<details>
+<summary>4. Почему разрешение TCP/80 ещё не ограничивает `POST /admin`, и как это сделать?</summary>
+
+L3/L4 rule разрешает всё TCP-соединение на порту 80 и не различает HTTP method или path. Внутри `toPorts` добавляют `rules.http`, например `method: "GET"` и узкий `path: "^/$"`; Cilium L7-proxy тогда отклоняет несовпавший запрос, обычно с 403.
+</details>
+
+<details>
+<summary>5. Как работают `toFQDNs` и почему вместе с ними нужно отдельно разрешить DNS?</summary>
+
+`toFQDNs` не резолвит имя при применении YAML: DNS-proxy Cilium наблюдает разрешённый DNS-ответ, заполняет FQDN-кэш с TTL и разрешает соединение к полученному IP. Поэтому Pod отдельно разрешают DNS к доверенному CoreDNS; DoH/DoT не заполняют этот кэш, а прямой IP не создаёт FQDN-сопоставления.
+</details>
+
+<details>
+<summary>6. Когда подходят entities `world`, `cluster` и `host`, и почему `host` требует особой осторожности?</summary>
+
+`world` обозначает адреса вне кластера, `cluster` — endpoints внутри него, а `host` — локальный host endpoint ноды. Доступ к `host` может затрагивать kubelet, runtime socket или localhost ноды и открыть путь к эскалации, поэтому он требует понимания host firewall Cilium и проверки control-plane traffic в тестовом кластере.
+</details>
+
+<details>
+<summary>7. Какие Hubble-команды помогут доказать, что Cilium отбросил запрещённый поток?</summary>
+
+После `cilium status --wait` и настройки доступа к Hubble можно наблюдать отказы командой `hubble observe --namespace cks-102 --verdict DROPPED`. Для сопоставления HTTP и DNS используют соответственно `hubble observe --namespace cks-102 --protocol http` и DNS-наблюдение; в Policy Audit Mode будущий запрет виден через `hubble observe flows -t policy-verdict --namespace cks-102` как `AUDITED`.
+</details>
+
+<details>
+<summary>8. Почему опасно начать внедрение CCNP с `endpointSelector: {}` в production-кластере?</summary>
+
+CCNP действует во всём кластере, а пустой selector выбирает все endpoints, поэтому ошибка в allow/deny может отрезать системный и прикладной трафик. Сначала правило проверяют с узкими labels в отдельном namespace, наблюдают baseline через Hubble и подготавливают rollback через удаление policy или GitOps-откат.
+</details>
 
 ## Практика
 

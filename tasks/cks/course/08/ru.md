@@ -29,9 +29,9 @@ transparent encryption, которая рассматривается в гла�
 
 ```mermaid
 flowchart TB
-    client["Клиент"] -->|"HTTP: пароль и cookie<br>видны в сети"| bad["Перехватчик"]
-    client -->|"HTTPS: TLS handshake<br>и шифрование"| ingress["Ingress/Gateway controller<br>TLS termination"]
-    ingress -->|"HTTP или TLS<br>внутри кластера"| service["Service"]
+    client["Клиент"] -->|"HTTP: пароль и cookie<br/>видны в сети"| bad["Перехватчик"]
+    client -->|"HTTPS: TLS handshake<br/>и шифрование"| ingress["Ingress/Gateway controller<br/>TLS termination"]
+    ingress -->|"HTTP или TLS<br/>внутри кластера"| service["Service"]
     service --> pod["Pod приложения"]
     style client fill:#326ce5,color:#fff
     style bad fill:#db4437,color:#fff
@@ -504,20 +504,59 @@ endpoint без ожидаемой защиты.
 
 ## 08.11. Вопросы для самопроверки
 
-1. Где заканчивается защита TLS при TLS termination на Ingress и почему это не гарантирует
-   шифрование между controller и Pod?
-2. Почему одного CN недостаточно и какое поле certificate должен содержать DNS host?
-3. Какой тип и какие ключи должен иметь TLS Secret для Ingress?
-4. Почему Ingress и его TLS Secret должны находиться в одном namespace?
-5. Почему ingress-nginx с `spec.tls` по умолчанию делает redirect и когда нужна
-   controller-specific аннотация `force-ssl-redirect`?
-6. Какие два результата ожидаются от `curl` для HTTP и HTTPS после настройки redirect?
-7. Как до создания Secret подтвердить совпадение public key certificate/key и цепочку
-   leaf -> intermediate -> root?
-8. Почему `curl -k` приемлем для self-signed certificate в лаборатории, но опасен в
-   production?
-9. Почему `GatewayClass` нельзя считать переносимым именем и как HTTPS listener связывает
-   Gateway с certificate через `certificateRefs`?
+<details>
+<summary>1. Где заканчивается защита TLS при TLS termination на Ingress и почему это не гарантирует шифрование между controller и Pod?</summary>
+
+TLS защищает канал от клиента до ingress controller, где выполняются handshake и расшифровка запроса. Дальнейший путь controller → Service → Pod может быть HTTP или TLS, поэтому для чувствительного внутрикластерного трафика требуются TLS приложения, service mesh или Cilium transparent encryption.
+</details>
+
+<details>
+<summary>2. Почему одного CN недостаточно и какое поле certificate должен содержать DNS host?</summary>
+
+Современные клиенты проверяют имя из URL по Subject Alternative Name, а не только по устаревшему Common Name. При выпуске self-signed certificate нужный DNS host добавляют в `subjectAltName`, например `DNS:${HOST}`, и проверяют его через `openssl x509 -ext subjectAltName`.
+</details>
+
+<details>
+<summary>3. Какой тип и какие ключи должен иметь TLS Secret для Ingress?</summary>
+
+Secret должен иметь тип `kubernetes.io/tls` и содержать certificate в `tls.crt` и private key в `tls.key`. Надёжнее создать его командой `kubectl create secret tls ... --cert=tls.crt --key=tls.key`, которая размещает файлы под правильными ключами.
+</details>
+
+<details>
+<summary>4. Почему Ingress и его TLS Secret должны находиться в одном namespace?</summary>
+
+Secret — namespaced объект, и Ingress из `web` не может сослаться на Secret из `default` или другого namespace. Поэтому `secretName` в `spec.tls` должен ссылаться на Secret, созданный в том же namespace, что и Ingress.
+</details>
+
+<details>
+<summary>5. Почему ingress-nginx с `spec.tls` по умолчанию делает redirect и когда нужна controller-specific аннотация `force-ssl-redirect`?</summary>
+
+Для ingress-nginx блок `spec.tls` по умолчанию включает HTTP → HTTPS redirect, обычно 308, если настройка controller не переопределена. `force-ssl-redirect` оставляют для топологии с external TLS offload, когда TLS завершается до controller, тот получает HTTP и у Ingress нет `spec.tls`; proxy обязан корректно передавать исходную HTTPS-схему, иначе возможен loop.
+</details>
+
+<details>
+<summary>6. Какие два результата ожидаются от `curl` для HTTP и HTTPS после настройки redirect?</summary>
+
+HTTPS-вызов с правильными SNI и Host, например через `curl --resolve`, должен успешно получить backend, в примере — HTTP 200; для self-signed test certificate допустим `-k`. Только для fixture с ingress-nginx и `spec.tls` отдельный HTTP-запрос ожидаемо возвращает redirect, обычно 308, с `Location`; статус не является переносимой семантикой Ingress API.
+</details>
+
+<details>
+<summary>7. Как до создания Secret подтвердить совпадение public key certificate/key и цепочку leaf -> intermediate -> root?</summary>
+
+Хеш публичного ключа certificate получают через `openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | sha256sum` и сравнивают с хешем `openssl pkey -in tls.key -pubout -outform DER | sha256sum`. Цепочку проверяют `openssl verify -show_chain -CAfile root-ca.crt -untrusted intermediate-ca.crt leaf.crt`: leaf должен быть проверен через intermediate до trusted root.
+</details>
+
+<details>
+<summary>8. Почему `curl -k` приемлем для self-signed certificate в лаборатории, но опасен в production?</summary>
+
+Self-signed certificate не доверен клиентами по умолчанию, поэтому `-k` допустим только для контролируемой лабораторной проверки. В production этот флаг отключает проверку certificate и скрывает ошибки доверия, SAN, цепочки и возможной подмены; проблему нужно исправлять, а не обходить.
+</details>
+
+<details>
+<summary>9. Почему `GatewayClass` нельзя считать переносимым именем и как HTTPS listener связывает Gateway с certificate через `certificateRefs`?</summary>
+
+`GatewayClass` предоставляет выбранный Gateway controller, поэтому имя вроде `platform-gateway` implementation-specific, а не стандарт Kubernetes. HTTPS listener задаёт `tls.mode: Terminate` и `certificateRefs` на TLS Secret; в примере Secret находится в том же namespace, а cross-namespace ссылка потребовала бы `ReferenceGrant` в namespace Secret.
+</details>
 
 ## Практика
 

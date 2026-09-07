@@ -1,62 +1,61 @@
-# Политика версий и весов курса CKS
+# CKS Course Version and Weight Policy
 
-Последняя проверка: **2026-09-06**.
+Last checked: **2026-09-07**.
 
-Три версии независимы и не должны автоматически выравниваться:
+Three versions are independent and must not be automatically aligned:
 
-| Контур | Текущее значение | Источник истины |
+| Track | Current value | Source of truth |
 |---|---:|---|
-| Учебные лаборатории (core, `labs/101-112`) | Kubernetes `v1.36` | `env.hcl` core labs, проверенная совместимость инструментов |
-| Учебные лаборатории (legacy, `labs/01-30`) | Kubernetes `v1.28-v1.34` (разброс, не единая версия) | `env.hcl` каждой legacy лабы; сохраняют исторические exam-pattern стенды |
-| Экзаменационная среда CKS | Kubernetes `v1.35` | LF CKS product page + LF «Important Instructions: CKS» + LF FAQ (сверено 2026-09-06, все три источника согласованно указывают v1.35) |
-| Программа CKS | `CKS Curriculum v1.34` | root-level CKS curriculum PDF в `cncf/curriculum` |
+| Training labs (core, `labs/101-113`) | Kubernetes `v1.36` (lab `113` is an exception: starts on `v1.35.x`, upgrades to `v1.36.x` - that upgrade is the task's own topic) | `env.hcl` of the core labs, verified tool compatibility |
+| CKS exam environment | Kubernetes `v1.35` | LF CKS product page + LF "Important Instructions: CKS" + LF FAQ (checked 2026-09-06, all three sources consistently state v1.35) |
+| CKS curriculum | `CKS Curriculum v1.34` | root-level CKS curriculum PDF in `cncf/curriculum` |
 
-Разделение core/legacy labs важно: не все `env.hcl` в `labs/01-30` обновлены до training
-baseline v1.36 - механическое обновление только даты проверки без реальной проверки
-`env.hcl` может закрепить неверное состояние в prose.
+The single training baseline is `labs/101-113`, complemented by the full-exam simulations
+in `mock/01-04`. There is no separate lab track.
 
-Несовпадение версий само по себе не является дефектом. Перед выпуском курса нужно отдельно:
+A version mismatch is not by itself a defect. Before releasing the course, separately:
 
-1. проверить training version во всех лабораториях и compatibility matrix Cilium, Istio,
-   Kyverno, Falco и kube-bench;
-2. проверить exam version минимум по основной странице CKS, «Important Instructions: CKS»
-   и LF FAQ; если официальные источники расходятся, зафиксировать все значения и не
-   объявлять одно из них согласованным source of truth; непосредственно перед попыткой
-   дополнительно сверить ExamUI;
-3. найти актуальный root-level CKS curriculum PDF в `cncf/curriculum`, записать filename,
-   размер и SHA-256, затем извлечь из него веса;
-4. проверить LF `Resources Allowed` независимо от curriculum и записать дату;
-5. обновить prose только по первичным источникам.
+1. verify the training version across all labs and the compatibility matrix for Cilium,
+   Istio, Kyverno, Falco, and kube-bench;
+2. verify the exam version against at minimum the main CKS page, "Important Instructions:
+   CKS", and the LF FAQ; if the official sources disagree, record all values and do not
+   declare one of them the agreed source of truth; cross-check the ExamUI immediately
+   before the attempt as well;
+3. find the current root-level CKS curriculum PDF in `cncf/curriculum`, record its
+   filename, size, and SHA-256, then extract the weights from it;
+4. verify the LF `Resources Allowed` independently of the curriculum and record the date;
+5. update the prose only from primary sources.
 
-### Политика весов доменов
+### Domain weight policy
 
-Веса экзамена не привязываются автоматически к версии Kubernetes и не считаются
-согласованными только потому, что не менялись давно.
+Exam weights are not automatically tied to the Kubernetes version and are not considered
+agreed just because they have not changed in a while.
 
-Для release snapshot отдельно фиксируются два независимых сигнала:
+For a release snapshot, two independent signals are recorded separately:
 
-1. веса, опубликованные на LF CKS product page;
-2. веса из актуального root-level CKS curriculum PDF в `cncf/curriculum`.
+1. weights published on the LF CKS product page;
+2. weights from the current root-level CKS curriculum PDF in `cncf/curriculum`.
 
-Если значения совпадают - snapshot считается согласованным, а текущие веса
-**15 / 15 / 10 / 20 / 20 / 20** остаются в силе.
+If the values match, the snapshot is considered consistent, and the current weights
+**15 / 15 / 10 / 20 / 20 / 20** remain in effect.
 
-Если значения расходятся:
+If the values disagree:
 
-- оба набора сохраняются в `metadata/cks-exam-snapshot.yaml` как отдельные наблюдения;
-- расхождение блокирует объявление весов «согласованными» в prose курса, но не блокирует
-  само использование курса;
-- maintainer вручную проверяет LF product page, актуальный curriculum PDF и, где возможно,
-  Candidate Handbook/ExamUI перед тем как менять веса в тексте глав;
-- prose не объявляет один из двух наборов «истиной», пока расхождение не разрешено через
-  первичный источник.
+- both sets are stored in `metadata/cks-exam-snapshot.yaml` as separate observations;
+- the disagreement blocks declaring the weights "consistent" in the course prose, but does
+  not block using the course itself;
+- the maintainer manually checks the LF product page, the current curriculum PDF, and,
+  where possible, the Candidate Handbook/ExamUI before changing the weights in chapter
+  text;
+- the prose does not declare either set "the truth" until the disagreement is resolved
+  through a primary source.
 
-Это отличается от прежнего правила «менять веса только после появления PDF новее v1.34»:
-CNCF curriculum filename может отставать от LF product page или наоборот, поэтому
-привязка к одному каналу (только PDF) может пропустить реальное изменение весов на
-product page. Оба канала проверяются и фиксируются независимо.
+This differs from the previous rule of "only change weights after a PDF newer than v1.34
+appears": the CNCF curriculum filename can lag behind the LF product page or vice versa,
+so relying on a single channel (the PDF only) could miss a real weight change on the
+product page. Both channels are checked and recorded independently.
 
-Ссылки:
+Links:
 
 - [LF Important Instructions: CKS](https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks)
 - [LF Resources Allowed](https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed)

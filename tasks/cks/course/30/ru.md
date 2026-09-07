@@ -12,13 +12,13 @@ Runtime-детектор видит действие процесса, но не
 
 ```mermaid
 flowchart TB
-    user["Пользователь / CI\naudit identity"] --> api["Kubernetes API\naudit events"]
-    api --> workload["Workload\nPod, SA, image digest"]
-    workload --> runtime["Runtime\nFalco, process tree, syscall"]
-    workload --> app["Приложение\naccess/error log, metrics"]
-    workload --> network["Сеть\nDNS, flow, proxy, Hubble"]
-    workload --> data["Данные\nSecret, file access, storage audit"]
-    runtime --> case["Хронология и attribution\nincident case"]
+    user["Пользователь / CI<br/>audit identity"] --> api["Kubernetes API<br/>audit events"]
+    api --> workload["Workload<br/>Pod, SA, image digest"]
+    workload --> runtime["Runtime<br/>Falco, process tree, syscall"]
+    workload --> app["Приложение<br/>access/error log, metrics"]
+    workload --> network["Сеть<br/>DNS, flow, proxy, Hubble"]
+    workload --> data["Данные<br/>Secret, file access, storage audit"]
+    runtime --> case["Хронология и attribution<br/>incident case"]
     app --> case
     network --> case
     data --> case
@@ -43,6 +43,95 @@ flowchart TB
 | Workload | новый `DaemonSet`, `CronJob`, `privileged` Pod, image без ожидаемого digest | API audit, admission logs, GitOps diff, Falco Kubernetes fields | владелец workload, namespace, image, node и scope инцидента |
 
 Не подменяйте источники друг другом. Falco обычно не доказывает, **кто** вызвал `kubectl exec`; это покажет audit-log. Audit-log не показывает каждый `openat(2)` внутри контейнера; это зона Falco или host audit. Kubernetes Events удобны для первичной ориентировки, но имеют короткий срок хранения и не являются forensic-журналом.
+## 30.1a. Physical infrastructure: что это значит для Kubernetes и что проверяемо
+
+Официальная формулировка CNCF curriculum для этого домена - "Detect threats within
+physical infrastructure, apps, networks, data, users, and workloads" - упоминает physical
+infrastructure отдельно от перечисленных выше слоёв. Строка "Инфраструктура" в таблице
+раздела 30.1 - это node/host **внутри** кластера (Falco, kernel warning, container runtime
+socket), а не физический уровень датацентра. Разберём, что реально стоит за этим термином
+в cloud native контексте (по [CNCF Cloud Native Security Whitepaper](https://github.com/cncf/tag-security/blob/main/community/resources/security-whitepaper/v2/cloud-native-security-whitepaper.md)),
+какие точки пересечения с Kubernetes-практикой у него есть, а какие целиком вне зоны
+ответственности инженера, работающего только через `kubectl`/API.
+
+**Что покрывает физический уровень.** Контроль доступа в датацентр, tamper-detection
+железа, питание/охлаждение, co-location security, физическая цепочка поставки
+серверов/дисков - это ответственность cloud provider (в managed Kubernetes) или отдельной
+инфраструктурной команды (on-prem), а не Kubernetes API. Официальная компетенция CKS
+("Detect threats within physical infrastructure, apps, networks, data, users and workloads"
+в домене Monitoring, Logging and Runtime Security) физический уровень явно не исключает.
+Конкретное заявление вида "CKS не проверяет это напрямую" мы не нашли в официальных
+источниках LF - на performance-based экзамене без физического доступа к датацентру прямое
+взаимодействие с физической инфраструктурой маловероятно, но это наблюдение по формату
+экзамена, а не документированное исключение компетенции.
+
+**Где физический уровень всё же пересекается с тем, что вы конфигурируете через
+Kubernetes/node:**
+
+- **Hardware root of trust и trusted/secure boot.** TPM (Trusted Platform Module) или
+  vTPM даёт cryptographic root of trust, к которому можно привязать проверку целостности
+  boot-цепочки ноды: BIOS/UEFI → bootloader → kernel → container runtime. Если эта
+  цепочка нарушена (модифицированный bootloader, unsigned kernel), ни один
+  Kubernetes-level control (RBAC, admission, NetworkPolicy) не защитит от компрометации,
+  случившейся ДО старта kubelet. Managed cloud providers обычно предлагают это как
+  отдельную опцию (например, Shielded VM/Confidential VM на GCP, AWS Nitro-based
+  attestation) - это не Kubernetes-объект, а свойство самой VM/host.
+- **Confidential computing / TEE (Trusted Execution Environment).** Аппаратно
+  изолированная область CPU (Intel SGX, AMD SEV), где данные в памяти зашифрованы даже от
+  BIOS, гипервизора и облачного провайдера. Для privacy-sensitive нагрузок (финансовые,
+  медицинские данные) это защита от угрозы "compromised host", которую RBAC/NetworkPolicy
+  не покрывают. В Kubernetes это обычно доступно через специальный `RuntimeClass`
+  (confidential containers, kata-CC), но сама аппаратная гарантия - за пределами API
+  Kubernetes.
+- **Node bootstrapping trust.** Когда новая нода присоединяется к кластеру, встаёт вопрос:
+  запущена ли она в ожидаемом физическом/логическом месте, и может ли она
+  криптографически подтвердить свою identity ДО получения доступа к cluster secrets?
+  В self-managed развёртываниях (`kubeadm`) это частично автоматизирует TLS bootstrap
+  token/CSR-процесс при присоединении ноды; managed cloud providers дополнительно могут
+  использовать cloud instance identity document или provider-specific attestation. Но
+  полноценная физическая attestation ("эта VM реально работает на аппаратуре с TPM X в
+  датацентре Y") - зона ответственности cloud provider/инфраструктурной команды, не
+  кластера.
+- **HSM (Hardware Security Module) для критичных ключей.** CA private key kube-apiserver,
+  etcd encryption key или KMS master key для `EncryptionConfiguration` (глава 21) в
+  production рекомендуют хранить не как файл на диске, а в HSM - специализированном
+  устройстве, физически не позволяющем извлечь приватный ключ. Стандартный (default)
+  key store AWS KMS - это HSM-backed service: ключевой материал генерируется и
+  используется внутри FIPS 140-3 HSM, никогда не покидая их в открытом виде. Но
+  AWS KMS также поддерживает custom key stores - AWS CloudHSM key store (ключи в
+  выделенном customer-owned HSM-кластере) и external key store (XKS, ключевой
+  материал и часть криптографических операций - во внешней системе управления
+  ключами за пределами AWS, которая может быть как физическим/виртуальным HSM,
+  так и программным key manager). То есть "HSM-backed для всех ключей" верно для
+  стандартного key store, но не является универсальной гарантией для custom/external
+  key stores. В Google Cloud KMS HSM - это отдельный
+  selectable `ProtectionLevel` (`HSM`/`HSM_SINGLE_TENANT`) наравне с `SOFTWARE`
+  (программная реализация без физического HSM) и `EXTERNAL`/`EXTERNAL_VPC` - то есть
+  не любой Cloud KMS-ключ гарантированно HSM-backed, это нужно проверять явно при
+  создании ключа. Это прямое продолжение темы шифрования etcd из главы 21, но сам
+  HSM - физическое устройство вне Kubernetes API.
+- **Secure erasure физических носителей.** Когда PersistentVolume на физическом диске
+  выводится из эксплуатации (например, диск неисправен и отправляется вендору), простое
+  удаление `PersistentVolumeClaim` не гарантирует физическое стирание данных с носителя -
+  для этого нужна поддержка secure erase на уровне самого диска (SSD self-encryption,
+  cryptographic erase). Это ответственность storage-провайдера/инфраструктурной команды.
+
+**Что из этого проверяемо через `kubectl`/`crictl` и что нет.** Ничего из перечисленного
+выше не проверяется напрямую через Kubernetes API - это осознанное архитектурное
+разделение: Kubernetes управляет workload и его допуском, но не аппаратной цепочкой
+доверия под собой. Максимум, что видно "снаружи" через API - это `Node` labels/taints,
+которыми provider иногда помечает hardware-возможности ноды (например,
+`feature.node.kubernetes.io/`-стиль labels для confidential computing или TPM presence из
+Node Feature Discovery), но сама проверка целостности происходит вне кластера. Официальная
+компетенция curriculum physical infrastructure не исключает - реальный вывод в том, что на
+performance-based экзамене без физического доступа к датацентру нельзя ожидать задач с
+прямым физическим взаимодействием; практическое покрытие этой компетенции вероятнее
+проявляется через инфраструктурные/node-сигналы и корректную классификацию угрозы, как
+показано выше. Если задача требует полноценную физическую security-программу (контроль
+доступа, аудит поставщиков железа), это предмет отдельной ISO 27001/SOC 2-style программы,
+не разбираемой дальше в этом курсе - но зная перечисленные выше термины, вы как минимум
+корректно классифицируете угрозу и не станете искать несуществующий Kubernetes-контроль
+для неё.
 
 ### Минимальная карточка сигнала
 
@@ -472,11 +561,11 @@ production.
 
 ```mermaid
 flowchart TB
-    alert["Falco alert\ncontainer ID + time"] --> node["node из alert"]
-    node --> cri["sandbox через crictl pods\ncontainer через ps --pod"]
-    cri --> proc["/proc, lsns, cgroup, mounts\nчто реально запущено?"]
-    proc --> trace["короткий strace к точному host PID\nтолько controlled/live case"]
-    trace --> correlate["audit + flow + app logs\nkill chain и scope"]
+    alert["Falco alert<br/>container ID + time"] --> node["node из alert"]
+    node --> cri["sandbox через crictl pods<br/>container через ps --pod"]
+    cri --> proc["/proc, lsns, cgroup, mounts<br/>что реально запущено?"]
+    proc --> trace["короткий strace к точному host PID<br/>только controlled/live case"]
+    trace --> correlate["audit + flow + app logs<br/>kill chain и scope"]
     style alert fill:#db4437,color:#fff
     style node fill:#326ce5,color:#fff
     style cri fill:#673ab7,color:#fff
@@ -588,10 +677,13 @@ kubectl delete namespace runtime-lab
 ## 30.9. Мини-глоссарий
 
 - **Attribution** - привязка события к процессу, container, Pod, identity, node и времени.
+- **Confidential computing / TEE** - аппаратно изолированная область CPU (Intel SGX, AMD SEV), шифрующая данные в памяти даже от гипервизора и облачного провайдера.
 - **Correlation** - связывание событий разных источников в единую хронологию инцидента.
 - **CRI** - Container Runtime Interface; `crictl` работает с runtime через его CRI socket.
 - **Falco rule override** - локальное изменение condition/исключений правила без правки vendor ruleset.
+- **Hardware root of trust** - криптографическая цепочка доверия, привязанная к физическому устройству (TPM/vTPM), от которой можно верифицировать целостность boot-цепочки ноды.
 - **Host PID** - PID процесса контейнера в PID namespace ноды; нужен для `/proc` и `strace`.
+- **HSM (Hardware Security Module)** - физическое устройство для хранения криптографических ключей, не позволяющее извлечь приватный ключ программным путём.
 - **Kill chain** - последовательность фаз атаки от initial access до цели, например exfiltration.
 - **Pod UID** - неизменяемый UID конкретного экземпляра Pod, надёжнее имени при корреляции.
 - **Runtime detection** - обнаружение действий уже работающего процесса по syscall/eBPF и runtime metadata.
@@ -614,19 +706,59 @@ kubectl delete namespace runtime-lab
 
 ## 30.12. Вопросы для самопроверки
 
-1. Почему Falco alert с одним именем процесса не позволяет надёжно определить владельца workload?
-2. Какие поля должны быть в output file-rule, чтобы сопоставить его с Pod после restart?
-3. Почему локальную настройку нельзя вносить прямо в `/etc/falco/falco_rules.yaml`?
-4. Чем `%user.name` отличается от Kubernetes user/ServiceAccount в API audit-log?
-5. Какая последовательность сигналов говорит о возможном переходе execution → persistence → exfiltration?
-6. Как сопоставить `%container.id` из alert с host PID и что проверять в `/proc/<pid>`?
-7. Почему `strace` не следует использовать как постоянный production monitoring или как способ восстановить уже завершённый процесс?
-8. Какие evidence нужно сохранить перед containment, если риск и процедура позволяют это сделать?
-9. **Flashback (глава 11).** В главе 11 bound projected token снижает последствия кражи
-   token по сравнению с legacy Secret token. Спроектируйте investigation-сценарий для этой
-   главы: как через `%user.name`/audit log отличить легитимный запрос от Pod с его
-   собственным ServiceAccount от запроса, использующего **украденный** token того же SA
-   с другого источника (например, с хоста снаружи кластера)?
+<details>
+<summary>1. Почему Falco alert с одним именем процесса не позволяет надёжно определить владельца workload?</summary>
+
+Имя процесса не уникально и не связывает alert с конкретными Pod, image или controller. Для attribution нужны как минимум timestamp, node, container ID, Pod UID, namespace/Pod/container и image digest; Pod name с префиксом может быть переиспользован. Затем owner устанавливают через `.metadata.ownerReferences` и коррелируют с audit, network и application signals.
+</details>
+
+<details>
+<summary>2. Какие поля должны быть в output file-rule, чтобы сопоставить его с Pod после restart?</summary>
+
+Глава требует UTC-время, event type и node, process name/command/PID, file target, container ID и по возможности full ID, Kubernetes namespace, Pod и Pod UID. Полезен image digest, потому что он связывает runtime с immutable artifact. PID может быть переиспользован, поэтому его нельзя трактовать отдельно от времени и container ID.
+</details>
+
+<details>
+<summary>3. Почему локальную настройку нельзя вносить прямо в `/etc/falco/falco_rules.yaml`?</summary>
+
+Это vendor-файл пакета/chart, поэтому обновление может затереть local change и потерять удобное сравнение с upstream. Локальные rules и overrides размещают в `falco_rules.local.yaml` либо явно подключённом файле, после базовых lists/rules. Фактический порядок проверяют в `falco.yaml` и валидируют полный config перед reload.
+</details>
+
+<details>
+<summary>4. Чем `%user.name` отличается от Kubernetes user/ServiceAccount в API audit-log?</summary>
+
+`%user.name` — effective Linux user процесса, наблюдаемый Falco на node. Kubernetes authenticated user или ServiceAccount отражается в `.user.username` audit event и относится к API request. Эти identity нельзя отождествлять: для attribution их коррелируют по времени, Pod/SA и другим устойчивым IDs.
+</details>
+
+<details>
+<summary>5. Какая последовательность сигналов говорит о возможном переходе execution → persistence → exfiltration?</summary>
+
+Пример главы: Falco shell после необычного application request указывает на initial access/execution. Затем audit `create CronJob`, `DaemonSet` или RoleBinding может свидетельствовать о persistence либо escalation. Последующий DNS/flow с большим egress к внешнему destination поддерживает гипотезу exfiltration; фазу подтверждают последовательностью, identity и целью, а не одним syscall.
+</details>
+
+<details>
+<summary>6. Как сопоставить `%container.id` из alert с host PID и что проверять в `/proc/<pid>`?</summary>
+
+На node из alert находят sandbox по namespace и Pod UID через `crictl pods`, затем контейнер через `crictl ps -a --pod` и проверяют exact/prefix container ID. Runtime-specific `crictl inspect` может дать PID; для конкретного подозрительного действия используют host PID `%proc.pid` из alert и подтверждают его cgroup. В `/proc/<pid>` смотрят executable, cmdline, credentials, CapEff, NoNewPrivs, Seccomp, cgroup, namespaces и mountinfo.
+</details>
+
+<details>
+<summary>7. Почему `strace` не следует использовать как постоянный production monitoring или как способ восстановить уже завершённый процесс?</summary>
+
+`strace` добавляет overhead, меняет timing и способен записать чувствительные arguments, поэтому применим лишь коротко к точному живому host PID. Он не восстанавливает прошлые syscalls и не поможет, когда process уже завершён или PID исчез. В таком случае сохраняют durable Falco, audit, flow, Pod spec, CRI/journal evidence и restart count.
+</details>
+
+<details>
+<summary>8. Какие evidence нужно сохранить перед containment, если риск и процедура позволяют это сделать?</summary>
+
+До удаления сохраняют исходную строку Falco, audit/flow IDs, timestamps, Pod YAML, UID, node, ServiceAccount, owner, image digest и container IDs. На node полезны `crictl inspect`, process/cgroup/namespace сведения; collection маркируют case ID, UTC-временем, источником, сборщиком и SHA-256. Не запускают команды атакующего и не копируют Secret в тикет.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 11).** В главе 11 bound projected token снижает последствия кражи token по сравнению с legacy Secret token. Спроектируйте investigation-сценарий для этой главы: как через `%user.name`/audit log отличить легитимный запрос от Pod с его собственным ServiceAccount от запроса, использующего **украденный** token того же SA с другого источника (например, с хоста снаружи кластера)?</summary>
+
+`%user.name` показывает только Linux user процесса и не доказывает, откуда пришёл Kubernetes API request. В audit ищут `.user.username` ServiceAccount, время, verb, objectRef, response, `.sourceIPs`, `userAgent`, `.authenticationMetadata` и annotations, затем сверяют IP/agent с доверенными proxy и другой telemetry. Запрос с тем же SA, но с необычного внешнего source, в нехарактерное время или с нетипичным scope, расследуют как возможное использование украденного token; сами `sourceIPs` и userAgent доказательством не являются.
+</details>
 
 ## Практика
 

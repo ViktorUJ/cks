@@ -23,12 +23,12 @@ language dependency или самом приложении. Сканер соп�
 
 ```mermaid
 flowchart TB
-    build["Dockerfile + зависимости"] --> image["image\nпакеты и библиотеки"]
+    build["Dockerfile + зависимости"] --> image["image<br/>пакеты и библиотеки"]
     image --> inventory["инвентаризация компонентов"]
-    db["vulnerability database\nCVE и fixed version"] --> match["сопоставление версий"]
+    db["vulnerability database<br/>CVE и fixed version"] --> match["сопоставление версий"]
     inventory --> match
-    match --> report["CVE, severity, путь\nисправления или no fix"]
-    report --> decision["обновить / принять риск\nзаблокировать delivery"]
+    match --> report["CVE, severity, путь<br/>исправления или no fix"]
+    report --> decision["обновить / принять риск<br/>заблокировать delivery"]
     style build fill:#326ce5,color:#fff
     style image fill:#f4b400,color:#000
     style db fill:#673ab7,color:#fff
@@ -300,16 +300,16 @@ images. Allowlist registry и verification signatures рассмотрены в
 
 ```mermaid
 flowchart TB
-    commit["commit / dependency update"] --> source["trivy fs + config\nлинтеры"]
+    commit["commit / dependency update"] --> source["trivy fs + config<br/>линтеры"]
     source --> build["build image"]
-    build --> scan["trivy image по digest\nSBOM CycloneDX/SPDX"]
-    scan --> gate{"policy severity\nи approved exceptions"}
-    gate -->|"pass"| sign["sign / attest\npush immutable digest"]
+    build --> scan["trivy image по digest<br/>SBOM CycloneDX/SPDX"]
+    scan --> gate{"policy severity<br/>и approved exceptions"}
+    gate -->|"pass"| sign["sign / attest<br/>push immutable digest"]
     gate -->|"fail"| fix["обновить base или dependency"]
     fix --> build
-    sign --> admission["admission: registry, signature\nscan evidence"]
+    sign --> admission["admission: registry, signature<br/>scan evidence"]
     admission --> deploy["deploy"]
-    deploy --> rescan["periodic inventory\nи rescan при новой CVE"]
+    deploy --> rescan["periodic inventory<br/>и rescan при новой CVE"]
     style commit fill:#326ce5,color:#fff
     style source fill:#673ab7,color:#fff
     style build fill:#f4b400,color:#000
@@ -485,19 +485,53 @@ artifact, безопасно заменить его и доказать, что
 
 ## 28.12. Вопросы для самопроверки
 
-1. Почему успешный scan вчера не доказывает отсутствие CVE сегодня?
-2. Что меняют флаги `--severity HIGH,CRITICAL`, `--ignore-unfixed` и `--exit-code 1`?
-3. Как найти image с наибольшим числом `CRITICAL` в одном namespace и почему нужно
-   учитывать status обычных, init и ephemeral containers?
-4. Чем отличаются `trivy image`, `trivy fs` и `trivy config`?
-5. Как создать CycloneDX и SPDX JSON SBOM через Trivy и когда нужен `trivy sbom`?
-6. Почему admission webhook не стоит синхронно сканировать image при каждом запросе API?
-7. Какие три проверки доказывают, что remediation CVE действительно завершено?
-8. **Flashback (глава 29).** Вопрос 1 этой главы уже указывает, что успешный scan вчера не
-   доказывает отсутствие CVE сегодня - то есть vulnerability scanning - snapshot в момент
-   проверки, не continuous monitoring. Falco из главы 29 работает по другому принципу
-   (runtime behavior detection). Какой конкретный класс атак поймает Falco, но не поймает
-   даже самый свежий `trivy image` scan, и почему?
+<details>
+<summary>1. Почему успешный scan вчера не доказывает отсутствие CVE сегодня?</summary>
+
+Vulnerability database постоянно обновляется, поэтому вчерашний чистый digest может сегодня получить новую CVE запись без изменения Dockerfile. Scan — это snapshot состава и базы в момент проверки. Поэтому images регулярно пересканируют после build, перед promotion/deploy и по расписанию для уже опубликованных digest.
+</details>
+
+<details>
+<summary>2. Что меняют флаги `--severity HIGH,CRITICAL`, `--ignore-unfixed` и `--exit-code 1`?</summary>
+
+`--severity HIGH,CRITICAL` оставляет в отчёте только finding этих уровней. `--ignore-unfixed` исключает CVE без известной fixed version, но не устраняет их риск: их ведут отдельным процессом. `--exit-code 1` делает подходящую находку причиной ненулевого exit code и позволяет превратить scan в CI gate.
+</details>
+
+<details>
+<summary>3. Как найти image с наибольшим числом `CRITICAL` в одном namespace и почему нужно учитывать status обычных, init и ephemeral containers?</summary>
+
+Сначала выгружают `.status.initContainerStatuses`, `.status.containerStatuses` и `.status.ephemeralContainerStatuses` всех Pod, получают фактические `imageID` и сопоставляют их с canonical registry digest. Затем для каждого подтверждённого reference запускают `trivy image --quiet --format json --severity CRITICAL`, считают findings через `jq` и сортируют числа. Каждый тип container может реально выполнять отдельный image, поэтому исключение init или ephemeral container оставит слепую зону.
+</details>
+
+<details>
+<summary>4. Чем отличаются `trivy image`, `trivy fs` и `trivy config`?</summary>
+
+`trivy image` анализирует собранный image, включая base image и packages, попавшие в artifact. `trivy fs` сканирует checkout filesystem на dependencies, secrets и при включённых scanners misconfiguration. `trivy config` проверяет IaC и configuration, например Kubernetes YAML, Helm, Terraform и Dockerfile; ни один из первых двух не заменяет остальные.
+</details>
+
+<details>
+<summary>5. Как создать CycloneDX и SPDX JSON SBOM через Trivy и когда нужен `trivy sbom`?</summary>
+
+Для одного image используют `trivy image --format cyclonedx --output api.cdx.json "$image"` и `trivy image --format spdx-json --output api.spdx.json "$image"`. `trivy sbom` повторно сканирует уже сохранённый SBOM, например после обновления CVE database или без доступа к registry. SBOM связывают с digest и не редактируют для удаления CVE: исправляют dependency/base image и генерируют его заново.
+</details>
+
+<details>
+<summary>6. Почему admission webhook не стоит синхронно сканировать image при каждом запросе API?</summary>
+
+Такой webhook делает API server зависимым от registry, CVE database и длительного scan. Недоступность или задержка scanner-а могут вызвать timeout либо заблокировать кластер. Для enforcement admission лучше проверяет заранее созданный scan/signature/attestation для конкретного digest, а continuous scanner работает после admission.
+</details>
+
+<details>
+<summary>7. Какие три проверки доказывают, что remediation CVE действительно завершено?</summary>
+
+Повторный scan replacement image должен не содержать целевую CVE либо показывать ожидаемую fixed version. `kubectl rollout status` должен подтвердить успешный rollout. Наконец, status всех новых Pod выбранного workload должен показывать runtime `imageID`, сопоставленный с проверенным digest; глава также рекомендует прикладной smoke test.
+</details>
+
+<details>
+<summary>8. **Flashback (глава 29).** Вопрос 1 этой главы уже указывает, что успешный scan вчера не доказывает отсутствие CVE сегодня - то есть vulnerability scanning - snapshot в момент проверки, не continuous monitoring. Falco из главы 29 работает по другому принципу (runtime behavior detection). Какой конкретный класс атак поймает Falco, но не поймает даже самый свежий `trivy image` scan, и почему?</summary>
+
+Falco может обнаружить runtime-действие процесса: например, интерактивный shell в контейнере, открытие чувствительного файла, запуск package manager или попытку открыть `/dev/mem`. Даже свежий `trivy image` видит известные уязвимости и состав bytes, но не знает, что процесс фактически сделал после запуска. Поэтому scan снижает вероятность доставки известного риска, а Falco наблюдает использование RCE или иной post-compromise behaviour.
+</details>
 
 ## Практика
 

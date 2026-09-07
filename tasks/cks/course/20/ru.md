@@ -29,12 +29,12 @@ Admission control получает уже аутентифицированный
 
 ```mermaid
 flowchart TB
-    client["kubectl / CI / controller"] --> authn["authentication\nкто отправил запрос"]
-    authn --> authz["authorization / RBAC\nможно ли выполнить verb"]
-    authz --> mutate["mutating admission\nвстроенные плагины / MAP / webhook"]
-    mutate --> validate["validating admission\nPSA / VAP / webhook"]
+    client["kubectl / CI / controller"] --> authn["authentication<br/>кто отправил запрос"]
+    authn --> authz["authorization / RBAC<br/>можно ли выполнить verb"]
+    authz --> mutate["mutating admission<br/>встроенные плагины / MAP / webhook"]
+    mutate --> validate["validating admission<br/>PSA / VAP / webhook"]
     validate -->|"allow"| etcd["etcd"]
-    validate -->|"deny"| rejected["запрос отклонён\nобъект не создан"]
+    validate -->|"deny"| rejected["запрос отклонён<br/>объект не создан"]
 
     subgraph api["Обработка объекта API server<br/>концептуально"]
         conversion["conversion, defaulting и API validation"]
@@ -948,21 +948,59 @@ supply-chain контроля: следующая часть курса прим
 
 ## 20.13. Вопросы для самопроверки
 
-1. Почему RBAC не может сам запретить `privileged: true` пользователю, которому разрешено
-   создать Pod?
-2. В каком порядке проходят mutating и validating admission, и почему mutation должна быть
-   идемпотентной?
-3. Чем `ConstraintTemplate` отличается от `Constraint` в Gatekeeper?
-4. Когда Kyverno `mutate` оправдан, а когда требование нужно выразить через `validate`?
-5. Чем опасны постоянный `failurePolicy: Ignore` и поспешный `failurePolicy: Fail`?
-6. Почему policy сначала запускают в `Audit`/`dryrun`, а не сразу в `Enforce`/`Deny`?
-7. В чём ограничения `ValidatingAdmissionPolicy` на CEL по сравнению с Kyverno?
-8. Какие container lists нельзя забыть при самописной проверке `privileged`?
-9. **Flashback (глава 04).** `NetworkPolicy` default-deny (глава 04) и `failurePolicy: Fail`
-   с `enforce`/`Deny` в admission policy (эта глава) - оба реализуют один и тот же
-   allow-list принцип на разных уровнях стека. Сформулируйте эту аналогию явно: что в
-   admission-policy соответствует "default-deny всем ingress/egress", а что соответствует
-   "узкому разрешённому правилу"?
+<details>
+<summary>1. Почему RBAC не может сам запретить `privileged: true` пользователю, которому разрешено создать Pod?</summary>
+
+RBAC решает, имеет ли identity verb `create` для Pod, а не инспектирует поля YAML. Пользователь с разрешением может прислать Pod с `privileged: true`, если validating admission не наложит отдельное правило. PSA, VAP, Gatekeeper или Kyverno проверяют именно содержание объекта до etcd.
+</details>
+
+<details>
+<summary>2. В каком порядке проходят mutating и validating admission, и почему mutation должна быть идемпотентной?</summary>
+
+Mutating admission выполняется до validating, поэтому validation видит уже изменённый объект. Webhook могут вызываться повторно после изменения другим mutating webhook, а MAP с `IfNeeded` также допускает повторную оценку. Поэтому повторное применение mutation не должно добавлять второй такой же volume, label или sidecar.
+</details>
+
+<details>
+<summary>3. Чем `ConstraintTemplate` отличается от `Constraint` в Gatekeeper?</summary>
+
+`ConstraintTemplate` определяет новый тип policy: Rego или CEL-код, admission target и OpenAPI schema параметров; после применения Gatekeeper создаёт CRD constraint kind. `Constraint` — экземпляр этого типа с параметрами, `match` scope и `enforcementAction`. Template требует review и тестов как policy code, а constraint обычно меняют при расширении охвата.
+</details>
+
+<details>
+<summary>4. Когда Kyverno `mutate` оправдан, а когда требование нужно выразить через `validate`?</summary>
+
+Mutation оправдана для прозрачного безопасного default, например добавления audit-label через `ApplyConfiguration`. Для критичного security-инварианта, который нельзя молча исправить, нужна явная validation: она должна отклонить небезопасный объект. Глава отдельно предупреждает не маскировать mutation небезопасный образ или архитектуру.
+</details>
+
+<details>
+<summary>5. Чем опасны постоянный `failurePolicy: Ignore` и поспешный `failurePolicy: Fail`?</summary>
+
+С `Ignore` при timeout, TLS-ошибке или недоступности webhook объект проходит без данной проверки, создавая окно обхода policy. `Fail` сохраняет границу при такой ошибке, но outage engine может остановить deploy и control-plane operations. До строгого режима нужны replicas, PDB, TLS, latency/error alerting и безопасный rollout.
+</details>
+
+<details>
+<summary>6. Почему policy сначала запускают в `Audit`/`dryrun`, а не сразу в `Enforce`/`Deny`?</summary>
+
+Audit/dryrun собирает реальные нарушения, не блокируя legacy workloads и системные компоненты. Затем владельцы исправляют manifests, проверяют scope и положительный/отрицательный сценарии. Только после этого `Deny`/`Enforce` вводят как контролируемый запрет, а не как внезапный outage.
+</details>
+
+<details>
+<summary>7. В чём ограничения `ValidatingAdmissionPolicy` на CEL по сравнению с Kyverno?</summary>
+
+VAP выполняет CEL validation внутри API server и применяется только binding-ом; он не меняет и не генерирует объекты. Native MAP дополняет stack mutation, но не даёт generation, policy reports, image signature verification или Rego. Kyverno предоставляет отдельные CEL-based типы для validate, mutate, generate, delete и image validation, а также namespaced variants.
+</details>
+
+<details>
+<summary>8. Какие container lists нельзя забыть при самописной проверке `privileged`?</summary>
+
+Нужно проверять `containers`, `initContainers` и `ephemeralContainers`. Проверка только обычных containers оставляет обход через init или debug ephemeral container. Для стандартного класса требований глава советует PSA `restricted`, а самописный Rego должен явно покрывать все эти списки.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 04).** `NetworkPolicy` default-deny (глава 04) и `failurePolicy: Fail` с `enforce`/`Deny` в admission policy (эта глава) - оба реализуют один и тот же allow-list принцип на разных уровнях стека. Сформулируйте эту аналогию явно: что в admission-policy соответствует "default-deny всем ingress/egress", а что соответствует "узкому разрешённому правилу"?</summary>
+
+В admission-policy эквивалентом default-deny является enforcing rule, при котором объект, не удовлетворяющий требованиям, отклоняется, а `failurePolicy: Fail` не допускает bypass при ошибке webhook. Эквивалент узкого разрешения — точные `match`/selectors, conditions и проверяемые поля, по которым конкретный допустимый объект проходит policy. Как и у NetworkPolicy, широкое исключение разрушает модель allow-list и усложняет audit.
+</details>
 
 ## Практика
 

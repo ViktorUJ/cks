@@ -24,10 +24,10 @@ NetworkPolicy уменьшают экспозицию, но не исправл�
 
 ```mermaid
 flowchart TB
-    cve["Опубликован CVE\nв kubelet / runtime / ОС"] --> inv["Инвентаризация:\nкакая версия установлена?"]
-    inv --> risk["Оценка экспозиции:\nдостижим ли компонент,\nнужны ли права?"]
-    risk --> fix["Патч или обновление\nв проверенном окне"]
-    fix --> verify["Проверка версий,\nhealth и workload"]
+    cve["Опубликован CVE<br/>в kubelet / runtime / ОС"] --> inv["Инвентаризация:<br/>какая версия установлена?"]
+    inv --> risk["Оценка экспозиции:<br/>достижим ли компонент,<br/>нужны ли права?"]
+    risk --> fix["Патч или обновление<br/>в проверенном окне"]
+    fix --> verify["Проверка версий,<br/>health и workload"]
     style cve fill:#db4437,color:#fff
     style inv fill:#f4b400,color:#000
     style risk fill:#673ab7,color:#fff
@@ -76,8 +76,8 @@ migration-проект.
 
 ```mermaid
 flowchart TB
-    n["N: текущая минорная ветка"] --> n1["N-1: поддерживается"] --> n2["N-2: последняя\nupstream-поддерживаемая"] --> n3["N-3: обычно EOL\nнет новых upstream-патчей"]
-    cp["kube-apiserver\nобновляется первым"] --> worker["kubelet: не новее apiserver\nи не более 3 minor старше"]
+    n["N: текущая минорная ветка"] --> n1["N-1: поддерживается"] --> n2["N-2: последняя<br/>upstream-поддерживаемая"] --> n3["N-3: обычно EOL<br/>нет новых upstream-патчей"]
+    cp["kube-apiserver<br/>обновляется первым"] --> worker["kubelet: не новее apiserver<br/>и не более 3 minor старше"]
     style n fill:#0f9d58,color:#fff
     style n1 fill:#0f9d58,color:#fff
     style n2 fill:#f4b400,color:#000
@@ -167,9 +167,9 @@ patch из проверенного advisory и своего репозитор�
 
 ```mermaid
 flowchart TB
-    plan["Advisory, fixed version,\nсовместимость и backup"] --> cp["Control plane:\nkubeadm -> plan/apply -> cordon + drain -> kubelet"]
-    cp --> health["Проверка API, nodes,\nsystem Pods и alerts"]
-    health --> node["Один рабочий узел:\nupgrade kubeadm -> upgrade node"]
+    plan["Advisory, fixed version,<br/>совместимость и backup"] --> cp["Control plane:<br/>kubeadm -> plan/apply -> cordon + drain -> kubelet"]
+    cp --> health["Проверка API, nodes,<br/>system Pods и alerts"]
+    health --> node["Один рабочий узел:<br/>upgrade kubeadm -> upgrade node"]
     node --> drain["cordon + drain"]
     drain --> workerKubelet["upgrade kubelet/kubectl -> restart"]
     workerKubelet --> verify["Ready, версия, workload"]
@@ -712,33 +712,78 @@ provider, profiling) не исчез из static Pod manifest после upgrade
 
 ## 13.12. Вопросы для самопроверки
 
-1. Почему CVE в kubelet или `runc` может быть критичным, даже если API server не доступен
-   из интернета?
-2. Чем EOL-ветка отличается от поддерживаемой ветки с точки зрения следующего CVE?
-3. Какие ветки обычно входят в upstream support window `N`/`N-1`/`N-2`, и что означает
-   `N-3`?
-4. Почему CVSS и CVE feed недостаточны для решения о срочности обновления?
-5. Почему control plane обновляют раньше рабочих узлов, почему kubelet не должен быть новее
-   API server и не может отставать от него более чем на три minor-версии?
-6. Назовите безопасную последовательность обновления рабочего узла через `kubeadm`.
-7. Какие проверки нужны после успешного `kubeadm upgrade`, чтобы доказать и security patch,
-   и работоспособность кластера?
-8. Почему обновление Kubernetes не закрывает автоматически CVE в `containerd`, `runc` или
-   kernel, и как их обновлять безопасно?
-9. **Flashback (глава 26).** Version skew (эта глава) и image digest pinning (глава 26) -
+<details>
+<summary>1. Почему CVE в kubelet или `runc` может быть критичным, даже если API server не доступен
+   из интернета?</summary>
+
+Kubelet может быть достижим атакующему уже из скомпрометированного Pod или соседней ноды, а уязвимость `runc` может эксплуатироваться из уже запущенного контейнера. Поэтому отсутствие публичного API не устраняет внутренние prerequisite атаки. Приоритет определяют по доступности уязвимой функции, требуемым правам, exploit и ценности ноды, а не только по внешней экспозиции.
+</details>
+
+<details>
+<summary>2. Чем EOL-ветка отличается от поддерживаемой ветки с точки зрения следующего CVE?</summary>
+
+Для поддерживаемой ветки upstream или поставщик выпускает исправленный patch в рамках support policy. Для EOL-ветки следующая уязвимость может остаться без нового security patch вообще. Компенсирующие controls не делают EOL-версию поддерживаемой, поэтому нужен переход на поддерживаемую minor-ветку или явно ограниченная поддержка поставщика.
+</details>
+
+<details>
+<summary>3. Какие ветки обычно входят в upstream support window `N`/`N-1`/`N-2`, и что означает
+   `N-3`?</summary>
+
+Upstream Kubernetes обычно поддерживает текущую minor-ветку `N` и две предыдущие: `N-1` и `N-2`. `N-3` обычно уже EOL и не получает новых upstream security patches. Реальное окно managed-сервиса или enterprise-дистрибутива может отличаться, поэтому его сверяют отдельно.
+</details>
+
+<details>
+<summary>4. Почему CVSS и CVE feed недостаточны для решения о срочности обновления?</summary>
+
+CVSS не описывает конкретную экспозицию кластера: нужны prerequisites, достижимость функции, доступ атакующего, public exploit и компенсирующие controls. CVE feed полезен для уведомления, но может отставать или не содержать точных диапазонов и условий. Решение опирается на первичный vendor/upstream advisory, fixed version, inventory и support policy.
+</details>
+
+<details>
+<summary>5. Почему control plane обновляют раньше рабочих узлов, почему kubelet не должен быть новее
+   API server и не может отставать от него более чем на три minor-версии?</summary>
+
+Version skew требует, чтобы kubelet был не новее kube-apiserver и не более чем на три minor-версии старше него, поэтому сначала поднимают control plane. В HA старый API server также ограничивает допустимую верхнюю версию kubelet, пока он остаётся в кластере. Такой skew допустим только на время rolling upgrade, а не как постоянное состояние.
+</details>
+
+<details>
+<summary>6. Назовите безопасную последовательность обновления рабочего узла через `kubeadm`.</summary>
+
+После healthy control plane на worker обновляют `kubeadm`, выполняют `kubeadm upgrade node`, затем с административной машины делают `cordon` и `drain` с учётом PDB и capacity. После этого устанавливают target `kubelet` и `kubectl`, перезапускают kubelet, проверяют Ready, версию и workload smoke test. Только затем выполняют `uncordon` и переходят к следующей ноде.
+</details>
+
+<details>
+<summary>7. Какие проверки нужны после успешного `kubeadm upgrade`, чтобы доказать и security patch,
+   и работоспособность кластера?</summary>
+
+Проверяют фактические версии control plane и kubelet через `kubectl version --output=yaml` и `kubectl get nodes -o wide`, а не только exit code `kubeadm`. Health подтверждают `/readyz?verbose`, состоянием всех Node `Ready`, `kube-system`, критичных DaemonSet/Deployment, событий и smoke test workload. Дополнительно проверяют alerts и отсутствие проблем runtime, CNI, DNS и storage.
+</details>
+
+<details>
+<summary>8. Почему обновление Kubernetes не закрывает автоматически CVE в `containerd`, `runc` или
+   kernel, и как их обновлять безопасно?</summary>
+
+Пакеты Kubernetes не обновляют независимые runtime, kernel и пакеты ОС, хотя именно они часто являются границей между контейнером и нодой. Их версии и compatibility с Kubernetes сверяют по vendor advisory, inventory и node image. Rollout выполняют тем же контролируемым lifecycle: stage, затем node-by-node `cordon`/`drain`, patch или reboot/replacement, health check и `uncordon`.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 26).** Version skew (эта глава) и image digest pinning (глава 26) -
    оба механизма про то, что "какая именно версия сейчас работает" должно быть проверяемым
    фактом, а не предположением. В чём разница между "версия compatible" (version skew) и
    "версия identical" (digest), и почему для kubelet/API server достаточно первого, а для
-   container image в production - обязательно второе?
+   container image в production - обязательно второе?</summary>
+
+Version skew задаёт допустимое отношение minor-версий взаимодействующих компонентов: kubelet и API server могут быть разными, но совместимыми в указанном диапазоне. Digest, напротив, идентифицирует конкретные неизменные байты образа; tag не даёт такой гарантии. Для rolling lifecycle Kubernetes нужна ограниченная совместимость версий, а production image должен быть воспроизводимо закреплён за точным содержимым.
+</details>
 
 ## Дополнительная практика
 
 Упражнение 13.11 полностью покрывает CKS-oriented security gates без внешнего материала.
-Для тренировки самого изменения пакетов можно дополнительно пройти полный `kubeadm`
-lifecycle в CKA-лабе. В главе 14 перейдём к минимизации поверхности узла и безопасности
-runtime-демона.
+В главе 14 перейдём к минимизации поверхности узла и безопасности runtime-демона.
 
-🧪 Лаба 111 (kubeadm upgrade): [tasks/cka/labs/111](../../../cka/labs/111/README_RU.MD)
+🧪 Лаба 113 (upgrade control-plane и worker через `kubeadm`, evidence отсутствия downtime): [tasks/cks/labs/113](../../labs/113/README_RU.MD)
+
+Для тренировки полного `kubeadm` lifecycle (init/join/upgrade на нескольких кластерах) можно
+дополнительно пройти CKA-лабу: [tasks/cka/labs/111](../../../cka/labs/111/README_RU.MD)
 
 🎮 Killercoda (в браузере, без установки): [Upgrading Kubernetes](https://killercoda.com/chadmcrowell/course/cka/upgrade-k8s) · [Upgrade Kubelet](https://killercoda.com/chadmcrowell/course/cka/upgrade-kubelet)
 

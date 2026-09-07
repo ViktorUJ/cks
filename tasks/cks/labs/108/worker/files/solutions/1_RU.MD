@@ -239,3 +239,163 @@ EOF
 
 Выполните `check_result`. Этап 5 показан в проверке, но он опционален: отсутствие
 mutation policy не должно отменять зачёт первых четырёх этапов.
+
+## 6. ImagePolicyWebhook: внешний backend
+
+В отличие от заданий 1-5, здесь решение об image принимает внешний HTTP(S)-backend через
+API `ImageReview`, а не CEL-выражение внутри Kyverno.
+
+Backend уже подготовлен на рабочей машине:
+
+```bash
+cat /opt/image-policy-backend/server.py
+```
+
+Скопируйте его на `control-plane` и создайте ConfigMap + Deployment + Service:
+
+```bash
+CP=$(kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+scp -o StrictHostKeyChecking=no /opt/image-policy-backend/server.py "$CP":/tmp/server.py
+
+kubectl create namespace image-policy --context "$CTX" --dry-run=client -o yaml | kubectl apply --context "$CTX" -f -
+kubectl create configmap image-policy-backend-src -n image-policy --context "$CTX" \
+  --from-file=server.py=/opt/image-policy-backend/server.py \
+  --dry-run=client -o yaml | kubectl apply --context "$CTX" -f -
+
+cat <<'EOF' | kubectl apply --context "$CTX" -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-policy-backend
+  namespace: image-policy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-policy-backend
+  template:
+    metadata:
+      labels:
+        app: image-policy-backend
+    spec:
+      containers:
+      - name: backend
+        image: python:3.12-slim
+        command: ["python3", "/opt/image-policy/server.py"]
+        ports:
+        - containerPort: 8443
+        volumeMounts:
+        - name: src
+          mountPath: /opt/image-policy
+      volumes:
+      - name: src
+        configMap:
+          name: image-policy-backend-src
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: image-policy-backend
+  namespace: image-policy
+spec:
+  selector:
+    app: image-policy-backend
+  ports:
+  - port: 8443
+    targetPort: 8443
+EOF
+
+kubectl rollout status deployment/image-policy-backend -n image-policy --context "$CTX" --timeout=90s
+BACKEND_IP=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o jsonpath='{.spec.clusterIP}')
+echo "$BACKEND_IP"
+```
+
+На `control-plane` (по SSH) создайте admission config и kubeconfig для backend. Путь на
+диске **на самом control-plane**, а не на рабочей машине:
+
+```bash
+ssh "$CP" 'sudo mkdir -p /etc/kubernetes/image-policy'
+
+ssh "$CP" "sudo tee /etc/kubernetes/image-policy/admission-config.yaml >/dev/null" <<'EOF'
+apiVersion: apiserver.config.k8s.io/v1
+kind: AdmissionConfiguration
+plugins:
+- name: ImagePolicyWebhook
+  configuration:
+    imagePolicy:
+      kubeConfigFile: /etc/kubernetes/image-policy/kubeconfig
+      allowTTL: 30
+      denyTTL: 30
+      retryBackoff: 500
+      defaultAllow: false
+EOF
+
+ssh "$CP" "sudo tee /etc/kubernetes/image-policy/kubeconfig >/dev/null" <<EOF
+apiVersion: v1
+kind: Config
+clusters:
+- name: image-policy-backend
+  cluster:
+    server: http://${BACKEND_IP}:8443/imagepolicy
+users:
+- name: kube-apiserver
+contexts:
+- name: image-policy
+  context:
+    cluster: image-policy-backend
+    user: kube-apiserver
+current-context: image-policy
+EOF
+```
+
+Отредактируйте static manifest **на `control-plane`**. Не заменяйте существующий
+`--enable-admission-plugins` целиком — допишите `ImagePolicyWebhook` к текущему значению
+(обычно там уже есть `NodeRestriction`), добавьте `--admission-control-config-file` и
+`--runtime-config`, смонтируйте новую директорию как hostPath:
+
+```bash
+ssh "$CP" 'sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml'
+```
+
+```yaml
+# фрагмент /etc/kubernetes/manifests/kube-apiserver.yaml на control-plane
+spec:
+  containers:
+  - name: kube-apiserver
+    command:
+    - kube-apiserver
+    - --enable-admission-plugins=NodeRestriction,ImagePolicyWebhook   # допишите к существующему списку
+    - --admission-control-config-file=/etc/kubernetes/image-policy/admission-config.yaml
+    - --runtime-config=imagepolicy.k8s.io/v1alpha1=true               # допишите, если runtime-config уже был задан
+    volumeMounts:
+    - name: image-policy
+      mountPath: /etc/kubernetes/image-policy
+      readOnly: true
+  volumes:
+  - name: image-policy
+    hostPath:
+      path: /etc/kubernetes/image-policy
+      type: DirectoryOrCreate
+```
+
+kubelet сам подхватит изменение static Pod. Дождитесь восстановления API:
+
+```bash
+until kubectl get --context "$CTX" --raw=/readyz 2>/dev/null | grep -q '^ok$'; do sleep 5; done
+```
+
+Проверьте оба случая:
+
+```bash
+kubectl run webhook-latest-must-fail --image=nginx:latest --context "$CTX"
+# Error from server (Forbidden): pods "webhook-latest-must-fail" is forbidden:
+# image policy webhook backend denied one or more images: Images using latest tag are not allowed
+
+kubectl run webhook-pinned-ok --image=nginx:1.27.3 --context "$CTX"
+kubectl get pod webhook-pinned-ok --context "$CTX"
+# STATUS: Running
+```
+
+`defaultAllow: false` означает fail-closed: если backend недоступен, все image
+запрещаются, а не разрешаются — это то же принципиальное решение, что описано в главе 26
+для production-конфигурации ImagePolicyWebhook.

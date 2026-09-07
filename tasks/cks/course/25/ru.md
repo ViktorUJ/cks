@@ -22,15 +22,15 @@ registry, manifest/GitOps repository, admission policy и kubelet, скачив�
 
 ```mermaid
 flowchart TB
-    src["Исходный код<br>и lock files"] --> deps["Зависимости<br>package registry"]
+    src["Исходный код<br/>и lock files"] --> deps["Зависимости<br/>package registry"]
     deps --> build["CI build и test"]
     src --> build
     build --> sbom["SBOM + provenance"]
-    build --> reg["Artifact repository<br>container registry"]
+    build --> reg["Artifact repository<br/>container registry"]
     sbom --> reg
-    reg --> deploy["CD / GitOps<br>manifest с digest"]
-    deploy --> admission["Admission policy<br>и проверка"]
-    admission --> pod["Pod запускает<br>проверенный artifact"]
+    reg --> deploy["CD / GitOps<br/>manifest с digest"]
+    deploy --> admission["Admission policy<br/>и проверка"]
+    admission --> pod["Pod запускает<br/>проверенный artifact"]
     style src fill:#326ce5,color:#fff
     style deps fill:#673ab7,color:#fff
     style build fill:#f4b400,color:#000
@@ -198,11 +198,11 @@ credentials или неправильного имени artifact.
 
 ```mermaid
 flowchart TB
-    image["Image по digest"] --> syft["syft\nSPDX или CycloneDX"]
-    image --> bom["bom generate\nSPDX 2.3 JSON"]
-    syft --> store["SBOM рядом с artifact\nи digest"]
+    image["Image по digest"] --> syft["syft<br/>SPDX или CycloneDX"]
+    image --> bom["bom generate<br/>SPDX 2.3 JSON"]
+    syft --> store["SBOM рядом с artifact<br/>и digest"]
     bom --> store
-    store --> query["Поиск package/version\nи vulnerability analysis"]
+    store --> query["Поиск package/version<br/>и vulnerability analysis"]
     style image fill:#326ce5,color:#fff
     style syft fill:#673ab7,color:#fff
     style bom fill:#326ce5,color:#fff
@@ -298,12 +298,12 @@ audit и неизменяемость release artifacts.
 
 ```mermaid
 flowchart TB
-    commit["Reviewed commit\nlock file"] --> ci["Изолированный CI build\nunit test + scan"]
-    ci --> artifact["Image по digest\nSBOM + provenance"]
-    artifact --> registry["Доверенный artifact repository\nimmutable release"]
-    registry --> cd["CD получает digest\nне собирает заново"]
-    cd --> cluster["Manifest / GitOps\nimage@sha256:..."]
-    cluster --> verify["Admission и runtime\nпроверяют policy"]
+    commit["Reviewed commit<br/>lock file"] --> ci["Изолированный CI build<br/>unit test + scan"]
+    ci --> artifact["Image по digest<br/>SBOM + provenance"]
+    artifact --> registry["Доверенный artifact repository<br/>immutable release"]
+    registry --> cd["CD получает digest<br/>не собирает заново"]
+    cd --> cluster["Manifest / GitOps<br/>image@sha256:..."]
+    cluster --> verify["Admission и runtime<br/>проверяют policy"]
     style commit fill:#326ce5,color:#fff
     style ci fill:#f4b400,color:#000
     style artifact fill:#0f9d58,color:#fff
@@ -408,11 +408,11 @@ statement. Подпись artifact и криптографическую про�
 
 ```mermaid
 flowchart TB
-    cve["Advisory: package\n+ affected version"] --> sbom["Поиск в SBOM\nпо digest"]
-    sbom --> affected["Affected image\nи running Pod"]
-    affected --> fixed["Fixed dependency\nили base image"]
-    fixed --> rebuild["Rebuild: новый digest\nновый SBOM"]
-    rebuild --> rescan["Scan + verify\nversion больше нет"]
+    cve["Advisory: package<br/>+ affected version"] --> sbom["Поиск в SBOM<br/>по digest"]
+    sbom --> affected["Affected image<br/>и running Pod"]
+    affected --> fixed["Fixed dependency<br/>или base image"]
+    fixed --> rebuild["Rebuild: новый digest<br/>новый SBOM"]
+    rebuild --> rescan["Scan + verify<br/>version больше нет"]
     rescan --> rollout["Controlled rollout"]
     style cve fill:#db4437,color:#fff
     style sbom fill:#f4b400,color:#000
@@ -566,25 +566,71 @@ mock-сценарий. Не путайте формат Syft, название J
 
 ## 25.12. Вопросы для самопроверки
 
-1. Какие участники входят в supply chain container workload от commit до Pod и где может
-   произойти подмена artifact?
-2. Чем SBOM отличается от vulnerability scan report, signature и provenance?
-3. Почему SBOM для `app:1.4.2` без digest может не быть доказательством состава running
-   image?
-4. Какие JSON paths используют для package/version в SPDX и CycloneDX?
-5. Как сгенерировать SPDX 2.3 JSON через `syft` и через `kubernetes-sigs/bom`?
-6. Почему поиск только по имени `ca-certificates-bundle` не достаточен для решения по CVE?
-7. Как получить `imageID` контейнера и зачем сравнивать его с digest SBOM?
-8. Почему CI не должен собирать один image, а CD - незаметно пересобирать его в другом
-   environment?
-9. Какой смысл SLSA придаёт provenance и изолированному сборщику (builder)?
-10. Какие проверки должны пройти между fixed dependency и production rollout?
-11. **Flashback (глава 32).** SBOM/provenance (эта глава) отвечают на вопрос "из чего
-    состоит этот artifact и как он был собран". Kubernetes audit log (глава 32) отвечает
-    на вопрос "кто и когда взаимодействовал с API server". Если нужно доказать полную
-    цепочку "кто задеплоил именно этот image, с этим SBOM, в это время" - какого из двух
-    источников евиденс недостаточно самого по себе, и как их совместное использование
-    закрывает то, что не закрывает каждый по отдельности?
+<details>
+<summary>1. Какие участники входят в supply chain container workload от commit до Pod и где может произойти подмена artifact?</summary>
+
+В цепочку входят source и lock files, package registry, CI runner, container registry, CD/GitOps, admission policy и kubelet, скачивающий image. Подмена возможна, например, в dependency, build script или runner, base image, registry tag либо CI/CD credential. Поэтому нужны одновременно digest/SBOM, provenance и контроль допуска артефакта.
+</details>
+
+<details>
+<summary>2. Чем SBOM отличается от vulnerability scan report, signature и provenance?</summary>
+
+SBOM — это inventory компонентов и версий конкретного artifact, а не вывод о CVE. Scanner сопоставляет этот состав с базой уязвимостей и severity, signature криптографически проверяет доверенного подписанта, а provenance описывает source revision, builder и входы сборки. Эти артефакты должны быть привязаны к одному digest.
+</details>
+
+<details>
+<summary>3. Почему SBOM для `app:1.4.2` без digest может не быть доказательством состава running image?</summary>
+
+Тег изменяем: `app:1.4.2` может быть переназначен на другие байты после генерации SBOM. Доказательство состава связывают с immutable `@sha256:...` и сверяют с фактическим runtime identifier. Иначе SBOM может относиться к прежнему manifest, а Pod — уже к другому образу.
+</details>
+
+<details>
+<summary>4. Какие JSON paths используют для package/version в SPDX и CycloneDX?</summary>
+
+В SPDX 2.3 JSON компоненты ищут в `.packages`, а версию — в `.versionInfo`, например у элемента `.packages[]`. В CycloneDX используются `.components[]` и поле `.version`; для различения экосистем полезен также `.purl`. Эти пути нельзя механически переносить на другой формат или SPDX 3.0.
+</details>
+
+<details>
+<summary>5. Как сгенерировать SPDX 2.3 JSON через `syft` и через `kubernetes-sigs/bom`?</summary>
+
+Для Syft используют `syft "$IMAGE" -o spdx-json > api.spdx.json`. Для Kubernetes SIGs bom — `bom generate --image "$IMAGE" --format json --output out.spdx.json`; здесь JSON означает SPDX, а не CycloneDX. После этого проверяют JSON, например наличие `.spdxVersion` и массива `.packages` через `jq`.
+</details>
+
+<details>
+<summary>6. Почему поиск только по имени `ca-certificates-bundle` не достаточен для решения по CVE?</summary>
+
+Решение по advisory требует exact package, его версию, ecosystem/distribution и условия fixed version, а имя может встречаться в нескольких вариантах. Нужен поиск имени вместе с `versionInfo` и привязка SBOM к digest образа. Затем результат сопоставляют с advisory и runtime imageID, а не удаляют workload только по совпадению имени.
+</details>
+
+<details>
+<summary>7. Как получить `imageID` контейнера и зачем сравнивать его с digest SBOM?</summary>
+
+Его выводят из статуса Pod: `kubectl get pod <pod> -n <namespace> -o jsonpath='{range .status.containerStatuses[*]}{.name}{"\t"}{.imageID}{"\n"}{end}'`. `imageID` показывает reference, который runtime получил после pull, и помогает подтвердить, что SBOM относится к реально работающему artifact. Tag в spec сам по себе этого не гарантирует.
+</details>
+
+<details>
+<summary>8. Почему CI не должен собирать один image, а CD - незаметно пересобирать его в другом environment?</summary>
+
+CD должен продвигать уже проверенный immutable digest, а не создавать новый artifact с отличающимися inputs, builder или зависимостями. Иначе SBOM, scan и provenance CI относятся к одним байтам, а production может получить другие. Разделение publish CI и deploy CD делает эту цепочку проверяемой.
+</details>
+
+<details>
+<summary>9. Какой смысл SLSA придаёт provenance и изолированному сборщику (builder)?</summary>
+
+В SLSA provenance связывает output с build definition, source и builder; её `subject.digest` сверяют с digest release image. В Build Track L1 требует наличие provenance, L2 — подписанную provenance от hosted build platform, а L3 — hardened build platform. Изолированный builder уменьшает риск подмены общей рабочей среды, но уровень нужно заявлять с указанием track и доказательств.
+</details>
+
+<details>
+<summary>10. Какие проверки должны пройти между fixed dependency и production rollout?</summary>
+
+После обновления dependency или base image собирают новый digest и новый SBOM, затем убеждаются, что affected version исчезла или заменена. Новый artifact сканируют, проверяют/подписывают и только затем продвигают через controlled CD rollout. Evidence включает SBOM, scan, проверенный digest и результат rollout.
+</details>
+
+<details>
+<summary>11. **Flashback (глава 32).** SBOM/provenance (эта глава) отвечают на вопрос "из чего состоит этот artifact и как он был собран". Kubernetes audit log (глава 32) отвечает на вопрос "кто и когда взаимодействовал с API server". Если нужно доказать полную цепочку "кто задеплоил именно этот image, с этим SBOM, в это время" - какого из двух источников евиденс недостаточно самого по себе, и как их совместное использование закрывает то, что не закрывает каждый по отдельности?</summary>
+
+Одного SBOM/provenance недостаточно: они доказывают состав и процесс сборки digest, но не API-действие deployment. Одного audit log тоже недостаточно: он показывает identity, время и объект API, но не состав образа и достоверность его build. Сверка image digest из manifest/audit с digest, к которому привязаны SBOM и provenance, связывает автора deploy с конкретным проверяемым artifact.
+</details>
 
 ## Практика
 

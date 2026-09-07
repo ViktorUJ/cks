@@ -23,9 +23,9 @@ Supply chain начинается до Kubernetes: исходный код и CI
 ```mermaid
 flowchart TB
     build["CI: build + test"] --> sign["SBOM / scan / подпись"]
-    sign --> reg["разрешённый registry\nimage@sha256:..."]
+    sign --> reg["разрешённый registry<br/>image@sha256:..."]
     reg --> deploy["GitOps / kubectl"]
-    deploy --> admit["admission: registry +\nподпись + identity"]
+    deploy --> admit["admission: registry +<br/>подпись + identity"]
     admit -->|"допустить"| kubelet["kubelet pull и запуск"]
     admit -->|"отклонить"| deny["Pod не сохранён"]
     style build fill:#326ce5,color:#fff
@@ -648,19 +648,53 @@ deployment. Вместе с least-privilege правами CI, защищённ�
 
 ## 26.10. Вопросы для самопроверки
 
-1. Почему allowlist trusted registry не доказывает, что image создал доверенный CI?
-2. Почему для production deployment нужен digest, а не только version tag?
-3. Какие массивы контейнеров обязан проверять registry policy и почему?
-4. Какие TLS-файлы и fail-closed параметры нужны `ImagePolicyWebhook` backend?
-5. Чем keyless signature отличается от static Cosign key и какие issuer/identity нужно
-   ограничить при проверке?
-6. Почему `cosign verify` в CI не предотвращает прямой `kubectl apply`?
-7. Что требуется, чтобы Notary/Notation стал enforcement point Kubernetes?
-8. **Flashback (глава 20).** Вопрос 6 этой главы уже показал, что `cosign verify` в CI не
-   мешает прямому `kubectl apply` неподписанного образа. Как admission policy из главы 20
-   (native `ValidatingAdmissionPolicy` или Kyverno `ImageValidatingPolicy`) закрывает именно
-   этот путь обхода, и чем "signature verification как admission policy" отличается по
-   надёжности от "signature verification только в CI pipeline"?
+<details>
+<summary>1. Почему allowlist trusted registry не доказывает, что image создал доверенный CI?</summary>
+
+Allowlist отвечает только на вопрос, из какого registry/repository разрешён image. Пользователь с правом push в этот trusted registry всё ещё может опубликовать неподписанный или чужой artifact. Поэтому происхождение конкретного digest проверяют подписью и ограниченной identity подписанта.
+</details>
+
+<details>
+<summary>2. Почему для production deployment нужен digest, а не только version tag?</summary>
+
+Version tag — изменяемое имя и может быть переназначен на другие байты без изменения manifest. `@sha256:...` фиксирует OCI manifest и связывает deployment с тем же artifact, который сканировали и подписали. `imagePullPolicy` не заменяет digest pinning: новый node или cache miss всё равно могут разрешить mutable tag иначе.
+</details>
+
+<details>
+<summary>3. Какие массивы контейнеров обязан проверять registry policy и почему?</summary>
+
+Policy должна проверять `containers`, `initContainers` и `ephemeralContainers`. Иначе init-container либо контейнер, добавленный через `kubectl debug` и subresource `pods/ephemeralcontainers`, станет обходом allowlist. Для этого правила match-ят также CREATE/UPDATE нужного subresource.
+</details>
+
+<details>
+<summary>4. Какие TLS-файлы и fail-closed параметры нужны `ImagePolicyWebhook` backend?</summary>
+
+В kubeconfig backend нужны CA в `certificate-authority`, а при выбранной mTLS-схеме — `client-certificate` и `client-key` API server; соответствующие пути должны быть примонтированы в static Pod. В `AdmissionConfiguration` задают `defaultAllow: false`, чтобы ошибка или недоступность backend не разрешала образ. Также сохраняют существующие admission plugins и включают API `imagepolicy.k8s.io/v1alpha1` для `ImageReview`.
+</details>
+
+<details>
+<summary>5. Чем keyless signature отличается от static Cosign key и какие issuer/identity нужно ограничить при проверке?</summary>
+
+Keyless flow получает краткоживущий сертификат после OIDC-аутентификации CI и не требует раздачи постоянного локального private key. Static Cosign key — отдельная ключевая пара, которую в production держат в KMS или ином защищённом хранилище. Для keyless verification ограничивают точный OIDC issuer и identity workflow: организацию, repository, release workflow и допустимый ref/environment, а не regex `.*`.
+</details>
+
+<details>
+<summary>6. Почему `cosign verify` в CI не предотвращает прямой `kubectl apply`?</summary>
+
+CI-проверка действует только на пути, где её действительно запускают. Пользователь или иной pipeline может обратиться к Kubernetes API напрямую и создать Pod с неподписанным образом. Обязательная проверка должна находиться на admission path и возвращать deny до сохранения Pod.
+</details>
+
+<details>
+<summary>7. Что требуется, чтобы Notary/Notation стал enforcement point Kubernetes?</summary>
+
+`notation verify` полезен в CI, но сам Notary не является Kubernetes admission controller. Его trust policy, X.509 trust roots и allowed identities должны быть интегрированы в policy controller или webhook backend, который возвращает kube-apiserver решение allow/deny. Также необходимы документированные rotation и, при миграции, период двойной подписи/проверки.
+</details>
+
+<details>
+<summary>8. **Flashback (глава 20).** Вопрос 6 этой главы уже показал, что `cosign verify` в CI не мешает прямому `kubectl apply` неподписанного образа. Как admission policy из главы 20 (native `ValidatingAdmissionPolicy` или Kyverno `ImageValidatingPolicy`) закрывает именно этот путь обхода, и чем "signature verification как admission policy" отличается по надёжности от "signature verification только в CI pipeline"?</summary>
+
+Admission policy исполняется kube-apiserver для каждого совпавшего CREATE/UPDATE Pod, поэтому ручной `kubectl apply` также проходит проверку и может быть отклонён. `ImageValidatingPolicy` способна проверить signature/attestation конкретного digest, а native VAP подходит, например, для CEL allowlist reference, но не заменяет криптографический verifier. Проверка только в CI — добровольный этап pipeline; admission превращает правило в fail-closed enforcement на границе кластера.
+</details>
 
 ## Практика
 

@@ -2,7 +2,8 @@
 
 # Глава 14. Минимизация footprint хостовой ОС и безопасность runtime-демона
 
-> **Что дальше.** Kubernetes защищает Pod политиками, RBAC и SecurityContext, но всё это
+> **Что дальше.** Kubernetes ограничивает workload политиками, RBAC и SecurityContext - то
+> есть сужает то, что нагрузка может сделать с API и с нодой, - но всё это
 > стоит на Linux-ноде. Лишний сервис, пакет, открытый порт или доступ к socket runtime
 > дают атакующему путь в обход Kubernetes API. В этом разделе домена **System Hardening**
 > CKS уменьшаем поверхность атаки самой ноды: оставляем только нужные службы,
@@ -32,7 +33,7 @@ flowchart TB
     vuln --> access["доступ к ноде"]
     access --> runtime["runtime socket или kubelet credential"]
     runtime --> cluster["контейнеры и кластер под риском"]
-    harden["инвентаризация<br>удаление / отключение<br>закрытие портов"] -. "сокращает" .-> pkg
+    harden["инвентаризация<br/>удаление / отключение<br/>закрытие портов"] -. "сокращает" .-> pkg
     style pkg fill:#f4b400,color:#000
     style vuln fill:#db4437,color:#fff
     style access fill:#db4437,color:#fff
@@ -267,7 +268,7 @@ flowchart TB
     root["root / разрешённый системный процесс"] -->|"локальный Unix socket"| containerd["containerd CRI (основной)"]
     docker["docker group"] -. "членство ~= root" .-> dockerDaemon["Docker (опционально)"]
     tcp["TCP 2375 без TLS"] -. "удалённый root" .-> dockerDaemon
-    containerd --> node["создание контейнеров<br>и доступ к ноде"]
+    containerd --> node["создание контейнеров<br/>и доступ к ноде"]
     dockerDaemon --> node
     style user fill:#f4b400,color:#000
     style deny fill:#db4437,color:#fff
@@ -586,24 +587,83 @@ Docker TCP, исправить права socket или отключить servi
 
 ## 14.13. Вопросы для самопроверки
 
-1. Почему выключенный, но не удалённый лишний пакет всё ещё увеличивает поверхность атаки?
-2. Чем `systemctl disable --now` отличается от `mask`, и когда нужен каждый вариант?
-3. Как установить владельца listener, прежде чем закрывать его порт?
-4. Почему `10250` и `6443` нельзя одинаково «закрыть везде», а `2375` должен отсутствовать?
-5. Почему `tcp://0.0.0.0:2375` равнозначен удалённому root, даже если сейчас есть firewall?
-6. Почему доступ к containerd/NRI socket root-equivalent и кому допустимо его выдать?
-7. Почему нельзя назначить universal `chmod` runtime socket, и как закрепить policy
-   устойчиво?
-8. Почему TCP debug endpoint не должен быть публичным, а metrics без TLS/auth ограничивают
-   loopback или management interface?
-9. Чем временный `modprobe -r` отличается от `blacklist` и `install ... /bin/false`?
-10. Почему отключение модуля тестируют node-by-node до rollout?
-11. Какие риски нужно проверить до `userns-remap` в `daemon.json`?
-12. **Flashback (глава 29).** Эта глава закрывает известные лишние процессы и порты
+<details>
+<summary>1. Почему выключенный, но не удалённый лишний пакет всё ещё увеличивает поверхность атаки?</summary>
+
+Остановленный service не удаляет бинарники, библиотеки, конфигурацию, socket/timer units и потенциальные CVE пакета. Он может быть снова включён либо стать источником ошибки при следующем изменении. После проверки зависимостей подтверждённо ненужный пакет удаляют, а минимальный образ поддерживают через allowlist и регулярную пересборку.
+</details>
+
+<details>
+<summary>2. Чем `systemctl disable --now` отличается от `mask`, и когда нужен каждый вариант?</summary>
+
+`systemctl disable --now` немедленно останавливает service и запрещает его обычный автозапуск; это обратимая базовая операция для известного ненужного unit. `mask` сильнее: он направляет unit на `/dev/null` и блокирует ручной и зависимый запуск. Mask используют для сервиса, который в образе точно не должен появляться, не маскируя зависимости Kubernetes без понимания последствий.
+</details>
+
+<details>
+<summary>3. Как установить владельца listener, прежде чем закрывать его порт?</summary>
+
+Сначала выводят TCP/UDP listener с PID и процессом командой `sudo ss -tulpn`; как альтернативы служат `lsof` и `netstat`. Затем для найденного service смотрят `systemctl status`, `systemctl cat`, `systemctl show ... -p ExecStart` и журнал. Решение принимают по связке listener, PID, unit, назначение и допустимые источники, а не по номеру порта.
+</details>
+
+<details>
+<summary>4. Почему `10250` и `6443` нельзя одинаково «закрыть везде», а `2375` должен отсутствовать?</summary>
+
+`10250` нужен защищённому kubelet API, а `6443` — API server, поэтому их доступ зависит от роли ноды и архитектуры: control plane, worker, администраторам и monitoring дают точные allowlist. Они не должны быть доступны интернету, но полное закрытие сломает нужные потоки. `2375` — неаутентифицированный Docker TCP API и в безопасном baseline не нужен вовсе.
+</details>
+
+<details>
+<summary>5. Почему `tcp://0.0.0.0:2375` равнозначен удалённому root, даже если сейчас есть firewall?</summary>
+
+Docker API на `2375` не использует TLS и authentication; любой достигший порта клиент может создавать привилегированные контейнеры, монтировать host filesystem и получать доступ к ноде. Firewall — лишь внешний компенсирующий слой, и его ошибка снова откроет этот root-equivalent API. Поэтому TCP endpoint нужно убрать из активного unit, drop-in и `daemon.json`, а не только фильтровать сетью.
+</details>
+
+<details>
+<summary>6. Почему доступ к containerd/NRI socket root-equivalent и кому допустимо его выдать?</summary>
+
+Клиент containerd или NRI API может управлять контейнерами с привилегиями, монтировать host filesystem либо получить node credentials, поэтому socket является security boundary. Доступ оставляют root и минимальному набору системных процессов. Если необходима группа, она должна быть выделенной системной без обычных пользователей, разработчиков, CI identity и workload.
+</details>
+
+<details>
+<summary>7. Почему нельзя назначить universal `chmod` runtime socket, и как закрепить policy
+   устойчиво?</summary>
+
+Путь, owner, group и mode socket задают пакет, systemd unit и policy конкретной ноды, а socket может пересоздаваться после рестарта. Универсальный или разовый `chmod` может не соответствовать установке и исчезнуть. Сначала определяют владельца через `systemctl cat` и `stat`, затем закрепляют минимальный доступ в поддерживаемой конфигурации image/IaC или unit policy и проверяют его после рестарта.
+</details>
+
+<details>
+<summary>8. Почему TCP debug endpoint не должен быть публичным, а metrics без TLS/auth ограничивают
+   loopback или management interface?</summary>
+
+Debug API даёт лишнюю диагностическую поверхность и потому его TCP-вариант не публикуют; Unix socket ограничивают root и разрешёнными системными потребителями. Metrics containerd часто не имеют TLS и authentication, поэтому публичный listener раскрывает данные любому источнику. Их привязывают к loopback или выделенному management interface и дополнительно ограничивают firewall/маршрутизацией.
+</details>
+
+<details>
+<summary>9. Чем временный `modprobe -r` отличается от `blacklist` и `install ... /bin/false`?</summary>
+
+`modprobe -r` лишь временно выгружает модуль и не переживает reboot; также он откажется, если модуль используется или удерживается зависимостью. `blacklist` запрещает обычную autoload-загрузку, а правило `install <module> /bin/false` блокирует и явный `modprobe` через это правило. Постоянные правила хранят в управляемом `modprobe`-конфиге и при необходимости обновляют initramfs.
+</details>
+
+<details>
+<summary>10. Почему отключение модуля тестируют node-by-node до rollout?</summary>
+
+Модуль может быть нужен CNI, storage driver, runtime либо сетевой/дисковой аппаратуре, и ошибка может сделать Node NotReady или нарушить workload. Сначала проверяют отключение на drained/staging-ноде, включая kubelet, containerd, CNI и приложения. Затем раскатывают изменение по нодам с health checks, а не на весь pool одновременно.
+</details>
+
+<details>
+<summary>11. Какие риски нужно проверить до `userns-remap` в `daemon.json`?</summary>
+
+`userns-remap` меняет mapping root контейнера на непривилегированный UID хоста, но также меняет ownership Docker-файлов и поведение bind mounts. Перед включением проверяют volumes, ownership, images и совместимость workload. Это настройка выделенного Docker-хоста, требующая теста, validation `dockerd` и плана отката, а не замена `runAsNonRoot` для Kubernetes с containerd.
+</details>
+
+<details>
+<summary>12. **Flashback (глава 29).** Эта глава закрывает известные лишние процессы и порты
     заранее (static hardening, "до инцидента"). Как Falco из главы 29 обнаружит **новый**,
     ранее не учтённый процесс на ноде уже после hardening - какой сигнал детекции дополняет
     static inventory, если злоумышленник запустит нечто, чего не было в исходном списке
-    сервисов?
+    сервисов?</summary>
+
+Static inventory сравнивает известные services, packages и listeners с baseline, но не видит заранее неизвестную программу как правило. Falco дополняет его runtime detection: rule на неожиданный process execution или запуск shell/бинарника в чувствительном контексте создаёт alert по системному событию. Такой сигнал позволяет расследовать новый процесс после hardening, а затем обновить baseline или отреагировать как на инцидент.
+</details>
 
 ## Практика
 

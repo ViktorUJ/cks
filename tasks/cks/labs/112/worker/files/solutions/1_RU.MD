@@ -565,6 +565,13 @@ YAML
 
 ```bash
 mkdir -p /var/work/tests/artifacts/9
+# Фиксируем момент начала прогона - все последующие journalctl-запросы используют
+# --since вместо -n N, чтобы не зависеть от объёма/шумности журнала и не подхватить
+# stale-события из предыдущего прогона этого же задания. Важно: время берём С
+# CONTROL-PLANE (той же машины, где потом читаем journal), а не с worker - иначе
+# при расхождении часов worker/control-plane (clock skew) отметка времени будет
+# интерпретирована неверно.
+START_TS="$(ssh control-plane "date '+%Y-%m-%d %H:%M:%S'")"
 kubectl apply -n runtime-112 -f - 2>&1 | tee /var/work/tests/artifacts/9/admission-deny.txt <<'YAML' || true
 apiVersion: v1
 kind: Pod
@@ -581,42 +588,78 @@ grep -q 'CKS112_TRUSTED_REPO_POLICY' /var/work/tests/artifacts/9/admission-deny.
 
 Теперь моделируем путь, который admission controller не видит: контейнер запускается
 прямо через `ctr` в containerd namespace `k8s.io` (тот же namespace, что kubelet использует
-для Pod), минуя kube-apiserver целиком. Каждый запуск использует **уникальный** container
-ID (`cks112-bypass-1`, затем `cks112-bypass-2` после перезапуска Falco) и запускается
-detached (`-d`), чтобы повторный прогон не столкнулся с ещё существующим предыдущим
-container/task:
+для Pod), минуя kube-apiserver целиком. Каждый запуск получает один уникальный суффикс
+`$RUN_ID`, а все созданные им container ID используют этот суффикс. Поэтому повторный прогон
+не столкнётся с task/container, оставшимися от предыдущей попытки. Контейнеры запускаются
+в detached-режиме (`-d`):
 
 ```bash
+RUN_ID="$(date +%s%N)"
+BYPASS_1="cks112-bypass-1-$RUN_ID"
+OBSERVE_REPO="cks112-observe-repo-$RUN_ID"
+PROBE_ALLOWED="cks112-probe-allowed-$RUN_ID"
+BYPASS_2="cks112-bypass-2-$RUN_ID"
+PREFIX_TRAP="cks112-prefix-trap-$RUN_ID"
+
 ssh control-plane 'sudo ctr -n k8s.io images pull docker.io/library/alpine:3.20'
-ssh control-plane 'sudo ctr -n k8s.io run -d docker.io/library/alpine:3.20 cks112-bypass-1 \
-  sh -c "echo CKS112_CTR_BYPASS; sleep 5"'
+ssh control-plane "sudo ctr -n k8s.io run -d docker.io/library/alpine:3.20 $BYPASS_1 \
+  sh -c 'echo CKS112_CTR_BYPASS; sleep 5'"
 ```
 
-Добавляем custom rule, которая ловит именно этот сценарий: процесс с нашим marker **и**
-image repository вне allowlist - то есть not просто любой alpine-процесс, а конкретно
-попытка обойти ту же policy, что уже была применена на admission. Условие использует
-**точное** сравнение `container.image.repository != "library/busybox"`, а не
-`startswith`/prefix-проверку: `not container.image.repository startswith "library/busybox"`
-пропустил бы (не заметил бы) репозиторий вроде `library/busybox-evil`, потому что его имя
-просто НАЧИНАЕТСЯ с разрешённой подстроки - то есть Falco считал бы его частью allowlist,
-хотя реально он вне допустимого repository. Это та же ловушка, которую избегает Kyverno
-policy выше через `==`, а не `startsWith`; условие admission и условие Falco должны
-проверять одно и то же repository property одинаковым (exact) способом, иначе они не
-эквивалентны как security control:
+Прежде чем писать точное условие, определяем РЕАЛЬНОЕ observed-значение
+`%container.image.repository` для доверенного образа на этом containerd/Falco стеке -
+не предполагаем его заранее. Разные container runtime/Falco версии могут по-разному
+формировать это поле (с hostname registry или без него), поэтому единственный надёжный
+способ - запустить доверенный контейнер с временным observe-правилом и посмотреть, что
+Falco реально пишет:
 
 ```bash
-ssh control-plane 'sudo tee -a /etc/falco/falco_rules.local.yaml >/dev/null' <<'YAML'
+ssh control-plane 'sudo tee /etc/falco/falco_rules.local.yaml >/dev/null' <<'YAML'
+- rule: CKS112 Observe Trusted Repository Value
+  desc: Temporary rule to capture the exact observed container.image.repository string for the trusted image
+  condition: spawned_process and proc.cmdline contains "CKS112_OBSERVE_REPO"
+  output: "CKS112 observed repository=%container.image.repository tag=%container.image.tag"
+  priority: INFORMATIONAL
+YAML
+ssh control-plane 'sudo systemctl restart falco'
+
+ssh control-plane 'sudo ctr -n k8s.io images pull docker.io/library/busybox:1.36'
+ssh control-plane "sudo ctr -n k8s.io run -d docker.io/library/busybox:1.36 $OBSERVE_REPO \
+  sh -c 'echo CKS112_OBSERVE_REPO; sleep 5'"
+sleep 3
+TRUSTED_REPO=$(ssh control-plane "sudo journalctl -u falco -b --no-pager -n 50 | grep -oP 'CKS112 observed repository=\K[^ ]+'" | tail -1)
+echo "TRUSTED_REPO=$TRUSTED_REPO"
+ssh control-plane "sudo ctr -n k8s.io task kill $OBSERVE_REPO 2>/dev/null; sudo ctr -n k8s.io task rm $OBSERVE_REPO 2>/dev/null; sudo ctr -n k8s.io container rm $OBSERVE_REPO 2>/dev/null" || true
+```
+
+> Сохраните значение `$TRUSTED_REPO` (например `library/busybox` или
+> `docker.io/library/busybox` - именно то, что реально вывела ваша Falco/containerd версия)
+> в `/var/work/tests/artifacts/9/observed-trusted-repo.txt` как evidence, чтобы условие
+> ниже было проверяемо привязано к наблюдаемому значению, а не к предположению.
+
+Теперь заменяем временное observe-правило на финальное. Условие использует **точное**
+сравнение с наблюдаемым `$TRUSTED_REPO`, а не `startswith`/prefix-проверку:
+`not container.image.repository startswith "$TRUSTED_REPO"` пропустил бы (не заметил бы)
+репозиторий вроде `<TRUSTED_REPO>-evil`, потому что его имя просто НАЧИНАЕТСЯ с разрешённой
+подстроки - то есть Falco считал бы его частью allowlist, хотя реально он вне допустимого
+repository. Это та же ловушка, которую избегает Kyverno policy выше через `==`, а не
+`startsWith`; условие admission и условие Falco должны проверять одно и то же repository
+property одинаковым (exact) способом и с одним и тем же наблюдаемым значением, иначе они
+не эквивалентны как security control:
+
+```bash
+ssh control-plane "sudo tee /etc/falco/falco_rules.local.yaml >/dev/null" <<YAML
 
 - rule: CKS112 Runtime Bypass of Admission
   desc: Process spawned in a container whose image is outside the runtime-112 trusted registry allowlist, indicating a container started outside kube-apiserver/admission (e.g. via ctr/crictl directly)
   condition: >
     spawned_process and
     proc.cmdline contains "CKS112_CTR_BYPASS" and
-    container.image.repository != "library/busybox"
+    container.image.repository != "$TRUSTED_REPO"
   output: >
     CKS112 runtime bypass of admission detected
     (command=%proc.cmdline container_id=%container.id
-    image=%container.image.repository:%container.image.tag
+    repo=%container.image.repository tag=%container.image.tag
     pid=%proc.pid ppid=%proc.ppid user=%user.name)
   priority: CRITICAL
   tags: [cks112, supply_chain, admission_bypass]
@@ -629,53 +672,89 @@ ssh control-plane 'sudo systemctl restart falco'
 
 ```bash
 ssh control-plane 'sudo ctr -n k8s.io images pull docker.io/library/busybox:1.36'
-ssh control-plane 'sudo ctr -n k8s.io run -d docker.io/library/busybox:1.36 cks112-probe-allowed \
-  sh -c "echo CKS112_CTR_BYPASS; sleep 5"'
+ssh control-plane "sudo ctr -n k8s.io run -d docker.io/library/busybox:1.36 $PROBE_ALLOWED \
+  sh -c 'echo CKS112_CTR_BYPASS; sleep 5'"
 sleep 3
-ssh control-plane "sudo journalctl -u falco -b --no-pager -n 50 | grep 'CKS112 runtime bypass of admission.*cks112-probe-allowed'" \
-  || echo "OK: no alert for allowed repository library/busybox, as expected"
-ssh control-plane 'sudo ctr -n k8s.io task kill cks112-probe-allowed 2>/dev/null; \
-  sudo ctr -n k8s.io task rm cks112-probe-allowed 2>/dev/null; \
-  sudo ctr -n k8s.io container rm cks112-probe-allowed 2>/dev/null' || true
+# Falco's output contains command=%proc.cmdline, not the ctr container name. Any alert
+# for this marker in the current run would therefore be a false positive for trusted repo.
+# Сохраняем отдельный evidence-файл именно для этого probe (trusted repo) - удобно
+# для диагностики независимо от общего falco-bypass-attempt.log, который читает BATS.
+ssh control-plane "sudo journalctl -u falco --since '$START_TS' --no-pager | grep -F 'CKS112 runtime bypass of admission' | grep -F 'CKS112_CTR_BYPASS'" \
+  > /var/work/tests/artifacts/9/probe-trusted.log || true
+if [[ -s /var/work/tests/artifacts/9/probe-trusted.log ]]; then
+  echo "ERROR: unexpected Falco alert for allowed repository ($TRUSTED_REPO)"
+else
+  echo "OK: no alert for allowed repository ($TRUSTED_REPO), as expected"
+fi
+ssh control-plane "sudo ctr -n k8s.io task kill $PROBE_ALLOWED 2>/dev/null; \
+  sudo ctr -n k8s.io task rm $PROBE_ALLOWED 2>/dev/null; \
+  sudo ctr -n k8s.io container rm $PROBE_ALLOWED 2>/dev/null" || true
 ```
 
 Убираем первый container/task перед повтором, чтобы не оставлять "зависший" процесс, и
 запускаем второй с новым уникальным ID:
 
 ```bash
-ssh control-plane 'sudo ctr -n k8s.io task kill cks112-bypass-1 2>/dev/null; \
-  sudo ctr -n k8s.io task rm cks112-bypass-1 2>/dev/null; \
-  sudo ctr -n k8s.io container rm cks112-bypass-1 2>/dev/null' || true
+ssh control-plane "sudo ctr -n k8s.io task kill $BYPASS_1 2>/dev/null; \
+  sudo ctr -n k8s.io task rm $BYPASS_1 2>/dev/null; \
+  sudo ctr -n k8s.io container rm $BYPASS_1 2>/dev/null" || true
 
-ssh control-plane 'sudo ctr -n k8s.io run -d docker.io/library/alpine:3.20 cks112-bypass-2 \
-  sh -c "echo CKS112_CTR_BYPASS; sleep 5"'
+ssh control-plane "sudo ctr -n k8s.io run -d docker.io/library/alpine:3.20 $BYPASS_2 \
+  sh -c 'echo CKS112_CTR_BYPASS; sleep 5'"
 sleep 3
-ssh control-plane "sudo journalctl -u falco -b --no-pager -n 200 | grep 'CKS112 runtime bypass of admission'" \
-  | tee /var/work/tests/artifacts/9/falco-bypass-attempt.log
+ssh control-plane "sudo journalctl -u falco --since '$START_TS' --no-pager | grep 'CKS112 runtime bypass of admission'" \
+  | tee /var/work/tests/artifacts/9/falco-bypass-attempt.log \
+  | tee /var/work/tests/artifacts/9/probe-alpine.log >/dev/null
 
-ssh control-plane 'sudo ctr -n k8s.io task kill cks112-bypass-2 2>/dev/null; \
-  sudo ctr -n k8s.io task rm cks112-bypass-2 2>/dev/null; \
-  sudo ctr -n k8s.io container rm cks112-bypass-2 2>/dev/null' || true
+ssh control-plane "sudo ctr -n k8s.io task kill $BYPASS_2 2>/dev/null; \
+  sudo ctr -n k8s.io task rm $BYPASS_2 2>/dev/null; \
+  sudo ctr -n k8s.io container rm $BYPASS_2 2>/dev/null" || true
 ```
 
-Наконец, доказываем сам prefix-trap: репозиторий `library/busybox-evil` НАЧИНАЕТСЯ с той же
-подстроки, что и разрешённый `library/busybox`, но не равен ему точно. Если бы Falco
-condition использовал `startswith` (как в более ранней, неправильной версии этого правила),
-этот образ прошёл бы НЕЗАМЕЧЕННЫМ - именно поэтому исправленное условие `!=` обязано
-поймать его:
+Наконец, доказываем сам prefix-trap: репозиторий, построенный как `${TRUSTED_REPO}-evil`,
+НАЧИНАЕТСЯ с той же подстроки, что и разрешённый `$TRUSTED_REPO`, но не равен ему точно.
+Если бы Falco condition использовал `startswith` (как в более ранней, неправильной версии
+этого правила), этот образ прошёл бы НЕЗАМЕЧЕННЫМ - именно поэтому исправленное условие
+`!=` обязано поймать его:
 
 ```bash
-ssh control-plane 'sudo ctr -n k8s.io images tag docker.io/library/alpine:3.20 docker.io/library/busybox-evil:1.0'
-ssh control-plane 'sudo ctr -n k8s.io run -d docker.io/library/busybox-evil:1.0 cks112-prefix-trap \
-  sh -c "echo CKS112_CTR_BYPASS; sleep 5"'
+# Собираем evil-ссылку так, чтобы TRUSTED_REPO остался буквальным префиксом registry-строки,
+# независимо от того, включает ли он сам hostname registry (docker.io/...) или только
+# repository-путь (library/...):
+case "$TRUSTED_REPO" in
+  */*) EVIL_IMAGE_REF="${TRUSTED_REPO}-evil:1.0" ;;
+  *)   EVIL_IMAGE_REF="docker.io/${TRUSTED_REPO}-evil:1.0" ;;
+esac
+ssh control-plane "sudo ctr -n k8s.io images tag docker.io/library/alpine:3.20 $EVIL_IMAGE_REF"
+ssh control-plane "sudo ctr -n k8s.io run -d $EVIL_IMAGE_REF $PREFIX_TRAP \
+  sh -c 'echo CKS112_CTR_BYPASS; sleep 5'"
 sleep 3
-ssh control-plane "sudo journalctl -u falco -b --no-pager -n 50 | grep 'CKS112 runtime bypass of admission.*busybox-evil'" \
-  | tee -a /var/work/tests/artifacts/9/falco-bypass-attempt.log
+# Ищем именно наблюдаемое значение TRUSTED_REPO с суффиксом -evil, а не хардкодим
+# конкретное имя репозитория - EVIL_IMAGE_REF мог быть построен из любого observed
+# значения, не только library/busybox.
+ssh control-plane "sudo journalctl -u falco --since '$START_TS' --no-pager | grep -F 'CKS112 runtime bypass of admission' | grep -F '${TRUSTED_REPO}-evil'" \
+  | tee -a /var/work/tests/artifacts/9/falco-bypass-attempt.log \
+  | tee /var/work/tests/artifacts/9/probe-prefix.log >/dev/null
 
-ssh control-plane 'sudo ctr -n k8s.io task kill cks112-prefix-trap 2>/dev/null; \
-  sudo ctr -n k8s.io task rm cks112-prefix-trap 2>/dev/null; \
-  sudo ctr -n k8s.io container rm cks112-prefix-trap 2>/dev/null' || true
+ssh control-plane "sudo ctr -n k8s.io task kill $PREFIX_TRAP 2>/dev/null; \
+  sudo ctr -n k8s.io task rm $PREFIX_TRAP 2>/dev/null; \
+  sudo ctr -n k8s.io container rm $PREFIX_TRAP 2>/dev/null" || true
 ```
+
+> `$EVIL_IMAGE_REF` строится КАК СУФФИКС к observed `$TRUSTED_REPO` (`<trusted-repo>-evil`),
+> поэтому его repository-строка гарантированно НАЧИНАЕТСЯ с `$TRUSTED_REPO` как точной
+> подстроки-префикса, независимо от того, какой конкретно формат ваш стек реально
+> использует (`library/busybox` или `docker.io/library/busybox`) - именно на этом и
+> только на этом основано доказательство prefix-trap.
+
+> **Структура evidence-файлов задания 9.** `falco-bypass-attempt.log` - основной
+> объединённый artifact, который проверяет автоматическая приёмка (содержит оба алерта:
+> untrusted alpine и prefix-trap, но не должен содержать алерт для trusted repo).
+> Дополнительно каждый probe также пишет собственный отдельный файл для более удобной
+> ручной диагностики без необходимости разбирать общий лог: `probe-trusted.log` (должен
+> быть пустым - это и есть negative control), `probe-alpine.log` и `probe-prefix.log`.
+> Раздельные файлы избыточны по отношению к основному artifact, но снижают риск спутать
+> evidence разных проб при повторных прогонах или troubleshooting.
 
 Ключевой вывод этого задания: registry allowlist на admission и Falco на runtime - не
 взаимозаменяемые слои, а взаимодополняющие. Admission останавливает путь через Kubernetes
@@ -687,5 +766,59 @@ Falco не может **заблокировать** создание таког
 prefix-trap-проверки выше: Falco condition и Kyverno CEL policy должны использовать ОДИНАКОВУЮ
 семантику сравнения (`==`/`!=`, а не `startsWith`/prefix), иначе они перестают быть
 эквивалентными security-контролями, даже если оба формально проверяют "тот же" repository.
+
+## 10. Обнаружить доступ к `/dev/mem` через file/device-open condition
+
+Задания 3, 7 и 9 строили condition вокруг `spawned_process`/`proc.cmdline` - обнаружение
+по ЗАПУСКУ процесса и его аргументам. Здесь используется принципиально другой класс
+условия Falco: обнаружение по ОТКРЫТИЮ конкретного файла/устройства, независимо от того,
+какой процесс и с какими аргументами командной строки это делает.
+
+Deployment `mem-scanner` (2 реплики) уже развёрнут бутстрапом; один из его Pod периодически
+открывает `/dev/mem` изнутри контейнера. Добавьте правило на `control-plane`:
+
+```bash
+ssh control-plane "sudo tee -a /etc/falco/falco_rules.local.yaml >/dev/null" <<'EOF'
+- rule: CKS112 Container access to /dev/mem
+  desc: Detect an open of /dev/mem from a container process
+  condition: >
+    evt.type in (open, openat, openat2) and
+    fd.name = /dev/mem and
+    container.id != host
+  output: >
+    CKS112 Container access to /dev/mem
+    (container_id=%container.id k8s_pod=%k8s.pod.name k8s_ns=%k8s.ns.name
+    proc=%proc.name pid=%proc.pid user=%user.name)
+  priority: CRITICAL
+  tags: [container, mitre_privilege_escalation, mitre_defense_evasion]
+EOF
+ssh control-plane 'sudo systemctl restart falco'
+```
+
+Дождитесь следующего периодического цикла `mem-scanner` (каждые ~15 секунд) и найдите
+срабатывание. Идентификатор Pod берите ИЗ самого alert (`k8s_pod=`), а не угадывайте
+заранее, какая из двух реплик виновна - это то же принципиальное правило "начинайте с
+alert", что и в задании 6:
+
+```bash
+ssh control-plane "sudo journalctl -u falco -b --no-pager -n 500 | grep -F 'CKS112 Container access to /dev/mem' | tail -1" \
+  > /var/work/tests/artifacts/10/falco-devmem.log
+cat /var/work/tests/artifacts/10/falco-devmem.log
+```
+
+Убедившись, что обнаружение подтверждено самим Falco (а не Pod manifest), останавливаем
+workload:
+
+```bash
+kubectl scale deployment mem-scanner -n runtime-112 --replicas=0
+kubectl get deployment mem-scanner -n runtime-112 -o json \
+  > /var/work/tests/artifacts/10/scaled-down.json
+jq '.spec.replicas' /var/work/tests/artifacts/10/scaled-down.json
+# ожидается: 0
+```
+
+`container.id != host` в условии - не декоративная деталь: без неё правило сработало бы
+и на легитимные системные процессы ноды (например, инструменты диагностики памяти),
+запущенные вне контейнеров, создавая шумные false positives на каждой ноде кластера.
 
 В конце выполните `check_result`.

@@ -34,7 +34,7 @@ ATT&CK T1528 (Steal Application Access Token) и T1613 дают контекст
 <details>
 <summary>1. Чем `Role`+`RoleBinding` отличаются от `ClusterRole`+`ClusterRoleBinding` в контексте задания 1?</summary>
 
-`Role` действует только в одном namespace и не может быть привязана к субъекту из другого namespace через `RoleBinding` в этом же namespace. `ClusterRole` действует на весь кластер (или через `RoleBinding` - namespaced, но с правами из cluster-wide шаблона). Задание 1 требует минимальный **namespaced** доступ, поэтому `Role`, а не `ClusterRole`, - иначе scope шире, чем требуется.
+`Role` действует только в одном namespace, но её `RoleBinding` МОЖЕТ ссылаться на субъект (например ServiceAccount) из ЛЮБОГО другого namespace - Kubernetes официально поддерживает `subjects[].namespace`, отличный от namespace самого `RoleBinding`. Что остаётся фиксированным - это SCOPE выдаваемых прав: права действуют только в namespace, где создан `RoleBinding`, независимо от того, откуда субъект. `RoleBinding` также может ссылаться на `ClusterRole` (а не только на `Role`) - в этом случае получаются права из cluster-wide шаблона, но выданные только в namespace конкретного `RoleBinding`. `ClusterRole`+`ClusterRoleBinding` даёт доступ на весь кластер. Задание 1 требует минимальный **namespaced** доступ, поэтому `Role`, а не `ClusterRole`, - иначе scope шире, чем требуется.
 </details>
 
 <details>
@@ -157,10 +157,19 @@ check_result
 ```text
 [FAIL] defaultMode для Secret Volume указан неверно.
 💡 Вы указали defaultMode: 400 (десятичное 400).
-   В YAML режим прав задаётся в десятичной системе: 0400 octal = 256 decimal.
+   YAML поддерживает восьмеричный литерал с ведущим нулём (0400), который Kubernetes
+   интерпретирует как обычные Unix-права; без ведущего нуля 400 читается как десятичное
+   число 400, а не как права 0400 (это десятичное 256).
 ```
 
-Это самая частая ошибка этого задания: `defaultMode` в манифесте Pod - обычное десятичное число YAML, а не восьмеричное, как в `chmod`. Если вы напишете `defaultMode: 400`, Kubernetes воспримет это как **десятичное** 400, а не как привычные Unix-права `0400`. Правильный способ - либо написать `defaultMode: 0400` (с ведущим нулём, YAML распознает восьмеричный литерал), либо явно указать десятичный эквивалент `256`. Проверьте себя: `kubectl get pod app-vulnerable -o jsonpath='{.spec.volumes[0].secret.defaultMode}'` должен вернуть `256`, а `stat -c '%a' /etc/secrets/DB_PASSWORD` внутри контейнера - `400`.
+Это самая частая ошибка этого задания: `defaultMode` - числовое поле с POSIX mode bits, и
+Kubernetes YAML поддерживает для него как восьмеричную, так и десятичную запись - в отличие
+от JSON, где допустима только десятичная. Если вы напишете `defaultMode: 400` (без ведущего
+нуля), Kubernetes воспримет это как **десятичное** 400, а не как привычные Unix-права
+`0400`. Правильный способ - либо написать `defaultMode: 0400` (с ведущим нулём, YAML
+распознает восьмеричный литерал), либо явно указать десятичный эквивалент `256`. Проверьте
+себя: `kubectl get pod app-vulnerable -o jsonpath='{.spec.volumes[0].secret.defaultMode}'`
+должен вернуть `256`, а `stat -c '%a' /etc/secrets/DB_PASSWORD` внутри контейнера - `400`.
 </details>
 
 ---

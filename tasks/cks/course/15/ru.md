@@ -22,13 +22,13 @@
 
 ```mermaid
 flowchart TB
-    net["Внешняя сеть"] --> ssh["SSH или другой\nоткрытый сервис"]
+    net["Внешняя сеть"] --> ssh["SSH или другой<br/>открытый сервис"]
     ssh --> user["Обычный пользователь"]
-    user --> weak["Слабый sudo, группа\nили права файла"]
+    user --> weak["Слабый sudo, группа<br/>или права файла"]
     weak --> root["root / захват ноды"]
-    root --> k8s["credentials, runtime\nи Kubernetes"]
-    fw["Firewall + SSH\nallowlist"] -. "блокирует раньше" .-> ssh
-    least["Least privilege\nна хосте"] -. "ограничивает" .-> weak
+    root --> k8s["credentials, runtime<br/>и Kubernetes"]
+    fw["Firewall + SSH<br/>allowlist"] -. "блокирует раньше" .-> ssh
+    least["Least privilege<br/>на хосте"] -. "ограничивает" .-> weak
     style net fill:#db4437,color:#fff
     style ssh fill:#f4b400,color:#000
     style user fill:#326ce5,color:#fff
@@ -318,8 +318,8 @@ sudo nft list ruleset
 
 ```mermaid
 flowchart TB
-    admin["admin VPN\n203.0.113.0/24"] --> ssh["22/tcp: allow"]
-    nodes["cluster CIDR\n10.0.0.0/16"] --> api["6443/tcp: allow"]
+    admin["admin VPN<br/>203.0.113.0/24"] --> ssh["22/tcp: allow"]
+    nodes["cluster CIDR<br/>10.0.0.0/16"] --> api["6443/tcp: allow"]
     internet["прочие источники"] -. "deny" .-> node["Kubernetes-нода"]
     ssh --> node
     api --> node
@@ -540,20 +540,59 @@ ssh -o PreferredAuthentications=publickey,keyboard-interactive \
 
 ## 15.11. Вопросы для самопроверки
 
-1. Почему членство в `docker` или широкое правило `sudo` может быть эквивалентно root?
-2. Какие Kubernetes-файлы на ноде наиболее опасно сделать читаемыми или записываемыми для
-   обычного пользователя?
-3. Почему нельзя рекурсивно применить `chmod 600` ко всему `/etc/kubernetes`?
-4. Какие правила должны быть добавлены до default deny firewall, чтобы не потерять доступ и
-   не сломать кластер?
-5. Чем отличаются области ответственности host firewall, Security Group и NetworkPolicy?
-6. Почему перед отключением password authentication надо открыть вторую SSH-сессию?
-7. Какие команды докажут, что SSH- и firewall-настройки не только записаны, но и работают?
-8. **Flashback (глава 10).** Эта глава про least privilege на уровне **хоста** (Linux
+<details>
+<summary>1. Почему членство в `docker` или широкое правило `sudo` может быть эквивалентно root?</summary>
+
+Член группы `docker` может обратиться к Docker socket и создать контейнер с доступом к host, поэтому это root-equivalent, а не обычная рабочая группа. Правило `user ALL=(ALL) ALL` позволяет выполнить произвольную команду от root. Оба пути обходят ограничения обычного непривилегированного пользователя и требуют такой же осторожности, как выдача root-доступа.
+</details>
+
+<details>
+<summary>2. Какие Kubernetes-файлы на ноде наиболее опасно сделать читаемыми или записываемыми для
+   обычного пользователя?</summary>
+
+Особенно чувствительны private keys в `/etc/kubernetes/pki/*.key` и `/etc/kubernetes/admin.conf`: их чтение может дать CA, client key или cluster-admin credential. Запись в `/etc/kubernetes/manifests/` позволяет подменить static Pod control plane. Также нельзя отдавать непривилегированным пользователям запись в `/var/lib/kubelet/config.yaml` и доступ к kubelet credentials.
+</details>
+
+<details>
+<summary>3. Почему нельзя рекурсивно применить `chmod 600` ко всему `/etc/kubernetes`?</summary>
+
+Каталогам необходим бит `x` для traversal, а отдельные публичные сертификаты и конфигурации могут иметь другой ожидаемый режим. Рекурсивный `chmod -R 600` без учёта назначения способен сломать kubelet или static Pod. Нужно проверять конкретный объект, его владельца, потребителя и путь через `stat` и `namei -l`, а затем менять точечно.
+</details>
+
+<details>
+<summary>4. Какие правила должны быть добавлены до default deny firewall, чтобы не потерять доступ и
+   не сломать кластер?</summary>
+
+До enforcement составляют allowlist по реальной топологии: bastion/VPN для SSH, control plane, worker, etcd peers, load balancer, monitoring, Pod/Service CIDR и протоколы конкретного CNI. В частности, нужны необходимые потоки к `6443`, `10250`, `2379-2380`, health endpoints и NodePort, если они используются. Сохраняют текущую SSH-сессию, открывают вторую и отдельно проверяют forwarding/`ufw route`, IPv4/IPv6 и CNI-трафик.
+</details>
+
+<details>
+<summary>5. Чем отличаются области ответственности host firewall, Security Group и NetworkPolicy?</summary>
+
+Host firewall управляет трафиком самой ноды, Security Group или cloud firewall — сетевой границей инфраструктуры и источниками к endpoint. NetworkPolicy применяется CNI главным образом к Pod-трафику и не заменяет защиту host/control-plane пути во всех топологиях. Контроли дополняют друг друга, поэтому их нельзя считать взаимозаменяемыми.
+</details>
+
+<details>
+<summary>6. Почему перед отключением password authentication надо открыть вторую SSH-сессию?</summary>
+
+Если ключ не установлен, неверны его права, drop-in не включён или `AllowUsers` слишком узок, отключение password authentication может лишить администратора доступа. Вторая независимая сессия и out-of-band console сохраняют путь отката. До закрытия текущей сессии нужно проверить `sshd -t`, фактические значения `sshd -T` и вход разрешённого пользователя ключом.
+</details>
+
+<details>
+<summary>7. Какие команды докажут, что SSH- и firewall-настройки не только записаны, но и работают?</summary>
+
+Синтаксис и итог SSH проверяют `sudo sshd -t` и `sudo sshd -T | grep ...`, затем делают реальный key-only вход из разрешённой сети через `ssh -o BatchMode=yes ...`. Активный firewall проверяют выбранным механизмом: `ufw status verbose`, `iptables -S INPUT` или `nft list ruleset`, а listeners — `sudo ss -lntup`. Из неразрешённого сегмента `nc -vz -w 3 <node> 22` должен дать ожидаемый отказ или timeout.
+</details>
+
+<details>
+<summary>8. **Flashback (глава 10).** Эта глава про least privilege на уровне **хоста** (Linux
    пользователи, группы, доступ к сокетам). Глава 10 - про least privilege на уровне
    **Kubernetes API** (RBAC). Приведите конкретный пример, где узкий RBAC не защищает от
    атаки, реализуемой через избыточный host access (и наоборот) - то есть почему одного из
-   этих двух уровней least privilege никогда не достаточно самого по себе.
+   этих двух уровней least privilege никогда не достаточно самого по себе.</summary>
+
+ServiceAccount может иметь узкую Role только на `get pods`, но пользователь с доступом к containerd/Docker socket или широким `sudo` способен получить root на ноде и обойти эту API-границу. Обратно, строгий host firewall и file modes не остановят Pod с украденным ServiceAccount token, если его RBAC разрешает читать Secret или создавать `pods/exec`. Host и Kubernetes API ограничивают разные пути атаки, поэтому нужны оба слоя.
+</details>
 
 ## Практика
 

@@ -17,7 +17,9 @@ ssh control-plane sudo hostname
 
 `kube-bench` `0.16.0` на worker уже расположен в `/opt/kube-bench`. Скопируйте полный
 каталог, чтобы на узле были и binary, и `cfg`. Kubernetes `1.36` пока отсутствует в
-официальной support table kube-bench; `cis-2.0` официально сопоставлен с `1.34–1.35`.
+официальной support table kube-bench; встроенный version mapping этой версии заканчивается
+записью `"1.34": "cis-1.12"` - более новых профилей (включая какой-либо профиль под 1.35/1.36)
+в `0.16.0` нет вовсе, поэтому используем именно `cis-1.12` как ближайший существующий.
 Поэтому мы запускаем его принудительно как approximate hardening signal, а не как
 authoritative CIS compliance assessment.
 
@@ -28,9 +30,9 @@ ssh control-plane 'sudo rm -rf /opt/kube-bench && sudo mv /tmp/kube-bench /opt/k
 {
   printf 'kubernetes_version=%s\n' "$(kubectl version -o json | jq -r '.serverVersion.gitVersion')"
   printf 'kube_bench_version=%s\n' "$(ssh control-plane 'sudo /opt/kube-bench/kube-bench version' | awk 'NF {print $NF}' | tail -1)"
-  printf 'benchmark=cis-2.0\n'
+  printf 'benchmark=cis-1.12\n'
   printf 'mapping_status=forced-approximate\n'
-  ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-2.0 --targets master,controlplane,node'
+  ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --targets master,controlplane,node'
 } | tee /var/work/tests/artifacts/1/kube-bench.txt
 
 test -s /var/work/tests/artifacts/1/kube-bench.txt
@@ -205,7 +207,7 @@ cat /var/work/tests/artifacts/6/binaries.sha256.txt
 ```bash
 mkdir -p /var/work/tests/artifacts/7
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-2.0 --check 1.1.1' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.1.1' \
   | tee /var/work/tests/artifacts/7/before.txt
 grep -A1 '1.1.1' /var/work/tests/artifacts/7/before.txt
 # [FAIL] 1.1.1 Ensure that the API server pod specification file permissions ...
@@ -227,7 +229,7 @@ ssh control-plane 'sudo stat -c "%a %n" /etc/kubernetes/manifests/kube-apiserver
 Повторный точечный запуск того же check должен показать `PASS`:
 
 ```bash
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-2.0 --check 1.1.1' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.1.1' \
   | tee /var/work/tests/artifacts/7/after.txt
 grep -A1 '1.1.1' /var/work/tests/artifacts/7/after.txt
 # [PASS] 1.1.1 Ensure that the API server pod specification file permissions ...

@@ -23,10 +23,10 @@
 
 ```mermaid
 flowchart TB
-    net["Сеть<br>firewall / Security Group / allowlist"] --> tls["TLS и endpoint<br>доступен только нужным клиентам"]
-    tls --> authn["Authentication<br>кто это?"]
-    authn --> authz["Authorization<br>что ему можно?"]
-    authz --> admission["Admission<br>допустим ли запрос?"]
+    net["Сеть<br/>firewall / Security Group / allowlist"] --> tls["TLS и endpoint<br/>доступен только нужным клиентам"]
+    tls --> authn["Authentication<br/>кто это?"]
+    authn --> authz["Authorization<br/>что ему можно?"]
+    authz --> admission["Admission<br/>допустим ли запрос?"]
     admission --> api["API object / etcd"]
     anon["anonymous request"] -. "--anonymous-auth=false" .-> authn
     style net fill:#326ce5,color:#fff
@@ -89,7 +89,7 @@ sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml \
 # Создать явную health-only authentication configuration вне каталога static Pod-манифестов.
 sudo install -d -m 700 /etc/kubernetes/authentication
 sudo tee /etc/kubernetes/authentication/apiserver-authentication.yaml >/dev/null <<'EOF'
-apiVersion: apiserver.config.k8s.io/v1beta1
+apiVersion: apiserver.config.k8s.io/v1
 kind: AuthenticationConfiguration
 anonymous:
   enabled: true
@@ -250,10 +250,10 @@ sudo grep -n -- '--authorization-mode' /etc/kubernetes/manifests/kube-apiserver.
 
 ```mermaid
 flowchart TB
-    kubelet["kubelet: system:node:worker-1"] --> nodeauth["Node authorizer\nнужен ли запрос ноде?"]
-    nodeauth --> restriction["NodeRestriction admission\nтолько свой Node и свои Pods"]
+    kubelet["kubelet: system:node:worker-1"] --> nodeauth["Node authorizer<br/>нужен ли запрос ноде?"]
+    nodeauth --> restriction["NodeRestriction admission<br/>только свой Node и свои Pods"]
     restriction --> allowed["разрешённое действие"]
-    bad["изменить worker-2 или\nзащитную label"] -. "отклонить" .-> restriction
+    bad["изменить worker-2 или<br/>защитную label"] -. "отклонить" .-> restriction
     style kubelet fill:#326ce5,color:#fff
     style nodeauth fill:#f4b400,color:#000
     style restriction fill:#673ab7,color:#fff
@@ -291,12 +291,12 @@ worker nodes и согласованным automation endpoints.
 
 ```mermaid
 flowchart TB
-    admin["admin VPN / bastion"] --> allowed["allowlist\nTCP 6443"]
+    admin["admin VPN / bastion"] --> allowed["allowlist<br/>TCP 6443"]
     node["worker nodes"] --> allowed
-    cicd["CI/CD runner\nесли нужен"] --> allowed
-    internet["Internet"] -. "deny" .-> api["kube-apiserver\n:6443"]
+    cicd["CI/CD runner<br/>если нужен"] --> allowed
+    internet["Internet"] -. "deny" .-> api["kube-apiserver<br/>:6443"]
     allowed --> api
-    pod["Pod egress"] --> np["NetworkPolicy\nтолько нужные namespaces/pods"]
+    pod["Pod egress"] --> np["NetworkPolicy<br/>только нужные namespaces/pods"]
     np --> api
     style admin fill:#0f9d58,color:#fff
     style node fill:#0f9d58,color:#fff
@@ -550,19 +550,55 @@ bindings и автоматическая проверка конфигураци
 
 ## 12.12. Вопросы для самопроверки
 
-1. В каком порядке запрос проходит сетевой периметр, authn, authz и admission, и что
-   означает `401` в сравнении с `403`?
-2. Почему после `--anonymous-auth=false` всё равно нужно ревьюить bindings для
-   `system:anonymous` и `system:unauthenticated`?
-3. Чем `10255` отличается от `10250` и какие настройки нужны kubelet API?
-4. Почему `AlwaysAllow` нельзя добавлять рядом с `RBAC` как «запасной» mode?
-5. Как NodeRestriction и `ServiceAccountNodeAudienceRestriction` снижают последствия
-   компрометации kubelet credential?
-6. Почему NetworkPolicy не заменяет firewall или Security Group для API server и при каких
-   условиях public endpoint может быть оправдан?
-7. Какие две проверки докажут отдельно сетевую доступность API и отсутствие anonymous
-   авторизации?
-8. **Flashback (глава 32).** Разовый `curl`/`401` из задания 7 этой главы доказывает
+<details>
+<summary>1. В каком порядке запрос проходит сетевой периметр, authn, authz и admission, и что
+   означает `401` в сравнении с `403`?</summary>
+
+Сначала источник должен пройти сетевой периметр и TLS-доступ к endpoint, затем API выполняет authentication, authorization и admission. `401 Unauthorized` означает, что credential не прошёл authentication. `403 Forbidden` означает, что identity уже определена, но authorization или admission отказали в запросе.
+</details>
+
+<details>
+<summary>2. Почему после `--anonymous-auth=false` всё равно нужно ревьюить bindings для
+   `system:anonymous` и `system:unauthenticated`?</summary>
+
+Отключение anonymous auth закрывает текущий обычный путь к этим субъектам, но опасная binding остаётся скрытым избыточным разрешением. При последующем изменении authentication или identity provider она может снова стать доступной без отдельного review. Поэтому ищут subjects `system:anonymous` и группу `system:unauthenticated` в RoleBinding и ClusterRoleBinding и удаляют именно ненужную привязку.
+</details>
+
+<details>
+<summary>3. Чем `10255` отличается от `10250` и какие настройки нужны kubelet API?</summary>
+
+`10255` — исторический read-only неаутентифицированный kubelet API и должен быть выключен `readOnlyPort: 0` либо `--read-only-port=0`. `10250` — нормальный kubelet API, который не открывают всем: для него нужны authentication, `Webhook` authorization и сетевые правила/firewall. Отключение `10255` подтверждают через `ss`, а не только строкой конфигурации.
+</details>
+
+<details>
+<summary>4. Почему `AlwaysAllow` нельзя добавлять рядом с `RBAC` как «запасной» mode?</summary>
+
+Authorizer-цепочка останавливается сразу, когда модуль возвращает Allow или Deny; только NoOpinion передаёт запрос далее. `AlwaysAllow` возвращает Allow для дошедших до него запросов и тем самым обнуляет least privilege для этой части цепочки. Безопасный kubeadm baseline — `Node,RBAC`, а не fallback с разрешением всех.
+</details>
+
+<details>
+<summary>5. Как NodeRestriction и `ServiceAccountNodeAudienceRestriction` снижают последствия
+   компрометации kubelet credential?</summary>
+
+NodeRestriction дополняет Node authorizer: kubelet-identity может работать со своим Node и назначенными ему Pod, но не с чужими объектами или защищёнными label `node-restriction.kubernetes.io/`. При включённом ServiceAccountNodeAudienceRestriction NodeRestriction дополнительно сужает audiences, которые kubelet может запросить через TokenRequest, до используемых Pod на ноде либо явно разрешённых RBAC. Это разные дополнительные ограничения, а не замена RBAC.
+</details>
+
+<details>
+<summary>6. Почему NetworkPolicy не заменяет firewall или Security Group для API server и при каких
+   условиях public endpoint может быть оправдан?</summary>
+
+NetworkPolicy применяется CNI к Pod-трафику и не обязана одинаково покрывать host, внешний и control-plane traffic; также standard policy не выбирает Service назначения по DNS-имени. Firewall и Security Group ограничивают доступ источников к `:6443` на другом уровне. Public endpoint допустим лишь при явном обосновании, строгом CIDR allowlist, сильной authentication и контроле сетевой архитектуры; private endpoint часто предпочтительнее.
+</details>
+
+<details>
+<summary>7. Какие две проверки докажут отдельно сетевую доступность API и отсутствие anonymous
+   авторизации?</summary>
+
+С административной или иной разрешённой машины сетевую доступность и health проверяют `kubectl cluster-info` либо `kubectl get --raw='/livez?verbose'`. Отсутствие anonymous authentication проверяют `curl` к server URL без credential, ожидая API `401`, а также `kubectl auth can-i ... --as=system:anonymous`, ожидая `no`. Timeout или refused диагностируют как сеть, а не как доказательство authn.
+</details>
+
+<details>
+<summary>8. **Flashback (глава 32).** Разовый `curl`/`401` из задания 7 этой главы доказывает
    отсутствие anonymous-доступа только **в момент проверки**. Kubernetes audit log
    фиксирует **API requests** (кто, когда, какой resource, какой verb, какой result) - он
    не является непрерывным монитором состояния файла
@@ -572,7 +608,10 @@ bindings и автоматическая проверка конфигураци
    менялась весь интервал между двумя проверками (например, если flag на короткое время
    включили, но никто не сделал anonymous-запрос именно в этот момент)? Какие
    дополнительные механизмы (periodic checks, file integrity monitoring, GitOps drift
-   detection) нужны для continuous assurance, которую сам audit log не даёт?
+   detection) нужны для continuous assurance, которую сам audit log не даёт?</summary>
+
+Audit log ретроспективно покажет состоявшиеся API requests от anonymous identity: когда они были, к какому resource и verb обращались и каким был result. Отсутствие таких событий не доказывает неизменность `--anonymous-auth`: флаг мог временно включаться, но в это время не было anonymous-запросов. Для continuous assurance нужны периодические configuration checks, file integrity monitoring манифеста и GitOps/drift detection, дополняющие audit API-вызовов.
+</details>
 
 ## Практика
 

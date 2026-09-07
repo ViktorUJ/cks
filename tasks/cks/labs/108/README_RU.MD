@@ -5,7 +5,10 @@
 В этой CKS-лабе вы установите Kyverno и защитите namespace `policy-108` policy-as-code
 правилами. Практика охватывает validating admission: запрет тега `latest`, обязательный
 `runAsNonRoot`, allowlist registry; в последнем, опциональном этапе — mutation Pod при
-admission. Работайте только с объектами и именами, указанными в заданиях.
+admission. Финальное задание сравнивает этот подход с другим механизмом — встроенным
+`ImagePolicyWebhook`, где решение об image принимает внешний HTTP(S)-backend через API
+`ImageReview`, а не CEL-выражение внутри кластера. Работайте только с объектами и именами,
+указанными в заданиях.
 
 ## Проверьте себя перед стартом
 
@@ -120,6 +123,18 @@ check_result
 Этот этап опциональный - если у вас закончилось время, можно его пропустить без риска для остальной лабы. Тестовый Pod для проверки mutation должен уже проходить policies из заданий 2-4 (trusted registry, non-root) - если он сам будет отклонён одной из предыдущих policy, вы не увидите результат mutation вообще.
 </details>
 
+---
+| **6** | **ImagePolicyWebhook: внешний backend вместо CEL policy** |
+| :---: | :--- |
+| Что делаем | На рабочей машине уже подготовлен `/opt/image-policy-backend/server.py` — минимальный HTTP-сервер, реализующий `ImageReview` API (отклоняет image с тегом `:latest` или без тега вовсе). Скопируйте его на `control-plane`, создайте из него ConfigMap `image-policy-backend-src` в namespace `image-policy`, разверните Deployment `image-policy-backend` (образ `python:3.12-slim`, команда `python3 /opt/image-policy/server.py` с этим ConfigMap, смонтированным в `/opt/image-policy`) и Service `image-policy-backend` на порту `8443`. На `control-plane` создайте `/etc/kubernetes/image-policy/admission-config.yaml` (`AdmissionConfiguration`, plugin `ImagePolicyWebhook`, `defaultAllow: false`) и `/etc/kubernetes/image-policy/kubeconfig` (kubeconfig с `server: http://<ClusterIP backend>:8443/imagepolicy` — HTTP допустим только в учебных целях, в production обязателен HTTPS/mTLS, см. главу 26). В static manifest `kube-apiserver.yaml` **добавьте** `ImagePolicyWebhook` к уже существующему списку `--enable-admission-plugins` (не заменяйте список целиком), добавьте `--admission-control-config-file=/etc/kubernetes/image-policy/admission-config.yaml`, включите `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` (тоже путём добавления к существующему значению, если оно уже задано) и смонтируйте директорию конфига через hostPath. После восстановления API создайте Pod `webhook-latest-must-fail` (`nginx:latest`) — должен быть отклонён; затем Pod `webhook-pinned-ok` (`nginx:1.27.3`) — должен быть создан. |
+| Критерии приёмки | `image-policy-backend` Available; kube-apiserver healthy с добавленным (не заменённым) plugin и `--runtime-config`; Pod с `:latest` отклонён именно ImagePolicyWebhook (сообщение admission содержит `image policy webhook backend denied`); Pod с закреплённым тегом создан и Running. |
+
+<details>
+<summary>💡 Подсказка к заданию 6</summary>
+
+`ImagePolicyWebhook` — принципиально другой механизм, чем Kyverno из заданий 1-5: решение принимает внешний HTTP(S)-backend через API `ImageReview`, а не CEL-выражение внутри кластера. Скопируйте готовый `/opt/image-policy-backend/server.py` на `control-plane` (например `scp`/`cat` через SSH) — задание проверяет понимание wiring admission plugin и ImageReview API, а не умение писать HTTP-сервер с нуля. Не заменяйте существующий `--enable-admission-plugins` новым значением целиком — допишите `ImagePolicyWebhook` через запятую к уже включённым plugins (обычно там уже есть `NodeRestriction`), иначе вы рискуете выключить обязательные встроенные admission-контроллеры. Также не забудьте `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` — без явного включения этого API backend не будет вызван вообще, даже если plugin и admission config настроены верно. Namespace `image-policy` не создан заранее — создайте его сами перед Deployment/Service.
+</details>
+
 ## Проверка
 
 На рабочей машине выполните:
@@ -128,10 +143,11 @@ check_result
 check_result
 ```
 
-Проверка содержит Init и пять тестов. Первые четыре обязательны. Пятый тест выполняет
-проверку mutation, но не делает лабораторию неуспешной, если optional policy не создана.
-Все admission-проверки используют `--dry-run=server`, поэтому образы не скачиваются и
-Pod не остаются в namespace.
+Проверка содержит Init и шесть тестов. Первые четыре и шестой обязательны. Пятый тест
+выполняет проверку mutation, но не делает лабораторию неуспешной, если optional policy не
+создана. Задания 2-4 используют `--dry-run=server`, поэтому образы не скачиваются и Pod
+не остаются в namespace; задание 6 проверяет реальный (не dry-run) admission через
+ImagePolicyWebhook, поэтому Pod `webhook-pinned-ok` действительно создаётся.
 
 ## Решение
 

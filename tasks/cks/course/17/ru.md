@@ -599,7 +599,7 @@ flowchart TB
     seccomp -->|"нет"| denied1["EPERM / KILL + audit"]
     seccomp -->|"да"| cap["capabilities: есть CAP_SYS_ADMIN?"]
     cap -->|"нет"| denied2["EPERM"]
-    cap -->|"да"| mac["AppArmor / SELinux:\npolicy допускает mount?"]
+    cap -->|"да"| mac["AppArmor / SELinux:<br/>policy допускает mount?"]
     mac -->|"нет"| denied3["MAC denial + audit"]
     mac -->|"да"| kernel["Ядро выполняет операцию"]
     style app fill:#326ce5,color:#fff
@@ -724,21 +724,59 @@ workflow: measured syscalls, review угрозы, versioned JSON, canary, audit 
 
 ## 17.12. Вопросы для самопроверки
 
-1. Чем seccomp отличается от Linux capabilities и почему один control не заменяет другой?
-2. Почему `RuntimeDefault` лучше `Unconfined` для обычной нагрузки?
-3. Какой путь пишут в `localhostProfile`, если файл находится в
-   `/var/lib/kubelet/seccomp/profiles/audit.json`?
-4. Почему абсолютный path в `localhostProfile` и profile только на одной node приводят к
-   проблемам при rollout?
-5. Что делает `SCMP_ACT_LOG`, и почему это не режим enforce?
-6. Какие данные нужны, чтобы отличить seccomp denial от отсутствующей capability или
-   AppArmor denial?
-7. Что доказывает `Seccomp: 2` в `/proc/1/status`, а чего он не доказывает?
-8. Почему allow-list profile нельзя строить по одному запуску приложения?
-9. **Flashback (глава 20).** Представьте `ValidatingAdmissionPolicy` из главы 20, которая
-   требует `seccompProfile.type` в манифесте. Почему прохождение такой policy на admission
-   всё равно не гарантирует реальную защиту syscall - что именно на уровне node/kubelet
-   должно совпасть с требованием policy, чтобы seccomp filter действительно заработал?
+<details>
+<summary>1. Чем seccomp отличается от Linux capabilities и почему один control не заменяет другой?</summary>
+
+Capabilities определяют, есть ли у процесса специальная привилегия ядра, например `CAP_SYS_ADMIN`; seccomp решает, разрешён ли конкретный syscall. Разрешённый seccomp вызов всё равно проходит обычные проверки capabilities, namespace и LSM, а capability не отменяет seccomp-denial. Поэтому для baseline глава сочетает `drop: ["ALL"]` с `RuntimeDefault`.
+</details>
+
+<details>
+<summary>2. Почему `RuntimeDefault` лучше `Unconfined` для обычной нагрузки?</summary>
+
+`RuntimeDefault` просит runtime применить его штатный seccomp-профиль и создаёт переносимый baseline для обычного workload. `Unconfined` отключает этот слой и допустим лишь как краткое диагностическое исключение с владельцем и сроком. Явное поле в manifest также фиксирует намерение, не полагаясь на node default.
+</details>
+
+<details>
+<summary>3. Какой путь пишут в `localhostProfile`, если файл находится в `/var/lib/kubelet/seccomp/profiles/audit.json`?</summary>
+
+Нужно указать `profiles/audit.json`. Значение всегда относительно seccomp root kubelet, а не является абсолютным путём на filesystem node. При другом `--root-dir` меняется физический root профилей, но относительное правило API сохраняется.
+</details>
+
+<details>
+<summary>4. Почему абсолютный path в `localhostProfile` и profile только на одной node приводят к проблемам при rollout?</summary>
+
+Абсолютный путь не соответствует контракту Kubernetes API: kubelet ожидает путь относительно своего seccomp root. Scheduler не переносит JSON profile между нодами, поэтому Pod, запланированный на node без файла, получит ошибку создания контейнера. Profile, его доставка и placement должны быть согласованной доверенной конфигурацией node pool.
+</details>
+
+<details>
+<summary>5. Что делает `SCMP_ACT_LOG`, и почему это не режим enforce?</summary>
+
+`SCMP_ACT_LOG` разрешает syscall и просит kernel создать audit event; он нужен для короткого контролируемого наблюдения. Он не блокирует вызов, может создавать много шума в логах и не является production-защитой. Для enforce используют, например, `SCMP_ACT_ERRNO` или осознанно выбранный `KILL`.
+</details>
+
+<details>
+<summary>6. Какие данные нужны, чтобы отличить seccomp denial от отсутствующей capability или AppArmor denial?</summary>
+
+Нужны declared Pod/container security context, effective `Seccomp` у нужного контейнера, точный syscall и kernel audit/log. `EPERM` сам по себе недостаточен: его могут вернуть capabilities, AppArmor, SELinux или обычные права. Глава рекомендует также сопоставить node, PID/container ID, время и записи `SECCOMP`.
+</details>
+
+<details>
+<summary>7. Что доказывает `Seccomp: 2` в `/proc/1/status`, а чего он не доказывает?</summary>
+
+`Seccomp: 2` доказывает, что у проверяемого процесса включён filter mode; `0` означает отсутствие фильтра, а `1` — legacy strict mode. Эта цифра не раскрывает имя JSON, содержимое или идентичность effective profile. Для этого связывают manifest precedence, kubelet/runtime configuration, доставку профиля и ожидаемое поведение.
+</details>
+
+<details>
+<summary>8. Почему allow-list profile нельзя строить по одному запуску приложения?</summary>
+
+Один удачный `curl` не охватывает startup, probes, DNS/TLS, периодические задачи, graceful shutdown и error paths. Allow-list требует измеренного и протестированного контракта реального приложения на целевых runtime и архитектуре. Наблюдение и `strace` помогают собрать данные, но observed syscalls нельзя механически превращать в policy без review угрозы.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 20).** Представьте `ValidatingAdmissionPolicy` из главы 20, которая требует `seccompProfile.type` в манифесте. Почему прохождение такой policy на admission всё равно не гарантирует реальную защиту syscall - что именно на уровне node/kubelet должно совпасть с требованием policy, чтобы seccomp filter действительно заработал?</summary>
+
+Admission-policy проверяет лишь YAML до записи объекта и не подтверждает, что node сможет применить профиль. На фактической node должны совпасть поддержка seccomp runtime/kubelet, effective `securityContext` с учётом container override и, для `Localhost`, существование совместимого JSON под kubelet seccomp root. Container также не должен быть `privileged`, потому что Kubernetes запускает его `Unconfined`; результат проверяют через события и `Seccomp: 2` у нужного процесса.
+</details>
 
 ## 17.13. Как это применяют в продакшене
 

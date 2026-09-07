@@ -1,6 +1,40 @@
 #!/bin/bash
 echo " *** worker pc mock-3  "
 
+# --- check_result_timed -----------------------------------------------------
+# Mock03 содержит 22 задания - больше типичного диапазона реального экзамена
+# (15-20 performance-based задач за 2 часа, по официальному LF snapshot). Общий
+# check_result (из shared worker.sh) честно считает все 22 задания и не даёт
+# 100% за выполнение только первых ~20 - это well-known ограничение fidelity.
+#
+# check_result_timed - локальное дополнение именно для этого мока. Раньше оно
+# пыталось вырезать первые N строк из общих result/all и result/ok, но это
+# было логически некорректно: result/ok пишется ТОЛЬКО при успехе теста, поэтому
+# после первого провала все последующие успешные записи сдвигаются на одну
+# позицию вверх - успешная задача 21-22 могла "занять" позицию проваленной
+# задачи 1-20 и дать 100% при реально незакрытом timed-наборе.
+#
+# Правильное решение: tests_timed.bats - отдельный файл, точная копия секции
+# Tasks 1-20 из tests.bats (включая Init), пишущий в СВОИ файлы результатов
+# (result/timed_all, result/timed_ok), не пересекающиеся с обычным result/all
+# и result/ok. Это гарантирует позиционную корректность денумератора и
+# нумератора без вырезания строк, и не запускает acceptance-проверки заданий
+# 21-22 вовсе - то есть их провал/успех физически не может повлиять на timed score.
+cat > /usr/bin/check_result_timed <<'EOF'
+#!/bin/bash
+bats /var/work/tests/tests_timed.bats
+sum_all=0; for v in $(cat /var/work/tests/result/timed_all); do sum_all=$(echo "$sum_all+$v" | bc); done
+sum_ok=0; for v in $(cat /var/work/tests/result/timed_ok); do sum_ok=$(echo "$sum_ok+$v" | bc); done
+result=$(echo "scale=2 ; $sum_ok/$sum_all*100" | bc)
+echo " timed result (tasks 1-20 only, tasks 21-22 not evaluated here) = $result %   ok_points=$sum_ok  all_points=$sum_all  "
+echo " (полный check_result с учётом заданий 21-22 запускается отдельно: check_result)"
+time_left
+EOF
+chmod +x /usr/bin/check_result_timed
+wget -q -O /var/work/tests/tests_timed.bats https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/03/worker/files/tests_timed.bats
+chown ubuntu:ubuntu /var/work/tests/tests_timed.bats
+# -----------------------------------------------------------------------------
+
 mkdir -p /opt/course/9/
 cd /opt/course/9/
 wget https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/03/worker/files/profile

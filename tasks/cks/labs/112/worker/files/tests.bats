@@ -365,22 +365,33 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   set -e
   deny_artifact=/var/work/tests/artifacts/9/admission-deny.txt
   bypass_artifact=/var/work/tests/artifacts/9/falco-bypass-attempt.log
+  observed_artifact=/var/work/tests/artifacts/9/observed-trusted-repo.txt
+  observed_repo=$(tr -d '[:space:]' < "$observed_artifact" 2>/dev/null || true)
   local_rule=$(ssh -o BatchMode=yes control-plane "sudo test -r '$FALCO_RULES' && sudo cat '$FALCO_RULES'" 2>/dev/null || true)
-  bypass_rule_block=$(awk '/rule: CKS112 Runtime Bypass of Admission/,/^- rule:|^$/' <<<"$local_rule" 2>/dev/null || true)
+  bypass_rule_block=$(awk '
+    /rule: CKS112 Runtime Bypass of Admission/ { found=1 }
+    found && /^- rule:/ && !/CKS112 Runtime Bypass of Admission/ { exit }
+    found && /^$/ && NR>1 { exit }
+    found { print }
+  ' <<<"$local_rule" 2>/dev/null || true)
   falco_condition_ok=0
   if [[ "$local_rule" == *'rule: CKS112 Runtime Bypass of Admission'* \
      && "$local_rule" == *'CKS112_CTR_BYPASS'* \
      && "$local_rule" == *'container.image.repository'* \
      && "$bypass_rule_block" != *'startswith'* && "$bypass_rule_block" != *'startsWith'* \
-     && ( "$bypass_rule_block" == *'container.image.repository !='* || "$bypass_rule_block" == *'container.image.repository =='* ) ]]; then
+     && ( "$bypass_rule_block" == *'container.image.repository !='* || "$bypass_rule_block" == *'container.image.repository =='* ) \
+     && -n "$observed_repo" \
+     && "$bypass_rule_block" == *"$observed_repo"* ]]; then
     falco_condition_ok=1
   fi
   if [[ -n "$crd" && "$policy_ok" -eq 1 ]] \
     && [[ "$blocked_absent" -ne 0 ]] \
     && [[ -s "$deny_artifact" ]] && grep -Fq 'CKS112_TRUSTED_REPO_POLICY' "$deny_artifact" \
+    && [[ -s "$observed_artifact" ]] && [[ -n "$observed_repo" ]] \
     && [[ "$falco_condition_ok" -eq 1 ]] \
     && [[ -s "$bypass_artifact" ]] && grep -Fq 'CKS112_CTR_BYPASS' "$bypass_artifact" \
-    && grep -Fq 'busybox-evil' "$bypass_artifact"; then
+    && grep -Fq "${observed_repo}-evil" "$bypass_artifact" \
+    && ! grep -Fq "repo=${observed_repo} " "$bypass_artifact"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -390,14 +401,64 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
       echo "HINT: Pod 'blocked-attempt' (image alpine:3.20) still exists - it should have been denied by the registry policy."
     elif ! grep -Fq 'CKS112_TRUSTED_REPO_POLICY' "$deny_artifact" 2>/dev/null; then
       echo "HINT: admission-deny.txt does not contain the marker 'CKS112_TRUSTED_REPO_POLICY' - the Pod may have been rejected for an unrelated reason, or your policy message text does not match exactly."
+    elif [[ ! -s "$observed_artifact" || -z "$observed_repo" ]]; then
+      echo "HINT: observed-trusted-repo.txt is missing or empty - before writing the Falco condition, run a trusted docker.io/library/busybox container with a temporary observe-rule and save the ACTUAL %container.image.repository value it emits, instead of assuming a literal string. Different containerd/Falco versions may format this field differently (with or without the registry hostname)."
     elif [[ "$falco_condition_ok" -ne 1 ]]; then
-      echo "HINT: falco_rules.local.yaml rule 'CKS112 Runtime Bypass of Admission' must check proc.cmdline for CKS112_CTR_BYPASS AND use an EXACT comparison on container.image.repository (e.g. 'container.image.repository != \"library/busybox\"'), not 'startswith'/prefix matching - a startswith check would fail to catch a repository like 'library/busybox-evil' that merely begins with the allowed string, even though the Kyverno admission policy above correctly rejects it with exact equality. Both controls must use the same comparison semantics to be equivalent security properties."
-    elif ! grep -Fq 'busybox-evil' "$bypass_artifact" 2>/dev/null; then
-      echo "HINT: falco-bypass-attempt.log does not show a detection for the prefix-trap probe (a container tagged 'library/busybox-evil', which starts with the allowed 'library/busybox' string but is not equal to it). This is the specific evidence that proves your Falco condition uses exact comparison rather than startswith - run the extra probe from the solution and append its alert to this log."
+      echo "HINT: falco_rules.local.yaml rule 'CKS112 Runtime Bypass of Admission' must check proc.cmdline for CKS112_CTR_BYPASS AND use an EXACT comparison on container.image.repository against the value you saved in observed-trusted-repo.txt (e.g. 'container.image.repository != \"\$TRUSTED_REPO\"'), not 'startswith'/prefix matching - a startswith check would fail to catch a repository that merely begins with the allowed string, even though the Kyverno admission policy above correctly rejects it with exact equality. Both controls must use the same comparison semantics to be equivalent security properties."
+    elif ! grep -Fq "${observed_repo}-evil" "$bypass_artifact" 2>/dev/null; then
+      echo "HINT: falco-bypass-attempt.log does not show a detection for the prefix-trap probe (a container tagged '<observed-trusted-repo>-evil', which starts with the allowed observed repository string but is not equal to it). This is the specific evidence that proves your Falco condition uses exact comparison rather than startswith - run the extra probe from the solution and append its alert to this log."
+    elif grep -Fq "repo=${observed_repo} " "$bypass_artifact" 2>/dev/null; then
+      echo "HINT: falco-bypass-attempt.log contains an alert for the TRUSTED repository itself (a false positive) - your Falco condition is triggering on the trusted image, not just the untrusted/prefix-trap ones. Check the exact-comparison logic and the observed value you're comparing against."
     else
       echo "HINT: falco-bypass-attempt.log does not show a matching alert for CKS112_CTR_BYPASS - make sure you ran 'ctr run' with a fresh, unique container ID (not reusing one from a previous attempt still running) and that Falco restarted after adding the rule."
     fi
-    echo "crd=${crd:-missing} policy_ok=$policy_ok blocked_absent=$blocked_absent deny_artifact=$deny_artifact rule_present=$([[ "$local_rule" == *'CKS112 Runtime Bypass of Admission'* ]] && echo yes || echo no) bypass_artifact=$bypass_artifact policy_message=$policy_message policy_expr=$policy_expr"
+    echo "crd=${crd:-missing} policy_ok=$policy_ok blocked_absent=$blocked_absent deny_artifact=$deny_artifact rule_present=$([[ "$local_rule" == *'CKS112 Runtime Bypass of Admission'* ]] && echo yes || echo no) bypass_artifact=$bypass_artifact observed_repo=${observed_repo:-missing} policy_message=$policy_message policy_expr=$policy_expr"
+    result=1
+  fi
+  [ "$result" -eq 0 ]
+}
+
+@test "10. A distinct file/device-open Falco condition detects /dev/mem access and mem-scanner is scaled to zero" {
+  echo '1' >> /var/work/tests/result/all
+  local_rule=$(ssh -o BatchMode=yes control-plane "sudo test -r '$FALCO_RULES' && sudo cat '$FALCO_RULES'" 2>/dev/null || true)
+  active=$(ssh -o BatchMode=yes control-plane 'systemctl is-active falco 2>/dev/null' 2>/dev/null || true)
+  artifact=/var/work/tests/artifacts/10/falco-devmem.log
+  scaled_artifact=/var/work/tests/artifacts/10/scaled-down.json
+  journal=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco -b --no-pager -n 2000 | grep -F 'CKS112 Container access to /dev/mem' | tail -1" 2>/dev/null || true)
+  deployment=$(kubectl get deployment mem-scanner -n "$NS" --context "$CTX" -o json 2>/dev/null)
+  replicas=$(jq -r '.spec.replicas // -1' <<<"$deployment" 2>/dev/null)
+  if [[ "$active" == "active" \
+    && "$local_rule" == *'rule: CKS112 Container access to /dev/mem'* \
+    && "$local_rule" == *'evt.type in (open, openat, openat2)'* \
+    && "$local_rule" == *'fd.name = /dev/mem'* \
+    && "$local_rule" == *'container.id != host'* \
+    && "$local_rule" == *'priority: CRITICAL'* \
+    && "$local_rule" == *'container_id=%container.id'* \
+    && "$local_rule" == *'k8s_pod=%k8s.pod.name'* \
+    && "$local_rule" == *'k8s_ns=%k8s.ns.name'* \
+    && -n "$journal" && -s "$artifact" ]] \
+    && grep -Fq 'CKS112 Container access to /dev/mem' "$artifact" \
+    && grep -Fq 'k8s_pod=' "$artifact" \
+    && [[ "$replicas" == "0" ]] \
+    && [[ -s "$scaled_artifact" ]] \
+    && jq -e '.spec.replicas == 0' "$scaled_artifact" >/dev/null 2>&1; then
+    echo '1' >> /var/work/tests/result/ok
+    result=0
+  else
+    if [[ "$local_rule" != *'rule: CKS112 Container access to /dev/mem'* ]]; then
+      echo "HINT: falco_rules.local.yaml is missing rule 'CKS112 Container access to /dev/mem' with condition 'evt.type in (open, openat, openat2) and fd.name = /dev/mem and container.id != host', priority CRITICAL, and output fields container_id=%container.id k8s_pod=%k8s.pod.name k8s_ns=%k8s.ns.name."
+    elif [[ "$local_rule" == *'proc.cmdline'*'/dev/mem'* ]]; then
+      echo "HINT: This task requires a file/device-open condition (evt.type in open/openat/openat2 + fd.name), not a spawned_process/proc.cmdline condition like tasks 3/7/9 - those detect process launch by command line, this one must detect the open() syscall on the device itself."
+    elif [[ -z "$journal" ]]; then
+      echo "HINT: No matching alert found in Falco's journal - after adding the rule, restart Falco and wait for mem-scanner's next periodic /dev/mem open attempt (it loops every ~15s)."
+    elif [[ ! -s "$artifact" || $(grep -Fq 'k8s_pod=' "$artifact"; echo $?) -ne 0 ]]; then
+      echo "HINT: falco-devmem.log is missing, empty, or does not show a k8s_pod= field - copy the real journalctl line for this alert, which must identify the actual Pod via the output fields, not a guessed name."
+    elif [[ "$replicas" != "0" ]]; then
+      echo "HINT: Deployment 'mem-scanner' is not scaled to 0 replicas yet - run 'kubectl scale deployment mem-scanner -n runtime-112 --replicas=0' after you have the Falco evidence saved."
+    else
+      echo "HINT: scaled-down.json is missing or does not show spec.replicas == 0 - save 'kubectl get deployment mem-scanner -n runtime-112 -o json' to this path after scaling down."
+    fi
+    echo "active=$active rule_present=$([[ -n "$local_rule" ]] && echo yes || echo no) replicas=$replicas artifact=$artifact"
     result=1
   fi
   [ "$result" -eq 0 ]

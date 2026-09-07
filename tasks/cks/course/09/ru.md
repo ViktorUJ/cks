@@ -28,12 +28,12 @@ Control plane принимает решения за весь кластер. `k
 
 ```mermaid
 flowchart TB
-    net["Сеть или доступ к ноде"] --> weak["Опасный аргумент\nили слабый TLS"]
+    net["Сеть или доступ к ноде"] --> weak["Опасный аргумент<br/>или слабый TLS"]
     weak --> api["Доступ к API/kubelet/etcd"]
-    file["Подменённый binary\nили image"] --> runtime["Код с правами компонента"]
-    api --> impact["Secrets, workload,\nэскалация прав"]
+    file["Подменённый binary<br/>или image"] --> runtime["Код с правами компонента"]
+    api --> impact["Secrets, workload,<br/>эскалация прав"]
     runtime --> impact
-    harden["Минимальные флаги + TLS\nпроверка подписи и sha256 binary"] --> verify["Проверка здоровья\nи происхождения"]
+    harden["Минимальные флаги + TLS<br/>проверка подписи и sha256 binary"] --> verify["Проверка здоровья<br/>и происхождения"]
     verify --> impact
     style net fill:#db4437,color:#fff
     style weak fill:#f4b400,color:#000
@@ -79,7 +79,7 @@ anonymous access только health endpoints, а не всему API. Напр
 монтирование, может содержать:
 
 ```yaml
-apiVersion: apiserver.config.k8s.io/v1beta1
+apiVersion: apiserver.config.k8s.io/v1
 kind: AuthenticationConfiguration
 anonymous:
   enabled: true
@@ -142,11 +142,11 @@ process arguments. Не задавайте один параметр однов�
 
 ```mermaid
 flowchart TB
-    inspect["Определить активный файл\nи сохранить состояние"] --> edit["Одна минимальная правка"]
-    edit --> reload["kubelet пересоздаёт static Pod\nпо изменению manifest"]
+    inspect["Определить активный файл<br/>и сохранить состояние"] --> edit["Одна минимальная правка"]
+    edit --> reload["kubelet пересоздаёт static Pod<br/>по изменению manifest"]
     reload --> health["Проверить logs, Ready, /readyz"]
     health --> test["Проверить запрет и TLS"]
-    test --> pass["Зафиксировать результат\nили откатить"]
+    test --> pass["Зафиксировать результат<br/>или откатить"]
     style inspect fill:#326ce5,color:#fff
     style edit fill:#f4b400,color:#000
     style reload fill:#673ab7,color:#fff
@@ -513,18 +513,57 @@ kubelet service; сохраните backup вне `/etc/kubernetes/manifests`; �
 
 ## 09.12. Вопросы для самопроверки
 
-1. Почему `--anonymous-auth=true` и RBAC для `system:anonymous` вместе опаснее, чем каждый
-   из этих факторов по отдельности?
-2. Какие источники конфигурации нужно проверить, прежде чем менять параметры kubelet?
-3. Почему нельзя хранить YAML backup внутри `/etc/kubernetes/manifests/`?
-4. Чем `VersionTLS12` у Kubernetes-компонента отличается от возможного `TLS1.2` в CLI
-   etcd и как узнать корректное значение?
-5. Почему ограниченный набор RSA cipher suites может сломать endpoint с ECDSA certificate?
-6. Какими командами вы подтвердите, что TLS 1.1 отвергнут, TLS 1.2 разрешён, а apiserver
-   после изменения здоров?
-7. Почему tag container image не доказывает его содержимое и что доказывает image digest?
-8. Почему SHA-256 подтверждает integrity, но не provenance, и какие certificate identity и
-   OIDC issuer должен проверять `cosign verify-blob` для Kubernetes binary?
+<details>
+<summary>1. Почему `--anonymous-auth=true` и RBAC для `system:anonymous` вместе опаснее, чем каждый
+   из этих факторов по отдельности?</summary>
+
+`--anonymous-auth=true` превращает запрос без credential в субъект `system:anonymous`, но сам по себе ещё не выдаёт ему API-права. Binding для `system:anonymous` или `system:unauthenticated` даёт разрешения, а вместе эти настройки позволяют получить их без сертификата или токена. Поэтому нужно проверять и путь аутентификации, и существующие bindings.
+</details>
+
+<details>
+<summary>2. Какие источники конфигурации нужно проверить, прежде чем менять параметры kubelet?</summary>
+
+Нужно посмотреть `systemctl cat kubelet` и фактические аргументы процесса через `ps`, чтобы установить активный источник. Затем проверяют `/var/lib/kubelet/config.yaml`, `kubeadm-flags.env`, systemd drop-in и, в Kubernetes 1.36, `--config-dir` с применяемыми `*.conf` drop-in. CLI-флаги имеют наивысший приоритет, поэтому один параметр нельзя без необходимости задавать и в YAML, и флагом.
+</details>
+
+<details>
+<summary>3. Почему нельзя хранить YAML backup внутри `/etc/kubernetes/manifests/`?</summary>
+
+Kubelet наблюдает этот каталог и рассматривает YAML-манифесты в нём как static Pod. Резервная копия с YAML-расширением может быть запущена как ещё один control-plane Pod, что создаст конфликт или нарушит работу. Backup следует держать вне watched directory, например в `/root/k8s-manifest-backup`.
+</details>
+
+<details>
+<summary>4. Чем `VersionTLS12` у Kubernetes-компонента отличается от возможного `TLS1.2` в CLI
+   etcd и как узнать корректное значение?</summary>
+
+Kubernetes-компоненты обычно принимают строку `VersionTLS12`, тогда как актуальный etcd может ожидать значение `TLS1.2`. Это интерфейсы разных программ, поэтому переносить значение по догадке нельзя. Перед изменением нужно проверить `etcd --help` запущенной версии либо документацию её пакета.
+</details>
+
+<details>
+<summary>5. Почему ограниченный набор RSA cipher suites может сломать endpoint с ECDSA certificate?</summary>
+
+RSA-only список не содержит suite, совместимый с ключевым алгоритмом ECDSA-сертификата. В результате TLS 1.2 handshake не сможет выбрать общий cipher suite, хотя сам endpoint и сертификат могут быть исправны. При policy-based pinning нужно включать совместимые ECDSA и RSA suites для реально используемых сертификатов и клиентов.
+</details>
+
+<details>
+<summary>6. Какими командами вы подтвердите, что TLS 1.1 отвергнут, TLS 1.2 разрешён, а apiserver
+   после изменения здоров?</summary>
+
+Для API на `6443` запускают `openssl s_client -connect "$API" -servername kubernetes -tls1_2` и проверяют согласованные Protocol, Cipher и Verify return code. Отказ TLS 1.1 проверяют тем же `openssl s_client` с `-tls1_1`, ожидая protocol-version error, alert или handshake failure. Затем состояние apiserver подтверждают `kubectl get --raw='/readyz?verbose'` и `kubectl get nodes`.
+</details>
+
+<details>
+<summary>7. Почему tag container image не доказывает его содержимое и что доказывает image digest?</summary>
+
+Tag является изменяемой ссылкой и может указывать на другие байты после повторной публикации, поэтому он не идентифицирует конкретное содержимое образа. Digest связывает образ с конкретным криптографическим содержимым: полученный образ должен соответствовать этому digest. Проверка подписи, SBOM и admission policy — отдельные supply-chain контроли, а не свойство tag.
+</details>
+
+<details>
+<summary>8. Почему SHA-256 подтверждает integrity, но не provenance, и какие certificate identity и
+   OIDC issuer должен проверять `cosign verify-blob` для Kubernetes binary?</summary>
+
+SHA-256 подтверждает совпадение байтов с выбранным digest, но digest, полученный с тем же недоверенным файлом, не доказывает, кто его выпустил. Для provenance `cosign verify-blob` проверяет подпись и certificate с identity `krel-staging@k8s-releng-prod.iam.gserviceaccount.com` и issuer `https://accounts.google.com`. Оба ограничения нельзя убирать ради успешной проверки.
+</details>
 
 ## Практика
 
@@ -551,7 +590,10 @@ Cluster Setup (главы 04-09) закрепился, а не просто бы
    произойдёт, если у backend Pod при этом нет NetworkPolicy: какой обход стал бы возможен,
    если TLS terminate на Ingress, а трафик от Ingress к Pod внутри кластера не ограничен?
 5. Без подсказки назовите команду, которой вы бы проверили sha256/подпись platform binary
-   на ноде (глава 09), и объясните, почему digest важнее tag.
+   на ноде (глава 09), и объясните, почему привязка к конкретному release-artifact digest
+   надёжнее, чем скачивание по мутируемой version-ссылке типа `latest` (это отдельная модель
+   идентичности от container image tag/digest - здесь речь про release binary с dl.k8s.io,
+   не про container registry).
 
 Если задание 4 вызвало затруднение - вернитесь к главам 04 и 08 вместе, а не по отдельности.
 

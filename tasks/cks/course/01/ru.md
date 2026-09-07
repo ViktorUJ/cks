@@ -4,7 +4,7 @@
 
 > **Что дальше.** CKS проверяет, умеет ли инженер защищать уже работающий Kubernetes-кластер и расследовать последствия компрометации. Это вводная, необязательная часть курса: она задаёт версию Kubernetes, формат подготовки и карту всех шести доменов. Дальше - модель угроз Kubernetes в главе 02, затем практические меры hardening.
 
-> **Что нужно из CKA.** CKS продолжает, а не заменяет CKA. Перед началом повторите [введение в CKA](../../../cka/course/01/ru.md) и [оглавление CKA](../../../cka/course/README_RU.md). Курс предполагает уверенную работу с `kubectl`, YAML-манифестами, pod, Service, Ingress, RBAC, ServiceAccount, TLS, kubeadm и компонентами control plane.
+> **Что нужно из CKA.** CKS продолжает, а не заменяет CKA. Перед началом повторите [введение в CKA](../../../cka/course/01/ru.md) и [оглавление CKA](../../../cka/course/README_RU.md). Курс предполагает уверенную работу с `kubectl`, YAML-манифестами, pod, Service, Ingress, RBAC, ServiceAccount, TLS, kubeadm и компонентами control plane. Если базовые термины и модель угроз cloud native пока не уверены, начните с [курса KCSA](../../../kcsa/course/README_RU.md) - он необязателен формально, но задаёт словарь, на который CKS постоянно опирается.
 
 ## 01.1 Что такое CKS и чем он отличается от CKA и KCSA
 
@@ -18,11 +18,13 @@
 
 CKA даёт операционную базу: как устроены API server, kubelet, CNI, RBAC и static Pod. CKS использует эти знания в security-сценарии. Например, CKA учит создать `NetworkPolicy`, а CKS - начать с default-deny, не сломать DNS, ограничить metadata endpoint и доказать тестом, что запрещённый трафик не проходит.
 
+KCSA (Kubernetes and Cloud Native Security Associate) - отдельный, необязательный для CKS курс: [`tasks/kcsa`](../../../kcsa/course/README_RU.md). Он даёт concept-level понимание модели угроз cloud native (4C, supply chain, admission control, observability) без hands-on части - формат KCSA - multiple choice, а не performance-based задачи. Если словарь из таблицы выше (threat model, admission control, RBAC как термины, а не команды) пока нужно проверять по определению, пройдите KCSA перед CKS; если вы уже свободно ориентируетесь в этих понятиях, KCSA можно пропустить и двигаться прямо к CKA → CKS.
+
 ```mermaid
 flowchart TB
-    ksca["KCSA<br>термины и риски"] --> cka["CKA<br>администрирование кластера"]
-    cka --> cks["CKS<br>защита и расследование"]
-    cks --> result["Безопасная конфигурация<br>и проверяемый результат"]
+    ksca["KCSA<br/>термины и риски"] --> cka["CKA<br/>администрирование<br/>кластера"]
+    cka --> cks["CKS<br/>защита и расследование"]
+    cks --> result["Безопасная конфигурация<br/>и проверяемый результат"]
     style ksca fill:#f4b400,color:#000
     style cka fill:#326ce5,color:#fff
     style cks fill:#db4437,color:#fff
@@ -39,7 +41,7 @@ flowchart TB
 
 Версии Kubernetes нужно различать:
 
-- **Версия обучения и core labs `101-112` этого курса - `v1.36`** (`k8_version = "1.36.0"` в их лабораторных окружениях): на ней проверяются Kubernetes-native команды, флаги и API-поведение курса; compatibility third-party компонентов необходимо сверять с их собственной support matrix. Legacy labs `01-30` сохраняют отдельные исторические exam-pattern стенды на Kubernetes `v1.28-v1.34` и не входят в единый v1.36 compatibility baseline.
+- **Версия обучения и core labs `101-113` этого курса - `v1.36`** (`k8_version = "1.36.0"` в их лабораторных окружениях): на ней проверяются Kubernetes-native команды, флаги и API-поведение курса; compatibility third-party компонентов необходимо сверять с их собственной support matrix. Исключение по конструкции - лаба `113`: её кластер стартует на `v1.35.x`, потому что тема задания - сам процесс minor upgrade до `v1.36.x`.
 - **Версию экзаменационной среды задаёт Linux Foundation, и она может отставать от версии курса.** Основная страница [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) указывает Kubernetes **v1.35**, однако Important Instructions и FAQ обновляются независимо и могут временно показывать другую версию. Для конкретной попытки приоритет имеют ExamUI и инструкции назначенного экзамена. Опубликованный CNCF curriculum overview по имени файла остаётся [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), но это не отменяет параметров, указанных Linux Foundation для попытки. Поэтому **не считайте `v1.36` версией экзамена**.
 
 Страницы CKS и FAQ обновляются независимо и могут временно расходиться. Непосредственно перед попыткой подтвердите версию Kubernetes, количество и формат задач, проходной балл, пререквизит и разрешённые ресурсы сначала на основной странице [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/), затем в ExamUI для назначенной попытки. Не полагайтесь на версию или правила, зафиксированные в курсе, как на постоянные.
@@ -85,11 +87,11 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    setup["Cluster Setup<br>15%"] --> hardening["Cluster Hardening<br>15%"]
-    hardening --> system["System Hardening<br>10%"]
-    system --> workload["Microservice<br>20%"]
-    workload --> supply["Supply Chain<br>20%"]
-    supply --> runtime["Monitoring, Logging<br>and Runtime<br>20%"]
+    setup["Cluster Setup<br/>15%"] --> hardening["Cluster Hardening<br/>15%"]
+    hardening --> system["System Hardening<br/>10%"]
+    system --> workload["Microservice<br/>20%"]
+    workload --> supply["Supply Chain<br/>20%"]
+    supply --> runtime["Monitoring, Logging<br/>and Runtime<br/>20%"]
     style setup fill:#326ce5,color:#fff
     style hardening fill:#db4437,color:#fff
     style system fill:#f4b400,color:#000
@@ -107,7 +109,7 @@ flowchart TB
 - `kube-linter` наряду с `kubesec` и `hadolint`.
 - Sandboxed containers через `RuntimeClass`: gVisor (`runsc`) и Kata Containers.
 
-Полная карта «компетенция -> глава» находится в [путеводителе CKS](../CKS_RU.md). Здесь важно увидеть логику: policy ограничивают доступ, hardening уменьшает поверхность атаки, supply chain не допускает ненадёжный артефакт, а runtime-защита и audit помогают заметить оставшийся риск.
+Полная карта «компетенция -> глава» находится в [оглавлении курса](../README_RU.md#компетенция--глава). Здесь важно увидеть логику: policy ограничивают доступ, hardening уменьшает поверхность атаки, supply chain не допускает ненадёжный артефакт, а runtime-защита и audit помогают заметить оставшийся риск.
 
 ## 01.4 Пререквизит CKA: что не повторяет этот курс
 
@@ -148,12 +150,12 @@ CKS не повторяет базовый синтаксис и устройс�
 
 ```mermaid
 flowchart TB
-    intro["01-03<br>контекст и модель угроз"] --> setup["04-09<br>Cluster Setup"]
-    setup --> hardening["10-17<br>cluster и system hardening"]
-    hardening --> workload["18-23<br>защита workload и сети"]
-    workload --> supply["24-28<br>supply chain"]
-    supply --> detect["29-32<br>runtime detection и audit"]
-    detect --> exam["33<br>экзаменационная тактика"]
+    intro["01-03<br/>контекст и<br/>модель угроз"] --> setup["04-09<br/>Cluster Setup"]
+    setup --> hardening["10-17<br/>cluster и system<br/>hardening"]
+    hardening --> workload["18-23<br/>защита workload<br/>и сети"]
+    workload --> supply["24-28<br/>supply chain"]
+    supply --> detect["29-32<br/>runtime detection<br/>и audit"]
+    detect --> exam["33<br/>экзаменационная<br/>тактика"]
     style intro fill:#326ce5,color:#fff
     style setup fill:#326ce5,color:#fff
     style hardening fill:#db4437,color:#fff
@@ -194,7 +196,7 @@ flowchart TB
 ## 01.9 Итоги главы
 
 - CKS продолжает CKA и проверяет практическую защиту кластера, workloads, нод и supply chain.
-- Целевая версия курса и core labs `101-112` - Kubernetes v1.36; legacy labs `01-30` остаются на v1.28-v1.34 и не входят в этот baseline.
+- Целевая версия курса и core labs `101-113` - Kubernetes v1.36 (лаба `113` стартует на v1.35.x, так как её тема - сам upgrade до v1.36.x).
 - Экзамен требует уверенной работы в терминале, с несколькими кластерами и конфигурацией нод.
 - Шесть доменов охватывают настройку кластера, hardening, workload, supply chain и runtime-защиту.
 - Новые акценты программы 2024 - Cilium, CIS, SBOM, KubeLinter и sandboxed containers.
@@ -208,17 +210,51 @@ flowchart TB
 
 ## 01.11 Вопросы для самопроверки
 
-1. Почему CKS нельзя готовить без уверенного уровня CKA?
-2. Чем performance-based экзамен отличается от теста с вариантами ответа?
-3. Какая версия Kubernetes зафиксирована в этом курсе и лабораторных работах?
-4. Какие шесть доменов CKS и какие из них имеют наибольший вес?
-5. Какие темы добавлены или усилены программой 2024?
-6. Когда использовать `kube-bench`, `trivy`, `kube-linter` и Falco?
-7. Почему для security-настройки недостаточно только применить manifest?
+<details>
+<summary>1. Почему CKS нельзя готовить без уверенного уровня CKA?</summary>
+
+CKS продолжает CKA и предполагает уверенную работу с `kubectl`, YAML-манифестами, Pod, Service, Ingress, RBAC, TLS, kubeadm и control plane. На CKS базовые механизмы используются в сценарии защиты: например, нужно не просто создать `NetworkPolicy`, а начать с default-deny, сохранить DNS и доказать отрицательным тестом, что запрещённый поток не проходит.
+</details>
+
+<details>
+<summary>2. Чем performance-based экзамен отличается от теста с вариантами ответа?</summary>
+
+В performance-based формате задачу выполняют в терминале на предоставленных кластерах и нодах, а не выбирают готовый ответ. Нужно определить нужный host или context, внести минимальную правку и проверить фактическое состояние; при назначении отдельного host работа начинается с `ssh <host>` с машины `base`.
+</details>
+
+<details>
+<summary>3. Какая версия Kubernetes зафиксирована в этом курсе и лабораторных работах?</summary>
+
+Для обучения и core labs `101-113` зафиксирована Kubernetes `v1.36` (`k8_version = "1.36.0"`). Версию экзамена задаёт Linux Foundation, и её нельзя автоматически выводить из версии курса.
+</details>
+
+<details>
+<summary>4. Какие шесть доменов CKS и какие из них имеют наибольший вес?</summary>
+
+Домены: Cluster Setup, Cluster Hardening, System Hardening, Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security. По 20% имеют Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security; Cluster Setup и Cluster Hardening имеют по 15%, System Hardening — 10%.
+</details>
+
+<details>
+<summary>5. Какие темы добавлены или усилены программой 2024?</summary>
+
+Отдельной практики требуют `CiliumNetworkPolicy` с L3/L4/L7, DNS-aware policy и Hubble, а также Cilium encryption/mutual authentication и Istio mTLS. В программе также выделены CIS/kube-bench, SBOM через SPDX/CycloneDX и `syft`/`bom`, `kube-linter`, `kubesec`, `hadolint` и sandboxed containers через RuntimeClass с gVisor или Kata.
+</details>
+
+<details>
+<summary>6. Когда использовать `kube-bench`, `trivy`, `kube-linter` и Falco?</summary>
+
+`kube-bench` сверяет конфигурацию нод и компонентов с CIS Benchmark, а `trivy` ищет CVE в image, filesystem, config и SBOM. `kube-linter` статически анализирует Kubernetes-манифесты до deploy, тогда как Falco наблюдает подозрительные runtime-события через syscall/eBPF.
+</details>
+
+<details>
+<summary>7. Почему для security-настройки недостаточно только применить manifest?</summary>
+
+Наличие манифеста не доказывает работу защиты: CNI может не применять `NetworkPolicy`, старые Secret могут не быть перешифрованы после `EncryptionConfiguration`, а правило Falco может не быть загружено. После каждого изменения нужно проверять именно требуемый результат — например, отклонение forbidden Pod, недоступность закрытого порта или отсутствие запрещённого сетевого потока.
+</details>
 
 ## Практика
 
-Для вводной главы отдельной лабораторной работы нет. Начните с [каталога лабораторных работ CKS](../../labs): лаба 101 отрабатывает default-deny `NetworkPolicy`, DNS egress и защиту metadata endpoint. После неё переходите к главе 02, чтобы связывать каждую защиту с моделью угроз.
+Для вводной главы отдельной лабораторной работы нет - она задаёт формат курса, а не технический навык. Прямо сейчас переходите к [главе 02](../02/ru.md): она даёт модель угроз, без которой рано браться за конкретные защиты. Первая лаба курса - [лаба 101](../../labs/101/README_RU.MD) (default-deny `NetworkPolicy`, DNS egress и защита metadata endpoint) - станет доступна по смыслу только после глав 04-05, где разбирается сам механизм NetworkPolicy; выполнять её раньше не даст того эффекта, ради которого лабы вообще существуют в этом курсе (Level 2 - "понять механизм", а не угадать команду).
 
 ---
 [Оглавление](../README_RU.md) · [Глава 02](../02/ru.md)

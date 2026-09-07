@@ -30,9 +30,17 @@ scanning. Даже если рабочая конфигурация уже не 
 тегом можно подставить другой, вредоносный image. Именно поэтому digest pinning важен в
 заданиях 3–5: он фиксирует конкретное содержимое образа, а не только его имя и тег.
 
-Проверка подписи в задании 7 доказывает provenance, тогда как Trivy scan в задании 1
-доказывает отсутствие известных уязвимостей. Это разные оси защиты: ни одна из них не
-заменяет другую, поскольку vulnerability != provenance.
+Проверка подписи в задании 7 доказывает, что конкретный digest подписан доверенным
+key/identity (signature integrity), тогда как Trivy scan в задании 1 не обнаруживает
+известных уязвимостей, попадающих в его detection coverage при текущей vulnerability DB
+(сам Trivy документирует trade-off в пользу precision, при котором возможны false
+negatives - "0 findings" не равно formal proof отсутствия уязвимостей). Это разные оси
+защиты: ни одна из них не заменяет другую, поскольку vulnerability != signature. Подпись -
+это НЕ то же самое, что provenance/attestation
+(например SLSA-style build metadata о том, из чего и как собран artifact): `cosign
+verify` подтверждает подлинность подписи, а не полную историю сборки - для attestation
+Sigstore предоставляет отдельные команды `cosign attest`/`cosign verify-attestation`, не
+задействованные в этой лабе.
 
 Локальная `cosign verify` (задание 7) сама по себе не является enforcement: она доказывает
 подпись конкретного image reference на момент проверки, но не мешает кому-то запустить
@@ -60,7 +68,7 @@ SBOM решает задачу инвентаризации КОМПОНЕНТО
 <details>
 <summary>2. В чём разница между тем, что доказывает Trivy scan (задание 1), и тем, что доказывает подпись Cosign (задание 9a-9c)?</summary>
 
-Trivy scan доказывает ОТСУТСТВИЕ ИЗВЕСТНЫХ УЯЗВИМОСТЕЙ на момент проверки - это про качество/безопасность содержимого образа. Подпись Cosign доказывает PROVENANCE - что образ был подписан конкретным доверенным ключом/identity, то есть кто-то авторизованный подтвердил, что это именно тот artifact, который должен быть развёрнут. Образ может быть полностью безопасен (0 CVE) и при этом не подписан - или подписан, но содержать неизвестную уязвимость. Это две независимые оси защиты.
+На момент проверки, при текущей vulnerability DB и логике детектирования Trivy, скан НЕ ОБНАРУЖИЛ известных уязвимостей, попадающих в его detection coverage - это про качество/безопасность содержимого образа в той мере, в которой Trivy способен его увидеть. Сама документация Trivy прямо описывает trade-off в пользу precision (минимизация false positives), при котором возможны false negatives - то есть "0 findings" не эквивалентно формальному доказательству полного отсутствия уязвимостей. Подпись Cosign доказывает SIGNATURE INTEGRITY - что конкретный digest подписан доверенным ключом/identity, то есть кто-то авторизованный подтвердил, что это именно тот artifact, который должен быть развёрнут. Это НЕ то же самое, что provenance/attestation (полная история сборки - из чего, кем и как собран artifact): для attestation в Sigstore есть отдельные команды (`cosign attest`/`cosign verify-attestation`), не используемые в этой лабе. Образ может быть полностью безопасен (0 CVE) и при этом не подписан - или подписан, но содержать неизвестную уязвимость. Это две независимые оси защиты.
 </details>
 
 <details>
@@ -220,7 +228,7 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 | **9a** | **Kyverno: установить и создать `ImageValidatingPolicy` на trusted signature** |
 | :---: | :--- |
 | Что делаем | Установите Kyverno через `install-kyverno` и дождитесь готовности `admission controller`. Сгенерируйте локальную пару ключей `cosign generate-key-pair` (учебная пара, не production key). Подпишите **собственный** hardened image из задания 4 (`$HARDENED_IMAGE`, не upstream nginx) вашим private key и сохраните вывод `cosign sign` в `9a/cosign-sign.txt`. Создайте `ImageValidatingPolicy` `require-signed-catalog-images`, которая проверяет `verifyImageSignatures` вашим public key для всех Pod с image в repository вашего `$HARDENED_IMAGE`, и **отклоняет** (`validationActions: [Deny]`) unsigned/невалидно подписанные образы. |
-| Критерии приёмки | Kyverno установлен и его admission controller `Available`; `9a/cosign-sign.txt` содержит успешный вывод подписи именно `$HARDENED_IMAGE`; применённая `ImageValidatingPolicy require-signed-catalog-images` существует, имеет `apiVersion: policies.kyverno.io/v1`, `validationActions: [Deny]` и ссылается на созданный public key. |
+| Критерии приёмки | Kyverno установлен и его admission controller `Available`; `9a/cosign-sign.txt` содержит успешный вывод подписи именно `$HARDENED_IMAGE`; реальная команда `cosign verify --key cosign.pub "$HARDENED_IMAGE"` завершается успешно; применённая `ImageValidatingPolicy require-signed-catalog-images` существует, имеет `apiVersion: policies.kyverno.io/v1`, `validationActions: [Deny]`, public key и `verifyImageSignatures`, а её `matchImageReferences` ограничены именно `$HARDENED_REPO:*` и `$HARDENED_REPO@*`, а не небезопасным префиксом `$HARDENED_REPO*`. |
 
 <details>
 <summary>💡 Подсказка к заданию 9a</summary>
@@ -232,7 +240,7 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 | **9b** | **Fresh signed ALLOW: новый Pod после создания policy** |
 | :---: | :--- |
 | Что делаем | Policy из задания 9a должна допустить подписанный `$HARDENED_IMAGE` - но повторный `kubectl apply` уже существующего Deployment **не доказывает** это: если template не изменился, новый ReplicaSet/Pod может не создаться, и `Running` окажется просто старым Pod, созданным до policy. Создайте **новый**, ранее не существовавший объект: `kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" --restart=Never --command -- sleep 300`. Сохраните `creationTimestamp` этого Pod, `creationTimestamp` policy из 9a, и итоговый `status.phase`/`Ready` condition в `9b/signed-admission-check.json`. |
-| Критерии приёмки | Pod `signed-admission-check` существует, использует именно `$HARDENED_IMAGE`, `status.phase` не `Failed`, а `Ready` условие достигает `True`; `9b/signed-admission-check.json` содержит `creationTimestamp` Pod **позже**, чем `creationTimestamp` `ImageValidatingPolicy require-signed-catalog-images` - это единственное, что доказывает fresh post-policy admission, а не переживший policy старый Pod. |
+| Критерии приёмки | Pod `signed-admission-check` существует, использует именно `$HARDENED_IMAGE`, для него успешно выполняется `cosign verify --key cosign.pub "$HARDENED_IMAGE"`, `status.phase` не `Failed`, а `Ready` условие достигает `True`; `9b/signed-admission-check.json` содержит этот image и `creationTimestamp` Pod **позже**, чем `creationTimestamp` `ImageValidatingPolicy require-signed-catalog-images` - это доказывает fresh post-policy admission именно верифицируемо подписанного image, а не переживший policy старый Pod. |
 
 <details>
 <summary>💡 Подсказка к заданию 9b</summary>

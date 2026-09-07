@@ -22,11 +22,11 @@
 
 ```mermaid
 flowchart TB
-    attacker["Атакующий получает доступ<br>к поду или ноде"] --> weak["Небезопасный флаг,<br>открытый kubelet или читаемый ключ"]
-    weak --> impact["Доступ к API, данным etcd<br>или эскалация привилегий"]
-    cis["CIS Benchmark"] --> bench["kube-bench<br>PASS / WARN / FAIL"]
-    bench --> fix["Исправить конфигурацию<br>и права файлов"]
-    fix --> verify["Повторить проверку<br>и проверить здоровье кластера"]
+    attacker["Атакующий получает доступ<br/>к поду или ноде"] --> weak["Небезопасный флаг,<br/>открытый kubelet или читаемый ключ"]
+    weak --> impact["Доступ к API, данным etcd<br/>или эскалация привилегий"]
+    cis["CIS Benchmark"] --> bench["kube-bench<br/>PASS / WARN / FAIL"]
+    bench --> fix["Исправить конфигурацию<br/>и права файлов"]
+    fix --> verify["Повторить проверку<br/>и проверить здоровье кластера"]
     style attacker fill:#db4437,color:#fff
     style weak fill:#f4b400,color:#000
     style cis fill:#326ce5,color:#fff
@@ -554,11 +554,11 @@ check ID из отчёта; (2) сделайте резервную копию �
 
 ```mermaid
 flowchart TB
-    report["kube-bench: FAIL/WARN"] --> locate["Определить файл, флаг<br>и владельца процесса"]
-    locate --> change["Минимальная правка<br>+ резервная копия"]
-    change --> health["Component Ready?<br>kubelet/etcd/API healthy?"]
+    report["kube-bench: FAIL/WARN"] --> locate["Определить файл, флаг<br/>и владельца процесса"]
+    locate --> change["Минимальная правка<br/>+ резервная копия"]
+    change --> health["Component Ready?<br/>kubelet/etcd/API healthy?"]
     health --> rerun["Повторить тот же target"]
-    rerun --> pass["PASS или обоснованное<br>исключение"]
+    rerun --> pass["PASS или обоснованное<br/>исключение"]
     style report fill:#db4437,color:#fff
     style change fill:#f4b400,color:#000
     style health fill:#326ce5,color:#fff
@@ -661,16 +661,47 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 
 ## 07.13. Вопросы для самопроверки
 
-1. Чем `WARN` в отчёте `kube-bench` отличается от `FAIL` и почему их нельзя исправлять
-   одинаково?
-2. Почему для исправления static Pod недостаточно только изменить файл и не проверить
-   новый контейнер?
-3. На каких трёх компонентах control plane нужен `--profiling=false`?
-4. Какие четыре настройки kubelet из этой главы закрывают его API и защищают sysctl
-   baseline?
-5. Почему перед `chown -R /var/lib/etcd` нужно узнать пользователя процесса etcd?
-6. Какие права уместны для TLS private key и почему сертификат можно читать шире?
-7. Какими командами вы докажете, что после исправления API, etcd и kubelet здоровы?
+<details>
+<summary>1. Чем `WARN` в отчёте `kube-bench` отличается от `FAIL` и почему их нельзя исправлять одинаково?</summary>
+
+`FAIL` означает, что инструмент обнаружил нарушение своего правила, а `WARN` обычно говорит, что состояние нельзя определить однозначно или нужно ручное решение. Для `WARN` читают текст рекомендации, подтверждают применимость к managed control plane, CNI или архитектуре и затем документируют исключение либо исправляют его, а не меняют все пункты механически.
+</details>
+
+<details>
+<summary>2. Почему для исправления static Pod недостаточно только изменить файл и не проверить новый контейнер?</summary>
+
+Kubelet должен заметить изменение манифеста и пересоздать static Pod, но YAML-ошибка или неподдерживаемый флаг могут оставить control plane недоступным. После правки проверяют новый контейнер через `crictl ps`, доступность API через `kubectl get --raw='/readyz?verbose'` и targeted rerun затронутого check.
+</details>
+
+<details>
+<summary>3. На каких трёх компонентах control plane нужен `--profiling=false`?</summary>
+
+Флаг нужен на `kube-apiserver`, `kube-controller-manager` и `kube-scheduler`. Нельзя ограничиться apiserver: CIS проверяет profiling endpoints всех трёх компонентов, а отключение profiling не тождественно отключению метрик.
+</details>
+
+<details>
+<summary>4. Какие четыре настройки kubelet из этой главы закрывают его API и защищают sysctl baseline?</summary>
+
+Это `--read-only-port=0`, `--anonymous-auth=false`, `--authorization-mode=Webhook` и `--protect-kernel-defaults=true` либо эквивалентные поля `config.yaml`. Перед включением `protectKernelDefaults` проверяют sysctl: при несоответствии baseline kubelet может не запуститься.
+</details>
+
+<details>
+<summary>5. Почему перед `chown -R /var/lib/etcd` нужно узнать пользователя процесса etcd?</summary>
+
+В kubeadm static Pod etcd может работать от `root`, а в отдельной systemd-инсталляции — от пользователя `etcd`. Шаблонная смена владельца способна лишить реальный процесс доступа к data directory и не дать etcd стартовать, поэтому сначала проверяют `crictl ps` и `ps`.
+</details>
+
+<details>
+<summary>6. Какие права уместны для TLS private key и почему сертификат можно читать шире?</summary>
+
+Для private key применяют владельца `root:root` и режим `0600`, так как он является секретной частью TLS-идентичности. Сертификат не содержит private key, поэтому в приведённом baseline для него допустимы `root:root` и `0644`; фактические пути и требования процесса всё равно проверяют до изменения.
+</details>
+
+<details>
+<summary>7. Какими командами вы докажете, что после исправления API, etcd и kubelet здоровы?</summary>
+
+Для API и объектов используют `kubectl get --raw='/readyz?verbose'`, `kubectl get nodes` и `kubectl get --all-namespaces pods`. Static Pod и etcd проверяют `kubectl -n kube-system get pods -o wide` и `sudo crictl ps`, kubelet — `sudo systemctl status kubelet` и `journalctl -u kubelet`; затем повторяют нужный target или check `kube-bench`.
+</details>
 
 ## Практика
 

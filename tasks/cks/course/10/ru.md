@@ -33,10 +33,10 @@ namespace превращается в компрометацию кластер�
 
 ```mermaid
 flowchart TB
-    token["Скомпрометированный<br>токен ServiceAccount"] --> broad["Широкая ClusterRole<br>* / cluster-admin"]
-    broad --> cluster["Secrets, workloads и RBAC<br>во всём кластере"]
-    token --> narrow["Role: get/list pods<br>только в namespace app"]
-    narrow --> limited["Нельзя читать Secret,<br>exec или менять RBAC"]
+    token["Скомпрометированный<br/>токен ServiceAccount"] --> broad["Широкая ClusterRole<br/>* / cluster-admin"]
+    broad --> cluster["Secrets, workloads и RBAC<br/>во всём кластере"]
+    token --> narrow["Role: get/list pods<br/>только в namespace app"]
+    narrow --> limited["Нельзя читать Secret,<br/>exec или менять RBAC"]
     style token fill:#db4437,color:#fff
     style broad fill:#c0392b,color:#fff
     style cluster fill:#c0392b,color:#fff
@@ -322,10 +322,10 @@ namespaced, поэтому `Role` ограничивает их namespace. `node
 ```mermaid
 flowchart TB
     need["Нужна операция API"] --> scope{"Ресурс namespaced?"}
-    scope -->|"да"| role["Role с точными<br>apiGroups/resources/verbs"]
+    scope -->|"да"| role["Role с точными<br/>apiGroups/resources/verbs"]
     role --> rb["RoleBinding в нужном namespace"]
-    scope -->|"нет"| cr["ClusterRole<br>только для cluster-scoped ресурса"]
-    cr --> review["Отдельное ревью<br>ClusterRoleBinding"]
+    scope -->|"нет"| cr["ClusterRole<br/>только для cluster-scoped ресурса"]
+    cr --> review["Отдельное ревью<br/>ClusterRoleBinding"]
     style need fill:#326ce5,color:#fff
     style role fill:#0f9d58,color:#fff
     style rb fill:#0f9d58,color:#fff
@@ -540,21 +540,65 @@ workload.
 
 ## 10.11. Вопросы для самопроверки
 
-1. Почему более узкая Role не может отменить разрешение, выданное другой привязкой?
-2. Какие две проверки `can-i` докажут, что `app-sa` может читать Pod, но не удалять их?
-3. Почему `get`/`list` Secret опаснее чтения большинства обычных ресурсов?
-4. Чем `bind` отличается от `escalate` и как каждый из них может привести к эскалации?
-5. Почему `create pods/exec` и `create pods/portforward` нужно ревьюить отдельно от
-   обычного доступа к `pods`?
-6. Почему `resourceNames` не ограничивает `create` и `deletecollection` верхнеуровневого
-   ресурса, но может применяться к именованному subresource, например `pods/exec`?
-7. Почему `get nodes/proxy` не является read-only правом и кому его допустимо выдавать?
-8. Как label `rbac.authorization.k8s.io/aggregate-to-view=true` меняет effective access и
-   почему wildcard в агрегированной роли особенно рискован?
-9. **Flashback (глава 04).** `NetworkPolicy` из главы 04 - allow-list: сначала default-deny,
+<details>
+<summary>1. Почему более узкая Role не может отменить разрешение, выданное другой привязкой?</summary>
+
+RBAC в Kubernetes аддитивен: разрешение действует, если его предоставляет хотя бы один RoleBinding или ClusterRoleBinding. В модели allow-only нет deny-правила, которым можно перекрыть уже выданный доступ. Чтобы убрать лишнее разрешение, нужно найти и удалить либо сузить именно выдающую его привязку.
+</details>
+
+<details>
+<summary>2. Какие две проверки `can-i` докажут, что `app-sa` может читать Pod, но не удалять их?</summary>
+
+Для разрешённого действия выполняют `kubectl auth can-i get pods -n cks-104 --as=system:serviceaccount:cks-104:app-sa` и ожидают `yes`. Для запрета выполняют `kubectl auth can-i delete pods -n cks-104 --as=system:serviceaccount:cks-104:app-sa` и ожидают `no`. Такая пара проверяет фактическое решение API server, а не только YAML роли.
+</details>
+
+<details>
+<summary>3. Почему `get`/`list` Secret опаснее чтения большинства обычных ресурсов?</summary>
+
+Secret часто содержит пароль, registry credential, ключ или bearer token, поэтому чтение раскрывает не только topology или статус, а готовые учётные данные. `list` и `watch` могут раскрыть значения многих Secret сразу. Если нужен один известный Secret, глава рекомендует точечный `get` с `resourceNames`, либо отсутствие API-доступа у приложения.
+</details>
+
+<details>
+<summary>4. Чем `bind` отличается от `escalate` и как каждый из них может привести к эскалации?</summary>
+
+`escalate` на Role или ClusterRole позволяет создать либо изменить роль с правами шире собственных. `bind` позволяет привязать роль, которой субъект сам не обладает, и передать её себе или другому субъекту. Оба права поэтому выдаются лишь узкой контролируемой автоматизации, но меняют разные шаги: содержание роли и её назначение.
+</details>
+
+<details>
+<summary>5. Почему `create pods/exec` и `create pods/portforward` нужно ревьюить отдельно от
+   обычного доступа к `pods`?</summary>
+
+Это отдельные subresource API, записываемые как `pods/exec` и `pods/portforward`, а не обычный ресурс `pods`. `create pods/exec` даёт выполнение команд в существующем Pod с его сетью, filesystem и mounted Secret, а `create pods/portforward` прокладывает туннель к портам Pod. Поэтому их не следует неявно включать в обычную read-role и обычно дают только для контролируемой диагностики.
+</details>
+
+<details>
+<summary>6. Почему `resourceNames` не ограничивает `create` и `deletecollection` верхнеуровневого
+   ресурса, но может применяться к именованному subresource, например `pods/exec`?</summary>
+
+Для `create` и `deletecollection` верхнеуровневого ресурса имя объекта не является частью URL запроса, поэтому API server не может ограничить их через `resourceNames`. Это не универсальное ограничение всех subresource. Именованный subresource, например `pods/exec`, может быть ограничен `resourceNames`, поскольку запрос адресует конкретный Pod.
+</details>
+
+<details>
+<summary>7. Почему `get nodes/proxy` не является read-only правом и кому его допустимо выдавать?</summary>
+
+`get nodes/proxy` разрешает proxy-запросы к kubelet, а такие операции могут обходить admission и обычный audit API server. Следовательно, это не безобидное чтение объекта Node. Право нельзя выдавать workload или tenant-ролям; оно допустимо только строго контролируемой операционной identity, по возможности с более узкими `nodes/metrics`, `nodes/stats` и другими fine-grained subresource.
+</details>
+
+<details>
+<summary>8. Как label `rbac.authorization.k8s.io/aggregate-to-view=true` меняет effective access и
+   почему wildcard в агрегированной роли особенно рискован?</summary>
+
+Контроллер RBAC добавляет правила ClusterRole с этой меткой в итоговую встроенную роль `view`, поэтому все её пользователи получают новый доступ. Wildcard в такой источниковой роли захватывает текущие и будущие API-группы, ресурсы, subresource и verbs сразу для широкой аудитории `view`. Поэтому нужно ревьюить и итоговую роль, и все роли-источники aggregation.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 04).** `NetworkPolicy` из главы 04 - allow-list: сначала default-deny,
    затем узкие разрешения. Где в дизайне RBAC работает та же логика "запретить всё, затем
    явно разрешить", и почему отсутствие явного `Role`/`RoleBinding` для subject эквивалентно
-   default-deny, а не default-allow?
+   default-deny, а не default-allow?</summary>
+
+Та же логика действует при проектировании identity: начинают с отсутствия прав и добавляют точные `apiGroups`, `resources`, `verbs` в Role и нужную RoleBinding только там, где это требуется. Если для subject нет binding, ни одна RBAC-роль не возвращает Allow, и запрос будет отклонён. В отличие от NetworkPolicy решение принимает RBAC authorizer API server, но результатом также является явный allow-list.
+</details>
 
 ## Практика
 

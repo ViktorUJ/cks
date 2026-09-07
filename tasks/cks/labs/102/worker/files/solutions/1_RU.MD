@@ -236,7 +236,7 @@ kill "$OBSERVE_PID" "$PF_PID" 2>/dev/null || true
 head -n 3 /var/work/tests/artifacts/5/hubble-observe.json
 ```
 
-Здесь verdict сам по себе недостаточен: evidence связывает временное окно, source/destination,
+Здесь `--follow` выбран как удобный способ непрерывно собирать controlled test; это не единственный допустимый способ evidence. В пределах retention window можно выполнить обычный `hubble observe` после теста с точным `--since` и сохранить его вывод. В любом варианте verdict сам по себе недостаточен: evidence связывает временное окно, source/destination,
 HTTP method/path и ожидаемый результат policy. Поток другого Pod не подтверждает этот test case.
 
 Проверка всех заданий:

@@ -33,7 +33,7 @@ record_result() {
   if [[ -s "$report" ]] \
     && grep -Eq '^kubernetes_version=v1[.]36([.]|$)' "$report" \
     && grep -Eq '^kube_bench_version=v?0[.]16[.]0$' "$report" \
-    && grep -qx 'benchmark=cis-2.0' "$report" \
+    && grep -qx 'benchmark=cis-1.12' "$report" \
     && grep -qx 'mapping_status=forced-approximate' "$report" \
     && grep -Eq '\[(PASS|WARN|FAIL)\]' "$report"; then
     result=0
@@ -44,8 +44,8 @@ record_result() {
       echo "HINT: Report must include a line 'kubernetes_version=v1.36.x' - check kube-bench actually detected this cluster's version."
     elif ! grep -Eq '^kube_bench_version=v?0[.]16[.]0$' "$report"; then
       echo "HINT: Report must include 'kube_bench_version=v0.16.0' (or without 'v') matching the tool version installed in this lab."
-    elif ! grep -qx 'benchmark=cis-2.0' "$report"; then
-      echo "HINT: Report must include a line 'benchmark=cis-2.0' exactly - check which CIS benchmark profile kube-bench auto-selected or was told to use."
+    elif ! grep -qx 'benchmark=cis-1.12' "$report"; then
+      echo "HINT: Report must include a line 'benchmark=cis-1.12' exactly - this pinned kube-bench 0.16.0 has no profile newer than cis-1.12 (its version_mapping tops out at '1.34': 'cis-1.12'; there is no cis-2.0 in this release at all), so cis-1.12 is the closest existing profile to run explicitly."
     elif ! grep -qx 'mapping_status=forced-approximate' "$report"; then
       echo "HINT: Report must include 'mapping_status=forced-approximate' exactly - this documents that v1.36 is newer than kube-bench's built-in version map."
     else

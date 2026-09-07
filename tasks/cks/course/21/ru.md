@@ -26,10 +26,10 @@ API server - обычный путь к состоянию Kubernetes, а etcd -
 
 ```mermaid
 flowchart TB
-    user["пользователь / Pod"] --> api["kube-apiserver\nTLS + authn/authz"]
-    api -->|"записывает объект"| enc["EncryptionConfiguration\nпровайдер шифрования"]
+    user["пользователь / Pod"] --> api["kube-apiserver<br/>TLS + authn/authz"]
+    api -->|"записывает объект"| enc["EncryptionConfiguration<br/>провайдер шифрования"]
     enc --> etcd[("etcd / диск / snapshot")]
-    attacker["доступ к диску, backup\nили etcd endpoint"] -. "без шифрования читает Secret" .-> etcd
+    attacker["доступ к диску, backup<br/>или etcd endpoint"] -. "без шифрования читает Secret" .-> etcd
     style user fill:#326ce5,color:#fff
     style api fill:#673ab7,color:#fff
     style enc fill:#0f9d58,color:#fff
@@ -66,10 +66,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    write["CREATE/UPDATE Secret"] --> first["первый provider\nдля secrets"] --> stored["новая запись в etcd\nзашифрована новым ключом"]
+    write["CREATE/UPDATE Secret"] --> first["первый provider<br/>для secrets"] --> stored["новая запись в etcd<br/>зашифрована новым ключом"]
     read["GET старого Secret"] --> trynew["пробовать новый provider"]
     trynew -->|"не подходит"| tryold["пробовать старый provider"]
-    tryold --> plain["plaintext только в памяти\nAPI server"]
+    tryold --> plain["plaintext только в памяти<br/>API server"]
     style write fill:#326ce5,color:#fff
     style first fill:#0f9d58,color:#fff
     style stored fill:#f4b400,color:#000
@@ -250,7 +250,7 @@ KMS v1 и v2 используют envelope encryption, но по-разному 
 ```mermaid
 flowchart TB
     api["kube-apiserver"] -->|"gRPC по Unix socket"| plugin["KMS plugin"]
-    plugin -->|"wrap/unwrap через KEK"| manager["внешний KMS / HSM\nKEK не в Kubernetes"]
+    plugin -->|"wrap/unwrap через KEK"| manager["внешний KMS / HSM<br/>KEK не в Kubernetes"]
     api -->|"encrypted payload + wrapped material"| etcd[("etcd")]
     style api fill:#326ce5,color:#fff
     style plugin fill:#673ab7,color:#fff
@@ -600,24 +600,65 @@ restore и минимизируйте количество людей, identitie
 
 ## 21.13. Вопросы для самопроверки
 
-1. Почему base64 в поле `Secret.data` не защищает секрет от владельца etcd snapshot?
-2. Какие записи защищает encryption at rest, а какие угрозы оно не устраняет?
-3. Как API server выбирает provider при записи и при чтении старой записи?
-4. Почему `identity` допустим в конце миграционной цепочки, но не первым provider?
-5. В чём эксплуатационная разница между локальным `aescbc`/`aesgcm` и `kms`?
-6. Почему нельзя удалить старый key сразу после добавления нового?
-7. Как доказать, что старый Secret реально прошёл re-encryption?
-8. Какие действия с Pod могут обойти запрет `get secrets` и почему?
-9. Что должно быть проверено для восстановления зашифрованного etcd snapshot?
-10. **Flashback (глава 14).** Encryption at rest защищает Secret именно в etcd. После
-    монтирования Secret kubelet предоставляет его Pod через **tmpfs-backed volume**
-    (Kubernetes официально не пишет Secret volume на durable storage именно чтобы
-    confidential data не оказались на постоянном диске) - то есть Secret уже доступен на
-    ноде в расшифрованном виде, хотя и не как обычный файл на persistent disk. Какие меры
-    из главы 14 (host footprint, least-privilege host) ограничивают риск для секрета на
-    этом этапе - когда он уже расшифрован и доступен авторизованному процессу на ноде через
-    tmpfs, - и почему host compromise или privileged workload на той же ноде остаются
-    серьёзной угрозой даже без durable-disk копии?
+<details>
+<summary>1. Почему base64 в поле `Secret.data` не защищает секрет от владельца etcd snapshot?</summary>
+
+Base64 — кодирование, а не шифрование: `kubectl get secret -o yaml` можно декодировать без ключа. Владелец etcd snapshot получает сохранённое API-состояние в обход authentication, authorization и audit API server. Encryption at rest меняет это, сохраняя ciphertext выбранных ресурсов.
+</details>
+
+<details>
+<summary>2. Какие записи защищает encryption at rest, а какие угрозы оно не устраняет?</summary>
+
+`EncryptionConfiguration` шифрует выбранные API-данные перед записью в etcd, например Secrets, и ciphertext попадает в snapshot. Она не шифрует disk, snapshot или backup целиком, не защищает TLS-трафик и не скрывает Secret от identity с `get secret` или `exec` в Pod. RBAC, TLS и защита backup остаются отдельными controls.
+</details>
+
+<details>
+<summary>3. Как API server выбирает provider при записи и при чтении старой записи?</summary>
+
+При записи API server использует первый provider, подходящий ресурсу. При чтении он перебирает providers по порядку, пока один не расшифрует существующее значение. Именно это позволяет держать старый key ниже нового во время ротации.
+</details>
+
+<details>
+<summary>4. Почему `identity` допустим в конце миграционной цепочки, но не первым provider?</summary>
+
+`identity` ничего не шифрует, но в конце цепочки позволяет прочитать прежние plaintext записи при миграции. Первым он опасен, потому что первый provider определяет формат новых записей, и они останутся plaintext. После re-encryption `identity` можно убрать, если fallback больше не нужен.
+</details>
+
+<details>
+<summary>5. В чём эксплуатационная разница между локальным `aescbc`/`aesgcm` и `kms`?</summary>
+
+У локальных provider ключ находится в защищённом config-файле control plane: это защищает snapshot без filesystem узла, но не разделяет эти секреты. `kms` использует envelope encryption через Unix-socket plugin и внешний KEK/HSM, улучшая separation of duties. Взамен plugin и внешний manager становятся критической зависимостью чтения, записи, ротации и restore.
+</details>
+
+<details>
+<summary>6. Почему нельзя удалить старый key сразу после добавления нового?</summary>
+
+Старые объекты всё ещё могут быть plaintext либо зашифрованы старым key, а новый provider применится лишь к новым/обновлённым записям. В HA сначала все API servers должны уметь читать оба key, затем новый становится первым и объекты переписываются. Удаление old key до re-encryption сделает часть записей или восстановленный snapshot нечитаемыми.
+</details>
+
+<details>
+<summary>7. Как доказать, что старый Secret реально прошёл re-encryption?</summary>
+
+После помещения нового provider первым старый Secret переписывают через API, например `kubectl get secrets --all-namespaces -o json | kubectl replace -f -`, начиная с тестового namespace. Затем проверяют чтение API и в изолированной lab проверяют raw etcd значение canary: уникальный plaintext marker не должен находиться через `strings | grep`. Только после такой проверки удаляют старый key/provider.
+</details>
+
+<details>
+<summary>8. Какие действия с Pod могут обойти запрет `get secrets` и почему?</summary>
+
+Широкие права `pods/exec`, `pods/attach` или `pods/ephemeralcontainers` могут дать shell в workload, где Secret смонтирован или доступен приложению. Тогда identity не обязана читать Secret напрямую через Kubernetes API, чтобы увидеть plaintext. Поэтому эти subresources тоже ограничивают least-privilege RBAC.
+</details>
+
+<details>
+<summary>9. Что должно быть проверено для восстановления зашифрованного etcd snapshot?</summary>
+
+Snapshot хранят и восстанавливают по безопасной процедуре, но также проверяют доступность нужных локальных keys или того же KMS KEK/plugin. Необходимо заранее тестировать restore, документировать key IDs и защищать snapshot отдельно ACL, storage encryption и retention. Нельзя экспортировать master keys в backup etcd.
+</details>
+
+<details>
+<summary>10. **Flashback (глава 14).** Encryption at rest защищает Secret именно в etcd. После монтирования Secret kubelet предоставляет его Pod через **tmpfs-backed volume**: это исключает обычную durable-disk копию, но не даёт безусловной гарантии «никогда не попадёт на диск». При включённом swap Kubernetes v1.36 монтирует memory-backed volumes с `noswap`, если kernel поддерживает эту опцию (официально с Linux 6.3 или с backport); иначе kubelet предупреждает, что такой volume, включая Secret, может быть вытеснен в swap. На таких нодах отключают swap либо обеспечивают его шифрование и проверяют warning kubelet. Какие меры из главы 14 (host footprint, least-privilege host) ограничивают риск для секрета на этом этапе - когда он уже расшифрован и доступен авторизованному процессу на ноде через tmpfs, - и почему host compromise или privileged workload на той же ноде остаются серьёзной угрозой, даже если persistent-disk копии нет?</summary>
+
+Нужно уменьшать host footprint: отключать лишние сервисы и пакеты, закрывать ненужные слушающие порты и своевременно обновлять node, чтобы сократить пути к host compromise. Least-privilege host ограничивает, кто имеет SSH/sudo и доступ к kubelet/runtime, а workload не должен получать `privileged`, host namespaces или hostPath. Tmpfs и `noswap` уменьшают durable-disk риск, но root на node либо привилегированный соседний workload всё ещё может получить доступ к памяти, runtime или смонтированному секрету.
+</details>
 
 ## Практика
 

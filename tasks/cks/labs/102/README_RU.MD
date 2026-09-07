@@ -37,7 +37,7 @@ L3/L4 разрешает или запрещает соединение цели
 <details>
 <summary>3. Почему для доказательства L7-denial через Hubble важно captur'ить трафик именно во время теста, а не после?</summary>
 
-Hubble показывает flow-события в момент их возникновения; после завершения запроса событие может уже не попасть в буфер `hubble observe`, если вы не были подписаны на поток в момент отказа. Нужно запустить `hubble observe --follow` ДО выполнения тестового запроса и остановить после - иначе конкретное `FORWARDED`/`DROPPED` событие для нужного `GET`/`POST` не попадёт в сохранённый JSON.
+`hubble observe --follow`, запущенный до запроса, — удобный режим для controlled capture: он снижает риск, что нужный flow выйдет из retention buffer до сохранения. Это не единственный способ получить валидное evidence: обычный `hubble observe` может прочитать уже сохранённые события в пределах retention window (например, с корректным `--since`), а вывод можно экспортировать в файл. В любом варианте evidence должно однозначно связывать временное окно, source/destination, HTTP method/path и verdict с конкретными GET/POST test case.
 </details>
 
 ## Что мы создаём и зачем
@@ -54,8 +54,8 @@ Hubble показывает flow-события в момент их возни�
 
 ```mermaid
 flowchart LR
-    frontend["frontend\nrole=frontend"] -->|"GET / :80"| backend["backend Service\napp=backend"]
-    client["client\nrole=untrusted"] -. "denied" .-> backend
+    frontend["frontend<br/>role=frontend"] -->|"GET / :80"| backend["backend Service<br/>app=backend"]
+    client["client<br/>role=untrusted"] -. "denied" .-> backend
     frontend -->|"DNS :53"| dns["kube-dns"]
     frontend -->|"HTTPS: example.com"| world["world"]
     frontend -. "other FQDN denied" .-> world
@@ -96,7 +96,7 @@ cilium status --wait
 | **1** | **Учебный namespace и endpoints** |
 | :---: | :--- |
 | Что делаем | Создайте namespace `cks-102`. В нём создайте: Pod `backend` с label `app=backend` и образом `nginx:1.27-alpine`; Service `backend`, выбирающий этот Pod на порту `80`; Pod `frontend` с label `role=frontend` и образом `curlimages/curl:8.10.1`; Pod `client` с label `role=untrusted` и тем же образом. У client-подов команда должна удерживать контейнер запущенным, например `sleep 3600`. Дождитесь Ready. |
-| Критерии приёмки | - существует namespace `cks-102`;<br>- существуют Pods `backend`, `frontend`, `client` с указанными labels;<br>- Service `backend` имеет порт `80`. |
+| Критерии приёмки | - существует namespace `cks-102`;<br/>- существуют Pods `backend`, `frontend`, `client` с указанными labels;<br/>- Service `backend` имеет порт `80`. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -107,7 +107,7 @@ cilium status --wait
 | **2** | **Cilium L3/L4: только frontend к backend:80** |
 | :---: | :--- |
 | Что делаем | В `cks-102` создайте `CiliumNetworkPolicy` с именем `backend-policy`. Она должна выбирать `app=backend` и разрешать ingress только от endpoint с `role=frontend` на TCP-порт `80`. Не добавляйте широкого разрешения для всех endpoint. Проверьте `curl` из `frontend` к `http://backend/` и из `client` к тому же адресу; сохраните результаты в `/var/work/tests/artifacts/2/l3-l4.txt`. |
-| Критерии приёмки | - `backend-policy` выбирает `app=backend`, source `role=frontend`, TCP `80`;<br>- запрос из `frontend` получает `200`;<br>- запрос из `client` не получает `200`;<br>- артефакт существует. |
+| Критерии приёмки | - `backend-policy` выбирает `app=backend`, source `role=frontend`, TCP `80`;<br/>- запрос из `frontend` получает `200`;<br/>- запрос из `client` не получает `200`;<br/>- артефакт существует. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -118,7 +118,7 @@ cilium status --wait
 | **3** | **Cilium L7 HTTP: только GET /** |
 | :---: | :--- |
 | Что делаем | Измените **тот же** `backend-policy`: для TCP/80 разрешите от `frontend` только HTTP `GET` с path `/`. Не оставляйте отдельное широкое L4 allow-правило, иначе L7-фильтр не будет ограничивать POST. Запишите HTTP-коды GET и POST в `/var/work/tests/artifacts/3/l7-http.txt`. |
-| Критерии приёмки | - у правила TCP/80 есть `rules.http` с `method: GET` и `path: /`;<br>- `GET http://backend/` из `frontend` возвращает `200`;<br>- `POST http://backend/` из `frontend` возвращает `403`;<br>- артефакт существует. |
+| Критерии приёмки | - у правила TCP/80 есть `rules.http` с `method: GET` и `path: /`;<br/>- `GET http://backend/` из `frontend` возвращает `200`;<br/>- `POST http://backend/` из `frontend` возвращает `403`;<br/>- артефакт существует. |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
@@ -129,7 +129,7 @@ cilium status --wait
 | **4** | **DNS-aware egress: разрешён только один FQDN** |
 | :---: | :--- |
 | Что делаем | Создайте `CiliumNetworkPolicy` `frontend-fqdn`, выбирающую `role=frontend`. Разрешите ей DNS к `kube-dns` на порту `53` **через L7 DNS proxy rule** `toPorts.rules.dns` (например, `matchPattern: "*"`): Cilium по этому DNS-трафику формирует FQDN-to-IP mapping для `toFQDNs`. Разрешите egress через `toFQDNs` только к `example.com` и только на TCP `443`. Проверьте HTTPS-запрос к `https://example.com/`, отказ `http://example.com:80` и отказ `https://www.google.com/`; сохраните результаты в `/var/work/tests/artifacts/4/fqdn.txt`. |
-| Критерии приёмки | - политика содержит `toFQDNs.matchName: example.com` и `toPorts` с TCP `443`;<br>- DNS к `kube-dns` разрешён отдельным правилом с `rules.dns`;<br>- `example.com` по HTTPS возвращает 2xx/3xx, но его TCP `80` запрещён;<br>- `www.google.com` не возвращает 2xx/3xx;<br>- артефакт существует. |
+| Критерии приёмки | - политика содержит `toFQDNs.matchName: example.com` и `toPorts` с TCP `443`;<br/>- DNS к `kube-dns` разрешён отдельным правилом с `rules.dns`;<br/>- `example.com` по HTTPS возвращает 2xx/3xx, но его TCP `80` запрещён;<br/>- `www.google.com` не возвращает 2xx/3xx;<br/>- артефакт существует. |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
@@ -139,13 +139,13 @@ cilium status --wait
 ---
 | **5** | **Hubble: evidence HTTP-потоков** |
 | :---: | :--- |
-| Что делаем | Зафиксируйте UTC-время начала контролируемого теста. На worker запустите `cilium hubble port-forward`, затем `hubble observe` с фильтрами `--from-pod cks-102/frontend`, `--to-pod cks-102/backend`, `--protocol http`, `--since <время-начала>`, `--output json --follow` и перенаправьте его в `/var/work/tests/artifacts/5/hubble-observe.json`. Пока наблюдение активно, выполните ровно два test case: разрешённый `GET /` и запрещённый `POST /` из `frontend`. Сохраните время и описание test case в `test-window.txt`, затем остановите процессы. |
-| Критерии приёмки | - оба артефакта непусты;<br>- JSON содержит flow именно `cks-102/frontend` → `cks-102/backend` для `GET /` с verdict `FORWARDED`;<br>- тот же source/destination содержит `POST /` с verdict `DROPPED`;<br>- generic flow другого Pod или без соответствующего метода не засчитывается. |
+| Что делаем | Зафиксируйте UTC-время начала контролируемого теста. На worker запустите `cilium hubble port-forward`, затем соберите Hubble evidence с фильтрами `--from-pod cks-102/frontend`, `--to-pod cks-102/backend`, `--protocol http`, `--since <время-начала>` и `--output json` в `/var/work/tests/artifacts/5/hubble-observe.json`. Рекомендуемый для controlled capture вариант — добавить `--follow` и начать наблюдение до запросов; альтернативно можно после теста выгрузить уже сохранённые события из retention buffer с тем же точным временным окном. В обоих случаях evidence должно содержать ровно два test case: разрешённый `GET /` и запрещённый `POST /` из `frontend`; сохраните также время и описание test case в `test-window.txt`. |
+| Критерии приёмки | - оба артефакта непусты;<br/>- JSON содержит flow именно `cks-102/frontend` → `cks-102/backend` для `GET /` с verdict `FORWARDED`;<br/>- тот же source/destination содержит `POST /` с verdict `DROPPED`;<br/>- generic flow другого Pod или без соответствующего метода не засчитывается. |
 
 <details>
 <summary>💡 Подсказка к заданию 5</summary>
 
-Запустите `hubble observe --follow` В ФОНЕ (`&`) ДО того, как выполните `GET`/`POST` запросы из задания 3 - если сначала выполнить запросы и только потом начать наблюдение, соответствующие flow-события будут упущены. Формат `test-window.txt` важен для проверки: запишите `source=cks-102/frontend destination=cks-102/backend` и `allowed=GET / denied=POST /` именно в этом виде.
+Для controlled capture рекомендуется запустить `hubble observe --follow` В ФОНЕ (`&`) ДО `GET`/`POST`: так меньше риск потерять flow до сохранения. Но `--follow` не является единственным валидным вариантом: если события ещё в retention buffer, их можно после запросов выгрузить обычным `hubble observe` с тем же точным `--since`. Формат `test-window.txt` важен для проверки: запишите `source=cks-102/frontend destination=cks-102/backend` и `allowed=GET / denied=POST /` именно в этом виде.
 </details>
 ---
 

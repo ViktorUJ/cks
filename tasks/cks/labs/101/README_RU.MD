@@ -59,12 +59,12 @@ OR. Каждый элемент массива `from` - самостоятель
 ```mermaid
 flowchart LR
     subgraph ns["namespace: cks-101"]
-        fe["frontend\napp=frontend"]
-        be["backend\napp=backend"]
-        deny["default-deny\ningress + egress"]
+        fe["frontend<br/>app=frontend"]
+        be["backend<br/>app=backend"]
+        deny["default-deny<br/>ingress + egress"]
     end
-    dns["kube-dns\nkube-system:53"]
-    meta["metadata\n169.254.169.254"]
+    dns["kube-dns<br/>kube-system:53"]
+    meta["metadata<br/>169.254.169.254"]
     fe -->|"TCP 8080 разрешён"| be
     fe -->|"DNS UDP/TCP 53 разрешён"| dns
     fe -. "egress запрещён" .-> meta

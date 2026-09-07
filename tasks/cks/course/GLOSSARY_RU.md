@@ -2,7 +2,7 @@
 
 # Глоссарий курса CKS
 
-[← Оглавление курса](README_RU.md) · [Путеводитель CKS](CKS_RU.md) · [Шпаргалка](CHEATSHEET_RU.md) · [Справочник ошибок](TROUBLESHOOTING_INDEX_RU.md)
+[← Оглавление курса](README_RU.md) · [Шпаргалка](CHEATSHEET_RU.md) · [Справочник ошибок](TROUBLESHOOTING_INDEX_RU.md)
 
 Единый алфавитный справочник терминов CKS. Термин приведён на английском, описание - на русском, в колонке «Главы» даны ссылки на места, где он разобран, а колонка «Лаба/Задание» указывает конкретную лабу и задание, где термин применяется на практике (заполнена только там, где такая привязка подтверждена; для чисто теоретических терминов оставлена пустой). Готовые сниппеты по многим из этих терминов - в [шпаргалке](CHEATSHEET_RU.md).
 
@@ -52,6 +52,7 @@
 | **ConstraintTemplate** | Rego template и schema параметров для нового типа Gatekeeper constraint. | [20](20/ru.md) | |
 | **container escape** | Выход из ожидаемой изоляции container к ресурсам node или другого tenant. | [03](03/ru.md) | |
 | **Container runtime sandbox** | Runtime, добавляющий границу изоляции между workload и host kernel. | [22](22/ru.md) | labs/110 (Задания 1-3) |
+| **Confidential computing / TEE** | Аппаратно изолированная область CPU (Intel SGX, AMD SEV), шифрующая данные в памяти даже от гипервизора и облачного провайдера; в Kubernetes доступна через специальный `RuntimeClass` (confidential containers), сама аппаратная гарантия - за пределами Kubernetes API. | [30](30/ru.md) | |
 | **context** | Именованная комбинация cluster, user и namespace в kubeconfig. | [33](33/ru.md) | |
 | **Correlation** | Связывание событий разных источников в единую хронологию инцидента. | [30](30/ru.md) | labs/112 (Задание 6) |
 | **Cosign** | Инструмент Sigstore для подписи и проверки OCI-artifacts. | [26](26/ru.md) | labs/111 (Задания 7, 9a, 9c) |
@@ -89,10 +90,12 @@
 | **Grype** | Scanner container images и SBOM из ecosystem Anchore. | [28](28/ru.md) | |
 | **gVisor** | Sandbox runtime с userspace kernel; его OCI runtime и CRI handler часто называется `runsc`. | [03](03/ru.md), [22](22/ru.md) | labs/110 (Задания 1-3) |
 | **handler** | Имя runtime в CRI configuration; должно совпадать с `RuntimeClass.spec.handler`. | [22](22/ru.md) | labs/110 (Задание 1) |
+| **Hardware root of trust** | Криптографическая цепочка доверия, привязанная к физическому устройству (TPM/vTPM), от которой верифицируется целостность boot-цепочки ноды (BIOS/UEFI → bootloader → kernel → runtime); проверка вне Kubernetes API. | [30](30/ru.md) | |
 | **host endpoint** | Сетевой endpoint node, а не обычного Pod в CNI dataplane. | [05](05/ru.md) | |
 | **host firewall** | Фильтрация трафика на самой node, например `ufw`, `iptables` или `nftables`. | [15](15/ru.md) | labs/105 (Задание 3) |
 | **host namespace** | Namespace node, разделяемый Pod через `hostPID`, `hostNetwork` или `hostIPC`. | [18](18/ru.md) | labs/101 (Задание 7) |
 | **Host PID** | PID container-процесса в PID namespace node; нужен для `/proc` и `strace`. | [30](30/ru.md) | labs/112 (Задание 6) |
+| **HSM (Hardware Security Module)** | Физическое устройство для хранения криптографических ключей (например, CA private key kube-apiserver или KMS master key), не позволяющее извлечь приватный ключ программным путём. | [21](21/ru.md), [30](30/ru.md) | |
 | **Hubble** | Наблюдаемость сетевых flows Cilium. | [06](06/ru.md) | labs/102 (Задание 5) |
 | **identity** | Идентификатор endpoint Cilium, построенный из labels; не следует путать с provider `identity`. | [06](06/ru.md), [21](21/ru.md) | labs/102 |
 | **ImagePolicyWebhook** | Admission plugin, делегирующий решение об image внешнему backend через `ImageReview`. | [26](26/ru.md) | |
@@ -148,10 +151,10 @@
 | **Pod UID** | Неизменяемый UID конкретного экземпляра Pod, надёжнее имени при корреляции. | [30](30/ru.md) | |
 | **podSelector** | Выбор Pod по labels в namespace NetworkPolicy. | [04](04/ru.md) | labs/101 (Задания 2, 6) |
 | **PolicyReport** | Report об outcome policy checks, если этот API установлен policy engine. | [31](31/ru.md) | |
-| **private key** | Секретная часть TLS-identity; требует ограниченных прав доступа, обычно `0600`. | [07](07/ru.md), [08](08/ru.md) | labs/111 (Задание 9a) |
+| **private key** | Секретная часть asymmetric key pair; конкретное применение зависит от протокола/инструмента - TLS identity (глава 07-08) или Cosign signing key (лаба 111) - в обоих случаях требует ограниченных прав доступа, обычно `0600`. | [07](07/ru.md), [08](08/ru.md) | labs/111 (Задание 9a) |
 | **profiling** | Endpoints диагностики производительности процесса; без необходимости выключаются флагом `--profiling=false`. | [07](07/ru.md), [12](12/ru.md) | labs/103 (Задание 3) |
 | **projected volume** | Volume, собирающий token, ConfigMap, downward API и другие источники в файлы Pod. | [11](11/ru.md) | labs/104 (Задание 2) |
-| **provenance** | Metadata о source, inputs, builder и процессе создания artifact; доказуемое происхождение. | [09](09/ru.md), [25](25/ru.md), [26](26/ru.md) | labs/111 (Задание 9) |
+| **provenance** | Metadata о source, inputs, builder и процессе создания artifact (attestation); доказуемое происхождение - отдельное от plain signature verification (`cosign sign`/`verify` доказывает подпись/identity, но не полную историю сборки; для provenance у Sigstore есть `cosign attest`/`verify-attestation`). | [09](09/ru.md), [25](25/ru.md), [26](26/ru.md) | |
 | **provider** | Механизм шифрования и дешифрования определённых API-resources. | [21](21/ru.md) | labs/109 (Задание 2) |
 | **PSA** | Pod Security Admission - встроенный validating admission controller для PSS. | [19](19/ru.md), [31](31/ru.md) | labs/107 (Задания 1, 3-4) |
 | **PSP** | PodSecurityPolicy - удалённый в Kubernetes 1.25 предшественник PSA. | [19](19/ru.md) | |
@@ -160,7 +163,7 @@
 | **re-encryption** | Переписывание старых API-объектов через новый provider или ключ. | [21](21/ru.md) | labs/109 (Задание 2) |
 | **read-only kubelet port** | Legacy неаутентифицированный port kubelet, который должен быть отключён значением `0`. | [07](07/ru.md), [09](09/ru.md), [12](12/ru.md) | labs/103 (Задание 2) |
 | **read-only root filesystem** | Режим, в котором image layer нельзя изменять; допустимые записи выносят в volumes. | [18](18/ru.md), [31](31/ru.md), [33](33/ru.md) | labs/107 (Задание 5), labs/112 (Задание 5) |
-| **Registry allowlist** | Policy, разрешающая image только из определённых registry/repository prefixes. | [26](26/ru.md) | labs/112 (Задание 9) |
+| **Registry allowlist** | Policy, разрешающая image только из явно перечисленных registry/repository identities; способ сравнения (exact match vs prefix) должен быть задан явно - лаба 112 показывает, что prefix/`startsWith` может пропустить lookalike-имена (`library/busybox-evil` при allowlist `library/busybox`), поэтому там используется exact match. | [26](26/ru.md) | labs/112 (Задание 9) |
 | **release cadence** | Регулярность выхода minor- и patch-релизов. | [13](13/ru.md) | |
 | **remediation** | Устранение риска обновлением artifact, dependency или base image с подтверждением результата. | [28](28/ru.md) | |
 | **Rendered manifest** | Окончательный YAML после `helm template` или `kustomize build`, который должен анализироваться перед deploy. | [27](27/ru.md) | |
@@ -213,7 +216,7 @@
 | **Trivy** | Scanner images, SBOM, filesystem, secrets и configuration/IaC. | [28](28/ru.md), [33](33/ru.md) | labs/111 (Задания 1, 5, 8) |
 | **Unconfined** | Отсутствие seccomp-фильтра для container; временное исключение, а не baseline. | [17](17/ru.md) | labs/106 (Задание 5) |
 | **Unix socket** | Локальная файловая точка IPC; её права определяют, кто обращается к API daemon. | [14](14/ru.md) | labs/105 (Задание 6) |
-| **userns-remap** | User namespace remapping UID/GID container на host. | [14](14/ru.md) | labs/106 (Задание 6) |
+| **userns-remap** | Docker daemon feature (`dockerd --userns-remap`), remapping UID/GID container на host на уровне самого Docker; отдельный механизм от Kubernetes Pod user namespaces (`hostUsers: false`), которые проверяются в лабе 106. | [14](14/ru.md) | |
 | **Validating admission webhook** | Webhook, который разрешает либо отклоняет объект. | [20](20/ru.md) | |
 | **ValidatingAdmissionPolicy** | Встроенная API server validation на CEL без внешнего webhook; применяется binding-ом. | [20](20/ru.md) | labs/107 (Задание 6) |
 | **version skew** | Допустимая разница версий Kubernetes-компонентов; kubelet не должен быть новее API server. | [13](13/ru.md) | |

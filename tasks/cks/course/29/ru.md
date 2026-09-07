@@ -24,11 +24,11 @@
 
 ```mermaid
 flowchart TB
-    build["image scan и подпись\nдо запуска"] --> admit["admission policy\nразрешить или отклонить Pod"]
-    admit --> runtime["контейнер выполняется\nна ноде"]
-    runtime --> events["syscalls / eBPF события\nпроцесс, файл, сеть"]
+    build["image scan и подпись<br/>до запуска"] --> admit["admission policy<br/>разрешить или отклонить Pod"]
+    admit --> runtime["контейнер выполняется<br/>на ноде"]
+    runtime --> events["syscalls / eBPF события<br/>процесс, файл, сеть"]
     events --> falco["Falco rule engine"]
-    falco --> alert["alert, log, webhook\nи расследование"]
+    falco --> alert["alert, log, webhook<br/>и расследование"]
     style build fill:#326ce5,color:#fff
     style admit fill:#673ab7,color:#fff
     style runtime fill:#f4b400,color:#000
@@ -74,12 +74,12 @@ container runtime и Kubernetes и проверяет против rules.
 
 ```mermaid
 flowchart TB
-    app["процесс в контейнере\nsh / curl / приложение"] --> syscall["syscall: execve, openat, connect"]
+    app["процесс в контейнере<br/>sh / curl / приложение"] --> syscall["syscall: execve, openat, connect"]
     syscall --> kernel["ядро Linux ноды"]
-    kernel --> driver["Falco driver\nkmod или modern eBPF"]
-    driver --> userspace["Falco userspace\nfields + rule engine"]
-    runtime["containerd / CRI\nPod и container metadata"] --> userspace
-    userspace --> output["stdout, syslog, journal,\nHTTP(S) или Falcosidekick"]
+    kernel --> driver["Falco driver<br/>kmod или modern eBPF"]
+    driver --> userspace["Falco userspace<br/>fields + rule engine"]
+    runtime["containerd / CRI<br/>Pod и container metadata"] --> userspace
+    userspace --> output["stdout, syslog, journal,<br/>HTTP(S) или Falcosidekick"]
     style app fill:#f4b400,color:#000
     style syscall fill:#db4437,color:#fff
     style kernel fill:#326ce5,color:#fff
@@ -271,12 +271,12 @@ Falco rules - YAML-документы. `rule` определяет детект�
 
 ```mermaid
 flowchart TB
-    event["syscall event\nproc, fd, container"] --> condition["condition\nсопоставить поля"]
-    macro["macro\nобщая часть условия"] --> condition
-    list["list\nнабор имён или путей"] --> condition
-    condition --> rule["rule\nсработал или нет"]
-    rule --> output["output\nконтекст alert"]
-    rule --> priority["priority\nNOTICE/WARNING/CRITICAL"]
+    event["syscall event<br/>proc, fd, container"] --> condition["condition<br/>сопоставить поля"]
+    macro["macro<br/>общая часть условия"] --> condition
+    list["list<br/>набор имён или путей"] --> condition
+    condition --> rule["rule<br/>сработал или нет"]
+    rule --> output["output<br/>контекст alert"]
+    rule --> priority["priority<br/>NOTICE/WARNING/CRITICAL"]
     style event fill:#326ce5,color:#fff
     style macro fill:#673ab7,color:#fff
     style list fill:#673ab7,color:#fff
@@ -616,23 +616,59 @@ kubectl -n falco describe daemonset falco
 
 ## 29.12. Вопросы для самопроверки
 
-1. Почему успешный image scan не заменяет runtime detection?
-2. Какие системные данные Falco видит через kernel module/eBPF и зачем ему metadata
-   container runtime?
-3. Когда выберете package-install, а когда DaemonSet? Как докажете покрытие всех нод?
-4. Чем отличаются `rule`, `condition`, `output`, `priority`, `macro` и `list`?
-5. Почему custom rule нужно класть в `falco_rules.local.yaml`, а не менять
-   `falco_rules.yaml`?
-6. Какие поля должны быть в output, чтобы alert можно было связать с Kubernetes workload?
-7. Как воспроизводимо проверить правило на shell в контейнере и где читать его alert для
-   package-install и DaemonSet?
-8. Почему исключение целого namespace из детектора хуже точного временного исключения?
-9. **Flashback (глава 17).** Falco (эта глава) и seccomp (глава 17) оба работают на
-   уровне syscall, но с разными гарантиями: seccomp может **заблокировать** syscall до его
-   выполнения, а Falco **обнаруживает** его уже после срабатывания. Если критичный syscall
-   (например, `unshare`) уже заблокирован seccomp профилем из главы 17, есть ли смысл
-   всё равно писать для него Falco rule - и если да, что докажет такая комбинация, чего не
-   докажет одно успешное seccomp denial?
+<details>
+<summary>1. Почему успешный image scan не заменяет runtime detection?</summary>
+
+Image scan сопоставляет состав artifact с известными CVE до или после build, но не наблюдает действия процесса после запуска. Exploit CVE, `kubectl exec`, злоупотребление легитимным образом или команда, отсутствующая в manifest, могут произойти в уже работающем контейнере. Falco сопоставляет kernel events с rules и дополняет scan, а не заменяет его.
+</details>
+
+<details>
+<summary>2. Какие системные данные Falco видит через kernel module/eBPF и зачем ему metadata container runtime?</summary>
+
+Falco видит node-level syscall events вроде `execve`, `openat`, `connect` и `unlink`, потому что процессы контейнеров используют ядро ноды. Driver `kmod` или `modern_ebpf` передаёт их userspace engine, который использует поля процесса, файла и сети. CRI/Kubernetes metadata связывает event с `container.id`, image, Pod и namespace, превращая syscall в расследуемый alert.
+</details>
+
+<details>
+<summary>3. Когда выберете package-install, а когда DaemonSet? Как докажете покрытие всех нод?</summary>
+
+Package-install удобен для одной ноды или экзамена, где состояние проверяют service manager и журналом; включают реальный driver-specific unit, а не alias `falco.service`. Для кластера применяют DaemonSet, чтобы агент работал на каждой подходящей ноде. Покрытие доказывают совпадением `READY` и `DESIRED`, списком Falco Pod по `NODE` и разбором selector, taint, tolerations либо driver errors на отсутствующих нодах.
+</details>
+
+<details>
+<summary>4. Чем отличаются `rule`, `condition`, `output`, `priority`, `macro` и `list`?</summary>
+
+`rule` — именованный detector; его `condition` — булево выражение по fields события. `output` задаёт текст alert, а `priority` — его серьёзность. `macro` даёт переиспользуемое имя части condition, а `list` содержит набор значений, благодаря чему ruleset проще review и tuning.
+</details>
+
+<details>
+<summary>5. Почему custom rule нужно класть в `falco_rules.local.yaml`, а не менять `falco_rules.yaml`?</summary>
+
+`falco_rules.yaml` — upstream/vendor ruleset, который обновление package может перезаписать. Local file сохраняет custom override отдельно, пригоден для Git/review и загружается в порядке, заданном `rules_files`. После изменения проверяют полную конфигурацию командой `falco -c /etc/falco/falco.yaml --dry-run`, чтобы не потерять upstream macro вроде `open_read`.
+</details>
+
+<details>
+<summary>6. Какие поля должны быть в output, чтобы alert можно было связать с Kubernetes workload?</summary>
+
+Минимально нужны имя rule и время, process/command, container ID и image, namespace, Pod и host/node. Глава также рекомендует сохранять доступный image digest, а для устойчивой Kubernetes correlation полезны `k8s.pod.uid` и container full ID. Если metadata field даёт `<NA>`, его не подменяют догадкой, а дополняют расследованием.
+</details>
+
+<details>
+<summary>7. Как воспроизводимо проверить правило на shell в контейнере и где читать его alert для package-install и DaemonSet?</summary>
+
+Создают отдельный namespace и Pod `busybox:1.36` со `sleep 600`, ждут Ready и выполняют `kubectl exec -it ... -- sh -c 'id; echo falco-rule-test'`; `-it` даёт TTY для условия `proc.tty != 0`. Для package-install ищут имя rule в `journalctl -u "$falco_unit"` и, только если настроен output, в syslog. Для DaemonSet сначала находят node test Pod, затем Falco Pod на той же node и читают его `kubectl logs`.
+</details>
+
+<details>
+<summary>8. Почему исключение целого namespace из детектора хуже точного временного исключения?</summary>
+
+Глобальное исключение namespace создаёт тихую зону, которой может воспользоваться атакующий. Исключение следует сузить до конкретного image, Pod label или command, измерив false positives. Его обоснование, owner и срок пересмотра хранят в Git, а не выключают rule навсегда.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 17).** Falco (эта глава) и seccomp (глава 17) оба работают на уровне syscall, но с разными гарантиями: seccomp может **заблокировать** syscall до его выполнения, а Falco **обнаруживает** его уже после срабатывания. Если критичный syscall (например, `unshare`) уже заблокирован seccomp профилем из главы 17, есть ли смысл всё равно писать для него Falco rule - и если да, что докажет такая комбинация, чего не докажет одно успешное seccomp denial?</summary>
+
+Да, Falco rule остаётся полезным как detection и evidence layer, хотя seccomp уже предотвращает выполнение syscall. Seccomp denial доказывает, что filter отказал конкретной попытке, но сам по себе не даёт rich runtime context для triage. Falco может связать попытку с process/command, container, Pod, namespace и node, показать повторяемость поведения и помочь коррелировать его с audit или другими сигналами.
+</details>
 
 ## Практика
 

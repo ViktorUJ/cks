@@ -12,10 +12,10 @@ Cloud provider часто предоставляет экземпляру вир
 
 ```mermaid
 flowchart TB
-    attacker["SSRF или shell<br>в скомпрометированном Pod"] --> imds["IMDS<br>169.254.169.254"]
-    imds --> identity["Identity ноды и<br>временные credentials"]
-    identity --> cloud["API cloud provider:<br>lateral movement и exfiltration"]
-    policy["Default-deny egress<br>и allowlist"] -. "блокирует" .-> imds
+    attacker["SSRF или shell<br/>в скомпрометированном Pod"] --> imds["IMDS<br/>169.254.169.254"]
+    imds --> identity["Identity ноды и<br/>временные credentials"]
+    identity --> cloud["API cloud provider:<br/>lateral movement и exfiltration"]
+    policy["Default-deny egress<br/>и allowlist"] -. "блокирует" .-> imds
     style attacker fill:#db4437,color:#fff
     style imds fill:#db4437,color:#fff
     style identity fill:#db4437,color:#fff
@@ -164,10 +164,10 @@ Metadata - не единственная цель. После доступа в 
 
 ```mermaid
 flowchart TB
-    external["Internet или чужой Pod"] --> fw["Security group / firewall<br>и private network"]
+    external["Internet или чужой Pod"] --> fw["Security group / firewall<br/>и private network"]
     fw --> api["kube-apiserver :6443"]
     cp["kube-apiserver и<br/>authorised etcd clients"] --> etcd["etcd client :2379<br/>peer :2380"]
-    api --> kubelet["kubelet :10250<br>аутентифицированный доступ"]
+    api --> kubelet["kubelet :10250<br/>аутентифицированный доступ"]
     external -. "запрещено" .-> etcd
     external -. "запрещено" .-> kubelet
     style external fill:#db4437,color:#fff
@@ -320,7 +320,7 @@ kubectl -n payments exec egress-test -- \
 
 - Cloud metadata может быть критичным путём от скомпрометированного Pod к cloud identity ноды, но provider-specific workload identity меняет ожидаемое поведение: в GKE metadata server нужен для WIF, а в AWS учитывайте также IPv6 IMDS.
 - Начинайте с default-deny egress и разрешайте только DNS и необходимые назначения. `ipBlock` с `except: 169.254.169.254/32` полезен для переходного широкого allow, но не заменяет точечный allowlist.
-- Для EKS IMDSv2 с hop limit 1 защищает Pod от node credentials; endpoint IMDS не отключают, а hop limit 2 оставляют только для обоснованного доступа workload. Это не заменяет workload identity, сетевую изоляцию и cloud identity с минимальными правами.
+- Для EKS IMDSv2 с hop limit 1 не даёт Pod дотянуться до node credentials через IMDS (защищается identity ноды от Pod, а не Pod от неё); endpoint IMDS не отключают, а hop limit 2 оставляют только для обоснованного доступа workload. Это не заменяет workload identity, сетевую изоляцию и cloud identity с минимальными правами.
 - kubelet, etcd и kube-apiserver защищаются сочетанием private network, firewall, TLS, authentication, authorization, review `nodes/proxy` и безопасных флагов, а не только Pod policy.
 - Legacy Dashboard не должен быть public и не должен работать от `cluster-admin`; `pods/log` для read-only роли требует только `get`, а не `list/watch`. Для новых решений он не является приоритетом CKS.
 - Проверяйте реальный трафик provider-specific: в AWS Pod не получает node IMDS credentials, в GKE WIF работает только через ожидаемый metadata path, в AKS отдельно проверяются Entra federation и применимость IMDS restriction; endpoint ноды не открыт лишним источникам.
@@ -350,15 +350,59 @@ kubectl -n payments exec egress-test -- \
 
 ## 05.10. Вопросы для самопроверки
 
-1. Почему доступ Pod к `169.254.169.254` опаснее обычного внешнего HTTP-запроса?
-2. Почему `NetworkPolicy` с `ipBlock.except` не является глобальным запретом для всех политик namespace?
-3. Какие разрешения обычно нужны после default-deny egress, чтобы приложение не потеряло DNS?
-4. Что улучшает IMDSv2 и почему одного IMDSv2 недостаточно при компрометации Pod?
-5. Чем защита host endpoints отличается от защиты обычных Pod через `NetworkPolicy`?
-6. Какие настройки kubelet нужно проверить наряду с firewall для endpoint `10250`?
-7. Почему даже `get` на `nodes/proxy` рискованнее, чем минимальные права `get` на `nodes/metrics` или `nodes/stats`?
-8. Как различаются metadata endpoint, node identity и workload identity для AWS/EKS, GKE и AKS, и почему для GKE нельзя безусловно блокировать metadata path?
-9. Почему read-only роль для Dashboard или другого web UI обычно требует `get/list/watch` на ресурсах, но только `get` на `pods/log`, и как проверить это через `kubectl auth can-i` без реального доступа к UI?
+<details>
+<summary>1. Почему доступ Pod к `169.254.169.254` опаснее обычного внешнего HTTP-запроса?</summary>
+
+Это типовой endpoint cloud metadata ноды, а не обычный внешний Service: через SSRF или shell Pod может получить сведения об экземпляре и, при неверной cloud identity, временные credentials роли ноды. Такой путь обходит RBAC, ServiceAccount и policy приложения и может открыть lateral movement в cloud API.
+</details>
+
+<details>
+<summary>2. Почему `NetworkPolicy` с `ipBlock.except` не является глобальным запретом для всех политик namespace?</summary>
+
+`except` исключает адрес только из одного конкретного `ipBlock` rule. Политики аддитивны, поэтому другая egress policy с широким CIDR или прямым разрешением metadata снова может открыть доступ; устойчивее default-deny и точечные allow для фактических зависимостей.
+</details>
+
+<details>
+<summary>3. Какие разрешения обычно нужны после default-deny egress, чтобы приложение не потеряло DNS?</summary>
+
+Обычно нужен точечный egress к фактическим CoreDNS endpoints в `kube-system` на UDP 53 и TCP 53. Перед применением надо проверить реальные labels DNS Pod; в конкретной архитектуре запросы может обслуживать NodeLocal DNSCache или другой DNS-компонент.
+</details>
+
+<details>
+<summary>4. Что улучшает IMDSv2 и почему одного IMDSv2 недостаточно при компрометации Pod?</summary>
+
+AWS IMDSv2 требует сначала получить временный token через `PUT`, а затем передать его в заголовке, поэтому уменьшает класс SSRF, рассчитанных на простой `GET`. Но скомпрометированный Pod способен выполнить корректный IMDSv2 exchange, если endpoint доступен, поэтому нужны egress isolation, workload identity и минимальные IAM-права; для EKS базовый hop limit равен 1.
+</details>
+
+<details>
+<summary>5. Чем защита host endpoints отличается от защиты обычных Pod через `NetworkPolicy`?</summary>
+
+Обычная NetworkPolicy переносимо описывает Pod-to-Pod traffic, но трафик к IP ноды может менять source из-за SNAT, а `hostNetwork` Pod способен обходить ожидаемый pod dataplane. Kubelet, etcd и API server защищают сочетанием host firewall, cloud security group, binding address, TLS, authentication, authorization и настроек компонентов.
+</details>
+
+<details>
+<summary>6. Какие настройки kubelet нужно проверить наряду с firewall для endpoint `10250`?</summary>
+
+Проверяют, что read-only порт отключён (`--read-only-port=0`), anonymous access выключен (`--anonymous-auth=false`), а authorization работает в режиме Webhook. Также требуется TLS и review RBAC, особенно прав `nodes/proxy`; Webhook authorization сам по себе не заменяет сетевое ограничение.
+</details>
+
+<details>
+<summary>7. Почему даже `get` на `nodes/proxy` рискованнее, чем минимальные права `get` на `nodes/metrics` или `nodes/stats`?</summary>
+
+`nodes/proxy` — широкий доступ к kubelet API, и даже `get` на нём через kubelet WebSocket endpoints может разрешить выполнение команд в контейнерах. В v1.36 fine-grained kubelet authorization позволяет monitoring-роли получить только `get` на `nodes/metrics` и/или `nodes/stats`; после миграции широкий `nodes/proxy` нужно удалить.
+</details>
+
+<details>
+<summary>8. Как различаются metadata endpoint, node identity и workload identity для AWS/EKS, GKE и AKS, и почему для GKE нельзя безусловно блокировать metadata path?</summary>
+
+В AWS/EKS IMDS выдаёт identity ноды, а workload используют EKS Pod Identity или IRSA; в GKE Workload Identity Federation получает short-lived workload token через GKE metadata server; в AKS применяется Microsoft Entra Workload ID. Поэтому GKE metadata path может быть необходим workload identity, и strict policy разрешает только документированный путь для используемого dataplane, а не безусловно блокирует адрес.
+</details>
+
+<details>
+<summary>9. Почему read-only роль для Dashboard или другого web UI обычно требует `get/list/watch` на ресурсах, но только `get` на `pods/log`, и как проверить это через `kubectl auth can-i` без реального доступа к UI?</summary>
+
+Для отображения списков Pod, Service и Events UI нужны `get`, `list` и `watch`, но чтение subresource `pods/log` практически требует только `get`. Права конкретной ServiceAccount проверяют в целевом namespace командой `kubectl auth can-i`: `get pods/log` должен вернуть `yes`, а `get secrets` и `create pods/exec` — `no`.
+</details>
 
 ## Практика
 

@@ -12,10 +12,10 @@
 
 ```mermaid
 flowchart TB
-    bad["Скомпрометированный<br>frontend Pod"] --> scan["Сканирует сервисы<br>и внутренние API"]
+    bad["Скомпрометированный<br/>frontend Pod"] --> scan["Сканирует сервисы<br/>и внутренние API"]
     bad --> db["Подключается к DB"]
     bad --> meta["Запрашивает metadata"]
-    deny["Default-deny + точечные allow"] --> only["Разрешён только<br>нужный путь"]
+    deny["Default-deny + точечные allow"] --> only["Разрешён только<br/>нужный путь"]
     only --> backend["frontend -> backend:8080"]
     style bad fill:#db4437,color:#fff
     style scan fill:#db4437,color:#fff
@@ -344,13 +344,47 @@ kubectl -n payments exec netshoot -- nc -vz -w 3 control 8080
 
 ## 04.11. Вопросы для самопроверки
 
-1. Почему отсутствие NetworkPolicy помогает lateral movement после компрометации Pod?
-2. Что означает пустой `podSelector: {}` в политике namespace?
-3. Почему default-deny ingress backend недостаточен для связи frontend -> backend при изолированном egress?
-4. В чём разница между двумя отдельными элементами `from` и одним элементом с `namespaceSelector` и `podSelector`?
-5. Почему после default-deny egress часто перестаёт работать DNS и какие протоколы надо разрешить?
-6. Почему наличие объекта `NetworkPolicy` не доказывает, что трафик блокируется?
-7. Какие зависимости, помимо прикладных сервисов, нужно учесть перед rollout default-deny?
+<details>
+<summary>1. Почему отсутствие NetworkPolicy помогает lateral movement после компрометации Pod?</summary>
+
+Без политик большинство CNI пропускает трафик между Pod и часто исходящий трафик. Получив shell или RCE в `frontend`, атакующий может сканировать Service, подключаться к DB, внутренним API и metadata endpoint; default-deny с точечными allow-правилами сужает этот путь.
+</details>
+
+<details>
+<summary>2. Что означает пустой `podSelector: {}` в политике namespace?</summary>
+
+Пустой `podSelector` выбирает все Pod namespace, где создана политика. В сочетании с `policyTypes: Ingress` или `Egress` и пустыми списками правил он изолирует соответствующее направление для всех этих Pod.
+</details>
+
+<details>
+<summary>3. Почему default-deny ingress backend недостаточен для связи frontend -> backend при изолированном egress?</summary>
+
+Ingress и egress проверяются независимо для каждой стороны соединения. Если backend изолирован по ingress, его правило должно разрешить frontend, но при изолированном egress у frontend должно быть отдельное разрешение на backend:8080; ответный трафик разрешён неявно только для уже разрешённого соединения.
+</details>
+
+<details>
+<summary>4. В чём разница между двумя отдельными элементами `from` и одним элементом с `namespaceSelector` и `podSelector`?</summary>
+
+Два отдельных элемента списка означают логическое OR: один может разрешить весь выбранный namespace, другой — Pod с меткой в namespace политики. Когда требуются оба условия, `namespaceSelector` и `podSelector` помещают в один элемент правила, и тогда источник должен соответствовать им одновременно.
+</details>
+
+<details>
+<summary>5. Почему после default-deny egress часто перестаёт работать DNS и какие протоколы надо разрешить?</summary>
+
+Default-deny блокирует запросы Pod к CoreDNS, поэтому не разрешаются имена Service и внешние FQDN. Нужно разрешить к фактическим DNS endpoints кластера UDP 53 и TCP 53, предварительно проверив labels CoreDNS и возможное использование NodeLocal DNSCache.
+</details>
+
+<details>
+<summary>6. Почему наличие объекта `NetworkPolicy` не доказывает, что трафик блокируется?</summary>
+
+Kubernetes принимает API-объект независимо от того, умеет ли установленный CNI применять NetworkPolicy. Нужно подтвердить поддержку CNI, реальные labels и направления, а затем проверить заранее известный listener разрешённым и запрещённым запросами; `connection refused` сам по себе не доказывает блокировку policy.
+</details>
+
+<details>
+<summary>7. Какие зависимости, помимо прикладных сервисов, нужно учесть перед rollout default-deny?</summary>
+
+Нужно учесть DNS, ingress controller, monitoring/metrics, egress proxy, registry, внешние SaaS API и health checks, соответствующие конкретной среде. До применения deny составляют карту допустимых потоков, готовят allow-политики и проверяют их в контролируемом rollout, чтобы не нарушить работу сервиса.
+</details>
 
 ## Практика
 

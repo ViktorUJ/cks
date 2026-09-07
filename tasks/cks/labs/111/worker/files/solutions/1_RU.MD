@@ -231,11 +231,15 @@ kubectl -n kyverno wait --for=condition=Available deployment -l app.kubernetes.i
 mkdir -p "$ART/9a" "$ART/9b" "$ART/9c"
 cosign generate-key-pair
 cosign sign --key cosign.key --yes "$HARDENED_IMAGE" | tee "$ART/9a/cosign-sign.txt"
+# Реально проверяем подпись тем же public key, а не только наличие текста sign-команды.
+cosign verify --key cosign.pub "$HARDENED_IMAGE" | tee "$ART/9a/cosign-verify.txt"
 ```
 
 Создайте `ImageValidatingPolicy`, ссылающуюся на публичный ключ, которым только что
-подписан `$HARDENED_IMAGE`. `matchImageReferences` ограничивает policy repository вашего
-образа, чтобы не блокировать остальные Pod кластера.
+подписан `$HARDENED_IMAGE`. `matchImageReferences` ограничивает policy ровно repository
+вашего образа: для OCI references нужны отдельные разделители `:` (tag) и `@` (digest),
+иначе префикс `${HARDENED_REPO}*` захватит, например, другой repository с тем же началом
+имени. Это не даёт policy блокировать остальные Pod кластера.
 
 ```bash
 export HARDENED_REPO="${HARDENED_IMAGE%@*}"
@@ -254,7 +258,8 @@ spec:
       operations: ["CREATE", "UPDATE"]
       resources: ["pods"]
   matchImageReferences:
-  - glob: "${HARDENED_REPO}*"
+  - glob: "${HARDENED_REPO}:*"
+  - glob: "${HARDENED_REPO}@*"
   attestors:
   - name: catalogReleaseKey
     cosign:

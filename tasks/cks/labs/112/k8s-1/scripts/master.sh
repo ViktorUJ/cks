@@ -103,5 +103,45 @@ KYVERNO_EOF
 chmod 0755 /usr/local/bin/install-kyverno
 
 install -d -m 0755 /var/work/tests/artifacts/9
+install -d -m 0755 /var/work/tests/artifacts/10
+
+# Стартовый ресурс для задания 10: mem-scanner периодически открывает /dev/mem изнутри
+# контейнера - обычное application workload не имеет причины делать это. Ресурс
+# развёрнут заранее (обнаружение через Falco - часть задания, не создание workload).
+# hostPath /dev/mem даёт контейнеру возможность попытаться открыть устройство без
+# полного --privileged; попытка открытия происходит независимо от того, разрешает ли
+# ядро её успешно завершить - для Falco достаточно самого системного вызова open/openat.
+kubectl apply -f - <<'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mem-scanner
+  namespace: runtime-112
+  labels:
+    app: mem-scanner
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mem-scanner
+  template:
+    metadata:
+      labels:
+        app: mem-scanner
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - name: scanner
+        image: busybox:1.36
+        command: ["sh", "-c", "while true; do cat /dev/mem >/dev/null 2>&1; sleep 15; done"]
+        volumeMounts:
+        - name: devmem
+          mountPath: /dev/mem
+      volumes:
+      - name: devmem
+        hostPath:
+          path: /dev/mem
+          type: CharDevice
+EOF
 
 echo "*** CKS lab 112 prerequisites are ready: namespace runtime-112 and audit-secret"

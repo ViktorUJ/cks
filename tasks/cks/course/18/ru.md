@@ -29,12 +29,12 @@ seccomp. Он также **не задаёт** CPU, memory или ephemeral-stor
 
 ```mermaid
 flowchart TB
-    vuln["Уязвимый процесс<br>в контейнере"] --> sc["SecurityContext<br>UID, capabilities, no_new_privs,<br>read-only root"]
+    vuln["Уязвимый процесс<br/>в контейнере"] --> sc["SecurityContext<br/>UID, capabilities, no_new_privs,<br/>read-only root"]
     sc --> kernel["Ядро и container runtime"]
-    kernel --> aa["AppArmor<br>какой объект и операция"]
-    kernel --> sec["seccomp<br>какой syscall"]
-    kernel --> ns["namespaces<br>не namespace ноды"]
-    aa --> result["меньше доступных<br>путей эскалации"]
+    kernel --> aa["AppArmor<br/>какой объект и операция"]
+    kernel --> sec["seccomp<br/>какой syscall"]
+    kernel --> ns["namespaces<br/>не namespace ноды"]
+    aa --> result["меньше доступных<br/>путей эскалации"]
     sec --> result
     ns --> result
     style vuln fill:#db4437,color:#fff
@@ -150,11 +150,11 @@ ServiceAccount и минимальный RBAC, а не возвращайте de
 
 ```mermaid
 flowchart TB
-    pod["Pod securityContext<br>runAsUser: 10001<br>seccomp: RuntimeDefault"] --> app["container app<br>наследует Pod baseline"]
-    pod --> helper["container helper<br>runAsUser: 20001<br>container value побеждает"]
-    pod --> fs["fsGroup: 10001<br>только Pod"]
-    app --> eff1["app: UID 10001<br>RuntimeDefault"]
-    helper --> eff2["helper: UID 20001<br>RuntimeDefault"]
+    pod["Pod securityContext<br/>runAsUser: 10001<br/>seccomp: RuntimeDefault"] --> app["container app<br/>наследует Pod baseline"]
+    pod --> helper["container helper<br/>runAsUser: 20001<br/>container value побеждает"]
+    pod --> fs["fsGroup: 10001<br/>только Pod"]
+    app --> eff1["app: UID 10001<br/>RuntimeDefault"]
+    helper --> eff2["helper: UID 20001<br/>RuntimeDefault"]
     style pod fill:#326ce5,color:#fff
     style app fill:#0f9d58,color:#fff
     style helper fill:#f4b400,color:#000
@@ -370,10 +370,10 @@ idmapped mounts. Перед rollout проверьте эти условия н�
 
 ```mermaid
 flowchart TB
-    app["app<br>root filesystem: read-only"] --> bin["/app и библиотеки<br>из image: только чтение"]
-    app --> tmp["/tmp<br>emptyDir Memory"]
-    app --> cache["/var/cache/app<br>emptyDir с sizeLimit"]
-    app --> data["/data<br>PVC при нужной persistence"]
+    app["app<br/>root filesystem: read-only"] --> bin["/app и библиотеки<br/>из image: только чтение"]
+    app --> tmp["/tmp<br/>emptyDir Memory"]
+    app --> cache["/var/cache/app<br/>emptyDir с sizeLimit"]
+    app --> data["/data<br/>PVC при нужной persistence"]
     tmp --> gone["Pod удалён → данные удалены"]
     cache --> gone
     style app fill:#326ce5,color:#fff
@@ -610,20 +610,65 @@ container того же Pod, которому этот том тоже смон�
 
 ## 18.10. Вопросы для самопроверки
 
-1. Почему `runAsNonRoot: true` не делает безопасным Pod с `privileged: true`?
-2. Какие поля container securityContext надо задать отдельно для initContainer и sidecar?
-3. Что будет effective UID у container, если Pod задаёт `runAsUser: 10001`, а container -
-   `runAsUser: 20001`?
-4. Почему нельзя считать `fsGroup` механизмом исправления прав всех файлов image layer?
-5. Чем `RuntimeDefault` operationally отличается от `Localhost` seccomp profile?
-6. Какие данные переживут restart container, но исчезнут при удалении Pod с `emptyDir`?
-7. Почему `allowPrivilegeEscalation: false` не заменяет `capabilities.drop: ["ALL"]`?
-8. Какие три независимые проверки нужны, чтобы доказать hardening после `kubectl apply`?
-9. Почему `hostNetwork` и `hostPID` требуют review даже при non-root UID?
-10. **Flashback (глава 10).** PSA действует через labels namespace. Если RBAC (глава 10)
-    разрешает пользователю `create namespaces` без ограничения на labels, что мешает этому
-    пользователю создать новый namespace **без** `enforce=restricted` и обойти PSA целиком,
-    и какое RBAC-ограничение из главы 10 закрывает именно этот путь?
+<details>
+<summary>1. Почему `runAsNonRoot: true` не делает безопасным Pod с `privileged: true`?</summary>
+
+`runAsNonRoot` проверяет effective UID при запуске, но не является sandbox. `privileged: true` даёт почти все capabilities и доступ к устройствам, делает seccomp effective `Unconfined`, а AppArmor игнорируется. Non-root процесс с таким доступом всё ещё получает опасные пути к node.
+</details>
+
+<details>
+<summary>2. Какие поля container securityContext надо задать отдельно для initContainer и sidecar?</summary>
+
+Для каждого app, sidecar и initContainer отдельно задают `capabilities.drop: ["ALL"]`, `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true` и при необходимости `privileged: false`. Pod-level `runAsNonRoot`, UID/GID и `seccompProfile` дают baseline, но container может его переопределить. Поэтому проверять нужно все списки контейнеров, включая injected sidecars.
+</details>
+
+<details>
+<summary>3. Что будет effective UID у container, если Pod задаёт `runAsUser: 10001`, а container - `runAsUser: 20001`?</summary>
+
+Effective UID этого container будет `20001`. Для полей, доступных на двух уровнях, container-level значение имеет приоритет только для данного контейнера. Pod-level `10001` остаётся baseline для соседних контейнеров без override.
+</details>
+
+<details>
+<summary>4. Почему нельзя считать `fsGroup` механизмом исправления прав всех файлов image layer?</summary>
+
+`fsGroup` — настройка Pod, которая помогает с групповым доступом к поддерживаемым volume. Она не предназначена для смены owner всех файлов image layer и не заменяет корректные ownership и UID в образе. Для writable путей нужно также явно выбрать volume и проверить поддержку storage driver.
+</details>
+
+<details>
+<summary>5. Чем `RuntimeDefault` operationally отличается от `Localhost` seccomp profile?</summary>
+
+`RuntimeDefault` использует поддерживаемый runtime профиль и подходит почти всем workload как baseline. `Localhost` ссылается на JSON, который доверенная automation заранее доставляет на каждую допустимую node под kubelet seccomp root. Отсутствие файла на выбранной node приводит к ошибке создания контейнера, поэтому нужны versioning, placement и совместимость runtime.
+</details>
+
+<details>
+<summary>6. Какие данные переживут restart container, но исчезнут при удалении Pod с `emptyDir`?</summary>
+
+Содержимое `emptyDir` переживает restart контейнера внутри того же Pod. При удалении или пересоздании Pod том исчезает вместе с данными. Поэтому он подходит для `/tmp`, runtime directory и cache, но не для данных, которые должны восстанавливаться.
+</details>
+
+<details>
+<summary>7. Почему `allowPrivilegeEscalation: false` не заменяет `capabilities.drop: ["ALL"]`?</summary>
+
+`allowPrivilegeEscalation: false` включает `no_new_privs` и запрещает получить новые права через setuid/setgid binary или file capabilities. Он не отнимает capabilities, уже выданные контейнеру. Поэтому baseline отдельно удаляет стартовый набор через `drop: ["ALL"]`.
+</details>
+
+<details>
+<summary>8. Какие три независимые проверки нужны, чтобы доказать hardening после `kubectl apply`?</summary>
+
+Сначала проверяют intent: security context в template и у всех containers. Затем подтверждают admission и запуск: Pod Ready, events не показывают конфликт UID, profile или volume. Наконец проверяют runtime effect: non-root UID, нулевые capabilities, `NoNewPrivs`, seccomp и только ожидаемые writable mounts, включая отрицательные сценарии.
+</details>
+
+<details>
+<summary>9. Почему `hostNetwork` и `hostPID` требуют review даже при non-root UID?</summary>
+
+`hostPID` открывает процессы и чувствительные данные `/proc` ноды, а `hostNetwork` даёт network namespace, IP, host ports и localhost сервисы ноды. Это доступ к ресурсам host, который не устраняется одним non-root UID. Для обычного workload глава рекомендует Service, обычную Pod-сеть, NetworkPolicy или поддерживаемый API вместо host namespace.
+</details>
+
+<details>
+<summary>10. **Flashback (глава 10).** PSA действует через labels namespace, которые можно задать сразу при создании объекта, а не только через отдельный `patch`. Глава 10 описывает RBAC-контроль для **изменения** labels существующего namespace (`patch` labels `Namespace`), но не для самого **создания** namespace. Почему одного RBAC-ограничения на verb `create` для `namespaces` недостаточно, чтобы гарантировать, что новый namespace получит `enforce=restricted`, и какой механизм (RBAC или admission-уровня) на самом деле нужен, чтобы закрыть именно этот путь обхода PSA?</summary>
+
+RBAC `create namespaces` решает, может ли identity создать объект, но не проверяет обязательные metadata labels в новом запросе. Пользователь с этим правом может создать namespace без `pod-security.kubernetes.io/enforce=restricted`, а PSA будет действовать по default configuration, которая не обязана быть restricted. Нужна admission-level policy, например ValidatingAdmissionPolicy или policy engine, требующая нужные labels при CREATE; RBAC остаётся дополнительным ограничением круга создателей namespace.
+</details>
 
 ## 18.11. Как это применяют в продакшене
 

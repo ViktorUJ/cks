@@ -34,7 +34,7 @@ flowchart TB
     appa["client app"] --> pa["sidecar / mesh proxy"]
     pa -->|"mTLS: identity workload↔workload"| pb["sidecar / mesh proxy"]
     pb --> appb["server app"]
-    na["node-a Cilium"] -->|"WireGuard или IPsec:\nшифрование node↔node"| nb["node-b Cilium"]
+    na["node-a Cilium"] -->|"WireGuard или IPsec:<br/>шифрование node↔node"| nb["node-b Cilium"]
     pa --- na
     pb --- nb
     style appa fill:#326ce5,color:#fff
@@ -333,10 +333,10 @@ plaintext inbound traffic: в ambient mode сервер ожидает защи�
 
 ```mermaid
 flowchart TB
-    ca["client app\nHTTP localhost/Pod IP"] --> cp["client istio-proxy\nполучает workload cert"]
-    cp -->|"mTLS + SAN identity"| sp["server istio-proxy\nпроверяет client cert"]
-    sp --> sa["server app\nобычный HTTP"]
-    out["Pod без sidecar\nplaintext"] -. "STRICT: reject/reset" .-> sp
+    ca["client app<br/>HTTP localhost/Pod IP"] --> cp["client istio-proxy<br/>получает workload cert"]
+    cp -->|"mTLS + SAN identity"| sp["server istio-proxy<br/>проверяет client cert"]
+    sp --> sa["server app<br/>обычный HTTP"]
+    out["Pod без sidecar<br/>plaintext"] -. "STRICT: reject/reset" .-> sp
     style ca fill:#326ce5,color:#fff
     style sa fill:#326ce5,color:#fff
     style cp fill:#673ab7,color:#fff
@@ -919,23 +919,71 @@ underlay даже если application protocol не менялся.
 
 ## 23.17. Вопросы для самопроверки
 
-1. Почему Cilium WireGuard/IPsec не заменяет mTLS между workload?
-2. Что именно аутентифицирует WireGuard peer и почему это не identity ServiceAccount?
-3. Какие firewall-протоколы надо разрешить между нодами: UDP/51871 для Cilium
-   WireGuard и ESP (IP protocol 50) для Cilium IPsec?
-4. Чем опасна ручная замена IPsec Secret без key-overlap rollout?
-5. Какова разница между Istio `PeerAuthentication: STRICT` и `DestinationRule` с
-   `ISTIO_MUTUAL`?
-6. Почему meshed `curl` с кодом 200 не доказывает, что plaintext client заблокирован?
-7. Почему tcpdump на `any` может показать HTTP даже при включённом Cilium encryption?
-8. Как доказать, что capture на physical NIC относится к нужному cross-node flow?
-9. Почему нельзя запускать Istio и Linkerd sidecar в одном workload?
-10. Какие четыре факта составляют минимальное runtime evidence для node encryption?
-11. **Flashback (глава 06).** Cilium из главы 06 реализует `NetworkPolicy` (allow/deny по
-    identity, L3/L4/L7). Эта же глава использует Cilium для transparent encryption
-    (WireGuard/IPsec). Это одна и та же задача под разными названиями или две независимые
-    возможности одного CNI? Может ли `NetworkPolicy` разрешить трафик, который при этом не
-    зашифрован transparent encryption, и наоборот?
+<details>
+<summary>1. Почему Cilium WireGuard/IPsec не заменяет mTLS между workload?</summary>
+
+Cilium WireGuard/IPsec шифрует и аутентифицирует транспортный участок между нодами, но не даёт серверу identity конкретного client Pod или ServiceAccount. Service mesh mTLS защищает соединение между proxy workload и проверяет workload identity. Кроме того, Cilium node encryption по дизайну не шифрует Pod-to-Pod traffic на одной node, тогда как mTLS может.
+</details>
+
+<details>
+<summary>2. Что именно аутентифицирует WireGuard peer и почему это не identity ServiceAccount?</summary>
+
+WireGuard принимает пакет только после криптографической проверки known public key/allowed peer, поэтому подтверждает доверенную node. Cilium управляет key pair peers и распространяет нужные public keys через Kubernetes API. У двух Pod на одной node нет отдельных WireGuard identities, а сервер не узнаёт ServiceAccount клиента по peer key.
+</details>
+
+<details>
+<summary>3. Какие firewall-протоколы надо разрешить между нодами: UDP/51871 для Cilium WireGuard и ESP (IP protocol 50) для Cilium IPsec?</summary>
+
+Для WireGuard между worker nodes разрешают UDP порт Cilium, по умолчанию `51871`, но фактическое значение проверяют в установленной конфигурации. Для Cilium IPsec разрешают ESP — IP protocol 50. Типичный IKE/NAT-T UDP/4500 не относится к описываемому Cilium IPsec механизму.
+</details>
+
+<details>
+<summary>4. Чем опасна ручная замена IPsec Secret без key-overlap rollout?</summary>
+
+Peers могут оказаться с разными ключами, что вызывает packet loss и потерю cross-node connectivity. Штатная version-matched процедура `cilium encryption rotate-key` временно даёт agents принимать old и new key, а потом проверяет rollout и status на всех nodes. Secret `cilium-ipsec-keys` не выводят и не заменяют одной случайной строкой.
+</details>
+
+<details>
+<summary>5. Какова разница между Istio `PeerAuthentication: STRICT` и `DestinationRule` с `ISTIO_MUTUAL`?</summary>
+
+`PeerAuthentication: STRICT` — server-side inbound policy: proxy принимает только mTLS и отклоняет plaintext. `DestinationRule` с `ISTIO_MUTUAL` — client-side намерение: Envoy использует сертификаты и trust bundle Istio для outbound соединения. Это две стороны одной связи; `SIMPLE` не предъявляет workload client certificate, а `DISABLE` отправляет plaintext.
+</details>
+
+<details>
+<summary>6. Почему meshed `curl` с кодом 200 не доказывает, что plaintext client заблокирован?</summary>
+
+Код 200 доказывает только работоспособность meshed client, но не исключает fallback policy или неверный scope `STRICT`. Нужен отдельный client без sidecar из namespace без injection и проверка, что запрос не возвращает HTTP 200. Также проверяют, что `PeerAuthentication` действительно совпала с server Pod, а outside client действительно не содержит `istio-proxy`.
+</details>
+
+<details>
+<summary>7. Почему tcpdump на `any` может показать HTTP даже при включённом Cilium encryption?</summary>
+
+`-i any` может захватить inner packet до node encryption, локальную доставку или same-node flow, для которого outer packet отсутствует. Cilium защищает недоверенный physical node-to-node path, а plaintext допустим до encryption и после decryption. Доказательство делают на конкретном physical NIC при подтверждённом cross-node placement.
+</details>
+
+<details>
+<summary>8. Как доказать, что capture на physical NIC относится к нужному cross-node flow?</summary>
+
+Сначала фиксируют, что client и server Pod размещены на разных nodes, и определяют node IP и реальный physical interface через `ip route get`. Затем ограничивают tcpdump парой node IP и WireGuard UDP/ESP, создают короткую серию повторяемых запросов и сопоставляют время capture. Дополняют evidence успешным intended flow и ростом/health encryption status Cilium.
+</details>
+
+<details>
+<summary>9. Почему нельзя запускать Istio и Linkerd sidecar в одном workload?</summary>
+
+Оба mesh хотят перехватывать трафик, выдавать сертификаты и управлять policy. Совместное sidecar injection создаёт конфликты iptables/ports, неопределённую observability и сложный incident response. Для namespace выбирают один mesh либо проводят документированную миграцию.
+</details>
+
+<details>
+<summary>10. Какие четыре факта составляют минимальное runtime evidence для node encryption?</summary>
+
+Нужны cross-node placement тестовых Pod, HTTP `200` для intended flow, healthy `cilium-dbg encrypt status`/счётчики и outer WireGuard UDP либо IPsec ESP на physical NIC без HTTP payload. Один только `curl`, DaemonSet Cilium или отсутствие строк в логах не дают достаточного доказательства. Все факты должны относиться к одному времени и паре nodes.
+</details>
+
+<details>
+<summary>11. **Flashback (глава 06).** Cilium из главы 06 реализует `NetworkPolicy` (allow/deny по identity, L3/L4/L7). Эта же глава использует Cilium для transparent encryption (WireGuard/IPsec). Это одна и та же задача под разными названиями или две независимые возможности одного CNI? Может ли `NetworkPolicy` разрешить трафик, который при этом не зашифрован transparent encryption, и наоборот?</summary>
+
+Это две независимые возможности одного CNI: NetworkPolicy решает, какой ingress/egress поток разрешён, а WireGuard/IPsec защищают transport node-to-node. Policy может разрешить same-node flow, который transparent encryption не шифрует, либо cross-node flow при выключенном encryption. И наоборот, encryption может защищать пакет на underlay, но не заменяет allow/deny policy и не делает поток разрешённым.
+</details>
 
 ## Практика
 

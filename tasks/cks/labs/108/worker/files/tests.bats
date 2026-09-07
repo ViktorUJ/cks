@@ -13,6 +13,15 @@ record_result() {
   return "$result"
 }
 
+control_plane() {
+  kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null
+}
+
+node_ssh() {
+  ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=10 "$(control_plane)" "$@"
+}
+
 policy_enforced() {
   kubectl get validatingpolicy "$1" --context "$CTX" -o json 2>/dev/null | \
     jq -e '.apiVersion == "policies.kyverno.io/v1" and (.spec.validationActions | index("Deny") != null)' >/dev/null
@@ -277,4 +286,49 @@ EOF
   fi
   # Последний этап опционален: check_result его проверяет, но не делает лабу неуспешной.
   true
+}
+
+@test "6. ImagePolicyWebhook denies :latest via external backend and admits a pinned tag" {
+  echo '1' >> /var/work/tests/result/all
+  manifest=$(node_ssh "sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml" 2>/dev/null || true)
+  backend_available=$(kubectl get deployment image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | \
+    jq -r '.status.availableReplicas // 0' 2>/dev/null)
+  set +e
+  kubectl delete pod webhook-latest-must-fail webhook-pinned-ok --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
+  kubectl run webhook-latest-must-fail --image=nginx:latest --context "$CTX" 2>/tmp/webhook-latest-err.txt >/dev/null
+  latest_status=$?
+  kubectl run webhook-pinned-ok --image=nginx:1.27.3 --context "$CTX" >/dev/null 2>&1
+  kubectl wait pod/webhook-pinned-ok --context "$CTX" --for=condition=Ready --timeout=90s >/dev/null 2>&1
+  pinned_status=$?
+  deny_message=$(cat /tmp/webhook-latest-err.txt 2>/dev/null || true)
+  set -e
+  if [[ "$manifest" == *'ImagePolicyWebhook'* \
+    && "$manifest" == *'--admission-control-config-file=/etc/kubernetes/image-policy/admission-config.yaml'* \
+    && "$manifest" == *'imagepolicy.k8s.io/v1alpha1=true'* \
+    && "$backend_available" -ge 1 \
+    && "$latest_status" -ne 0 && "$deny_message" == *'image policy webhook backend denied'* \
+    && "$pinned_status" -eq 0 ]]; then
+    result=0
+  else
+    if [[ "$backend_available" -lt 1 ]]; then
+      echo "HINT: Deployment 'image-policy-backend' in namespace 'image-policy' has no available replicas - check the Deployment mounts the ConfigMap correctly and the Pod is actually Running."
+    elif [[ "$manifest" != *'ImagePolicyWebhook'* ]]; then
+      echo "HINT: kube-apiserver.yaml --enable-admission-plugins does not include ImagePolicyWebhook - add it to the EXISTING list (comma-separated), do not replace the whole flag value."
+    elif [[ "$manifest" != *'imagepolicy.k8s.io/v1alpha1=true'* ]]; then
+      echo "HINT: kube-apiserver.yaml is missing --runtime-config=imagepolicy.k8s.io/v1alpha1=true - without it the ImageReview API is not served and the backend is never called."
+    elif [[ "$manifest" != *'--admission-control-config-file='* ]]; then
+      echo "HINT: kube-apiserver.yaml is missing --admission-control-config-file pointing at your AdmissionConfiguration file."
+    elif [[ "$latest_status" -eq 0 ]]; then
+      echo "HINT: Pod webhook-latest-must-fail (nginx:latest) was created - it should have been denied by the ImagePolicyWebhook backend. Check the backend is reachable from kube-apiserver (Service/kubeconfig server URL) and defaultAllow is false."
+    elif [[ "$deny_message" != *'image policy webhook backend denied'* ]]; then
+      echo "HINT: The Pod was denied, but not with the expected ImagePolicyWebhook message - check the denial actually came from the backend (your server.py 'reason' field), not from an unrelated admission controller."
+    else
+      echo "HINT: Pod webhook-pinned-ok (nginx:1.27.3) was not created/Ready - a correctly pinned tag should be allowed by the backend logic in server.py."
+    fi
+    echo "backend_available=$backend_available latest_status=$latest_status pinned_status=$pinned_status deny_message=$deny_message"
+    result=1
+  fi
+  kubectl delete pod webhook-latest-must-fail webhook-pinned-ok --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
+  rm -f /tmp/webhook-latest-err.txt
+  record_result "$result"
 }

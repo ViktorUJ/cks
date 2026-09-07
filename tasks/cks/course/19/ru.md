@@ -29,10 +29,10 @@ spec:
 
 ```mermaid
 flowchart TB
-    author["Пользователь или CI\nсоздаёт Pod"] --> api["kube-apiserver"]
-    api --> psa["Pod Security Admission\nPSS для namespace"]
-    psa -->|"соответствует"| etcd["etcd → scheduler\nи container runtime"]
-    psa -->|"нарушает enforce"| deny["HTTP 403: Pod\nне создан"]
+    author["Пользователь или CI<br/>создаёт Pod"] --> api["kube-apiserver"]
+    api --> psa["Pod Security Admission<br/>PSS для namespace"]
+    psa -->|"соответствует"| etcd["etcd → scheduler<br/>и container runtime"]
+    psa -->|"нарушает enforce"| deny["HTTP 403: Pod<br/>не создан"]
     style psa fill:#673ab7,color:#fff
     style etcd fill:#0f9d58,color:#fff
     style deny fill:#db4437,color:#fff
@@ -131,7 +131,7 @@ flowchart TB
     pod["Новый Pod"] --> base["enforce=baseline"]
     base -->|"нарушение"| rejected["отклонён"]
     base -->|"прошёл"| strict["warn/audit=restricted"]
-    strict -->|"нарушение"| admitted["создан + warning\nи audit record"]
+    strict -->|"нарушение"| admitted["создан + warning<br/>и audit record"]
     strict -->|"прошёл"| clean["создан без нарушения"]
     style rejected fill:#db4437,color:#fff
     style admitted fill:#f4b400,color:#000
@@ -167,15 +167,15 @@ kubectl label namespace payments \
 
 Лейбл применяется к **новым и обновляемым** Pod. Не ожидайте, что смена лейбла удалит уже работающие Pod: PSA не является controller, не сканирует и не исправляет существующие объекты. При изменении namespace PSA также проверяет существующие Pods для предупреждений, поэтому label change может показать workload, который надо мигрировать.
 
-`latest` удобно для небольшого test-кластера, но в production создаёт риск: после обновления Kubernetes содержание стандарта может стать строже, и ранее работающий rollout будет отклонён. Поэтому в примерах выше версия зафиксирована на версии production-current расширения (`v1.36`). Не используйте версию выше фактической версии API server.
+`latest` удобно для небольшого test-кластера, но в production создаёт риск: после обновления Kubernetes содержание стандарта может стать строже, и ранее работающий rollout будет отклонён. Поэтому в учебных примерах этой главы версия зафиксирована на `v1.36` — **training baseline** курса и core labs. Для своего production-кластера выбирайте PSS pin, соответствующий фактической версии его API server; не используйте версию выше неё.
 
-> **Версионная граница обучения и экзамена.** Связанный файл curriculum сейчас называется
-> `CKS_Curriculum v1.34`; это версия учебного документа, а не версия runtime. Актуальная
-> экзаменационная среда CKS — Kubernetes `v1.35`. Версию PSS выбирают для конкретной
-> поддерживаемой версии API server/кластера и фиксируют в PSA labels: она не является
-> универсальной рекомендацией «всегда использовать v1.34». Примеры с pin `v1.36` выше —
-> дополнительный production-контекст для кластера этой версии, а не обещание требований
-> экзамена.
+> **Версионная граница обучения, экзамена и production.** Связанный файл curriculum сейчас называется
+> `CKS_Curriculum v1.34`; это версия учебного документа, а не версия runtime. Training baseline
+> курса и core labs — Kubernetes `v1.36`, поэтому labels и матрица выше используют `v1.36`.
+> Экзаменационная среда CKS в зафиксированном снимке курса — Kubernetes `v1.35`; перед попыткой
+> сверяйте фактическую версию в ExamUI. Production-версию PSS всегда выбирают по версии API server
+> конкретного кластера: учебный pin `v1.36` не является ни обещанием требований экзамена, ни
+> рекомендацией «всегда использовать v1.36» в будущем.
 
 **Version drift PSS.** Профили `baseline`/`restricted` со временем ужесточаются: например, в Kubernetes `v1.34` в Baseline/Restricted добавили ограничения host-полей в probes и lifecycle hooks. Из-за этого Pod, проходящий более старый pin (скажем, `v1.31`), может быть отклонён под более новой версией стандарта. Практичный путь миграции: зафиксировать текущую поддерживаемую версию, сначала оценить эффект в `warn`/`audit`, при необходимости сравнить со старым pin (`v1.31`) как миграционным примером, затем сознательно поднять `enforce`. Именно поэтому «работает на старой версии PSS» не значит «пройдёт на новой».
 
@@ -384,21 +384,71 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 
 ## 19.14. Вопросы для самопроверки
 
-1. Как различаются обязанности RBAC, `securityContext` и PSA?
-2. Почему namespace без PSA-лейблов не стоит считать защищённым?
-3. Какие три PSS-профиля существуют и когда оправдан каждый из них?
-4. Чем `warn` и `audit` отличаются от `enforce`, и почему они не являются защитой?
-5. Как записать label для `enforce=restricted` с зафиксированной PSS version (версией обучающего кластера)?
-6. Почему перед обновлением Kubernetes лучше фиксировать PSS version, а не оставлять `latest`?
-7. Почему исправляют Deployment template, а не уже созданный Pod?
-8. Чем admission rejection PSA отличается от `ImagePullBackOff` и отказа RBAC?
-9. Почему отдельный namespace лучше широкого exemption для CNI или CSI?
-10. Что случилось с PodSecurityPolicy и чем закрывают правила, которых нет в PSS?
-11. **Flashback (глава 30).** PSA принимает решение один раз - на admission, при создании
-    Pod. Если Pod прошёл `enforce=restricted` честно, но процесс внутри контейнера позже
-    попытается выполнить нечто подозрительное (например, downloaded binary), сможет ли PSA
-    это остановить? Какой слой из главы 30 покрывает именно этот - runtime, а не
-    admission-time - момент?
+<details>
+<summary>1. Как различаются обязанности RBAC, `securityContext` и PSA?</summary>
+
+RBAC отвечает, кто может выполнить `create pods`. `securityContext` задаёт права и ограничения процесса конкретного Pod, а PSA до записи в etcd проверяет, какой Pod разрешён PSS для namespace. Это дополняющие, а не взаимозаменяемые слои.
+</details>
+
+<details>
+<summary>2. Почему namespace без PSA-лейблов не стоит считать защищённым?</summary>
+
+При стандартных PSA defaults такой namespace фактически ведёт себя как `privileged`, но администратор может настроить иные defaults. Поэтому отсутствие labels не доказывает effective policy. Проверяют labels namespace и конфигурацию admission controller.
+</details>
+
+<details>
+<summary>3. Какие три PSS-профиля существуют и когда оправдан каждый из них?</summary>
+
+`privileged` не ограничивает Pod PSA и нужен лишь доверенным системным компонентам. `baseline` блокирует известные breakout-пути, включая privileged container, host namespaces и hostPath, и полезен как переходный минимум. `restricted` добавляет non-root, APE false, seccomp и drop capabilities для обычных production workloads.
+</details>
+
+<details>
+<summary>4. Чем `warn` и `audit` отличаются от `enforce`, и почему они не являются защитой?</summary>
+
+`warn` допускает Pod с предупреждением клиенту, а `audit` допускает его и записывает нарушение в audit event. Только `enforce` отклоняет create/update до persistence. Поэтому первые два режима предназначены для инвентаризации и миграции.
+</details>
+
+<details>
+<summary>5. Как записать label для `enforce=restricted` с зафиксированной PSS version (версией обучающего кластера)?</summary>
+
+Для training baseline главы используют `pod-security.kubernetes.io/enforce=restricted` и `pod-security.kubernetes.io/enforce-version=v1.36`. Их назначают namespace, например через `kubectl label namespace payments`. Production pin выбирают по фактической версии API server, а не переносят учебное значение автоматически.
+</details>
+
+<details>
+<summary>6. Почему перед обновлением Kubernetes лучше фиксировать PSS version, а не оставлять `latest`?</summary>
+
+PSS со временем ужесточается: глава приводит добавленные в v1.34 ограничения host-полей probes и lifecycle hooks. С `latest` upgrade способен неожиданно отклонить прежде рабочий rollout. Pin даёт возможность сначала оценить manifests через warn/audit и обновить стандарт сознательно.
+</details>
+
+<details>
+<summary>7. Почему исправляют Deployment template, а не уже созданный Pod?</summary>
+
+PSA не исправляет и не удаляет существующие Pod, а контроллер создаст следующую реплику по своему template. Ручная правка живого Pod не устранит источник следующего нарушения. Поэтому меняют template Deployment, StatefulSet, Job или CronJob и проводят rollout.
+</details>
+
+<details>
+<summary>8. Чем admission rejection PSA отличается от `ImagePullBackOff` и отказа RBAC?</summary>
+
+PSA отказывает до создания Pod и возвращает ошибку с PSS-нарушениями; объект может не получить UID. `ImagePullBackOff` и runtime/scheduler ошибки происходят после admission и видны в Events. RBAC также отказывает до persistence, но его отделяют по тексту ответа и `kubectl auth can-i`.
+</details>
+
+<details>
+<summary>9. Почему отдельный namespace лучше широкого exemption для CNI или CSI?</summary>
+
+Отдельный namespace позволяет дать системному компоненту минимально нужный PSS level, не ослабляя application workloads. Exemption в AdmissionConfiguration обходит PSA во всех режимах для namespace, username или RuntimeClass. Поэтому его применяют только узко, документированно и временно.
+</details>
+
+<details>
+<summary>10. Что случилось с PodSecurityPolicy и чем закрывают правила, которых нет в PSS?</summary>
+
+PodSecurityPolicy удалён в Kubernetes 1.25, поэтому старые PSP manifests и RBAC `use` не включают защиту. Стандартные требования переводят в PSA `baseline` или `restricted`. Registry, labels, лимиты и прочие правила вне PSS реализуют Kyverno, Gatekeeper или ValidatingAdmissionPolicy.
+</details>
+
+<details>
+<summary>11. **Flashback (глава 30).** PSA принимает решение один раз - на admission, при создании Pod. Если Pod прошёл `enforce=restricted` честно, но процесс внутри контейнера позже попытается выполнить нечто подозрительное (например, downloaded binary), сможет ли PSA это остановить? Какой слой из главы 30 покрывает именно этот - runtime, а не admission-time - момент?</summary>
+
+Нет: PSA принимает решение только при admission и не наблюдает последующее выполнение процесса. Runtime-момент покрывают средства runtime security из главы 30, которые наблюдают события процесса и способны выявлять или реагировать на подозрительное поведение. Admission предотвращает опасную конфигурацию, а runtime detection дополняет его после запуска.
+</details>
 
 ## Практика
 

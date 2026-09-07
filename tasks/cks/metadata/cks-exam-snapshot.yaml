@@ -2,36 +2,35 @@ schema_version: 1
 
 checked_at: "2026-09-06"
 
-# Четыре контура версии независимы и не выравниваются автоматически.
-# Подробное объяснение политики - см. ../VERSION_POLICY.md.
+# The four version tracks are independent and are not aligned automatically.
+# For a detailed explanation of the policy, see ../VERSION_POLICY.md.
 
 upstream:
-  # Актуальный upstream-релиз Kubernetes - самостоятельный сигнал, отдельный от
-  # training/exam/curriculum ниже. Подтверждено live: kubernetes.io/blog/2026/08/26/
-  # kubernetes-v1-37-release/ ("Garhwal", released 2026-08-26) и kubernetes.io/releases/.
-  # Не переводить core labs на latest_stable автоматически только из-за номера версии -
-  # только если это реально нужно compatibility/security причинам.
+  # The current upstream Kubernetes release is an independent signal, separate from
+  # training/exam/curriculum below. Confirmed live: kubernetes.io/blog/2026/08/26/
+  # kubernetes-v1-37-release/ ("Garhwal", released 2026-08-26) and kubernetes.io/releases/.
+  # Do not move core labs to latest_stable automatically just because of the version number—
+  # only if this is actually required for compatibility/security reasons.
   latest_stable: "1.37"
   checked_at: "2026-09-06"
   url: "https://kubernetes.io/releases/"
 
 training:
-  # Реальный разброс версий подтверждён grep по всем labs/*/env.hcl (проверено 2026-09-06):
-  # только core labs 101-112 построены на 1.36; legacy labs 01-30 остаются на 1.28-1.34.
-  # Не сворачивать это в единое число "1.36" - см. VERSION_POLICY.md.
+  # The actual version variation was confirmed by grep across all labs/*/env.hcl (checked 2026-09-07):
+  # core labs 101-112 are built on 1.36; lab 113 starts on 1.35.4 and, by assignment topic
+  # (kubeadm minor upgrade), ends on 1.36.x—its k8_version in env.hcl reflects
+  # only the STARTING version, not the final one.
+  # Do not collapse this into the single number "1.36"—see VERSION_POLICY.md.
   core_labs:
-    ids: "101-112"
+    ids: "101-113"
     kubernetes: "1.36"
     status: current
     source: "labs/101-112/*/env.hcl"
-  legacy_labs:
-    ids: "01-30 (не все номера присутствуют)"
-    kubernetes_versions_observed: ["1.28.0", "1.29.0", "1.30.0", "1.31.0", "1.32.0", "1.33.0", "1.34.0"]
-    status: legacy_exam_pattern_bank
-    source: "labs/01-30/*/env.hcl"
-    note: >
-      Legacy labs сохраняют исторические exam-pattern стенды и не входят в единый
-      Kubernetes v1.36 compatibility baseline core labs.
+    exceptions:
+      - id: "113"
+        kubernetes_start: "1.35.4"
+        kubernetes_target: "1.36.x"
+        reason: "the lab is specifically about kubeadm minor upgrade—the starting version is intentionally one minor version below the baseline; the target matches the baseline after completing the assignment"
 
 exam:
   linux_foundation:
@@ -49,8 +48,8 @@ exam:
       checked_at: "2026-09-06"
       url: "https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks"
       notes:
-        - "CKS-SINGLE registration не включает доступ к Killer.sh exam simulator."
-        - "Стандартная регистрация включает две попытки Killer.sh simulator (36 часов каждая)."
+        - "CKS-SINGLE registration does not include access to the Killer.sh exam simulator."
+        - "Standard registration includes two Killer.sh simulator attempts (36 hours each)."
 
   duration_minutes: 120
   task_count:
@@ -69,12 +68,12 @@ curriculum:
   checked_at: "2026-09-06"
 
 weights:
-  # Три независимых публичных сигнала фиксируются отдельно; расхождение не разрешается
-  # выбором "истинного" значения без проверки первичного источника. Подробности - см.
-  # ../VERSION_POLICY.md. lf_product_page и curriculum_pdf согласны друг с другом, но
-  # cncf_certification_page расходится по Cluster Setup (10% vs 15%) и System Hardening
-  # (15% vs 10%) - см. selected_sources_agreement/public_signal_agreement ниже: это два
-  # разных вопроса, и смешивать их в одном поле agreement было бы неточно.
+  # Three independent public signals are recorded separately; a discrepancy is not resolved
+  # by choosing a "true" value without checking the primary source. For details, see
+  # ../VERSION_POLICY.md. lf_product_page and curriculum_pdf agree with each other, but
+  # cncf_certification_page differs on Cluster Setup (10% vs 15%) and System Hardening
+  # (15% vs 10%)—see selected_sources_agreement/public_signal_agreement below: these are two
+  # different questions, and combining them in one agreement field would be inaccurate.
   lf_product_page:
     cluster_setup: 15
     cluster_hardening: 15
@@ -101,18 +100,18 @@ weights:
     checked_at: "2026-09-06"
     url: "https://www.cncf.io/training/certification/cks/"
   selected_sources_agreement: consistent
-  # selected_sources_agreement описывает только lf_product_page vs curriculum_pdf (два
-  # источника, выбранных как operational default для этого курса - см. domains.*.weight
-  # в curriculum-map.yaml). Она НЕ означает, что все публичные источники согласны между
-  # собой в целом.
+  # selected_sources_agreement describes only lf_product_page vs curriculum_pdf (the two
+  # sources selected as the operational default for this course—see domains.*.weight
+  # in curriculum-map.yaml). It does NOT mean that all public sources agree with each
+  # other overall.
   public_signal_agreement:
     status: disagreement
     note: >
-      lf_product_page и cncf_certification_page расходятся именно по Cluster Setup
-      (15% vs 10%) и System Hardening (10% vs 15%); Cluster Hardening, Microservice,
-      Supply Chain и Runtime совпадают у всех трёх источников. curriculum-map.yaml
-      хранит оба набора весов явно в секции weight_sources и использует
-      linux_foundation_product_page как operational default для каждого домена.
+      lf_product_page and cncf_certification_page differ specifically on Cluster Setup
+      (15% vs 10%) and System Hardening (10% vs 15%); Cluster Hardening, Microservice,
+      Supply Chain, and Runtime match across all three sources. curriculum-map.yaml
+      explicitly stores both weight sets in the weight_sources section and uses
+      linux_foundation_product_page as the operational default for each domain.
 
 allowed_resources:
   checked_at: "2026-09-06"
@@ -127,15 +126,15 @@ allowed_resources:
     - cilium_documentation
     - istio_documentation
   notes:
-    - "task-specific Quick Reference может добавлять ресурсы для конкретной задачи."
-    - "Trivy/AppArmor training-ссылки в курсе - не являются глобально разрешёнными exam resources."
+    - "task-specific Quick Reference may add resources for a specific task."
+    - "Trivy/AppArmor training links in the course are not globally permitted exam resources."
 
 interpretation: >
-  Official LF pages в данный момент показывают согласованную версию Kubernetes (v1.35)
-  для exam environment; upstream latest_stable (v1.37), training baseline core labs
-  (v1.36) и curriculum filename (v1.34) остаются самостоятельными контурами и не должны
-  схлопываться в одно число. Domain weights: lf_product_page согласна с curriculum_pdf,
-  но CNCF certification page публикует другой набор (Cluster Setup 10% вместо 15%,
-  System Hardening 15% вместо 10%) - см. weights.public_signal_agreement. Перед
-  использованием значений из этого файла для принятия решений - сверьте checked_at с
-  текущей датой и переопределите устаревшие поля через первичные источники.
+  Official LF pages currently show a consistent Kubernetes version (v1.35)
+  for the exam environment; upstream latest_stable (v1.37), the training baseline core labs
+  (v1.36), and the curriculum filename (v1.34) remain independent tracks and must not
+  be collapsed into one number. Domain weights: lf_product_page agrees with curriculum_pdf,
+  but the CNCF certification page publishes a different set (Cluster Setup 10% instead of 15%,
+  System Hardening 15% instead of 10%)—see weights.public_signal_agreement. Before
+  using values from this file to make decisions, compare checked_at with the current date
+  and override stale fields from primary sources.

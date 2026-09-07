@@ -14,9 +14,9 @@ CKS - performance-based экзамен: проверяется состояни�
 
 ```mermaid
 flowchart TB
-    base["base\nпрочитать infobox задачи"] --> ssh["ssh на назначенный host"]
-    ssh --> scope["hostname, context, namespace\nи критерий"]
-    scope --> change["изменить и проверить\nна этом host"]
+    base["base<br/>прочитать infobox задачи"] --> ssh["ssh на назначенный host"]
+    ssh --> scope["hostname, context, namespace<br/>и критерий"]
+    scope --> change["изменить и проверить<br/>на этом host"]
     change --> exit["exit: вернуться на base"]
     style base fill:#f4b400,color:#000
     style ssh fill:#673ab7,color:#fff
@@ -125,8 +125,8 @@ LF разрешает только **один активный монитор**.
 
 ```mermaid
 flowchart TB
-    p1["Проход 1\nбыстрые, знакомые\nпримерно 60-70 мин"] --> p2["Проход 2\nзадачи с флагом\nпримерно 35-45 мин"]
-    p2 --> p3["Проход 3\nпроверка и исправление\n10-15 мин"]
+    p1["Проход 1<br/>быстрые, знакомые<br/>примерно 60-70 мин"] --> p2["Проход 2<br/>задачи с флагом<br/>примерно 35-45 мин"]
+    p2 --> p3["Проход 3<br/>проверка и исправление<br/>10-15 мин"]
     style p1 fill:#0f9d58,color:#fff
     style p2 fill:#326ce5,color:#fff
     style p3 fill:#673ab7,color:#fff
@@ -312,11 +312,11 @@ exit
 
 ```mermaid
 flowchart TB
-    c1["не тот context\nили namespace"] --> loss["верное решение\nне получает баллы"]
-    c2["изменён static Pod\nбез readiness-проверки"] --> loss
-    c3["policy проверена\nтолько позитивным тестом"] --> loss
-    c4["AppArmor profile\nне на ноде Pod"] --> loss
-    c5["egress закрыт\nвместе с DNS"] --> loss
+    c1["не тот context<br/>или namespace"] --> loss["верное решение<br/>не получает баллы"]
+    c2["изменён static Pod<br/>без readiness-проверки"] --> loss
+    c3["policy проверена<br/>только позитивным тестом"] --> loss
+    c4["AppArmor profile<br/>не на ноде Pod"] --> loss
+    c5["egress закрыт<br/>вместе с DNS"] --> loss
     style c1 fill:#db4437,color:#fff
     style c2 fill:#db4437,color:#fff
     style c3 fill:#db4437,color:#fff
@@ -393,15 +393,59 @@ export KUBE_EDITOR=vim
 
 ## 33.11. Вопросы для самопроверки
 
-1. Какие пять значений нужно извлечь из условия до первой команды и почему сначала нужен SSH на host из infobox?
-2. Почему после каждой задачи нужно вернуться на `base` и почему нельзя использовать nested SSH?
-3. Как распределить 120 минут по source-dated весам LF, учитывая, что CNCF curriculum может отличаться?
-4. Как использовать первую и вторую попытки симулятора по 17 сценариев в их 36-часовых окнах?
-5. Как убедиться, что изменение `kube-apiserver` static Pod действительно применилось и не сломало API?
-6. Почему проверка NetworkPolicy должна включать разрешённый маршрут, запрещённый маршрут и DNS?
-7. Что надо подтвердить перед применением Localhost AppArmor profile к Pod?
-8. Чем глобально разрешённая документация отличается от task-specific Quick Reference?
-9. Какие клавиши нужны для terminal copy/paste и vim, если `Insert` запрещён?
+<details>
+<summary>1. Какие пять значений нужно извлечь из условия до первой команды и почему сначала нужен SSH на host из infobox?</summary>
+
+Нужно выписать `host`, `context`, `namespace`, `node` и criterion/verification. Каждая задача выполняется на назначенном SSH-host, а `base` служит начальной точкой и не содержит `kubectl`, `k`, `yq`, `curl`, `wget` или `man`. Только на указанном host проверяют `hostname`, выбирают context и делают изменение в нужной среде.
+</details>
+
+<details>
+<summary>2. Почему после каждой задачи нужно вернуться на `base` и почему нельзя использовать nested SSH?</summary>
+
+Exam workflow требует начинать следующую задачу с `base`, откуда выполняют новый SSH на host из её infobox. Nested SSH не поддерживается и повышает риск применить context, profile или правку на неверной ноде. После проверки делают `exit`, отмечают задачу и лишь затем переходят к следующей.
+</details>
+
+<details>
+<summary>3. Как распределить 120 минут по source-dated весам LF, учитывая, что CNCF curriculum может отличаться?</summary>
+
+Для снимка LF на 2026-09-05 веса 15/15/10/20/20/20 дают ориентиры 18, 18, 12, 24, 24 и 24 минуты по доменам. Практичная тактика — быстрый первый проход примерно за 60–70 минут, флаги за 35–45 минут и 10–15 минут на проверку. Эти числа не invariant: перед экзаменом сверяют актуальные LF product page, curriculum и ExamUI, следуя фактическим инструкциям.
+</details>
+
+<details>
+<summary>4. Как использовать первую и вторую попытки симулятора по 17 сценариев в их 36-часовых окнах?</summary>
+
+Первую попытку проходят как экзамен: 17 сценариев за двухчасовой таймер с переходами `base` → assigned host → `base`, затем разбирают ошибки и создают список конкретных навыков и проверок. Вторую используют после устранения этого списка, снова без подсказок в первом проходе. Указанные 17 сценариев и 36 часов — source-dated snapshot, который нужно проверить перед активацией.
+</details>
+
+<details>
+<summary>5. Как убедиться, что изменение `kube-apiserver` static Pod действительно применилось и не сломало API?</summary>
+
+На назначенном control-plane host перед правкой сохраняют manifest вне `/etc/kubernetes/manifests/`, затем проверяют пересоздание через `crictl ps -a` и `journalctl -u kubelet`. После старта подтверждают Pod API server и `k get --raw='/readyz?verbose'`. Если readiness не возвращается, до выхода на `base` читают логи, проверяют YAML/mount paths и при необходимости откатывают backup.
+</details>
+
+<details>
+<summary>6. Почему проверка NetworkPolicy должна включать разрешённый маршрут, запрещённый маршрут и DNS?</summary>
+
+Успешный apply policy не доказывает её сетевую семантику. Нужно показать, что разрешённый flow работает и запрещённый не проходит, потому что selector, namespace или port могут не совпасть с intent. Egress policy легко блокирует DNS вместе с нежелательным трафиком, поэтому проверяют и DNS-запрос, если policy ограничивает egress.
+</details>
+
+<details>
+<summary>7. Что надо подтвердить перед применением Localhost AppArmor profile к Pod?</summary>
+
+Профиль должен существовать и быть загружен на node, где scheduler фактически запустит Pod; это проверяют `sudo aa-status` и при необходимости `apparmor_parser`. В manifest используют современное поле `securityContext.appArmorProfile` с `type: Localhost` и корректным `localhostProfile`. Если нода не та, profile не даст ожидаемой защиты, поэтому сверяют placement через `k get pod -o wide`.
+</details>
+
+<details>
+<summary>8. Чем глобально разрешённая документация отличается от task-specific Quick Reference?</summary>
+
+Глобально разрешённые ресурсы определяются актуальными LF instructions и могут использоваться в задачах в их установленной области. Quick Reference относится к конкретной задаче и разрешает только отображённые там ссылки; его разрешение нельзя переносить на другие задачи. Перед экзаменом список всё равно сверяют с Resources Allowed и ExamUI, а не с сохранённой таблицей курса.
+</details>
+
+<details>
+<summary>9. Какие клавиши нужны для terminal copy/paste и vim, если `Insert` запрещён?</summary>
+
+В terminal используют `Ctrl+Shift+C` и `Ctrl+Shift+V`, а в остальных Remote Desktop applications — `Ctrl+C` и `Ctrl+V`. В vim в insert mode входят клавишей `i`, затем используют `Esc`, `:w`, `:wq`, `:q!`, `u`, `dd`, поиск `/текст`, `n`, `gg` и `G`. Для больших вставок включают `:set paste`, после неё — `:set nopaste`; `Ctrl+Alt+W`, а не `Ctrl+W`, закрывает окно.
+</details>
 
 ## Практика
 

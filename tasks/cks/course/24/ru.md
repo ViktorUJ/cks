@@ -32,11 +32,11 @@
 
 ```mermaid
 flowchart TB
-    src["Исходники + зависимости"] --> build["builder stage\nкомпилятор, тесты, git"]
-    build -->|"весь stage попал в runtime ❌"| fat["shell + package manager\nлишние пакеты и CVE"]
-    build -->|"COPY только artifact ✓"| runtime["минимальный runtime\nбинарник + нужные данные"]
-    fat --> attacker["RCE: больше инструментов\nи объектов для атаки"]
-    runtime --> reduced["RCE: меньше возможностей\nдля пост-эксплуатации"]
+    src["Исходники + зависимости"] --> build["builder stage<br/>компилятор, тесты, git"]
+    build -->|"весь stage попал в runtime ❌"| fat["shell + package manager<br/>лишние пакеты и CVE"]
+    build -->|"COPY только artifact ✓"| runtime["минимальный runtime<br/>бинарник + нужные данные"]
+    fat --> attacker["RCE: больше инструментов<br/>и объектов для атаки"]
+    runtime --> reduced["RCE: меньше возможностей<br/>для пост-эксплуатации"]
     style build fill:#326ce5,color:#fff
     style fat fill:#db4437,color:#fff
     style runtime fill:#0f9d58,color:#fff
@@ -74,10 +74,10 @@ libraries.
 ```mermaid
 flowchart TB
     q["Что требуется финальному процессу?"]
-    q -->|"статический binary\nи все данные встроены"| scratch["scratch\nминимум файлов"]
-    q -->|"нужен runtime, но\nне shell/package manager"| dist["distroless\nминимальный runtime"]
-    q -->|"нужны shell, apk\nили native diagnostics"| alpine["Alpine\nобоснованное исключение"]
-    scratch --> verify["проверить запуск, TLS, DNS\nи non-root"]
+    q -->|"статический binary<br/>и все данные встроены"| scratch["scratch<br/>минимум файлов"]
+    q -->|"нужен runtime, но<br/>не shell/package manager"| dist["distroless<br/>минимальный runtime"]
+    q -->|"нужны shell, apk<br/>или native diagnostics"| alpine["Alpine<br/>обоснованное исключение"]
+    scratch --> verify["проверить запуск, TLS, DNS<br/>и non-root"]
     dist --> verify
     alpine --> verify
     style q fill:#f4b400,color:#000
@@ -506,26 +506,71 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 
 ## 24.11. Вопросы для самопроверки
 
-1. Почему shell и package manager в runtime image увеличивают последствия RCE, хотя их
-   отсутствие не исправляет уязвимость приложения?
-2. Как выбрать между `scratch`, distroless и Alpine для статического Go binary, Java
-   application и приложения с необходимым native tool?
-3. Что именно предотвращает `COPY --from=builder`, а что всё ещё может попасть в final
-   image по ошибке?
-4. Почему версионный tag лучше `latest`, а digest сильнее version tag для release?
-5. Как `USER` в Dockerfile связан с `runAsNonRoot` в Pod и почему нужны оба?
-6. Почему `RUN rm /secret` не удаляет secret из image history? Какой механизм применять
-   для private dependency credential?
-7. Что ограничивает `.dockerignore` и почему он не заменяет secret manager?
-8. Какие признаки в `dive` указывают на слишком широкий context или waste в layers?
-9. Как доказать, что distroless Pod работоспособен, если `/bin/sh` намеренно отсутствует?
-10. Чем rootless Podman полезен для build pipeline и чего он не защищает?
-11. **Flashback (глава 14).** Минимизация base image (эта глава: distroless, отсутствие
-    shell/package manager) и минимизация host footprint (глава 14: отключение лишних
-    сервисов/пакетов на ноде) - это один и тот же принцип "меньше поверхность атаки",
-    применённый на двух разных уровнях. Если у вас ограничено время перед экзаменом/
-    инцидентом, какой из этих двух уровней минимизации снижает риск для **уже
-    скомпрометированного** container быстрее - и почему ни один не заменяет другой?
+<details>
+<summary>1. Почему shell и package manager в runtime image увеличивают последствия RCE, хотя их отсутствие не исправляет уязвимость приложения?</summary>
+
+После RCE shell, `curl`/`wget`, compiler и package manager дают атакующему готовые средства скачать payload, ставить утилиты и исследовать filesystem. Их отсутствие сокращает post-exploitation surface, но не исправляет исходную RCE и не заменяет SecurityContext, NetworkPolicy или runtime detection. Поэтому минимизация — defence in depth, а не граница безопасности сама по себе.
+</details>
+
+<details>
+<summary>2. Как выбрать между `scratch`, distroless и Alpine для статического Go binary, Java application и приложения с необходимым native tool?</summary>
+
+Статический Go binary с `CGO_ENABLED=0` подходит для `scratch`, если проверены DNS, TLS, CA bundle и требуемые runtime данные. Java application нужен минимальный поддерживаемый language runtime, поэтому выбирают соответствующий distroless variant. Если действительно необходим shell, `apk` или native diagnostic tool, обоснован Alpine, но его BusyBox/package manager и `musl` требуют отдельной compatibility и security оценки.
+</details>
+
+<details>
+<summary>3. Что именно предотвращает `COPY --from=builder`, а что всё ещё может попасть в final image по ошибке?</summary>
+
+`COPY --from=builder` переносит только явно указанный artifact, а не filesystem builder целиком, поэтому compiler, source, `git`, build cache и большинство зависимостей не попадают в runtime автоматически. Но ошибочный широкий `COPY`, добавленная runtime dependency или secret, заранее оказавшийся в копируемом пути, всё ещё могут попасть в final image. Содержимое проверяют через `history`, `inspect` и `dive`.
+</details>
+
+<details>
+<summary>4. Почему версионный tag лучше `latest`, а digest сильнее version tag для release?</summary>
+
+`latest` mutable и не фиксирует проверенный artifact, тогда как version tag хотя бы выражает выпуск. Immutable digest связывает deployment с конкретными байтами manifest/content, которые были просканированы и подписаны. Для release глава рекомендует хранить в GitOps tag вместе с проверенным `@sha256:...` digest.
+</details>
+
+<details>
+<summary>5. Как `USER` в Dockerfile связан с `runAsNonRoot` в Pod и почему нужны оба?</summary>
+
+`USER` делает non-root запуск default уже для image и локального `docker run`; numeric UID работает даже без записи в `/etc/passwd`. `runAsNonRoot` в Pod не создаёт пользователя и не исправляет ownership, но не даст runtime запустить определённого root пользователя. Pod также может явно задать UID/GID и подкрепить решение admission policy.
+</details>
+
+<details>
+<summary>6. Почему `RUN rm /secret` не удаляет secret из image history? Какой механизм применять для private dependency credential?</summary>
+
+Filesystem layers immutable: удаление в следующем layer не стирает байты секрета из предыдущего layer/history. Credential нельзя передавать через `ARG`, `ENV`, `COPY` или `ADD`; для private dependency применяют BuildKit/Podman `--mount=type=secret`. Если secret уже опубликован, его отзывают и ротируют, а image пересобирают из чистого Dockerfile.
+</details>
+
+<details>
+<summary>7. Что ограничивает `.dockerignore` и почему он не заменяет secret manager?</summary>
+
+`.dockerignore` ограничивает files build context, отправляемого builder, поэтому `.git`, `.env`, keys и test artifacts не становятся доступными `COPY . .`. Это уменьшает риск утечки и размер/время build. Но файл, который всё-таки нужен в context, всё ещё можно ошибочно скопировать, поэтому credentials должны выдаваться secret manager через secret mount.
+</details>
+
+<details>
+<summary>8. Какие признаки в `dive` указывают на слишком широкий context или waste в layers?</summary>
+
+Большой layer от `COPY . .` обычно означает широкий context или неверный порядок Dockerfile. Compiler, package cache, tests, `.git`, `.env`, private key и `.npmrc` показывают лишнее содержимое, а wasted bytes после `RUN install` и отдельного `RUN rm` — позднее удаление. Пустой либо root `User` также сигнализирует, что Dockerfile не задал non-root user.
+</details>
+
+<details>
+<summary>9. Как доказать, что distroless Pod работоспособен, если `/bin/sh` намеренно отсутствует?</summary>
+
+Проверяют Ready, logs, health endpoint или probe, например через `kubectl port-forward` и `curl`, а не пытаются вернуть shell. Отказ `kubectl exec ... /bin/sh` с non-zero кодом ожидаем и подтверждает отсутствие shell. Для incident diagnosis применяют logs, metrics, `describe` или временный утверждённый ephemeral debug container.
+</details>
+
+<details>
+<summary>10. Чем rootless Podman полезен для build pipeline и чего он не защищает?</summary>
+
+Rootless Podman запускает build/run обычным пользователем без root Docker daemon, что уменьшает необходимость давать pipeline доступ к host Docker socket. Он использует тот же Dockerfile и build context, но не предотвращает попадание secret и лишних файлов в image. Поэтому `.dockerignore`, secret mounts и review Dockerfile всё равно обязательны.
+</details>
+
+<details>
+<summary>11. **Flashback (глава 14).** Минимизация base image (эта глава: distroless, отсутствие shell/package manager) и минимизация host footprint (глава 14: отключение лишних сервисов/пакетов на ноде) - это один и тот же принцип "меньше поверхность атаки", применённый на двух разных уровнях. Если у вас ограничено время перед экзаменом/ инцидентом, какой из этих двух уровней минимизации снижает риск для **уже скомпрометированного** container быстрее - и почему ни один не заменяет другой?</summary>
+
+Для уже скомпрометированного container быстрее меняет доступные атакующему инструменты минимизация runtime image: в нём сразу может не быть shell, package manager и downloader. Минимизация host footprint защищает node и другие workloads, уменьшая сервисы и пакеты, через которые можно развивать escape после host access. Образ не защищает скомпрометированную node, а безопасная node не убирает лишние инструменты внутри container, поэтому нужны оба уровня.
+</details>
 
 ## Практика
 
