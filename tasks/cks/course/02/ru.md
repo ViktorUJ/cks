@@ -100,12 +100,13 @@ kubectl run metadata-probe --rm -i --restart=Never --image=curlimages/curl:8.11.
 aws eks describe-cluster --name "$CLUSTER" \
   --query 'cluster.resourcesVpcConfig.{public:endpointPublicAccess,private:endpointPrivateAccess,cidrs:publicAccessCidrs}'
 
-# Вопрос 3: нужен HttpTokens=required (IMDSv2-only) и hop limit 2
+# Вопрос 3: hop limit `1` - security-first default; `2` проверяют только там,
+# где Pod обоснованно должен сам обращаться к IMDS
 aws ec2 describe-instances --filters "Name=tag:eks:cluster-name,Values=$CLUSTER" \
   --query 'Reservations[].Instances[].{id:InstanceId,imds:MetadataOptions.HttpTokens,hop:MetadataOptions.HttpPutResponseHopLimit}'
 ```
 
-Значения `HttpTokens=required` и `HttpPutResponseHopLimit=2` - документированный AWS baseline именно для контейнерных нагрузок: hop limit `1` ломает часть контроллеров внутри Pod, а больше `2` излишне расширяет путь до metadata.
+AWS EKS Best Practices Guide различает два разных случая, и их нельзя сводить к одному "baseline". Если Pod не должен наследовать права instance profile ноды (обычный случай при IRSA/EKS Pod Identity), документация прямо рекомендует `HttpTokens=required` и `HttpPutResponseHopLimit=1` в разделе "Restrict access to the instance profile assigned to the worker node" - именно это и блокирует получение credentials ноды через Pod. Значение `HttpPutResponseHopLimit=2` документация рекомендует отдельно и только тогда, когда приложению действительно нужен собственный доступ к IMDS ("When your application needs access to IMDS... increase the hop limit to 2") - это обоснованное исключение, а не общий security baseline для всех контейнерных нагрузок.
 
 **Отдельный случай: self-managed кластер на «обычных» серверах** (kubeadm на bare metal, VM в Hetzner и подобных).
 
