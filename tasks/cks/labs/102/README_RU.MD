@@ -129,7 +129,7 @@ cilium status --wait
 | **4** | **DNS-aware egress: разрешён только один FQDN** |
 | :---: | :--- |
 | Что делаем | Создайте `CiliumNetworkPolicy` `frontend-fqdn`, выбирающую `role=frontend`. Разрешите ей DNS к `kube-dns` на порту `53` **через L7 DNS proxy rule** `toPorts.rules.dns` (например, `matchPattern: "*"`): Cilium по этому DNS-трафику формирует FQDN-to-IP mapping для `toFQDNs`. Разрешите egress через `toFQDNs` только к `example.com` и только на TCP `443`. Проверьте HTTPS-запрос к `https://example.com/`, отказ `http://example.com:80` и отказ `https://www.google.com/`; сохраните результаты в `/var/work/tests/artifacts/4/fqdn.txt`. |
-| Критерии приёмки | - политика содержит `toFQDNs.matchName: example.com` и `toPorts` с TCP `443`;<br/>- DNS к `kube-dns` разрешён отдельным правилом с `rules.dns`;<br/>- `example.com` по HTTPS возвращает 2xx/3xx, но его TCP `80` запрещён;<br/>- `www.google.com` не возвращает 2xx/3xx;<br/>- артефакт существует. |
+| Критерии приёмки | - политика содержит `toFQDNs.matchName: example.com` и `toPorts` с TCP `443`;<br/>- DNS к `kube-dns` разрешён отдельным правилом с `rules.dns`;<br/>- артефакт `fqdn.txt` существует.<br/>- Сетевые проверки к `example.com`/`www.google.com` сохраняются в артефакт как diagnostic evidence, но **не являются** обязательным условием PASS: IANA прямо указывает, что HTTP-сервис example-доменов предоставляется best-effort и не предназначен как testing endpoint для software, поэтому их временная недоступность не должна засчитываться как ошибка policy. |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>

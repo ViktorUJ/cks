@@ -195,17 +195,30 @@ EOF
 mkdir -p /var/work/tests/artifacts/4
 {
   printf 'example.com HTTPS: '
-  kubectl exec -n cks-102 frontend -- curl -k -sS --max-time 10 -o /dev/null -w '%{http_code}' https://example.com/
+  kubectl exec -n cks-102 frontend -- curl -sS --max-time 10 -o /dev/null -w '%{http_code}' https://example.com/
   printf '\nexample.com HTTP: '
   kubectl exec -n cks-102 frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://example.com:80/ || true
   printf '\nwww.google.com HTTPS: '
-  kubectl exec -n cks-102 frontend -- curl -k -sS --max-time 5 -o /dev/null -w '%{http_code}' https://www.google.com/ || true
+  kubectl exec -n cks-102 frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' https://www.google.com/ || true
   printf '\n'
 } > /var/work/tests/artifacts/4/fqdn.txt
 ```
 
-`example.com` по HTTPS возвращает успешный HTTP-статус; запрос к тому же FQDN по HTTP/TCP 80 и
-`www.google.com` не должны вернуть 2xx/3xx.
+Проверка к `example.com`/`www.google.com` записывается в артефакт как diagnostic
+evidence, но не является обязательным условием PASS для этого задания: IANA прямо
+указывает, что HTTP-сервис example-доменов предоставляется best-effort и не
+предназначен как testing endpoint для software, поэтому его временная недоступность
+не должна засчитываться как ошибка policy. Graded критерий - структура
+`CiliumNetworkPolicy` (`toFQDNs.matchName`, TCP `443`, отдельное правило `rules.dns`
+для `kube-dns`).
+
+Если непосредственно перед применением policy preflight подтвердил доступность всех
+контрольных endpoint, то относительный diagnostic result после корректной policy
+ожидается такой: `example.com:443` остаётся достижимым, а `example.com:80` и
+`www.google.com:443` перестают проходить. Эти внешние сетевые результаты всё равно
+остаются non-blocking evidence и не должны интерпретироваться без актуального
+preflight: доступность и поведение публичных сервисов находятся вне контроля политики
+студента.
 
 ## Задание 5. Evidence из Hubble
 

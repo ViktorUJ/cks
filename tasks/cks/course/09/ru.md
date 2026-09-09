@@ -2,6 +2,12 @@
 
 # Глава 09. Небезопасные аргументы компонентов, TLS-хардненинг и проверка бинарников
 
+> **Проблема.** Атакующий, получивший сетевой доступ к endpoint control plane или
+> возможность изменить файл на ноде, ищет не уязвимость в самом Kubernetes, а небезопасный
+> аргумент рядом: anonymous access, read-only kubelet port, слабый TLS или подменённый
+> `kubelet`/`kubectl`/образ ещё до запуска. Один такой недостаток даёт доступ к API, etcd
+> или запуск кода с полномочиями компонента - и ни один из них не виден из кода приложения.
+
 > **Что дальше.** В главе 08 мы защитили внешний HTTP-вход TLS. Теперь нужно защитить
 > сами компоненты control plane и kubelet: один небезопасный аргумент может открыть
 > анонимный API, диагностический endpoint или слабый TLS-канал. Затем проверим, что
@@ -108,22 +114,9 @@ token-based `kubeadm join` через публичный `cluster-info` рабо
 
 Сначала инвентаризируйте активные параметры, а не только шаблонный файл. Ищите
 дубликаты: последнее или фактически использованное значение зависит от реализации, а
-конфликтующие флаги усложняют диагностику.
-
-```bash
-# На узле control plane: static Pod-манифесты и аргументы запущенных контейнеров.
-sudo grep -nE -- '--(anonymous-auth|authorization-mode|profiling|tls-|cipher|insecure)' \
-  /etc/kubernetes/manifests/{kube-apiserver,kube-controller-manager,kube-scheduler,etcd}.yaml
-sudo crictl ps -a
-sudo crictl inspect "$(sudo crictl ps -q --name kube-apiserver | head -n1)" \
-  | grep -A2 -B2 'tls-min-version\|cipher-suites\|anonymous-auth'
-
-# На каждой ноде: источник запуска kubelet и фактическая конфигурация.
-sudo systemctl cat kubelet
-sudo ps -ef | grep '[k]ubelet'
-sudo grep -nE 'readOnlyPort|anonymous:|authorization:|protectKernelDefaults|tls' \
-  /var/lib/kubelet/config.yaml
-```
+конфликтующие флаги усложняют диагностику. Если конкретную находку уже даёт `kube-bench`
+(глава 07), используйте её remediation как источник точного флага и файла; TLS-специфичные
+параметры (`--tls-min-version`, `--tls-cipher-suites`) разбираются отдельно ниже в 09.4-09.5.
 
 `--enable-debugging-handlers` у kubelet тоже оценивают по риску: он включает
 диагностические handlers, нужные части которых могут использовать `kubectl logs`, `exec`
@@ -138,11 +131,11 @@ traffic, а поведение NetworkPolicy для `hostNetwork` и node IP з�
 
 ## 09.3. Где менять конфигурацию и как безопасно перезапускать
 
-В kubeadm-кластере `kube-apiserver`, `kube-controller-manager`, `kube-scheduler` и часто
-`etcd` - **static Pod**. Их локальные манифесты обычно находятся в
-`/etc/kubernetes/manifests/`. Kubelet наблюдает этот каталог и пересоздаёт Pod после
-изменения манифеста; API server для этого не нужен. Именно поэтому ошибка YAML, неверный
-флаг или неподходящий cipher может временно лишить кластер API.
+Общий процесс безопасной правки static Pod control plane (backup, минимальное изменение,
+проверка здоровья, восстановление после сбоя) разобран в главе 07 - здесь он не
+повторяется, а дополняется одной специфичной для этой главы техникой и нюансами discovery
+конфигурации kubelet/scheduler/controller-manager, которые особенно важны при TLS- и
+cipher-правках ниже в 09.4.
 
 Kubelet не является static Pod: его конфигурация обычно находится в
 `/var/lib/kubelet/config.yaml`, а дополнительные аргументы - в
@@ -172,22 +165,18 @@ flowchart TB
     style pass fill:#0f9d58,color:#fff
 ```
 
-Правьте один control-plane компонент за раз и храните backup **вне**
-`/etc/kubernetes/manifests/`.
-
-Kubelet не фильтрует static Pod directory по расширению: он пытается обработать все
-файлы, имя которых не начинается с точки. Поэтому `kube-apiserver.yaml.backup`,
-`.bak`-копия без leading dot или файл с другим suffix также может быть прочитан как
-manifest.
-
-Надёжное правило - не хранить backup-файлы в watched directory вообще. Работайте через
-консоль ноды, особенно на одноузловом control plane; в HA-кластере меняйте одну ноду и
-дождитесь её здоровья перед следующей.
+Дополнительная техника для static Pod control plane - atomic rename через hidden
+candidate в том же watched directory. Она надёжнее обычного backup+edit там, где важно не
+оставить кластер без API даже на момент ошибки в промежуточном YAML:
 
 ```bash
-# 1. Создать candidate вне watched directory; kubelet не увидит его до атомарной замены.
+# 1. Создать hidden candidate в самом watched directory; kubelet игнорирует файлы,
+# чьё имя начинается с точки, поэтому Pod не пересоздастся до атомарной замены.
+# /etc/kubernetes/manifests может быть отдельным mount: если candidate создать в
+# /etc/kubernetes, mv между разными filesystem превращается в copy+unlink и перестаёт
+# быть atomic rename.
 sudo install -d -m 700 /root/k8s-manifest-backup
-CANDIDATE=$(sudo mktemp /etc/kubernetes/.kube-apiserver.yaml.candidate.XXXXXX)
+CANDIDATE=$(sudo mktemp /etc/kubernetes/manifests/.kube-apiserver.yaml.candidate.XXXXXX)
 sudo cp -p /etc/kubernetes/manifests/kube-apiserver.yaml "$CANDIDATE"
 sudo cp -p /etc/kubernetes/manifests/kube-apiserver.yaml \
   /root/k8s-manifest-backup/kube-apiserver.yaml.$(date +%F-%H%M%S)
@@ -197,7 +186,8 @@ sudoedit "$CANDIDATE"
 sudo kubectl apply --dry-run=client --validate=strict -f "$CANDIDATE"
 
 # 3. Только после успешной проверки атомарно заменить watched manifest.
-# Candidate создан в /etc/kubernetes, поэтому rename остаётся в той же файловой системе.
+# Candidate и target находятся в одном directory и на одной файловой системе,
+# поэтому rename гарантированно atomic.
 sudo mv -f "$CANDIDATE" /etc/kubernetes/manifests/kube-apiserver.yaml
 
 # 4. Наблюдать пересоздание с консоли ноды, затем проверить API.
@@ -210,6 +200,9 @@ sudo journalctl -u kubelet -n 100 --no-pager
 sudo crictl ps -a --name kube-apiserver
 sudo crictl logs "$(sudo crictl ps -aq --name kube-apiserver | head -n1)"
 ```
+
+Постоянные backup-файлы всё равно храните вне `/etc/kubernetes/manifests/` (как в шаге 1
+выше): hidden candidate нужен только на время самой замены, а не как долгосрочная копия.
 
 Для kubelet сначала проверьте значения sysctl и конфигурацию, затем перезапустите только его. Обычный `systemctl restart kubelet` сам по себе не останавливает уже запущенные Pod и контейнеры: container runtime продолжает их выполнять, а kubelet после старта восстанавливает reconciliation. Тем не менее на control-plane меняйте kubelet по одной ноде и контролируйте Node heartbeat, kubelet logs и `/readyz`: ошибка конфигурации может оставить ноду `NotReady` или помешать дальнейшему управлению static Pod.
 
@@ -649,9 +642,12 @@ Cluster Setup (главы 04-09) закрепился, а не просто бы
    одним разрешённым и одним запрещённым запросом, что правило реально применилось (глава 04).
 2. Запустите `kube-bench` (или прочитайте существующий отчёт) и укажите один `FAIL`, который
    вы бы исправили первым, и почему (глава 07).
-3. Объясните, какую конкретную угрозу устраняет `hostNetwork: false` в сочетании с
-   NetworkPolicy, если Pod пытается обойти правило через host-сеть (главы 04 и 05 - разные
-   главы одного домена, но проверьте, что вы не путаете уровни).
+3. Объясните, почему `hostNetwork: false` у конкретного Pod удерживает этот Pod в обычной
+   pod network, но само по себе не является enforcement-контролем: какой механизм должен
+   запрещать недоверенным workload создавать Pod с `hostNetwork: true`, и почему обычный
+   Kubernetes `NetworkPolicy` нельзя считать переносимым firewall для host-network/node
+   traffic (главы 04 и 05 - разные главы одного домена, но проверьте, что вы не путаете
+   уровни)?
 4. **Смешанное задание.** Возьмите Secure Ingress с TLS (глава 08) и объясните, что
    произойдёт, если у backend Pod при этом нет NetworkPolicy: какой обход стал бы возможен,
    если TLS terminate на Ingress, а трафик от Ingress к Pod внутри кластера не ограничен?

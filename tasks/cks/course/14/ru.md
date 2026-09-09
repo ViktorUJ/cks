@@ -113,11 +113,26 @@ sudo systemctl is-enabled avahi-daemon.service || true
 
 ```bash
 UNIT='confirmed-unwanted.service'
-sudo systemctl mask "$UNIT"
-# Откат:
-sudo systemctl unmask "$UNIT"
-sudo systemctl enable --now "$UNIT"
+
+# До изменения сохранить исходное состояние.
+sudo systemctl is-active "$UNIT" \
+  > "/root/hardening-before/${UNIT}.active" 2>&1 || true
+sudo systemctl is-enabled "$UNIT" \
+  > "/root/hardening-before/${UNIT}.enabled" 2>&1 || true
+
+# Mask + остановка уже работающего unit.
+sudo systemctl mask --now "$UNIT"
+
+# Доказать оба состояния.
+sudo systemctl is-active "$UNIT" || true
+sudo systemctl is-enabled "$UNIT" || true
 ```
+
+Без `--now` `mask` блокирует только будущий ручной и dependency-based запуск: уже
+работающий service продолжит работать. Для отката сначала выполните `systemctl unmask
+<unit>`, а затем восстановите именно сохранённое до изменения active/enabled состояние.
+Не выполняйте `enable --now` автоматически, если unit до hardening не был enabled и
+active.
 
 ## 14.3. Лишние пакеты и минимальный образ ОС
 
@@ -423,11 +438,27 @@ kubelet или эксплуатационные задачи.
 containerd и не замена `runAsNonRoot`; применяйте её к выделенному Docker-хосту после
 тестирования. Проверка и откат должны быть готовы до перезапуска daemon.
 
+Никогда не создавайте `daemon.json` поверх существующего файла через `install /dev/null`:
+сначала сохраните текущую конфигурацию. Новый пустой файл создавайте только при его
+отсутствии.
+
 ```bash
-sudo install -m 600 -o root -g root /dev/null /etc/docker/daemon.json
+sudo install -d -m 0755 /etc/docker
+
+if sudo test -e /etc/docker/daemon.json; then
+  # Сначала сохранить существующую конфигурацию.
+  sudo cp -a /etc/docker/daemon.json /root/hardening-before/daemon.json.before
+  sudo chown root:root /etc/docker/daemon.json
+  sudo chmod 0600 /etc/docker/daemon.json
+else
+  # Создать пустой файл только если его ещё нет.
+  sudo install -m 0600 -o root -g root /dev/null /etc/docker/daemon.json
+fi
+
 sudoedit /etc/docker/daemon.json
 sudo dockerd --validate --config-file=/etc/docker/daemon.json
 sudo systemctl restart docker.service
+sudo systemctl --no-pager --full status docker.service
 sudo docker info --format '{{json .SecurityOptions}}'
 ```
 

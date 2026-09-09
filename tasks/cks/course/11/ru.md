@@ -226,9 +226,16 @@ Legacy-вариант - Secret типа `kubernetes.io/service-account-token`, �
 ## 11.4. Выделенный ServiceAccount и минимальный RBAC
 
 `default` SA не является ролью приложения. Для каждого workload, которому нужен API,
-создайте отдельный SA и namespaced Role. В этом примере `app-sa` может только читать список
-Pod в namespace `cks-104`: никакого `watch`, `create`, `delete`, доступа к Secret или
-ClusterRoleBinding.
+создайте отдельный ServiceAccount и выдайте ему минимальные RBAC-права.
+
+Если необходимые ресурсы находятся только в одном namespace, используйте `Role` +
+`RoleBinding`. Если нужен переиспользуемый набор правил или доступ к cluster-scoped
+resources, используйте `ClusterRole`. Для выдачи её namespaced-прав только в одном
+namespace свяжите `ClusterRole` через `RoleBinding`; для действительно cluster-wide
+доступа используйте `ClusterRoleBinding`.
+
+В этом примере `app-sa` может только читать список Pod в namespace `cks-104`: никакого
+`watch`, `create`, `delete`, доступа к Secret или ClusterRoleBinding.
 
 ```yaml
 apiVersion: v1
@@ -280,11 +287,17 @@ kubectl auth can-i get secrets -n cks-104 \
 # no
 ```
 
-RoleBinding ограничивает область namespace `cks-104`. Не заменяйте его ClusterRoleBinding
-«ради простоты»: тогда те же permissions станут cluster-wide. Не добавляйте wildcard `*` в
-`resources` или `verbs`, а также не выдавайте `secrets`, `pods/exec`, `bind`, `escalate` и
-`impersonate` без отдельно обоснованной задачи. Текущие и будущие права SA полезно регулярно
-проверять командой из главы 10:
+В этом примере `RoleBinding` ограничивает выдаваемые права namespace `cks-104` и
+ссылается на namespaced `Role`.
+
+Не рассматривайте `ClusterRoleBinding` как механическую замену этого объекта:
+`ClusterRoleBinding` может ссылаться только на `ClusterRole`, а не на `Role`. Чтобы
+выдать аналогичные правила cluster-wide, сначала пришлось бы определить `ClusterRole`, а
+затем связать её через `ClusterRoleBinding`.
+
+При аудите отдельно проверяйте набор правил и scope binding; не добавляйте wildcard `*`,
+`secrets`, `pods/exec`, `bind`, `escalate` или `impersonate` без отдельной обоснованной
+задачи. Текущие и будущие права SA полезно регулярно проверять командой из главы 10:
 
 ```bash
 kubectl auth can-i --list -n cks-104 \
@@ -361,9 +374,11 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
   `default` SA каждого прикладного namespace. Workload, которому API не нужен, фиксирует
   `automountServiceAccountToken: false` и в шаблоне Pod, чтобы исключение было видно в
   code review.
-- **Один workload - один SA.** Отдельные ServiceAccount, Role и RoleBinding уменьшают
-  blast radius. Права дают в нужном namespace и с минимальным набором verb/resource;
-  `ClusterRoleBinding` используют только когда объект действительно cluster-scoped.
+- **Один workload - один SA.** Отдельные ServiceAccount и минимальные RBAC bindings
+  уменьшают blast radius. Для прав в одном namespace используйте `RoleBinding`; он может
+  ссылаться на локальную `Role` или reusable `ClusterRole`. `ClusterRoleBinding`
+  применяйте только когда субъекту действительно требуется cluster-wide scope - для
+  cluster-scoped resources и/или одинаковых namespaced permissions во всех namespaces.
 - **Bound token вместо статичного секрета.** Для Pod используют projected token с коротким
   сроком и узкой audience. Для внешних систем применяют TokenRequest, OIDC workload
   identity или облачную федерацию, а не копируют service-account-token Secret.
@@ -445,7 +460,12 @@ Bound token выпускается TokenRequest API, связан с конкр�
 <details>
 <summary>5. Почему `app-sa` из примера получает RoleBinding, а не ClusterRoleBinding?</summary>
 
-`app-sa` должен читать Pod только в namespace `cks-104`, поэтому namespaced RoleBinding задаёт требуемую границу. ClusterRoleBinding сделал бы те же permissions cluster-wide, хотя задача не требует такого scope. Отдельный SA с минимальной Role уменьшает blast radius в случае утечки token.
+`app-sa` должен читать Pod только в namespace `cks-104`, поэтому `RoleBinding` задаёт
+правильный scope. В данном примере он ссылается на `Role app-pod-reader`.
+`ClusterRoleBinding` не может ссылаться на эту `Role`; для cluster-wide варианта
+понадобились бы `ClusterRole` с нужными правилами и `ClusterRoleBinding`. Важно
+различать rules и binding scope: `RoleBinding` ограничивает выдаваемые namespaced-права
+своим namespace, а `ClusterRoleBinding` выдаёт правила `ClusterRole` cluster-wide.
 </details>
 
 <details>

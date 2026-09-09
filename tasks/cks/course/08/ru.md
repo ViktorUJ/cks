@@ -2,6 +2,12 @@
 
 # Глава 08. Secure Ingress с TLS
 
+> **Проблема.** Если Ingress принимает трафик по обычному HTTP, логин, cookie, bearer
+> token и содержимое формы идут по сети открытым текстом. Пользователь в той же
+> недоверенной сети, вредоносная точка Wi-Fi или промежуточный прокси могут прочитать
+> запрос или незаметно подменить ответ - публичная точка входа приложения остаётся
+> открытой для перехвата до того, как трафик вообще дойдёт до Pod.
+
 > **Что дальше.** В главе 07 мы проверяли и усиливали конфигурацию компонентов кластера.
 > Теперь защитим публичную точку входа приложений. **Ingress с TLS** шифрует HTTP-трафик
 > между клиентом и ingress controller, подтверждает имя сервера и не даёт перехватчику
@@ -389,7 +395,195 @@ namespace Secret**; без него controller не должен принять 
 Проверьте поддерживаемые `GatewayClass` через `kubectl get gatewayclass` и статус Gateway
 перед миграцией трафика.
 
-## 08.6. Проверка: controller-neutral HTTPS, host и сертификат
+## 08.6. mTLS на входе: controller проверяет сертификат клиента
+
+Всё выше в главе - **server-side TLS**: controller доказывает клиенту свою identity
+сертификатом, а клиент остаётся анонимным на уровне TLS. Отдельная задача - **mutual
+TLS (mTLS) на входе**: controller дополнительно требует у клиента предъявить свой
+сертификат и проверяет его по доверенному CA **до** того, как запрос дойдёт до backend.
+Не путайте это с темами из других глав:
+
+- глава 23 разбирает mTLS **между Pod внутри mesh** (Istio/Linkerd sidecar-to-sidecar);
+- TLS passthrough из 08.5 переносит обязанность проверки клиента **на сам backend**,
+  а не на Gateway/Ingress;
+- здесь речь именно про то, что **controller на границе кластера** сам становится
+  TLS-сервером для клиента и одновременно проверяет клиентский сертификат.
+
+```mermaid
+flowchart TB
+    client["Клиент"] -->|"TLS + client cert"| edge["Ingress/Gateway data<br/>plane проверяет cert"]
+    edge -->|"validation failed"| deny["Отклонён,<br/>код зависит от API"]
+    edge -->|"соединение принято"| backend["Backend видит HTTP;<br/>identity видит API"]
+    style client fill:#326ce5,color:#fff
+    style edge fill:#f4b400,color:#000
+    style deny fill:#db4437,color:#fff
+    style backend fill:#0f9d58,color:#fff
+```
+
+Не делайте HTTP-код частью общей модели mTLS. В ingress-nginx режим `on` возвращает `400`
+при failed certificate verification, а `auth-tls-match-cn` может вернуть `403`. В Gateway
+API `AllowValidOnly` валидирует сертификат во время TLS handshake, поэтому реализация
+может отклонить само TLS-соединение без HTTP-ответа - controller-neutral модели «всегда
+400/403» здесь не существует.
+
+### ingress-nginx: аннотации `auth-tls-*`
+
+Client Certificate Authentication включается через `Secret` с CA-цепочкой в ключе
+`ca.crt` и набор аннотаций на объекте `Ingress`:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-mtls
+  namespace: web
+  annotations:
+    nginx.ingress.kubernetes.io/auth-tls-secret: "web/client-ca"
+    nginx.ingress.kubernetes.io/auth-tls-verify-client: "on"
+    nginx.ingress.kubernetes.io/auth-tls-verify-depth: "1"
+    nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream: "true"
+spec:
+  tls:
+  - hosts: [app.example.test]
+    secretName: web-tls
+  rules:
+  - host: app.example.test
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web
+            port:
+              number: 80
+```
+
+- `auth-tls-secret` ссылается на `Secret` формата `namespace/name`, где `ca.crt` содержит
+  доверенную CA-цепочку для клиентских сертификатов - это отдельный `Secret` от
+  server-side `web-tls` из 08.3, хотя оба относятся к одному host.
+- `auth-tls-verify-client: "on"` требует сертификат клиента, успешно проверяемый по CA из
+  `auth-tls-secret`; failed certificate verification завершается HTTP `400`.
+- `optional` не требует сертификат от каждого клиента, но это **не** режим «никогда не
+  отклонять»: если клиент предъявил сертификат, не подписанный настроенным CA,
+  ingress-nginx всё равно возвращает HTTP `400`. Когда запрос допускается, результат
+  проверки может быть передан upstream.
+- `optional_no_ca` не отклоняет запрос только из-за того, что клиентский сертификат не
+  подписан CA из `auth-tls-secret`; verification result передаётся upstream. Используйте
+  этот режим только если приложение или отдельный authorization layer действительно
+  принимает решение по этому результату.
+- Для пропущенного upstream запроса ingress-nginx передаёт `ssl-client-verify`,
+  `ssl-client-subject-dn` и `ssl-client-issuer-dn`; полный PEM-сертификат в
+  `ssl-client-cert` передаётся только при `auth-tls-pass-certificate-to-upstream: "true"`.
+- Client Certificate Authentication применяется на весь host, а не на отдельный path.
+
+### Gateway API: frontend client-certificate validation на уровне Gateway
+
+Frontend client-certificate validation входит в Gateway API через поле `spec.tls.frontend`
+объекта `Gateway`, а не через `HTTPRoute`. Актуальная схема отличается от более раннего
+proposal-варианта (`default.frontendValidation` из GEP-91): в released API путь -
+`spec.tls.frontend.default.validation`, а per-port override -
+`spec.tls.frontend.perPort[].tls.validation`.
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: mtls-gateway
+  namespace: web
+spec:
+  gatewayClassName: platform-gateway
+  tls:
+    frontend:
+      default:
+        validation:
+          caCertificateRefs:
+          - group: ""
+            kind: ConfigMap
+            name: client-ca
+          mode: AllowValidOnly
+  listeners:
+  - name: app-https
+    protocol: HTTPS
+    port: 443
+    hostname: app.example.test
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: web-tls
+```
+
+`ConfigMap` `client-ca` содержит доверенный CA certificate (trust anchor) в ключе
+`ca.crt`. Переносимый Core-вариант Gateway API - один `caCertificateRefs` на один
+`ConfigMap` с одним CA certificate. Несколько CA certificates в одном `ca.crt`,
+несколько `caCertificateRefs` или другие resource kinds относятся к
+implementation-specific support, поэтому такие варианты проверяйте по документации
+конкретного Gateway controller.
+
+- `spec.tls.frontend.default.validation` проверяет клиента при подключении **к Gateway**
+  и применяется ко всем HTTPS listeners, для которых нет per-port override; это не то же
+  самое, что `BackendTLSPolicy`, которая управляет TLS от Gateway **к backend** - обе
+  политики независимы и могут применяться одновременно.
+- `spec.tls.frontend.perPort[].tls.validation` переопределяет эту конфигурацию для всех
+  HTTPS listeners на указанном порту.
+- `mode: AllowValidOnly` (default) отклоняет соединение без валидного сертификата.
+  `AllowInsecureFallback` принимает соединение даже без сертификата или при неуспешной
+  его проверке, делегируя решение об авторизации клиента backend. Это состояние явно
+  помечается условием `InsecureFrontendValidationMode` на `Gateway` и создаёт
+  значительный security risk. Gateway API рекомендует использовать такой режим в
+  тестовой среде либо только временно в non-testing среде; для обычного production mTLS
+  предпочитайте `AllowValidOnly`.
+- Поддержка frontend client-certificate validation зависит от конкретного Gateway API
+  controller; перед использованием проверьте её в списке поддерживаемых implementations
+  вашей версии.
+
+Оба механизма решают одну и ту же задачу разными API: и NGINX Ingress через
+`auth-tls-*`, и Gateway API через `spec.tls.frontend...validation` умеют проверять
+клиентский сертификат на границе кластера. Какой из них доступен, зависит не от
+возможностей самой идеи mTLS, а от того, какой ingress controller или Gateway API
+implementation развёрнута в кластере - выбирайте синтаксис по фактически установленному
+controller, а не наоборот.
+
+### Подводный камень: scope client-certificate validation зависит от API
+
+Client certificate проверяется во время TLS handshake, до HTTP-маршрутизации по path. Но
+точная область действия policy различается между API, а не универсальна:
+
+- **ingress-nginx:** Client Certificate Authentication применяется **per host** и не
+  может иметь разные правила для отдельных paths одного host. Если `/admin` требует
+  строгий client certificate, а `/public` не должен его требовать на TLS-уровне, такие
+  handshake-requirements нельзя выразить двумя paths одного ingress-nginx host.
+- **Gateway API:** frontend client-certificate validation задаётся на уровне `Gateway`:
+  `default` применяется ко всем HTTPS listeners без override, а `perPort` - ко всем HTTPS
+  listeners на указанном порту. Разные `hostname`/listeners одного Gateway на одном
+  порту **не** получают независимые client-certificate policies - GEP-91 явно объясняет,
+  что более узкая привязка создала бы риск обхода через HTTP/2/TLS connection
+  coalescing: уже установленное TLS-соединение может обслуживать listener с другим
+  hostname на том же порту.
+
+Практическое следствие: не используйте правило «разный hostname всегда означает
+отдельную mTLS policy» как переносимую модель. Для Gateway API разные handshake-level
+требования нужно разводить по разным портам либо по действительно изолированным
+TCP/TLS entrypoints, которые выбранная реализация гарантированно не объединяет;
+конкретную топологию проверяйте по документации controller.
+
+Авторизация по HTTP path/method выполняется уже после TLS handshake в HTTP-aware
+authorization layer или приложении. `auth-tls-match-cn` ingress-nginx - не path/method
+authorization: она лишь дополнительно сверяет CN клиентского сертификата со строкой/regex.
+
+Не переносите `ssl-client-verify` из ingress-nginx на Gateway API как общий contract.
+Ingress-nginx документирует `ssl-client-*` headers, а Gateway API стандартизует frontend
+certificate validation, но не общий формат передачи client identity backend. Если backend
+должен получать эту identity, отдельно проверьте механизм конкретной Gateway
+implementation.
+
+Не считайте mTLS на входе универсальной заменой RBAC или authorization приложения:
+проверка сертификата на границе кластера подтверждает identity TLS-клиента, а не
+авторизует конкретное действие внутри приложения.
+
+## 08.7. Проверка: controller-neutral HTTPS, host и сертификат
 
 Сначала определите реальную публичную точку входа: адрес Service выбранного Ingress/Gateway
 controller, hostname LoadBalancer либо адрес, опубликованный используемым fixture. Для
@@ -464,7 +658,7 @@ CA bundle через `--cacert <ca-bundle.pem>`, а не отключайте ve
 | Secret есть, но TLS не включился | `tls.crt`, `tls.key`, namespace и требования конкретного controller | отсутствуют или некорректны `tls.crt`/`tls.key`, certificate не соответствует private key, Secret находится в другом namespace либо controller не принимает используемый формат Secret |
 | Браузер не доверяет сертификату | Issuer, цепочка и срок действия | Self-signed certificate или неполная цепочка CA |
 
-## 08.7. Как это применяют в продакшене
+## 08.8. Как это применяют в продакшене
 
 - **Автоматическая выдача и ротация.** `cert-manager` и доверенный CA выпускают certificate,
   продлевают его до истечения и обновляют TLS Secret. Команда следит за метриками срока
@@ -489,7 +683,7 @@ CA bundle через `--cacert <ca-bundle.pem>`, а не отключайте ve
   быть полное отсутствие доступного HTTP listener. Это ловит ошибку до того, как её увидит
   пользователь.
 
-## 08.8. Мини-глоссарий
+## 08.9. Мини-глоссарий
 
 - **TLS termination** - завершение TLS handshake и расшифровка трафика на ingress controller.
 - **Ingress** - API-объект с правилами внешней HTTP/HTTPS-маршрутизации к Service.
@@ -503,8 +697,14 @@ CA bundle через `--cacert <ca-bundle.pem>`, а не отключайте ve
 - **self-signed certificate** - certificate, подписанный собственным ключом, а не доверенным
   CA; подходит для теста, но не доверен клиентами по умолчанию.
 - **HTTP -> HTTPS redirect** - постоянное перенаправление незашифрованного запроса на HTTPS.
+- **mTLS на входе** - controller дополнительно требует и проверяет сертификат клиента при
+  TLS handshake, до того как запрос дойдёт до backend; не путать с mesh mTLS (глава 23).
+- **Gateway frontend client-certificate validation** - проверка клиентского сертификата
+  через `spec.tls.frontend.default.validation` или per-port override
+  `spec.tls.frontend.perPort[].tls.validation`; отдельно от `BackendTLSPolicy`, которая
+  управляет TLS к backend.
 
-## 08.9. Итоги главы
+## 08.10. Итоги главы
 
 - TLS на Ingress защищает внешний HTTP-канал от перехвата и подмены до точки TLS termination.
 - Для теста можно создать self-signed certificate через `openssl`, но SAN обязан содержать
@@ -525,7 +725,7 @@ CA bundle через `--cacert <ca-bundle.pem>`, а не отключайте ve
 - Проверка должна включать SNI и SAN сертификата, Service endpoints и события Ingress, а не
   только наличие YAML-объектов.
 
-## 08.10. Как это пригодится: на экзамене и в реальной работе
+## 08.11. Как это пригодится: на экзамене и в реальной работе
 
 **На экзамене.** Переносимый минимум: сгенерировать certificate для заданного host и
 проверить SAN, создать TLS Secret, сослаться на него через `spec.tls`, сверить host/SNI/SAN,
@@ -541,7 +741,7 @@ private key, строгую проверку SAN, обязательный HTTPS
 Одна неправильная аннотация или Secret в другом namespace способна оставить публичный
 endpoint без ожидаемой защиты.
 
-## 08.11. Вопросы для самопроверки
+## 08.12. Вопросы для самопроверки
 
 <details>
 <summary>1. Где заканчивается защита TLS при TLS termination на Ingress и почему это не гарантирует шифрование между controller и Pod?</summary>

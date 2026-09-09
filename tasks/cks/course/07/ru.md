@@ -2,6 +2,12 @@
 
 # Глава 07. CIS Benchmark и kube-bench
 
+> **Проблема.** Кластер редко ломают через уязвимость в самом Kubernetes: обычно
+> атакующий, уже получивший доступ к Pod или ноде, находит рядом небезопасную мелочь -
+> лишний открытый порт, слабый флаг компонента, читаемый всем ключ. По отдельности такие
+> детали незаметны, но вместе они дают путь к API без проверки, к секретам в etcd или к
+> эскалации прав на ноде - и ни одна из них не видна из кода приложения.
+
 > **Что дальше.** Сетевые политики ограничивают путь атакующего между workload. Теперь
 > проверим, насколько безопасно настроены сами control plane и ноды. **CIS Kubernetes
 > Benchmark** переводит рекомендации по hardening в проверяемые пункты, а `kube-bench`
@@ -104,132 +110,16 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-control-plane.txt
 sudo kube-bench run --targets master --check 1.2.1
 ```
 
-Если в образе ноды нет бинаря, его можно запускать как Job с `hostPID: true`: этот
-namespace нужен `kube-bench` для проверки процессов, но привилегированный режим для
-чтения указанных ниже путей не нужен. Job всё равно чувствителен из-за `hostPath`: используйте его
-только в доверенном административном namespace и удаляйте после проверки. Ниже - набор
-конкретных read-only путей из upstream Job для control plane, а не широкие `/etc` и
-`/var/lib`. Монтирование `/usr/bin` нужно только для автоматического определения версии;
-его можно убрать, если версия передана `kube-bench` явно через `--version`.
+Если бинарник `kube-bench` не установлен непосредственно на ноду, его альтернативно можно
+запустить в Pod/Job с `hostPID` и необходимыми `hostPath`-монтированиями конфигурации и
+данных компонентов; готовые примеры есть в upstream-репозитории `kube-bench`. Такой запуск
+проверяет только те ноды, на которые Pod можно запланировать и чьи host namespaces/файлы
+ему доступны. В managed Kubernetes это обычно позволяет проверять доступные worker-ноды,
+но не provider-owned control plane GKE/EKS/AKS/ACK: сам по себе доступ к Kubernetes API не
+делает control-plane checks доступными.
 
-Ниже для воспроизводимости используется `kube-bench:v0.16.0`. Не используйте этот image
-для упражнения CIS 2.0: в данном релизе профиль `cis-2.0` ещё не поставляется. Если
-лаборатория переводится на CIS 2.0, сначала выберите release/tag, в котором одновременно
-присутствуют `cfg/cis-2.0` и корректная version mapping, и только затем закрепите его
-точный digest.
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kube-bench
-  namespace: kube-system
-spec:
-  backoffLimit: 0
-  template:
-    spec:
-      hostPID: true
-      # Лабораторное значение: замените на фактическое имя control-plane node.
-      # Получите его: kubectl get nodes -l node-role.kubernetes.io/control-plane
-      nodeName: control-plane
-      restartPolicy: Never
-      containers:
-      - name: kube-bench
-        image: aquasec/kube-bench:v0.16.0 # зафиксируйте точный digest перед production; `latest` недопустим для Job с hostPID и hostPath
-        command: ["kube-bench", "run", "--targets", "master,etcd"]
-        volumeMounts:
-        - name: var-lib-cni
-          mountPath: /var/lib/cni
-          readOnly: true
-        - name: var-lib-etcd
-          mountPath: /var/lib/etcd
-          readOnly: true
-        - name: var-lib-kubelet
-          mountPath: /var/lib/kubelet
-          readOnly: true
-        - name: var-lib-kube-scheduler
-          mountPath: /var/lib/kube-scheduler
-          readOnly: true
-        - name: var-lib-kube-controller-manager
-          mountPath: /var/lib/kube-controller-manager
-          readOnly: true
-        - name: etc-systemd
-          mountPath: /etc/systemd
-          readOnly: true
-        - name: lib-systemd
-          mountPath: /lib/systemd
-          readOnly: true
-        - name: srv-kubernetes
-          mountPath: /srv/kubernetes
-          readOnly: true
-        - name: etc-kubernetes
-          mountPath: /etc/kubernetes
-          readOnly: true
-        - name: usr-bin
-          mountPath: /usr/local/mount-from-host/bin
-          readOnly: true
-        - name: etc-cni-netd
-          mountPath: /etc/cni/net.d
-          readOnly: true
-        - name: opt-cni-bin
-          mountPath: /opt/cni/bin
-          readOnly: true
-        - name: etc-passwd
-          mountPath: /etc/passwd
-          readOnly: true
-        - name: etc-group
-          mountPath: /etc/group
-          readOnly: true
-      volumes:
-      - name: var-lib-cni
-        hostPath:
-          path: /var/lib/cni
-      - name: var-lib-etcd
-        hostPath:
-          path: /var/lib/etcd
-      - name: var-lib-kubelet
-        hostPath:
-          path: /var/lib/kubelet
-      - name: var-lib-kube-scheduler
-        hostPath:
-          path: /var/lib/kube-scheduler
-      - name: var-lib-kube-controller-manager
-        hostPath:
-          path: /var/lib/kube-controller-manager
-      - name: etc-systemd
-        hostPath:
-          path: /etc/systemd
-      - name: lib-systemd
-        hostPath:
-          path: /lib/systemd
-      - name: srv-kubernetes
-        hostPath:
-          path: /srv/kubernetes
-      - name: etc-kubernetes
-        hostPath:
-          path: /etc/kubernetes
-      - name: usr-bin
-        hostPath:
-          path: /usr/bin
-      - name: etc-cni-netd
-        hostPath:
-          path: /etc/cni/net.d
-      - name: opt-cni-bin
-        hostPath:
-          path: /opt/cni/bin
-      - name: etc-passwd
-        hostPath:
-          path: /etc/passwd
-      - name: etc-group
-        hostPath:
-          path: /etc/group
-```
-
-```bash
-kubectl apply -f kube-bench.yaml
-kubectl -n kube-system logs job/kube-bench | tee kube-bench-control-plane.txt
-kubectl -n kube-system delete job kube-bench
-```
+В этой главе кластер считается поднятым `kubeadm` с прямым доступом к нодам, поэтому далее
+используется именно локальный запуск.
 
 Читайте результат в таком порядке: зафиксируйте номер рекомендации, путь или флаг,
 фактическое значение, владельца/режим файла и способ проверки после исправления. Это
@@ -241,114 +131,49 @@ kubectl -n kube-system delete job kube-bench
 | `FAIL` | выяснить, какой компонент и какой конфигурационный источник использует кластер, затем исправить и проверить |
 | `WARN` | прочитать текст рекомендации; подтвердить вручную, задокументировать исключение или исправить |
 
-## 07.3. kube-apiserver: минимизация опасных endpoints
+Именно этот цикл - запустить `kube-bench`, найти конкретный `FAIL`/`WARN` в своём отчёте,
+исправить и перепроверить - и есть рабочий процесс всей главы. Набор находок у каждого
+кластера свой: он зависит от способа развёртывания, дистрибутива kubeadm,
+версий компонентов и уже применённого hardening. Поэтому дальше в главе не идёт по номерам
+CIS-рекомендаций подряд, а разбирает по одному разделу на каждый компонент control plane и
+ноды (`kube-apiserver`, `kube-controller-manager` и `kube-scheduler`, `kubelet`, `etcd`)
+- как наиболее частые категории находок в реальных отчётах `kube-bench` и как их безопасно
+исправить, а не исчерпывающий список всех возможных пунктов benchmark.
 
-`kube-apiserver` - граница управления кластером. Если он принимает анонимные запросы,
-разрешает слишком широкий режим authorization, выдаёт подробные profiling endpoints или
-не ведёт audit, атакующий получает больше способов узнать внутреннее состояние либо
-обойти ожидаемый контроль.
+## 07.3. Пример: находим и исправляем FAIL у kube-apiserver
 
-В kubeadm-кластере апи-сервер обычно является static Pod. Его манифест находится в
-`/etc/kubernetes/manifests/kube-apiserver.yaml`; kubelet заметит изменение файла и
-пересоздаст Pod. Сначала сохраните копию и определите существующий список аргументов:
+`kube-apiserver` в kubeadm-кластере запускается как static Pod: kubelet следит за
+манифестом `/etc/kubernetes/manifests/kube-apiserver.yaml` на диске control-plane узла и
+автоматически пересоздаёт Pod при его изменении. Поэтому редактируется именно этот файл,
+а не объект Pod через `kubectl`.
+
+Инструкцию по исправлению не нужно придумывать - её даёт сам `kube-bench` в отчёте.
+Каждый `FAIL` сопровождается собственным пунктом в секции `== Remediations ==`, например:
+
+```text
+[FAIL] 1.2.15 Ensure that the --profiling argument is set to false (Automated)
+...
+== Remediations master ==
+1.2.15 Edit the API server pod specification file
+/etc/kubernetes/manifests/kube-apiserver.yaml on the master node and set the
+below parameter.
+--profiling=false
+```
+
+Remediation указывает точный файл и точный флаг. Перед правкой сохраните резервную копию
+**вне** `/etc/kubernetes/manifests/`: kubelet читает все файлы этого каталога, чьё имя не
+начинается с точки, независимо от расширения, и может попытаться создать static Pod из
+случайно оставленной рядом копии - при совпадении имени Pod поведение неопределено и
+устаревшая спецификация из backup может тихо победить актуальный manifest.
 
 ```bash
-sudo install -d -m 700 /root/k8s-manifest-backup
-sudo cp -p /etc/kubernetes/manifests/kube-apiserver.yaml \
-  "/root/k8s-manifest-backup/kube-apiserver.yaml.$(date +%F-%H%M%S)"
-
-sudo grep -nE -- '--(anonymous-auth|authorization-mode|audit-|profiling)' \
-  /etc/kubernetes/manifests/kube-apiserver.yaml
+sudo install -d -m 0700 /etc/kubernetes/backup
+sudo cp -a /etc/kubernetes/manifests/kube-apiserver.yaml \
+  "/etc/kubernetes/backup/kube-apiserver.yaml.$(date +%Y%m%d%H%M%S)"
 ```
 
-Добавьте или скорректируйте аргументы в массиве `command` static Pod. Не оставляйте два
-экземпляра одного флага с конфликтующими значениями. До изменения манифеста подготовьте
-на ноде валидный audit policy (см. главу 32) и каталог журнала: `hostPath` типа `File` не
-создаёт policy-файл, а apiserver должен иметь возможность создать log-файл.
-
-```bash
-sudo test -f /etc/kubernetes/audit-policy.yaml
-sudo install -d -o root -g root -m 700 /var/log/kubernetes/audit
-```
-
-Добавьте к существующим `volumeMounts` и `volumes` static Pod следующие записи вместе с
-аргументами (не заменяя остальные монтирования манифеста):
-
-`--anonymous-auth=false` не является безопасной универсальной drop-in правкой для
-kubeadm. Перед изменением проверьте HTTP probes `kube-apiserver` и используемый механизм
-`kubeadm join`: полное отключение anonymous authentication может вернуть `401` на
-`/livez`/`/readyz`/`/healthz` и нарушить token-based discovery через
-`kube-public/cluster-info`.
-
-Если задача требует убрать общий anonymous-доступ, в современных версиях Kubernetes
-можно использовать `AuthenticationConfiguration`, оставив anonymous-доступ только для
-необходимых health endpoints:
-
-```yaml
-apiVersion: apiserver.config.k8s.io/v1
-kind: AuthenticationConfiguration
-anonymous:
-  enabled: true
-  conditions:
-  - path: /livez
-  - path: /readyz
-  - path: /healthz
-```
-
-При использовании `anonymous` в `AuthenticationConfiguration` флаг `--anonymous-auth`
-одновременно задавать нельзя. Такой вариант сохраняет anonymous-доступ только к health
-endpoints. Если кластер должен поддерживать стандартный token-based `kubeadm join`,
-проверьте discovery flow отдельно: ограничение anonymous-доступа только health endpoints
-может потребовать другого способа discovery.
-
-```yaml
-spec:
-  containers:
-  - name: kube-apiserver
-    command:
-    - kube-apiserver
-    - --anonymous-auth=false
-    - --authorization-mode=Node,RBAC
-    - --profiling=false
-    - --audit-policy-file=/etc/kubernetes/audit-policy.yaml
-    - --audit-log-path=/var/log/kubernetes/audit/audit.log
-    - --audit-log-maxage=30
-    - --audit-log-maxbackup=10
-    - --audit-log-maxsize=100
-    volumeMounts:
-    - name: audit-policy
-      mountPath: /etc/kubernetes/audit-policy.yaml
-      readOnly: true
-    - name: audit-log
-      mountPath: /var/log/kubernetes/audit
-  volumes:
-  - name: audit-policy
-    hostPath:
-      path: /etc/kubernetes/audit-policy.yaml
-      type: File
-  - name: audit-log
-    hostPath:
-      path: /var/log/kubernetes/audit
-      type: Directory
-```
-
-- `--anonymous-auth=false` не даёт неаутентифицированному запросу стать
-  `system:anonymous`.
-- `--authorization-mode` и `--authorization-config` - два альтернативных способа
-  настройки authorization и являются взаимно исключающимися. Если используется файл
-  `AuthorizationConfiguration` через `--authorization-config`, удалите
-  `--authorization-mode` из аргументов `kube-apiserver`; одновременно задавать оба
-  параметра нельзя.
-- `--authorization-mode=Node,RBAC` включает обычную модель авторизации для kubeadm.
-  Не добавляйте `AlwaysAllow`; порядок и список modes нужно согласовать с архитектурой
-  кластера.
-- `--profiling=false` убирает profiling endpoints, которые могут раскрывать сведения о
-  процессе и не должны быть доступны без необходимости.
-- `--audit-*` подключают audit policy и сохраняют журнал. Сама policy подробно разбирается
-  в главе 32; здесь важно, что отсутствие audit trail - находка CIS.
-
-После изменения static Pod временно станет недоступен. Работайте через консоль ноды и не
-перезапускайте все control-plane компоненты одновременно.
+Добавьте флаг из remediation в массив `command` static Pod, сохраните файл и подождите,
+пока kubelet пересоздаст Pod:
 
 ```bash
 # kubelet должен автоматически пересоздать static Pod.
@@ -357,55 +182,90 @@ watch -n 2 'sudo crictl ps --name kube-apiserver'
 # После восстановления API.
 kubectl get --raw='/readyz?verbose'
 kubectl -n kube-system get pods -l component=kube-apiserver -o wide
+
+# Перепроверить именно этот check, а не весь target заново.
+sudo kube-bench run --targets master --check 1.2.15
 ```
 
-## 07.4. controller-manager и scheduler: profiling выключается везде
+## 07.4. Пример: находим и исправляем FAIL у kube-scheduler
 
-Частая ошибка - выключить profiling только у `kube-apiserver`. CIS проверяет этот флаг и у
-`kube-controller-manager`, и у `kube-scheduler`. Оба компонента в kubeadm также обычно
-работают как static Pod.
+Проверка отключения profiling есть у всех трёх основных control-plane компонентов, но её
+ID зависит от раздела benchmark. В `kube-bench v0.16.0 / cis-1.12` это:
 
-```bash
-sudo install -d -m 700 /root/k8s-manifest-backup
+- `1.2.15` - `kube-apiserver`;
+- `1.3.2` - `kube-controller-manager`;
+- `1.4.1` - `kube-scheduler`.
 
-for component in kube-controller-manager kube-scheduler; do
-  sudo cp -p "/etc/kubernetes/manifests/${component}.yaml" \
-    "/root/k8s-manifest-backup/${component}.yaml.$(date +%F-%H%M%S)"
-  sudo grep -n -- '--profiling' "/etc/kubernetes/manifests/${component}.yaml" || true
-done
+Все три относятся к target `master`, а не `node`. Например, для scheduler:
+
+```text
+[FAIL] 1.4.1 Ensure that the --profiling argument is set to false (Automated)
+...
+== Remediations master ==
+1.4.1 Edit the Scheduler pod specification file
+/etc/kubernetes/manifests/kube-scheduler.yaml on the master node and set the
+below parameter.
+--profiling=false
 ```
 
-Добавьте ровно один аргумент в `command` каждого манифеста:
+Применяется тот же процесс, что и в 07.3: отредактировать манифест
+`/etc/kubernetes/manifests/kube-scheduler.yaml`, дождаться пересоздания static Pod,
+перепроверить `sudo kube-bench run --targets master --check 1.4.1`.
+
+Но сначала проверьте, не запущен ли `kube-scheduler` с `--config=<path>`. Если `--config`
+задан, CLI-флаг `--profiling` deprecated и игнорируется runtime; effective настройка
+находится в `KubeSchedulerConfiguration`:
 
 ```yaml
-# /etc/kubernetes/manifests/kube-controller-manager.yaml
-- --profiling=false
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+enableProfiling: false
 ```
 
-```yaml
-# /etc/kubernetes/manifests/kube-scheduler.yaml
-- --profiling=false
-```
+У `kube-bench v0.16.0 / cis-1.12` есть ограничение: check `1.4.1` анализирует process
+command line и не читает `KubeSchedulerConfiguration`. Поэтому при scheduler с `--config`
+результат `1.4.1` нельзя считать самостоятельным доказательством effective profiling
+state: правильный config может дать `FAIL`, а игнорируемый `--profiling=false` -
+формальный `PASS`. В таком случае отдельно проверьте активный файл `--config`, убедитесь,
+что `enableProfiling: false`, проверьте здоровье scheduler и зафиксируйте расхождение
+`kube-bench` как ограничение используемого benchmark/tool version. Не добавляйте
+игнорируемый CLI-флаг только ради получения `PASS`.
 
-Kubelet перезапустит соответствующие static Pod. Проверяйте не только присутствие текста в
-файле, но и новый работающий контейнер:
+У `kube-controller-manager` `--profiling` остаётся штатным CLI-флагом, поэтому его находка
+(`1.3.2`) чинится ровно как в 07.3, без этой оговорки.
 
-```bash
-kubectl -n kube-system get pods \
-  -l 'component in (kube-controller-manager,kube-scheduler)' -o wide
-sudo crictl ps | grep -E 'kube-controller-manager|kube-scheduler'
-```
+Ровно тот же цикл - запустить `kube-bench`, найти `FAIL`, отредактировать манифест,
+проверить - выполняется и на worker-нодах, только с targets и набором флагов `node`
+(`kubelet`, а не control-plane компоненты). Раздел 07.5 разбирает именно эту находку.
 
-Не путайте `--profiling=false` с отключением метрик. Метрики и profiling - разные
-endpoints; решение о метриках принимают отдельно, исходя из наблюдаемости и сетевой защиты.
+**На экзамене скорость важнее полноты.** Типичное задание CKS формулируется как «в
+отчёте kube-bench для kube-apiserver/kubelet есть FAIL по такому-то ID - исправьте его»,
+и оценивается именно факт исправления, а не общий обзор всех находок. Быстрый алгоритм:
+открыть `== Remediations ==` для конкретного ID → определить, static Pod это или
+systemd-сервис (kubelet) → отредактировать нужный файл → дождаться перезапуска →
+перепроверить тем же `--check <ID>`, а не всем target заново.
+
+**Если после правки компонент не стартовал.** Ошибка в аргументе или в YAML манифеста
+статик-пода не блокирует редактирование - она блокирует запуск нового Pod. Типичные
+причины: опечатка в имени флага, конфликтующий дубликат аргумента, несуществующий путь к
+файлу, на который ссылается флаг. Порядок восстановления:
+
+1. Проверить, что реально происходит: `sudo crictl ps -a --name <component>` и
+   `sudo journalctl -u kubelet -n 100 --no-pager` - kubelet логирует причину, по которой
+   он не может запустить static Pod из нового манифеста.
+2. Если причина не находится быстро, откатить правку резервной копией манифеста - это
+   быстрее, чем разбирать сложный YAML под давлением времени на экзамене.
+3. После восстановления повторить правку точнее и снова дождаться `Ready`, прежде чем
+   переходить к следующей находке.
 
 ## 07.5. kubelet: закрытый API и защита параметров ядра
 
 Kubelet запущен на каждой ноде и имеет полномочия выполнять Pod. Открытый read-only API,
 анонимный доступ или слабая authorization позволяют получить данные ноды и в некоторых
-случаях развить компрометацию. `protectKernelDefaults` запрещает kubelet стартовать, если
-значения sysctl на ноде не соответствуют ожидаемым безопасным defaults: kubelet не будет
-молча менять параметры ядра за администратора.
+случаях развить компрометацию. `protectKernelDefaults: true` заставляет kubelet завершить
+инициализацию ошибкой, если kernel flags, которые kubelet ожидает для своей работы, имеют
+другие значения. При `protectKernelDefaults: false` kubelet пытается привести эти
+параметры к ожидаемым значениям самостоятельно.
 
 На kubeadm-ноде основной файл обычно `/var/lib/kubelet/config.yaml`, а дополнительные
 аргументы задаются в `/var/lib/kubelet/kubeadm-flags.env` и systemd drop-in. В Kubernetes
@@ -417,13 +277,29 @@ Kubelet запущен на каждой ноде и имеет полномоч
 ```bash
 sudo systemctl cat kubelet
 sudo ps -ef | grep '[k]ubelet'
-# Получите фактические --config и --config-dir из unit/process.
-# Основной config читается отдельно; в config-dir kubelet загружает только *.conf.
-sudo find "${KUBELET_CONFIG_DIR:-/etc/kubernetes/kubelet.conf.d}" -type f -name '*.conf' \
-  2>/dev/null
-sudo grep -nE 'readOnlyPort|anonymous:|authorization:|protectKernelDefaults' \
-  /var/lib/kubelet/config.yaml
+
+# Из фактического ExecStart/process определите значения --config и --config-dir.
+# Не подставляйте kubeadm-пути, если процесс использует другие.
+KUBELET_CONFIG='<фактическое значение --config>'
+KUBELET_CONFIG_DIR='<фактическое значение --config-dir или пустая строка>'
+
+if [[ -n "$KUBELET_CONFIG" ]]; then
+  sudo grep -nE \
+    'readOnlyPort|anonymous:|authorization:|protectKernelDefaults' \
+    "$KUBELET_CONFIG"
+else
+  echo 'kubelet запущен без --config: учитывайте built-in defaults, drop-ins и CLI flags'
+fi
+
+if [[ -n "$KUBELET_CONFIG_DIR" ]]; then
+  sudo find "$KUBELET_CONFIG_DIR" -type f -name '*.conf' -print
+fi
 ```
+
+Если `--config` отсутствует, не назначайте ему путь по умолчанию: kubelet использует
+built-in defaults, затем `--config-dir` (если задан), после чего CLI flags могут
+переопределить итоговые значения. Для доказательства effective state в конце всё равно
+сверьте `/configz`.
 
 Для конфигурационного API kubelet задайте эквивалентные поля:
 
@@ -438,23 +314,33 @@ authorization:
 protectKernelDefaults: true
 ```
 
-Если в вашей установке параметр передаётся флагом, используйте его в фактически
-подключённом systemd environment/drop-in, не дублируя значение между источниками:
+Если в вашей установке параметр передаётся флагом, добавьте его в фактически подключённый
+systemd environment/drop-in, не дублируя значение между источниками. Ниже не shell-команды,
+а требуемые фрагменты аргументов kubelet:
 
-```bash
-# Пример требуемых значений в KUBELET_KUBEADM_ARGS или аналогичном источнике.
+```text
 --read-only-port=0
 --anonymous-auth=false
 --authorization-mode=Webhook
 --protect-kernel-defaults=true
 ```
 
-Перед рестартом проверьте sysctl. При `protectKernelDefaults: true` kubelet может не
-запуститься, если окружение управляет ожидаемыми параметрами ядра иначе. Значения и способ
-их централизованной настройки определяет ОС и ваш baseline.
+Перед рестартом проверьте sysctl. Для Kubernetes 1.36 ожидаемые kubelet значения -
+`1`, `0`, `10`, `1`, `1000000` и `25000000` соответственно. Не меняйте их вслепую: сначала
+установите, какой sysctl source управляет нодой, затем приведите его к согласованному
+baseline и только после этого перезапускайте kubelet.
 
 ```bash
-sudo sysctl -a 2>/dev/null | grep '^net\.ipv4\.ip_forward\|^net\.bridge\.'
+# Kubernetes 1.36: параметры, которые kubelet проверяет в setupKernelTunables().
+sudo sysctl \
+  vm.overcommit_memory \
+  vm.panic_on_oom \
+  kernel.panic \
+  kernel.panic_on_oops \
+  kernel.keys.root_maxkeys \
+  kernel.keys.root_maxbytes
+
+# После проверки/приведения параметров к baseline вашей ОС и Kubernetes:
 sudo systemctl restart kubelet
 sudo systemctl --no-pager --full status kubelet
 sudo journalctl -u kubelet -n 100 --no-pager
@@ -480,123 +366,85 @@ kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" \
 сетевой топологией. `authorization-mode=Webhook` не делает порт безопасным сам по себе -
 он заставляет kubelet спрашивать Kubernetes API о правах аутентифицированного субъекта.
 
-## 07.6. kube-dns/CoreDNS: отдельная граница cluster DNS
-
-Актуальная компетенция CKS отдельно называет `kubedns`; в современных кластерах его
-обычно реализует CoreDNS. Проверьте deployment/DaemonSet, Service, ConfigMap `Corefile`,
-образ и версию, а также минимальные права ServiceAccount/RBAC. DNS не должен быть
-случайно опубликован наружу, а изменение `Corefile` (например, forwarding на недоверенный
-resolver) требует security-review и сверки с конкретным CIS profile.
-
-```bash
-kubectl -n kube-system get deploy,ds,svc,sa,cm | grep -Ei 'coredns|kube-dns'
-kubectl -n kube-system get configmap coredns -o yaml
-kubectl -n kube-system get deploy coredns -o jsonpath='{.spec.template.spec.serviceAccountName}{"\n"}{.spec.template.spec.containers[*].image}{"\n"}'
-kubectl -n kube-system get rolebinding,clusterrolebinding -o yaml | grep -n -C 3 coredns
-```
-
-Минимальный законченный сценарий — проверить и устранить недоверенный DNS-forwarder.
-Сначала сохраните `Corefile`, проверьте, куда CoreDNS передаёт внешние запросы, и подтвердите
-разрешение имени из временного Pod. Если адрес не соответствует утверждённому resolver,
-замените его на разрешённый адрес или внутренний DNS организации, перезапустите rollout и
-повторите тот же DNS-запрос:
-
-```bash
-# Check: зафиксировать текущую конфигурацию и найти forwarding target.
-kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}{"\n"}' \
-  | tee coredns-corefile.before
-kubectl -n kube-system get configmap coredns -o yaml | grep -nE '^\s*forward\s+\.'
-kubectl -n default run dns-check --rm -i --restart=Never \
-  --image=busybox:1.36.1 -- nslookup kubernetes.default.svc.cluster.local
-
-# Remediation: отредактируйте только target `forward . ...` на утверждённый resolver.
-kubectl -n kube-system edit configmap coredns
-kubectl -n kube-system rollout restart deployment/coredns
-kubectl -n kube-system rollout status deployment/coredns --timeout=120s
-
-# Recheck: новый Corefile и тот же запрос подтверждают изменение без поломки DNS.
-kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}{"\n"}' \
-  | grep -nE '^\s*forward\s+\.'
-kubectl -n default run dns-check-after --rm -i --restart=Never \
-  --image=busybox:1.36.1 -- nslookup kubernetes.default.svc.cluster.local
-```
-
-Не подставляйте публичный адрес по шаблону: target должен следовать вашему утверждённому
-DNS baseline. В managed Kubernetes DNS-компонентом может владеть provider: не исправляйте
-его только ради `PASS`, если benchmark не применим к данной реализации.
-
-## 07.7. etcd и файловые права: ключи не должны быть общими
+## 07.6. Пример: находим и исправляем FAIL у etcd
 
 etcd хранит persistent state Kubernetes API: Secrets, RBAC, конфигурацию и спецификации
-workload. Вручную созданные long-lived ServiceAccount token Secrets также хранятся как
-Secret-объекты. Обычные bound ServiceAccount tokens современных Pod выдаются через
-TokenRequest/projected volume, автоматически ротируются и не хранятся в etcd как
-постоянные Secret-объекты. Чтение data directory или TLS private key равнозначно серьёзной компрометации
-кластера. Поэтому CIS проверяет TLS-настройки etcd, владельцев и режимы файлов.
+workload. Чтение data directory или TLS private key равнозначно серьёзной компрометации
+кластера, поэтому CIS отдельно проверяет владельца и права файлов etcd.
 
-Сначала смотрите фактического владельца процесса и файлы. В kubeadm static Pod etcd может
-работать с UID `root`; в отдельной systemd-инсталляции - от пользователя `etcd`. Не меняйте
-владельца data directory «по шаблону», если это лишит работающий процесс доступа.
-
-```bash
-sudo stat -c '%A %a %U:%G %n' \
-  /etc/kubernetes/manifests/etcd.yaml \
-  /etc/kubernetes/pki/etcd/server.crt \
-  /etc/kubernetes/pki/etcd/server.key \
-  /etc/kubernetes/admin.conf \
-  /var/lib/etcd
-sudo crictl ps --name etcd
-sudo ps -eo user,group,args | grep '[e]tcd'
+```text
+[FAIL] 1.1.12 Ensure that the etcd data directory ownership is set to etcd:etcd (Automated)
+...
+== Remediations master ==
+1.1.12 On the etcd server node, get the etcd data directory, passed as an argument
+--data-dir, from the below command:
+ps -ef | grep etcd
+Run the below command (based on the etcd data directory found above).
+For example, chown etcd:etcd /var/lib/etcd
 ```
 
-Безопасный ориентир для kubeadm-кластера: ключи доступны только root, сертификаты могут
-быть читаемы, административный kubeconfig закрыт, static Pod-манифесты не могут менять
-обычные пользователи. Применяйте команды только к существующим путям своего кластера.
+Remediation прямо говорит: сначала определить фактический data directory через `ps`, а
+затем привести его ownership к `etcd:etcd`. Команда `ps` здесь нужна именно для того,
+чтобы найти реальный `--data-dir`, а не для того, чтобы вывести из неё ожидаемого
+владельца - сам check `1.1.12` требует literal `etcd:etcd` независимо от того, каким
+пользователем реально запущен процесс.
+
+Это требование нужно отделять от runtime identity конкретной установки. В обычном kubeadm
+control plane static Pod'ы по умолчанию запускаются от `root`; при `RootlessControlPlane`
+kubeadm использует отдельную non-root identity (для etcd - `kubeadm-etcd`). Поэтому перед
+изменением ownership проверьте фактический data directory, применимость выбранного CIS
+profile к вашей установке и наличие нужного account/group mapping `etcd`/`etcd` на host -
+не заменяйте literal requirement benchmark пользователем процесса.
+
+Если среда должна удовлетворять именно этому check и mapping `etcd:etcd` для host валиден,
+применяйте минимальную remediation к самому каталогу и перепроверяйте именно её:
 
 ```bash
-# Private keys: секретны.
-sudo chown root:root /etc/kubernetes/pki/etcd/*.key
-sudo chmod 600 /etc/kubernetes/pki/etcd/*.key
+# Определите фактический --data-dir из процесса/манифеста.
+sudo ps -ef | grep '[e]tcd'
+DATA_DIR=/var/lib/etcd   # замените на реально найденное значение
 
-# Сертификаты не содержат private key.
-sudo chown root:root /etc/kubernetes/pki/etcd/*.crt
-sudo chmod 644 /etc/kubernetes/pki/etcd/*.crt
+sudo stat -c '%A %a %U:%G %n' "$DATA_DIR"
+getent passwd etcd
+getent group etcd
 
-# kubeconfig и static Pod-манифесты не должны быть доступны обычным пользователям.
-sudo chown root:root /etc/kubernetes/admin.conf /etc/kubernetes/manifests/*.yaml
-sudo chmod 600 /etc/kubernetes/admin.conf /etc/kubernetes/manifests/*.yaml
+# Только если выбранный benchmark применим и mapping etcd:etcd валиден для host.
+sudo chown etcd:etcd "$DATA_DIR"
+
+# Перепроверить именно этот check (target master, а не etcd).
+sudo kube-bench run --targets master --check 1.1.12
 ```
 
-Для data directory выберите владельца по реальному пользователю процесса. Если etcd
-запущен системным пользователем `etcd`, типовой вариант выглядит так; для kubeadm static
-Pod с root этот пример не применяют без проверки.
+Права доступа - отдельный check `1.1.11` ("permissions 700 или более строгие"); если
+исправляется и он, применяйте и перепроверяйте отдельно:
 
 ```bash
-# Только если `ps` подтверждает, что сервис etcd работает как etcd:etcd.
-sudo chown -R etcd:etcd /var/lib/etcd
-sudo chmod 700 /var/lib/etcd
+sudo chmod 700 "$DATA_DIR"
+sudo kube-bench run --targets master --check 1.1.11
 ```
 
-Проверьте также, что etcd не слушает незащищённый client URL и использует TLS. Флаги
-`--cert-file`, `--key-file`, `--trusted-ca-file`, `--client-cert-auth=true` и защищённые
-`--listen-client-urls` должны быть видны в манифесте или unit. Не открывайте `2379` и `2380`
-наружу: доступ к ним нужен только control plane и членам etcd cluster.
+Тот же принцип «remediation даёт команду, но применяют её после проверки фактического
+data directory и применимости профиля» относится и к соседним находкам CIS про etcd -
+права и владельца pod spec-файла (`/etc/kubernetes/manifests/etcd.yaml`) и TLS-ключей
+(`/etc/kubernetes/pki/etcd/*.key`). Не открывайте `2379`/`2380` наружу и не переносите
+пример один в один в managed-кластер, где data directory и процесс etcd вам не принадлежат.
 
-```bash
-sudo grep -nE -- '--(cert-file|key-file|trusted-ca-file|client-cert-auth|listen-client-urls)' \
-  /etc/kubernetes/manifests/etcd.yaml
-sudo ss -lntp | grep -E ':(2379|2380)'
-```
-
-## 07.8. Повторный прогон, диагностика и доказательство исправления
+## 07.7. Повторный прогон, диагностика и доказательство исправления
 
 Для каждого `FAIL` или осознанного `WARN` действуйте по короткой процедуре: (1)
 зафиксируйте версию Kubernetes, версию или digest `kube-bench`, выбранный профиль и CIS
-check ID из отчёта; (2) сделайте резервную копию активного файла или объекта; (3) измените
+check ID из отчёта; (2) сделайте резервную копию активного файла или объекта - для
+filesystem-hosted static Pod храните backup **вне `staticPodPath`**: kubelet не
+фильтрует файлы этого каталога по расширению и может обработать `.backup` как ещё один
+manifest; (3) измените
 ровно один control; (4) дождитесь рестарта и проверьте здоровье компонента и кластера;
 (5) повторите только затронутый target или check (например, `kube-bench run --targets master --check <ID>` для версии, поддерживающей этот синтаксис); (6) при ошибке здоровья немедленно
 верните резервную копию, дождитесь восстановления и повторите health check. Не объявляйте
-исправление успешным до targeted rerun.
+исправление успешным, пока не проверены здоровье компонента, effective конфигурация и
+targeted rerun. Если конкретный check `kube-bench` проверяет не тот конфигурационный
+источник, который реально использует компонент (как в примере scheduler с `--config` из
+07.4), зафиксируйте это как ограничение инструмента и не подменяйте effective-state
+verification формальным `PASS`.
 
 В self-managed кластере эта процедура относится к control plane, нодам и их файлам, за
 которые отвечает оператор. В managed Kubernetes provider обычно владеет control plane:
@@ -647,7 +495,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 | etcd не стартует после смены прав | пользователь процесса потерял доступ к data directory или key | `stat`, владельца процесса, логи etcd |
 | Проверка в managed Kubernetes не проходит | control plane не принадлежит пользователю и часть рекомендаций не применима | документацию провайдера, разделить customer- и provider-owned controls |
 
-## 07.9. Как это применяют в продакшене
+## 07.8. Как это применяют в продакшене
 
 - **Hardening как baseline.** Конфигурацию control plane, kubelet и права PKI описывают в
   kubeadm-конфигурации, image ноды или automation, а не правят вручную после каждого
@@ -664,14 +512,15 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   доступны только сервисному пользователю и администраторам, которым это действительно
   необходимо. Права регулярно проверяют средствами управления конфигурацией.
 
-## 07.10. Мини-глоссарий
+## 07.9. Мини-глоссарий
 
 - **CIS Kubernetes Benchmark** - рекомендации CIS по безопасной конфигурации Kubernetes.
 - **kube-bench** - инструмент, который проверяет конфигурацию по профилям CIS Benchmark.
 - **static Pod** - Pod, описанный локальным манифестом ноды и запускаемый kubelet без
   управления через API.
-- **profiling** - endpoints диагностики производительности процесса; без необходимости их
-  отключают флагом `--profiling=false`.
+- **profiling** - endpoints диагностики производительности процесса; их отключают через
+  активный конфигурационный источник компонента. Для `kube-scheduler` с `--config` это
+  `enableProfiling: false` в `KubeSchedulerConfiguration`, а не CLI-флаг `--profiling`.
 - **read-only port** - неаутентифицированный порт kubelet; должен быть отключён
   `--read-only-port=0`.
 - **protectKernelDefaults** - настройка kubelet, запрещающая старт при несоответствии
@@ -680,7 +529,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 - **private key** - секретная часть TLS-идентичности; для неё нужен ограниченный режим
   доступа, обычно `0600`.
 
-## 07.11. Итоги главы
+## 07.10. Итоги главы
 
 - CIS Benchmark задаёт проверяемый baseline hardening для control plane, etcd, worker и
   политик; `kube-bench` показывает конкретные `PASS`, `WARN` и `FAIL`.
@@ -689,16 +538,19 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 - На `kube-apiserver` важно минимизировать anonymous-доступ с учётом health probes и
   kubeadm discovery, использовать безопасную authorization, audit и `--profiling=false`.
   Не применяйте `--anonymous-auth=false` механически без проверки lifecycle кластера.
-- `--profiling=false` нужен на всех трёх компонентах control plane: apiserver,
-  controller-manager и scheduler.
+- profiling должен быть отключён на `kube-apiserver`, `kube-controller-manager` и
+  `kube-scheduler`, но активный способ настройки зависит от компонента: для
+  `kube-scheduler` при `--config` проверяйте `enableProfiling: false` в
+  `KubeSchedulerConfiguration`, а не CLI-флаг `--profiling`.
 - Для kubelet нужны `--read-only-port=0`, `--anonymous-auth=false`,
   `--authorization-mode=Webhook` и `--protect-kernel-defaults=true` либо их эквиваленты
   в `config.yaml`.
 - etcd data directory, PKI private keys, kubeconfig и static Pod-манифесты требуют
-  минимальных прав. Владельца `/var/lib/etcd` определяют по реальному пользователю
-  процесса.
+  минимальных прав. Для CIS check сначала определяют фактический data directory, затем
+  применяют именно требуемые benchmark ownership/permissions с учётом применимости
+  профиля и runtime-модели конкретной установки.
 
-## 07.12. Как это пригодится: на экзамене и в реальной работе
+## 07.11. Как это пригодится: на экзамене и в реальной работе
 
 **На экзамене.** Задание обычно называет один или несколько `FAIL` из `kube-bench` и даёт
 доступ к ноде. Быстро найдите, является ли компонент static Pod, kubelet service или etcd,
@@ -711,7 +563,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 а воспроизводимые проверки и документированные исключения делают обновления кластера
 предсказуемыми.
 
-## 07.13. Вопросы для самопроверки
+## 07.12. Вопросы для самопроверки
 
 <details>
 <summary>1. Чем `WARN` в отчёте `kube-bench` отличается от `FAIL` и почему их нельзя исправлять одинаково?</summary>
@@ -726,9 +578,9 @@ Kubelet должен заметить изменение манифеста и �
 </details>
 
 <details>
-<summary>3. На каких трёх компонентах control plane нужен `--profiling=false`?</summary>
+<summary>3. На каких компонентах control plane нужно отключить profiling, и одинаков ли способ настройки?</summary>
 
-Флаг нужен на `kube-apiserver`, `kube-controller-manager` и `kube-scheduler`. Нельзя ограничиться apiserver: CIS проверяет profiling endpoints всех трёх компонентов, а отключение profiling не тождественно отключению метрик.
+Profiling должен быть отключён на `kube-apiserver`, `kube-controller-manager` и `kube-scheduler`: нельзя ограничиться apiserver, CIS проверяет profiling endpoints всех трёх компонентов. Способ настройки не всегда одинаковый: `kube-apiserver` и `kube-controller-manager` используют CLI-флаг `--profiling=false`, но у `kube-scheduler` этот флаг deprecated - если он запущен с `--config=<path>`, отключать profiling нужно через `enableProfiling: false` в `KubeSchedulerConfiguration`, а не через CLI. Отключение profiling не тождественно отключению метрик.
 </details>
 
 <details>
@@ -738,15 +590,19 @@ Kubelet должен заметить изменение манифеста и �
 </details>
 
 <details>
-<summary>5. Почему перед `chown -R /var/lib/etcd` нужно узнать пользователя процесса etcd?</summary>
+<summary>5. Почему пользователя процесса etcd нельзя автоматически считать требуемым владельцем data directory в CIS check?</summary>
 
-В kubeadm static Pod etcd может работать от `root`, а в отдельной systemd-инсталляции — от пользователя `etcd`. Шаблонная смена владельца способна лишить реальный процесс доступа к data directory и не дать etcd стартовать, поэтому сначала проверяют `crictl ps` и `ps`.
+CIS check задаёт собственное ожидаемое ownership (`etcd:etcd`), а `ps` в remediation используется прежде всего для определения фактического `--data-dir`. Runtime identity зависит от реализации: обычный kubeadm control plane по умолчанию запускает etcd от `root`, а rootless-вариант использует отдельную identity. Поэтому сначала проверяют data directory, применимость benchmark и UID/GID mapping, а затем выполняют точную remediation; process user не подменяет requirement самого check.
 </details>
 
 <details>
 <summary>6. Какие права уместны для TLS private key и почему сертификат можно читать шире?</summary>
 
-Для private key применяют владельца `root:root` и режим `0600`, так как он является секретной частью TLS-идентичности. Сертификат не содержит private key, поэтому в приведённом baseline для него допустимы `root:root` и `0644`; фактические пути и требования процесса всё равно проверяют до изменения.
+Private key - секретный материал, поэтому ему нужен максимально ограниченный доступ; типичный baseline - mode `0600`. Владелец не универсален: в обычной root-run kubeadm установке это часто `root:root`, а при non-root control plane ключ должен принадлежать той service identity, которой он реально нужен - механическая смена владельца на `root:root` без проверки runtime identity может лишить такой процесс доступа к собственному ключу.
+
+Если проверяется конкретный CIS control, отдельно сверяйте его literal requirement: например, `cis-1.12` check `1.1.19` ожидает `root:root` для Kubernetes PKI, и это требование конкретного benchmark, а не универсальное правило для любой runtime-модели.
+
+Сертификат содержит публичную часть TLS-идентичности, поэтому mode `0644` часто допустим; его ownership и фактические пути всё равно сверяют с deployment и выбранным benchmark.
 </details>
 
 <details>

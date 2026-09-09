@@ -14,15 +14,29 @@ until kubectl get nodes --no-headers >/dev/null 2>&1 && [ "$(kubectl get nodes -
   sleep 5
 done
 
-curl -fsSL --retry 5 -o /tmp/cilium.tar.gz \
-  "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${ARCH}.tar.gz"
-tar -xzf /tmp/cilium.tar.gz -C /usr/local/bin cilium
-rm -f /tmp/cilium.tar.gz
+CILIUM_ARCHIVE="cilium-linux-${ARCH}.tar.gz"
+curl -fsSL --retry 5 -o "/tmp/${CILIUM_ARCHIVE}" \
+  "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/${CILIUM_ARCHIVE}"
+curl -fsSL --retry 5 -o "/tmp/${CILIUM_ARCHIVE}.sha256sum" \
+  "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/${CILIUM_ARCHIVE}.sha256sum"
+(
+  cd /tmp
+  sha256sum --check "${CILIUM_ARCHIVE}.sha256sum"
+)
+tar -xzf "/tmp/${CILIUM_ARCHIVE}" -C /usr/local/bin cilium
+rm -f "/tmp/${CILIUM_ARCHIVE}" "/tmp/${CILIUM_ARCHIVE}.sha256sum"
 
-curl -fsSL --retry 5 -o /tmp/hubble.tar.gz \
-  "https://github.com/cilium/hubble/releases/download/${HUBBLE_VERSION}/hubble-linux-${ARCH}.tar.gz"
-tar -xzf /tmp/hubble.tar.gz -C /usr/local/bin hubble
-rm -f /tmp/hubble.tar.gz
+HUBBLE_ARCHIVE="hubble-linux-${ARCH}.tar.gz"
+curl -fsSL --retry 5 -o "/tmp/${HUBBLE_ARCHIVE}" \
+  "https://github.com/cilium/hubble/releases/download/${HUBBLE_VERSION}/${HUBBLE_ARCHIVE}"
+curl -fsSL --retry 5 -o "/tmp/${HUBBLE_ARCHIVE}.sha256sum" \
+  "https://github.com/cilium/hubble/releases/download/${HUBBLE_VERSION}/${HUBBLE_ARCHIVE}.sha256sum"
+(
+  cd /tmp
+  sha256sum --check "${HUBBLE_ARCHIVE}.sha256sum"
+)
+tar -xzf "/tmp/${HUBBLE_ARCHIVE}" -C /usr/local/bin hubble
+rm -f "/tmp/${HUBBLE_ARCHIVE}" "/tmp/${HUBBLE_ARCHIVE}.sha256sum"
 
 cilium status --wait
 # Relay нужен для hubble observe с рабочей машины. Повторный запуск безопасен.

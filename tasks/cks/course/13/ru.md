@@ -97,8 +97,9 @@ rolling upgrade, а не для жизни старых нод месяцами.
 он сужает допустимую верхнюю границу версии kubelet: kubelet не может быть новее ни одного
 API server. Например, при API servers `1.37` и `1.36` допустимы kubelet `1.36`, `1.35` и
 `1.34`, а kubelet `1.37` недопустим из-за API server `1.36`. `kube-controller-manager`,
-`kube-scheduler` и `cloud-controller-manager` не должны быть новее API server и обычно
-держатся на его minor-версии (допускается максимум одна minor старше назад).
+`kube-scheduler` и `cloud-controller-manager` не должны быть новее `kube-apiserver`.
+Обычно их держат на той же minor-версии; в допустимом skew они могут быть не более чем
+на одну minor-версию старее соответствующего API server.
 
 Перед целевым минорным обновлением также проверьте удаляемые API у приложений, Helm-чартов,
 операторов и аддонов. Устранение CVE не должно сломать следующий deploy из-за удалённого
@@ -191,8 +192,15 @@ flowchart TB
 `cordon` и `drain` перед заменой `kubelet` → target-пакеты kubelet/kubectl → restart и
 проверка → `uncordon`. Drain нельзя пропускать перед обновлением kubelet control-plane:
 он даёт PDB и capacity возможность остановить небезопасный rollout. Проверяйте, что в
-кластере есть ёмкость для выселенных workload; не добавляйте `--force` и не обходите PDB.
-Static Pods control plane не выселяются через `drain`.
+кластере есть ёмкость для выселенных workload.
+
+Не используйте `--force` только для того, чтобы «продавить» непонятную ошибку drain.
+Если drain обнаружил Pod без controller или с отсутствующим managing resource, сначала
+идентифицируйте workload и подтвердите способ его восстановления. Только после явного
+принятия риска допустимо использовать `--force`. Не путайте это с `--disable-eviction`:
+этот флаг заставляет drain обходить Eviction API и проверки PodDisruptionBudget и не
+должен использоваться как обычный способ ускорить upgrade. Static Pods control plane не
+выселяются через `drain`.
 
 После `apply` и нужной проверки CNI установите target `kubelet` и `kubectl`, перезапустите
 kubelet, убедитесь в `Ready` и только тогда сделайте `uncordon`. В HA-кластере остальные control-plane ноды
@@ -305,8 +313,9 @@ sudo apt-get install -y kubeadm="$TARGET_K8S_PACKAGE_VERSION"
 sudo apt-mark hold kubeadm
 sudo kubeadm upgrade node
 
-# С административной машины: --delete-emptydir-data добавляйте только если потеря этих
-# данных ожидаема. Не добавляйте --force и не обходите PDB ради ускорения.
+# С административной машины: --delete-emptydir-data добавляйте только после принятия
+# потери local emptyDir. --force нужен только для явно разобранных unmanaged Pod /
+# missing controller. Не используйте --disable-eviction для обхода PDB в обычном rollout.
 kubectl cordon worker-1
 kubectl drain worker-1 --ignore-daemonsets
 
@@ -537,6 +546,25 @@ sudo kubeadm upgrade plan | tee "$UPGRADE_EVIDENCE/before/kubeadm-upgrade-plan.t
 
 ### Gate 2: backup и проверяемое восстановление
 
+Наличие `etcdctl`/`etcdutl` не следует выводить из самого факта установки kubeadm.
+Перед gate проверьте binaries и их совместимость с версией etcd. Если инструментов нет,
+установите заранее проверенную и закреплённую совместимую версию из доверенного
+источника либо используйте утверждённый operational image/toolbox. Не скачивайте
+`latest` непосредственно во время change window.
+
+```bash
+command -v etcdctl >/dev/null 2>&1 || {
+  echo 'ERROR: etcdctl is not installed on this control-plane node' >&2
+  exit 1
+}
+command -v etcdutl >/dev/null 2>&1 || {
+  echo 'ERROR: etcdutl is not installed on this control-plane node' >&2
+  exit 1
+}
+etcdctl version
+etcdutl version
+```
+
 На узле control plane создайте snapshot с TLS-параметрами из
 `/etc/kubernetes/manifests/etcd.yaml`, затем проверьте его через `etcdutl snapshot status`.
 Не запускайте restore поверх работающего etcd: запишите точную restore-команду в runbook и
@@ -587,16 +615,25 @@ encryption) и `--profiling=false`, добавленные вручную в man
 установки кластера, но не отражённые в `kubeadm-config`, могут быть потеряны при следующем
 `kubeadm upgrade apply` - кластер останется API-совместим и `Ready`, но de facto потеряет
 audit trail, шифрование Secret at rest или debug-профилирование останется включённым.
-Зафиксируйте полный список аргументов **до** upgrade:
+Зафиксируйте полный список аргументов **до** upgrade. В HA-кластере `.items[0]` может
+выбрать разную control-plane ноду до и после upgrade, поэтому явно закрепите проверяемую
+ноду через `--field-selector`:
 
 ```bash
-kubectl -n kube-system get pod -l component=kube-apiserver \
+export CONTROL_PLANE_NODE='control-plane-1'
+
+kubectl -n kube-system get pods -l component=kube-apiserver \
+  --field-selector "spec.nodeName=${CONTROL_PLANE_NODE}" \
   -o jsonpath='{.items[0].spec.containers[0].command}' \
   | jq -r '.[]' | sort > "$UPGRADE_EVIDENCE/before/apiserver-flags.txt"
 grep -E '^--(audit-policy-file|audit-log-path|encryption-provider-config|profiling)' \
   "$UPGRADE_EVIDENCE/before/apiserver-flags.txt" \
-  | tee "$UPGRADE_EVIDENCE/before/apiserver-security-flags.txt"
+  > "$UPGRADE_EVIDENCE/before/apiserver-security-flags.txt" || true
 ```
+
+`grep` завершается кодом `1`, если ни одна строка не совпала; под `set -e` это без `|| true`
+останавливает скрипт раньше собственной проверки. `|| true` сохраняет корректное поведение
+для обоих исходов: список флагов может быть пустым (это отдельная находка) или непустым.
 
 Если этот список пуст в вашем кластере - это отдельная находка: значит, audit/KMS/profiling
 hardening ещё не применены, и сравнение после upgrade окажется тривиальным. В таком случае
@@ -631,12 +668,24 @@ kubectl get ns -o json | jq -S '[.items[] | {
   enforce: (.metadata.labels["pod-security.kubernetes.io/enforce"] // ""),
   enforceVersion: (.metadata.labels["pod-security.kubernetes.io/enforce-version"] // "")
 }] | sort_by(.namespace)' > "$UPGRADE_EVIDENCE/after/pss.txt"
-kubectl -n kube-system get pod -l component=kube-apiserver \
+
+# Та же control-plane нода, что и в блоке before - иначе в HA gate сравнит разные
+# API server, а не тот, что реально обновлялся.
+kubectl -n kube-system get pods -l component=kube-apiserver \
+  --field-selector "spec.nodeName=${CONTROL_PLANE_NODE}" \
   -o jsonpath='{.items[0].spec.containers[0].command}' \
   | jq -r '.[]' | sort > "$UPGRADE_EVIDENCE/after/apiserver-flags.txt"
 grep -E '^--(audit-policy-file|audit-log-path|encryption-provider-config|profiling)' \
   "$UPGRADE_EVIDENCE/after/apiserver-flags.txt" \
-  > "$UPGRADE_EVIDENCE/after/apiserver-security-flags.txt"
+  > "$UPGRADE_EVIDENCE/after/apiserver-security-flags.txt" || true
+
+# Проверить, что именно целевая нода вернула ровно один Ready=True Pod kube-apiserver.
+kubectl -n kube-system get pods -l component=kube-apiserver \
+  --field-selector "spec.nodeName=${CONTROL_PLANE_NODE}" \
+  -o json | jq -e '
+    (.items | length) == 1 and
+    any(.items[0].status.conditions[]?; .type == "Ready" and .status == "True")
+  ' > "$UPGRADE_EVIDENCE/after/apiserver-node-gate.txt"
 
 grep -q 'readyz check passed' "$UPGRADE_EVIDENCE/after/readyz.txt"
 # Любое Ready=False (или отсутствие Ready=True) даёт jq exit code 1 и останавливает gate.
@@ -648,10 +697,43 @@ kubectl get nodes -o json | jq -e '
              (.ready | index("True")) == null)
   ] | length == 0
 ' > "$UPGRADE_EVIDENCE/after/nodes-ready-gate.txt"
-diff -u "$UPGRADE_EVIDENCE/before/rbac.yaml" "$UPGRADE_EVIDENCE/after/rbac.yaml"
-diff -u "$UPGRADE_EVIDENCE/before/admission.yaml" "$UPGRADE_EVIDENCE/after/admission.yaml"
+
+# Глобальные snapshots оставляем как evidence для review, а не как автоматический
+# критерий провала: Kubernetes auto-reconciles default RBAC/admission-объекты
+# (label kubernetes.io/bootstrapping=rbac-defaults), и новый minor-релиз может
+# легитимно добавить rules/subjects в system: роли. "RBAC изменился" не равно
+# "security posture ослаб".
+diff -u "$UPGRADE_EVIDENCE/before/rbac.yaml" \
+  "$UPGRADE_EVIDENCE/after/rbac.yaml" \
+  > "$UPGRADE_EVIDENCE/after/rbac.diff" || true
+diff -u "$UPGRADE_EVIDENCE/before/admission.yaml" \
+  "$UPGRADE_EVIDENCE/after/admission.yaml" \
+  > "$UPGRADE_EVIDENCE/after/admission.diff" || true
 diff -u "$UPGRADE_EVIDENCE/before/default-sa-can-i.txt" \
-  "$UPGRADE_EVIDENCE/after/default-sa-can-i.txt"
+  "$UPGRADE_EVIDENCE/after/default-sa-can-i.txt" \
+  > "$UPGRADE_EVIDENCE/after/default-sa-can-i.diff" || true
+
+# Если вашей policy нужен exact diff по custom RBAC, сначала исключите
+# auto-reconciled bootstrap-defaults и runtime-metadata, а не сравнивайте весь
+# global snapshot целиком:
+#
+# kubectl get clusterrole,clusterrolebinding -o json | jq -S '
+#   { items: [ .items[]
+#       | select((.metadata.labels["kubernetes.io/bootstrapping"] // "") != "rbac-defaults")
+#       | del(.metadata.creationTimestamp, .metadata.generation,
+#             .metadata.managedFields, .metadata.resourceVersion,
+#             .metadata.uid, .status) ] }
+# ' > "$UPGRADE_EVIDENCE/before/custom-rbac.json"
+#
+# и сравнивать такой же after/custom-rbac.json согласно policy проекта.
+#
+# Automatic gate вместо этого должен явно проверять:
+# - security-critical custom Role/ClusterRole/Binding, которые должны сохраниться;
+# - отсутствие новых запрещённых permissions у выбранных identities;
+# - нужные admission policies/bindings;
+# - security flags именно обновляемого API server;
+# - PSS invariants.
+
 # Gate: любой security-флаг, присутствовавший до upgrade, обязан остаться после него.
 # Пустой diff -u не обязателен (после upgrade список может стать шире), но exit code
 # comm -23 (строки только в before) обязан быть нулевой длины.

@@ -63,10 +63,28 @@ getent group
 id "$USER_TO_REVIEW"
 groups "$USER_TO_REVIEW"
 
-# Заблокировать неиспользуемую интерактивную учётную запись, не удаляя её данные.
+# Запретить password authentication для неиспользуемой интерактивной учётной записи.
 sudo usermod --lock "$USER_TO_REVIEW"
+
+# Отдельно отключить сам account для новых login (usermod --lock блокирует только
+# password hash, а не весь Linux-account).
+sudo usermod --expiredate 1 "$USER_TO_REVIEW"
+
+# Проверить состояние.
+sudo passwd -S "$USER_TO_REVIEW"
+sudo chage -l "$USER_TO_REVIEW"
+
 sudo usermod --shell /usr/sbin/nologin "$SERVICE_USER"
 ```
+
+Account expiration и password lock не завершают уже существующие процессы/сессии. При
+немедленном отзыве доступа отдельно проверьте активные sessions, SSH keys, привилегированные
+группы и централизованный IAM/SSO source и завершите доступ по утверждённой
+incident/offboarding procedure.
+
+Для service account не применяйте account expiration механически, если сервис должен
+продолжать запускаться. Для него обычно отдельно запрещают interactive shell через
+`nologin` и минимизируют группы/permissions.
 
 Сервисным аккаунтам не нужен интерактивный shell и членство в административных группах.
 Домашний либо state-каталог создавайте только если он нужен сервису, с минимальными owner/mode.
@@ -374,8 +392,18 @@ PubkeyAuthentication yes
 AllowUsers k8s-operator
 EOF
 sudo chmod 600 /etc/ssh/sshd_config.d/00-hardening.conf
+
+SSHD_UNIT="$(
+  systemctl list-unit-files --type=service --no-legend \
+    | awk '$1 == "ssh.service" || $1 == "sshd.service" { print $1; exit }'
+)"
+test -n "$SSHD_UNIT" || {
+  echo 'ERROR: ssh.service/sshd.service was not found' >&2
+  exit 1
+}
+
 sudo sshd -t
-sudo systemctl reload ssh
+sudo systemctl reload "$SSHD_UNIT"
 ```
 
 **Профиль B - ключ + MFA через PAM keyboard-interactive.** Используйте его только после
@@ -393,7 +421,9 @@ AllowUsers k8s-operator
 ```
 
 Сохраните профиль B в том же `/etc/ssh/sshd_config.d/00-hardening.conf`, затем выполните
-`sudo sshd -t` и `sudo systemctl reload ssh`. `AllowUsers` - сильное ограничение, но оно
+`sudo sshd -t` и reload фактического OpenSSH server unit (`ssh.service` на Debian/Ubuntu
+или `sshd.service` на многих RHEL-family системах). Не фиксируйте одно имя unit как
+универсальное для всех Linux-дистрибутивов. `AllowUsers` - сильное ограничение, но оно
 блокирует всех неуказанных пользователей. Не применяйте его, пока не добавили необходимые
 break-glass и automation-аккаунты; документируйте владельцев и пересматривайте список.
 

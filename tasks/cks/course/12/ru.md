@@ -112,6 +112,49 @@ sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml
 - --authentication-config=/etc/kubernetes/authentication/apiserver-authentication.yaml
 ```
 
+Одного флага недостаточно: файл находится на host и должен быть явно смонтирован в
+static Pod. Добавьте `hostPath` volume и read-only `volumeMount`, не удаляя существующие
+volumes kube-apiserver:
+
+```yaml
+# Добавьте к существующим volumeMounts kube-apiserver:
+volumeMounts:
+- name: authentication-config
+  mountPath: /etc/kubernetes/authentication/apiserver-authentication.yaml
+  readOnly: true
+
+# Добавьте к существующим volumes Pod:
+volumes:
+- name: authentication-config
+  hostPath:
+    path: /etc/kubernetes/authentication/apiserver-authentication.yaml
+    type: File
+```
+
+После изменения проверьте, что container действительно видит файл, API server
+восстановился и `/readyz` успешен.
+
+Ручная правка static Pod подходит для конкретной лабораторной или аварийной задачи, но
+не должна оставаться единственным source of truth kubeadm-кластера. Для постоянной
+конфигурации перенесите параметр и mount в `ClusterConfiguration`, например через
+`apiServer.extraArgs` и `apiServer.extraVolumes`, либо используйте управляемые kubeadm
+patches. Иначе `kubeadm upgrade` может перегенерировать manifest без этой настройки:
+
+```yaml
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+apiServer:
+  extraArgs:
+  - name: authentication-config
+    value: /etc/kubernetes/authentication/apiserver-authentication.yaml
+  extraVolumes:
+  - name: authentication-config
+    hostPath: /etc/kubernetes/authentication/apiserver-authentication.yaml
+    mountPath: /etc/kubernetes/authentication/apiserver-authentication.yaml
+    readOnly: true
+    pathType: File
+```
+
 Полное отключение через `--anonymous-auth=false` допустимо только после предварительного
 изменения kubeadm health probes на аутентифицированные либо иной проверенный механизм и
 проверки bootstrap-зависимостей. После сохранения kubelet пересоздаёт static Pod. Не

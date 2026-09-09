@@ -5,7 +5,8 @@
 > **Что дальше.** Нативные NetworkPolicy уже позволяют изолировать Pod и закрывать
 > доступ к metadata-сервисам. Но для части сценариев этого недостаточно: нужно разрешить
 > конкретный HTTP-метод, учитывать DNS-имена внешних сервисов, отличать трафик к кластеру
-> от трафика в интернет и видеть причину каждого DROP. **CiliumNetworkPolicy** расширяет
+> от трафика в интернет и видеть причину каждого DROP (пакет отброшен без ответа
+> отправителю). **CiliumNetworkPolicy** расширяет
 > базовые возможности сетевых политик Cilium L7-фильтрацией, FQDN-правилами, identities и
 > наблюдаемостью. Эта глава углубляет компетенцию CKS Cluster Setup «Use Network security
 > policies to restrict cluster level access» и служит основой для лабы 102.
@@ -14,11 +15,85 @@
 > каждой экзаменационной среде, поэтому Cilium-specific команды и CRD рассматривайте как
 > углубление для кластеров, где Cilium действительно предоставлен.
 
+> **Cilium сам по себе в кластере не появляется.** Это отдельный CNI, который
+> устанавливает администратор кластера - через `cilium` CLI или Helm chart, поверх уже
+> созданного кластера или вместо стандартного CNI при его создании. Если в вашем окружении
+> Cilium ещё не установлен, все примеры этой главы неприменимы до установки. Официальная
+> инструкция: [Cilium Quick Installation](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-default/).
+> Более подробные примеры L3/L4/L7-правил, чем разобраны в этой главе, - в официальном
+> разделе [Overview of Network Policy](https://docs.cilium.io/en/stable/security/policy/),
+> включая отдельные страницы Layer 3, Layer 4 и Layer 7 Policies.
+
 > **Что нужно из CKA.** Базовую модель CNI, IP-адреса Pod и сервисов см. в
 > [главе 30 CKA](../../../cka/course/30/ru.md), а назначение CNI и его место в сетевом
 > стеке - в [главе 40 CKA](../../../cka/course/40/ru.md). Базовый синтаксис Kubernetes
 > NetworkPolicy разобран в главе 04 этого курса; здесь не повторяем его, а используем
 > возможности Cilium.
+
+## 06.0. Что для вас нового: eBPF-datapath вместо kube-proxy
+
+### Baseline без Cilium: как трафик доходит до Service сейчас
+
+До этой главы путь пакета к Service обеспечивал `kube-proxy`. Механизм состоит из трёх
+частей:
+
+- **Наблюдение.** На каждой ноде `kube-proxy` слушает изменения объектов Service и
+  `EndpointSlice`.
+- **Программирование ядра.** По каждому изменению он обновляет правила ядра - обычно через
+  `iptables` или `nftables` (устаревающий `ipvs` тоже возможен).
+- **Перехват и DNAT.** Правило перехватывает трафик к `ClusterIP:port` и делает DNAT на IP
+  конкретного Pod, выбранного случайно или по session affinity.
+
+`NetworkPolicy` из главы 04 - отдельный слой поверх этой же модели: CNI со своей стороны
+читает объект `NetworkPolicy` и добавляет собственные правила ядра, которые разрешают или
+блокируют пакет **до или после** правил kube-proxy, в зависимости от реализации.
+
+### Что меняет Cilium: eBPF как основной L3/L4 datapath
+
+Cilium предлагает другую архитектуру для того же пути пакета:
+
+- **eBPF как основной L3/L4 datapath.** Для pod networking, L3/L4 policy и
+- **eBPF как основной L3/L4 datapath.** Для pod networking, L3/L4 policy и
+  kube-proxy-replacement Cilium использует eBPF-программы и BPF maps. Программы
+  прикрепляются к hook-точкам ядра, например сетевым интерфейсам и cgroup.
+- **Map lookup вместо линейного `iptables`-обхода.** В kube-proxy-replacement Cilium
+  хранит Service/backend state в BPF maps и выполняет lookup без последовательного обхода
+  длинной `iptables`-цепочки. Это важное отличие именно от kube-proxy в режиме `iptables`.
+  Не переносите это сравнение на kube-proxy `nftables`: современный nftables-режим тоже
+  использует map-based dispatch (`verdict map`) с примерно O(1) lookup - подробности в
+  официальном блоге Kubernetes про nftables-режим kube-proxy.
+- **Два режима работы.** Полный **kube-proxy-replacement** реализует весь Service load
+  balancing в eBPF и позволяет удалить `kube-proxy` из кластера. В режиме совместной
+  работы `kube-proxy` продолжает обслуживать Service, а Cilium добавляет policy
+  enforcement и L7-возможности рядом.
+
+Оба режима возможны в production, и экзамен CKS не требует конкретного из них.
+
+Важно разделять уровни. L3/L4 forwarding, policy enforcement и Service load balancing при
+kube-proxy-replacement в Cilium в основном реализуются через eBPF.
+
+L7 HTTP/DNS policy работает иначе: выбранный трафик перенаправляется в node-local userspace
+proxy (Envoy или DNS proxy). В текущих stable-версиях Cilium такой proxy redirection может
+также использовать netfilter/`iptables` TPROXY. Поэтому Cilium не следует описывать как
+datapath, который при любых функциях полностью исключает `iptables` и userspace.
+
+### Когда достаточно `NetworkPolicy`, а когда нужен CNP
+
+Из разницы механизмов следует практический критерий выбора между нативной
+`NetworkPolicy` и `CiliumNetworkPolicy` (CNP):
+
+- **Начинайте с нативной `NetworkPolicy`.** Если задача - разрешить или запретить трафик
+  между Pod по labels, namespace, CIDR и TCP/UDP/SCTP-порту, этого достаточно. Политика
+  переносима между кластерами и CNI, поэтому переход на CNP без причины усложняет миграцию
+  и поддержку.
+- **Переходите на CNP, когда нужен контроль внутри уже разрешённого L3/L4-соединения.**
+  Типичные триггеры: ограничить конкретный HTTP-метод или путь (L7), разрешить или
+  запретить конкретные внешние DNS-имена (`toFQDNs`), явно описать трафик к `world`,
+  `cluster` или `host` (`toEntities`), либо получить наблюдаемость через Hubble для
+  расследования `DROP`.
+- **Обе модели можно комбинировать.** Нативная `NetworkPolicy` остаётся переносимым L3/L4
+  контролем, а CNP добавляет более тонкую granularity там, где L3/L4 уже недостаточно.
+  Подробности совместного вычисления allow/deny разобраны ниже в этой главе.
 
 ## 06.1. Зачем нужна политика Cilium
 
@@ -35,21 +110,17 @@ backend принимает только `GET /`, то `POST /admin` или `DELE
 
 ```mermaid
 flowchart TB
-    attacker["скомпрометированный<br/>frontend"] -->|"TCP/80 разрешён"| backend["backend API"]
-    attacker -->|"DNS + HTTPS"| evil["внешний сервер<br/>атакующего"]
-    cnp["CiliumNetworkPolicy"] --> l34["L3/L4:<br/>frontend →<br/>backend:80"]
-    cnp --> l7["L7:<br/>только GET /"]
-    cnp --> fqdn["DNS-aware:<br/>только<br/>разрешённое FQDN"]
-    l34 --> backend
-    l7 --> backend
-    fqdn --> evil
+    attacker["Скомпрометированный<br/>frontend"]
+    gap["L3/L4 разрешает<br/>TCP/80: POST /admin<br/>и внешний сервер<br/>тоже пройдут"]
+    cnp["CiliumNetworkPolicy:<br/>L7 · только GET /<br/>DNS-aware FQDN"]
+    blocked["Опасные запросы<br/>заблокированы"]
+
+    attacker --> gap --> cnp --> blocked
+
     style attacker fill:#db4437,color:#fff
-    style backend fill:#326ce5,color:#fff
-    style evil fill:#db4437,color:#fff
+    style gap fill:#f4b400,color:#000
     style cnp fill:#673ab7,color:#fff
-    style l34 fill:#0f9d58,color:#fff
-    style l7 fill:#0f9d58,color:#fff
-    style fqdn fill:#0f9d58,color:#fff
+    style blocked fill:#0f9d58,color:#fff
 ```
 
 Cilium оценивает политику по identity, а не только по IP. Для рабочих нагрузок Kubernetes
@@ -168,6 +239,39 @@ kubectl -n cks-102 get pod --show-labels
 стабильных внешних сетей или узких служебных диапазонов, а не как обычный способ связать
 два сервиса Kubernetes.
 
+### Corner case: active FTP не выражается через L3/L4
+
+Active FTP показывает границу L3/L4-policy. Клиент открывает control-соединение на TCP/21
+и сообщает серверу свой порт для data-соединения; затем **сервер сам инициирует новое
+TCP-соединение обратно к клиенту** на этот порт. Порт заранее неизвестен и договаривается
+динамически внутри сессии, поэтому статичное правило `toPorts`/`fromEndpoints` не может
+описать «разреши входящее соединение на порт, о котором стороны договорятся позже».
+
+До Kubernetes и Cilium эту проблему решал **connection tracking на уровне ядра**: модуль
+`nf_conntrack_ftp` разбирает control-канал, видит согласованный порт и динамически
+добавляет related-соединение как разрешённое. `kube-proxy` и его `iptables`/`nftables`
+правила сами по себе не решают эту задачу - её решает отдельный conntrack helper поверх
+netfilter, а не сам механизм forwarding Service.
+
+Для протоколов с поддерживаемой application-level семантикой Cilium может использовать
+L7 proxy, но FTP к ним не относится.
+
+Стандартный CiliumNetworkPolicy не предоставляет FTP-aware helper или встроенный FTP L7
+parser. Поэтому Cilium не может по FTP control channel автоматически определить negotiated
+port active-mode data connection и создать для него временное policy-разрешение.
+
+Для Kubernetes-среды предпочтительнее **passive FTP** с заранее ограниченным диапазоном
+data ports: тогда control traffic на TCP/21 и data traffic на фиксированном диапазоне можно
+выразить обычными L3/L4 policy rules (`endPort`).
+
+Если legacy-приложению обязательно нужен active FTP с динамически согласуемыми портами, это
+уже задача отдельного protocol-aware gateway/proxy или специально спроектированного
+сетевого слоя, а не стандартной CNP.
+
+Из встроенных application-level правил современного Cilium ориентируйтесь на HTTP и DNS.
+gRPC фильтруется через HTTP/2 semantics с `rules.http`; отдельного gRPC rule type нет.
+Kafka-aware network policy удалена в Cilium 1.20.
+
 ## 06.3. L7: ограничить HTTP и DNS
 
 L7-правило добавляется внутрь элемента `toPorts`. Cilium направляет выбранный трафик через
@@ -220,6 +324,102 @@ kubectl -n cks-102 exec deploy/frontend -- \
 Cilium также умеет фильтровать DNS по имени запроса. Не включайте L7-proxy без нужды: он
 добавляет обработку на пути трафика и требует отдельного нагрузочного тестирования.
 
+### gRPC: фильтрация через HTTP, но с особенностью в балансировке
+
+У Cilium нет отдельного «gRPC-парсера». gRPC работает поверх HTTP/2, а каждый вызов метода
+кодируется как обычный HTTP-запрос: `POST` на путь вида `/Пакет.Сервис/Метод`. Поэтому
+L7-фильтрация gRPC - это то же самое HTTP-правило `path`, что вы только что видели выше,
+только regex или точный путь описывает `/cloudcity.DoorManager/GetName` вместо `/`.
+
+Например, правило ниже разрешает `public-terminal` вызывать у `cc-door-mgr` только чтение
+статуса, но не изменение кода доступа:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: door-read-only-grpc
+spec:
+  endpointSelector:
+    matchLabels:
+      app: cc-door-mgr
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app: public-terminal
+    toPorts:
+    - ports:
+      - port: "50051"
+        protocol: TCP
+      rules:
+        http:
+        - method: "POST"
+          path: "/cloudcity.DoorManager/GetName"
+        - method: "POST"
+          path: "/cloudcity.DoorManager/GetLocation"
+```
+
+Вызов `SetAccessCode` не совпадёт ни с одним правилом и будет отклонён - клиент получит
+gRPC-статус `PERMISSION_DENIED`, а не обычный сетевой timeout. Разобранный пошаговый пример
+с демо-приложением есть в официальной документации: [Securing gRPC](https://docs.cilium.io/en/stable/security/grpc/).
+
+Отдельная проблема возникает с балансировкой, если Cilium **полностью заменяет
+kube-proxy** (`kube-proxy-replacement`). gRPC держит одно долгоживущее TCP-соединение и
+прогоняет через него много вызовов подряд. Обычная eBPF-балансировка Cilium выбирает Pod
+**один раз при установке соединения**, а не на каждый отдельный вызов внутри него. Если
+клиент открыл соединение и держит его долго, весь его трафик уйдёт на один и тот же Pod, а
+остальные реплики backend не получат свою долю нагрузки - это называют pinning соединения.
+
+Решение - включить у Cilium **Proxy Load Balancing** для нужного Service: трафик
+направляется через встроенный Envoy, который умеет заглянуть внутрь HTTP/2-потока и
+распределить отдельные gRPC-вызовы между Pod, а не всё соединение целиком. Без этой
+настройки долгоживущие gRPC-клиенты в кластере без kube-proxy стоит проверять отдельно на
+равномерность нагрузки между репликами.
+
+Включается это одной аннотацией на объекте Service, без изменения манифеста workload:
+
+```bash
+kubectl annotate service payment-grpc-service \
+  service.cilium.io/lb-l7=enabled
+```
+
+После этого трафик к `payment-grpc-service` идёт через Cilium-managed Envoy, который
+распределяет отдельные вызовы между Pod, а не пиннит всё TCP-соединение к одному backend.
+Алгоритм балансировки можно уточнить отдельной аннотацией
+`service.cilium.io/lb-l7-algorithm` (`round_robin`, `least_request` или `random`). Функция
+находится в статусе **beta**; перед включением в production проверьте её поведение в
+своей версии Cilium. Пошаговый пример с наблюдением трафика через Hubble - в официальной
+документации: [Proxy Load Balancing for Kubernetes Services](https://docs.cilium.io/en/stable/network/servicemesh/envoy-load-balancing/).
+
+**Где физически находится Envoy.** Это не sidecar в каждом Pod. Envoy входит в образ
+Cilium и работает **на каждой ноде один раз**: либо как процесс внутри `cilium-agent`, либо
+как отдельный `cilium-envoy` DaemonSet, разделяемый всеми Pod на этой ноде. В
+рассматриваемых выше сценариях через него проходит трафик, перенаправленный L7-policy или
+proxy load balancing (`lb-l7`). Это не исчерпывающий список: Cilium Ingress, Gateway API и
+`CiliumEnvoyConfig` также направляют трафик через тот же per-node Envoy. Обычный Pod-to-Pod
+L3/L4 трафик, для которого не включена ни одна из этих proxy-based функций, остаётся на
+eBPF-datapath без прохода через userspace.
+
+**Как это влияет на задержку и параметры соединения.** Каждый перенаправленный пакет
+проходит дополнительный переход через userspace-процесс Envoy на той же ноде, а не через
+сеть к другой ноде или Pod. Это добавляет:
+
+- **Небольшую дополнительную задержку** на каждый запрос - переход из ядра в userspace и
+  обратно, плюс разбор протокола (HTTP/gRPC). Величина обычно небольшая для локального
+  hop, но не нулевая, и её стоит измерять под реальной нагрузкой перед включением.
+- **Дополнительное использование CPU и памяти на ноде** - Envoy обрабатывает трафик как
+  отдельный процесс, поэтому пропорционально растёт нагрузка на ноду при большом объёме
+  L7-трафика.
+- **Source address зависит от proxy path и конфигурации.** Сам факт прохождения через
+  Envoy не означает, что backend обязательно увидит source IP самого proxy. Для L7 policy
+  enforcement Cilium по умолчанию использует original source address; у
+  `CiliumEnvoyConfig`, Ingress и Gateway API есть отдельные настройки и правила source
+  visibility. Поэтому backend-visible source IP/port нужно проверять для конкретного
+  режима, а не выводить из одного только факта использования Envoy.
+- **Оверхед применяется только к выбранному трафику** - обычные L3/L4-соединения без
+  L7-правил и без аннотации `lb-l7` эту цену не платят: они остаются на быстром
+  eBPF-пути без Envoy.
+
 > **Актуальность.** L7-фильтрация Kafka в Cilium deprecated с версии 1.18 и удалена
 > в версии 1.20. Для CKS ориентируйтесь на L7 HTTP и DNS/`toFQDNs`, а Kafka-политику
 > рассматривайте только как исторический пример, а не текущую практику.
@@ -235,7 +435,7 @@ YAML. Proxy заполняет FQDN-кэш с учётом TTL и затем д�
 доверять произвольному nameserver.
 
 Политика ниже разрешает frontend DNS-запросы к CoreDNS и HTTPS только к
-`api.example.com`. `rules.dns` разрешает DNS query, а `toFQDNs` - последующее соединение
+`example.com`. `rules.dns` разрешает DNS query, а `toFQDNs` - последующее соединение
 к IP, возвращённому для разрешённого имени.
 
 ```yaml
@@ -263,7 +463,7 @@ spec:
         dns:
         - matchPattern: "*"
   - toFQDNs:
-    - matchName: "api.example.com"
+    - matchName: "example.com"
     toPorts:
     - ports:
       - port: "443"
@@ -271,24 +471,38 @@ spec:
 ```
 
 `matchName` выбирает ровно одно имя. Для контролируемого набора поддоменов применяйте
-`matchPattern`, например `"*.example.com"`: такой wildcard не следует считать
-разрешением apex-имени `example.com`. Если нужны и `example.com`, и его поддомены,
-выразите их отдельными правилами. Не используйте `"*"` без явной необходимости:
-в `toFQDNs` такой pattern снимает ограничение по DNS-имени и разрешает назначения,
-полученные из DNS cache для всех совпавших имён; остальные условия того же правила,
-например `toPorts`, продолжают действовать. Перед применением проверьте реальные labels
-CoreDNS в своём кластере - у некоторых установок вместо `k8s-app: kube-dns` используется
-другая метка.
+`matchPattern`, например `"*.example.com"`: такой wildcard не следует считать разрешением
+apex-имени `example.com`. Если нужны и `example.com`, и его поддомены, выразите их
+отдельными правилами. Не используйте `"*"` без явной необходимости: в `toFQDNs` такой
+pattern снимает ограничение по DNS-имени и разрешает назначения, полученные из DNS cache
+для всех совпавших имён; остальные условия того же правила, например `toPorts`,
+продолжают действовать. Перед применением проверьте реальные labels CoreDNS в своём
+кластере - у некоторых установок вместо `k8s-app: kube-dns` используется другая метка.
 
 ```bash
 kubectl -n kube-system get pod --show-labels | grep -E 'coredns|dns'
-
-# Разрешённое имя должно работать, чужое - нет.
-kubectl -n cks-102 exec deploy/frontend -- \
-  curl -I --max-time 5 https://api.example.com
-kubectl -n cks-102 exec deploy/frontend -- \
-  curl -I --max-time 5 https://www.example.org
 ```
+
+Следующий пример - иллюстративная ручная проверка, а не детерминированный acceptance
+test. IANA прямо указывает, что HTTP-сервис документационных доменов (`example.com`,
+`example.org` и т. п.) предоставляется best-effort и не предназначен как testing
+endpoint для software: https://www.iana.org/news/2024/example-domain-http-methods.
+Если в вашем окружении `example.com`/`www.google.com` недоступны (сетевые ограничения,
+временный отказ, блокировка в конкретной сети), это не означает ошибку policy - замените
+их на FQDN, для которого вы независимо, до применения policy, подтвердили DNS-разрешение
+и рабочий HTTPS.
+
+```bash
+kubectl -n cks-102 exec deploy/frontend -- \
+  curl -I --max-time 5 https://example.com
+kubectl -n cks-102 exec deploy/frontend -- \
+  curl -I --max-time 5 https://www.google.com
+```
+
+Перед применением policy подтвердите, что оба запроса выше проходят без ограничений.
+Только затем примените `toFQDNs` и сравните: `example.com:443` должен пройти, а
+`www.google.com:443` - быть заблокирован именно policy, а не случайной недоступностью
+внешнего сервиса.
 
 `toFQDNs` не является полноценным DLP или проверкой HTTP `Host`: это контроль сетевого
 доступа по наблюдаемому DNS-разрешению. DoH/DoT скрывают DNS-запрос от DNS-proxy и сами
@@ -356,20 +570,59 @@ spec:
     - 169.254.169.254/32
 ```
 
-Не трактуйте `host` как безобидный объект. Доступ к kubelet, runtime socket или localhost
-ноды часто даёт путь к эскалации. Ограничение host-трафика требует понимания Cilium
-host firewall, режима `hostFirewall.enabled` и трафика control plane; проверяйте его в
-тестовом кластере, чтобы не потерять доступ к нодам или API server.
+Не трактуйте `host` как безобидный объект. `toEntities: host` управляет сетевым доступом
+к локальной ноде и host-networked workloads и поэтому может открыть путь к kubelet или
+другим TCP/UDP listener на host. Runtime CRI socket - отдельный механизм: например,
+containerd обычно доступен через Unix domain socket
+`/var/run/containerd/containerd.sock`, и его экспозиция зависит от filesystem
+mounts/`hostPath` и привилегий Pod, а не от `toEntities: host` сама по себе. Ограничение
+host-трафика требует понимания Cilium host firewall, режима `hostFirewall.enabled` и
+трафика control plane; проверяйте его в тестовом кластере, чтобы не потерять доступ к
+нодам или API server. Доступ к runtime socket отдельно ограничивайте через mount/privilege
+controls.
 
 ## 06.6. Наблюдаемость и проверка с Hubble
 
-Политика, которую нельзя наблюдать, сложно безопасно менять. Hubble получает flow events
-из eBPF datapath Cilium: source/destination identity, verdict, L4/L7-контекст и причину
-отказа. Он не заменяет audit-логи Kubernetes, но отвечает на вопрос: «какое соединение
-Cilium разрешил или отбросил и почему?»
+### Что такое Hubble и какую задачу он решает
+
+Обычная `NetworkPolicy` или `CiliumNetworkPolicy` отвечает на вопрос «что разрешено».
+Она не отвечает на вопрос «что произошло на самом деле»: почему конкретный запрос не
+прошёл, к какому именно правилу относится DROP, виден ли клиенту TCP-connect или отказ
+случился уже на L7. Без такого инструмента расследование сводится к перечитыванию YAML
+и догадкам.
+
+**Hubble** - компонент наблюдаемости Cilium, который читает те же eBPF-события, что уже
+собирает datapath, и превращает их в читаемый поток flow-событий: source/destination
+identity, L4/L7-контекст, verdict (`FORWARDED`/`DROPPED`) и причину отказа. Он не заменяет
+Kubernetes audit log и не читает контент запроса за вас - он показывает, что Cilium решил
+сделать с конкретным соединением и почему.
+
+Архитектурно Hubble состоит из четырёх частей:
+
+- **Hubble Server** - встроен в `cilium-agent` и работает на каждой ноде; отдаёт flow
+  events по gRPC.
+- **Hubble Relay** (`hubble-relay`) - отдельный компонент, который подключается к Server
+  на всех нодах и даёт единый кластерный вид вместо ноды за нодой.
+- **Hubble CLI** (`hubble`) - клиент командной строки; подключается либо к Relay для
+  кластерного обзора, либо к локальному Server на одной ноде.
+- **Hubble UI** (`hubble-ui`) - опциональный графический интерфейс поверх Relay с картой
+  связей сервисов.
+
+**Как это включается.** В managed-дистрибутивах и стандартных инсталляциях Cilium Hubble
+обычно включают флагом Helm при установке или обновлении, например
+`--set hubble.relay.enabled=true --set hubble.ui.enabled=true`; точный флаг зависит от
+версии chart. Для CKS и этой главы достаточно знать одну вещь: если Hubble уже включён в
+кластере, `cilium status` покажет его состояние, а CLI `hubble` можно подключить через
+port-forward к Relay, как показано ниже. Включать Hubble с нуля для лабы не требуется -
+это задача администратора кластера, а не части CNP, которые вы применяете.
 
 Перед тестом убедитесь, что агенты Cilium здоровы. Команды обычно выполняют на рабочей
 машине с доступным `cilium` CLI; точный способ включения Hubble зависит от установки Cilium.
+
+`hubble` - это отдельный бинарник, а не часть `cilium` CLI. Его нужно один раз установить
+на рабочую машину, скачав нужный релиз с GitHub; шаги по платформам - в официальной
+инструкции [Install the Hubble Client](https://docs.cilium.io/en/stable/observability/hubble/setup/#install-the-hubble-client).
+После установки проверьте бинарник командой `hubble help`.
 
 ```bash
 cilium status --wait
@@ -544,7 +797,12 @@ L3/L4 rule разрешает всё TCP-соединение на порту 80
 <details>
 <summary>6. Когда подходят entities `world`, `cluster` и `host`, и почему `host` требует особой осторожности?</summary>
 
-`world` обозначает адреса вне кластера, `cluster` — endpoints внутри него, а `host` — локальный host endpoint ноды. Доступ к `host` может затрагивать kubelet, runtime socket или localhost ноды и открыть путь к эскалации, поэтому он требует понимания host firewall Cilium и проверки control-plane traffic в тестовом кластере.
+`world` обозначает адреса вне кластера, `cluster` — endpoints внутри него, а `host` —
+локальный host endpoint ноды и host-networked workloads. Доступ к `host` может затрагивать
+kubelet и другие сетевые listener ноды, поэтому требует осторожной host-firewall policy.
+Runtime CRI socket — другой attack path: обычно это Unix socket на filesystem ноды, и его
+нужно защищать ограничением `hostPath`, привилегий и других механизмов доступа к host
+filesystem.
 </details>
 
 <details>

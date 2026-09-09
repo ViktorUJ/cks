@@ -176,6 +176,13 @@ curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/version" # 401
 kubectl -n kube-system get pods -l component=kube-apiserver
 ```
 
+Этот приём безопасен именно в изолированной однонодовой лабе. В production-кластере
+блокирующее `--anonymous-auth=false` нельзя применять механически: health probes и
+стандартный token-based `kubeadm join` discovery могут зависеть от anonymous-доступа к
+конкретным endpoints. Для этого случая используйте `AuthenticationConfiguration` с
+`anonymous.conditions`, ограничивающим anonymous-доступ только нужными путями
+(`/livez`, `/readyz` и т. п.) - подробности в главах 07 и 12.
+
 В конце выполните `check_result`.
 
 ## 6. Secret через env раскрывается в `/proc/1/environ`: рефакторинг на volume

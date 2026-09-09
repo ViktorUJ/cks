@@ -95,38 +95,74 @@ record_result() {
 @test "4. DNS-aware Cilium policy resolves example.com and permits only HTTPS" {
   mkdir -p /var/work/tests/artifacts/4
   policy=$(kubectl --context "$CTX" get ciliumnetworkpolicy frontend-fqdn -n "$NS" -o json 2>/dev/null)
-  fqdn_ok=$(printf '%s' "$policy" | jq -r '[.spec.egress[]?.toFQDNs[]?.matchName] | index("example.com") != null' 2>/dev/null)
-  dns_ok=$(printf '%s' "$policy" | jq -r '[.spec.egress[]?.toEndpoints[]?.matchLabels["k8s:k8s-app"]] | index("kube-dns") != null' 2>/dev/null)
-  dns_proxy_ok=$(printf '%s' "$policy" | jq -r '[.spec.egress[]? | select(.toEndpoints != null) | .toPorts[]?.rules.dns[]?.matchPattern | select(. == "*")] | length > 0' 2>/dev/null)
-  fqdn_https_ok=$(printf '%s' "$policy" | jq -r '[.spec.egress[]? | select(.toFQDNs[]?.matchName == "example.com") | .toPorts[]?.ports[]? | select(.port == "443" and .protocol == "TCP")] | length > 0' 2>/dev/null)
-  allowed=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -k -sS --max-time 10 -o /dev/null -w '%{http_code}' https://example.com/ 2>&1)
+  policy_ok=$(printf '%s' "$policy" | jq -r '
+    def dns_port53:
+      ([.toPorts[]?
+        | select((.rules.dns // []) | any(.matchPattern == "*"))
+        | .ports[]?
+        | select(.port == "53")
+        | .protocol] as $p
+       | (($p | index("ANY")) != null)
+         or ((($p | index("UDP")) != null) and (($p | index("TCP")) != null)));
+
+    def dns_rule:
+      ((.toEndpoints // []) | length == 1)
+      and (.toEndpoints[0].matchLabels["k8s:io.kubernetes.pod.namespace"] == "kube-system")
+      and (.toEndpoints[0].matchLabels["k8s:k8s-app"] == "kube-dns")
+      and dns_port53
+      and ((.toFQDNs // []) | length == 0)
+      and ((.toCIDR // []) | length == 0)
+      and ((.toCIDRSet // []) | length == 0)
+      and ((.toEntities // []) | length == 0)
+      and ((.toServices // []) | length == 0)
+      and ((.toGroups // []) | length == 0)
+      and ((.toNodes // []) | length == 0);
+
+    def fqdn_rule:
+      ((.toFQDNs // []) | length == 1)
+      and (.toFQDNs[0].matchName == "example.com")
+      and ((.toFQDNs[0].matchPattern // "") == "")
+      and ((.toPorts // []) | length == 1)
+      and ((.toPorts[0].ports // []) | length == 1)
+      and (.toPorts[0].ports[0].port == "443")
+      and (.toPorts[0].ports[0].protocol == "TCP")
+      and ((.toEndpoints // []) | length == 0)
+      and ((.toCIDR // []) | length == 0)
+      and ((.toCIDRSet // []) | length == 0)
+      and ((.toEntities // []) | length == 0)
+      and ((.toServices // []) | length == 0)
+      and ((.toGroups // []) | length == 0)
+      and ((.toNodes // []) | length == 0);
+
+    (.spec.endpointSelector.matchLabels.role == "frontend")
+    and ((.spec.egress // []) as $e
+         | (any($e[]?; dns_rule))
+           and (any($e[]?; fqdn_rule))
+           and (all($e[]?; dns_rule or fqdn_rule)))
+  ' 2>/dev/null)
+
+  # Сетевая проверка через example.com/www.google.com - НЕ часть grading criteria.
+  # IANA прямо указывает, что HTTP-сервис example-доменов предоставляется best-effort
+  # и не предназначен как testing endpoint для software; доступность внешнего сайта
+  # зависит от Internet egress тестовой среды, а не от корректности policy студента.
+  # Результат сохраняется только как diagnostic evidence, не как условие PASS/FAIL.
+  allowed=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 10 -o /dev/null -w '%{http_code}' https://example.com/ 2>&1)
   allowed_rc=$?
   same_fqdn_http=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://example.com:80/ 2>&1)
   same_fqdn_http_rc=$?
-  blocked=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -k -sS --max-time 5 -o /dev/null -w '%{http_code}' https://www.google.com/ 2>&1)
+  blocked=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' https://www.google.com/ 2>&1)
   blocked_rc=$?
   printf 'example.com HTTPS: rc=%s status=%s\nexample.com HTTP: rc=%s status=%s\nwww.google.com HTTPS: rc=%s status=%s\n' "$allowed_rc" "$allowed" "$same_fqdn_http_rc" "$same_fqdn_http" "$blocked_rc" "$blocked" > /var/work/tests/artifacts/4/fqdn.txt
+  if [[ "$allowed_rc" -ne 0 || ! "$allowed" =~ ^[23][0-9][0-9]$ ]]; then
+    echo "WARNING (non-blocking): HTTPS to example.com did not succeed (rc=$allowed_rc status=$allowed). This does not fail the task by itself - example.com availability is best-effort and outside student control; see /var/work/tests/artifacts/4/fqdn.txt."
+  fi
 
-  if [[ "$fqdn_ok" == "true" && "$dns_ok" == "true" && "$dns_proxy_ok" == "true" && "$fqdn_https_ok" == "true" && "$allowed_rc" -eq 0 && "$allowed" =~ ^[23][0-9][0-9]$ ]] \
-    && [[ "$same_fqdn_http_rc" -ne 0 || ! "$same_fqdn_http" =~ ^[23][0-9][0-9]$ ]] \
-    && [[ "$blocked_rc" -ne 0 || ! "$blocked" =~ ^[23][0-9][0-9]$ ]]; then
+  if [[ "$policy_ok" == "true" ]]; then
     record_result 0
   else
-    if [[ "$fqdn_ok" != "true" ]]; then
-      echo "HINT: The policy must have an egress rule with toFQDNs.matchName == 'example.com' exactly - a wildcard or wrong domain will not match this check."
-    elif [[ "$dns_ok" != "true" || "$dns_proxy_ok" != "true" ]]; then
-      echo "HINT: A toFQDNs rule requires a companion egress rule allowing DNS to kube-dns (label k8s-app: kube-dns) with a toPorts.rules.dns matchPattern '*' - Cilium needs to observe the DNS answer to resolve the FQDN policy dynamically."
-    elif [[ "$fqdn_https_ok" != "true" ]]; then
-      echo "HINT: The toFQDNs rule for example.com must restrict toPorts to 443/TCP only - allowing all ports defeats the purpose of a DNS-aware egress allowlist."
-    elif [[ "$allowed_rc" -ne 0 || ! "$allowed" =~ ^[23][0-9][0-9]$ ]]; then
-      echo "HINT: HTTPS to example.com did not succeed (rc=$allowed_rc status=$allowed) even though it should be allowed. Give Cilium's FQDN cache a moment after applying the policy, or check the DNS-visibility rule is correctly matching kube-dns."
-    elif [[ "$same_fqdn_http_rc" -eq 0 && "$same_fqdn_http" =~ ^[23][0-9][0-9]$ ]]; then
-      echo "HINT: Plain HTTP (port 80) to example.com succeeded - the policy should only allow port 443 for this FQDN, not all ports on the same domain."
-    elif [[ "$blocked_rc" -eq 0 && "$blocked" =~ ^[23][0-9][0-9]$ ]]; then
-      echo "HINT: HTTPS to a DIFFERENT domain (www.google.com) succeeded - toFQDNs.matchName must be scoped to example.com specifically, not to any FQDN."
-    fi
+    echo "HINT: frontend-fqdn must select role=frontend and contain only the DNS rule to kube-system/kube-dns:53 with rules.dns plus the exact example.com:443/TCP FQDN rule; broad extra egress (toEntities, toCIDR, extra toFQDNs/toPorts, etc.) is not allowed."
     cat /var/work/tests/artifacts/4/fqdn.txt
-    echo "policy: toFQDNs=$fqdn_ok kube-dns=$dns_ok dns-proxy=$dns_proxy_ok https-443=$fqdn_https_ok"
+    echo "policy_ok=$policy_ok"
     record_result 1
   fi
 }

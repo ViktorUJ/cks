@@ -79,6 +79,13 @@ kubectl auth can-i get secrets -n cks-104 --as="$SA"
 # no
 ```
 
+`--list` удобен как обзор правил, но не считайте его гарантированно полным перечнем
+effective permissions для любой authorizer chain: команда опирается на
+`SelfSubjectRulesReview`, а её официальная документация прямо предупреждает, что
+возвращённый список может быть неполным в зависимости от authorization mode кластера и
+ошибок evaluation. Критичные границы подтверждайте отдельными positive/negative
+`kubectl auth can-i <verb> <resource>` для конкретной identity, как в примерах выше.
+
 `--list` удобен для ревью, но не заменяет проверку критичных разрешений: вывод может быть
 длинным, а wildcard скрывает конкретный риск. В acceptance-тесте всегда проверяйте пару
 «нужное действие = `yes`» и «опасное соседнее действие = `no`». Для cluster-scoped ресурса
@@ -203,7 +210,7 @@ kubectl get clusterrole "$ROLE_NAME" -o yaml
 | `create` `serviceaccounts/token` | Выпускает токен выбранного ServiceAccount и может стать способом воспользоваться его правами. | Разрешать только доверенной автоматизации, на конкретные ServiceAccount. |
 | `create` `pods/exec` | Даёт интерактивное выполнение команд в уже работающем Pod и доступ к его сети, файловой системе и mounted Secret. | Не включать в обычные роли; использовать короткоживущий break-glass доступ и аудит. |
 | `create` `pods/portforward` | Прокладывает туннель к портам Pod, обходя обычную сетевую экспозицию. | Выдавать точечно для диагностики и отзывать после инцидента. |
-| `create` workload (`pods`, `deployments`, `jobs` и т. п.) | В namespace можно выбрать любой его ServiceAccount, смонтировать доступные ему Secret, ConfigMap или PVC и изменить выполнение приложения. При допущенных политиками privileged Pod или доступе к узлу последствия могут затронуть node. | Не выдавать tenant-приложениям; ограничивать Pod Security Admission, ServiceAccount, Secret/PVC и отдельные операционные роли. |
+| `create` workload (`pods`, `deployments`, `jobs` и т. п.) | Создание Pod/workload в namespace само по себе даёт сильный косвенный доступ: можно выбрать любой ServiceAccount этого namespace и сослаться из Pod spec на Secret, ConfigMap и доступное хранилище, даже без отдельного `get secrets` у исходной identity. Это позволяет получить данные или API-права другого workload. Если policy допускает privileged/host-level Pod, последствия могут распространиться на node. | Не выдавать недоверенным tenant-identity без необходимости; считать workload creation привилегированным правом, ограничивать Pod Security, ServiceAccount, Secret/storage design и admission policy. |
 | `nodes` | Доступ к объектам node раскрывает сведения об инфраструктуре; изменение node - cluster-wide операция. | Исключить из tenant-ролей; выдавать отдельным операционным identity. |
 | `get` `nodes/proxy` | Разрешает proxy-запросы к kubelet. Это не read-only доступ: kubelet proxy-операции могут обойти admission и обычный audit API server. | Не выдавать workload и tenant-ролям; предоставлять только строго контролируемой операционной identity. |
 
@@ -315,23 +322,36 @@ namespaced, поэтому `Role` ограничивает их namespace. `node
 в нескольких namespace, определите `ClusterRole`, но привяжите её отдельными
 `RoleBinding` в каждом разрешённом namespace.
 
-`nonResourceURLs` описывает пути API, а не Kubernetes-объекты; это короткое правило
-уместно только в `ClusterRole`. Например, health-проверке можно дать ровно
-`nonResourceURLs: ["/healthz"]` и `verbs: ["get"]`, а не wildcard `/*`.
+`nonResourceURLs` описывает URL API server, а не Kubernetes-объекты. Такие URL не имеют
+namespace scope, поэтому правило должно находиться в `ClusterRole` и быть выдано через
+`ClusterRoleBinding`. Например, отдельной health-check identity можно дать ровно
+`nonResourceURLs: ["/healthz"]` и `verbs: ["get"]`, не выдавая wildcard `/*`. `RoleBinding`,
+даже если он ссылается на такую `ClusterRole`, не превращает non-resource URL в
+namespaced permission.
 
 ```mermaid
 flowchart TB
     need["Нужна операция API"] --> scope{"Ресурс namespaced?"}
-    scope -->|"да"| role["Role с точными<br/>apiGroups/resources/verbs"]
-    role --> rb["RoleBinding в нужном namespace"]
-    scope -->|"нет"| cr["ClusterRole<br/>только для cluster-scoped ресурса"]
-    cr --> review["Отдельное ревью<br/>ClusterRoleBinding"]
+    scope -->|"да"| reuse{"Нужен reuse<br/>между namespace?"}
+    reuse -->|"нет"| role["Role: точные<br/>apiGroups/verbs"]
+    role --> rb["RoleBinding<br/>в namespace"]
+    reuse -->|"да"| crn["ClusterRole:<br/>namespaced-правила"]
+    crn --> rbn["RoleBinding<br/>в каждом namespace"]
+    scope -->|"нет"| cr["ClusterRole для<br/>cluster-scoped"]
+    cr --> crb["ClusterRoleBinding"]
     style need fill:#326ce5,color:#fff
     style role fill:#0f9d58,color:#fff
     style rb fill:#0f9d58,color:#fff
+    style crn fill:#0f9d58,color:#fff
+    style rbn fill:#0f9d58,color:#fff
     style cr fill:#f4b400,color:#000
-    style review fill:#db4437,color:#fff
+    style crb fill:#db4437,color:#fff
 ```
+
+`ClusterRole` не означает автоматически cluster-wide access: она может содержать rules
+для namespaced resources и быть выдана через `RoleBinding` только в конкретном
+namespace. Cluster-wide scope появляется именно при `ClusterRoleBinding`. Для
+cluster-scoped resources и `nonResourceURLs` нужны `ClusterRole` + `ClusterRoleBinding`.
 
 ## 10.5. Встроенные и агрегированные ClusterRole: скрытое расширение прав
 
@@ -340,15 +360,23 @@ flowchart TB
 Secret часто содержит привилегии ServiceAccount. `edit` разрешает изменять большинство
 namespaced ресурсов и читать Secret, но не может изменять Role или RoleBinding; при этом
 может запустить Pod от имени любого ServiceAccount того же namespace. `admin` может
-управлять большинством RBAC в namespace. `cluster-admin` не ограничен API-группой,
-ресурсом или областью и должен быть только у строго контролируемых операторов кластера.
+управлять большинством RBAC в namespace.
+
+Built-in `cluster-admin` содержит максимально широкие wildcard-разрешения. Через
+`ClusterRoleBinding` та же `ClusterRole` даёт cluster-wide superuser access. Через
+`RoleBinding` она ограничена областью конкретного namespace, но built-in semantics
+`cluster-admin` дают полный контроль над ресурсами этого namespace, **включая сам объект
+Namespace** - важное исключение, потому что `Namespace` сам является cluster-scoped
+resource. Такой `RoleBinding` не становится cluster-wide, однако всё равно является
+чрезвычайно привилегированной namespaced-привязкой; любое назначение `cluster-admin`
+должно быть отдельно обосновано и контролироваться.
 
 | Роль | Практический смысл | Риск при назначении приложению или широкой группе |
 |---|---|---|
 | `view` | Просмотр обычных ресурсов namespace; без Secret, Role и RoleBinding | Может раскрыть topology, образы и конфигурацию, но меньше риск утечки credential. |
 | `edit` | Изменение большинства ресурсов namespace и чтение Secret; без изменения Role/RoleBinding | Можно изменить workload, прочитать Secret и запустить Pod от имени любого ServiceAccount namespace. |
 | `admin` | Широкое администрирование namespace, включая управление roles/binding в его границе | Высокий риск эскалации в namespace и захвата приложений команды. |
-| `cluster-admin` | Через `ClusterRoleBinding` - полный доступ ко всему кластеру; через `RoleBinding` - полный доступ к namespaced ресурсам только namespace binding | Даже локальная привязка крайне рискованна; ClusterRoleBinding означает компрометацию кластера. |
+| `cluster-admin` | Через `ClusterRoleBinding` - полный доступ ко всему кластеру; через `RoleBinding` - полный контроль над ресурсами namespace этого binding, включая сам объект Namespace | Даже локальная привязка крайне рискованна; ClusterRoleBinding означает компрометацию кластера. |
 
 Aggregation позволяет расширять встроенную ClusterRole правилами из других ClusterRole.
 Контроллер RBAC объединяет правила ролей с меткой
@@ -466,9 +494,17 @@ workload.
 - **RBAC как код.** Храните собственные роли в Git, проверяйте diff правил и labels
   агрегации в CI. Отдельно блокируйте wildcard, `escalate`, `bind`, `impersonate` и доступ
   к Secret без явного исключения.
-- **Конфигурация авторизации API server.** Проверяйте и `--authorization-mode` (RBAC
-  должен быть включён), и `--authorization-config`, если используется
-  `AuthorizationConfiguration`: состав и порядок authorizer должны быть частью security-review.
+- **Конфигурация авторизации API server.** Сначала определите, какой из двух взаимно
+  исключающих способов настройки используется.
+
+  При command-line configuration проверьте, что `--authorization-mode` содержит нужную
+  цепочку, например `Node,RBAC`.
+
+  При file-based configuration через `--authorization-config` не задавайте одновременно
+  `--authorization-mode`: проверьте наличие `type: RBAC`, состав и порядок `authorizers`
+  непосредственно в `AuthorizationConfiguration`.
+
+  Состав и порядок authorizer chain должны быть частью security-review.
 - **Периодический аудит.** Инвентаризируйте `ClusterRoleBinding`, subjects
   `system:serviceaccount`, встроенные роли и агрегаторы; проверяйте критичные контракты
   через `kubectl auth can-i`.
@@ -498,8 +534,9 @@ workload.
   нужно найти и убрать или сузить.
 - Least privilege начинается с `Role` и `RoleBinding` в конкретном namespace; доступ на
   уровне кластера и `ClusterRoleBinding` требуют отдельного обоснования.
-- `kubectl auth can-i --list` показывает эффективные права, а проверки `yes` для нужной
-  операции и `no` для опасной - доказательство границы доступа.
+- `kubectl auth can-i --list` даёт полезный обзор правил, когда результат полный, но не
+  гарантированно исчерпывающий inventory. Security-critical boundaries доказывайте
+  targeted `can-i` checks: ожидаемый доступ должен вернуть `yes`, запрещённый - `no`.
 - Особо опасны `escalate`, `bind`, `impersonate`, изменение binding, `secrets`,
   `serviceaccounts/token`, `pods/exec`, `pods/portforward` и `get nodes/proxy`.
 - Не используйте `*` без исключительного и документированного основания: wildcard включает
@@ -594,10 +631,17 @@ Secret часто содержит пароль, registry credential, ключ �
 <details>
 <summary>9. **Flashback (глава 04).** `NetworkPolicy` из главы 04 - allow-list: сначала default-deny,
    затем узкие разрешения. Где в дизайне RBAC работает та же логика "запретить всё, затем
-   явно разрешить", и почему отсутствие явного `Role`/`RoleBinding` для subject эквивалентно
-   default-deny, а не default-allow?</summary>
+   явно разрешить", и когда запрос действительно получает default-deny?</summary>
 
-Та же логика действует при проектировании identity: начинают с отсутствия прав и добавляют точные `apiGroups`, `resources`, `verbs` в Role и нужную RoleBinding только там, где это требуется. Если для subject нет binding, ни одна RBAC-роль не возвращает Allow, и запрос будет отклонён. В отличие от NetworkPolicy решение принимает RBAC authorizer API server, но результатом также является явный allow-list.
+В RBAC начинают с отсутствия необходимых разрешений и добавляют только точные
+`apiGroups`, `resources` и `verbs` с минимальным scope. Запрос отклоняется, если ни один
+применимый `RoleBinding` или `ClusterRoleBinding` не выдаёт Allow. Проверять нужно не
+только binding, где subject указан напрямую, но и права, полученные через его группы
+(например, `system:serviceaccounts` для ServiceAccount). Поэтому отсутствие прямого
+`RoleBinding` на пользователя или ServiceAccount само по себе ещё не доказывает
+отсутствие доступа; итоговую границу подтверждают через `kubectl auth can-i` для
+конкретной identity. В отличие от NetworkPolicy решение принимает RBAC authorizer API
+server, но результатом также является явный allow-list.
 </details>
 
 ## Практика
