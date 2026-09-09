@@ -6,6 +6,8 @@
 
 > **Что нужно из CKA.** Поля `securityContext`, non-root запуск, capabilities и `allowPrivilegeEscalation` разобраны в [главе 20 CKA](../../../cka/course/20/ru.md). Здесь используем их как контракт, который PSA проверяет и принудительно соблюдает.
 
+> 🧠 PSA оценивает Pod на admission, RBAC — право создать объект; PSS `privileged`, `baseline` и `restricted` не заменяют runtime hardening, сеть или scan.
+
 ## 19.1. Зачем нужен PSA
 
 У разработчика есть право создать Pod, а в манифесте случайно или намеренно оказывается опасная настройка:
@@ -113,6 +115,8 @@ spec:
 `readOnlyRootFilesystem: true` - сильная практика защиты, но не самостоятельное требование PSS restricted. Не подменяйте им обязательные поля. Если приложению нужен порт ниже 1024, после `drop: ["ALL"]` допускается точечно вернуть `NET_BIND_SERVICE`, если это разрешает выбранная версия PSS и оправдано задачей.
 
 **User namespaces в v1.36.** Для Linux Pod с `spec.hostUsers: false` PSA ослабляет именно проверки `runAsNonRoot` и `runAsUser` даже при `baseline`/`restricted`: root внутри отдельного user namespace сопоставлен с непривилегированным UID хоста. Это не отменяет остальные правила матрицы и не разрешает host namespaces. Не переносите это исключение на обычный Pod с `hostUsers` не заданным или `true`.
+
+> 🎯 Миграция: `warn`/`audit` → `enforce`; проверяйте namespace labels/PSS version и диагностируйте отказ direct Pod через server-side dry run.
 
 ## 19.3. Режимы PSA: enforce, audit и warn
 
@@ -256,6 +260,8 @@ kubectl get deployment -n payments api -o yaml
 
 `--dry-run=server` выполняет admission-проверку, но не сохраняет объект. Для workload resources PSA применяет к Pod template `warn` и `audit`, однако `enforce` проверит Pod только позднее, когда его создаст controller. Поэтому успешный dry-run Deployment не доказывает, что controller-created Pod пройдёт `enforce`: проверяйте отдельный Pod из того же template либо делайте реальный rollout в изолированном test namespace с идентичными PSA labels и контролируйте `kubectl rollout status` и Events. `kubectl auth can-i` отделяет отказ RBAC от отказа PSA. Если Pod уже был создан контроллером и не стартует, сначала смотрите `kubectl describe pod` и Events: PSA-отказ происходит до запуска, а ошибка image, node, seccomp или AppArmor - позже и на другом слое.
 
+> 🏭 PSA exception: минимальный namespace/identity scope, владелец, причина, компенсирующие controls и дата удаления.
+
 ## 19.7. Исключения: точечно, с владельцем и сроком
 
 Некоторые системные компоненты объективно не соответствуют restricted: CNI, CSI node plugin, device plugin или диагностический агент. Выбор - не «отключить PSA для кластера», а минимальное исключение с владельцем, причиной и сроком пересмотра.
@@ -288,6 +294,8 @@ plugins:
 
 Также не путайте exemption PSA с RBAC. Exemption не даёт право создать Pod; он лишь пропускает PSS-проверку, если RBAC уже разрешил запрос. Поэтому системный ServiceAccount должен иметь и минимальный RBAC, и узкую область exemption.
 
+> 🔬 `PodSecurityPolicy` удалён в Kubernetes v1.25; стандартные ограничения переносят в PSA/PSS, организационные — в policy engine.
+
 ## 19.8. PSP: почему старые манифесты не работают
 
 **PodSecurityPolicy (PSP)** был прежним механизмом ограничения Pod, но удалён из Kubernetes в версии 1.25. PSA не является API-заменой `kind: PodSecurityPolicy`: он использует три фиксированных PSS-профиля и namespace labels, а не произвольный spec PSP и RBAC `use`.
@@ -310,6 +318,8 @@ metadata:
 - после cutover проверьте, что admission controller включён, labels назначены и старые cluster-wide bypass не остались.
 
 PSA нельзя расширить собственными полями. Это преимущество для базового hardening: поведение стандартизировано и понятно на экзамене и в incident response. Для правил организации используйте policy engine **в дополнение**, а не вместо PSS.
+
+> 🎯 Доказательство: pinned labels, разрешённый и нарушающий **прямой Pod** в namespace и effective `securityContext` workload.
 
 ## 19.9. Операционный чеклист и проверка
 
@@ -346,6 +356,8 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 | System component сломан после restricted | компоненту нужен допустимый отдельный namespace или узкое exemption | не ослабляйте прикладной namespace; зафиксируйте исключение |
 
 Для observability собирайте audit logs API server и метрики PSA `pod_security_evaluations_total`, `pod_security_errors_total` и `pod_security_exemptions_total`, если они доступны в вашей дистрибуции. Первая показывает результаты проверок, вторая - ошибки проверки, третья - применения exemption; разрез по labels метрик, включая `decision`, `mode` и policy, показывает, какие команды и workloads ещё не готовы к следующему уровню. В CI добавьте `kubectl apply --dry-run=server` прямого Pod против test namespace с теми же PSA-лейблами, что и production; template workload дополнительно проверяйте реальным rollout там же.
+
+> 🏭 IaC создаёт namespace с pinned `enforce=restricted`; исключения хранятся с expiry, policy engine добавляет организационные правила.
 
 ## 19.10. Как это применяют в продакшене
 

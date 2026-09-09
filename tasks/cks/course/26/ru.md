@@ -13,6 +13,8 @@
 > security control: tag не является доказательством содержимого, а успешный `docker pull`
 > не означает, что образ разрешён к запуску.
 
+> 🧠 Trust decision принимается до сохранения `Pod`: registry allowlist отвечает за источник image, подпись — за доверенного издателя, а digest фиксирует содержимое.
+
 ## 26.1. Что именно нужно защищать
 
 Supply chain начинается до Kubernetes: исходный код и CI собирают image, registry хранит
@@ -48,6 +50,8 @@ flowchart TB
 rollout. Allowlist не заменяет signature verification: атакующий с правом push в
 доверенный registry всё ещё может поместить туда неподписанный образ. Подпись, в свою
 очередь, не запрещает использовать неутверждённый registry.
+
+> 🎯 Реализуйте fail-closed admission allowlist для нужного registry/repository и проверьте normal, init и ephemeral containers. Native `ValidatingAdmissionPolicy` и Gatekeeper — прямые пути к этой задаче.
 
 ## 26.2. Allowlist реестров через native ValidatingAdmissionPolicy, Kyverno и Gatekeeper
 
@@ -111,6 +115,8 @@ policy сама проверяет только Pod. Чтобы Kyverno `Validat
 другие workload-контроллеры до создания Pod, явно включите `spec.autogen.podControllers`;
 без него controller будет принят, а отказ случится только при создании Pod. Начните с
 режима Audit, исправьте существующие manifests, затем переведите правило в Enforce.
+
+> 🔬 Kyverno — альтернативный policy engine с дополнительными возможностями; применяйте его, когда он указан в среде или уже является стандартом платформы.
 
 ### Kyverno 1.19 (chart 3.9.0, installed release)
 
@@ -263,6 +269,8 @@ Kyverno удобен, когда policy должна также mutate manifests
 владельца и согласованного порядка миграции: двойные denial-сообщения усложняют
 диагностику, а два разных allowlist расходятся.
 
+> 🎯 `ImagePolicyWebhook` — exam-oriented admission mechanism: API-сервер делегирует allow/deny backend-у, который должен быть доступен и настроен fail-closed.
+
 ## 26.3. ImagePolicyWebhook: backend и конфигурация API-сервера
 
 `ImagePolicyWebhook` - admission plugin API-сервера. Для каждого admission-запроса с
@@ -400,6 +408,8 @@ status:
 старый специализированный механизм; webhook/policy engine с поддержкой signature
 verification обычно проще сопровождать.
 
+> 🎯 Умейте подписать и проверить конкретный immutable digest через `cosign`; tag сам по себе не является объектом доверия.
+
 ## 26.4. Cosign и Sigstore: подпись и проверка digest
 
 Cosign создаёт и проверяет подписи OCI-artifacts. Подписывайте **digest**, полученный из
@@ -431,6 +441,8 @@ cosign verify --key cosign.pub "$IMAGE"
 отзывайте доступ к старому ключу и сохраняйте audit trail: кто, когда и какой digest
 подписал.
 
+> 🔬 Keyless flow с OIDC, Fulcio и Rekor снижает риск постоянного private key, но требует точного ограничения issuer и identity release workflow.
+
 ### Keyless: короткоживущая identity вместо локального signing key
 
 Sigstore keyless flow получает краткоживущий сертификат после OIDC-аутентификации CI и
@@ -456,6 +468,8 @@ cosign verify \
 организацию, repository, workflow и подходящий ref/environment. Слишком широкое
 `--certificate-identity-regexp='.*'` делает keyless verification почти бессмысленным:
 любой OIDC-пользователь, которого принимает verifier, сможет подписать образ.
+
+> 🎯 Проверка подписи становится обязательной только на admission path: локальная успешная проверка в CI не мешает прямому `kubectl apply`.
 
 ## 26.5. Проверка подписи при admission и Notary
 
@@ -546,6 +560,8 @@ kubectl debug allowed-pod --image=registry.example.com/platform/debug:unsigned -
 конкретного CI workflow. Тестируйте подписанный и неподписанный digest, ошибочный signer,
 отсутствующий signed SBOM и недоступность registry.
 
+> 🔬 Notary/Notation — альтернативная OCI signing-экосистема; для Kubernetes ей всё равно нужна интеграция, возвращающая admission allow/deny.
+
 **Notary Project** и CLI `notation` - альтернативная экосистема OCI signing с X.509
 trust stores и trust policy. `notation verify` полезен в CI/CD:
 
@@ -562,6 +578,8 @@ allow/deny API-серверу. Не требуйте, чтобы один verifi
 Cosign/Sigstore и Notary/Notation используют разные модели доверия. Выберите стандарт
 для конкретного repository, документируйте trust root, allowed identities и процедуру
 rotation, а миграцию ведите с явным периодом двойной подписи и двойной проверки.
+
+> 🏭 End-to-end процесс объединяет build, scan, SBOM/attestations, подпись, deployment по digest и fail-closed admission с audit evidence.
 
 ## 26.6. Проверяемый production-процесс
 

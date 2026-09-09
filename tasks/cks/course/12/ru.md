@@ -14,6 +14,8 @@
 > сертификаты и CSR - в [главе 39 CKA](../../../cka/course/39/ru.md). Здесь не повторяем
 > эти механизмы, а применяем их для hardening API.
 
+> 🧠 Сеть, TLS, authentication, authorization и admission — последовательные независимые барьеры; timeout/refused, `401` и `403` указывают на разные слои.
+
 ## 12.1. Путь запроса к API: несколько независимых барьеров
 
 `kube-apiserver` - единая точка управления состоянием кластера. Через него проходят
@@ -208,6 +210,8 @@ sudo ss -lntp | grep ':10255' || echo 'kubelet read-only port is closed'
 sudo ss -lntp | grep ':10250'
 ```
 
+> 🎯 Задайте безопасную authentication configuration и удалите bindings для `system:anonymous`/`system:unauthenticated`. Legacy `10255` и `--insecure-port` отключают, а защищённый `10250` не публикуют.
+
 ### Инвентаризация и cleanup bindings
 
 Не удаляйте `ClusterRole` по имени наугад: одна роль может быть нужна другому субъекту.
@@ -284,6 +288,8 @@ sudo grep -n -- '--authorization-mode' /etc/kubernetes/manifests/kube-apiserver.
 `RBAC` остаётся обязательным для остальных запросов. Не меняйте список modes на работающем
 кластере без проверки bootstrap-контроллеров, identity provider и текущих API-клиентов.
 
+> 🎯 kubeadm baseline: `Node,RBAC` без `AlwaysAllow`; `Node` обслуживает kubelet, RBAC ограничивает остальные identity, а `NodeRestriction` ограничивает скомпрометированный kubelet credential.
+
 **NodeRestriction** - admission plugin, дополняющий `Node` authorizer. С kubelet-
 сертификатом атакующий, захвативший ноду, не должен получать возможность выдавать себе
 доступ через произвольные объекты Node или управлять workload другой ноды. При включённом
@@ -321,6 +327,8 @@ sudo crictl ps --name kube-apiserver
 аудитории, для которых kubelet может запрашивать ServiceAccount-токены через `TokenRequest`,
 до аудиторий, уже используемых Pod на этой ноде, либо явно выданных через RBAC. Это не
 замена NodeRestriction, а дополнительное ограничение для node-originated token requests.
+
+> 🎯 Ограничьте `:6443` private endpoint или точным CIDR allowlist; для Pod проверьте отдельную egress policy.
 
 ## 12.4. Сетевое ограничение доступа к apiserver
 
@@ -396,6 +404,8 @@ kubectl cluster-info
 kubectl get --raw='/livez?verbose'
 ```
 
+> 🔬 `kubectl proxy` и `port-forward` как вспомогательные способы локального доступа: используют права kubeconfig оператора и создают дополнительную поверхность диагностики.
+
 ## 12.4.1. Локальные API-шлюзы: `kubectl proxy` и `port-forward`
 
 `kubectl proxy` и `kubectl port-forward` используют полномочия kubeconfig пользователя, а
@@ -406,6 +416,8 @@ kubectl get --raw='/livez?verbose'
 `kubectl port-forward --address 0.0.0.0`, если не требуется краткое, отдельно согласованное
 подключение через защищённую сеть. Завершайте временный туннель после диагностики и не
 считайте его заменой firewall, RBAC или NetworkPolicy.
+
+> 🎯 Подтвердите active config, безопасные flags, readiness после reload, `401` для anonymous path и targeted `can-i` с `no`; static Pod диагностируйте через kubelet и runtime.
 
 ## 12.5. Profiling, ServiceAccount lookup и аудит флагов
 
@@ -512,6 +524,8 @@ HTTP status и изменённые config sources в change record: это до
 | kubelet перестал регистрироваться | firewall или API endpoint недоступны, неверен kubelet config | `journalctl -u kubelet`, `ss`, node routes и active kubelet args |
 | NodeRestriction не даёт ожидаемого эффекта | plugin не активен либо kubelet использует не node identity | флаги apiserver, CN клиентского сертификата, admission configuration |
 | Pod больше не достаёт API | egress policy слишком широка или ServiceAccount-token отключён намеренно | необходимость доступа, NetworkPolicy, `automountServiceAccountToken`, RBAC |
+
+> 🏭 Endpoint exposure, kubeadm/API configuration и RBAC cleanup закрепляют в IaC и сверяют с baseline; владельцы отвечают за endpoint, CIDR и evidence после изменений.
 
 ## 12.8. Как это применяют в продакшене
 

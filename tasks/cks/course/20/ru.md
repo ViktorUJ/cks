@@ -15,6 +15,8 @@
 > [главе 20 CKA](../../../cka/course/20/ru.md). Здесь не повторяем эти механизмы, а
 > превращаем требования безопасности в проверяемые cluster-wide policy.
 
+> 🧠 Admission проверяет поля уже разрешённого API-запроса перед записью в etcd; RBAC не оценивает безопасность YAML.
+
 ## 20.1. Модель угроз: небезопасный манифест как вход в кластер
 
 RBAC отвечает на вопрос, может ли identity создать Pod. Если разработчику разрешён
@@ -72,6 +74,8 @@ PSA и policy engine не заменяют друг друга. PSA быстро
 ограничения Pod. Gatekeeper, Kyverno или CEL закрывают специфические требования. Не
 дублируйте одну и ту же жёсткую проверку в трёх местах без причины: отказ станет сложнее
 диагностировать, а разные сообщения и исключения начнут расходиться.
+
+> 🏭 `failurePolicy: Fail` требует HA, TLS, PDB и наблюдаемости webhook; `Ignore` — компромисс в пользу доступности API.
 
 ## 20.2. Webhook: доступность тоже является security-решением
 
@@ -172,6 +176,8 @@ kubectl -n kyverno get pods
 Admission проверяет лишь запрос к API. Он не заменяет image scanning, runtime detection,
 NetworkPolicy, RBAC и audit logs. Образ, разрешённый в admission, всё ещё должен пройти
 supply-chain проверки из глав 25-28; уже запущенный процесс контролируют главы 29-32.
+
+> 🎯 Свяжите `ConstraintTemplate` (code/schema) с `Constraint` (scope/параметры/`enforcementAction`), затем докажите `dryrun` → `deny`.
 
 ## 20.3. OPA/Gatekeeper: `ConstraintTemplate` и `Constraint`
 
@@ -299,6 +305,8 @@ violation[{"msg": msg}] {
 `ephemeralContainers`; это типичная ошибка самописной policy. PSA `restricted` уже
 покрывает этот класс требований - используйте custom Rego только когда нужны свои scope,
 исключения или расширенная логика.
+
+> 🔬 Kyverno CEL API для validation, mutation, generation и других admission-сценариев.
 
 ## 20.4. Kyverno 1.19: CEL-based policy types
 
@@ -457,6 +465,8 @@ legacy объект только после проверки admission и backgr
 [руководство миграции Kyverno](https://kyverno.io/docs/guides/migration-to-cel/)
 с установленной minor-версией.
 
+> 🏭 Выбор engine зависит от владения policy, языка, CI и webhook; не дублируйте deny-контроль без причины.
+
 ## 20.5. Gatekeeper и Kyverno: что выбрать
 
 Оба движка могут deny небезопасный Pod, собирать audit-нарушения и работать через
@@ -491,6 +501,8 @@ fixture: у deny Constraint найденное нарушение даёт `gato
 test manifest не давало зелёный pipeline. CI должен завершаться ошибкой, если allowed manifest
 отклонён или denied manifest принят. Исключение должно быть узким, ограниченным по времени и
 видимым в review - не глобальным `excludedNamespaces: ["*"]`.
+
+> 🏭 CI fixtures должны принять разрешённый и отклонить запрещённый объект до admission в кластере.
 
 ### CI mini-lab: проверка policy до rollout
 
@@ -529,6 +541,8 @@ kyverno test --require-tests ./policy/kyverno
 ожидаемые assertions, поэтому job станет красным лишь при регрессии policy или fixtures.
 Используйте команды и структуру файлов, соответствующие закреплённой версии CLI; cluster
 admission test остаётся отдельным этапом интеграционного CI.
+
+> 🔬 Native CEL выполняется в API server без webhook, но не покрывает generation, reports, signature verification и сложную Rego-логику.
 
 ## 20.6. Native CEL: validation и mutation без внешнего webhook
 
@@ -786,6 +800,8 @@ Native CEL - хорошая первая опция для небольшой ч
 policy-платформа. В обоих вариантах обязательны scope, положительный и отрицательный тест,
 а также план rollout.
 
+> 🎯 Допустимый manifest принят, нарушающий отклонён; для mutation сравните объект с результатом server-side dry-run.
+
 ## 20.7. Проверка: доказать allow, deny и mutation
 
 Проверка policy состоит не из `kubectl apply` без ошибки, а из двух контролируемых
@@ -850,6 +866,8 @@ controller. Затем сверяйте selector, `match`/`exclude`, namespace l
 после mutation. Если policy не сработала, проверьте, что webhook/engine healthy, правило
 покрывает API version и kind, а тестовый объект не исключён по namespace или label.
 
+> 🏭 Rollout: узкий scope → `Audit`/`dryrun`/`Warn` → remediation → `Deny`/`Enforce`.
+
 ## 20.8. Типичные ошибки и безопасный rollout
 
 | Ошибка | Последствие | Безопасный подход |
@@ -867,6 +885,8 @@ controller. Затем сверяйте selector, `match`/`exclude`, namespace l
 v1.36, certificate rotation, resource requests/limits и PDB. Admission outage - incident:
 заранее определите, кто может временно сузить scope или откатить release, и логируйте это
 изменение через GitOps/audit.
+
+> 🏭 Policy as code: владелец, Git review, fixtures, CI, узкие исключения, admission-метрики и проверяемый rollout.
 
 ## 20.9. Как это применяют в продакшене
 

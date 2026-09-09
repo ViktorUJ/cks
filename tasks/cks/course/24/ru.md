@@ -15,6 +15,8 @@
 > [главе 20 CKA](../../../cka/course/20/ru.md). Здесь применяем их к supply-chain
 > угрозе: не просто делаем образ маленьким, а исключаем лишнее из финального artifact.
 
+> 🧠 Минимальный final image сокращает CVE и post-exploitation tools, но не заменяет RCE-защиту, `SecurityContext`, сеть или detection.
+
 ## 24.1. Модель угроз: лишнее в образе становится возможностью атакующего
 
 Образ - часть поставляемого software artifact. Всё, что попало в его final stage,
@@ -55,6 +57,8 @@ flowchart TB
 root-процессом небезопасен, а удаление сертификатов CA может сломать TLS. Минимизируют
 **осмысленно**: оставляют runtime, CA bundle, timezone data и dynamic libraries, которые
 действительно требуются приложению.
+
+> 🧠 Меньше файлов в runtime image — меньше post-exploitation инструментов у атакующего; выбор между `scratch`/distroless/Alpine — trade-off между attack surface и диагностируемостью.
 
 ## 24.2. `scratch`, distroless и Alpine: выбрать runtime по потребностям
 
@@ -104,6 +108,8 @@ registry.example.com/payments/api:1.4.2@sha256:<проверенный-64-сим
 Digest записывают в GitOps/manifest после проверки image, а не берут из случайного
 поста. Тег удобен человеку, digest гарантирует байты, которые были просканированы и
 подписаны. В Kubernetes это же значение указывается в `image:`.
+
+> 🎯 Отдельный builder и final stage с `COPY --from=builder` только готового artifact; compiler, исходники, cache и credentials не попадают в runtime.
 
 ## 24.3. Multi-stage build: builder не должен стать runtime
 
@@ -176,6 +182,8 @@ spec:
 куда приложение пишет, доступны UID `65532`; при `readOnlyRootFilesystem: true` временные
 данные выносите в `emptyDir`, а не возвращайте writable root.
 
+> 🔬 Docker и rootless Podman используют тот же Dockerfile/context; rootless не защищает от широкого context, mutable base image или секрета в layer.
+
 ### Сборка Docker и Podman
 
 Обе команды используют один Dockerfile и один build context. Docker обычно работает
@@ -228,6 +236,8 @@ COPY --from=builder /out/server /server
 USER 65532:65532
 ENTRYPOINT ["/server"]
 ```
+
+> 🎯 `RUN rm` не стирает secret из предыдущего layer; используйте secret mount и `.dockerignore`, а утечку отзовите и пересоберите image.
 
 ## 24.4. Слои, secrets и build context
 
@@ -331,6 +341,8 @@ RUN apk add --no-cache --virtual .build-deps build-base \
 вообще не переносить stage, где есть `apk`, compiler и cache, в runtime через multi-stage
 build.
 
+> 🎯 Проверьте final artifact через `history`, `inspect` и `dive`; для distroless/scratch отсутствие shell подтверждает ожидаемый отказ `kubectl exec -- /bin/sh`.
+
 ## 24.5. Инспекция: измерить размер, layers и содержимое
 
 После build не предполагайте, что final image минимален: докажите это. `docker image ls`
@@ -423,6 +435,8 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 | `kubectl exec ... /bin/sh` не работает | ожидаемое отсутствие shell в distroless/scratch | проверить logs/endpoint; для расследования применить `kubectl debug` |
 | secret найден в `dive`/history | credential скопирован, передан `ARG` или удалён в позднем layer | отозвать secret, пересобрать без него, использовать BuildKit/Podman secret mount |
 | Docker и Podman собрали разный результат | разный builder/cache/platform или незафиксированный base image | явно задать platform при необходимости, зафиксировать digest и сравнить final digest |
+
+> 🏭 Pinned base/release digest, узкий context, secret management, non-root runtime, SBOM/scan/signature и admission; отладка — в утверждённом ephemeral debug image.
 
 ## 24.7. Как это применяют в продакшене
 

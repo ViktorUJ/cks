@@ -15,6 +15,8 @@
 > [лабе 106 CKA](../../../cka/labs/106/README_RU.MD): seccomp не заменяет
 > `capabilities.drop: ["ALL"]`, а уменьшает доступный процессу API ядра.
 
+> 🧠 Seccomp фильтрует syscalls и возвращает allow, `ERRNO`, kill или `LOG`; capabilities, DAC и MAC проверяются отдельно.
+
 ## 17.1. Что seccomp защищает
 
 Приложение не вызывает функции ядра напрямую. Библиотека или runtime в итоге делает
@@ -117,6 +119,8 @@ Kernel поддерживает строгий legacy-режим и фильтр
 `RuntimeDefault` обычно даёт безопасный baseline runtime. Custom allow-list имеет смысл
 только после наблюдения и теста реального приложения, его probes, entrypoint, DNS/TLS и
 периодических задач. Никогда не строите его по одному удачному `curl` или одному `strace`.
+
+> 🎯 Выберите `RuntimeDefault` или проверенный `Localhost` и докажите effective seccomp у нужного контейнера; один `EPERM` не доказывает seccomp denial.
 
 ## 17.3. Kubernetes API: `RuntimeDefault`, `Localhost`, `Unconfined`
 
@@ -333,6 +337,8 @@ kubectl exec -n "$NS" "$POD" -c "$CTR" -- grep '^Seccomp:' /proc/1/status
 annotation и API-поле, особенно с разными значениями. После миграции протестируйте новый Pod
 и проверьте его effective mode.
 
+> 🎯 Соберите JSON-профиль `Localhost` по OCI seccomp format, загрузите на нужную ноду и подтвердите effective mode контейнера.
+
 ## 17.4. JSON-профиль: структура и безопасный пример
 
 Профиль `Localhost` - JSON в OCI seccomp format. В нём важны архитектура, действие по
@@ -358,6 +364,8 @@ kernel журналировать попытки `unshare`, `setns`, `mount` и 
   ]
 }
 ```
+
+> 🔬 `syscalls[].args`, `errnoRet` и фильтрация по аргументам syscall — узкие version- и architecture-dependent детали.
 
 OCI seccomp умеет сопоставлять не только имя syscall, но и его аргументы через
 `syscalls[].args` (`index`, `value`, необязательный `valueTwo`, `op`). Например,
@@ -588,6 +596,8 @@ capability. Для учебного доказательства фиксиру�
 соответствующий node audit/log. В реальном расследовании изолируйте тест и не добавляйте
 `CAP_SYS_ADMIN` лишь для того, чтобы обойти одно ограничение и «проверить» другое.
 
+> 🧠 Seccomp контролирует syscalls, capabilities — привилегии, AppArmor/SELinux — доступ к объектам и операциям.
+
 ## 17.7. Как связать seccomp, capabilities и AppArmor
 
 Эти controls проверяют одно действие на разных слоях. Рассмотрим попытку скомпрометированного
@@ -633,6 +643,8 @@ flowchart TB
 из независимых барьеров. И не добавляйте capability ради теста seccomp на production
 workload. Делайте узкий эксперимент в отдельном namespace/node и после него удаляйте
 ресурсы.
+
+> 🏭 `Localhost` profile: versioned artifact с владельцем, тестами runtime/ABI, доставкой, canary и rollback.
 
 ## 17.8. Эксплуатация: profile как код, а не как файл на ноде
 
@@ -777,6 +789,8 @@ Capabilities определяют, есть ли у процесса специ�
 
 Admission-policy проверяет лишь YAML до записи объекта и не подтверждает, что node сможет применить профиль. На фактической node должны совпасть поддержка seccomp runtime/kubelet, effective `securityContext` с учётом container override и, для `Localhost`, существование совместимого JSON под kubelet seccomp root. Container также не должен быть `privileged`, потому что Kubernetes запускает его `Unconfined`; результат проверяют через события и `Seccomp: 2` у нужного процесса.
 </details>
+
+> 🏭 `RuntimeDefault` в template/admission; custom `Localhost` — versioned profile с совместимым pool, наблюдением и rollback.
 
 ## 17.13. Как это применяют в продакшене
 

@@ -54,6 +54,8 @@ namespace, на какой срок и нужен ли вообще доступ
 через `RoleBinding` только в одном namespace. `ClusterRoleBinding` расширяет область на весь
 кластер и требует отдельного обоснования.
 
+> 🎯 Проверяйте конкретные identity, verb, resource и scope парой `can-i`: нужное действие — `yes`, опасное соседнее — `no`.
+
 ## 10.2. Аудит фактических прав: `kubectl auth can-i`
 
 YAML показывает намерение, но не итоговую авторизацию: субъект может получить доступ из
@@ -102,6 +104,8 @@ kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
 будет `forbidden`, а не ответом о правах цели. В CI выполняйте аудит identity с отдельными
 минимальными правами либо документируйте контролируемое право security-аудитора на
 `impersonate`.
+
+> 🔬 Constrained Impersonation в Kubernetes 1.36+ отдельно ограничивает подменяемую identity и разрешённое при подмене действие.
 
 ### 10.2.1. Constrained Impersonation: ограничить identity и действие
 
@@ -240,6 +244,8 @@ Wildcards особенно опасны в трёх местах: `apiGroups: ["
 усложняет аудит: нельзя по YAML понять, есть ли доступ к `secrets`, `pods/exec` или
 `rolebindings`.
 
+> 🧠 RBAC аддитивен: узкая роль не отменяет выданный Allow; `escalate`, `bind`, `impersonate`, bindings, Secret и опасные subresource могут передавать чужие права.
+
 ```yaml
 # Небезопасно: весь текущий и будущий API namespace
 rules:
@@ -261,6 +267,8 @@ rules:
 его в минимальные правила. Разделяйте чтение (`get`, `list`, `watch`) и изменение
 (`create`, `update`, `patch`, `delete`): контроллеру, который наблюдает Pod, не обязательно
 нужно право удалять их.
+
+> 🎯 Сформулируйте контракт доступа, выберите узкий scope (`Role` + `RoleBinding` для namespace) и докажите разрешённое действие и отказ на опасном соседнем ресурсе или namespace.
 
 ```yaml
 apiVersion: v1
@@ -385,6 +393,8 @@ Aggregation позволяет расширять встроенную ClusterRo
 и RBAC-граница: созданная или изменённая роль способна незаметно дать всем пользователям
 `view`, `edit` или `admin` дополнительные права.
 
+> 🧠 `aggregate-to-*` меняет effective permissions всей аудитории встроенной роли; wildcard в роли-источнике массово расширяет права.
+
 ```yaml
 # Пример расширения встроенной роли view только для чтения CRD.
 # Добавляйте подобную роль лишь после отдельного security-ревью.
@@ -425,6 +435,8 @@ kubectl get clusterrole -l rbac.authorization.k8s.io/aggregate-to-admin=true
 | Создание/изменение PV с `hostPath` | Claim и Pod могут получить путь файловой системы node | Запретить tenant-ролям; контролировать storage policy и Pod Security Admission. |
 | Выпуск токенов ServiceAccount (`create serviceaccounts/token`) | Позволяет действовать с правами выбранного ServiceAccount | Разрешать только доверенной автоматизации на конкретные ServiceAccount. |
 | Членство в `system:masters` | Это superuser-группа, обходящая обычную проверку RBAC | Не выдавать её приложениям; контролировать источник сертификатов и внешние группы. |
+
+> 🎯 После изменения RBAC доказать и разрешённое действие, и ожидаемый отказ.
 
 ## 10.6. Проверка: доказать и нужный доступ, и отказ
 
@@ -482,6 +494,8 @@ kubectl delete clusterrolebinding app-sa-excessive-access
 Role, ClusterRole и binding отправляйте на review. Долгоживущий доступ регулярно
 пересматривайте по фактическому назначению ServiceAccount, логам аудита и владельцу
 workload.
+
+> 🏭 Роли и aggregation labels хранятся в Git, изменения проходят review, а critical positive/negative `can-i` проверки — CI; break-glass имеет владельца и срок.
 
 ## 10.7. Как это применяют в продакшене
 

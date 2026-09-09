@@ -15,6 +15,8 @@
 > `kubectl logs`, Events и наблюдаемость - в [главе 28 CKA](../../../cka/course/28/ru.md).
 > Здесь их не повторяем: используем для security-сигнала и его проверки.
 
+> 🧠 Falco отвечает на вопрос о действиях уже работающего процесса, тогда как scan и admission оценивают artifact или manifest раньше. Alert — повод для triage, а не самостоятельный verdict: его связывают с workload, identity, audit и другими evidence, прежде чем запускать destructive remediation.
+
 ## 29.1. Зачем нужен runtime-детектор
 
 Защита до запуска отвечает на вопрос «можно ли создать этот Pod?». Runtime detection
@@ -65,6 +67,8 @@ Falco особенно полезен для следующих сигналов
 масштабировать подтверждённо скомпрометированный Deployment до нуля. Автоматически удалять
 любой Pod по одному общему правилу рискованно: ложное срабатывание может стать outage.
 
+> 🧠 Практическая цепочка проста: syscall процесса → kernel event на node → Falco driver → rule engine с CRI/Kubernetes metadata → alert. Именно metadata превращает `execve` или `openat` в расследуемый Pod/namespace/container контекст.
+
 ## 29.2. Как Falco получает события: ядро, driver и eBPF
 
 Процесс контейнера всё равно использует kernel ноды: делает `execve`, `openat`, `connect`,
@@ -88,6 +92,8 @@ flowchart TB
     style runtime fill:#326ce5,color:#fff
     style output fill:#0f9d58,color:#fff
 ```
+
+> 🔬 Выбор `kmod`/`modern_ebpf` и совместимость kernel/runtime socket; проверяйте driver и `syscall` event source в startup log.
 
 В Falco 0.44 legacy eBPF probe удалён. Для syscall event source выбирают один из
 поддерживаемых driver: `kmod` или `modern_ebpf`.
@@ -116,6 +122,8 @@ kubectl get nodes -o wide
 для security-agent, но его надо ограничивать: доверять официальному образу и chart,
 фиксировать версию, давать права только Falco namespace, обновлять agent и не использовать
 его ServiceAccount для обычных workload.
+
+> 🔬 Package-install и DaemonSet требуют проверки driver-specific unit либо coverage intended nodes и startup log; не редактируйте rule file внутри живого Pod.
 
 ## 29.3. Установка: пакет на ноде или DaemonSet
 
@@ -225,6 +233,8 @@ kubectl -n falco describe daemonset falco
 Сохраняйте правило в Git и применяйте декларативно. При включённом `watch_config_files`
 Falco hot-reload-ит изменённые config/rule files; restart или rollout restart — fallback, если
 watching выключен, reload не произошёл или изменение этого требует.
+
+> 🎯 Умейте найти фактически загружаемые `rules_files`, добавить local rule, валидировать полный config, сгенерировать контролируемый event и найти alert на Falco Pod той же node. Ready/active agent без успешной цепочки rule → event → contextual alert не является доказательством готовности.
 
 ## 29.4. Файлы конфигурации и стандартные правила
 
@@ -492,6 +502,8 @@ kubectl -n falco logs daemonset/falco -c falco --tail=100
 # Показать selector и scheduling-причины для отсутствующих нод.
 kubectl -n falco describe daemonset falco
 ```
+
+> 🏭 Rules, suppressions, Falco/chart versions и output delivery управляются как versioned artifacts: review, test, progressive rollout, owner и expiry. Central SIEM delivery и полное node coverage важнее одного локального alert; detection дополняет, но не заменяет containment runbook и preventive controls.
 
 ## 29.8. Как это применяют в продакшене
 

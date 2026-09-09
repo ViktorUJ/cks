@@ -6,6 +6,8 @@
 
 > **Что нужно из CKA.** Устройство ноды, container runtime и CNI - в [главе 02 CKA](../../../cka/course/02/ru.md), процессы контейнера и диагностика на ноде - в [главе 40 CKA](../../../cka/course/40/ru.md). Модель фаз атаки дана в [главе 02](../02/ru.md), установка и базовый синтаксис Falco - в [главе 29](../29/ru.md). Здесь не повторяем их, а связываем сигнал с расследованием.
 
+> 🧠 Incident detection — это корреляция независимых источников, а не доверие одному alert: каждый слой уменьшает неопределённость, которую оставляют остальные.
+
 ## 30.1. Детект угроз по слоям: один инцидент, несколько источников
 
 Runtime-детектор видит действие процесса, но не весь контекст. Например, `curl` к внешнему IP из контейнера может быть штатной интеграцией, а может быть exfiltration. Решение принимают по корреляции событий из нескольких слоёв: инфраструктуры, приложения, сети, данных, пользователей и workload.
@@ -43,6 +45,8 @@ flowchart TB
 | Workload | новый `DaemonSet`, `CronJob`, `privileged` Pod, image без ожидаемого digest | API audit, admission logs, GitOps diff, Falco Kubernetes fields | владелец workload, namespace, image, node и scope инцидента |
 
 Не подменяйте источники друг другом. Falco обычно не доказывает, **кто** вызвал `kubectl exec`; это покажет audit-log. Audit-log не показывает каждый `openat(2)` внутри контейнера; это зона Falco или host audit. Kubernetes Events удобны для первичной ориентировки, но имеют короткий срок хранения и не являются forensic-журналом.
+> 🔬 Физическая цепочка доверия, HSM и confidential computing ниже уровня Kubernetes API.
+
 ## 30.1a. Physical infrastructure: что это значит для Kubernetes и что проверяемо
 
 Официальная формулировка CNCF curriculum для этого домена - "Detect threats within
@@ -133,6 +137,8 @@ performance-based экзамене без физического доступа 
 корректно классифицируете угрозу и не станете искать несуществующий Kubernetes-контроль
 для неё.
 
+> 🏭 Сохраняйте исходный alert и неизменяемые identifiers до containment: это дисциплина evidence, которая позволяет повторно проверить attribution и не потерять контекст после restart Pod.
+
 ### Минимальная карточка сигнала
 
 Сразу после alert сохраните неизменяемую копию исходной строки и добавьте к ней: время в UTC с точностью источника, rule name/priority, node, container ID, Pod UID, namespace/Pod/container, image digest, процесс с аргументами, файл или сеть, а также identity из audit-log. По одному имени Pod расследование не строят: Pod может быть пересоздан с тем же префиксом.
@@ -152,6 +158,8 @@ kubectl get pod -n "$NAMESPACE" "$POD" \
 # Недавние API-действия рядом со временем alert. Events - только вспомогательный источник.
 kubectl get events -A --sort-by='.lastTimestamp'
 ```
+
+> 🎯 Безопасно добавьте или измените local rule, проверьте active config и получите alert.
 
 ## 30.2. Локальные правила Falco: расширять, а не править vendor-файл
 
@@ -228,6 +236,8 @@ kubectl -n falco get pods -o wide
 kubectl -n falco logs daemonset/falco --since=5m
 ```
 
+> 🎯 Для проверки результата нужны rule/event, время, node, процесс, container и Kubernetes context. Не ограничивайтесь фактом срабатывания: докажите, какой workload породил alert.
+
 ## 30.3. Формат output: alert должен быть пригоден для attribution
 
 `condition` отвечает, **когда** генерировать alert; `output` задаёт, что сохранит оператор. Плохой output вроде `Suspicious file access` заставляет повторно искать исчезнувший контейнер. Хороший output содержит стабильную связь syscall → process → container → Pod → workload.
@@ -274,6 +284,8 @@ sudo journalctl -u falco --since '10 minutes ago' --no-pager | \
 
 Если `k8s_ns`/`k8s_pod` пусты, не делайте вывод, что это host process. Сначала проверьте CRI socket, права Falco и версию/метаданные plugin, затем сопоставьте `%container.id` вручную через `crictl`.
 
+> 🔬 MITRE ATT&CK помогает формировать и проверять аналитическую гипотезу по последовательности сигналов.
+
 ## 30.4. От alert к MITRE ATT&CK tactics: практический разбор
 
 Один syscall не обозначает фазу атаки автоматически. Термины `Initial Access`, `Execution`,
@@ -310,6 +322,8 @@ sequenceDiagram
 
 Последовательность «Falco shell → audit `create CronJob` → network egress» сильнее трёх отдельных alerts. Для корреляции используйте временное окно с учётом clock skew, а ключами делайте Pod UID, container ID, node, ServiceAccount, image digest и API request UID. `Pod` name без UID нельзя считать уникальным.
 
+> 🏭 Containment выбирают по риску и runbook: сначала фиксируют доступные volatile evidence, затем изолируют. Нельзя приносить расследование в жертву удобству, но и нельзя откладывать защиту при активной угрозе.
+
 ### Containment не должен уничтожить доказательства
 
 При подтверждённом активном риске безопасность важнее сохранения процесса, но действие должно быть фиксируемым и пропорциональным runbook. До удаления Pod, если это безопасно и разрешено процедурой, сохраните `kubectl get pod -o yaml`, Falco line, audit/flow IDs, `crictl inspect`, process/cgroup/namespace сведения. Не выполняйте команды атакующего «чтобы проверить», не запускайте `kubectl exec` без необходимости и не копируйте Secret в тикет.
@@ -324,6 +338,8 @@ kubectl get pod -n "$NAMESPACE" "$POD" \
 kubectl get pod -n "$NAMESPACE" "$POD" \
   -o jsonpath='{range .status.initContainerStatuses[*]}init{"\t"}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}{range .status.containerStatuses[*]}normal{"\t"}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}{range .status.ephemeralContainerStatuses[*]}ephemeral{"\t"}{.name}{"\t"}{.containerID}{"\t"}{.imageID}{"\n"}{end}'
 ```
+
+> 🏭 Hash, case ID, время, источник и журнал передачи делают evidence проверяемым и воспроизводимым.
 
 ### Целостность и chain of custody
 
@@ -357,6 +373,8 @@ sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
   sha256sum --check SHA256SUMS
 )
 ```
+
+> 🏭 Containment — последовательный workflow с обратимыми первыми шагами, явным владельцем решения и доказательством результата. Выбор между quarantine, cordon и удалением workload зависит от scope и сохранённого evidence.
 
 ## 30.5. После alert: containment, а не только evidence
 
@@ -438,6 +456,8 @@ NetworkPolicy повторите тот же исходящий запрос, к
 `DENIED`/timeout. Если применена полная quarantine выше (без allow-правил), тот же тест
 подтвердит недоступность и DNS - это ожидаемо и не является регрессией.
 
+> 🔬 Falco Talon автоматизирует post-detection response, а Tetragon может enforce-ить отдельное действие inline.
+
 ### Автоматизация реакции: Falco Talon и Tetragon enforcement
 
 Ручной containment по runbook - обязательный baseline, но при высоком объёме alert его
@@ -459,6 +479,8 @@ audit) - оба остаются production-расширением, не экз�
 Не автоматизируйте безусловное удаление Pod по одному general-purpose rule: false positive
 на broad severity превращает шум в самостоятельный outage. Автоматическую реакцию
 включают только для узких, проверенных на staging условий с понятным owner и откатом.
+
+> 🔬 Путь от CRI к host PID и syscall trace для controlled incident с volatile evidence и production access.
 
 ## 30.6. Расследование на node: `crictl` → PID → `/proc` → `strace`
 
@@ -583,6 +605,8 @@ flowchart TB
 - Делать `strace` постоянным мониторингом или запускать его на каждом процессе node.
 - Править `falco_rules.yaml` vendor-файла либо выключать rule глобально ради одного noisy workload.
 
+> 🎯 Подтвердите всю цепочку: local rule загружено, controlled workload создал событие, а alert содержит достаточный Kubernetes context. Это надёжнее проверки только YAML или service status.
+
 ## 30.7. Проверка: controlled alert от своего правила до workload
 
 Проверка имеет две части: Falco должен загрузить правило, а controlled action должен породить alert с достаточными полями. Не используйте `/dev/mem` test на production node: доступ к устройству зависит от privileges и может создавать лишний риск. Для безопасной воспроизводимой демонстрации ниже используется файл-маркер в writable `emptyDir`; правило ограничено namespace `runtime-lab`.
@@ -664,6 +688,8 @@ kubectl delete namespace runtime-lab
 ```
 
 Если alert отсутствует, не повышайте priority и не переписывайте condition вслепую. Проверьте: local-file реально загружен, `falco -c /etc/falco/falco.yaml --dry-run` успешен, Falco работает на node тестового Pod, path совпадает с `fd.name`, event type поддержан driver-ом и Kubernetes metadata integration доступна. Если fields присутствуют, но пусты, расследуйте CRI integration отдельно и всё равно сопоставьте container ID через `crictl`.
+
+> 🏭 Operating model rules, telemetry и response: owner, versioned schema, retention, access control и безопасная автоматизация.
 
 ## 30.8. Как это применяют в продакшене
 

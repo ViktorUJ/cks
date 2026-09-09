@@ -15,6 +15,8 @@
 > [главе 34 CKA](../../../cka/course/34/ru.md). Здесь предполагается, что вы умеете
 > найти Pod, Service, node и проверить обычный `curl`.
 
+> 🧠 Cilium WireGuard/IPsec защищает node-to-node transport, mesh mTLS — proxy-соединения и workload identity, NetworkPolicy — разрешение потока.
+
 ## 23.1. Две задачи, два уровня: encryption и mTLS
 
 У слова «зашифровать трафик Pod-to-Pod» есть два разных значения. Их нельзя считать
@@ -61,6 +63,8 @@ flowchart TB
 | Видит приложение сертификат | нет | обычно нет | нет |
 | Защищает same-node Pod-to-Pod | нет: Cilium WireGuard/IPsec не шифруют такой трафик по дизайну | да, если оба в mesh | ограничивает, но не шифрует |
 
+> 🎯 До изменения зафиксируйте CNI, версии, firewall, MTU и cross-node placement тестовых Pod.
+
 ## 23.2. Перед изменением: scope, совместимость и исходное состояние
 
 Шифрование CNI и service mesh - cluster-wide или namespace-wide изменение. Не включайте
@@ -100,6 +104,8 @@ helm -n kube-system list
 helm -n kube-system get values cilium --all
 kubectl -n kube-system get configmap cilium-config -o yaml
 ```
+
+> 🎯 Transparent encryption защищает только межузловой участок; выберите backend и проверьте его scope.
 
 ## 23.3. Cilium transparent encryption: модель и границы
 
@@ -148,6 +154,8 @@ forward-looking production extension, а не основной путь CKS; д�
 защиты» не является нормальной конфигурацией Cilium и только усложняет отладку. Точные
 Helm values и поддерживаемые комбинации сверяйте с документацией версии, установленной в
 кластере: значения из старой статьи могут не подходить к новому Cilium.
+
+> 🎯 Проверьте version-matched values, rollout Cilium agents и encryption status; peer key подтверждает node, не Pod identity.
 
 ## 23.4. WireGuard: включение, key peer и взаимная аутентификация
 
@@ -209,6 +217,8 @@ kubectl -n kube-system get pods -l k8s-app=cilium -o wide
 `cilium --help` внутри именно этого agent и используйте документацию совпадающей версии,
 а не отключайте encryption ради «зелёного» вывода.
 
+> 🔬 Strict mode предотвращает первый plaintext packet, но требует version- и routing-specific compatibility.
+
 ### Strict mode: не допустить первый plaintext packet
 
 При обычном node-to-node WireGuard новый remote endpoint может стать известен agent не сразу;
@@ -235,6 +245,8 @@ configuration, затем отрицательным тестом подтвер
 проходит. Не включайте strict mode как замену проверки NetworkPolicy, firewall и доступности
 control-plane.
 
+> 🏭 Для скомпрометированной node: изоляция, сохранение evidence, вывод старого peer из доверия; private key не попадает в ticket, Git или чат.
+
 ### Ротация и инцидент с ключом WireGuard
 
 Cilium автоматизирует lifecycle keys, но security design всё равно обязан описывать,
@@ -251,6 +263,8 @@ Cilium автоматизирует lifecycle keys, но security design всё 
 
 `kubectl get secret -A` и широкое право читать Secrets дают доступ не только к IPsec
 material, но и к множеству иных секретов. Ограничьте RBAC и audit доступ к `kube-system`.
+
+> 🔬 IPsec — альтернативный backend Cilium с key rotation, ESP-диагностикой, version-matched CLI и overlap rollout.
 
 ## 23.5. IPsec: когда нужен и как не сломать key management
 
@@ -315,6 +329,8 @@ peers вызывает packet loss. Практический минимум дл
 **Не путайте IPsec key с mTLS CA.** IPsec key защищает transport peers, а сертификат mesh
 подтверждает workload identity. Их владелец, rotation interval, audit и blast radius могут
 быть разными.
+
+> 🎯 Istio mTLS связывает certificate с workload identity; отличайте `PeerAuthentication: STRICT` от `DestinationRule` с `ISTIO_MUTUAL` и проверяйте proxy/injection.
 
 ## 23.6. Istio: sidecar, SPIFFE workload identity и `PeerAuthentication`
 
@@ -459,6 +475,8 @@ istioctl analyze -n mesh-demo
 `istioctl analyze` и `proxy-config` зависят от версии Istio, но полезная идея постоянна:
 смотреть не только YAML в Git, а runtime configuration proxy. Успешное создание CR не
 гарантирует, что selector/host совпал с нужным endpoint.
+
+> 🎯 `STRICT`: meshed client получает `200`, client без sidecar не получает plaintext success.
 
 ## 23.7. Контролируемый опыт Istio: внутри mesh 200, снаружи reset
 
@@ -625,6 +643,8 @@ test "$RC" -ne 0 || test "$OUT" != 200
 действительно без sidecar; затем ищите более специфичную `PeerAuthentication` policy,
 которая переопределила тест.
 
+> 🔬 Linkerd имеет собственные identity model и policy API; не используйте его вместе с Istio sidecar в одном Pod.
+
 ## 23.8. Linkerd: production-вариант mTLS и identity ServiceAccount
 
 Linkerd -- полноценный production-вариант service mesh для workload mTLS, но это
@@ -701,6 +721,8 @@ identity должен остаться работоспособным. Для б
 канал, но не обязательно означает «каждый identity может вызвать каждый endpoint» -
 авторизацию надо настроить отдельно.
 
+> 🔬 Capture видит inner plaintext/TLS до termination и outer encrypted packet на physical NIC.
+
 ## 23.9. WireGuard/IPsec и mesh вместе: где виден plaintext
 
 Проверка «`curl` работает» не доказывает encryption. `curl` проверяет доступность и
@@ -721,6 +743,8 @@ outer encrypted packet на physical NIC. Для доказательства с
 TLS-protected и связать его с identity. Не заявляйте «tcpdump нигде не показывает HTTP»:
 на ноде и в Pod он может быть виден до/после encryption, если у атакующего есть root на
 этой ноде.
+
+> 🎯 Подтвердите cross-node placement, specific physical NIC, время повторяемого flow и Cilium status.
 
 ## 23.10. `tcpdump`-проверка: доказать outer encrypted traffic
 
@@ -803,6 +827,8 @@ protocol на physical NIC без payload.
   шифрование как «исправление»; измерьте path MTU и настройте CNI/underlay по процедуре
   платформы.
 
+> 🎯 Диагностируйте Cilium/underlay → DNS/Service → mesh identity/policy → NetworkPolicy; не оставляйте bypass `STRICT` или encryption.
+
 ## 23.11. Диагностика: сначала определить слой отказа
 
 Один симптом `connection reset` может происходить на нескольких уровнях. Диагностируйте
@@ -834,6 +860,8 @@ linkerd check 2>/dev/null || true
 общий канал incident. Capture может содержать metadata, URL, cookie или plaintext на
 внутренней точке. Сохраняйте только минимально нужное evidence в одобренное хранилище с
 сроком хранения.
+
+> 🏭 Inventory потоков, canary namespace/nodes, период совместимости, узкие исключения и runtime evidence после upgrade, firewall change или ротации CA/key.
 
 ## 23.12. Безопасный rollout и эксплуатационные правила
 
@@ -898,6 +926,8 @@ upgrade Kubernetes/Cilium/mesh.
   не смешивайте его sidecar с Istio в одном Pod.
 - Убедительное доказательство содержит meshed `200`, plaintext outside reset/failure,
   `cilium-dbg encrypt status` и tcpdump outer WireGuard/IPsec на physical NIC без HTTP payload.
+
+> 🏭 RBAC к key material, version-pinned changes, MTU/firewall design, rotation/rollback runbook и runtime evidence.
 
 ## 23.15. Как это применяют в продакшене
 

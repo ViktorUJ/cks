@@ -14,6 +14,8 @@
 > [главе 36 CKA](../../../cka/course/36/ru.md). Здесь не повторяем lifecycle-процедуру,
 > а рассматриваем её с security-стороны: CVE, EOL, advisories и зависимости ноды.
 
+> 🧠 Patch сокращает окно эксплуатации; приоритет учитывает достижимость, prerequisites и экспозицию кластера, не только CVSS.
+
 ## 13.1. Почему патч - это security-контроль
 
 CVE в Kubernetes-компоненте, container runtime или ядре ноды может дать атакующему путь от
@@ -57,6 +59,8 @@ exploit, компенсирующие controls и ценность затрон�
 4. Если немедленный патч невозможен, временно сузьте экспозицию по рекомендациям advisory,
    назначьте владельца и дедлайн. Временная mitigation не должна остаться постоянной.
 
+> 🏭 Release cadence и support window задают lifecycle: поддерживаемый кластер проще патчить, чем срочно мигрировать из EOL.
+
 ## 13.2. Release cadence, support window и version skew
 
 Kubernetes выпускает минорные версии регулярно, обычно три раза в год, а patch-релизы
@@ -86,6 +90,8 @@ flowchart TB
     style worker fill:#673ab7,color:#fff
 ```
 
+> 🎯 Сначала обновляйте control plane; kubelet не новее `kube-apiserver` и не более чем на три minor-версии старше него.
+
 **Version skew** ограничивает порядок. Для каждого kubelet проверяйте обе границы относительно
 его `kube-apiserver`: kubelet **не новее** API server и **не более чем на три minor-версии
 старше** него. Поэтому сначала обновляют control plane, затем рабочие узлы. Допустимый
@@ -104,6 +110,8 @@ API server. Например, при API servers `1.37` и `1.36` допусти
 Перед целевым минорным обновлением также проверьте удаляемые API у приложений, Helm-чартов,
 операторов и аддонов. Устранение CVE не должно сломать следующий deploy из-за удалённого
 `apiVersion`; инструменты и порядок проверки описаны в [главе 36 CKA](../../../cka/course/36/ru.md).
+
+> 🏭 Advisory и точный inventory фиксируют affected versions, владельца remediation, SLA, evidence исправления и временную mitigation.
 
 ## 13.3. Advisories, CVE feed и инвентаризация версий
 
@@ -146,6 +154,8 @@ uname -r
 окно реакции, остальные - ближайшее плановое окно. Severity сама по себе не приоритет:
 CVE с меньшим CVSS, но без authentication в доступном извне компоненте, может быть важнее
 локального CVE с трудными prerequisites.
+
+> 🎯 Последовательность: preflight → первый control plane через `kubeadm upgrade apply` → health → каждый worker через `kubeadm upgrade node`, `cordon`/`drain`, kubelet, проверку и `uncordon`.
 
 ## 13.4. Безопасный `kubeadm` upgrade: control plane, затем ноды
 
@@ -368,6 +378,8 @@ kubectl version --output=yaml
 чаще требует смотреть `journalctl -u kubelet`, статус `containerd`, cgroup driver, CRI socket
 и логи CNI - не повторять `kubeadm` вслепую.
 
+> 🔬 Runtime, kernel, ОС и cgroup v2 образуют совместимый node-image contract; проверяйте его в stage.
+
 ## 13.5. Runtime и ОС: Kubernetes не единственный источник CVE
 
 Патч `kube-apiserver` не обновляет `containerd`, `runc`, kernel, OpenSSL, `systemd` и
@@ -422,6 +434,8 @@ runtime + ОС в stage, затем раскатывать по нодам. Ес
 runtime и ОС migration без выделенного теста: так трудно отличить CVE remediation от
 regression и безопасно откатиться.
 
+> 🎯 Не нарушайте version skew, не обновляйте все ноды одновременно, не обходите PDB или preflight без причины и подтверждайте итог версиями и health.
+
 ## 13.6. Типичные ошибки при security-обновлении
 
 - **«У нас нет публичного API, CVE не касается нас».** Уязвимый kubelet или runtime может
@@ -436,6 +450,8 @@ regression и безопасно откатиться.
   реплик; сначала оценивают экспозицию и capacity, затем выполняют rolling rollout.
 - **Доверяют только успешному `kubeadm`.** Команда не доказывает, что runtime, CNI, DNS,
   storage и приложения действительно работают на исправленных версиях.
+
+> 🏭 Security upgrade: advisories, inventory, support policy, stage, progressive rollout, evidence и stop conditions при health failure.
 
 ## 13.7. Как это применяют в продакшене
 
@@ -500,6 +516,8 @@ apply`, на worker - `kubeadm upgrade node`.
 экспозиции CVE без потери доступности. Инженер читает advisory, подтверждает затронутые
 версии, проверяет EOL и зависимости, тестирует node image, идёт rolling-волной и доказывает
 после неё и исправленную версию, и работоспособность сервисов.
+
+> 🏭 Gate сохраняет before/after evidence версий, readiness, PSS, admission/RBAC и security-флагов API server; он не заменяет tested rollback.
 
 ## 13.11. Самостоятельная практика: security upgrade gate
 

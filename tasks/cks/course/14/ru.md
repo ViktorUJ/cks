@@ -62,6 +62,10 @@ sudo dpkg-query -W -f='${binary:Package}\t${Version}\n' \
   | sort | sudo tee /root/hardening-before/packages.txt >/dev/null
 ```
 
+> 🧠 Компрометация ноды может начаться с лишнего процесса, пакета, listener или socket; поддерживайте карту компонента, владельца, назначения и допустимого доступа.
+
+> 🎯 Инвентаризируйте service, пакет, kernel module и listener; меняйте только ненужный объект, сохраните baseline и проверьте `kubelet`/containerd. `disable --now`, removal и закрытие порта требуют разных проверок.
+
 ## 14.2. Инвентаризация и отключение ненужных сервисов
 
 Сначала различайте три состояния. `systemctl list-units` показывает загруженные unit,
@@ -268,6 +272,8 @@ sudo systemctl status "$SERVICE"
 sudo ss -lntp | grep -F ":${PORT}" || echo 'listener is absent'
 ```
 
+> 🎯 Инвентаризируйте service, пакет, kernel module и listener; меняйте только ненужный объект, сохраните baseline и проверьте `kubelet`/containerd. `disable --now`, removal и закрытие порта требуют разных проверок.
+
 ## 14.6. Безопасность containerd и необязательного Docker
 
 На современной Kubernetes-ноде containerd - основной CRI runtime; Docker daemon и его
@@ -276,6 +282,8 @@ Runtime daemon имеет больше прав, чем обычный конт�
 containerd, NRI или Docker API, часто может запустить привилегированный контейнер,
 смонтировать filesystem хоста или получить credentials ноды. Поэтому Unix socket - граница
 доступа, а не безобидная деталь реализации.
+
+> 🎯 Доступ к containerd CRI socket — только у `root` и минимальных системных потребителей, без world-writable mode и mount в непривилегированный workload.
 
 ```mermaid
 flowchart TB
@@ -291,6 +299,8 @@ flowchart TB
     style containerd fill:#673ab7,color:#fff
     style dockerDaemon fill:#673ab7,color:#fff
 ```
+
+> 🔬 Docker применим только к Docker-хосту; NRI/debug/metrics требуют version- и runtime-specific проверки.
 
 ### Docker: никакого неаутентифицированного TCP API
 
@@ -462,6 +472,8 @@ sudo systemctl --no-pager --full status docker.service
 sudo docker info --format '{{json .SecurityOptions}}'
 ```
 
+> 🎯 Докажите минимизацию diff до/после и отрицательными проверками: ненужный service не active/enabled, listener и `2375` отсутствуют, непривилегированный пользователь не получает runtime access.
+
 ## 14.7. Проверка результата: доказать минимальную ноду
 
 Проверка состоит из факта конфигурации и факта доступа. Недостаточно увидеть нужную
@@ -529,6 +541,8 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 | worker стал `NotReady` | удалён/остановлен containerd, kubelet или сломана CRI config | `systemctl status kubelet containerd`, `journalctl -u kubelet`, сверить endpoint и восстановить из снимка |
 | закрыли нужный порт | порт отключали по номеру без проверки PID и назначения | `ss -lntp`, unit-владелец, источники/назначение; откатить точечно |
 | после `apt autoremove` нет нужной утилиты | список не был просмотрен, package dependency неверно оценена | восстановить пакет, закрепить allowlist образа, использовать `--dry-run` |
+
+> 🏭 Role-specific golden image, IaC, inventory и drift detection; staging/canary и node-by-node rollout с rollback и проверкой `kubelet`, runtime, CNI и workload.
 
 ## 14.9. Как это применяют в продакшене
 

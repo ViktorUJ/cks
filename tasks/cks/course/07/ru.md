@@ -40,12 +40,16 @@ flowchart TB
     style verify fill:#673ab7,color:#fff
 ```
 
+> 🧠 `kube-bench` сопоставляет доступные файлы, аргументы и CIS profile; `FAIL`/`WARN` требуют оценки active state и риска.
+
 Проверки сгруппированы по ролям и компонентам. Названия профилей и номера рекомендаций
 меняются между версиями benchmark, поэтому ориентируйтесь на профиль, который выбрал
 `kube-bench` для установленной версии Kubernetes. Версии Kubernetes и версии CIS Benchmark
 не связаны один к одному: одна версия benchmark может покрывать несколько версий Kubernetes
 и наоборот, а `kube-bench` умеет автоматически выбрать benchmark только тогда, когда
 установленная версия Kubernetes присутствует в его опубликованной version mapping.
+
+> 🔬 Version/profile mapping определяет достоверность отчёта; используйте profile, выбранный поддерживаемым `kube-bench`, и исправляйте конкретный check.
 
 > **Снимок currentness на 2026-09-08.** В `docs/platforms.md` ветки `main` kube-bench
 > опубликована таблица: CIS `1.12` для Kubernetes `1.32-1.33` и CIS `2.0` для Kubernetes
@@ -94,6 +98,8 @@ flowchart TB
 Запускайте `kube-bench` на том узле, чьи файлы он должен читать. На узле control plane
 обычно нужны разделы `master` и `etcd`, на worker - `node`. В учебном кластере или при SSH
 доступе к ноде самый прозрачный вариант - локальный запуск:
+
+> 🎯 Запустите scanner у владельца файлов, исправьте единственный активный источник с backup, дождитесь restart, проверьте effective state и health, затем повторите check.
 
 ```bash
 # На узле control plane; доступные targets зависят от версии kube-bench.
@@ -494,6 +500,8 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
 | `kube-bench` продолжает показывать `FAIL` | изменён неактивный файл или указан конфликтующий флаг | `systemctl cat kubelet`, `ps`, `crictl inspect` |
 | etcd не стартует после смены прав | пользователь процесса потерял доступ к data directory или key | `stat`, владельца процесса, логи etcd |
 | Проверка в managed Kubernetes не проходит | control plane не принадлежит пользователю и часть рекомендаций не применима | документацию провайдера, разделить customer- и provider-owned controls |
+
+> 🏭 Versioned CIS baseline, регулярная проверка drift, владелец исключений и evidence после rollout.
 
 ## 07.8. Как это применяют в продакшене
 

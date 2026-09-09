@@ -6,6 +6,8 @@
 
 > **Что нужно знать из CKA.** Поля `securityContext`, которые обнаруживают линтеры: `runAsNonRoot`, `allowPrivilegeEscalation`, `readOnlyRootFilesystem`, capabilities и `privileged`, разобраны в [главе 20 CKA](../../../cka/course/20/ru.md). Здесь не повторяем их синтаксис, а строим автоматические проверки, которые не позволят пропустить небезопасную настройку в Git.
 
+> 🧠 Shift-left анализ переносит поиск небезопасной конфигурации в pull request: исправить source до build и deploy дешевле, чем реагировать на риск в работающей нагрузке.
+
 ## 27.1. Модель угроз: небезопасная конфигурация попадает в кластер вместе с кодом
 
 Kubernetes API принимает syntactically valid manifest, даже если он противоречит secure-by-default практике. Контейнер от UID 0, `privileged: true`, writable root filesystem или image с `:latest` могут выглядеть как обычное изменение в review. Если найти проблему только после deploy, она уже доступна атакующему и требует incident response вместо недорогой правки в pull request.
@@ -42,6 +44,8 @@ flowchart TB
 В этой главе `kubesec` и `kube-linter` служат инструментами практики для анализа Kubernetes manifests. `hadolint` и `conftest` так же полезны в курсе и лабораторных заданиях: первый анализирует Dockerfile, второй проверяет локальную policy организации. На экзамене используйте только инструмент и окружение, указанные в конкретном задании.
 
 Линтер - detector, не authority. Каждое правило должно быть понятным: команда обязана уметь объяснить риск, выбрать исправление или документированно принять временное исключение. Не скрывайте системное нарушение глобальным `--ignore`; ограничьте исключение конкретным rule, файлом и сроком, а затем уберите его.
+
+> 🔬 `kubesec` даёт security score и controls, но не заменяет policy вашей организации.
 
 ## 27.2. `kubesec`: скоринг Kubernetes manifest
 
@@ -99,6 +103,8 @@ helm template payments-api ./chart --namespace payments \
 ```
 
 Не отправляйте приватные manifests в публичный online scanner. Локальный binary или утверждённый CI container оставляет исходники в вашем execution environment.
+
+> 🎯 `kube-linter` — Kubernetes-oriented static analysis: прочитайте finding, исправьте manifest и повторите lint до чистого результата.
 
 ## 27.3. `kube-linter`: проверка Kubernetes best practices
 
@@ -168,6 +174,8 @@ kubectl apply --dry-run=server -f manifests/api.yaml
 
 `kubectl apply --dry-run=server` проверяет API schema и admission без сохранения resource. Это другой сигнал, чем lint: schema может быть корректной у небезопасного manifest, а custom policy может отклонить manifest, который устраивает generic linter.
 
+> 🏭 Версионируйте набор checks, ограничивайте исключения конкретным scope и не отключайте security baseline для всего repository из-за одной legacy-нагрузки.
+
 ### Настройка checks без ослабления всего pipeline
 
 Некоторые checks требуют настройки для legacy workload. `include` без `doNotAutoAddDefaults: true` добавляет checks к default-набору, а не заменяет его. Если нужен ровно обозримый security baseline, отключите автодобавление defaults и перечислите весь набор. Не отключайте `run-as-non-root` для всего repository ради одного системного DaemonSet: выделите system manifest в отдельный путь, добавьте exception в policy с обоснованием и ограничьте доступ к изменению этого исключения.
@@ -188,6 +196,8 @@ checks:
 ```
 
 Проверьте название и доступность checks для закреплённой версии через `kube-linter checks list`; не копируйте конфигурацию между версиями без проверки. CI должен завершаться ошибкой при невозможности загрузить configuration - молчаливый переход к default checks создаёт ложное ощущение защиты.
+
+> 🔬 `hadolint` полезен для Dockerfile и воспроизводимости образа, но не заменяет image scan.
 
 ## 27.4. `hadolint`: анализ Dockerfile до сборки образа
 
@@ -242,6 +252,8 @@ ENTRYPOINT ["/api"]
 ```
 
 `hadolint` не видит всё: он не знает, содержит ли `COPY . .` secret, соответствует ли binary architecture ноде или есть ли CVE в base image. Используйте `.dockerignore`, BuildKit secret mounts, unit tests, SBOM и scanner из соседних глав. Lint помогает раньше заметить structural error, а не заменяет supply-chain controls.
+
+> 🔬 `conftest` расширяет generic lint локальными правилами Rego; проверяйте и versionируйте сами policies через `opa test`.
 
 ## 27.5. OPA `conftest`: проверка policy-as-code для manifests
 
@@ -462,6 +474,8 @@ opa test policy/ -v
 
 В production дублируйте critical policy в admission controller, например Kyverno, Gatekeeper или ValidatingAdmissionPolicy, где это применимо. `conftest` защищает путь Git -> CI; admission защищает API от ручного `kubectl apply`, другого pipeline и ошибочно настроенного job. Политики должны иметь один источник или tests, которые подтверждают их эквивалентное intent, иначе они со временем расходятся.
 
+> 🏭 Static analysis становится защитой только как обязательный, воспроизводимый CI gate с закреплёнными инструментами, reports и управляемыми исключениями.
+
 ## 27.6. CI gate и цикл «исправить - повторить проверку»
 
 Static analysis полезен только тогда, когда его результат влияет на delivery. Локальный запуск даёт быстрый feedback, но обязательный CI job делает проверку воспроизводимой для каждого pull request. Pipeline должен устанавливать или использовать pinned releases, сохранять reports как artifacts и прекращать build/push при error. Не загружайте для scanner manifests с production secrets и не печатайте secrets в logs.
@@ -540,6 +554,8 @@ kubesec scan manifests/api.yaml --format json \
   | jq -e 'type == "array" and length > 0 and all(.[]; (.score? | type) == "number" and .score > 0)' > /dev/null
 ```
 
+> 🎯 Универсальный навык: найти finding, исправить исходный Dockerfile или manifest и повторить scan до успешного exit code; не скрывайте проблему глобальным ignore.
+
 ### Практический цикл исправления
 
 1. Создайте или возьмите manifest с `:latest`, без `runAsNonRoot`, `readOnlyRootFilesystem` и `allowPrivilegeEscalation`.
@@ -576,6 +592,8 @@ kubectl apply --dry-run=server -f manifests/
 | `conftest` не находит правило | передан template вместо rendered YAML или неверен путь `--policy` | тестировать input fixture, запустить `opa test`, затем lint именно rendered output |
 | CI зелёный после `kubesec ... | tee` | `tee` сохранил JSON, но score не проверялся | включить `set -o pipefail` и `jq -e` с `all(.[]; .score > порог)` для всего JSON-массива |
 | критичный system workload требует exception | правило применено одинаково к приложению и CNI/CSI | отдельный scope, least-privilege exception с owner, ticket и expiry; не глобальный ignore |
+
+> 🏭 Линтите финальный rendered YAML, храните результаты и версии scanners, а critical rules согласуйте с admission policy, чтобы исключить обход CI.
 
 ## 27.7. Как это применяют в продакшене
 

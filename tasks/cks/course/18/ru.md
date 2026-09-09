@@ -17,6 +17,8 @@
 > hardened baseline вместе с `seccompProfile`, отказом от `privileged` и host namespaces,
 > writable `emptyDir` и проверкой effective-состояния, а не только YAML.
 
+> 🧠 `SecurityContext` ограничивает права процесса, но не устраняет уязвимости image, RBAC, сети или ресурсов.
+
 ## 18.1. Модель: защита процесса, а не «безопасный образ»
 
 Контейнер изолирует filesystem и namespaces, но его процесс всё ещё обращается к ядру. Если
@@ -59,6 +61,8 @@ flowchart TB
 | `readOnlyRootFilesystem: true` | запись в writable rootfs layer, persistence и подмену бинарников | запрет записи в тома, `emptyDir` и memory |
 | `seccompProfile` | набор доступных syscalls | доступ к разрешённым файлам или API |
 | отсутствие `privileged`, `host*`, `hostPath` | прямой путь к namespaces, устройствам и данным ноды | корректную авторизацию Kubernetes API |
+
+> 🎯 Baseline: non-root identity, `drop: ["ALL"]`, `allowPrivilegeEscalation: false`, read-only root filesystem, `RuntimeDefault` и узкие writable volumes.
 
 ## 18.2. Hardened baseline: один Pod, несколько границ
 
@@ -140,6 +144,8 @@ ServiceAccount и минимальный RBAC, а не возвращайте de
 - **`fsGroup: 10001`** помогает non-root процессу получить групповой доступ к поддерживаемым
   volume. Это настройка Pod, не способ исправить владельца каждого файла в image layer.
 
+> 🎯 Container-level override действует только на этот container; capabilities, `privileged`, escalation и read-only root filesystem проверяйте у app, sidecar и initContainer.
+
 ## 18.3. Порядок полей и конфликты уровней
 
 `securityContext` существует на уровне Pod (`spec.securityContext`) и на уровне каждого
@@ -195,6 +201,8 @@ spec:
 чтобы профиль уже был установлен на **каждой** ноде, куда может попасть Pod; иначе контейнер
 не создастся. Не судите по одному `spec.securityContext`: inspect каждого container.
 
+> 🔬 `Strict` отключает неявные группы образа и требует проверки Kubernetes/CRI support и реакции ноды.
+
 ### `supplementalGroupsPolicy: Strict`: без неявных групп образа
 
 По умолчанию `Merge` добавляет к supplementary groups членство primary user из `/etc/group`
@@ -226,6 +234,8 @@ v1.33 → GA v1.35), согласно официальному release blog Kube
 kubelet отклоняет Pod с `Strict` на неподдерживаемой ноде, а не молча применяет `Merge`; в
 событиях будет `SupplementalGroupsPolicyNotSupported`.
 
+> 🔬 SELinux labels, `procMount`, sysctls и Windows identity требуют проверки Kubernetes, runtime, CSI, ОС и policy.
+
 ### Advanced: SELinux, `/proc`, sysctls и Windows scope
 
 Это поля того же `SecurityContext`, но они не являются универсальным Linux baseline выше.
@@ -252,6 +262,8 @@ Kubernetes; unsafe sysctls требуют allowlist kubelet и могут кон
 при необходимости там же настраивают GMSA. Проверяйте имя пользователя, образ и поддержку
 Windows-ноды отдельно: Linux `runAsUser`/UID и SELinux не являются заменой `runAsUserName`.
 
+> 🧠 Init, sidecar и ephemeral container имеют собственные effective-параметры; слабый контейнер обходит hardening Pod.
+
 ### Init, sidecar и ephemeral container - отдельные процессы
 
 `initContainers` выполняются до приложения, но могут создать файлы с неподходящими owner/mode
@@ -267,6 +279,8 @@ container security context workload. Он полезен для controlled incid
 admission policy, ограничьте время жизни и зафиксируйте изменение. Для постоянной диагностики
 измените Deployment template и создайте новый Pod, а не пытайтесь менять неизменяемый
 `securityContext` уже запущенного Pod.
+
+> 🎯 Уберите `privileged`, `hostPID`, `hostNetwork`, `hostIPC` и широкий `hostPath`: non-root UID не закрывает эти пути выхода за границу Pod.
 
 ## 18.4. `privileged` и `host*`: опасные обходы границы Pod
 
@@ -331,6 +345,8 @@ kubectl get pods -A -o json | jq -r '
 контекстного review: владелец, назначение, node placement, минимальный доступ, manifest и
 контроль admission.
 
+> 🔬 UID/GID mapping и требования Linux, kernel, CRI/OCI runtime и файловых систем для `hostUsers: false`.
+
 ### `hostUsers: false`: user namespaces в Kubernetes v1.36
 
 В Kubernetes v1.36 user namespaces stable. `hostUsers: false` просит kubelet создать для Pod
@@ -361,6 +377,8 @@ block volumes через `volumeDevices` также запрещены. Нужн
 и всех volume, поддерживающий CRI/OCI runtime и совместимое ядро; в актуальной документации
 указаны containerd v2.0+, CRI-O v1.25+, runc v1.2+ или crun v1.9+. NFS не поддерживает
 idmapped mounts. Перед rollout проверьте эти условия на всех нодах, куда может попасть Pod.
+
+> 🎯 При ошибке записи найдите path и добавьте минимальный `emptyDir` или PVC с подходящими правами и lifecycle.
 
 ## 18.5. Read-only root filesystem без поломки приложения
 
@@ -459,6 +477,8 @@ hardened debug Pod с явной NetworkPolicy или согласованная
 После диагностики удалите debug-артефакт и внесите минимальный `emptyDir` mount в template,
 если запись действительно является частью контракта.
 
+> 🎯 Используйте `RuntimeDefault` и докажите effect через `/proc/1/status`; `Localhost` требует доставки профиля на каждую допустимую node.
+
 ## 18.6. Seccomp в baseline: RuntimeDefault, Localhost и доказательство
 
 `seccompProfile` задаёт реакцию ядра на системные вызовы. Для штатного workload используйте
@@ -498,6 +518,8 @@ kubectl exec hardened-web -c app -- sh -c 'grep -E "^(NoNewPrivs|Seccomp):" /pro
 test, ожидаемый `EPERM`/`Operation not permitted` и проверку node/runtime log. Не превращайте
 боевой exploit в проверку: тестируйте безопасный запрещённый syscall в изолированном
 стенде.
+
+> 🎯 Проверяйте intent в template, admission/запуск и effective state процесса; `kubectl apply` не доказывает UID, capabilities, seccomp или отказ записи.
 
 ## 18.7. Проверка: manifest, effective state и отрицательные сценарии
 
@@ -586,6 +608,8 @@ smoke-test Pod или безобидный путь, заранее исключ
 смешивайте с общим cache. `readOnlyRootFilesystem` не защищает содержимое тома от другого
 container того же Pod, которому этот том тоже смонтирован.
 
+> 🏭 Versioned templates, inventory, исправление image, canary, runtime tests, admission guardrails и документированные исключения.
+
 ## 18.9. Поэтапное внедрение hardened baseline
 
 Внедряйте baseline в template Deployment/StatefulSet/Job и Helm chart, а не вручную в
@@ -669,6 +693,8 @@ Effective UID этого container будет `20001`. Для полей, дос
 
 RBAC `create namespaces` решает, может ли identity создать объект, но не проверяет обязательные metadata labels в новом запросе. Пользователь с этим правом может создать namespace без `pod-security.kubernetes.io/enforce=restricted`, а PSA будет действовать по default configuration, которая не обязана быть restricted. Нужна admission-level policy, например ValidatingAdmissionPolicy или policy engine, требующая нужные labels при CREATE; RBAC остаётся дополнительным ограничением круга создателей namespace.
 </details>
+
+> 🏭 Общий chart/template и CI/admission policy; у исключения — scope, владелец, причина, срок пересмотра и evidence.
 
 ## 18.11. Как это применяют в продакшене
 

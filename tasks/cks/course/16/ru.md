@@ -14,6 +14,8 @@
 > служит интерфейсом Kubernetes к profile AppArmor, а главная задача - подготовить profile на
 > ноде, назначить его Pod и доказать, что запрет действительно сработал.
 
+> 🧠 AppArmor — path-based MAC между процессом и ядром; он дополняет DAC, capabilities, seccomp и RBAC, но не заменяет ни один из этих слоёв.
+
 ## 16.1. AppArmor: policy между процессом и ядром
 
 Обычные права Linux (DAC) проверяют UID, GID и mode bits. Если процесс получил подходящий
@@ -56,6 +58,8 @@ RBAC: каждый слой ограничивает другой путь ат�
 AppArmor особенно распространён на Ubuntu и Debian. На SELinux-ориентированной ноде
 используют labels и type enforcement, а не AppArmor profile. Сначала определите реальный
 механизм образа ноды; нельзя перенести профиль AppArmor в SELinux и ожидать применения.
+
+> 🎯 Различайте `enforce` и `complain`, загрузите profile на фактическую ноду, назначьте `securityContext.appArmorProfile` и подтвердите effective profile процесса.
 
 ## 16.2. Profile и режимы enforce/complain
 
@@ -235,6 +239,8 @@ kubectl exec -n demo apparmor-localhost -- cat /proc/1/attr/current
 зависит от runtime и может содержать режим в скобках. Это сильнее, чем проверка только
 YAML: YAML может быть корректным, а container мог не стартовать на ноде без profile.
 
+> 🔬 Beta-аннотация нужна, чтобы распознать и безопасно мигрировать старый manifest; для нового workload используйте только `securityContext.appArmorProfile`.
+
 ## 16.5. Legacy annotation: читать, мигрировать, не смешивать
 
 До Kubernetes v1.30 AppArmor задавали per-container через beta-аннотацию:
@@ -285,6 +291,8 @@ kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.met
 
 Пустой результат второго запроса не доказывает отсутствие container-level override; при
 ревью production workload смотрите и `.spec.containers[*].securityContext.appArmorProfile`.
+
+> 🎯 Отличите ошибку создания контейнера от runtime denial, затем подтвердите ноду, имя и загрузку profile, effective enforcement и kernel evidence; не заменяйте причину на `Unconfined`.
 
 ## 16.6. Отказ старта и denial: диагностировать на правильном слое
 
@@ -392,6 +400,8 @@ change record. `complain`-лог показывает, что приложени
 | Profile есть на одной ноде, но rollout нестабилен | scheduler переносит реплики на node без profile | одинаковая delivery на pool либо node affinity/selector и проверка каждого pool |
 | «Решение» - `Unconfined` или `privileged` | security control отключён вместо диагностики | восстановить least privilege, найти конкретный denial и сузить исключение |
 
+> 🏭 Versioned profiles доставляют на все допустимые node pool, коротко проверяют в complain mode, затем review-ят разрешения, rollout и `DENIED`.
+
 ## 16.9. Как это применяют в продакшене
 
 - **Profile как код.** Храните profile рядом с workload и node-image/automation, тестируйте
@@ -468,6 +478,8 @@ scheduling/profile delivery от настоящего denial. Старую annot
 наблюдается. Автоматический rollout profile, короткий complain-период, review новых
 разрешений и alert на `DENIED` создают проверяемую boundary вместо «файла policy где-то на
 ноде».
+
+> 🎯 Уметь диагностировать, почему профиль AppArmor не применился или workload не запускается.
 
 ### 16.12.1. Troubleshooting: «Профиль не работает, потому что…»
 

@@ -15,6 +15,8 @@
 > Здесь они соединяются в runtime-контракт: корень контейнера read-only, запись разрешена
 > только в явные временные тома, а admission не допускает отступление от правила.
 
+> 🧠 Writable root даёт скомпрометированному процессу неявное место для tools и mutation. Read-only root переводит запись в явно объявленные и потому контролируемые paths.
+
 ## 31.1. Угроза runtime-мутации: почему writable root - это путь к закреплению
 
 Образ состоит из read-only слоёв. После старта container runtime добавляет к ним тонкий
@@ -64,6 +66,8 @@ lock, cache, TLS session, compiled template или log. Цель hardening - н�
 запись, а заранее ответить: *какой процесс пишет, куда, сколько и переживает ли Pod?*
 Если ответа нет, writable root превращает ошибку разработки в неявно разрешённую
 поверхность атаки.
+
+> 🎯 Поставьте `readOnlyRootFilesystem: true` для каждого container и дайте приложению только необходимые writable volumes. На экзамене затем подтвердите effective spec и реальный отказ записи в root filesystem.
 
 ## 31.2. `readOnlyRootFilesystem`: граница image layer
 
@@ -166,6 +170,8 @@ baseline: доступ, образ и время жизни debug-container сл
 Не решайте ошибку командой `chmod -R 777 /`. Права образа и volume должны быть минимальны:
 процессу нужен его UID/GID и право записи только в собственный runtime-каталог.
 
+> 🎯 `emptyDir` — явный scratch space с lifecycle Pod. Умейте выбрать узкий mount path, объяснить его очистку при replacement Pod и не путать его с persistent storage.
+
 ## 31.3. `emptyDir`: контролируемая временная запись
 
 `emptyDir` создаётся при назначении Pod на ноду и существует, пока существует этот Pod.
@@ -263,6 +269,8 @@ spec:
 реально надо обновлять этот файл, документируйте причину и оставьте write только на нужном
 path.
 
+> 🎯 При `EROFS` найдите точный path по log, добавьте минимальный mount и повторите negative test записи в `/`. Не возвращайте writable root или широкий mount ради удобства.
+
 ## 31.4. Какие пути обычно требуют записи
 
 `readOnlyRootFilesystem` часто ломает не Kubernetes, а неявное предположение приложения о
@@ -304,6 +312,8 @@ kubectl exec -n payments api-7d9d6f4d5c-x2m7q -c api -- sh -c \
 контейнер по процедуре команды или отдельный debug Pod с теми же mounts и identity. Не
 изменяйте production workload ради установки диагностических пакетов.
 
+> 🧠 Distroless сокращает доступные runtime-инструменты после RCE, но не устраняет саму уязвимость, доступные данные или сеть. Это слой минимизации возможностей, а не самостоятельная защита.
+
 ## 31.5. Distroless: меньше инструментов, меньше post-exploitation
 
 **Distroless image** содержит приложение и только необходимые runtime-библиотеки, без
@@ -324,6 +334,8 @@ flowchart TB
     style final fill:#0f9d58,color:#fff
     style pod fill:#0f9d58,color:#fff
 ```
+
+> 🔬 Multi-stage build, pin по digest и scan final image формируют минимальный final image.
 
 Пример multi-stage Dockerfile. Конкретные digest здесь намеренно не указаны: в реальном
 release pin-ят проверенные base images по digest и scan-ят **финальный** image.
@@ -360,6 +372,8 @@ runtime state является предметом проверки.
 в builder/debug image. Для observability приложение должно писать structured logs в stdout,
 экспортировать metrics и health endpoint; поддерживаемая диагностика должна быть отдельной
 процедурой, а не скрытой backdoor-оболочкой.
+
+> 🧠 Configuration и credentials не должны превращать image layer в mutable state: projected read-only volumes отделяют runtime artifact от данных, а явный scratch path остаётся контролируемым.
 
 ## 31.6. ConfigMap и Secret при read-only root
 
@@ -449,6 +463,8 @@ initContainer может записать результат в memory `emptyDir
 его read-only, как в разделе 31.3. Так secret-derived output не расползается по image layer
 и остаётся ограничен lifecycle Pod.
 
+> 🎯 Проверяйте не только manifest, но и effective Pod spec всех типов containers, затем докажите отрицательным тестом, что запись в root filesystem действительно отклонена.
+
 ## 31.7. Проверка effective-состояния, а не только YAML
 
 Манифест - намерение. Admission webhook может изменить Pod, Helm/Kustomize - подставить
@@ -505,6 +521,8 @@ kubectl get pods -A -o json | jq -r '
 Пустой output означает, что у regular, init и уже добавленных ephemeral containers поле
 явно `true`; отдельно оцените исключённые namespaces и статус policy. Не запускайте
 такой audit с выводом Secret: эта команда читает только Pod spec и image reference.
+
+> 🎯 PSA `restricted` — встроенный namespace baseline: начните с `warn`/`audit`, затем включайте `enforce` с pinned version. Помните, что он не требует `readOnlyRootFilesystem` сам по себе.
 
 ## 31.8. Pod Security Admission: baseline и enforce
 
@@ -567,6 +585,8 @@ kubectl apply -f rejected.yaml
 вслепую: системные DaemonSet могут обоснованно требовать host access. Разделяйте
 пользовательские namespaces и documented platform exceptions, ограничивайте доступ к таким
 namespaces RBAC и регулярно пересматривайте исключения.
+
+> 🔬 Native VAP с CEL — современное upstream-расширение PSA для точных admission требований. Проверяйте coverage resources, controller templates и exception scope: это архитектурная, а не только YAML-задача.
 
 ## 31.9. Native ValidatingAdmissionPolicy: vendor-neutral admission gate
 
@@ -736,6 +756,8 @@ Bindings на непересекающиеся scopes с platform-controlled `na
 «allow Binding» не отменяет совпадающий Deny. У exception должны быть владелец, ticket, expiry
 и RBAC, не позволяющий developer-у самостоятельно расширить scope.
 
+> 🏭 Kyverno — optional extension, когда действительно нужны reports, mutation, централизованные exceptions или controller autogen. Не ставьте policy engine вместо достаточного native baseline без операционной причины.
+
 ## 31.10. Kyverno: optional production extension и autogen controller rules
 
 > **Compatibility note (только production для v1.36).** Kyverno v1.19 официально
@@ -763,6 +785,8 @@ CronJob. Для `ValidatingPolicy` это требует явно задать
 правила/status у установленной версии и не рассчитывайте на autogen для rule, которая не
 match-ит Pod или намеренно отключила generation. В частности, subresource
 `pods/ephemeralcontainers` проверяется отдельным admission path, как в native policy выше.
+
+> 🔬 PSA, native CEL и Kyverno отличаются coverage и операционными требованиями.
 
 ## 31.10.1. PSA, native CEL и Kyverno: что именно проверять
 
@@ -803,6 +827,8 @@ kubectl get deploy -n payments api \
 После `Deny` нужно доказать именно отклонение bad manifest, а после rollout - готовность
 good workload. Для Kyverno отдельно проверяют report и сгенерированные controller rules,
 если это заявленная часть его production design.
+
+> 🏭 Runtime immutability работает как процесс: image design, bounded writable paths, staged policy rollout, documented exceptions и positive/negative verification должны поддерживать друг друга.
 
 ## 31.11. Как это применяют в продакшене
 

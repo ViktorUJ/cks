@@ -30,6 +30,8 @@
 > NetworkPolicy разобран в главе 04 этого курса; здесь не повторяем его, а используем
 > возможности Cilium.
 
+> 🧠 `kube-proxy` направляет `ClusterIP:port` к выбранному Pod, а CNI отдельно применяет `NetworkPolicy`.
+
 ## 06.0. Что для вас нового: eBPF-datapath вместо kube-proxy
 
 ### Baseline без Cilium: как трафик доходит до Service сейчас
@@ -47,6 +49,8 @@
 `NetworkPolicy` из главы 04 - отдельный слой поверх этой же модели: CNI со своей стороны
 читает объект `NetworkPolicy` и добавляет собственные правила ядра, которые разрешают или
 блокируют пакет **до или после** правил kube-proxy, в зависимости от реализации.
+
+> 🧠 Cilium связывает labels workload с identity и применяет L3/L4 policy через eBPF maps; L7 требует proxy path.
 
 ### Что меняет Cilium: eBPF как основной L3/L4 datapath
 
@@ -77,6 +81,8 @@ proxy (Envoy или DNS proxy). В текущих stable-версиях Cilium �
 также использовать netfilter/`iptables` TPROXY. Поэтому Cilium не следует описывать как
 datapath, который при любых функциях полностью исключает `iptables` и userspace.
 
+> 🎯 Используйте нативную `NetworkPolicy` для labels/CIDR и L3/L4-портов, CNP — для L7 HTTP/DNS, `toFQDNs`, `toEntities` и Cilium-наблюдаемости.
+
 ### Когда достаточно `NetworkPolicy`, а когда нужен CNP
 
 Из разницы механизмов следует практический критерий выбора между нативной
@@ -94,6 +100,8 @@ datapath, который при любых функциях полностью �
 - **Обе модели можно комбинировать.** Нативная `NetworkPolicy` остаётся переносимым L3/L4
   контролем, а CNP добавляет более тонкую granularity там, где L3/L4 уже недостаточно.
   Подробности совместного вычисления allow/deny разобраны ниже в этой главе.
+
+> 🧠 CNP добавляет labels, L7 и FQDN к нативной `NetworkPolicy`; явный Cilium deny имеет приоритет над allow.
 
 ## 06.1. Зачем нужна политика Cilium
 
@@ -158,6 +166,8 @@ endpoint. Их allow-правила учитываются вместе, но я
 > `Admin` tier имеют приоритет над CNP, CCNP и обычной `NetworkPolicy`. Это полезно для
 > platform-wide границ, но не обязательная отдельная тема CKS: перед использованием
 > проверьте, включены ли соответствующие API и поддержка в вашем Cilium-кластере.
+
+> 🎯 В CNP `endpointSelector` выбирает Pod, `fromEndpoints`/`toEndpoints` — identity, `toPorts` — протокол и порт; ingress и egress создают default-deny независимо.
 
 ## 06.2. L3/L4: разрешить только нужный workload и порт
 
@@ -239,6 +249,8 @@ kubectl -n cks-102 get pod --show-labels
 стабильных внешних сетей или узких служебных диапазонов, а не как обычный способ связать
 два сервиса Kubernetes.
 
+> 🔬 Active FTP использует динамический обратный порт, который статичная L3/L4 CNP не выражает; нужны protocol-aware gateway или passive FTP с фиксированным диапазоном.
+
 ### Corner case: active FTP не выражается через L3/L4
 
 Active FTP показывает границу L3/L4-policy. Клиент открывает control-соединение на TCP/21
@@ -271,6 +283,8 @@ data ports: тогда control traffic на TCP/21 и data traffic на фикс
 Из встроенных application-level правил современного Cilium ориентируйтесь на HTTP и DNS.
 gRPC фильтруется через HTTP/2 semantics с `rules.http`; отдельного gRPC rule type нет.
 Kafka-aware network policy удалена в Cilium 1.20.
+
+> 🎯 В `toPorts.rules.http` разрешайте только нужные method и path и проверяйте разрешённый и запрещённый запрос.
 
 ## 06.3. L7: ограничить HTTP и DNS
 
@@ -323,6 +337,8 @@ kubectl -n cks-102 exec deploy/frontend -- \
 
 Cilium также умеет фильтровать DNS по имени запроса. Не включайте L7-proxy без нужды: он
 добавляет обработку на пути трафика и требует отдельного нагрузочного тестирования.
+
+> 🔬 gRPC фильтруется как HTTP/2 через `POST` и путь метода.
 
 ### gRPC: фильтрация через HTTP, но с особенностью в балансировке
 
@@ -424,6 +440,8 @@ eBPF-datapath без прохода через userspace.
 > в версии 1.20. Для CKS ориентируйтесь на L7 HTTP и DNS/`toFQDNs`, а Kafka-политику
 > рассматривайте только как исторический пример, а не текущую практику.
 
+> 🎯 Разрешите UDP/TCP 53 к доверенному CoreDNS и ограничьте внешний доступ `toFQDNs`; Cilium использует наблюдаемые DNS-ответы и FQDN-кэш.
+
 ## 06.4. DNS-aware egress и `toFQDNs`
 
 IP публичного SaaS-сервиса меняются, CDN отдаёт разные адреса, а приложение обычно знает
@@ -512,6 +530,8 @@ kubectl -n cks-102 exec deploy/frontend -- \
 IP, если для модели угроз это существенно: ограничьте egress до доверенного DNS, включите
 нужную DNS visibility и сочетайте правила с proxy/firewall на границе сети.
 
+> 🔬 `world`, `cluster`, `host` и CCNP для platform-wide границ; тестируйте узкий scope и учитывайте host firewall и системный трафик.
+
 ## 06.5. Entities и cluster-wide политика
 
 Entities дают читаемые идентификаторы групп адресов, для которых labels Kubernetes не
@@ -597,6 +617,8 @@ identity, L4/L7-контекст, verdict (`FORWARDED`/`DROPPED`) и причи�
 Kubernetes audit log и не читает контент запроса за вас - он показывает, что Cilium решил
 сделать с конкретным соединением и почему.
 
+> 🔬 Архитектура Hubble Server/Relay/UI, CLI и компоненты зависят от версии и способа установки Cilium.
+
 Архитектурно Hubble состоит из четырёх частей:
 
 - **Hubble Server** - встроен в `cilium-agent` и работает на каждой ноде; отдаёт flow
@@ -615,6 +637,8 @@ Kubernetes audit log и не читает контент запроса за в�
 кластере, `cilium status` покажет его состояние, а CLI `hubble` можно подключить через
 port-forward к Relay, как показано ниже. Включать Hubble с нуля для лабы не требуется -
 это задача администратора кластера, а не части CNP, которые вы применяете.
+
+> 🎯 Сгенерируйте ожидаемый разрешённый и запрещённый трафик, затем наблюдайте Hubble flows фильтром namespace, verdict или protocol.
 
 Перед тестом убедитесь, что агенты Cilium здоровы. Команды обычно выполняют на рабочей
 машине с доступным `cilium` CLI; точный способ включения Hubble зависит от установки Cilium.
@@ -666,6 +690,8 @@ kubectl -n kube-system exec ds/cilium -- cilium-dbg policy get
 Если L7 правило неожиданно не совпадает, проверьте порт, protocol, HTTP method, регулярное
 выражение path и TLS: шифрованный HTTP без подходящей конфигурации не виден L7-proxy.
 
+> 🎯 Проверьте labels/selectors, направление, порты и DNS, затем сравните разрешённый и запрещённый flow в Hubble; разворачивайте от узкого allow с rollback.
+
 ## 06.7. Частые ошибки и безопасный порядок внедрения
 
 | Симптом | Вероятная причина | Что проверить |
@@ -700,6 +726,8 @@ narrow allow и проверить его из тестового Pod; толь�
 production-кластере. Для каждого изменения нужен rollback:
 `kubectl delete ciliumnetworkpolicy <name> -n <namespace>` или откат через GitOps, а не
 ручная правка без истории.
+
+> 🏭 CNP rollout: review, staging, GitOps, baseline flows и разделение владельцев CCNP и прикладных policy.
 
 ## 06.8. Как это применяют в продакшене
 

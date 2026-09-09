@@ -6,6 +6,8 @@
 
 > **Что нужно из CKA.** Базовое устройство контейнеров, namespaces, cgroups и runtime разобрано в CKA: [контейнеры](../../../cka/course/00-4-containers/ru.md), [Linux](../../../cka/course/00-5-linux/ru.md) и [network namespaces](../../../cka/course/00-7-netns/ru.md). Здесь не повторяем создание контейнера и базовые команды CKA, а рассматриваем security-свойства, проверку изоляции и пути её обхода.
 
+> 🧠 Изоляция контейнера — сочетание независимых Linux-границ, а не одна «магическая» настройка.
+
 ## 03.1. Изоляция контейнера - это набор границ, а не виртуальная машина
 
 Обычный OCI workload под runc/containerd - Linux-процесс на общем ядре ноды. Его изоляция складывается из нескольких независимых механизмов. Это не абсолютная формула для sandbox runtimes: Kata добавляет VM boundary, а gVisor заметно меняет взаимодействие процесса с ядром. Если атакующий получил выполнение кода в контейнере, он сначала ограничен этими границами. Ошибка в одной границе не должна автоматически отменять остальные: это и есть defense in depth.
@@ -62,6 +64,8 @@ flowchart TB
 
 Задача инженера - убрать ненужные привилегии, ограничить последствия DoS и сделать попытку escape наблюдаемой или невозможной. Поле `securityContext` является интерфейсом Kubernetes к части этих механизмов, но его базовый синтаксис уже есть в [главе CKA о SecurityContext](../../../cka/course/20/ru.md).
 
+> 🧠 Namespace меняет видимость ресурса, но не удаляет его с ноды и не отменяет явно выданный доступ.
+
 ## 03.2. Linux namespaces: что контейнер видит, а чего не видит
 
 Namespace даёт процессу отдельное представление о ресурсе ядра. Процесс не исчезает с ноды, но через API ядра видит только объекты своего namespace. Kubernetes и runtime создают необходимые namespaces при старте sandbox пода.
@@ -78,6 +82,8 @@ Namespace даёт процессу отдельное представлени�
 | `USER` | UID/GID mapping и capabilities | UID, отображённый в user namespace | UID 0 внутри можно отобразить в непривилегированный UID хоста |
 
 Граница не абсолютна. Например, несколько контейнеров одного пода обычно разделяют `NET` namespace и могут общаться через `localhost`. Поля `hostNetwork`, `hostPID` и `hostIPC` отключают соответствующую границу. Их следует запрещать обычным workload через Pod Security Admission или policy engine.
+
+> 🔬 UID/GID mapping, idmapped mounts и требования к версии kernel/runtime для `hostUsers: false`.
 
 ### User namespaces: отдельное отображение UID/GID
 
@@ -214,6 +220,8 @@ kubectl exec -n demo deploy/web -- sh -c '
 kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.metadata.name}{" hostPID="}{.spec.hostPID}{" hostNetwork="}{.spec.hostNetwork}{" hostIPC="}{.spec.hostIPC}{"\n"}{end}'
 ```
 
+> 🧠 Namespace ограничивает видимость, cgroup — потребление; `limits` создают ресурсную границу, а `requests` помогают планированию.
+
 ## 03.3. cgroups: ресурсные пределы как защита от DoS
 
 Если namespace отвечает на вопрос «что процесс видит», cgroup отвечает на вопрос «сколько ресурса он может потребить». Container runtime помещает процессы контейнера в cgroup и kubelet применяет limits и requests из спецификации Pod.
@@ -253,6 +261,8 @@ spec:
         cpu: 500m
         memory: 256Mi
 ```
+
+> 🔬 `spec.resources` на уровне Pod — beta-возможность Kubernetes v1.34 для общего resource budget контейнеров.
 
 ### Pod-Level Resources: общая граница Pod
 
@@ -311,6 +321,8 @@ stat -fc %T /sys/fs/cgroup
 - **PID: limit задаёт администратор ноды.** В YAML обычного Pod нельзя указать «этому workload разрешено N процессов». Вместо этого администратор задаёт kubelet параметр `podPidsLimit` - максимальное число PID **для одного Pod** на этой ноде. Kubelet применяет его через PID cgroup. Поэтому проверка состоит из двух шагов: сначала найдите `podPidsLimit` в конфигурации kubelet, затем у уже запущенного Pod проверьте `pids.max` в его cgroup.
 - **При memory pressure: OOM в cgroup.** Ядро может завершить процесс контейнера в области соответствующей cgroup. Если завершается основной процесс, kubelet перезапускает контейнер в соответствии с `restartPolicy`.
 - **Проверяйте безопасно.** Не доказывайте работу memory limit намеренным OOM на production-ноде.
+
+> 🎯 Уберите `privileged`, host namespaces, избыточные capabilities и `allowPrivilegeEscalation: true`; задайте `capabilities.drop: [ALL]`, `RuntimeDefault` и нужный MAC-профиль.
 
 ## 03.4. Linux capabilities: root надо дробить
 
@@ -477,6 +489,8 @@ securityContext:
 
 Для SELinux параметры метки задают через `securityContext.seLinuxOptions` только в соответствии с policy образа ноды. При отказе сначала изучайте AVC denial, а не отключайте SELinux. Volumes и файлы на filesystem должны иметь подходящие SELinux labels; особенно внимательно проверяйте hostPath, persistent volumes и общие writable volumes.
 
+> 🧠 Контейнеры разделяют ядро с нодой; sandboxed runtime добавляет изоляцию для недоверенной или высокорисковой нагрузки.
+
 ## 03.7. Границы изоляции, sandboxed runtime и диагностика escape-рисков
 
 namespaces, cgroups, capabilities, seccomp и MAC работают в одном ядре. Если риск-профиль требует сильной границы между tenant-ами, используйте sandboxed runtime. gVisor перехватывает значительную часть syscalls в user space, а Kata Containers запускает workload в лёгкой VM. Это снижает вероятность прямого использования ядра ноды ценой совместимости, latency и операционной сложности.
@@ -495,6 +509,8 @@ flowchart TB
 ```
 
 Sandbox не отменяет остальные меры. Даже в gVisor или Kata workload не должен получать `privileged`, host namespaces, Docker socket или широкие RBAC-права. Сначала примените least privilege, затем выберите RuntimeClass по модели угроз. Установка `runsc`, `RuntimeClass` и планирование на совместимые nodes разобраны в главе 22.
+
+> 🔬 Forensic-style сопоставление декларативного Pod с PID, namespaces и cgroup на ноде.
 
 Практический чеклист расследования подозрительного Pod:
 
@@ -550,6 +566,8 @@ sudo cat "/proc/$PID/cgroup"
 - Оставлять Pod без `limits`, потому что приложение «обычно» мало потребляет. Одного дефекта или злонамеренного запроса достаточно для DoS.
 - Включать custom seccomp profile без тестов приложения и без доставки профиля на все целевые nodes.
 - Применять AppArmor profile, не убедившись, что профиль загружен на ноде, где scheduler запустил Pod.
+
+> 🏭 Шаблоны workload, admission policy, разделение node pool и наблюдение за отказами закрепляют безопасный baseline и исключения.
 
 ## 03.8. Как это применяют в продакшене
 

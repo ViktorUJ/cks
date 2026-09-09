@@ -15,6 +15,8 @@
 > а CRI, kubelet и containerd - в [главе 40 CKA](../../../cka/course/40/ru.md). Здесь
 > используем эти механизмы для изоляции недоверенного workload, а не повторяем их основы.
 
+> 🧠 Sandbox уменьшает kernel escape для недоверенной нагрузки, но не заменяет RBAC, PSA, `securityContext` и NetworkPolicy.
+
 ## 22.1. Почему обычного контейнера недостаточно для multi-tenancy
 
 Container изолирует PID, mount, network и другие namespaces, а cgroups ограничивают
@@ -61,6 +63,8 @@ RuntimeClass, выделяет совместимые nodes, задаёт admiss
 Разработчик указывает разрешённый `runtimeClassName`; ему не нужен доступ к containerd или
 SSH на worker node.
 
+> 🧠 gVisor добавляет userspace kernel, Kata — lightweight VM с guest kernel и более сильной изоляцией ценой ресурсов.
+
 ## 22.2. Два подхода: gVisor и Kata Containers
 
 **gVisor** запускает контейнер через `runsc`. Его userspace kernel (`Sentry`) перехватывает
@@ -88,6 +92,8 @@ hypervisor boundary. Container внутри VM видит guest kernel, а не 
 network tools, nested containers, device plugins, huge pages, GPU и host mounts могут быть
 несовместимы либо потребовать отдельного дизайна. Нельзя silently fallback с sandbox на
 `runc`: тогда заявленная граница исчезнет именно в момент, когда нужна.
+
+> 🎯 Pod выбирает `RuntimeClass`, а его CRI `handler` должен точно существовать в configuration целевой node.
 
 ## 22.3. Как Kubernetes выбирает runtime: `RuntimeClass` и handler
 
@@ -180,6 +186,8 @@ kubectl -n tenant-b run gvisor-not-allowed \
   --dry-run=server
 # Expected: runtimeClassName gvisor is allowed only in tenant-a
 ```
+
+> 🔬 `RuntimeClass.scheduling` объединяет constraints Pod и направляет sandbox workload на подготовленный pool.
 
 ## 22.4. Scheduling в RuntimeClass: `nodeSelector`, taints и tolerations
 
@@ -287,6 +295,8 @@ scheduling:
 Для Kata pool предварительно проверьте, что hardware virtualization доступна и разрешена
 гипервизору. Простая метка node не создаёт эту возможность.
 
+> 🔬 gVisor binary, shim и containerd handler требуют согласованных версий, PATH service и config на выделенном pool.
+
 ## 22.5. Установка gVisor и подключение `runsc` к containerd
 
 Ниже - runbook для выделенной Linux node с containerd. Версии `runsc`, shim, Kubernetes и
@@ -386,6 +396,8 @@ sudo crictl info | jq '.config.containerd.runtimes.runsc'
 handler не появился или service не active, остановитесь: RuntimeClass пока не создавайте и
 не переносите workload на эту node.
 
+> 🔬 Kata требует совместимых shim, hypervisor, guest components, host virtualization и проверки KVM/runtime.
+
 ## 22.6. Установка Kata Containers и containerd handler
 
 Kata требует не только `containerd-shim-kata-v2`, но и выбранный hypervisor, kernel/rootfs
@@ -444,6 +456,8 @@ sudo crictl info | jq '.config.containerd.runtimes.kata'
 не пример из статьи. Сверьте `crictl info`, config.toml и `RuntimeClass.spec.handler` до
 rollout.
 
+> 🏭 Canary representative Pod и negative test без fallback → application SLO → namespace policy; не обходите несовместимость через `privileged` или `runc`.
+
 ## 22.7. Rollout: от одного Pod к namespace policy
 
 Sandbox может изменить timing, filesystem semantics, network behavior и потребление
@@ -501,6 +515,8 @@ spec:
 что workload должен быть переработан или запущен в отдельном доверенном pool с явно
 документированным исключением.
 
+> 🔬 `RuntimeClass.overhead` измеряют для конкретных версий, node type и workload; ошибка переполняет pool или теряет capacity.
+
 ### Runtime overhead
 
 `RuntimeClass.overhead` сообщает scheduler дополнительный CPU/memory, потребляемый runtime
@@ -525,6 +541,8 @@ scheduling:
 
 Изменение overhead влияет на новые Pod и admission/scheduling, поэтому его проверяют в
 staging вместе с resource requests/limits и autoscaler behavior.
+
+> 🎯 `runtimeClassName` показывает intent; подтвердите Pod/node через CRI handler/shim и функциональность workload.
 
 ## 22.8. Проверка: sandbox действительно работает, а не просто указан в YAML
 
@@ -593,6 +611,8 @@ application smoke test.
 | `uname`/`dmesg` внутри | workload view отличается от host; полезный сигнал | полную корректность isolation boundary |
 | `uname` и logs на host | host-side context и runtime activity | содержимое guest/userspace kernel Pod |
 
+> 🎯 Диагностируйте class, node placement, handler и `FailedCreatePodSandBox`; не удаляйте `runtimeClassName`.
+
 ## 22.9. Типовые отказы и безопасная диагностика
 
 | Симптом | Вероятная причина | Проверка и действие |
@@ -608,6 +628,8 @@ application smoke test.
 Не «лечите» `FailedCreatePodSandBox` удалением `runtimeClassName`: это превращает
 security failure в незаметный downgrade. Оставьте workload остановленным, пока platform
 team не подтвердит другой допустимый RuntimeClass или отдельный risk acceptance.
+
+> 🏭 Выделенный pool, compatibility matrix, измеренный overhead, alerting и controlled upgrades для sandbox runtime.
 
 ## 22.10. Как это применяют в продакшене
 

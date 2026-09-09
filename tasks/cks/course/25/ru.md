@@ -13,6 +13,8 @@
 > контейнера: рассматриваем image как artifact поставки, составляем его инвентарь и
 > проверяем путь от исходного кода до Kubernetes.
 
+> 🧠 Chain of trust связывает source, зависимости, CI/CD, registry и admission: компрометация любого перехода может доставить в `Pod` чужой artifact.
+
 ## 25.1. Software supply chain и цепочка доверия
 
 **Software supply chain** - все люди, системы, исходники, зависимости и artifacts, через
@@ -67,6 +69,8 @@ flowchart TB
 известными CVE, signature/provenance связывают artifact с процессом сборки, а admission
 policy не допускает artifact, который не соответствует правилам. Эти механизмы дополняют
 друг друга.
+
+> 🧠 SBOM — это инвентарь состава конкретного artifact, а не scan report и не криптографическое доказательство его происхождения.
 
 ## 25.2. SBOM: инвентарь компонентов и форматы SPDX 2.3 JSON/CycloneDX
 
@@ -126,6 +130,8 @@ IMAGE='registry.example.com/payments/api:1.4.2@sha256:<64-hex-digest>'
 потребоваться registry credential для private image; передавать пароль в history shell или
 в commit нельзя.
 
+> 🔬 `syft` генерирует SBOM в нескольких форматах.
+
 ### `syft`: SPDX 2.3 JSON и CycloneDX из одного image
 
 [Syft](https://github.com/anchore/syft) каталогизирует packages в image, directory или
@@ -157,6 +163,8 @@ jq -e '.bomFormat == "CycloneDX" and (.components | type == "array")' \
 какого-либо поля, не обязательного для вашего generator version; однако JSON parser,
 формат и наличие списка компонентов должны быть проверены явно. Не выдавайте HTML-ошибку
 registry или пустой файл за SBOM только потому, что команда вернула файл.
+
+> 🎯 `kubernetes-sigs/bom` — Kubernetes-ориентированный путь: сгенерируйте SPDX JSON для заданного image, проверьте структуру и сохраните результат.
 
 ### `bom`: Kubernetes-ориентированный путь к SPDX 2.3 JSON
 
@@ -209,6 +217,8 @@ flowchart TB
     style store fill:#0f9d58,color:#fff
     style query fill:#f4b400,color:#000
 ```
+
+> 🎯 Для заданного image digest найдите exact package и его version в SBOM; поиск только по имени не доказывает применимость advisory.
 
 ## 25.4. Чтение SBOM: найти package и конкретную версию
 
@@ -280,6 +290,8 @@ kubectl get pod <pod> -n <namespace> \
 SBOM и scan, затем замените image через обычный controlled rollout. Удаление workload может
 прервать сервис и не устраняет уязвимый artifact в registry.
 
+> 🏭 Надёжная поставка связывает один immutable digest в registry, SBOM, provenance, scan report и manifest; CI публикует artifact, а CD продвигает его без повторной сборки.
+
 ## 25.5. CI/CD, artifact repositories, provenance и SLSA
 
 **CI** собирает, тестирует, сканирует и публикует artifact; **CD** продвигает уже
@@ -317,6 +329,8 @@ builder и входные материалы участвовали в сбор�
 перечисляет все libraries; оно связывает output с контролируемым build process. Для
 сильной цепочки release должен связывать одни и те же digest в manifest, SBOM, provenance
 и registry.
+
+> 🔬 Связь SBOM, provenance и подписи с digest в модели SLSA.
 
 [SLSA](https://slsa.dev/) (Supply-chain Levels for Software Artifacts) в версии 1.2
 разделяет требования на независимые tracks. Поэтому единой шкалы «начальный - высокий»
@@ -392,6 +406,8 @@ jq -e --arg digest "${RELEASE_DIGEST#sha256:}" \
 statement. Подпись artifact и криптографическую проверку `cosign verify` подробно
 рассматривает [глава 26](../26/ru.md); SBOM не заменяет эту проверку.
 
+> 🎯 Используйте SBOM, чтобы подтвердить affected package/version в конкретном digest, затем замените artifact и проверьте, что уязвимый компонент исчез.
+
 ## 25.6. SBOM в поиске уязвимых компонентов
 
 Когда появляется CVE или vendor advisory, SBOM сокращает инцидентный вопрос с «какие у нас
@@ -437,6 +453,8 @@ image и готовому SBOM. До этого полезно уметь вру
 неполный detector, static link, неверный image, устаревший SBOM или package под другим
 именем. Для critical incident дополняйте поиск lock file, source repository, base image
 release notes и runtime image ID.
+
+> 🎯 Практический результат — валидный SPDX JSON и воспроизводимый вывод package/version для image из задания, а не только успешно выполненная команда.
 
 ## 25.7. Проверка: SBOM через `bom` и поиск заданного package/version
 
@@ -487,6 +505,8 @@ jq -e '.spdxVersion and (.packages | type == "array")' syft.spdx.json >/dev/null
 Критерий готовности проверки: есть непустой валидный SPDX 2.3 JSON, в нём зафиксирован
 package/version для конкретного image digest, а команды и файлы можно передать другому
 инженеру для повторения результата.
+
+> 🏭 Автоматизируйте выпуск и хранение SBOM, provenance и scan evidence для каждого release digest; вручную созданный отчёт после инцидента не заменяет этот процесс.
 
 ## 25.8. Как это применяют в продакшене
 

@@ -17,6 +17,8 @@
 > клиентом и API server (для этого TLS), не отменяет RBAC и не спасает от пользователя, который уже
 > может выполнить `get secret` или `exec` в Pod с секретом.
 
+> 🧠 Доступ к etcd или snapshot обходит API authentication, authorization и audit; base64 не защищает `Secret.data`, encryption at rest защищает storage без ключей.
+
 ## 21.1. Модель угроз: почему etcd - особенно ценная цель
 
 API server - обычный путь к состоянию Kubernetes, а etcd - его постоянное хранилище. В etcd находятся
@@ -55,6 +57,8 @@ flowchart TB
 | RBAC | ограничивает API-доступ к Secret | не защищает украденный snapshot |
 | Encryption at rest | ciphertext выбранных API-данных в etcd и его snapshot | не шифрует диски, snapshot или backup целиком и не скрывает Secret от разрешённого API-клиента |
 | внешний secrets manager | отделяет master keys и lifecycle от кластера | не заменяет RBAC, TLS и безопасный Pod |
+
+> 🧠 Первый подходящий provider шифрует новые записи, API server читает providers по порядку.
 
 ## 21.2. Как работает шифрование API-данных
 
@@ -109,6 +113,8 @@ resources:
 > способен сделать часть объектов нечитаемыми и нарушить работу control plane. Конфигурация и ключи
 > нуждаются в резервировании, контроле доступа и заранее отрепетированной ротации.
 
+> 🎯 `identity` в конце читает старый plaintext, а первым оставляет новые записи незашифрованными.
+
 ## 21.3. Провайдеры: `aescbc`, `aesgcm`, `secretbox`, `kms` и `identity`
 
 Kubernetes поддерживает несколько providers. Для production не выбирайте `identity` как единственную
@@ -121,6 +127,8 @@ Kubernetes поддерживает несколько providers. Для product
 | `aesgcm` | AES-GCM, AEAD | только с автоматизированной ротацией | не рекомендуется без ротации; лимит 200 000 записей на ключ |
 | `secretbox` | XSalsa20 + Poly1305, AEAD | сильный и быстрый локальный provider | 32-байтный ключ хранится на control plane |
 | `kms` | envelope encryption через KMS plugin | production с внешним key manager/HSM/облачным KMS | доступность plugin/KMS становится зависимостью API server |
+
+> 🔬 AEAD, CBC, лимиты записей и размещение ключей определяют выбор provider.
 
 `aescbc` использует ключ AES, закодированный base64; в примере это 32-байтный ключ (AES-256).
 Kubernetes принимает ключи длиной 16, 24 или 32 байта. У `aescbc` нет встроенной
@@ -186,6 +194,8 @@ sudo ls -l /etc/kubernetes/enc/encryption-config.yaml
 control-plane filesystem. Это полезный baseline, однако ключ лежит на той же доверенной машине. Для
 разделения обязанностей и устойчивого lifecycle ключей используют `kms`.
 
+> 🎯 Kube-apiserver получает `--encryption-provider-config` с path, доступным через mount; проверьте readiness и чтение Secret через API.
+
 ## 21.4. Подключение `EncryptionConfiguration` к kube-apiserver
 
 Файл сам по себе ничего не меняет. API server должен получить flag
@@ -239,6 +249,8 @@ kubectl -n kube-system get pods -l component=kube-apiserver
 > консоль control-plane node, держите резервную копию manifest и не удаляйте предыдущую конфигурацию,
 > пока не завершена проверка. Для managed Kubernetes не редактируют static Pod: включают encryption
 > штатным механизмом провайдера и следуют его процедуре KMS/cluster update.
+
+> 🏭 KMS выносит KEK, но plugin и key manager требуют HA, минимальных permissions и проверяемого restore.
 
 ## 21.5. KMS и envelope encryption
 
@@ -323,6 +335,8 @@ KMS улучшает разделение секретов, но добавля�
 Operator, но тщательно проверяют их RBAC и синхронизацию: operator, создающий Kubernetes Secret,
 снова помещает копию в etcd.
 
+> 🎯 Новый key/provider первым при сохранённом старом → перепись объектов → проверка чтения/storage → удаление старого key.
+
 ## 21.6. Ротация provider и re-encryption существующих данных
 
 Изменить конфигурацию недостаточно. Новый provider применяется только к **новым или обновлённым**
@@ -390,6 +404,8 @@ kubectl get secrets --all-namespaces -o json | kubectl replace -f -
 # kubectl get configmaps --all-namespaces -o json | kubectl replace -f -
 ```
 
+> 🔬 Storage Version Migration массово переписывает storage и требует отдельного feature/operational rollout.
+
 ### Production extension: Storage Version Migration
 
 Для массовой перезаписи в production есть Kubernetes-native альтернатива: **Storage Version
@@ -427,6 +443,8 @@ providers:
 как явный временный выбор для совместимости; не считайте наличие `identity` доказательством, что все
 данные защищены.
 
+> 🏭 Ротация KEK и смена provider различны; сохраняйте decrypt старых данных до проверки restore.
+
 ### Ротация KMS
 
 У KMS есть два слоя. Ротация KEK обычно выполняется внутри внешнего manager по его процедуре и часто
@@ -448,6 +466,8 @@ sequenceDiagram
     A->>API: проверка чтения и snapshot
     A->>API: удалить старый provider только после проверки
 ```
+
+> 🎯 Докажите config API server, авторизованное чтение Secret и отсутствие plaintext marker в raw etcd value.
 
 ## 21.7. Проверка: API, конфигурация и etcd
 
@@ -512,6 +532,8 @@ kubectl -n default delete secret encryption-check
 | etcd lab-проверка | уникальный plaintext marker не найден в raw stored value |
 | после ротации | Secret, созданный до ротации, читается и переписан новым provider |
 | backup/restore | snapshot доступен безопасно, а нужные ключи/KMS доступны при восстановлении |
+
+> 🏭 Encryption at rest не заменяет RBAC, TLS, Secret hygiene и backup; отдельно владейте keys, KMS availability и restore.
 
 ## 21.8. Как это применяют в продакшене
 

@@ -13,6 +13,8 @@
 > образ как поставляемый artifact: инвентаризируем, сканируем, исправляем и проверяем
 > результат.
 
+> 🧠 Scanner сопоставляет известные CVE с найденными component/version, но не доказывает эксплуатацию, отсутствие неизвестных уязвимостей или безопасность workload без контекста.
+
 ## 28.1. CVE в образах: что именно показывает сканер
 
 **CVE** - публичный идентификатор известной уязвимости. В контейнерном образе она обычно
@@ -61,6 +63,8 @@ exploitation или присутствие в KEV должно резко пов
 компенсирующими контролями. Ни KEV, ни EPSS не являются экзаменационным gate и не заменяют
 анализ достижимости или экспозиции конкретного workload.
 
+> 🔬 Severity зависит от источника vulnerability intelligence: для OS package vendor advisory и backport исправления могут быть точнее общей оценки NVD.
+
 ### Почему Trivy severity может отличаться от NVD
 
 Для OS-пакетов Trivy предпочитает advisory поставщика дистрибутива: дистрибутив может
@@ -77,6 +81,8 @@ finding не доказывает отсутствия уязвимости.
 images. Результат должен быть привязан к digest или runtime-resolved identifier, идентификатору
 или версии vulnerability database и времени scan, иначе нельзя доказать, что проверяли
 именно доставленные байты и с актуальными данными.
+
+> 🎯 Умейте запустить `trivy image`, отфильтровать severity и использовать `--exit-code 1`, когда finding должен остановить pipeline.
 
 ## 28.2. `trivy image`: CVE, severity, флаги CI и инвентаризация кластера
 
@@ -175,6 +181,8 @@ kubectl get pod -n "$namespace" "$POD" -o jsonpath='{.metadata.ownerReferences[0
 Решение «заменить тег» без повторного scan canonical reference и сверки нового runtime
 identifier не является remediation.
 
+> 🎯 Свяжите SBOM с тем же digest и просканируйте сохранённый состав: CVE исправляется rebuild-ом artifact, а не редактированием SBOM.
+
 ## 28.3. Trivy и SBOM: CycloneDX, SPDX и scan уже сохранённого состава
 
 SBOM из [главы 25](../25/ru.md) описывает компоненты artifact. CycloneDX, SPDX и
@@ -224,6 +232,8 @@ reviewable status (`affected`, `not_affected`, `fixed` или `under_investigati
 и provenance утверждения, владельца и дату повторного review или expiry. После expiry
 исключение снова рассматривают; VEX без доказательства и срока - не основание скрыть CVE.
 
+> 🔬 `trivy fs` и `trivy config` дают shift-left feedback по repository и IaC, но не заменяют scan финального image.
+
 ## 28.4. `trivy fs` и `trivy config`: до сборки и помимо образа
 
 `trivy image` видит то, что уже попало в image. Более дешёвый feedback получают ещё в
@@ -256,6 +266,8 @@ trivy config --severity HIGH,CRITICAL Dockerfile
 | Сканировать только image | Небезопасный manifest попадёт в cluster | Добавить `trivy config` и линтеры главы 27 |
 | Передавать `--ignore-unfixed` без учёта | Backlog известных рисков становится невидимым | Отдельный отчёт и SLA на no-fix CVE |
 | Печатать secret findings в общий CI log | Секрет может стать доступен читателям log | Маскировать output, отзывать раскрытый secret |
+
+> 🔬 Grype и Clair — альтернативные scanners; выбор инструмента не меняет требования сканировать digest, хранить evidence и повторно проверять remediation.
 
 ## 28.5. Grype, Clair и сканирование при допуске
 
@@ -292,6 +304,8 @@ attestation или результат, policy на admission разрешает 
 успешным evidence, а периодический scanner продолжает искать новые CVE в уже deployed
 images. Allowlist registry и verification signatures рассмотрены в
 [главе 26](../26/ru.md); они дополняют, но не заменяют vulnerability scan.
+
+> 🏭 Располагайте gates по пути delivery: source checks до build, scan/SBOM/signature по digest до promotion, admission для evidence и scheduled rescan после deploy.
 
 ## 28.6. CI/CD и cluster: где ставить gates
 
@@ -366,10 +380,14 @@ scan и identifier или версию базы из лога вместе с `t
 не фиксирует artifact и может подтянуть другой digest под mutable tag. Deploy должен
 ссылаться на проверенный digest.
 
+> 🎯 Remediation доказано только после нового build по digest, повторного scan без целевой CVE, успешного rollout и сверки runtime image ID.
+
 ## 28.7. Инвентаризация, remediation и проверка исправления
 
 Ниже практический цикл для incident или регулярного отчёта. Его цель - не только найти
 CVE, но и убедиться, что уязвимый artifact больше не работает в cluster.
+
+> 🏭 Автоматизируйте inventory и scheduled rescan deployed images: новая CVE может появиться для неизменившегося digest уже после release.
 
 1. **Инвентаризируйте.** Выгрузите runtime `imageID` из всех Pod status, сопоставьте с
    canonical digest, сгруппируйте по namespace и owner. Не забудьте init, ephemeral
@@ -420,6 +438,8 @@ workload имеют ожидаемый runtime `imageID`, сопоставлен
 прикладной smoke-test, например
 `curl` health endpoint из test job. Иначе можно закрыть CVE ценой сломанного TLS, migration
 или несовместимой ABI.
+
+> 🏭 Измеримая vulnerability-management программа связывает digest, scan evidence, SLA remediation, VEX/исключения с expiry и continuous detection в кластере.
 
 ## 28.8. Как это применяют в продакшене
 

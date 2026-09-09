@@ -16,6 +16,8 @@
 > etcd snapshot/restore, а не про audit, но использует те же SSH-доступ, static Pod и
 > проверку здоровья API.
 
+> 🧠 Kubernetes audit фиксирует API-запрос, а не shell-команду или непрерывное состояние control plane. Для расследования различайте `stage` (когда записан event) и `level` (сколько данных записано): `Metadata` обычно даёт нужные identity/action/outcome без body и риска утечки Secret.
+
 ## 32.1. Зачем нужен audit: ответить «кто, что, когда и с каким результатом»
 
 **Audit event** - запись `kube-apiserver` о запросе к Kubernetes API. Каждый запрос от
@@ -147,6 +149,8 @@ long-running запросы имеют стадию `ResponseStarted`, а выс
 3. Включать `Request` лишь на ограниченный namespace/resource/verb и с обоснованием.
 4. Завершать policy catch-all правилом `Metadata`, чтобы не потерять неизвестный API вызов.
 
+> 🎯 Policy читается сверху вниз и применяет первое совпавшее rule: поставьте health exclusions и `Metadata` для Secret перед широким `Request`/catch-all. Проверьте YAML, matching namespace/resource/verb и безопасный запрос; валидный файл без event нужного level не доказывает корректную policy.
+
 ## 32.4. Audit Policy: порядок, matching и безопасная policy file
 
 Файл policy имеет API `audit.k8s.io/v1`, kind `Policy`. Его `rules` проверяются **сверху
@@ -249,6 +253,8 @@ sudo sed -n '1,220p' /etc/kubernetes/audit/audit-policy.yaml
 | Нет catch-all | часть неизвестных действий вообще не видна | завершить policy явным `Metadata` |
 | Исключить `/api*` ради шума | отключить audit фактически всего Kubernetes API | исключать только конкретные health/non-resource endpoints |
 | Trust policy без теста | YAML может быть валидным, но нужное правило не совпадает | инициировать известный запрос и проверить `level`, `verb`, `objectRef` |
+
+> 🎯 В kubeadm сначала сохраните manifest, подготовьте policy и host directories, затем добавьте единственные audit flags и согласованные read-only policy/writable log mounts в static Pod. После restart докажите `/readyz`, active configuration и JSON event от контролируемого API-запроса; rollback храните вне каталога manifests.
 
 ## 32.5. Подключение policy к kube-apiserver static Pod
 
@@ -365,6 +371,8 @@ CONTAINER_ID="${CONTAINER_ID:?set container ID}"
 sudo crictl logs "$CONTAINER_ID"
 ```
 
+> 🏭 В HA обновляйте control-plane instances rolling-образом: canary, `/readyz`, test event через этот instance, затем следующий узел. Единые policy, flags и mounts на всех API server исключают неравномерное audit coverage; перед массовым rollout измерьте API rate, backend latency и failure mode.
+
 ### HA: завершить rollout на всех API server
 
 После canary-проверки одного control-plane узла в HA-кластере применяйте идентичные policy,
@@ -378,6 +386,8 @@ flags и mounts **rolling-образом** ко всем остальным `kub
 level, размер request/response, file I/O и webhook queue могут увеличить latency/memory либо
 сбросить batch events при overflow. Измеряйте audit metrics, backend latency и loss/retry
 сценарии, а не переносите tuning numbers из другого кластера.
+
+> 🏭 Rotation flags ограничивают лишь локальный буфер. Для evidence нужны защищённые central delivery, retention, доступ и alerting на остановку потока.
 
 ## 32.6. Локальная ротация, retention и доставка за пределы ноды
 
@@ -428,6 +438,8 @@ backend. Если `batch` всё же включён после нагрузоч
 ошибке audit на стадии `RequestReceived` kube-apiserver отклоняет сам запрос. Это усиливает
 fail-closed evidence, но превращает сбой audit backend в отказ API для клиентов; выбирайте его
 только с проверенными capacity, HA и recovery, а не как универсальный «безопасный» режим.
+
+> 🏭 Централизованный сбор audit events, webhook backends, SIEM и эксплуатационный pipeline: TLS, очередь, capacity и trade-off между loss risk и API availability.
 
 ## 32.7. Webhook backend: отправить audit в центральный collector
 
@@ -515,6 +527,8 @@ webhook kubeconfig и CA лежат там. Если client key находитс
 Webhook не меняет policy: одна policy выбирает level/stage, а log и webhook backends
 получают события, которые policy разрешила записать. Подключение endpoint без корректной
 policy не создаёт полезного расследовательского следа.
+
+> 🎯 Проверяйте не только flags: сделайте безопасный API request, найдите JSON Lines через `jq` по `ResponseComplete`, identity, `objectRef` и status, затем докажите отсутствие Secret body при `Metadata`. Для CKS triage ищите high-signal RBAC, `pods/exec` и `ephemeralcontainers`; у streaming `exec` учитывайте `get`/`create`, `ResponseStarted` и WebSocket `101`.
 
 ## 32.8. Проверка: сгенерировать запрос и найти evidence
 
@@ -684,6 +698,8 @@ sudo jq -r '
    сверить `auditID`, status, annotations и только потом сетевой контекст.
 6. **18-20 мин:** проверить rotation, актуальность `apiserver_audit_event_total` /
    `apiserver_audit_error_total` и записать rollback path.
+
+> 🏭 Audit policy в продакшене — часть устойчивого процесса: версионирование, review, central delivery, retention и владелец каждого исключения.
 
 ## 32.9. Как это применяют в продакшене
 

@@ -19,6 +19,8 @@
 > Здесь рассматриваем безопасное применение этих механизмов на публичном входе, а не
 > повторяем их основы.
 
+> 🧠 TLS защищает только путь клиента до TLS termination; controller → Service → Pod — отдельная граница.
+
 ## 08.1. Модель угроз: почему HTTP на Ingress недостаточен
 
 Ingress controller обычно принимает трафик из внешней сети и направляет его к Service,
@@ -56,6 +58,8 @@ flowchart TB
 Это один слой defense in depth. Также нельзя путать TLS certificate с Kubernetes Secret:
 Secret хранит ключ и сертификат, но сам по себе не включает TLS, пока на него не сошлётся
 Ingress.
+
+> 🎯 Уметь выпустить тестовый certificate для заданного host с SAN, сверить certificate/key и использовать `--cacert` вместо `-k` — практический минимум для TLS-задачи.
 
 ## 08.2. Сертификат и ключ: тестовый self-signed и production-подход
 
@@ -107,12 +111,16 @@ controller должен прочитать ключ без интерактив�
 строгом RBAC для Secret, ограничении доступа к etcd и encryption at rest - не на passphrase
 в файле ключа.
 
+> 🏭 Доверенный CA, автоматическое продление, владелец, alert до истечения и проверенная ротация Secret.
+
 В production не создавайте долгоживущие self-signed certificate вручную. Обычно
 `cert-manager` получает сертификат у доверенного CA, например Let's Encrypt, кладёт его в
 Secret и обновляет до истечения срока. Команда платформы должна также определить владельца
 сертификата, оповещение об истечении и процедуру ротации. Если TLS завершается перед
 кластером на cloud load balancer, проверьте, что соединение до NGINX также соответствует
 требованиям организации: TLS может понадобиться и на этом участке.
+
+> 🎯 Создайте `kubernetes.io/tls` Secret с ключами `tls.crt` и `tls.key`, затем проверьте namespace и имя: Ingress может сослаться только на Secret из своего namespace.
 
 ## 08.3. TLS Secret: формат и область видимости
 
@@ -127,8 +135,7 @@ Secret и обновляет до истечения срока. Команда 
 наличие требуемых ключей для Secret этого типа, а TLS credentials технически могут
 храниться и в `Opaque` Secret, хотя такой Secret не получает эту проверку и не сообщает
 назначение объекта другим инженерам.
-Наиболее надёжный способ создать его из уже проверенных файлов - `kubectl create secret
-tls`: команда сама положит сертификат в ключ `tls.crt`, а закрытый ключ в `tls.key`.
+Наиболее надёжный способ создать его из уже проверенных файлов - `kubectl create secret tls`: команда сама положит сертификат в ключ `tls.crt`, а закрытый ключ в `tls.key`.
 
 ```bash
 kubectl -n web create secret tls app-example-tls \
@@ -165,6 +172,8 @@ Secret namespaced. Ingress в namespace `web` не может сослаться
 другого namespace. Не давайте приложению право `get`/`list` всех Secret только ради TLS:
 обычно certificate обслуживает controller, а доступ к созданию и чтению таких Secret
 ограничен отдельной ролью. Base64 в `data` - это кодирование, а не encryption.
+
+> 🎯 Свяжите один host в `spec.tls.hosts` и `spec.rules.host`, укажите `secretName`, Service и `ingressClassName`.
 
 ## 08.4. Ingress: связать host, TLS Secret и backend
 
@@ -236,6 +245,8 @@ entrypoint выбранного controller, а не только по налич
 
 > **NGINX Ingress Controller retired.** С марта 2026 проект `ingress-nginx` retired и больше не получает релизов и security-фиксов ([анонс](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)). CKS требует корректно настроенный Ingress с TLS, но публичная компетенция не гарантирует конкретный controller или nginx-specific annotations. На экзамене сначала проверяйте controller, данный лабораторией; синтаксис `ingressClassName: nginx` и его аннотации — лишь возможный fixture. Для production не разворачивайте retired-controller на новых кластерах: выбирайте поддерживаемую реализацию или Gateway API. Переносимая часть — TLS Secret, `spec.tls`, host/SNI, SAN, Service endpoints и проверка HTTPS — не зависит от controller.
 
+> 🎯 Для ingress-nginx `spec.tls` обычно включает redirect; `ssl-redirect` и `force-ssl-redirect` зависят от реализации и topology.
+
 Даже корректный TLS Ingress оставляет риск, если HTTP остаётся доступным: пользователь может
 перейти по старой ссылке, а cookie или форма уйдут до первого HTTPS-ответа. Для
 **ingress-nginx** наличие блока `spec.tls` по умолчанию включает redirect HTTP -> HTTPS
@@ -285,6 +296,8 @@ spec:
 должен повторять одинаковую настройку, а случайно добавленный Service может остаться
 доступным по HTTP. HSTS дополняет redirect после первого успешного HTTPS-подключения, но не
 заменяет TLS и требует отдельной осторожной политики для доменов и поддоменов.
+
+> 🏭 Поддерживаемый Gateway API controller и его status/compatibility; возможности `GatewayClass` определяет конкретная реализация.
 
 ### Gateway API: текущий production-путь
 
@@ -343,6 +356,8 @@ spec:
 Если Gateway также открывает порт 80, добавьте отдельный HTTP listener и `HTTPRoute` с
 стандартным фильтром `RequestRedirect` на `https`; не смешивайте его с HTTPS-route к backend.
 
+> 🔬 TLS passthrough завершает TLS и mTLS на backend; проверьте поддержку `TLSRoute`, SNI-маршрутизации и passthrough у controller.
+
 ### TLS passthrough: `TLSRoute`
 
 Для backend, который сам завершает TLS (например, ему нужен собственный certificate или
@@ -395,6 +410,8 @@ namespace Secret**; без него controller не должен принять 
 Проверьте поддерживаемые `GatewayClass` через `kubectl get gatewayclass` и статус Gateway
 перед миграцией трафика.
 
+> 🧠 mTLS аутентифицирует клиента на edge в TLS handshake, но не заменяет authorization приложения или mTLS между Pod.
+
 ## 08.6. mTLS на входе: controller проверяет сертификат клиента
 
 Всё выше в главе - **server-side TLS**: controller доказывает клиенту свою identity
@@ -425,6 +442,8 @@ flowchart TB
 API `AllowValidOnly` валидирует сертификат во время TLS handshake, поэтому реализация
 может отклонить само TLS-соединение без HTTP-ответа - controller-neutral модели «всегда
 400/403» здесь не существует.
+
+> 🔬 `auth-tls-*` — API retired ingress-nginx; переносимая модель — валидный client certificate на edge.
 
 ### ingress-nginx: аннотации `auth-tls-*`
 
@@ -476,6 +495,8 @@ spec:
   `ssl-client-subject-dn` и `ssl-client-issuer-dn`; полный PEM-сертификат в
   `ssl-client-cert` передаётся только при `auth-tls-pass-certificate-to-upstream: "true"`.
 - Client Certificate Authentication применяется на весь host, а не на отдельный path.
+
+> 🔬 Frontend validation Gateway API требует поддержки версии API и controller; проверьте поле, CA references и handshake.
 
 ### Gateway API: frontend client-certificate validation на уровне Gateway
 
@@ -583,6 +604,8 @@ implementation.
 проверка сертификата на границе кластера подтверждает identity TLS-клиента, а не
 авторизует конкретное действие внутри приложения.
 
+> 🎯 `curl --resolve` с `--cacert` проверяет HTTPS, а `openssl s_client -servername` — certificate, отданный controller.
+
 ## 08.7. Проверка: controller-neutral HTTPS, host и сертификат
 
 Сначала определите реальную публичную точку входа: адрес Service выбранного Ingress/Gateway
@@ -649,14 +672,16 @@ CA bundle через `--cacert <ca-bundle.pem>`, а не отключайте ve
 срок действия, SAN, цепочку CA, `secretName`, namespace и то, что controller действительно
 перечитал обновлённый Secret.
 
-| Симптом | Что проверить | Вероятная причина |
-|---|---|---|
-| HTTP возвращает backend `200` | Аннотации и фактический controller | Нет `ssl-redirect`, controller не NGINX или его конфигурация переопределяет redirect |
-| HTTPS показывает default certificate | `spec.tls.hosts`, SAN и SNI | Host не совпадает, Secret не найден или запрос без `--resolve`/SNI |
-| `curl` получает `404` от NGINX | Host, `rules.host`, `ingressClassName` | Запрос попал в controller, но правило не выбрано |
-| HTTPS возвращает `503` | Service, endpoints и readiness Pod | TLS работает, но backend недоступен |
-| Secret есть, но TLS не включился | `tls.crt`, `tls.key`, namespace и требования конкретного controller | отсутствуют или некорректны `tls.crt`/`tls.key`, certificate не соответствует private key, Secret находится в другом namespace либо controller не принимает используемый формат Secret |
-| Браузер не доверяет сертификату | Issuer, цепочка и срок действия | Self-signed certificate или неполная цепочка CA |
+| Симптом                                              | Что проверить                                                                     | Вероятная причина                                                                                                                                                                                                                                                  |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP возвращает backend`200`                    | Аннотации и фактический controller                                       | Нет`ssl-redirect`, controller не NGINX или его конфигурация переопределяет redirect                                                                                                                                                         |
+| HTTPS показывает default certificate              | `spec.tls.hosts`, SAN и SNI                                                                | Host не совпадает, Secret не найден или запрос без`--resolve`/SNI                                                                                                                                                                                 |
+| `curl` получает `404` от NGINX                | Host,`rules.host`, `ingressClassName`                                                     | Запрос попал в controller, но правило не выбрано                                                                                                                                                                                                     |
+| HTTPS возвращает`503`                           | Service, endpoints и readiness Pod                                                           | TLS работает, но backend недоступен                                                                                                                                                                                                                            |
+| Secret есть, но TLS не включился           | `tls.crt`, `tls.key`, namespace и требования конкретного controller | отсутствуют или некорректны`tls.crt`/`tls.key`, certificate не соответствует private key, Secret находится в другом namespace либо controller не принимает используемый формат Secret |
+| Браузер не доверяет сертификату | Issuer, цепочка и срок действия                                           | Self-signed certificate или неполная цепочка CA                                                                                                                                                                                                                  |
+
+> 🏭 Выпуск и ротация certificate, минимальный доступ к private key, поддерживаемый controller и synthetic-проверки после изменений.
 
 ## 08.8. Как это применяют в продакшене
 
@@ -747,54 +772,63 @@ endpoint без ожидаемой защиты.
 <summary>1. Где заканчивается защита TLS при TLS termination на Ingress и почему это не гарантирует шифрование между controller и Pod?</summary>
 
 TLS защищает канал от клиента до ingress controller, где выполняются handshake и расшифровка запроса. Дальнейший путь controller → Service → Pod может быть HTTP или TLS, поэтому для чувствительного внутрикластерного трафика требуются TLS приложения, service mesh или Cilium transparent encryption.
+
 </details>
 
 <details>
 <summary>2. Почему одного CN недостаточно и какое поле certificate должен содержать DNS host?</summary>
 
 Современные клиенты проверяют имя из URL по Subject Alternative Name, а не только по устаревшему Common Name. При выпуске self-signed certificate нужный DNS host добавляют в `subjectAltName`, например `DNS:${HOST}`, и проверяют его через `openssl x509 -ext subjectAltName`.
+
 </details>
 
 <details>
 <summary>3. Какой тип и какие ключи должен иметь TLS Secret для Ingress?</summary>
 
 Стандартный вариант - Secret типа `kubernetes.io/tls` с certificate в `tls.crt` и private key в `tls.key`. Надёжнее создать его через `kubectl create secret tls ... --cert=tls.crt --key=tls.key`. Для переносимой конфигурации ключевыми являются корректные `tls.crt`, `tls.key` и поддержка выбранного Ingress controller.
+
 </details>
 
 <details>
 <summary>4. Почему Ingress и его TLS Secret должны находиться в одном namespace?</summary>
 
 Secret — namespaced объект, и Ingress из `web` не может сослаться на Secret из `default` или другого namespace. Поэтому `secretName` в `spec.tls` должен ссылаться на Secret, созданный в том же namespace, что и Ingress.
+
 </details>
 
 <details>
 <summary>5. Почему ingress-nginx с `spec.tls` по умолчанию делает redirect и когда нужна controller-specific аннотация `force-ssl-redirect`?</summary>
 
 Для ingress-nginx блок `spec.tls` по умолчанию включает HTTP → HTTPS redirect, обычно 308, если настройка controller не переопределена. `force-ssl-redirect` оставляют для топологии с external TLS offload, когда TLS завершается до controller, тот получает HTTP и у Ingress нет `spec.tls`; proxy обязан корректно передавать исходную HTTPS-схему, иначе возможен loop.
+
 </details>
 
 <details>
 <summary>6. Какие два результата ожидаются от `curl` для HTTP и HTTPS после настройки redirect?</summary>
 
 HTTPS-вызов с правильными SNI и Host, например через `curl --resolve`, должен успешно получить backend, в примере — HTTP 200. Для лабораторного self-signed certificate передайте его как доверенный certificate через `--cacert tls.crt`; `-k` используйте только как отдельный diagnostic bypass, его успех подтверждает соединение, но не доказывает корректность certificate, SAN или цепочки. Только для fixture с ingress-nginx и `spec.tls` отдельный HTTP-запрос ожидаемо возвращает redirect, обычно 308, с `Location`; статус не является переносимой семантикой Ingress API.
+
 </details>
 
 <details>
 <summary>7. Как до создания Secret подтвердить совпадение public key certificate/key и цепочку leaf -> intermediate -> root?</summary>
 
 Хеш публичного ключа certificate получают через `openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | sha256sum` и сравнивают с хешем `openssl pkey -in tls.key -pubout -outform DER | sha256sum`. Цепочку проверяют `openssl verify -show_chain -CAfile root-ca.crt -untrusted intermediate-ca.crt leaf.crt`: leaf должен быть проверен через intermediate до trusted root.
+
 </details>
 
 <details>
 <summary>8. Почему `curl -k` нельзя использовать как доказательство корректной TLS-конфигурации даже с self-signed certificate?</summary>
 
 `-k` отключает проверку certificate и поэтому подходит только для диагностики. Если self-signed certificate лаборатории доступен локально, лучше использовать `--cacert tls.crt`: тогда curl доверяет именно этому certificate, но продолжает проверять TLS и имя host. В production `-k` скрывает ошибки доверия, SAN, цепочки и возможной подмены; проблему нужно исправлять, а не обходить.
+
 </details>
 
 <details>
 <summary>9. Почему `GatewayClass` нельзя считать переносимым именем и как HTTPS listener связывает Gateway с certificate через `certificateRefs`?</summary>
 
 `GatewayClass` предоставляет выбранный Gateway controller, поэтому имя вроде `platform-gateway` implementation-specific, а не стандарт Kubernetes. HTTPS listener задаёт `tls.mode: Terminate` и `certificateRefs` на TLS Secret; в примере Secret находится в том же namespace, а cross-namespace ссылка потребовала бы `ReferenceGrant` в namespace Secret.
+
 </details>
 
 ## Практика
@@ -807,4 +841,5 @@ HTTPS-вызов с правильными SNI и Host, например чер�
 🎮 Killercoda (в браузере, без установки): [Ingress Controller](https://killercoda.com/kubernetes-basics/course/kubernetes-fundamentals/ingress-controller) · [Create TLS Certificate](https://killercoda.com/kubernetes-basics/course/kubernetes-fundamentals/create-tls-certificate)
 
 ---
+
 [Оглавление](../README_RU.md) · [Глава 07](../07/ru.md) · [Глава 09](../09/ru.md)

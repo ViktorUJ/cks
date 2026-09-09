@@ -14,6 +14,8 @@
 > Role, RoleBinding и проверка прав - в [главе 38 CKA](../../../cka/course/38/ru.md).
 > Здесь не повторяем базовый синтаксис, а применяем его для least privilege.
 
+> 🧠 Token в скомпрометированном Pod — bearer credential ServiceAccount: его ущерб определяется не самим файлом, а всеми текущими и будущими RBAC-правами этой identity.
+
 ## 11.1. Сценарий атаки: token `default`-ServiceAccount в Pod
 
 Каждый namespace содержит ServiceAccount `default`. Если у Pod не указан
@@ -47,6 +49,8 @@ flowchart TB
 не монтировать token Pod, которому API не нужен; выделять отдельный SA для Pod, которому
 API нужен; давать этому SA только необходимые RBAC-действия. NetworkPolicy из главы 04 и
 ограничение доступа к API из главы 12 дополняют, но не заменяют эти меры.
+
+> 🎯 Без API выключите automount; с API используйте выделенный SA, short-lived bound token и минимальный Role/RoleBinding, затем проверьте token и API-права.
 
 ## 11.2. `automountServiceAccountToken`: выключать по умолчанию
 
@@ -114,6 +118,8 @@ spec:
 `app-sa`; просто credential не выдан в его filesystem. Также не рассчитывайте, что
 `automount: false` остановит приложение, которому token передали иным способом - через
 Secret, projected volume или переменную окружения. Такие источники нужно исключать отдельно.
+
+> 🧠 Claims JWT, audience, ротация и проверка bound object задают границы token credential.
 
 ## 11.3. Bound ServiceAccount token и projected volume
 
@@ -304,6 +310,8 @@ kubectl auth can-i --list -n cks-104 \
   --as=system:serviceaccount:cks-104:app-sa
 ```
 
+> 🧠 Создание или изменение workload позволяет выбрать чужой ServiceAccount и запустить код с его token.
+
 ## 11.4.1. RBAC: права на workload могут стать эскалацией ServiceAccount
 
 Право создавать или изменять workload — не только право на запуск приложения. Если субъект
@@ -367,6 +375,8 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
 | API отвечает `403` | `kubectl auth can-i --list` | Token валиден, но Role намеренно не содержит нужный verb/resource |
 | API отвечает `401` | `audience`, `expirationSeconds`, CA, время | Token истёк, audience не принимается apiserver или credential повреждён |
 | В Git появился token Secret | история Git и CI-логи | Создан legacy Secret или credential выведен командой; отзовите/перевыпустите и удалите из логов |
+
+> 🏭 Отдельный SA для workload, регулярный RBAC review и runbook отзыва и расследования утечек credential.
 
 ## 11.6. Как это применяют в продакшене
 
