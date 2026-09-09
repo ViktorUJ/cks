@@ -2,7 +2,9 @@
 
 # Глава 04. NetworkPolicy для безопасности
 
-> **Что дальше.** В предыдущих главах мы разобрали модель угроз и механизмы изоляции Linux. Теперь ограничим один из главных путей lateral movement: сеть между Pod. **NetworkPolicy** превращает плоскую pod-сеть в набор явно разрешённых связей. Это домен Cluster Setup (15%) CKS.
+> **Проблема.** RCE в одном Pod даёт атакующему foothold, а плоская pod-сеть часто позволяет из него сканировать сервисы, обращаться к DB, внутренним API и cloud metadata. Это lateral movement: компрометация одного приложения становится входом к другим системам.
+
+> **Что дальше.** В предыдущих главах мы разобрали модель угроз и механизмы изоляции Linux. Теперь сузим доступные скомпрометированному Pod сетевые пути. **NetworkPolicy** превращает плоскую pod-сеть в набор явно разрешённых связей. Это домен Cluster Setup (15%) CKS.
 
 > **Что нужно из CKA.** Базовый синтаксис `NetworkPolicy`, селекторы и модель сети Pod разобраны в [главе 34 CKA](../../../cka/course/34/ru.md). Устройство pod-сети и роль CNI - в [главе 30 CKA](../../../cka/course/30/ru.md). Здесь рассматриваем применение этих механизмов как средства защиты, а не повторяем основу.
 
@@ -12,18 +14,20 @@
 
 ```mermaid
 flowchart TB
-    bad["Скомпрометированный<br/>frontend Pod"] --> scan["Сканирует сервисы<br/>и внутренние API"]
-    bad --> db["Подключается к DB"]
-    bad --> meta["Запрашивает metadata"]
-    deny["Default-deny + точечные allow"] --> only["Разрешён только<br/>нужный путь"]
-    only --> backend["frontend -> backend:8080"]
+    bad["Скомпрометированный<br/>frontend Pod"]
+    scan["Без NetworkPolicy<br/>сканирует сервисы<br/>и внутренние API"]
+    target["Достигает<br/>DB и cloud metadata"]
+    deny["Default-deny<br/>и точечные allow"]
+    only["Разрешён только<br/>frontend<br/>→ backend:8080"]
+
+    bad --> scan --> target
+    target -. "закрыть сеть" .-> deny --> only
+
     style bad fill:#db4437,color:#fff
     style scan fill:#db4437,color:#fff
-    style db fill:#db4437,color:#fff
-    style meta fill:#db4437,color:#fff
+    style target fill:#db4437,color:#fff
     style deny fill:#326ce5,color:#fff
     style only fill:#0f9d58,color:#fff
-    style backend fill:#0f9d58,color:#fff
 ```
 
 `NetworkPolicy` применяется к Pod по меткам, а не к Service. Service остаётся удобной DNS-точкой назначения, но CNI принимает решение по исходному и конечному Pod, IP, порту и правилам политики. Политика не заменяет RBAC, TLS или security group: это один слой defense in depth.
@@ -186,16 +190,20 @@ Namespace сам по себе не является сетевой границ
 
 ```mermaid
 flowchart TB
-    internet["Ingress controller"] --> api["tenant-a / api"]
-    api --> db["tenant-a / db"]
-    api -. "нет policy" .-> tenantb["tenant-b / workloads"]
-    dns["kube-system / DNS"] --> api
-    dns --> db
-    style internet fill:#326ce5,color:#fff
-    style api fill:#0f9d58,color:#fff
-    style db fill:#0f9d58,color:#fff
+    tenanta["tenant-a Pod"]
+    flat["Без NetworkPolicy<br/>между namespace<br/>трафик открыт"]
+    tenantb["tenant-b Pod"]
+    baseline["Default-deny<br/>в каждом namespace"]
+    allowed["Только явные allow<br/>DNS · ingress · app"]
+
+    tenanta --> flat --> tenantb
+    tenantb -->|"защитить tenant-ы"| baseline --> allowed
+
+    style tenanta fill:#326ce5,color:#fff
+    style flat fill:#db4437,color:#fff
     style tenantb fill:#db4437,color:#fff
-    style dns fill:#f4b400,color:#000
+    style baseline fill:#326ce5,color:#fff
+    style allowed fill:#0f9d58,color:#fff
 ```
 
 На практике полезно применять baseline автоматически шаблоном namespace или policy-движком. Но обычная `NetworkPolicy` имеет область namespace и не заменяет cluster-wide policy конкретного CNI. Если нужны общекластерные запреты, FQDN-правила или L7-фильтрация, рассмотрите Cilium и его политики в главе 06.
@@ -239,7 +247,14 @@ spec:
 
 Сначала убедитесь, что CNI вообще реализует `NetworkPolicy`. Сам API-объект принимается Kubernetes независимо от возможностей CNI; при отсутствии поддержки объект существует, но трафик не меняется. Сверьте документацию установленного CNI и создайте контролируемый тест.
 
-> **Граница NetworkPolicy.** Это фильтрация сетевого трафика Pod, а не полная изоляция tenant. **Local-node exception задана спецификацией Kubernetes:** трафик в Pod и из Pod с node, на которой этот Pod запущен, всегда разрешён независимо от IP Pod или node; ingress из локальной node к изолированному Pod также разрешён. Это отдельное гарантированное правило, а не различие CNI. Напротив, поведение `hostNetwork` Pod и других host-aware controls CNI-специфично: такой трафик нередко выглядит как node IP, поэтому `podSelector` и `namespaceSelector` могут не сработать ожидаемым образом. Стандартная NetworkPolicy задаёт переносимую семантику для TCP, UDP и SCTP (SCTP — при поддержке CNI); для ICMP, ARP и других протоколов allow/deny implementation-defined. Поэтому `ping` нельзя использовать как переносимое доказательство того, что default-deny сработал или не сработал. Порядок применения NAT и policy зависит от реализации: не делайте переносимое правило `ipBlock` для Service `ClusterIP`, pod CIDR или адреса после SNAT. Для Pod выбирайте источник и назначение селекторами, а `ipBlock` оставляйте для документированных внешних адресов. Помимо сети нужны отдельные controls для kernel и node, API/RBAC, Secret, admission и scheduler; также применяйте TLS, host firewall и возможности конкретного CNI. Поведение уже установленных соединений после изменения policy или labels implementation-defined: CNI может разорвать их или оставить до закрытия. Учитывайте это при rollout, incident response и тестах.
+**Границы NetworkPolicy: проверяйте их по отдельности.**
+
+- **Это фильтрация Pod-трафика, не полная изоляция tenant.** NetworkPolicy сужает доступные сетевые пути, но не защищает kernel и node, Kubernetes API/RBAC, Secret, admission или scheduler. Её дополняют TLS, host firewall и средства конкретного CNI.
+- **Local-node exception задана спецификацией Kubernetes.** Трафик в Pod и из Pod с node, на которой он запущен, всегда разрешён независимо от IP Pod или node; ingress из локальной node к изолированному Pod также разрешён. Это переносимое правило спецификации, а не различие CNI.
+- **`hostNetwork` и host-aware controls зависят от CNI.** Такой трафик часто выглядит как node IP, поэтому `podSelector` и `namespaceSelector` могут сработать не так, как ожидается. Проверяйте это в своём CNI.
+- **Не все протоколы имеют одинаковую переносимую семантику.** Core NetworkPolicy определяет её для TCP, UDP и SCTP (SCTP - при поддержке CNI). Для ICMP, ARP и других протоколов allow/deny implementation-defined, поэтому `ping` не доказывает переносимо, что default-deny сработал или не сработал.
+- **Не стройте переносимые правила `ipBlock` вокруг внутренней маршрутизации.** Порядок NAT и policy зависит от реализации. Для Service `ClusterIP`, pod CIDR или адреса после SNAT выбирайте Pod селекторами; `ipBlock` оставляйте для документированных внешних адресов.
+- **Уже открытые соединения ведут себя по-разному.** После изменения policy или labels CNI может разорвать их либо оставить до закрытия. Учитывайте это при rollout, incident response и тестах.
 
 Перед тестом подготовьте известный исправный контрольный endpoint: например, Service `control`, который выбирает listener Pod с точной меткой `app=control` и отвечает на TCP 8080. Проверьте его без новых policy или из заранее разрешённого диагностического Pod. Не используйте для отрицательного теста несуществующее DNS-имя: так будет проверен DNS, а не политика. Затем сверьте реальные labels всех участников:
 
@@ -257,11 +272,13 @@ kubectl -n payments get pod --show-labels
 kubectl -n payments run netshoot \
   --image=nicolaka/netshoot:v0.16 \
   --labels=app=frontend \
-  --restart=Never -- sleep 3600
+  --restart=Never \
+  --command -- sleep 3600
 kubectl -n payments run netshoot-untrusted \
   --image=nicolaka/netshoot:v0.16 \
   --labels=app=untrusted \
-  --restart=Never -- sleep 3600
+  --restart=Never \
+  --command -- sleep 3600
 kubectl -n payments wait --for=condition=Ready pod/netshoot --timeout=90s
 kubectl -n payments wait --for=condition=Ready pod/netshoot-untrusted --timeout=90s
 

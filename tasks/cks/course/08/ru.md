@@ -29,8 +29,8 @@ transparent encryption, которая рассматривается в гла�
 
 ```mermaid
 flowchart TB
-    client["Клиент"] -->|"HTTP: пароль и cookie<br/>видны в сети"| bad["Перехватчик"]
-    client -->|"HTTPS: TLS handshake<br/>и шифрование"| ingress["Ingress/Gateway controller<br/>TLS termination"]
+    client["Клиент"] -->|"HTTP: пароль<br/>и cookie видны"| bad["Перехватчик"]
+    client -->|"HTTPS: TLS handshake<br/>и шифрование"| ingress["Ingress/Gateway<br/>controller<br/>TLS termination"]
     ingress -->|"HTTP или TLS<br/>внутри кластера"| service["Service"]
     service --> pod["Pod приложения"]
     style client fill:#326ce5,color:#fff
@@ -54,8 +54,12 @@ Ingress.
 ## 08.2. Сертификат и ключ: тестовый self-signed и production-подход
 
 Для лаборатории можно создать self-signed certificate. Клиент не доверяет ему по умолчанию,
-поэтому при проверке будет нужен `curl -k`. Это нормально только для теста: флаг `-k`
-отключает проверку сертификата и в production скрывает ошибки доверия и подмены.
+поэтому обычный `curl` завершится ошибкой проверки цепочки.
+
+Предпочтительный тест - явно доверить лабораторный certificate через `--cacert tls.crt`: так
+curl продолжит проверять certificate и соответствие имени host. `curl -k` полностью отключает
+certificate verification и допустим только как отдельная диагностическая проверка, но не как
+доказательство корректной TLS-конфигурации.
 
 Имя из URL должно присутствовать в **Subject Alternative Name** (SAN). Современные клиенты
 проверяют SAN, а не только устаревшее поле Common Name (CN). Ниже сертификат рассчитан на
@@ -106,9 +110,19 @@ Secret и обновляет до истечения срока. Команда 
 
 ## 08.3. TLS Secret: формат и область видимости
 
-Ingress ищет certificate и key в Secret типа `kubernetes.io/tls`. Наиболее надёжный способ
-создать его из уже проверенных файлов - `kubectl create secret tls`: команда сама положит
-сертификат в ключ `tls.crt`, а закрытый ключ в `tls.key`.
+Для Ingress TLS используйте стандартный TLS Secret типа `kubernetes.io/tls` с ключами
+`tls.crt` и `tls.key`. Именно такой объект создаёт `kubectl create secret tls`.
+
+Переносимый Ingress TLS contract требует certificate и private key под ключами `tls.crt` и
+`tls.key`; дополнительные проверки типа Secret и содержимого зависят от controller. Поэтому
+`kubernetes.io/tls` - правильный стандартный формат для курса и production, но не следует
+объяснять его как единственный механизм, который сам Ingress API способен прочитать. Сам
+тип `kubernetes.io/tls` предоставлен для удобства и единообразия: Kubernetes API проверяет
+наличие требуемых ключей для Secret этого типа, а TLS credentials технически могут
+храниться и в `Opaque` Secret, хотя такой Secret не получает эту проверку и не сообщает
+назначение объекта другим инженерам.
+Наиболее надёжный способ создать его из уже проверенных файлов - `kubectl create secret
+tls`: команда сама положит сертификат в ключ `tls.crt`, а закрытый ключ в `tls.key`.
 
 ```bash
 kubectl -n web create secret tls app-example-tls \
@@ -121,9 +135,13 @@ kubectl -n web get secret app-example-tls \
 # base64-значения tls.crt и tls.key
 ```
 
-Тот же объект в виде манифеста выглядит так. Здесь `data` намеренно не заполнен: ключ и
-сертификат нельзя хранить в Git в открытом виде. `stringData` удобнее для коротких
-тестовых значений, но не делает секретным содержимое репозитория.
+Тот же объект в виде манифеста выглядит так. Здесь `data` намеренно не заполнен прежде всего
+потому, что private key `tls.key` нельзя коммитить в Git в открытом виде.
+
+X.509 certificate `tls.crt` содержит публичный ключ и сам по себе не является секретом;
+хранить ли public certificate в репозитории - отдельное решение repository policy. Private
+key всегда должен оставаться конфиденциальным. `stringData` удобнее для коротких тестовых
+значений, но не делает секретным содержимое репозитория.
 
 ```yaml
 apiVersion: v1
@@ -197,10 +215,16 @@ kubectl -n web get ingress web-secure -o yaml
 kubectl -n web get secret app-example-tls -o jsonpath='{.type}{"\n"}'
 ```
 
-В выводе `describe` проверьте `Ingress Class`, правило для `app.example.test`, TLS host и
-Secret. Событие об ошибке чтения Secret, пустое поле `ADDRESS` или backend без endpoints
-означают, что запрос ещё не готов проверять TLS: сначала исправьте controller, Secret,
-Service или готовность Pod.
+В выводе `describe` проверьте `Ingress Class`, правило для `app.example.test`, TLS host,
+Secret и события.
+
+Ошибка чтения Secret или отсутствие backend endpoints действительно требуют исправления до
+полноценной end-to-end проверки.
+
+Поле `ADDRESS` рассматривайте отдельно: оно отражает опубликованный status Ingress и в
+NodePort, bare-metal, `hostNetwork`, port-forward или некоторых локальных fixture может
+оставаться пустым даже при рабочем Ingress. Готовность TLS проверяйте через фактический
+entrypoint выбранного controller, а не только по наличию значения в `ADDRESS`.
 
 ## 08.5. ingress-nginx: retired-controller и границы аннотаций
 
@@ -384,22 +408,31 @@ export ENTRYPOINT_IP=203.0.113.10  # замените на адрес выбра
 ```
 
 Если тестовый host не опубликован в DNS, `--resolve` заставит `curl` использовать
-`ENTRYPOINT_IP`, сохранив правильный Host header и SNI. Переносимая проверка — успешный
-HTTPS-вызов к backend с правильным SNI и host; `-k` допустим здесь только потому, что
-сертификат self-signed:
+`ENTRYPOINT_IP`, сохранив правильный Host header и SNI. Переносимая проверка - успешный
+HTTPS-вызов к backend с правильным SNI и host, при этом сертификат проверяется через
+`--cacert`:
 
 ```bash
-curl -kvsS -o /dev/null -w 'HTTP %{http_code}\n' \
+curl --cacert tls.crt -vsS -o /dev/null -w 'HTTP %{http_code}\n' \
   --resolve "${HOST}:443:${ENTRYPOINT_IP}" \
   "https://${HOST}/"
 # HTTP 200
+```
+
+Только диагностика: соединиться без проверки certificate. Успех этой команды **не
+доказывает** корректность SAN/цепочки:
+
+```bash
+curl -kvsS -o /dev/null \
+  --resolve "${HOST}:443:${ENTRYPOINT_IP}" \
+  "https://${HOST}/"
 ```
 
 HTTP -> HTTPS redirect и его статус зависят от controller. **Только если fixture использует
 `ingress-nginx`** с `spec.tls`, можно отдельно ожидать `308` и `Location`:
 
 ```bash
-curl -kvI --resolve "${HOST}:80:${ENTRYPOINT_IP}" "http://${HOST}/"
+curl -vI --resolve "${HOST}:80:${ENTRYPOINT_IP}" "http://${HOST}/"
 ```
 
 Проверяйте не только статус `200`, но и сертификат, который получил клиент. `-servername`
@@ -414,10 +447,13 @@ openssl s_client -connect "${ENTRYPOINT_IP}:443" -servername "${HOST}" </dev/nul
 #     DNS:app.example.test
 ```
 
-Для сертификата от доверенного CA уберите `-k`: обычный `curl` обязан успешно проверить
-цепочку и имя. Если `curl` сообщает `SSL certificate problem`, не обходите проблему в
-production. Проверьте срок действия, SAN, цепочку CA, `secretName`, namespace и то, что
-controller действительно перечитал обновлённый Secret.
+Для certificate, которому доверяет системный trust store, используйте обычный `curl` без
+`-k` и без лабораторного `--cacert tls.crt`: клиент должен проверить цепочку и имя через
+системные доверенные CA. Если используется внутренний/private CA, передавайте доверенный
+CA bundle через `--cacert <ca-bundle.pem>`, а не отключайте verification через `-k`. Если
+`curl` сообщает `SSL certificate problem`, не обходите проблему в production. Проверьте
+срок действия, SAN, цепочку CA, `secretName`, namespace и то, что controller действительно
+перечитал обновлённый Secret.
 
 | Симптом | Что проверить | Вероятная причина |
 |---|---|---|
@@ -425,7 +461,7 @@ controller действительно перечитал обновлённый 
 | HTTPS показывает default certificate | `spec.tls.hosts`, SAN и SNI | Host не совпадает, Secret не найден или запрос без `--resolve`/SNI |
 | `curl` получает `404` от NGINX | Host, `rules.host`, `ingressClassName` | Запрос попал в controller, но правило не выбрано |
 | HTTPS возвращает `503` | Service, endpoints и readiness Pod | TLS работает, но backend недоступен |
-| Secret есть, но TLS не включился | `type`, `tls.crt`, `tls.key`, namespace | Неверный тип, пустой/несовместимый ключ либо Secret в другом namespace |
+| Secret есть, но TLS не включился | `tls.crt`, `tls.key`, namespace и требования конкретного controller | отсутствуют или некорректны `tls.crt`/`tls.key`, certificate не соответствует private key, Secret находится в другом namespace либо controller не принимает используемый формат Secret |
 | Браузер не доверяет сертификату | Issuer, цепочка и срок действия | Self-signed certificate или неполная цепочка CA |
 
 ## 08.7. Как это применяют в продакшене
@@ -447,8 +483,11 @@ controller действительно перечитал обновлённый 
 - **Разделение границ.** Отдельные namespace, IngressClass и certificate для tenant либо
   критичных доменов уменьшают вероятность случайно отдать чужой certificate или маршрут.
 - **Проверка после каждого изменения.** Pipeline делает HTTPS-запрос с правильным SNI,
-  проверяет ожидаемый SAN, срок действия, 30x-redirect и доступность backend. Это ловит
-  ошибку до того, как её увидит пользователь.
+  проверяет ожидаемый SAN, срок действия certificate и доступность backend. Если политика
+  предусматривает HTTP listener с перенаправлением на HTTPS, pipeline дополнительно
+  проверяет ожидаемый `30x` redirect. Для HTTPS-only topology корректным результатом может
+  быть полное отсутствие доступного HTTP listener. Это ловит ошибку до того, как её увидит
+  пользователь.
 
 ## 08.8. Мини-глоссарий
 
@@ -519,7 +558,7 @@ TLS защищает канал от клиента до ingress controller, г�
 <details>
 <summary>3. Какой тип и какие ключи должен иметь TLS Secret для Ingress?</summary>
 
-Secret должен иметь тип `kubernetes.io/tls` и содержать certificate в `tls.crt` и private key в `tls.key`. Надёжнее создать его командой `kubectl create secret tls ... --cert=tls.crt --key=tls.key`, которая размещает файлы под правильными ключами.
+Стандартный вариант - Secret типа `kubernetes.io/tls` с certificate в `tls.crt` и private key в `tls.key`. Надёжнее создать его через `kubectl create secret tls ... --cert=tls.crt --key=tls.key`. Для переносимой конфигурации ключевыми являются корректные `tls.crt`, `tls.key` и поддержка выбранного Ingress controller.
 </details>
 
 <details>
@@ -537,7 +576,7 @@ Secret — namespaced объект, и Ingress из `web` не может сос
 <details>
 <summary>6. Какие два результата ожидаются от `curl` для HTTP и HTTPS после настройки redirect?</summary>
 
-HTTPS-вызов с правильными SNI и Host, например через `curl --resolve`, должен успешно получить backend, в примере — HTTP 200; для self-signed test certificate допустим `-k`. Только для fixture с ingress-nginx и `spec.tls` отдельный HTTP-запрос ожидаемо возвращает redirect, обычно 308, с `Location`; статус не является переносимой семантикой Ingress API.
+HTTPS-вызов с правильными SNI и Host, например через `curl --resolve`, должен успешно получить backend, в примере — HTTP 200. Для лабораторного self-signed certificate передайте его как доверенный certificate через `--cacert tls.crt`; `-k` используйте только как отдельный diagnostic bypass, его успех подтверждает соединение, но не доказывает корректность certificate, SAN или цепочки. Только для fixture с ingress-nginx и `spec.tls` отдельный HTTP-запрос ожидаемо возвращает redirect, обычно 308, с `Location`; статус не является переносимой семантикой Ingress API.
 </details>
 
 <details>
@@ -547,9 +586,9 @@ HTTPS-вызов с правильными SNI и Host, например чер�
 </details>
 
 <details>
-<summary>8. Почему `curl -k` приемлем для self-signed certificate в лаборатории, но опасен в production?</summary>
+<summary>8. Почему `curl -k` нельзя использовать как доказательство корректной TLS-конфигурации даже с self-signed certificate?</summary>
 
-Self-signed certificate не доверен клиентами по умолчанию, поэтому `-k` допустим только для контролируемой лабораторной проверки. В production этот флаг отключает проверку certificate и скрывает ошибки доверия, SAN, цепочки и возможной подмены; проблему нужно исправлять, а не обходить.
+`-k` отключает проверку certificate и поэтому подходит только для диагностики. Если self-signed certificate лаборатории доступен локально, лучше использовать `--cacert tls.crt`: тогда curl доверяет именно этому certificate, но продолжает проверять TLS и имя host. В production `-k` скрывает ошибки доверия, SAN, цепочки и возможной подмены; проблему нужно исправлять, а не обходить.
 </details>
 
 <details>

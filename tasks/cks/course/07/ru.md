@@ -22,11 +22,11 @@
 
 ```mermaid
 flowchart TB
-    attacker["Атакующий получает доступ<br/>к поду или ноде"] --> weak["Небезопасный флаг,<br/>открытый kubelet или читаемый ключ"]
-    weak --> impact["Доступ к API, данным etcd<br/>или эскалация привилегий"]
+    attacker["Атакующий получает<br/>доступ к поду<br/>или ноде"] --> weak["Небезопасный флаг,<br/>открытый kubelet<br/>или читаемый ключ"]
+    weak --> impact["Доступ к API,<br/>данным etcd или<br/>эскалация прав"]
     cis["CIS Benchmark"] --> bench["kube-bench<br/>PASS / WARN / FAIL"]
-    bench --> fix["Исправить конфигурацию<br/>и права файлов"]
-    fix --> verify["Повторить проверку<br/>и проверить здоровье кластера"]
+    bench --> fix["Исправить<br/>конфигурацию<br/>и права файлов"]
+    fix --> verify["Повторить проверку<br/>и здоровье<br/>кластера"]
     style attacker fill:#db4437,color:#fff
     style weak fill:#f4b400,color:#000
     style cis fill:#326ce5,color:#fff
@@ -41,18 +41,31 @@ flowchart TB
 и наоборот, а `kube-bench` умеет автоматически выбрать benchmark только тогда, когда
 установленная версия Kubernetes присутствует в его опубликованной version mapping.
 
-> **Снимок currentness на 2026-09-04.** Upstream `kube-bench` сопоставляет CIS `1.12` с
-> Kubernetes `1.32-1.33` и CIS `2.0` с Kubernetes `1.34-1.35`; Kubernetes `1.36` (версия
-> курса) в текущей mapping отсутствует. Перед запуском определите версию Kubernetes,
-> сверьте её с актуальной [version mapping `kube-bench`](https://github.com/aquasecurity/kube-bench/blob/main/docs/platforms.md)
-> и используйте только benchmark, для которого upstream явно заявляет совместимость с этой
-> версией Kubernetes. Если версия кластера отсутствует в published mapping, не считайте
-> принудительный `--benchmark` авторитетной CIS-оценкой: `--benchmark` меняет только
-> набор применяемых тестов, но не делает его валидным для непокрытой версии. Для
-> CIS-упражнения используйте отдельную Kubernetes-версию, которую mapping действительно
-> покрывает; `--benchmark` задавайте вручную только когда применимость выбранного
-> benchmark уже подтверждена документацией, а автоматический выбор по версии использовать
-> нельзя или он не сработал.
+> **Снимок currentness на 2026-09-08.** В `docs/platforms.md` ветки `main` kube-bench
+> опубликована таблица: CIS `1.12` для Kubernetes `1.32-1.33` и CIS `2.0` для Kubernetes
+> `1.34-1.35`.
+>
+> Однако published support table нужно отличать от содержимого конкретного релиза
+> kube-bench. Например, закреплённый ниже `v0.16.0` ещё не содержит `cfg/cis-2.0`: его
+> bundled `cfg/config.yaml` сопоставляет Kubernetes `1.34` с `cis-1.12`, а mapping для
+> `1.35` отсутствует.
+>
+> Поэтому перед запуском проверяйте не только `docs/platforms.md`, но и сам
+> `cfg/config.yaml` и наличие нужного каталога `cfg/<benchmark>` именно в используемом
+> tag/image. Не считайте профиль поддерживаемым конкретным релизом только потому, что он
+> уже указан в документации ветки `main`. Если версия кластера отсутствует в mapping
+> закреплённого релиза, не считайте принудительный `--benchmark` авторитетной CIS-оценкой:
+> `--benchmark` меняет только набор применяемых тестов, но не делает его валидным для
+> непокрытой версии.
+>
+> Если цель лаборатории - получить детерминированную оценку на версии Kubernetes, которую
+> `kube-bench:v0.16.0` реально покрывает своим bundled mapping, используйте Kubernetes
+> `1.33` + `cis-1.12`.
+>
+> Связанная с этой главой Lab103 намеренно использует training baseline Kubernetes
+> `1.36.0`, которого `v0.16.0` не покрывает. Там `cis-1.12` запускается принудительно
+> только как `forced-approximate` учебный сценарий: результат полезен для практики
+> remediation, но не является authoritative CIS compliance для Kubernetes `1.36`.
 
 | Раздел CIS | Что проверяется | Типовые объекты |
 |---|---|---|
@@ -70,7 +83,7 @@ flowchart TB
 
 Следующие команды применяйте только после подтверждения, что установленная версия
 `kube-bench` имеет поддерживаемый benchmark mapping для вашего кластера: на снимке
-2026-09-04 Kubernetes `1.36` в generic mapping отсутствует (см. §07.1).
+2026-09-08 Kubernetes `1.36` в generic mapping отсутствует (см. §07.1).
 
 Запускайте `kube-bench` на том узле, чьи файлы он должен читать. На узле control plane
 обычно нужны разделы `master` и `etcd`, на worker - `node`. В учебном кластере или при SSH
@@ -98,6 +111,12 @@ namespace нужен `kube-bench` для проверки процессов, н
 конкретных read-only путей из upstream Job для control plane, а не широкие `/etc` и
 `/var/lib`. Монтирование `/usr/bin` нужно только для автоматического определения версии;
 его можно убрать, если версия передана `kube-bench` явно через `--version`.
+
+Ниже для воспроизводимости используется `kube-bench:v0.16.0`. Не используйте этот image
+для упражнения CIS 2.0: в данном релизе профиль `cis-2.0` ещё не поставляется. Если
+лаборатория переводится на CIS 2.0, сначала выберите release/tag, в котором одновременно
+присутствуют `cfg/cis-2.0` и корректная version mapping, и только затем закрепите его
+точный digest.
 
 ```yaml
 apiVersion: batch/v1
@@ -255,6 +274,33 @@ sudo install -d -o root -g root -m 700 /var/log/kubernetes/audit
 Добавьте к существующим `volumeMounts` и `volumes` static Pod следующие записи вместе с
 аргументами (не заменяя остальные монтирования манифеста):
 
+`--anonymous-auth=false` не является безопасной универсальной drop-in правкой для
+kubeadm. Перед изменением проверьте HTTP probes `kube-apiserver` и используемый механизм
+`kubeadm join`: полное отключение anonymous authentication может вернуть `401` на
+`/livez`/`/readyz`/`/healthz` и нарушить token-based discovery через
+`kube-public/cluster-info`.
+
+Если задача требует убрать общий anonymous-доступ, в современных версиях Kubernetes
+можно использовать `AuthenticationConfiguration`, оставив anonymous-доступ только для
+необходимых health endpoints:
+
+```yaml
+apiVersion: apiserver.config.k8s.io/v1
+kind: AuthenticationConfiguration
+anonymous:
+  enabled: true
+  conditions:
+  - path: /livez
+  - path: /readyz
+  - path: /healthz
+```
+
+При использовании `anonymous` в `AuthenticationConfiguration` флаг `--anonymous-auth`
+одновременно задавать нельзя. Такой вариант сохраняет anonymous-доступ только к health
+endpoints. Если кластер должен поддерживать стандартный token-based `kubeadm join`,
+проверьте discovery flow отдельно: ограничение anonymous-доступа только health endpoints
+может потребовать другого способа discovery.
+
 ```yaml
 spec:
   containers:
@@ -288,12 +334,14 @@ spec:
 
 - `--anonymous-auth=false` не даёт неаутентифицированному запросу стать
   `system:anonymous`.
+- `--authorization-mode` и `--authorization-config` - два альтернативных способа
+  настройки authorization и являются взаимно исключающимися. Если используется файл
+  `AuthorizationConfiguration` через `--authorization-config`, удалите
+  `--authorization-mode` из аргументов `kube-apiserver`; одновременно задавать оба
+  параметра нельзя.
 - `--authorization-mode=Node,RBAC` включает обычную модель авторизации для kubeadm.
   Не добавляйте `AlwaysAllow`; порядок и список modes нужно согласовать с архитектурой
-  кластера. Не путайте этот флаг с `--authorization-config`: первый выбирает authorizer
-  modes, второй указывает файл `AuthorizationConfiguration` для настраиваемых authorizer
-  (например, Webhook). Это не взаимозаменяемые настройки; при использовании config-файла
-  проверьте API/version и не дублируйте или не конфликтуйте с modes.
+  кластера.
 - `--profiling=false` убирает profiling endpoints, которые могут раскрывать сведения о
   процессе и не должны быть доступны без необходимости.
 - `--audit-*` подключают audit policy и сохраняют журнал. Сама policy подробно разбирается
@@ -479,8 +527,11 @@ DNS baseline. В managed Kubernetes DNS-компонентом может вла
 
 ## 07.7. etcd и файловые права: ключи не должны быть общими
 
-etcd хранит состояние кластера: Secrets, ServiceAccount-токены, RBAC и спецификации
-workload. Чтение data directory или TLS private key равнозначно серьёзной компрометации
+etcd хранит persistent state Kubernetes API: Secrets, RBAC, конфигурацию и спецификации
+workload. Вручную созданные long-lived ServiceAccount token Secrets также хранятся как
+Secret-объекты. Обычные bound ServiceAccount tokens современных Pod выдаются через
+TokenRequest/projected volume, автоматически ротируются и не хранятся в etcd как
+постоянные Secret-объекты. Чтение data directory или TLS private key равнозначно серьёзной компрометации
 кластера. Поэтому CIS проверяет TLS-настройки etcd, владельцев и режимы файлов.
 
 Сначала смотрите фактического владельца процесса и файлы. В kubeadm static Pod etcd может
@@ -554,11 +605,11 @@ check ID из отчёта; (2) сделайте резервную копию �
 
 ```mermaid
 flowchart TB
-    report["kube-bench: FAIL/WARN"] --> locate["Определить файл, флаг<br/>и владельца процесса"]
-    locate --> change["Минимальная правка<br/>+ резервная копия"]
-    change --> health["Component Ready?<br/>kubelet/etcd/API healthy?"]
-    health --> rerun["Повторить тот же target"]
-    rerun --> pass["PASS или обоснованное<br/>исключение"]
+    report["kube-bench:<br/>FAIL/WARN"] --> locate["Определить файл,<br/>флаг и владельца<br/>процесса"]
+    locate --> change["Минимальная<br/>правка<br/>+ резервная копия"]
+    change --> health["Component Ready?<br/>kubelet/etcd/API<br/>healthy?"]
+    health --> rerun["Повторить<br/>тот же target"]
+    rerun --> pass["PASS или<br/>обоснованное<br/>исключение"]
     style report fill:#db4437,color:#fff
     style change fill:#f4b400,color:#000
     style health fill:#326ce5,color:#fff
@@ -635,8 +686,9 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   политик; `kube-bench` показывает конкретные `PASS`, `WARN` и `FAIL`.
 - Сначала определяют активный конфигурационный источник и владельца процесса, затем
   меняют настройки. Отчёт без повторной проверки не доказывает исправление.
-- На `kube-apiserver` важны `--anonymous-auth=false`, безопасный
-  `--authorization-mode`, audit и `--profiling=false`.
+- На `kube-apiserver` важно минимизировать anonymous-доступ с учётом health probes и
+  kubeadm discovery, использовать безопасную authorization, audit и `--profiling=false`.
+  Не применяйте `--anonymous-auth=false` механически без проверки lifecycle кластера.
 - `--profiling=false` нужен на всех трёх компонентах control plane: apiserver,
   controller-manager и scheduler.
 - Для kubelet нужны `--read-only-port=0`, `--anonymous-auth=false`,

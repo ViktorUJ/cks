@@ -5,9 +5,14 @@
 > **Что дальше.** Нативные NetworkPolicy уже позволяют изолировать Pod и закрывать
 > доступ к metadata-сервисам. Но для части сценариев этого недостаточно: нужно разрешить
 > конкретный HTTP-метод, учитывать DNS-имена внешних сервисов, отличать трафик к кластеру
-> от трафика в интернет и видеть причину каждого DROP. **CiliumNetworkPolicy** добавляет
-> эти возможности поверх eBPF. Это новая тема домена Cluster Setup (15%) и основа для
-> лабы 102.
+> от трафика в интернет и видеть причину каждого DROP. **CiliumNetworkPolicy** расширяет
+> базовые возможности сетевых политик Cilium L7-фильтрацией, FQDN-правилами, identities и
+> наблюдаемостью. Эта глава углубляет компетенцию CKS Cluster Setup «Use Network security
+> policies to restrict cluster level access» и служит основой для лабы 102.
+>
+> Публичная программа CKS не требует именно CiliumNetworkPolicy, `toFQDNs` или Hubble в
+> каждой экзаменационной среде, поэтому Cilium-specific команды и CRD рассматривайте как
+> углубление для кластеров, где Cilium действительно предоставлен.
 
 > **Что нужно из CKA.** Базовую модель CNI, IP-адреса Pod и сервисов см. в
 > [главе 30 CKA](../../../cka/course/30/ru.md), а назначение CNI и его место в сетевом
@@ -32,9 +37,9 @@ backend принимает только `GET /`, то `POST /admin` или `DELE
 flowchart TB
     attacker["скомпрометированный<br/>frontend"] -->|"TCP/80 разрешён"| backend["backend API"]
     attacker -->|"DNS + HTTPS"| evil["внешний сервер<br/>атакующего"]
-    cnp["CiliumNetworkPolicy"] --> l34["L3/L4:<br/>frontend → backend:80"]
+    cnp["CiliumNetworkPolicy"] --> l34["L3/L4:<br/>frontend →<br/>backend:80"]
     cnp --> l7["L7:<br/>только GET /"]
-    cnp --> fqdn["DNS-aware:<br/>только разрешённое FQDN"]
+    cnp --> fqdn["DNS-aware:<br/>только<br/>разрешённое FQDN"]
     l34 --> backend
     l7 --> backend
     fqdn --> evil
@@ -88,11 +93,21 @@ endpoint. Их allow-правила учитываются вместе, но я
 Политика становится применимой к endpoint, если его выбирает `endpointSelector`. В
 `policyEnforcementMode: default` Cilium включает enforcement, когда endpoint выбран
 политикой; `always` включает его для всех endpoints (endpoint без allow-правил получает
-запрет), а `never` отключает enforcement. При применимой политике allow-list действует
+запрет), а `never` отключает enforcement. По умолчанию allow-list действует
 **по каждому направлению отдельно**: наличие `ingress` делает ingress default-deny до
 совпадения с allow-правилом, наличие `egress` так же делает default-deny только для egress.
 Политика только с `ingress` не закрывает egress и наоборот. Поэтому selector должен быть
-точным. Cilium отслеживает состояние соединения: разрешение инициирующего ingress- или
+точным.
+
+Это поведение можно изменить через `enableDefaultDeny`: направление, для которого
+установлено `false`, не учитывается при переводе endpoint в default-deny. Так
+администратор может безопасно применить cluster-wide policy - например, перехват DNS -
+без риска перевести endpoint в default-deny и заблокировать легитимный трафик. Исключение
+не следует переносить на L7-policy: `enableDefaultDeny` не применяется к layer-7 правилам,
+и добавление L7 rule без соответствующего L7 allow-all вызовет DROP даже при явно
+отключённом default-deny.
+
+Cilium отслеживает состояние соединения: разрешение инициирующего ingress- или
 egress-потока позволяет **ответный трафик того же соединения**, но не разрешает новое
 соединение в обратном направлении. Поэтому не дублируйте механически правило для ответа,
 но явно описывайте самостоятельный обратный вызов, если он нужен приложению.

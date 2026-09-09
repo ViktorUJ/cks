@@ -2,6 +2,8 @@
 
 # Глава 05. Защита node metadata и endpoints; защита GUI
 
+> **Проблема.** Скомпрометированный Pod или SSRF может обратиться к endpoint, который недоступен внешнему пользователю: cloud metadata ноды, control plane или служебному GUI. Один неверно разрешённый сетевой путь способен раскрыть cloud identity и временные credentials ноды либо privileged management interface. Обычный RBAC workload не защищает metadata, потому что это не Kubernetes API.
+
 > **Что дальше.** В главе 04 мы превратили плоскую pod-сеть в набор разрешённых связей. Теперь применим egress isolation к особенно опасным назначениям: cloud metadata, control plane и GUI. Это домен Cluster Setup (15%) CKS. Ошибка в одном таком разрешении может превратить компрометацию Pod в компрометацию cloud identity или кластера.
 
 > **Что нужно из CKA.** Базовый синтаксис egress `NetworkPolicy`, `ipBlock` и работа CNI разобраны в [главе 34 CKA](../../../cka/course/34/ru.md). Здесь рассматриваем угрозы node metadata и служебных endpoints, а не повторяем основу политик.
@@ -12,9 +14,9 @@ Cloud provider часто предоставляет экземпляру вир
 
 ```mermaid
 flowchart TB
-    attacker["SSRF или shell<br/>в скомпрометированном Pod"] --> imds["IMDS<br/>169.254.169.254"]
-    imds --> identity["Identity ноды и<br/>временные credentials"]
-    identity --> cloud["API cloud provider:<br/>lateral movement и exfiltration"]
+    attacker["SSRF или shell<br/>в Pod<br/>с компрометацией"] --> imds["IMDS<br/>169.254.169.254"]
+    imds --> identity["Identity ноды<br/>и временные<br/>credentials"]
+    identity --> cloud["API cloud provider:<br/>lateral movement<br/>и exfiltration"]
     policy["Default-deny egress<br/>и allowlist"] -. "блокирует" .-> imds
     style attacker fill:#db4437,color:#fff
     style imds fill:#db4437,color:#fff
@@ -124,13 +126,15 @@ spec:
 
 | Provider | Node identity | Workload identity и metadata path | Network control | IAM/control и evidence |
 |---|---|---|---|---|
-| AWS / EKS | IAM role ноды через IMDS `169.254.169.254` (и `fd00:ec2::254` при IPv6) | EKS Pod Identity или IRSA вместо node credentials | IMDSv2, hop limit `1` как baseline; policy/firewall как дополнительный слой | Минимальная IAM role ноды; CloudTrail и проверка, что Pod не получает node credentials |
+| AWS / EKS | IAM role ноды через IMDS `169.254.169.254` (и `fd00:ec2::254` при IPv6) | EKS Pod Identity или IRSA вместо node credentials | IMDSv2 с hop limit `1` как baseline для non-`hostNetwork` Pod; `hostNetwork: true` Pod сохраняют доступ к IMDS и требуют отдельного контроля/admission policy; policy/firewall - дополнительные слои | Минимальная IAM role ноды; CloudTrail и проверка, что Pod не получает node credentials |
 | GKE | Service account/access scopes ноды | Workload Identity Federation: Pod -> GKE metadata server (`metadata.google.internal` / metadata IP) -> KSA token -> STS -> short-lived federated token | Current examples для strict policy: обычный dataplane — `169.254.169.252/32`, TCP `988` и `987`; GKE Dataplane V2 — `169.254.169.254/32`, TCP `80` и `8080`. Перед применением сверяйте документацию GKE | Минимальные IAM роли KSA/GSA; Cloud Audit Logs и проверка federated token |
 | Azure / AKS | Managed identity ноды через IMDS `169.254.169.254` | Microsoft Entra Workload ID | AKS IMDS restriction — **Preview**, только для non-`hostNetwork` Pod; не предназначен для production SLA, несовместим с рядом add-ons/extension scenarios и не поддерживает Windows node pools | Минимальная managed identity ноды; проверка Entra federation и отдельно применимости IMDS restriction |
 
 GKE Workload Identity создаёт важный на первый взгляд парадокс: безопасная workload identity сама использует GKE metadata server. Поэтому запретить `169.254.169.254` как универсальное правило нельзя: этот адрес используют Azure IMDS и GKE Dataplane V2, а не только AWS. При strict `NetworkPolicy` разрешите только документированный путь для фактического GKE dataplane: `169.254.169.252/32` на TCP `988` и `987` для Workload Identity Federation в обычном dataplane либо `169.254.169.254/32` на TCP `80` и `8080` для GKE Dataplane V2. Это текущие примеры, а не вечные константы: перепроверьте документацию GKE перед применением. `hostNetwork` Pod имеют другую модель доступа и требуют отдельной оценки.
 
-На AWS включайте IMDSv2 на уровне instance template или instance: `HttpTokens=required` заставляет клиента сначала получить временный token через `PUT`, а затем передать его в заголовке. Это уменьшает класс SSRF-атак, рассчитанных на простой `GET`, но не заменяет egress policy: скомпрометированный Pod всё ещё может выполнить корректный IMDSv2 exchange, если endpoint доступен. Для **новых workload на поддерживаемых node types** AWS рекомендует **EKS Pod Identity**; **IRSA** остаётся альтернативой для существующих OIDC/IRSA-развёртываний и случаев, где Pod Identity не поддерживается, включая некоторые сценарии Fargate, Windows или SDK. Для EKS AWS рекомендует **не отключать IMDS endpoint**: от него могут зависеть компоненты ноды. Базовый безопасный вариант для workload, использующих IRSA/EKS Pod Identity, - IMDSv2 с hop limit **1**, чтобы response не дошёл через container network. Hop limit **2** используют только как осознанное исключение, когда workload действительно обязан обращаться к IMDS.
+На AWS включайте IMDSv2 на уровне instance template или instance: `HttpTokens=required` заставляет клиента сначала получить временный token через `PUT`, а затем передать его в заголовке. Это уменьшает класс SSRF-атак, рассчитанных на простой `GET`, но не заменяет egress policy: скомпрометированный Pod всё ещё может выполнить корректный IMDSv2 exchange, если endpoint доступен. Для **новых workload на поддерживаемых node types** AWS рекомендует **EKS Pod Identity**; **IRSA** остаётся альтернативой для существующих OIDC/IRSA-развёртываний и случаев, где Pod Identity не поддерживается, включая некоторые сценарии Fargate, Windows или SDK. Для EKS AWS рекомендует **не отключать IMDS endpoint**: от него могут зависеть компоненты ноды. Базовый безопасный вариант для обычных non-`hostNetwork` workload, использующих IRSA/EKS Pod Identity, - IMDSv2 с hop limit **1**, чтобы response IMDSv2 не прошёл дополнительный network hop в pod network. Hop limit **2** используют только как осознанное исключение, когда workload действительно обязан обращаться к IMDS.
+
+Это ограничение не защищает `hostNetwork: true` Pod: AWS указывает, что такие Pod сохраняют прямой доступ к IMDS. Для недоверенных workload отдельно ограничивайте использование `hostNetwork` через admission/policy и не рассматривайте hop limit `1` как достаточную защиту для host-network Pod.
 
 ```bash
 # Пример для AWS: задаётся администратором инфраструктуры, а не из Pod.
@@ -164,18 +168,17 @@ Metadata - не единственная цель. После доступа в 
 
 ```mermaid
 flowchart TB
-    external["Internet или чужой Pod"] --> fw["Security group / firewall<br/>и private network"]
-    fw --> api["kube-apiserver :6443"]
-    cp["kube-apiserver и<br/>authorised etcd clients"] --> etcd["etcd client :2379<br/>peer :2380"]
-    api --> kubelet["kubelet :10250<br/>аутентифицированный доступ"]
-    external -. "запрещено" .-> etcd
-    external -. "запрещено" .-> kubelet
+    external["Internet<br/>или чужой Pod"]
+    api["kube-apiserver<br/>:6443 · private<br/>TLS · authn/authz"]
+    protected["etcd :2379/2380<br/>kubelet :10250<br/>только нужные<br/>clients"]
+
+    external -->|"allowlist"| api
+    api -->|"control plane"| protected
+    external -. "прямой доступ" .-> protected
+
     style external fill:#db4437,color:#fff
-    style fw fill:#326ce5,color:#fff
-    style api fill:#0f9d58,color:#fff
-    style cp fill:#326ce5,color:#fff
-    style etcd fill:#0f9d58,color:#fff
-    style kubelet fill:#0f9d58,color:#fff
+    style api fill:#326ce5,color:#fff
+    style protected fill:#0f9d58,color:#fff
 ```
 
 Проверка слушающих портов выполняется на ноде с разрешённым административным доступом:
@@ -231,11 +234,11 @@ rules:
 
 Обычная `NetworkPolicy` полезна для Pod-to-Pod traffic, но не является универсальным firewall для host endpoints. Трафик к IP ноды может изменить source из-за SNAT, а hostNetwork Pod может обходить pod dataplane. Для защиты ноды сочетайте CNI policy с host firewall, cloud network controls и настройками компонентов. Cilium может дать дополнительные host-aware controls, но они зависят от режима CNI и требуют отдельного проектирования.
 
-## 05.4. Legacy side note: Kubernetes Dashboard и принцип минимального доступа
+## 05.4. Legacy: архивированный Kubernetes Dashboard и минимальный доступ GUI
 
-> **Не приоритет текущего CKS.** В актуальном списке компетенций CKS Dashboard/GUI не указан; приоритет этой главы — endpoints и provider-specific metadata scenarios. Upstream Kubernetes Dashboard архивирован и не должен устанавливаться в новых production-средах. Этот блок оставлен только для уже существующей установки и как пример least privilege для любого web UI.
+> **Не устанавливайте Kubernetes Dashboard в новых кластерах.** Upstream-проект архивирован; это не поддерживаемый вариант для новых production-сред и не приоритет текущего CKS. Раздел не описывает установку Dashboard: он нужен только для containment уже существующей инсталляции и как пример least privilege для любого Kubernetes GUI.
 
-Не публикуйте legacy Dashboard через public `LoadBalancer` или Internet-facing Ingress и не используйте `cluster-admin` как повседневную identity. Держите существующий UI за VPN или authenticated access proxy, применяйте TLS и минимальный namespace-scoped RBAC. Для нового поддерживаемого UI действуют те же требования: private exposure, strong authentication, короткие сессии и audit. Тот же принцип применим и к современным преемникам upstream Dashboard - например, **Headlamp** или **Lens**: это отдельные web/desktop UI поверх Kubernetes API, а не встроенный компонент кластера, и им нужен точно такой же minimal-scope kubeconfig или ServiceAccount, а не `cluster-admin`.
+Для уже установленного Dashboard запланируйте замену или вывод из эксплуатации. До этого не публикуйте UI через public `LoadBalancer` или Internet-facing Ingress и не используйте `cluster-admin` как повседневную identity. Держите UI за VPN или authenticated access proxy, применяйте TLS и минимальный namespace-scoped RBAC. Те же требования действуют для любого другого поддерживаемого web или desktop UI поверх Kubernetes API: private exposure, strong authentication, короткие сессии, audit и minimal-scope kubeconfig или ServiceAccount.
 
 В read-only роли для общего списка ресурсов нужны `get/list/watch`, а для subresource `pods/log` практически нужен только `get`:
 
@@ -285,20 +288,20 @@ kubectl -n payments exec egress-test -- \
 
 | Симптом | Проверка и вероятная причина |
 |---|---|
-| AWS metadata всё ещё доступна | Pod не выбран selector, CNI не применяет policy, другая аддитивная policy разрешает широкий CIDR, IPv6 IMDS не учтён или EKS hop limit не равен 1 |
+| AWS metadata всё ещё доступна | Pod не выбран selector, CNI не применяет policy, другая аддитивная policy разрешает широкий CIDR, IPv6 IMDS не учтён, EKS hop limit не равен 1 для non-`hostNetwork` Pod, или сам Pod использует `hostNetwork: true` и поэтому сохраняет доступ к IMDS независимо от hop limit |
 | GKE metadata доступна | При Workload Identity Federation это может быть ожидаемым путём к short-lived workload token; проверьте, что разрешён только документированный GKE metadata path и не выдаётся node identity |
 | AKS metadata доступна | IMDS restriction имеет статус Preview и не покрывает `hostNetwork` Pod; он не предназначен для production SLA, может быть несовместим с add-ons/extension scenarios и не поддерживает Windows node pools. Проверьте Entra Workload ID и применимые ограничения отдельно |
 | После default-deny не работает DNS | Нет allow для фактического CoreDNS или NodeLocal DNSCache, забыты UDP/TCP `53` |
 | `except` не даёт ожидаемой блокировки | В другом правиле есть более широкий allow, metadata идёт по IPv6 или enforcement link-local/host endpoint зависит от CNI и dataplane |
 | Kubelet доступен извне | Firewall/security group открыт, anonymous access включён, endpoint слушает не тот интерфейс или RBAC даёт лишнее `nodes/proxy` |
-| Dashboard открывается из Internet | Service имеет `LoadBalancer`/`NodePort`, Ingress public или отсутствует authentication proxy |
-| Dashboard user видит слишком много | Выдан `cluster-admin`, `view` применён cluster-wide без необходимости или Role содержит `secrets`/опасные subresources |
+| Legacy GUI доступен из Internet | Service имеет `LoadBalancer`/`NodePort`, Ingress public или отсутствует authentication proxy |
+| Пользователь GUI видит слишком много | Выдан `cluster-admin`, `view` применён cluster-wide без необходимости или Role содержит `secrets`/опасные subresources |
 
 Полезный порядок диагностики: проверить labels Pod и политики, убедиться в поддержке CNI, проверить DNS, затем сравнить разрешённый и запрещённый запросы. Для endpoint ноды отдельно проверьте cloud firewall, host firewall, binding address и component flags. Не тестируйте etcd записью или неаутентифицированными destructive запросами на production-кластере.
 
 ## 05.6. Как это применяют в продакшене
 
-- **Identity без node credentials для Pod.** Не выдавайте приложениям неявный доступ к IAM-роли ноды. В EKS используйте IRSA/EKS Pod Identity и IMDSv2 hop limit 1, не отключая endpoint ноды; в GKE разрешайте необходимый GKE metadata path для Workload Identity Federation; в AKS учитывайте, что IMDS restriction имеет статус Preview, не покрывает `hostNetwork`, не предназначен для production SLA, может быть несовместим с add-ons/extension scenarios и не поддерживает Windows node pools. Во всех случаях применяйте минимальные provider IAM roles и сохраняйте Cloud audit evidence.
+- **Identity без node credentials для Pod.** Не выдавайте приложениям неявный доступ к IAM-роли ноды. В EKS используйте EKS Pod Identity или IRSA и IMDSv2 hop limit `1` для обычных non-`hostNetwork` Pod, не отключая endpoint ноды. `hostNetwork` Pod оценивайте отдельно: они сохраняют доступ к IMDS, поэтому запрещайте `hostNetwork` недоверенным workload через policy/admission. В GKE разрешайте необходимый GKE metadata path для Workload Identity Federation; в AKS учитывайте, что IMDS restriction имеет статус Preview, не покрывает `hostNetwork`, не предназначен для production SLA, может быть несовместим с add-ons/extension scenarios и не поддерживает Windows node pools. Во всех случаях применяйте минимальные provider IAM roles и сохраняйте Cloud audit evidence.
 - **Egress allowlist как код.** Default-deny, DNS и точечные назначения хранятся рядом с workload, проходят review и проверяются в pre-production. Широкий `0.0.0.0/0` с `except` должен иметь владельца и срок удаления.
 - **Private management plane.** API server, kubelet и etcd доступны только из нужных сетей. Security group, host firewall, TLS и RBAC работают вместе, потому что ошибка одного слоя не должна открывать endpoint.
 - **GUI как legacy/management endpoint.** Для существующего или поддерживаемого UI используют SSO/auth proxy, короткие сессии, TLS и roles по namespace. Долгоживущие bearer tokens, public `LoadBalancer` и `cluster-admin` не являются нормальной конфигурацией.
@@ -313,16 +316,16 @@ kubectl -n payments exec egress-test -- \
 - **`ipBlock`** - правило egress или ingress для CIDR; `except` исключает из него подсети или адреса.
 - **kubelet** - агент ноды Kubernetes; защищённый endpoint обычно слушает `10250`.
 - **etcd** - key-value хранилище состояния Kubernetes; client и peer endpoints обычно `2379` и `2380`.
-- **Kubernetes Dashboard** - web UI, работающий как Kubernetes API client и требующий минимальных RBAC-прав.
+- **Kubernetes Dashboard** - архивированный upstream web UI; для существующей установки применяют минимальные RBAC-права и планируют замену или вывод из эксплуатации.
 - **Host endpoint** - сетевой endpoint ноды, а не обычного Pod в CNI dataplane.
 
 ## 05.8. Итоги главы
 
 - Cloud metadata может быть критичным путём от скомпрометированного Pod к cloud identity ноды, но provider-specific workload identity меняет ожидаемое поведение: в GKE metadata server нужен для WIF, а в AWS учитывайте также IPv6 IMDS.
 - Начинайте с default-deny egress и разрешайте только DNS и необходимые назначения. `ipBlock` с `except: 169.254.169.254/32` полезен для переходного широкого allow, но не заменяет точечный allowlist.
-- Для EKS IMDSv2 с hop limit 1 не даёт Pod дотянуться до node credentials через IMDS (защищается identity ноды от Pod, а не Pod от неё); endpoint IMDS не отключают, а hop limit 2 оставляют только для обоснованного доступа workload. Это не заменяет workload identity, сетевую изоляцию и cloud identity с минимальными правами.
+- Для EKS IMDSv2 с hop limit `1` блокирует обычный путь к node IMDS для non-`hostNetwork` Pod. Это не относится к `hostNetwork: true` Pod, которые сохраняют доступ к IMDS и требуют отдельного контроля; endpoint IMDS не отключают, а hop limit 2 оставляют только для обоснованного доступа workload. Это не заменяет workload identity, сетевую изоляцию и cloud identity с минимальными правами.
 - kubelet, etcd и kube-apiserver защищаются сочетанием private network, firewall, TLS, authentication, authorization, review `nodes/proxy` и безопасных флагов, а не только Pod policy.
-- Legacy Dashboard не должен быть public и не должен работать от `cluster-admin`; `pods/log` для read-only роли требует только `get`, а не `list/watch`. Для новых решений он не является приоритетом CKS.
+- Архивированный Kubernetes Dashboard не используют для новых установок; существующий GUI не должен быть public или работать от `cluster-admin`. `pods/log` для read-only роли требует только `get`, а не `list/watch`.
 - Проверяйте реальный трафик provider-specific: в AWS Pod не получает node IMDS credentials, в GKE WIF работает только через ожидаемый metadata path, в AKS отдельно проверяются Entra federation и применимость IMDS restriction; endpoint ноды не открыт лишним источникам.
 
 ## 05.9. Как это пригодится: на экзамене и в реальной работе
@@ -371,7 +374,7 @@ kubectl -n payments exec egress-test -- \
 <details>
 <summary>4. Что улучшает IMDSv2 и почему одного IMDSv2 недостаточно при компрометации Pod?</summary>
 
-AWS IMDSv2 требует сначала получить временный token через `PUT`, а затем передать его в заголовке, поэтому уменьшает класс SSRF, рассчитанных на простой `GET`. Но скомпрометированный Pod способен выполнить корректный IMDSv2 exchange, если endpoint доступен, поэтому нужны egress isolation, workload identity и минимальные IAM-права; для EKS базовый hop limit равен 1.
+AWS IMDSv2 требует сначала получить временный token через `PUT`, а затем передать его в заголовке, поэтому уменьшает класс SSRF, рассчитанных на простой `GET`. Но скомпрометированный Pod способен выполнить корректный IMDSv2 exchange, если endpoint доступен, поэтому нужны egress isolation, workload identity и минимальные IAM-права; для EKS hop limit `1` является baseline для обычных non-`hostNetwork` Pod, а `hostNetwork: true` Pod сохраняют доступ к IMDS и должны контролироваться отдельно.
 </details>
 
 <details>
@@ -399,7 +402,7 @@ AWS IMDSv2 требует сначала получить временный tok
 </details>
 
 <details>
-<summary>9. Почему read-only роль для Dashboard или другого web UI обычно требует `get/list/watch` на ресурсах, но только `get` на `pods/log`, и как проверить это через `kubectl auth can-i` без реального доступа к UI?</summary>
+<summary>9. Почему read-only роль для legacy Dashboard или другого web UI обычно требует `get/list/watch` на ресурсах, но только `get` на `pods/log`, и как проверить это через `kubectl auth can-i` без реального доступа к UI?</summary>
 
 Для отображения списков Pod, Service и Events UI нужны `get`, `list` и `watch`, но чтение subresource `pods/log` практически требует только `get`. Права конкретной ServiceAccount проверяют в целевом namespace командой `kubectl auth can-i`: `get pods/log` должен вернуть `yes`, а `get secrets` и `create pods/exec` — `no`.
 </details>

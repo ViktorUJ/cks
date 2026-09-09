@@ -13,18 +13,28 @@
 ```mermaid
 flowchart TB
     app["Процесс приложения<br/>в контейнере"]
-    ns["namespaces<br/>видимость процессов, сети, mount и hostname"]
-    cg["cgroups<br/>CPU, memory, PID и другие ресурсы"]
-    caps["capabilities<br/>отдельные привилегии вместо полного root"]
-    mac["AppArmor или SELinux<br/>обязательный контроль доступа"]
-    sc["seccomp<br/>разрешённый набор syscalls"]
-    kernel["Общее ядро Linux ноды"]
-    app --> ns --> kernel
-    app --> cg
-    app --> caps
-    app --> mac
-    app --> sc
+
+    subgraph isolation["Границы изоляции"]
+        direction TB
+        boundaries["Независимые<br/>механизмы<br/>работают вместе<br/>не по порядку"]
+        ns["namespaces<br/>процессы · сеть<br/>mount · hostname"]
+        cg["cgroups<br/>CPU · память · PID<br/>и другие ресурсы"]
+        caps["capabilities<br/>точечные<br/>привилегии<br/>вместо root"]
+        mac["AppArmor / SELinux<br/>обязательный<br/>контроль доступа"]
+        sc["seccomp<br/>допустимый набор<br/>syscalls"]
+        boundaries ~~~ ns
+        ns ~~~ cg
+        cg ~~~ caps
+        caps ~~~ mac
+        mac ~~~ sc
+    end
+
+    kernel["Общее ядро<br/>Linux ноды"]
+    app --> boundaries
+    sc --> kernel
+
     style app fill:#326ce5,color:#fff
+    style boundaries fill:#e8eaed,color:#202124
     style ns fill:#0f9d58,color:#fff
     style cg fill:#0f9d58,color:#fff
     style caps fill:#0f9d58,color:#fff
@@ -39,10 +49,10 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    exploit["Уязвимость приложения<br/>или вредоносный образ"] --> shell["Shell в контейнере"]
-    shell --> probe["Разведка: uid, capabilities,<br/>mounts, сеть"]
-    probe --> weak["Слабая конфигурация:<br/>privileged, hostPath, опасная capability<br/>или уязвимость runtime"]
-    weak --> escape["Выход из ожидаемой изоляции<br/>и захват ноды"]
+    exploit["Уязвимость<br/>приложения<br/>или вредоносный<br/>образ"] --> shell["Shell в контейнере"]
+    shell --> probe["Разведка<br/>uid · capabilities<br/>mounts · сеть"]
+    probe --> weak["Слабая конфигурация<br/>privileged<br/>hostPath<br/>опасная capability<br/>уязвимость runtime"]
+    weak --> escape["Выход из изоляции<br/>захват ноды"]
     style exploit fill:#db4437,color:#fff
     style shell fill:#f4b400,color:#000
     style probe fill:#326ce5,color:#fff
@@ -55,6 +65,8 @@ flowchart TB
 ## 03.2. Linux namespaces: что контейнер видит, а чего не видит
 
 Namespace даёт процессу отдельное представление о ресурсе ядра. Процесс не исчезает с ноды, но через API ядра видит только объекты своего namespace. Kubernetes и runtime создают необходимые namespaces при старте sandbox пода.
+
+**Короткое напоминание о запуске обычного Pod.** Пользователь или controller отправляет его спецификацию в API server, scheduler выбирает ноду, а kubelet на этой ноде передаёт Pod container runtime. Runtime создаёт pod sandbox (в том числе нужные namespaces), затем запускает в нём контейнеры Pod. Полный путь создания Pod, роль pause-контейнера и sandbox разобраны в [главе 4 CKA](../../../cka/course/04/ru.md).
 
 | Namespace | Изолирует | Что обычно видит процесс контейнера | Security-следствие |
 |---|---|---|---|
@@ -69,7 +81,17 @@ Namespace даёт процессу отдельное представлени�
 
 ### User namespaces: отдельное отображение UID/GID
 
-User namespace не включается автоматически. В Kubernetes это opt-in: `spec.hostUsers: false` запрашивает user namespace для Pod. В v1.36 функция стала Stable/GA. При поддержке со стороны kubelet, container runtime и ноды UID 0 внутри контейнера отображается в непривилегированный UID на хосте. Это уменьшает последствия компрометации и не заменяет least privilege, capabilities, seccomp и MAC. Для Pod с user namespaces Pod Security Standards специально ослабляют проверки `runAsNonRoot` и `runAsUser`: root внутри user namespace не отображается как привилегированный host user, поэтому не переносите обычное правило `runAsNonRoot` на такой Pod без этого контекста.
+User namespace не включается автоматически. В Kubernetes это opt-in: `spec.hostUsers: false` запрашивает user namespace для Pod; в v1.36 функция стала Stable/GA.
+
+**Проблема.** Без user namespace UID 0 внутри обычного контейнера - это тот же числовой UID 0, что и root на ноде. Namespaces скрывают часть ресурсов хоста, но сами по себе не меняют это отображение идентичности. Если процесс получает доступ за ожидаемую границу контейнера, host воспринимает его как root - последствия ошибки в приложении, конфигурации или изоляции становятся существенно тяжелее.
+
+**Защитный эффект.** При поддержке со стороны kubelet, container runtime и ноды UID 0 внутри контейнера отображается в непривилегированный UID на хосте. Приложение по-прежнему может считать себя root **внутри** Pod, но для ядра и файлов хоста это уже не host root. Так user namespace снижает blast radius компрометации и добавляет ещё одну границу между процессом контейнера и нодой.
+
+**Подводные камни.**
+
+- Это не замена least privilege, capabilities, seccomp и MAC: user namespace не исправляет уязвимость ядра и не делает безопасными `privileged`, `hostPath` или host namespaces.
+- Совместимость ноды, runtime, volumes и workload обязательна; ниже есть короткий чек-лист, что именно проверить до rollout.
+- Pod Security Standards для Pod с user namespaces ослабляют проверки `runAsNonRoot` и `runAsUser`, потому что root внутри такого Pod не равен привилегированному пользователю хоста. Это не отменяет внутренних правил приложения: если оно не должно работать от root, требуйте `runAsNonRoot` и здесь.
 
 ```yaml
 apiVersion: v1
@@ -84,12 +106,81 @@ spec:
     image: nginx:1.30.4
 ```
 
-Перед включением проверьте поддержку user namespaces в используемой версии Kubernetes, runtime и образе ноды, а также совместимость volumes и workload. Минимальные ориентиры документации: **Linux 6.3+** (в этой версии tmpfs получил поддержку idmapped mounts), runc >= 1.2, crun >= 1.9 (рекомендуется >= 1.13), containerd >= 2.0 или CRI-O >= 1.25; idmapped mounts должны поддерживаться filesystem для `/var/lib/kubelet/pods` и используемых volumes. Pod с user namespaces не может использовать `volumeDevices`/raw block volumes; NFS volumes также сейчас несовместимы, поскольку Linux NFS client не поддерживает нужные idmapped mounts. Это не рекомендация: при `hostUsers: false` API запрещает `hostNetwork: true`, `hostIPC: true` и `hostPID: true`.
+Перед включением user namespaces проверьте совместимость в трёх местах:
+
+1. **Нода.** Нужен Linux **6.3+**: начиная с него tmpfs поддерживает idmapped mounts. Filesystem должен поддерживать idmapped mounts для `/var/lib/kubelet/pods` и используемых volumes. Выполните на **каждой** ноде, куда может попасть Pod:
+
+   ```bash
+   uname -r
+   sudo findmnt -T /var/lib/kubelet/pods \
+     -o TARGET,SOURCE,FSTYPE,OPTIONS
+   ```
+
+   Первая команда должна показать ядро 6.3 или новее; вторая - filesystem, который надо сверить с поддержкой idmapped mounts для образа ноды. Эти команды выявляют неподходящую ноду, но не заменяют canary-запуск Pod с `hostUsers: false`.
+
+2. **Runtime.** Минимальные ориентиры документации: runc >= 1.2, crun >= 1.9 (рекомендуется >= 1.13), containerd >= 2.0 или CRI-O >= 1.25. На целевой ноде посмотрите версию CRI runtime и OCI runtime:
+
+   ```bash
+   sudo crictl version
+   sudo runc --version 2>/dev/null || sudo crun --version
+   ```
+
+   В выводе `crictl version` нужны `runtimeName` и `runtimeVersion`; вторую команду сопоставьте с runtime, который фактически использует нода. Не делайте вывод о версии runc только по версии `kubectl` или API Kubernetes.
+
+3. **Workload и storage.** User namespaces меняют отображение UID/GID. Чтобы файловый volume сохранял корректные владельца и права внутри Pod, kubelet должен подключить его как idmapped mount. У `volumeDevices`/raw block volumes нет filesystem для такого отображения, а Linux NFS client не поддерживает нужные idmapped mounts. Если workload использует один из этих типов, kubelet не сможет подготовить volume для Pod с `hostUsers: false`, и Pod не стартует.
+
+   **Обычный EBS PVC не запрещён.** Если EBS CSI driver предоставляет PVC как filesystem (типичный случай: `volumeMode: Filesystem`, том подключён через `volumeMounts`), такой Pod может работать с user namespaces при поддержке idmapped mounts у filesystem ноды. Например, ext4 и XFS поддерживаются на Linux 6.3+. Но тот же EBS PVC с `volumeMode: Block`, переданный контейнеру через `volumeDevices`, - raw block volume и поэтому несовместим. Поэтому проверяйте storage **до** rollout: это показывает, нужно ли отказаться от user namespaces для workload или сначала сменить способ подключения storage. Для уже созданного test-Pod или аналогичного workload в staging сначала проверьте raw block devices:
+
+   ```bash
+   NS=demo
+   POD=userns-web
+
+   kubectl get pod -n "$NS" "$POD" -o json | jq -r '
+     (
+       .spec.containers[]?,
+       .spec.initContainers[]?,
+       .spec.ephemeralContainers[]?
+     ) as $container
+     | $container.volumeDevices[]?
+     | "container=\($container.name) raw-block-volume=\(.name)"
+   '
+   ```
+
+   Пустой вывод означает, что `volumeDevices` не используются. Затем проверьте прямые NFS volumes и PV, подключённые через PVC:
+
+   ```bash
+   kubectl get pod -n "$NS" "$POD" -o json | jq -r '
+     .spec.volumes[]? | select(.nfs)
+     | "direct NFS volume: \(.name)"
+   '
+
+   for pvc in $(kubectl get pod -n "$NS" "$POD" \
+     -o jsonpath='{range .spec.volumes[?(@.persistentVolumeClaim)]}{.persistentVolumeClaim.claimName}{"\n"}{end}'); do
+     pv=$(kubectl get pvc -n "$NS" "$pvc" \
+       -o jsonpath='{.spec.volumeName}')
+     kubectl get pv "$pv" -o json | jq -r '
+       if .spec.nfs then "NFS PV: \(.metadata.name)"
+       elif .spec.csi then "CSI driver: \(.spec.csi.driver)"
+       else "PV without direct NFS: \(.metadata.name)"
+       end
+     '
+   done
+   ```
+
+   Любой вывод о raw block или NFS означает, что этот workload не готов к user namespaces. Для CSI volume строка `CSI driver` сама по себе не означает совместимость: её надо подтвердить документацией и тестом конкретного CSI-драйвера.
+
+Есть и жёсткие ограничения API: при `hostUsers: false` нельзя указать `hostNetwork: true`, `hostIPC: true` или `hostPID: true`. Это не настройка hardening, которую можно проигнорировать: Kubernetes отклонит такой Pod.
 
 На ноде namespaces можно посмотреть утилитой `lsns`. Это диагностическая команда для администратора ноды, а не команда, которую надо давать приложению:
 
 ```bash
-sudo lsns -t pid,net,mnt,uts,ipc,user
+sudo lsns \
+  -t pid \
+  -t net \
+  -t mnt \
+  -t uts \
+  -t ipc \
+  -t user
 sudo crictl ps
 CONTAINER_ID="${CONTAINER_ID:?set target container id from crictl ps}"
 sudo crictl inspect "$CONTAINER_ID" | jq '.info.pid'
@@ -131,17 +222,15 @@ kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.met
 
 ```mermaid
 flowchart TB
-    pod["Pod"] --> app["Контейнер приложения"]
-    pod --> sidecar["Sidecar"]
-    app --> cga["cgroup приложения<br/>CPU, memory, pids"]
-    sidecar --> cgs["cgroup sidecar<br/>CPU, memory, pids"]
-    cga --> node["Ресурсы ноды"]
-    cgs --> node
-    attacker["Бесконечное выделение памяти<br/>или fork bomb"] --> cga
-    cga --> limited["limit срабатывает:<br/>OOM только для cgroup<br/>или отказ создания PID"]
-    style pod fill:#326ce5,color:#fff
-    style attacker fill:#db4437,color:#fff
-    style limited fill:#0f9d58,color:#fff
+    attack["DoS в контейнере<br/>память без конца<br/>или fork bomb"]
+    limit["cgroup<br/>контейнера<br/>memory · CPU<br/>PID limits"]
+    result["Предел сработал<br/>OOM · throttling<br/>отказ создания PID"]
+
+    attack --> limit --> result
+
+    style attack fill:#db4437,color:#fff
+    style limit fill:#326ce5,color:#fff
+    style result fill:#0f9d58,color:#fff
 ```
 
 Минимальный пример лимитов для процесса, который способен обслуживать небольшой HTTP-трафик:
@@ -170,6 +259,11 @@ spec:
 **Pod-Level Resources** находятся в Beta с Kubernetes v1.34 и включены по умолчанию. Через `spec.resources` можно задать общий `requests` и `limits` Pod для CPU, memory и hugepages: это aggregate budget всего Pod, а не замена явных ресурсов контейнера. Aggregate Pod limit — реальная общая граница для контейнеров Pod; container-level limits остаются отдельными пределами каждого контейнера.
 
 ```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-budget-web
+  namespace: demo
 spec:
   resources:
     requests:
@@ -183,14 +277,14 @@ spec:
     image: nginx:1.30.4
 ```
 
-Примените манифест и проверьте, что спецификация содержит ожидаемую границу:
+Сохраните пример как `pod-budget-web.yaml` и проверьте именно общий budget в `spec.resources`:
 
 ```bash
-kubectl apply -f bounded-web.yaml
-kubectl wait -n demo --for=condition=Ready pod/bounded-web --timeout=120s
-kubectl get pod -n demo bounded-web \
-  -o jsonpath='{.spec.containers[0].resources}{"\n"}'
-kubectl describe pod -n demo bounded-web
+kubectl apply -f pod-budget-web.yaml
+kubectl wait -n demo --for=condition=Ready pod/pod-budget-web --timeout=120s
+kubectl get pod -n demo pod-budget-web \
+  -o jsonpath='{.spec.resources}{"\n"}'
+kubectl describe pod -n demo pod-budget-web
 ```
 
 На cgroup v2 лимиты видны через файлы `memory.max`, `cpu.max` и `pids.max`; расположение cgroup конкретного процесса показывает `/proc/<pid>/cgroup`:
@@ -210,7 +304,13 @@ stat -fc %T /sys/fs/cgroup
 # cgroup2fs означает cgroup v2.
 ```
 
-`requests` влияют на scheduler и QoS, но сами по себе не останавливают прожорливый процесс. За жёсткое ограничение отвечают `limits`; для CPU это означает возможный throttling, поэтому limit не выбирают произвольно низким. Ресурсы одного Pod не защищают namespace от суммарного потребления: `ResourceQuota` ограничивает бюджет namespace, а `LimitRange` задаёт defaults/границы для каждого workload. Вместе они не дают одной команде вытеснить остальные только потому, что отдельный манифест оказался неполным. Лимит PID задаётся параметром kubelet `podPidsLimit`, а не полем PodSpec workload; его наличие проверяют в конфигурации kubelet и в cgroup. При memory pressure OOM обрабатывается в области соответствующей cgroup: ядро может завершить процесс в контейнере, а если завершается основной процесс, kubelet перезапустит контейнер согласно `restartPolicy`. Не пытайтесь доказывать работу memory limit запуском намеренного OOM на production-ноде.
+Запомните эти границы по отдельности:
+
+- **Внутри workload: `requests` и `limits`.** `requests` влияют на scheduler и QoS, но сами по себе не останавливают прожорливый процесс. Жёсткую границу задают `limits`: для CPU это ceiling через возможный throttling, поэтому CPU limit не выбирают произвольно низким.
+- **На уровне namespace: `ResourceQuota` и `LimitRange`.** Ресурсы одного Pod не защищают namespace от суммарного потребления. `ResourceQuota` ограничивает его общий бюджет, а `LimitRange` задаёт defaults и допустимые границы для каждого workload. Вместе они не позволяют одной команде вытеснить остальных неполным манифестом.
+- **PID: limit задаёт администратор ноды.** В YAML обычного Pod нельзя указать «этому workload разрешено N процессов». Вместо этого администратор задаёт kubelet параметр `podPidsLimit` - максимальное число PID **для одного Pod** на этой ноде. Kubelet применяет его через PID cgroup. Поэтому проверка состоит из двух шагов: сначала найдите `podPidsLimit` в конфигурации kubelet, затем у уже запущенного Pod проверьте `pids.max` в его cgroup.
+- **При memory pressure: OOM в cgroup.** Ядро может завершить процесс контейнера в области соответствующей cgroup. Если завершается основной процесс, kubelet перезапускает контейнер в соответствии с `restartPolicy`.
+- **Проверяйте безопасно.** Не доказывайте работу memory limit намеренным OOM на production-ноде.
 
 ## 03.4. Linux capabilities: root надо дробить
 
@@ -244,7 +344,13 @@ sudo getpcaps "$PID"
 kubectl exec -n demo <pod> -- cat /proc/sys/net/ipv4/ip_unprivileged_port_start
 ```
 
-`allowPrivilegeEscalation: false` устанавливает для процесса Linux `no_new_privs`: exec не должен получить новые привилегии через setuid/setgid-биты или file capabilities. Это важная, но не единственная граница; она не заменяет drop capabilities, seccomp и MAC. В Kubernetes безопасная отправная точка - удалить всё и добавить одну capability только при документированной необходимости. Только если настройка sysctl и требования приложения это подтверждают, legacy-приложению для TCP 80 может потребоваться `NET_BIND_SERVICE`:
+Для обычного непривилегированного контейнера `allowPrivilegeEscalation: false` устанавливает для процесса Linux `no_new_privs`: дочерний процесс после `exec` не должен получить новые привилегии через setuid/setgid-биты или file capabilities.
+
+Есть важное исключение Kubernetes: `allowPrivilegeEscalation` фактически всегда `true`, если контейнер запущен с `privileged: true` или имеет `CAP_SYS_ADMIN`. Поэтому сначала уберите `privileged` и чрезмерные capabilities; `allowPrivilegeEscalation: false` - дополнительная граница, а не способ обезопасить такой контейнер.
+
+При `allowPrivilegeEscalation: true` (значение по умолчанию) Kubernetes не ставит `no_new_privs`. Само `true` не выдаёт capability и не делает контейнер privileged, но оставляет путь к повышению привилегий: скомпрометированный непривилегированный процесс может выполнить setuid/setgid-программу или файл с capabilities из образа и получить предложенный этим файлом UID/GID или capability. Так RCE от имени пользователя приложения может превратиться в root или процесс с дополнительными capabilities **внутри контейнера**, расширяя последствия атаки и возможные escape-цепочки. Если приложению не нужен такой exec, безопаснее установить `false`.
+
+Это важная, но не единственная граница; она не заменяет drop capabilities, seccomp и MAC. В Kubernetes безопасная отправная точка - удалить всё и добавить одну capability только при документированной необходимости. Только если настройка sysctl и требования приложения это подтверждают, legacy-приложению для TCP 80 может потребоваться `NET_BIND_SERVICE`:
 
 ```yaml
 apiVersion: v1
@@ -289,11 +395,11 @@ capsh --decode=0000000000000400
 
 ```mermaid
 flowchart TB
-    process["Процесс контейнера"] --> syscall["syscall: openat, clone, mount, ..."]
+    process["Процесс контейнера"] --> syscall["syscall<br/>openat · clone<br/>mount · …"]
     syscall --> filter["seccomp profile"]
-    filter -->|"allow"| kernel["Ядро выполняет syscall"]
-    filter -->|"errno или kill"| blocked["Операция заблокирована"]
-    filter -->|"log"| audit["Событие для расследования"]
+    filter -->|"allow"| kernel["Ядро выполняет<br/>syscall"]
+    filter -->|"errno или kill"| blocked["Операция<br/>заблокирована"]
+    filter -->|"log"| audit["Событие для<br/>расследования"]
     style process fill:#326ce5,color:#fff
     style filter fill:#673ab7,color:#fff
     style kernel fill:#0f9d58,color:#fff
@@ -342,7 +448,9 @@ sudo strace -f -p "$PID" -e trace=%file,%network
 
 ## 03.6. MAC: AppArmor и SELinux дополняют DAC
 
-Обычный Linux DAC проверяет UID, GID и mode bits файла. Процесс с достаточным UID или capability может пройти эту проверку. Mandatory Access Control добавляет политику, которую процесс не может отменить сам по себе.
+Обычный Linux DAC проверяет UID, GID и mode bits файла. В модели DAC (Discretionary Access Control, дискреционный контроль доступа) владелец объекта может менять mode bits, например через `chmod`, и тем самым выдавать или отзывать доступ в пределах DAC-модели. Смена UID-владельца файла в Linux требует `CAP_CHOWN`; непривилегированный владелец может изменить группу файла только на группу, членом которой он является. Процесс с достаточными UID/GID или capabilities может пройти либо обойти часть обычных DAC-проверок.
+
+**Mandatory Access Control (MAC, обязательный контроль доступа)** добавляет вторую, обязательную для ядра проверку. Администратор загружает policy, а ядро сопоставляет процесс с его profile/label и проверяет, разрешено ли ему конкретное действие над файлом, сокетом или другим объектом. Даже если DAC уже разрешил доступ, MAC может его запретить; сам процесс не может снять или ослабить policy. Цель - локализовать скомпрометированный процесс: например, веб-сервер не должен читать SSH-ключи или менять системные файлы только потому, что получил дополнительный UID, capability либо доступ к файлу. Поэтому MAC дополняет DAC, capabilities и seccomp, а не заменяет их.
 
 | Механизм | Основная модель | Где чаще встречается | Что проверять |
 |---|---|---|---|
@@ -375,10 +483,10 @@ namespaces, cgroups, capabilities, seccomp и MAC работают в одном
 
 ```mermaid
 flowchart TB
-    normal["Обычный container runtime<br/>процесс -> host kernel"]
-    gvisor["gVisor<br/>процесс -> Sentry -> host kernel"]
-    kata["Kata Containers<br/>процесс -> guest kernel -> VM boundary -> host"]
-    risk["Недоверенный tenant<br/>или высокорисковая нагрузка"] --> gvisor
+    normal["Обычный runtime<br/>процесс<br/>→ host kernel"]
+    gvisor["gVisor<br/>процесс → Sentry<br/>→ host kernel"]
+    kata["Kata Containers<br/>процесс<br/>→ guest kernel<br/>→ VM boundary<br/>→ host kernel"]
+    risk["Недоверенный tenant<br/>или высокорисковая<br/>нагрузка"] --> gvisor
     risk --> kata
     style normal fill:#f4b400,color:#000
     style gvisor fill:#326ce5,color:#fff
@@ -398,15 +506,38 @@ POD="${POD:?set target pod name}"
 kubectl get pod -n "$NAMESPACE" "$POD" -o yaml | \
   grep -E 'privileged:|hostPID:|hostIPC:|hostNetwork:|hostPath:|allowPrivilegeEscalation:'
 
-# 2. Посмотреть effective securityContext и volumes.
-kubectl get pod -n "$NAMESPACE" "$POD" -o jsonpath='{.spec.containers[*].securityContext}{"\n"}'
-kubectl get pod -n "$NAMESPACE" "$POD" -o jsonpath='{.spec.volumes}{"\n"}'
+# 2. Посмотреть объявленные Pod-level и container-level securityContext,
+#    а также volumes. Это декларативная конфигурация, не доказательство
+#    фактически применённых runtime/kernel settings.
+kubectl get pod -n "$NAMESPACE" "$POD" -o json | jq '
+{
+  podSecurityContext: .spec.securityContext,
+  containers: [
+    (
+      .spec.containers[]?,
+      .spec.initContainers[]?,
+      .spec.ephemeralContainers[]?
+    )
+    | {
+        name: .name,
+        securityContext: .securityContext
+      }
+  ],
+  volumes: .spec.volumes
+}
+'
 
-# 3. На ноде сопоставить container c PID и его namespace/cgroup.
-sudo crictl ps --name "$POD"
+# 3. На ноде найти Pod sandbox, затем container и его namespace/cgroup.
+#    В `crictl ps --name` фильтруется имя контейнера, не имя Pod.
+sudo crictl pods \
+  --name "^${POD}$" \
+  --namespace "^${NAMESPACE}$"
+POD_ID="${POD_ID:?set target pod sandbox id from crictl pods}"
+sudo crictl ps --pod "$POD_ID"
 CONTAINER_ID="${CONTAINER_ID:?set target container id from crictl ps}"
 sudo crictl inspect "$CONTAINER_ID" | jq '.info.pid'
-PID="${PID:?set pid from crictl inspect}"
+PID="$(sudo crictl inspect "$CONTAINER_ID" | jq -r '.info.pid')"
+PID="${PID:?failed to get pid from crictl inspect}"
 sudo lsns -p "$PID"
 sudo cat "/proc/$PID/cgroup"
 ```

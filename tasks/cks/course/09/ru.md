@@ -28,12 +28,12 @@ Control plane принимает решения за весь кластер. `k
 
 ```mermaid
 flowchart TB
-    net["Сеть или доступ к ноде"] --> weak["Опасный аргумент<br/>или слабый TLS"]
-    weak --> api["Доступ к API/kubelet/etcd"]
-    file["Подменённый binary<br/>или image"] --> runtime["Код с правами компонента"]
+    net["Сеть или доступ<br/>к ноде"] --> weak["Опасный аргумент<br/>или слабый TLS"]
+    weak --> api["Доступ к<br/>API/kubelet/etcd"]
+    file["Подменённый binary<br/>или image"] --> runtime["Код с правами<br/>компонента"]
     api --> impact["Secrets, workload,<br/>эскалация прав"]
     runtime --> impact
-    harden["Минимальные флаги + TLS<br/>проверка подписи и sha256 binary"] --> verify["Проверка здоровья<br/>и происхождения"]
+    harden["Минимальные флаги<br/>+ TLS · подпись<br/>и sha256 binary"] --> verify["Проверка здоровья<br/>и происхождения"]
     verify --> impact
     style net fill:#db4437,color:#fff
     style weak fill:#f4b400,color:#000
@@ -59,7 +59,7 @@ TLS и RBAC образуют один контроль. Но следующие 
 
 | Компонент | Опасная настройка | Риск | Безопасный ориентир |
 |---|---|---|---|
-| `kube-apiserver` | `--anonymous-auth=true` | запрос становится `system:anonymous`; при ошибочном RBAC получает доступ | `--anonymous-auth=false` |
+| `kube-apiserver` | широкий anonymous access | запрос без принятых credentials может быть обработан как `system:anonymous`; при ошибочном RBAC это создаёт путь неаутентифицированного доступа | для benchmark может требоваться `--anonymous-auth=false`; в production сначала проверьте health endpoints и kubeadm discovery, а в Kubernetes 1.34+ при необходимости ограничьте anonymous access через `AuthenticationConfiguration` |
 | `kube-apiserver` | `--authorization-mode=AlwaysAllow` или добавленный `AlwaysAllow` | любой аутентифицированный запрос проходит authorization | для kubeadm обычно `Node,RBAC` |
 | `kube-apiserver` | `--profiling=true` | profiling может раскрыть состояние процесса и не нужен на публичной границе | `--profiling=false` |
 | `kube-apiserver` | legacy `--insecure-port`/`--insecure-bind-address` | API без TLS и authentication | не включать; в современных Kubernetes эти legacy-опции удалены |
@@ -71,12 +71,20 @@ TLS и RBAC образуют один контроль. Но следующие 
 | `kube-scheduler` | profiling включён или endpoint на широком `--bind-address` | диагностический endpoint становится доступен лишней сети | в component config `enableProfiling: false`; deprecated CLI `--profiling=false` проверять только как legacy-источник |
 | `etcd` | `--client-cert-auth=false`, небезопасный `--listen-client-urls` | клиент без mTLS или внешняя сеть получает доступ к хранилищу кластера | mTLS, localhost/внутренняя сеть, firewall |
 
-Для CIS/CKS-лабы простой ожидаемый baseline apiserver — `--anonymous-auth=false`: ни один
-неаутентифицированный запрос не становится `system:anonymous`. В production Kubernetes
-1.34+ доступна более узкая альтернатива `AuthenticationConfiguration`: можно разрешить
-anonymous access только health endpoints, а не всему API. Например, отдельный файл,
-подключённый в static Pod через `--authentication-config=<path>` и соответствующее
-монтирование, может содержать:
+Для конкретной CIS/CKS-задачи benchmark может явно требовать `--anonymous-auth=false`;
+тогда выполняйте именно требование задания и доказывайте результат.
+
+В production kubeadm не применяйте эту правку механически. Стандартный token-based
+`kubeadm join` использует публичное чтение `kube-public/cluster-info` группой
+`system:unauthenticated`, поэтому полное отключение anonymous authentication меняет
+discovery lifecycle. Также проверьте health probes `kube-apiserver`, если они обращаются
+к anonymous health endpoints.
+
+В Kubernetes 1.34+ можно использовать `AuthenticationConfiguration`, разрешая anonymous
+access только для явно необходимых endpoints. Если публичный `cluster-info` больше не
+нужен, сначала переведите join/discovery на подходящую альтернативу и только затем
+убирайте этот доступ. Например, отдельный файл, подключённый в static Pod через
+`--authentication-config=<path>` и соответствующее монтирование, может содержать:
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -88,6 +96,10 @@ anonymous:
   - path: /readyz
   - path: /healthz
 ```
+
+Если оставить anonymous access только для `/livez`, `/readyz` и `/healthz`, обычный
+token-based `kubeadm join` через публичный `cluster-info` работать не будет. Это допустимо
+только если lifecycle добавления нод переведён на другой discovery mechanism.
 
 Если в `AuthenticationConfiguration` задано поле `anonymous`, одновременно использовать
 `--anonymous-auth` нельзя. Endpoint-scoped вариант не делает пройденным benchmark, который
@@ -115,9 +127,14 @@ sudo grep -nE 'readOnlyPort|anonymous:|authorization:|protectKernelDefaults|tls'
 
 `--enable-debugging-handlers` у kubelet тоже оценивают по риску: он включает
 диагностические handlers, нужные части которых могут использовать `kubectl logs`, `exec`
-и `port-forward`. Не отключайте его вслепую. Сначала определите нужные операции,
-защитите порт `10250` network policy/firewall и включите authentication + `Webhook`
-authorization. То же правило относится к метрикам: profiling и metrics - разные endpoint.
+и `port-forward`. Не отключайте его вслепую. Сначала определите нужные операции и
+защитите kubelet API на `10250` authentication + `Webhook` authorization.
+
+Сетевой доступ к `10250` ограничивайте на уровне ноды или инфраструктуры: host firewall,
+cloud security group/ACL либо CNI-specific host policy. Не рассчитывайте на обычный
+Kubernetes `NetworkPolicy` как на переносимый контроль kubelet endpoint: это host/node
+traffic, а поведение NetworkPolicy для `hostNetwork` и node IP зависит от реализации CNI.
+То же правило относится к метрикам: profiling и metrics - разные endpoint.
 
 ## 09.3. Где менять конфигурацию и как безопасно перезапускать
 
@@ -142,11 +159,11 @@ process arguments. Не задавайте один параметр однов�
 
 ```mermaid
 flowchart TB
-    inspect["Определить активный файл<br/>и сохранить состояние"] --> edit["Одна минимальная правка"]
-    edit --> reload["kubelet пересоздаёт static Pod<br/>по изменению manifest"]
-    reload --> health["Проверить logs, Ready, /readyz"]
-    health --> test["Проверить запрет и TLS"]
-    test --> pass["Зафиксировать результат<br/>или откатить"]
+    inspect["Определить активный<br/>файл и сохранить<br/>состояние"] --> edit["Одна минимальная<br/>правка"]
+    edit --> reload["kubelet пересоздаёт<br/>static Pod по<br/>изменению manifest"]
+    reload --> health["Проверить logs,<br/>Ready, /readyz"]
+    health --> test["Проверить запрет<br/>и TLS"]
+    test --> pass["Зафиксировать<br/>результат или<br/>откатить"]
     style inspect fill:#326ce5,color:#fff
     style edit fill:#f4b400,color:#000
     style reload fill:#673ab7,color:#fff
@@ -156,9 +173,16 @@ flowchart TB
 ```
 
 Правьте один control-plane компонент за раз и храните backup **вне**
-`/etc/kubernetes/manifests/`: backup с расширением YAML в этом каталоге может быть принят
-kubelet за ещё один static Pod. Работайте через консоль ноды, особенно на одноузловом
-control plane; в HA-кластере меняйте одну ноду и дождитесь её здоровья перед следующей.
+`/etc/kubernetes/manifests/`.
+
+Kubelet не фильтрует static Pod directory по расширению: он пытается обработать все
+файлы, имя которых не начинается с точки. Поэтому `kube-apiserver.yaml.backup`,
+`.bak`-копия без leading dot или файл с другим suffix также может быть прочитан как
+manifest.
+
+Надёжное правило - не хранить backup-файлы в watched directory вообще. Работайте через
+консоль ноды, особенно на одноузловом control plane; в HA-кластере меняйте одну ноду и
+дождитесь её здоровья перед следующей.
 
 ```bash
 # 1. Создать candidate вне watched directory; kubelet не увидит его до атомарной замены.
@@ -272,21 +296,58 @@ apiserver - клиенты kubelet, controller-manager, scheduler, kubectl, webh
 `VersionTLS13` ожидайте отказ старого TLS 1.2-клиента - это не доказательство ошибки
 сервера, но требует плана миграции клиента.
 
-Проверка должна удостоверить и разрешённый, и запрещённый protocol. Для apiserver
-достаточно проверить handshake на `6443`; для kubelet `10250` часто требует client
-certificate и authorization после handshake; для etcd нужен его CA и клиентский cert.
-Не выводите private key в терминал и не копируйте PKI с ноды.
+Проверка TLS minimum должна включать две разные вещи:
+
+1. protocol evidence - разрешённая версия успешно согласуется, а версия ниже
+   установленного minimum отвергается;
+2. application health - компонент после изменения остаётся работоспособным.
+
+Для apiserver достаточно проверить handshake на `6443`; для kubelet `10250` часто требует
+client certificate и authorization после handshake; для etcd `etcdctl endpoint health`
+доказывает только application health, поэтому protocol handshake проверяйте отдельно
+через `openssl s_client`. Не выводите private key в терминал и не копируйте PKI с ноды.
+
+Перед negative test убедитесь, что используемый TLS-клиент действительно способен
+предложить тестируемую legacy-версию протокола. Современный OpenSSL или системная crypto
+policy могут сами запрещать TLS 1.1. Если клиент отклоняет TLS 1.1 локально, такой
+результат не доказывает server-side `tls-min-version`. Negative test считается
+доказательством только когда видно, что клиент попытался согласовать legacy protocol, а
+отказ пришёл от проверяемого endpoint. Это правило одинаково относится к apiserver,
+kubelet и etcd.
 
 ```bash
-# apiserver: TLS 1.2 должен согласоваться, TLS 1.1 - завершиться protocol-version error.
+# apiserver, positive test: TLS 1.2 должен успешно согласоваться.
 # Замените адрес и SNI на значения своего кластера.
 export API=127.0.0.1:6443
 openssl s_client -connect "$API" -servername kubernetes -tls1_2 \
   -CAfile /etc/kubernetes/pki/ca.crt </dev/null 2>&1 | grep -E 'Protocol|Cipher|Verify return code'
+
+# apiserver, negative test: TLS 1.1 должен быть отвергнут сервером.
+# Не считайте локальный отказ OpenSSL доказательством server policy.
 openssl s_client -connect "$API" -servername kubernetes -tls1_1 \
   </dev/null 2>&1 | grep -Ei 'protocol|alert|handshake failure'
 
-# etcd: проверка TLS выполняется с доверенным client certificate и CA.
+# etcd: сначала проверить разрешённый TLS 1.2 handshake с mTLS.
+sudo openssl s_client \
+  -connect 127.0.0.1:2379 \
+  -tls1_2 \
+  -CAfile /etc/kubernetes/pki/etcd/ca.crt \
+  -cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
+  -key /etc/kubernetes/pki/etcd/healthcheck-client.key \
+  </dev/null 2>&1 \
+  | grep -E 'Protocol|Cipher|Verify return code'
+
+# Затем negative test: TLS 1.1 не должен согласоваться.
+sudo openssl s_client \
+  -connect 127.0.0.1:2379 \
+  -tls1_1 \
+  -CAfile /etc/kubernetes/pki/etcd/ca.crt \
+  -cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
+  -key /etc/kubernetes/pki/etcd/healthcheck-client.key \
+  </dev/null 2>&1 \
+  | grep -Ei 'protocol|alert|handshake failure'
+
+# Отдельно проверить прикладное здоровье etcd.
 export ETCDCTL_API=3
 sudo etcdctl --endpoints=https://127.0.0.1:2379 endpoint health \
   --cacert=/etc/kubernetes/pki/etcd/ca.crt \
@@ -414,11 +475,16 @@ sudo grep -nE 'readOnlyPort|anonymous:|authorization:|tlsMinVersion|tlsCipherSui
   /var/lib/kubelet/config.yaml
 sudo ps -ef | grep -E '[k]ubelet|[k]ube-apiserver'
 
-# 2. Поведение: read-only kubelet port закрыт, старый TLS protocol отвергнут.
+# 2. Поведение: read-only kubelet port закрыт.
 sudo ss -lntp | grep ':10255' || echo 'PASS: kubelet read-only port is closed'
-openssl s_client -connect 127.0.0.1:6443 -tls1_1 </dev/null 2>&1 \
-  | grep -Ei 'protocol|alert|handshake failure'
+```
 
+TLS minimum подтвердите positive/negative protocol tests из §09.4. Не повторяйте
+упрощённый `openssl ... -tls1_1 | grep ...` без проверки возможностей локального клиента:
+современный OpenSSL или системная crypto policy сами могут запрещать TLS 1.1, и такой
+тест допускает false positive.
+
+```bash
 # 3. Здоровье: API, ноды и static Pod вернулись в рабочее состояние.
 kubectl get --raw='/readyz?verbose'
 kubectl get nodes
@@ -527,9 +593,9 @@ kubelet service; сохраните backup вне `/etc/kubernetes/manifests`; �
 </details>
 
 <details>
-<summary>3. Почему нельзя хранить YAML backup внутри `/etc/kubernetes/manifests/`?</summary>
+<summary>3. Почему нельзя хранить backup-манифесты внутри `/etc/kubernetes/manifests/`?</summary>
 
-Kubelet наблюдает этот каталог и рассматривает YAML-манифесты в нём как static Pod. Резервная копия с YAML-расширением может быть запущена как ещё один control-plane Pod, что создаст конфликт или нарушит работу. Backup следует держать вне watched directory, например в `/root/k8s-manifest-backup`.
+Kubelet сканирует static Pod directory и не ограничивается файлами `.yaml`/`.yml`: обрабатываются все файлы, имя которых не начинается с точки. Поэтому backup с любым обычным именем может быть прочитан как ещё один manifest и создать конфликт. Резервные копии нужно хранить вне watched directory, например в `/root/k8s-manifest-backup`.
 </details>
 
 <details>
@@ -549,7 +615,7 @@ RSA-only список не содержит suite, совместимый с к�
 <summary>6. Какими командами вы подтвердите, что TLS 1.1 отвергнут, TLS 1.2 разрешён, а apiserver
    после изменения здоров?</summary>
 
-Для API на `6443` запускают `openssl s_client -connect "$API" -servername kubernetes -tls1_2` и проверяют согласованные Protocol, Cipher и Verify return code. Отказ TLS 1.1 проверяют тем же `openssl s_client` с `-tls1_1`, ожидая protocol-version error, alert или handshake failure. Затем состояние apiserver подтверждают `kubectl get --raw='/readyz?verbose'` и `kubectl get nodes`.
+Сначала TLS 1.2 проверяют через `openssl s_client` и подтверждают согласованные Protocol, Cipher и успешную certificate verification. Для TLS 1.1 нужен negative test, но перед выводом проверяют, что локальный OpenSSL действительно способен предложить TLS 1.1: client-side запрет legacy protocol сам по себе не доказывает настройку apiserver. После protocol tests здоровье apiserver подтверждают через `kubectl get --raw='/readyz?verbose'` и `kubectl get nodes`.
 </details>
 
 <details>
