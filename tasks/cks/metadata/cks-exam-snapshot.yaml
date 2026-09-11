@@ -1,6 +1,6 @@
 schema_version: 1
 
-checked_at: "2026-09-06"
+checked_at: "2026-09-10"
 
 # The four version tracks are independent and are not aligned automatically.
 # For a detailed explanation of the policy, see ../VERSION_POLICY.md.
@@ -12,7 +12,7 @@ upstream:
   # Do not move core labs to latest_stable automatically just because of the version number—
   # only if this is actually required for compatibility/security reasons.
   latest_stable: "1.37"
-  checked_at: "2026-09-06"
+  checked_at: "2026-09-10"
   url: "https://kubernetes.io/releases/"
 
 training:
@@ -36,20 +36,20 @@ exam:
   linux_foundation:
     product_page:
       kubernetes: "1.35"
-      checked_at: "2026-09-06"
+      checked_at: "2026-09-10"
       url: "https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/"
 
     important_instructions:
       kubernetes: "1.35"
-      checked_at: "2026-09-06"
+      checked_at: "2026-09-10"
       url: "https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks"
 
     faq:
-      checked_at: "2026-09-06"
+      checked_at: "2026-09-10"
       url: "https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks"
       notes:
-        - "CKS-SINGLE registration does not include access to the Killer.sh exam simulator."
-        - "Standard registration includes two Killer.sh simulator attempts (36 hours each)."
+        - "CKS requires passing CKA before attempting the exam."
+        - "The FAQ does not publish the CKS Kubernetes environment version; use the product page and Important Instructions for that value."
 
   duration_minutes: 120
   task_count:
@@ -65,7 +65,9 @@ curriculum:
   repository: "https://github.com/cncf/curriculum"
   filename: "CKS_Curriculum v1.34.pdf"
   kubernetes_version_in_filename: "1.34"
-  checked_at: "2026-09-06"
+  size_bytes: 170239
+  sha256: "a755a5680bec6978de4a3074d7f0c7fe978bd7a9ad5e4f1681597aedda6f6637"
+  checked_at: "2026-09-10"
 
 weights:
   # Three independent public signals are recorded separately; a discrepancy is not resolved
@@ -81,7 +83,7 @@ weights:
     minimize_microservice_vulnerabilities: 20
     supply_chain_security: 20
     monitoring_logging_runtime_security: 20
-    checked_at: "2026-09-06"
+    checked_at: "2026-09-10"
   curriculum_pdf:
     cluster_setup: 15
     cluster_hardening: 15
@@ -89,7 +91,7 @@ weights:
     minimize_microservice_vulnerabilities: 20
     supply_chain_security: 20
     monitoring_logging_runtime_security: 20
-    checked_at: "2026-09-06"
+    checked_at: "2026-09-10"
   cncf_certification_page:
     cluster_setup: 10
     cluster_hardening: 15
@@ -97,7 +99,7 @@ weights:
     minimize_microservice_vulnerabilities: 20
     supply_chain_security: 20
     monitoring_logging_runtime_security: 20
-    checked_at: "2026-09-06"
+    checked_at: "2026-09-10"
     url: "https://www.cncf.io/training/certification/cks/"
   selected_sources_agreement: consistent
   # selected_sources_agreement describes only lf_product_page vs curriculum_pdf (the two
@@ -114,7 +116,7 @@ weights:
       linux_foundation_product_page as the operational default for each domain.
 
 allowed_resources:
-  checked_at: "2026-09-06"
+  checked_at: "2026-09-10"
   url: "https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed"
   global:
     - kubernetes_documentation

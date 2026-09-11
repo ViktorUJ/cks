@@ -1,13 +1,13 @@
 # CKS Course Version and Weight Policy
 
-Last checked: **2026-09-07**.
+Last checked: **2026-09-10**.
 
 Three versions are independent and must not be automatically aligned:
 
 | Track | Current value | Source of truth |
 |---|---:|---|
 | Training labs (core, `labs/101-113`) | Kubernetes `v1.36` (lab `113` is an exception: starts on `v1.35.x`, upgrades to `v1.36.x` - that upgrade is the task's own topic) | `env.hcl` of the core labs, verified tool compatibility |
-| CKS exam environment | Kubernetes `v1.35` | LF CKS product page + LF "Important Instructions: CKS" + LF FAQ (checked 2026-09-06, all three sources consistently state v1.35) |
+| CKS exam environment | Kubernetes `v1.35` | LF CKS product page + LF "Important Instructions: CKS" (checked 2026-09-10); LF FAQ confirms the CKA prerequisite but does not publish the environment version |
 | CKS curriculum | `CKS Curriculum v1.34` | root-level CKS curriculum PDF in `cncf/curriculum` |
 
 The single training baseline is `labs/101-113`, complemented by the full-exam simulations
@@ -17,14 +17,24 @@ A version mismatch is not by itself a defect. Before releasing the course, separ
 
 1. verify the training version across all labs and the compatibility matrix for Cilium,
    Istio, Kyverno, Falco, and kube-bench;
-2. verify the exam version against at minimum the main CKS page, "Important Instructions:
-   CKS", and the LF FAQ; if the official sources disagree, record all values and do not
-   declare one of them the agreed source of truth; cross-check the ExamUI immediately
-   before the attempt as well;
+2. verify the exam version against the main CKS page and "Important Instructions: CKS";
+   use the LF FAQ for prerequisites and registration conditions, not as a version source.
+   If version-publishing official sources disagree, record all values and do not declare
+   one of them the agreed source of truth; cross-check the ExamUI immediately before the
+   attempt as well;
 3. find the current root-level CKS curriculum PDF in `cncf/curriculum`, record its
    filename, size, and SHA-256, then extract the weights from it;
 4. verify the LF `Resources Allowed` independently of the curriculum and record the date;
 5. update the prose only from primary sources.
+
+## Upstream-to-exam transition window
+
+Upstream latest stable показывает production-current состояние, а версия экзамена меняется
+независимо. Когда upstream minor новее minor, указанного на LF CKS product page, exam
+snapshot перепроверяют чаще: default threshold для `cks-exam-snapshot.yaml` — 7 дней вместо
+обычных 30. Это не основание автоматически обновлять labs: для нового Kubernetes minor
+создают отдельный Security Delta, а 🎯 CKS Core меняют только после подтверждения
+exam/curriculum relevance. Явный `--max-age-days` сохраняет приоритет над этой policy.
 
 ### Domain weight policy
 

@@ -2,6 +2,12 @@
 
 # Глава 19. Pod Security Admission и Pod Security Standards
 
+> **Проблема.** Разработчик, скомпрометированный CI или Helm chart с правом `create pods` может
+> отправить разрешённый RBAC манифест с `privileged: true`, `hostPath: /` или host namespace.
+> Такой Pod даёт процессу путь к данным и ядру ноды, хотя отдельный workload мог иметь хороший
+> `SecurityContext`. Нужна общая admission-граница, которая до запуска принудительно применит
+> безопасный baseline ко всем Pod в namespace.
+
 > **Что дальше.** `securityContext` описывает, с какими правами *должен* работать конкретный Pod, но сам по себе не запрещает другому манифесту запросить `privileged: true`, `hostPath` или host namespaces. **Pod Security Admission (PSA)** - встроенный admission-контроллер Kubernetes, который проверяет Pod до записи в etcd и применяет к namespace готовые **Pod Security Standards (PSS)**. Это основа домена CKS **Minimize Microservice Vulnerabilities**: сначала безопасный baseline для всех workloads, затем узкие и наблюдаемые исключения.
 
 > **Что нужно из CKA.** Поля `securityContext`, non-root запуск, capabilities и `allowPrivilegeEscalation` разобраны в [главе 20 CKA](../../../cka/course/20/ru.md). Здесь используем их как контракт, который PSA проверяет и принудительно соблюдает.

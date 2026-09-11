@@ -27,7 +27,7 @@
 - 🔬 **Deep Dive** - углубление, edge case, альтернатива или legacy-контекст.
 - 🏭 **Production** - как это применяют в реальной эксплуатации.
 
-Термины будут собраны в [глоссарии](GLOSSARY_RU.md). Готовые YAML/CLI-сниппеты без теории - в [шпаргалке](CHEATSHEET_RU.md), а частые причины `[FAIL]` в лабах - в [справочнике ошибок](TROUBLESHOOTING_INDEX_RU.md). Production-current изменения Kubernetes v1.36, которые не привязаны к одному домену, собраны в [приложении Security Delta](APPENDIX_K8S_136_SECURITY_DELTA_RU.md).
+Термины будут собраны в [глоссарии](GLOSSARY_RU.md). Готовые YAML/CLI-сниппеты без теории - в [шпаргалке](CHEATSHEET_RU.md), а частые причины `[FAIL]` в лабах - в [справочнике ошибок](TROUBLESHOOTING_INDEX_RU.md). Production-current security changes, не привязанные к одному CKS domain, вынесены в version-specific приложения: [Kubernetes v1.36 Security Delta](APPENDIX_K8S_136_SECURITY_DELTA_RU.md) — training baseline; [Kubernetes v1.37 Security Delta](APPENDIX_K8S_137_SECURITY_DELTA_RU.md) — current upstream, не автоматически CKS Core.
 
 ## Формат экзамена
 

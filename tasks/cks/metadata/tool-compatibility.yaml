@@ -1,6 +1,6 @@
 schema_version: 1
 
-checked_at: "2026-09-07"
+checked_at: "2026-09-10"
 
 # The values below are taken from versions actually pinned in env.hcl and the laboratories' worker.sh
 # (labs/110, labs/111) and the compatibility note in course/26/ru.md. When updating the
@@ -14,6 +14,9 @@ kubernetes:
 cilium:
   data_plane_helm_version: "1.20.1"
   cli_version: "v0.19.7"
+  latest_stable_checked: "1.20.1"
+  latest_checked_at: "2026-09-10"
+  pin_status: intentionally_pinned
   kubernetes:
     supported:
       - "1.33"
@@ -27,6 +30,9 @@ cilium:
 kyverno:
   course_version: "1.19.0"
   helm_chart_version: "3.9.0"
+  latest_stable_checked: "1.19.1"
+  latest_checked_at: "2026-09-10"
+  pin_status: intentionally_pinned
   kubernetes:
     officially_tested:
       - "1.33"
@@ -46,35 +52,57 @@ kyverno:
 
 trivy:
   course_version: "0.74.0"
+  latest_stable_checked: "0.74.0"
+  latest_checked_at: "2026-09-10"
+  pin_status: intentionally_pinned
   verify_before_release: true
   source: labs/111/worker/files/worker.sh
 
 syft:
   course_version: "1.51.0"
+  latest_stable_checked: "1.51.1"
+  latest_checked_at: "2026-09-10"
+  pin_status: intentionally_pinned
   verify_before_release: true
   source: labs/111/worker/files/worker.sh
 
 cosign:
   course_version: "3.1.3"
+  latest_stable_checked: "3.1.3"
+  latest_checked_at: "2026-09-10"
+  pin_status: intentionally_pinned
   verify_before_release: true
   source: labs/111/worker/files/worker.sh
 
 kubelinter:
   course_version: "0.8.3"
+  latest_stable_checked: "0.8.3"
+  latest_checked_at: "2026-09-10"
+  pin_status: intentionally_pinned
   verify_before_release: true
   source: labs/111/worker/files/worker.sh
 
 kubesec:
   course_version: "2.14.0"
+  latest_stable_checked: "2.14.2"
+  latest_checked_at: "2026-09-10"
+  pin_status: intentionally_pinned
   verify_before_release: true
   source: labs/111/worker/files/worker.sh
 
 hadolint:
   course_version: "2.12.0"
+  latest_stable_checked: "2.15.1"
+  latest_checked_at: "2026-09-10"
+  pin_status: intentionally_pinned
   verify_before_release: true
   source: labs/111/worker/files/worker.sh
 
 falco:
+  course_version: null
+  latest_stable_checked: "0.44.1"
+  latest_checked_at: "2026-09-10"
+  pin_status: tracks_repository
   verify_before_release: true
   note: >
     The version is not pinned to a single number in the course; chapter 29 describes installation via

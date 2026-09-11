@@ -2,6 +2,12 @@
 
 # Глава 20. Admission-контроллеры и policy-движки: OPA/Gatekeeper и Kyverno
 
+> **Проблема.** RBAC может законно разрешить CI создать Deployment, но не проверяет, что образ
+> взят из доверенного registry, у Pod нет опасных полей, а объект содержит обязательные
+> организационные метки. Ручной review YAML легко обходится шаблоном, API-клиентом или ошибкой
+> в pipeline; без policy объект попадёт в etcd и будет запущен. Admission-контроль должен
+> проверить или безопасно дополнить такой запрос до его сохранения.
+
 > **Что дальше.** Pod Security Admission из [главы 19](../19/ru.md) применяет готовые
 > Pod Security Standards, но не отвечает на все правила организации: разрешён ли реестр
 > образов, обязательна ли метка владельца, надо ли добавить безопасное поле или создать
@@ -768,9 +774,9 @@ spec:
 совпавшие combinations должны пройти. `parameterNotFoundAction: Deny` вместе с
 `failurePolicy: Fail` не превращает отсутствующую конфигурацию в bypass.
 
-> **Advanced — Manifest-Based Admission Control (v1.36 alpha).** Эта выключенная по
-> умолчанию функция загружает webhook и CEL policy manifests с диска API server: включите
-> feature gate `ManifestBasedAdmissionControlConfig` и передайте через
+> 🔬 **Deep Dive — Manifest-Based Admission Control.** В training baseline Kubernetes v1.36 функция Alpha и выключена по умолчанию. В upstream Kubernetes v1.37 она перешла в Beta и enabled by default. Основной workflow этой главы остаётся привязан к v1.36; production-current delta см. в [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+>
+> В v1.36 включите feature gate `ManifestBasedAdmissionControlConfig`; функция загружает webhook и CEL policy manifests с диска API server. Передайте через
 > `--admission-control-config-file` `AdmissionConfiguration` с отдельным абсолютным
 > `staticManifestsDir` для нужного admission plugin. Такие policies активны при старте,
 > независимы от etcd и могут защищать API-based admission configuration от удаления или

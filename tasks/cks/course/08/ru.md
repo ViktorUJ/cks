@@ -299,6 +299,8 @@ spec:
 
 > 🏭 Поддерживаемый Gateway API controller и его status/compatibility; возможности `GatewayClass` определяет конкретная реализация.
 
+> 🔬 **Gateway API v1.6 currentness.** В Gateway API v1.6 `TCPRoute` и `UDPRoute` перешли в Standard `v1`; новые experimental resources вынесены в отдельную группу `gateway.networking.x-k8s.io` с `X`-префиксом. `XBackend` остаётся experimental, а его поддержка `ExternalHostname` требует осознанного opt-in из-за security trade-off, включая confused-deputy risk. Это production-current context, не CKS Core. [Официальный release blog](https://kubernetes.io/blog/2026/08/03/gateway-api-v1-6-release/).
+
 ### Gateway API: текущий production-путь
 
 Gateway API описывает три TLS-модели: **edge termination** (HTTPS listener расшифровывает

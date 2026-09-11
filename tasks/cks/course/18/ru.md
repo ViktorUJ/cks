@@ -2,6 +2,12 @@
 
 # Глава 18. Hardened SecurityContext: минимальные привилегии процесса
 
+> **Проблема.** Уязвимость в приложении превращается из shell в одном контейнере в захват
+> ноды или persistence, если процесс работает от root, сохраняет capabilities, может повысить
+> привилегии или подменить бинарники в writable root filesystem. Без единого ограничивающего
+> контракта один небезопасный default в Pod или sidecar расширяет последствия компрометации;
+> hardened `SecurityContext` заранее отсекает эти лишние пути.
+
 > **Что дальше.** AppArmor ограничил, к каким объектам может обращаться процесс, а seccomp -
 > какие системные вызовы он может сделать. Теперь соберём эти и базовые ограничения процесса
 > в один воспроизводимый контракт Pod: non-root, пустой набор capabilities, запрет повышения
@@ -248,6 +254,8 @@ Pod-level `seLinuxChangePolicy: MountOption` запрашивает relabel че
 выключен по умолчанию) и `CSIDriver.spec.seLinuxMount: true` у CSI-драйвера; иначе Kubernetes
 использует обычный recursive relabel. Не меняйте label или policy ради скорости без теста
 изоляции и совместимости конкретного CSI/файловой системы.
+
+> 🔬 **Upstream v1.37.** В Kubernetes v1.37 `SELinuxMount` стал GA и включён по умолчанию. Перед upgrade SELinux-enabled кластера проверьте volume-label conflicts; при необходимости workload может явно сохранить recursive behavior через `spec.securityContext.seLinuxChangePolicy: Recursive`. Подробности: [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 `procMount` — только container-level Linux option: безопасный default `Default` оставляет
 маскированные чувствительные части `/proc`; `Unmasked` расширяет обзор процесса и не подходит

@@ -2,6 +2,12 @@
 
 # Глава 27. Статический анализ нагрузок и образов
 
+> **Проблема.** Синтаксически корректный manifest может незаметно добавить
+> `privileged: true`, root-процесс, writable root filesystem или image с `:latest`, а
+> Dockerfile — небезопасный build-паттерн. После merge такой риск уже попадёт в CI и
+> кластер, где его исправление потребует rollout или incident response. Нужна проверка
+> исходных Dockerfile и manifests до build, push и deploy.
+
 > **Что дальше.** В [главе 26](../26/ru.md) мы научились разрешать trusted registry и проверять подпись artifact при admission. Но подпись доказывает происхождение, а не отсутствие небезопасной конфигурации: подписанный Deployment всё ещё может запускать root-процесс, writable root filesystem или образ с тегом `latest`. Статический анализ проверяет Dockerfile и Kubernetes manifests до push и deploy. Это домен **Supply Chain Security** CKS (20%): быстрый feedback в локальной разработке и обязательный gate в CI.
 
 > **Что нужно знать из CKA.** Поля `securityContext`, которые обнаруживают линтеры: `runAsNonRoot`, `allowPrivilegeEscalation`, `readOnlyRootFilesystem`, capabilities и `privileged`, разобраны в [главе 20 CKA](../../../cka/course/20/ru.md). Здесь не повторяем их синтаксис, а строим автоматические проверки, которые не позволят пропустить небезопасную настройку в Git.

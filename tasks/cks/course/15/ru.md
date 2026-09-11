@@ -2,6 +2,11 @@
 
 # Глава 15. Least-privilege на хосте и минимизация внешнего доступа к сети
 
+> **Проблема.** Получив вход через открытый SSH или локальную учётную запись, атакующий
+> ищет широкое `sudo`, привилегированную группу либо writable файл конфигурации. Одна
+> такая ошибка позволяет стать root, прочитать kubelet credentials или обратиться к
+> runtime socket, превращая ограниченный доступ к ноде в захват её и Kubernetes.
+
 > **Что дальше.** В главе 14 мы уменьшили поверхность атаки ноды: убрали лишние сервисы,
 > пакеты и небезопасный доступ к container runtime. Теперь ограничим последствия оставшейся
 > точки входа: кому разрешено войти на хост, что пользователь может сделать через `sudo`,
@@ -135,15 +140,24 @@ sudo visudo -cf /etc/sudoers
 
 ```sudoers
 # /etc/sudoers.d/k8s-operator - точный wrapper, без wildcard и без аргументов.
-Cmnd_Alias KUBELET_STATUS = /usr/local/sbin/k8s-kubelet-status
+# Пустые кавычки — аргументная спецификация «только без аргументов»; её отсутствие
+# разрешила бы запуск этого пути с любыми аргументами.
+Cmnd_Alias KUBELET_STATUS = /usr/local/sbin/k8s-kubelet-status ""
 k8s-operator ALL=(root) KUBELET_STATUS
 ```
 
-Проверьте правило именно от имени целевого пользователя:
+Проверьте итоговую policy именно для целевого пользователя. Не превращайте ошибку
+`sudo`/аутентификации в «ожидаемый denial» через `|| echo`: сначала должна успешно
+получиться полная listing policy, а отсутствие `/bin/bash` и иных лишних команд проверяется
+в её сохранённом выводе.
 
 ```bash
-sudo -l -U k8s-operator /usr/local/sbin/k8s-kubelet-status
-sudo -l -U k8s-operator /bin/bash || echo 'root shell is denied by policy as expected'
+policy=$(sudo -l -U k8s-operator) || {
+  echo 'ERROR: cannot retrieve sudo policy for k8s-operator' >&2; exit 2;
+}
+printf '%s\n' "$policy" | tee /tmp/k8s-operator-sudo-policy.txt
+# Review: разрешён только /usr/local/sbin/k8s-kubelet-status без аргументов;
+# /bin/bash, shell/interpreter и произвольный systemctl отсутствуют.
 ```
 
 Не пытайтесь ограничить опасную программу поверхностным списком аргументов. Редактор,
@@ -153,12 +167,26 @@ sudo -l -U k8s-operator /bin/bash || echo 'root shell is denied by policy as exp
 лучше дать контролируемую break-glass-процедуру с журналированием, чем ложное ощущение
 ограничения.
 
-Для всех административных действий полезно сохранять следы:
+Для всех административных действий полезно сохранять следы. Event/command logging и
+I/O logging — разные механизмы sudoers: `logfile` задаёт file destination event log, а
+`log_input`/`log_output` либо command tags `LOG_INPUT`/`LOG_OUTPUT` записывают ввод/вывод
+в location из `iolog_*` или на `log_servers`.
 
 ```bash
-sudo grep -R --line-number -- '--log' /etc/sudoers /etc/sudoers.d 2>/dev/null || true
+# Инвентаризация sudoers-настроек command/I/O logging.
+sudo grep -REns \
+  '(^|[[:space:],])((logfile|log_input|log_output|iolog_dir|iolog_file|log_servers)([=[:space:],]|$)|LOG_INPUT|LOG_OUTPUT)' \
+  /etc/sudoers /etc/sudoers.d 2>/dev/null || true
+
+# Проверить фактические недавние sudo-события.
+# Конкретный journal/syslog/logfile зависит от policy и дистрибутива.
 sudo journalctl _COMM=sudo --since '1 day ago'
 ```
+
+Если sudoers задаёт `logfile`, проверяйте и этот файл. Если включены `log_input` /
+`log_output` или command tags `LOG_INPUT` / `LOG_OUTPUT`, отдельно проверяйте `iolog_dir`
+и возможность прочитать запись через `sudoreplay`. Пустой результат одного `journalctl`
+не доказывает отсутствие logging: destination зависит от sudoers/syslog и конфигурации ОС.
 
 `NOPASSWD` не является самим по себе доказательством компрометации, но снижает защиту от
 неавторизованного использования уже открытой сессии. Применяйте его только к короткому,
@@ -385,12 +413,25 @@ SSH часто является единственным удалённым вх
 
 На современных OpenSSH удобнее создать небольшой drop-in, а не редактировать большой
 vendor-файл. Сначала проверьте, что каталог включается вашей конфигурацией через `Include`.
-Имя `99-hardening.conf` не гарантирует приоритет: drop-ins обрабатываются по алфавиту, а
-OpenSSH обычно использует первое встретившееся значение каждого keyword. Инвентаризируйте
-более ранние файлы (например, cloud-init) и устраните конфликт либо используйте осознанно
-ранний `00-hardening.conf`; итог всегда подтверждайте `sshd -T` (и при `Match` —
-`sshd -T -C user=...,host=...,addr=...`). Выберите **один** профиль ниже: оба запрещают парольный вход, но MFA-профиль дополнительно
-требует ключ и PAM keyboard-interactive. Не включайте два профиля одновременно.
+Файлы wildcard-`Include` обрабатываются в lexical order, а для большинства обычных scalar
+keywords OpenSSH использует первое полученное значение, поэтому имя `99-hardening.conf` не
+gарантирует приоритет и для таких параметров часто нужен осознанно ранний файл.
+
+Но не переносите эту модель на list directives. `AllowUsers`, `AllowGroups`, `DenyUsers` и
+`DenyGroups` могут встречаться несколько раз, и каждый occurrence **добавляется** к
+соответствующему списку. Ранний `00-hardening.conf` не отменяет другой `AllowUsers`.
+Перед использованием `AllowUsers` инвентаризируйте все его occurrences в основном
+`sshd_config` и включённых файлах, удалите или объедините конфликтующие списки в
+управляемый allowlist, а затем проверьте итог через `sshd -T` и, при наличии `Match`,
+`sshd -T -C user=...,host=...,addr=...`. Выберите **один** профиль ниже: оба запрещают
+парольный вход, но MFA-профиль дополнительно требует ключ и PAM keyboard-interactive. Не
+включайте два профиля одновременно.
+
+```bash
+sudo grep -RnsE \
+  '^[[:space:]]*(Include|Match|AllowUsers|AllowGroups|DenyUsers|DenyGroups)[[:space:]]' \
+  /etc/ssh/sshd_config /etc/ssh/sshd_config.d 2>/dev/null || true
+```
 
 **Профиль A - только ключ.**
 
@@ -457,6 +498,11 @@ ssh -o PreferredAuthentications=publickey,keyboard-interactive \
   "k8s-operator@${NODE_ADDRESS}" true
 ```
 
+Отдельно убедитесь, что итоговый `allowusers` содержит **только** утверждённые аккаунты,
+включая необходимые break-glass/automation identities, а не дополнительные значения из
+другого `Include`. При `Match` проверяйте effective configuration для каждого значимого
+user/source через `sshd -T -C`.
+
 Не отключайте password authentication, пока не убедились, что ключ целевого пользователя
 реально установлен, имеет корректные права и работает через bastion/VPN. Для аварийного
 доступа используйте консоль провайдера или оформленную break-glass-учётную запись с
@@ -475,9 +521,13 @@ sudo stat -c '%U %G %a %n' \
   /etc/kubernetes/admin.conf \
   /etc/kubernetes/pki/ca.key
 
-# 2. Проверить policy без смешивания с аутентификацией пользователя.
-sudo -l -U k8s-operator /usr/local/sbin/k8s-kubelet-status
-sudo -l -U k8s-operator /bin/bash || echo 'root shell is denied by policy as expected'
+# 2. Получить policy без смешивания с аутентификацией пользователя. Если sudo -l
+# не сработал, это operational error, а не доказательство policy denial.
+policy=$(sudo -l -U k8s-operator) || {
+  echo 'ERROR: cannot retrieve sudo policy for k8s-operator' >&2; exit 2;
+}
+printf '%s\n' "$policy" | tee /tmp/k8s-operator-sudo-policy.txt
+# Review listing: разрешён только wrapper без аргументов; /bin/bash отсутствует.
 
 # 3. Проверить фактический firewall выбранного механизма.
 sudo ufw status verbose             # если используется ufw
@@ -538,6 +588,7 @@ ssh -o PreferredAuthentications=publickey,keyboard-interactive \
 - **Непрерывная проверка.** CIS-сканирование из [главы 07](../07/ru.md), file-integrity
   monitoring, поиск world-writable путей и контроль открытых портов запускают регулярно,
   а не только перед аудитом.
+- Для Kubernetes v1.37 отдельно оцените rootless node architecture (`KubeletInUserNamespace`) как дополнительную least-privilege границу; это не то же самое, что Pod user namespaces. См. [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 15.8. Мини-глоссарий
 

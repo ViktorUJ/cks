@@ -2,6 +2,11 @@
 
 # Глава 11. ServiceAccounts: минимизация и токены
 
+> **Проблема.** Shell в уязвимом Pod даёт атакующему доступ к смонтированному bearer token
+> ServiceAccount. Если token выдан `default`-аккаунту или identity с избыточным RBAC,
+> его можно использовать вне контейнера для чтения Secret, создания Pod и дальнейшей
+> эскалации в API; даже short-lived token опасен в течение срока действия.
+
 > **Что дальше.** В главе 10 мы уменьшили права через RBAC. Теперь ограничим саму
 > идентичность, которую получает Pod: ServiceAccount и его token. Лишний token в
 > скомпрометированном контейнере - готовый вход в Kubernetes API; минимальный
@@ -36,7 +41,7 @@ flowchart TB
     shell --> token["Смонтированный<br/>token default SA"]
     token --> api["Kubernetes API"]
     api --> rbac{"RBAC разрешает?"}
-    rbac -->|"да: широкая роль"| damage["Чтение Secret / создание Pod<br/>lateral movement"]
+    rbac -->|"да: широкая роль"| damage["Secret / Pod create<br/>lateral movement"]
     rbac -->|"нет: минимум прав"| deny["403 Forbidden"]
     style vuln fill:#db4437,color:#fff
     style token fill:#f4b400,color:#000
@@ -138,11 +143,11 @@ ServiceAccount, имеет ограниченный срок жизни (`exp`) 
 
 ```mermaid
 flowchart TB
-    sa["ServiceAccount api-reader"] --> kubelet["kubelet / TokenRequest"]
-    kubelet --> jwt["Bound token<br/>exp + aud + pod binding"]
+    sa["SA api-reader"] --> kubelet["kubelet<br/>TokenRequest"]
+    kubelet --> jwt["Bound token<br/>exp + aud<br/>binding Pod"]
     jwt --> volume["projected volume<br/>в Pod"]
-    volume --> api["API с допустимой audience"]
-    volume --> ext["Внешний сервис<br/>проверяет свою audience"]
+    volume --> api["API audience OK"]
+    volume --> ext["Внешний сервис<br/>проверка audience"]
     style sa fill:#326ce5,color:#fff
     style jwt fill:#0f9d58,color:#fff
     style volume fill:#673ab7,color:#fff
@@ -168,6 +173,11 @@ metadata:
 spec:
   serviceAccountName: app-sa
   automountServiceAccountToken: false
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+
   containers:
   - name: client
     image: curlimages/curl:8.12.1
@@ -179,7 +189,7 @@ spec:
   volumes:
   - name: api-credential
     projected:
-      defaultMode: 0400
+      defaultMode: 0444
       sources:
       - serviceAccountToken:
           path: token
@@ -197,6 +207,26 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
 ```
+
+Официальный образ `curlimages/curl` запускает процесс не под root (`running as curl_user
+is an explicit design decision`, curl-docker README), поэтому runtime identity в этом
+примере задаётся явно через `runAsNonRoot: true` и `runAsUser: 10001`, а не остаётся
+только на усмотрение image metadata.
+
+Для Linux Kubernetes v1.36 projected ServiceAccount token имеет специальную permission
+semantics: когда все containers Pod используют один и тот же `runAsUser`, kubelet
+назначает token этому UID и принудительно устанавливает mode `0600`. Поэтому в этом
+одно-контейнерном Pod token становится owner-readable только для UID `10001` без
+`fsGroup`.
+
+`defaultMode: 0444` нужен mixed projection для несекретных `ca.crt` и `namespace`,
+которые non-root client тоже должен читать. Он не делает bearer token world-readable:
+для `serviceAccountToken` kubelet отдельно применяет описанное выше `0600`.
+
+`fsGroup` здесь не требуется. Если его добавить, kubelet применит group ownership к
+volume и для projected ServiceAccount token расширит permissions с `0600` до `0640`.
+Используйте такой групповой доступ только когда он действительно нужен нескольким
+процессам или GID, а не как обязательное условие non-root `runAsUser`.
 
 `expirationSeconds` - запрос желаемого времени жизни, а не способ получить бессрочный
 credential: значение должно быть не меньше `600`, а предел всё равно определяет control
@@ -218,16 +248,29 @@ OIDC/JWT проверяет подпись и claims, но не узнаёт о�
 валидным только до `exp`. Если объект лишь помечен на удаление (`deletionTimestamp`),
 authenticator отклонит token не позднее чем через 60 секунд.
 
-В Kubernetes v1.33 `ServiceAccountNodeAudienceRestriction` - beta-функция, включённая по
-умолчанию. Она ограничивает audiences, которые kubelet запрашивает через TokenRequest,
-теми, что уже указаны у workloads на этом Node; для обоснованных исключений требуется
-новый RBAC verb `request-serviceaccounts-token-audience`.
+В Kubernetes v1.33+ `ServiceAccountNodeAudienceRestriction` — Beta и включена по
+умолчанию. Само ограничение применяет admission plugin `NodeRestriction`: когда feature
+gate включён, `NodeRestriction` активен и запрос TokenRequest приходит от распознанной
+node/kubelet identity, kubelet по умолчанию может запрашивать только audiences, уже
+используемые workloads на этой Node. Для обоснованных исключений администратор может
+выдать RBAC verb `request-serviceaccounts-token-audience`.
 
-Legacy-вариант - Secret типа `kubernetes.io/service-account-token`, созданный намеренно
-с аннотацией SA. Он создаёт долгоживущий credential и нужен только для старой внешней
-интеграции, которую нельзя перевести на TokenRequest/OIDC. Не создавайте такой Secret как
-обычный способ дать Pod доступ к API; он не получает автоматическую короткую ротацию и
+Это ограничение относится именно к kubelet/node identities; другие callers TokenRequest
+API оно не ограничивает.
+
+Ручной Secret типа `kubernetes.io/service-account-token` создаёт долгоживущий bearer
+credential. Kubernetes всё ещё официально поддерживает такой способ - например, если
+интеграции действительно нужен token без штатного срока истечения, - но upstream
+документация прямо рекомендует вместо этого использовать TokenRequest.
+
+Для курса считайте такой Secret исключением, а не обычным способом выдачи credential:
+сначала предпочитайте short-lived TokenRequest, OIDC или federation. Если конкретная
+интеграция не может работать с ограниченным lifetime, документируйте причину исключения,
+минимальный RBAC, защиту Secret и процедуру ротации/отзыва. Не создавайте такой Secret как
+обычный способ дать Pod доступ к API: он не получает автоматическую короткую ротацию и
 сильнее увеличивает ущерб при утечке.
+
+> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount token остаётся основной JWT identity-моделью этой главы. Kubernetes v1.37 также стабилизировал Pod Certificates и ClusterTrustBundles — built-in primitives для выдачи и ротации X.509 workload credentials. Это production-current extension, а не замена CKS Core: см. [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 11.4. Выделенный ServiceAccount и минимальный RBAC
 
@@ -362,18 +405,25 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
 '
 ```
 
-`401 Unauthorized` означает, что API не принял credential: проверьте срок действия,
-`audience`, issuer, CA и путь к token. `403 Forbidden` означает успешную аутентификацию,
-но недостаточные RBAC-права: проверьте `Role`, `RoleBinding`, namespace и `can-i`. Если
-в Pod всё ещё есть стандартный token после изменения SA, проверьте `spec.automountServiceAccountToken`
+Сначала разделяйте transport, authentication и authorization.
+
+- TLS/certificate error до HTTP-ответа: проверяйте CA file, DNS/SAN, endpoint и
+  доступность TLS.
+- HTTP `401 Unauthorized`: API server не принял credential — проверяйте token path,
+  подпись/issuer, `audience`, `exp`/время и целостность token.
+- HTTP `403 Forbidden`: authentication прошла, но authorizer не разрешил действие —
+  проверяйте Role/RoleBinding, namespace и targeted `kubectl auth can-i`.
+
+Если в Pod всё ещё есть стандартный token после изменения SA, проверьте `spec.automountServiceAccountToken`
 у самого Pod и пересоздайте его.
 
 | Симптом | Что проверить | Типичная причина |
 |---|---|---|
 | Token есть у обычного приложения | Pod spec и ServiceAccount | Не задан `automount: false`, либо Pod явно переопределил SA значением `true` |
 | `can-i` возвращает `no` для ожидаемого действия | `roleRef`, namespace, subject | RoleBinding в другом namespace или неверное имя SA |
-| API отвечает `403` | `kubectl auth can-i --list` | Token валиден, но Role намеренно не содержит нужный verb/resource |
-| API отвечает `401` | `audience`, `expirationSeconds`, CA, время | Token истёк, audience не принимается apiserver или credential повреждён |
+| TLS/certificate error, HTTP status не получен | CA, DNS/SAN, endpoint, TLS connectivity | Клиент не смог установить доверенное TLS-соединение |
+| API отвечает `401` | token path, issuer/signature, `audience`, `exp`, время | Credential истёк, повреждён или не принимается authenticator |
+| API отвечает `403` | targeted `kubectl auth can-i`, Role/RoleBinding, namespace | Credential валиден, но нужный verb/resource не разрешён |
 | В Git появился token Secret | история Git и CI-логи | Создан legacy Secret или credential выведен командой; отзовите/перевыпустите и удалите из логов |
 
 > 🏭 Отдельный SA для workload, регулярный RBAC review и runbook отзыва и расследования утечек credential.
@@ -420,7 +470,9 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
 - `automountServiceAccountToken: false` выключает автоматическую выдачу token. Значение в
   Pod имеет приоритет над значением ServiceAccount; уже созданные Pod нужно пересоздать.
 - Современный Pod получает bound projected token с ограниченным сроком жизни и audience,
-  а kubelet его ротирует. Долгоживущий token Secret - исключение для legacy-интеграций.
+  а kubelet его ротирует. Ручной долгоживущий ServiceAccount token Secret Kubernetes
+  всё ещё официально поддерживает, но курс считает его документированным исключением, а
+  не обычным способом выдачи credential Pod.
 - Workload с доступом к API получает отдельный SA, namespaced Role и RoleBinding с точными
   `verbs` и `resources`, а не права `default` SA или wildcard.
 - Проверка включает отсутствие token в обычном Pod, `kubectl auth can-i` для SA и реальный
@@ -479,16 +531,32 @@ Bound token выпускается TokenRequest API, связан с конкр�
 </details>
 
 <details>
-<summary>6. Как отличить истёкший или неверный token (`401`) от недостаточных RBAC-прав (`403`)?</summary>
+<summary>6. Как отличить TLS-проблему, неверный token (`401`) и недостаточные RBAC-права (`403`)?</summary>
 
-`401 Unauthorized` означает, что API server не принял credential: проверяют expiry, audience, issuer, CA и путь к token. `403 Forbidden` означает, что аутентификация прошла, но Role или RoleBinding не дают нужный resource/verb в нужном namespace. Для второго случая применяют `kubectl auth can-i` от имени ServiceAccount.
+Если TLS trust не установлен, клиент получает certificate/TLS error до HTTP authentication:
+проверяют CA, DNS/SAN и endpoint. `401 Unauthorized` означает, что API server получил
+HTTP request, но не принял credential: проверяют token path, issuer/signature, audience,
+expiry и время. `403 Forbidden` означает, что authentication прошла, но authorizer не
+разрешил нужный resource/verb/scope; это подтверждают targeted `kubectl auth can-i`.
 </details>
 
 <details>
-<summary>7. Какие три проверки докажут, что Pod без API-задачи действительно не может использовать
-   ServiceAccount token?</summary>
+<summary>7. Какие проверки докажут, что стандартный автоматический ServiceAccount token не смонтирован в Pod без API-задачи?</summary>
 
-Нужно подтвердить `automountServiceAccountToken: false` у ServiceAccount и в spec нового Pod, учитывая приоритет поля Pod. Затем в контейнере выполняют `test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token`. Наконец, Pod/workload пересоздают после изменения и повторяют эту проверку, потому что старый volume не удаляется автоматически.
+Подтвердите `automountServiceAccountToken: false` у ServiceAccount и в spec нового Pod,
+учитывая приоритет поля Pod. Затем в контейнере проверьте отсутствие стандартного пути:
+
+```bash
+test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
+```
+
+После изменения workload пересоздайте Pod и повторите проверку, потому что уже созданный
+volume автоматически не исчезает.
+
+Это доказывает отсутствие **стандартной автоматической инъекции**, а не отсутствие любого
+возможного ServiceAccount credential. Если requirement — «Pod вообще не должен получать
+SA token», дополнительно ревьюйте `volumes`, `projected.serviceAccountToken`, Secret/env,
+sidecar/init-container и другие механизмы выдачи credential.
 </details>
 
 <details>

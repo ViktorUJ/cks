@@ -2,6 +2,11 @@
 
 # Глава 14. Минимизация footprint хостовой ОС и безопасность runtime-демона
 
+> **Проблема.** Лишний пакет, service, listener или socket на Kubernetes-ноде добавляет
+> отдельный бинарник с CVE и путь к локальному либо сетевому входу. Компрометация такого
+> компонента может привести к kubelet credentials или socket container runtime, обходя
+> ограничения Kubernetes API и ставя под угрозу все workload на ноде.
+
 > **Что дальше.** Kubernetes ограничивает workload политиками, RBAC и SecurityContext - то
 > есть сужает то, что нагрузка может сделать с API и с нодой, - но всё это
 > стоит на Linux-ноде. Лишний сервис, пакет, открытый порт или доступ к socket runtime
@@ -268,8 +273,15 @@ PORT='10250'
 sudo ss -lntp | grep -E ':(22|10250|6443|2379|2380|2375|2376)\b' || true
 sudo systemctl status "$SERVICE"
 
-# После удаления/отключения service порт должен исчезнуть.
-sudo ss -lntp | grep -F ":${PORT}" || echo 'listener is absent'
+# После удаления/отключения service порт должен исчезнуть. Ошибка ss не равна отсутствию listener.
+listeners=$(sudo ss -H -lnt "( sport = :${PORT} )") || {
+  echo "ERROR: cannot inspect TCP listener ${PORT}" >&2; exit 2;
+}
+if [ -n "$listeners" ]; then
+  printf 'ERROR: TCP port %s is still listening:\n%s\n' "$PORT" "$listeners" >&2
+  exit 1
+fi
+echo "OK: TCP listener ${PORT} is absent"
 ```
 
 > 🎯 Инвентаризируйте service, пакет, kernel module и listener; меняйте только ненужный объект, сохраните baseline и проверьте `kubelet`/containerd. `disable --now`, removal и закрытие порта требуют разных проверок.
@@ -317,9 +329,25 @@ sudo ps -ef | grep '[d]ockerd'
 sudo grep -RnsE 'tcp://|2375|2376|"hosts"' \
   /etc/docker /etc/systemd/system /lib/systemd/system 2>/dev/null || true
 
-# После исправления вывод для 2375 должен быть пустым.
-sudo ss -tulpn | grep ':2375' || echo 'Docker TCP 2375 is not listening'
-sudo ss -tulpn | grep ':2376' || echo 'Docker TCP 2376 is not listening'
+# После исправления 2375 обязан быть пуст; ошибка ss не даёт ложный PASS.
+listeners=$(sudo ss -H -lnt '( sport = :2375 )') || {
+  echo 'ERROR: cannot inspect Docker TCP 2375' >&2; exit 2;
+}
+if [ -n "$listeners" ]; then
+  printf 'ERROR: Docker TCP 2375 is listening:\n%s\n' "$listeners" >&2
+  exit 1
+fi
+echo 'OK: Docker TCP 2375 is absent'
+
+# 2376 не является автоматическим FAIL: проверяйте его только если согласованная policy
+# запрещает удалённый Docker API. При разрешённом исключении обязательны mTLS и firewall allowlist.
+REQUIRE_DOCKER_TLS=false
+if [ "$REQUIRE_DOCKER_TLS" = false ]; then
+  listeners=$(sudo ss -H -lnt '( sport = :2376 )') || {
+    echo 'ERROR: cannot inspect Docker TCP 2376' >&2; exit 2;
+  }
+  [ -z "$listeners" ] || { printf 'ERROR: unexpected Docker TCP 2376 listener:\n%s\n' "$listeners" >&2; exit 1; }
+fi
 ```
 
 В типичной systemd-установке Docker получает `-H fd://`: systemd `docker.socket`
@@ -494,8 +522,15 @@ sudo ss -tulpn | sort | sudo tee /root/hardening-after-listeners.txt >/dev/null
 sudo diff -u /root/hardening-before/listeners.txt \
   /root/hardening-after-listeners.txt || true
 
-# 3. Docker API не слушает неаутентифицированный TCP 2375.
-sudo ss -tulpn | grep ':2375' && exit 1 || echo 'OK: TCP 2375 is absent'
+# 3. Docker API не слушает неаутентифицированный TCP 2375; сбой ss — operational error.
+listeners=$(sudo ss -H -lnt '( sport = :2375 )') || {
+  echo 'ERROR: cannot inspect Docker TCP 2375' >&2; exit 2;
+}
+if [ -n "$listeners" ]; then
+  printf 'ERROR: TCP 2375 is listening:\n%s\n' "$listeners" >&2
+  exit 1
+fi
+echo 'OK: TCP 2375 is absent'
 
 # 4. Socket runtime остаётся локальным; owner/mode соответствуют policy unit/package,
 #    не дают доступа обычным пользователям и не являются world-writable.
@@ -518,8 +553,9 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
   обновления, а не ручной неописанный дрейф.
 - [ ] `ss -tulpn` не содержит необъяснимых listeners; `10250`, `6443`, etcd и SSH доступны
   только там и тем источникам, где это требуется архитектурой.
-- [ ] `ss -tulpn | grep ':2375'` ничего не выводит; в unit/drop-in/`daemon.json` нет
-  `tcp://0.0.0.0:2375`.
+- [ ] Exact filter `ss -H -lnt '( sport = :2375 )'` не выводит listener; в unit/drop-in/`daemon.json`
+  нет `tcp://0.0.0.0:2375`. Порт `2376` запрещён по умолчанию, но допустим только как явно
+  согласованное исключение с mTLS, firewall allowlist и владельцем риска.
 - [ ] `/run/containerd/containerd.sock` и при наличии `/run/nri/nri.sock` не
   доступны обычным пользователям, не примонтированы в непривилегированный workload, а
   `sudo crictl` продолжает работать; разрешённые группы состоят только из системных субъектов.
@@ -546,6 +582,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 
 ## 14.9. Как это применяют в продакшене
 
+- **Kubernetes v1.37 rootless node path.** `KubeletInUserNamespace` стал Beta и позволяет строить node stack, где kubelet и связанные node components работают без host-root через user namespace. Не путайте это с `spec.hostUsers: false`, который изолирует Pod. См. [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 - **Baseline задают как код.** Список пакетов, enabled services, systemd drop-in, firewall
   и проверка socket входят в immutable image, Ansible/Cloud-Init или другой IaC. Ручной
   emergency fix затем переносится в источник истины.

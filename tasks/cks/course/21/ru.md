@@ -2,6 +2,12 @@
 
 # Глава 21. Шифрование данных в etcd и безопасное хранение Secret
 
+> **Проблема.** Тот, кто получил диск control plane, доступ к etcd, snapshot или его backup,
+> обходит RBAC, authentication и audit API server и читает `Secret.data`, если она записана
+> как обычный base64. Пароли, токены и закрытые ключи из такой копии позволяют продолжить
+> атаку уже за пределами кластера. Шифрование выбранных API-ресурсов до записи в etcd оставляет
+> в хранилище ciphertext и требует отдельного доступа к ключевому материалу.
+
 > **Что дальше.** `Secret` - это объект для чувствительных данных, но его поля `data` всего лишь
 > закодированы в base64. Если не включено шифрование at rest, тот, кто получил доступ к данным etcd,
 > snapshot или резервной копии, сможет прочитать пароль, токен и закрытый ключ. В этой главе настраиваем
@@ -417,6 +423,8 @@ storage path. Это подходит, в частности, для re-encrypti
 путём, а Storage Version Migration требует отдельного operational rollout, наблюдения и
 проверенного rollback/recovery-процесса.
 
+> 🏭 **Upstream v1.37.** В Kubernetes v1.37 встроенный `StorageVersionMigration` API/controller стал GA и enabled by default. Это меняет production-current status, но не CKS Core workflow этой главы, который остаётся привязан к exam/training context. См. [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+
 `kubectl replace` требует актуальный `resourceVersion`; при высокой конкуренции возможны конфликты.
 В production запускайте controlled script с retry, наблюдением за API latency и согласованным окном,
 а не бездумно вставляйте команду в CI. Не записывайте JSON с Secret на диск или в pipeline log.
@@ -572,6 +580,8 @@ Kubernetes Secret - меньше копий в etcd, но появляются t
 | новая запись остаётся plaintext | `identity` стоит первым или flag не применяется | проверить порядок providers, manifest, restart и create нового canary |
 | запись API зависает/падает | KMS plugin или внешний KMS недоступен/медленный | проверить socket, TLS, KMS health, timeout и HA; не ослаблять security вслепую |
 | Secret обнаружен в Git/log | encryption at rest не поможет | немедленно rotate исходный credential, ограничить доступ и удалить артефакт по IR-процедуре |
+
+> 🏭 **Kubernetes v1.37 recovery edge case.** Для unreadable/corrupt API object существует Beta unsafe force-delete path (`AllowUnsafeMalformedObjectDeletion`). Это операция с cluster-breaking potential и последний recovery mechanism, а не обычный способ исправить encryption rotation. Подробности и ограничения: [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 На экзамене сначала определите тип кластера. Для kubeadm ищите manifest API server и etcd TLS paths.
 Для managed control plane настройки могут быть закрыты: не пытайтесь редактировать несуществующий

@@ -2,6 +2,12 @@
 
 # Глава 23. Pod-to-Pod шифрование и mTLS: Cilium, Istio и Linkerd
 
+> **Проблема.** NetworkPolicy может разрешить только нужный поток, но данные в нём остаются
+> доступны для перехвата или подмены на межузловом пути, а сервис без взаимной проверки
+> identity способен принять соединение от чужого workload. Компрометация ноды, сетевого
+> сегмента или клиента тогда раскрывает токены и payload либо позволяет выдать себя за
+> доверенный сервис; нужны отдельно transport encryption и mTLS для workload identity.
+
 > **Что дальше.** NetworkPolicy разрешает или запрещает поток, но сама по себе не делает
 > его конфиденциальным. В этой главе строим два разных слоя защиты Pod-to-Pod трафика:
 > прозрачное шифрование сети между нодами через Cilium (WireGuard или IPsec) и взаимную
@@ -331,6 +337,8 @@ peers вызывает packet loss. Практический минимум дл
 быть разными.
 
 > 🎯 Istio mTLS связывает certificate с workload identity; отличайте `PeerAuthentication: STRICT` от `DestinationRule` с `ISTIO_MUTUAL` и проверяйте proxy/injection.
+
+> 🔬 **Upstream identity primitive.** Kubernetes v1.37 стабилизировал Pod Certificates и ClusterTrustBundles. Они дают X.509 primitives на уровне Kubernetes, но не делают Istio/SPIFFE identity plane автоматически ненужным: signer, trust model и mesh enforcement — отдельные архитектурные решения. См. [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 23.6. Istio: sidecar, SPIFFE workload identity и `PeerAuthentication`
 
