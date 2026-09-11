@@ -1,0 +1,862 @@
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
+
+# Глава 17. seccomp: минимальный набор системных вызовов
+
+> **Проблема.** Скомпрометированный процесс в контейнере получает тот же интерфейс системных
+> вызовов к ядру, что и легитимное приложение, и может использовать редко нужные `mount`,
+> `unshare`, `bpf` или `clone` для выхода из изоляции либо развития kernel exploit. Даже без
+> лишней capability такой API ядра расширяет поверхность атаки; seccomp заранее оставляет
+> процессу только проверенный набор syscalls.
+
+> **Что дальше.** AppArmor из [главы 16](../16/ru.md) ограничил, с какими путями и
+> объектами ядра может работать процесс. Теперь добавим фильтр на ещё более низком уровне:
+> **seccomp** сопоставляет системные вызовы (syscalls) процесса с правилами profile и для
+> каждого выбирает действие, например разрешение, ошибку, завершение или журналирование.
+> Это домен **System Hardening** CKS (10%). В следующей части курса эти же ограничения
+> станут частью защищённого `SecurityContext` и Pod Security Standards.
+
+> **Что нужно из CKA.** Базовые `securityContext`, non-root запуск,
+> `allowPrivilegeEscalation: false` и Linux capabilities разобраны в
+> [главе 20 CKA](../../../cka/course/20/ru.md). Сначала отработайте их в
+> [лабе 106 CKA](../../../cka/labs/106/README_RU.MD): seccomp не заменяет
+> `capabilities.drop: ["ALL"]`, а уменьшает доступный процессу API ядра.
+
+> 🧠 Seccomp фильтрует syscalls и возвращает allow, `ERRNO`, kill или `LOG`; capabilities, DAC и MAC проверяются отдельно.
+
+## 17.1. Что seccomp защищает
+
+Приложение не вызывает функции ядра напрямую. Библиотека или runtime в итоге делает
+**system call**: `openat(2)` открывает файл, `socket(2)` создаёт сокет, `clone(2)` создаёт
+процесс или thread, `mount(2)` монтирует файловую систему. У скомпрометированного процесса
+появляется тот же интерфейс к ядру. Многие syscalls для обычного веб-сервера или worker не
+нужны, но полезны для container escape, смены namespace, загрузки BPF-программ или
+монтирования.
+
+seccomp (secure computing mode) - механизм Linux kernel, который сопоставляет каждый syscall
+процесса с BPF-фильтром и выбирает действие: разрешить, вернуть ошибку, завершить процесс,
+создать audit event либо передать решение userspace-notifier. Kubernetes назначает такой
+фильтр процессам контейнера через `securityContext.seccompProfile`.
+
+```mermaid
+flowchart TB
+    process["Процесс контейнера"] --> call["syscall: mount, clone, openat ..."]
+    call --> filter["seccomp BPF filter"]
+    filter -->|"ALLOW"| kernel["Ядро выполняет syscall"]
+    filter -->|"ERRNO / KILL"| blocked["EPERM, ENOSYS или завершение"]
+    filter -->|"LOG"| audit["kernel audit / journal"]
+    style process fill:#326ce5,color:#fff
+    style filter fill:#673ab7,color:#fff
+    style kernel fill:#0f9d58,color:#fff
+    style blocked fill:#db4437,color:#fff
+    style audit fill:#f4b400,color:#000
+```
+
+Фильтр привязан к процессу и наследуется дочерними процессами. Он не даёт разрешений: если
+syscall пропущен seccomp, обычные проверки kernel всё равно остаются. Например, разрешённый
+`mount(2)` ещё потребует capability и нужные mount namespace/LSM-права. И наоборот,
+`CAP_SYS_ADMIN` не отменяет seccomp-denial. Поэтому seccomp - последний узкий барьер перед
+API ядра, а не универсальная замена остальных controls.
+
+| Механизм | Вопрос, на который отвечает | Пример |
+|---|---|---|
+| UID/GID и DAC | может ли identity работать с объектом? | права файла `0640` |
+| capabilities | есть ли специальная привилегия ядра? | нет `CAP_SYS_ADMIN` |
+| seccomp | разрешён ли конкретный syscall? | `unshare(2)` возвращает `EPERM` |
+| AppArmor / SELinux | допускает ли MAC policy объект и операцию? | AppArmor запрещает чтение `/etc/shadow` |
+| RBAC | может ли identity вызвать Kubernetes API? | нет `get secrets` |
+
+seccomp не ограничивает сеть на уровне адресов и портов, не проверяет Kubernetes RBAC и не
+делает образ безопасным. host namespaces, hostPath и чрезмерные capabilities делают риск
+намного выше. Отдельно, `privileged: true` всегда запускает контейнер с seccomp
+`Unconfined`: Kubernetes profile к такому контейнеру не применяется. Для обычного workload
+базовая связка выглядит так:
+
+```yaml
+securityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+containers:
+- name: app
+  image: nginxinc/nginx-unprivileged:1.30.4-alpine-slim
+  ports:
+  - containerPort: 8080
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+```
+
+## 17.2. Режимы seccomp и действия фильтра
+
+Kernel поддерживает строгий legacy-режим и фильтрующий режим. В контейнерах практически
+всегда используется filter mode: runtime загружает BPF-программу из OCI/Kubernetes profile
+перед запуском процесса. Поле `/proc/<pid>/status` содержит `Seccomp: 2`, когда для
+процесса включён filter mode; `0` означает отсутствие seccomp, `1` - legacy strict mode.
+Само значение `2` не доказывает, *какой* профиль загружен, но полезно при диагностике.
+
+В JSON-профиле действия задаются значениями libseccomp/OCI. Их смысл важнее запоминания
+каждого имени:
+
+| Действие | Результат | Типичное применение |
+|---|---|---|
+| `SCMP_ACT_ALLOW` | syscall выполняется | allow-list нужных вызовов |
+| `SCMP_ACT_ERRNO` | syscall не выполняется, процесс получает errno | предсказуемо запретить ненужное действие |
+| `SCMP_ACT_KILL_PROCESS` | kernel завершает весь процесс | жёсткий fail-closed для явно опасного syscall |
+| `SCMP_ACT_KILL_THREAD` | kernel завершает вызывающий thread | обычно избегают: многопоточный процесс может остаться в странном состоянии |
+| `SCMP_ACT_TRAP` | процесс получает `SIGSYS` | специализированная обработка, не обычный baseline |
+| `SCMP_ACT_LOG` | syscall разрешён, kernel пытается записать audit event | инвентаризация вызовов до enforce |
+| `SCMP_ACT_NOTIFY` | решение передаётся userspace supervisor | специальная архитектура; не замена обычной policy |
+
+`SCMP_ACT_LOG` не блокирует syscall. Он полезен для краткого controlled test, но шумит в
+логах и не является production-защитой. `SCMP_ACT_ERRNO` без указанного errno обычно
+даёт `EPERM`; конкретное значение можно задать отдельно. Не выбирайте `KILL` только потому,
+что он «строже»: внезапная смерть процесса может превратить несущественный вызов в outage,
+а диагностику - в сложный crash loop.
+
+Два направления policy выглядят по-разному:
+
+- **deny-list:** `defaultAction: SCMP_ACT_ALLOW`, отдельные опасные syscalls получают
+  `ERRNO` или `KILL`. Это проще для совместимости, но новые или забытые syscalls остаются
+  доступными.
+- **allow-list:** `defaultAction: SCMP_ACT_ERRNO`, в `syscalls` перечислены разрешённые
+  группы. Это сильнее и требует измеренного, протестированного контракта приложения.
+
+`RuntimeDefault` обычно даёт безопасный baseline runtime. Custom allow-list имеет смысл
+только после наблюдения и теста реального приложения, его probes, entrypoint, DNS/TLS и
+периодических задач. Никогда не строите его по одному удачному `curl` или одному `strace`.
+
+> 🎯 Выберите `RuntimeDefault` или проверенный `Localhost` и докажите effective seccomp у нужного контейнера; один `EPERM` не доказывает seccomp denial.
+
+## 17.3. Kubernetes API: `RuntimeDefault`, `Localhost`, `Unconfined`
+
+Актуальный Kubernetes API задаёт seccomp в `securityContext.seccompProfile`. Его можно
+поставить на Pod как baseline для всех контейнеров или на конкретный container, когда ему
+нужна более узкая policy. Container-level `securityContext` имеет приоритет для этого
+контейнера. Избегайте разных фильтров без необходимости: они усложняют rollout, audit и
+поиск причины отказа.
+
+| `type` | Что назначается | Когда выбирать |
+|---|---|---|
+| `RuntimeDefault` | профиль, поставляемый container runtime | нормальный baseline для обычной нагрузки |
+| `Localhost` | JSON profile, доступный локально на ноде | проверенный application-specific контракт syscalls |
+| `Unconfined` | фильтр seccomp не применяется | лишь временное диагностическое исключение с владельцем и сроком |
+
+### `RuntimeDefault`: безопасная отправная точка
+
+`RuntimeDefault` просит runtime применить его стандартный профиль. Его точное содержимое
+зависит от runtime и версии, поэтому нельзя считать, что это один и тот же JSON на всех
+платформах. Не заменяйте его на `Unconfined`, если приложение пока не было исследовано:
+сначала докажите конкретный конфликт через event, логи и тест.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: runtime-default-seccomp
+  namespace: demo
+spec:
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: nginx:1.30.4
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+```
+
+Проверьте сохранённую specification, состояние и режим effective процесса:
+
+```bash
+kubectl apply -f runtime-default-seccomp.yaml
+kubectl wait -n demo --for=condition=Ready pod/runtime-default-seccomp --timeout=120s
+kubectl get pod -n demo runtime-default-seccomp \
+  -o jsonpath='{.spec.securityContext.seccompProfile.type}{"\n"}'
+kubectl describe pod -n demo runtime-default-seccomp
+kubectl exec -n demo runtime-default-seccomp -- grep '^Seccomp:' /proc/1/status
+# Ожидается Seccomp: 2; это подтверждает filter mode, но не идентичность profile.
+```
+
+Если cluster-wide default уже включает `RuntimeDefault`, явное поле всё равно полезно:
+manifest переносит намерение вместе с workload, admission policy может его проверить, а
+проверяющий не должен угадывать node/runtime configuration.
+
+### `seccompDefault`: default ноды для manifest без поля
+
+Функция `seccompDefault` стабильна с Kubernetes v1.27. Если она включена, kubelet применяет
+`RuntimeDefault` к workload, у которого seccomp profile не указан. Её включают флагом
+kubelet `--seccomp-default` или полем конфигурации kubelet:
+
+```yaml
+seccompDefault: true
+```
+
+Это node-level настройка, поэтому manifest без `seccompProfile` может фактически получить
+`RuntimeDefault` на ноде с включённым `seccompDefault` или `Unconfined` на ноде без него.
+Не используйте отсутствие поля как security contract: для переносимого baseline задавайте
+`RuntimeDefault` явно. Явный `Unconfined` остаётся исключением, а `privileged: true` всегда
+даёт `Unconfined` независимо от profile в manifest.
+
+Проверяйте реальную конфигурацию на **фактической** node Pod, а не угадывайте по версии
+кластера. Команды ниже читают только командную строку kubelet и одно явно указанное поле;
+сначала получите имя node из `kubectl get pod -o wide` и используйте разрешённый
+административный доступ к ней:
+
+```bash
+# На фактической node Pod. Выводятся только релевантные флаги работающего kubelet.
+KPID=$(pgrep -xo kubelet) || exit 1
+sudo tr '\0' '\n' <"/proc/$KPID/cmdline" | \
+  awk '$0 == "--config" { print; getline; print; next }
+       /^--(config|seccomp-default)(=|$)/' || true
+
+# Присвойте путь, который фактически показал --config, а не предполагаемый путь.
+KUBELET_CONFIG=/path/from-kubelet-config
+sudo grep -nE '^[[:space:]]*seccompDefault:[[:space:]]*(true|false)[[:space:]]*$' \
+  "$KUBELET_CONFIG"
+```
+
+Вторая команда нужна, когда `--config` задан: поле и флаг являются источниками настройки
+kubelet. Не публикуйте весь config или произвольную `/proc` command line в тикете. Затем
+сверьте intended state с режимом процесса. Приоритет таков: container-level profile, затем
+Pod-level profile, затем default ноды для отсутствующего profile; `privileged` является
+исключением и остаётся `Unconfined`.
+
+```bash
+NS=demo
+POD=runtime-default-seccomp
+CTR=app
+
+kubectl get pod -n "$NS" "$POD" \
+  -o jsonpath='{.spec.securityContext.seccompProfile}{"\n"}'
+kubectl get pod -n "$NS" "$POD" \
+  -o jsonpath='{.spec.containers[?(@.name=="app")].securityContext.seccompProfile}{"\n"}'
+kubectl exec -n "$NS" "$POD" -c "$CTR" -- grep '^Seccomp:' /proc/1/status
+```
+
+`Seccomp: 2` подтверждает filter mode, а `Seccomp: 0` - отсутствие фильтра. `/proc` не
+раскрывает имя JSON или точное содержимое `RuntimeDefault`; идентичность effective profile
+подтверждают вместе precedence из manifest, фактическая kubelet configuration/flags, records
+runtime и ожидаемое поведение. Для privileged container Kubernetes profile не может стать
+эффективным, даже если поле присутствует в YAML.
+
+### `Localhost`: path не является абсолютным
+
+`Localhost` выбирает custom JSON profile. Kubernetes не передаёт JSON через Pod и не копирует
+его планировщиком: kubelet читает файл **на выбранной ноде** из каталога seccomp profiles.
+По умолчанию это `/var/lib/kubelet/seccomp`, то есть подкаталог `profiles` и файл
+`audit.json` физически будут такими:
+
+```text
+/var/lib/kubelet/seccomp/profiles/audit.json
+```
+
+В manifest указывается путь **относительно seccomp root kubelet**, без начального `/`:
+
+```yaml
+securityContext:
+  seccompProfile:
+    type: Localhost
+    localhostProfile: profiles/audit.json
+```
+
+`localhostProfile: /var/lib/kubelet/seccomp/profiles/audit.json` неверен: абсолютный путь
+не является контрактом API. Аналогично неверно предполагать `/var/lib/kubelet`, если
+kubelet запускается с другим `--root-dir`: тогда root профилей -
+`<root-dir>/seccomp`. На managed nodes узнайте реальную конфигурацию kubelet у владельца
+платформы; не ищите файлы на production-ноде наугад.
+
+Полный пример с node-local dependency:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: localhost-seccomp
+  namespace: demo
+spec:
+  # Указывайте только доверенный label/pool, на который profile доставлен automation.
+  nodeSelector:
+    seccomp.example.com/profiles: "v1"
+  securityContext:
+    seccompProfile:
+      type: Localhost
+      localhostProfile: profiles/audit.json
+  containers:
+  - name: app
+    image: busybox:1.36.1
+    command: ["sh", "-c", "sleep 3600"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+```
+
+Не ставьте user-controlled label на ноду только ради этого manifest: label, profile и
+placement являются частью доверенной node configuration. Либо доставляйте одинаковый profile
+на весь допустимый pool, либо ограничивайте scheduling защищённым label/affinity и
+проверяйте каждый pool перед rollout.
+
+### `privileged` всегда `Unconfined`
+
+Kubernetes запускает контейнер с `securityContext.privileged: true` как seccomp
+`Unconfined` и не применяет к нему ни `RuntimeDefault`, ни `Localhost`. Поэтому YAML с
+`privileged: true` и `seccompProfile` не означает два действующих слоя: seccomp profile
+здесь не станет effective. Не пытайтесь «исправить» это заменой profile или искать JSON на
+node. Уберите `privileged`, если он не обоснован, и затем назначьте минимальный profile.
+
+Безопасная диагностика сначала фиксирует конфликтующее desired state и лишь затем смотрит
+процесс нужного контейнера:
+
+```bash
+NS=demo
+POD=example
+CTR=app
+
+kubectl get pod -n "$NS" "$POD" \
+  -o jsonpath='{.spec.containers[?(@.name=="app")].securityContext.privileged}{"\n"}'
+kubectl get pod -n "$NS" "$POD" \
+  -o jsonpath='{.spec.containers[?(@.name=="app")].securityContext.seccompProfile}{"\n"}'
+kubectl exec -n "$NS" "$POD" -c "$CTR" -- grep '^Seccomp:' /proc/1/status
+```
+
+Для privileged container без самостоятельно установленного приложением фильтра ожидается
+`Seccomp: 0`. Поле profile в manifest полезно только как признак ошибочного намерения, а не
+как доказательство его применения. `Seccomp: 2` у процесса доказывает лишь filter mode и
+требует отдельного расследования процесса/runtime; оно не делает Kubernetes profile
+эффективным для privileged container.
+
+### `Unconfined` и устаревшая annotation
+
+`Unconfined` отключает этот слой для контейнера. Его допустимо использовать как короткое
+исключение, например для controlled comparison на test node, но не как постоянное «решение»
+`Operation not permitted`. Запишите owner, срок удаления и конкретную причину; затем
+восстановите least privilege.
+
+Старые manifest могут использовать annotation
+`seccomp.security.alpha.kubernetes.io/pod` или
+`container.seccomp.security.alpha.kubernetes.io/<container>`. Это исторический интерфейс: начиная с Kubernetes v1.25 эти annotations **нефункциональны**
+и не назначают seccomp profile. Их наличие в современном кластере — сигнал для audit, а не
+работающая совместимость; замените их на `securityContext.seccompProfile`. Не смешивайте
+annotation и API-поле, особенно с разными значениями. После миграции протестируйте новый Pod
+и проверьте его effective mode.
+
+> 🎯 Соберите JSON-профиль `Localhost` по OCI seccomp format, загрузите на нужную ноду и подтвердите effective mode контейнера.
+
+## 17.4. JSON-профиль: структура и безопасный пример
+
+Профиль `Localhost` - JSON в OCI seccomp format. В нём важны архитектура, действие по
+умолчанию и массив правил. Называйте syscalls по Linux ABI, а не по имени shell-команды:
+`mount` означает `mount(2)`, а не утилиту `/bin/mount`.
+
+Ниже - небольшой **аудит-профиль для test node**. Он позволяет все syscalls, но заставляет
+kernel журналировать попытки `unshare`, `setns`, `mount` и `bpf`. Он не защищает workload;
+его задача - показать путь `Localhost` и собрать наблюдаемое событие перед тем, как писать
+реальное restrict profile.
+
+```json
+{
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "architectures": [
+    "SCMP_ARCH_X86_64"
+  ],
+  "syscalls": [
+    {
+      "names": ["unshare", "setns", "mount", "bpf"],
+      "action": "SCMP_ACT_LOG"
+    }
+  ]
+}
+```
+
+> 🔬 `syscalls[].args`, `errnoRet` и фильтрация по аргументам syscall — узкие version- и architecture-dependent детали.
+
+OCI seccomp умеет сопоставлять не только имя syscall, но и его аргументы через
+`syscalls[].args` (`index`, `value`, необязательный `valueTwo`, `op`). Например,
+следующее правило возвращает `EPERM` только для `socket(2)` с domain `AF_PACKET` (17),
+не запрещая другие socket domains:
+
+```json
+{
+  "names": ["socket"],
+  "action": "SCMP_ACT_ERRNO",
+  "errnoRet": 1,
+  "args": [{"index": 0, "value": 17, "op": "SCMP_CMP_EQ"}]
+}
+```
+
+Номера аргументов и значения зависят от syscall ABI, поэтому такой фильтр тестируют на
+каждой целевой архитектуре/runtime и не переносят между платформами без проверки.
+
+Для ARM64 набор `architectures` должен соответствовать архитектуре node (например,
+`SCMP_ARCH_AARCH64`); не копируйте x86_64 JSON на ARM node. В heterogeneous cluster profile
+либо содержит корректные ABI для каждого поддерживаемого node pool, либо workload явно
+ограничен совместимым pool.
+
+Профиль кладёт и проверяет node automation, а не обычный Pod. Пример ниже предназначен для
+выделенной test-ноды и иллюстрирует default path kubelet:
+
+```bash
+# На test-ноде, с административным доступом.
+sudo install -d -m 0755 /var/lib/kubelet/seccomp/profiles
+sudo install -m 0644 audit.json /var/lib/kubelet/seccomp/profiles/audit.json
+sudo test -r /var/lib/kubelet/seccomp/profiles/audit.json
+sudo jq empty /var/lib/kubelet/seccomp/profiles/audit.json
+```
+
+`jq empty` проверяет синтаксис JSON, но не доказывает семантику syscall names или
+совместимость runtime. Перед production rollout добавьте тест запуска container на каждой
+целевой версии runtime, затем подготовьте rollback как выпуск новой проверенной profile
+версии, а не ручное редактирование live node.
+
+Ниже пример enforce-профиля с deny-list. Он нужен для демонстрации предсказуемого отказа:
+по умолчанию syscalls разрешены, а несколько действий получают `EPERM`. Такой файл не
+заменяет `RuntimeDefault` и не является достаточной production policy сам по себе.
+
+```json
+{
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "architectures": [
+    "SCMP_ARCH_X86_64"
+  ],
+  "syscalls": [
+    {
+      "names": ["unshare", "setns", "mount"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1
+    },
+    {
+      "names": ["bpf", "keyctl", "perf_event_open"],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1
+    }
+  ]
+}
+```
+
+`errnoRet: 1` означает `EPERM`. Если процесс получает `Operation not permitted`, это не
+доказывает seccomp автоматически: тот же errno могут вернуть capabilities, AppArmor,
+SELinux или обычные права. Нужны одновременно manifest, status процесса и kernel audit/log.
+
+## 17.5. Наблюдение: syscall audit и kernel log
+
+Краткий audit этап отвечает на вопрос «какие syscalls реально нужны?» и не должен
+превращаться в бесконечный production-режим. Используйте representative traffic на test
+node, включая startup, liveness/readiness probes, TLS/DNS, worker jobs, graceful shutdown
+и error paths. Собирайте данные ограниченное время и соотносите их с PID/container и
+версией образа.
+
+Для audit profile из предыдущего раздела примените Pod, затем сделайте безопасную проверку
+вызова. В контейнере без `CAP_SYS_ADMIN` `unshare` обычно всё равно завершается ошибкой;
+для audit достаточно, что syscall attempted и kernel получил его.
+
+```bash
+kubectl apply -f localhost-seccomp.yaml
+kubectl wait -n demo --for=condition=Ready pod/localhost-seccomp --timeout=120s
+kubectl get pod -n demo localhost-seccomp -o wide
+kubectl exec -n demo localhost-seccomp -- sh -c 'unshare -Ur true || true'
+kubectl exec -n demo localhost-seccomp -- grep '^Seccomp:' /proc/1/status
+```
+
+Затем подключитесь к node, указанной `kubectl get ... -o wide`, и ищите seccomp records в
+kernel journal. Конкретный формат зависит от kernel, auditd и logging pipeline; в записи
+обычно есть `type=SECCOMP`, `syscall=`, `pid=`, `comm=` и arch. Не ожидайте один неизменный
+текст на всех дистрибутивах.
+
+```bash
+# На выбранной ноде, ограничьте временное окно и ищите несколько известных вариантов.
+sudo journalctl -k --since '10 minutes ago' | \
+  grep -Ei 'seccomp|type=SECCOMP|audit.*syscall' || true
+
+# Если auditd установлен и разрешён вашей процедурой эксплуатации:
+sudo ausearch -m SECCOMP -ts recent 2>/dev/null || true
+```
+
+Для сопоставления записи с контейнером нужны node, время, process name/PID и runtime ID.
+Не считайте весь kernel journal «логом Pod»: на одной node работают kubelet, runtime и
+другие workload. Сначала соберите Kubernetes-контекст:
+
+```bash
+NS=demo
+POD=localhost-seccomp
+
+kubectl get pod -n "$NS" "$POD" -o wide
+kubectl get pod -n "$NS" "$POD" \
+  -o jsonpath='{.spec.securityContext.seccompProfile}{"\n"}'
+kubectl describe pod -n "$NS" "$POD"
+```
+
+На node администратор может получить container ID и host PID, если это разрешено правилами
+доступа:
+
+```bash
+# На ноде; выберите фактический ID, не копируйте его из другого Pod.
+sudo crictl ps --name localhost-seccomp
+CONTAINER_ID=replace-with-container-id
+HOST_PID=$(sudo crictl inspect "$CONTAINER_ID" | jq -r '.info.pid')
+sudo grep '^Seccomp:' "/proc/$HOST_PID/status"
+```
+
+`strace` полезен для локального воспроизводимого исследования, но сам меняет timing и
+создаёт нагрузку. Не подключайтесь надолго к высоконагруженному production PID. На test node
+можно запустить короткий trace процесса или команды и сопоставить имена syscalls с
+профилем:
+
+```bash
+HOST_PID=replace-with-host-pid
+sudo strace -f -p "$HOST_PID" -e trace=%process,%network,%file
+# Остановите trace после короткого controlled test.
+```
+
+`strace` показывает вызовы процесса, а `SCMP_ACT_LOG` даёт kernel telemetry. Ни один из них
+не должен автоматически генерировать allow-list: оставляйте минимальную policy после review
+угрозы, а не после механического добавления всех observed syscalls.
+
+## 17.6. Проверка и debugging: от YAML до kernel
+
+Для seccomp есть две разные группы отказов, и порядок проверки экономит время.
+
+1. **Container не создан.** В `Localhost` не найден файл, путь не относительный,
+   JSON/runtime не поддержан либо Pod scheduled на node без profile. Смотрите event Pod,
+   node и kubelet/runtime logs.
+2. **Container работает, но syscall rejected.** seccomp filter применён, приложение
+   получает `EPERM`, `ENOSYS`, `SIGSYS` или завершается. Смотрите effective mode,
+   application log и kernel audit records.
+
+### Быстрый порядок проверки
+
+```bash
+NS=demo
+POD=localhost-seccomp
+CTR=app
+
+# 1. Desired state: Pod- и container-level contexts могут различаться.
+kubectl get pod -n "$NS" "$POD" -o jsonpath='{.spec.securityContext.seccompProfile}{"\n"}'
+kubectl get pod -n "$NS" "$POD" \
+  -o jsonpath='{.spec.containers[?(@.name=="app")].securityContext.seccompProfile}{"\n"}'
+
+# 2. Lifecycle и выбранная node.
+kubectl get pod -n "$NS" "$POD" -o wide
+kubectl describe pod -n "$NS" "$POD"
+kubectl get events -n "$NS" --field-selector involvedObject.name="$POD" \
+  --sort-by=.lastTimestamp
+
+# 3. Effective process state, если container стартовал.
+kubectl exec -n "$NS" "$POD" -c "$CTR" -- grep '^Seccomp:' /proc/1/status
+```
+
+Если `kubectl exec` невозможен, не начинайте с предположения о blocked syscall: сначала
+прочитайте `describe` и events. Для `Localhost` event часто прямо указывает отсутствующий
+profile или ошибку его загрузки. Проверьте точное значение `localhostProfile`; это не имя
+файла «где-то на node» и не абсолютный path.
+
+На фактической node диагностируйте путь, права чтения и kubelet, но не копируйте секреты или
+содержимое production profile в тикет без необходимости:
+
+```bash
+# На выбранной node. Подставьте root-dir из фактической command line/config kubelet.
+KUBELET_ROOT=/var/lib/kubelet
+sudo test -r "$KUBELET_ROOT/seccomp/profiles/audit.json"
+sudo stat "$KUBELET_ROOT/seccomp/profiles/audit.json"
+sudo journalctl -u kubelet --since '15 minutes ago'
+sudo journalctl -k --since '15 minutes ago' | grep -Ei 'seccomp|SECCOMP|audit' || true
+```
+
+### Таблица симптомов
+
+| Симптом | Вероятная причина | Доказательство и безопасная правка |
+|---|---|---|
+| `CreateContainerError` после `Localhost` | profile отсутствует на выбранной node или путь неверен | `describe`, node из `-o wide`, точное относительное имя и файл под kubelet seccomp root |
+| Pod scheduled не туда | profile доставлен не на весь pool | проверить node label, automation delivery и placement; не ослаблять профиль |
+| `Seccomp: 0` в работающем контейнере | profile не назначен, задан `Unconfined`, container privileged либо node default выключен | сравнить Pod/container `securityContext` и `privileged`, затем фактические kubelet flags/config на node |
+| `Seccomp: 2`, но приложение даёт `EPERM` | возможен seccomp denial, capability/MAC/DAC denial или все сразу | kernel audit, AppArmor/SELinux logs, capabilities и точный syscall |
+| `SIGSYS` или process killed | profile использует `TRAP`/`KILL` | проверить JSON, exit code и runtime logs; воспроизвести на test node |
+| JSON читается `jq`, но container не стартует | schema, ABI, runtime version или seccomp support несовместимы | kubelet/runtime event и isolated compatibility test |
+| rollout ломается лишь на части реплик | node pools различаются по profile/runtime/architecture | inventory каждого pool, pin compatible pool или единый managed delivery |
+| «исправление» через `Unconfined`/`privileged` | защиту выключили, причину не нашли | вернуть baseline, выделить конкретный syscall и минимальное обоснованное исключение |
+
+`/proc/1/status` нужно читать у нужного container. В multi-container Pod PID 1 каждого
+container имеет отдельное представление; `kubectl exec` без `-c` может выбрать не тот
+контейнер. `Seccomp: 2` доказывает наличие filter mode, а verification identity профиля
+остается связкой из Pod spec, runtime/kubelet records, node delivery и expected behavior.
+
+### Проверяем отрицательный сценарий
+
+Для enforce JSON из раздела 17.4 создайте отдельный test Pod, назначив
+`localhostProfile: profiles/restrict.json`. Не меняйте file на production node под
+работающим rollout: подготовьте новую версию, проверьте и только потом меняйте ссылку
+workload.
+
+```bash
+kubectl exec -n demo localhost-seccomp -- sh -c 'mount -t tmpfs tmpfs /tmp/x'
+# Ожидается: mount: permission denied (или аналогичный EPERM).
+
+kubectl exec -n demo localhost-seccomp -- grep '^Seccomp:' /proc/1/status
+# Ожидается: Seccomp: 2
+```
+
+Этой команды недостаточно для attribution: mount может быть запрещён отсутствующей
+capability. Для учебного доказательства фиксируйте profile, `Seccomp: 2`, stderr команды и
+соответствующий node audit/log. В реальном расследовании изолируйте тест и не добавляйте
+`CAP_SYS_ADMIN` лишь для того, чтобы обойти одно ограничение и «проверить» другое.
+
+> 🧠 Seccomp контролирует syscalls, capabilities — привилегии, AppArmor/SELinux — доступ к объектам и операциям.
+
+## 17.7. Как связать seccomp, capabilities и AppArmor
+
+Эти controls проверяют одно действие на разных слоях. Рассмотрим попытку скомпрометированного
+процесса вызвать `mount(2)`:
+
+```mermaid
+flowchart TB
+    app["Скомпрометированный процесс"] --> seccomp["seccomp: разрешён mount(2)?"]
+    seccomp -->|"нет"| denied1["EPERM / KILL + audit"]
+    seccomp -->|"да"| cap["capabilities: есть CAP_SYS_ADMIN?"]
+    cap -->|"нет"| denied2["EPERM"]
+    cap -->|"да"| mac["AppArmor / SELinux:<br/>policy допускает mount?"]
+    mac -->|"нет"| denied3["MAC denial + audit"]
+    mac -->|"да"| kernel["Ядро выполняет операцию"]
+    style app fill:#326ce5,color:#fff
+    style seccomp fill:#673ab7,color:#fff
+    style cap fill:#f4b400,color:#000
+    style mac fill:#673ab7,color:#fff
+    style denied1 fill:#db4437,color:#fff
+    style denied2 fill:#db4437,color:#fff
+    style denied3 fill:#db4437,color:#fff
+    style kernel fill:#0f9d58,color:#fff
+```
+
+Порядок внутренних kernel checks и конкретный errno зависят от syscall и версии kernel, но
+модель defence-in-depth остаётся: успешное прохождение одного слоя не отменяет другой. Из
+этого следуют практические правила.
+
+- **Capabilities сокращают полномочия.** `drop: ["ALL"]` убирает ненужные kernel
+  privileges. Если приложению действительно нужен privileged port, возвращают только
+  `NET_BIND_SERVICE`, а не `SYS_ADMIN`.
+- **seccomp сокращает поверхность API.** Он может запретить syscall независимо от того,
+  насколько высоки privileges процесса. `RuntimeDefault` - стандартный baseline;
+  `Localhost` требует измеренного контракта и node delivery.
+- **AppArmor/SELinux ограничивают объекты и операции.** AppArmor path-based policy из
+  [главы 16](../16/ru.md) может запретить конкретный путь даже после разрешённого syscall.
+  SELinux решает похожую задачу labels/type enforcement на соответствующих ОС.
+- **`allowPrivilegeEscalation: false` связывает модель.** Для Linux это запрещает gaining
+  new privileges и мешает процессу получить больше прав через setuid/file capabilities;
+  это не подмена seccomp, но полезная дополнительная граница.
+
+Не пытайтесь доказать seccomp тем, что capability отсутствует: это доказывает только один
+из независимых барьеров. И не добавляйте capability ради теста seccomp на production
+workload. Делайте узкий эксперимент в отдельном namespace/node и после него удаляйте
+ресурсы.
+
+> 🏭 `Localhost` profile: versioned artifact с владельцем, тестами runtime/ABI, доставкой, canary и rollback.
+
+## 17.8. Эксплуатация: profile как код, а не как файл на ноде
+
+`Localhost` profile - часть platform contract. Scheduler не читает содержимое
+`/var/lib/kubelet/seccomp` и не переносит JSON на node. Надёжная эксплуатация требует
+управляемого полного lifecycle.
+
+1. **Определите угрозу и владельца.** Укажите, какой syscall сокращает риск и какой
+   workload/version profile покрывает. «На всякий случай запретим всё» не является
+   спецификацией.
+2. **Наблюдайте контролируемо.** На test node используйте краткий audit/profile tracing
+   для representative workload, включая startup и failure paths. Сохраняйте image digest,
+   node OS, kernel и runtime version.
+3. **Сделайте минимальный JSON и проверьте совместимость.** Validate JSON, ABI и запуск
+   на каждой поддерживаемой архитектуре/runtime. Новый image или dependency может изменить
+   набор syscalls.
+4. **Доставьте profile как версионируемый артефакт.** Node image, cloud-init или
+   configuration management должны установить файл до scheduling workload. Не давайте
+   непривилегированному Pod доступ писать в kubelet directory.
+5. **Свяжите delivery и placement.** Одинаковый profile на pool проще и безопаснее;
+   иначе используйте доверенный node label/affinity и проверяйте inventory.
+6. **Roll out постепенно.** Начните с canary, проверьте Ready, application SLO и
+   `SECCOMP`/runtime events. У rollback должен быть владелец и проверенный manifest.
+7. **Наблюдайте deny, не отключайте защиту.** Alert связывает node audit с workload.
+   Исправление - обоснованный узкий change profile или приложения, а не бессрочный
+   `Unconfined`.
+
+Для production обычной нагрузки часто достаточно комбинации `RuntimeDefault`, non-root,
+`allowPrivilegeEscalation: false`, drop capabilities и MAC policy. Custom profile оправдан
+там, где риск и контракт хорошо известны; сложность profile - тоже operational risk.
+
+Когда custom seccomp/AppArmor/SELinux profiles нужно распространять и записывать в масштабе
+кластера, рассмотрите **Security Profiles Operator (SPO)** как production-путь: он
+управляет lifecycle и recording workflow профилей вместо ручного копирования JSON в
+каталог kubelet на каждой ноде. Это не отменяет тестов, versioning и контроля placement,
+но делает delivery профиля управляемым платформой.
+
+Pod Security Standards уровня `restricted` требуют seccomp `RuntimeDefault` или
+`Localhost`; `Unconfined` этому baseline не соответствует. Admission policy полезна для
+того, чтобы workload без seccomp не появился из-за пропуска в chart. Но admission не
+проверяет наличие custom JSON на node - это всё ещё задача node lifecycle и rollout.
+
+## 17.9. Мини-глоссарий
+
+- **syscall** - системный вызов, через который процесс запрашивает операцию у kernel.
+- **seccomp** - Linux-механизм фильтрации syscalls процесса.
+- **BPF filter** - программа фильтра, которую kernel исполняет для syscall в filter mode.
+- **`RuntimeDefault`** - seccomp profile, поставляемый выбранным container runtime.
+- **`Localhost`** - Kubernetes type для JSON profile, доступного локально на node.
+- **`localhostProfile`** - относительный к kubelet seccomp root путь JSON profile.
+- **`Unconfined`** - отсутствие seccomp-фильтра для container; временное исключение, не baseline.
+- **allow-list** - policy, где default action запрещает, а разрешённые syscalls перечислены явно.
+- **deny-list** - policy, где default action разрешает, а отдельные syscalls запрещены.
+- **`SCMP_ACT_LOG`** - action, который разрешает syscall и просит kernel его журналировать.
+- **`SCMP_ACT_ERRNO`** - action, возвращающий syscall ошибку без его выполнения.
+- **`SECCOMP` audit record** - kernel/audit запись о событии, относящемся к seccomp.
+
+## 17.10. Итоги главы
+
+- seccomp фильтрует syscalls у границы процесса и kernel; он дополняет, а не заменяет
+  capabilities, AppArmor/SELinux, DAC, RBAC и SecurityContext.
+- Для обычного workload явно задавайте `seccompProfile.type: RuntimeDefault` вместе с
+  non-root, `allowPrivilegeEscalation: false` и минимальными capabilities. `seccompDefault`
+  стабилен с v1.27, но default ноды не заменяет явное намерение в manifest.
+- `Localhost` profile - JSON на node. `localhostProfile` всегда относителен к kubelet
+  seccomp root: для default root файл
+  `/var/lib/kubelet/seccomp/profiles/audit.json` задаётся как `profiles/audit.json`.
+- Custom profile требует версионирования, architecture/runtime testing, managed delivery
+  на все допустимые nodes и связанного scheduling. Scheduler сам JSON не доставляет.
+- `SCMP_ACT_LOG` даёт временное наблюдение, но не защиту; `ERRNO`/`KILL` блокируют с
+  разными последствиями для доступности и диагностики.
+- Проверка включает desired Pod/container context, `privileged`, node и events,
+  фактические kubelet flags/config, `Seccomp: 2` в нужном container, application result и
+  сопоставленный kernel audit/log. Одного `EPERM` для attribution недостаточно.
+
+## 17.11. Как это пригодится: на экзамене и в реальной работе
+
+**На экзамене.** Быстро отличите `RuntimeDefault` от `Localhost`, помните относительный
+путь `localhostProfile`, `seccompDefault` kubelet и правило: `privileged` всегда
+`Unconfined`. Проверяйте результат через `kubectl describe`, `-o jsonpath`, выбранную node
+и `/proc/1/status`. При `CreateContainerError` первым делом читайте event и проверяйте
+node-local profile; при `EPERM` не объявляйте seccomp виновником до проверки capabilities
+и AppArmor/SELinux logs.
+
+**В реальной работе.** Runtime default даёт переносимый baseline, а custom seccomp -
+контракт между приложением, runtime и node platform. Полезный результат даёт только полный
+workflow: measured syscalls, review угрозы, versioned JSON, canary, audit correlation и
+быстрый rollback. «Файл на одной ноде» и постоянный `Unconfined` не являются hardening.
+
+## 17.12. Вопросы для самопроверки
+
+<details>
+<summary>1. Чем seccomp отличается от Linux capabilities и почему один control не заменяет другой?</summary>
+
+Capabilities определяют, есть ли у процесса специальная привилегия ядра, например `CAP_SYS_ADMIN`; seccomp решает, разрешён ли конкретный syscall. Разрешённый seccomp вызов всё равно проходит обычные проверки capabilities, namespace и LSM, а capability не отменяет seccomp-denial. Поэтому для baseline глава сочетает `drop: ["ALL"]` с `RuntimeDefault`.
+</details>
+
+<details>
+<summary>2. Почему `RuntimeDefault` лучше `Unconfined` для обычной нагрузки?</summary>
+
+`RuntimeDefault` просит runtime применить его штатный seccomp-профиль и создаёт переносимый baseline для обычного workload. `Unconfined` отключает этот слой и допустим лишь как краткое диагностическое исключение с владельцем и сроком. Явное поле в manifest также фиксирует намерение, не полагаясь на node default.
+</details>
+
+<details>
+<summary>3. Какой путь пишут в `localhostProfile`, если файл находится в `/var/lib/kubelet/seccomp/profiles/audit.json`?</summary>
+
+Нужно указать `profiles/audit.json`. Значение всегда относительно seccomp root kubelet, а не является абсолютным путём на filesystem node. При другом `--root-dir` меняется физический root профилей, но относительное правило API сохраняется.
+</details>
+
+<details>
+<summary>4. Почему абсолютный path в `localhostProfile` и profile только на одной node приводят к проблемам при rollout?</summary>
+
+Абсолютный путь не соответствует контракту Kubernetes API: kubelet ожидает путь относительно своего seccomp root. Scheduler не переносит JSON profile между нодами, поэтому Pod, запланированный на node без файла, получит ошибку создания контейнера. Profile, его доставка и placement должны быть согласованной доверенной конфигурацией node pool.
+</details>
+
+<details>
+<summary>5. Что делает `SCMP_ACT_LOG`, и почему это не режим enforce?</summary>
+
+`SCMP_ACT_LOG` разрешает syscall и просит kernel создать audit event; он нужен для короткого контролируемого наблюдения. Он не блокирует вызов, может создавать много шума в логах и не является production-защитой. Для enforce используют, например, `SCMP_ACT_ERRNO` или осознанно выбранный `KILL`.
+</details>
+
+<details>
+<summary>6. Какие данные нужны, чтобы отличить seccomp denial от отсутствующей capability или AppArmor denial?</summary>
+
+Нужны declared Pod/container security context, effective `Seccomp` у нужного контейнера, точный syscall и kernel audit/log. `EPERM` сам по себе недостаточен: его могут вернуть capabilities, AppArmor, SELinux или обычные права. Глава рекомендует также сопоставить node, PID/container ID, время и записи `SECCOMP`.
+</details>
+
+<details>
+<summary>7. Что доказывает `Seccomp: 2` в `/proc/1/status`, а чего он не доказывает?</summary>
+
+`Seccomp: 2` доказывает, что у проверяемого процесса включён filter mode; `0` означает отсутствие фильтра, а `1` — legacy strict mode. Эта цифра не раскрывает имя JSON, содержимое или идентичность effective profile. Для этого связывают manifest precedence, kubelet/runtime configuration, доставку профиля и ожидаемое поведение.
+</details>
+
+<details>
+<summary>8. Почему allow-list profile нельзя строить по одному запуску приложения?</summary>
+
+Один удачный `curl` не охватывает startup, probes, DNS/TLS, периодические задачи, graceful shutdown и error paths. Allow-list требует измеренного и протестированного контракта реального приложения на целевых runtime и архитектуре. Наблюдение и `strace` помогают собрать данные, но observed syscalls нельзя механически превращать в policy без review угрозы.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 20).** Представьте `ValidatingAdmissionPolicy` из главы 20, которая требует `seccompProfile.type` в манифесте. Почему прохождение такой policy на admission всё равно не гарантирует реальную защиту syscall - что именно на уровне node/kubelet должно совпасть с требованием policy, чтобы seccomp filter действительно заработал?</summary>
+
+Admission-policy проверяет лишь YAML до записи объекта и не подтверждает, что node сможет применить профиль. На фактической node должны совпасть поддержка seccomp runtime/kubelet, effective `securityContext` с учётом container override и, для `Localhost`, существование совместимого JSON под kubelet seccomp root. Container также не должен быть `privileged`, потому что Kubernetes запускает его `Unconfined`; результат проверяют через события и `Seccomp: 2` у нужного процесса.
+</details>
+
+> 🏭 `RuntimeDefault` в template/admission; custom `Localhost` — versioned profile с совместимым pool, наблюдением и rollback.
+
+## 17.13. Как это применяют в продакшене
+
+Для обычных stateless workload platform team фиксирует
+`seccompProfile.type: RuntimeDefault` в chart или базовом manifest и запрещает
+`Unconfined` admission policy. Так защита не зависит от того, вспомнил ли владелец
+каждого сервиса добавить поле, а manifest всё равно явно документирует ожидаемый
+baseline. Вместе с non-root, `allowPrivilegeEscalation: false`, drop capabilities и
+AppArmor/SELinux это уменьшает последствия эксплуатации уязвимости в приложении.
+
+Custom `Localhost` profile применяют только к workload с понятным syscall-контрактом,
+например к изолированному batch worker или чувствительному сервису. Профиль хранят в
+репозитории как версионируемый артефакт, проверяют на каждой архитектуре и версии
+runtime, а automation доставляет его на весь допустимый node pool до rollout. Manifest
+ссылается на версию профиля относительным `localhostProfile`, а scheduling ограничивают
+доверенным pool, где этот файл гарантированно есть.
+
+Изменение проходит через test node с representative traffic, canary и наблюдение за
+startup, probes, error rate и `SECCOMP`/runtime events. При отказе команда сначала
+сопоставляет Pod spec, node, `Seccomp: 2`, syscall и kernel audit record, затем делает
+узкое обоснованное изменение profile или приложения. Постоянно переключать сервис на
+`Unconfined`, добавлять `CAP_SYS_ADMIN` или редактировать JSON на работающей ноде нельзя:
+это скрывает причину, создаёт разницу между репликами и ослабляет защиту.
+
+## Практика
+
+Сначала выполните [лабу 106 CKA](../../../cka/labs/106/README_RU.MD): она закрепляет
+`SecurityContext`, non-root и capabilities, которые нужны для корректной интерпретации
+seccomp-отказов. Затем на выделенной test-ноде создайте `profiles/audit.json`, примените
+Pod с `Localhost`, найдите `SECCOMP`/kernel record и замените audit profile узким
+проверенным enforce profile. Перед этим повторите [главу 16](../16/ru.md): AppArmor
+ограничивает объекты и операции, seccomp - сам набор syscalls.
+
+## Ссылки
+
+- [Kubernetes: Restrict a Container's Syscalls with seccomp](https://kubernetes.io/docs/tutorials/security/seccomp/)
+- [Kubernetes: Linux kernel security constraints](https://kubernetes.io/docs/concepts/security/linux-kernel-security-constraints/)
+- [Kubernetes API: SeccompProfile](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#SeccompProfile)
+- [Kubernetes: Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
+- [Linux kernel: Seccomp BPF (SECure COMPuting with filters)](https://docs.kernel.org/userspace-api/seccomp_filter.html)
+
+## Смешанный чек-поинт: System Hardening завершён
+
+Прежде чем перейти к Minimize Microservice Vulnerabilities, проверьте 15-20 минут без
+подсказок, что домен System Hardening (главы 14-17) закрепился:
+
+1. Найдите на тестовой ноде один лишний слушающий порт или сервис и объясните, как решить,
+   можно ли его отключить (глава 14).
+2. Назовите два уровня least privilege - Linux-пользователь на хосте и Kubernetes API - и
+   приведите по одному конкретному примеру для каждого (глава 15).
+3. Переключите AppArmor profile Pod из `enforce` в `complain` и объясните, почему `complain`
+   нельзя показывать как доказательство защиты на экзамене (глава 16).
+4. **Смешанное задание.** Возьмите RBAC (глава 10, домен Cluster Hardening) и AppArmor/
+   seccomp (главы 16-17, этот домен): если пользователь имеет право `create pods` без
+   ограничения на `securityContext`, какая из двух защит - RBAC или AppArmor/seccomp -
+   реально остановит Pod с опасным syscall-профилем, и почему RBAC здесь бессилен?
+5. Задайте `seccompProfile.type: RuntimeDefault` для тестового Pod и объясните, чем это
+   отличается от `Unconfined` в терминах allow-list/deny-list (глава 17).
+
+Если задание 4 вызвало затруднение - вернитесь к главам 10 и 16-17 вместе.
+
+---
+[Оглавление](../README_RU.md) · [Глава 16](../16/ru.md)

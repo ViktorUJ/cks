@@ -11,7 +11,7 @@ terraform {
   #
 
   extra_arguments "retry_lock" {
-    commands = get_terraform_commands_that_need_locking()
+    commands  = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -26,22 +26,22 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  region              = local.vars.locals.region
-  aws                 = local.vars.locals.aws
-  prefix              = "cluster11"
-  tags_common         = local.vars.locals.tags
-  app_name            = "k8s"
-  subnets             = dependency.vpc.outputs.subnets
-  vpc_id              = dependency.vpc.outputs.vpc_id
-  cluster_name        = "k8s11"
-  node_type           = local.vars.locals.node_type
-  ssh_password_enable = local.vars.locals.ssh_password_enable
+  region                = local.vars.locals.region
+  aws                   = local.vars.locals.aws
+  prefix                = "cluster11"
+  tags_common           = local.vars.locals.tags
+  app_name              = "k8s"
+  subnets               = dependency.vpc.outputs.subnets
+  vpc_id                = dependency.vpc.outputs.vpc_id
+  cluster_name          = "k8s11"
+  node_type             = local.vars.locals.node_type
+  ssh_password_enable   = local.vars.locals.ssh_password_enable
   spot_additional_types = local.vars.locals.spot_additional_types
   all_spot_subnet       = local.vars.locals.all_spot_subnet
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
-    runtime = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )
+    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it )
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name
@@ -55,7 +55,7 @@ inputs = {
     utils_enable       = "false"
     task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/master/tasks/cks/mock/03/k8s-11/scripts/master.sh"
     cni = {
-      type = "cilium" #calico , cilium
+      type               = "cilium" #calico , cilium
       disable_kube_proxy = "false"
     }
     root_volume = local.vars.locals.root_volume

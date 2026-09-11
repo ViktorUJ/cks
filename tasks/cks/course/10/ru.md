@@ -1,0 +1,734 @@
+<!-- Standalone RU release: ссылки на переводы удалены, потому что соответствующие файлы не входят в архив. -->
+
+# Глава 10. RBAC для минимизации доступа
+
+> **Проблема.** Атакующий, получивший shell в Pod или украденный token, не остановится на
+> границе одного namespace, если ServiceAccount или пользователь имеет лишние права.
+> Широкий `verb`, забытый `cluster-admin` для удобства или доступная
+> `escalate`/`bind`/`impersonate` превращают локальную компрометацию в чтение всех Secret,
+> создание Pod на любой ноде или полный захват кластера - и это решает не сама
+> уязвимость, а то, что RBAC заранее разрешил.
+
+> **Что дальше.** В главах 07-09 мы уменьшали поверхность атаки компонентов кластера.
+> Теперь ограничим последствия компрометации identity, ServiceAccount или Pod: RBAC должен
+> выдавать только доступ, который действительно нужен. Это домен Cluster Hardening (15%) CKS.
+
+> **Что нужно из CKA.** Базовый синтаксис `Role`, `ClusterRole`, `RoleBinding` и
+> `ClusterRoleBinding` уже разобран в [главе 38 CKA](../../../cka/course/38/ru.md).
+> Здесь не повторяем создание четырёх объектов, а рассматриваем аудит, эскалацию прав и
+> безопасное проектирование правил.
+
+## 10.1. Least privilege: один лишний verb меняет границу инцидента
+
+RBAC отвечает на запрос API server сочетанием identity, `verb`, ресурса, namespace и иногда
+имени объекта. Разрешения **аддитивны**: если любой `RoleBinding` или `ClusterRoleBinding`
+даёт доступ, более узкая роль его не отнимает. Поэтому запрет нельзя выразить второй ролью:
+нужно удалить или сузить существующую привязку. Kubernetes RBAC — **allow-only** модель: в ней нет отрицательных deny-правил и условий
+наподобие времени суток или source IP. Такие требования нельзя в общем случае переложить
+на admission: он запускается после authentication/authorization только для
+create/delete/modify (и некоторых custom verbs), а `get`, `list` и `watch` обходят admission
+layer. Для условной **авторизации API** нужен внешний/Webhook authorizer либо иной
+authorization/policy layer; source IP дополнительно ограничивают сетью — firewall,
+load balancer или NetworkPolicy, где это применимо. Admission policy подходит лишь для
+запросов, которые она действительно перехватывает, а не как замена RBAC conditions.
+
+Сценарий атаки типичен: разработчику или ServiceAccount дали `cluster-admin` «временно»,
+либо контроллер получил `verbs: ["*"]`. После компрометации его токена атакующий может
+прочитать Secret с учётными данными, запустить `pods/exec` в приложении, создать workload
+от имени более привилегированного ServiceAccount или выдать себе новую роль. Первоначальный компромисс одного
+namespace превращается в компрометацию кластера.
+
+```mermaid
+flowchart TB
+    token["Скомпрометированный<br/>токен ServiceAccount"] --> broad["Широкая ClusterRole<br/>* / cluster-admin"]
+    broad --> cluster["Secrets / workloads<br/>RBAC всего кластера"]
+    token --> narrow["Role: get/list pods<br/>только namespace app"]
+    narrow --> limited["Secret недоступен<br/>exec / RBAC: запрет"]
+    style token fill:#db4437,color:#fff
+    style broad fill:#c0392b,color:#fff
+    style cluster fill:#c0392b,color:#fff
+    style narrow fill:#0f9d58,color:#fff
+    style limited fill:#0f9d58,color:#fff
+```
+
+Least privilege означает не просто заменить `cluster-admin` на роль с меньшим именем. Для
+каждого субъекта нужно определить: какие API-операции нужны, над какими ресурсами, в каком
+namespace, на какой срок и нужен ли вообще доступ к API. Для обычного приложения часто
+верный ответ - отдельный ServiceAccount без токена; токены рассматриваются в главе 11.
+
+Начинайте с `Role` и `RoleBinding`, если задача локальна для namespace. `ClusterRole` нужна
+для cluster-scoped ресурсов или повторно используемого набора правил, но её можно выдать
+через `RoleBinding` только в одном namespace. `ClusterRoleBinding` расширяет область на весь
+кластер и требует отдельного обоснования.
+
+> 🎯 Проверяйте конкретные identity, verb, resource и scope парой `can-i`: нужное действие — `yes`, опасное соседнее — `no`.
+
+## 10.2. Аудит фактических прав: `kubectl auth can-i`
+
+YAML показывает намерение, но не итоговую авторизацию: субъект может получить доступ из
+нескольких binding, встроенной роли, группы или агрегированной `ClusterRole`. Проверяйте
+ответ API server командой `kubectl auth can-i`.
+
+```bash
+# Обзор правил текущей identity в конкретном namespace.
+kubectl auth can-i --list -n cks-104
+
+# Cluster-scoped и cross-namespace границы проверяйте отдельными действиями.
+kubectl auth can-i get nodes
+kubectl auth can-i list pods -n cks-104
+kubectl auth can-i list pods -n default
+
+# Если вопрос именно "разрешено ли это действие во всех namespaces":
+kubectl auth can-i list pods --all-namespaces
+
+# Конкретное ожидаемое разрешение и ожидаемый отказ - но это права ВАШЕЙ
+# текущей identity, а не проверяемого ServiceAccount или пользователя
+kubectl auth can-i list pods -n cks-104
+kubectl auth can-i get secrets -n cks-104
+
+# Проверка за ServiceAccount из lab104
+SA=system:serviceaccount:cks-104:app-sa
+kubectl auth can-i list pods -n cks-104 --as="$SA"
+kubectl auth can-i delete pods -n cks-104 --as="$SA"
+kubectl auth can-i get secrets -n cks-104 --as="$SA"
+# yes
+# no
+# no
+```
+
+Без `--as` `can-i` всегда отвечает про identity, из-под которой вы сами выполняете
+`kubectl` - то есть про ваш собственный kubeconfig, не про тестируемую identity. Задание
+почти всегда спрашивает про конкретный ServiceAccount, пользователя или группу, поэтому
+для проверки нужен `--as=<identity>`: без него `yes`/`no` ничего не доказывает про цель
+аудита, только про ваши собственные права.
+
+`--as-group` не заменяет `--as` и не является самостоятельной альтернативой ему: это
+список дополнительных impersonated groups, которые применяются только вместе с
+impersonated user. Если задание проверяет права, получаемые именно через group binding,
+задайте `--as` и **дополнительно** нужные `--as-group`:
+
+```bash
+kubectl auth can-i list pods -n cks-104 \
+  --as=group-audit-user \
+  --as-group=developers
+```
+
+Помните, что `--as=<user>` не восстанавливает реальные группы этого пользователя
+автоматически: перечислите те impersonated groups, которые входят в проверяемый сценарий.
+
+`--list` удобен как обзор правил, но не считайте его гарантированно полным перечнем
+effective permissions для любой authorizer chain: команда опирается на
+`SelfSubjectRulesReview`, а её официальная документация прямо предупреждает, что
+возвращённый список может быть неполным в зависимости от authorization mode кластера и
+ошибок evaluation. `--list` также не поддерживает `--all-namespaces`: `kubectl` явно
+отклоняет эту комбинацию флагов, потому что `SelfSubjectRulesReview` перечисляет правила
+ровно в одном namespace и не является cluster-wide inventory. Критичные границы
+подтверждайте отдельными positive/negative `kubectl auth can-i <verb> <resource>` для
+конкретной identity, как в примерах выше.
+
+`--list` удобен для ревью, но не заменяет проверку критичных разрешений: вывод может быть
+длинным, а wildcard скрывает конкретный риск. В acceptance-тесте всегда проверяйте пару
+«нужное действие = `yes`» и «опасное соседнее действие = `no`». Для cluster-scoped ресурса
+не указывайте namespace:
+
+```bash
+kubectl auth can-i get nodes --as="$SA"
+kubectl auth can-i create clusterrolebindings --as="$SA"
+kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
+```
+
+Флаг `--as` использует Kubernetes impersonation. В Kubernetes 1.36 запрос может быть
+разрешён либо широким legacy verb `impersonate`, либо Constrained Impersonation:
+отдельным правом на identity и отдельным `impersonate-on:<mode>:<verb>` на фактически
+выполняемый API request. Если необходимых impersonation permissions нет, API вернёт
+`forbidden` до проверки прав impersonated identity.
+
+Для security-аудита не выдавайте legacy `impersonate` автоматически: выберите модель,
+которая соответствует требуемому workflow, и документируйте область её действия.
+
+> 🔬 Constrained Impersonation в Kubernetes 1.36+ отдельно ограничивает подменяемую identity и разрешённое при подмене действие.
+
+### 10.2.1. Constrained Impersonation: ограничить identity и действие
+
+> **Kubernetes 1.36+ / advanced.** Это production-материал сверх обязательного ядра CKS:
+> экзаменационный приоритет — точные обычные Role/Binding и минимальный `impersonate`.
+
+**Constrained Impersonation** - Beta в Kubernetes v1.36+ и включена по умолчанию. В отличие
+от обычного `impersonate`, она не даёт выполнять от имени цели всё, что та может. Для
+обычного пользователя (значение `Impersonate-User` не начинается с
+`system:serviceaccount:` или `system:node:`) API server выполняет **две отдельные
+проверки**:
+
+1. **Identity permission** - можно ли подменить именно эту identity. Для generic user это
+   правило в `apiGroups: ["authentication.k8s.io"]`, ресурсе `users`, с
+   `resourceNames` нужного имени и verb `impersonate:user-info`. Поскольку user не имеет
+   namespace-scope, выдавайте его через `ClusterRole` и `ClusterRoleBinding`.
+2. **Action-at-scope permission** - можно ли выполнить конкретную операцию в её области
+   *при этой подмене*. Для `list` Pod это
+   `impersonate-on:user-info:list` на `pods`; для `watch` -
+   `impersonate-on:user-info:watch`. Их можно выдать `Role`/`RoleBinding` только в нужном
+   namespace. Одного разрешения на identity недостаточно.
+
+Пример разрешает ServiceAccount `audit-reader` подменять только generic user
+`readonly@example.com` и только list/watch Pod в `cks-104`:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: impersonate-readonly-identity
+rules:
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["users"]
+  resourceNames: ["readonly@example.com"]
+  verbs: ["impersonate:user-info"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: audit-reader-impersonate-readonly
+subjects:
+- kind: ServiceAccount
+  name: audit-reader
+  namespace: cks-104
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: impersonate-readonly-identity
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: impersonate-readonly-pods
+  namespace: cks-104
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs:
+  - "impersonate-on:user-info:list"
+  - "impersonate-on:user-info:watch"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: audit-reader-impersonate-readonly-pods
+  namespace: cks-104
+subjects:
+- kind: ServiceAccount
+  name: audit-reader
+  namespace: cks-104
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: impersonate-readonly-pods
+```
+
+Клиент использует те же заголовки или `kubectl --as=readonly@example.com`; меняются только
+проверки API server. Старое `impersonate` продолжает работать и остаётся широким fallback,
+поэтому не выдавайте его вместе с constrained-правилами без отдельной причины.
+
+Важно: constrained permission относится к **реальному API request**, а не к действию,
+которое клиент описывает внутри другого review-объекта. Поэтому показанные выше
+`impersonate-on:user-info:list/watch` на `pods` позволяют выполнять фактические
+`list/watch pods` под `--as`, но сами по себе не дают выполнить:
+
+```bash
+kubectl auth can-i list pods --as=readonly@example.com -n cks-104
+```
+
+`kubectl auth can-i` создаёт `SelfSubjectAccessReview`, поэтому для такого audit workflow
+нужны constrained permissions, покрывающие `create` на
+`selfsubjectaccessreviews.authorization.k8s.io`, либо контролируемый legacy
+impersonator. Не расширяйте constrained role только ради удобства `can-i`, если можно
+проверить требуемую операцию напрямую в безопасном read-only сценарии.
+
+Для инвентаризации сначала найдите, откуда могла прийти возможность, затем смотрите
+правила и subjects. Не редактируйте встроенные роли до понимания того, кто их использует.
+
+```bash
+ROLE_NAME='role-name-to-review'
+kubectl get role,rolebinding -A
+kubectl get clusterrole,clusterrolebinding
+kubectl describe rolebinding -n cks-104 app-sa-pod-reader
+kubectl get clusterrolebinding -o wide
+kubectl get clusterrole "$ROLE_NAME" -o yaml
+```
+
+## 10.3. Опасные verbs и resources: пути эскалации
+
+Не все правила одинаковы. Read-only доступ к `pods` и `get` к `secrets` имеют совершенно
+разный ущерб, а некоторые verbs позволяют неявно получить уже существующие права. При
+ревью ищите следующие сочетания прежде обычных `get`/`list`.
+
+| Verb или resource | Почему опасен | Безопасный подход |
+|---|---|---|
+| `escalate` на `roles`/`clusterroles` | В сочетании с обычным `create`/`update` на Role/ClusterRole снимает требование самому обладать всеми permissions, которые записываются в роль. | Не выдавать workload и обычным администраторам namespace; отдельно контролировать и CRUD на RBAC-объекты, и bypass-verb. |
+| `bind` на `roles`/`clusterroles` | В сочетании с обычным `create`/`update` на RoleBinding/ClusterRoleBinding снимает требование самому обладать permissions из referenced role. | Ограничивать конкретными ролями через `resourceNames` и выдавать только вместе с действительно необходимым управлением binding. |
+| `impersonate` на `users`, `groups`, `serviceaccounts`, `uids` или `userextras/<имя>` | Позволяет выполнять запросы от имени другой identity, в том числе более привилегированной. Extra-поля задают точным resource name, например `userextras/scopes`, в API group `authentication.k8s.io`. | Давать аудитору только при необходимости и ограничивать `resourceNames`. |
+| `create`/`update`/`patch` RoleBinding и ClusterRoleBinding | В сочетании с доступной ролью может передать права; ClusterRoleBinding делает это для всего кластера. | Запретить приложению; отделить выдачу доступа от разработки workload. |
+| `get`/`list`/`watch` `secrets` | Secret часто содержит пароль, registry credential, ключ или bearer token; `list`/`watch` раскрывают значения многих Secret. | Указать конкретный Secret через `resourceNames` для `get`, либо не давать API-доступ приложению. |
+| `create` `serviceaccounts/token` | Выпускает токен выбранного ServiceAccount и может стать способом воспользоваться его правами. | Разрешать только доверенной автоматизации, на конкретные ServiceAccount. |
+| `create` `pods/exec` | Даёт интерактивное выполнение команд в уже работающем Pod и доступ к его сети, файловой системе и mounted Secret. | Не включать в обычные роли; использовать короткоживущий break-glass доступ и аудит. |
+| `create` `pods/portforward` | Прокладывает туннель к портам Pod, обходя обычную сетевую экспозицию. | Выдавать точечно для диагностики и отзывать после инцидента. |
+| `create` workload (`pods`, `deployments`, `jobs` и т. п.) | Создание Pod/workload в namespace само по себе даёт сильный косвенный доступ: можно выбрать любой ServiceAccount этого namespace и сослаться из Pod spec на Secret, ConfigMap и доступное хранилище, даже без отдельного `get secrets` у исходной identity. Это позволяет получить данные или API-права другого workload. Если policy допускает privileged/host-level Pod, последствия могут распространиться на node. | Не выдавать недоверенным tenant-identity без необходимости; считать workload creation привилегированным правом, ограничивать Pod Security, ServiceAccount, Secret/storage design и admission policy. |
+| `nodes` | Доступ к объектам node раскрывает сведения об инфраструктуре; изменение node - cluster-wide операция. | Исключить из tenant-ролей; выдавать отдельным операционным identity. |
+| `get` `nodes/proxy` | Разрешает proxy-запросы к kubelet. Это не read-only доступ: kubelet proxy-операции могут обойти admission и обычный audit API server. | Не выдавать workload и tenant-ролям; предоставлять только строго контролируемой операционной identity. |
+
+Subresource пишется через косую черту: `resources: ["pods/exec"]`. Для `exec` и
+`portforward` обычно нужен именно `create`, а не `get`. Не заменяйте точное правило
+`resources: ["pods/exec"]` правилом на все `pods`: это разные API-пути и разные риски.
+Напротив, `get` на `nodes/proxy` - отдельное опасное разрешение на kubelet proxy, а не
+безобидное чтение node.
+
+В Kubernetes 1.36 `KubeletFineGrainedAuthz` — GA и включён постоянно. Для законной
+операционной задачи выдавайте узкий subresource вместо `nodes/proxy`: например
+`nodes/stats`, `nodes/metrics`, `nodes/log`, `nodes/pods`, `nodes/healthz` или
+`nodes/configz`. Kubelet проверяет именно эти пути отдельно; для остальных запросов и
+ради совместимости остаётся fallback `nodes/proxy`.
+
+```yaml
+# Пример для monitoring identity; не заменяйте этим правилом произвольные операции kubelet.
+rules:
+- apiGroups: [""]
+  resources: ["nodes/metrics", "nodes/stats"]
+  verbs: ["get"]
+```
+
+Wildcards особенно опасны в трёх местах: `apiGroups: ["*"]`, `resources: ["*"]` и
+`verbs: ["*"]`. Они захватывают новые API-группы, CRD, subresource и verbs, которые появятся
+после обновления. Правило, безопасное сегодня, незаметно станет шире завтра. Wildcard также
+усложняет аудит: нельзя по YAML понять, есть ли доступ к `secrets`, `pods/exec` или
+`rolebindings`.
+
+> 🧠 RBAC аддитивен: узкая роль не отменяет выданный Allow; `escalate`, `bind`, `impersonate`, bindings, Secret и опасные subresource могут передавать чужие права.
+
+```yaml
+# Небезопасно: весь текущий и будущий API namespace
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+
+# Минимально для read-only контроллера в одном namespace
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+```
+
+## 10.4. Проектирование минимальной Role
+
+Сначала запишите контракт доступа обычным языком: «`app-sa` читает список Pod и состояние
+конкретного ConfigMap в `cks-104`; не изменяет workload, Secret или RBAC». Затем переведите
+его в минимальные правила. Разделяйте чтение (`get`, `list`, `watch`) и изменение
+(`create`, `update`, `patch`, `delete`): контроллеру, который наблюдает Pod, не обязательно
+нужно право удалять их.
+
+> 🎯 Сформулируйте контракт доступа, выберите узкий scope (`Role` + `RoleBinding` для namespace) и докажите разрешённое действие и отказ на опасном соседнем ресурсе или namespace.
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-sa
+  namespace: cks-104
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-sa-pod-reader
+  namespace: cks-104
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-sa-pod-reader
+  namespace: cks-104
+subjects:
+- kind: ServiceAccount
+  name: app-sa
+  namespace: cks-104
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: app-sa-pod-reader
+```
+
+`resourceNames` дополнительно ограничивает `get`, `update`, `patch` и `delete` именем
+объекта. Это полезно для одного известного ConfigMap или Secret. Для **верхнеуровневого
+ресурса** оно не ограничивает `create` и `deletecollection`: в этих запросах имя объекта не
+служит частью URL. Это не правило для всех subresource: именованные subresource, например
+`pods/exec`, могут быть ограничены `resourceNames` (см. [RBAC reference](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)). `list`/`watch` с `resourceNames`
+требуют field selector `metadata.name=<name>` у клиента и часто неудобны; не считайте их
+полноценной заменой namespace-изоляции.
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-config-reader
+  namespace: cks-104
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["app-config"]
+  verbs: ["get"]
+```
+
+Проверьте scope ресурса до выбора объекта. `pods`, `configmaps`, `deployments` и `secrets`
+namespaced, поэтому `Role` ограничивает их namespace. `nodes`, `namespaces`,
+`persistentvolumes` и `clusterroles` cluster-scoped: для них нужна `ClusterRole`, а
+`RoleBinding` не делает cluster-scoped ресурс локальным. Если набор namespaced-правил нужен
+в нескольких namespace, определите `ClusterRole`, но привяжите её отдельными
+`RoleBinding` в каждом разрешённом namespace.
+
+`nonResourceURLs` описывает URL API server, а не Kubernetes-объекты. Такие URL не имеют
+namespace scope, поэтому правило должно находиться в `ClusterRole` и быть выдано через
+`ClusterRoleBinding`. Например, отдельной health-check identity можно дать ровно
+`nonResourceURLs: ["/healthz"]` и `verbs: ["get"]`, не выдавая wildcard `/*`. `RoleBinding`,
+даже если он ссылается на такую `ClusterRole`, не превращает non-resource URL в
+namespaced permission.
+
+```mermaid
+flowchart TB
+    need["Нужна операция API"] --> scope{"Ресурс namespaced?"}
+    scope -->|"да"| reuse{"Нужен reuse<br/>между namespace?"}
+    reuse -->|"нет"| role["Role: точные<br/>apiGroups/verbs"]
+    role --> rb["RoleBinding<br/>в namespace"]
+    reuse -->|"да"| crn["ClusterRole:<br/>namespaced-правила"]
+    crn --> rbn["RoleBinding<br/>в каждом namespace"]
+    scope -->|"нет"| cr["ClusterRole для<br/>cluster-scoped"]
+    cr --> crb["ClusterRoleBinding"]
+    style need fill:#326ce5,color:#fff
+    style role fill:#0f9d58,color:#fff
+    style rb fill:#0f9d58,color:#fff
+    style crn fill:#0f9d58,color:#fff
+    style rbn fill:#0f9d58,color:#fff
+    style cr fill:#f4b400,color:#000
+    style crb fill:#db4437,color:#fff
+```
+
+`ClusterRole` не означает автоматически cluster-wide access: она может содержать rules
+для namespaced resources и быть выдана через `RoleBinding` только в конкретном
+namespace. Cluster-wide scope появляется именно при `ClusterRoleBinding`. Для
+cluster-scoped resources и `nonResourceURLs` нужны `ClusterRole` + `ClusterRoleBinding`.
+
+## 10.5. Встроенные и агрегированные ClusterRole: скрытое расширение прав
+
+Встроенные `ClusterRole` удобны, но не равны по риску. `view` предназначена для чтения
+обычных namespaced-объектов и намеренно не даёт доступ к Secret, Role или RoleBinding:
+Secret часто содержит привилегии ServiceAccount. `edit` разрешает изменять большинство
+namespaced ресурсов и читать Secret, но не может изменять Role или RoleBinding; при этом
+может запустить Pod от имени любого ServiceAccount того же namespace. `admin` может
+управлять большинством RBAC в namespace.
+
+Built-in `cluster-admin` содержит максимально широкие wildcard-разрешения. Через
+`ClusterRoleBinding` та же `ClusterRole` даёт cluster-wide superuser access. Через
+`RoleBinding` она ограничена областью конкретного namespace, но built-in semantics
+`cluster-admin` дают полный контроль над ресурсами этого namespace, **включая сам объект
+Namespace** - важное исключение, потому что `Namespace` сам является cluster-scoped
+resource. Такой `RoleBinding` не становится cluster-wide, однако всё равно является
+чрезвычайно привилегированной namespaced-привязкой; любое назначение `cluster-admin`
+должно быть отдельно обосновано и контролироваться.
+
+| Роль | Практический смысл | Риск при назначении приложению или широкой группе |
+|---|---|---|
+| `view` | Просмотр обычных ресурсов namespace; без Secret, Role и RoleBinding | Может раскрыть topology, образы и конфигурацию, но меньше риск утечки credential. |
+| `edit` | Изменение большинства ресурсов namespace и чтение Secret; без изменения Role/RoleBinding | Можно изменить workload, прочитать Secret и запустить Pod от имени любого ServiceAccount namespace. |
+| `admin` | Широкое администрирование namespace, включая управление roles/binding в его границе | Высокий риск эскалации в namespace и захвата приложений команды. |
+| `cluster-admin` | Через `ClusterRoleBinding` - полный доступ ко всему кластеру; через `RoleBinding` - полный контроль над ресурсами namespace этого binding, включая сам объект Namespace | Даже локальная привязка крайне рискованна; ClusterRoleBinding означает компрометацию кластера. |
+
+Aggregation позволяет расширять встроенную ClusterRole правилами из других ClusterRole.
+Контроллер RBAC объединяет правила ролей с меткой
+`rbac.authorization.k8s.io/aggregate-to-<role>: "true"`. Это полезно для CRD: например,
+плагин может добавить своему API read-only правила в `view`. Но такая метка - supply chain
+и RBAC-граница: созданная или изменённая роль способна незаметно дать всем пользователям
+`view`, `edit` или `admin` дополнительные права.
+
+> 🧠 `aggregate-to-*` меняет effective permissions всей аудитории встроенной роли; wildcard в роли-источнике массово расширяет права.
+
+```yaml
+# Пример расширения встроенной роли view только для чтения CRD.
+# Добавляйте подобную роль лишь после отдельного security-ревью.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aggregate-widget-view
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+- apiGroups: ["example.io"]
+  resources: ["widgets"]
+  verbs: ["get", "list", "watch"]
+```
+
+Проверьте агрегированные правила у итоговой встроенной роли, а также сами источники
+агрегации. Не редактируйте системные ClusterRole с префиксом `system:`: API server может
+восстановить их при запуске или обновлении. Собственные ClusterRole и labels управляйте
+через Git, code review и ограниченный набор identity, которым разрешено менять RBAC.
+
+```bash
+# Итоговые эффективные правила встроенной роли
+kubectl get clusterrole view -o yaml
+
+# Все ClusterRole, которые могут расширять view/edit/admin
+kubectl get clusterrole -l rbac.authorization.k8s.io/aggregate-to-view=true
+kubectl get clusterrole -l rbac.authorization.k8s.io/aggregate-to-edit=true
+kubectl get clusterrole -l rbac.authorization.k8s.io/aggregate-to-admin=true
+```
+
+### Компактная карта эскалации
+
+| Возможность | Граница, которую она меняет | Контроль |
+|---|---|---|
+| `create` CSR вместе с возможностью `approve`/`sign` | Может выпустить client certificate с более широким identity; одного `create` недостаточно | Разделить создание, approval и signing между контролируемыми identity. |
+| Управление `ValidatingWebhookConfiguration`/`MutatingWebhookConfiguration` | Меняет проверку или мутацию admission-запросов cluster-wide | Не выдавать tenant-ролям; ревьюить endpoint, CA и правила webhook. |
+| `patch` labels `Namespace` | Может изменить метки Pod Security Admission и допустить другой профиль Pod | Ограничить отдельной platform-identity и ревьюить изменения labels. |
+| Создание/изменение PV с `hostPath` | Claim и Pod могут получить путь файловой системы node | Запретить tenant-ролям; контролировать storage policy и Pod Security Admission. |
+| Выпуск токенов ServiceAccount (`create serviceaccounts/token`) | Позволяет действовать с правами выбранного ServiceAccount | Разрешать только доверенной автоматизации на конкретные ServiceAccount. |
+| Членство в `system:masters` | Это superuser-группа, обходящая обычную проверку RBAC | Не выдавать её приложениям; контролировать источник сертификатов и внешние группы. |
+
+> 🎯 После изменения RBAC доказать и разрешённое действие, и ожидаемый отказ.
+
+## 10.6. Проверка: доказать и нужный доступ, и отказ
+
+После применения роли не ограничивайтесь `kubectl get role`: объект может существовать, но
+не быть привязанным, конфликтовать с другой привязкой или оказаться слишком широким. В
+lab104 проверка для `app-sa` должна доказывать ровно требуемую границу.
+
+```bash
+kubectl apply -f app-sa-rbac.yaml
+
+SA=system:serviceaccount:cks-104:app-sa
+
+# Функционально необходимое право
+kubectl auth can-i get pods -n cks-104 --as="$SA"
+kubectl auth can-i list pods -n cks-104 --as="$SA"
+# yes
+# yes
+
+# Нежелательные права: изменение workload, Secret, exec и RBAC
+kubectl auth can-i delete pods -n cks-104 --as="$SA"
+kubectl auth can-i get secrets -n cks-104 --as="$SA"
+kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
+kubectl auth can-i create rolebindings -n cks-104 --as="$SA"
+kubectl auth can-i create clusterrolebindings --as="$SA"
+# no
+# no
+# no
+# no
+# no
+```
+
+Проверяйте также область видимости. Та же identity не должна читать Pod в соседнем namespace
+и не должна иметь cluster-scoped прав только потому, что ей дали доступ к Pod.
+
+```bash
+kubectl auth can-i list pods -n default --as="$SA"
+kubectl auth can-i get nodes --as="$SA"
+# no
+# no
+```
+
+Если ответ неожиданно `yes`, найдите все binding субъекта, затем повторите проверку после
+удаления или сужения лишнего доступа. Удалять нужно точечный объект, а не случайно лишать
+доступа другую команду:
+
+```bash
+kubectl get rolebinding -A -o yaml | grep -n -C 4 'app-sa'
+kubectl get clusterrolebinding -o yaml | grep -n -C 4 'app-sa'
+
+# Только после подтверждения владельца и назначения binding
+kubectl delete clusterrolebinding app-sa-excessive-access
+```
+
+Для production включайте этот набор `can-i` в smoke-test после изменения RBAC, а изменения
+Role, ClusterRole и binding отправляйте на review. Долгоживущий доступ регулярно
+пересматривайте по фактическому назначению ServiceAccount, логам аудита и владельцу
+workload.
+
+> 🏭 Роли и aggregation labels хранятся в Git, изменения проходят review, а critical positive/negative `can-i` проверки — CI; break-glass имеет владельца и срок.
+
+## 10.7. Как это применяют в продакшене
+
+- **Role по умолчанию.** Команды и приложения получают namespaced `Role`/`RoleBinding`;
+  `ClusterRoleBinding` требует владельца, причины, срока действия и security-review.
+- **ServiceAccount по умолчанию.** Не давайте `default` ServiceAccount прикладных прав.
+  Если workload не обращается к Kubernetes API, установите `automountServiceAccountToken:
+  false`; иначе создайте отдельный ServiceAccount с минимальными правами. Так аудит и отзыв
+  доступа остаются точечными.
+- **RBAC как код.** Храните собственные роли в Git, проверяйте diff правил и labels
+  агрегации в CI. Отдельно блокируйте wildcard, `escalate`, `bind`, `impersonate` и доступ
+  к Secret без явного исключения.
+- **Конфигурация авторизации API server.** Сначала определите, какой из двух взаимно
+  исключающих способов настройки используется.
+
+  При command-line configuration проверьте, что `--authorization-mode` содержит нужную
+  цепочку, например `Node,RBAC`.
+
+  При file-based configuration через `--authorization-config` не задавайте одновременно
+  `--authorization-mode`: проверьте наличие `type: RBAC`, состав и порядок `authorizers`
+  непосредственно в `AuthorizationConfiguration`.
+
+  Состав и порядок authorizer chain должны быть частью security-review.
+- **Периодический аудит.** Инвентаризируйте `ClusterRoleBinding`, subjects
+  `system:serviceaccount`, встроенные роли и агрегаторы; проверяйте критичные контракты
+  через `kubectl auth can-i`.
+- **Break-glass вместо постоянного admin.** Экстренный доступ должен быть отдельной
+  короткоживущей identity, журналироваться и отзываться после работы, а не оставаться
+  `cluster-admin` у повседневного пользователя.
+
+## 10.8. Мини-глоссарий
+
+- **least privilege** - выдача только минимального набора разрешений, нужного identity для
+  конкретной задачи.
+- **verb** - операция Kubernetes API, например `get`, `list`, `create`, `bind` или
+  `escalate`.
+- **resource / subresource** - API-объект и его подресурс, например `pods` и `pods/exec`.
+- **`resourceNames`** - ограничение правила конкретными именами объектов там, где оно
+  поддерживается API server.
+- **impersonation** - выполнение запроса от имени другой identity через заголовки API.
+- **aggregation** - автоматическое добавление правил одной ClusterRole во встроенную
+  ClusterRole по label.
+- **wildcard** - `*` в `apiGroups`, `resources` или `verbs`; включает неизвестные будущие
+  объекты и потому опасен в security-роли.
+- **break-glass access** - контролируемый временный привилегированный доступ для аварии.
+
+## 10.9. Итоги главы
+
+- RBAC-разрешения аддитивны: лишний binding нельзя компенсировать более узкой ролью, его
+  нужно найти и убрать или сузить.
+- Least privilege начинается с `Role` и `RoleBinding` в конкретном namespace; доступ на
+  уровне кластера и `ClusterRoleBinding` требуют отдельного обоснования.
+- `kubectl auth can-i --list` даёт полезный обзор правил, когда результат полный, но не
+  гарантированно исчерпывающий inventory. Security-critical boundaries доказывайте
+  targeted `can-i` checks: ожидаемый доступ должен вернуть `yes`, запрещённый - `no`.
+- Особо опасны `escalate`, `bind`, `impersonate`, изменение binding, `secrets`,
+  `serviceaccounts/token`, `pods/exec`, `pods/portforward` и `get nodes/proxy`.
+- Не используйте `*` без исключительного и документированного основания: wildcard включает
+  текущие и будущие API, ресурсы, subresources и verbs.
+- Aggregated ClusterRole могут незаметно расширять `view`, `edit` и `admin`; labels
+  `aggregate-to-*` и источники таких ролей надо ревьюить.
+
+## 10.10. Как это пригодится: на экзамене и в реальной работе
+
+**На экзамене.** Быстро создайте или сузьте `Role` с точными `apiGroups`, `resources` и
+`verbs`, привяжите её к правильному ServiceAccount в указанном namespace и сразу проверьте
+`kubectl auth can-i --as=system:serviceaccount:<ns>:<sa>`. Читайте resource буквально:
+`pods/exec` - не то же самое, что `pods`; `nodes` - cluster-scoped. Если требуется убрать
+избыточный доступ, сначала найдите соответствующий binding, а не меняйте всё подряд.
+
+**В реальной работе.** RBAC ограничивает blast radius украденного токена, ошибки
+автоматизации и компрометации Pod. Самые опасные инциденты обычно возникают не из-за
+синтаксиса YAML, а из-за удобных широких ролей, wildcard и скрытых привязок. Регулярный
+`can-i`-аудит, review aggregation labels и явный контракт доступа превращают RBAC в
+проверяемую security-границу.
+
+> ### 🔴 Взгляд атакующего
+> **Asset:** ресурсы Kubernetes API.
+>
+> **Starting foothold:** выполнение кода внутри Pod.
+>
+> **Attacker objective:** использовать identity workload для доступа к API.
+>
+> **Abuse path:** проверить наличие token, его audience и TTL, затем RBAC permissions и возможность `list` Pod, читать Secret либо создавать/выполнять workload через `pods/exec`.
+>
+> **Expected evidence:** audit events и SubjectAccessReview.
+>
+> **Control:** `automountServiceAccountToken: false` там, где API не нужен; projected short-lived token там, где нужен; минимальный RBAC.
+>
+> **Retest:** разрешённый API call работает, а запрещённый возвращает `403`.
+>
+> **ATT&CK:** [T1528 — Steal Application Access Token](https://attack.mitre.org/techniques/T1528/).
+
+## 10.11. Вопросы для самопроверки
+
+<details>
+<summary>1. Почему более узкая Role не может отменить разрешение, выданное другой привязкой?</summary>
+
+RBAC в Kubernetes аддитивен: разрешение действует, если его предоставляет хотя бы один RoleBinding или ClusterRoleBinding. В модели allow-only нет deny-правила, которым можно перекрыть уже выданный доступ. Чтобы убрать лишнее разрешение, нужно найти и удалить либо сузить именно выдающую его привязку.
+</details>
+
+<details>
+<summary>2. Какие две проверки `can-i` докажут, что `app-sa` может читать Pod, но не удалять их?</summary>
+
+Для разрешённого действия выполняют `kubectl auth can-i get pods -n cks-104 --as=system:serviceaccount:cks-104:app-sa` и ожидают `yes`. Для запрета выполняют `kubectl auth can-i delete pods -n cks-104 --as=system:serviceaccount:cks-104:app-sa` и ожидают `no`. Такая пара проверяет фактическое решение API server, а не только YAML роли.
+</details>
+
+<details>
+<summary>3. Почему `get`/`list` Secret опаснее чтения большинства обычных ресурсов?</summary>
+
+Secret часто содержит пароль, registry credential, ключ или bearer token, поэтому чтение раскрывает не только topology или статус, а готовые учётные данные. `list` и `watch` могут раскрыть значения многих Secret сразу. Если нужен один известный Secret, глава рекомендует точечный `get` с `resourceNames`, либо отсутствие API-доступа у приложения.
+</details>
+
+<details>
+<summary>4. Чем `bind` отличается от `escalate` и как каждый из них может привести к эскалации?</summary>
+
+Оба verbs обходят встроенную защиту RBAC, но не заменяют обычный CRUD на объект.
+`escalate` вместе с `create`/`update` Role или ClusterRole позволяет записать в роль
+permissions, которых субъект сам не имеет. `bind` вместе с `create`/`update`
+RoleBinding или ClusterRoleBinding позволяет назначить referenced role, не обладая
+самому всеми её permissions. Поэтому при аудите проверяют обе части пути:
+возможность изменить RBAC-объект и наличие соответствующего bypass-verb.
+</details>
+
+<details>
+<summary>5. Почему `create pods/exec` и `create pods/portforward` нужно ревьюить отдельно от
+   обычного доступа к `pods`?</summary>
+
+Это отдельные subresource API, записываемые как `pods/exec` и `pods/portforward`, а не обычный ресурс `pods`. `create pods/exec` даёт выполнение команд в существующем Pod с его сетью, filesystem и mounted Secret, а `create pods/portforward` прокладывает туннель к портам Pod. Поэтому их не следует неявно включать в обычную read-role и обычно дают только для контролируемой диагностики.
+</details>
+
+<details>
+<summary>6. Почему `resourceNames` не ограничивает `create` и `deletecollection` верхнеуровневого
+   ресурса, но может применяться к именованному subresource, например `pods/exec`?</summary>
+
+Для `create` и `deletecollection` верхнеуровневого ресурса имя объекта не является частью URL запроса, поэтому API server не может ограничить их через `resourceNames`. Это не универсальное ограничение всех subresource. Именованный subresource, например `pods/exec`, может быть ограничен `resourceNames`, поскольку запрос адресует конкретный Pod.
+</details>
+
+<details>
+<summary>7. Почему `get nodes/proxy` не является read-only правом и кому его допустимо выдавать?</summary>
+
+`get nodes/proxy` разрешает proxy-запросы к kubelet, а такие операции могут обходить admission и обычный audit API server. Следовательно, это не безобидное чтение объекта Node. Право нельзя выдавать workload или tenant-ролям; оно допустимо только строго контролируемой операционной identity, по возможности с более узкими `nodes/metrics`, `nodes/stats` и другими fine-grained subresource.
+</details>
+
+<details>
+<summary>8. Как label `rbac.authorization.k8s.io/aggregate-to-view=true` меняет effective access и
+   почему wildcard в агрегированной роли особенно рискован?</summary>
+
+Контроллер RBAC добавляет правила ClusterRole с этой меткой в итоговую встроенную роль `view`, поэтому все её пользователи получают новый доступ. Wildcard в такой источниковой роли захватывает текущие и будущие API-группы, ресурсы, subresource и verbs сразу для широкой аудитории `view`. Поэтому нужно ревьюить и итоговую роль, и все роли-источники aggregation.
+</details>
+
+<details>
+<summary>9. **Flashback (глава 04).** `NetworkPolicy` из главы 04 - allow-list: сначала default-deny,
+   затем узкие разрешения. Где в дизайне RBAC работает та же логика "запретить всё, затем
+   явно разрешить", и когда запрос действительно получает default-deny?</summary>
+
+В RBAC начинают с отсутствия необходимых разрешений и добавляют только точные
+`apiGroups`, `resources` и `verbs` с минимальным scope. Запрос отклоняется, если ни один
+применимый `RoleBinding` или `ClusterRoleBinding` не выдаёт Allow. Проверять нужно не
+только binding, где subject указан напрямую, но и права, полученные через его группы
+(например, `system:serviceaccounts` для ServiceAccount). Поэтому отсутствие прямого
+`RoleBinding` на пользователя или ServiceAccount само по себе ещё не доказывает
+отсутствие доступа; итоговую границу подтверждают через `kubectl auth can-i` для
+конкретной identity. В отличие от NetworkPolicy решение принимает RBAC authorizer API
+server, но результатом также является явный allow-list.
+</details>
+
+## Практика
+
+В [лабе 104](../../labs/104/README_RU.MD) создайте `app-sa` с минимальной Role на чтение
+Pod, докажите через `auth can-i`, что `delete pods` запрещён, и удалите избыточную
+привязку. В той же лабе вы отключите автомонтирование токена ServiceAccount и ограничите
+анонимный доступ к API server - следующие главы развивают эту RBAC-границу.
+
+🌐 Дополнительная интерактивная практика (killer.sh/killercoda, внешний ресурс): [rbac-serviceaccount-permissions](https://killercoda.com/killer-shell-cks/scenario/rbac-serviceaccount-permissions) · [rbac-user-permissions](https://killercoda.com/killer-shell-cks/scenario/rbac-user-permissions) · [certificate-signing-requests-sign-manually](https://killercoda.com/killer-shell-cks/scenario/certificate-signing-requests-sign-manually) · [certificate-signing-requests-sign-k8s](https://killercoda.com/killer-shell-cks/scenario/certificate-signing-requests-sign-k8s)
+
+🎮 Killercoda (в браузере, без установки): [Create a Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-role) · [Create a Cluster Role and Role Binding](https://killercoda.com/chadmcrowell/course/cka/create-cluster-role)
+
+---
+[Оглавление](../README_RU.md) · [Глава 09](../09/ru.md) · [Глава 11](../11/ru.md)

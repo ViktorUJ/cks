@@ -1,0 +1,142 @@
+schema_version: 1
+
+checked_at: "2026-09-10"
+
+# The four version tracks are independent and are not aligned automatically.
+# For a detailed explanation of the policy, see ../VERSION_POLICY.md.
+
+upstream:
+  # The current upstream Kubernetes release is an independent signal, separate from
+  # training/exam/curriculum below. Confirmed live: kubernetes.io/blog/2026/08/26/
+  # kubernetes-v1-37-release/ ("Garhwal", released 2026-08-26) and kubernetes.io/releases/.
+  # Do not move core labs to latest_stable automatically just because of the version number—
+  # only if this is actually required for compatibility/security reasons.
+  latest_stable: "1.37"
+  checked_at: "2026-09-10"
+  url: "https://kubernetes.io/releases/"
+
+training:
+  # The actual version variation was confirmed by grep across all labs/*/env.hcl (checked 2026-09-07):
+  # core labs 101-112 are built on 1.36; lab 113 starts on 1.35.4 and, by assignment topic
+  # (kubeadm minor upgrade), ends on 1.36.x—its k8_version in env.hcl reflects
+  # only the STARTING version, not the final one.
+  # Do not collapse this into the single number "1.36"—see VERSION_POLICY.md.
+  core_labs:
+    ids: "101-113"
+    kubernetes: "1.36"
+    status: current
+    source: "labs/101-112/*/env.hcl"
+    exceptions:
+      - id: "113"
+        kubernetes_start: "1.35.4"
+        kubernetes_target: "1.36.x"
+        reason: "the lab is specifically about kubeadm minor upgrade—the starting version is intentionally one minor version below the baseline; the target matches the baseline after completing the assignment"
+
+exam:
+  linux_foundation:
+    product_page:
+      kubernetes: "1.35"
+      checked_at: "2026-09-10"
+      url: "https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/"
+
+    important_instructions:
+      kubernetes: "1.35"
+      checked_at: "2026-09-10"
+      url: "https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks"
+
+    faq:
+      checked_at: "2026-09-10"
+      url: "https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks"
+      notes:
+        - "CKS requires passing CKA before attempting the exam."
+        - "The FAQ does not publish the CKS Kubernetes environment version; use the product page and Important Instructions for that value."
+
+  duration_minutes: 120
+  task_count:
+    min: 15
+    max: 20
+  retakes:
+    included: 1
+    label: "One Retake"
+  eligibility_window_months: 12
+  certificate_validity_years: 2
+
+curriculum:
+  repository: "https://github.com/cncf/curriculum"
+  filename: "CKS_Curriculum v1.34.pdf"
+  kubernetes_version_in_filename: "1.34"
+  size_bytes: 170239
+  sha256: "a755a5680bec6978de4a3074d7f0c7fe978bd7a9ad5e4f1681597aedda6f6637"
+  checked_at: "2026-09-10"
+
+weights:
+  # Three independent public signals are recorded separately; a discrepancy is not resolved
+  # by choosing a "true" value without checking the primary source. For details, see
+  # ../VERSION_POLICY.md. lf_product_page and curriculum_pdf agree with each other, but
+  # cncf_certification_page differs on Cluster Setup (10% vs 15%) and System Hardening
+  # (15% vs 10%)—see selected_sources_agreement/public_signal_agreement below: these are two
+  # different questions, and combining them in one agreement field would be inaccurate.
+  lf_product_page:
+    cluster_setup: 15
+    cluster_hardening: 15
+    system_hardening: 10
+    minimize_microservice_vulnerabilities: 20
+    supply_chain_security: 20
+    monitoring_logging_runtime_security: 20
+    checked_at: "2026-09-10"
+  curriculum_pdf:
+    cluster_setup: 15
+    cluster_hardening: 15
+    system_hardening: 10
+    minimize_microservice_vulnerabilities: 20
+    supply_chain_security: 20
+    monitoring_logging_runtime_security: 20
+    checked_at: "2026-09-10"
+  cncf_certification_page:
+    cluster_setup: 10
+    cluster_hardening: 15
+    system_hardening: 15
+    minimize_microservice_vulnerabilities: 20
+    supply_chain_security: 20
+    monitoring_logging_runtime_security: 20
+    checked_at: "2026-09-10"
+    url: "https://www.cncf.io/training/certification/cks/"
+  selected_sources_agreement: consistent
+  # selected_sources_agreement describes only lf_product_page vs curriculum_pdf (the two
+  # sources selected as the operational default for this course—see domains.*.weight
+  # in curriculum-map.yaml). It does NOT mean that all public sources agree with each
+  # other overall.
+  public_signal_agreement:
+    status: disagreement
+    note: >
+      lf_product_page and cncf_certification_page differ specifically on Cluster Setup
+      (15% vs 10%) and System Hardening (10% vs 15%); Cluster Hardening, Microservice,
+      Supply Chain, and Runtime match across all three sources. curriculum-map.yaml
+      explicitly stores both weight sets in the weight_sources section and uses
+      linux_foundation_product_page as the operational default for each domain.
+
+allowed_resources:
+  checked_at: "2026-09-10"
+  url: "https://docs.linuxfoundation.org/tc-docs/certification/certification-resources-allowed"
+  global:
+    - kubernetes_documentation
+    - kubernetes_blog
+    - falco_documentation
+    - bom_documentation
+    - etcd_documentation
+    - nginx_ingress_controller_documentation
+    - cilium_documentation
+    - istio_documentation
+  notes:
+    - "task-specific Quick Reference may add resources for a specific task."
+    - "Trivy/AppArmor training links in the course are not globally permitted exam resources."
+
+interpretation: >
+  Official LF pages currently show a consistent Kubernetes version (v1.35)
+  for the exam environment; upstream latest_stable (v1.37), the training baseline core labs
+  (v1.36), and the curriculum filename (v1.34) remain independent tracks and must not
+  be collapsed into one number. Domain weights: lf_product_page agrees with curriculum_pdf,
+  but the CNCF certification page publishes a different set (Cluster Setup 10% instead of 15%,
+  System Hardening 15% instead of 10%)—see weights.public_signal_agreement. Before
+  using values from this file to make decisions, compare checked_at with the current date
+  and override stale fields from primary sources.
