@@ -37,19 +37,19 @@ Admission control получает уже аутентифицированный
 
 ```mermaid
 flowchart TB
-    client["kubectl / CI / controller"] --> authn["authentication<br/>кто отправил запрос"]
-    authn --> authz["authorization / RBAC<br/>можно ли выполнить verb"]
-    authz --> mutate["mutating admission<br/>встроенные плагины / MAP / webhook"]
-    mutate --> validate["validating admission<br/>PSA / VAP / webhook"]
+    client["kubectl / CI<br/>/ controller"] --> authn["authentication<br/>кто отправил запрос"]
+    authn --> authz["authorization<br/>/ RBAC<br/>можно ли выполнить verb"]
+    authz --> mutate["mutating<br/>admission<br/>встроенные плагины /<br/>MAP / webhook"]
+    mutate --> validate["validating<br/>admission<br/>PSA / VAP / webhook"]
     validate -->|"allow"| etcd["etcd"]
     validate -->|"deny"| rejected["запрос отклонён<br/>объект не создан"]
 
-    subgraph api["Обработка объекта API server<br/>концептуально"]
-        conversion["conversion, defaulting и API validation"]
+    subgraph api["Обработка объекта<br/>API server<br/>концептуально"]
+        conversion["conversion, defaulting<br/>и API validation"]
     end
-    authz -. "зависит от API и типа запроса" .-> conversion
-    conversion -. "объект участвует в admission" .-> mutate
-    conversion -. "объект участвует в admission" .-> validate
+    authz -. "зависит от API<br/>и типа запроса" .-> conversion
+    conversion -. "объект участвует<br/>в admission" .-> mutate
+    conversion -. "объект участвует<br/>в admission" .-> validate
 
     style client fill:#326ce5,color:#fff
     style authn fill:#673ab7,color:#fff
@@ -142,6 +142,16 @@ webhooks:
   matchConditions:
   - name: skip-kube-system
     expression: "request.namespace != 'kube-system'"
+```
+
+Custom namespace label в `namespaceSelector` — часть security boundary: identity, для которой правило обязательно, не должна иметь права удалить или изменить этот label. Для фиксированного scope безопаснее сопоставлять неизменяемый `kubernetes.io/metadata.name`; custom enforcement labels меняет только platform/security роль. То же относится к `objectSelector`: label, которым пользователь сам может изменить объект и выйти из scope, не подходит как deny-boundary.
+
+```bash
+SUBJECT='system:serviceaccount:team-a:ci'
+NS='team-a'
+kubectl auth can-i patch namespaces/"$NS" --as="$SUBJECT"
+kubectl auth can-i update namespaces/"$NS" --as="$SUBJECT"
+# Для application/CI identity оба ответа должны быть `no`.
 ```
 
 Для mutating webhook к тому же контракту добавляется правило повторного вызова:
@@ -290,27 +300,35 @@ kubectl patch k8srequiredlabels pods-must-have-owner --type merge \
 
 ### Пример Gatekeeper для опасного `privileged`
 
-Для security-critical запрета полезен отдельный template: он проверяет обычные,
-`initContainers` и `ephemeralContainers`. В production лучше взять поддерживаемую библиотеку
-Gatekeeper или покрыть template unit-тестами, а не копировать упрощённый Rego без проверки
-всех полей PodSpec.
+Для security-critical запрета template должен проверять обычные, `initContainers` и
+`ephemeralContainers`; иначе один из списков остаётся bypass-путём.
 
 ```rego
 package k8sdisallowprivileged
 
 violation[{"msg": msg}] {
-  containers := input.review.object.spec.containers
-  container := containers[_]
+  container := input.review.object.spec.containers[_]
   container.securityContext.privileged == true
   msg := sprintf("privileged container %q is not allowed", [container.name])
+}
+
+violation[{"msg": msg}] {
+  container := input.review.object.spec.initContainers[_]
+  container.securityContext.privileged == true
+  msg := sprintf("privileged initContainer %q is not allowed", [container.name])
+}
+
+violation[{"msg": msg}] {
+  container := input.review.object.spec.ephemeralContainers[_]
+  container.securityContext.privileged == true
+  msg := sprintf("privileged ephemeralContainer %q is not allowed", [container.name])
 }
 ```
 
 Условие `container.securityContext.privileged == true` не срабатывает для отсутствующего
-поля, то есть default `false` допускается. Аналогичные циклы нужны для `initContainers` и
-`ephemeralContainers`; это типичная ошибка самописной policy. PSA `restricted` уже
-покрывает этот класс требований - используйте custom Rego только когда нужны свои scope,
-исключения или расширенная логика.
+поля, то есть default `false` допускается. PSA `restricted` уже покрывает этот класс
+требований - используйте custom Rego только когда нужны свои scope, исключения или
+расширенная логика.
 
 > 🔬 Kyverno CEL API для validation, mutation, generation и других admission-сценариев.
 
@@ -460,6 +478,18 @@ spec:
 
 Это только ingress default deny. Egress, DNS и разрешённые связи задавайте отдельными
 `NetworkPolicy` - см. [главу 04](../04/ru.md).
+
+`GeneratingPolicy` — provisioning/reconciliation mechanism, а не атомарный admission barrier: Namespace создаётся раньше, чем background controller гарантированно создаст downstream `NetworkPolicy`. До передачи namespace workload identity подтвердите фактический baseline, например `kubectl -n <new-namespace> get networkpolicy default-deny-ingress`; наличие самой `GeneratingPolicy` этого не доказывает.
+
+Перед использованием generation проверьте права фактического ServiceAccount background controller на целевой ресурс. Для `synchronize.enabled: true` нужны и read/watch, и управление downstream resource; все шесть проверок ниже должны вернуть `yes`:
+
+```bash
+KYVERNO_BG='system:serviceaccount:kyverno:kyverno-background-controller'
+for verb in get list watch create update delete; do
+  kubectl auth can-i "$verb" networkpolicies.networking.k8s.io \
+    --all-namespaces --as="$KYVERNO_BG"
+done
+```
 
 ### Миграция legacy policy
 
@@ -773,6 +803,16 @@ spec:
 Один policy может иметь несколько bindings и parameter resources для разных команд; все
 совпавшие combinations должны пройти. `parameterNotFoundAction: Deny` вместе с
 `failurePolicy: Fail` не превращает отсутствующую конфигурацию в bypass.
+
+VAP выполняет authorization check parameter resource: matched requester должен иметь `read`
+доступ к `paramKind`/`paramRef`, иначе корректный запрос может быть отклонён. Перед `Deny`
+проверьте реальную identity; давайте ей только `get`, а не право менять parameter, и не
+храните security-sensitive данные в ConfigMap, который должны читать workload identities.
+
+```bash
+SUBJECT='system:serviceaccount:team-a:ci'
+kubectl auth can-i get configmap/team-a-replica-limit   -n policy-system --as="$SUBJECT"
+```
 
 > 🔬 **Deep Dive — Manifest-Based Admission Control.** В training baseline Kubernetes v1.36 функция Alpha и выключена по умолчанию. В upstream Kubernetes v1.37 она перешла в Beta и enabled by default. Основной workflow этой главы остаётся привязан к v1.36; production-current delta см. в [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 >
