@@ -34,11 +34,11 @@
 
 ```mermaid
 flowchart TB
-    pkg["лишний пакет или service"] --> vuln["CVE / слабая конфигурация"]
-    vuln --> access["доступ к ноде"]
-    access --> runtime["runtime socket или kubelet credential"]
-    runtime --> cluster["контейнеры и кластер под риском"]
-    harden["инвентаризация<br/>удаление / отключение<br/>закрытие портов"] -. "сокращает" .-> pkg
+    pkg["лишний пакет<br/>или service"] --> vuln["CVE или слабая<br/>конфигурация"]
+    vuln --> access["доступ<br/>к ноде"]
+    access --> runtime["runtime socket<br/>или kubelet<br/>credential"]
+    runtime --> cluster["контейнеры<br/>и кластер<br/>под риском"]
+    harden["инвентаризация<br/>удаление / отключение<br/>закрытие портов"] -.->|"сокращает"| pkg
     style pkg fill:#f4b400,color:#000
     style vuln fill:#db4437,color:#fff
     style access fill:#db4437,color:#fff
@@ -58,13 +58,23 @@ flowchart TB
 доступ: ошибка может сделать ноду и API недоступными.
 
 ```bash
+set -euo pipefail
 sudo install -d -m 700 /root/hardening-before
-sudo systemctl list-unit-files --type=service | sudo tee /root/hardening-before/services-enabled.txt >/dev/null
-sudo systemctl list-units --type=service --state=running \
+sudo systemctl list-unit-files --type=service | sort \
+  | sudo tee /root/hardening-before/services-enabled.txt >/dev/null
+sudo systemctl list-units --type=service --state=running | sort \
   | sudo tee /root/hardening-before/services-running.txt >/dev/null
-sudo ss -tulpn | sudo tee /root/hardening-before/listeners.txt >/dev/null
-sudo dpkg-query -W -f='${binary:Package}\t${Version}\n' \
-  | sort | sudo tee /root/hardening-before/packages.txt >/dev/null
+sudo ss -tulpn | sort | sudo tee /root/hardening-before/listeners.txt >/dev/null
+if command -v dpkg-query >/dev/null; then
+  sudo dpkg-query -W -f='${binary:Package}\t${Version}\n' | LC_ALL=C sort \
+    | sudo tee /root/hardening-before/packages.txt >/dev/null
+elif command -v rpm >/dev/null; then
+  sudo rpm -qa | LC_ALL=C sort \
+    | sudo tee /root/hardening-before/packages.txt >/dev/null
+else
+  echo 'REVIEW_REQUIRED: unsupported package manager; cannot create package inventory' >&2
+  exit 2
+fi
 ```
 
 > 🧠 Компрометация ноды может начаться с лишнего процесса, пакета, listener или socket; поддерживайте карту компонента, владельца, назначения и допустимого доступа.
@@ -184,6 +194,13 @@ image version и rollback должны идти через обычный про
 Минимальность не значит отсутствие средств восстановления: должен остаться согласованный
 способ доступа, журналирования и диагностики.
 
+> 🏭 **Production.** Специализированная Kubernetes-ОС — например,
+> [Bottlerocket](https://bottlerocket.dev/) — может уменьшить mutable host footprint за счёт
+> намеренно минимального immutable image и управляемого update workflow. Это архитектурный
+> выбор: до rollout в production проверьте в stage поддержку целевой версии Kubernetes,
+> CNI/CSI, bootstrap, observability, debug-доступа и rollback. Не переносите на такую ОС
+> команды `apt`/`dpkg` или пути обычного Linux-дистрибутива без её официальной документации.
+
 | Подход | Плюс | Риск и контроль |
 |---|---|---|
 | Удалить пакет на работающей ноде | быстро устраняет известную поверхность | дрейф между нодами; зафиксировать в IaC/image |
@@ -201,10 +218,26 @@ image version и rollback должны идти через обычный про
 MODULE='example_module'
 lsmod | sort
 sudo modinfo "$MODULE"
-sudo find /etc/modprobe.d /usr/lib/modprobe.d -type f -print 2>/dev/null | sort
+# `modprobe -c` — источник истины для effective configuration.
+EFFECTIVE_MODPROBE_CONFIG=$(sudo modprobe -c) || {
+  echo 'ERROR: cannot read effective modprobe configuration' >&2
+  exit 2
+}
+printf '%s\n' "$EFFECTIVE_MODPROBE_CONFIG" \
+  | grep -E "^(blacklist|install)[[:space:]]+${MODULE}\b" || true
+sudo modprobe -n -v "$MODULE"
+# Эти файлы нужны только для поиска источника правила; они могут быть overridden.
+sudo find /etc/modprobe.d /run/modprobe.d /usr/local/lib/modprobe.d \
+  /usr/lib/modprobe.d /lib/modprobe.d -type f -print 2>/dev/null | sort
 sudo grep -RnsE "^(blacklist|install)[[:space:]]+${MODULE}\b" \
-  /etc/modprobe.d /usr/lib/modprobe.d 2>/dev/null || true
+  /etc/modprobe.d /run/modprobe.d /usr/local/lib/modprobe.d /usr/lib/modprobe.d /lib/modprobe.d \
+  2>/dev/null || true
 ```
+
+`modprobe -c` показывает итоговые правила с учётом precedence; file-level `find`/`grep`
+нужны только чтобы найти источник увиденного правила и могут показывать перекрытые записи.
+Для конкретного модуля `modprobe -n -v` показывает фактическое действие, которое применит
+`modprobe`.
 
 `modprobe -r <module>` выгружает модуль **только временно**: он не переживает reboot и
 завершится ошибкой, если модуль используется или удерживается зависимостью. Постоянное
@@ -257,8 +290,8 @@ sudo ss -lxnp | grep -E 'docker|containerd' || true
 | kubelet `10250/tcp` | control-plane и согласованная диагностика | не открывать интернету; TLS, authn/authz и firewall |
 | kube-apiserver `6443/tcp` | control-plane; worker и администраторы по архитектуре | allowlist/private endpoint, не `0.0.0.0/0` |
 | etcd `2379`, `2380/tcp` | только control-plane/etcd peers | не публиковать на worker или внешнюю сеть |
-| Docker `2375/tcp` | нигде в безопасном baseline | не слушать |
-| Docker TLS `2376/tcp` | только при обоснованном удалённом управлении | mTLS и точный firewall; по умолчанию не нужен |
+| Docker TCP API (часто `2375`/`2376`) | только при обоснованном удалённом управлении | `2375` не слушать; любой TCP endpoint требует явного исключения, mTLS и точного firewall |
+
 | containerd/NRI Unix socket | локально на ноде | `root` и минимальный набор разрешённых системных потребителей |
 
 Не делайте вывод из номера порта без процесса: например, `6443` на control-plane ожидаем,
@@ -299,11 +332,11 @@ containerd, NRI или Docker API, часто может запустить пр
 
 ```mermaid
 flowchart TB
-    user["обычный пользователь"] -->|"не должен иметь доступ"| deny["runtime socket"]
-    root["root / разрешённый системный процесс"] -->|"локальный Unix socket"| containerd["containerd CRI (основной)"]
-    docker["docker group"] -. "членство ~= root" .-> dockerDaemon["Docker (опционально)"]
-    tcp["TCP 2375 без TLS"] -. "удалённый root" .-> dockerDaemon
-    containerd --> node["создание контейнеров<br/>и доступ к ноде"]
+    user["обычный<br/>пользователь"] -->|"не должен<br/>иметь доступ"| deny["runtime<br/>socket"]
+    root["root / разрешённый<br/>системный процесс"] -->|"локальный<br/>Unix socket"| containerd["containerd CRI<br/>(основной)"]
+    docker["docker group"] -.->|"членство<br/>~= root"| dockerDaemon["Docker<br/>(опционально)"]
+    tcp["TCP 2375<br/>без TLS"] -.->|"удалённый<br/>root"| dockerDaemon
+    containerd --> node["создание контейнеров<br/>и доступ<br/>к ноде"]
     dockerDaemon --> node
     style user fill:#f4b400,color:#000
     style deny fill:#db4437,color:#fff
@@ -322,36 +355,185 @@ flowchart TB
 Не пытайтесь «прикрыть» `2375` только firewall: ошибка правила снова сделает API доступным.
 
 ```bash
-# Фактические sources конфигурации и запущенный процесс.
-sudo systemctl cat docker.service docker.socket
-sudo systemctl show docker.service -p ExecStart
-sudo ps -ef | grep '[d]ockerd'
-sudo grep -RnsE 'tcp://|2375|2376|"hosts"' \
-  /etc/docker /etc/systemd/system /lib/systemd/system 2>/dev/null || true
+set -euo pipefail
+# Этот gate проверяет independently effective configuration и actual listeners.
+# false — безопасный baseline; true допускается лишь для documented risk exception.
+ALLOW_REMOTE_DOCKER_API=false
+declare -a TCP_CONFIGURATION_SOURCES=()
+USES_SOCKET_ACTIVATION=false
 
-# После исправления 2375 обязан быть пуст; ошибка ss не даёт ложный PASS.
-listeners=$(sudo ss -H -lnt '( sport = :2375 )') || {
-  echo 'ERROR: cannot inspect Docker TCP 2375' >&2; exit 2;
+add_tcp_source() {
+  TCP_CONFIGURATION_SOURCES+=("$1")
 }
-if [ -n "$listeners" ]; then
-  printf 'ERROR: Docker TCP 2375 is listening:\n%s\n' "$listeners" >&2
-  exit 1
-fi
-echo 'OK: Docker TCP 2375 is absent'
 
-# 2376 не является автоматическим FAIL: проверяйте его только если согласованная policy
-# запрещает удалённый Docker API. При разрешённом исключении обязательны mTLS и firewall allowlist.
-REQUIRE_DOCKER_TLS=false
-if [ "$REQUIRE_DOCKER_TLS" = false ]; then
-  listeners=$(sudo ss -H -lnt '( sport = :2376 )') || {
-    echo 'ERROR: cannot inspect Docker TCP 2376' >&2; exit 2;
+# Classify normalized Docker -H/--host values. Unix and fd are not TCP;
+# host:, host:port, :port, numeric port and tcp:// are TCP forms.
+classify_docker_host() {
+  local source=$1 host=$2
+  case "$host" in
+    unix://*|/*|@*) ;;
+    fd://*) USES_SOCKET_ACTIVATION=true ;;
+    tcp://*|*:*|[0-9]*) add_tcp_source "$source: $host" ;;
+    *)
+      printf 'REVIEW_REQUIRED: cannot classify Docker host value from %s: %s\n' "$source" "$host" >&2
+      exit 2
+      ;;
+  esac
+}
+
+# Effective systemd service configuration plus argv of an active daemon.
+DOCKER_SERVICE_EXEC=$(sudo systemctl show docker.service -p ExecStart --value 2>/dev/null || true)
+DOCKER_PID=$(pgrep -xo dockerd || true)
+DOCKER_CMDLINE=''
+if [ -n "$DOCKER_PID" ]; then
+  DOCKER_CMDLINE=$(sudo cat "/proc/$DOCKER_PID/cmdline" | tr '\0' '\n') || {
+    echo 'ERROR: cannot read dockerd argv' >&2
+    exit 2
   }
-  [ -z "$listeners" ] || { printf 'ERROR: unexpected Docker TCP 2376 listener:\n%s\n' "$listeners" >&2; exit 1; }
 fi
+
+# Parse all -H/--host forms in effective ExecStart, including -H=<value>.
+mapfile -t EXEC_HOST_DIRECTIVES < <(
+  printf '%s\n' "$DOCKER_SERVICE_EXEC"     | grep -Eo -- '(-H|--host)(=|[[:space:]]+)[^[:space:]]+' || true
+)
+for directive in "${EXEC_HOST_DIRECTIVES[@]}"; do
+  case "$directive" in
+    -H=*) host=${directive#-H=} ;;
+    --host=*) host=${directive#--host=} ;;
+    -H\ *) host=${directive#-H } ;;
+    --host\ *) host=${directive#--host } ;;
+    *)
+      printf 'REVIEW_REQUIRED: cannot normalize ExecStart host directive: %s\n' "$directive" >&2
+      exit 2
+      ;;
+  esac
+  classify_docker_host 'docker.service ExecStart' "$host"
+done
+
+# argv is NUL-separated, so parse its individual values without quoting ambiguity.
+mapfile -t DOCKER_ARGV <<< "$DOCKER_CMDLINE"
+for ((i = 0; i < ${#DOCKER_ARGV[@]}; i++)); do
+  case "${DOCKER_ARGV[i]}" in
+    -H|--host)
+      ((++i < ${#DOCKER_ARGV[@]})) || {
+        echo 'REVIEW_REQUIRED: dockerd host flag has no value' >&2
+        exit 2
+      }
+      classify_docker_host 'dockerd argv' "${DOCKER_ARGV[i]}"
+      ;;
+    -H=*) classify_docker_host 'dockerd argv' "${DOCKER_ARGV[i]#-H=}" ;;
+    --host=*) classify_docker_host 'dockerd argv' "${DOCKER_ARGV[i]#--host=}" ;;
+  esac
+done
+
+# A custom config path cannot safely be inferred from grep output; require its explicit review.
+if printf '%s\n' "$DOCKER_SERVICE_EXEC" "$DOCKER_CMDLINE"   | grep -Eq -- '--config-file(=|[[:space:]])'; then
+  echo 'REVIEW_REQUIRED: dockerd uses --config-file; parse that effective config before allowing Docker TCP API' >&2
+  exit 2
+fi
+
+# Parse hosts in the default config. Without jq, a hosts key is review-required, not PASS.
+if sudo test -f /etc/docker/daemon.json && sudo grep -qE '"hosts"[[:space:]]*:' /etc/docker/daemon.json; then
+  command -v jq >/dev/null || {
+    echo 'REVIEW_REQUIRED: jq is required to parse daemon.json hosts safely' >&2
+    exit 2
+  }
+  DOCKER_CONFIG_HOSTS=$(sudo jq -er '
+    if .hosts? == null then empty
+    elif (.hosts | type) == "array" and all(.hosts[]; type == "string") then .hosts[]
+    else error("daemon.json hosts must be an array of strings") end
+  ' /etc/docker/daemon.json) || {
+    echo 'REVIEW_REQUIRED: cannot parse daemon.json hosts' >&2
+    exit 2
+  }
+  while IFS= read -r host; do
+    [ -z "$host" ] || classify_docker_host 'daemon.json hosts' "$host"
+  done <<< "$DOCKER_CONFIG_HOSTS"
+fi
+
+# `Listen` is systemd's effective socket property. Distinguish an absent unit from a
+# unit whose effective configuration cannot be read; never turn the latter into PASS.
+DOCKER_SOCKET_LOAD_STATE=$(sudo systemctl show docker.socket -p LoadState --value 2>/dev/null) || {
+  echo 'REVIEW_REQUIRED: cannot determine whether docker.socket exists' >&2
+  exit 2
+}
+case "$DOCKER_SOCKET_LOAD_STATE" in
+  not-found) DOCKER_SOCKET_PRESENT=false ;;
+  '')
+    echo 'REVIEW_REQUIRED: empty docker.socket LoadState' >&2
+    exit 2
+    ;;
+  *) DOCKER_SOCKET_PRESENT=true ;;
+esac
+if [ "$DOCKER_SOCKET_PRESENT" = true ]; then
+  DOCKER_SOCKET_LISTEN=$(sudo systemctl show docker.socket -p Listen --value) || {
+    echo 'REVIEW_REQUIRED: cannot read effective docker.socket Listen configuration' >&2
+    exit 2
+  }
+  [ -n "$DOCKER_SOCKET_LISTEN" ] || {
+    echo 'REVIEW_REQUIRED: docker.socket has no effective Listen entries' >&2
+    exit 2
+  }
+  while IFS= read -r listen_entry; do
+    listen_entry=${listen_entry#"${listen_entry%%[![:space:]]*}"}
+    [ -z "$listen_entry" ] && continue
+    case "$listen_entry" in
+      *' (Stream)') socket_address=${listen_entry% (Stream)} ;;
+      *)
+        printf 'REVIEW_REQUIRED: cannot classify non-stream docker.socket Listen entry: %s\n' "$listen_entry" >&2
+        exit 2
+        ;;
+    esac
+    case "$socket_address" in
+      /*|@*) ;;  # filesystem and abstract Unix sockets
+      *:*) add_tcp_source "docker.socket Listen: $socket_address" ;;
+      *)
+        if [[ "$socket_address" =~ ^[0-9]+$ ]]; then
+          add_tcp_source "docker.socket Listen: $socket_address"
+        else
+          printf 'REVIEW_REQUIRED: cannot classify docker.socket Listen address: %s\n' "$socket_address" >&2
+          exit 2
+        fi
+        ;;
+    esac
+  done <<< "$DOCKER_SOCKET_LISTEN"
+elif [ "$USES_SOCKET_ACTIVATION" = true ]; then
+  echo 'REVIEW_REQUIRED: dockerd uses fd:// but docker.socket is absent' >&2
+  exit 2
+fi
+
+# Current listeners are separate evidence. Match dockerd anywhere in process metadata, not only first.
+listeners_2375=$(sudo ss -H -lnt '( sport = :2375 )') || {
+  echo 'ERROR: cannot inspect TCP 2375' >&2
+  exit 2
+}
+dockerd_tcp_listeners=$(sudo ss -H -lntp | awk 'index($0, "\"dockerd\"")') || {
+  echo 'ERROR: cannot inspect dockerd TCP listeners' >&2
+  exit 2
+}
+
+TCP_EVIDENCE=$(printf '%s\n%s\n' "${TCP_CONFIGURATION_SOURCES[*]-}" "$dockerd_tcp_listeners")
+if [ -n "$listeners_2375" ] || [ -n "${TCP_CONFIGURATION_SOURCES[*]-}" ] || [ -n "$dockerd_tcp_listeners" ]; then
+  printf 'Docker TCP configuration/listener evidence:\n%s\n' "$TCP_EVIDENCE" >&2
+  if printf '%s\n%s\n' "$listeners_2375" "$TCP_EVIDENCE"     | grep -Eq '(^|[^0-9])2375([^0-9]|$)'; then
+    echo 'ERROR: Docker TCP 2375 is configured or listening' >&2
+    exit 1
+  fi
+  if [ "$ALLOW_REMOTE_DOCKER_API" != true ]; then
+    echo 'ERROR: unexpected Docker TCP endpoint is configured or listening' >&2
+    exit 1
+  fi
+  echo 'REVIEW_REQUIRED: every allowed endpoint needs effective tlsverify=true, CA, server certificate/key, verified client-certificate authentication and firewall/security-group allowlist.' >&2
+  exit 2
+fi
+echo 'OK: no Docker TCP endpoint is configured or listening'
 ```
 
-В типичной systemd-установке Docker получает `-H fd://`: systemd `docker.socket`
-создаёт **локальный Unix socket**, а не TCP listener. Не добавляйте одновременно `hosts`
+В типичной systemd-установке Docker получает `-H fd://`: `docker.socket` обычно создаёт
+локальный Unix socket. Не предполагайте это без проверки: effective systemd property
+`Listen` может задавать TCP listener, который существует ещё до запуска `dockerd`. Gate
+выше разбирает только `Stream` entries: путь `/…` и abstract Unix socket `@…` остаются
+Unix, а port, `host:port` и `[IPv6]:port` считаются TCP. Не добавляйте одновременно `hosts`
 в `daemon.json` и `-H` в unit: Docker завершается при конфликтующих настройках. Уберите
 только TCP endpoint из активного источника, затем проверьте конфигурацию и рестартуйте
 один service за раз.
@@ -365,10 +547,12 @@ sudo systemctl --no-pager --full status docker.service
 sudo journalctl -u docker.service -n 50 --no-pager
 ```
 
-Если удалённый Docker API действительно является согласованным требованием, используют
-только TLS на `2376`, взаимную аутентификацию сертификатами, firewall allowlist и
-выделенный management network. Это исключение с владельцем риска, а не default для
-Kubernetes-ноды.
+Если удалённый Docker API действительно является согласованным требованием, номер порта
+не доказывает TLS или mTLS: даже `2376` не является доказательством. Для **каждого**
+разрешённого TCP endpoint подтвердите effective `tlsverify=true`, CA, server certificate и
+key, а также реальную аутентификацию client certificate; ограничьте источники через
+firewall/security group и выделенную management network. Это исключение с владельцем
+риска, а не default для Kubernetes-ноды.
 
 ### containerd, NRI и файловые границы runtime
 
@@ -432,7 +616,7 @@ containerd нередко не имеют TLS и аутентификации: �
 
 Если Docker оставлен для отдельной задачи, его socket и группа `docker` также
 root-equivalent. Не выдавайте членство обычным пользователям, не монтируйте socket в
-непривилегированный workload и не предполагаете единые owner/mode для всех установок:
+непривилегированный workload и не предполагайте единые owner/mode для всех установок:
 следуйте unit/package policy и проверяйте доступ от имени запрещённой учётной записи.
 
 ```bash
@@ -452,8 +636,12 @@ kubelet или эксплуатационные задачи.
 
 `daemon.json` - один из источников конфигурации Docker. Он не заменяет firewall, права
 на socket, SecurityContext и политики Kubernetes, но задаёт безопасный baseline daemon.
-Следующий фрагмент - **пример для Docker-хоста**; сначала подтвердите поддержку версии и
-совместимость с workload. Не добавляйте `hosts`, если systemd уже передаёт `-H fd://`.
+Не добавляйте `hosts`, если systemd уже передаёт `-H fd://`.
+
+#### Новый Docker-host
+
+Следующий baseline применим к **новой** Docker-установке после проверки поддержки версии и
+совместимости с planned workload:
 
 ```json
 {
@@ -466,15 +654,35 @@ kubelet или эксплуатационные задачи.
 
 | Ключ | Что даёт | Что проверить до включения |
 |---|---|---|
-| `live-restore` | контейнеры продолжают работать при рестарте daemon | workflow обновления, monitoring и ожидаемое поведение restart |
-| `no-new-privileges` | запрещает контейнерным процессам повышать privilege через `setuid`/file capabilities | приложения, которым ошибочно требуется privilege escalation |
+| `live-restore` | может сохранить работу контейнеров при недоступности daemon | workflow обновления, monitoring и ожидаемое поведение restart; не гарантия для любого config/migration change |
+| `no-new-privileges` | запрещает новым контейнерным процессам повышать privilege через `setuid`/file capabilities | приложения, которым ошибочно требуется privilege escalation; существующие контейнеры recreate |
 | `userns-remap` | маппит root контейнера на непривилегированный UID хоста | volumes, ownership, образы и совместимость; не включать без теста на production-ноде |
-| `log-driver: local` | ограничивает рост JSON-логов и rotation управляется драйвером | централизованный сбор логов и retention |
+| `log-driver: local` | ограничивает рост JSON-логов и rotation управляется драйвером | централизованный сбор логов и retention; существующие контейнеры не мигрируют автоматически |
 
-`userns-remap` особенно важен, но не является «одной безрисковой галочкой»: меняются UID
-файлов Docker и поведение bind mounts. Для Kubernetes-ноды с containerd это не настройка
-containerd и не замена `runAsNonRoot`; применяйте её к выделенному Docker-хосту после
-тестирования. Проверка и откат должны быть готовы до перезапуска daemon.
+#### Существующий Docker-host: отдельная migration
+
+Не применяйте этот JSON к уже работающему Docker-host как обычную правку с последующим
+restart. До change соберите inventory containers/images/volumes, проверьте `/etc/subuid` и
+`/etc/subgid`, bind mounts, host networking и privileged containers, оцените совместимость
+с `userns-remap` и подготовьте recreate/migration и rollback plan.
+
+```bash
+set -euo pipefail
+sudo docker ps -a --no-trunc
+sudo docker image ls
+sudo docker volume ls
+sudo docker network ls
+sudo grep -Ev '^[[:space:]]*(#|$)' /etc/subuid /etc/subgid 2>/dev/null || true
+# Для каждого workload отдельно: sudo docker inspect <container>; проверьте mounts, network и privileges.
+```
+
+`no-new-privileges` как daemon default действует на новые контейнеры; существующие нужно
+recreate. Смена `log-driver` не переводит существующие контейнеры автоматически.
+`userns-remap` меняет namespace/storage view и ownership Docker, поэтому требует отдельной
+migration. `live-restore` не является безусловной гарантией сохранности контейнеров при
+любом изменении конфигурации daemon. Для Kubernetes-ноды с containerd это не настройка
+containerd и не замена `runAsNonRoot`; применяйте Docker только к выделенному Docker-host
+после тестирования.
 
 Никогда не создавайте `daemon.json` поверх существующего файла через `install /dev/null`:
 сначала сохраните текущую конфигурацию. Новый пустой файл создавайте только при его
@@ -509,28 +717,40 @@ sudo docker info --format '{{json .SecurityOptions}}'
 группой. Выполните до/после diff и тест от имени пользователя, которому доступ снят.
 
 ```bash
-# 1. Сервисы: сохранённый снимок против текущего состояния.
+set -euo pipefail
+sudo install -d -m 700 /root/hardening-after
+
+# 1. Сервисы: before/after snapshots и diff running + enabled состояния.
 sudo systemctl list-units --type=service --state=running | sort \
-  | sudo tee /root/hardening-after-services.txt >/dev/null
+  | sudo tee /root/hardening-after/services-running.txt >/dev/null
+sudo systemctl list-unit-files --type=service | sort \
+  | sudo tee /root/hardening-after/services-enabled.txt >/dev/null
 sudo diff -u /root/hardening-before/services-running.txt \
-  /root/hardening-after-services.txt || true
+  /root/hardening-after/services-running.txt || true
+sudo diff -u /root/hardening-before/services-enabled.txt \
+  /root/hardening-after/services-enabled.txt || true
 
-# 2. Пакеты и сетевые listeners: изменения должны быть объяснимы.
-dpkg-query -W -f='${binary:Package}\t${Version}\n' | sort \
-  | sudo tee /root/hardening-after-packages.txt >/dev/null
-sudo ss -tulpn | sort | sudo tee /root/hardening-after-listeners.txt >/dev/null
-sudo diff -u /root/hardening-before/listeners.txt \
-  /root/hardening-after-listeners.txt || true
-
-# 3. Docker API не слушает неаутентифицированный TCP 2375; сбой ss — operational error.
-listeners=$(sudo ss -H -lnt '( sport = :2375 )') || {
-  echo 'ERROR: cannot inspect Docker TCP 2375' >&2; exit 2;
-}
-if [ -n "$listeners" ]; then
-  printf 'ERROR: TCP 2375 is listening:\n%s\n' "$listeners" >&2
-  exit 1
+# 2. Пакеты и сетевые listeners: distro-aware snapshot, then explain every diff.
+if command -v dpkg-query >/dev/null; then
+  sudo dpkg-query -W -f='${binary:Package}\t${Version}\n' | LC_ALL=C sort \
+    | sudo tee /root/hardening-after/packages.txt >/dev/null
+elif command -v rpm >/dev/null; then
+  sudo rpm -qa | LC_ALL=C sort \
+    | sudo tee /root/hardening-after/packages.txt >/dev/null
+else
+  echo 'REVIEW_REQUIRED: unsupported package manager; cannot create package inventory' >&2
+  exit 2
 fi
-echo 'OK: TCP 2375 is absent'
+sudo ss -tulpn | sort | sudo tee /root/hardening-after/listeners.txt >/dev/null
+sudo diff -u /root/hardening-before/packages.txt \
+  /root/hardening-after/packages.txt || true
+sudo diff -u /root/hardening-before/listeners.txt \
+  /root/hardening-after/listeners.txt || true
+
+# 3. Docker TCP: повторите canonical gate из §14.6 целиком, а не только `ss` check.
+# PASS возможен лишь если одновременно нет TCP endpoint в effective ExecStart/argv,
+# daemon.json hosts/default or explicitly reviewed custom config, effective docker.socket Listen
+# и current listener. TCP Listen может существовать до запуска dockerd.
 
 # 4. Socket runtime остаётся локальным; owner/mode соответствуют policy unit/package,
 #    не дают доступа обычным пользователям и не являются world-writable.
@@ -553,9 +773,12 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
   обновления, а не ручной неописанный дрейф.
 - [ ] `ss -tulpn` не содержит необъяснимых listeners; `10250`, `6443`, etcd и SSH доступны
   только там и тем источникам, где это требуется архитектурой.
-- [ ] Exact filter `ss -H -lnt '( sport = :2375 )'` не выводит listener; в unit/drop-in/`daemon.json`
-  нет `tcp://0.0.0.0:2375`. Порт `2376` запрещён по умолчанию, но допустим только как явно
-  согласованное исключение с mTLS, firewall allowlist и владельцем риска.
+- [ ] `2375` не настроен и не слушает; full gate анализирует effective `ExecStart`/argv,
+  `daemon.json hosts` либо явно reviewed custom config, effective `docker.socket Listen` и
+  `ss -lntp`. Нет неразрешённого Docker TCP endpoint на **любом** порту, включая endpoint,
+  который пока не слушает или socket-activated. Разрешённый endpoint имеет владельца риска,
+  effective `tlsverify=true`, CA, server certificate/key, подтверждённую client-certificate
+  authentication и firewall/security-group allowlist; `2376` само по себе не доказывает mTLS.
 - [ ] `/run/containerd/containerd.sock` и при наличии `/run/nri/nri.sock` не
   доступны обычным пользователям, не примонтированы в непривилегированный workload, а
   `sudo crictl` продолжает работать; разрешённые группы состоят только из системных субъектов.
@@ -599,7 +822,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
   `kubelet`/`containerd`, только после этого rollout. Для control-plane держат out-of-band
   console и tested rollback.
 
-> **Для тех, кто хочет глубже, не экзаменационный материал.** Эта главы и главы 16-17
+> **Для тех, кто хочет глубже, не экзаменационный материал.** Эта глава и главы 16-17
 > объясняют namespaces, capabilities, cgroups и MAC ровно в объёме, который нужен для CKS:
 > распознать риск, применить нужное поле `securityContext` или policy и проверить эффект.
 > Если нужен более глубокий разбор самого механизма - как ядро реализует syscall
@@ -640,7 +863,8 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 - Порты оценивают по процессу и источникам: kubelet `10250` и API `6443` не должны быть
   открыты всему интернету, а Docker `2375` не должен слушаться вовсе.
 - `-H tcp://0.0.0.0:2375` - неаутентифицированный удалённый root. Оставляйте Docker на
-  Unix socket; `2376` допустим только как обоснованное TLS/mTLS-исключение.
+  Unix socket; любой TCP endpoint — только обоснованное mTLS-исключение, а `2376` не
+  является доказательством его безопасности.
 - containerd - основной современный CRI runtime; доступ к его socket и NRI socket
   root-equivalent, ограничен системными субъектами и никогда не монтируется в
   непривилегированный workload.
@@ -657,8 +881,8 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 **На экзамене.** Сначала найдите активный источник: `systemctl cat`, `systemctl show`,
 `ss -tulpn`, `stat` и `ps` надёжнее догадки по пути файла. Задание может требовать убрать
 Docker TCP, исправить права socket или отключить service. После изменения докажите
-результат: `2375` не слушается, `stat` показывает нужные owner/mode, а пользователь без
-прав получает отказ. Не отключайте kubelet/containerd только потому, что их порт или
+результат: `2375` не слушается, `ss -lntp` не показывает неразрешённый TCP listener
+`dockerd`, `stat` показывает нужные owner/mode, а пользователь без прав получает отказ. Не отключайте kubelet/containerd только потому, что их порт или
 процесс выглядит незнакомо.
 
 **В реальной работе.** Большая часть компрометаций ноды начинается с обычной ошибки:

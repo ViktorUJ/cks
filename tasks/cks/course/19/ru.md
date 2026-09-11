@@ -130,23 +130,27 @@ spec:
 
 | Режим | Результат при нарушении | Где искать сигнал |
 |---|---|---|
-| `enforce` | API server отклоняет create/update Pod; объект не появляется | ответ `kubectl`, CI/CD, Event/API audit |
-| `audit` | Pod допускается, нарушение записывается в audit event | audit log control plane |
+| `enforce` | API server отклоняет нарушающие create и policy-checked update: create не создаёт новый Pod, update не сохраняет изменение | ответ `kubectl`, CI/CD, Event/API audit |
+| `audit` | Pod допускается; PSA добавляет annotation к соответствующему audit event | audit log control plane, если он включён |
 | `warn` | Pod допускается, клиент получает предупреждение | stderr/ответ `kubectl`, лог CI |
 
 `warn` и `audit` **не защищают**: нарушающий Pod всё ещё запускается. Их цель - инвентаризация до перехода к `enforce`. Режимы независимы: на одном namespace можно `enforce=baseline`, но уже собирать `warn` и `audit` для `restricted`.
+
+`audit` PSA добавляет annotation к Kubernetes audit event, но сам не включает API audit backend и не гарантирует хранение события. Для evidence заранее проверьте, что API auditing включён, policy записывает нужные requests/stages и у оператора есть доступ к выбранному audit sink; иначе используйте `warn`, server-side dry run и PSA metrics как дополнительные сигналы. Не каждый update уже существующего Pod снова проходит policy check: исключены metadata-only updates (кроме deprecated seccomp/AppArmor annotations), а также валидные изменения `.spec.activeDeadlineSeconds` и `.spec.tolerations`.
 
 ```mermaid
 flowchart TB
     pod["Новый Pod"] --> base["enforce=baseline"]
     base -->|"нарушение"| rejected["отклонён"]
     base -->|"прошёл"| strict["warn/audit=restricted"]
-    strict -->|"нарушение"| admitted["создан + warning<br/>и audit record"]
+    strict -->|"нарушение"| admitted["создан + warning<br/>+ audit annotation*"]
     strict -->|"прошёл"| clean["создан без нарушения"]
     style rejected fill:#db4437,color:#fff
     style admitted fill:#f4b400,color:#000
     style clean fill:#0f9d58,color:#fff
 ```
+
+*Наблюдаемый audit record существует, только если Kubernetes API auditing включён и audit policy/backend сохраняют соответствующий event.*
 
 ## 19.4. Namespace labels и версия стандарта
 
@@ -158,6 +162,8 @@ pod-security.kubernetes.io/<mode>-version=<version>
 ```
 
 `<mode>` - `enforce`, `audit` или `warn`; `<level>` - `privileged`, `baseline` либо `restricted`. Значение версии - Kubernetes minor version, например `v1.36`, или `latest`. Для каждого режима версию можно задать отдельно.
+
+PSA labels — часть security boundary. Identity, которой разрешено создавать workloads в application namespace, не должна автоматически получать `create`, `patch` или `update` для `Namespace`: изменив либо удалив PSA labels, она меняет применяемую policy.
 
 ```bash
 # Сначала наблюдаем restricted, но уже запрещаем самые опасные Pod.
@@ -175,7 +181,7 @@ kubectl label namespace payments \
   pod-security.kubernetes.io/enforce-version=v1.36 --overwrite
 ```
 
-Лейбл применяется к **новым и обновляемым** Pod. Не ожидайте, что смена лейбла удалит уже работающие Pod: PSA не является controller, не сканирует и не исправляет существующие объекты. При изменении namespace PSA также проверяет существующие Pods для предупреждений, поэтому label change может показать workload, который надо мигрировать.
+PSA применяет policy к новым Pod и к update, которые входят в его policy checks. Не ожидайте, что смена лейбла удалит уже работающие Pod: PSA не является controller и не исправляет существующие объекты. Когда меняется `enforce` level или version label namespace, PSA проверяет существующие Pod и возвращает warnings о нарушениях; это migration signal, а не автоматическое удаление. Не каждое изменение namespace запускает такую проверку.
 
 `latest` удобно для небольшого test-кластера, но в production создаёт риск: после обновления Kubernetes содержание стандарта может стать строже, и ранее работающий rollout будет отклонён. Поэтому в учебных примерах этой главы версия зафиксирована на `v1.36` — **training baseline** курса и core labs. Для своего production-кластера выбирайте PSS pin, соответствующий фактической версии его API server; не используйте версию выше неё.
 
@@ -205,7 +211,7 @@ kubectl get namespace -L pod-security.kubernetes.io/enforce \
 Включить `enforce=restricted` сразу на старом namespace - рискованно: Deployment не создаст новые replicas, Job не стартует, а автоскейлер или rollback окажутся заблокированы. Безопасная миграция отделяет наблюдение от запрета.
 
 1. **Инвентаризируйте namespace и владельцев.** Найдите Pod templates у Deployments, StatefulSets, DaemonSets, Jobs и CronJobs. Исправлять надо template контроллера, не живой Pod: иначе следующая реплика снова нарушит policy.
-2. **Начните с `warn=restricted` и `audit=restricted`.** Existing traffic и CI покажут нарушителей, но ничего не заблокируют. Сохраните предупреждения и audit records как список работ.
+2. **Начните с `warn=restricted` и `audit=restricted`.** Existing traffic и CI покажут нарушителей, но ничего не заблокируют. До того как рассчитывать на audit records, проверьте доступность API audit logging и выбранного sink; сохраните доступные warnings/audit records как список работ.
 3. **Устраните нарушения в шаблонах.** Добавьте `runAsNonRoot`, seccomp, запрет эскалации, drop capabilities; замените `hostPath` допустимым volume, а привилегированную функцию - отдельным системным компонентом.
 4. **Проверьте отрицательный и положительный сценарии.** Хороший Pod должен создаваться без warning; заведомо плохой - дать warning/audit до enforce и отказ после него.
 5. **Переведите сначала в `enforce=baseline`, затем в `enforce=restricted`.** Оставьте `warn` и `audit` на restricted хотя бы на период rollout, чтобы видеть дрейф шаблонов.
@@ -274,7 +280,9 @@ kubectl get deployment -n payments api -o yaml
 
 **Предпочтительный вариант - отдельный namespace и самый слабый достаточный уровень.** Например, системный DaemonSet остаётся в `kube-system` или в выделенном `platform-system` с `enforce=baseline` либо, при доказанной необходимости, `privileged`; прикладные namespace остаются `restricted`. Namespace не должен смешивать доверенный node agent и пользовательские workloads.
 
-**Системные PSA exemptions** задаются конфигурацией admission controller, а не лейблом namespace. В `AdmissionConfiguration` для `PodSecurity` предусмотрены списки `usernames`, `runtimeClasses` и `namespaces`; исключение применяется ко всем режимам PSA. Оно обходит policy целиком, поэтому подходит только для заранее известных, доверенных компонентов под управлением платформенной команды.
+**Системные PSA exemptions** задаются конфигурацией admission controller, а не лейблом namespace. В `AdmissionConfiguration` для `PodSecurity` предусмотрены списки `usernames`, `runtimeClasses` и `namespaces`; исключение применяется ко всем режимам PSA. Эти dimensions независимы: совпадение **любого** из них (`namespace` **или** `runtimeClass` **или** `username`) полностью обходит PSA. Поэтому в одном исключении не объединяйте несколько dimensions, ожидая сужения области.
+
+Ниже показано только namespace exemption. `defaults` приведены целиком; при изменении реальной конфигурации сохраните все действующие значения и добавьте только нужное узкое исключение.
 
 ```yaml
 apiVersion: apiserver.config.k8s.io/v1
@@ -287,18 +295,20 @@ plugins:
     defaults:
       enforce: restricted
       enforce-version: v1.36
+      audit: restricted
+      audit-version: v1.36
+      warn: restricted
+      warn-version: v1.36
     exemptions:
+      usernames: []
+      runtimeClasses: []
       namespaces:
       - platform-system
-      runtimeClasses:
-      - trusted-sandbox
-      usernames:
-      - system:serviceaccount:platform-system:node-agent
 ```
 
 Не копируйте этот пример в управляемый кластер вслепую: способ задания admission configuration зависит от того, кто управляет kube-apiserver. Перед добавлением exemption документируйте причину, identity/namespace, owner, компенсирующие controls и дату удаления. Не добавляйте широкую группу пользователей и не вносите прикладной namespace в исключения только потому, что один Deployment не прошёл migration.
 
-Также не путайте exemption PSA с RBAC. Exemption не даёт право создать Pod; он лишь пропускает PSS-проверку, если RBAC уже разрешил запрос. Поэтому системный ServiceAccount должен иметь и минимальный RBAC, и узкую область exemption.
+Username exemption относится к identity конкретного API request. Pod, созданный из Deployment, DaemonSet или Job, обычно создаёт controller, а не исходный пользователь; его exemption не передаётся controller-created Pod. Не exempt controller ServiceAccounts ради workload: это может bypass PSA для всех ресурсов, которые создаёт такой controller. Также не путайте exemption PSA с RBAC. Exemption не даёт право создать Pod; он лишь пропускает PSS-проверку, если RBAC уже разрешил запрос.
 
 > 🔬 `PodSecurityPolicy` удалён в Kubernetes v1.25; стандартные ограничения переносят в PSA/PSS, организационные — в policy engine.
 
@@ -333,6 +343,13 @@ PSA нельзя расширить собственными полями. Эт�
 
 ```bash
 NS=payments
+SUBJECT='system:serviceaccount:payments:ci'  # identity, которую проверяете
+
+# PSA labels — security boundary: creator workloads не должен сам менять policy namespace.
+kubectl auth can-i create pods -n "$NS" --as="$SUBJECT"
+kubectl auth can-i create namespaces --as="$SUBJECT"
+kubectl auth can-i patch namespaces/"$NS" --as="$SUBJECT"
+kubectl auth can-i update namespaces/"$NS" --as="$SUBJECT"
 
 # 1. Назначенный уровень и pin версии.
 kubectl get ns "$NS" -o jsonpath='{.metadata.labels}{"\n"}'
@@ -361,13 +378,15 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 | `kubectl apply` отвечает Forbidden, Pod не создан | PSA или RBAC отказал до persistence | сравните текст ошибки с `auth can-i` и labels namespace |
 | System component сломан после restricted | компоненту нужен допустимый отдельный namespace или узкое exemption | не ослабляйте прикладной namespace; зафиксируйте исключение |
 
-Для observability собирайте audit logs API server и метрики PSA `pod_security_evaluations_total`, `pod_security_errors_total` и `pod_security_exemptions_total`, если они доступны в вашей дистрибуции. Первая показывает результаты проверок, вторая - ошибки проверки, третья - применения exemption; разрез по labels метрик, включая `decision`, `mode` и policy, показывает, какие команды и workloads ещё не готовы к следующему уровню. В CI добавьте `kubectl apply --dry-run=server` прямого Pod против test namespace с теми же PSA-лейблами, что и production; template workload дополнительно проверяйте реальным rollout там же.
+Для application/CI identity ожидайте `no` для `create namespaces`, `patch namespaces/<application-namespace>` и `update namespaces/<application-namespace>`. Делегированное создание namespace — отдельный privileged workflow: PSA labels должны назначаться и защищаться platform control/admission policy.
+
+Для observability собирайте API audit logs и метрики PSA `pod_security_evaluations_total`, `pod_security_errors_total` и `pod_security_exemptions_total`, если они доступны в вашей дистрибуции. Наборы labels различаются: у evaluations есть `decision`, `mode`, `policy_level`, `policy_version`, `request_operation`, `resource`, `subresource`; у errors — `fatal`, `request_operation`, `resource`, `subresource`; у exemptions — только request/resource dimensions. Label `policy` здесь не существует. Для `audit`/`warn` `decision="deny"` означает найденное нарушение проверяемой policy, а не API rejection: запрос отклоняет только `mode="enforce"`. В CI добавьте `kubectl apply --dry-run=server` прямого Pod против test namespace с теми же PSA-лейблами, что и production; template workload дополнительно проверяйте реальным rollout там же.
 
 > 🏭 IaC создаёт namespace с pinned `enforce=restricted`; исключения хранятся с expiry, policy engine добавляет организационные правила.
 
 ## 19.10. Как это применяют в продакшене
 
-- **restricted по умолчанию для приложений.** Создавайте namespace через шаблон/IaC уже с pinned `enforce=restricted`; не оставляйте безопасность на усмотрение каждого chart.
+- **restricted по умолчанию для приложений.** Создавайте namespace через шаблон/IaC уже с pinned `enforce=restricted`; не оставляйте безопасность на усмотрение каждого chart. Право менять PSA labels оставляйте доверенной platform/security роли.
 - **Предупреждение перед запретом.** Новый PSS level начинается с `warn` и `audit`, потом становится `enforce`; так политика не превращает плановый rollout в инцидент.
 - **Границы системных компонентов.** CNI/CSI и node agents изолированы от бизнес-workloads отдельными namespaces, ServiceAccounts и RBAC. `privileged` не распространяется на всю платформу.
 - **Исключение - временный security debt.** У него есть владелец, тест, ticket, компенсирующие controls и дата удаления. Exemption не является способом «починить» образ, который можно сделать non-root.
@@ -384,7 +403,7 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 - **PSA (Pod Security Admission)** - встроенный validating admission controller для PSS.
 - **PSS (Pod Security Standards)** - готовые профили безопасности Pod: `privileged`, `baseline`, `restricted`.
 - **`enforce`** - режим PSA, который отклоняет нарушающий Pod.
-- **`audit`** - режим, записывающий нарушение в audit log без отклонения Pod.
+- **`audit`** - режим PSA, который не отклоняет Pod и добавляет информацию о нарушении к Kubernetes audit event; наблюдаемый audit log требует отдельно включённого API auditing и подходящей audit policy/backend.
 - **`warn`** - режим, возвращающий warning клиенту без отклонения Pod.
 - **PSS version** - версия стандарта для конкретного PSA mode; pin защищает rollout от неожиданной смены правил после upgrade.
 - **exemption** - bypass PSA для заранее доверенной namespace, username или RuntimeClass; не даёт RBAC-права.
@@ -394,7 +413,7 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 
 - PSA проверяет Pod до записи в etcd; он дополняет RBAC и `securityContext`, но не заменяет другие security controls.
 - PSS даёт три профиля: `privileged` без ограничений, `baseline` против явных node-breakout путей, `restricted` для non-root приложения с least privilege; отсутствие namespace labels означает `privileged` только при стандартных PSA defaults.
-- `enforce`, `audit` и `warn` независимы и задаются namespace labels `pod-security.kubernetes.io/<mode>`; к каждому можно добавить `<mode>-version`.
+- `enforce`, `audit` и `warn` независимы и задаются namespace labels `pod-security.kubernetes.io/<mode>`; к каждому можно добавить `<mode>-version`. Право менять эти labels меняет security boundary и не должно автоматически следовать из права создавать workloads.
 - Надёжная migration идёт от `warn`/`audit` к `enforce=baseline`, затем к `enforce=restricted`, с исправлением templates, а не живых Pod.
 - Rejection PSA происходит до создания Pod. Проверяйте labels namespace, effective defaults, прямой Pod через server-side dry run, RBAC и текст admission error; успешный dry-run Deployment не подтверждает enforce для Pod, который позднее создаст controller.
 - PSP удалён в 1.25. Его нельзя вернуть манифестом: стандартные правила переносят в PSA, а организационные - в policy engine.
@@ -423,7 +442,7 @@ RBAC отвечает, кто может выполнить `create pods`. `secu
 <details>
 <summary>4. Чем `warn` и `audit` отличаются от `enforce`, и почему они не являются защитой?</summary>
 
-`warn` допускает Pod с предупреждением клиенту, а `audit` допускает его и записывает нарушение в audit event. Только `enforce` отклоняет create/update до persistence. Поэтому первые два режима предназначены для инвентаризации и миграции.
+`warn` допускает Pod с предупреждением клиенту, а `audit` добавляет annotation к audit event и тоже допускает Pod; для наблюдаемого audit evidence нужен включённый API audit logging. Только `enforce` отклоняет нарушающий create и релевантный PSA update до persistence. Поэтому первые два режима предназначены для инвентаризации и миграции.
 </details>
 
 <details>

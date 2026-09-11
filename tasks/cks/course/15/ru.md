@@ -240,9 +240,34 @@ sudo stat -c '%U %G %a %n' /etc/kubernetes/admin.conf
 сначала установите, какому пакету они принадлежат и нужен ли он на ноде.
 
 ```bash
+set -euo pipefail
 BINARY_PATH='/path/to/reviewed-binary'
-sudo find / -xdev -type f -perm /6000 -printf '%m %u:%g %p\n' 2>/dev/null
-sudo dpkg -S "$BINARY_PATH" 2>/dev/null || true
+# Inventory every selected local filesystem separately: `find / -xdev` would miss /usr, /var, /opt, etc.
+findmnt -rn -o TARGET,FSTYPE |
+while IFS=' ' read -r target fstype; do
+  case "$fstype" in
+    proc|sysfs|devtmpfs|devpts|tmpfs|cgroup|cgroup2|overlay|squashfs|nfs|nfs4|cifs|fuse.*|autofs|nsfs|mqueue|hugetlbfs|rpc_pipefs)
+      continue
+      ;;
+  esac
+  sudo find "$target" -xdev -type f -perm /6000 -printf '%m %u:%g %p\n' 2>/dev/null
+done | LC_ALL=C sort -u
+
+# Package ownership is distro-aware; a file without an owner needs provenance review.
+if command -v dpkg-query >/dev/null 2>&1; then
+  sudo dpkg-query -S "$BINARY_PATH" || {
+    echo 'REVIEW_REQUIRED: no Debian package owns this binary; review its provenance' >&2
+    exit 2
+  }
+elif command -v rpm >/dev/null 2>&1; then
+  sudo rpm -qf "$BINARY_PATH" || {
+    echo 'REVIEW_REQUIRED: no RPM package owns this binary; review its provenance' >&2
+    exit 2
+  }
+else
+  echo 'REVIEW_REQUIRED: package manager is unknown' >&2
+  exit 2
+fi
 ```
 
 > 🎯 Составьте матрицу потоков и allowlist, сохраните второй путь доступа, примените deny-by-default и проверьте разрешённый и запрещённый сегменты.
@@ -436,7 +461,7 @@ sudo grep -RnsE \
 **Профиль A - только ключ.**
 
 ```bash
-sudo install -d -m 755 /etc/ssh/sshd_config.d
+sudo install -d -o root -g root -m 0755 /etc/ssh/sshd_config.d
 sudo tee /etc/ssh/sshd_config.d/00-hardening.conf >/dev/null <<'EOF'
 PermitRootLogin no
 PasswordAuthentication no
@@ -444,7 +469,10 @@ KbdInteractiveAuthentication no
 PubkeyAuthentication yes
 AllowUsers k8s-operator
 EOF
-sudo chmod 600 /etc/ssh/sshd_config.d/00-hardening.conf
+sudo chown root:root /etc/ssh/sshd_config.d/00-hardening.conf
+sudo chmod 0600 /etc/ssh/sshd_config.d/00-hardening.conf
+sudo stat -c '%U:%G %a %n' \
+  /etc/ssh/sshd_config.d /etc/ssh/sshd_config.d/00-hardening.conf
 
 SSHD_UNIT="$(
   systemctl list-unit-files --type=service --no-legend \
@@ -473,10 +501,22 @@ AuthenticationMethods publickey,keyboard-interactive:pam
 AllowUsers k8s-operator
 ```
 
-Сохраните профиль B в том же `/etc/ssh/sshd_config.d/00-hardening.conf`, затем выполните
-`sudo sshd -t` и reload фактического OpenSSH server unit (`ssh.service` на Debian/Ubuntu
-или `sshd.service` на многих RHEL-family системах). Не фиксируйте одно имя unit как
-универсальное для всех Linux-дистрибутивов. `AllowUsers` - сильное ограничение, но оно
+Сохраните профиль B в том же `/etc/ssh/sshd_config.d/00-hardening.conf`; примените **тот
+же** invariant owner/mode, затем проверьте его до `sshd -t` и reload фактического OpenSSH
+server unit (`ssh.service` на Debian/Ubuntu или `sshd.service` на многих RHEL-family
+системах):
+
+```bash
+sudo install -d -o root -g root -m 0755 /etc/ssh/sshd_config.d
+sudo chown root:root /etc/ssh/sshd_config.d/00-hardening.conf
+sudo chmod 0600 /etc/ssh/sshd_config.d/00-hardening.conf
+sudo stat -c '%U:%G %a %n' \
+  /etc/ssh/sshd_config.d /etc/ssh/sshd_config.d/00-hardening.conf
+sudo sshd -t
+# Определите ssh.service/sshd.service тем же distro-aware способом, что и в Profile A, затем reload.
+```
+
+Не фиксируйте одно имя unit как универсальное для всех Linux-дистрибутивов. `AllowUsers` - сильное ограничение, но оно
 блокирует всех неуказанных пользователей. Не применяйте его, пока не добавили необходимые
 break-glass и automation-аккаунты; документируйте владельцев и пересматривайте список.
 
@@ -490,12 +530,12 @@ NODE_ADDRESS='node-address.example.internal'
 # Профиль A (только ключ): проверка неинтерактивна и не должна предлагать password/MFA.
 ssh -o BatchMode=yes -o PreferredAuthentications=publickey \
   -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no \
-  "k8s-operator@${NODE_ADDRESS}" true
+  "k8s-operator@${NODE_ADDRESS}" id
 
 # Профиль B (ключ + MFA): не используйте BatchMode; пройдите prompt второго фактора.
 ssh -o PreferredAuthentications=publickey,keyboard-interactive \
   -o PasswordAuthentication=no -o KbdInteractiveAuthentication=yes \
-  "k8s-operator@${NODE_ADDRESS}" true
+  "k8s-operator@${NODE_ADDRESS}" id
 ```
 
 Отдельно убедитесь, что итоговый `allowusers` содержит **только** утверждённые аккаунты,
@@ -543,22 +583,32 @@ sudo sshd -T | grep -E 'permitrootlogin|passwordauthentication|pubkeyauthenticat
 ```
 
 Из хоста, который не входит в allowlist, проверяйте только ожидаемый отказ или timeout;
-из разрешённой сети - успешный SSH/API-доступ в объёме, который нужен роли.
+из разрешённой сети - успешный SSH/API-доступ в объёме, который нужен роли. Проверка SSH
+аутентификации и проверка `sudo` authorization/authentication независимы: password prompt
+`sudo` без TTY не доказывает ошибку SSH или sudo policy.
 
 ```bash
 # С хоста вне разрешённого CIDR: соединение не должно устанавливаться.
 NODE_ADDRESS='node-address.example.internal'
 nc -vz -w 3 "$NODE_ADDRESS" 22
 
-# Из разрешённой административной сети: профиль A проверяется key-only без prompt.
+# SSH login proof, Profile A: key-only and non-interactive.
 ssh -o BatchMode=yes -o PreferredAuthentications=publickey \
   -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no \
-  "k8s-operator@${NODE_ADDRESS}" 'id && sudo -l'
+  "k8s-operator@${NODE_ADDRESS}" id
 
-# Профиль B проверяется с ключом и интерактивным вторым фактором; не задавайте BatchMode.
+# SSH login proof, Profile B: complete publickey + keyboard-interactive MFA; no BatchMode.
 ssh -o PreferredAuthentications=publickey,keyboard-interactive \
   -o PasswordAuthentication=no -o KbdInteractiveAuthentication=yes \
-  "k8s-operator@${NODE_ADDRESS}" 'id && sudo -l'
+  "k8s-operator@${NODE_ADDRESS}" id
+
+# Run this separately from an interactive admin terminal when sudo policy requires a password.
+ssh -t "k8s-operator@${NODE_ADDRESS}" 'sudo -l'
+# Or prove a specific allowed wrapper:
+# ssh -t "k8s-operator@${NODE_ADDRESS}" 'sudo /usr/local/sbin/k8s-kubelet-status'
+
+# Use this only when NOPASSWD is an explicit policy requirement for the checked command/listing.
+ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
 ```
 
 | Симптом | Вероятная причина | Что проверить |

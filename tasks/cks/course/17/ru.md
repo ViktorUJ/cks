@@ -206,20 +206,26 @@ seccompDefault: true
 административный доступ к ней:
 
 ```bash
-# На фактической node Pod. Выводятся только релевантные флаги работающего kubelet.
-KPID=$(pgrep -xo kubelet) || exit 1
-sudo tr '\0' '\n' <"/proc/$KPID/cmdline" | \
+# На фактической node Pod. sudo opens /proc; pipefail prevents a hidden read failure.
+set -o pipefail
+KPID=$(pgrep -xo kubelet) || { echo 'ERROR: kubelet not found' >&2; exit 1; }
+if ! sudo cat "/proc/$KPID/cmdline" | tr '\0' '\n' | \
   awk '$0 == "--config" { print; getline; print; next }
-       /^--(config|seccomp-default)(=|$)/' || true
+       $0 == "--config-dir" { print; getline; print; next }
+       /^--(config|config-dir|seccomp-default)(=|$)/'; then
+  echo 'REVIEW_REQUIRED: cannot read kubelet command line reliably' >&2
+  exit 2
+fi
 
-# Присвойте путь, который фактически показал --config, а не предполагаемый путь.
-KUBELET_CONFIG=/path/from-kubelet-config
-sudo grep -nE '^[[:space:]]*seccompDefault:[[:space:]]*(true|false)[[:space:]]*$' \
-  "$KUBELET_CONFIG"
+# --config-dir drop-ins are supported by kubelet v1.36. Resolve relative paths against
+# kubelet working directory, read every .conf in kubelet merge order, then apply CLI flags.
+# If paths/order/merged value cannot be determined exactly, report REVIEW_REQUIRED; do not
+# infer seccompDefault from one config.yaml.
 ```
 
-Вторая команда нужна, когда `--config` задан: поле и флаг являются источниками настройки
-kubelet. Не публикуйте весь config или произвольную `/proc` command line в тикете. Затем
+`--config`, `--config-dir` drop-ins и `--seccomp-default` являются источниками настройки
+kubelet; CLI flags override merged file configuration. Не публикуйте весь config или
+произвольную `/proc` command line в тикете. Затем
 сверьте intended state с режимом процесса. Приоритет таков: container-level profile, затем
 Pod-level profile, затем default ноды для отсутствующего profile; `privileged` является
 исключением и остаётся `Unconfined`.
@@ -492,10 +498,29 @@ kubectl describe pod -n "$NS" "$POD"
 доступа:
 
 ```bash
-# На ноде; выберите фактический ID, не копируйте его из другого Pod.
-sudo crictl ps --name localhost-seccomp
-CONTAINER_ID=replace-with-container-id
-HOST_PID=$(sudo crictl inspect "$CONTAINER_ID" | jq -r '.info.pid')
+# On node: select exactly one current Ready sandbox, then exactly one app container.
+mapfile -t POD_IDS < <(
+  sudo crictl pods --name '^localhost-seccomp$' --namespace '^demo$' --state ready -q
+)
+if [ "${#POD_IDS[@]}" -ne 1 ]; then
+  printf 'REVIEW_REQUIRED: expected exactly one Ready pod sandbox, found %s\n' "${#POD_IDS[@]}" >&2
+  exit 2
+fi
+POD_ID=${POD_IDS[0]}
+mapfile -t CONTAINER_IDS < <(
+  sudo crictl ps --pod "$POD_ID" --name '^app$' -q
+)
+if [ "${#CONTAINER_IDS[@]}" -ne 1 ]; then
+  printf 'REVIEW_REQUIRED: expected exactly one running app container, found %s\n' "${#CONTAINER_IDS[@]}" >&2
+  exit 2
+fi
+CONTAINER_ID=${CONTAINER_IDS[0]}
+# .info is runtime-specific verbose data, not a portable CRI PID contract.
+HOST_PID=$(sudo crictl inspect "$CONTAINER_ID" | jq -r '.info.pid // empty')
+if ! [[ "$HOST_PID" =~ ^[0-9]+$ ]]; then
+  echo 'REVIEW_REQUIRED: runtime did not expose host PID as .info.pid; use its documented node-local inspection method' >&2
+  exit 2
+fi
 sudo grep '^Seccomp:' "/proc/$HOST_PID/status"
 ```
 
@@ -611,13 +636,13 @@ capability. Для учебного доказательства фиксиру�
 
 ```mermaid
 flowchart TB
-    app["Скомпрометированный процесс"] --> seccomp["seccomp: разрешён mount(2)?"]
-    seccomp -->|"нет"| denied1["EPERM / KILL + audit"]
-    seccomp -->|"да"| cap["capabilities: есть CAP_SYS_ADMIN?"]
+    app["Скомпрометированный<br/>процесс"] --> seccomp["seccomp: разрешён<br/>mount(2)?"]
+    seccomp -->|"нет"| denied1["EPERM / KILL<br/>+ audit"]
+    seccomp -->|"да"| cap["capabilities: есть<br/>CAP_SYS_ADMIN?"]
     cap -->|"нет"| denied2["EPERM"]
     cap -->|"да"| mac["AppArmor / SELinux:<br/>policy допускает mount?"]
-    mac -->|"нет"| denied3["MAC denial + audit"]
-    mac -->|"да"| kernel["Ядро выполняет операцию"]
+    mac -->|"нет"| denied3["MAC denial<br/>+ audit"]
+    mac -->|"да"| kernel["Ядро выполняет<br/>операцию"]
     style app fill:#326ce5,color:#fff
     style seccomp fill:#673ab7,color:#fff
     style cap fill:#f4b400,color:#000
@@ -850,9 +875,11 @@ Pod с `Localhost`, найдите `SECCOMP`/kernel record и замените a
 3. Переключите AppArmor profile Pod из `enforce` в `complain` и объясните, почему `complain`
    нельзя показывать как доказательство защиты на экзамене (глава 16).
 4. **Смешанное задание.** Возьмите RBAC (глава 10, домен Cluster Hardening) и AppArmor/
-   seccomp (главы 16-17, этот домен): если пользователь имеет право `create pods` без
-   ограничения на `securityContext`, какая из двух защит - RBAC или AppArmor/seccomp -
-   реально остановит Pod с опасным syscall-профилем, и почему RBAC здесь бессилен?
+   seccomp (главы 16-17, этот домен): пользователь имеет RBAC `create pods`, а admission не
+   ограничивает `securityContext`. Почему RBAC сам не контролирует Linux syscalls? Может ли
+   пользователь запросить `Unconfined`/`privileged` и обойти доступный seccomp/AppArmor?
+   Какое admission enforcement (PSA `restricted`, ValidatingAdmissionPolicy, Gatekeeper,
+   Kyverno или platform equivalent) нужно, чтобы hardening нельзя было отключить в manifest?
 5. Задайте `seccompProfile.type: RuntimeDefault` для тестового Pod и объясните, чем это
    отличается от `Unconfined` в терминах allow-list/deny-list (глава 17).
 

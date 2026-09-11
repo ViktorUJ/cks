@@ -37,11 +37,11 @@ seccomp. Он также **не задаёт** CPU, memory или ephemeral-stor
 
 ```mermaid
 flowchart TB
-    vuln["Уязвимый процесс<br/>в контейнере"] --> sc["SecurityContext<br/>UID, capabilities, no_new_privs,<br/>read-only root"]
-    sc --> kernel["Ядро и container runtime"]
-    kernel --> aa["AppArmor<br/>какой объект и операция"]
-    kernel --> sec["seccomp<br/>какой syscall"]
-    kernel --> ns["namespaces<br/>не namespace ноды"]
+    vuln["Уязвимый процесс<br/>в контейнере"] --> sc["SecurityContext<br/>UID, capabilities,<br/>no_new_privs,<br/>read-only root"]
+    sc --> kernel["Ядро и<br/>container runtime"]
+    kernel --> aa["AppArmor<br/>какой объект<br/>и операция"]
+    kernel --> sec["seccomp<br/>какой<br/>syscall"]
+    kernel --> ns["namespaces<br/>не namespace<br/>ноды"]
     aa --> result["меньше доступных<br/>путей эскалации"]
     sec --> result
     ns --> result
@@ -340,13 +340,17 @@ DaemonSet без понимания его контракта: можно сло
 
 ```bash
 kubectl get pods -A -o json | jq -r '
-  .items[] | select(
-    .spec.hostPID == true or .spec.hostNetwork == true or .spec.hostIPC == true or
-    any(.spec.containers[]?; .securityContext.privileged == true)
-  ) | [.metadata.namespace, .metadata.name,
-       ("hostPID=" + ((.spec.hostPID // false)|tostring)),
-       ("hostNetwork=" + ((.spec.hostNetwork // false)|tostring)),
-       ("hostIPC=" + ((.spec.hostIPC // false)|tostring))] | @tsv'
+  def allContainers: ((.spec.containers // []) + (.spec.initContainers // []) + (.spec.ephemeralContainers // []));
+  .items[]
+  | [allContainers[] | select(.securityContext.privileged == true) | .name] as $privileged
+  | [(.spec.volumes // [])[] | select(.hostPath != null) | (.name + "=" + .hostPath.path)] as $hostPaths
+  | select(.spec.hostPID == true or .spec.hostNetwork == true or .spec.hostIPC == true or ($privileged|length)>0 or ($hostPaths|length)>0)
+  | [.metadata.namespace, .metadata.name,
+     ("hostPID=" + ((.spec.hostPID // false)|tostring)),
+     ("hostNetwork=" + ((.spec.hostNetwork // false)|tostring)),
+     ("hostIPC=" + ((.spec.hostIPC // false)|tostring)),
+     ("privileged=" + ($privileged|join(","))),
+     ("hostPath=" + ($hostPaths|join(",")))] | @tsv'
 ```
 
 Команда показывает кандидатов, но не verdict. Системный namespace и DaemonSet требуют
@@ -380,8 +384,12 @@ spec:
         drop: ["ALL"]
 ```
 
-Это Linux-only режим. Нельзя совместить его с `hostNetwork`, `hostPID` или `hostIPC`, а raw
-block volumes через `volumeDevices` также запрещены. Нужны idmapped mounts на filesystem ноды
+Это Linux-only режим. По умолчанию его нельзя совместить с `hostNetwork`, `hostPID` или
+`hostIPC`, а raw block volumes через `volumeDevices` также запрещены. В v1.36 alpha gate
+`UserNamespacesHostNetworkSupport` (default `false`) отдельно разрешает `hostNetwork: true`
+с `hostUsers: false`; `hostPID` и `hostIPC` остаются запрещены. Hardened baseline не должен
+полагаться на это alpha-исключение: такое сочетание требует явного gate, отдельного review и
+проверки threat model. Нужны idmapped mounts на filesystem ноды
 и всех volume, поддерживающий CRI/OCI runtime и совместимое ядро; в актуальной документации
 указаны containerd v2.0+, CRI-O v1.25+, runc v1.2+ или crun v1.9+. NFS не поддерживает
 idmapped mounts. Перед rollout проверьте эти условия на всех нодах, куда может попасть Pod.
@@ -396,11 +404,11 @@ idmapped mounts. Перед rollout проверьте эти условия н�
 
 ```mermaid
 flowchart TB
-    app["app<br/>root filesystem: read-only"] --> bin["/app и библиотеки<br/>из image: только чтение"]
-    app --> tmp["/tmp<br/>emptyDir Memory"]
-    app --> cache["/var/cache/app<br/>emptyDir с sizeLimit"]
-    app --> data["/data<br/>PVC при нужной persistence"]
-    tmp --> gone["Pod удалён → данные удалены"]
+    app["app<br/>root filesystem:<br/>read-only"] --> bin["/app и библиотеки<br/>из image:<br/>только чтение"]
+    app --> tmp["/tmp<br/>emptyDir<br/>Memory"]
+    app --> cache["/var/cache/app<br/>emptyDir<br/>с sizeLimit"]
+    app --> data["/data<br/>PVC при нужной<br/>persistence"]
+    tmp --> gone["Pod удалён →<br/>данные удалены"]
     cache --> gone
     style app fill:#326ce5,color:#fff
     style bin fill:#0f9d58,color:#fff
@@ -546,8 +554,10 @@ test, ожидаемый `EPERM`/`Operation not permitted` и проверку n
 ### 1. Сверить template и все containers
 
 ```bash
-# Template Deployment, а не случайно оставшийся старый Pod
-kubectl get deploy hardened-web -o yaml
+# Declarative intent текущего учебного Pod.
+kubectl get pod hardened-web -o yaml
+# В production source of truth управляемого workload — его controller template:
+# kubectl get deploy <deployment-name> -o yaml
 
 # Pod-level context и context каждого обычного/init container
 kubectl get pod hardened-web -o jsonpath='{.spec.securityContext}{"\n"}'
@@ -556,7 +566,9 @@ kubectl get pod hardened-web -o jsonpath='{range .spec.initContainers[*]}{.name}
 
 # Host namespaces и privileged flag надо искать отдельно
 kubectl get pod hardened-web -o jsonpath='{.spec.hostPID}{" "}{.spec.hostNetwork}{" "}{.spec.hostIPC}{"\n"}'
-kubectl get pod hardened-web -o json | jq '.spec.containers[] | {name, privileged: .securityContext.privileged}'
+kubectl get pod hardened-web -o json | jq '
+  ((.spec.containers // []) + (.spec.initContainers // []) + (.spec.ephemeralContainers // []))
+  | .[] | {name, privileged: (.securityContext.privileged // false)}'
 ```
 
 JSONPath покажет declared configuration. Для отсутствующего boolean поля пустой вывод не

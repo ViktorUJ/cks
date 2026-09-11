@@ -13,9 +13,11 @@ kubernetes:
 
 cilium:
   data_plane_helm_version: "1.20.1"
+  data_plane_latest_stable_checked: "1.20.1"
+  data_plane_latest_checked_at: "2026-09-10"
   cli_version: "v0.19.7"
-  latest_stable_checked: "1.20.1"
-  latest_checked_at: "2026-09-10"
+  cli_latest_stable_checked: "v0.20.0"
+  cli_latest_checked_at: "2026-09-11"
   pin_status: intentionally_pinned
   kubernetes:
     supported:
@@ -77,9 +79,22 @@ cosign:
 kubelinter:
   course_version: "0.8.3"
   latest_stable_checked: "0.8.3"
-  latest_checked_at: "2026-09-10"
+  latest_checked_at: "2026-09-11"
   pin_status: intentionally_pinned
   verify_before_release: true
+  known_security:
+    - id: "CVE-2026-33186"
+      advisory: "GHSA-p77j-4mvh-x3m3"
+      dependency: "google.golang.org/grpc v1.75.1 (indirect)"
+      fixed_in: "1.79.3"
+      status: affected_dependency_declared
+      course_reachability: not_observed
+      recheck_on_next_release: true
+      note: >
+        KubeLinter v0.8.3 declares an affected grpc-go dependency. The advisory requires
+        a gRPC server with path-based authorization and a default-allow policy shape; the
+        course invokes kube-linter only as a local manifest-lint CLI, so no matching
+        exploitable course path is currently identified.
   source: labs/111/worker/files/worker.sh
 
 kubesec:
@@ -111,15 +126,26 @@ falco:
     at falco.org/docs/setup/packages/.
 
 gvisor:
+  course_version: null
+  release_model: rolling
+  release_channel: release/latest
+  latest_checked_at: "2026-09-11"
+  pin_status: tracks_repository
   verify_before_release: true
   note: >
     Chapter 22 uses the apt package `runsc` or the `gvisor.tar.zstd` archive (multi-file layout
-    after changes to gVisor in July 2026). Verify that the layout is current before release:
+    after changes to gVisor in July 2026). Upstream publishes the release/latest channel rather
+    than a semver latest release; verify the layout and channel before release:
     gvisor.dev/docs/user_guide/install/.
 
 kata_containers:
+  course_version: null
+  latest_stable_checked: "4.1.0"
+  latest_checked_at: "2026-09-11"
+  pin_status: tracks_repository
+  verify_before_release: true
   install_path: "kata-deploy Helm chart"
   note: >
     Chapter 22 recommends the kata-deploy Helm chart as the primary Kubernetes install path;
     the runtime-rs shim (for example, kata-qemu-runtime-rs) is the current default instead of
-    the deprecated Go runtime.
+    the deprecated Go runtime. No kata-deploy chart version is pinned by the course.

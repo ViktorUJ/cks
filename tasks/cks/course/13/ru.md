@@ -172,225 +172,54 @@ CVE с меньшим CVSS, но без authentication в доступном и�
 
 ## 13.4. Безопасный `kubeadm` upgrade: control plane, затем ноды
 
-Ниже — security-последовательность, которая не пропускает ни исправление CVE, ни
-проверку его результата. `v1.36.x` здесь является **lab target**: замените его на точный поддерживаемый
-patch из проверенного advisory и своего репозитория пакетов; это не утверждение, что
-`v1.36` является текущей stable-версией.
+Не заучивайте и не копируйте самодельные package/repository scripts: конкретные команды
+зависят от target minor, ОС, package manager и состояния узла. На экзамене и в реальной
+работе откройте официальную документацию Kubernetes для нужной версии и последовательно
+выполните её шаги. Это надёжнее, чем пытаться восстановить команды по памяти.
 
-### До изменения
+### Официальный маршрут
 
-- Прочитайте advisory и release notes, проверьте support window, version skew, удалённые API,
-  совместимость CNI/CSI/CoreDNS и container runtime.
-- Проверьте health control plane, свободную ёмкость для evicted Pod, PDB и готовность
-  monitoring/alerting. Устраните уже существующие `NotReady` и `CrashLoopBackOff` до начала.
-- Проверьте backup и процедуру восстановления etcd; backup должен быть проверяемым, а не
-  только «успешно созданным файлом». Подготовьте tested rollback для пакетов и node image.
-- Воспроизведите процедуру в stage с теми же critical add-ons и workload. Не добавляйте
-  `--ignore-preflight-errors`, чтобы «пройти дальше», пока причина не понята и не одобрена.
+- [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/) — основной документ: выбор target version, первый и дополнительные control-plane узлы, проверка кластера и recovery.
+- [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) — отдельная последовательность для worker-ноды Linux.
+- [Changing the Kubernetes package repository](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/change-package-repository/) — используйте, когда target minor требует переключения `pkgs.k8s.io` repository.
+- [Safely Drain a Node](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/) — поведение `drain`, PodDisruptionBudget и DaemonSet.
+- [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/) — границы совместимости, если формулировка задания вызывает сомнение.
 
-```mermaid
-flowchart TB
-    plan["Advisory,<br/>fixed version,<br/>совместимость<br/>и backup"] --> cp["Control plane:<br/>kubeadm -><br/>plan/apply -><br/>cordon + drain -><br/>kubelet"]
-    cp --> health["Проверка API, nodes,<br/>system Pods и alerts"]
-    health --> node["Один рабочий узел:<br/>upgrade kubeadm -><br/>upgrade node"]
-    node --> drain["cordon + drain"]
-    drain --> workerKubelet["upgrade kubelet/<br/>kubectl -> restart"]
-    workerKubelet --> verify["Ready, версия<br/>workload"]
-    verify --> uncordon["uncordon и<br/>следующая нода"]
-    style plan fill:#673ab7,color:#fff
-    style cp fill:#326ce5,color:#fff
-    style health fill:#f4b400,color:#000
-    style drain fill:#db4437,color:#fff
-    style node fill:#326ce5,color:#fff
-    style verify fill:#0f9d58,color:#fff
-    style uncordon fill:#0f9d58,color:#fff
-```
+Если target minor отличается от current upstream, в документации переключите selector версии
+на соответствующую ветку: команды и package versions должны относиться именно к target
+release, а не к примеру из конспекта.
 
-### Control plane
+### Короткий экзаменационный маршрут
 
-На первом control-plane обновите пакет `kubeadm` до target-версии, выполните только
-предварительный расчёт, затем примените обновление. Канонический порядок для minor-upgrade:
-`kubeadm upgrade apply` → обновление CNI, если его compatibility matrix этого требует →
-`cordon` и `drain` перед заменой `kubelet` → target-пакеты kubelet/kubectl → restart и
-проверка → `uncordon`. Drain нельзя пропускать перед обновлением kubelet control-plane:
-он даёт PDB и capacity возможность остановить небезопасный rollout. Проверяйте, что в
-кластере есть ёмкость для выселенных workload.
+1. Прочитайте задание, определите текущую и целевую версии; не пропускайте minor-версии и
+   не нарушайте version skew.
+2. Откройте основной guide. На первом control-plane следуйте его шагам: обновите `kubeadm`,
+   выполните `kubeadm upgrade plan`, затем `kubeadm upgrade apply <target-version>`. Затем по
+   тому же guide выполните для этой ноды `drain`, обновление `kubelet`/`kubectl`, restart
+   kubelet, проверку node и control-plane components и `uncordon`.
+3. В HA обновляйте остальные control-plane ноды по одной через `kubeadm upgrade node`, после
+   чего для **каждой** повторите тот же lifecycle `drain` → kubelet/kubectl → restart →
+   проверка → `uncordon`. Убеждайтесь, что API остаётся доступен, и не переходите к worker,
+   пока control plane не healthy.
+4. Для каждой worker-ноды откройте Linux-node guide и выполняйте его по порядку: обновить
+   `kubeadm` → `kubeadm upgrade node` → `drain` → обновить `kubelet`/`kubectl` → restart
+   kubelet → проверить `Ready` и версию → `uncordon`.
+5. В конце подтвердите `Ready` всех нод и ожидаемые версии. Если `drain`, preflight или
+   health check не проходит, остановитесь и разберите причину; не добавляйте наугад
+   `--force`, `--disable-eviction` или `--ignore-preflight-errors`.
 
-Не используйте `--force` только для того, чтобы «продавить» непонятную ошибку drain.
-Если drain обнаружил Pod без controller или с отсутствующим managing resource, сначала
-идентифицируйте workload и подтвердите способ его восстановления. Только после явного
-принятия риска допустимо использовать `--force`. Не путайте это с `--disable-eviction`:
-этот флаг заставляет drain обходить Eviction API и проверки PodDisruptionBudget и не
-должен использоваться как обычный способ ускорить upgrade. Static Pods control plane не
-выселяются через `drain`.
+> 🎯 **CKS Core.** На экзамене документация — часть рабочего процесса: откройте guide,
+> сопоставьте текущий шаг с заданием и выполняйте его буквально. Не нужно создавать custom
+> automation или воспроизводить production change runbook.
 
-После `apply` и нужной проверки CNI установите target `kubelet` и `kubectl`, перезапустите
-kubelet, убедитесь в `Ready` и только тогда сделайте `uncordon`. В HA-кластере остальные control-plane ноды
-обновляют по одной через `kubeadm upgrade node`, с проверкой quorum и API между нодами. Не
-обновляйте все control-plane ноды одновременно.
+### Production boundary
 
-```bash
-# Пример Debian/Ubuntu. Сначала переключите фактически активный source на target minor,
-# затем обновите индекс и выберите точный patch из этого репозитория. `1.36.<PATCH>` и
-# `1.36.x-*` не являются copy-paste значениями.
-export TARGET_K8S_VERSION='v1.36.<PATCH>'
-export TARGET_K8S_MINOR='v1.36'
-KEYRING=/etc/apt/keyrings/kubernetes-apt-keyring.gpg
-K8S_SOURCE_FILES=$(sudo grep -RIlE --include='*.list' --include='*.sources' \
-  'https://(pkgs\.k8s\.io|pkgs\.kubernetes\.io|packages\.kubernetes\.io)/core:/stable:/v1\.[0-9]+/deb/' \
-  /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null | sort -u || true)
+Перед production change дополнительно читают advisory и release notes, проверяют backup,
+CNI/CSI/runtime compatibility, capacity и tested rollback. Это не меняет порядок `kubeadm`,
+но определяет, можно ли безопасно начинать rollout.
 
-# Один signing key используется для всех minor-веток. Создайте keyring лишь при первом
-# подключении репозитория; --yes исключает интерактивный вопрос о перезаписи.
-if ! sudo test -s "$KEYRING"; then
-  sudo install -d -m 0755 /etc/apt/keyrings
-  curl -fsSL "https://pkgs.k8s.io/core:/stable:/${TARGET_K8S_MINOR}/deb/Release.key" \
-    | sudo gpg --dearmor --yes -o "$KEYRING"
-  sudo chmod 0644 "$KEYRING"
-fi
-
-# Меняем minor в реально активном source, а не всегда создаём kubernetes.list.
-if [ -n "$K8S_SOURCE_FILES" ]; then
-  printf '%s\n' "$K8S_SOURCE_FILES"
-  while IFS= read -r source_file; do
-    sudo sed -Ei "s#https://(pkgs\.k8s\.io|pkgs\.kubernetes\.io|packages\.kubernetes\.io)/core:/stable:/v1\.[0-9]+/deb/#https://pkgs.k8s.io/core:/stable:/${TARGET_K8S_MINOR}/deb/#g" "$source_file"
-  done <<< "$K8S_SOURCE_FILES"
-else
-  echo "deb [signed-by=$KEYRING] https://pkgs.k8s.io/core:/stable:/${TARGET_K8S_MINOR}/deb/ /" \
-    | sudo tee /etc/apt/sources.list.d/kubernetes.list >/dev/null
-fi
-sudo apt-get update
-apt-cache madison kubeadm
-export TARGET_K8S_PACKAGE_VERSION='<точная-версия-из-целевого-репозитория>'
-
-# На control-plane-1: kubeadm можно обновить до apply, kubelet -- только после drain.
-sudo apt-mark unhold kubeadm
-sudo apt-get install -y kubeadm="$TARGET_K8S_PACKAGE_VERSION"
-sudo apt-mark hold kubeadm
-sudo kubeadm upgrade plan
-
-# На control-plane-1: сначала обновляется control plane.
-sudo kubeadm upgrade apply "$TARGET_K8S_VERSION" --yes
-# Если матрица CNI требует обновления, выполните его здесь и подтвердите сеть.
-
-# С административной машины: только перед minor-обновлением kubelet.
-kubectl cordon control-plane-1
-kubectl drain control-plane-1 --ignore-daemonsets
-
-# На control-plane-1.
-sudo apt-mark unhold kubelet kubectl
-sudo apt-get install -y kubelet="$TARGET_K8S_PACKAGE_VERSION" kubectl="$TARGET_K8S_PACKAGE_VERSION"
-sudo apt-mark hold kubelet kubectl
-sudo systemctl daemon-reload
-sudo systemctl restart kubelet
-
-# С административной машины: только после Ready и проверки версии.
-kubectl get node control-plane-1 -o wide
-kubectl uncordon control-plane-1
-```
-
-### Worker-ноды
-
-К рабочим узлам переходят только после healthy control plane. Канонический порядок для
-каждой worker-ноды: обновить `kubeadm` → выполнить `kubeadm upgrade node` (**не** `apply`) →
-вывести ноду из планирования и освободить её → обновить `kubelet` и `kubectl` →
-перезапустить kubelet → проверить `Ready` и версию → `uncordon`. Повторяют по одной ноде,
-соблюдая PDB и требуемую capacity.
-
-```bash
-# На worker-1, пример Debian/Ubuntu. Репозиторий pkgs.k8s.io привязан к minor-ветке:
-# поменяйте minor в фактически активном source, затем обновите индекс и выбирайте patch.
-export TARGET_K8S_VERSION='v1.36.<PATCH>'
-export TARGET_K8S_MINOR='v1.36'
-KEYRING=/etc/apt/keyrings/kubernetes-apt-keyring.gpg
-K8S_SOURCE_FILES=$(sudo grep -RIlE --include='*.list' --include='*.sources' \
-  'https://(pkgs\.k8s\.io|pkgs\.kubernetes\.io|packages\.kubernetes\.io)/core:/stable:/v1\.[0-9]+/deb/' \
-  /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null | sort -u || true)
-
-# Обычная minor-смена переиспользует signing key. Импортируйте и сделайте keyring читаемым
-# для apt только при первом подключении; --yes исключает интерактивную перезапись.
-if ! sudo test -s "$KEYRING"; then
-  sudo install -d -m 0755 /etc/apt/keyrings
-  curl -fsSL "https://pkgs.k8s.io/core:/stable:/${TARGET_K8S_MINOR}/deb/Release.key" \
-    | sudo gpg --dearmor --yes -o "$KEYRING"
-  sudo chmod 0644 "$KEYRING"
-fi
-
-if [ -n "$K8S_SOURCE_FILES" ]; then
-  printf '%s\n' "$K8S_SOURCE_FILES"
-  while IFS= read -r source_file; do
-    sudo sed -Ei "s#https://(pkgs\.k8s\.io|pkgs\.kubernetes\.io|packages\.kubernetes\.io)/core:/stable:/v1\.[0-9]+/deb/#https://pkgs.k8s.io/core:/stable:/${TARGET_K8S_MINOR}/deb/#g" "$source_file"
-  done <<< "$K8S_SOURCE_FILES"
-else
-  echo "deb [signed-by=$KEYRING] https://pkgs.k8s.io/core:/stable:/${TARGET_K8S_MINOR}/deb/ /" \
-    | sudo tee /etc/apt/sources.list.d/kubernetes.list >/dev/null
-fi
-sudo apt-get update
-apt-cache madison kubeadm
-export TARGET_K8S_PACKAGE_VERSION='<точная-версия-из-целевого-репозитория>'
-
-# Сначала обновите kubeadm и примените его node-конфигурацию.
-sudo apt-mark unhold kubeadm
-sudo apt-get install -y kubeadm="$TARGET_K8S_PACKAGE_VERSION"
-sudo apt-mark hold kubeadm
-sudo kubeadm upgrade node
-
-# С административной машины: --delete-emptydir-data добавляйте только после принятия
-# потери local emptyDir. --force нужен только для явно разобранных unmanaged Pod /
-# missing controller. Не используйте --disable-eviction для обхода PDB в обычном rollout.
-kubectl cordon worker-1
-kubectl drain worker-1 --ignore-daemonsets
-
-# На worker-1: kubelet и kubectl обновляют вместе только после drain.
-sudo apt-mark unhold kubelet kubectl
-sudo apt-get install -y kubelet="$TARGET_K8S_PACKAGE_VERSION" kubectl="$TARGET_K8S_PACKAGE_VERSION"
-sudo apt-mark hold kubelet kubectl
-sudo systemctl daemon-reload
-sudo systemctl restart kubelet
-
-# С административной машины: только после Ready, версии и workload smoke test.
-kubectl get node worker-1 -o wide
-kubectl uncordon worker-1
-```
-
-Для RPM-дистрибутива сначала проверьте и при необходимости переключите vendor-репозиторий
-на целевую minor-ветку, затем выберите **явную точную** версию. Используйте эквиваленты
-`kubeadm-<TARGET_K8S_PACKAGE_VERSION>`, `kubelet-<TARGET_K8S_PACKAGE_VERSION>` и
-`kubectl-<TARGET_K8S_PACKAGE_VERSION>` в том же порядке: `kubeadm upgrade node` → drain →
-обновление kubelet/kubectl → restart kubelet → проверка → `uncordon`. Не оставляйте worker
-на старом kubelet из-за того, что `kubeadm upgrade node` завершился успешно: эта команда не
-устанавливает пакеты.
-
-### Проверка результата и диагностика
-
-```bash
-kubectl get nodes -o wide
-kubectl get --raw='/readyz?verbose'
-
-# Gate завершается с ненулевым кодом для Failed/Pending/Unknown Pod или Running Pod без Ready=True.
-# Успешно завершённые Pods Job имеют phase=Succeeded и намеренно не считаются ошибкой.
-kubectl get pods -A -o json | jq -e '
-  [ .items[]
-    | select(
-        .status.phase == "Failed" or
-        .status.phase == "Pending" or
-        .status.phase == "Unknown" or
-        (.status.phase == "Running" and
-          (any(.status.conditions[]?; .type == "Ready" and .status == "True") | not))
-      )
-  ] | length == 0
-'
-kubectl get events -A --sort-by=.lastTimestamp
-kubectl version --output=yaml
-```
-
-Проверьте отдельно: API server готов, все ноды `Ready`, версии соответствуют плану, `kube-system`
-и критичные DaemonSet/Deployment восстановились, workload проходит smoke test, а alerts не
-сигнализируют об ошибках runtime, CNI, DNS или storage. Ошибка `NotReady` после обновления
-чаще требует смотреть `journalctl -u kubelet`, статус `containerd`, cgroup driver, CRI socket
-и логи CNI - не повторять `kubeadm` вслепую.
-
-> 🔬 Runtime, kernel, ОС и cgroup v2 образуют совместимый node-image contract; проверяйте его в stage.
+> 🏭 Production. В production фиксируют evidence, делают stage и progressive rollout; детали
+> зависят от platform и не являются экзаменационным набором команд.
 
 ## 13.5. Runtime и ОС: Kubernetes не единственный источник CVE
 
@@ -435,8 +264,11 @@ set -euo pipefail
 test "$(stat -fc %T /sys/fs/cgroup)" = 'cgroup2fs'
 sudo systemctl cat kubelet containerd crio 2>/dev/null || true
 KUBELET_PID=$(pgrep -xo kubelet) || { echo 'kubelet process not found' >&2; exit 2; }
-sudo tr '\0' '\n' < "/proc/$KUBELET_PID/cmdline" \
-  | grep -E -- '^--config(=|$)|^--config-dir(=|$)' || true
+# `sudo cat` открывает /proc как root. `pipefail` сохраняет ошибку чтения, тогда как
+# отсутствие --config/--config-dir остаётся допустимым и потому только grep получает || true.
+sudo cat "/proc/$KUBELET_PID/cmdline" \
+  | tr '\0' '\n' \
+  | { grep -E -- '^--config(=|$)|^--config-dir(=|$)' || true; }
 sudo journalctl -u kubelet -b --no-pager | grep -Ei 'cgroup|RuntimeConfig' || true
 ```
 
@@ -480,6 +312,12 @@ regression и безопасно откатиться.
 - **Patch management как процесс.** Команда подписывается на upstream и vendor advisories,
   связывает CVE с inventory, назначает severity-based SLA, владельца, окно rollout и
   подтверждение закрытия. Это лучше разовых «дней обновления» раз в год.
+- **После публикации patch риск растёт.** Diff между уязвимой и исправленной версиями часто
+  сужает область поиска причины CVE и облегчает reverse engineering. Поэтому известная,
+  доступная атакующему и ещё не устранённая CVE после выхода fixed patch обычно получает
+  более высокий приоритет: вероятность появления или адаптации exploit возрастает. AI-assisted
+  анализ дополнительно снижает стоимость и время такого исследования, но сам по себе не
+  доказывает exploitability; всё равно оценивают reachability, prerequisites и ценность актива.
 - **Короткий lag от релиза.** Регулярный переход в пределах поддерживаемого окна N/N-1/N-2
   уменьшает размер каждого изменения и оставляет возможность спокойно тестировать critical
   CVE, а не проводить multi-hop upgrade ночью.
@@ -539,12 +377,12 @@ apply`, на worker - `kubeadm upgrade node`.
 версии, проверяет EOL и зависимости, тестирует node image, идёт rolling-волной и доказывает
 после неё и исправленную версию, и работоспособность сервисов.
 
-> 🏭 Gate сохраняет before/after evidence версий, readiness, PSS, admission/RBAC и security-флагов API server; он не заменяет tested rollback.
+> 🏭 Production gate фиксирует evidence версий, readiness и health; он не заменяет tested rollback.
 
 ## 13.11. Самостоятельная практика: security upgrade gate
 
 Это self-contained контролируемая simulation для kubeadm-кластера. Она не заменяет
-реальное обновление пакетов: цель - пройти все security gates и получить артефакты до/после,
+реальное обновление пакетов: цель - пройти CKS-ориентированные preflight gates,
 не меняя версию учебного кластера. Выполняйте её только в одноразовом стенде; пути
 сертификатов etcd сначала сверяйте с manifest вашего control plane.
 
@@ -552,37 +390,11 @@ apply`, на worker - `kubeadm upgrade node`.
 
 ```bash
 export UPGRADE_EVIDENCE=/tmp/cks-upgrade-security
-mkdir -p "$UPGRADE_EVIDENCE"/{before,after}
+mkdir -p "$UPGRADE_EVIDENCE/before"
 
 kubectl version -o yaml > "$UPGRADE_EVIDENCE/before/version.yaml"
 kubectl get nodes -o wide > "$UPGRADE_EVIDENCE/before/nodes.txt"
 kubectl get --raw='/readyz?verbose' > "$UPGRADE_EVIDENCE/before/readyz.txt"
-kubectl get ns -o json > "$UPGRADE_EVIDENCE/before/namespaces.json"
-kubectl get clusterrole,clusterrolebinding -o yaml > "$UPGRADE_EVIDENCE/before/rbac.yaml"
-# MutatingAdmissionPolicy may be not served (for example, the v1.35 beta feature was off
-# by default). Preserve an explicit marker instead of failing the whole pre-upgrade snapshot.
-snapshot_admission_resources() {
-  local phase=$1 resource served
-  served=$(kubectl api-resources --api-group=admissionregistration.k8s.io -o name)
-  {
-    for resource in validatingadmissionpolicies validatingadmissionpolicybindings \
-      validatingwebhookconfigurations mutatingwebhookconfigurations; do
-      printf '# resource: %s\n' "$resource"
-      kubectl get "$resource" -o yaml
-      printf '%s\n' '---'
-    done
-    for resource in mutatingadmissionpolicies mutatingadmissionpolicybindings; do
-      printf '# resource: %s\n' "$resource"
-      if grep -Fxq "${resource}.admissionregistration.k8s.io" <<< "$served"; then
-        kubectl get "$resource" -o yaml
-      else
-        printf '# NOT_SERVED\n'
-      fi
-      printf '%s\n' '---'
-    done
-  } > "$UPGRADE_EVIDENCE/$phase/admission.yaml"
-}
-snapshot_admission_resources before
 ```
 
 ### Gate 1: kubelet version skew и план
@@ -615,6 +427,7 @@ sudo kubeadm upgrade plan | tee "$UPGRADE_EVIDENCE/before/kubeadm-upgrade-plan.t
 `latest` непосредственно во время change window.
 
 ```bash
+set -euo pipefail
 command -v etcdctl >/dev/null 2>&1 || {
   echo 'ERROR: etcdctl is not installed on this control-plane node' >&2
   exit 1
@@ -633,6 +446,7 @@ etcdutl version
 репетируйте её в отдельном кластере.
 
 ```bash
+set -euo pipefail
 sudo ETCDCTL_API=3 etcdctl snapshot save /var/backups/etcd-pre-upgrade.db \
   --endpoints=https://127.0.0.1:2379 \
   --cacert=/etc/kubernetes/pki/etcd/ca.crt \
@@ -653,459 +467,43 @@ inventory. Для production HA агрегируйте scrape **всех** API s
 PromQL `max by (group, version, resource, subresource, removed_release)
 (apiserver_requested_deprecated_apis) > 0`) либо сверяйте audit events каждого API server.
 Любая строка со значением больше нуля получает владельца и remediation до upgrade. Зафиксируйте
-PSS, admission и критические RBAC-разрешения. Namespace labels — только часть effective PSS:
-cluster-wide defaults и exemptions могут задаваться через `PodSecurityConfiguration` в файле,
-переданном API server флагом `--admission-control-config-file`; этот файл сохраняется в Gate 4.
+admission и критические RBAC-разрешения; detailed Pod Security Admission configuration разбирается
+в главе 19, а не в этом upgrade practice.
 
 ```bash
+set -euo pipefail
 # Это evidence только выбранного API server backend; в HA используйте описанную выше агрегацию.
 kubectl get --raw /metrics \
   | awk '/^apiserver_requested_deprecated_apis/ && $NF > 0' \
   | tee "$UPGRADE_EVIDENCE/before/deprecated-apis.txt"
 
-kubectl auth can-i --list --as=system:serviceaccount:default:default \
-  > "$UPGRADE_EVIDENCE/before/default-sa-can-i.txt"
-# Effective PSS map (labels + defaults + version + exemptions) is built in Gate 4 after
-# the active kube-apiserver configuration has been resolved from its actual volume mounts.
-kubectl api-resources --api-group=admissionregistration.k8s.io \
-  > "$UPGRADE_EVIDENCE/before/admission-resources.txt"
 ```
 
-### Gate 4: security-флаги static Pod manifests не должны исчезнуть
+### Production note: сохранность custom security flags
 
-Главная экзаменационная ловушка `kubeadm upgrade`: команда переписывает static Pod
-manifests control plane из своей собственной конфигурации (`ClusterConfiguration` в
-`kubeadm-config` ConfigMap), а не просто патчит существующий файл. Кастомные флаги
-`--audit-policy-file`, `--audit-log-path`, `--encryption-provider-config` (KMS/at-rest
-encryption) и `--profiling=false`, добавленные вручную в manifest **после** первоначальной
-установки кластера, но не отражённые в `kubeadm-config`, могут быть потеряны при следующем
-`kubeadm upgrade apply` - кластер останется API-совместим и `Ready`, но de facto потеряет
-audit trail, шифрование Secret at rest или debug-профилирование останется включённым.
-Зафиксируйте полный список аргументов **до** upgrade. В HA-кластере `.items[0]` может
-выбрать разную control-plane ноду до и после upgrade, поэтому явно закрепите проверяемую
-ноду через `--field-selector`:
+В self-hosted `kubeadm` production upgrade команда может переписать static Pod manifests из
+`ClusterConfiguration`. Поэтому custom audit, encryption и profiling settings должны быть
+зафиксированы в Infrastructure as Code и отдельно проверены в change/rollback procedure.
 
-```bash
-export CONTROL_PLANE_NODE='control-plane-1'
-
-# Baseline допустим только от ровно одного Ready kube-apiserver на целевой ноде.
-# Без этой проверки .items[0] для пустого списка даёт пустой файл с jq exit code 0.
-BEFORE_APISERVER_JSON="$(
-  kubectl -n kube-system get pods -l component=kube-apiserver \
-    --field-selector "spec.nodeName=${CONTROL_PLANE_NODE}" \
-    -o json
-)"
-printf '%s\n' "$BEFORE_APISERVER_JSON" | jq -e '
-  (.items | length) == 1 and
-  any(.items[0].status.conditions[]?;
-      .type == "Ready" and .status == "True")
-' > "$UPGRADE_EVIDENCE/before/apiserver-node-gate.txt"
-printf '%s\n' "$BEFORE_APISERVER_JSON" \
-  | jq -r '.items[0].spec.containers[0].command[]?' \
-  | sort > "$UPGRADE_EVIDENCE/before/apiserver-flags.txt"
-grep -E '^--(audit-policy-file|audit-log-path|encryption-provider-config|profiling)' \
-  "$UPGRADE_EVIDENCE/before/apiserver-flags.txt" \
-  > "$UPGRADE_EVIDENCE/before/apiserver-security-flags.txt" || true
-
-# Effective PSS включает labels namespace и PodSecurityConfiguration с defaults/exemptions.
-# Выполняйте этот блок на CONTROL_PLANE_NODE. Если путь из container argv не совпадает с
-# hostPath static Pod manifest, сначала сопоставьте его с hostPath: иначе sudo test остановит gate.
-# PyYAML is used only as a parser for the documented AdmissionConfiguration schema. A
-# missing parser or an ambiguous mount/path must stop the gate; it must never yield PASS.
-python3 -c 'import yaml' || {
-  echo 'ERROR: Python PyYAML is required to inspect effective PodSecurity configuration' >&2
-  exit 2
-}
-
-resolve_apiserver_host_path() {
-  local container_path=$1 apiserver_json=$2 mapping host_path sub_path relative_path
-  mapping=$(printf '%s\n' "$apiserver_json" | jq -ce --arg path "$container_path" '
-    def relative_to_mount($path; $mount):
-      if $path == $mount then "" else ($path | ltrimstr($mount + "/")) end;
-    .items[0] as $pod |
-    [ $pod.spec.containers[0].volumeMounts[]? as $mount
-      | ($mount.mountPath) as $mount_path
-      | select($path == $mount_path or ($path | startswith($mount_path + "/")))
-      | ($pod.spec.volumes[]? | select(.name == $mount.name and .hostPath.path? != null)) as $volume
-      | {mountPath: $mount_path, hostPath: $volume.hostPath.path,
-         subPath: ($mount.subPath // ""),
-         relativePath: relative_to_mount($path; $mount_path)}
-    ] | sort_by(.mountPath | length) | reverse as $candidates |
-    ($candidates[0].mountPath) as $longest |
-    [$candidates[] | select(.mountPath == $longest)] |
-    if length == 1 then .[0] else error("no unique hostPath mapping") end
-  ') || {
-    echo "ERROR: cannot map kube-apiserver container path to one hostPath: $container_path" >&2
-    return 2
-  }
-  IFS=$'\t' read -r host_path sub_path relative_path < <(
-    jq -r '[.hostPath, .subPath, .relativePath] | @tsv' <<< "$mapping"
-  )
-  for component in "$sub_path" "$relative_path"; do
-    case "/$component/" in
-      *'/../'*|*/..|../*)
-        echo 'ERROR: unsafe relative path in kube-apiserver volume mapping' >&2
-        return 2
-        ;;
-    esac
-  done
-  printf '%s%s%s\n' "$host_path" \
-    "${sub_path:+/$sub_path}" "${relative_path:+/$relative_path}"
-}
-
-capture_admission_control_config() {
-  local phase=$1 apiserver_json=$2 config_container_path='' config_host_path='' i disabled='false'
-  local plugin_kind plugin_path='' plugin_container_path='' plugin_host_path=''
-  local -a argv=()
-  mapfile -t argv < <(printf '%s\n' "$apiserver_json" \
-    | jq -r '.items[0].spec.containers[0].command[]?')
-  printf '%s\n' "${argv[@]}" \
-    | grep -E '^--(admission-control-config-file|disable-admission-plugins)(=|$)' \
-    > "$UPGRADE_EVIDENCE/$phase/pss-admission-flags.txt" || true
-
-  for ((i = 0; i < ${#argv[@]}; i++)); do
-    case "${argv[i]}" in
-      --admission-control-config-file=*)
-        [[ -z "$config_container_path" ]] || { echo 'duplicate admission-control config flag' >&2; return 2; }
-        config_container_path=${argv[i]#--admission-control-config-file=}
-        ;;
-      --admission-control-config-file)
-        (( i + 1 < ${#argv[@]} )) || { echo 'missing admission-control config path' >&2; return 2; }
-        [[ -z "$config_container_path" ]] || { echo 'duplicate admission-control config flag' >&2; return 2; }
-        i=$((i + 1))
-        config_container_path=${argv[i]}
-        ;;
-      --disable-admission-plugins=*)
-        [[ ",${argv[i]#--disable-admission-plugins=}," == *,PodSecurity,* ]] && disabled='true'
-        ;;
-      --disable-admission-plugins)
-        (( i + 1 < ${#argv[@]} )) || { echo 'missing disabled admission plugin list' >&2; return 2; }
-        i=$((i + 1))
-        [[ ",${argv[i]}," == *,PodSecurity,* ]] && disabled='true'
-        ;;
-    esac
-  done
-  if [[ "$disabled" == true ]]; then
-    printf 'PodSecurity=DISABLED\n' > "$UPGRADE_EVIDENCE/$phase/pss-admission-status.txt"
-    echo 'ERROR: PodSecurity is disabled through --disable-admission-plugins' >&2
-    return 1
-  fi
-  printf 'PodSecurity=ENABLED\n' > "$UPGRADE_EVIDENCE/$phase/pss-admission-status.txt"
-
-  if [[ -z "$config_container_path" ]]; then
-    printf 'not-set\n' > "$UPGRADE_EVIDENCE/$phase/admission-control-config-path.txt"
-    printf 'admission-control-config-file: not-set\n' \
-      > "$UPGRADE_EVIDENCE/$phase/admission-control-config.yaml"
-    python3 - "$UPGRADE_EVIDENCE/$phase/pss-effective-config.json" <<'PYTHON'
-import json, sys
-json.dump({"source": "apiserver-defaults", "defaults": {
-    "enforce": "privileged", "enforce-version": "latest",
-    "audit": "privileged", "audit-version": "latest",
-    "warn": "privileged", "warn-version": "latest",
-}, "exemptions": {"usernames": [], "runtimeClasses": [], "namespaces": []}},
-    open(sys.argv[1], "w"), sort_keys=True)
-PYTHON
-  else
-    [[ "$config_container_path" == /* ]] || { echo 'admission-control config path is not absolute' >&2; return 2; }
-    config_host_path=$(resolve_apiserver_host_path "$config_container_path" "$apiserver_json")
-    printf '%s\n' "$config_container_path -> $config_host_path" \
-      > "$UPGRADE_EVIDENCE/$phase/admission-control-config-path.txt"
-    sudo cat -- "$config_host_path" \
-      > "$UPGRADE_EVIDENCE/$phase/admission-control-config.yaml"
-    python3 - "$UPGRADE_EVIDENCE/$phase/admission-control-config.yaml" \
-      "$UPGRADE_EVIDENCE/$phase/pss-plugin-reference.json" <<'PYTHON'
-import json, sys, yaml
-config = yaml.safe_load(open(sys.argv[1])) or {}
-plugins = [p for p in config.get("plugins", []) if p.get("name") == "PodSecurity"]
-if len(plugins) > 1:
-    raise SystemExit("multiple PodSecurity plugin configurations")
-if not plugins:
-    result = {"kind": "default"}
-else:
-    plugin = plugins[0]
-    if plugin.get("configuration") is not None:
-        result = {"kind": "embedded", "configuration": plugin["configuration"]}
-    elif plugin.get("path"):
-        result = {"kind": "path", "path": plugin["path"]}
-    else:
-        result = {"kind": "default"}
-json.dump(result, open(sys.argv[2], "w"), sort_keys=True)
-PYTHON
-    plugin_kind=$(jq -r '.kind' "$UPGRADE_EVIDENCE/$phase/pss-plugin-reference.json")
-    if [[ "$plugin_kind" == path ]]; then
-      plugin_path=$(jq -r '.path' "$UPGRADE_EVIDENCE/$phase/pss-plugin-reference.json")
-      # Kubernetes resolves a relative plugin path against the directory of the primary
-      # --admission-control-config-file. Normalize first, then map the resulting absolute
-      # container path through the static Pod hostPath mounts.
-      plugin_container_path=$(python3 - "$config_container_path" "$plugin_path" <<'PYTHON'
-import posixpath, sys
-config_path, plugin_path = sys.argv[1:]
-base_dir = posixpath.dirname(config_path)
-print(posixpath.normpath(plugin_path if plugin_path.startswith("/") else
-                         posixpath.join(base_dir, plugin_path)))
-PYTHON
-)
-      [[ "$plugin_container_path" == /* ]] || { echo 'resolved PodSecurity plugin path is not absolute' >&2; return 2; }
-      plugin_host_path=$(resolve_apiserver_host_path "$plugin_container_path" "$apiserver_json")
-      printf '%s\n' "$plugin_path -> $plugin_container_path -> $plugin_host_path" \
-        > "$UPGRADE_EVIDENCE/$phase/podsecurity-config-path.txt"
-      sudo cat -- "$plugin_host_path" \
-        > "$UPGRADE_EVIDENCE/$phase/podsecurity-config.yaml"
-    else
-      printf '%s\n' "$plugin_kind" > "$UPGRADE_EVIDENCE/$phase/podsecurity-config-path.txt"
-    fi
-    python3 - "$UPGRADE_EVIDENCE/$phase/pss-plugin-reference.json" \
-      "$UPGRADE_EVIDENCE/$phase/podsecurity-config.yaml" \
-      "$UPGRADE_EVIDENCE/$phase/pss-effective-config.json" <<'PYTHON'
-import json, os, sys, yaml
-reference_path, nested_path, output_path = sys.argv[1:]
-reference = json.load(open(reference_path))
-kind = reference["kind"]
-if kind == "embedded":
-    config = reference["configuration"] or {}
-elif kind == "path":
-    config = yaml.safe_load(open(nested_path)) or {}
-elif kind == "default":
-    config = {}
-else:
-    raise SystemExit(f"unknown PodSecurity config source: {kind}")
-defaults = config.get("defaults", {}) or {}
-exemptions = config.get("exemptions", {}) or {}
-if not isinstance(defaults, dict) or not isinstance(exemptions, dict):
-    raise SystemExit("PodSecurity defaults/exemptions must be mappings")
-def normalized_exemption(name):
-    values = exemptions.get(name, []) or []
-    if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
-        raise SystemExit(f"PodSecurity exemptions.{name} must be a list of strings")
-    return sorted(values)
-effective = {
-    "source": kind,
-    "defaults": {
-        "enforce": defaults.get("enforce", "privileged"),
-        "enforce-version": defaults.get("enforce-version", "latest"),
-        "audit": defaults.get("audit", "privileged"),
-        "audit-version": defaults.get("audit-version", "latest"),
-        "warn": defaults.get("warn", "privileged"),
-        "warn-version": defaults.get("warn-version", "latest"),
-    },
-    "exemptions": {
-        "usernames": normalized_exemption("usernames"),
-        "runtimeClasses": normalized_exemption("runtimeClasses"),
-        "namespaces": normalized_exemption("namespaces"),
-    },
-}
-json.dump(effective, open(output_path, "w"), sort_keys=True)
-PYTHON
-  fi
-  sha256sum "$UPGRADE_EVIDENCE/$phase/admission-control-config.yaml" \
-    > "$UPGRADE_EVIDENCE/$phase/admission-control-config.sha256"
-  [[ -f "$UPGRADE_EVIDENCE/$phase/podsecurity-config.yaml" ]] && \
-    sha256sum "$UPGRADE_EVIDENCE/$phase/podsecurity-config.yaml" \
-      > "$UPGRADE_EVIDENCE/$phase/podsecurity-config.sha256" || true
-  python3 - "$UPGRADE_EVIDENCE/$phase/namespaces.json" \
-    "$UPGRADE_EVIDENCE/$phase/pss-effective-config.json" \
-    "$UPGRADE_EVIDENCE/$phase/pss-effective.json" <<'PYTHON'
-import json, sys
-namespaces = json.load(open(sys.argv[1]))
-config = json.load(open(sys.argv[2]))
-defaults = config["defaults"]
-items = []
-for item in namespaces.get("items", []):
-    labels = item.get("metadata", {}).get("labels", {})
-    level = labels.get("pod-security.kubernetes.io/enforce") or defaults["enforce"]
-    version = labels.get("pod-security.kubernetes.io/enforce-version")
-    if not version:
-        version = "latest" if labels.get("pod-security.kubernetes.io/enforce") else defaults["enforce-version"]
-    items.append({"namespace": item["metadata"]["name"], "enforce": level,
-                  "enforceVersion": version,
-                  "source": "namespace-label" if labels.get("pod-security.kubernetes.io/enforce") else "cluster-default"})
-json.dump(sorted(items, key=lambda entry: entry["namespace"]), open(sys.argv[3], "w"), sort_keys=True)
-PYTHON
-}
-capture_admission_control_config before "$BEFORE_APISERVER_JSON"
-```
-
-`grep` завершается кодом `1`, если ни одна строка не совпала; под `set -e` это без `|| true`
-останавливает скрипт раньше собственной проверки. `|| true` сохраняет корректное поведение
-для обоих исходов: список флагов может быть пустым (это отдельная находка) или непустым.
-
-Если этот список пуст в вашем кластере - это отдельная находка: значит, audit/KMS/profiling
-hardening ещё не применены, и сравнение после upgrade окажется тривиальным. В таком случае
-сначала настройте нужные флаги (главы 07, 09, 32) и только после этого выполняйте upgrade
-gate осмысленно.
+> 🏭 **Production.** Это operational control для конкретной platform implementation, не 🎯 CKS
+> Core и не обязательный before/after static-Pod runbook этой главы.
 
 ### Контролируемая simulation и post-upgrade validation
 
-Отметьте simulation, ещё раз выполните те же probes как если бы control plane и один
-рабочий узел уже прошли rolling upgrade. Сравнение должно показать неизменившийся security
-posture; health обязан быть успешным. Node gate ниже возвращает ненулевой код, если у любой
-ноды condition `Ready=False` (а также если condition `Ready=True` отсутствует). При реальном
-upgrade между блоками выполняются
-`kubeadm upgrade apply` для первого control plane и `kubeadm upgrade node` для остальных
-узлов в порядке из 13.4.
+В учебной simulation не нужен отдельный Bash runbook для post-upgrade evidence: он отвлекает
+от экзаменационного порядка действий. После указанного в задании upgrade-процесса подтвердите,
+что control plane и kubelet имеют ожидаемые версии и соблюдают version skew, `/readyz` успешен,
+а все ноды `Ready`. Затем проверьте `kube-system` и одну критичную рабочую нагрузку; при
+проблеме остановитесь, соберите события и не переходите к следующей ноде.
 
-```bash
-set -euo pipefail
-printf 'mode=controlled-simulation\nserver_minor=%s\ntarget_minor=%s\n' \
-  "$SERVER_MINOR" "$((SERVER_MINOR + 1))" > "$UPGRADE_EVIDENCE/simulation.txt"
+Для реального rollout дополнительно сохраняют точные версии до/после, статус проверенного
+etcd snapshot, результаты health/smoke tests и tested rollback. Изменения custom RBAC или
+admission policy сверяют по project-specific процедуре, а не пытаются признать безопасными
+общим YAML diff.
 
-kubectl get --raw='/readyz?verbose' > "$UPGRADE_EVIDENCE/after/readyz.txt"
-kubectl get nodes -o wide > "$UPGRADE_EVIDENCE/after/nodes.txt"
-kubectl get ns -o json > "$UPGRADE_EVIDENCE/after/namespaces.json"
-kubectl get clusterrole,clusterrolebinding -o yaml > "$UPGRADE_EVIDENCE/after/rbac.yaml"
-snapshot_admission_resources after
-kubectl auth can-i --list --as=system:serviceaccount:default:default \
-  > "$UPGRADE_EVIDENCE/after/default-sa-can-i.txt"
-
-# Та же control-plane нода, что и в блоке before. Сначала требуем ровно один Ready
-# kube-apiserver; только затем извлекаем argv, чтобы пустой список не стал false-PASS.
-AFTER_APISERVER_JSON="$(
-  kubectl -n kube-system get pods -l component=kube-apiserver \
-    --field-selector "spec.nodeName=${CONTROL_PLANE_NODE}" \
-    -o json
-)"
-printf '%s\n' "$AFTER_APISERVER_JSON" | jq -e '
-  (.items | length) == 1 and
-  any(.items[0].status.conditions[]?;
-      .type == "Ready" and .status == "True")
-' > "$UPGRADE_EVIDENCE/after/apiserver-node-gate.txt"
-printf '%s\n' "$AFTER_APISERVER_JSON" \
-  | jq -r '.items[0].spec.containers[0].command[]?' \
-  | sort > "$UPGRADE_EVIDENCE/after/apiserver-flags.txt"
-grep -E '^--(audit-policy-file|audit-log-path|encryption-provider-config|profiling)' \
-  "$UPGRADE_EVIDENCE/after/apiserver-flags.txt" \
-  > "$UPGRADE_EVIDENCE/after/apiserver-security-flags.txt" || true
-capture_admission_control_config after "$AFTER_APISERVER_JSON"
-
-grep -q 'readyz check passed' "$UPGRADE_EVIDENCE/after/readyz.txt"
-# Любое Ready=False (или отсутствие Ready=True) даёт jq exit code 1 и останавливает gate.
-kubectl get nodes -o json | jq -e '
-  [ .items[]
-    | {name: .metadata.name,
-       ready: [.status.conditions[]? | select(.type == "Ready") | .status]}
-    | select((.ready | index("False")) != null or
-             (.ready | index("True")) == null)
-  ] | length == 0
-' > "$UPGRADE_EVIDENCE/after/nodes-ready-gate.txt"
-
-# Глобальные snapshots — evidence для обязательного review, а не автоматическое
-# доказательство неизменной security posture. Kubernetes auto-reconciles только default
-# ClusterRole/ClusterRoleBinding с label kubernetes.io/bootstrapping=rbac-defaults;
-# это правило не переносится на произвольные admission objects. Новый minor-релиз может
-# легитимно изменить default RBAC, а обычный YAML diff не умеет универсально определить,
-# стало ли custom RBAC/admission слабее. Переход marker `NOT_SERVED` -> served
-# MutatingAdmissionPolicy/Binding — ожидаемое platform change, но objects после перехода
-# всё равно входят в admission.diff и требуют обычного review.
-diff -u "$UPGRADE_EVIDENCE/before/rbac.yaml" \
-  "$UPGRADE_EVIDENCE/after/rbac.yaml" \
-  > "$UPGRADE_EVIDENCE/after/rbac.diff" || true
-diff -u "$UPGRADE_EVIDENCE/before/admission.yaml" \
-  "$UPGRADE_EVIDENCE/after/admission.yaml" \
-  > "$UPGRADE_EVIDENCE/after/admission.diff" || true
-diff -u "$UPGRADE_EVIDENCE/before/default-sa-can-i.txt" \
-  "$UPGRADE_EVIDENCE/after/default-sa-can-i.txt" \
-  > "$UPGRADE_EVIDENCE/after/default-sa-can-i.diff" || true
-
-# Если вашей policy нужен exact diff по custom RBAC, сначала исключите
-# auto-reconciled bootstrap-defaults и runtime-metadata, а не сравнивайте весь
-# global snapshot целиком:
-#
-# kubectl get clusterrole,clusterrolebinding -o json | jq -S '
-#   { items: [ .items[]
-#       | select((.metadata.labels["kubernetes.io/bootstrapping"] // "") != "rbac-defaults")
-#       | del(.metadata.creationTimestamp, .metadata.generation,
-#             .metadata.managedFields, .metadata.resourceVersion,
-#             .metadata.uid, .status) ] }
-# ' > "$UPGRADE_EVIDENCE/before/custom-rbac.json"
-#
-# и сравнивать такой же after/custom-rbac.json согласно policy проекта.
-#
-# До принятия gate обязательно просмотрите rbac.diff, admission.diff и targeted
-# authorization evidence; подтвердите сохранность security-critical custom
-# Roles/Bindings, отсутствие новых запрещённых permissions у выбранных identities и
-# требуемые validating/mutating webhooks, admission policies, selectors, rules и failure
-# behavior. Зафиксируйте результат review в change record. Если нужен fully automatic
-# gate, замените общий diff явными project-specific invariants для этих объектов.
-
-# Gate: любой security-флаг, присутствовавший до upgrade, обязан остаться после него.
-# Пустой diff -u не обязателен (после upgrade список может стать шире), но exit code
-# comm -23 (строки только в before) обязан быть нулевой длины.
-missing_flags=$(comm -23 "$UPGRADE_EVIDENCE/before/apiserver-security-flags.txt" \
-  "$UPGRADE_EVIDENCE/after/apiserver-security-flags.txt")
-if [[ -n "$missing_flags" ]]; then
-  echo "ERROR: security flags disappeared after upgrade:" >&2
-  printf '%s\n' "$missing_flags" >&2
-  exit 1
-fi
-
-# Raw AdmissionConfiguration remains review evidence, but effective PodSecurity defaults
-# and normalized exemptions are the authoritative security gate. A change must never PASS.
-diff -u "$UPGRADE_EVIDENCE/before/admission-control-config.yaml" \
-  "$UPGRADE_EVIDENCE/after/admission-control-config.yaml" \
-  > "$UPGRADE_EVIDENCE/after/admission-control-config.diff" || true
-diff -u "$UPGRADE_EVIDENCE/before/pss-effective-config.json" \
-  "$UPGRADE_EVIDENCE/after/pss-effective-config.json" \
-  > "$UPGRADE_EVIDENCE/after/pss-effective-config.diff" || true
-if ! cmp -s "$UPGRADE_EVIDENCE/before/pss-effective-config.json" \
-  "$UPGRADE_EVIDENCE/after/pss-effective-config.json"; then
-  echo 'ERROR: effective PodSecurity configuration changed; review defaults/exemptions' >&2
-  exit 1
-fi
-
-# Effective PSS combines namespace labels with PodSecurityConfiguration defaults. A missing
-# namespace *-version means latest; latest after a minor upgrade is always REVIEW_REQUIRED.
-# The enforcement level is monotonic (privileged < baseline < restricted), but version is not
-# an ordinal measure of strictness.
-jq -e --slurpfile before "$UPGRADE_EVIDENCE/before/pss-effective.json" '
-  def enforce_level:
-    if . == "restricted" then 2 elif . == "baseline" then 1 else 0 end;
-  $before[0] as $previous |
-  [ $previous[] as $before_ns
-    | ([.[] | select(.namespace == $before_ns.namespace)] | .[0]) as $after_ns
-    | select($after_ns != null)
-    | select(($after_ns.enforce | enforce_level) < ($before_ns.enforce | enforce_level))
-    | {namespace: $before_ns.namespace, before: $before_ns, after: $after_ns}
-  ] as $weaker |
-  [ $previous[] as $before_ns
-    | ([.[] | select(.namespace == $before_ns.namespace)] | .[0]) as $after_ns
-    | select($after_ns != null)
-    | select($before_ns.enforceVersion != $after_ns.enforceVersion or
-             $before_ns.enforceVersion == "latest" or $after_ns.enforceVersion == "latest")
-    | {namespace: $before_ns.namespace, before: $before_ns, after: $after_ns,
-       action: "review effective PSS controls for source and target Kubernetes versions"}
-  ] as $version_review |
-  if ($weaker | length) > 0 then
-    error("PSS enforce level was weakened: " + ($weaker | tojson))
-  else
-    {status: (if ($version_review | length) == 0 then "OK" else "REVIEW_REQUIRED" end),
-     version_review: $version_review}
-  end
-' "$UPGRADE_EVIDENCE/after/pss-effective.json"   | tee "$UPGRADE_EVIDENCE/after/pss-gate.txt"
-
-# Succeeded Pods завершённых Job не являются health failure; Running Pod обязан иметь Ready=True.
-kubectl get pods -A -o json | jq -e '
-  [ .items[]
-    | select(
-        .status.phase == "Failed" or
-        .status.phase == "Pending" or
-        .status.phase == "Unknown" or
-        (.status.phase == "Running" and
-          (any(.status.conditions[]?; .type == "Ready" and .status == "True") | not))
-      )
-  ] | length == 0
-'
-```
-
-Simulation считается принятой, если skew check успешен, `kubeadm upgrade plan` сохранён,
-snapshot валиден, deprecated API inventory разобран, `/readyz` успешен, все узлы `Ready`,
-cluster-wide PSS configuration (включая defaults/exemptions) не изменилась, PSS `enforce`
-не ослаблен, а каждое изменение effective PSS version (включая `latest`) прошло отдельный
-review. RBAC/admission считаются проверенными только после обязательного
-review сохранённых diff и targeted policy evidence либо после успешного project-specific
-automated gate; сам факт создания `*.diff` этого не доказывает. Ни один security-флаг
-apiserver (audit, encryption provider, profiling) не должен исчезнуть из static Pod manifest
-после upgrade. Для реального upgrade дополнительно приложите точные версии до/после и smoke
-test критической рабочей нагрузки.
+> 🎯 **CKS Core.** На экзамене следуйте только условиям задания: control plane обновляется
+> раньше worker, перед обновлением worker используйте `cordon`/`drain`, после проверки верните
+> ноду через `uncordon`.
 
 ## 13.12. Вопросы для самопроверки
 
