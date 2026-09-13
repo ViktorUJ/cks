@@ -35,12 +35,28 @@ kubectl -n payments run metadata-check \
 kubectl -n payments wait --for=condition=Ready pod/metadata-check --timeout=90s
 
 # --noproxy исключает влияние HTTP_PROXY и HTTPS_PROXY.
-kubectl -n payments exec metadata-check -- \
-  curl --noproxy '*' --connect-timeout 3 --max-time 5 -sS -o /dev/null -w '%{http_code}\n' \
-  http://169.254.169.254/latest/meta-data/
+# Ошибка curl сама по себе не доказывает, что IMDS заблокирован.
+kubectl -n payments exec metadata-check -- sh -c '
+  tmp_err=$(mktemp)
+  http_code=$(curl --noproxy "*" --connect-timeout 3 --max-time 5 \
+    -sS -o /dev/null -w "%{http_code}" \
+    http://169.254.169.254/latest/meta-data/ 2>"$tmp_err")
+  rc=$?
+
+  if [ "$rc" -eq 0 ]; then
+    echo "IMDS reachable, HTTP status: $http_code"
+    rm -f "$tmp_err"
+  else
+    echo "IMDS request failed, curl rc=$rc" >&2
+    cat "$tmp_err" >&2
+    rm -f "$tmp_err"
+    echo "REVIEW_REQUIRED: failure alone does not prove that IMDS is blocked" >&2
+    exit "$rc"
+  fi
+'
 ```
 
-`200`, `401` или иной быстрый ответ доказывает достижимость сети, но не доказывает доступ к credentials. После защиты ожидайте timeout или иной отказ, определяемый CNI. Удалите временный Pod после проверки:
+Только завершившийся `curl` с быстрым HTTP-ответом (`200`, `401` или иным status) доказывает достижимость сети, но не доказывает доступ к credentials. Timeout, route/runtime error или иной сбой требуют отдельной проверки policy/CNI: это **не** доказательство блокировки IMDS. Удалите временный Pod после проверки:
 
 ```bash
 kubectl -n payments delete pod metadata-check
@@ -286,10 +302,23 @@ kubectl -n payments wait --for=condition=Ready pod/egress-test --timeout=90s
 
 # AWS/EKS: DNS должен работать, а node IMDS credentials не должны быть доступны Pod.
 kubectl -n payments exec egress-test -- nslookup kubernetes.default.svc.cluster.local
-kubectl -n payments exec egress-test -- \
-  curl --noproxy '*' --connect-timeout 3 --max-time 5 \
-  -sS -o /dev/null -w '%{http_code}\n' \
-  http://169.254.169.254/latest/meta-data/ || echo 'AWS IMDS blocked'
+kubectl -n payments exec egress-test -- sh -c '
+  tmp_err=$(mktemp)
+  http_code=$(curl --noproxy "*" --connect-timeout 3 --max-time 5 \
+    -sS -o /dev/null -w "%{http_code}" \
+    http://169.254.169.254/latest/meta-data/ 2>"$tmp_err")
+  rc=$?
+
+  if [ "$rc" -eq 0 ]; then
+    echo "IMDS request reached an HTTP endpoint; status: $http_code"
+  else
+    echo "REVIEW_REQUIRED: IMDS request failed, curl rc=$rc" >&2
+    cat "$tmp_err" >&2
+  fi
+
+  rm -f "$tmp_err"
+  exit "$rc"
+'
 
 # GKE WIF: metadata path может быть намеренно доступен; проверяйте получение
 # short-lived workload identity, а не ожидайте timeout, и подтверждайте отсутствие node identity.

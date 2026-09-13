@@ -81,7 +81,13 @@ PSA и policy engine не заменяют друг друга. PSA быстро
 дублируйте одну и ту же жёсткую проверку в трёх местах без причины: отказ станет сложнее
 диагностировать, а разные сообщения и исключения начнут расходиться.
 
-> 🏭 `failurePolicy: Fail` требует HA, TLS, PDB и наблюдаемости webhook; `Ignore` — компромисс в пользу доступности API.
+> 🏭 `failurePolicy` определяет реакцию на **техническую или evaluation-ошибку** на admission webhook path, а не на явное policy-решение. Она применяется, например, при timeout, TLS/DNS/Service/Pod-ошибке, некорректном HTTP/AdmissionReview response, а также при ошибке вычисления `matchConditions`.
+>
+> `matchConditions` API server вычисляет **до** вызова webhook. Если хотя бы одно condition вернуло `false`, webhook штатно пропускается. Если ни одно не `false`, но хотя бы одно завершилось ошибкой, webhook не вызывается: при `Fail` API server отклоняет запрос, при `Ignore` продолжает его без этого webhook. Если webhook был успешно вызван и явно вернул `allowed: false`, запрос отклоняется и при `Fail`, и при `Ignore`.
+>
+> При `Fail` такая техническая/evaluation-ошибка тоже отклоняет create/update: policy нельзя молча обойти, но сбой webhook **или ошибка его `matchConditions`** может остановить deploy и часть операций control plane. Поэтому security-critical webhook должен быть надёжнее одного Pod: несколько replicas уменьшают риск отказа, PDB не даёт добровольному disruption удалить все replicas одновременно, корректный TLS обеспечивает доверенное HTTPS-соединение, а метрики и alerts по error/latency позволяют заметить деградацию до outage.
+>
+> При `Ignore` API остаётся доступным, но в момент такой ошибки объект проходит **без проверки этого webhook** — это сознательное окно обхода policy, а не режим «более мягкого deny». Для критичного зрелого запрета обычно выбирают `Fail`; `Ignore` может быть временным компромиссом на rollout или для некритичного контроля, если риск bypass принят явно.
 
 ## 20.2. Webhook: доступность тоже является security-решением
 
@@ -92,8 +98,8 @@ patches. У webhook есть два особенно важных парамет
 
 | Параметр | Значение для безопасности | Риск |
 |---|---|---|
-| `failurePolicy: Fail` | timeout, TLS-ошибка или недоступный webhook отклоняет запрос | outage engine останавливает deploy и иногда control plane operations |
-| `failurePolicy: Ignore` | при ошибке webhook объект проходит без этой проверки | окно обхода policy во время сбоя |
+| `failurePolicy: Fail` | ошибка webhook path или `matchConditions` (если ни одно condition не `false`) отклоняет запрос | outage engine или ошибочное CEL condition блокирует deploy и иногда control plane operations |
+| `failurePolicy: Ignore` | при такой ошибке API server продолжает запрос без этой webhook-проверки | окно обхода policy во время сбоя или ошибки condition |
 | `timeoutSeconds` | ограничивает время ожидания API server | слишком большой timeout задерживает все create/update |
 | `namespaceSelector`/`objectSelector` | сужает scope webhook | ошибочный selector может пропустить критичный namespace |
 | `matchPolicy` | определяет сопоставление версий API | неожиданный match способен применить правило шире или уже |
@@ -194,23 +200,40 @@ NetworkPolicy, RBAC и audit logs. Образ, разрешённый в admissi
 supply-chain проверки из глав 25-28; уже запущенный процесс контролируют главы 29-32.
 
 > 🎯 Свяжите `ConstraintTemplate` (code/schema) с `Constraint` (scope/параметры/`enforcementAction`), затем докажите `dryrun` → `deny`.
+>
+> В этом примере template объявляет тип `K8sRequiredLabels`, его Rego-проверку и допустимый параметр `labels`; constraint `pods-must-have-owner` — конкретный экземпляр этого типа. Проследите связь: `match` ограничивает Pod и исключённые namespaces, `parameters.labels: ["owner"]` передаёт Rego требование, а `enforcementAction` выбирает реакцию на найденное нарушение.
+>
+> Доказательство делайте новыми одноразовыми Pod: в `dryrun` создайте Pod без `owner`, убедитесь, что он принят API, затем дождитесь его записи в `status.violations`. После patch на `deny` попробуйте создать **другой** Pod без `owner`: API должен его отклонить. В качестве контрольного положительного сценария Pod с `owner` должен приниматься в обоих режимах. Не используйте для этого только существующий Pod или `--dry-run`: они не доказывают, что admission и audit отработали для нового объекта.
 
 ## 20.3. OPA/Gatekeeper: `ConstraintTemplate` и `Constraint`
 
-**OPA** - Open Policy Agent, общий движок решений на Rego. **Gatekeeper** использует OPA
-в Kubernetes и даёт ему Kubernetes-native модель из двух объектов:
+**OPA** (Open Policy Agent) — движок, который умеет принимать policy-решения. **Gatekeeper**
+подключает его к Kubernetes admission: когда кто-то пытается создать или изменить объект,
+API server передаёт объект Gatekeeper для проверки. Если правило находит нарушение,
+Gatekeeper сообщает результат — записать его как наблюдение, предупредить или отклонить
+запрос. Для первого чтения не нужно уметь писать Rego или CEL: сначала важно понять,
+**какое правило проверяется, где оно действует и что произойдёт при нарушении**.
 
-1. `ConstraintTemplate` описывает новый тип policy: Rego или CEL-код в
-   `spec.targets[].rego` либо `spec.targets[].code[]`, целевой admission handler и OpenAPI
-   schema параметров. После применения Gatekeeper создаёт CRD для constraint kind.
-2. `Constraint` - экземпляр этого типа: параметры, scope `match` и режим реакции. Один
-   template можно переиспользовать для разных namespace или наборов labels.
+Для этого Gatekeeper разделяет policy на два ресурса — это не дублирование, а возможность
+написать правило один раз и применять его по-разному:
 
-Это разделение похоже на класс и экземпляр. Template содержит reviewable policy code:
-изменение Rego или CEL требует тестов и code review. В одном target выбирайте один движок:
-у legacy `rego` выше приоритет, а в `code[]` CEL (`K8sNativeValidation`) имеет приоритет над
-Rego. Constraint обычно меняют чаще, когда policy надо включить для новой команды или
-namespace.
+1. `ConstraintTemplate` — **шаблон/чертёж правила**. В нём хранится проверяющий код на
+   Rego или CEL, целевой admission handler и OpenAPI schema разрешённых параметров. Schema
+   проверяет параметры самого `Constraint`, а не Pod напрямую: например, что `labels` —
+   список строк. После применения template Gatekeeper создаёт CRD (Custom Resource
+   Definition) — то есть регистрирует в API Kubernetes новый вид ресурса для этого правила.
+2. `Constraint` — **включённый экземпляр правила**. Он выбирает `match` scope (какие
+   объекты и namespaces проверять), передаёт значения в `parameters` и задаёт
+   `enforcementAction` — что делать при нарушении. Один template можно переиспользовать
+   для разных команд, namespaces или наборов обязательных labels, создавая отдельный
+   constraint для каждого случая.
+
+Запомните flow: **template определяет правило → constraint настраивает и включает его →
+создание/изменение объекта попадает в `match` → Gatekeeper запускает проверку с
+`parameters` → `enforcementAction` определяет результат**. Это похоже на класс и экземпляр:
+template содержит code, который требует review и тестов; constraint обычно меняют чаще,
+когда расширяют охват policy. В одном target выбирайте один движок: у legacy `rego` выше
+приоритет, а в `code[]` CEL (`K8sNativeValidation`) имеет приоритет над Rego.
 
 ### Установка и быстрая проверка Gatekeeper
 
@@ -234,48 +257,191 @@ kubectl get crd | grep -E 'gatekeeper|constraints.gatekeeper'
 проверка `privileged`, но показывает все части модели и даёт понятный отказ.
 
 ```yaml
+# API Gatekeeper для переиспользуемого шаблона policy.
 apiVersion: templates.gatekeeper.sh/v1
+# Шаблон определяет новый тип constraint, но сам ещё не включает проверку.
 kind: ConstraintTemplate
 metadata:
+  # Имя шаблона Kubernetes; обычно совпадает с именем Rego package.
   name: k8srequiredlabels
 spec:
   crd:
     spec:
       names:
+        # Kind ресурса Constraint, который Gatekeeper создаст из этого template.
         kind: K8sRequiredLabels
       validation:
+        # Schema проверяет spec.parameters Constraint, а не incoming Pod.
         openAPIV3Schema:
           type: object
           properties:
             labels:
+              # Constraint передаёт policy список обязательных label keys.
               type: array
               items:
                 type: string
   targets:
+  # Встроенный target, вызываемый на admission create/update запросах.
   - target: admission.k8s.gatekeeper.sh
+    # Блок Rego, который возвращает violation при нарушении.
     rego: |
+      # Namespace имён Rego policy.
       package k8srequiredlabels
 
+      # Создать violation для каждого отсутствующего обязательного label.
       violation[{"msg": msg}] {
+        # Берёт по одному значению из spec.parameters.labels Constraint.
         required := input.parameters.labels[_]
+        # input.review.object — Pod из текущего admission request.
         not input.review.object.metadata.labels[required]
+        # Сообщение появится в audit status или в отказе deny.
         msg := sprintf("missing required label: %v", [required])
       }
 ---
+# API и kind экземпляра, созданного этим ConstraintTemplate.
 apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: K8sRequiredLabels
 metadata:
+  # Уникальное имя конкретно включённой policy.
   name: pods-must-have-owner
 spec:
+  # Audit-only: записывать violation, но пока не блокировать Pod.
   enforcementAction: dryrun
   match:
+    # Не применять правило к системным namespaces.
     excludedNamespaces: ["kube-system", "gatekeeper-system", "kyverno"]
     kinds:
+    # Пустая API group означает core/v1 API.
     - apiGroups: [""]
+      # Проверять только Pod, а не все Kubernetes-объекты.
       kinds: ["Pod"]
   parameters:
+    # Значение для input.parameters.labels в Rego: label owner обязателен.
     labels: ["owner"]
 ```
+
+#### Как читать эту policy
+
+Сначала Gatekeeper смотрит на `match` в `Constraint`. Здесь он проверяет только Pod и
+пропускает перечисленные системные namespaces; объект вне scope вообще не попадает в это
+правило. Для каждого подходящего create/update Gatekeeper формирует `input.review.object`:
+это incoming Pod в форме Kubernetes API. Одновременно он передаёт
+`spec.parameters` constraint в `input.parameters`. Поэтому в данном примере
+`input.parameters.labels` равно `["owner"]`.
+
+В Rego правило — это набор условий, соединённых логическим **И**. Оно читается снизу
+вверх как «создай violation, если все строки в теле выполнились»:
+
+- `required := input.parameters.labels[_]` перебирает каждый обязательный label; `_`
+  означает «очередной элемент массива». Здесь единственным значением станет `owner`.
+- `not input.review.object.metadata.labels[required]` истинно, когда у incoming Pod нет
+  этого ключа label.
+- `msg := ...` формирует понятное сообщение, а `violation[{"msg": msg}]` — специальный
+  результат, который Gatekeeper считает нарушением. При `dryrun` он попадёт в
+  `status.violations`; при `deny` API server вернёт это сообщение и не создаст Pod.
+
+Для первой policy достаточно помнить четыре идеи Rego: `input` — read-only входные данные,
+`:=` сохраняет найденное значение в переменную, `[_]` перебирает список, `not` описывает
+отсутствие/невыполнение условия. Не нужно писать отдельные `if/else`: если тело правила не
+удаётся доказать, `violation` не создаётся. Эта policy проверяет **наличие** ключа `owner`;
+если организации нужен непустой или форматированный value, это должно быть отдельным
+условием.
+
+#### Быстрый pattern для экзамена: scope namespace и запрет `latest`
+
+Сначала переведите задачу в четыре поля: **что** проверять (Pod и image), **где**
+(`match.namespaces`), **условие нарушения** (image использует `latest`) и **реакция**
+(`dryrun`, затем `deny`). Для owner в одном namespace не нужен новый template: у
+`K8sRequiredLabels` замените `excludedNamespaces` на `namespaces: ["team-a"]` и оставьте
+`parameters.labels: ["owner"]`.
+
+Для отдельного запрета `latest` шаблон ниже можно написать и применить как один файл. Он
+проверяет обычные, init- и ephemeral containers: проверка только `spec.containers` оставила
+бы bypass. Функция считает нарушением и явный `:latest`, и image без tag (например,
+`nginx`, для которого Kubernetes подразумевает `latest`); digest `@sha256:...` не считается
+latest.
+
+```yaml
+# API Gatekeeper для шаблона запрета latest image tag.
+apiVersion: templates.gatekeeper.sh/v1
+# Template содержит Rego; Constraint ниже выберет его scope и режим реакции.
+kind: ConstraintTemplate
+metadata:
+  # Имя template Kubernetes.
+  name: k8sdisallowlatest
+spec:
+  crd:
+    spec:
+      names:
+        # Kind Constraint, который будет использовать этот template.
+        kind: K8sDisallowLatest
+      validation:
+        # У этой policy нет настраиваемых parameters, но schema всё равно описывает object.
+        openAPIV3Schema:
+          type: object
+          properties: {}
+  targets:
+  # Подключить проверку к Gatekeeper admission handler.
+  - target: admission.k8s.gatekeeper.sh
+    rego: |
+      # Namespace имён Rego policy.
+      package k8sdisallowlatest
+
+      # Собрать контейнеры из всех трёх списков PodSpec, чтобы не оставить bypass.
+      pod_containers[container] {
+        container := input.review.object.spec.containers[_]
+      }
+      pod_containers[container] {
+        container := input.review.object.spec.initContainers[_]
+      }
+      pod_containers[container] {
+        container := input.review.object.spec.ephemeralContainers[_]
+      }
+
+      # Явный tag :latest запрещён.
+      image_uses_latest(image) {
+        endswith(image, ":latest")
+      }
+      # Image без tag (например nginx) Kubernetes трактует как latest; digest разрешён.
+      image_uses_latest(image) {
+        not contains(image, "@")
+        path := split(image, "/")
+        last := path[count(path) - 1]
+        not contains(last, ":")
+      }
+
+      # Вернуть Gatekeeper violation для каждого контейнера с latest image.
+      violation[{"msg": msg}] {
+        container := pod_containers[_]
+        image_uses_latest(container.image)
+        msg := sprintf("image %q must not use the latest tag", [container.image])
+      }
+---
+# Экземпляр template: включает запрет только для выбранного scope.
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDisallowLatest
+metadata:
+  # Уникальное имя policy с namespace-specific scope.
+  name: pods-without-latest-in-team-a
+spec:
+  # Начать с audit; после проверки заменить на deny.
+  enforcementAction: dryrun
+  match:
+    # Scope: policy применяется только к Pod в namespace team-a.
+    namespaces: ["team-a"]
+    kinds:
+    # Core/v1 API group.
+    - apiGroups: [""]
+      # Проверять именно Pod admission requests.
+      kinds: ["Pod"]
+```
+
+На экзамене не пытайтесь сначала сделать универсальный framework: берите минимальный
+`ConstraintTemplate`, задавайте точный `kind`/`match` и одно условие `violation`. Затем
+проверьте отрицательный и положительный случаи: в `team-a` Pod с `nginx:latest` должен
+сначала появиться в violations, после перехода на `deny` — быть отклонён, а Pod с
+`nginx:1.27` — пройти. Проверяйте scope отдельно: та же попытка вне `team-a` не должна
+совпасть с этим constraint.
 
 ```bash
 kubectl apply -f gatekeeper-owner.yaml
@@ -345,6 +511,29 @@ violation[{"msg": msg}] {
 > Compatibility third-party admission-компонентов (Kyverno, Gatekeeper и аналоги)
 > необходимо сверять с их собственной release matrix отдельно от версии Kubernetes курса.
 
+### Как читать Kyverno CEL policy
+
+Kyverno — Kubernetes policy engine: его controllers и admission webhook читают policy
+ресурсы из API и реагируют на операции с объектами. В новых CEL-based типах policy — это
+обычный YAML-ресурс, а CEL — короткий язык выражений внутри поля `expression`. Он не
+заменяет YAML и не является shell-скриптом: выражение получает входные данные, например
+`object` — объект текущего admission request, — и вычисляет значение.
+
+Для первого чтения проходите каждый пример по одному flow: **какая операция и resource
+совпадают с `matchConstraints` → какие дополнительные условия проходят → что делает policy**.
+`ValidatingPolicy` вычисляет булево expression: `true` разрешает объект, `false` создаёт
+нарушение; действие `Audit` только фиксирует его, а `Deny` отклоняет запрос.
+`MutatingPolicy` возвращает изменение объекта до его сохранения. `GeneratingPolicy` просит
+background controller создать или синхронизировать другой объект после совпадения source
+resource. Поэтому generation не является мгновенным admission deny.
+
+Сначала выбирайте тип по результату, а не по синтаксису CEL: `ValidatingPolicy` — проверить
+и при необходимости запретить, `MutatingPolicy` — добавить безопасный default,
+`GeneratingPolicy` — создать связанный ресурс, `DeletingPolicy` — удалить по rule,
+`ImageValidatingPolicy` — проверить image. Cluster-wide типы действуют по заданному scope;
+`Namespaced...` варианты живут и действуют только в своём namespace. Не смешивайте эти
+ресурсы с legacy `Policy`/`ClusterPolicy`: у них другой API и другие поля.
+
 Начиная с Kyverno 1.19 основной путь - отдельные CEL-based cluster-wide типы группы
 `policies.kyverno.io/v1`: `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`,
 `DeletingPolicy` и `ImageValidatingPolicy`. Для каждого есть namespaced-вариант
@@ -370,26 +559,38 @@ kubectl -n kyverno get deploy -o jsonpath='{..image}'
 
 ### `ValidatingPolicy`: требовать `runAsNonRoot`
 
-Начните с `Audit`, устраните нарушения и только затем переключите действие на `Deny`.
-Проверка ниже требует явный pod-level baseline; она не заменяет полный PSS `restricted`.
+`ValidatingPolicy` ничего не меняет: она отвечает на вопрос «можно ли принять этот объект?».
+Сначала policy совпадает с create/update Pod, затем CEL получает Pod как `object`.
+Expression должен вернуть `true`, иначе Kyverno создаёт violation с полем `message`.
+`Audit` позволяет запрос и собирает результат для исправления manifests; после проверки
+реального scope переключайте на `Deny`, который отклонит такой Pod. Проверка ниже требует
+явный pod-level baseline; она не заменяет полный PSS `restricted`.
 
 ```yaml
+# API новой CEL-based Kyverno policy.
 apiVersion: policies.kyverno.io/v1
+# Validation не изменяет объект: она разрешает или фиксирует/отклоняет нарушение.
 kind: ValidatingPolicy
 metadata:
+  # Уникальное имя policy в кластере.
   name: require-pod-run-as-non-root
 spec:
+  # Сначала audit-only: запрос не блокируется, violation можно изучить.
   validationActions: [Audit]
   matchConstraints:
     resourceRules:
+    # Core/v1 Pod; проверять и создание, и последующие изменения.
     - apiGroups: [""]
       apiVersions: ["v1"]
       operations: ["CREATE", "UPDATE"]
       resources: ["pods"]
   validations:
+  # Для каждого совпавшего Pod expression должен вернуть true.
   - message: "Pod spec.securityContext.runAsNonRoot must be true"
     expression: >-
+      // has предотвращает обращение к отсутствующему securityContext.
       has(object.spec.securityContext) &&
+      // ? безопасно читает optional field; отсутствие или false даёт false.
       object.spec.securityContext.?runAsNonRoot.orValue(false)
 ```
 
@@ -402,28 +603,37 @@ kubectl patch validatingpolicy require-pod-run-as-non-root --type merge \
 
 ### `MutatingPolicy`: прозрачная маркировка
 
-Mutation не должна маскировать небезопасный image. Для security-critical полей чаще лучше
-явная validation. Безопасный учебный пример добавляет только audit-label и показывает
-современный `ApplyConfiguration` вместо legacy `patchStrategicMerge`:
+`MutatingPolicy` отвечает не «разрешить или запретить», а «какой безопасный default
+добавить к уже принятому объекту». Она срабатывает после match, строит изменённый fragment
+объекта и API server сохраняет результат. Mutation не должна маскировать небезопасный image:
+для security-critical полей чаще лучше явная validation. Безопасный учебный пример добавляет
+только audit-label. `ApplyConfiguration` означает, что CEL строит желаемый fragment в виде
+`Object{...}`, а Kyverno применяет его вместо legacy `patchStrategicMerge`:
 
 ```yaml
+# API CEL-based Kyverno policy, которая изменяет объект до сохранения.
 apiVersion: policies.kyverno.io/v1
 kind: MutatingPolicy
 metadata:
+  # Имя policy, добавляющей traceable audit label.
   name: mark-kyverno-managed-pods
 spec:
   matchConstraints:
     resourceRules:
+    # Менять только новые core/v1 Pod, а не все ресурсы.
     - apiGroups: [""]
       apiVersions: ["v1"]
       operations: ["CREATE"]
       resources: ["pods"]
   mutations:
+  # ApplyConfiguration применяет CEL-constructed fragment к incoming object.
   - patchType: ApplyConfiguration
     applyConfiguration:
       expression: >-
+        // Object{...} — CEL representation желаемого fragment Kubernetes object.
         Object{
           metadata: Object.metadata{
+            // Добавляем label, не заменяя остальные metadata.labels.
             labels: {"security.example.com/policy": "kyverno"}
           }
         }
@@ -431,48 +641,62 @@ spec:
 
 ### `GeneratingPolicy`: default-deny для нового Namespace
 
-YAML template остаётся читаемым, а CEL подставляет имя Namespace. При
-`synchronize.enabled: true` Kyverno продолжает сверять и синхронизировать сгенерированный
-объект с policy. Это не утверждение о Kubernetes `ownerReferences` и не заменяет явного
-распределения ответственности: не поручайте GitOps-controller и Kyverno одновременно
-синхронизировать один и тот же объект.
+`GeneratingPolicy` реагирует на source object и просит отдельный background controller
+создать downstream resource. В этом примере source — новый Namespace, а результат —
+`NetworkPolicy` внутри него. YAML template остаётся читаемым, а CEL вычисляет и подставляет
+имя Namespace. При `synchronize.enabled: true` Kyverno продолжает сверять и синхронизировать
+сгенерированный объект с policy. Это не утверждение о Kubernetes `ownerReferences` и не
+заменяет явного распределения ответственности: не поручайте GitOps-controller и Kyverno
+одновременно синхронизировать один и тот же объект.
 
 ```yaml
+# API CEL-based policy, которая создаёт/синхронизирует downstream resource.
 apiVersion: policies.kyverno.io/v1
 kind: GeneratingPolicy
 metadata:
+  # Имя policy для NetworkPolicy нового Namespace.
   name: generate-default-deny-ingress
 spec:
   evaluation:
     synchronize:
+      # Background controller продолжает сверять generated NetworkPolicy с template.
       enabled: true
   matchConstraints:
     resourceRules:
+    # Trigger — создание core/v1 Namespace.
     - apiGroups: [""]
       apiVersions: ["v1"]
       operations: ["CREATE"]
       resources: ["namespaces"]
   matchConditions:
+  # Не генерировать policy в системных namespaces.
   - name: skip-system-namespaces
     expression: >-
       !(object.metadata.name in
       ["kube-system", "kube-public", "kube-node-lease", "kyverno"])
   variables:
+  # Сохранить имя source Namespace для использования внутри YAML template.
   - name: namespaceName
     expression: object.metadata.name
   generate:
   - template:
+      # Подставить CEL variable в YAML между (( ... )).
       interpolate: cel
       value: |
         apiVersion: networking.k8s.io/v1
         kind: NetworkPolicy
         metadata:
+          # Фиксированное имя downstream NetworkPolicy.
           name: default-deny-ingress
+          # Создать её в том Namespace, который вызвал policy.
           namespace: (( variables.namespaceName ))
           labels:
+            # Позволяет определить владельца generated object.
             app.kubernetes.io/managed-by: kyverno
         spec:
+          # Пустой selector охватывает все Pod Namespace.
           podSelector: {}
+          # Default deny только ingress; egress задаётся отдельно.
           policyTypes: [Ingress]
 ```
 

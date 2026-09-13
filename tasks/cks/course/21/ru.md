@@ -34,10 +34,10 @@ API server - обычный путь к состоянию Kubernetes, а etcd -
 
 ```mermaid
 flowchart TB
-    user["пользователь / Pod"] --> api["kube-apiserver<br/>TLS + authn/authz"]
-    api -->|"записывает объект"| enc["EncryptionConfiguration<br/>провайдер шифрования"]
-    enc --> etcd[("etcd / диск / snapshot")]
-    attacker["доступ к диску, backup<br/>или etcd endpoint"] -. "без шифрования читает Secret" .-> etcd
+    user["пользователь<br/>/ Pod"] --> api["kube-apiserver<br/>TLS +<br/>authn/authz"]
+    api -->|"записывает объект"| enc["EncryptionConfiguration<br/>провайдер<br/>шифрования"]
+    enc --> etcd[("etcd / диск<br/>/ snapshot")]
+    attacker["доступ к диску,<br/>backup или<br/>etcd endpoint"] -. "без шифрования<br/>читает Secret" .-> etcd
     style user fill:#326ce5,color:#fff
     style api fill:#673ab7,color:#fff
     style enc fill:#0f9d58,color:#fff
@@ -108,7 +108,31 @@ resources:
 `resources` перечисляет API-ресурсы, а не namespace. Обычно первым защищают `secrets`; при
 обоснованной необходимости можно добавить `configmaps`, CRD или другие чувствительные ресурсы.
 Не шифруйте всё вслепую: это увеличивает нагрузку, усложняет восстановление и не заменяет
-классификацию данных. Один resource не должен быть указан в нескольких блоках `resources`.
+классификацию данных.
+
+Элементы `resources` обрабатываются по порядку: более ранняя matching-конфигурация имеет
+приоритет. Не дублируйте один и тот же explicit resource в независимых блоках без причины и
+не создавайте overlapping wildcard expressions. Допустим documented pattern: более specific
+исключение стоит **раньше** широкого wildcard, например оставить `events` plaintext, а остальное
+зашифровать:
+
+```yaml
+resources:
+- resources:
+  - events
+  providers:
+  - identity: {}
+- resources:
+  - '*.*'
+  providers:
+  - secretbox:
+      keys:
+      - name: key1
+        secret: <base64-encoded-32-byte-key>
+```
+
+Здесь `events` совпадает с первым элементом и не доходит до `*.*`; порядок specific rule перед
+wildcard является частью security boundary.
 
 `identity: {}` ничего не шифрует. В конце цепочки он позволяет прочитать прежние plaintext-записи в
 период миграции. Для новой записи он опасен только тогда, когда стоит первым: первый provider
@@ -191,9 +215,13 @@ resources:
 с локальным ключом должен быть доступен только root и процессу API server, например:
 
 ```bash
+# Создать parent directory заранее: install файла не создаёт отсутствующий каталог.
+sudo install -d -o root -g root -m 0700 /etc/kubernetes/enc
 sudo install -o root -g root -m 0600 encryption-config.yaml \
   /etc/kubernetes/enc/encryption-config.yaml
-sudo ls -l /etc/kubernetes/enc/encryption-config.yaml
+sudo stat -c '%U:%G %a %n' \
+  /etc/kubernetes/enc \
+  /etc/kubernetes/enc/encryption-config.yaml
 ```
 
 Локальный `aescbc`/`aesgcm` защищает snapshot от человека, у которого есть только snapshot, но не
@@ -225,7 +253,8 @@ spec:
   - name: encryption-config
     hostPath:
       path: /etc/kubernetes/enc
-      type: DirectoryOrCreate
+      # Каталог подготовлен выше; Directory не скрывает typo пустым каталогом.
+      type: Directory
 ```
 
 Путь flag виден **из контейнера API server**, поэтому одного файла на host недостаточно: нужен
@@ -320,14 +349,19 @@ re-encryption процедурой.
 конфигурацию без рестарта (удобно при ротации ключей). Здоровье plugin проверяется endpoint
 `/healthz/kms-providers` и общим `/healthz`; при automatic reload отдельные health checks
 сворачиваются в один. API server опрашивает KMS v2 `Status` примерно раз в минуту в healthy
-состоянии и чаще при сбое. Не рассчитывайте на cache как на HA: недоступность plugin/KEK может
-сорвать чтение ещё не раскрытого material, запись, ротацию и восстановление snapshot. Plugin и
-удалённый manager должны быть в HA, а restore требует того же KEK или документированной миграции.
+состоянии и чаще при сбое. Cache не превращает plugin/KEK в необязательную зависимость: их
+недоступность может сорвать startup/cache warm-up, decrypt ещё не раскрытого material, KEK/key_id
+rotation и восстановление snapshot. Plugin и удалённый manager должны быть в HA, а restore требует
+того же KEK или документированной миграции.
 
 KMS улучшает разделение секретов, но добавляет эксплуатационные требования:
 
-- KMS plugin и удалённый key manager - часть критического пути записи/чтения; мониторьте latency,
-  ошибки, доступность, quota и срок действия credentials;
+- Для KMS v1 plugin/KMS значительно ближе к synchronous data path: новые DEK оборачиваются через
+  KMS, а cache miss требует unwrap. Для KMS v2 API server локально выводит одноразовые DEK из
+  защищённого seed, поэтому не вызывает remote KMS на каждый обычный API read/write. Plugin и
+  manager всё равно критичны для startup/cache warm-up, uncached decryption, key rotation и
+  recovery; мониторьте `Status` health, стабильность `key_id`, latency `EncryptRequest`/
+  `DecryptRequest`, ошибки, доступность, quota и срок действия credentials;
 - проектируйте HA plugin и KMS: это критическая зависимость, поэтому недоступность plugin/KEK
   может привести к ошибкам чтения и записи зашифрованных ресурсов; заранее проверьте recovery-процесс;
 - делайте backup metadata и документируйте key IDs, но **не** экспортируйте master keys в backup etcd;
@@ -453,24 +487,38 @@ providers:
 
 > 🏭 Ротация KEK и смена provider различны; сохраняйте decrypt старых данных до проверки restore.
 
-### Ротация KMS
+### Ротация KMS v2 KEK
 
-У KMS есть два слоя. Ротация KEK обычно выполняется внутри внешнего manager по его процедуре и часто
-позволяет расшифровать ранее wrapped DEK. Ротация data encryption конфигурации или смена KMS key/plugin
-требует той же стратегии provider order и re-encryption. Сначала новый `kms` provider становится
-первым, старый остаётся доступным для decrypt, затем API переписывает данные, и лишь после проверки
-старый key/plugin выводят из эксплуатации.
+Обычная ротация remote KEK в KMS v2 происходит **внутри внешнего KMS/plugin**. Plugin сообщает
+текущий публичный `key_id` через `Status`; API server считает этот ID authoritative. Когда `key_id`
+меняется, API server получает новый seed, защищённый новым KEK, и применяет его к последующим
+шифрованиям. Для этой штатной KEK rotation не добавляют второй `kms` provider, не меняют provider
+order и не перезапускают API server только ради смены KEK.
+
+В healthy состоянии API server опрашивает `Status` примерно раз в минуту и может использовать
+последнее valid состояние около трёх минут. Поэтому не начинайте re-encryption сразу после ротации:
+сначала подтвердите, что новый стабильный `key_id` увиден всеми API servers и plugin не переключается
+между ID. Затем перепишите нужные объекты через API, если storage должен перейти на новый KEK. Upstream
+рекомендует ротировать KMS v2 KEK не реже чем раз в 90 дней. Точный workflow и observability зависят
+от plugin и внешнего KMS.
+
+### Миграция на другой KMS provider/plugin
+
+Это **не** обычная KEK rotation. Если кластер действительно переезжает на другой configured KMS
+provider, plugin или endpoint, новый `kms` provider ставят первым, старый оставляют ниже для decrypt,
+затем API переписывает данные, и лишь после проверки старый provider/plugin выводят из эксплуатации.
 
 ```mermaid
 sequenceDiagram
+    title Миграция на другой KMS provider/plugin
     participant A as администратор
     participant API as kube-apiserver
     participant E as etcd
-    A->>A: backup + новый ключ/provider
+    A->>A: backup + новый KMS provider/plugin
     A->>API: новый provider первым, старый ниже
-    API->>E: новые записи шифруются новым ключом
+    API->>E: новые записи шифруются новым provider
     A->>API: GET/replace всех Secrets
-    API->>E: старые записи переписаны новым ключом
+    API->>E: старые записи переписаны новым provider
     A->>API: проверка чтения и snapshot
     A->>API: удалить старый provider только после проверки
 ```
@@ -508,23 +556,55 @@ get pods -l component=kube-apiserver`. Не выводите production-логи
 данные могут содержать имена объектов и ошибки доступа.
 
 Для учебного self-managed кластера можно взять значение непосредственно через `etcdctl` и убедиться,
-что marker отсутствует в байтах ответа. Используйте TLS-параметры текущего etcd manifest, а не
-предполагайте пути:
+что marker отсутствует в байтах ответа. TLS-параметры ниже — типичный kubeadm-пример: сначала сверьте
+endpoint, CA и cert/key paths с **текущим** etcd manifest. Проверка fail-closed: PASS возможен только,
+если `etcdctl` прочитал непустое значение нужного ключа, `strings` успешно отработал и marker не найден.
 
 ```bash
-ETCDCTL_API=3 etcdctl get /registry/secrets/default/encryption-check \
-  --endpoints=https://127.0.0.1:2379 \
-  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-  --cert=/etc/kubernetes/pki/etcd/server.crt \
-  --key=/etc/kubernetes/pki/etcd/server.key \
-  --print-value-only | strings | grep 'not-a-real-secret-rotate-me'
+(
+  set -euo pipefail
+  raw_file="$(mktemp)"
+  trap 'rm -f "$raw_file"' EXIT
+
+  # Замените endpoint и TLS paths значениями из текущего etcd manifest.
+  if ! ETCDCTL_API=3 etcdctl get /registry/secrets/default/encryption-check \
+    --endpoints=https://127.0.0.1:2379 \
+    --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+    --cert=/etc/kubernetes/pki/etcd/server.crt \
+    --key=/etc/kubernetes/pki/etcd/server.key \
+    --print-value-only >"$raw_file"; then
+    echo 'ERROR: etcdctl could not read the canary object' >&2
+    exit 1
+  fi
+
+  if [ ! -s "$raw_file" ]; then
+    echo 'ERROR: etcd key is absent or has an empty value' >&2
+    exit 1
+  fi
+
+  # grep=1 означает marker не найден; не путайте это с ошибкой etcdctl/strings.
+  set +e
+  strings "$raw_file" | grep -Fq 'not-a-real-secret-rotate-me'
+  status=("${PIPESTATUS[@]}")
+  set -e
+
+  if [ "${status[0]}" -ne 0 ]; then
+    echo 'ERROR: strings could not inspect the etcd value' >&2
+    exit 1
+  elif [ "${status[1]}" -eq 0 ]; then
+    echo 'FAIL: plaintext marker is present in etcd' >&2
+    exit 1
+  elif [ "${status[1]}" -ne 1 ]; then
+    echo 'ERROR: plaintext verification failed unexpectedly' >&2
+    exit 1
+  fi
+
+  echo 'OK: etcd value was read and plaintext marker was not found'
+)
 ```
 
-При корректном encryption at rest `grep` не должен ничего вывести (exit code `1`). Отсутствие строки
-само по себе не является единственным доказательством: проверьте, что ключ etcd верный и значение
-действительно создано. Для старых данных этот тест надо выполнять после re-encryption. Данные etcd
-обычно имеют префикс формата encryption provider; не стройте проверку вокруг внутреннего формата,
-который зависит от версии Kubernetes.
+Для старых данных этот тест выполняют после re-encryption. Данные etcd обычно имеют префикс формата
+encryption provider; не стройте проверку вокруг внутреннего формата, который зависит от версии Kubernetes.
 
 После теста удалите canary Secret и проверьте, что backup/restore runbook сохранён:
 

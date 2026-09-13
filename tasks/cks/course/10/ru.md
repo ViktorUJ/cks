@@ -308,7 +308,9 @@ rules:
 - apiGroups: ["*"]
   resources: ["*"]
   verbs: ["*"]
+```
 
+```yaml
 # Минимально для read-only контроллера в одном namespace
 rules:
 - apiGroups: [""]

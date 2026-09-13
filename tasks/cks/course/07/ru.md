@@ -359,8 +359,20 @@ sudo journalctl -u kubelet -n 100 --no-pager
 kubeconfig через API-server proxy):
 
 ```bash
-sudo ss -lntp | grep ':10255' || echo 'read-only kubelet port is closed'
-sudo ss -lntp | grep ':10250'
+listeners=$(sudo ss -lntp) || {
+  echo 'ERROR: cannot inspect TCP listeners' >&2
+  exit 1
+}
+
+if grep -q ':10255' <<<"$listeners"; then
+  echo 'ERROR: read-only kubelet port is listening' >&2
+  exit 1
+else
+  echo 'OK: read-only kubelet port is closed'
+fi
+
+# Показать защищённый kubelet API, если он слушается.
+grep ':10250' <<<"$listeners"
 kubectl get nodes
 
 NODE="${NODE:?set target node name from kubectl get nodes}"

@@ -39,10 +39,10 @@
 
 ```mermaid
 flowchart TB
-    appa["client app"] --> pa["sidecar / mesh proxy"]
-    pa -->|"mTLS: identity workload↔workload"| pb["sidecar / mesh proxy"]
+    appa["client app"] --> pa["sidecar /<br/>mesh proxy"]
+    pa -->|"mTLS:<br/>identity<br/>workload↔workload"| pb["sidecar /<br/>mesh proxy"]
     pb --> appb["server app"]
-    na["node-a Cilium"] -->|"WireGuard или IPsec:<br/>шифрование node↔node"| nb["node-b Cilium"]
+    na["node-a<br/>Cilium"] -->|"WireGuard<br/>или IPsec:<br/>шифрование<br/>node↔node"| nb["node-b<br/>Cilium"]
     pa --- na
     pb --- nb
     style appa fill:#326ce5,color:#fff
@@ -71,6 +71,16 @@ flowchart TB
 
 > 🎯 До изменения зафиксируйте CNI, версии, firewall, MTU и cross-node placement тестовых Pod.
 
+
+**Зафиксировать** здесь значит не менять конфигурацию, а сохранить baseline — снимок
+работающего состояния, с которым можно сравнить результат после rollout. Запишите вывод
+проверок в заметку change/incident или учебные записи: какой CNI уже обслуживает сеть и его
+версию; какие версии Kubernetes/kernel/Cilium участвуют; разрешает ли firewall нужный
+межузловой protocol; какой MTU доступен по пути. **Cross-node placement** означает, что два
+тестовых Pod действительно запланированы на **разные** nodes. Это важно: только такой flow
+создаёт node-to-node outer packet, по которому можно доказать WireGuard/IPsec. Если после
+изменения трафик перестанет работать, baseline помогает отличить новый дефект от прежнего
+firewall/MTU/placement ограничения.
 ## 23.2. Перед изменением: scope, совместимость и исходное состояние
 
 Шифрование CNI и service mesh - cluster-wide или namespace-wide изменение. Не включайте
@@ -123,15 +133,15 @@ node IP, а Cilium на `node-b` проверяет peer, расшифровыв
 
 ```mermaid
 sequenceDiagram
-    participant A as Pod client на node-a
-    participant CA as Cilium node-a
-    participant CB as Cilium node-b
-    participant B as Pod server на node-b
-    A->>CA: исходный TCP/HTTP packet
-    CA->>CB: outer node-IP packet, WireGuard/IPsec encrypted
-    CB->>B: расшифрованный исходный TCP/HTTP packet
+    participant A as Pod client<br/>на node-a
+    participant CA as Cilium<br/>node-a
+    participant CB as Cilium<br/>node-b
+    participant B as Pod server<br/>на node-b
+    A->>CA: исходный<br/>TCP/HTTP packet
+    CA->>CB: outer node-IP packet<br/>WireGuard/IPsec encrypted
+    CB->>B: расшифрованный<br/>исходный TCP/HTTP packet
     B-->>CB: response
-    CB-->>CA: encrypted response
+    CB-->>CA: encrypted<br/>response
     CA-->>A: response
 ```
 
@@ -161,7 +171,7 @@ forward-looking production extension, а не основной путь CKS; д�
 Helm values и поддерживаемые комбинации сверяйте с документацией версии, установленной в
 кластере: значения из старой статьи могут не подходить к новому Cilium.
 
-> 🎯 Проверьте version-matched values, rollout Cilium agents и encryption status; peer key подтверждает node, не Pod identity.
+> 🎯 Проверьте version-pinned values, rollout Cilium agents и encryption status; peer key подтверждает node, не Pod identity.
 
 ## 23.4. WireGuard: включение, key peer и взаимная аутентификация
 
@@ -209,19 +219,27 @@ helm upgrade cilium cilium/cilium \
   --set encryption.nodeEncryption=true
 ```
 
-После rollout проверяйте состояние *на каждом agent*, а не только наличие DaemonSet:
+После rollout проверяйте состояние **на каждом Cilium agent**, а не только один Pod,
+который произвольно выберет `kubectl exec ds/cilium`:
 
 ```bash
-kubectl -n kube-system exec ds/cilium -- cilium status --verbose
-kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status
 kubectl -n kube-system get pods -l k8s-app=cilium -o wide
+kubectl -n kube-system get pods -l k8s-app=cilium -o name |
+  while IFS= read -r agent; do
+    echo "=== $agent ==="
+    kubectl -n kube-system exec "$agent" -- cilium-dbg status --verbose
+    kubectl -n kube-system exec "$agent" -- cilium-dbg encrypt status
+  done
 ```
 
-Ожидаются healthy agents и encryption state без ошибок peer/handshake. В зависимости от
-версии Cilium команда может показывать интерфейс WireGuard, peers, public keys или
-счётчики. Если CLI не поддерживает ожидаемый subcommand, сначала выполните
-`cilium --help` внутри именно этого agent и используйте документацию совпадающей версии,
-а не отключайте encryption ради «зелёного» вывода.
+Ожидаются healthy agents и encryption state без ошибок peer/handshake на каждой node. В
+зависимости от версии Cilium команда может показывать интерфейс WireGuard, peers, public
+keys или счётчики. `cilium-dbg` — CLI локального agent: если subcommand отсутствует,
+выполните `cilium-dbg --help` **в этом же agent** и сверяйте документацию установленной
+версии Cilium, потому что этот binary поставляется вместе с agent. Внешний Cilium CLI
+`cilium`, который запускают с административной машины, имеет отдельную нумерацию: для него
+используйте поддерживаемую совместимую версию и её compatibility table, а не одинаковый
+номер версии с release.
 
 > 🔬 Strict mode предотвращает первый plaintext packet, но требует version- и routing-specific compatibility.
 
@@ -253,6 +271,15 @@ control-plane.
 
 > 🏭 Для скомпрометированной node: изоляция, сохранение evidence, вывод старого peer из доверия; private key не попадает в ticket, Git или чат.
 
+**Что это означает на практике:** «скомпрометирована» — есть основание считать, что
+злоумышленник мог выполнять команды на node или читать её данные. **Изолировать** — не
+назначать на неё новые Pod и ограничить её участие в кластере по approved incident procedure;
+это сдерживает распространение, но не стирает следы. **Evidence** — нужные для расследования
+метаданные и логи (время, node name, состояние Cilium и события), а не копия private key.
+**Вывести старый peer из доверия** — после регенерации key или замены node убедиться, что
+остальные nodes больше не принимают traffic, аутентифицированный старым public key. Следующий
+список показывает безопасный порядок этих действий.
+
 ### Ротация и инцидент с ключом WireGuard
 
 Cilium автоматизирует lifecycle keys, но security design всё равно обязан описывать,
@@ -270,7 +297,7 @@ Cilium автоматизирует lifecycle keys, но security design всё 
 `kubectl get secret -A` и широкое право читать Secrets дают доступ не только к IPsec
 material, но и к множеству иных секретов. Ограничьте RBAC и audit доступ к `kube-system`.
 
-> 🔬 IPsec — альтернативный backend Cilium с key rotation, ESP-диагностикой, version-matched CLI и overlap rollout.
+> 🔬 IPsec — альтернативный backend Cilium с key rotation, ESP-диагностикой, совместимым Cilium CLI и key-overlap window.
 
 ## 23.5. IPsec: когда нужен и как не сломать key management
 
@@ -280,9 +307,22 @@ Security Associations. Его часто выбирают, когда корпо
 как ESP (IP protocol 50); прикладной HTTP в нём не должен читаться. Не переносите сюда
 общую IKE/NAT-T модель с UDP/4500: она не является частью этого Cilium-механизма.
 
-Типовой переход для Cilium release с поддержкой IPsec выглядит так:
+Типовой переход для Cilium release с поддержкой IPsec начинается с Secret ключа: agent
+должен получить `cilium-ipsec-keys` **до** включения `encryption.type=ipsec`. Выполняйте
+создание только с административной машины, где установлен поддерживаемый совместимый Cilium
+CLI и есть kubeconfig. Если Secret уже существует, не перезаписывайте его случайно — сначала
+проверьте owner и version-specific rotation procedure:
 
 ```bash
+kubectl -n kube-system get secret cilium-ipsec-keys >/dev/null 2>&1 || \
+  cilium encrypt create-key --auth-algo rfc4106-gcm-aes
+
+# Проверяем только наличие и metadata, не data ключа.
+kubectl -n kube-system get secret cilium-ipsec-keys \
+  -o custom-columns=NAME:.metadata.name,TYPE:.type,CREATED:.metadata.creationTimestamp
+kubectl -n kube-system get secret cilium-ipsec-keys \
+  -o jsonpath='{.metadata.resourceVersion}{"\n"}'
+
 helm upgrade cilium cilium/cilium \
   --namespace kube-system \
   --reuse-values \
@@ -291,50 +331,58 @@ helm upgrade cilium cilium/cilium \
   --set encryption.type=ipsec
 
 kubectl -n kube-system rollout status daemonset/cilium --timeout=10m
-kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status
+kubectl -n kube-system get pods -l k8s-app=cilium -o name |
+  while IFS= read -r agent; do
+    echo "=== $agent ==="
+    kubectl -n kube-system exec "$agent" -- cilium-dbg encrypt status
+  done
 ```
 
 Cilium хранит IPsec key material в Secret `cilium-ipsec-keys` в `kube-system`. Не выводите
 его в терминал, CI log или документацию. Разрешено проверить наличие и метаданные без
-декодирования data:
+dекодирования data.
+
+Для ротации используйте только поддерживаемую **совместимую** версию Cilium CLI и
+version-specific procedure. Обычный несекретный статус снимайте через `cilium encryption
+status` с административной машины и `cilium-dbg encrypt status` на каждой node. Команда
+`cilium encryption key-status` выводит IPsec key material: запускайте её только если это
+прямо требует одобренная процедура ротации, в защищённом терминале, без вывода в CI, log,
+ticket или чат.
 
 ```bash
-kubectl -n kube-system get secret cilium-ipsec-keys \
-  -o custom-columns=NAME:.metadata.name,TYPE:.type,CREATED:.metadata.creationTimestamp
-kubectl -n kube-system get secret cilium-ipsec-keys -o jsonpath='{.metadata.resourceVersion}{"\n"}'
-```
-
-Для поддерживаемого version-matched Cilium CLI штатный путь ротации IPsec key -
-`cilium encryption rotate-key`; состояние ключей проверяйте через `cilium encryption
-key-status`. Выполняйте эти команды с административной машины, где CLI имеет kubeconfig к
-кластеру, а не из container Cilium agent:
-
-```bash
-# Административная машина с Cilium CLI той же версии, что и release.
-cilium encryption key-status
+# Административная машина с поддерживаемым совместимым Cilium CLI.
+cilium encryption status
 cilium encryption rotate-key
-cilium encryption key-status
 ```
 
 При нескольких кластерах или нестандартном release добавьте к командам нужные параметры
-`--context`, `--namespace kube-system` и `--helm-release-name`. Для node-local диагностики
-используйте `kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status`, но не
-выполняйте ротацию из Pod. Сверьте доступность subcommand с версией CLI через `cilium
-encryption --help` и наблюдайте rollout на всех нодах. Ручная работа с Secret допустима
-только как version-specific fallback из документации Cilium. Смысл процедуры - на короткий
-период дать agents принять старый и новый key, дождаться rollout всех нод и только потом
-убрать старый key. Нельзя вручную заменить Secret одной случайной строкой: рассинхронизация
-peers вызывает packet loss. Практический минимум для change request:
+`--context`, `--namespace kube-system` и `--helm-release-name`. Не выполняйте ротацию из
+Cilium Pod. Сверьте доступность subcommand через `cilium encryption --help` и compatibility
+table CLI. При `encryption.ipsec.keyWatcher=true` (default) agents подхватывают обновление
+Secret без DaemonSet restart; обычно все agents применяют его примерно за минуту, а старый
+и новый key сосуществуют в rotation window. Restart/rollout DaemonSet нужен только при
+отключённом watcher или если этого прямо требует документация установленной версии.
+
+Нельзя вручную заменить Secret одной случайной строкой: рассинхронизация peers вызывает
+packet loss. Практический минимум для change request:
 
 - новый key генерируется криптографически случайно и передаётся защищённым каналом;
 - порядок и формат key Secret берутся из документации установленного Cilium;
-- rollout DaemonSet наблюдается до completion на всех нодах;
+- `resourceVersion` Secret и `cilium-dbg encrypt status` проверяются на **всех** agents до
+  окончания key-overlap window;
 - есть измерение потерь/ошибок и откат до удаления старого key;
-- после ротации проверяются `cilium-dbg encrypt status`, приложение и physical capture.
+- после ротации проверяются приложение и physical capture на нужной паре нод.
 
 **Не путайте IPsec key с mTLS CA.** IPsec key защищает transport peers, а сертификат mesh
 подтверждает workload identity. Их владелец, rotation interval, audit и blast radius могут
 быть разными.
+
+На этом настройка Cilium transport encryption заканчивается. Istio рассматривается сразу
+следом намеренно: это **не** следующий параметр Cilium и не prerequisite для IPsec, а
+независимый дополнительный слой. Для cross-node запроса Cilium защищает outer packet между
+nodes, тогда как Istio mTLS позволяет proxy проверить identity конкретного workload. Поэтому
+healthy Cilium encryption ещё не доказывает injection, certificate или mTLS policy Istio —
+эти проверки выполняются отдельно в следующем разделе.
 
 > 🎯 Istio mTLS связывает certificate с workload identity; отличайте `PeerAuthentication: STRICT` от `DestinationRule` с `ISTIO_MUTUAL` и проверяйте proxy/injection.
 
@@ -342,25 +390,69 @@ peers вызывает packet loss. Практический минимум дл
 
 ## 23.6. Istio: sidecar, SPIFFE workload identity и `PeerAuthentication`
 
+
+### Какую проблему решает Istio после Cilium
+
+Предыдущие разделы уже защитили **transport между nodes**: Cilium WireGuard/IPsec шифрует
+outer packet и аутентифицирует node peer. Но этого недостаточно, если важно ответить на
+вопрос: «какой именно workload вызывает сервис?» Cilium не выдаёт приложению или серверу
+проверяемую identity client Pod/ServiceAccount и сам по себе не заставляет server принимать
+только mTLS. Кроме того, Cilium node encryption по дизайну не создаёт outer tunnel для Pod
+на одной node.
+
+Istio решает другую часть задачи: proxy workload получают certificates, устанавливают mTLS
+и проверяют identity peer. `PeerAuthentication: STRICT` может запретить plaintext inbound
+traffic. В связке они работают так: **Istio защищает и аутентифицирует workload-to-workload
+connection, Cilium дополнительно защищает пакет на недоверенном межузловом участке**.
+`NetworkPolicy` остаётся третьим слоем — она определяет, какой flow вообще разрешён.
+
+| Вопрос | Cilium WireGuard/IPsec | Istio mTLS |
+|---|---|---|
+| Главный плюс | Transparent node-to-node encryption без изменения приложения или Service | Workload identity, взаимная аутентификация и `STRICT` против plaintext client |
+| Чего не решает | Не даёт server identity client workload; не шифрует same-node flow по дизайну | Не скрывает outer L3/L4 metadata от underlay и не покрывает non-mesh flow; не заменяет NetworkPolicy |
+| Цена/ограничение | Нужны совместимые CNI/kernel, firewall и MTU; ключи относятся к nodes | Нужны control plane, certificates и proxy/ambient dataplane; sidecar mode добавляет container и overhead |
+| Что доказывать | Cilium agent status и outer WireGuard/ESP на physical NIC | Injection/enrollment, proxy/certificate status и mTLS/`STRICT` tests |
+
+Это не обязательное «двойное шифрование». Если **оба** workload уже в mesh, trust
+проверен и `PeerAuthentication: STRICT` действительно применяется, mTLS уже шифрует
+application payload между proxy. Ради повторного шифрования того же payload Cilium node
+encryption включать не обязательно.
+
+Cilium добавляет отдельную ценность, когда threat model требует защитить node-to-node
+underlay: скрыть inner Pod IP/port и другой L3/L4 metadata от физической сети, покрыть
+чувствительный cross-node flow вне mesh либо выполнить policy/compliance требование к
+шифрованию между nodes. Оба слоя нужны только когда применимы **обе** цели: workload
+identity/mTLS **и** защита underlay или non-mesh traffic. Если application не требует
+workload identity или mesh-compatible behavior, Istio не включают автоматически — сначала
+оценивают threat model, compatibility и overhead.
 Istio sidecar (`istio-proxy`, Envoy) перехватывает inbound/outbound workload traffic.
 Istiod выдаёт workload сертификат на основе Kubernetes ServiceAccount; proxy устанавливают
 mTLS и проверяют identity peer. Workload identity имеет форму SPIFFE ID:
 `spiffe://<trust-domain>/ns/<namespace>/sa/<service-account>`. Приложение обычно продолжает
 слушать обычный HTTP порт, потому что TLS завершается в sidecar, а не в app container.
 
-В ambient mode Istio не добавляет sidecar в каждый Pod: node-level `ztunnel` переносит
-workload traffic по HBONE и обеспечивает mTLS. Поэтому отсутствие `istio-proxy` не всегда
-означает plaintext client. В обеих моделях `PeerAuthentication` с `STRICT` не допускает
-plaintext inbound traffic: в ambient mode сервер ожидает защищённый HBONE/mTLS поток.
-Проверяйте mode mesh перед диагностикой и сверяйте особенности `PeerAuthentication` с
-версией Istio.
+В **ambient mode** Istio не добавляет отдельный sidecar в каждый Pod: вместо этого на
+каждой node работает `ztunnel` (**Zero Trust Tunnel**) — специальный node-level proxy.
+Он выполняет L3/L4-задачи mesh, в том числе mTLS и authentication, не заставляя приложение
+самостоятельно работать с TLS.
+
+`HBONE` (**HTTP-Based Overlay Network Environment**) — защищённый Istio tunnel между
+компонентами mesh. Он переносит несколько TCP streams через одно mTLS connection; поэтому
+workload traffic может быть защищён, хотя в списке containers Pod нет `istio-proxy`.
+Отсутствие `istio-proxy` в ambient mode не означает plaintext client. В обеих моделях
+`PeerAuthentication` с `STRICT` не допускает plaintext inbound traffic: в ambient mode
+сервер ожидает защищённый HBONE/mTLS поток.
+
+Следующая проверка `istio-injection=enabled` и наличие `istio-proxy` относится **только к
+sidecar mode**. Для ambient mode проверяйте enrollment workload и состояние `ztunnel` по
+documentation установленной версии Istio, а не ожидайте дополнительный container в Pod.
 
 ```mermaid
 flowchart TB
-    ca["client app<br/>HTTP localhost/Pod IP"] --> cp["client istio-proxy<br/>получает workload cert"]
-    cp -->|"mTLS + SAN identity"| sp["server istio-proxy<br/>проверяет client cert"]
+    ca["client app<br/>HTTP localhost/<br/>Pod IP"] --> cp["client istio-proxy<br/>получает<br/>workload cert"]
+    cp -->|"mTLS + SAN identity"| sp["server istio-proxy<br/>проверяет<br/>client cert"]
     sp --> sa["server app<br/>обычный HTTP"]
-    out["Pod без sidecar<br/>plaintext"] -. "STRICT: reject/reset" .-> sp
+    out["Pod без sidecar<br/>plaintext"] -. "STRICT:<br/>reject/reset" .-> sp
     style ca fill:#326ce5,color:#fff
     style sa fill:#326ce5,color:#fff
     style cp fill:#673ab7,color:#fff
@@ -381,7 +473,8 @@ kubectl label namespace mesh-demo istio-injection=enabled
 kubectl -n mesh-demo apply -f server.yaml
 kubectl -n mesh-demo apply -f client.yaml
 kubectl -n mesh-demo get pods
-kubectl -n mesh-demo get pod server -o jsonpath='{.spec.containers[*].name}{"\n"}'
+kubectl -n mesh-demo get pod -l app=server \
+  -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.spec.containers[*].name}{"\n"}{end}'
 ```
 
 В списке контейнеров должен быть `istio-proxy` наряду с `server`. Отсутствие sidecar -
@@ -682,6 +775,10 @@ linkerd check --pre
 linkerd install --crds | kubectl apply -f -
 linkerd install | kubectl apply -f -
 linkerd check
+
+# Viz — отдельное extension; устанавливайте его до viz commands.
+linkerd viz install | kubectl apply -f -
+linkerd viz check
 ```
 
 В production installation manifest должен быть сгенерирован и проверен в CI из
@@ -792,10 +889,15 @@ for i in $(seq 1 20); do
 done
 ```
 
-Ожидается серия UDP datagram node-a ↔ node-b на WireGuard port. В выводе не должно быть
-строки HTTP request (`GET /`, `Host:`) или `server-ok`. Наличие UDP на порту ещё не
-доказывает, что это именно нужный Pod flow; сопоставьте время capture, node pair и рост
-счётчиков Cilium encryption.
+Ожидается серия UDP datagram node-a ↔ node-b на WireGuard port. `-vv` повышает
+подробность разбора protocol headers, но не печатает payload ASCII, поэтому отсутствие
+`GET /`, `Host:` или `server-ok` в таком выводе ничего не доказывает. Наличие UDP на порту
+тоже ещё не доказывает, что это именно нужный Pod flow: сопоставьте время capture, node
+pair и рост счётчиков/status Cilium encryption.
+
+Если disposable lab требует именно сравнить payload, используйте короткий capture
+контролируемого несекретного flow с `-A` или `-X` и достаточным snaplen на ожидаемой inner
+точке. Не применяйте payload capture к чувствительному production traffic.
 
 ### IPsec capture
 
@@ -806,17 +908,26 @@ done
 sudo tcpdump -ni ens5 -vv 'host <NODE_B_IP> and esp'
 ```
 
-Снова запустите повторяемый application flow. Ожидаются ESP packets, но не readable HTTP. После capture сопоставьте результат с agent:
+Снова запустите повторяемый application flow. Ожидаются ESP packets. Не используйте
+отсутствие HTTP строк в `tcpdump -vv` как доказательство: payload этот режим не показывает.
+После capture сопоставьте результат с agent **на node-a и node-b**:
 
 ```bash
-kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status
-kubectl -n kube-system logs ds/cilium --since=10m | grep -Ei 'encrypt|wireguard|ipsec|error'
+for node in "${NODE_A:?set first node name}" "${NODE_B:?set second node name}"; do
+  agent=$(kubectl -n kube-system get pods -l k8s-app=cilium \
+    --field-selector "spec.nodeName=$node" \
+    -o jsonpath='{.items[0].metadata.name}')
+  test -n "$agent" || { echo "ERROR: no Cilium agent on $node" >&2; exit 1; }
+  echo "=== node=$node agent=$agent ==="
+  kubectl -n kube-system exec "$agent" -- cilium-dbg encrypt status
+done
 ```
 
 `grep` без результата не является доказательством безопасности: многие нормальные agents
 не логируют каждый пакет. Сильное evidence - четыре совпадающих факта: cross-node
 placement, `200` для intended flow, healthy encryption status/counters и encrypted outer
-protocol на physical NIC без payload.
+protocol на physical NIC. Для payload comparison используйте только ограниченный lab
+capture с `-A`/`-X`, а не production traffic.
 
 ### Отрицательная проверка и частые ловушки
 
@@ -859,7 +970,11 @@ protocol на physical NIC без payload.
 kubectl -n mesh-demo get pod,svc,endpointslice -o wide
 kubectl -n mesh-demo get peerauthentication,destinationrule -o yaml
 kubectl -n kube-system get pods -l k8s-app=cilium -o wide
-kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status
+kubectl -n kube-system get pods -l k8s-app=cilium -o name |
+  while IFS= read -r agent; do
+    echo "=== $agent ==="
+    kubectl -n kube-system exec "$agent" -- cilium-dbg encrypt status
+  done
 istioctl proxy-status 2>/dev/null || true
 linkerd check 2>/dev/null || true
 ```
@@ -978,7 +1093,7 @@ WireGuard принимает пакет только после криптогр
 <details>
 <summary>4. Чем опасна ручная замена IPsec Secret без key-overlap rollout?</summary>
 
-Peers могут оказаться с разными ключами, что вызывает packet loss и потерю cross-node connectivity. Штатная version-matched процедура `cilium encryption rotate-key` временно даёт agents принимать old и new key, а потом проверяет rollout и status на всех nodes. Secret `cilium-ipsec-keys` не выводят и не заменяют одной случайной строкой.
+Peers могут оказаться с разными ключами, что вызывает packet loss и потерю cross-node connectivity. Совместимая version-specific процедура ротации временно даёт agents принимать old и new key; при включённом key watcher новый Secret распространяется без обязательного DaemonSet rollout. До конца key-overlap window проверяют `resourceVersion` Secret и `cilium-dbg encrypt status` на всех nodes. Secret `cilium-ipsec-keys` не выводят и не заменяют одной случайной строкой.
 </details>
 
 <details>
