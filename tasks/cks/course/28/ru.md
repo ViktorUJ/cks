@@ -100,27 +100,32 @@ store или archive. Первый запуск загрузит vulnerability d
 # Полный человекочитаемый отчёт для анализа.
 trivy image registry.example.com/payments/api:1.4.2
 
-# Для gate: только приоритетные находки, без CVE без опубликованного фикса.
+# CVE gate: только vulnerability scanner и приоритетные находки с опубликованным фиксом.
 trivy image \
+  --scanners vuln \
   --severity HIGH,CRITICAL \
   --ignore-unfixed \
   --exit-code 1 \
   registry.example.com/payments/api:1.4.2
 ```
 
-`--severity HIGH,CRITICAL` отфильтровывает отчёт по severity. `--ignore-unfixed` исключает
-находки, для которых база не знает fixed version; это не означает, что риск исчез. Их
-отслеживают отдельно: обновляют базовый образ, применяют vendor backport, компенсируют
-контролями или принимают ограниченное по сроку исключение. `--exit-code 1` заставляет Trivy
-вернуть ненулевой код при находке, подходящей фильтрам; без него pipeline может успешно
-закончиться, только напечатав CVE. Не используйте этот флаг для exploratory-отчёта, если
-ненулевой exit code не должен останавливать job.
+`--scanners vuln` делает этот gate именно CVE/vulnerability control: актуальный `trivy image`
+по умолчанию включает также secret scanner, чьи HIGH/CRITICAL findings иначе тоже могут
+вернуть `--exit-code 1`. Secret scanning оставляйте отдельным явным control с безопасным
+хранением output. `--severity HIGH,CRITICAL` отфильтровывает vulnerability report по severity.
+`--ignore-unfixed` исключает CVE, для которых база не знает fixed version; это не означает,
+что риск исчез. Их отслеживают отдельно: обновляют базовый образ, применяют vendor backport,
+компенсируют контролями или принимают ограниченное по сроку исключение. `--exit-code 1`
+заставляет Trivy вернуть ненулевой код при vulnerability finding, подходящей фильтрам; без
+него pipeline может успешно закончиться, только напечатав CVE. Не используйте этот флаг для
+exploratory-отчёта, если ненулевой exit code не должен останавливать job.
 
 Полезный формат для artifact CI - JSON. В нём можно хранить результат, строить dashboard и
 сравнивать scan до и после обновления:
 
 ```bash
 trivy image \
+  --scanners vuln \
   --severity HIGH,CRITICAL \
   --format json \
   --output trivy-api-1.4.2.json \
@@ -134,58 +139,32 @@ jq -r '.Results[]?.Vulnerabilities[]? |
 
 ### Найти image с наибольшим числом `CRITICAL` в namespace
 
-Сначала получают runtime inventory **всех статусов контейнеров**, а не предполагают
-image по имени Deployment. Здесь `payments` - пример namespace. `imageID` из `status`
-предпочтительнее для факта запуска, чем `spec.image`: оно отражает identifier, разрешённый
-runtime для данного Pod. Включайте обычные, init и ephemeral containers.
+> 🎯 **CKS Core.** На экзамене получите список Pod, для каждого извлеките image regular
+> containers и выведите одну строку `Pod | image | CRITICAL: N`. Trivy отдаёт JSON только во
+> внутренний `jq`, поэтому таблицы, summary и служебный output не засоряют terminal.
 
 ```bash
 namespace=payments
+set -euo pipefail
 
-kubectl get pods -n "$namespace" -o json | jq -r '
-  .items[] as $pod |
-  ($pod.status.initContainerStatuses[]? |
-    [$pod.metadata.name, "init", .name, .imageID] | @tsv),
-  ($pod.status.containerStatuses[]? |
-    [$pod.metadata.name, "app", .name, .imageID] | @tsv),
-  ($pod.status.ephemeralContainerStatuses[]? |
-    [$pod.metadata.name, "ephemeral", .name, .imageID] | @tsv)
-' | sort -u | tee /tmp/payments-runtime-images.tsv
+for pod in $(kubectl get pods -n "$namespace" -o name); do
+  for image in $(kubectl get -n "$namespace" "$pod" \
+    -o jsonpath='{.spec.containers[*].image}'); do
+    critical="$(
+      trivy image --scanners vuln --quiet --format json --severity CRITICAL "$image" \
+        | jq -er '[.Results[]?.Vulnerabilities[]?] | length'
+    )"
+    printf '%s | %s | CRITICAL: %s\n' "$pod" "$image" "$critical"
+  done
+done
 ```
 
-`imageID` задаёт container runtime, поэтому это не универсально registry digest: оно может
-быть resolved reference, runtime-specific URI или identifier. Для scan сопоставьте каждую
-строку с canonical registry reference вида `registry.example.com/name@sha256:...`, который
-разрешается в тот же runtime identifier, и сохраните только такие подтверждённые references
-в `/tmp/payments-images.txt`. Не передавайте runtime-specific prefix scanner-у как будто это
-всегда registry reference.
-
-```bash
-# Файл содержит только подтверждённые canonical registry references по runtime inventory.
-while IFS= read -r image; do
-  critical=$(trivy image --quiet --format json --severity CRITICAL "$image" \
-    | jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length')
-  printf '%6d  %s\n' "$critical" "$image"
-done < /tmp/payments-images.txt | sort -n
-```
-
-Перед remediation подтвердите, что runtime identifier действительно относится к нужному
-workload: Pod может быть старой репликой после rollout, а один и тот же тег может в разных
-registry указывать на разные байты. Зафиксируйте все runtime identifiers и владельца:
-
-```bash
-POD="${POD:?set pod name}"
-
-kubectl get pod -n "$namespace" "$POD" -o json | jq -r '
-  (.status.initContainerStatuses[]?, .status.containerStatuses[]?,
-   .status.ephemeralContainerStatuses[]?) |
-  [.name, .imageID] | @tsv
-'
-kubectl get pod -n "$namespace" "$POD" -o jsonpath='{.metadata.ownerReferences[0].kind}{"/"}{.metadata.ownerReferences[0].name}{"\n"}'
-```
-
-Решение «заменить тег» без повторного scan canonical reference и сверки нового runtime
-identifier не является remediation.
+> 🏭 **Production.** Полная platform automation инвентаризирует фактически запущенные
+> regular, init и ephemeral containers, сопоставляет runtime `imageID` с canonical digest и
+> фиксирует owner workload. В Kubernetes v1.36 отдельно учитывайте
+> `spec.volumes[].image.reference`: container-image-compatible volume проходит тот же
+> CVE/SBOM flow, а для другого OCI artifact нужна подходящая policy. Это полезно для
+> эксплуатации, но не требуется воспроизводить вручную в exam task.
 
 > 🎯 Свяжите SBOM с тем же digest и просканируйте сохранённый состав: CVE исправляется rebuild-ом artifact, а не редактированием SBOM.
 
@@ -200,21 +179,38 @@ CLI-задача: перед применением проверьте дост�
 ```bash
 image=registry.example.com/payments/api:1.4.2
 
+# Для single-platform image укажите реально поставляемую platform.
+platform=linux/amd64
 # CycloneDX: распространённый формат для SCA и security-платформ.
-trivy image --format cyclonedx --output api.cdx.json "$image"
+trivy image --platform "$platform" --format cyclonedx --output api-amd64.cdx.json "$image"
 
 # SPDX JSON: формат, удобный для interoperability и compliance.
-trivy image --format spdx-json --output api.spdx.json "$image"
+trivy image --platform "$platform" --format spdx-json --output api-amd64.spdx.json "$image"
 
 # Повторно сканировать SBOM, а не image. JSON - машиночитаемый результат для CI.
-trivy sbom --format json --output api-sbom-vulnerabilities.json api.spdx.json
+trivy sbom --format json --output api-amd64-sbom-vulnerabilities.json api-amd64.spdx.json
 ```
 
 Файл SBOM - security artifact: он раскрывает используемые компоненты и версии. Храните его
-рядом с release artifact с контролем доступа и связывайте с digest образа. Он не заменяет
-scan image: SBOM может быть создан из другой сборки, не включать OS packages из-за выбранного
-генератора или быть устаревшим. Практика - сохранять как SBOM, так и scan result, а перед
-promotion проверять их provenance.
+рядом с release artifact с контролем доступа и связывайте с digest **platform manifest**.
+Он не заменяет scan image: SBOM может быть создан из другой сборки, не включать OS packages
+из-за выбранного генератора или быть устаревшим. Практика - сохранять как SBOM, так и scan
+result, а перед promotion проверять их provenance.
+
+Один OCI index digest не означает один filesystem. Trivy без `--platform` по умолчанию
+загружает `linux/amd64`; для multi-platform image перечислите реально поставляемые platform,
+сканируйте и создавайте SBOM для каждой (либо сканируйте её platform-manifest digest):
+
+```bash
+for platform in linux/amd64 linux/arm64; do
+  suffix="${platform//\//-}"
+  trivy image --scanners vuln --platform "$platform" --severity HIGH,CRITICAL "$image"
+  trivy image --platform "$platform" --format spdx-json --output "api-${suffix}.spdx.json" "$image"
+done
+```
+
+В heterogeneous cluster сопоставляйте architecture node и runtime workload с platform-manifest
+digest; scan root index только для одной default platform не является evidence для остальных.
 
 Для gate на SBOM применяют те же пороги, но явно отделяют audit от block:
 
@@ -224,8 +220,8 @@ trivy sbom \
   --ignore-unfixed \
   --exit-code 1 \
   --format json \
-  --output api-sbom-gate.json \
-  api.spdx.json
+  --output api-amd64-sbom-gate.json \
+  api-amd64.spdx.json
 ```
 
 Если Trivy показывает CVE для package, сначала проверьте `InstalledVersion` и
@@ -320,24 +316,31 @@ images. Allowlist registry и verification signatures рассмотрены в
 
 ```mermaid
 flowchart TB
-    commit["commit / dependency update"] --> source["trivy fs + config<br/>линтеры"]
-    source --> build["build image"]
-    build --> scan["trivy image по digest<br/>SBOM CycloneDX/SPDX"]
-    scan --> gate{"policy severity<br/>и approved exceptions"}
-    gate -->|"pass"| sign["sign / attest<br/>push immutable digest"]
-    gate -->|"fail"| fix["обновить base или dependency"]
+    commit["Commit"] --> source["Source checks"]
+    source --> build["Build"]
+    build --> scan["CVE scan"]
+    scan --> sbom["SBOM"]
+    sbom --> gate{"Policy gate"}
+    gate -->|"fail"| fix["Fix"]
     fix --> build
-    sign --> admission["admission: registry, signature<br/>scan evidence"]
-    admission --> deploy["deploy"]
-    deploy --> rescan["periodic inventory<br/>и rescan при новой CVE"]
+    gate -->|"pass"| sign["Sign"]
+    sign --> push["Push"]
+    push --> admission["Admission"]
+    admission --> deploy["Deploy"]
+    deploy --> inventory["Inventory"]
+    inventory --> rescan["Rescan"]
     style commit fill:#326ce5,color:#fff
     style source fill:#673ab7,color:#fff
     style build fill:#f4b400,color:#000
     style scan fill:#db4437,color:#fff
+    style sbom fill:#0f9d58,color:#fff
     style gate fill:#db4437,color:#fff
+    style fix fill:#db4437,color:#fff
     style sign fill:#0f9d58,color:#fff
+    style push fill:#0f9d58,color:#fff
     style admission fill:#326ce5,color:#fff
     style deploy fill:#0f9d58,color:#fff
+    style inventory fill:#673ab7,color:#fff
     style rescan fill:#673ab7,color:#fff
 ```
 
@@ -358,9 +361,9 @@ immutable_image="${image}@${digest}"
 scan_started_at="$(date -u +%FT%TZ)"
 trivy image --download-db-only 2>&1 | tee trivy-db-update.log
 printf '%s\n' "$scan_started_at" > trivy-scan-started-at.txt
-trivy image --severity HIGH,CRITICAL --ignore-unfixed \
+trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
   --format json --output trivy.json "$immutable_image"
-trivy image --severity HIGH,CRITICAL --ignore-unfixed \
+trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
   --exit-code 1 "$immutable_image"
 trivy image --format cyclonedx --output sbom.cdx.json "$immutable_image"
 ```
@@ -377,8 +380,10 @@ scan и identifier или версию базы из лога вместе с `t
 В cluster полезны два независимых контроля:
 
 1. **Inventory и continuous scanning.** Получать runtime identifiers из всех Pod status,
-   canonical digest после сопоставления, namespace, owner и report. Trivy Operator создаёт
-   post-admission reports и обнаруживает новую CVE без нового deployment.
+   canonical digest после сопоставления, namespace, owner и report, а отдельно —
+   `spec.volumes[].image.reference`. Для multi-platform artifact сопоставлять node architecture
+   и workload с platform manifest; Trivy Operator создаёт post-admission reports и обнаруживает
+   новую CVE без нового deployment.
 2. **Admission.** Запретить непроверенные registry/digest или отсутствие signature/scan
    evidence. Policy должна иметь предсказуемые exception и audit mode перед enforce.
 
@@ -397,9 +402,10 @@ CVE, но и убедиться, что уязвимый artifact больше �
 
 1. **Инвентаризируйте.** Выгрузите runtime `imageID` из всех Pod status, сопоставьте с
    canonical digest, сгруппируйте по namespace и owner. Не забудьте init, ephemeral
-   containers, DaemonSet и Jobs.
-2. **Приоритизируйте.** Запустите scan по digest, выберите `CRITICAL`, изучите package,
-   installed/fixed versions, exposure и владельца сервиса.
+   containers, DaemonSet и Jobs; отдельно выгрузите `spec.volumes[].image.reference` и
+   примените к container-image-compatible image volume CVE/SBOM policy.
+2. **Приоритизируйте.** Запустите vulnerability scan по platform-manifest digest, выберите
+   `CRITICAL`, изучите package, installed/fixed versions, exposure и владельца сервиса.
 3. **Исправьте источник.** Обновите base image или dependency до версии с fix. Если
    upstream пока не выпустил fix, оформите срок действия exception и уменьшите exposure,
    но не объявляйте CVE устранённой.
@@ -416,6 +422,18 @@ CVE, но и убедиться, что уязвимый artifact больше �
 ```bash
 namespace=payments
 deployment=api
+# Этот компактный пример намеренно amd64-only. Heterogeneous deployment должен до rollout
+# выполнить scan/SBOM для каждой реально используемой platform (см. §28.3).
+platform=linux/amd64
+required_arch="${platform#linux/}"
+deployment_arch="$(kubectl -n "$namespace" get deployment "$deployment" \
+  -o jsonpath='{.spec.template.spec.nodeSelector.kubernetes\.io/arch}')"
+test "$deployment_arch" = "$required_arch" || {
+  printf 'Deployment %s must set nodeSelector kubernetes.io/arch=%s; got %s\n' \
+    "$deployment" "$required_arch" "${deployment_arch:-<unset>}" >&2
+  exit 1
+}
+
 # Контракт: IMAGE_DIGEST — canonical OCI digest вида sha256:<64-hex>,
 # например значение containerimage.digest, возвращённое Buildx после push.
 image_digest="${IMAGE_DIGEST:?set verified image digest (sha256:<64-hex>)}"
@@ -431,17 +449,20 @@ kubectl -n "$namespace" get pods -l app=api -o json | jq -r '
   [$pod.metadata.name, .name, .imageID, .ready] | @tsv
 '
 
-# Те же gate-флаги применяются к replacement, а не только к старому образу.
-trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 "$new_image"
-trivy image --format spdx-json --output api-1.4.3.spdx.json "$new_image"
+# Те же gate-флаги и platform применяются к replacement, а не только к старому образу.
+trivy image --scanners vuln --platform "$platform" --severity HIGH,CRITICAL --ignore-unfixed \
+  --exit-code 1 "$new_image"
+trivy image --platform "$platform" --format spdx-json \
+  --output api-1.4.3-amd64.spdx.json "$new_image"
 trivy sbom --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
-  --format json --output api-1.4.3-sbom-scan.json api-1.4.3.spdx.json
+  --format json --output api-1.4.3-amd64-sbom-scan.json api-1.4.3-amd64.spdx.json
 ```
 
 Тест remediation состоит минимум из трёх частей: scan больше не содержит целевую CVE или
 показывает ожидаемую fixed version; `rollout status` успешен; все новые Pods с selector
-workload имеют ожидаемый runtime `imageID`, сопоставленный с проверенным digest. Добавьте
-прикладной smoke-test, например
+workload имеют ожидаемый runtime `imageID`, сопоставленный с проверенным platform-manifest
+digest. Для multi-platform artifact platform scan/SBOM должна совпадать с architecture node,
+на которой запускается workload. Добавьте прикладной smoke-test, например
 `curl` health endpoint из test job. Иначе можно закрыть CVE ценой сломанного TLS, migration
 или несовместимой ABI.
 
@@ -449,10 +470,11 @@ workload имеют ожидаемый runtime `imageID`, сопоставлен
 
 ## 28.8. Как это применяют в продакшене
 
-- **Сканируйте digest, а не только тег.** Тег может быть перезаписан; SBOM, scan result,
-  signature и deployment связывают с одним immutable digest.
+- **Сканируйте platform-manifest digest, а не только тег или OCI index.** Тег может быть
+  перезаписан, а index может указывать на разные filesystem по architecture; SBOM, scan result,
+  signature и deployment связывают с platform-specific immutable digest.
 - **Разделяйте prevention и detection.** CI/admission уменьшают шанс нового уязвимого
-  deploy, а inventory и scheduled rescan находят новые CVE в старых images.
+  deploy, а inventory и scheduled rescan находят новые CVE в старых images и image volumes.
 - **Делайте policy измеримой.** Явно задайте severity, правило для unfixed CVE, SLA по
   remediation и исключения с истечением. Для VEX сохраняйте status, provenance и дату
   review. Политика без владельца и срока становится накопителем игноров.
@@ -482,12 +504,15 @@ workload имеют ожидаемый runtime `imageID`, сопоставлен
 
 - CVE находится в конкретном component/version; severity помогает приоритизировать, но
   не заменяет контекст эксплуатации и ownership.
-- `trivy image` сканирует образ; `--severity HIGH,CRITICAL`, `--ignore-unfixed` и
-  `--exit-code 1` позволяют сделать из него управляемый CI gate.
-- Inventory namespace должен включать statuses обычных, init и ephemeral containers; для
-  remediation runtime `imageID` сопоставляют с проверенным digest, а не полагаются на тег.
+- `trivy image` CVE gate должен явно использовать `--scanners vuln`; `--severity
+  HIGH,CRITICAL`, `--ignore-unfixed` и `--exit-code 1` позволяют сделать из него управляемый
+  CI control, а secret scanning остаётся отдельной policy.
+- Inventory namespace должен включать statuses обычных, init и ephemeral containers, а также
+  `spec.volumes[].image.reference`; для remediation runtime `imageID` или volume reference
+  сопоставляют с проверенным platform-manifest digest, а не полагаются на тег.
 - Trivy создаёт SBOM в CycloneDX (`--format cyclonedx`) и SPDX JSON
-  (`--format spdx-json`); `trivy sbom` повторно сканирует сохранённый состав как production
+  (`--format spdx-json`); для multi-platform image scan и SBOM создают для каждой реально
+  поставляемой platform. `trivy sbom` повторно сканирует сохранённый состав как production
   extension, а не гарантированную CLI-задачу экзамена.
 - `trivy fs` и `trivy config` находят проблемы до image build, но не заменяют scan
   собранного image.
@@ -520,13 +545,17 @@ Vulnerability database постоянно обновляется, поэтому
 <details>
 <summary>2. Что меняют флаги `--severity HIGH,CRITICAL`, `--ignore-unfixed` и `--exit-code 1`?</summary>
 
-`--severity HIGH,CRITICAL` оставляет в отчёте только finding этих уровней. `--ignore-unfixed` исключает CVE без известной fixed version, но не устраняет их риск: их ведут отдельным процессом. `--exit-code 1` делает подходящую находку причиной ненулевого exit code и позволяет превратить scan в CI gate.
+`--scanners vuln` ограничивает этот gate CVE/vulnerability findings; secret scanning — отдельный
+control. `--severity HIGH,CRITICAL` оставляет в отчёте только vulnerability finding этих уровней.
+`--ignore-unfixed` исключает CVE без известной fixed version, но не устраняет их риск: их ведут
+отдельным процессом. `--exit-code 1` делает подходящую находку причиной ненулевого exit code и
+позволяет превратить scan в CI gate.
 </details>
 
 <details>
 <summary>3. Как найти image с наибольшим числом `CRITICAL` в одном namespace и почему нужно учитывать status обычных, init и ephemeral containers?</summary>
 
-Сначала выгружают `.status.initContainerStatuses`, `.status.containerStatuses` и `.status.ephemeralContainerStatuses` всех Pod, получают фактические `imageID` и сопоставляют их с canonical registry digest. Затем для каждого подтверждённого reference запускают `trivy image --quiet --format json --severity CRITICAL`, считают findings через `jq` и сортируют числа. Каждый тип container может реально выполнять отдельный image, поэтому исключение init или ephemeral container оставит слепую зону.
+Сначала выгружают `.status.initContainerStatuses`, `.status.containerStatuses` и `.status.ephemeralContainerStatuses` всех Pod, получают фактические `imageID` и сопоставляют их с canonical registry digest; отдельно инвентаризируют `spec.volumes[].image.reference`. Затем для каждого подтверждённого container-image reference запускают `trivy image --scanners vuln --quiet --format json --severity CRITICAL`, считают findings через `jq` и сортируют числа. Каждый тип container и image volume может доставлять отдельный OCI artifact, поэтому исключение любого пути оставит слепую зону.
 </details>
 
 <details>
@@ -538,7 +567,7 @@ Vulnerability database постоянно обновляется, поэтому
 <details>
 <summary>5. Как создать CycloneDX и SPDX JSON SBOM через Trivy и когда нужен `trivy sbom`?</summary>
 
-Для одного image используют `trivy image --format cyclonedx --output api.cdx.json "$image"` и `trivy image --format spdx-json --output api.spdx.json "$image"`. `trivy sbom` повторно сканирует уже сохранённый SBOM, например после обновления CVE database или без доступа к registry. SBOM связывают с digest и не редактируют для удаления CVE: исправляют dependency/base image и генерируют его заново.
+Для single-platform image используют `trivy image --platform linux/amd64 --format cyclonedx --output api-amd64.cdx.json "$image"` и `trivy image --platform linux/amd64 --format spdx-json --output api-amd64.spdx.json "$image"`. Для OCI index повторяют это для каждой реально поставляемой platform. `trivy sbom` повторно сканирует уже сохранённый SBOM, например после обновления CVE database или без доступа к registry. SBOM связывают с platform-manifest digest и не редактируют для удаления CVE: исправляют dependency/base image и генерируют его заново.
 </details>
 
 <details>
@@ -550,7 +579,7 @@ Vulnerability database постоянно обновляется, поэтому
 <details>
 <summary>7. Какие три проверки доказывают, что remediation CVE действительно завершено?</summary>
 
-Повторный scan replacement image должен не содержать целевую CVE либо показывать ожидаемую fixed version. `kubectl rollout status` должен подтвердить успешный rollout. Наконец, status всех новых Pod выбранного workload должен показывать runtime `imageID`, сопоставленный с проверенным digest; глава также рекомендует прикладной smoke test.
+Повторный scan replacement image должен не содержать целевую CVE либо показывать ожидаемую fixed version. `kubectl rollout status` должен подтвердить успешный rollout. Наконец, status всех новых Pod выбранного workload должен показывать runtime `imageID`, сопоставленный с проверенным platform-manifest digest; для multi-platform image scan/SBOM должны покрывать architecture этих Pod. Глава также рекомендует прикладной smoke test.
 </details>
 
 <details>
@@ -579,8 +608,8 @@ allowlist artifact. В ней scan-отчёт, SBOM и проверка испр
 
 1. Постройте образ на `distroless` вместо полнофункциональной базы и объясните, какую
    конкретную post-exploitation технику это убирает у атакующего с RCE (глава 24).
-2. Сгенерируйте SBOM (SPDX или CycloneDX) через `syft` или `trivy sbom` и найдите в нём
-   один конкретный пакет с версией (глава 25).
+2. Сгенерируйте SBOM (SPDX или CycloneDX) через `syft` либо `trivy image --format spdx-json` /
+   `trivy image --format cyclonedx` и найдите в нём один конкретный пакет с версией (глава 25).
 3. Подпишите тестовый образ через `cosign` и объясните, почему `cosign verify` в CI не
    мешает прямому `kubectl apply` неподписанного образа без admission-контроля (глава 26).
 4. **Смешанное задание.** Возьмите admission policy (глава 20, домен Minimize Microservice

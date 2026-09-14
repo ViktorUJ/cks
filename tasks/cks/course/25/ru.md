@@ -71,6 +71,17 @@ flowchart TB
 потребителя, если получает возможность изменить один доверенный этап сборки или delivery.
 В Kubernetes результатом может стать Pod с корректным именем и tag, но с чужим code.
 
+Недавний [инцидент Trivy](https://github.com/aquasecurity/trivy/discussions/10462)
+показывает ту же точку концентрации доверия. По итоговому отчёту проекта, 27 февраля 2026
+злоумышленник использовал уязвимый workflow с `pull_request_target`, получил secrets уровня
+repository и organization, а 19 марта украденным credential запустил release workflow и
+распространил вредоносный Trivy `v0.69.4`. Корневая проблема была не в самом scanner-е, а в
+привилегированном CI, который исполнил непроверенный PR-код и имел доступ к избыточным
+secrets; недостаточная изоляция service accounts и неэффективная ротация увеличили impact.
+Это не означает компрометацию всех пользователей Trivy или Kubernetes Pod-ов, но подтверждает
+урок SolarWinds: один доверенный build/release шаг с широкими credential даёт атакующему
+масштабируемый путь доставки чужого кода.
+
 Нельзя свести защиту к одному scanner-у. SBOM показывает состав, scanner сопоставляет его с
 известными CVE, signature/provenance связывают artifact с процессом сборки, а admission
 policy не допускает artifact, который не соответствует правилам. Эти механизмы дополняют
@@ -91,7 +102,7 @@ container image генератор читает filesystem и package metadata �
 | Формат | Назначение и сильная сторона | Где чаще встречается |
 |---|---|---|
 | **SPDX 2.3 JSON** | Стандарт Linux Foundation для состава software, лицензий, пакетов и отношений; хорошо подходит для compliance и обмена inventory | OCI artifacts, дистрибутивы, CI и Kubernetes ecosystem |
-| **CycloneDX** | Формат OWASP, ориентированный на component analysis и security tooling; удобен для vulnerability management | scanners, dependency analysis, security dashboards |
+| **CycloneDX** | Формат Open Worldwide Application Security Project (OWASP), ориентированный на component analysis и security tooling; удобен для vulnerability management | scanners, dependency analysis, security dashboards |
 
 Оба формата могут описать один image, но их JSON-поля различаются. Все примеры SPDX ниже --
 **SPDX 2.3 JSON**: в этой схеме пакеты обычно находятся в `.packages`, а версия -- в
@@ -149,6 +160,15 @@ syft "$IMAGE" -o spdx-json > api.spdx.json
 syft "$IMAGE" -o cyclonedx-json > api.cyclonedx.json
 ```
 
+Если reference указывает на multi-arch OCI index, явно выберите platform. Для heterogeneous
+cluster создайте и проиндексируйте отдельный SBOM для каждого реально используемого platform
+manifest; рядом с ним храните platform и digest этого manifest, а не только digest index:
+
+```bash
+PLATFORM='linux/amd64'
+syft "$IMAGE" --platform "$PLATFORM" -o spdx-json > api.linux-amd64.spdx.json
+```
+
 Эквивалентные краткие команды, которые полезно быстро вспомнить на экзамене:
 
 ```bash
@@ -160,15 +180,24 @@ syft <image> -o cyclonedx-json
 сохранять как evidence:
 
 ```bash
-jq -e '.spdxVersion and (.packages | type == "array")' api.spdx.json >/dev/null
+jq -e '
+  .spdxVersion == "SPDX-2.3"
+  and .SPDXID == "SPDXRef-DOCUMENT"
+  and .dataLicense == "CC0-1.0"
+  and (.documentNamespace | type == "string")
+  and (.creationInfo.creators | type == "array")
+  and (.packages | type == "array")
+' api.spdx.json >/dev/null
 jq -e '.bomFormat == "CycloneDX" and (.components | type == "array")' \
   api.cyclonedx.json >/dev/null
 ```
 
-Первый запрос ожидает SPDX 2.3 JSON, второй - CycloneDX JSON. Конкретный SBOM может не иметь
-какого-либо поля, не обязательного для вашего generator version; однако JSON parser,
-формат и наличие списка компонентов должны быть проверены явно. Не выдавайте HTML-ошибку
-registry или пустой файл за SBOM только потому, что команда вернула файл.
+Первый запрос — **sanity-check** ожидаемого SPDX 2.3 JSON, второй — CycloneDX JSON. Он
+отсекает пустой output, HTML-ошибку registry и JSON другого формата, но не является полной
+schema/conformance validation: для неё используйте SPDX validator, совместимый с нужной
+версией specification. Конкретный SBOM может не иметь поля, не обязательного для вашего
+generator version; базовые поля документа, format и список компонентов всё равно проверяйте
+явно.
 
 > 🎯 `kubernetes-sigs/bom` — Kubernetes-ориентированный путь: сгенерируйте SPDX JSON для заданного image, проверьте структуру и сохраните результат.
 
@@ -201,9 +230,18 @@ bom generate --image "$IMAGE" --format json -o sbom.spdx.json
 как SPDX и посчитайте найденные packages:
 
 ```bash
-jq -e '.spdxVersion and (.packages | type == "array")' out.spdx.json >/dev/null
+jq -e '
+  .spdxVersion == "SPDX-2.3"
+  and .SPDXID == "SPDXRef-DOCUMENT"
+  and .dataLicense == "CC0-1.0"
+  and (.documentNamespace | type == "string")
+  and (.creationInfo.creators | type == "array")
+  and (.packages | type == "array")
+' out.spdx.json >/dev/null
 jq '.packages | length' out.spdx.json
 ```
+
+Это sanity-check, а не полная schema/conformance validation SPDX.
 
 Если `bom` не видит локальный image, укажите reference, доступный тому runtime/registry, из
 которого запускается команда, и проверьте `bom generate --help` для версии, установленной
@@ -282,13 +320,18 @@ kubectl get pods -A \
   -o jsonpath='{range .items[*]}{.metadata.namespace}{"\t"}{.metadata.name}{"\t"}{range .spec.containers[*]}{.image}{"\n"}{end}{end}'
 ```
 
-Этот вывод показывает declared image reference. Для окончательного incident evidence также
-смотрите image ID, который runtime получил после pull: tag мог указывать на новый manifest,
-а SBOM был составлен для старого digest.
+Этот вывод показывает declared image reference. `status.containerStatuses[].imageID` полезен
+как runtime-specific evidence того, что сообщил node о запущенном container, но это не
+переносимый registry digest и не обязательно digest OCI index либо platform manifest. Для
+сильного incident evidence используйте digest-pinned `spec.containers[].image`, определите
+архитектуру node, разрешите registry/index до соответствующего platform manifest и сопоставьте
+с ним SBOM. При доступе к node дополнительно сверяйте runtime inventory:
 
 ```bash
 kubectl get pod <pod> -n <namespace> \
   -o jsonpath='{range .status.containerStatuses[*]}{.name}{"\t"}{.imageID}{"\n"}{end}'
+kubectl get node <node> -o jsonpath='{.metadata.labels.kubernetes\.io/arch}{"\n"}'
+crictl images --digests
 ```
 
 Типичная ошибка - удалить весь Deployment, увидев совпадение имени package в SBOM. Сначала
@@ -296,7 +339,7 @@ kubectl get pod <pod> -n <namespace> \
 SBOM и scan, затем замените image через обычный controlled rollout. Удаление workload может
 прервать сервис и не устраняет уязвимый artifact в registry.
 
-> 🏭 Надёжная поставка связывает один immutable digest в registry, SBOM, provenance, scan report и manifest; CI публикует artifact, а CD продвигает его без повторной сборки.
+> 🏭 Надёжная поставка фиксирует digest release/index, затем target platform-manifest digest и связывает с ним SBOM, provenance и scan report; CI публикует artifact, а CD продвигает его без повторной сборки.
 
 ## 25.5. CI/CD, artifact repositories, provenance и SLSA
 
@@ -333,8 +376,9 @@ flowchart TB
 **Provenance** - metadata о происхождении artifact: какой source revision, build definition,
 builder и входные материалы участвовали в сборке. В отличие от SBOM, provenance не
 перечисляет все libraries; оно связывает output с контролируемым build process. Для
-сильной цепочки release должен связывать одни и те же digest в manifest, SBOM, provenance
-и registry.
+сильной цепочки различайте digest release/index и digest выбранного platform manifest:
+SBOM, scan и provenance должны быть привязаны к тому artifact, который реально проверяется
+или запускается.
 
 > 🔬 Связь SBOM, provenance и подписи с digest в модели SLSA.
 
@@ -361,13 +405,17 @@ BuildKit может создать и опубликовать SBOM/provenance a
 
 ```bash
 IMAGE_TAG='registry.example.com/payments/api:1.4.2'
-docker buildx build --sbom=true --provenance=mode=max --push \
+docker buildx build --sbom=true --provenance=mode=max,version=v1 --push \
   --tag "$IMAGE_TAG" .
 ```
 
-После push получите и сохраните immutable digest. Эти build-native attestations полезны для
-связи output с build, но не отменяют отдельные проверку signature, SBOM final image и
-inventory всей цепочки по source/lock files.
+`version=v1` здесь явно фиксирует ожидаемый формат: в текущем upstream BuildKit default —
+SLSA provenance `v1`; старые версии BuildKit/Buildx могли выдавать `v0.2`. Поэтому при
+этом параметре проверяйте `Statement/v1` с `https://slsa.dev/provenance/v1`. После push
+сохраните immutable digest и для multi-arch release определите platform manifest, который
+будет запускаться. Эти build-native attestations полезны для связи output с build, но не
+отменяют отдельные проверку signature, SBOM final image и inventory всей цепочки по
+source/lock files.
 
 На практике улучшения выглядят так:
 
@@ -378,15 +426,22 @@ inventory всей цепочки по source/lock files.
 - используйте protected branches, required review и audit log registry/CI;
 - в CD разворачивайте digest, не выполняйте повторный build из другого environment.
 
+Для OCI index это не один универсальный digest, а цепочка: `release/index digest →
+platform manifest digest → SBOM/provenance/scan evidence`. Сначала выберите target platform,
+разрешите index до её manifest и найдите относящуюся к нему attestation; затем проверяйте
+in-toto `subject.digest`. Docker хранит attestation manifest у root index, но его `subject`
+должен указывать на target platform manifest (либо объект внутри него). Для single-platform
+image release digest и platform-manifest digest могут совпасть, но это нельзя предполагать.
+
 Минимальная SLSA/in-toto provenance является statement с `subject`, привязанным к
-выпущенному image digest. Например, структура может выглядеть так:
+соответствующему platform manifest. Например, структура может выглядеть так:
 
 ```json
 {
   "_type": "https://in-toto.io/Statement/v1",
   "subject": [{
     "name": "registry.example.com/payments/api",
-    "digest": {"sha256": "<64-hex-release-image-digest>"}
+    "digest": {"sha256": "<64-hex-platform-manifest-digest>"}
   }],
   "predicateType": "https://slsa.dev/provenance/v1",
   "predicate": {
@@ -399,16 +454,17 @@ inventory всей цепочки по source/lock files.
 }
 ```
 
-До использования provenance сравните её `subject.digest.sha256` с digest release image,
-полученным из доверенного registry или manifest. Это можно проверить без угадывания tag:
+До использования provenance сначала разрешите доверенный release/index до target platform
+manifest, затем сравните её `subject.digest.sha256` с digest именно этого manifest. Это можно
+проверить без угадывания tag:
 
 ```bash
-RELEASE_DIGEST='sha256:<64-hex-release-image-digest>'
-jq -e --arg digest "${RELEASE_DIGEST#sha256:}" \
+PLATFORM_MANIFEST_DIGEST='sha256:<64-hex-platform-manifest-digest>'
+jq -e --arg digest "${PLATFORM_MANIFEST_DIGEST#sha256:}" \
   '.subject[] | select(.digest.sha256 == $digest)' provenance.intoto.json >/dev/null
 ```
 
-Успешный `jq` доказывает привязку statement к ожидаемому digest, но не подлинность самого
+Успешный `jq` доказывает привязку statement к ожидаемому platform manifest, но не подлинность самого
 statement. Подпись artifact и криптографическую проверку `cosign verify` подробно
 рассматривает [глава 26](../26/ru.md); SBOM не заменяет эту проверку.
 
@@ -417,16 +473,40 @@ statement. Подпись artifact и криптографическую про�
 ## 25.6. SBOM в поиске уязвимых компонентов
 
 Когда появляется CVE или vendor advisory, SBOM сокращает инцидентный вопрос с «какие у нас
-тысячи образов?» до «какие digest содержат affected package/version?». Рабочий цикл:
+тысячи образов?» до «какие digest содержат affected package/version?». Это нужно и для
+**позднего обнаружения**: на этапе build scanner мог не найти проблему, потому что CVE или
+сведения о затронутых версиях ещё не были опубликованы. Результат scan отражает базу знаний
+на момент проверки, а не гарантирует отсутствие будущих advisory в уже работающем image.
+
+Поэтому вне build pipeline **регулярно повторно сопоставляйте сохранённые SBOM с обновлённой
+базой CVE**: по расписанию и внепланово при публикации нового значимого CVE или vendor
+advisory. Такая проверка не пересобирает artifact: она оценивает тот же immutable digest по
+актуальным данным и должна запускать triage affected releases.
+
+Рабочий цикл:
 
 1. получить точные условия advisory: package, ecosystem/distribution, affected versions и
    fixed version;
-2. найти package/version в SBOM каждого candidate artifact, не полагаясь на tag;
-3. подтвердить digest в registry и `imageID` работающего Pod;
-4. собрать или выбрать исправленный artifact, сгенерировать новый SBOM и проверить, что
+2. найти package/version в сохранённых SBOM каждого candidate release digest, не полагаясь
+   на tag; результатом будет список affected digest;
+3. сопоставить affected digest с runtime inventory: `spec.containers[].image` показывает
+   объявленный reference; `status.containerStatuses[].imageID` — runtime-specific hint, а не
+   переносимый registry/platform-manifest digest. Для multi-arch сопоставьте архитектуру node,
+   platform manifest и привязанный к нему SBOM;
+4. разделить affected digest на running workloads, доступные только в registry и уже
+   выведенные из эксплуатации; сначала устранять running workload с высоким business/risk
+   impact, затем остальные release;
+5. собрать или выбрать исправленный artifact, сгенерировать новый SBOM и проверить, что
    affected version исчезла или заменена;
-5. просканировать, подписать/проверить и только затем продвинуть digest через CD;
-6. сохранить SBOM, результат scan и rollout как evidence для incident response и audit.
+6. просканировать, подписать/проверить и только затем продвинуть digest через CD;
+7. сохранить SBOM, результат scan и rollout как evidence для incident response и audit.
+
+Для быстрого response храните индекс `digest → SBOM → scan timestamp → environment/workload`.
+Тогда новая CVE запускает запрос по inventory, а не повторный scan всех образов вручную:
+сначала определяют потенциально affected release/platform-manifest digest по SBOM, затем
+подтверждают running workload через digest-pinned spec, platform node и runtime `imageID` как
+дополнительный hint. Одного tag недостаточно: он может быть mutable и не доказывает, какие
+байты использует уже запущенный Pod.
 
 ```mermaid
 flowchart TB
@@ -475,9 +555,16 @@ IMAGE='<image-from-lab-or-registry>@sha256:<64-hex-digest>'
 # 1. Создать SPDX 2.3 JSON с Kubernetes SIGs bom.
 bom generate --image "$IMAGE" --format json --output out.spdx.json
 
-# 2. Доказать, что output - SPDX 2.3 JSON с packages.
-jq -e '.spdxVersion and (.packages | type == "array") and (.packages | length > 0)' \
-  out.spdx.json >/dev/null
+# 2. Выполнить SPDX 2.3 sanity-check и убедиться, что packages не пуст.
+jq -e '
+  .spdxVersion == "SPDX-2.3"
+  and .SPDXID == "SPDXRef-DOCUMENT"
+  and .dataLicense == "CC0-1.0"
+  and (.documentNamespace | type == "string")
+  and (.creationInfo.creators | type == "array")
+  and (.packages | type == "array")
+  and (.packages | length > 0)
+' out.spdx.json >/dev/null
 
 # 3. Найти заданный package и его version.
 jq -r '
@@ -495,8 +582,17 @@ jq -r '
 
 ```bash
 syft "$IMAGE" -o spdx-json > syft.spdx.json
-jq -e '.spdxVersion and (.packages | type == "array")' syft.spdx.json >/dev/null
+jq -e '
+  .spdxVersion == "SPDX-2.3"
+  and .SPDXID == "SPDXRef-DOCUMENT"
+  and .dataLicense == "CC0-1.0"
+  and (.documentNamespace | type == "string")
+  and (.creationInfo.creators | type == "array")
+  and (.packages | type == "array")
+' syft.spdx.json >/dev/null
 ```
+
+Это sanity-check, не полная schema/conformance validation SPDX.
 
 ### Диагностика типичных ошибок
 
@@ -508,9 +604,10 @@ jq -e '.spdxVersion and (.packages | type == "array")' syft.spdx.json >/dev/null
 | package найден, но версия не совпала | image собран из другого base/dependency или advisory применён к иной distribution | `versionInfo`, purl, base image, lock file и условия advisory |
 | SBOM есть, но deploy всё ещё уязвим | CD применил tag/старый digest или rollout не завершён | manifest `image:`, Pod `imageID`, rollout status и registry digest |
 
-Критерий готовности проверки: есть непустой валидный SPDX 2.3 JSON, в нём зафиксирован
-package/version для конкретного image digest, а команды и файлы можно передать другому
-инженеру для повторения результата.
+Критерий готовности проверки: есть непустой SPDX 2.3 JSON, прошедший sanity-check (для
+полного conformance — отдельный SPDX validator), в нём зафиксирован package/version для
+конкретного platform manifest digest, а команды и файлы можно передать другому инженеру для
+повторения результата.
 
 > 🏭 Автоматизируйте выпуск и хранение SBOM, provenance и scan evidence для каждого release digest; вручную созданный отчёт после инцидента не заменяет этот процесс.
 
@@ -523,9 +620,10 @@ package/version для конкретного image digest, а команды и
   provenance, но не любой SBOM является attestation. Практическая модель: `image digest
   <- OCI SBOM artifact/referrer` и `image digest <- signed attestation
   (predicate=SBOM/provenance)`. Retention этих данных не должен быть короче самого release.
-- **Digest - идентификатор релиза.** Manifest/GitOps, SBOM, scan report, provenance и
-  change record ссылаются на один immutable digest. Release tag можно оставить для людей,
-  но им не заменяют доказательство содержимого.
+- **Digest - цепочка идентификаторов релиза.** Для multi-arch сначала фиксируют digest
+  release/index, затем выбранный platform-manifest digest; SBOM, scan report, provenance и
+  change record связывают с применимым уровнем этой цепочки. Release tag можно оставить для
+  людей, но им не заменяют доказательство содержимого.
 - **Registry - контролируемая граница.** Права push разделены по проектам, release tags
   защищены от overwrite, включены audit logs, replication и cleanup policy. Рабочая станция
   не публикует production image напрямую.
@@ -534,9 +632,10 @@ package/version для конкретного image digest, а команды и
 - **Vulnerability management замкнут.** Advisory приводит к SBOM query, затем к fixed
   digest, новому SBOM, scan, проверке и rollout. Исключения имеют владельца, срок и
   evidence, а не живут в ignore list бесконечно.
-- **Проверка происхождения обязательна.** До CD проверяют digest и attestations/signature;
-  admission policy в кластере становится последней границей, а не единственным местом
-  контроля. Подпись и её enforcement - тема следующей главы.
+- **Проверка происхождения обязательна.** До CD проверяют цепочку release/index → target
+  platform manifest → attestation `subject` и signature; admission policy в кластере
+  становится последней границей, а не единственным местом контроля. Подпись и её enforcement
+  - тема следующей главы.
 
 ## 25.9. Мини-глоссарий
 
@@ -569,8 +668,8 @@ package/version для конкретного image digest, а команды и
 - Поиск уязвимого компонента требует package, exact version и image digest. Для SPDX это
   обычно `.packages[].name` и `.versionInfo`, для CycloneDX - `.components[].name` и
   `.version`.
-- CI должен выпускать image, SBOM и provenance для одного digest, а CD - продвигать этот
-  digest из доверенного artifact repository без повторной сборки.
+- CI должен выпускать image, SBOM и provenance с проверяемой digest-chain, а CD -
+  продвигать выбранный digest из доверенного artifact repository без повторной сборки.
 - SLSA v1.2 разделяет Build Track (L0-L3) и Source Track (L1-L4); генерация SBOM сама
   по себе не доказывает выполнение требований ни одного из tracks.
 - После CVE цикл выглядит так: query SBOM → подтвердить running digest → fixed rebuild →
@@ -601,13 +700,13 @@ mock-сценарий. Не путайте формат Syft, название J
 <details>
 <summary>2. Чем SBOM отличается от vulnerability scan report, signature и provenance?</summary>
 
-SBOM — это inventory компонентов и версий конкретного artifact, а не вывод о CVE. Scanner сопоставляет этот состав с базой уязвимостей и severity, signature криптографически проверяет доверенного подписанта, а provenance описывает source revision, builder и входы сборки. Эти артефакты должны быть привязаны к одному digest.
+SBOM — это inventory компонентов и версий конкретного artifact, а не вывод о CVE. Scanner сопоставляет этот состав с базой уязвимостей и severity, signature криптографически проверяет доверенного подписанта, а provenance описывает source revision, builder и входы сборки. Для multi-arch эти артефакты должны быть связаны с корректной цепочкой index и platform manifest.
 </details>
 
 <details>
 <summary>3. Почему SBOM для `app:1.4.2` без digest может не быть доказательством состава running image?</summary>
 
-Тег изменяем: `app:1.4.2` может быть переназначен на другие байты после генерации SBOM. Доказательство состава связывают с immutable `@sha256:...` и сверяют с фактическим runtime identifier. Иначе SBOM может относиться к прежнему manifest, а Pod — уже к другому образу.
+Тег изменяем: `app:1.4.2` может быть переназначен на другие байты после генерации SBOM. Доказательство состава связывают с immutable `@sha256:...`; для multi-arch дополнительно фиксируют выбранный platform manifest и runtime evidence. Иначе SBOM может относиться к прежнему manifest, а Pod — уже к другому образу.
 </details>
 
 <details>
@@ -619,7 +718,7 @@ SBOM — это inventory компонентов и версий конкрет�
 <details>
 <summary>5. Как сгенерировать SPDX 2.3 JSON через `syft` и через `kubernetes-sigs/bom`?</summary>
 
-Для Syft используют `syft "$IMAGE" -o spdx-json > api.spdx.json`. Для Kubernetes SIGs bom — `bom generate --image "$IMAGE" --format json --output out.spdx.json`; здесь JSON означает SPDX, а не CycloneDX. После этого проверяют JSON, например наличие `.spdxVersion` и массива `.packages` через `jq`.
+Для Syft используют `syft "$IMAGE" -o spdx-json > api.spdx.json`. Для Kubernetes SIGs bom — `bom generate --image "$IMAGE" --format json --output out.spdx.json`; здесь JSON означает SPDX, а не CycloneDX. После этого выполняют sanity-check ожидаемого SPDX 2.3: проверяют `.spdxVersion == "SPDX-2.3"` и массив `.packages` (в основной процедуре также проверяются идентификатор и metadata документа). Полная schema/conformance validation требует отдельного SPDX validator.
 </details>
 
 <details>
@@ -629,9 +728,9 @@ SBOM — это inventory компонентов и версий конкрет�
 </details>
 
 <details>
-<summary>7. Как получить `imageID` контейнера и зачем сравнивать его с digest SBOM?</summary>
+<summary>7. Как получить `imageID` контейнера и как использовать его как runtime evidence?</summary>
 
-Его выводят из статуса Pod: `kubectl get pod <pod> -n <namespace> -o jsonpath='{range .status.containerStatuses[*]}{.name}{"\t"}{.imageID}{"\n"}{end}'`. `imageID` показывает reference, который runtime получил после pull, и помогает подтвердить, что SBOM относится к реально работающему artifact. Tag в spec сам по себе этого не гарантирует.
+Его выводят из статуса Pod: `kubectl get pod <pod> -n <namespace> -o jsonpath='{range .status.containerStatuses[*]}{.name}{"\t"}{.imageID}{"\n"}{end}'`. `imageID` — runtime-specific hint, а не переносимый registry/index/platform-manifest digest, поэтому его не сравнивают напрямую с digest SBOM. Для сильного сопоставления учитывают digest-pinned `spec.containers[].image`, архитектуру node и разрешение registry/index до target platform manifest; при доступе к node дополнительно сверяют `crictl images --digests`. Tag в spec сам по себе этого не гарантирует.
 </details>
 
 <details>
@@ -643,7 +742,7 @@ CD должен продвигать уже проверенный immutable dig
 <details>
 <summary>9. Какой смысл SLSA придаёт provenance и изолированному сборщику (builder)?</summary>
 
-В SLSA provenance связывает output с build definition, source и builder; её `subject.digest` сверяют с digest release image. В Build Track L1 требует наличие provenance, L2 — подписанную provenance от hosted build platform, а L3 — hardened build platform. Изолированный builder уменьшает риск подмены общей рабочей среды, но уровень нужно заявлять с указанием track и доказательств.
+В SLSA provenance связывает output с build definition, source и builder. Для multi-arch сначала разрешают digest release/index до target platform manifest и сверяют её `subject.digest` с digest этого manifest (либо допустимого объекта внутри него); совпадение с root index не предполагают. В Build Track L1 требует наличие provenance, L2 — подписанную provenance от hosted build platform, а L3 — hardened build platform. Изолированный builder уменьшает риск подмены общей рабочей среды, но уровень нужно заявлять с указанием track и доказательств.
 </details>
 
 <details>

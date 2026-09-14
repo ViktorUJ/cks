@@ -2,7 +2,7 @@
 
 # Глава 29. Поведенческий анализ во время выполнения: Falco
 
-> **Проблема.** После RCE, `kubectl exec` или эксплуатации CVE процесс в контейнере может
+> **Проблема.** После удалённого выполнения кода (RCE), `kubectl exec` или эксплуатации CVE процесс в контейнере может
 > запускать shell, читать token, обращаться к runtime socket или готовить выход на ноду,
 > хотя image и manifest были безопасны на момент допуска. Без наблюдения за syscall и
 > процессом эта активность остаётся невидимой до ущерба; Falco даёт сигнал с контекстом
@@ -32,11 +32,11 @@
 
 ```mermaid
 flowchart TB
-    build["image scan и подпись<br/>до запуска"] --> admit["admission policy<br/>разрешить или отклонить Pod"]
-    admit --> runtime["контейнер выполняется<br/>на ноде"]
-    runtime --> events["syscalls / eBPF события<br/>процесс, файл, сеть"]
-    events --> falco["Falco rule engine"]
-    falco --> alert["alert, log, webhook<br/>и расследование"]
+    build["Build checks"] --> admit["Admission"]
+    admit --> runtime["Runtime"]
+    runtime --> events["Syscalls"]
+    events --> falco["Falco"]
+    falco --> alert["Alert + triage"]
     style build fill:#326ce5,color:#fff
     style admit fill:#673ab7,color:#fff
     style runtime fill:#f4b400,color:#000
@@ -84,12 +84,12 @@ container runtime и Kubernetes и проверяет против rules.
 
 ```mermaid
 flowchart TB
-    app["процесс в контейнере<br/>sh / curl / приложение"] --> syscall["syscall: execve, openat, connect"]
-    syscall --> kernel["ядро Linux ноды"]
-    kernel --> driver["Falco driver<br/>kmod или modern eBPF"]
-    driver --> userspace["Falco userspace<br/>fields + rule engine"]
-    runtime["containerd / CRI<br/>Pod и container metadata"] --> userspace
-    userspace --> output["stdout, syslog, journal,<br/>HTTP(S) или Falcosidekick"]
+    app["Процесс"] --> syscall["Syscall"]
+    syscall --> kernel["Ядро"]
+    kernel --> driver["Falco driver"]
+    driver --> userspace["Rules + fields"]
+    runtime["CRI metadata"] --> userspace
+    userspace --> output["Alert output"]
     style app fill:#f4b400,color:#000
     style syscall fill:#db4437,color:#fff
     style kernel fill:#326ce5,color:#fff
@@ -210,12 +210,15 @@ sudo falco --version
 helm repo add falcosecurity https://falcosecurity.github.io/charts
 helm repo update
 
-# Укажите проверенную версию chart через переменную CHART_VERSION.
+# Зафиксируйте проверенные версии chart и rules artifact.
 CHART_VERSION="${CHART_VERSION:?set chart version}"
+FALCO_RULES_VERSION="${FALCO_RULES_VERSION:?set verified falco-rules artifact version}"
 helm upgrade --install falco falcosecurity/falco \
   --namespace falco --create-namespace \
   --version "$CHART_VERSION" \
-  --set driver.kind=modern_ebpf
+  --set driver.kind=modern_ebpf \
+  --set "falcoctl.config.artifact.install.refs={falco-rules:${FALCO_RULES_VERSION}}" \
+  --set falcoctl.artifact.follow.enabled=false
 
 kubectl -n falco get daemonset,pods -o wide
 kubectl -n falco rollout status daemonset/falco --timeout=5m
@@ -287,12 +290,12 @@ Falco rules - YAML-документы. `rule` определяет детект�
 
 ```mermaid
 flowchart TB
-    event["syscall event<br/>proc, fd, container"] --> condition["condition<br/>сопоставить поля"]
-    macro["macro<br/>общая часть условия"] --> condition
-    list["list<br/>набор имён или путей"] --> condition
-    condition --> rule["rule<br/>сработал или нет"]
-    rule --> output["output<br/>контекст alert"]
-    rule --> priority["priority<br/>NOTICE/WARNING/CRITICAL"]
+    event["Event"] --> condition["Condition"]
+    macro["Macro"] --> condition
+    list["List"] --> condition
+    condition --> rule["Rule"]
+    rule --> output["Alert"]
+    rule --> priority["Priority"]
     style event fill:#326ce5,color:#fff
     style macro fill:#673ab7,color:#fff
     style list fill:#673ab7,color:#fff
@@ -519,21 +522,24 @@ kubectl -n falco describe daemonset falco
 они нужны для управляемого жизненного цикла rules и централизованной доставки, но не
 заменяют проверку локального alert на каждой ноде.
 
-- **Управляйте rule artifact через `falcoctl`.** Устанавливайте проверенный artifact с
-  точной версией, проверяйте установленный набор и включение его файлов в `rules_files`.
-  Не выполняйте массовое обновление artifact без теста совместимости с версией Falco и
-  review изменений rules.
+- **Явно выбирайте lifecycle rule artifact.** Для проверенного точно закреплённого
+  ruleset укажите exact `falco-rules` reference и отключите `falcoctl artifact follow` в
+  Helm install/upgrade (как в §29.3): разовая команда `falcoctl artifact install` сама по
+  себе не фиксирует ruleset, пока follow остаётся включён. Для package-install проверьте,
+  что сервис `falcoctl-artifact-follow` не запущен, и отключите его, если политика требует
+  strict pinning.
 
   ```bash
   FALCO_RULES_VERSION="${FALCO_RULES_VERSION:?set verified falco-rules artifact version}"
-  falcoctl artifact install "falco-rules:${FALCO_RULES_VERSION}"
   falcoctl artifact list
   sudo falco -c /etc/falco/falco.yaml --dry-run
   ```
 
   Фиксируйте в Git и configuration management версии Falco package/chart, `falcoctl` и
   каждого rules artifact. Обновление сначала проверяют в test-кластере, затем закрепляют
-  новую совместимую версию, а не оставляют плавающий `latest`.
+  новую совместимую версию, а не оставляют плавающий `latest`. Если организация осознанно
+  использует auto-follow, ruleset не является immutable: задайте допустимый version range,
+  compatibility gate, staged validation и учтите обновление rules без нового Helm release.
 - **Доставляйте alert штатным output.** Для прямой интеграции используйте native HTTP(S)
   output Falco; для fan-out в SIEM, chat или incident system используйте Falcosidekick как
   downstream получатель Falco events. Falco plugins - отдельный механизм для event source и
@@ -557,6 +563,126 @@ kubectl -n falco describe daemonset falco
 - **Комбинируйте контроли.** Falco обнаруживает действие, но не исправляет CVE и не
   запрещает опасный Pod сам по себе. Его связывают с image scan, admission policy,
   read-only filesystem, audit logs, NetworkPolicy и incident response.
+
+
+### Production extension: health, drops и метрики
+
+`READY == DESIRED` доказывает scheduling DaemonSet, но не отсутствие слепых зон: при
+перегрузке Falco может потерять syscall event до того, как rule будет вычислен. Потеря
+событий также способна нарушить внутреннее состояние процессов, файлов и container metadata.
+Включите native metrics и alert на ненулевые или растущие drops; метрики Falco по умолчанию
+выключены. Для Prometheus нужны включённые metrics, web server и его Prometheus endpoint:
+
+```yaml
+# falco.yaml — конкретные доступные опции сверяйте с pinned версией Falco.
+metrics:
+  enabled: true
+  kernel_event_counters_enabled: true
+  rules_counters_enabled: true
+webserver:
+  enabled: true
+  prometheus_metrics_enabled: true
+```
+
+Проверяйте event rate и kernel-side drops (`scap.n_drops*`), а также потери output queue
+(`falco.outputs_queue_num_drops`; в Prometheus имена получают префикс
+`falcosecurity_` и суффикс `_total`). `buf_size_preset` определяет размер буфера capture,
+а `base_syscalls` — набор syscall для capture: это troubleshooting/performance knobs, а не
+универсальные значения. Сначала измерьте drops и нагрузку на test-ноду, затем меняйте один
+параметр, повторяйте нагрузочный тест и подтверждайте, что coverage нужных rule не потерян.
+
+### Production extension: точное tuning ruleset
+
+Если rule шумит, не выключайте его целиком и не исключайте постоянным правилом namespace.
+Опишите легитимное сочетание **actor + action + target** как structured `exceptions`, оставив
+возможность детектировать остальные случаи. Например, local file, загружаемый после standard
+rules, может добавить узкое исключение к уже определённому в этой главе rule:
+
+```yaml
+- rule: Interactive shell in container
+  exceptions:
+    - name: approved_debug_shell
+      fields: [container.name, proc.name]
+      comps: [=, =]
+      values:
+        - [approved-debug, sh]
+  override:
+    exceptions: append
+```
+
+До rollout убедитесь, что это именно согласованный maintenance container и shell, а не
+маскировка общего поведения. Повторите malicious path: он обязан по-прежнему создавать alert.
+
+Для изменения upstream rule не копируйте весь rule: создайте local definition с тем же именем
+после upstream file и используйте `override`. Допустимы `condition: append` для добавления
+точного условия и, например, `output: replace` для замены output; `exceptions` можно
+`append` или `replace`. Старый `append: true` deprecated. Для disabled upstream rule не
+используйте одиночное `enabled: true`; применяйте `enabled: true` вместе с
+`override: { enabled: replace }`. Порядок `rules_files` критичен для каждого override.
+
+`tags` группируют rule по домену и MITRE, например `container`, `filesystem`,
+`mitre_credential_access`; их используют для review, rollout и выбора общих `append_output`
+настроек. Начинайте с upstream tag `maturity_stable`, затем после staging и анализа false
+positives добавляйте `maturity_incubating` и `maturity_sandbox`. Maturity — не обещание низкого
+шума в конкретной среде: custom rule и каждую новую группу всё равно тестируют.
+
+Это не только tags: stable rules поставляет artifact `falco-rules`, а incubating и sandbox —
+отдельные `falco-incubating-rules` и `falco-sandbox-rules`. Чтобы реально использовать дополнительные менее зрелые incubating/sandbox
+группы, закрепите точные версии всех нужных artifacts в
+`falcoctl.config.artifact.install.refs`, отключите `falcoctl artifact follow` и добавьте их
+files в `falco.rules_files` (стандартные пути: `/etc/falco/falco-incubating_rules.yaml` и
+`/etc/falco/falco-sandbox_rules.yaml`). При переопределении `rules_files` сохраните уже нужные
+paths — например `k8s_audit_rules.yaml`, `rules.d`, `falco_rules.yaml` и local files. Каждую
+добавленную maturity-группу валидируют полным config на staging до rollout.
+
+### Production extension: sources, plugins, JSON и совместимость
+
+Falco — не только syscall detector. Rule с `source: syscall` работает по kernel events;
+plugin может дать иной event source, например Kubernetes Audit или CloudTrail, и дополнительные
+fields для условий/output. Это не взаимозаменяемые способы получить Pod metadata: для syscall
+rule контекст контейнера дают driver и CRI/Kubernetes metadata.
+
+Современный Falco обрабатывает несколько configured sources одновременно: каждый source
+работает изолированно, а rules разделены по `source`. По умолчанию включены все известные
+sources, включая `syscall` и source корректно загруженных plugins. Чтобы закрепить набор для
+production, применяйте повторяемые `--enable-source` (например,
+`--enable-source=syscall --enable-source=k8s_audit`); это отключает все не перечисленные
+sources. `--disable-source` отключает только явно названные sources. Нельзя рассчитывать на
+cross-source correlation внутри одного rule: он вычисляется только в контексте своего source.
+Перед rollout проверьте загрузку plugin, доступные fields, enabled sources и совместимость
+plugin API, а не включайте plugin в существующий DaemonSet вслепую.
+
+Для machine-readable доставки включите `json_output: true` в фактической конфигурации и
+проверяйте JSON, например:
+
+```bash
+kubectl -n falco logs daemonset/falco -c falco --tail=100 | jq .
+```
+
+Поля, подставленные в rule `output` (например, `%proc.cmdline`, `%container.id`,
+`%k8s.pod.name`), Falco помещает в JSON object `output_fields`. Нельзя добавлять
+произвольный YAML key `output_fields` внутрь rule. Для одинаковых дополнительных
+структурированных полей у набора rules применяют `append_output.extra_fields` в `falco.yaml`;
+его `match` может ограничить source, rule name или tags.
+
+Rules artifact должен быть совместим с engine: используйте и проверяйте
+`required_engine_version` в rules file перед rollout. Для plugin-based rules дополнительно
+проверяйте `required_plugin_versions`, поскольку валидный YAML не гарантирует совместимость
+с загруженным plugin. Обе проверки выполняйте вместе с полным
+`falco -c /etc/falco/falco.yaml --dry-run` на staging.
+
+### Production extension: минимальный workflow detection engineering
+
+1. Закрепите версии Falco, `falco-rules` и, при наличии, plugin; отключите неконтролируемый
+   auto-follow rules artifact.
+2. Определите threat → наблюдаемое событие → source → condition → обязательные context fields.
+3. Провалидируйте полный ruleset и compatibility, разверните его сначала на staging.
+4. Сгенерируйте контролируемое suspicious event, подтвердите alert, Pod/namespace metadata и
+   доставку в назначенный output/SIEM.
+5. Измерьте false positives, rule matches и event/output drops. Легитимный паттерн сузьте
+   exception/override, затем повторите positive и negative тесты.
+6. Выполните progressive rollout с owner, runbook и мониторингом drops; production deployment
+   без evidence о coverage и delivery не считается завершённым.
 
 > **Production note, не экзаменационный материал.** Falco - детектор: он видит syscall и
 > сообщает о нём alert'ом уже **после** того, как действие произошло. **Cilium Tetragon** -
@@ -615,8 +741,15 @@ kubectl -n falco describe daemonset falco
 
 **На экзамене.** Нужно быстро определить, где запущен Falco, найти активные rules files,
 создать или изменить local rule, проверить синтаксис, сгенерировать указанное действие и
-вывести alert с нужными полями в требуемый файл. Не редактируйте upstream rules без причины
-и не ограничивайтесь командой запуска: критерий обычно проверяет конкретный event/output.
+вывести alert с нужными полями в требуемый файл. Типовой сценарий: найти Pod, процесс
+которого открывает `/dev/mem`, и добавить local rule с container context, проверкой
+`fd.name=/dev/mem` и подходящего `open*` syscall. В output включите как минимум command,
+container ID, `%k8s.ns.name` и `%k8s.pod.name`, затем подтвердите alert контролируемым
+событием. Pod и namespace появляются благодаря рабочим Falco driver и CRI/Kubernetes
+metadata; не включайте произвольные plugins только ради этих полей — сначала проверьте
+доступность полей через `falco --list` и корректный runtime socket. Не редактируйте upstream
+rules без причины и не ограничивайтесь командой запуска: критерий обычно проверяет конкретный
+event/output.
 
 **В реальной работе.** Falco помогает заметить действия после компрометации, которые не
 видны в manifest: shell, доступ к socket, запись в чувствительный путь или неожиданный
@@ -685,7 +818,13 @@ Package-install удобен для одной ноды или экзамена,
 <details>
 <summary>9. **Flashback (глава 17).** Falco (эта глава) и seccomp (глава 17) оба работают на уровне syscall, но с разными гарантиями: seccomp может **заблокировать** syscall до его выполнения, а Falco **обнаруживает** его уже после срабатывания. Если критичный syscall (например, `unshare`) уже заблокирован seccomp профилем из главы 17, есть ли смысл всё равно писать для него Falco rule - и если да, что докажет такая комбинация, чего не докажет одно успешное seccomp denial?</summary>
 
-Да, Falco rule остаётся полезным как detection и evidence layer, хотя seccomp уже предотвращает выполнение syscall. Seccomp denial доказывает, что filter отказал конкретной попытке, но сам по себе не даёт rich runtime context для triage. Falco может связать попытку с process/command, container, Pod, namespace и node, показать повторяемость поведения и помочь коррелировать его с audit или другими сигналами.
+Да, Falco остаётся полезным detection layer, но не обещайте alert для того же syscall,
+который уже отклонил seccomp. В обычном Linux syscall path seccomp filter выполняется до
+syscall tracepoint; поэтому отклонённая попытка может не породить обычное Falco syscall event.
+Доказательство seccomp denial берите из seccomp/audit-specific telemetry. Falco полезен для
+соседних разрешённых действий и другого runtime-контекста (process/command, container, Pod,
+namespace, node); alert именно на denied syscall подтверждают отдельным тестом на фактических
+kernel и driver, а не считают гарантированным.
 </details>
 
 ## Практика

@@ -245,9 +245,10 @@ keys или счётчики. `cilium-dbg` — CLI локального agent: �
 
 ### Strict mode: не допустить первый plaintext packet
 
-При обычном node-to-node WireGuard новый remote endpoint может стать известен agent не сразу;
-до этого первые egress-пакеты к нему потенциально могут уйти без туннеля. Если threat model
-этого не допускает, используйте strict mode после отдельной проверки совместимости версии:
+При обычном transparent WireGuard для Pod-to-Pod traffic между Cilium-managed endpoints на
+разных нодах новый remote endpoint может стать известен agent не сразу; до этого первые
+egress-пакеты к нему потенциально могут уйти без туннеля. Если threat model этого не допускает,
+используйте strict mode после отдельной проверки совместимости версии:
 
 ```yaml
 encryption:
@@ -265,7 +266,7 @@ encryption:
 выбранных интерфейсов. `encryption.strictMode.ingress` отбрасывает cluster-internal Pod
 traffic, пришедший не через WireGuard tunnel; это не универсальный strict mode для IPsec.
 Перед включением сверьте требования release Cilium к native/direct routing и device
-configuration, затем отрицательным тестом подтвердите, что plaintext packet между нодами не
+configuration, затем отрицательным тестом подтвердите, что plaintext Pod-to-Pod packet между нодами не
 проходит. Не включайте strict mode как замену проверки NetworkPolicy, firewall и доступности
 control-plane.
 

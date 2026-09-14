@@ -22,19 +22,25 @@ Kubernetes API принимает syntactically valid manifest, даже есл�
 
 ```mermaid
 flowchart TB
-    dev["Разработчик меняет<br/>Dockerfile и manifests"] --> pr["Pull request"]
-    pr --> lint["Инструменты практики: kubesec, kube-linter,<br/>hadolint, conftest"]
-    lint -->|"нарушение"| block["CI завершается ошибкой<br/>artifact не публикуется"]
-    lint -->|"проверки пройдены"| build["build, SBOM, scan, sign"]
-    build --> deploy["admission и deploy"]
-    bad["root, latest, writable rootfs<br/>или запрещённый registry"] --> lint
-    style dev fill:#326ce5,color:#fff
+    source["Код / YAML"] --> pr["PR"]
+    pr --> checks["Lint / policy"]
+    risk["Небезопасный YAML"] --> checks
+    checks -->|"fail"| stop["CI stop"]
+    checks -->|"pass"| build["Build"]
+    build --> sbom["SBOM"]
+    sbom --> scan["CVE scan"]
+    scan --> sign["Sign"]
+    sign --> deploy["Deploy"]
+    style source fill:#326ce5,color:#fff
     style pr fill:#f4b400,color:#000
-    style lint fill:#673ab7,color:#fff
-    style block fill:#db4437,color:#fff
+    style checks fill:#673ab7,color:#fff
+    style stop fill:#db4437,color:#fff
     style build fill:#0f9d58,color:#fff
+    style sbom fill:#0f9d58,color:#fff
+    style scan fill:#0f9d58,color:#fff
+    style sign fill:#0f9d58,color:#fff
     style deploy fill:#326ce5,color:#fff
-    style bad fill:#c0392b,color:#fff
+    style risk fill:#c0392b,color:#fff
 ```
 
 Типовой сценарий: разработчик добавляет `Deployment` для API. Он указывает `image: api:latest`, не задаёт `securityContext`, а приложению временно нужен каталог `/tmp`. Без проверки workload успешно применится и будет запускаться с image, который меняется за тем же тегом, от root и с writable filesystem. С `kube-linter`, `kubesec` и собственным policy CI покажет конкретные нарушения до merge. Исправление становится частью изменения: фиксированный tag или digest, non-root user, drop capabilities и отдельный `emptyDir` для записи.
@@ -276,7 +282,7 @@ Generic linters знают общие best practices. Организации о�
     └── main.rego
 ```
 
-Следующая Rego policy намеренно сопоставляет только `Deployment`, но проверяет его regular и init containers. Это учебная ограниченная область, а не готовая cluster-wide policy: для production отдельно добавляют Pod, StatefulSet, DaemonSet, Job/CronJob и соответствующие template paths либо применяют тот же intent в admission policy. Задача policy - явно зафиксировать локальные неизменяемые требования: trusted registry prefix, валидный immutable digest, effective non-root, read-only root filesystem и запрет privilege escalation. `object.get` даёт безопасное значение по умолчанию для необязательных объектов: поэтому отсутствие `securityContext` тоже создаёт violation, а не делает правило undefined.
+Следующая Rego policy намеренно сопоставляет только `Deployment`, но проверяет regular/init containers и OCI reference в image volumes. Это учебная ограниченная область, а не готовая cluster-wide policy: для production отдельно добавляют Pod, StatefulSet, DaemonSet, Job/CronJob и соответствующие template paths либо применяют тот же intent в admission policy. Задача policy - явно зафиксировать локальные неизменяемые требования: trusted registry prefix и валидный immutable digest для каждого пути к OCI artifact, а для containers ещё и effective non-root, read-only root filesystem и запрет privilege escalation. В Kubernetes v1.36 [image volume](https://v1-36.docs.kubernetes.io/docs/tasks/configure-pod-container/image-volumes/) stable и enabled by default; его `spec.volumes[].image.reference` не входит в generic container loop, поэтому policy проверяет его отдельно. `object.get` даёт безопасное значение по умолчанию для необязательных объектов: поэтому отсутствие `securityContext` тоже создаёт violation, а не делает правило undefined.
 
 ```rego
 # policy/main.rego
@@ -294,6 +300,13 @@ pod_security_context := object.get(pod_spec, "securityContext", {})
 containers := object.get(pod_spec, "containers", [])
 init_containers := object.get(pod_spec, "initContainers", [])
 all_containers := array.concat(containers, init_containers)
+
+# Kubernetes v1.36 image volume доставляет OCI artifact не через containers[].image,
+# а через spec.volumes[].image.reference; применяем к нему тот же registry/digest intent.
+image_volumes := [volume |
+  volume := object.get(pod_spec, "volumes", [])[_]
+  object.get(volume, "image", null) != null
+]
 
 violation contains msg if {
   workload
@@ -313,6 +326,24 @@ violation contains msg if {
   not regex.match(`^.+@sha256:[A-Fa-f0-9]{64}$`, image)
   name := object.get(container, "name", "<unnamed>")
   msg := sprintf("container %q must use an image pinned by a valid SHA-256 digest", [name])
+}
+
+violation contains msg if {
+  workload
+  volume := image_volumes[_]
+  reference := object.get(object.get(volume, "image", {}), "reference", "")
+  not startswith(reference, "registry.example.com/")
+  name := object.get(volume, "name", "<unnamed>")
+  msg := sprintf("image volume %q uses an unapproved registry: %s", [name, reference])
+}
+
+violation contains msg if {
+  workload
+  volume := image_volumes[_]
+  reference := object.get(object.get(volume, "image", {}), "reference", "")
+  not regex.match(`^.+@sha256:[A-Fa-f0-9]{64}$`, reference)
+  name := object.get(volume, "name", "<unnamed>")
+  msg := sprintf("image volume %q must use an image pinned by a valid SHA-256 digest", [name])
 }
 
 # Container-level securityContext имеет приоритет над пересекающимся Pod-level полем.
@@ -454,6 +485,27 @@ test_denies_untagged_image_container_override_and_unsafe_init if {
   "container \"init\" must set readOnlyRootFilesystem: true" in result
 }
 
+test_denies_untrusted_unpinned_image_volume if {
+  resource := {
+    "kind": "Deployment",
+    "spec": {"template": {"spec": {
+      "securityContext": {"runAsNonRoot": true},
+      "volumes": [{
+        "name": "model",
+        "image": {"reference": "docker.io/library/model:latest"},
+      }],
+      "containers": [{
+        "name": "api",
+        "image": "registry.example.com/payments/api@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "securityContext": {"readOnlyRootFilesystem": true, "allowPrivilegeEscalation": false},
+      }],
+    }}},
+  }
+  result := violation with input as resource
+  "image volume \"model\" uses an unapproved registry: docker.io/library/model:latest" in result
+  "image volume \"model\" must use an image pinned by a valid SHA-256 digest" in result
+}
+
 test_allows_hardened_workload if {
   resource := {
     "kind": "Deployment",
@@ -490,18 +542,28 @@ Static analysis полезен только тогда, когда его рез
 
 ```mermaid
 flowchart TB
-    change["Изменение Dockerfile или YAML"] --> local["Локально: lint и conftest"]
-    local --> pr["Pull request"]
-    pr --> ci["CI: hadolint + kube-linter<br/>+ kubesec + conftest"]
-    ci -->|"failure"| fix["Исправить исходник или<br/>узкое документированное исключение"]
+    change["Код / YAML"] --> local["Локальные checks"]
+    local --> pr["PR"]
+    pr --> ci["CI checks"]
+    ci -->|"fail"| fix["Исправить"]
     fix --> ci
-    ci -->|"all passed"| next["build -> SBOM -> CVE scan<br/>-> sign -> push -> admission"]
+    ci -->|"pass"| build["Build"]
+    build --> sbom["SBOM"]
+    sbom --> scan["CVE scan"]
+    scan --> sign["Sign"]
+    sign --> push["Push"]
+    push --> admission["Admission"]
     style change fill:#326ce5,color:#fff
     style local fill:#f4b400,color:#000
     style pr fill:#326ce5,color:#fff
     style ci fill:#673ab7,color:#fff
     style fix fill:#db4437,color:#fff
-    style next fill:#0f9d58,color:#fff
+    style build fill:#0f9d58,color:#fff
+    style sbom fill:#0f9d58,color:#fff
+    style scan fill:#0f9d58,color:#fff
+    style sign fill:#0f9d58,color:#fff
+    style push fill:#0f9d58,color:#fff
+    style admission fill:#326ce5,color:#fff
 ```
 
 Для практики этой главы gate может запускать `kubesec` и `kube-linter`; `hadolint` для Dockerfile и `conftest` с unit tests полезно добавить для полной локальной проверки. Пример GitHub Actions job ниже показывает расширенный порядок, а не предписывает один CI provider. На экзамене используйте инструмент и окружение, указанные в конкретном задании. В real pipeline замените floating `curl` downloads на внутренний, проверенный tool image или pinned action/image digest; используйте lockfile/verified checksums для binary. `helm template` или `kustomize build` добавьте перед линтерами, если production deploy использует templates.
@@ -536,7 +598,16 @@ jobs:
         set -euo pipefail
         kubesec scan manifests/api.yaml --format json \
           | tee kubesec-report.json \
-          | jq -e 'type == "array" and length > 0 and all(.[]; (.score? | type) == "number" and .score > 0)' > /dev/null
+          | jq -e '
+              type == "array"
+              and length > 0
+              and all(.[];
+                .valid == true
+                and ((.scoring.critical // []) | length == 0)
+                and ((.score? | type) == "number")
+                and .score > 0
+              )
+            ' > /dev/null
 
     - name: Organisation policy
       run: conftest test --policy policy manifests/
@@ -551,13 +622,22 @@ jobs:
         path: kubesec-report.json
 ```
 
-Проверяйте exit code и машинно проверяемый результат, а не наличие текста в stdout. `tee` лишь сохраняет JSON, а `pipefail` лишь не скрывает failure самого scanner: они не делают score gate. У `kubesec` default JSON - массив результатов, поэтому `jq -e` должен проверить score каждого элемента. В примере ниже любой пустой массив, нечисловой score или score `<= 0` завершает команду с non-zero; порог выбирают и versionируют как часть policy.
+Проверяйте exit code и машинно проверяемый результат, а не наличие текста в stdout. `tee` лишь сохраняет JSON, а `pipefail` лишь не скрывает failure самого scanner: они не делают security gate. У `kubesec` default JSON — массив результатов; итоговый score складывает positive и negative points, а `scoring.critical` — отдельный список critical findings. Поэтому `jq -e` обязан проверить каждый элемент: валидность schema, отсутствие critical findings и versioned numeric score threshold. В примере ниже любой пустой массив, invalid result, critical finding, нечисловой score или score `<= 0` завершает команду с non-zero. Если конкретный critical rule сознательно допустим, оформляйте узкое versioned exception с owner и expiry, а не компенсируйте его общим score.
 
 ```bash
 set -euo pipefail
 kubesec scan manifests/api.yaml --format json \
   | tee kubesec-report.json \
-  | jq -e 'type == "array" and length > 0 and all(.[]; (.score? | type) == "number" and .score > 0)' > /dev/null
+  | jq -e '
+      type == "array"
+      and length > 0
+      and all(.[];
+        .valid == true
+        and ((.scoring.critical // []) | length == 0)
+        and ((.score? | type) == "number")
+        and .score > 0
+      )
+    ' > /dev/null
 ```
 
 > 🎯 Универсальный навык: найти finding, исправить исходный Dockerfile или manifest и повторить scan до успешного exit code; не скрывайте проблему глобальным ignore.
@@ -582,7 +662,16 @@ hadolint Dockerfile
 kube-linter lint manifests/
 kubesec scan manifests/api.yaml --format json \
   | tee kubesec-report.json \
-  | jq -e 'type == "array" and length > 0 and all(.[]; (.score? | type) == "number" and .score > 0)' > /dev/null
+  | jq -e '
+      type == "array"
+      and length > 0
+      and all(.[];
+        .valid == true
+        and ((.scoring.critical // []) | length == 0)
+        and ((.score? | type) == "number")
+        and .score > 0
+      )
+    ' > /dev/null
 conftest test --policy policy manifests/
 opa test policy/ -v
 kubectl apply --dry-run=server -f manifests/
@@ -596,7 +685,7 @@ kubectl apply --dry-run=server -f manifests/
 | приложение падает после `readOnlyRootFilesystem: true` | process пишет cache, PID или temp file в root filesystem | определить путь по logs, смонтировать узкий `emptyDir` только туда; не отключать read-only root целиком |
 | `hadolint` проходит, но image запускается от root | Dockerfile не содержит `USER`, а manifest проверяет лишь cluster runtime | добавить non-root `USER` в final stage и оставить manifest guard |
 | `conftest` не находит правило | передан template вместо rendered YAML или неверен путь `--policy` | тестировать input fixture, запустить `opa test`, затем lint именно rendered output |
-| CI зелёный после `kubesec ... | tee` | `tee` сохранил JSON, но score не проверялся | включить `set -o pipefail` и `jq -e` с `all(.[]; .score > порог)` для всего JSON-массива |
+| CI зелёный после `kubesec ... | tee` | `tee` сохранил JSON, но security result не проверялся | включить `set -o pipefail` и `jq -e`: для всего JSON-массива проверить `.valid == true`, пустой `scoring.critical` и versioned score threshold |
 | критичный system workload требует exception | правило применено одинаково к приложению и CNI/CSI | отдельный scope, least-privilege exception с owner, ticket и expiry; не глобальный ignore |
 
 > 🏭 Линтите финальный rendered YAML, храните результаты и версии scanners, а critical rules согласуйте с admission policy, чтобы исключить обход CI.
@@ -626,9 +715,9 @@ kubectl apply --dry-run=server -f manifests/
 ## 27.9. Итоги главы
 
 - Kubernetes manifest может быть валидным для API, но небезопасным; static analysis находит такие ошибки до deploy и превращает security practice в repeatable CI gate.
-- В практике курса `kubesec` показывает score и security controls, а `kube-linter` проверяет Kubernetes best practices, включая non-root, read-only root filesystem и mutable tags. Gate для `kubesec` разбирает JSON-массив и проверяет score каждого результата.
+- В практике курса `kubesec` показывает score и security controls, а `kube-linter` проверяет Kubernetes best practices, включая non-root, read-only root filesystem и mutable tags. Gate для `kubesec` разбирает JSON-массив и проверяет валидность, отсутствие `scoring.critical` и versioned score threshold каждого результата.
 - `hadolint` обнаруживает structural проблемы Dockerfile по rules `DL####`, включая `DL3002` для root final user, но не заменяет image build, secret handling и CVE scan.
-- `conftest` исполняет versioned Rego policy для требований конкретной организации; policy сама должна иметь тесты через `opa test`, в том числе для отсутствующих полей и опасных значений.
+- `conftest` исполняет versioned Rego policy для требований конкретной организации; policy сама должна иметь тесты через `opa test`, в том числе для отсутствующих полей и опасных значений. В Kubernetes v1.36 policy должна отдельно покрывать OCI references image volumes, которые не являются container images.
 - Исправление означает изменение Dockerfile/manifest/policy, после которого все linters и server dry-run повторно возвращают `0`.
 - Lint не заменяет SBOM, vulnerability scan, signing или admission: это последовательные слои supply-chain defense.
 
@@ -667,7 +756,7 @@ Hadolint разбирает Dockerfile, но не строит image, не ис�
 <details>
 <summary>5. Как `conftest` и Rego помогают проверить trusted registry или обязательный `securityContext`?</summary>
 
-`conftest test` передаёт YAML в Rego policy и возвращает non-zero, когда правило создаёт `deny`. Пример policy проверяет prefix `registry.example.com/`, SHA-256 digest и effective `runAsNonRoot`, `readOnlyRootFilesystem`, `allowPrivilegeEscalation` у regular и init containers. Tests `opa test` защищают саму policy от случайного ослабления.
+`conftest test` передаёт YAML в Rego policy и возвращает non-zero, когда правило создаёт `deny`. Пример policy проверяет prefix `registry.example.com/` и SHA-256 digest у regular/init containers и image volumes, а также effective `runAsNonRoot`, `readOnlyRootFilesystem`, `allowPrivilegeEscalation` у containers. Tests `opa test` защищают саму policy от случайного ослабления.
 </details>
 
 <details>
@@ -685,7 +774,7 @@ Templates ещё не являются тем ресурсом, который �
 <details>
 <summary>8. Почему `set -o pipefail` важен для команды scanner, вывод которой передаётся в `tee`?</summary>
 
-Без `pipefail` shell может вернуть статус последней успешной команды `tee`, скрыв падение scanner. Он сохраняет failure исходной команды во всём pipeline. Однако для `kubesec` этого недостаточно: JSON нужно явно проверить `jq -e`, включая score каждого элемента массива.
+Без `pipefail` shell может вернуть статус последней успешной команды `tee`, скрыв падение scanner. Он сохраняет failure исходной команды во всём pipeline. Однако для `kubesec` этого недостаточно: JSON нужно явно проверить `jq -e` для каждого элемента массива — `.valid == true`, пустой `scoring.critical` и versioned score threshold; один положительный score не компенсирует critical finding.
 </details>
 
 <details>

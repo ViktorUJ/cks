@@ -40,11 +40,11 @@
 
 ```mermaid
 flowchart TB
-    src["Исходники + зависимости"] --> build["builder stage<br/>компилятор, тесты, git"]
-    build -->|"весь stage попал в runtime ❌"| fat["shell + package manager<br/>лишние пакеты и CVE"]
-    build -->|"COPY только artifact ✓"| runtime["минимальный runtime<br/>бинарник + нужные данные"]
-    fat --> attacker["RCE: больше инструментов<br/>и объектов для атаки"]
-    runtime --> reduced["RCE: меньше возможностей<br/>для пост-эксплуатации"]
+    src["Код<br/>и зависимости"] --> build["Builder<br/>build/tests/git"]
+    build --> fat["Неверный путь ❌<br/>builder целиком<br/>в runtime<br/>shell, packages<br/>и лишние CVE"]
+    build --> runtime["Верный путь ✓<br/>COPY artifact<br/>минимум runtime<br/>бинарник<br/>и данные"]
+    fat --> attacker["RCE<br/>больше<br/>инструментов<br/>и целей атаки"]
+    runtime --> reduced["RCE<br/>меньше<br/>инструментов<br/>для атаки"]
     style build fill:#326ce5,color:#fff
     style fat fill:#db4437,color:#fff
     style runtime fill:#0f9d58,color:#fff
@@ -83,11 +83,11 @@ libraries.
 
 ```mermaid
 flowchart TB
-    q["Что требуется финальному процессу?"]
-    q -->|"статический binary<br/>и все данные встроены"| scratch["scratch<br/>минимум файлов"]
-    q -->|"нужен runtime, но<br/>не shell/package manager"| dist["distroless<br/>минимальный runtime"]
-    q -->|"нужны shell, apk<br/>или native diagnostics"| alpine["Alpine<br/>обоснованное исключение"]
-    scratch --> verify["проверить запуск, TLS, DNS<br/>и non-root"]
+    q["Требования<br/>к runtime"]
+    q --> scratch["scratch<br/>static binary<br/>данные внутри<br/>минимум файлов"]
+    q --> dist["distroless<br/>нужен runtime<br/>без shell<br/>без package mgr"]
+    q --> alpine["Alpine<br/>shell или apk<br/>либо debug tools<br/>осознанный выбор"]
+    scratch --> verify["Проверить<br/>запуск и TLS<br/>DNS, non-root"]
     dist --> verify
     alpine --> verify
     style q fill:#f4b400,color:#000
@@ -237,7 +237,7 @@ BuildKit/Podman secret mounts.
 `USER` указан явно, чтобы намерение было видно в Dockerfile.
 
 ```dockerfile
-FROM gcr.io/distroless/static-debian12:nonroot@sha256:<проверенный-digest>
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:<проверенный-digest>
 COPY --from=builder /out/server /server
 USER 65532:65532
 ENTRYPOINT ["/server"]
@@ -248,9 +248,20 @@ ENTRYPOINT ["/server"]
 ## 24.4. Слои, secrets и build context
 
 Каждая filesystem-changing инструкция Dockerfile может создать layer. Layer
-immutable: если `RUN rm /tmp/token` удаляет файл в следующем layer, байты секрета всё
-равно остаются в предыдущем layer и могут быть извлечены из image history/layers. Поэтому
-секрет нельзя передавать через `COPY`, `ADD`, `ARG` или `ENV`.
+immutable: если secret создан в layer stage, который входит в опубликованный image, то
+`RUN rm /tmp/token` в следующем layer не стирает его байты из нижнего layer. Поэтому
+secret нельзя передавать через `COPY`, `ADD`, `ARG` или `ENV`.
+
+Обычный multi-stage build — другой случай: отдельные layers builder не становятся layers
+final runtime image, если final stage начинается с собственного `FROM` и через
+`COPY --from` переносится только нужный artifact.
+
+Это не делает небезопасную передачу credentials безопасной автоматически. Secret всё ещё
+может попасть в final image через случайно скопированный artifact, в отдельно
+опубликованный intermediate image или в build logs. Если credential передавался через
+`ARG`/`ENV` либо был записан в filesystem layer, он также может остаться в build metadata,
+history или cache соответствующего build stage. Для build-time credentials используйте
+BuildKit/Podman secret mounts вместо `ARG`, `ENV`, `COPY` или `ADD`.
 
 ```dockerfile
 # НИКОГДА: token останется в history/config или в одном из layers.
@@ -263,13 +274,17 @@ RUN npm ci
 RUN rm /root/.npmrc
 ```
 
-Для BuildKit используйте secret mount: файл доступен только одной команде `RUN` и не
-попадает в финальный layer. Команда, которая использует secret, не должна печатать его
-в stdout/stderr.
+Для BuildKit используйте secret mount: secret временно доступен только нужной команде
+`RUN` и не попадает в output layer; значение secret также не включается в provenance
+attestation. Команда, которая использует secret, всё равно не должна печатать его в
+stdout/stderr, записывать в artifact для `COPY --from` или сохранять credential в обычный
+filesystem layer. External cache допустим при корректном `--secret`: опасен не cache
+export сам по себе, а credential в cacheable filesystem output из-за неверной обработки
+secret.
 
 ```dockerfile
 # syntax=docker/dockerfile:1.7
-FROM node:22.14.0-alpine3.21 AS builder
+FROM node:22.23.2-alpine@sha256:<проверенный-digest> AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 # Build-инструменты (TypeScript, Vite, webpack и т. п.) обычно находятся в devDependencies.
@@ -347,7 +362,7 @@ RUN apk add --no-cache --virtual .build-deps build-base \
 вообще не переносить stage, где есть `apk`, compiler и cache, в runtime через multi-stage
 build.
 
-> 🎯 Проверьте final artifact через `history`, `inspect` и `dive`; для distroless/scratch отсутствие shell подтверждает ожидаемый отказ `kubectl exec -- /bin/sh`.
+> 🎯 Проверьте final artifact через `history`, `inspect` и `dive`; для distroless/scratch отсутствие shell подтверждает только ожидаемая ошибка отсутствующего executable, а не любой non-zero `kubectl exec`.
 
 ## 24.5. Инспекция: измерить размер, layers и содержимое
 
@@ -407,10 +422,26 @@ kubectl logs minimal-api
 kubectl port-forward pod/minimal-api 8080:8080
 # В другом terminal: curl -fsS http://127.0.0.1:8080/health
 
-# Для distroless/scratch это ДОЛЖНО завершиться ошибкой, например
-# "executable file not found". Код != 0 подтверждает отсутствие /bin/sh.
-kubectl exec minimal-api -- /bin/sh
-printf 'kubectl exec exit code: %s\n' "$?"
+# Сначала исключите generic exec failure: Pod уже Ready, а RBAC разрешает pods/exec.
+if [[ "$(kubectl auth can-i create pods --subresource=exec)" != yes ]]; then
+  echo "ERROR: current identity cannot create pods/exec" >&2
+  exit 1
+fi
+
+# Для distroless/scratch ожидается именно ошибка отсутствующего executable.
+if output=$(kubectl exec minimal-api -c api -- /bin/sh 2>&1); then
+  echo "ERROR: /bin/sh unexpectedly exists in the minimal runtime" >&2
+  exit 1
+else
+  status=$?
+  if printf '%s\n' "$output" | grep -Eqi 'executable file not found|stat /bin/sh: no such file or directory'; then
+    echo "OK: /bin/sh is absent as expected"
+  else
+    printf 'ERROR: kubectl exec failed, but /bin/sh absence was not proven (exit %s): %s\n' \
+      "$status" "$output" >&2
+    exit 1
+  fi
+fi
 
 # Настройки, не требующие shell:
 kubectl get pod minimal-api -o jsonpath='{.spec.securityContext.runAsNonRoot}{"\n"}'
@@ -427,9 +458,13 @@ kubectl debug -it pod/minimal-api --target=api \
   --image=busybox:1.36.1 -- sh
 ```
 
-Debug container разделяет namespaces Pod, но не изменяет filesystem target-container.
-Он также должен иметь конкретную версию (а в production - утверждённый digest) и не
-должен использоваться как постоянный обход отсутствующего shell.
+Ephemeral debug container находится в том же Pod и разделяет его network namespace.
+`--target=api` просит container runtime поместить debug container в process namespace
+целевого container; это требует поддержки runtime. Без неё debug container может
+стартовать с изолированным process namespace и не увидеть процессы приложения. Его root
+filesystem и mount namespace не становятся filesystem target-container автоматически.
+Debug image также должен иметь конкретную версию (а в production - утверждённый digest) и
+не должен использоваться как постоянный обход отсутствующего shell.
 
 ### Типичные ошибки и диагностика
 
@@ -519,10 +554,10 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 > **Asset:** секреты и credentials в build-временных файлах, например `.npmrc` и token.
 > **Starting foothold:** доступ к Dockerfile/build context либо возможность исследовать собранный image.
 > **Attacker objective:** найти credential, забытый в промежуточных слоях image.
-> **Abuse path:** исследовать `docker history` и извлечь layers image, чтобы восстановить credential из предыдущих стадий multi-stage build, если secret не исключён через `.dockerignore` или передан в build stage не через `--mount=type=secret`.
-> **Expected evidence:** `docker history` и `trivy image` не находят secret в layers.
-> **Control:** BuildKit `--mount=type=secret`, `.dockerignore` для файлов с credentials и multi-stage build без secret в финальном слое.
-> **Retest:** повторное извлечение layers не даёт credential.
+> **Abuse path:** исследовать layers опубликованного final image и извлечь credential, если он создан в одном из его нижних layers либо случайно скопирован из builder. Отдельные builder layers не входят в обычный final multi-stage image, но credential может остаться в отдельно опубликованном intermediate image, build logs или cacheable filesystem output, если secret передан через `ARG`/`ENV`/`COPY` либо записан build-командой в layer/artifact. Корректный BuildKit `--mount=type=secret` не сохраняет значение secret в final layer или provenance attestation.
+> **Expected evidence:** final layers, copied artifacts и доступные build outputs не содержат credential; provenance не содержит значения secret.
+> **Control:** BuildKit `--mount=type=secret`, `.dockerignore` для файлов с credentials и `COPY --from` только нужного artifact; external cache используют только без credential в cacheable filesystem output.
+> **Retest:** повторная проверка final layers, доступных build outputs и provenance не даёт credential.
 
 ## 24.11. Вопросы для самопроверки
 
@@ -559,7 +594,7 @@ Debug container разделяет namespaces Pod, но не изменяет fi
 <details>
 <summary>6. Почему `RUN rm /secret` не удаляет secret из image history? Какой механизм применять для private dependency credential?</summary>
 
-Filesystem layers immutable: удаление в следующем layer не стирает байты секрета из предыдущего layer/history. Credential нельзя передавать через `ARG`, `ENV`, `COPY` или `ADD`; для private dependency применяют BuildKit/Podman `--mount=type=secret`. Если secret уже опубликован, его отзывают и ротируют, а image пересобирают из чистого Dockerfile.
+Если secret был создан в layer stage, который входит в опубликованный image, удаление в следующем layer не стирает его байты из нижнего layer/history. При обычном multi-stage build отдельный builder не входит в final image сам по себе, но `ARG`, `ENV`, `COPY` или `ADD` небезопасны: credential может попасть в копируемый artifact, cache, logs или отдельно опубликованный intermediate image. BuildKit/Podman `--mount=type=secret` временно выдаёт secret только build instruction и не сохраняет значение secret в final layer или provenance attestation. Но build-команда может сама напечатать secret или записать его в generated artifact, поэтому output всё равно проверяют. Если secret уже опубликован, его отзывают и ротируют, а image пересобирают из чистого Dockerfile.
 </details>
 
 <details>
@@ -577,7 +612,7 @@ Filesystem layers immutable: удаление в следующем layer не �
 <details>
 <summary>9. Как доказать, что distroless Pod работоспособен, если `/bin/sh` намеренно отсутствует?</summary>
 
-Проверяют Ready, logs, health endpoint или probe, например через `kubectl port-forward` и `curl`, а не пытаются вернуть shell. Отказ `kubectl exec ... /bin/sh` с non-zero кодом ожидаем и подтверждает отсутствие shell. Для incident diagnosis применяют logs, metrics, `describe` или временный утверждённый ephemeral debug container.
+Проверяют Ready, logs, health endpoint или probe, например через `kubectl port-forward` и `curl`, а не пытаются вернуть shell. Отсутствие shell подтверждает ожидаемая именно ошибка отсутствующего executable после проверки Pod Ready и доступа `pods/exec`; любой non-zero `kubectl exec` не является доказательством. Для incident diagnosis применяют logs, metrics, `describe` или временный утверждённый ephemeral debug container.
 </details>
 
 <details>

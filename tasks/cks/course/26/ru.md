@@ -19,6 +19,13 @@
 > security control: tag не является доказательством содержимого, а успешный `docker pull`
 > не означает, что образ разрешён к запуску.
 
+> **Простая идея подписи.** Она отвечает на один вопрос: **кто одобрил именно эти
+> байты image?** Pipeline сначала фиксирует immutable digest — отпечаток содержимого, затем
+> подписывает этот digest. Перед запуском verifier сопоставляет digest image с подписью и
+> убеждается, что signer доверенный. Если tag теперь ведёт к другим байтам, старая подпись
+> уже не подходит. Подпись не шифрует image и не заменяет scan на malware/CVE: она доказывает
+> identity издателя для конкретного содержимого.
+
 > 🧠 Trust decision принимается до сохранения `Pod`: registry allowlist отвечает за источник image, подпись — за доверенного издателя, а digest фиксирует содержимое.
 
 ## 26.1. Что именно нужно защищать
@@ -57,7 +64,7 @@ rollout. Allowlist не заменяет signature verification: атакующ�
 доверенный registry всё ещё может поместить туда неподписанный образ. Подпись, в свою
 очередь, не запрещает использовать неутверждённый registry.
 
-> 🎯 Реализуйте fail-closed admission allowlist для нужного registry/repository и проверьте normal, init и ephemeral containers. Native `ValidatingAdmissionPolicy` и Gatekeeper — прямые пути к этой задаче.
+> 🎯 Реализуйте fail-closed admission allowlist для нужного registry/repository и проверьте normal, init и ephemeral containers. В Kubernetes v1.36 отдельно учтите `spec.volumes[].image.reference`: пока verifier не умеет доказуемо проверить такой OCI artifact, в защищённом namespace безопаснее отклонять image volumes. Native `ValidatingAdmissionPolicy` и Gatekeeper — прямые пути к этой задаче.
 
 ## 26.2. Allowlist реестров через native ValidatingAdmissionPolicy, Kyverno и Gatekeeper
 
@@ -68,7 +75,8 @@ rollout. Allowlist не заменяет signature verification: атакующ�
 Он подходит для CEL-проверок prefix/формата image, но **не заменяет криптографическую
 проверку Cosign или Notary**: VAP не доказывает, кто подписал конкретный digest. Политика
 ниже одинаково охватывает обычные, init- и ephemeral-контейнеры; `pods/ephemeralcontainers`
-нужен для запрета обхода через `kubectl debug`.
+нужен для запрета обхода через `kubectl debug`. Она также fail-closed отклоняет image volumes:
+в Kubernetes v1.36 `spec.volumes[].image.reference` — отдельная OCI-ссылка, не контейнер.
 
 ```yaml
 apiVersion: admissionregistration.k8s.io/v1
@@ -84,13 +92,14 @@ spec:
       operations: ["CREATE", "UPDATE"]
       resources: ["pods", "pods/ephemeralcontainers"]
   validations:
-  - message: "Разрешены только образы registry.example.com/platform/."
+  - message: "Разрешены только container images registry.example.com/platform/; image volumes запрещены."
     expression: >-
       object.spec.containers.all(c, c.image.startsWith("registry.example.com/platform/")) &&
       (!has(object.spec.initContainers) || object.spec.initContainers.all(c,
         c.image.startsWith("registry.example.com/platform/"))) &&
       (!has(object.spec.ephemeralContainers) || object.spec.ephemeralContainers.all(c,
-        c.image.startsWith("registry.example.com/platform/")))
+        c.image.startsWith("registry.example.com/platform/"))) &&
+      (!has(object.spec.volumes) || !object.spec.volumes.exists(v, has(v.image)))
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -112,12 +121,14 @@ spec:
 
 VAP, как и Pod-only Gatekeeper Constraint, отклонит Pod, созданный контроллером; для раннего
 отказа самого Deployment нужны отдельные CEL-правила его template. Сначала примените policy
-в тестовом namespace и проверьте normal/init/ephemeral container images. Для требований
-signature оставьте следующий `ImageValidatingPolicy` или другой криптографический verifier.
+в тестовом namespace и проверьте normal/init/ephemeral container images, а также Pod с
+`spec.volumes[].image`: этот пример должен отклонить image volume. Для требований signature
+оставьте следующий `ImageValidatingPolicy` или другой криптографический verifier.
 
 Проверка должна покрывать `containers`, `initContainers` и, если они разрешены,
-`ephemeralContainers`: иначе init- или debug-контейнер станет обходом policy. Pod-only
-policy сама проверяет только Pod. Чтобы Kyverno `ValidatingPolicy` отклоняла Deployment и
+`ephemeralContainers`: иначе init- или debug-контейнер станет обходом policy. В Kubernetes
+v1.36 отдельно обработайте `spec.volumes[].image.reference`: это не элемент ни одного из
+трёх массивов. Pod-only policy сама проверяет только Pod. Чтобы Kyverno `ValidatingPolicy` отклоняла Deployment и
 другие workload-контроллеры до создания Pod, явно включите `spec.autogen.podControllers`;
 без него controller будет принят, а отказ случится только при создании Pod. Начните с
 режима Audit, исправьте существующие manifests, затем переведите правило в Enforce.
@@ -134,18 +145,19 @@ policy сама проверяет только Pod. Чтобы Kyverno `Validat
 > vendor-supported версия конкретного инструмента могут отличаться одновременно.
 >
 > Лабы 108 и 111 устанавливают Kyverno через Helm chart `3.9.0`, что соответствует релизу
-> **Kyverno 1.19.0**. Если для конкретного negative test с `pods/ephemeralcontainers`
-> требуется более новый patch этой ветки (например, для fix, вошедшего после 1.19.0),
-> сверяйте actual fixed version в release notes `github.com/kyverno/kyverno/releases`
-> перед тем, как считать поведение гарантированным: не объявляйте patch-версию
-> pinned/available, пока лаба не устанавливает именно её. На 1.19.0 запрос может дойти до
-> image verification, но `validations` могут не примениться для `pods/ephemeralcontainers`,
-> поэтому отрицательный тест `kubectl debug` не гарантированно будет отклонён - проверяйте
-> это поведение эмпирически на установленной версии, а не по номеру patch из документации.
+> **Kyverno 1.19.0**. Известный upstream defect [#16947](https://github.com/kyverno/kyverno/issues/16947)
+> относится именно к `ImageValidatingPolicy`: для `pods/ephemeralcontainers` её validating
+> handler не применяет `validations`, хотя webhook и image verification вызываются; issue
+> помечена milestone `1.19.2`. Поэтому на pinned 1.19.0 не считайте отрицательный
+> `kubectl debug` test для **подписи** гарантированным (подробности в §26.5).
+> Это ограничение не переносится на обычную `ValidatingPolicy`: policy ниже получает
+> admission review для `pods/ephemeralcontainers` и применяет CEL allowlist.
 
 Основной путь использует CEL-based `ValidatingPolicy` из `policies.kyverno.io/v1`.
 Переменная объединяет все три списка контейнеров; ресурс `pods/ephemeralcontainers`
-нужен, чтобы та же проверка выполнялась при `kubectl debug`.
+нужен, чтобы та же проверка выполнялась при `kubectl debug`. Как и native VAP, данный
+вариант отдельно запрещает image volumes, пока для них не выбран verifier с подтверждённой
+поддержкой `spec.volumes[].image.reference`.
 
 ```yaml
 apiVersion: policies.kyverno.io/v1
@@ -174,6 +186,9 @@ spec:
     expression: >-
       variables.allContainers.all(container,
         container.image.startsWith("registry.example.com/platform/"))
+  - message: "Image volumes запрещены до появления проверенного verifier для них."
+    expression: >-
+      !has(object.spec.volumes) || !object.spec.volumes.exists(volume, has(volume.image))
 ```
 
 Проверьте положительный и отрицательный случаи до rollout:
@@ -181,7 +196,9 @@ spec:
 ```bash
 kubectl apply -f allowed-pod.yaml
 kubectl apply -f forbidden-pod.yaml  # ожидается admission denial
-kubectl debug allowed-pod --image=registry.example.com/other-team/debug:1.0 --target=app  # denial: prefix не registry.example.com/platform/
+kubectl debug allowed-pod --image=registry.example.com/other-team/debug:1.0 --target=app
+# Expected: admission denial — обычный ValidatingPolicy проверяет
+# pods/ephemeralcontainers и отклоняет неверный repository prefix.
 kubectl get policyreport -A          # если в кластере включены Policy Reports
 ```
 
@@ -199,7 +216,8 @@ Legacy `ClusterPolicy` с `foreach` относится только к мигр�
 ### OPA Gatekeeper
 
 Gatekeeper отделяет логику ConstraintTemplate от конкретного Constraint. Шаблон ниже
-проверяет regular, init и ephemeral containers. Его `match` ограничен `Pod`: такой
+проверяет regular, init и ephemeral containers и отклоняет image volumes, пока для
+`spec.volumes[].image.reference` не внедрён отдельный проверенный verifier. Его `match` ограничен `Pod`: такой
 Constraint **не отклоняет сам Deployment**. Он отклонит Pod, который позже создаст
 контроллер; для раннего отказа добавьте отдельные правила для workload templates. Для
 `kubectl debug` webhook Gatekeeper должен получать `UPDATE` subresource
@@ -250,6 +268,12 @@ spec:
         msg := sprintf("ephemeral image %q is not from an approved registry", [container.image])
       }
 
+      violation contains {"msg": msg} if {
+        volume := input.review.object.spec.volumes[_]
+        volume.image
+        msg := "image volumes are not allowed until their OCI references have verified policy coverage"
+      }
+
       starts_with_allowed(image, repos) if {
         repo := repos[_]
         startswith(image, repo)
@@ -269,6 +293,24 @@ spec:
     - "registry.example.com/platform/"
 ```
 
+Для обязательного enforcement установите Gatekeeper с `validatingWebhookFailurePolicy: Fail`
+и после установки проверьте фактическую конфигурацию:
+
+```yaml
+# values.yaml для Helm chart Gatekeeper
+validatingWebhookFailurePolicy: Fail
+```
+
+```bash
+kubectl get validatingwebhookconfiguration gatekeeper-validating-webhook-configuration \
+  -o jsonpath='{range .webhooks[*]}{.name}{"\t"}{.failurePolicy}{"\n"}{end}'
+```
+
+Значение chart по умолчанию может быть `Ignore`, то есть недоступный webhook пропустит запрос.
+В тестовом окружении намеренно проверьте, что при недоступном webhook запрос отклоняется.
+`Fail` требует HA, мониторинга и доступности Gatekeeper: иначе он может блокировать новые
+Pod при аварии контроллера.
+
 Kyverno удобен, когда policy должна также mutate manifests или нативно проверять
 подписи. Gatekeeper удобен, когда организация стандартизировала Rego и Constraints.
 Не устанавливайте оба движка для одной и той же обязательной проверки без явного
@@ -280,9 +322,13 @@ Kyverno удобен, когда policy должна также mutate manifests
 ## 26.3. ImagePolicyWebhook: backend и конфигурация API-сервера
 
 `ImagePolicyWebhook` - admission plugin API-сервера. Для каждого admission-запроса с
-образами он отправляет `ImageReview` во внешний HTTPS backend; backend отвечает
+container images он отправляет `ImageReview` во внешний HTTPS backend; backend отвечает
 `allowed: true` или `false` и может вернуть причину и audit annotations. Это централизует
 решение вне manifests, но backend оказывается частью критического пути API-сервера.
+`ImageReview` включает `containers`, `initContainers` и `ephemeralContainers`, но не
+`spec.volumes[].image.reference`; поэтому не делайте этот plugin единственным supply-chain
+control, если image volumes разрешены. В примерах этой главы native policy/Gatekeeper
+отклоняют image volumes fail-closed.
 
 ```mermaid
 sequenceDiagram
@@ -414,6 +460,13 @@ status:
 старый специализированный механизм; webhook/policy engine с поддержкой signature
 verification обычно проще сопровождать.
 
+> 🧪 **Практика: CKS Lab 108, задания 2 и 6.** [Лаба 108](../../labs/108/README_RU.MD)
+> отдельно тренирует запрет явного и implicit `latest`, а в задании 6 — полный wiring
+> `ImagePolicyWebhook`: `defaultAllow: false`, backend `ImageReview`, добавление plugin к
+> kube-apiserver, denial для `nginx:latest` и allow для `nginx:1.27.3`. Это удобная
+> экзаменационная проверка механизма; в production разрешённый versioned tag всё равно
+> заменяйте на reference по digest.
+
 > 🎯 Умейте подписать и проверить конкретный immutable digest через `cosign`; tag сам по себе не является объектом доверия.
 
 ## 26.4. Cosign и Sigstore: подпись и проверка digest
@@ -465,7 +518,7 @@ cosign sign --yes "$IMAGE"
 # Проверяем issuer И subject workflow, а не только факт наличия certificate.
 cosign verify \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp='^https://github.com/example-org/payments/.github/workflows/release.yml@refs/tags/v[0-9].*$' \
+  --certificate-identity-regexp='^https://github\.com/example-org/payments/\.github/workflows/release\.yml@refs/tags/v[0-9].*$' \
   "$IMAGE"
 ```
 
@@ -482,7 +535,9 @@ cosign verify \
 Проверка до deployment полезна, но не является enforcement: пользователь может обойти
 локальный CI script и обратиться к API напрямую. Поэтому проверка должна жить на
 admission path. В Kyverno 1.19 это делает CEL-based `ImageValidatingPolicy`; legacy
-`ClusterPolicy.verifyImages` оставлен только для миграции.
+`ClusterPolicy.verifyImages` оставлен только для миграции. Не считайте этот policy примером
+проверки `spec.volumes[].image.reference`: в этой главе image volumes уже fail-closed
+отклоняются allowlist policy, пока для них не подтверждена поддержка verifier.
 
 **Экзаменационное ядро** - allowlist repository, immutable digest, fail-closed admission
 и диагностика denial. `ImageValidatingPolicy` Kyverno, Notary и signed SBOM/in-toto
@@ -541,17 +596,19 @@ spec:
         verifyAttestationSignatures(image, attestations.signedSbom, [attestors.releaseKey]) > 0).all(ok, ok)
 ```
 
-`failurePolicy: Fail` не пропускает объект при ошибке проверки. `pods/ephemeralcontainers`
-и объединение трёх наборов image не дают добавить неподписанный debug-container после
-создания Pod. Проверьте positive/negative cases для normal и init container, а также обход
-через subresource:
+`failurePolicy: Fail` не пропускает объект при ошибке проверки. Но в установленном Kyverno
+1.19.0 известный defect `ImageValidatingPolicy` для `pods/ephemeralcontainers` не даёт
+гарантии, что её `validations` будут применены к `kubectl debug` (upstream #16947 указывает
+milestone fix `1.19.2`; см. также compatibility note в §26.2). Поэтому обязательные
+positive/negative tests этого pinned релиза — normal и init container. Запрос ниже допустимо
+выполнять только как empirical compatibility test; не записывайте заранее ожидаемый denial и
+не полагайтесь на него для enforcement неподписанного approved-registry debug-container,
+пока лаба не устанавливает исправленную версию и результат не подтверждён вашим тестом.
 
 ```bash
 kubectl debug allowed-pod --image=registry.example.com/platform/debug@sha256:<digest> --target=app
-# Positive case: image подписан доверенным signer и имеет нужные attestation.
+# Только empirical test для pinned Kyverno 1.19.0: outcome зафиксируйте в evidence.
 kubectl debug allowed-pod --image=registry.example.com/platform/debug:unsigned --target=app
-# Expected: admission denial; образ из разрешённого registry, но без доверенной подписи/
-# attestation, поэтому именно ImageValidatingPolicy отклоняет ephemeral container, а не VAP.
 ```
 
 Отдельно проверьте образ из чужого registry (`registry.example.com/other-team/debug:1.0`
@@ -596,20 +653,27 @@ rotation, а миграцию ведите с явным периодом дво
 1. CI собирает воспроизводимый image, сканирует его и получает digest после push.
 2. CI создаёт SBOM/attestations и подписывает этот digest ключом или keyless OIDC identity.
 3. Deployment reference использует этот же digest; allowlist разрешает только нужный
-   registry/repository.
+   registry/repository, а image volumes либо явно проверяются отдельным verifier, либо
+   fail-closed запрещены.
 4. Admission сверяет registry, digest и подпись с ограниченной trusted identity и
    fail-closed отклоняет ошибку проверки.
 5. Логи CI, registry и admission связывают commit, workflow run, digest и решение.
 
-Диагностику начинайте с фактов, а не с ослабления policy:
+Диагностику начинайте с фактов, а не с ослабления policy. Direct `Pod` CREATE, отклонённый
+admission, не сохраняется, поэтому первичное evidence — ответ самой команды, а не
+`kubectl describe pod`:
 
 ```bash
-POD="${POD:?set pod}"
-kubectl describe pod "$POD"             # Events: причина admission denial
+kubectl apply -f pod.yaml 2>&1 | tee /tmp/admission-denial.txt
+kubectl get pod "${POD:?set pod}" && kubectl describe pod "$POD"  # только если Pod существует
 kubectl get events -A --sort-by=.lastTimestamp
+kubectl describe rs/my-replicaset         # для Pod, который создаёт controller: ищите FailedCreate
 cosign verify --key cosign.pub "$IMAGE"
 kubectl logs -n kyverno deploy/kyverno-admission-controller
 ```
+
+Для controller-owned Pod проверяйте Events и `FailedCreate` у ReplicaSet/Job, а для
+полной трассировки — API-server audit и логи соответствующего admission controller.
 
 Если legitimate deployment отклонён, проверьте его digest, repository prefix, signer
 identity, сертификат/ключ и network/TLS до registry. Не исправляйте incident временным
@@ -631,8 +695,9 @@ identity, сертификат/ключ и network/TLS до registry. Не ис�
 ## 26.8. Итоги главы
 
 - Allowlist registry и проверка подписи решают разные задачи и должны работать вместе.
-- Kyverno и Gatekeeper могут запретить неутверждённые image references; проверка обязана
-  учитывать обычные, init- и ephemeral-контейнеры.
+- Kyverno и Gatekeeper могут запретить неутверждённые container image references; проверка
+  обязана учитывать обычные, init- и ephemeral-контейнеры, а `spec.volumes[].image.reference`
+  — явно проверять отдельным verifier или fail-closed запрещать.
 - `ImagePolicyWebhook` требует защищённого доступного backend, конфигурации
   API-сервера и fail-closed `defaultAllow: false`; mTLS в примере - выбранный вариант
   аутентификации backend.
@@ -647,8 +712,8 @@ identity, сертификат/ключ и network/TLS до registry. Не ис�
 
 **На экзамене.** Короткое ядро - разница между registry policy, tag и digest,
 настройка или диагностика validating admission, API-server admission configuration и риск
-fail-open. Умение прочитать denial event и проверить exact image reference быстрее и
-безопаснее, чем отключение контроллера. Kyverno `ImageValidatingPolicy`, Notary и
+fail-open. Умение сохранить ответ admission denial и проверить exact image reference быстрее
+и безопаснее, чем отключение контроллера. Kyverno `ImageValidatingPolicy`, Notary и
 attestations - production extension, для которой достаточно понимать назначение.
 
 **В реальной работе.** Подпись связывает production workload с release workflow и
@@ -666,7 +731,7 @@ deployment. Вместе с least-privilege правами CI, защищённ�
 > временно скрыть изменение, но новый node или очищенный cache получат новый digest при
 > первом pull; `Never` исключает pull, но не является supply-chain verification control.
 > `imagePullPolicy` не заменяет digest pinning и signature/provenance verification.
-> **Expected evidence:** admission denial event или audit log с неутверждённым registry либо недействительной signature.
+> **Expected evidence:** сохранённый ответ admission denial либо audit log; для controller-owned Pod — также `FailedCreate` event у владельца.
 > **Control:** digest pinning, registry allowlist и admission signature verification через ImagePolicyWebhook или Kyverno.
 > **Retest:** workload по digest не меняется после retarget tag, а unsigned image отклоняется admission.
 
@@ -685,9 +750,9 @@ Version tag — изменяемое имя и может быть перена�
 </details>
 
 <details>
-<summary>3. Какие массивы контейнеров обязан проверять registry policy и почему?</summary>
+<summary>3. Какие container references обязан проверять registry policy и что делать с image volumes?</summary>
 
-Policy должна проверять `containers`, `initContainers` и `ephemeralContainers`. Иначе init-container либо контейнер, добавленный через `kubectl debug` и subresource `pods/ephemeralcontainers`, станет обходом allowlist. Для этого правила match-ят также CREATE/UPDATE нужного subresource.
+Policy должна проверять `containers`, `initContainers` и `ephemeralContainers`. Иначе init-container либо контейнер, добавленный через `kubectl debug` и subresource `pods/ephemeralcontainers`, станет обходом allowlist. Для этого правила match-ят также CREATE/UPDATE нужного subresource. В Kubernetes v1.36 `spec.volumes[].image.reference` — отдельная OCI-ссылка вне этих массивов: её нужно явно проверять поддерживаемым verifier либо, как в примерах главы, fail-closed запрещать image volumes.
 </details>
 
 <details>

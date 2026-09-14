@@ -4,6 +4,16 @@
 
 Практический курс подготовки к **CKS (Certified Kubernetes Security Specialist)** - сертификации CNCF и Linux Foundation по защите Kubernetes. Это продолжение [курса CKA + CKAD](../../cka/course/README_RU.md): предполагается, что вы уже умеете администрировать кластер, работать с `kubectl`, RBAC, NetworkPolicy, SecurityContext, kubeadm и TLS. CKS не повторяет эту базу, а применяет её к моделям угроз, hardening и расследованию инцидентов.
 
+## О проекте и его поддержке
+
+Курс поддерживается **Viktar Mikalayeu, CNCF Kubestronaut**, и сообществом контрибьюторов. Статус Kubestronaut подтверждает наличие и поддержание действующими пяти Kubernetes-сертификаций CNCF: CKA, CKAD, CKS, KCNA и KCSA.
+
+Материалы развиваются как независимый open-source проект: технические утверждения сверяются с первичными источниками Kubernetes, CNCF/Linux Foundation и официальной документацией используемых проектов; изменения проходят техническое ревью и автоматические проверки, а актуальность экзаменационной среды, Kubernetes и security tooling отслеживается отдельно.
+
+Подробнее о maintainers, техническом ревью и принципах поддержки курса: [MAINTAINERS.md](../MAINTAINERS.md). Список Kubestronauts публикуется CNCF: [CNCF Kubestronaut Program](https://www.cncf.io/training/kubestronaut/). CNCF Kubestronaut list: [Viktar Mikalayeu](https://www.cncf.io/training/kubestronaut/?_sft_lf-country=ge&p=viktar-mikalayeu&_sf_s=viktar+mikalayeu).
+
+> **Независимый проект.** Статус Kubestronaut относится к квалификации maintainer. Этот курс не является официальным курсом CNCF или Linux Foundation и не подразумевает endorsement, сертификацию или официальное одобрение ими содержания проекта.
+
 > **О ссылках на CKA и KCSA.** Самостоятельный архив CKS не включает каталоги `cka` и `kcsa`. Поэтому в standalone-distribution ссылки внутри самого CKS остаются кликабельными, а cross-course references на CKA/KCSA публикуются как обычный текст без относительных URL. В monorepo-build их можно генерировать как рабочие ссылки на соседние курсы или как стабильные absolute URLs. Ссылки вида `../../cka/...` и `../../kcsa/...` в исходниках рассчитаны на полный monorepo и намеренно сохраняются: пререквизиты CKA и вводный материал KCSA - реальная часть учебного маршрута, и терять указание на них в тексте не следует.
 
 > **Версия Kubernetes и экзамен.** Основные комплексные лабораторные `101-112` проверены на Kubernetes `v1.36` - это **версия обучения** для core labs. Лаба `113` - исключение по конструкции: кластер стартует на `v1.35.x` и целевая версия задания - реальный upgrade до `v1.36.x` (тема лабы - сам процесс minor upgrade, поэтому финальная версия совпадает с baseline остальных core labs). На дату проверки 2026-09-06 официальные страницы LF (основная страница CKS, «Important Instructions: CKS» и FAQ) согласованно указывают Kubernetes `v1.35` для экзаменационной среды CKS; актуальная программа CNCF по имени файла остаётся `CKS Curriculum v1.34` - curriculum version и exam environment version поддерживаются независимо. Перед экзаменом перепроверьте основную страницу CKS, Important Instructions и FAQ, а также версию, показанную в ExamUI. Подробный release-процесс описан в [политике версий](../VERSION_POLICY.md), русский стиль - в [STYLE_RU.md](../STYLE_RU.md).

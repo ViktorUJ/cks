@@ -21,12 +21,12 @@ Runtime-детектор видит действие процесса, но не
 ```mermaid
 flowchart TB
     user["Пользователь / CI<br/>audit identity"] --> api["Kubernetes API<br/>audit events"]
-    api --> workload["Workload<br/>Pod, SA, image digest"]
-    workload --> runtime["Runtime<br/>Falco, process tree, syscall"]
-    workload --> app["Приложение<br/>access/error log, metrics"]
-    workload --> network["Сеть<br/>DNS, flow, proxy, Hubble"]
-    workload --> data["Данные<br/>Secret, file access, storage audit"]
-    runtime --> case["Хронология и attribution<br/>incident case"]
+    api --> workload["Workload<br/>Pod, SA, digest"]
+    workload --> runtime["Runtime<br/>Falco, process, syscall"]
+    workload --> app["Приложение<br/>logs и metrics"]
+    workload --> network["Сеть<br/>DNS, flow, proxy"]
+    workload --> data["Данные<br/>Secret, files, storage"]
+    runtime --> case["Хронология<br/>incident case"]
     app --> case
     network --> case
     data --> case
@@ -41,16 +41,17 @@ flowchart TB
     style case fill:#c0392b,color:#fff
 ```
 
-| Слой | Что искать | Полезные источники | Что можно установить |
-|---|---|---|---|
-| Инфраструктура | неожиданный процесс на node, доступ к runtime socket, изменение unit или kernel warning | Falco, `journalctl`, kubelet/containerd logs, EDR, host audit | затронутая node, host PID, parent process, возможный выход на node |
-| Приложение | всплеск 5xx, необычный путь, command injection, новый child process | application access/error logs, traces, metrics, Falco | исходный request, tenant, endpoint и время initial access |
-| Сеть | DNS к новому домену, scan портов, исходящий transfer, обращение к metadata/API | CNI flow/Hubble, DNS, proxy, firewall, Falco `connect` | destination, объём, разрешённый или запрещённый путь |
-| Данные | чтение Secret, `/etc/shadow`, ключей, service-account token или неожиданный write | API audit, Falco file events, storage audit, DLP | какой объект/файл затронут и имелся ли доступ |
-| Пользователи | `kubectl exec`, impersonation, создание token/RoleBinding, вход с нового источника | API audit, IdP/cloud audit, bastion logs | user или ServiceAccount, source IP, verb, объект и result |
-| Workload | новый `DaemonSet`, `CronJob`, `privileged` Pod, image без ожидаемого digest | API audit, admission logs, GitOps diff, Falco Kubernetes fields | владелец workload, namespace, image, node и scope инцидента |
+| Слой                     | Что искать                                                                                                            | Полезные источники                             | Что можно установить                                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Инфраструктура | неожиданный процесс на node, доступ к runtime socket, изменение unit или kernel warning | Falco,`journalctl`, kubelet/containerd logs, EDR, host audit  | затронутая node, host PID, parent process, возможный выход на node |
+| Приложение         | всплеск 5xx, необычный путь, command injection, новый child process                                   | application access/error logs, traces, metrics, Falco           | исходный request, tenant, endpoint и время initial access                      |
+| Сеть                     | DNS к новому домену, scan портов, исходящий transfer, обращение к metadata/API           | CNI flow/Hubble, DNS, proxy, firewall, Falco`connect`         | destination, объём, разрешённый или запрещённый путь       |
+| Данные                 | чтение Secret,`/etc/shadow`, ключей, service-account token или неожиданный write                   | API audit, Falco file events, storage audit, DLP                | какой объект/файл затронут и имелся ли доступ          |
+| Пользователи     | `kubectl exec`, impersonation, создание token/RoleBinding, вход с нового источника               | API audit, IdP/cloud audit, bastion logs                        | user или ServiceAccount, source IP, verb, объект и result                          |
+| Workload                     | новый`DaemonSet`, `CronJob`, `privileged` Pod, image без ожидаемого digest                             | API audit, admission logs, GitOps diff, Falco Kubernetes fields | владелец workload, namespace, image, node и scope инцидента                |
 
 Не подменяйте источники друг другом. Falco обычно не доказывает, **кто** вызвал `kubectl exec`; это покажет audit-log. Audit-log не показывает каждый `openat(2)` внутри контейнера; это зона Falco или host audit. Kubernetes Events удобны для первичной ориентировки, но имеют короткий срок хранения и не являются forensic-журналом.
+
 > 🔬 Физическая цепочка доверия, HSM и confidential computing ниже уровня Kubernetes API.
 
 ## 30.1a. Physical infrastructure: что это значит для Kubernetes и что проверяемо
@@ -86,13 +87,14 @@ Kubernetes/node:**
   случившейся ДО старта kubelet. Managed cloud providers обычно предлагают это как
   отдельную опцию (например, Shielded VM/Confidential VM на GCP, AWS Nitro-based
   attestation) - это не Kubernetes-объект, а свойство самой VM/host.
-- **Confidential computing / TEE (Trusted Execution Environment).** Аппаратно
-  изолированная область CPU (Intel SGX, AMD SEV), где данные в памяти зашифрованы даже от
-  BIOS, гипервизора и облачного провайдера. Для privacy-sensitive нагрузок (финансовые,
-  медицинские данные) это защита от угрозы "compromised host", которую RBAC/NetworkPolicy
-  не покрывают. В Kubernetes это обычно доступно через специальный `RuntimeClass`
-  (confidential containers, kata-CC), но сама аппаратная гарантия - за пределами API
-  Kubernetes.
+- **Confidential computing / TEE (Trusted Execution Environment).** Гарантии зависят от
+  технологии и её threat model: Intel SGX защищает enclave, а для AMD VM-based confidential
+  computing наиболее сильную модель против malicious host/hypervisor даёт SEV-SNP. Более
+  ранние SEV/SEV-ES имеют иной threat model и не должны автоматически описываться как защита
+  от полностью скомпрометированного host. Для privacy-sensitive нагрузок проверяют
+  attestation, firmware/TCB и ограничения выбранной технологии. В Kubernetes это обычно
+  доступно через специальный `RuntimeClass` (confidential containers, kata-CC), но сама
+  аппаратная гарантия остаётся за пределами API Kubernetes.
 - **Node bootstrapping trust.** Когда новая нода присоединяется к кластеру, встаёт вопрос:
   запущена ли она в ожидаемом физическом/логическом месте, и может ли она
   криптографически подтвердить свою identity ДО получения доступа к cluster secrets?
@@ -150,7 +152,7 @@ performance-based экзамене без физического доступа 
 Сразу после alert сохраните неизменяемую копию исходной строки и добавьте к ней: время в UTC с точностью источника, rule name/priority, node, container ID, Pod UID, namespace/Pod/container, image digest, процесс с аргументами, файл или сеть, а также identity из audit-log. По одному имени Pod расследование не строят: Pod может быть пересоздан с тем же префиксом.
 
 ```bash
-# Список normal-контейнеров, их image и фактических imageID для корреляции с alert.
+# Список normal-контейнеров, их declared image и runtime-specific imageID для корреляции.
 NAMESPACE="${NAMESPACE:?set NAMESPACE to the affected Pod namespace}"
 POD="${POD:?set POD to the affected Pod name}"
 kubectl get pods -A -o custom-columns='NS:.metadata.namespace,POD:.metadata.name,NODE:.spec.nodeName,IMAGE:.spec.containers[*].image,IMAGE-ID:.status.containerStatuses[*].imageID'
@@ -239,7 +241,7 @@ sudo systemctl is-active falco
 ```bash
 kubectl -n falco rollout status daemonset/falco --timeout=180s
 kubectl -n falco get pods -o wide
-kubectl -n falco logs daemonset/falco --since=5m
+kubectl -n falco logs daemonset/falco -c falco --all-pods=true --prefix --since=5m
 ```
 
 > 🎯 Для проверки результата нужны rule/event, время, node, процесс, container и Kubernetes context. Не ограничивайтесь фактом срабатывания: докажите, какой workload породил alert.
@@ -248,17 +250,17 @@ kubectl -n falco logs daemonset/falco --since=5m
 
 `condition` отвечает, **когда** генерировать alert; `output` задаёт, что сохранит оператор. Плохой output вроде `Suspicious file access` заставляет повторно искать исчезнувший контейнер. Хороший output содержит стабильную связь syscall → process → container → Pod → workload.
 
-| Поле Falco | Что даёт расследованию | Ограничение или проверка |
-|---|---|---|
-| `%evt.time.iso8601`, `%evt.type`, `%evt.hostname` | UTC-время, тип системного события и node для корреляции | `evt.hostname` должен быть настроен как имя node в DaemonSet, а не случайное имя Falco Pod |
-| `%proc.name`, `%proc.cmdline` | executable и аргументы подозрительного процесса | аргументы могут содержать Secret; ограничьте доступ к log и redaction |
-| `%proc.pid`, `%proc.pname`, `%proc.aname[1]` | PID и ближайшая process tree | PID переиспользуется, поэтому нужен timestamp и container ID |
-| `%user.name`, `%user.uid` | effective Linux user процесса | это не Kubernetes user из API audit |
-| `%fd.name`, `%fd.typechar` | файл/дескриптор, с которым работал syscall | путь может быть относительным или resolved runtime-ом |
-| `%fd.sip`, `%fd.sport`, `%fd.dip`, `%fd.dport` | source/destination сетевого события | применимы к сетевым событиям, не к file open |
-| `%container.id`, `%container.full_id`, `%container.name` | контейнер для связи с CRI | `container.id` обычно усечён; сохраняйте `full_id`, когда enrichment его предоставил |
-| `%container.image.repository`, `%container.image.tag`, `%container.image.digest` | ссылка на образ и immutable digest | digest может быть пуст при задержке или отсутствии runtime enrichment; подтвердите его через Kubernetes status/CRI inspect |
-| `%k8s.ns.name`, `%k8s.pod.name`, `%k8s.pod.uid` | Kubernetes scope и стабильный Pod UID | поля требуют корректной интеграции runtime/Kubernetes metadata |
+| Поле Falco                                                                         | Что даёт расследованию                                                     | Ограничение или проверка                                                                                                                                     |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `%evt.time.iso8601`, `%evt.type`, `%evt.hostname`                                | UTC-время, тип системного события и node для корреляции | `evt.hostname` должен быть настроен как имя node в DaemonSet, а не случайное имя Falco Pod                                               |
+| `%proc.name`, `%proc.cmdline`                                                      | executable и аргументы подозрительного процесса               | аргументы могут содержать Secret; ограничьте доступ к log и redaction                                                                     |
+| `%proc.pid`, `%proc.pname`, `%proc.aname[1]`                                     | PID и ближайшая process tree                                                         | PID переиспользуется, поэтому нужен timestamp и container ID                                                                                          |
+| `%user.name`, `%user.uid`                                                          | effective Linux user процесса                                                          | это не Kubernetes user из API audit                                                                                                                                         |
+| `%fd.name`, `%fd.typechar`                                                         | файл/дескриптор, с которым работал syscall                        | путь может быть относительным или resolved runtime-ом                                                                                               |
+| `%fd.lip`, `%fd.lport`, `%fd.rip`, `%fd.rport`                                 | local/remote endpoint сетевого события                                          | применимы к сетевым событиям, не к file open; для client/server semantics используйте `%fd.cip`/`%fd.cport` и `%fd.sip`/`%fd.sport` |
+| `%container.id`, `%container.full_id`, `%container.name`                         | контейнер для связи с CRI                                                    | `container.id` обычно усечён; сохраняйте `full_id`, когда enrichment его предоставил                                                  |
+| `%container.image.repository`, `%container.image.tag`, `%container.image.digest` | ссылка на образ и registry digest из runtime enrichment                          | digest может быть пуст при задержке/отсутствии enrichment; `ContainerStatus.imageID` — runtime-specific identifier, поэтому не требуйте их универсального равенства; при необходимости сверяйте CRI/runtime inspect |
+| `%k8s.ns.name`, `%k8s.pod.name`, `%k8s.pod.uid`                                  | Kubernetes scope и стабильный Pod UID                                               | поля требуют корректной интеграции runtime/Kubernetes metadata                                                                                      |
 
 Полный формат для file-правила уже показан в разделе 30.2. Для network detection не используйте `fd.name` как единственное доказательство: добавьте адрес и порт. Например, локальное правило для исходящего соединения внешнего контейнерного процесса может начинаться с такого output:
 
@@ -266,13 +268,13 @@ kubectl -n falco logs daemonset/falco --since=5m
 output: >
   Unexpected outbound connection
   (time=%evt.time.iso8601 node=%evt.hostname proc=%proc.name pid=%proc.pid cmd=%proc.cmdline
-  src=%fd.sip:%fd.sport dst=%fd.dip:%fd.dport
+  src=%fd.lip:%fd.lport dst=%fd.rip:%fd.rport
   container_id=%container.id container_full_id=%container.full_id container=%container.name
   image_digest=%container.image.digest
   k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name k8s_pod_uid=%k8s.pod.uid)
 ```
 
-Не добавляйте все поля «на всякий случай». `proc.cmdline`, environment и request body могут раскрыть passwords, bearer tokens и PII. Определите redact policy, ограничьте доступ к SIEM и журналу Falco, срок хранения и процедуру передачи evidence. При этом нельзя вырезать container ID, Pod UID, node, UTC-время и, когда runtime его предоставил, image digest: без них alert почти невозможно надёжно связать с другими источниками. Если digest или `container_full_id` пуст, сохраните исходный alert и дополните его результатами `kubectl get pod` и `crictl inspect`, а не подставляйте догадку.
+Не добавляйте все поля «на всякий случай». `proc.cmdline`, environment и request body могут раскрыть passwords, bearer tokens и PII. Определите redact policy, ограничьте доступ к SIEM и журналу Falco, срок хранения и процедуру передачи evidence. При этом нельзя вырезать container ID, Pod UID, node, UTC-время и, когда runtime его предоставил, image digest: без них alert почти невозможно надёжно связать с другими источниками. Если digest или `container_full_id` пуст, сохраните исходный alert и дополните его результатами `kubectl get pod` и `crictl inspect`, а не подставляйте догадку. Для attribution первично сопоставляйте Pod UID, exact container ID, node и timestamp. `status.containerStatuses[].imageID` — runtime-specific identifier/hint, а не переносимое доказательство равенства `%container.image.digest`; сильнее evidence даёт digest-pinned `spec.containers[].image`. Для multi-arch image учитывайте разрешение index в platform manifest выбранной архитектуры node; `crictl inspect` или `crictl images --digests` — дополнительное evidence.
 
 ### Проверить доступные поля и фактическое обогащение
 
@@ -295,36 +297,35 @@ sudo journalctl -u falco --since '10 minutes ago' --no-pager | \
 ## 30.4. От alert к MITRE ATT&CK tactics: практический разбор
 
 Один syscall не обозначает фазу атаки автоматически. Термины `Initial Access`, `Execution`,
-`Credential Access`, `Lateral Movement`, `Persistence`, `Privilege Escalation`, `Defense
-Evasion` и `Exfiltration` ниже — это tactics MITRE ATT&CK, а не классическая Lockheed Martin
+`Credential Access`, `Lateral Movement`, `Persistence`, `Privilege Escalation`, `Defense Evasion` и `Exfiltration` ниже — это tactics MITRE ATT&CK, а не классическая Lockheed Martin
 Cyber Kill Chain. Фазу определяют по последовательности, identity и цели. Ниже - пример controlled incident: web-Pod получает shell, читает service-account token, обращается к API и пытается открыть `/dev/mem`. Последнее действие не доказывает успешный escape, но повышает приоритет расследования.
 
 ```mermaid
 sequenceDiagram
-    participant U as Внешний пользователь
+    participant U as Внешний user
     participant A as web Pod
     participant F as Falco
-    participant K as Kubernetes API audit
-    participant N as Node investigator
+    participant K as API audit
+    participant N as Node engineer
     U->>A: exploit / command injection
     A->>F: shell и file open
-    F-->>N: execution alert + container/Pod context
+    F-->>N: execution alert + Pod context
     A->>F: read service-account token
     A->>K: API request от ServiceAccount
-    K-->>N: user, verb, resource, response
+    K-->>N: user, verb, resource, result
     A->>F: open /dev/mem
     F-->>N: CRITICAL alert
-    N->>N: crictl -> PID -> /proc -> strace
+    N->>N: CRI -> PID -> /proc -> strace
 ```
 
-| Время/сигнал | Возможная фаза | Что проверить до вывода | Действие расследования |
-|---|---|---|---|
-| app access-log: необычный request; затем Falco shell | initial access → execution | endpoint, deployment/version, был ли shell штатным debug-action | сохранить request metadata, Pod UID, image digest, process tree |
-| Falco: чтение token или credentials file | credential access / preparation for lateral movement | путь, UID, expected process и ServiceAccount автомонтирование | проверить `automountServiceAccountToken`, RBAC и access к Secret |
-| API audit: `system:serviceaccount:ns:sa` читает Secret или создаёт Pod | lateral movement или persistence | `verb`, `objectRef`, response code, source IP, прежние нормальные действия SA | отозвать/ограничить права, найти все действия этой identity |
-| API audit: новый `CronJob`, `DaemonSet`, RoleBinding | persistence или privilege escalation | owner, manifest diff, `escalate`/`bind`, кто вызвал API | остановить controller, сохранить manifest и audit evidence |
-| Falco: `/dev/mem`, runtime socket, host mount | privilege escalation / defense evasion attempt | Pod `privileged`, capabilities, `hostPID`, `hostPath`, результат операции | изолировать node/Pod по runbook, проверить host integrity |
-| Flow/DNS: большой egress к внешнему destination | exfiltration | destination ownership, byte count, какие data events были раньше | заблокировать egress, сохранить flow и scope credentials |
+| Время/сигнал                                                                 | Возможная фаза                          | Что проверить до вывода                                                                | Действие расследования                                                            |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| app access-log: необычный request; затем Falco shell                      | initial access → execution                          | endpoint, deployment/version, был ли shell штатным debug-action                                | сохранить request metadata, Pod UID, image digest, process tree                               |
+| Falco: чтение token или credentials file                                       | credential access / preparation for lateral movement | путь, UID, expected process и ServiceAccount автомонтирование                         | проверить`automountServiceAccountToken`, RBAC и access к Secret                           |
+| API audit:`system:serviceaccount:ns:sa` читает Secret или создаёт Pod | lateral movement или persistence                  | `verb`, `objectRef`, response code, source IP, прежние нормальные действия SA | отозвать/ограничить права, найти все действия этой identity |
+| API audit: новый`CronJob`, `DaemonSet`, RoleBinding                            | persistence или privilege escalation              | owner, manifest diff,`escalate`/`bind`, кто вызвал API                                        | остановить controller, сохранить manifest и audit evidence                         |
+| Falco:`/dev/mem`, runtime socket, host mount                                          | privilege escalation / defense evasion attempt       | Pod`privileged`, capabilities, `hostPID`, `hostPath`, результат операции            | изолировать node/Pod по runbook, проверить host integrity                        |
+| Flow/DNS: большой egress к внешнему destination                         | exfiltration                                         | destination ownership, byte count, какие data events были раньше                            | заблокировать egress, сохранить flow и scope credentials                        |
 
 Последовательность «Falco shell → audit `create CronJob` → network egress» сильнее трёх отдельных alerts. Для корреляции используйте временное окно с учётом clock skew, а ключами делайте Pod UID, container ID, node, ServiceAccount, image digest и API request UID. `Pod` name без UID нельзя считать уникальным.
 
@@ -393,22 +394,21 @@ sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
 
 ### Три уровня изоляции, от менее к более разрушительному
 
-| Действие | Что делает | Когда уместно | Что теряете |
-|---|---|---|---|
-| **NetworkPolicy quarantine** | `podSelector` на скомпрометированный Pod/label, `policyTypes: [Ingress, Egress]` без разрешающих правил | наиболее частый первый шаг: разрывает C2/exfiltration и lateral movement, Pod и его evidence остаются доступны | не останавливает локальную активность внутри уже скомпрометированного namespace, если policy написана слишком узко |
-| **Cordon ноды** | `kubectl cordon <node>` останавливает scheduling новых Pod на неё; существующие Pod продолжают работать | подозрение на компрометацию самой ноды (не только одного Pod), например через host-level Falco alert или `/dev/mem` попытку | не изолирует уже работающий процесс; нужен вместе с NetworkPolicy или removal подозрительного workload |
-| **Удаление/scale-to-zero workload** | `kubectl delete pod` или `kubectl scale --replicas=0` для owning controller | подтверждённый активный риск, evidence уже сохранён (см. раздел «Containment не должен уничтожить доказательства» выше) | безвозвратно теряете live-процесс, `/proc`-контекст и возможность повторного `strace`; controller может пересоздать Pod, если сам workload не остановлен на уровне Deployment/DaemonSet |
+| Действие                                  | Что делает                                                                                                                                            | Когда уместно                                                                                                                                                                                  | Что теряете                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Действие | Что делает | Когда уместно | Что теряете/чего не гарантирует |
+| --- | --- | --- | --- |
+| **NetworkPolicy quarantine** | additive L3/L4 isolation selected Pod при CNI, который реально enforces NetworkPolicy | обратимый первый шаг: ограничивает новые разрешённые TCP/UDP/SCTP connections, сохраняя Pod и evidence | не priority deny: все selecting policies складывают allow; traffic resident node, non-L4 и existing connections имеют ограничения/зависят от CNI |
+| **Cordon ноды** | `kubectl cordon <node>` — scheduling freeze: блокирует scheduling новых обычных Pod; существующие Pod продолжают работать | дополнительный preparatory step при подозрении на node compromise | не изолирует скомпрометированные node, kubelet, host process, сеть или credentials; нужен infrastructure isolation runbook |
+| **Остановка owning workload** | определить owner/controller и изменить source desired state, например `kubectl scale deployment --replicas=0` | подтверждённый активный риск, evidence уже сохранён | простое `kubectl delete pod` обычно создаст replacement и теряет live-процесс, `/proc`-контекст и возможность повторного `strace` |
 
-Порядок обычно такой: сначала NetworkPolicy (обратимо, не удаляет evidence), затем при
-необходимости cordon ноды, и только после сохранения evidence - удаление или остановка
-workload. Автоматическое **evict** ноды (`kubectl drain`) относится к тому же уровню, что
-удаление Pod: оно пересоздаёт workload на другой ноде, если не остановлен сам controller,
-и должно применяться после, а не вместо, сохранения evidence.
+Порядок обычно такой: сначала проверяют возможности CNI и все policy, выбирающие Pod, затем при необходимости применяют NetworkPolicy как обратимое ограничение новых соединений. `cordon` используют лишь как scheduling freeze. При подозрении на host/node compromise реальное containment выполняют по infrastructure runbook: убрать node из LB/service paths, применить cloud firewall/security group/NAC/EDR host isolation, ограничить node и workload credentials, затем контролируемо заменить/rebuild node. После сохранения evidence останавливают owning workload, а не только один Pod. Автоматическое **evict** ноды (`kubectl drain`) также пересоздаёт workload на другой ноде, если не остановлен controller.
 
 ```bash
-# Шаг 1: NetworkPolicy quarantine - обратимо, не убивает процесс и его evidence.
-# Не угадывайте существующий label скомпрометированного Pod: назначьте отдельный
-# quarantine-marker, который не пересекается с обычными label workload.
+# Шаг 1: NetworkPolicy quarantine — ограничение новых L3/L4 connections, не уничтожающее evidence.
+# До применения подтвердите, что CNI enforces NetworkPolicy, и просмотрите ВСЕ policy,
+# которые уже выбирают этот Pod: их allow rules складываются с quarantine.
+# Не угадывайте существующий label скомпрометированного Pod: назначьте отдельный marker.
 NAMESPACE="${NAMESPACE:?set NAMESPACE to the affected Pod namespace}"
 POD="${POD:?set POD to the affected Pod name}"
 kubectl -n "$NAMESPACE" label pod "$POD" security.cks/quarantine=true --overwrite
@@ -425,24 +425,26 @@ spec:
       security.cks/quarantine: "true"
   policyTypes: ["Ingress", "Egress"]
 YAML
+kubectl -n "$NAMESPACE" get networkpolicy
 kubectl -n "$NAMESPACE" get networkpolicy incident-quarantine
+# Проверьте НОВОЕ соединение после применения; судьба уже установленного зависит от CNI.
 
-# Шаг 2 (если компрометация подозревается на уровне ноды, не только Pod):
+# Шаг 2 — только scheduling freeze, не node isolation:
 NODE="${NODE:?set NODE to the node from the Falco alert}"
 kubectl cordon "$NODE"
 kubectl get node "$NODE"
+# При host/node compromise параллельно запустите infrastructure isolation runbook.
 
-# Шаг 3 (только после сохранения evidence из разделов выше):
-kubectl delete pod -n "$NAMESPACE" "$POD"
+# Шаг 3 — после сохранения evidence определить owner и остановить desired state по runbook:
+kubectl get pod -n "$NAMESPACE" "$POD" \
+  -o jsonpath='{range .metadata.ownerReferences[*]}{.kind}{"/"}{.name}{"
+"}{end}'
+# Например, только после подтверждения owning Deployment:
+DEPLOYMENT="${DEPLOYMENT:?set owning Deployment name after checking ownerReferences}"
+kubectl scale deployment -n "$NAMESPACE" "$DEPLOYMENT" --replicas=0
 ```
 
-Policy выше без разрешающих ingress/egress rules - это **полный deny-all**, включая DNS:
-скомпрометированный Pod не резолвит имена и не может делать exfiltration ни под каким
-видом трафика. Для incident containment это осознанный выбор, а не недосмотр - на этом
-этапе Pod уже не должен обслуживать обычный трафик, поэтому потеря DNS не мешает
-изоляции. Если нужна **частичная** quarantine, где Pod продолжает резолвить имена (это
-уже не полная изоляция, а осознанный компромисс, например для продолжения диагностики
-изнутри контролируемого Pod), явно добавьте allow-правило на `kube-dns`/`CoreDNS`:
+Policy выше создаёт deny-by-default для selected Pod только если CNI enforces standard NetworkPolicy и ни одна другая selecting policy не добавляет allow: правила additive, а не priority explicit-deny. Она не блокирует трафик с resident node, гарантирует deny только для TCP/UDP/SCTP, а поведение иных протоколов и уже существующих connections зависит от plugin. Для гарантированного priority deny используйте CNI-specific policy/tier, infrastructure firewall или host isolation. DNS без allow-rule обычно блокируется; если нужна **частичная** quarantine, разрешайте именно реальные DNS Pod, предварительно проверив их labels:
 
 ```yaml
   egress:
@@ -450,6 +452,9 @@ Policy выше без разрешающих ingress/egress rules - это **п
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns # сверить с labels фактических CoreDNS/kube-dns Pod
       ports:
         - protocol: UDP
           port: 53
@@ -457,10 +462,7 @@ Policy выше без разрешающих ingress/egress rules - это **п
           port: 53
 ```
 
-Проверьте результат негативным тестом, а не только отсутствием ошибки в команде: после
-NetworkPolicy повторите тот же исходящий запрос, который видел Falco/audit, и подтвердите
-`DENIED`/timeout. Если применена полная quarantine выше (без allow-правил), тот же тест
-подтвердит недоступность и DNS - это ожидаемо и не является регрессией.
+Проверьте результат новым негативным тестом, а не только отсутствием ошибки в команде: после NetworkPolicy повторите новый исходящий запрос, который соответствует observed pattern, и подтвердите `DENIED`/timeout на данном CNI. Если нет DNS allow-rule, отдельно подтвердите его недоступность; это не доказывает блокировку resident-node, non-L4 или уже существующего трафика.
 
 > 🔬 Falco Talon автоматизирует post-detection response, а Tetragon может enforce-ить отдельное действие inline.
 
@@ -590,10 +592,10 @@ production.
 ```mermaid
 flowchart TB
     alert["Falco alert<br/>container ID + time"] --> node["node из alert"]
-    node --> cri["sandbox через crictl pods<br/>container через ps --pod"]
-    cri --> proc["/proc, lsns, cgroup, mounts<br/>что реально запущено?"]
-    proc --> trace["короткий strace к точному host PID<br/>только controlled/live case"]
-    trace --> correlate["audit + flow + app logs<br/>kill chain и scope"]
+    node --> cri["CRI sandbox<br/>container: ps --pod"]
+    cri --> proc["/proc, lsns, cgroup<br/>и mounts"]
+    proc --> trace["Короткий strace<br/>точного host PID"]
+    trace --> correlate["Audit, flow, app logs<br/>scope и kill chain"]
     style alert fill:#db4437,color:#fff
     style node fill:#326ce5,color:#fff
     style cri fill:#673ab7,color:#fff
@@ -615,7 +617,7 @@ flowchart TB
 
 ## 30.7. Проверка: controlled alert от своего правила до workload
 
-Проверка имеет две части: Falco должен загрузить правило, а controlled action должен породить alert с достаточными полями. Не используйте `/dev/mem` test на production node: доступ к устройству зависит от privileges и может создавать лишний риск. Для безопасной воспроизводимой демонстрации ниже используется файл-маркер в writable `emptyDir`; правило ограничено namespace `runtime-lab`.
+Проверка имеет две части: Falco должен загрузить правило, а controlled action должен породить alert с достаточными полями. Не используйте `/dev/mem` test на production node: доступ к устройству зависит от privileges и может создавать лишний риск. Для безопасной воспроизводимой демонстрации ниже используется файл-маркер в writable `emptyDir`; rule ограничен namespace `runtime-lab`. Event генерируют только после Ready, чтобы runtime enrichment успел связать container с Kubernetes metadata.
 
 ### Правило для теста
 
@@ -642,10 +644,12 @@ flowchart TB
 Проверьте YAML и загрузку, затем создайте изолированный test workload. `emptyDir` даёт writable path без записи в root filesystem образа.
 
 ```bash
+set -euo pipefail
 sudo falco -c /etc/falco/falco.yaml --dry-run
 # При watch_config_files: true проверить hot reload в журнале; restart — только fallback.
 sudo journalctl -u falco --since '2 minutes ago' --no-pager
 
+# Fail closed: не продолжать и не удалять namespace, если он уже существовал.
 kubectl create namespace runtime-lab
 kubectl apply -f - <<'YAML'
 apiVersion: v1
@@ -658,7 +662,7 @@ spec:
   containers:
   - name: app
     image: busybox:1.37.0
-    command: ["sh", "-c", "mkdir -p /tmp/runtime-lab; echo marker >/tmp/runtime-lab/marker; cat /tmp/runtime-lab/marker; sleep 30"]
+    command: ["sh", "-c", "sleep 600"]
     volumeMounts:
     - name: runtime-lab
       mountPath: /tmp/runtime-lab
@@ -667,6 +671,9 @@ spec:
     emptyDir: {}
 YAML
 kubectl wait -n runtime-lab --for=condition=Ready pod/marker-reader --timeout=120s
+# Только после Ready создать marker и открыть его: это controlled Falco event.
+kubectl exec -n runtime-lab marker-reader -- \
+  sh -c 'mkdir -p /tmp/runtime-lab; echo marker >/tmp/runtime-lab/marker; cat /tmp/runtime-lab/marker'
 ```
 
 Соберите evidence из Falco и Kubernetes. Для service installation подставьте node, на которой scheduled test Pod; для DaemonSet заберите log Falco Pod на той же node.
@@ -687,7 +694,7 @@ kubectl -n falco logs "$FALCO_POD" --since=5m | \
   grep 'Runtime lab marker opened'
 ```
 
-**Критерии успешной проверки:** Falco service/Pod healthy; alert содержит имя собственного rule; `file=/tmp/runtime-lab/marker`; имеются UTC-время, node, `%proc.pid`, `%container.id`, `k8s_ns=runtime-lab`, `k8s_pod=marker-reader` и `k8s_pod_uid`; при доступном runtime enrichment также `container_full_id` и `image_digest`. UID, container ID, статус `normal`/`init`/`ephemeral` и imageID совпадают с `kubectl get pod`; rule не создаёт alert в иных namespace. После теста удалите только controlled объект:
+**Критерии успешной проверки:** Falco service/Pod healthy; alert содержит имя собственного rule; `file=/tmp/runtime-lab/marker`; имеются UTC-время, node, `%proc.pid`, `%container.id`, `k8s_ns=runtime-lab`, `k8s_pod=marker-reader` и `k8s_pod_uid`; при доступном runtime enrichment также `container_full_id` и `image_digest`. UID, exact container ID и status type сопоставляют с `kubectl get pod`; `imageID` сохраняют как runtime-specific identifier и не требуют его универсального равенства с Falco registry digest. Rule не создаёт alert в иных namespace. После теста удалите только namespace, созданный этим successful run, затем удалите/отключите временное Falco rule и подтвердите reload:
 
 ```bash
 kubectl delete namespace runtime-lab
@@ -709,7 +716,7 @@ kubectl delete namespace runtime-lab
 ## 30.9. Мини-глоссарий
 
 - **Attribution** - привязка события к процессу, container, Pod, identity, node и времени.
-- **Confidential computing / TEE** - аппаратно изолированная область CPU (Intel SGX, AMD SEV), шифрующая данные в памяти даже от гипервизора и облачного провайдера.
+- **Confidential computing / TEE** - технологии с разными threat model: Intel SGX защищает enclave; AMD SEV-SNP предоставляет VM-based модель с защитой от malicious host/hypervisor, тогда как SEV/SEV-ES имеют иные гарантии. Всегда проверяют attestation, firmware/TCB и ограничения конкретной реализации.
 - **Correlation** - связывание событий разных источников в единую хронологию инцидента.
 - **CRI** - Container Runtime Interface; `crictl` работает с runtime через его CRI socket.
 - **Falco rule override** - локальное изменение condition/исключений правила без правки vendor ruleset.
@@ -742,54 +749,63 @@ kubectl delete namespace runtime-lab
 <summary>1. Почему Falco alert с одним именем процесса не позволяет надёжно определить владельца workload?</summary>
 
 Имя процесса не уникально и не связывает alert с конкретными Pod, image или controller. Для attribution нужны как минимум timestamp, node, container ID, Pod UID, namespace/Pod/container и image digest; Pod name с префиксом может быть переиспользован. Затем owner устанавливают через `.metadata.ownerReferences` и коррелируют с audit, network и application signals.
+
 </details>
 
 <details>
 <summary>2. Какие поля должны быть в output file-rule, чтобы сопоставить его с Pod после restart?</summary>
 
 Глава требует UTC-время, event type и node, process name/command/PID, file target, container ID и по возможности full ID, Kubernetes namespace, Pod и Pod UID. Полезен image digest, потому что он связывает runtime с immutable artifact. PID может быть переиспользован, поэтому его нельзя трактовать отдельно от времени и container ID.
+
 </details>
 
 <details>
 <summary>3. Почему локальную настройку нельзя вносить прямо в `/etc/falco/falco_rules.yaml`?</summary>
 
 Это vendor-файл пакета/chart, поэтому обновление может затереть local change и потерять удобное сравнение с upstream. Локальные rules и overrides размещают в `falco_rules.local.yaml` либо явно подключённом файле, после базовых lists/rules. Фактический порядок проверяют в `falco.yaml` и валидируют полный config перед reload.
+
 </details>
 
 <details>
 <summary>4. Чем `%user.name` отличается от Kubernetes user/ServiceAccount в API audit-log?</summary>
 
 `%user.name` — effective Linux user процесса, наблюдаемый Falco на node. Kubernetes authenticated user или ServiceAccount отражается в `.user.username` audit event и относится к API request. Эти identity нельзя отождествлять: для attribution их коррелируют по времени, Pod/SA и другим устойчивым IDs.
+
 </details>
 
 <details>
 <summary>5. Какая последовательность сигналов говорит о возможном переходе execution → persistence → exfiltration?</summary>
 
 Пример главы: Falco shell после необычного application request указывает на initial access/execution. Затем audit `create CronJob`, `DaemonSet` или RoleBinding может свидетельствовать о persistence либо escalation. Последующий DNS/flow с большим egress к внешнему destination поддерживает гипотезу exfiltration; фазу подтверждают последовательностью, identity и целью, а не одним syscall.
+
 </details>
 
 <details>
 <summary>6. Как сопоставить `%container.id` из alert с host PID и что проверять в `/proc/<pid>`?</summary>
 
 На node из alert находят sandbox по namespace и Pod UID через `crictl pods`, затем контейнер через `crictl ps -a --pod` и проверяют exact/prefix container ID. Runtime-specific `crictl inspect` может дать PID; для конкретного подозрительного действия используют host PID `%proc.pid` из alert и подтверждают его cgroup. В `/proc/<pid>` смотрят executable, cmdline, credentials, CapEff, NoNewPrivs, Seccomp, cgroup, namespaces и mountinfo.
+
 </details>
 
 <details>
 <summary>7. Почему `strace` не следует использовать как постоянный production monitoring или как способ восстановить уже завершённый процесс?</summary>
 
 `strace` добавляет overhead, меняет timing и способен записать чувствительные arguments, поэтому применим лишь коротко к точному живому host PID. Он не восстанавливает прошлые syscalls и не поможет, когда process уже завершён или PID исчез. В таком случае сохраняют durable Falco, audit, flow, Pod spec, CRI/journal evidence и restart count.
+
 </details>
 
 <details>
 <summary>8. Какие evidence нужно сохранить перед containment, если риск и процедура позволяют это сделать?</summary>
 
 До удаления сохраняют исходную строку Falco, audit/flow IDs, timestamps, Pod YAML, UID, node, ServiceAccount, owner, image digest и container IDs. На node полезны `crictl inspect`, process/cgroup/namespace сведения; collection маркируют case ID, UTC-временем, источником, сборщиком и SHA-256. Не запускают команды атакующего и не копируют Secret в тикет.
+
 </details>
 
 <details>
 <summary>9. **Flashback (глава 11).** В главе 11 bound projected token снижает последствия кражи token по сравнению с legacy Secret token. Спроектируйте investigation-сценарий для этой главы: как через `%user.name`/audit log отличить легитимный запрос от Pod с его собственным ServiceAccount от запроса, использующего **украденный** token того же SA с другого источника (например, с хоста снаружи кластера)?</summary>
 
-`%user.name` показывает только Linux user процесса и не доказывает, откуда пришёл Kubernetes API request. В audit ищут `.user.username` ServiceAccount, время, verb, objectRef, response, `.sourceIPs`, `userAgent`, `.authenticationMetadata` и annotations, затем сверяют IP/agent с доверенными proxy и другой telemetry. Запрос с тем же SA, но с необычного внешнего source, в нехарактерное время или с нетипичным scope, расследуют как возможное использование украденного token; сами `sourceIPs` и userAgent доказательством не являются.
+`%user.name` показывает только Linux user процесса и не доказывает, откуда пришёл Kubernetes API request. В audit ищут `.user.username` ServiceAccount, время, verb, objectRef, responseStatus, audit/request UID, `.sourceIPs`, `userAgent` и annotations, затем сверяют IP/agent с доверенными proxy, IdP/cloud/network telemetry. Запрос с тем же SA, но с необычного внешнего source, в нехарактерное время или с нетипичным scope, расследуют как возможное использование украденного token; сами `sourceIPs` и userAgent доказательством не являются. Audit API не раскрывает token/JTI, поэтому один только Kubernetes audit не может доказательно отличить использование украденного token того же SA. `.authenticationMetadata` не является token metadata: в текущем API оно содержит только `impersonationConstraint` при constrained impersonation.
+
 </details>
 
 ## Практика
@@ -804,4 +820,5 @@ kubectl delete namespace runtime-lab
 - [Kubernetes: Troubleshooting Applications](https://kubernetes.io/docs/tasks/debug/debug-application/)
 
 ---
+
 [Оглавление](../README_RU.md) · [Глава 29](../29/ru.md) · [Глава 31](../31/ru.md)

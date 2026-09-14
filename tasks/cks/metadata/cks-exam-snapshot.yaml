@@ -45,11 +45,12 @@ exam:
       url: "https://docs.linuxfoundation.org/tc-docs/certification/important-instructions-cks"
 
     faq:
-      checked_at: "2026-09-10"
+      kubernetes: "1.35"
+      checked_at: "2026-09-13"
       url: "https://docs.linuxfoundation.org/tc-docs/certification/faq-cka-ckad-cks"
       notes:
         - "CKS requires passing CKA before attempting the exam."
-        - "The FAQ does not publish the CKS Kubernetes environment version; use the product page and Important Instructions for that value."
+        - "The FAQ states that the CKS exam environment is running Kubernetes v1.35."
 
   duration_minutes: 120
   task_count:

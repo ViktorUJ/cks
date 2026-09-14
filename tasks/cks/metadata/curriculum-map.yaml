@@ -200,7 +200,7 @@ domains:
       static_analysis:
         relevance: core
         theory: ["course/27/ru.md"]
-        labs: []
+        labs: ["labs/111"]
         mocks: []
       image_vulnerability_scanning:
         relevance: core

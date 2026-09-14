@@ -494,10 +494,21 @@ kubectl get pod -n "$namespace" "$pod" \
 kubectl get pod -n "$namespace" "$pod" \
   -o jsonpath='{range .spec.ephemeralContainers[*]}ephemeral/{.name}{"\t"}{.securityContext.readOnlyRootFilesystem}{"\n"}{end}'
 
-# Smoke test должен вернуть ненулевой код: корень не принимает файл.
-kubectl exec -n "$namespace" "$pod" -c api -- sh -c 'touch /rootfs-write-test' \
-  && { echo "ERROR: root filesystem is writable"; exit 1; } \
-  || echo "OK: write to root filesystem was refused"
+# Smoke test: успешный touch означает writable root. Положительным доказательством
+# служит только filesystem-level EROFS, а не Permission denied от UID/DAC/LSM.
+if output=$(kubectl exec -n "$namespace" "$pod" -c api -- sh -c 'touch /rootfs-write-test' 2>&1); then
+  echo "ERROR: root filesystem is writable" >&2
+  exit 1
+else
+  status=$?
+  if printf '%s\n' "$output" | grep -Fqi 'read-only file system'; then
+    echo "OK: root filesystem rejected the write as read-only"
+  else
+    printf 'ERROR: write failed, but read-only root filesystem was not proven (kubectl exec exit %s): %s\n' \
+      "$status" "$output" >&2
+    exit 1
+  fi
+fi
 
 # Разрешённый scratch path, напротив, должен быть доступен приложению.
 kubectl exec -n "$namespace" "$pod" -c api -- sh -c 'touch /tmp/write-test && rm /tmp/write-test'
