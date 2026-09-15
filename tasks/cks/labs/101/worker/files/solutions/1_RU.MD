@@ -8,14 +8,10 @@
 
 ## Задание 1. Namespace, frontend/backend и Service
 
-Перед применением получите и укажите **реальный** digest одобренного образа. `${PING_PONG_DIGEST}`
-ниже — намеренно заметный placeholder: не заменяйте его на mutable tag (`:latest`), а закрепите
-64-символьный SHA-256 digest. Digest content-addressed и не может незаметно сменить образ, в
-отличие от tag.
+Используйте одобренный immutable image reference ниже. Digest content-addressed и не может незаметно смениться, в отличие от mutable tag.
 
 ```bash
-export PING_PONG_DIGEST='<real-64-hex-sha256-digest>'
-PING_PONG_IMAGE="viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}"
+PING_PONG_IMAGE="viktoruj/ping_pong@sha256:32d367cdfc826dafa36f7d79d4f345425552c9aa2db5bdf3a33f86ff3532fa95"
 ```
 
 Сохраните следующий манифест как `app.yaml` и примените его:
@@ -166,15 +162,41 @@ kubectl -n cks-101 run check-frontend --rm -i --restart=Never \
   --image=curlimages/curl:8.11.1 --labels=app=frontend --command -- \
   sh -c "curl -fsS --max-time 5 http://${BACKEND_IP}:8080/" \
   | tee /var/work/tests/artifacts/3/frontend.txt
+# Временная policy даёт foreign только egress к backend:8080; поэтому
+# ненулевой результат ниже доказывает именно ограничение backend ingress.
+cat <<'EOF' | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: check-foreign-egress
+  namespace: cks-101
+spec:
+  podSelector:
+    matchLabels:
+      app: foreign
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: 8080
+EOF
+set +e
 kubectl -n cks-101 run check-foreign --rm -i --restart=Never \
   --image=curlimages/curl:8.11.1 --labels=app=foreign --command -- \
   sh -c "curl -fsS --max-time 5 http://${BACKEND_IP}:8080/" \
-  > /var/work/tests/artifacts/3/foreign.txt 2>&1 || true
+  > /var/work/tests/artifacts/3/foreign.txt 2>&1
+foreign_rc=$?
+set -e
+kubectl -n cks-101 delete networkpolicy check-foreign-egress
+printf 'exit=%s\n' "$foreign_rc" >> /var/work/tests/artifacts/3/foreign.txt
+test "$foreign_rc" -ne 0
 ```
 
-Временный client Pod имеет ту же security identity (`app=frontend`), что и frontend.
-Это необходимо, потому что минимальный закреплённый по digest образ
-`viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}` не содержит shell и `curl`.
+Временный client Pod имеет ту же security identity (`app=frontend`), что и frontend. Это необходимо, потому что образ `viktoruj/ping_pong@sha256:32d367cdfc826dafa36f7d79d4f345425552c9aa2db5bdf3a33f86ff3532fa95` не содержит shell и `curl`. Для отрицательной проверки одного `app=foreign` недостаточно: без отдельного egress он будет заблокирован default-deny ещё до backend ingress.
 
 ## Задание 4. Разрешить DNS только к kube-dns
 
@@ -319,7 +341,7 @@ spec:
 ```
 
 Ловушка выглядела бы так и означала бы совсем другое правило - "любой Pod из
-`cks-101-legacy` ИЛИ любой Pod с `app=legacy-client` в любом namespace":
+`cks-101-legacy` ИЛИ любой Pod с `app=legacy-client` в namespace самой policy (`cks-101`)":
 
 ```yaml
     # НЕ делайте так - это OR, а не AND:
@@ -364,13 +386,13 @@ mkdir -p /var/work/tests/artifacts/6
 
 BACKEND_IP=$(kubectl -n cks-101 get svc backend -o jsonpath='{.spec.clusterIP}')
 
-# AND верно применён: Pod с той же меткой, но в другом namespace, не проходит.
+# Проверяем обе ветки ошибочного OR: wrong-label в legacy namespace и
+# legacy-client в namespace самой policy. Для честной проверки ingress им
+# временно разрешается только egress к backend:8080.
+# Полный runtime-вариант этих двух negative probes выполняет check_result.
 kubectl -n cks-101-legacy run policy-legacy-allowed --rm -i --restart=Never \
   --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- \
   sh -c "curl -fsS --max-time 5 http://${BACKEND_IP}:8080/"
-kubectl -n default run policy-legacy-foreign --rm -i --restart=Never \
-  --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- \
-  sh -c "curl -fsS --max-time 5 http://${BACKEND_IP}:8080/" || true
 
 # except исключил именно metadata, остальной IPv4 остаётся доступен.
 kubectl -n cks-101-legacy run policy-legacy-external --rm -i --restart=Never \
@@ -412,14 +434,16 @@ kubectl apply -f hostnetwork-probe.yaml
 kubectl -n cks-101 wait --for=condition=Ready pod/hostnetwork-probe --timeout=60s
 mkdir -p /var/work/tests/artifacts/7
 
-kubectl -n cks-101 exec hostnetwork-probe -- \
-  sh -c "curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --connect-timeout 2 --max-time 3 http://169.254.169.254/" \
-  | tee /var/work/tests/artifacts/7/hostnetwork-metadata.output
-
+host_out=$(kubectl -n cks-101 exec hostnetwork-probe -- sh -c 'set +e; out=$(curl -sS -o /dev/null -w "HTTPCODE:%{http_code}" --connect-timeout 2 --max-time 3 http://169.254.169.254/ 2>&1); rc=$?; printf "CURL_EXIT:%s\n%s\n" "$rc" "$out"')
+printf '%s\n' "$host_out" | tee /var/work/tests/artifacts/7/hostnetwork-metadata.output
+host_rc=$(printf '%s\n' "$host_out" | sed -n 's/.*CURL_EXIT:\([0-9][0-9]*\).*/\1/p' | tail -1)
+host_code=$(printf '%s\n' "$host_out" | sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' | tail -1)
+task5_out=$(cat /var/work/tests/artifacts/5/metadata.output)
+task5_rc=$(printf '%s\n' "$task5_out" | sed -n 's/.*CURL_EXIT:\([0-9][0-9]*\).*/\1/p' | tail -1)
+task5_code=$(printf '%s\n' "$task5_out" | sed -n 's/^http_code=\([0-9][0-9][0-9]\).*/\1/p' | tail -1)
 {
-  echo "task5_result=network-deny (http_code=000), обычный Pod с app=frontend"
-  echo "task7_result=observed HTTP response for hostNetwork Pod in this Calico/AWS lab (environment-specific, not a universal NetworkPolicy guarantee)"
-  cat /var/work/tests/artifacts/7/hostnetwork-metadata.output
+  echo "task5_result=curl_exit=${task5_rc:-missing} http_code=${task5_code:-missing}"
+  echo "task7_result=curl_exit=${host_rc:-missing} http_code=${host_code:-missing}; observed for this Calico/AWS lab only, environment-specific and not a universal NetworkPolicy guarantee"
 } > /var/work/tests/artifacts/7/comparison.txt
 ```
 

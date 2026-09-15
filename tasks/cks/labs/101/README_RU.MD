@@ -53,7 +53,7 @@ OR. Каждый элемент массива `from` - самостоятель
 | Объект                           | Назначение                                                                                                                        |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Namespace`cks-101`                   | Граница ресурсов и действия политик лабы.                                                                |
-| Deployments`frontend` и `backend` | Учебные приложения`viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}` с метками `app=frontend` и `app=backend`. |
+| Deployments`frontend` и `backend` | Учебные приложения`viktoruj/ping_pong@sha256:32d367cdfc826dafa36f7d79d4f345425552c9aa2db5bdf3a33f86ff3532fa95` с метками `app=frontend` и `app=backend`. |
 | Service`backend`                     | Стабильная точка доступа к backend на TCP`8080`.                                                                 |
 | default-deny NetworkPolicy             | Закрывает ingress и egress всем Pod namespace.                                                                                |
 | allow policy для backend            | Открывает TCP`8080` только от Pod с `app=frontend`.                                                                   |
@@ -109,13 +109,13 @@ kubectl config current-context
 
 |           **1**           | **Приложение в отдельном namespace**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | :-----------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|       Что делаем       | Создайте namespace`cks-101`. В нём создайте Deployments `frontend` и `backend` с образом `viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}`, заменив `${PING_PONG_DIGEST}` на **реальный** digest образа перед применением, и метками `app=frontend` и `app=backend` соответственно. Создайте Service `backend`, выбирающий `app=backend` и направляющий TCP `8080` на `8080`. `:latest` и прочие tags mutable: тот же tag может указывать на другой образ; digest фиксирует неизменяемый content-addressed образ. |
+|       Что делаем       | Создайте namespace`cks-101`. В нём создайте Deployments `frontend` и `backend` с образом `viktoruj/ping_pong@sha256:32d367cdfc826dafa36f7d79d4f345425552c9aa2db5bdf3a33f86ff3532fa95`, метками `app=frontend` и `app=backend` соответственно. Создайте Service `backend`, выбирающий `app=backend` и направляющий TCP `8080` на `8080`. `:latest` и прочие tags mutable: тот же tag может указывать на другой образ; digest фиксирует неизменяемый content-addressed образ. |
 | Критерии приёмки | Namespace и Pod обоих приложений существуют; Service`backend` имеет endpoint.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
 
-Не забудьте подставить реальный digest вместо `${PING_PONG_DIGEST}` - если оставить переменную буквально в манифесте, `kubectl apply` создаст Pod с невалидным image reference, и он никогда не станет Running. Проверьте себя: `kubectl get pods -n cks-101 -o jsonpath='{.items[*].spec.containers[0].image}'` должен показать полный `viktoruj/ping_pong@sha256:<64 hex символа>`, без буквальных `${...}`.
+Используйте именно закреплённый образ `viktoruj/ping_pong@sha256:32d367cdfc826dafa36f7d79d4f345425552c9aa2db5bdf3a33f86ff3532fa95`. Его digest фиксирует content-addressed версию образа; не заменяйте его на mutable tag (`:latest` и подобные). Проверьте себя: `kubectl get pods -n cks-101 -o jsonpath='{.items[*].spec.containers[0].image}'` должен показать этот полный image reference.
 
 </details>
 ---
@@ -127,19 +127,19 @@ kubectl config current-context
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
 
-`podSelector: {}` (пустые скобки) - это не "нет селектора", а "выбрать ВСЕ Pod". Если вы напишете просто `podSelector:` без значения или вообще уберёте это поле, YAML может интерпретировать это иначе, чем вы ожидаете. Также не добавляйте пустые массивы `ingress: []`/`egress: []` явно - для default-deny достаточно указать `policyTypes`, не имея вообще никакого `ingress`/`egress` поля в spec.
+`podSelector: {}` — наиболее читаемая явная форма «выбрать все Pod». В Kubernetes API `spec.podSelector` optional: его отсутствие также соответствует пустому selector. Пишите `podSelector: {}` в этой лабе явно, чтобы intent default-deny был однозначен. Для default-deny достаточно `policyTypes` без allow-правил; поля `ingress`/`egress` могут отсутствовать или быть пустыми.
 
 </details>
 ---
 | **3** | **Изоляция frontend/backend** |
 | :---: | :--- |
-| Что делаем | Отдельной allow policy разрешите Pod с `app=frontend` обращаться к Pod с `app=backend` только по TCP `8080`. Любой Pod без метки `app=frontend` не должен получить этот доступ. Сохраните результат проверок разрешённого и запрещённого запросов в `/var/work/tests/artifacts/3/`. |
+| Что делаем | Разрешите поток `frontend -> backend:8080` с обеих сторон: отдельная egress policy для `app=frontend` и ingress policy для `app=backend`, обе только на TCP `8080`. Любая другая identity не должна получить доступ к backend; отрицательная проверка должна иметь разрешённый egress к backend, иначе она доказывает только default-deny egress, а не ограничение backend ingress. Сохраните результат проверок разрешённого и запрещённого запросов в `/var/work/tests/artifacts/3/`. |
 | Критерии приёмки | Запрос с frontend identity к backend успешен; запрос с другой identity блокируется; артефакт существует. |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Тестовый Pod для проверки нужно создавать с `--labels=app=frontend` (или `app=<другое>` для отрицательного теста) - именно эта метка, а не имя Pod, определяет, разрешит ли policy трафик. `viktoruj/ping_pong` не содержит shell/curl - используйте отдельный `curlimages/curl` Pod для проверки.
+Тестовый Pod для разрешённого потока создавайте с `--labels=app=frontend`. Для отрицательного ingress-теста дайте другой identity минимальный egress только к backend:8080 временной policy, затем убедитесь, что backend всё равно отвергает её. Именно метка, а не имя Pod, определяет identity. Образ ping_pong не содержит shell/curl — используйте `curlimages/curl`.
 
 </details>
 ---
@@ -169,13 +169,13 @@ kubectl config current-context
 ---
 | **6** | **Ловушка AND vs OR и `ipBlock.except` для legacy egress** |
 | :---: | :--- |
-| Что делаем | Создайте отдельный namespace `cks-101-legacy` и в нём Deployment `legacy-client` (образ `curlimages/curl:8.11.1`, `command: ["sleep", "3600"]`, метка `app=legacy-client`); **не применяйте к этому namespace default-deny**. В `cks-101` создайте `NetworkPolicy` `allow-backend-ingress-from-legacy` типа `Ingress` на Pod с `app=backend`, которая разрешает вход **только** от Pod с `app=legacy-client`, находящегося именно в `cks-101-legacy` (AND: `namespaceSelector` и `podSelector` заданы в одном элементе массива `from`, не в двух отдельных - иначе получится OR, разрешающий весь namespace `cks-101-legacy` или любой Pod с такой меткой в любом namespace). Отдельно в `cks-101-legacy` создайте `NetworkPolicy` `allow-legacy-egress`, которая разрешает `legacy-client` широкий egress на `ipBlock: 0.0.0.0/0`, но с явным `except: ["169.254.169.254/32"]`. |
-| Критерии приёмки | `allow-backend-ingress-from-legacy` содержит элемент `from`, где `namespaceSelector` и `podSelector` заданы **в одном и том же элементе массива** (AND); Pod с `app=legacy-client` из `cks-101-legacy` достигает `backend:8080`, а такой же Pod, временно созданный в `default` с той же меткой, - не достигает. `allow-legacy-egress` содержит `ipBlock.cidr: 0.0.0.0/0` и `except` с `169.254.169.254/32`; из `legacy-client` внешний адрес (например `1.1.1.1`) достижим, а metadata - нет. |
+| Что делаем | Создайте отдельный namespace `cks-101-legacy` и в нём Deployment `legacy-client` (образ `curlimages/curl:8.11.1`, `command: ["sleep", "3600"]`, метка `app=legacy-client`); **не применяйте к этому namespace default-deny**. В `cks-101` создайте `NetworkPolicy` `allow-backend-ingress-from-legacy` типа `Ingress` на Pod с `app=backend`, которая разрешает вход **только** от Pod с `app=legacy-client`, находящегося именно в `cks-101-legacy` (AND: `namespaceSelector` и `podSelector` заданы в одном элементе массива `from`, не в двух отдельных - иначе получится OR: весь namespace `cks-101-legacy` либо Pod с этой меткой в namespace самой policy (`cks-101`)). Отдельно в `cks-101-legacy` создайте `NetworkPolicy` `allow-legacy-egress`, которая разрешает `legacy-client` широкий egress на `ipBlock: 0.0.0.0/0`, но с явным `except: ["169.254.169.254/32"]`. |
+| Критерии приёмки | `allow-backend-ingress-from-legacy` содержит элемент `from`, где `namespaceSelector` и `podSelector` заданы **в одном и том же элементе массива** (AND); Pod с `app=legacy-client` из `cks-101-legacy` достигает `backend:8080`, Pod с неправильной меткой из `cks-101-legacy`, а также Pod с `app=legacy-client` из `cks-101`, не достигают backend. `allow-legacy-egress` содержит `ipBlock.cidr: 0.0.0.0/0` и `except` с `169.254.169.254/32`; из `legacy-client` внешний адрес (например `1.1.1.1`) достижим, а metadata - нет. |
 
 <details>
 <summary>💡 Подсказка к заданию 6</summary>
 
-Это задание специально названо "ловушкой", потому что YAML-структура AND и OR отличается на один уровень отступа, и легко ошибиться неявно. AND (то, что нужно): `from: [{namespaceSelector: {...}, podSelector: {...}}]` - один элемент массива с двумя полями. OR (частая ошибка): `from: [{namespaceSelector: {...}}, {podSelector: {...}}]` - два отдельных элемента массива. Проверьте себя, создав тестовый Pod с той же меткой `app=legacy-client`, но в другом namespace (например `default`) - если он получает доступ, у вас OR вместо AND.
+Это задание специально названо "ловушкой", потому что YAML-структура AND и OR отличается на один уровень отступа, и легко ошибиться неявно. AND (то, что нужно): `from: [{namespaceSelector: {...}, podSelector: {...}}]` - один элемент массива с двумя полями. OR (частая ошибка): `from: [{namespaceSelector: {...}}, {podSelector: {...}}]` - два отдельных элемента массива. Проверьте обе ветки ошибочного OR: Pod с неправильной меткой в `cks-101-legacy` не должен пройти (поймает namespace-only ветку), и Pod с `app=legacy-client` в `cks-101` не должен пройти (поймает podSelector-only ветку). Отдельный `podSelector` без `namespaceSelector` выбирает Pod только в namespace самой NetworkPolicy.
 
 </details>
 ---
@@ -195,7 +195,7 @@ kubectl config current-context
 
 Для проверки из временного client Pod используйте `curlimages/curl` или `busybox` и назначьте
 ему `--labels=app=frontend`: policy сопоставляет именно identity Pod, а закреплённый по digest образ
-`viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}` не содержит shell/curl.
+`viktoruj/ping_pong@sha256:32d367cdfc826dafa36f7d79d4f345425552c9aa2db5bdf3a33f86ff3532fa95` не содержит shell/curl.
 
 Не используйте один только ненулевой exit code `curl -f` как доказательство сетевого
 запрета: `-f` возвращает ошибку и для доступного HTTP endpoint с ответом `401`, `403` или
