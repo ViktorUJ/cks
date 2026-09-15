@@ -327,7 +327,7 @@ image, доступный image digest, host и команду: alert без э�
   output: >
     Interactive shell in container (user=%user.name command=%proc.cmdline process=%proc.name
     container_id=%container.id container_image=%container.image
-    container_image_digest=%container.image.digest host=%host.name
+    container_image_digest=%container.image.digest host=%evt.hostname
     namespace=%k8s.ns.name pod=%k8s.pod.name)
   priority: WARNING
   tags: [container, shell, mitre_execution]
@@ -339,7 +339,7 @@ image, доступный image digest, host и команду: alert без э�
   output: >
     Sensitive file opened in container (file=%fd.name user=%user.name
     command=%proc.cmdline container_id=%container.id container_image=%container.image
-    container_image_digest=%container.image.digest host=%host.name
+    container_image_digest=%container.image.digest host=%evt.hostname
     namespace=%k8s.ns.name pod=%k8s.pod.name)
   priority: WARNING
   tags: [container, filesystem, mitre_credential_access]
@@ -347,8 +347,9 @@ image, доступный image digest, host и команду: alert без э�
 
 `/etc/shadow` в этом правиле - путь, наблюдаемый в mount namespace контейнера. Он не
 доказывает чтение `/etc/shadow` ноды, если в контейнер не смонтирована host filesystem.
-`%container.image.digest` зависит от metadata runtime и может быть `<NA>`; `%host.name`
-связывает alert с хостом, на котором Falco увидел событие.
+`%container.image.digest` зависит от metadata runtime и может быть `<NA>`; `%evt.hostname`
+содержит hostname underlying host. В Kubernetes DaemonSet сопоставьте его с node, например
+задайте `FALCO_HOSTNAME` из `spec.nodeName`, иначе hostname может быть именем Falco Pod.
 
 `open_read` в примере - macro из standard Falco rules. Поэтому порядок rules files имеет
 значение: upstream rules с этим macro должны загрузиться раньше local file. Если ваш
@@ -531,7 +532,10 @@ kubectl -n falco describe daemonset falco
 
   ```bash
   FALCO_RULES_VERSION="${FALCO_RULES_VERSION:?set verified falco-rules artifact version}"
-  falcoctl artifact list
+  sudo systemctl stop falcoctl-artifact-follow.service 2>/dev/null || true
+  sudo systemctl mask falcoctl-artifact-follow.service
+  sudo falcoctl artifact install "falco-rules:${FALCO_RULES_VERSION}"
+  sudo falcoctl artifact list
   sudo falco -c /etc/falco/falco.yaml --dry-run
   ```
 
@@ -759,7 +763,7 @@ event/output.
 > ### 🔴 Взгляд атакующего
 > **Asset:** видимость runtime-аномалий для security team.
 > **Starting foothold:** RCE в container с возможностью выбрать выполняемое действие.
-> **Attacker objective:** выполнить подозрительное действие — например, запись в `/etc` или сетевое соединение с C2 — без alert.
+> **Цель атакующего:** выполнить опасное действие в контейнере так, чтобы Falco его не заметил и не создал alert. Например, изменить файл в `/etc` или установить сетевое соединение с сервером, через который атакующий управляет скомпрометированным контейнером.
 > **Abuse path:** выбрать действие, не покрытое активным rule set/driver, либо воспользоваться неверно выбранным systemd unit, из-за которого engine не запустился.
 > **Expected evidence:** Falco alert/event с корректным container/process context.
 > **Control:** включённый и active правильный driver-specific unit, а также custom/tuned rules без избыточного false-positive suppression.

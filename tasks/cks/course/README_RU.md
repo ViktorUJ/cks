@@ -1,5 +1,3 @@
-[Eng version](README.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md) · [ქართული ვერსია](README_GE.md) · [繁體中文版](README_TW.md) · [日本語版](README_JP.md)
-
 # CKS: практический самоучитель по безопасности Kubernetes
 
 Практический курс подготовки к **CKS (Certified Kubernetes Security Specialist)** - сертификации CNCF и Linux Foundation по защите Kubernetes. Это продолжение [курса CKA + CKAD](../../cka/course/README_RU.md): предполагается, что вы уже умеете администрировать кластер, работать с `kubectl`, RBAC, NetworkPolicy, SecurityContext, kubeadm и TLS. CKS не повторяет эту базу, а применяет её к моделям угроз, hardening и расследованию инцидентов.
@@ -20,7 +18,7 @@
 
 ## Как устроен курс
 
-Каждая тема - каталог с номером и русским исходником `ru.md`. Переводы появятся в `README.md`, `es.md`, `fr.md`, `de.md`, `ge.md`, `tw.md` и `jp.md`; переключатель языков расположен в первой строке файлов. Главы сгруппированы по доменам CKS и помечены цветом:
+Каждая тема - каталог с номером и русским исходником `ru.md`. Переводы появятся в `README.md`, `es.md`, `fr.md`, `de.md`, `ge.md`, `tw.md` и `jp.md`; ссылку на язык добавляют в переключатель только вместе с соответствующим файлом. Главы сгруппированы по доменам CKS и помечены цветом:
 
 - 🟦 Cluster Setup - 15%
 - 🟥 Cluster Hardening - 15%
@@ -215,7 +213,7 @@ flowchart TB
 
 ## Что читать дальше
 
-- B. Muschko, **Certified Kubernetes Security Specialist (CKS) Study Guide**, O'Reilly.
+- B. Muschko, **Certified Kubernetes Security Specialist (CKS) Study Guide**, O'Reilly, 1-е издание, 2023. Полезна как компактный обзор структуры экзамена, но сверяйте технические рекомендации с актуальной документацией и приложениями Security Delta этого курса.
 - [Официальная документация Kubernetes](https://kubernetes.io/docs/) - первоисточник по API и hardening.
 - [Falco](https://falco.org/docs/), [Trivy](https://trivy.dev/latest/docs/), [Cilium](https://docs.cilium.io/), [Kyverno](https://kyverno.io/docs/) - документация практических инструментов курса.
 - [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes) - рекомендации по безопасной конфигурации компонентов.

@@ -38,11 +38,11 @@ flowchart TB
 ```bash
 # На base: только вход на host, указанный в текущей задаче.
 HOST="${HOST:?Set HOST to the host from the infobox}"
-CONTEXT="${CONTEXT:?Set CONTEXT to the context from the task}"
-NAMESPACE="${NAMESPACE:?Set NAMESPACE to the namespace from the task}"
 ssh "$HOST"
 
-# Уже на назначенном SSH-хосте.
+# Уже на назначенном SSH-хосте: задайте значения из условия текущей задачи здесь.
+CONTEXT="${CONTEXT:?Set CONTEXT to the context from the task}"
+NAMESPACE="${NAMESPACE:?Set NAMESPACE to the namespace from the task}"
 hostname
 k config get-contexts
 k config use-context "$CONTEXT"
@@ -164,17 +164,18 @@ flowchart TB
 
 ```bash
 # Уже на назначенном SSH-хосте: `k` преднастроен LF.
+NAMESPACE="${NAMESPACE:?Set NAMESPACE to the namespace from the task}"
 export do="--dry-run=client -o yaml"
 
 # Каркас Pod, затем добавить securityContext и volumes в vim.
-k run hardened --image=nginxinc/nginx-unprivileged:1.30.4-alpine-slim $do > pod.yaml
+k run hardened -n "$NAMESPACE" --image=nginxinc/nginx-unprivileged:1.30.4-alpine-slim $do > pod.yaml
 vim pod.yaml
-k apply -f pod.yaml
-k get pod hardened -o yaml
+k apply -n "$NAMESPACE" -f pod.yaml
+k get pod -n "$NAMESPACE" hardened -o yaml
 
 # Проверить именно security-поля, а не только Running.
-k get pod hardened -o jsonpath='{.spec.containers[0].securityContext}{"\n"}'
-k describe pod hardened
+k get pod -n "$NAMESPACE" hardened -o jsonpath='{.spec.containers[0].securityContext}{"\n"}'
+k describe pod -n "$NAMESPACE" hardened
 ```
 
 Для типичного hardened container добавляйте только требуемые поля и проверяйте, что приложение может работать с read-only root filesystem:
@@ -203,7 +204,7 @@ spec:
     emptyDir: {}
 ```
 
-Если условие требует AppArmor, профиль должен существовать и быть загружен **на ноде, где запускается Pod**. Свяжите это с `nodeSelector` или scheduling только когда этого требует задача; иначе сначала выясните фактическую ноду на назначенном SSH-хосте через `k get pod -o wide`. Начиная с Kubernetes v1.30 применяйте поле `securityContext.appArmorProfile`; интеграция
+Если условие требует AppArmor, профиль должен существовать и быть загружен **на ноде, где запускается Pod**. Свяжите это с `nodeSelector` или scheduling только когда этого требует задача; иначе сначала выясните фактическую ноду на назначенном SSH-хосте через `k get pod -n "$NAMESPACE" -o wide`. Начиная с Kubernetes v1.30 применяйте поле `securityContext.appArmorProfile`; интеграция
 AppArmor stable с v1.31. Поэтому и для текущего snapshot CKS v1.35, и для v1.36 используйте
 поле, а deprecated annotation оставляйте только для явно старого условия.
 
@@ -220,8 +221,9 @@ sudo aa-status
 sudo apparmor_parser -r /etc/apparmor.d/cks-deny-write
 
 # На том же SSH-хосте после запуска Pod убедиться, что scheduler выбрал ожидаемую ноду.
+NAMESPACE="${NAMESPACE:?Set NAMESPACE to the namespace from the task}"
 POD="${POD:?Set POD to the Pod name from the task}"
-k get pod "$POD" -o wide
+k get pod -n "$NAMESPACE" "$POD" -o wide
 ```
 
 ### Static Pod: изменять и проверять на назначенном host
@@ -231,10 +233,10 @@ k get pod "$POD" -o wide
 ```bash
 # На base.
 HOST="${HOST:?Set HOST to the control-plane host from the infobox}"
-CONTEXT="${CONTEXT:?Set CONTEXT to the context from the task}"
 ssh "$HOST"
 
 # Уже на назначенном control-plane host.
+CONTEXT="${CONTEXT:?Set CONTEXT to the context from the task}"
 hostname
 k config use-context "$CONTEXT"
 k config current-context
@@ -288,18 +290,54 @@ NAME="${NAME:?Set NAME to the resource name from the task}"
 NAMESPACE="${NAMESPACE:?Set NAMESPACE to the namespace from the task}"
 POD="${POD:?Set POD to the Pod name from the task}"
 SOURCE_POD="${SOURCE_POD:?Set SOURCE_POD to the source Pod from the task}"
-SERVICE="${SERVICE:?Set SERVICE to the destination Service from the task}"
+ALLOWED_URL="${ALLOWED_URL:?Set ALLOWED_URL to the allowed endpoint from the task}"
+DENIED_URL="${DENIED_URL:?Set DENIED_URL to the denied endpoint from the task}"
 k get "$KIND" "$NAME" -n "$NAMESPACE" -o yaml
 k describe "$KIND" "$NAME" -n "$NAMESPACE"
 k get events -n "$NAMESPACE" --sort-by=.lastTimestamp
 
 # Нода и профиль/сервис, если задача системная.
-k get pod "$POD" -o wide
+k get pod -n "$NAMESPACE" "$POD" -o wide
 sudo aa-status
 systemctl is-active kubelet
 
-# Сеть: тестируйте и разрешённый, и запрещённый маршрут.
-k exec -n "$NAMESPACE" "$SOURCE_POD" -- wget -qO- --timeout=3 "http://$SERVICE"
+# Сеть: positive control доказывает разрешённый путь. Для deny используйте известный live target.
+if ! k exec -n "$NAMESPACE" "$SOURCE_POD" -- wget -qO- --timeout=3 "$ALLOWED_URL" >/dev/null; then
+  echo "ERROR: allowed route failed" >&2
+  exit 1
+fi
+
+# Если известен Pod, которому policy разрешает тот же DENIED_URL, он подтверждает, что target/path жив.
+CONTROL_POD="${CONTROL_POD:-}"
+if [ -n "$CONTROL_POD" ] && ! k exec -n "$NAMESPACE" "$CONTROL_POD" --   wget -qO- --timeout=3 "$DENIED_URL" >/dev/null; then
+  echo "ERROR: control Pod cannot reach DENIED_URL; negative probe would be ambiguous" >&2
+  exit 1
+fi
+
+# Не считать любой non-zero proof NetworkPolicy deny: сохранить и классифицировать ответ.
+if DENIED_OUT=$(k exec -n "$NAMESPACE" "$SOURCE_POD" --   wget -S -O- --timeout=3 "$DENIED_URL" 2>&1); then
+  DENIED_RC=0
+else
+  DENIED_RC=$?
+fi
+printf '%s\n' "$DENIED_OUT"
+printf 'denied_probe_exit=%s\n' "$DENIED_RC"
+if [ "$DENIED_RC" -eq 0 ]; then
+  echo "ERROR: denied route unexpectedly succeeded" >&2
+  exit 1
+fi
+if printf '%s\n' "$DENIED_OUT" | grep -Eq 'HTTP/[0-9.]+ [1-5][0-9][0-9]'; then
+  echo "ERROR: HTTP response proves DENIED_URL is network-reachable, not denied by NetworkPolicy" >&2
+  exit 1
+fi
+case "$DENIED_OUT" in
+  *'Name or service not known'*|*'Temporary failure in name resolution'*|*'bad address'*)
+    echo "REVIEW REQUIRED: DNS failure is not proof of NetworkPolicy deny" >&2 ;;
+  *'Connection refused'*|*'No route to host'*|*'Network is unreachable'*|*'timed out'*)
+    echo "REVIEW REQUIRED: transport failure is not proof of NetworkPolicy deny; check live control target or CNI flow" >&2 ;;
+  *)
+    echo "REVIEW REQUIRED: classify this failure and confirm CNI/effective-state evidence before claiming deny" >&2 ;;
+esac
 
 # Только после верификации текущей задачи.
 exit
@@ -311,7 +349,7 @@ exit
 
 | Домен | Минимум, который нужно уметь | Проверка результата | Частые подводные камни |
 |---|---|---|---|
-| Cluster Setup - 15% | default-deny ingress/egress, DNS и metadata egress, `CiliumNetworkPolicy`, `kube-bench`, TLS Ingress, checksum бинарника | связность разрешённого и запрещённого Pod, DNS-запрос, отчёт CIS, `curl` TLS endpoint, `sha256sum -c` | policy без `egress` блокирует DNS; CIDR metadata слишком широк; CNI не поддерживает policy; TLS Secret в другом namespace |
+| Cluster Setup - 15% | default-deny ingress/egress, DNS и metadata egress, `CiliumNetworkPolicy`, `kube-bench`, TLS Ingress, checksum бинарника | связность разрешённого и запрещённого Pod, DNS-запрос, отчёт CIS, `curl` TLS endpoint, `sha256sum -c` | default-deny egress без DNS allow блокирует DNS; ingress-only policy без Egress isolation не блокирует DNS; CIDR metadata слишком широк; CNI не поддерживает policy; TLS Secret в другом namespace |
 | Cluster Hardening - 15% | least-privilege RBAC, `auth can-i`, отключение/ограничение ServiceAccount token, API allowlist, безопасный upgrade | `kubectl auth can-i --as`, просмотр RoleBinding и Pod spec, readiness API | wildcard `*`, опасные `bind`/`escalate`/`impersonate`; default SA остаётся смонтирован; правка не того API server |
 | System Hardening - 10% | лишние сервисы и пакеты, права, firewall, AppArmor, seccomp `RuntimeDefault` и Localhost profile | `systemctl`, `ss`, правила firewall, `aa-status`, состояние Pod | профиль AppArmor загружен не на той ноде; неправильный `localhostProfile`; seccomp profile отсутствует на node; firewall закрывает нужный control-plane трафик |
 | Minimize Microservice Vulnerabilities - 20% | `runAsNonRoot`, drop capabilities, `allowPrivilegeEscalation: false`, read-only root, PSA, secret encryption, RuntimeClass, Cilium encryption и Istio mTLS | Pod запускается без лишних прав, PSA отклоняет нарушение, путь к secret защищён, проверка mTLS | приложение не имеет writable `emptyDir`; только audit PSA вместо `enforce`; Secret попадает в log; mTLS policy применена в другом namespace |
@@ -444,7 +482,7 @@ Exam workflow требует начинать следующую задачу с
 <details>
 <summary>7. Что надо подтвердить перед применением Localhost AppArmor profile к Pod?</summary>
 
-Профиль должен существовать и быть загружен на node, где scheduler фактически запустит Pod; это проверяют `sudo aa-status` и при необходимости `apparmor_parser`. В manifest используют современное поле `securityContext.appArmorProfile` с `type: Localhost` и корректным `localhostProfile`. Если нода не та, profile не даст ожидаемой защиты, поэтому сверяют placement через `k get pod -o wide`.
+Профиль должен существовать и быть загружен на node, где scheduler фактически запустит Pod; это проверяют `sudo aa-status` и при необходимости `apparmor_parser`. В manifest используют современное поле `securityContext.appArmorProfile` с `type: Localhost` и корректным `localhostProfile`. Если нода не та, profile не даст ожидаемой защиты, поэтому сверяют placement через `k get pod -n "$NAMESPACE" -o wide`.
 </details>
 
 <details>
@@ -477,6 +515,7 @@ Exam workflow требует начинать следующую задачу с
 | [Лаба 110](../../labs/110/README_RU.MD) | gVisor RuntimeClass, Cilium encryption и Istio mTLS |
 | [Лаба 111](../../labs/111/README_RU.MD) | минимальный образ, статический анализ, Trivy, SBOM, подпись и ImagePolicyWebhook |
 | [Лаба 112](../../labs/112/README_RU.MD) | Falco, audit-логи и иммутабельность контейнера |
+| [Лаба 113](../../labs/113/README_RU.MD) | kubeadm minor upgrade: control-plane → worker, version skew, drain/uncordon и evidence отсутствия downtime |
 
 ---
 [Оглавление](../README_RU.md) · [Глава 32](../32/ru.md)

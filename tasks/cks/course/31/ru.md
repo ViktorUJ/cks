@@ -4,7 +4,9 @@
 
 > **Проблема.** Получив выполнение кода в контейнере с writable root filesystem, атакующий
 > может скачать tool, подменить script в `/app` или конфигурацию в `/etc` и сохранить
-> результат до пересоздания Pod. Такие изменения не видны в исходном image и превращают
+> результат, пока живёт текущий container instance. Kubelet-managed restart/recreation
+> контейнера создаёт новый writable layer, поэтому для persistence между container restart
+> нужны volume или внешнее хранилище. Такие изменения не видны в исходном image и превращают
 > разовую компрометацию в удобную площадку для persistence и lateral movement. Явные
 > read-only границы и узкие writable volumes сокращают эту поверхность.
 
@@ -18,28 +20,31 @@
 > **Что нужно из CKA.** Поля `SecurityContext` разобраны в [главе 20 CKA](../../../cka/course/20/ru.md),
 > `emptyDir` и остальные тома - в [главе 24 CKA](../../../cka/course/24/ru.md), а ConfigMap и
 > Secret - в [главах 18](../../../cka/course/18/ru.md) и [19](../../../cka/course/19/ru.md).
-> Здесь они соединяются в runtime-контракт: корень контейнера read-only, запись разрешена
-> только в явные временные тома, а admission не допускает отступление от правила.
+> Здесь они соединяются в runtime-контракт: image root контейнера read-only, запись приложения
+> вынесена в узкие declared volumes, а admission не допускает отступление от правила. Отдельно
+> учитывают kubelet/runtime-managed mounts.
 
-> 🧠 Writable root даёт скомпрометированному процессу неявное место для tools и mutation. Read-only root переводит запись в явно объявленные и потому контролируемые paths.
+> 🧠 Writable root даёт скомпрометированному процессу неявное место для tools и mutation. Read-only root закрывает image-backed paths, а допустимую запись переводит в контролируемые mounts.
 
 ## 31.1. Угроза runtime-мутации: почему writable root - это путь к закреплению
 
 Образ состоит из read-only слоёв. После старта container runtime добавляет к ним тонкий
 **writable layer**. Если приложение или атакующий может писать в этот слой, он получает
-удобное рабочее место внутри уже запущенного процесса: можно положить downloader в `/tmp`,
-подменить script в `/app`, изменить startup-файл для следующего restart или сохранить
-украденный token. Изменение обычно не попадает в registry и исчезает при пересоздании Pod,
-но до этого живёт в работающем контейнере и может быть использовано для lateral movement,
-майнинга или продолжения атаки.
+удобное рабочее место внутри уже запущенного container instance: можно положить downloader
+в `/tmp`, подменить script в `/app`, изменить конфигурационный файл для restart процесса
+в том же container или сохранить украденный token. Изменение обычно не попадает в registry.
+Обычный restart дочернего процесса не очищает layer, но kubelet-managed restart/recreation
+container создаёт новый instance с новым writable layer, даже если Pod как API-объект
+остаётся тем же. Для сохранения данных между container restart нужен volume или внешнее
+хранилище.
 
 ```mermaid
 flowchart TB
-    vuln["Уязвимость или<br/>скомпрометированный процесс"] --> write["Writable layer<br/>/app, /etc, /tmp"]
-    write --> tool["Скачать tool / изменить script"]
-    tool --> persist["Пережить restart процесса<br/>в том же container"]
-    ro["readOnlyRootFilesystem: true"] --> deny["Запись в image layer<br/>получает EROFS"]
-    deny --> volume["Явный writable volume<br/>с лимитом и назначением"]
+    vuln["Уязвимый<br/>процесс"] --> write["Writable layer<br/>/app, /etc, /tmp"]
+    write --> tool["Скачать утилиту<br/>или изменить script"]
+    tool --> persist["Restart процесса<br/>layer сохраняется"]
+    ro["readOnlyRootFilesystem<br/>включён"] --> deny["Запись в image layer<br/>получает EROFS"]
+    deny --> volume["Writable volume<br/>с лимитом"]
     vuln --> ro
     style vuln fill:#db4437,color:#fff
     style write fill:#f4b400,color:#000
@@ -50,21 +55,23 @@ flowchart TB
     style volume fill:#673ab7,color:#fff
 ```
 
-Важно не переоценивать защиту. `readOnlyRootFilesystem: true` запрещает запись в root
-filesystem **конкретного контейнера**, но не в writable mounted volumes и не в API
-Kubernetes. У каждого контейнера свой root filesystem: процесс не получает прямую запись в
-root filesystem другого контейнера. Однако контейнеры могут намеренно обмениваться данными
-через один и тот же writable volume, смонтированный в оба контейнера. Процесс всё ещё может
-читать доступные ему секреты, отправить данные по сети или эксплуатировать уязвимость ядра.
-Поэтому это один слой вместе с non-root, capabilities, seccomp, NetworkPolicy, минимальным
-ServiceAccount и runtime detection.
+Важно не переоценивать защиту. `readOnlyRootFilesystem: true` запрещает запись в image root
+filesystem **конкретного контейнера**, но не в любой отдельный writable mount и не в API
+Kubernetes. Помимо явно объявленных volumeMounts, учитывайте kubelet/runtime-managed mounts.
+Например, `/etc/hosts` Kubernetes создаёт и управляет отдельно для каждого container, поэтому
+это не доказательство writable image layer. У каждого контейнера свой root filesystem: процесс
+не получает прямую запись в root filesystem другого контейнера. Однако контейнеры могут
+намеренно обмениваться данными через один и тот же writable volume, смонтированный в оба
+контейнера. Процесс всё ещё может читать доступные ему секреты, отправить данные по сети или
+эксплуатировать уязвимость ядра. Поэтому это один слой вместе с non-root, capabilities,
+seccomp, NetworkPolicy, минимальным ServiceAccount и runtime detection.
 
 | Сценарий после compromise | Writable root | Read-only root + узкие volumes |
 |---|---|---|
 | Загрузить и выполнить новый binary в `/tmp` | обычно возможно | нужен writable mount; попытка в корне падает |
-| Подменить `/app/start.sh` или `/etc/hosts` | возможно, пока жив container | невозможно: image layer неизменяем |
-| Создать log/cache | возможно где угодно, трудно различить intent | возможно только в названном mount path |
-| Persist между Pod replacement | не гарантировано, но может жить до replacement | нужен отдельный volume/внешний сервис, что легче контролировать |
+| Подменить `/app/start.sh` или `/etc/myapp/config` | возможно в текущем container instance | image-backed path неизменяем; `/etc/hosts` не используют как такой пример, это kubelet-managed mount |
+| Создать log/cache | возможно в writable layer или любом writable mount | image-backed path недоступен для записи, но любой writable mount остаётся доступным |
+| Persist между kubelet restart container | writable layer теряется с прежним container instance | нужен отдельный volume/внешний сервис, что легче контролировать |
 | Исправить CVE или остановить сеть | не решает | также не решает |
 
 **Runtime mutation** - сигнал, а не всегда атака. Многие легитимные приложения пишут PID,
@@ -128,10 +135,11 @@ spec:
           sizeLimit: 256Mi
 ```
 
-В примере `/`, `/app`, `/etc` и все прочие пути из image read-only. Два исключения
-декларированы прямо в Pod spec. Это лучше, чем writable root по умолчанию: reviewer видит
-назначение каждого места записи, а policy может потребовать read-only root от всех
-containers.
+В примере image-backed paths, включая `/` и `/app`, read-only. Два writable volume
+декларированы прямо в Pod spec. Отдельно оценивайте kubelet/runtime-managed mounts: например,
+`/etc/hosts` не является обычным файлом image layer. Это лучше, чем writable root по
+умолчанию: reviewer видит назначение каждого места записи, а policy может потребовать
+read-only root от всех containers.
 
 ### Контейнерный, а не Pod-level флаг
 
@@ -191,7 +199,7 @@ flowchart TB
     ed --> c1["app: /tmp"]
     ed --> c2["sidecar: /shared"]
     c1 --> restart["restart container<br/>данные остаются"]
-    c2 --> delete["Pod удалён / пересоздан"]
+    c2 --> delete["Pod удалён<br/>или пересоздан"]
     delete --> gone["emptyDir удалён"]
     style pod fill:#326ce5,color:#fff
     style ed fill:#673ab7,color:#fff
@@ -330,9 +338,9 @@ package manager, shell и большинства обычных userland tools. 
 
 ```mermaid
 flowchart TB
-    src["Source + lock file"] --> build["Builder stage<br/>compiler, tests, tools"]
-    build --> artifact["Статический binary<br/>или application artefact"]
-    artifact --> final["Distroless final image<br/>app + runtime libs"]
+    src["Source + lockfile"] --> build["Build stage<br/>tools и tests"]
+    build --> artifact["Binary или<br/>application artifact"]
+    artifact --> final["Final image<br/>app + runtime libs"]
     final --> pod["non-root Pod<br/>read-only root"]
     style src fill:#326ce5,color:#fff
     style build fill:#f4b400,color:#000
@@ -832,18 +840,20 @@ kubectl get validatingadmissionpolicy require-readonly-rootfs
 kubectl get validatingadmissionpolicybinding require-readonly-rootfs-default \
   -o jsonpath='{.spec.validationActions}{"\n"}'
 
-# 3. Хороший Pod создан, плохой был отклонён после Deny.
+# 3. Хороший Pod создан, а helper из negative test выше подтверждает прямой Deny.
 kubectl get pod -n payments good-rootfs
-kubectl get events -n payments --sort-by=.lastTimestamp | tail -n 20
+expect_rootfs_deny payments
 
 # 4. Running workload имеет expected settings у regular и init containers.
 kubectl get deploy -n payments api \
   -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{"\t"}{.securityContext.readOnlyRootFilesystem}{"\n"}{end}{range .spec.template.spec.initContainers[*]}init/{.name}{"\t"}{.securityContext.readOnlyRootFilesystem}{"\n"}{end}'
 ```
 
-После `Deny` нужно доказать именно отклонение bad manifest, а после rollout - готовность
-good workload. Для Kyverno отдельно проверяют report и сгенерированные controller rules,
-если это заявленная часть его production design.
+После `Deny` нужно доказать именно отклонение bad manifest: `expect_rootfs_deny` проверяет
+ненулевой exit status и unique message этой VAP. `kubectl get events` не доказывает прямой
+VAP Deny; для audit evidence отдельно проверяют API audit log или audit annotation. После
+rollout проверяют готовность good workload. Для Kyverno отдельно проверяют report и
+сгенерированные controller rules, если это заявленная часть его production design.
 
 > 🏭 Runtime immutability работает как процесс: image design, bounded writable paths, staged policy rollout, documented exceptions и positive/negative verification должны поддерживать друг друга.
 
@@ -919,9 +929,9 @@ good workload. Для Kyverno отдельно проверяют report и сг
 **Вопросы для самопроверки.**
 
 <details>
-<summary>1. Почему изменение файла в writable layer не обязательно переживёт replacement Pod, но всё равно опасно для расследуемого инцидента?</summary>
+<summary>1. Почему изменение файла в writable layer не обязательно переживёт kubelet restart container, но всё равно опасно для расследуемого инцидента?</summary>
 
-Writable layer обычно исчезает при пересоздании Pod, поэтому не даёт гарантированной persistence после replacement. Но пока container жив, атакующий может положить tool, изменить script или startup-файл, сохранить token и использовать это для lateral movement либо продолжения атаки. Это также меняет evidence и требует расследования до destructive containment.
+Writable layer принадлежит конкретному container instance. Restart дочернего процесса в том же container не очищает его, но kubelet restart/recreation создаёт новый instance с новым layer, даже если Pod остаётся тем же API-объектом. Поэтому layer не даёт persistence между container restart; для неё нужен volume или внешнее хранилище. Пока текущий container жив, атакующий всё ещё может положить tool, изменить script или конфигурацию, сохранить token и использовать это для lateral movement либо продолжения атаки. Это также меняет evidence и требует расследования до destructive containment.
 </details>
 
 <details>

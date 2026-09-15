@@ -153,8 +153,11 @@ sudo apparmor_parser -R /etc/apparmor.d/k8s-demo
 может не дать workload стартовать либо сломать приложение после reload. Сначала проверяйте
 синтаксис и rollout на выделенной ноде.
 
+Различайте флаги `apparmor_parser`: `-p` только разворачивает `#include` и печатает результат; `-Q` компилирует policy, но не загружает её в kernel; `-r` заменяет загруженную версию. Для безопасной проверки используйте `-Q -K`, затем `-r -W`.
+
 ```bash
-# -p only preprocesses. -Q compiles without kernel load; -K prevents cache reuse.
+# -Q компилирует без загрузки в kernel; -K запрещает переиспользовать кеш.
+# -p не является полной compile-проверкой.
 sudo apparmor_parser -Q -K /etc/apparmor.d/k8s-demo >/dev/null
 sudo apparmor_parser -r -W /etc/apparmor.d/k8s-demo
 sudo aa-status

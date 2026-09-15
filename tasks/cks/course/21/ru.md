@@ -326,11 +326,13 @@ resources:
 
 | Свойство | KMS v1 | KMS v2 |
 |---|---|---|
-| Статус | deprecated с Kubernetes 1.28; с 1.29 выключен по умолчанию | stable с Kubernetes 1.29, рекомендуемый API |
+| Статус | deprecated с Kubernetes 1.28; с 1.29 выключен по умолчанию и требует явного `--feature-gates=KMSv1=true` | stable с Kubernetes 1.29; рекомендуемый API для новых конфигураций |
 | DEK | новый случайный DEK для каждой операции шифрования; plugin оборачивает каждый DEK KEK | API server хранит secret seed и через KDF выводит одноразовый DEK для каждой операции; seed оборачивается KEK и меняется при ротации KEK |
 | Поля config | `apiVersion: v1` или поле отсутствует; `name`, `endpoint`, `cachesize`, `timeout` | `apiVersion: v2`, `name`, `endpoint`, `timeout`; `cachesize` недопустим |
 | Производительность | больше gRPC/KMS-вызовов; cache хранит unwrapped DEK | нет KMS-вызова для оборачивания отдельного DEK при каждой записи |
 | Идентификация ключа | зависит от v1 plugin | `Status` возвращает `version: v2`, `healthz: ok` и `key_id` текущего KEK |
+
+> **Версионная граница таблицы.** На дату проверки **2026-09-15** KMS v1 в exam snapshot v1.35 ещё существует, но deprecated и выключен по умолчанию; для legacy compatibility нужен явный feature gate. Не используйте его для новых конфигураций и сверяйте KMS documentation своей minor-версии.
 
 В v2 в etcd сохраняются encrypted payload и material, достаточный API server для получения
 одноразового DEK из защищённого seed; это не модель «plugin выдаёт новый wrapped DEK на каждую

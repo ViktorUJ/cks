@@ -241,6 +241,8 @@ kubectl get clusterrolebinding \
 | `/checkpoint/*` | `nodes/checkpoint` | нет |
 | всё остальное | `nodes/proxy` | применимо напрямую |
 
+> **⚠️ Версионная дельта.** Fine-Grained Kubelet Authorization - GA в v1.36, а в exam snapshot v1.35 feature gate `KubeletFineGrainedAuthz` ещё Beta (default-on). Перед миграцией подтвердите на целевом kubelet `authorization.mode: Webhook` и фактическое состояние feature gate. Отдельно проверьте RBAC именно той identity, которая обращается к kubelet, например `kubectl auth can-i get nodes/metrics --as=system:serviceaccount:<namespace>:<serviceaccount>`. Не удаляйте `nodes/proxy`, пока configuration/gate, RBAC и реальный endpoint retest не подтверждены.
+
 Для `/pods`, `/runningPods/`, `/healthz` и `/configz` kubelet сначала проверяет соответствующий fine-grained subresource, а при отказе повторяет авторизацию через широкий `nodes/proxy`. Это backward-compatible dual-check: пока у субъекта остаётся `nodes/proxy`, узкое разрешение само по себе не уменьшает его фактические привилегии. После миграции ролей удалите `nodes/proxy`, иначе least privilege не будет реализован.
 
 Например, сборщику метрик обычно достаточно `get` на `nodes/metrics` и/или `nodes/stats`:

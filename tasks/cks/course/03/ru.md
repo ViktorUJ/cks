@@ -93,7 +93,7 @@ Namespace даёт процессу отдельное представлени�
 
 ### User namespaces: отдельное отображение UID/GID
 
-User namespace не включается автоматически. В Kubernetes это opt-in: `spec.hostUsers: false` запрашивает user namespace для Pod; в v1.36 функция стала Stable/GA.
+User namespace не включается автоматически. В Kubernetes это opt-in: `spec.hostUsers: false` запрашивает user namespace для Pod; в v1.36 функция стала Stable/GA. В exam snapshot v1.35 она ещё Beta, хотя `UserNamespacesSupport` включён по умолчанию, поэтому это 🔬 Deep Dive / Production, а не 🎯 CKS Core.
 
 **Проблема.** Без user namespace UID 0 внутри обычного контейнера - это тот же числовой UID 0, что и root на ноде. Namespaces скрывают часть ресурсов хоста, но сами по себе не меняют это отображение идентичности. Если процесс получает доступ за ожидаемую границу контейнера, host воспринимает его как root - последствия ошибки в приложении, конфигурации или изоляции становятся существенно тяжелее.
 

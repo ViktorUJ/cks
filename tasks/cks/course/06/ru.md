@@ -63,7 +63,6 @@
 Cilium предлагает другую архитектуру для того же пути пакета:
 
 - **eBPF как основной L3/L4 datapath.** Для pod networking, L3/L4 policy и
-- **eBPF как основной L3/L4 datapath.** Для pod networking, L3/L4 policy и
   kube-proxy-replacement Cilium использует eBPF-программы и BPF maps. Программы
   прикрепляются к hook-точкам ядра, например сетевым интерфейсам и cgroup.
 - **Map lookup вместо линейного `iptables`-обхода.** В kube-proxy-replacement Cilium

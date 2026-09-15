@@ -246,7 +246,7 @@ kubectl -n falco logs daemonset/falco -c falco --all-pods=true --prefix --since=
 
 > 🎯 Для проверки результата нужны rule/event, время, node, процесс, container и Kubernetes context. Не ограничивайтесь фактом срабатывания: докажите, какой workload породил alert.
 
-## 30.3. Формат output: alert должен быть пригоден для attribution
+## 30.3. Формат output: alert должен быть пригоден для attribution (установления источника события)
 
 `condition` отвечает, **когда** генерировать alert; `output` задаёт, что сохранит оператор. Плохой output вроде `Suspicious file access` заставляет повторно искать исчезнувший контейнер. Хороший output содержит стабильную связь syscall → process → container → Pod → workload.
 
@@ -348,7 +348,7 @@ kubectl get pod -n "$NAMESPACE" "$POD" \
 
 > 🏭 Hash, case ID, время, источник и журнал передачи делают evidence проверяемым и воспроизводимым.
 
-### Целостность и chain of custody
+### Целостность и chain of custody (цепочка хранения и передачи доказательств)
 
 Для каждого файла evidence зафиксируйте case ID, UTC-время сбора, node, сборщика, источник и команду. Сразу вычислите SHA-256, сохраните manifest вместе с evidence в хранилище с ограничением записи и журналом передачи. При передаче фиксируйте время UTC, отправителя, получателя и hash: это позволяет проверить целостность, но не заменяет утверждённую процедуру хранения.
 
@@ -394,8 +394,6 @@ sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
 
 ### Три уровня изоляции, от менее к более разрушительному
 
-| Действие                                  | Что делает                                                                                                                                            | Когда уместно                                                                                                                                                                                  | Что теряете                                                                                                                                                                                                                                                                         |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Действие | Что делает | Когда уместно | Что теряете/чего не гарантирует |
 | --- | --- | --- | --- |
 | **NetworkPolicy quarantine** | additive L3/L4 isolation selected Pod при CNI, который реально enforces NetworkPolicy | обратимый первый шаг: ограничивает новые разрешённые TCP/UDP/SCTP connections, сохраняя Pod и evidence | не priority deny: все selecting policies складывают allow; traffic resident node, non-L4 и existing connections имеют ограничения/зависят от CNI |
@@ -435,12 +433,27 @@ kubectl cordon "$NODE"
 kubectl get node "$NODE"
 # При host/node compromise параллельно запустите infrastructure isolation runbook.
 
-# Шаг 3 — после сохранения evidence определить owner и остановить desired state по runbook:
-kubectl get pod -n "$NAMESPACE" "$POD" \
-  -o jsonpath='{range .metadata.ownerReferences[*]}{.kind}{"/"}{.name}{"
-"}{end}'
-# Например, только после подтверждения owning Deployment:
-DEPLOYMENT="${DEPLOYMENT:?set owning Deployment name after checking ownerReferences}"
+# Шаг 3: после сохранения evidence определить controller и остановить desired state по runbook.
+# Для Deployment Pod обычно принадлежит ReplicaSet, который принадлежит Deployment.
+POD_OWNER="$(
+  kubectl get pod -n "$NAMESPACE" "$POD" \
+    -o jsonpath='{range .metadata.ownerReferences[?(@.controller==true)]}{.kind}{"/"}{.name}{"\n"}{end}'
+)"
+printf 'Pod controller: %s\n' "$POD_OWNER"
+case "$POD_OWNER" in
+  ReplicaSet/*) REPLICASET="${POD_OWNER#ReplicaSet/}" ;;
+  *) printf 'Pod controller is not a ReplicaSet; use the controller-specific incident runbook.\n' >&2; exit 1 ;;
+esac
+
+DEPLOYMENT_OWNER="$(
+  kubectl get replicaset -n "$NAMESPACE" "$REPLICASET" \
+    -o jsonpath='{range .metadata.ownerReferences[?(@.controller==true)]}{.kind}{"/"}{.name}{"\n"}{end}'
+)"
+printf 'ReplicaSet controller: %s\n' "$DEPLOYMENT_OWNER"
+case "$DEPLOYMENT_OWNER" in
+  Deployment/*) DEPLOYMENT="${DEPLOYMENT_OWNER#Deployment/}" ;;
+  *) printf 'ReplicaSet controller is not a Deployment; use the controller-specific incident runbook.\n' >&2; exit 1 ;;
+esac
 kubectl scale deployment -n "$NAMESPACE" "$DEPLOYMENT" --replicas=0
 ```
 
@@ -706,6 +719,8 @@ kubectl delete namespace runtime-lab
 
 ## 30.8. Как это применяют в продакшене
 
+> 🏭 **Production.** В большой организации аналитик обычно не ищет вручную один и тот же инцидент во всех системах. Falco, Kubernetes audit, network flow, application и cloud identity logs отправляют в централизованную платформу security operations. Она связывает сигналы по времени и устойчивым идентификаторам, создаёт одну карточку инцидента с alert, обогащением и историей действий. Автоматизация по заранее утверждённому сценарию добавляет безопасный контекст или создаёт ticket; решение об изоляции Pod или node с высоким риском остаётся за человеком и incident runbook.
+
 - **Пишут detection use cases, а не собирают случайные rules.** Для каждого правила фиксируют актив, threat hypothesis, kill-chain phase, expected signal, owner, severity, suppression policy и ответное действие. Rule без владельца и runbook быстро становится ignored noise.
 - **Делают output схемой событий.** SIEM получает нормализованные UTC `event.time`, rule, priority, node, host PID, container ID, Pod UID, namespace, workload owner, image digest, process и network/file target. Поля версионируют: изменение output не должно бесшумно ломать parser и correlation.
 - **Тестируют rules как код.** Custom rules лежат в Git, проходят YAML/Falco validation, review и controlled positive/negative tests на staging. Vendor rules обновляют отдельно, после чего повторяют тесты local overrides.
@@ -804,7 +819,9 @@ kubectl delete namespace runtime-lab
 <details>
 <summary>9. **Flashback (глава 11).** В главе 11 bound projected token снижает последствия кражи token по сравнению с legacy Secret token. Спроектируйте investigation-сценарий для этой главы: как через `%user.name`/audit log отличить легитимный запрос от Pod с его собственным ServiceAccount от запроса, использующего **украденный** token того же SA с другого источника (например, с хоста снаружи кластера)?</summary>
 
-`%user.name` показывает только Linux user процесса и не доказывает, откуда пришёл Kubernetes API request. В audit ищут `.user.username` ServiceAccount, время, verb, objectRef, responseStatus, audit/request UID, `.sourceIPs`, `userAgent` и annotations, затем сверяют IP/agent с доверенными proxy, IdP/cloud/network telemetry. Запрос с тем же SA, но с необычного внешнего source, в нехарактерное время или с нетипичным scope, расследуют как возможное использование украденного token; сами `sourceIPs` и userAgent доказательством не являются. Audit API не раскрывает token/JTI, поэтому один только Kubernetes audit не может доказательно отличить использование украденного token того же SA. `.authenticationMetadata` не является token metadata: в текущем API оно содержит только `impersonationConstraint` при constrained impersonation.
+`%user.name` показывает только Linux user процесса и не доказывает, откуда пришёл Kubernetes API request. В audit ищут `.user.username` ServiceAccount, время, verb, objectRef, responseStatus, audit/request UID, `.sourceIPs`, `userAgent` и annotations, затем сверяют IP/agent с доверенными proxy, IdP/cloud/network telemetry. Запрос с тем же SA, но с необычного внешнего source, в нехарактерное время или с нетипичным scope, расследуют как возможное использование украденного token; сами `sourceIPs` и userAgent доказательством не являются.
+
+Для современных generated ServiceAccount token Kubernetes добавляет в `.user.extra` credential identity: `authentication.kubernetes.io/credential-id=JTI=<uuid>`. Для Pod-bound token там также могут быть Pod UID, node name и node UID. Сохраните JTI и сопоставьте его с Pod UID, node, временем и сетевым источником. JTI показывает, какой credential был использован, но сам по себе не доказывает кражу или легитимность: для этого нужен контекст workload и сети. Для legacy/static token evidence может отличаться. `.authenticationMetadata` не является token metadata: в текущем API оно содержит только `impersonationConstraint` при constrained impersonation.
 
 </details>
 

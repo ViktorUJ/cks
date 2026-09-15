@@ -128,7 +128,11 @@ VAP, как и Pod-only Gatekeeper Constraint, отклонит Pod, созда�
 Проверка должна покрывать `containers`, `initContainers` и, если они разрешены,
 `ephemeralContainers`: иначе init- или debug-контейнер станет обходом policy. В Kubernetes
 v1.36 отдельно обработайте `spec.volumes[].image.reference`: это не элемент ни одного из
-трёх массивов. Pod-only policy сама проверяет только Pod. Чтобы Kyverno `ValidatingPolicy` отклоняла Deployment и
+трёх массивов.
+
+> **⚠️ Версионная дельта.** В exam snapshot v1.35 `spec.volumes[].image` ещё Beta, хотя `ImageVolume` включён по умолчанию. На более старом кластере или при отключённом gate сначала проверьте API schema и validation policy; не удаляйте fail-closed coverage image volume только из-за отсутствия текущих workload.
+
+Pod-only policy сама проверяет только Pod. Чтобы Kyverno `ValidatingPolicy` отклоняла Deployment и
 другие workload-контроллеры до создания Pod, явно включите `spec.autogen.podControllers`;
 без него controller будет принят, а отказ случится только при создании Pod. Начните с
 режима Audit, исправьте существующие manifests, затем переведите правило в Enforce.

@@ -34,12 +34,12 @@ webhook создаёт отдельный audit request лишь если его
 
 ```mermaid
 flowchart TB
-    client["kubectl / controller / SA<br/>иной API client"] --> api["kube-apiserver<br/>authn → authz → admission webhook"]
-    api --> etcd["API-объект / etcd"]
-    api --> policy["audit Policy<br/>выбирает level"]
+    client["kubectl / controller<br/>ServiceAccount"] --> api["kube-apiserver<br/>authn, authz<br/>admission"]
+    api --> etcd["API-объект<br/>etcd"]
+    api --> policy["audit Policy<br/>выбор level"]
     policy --> local["локальный audit log"]
-    policy --> webhook["центральный collector<br/>через webhook"]
-    local --> investigation["поиск и расследование"]
+    policy --> webhook["central collector<br/>webhook"]
+    local --> investigation["поиск инцидента"]
     webhook --> investigation
     style client fill:#326ce5,color:#fff
     style api fill:#f4b400,color:#000
@@ -53,7 +53,8 @@ flowchart TB
 
 | Вопрос расследования | Поля события |
 |---|---|
-| **Кто и как аутентифицирован?** | `.user.username`, `.user.groups`, `.user.uid`; при impersonation - `.impersonatedUser`; при наличии - `.authenticationMetadata` |
+| **Какая identity указана?** | `.user.username`, `.user.groups`, `.user.uid`; при impersonation - `.impersonatedUser` |
+| **Constrained impersonation?** | `.authenticationMetadata.impersonationConstraint`, только когда использован constrained impersonation; это не общее описание способа authentication или ServiceAccount token |
 | **Откуда и чем?** | `.sourceIPs`, `.userAgent` - данные, сообщаемые клиентом/proxy, а не самостоятельное доказательство источника |
 | **Что хотел сделать?** | `.verb`, `.requestURI`, `.objectRef` (group/resource/namespace/name); audit-аннотации `.annotations` от authn/authz/admission plugins |
 | **Когда и в какой фазе?** | `.requestReceivedTimestamp`, `.stageTimestamp`, `.stage` |
@@ -83,9 +84,11 @@ SQL-запрос внутри Pod или shell-команду, которая н
 `sourceIPs` содержит IP из `X-Forwarded-For`/`X-Real-IP` и адрес соединения: все значения,
 кроме последнего, клиент может задать произвольно. `userAgent` также сообщает клиент. Это
 полезные pivot-поля, но их нужно corroborate с доверенным ingress/proxy, identity и временем.
-Для более полного контекста смотрите `.authenticationMetadata` и `.annotations`: последние
-могут быть добавлены authn/authz/admission plugins и относятся к audit event, а не к
-`metadata.annotations` объекта.
+Для более полного контекста смотрите `.annotations` audit event и внешние IdP/proxy/authentication
+logs, если они доступны. `.authenticationMetadata` не является общим описанием authentication
+или ServiceAccount token: в Kubernetes v1.36 оно содержит только `impersonationConstraint` при
+constrained impersonation. `.annotations` могут быть добавлены authn/authz/admission plugins и
+не относятся к `metadata.annotations` объекта.
 
 ## 32.2. Как событие проходит стадии audit pipeline
 
@@ -94,9 +97,9 @@ SQL-запрос внутри Pod или shell-команду, которая н
 
 ```mermaid
 flowchart TB
-    rr["RequestReceived<br/>запрос принят"] --> rs["ResponseStarted<br/>long-running response"]
+    rr["RequestReceived<br/>запрос принят"] --> rs["ResponseStarted<br/>stream response"]
     rs --> rc["ResponseComplete<br/>запрос завершён"]
-    rr --> panic["Panic<br/>сервер аварийно завершил обработку"]
+    rr --> panic["Panic<br/>API handler завершился"]
     style rr fill:#326ce5,color:#fff
     style rs fill:#f4b400,color:#000
     style rc fill:#0f9d58,color:#fff
@@ -405,10 +408,10 @@ level, размер request/response, file I/O и webhook queue могут ув�
 ```mermaid
 flowchart TB
     event["audit event"] --> active["audit.log<br/>активный файл"]
-    active -->|"maxsize"| rotated["rotated copies<br/>maxbackup / maxage"]
+    active -->|"maxsize"| rotated["rotated copies<br/>backup / age"]
     active --> shipper["agent / collector"]
     rotated --> retention["локальное удаление"]
-    shipper --> immutable["центральное хранилище<br/>search + longer retention"]
+    shipper --> immutable["central storage<br/>search и retention"]
     style event fill:#326ce5,color:#fff
     style active fill:#f4b400,color:#000
     style rotated fill:#0f9d58,color:#fff
@@ -457,7 +460,7 @@ server передаёт audit events (в batch режиме - списками) 
 flowchart TB
     api["kube-apiserver"] -->|"HTTPS + mTLS/CA"| collector["audit collector<br/>/webhook"]
     collector --> queue["durable queue / SIEM"]
-    queue --> search["поиск, correlation, alerting"]
+    queue --> search["поиск и correlation<br/>alerting"]
     api --> local["опционально:<br/>локальный audit.log"]
     style api fill:#326ce5,color:#fff
     style collector fill:#f4b400,color:#000
@@ -561,9 +564,13 @@ request body в audit event. Не помещайте в тест чувстви�
 
 ```bash
 kubectl get namespace payments >/dev/null || kubectl create namespace payments
-kubectl -n payments create configmap audit-check \
+# Выполняйте следующие блоки в одном shell: уникальные имена связывают event с текущим run.
+RUN_ID="$(date -u +%Y%m%d%H%M%S)-$$"
+CM="audit-check-$RUN_ID"
+SECRET="audit-secret-check-$RUN_ID"
+kubectl -n payments create configmap "$CM" \
   --from-literal=purpose=verification
-kubectl -n payments delete configmap audit-check
+kubectl -n payments delete configmap "$CM"
 ```
 
 ### 3. Запросить JSON Lines через `jq`
@@ -572,11 +579,12 @@ Audit file содержит отдельные JSON events. Фильтр ниж�
 создания/удаления тестового ConfigMap и выводит поля расследования:
 
 ```bash
-sudo jq -r '
+sudo jq -r --arg name "$CM" '
   select(.stage == "ResponseComplete")
   | select(.objectRef.resource == "configmaps")
   | select(.objectRef.namespace == "payments")
-  | select(.objectRef.name == "audit-check")
+  | select(.objectRef.name == $name)
+  | select((.responseStatus.code // 0) >= 200 and (.responseStatus.code // 0) < 300)
   | [.stageTimestamp, .level, .auditID, .user.username, .verb,
      .objectRef.namespace, .objectRef.resource, .objectRef.name,
      (.responseStatus.code | tostring)]
@@ -584,30 +592,30 @@ sudo jq -r '
 ' /var/log/kubernetes/audit/audit.log
 ```
 
-Ожидаются строки уровня `Request`, с вашим username, `create`/`delete`, объектом
-`payments/configmaps/audit-check` и успешным response code класса `2xx`. Конкретный код
-зависит от операции и API. Если policy использует
-другой namespace/resource, тест и фильтр должны соответствовать именно ей.
+Ожидаются строки уровня `Request`, с вашим username, `create`/`delete`, объектом с именем
+`$CM` и успешным response code класса `2xx`. Конкретный код зависит от операции и API. Если
+policy использует другой namespace/resource, тест и фильтр должны соответствовать именно ей.
 
 Проверить, что body Secret не утёк в локальный audit log, можно создать или прочитать
 тестовый Secret и смотреть event: у `Metadata` не должно быть `.requestObject` или
 `.responseObject`.
 
 ```bash
-kubectl -n payments create secret generic audit-secret-check \
+kubectl -n payments create secret generic "$SECRET" \
   --from-literal=token='not-a-real-secret'
 
-sudo jq -c '
+sudo jq -c --arg name "$SECRET" '
   select(.stage == "ResponseComplete")
   | select(.objectRef.resource == "secrets")
   | select(.objectRef.namespace == "payments")
-  | select(.objectRef.name == "audit-secret-check")
+  | select(.objectRef.name == $name)
+  | select((.responseStatus.code // 0) >= 200 and (.responseStatus.code // 0) < 300)
   | {level, auditID, user: .user.username, verb, objectRef,
      hasRequestObject: has("requestObject"),
      hasResponseObject: has("responseObject"), responseStatus}
 ' /var/log/kubernetes/audit/audit.log
 
-kubectl -n payments delete secret audit-secret-check
+kubectl -n payments delete secret "$SECRET"
 ```
 
 Для этой policy ожидается `level: "Metadata"` и оба `has…Object: false`. Не проверяйте
@@ -619,7 +627,9 @@ kubectl -n payments delete secret audit-secret-check
 Начинайте с узких, high-signal действий: успешных изменений RBAC, создания
 ClusterRoleBinding, доступа через `pods/exec` и добавления `ephemeralcontainers`. Не делайте
 вывод об источнике только по `sourceIPs`/`userAgent`: сопоставьте их с identity,
-`.authenticationMetadata`, `.annotations` и доверенными log proxy/ingress.
+`.annotations` audit event и доверенными log proxy/ingress или IdP. `.authenticationMetadata`
+используйте только как признак constrained impersonation, а не как универсальное evidence
+способа authentication.
 
 Например, вывести завершённые изменения RBAC за период и не терять response status:
 
@@ -639,11 +649,14 @@ sudo jq -r '
 ```
 
 Отдельно выделите streaming-доступ и изменение Pod через subresource. Начиная с Kubernetes
-v1.31 `kubectl exec` по умолчанию использует WebSocket: HTTP upgrade — `GET` с успешным
-`101 Switching Protocols`. В v1.35 authorization для `pods/exec` требует также permission
-`create`, но audit verb WebSocket request может быть `get`; учитывайте оба варианта.
-`ResponseStarted` — первое полезное evidence активного upgrade, не ждите `ResponseComplete`,
-пока сессия ещё открыта.
+v1.31 `kubectl exec` по умолчанию использует WebSocket: HTTP upgrade использует `GET` с
+успешным `101 Switching Protocols`. Feature gate
+`AuthorizePodWebsocketUpgradeCreatePermission` beta с v1.35 и включён по умолчанию. Когда
+он включён, WebSocket `GET` для `pods/exec`, `pods/attach` и `pods/portforward` дополнительно
+проходит permission `create`; если администратор отключил gate, этой дополнительной проверки
+нет. Audit verb самого WebSocket request остаётся `get`, поэтому detection учитывает
+фактический audit verb и конфигурацию gate. `ResponseStarted` — первое полезное evidence
+активного upgrade, не ждите `ResponseComplete`, пока сессия ещё открыта.
 
 ```bash
 # exec: WebSocket GET/101 и legacy/create варианты; сохраняем streaming stages.
@@ -837,7 +850,7 @@ Rules проверяются сверху вниз, и API server применя
 <details>
 <summary>8. Почему `sourceIPs` и `userAgent` нельзя считать самостоятельным доказательством источника?</summary>
 
-`sourceIPs` включает значения из `X-Forwarded-For`/`X-Real-IP`, которые клиент может подделать, и адрес соединения; `userAgent` также сообщает сам клиент. Это полезные pivot-поля, но не самостоятельное доказательство. Их corroborate с identity, временем, `.authenticationMetadata`, annotations и логами доверенного proxy/ingress.
+`sourceIPs` включает значения из `X-Forwarded-For`/`X-Real-IP`, которые клиент может подделать, и адрес соединения; `userAgent` также сообщает сам клиент. Это полезные pivot-поля, но не самостоятельное доказательство. Их corroborate с identity, временем, `.annotations` audit event и логами доверенного proxy/ingress или IdP. `.authenticationMetadata` учитывают только при constrained impersonation: в текущем API оно содержит `impersonationConstraint`, а не общие сведения о token или способе authentication.
 </details>
 
 <details>

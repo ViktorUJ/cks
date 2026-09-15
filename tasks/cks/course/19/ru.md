@@ -98,6 +98,8 @@ spec:
 
 Ниже компактная матрица для **PSS `restricted` v1.36**. Она включает `baseline`; правило для каждого container распространяется также на `initContainers` и `ephemeralContainers`, если не сказано иное.
 
+> **⚠️ Экзамен идёт на v1.35.** Матрица использует v1.36 как training baseline. На экзамене используйте версию из условия, `v1.35` либо не задавайте `pod-security.kubernetes.io/*-version`; не копируйте label `v1.36` в более старый кластер без проверки.
+
 | Контроль v1.36 | Допустимое значение или требование |
 |---|---|
 | Host namespaces и Windows HostProcess | `hostNetwork`, `hostPID`, `hostIPC` - только `false`/не заданы; `windowsOptions.hostProcess` - `false`/не задан |

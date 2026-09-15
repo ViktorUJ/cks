@@ -323,9 +323,9 @@ flowchart TB
     sbom --> gate{"Policy gate"}
     gate -->|"fail"| fix["Fix"]
     fix --> build
-    gate -->|"pass"| sign["Sign"]
-    sign --> push["Push"]
-    push --> admission["Admission"]
+    gate -->|"pass"| push["Push immutable digest"]
+    push --> sign["Sign / attach attestations"]
+    sign --> admission["Admission"]
     admission --> deploy["Deploy"]
     deploy --> inventory["Inventory"]
     inventory --> rescan["Rescan"]
