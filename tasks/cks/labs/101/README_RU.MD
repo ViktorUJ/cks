@@ -31,30 +31,33 @@
 <summary>1. Что происходит с трафиком, если в namespace есть NetworkPolicy с podSelector={} и policyTypes: [Ingress, Egress], но без единого allow-правила?</summary>
 
 Весь ingress и весь egress запрещён для всех Pod этого namespace. Пустой `podSelector` означает "все Pod", а `policyTypes` без соответствующих массивов `ingress`/`egress` означает "ноль разрешённых правил" - то есть default-deny. Это не оставляет исключений даже для DNS - его нужно разрешить отдельной policy.
+
 </details>
 
 <details>
 <summary>2. Почему curl -f не годится как доказательство того, что NetworkPolicy заблокировал запрос?</summary>
 
 `curl -f` возвращает ненулевой exit code и для СЕТЕВОГО отказа (connection refused/timeout), и для успешного HTTP-ответа с кодом `4xx`/`5xx` (например, `401 Unauthorized` от metadata endpoint). Оба случая выглядят одинаково "curl вернул ошибку", но означают разное: первое доказывает network-level deny, второе доказывает, что endpoint СЕТЕВО ДОСТУПЕН, просто отверг запрос на HTTP-уровне. Нужно смотреть на `%{http_code}` (пустой/`000` означает, что HTTP-ответа не было вообще) без флага `-f`.
+
 </details>
 
 <details>
 <summary>3. Если policy имеет два элемента в массиве `from: [{namespaceSelector: A}, {podSelector: B}]`, что это значит - AND или OR?</summary>
 
 OR. Каждый элемент массива `from` - самостоятельное условие; трафик разрешается, если совпадает **хотя бы одно**. Чтобы получить AND ("этот namespace И эта метка одновременно"), оба селектора должны быть в ОДНОМ элементе массива: `from: [{namespaceSelector: A, podSelector: B}]`.
+
 </details>
 
 ## Что мы создаём и зачем
 
-| Объект | Назначение |
-|---|---|
-| Namespace `cks-101` | Граница ресурсов и действия политик лабы. |
-| Deployments `frontend` и `backend` | Учебные приложения `viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}` с метками `app=frontend` и `app=backend`. |
-| Service `backend` | Стабильная точка доступа к backend на TCP `8080`. |
-| default-deny NetworkPolicy | Закрывает ingress и egress всем Pod namespace. |
-| allow policy для backend | Открывает TCP `8080` только от Pod с `app=frontend`. |
-| DNS egress policy | Открывает UDP/TCP `53` только к `kube-dns` в `kube-system`. |
+| Объект                           | Назначение                                                                                                                        |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Namespace`cks-101`                   | Граница ресурсов и действия политик лабы.                                                                |
+| Deployments`frontend` и `backend` | Учебные приложения`viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}` с метками `app=frontend` и `app=backend`. |
+| Service`backend`                     | Стабильная точка доступа к backend на TCP`8080`.                                                                 |
+| default-deny NetworkPolicy             | Закрывает ingress и egress всем Pod namespace.                                                                                |
+| allow policy для backend            | Открывает TCP`8080` только от Pod с `app=frontend`.                                                                   |
+| DNS egress policy                      | Открывает UDP/TCP`53` только к `kube-dns` в `kube-system`.                                                           |
 
 ```mermaid
 flowchart LR
@@ -80,12 +83,12 @@ flowchart LR
 
 ## Инфраструктура
 
-| Компонент | Значение |
-|---|---|
-| Kubernetes | `1.36.0`, одноузловой kubeadm cluster |
-| CNI | Calico с поддержкой Kubernetes `NetworkPolicy` |
-| VPC | `10.101.0.0/16`, две публичные подсети |
-| Worker | `kubectl`, контекст `cluster1-admin@cluster1`, `check_result` |
+| Компонент | Значение                                                            |
+| ------------------ | --------------------------------------------------------------------------- |
+| Kubernetes         | `1.36.0`, одноузловой kubeadm cluster                          |
+| CNI                | Calico с поддержкой Kubernetes`NetworkPolicy`                  |
+| VPC                | `10.101.0.0/16`, две публичные подсети                 |
+| Worker             | `kubectl`, контекст `cluster1-admin@cluster1`, `check_result` |
 
 ## Развёртывание
 
@@ -103,15 +106,17 @@ kubectl config current-context
 ## Задания
 
 ---
-| **1** | **Приложение в отдельном namespace** |
-| :---: | :--- |
-| Что делаем | Создайте namespace `cks-101`. В нём создайте Deployments `frontend` и `backend` с образом `viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}`, заменив `${PING_PONG_DIGEST}` на **реальный** digest образа перед применением, и метками `app=frontend` и `app=backend` соответственно. Создайте Service `backend`, выбирающий `app=backend` и направляющий TCP `8080` на `8080`. `:latest` и прочие tags mutable: тот же tag может указывать на другой образ; digest фиксирует неизменяемый content-addressed образ. |
-| Критерии приёмки | Namespace и Pod обоих приложений существуют; Service `backend` имеет endpoint. |
+
+|           **1**           | **Приложение в отдельном namespace**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| :-----------------------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|       Что делаем       | Создайте namespace`cks-101`. В нём создайте Deployments `frontend` и `backend` с образом `viktoruj/ping_pong@sha256:${PING_PONG_DIGEST}`, заменив `${PING_PONG_DIGEST}` на **реальный** digest образа перед применением, и метками `app=frontend` и `app=backend` соответственно. Создайте Service `backend`, выбирающий `app=backend` и направляющий TCP `8080` на `8080`. `:latest` и прочие tags mutable: тот же tag может указывать на другой образ; digest фиксирует неизменяемый content-addressed образ. |
+| Критерии приёмки | Namespace и Pod обоих приложений существуют; Service`backend` имеет endpoint.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
 
 Не забудьте подставить реальный digest вместо `${PING_PONG_DIGEST}` - если оставить переменную буквально в манифесте, `kubectl apply` создаст Pod с невалидным image reference, и он никогда не станет Running. Проверьте себя: `kubectl get pods -n cks-101 -o jsonpath='{.items[*].spec.containers[0].image}'` должен показать полный `viktoruj/ping_pong@sha256:<64 hex символа>`, без буквальных `${...}`.
+
 </details>
 ---
 | **2** | **Default-deny ingress и egress** |
@@ -123,6 +128,7 @@ kubectl config current-context
 <summary>💡 Подсказка к заданию 2</summary>
 
 `podSelector: {}` (пустые скобки) - это не "нет селектора", а "выбрать ВСЕ Pod". Если вы напишете просто `podSelector:` без значения или вообще уберёте это поле, YAML может интерпретировать это иначе, чем вы ожидаете. Также не добавляйте пустые массивы `ingress: []`/`egress: []` явно - для default-deny достаточно указать `policyTypes`, не имея вообще никакого `ingress`/`egress` поля в spec.
+
 </details>
 ---
 | **3** | **Изоляция frontend/backend** |
@@ -134,6 +140,7 @@ kubectl config current-context
 <summary>💡 Подсказка к заданию 3</summary>
 
 Тестовый Pod для проверки нужно создавать с `--labels=app=frontend` (или `app=<другое>` для отрицательного теста) - именно эта метка, а не имя Pod, определяет, разрешит ли policy трафик. `viktoruj/ping_pong` не содержит shell/curl - используйте отдельный `curlimages/curl` Pod для проверки.
+
 </details>
 ---
 | **4** | **DNS после egress default-deny** |
@@ -145,6 +152,7 @@ kubectl config current-context
 <summary>💡 Подсказка к заданию 4</summary>
 
 Легко забыть про UDP - DNS обычно использует UDP/53, но может переключаться на TCP/53 для больших ответов. Разрешите оба протокола. Селектор для kube-dns обычно `k8s-app: kube-dns` в namespace `kube-system` - проверьте актуальный label через `kubectl get pods -n kube-system --show-labels | grep dns`.
+
 </details>
 ---
 | **5** | **Защита metadata endpoint** |
@@ -156,6 +164,7 @@ kubectl config current-context
 <summary>💡 Подсказка к заданию 5</summary>
 
 Если вы уже прошли задания 2-4 корректно, metadata endpoint должен блокироваться "бесплатно" - default-deny egress не делает исключения для `169.254.169.254`, если вы не создали для неё явное allow-правило. Если запрос всё же проходит - проверьте, не разрешили ли вы случайно широкий egress (например, `0.0.0.0/0` без `except`) в задании 3 или 4.
+
 </details>
 ---
 | **6** | **Ловушка AND vs OR и `ipBlock.except` для legacy egress** |
@@ -167,6 +176,7 @@ kubectl config current-context
 <summary>💡 Подсказка к заданию 6</summary>
 
 Это задание специально названо "ловушкой", потому что YAML-структура AND и OR отличается на один уровень отступа, и легко ошибиться неявно. AND (то, что нужно): `from: [{namespaceSelector: {...}, podSelector: {...}}]` - один элемент массива с двумя полями. OR (частая ошибка): `from: [{namespaceSelector: {...}}, {podSelector: {...}}]` - два отдельных элемента массива. Проверьте себя, создав тестовый Pod с той же меткой `app=legacy-client`, но в другом namespace (например `default`) - если он получает доступ, у вас OR вместо AND.
+
 </details>
 ---
 | **7** | **`hostNetwork` и границы portability `NetworkPolicy`** |
@@ -178,6 +188,7 @@ kubectl config current-context
 <summary>💡 Подсказка к заданию 7</summary>
 
 Не пытайтесь "исправить" это поведение или считать, что задание провалено, если metadata оказывается достижима - это ожидаемый результат для Calico: трафик `hostNetwork` Pod обрабатывается как трафик самой ноды, а не как трафик Pod, и NetworkPolicy к нему просто не применяется. Задание проверяет, что вы это ЗАФИКСИРОВАЛИ и объяснили как environment-specific наблюдение, а не как гарантию.
+
 </details>
 
 ## Проверка результата

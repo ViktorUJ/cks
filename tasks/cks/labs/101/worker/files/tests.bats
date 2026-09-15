@@ -53,21 +53,15 @@ client_run() {
 
 @test "2. Default-deny NetworkPolicy covers ingress and egress in cks-101" {
   echo '1' >> /var/work/tests/result/all
-
   policy=$(kubectl --context "$CTX" get networkpolicy -n "$NS" -o json 2>/dev/null | jq -r '
-    .items[]
-    | select(.spec.podSelector == {})
+    .items[] | select(.spec.podSelector == {})
     | select((.spec.policyTypes | sort) == ["Egress", "Ingress"])
     | select((.spec.ingress // []) | length == 0)
-    | select((.spec.egress // []) | length == 0)
-    | .metadata.name' | head -n1)
-
+    | select((.spec.egress // []) | length == 0) | .metadata.name' | head -n1)
   if [[ -n "$policy" ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+    echo '1' >> /var/work/tests/result/ok; result=0
   else
-    echo "HINT: No NetworkPolicy matches an empty podSelector ({}) with policyTypes [Ingress, Egress] and empty ingress/egress rules. Check that podSelector is exactly {} (not a specific app label), and that both ingress and egress arrays are present but empty."
-    echo "No default-deny ingress+egress policy found in $NS"
+    echo "HINT: Create podSelector: {}, policyTypes [Ingress, Egress], and no allow rules. ingress/egress may be omitted or empty; they must not allow traffic."
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -76,36 +70,40 @@ client_run() {
 @test "3. frontend identity reaches backend:8080; foreign identity is blocked" {
   echo '1' >> /var/work/tests/result/all
   mkdir -p /var/work/tests/artifacts/3
-
   backend_ip=$(kubectl --context "$CTX" get service backend -n "$NS" -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
   if [[ -z "$backend_ip" || "$backend_ip" == "None" ]]; then
-    echo "backend ClusterIP is unavailable" > /var/work/tests/artifacts/3/connectivity.txt
+    echo "backend ClusterIP unavailable" > /var/work/tests/artifacts/3/connectivity.txt
     [ 1 -eq 0 ]
   fi
 
+  # The foreign source receives only backend egress. A failed request now proves
+  # backend ingress selection, not the namespace default-deny egress policy.
+  kubectl --context "$CTX" delete networkpolicy checker-allow-foreign-egress -n "$NS" --ignore-not-found >/dev/null 2>&1
+  cat <<'EOF' | kubectl --context "$CTX" apply -f - >/dev/null
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: checker-allow-foreign-egress, namespace: cks-101}
+spec:
+  podSelector: {matchLabels: {app: foreign}}
+  policyTypes: [Egress]
+  egress:
+    - to: [{podSelector: {matchLabels: {app: backend}}}]
+      ports: [{protocol: TCP, port: 8080}]
+EOF
+  checker_policy_status=$?
   run client_run policy-frontend frontend "curl -fsS --max-time 5 http://$backend_ip:8080/"
-  frontend_status=$status
-  frontend_output=$output
+  frontend_status=$status; frontend_output=$output
   run client_run policy-foreign foreign "curl -fsS --max-time 5 http://$backend_ip:8080/"
-  foreign_status=$status
-  foreign_output=$output
-
+  foreign_status=$status; foreign_output=$output
+  kubectl --context "$CTX" delete networkpolicy checker-allow-foreign-egress -n "$NS" --ignore-not-found >/dev/null 2>&1
   {
-    echo "frontend exit=$frontend_status"
-    echo "$frontend_output"
-    echo "foreign exit=$foreign_status"
-    echo "$foreign_output"
+    echo "frontend exit=$frontend_status"; echo "$frontend_output"
+    echo "foreign egress-policy exit=$checker_policy_status"; echo "foreign exit=$foreign_status"; echo "$foreign_output"
   } > /var/work/tests/artifacts/3/connectivity.txt
-
-  if [[ "$frontend_status" -eq 0 && "$foreign_status" -ne 0 ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+  if [[ "$checker_policy_status" -eq 0 && "$frontend_status" -eq 0 && "$foreign_status" -ne 0 ]]; then
+    echo '1' >> /var/work/tests/result/ok; result=0
   else
-    if [[ "$frontend_status" -ne 0 ]]; then
-      echo "HINT: The 'frontend' identity could not reach backend:8080 (exit=$frontend_status). Check your allow-rule's podSelector/namespaceSelector actually matches label 'app: frontend', and that it permits port 8080."
-    elif [[ "$foreign_status" -eq 0 ]]; then
-      echo "HINT: A Pod with an unrelated identity ('foreign') COULD reach backend:8080 - your NetworkPolicy is too permissive. Check for an overly broad selector (e.g. missing podSelector, or a namespaceSelector matching more than intended)."
-    fi
+    echo "HINT: frontend needs egress and backend needs ingress on TCP/8080. A foreign Pod with checker-provided backend egress must still be denied by backend ingress."
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -114,18 +112,23 @@ client_run() {
 @test "4. frontend identity can resolve DNS through kube-dns on port 53" {
   echo '1' >> /var/work/tests/result/all
   mkdir -p /var/work/tests/artifacts/4
-
   run kubectl --context "$CTX" run policy-dns -n "$NS" --rm -i --restart=Never \
-    --image=busybox:1.36.1 --labels=app=frontend --command -- \
-    nslookup kubernetes.default.svc.cluster.local
+    --image=busybox:1.36.1 --labels=app=frontend --command -- nslookup kubernetes.default.svc.cluster.local
   dns_status=$status
   printf '%s\n' "$output" > /var/work/tests/artifacts/4/dns.txt
 
-  if [[ "$dns_status" -eq 0 ]] && grep -q "Name:" /var/work/tests/artifacts/4/dns.txt; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+  # Require the narrow DNS peer and both transports, and reject broad egress in
+  # policies which select frontend (including a podSelector of {}).
+  dns_policy_valid=$(kubectl --context "$CTX" get networkpolicy -n "$NS" -o json 2>/dev/null | jq -r '
+    def frontend_selected: .spec.podSelector == {} or .spec.podSelector.matchLabels.app == "frontend";
+    def backend_rule: ((.to // []) | length == 1) and .to[0].podSelector.matchLabels.app == "backend" and ((.to[0] | has("namespaceSelector")) | not) and (([.ports[]? | select(.port == 8080) | .protocol] | unique) == ["TCP"]);
+    def dns_rule: ((.to // []) | length == 1) and .to[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"] == "kube-system" and .to[0].podSelector.matchLabels["k8s-app"] == "kube-dns" and (([.ports[]? | select(.port == 53) | .protocol] | sort | unique) == ["TCP", "UDP"]);
+    [.items[] | select((.spec.policyTypes // []) | index("Egress")) | select(frontend_selected) | .spec.egress[]?] as $rules
+    | (($rules | any(dns_rule)) and ($rules | all(backend_rule or dns_rule)))')
+  if [[ "$dns_status" -eq 0 && "$dns_policy_valid" == "true" ]] && grep -q "Name:" /var/work/tests/artifacts/4/dns.txt; then
+    echo '1' >> /var/work/tests/result/ok; result=0
   else
-    echo "HINT: DNS resolution failed for a Pod labeled 'app: frontend'. Your default-deny egress policy must still allow UDP/TCP port 53 to kube-dns - check for an explicit egress rule permitting DNS, usually via a namespaceSelector matching kube-system plus port 53."
+    echo "HINT: Allow only backend TCP/8080 and kube-system/kube-dns on both UDP and TCP/53 for frontend-selected Pods; broad egress is not accepted."
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -188,67 +191,60 @@ client_run() {
 @test "6. AND-trap ingress policy and ipBlock except are correctly scoped" {
   echo '1' >> /var/work/tests/result/all
   mkdir -p /var/work/tests/artifacts/6
-
   policy=$(kubectl --context "$CTX" get networkpolicy allow-backend-ingress-from-legacy -n "$NS" -o json 2>/dev/null)
-  and_scoped=$(jq -r '
-    [.spec.ingress[]?.from[]? | select(has("namespaceSelector") and has("podSelector"))] | length > 0
-  ' <<<"$policy" 2>/dev/null)
-
+  and_scoped=$(jq -r '([.spec.ingress[]?.from[]?] | length > 0) and all(.spec.ingress[]?.from[]?; .namespaceSelector.matchLabels["kubernetes.io/metadata.name"] == "cks-101-legacy" and .podSelector.matchLabels.app == "legacy-client")' <<<"$policy" 2>/dev/null)
   egress_policy=$(kubectl --context "$CTX" get networkpolicy allow-legacy-egress -n cks-101-legacy -o json 2>/dev/null)
-  except_scoped=$(jq -r '
-    [.spec.egress[]?.to[]? | select(.ipBlock.cidr == "0.0.0.0/0") | select((.ipBlock.except // []) | index("169.254.169.254/32") != null)] | length > 0
-  ' <<<"$egress_policy" 2>/dev/null)
-
+  except_scoped=$(jq -r '([.spec.egress[]?.to[]? | select(.ipBlock.cidr == "0.0.0.0/0") | select((.ipBlock.except // []) == ["169.254.169.254/32"])] | length == 1)' <<<"$egress_policy" 2>/dev/null)
   backend_ip=$(kubectl --context "$CTX" get service backend -n "$NS" -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
 
-  run kubectl --context "$CTX" run policy-legacy-allowed -n cks-101-legacy --rm -i --restart=Never \
-    --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- sh -c \
-    "curl -fsS --max-time 5 http://$backend_ip:8080/"
-  legacy_in_ns_status=$status
-
-  run kubectl --context "$CTX" run policy-legacy-foreign -n default --rm -i --restart=Never \
-    --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- sh -c \
-    "curl -fsS --max-time 5 http://$backend_ip:8080/"
-  legacy_foreign_status=$status
-
-  run kubectl --context "$CTX" run policy-legacy-external -n cks-101-legacy --rm -i --restart=Never \
-    --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- sh -c \
-    "curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 https://1.1.1.1/ || true"
-  legacy_external_output=$output
-
-  run kubectl --context "$CTX" run policy-legacy-metadata -n cks-101-legacy --rm -i --restart=Never \
-    --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- sh -c \
-    "curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --connect-timeout 2 --max-time 3 http://169.254.169.254/ 2>&1 || true"
-  legacy_metadata_output=$output
-
+  # These policies give the two negative identities backend egress, so each
+  # probe detects one branch of a split-OR ingress policy.
+  kubectl --context "$CTX" delete networkpolicy checker-legacy-wrong-egress -n cks-101-legacy --ignore-not-found >/dev/null 2>&1
+  kubectl --context "$CTX" delete networkpolicy checker-legacy-local-egress -n "$NS" --ignore-not-found >/dev/null 2>&1
+  cat <<'EOF' | kubectl --context "$CTX" apply -f - >/dev/null
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: checker-legacy-wrong-egress, namespace: cks-101-legacy}
+spec:
+  podSelector: {matchLabels: {app: legacy-wrong-label}}
+  policyTypes: [Egress]
+  egress:
+    - to: [{podSelector: {matchLabels: {app: backend}}}]
+      ports: [{protocol: TCP, port: 8080}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: checker-legacy-local-egress, namespace: cks-101}
+spec:
+  podSelector: {matchLabels: {app: legacy-client}}
+  policyTypes: [Egress]
+  egress:
+    - to: [{podSelector: {matchLabels: {app: backend}}}]
+      ports: [{protocol: TCP, port: 8080}]
+EOF
+  checker_policy_status=$?
+  run kubectl --context "$CTX" run policy-legacy-allowed -n cks-101-legacy --rm -i --restart=Never --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- sh -c "curl -fsS --max-time 5 http://$backend_ip:8080/"
+  allowed_status=$status
+  run kubectl --context "$CTX" run policy-legacy-wrong-label -n cks-101-legacy --rm -i --restart=Never --image=curlimages/curl:8.11.1 --labels=app=legacy-wrong-label --command -- sh -c "curl -fsS --max-time 5 http://$backend_ip:8080/"
+  wrong_label_status=$status
+  run kubectl --context "$CTX" run policy-legacy-local -n "$NS" --rm -i --restart=Never --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- sh -c "curl -fsS --max-time 5 http://$backend_ip:8080/"
+  local_status=$status
+  run kubectl --context "$CTX" run policy-legacy-external -n cks-101-legacy --rm -i --restart=Never --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- sh -c "set +e; out=\$(curl -ksS -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 https://1.1.1.1/ 2>&1); rc=\$?; printf 'CURL_EXIT:%s\\n%s\\n' \"\$rc\" \"\$out\"; exit 0"
+  external_output=$output
+  run kubectl --context "$CTX" run policy-legacy-metadata -n cks-101-legacy --rm -i --restart=Never --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- sh -c "set +e; out=\$(curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --connect-timeout 2 --max-time 3 http://169.254.169.254/ 2>&1); rc=\$?; printf 'CURL_EXIT:%s\\n%s\\n' \"\$rc\" \"\$out\"; exit 0"
+  metadata_output=$output
+  kubectl --context "$CTX" delete networkpolicy checker-legacy-wrong-egress -n cks-101-legacy --ignore-not-found >/dev/null 2>&1
+  kubectl --context "$CTX" delete networkpolicy checker-legacy-local-egress -n "$NS" --ignore-not-found >/dev/null 2>&1
+  external_code=$(sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' <<<"$external_output" | tail -n1)
+  metadata_code=$(sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' <<<"$metadata_output" | tail -n1)
+  metadata_rc=$(sed -n 's/.*CURL_EXIT:\([0-9][0-9]*\).*/\1/p' <<<"$metadata_output" | tail -n1)
   {
-    echo "legacy_in_namespace_status=$legacy_in_ns_status"
-    echo "legacy_foreign_namespace_status=$legacy_foreign_status"
-    echo "legacy_external=$legacy_external_output"
-    echo "legacy_metadata=$legacy_metadata_output"
+    echo "checker_policy_apply_exit=$checker_policy_status"; echo "allowed=$allowed_status wrong_label=$wrong_label_status local=$local_status"; echo "external=$external_output"; echo "metadata=$metadata_output"
   } > /var/work/tests/artifacts/6/and-trap.txt
-
-  if [[ "$and_scoped" == "true" && "$except_scoped" == "true" \
-    && "$legacy_in_ns_status" -eq 0 && "$legacy_foreign_status" -ne 0 \
-    && "$legacy_external_output" != *"HTTPCODE:000"* \
-    && "$legacy_metadata_output" == *"HTTPCODE:000"* ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+  if [[ "$and_scoped" == true && "$except_scoped" == true && "$checker_policy_status" -eq 0 && "$allowed_status" -eq 0 && "$wrong_label_status" -ne 0 && "$local_status" -ne 0 && "$external_code" != 000 && "$metadata_code" == 000 && ( "$metadata_rc" == 7 || "$metadata_rc" == 28 ) ]]; then
+    echo '1' >> /var/work/tests/result/ok; result=0
   else
-    if [[ "$and_scoped" != "true" ]]; then
-      echo "HINT: NetworkPolicy 'allow-backend-ingress-from-legacy' must combine namespaceSelector AND podSelector inside the SAME 'from' entry - two separate 'from' list items are combined with OR, not AND, which is a common trap."
-    elif [[ "$except_scoped" != "true" ]]; then
-      echo "HINT: NetworkPolicy 'allow-legacy-egress' in cks-101-legacy must allow ipBlock 0.0.0.0/0 with 'except: [\"169.254.169.254/32\"]' - the metadata address must be explicitly excluded from the broad CIDR allow."
-    elif [[ "$legacy_in_ns_status" -ne 0 ]]; then
-      echo "HINT: legacy-client Pod inside cks-101-legacy could not reach backend - check that the AND-scoped rule matches this namespace's actual labels/podSelector."
-    elif [[ "$legacy_foreign_status" -eq 0 ]]; then
-      echo "HINT: legacy-client identity from an unrelated namespace (default) could still reach backend - the AND-trap rule is too permissive and is matching on namespaceSelector OR podSelector instead of AND."
-    elif [[ "$legacy_external_output" == *"HTTPCODE:000"* ]]; then
-      echo "HINT: The legacy Pod cannot reach an external address (1.1.1.1) at all - check the 0.0.0.0/0 egress rule is actually present, not just the except clause."
-    elif [[ "$legacy_metadata_output" != *"HTTPCODE:000"* ]]; then
-      echo "HINT: The legacy Pod CAN still reach 169.254.169.254 despite the except clause - check the CIDR notation '169.254.169.254/32' is exact (no typo, correct prefix length)."
-    fi
-    echo "and_scoped=$and_scoped except_scoped=$except_scoped in_ns=$legacy_in_ns_status foreign=$legacy_foreign_status external=$legacy_external_output metadata=$legacy_metadata_output"
+    echo "HINT: Allow only legacy-client in cks-101-legacy (both selectors in each peer), without extra peers; exclude metadata from broad legacy egress."
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -257,35 +253,26 @@ client_run() {
 @test "7. hostNetwork Pod networking is observed as implementation-dependent for this Calico lab" {
   echo '1' >> /var/work/tests/result/all
   mkdir -p /var/work/tests/artifacts/7
-
   pod=$(kubectl --context "$CTX" get pod hostnetwork-probe -n "$NS" -o json 2>/dev/null)
   host_network=$(jq -r '.spec.hostNetwork == true' <<<"$pod" 2>/dev/null)
   app_label=$(jq -r '.metadata.labels.app // ""' <<<"$pod" 2>/dev/null)
-
-  run kubectl --context "$CTX" exec -n "$NS" hostnetwork-probe --context "$CTX" -- \
-    sh -c "curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --connect-timeout 2 --max-time 3 http://169.254.169.254/ 2>&1 || true"
+  run kubectl --context "$CTX" exec -n "$NS" hostnetwork-probe -- sh -c "set +e; out=\$(curl -sS -o /dev/null -w 'HTTPCODE:%{http_code}' --connect-timeout 2 --max-time 3 http://169.254.169.254/ 2>&1); rc=\$?; printf 'CURL_EXIT:%s\\n%s\\n' \"\$rc\" \"\$out\"; exit 0"
   probe_output=$output
-  probe_http_code=$(printf '%s\n' "$probe_output" | sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' | tail -n1)
-
+  probe_http_code=$(sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' <<<"$probe_output" | tail -n1)
+  probe_rc=$(sed -n 's/.*CURL_EXIT:\([0-9][0-9]*\).*/\1/p' <<<"$probe_output" | tail -n1)
+  task5_output=$(cat /var/work/tests/artifacts/5/metadata.output 2>/dev/null || true)
+  task5_http_code=$(sed -n 's/^http_code=\([0-9][0-9][0-9]\).*/\1/p' <<<"$task5_output" | tail -n1)
+  task5_rc=$(sed -n 's/.*CURL_EXIT:\([0-9][0-9]*\).*/\1/p' <<<"$task5_output" | tail -n1)
   {
     printf '%s\n' "$probe_output"
-    echo "task5_result=network-deny (http_code=000)"
-    echo "task7_result=observed HTTP response for hostNetwork Pod in this Calico lab (http_code=${probe_http_code:-unknown}); environment-specific, not a universal NetworkPolicy guarantee"
+    echo "task5_result=curl_exit=${task5_rc:-missing} http_code=${task5_http_code:-missing}"
+    echo "task7_result=curl_exit=${probe_rc:-missing} http_code=${probe_http_code:-missing}; observed for this Calico lab only, not a universal NetworkPolicy guarantee"
   } > /var/work/tests/artifacts/7/comparison.txt
   printf '%s\n' "$probe_output" > /var/work/tests/artifacts/7/hostnetwork-metadata.output
-
-  if [[ "$host_network" == "true" && "$app_label" == "frontend" && -n "$probe_http_code" && "$probe_http_code" != "000" ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+  if [[ "$host_network" == true && "$app_label" == frontend && "$task5_http_code" == 000 && ( "$task5_rc" == 7 || "$task5_rc" == 28 ) && -n "$probe_http_code" && "$probe_http_code" != 000 ]]; then
+    echo '1' >> /var/work/tests/result/ok; result=0
   else
-    if [[ "$host_network" != "true" ]]; then
-      echo "HINT: Pod 'hostnetwork-probe' must have spec.hostNetwork: true - this task specifically observes how NetworkPolicy interacts with host networking."
-    elif [[ "$app_label" != "frontend" ]]; then
-      echo "HINT: Pod 'hostnetwork-probe' must carry label 'app: frontend' so it is covered by the same NetworkPolicy selectors as the rest of this task."
-    elif [[ -z "$probe_http_code" || "$probe_http_code" == "000" ]]; then
-      echo "HINT: Expected an actual HTTP response code from the metadata probe (proving hostNetwork bypasses the CNI-enforced NetworkPolicy in this environment), but got no response. Check the Pod is actually Running with hostNetwork: true applied."
-    fi
-    echo "host_network=$host_network app_label=$app_label probe_http_code=${probe_http_code:-missing} output=$probe_output"
+    echo "HINT: Record actual curl exit and HTTP codes. The normal frontend probe must be network-denied; hostNetwork behavior is an environment-specific observation."
     result=1
   fi
   [ "$result" -eq 0 ]
