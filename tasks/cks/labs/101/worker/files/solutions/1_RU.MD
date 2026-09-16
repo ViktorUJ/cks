@@ -18,7 +18,7 @@ IMAGE_ID=$(kubectl get pod digest-resolver \
 DIGEST=$(printf '%s\n' "$IMAGE_ID" \
   | sed -n 's/.*@\(sha256:[a-f0-9]\{64\}\).*/\1/p')
 test -n "$DIGEST" || {
-  echo "Could not extract digest from imageID: $IMAGE_ID" >&2
+  echo "Не удалось извлечь digest из imageID: $IMAGE_ID" >&2
   exit 1
 }
 
@@ -158,7 +158,7 @@ kubectl -n cks-101 run verify-frontend --rm -i --restart=Never \
   sh -c "curl -fsS --max-time 5 http://${BACKEND_IP}:8080/"
 ```
 
-Foreign egress is temporarily opened only to backend; therefore its failed request tests backend ingress rather than default-deny egress.
+Временное разрешение egress для foreign открывает доступ только к backend, поэтому неудачный запрос проверяет ingress backend, а не egress default-deny.
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -310,10 +310,10 @@ spec:
             except: [169.254.169.254/32]
 ```
 
-The selectors in one peer are AND. The following is wrong because its two peers are OR:
+Селекторы в одном peer объединяются через AND. Следующий вариант неверен, потому что его два peer объединяются через OR:
 
 ```yaml
-# Do not apply: one namespaceSelector peer plus one podSelector peer is OR.
+# Не применяйте: отдельные peer с namespaceSelector и podSelector объединяются через OR.
 from:
   - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: cks-101-legacy}}
   - podSelector: {matchLabels: {app: legacy-client}}
@@ -327,7 +327,7 @@ kubectl -n cks-101-legacy run verify-legacy-allowed --rm -i --restart=Never \
   --image=curlimages/curl:8.11.1 --labels=app=legacy-client --command -- \
   sh -c "curl -fsS --max-time 5 http://${BACKEND_IP}:8080/"
 
-# A wrong label in the legacy namespace has ordinary egress but must fail backend ingress.
+# Неверная метка в legacy namespace имеет обычный egress, но должна быть отклонена ingress backend.
 set +e
 kubectl -n cks-101-legacy run verify-legacy-wrong-label --rm -i --restart=Never \
   --image=curlimages/curl:8.11.1 --labels=app=wrong-label --command -- \
@@ -335,7 +335,7 @@ kubectl -n cks-101-legacy run verify-legacy-wrong-label --rm -i --restart=Never 
 wrong_label_rc=$?
 set -e
 
-# The same label in cks-101 needs temporary egress to make this an ingress test.
+# Той же метке в cks-101 требуется временный egress, чтобы это была проверка ingress.
 cat <<'EOF' | kubectl apply -f -
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -411,7 +411,7 @@ task5_code=$(printf '%s\n' "$task5_out" | sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]
 } > /var/work/tests/artifacts/7/comparison.txt
 ```
 
-`hostNetwork` behaviour is CNI/environment-specific; record the observation rather than asserting a universal result.
+Поведение `hostNetwork` зависит от CNI и окружения; зафиксируйте наблюдение вместо утверждения универсального результата.
 
 ## Быстрая самопроверка
 
