@@ -1,86 +1,105 @@
-[Eng version](README.MD) · [Versión en español](README_ES.MD) · [Version française](README_FR.MD) · [Deutsche Version](README_DE.MD) · [ქართული ვერსია](README_GE.MD) · [繁體中文版](README_TW.MD) · [日本語版](README_JP.MD)
-
-# Lab 101 — NetworkPolicy: default-deny, изоляция и защита metadata
+# Lab 101 — NetworkPolicy: default-deny, изоляция и EC2 IMDS
 
 ## Описание
 
-`NetworkPolicy` работает как allow-list: после default-deny необходимые потоки нужно вернуть явными правилами. Enforcement выполняет CNI; в этой lab используется Calico. Базовые selectors и NetworkPolicy разобраны в [главе CKA 34](../../../cka/course/34/ru.md).
+`NetworkPolicy` работает как allow-list: после default-deny необходимые потоки возвращаются только явными правилами. Принудительное применение правил обеспечивает Calico. Worker этой лабораторной работы — EC2 instance, управляемый Terraform; его Instance Metadata Service (IMDS) доступен по `http://169.254.169.254/`. Terraform явно включает HTTP endpoint, оставляет IMDSv1 GET допустимым для безопасного probe и устанавливает response hop limit `2`, чтобы до default-deny обычный Pod мог подтвердить сетевую достижимость IMDS.
 
-Лаба изолирует небольшое приложение, оставляет ему только backend и DNS, проверяет защиту metadata и показывает границы переносимости `hostNetwork`.
-
-## Цель
-
-Настроить минимальный ingress/egress allow-list, закрепить образ immutable digest, корректно использовать AND selectors и `ipBlock.except`, а также записать security evidence.
-
-## Что мы создаём и зачем
-
-| Объект | Что это и зачем |
-| --- | --- |
-| Namespace `cks-101` | Изолированная граница ресурсов и политик lab. |
-| Deployments `frontend`, `backend` | Приложения с identity `app=frontend` и `app=backend`. |
-| Service `backend` | Стабильный TCP-доступ к backend на `8080`. |
-| `default-deny` | Закрывает ingress и egress для всех Pod `cks-101`. |
-| Frontend/backend policies | Возвращают только поток frontend → backend:8080. |
-| `allow-frontend-dns` | Открывает frontend только DNS к kube-dns/CoreDNS. |
-| `cks-101-legacy`, `legacy-client` | Проверяют AND selectors и исключение metadata из broad egress. |
-| `hostnetwork-probe` | Фиксирует environment-specific наблюдение для `hostNetwork`. |
-
-## Инфраструктура
-
-| Компонент | Значение |
-| --- | --- |
-| vpc | `10.101.0.0/16`, две публичные подсети |
-| ssh-keys | Доступ к worker по ключу lab-окружения |
-| k8s-1 | Kubernetes `v1.36.0`, kubeadm, Calico |
-| worker | Настроенные `kubectl` и `check_result` |
+Проверка обращается только к корню IMDS и сохраняет лишь HTTP-код и exit code `curl`: она не запрашивает и не печатает metadata или credentials. Любой HTTP-ответ (`1xx`–`5xx`, включая ожидаемый от конфигурации IMDS `401`) — evidence достижимости сети, но не доказательство доступа к credentials.
 
 ## Развёртывание
+
+На управляющей машине запустите окружение:
 
 ```bash
 TASK=101 make run_cks_task
 ```
 
-Работайте с worker, где уже настроен `kubectl`.
+Работайте на worker. Перед началом удалите namespaces от предыдущей попытки, включая независимый control namespace: это исключает старые policy и probe из доказательства.
 
 ```bash
+kubectl delete namespace cks-101 cks-101-legacy imds-control --ignore-not-found --wait=true
+printf 'EC2 IMDS target: %s\n' 'http://169.254.169.254/'
 time_left
-check_result
 ```
+
+Самостоятельно проверяйте каждый этап на своих ресурсах; `check_result` запускайте после выполнения заданий, а эталонное решение открывайте только после собственной попытки или при затруднении.
+
+## Цель
+
+Настроить минимальный ingress/egress allow-list, закрепить image digest, доказать семантику AND selector и точный `ipBlock.except` для IMDS, а затем сравнить обычный Pod с `hostNetwork`, не предполагая заранее универсальный результат.
+
+## Инфраструктура
+
+| Компонент | Назначение |
+|---|---|
+| `cks-101` | namespace приложения и ваших `NetworkPolicy` |
+| `cks-101-legacy` | namespace сценария legacy-клиента |
+| `imds-control` | независимый namespace без policy для baseline и повторного control probe |
+| worker EC2 | Terraform-managed EC2 instance с IMDS `http://169.254.169.254/` |
+| CNI | Calico |
 
 ## Задания
 
-| № | Задание |
-| :---: | --- |
-| **1** | Создайте namespace `cks-101`. Временно запустите resolver Pod из `viktoruj/ping_pong:latest`, дождитесь фактического pull, определите текущий `sha256` digest и удалите resolver. Создайте Deployments `frontend` и `backend` с метками `app=frontend`/`app=backend` и **одним и тем же** `viktoruj/ping_pong@sha256:<64hex>`. Создайте Service `backend`, TCP `8080` → `8080`. **Критерии:** оба Deployment Ready, immutable references совпадают, mutable tag не используется, Service имеет endpoint. |
-| **2** | В `cks-101` создайте `NetworkPolicy` `default-deny`: `podSelector: {}`, `policyTypes: [Ingress, Egress]`, без allow-rules. **Критерии:** policy охватывает все Pod и закрывает оба направления. |
-| **3** | Создайте `allow-frontend-egress-to-backend` и `allow-backend-ingress-from-frontend`. Первая выбирает `app=frontend` и разрешает только egress к `app=backend`, TCP/8080; вторая выбирает `app=backend` и разрешает только ingress от `app=frontend`, TCP/8080. **Критерии:** frontend identity достигает backend, foreign identity не проходит; selectors и port ограничены указанным потоком. |
-| **4** | Создайте `allow-frontend-dns`, выбирающую `app=frontend` и разрешающую только DNS к kube-dns/CoreDNS в `kube-system` по UDP/53 и TCP/53. **Критерии:** DNS lookup из frontend identity успешен, broad egress не добавлен. |
-| **5** | Убедитесь, что allow-list не разрешает `169.254.169.254`. Сохраните `/var/work/tests/artifacts/5/metadata.output` с `CURL_EXIT:<n>`, `HTTPCODE:000` и классификацией `level=network`. HTTP `401/403` — HTTP response, а не network deny. **Критерии:** evidence содержит network failure/timeout; дополнительная deny-policy для metadata не нужна. |
-| **6** | Создайте `cks-101-legacy` и Deployment `legacy-client` (`curlimages/curl:8.11.1`, `sleep 3600`, `app=legacy-client`) без default-deny namespace. Создайте `allow-backend-ingress-from-legacy` для backend:8080: `namespaceSelector` для `cks-101-legacy` и `podSelector` `app=legacy-client` должны быть в **одном** `from` peer (AND). В legacy namespace создайте `allow-legacy-egress` для `legacy-client`: `0.0.0.0/0` с `except: 169.254.169.254/32`. **Критерии:** target, AND peer, TCP/8080 и except имеют указанную область действия. |
-| **7** | Создайте `hostnetwork-probe` в `cks-101` с `hostNetwork: true`, `app=frontend` и образом `curlimages/curl:8.11.1`. Выполните тот же metadata probe, сохраните `/var/work/tests/artifacts/7/hostnetwork-metadata.output` и сравнение с task 5 в `/var/work/tests/artifacts/7/comparison.txt`. **Критерии:** оба фактических результата и явная пометка `environment-specific` записаны; конкретный HTTP outcome не требуется. |
+---
+| **1** | **Приложение** |
+| :---: | :--- |
+| Что делаем | Namespace `cks-101`; Deployments `frontend` и `backend` с `replicas: 1`, без `hostNetwork`, одинаковым `viktoruj/ping_pong@sha256:<64hex>`; Service `backend` TCP/8080. |
+| Критерии приёмки | Обе replicas Ready, image references одинаковы, Service имеет endpoint. |
+| Проверка | ``kubectl -n cks-101 get deploy,svc,endpoints``<br/>**Ожидаем:** Одна ready replica каждого Deployment и TCP/8080 endpoint. |
 
-## Проверка результата
+---
+| **2** | **Baseline, default-deny и повторный probe** |
+| :---: | :--- |
+| Что делаем | В чистом `imds-control` без policy выполните baseline curl к `http://169.254.169.254/`; до policy также измерьте frontend → backend и frontend → IMDS в `cks-101`. Создайте NetworkPolicy `default-deny` без allow-rules, подтвердите в `cks-101` `HTTPCODE:000` и curl `7`/`28`, затем повторите IMDS curl в `imds-control`. |
+| Критерии приёмки | Оба control результата имеют `CURL_EXIT:0` + HTTP `1xx`–`5xx`; probe в `cks-101` после default-deny имеет `HTTPCODE:000` и curl `7`/`28`. HTTP-ответ — достижимость, а не deny. |
+| Проверка | ``kubectl -n cks-101 get networkpolicy default-deny -o yaml``<br/>**Ожидаем:** Пустой selector, Ingress/Egress, нет allow-rules. |
+
+---
+| **3** | **Точный поток приложения** |
+| :---: | :--- |
+| Что делаем | Создайте frontend egress и backend ingress TCP/8080; проверьте frontend allow и foreign deny с временным source egress. |
+| Критерии приёмки | Разрешён только frontend → backend:8080; foreign blocked. |
+| Проверка | ``kubectl -n cks-101 get networkpolicy -o yaml``<br/>**Ожидаем:** Нет widening allow policy. |
+
+---
+| **4** | **DNS** |
+| :---: | :--- |
+| Что делаем | Создайте frontend DNS egress только к kube-system/kube-dns, exact UDP/53 и TCP/53; выполните nslookup. |
+| Критерии приёмки | DNS allow-set ровно UDP/53+TCP/53, без endPort/extra port. |
+| Проверка | ``kubectl -n cks-101 get networkpolicy allow-frontend-dns -o yaml``<br/>**Ожидаем:** DNS probe успешен, ports exact. |
+
+---
+| **5** | **IMDS evidence** |
+| :---: | :--- |
+| Что делаем | После сохранённого baseline повторите `http://169.254.169.254/` из frontend и независимого `imds-control`; сохраните artifact с target, `imds_cidr=169.254.169.254/32`, отдельными numeric `baseline_`, `control_` и `deny_` значениями `CURL_EXIT`/`HTTPCODE`, `level=network`. |
+| Критерии приёмки | Baseline и control подтверждают HTTP-достижимость; frontend после policy имеет HTTP `000` плюс curl `7`/`28`. |
+| Проверка | ``cat /var/work/tests/artifacts/5/metadata.output``<br/>**Ожидаем:** Один target, точный IMDS `/32`, отдельные baseline/control/deny transport evidence. |
+
+---
+| **6** | **Legacy AND и IMDS except** |
+| :---: | :--- |
+| Что делаем | Создайте legacy namespace/client, AND backend ingress и `allow-legacy-egress` с literal `169.254.169.254/32` в `except`; проверьте IMDS deny, actual legacy backend allow и wrong peers deny. |
+| Критерии приёмки | IMDS denied, actual legacy backend allowed, wrong label/namespace denied. |
+| Проверка | ``kubectl -n cks-101-legacy get networkpolicy allow-legacy-egress -o yaml``<br/>**Ожидаем:** `0.0.0.0/0` с literal `169.254.169.254/32` в единственном `except` и один AND peer. |
+
+---
+| **7** | **Наблюдение hostNetwork** |
+| :---: | :--- |
+| Что делаем | Создайте hostnetwork-probe и сохраните IMDS probe/artifacts comparison с task 5. |
+| Критерии приёмки | Evidence numeric, comparison consistent, environment-specific. |
+| Проверка | ``cat /var/work/tests/artifacts/7/comparison.txt``<br/>**Ожидаем:** Task5/task7 values match artifacts; no fixed outcome. |
+
+## Проверка
 
 ```bash
 check_result
 ```
 
-Checker проверит семь заданий.
-
-## Решение
+Checker создаёт и удаляет собственные `imds-control` namespace и probes: до и после deny в `cks-101` он подтверждает, что реальный IMDS отвечает из независимого namespace без policy. Он не доверяет control-ресурсам от предыдущей попытки и не заменяет самостоятельные baseline/runtime-проверки. Дополнительные policy, расширяющие разрешённые потоки, приводят к ошибке.
 
 Эталонное решение: [worker/files/solutions/1_RU.MD](worker/files/solutions/1_RU.MD).
 
-## Покрытие мок-экзаменов
-
-- CKS mock 01 — task 8 `Network policy`;
-- CKS mock 02 — task 8 `Network policy`;
-- CKS mock 03 — task 8 `Network policy`;
-- CKS mock 04 — task 5 `Network policy`.
-
-Lab 101 расширяет базовую mock-тему security-проверками egress, metadata и selector semantics.
-
-## Удаление кластера и ресурсов
+## Удаление
 
 ```bash
 TASK=101 make delete_cks_task

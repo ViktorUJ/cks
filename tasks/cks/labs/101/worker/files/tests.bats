@@ -4,250 +4,332 @@ export KUBECONFIG=/home/ubuntu/.kube/config
 CTX="cluster1-admin@cluster1"
 NS="cks-101"
 LEGACY_NS="cks-101-legacy"
+CONTROL_NS="imds-control"
+IMDS_URL=http://169.254.169.254/
+IMDS_CIDR=169.254.169.254/32
+CHECKER_LABEL="cks.lab/checker=101"
+
+setup() {
+  CHECKER_PREFIX="cks-101-checker-${BATS_TEST_NUMBER}-$$"
+  CONTROL_CREATED=false
+}
+
+teardown() {
+  cleanup
+}
+
+cleanup() {
+  local namespace
+  for namespace in "$NS" "$LEGACY_NS"; do
+    kubectl --context "$CTX" -n "$namespace" delete pod -l "$CHECKER_LABEL" \
+      --ignore-not-found --wait=false >/dev/null 2>&1 || true
+    kubectl --context "$CTX" -n "$namespace" delete networkpolicy -l "$CHECKER_LABEL" \
+      --ignore-not-found --wait=true >/dev/null 2>&1 || true
+  done
+  if [[ "${CONTROL_CREATED:-false}" == true ]]; then
+    kubectl --context "$CTX" delete namespace "$CONTROL_NS" \
+      --ignore-not-found --wait=true >/dev/null 2>&1 || true
+  fi
+}
+
+create_probe() {
+  local namespace=$1 name=$2 labels=$3 image=${4:-curlimages/curl:8.11.1}
+  kubectl --context "$CTX" -n "$namespace" run "$name" --restart=Never --image="$image" \
+    --labels="$labels,$CHECKER_LABEL" --command -- sh -c 'sleep 300' >/dev/null
+  kubectl --context "$CTX" -n "$namespace" wait --for=condition=Ready "pod/$name" --timeout=90s >/dev/null
+}
+
+curl_probe() {
+  local namespace=$1 pod=$2 destination=$3
+  kubectl --context "$CTX" -n "$namespace" exec "$pod" -- sh -c \
+    "set +e; code=\$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 '$destination'); rc=\$?; printf 'CURL_EXIT:%s\\nHTTPCODE:%s\\n' \"\$rc\" \"\$code\"; exit 0"
+}
+
+assert_reachable() {
+  local output=$1 rc code
+  rc=$(sed -n 's/^CURL_EXIT:\([0-9][0-9]*\)$/\1/p' <<<"$output" | tail -1)
+  code=$(sed -n 's/^HTTPCODE:\([0-9][0-9][0-9]\)$/\1/p' <<<"$output" | tail -1)
+  [[ "$rc" == 0 && "$code" =~ ^[1-5][0-9][0-9]$ ]]
+}
+
+assert_transport_denied() {
+  local output=$1 rc code
+  rc=$(sed -n 's/^CURL_EXIT:\([0-9][0-9]*\)$/\1/p' <<<"$output" | tail -1)
+  code=$(sed -n 's/^HTTPCODE:\([0-9][0-9][0-9]\)$/\1/p' <<<"$output" | tail -1)
+  [[ "$code" == 000 && "$rc" =~ ^(7|28)$ ]]
+}
+
+artifact_probe_values() {
+  local artifact=$1 prefix=${2:-} exits codes
+  mapfile -t exits < <(grep -E "^${prefix}CURL_EXIT:[0-9]+$" "$artifact" 2>/dev/null)
+  mapfile -t codes < <(grep -E "^${prefix}HTTPCODE:[0-9]{3}$" "$artifact" 2>/dev/null)
+  [[ ${#exits[@]} -eq 1 && ${#codes[@]} -eq 1 ]] || return 1
+  printf '%s %s\n' "${exits[0]#${prefix}CURL_EXIT:}" "${codes[0]#${prefix}HTTPCODE:}"
+}
+
+comparison_probe_values() {
+  local key=$1 comparison=$2 line rc code
+  line=$(sed -n "s/^${key}=//p" "$comparison" 2>/dev/null | tail -1)
+  [[ -n "$line" && "$line" =~ curl_exit=([0-9]+) ]] || return 1
+  rc=${BASH_REMATCH[1]}
+  [[ "$line" =~ http_code=([0-9]{3}) ]] || return 1
+  code=${BASH_REMATCH[1]}
+  printf '%s %s\n' "$rc" "$code"
+}
+
+no_unexpected_student_policies() {
+  local namespace=$1
+  shift
+  local expected actual
+  expected=$(printf '%s\n' "$@" | sort)
+  actual=$(kubectl --context "$CTX" -n "$namespace" get networkpolicy -o json 2>/dev/null | \
+    jq -r '.items[].metadata.name' | sort)
+  [[ "$actual" == "$expected" ]]
+}
+
+apply_checker_policy() {
+  local namespace=$1 name=$2 spec=$3
+  {
+    cat <<EOF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: $name
+  namespace: $namespace
+  labels: {cks.lab/checker: "101"}
+spec:
+EOF
+    printf '%b\n' "$spec"
+  } | kubectl --context "$CTX" apply -f - >/dev/null
+  # Allow Calico to observe the policy before the probe.
+  sleep 2
+}
+
+create_imds_control() {
+  # This namespace belongs to the checker. Recreate it so no prior lab state can supply the proof.
+  kubectl --context "$CTX" delete namespace "$CONTROL_NS" --ignore-not-found --wait=true >/dev/null 2>&1 || true
+  kubectl --context "$CTX" create namespace "$CONTROL_NS" >/dev/null
+  CONTROL_CREATED=true
+}
+
+control_imds_probe() {
+  local name=$1 output
+  create_probe "$CONTROL_NS" "$name" 'role=imds-control'
+  output=$(curl_probe "$CONTROL_NS" "$name" "$IMDS_URL")
+  assert_reachable "$output" || return 1
+  printf '%s\n' "$output"
+}
+
+backend_ip() {
+  kubectl --context "$CTX" -n "$NS" get endpoints backend -o jsonpath='{.subsets[0].addresses[0].ip}'
+}
 
 @test "0 Init" {
-  echo '' > /var/work/tests/result/all
-  echo '' > /var/work/tests/result/ok
-  echo '' > /var/work/tests/result/requests
+  mkdir -p /var/work/tests/result
+  : > /var/work/tests/result/all
+  : > /var/work/tests/result/ok
+  : > /var/work/tests/result/requests
 }
 
-@test "1. Immutable frontend and backend application is ready" {
-  echo '1' >> /var/work/tests/result/all
-  state=$(kubectl --context "$CTX" get namespace "$NS" -o json 2>/dev/null | jq -r '
-    .metadata.name == "cks-101"')
-  apps=$(kubectl --context "$CTX" get deployment frontend backend -n "$NS" -o json 2>/dev/null | jq -r '
+@test "1. Immutable non-hostNetwork frontend and backend are ready with their live labels" {
+  echo 1 >> /var/work/tests/result/all
+  deployments=$(kubectl --context "$CTX" get deploy frontend backend -n "$NS" -o json 2>/dev/null | jq -r '
     (.items | length == 2) and
-    ([.items[] | .metadata.name] | sort == ["backend", "frontend"]) and
-    ([.items[] | .status.readyReplicas // 0] | all(. >= 1)) and
-    ([.items[] | .spec.template.metadata.labels.app] | sort == ["backend", "frontend"]) and
-    ([.items[] | .spec.template.spec.containers[0].image] as $images |
-      ($images | length == 2) and
-      ($images | unique | length == 1) and
-      ($images | all(test("^viktoruj/ping_pong@sha256:[a-f0-9]{64}$"))))')
+    ([.items[].metadata.name] | sort == ["backend", "frontend"]) and
+    ([.items[].spec.replicas] == [1, 1]) and
+    ([.items[] | (.status.readyReplicas // 0) >= 1] | all) and
+    ([.items[].spec.template.metadata.labels.app] | sort == ["backend", "frontend"]) and
+    (([.items[].spec.template.spec.hostNetwork // false] | any) | not) and
+    ([.items[].spec.template.spec.containers[0].image] | unique | length == 1) and
+    ([.items[].spec.template.spec.containers[0].image] | all(test("^viktoruj/ping_pong@sha256:[a-f0-9]{64}$")))')
+  pods=$(kubectl --context "$CTX" get pod -n "$NS" -l 'app in (frontend,backend)' -o json 2>/dev/null | jq -r '
+    [.items[] | select(.metadata.name != "hostnetwork-probe")] as $workloads |
+    ($workloads | length >= 2) and
+    ([$workloads[] | select(.metadata.labels.app == "frontend" or .metadata.labels.app == "backend") |
+      ((.spec.hostNetwork // false) | not) and
+      ((.status.conditions // []) | any(.type == "Ready" and .status == "True"))] | all)')
   service=$(kubectl --context "$CTX" get service backend -n "$NS" -o json 2>/dev/null | jq -r '
-    .spec.selector == {"app":"backend"} and
-    (.spec.ports | length == 1) and
-    .spec.ports[0].protocol == "TCP" and
-    .spec.ports[0].port == 8080 and
-    .spec.ports[0].targetPort == 8080')
-  endpoint=$(kubectl --context "$CTX" get endpoints backend -n "$NS" -o json 2>/dev/null | jq -r '
-    any(.subsets[]?; (.addresses // []) | length > 0)')
-  if [[ "$state" == true && "$apps" == true && "$service" == true && "$endpoint" == true ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+    .spec.selector == {"app":"backend"} and (.spec.ports | length == 1) and
+    .spec.ports[0].protocol == "TCP" and .spec.ports[0].port == 8080 and .spec.ports[0].targetPort == 8080')
+  endpoint=$(kubectl --context "$CTX" get endpoints backend -n "$NS" -o json 2>/dev/null | jq -r 'any(.subsets[]?; (.addresses // []) | length > 0)')
+  if [[ "$deployments" == true && "$pods" == true && "$service" == true && "$endpoint" == true ]]; then
+    echo 1 >> /var/work/tests/result/ok
   else
-    echo "HINT: Create ready frontend/backend Deployments with matching pinned images and a backend Service selecting app=backend with one TCP 8080 to 8080 port and an endpoint."
-    result=1
+    echo "HINT: Create ready, non-hostNetwork frontend/backend pods with live app labels, one pinned image, and a TCP/8080 backend Service." >&2
+    false
   fi
-  [ "$result" -eq 0 ]
 }
 
-@test "2. default-deny isolates all pods for ingress and egress" {
-  echo '1' >> /var/work/tests/result/all
-  valid=$(kubectl --context "$CTX" get networkpolicy default-deny -n "$NS" -o json 2>/dev/null | jq -r '
-    .spec.podSelector == {} and
-    ((.spec.policyTypes | sort) == ["Egress", "Ingress"]) and
-    ((.spec.ingress // []) | length == 0) and
-    ((.spec.egress // []) | length == 0)')
-  if [[ "$valid" == true ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+@test "2. Student default-deny blocks cks-101 while independent imds-control stays reachable" {
+  echo 1 >> /var/work/tests/result/all
+  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create namespace $NS and default-deny before checking isolation." >&2; false; fi
+  shape=$(kubectl --context "$CTX" get networkpolicy default-deny -n "$NS" -o json 2>/dev/null | jq -r '
+    .spec.podSelector == {} and (.spec.policyTypes | sort) == ["Egress", "Ingress"] and
+    ((.spec.ingress // []) | length == 0) and ((.spec.egress // []) | length == 0)')
+  create_imds_control
+  control_baseline=$(control_imds_probe "${CHECKER_PREFIX}-control-baseline")
+  create_probe "$NS" "${CHECKER_PREFIX}-default-deny" 'role=unselected'
+  denied=$(curl_probe "$NS" "${CHECKER_PREFIX}-default-deny" "$IMDS_URL")
+  control_after_deny=$(control_imds_probe "${CHECKER_PREFIX}-control-after-deny")
+  if [[ "$shape" == true ]] && assert_reachable "$control_baseline" && \
+     assert_transport_denied "$denied" && assert_reachable "$control_after_deny"; then
+    echo 1 >> /var/work/tests/result/ok
   else
-    echo "HINT: default-deny must select all pods, define Ingress and Egress, and contain no allow rules."
-    result=1
+    echo "HINT: default-deny must yield HTTP 000 with curl 7/28 for an unselected cks-101 probe, while the checker-owned independent imds-control namespace reaches real EC2 IMDS both before and after." >&2
+    false
   fi
-  [ "$result" -eq 0 ]
 }
 
-@test "3. Frontend and backend policies permit only TCP 8080" {
-  echo '1' >> /var/work/tests/result/all
+@test "3. Student frontend reaches the real backend while a foreign identity is denied" {
+  echo 1 >> /var/work/tests/result/all
+  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create $NS, frontend/backend and their exact allow policies before runtime flow checks." >&2; false; fi
   frontend=$(kubectl --context "$CTX" get networkpolicy allow-frontend-egress-to-backend -n "$NS" -o json 2>/dev/null | jq -r '
-    .spec.podSelector == {"matchLabels":{"app":"frontend"}} and
-    .spec.policyTypes == ["Egress"] and
-    (.spec.egress | length == 1) and
-    (.spec.egress[0].to | length == 1) and
-    .spec.egress[0].to[0].podSelector == {"matchLabels":{"app":"backend"}} and
-    (.spec.egress[0].to[0] | has("namespaceSelector") | not) and
-    (.spec.egress[0].to[0] | has("ipBlock") | not) and
-    .spec.egress[0].ports == [{"protocol":"TCP","port":8080}]')
+    .spec.podSelector == {"matchLabels":{"app":"frontend"}} and .spec.policyTypes == ["Egress"] and
+    .spec.egress == [{"to":[{"podSelector":{"matchLabels":{"app":"backend"}}}],"ports":[{"protocol":"TCP","port":8080}]}]')
   backend=$(kubectl --context "$CTX" get networkpolicy allow-backend-ingress-from-frontend -n "$NS" -o json 2>/dev/null | jq -r '
-    .spec.podSelector == {"matchLabels":{"app":"backend"}} and
-    .spec.policyTypes == ["Ingress"] and
-    (.spec.ingress | length == 1) and
-    (.spec.ingress[0].from | length == 1) and
-    .spec.ingress[0].from[0].podSelector == {"matchLabels":{"app":"frontend"}} and
-    (.spec.ingress[0].from[0] | has("namespaceSelector") | not) and
-    (.spec.ingress[0].from[0] | has("ipBlock") | not) and
-    .spec.ingress[0].ports == [{"protocol":"TCP","port":8080}]')
-  additive=$(kubectl --context "$CTX" get networkpolicy -n "$NS" -o json 2>/dev/null | jq -r '
-    def expression_matches($labels):
-      . as $expression |
-      ($labels[$expression.key]) as $value |
-      if $expression.operator == "In" then
-        $value != null and ($expression.values | index($value) != null)
-      elif $expression.operator == "NotIn" then
-        $value == null or ($expression.values | index($value) == null)
-      elif $expression.operator == "Exists" then
-        $value != null
-      elif $expression.operator == "DoesNotExist" then
-        $value == null
-      else false end;
-    def selector_matches($labels):
-      . as $selector |
-      (($selector.matchLabels // {}) | all(to_entries[]?; $labels[.key] == .value)) and
-      (($selector.matchExpressions // []) | all(.[]?; expression_matches($labels)));
-    def has_egress_allow: ((.spec.egress // []) | length > 0);
-    def has_ingress_allow: ((.spec.ingress // []) | length > 0);
-    ([.items[]? |
-      select((.metadata.name as $name | ["allow-frontend-egress-to-backend", "allow-frontend-dns"] | index($name) | not) and
-             has_egress_allow and
-             ((.spec.podSelector // {}) | selector_matches({"app":"frontend"}))) |
-      .metadata.name] | length == 0) and
-    ([.items[]? |
-      select((.metadata.name as $name | ["allow-backend-ingress-from-frontend", "allow-backend-ingress-from-legacy"] | index($name) | not) and
-             has_ingress_allow and
-             ((.spec.podSelector // {}) | selector_matches({"app":"backend"}))) |
-      .metadata.name] | length == 0)')
-  if [[ "$frontend" == true && "$backend" == true && "$additive" == true ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+    .spec.podSelector == {"matchLabels":{"app":"backend"}} and .spec.policyTypes == ["Ingress"] and
+    .spec.ingress == [{"from":[{"podSelector":{"matchLabels":{"app":"frontend"}}}],"ports":[{"protocol":"TCP","port":8080}]}]')
+  policy_set=$(no_unexpected_student_policies "$NS" \
+    default-deny allow-frontend-egress-to-backend allow-backend-ingress-from-frontend \
+    allow-frontend-dns allow-backend-ingress-from-legacy && echo true || echo false)
+  ip=$(backend_ip)
+  [[ "$ip" =~ ^[0-9]+(\.[0-9]+){3}$ ]]
+  destination="http://$ip:8080/"
+  create_probe "$NS" "${CHECKER_PREFIX}-frontend" 'app=frontend'
+  frontend_result=$(curl_probe "$NS" "${CHECKER_PREFIX}-frontend" "$destination")
+  create_probe "$NS" "${CHECKER_PREFIX}-foreign" 'app=foreign'
+  apply_checker_policy "$NS" "${CHECKER_PREFIX}-foreign-egress" "  podSelector: {matchLabels: {app: foreign}}\n  policyTypes: [Egress]\n  egress:\n    - to: [{podSelector: {matchLabels: {app: backend}}}]\n      ports: [{protocol: TCP, port: 8080}]"
+  foreign_result=$(curl_probe "$NS" "${CHECKER_PREFIX}-foreign" "$destination")
+  if [[ "$frontend" == true && "$backend" == true && "$policy_set" == true ]] && assert_reachable "$frontend_result" && assert_transport_denied "$foreign_result"; then
+    echo 1 >> /var/work/tests/result/ok
   else
-    echo "HINT: The named frontend/backend policies must contain only the required TCP/8080 rules, and no additional matching policy may add frontend egress or backend ingress."
-    result=1
+    echo "HINT: In cks-101, frontend must reach the actual backend:8080 and a foreign identity with checker-provided backend egress must still be rejected by backend ingress." >&2
+    false
   fi
-  [ "$result" -eq 0 ]
 }
 
-@test "4. Frontend DNS policy is limited to kube-system DNS on both protocols" {
-  echo '1' >> /var/work/tests/result/all
-  valid=$(kubectl --context "$CTX" get networkpolicy allow-frontend-dns -n "$NS" -o json 2>/dev/null | jq -r '
-    def strict_dns_rule:
-      (.to | length == 1) and
-      (.to[0] | keys | sort == ["namespaceSelector", "podSelector"]) and
-      .to[0].namespaceSelector == {"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}} and
-      .to[0].podSelector == {"matchLabels":{"k8s-app":"kube-dns"}} and
+@test "4. DNS policy contains only full TCP/53 and UDP/53 objects and works in cks-101" {
+  echo 1 >> /var/work/tests/result/all
+  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create $NS and allow-frontend-dns before DNS runtime validation." >&2; false; fi
+  shape=$(kubectl --context "$CTX" get networkpolicy allow-frontend-dns -n "$NS" -o json 2>/dev/null | jq -r '
+    .spec.podSelector == {"matchLabels":{"app":"frontend"}} and .spec.policyTypes == ["Egress"] and
+    (.spec.egress | type == "array" and length > 0) and
+    (all(.spec.egress[];
+      .to == [{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}},"podSelector":{"matchLabels":{"k8s-app":"kube-dns"}}}] and
       (.ports | type == "array" and length > 0) and
-      (all(.ports[]; (keys | sort) == ["port", "protocol"]));
-    .spec.podSelector == {"matchLabels":{"app":"frontend"}} and
-    .spec.policyTypes == ["Egress"] and
-    (.spec.egress | length > 0) and
-    ([.spec.egress[] | strict_dns_rule] | all) and
-    ([.spec.egress[] | .ports[] | {protocol, port}] | unique | sort_by(.protocol, .port)) ==
-      [{"protocol":"TCP","port":53}, {"protocol":"UDP","port":53}]')
-  if [[ "$valid" == true ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+      all(.ports[]; (keys | sort) == ["port", "protocol"] and
+        (.protocol == "TCP" or .protocol == "UDP") and (.port | type == "number" and . == 53)))) and
+    ([.spec.egress[].ports[] | {protocol, port}] | unique | sort_by(.protocol, .port)) ==
+      [{"protocol":"TCP","port":53},{"protocol":"UDP","port":53}]')
+  create_probe "$NS" "${CHECKER_PREFIX}-dns" 'app=frontend' busybox:1.36.1
+  dns=$(kubectl --context "$CTX" -n "$NS" exec "${CHECKER_PREFIX}-dns" -- nslookup kubernetes.default.svc.cluster.local 2>&1)
+  if [[ "$shape" == true && "$dns" == *"Name:"* ]]; then
+    echo 1 >> /var/work/tests/result/ok
   else
-    echo "HINT: allow-frontend-dns must select frontend and use only exact kube-system/kube-dns peers; its aggregate ports must be TCP/53 and UDP/53."
-    result=1
+    echo "HINT: allow-frontend-dns must use exactly two complete NetworkPolicyPort objects (TCP/53 and UDP/53, no endPort) and permit the frontend probe DNS lookup." >&2
+    false
   fi
-  [ "$result" -eq 0 ]
 }
 
-@test "5. Metadata network-deny evidence is recorded" {
-  echo '1' >> /var/work/tests/result/all
+@test "5. Student artifact records baseline/control/deny and frontend cannot reach IMDS" {
+  echo 1 >> /var/work/tests/result/all
+  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create $NS and frontend metadata protection before IMDS validation." >&2; false; fi
   artifact=/var/work/tests/artifacts/5/metadata.output
-  policy_state=$(kubectl --context "$CTX" get networkpolicy allow-frontend-egress-to-backend allow-frontend-dns -n "$NS" -o json 2>/dev/null | jq -r '
-    [.items[].spec.egress[]?.to[]?.ipBlock? | select(.cidr == "169.254.169.254/32")] | length == 0')
-  if [[ "$policy_state" == true ]] && cat "$artifact" 2>/dev/null | grep -q 'CURL_EXIT:\(7\|28\)' && \
-     cat "$artifact" 2>/dev/null | grep -q 'HTTPCODE:000' && \
-     cat "$artifact" 2>/dev/null | grep -q 'level=network'; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
-  else
-    echo "HINT: metadata.output must record CURL_EXIT 7 or 28, HTTPCODE:000, and level=network without metadata egress."
-    result=1
+  baseline_values=$(artifact_probe_values "$artifact" baseline_ || true)
+  control_values=$(artifact_probe_values "$artifact" control_ || true)
+  deny_values=$(artifact_probe_values "$artifact" deny_ || true)
+  read -r baseline_rc baseline_code <<<"$baseline_values"
+  read -r control_rc control_code <<<"$control_values"
+  read -r deny_rc deny_code <<<"$deny_values"
+  artifact_ok=false
+  if grep -Fx "target=$IMDS_URL" "$artifact" >/dev/null 2>&1 && \
+     grep -Fx "imds_cidr=$IMDS_CIDR" "$artifact" >/dev/null 2>&1 && \
+     grep -q '^level=network$' "$artifact" 2>/dev/null && \
+     [[ "$baseline_rc" == 0 && "$baseline_code" =~ ^[1-5][0-9]{2}$ ]] && \
+     [[ "$control_rc" == 0 && "$control_code" =~ ^[1-5][0-9]{2}$ ]] && \
+     [[ "$deny_code" == 000 && "$deny_rc" =~ ^(7|28)$ ]]; then
+    artifact_ok=true
   fi
-  [ "$result" -eq 0 ]
+  policy_set=$(no_unexpected_student_policies "$NS" \
+    default-deny allow-frontend-egress-to-backend allow-backend-ingress-from-frontend \
+    allow-frontend-dns allow-backend-ingress-from-legacy && echo true || echo false)
+  create_imds_control
+  control_baseline=$(control_imds_probe "${CHECKER_PREFIX}-task5-control-baseline")
+  create_probe "$NS" "${CHECKER_PREFIX}-metadata" 'app=frontend'
+  result=$(curl_probe "$NS" "${CHECKER_PREFIX}-metadata" "$IMDS_URL")
+  control_after_deny=$(control_imds_probe "${CHECKER_PREFIX}-task5-control-after-deny")
+  if [[ "$artifact_ok" == true && "$policy_set" == true ]] && \
+     assert_reachable "$control_baseline" && assert_transport_denied "$result" && \
+     assert_reachable "$control_after_deny"; then
+    echo 1 >> /var/work/tests/result/ok
+  else
+    echo "HINT: metadata.output must record baseline_, control_, and deny_ curl/HTTP values. The cks-101 frontend must receive HTTP 000 with curl 7/28, while checker-owned imds-control reaches real EC2 IMDS before and after that deny." >&2
+    false
+  fi
 }
 
-@test "6. Legacy policies use one AND peer and exclude metadata" {
-  echo '1' >> /var/work/tests/result/all
-  legacy=$(kubectl --context "$CTX" get namespace "$LEGACY_NS" -o json 2>/dev/null | jq -r '.metadata.name == "cks-101-legacy"')
-  client=$(kubectl --context "$CTX" get deployment legacy-client -n "$LEGACY_NS" -o json 2>/dev/null | jq -r '
-    .spec.selector == {"matchLabels":{"app":"legacy-client"}} and
-    .spec.template.metadata.labels == {"app":"legacy-client"} and
-    (.status.readyReplicas // 0) >= 1 and
-    (.spec.template.spec.containers | length == 1) and
-    .spec.template.spec.containers[0].image == "curlimages/curl:8.11.1" and
-    .spec.template.spec.containers[0].command == ["sleep", "3600"]')
+@test "6. Legacy effective policy proves IMDS deny and AND ingress semantics" {
+  echo 1 >> /var/work/tests/result/all
+  if ! kubectl --context "$CTX" get namespace "$NS" "$LEGACY_NS" >/dev/null 2>&1; then echo "HINT: Create both $NS and $LEGACY_NS with legacy-client and the required AND/except policies." >&2; false; fi
   ingress=$(kubectl --context "$CTX" get networkpolicy allow-backend-ingress-from-legacy -n "$NS" -o json 2>/dev/null | jq -r '
-    .spec.podSelector == {"matchLabels":{"app":"backend"}} and
-    .spec.policyTypes == ["Ingress"] and
-    (.spec.ingress | length == 1) and
-    (.spec.ingress[0].from | length == 1) and
-    (.spec.ingress[0].from[0] | keys | sort == ["namespaceSelector", "podSelector"]) and
-    .spec.ingress[0].from[0].namespaceSelector == {"matchLabels":{"kubernetes.io/metadata.name":"cks-101-legacy"}} and
-    .spec.ingress[0].from[0].podSelector == {"matchLabels":{"app":"legacy-client"}} and
-    .spec.ingress[0].ports == [{"protocol":"TCP","port":8080}]')
+    .spec.podSelector == {"matchLabels":{"app":"backend"}} and .spec.policyTypes == ["Ingress"] and
+    .spec.ingress == [{"from":[{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"cks-101-legacy"}},"podSelector":{"matchLabels":{"app":"legacy-client"}}}],"ports":[{"protocol":"TCP","port":8080}]}]')
   egress=$(kubectl --context "$CTX" get networkpolicy allow-legacy-egress -n "$LEGACY_NS" -o json 2>/dev/null | jq -r '
-    .spec.podSelector == {"matchLabels":{"app":"legacy-client"}} and
-    .spec.policyTypes == ["Egress"] and
-    (.spec.egress | length == 1) and
-    .spec.egress[0].to == [{"ipBlock":{"cidr":"0.0.0.0/0","except":["169.254.169.254/32"]}}] and
-    ((.spec.egress[0] | has("ports")) | not)')
-  no_default_deny=$(kubectl --context "$CTX" get networkpolicy -n "$LEGACY_NS" -o json 2>/dev/null | jq -r '
-    all(.items[]?; ((.spec.podSelector == {}) and
-                     ((.spec.ingress // []) | length == 0) and
-                     ((.spec.egress // []) | length == 0)) | not)')
-  additive=$(kubectl --context "$CTX" get networkpolicy -n "$LEGACY_NS" -o json 2>/dev/null | jq -r '
-    def expression_matches($labels):
-      . as $expression |
-      ($labels[$expression.key]) as $value |
-      if $expression.operator == "In" then
-        $value != null and ($expression.values | index($value) != null)
-      elif $expression.operator == "NotIn" then
-        $value == null or ($expression.values | index($value) == null)
-      elif $expression.operator == "Exists" then
-        $value != null
-      elif $expression.operator == "DoesNotExist" then
-        $value == null
-      else false end;
-    def selector_matches($labels):
-      . as $selector |
-      (($selector.matchLabels // {}) | all(to_entries[]?; $labels[.key] == .value)) and
-      (($selector.matchExpressions // []) | all(.[]?; expression_matches($labels)));
-    [.items[]? |
-      select(.metadata.name != "allow-legacy-egress" and
-             ((.spec.egress // []) | length > 0) and
-             ((.spec.podSelector // {}) | selector_matches({"app":"legacy-client"}))) |
-      .metadata.name] | length == 0')
-  if [[ "$legacy" == true && "$client" == true && "$ingress" == true && "$egress" == true && "$no_default_deny" == true && "$additive" == true ]]; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+    .spec.podSelector == {"matchLabels":{"app":"legacy-client"}} and .spec.policyTypes == ["Egress"] and
+    .spec.egress == [{"to":[{"ipBlock":{"cidr":"0.0.0.0/0","except":["169.254.169.254/32"]}}]}]')
+  app_policy_set=$(no_unexpected_student_policies "$NS" \
+    default-deny allow-frontend-egress-to-backend allow-backend-ingress-from-frontend \
+    allow-frontend-dns allow-backend-ingress-from-legacy && echo true || echo false)
+  legacy_policy_set=$(no_unexpected_student_policies "$LEGACY_NS" allow-legacy-egress && echo true || echo false)
+  legacy=$(kubectl --context "$CTX" get deploy legacy-client -n "$LEGACY_NS" -o json 2>/dev/null | jq -r '
+    .spec.selector == {"matchLabels":{"app":"legacy-client"}} and .spec.template.metadata.labels == {"app":"legacy-client"} and
+    (.spec.template.spec.hostNetwork // false | not) and .spec.template.spec.containers[0].image == "curlimages/curl:8.11.1" and
+    .spec.template.spec.containers[0].command == ["sleep", "3600"] and (.status.readyReplicas // 0) >= 1')
+  live_legacy=$(kubectl --context "$CTX" get pod -n "$LEGACY_NS" -l app=legacy-client -o json 2>/dev/null | jq -r '
+    (.items | length > 0) and ([.items[] | ((.spec.hostNetwork // false) | not) and ((.status.conditions // []) | any(.type == "Ready" and .status == "True"))] | all)')
+  ip=$(backend_ip)
+  [[ "$ip" =~ ^[0-9]+(\.[0-9]+){3}$ ]]
+  backend_url="http://$ip:8080/"
+  actual_pod=$(kubectl --context "$CTX" -n "$LEGACY_NS" get pod -l 'app=legacy-client,cks.lab/checker notin (101)' -o jsonpath='{.items[0].metadata.name}')
+  metadata=$(curl_probe "$LEGACY_NS" "$actual_pod" "$IMDS_URL")
+  actual=$(curl_probe "$LEGACY_NS" "$actual_pod" "$backend_url")
+  create_probe "$LEGACY_NS" "${CHECKER_PREFIX}-wrong-label" 'app=wrong-label'
+  apply_checker_policy "$LEGACY_NS" "${CHECKER_PREFIX}-wrong-label-egress" "  podSelector: {matchLabels: {app: wrong-label}}\n  policyTypes: [Egress]\n  egress:\n    - to: [{ipBlock: {cidr: $ip/32}}]\n      ports: [{protocol: TCP, port: 8080}]"
+  wrong_label=$(curl_probe "$LEGACY_NS" "${CHECKER_PREFIX}-wrong-label" "$backend_url")
+  create_probe "$NS" "${CHECKER_PREFIX}-wrong-namespace" 'app=legacy-client'
+  apply_checker_policy "$NS" "${CHECKER_PREFIX}-wrong-namespace-egress" "  podSelector: {matchLabels: {app: legacy-client}}\n  policyTypes: [Egress]\n  egress:\n    - to: [{ipBlock: {cidr: $ip/32}}]\n      ports: [{protocol: TCP, port: 8080}]"
+  wrong_namespace=$(curl_probe "$NS" "${CHECKER_PREFIX}-wrong-namespace" "$backend_url")
+  if [[ "$ingress" == true && "$egress" == true && "$app_policy_set" == true && "$legacy_policy_set" == true && "$legacy" == true && "$live_legacy" == true ]] && \
+     assert_transport_denied "$metadata" && assert_reachable "$actual" && \
+     assert_transport_denied "$wrong_label" && assert_transport_denied "$wrong_namespace"; then
+    echo 1 >> /var/work/tests/result/ok
   else
-    echo "HINT: Use the fixed legacy Deployment, exact one-peer namespace/pod AND selector, TCP/8080, metadata exception, no legacy default-deny, and no additional matching egress policy."
-    result=1
+    echo "HINT: Legacy must exclude real EC2 IMDS with literal 169.254.169.254/32; the actual legacy workload alone must reach backend, while wrong-label and wrong-namespace probes with checker egress remain denied." >&2
+    false
   fi
-  [ "$result" -eq 0 ]
 }
 
-@test "7. hostNetwork observation and comparison are recorded" {
-  echo '1' >> /var/work/tests/result/all
+@test "7. Host-network probe records an environment-specific observation without a fixed outcome" {
+  echo 1 >> /var/work/tests/result/all
+  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create $NS, hostnetwork-probe and task 7 evidence artifacts." >&2; false; fi
   host=$(kubectl --context "$CTX" get pod hostnetwork-probe -n "$NS" -o json 2>/dev/null | jq -r '
-    .spec.hostNetwork == true and
-    .metadata.labels.app == "frontend" and
-    (.spec.containers | length == 1) and
-    .spec.containers[0].image == "curlimages/curl:8.11.1" and
-    ((.status.conditions // []) | any(.[]; .type == "Ready" and .status == "True"))')
-  task5=/var/work/tests/artifacts/5/metadata.output
-  task7=/var/work/tests/artifacts/7/hostnetwork-metadata.output
+    .spec.hostNetwork == true and .metadata.labels.app == "frontend" and .spec.containers[0].image == "curlimages/curl:8.11.1" and
+    ((.status.conditions // []) | any(.type == "Ready" and .status == "True"))')
+  task5_artifact=/var/work/tests/artifacts/5/metadata.output
+  host_artifact=/var/work/tests/artifacts/7/hostnetwork-metadata.output
   comparison=/var/work/tests/artifacts/7/comparison.txt
-  task5_rc=$(sed -n 's/.*CURL_EXIT:\([0-9][0-9]*\).*/\1/p' "$task5" 2>/dev/null | tail -n 1)
-  task5_code=$(sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' "$task5" 2>/dev/null | tail -n 1)
-  task7_rc=$(sed -n 's/.*CURL_EXIT:\([0-9][0-9]*\).*/\1/p' "$task7" 2>/dev/null | tail -n 1)
-  task7_code=$(sed -n 's/.*HTTPCODE:\([0-9][0-9][0-9]\).*/\1/p' "$task7" 2>/dev/null | tail -n 1)
-  comparison5=$(sed -n 's/^task5_result=curl_exit=\([0-9][0-9]*\) http_code=\([0-9][0-9][0-9]\)$/\1 \2/p' "$comparison" 2>/dev/null)
-  comparison7=$(sed -n 's/^task7_result=curl_exit=\([0-9][0-9]*\) http_code=\([0-9][0-9][0-9]\)$/\1 \2/p' "$comparison" 2>/dev/null)
-  if [[ "$host" == true && "$task5_rc" =~ ^[0-9]+$ && "$task5_code" =~ ^[0-9]{3}$ && \
-        "$task7_rc" =~ ^[0-9]+$ && "$task7_code" =~ ^[0-9]{3}$ && \
-        "$comparison5" == "$task5_rc $task5_code" && "$comparison7" == "$task7_rc $task7_code" ]] && \
+  task5_values=$(artifact_probe_values "$task5_artifact" deny_ || true)
+  host_values=$(artifact_probe_values "$host_artifact" || true)
+  task5_comparison=$(comparison_probe_values task5_result "$comparison" || true)
+  host_comparison=$(comparison_probe_values task7_result "$comparison" || true)
+  if [[ "$host" == true && -n "$task5_values" && -n "$host_values" && \
+        "$task5_values" == "$task5_comparison" && "$host_values" == "$host_comparison" ]] && \
+     [[ $(grep -c '^task5_result=' "$comparison" 2>/dev/null) -eq 1 && \
+        $(grep -c '^task7_result=' "$comparison" 2>/dev/null) -eq 1 ]] && \
      grep -qi 'environment-specific' "$comparison" 2>/dev/null; then
-    echo '1' >> /var/work/tests/result/ok
-    result=0
+    echo 1 >> /var/work/tests/result/ok
   else
-    echo "HINT: Use a ready hostNetwork frontend probe with curlimages/curl:8.11.1, record numeric probe results, and copy both values exactly into an environment-specific comparison."
-    result=1
+    echo "HINT: hostnetwork-metadata.output must contain one numeric curl result; comparison.txt must exactly reproduce task 5 and task 7 evidence and mark it environment-specific." >&2
+    false
   fi
-  [ "$result" -eq 0 ]
 }
