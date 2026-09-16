@@ -85,18 +85,11 @@ k -n imds-control exec imds-control -- curl -sS -o /dev/null -w 'HTTP:%{http_cod
 echo $?
 ```
 
-## 3. DNS (т.к. default-deny egress блокирует DNS - разрешаем сначала)
+## 3. DNS
 
-Создаём DNS probe с busybox:
+Сначала разрешаем DNS egress:
 ```bash
-k -n cks-101 run dns-probe --image=busybox:1.36.1 -l app=frontend --command -- sleep 3600
-k -n cks-101 wait --for=condition=Ready pod/dns-probe --timeout=60s
-k -n cks-101 exec dns-probe -- nslookup kubernetes.default.svc.cluster.local
-```
-
-Применяем DNS policy:
-```bash
-k -n cks-101 apply -f - <<EOF
+k -n cks-101 apply -f - <<'EOF'
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -105,7 +98,8 @@ spec:
   podSelector:
     matchLabels:
       app: frontend
-  policyTypes: [Egress]
+  policyTypes:
+    - Egress
   egress:
     - to:
         - namespaceSelector:
@@ -120,6 +114,32 @@ spec:
         - protocol: TCP
           port: 53
 EOF
+```
+
+Проверяем DNS из отдельного BusyBox Pod:
+```bash
+k -n cks-101 run dns-probe \
+  --image=busybox:1.36.1 \
+  -l app=frontend \
+  --command -- sleep 3600
+
+k -n cks-101 wait --for=condition=Ready pod/dns-probe --timeout=60s
+
+k -n cks-101 exec dns-probe -- \
+  nslookup kubernetes.default.svc.cluster.local
+```
+
+После возврата DNS backend пока ещё должен оставаться закрытым:
+```bash
+k -n cks-101 exec probe -- \
+  curl -sS -o /dev/null -w 'HTTP:%{http_code}\n' -m 5 http://backend:8080/
+echo $?
+```
+
+Ожидаем:
+```
+HTTP:000
+curl exit 7 или 28
 ```
 
 ## 4. Разрешённые потоки приложения

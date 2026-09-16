@@ -77,18 +77,18 @@ time_left
 | Проверка | 1. Выполните ``kubectl -n cks-101 get networkpolicy default-deny -o yaml`` - убедитесь, что podSelector пустой, policyTypes содержит Ingress и Egress, нет правил в egress и ingress.<br/>2. После default-deny: curl из временного frontend probe к backend должен вернуть `000` и exit code `7` или `28`.<br/>3. После default-deny: curl из imds-control к IMDS должен вернуть HTTP `1xx-5xx` и exit code `0`. |
 
 ---
-| **3** | **NetworkPolicy для приложения** |
+| **3** | **DNS** |
 | :---: | :--- |
-| Что делаем | Создайте две NetworkPolicy: `allow-frontend-egress-to-backend` (frontend egress к backend:8080 TCP) и `allow-backend-ingress-from-frontend` (backend ingress от frontend). Проверьте: 1) frontend может достичь backend; 2) создайте временный Pod с другим label и временную egress policy к backend - он не должен пройти ingress на backend. |
-| Критерии приёмки | Разрешён только frontend → backend:8080; чужая identity заблокирована. |
-| Проверка | 1. Выполните ``kubectl -n cks-101 get networkpolicy -o yaml`` - убедитесь, что есть только default-deny и две allow policy (не должно быть дополнительных policy, расширяющих доступ).<br/>2. Выполните curl из frontend probe к backend - должен вернуть HTTP 2xx.<br/>3. Создайте Pod с label=app=foreign, дайте ему временную egress к backend - он будет заблокирован ingress policy backend (нет HTTP ответа), curl вернёт `000` и exit code `7` или `28`. |
+| Что делаем | После `default-deny` первым allow-rule верните frontend доступ только к `kube-system/kube-dns` по exact UDP/53 и TCP/53, без `endPort`. Для проверки создайте отдельный `dns-probe` на `busybox:1.36.1` с label `app=frontend`. |
+| Критерии приёмки | DNS allow-set ровно UDP/53 + TCP/53; `nslookup kubernetes.default.svc.cluster.local` работает. Backend в этот момент ещё не должен быть доступен по TCP/8080. |
+| Проверка | 1. Проверьте `allow-frontend-dns` в YAML: только UDP/53 и TCP/53, без `endPort` и дополнительных портов.<br/>2. Выполните `nslookup kubernetes.default.svc.cluster.local` из `dns-probe`.<br/>3. После успешного DNS выполните curl из frontend probe к `http://backend:8080/`: до Task 4 ожидается `HTTP 000` + curl `7`/`28`. |
 
 ---
-| **4** | **DNS** |
+| **4** | **NetworkPolicy для приложения** |
 | :---: | :--- |
-| Что делаем | Создайте NetworkPolicy `allow-frontend-dns` с frontend egress только к kube-system/kube-dns, exact UDP/53 и TCP/53 (без endPort). Выполните nslookup из frontend probe для проверки. |
-| Критерии приёмки | DNS allow-set ровно UDP/53+TCP/53, без endPort/extra port. |
-| Проверка | 1. Выполните ``kubectl -n cks-101 get networkpolicy allow-frontend-dns -o yaml`` - убедитесь, что есть ровно два порта: UDP/53 и TCP/53 (без endPort, без дополнительных портов).<br/>2. Выполните ``kubectl -n cks-101 exec <frontend-pod> -- nslookup kubernetes.default.svc.cluster.local`` - DNS должен разрешить имя. |
+| Что делаем | Создайте `allow-frontend-egress-to-backend` и `allow-backend-ingress-from-frontend`. После этого frontend должен получить реальный HTTP response от `http://backend:8080/`. |
+| Критерии приёмки | Разрешён frontend → backend:8080; foreign identity остаётся заблокированной. |
+| Проверка | Positive: frontend curl по Service DNS. Negative: foreign Pod с временной egress policy к backend не должен пройти backend ingress. |
 
 ---
 | **5** | **IMDS final verification** |
