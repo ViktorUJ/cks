@@ -4,7 +4,7 @@ export KUBECONFIG=/home/ubuntu/.kube/config
 CTX="cluster1-admin@cluster1"
 NS="cks-101"
 LEGACY_NS="cks-101-legacy"
-CONTROL_NS="imds-control"
+CONTROL_NS="cks-101-checker-control-$$"
 IMDS_URL=http://169.254.169.254/
 IMDS_CIDR=169.254.169.254/32
 CHECKER_LABEL="cks.lab/checker=101"
@@ -106,10 +106,12 @@ EOF
 }
 
 create_imds_control() {
-  # This namespace belongs to the checker. Recreate it so no prior lab state can supply the proof.
-  kubectl --context "$CTX" delete namespace "$CONTROL_NS" --ignore-not-found --wait=true >/dev/null 2>&1 || true
-  kubectl --context "$CTX" create namespace "$CONTROL_NS" >/dev/null
-  CONTROL_CREATED=true
+  # Create a checker-owned namespace separate from student's imds-control.
+  # The student may have created imds-control themselves - we don't touch it.
+  if ! kubectl --context "$CTX" get namespace "$CONTROL_NS" >/dev/null 2>&1; then
+    kubectl --context "$CTX" create namespace "$CONTROL_NS" >/dev/null
+    CONTROL_CREATED=true
+  fi
 }
 
 control_imds_probe() {
