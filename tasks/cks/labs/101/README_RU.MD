@@ -72,7 +72,7 @@ time_left
 ---
 | **2** | **Baseline, default-deny и повторный probe** |
 | :---: | :--- |
-| Что делаем | Создайте namespace `imds-control` и запустите в нём временный Pod с curl (`curlimages/curl:8.11.1`) для baseline probe IMDS. Создайте временный Pod с label=app=frontend в namespace cks-101 для измерения baseline frontend → backend и frontend → IMDS. **Сохраните baseline значения** CURL_EXIT и HTTPCODE - они понадобятся для artifact. Затем создайте NetworkPolicy `default-deny` без allow-rules. Подтвердите в `cks-101` `HTTPCODE:000` и curl `7`/`28`, повторите IMDS curl из imds-control. |
+| Что делаем | Создайте namespace `imds-control` и запустите в нём временный Pod с curl (`curlimages/curl:8.11.1`) для baseline probe IMDS. Создайте временный Pod с label=app=frontend в namespace cks-101 для измерения baseline frontend → backend и frontend → IMDS. До default-deny реально проверьте IMDS из frontend probe и из независимого `imds-control`. Затем создайте NetworkPolicy `default-deny` без allow-rules. После применения `default-deny` повторите те же probes: frontend должен получить HTTP `000` и curl `7`/`28`, а `imds-control` должен продолжать получать реальный HTTP `1xx–5xx` с exit `0`. |
 | Критерии приёмки | Оба control результата имеют `CURL_EXIT:0` + HTTP `1xx`–`5xx`; probe в `cks-101` после default-deny имеет `HTTPCODE:000` и curl `7`/`28`. HTTP-ответ - достижимость, а не deny. |
 | Проверка | 1. Выполните ``kubectl -n cks-101 get networkpolicy default-deny -o yaml`` - убедитесь, что podSelector пустой, policyTypes содержит Ingress и Egress, нет правил в egress и ingress.<br/>2. После default-deny: curl из временного frontend probe к backend должен вернуть `000` и exit code `7` или `28`.<br/>3. После default-deny: curl из imds-control к IMDS должен вернуть HTTP `1xx-5xx` и exit code `0`. |
 
@@ -91,11 +91,11 @@ time_left
 | Проверка | 1. Выполните ``kubectl -n cks-101 get networkpolicy allow-frontend-dns -o yaml`` - убедитесь, что есть ровно два порта: UDP/53 и TCP/53 (без endPort, без дополнительных портов).<br/>2. Выполните ``kubectl -n cks-101 exec <frontend-pod> -- nslookup kubernetes.default.svc.cluster.local`` - DNS должен разрешить имя. |
 
 ---
-| **5** | **IMDS evidence** |
+| **5** | **IMDS final verification** |
 | :---: | :--- |
-| Что делаем | Выполните IMDS probe из временного frontend Pod (созданного в задании 2) и из Pod в namespace `imds-control`. Используйте сохранённые из задания 2 baseline значения. Сохраните в `/var/work/tests/artifacts/5/metadata.output` данные в точном формате:<br/><br/>```<br/>target=http://169.254.169.254/<br/>imds_cidr=169.254.169.254/32<br/>baseline_CURL_EXIT:<number><br/>baseline_HTTPCODE:<3digits><br/>control_CURL_EXIT:<number><br/>control_HTTPCODE:<3digits><br/>deny_CURL_EXIT:<number><br/>deny_HTTPCODE:<3digits><br/>level=network<br/>``` |
-| Критерии приёмки | Baseline и control подтверждают HTTP-достижимость; frontend после policy имеет HTTP `000` плюс curl `7`/`28`. |
-| Проверка | 1. Выполните ``cat /var/work/tests/artifacts/5/metadata.output`` и проверьте:<br/>• target = http://169.254.169.254/<br/>• imds_cidr = 169.254.169.254/32<br/>• baseline_CURL_EXIT:0, baseline_HTTPCODE:1xx-5xx (IMDS достижим до default-deny)<br/>• control_CURL_EXIT:0, control_HTTPCODE:1xx-5xx (imds-control всегда достижим)<br/>• deny_CURL_EXIT:7 или 28, deny_HTTPCODE:000 (frontend заблокирован после default-deny)<br/>• level = network |
+| Что делаем | После добавления DNS и application allow policies повторите тот же IMDS probe из frontend Pod и из независимого `imds-control`. Цель — доказать, что новые allow policies не открыли IMDS. Служебные artifact-файлы создавать не нужно. |
+| Критерии приёмки | `imds-control`: реальный HTTP `1xx–5xx` + exit `0`; frontend: `HTTP 000` + curl `7`/`28`. |
+| Проверка | Выполните один и тот же bounded curl (`-m 5`) из обоих Pod и сравните фактический результат. Не используйте `curl -f`: HTTP `401/403/404/...` всё равно означает сетевую достижимость. |
 
 ---
 | **6** | **Legacy AND и IMDS except** |
@@ -107,9 +107,9 @@ time_left
 ---
 | **7** | **Наблюдение hostNetwork** |
 | :---: | :--- |
-| Что делаем | Создайте Pod с образом `curlimages/curl:8.11.1`, label=app=frontend и spec.hostNetwork=true. Выполните из него IMDS probe и сохраните результаты в `/var/work/tests/artifacts/7/hostnetwork-metadata.output` в формате:<br/><br/>```<br/>CURL_EXIT:<number><br/>HTTPCODE:<3digits><br/>```<br/><br/>Создайте comparison файл `/var/work/tests/artifacts/7/comparison.txt` в формате:<br/><br/>```<br/>task5_result=curl_exit=<number> http_code=<3digits><br/>task7_result=curl_exit=<number> http_code=<3digits><br/>... environment-specific ...<br/>``` |
-| Критерии приёмки | Числовые значения evidence, согласующееся сравнение, зависит от окружения. |
-| Проверка | 1. Проверьте, что Pod hostnetwork-probe имеет spec.hostNetwork=true: ``kubectl -n cks-101 get pod hostnetwork-probe -o jsonpath='{.spec.hostNetwork}'``.<br/>2. Выполните ``cat /var/work/tests/artifacts/7/hostnetwork-metadata.output`` - должны быть CURL_EXIT и HTTPCODE (с двоеточием).<br/>3. Выполните ``cat /var/work/tests/artifacts/7/comparison.txt`` - должны быть task5_result и task7_result с curl_exit и http_code (через =), а также строка содержащая "environment-specific".<br/>Примечание: результат может отличаться от task 5 - это зависит от CNI и конфигурации узла. |
+| Что делаем | Создайте `hostnetwork-probe` с образом `curlimages/curl:8.11.1`, label `app=frontend` и `spec.hostNetwork=true`. Выполните из него тот же IMDS curl, который использовали для обычного frontend Pod. Сравните фактическое наблюдение с Task 5. Служебные artifact-файлы создавать не нужно. |
+| Критерии приёмки | Pod Ready, `hostNetwork=true`, реальный IMDS probe выполнен. Для hostNetwork не предполагается универсальный ожидаемый результат: поведение зависит от CNI и конфигурации узла. |
+| Проверка | Проверьте `hostNetwork: true`, затем выполните bounded IMDS curl (`-m 5`) и `echo $?`. Сравните фактическое наблюдение с обычным Pod из Task 5. |
 
 ## Проверка
 

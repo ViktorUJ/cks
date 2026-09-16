@@ -59,7 +59,14 @@ assert_transport_denied() {
   [[ "$code" == 000 && "$rc" =~ ^(7|28)$ ]]
 }
 
-artifact_probe_values() {
+assert_observed_probe() {
+  local output=$1 rc code
+  rc=$(sed -n 's/^CURL_EXIT:\([0-9][0-9]*\)$/\1/p' <<<"$output" | tail -1)
+  code=$(sed -n 's/^HTTPCODE:\([0-9][0-9][0-9]\)$/\1/p' <<<"$output" | tail -1)
+  [[ "$rc" =~ ^[0-9]+$ && "$code" =~ ^[0-9]{3}$ ]]
+}
+
+comparison_probe_values() {
   local artifact=$1 prefix=${2:-} exits codes
   mapfile -t exits < <(grep -E "^${prefix}CURL_EXIT:[0-9]+$" "$artifact" 2>/dev/null)
   mapfile -t codes < <(grep -E "^${prefix}HTTPCODE:[0-9]{3}$" "$artifact" 2>/dev/null)
@@ -233,39 +240,33 @@ backend_ip() {
   fi
 }
 
-@test "5. Student artifact records baseline/control/deny and frontend cannot reach IMDS" {
+@test "5. Frontend cannot reach IMDS while independent control remains reachable" {
   echo 1 >> /var/work/tests/result/all
-  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create $NS and frontend metadata protection before IMDS validation." >&2; false; fi
-  artifact=/var/work/tests/artifacts/5/metadata.output
-  baseline_values=$(artifact_probe_values "$artifact" baseline_ || true)
-  control_values=$(artifact_probe_values "$artifact" control_ || true)
-  deny_values=$(artifact_probe_values "$artifact" deny_ || true)
-  read -r baseline_rc baseline_code <<<"$baseline_values"
-  read -r control_rc control_code <<<"$control_values"
-  read -r deny_rc deny_code <<<"$deny_values"
-  artifact_ok=false
-  if grep -Fx "target=$IMDS_URL" "$artifact" >/dev/null 2>&1 && \
-     grep -Fx "imds_cidr=$IMDS_CIDR" "$artifact" >/dev/null 2>&1 && \
-     grep -q '^level=network$' "$artifact" 2>/dev/null && \
-     [[ "$baseline_rc" == 0 && "$baseline_code" =~ ^[1-5][0-9]{2}$ ]] && \
-     [[ "$control_rc" == 0 && "$control_code" =~ ^[1-5][0-9]{2}$ ]] && \
-     [[ "$deny_code" == 000 && "$deny_rc" =~ ^(7|28)$ ]]; then
-    artifact_ok=true
+
+  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then
+    echo "HINT: Create $NS and the required NetworkPolicies before IMDS validation." >&2
+    false
   fi
+
   policy_set=$(no_unexpected_student_policies "$NS" \
     default-deny allow-frontend-egress-to-backend allow-backend-ingress-from-frontend \
     allow-frontend-dns allow-backend-ingress-from-legacy && echo true || echo false)
+
   create_imds_control
-  control_baseline=$(control_imds_probe "${CHECKER_PREFIX}-task5-control-baseline")
+  control_before=$(control_imds_probe "${CHECKER_PREFIX}-task5-control-before")
+
   create_probe "$NS" "${CHECKER_PREFIX}-metadata" 'app=frontend'
-  result=$(curl_probe "$NS" "${CHECKER_PREFIX}-metadata" "$IMDS_URL")
-  control_after_deny=$(control_imds_probe "${CHECKER_PREFIX}-task5-control-after-deny")
-  if [[ "$artifact_ok" == true && "$policy_set" == true ]] && \
-     assert_reachable "$control_baseline" && assert_transport_denied "$result" && \
-     assert_reachable "$control_after_deny"; then
+  denied=$(curl_probe "$NS" "${CHECKER_PREFIX}-metadata" "$IMDS_URL")
+
+  control_after=$(control_imds_probe "${CHECKER_PREFIX}-task5-control-after")
+
+  if [[ "$policy_set" == true ]] && \
+     assert_reachable "$control_before" && \
+     assert_transport_denied "$denied" && \
+     assert_reachable "$control_after"; then
     echo 1 >> /var/work/tests/result/ok
   else
-    echo "HINT: metadata.output must record baseline_, control_, and deny_ curl/HTTP values. The cks-101 frontend must receive HTTP 000 with curl 7/28, while checker-owned imds-control reaches real EC2 IMDS before and after that deny." >&2
+    echo "HINT: frontend must receive HTTP 000 with curl 7/28 for IMDS, while checker-owned independent control must reach real EC2 IMDS before and after the probe." >&2
     false
   fi
 }
@@ -311,27 +312,34 @@ backend_ip() {
   fi
 }
 
-@test "7. Host-network probe records an environment-specific observation without a fixed outcome" {
+@test "7. Host-network probe is measured at runtime without assuming a fixed outcome" {
   echo 1 >> /var/work/tests/result/all
-  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create $NS, hostnetwork-probe and task 7 evidence artifacts." >&2; false; fi
+
+  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then
+    echo "HINT: Create $NS and hostnetwork-probe before task 7 validation." >&2
+    false
+  fi
+
   host=$(kubectl --context "$CTX" get pod hostnetwork-probe -n "$NS" -o json 2>/dev/null | jq -r '
-    .spec.hostNetwork == true and .metadata.labels.app == "frontend" and .spec.containers[0].image == "curlimages/curl:8.11.1" and
+    .spec.hostNetwork == true and
+    .metadata.labels.app == "frontend" and
+    .spec.containers[0].image == "curlimages/curl:8.11.1" and
     ((.status.conditions // []) | any(.type == "Ready" and .status == "True"))')
-  task5_artifact=/var/work/tests/artifacts/5/metadata.output
-  host_artifact=/var/work/tests/artifacts/7/hostnetwork-metadata.output
-  comparison=/var/work/tests/artifacts/7/comparison.txt
-  task5_values=$(artifact_probe_values "$task5_artifact" deny_ || true)
-  host_values=$(artifact_probe_values "$host_artifact" || true)
-  task5_comparison=$(comparison_probe_values task5_result "$comparison" || true)
-  host_comparison=$(comparison_probe_values task7_result "$comparison" || true)
-  if [[ "$host" == true && -n "$task5_values" && -n "$host_values" && \
-        "$task5_values" == "$task5_comparison" && "$host_values" == "$host_comparison" ]] && \
-     [[ $(grep -c '^task5_result=' "$comparison" 2>/dev/null) -eq 1 && \
-        $(grep -c '^task7_result=' "$comparison" 2>/dev/null) -eq 1 ]] && \
-     grep -qi 'environment-specific' "$comparison" 2>/dev/null; then
+
+  policy_set=$(no_unexpected_student_policies "$NS" \
+    default-deny allow-frontend-egress-to-backend allow-backend-ingress-from-frontend \
+    allow-frontend-dns allow-backend-ingress-from-legacy && echo true || echo false)
+
+  create_probe "$NS" "${CHECKER_PREFIX}-task7-normal" 'app=frontend'
+  normal_result=$(curl_probe "$NS" "${CHECKER_PREFIX}-task7-normal" "$IMDS_URL")
+  host_result=$(curl_probe "$NS" hostnetwork-probe "$IMDS_URL")
+
+  if [[ "$host" == true && "$policy_set" == true ]] && \
+     assert_transport_denied "$normal_result" && \
+     assert_observed_probe "$host_result"; then
     echo 1 >> /var/work/tests/result/ok
   else
-    echo "HINT: hostnetwork-metadata.output must contain one numeric curl result; comparison.txt must exactly reproduce task 5 and task 7 evidence and mark it environment-specific." >&2
+    echo "HINT: A normal frontend pod must remain denied to IMDS. hostnetwork-probe must be Ready and its real IMDS result must be measured at runtime; no fixed hostNetwork outcome is assumed." >&2
     false
   fi
 }
