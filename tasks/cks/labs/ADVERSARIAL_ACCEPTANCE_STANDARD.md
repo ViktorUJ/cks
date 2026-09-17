@@ -135,6 +135,34 @@ path, а не только readiness
 практически, bootstrap завершается `FATAL` и лаба не выдаётся студенту в
 неработоспособном виде.
 
+Исключение: labs/105 намеренно включает `ufw` (UFW) как host-level firewall на
+одноузловом Kubernetes control-plane, использующем Calico как CNI. Официальная
+документация Calico по требованиям (docs.tigera.io/calico/latest/getting-started/
+kubernetes/requirements) прямо указывает: "If your Linux distribution comes with
+installed Firewalld or another iptables manager it should be disabled. These may
+interfere with rules added by Calico and result in unexpected behavior." UFW - это
+iptables/nftables manager, поэтому совмещение UFW с Calico node - неоговорённая upstream
+конфигурация, а не рекомендуемый общий способ ограничить host-level трафик на
+Calico-ноде (для этого Calico предлагает `HostEndpoint`/`GlobalNetworkPolicy`). Лаба
+сохраняет именно UFW - не потому что это production best practice, а потому что задание
+7 CKS exam curriculum (`Minimize host OS footprint`, домен System Hardening) явно
+включает host firewall configuration как отдельный практический навык, независимый от
+CNI-специфичных механизмов, которые уже покрыты в лабе 102 (`CiliumNetworkPolicy`). README
+лабы явно формулирует это как lab-specific exception, а не как общую рекомендацию совмещать
+Calico с UFW на реальном кластере. Чтобы конфликт не был тихим и непроверяемым риском,
+задание 3 требует deterministic E2E contract вокруг UFW enable/reload: bootstrap
+подтверждает `calico-node` Ready до начала задания; до `ufw enable` фиксируется baseline
+всех проверяемых сетевых flows (в том числе прямая проба TCP/10250, доказывающая
+исходную сетевую достижимость до применения firewall - без этого шага post-hardening
+transport failure нельзя было бы отличить от посторонней причины, например от
+недостижимости порта на уровне security group); после `ufw enable` и после отдельного
+`ufw reload` те же проверки повторяются и требуют: `calico-node` остаётся Ready, Node
+остаётся Ready, Pod DNS работает, Pod -> Kubernetes Service работает, Pod -> API server
+работает, нужный host traffic (SSH/API от worker, API от самой ноды и от Pod CIDR) работает,
+а запрещённый `worker -> kubelet:10250` flow блокируется именно host firewall (не иной
+причиной). Любой сбой в этой цепочке проверок должен явно фиксироваться как
+infrastructure/control error, а не маскироваться как случайный transient failure.
+
 ## Как это соотносится с существующими лабами
 
 Пункты выше не требуют переписывания existing labs с нуля. Большинство лаб 101-112 уже

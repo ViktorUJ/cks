@@ -8,7 +8,7 @@ until kubectl get nodes --no-headers >/dev/null 2>&1; do
   sleep 5
 done
 
-mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6}
+mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6,7,8,9,10}
 chown -R ubuntu:ubuntu /var/work/tests/artifacts
 
 # Cache recovery context before the firewall exercise. A correct source-scoped rule keeps

@@ -54,8 +54,11 @@ systemctl reload ssh || true
 
 # Task 7: load an unused kernel module (sctp) that the student must blacklist and unload.
 # sctp is not required by kubeadm/containerd/Calico in this lab and is a common exam-style
-# attack-surface item (also dccp, cramfs, freevxfs in the same family).
-modprobe sctp || true
+# attack-surface item (also dccp, cramfs, freevxfs in the same family). Do NOT swallow a
+# load failure here: if sctp cannot be loaded, the intended unsafe baseline is missing and
+# the lab must fail fast rather than silently hand the student a fixture without it.
+modprobe sctp
+lsmod | awk '$1 == "sctp" {found=1} END {exit !found}'
 
 # Task 8: an insecure sysctl the student must correct, and a kubelet not yet hardened with
 # protectKernelDefaults. sysctl is applied through a file so it is reproducible and greppable.
@@ -67,6 +70,15 @@ sysctl --system >/dev/null 2>&1 || true
 
 # Task 9: an extra SUID binary that is not required for this node's Kubernetes role. The
 # student must find it among genuine system SUID binaries and remove only this bit.
+# A checker-owned baseline of ALL system SUID binaries is captured BEFORE the lab tool is
+# planted, so the checker can later diff the post-remediation set against this baseline and
+# catch a student who strips SUID from unrelated system binaries (e.g. sudo/passwd/mount)
+# while restoring it only on sudo to pass a naive single-binary check.
+install -d -m 0700 /var/lib/cks-lab105
+find / -xdev -perm -4000 -type f -print 2>/dev/null \
+  | sort \
+  > /var/lib/cks-lab105/system-suid-baseline.txt
+
 cp /bin/true /usr/local/bin/cks-lab105-suid-tool
 chmod 4755 /usr/local/bin/cks-lab105-suid-tool
 chown root:root /usr/local/bin/cks-lab105-suid-tool

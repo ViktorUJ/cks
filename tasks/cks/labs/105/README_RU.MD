@@ -105,8 +105,8 @@ check_result
 ---
 | **2** | **Закрыть ненужный открытый порт** |
 | :---: | :--- |
-| Что делаем | На control-plane устраните listener TCP/8080, созданный `cks-lab105-port.service`. Отключите и остановите сервис; он не нужен ни control-plane, ни kubelet. |
-| Критерии приёмки | `ss -ltn` не показывает TCP/8080; `/var/work/tests/artifacts/2/port-8080.txt` содержит `tcp/8080: closed`. |
+| Что делаем | На control-plane устраните listener TCP/8080, созданный `cks-lab105-port.service`. Отключите и остановите сервис (оба действия обязательны — см. вопрос 1 в разделе самопроверки); он не нужен ни control-plane, ни kubelet. |
+| Критерии приёмки | `ss -ltn` не показывает TCP/8080; `systemctl is-enabled cks-lab105-port.service` возвращает `disabled`, `systemctl is-active` - `inactive`; `/var/work/tests/artifacts/2/service.txt` содержит строку `disabled inactive`; `/var/work/tests/artifacts/2/port-8080.txt` содержит `tcp/8080: closed`. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -117,13 +117,13 @@ check_result
 ---
 | **3** | **Ограничить входящий трафик firewall** |
 | :---: | :--- |
-| Что делаем | До включения UFW зафиксируйте роль узла, worker source IP, node InternalIP и `spec.podCIDR`. Это одноузловой control-plane + workload node: нужны loopback, SSH recovery от worker, API `6443/tcp` от worker, самого узла и Pod CIDR; etcd/scheduler/controller-manager используют локальные flows, а межнодовых CNI/kubelet flows в этой топологии нет. Добавьте source-scoped allow rules **до** `ufw default deny incoming`; не используйте широкие `ALLOW Anywhere`. Затем включите UFW и сохраните правила, preflight и recovery-команды в `/var/work/tests/artifacts/3/`. |
-| Критерии приёмки | UFW active/default-deny; `22` и `6443` разрешены только нужным источникам; `/readyz=ok`; ожидаемая нода `Ready`; `health-probe` остаётся Ready и достигает Kubernetes Service; worker не достигает kubelet `10250`; артефакт содержит команды recovery (`ufw disable`, проверка, исправление и повторное включение). |
+| Что делаем | До включения UFW зафиксируйте роль узла, worker source IP, node InternalIP и `spec.podCIDR`. **Обязательный baseline до firewall:** до включения UFW зафиксируйте baseline-пробу TCP/10250 (kubelet HTTPS endpoint) с worker - `curl` с реальным `CURL_EXIT`/`HTTPCODE`, доказывающим сетевую достижимость порта (любой `1xx-5xx`, включая `401`/`403`, считается достижимостью - kubelet API реально ответил). Без этого шага post-hardening "заблокировано" нельзя отличить от постороннего сбоя (security group, routing), который блокировал порт ещё до UFW. Это одноузловой control-plane + workload node: нужны loopback, SSH recovery от worker, API `6443/tcp` от worker, самого узла и Pod CIDR; etcd/scheduler/controller-manager используют локальные flows, а межнодовых CNI/kubelet flows в этой топологии нет. Добавьте source-scoped allow rules **до** `ufw default deny incoming`; не используйте широкие `ALLOW Anywhere`. Затем включите UFW и сохраните правила, preflight (включая baseline TCP/10250) и recovery-команды в `/var/work/tests/artifacts/3/`. |
+| Критерии приёмки | Baseline-проба TCP/10250 до UFW сохранена и показывает реальную сетевую достижимость (`CURL_EXIT=0`, HTTP `1xx-5xx`) - если порт уже недоступен на baseline, результат задания - `inconclusive`, а не PASS; UFW active/default-deny; `22` и `6443` разрешены только нужным источникам (именно `worker_ip`, именно `node_ip`, именно `pod_cidr` - все три с точным правилом на `6443/tcp`, без иных broad `ALLOW Anywhere` для любых портов); `/readyz=ok`; ожидаемая нода `Ready`; `health-probe` остаётся Ready и достигает Kubernetes Service; после UFW worker не достигает kubelet `10250` (`HTTPCODE=000`, транспортный deny) - именно как регресс относительно доказанного baseline; артефакт содержит команды recovery (`ufw disable`, проверка, исправление и повторное включение). |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Самая опасная ошибка здесь - включить `ufw enable` (default-deny) ДО того, как вы добавили allow-правило для SSH с worker IP. Порядок должен быть: сначала все нужные `ufw allow from <IP> to any port <port>`, только потом `ufw --force enable`. Держите текущую SSH-сессию открытой на всё время работы с firewall - если вы потеряете доступ, вторая сессия для recovery не подключится (см. предупреждение ниже).
+Самая опасная ошибка здесь - включить `ufw enable` (default-deny) ДО того, как вы добавили allow-правило для SSH с worker IP. Порядок должен быть: сначала все нужные `ufw allow from <IP> to any port <port>`, только потом `ufw --force enable`. Держите текущую SSH-сессию открытой на всё время работы с firewall - если вы потеряете доступ, вторая сессия для recovery не подключится (см. предупреждение ниже). Не забудьте baseline-пробу TCP/10250 ДО включения UFW - без неё post-hardening "заблокировано" ничего не доказывает: порт мог быть недостижим ещё раньше по совершенно другой причине (например, AWS security group), и тогда UFW тут вообще ни при чём. Проверяйте allow-set строго: `pod_cidr` должен быть разрешён именно на `6443/tcp`, а не просто где-то фигурировать в правилах UFW - и убедитесь, что нет других широких `ALLOW Anywhere` правил помимо необходимых source-scoped.
 </details>
 
 > **Recovery сначала.** Держите текущую SSH-сессию открытой до полной проверки. Если API
@@ -135,6 +135,17 @@ check_result
 > Его нельзя буквально переносить в multi-node cluster: до default-deny нужно инвентаризовать
 > kubelet и межнодовые потоки, CNI overlay, BGP/VXLAN/WireGuard, LoadBalancer/NodePort и
 > provider firewall/security groups для конкретной топологии.
+>
+> **Lab-specific exception: UFW на Calico node.** Официальная документация Calico по
+> требованиям прямо рекомендует отключать firewalld и другие iptables managers на
+> Calico-нодах, потому что они могут конфликтовать с правилами, которые расставляет сам
+> Calico. UFW - такой же iptables/nftables manager. Эта лаба намеренно сохраняет UFW на
+> control-plane для практики host firewall hardening (отдельный навык в программе экзамена
+> CKS), а не как рекомендуемый способ совместить Calico с host firewall в production - для
+> этого Calico предлагает свой `HostEndpoint`/`GlobalNetworkPolicy`. Именно поэтому задание
+> явно требует контролируемую последовательность baseline → `ufw enable` → retest с
+> проверкой, что `calico-node` и вся связность Kubernetes остаются исправны (см.
+> `ADVERSARIAL_ACCEPTANCE_STANDARD.md`).
 
 ---
 | **4** | **Исправить права kubeconfig** |
@@ -151,25 +162,25 @@ check_result
 ---
 | **5** | **Запретить root login по SSH** |
 | :---: | :--- |
-| Что делаем | На control-plane задайте `PermitRootLogin no` в `/etc/ssh/sshd_config`, проверьте синтаксис через `sshd -t` и безопасно перезагрузите SSH. Проверяйте эффективное значение командой `sshd -T`, а не только текст файла. |
-| Критерии приёмки | Эффективное значение `permitrootlogin` равно `no`; `/var/work/tests/artifacts/5/sshd.txt` содержит `PermitRootLogin no`. |
+| Что делаем | На control-plane задайте `PermitRootLogin no` в `/etc/ssh/sshd_config`, проверьте синтаксис через `sshd -t` и безопасно перезагрузите SSH. Проверяйте эффективное значение именно для root-соединения командой `sshd -T -C "user=root,addr=<ваш IP>,laddr=<IP ноды>,lport=22"`, а не просто `sshd -T` без connection context. |
+| Критерии приёмки | Эффективное значение `permitrootlogin` для root connection context равно `no`; `/var/work/tests/artifacts/5/sshd.txt` содержит `PermitRootLogin no`. |
 
 <details>
 <summary>💡 Подсказка к заданию 5</summary>
 
-`sshd -T` показывает ЭФФЕКТИВНОЕ значение после разбора всех `Include`-директив и `Match`-блоков - если где-то позже в конфигурации (или в отдельном включённом файле) есть противоречащая строка, именно `sshd -T` покажет реальный итог, а не то, что вы написали в основном файле. ВСЕГДА держите текущую SSH-сессию открытой перед `systemctl reload sshd` и проверяйте с новой сессии - не с той, что уже была аутентифицирована до изменения.
+`sshd -T` показывает ЭФФЕКТИВНУЮ конфигурацию, но БЕЗ connection context (`-C`) любые `Match`-блоки (`Match User`/`Match Address`/`Match Group` и подобные) не применяются вообще - man-страница `sshd(8)` явно говорит, что `Match`-правила применяются в test mode "only when the connection parameters are supplied via one or more `-C` options". Поэтому `sshd -T` без `-C` может показать `permitrootlogin no` из основного блока конфигурации, хотя более специфичный `Match`-блок (например, `Match Address <IP администратора>` или `Match User root`) разрешает root login именно для реального соединения. Проверяйте через `sshd -T -C "user=root,addr=<IP>,laddr=<IP ноды>,lport=22"` - это симулирует РЕАЛЬНОЕ входящее root-соединение и заставляет `sshd` применить все подходящие `Match`-блоки, прежде чем показать итоговое значение. ВСЕГДА держите текущую SSH-сессию открытой перед `systemctl reload sshd` и проверяйте с новой сессии - не с той, что уже была аутентифицирована до изменения.
 </details>
 
 ---
 | **6** | **Укрепить Docker daemon на `docker-host`** |
 | :---: | :--- |
-| Что делаем | На отдельном `docker-host` прекратите публикацию Docker API по TCP/2375: уберите `-H tcp://...` из учебного systemd override, но сохраните доступ только через unix-сокет. Настройте `/var/run/docker.sock` как `root:root` с режимом `660`; для устойчивости после restart задайте это через override `docker.socket`. Удалите `developer` из группы `docker`. |
-| Критерии приёмки | На TCP/2375 нет listener; `stat -c '%U %G %a' /var/run/docker.sock` возвращает `root root 660`; `developer` не состоит в группе `docker`, а `sudo -u developer docker ps` завершается ошибкой доступа. Создайте `/var/work/tests/artifacts/6/docker-tcp.txt`, `/var/work/tests/artifacts/6/docker-socket.txt`, `/var/work/tests/artifacts/6/developer-access.txt` со строками `tcp/2375: closed`, `root root 660`, `developer docker ps: denied`. |
+| Что делаем | На отдельном `docker-host` прекратите публикацию Docker API по TCP/2375: уберите `-H tcp://...` из учебного systemd override, но сохраните доступ только через unix-сокет. Настройте `/var/run/docker.sock` как `root:root` с режимом `660`; для устойчивости после restart задайте это через override `docker.socket`. Удалите `developer` из группы `docker`. После правок обязательно выполните `sudo systemctl daemon-reload && sudo systemctl restart docker.socket && sudo systemctl restart docker.service` - это доказывает, что настройки переживают перезапуск демона, а не просто временно совпадают с ожидаемым состоянием. После restart подтвердите, что Docker реально работает (`sudo docker version`), а не просто остановлен. |
+| Критерии приёмки | После `daemon-reload` + restart `docker.service` и `docker.socket` в состоянии `active`, а `sudo docker version`/`sudo docker info` завершаются успешно (positive control - Docker реально работает, не просто "выключен и поэтому 2375 закрыт"); на TCP/2375 нет listener; `stat -c '%U %G %a' /var/run/docker.sock` возвращает `root root 660`; persistent override `docker.service`/`docker.socket` (через `systemctl cat`) не содержит `-H tcp://` и задаёт `SocketGroup=root`/`SocketMode=0660`; `developer` не состоит в группе `docker`, а `sudo -u developer docker ps` завершается ошибкой доступа. Создайте `/var/work/tests/artifacts/6/docker-tcp.txt`, `/var/work/tests/artifacts/6/docker-socket.txt`, `/var/work/tests/artifacts/6/developer-access.txt` со строками `tcp/2375: closed`, `root root 660`, `developer docker ps: denied`. |
 
 <details>
 <summary>💡 Подсказка к заданию 6</summary>
 
-Членство в группе `docker` фактически эквивалентно root - любой процесс с доступом к `docker.sock` может смонтировать хостовую файловую систему через `--privileged` container. Убедиться, что `developer` удалён из группы, недостаточно проверить `groups developer` - изменения членства в группе применяются к НОВЫМ login-сессиям, проверяйте именно через `sudo -u developer docker ps` в свежей команде, не в уже открытой сессии `developer`.
+Членство в группе `docker` фактически эквивалентно root - любой процесс с доступом к `docker.sock` может смонтировать хостовую файловую систему через `--privileged` container. Убедиться, что `developer` удалён из группы, недостаточно проверить `groups developer` - изменения членства в группе применяются к НОВЫМ login-сессиям, проверяйте именно через `sudo -u developer docker ps` в свежей команде, не в уже открытой сессии `developer`. Не останавливайтесь на первом успешном запуске проверки - выполните `daemon-reload` и `restart` обоих unit-ов (`docker.socket`, `docker.service`) и повторите проверки СНОВА: без этого шага можно случайно пройти задание, просто временно остановив Docker (тогда 2375 закрыт не потому что убран `-H tcp://`, а потому что демон вообще не работает) - убедитесь также, что `sudo docker version` работает после restart, это доказывает, что Docker реально функционирует, а не просто "выключен".
 </details>
 
 ---
@@ -193,7 +204,7 @@ check_result
 <details>
 <summary>💡 Подсказка к заданию 8</summary>
 
-Порядок здесь критичен и намеренно подчёркнут в описании задания: сначала `sysctl --system` (применить значения), ТОЛЬКО ПОТОМ включать `protectKernelDefaults: true` и перезапускать kubelet. Если сделать в обратном порядке, kubelet при старте обнаружит несоответствие kernel parameters своим ожиданиям и откажется запускаться - нода останется NotReady, и вы не сможете понять причину без чтения kubelet логов (`journalctl -u kubelet`).
+Порядок здесь критичен и намеренно подчёркнут в описании задания: сначала `sysctl --system` (применить значения), ТОЛЬКО ПОТОМ включать `protectKernelDefaults: true` и перезапускать kubelet. Если сделать в обратном порядке, kubelet при старте обнаружит несоответствие kernel parameters своим ожиданиям и откажется запускаться - нода останется NotReady, и вы не сможете понять причину без чтения kubelet логов (`journalctl -u kubelet`). Проверка ориентируется на РЕАЛЬНО ДЕЙСТВУЮЩУЮ конфигурацию kubelet через `kubectl get --raw="/api/v1/nodes/<node>/proxy/configz"`, а не на текст `config.yaml` - если строка в файле закомментирована или содержит опечатку, `grep` мог бы её всё равно найти, хотя kubelet продолжает работать со старым значением по умолчанию. После правки файла обязательно перезапустите kubelet и проверьте именно через `configz`.
 </details>
 
 ---
@@ -205,19 +216,19 @@ check_result
 <details>
 <summary>💡 Подсказка к заданию 9</summary>
 
-`chmod u-s` убирает именно SUID-бит, не трогая остальные права (в отличие от `chmod 755`, который также перезапишет все остальные биты прав - в данном случае результат совпадает, но `u-s` безопаснее как общая привычка). Не запускайте `find / -perm -4000` без `-xdev` без крайней необходимости - без него команда будет сканировать смонтированные сетевые/виртуальные файловые системы и может выполняться очень долго или зависнуть.
+`chmod u-s` убирает именно SUID-бит, не трогая остальные права (в отличие от `chmod 755`, который также перезапишет все остальные биты прав - в данном случае результат совпадает, но `u-s` безопаснее как общая привычка). Не запускайте `find / -perm -4000` без `-xdev` без крайней необходимости - без него команда будет сканировать смонтированные сетевые/виртуальные файловые системы и может выполняться очень долго или зависнуть. Проверка сравнивает текущий набор системных SUID-бинарников с baseline, зафиксированным ДО начала лабы - трогать любой другой системный SUID-бинарник (не только `sudo`/`passwd`) запрещено, и просто вернуть SUID на `sudo` не поможет, если вы случайно (или намеренно) сняли его с чего-то ещё.
 </details>
 
 ---
 | **10** | **Отключить core dumps и защитить SUID-процессы от снятия дампа памяти** |
 | :---: | :--- |
-| Что делаем | Core dump процесса может содержать расшифрованные секреты, приватные ключи и токены, находившиеся в памяти на момент crash. На control-plane ограничьте размер core dump через `/etc/security/limits.conf` (добавьте строки `* hard core 0` и `* soft core 0`) и запретите dump для SUID/privileged-процессов через `sysctl fs.suid_dumpable = 0` в `/etc/sysctl.d/99-kubernetes.conf` (тот же файл, что в задании 8 — не создавайте отдельный конфликтующий файл). Примените `sudo sysctl --system`. Подтвердите оба свойства: `sysctl fs.suid_dumpable` возвращает `0`, а новый login-shell (`bash -l` или `su - ubuntu -c 'ulimit -c'`) показывает `ulimit -c` равным `0`. |
-| Критерии приёмки | `sysctl -n fs.suid_dumpable` возвращает `0`; `/etc/sysctl.d/99-kubernetes.conf` содержит `fs.suid_dumpable = 0`; `/etc/security/limits.conf` содержит обе строки `* hard core 0` и `* soft core 0`; новый login-shell показывает `ulimit -c` равным `0`; `/var/work/tests/artifacts/10/coredump.txt` содержит все три подтверждения. |
+| Что делаем | Core dump процесса может содержать расшифрованные секреты, приватные ключи и токены, находившиеся в памяти на момент crash. На control-plane ограничьте размер core dump через `/etc/security/limits.conf` (добавьте строки `* hard core 0` и `* soft core 0`) и запретите dump для SUID/privileged-процессов через `sysctl fs.suid_dumpable = 0` в `/etc/sysctl.d/99-kubernetes.conf` (тот же файл, что в задании 8 — не создавайте отдельный конфликтующий файл). **На Ubuntu этого недостаточно**: crash dump по умолчанию передаётся не напрямую в файл, а через `kernel.core_pattern`, который на Ubuntu указывает на userspace pipe handler (Apport) — Apport перехватывает crash в `/var/lib/apport/coredump/` независимо от `ulimit -c`, потому что `RLIMIT_CORE` игнорируется ядром именно для pipe-обработчиков (см. `man 5 core`: "RLIMIT_CORE will be ignored if the system is configured to pipe core dumps to a program"). Поэтому дополнительно задайте `kernel.core_pattern = |/bin/false` в том же `/etc/sysctl.d/99-kubernetes.conf` — это заменяет pipe-handler на заведомо неработающий, и ядро не создаёт dump ни в файл, ни через Apport. Примените `sudo sysctl --system`. Подтвердите все четыре свойства: `sysctl fs.suid_dumpable` возвращает `0`, `cat /proc/sys/kernel/core_pattern` возвращает `\|/bin/false`, новый login-shell (`bash -l` или `su - ubuntu -c 'ulimit -c'`) показывает `ulimit -c` равным `0`, и после реального crash тестового процесса (`SIGSEGV`) не появляется новый core dump ни в `/var/lib/apport/coredump/`, ни где-либо ещё. |
+| Критерии приёмки | `sysctl -n fs.suid_dumpable` возвращает `0`; `/etc/sysctl.d/99-kubernetes.conf` содержит `fs.suid_dumpable = 0` и `kernel.core_pattern = \|/bin/false`; `cat /proc/sys/kernel/core_pattern` возвращает `\|/bin/false`; `/etc/security/limits.conf` содержит обе строки `* hard core 0` и `* soft core 0`; новый login-shell показывает `ulimit -c` равным `0`; controlled crash тестового процесса не создаёт новый retained core dump; `/var/work/tests/artifacts/10/coredump.txt` содержит все подтверждения, включая результат controlled crash probe. |
 
 <details>
 <summary>💡 Подсказка к заданию 10</summary>
 
-`ulimit -c` в ВАШЕЙ текущей SSH-сессии не изменится после редактирования `limits.conf` - PAM-лимиты применяются только при создании НОВОЙ сессии/login-shell. Проверяйте через `su - ubuntu -c 'ulimit -c'` (новый login) или откройте новую SSH-сессию, а не проверяйте `ulimit -c` в той же shell, где вы редактировали файл. Оба значения нужны: `hard` - абсолютный потолок, `soft` - действующее значение по умолчанию; если задать только `soft`, процесс может сам поднять лимит до `hard`.
+`ulimit -c` в ВАШЕЙ текущей SSH-сессии не изменится после редактирования `limits.conf` - PAM-лимиты применяются только при создании НОВОЙ сессии/login-shell. Проверяйте через `su - ubuntu -c 'ulimit -c'` (новый login) или откройте новую SSH-сессию, а не проверяйте `ulimit -c` в той же shell, где вы редактировали файл. Оба значения нужны: `hard` - абсолютный потолок, `soft` - действующее значение по умолчанию; если задать только `soft`, процесс может сам поднять лимит до `hard`. Ключевая ловушка задания: `ulimit -c 0` и `fs.suid_dumpable=0` **не отключают** core dump на Ubuntu сами по себе - `man 5 core` прямо говорит, что `RLIMIT_CORE` игнорируется ядром, если `kernel.core_pattern` указывает на pipe-обработчик (`|program`), а Ubuntu по умолчанию направляет crash именно в такой обработчик (Apport), который перехватывает dump независимо от `ulimit`. Единственный надёжный способ - переопределить сам `kernel.core_pattern` (например, на `|/bin/false`), а не только лимиты процесса.
 </details>
 
 ## Дополнительно: kernel и containerd/CRI hardening

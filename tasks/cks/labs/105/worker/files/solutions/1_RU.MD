@@ -27,10 +27,14 @@ ssh "$CP" 'enabled=$(sudo systemctl is-enabled cks-lab105-unused.service 2>/dev/
 ## 2. Закрыть ненужный TCP/8080
 
 Порт 8080 открыт намеренно сервисом `cks-lab105-port.service`; он не нужен ни
-control-plane, ни kubelet.
+control-plane, ни kubelet. Останавливаем и отключаем сервис - оба действия обязательны,
+иначе listener вернётся после reboot, даже если сейчас порт закрыт.
 
 ```bash
 ssh "$CP" 'sudo systemctl disable --now cks-lab105-port.service'
+ssh "$CP" 'enabled=$(sudo systemctl is-enabled cks-lab105-port.service 2>/dev/null || true); active=$(sudo systemctl is-active cks-lab105-port.service 2>/dev/null || true); echo "$enabled $active"' \
+  | tee /var/work/tests/artifacts/2/service.txt
+# disabled inactive
 ssh "$CP" 'sudo ss -ltn | grep -qE "[:.]8080([[:space:]]|$)"' \
   && echo 'tcp/8080: still open' \
   || echo 'tcp/8080: closed' \
@@ -52,6 +56,22 @@ POD_CIDR=$(kubectl get node "$CP" --context "$CTX" -o jsonpath='{.spec.podCIDR}'
 printf 'role=control-plane,workload\nworker_ip=%s\nnode_ip=%s\npod_cidr=%s\n' \
   "$WORKER_IP" "$NODE_IP" "$POD_CIDR" \
   | tee /var/work/tests/artifacts/3/preflight.txt
+
+# Baseline ДО UFW: доказываем, что TCP/10250 (kubelet HTTPS) реально достижим сейчас -
+# без этого шага post-hardening "заблокировано" ничего не доказывает, порт мог быть
+# недоступен по совершенно другой причине ещё раньше (security group, routing).
+set +e
+baseline_kubelet_code=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 \
+  "https://${NODE_IP}:10250/healthz")
+baseline_kubelet_rc=$?
+set -e
+printf 'baseline kubelet 10250: CURL_EXIT=%s HTTPCODE=%s\n' "$baseline_kubelet_rc" "$baseline_kubelet_code" \
+  | tee -a /var/work/tests/artifacts/3/preflight.txt
+if [[ "$baseline_kubelet_rc" -eq 0 && "$baseline_kubelet_code" =~ ^[1-5][0-9][0-9]$ ]]; then
+  echo "OK: baseline TCP/10250 reachable (exit=$baseline_kubelet_rc http=$baseline_kubelet_code) - a post-UFW block can now be attributed to UFW."
+else
+  echo "FAIL: TCP/10250 already unreachable before UFW (exit=$baseline_kubelet_rc http=$baseline_kubelet_code) - fix connectivity first, otherwise the post-UFW result is inconclusive." >&2
+fi
 
 # Allow recovery and required API sources before changing the default.
 ssh "$CP" "sudo ufw allow from '$WORKER_IP' to any port 22 proto tcp comment 'CKS105 worker SSH recovery'"
@@ -110,7 +130,16 @@ ssh "$CP" "sudo stat -c '%U %G %a' /etc/kubernetes/admin.conf" \
 ssh "$CP" "sudo sed -i -E 's/^[[:space:]]*PermitRootLogin[[:space:]]+.*/PermitRootLogin no/' /etc/ssh/sshd_config"
 ssh "$CP" "sudo grep -qE '^[[:space:]]*PermitRootLogin[[:space:]]+' /etc/ssh/sshd_config || echo 'PermitRootLogin no' | sudo tee -a /etc/ssh/sshd_config"
 ssh "$CP" 'sudo sshd -t && sudo systemctl reload ssh'
-ssh "$CP" "sudo sshd -T | awk '\$1 == \"permitrootlogin\" {print \"PermitRootLogin \" \$2}'" \
+```
+
+`sshd -T` без connection context не применяет `Match`-блоки вообще - man `sshd(8)`
+прямо говорит, что `Match` в test mode применяется только когда передан `-C`. Поэтому
+проверяем через `-C`, симулируя реальное root-соединение с worker:
+
+```bash
+WORKER_IP=$(ssh "$CP" 'printf "%s\n" "${SSH_CONNECTION%% *}"')
+NODE_IP=$(kubectl get node "$CP" --context "$CTX" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
+ssh "$CP" "sudo sshd -T -C 'user=root,addr=${WORKER_IP},laddr=${NODE_IP},lport=22' | awk '\$1 == \"permitrootlogin\" {print \"PermitRootLogin \" \$2}'" \
   | tee /var/work/tests/artifacts/5/sshd.txt
 # PermitRootLogin no
 ```
@@ -125,9 +154,39 @@ TCP/2375 не имеет TLS и аутентификации: доступ к н
 ssh docker-host 'sudo rm -f /etc/systemd/system/docker.service.d/10-cks-lab105-tcp.conf'
 ssh docker-host 'sudo install -d -m 0755 /etc/systemd/system/docker.socket.d'
 ssh docker-host 'printf "[Socket]\nSocketGroup=root\nSocketMode=0660\n" | sudo tee /etc/systemd/system/docker.socket.d/10-cks-lab105-socket.conf >/dev/null'
-ssh docker-host 'sudo systemctl daemon-reload && sudo systemctl stop docker.service && sudo systemctl restart docker.socket && sudo systemctl start docker.service'
-ssh docker-host 'sudo chown root:root /var/run/docker.sock && sudo chmod 660 /var/run/docker.sock'
 ssh docker-host 'sudo gpasswd -d developer docker || true'
+```
+
+Применяем изменения через полный `daemon-reload` + restart **обоих** unit-ов - это
+обязательный шаг, а не просто "перечитать конфиг": без реального restart можно случайно
+"пройти" проверку, если Docker просто перестал отвечать (тогда TCP/2375 закрыт не потому,
+что убран `-H tcp://`, а потому что демон вообще не работает):
+
+```bash
+ssh docker-host 'sudo systemctl daemon-reload'
+ssh docker-host 'sudo systemctl restart docker.socket'
+ssh docker-host 'sudo systemctl restart docker.service'
+ssh docker-host 'sudo chown root:root /var/run/docker.sock && sudo chmod 660 /var/run/docker.sock'
+```
+
+Positive control: подтверждаем, что Docker после restart реально РАБОТАЕТ (не просто не
+слушает 2375 - он должен полноценно функционировать через unix-сокет):
+
+```bash
+ssh docker-host 'sudo systemctl is-active docker.service docker.socket'
+ssh docker-host 'sudo docker version && sudo docker info >/dev/null'
+# active / active
+# (docker version/info должны завершиться без ошибки)
+```
+
+Persistent config check - убеждаемся, что effective unit не содержит `-H tcp://` и что
+socket override реально задаёт нужные значения (а не просто временно совпадает с ними):
+
+```bash
+ssh docker-host 'systemctl cat docker.service | grep -c "H tcp://" || true'
+ssh docker-host 'systemctl cat docker.socket'
+# 0 (нет совпадений -H tcp://)
+# [Socket] ... SocketGroup=root ... SocketMode=0660 ...
 ```
 
 Проверим TCP listener, сокет и доступ пользователя отдельными артефактами:
@@ -168,6 +227,7 @@ ssh "$CP" "printf 'blacklist sctp\ninstall sctp /bin/true\n' | sudo tee /etc/mod
 файла конфигурации, и override виден в effective modprobe config:
 
 ```bash
+mkdir -p /var/work/tests/artifacts/7
 ssh "$CP" '
 {
   if sudo lsmod | grep -q sctp; then echo "lsmod: present"; else echo "lsmod: absent"; fi
@@ -244,13 +304,24 @@ Core dump может содержать секреты и ключи из пам
 
 ```bash
 ssh "$CP" "printf 'fs.suid_dumpable = 0\n' | sudo tee -a /etc/sysctl.d/99-kubernetes.conf"
+```
+
+На Ubuntu `ulimit -c 0` и `fs.suid_dumpable=0` **не гарантируют** отсутствие core dump:
+`man 5 core` прямо документирует, что `RLIMIT_CORE` игнорируется ядром, если
+`kernel.core_pattern` направляет dump в userspace-обработчик через pipe (`|program`).
+Ubuntu по умолчанию именно так настроен - crash перехватывает Apport и сохраняет его в
+`/var/lib/apport/coredump/` НЕЗАВИСИМО от `ulimit -c` процесса. Единственный надёжный
+способ - переопределить сам `kernel.core_pattern` на заведомо неработающий handler:
+
+```bash
+ssh "$CP" "printf 'kernel.core_pattern = |/bin/false\n' | sudo tee -a /etc/sysctl.d/99-kubernetes.conf"
 ssh "$CP" 'sudo sysctl --system'
-ssh "$CP" 'sysctl -n fs.suid_dumpable'
+ssh "$CP" 'sysctl -n fs.suid_dumpable; cat /proc/sys/kernel/core_pattern'
 ```
 
 Ограничиваем размер core dump на уровне лимитов процессов - это отдельный механизм от
-`suid_dumpable` (soft limit для обычных crash, `suid_dumpable` специально для setuid/setgid
-процессов):
+`suid_dumpable`/`core_pattern` (soft limit для обычных crash при классической
+file-based записи, если она когда-либо будет восстановлена):
 
 ```bash
 ssh "$CP" "printf '* hard core 0\n* soft core 0\n' | sudo tee -a /etc/security/limits.conf"
@@ -261,10 +332,28 @@ ssh "$CP" "printf '* hard core 0\n* soft core 0\n' | sudo tee -a /etc/security/l
 
 ```bash
 mkdir -p /var/work/tests/artifacts/10
-ssh "$CP" "sysctl -n fs.suid_dumpable; su - ubuntu -c 'ulimit -c'" \
+ssh "$CP" "sysctl -n fs.suid_dumpable; cat /proc/sys/kernel/core_pattern; su - ubuntu -c 'ulimit -c'" \
   | tee /var/work/tests/artifacts/10/coredump.txt
 ssh "$CP" "cat /etc/sysctl.d/99-kubernetes.conf; cat /etc/security/limits.conf" \
   | tee -a /var/work/tests/artifacts/10/coredump.txt
+```
+
+Controlled crash probe: подтверждаем, что после реального `SIGSEGV` не появляется НОВЫЙ
+retained core dump - ни в стандартном текущем каталоге, ни через Apport:
+
+```bash
+ssh "$CP" '
+before_count=$(sudo find /var/lib/apport/coredump /var/crash -type f 2>/dev/null | wc -l)
+sh -c "kill -SEGV \$\$" || true
+sleep 2
+after_count=$(sudo find /var/lib/apport/coredump /var/crash -type f 2>/dev/null | wc -l)
+if [ "$after_count" -le "$before_count" ]; then
+  echo "crash-probe: no new retained core dump"
+else
+  echo "crash-probe: NEW core dump appeared after SIGSEGV"
+fi
+' | tee -a /var/work/tests/artifacts/10/coredump.txt
+# crash-probe: no new retained core dump
 ```
 
 После выполнения всех шагов запустите `check_result`.
