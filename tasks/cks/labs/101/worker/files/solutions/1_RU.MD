@@ -11,7 +11,7 @@ k delete ns cks-101 cks-101-legacy imds-control --ignore-not-found
 
 Получаем актуальный digest образа:
 ```bash
-k run digest --image=viktoruj/ping_pong:latest --restart=Never
+k run digest --image=viktoruj/ping_pong:latest
 k wait --for=condition=Ready pod/digest --timeout=60s
 digest=$(k get pod digest -o yaml | grep imageID | cut -d'@' -f2)
 k delete pod digest
@@ -35,19 +35,23 @@ k -n cks-101 get deploy frontend backend -o yaml | grep 'image:'
 
 Создаём probe для тестов:
 ```bash
-k -n cks-101 run probe --image=curlimages/curl:8.11.1 --restart=Never -l app=frontend --command -- sleep 3600
+k -n cks-101 run probe --image=curlimages/curl:8.11.1 -l app=frontend --command -- sleep 3600
 k -n cks-101 wait --for=condition=Ready pod/probe --timeout=60s
 ```
 
 Создаём независимый namespace для control:
 ```bash
 k create ns imds-control
-k -n imds-control run imds-control --image=curlimages/curl:8.11.1 --restart=Never --command -- sleep 3600
+k -n imds-control run imds-control --image=curlimages/curl:8.11.1 --command -- sleep 3600
 k -n imds-control wait --for=condition=Ready pod/imds-control --timeout=60s
 ```
 
 Baseline ДО default-deny:
 ```bash
+# Baseline: backend достижим до default-deny
+k -n cks-101 exec probe -- curl -sS -o /dev/null -w 'HTTP:%{http_code}\n' -m 5 http://backend:8080/
+echo $?
+
 # Baseline: IMDS достижим из frontend
 k -n cks-101 exec probe -- curl -sS -o /dev/null -w 'HTTP:%{http_code}\n' -m 5 http://169.254.169.254/
 echo $?
@@ -72,10 +76,6 @@ EOF
 
 Проверяем после default-deny:
 ```bash
-# frontend -> backend заблокирован
-k -n cks-101 exec probe -- curl -sS -o /dev/null -w 'HTTP:%{http_code}\n' -m 5 http://backend:8080/
-echo $?
-
 # IMDS заблокирован
 k -n cks-101 exec probe -- curl -sS -o /dev/null -w 'HTTP:%{http_code}\n' -m 5 http://169.254.169.254/
 echo $?
@@ -272,7 +272,7 @@ k -n cks-101-legacy exec deploy/legacy-client -- curl -sS -m 5 http://backend.ck
 ## 7. hostNetwork observation
 
 ```bash
-k -n cks-101 run hostnetwork-probe --image=curlimages/curl:8.11.1 --restart=Never -l app=frontend \
+k -n cks-101 run hostnetwork-probe --image=curlimages/curl:8.11.1 -l app=frontend \
   --overrides='{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}' \
   --command -- sleep 3600
 k -n cks-101 wait --for=condition=Ready pod/hostnetwork-probe --timeout=60s

@@ -1,6 +1,6 @@
 locals {
-  questions_list    = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/102/README_RU.MD"
-  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/master/tasks/cks/labs/102/worker/files/solutions/1_RU.MD"
+  questions_list    = "https://github.com/ViktorUJ/cks/blob/AG-156/tasks/cks/labs/102/README_RU.MD"
+  solutions_scripts = "https://github.com/ViktorUJ/cks/blob/AG-156/tasks/cks/labs/102/worker/files/solutions/1_RU.MD"
   solutions_video   = "Not ready yet"
   debug_output      = "false"
   region            = "eu-central-1"
@@ -20,6 +20,8 @@ locals {
   cni = {
     type               = "cilium"
     disable_kube_proxy = "true"
+    cilium_version      = "v0.19.7"
+    cilium_helm_version = "1.20.1"
   }
   instance_type         = "t3.medium"
   instance_type_worker  = "t3.small"

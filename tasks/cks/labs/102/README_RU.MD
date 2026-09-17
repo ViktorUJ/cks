@@ -106,35 +106,35 @@ cilium status --wait
 ---
 | **2** | **Cilium L3/L4: только frontend к backend:80** |
 | :---: | :--- |
-| Что делаем | В `cks-102` создайте `CiliumNetworkPolicy` с именем `backend-policy`. Она должна выбирать `app=backend` и разрешать ingress только от endpoint с `role=frontend` на TCP-порт `80`. Не добавляйте широкого разрешения для всех endpoint. Проверьте `curl` из `frontend` к `http://backend/` и из `client` к тому же адресу; сохраните результаты в `/var/work/tests/artifacts/2/l3-l4.txt`. |
-| Критерии приёмки | - `backend-policy` выбирает `app=backend`, source `role=frontend`, TCP `80`;<br/>- запрос из `frontend` получает `200`;<br/>- запрос из `client` не получает `200`;<br/>- артефакт существует. |
+| Что делаем | В `cks-102` создайте `CiliumNetworkPolicy` с именем `backend-policy`. Она должна выбирать `app=backend` и разрешать ingress только от endpoint с `role=frontend` на TCP-порт `80`. Не добавляйте широкого разрешения для всех endpoint.<br/><br/>**Обязательный baseline до policy:**<br/>1. До применения `backend-policy` убедитесь, что и `frontend`, и `client` реально достигают `http://backend/`: зафиксируйте отдельно `CURL_EXIT` и `HTTPCODE` для каждого.<br/>2. Baseline считается доказанным только при `CURL_EXIT:0` и реальном HTTP status `1xx–5xx` для обоих Pod.<br/><br/>**После этого** примените `backend-policy` и повторите те же probes из `frontend` и `client`; сохраните все результаты (baseline и после policy, оба Pod, оба CURL_EXIT/HTTPCODE) в `/var/work/tests/artifacts/2/l3-l4.txt`. |
+| Критерии приёмки | - `backend-policy` выбирает `app=backend`, source `role=frontend`, TCP `80`;<br/>- до policy: `frontend` и `client` оба реально достигают backend (`CURL_EXIT:0` + HTTP `1xx-5xx`);<br/>- после policy: `frontend` получает `200`;<br/>- после policy: `client` получает именно transport-level deny - `HTTPCODE:000` и curl network/timeout exit code (`7`/`28`), а не просто «не 200»;<br/>- артефакт содержит baseline и after-policy результаты для обоих Pod. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
 
-`endpointSelector.matchLabels` в самой policy должен матчить `backend` (`app: backend`), а `fromEndpoints[].matchLabels` внутри `ingress` должен матчить `frontend` (`role: frontend`) - это два РАЗНЫХ селектора в одном объекте, легко перепутать местами. Проверьте себя через `kubectl exec` в `client`: запрос должен либо не отвечать вовсе, либо получать таймаут - не `200`.
+`endpointSelector.matchLabels` в самой policy должен матчить `backend` (`app: backend`), а `fromEndpoints[].matchLabels` внутри `ingress` должен матчить `frontend` (`role: frontend`) - это два РАЗНЫХ селектора в одном объекте, легко перепутать местами. Проверьте себя через `kubectl exec` в `client`: после policy запрос должен получить именно `HTTPCODE:000` и exit `7`/`28` - реальный HTTP-ответ с любым кодом (`403`, `404`...) означает, что сетевой путь всё ещё существует и L3/L4 deny не доказан.
 </details>
 ---
 | **3** | **Cilium L7 HTTP: только GET /** |
 | :---: | :--- |
-| Что делаем | Измените **тот же** `backend-policy`: для TCP/80 разрешите от `frontend` только HTTP `GET` с path `/`. Не оставляйте отдельное широкое L4 allow-правило, иначе L7-фильтр не будет ограничивать POST. Запишите HTTP-коды GET и POST в `/var/work/tests/artifacts/3/l7-http.txt`. |
-| Критерии приёмки | - у правила TCP/80 есть `rules.http` с `method: GET` и `path: /`;<br/>- `GET http://backend/` из `frontend` возвращает `200`;<br/>- `POST http://backend/` из `frontend` возвращает `403`;<br/>- артефакт существует. |
+| Что делаем | Измените **тот же** `backend-policy`: для TCP/80 разрешите от `frontend` только HTTP `GET` с path `/`. Не оставляйте отдельное широкое L4 allow-правило, иначе L7-фильтр не будет ограничивать POST.<br/><br/>**Обязательный baseline до L7-правила:** при ещё действующей L3/L4-only policy из задания 2 убедитесь, что `frontend -> backend GET /` получает HTTP response, и `frontend -> backend POST /` также достигает backend и получает какой-либо реальный HTTP status (`1xx-5xx`; конкретный nginx status не фиксируется как универсальное условие).<br/><br/>После замены правила на L7 повторите оба запроса. Запишите baseline и after-policy HTTP-коды GET и POST в `/var/work/tests/artifacts/3/l7-http.txt`. |
+| Критерии приёмки | - у правила TCP/80 есть `rules.http` с `method: GET` и `path: /`;<br/>- baseline (L4-only): `GET /` и `POST /` оба реально достигают backend;<br/>- после L7: `GET http://backend/` из `frontend` возвращает `200`;<br/>- после L7: `POST http://backend/` из `frontend` возвращает `403`;<br/>- артефакт содержит baseline и after-policy evidence. |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Самая частая ошибка этого задания - оставить исходное L4-only правило из задания 2 РЯДОМ с новым L7-правилом, вместо того чтобы заменить его. Если в policy одновременно есть "разрешить TCP/80 без L7-фильтра" и "разрешить TCP/80 с L7 GET /", Cilium применит более широкое разрешение, и `POST` пройдёт, а должен получить `403`. Убедитесь, что `toPorts.rules.http` находится ВНУТРИ того же правила, что и `toPorts.ports` с портом 80, а не в отдельном дублирующем правиле.
+Самая частая ошибка этого задания - оставить исходное L4-only правило из задания 2 РЯДОМ с новым L7-правилом, вместо того чтобы заменить его. Если в policy одновременно есть "разрешить TCP/80 без L7-фильтра" и "разрешить TCP/80 с L7 GET /", Cilium применит более широкое разрешение, и `POST` пройдёт, а должен получить `403`. Убедитесь, что `toPorts.rules.http` находится ВНУТРИ того же правила, что и `toPorts.ports` с портом 80, а не в отдельном дублирующем правиле. Baseline с L4-only policy до этого задания существует именно для того, чтобы доказать: до L7 POST реально проходил на backend, а после L7 его отклоняет именно L7-фильтр (`403`), а не какая-то посторонняя сетевая проблема.
 </details>
 ---
 | **4** | **DNS-aware egress: разрешён только один FQDN** |
 | :---: | :--- |
-| Что делаем | Создайте `CiliumNetworkPolicy` `frontend-fqdn`, выбирающую `role=frontend`. Разрешите ей DNS к `kube-dns` на порту `53` **через L7 DNS proxy rule** `toPorts.rules.dns` (например, `matchPattern: "*"`): Cilium по этому DNS-трафику формирует FQDN-to-IP mapping для `toFQDNs`. Разрешите egress через `toFQDNs` только к `example.com` и только на TCP `443`. Проверьте HTTPS-запрос к `https://example.com/`, отказ `http://example.com:80` и отказ `https://www.google.com/`; сохраните результаты в `/var/work/tests/artifacts/4/fqdn.txt`. |
-| Критерии приёмки | - политика содержит `toFQDNs.matchName: example.com` и `toPorts` с TCP `443`;<br/>- DNS к `kube-dns` разрешён отдельным правилом с `rules.dns`;<br/>- артефакт `fqdn.txt` существует.<br/>- Сетевые проверки к `example.com`/`www.google.com` сохраняются в артефакт как diagnostic evidence, но **не являются** обязательным условием PASS: IANA прямо указывает, что HTTP-сервис example-доменов предоставляется best-effort и не предназначен как testing endpoint для software, поэтому их временная недоступность не должна засчитываться как ошибка policy. |
+| Что делаем | Создайте `CiliumNetworkPolicy` `frontend-fqdn`, выбирающую `role=frontend`. Разрешите ей DNS к `kube-dns` на порту `53` **через L7 DNS proxy rule** `toPorts.rules.dns` (например, `matchPattern: "*"`): Cilium по этому DNS-трафику формирует FQDN-to-IP mapping для `toFQDNs`. Разрешите egress через `toFQDNs` только к `example.com` и только на TCP `443`. **Также сохраните обязательный внутренний поток из заданий 2-3**: добавьте отдельное правило egress к `backend` (`app=backend`) только на TCP `80` - без него `frontend-fqdn` включает egress default-deny для `frontend`, и уже разрешённый `frontend -> backend:80` из задания 2-3 будет заблокирован.<br/><br/>**Обязательный preflight до `frontend-fqdn`:** до применения policy подтвердите, что DNS resolution из `frontend` работает, и попытайтесь обратиться к `https://example.com/`, `http://example.com:80/` и `https://www.google.com/`; сохраните эти baseline-результаты.<br/><br/>После применения `frontend-fqdn` повторите те же три проверки; сохраните все baseline и after-policy результаты в `/var/work/tests/artifacts/4/fqdn.txt`. Если конкретный внешний endpoint был недоступен уже на baseline, его after-policy результат считается `inconclusive`, а не доказательством policy deny - структурная проверка policy при этом остаётся обязательной. Дополнительно подтвердите regression-check: `frontend -> backend GET /` должен вернуть `200`, `frontend -> backend POST /` должен вернуть `403` (L7-policy из задания 3 должна продолжать работать). |
+| Критерии приёмки | - preflight выполнен до policy и сохранён;<br/>- политика содержит `toFQDNs.matchName: example.com` и `toPorts` с TCP `443`;<br/>- DNS к `kube-dns` разрешён отдельным правилом с `rules.dns`;<br/>- внутренний egress к `backend` разрешён отдельным правилом только на TCP `80`, без чего задание 3 регрессирует;<br/>- внешний egress разрешён только к `example.com:443`; другие внешние destinations/ports не разрешаются;<br/>- после применения `frontend-fqdn` `frontend -> backend GET /` всё ещё возвращает `200`, а `POST /` - `403`;<br/>- артефакт `fqdn.txt` содержит baseline и after-policy результаты.<br/>- Сетевые проверки к `example.com`/`www.google.com` сохраняются в артефакт как diagnostic evidence, но **не являются** обязательным условием PASS: IANA прямо указывает, что HTTP-сервис example-доменов предоставляется best-effort и не предназначен как testing endpoint для software, поэтому их временная недоступность не должна засчитываться как ошибка policy - однако именно baseline позволяет отличить «endpoint был недоступен изначально» от «policy заблокировала доступный endpoint». |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
 
-Два egress-правила нужны в одном объекте policy: (1) DNS к kube-dns с `rules.dns.matchPattern: "*"`, БЕЗ этого Cilium не сможет отследить, какой IP соответствует `example.com`; (2) `toFQDNs` с `matchName: example.com` и `toPorts` строго на 443. Если после apply первый запрос к `example.com` не проходит - подождите несколько секунд, DNS resolution и FQDN mapping в Cilium не мгновенные.
+Три egress-правила нужны в одном объекте policy: (1) DNS к kube-dns с `rules.dns.matchPattern: "*"`, БЕЗ этого Cilium не сможет отследить, какой IP соответствует `example.com`; (2) внутренний `backend` (`app=backend`) на TCP/80 - без этого правила egress default-deny для `frontend` заблокирует уже разрешённый поток из заданий 2-3, и Hubble evidence в задании 5 станет невозможным; (3) `toFQDNs` с `matchName: example.com` и `toPorts` строго на 443. Если после apply первый запрос к `example.com` не проходит - подождите несколько секунд, DNS resolution и FQDN mapping в Cilium не мгновенные.
 </details>
 ---
 | **5** | **Hubble: evidence HTTP-потоков** |
@@ -157,9 +157,9 @@ cilium status --wait
 check_result
 ```
 
-Проверка выполняет пять независимых заданий, записывает собственные сетевые проверки в
-`/var/work/tests/artifacts/2/` - `/var/work/tests/artifacts/4/` и проверяет Hubble evidence
-из задания 5.
+Проверка выполняет пять независимых заданий. Артефакты заданий 2-5 создаёт сам студент.
+`check_result` не перезаписывает student artifacts: собственные диагностические runtime-
+проверки checker сохраняет отдельно в `/var/work/tests/checker-artifacts/`.
 
 ## Решение
 

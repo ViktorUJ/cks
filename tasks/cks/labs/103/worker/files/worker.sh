@@ -41,3 +41,13 @@ ln -sf /opt/kube-bench/kube-bench /usr/local/bin/kube-bench
 
 mkdir -p /var/work/tests/artifacts/{1,5,6}
 chown -R ubuntu:ubuntu /var/work/tests/artifacts
+
+# Trusted checksum fixture для проверки задания 6: checker должен сравнивать реально
+# установленные бинарники с независимо полученными официальными суммами, а не доверять
+# student-owned artifact на слово. Загружаем их один раз при bootstrap в checker-only
+# каталог, недоступный из student-facing README/solution.
+mkdir -p /var/work/tests/checker-fixtures
+curl -fsSL -o /var/work/tests/checker-fixtures/kubelet.sha256 \
+  "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kubelet.sha256"
+curl -fsSL -o /var/work/tests/checker-fixtures/kubectl.sha256 \
+  "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kubectl.sha256"

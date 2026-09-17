@@ -89,6 +89,52 @@ kubectl apply завершился с ненулевым exit code -> счита
 Не использовать: реальные CVE exploit chains, kernel/container escape PoC, реальные cloud
 credentials, реальные внешние цели.
 
+Исключение: labs/101 намеренно использует реальный EC2 IMDS вместо синтетического
+эндпоинта, потому что цель лабы - проверить фактическое поведение AWS IMDSv1/v2 (hop
+limit, token flow), а не общий факт сетевой достижимости произвольного IP; риски описаны
+в README лабы.
+
+Исключение: labs/102 намеренно использует публичные DNS-имена `example.com` и
+`www.google.com` для проверки Cilium `toFQDNs`. Механизм `toFQDNs` формирует
+FQDN-to-IP mapping на основании DNS-ответов, наблюдаемых Cilium DNS proxy, поэтому для
+этой лабораторной работы требуется реальный DNS/FQDN flow. `example.com` - зарезервированный
+IANA домен для документационных примеров; его HTTP-сервис предоставляется best-effort и не
+рассматривается как надёжный testing endpoint. `www.google.com` используется только как
+безопасный внешний negative comparator. Перед применением FQDN policy лаба выполняет
+baseline/preflight: если внешний endpoint уже недоступен до применения policy, такой
+результат считается `inconclusive`, а не ошибкой policy, и не приводит сам по себе к
+`FAIL`. Лаба не передаёт credentials, не выполняет state-changing requests и не использует
+внешний сервис как объект controlled abuse - проверяется только DNS/FQDN reachability и
+ограничение egress policy.
+
+Исключение: labs/103 намеренно устанавливает `ingress-nginx controller-v1.15.1` на
+Kubernetes `1.36.0`, хотя официальная support table этого релиза контроллера
+перечисляет только `1.35-1.31` (Kubernetes `1.36` в неё не входит). Причина: лаба
+целиком построена как forward-looking сценарий на версии Kubernetes новее текущей
+экзаменационной (`1.35` на дату написания, см. README лабы), а `ingress-nginx` retired
+с марта 2026 и не получит новых релизов, которые формально покрывали бы `1.36` - таким
+образом любая версия контроллера для этой лабы гарантированно будет вне support table
+для достаточно новой версии Kubernetes. Официальная support table прямо описывает
+перечисленные версии как E2E-tested combinations ("Supported versions ... mean that we
+have completed E2E tests, and they are passing for the versions listed"); для Kubernetes
+`1.36` такой проверки и, соответственно, формальной гарантии совместимости нет - проект
+не даёт и обратной гарантии, что версия заведомо не будет работать, просто это
+не покрыто их E2E-матрицей. Чтобы это несоответствие не было тихим и непроверяемым
+риском, bootstrap (`k8s-1/scripts/master.sh`) не считает установку успешной по факту
+применения манифеста: он дожидается `condition=Available` у Deployment, затем проверяет
+устойчивые postconditions admission webhook bootstrap-а - `Secret ingress-nginx-admission`,
+непустой `caBundle` в `ValidatingWebhookConfiguration ingress-nginx-admission`, наличие
+endpoint у `Service ingress-nginx-controller-admission`, и завершает проверку успешным
+server-side dry-run (`kubectl apply --dry-run=server`) тестового `Ingress` с
+`ingressClassName: nginx` - что подтверждает, что admission webhook path реально
+принимает запросы, а не просто что связанные объекты существуют. Затем явно проверяет
+наличие реального Pod IP в `Endpoints` основного `Service ingress-nginx-controller` -
+то есть end-to-end preflight именно на этой версии Kubernetes, включая admission webhook
+path, а не только readiness
+самого Deployment. Если контроллер или его admission webhook не поднимаются на `1.36`
+практически, bootstrap завершается `FATAL` и лаба не выдаётся студенту в
+неработоспособном виде.
+
 ## Как это соотносится с существующими лабами
 
 Пункты выше не требуют переписывания existing labs с нуля. Большинство лаб 101-112 уже

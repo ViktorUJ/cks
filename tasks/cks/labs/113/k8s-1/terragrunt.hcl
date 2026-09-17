@@ -47,7 +47,7 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     eip                = "false"
     utils_enable       = "false"
-    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/113/k8s-1/scripts/master.sh"
+    task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-156/tasks/cks/labs/113/k8s-1/scripts/master.sh"
     cni                = local.vars.locals.cni
     ssh = {
       private_key = dependency.ssh-keys.outputs.private_key
@@ -69,7 +69,7 @@ inputs = {
       user_data_template = "template/worker.sh"
       runtime            = local.vars.locals.runtime
       runtime_script     = "template/runtime.sh"
-      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/refs/heads/master/tasks/cks/labs/113/k8s-1/scripts/worker.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-156/tasks/cks/labs/113/k8s-1/scripts/worker.sh"
       node_labels        = "lab.cks.io/role=upgrade-target"
       cidrs              = local.vars.locals.access_cidrs
       root_volume        = local.vars.locals.root_volume

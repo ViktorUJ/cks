@@ -4,8 +4,8 @@ set -euo pipefail
 echo "*** worker pc cks lab 102: Cilium NetworkPolicy and Hubble ***"
 export KUBECONFIG=/root/.kube/config
 
-CILIUM_CLI_VERSION="v0.18.8"
-HUBBLE_VERSION="v1.18.3"
+CILIUM_CLI_VERSION="v0.19.7"
+HUBBLE_VERSION="v1.19.4"
 ARCH="amd64"
 
 # Ждём API и Cilium, прежде чем включать relay и устанавливать клиенты.
@@ -41,5 +41,11 @@ rm -f "/tmp/${HUBBLE_ARCHIVE}" "/tmp/${HUBBLE_ARCHIVE}.sha256sum"
 cilium status --wait
 # Relay нужен для hubble observe с рабочей машины. Повторный запуск безопасен.
 cilium hubble enable --relay --wait
+
+echo "*** version evidence (pinned client/server contract) ***"
+kubectl version
+cilium version
+cilium status
+hubble version
 
 echo "Cilium and Hubble CLIs are ready. Run 'cilium hubble port-forward &' before hubble observe."

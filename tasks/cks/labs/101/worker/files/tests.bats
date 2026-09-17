@@ -66,24 +66,6 @@ assert_observed_probe() {
   [[ "$rc" =~ ^[0-9]+$ && "$code" =~ ^[0-9]{3}$ ]]
 }
 
-comparison_probe_values() {
-  local artifact=$1 prefix=${2:-} exits codes
-  mapfile -t exits < <(grep -E "^${prefix}CURL_EXIT:[0-9]+$" "$artifact" 2>/dev/null)
-  mapfile -t codes < <(grep -E "^${prefix}HTTPCODE:[0-9]{3}$" "$artifact" 2>/dev/null)
-  [[ ${#exits[@]} -eq 1 && ${#codes[@]} -eq 1 ]] || return 1
-  printf '%s %s\n' "${exits[0]#${prefix}CURL_EXIT:}" "${codes[0]#${prefix}HTTPCODE:}"
-}
-
-comparison_probe_values() {
-  local key=$1 comparison=$2 line rc code
-  line=$(sed -n "s/^${key}=//p" "$comparison" 2>/dev/null | tail -1)
-  [[ -n "$line" && "$line" =~ curl_exit=([0-9]+) ]] || return 1
-  rc=${BASH_REMATCH[1]}
-  [[ "$line" =~ http_code=([0-9]{3}) ]] || return 1
-  code=${BASH_REMATCH[1]}
-  printf '%s %s\n' "$rc" "$code"
-}
-
 no_unexpected_student_policies() {
   local namespace=$1
   shift
@@ -189,7 +171,30 @@ backend_ip() {
   fi
 }
 
-@test "3. Student frontend reaches the real backend while a foreign identity is denied" {
+@test "3. DNS policy contains only full TCP/53 and UDP/53 objects and works in cks-101" {
+  echo 1 >> /var/work/tests/result/all
+  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create $NS and allow-frontend-dns before DNS runtime validation." >&2; false; fi
+  shape=$(kubectl --context "$CTX" get networkpolicy allow-frontend-dns -n "$NS" -o json 2>/dev/null | jq -r '
+    .spec.podSelector == {"matchLabels":{"app":"frontend"}} and .spec.policyTypes == ["Egress"] and
+    (.spec.egress | type == "array" and length > 0) and
+    (all(.spec.egress[];
+      .to == [{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}},"podSelector":{"matchLabels":{"k8s-app":"kube-dns"}}}] and
+      (.ports | type == "array" and length > 0) and
+      all(.ports[]; (keys | sort) == ["port", "protocol"] and
+        (.protocol == "TCP" or .protocol == "UDP") and (.port | type == "number" and . == 53)))) and
+    ([.spec.egress[].ports[] | {protocol, port}] | unique | sort_by(.protocol, .port)) ==
+      [{"protocol":"TCP","port":53},{"protocol":"UDP","port":53}]')
+  create_probe "$NS" "${CHECKER_PREFIX}-dns" 'app=frontend' busybox:1.36.1
+  dns=$(kubectl --context "$CTX" -n "$NS" exec "${CHECKER_PREFIX}-dns" -- nslookup kubernetes.default.svc.cluster.local 2>&1)
+  if [[ "$shape" == true && "$dns" == *"Name:"* ]]; then
+    echo 1 >> /var/work/tests/result/ok
+  else
+    echo "HINT: allow-frontend-dns must use exactly two complete NetworkPolicyPort objects (TCP/53 and UDP/53, no endPort) and permit the frontend probe DNS lookup." >&2
+    false
+  fi
+}
+
+@test "4. Student frontend reaches the real backend while a foreign identity is denied" {
   echo 1 >> /var/work/tests/result/all
   if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create $NS, frontend/backend and their exact allow policies before runtime flow checks." >&2; false; fi
   frontend=$(kubectl --context "$CTX" get networkpolicy allow-frontend-egress-to-backend -n "$NS" -o json 2>/dev/null | jq -r '
@@ -213,29 +218,6 @@ backend_ip() {
     echo 1 >> /var/work/tests/result/ok
   else
     echo "HINT: In cks-101, frontend must reach the actual backend:8080 and a foreign identity with checker-provided backend egress must still be rejected by backend ingress." >&2
-    false
-  fi
-}
-
-@test "4. DNS policy contains only full TCP/53 and UDP/53 objects and works in cks-101" {
-  echo 1 >> /var/work/tests/result/all
-  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then echo "HINT: Create $NS and allow-frontend-dns before DNS runtime validation." >&2; false; fi
-  shape=$(kubectl --context "$CTX" get networkpolicy allow-frontend-dns -n "$NS" -o json 2>/dev/null | jq -r '
-    .spec.podSelector == {"matchLabels":{"app":"frontend"}} and .spec.policyTypes == ["Egress"] and
-    (.spec.egress | type == "array" and length > 0) and
-    (all(.spec.egress[];
-      .to == [{"namespaceSelector":{"matchLabels":{"kubernetes.io/metadata.name":"kube-system"}},"podSelector":{"matchLabels":{"k8s-app":"kube-dns"}}}] and
-      (.ports | type == "array" and length > 0) and
-      all(.ports[]; (keys | sort) == ["port", "protocol"] and
-        (.protocol == "TCP" or .protocol == "UDP") and (.port | type == "number" and . == 53)))) and
-    ([.spec.egress[].ports[] | {protocol, port}] | unique | sort_by(.protocol, .port)) ==
-      [{"protocol":"TCP","port":53},{"protocol":"UDP","port":53}]')
-  create_probe "$NS" "${CHECKER_PREFIX}-dns" 'app=frontend' busybox:1.36.1
-  dns=$(kubectl --context "$CTX" -n "$NS" exec "${CHECKER_PREFIX}-dns" -- nslookup kubernetes.default.svc.cluster.local 2>&1)
-  if [[ "$shape" == true && "$dns" == *"Name:"* ]]; then
-    echo 1 >> /var/work/tests/result/ok
-  else
-    echo "HINT: allow-frontend-dns must use exactly two complete NetworkPolicyPort objects (TCP/53 and UDP/53, no endPort) and permit the frontend probe DNS lookup." >&2
     false
   fi
 }
