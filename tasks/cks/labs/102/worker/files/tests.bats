@@ -166,10 +166,22 @@ no_unexpected_policies() {
 
   # Собственные runtime-проверки checker-а пишутся в отдельный каталог, не в student artifact.
   mkdir -p "$CHECKER_DIR/2"
-  allowed=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/ 2>&1)
-  allowed_rc=$?
-  blocked=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/ 2>&1)
-  blocked_rc=$?
+  # curl намеренно может вернуть ненулевой exit code для 'client' (transport-level deny
+  # - это и есть ожидаемый правильный результат). В этой версии Bats `set +e` НЕ подавляет
+  # её собственный ERR-trap (`trap ... err` + `set -E`) для команды внутри command
+  # substitution - trap всё равно сработает и завалит тест, даже если сам shell формально
+  # "не должен" падать на ненулевом exit code. Единственный надёжный способ - captur'ить
+  # реальный exit code через ветку if/else, а не через `$?` после отдельной команды.
+  if allowed=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/); then
+    allowed_rc=0
+  else
+    allowed_rc=$?
+  fi
+  if blocked=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/); then
+    blocked_rc=0
+  else
+    blocked_rc=$?
+  fi
   printf 'frontend: rc=%s output=%s\nclient: rc=%s output=%s\n' "$allowed_rc" "$allowed" "$blocked_rc" "$blocked" > "$CHECKER_DIR/2/l3-l4-runtime.txt"
 
   # client deny должен быть именно transport-level (нет HTTP response), а не "просто не 200".
@@ -256,15 +268,24 @@ no_unexpected_policies() {
   no_unexpected_policies "$NS" backend-policy frontend-fqdn && policies_ok=true
 
   mkdir -p "$CHECKER_DIR/3"
-  get_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/ 2>&1)
-  get_rc=$?
-  post_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -X POST -o /dev/null -w '%{http_code}' http://backend/ 2>&1)
-  post_rc=$?
+  if get_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/); then
+    get_rc=0
+  else
+    get_rc=$?
+  fi
+  if post_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -X POST -o /dev/null -w '%{http_code}' http://backend/); then
+    post_rc=0
+  else
+    post_rc=$?
+  fi
   printf 'GET /: rc=%s status=%s\nPOST /: rc=%s status=%s\n' "$get_rc" "$get_code" "$post_rc" "$post_code" > "$CHECKER_DIR/3/l7-http-runtime.txt"
 
   # client (role: untrusted) не должен быть допущен и на этом этапе - иначе задание 2 регрессировало.
-  client_blocked=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/ 2>&1)
-  client_blocked_rc=$?
+  if client_blocked=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/); then
+    client_blocked_rc=0
+  else
+    client_blocked_rc=$?
+  fi
   client_still_denied=false
   if [[ "$client_blocked_rc" =~ ^(7|28)$ && "$client_blocked" == "000" ]]; then
     client_still_denied=true
@@ -449,12 +470,21 @@ no_unexpected_policies() {
   read -r pre_http_rc pre_http_code <<<"$(extract_artifact_probe "$artifact" "preflight example.com HTTP")"
   read -r pre_google_rc pre_google_code <<<"$(extract_artifact_probe "$artifact" "preflight www.google.com HTTPS")"
 
-  https_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 10 -o /dev/null -w '%{http_code}' https://example.com/ 2>&1)
-  https_rc=$?
-  http_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://example.com:80/ 2>&1)
-  http_rc=$?
-  google_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' https://www.google.com/ 2>&1)
-  google_rc=$?
+  if https_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 10 -o /dev/null -w '%{http_code}' https://example.com/); then
+    https_rc=0
+  else
+    https_rc=$?
+  fi
+  if http_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://example.com:80/); then
+    http_rc=0
+  else
+    http_rc=$?
+  fi
+  if google_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' https://www.google.com/); then
+    google_rc=0
+  else
+    google_rc=$?
+  fi
   printf 'dns_after_policy=%s\nexample.com HTTPS: rc=%s status=%s\nexample.com HTTP: rc=%s status=%s\nwww.google.com HTTPS: rc=%s status=%s\n' \
     "$dns_after_policy_ok" "$https_rc" "$https_code" "$http_rc" "$http_code" "$google_rc" "$google_code" > "$CHECKER_DIR/4/fqdn-runtime.txt"
 
@@ -478,10 +508,19 @@ no_unexpected_policies() {
   # для frontend, поэтому без явного правила к backend уже разрешённый в заданиях 2-3
   # поток frontend -> backend:80 был бы заблокирован. Задание 5 также зависит от этого
   # потока для Hubble evidence, поэтому регрессия здесь должна проваливать это задание.
-  backend_get_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/ 2>&1)
-  backend_get_rc=$?
-  backend_post_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -X POST -o /dev/null -w '%{http_code}' http://backend/ 2>&1)
-  backend_post_rc=$?
+  # Если policy студента ошибочно регрессировала внутренний доступ до transport-level
+  # deny, curl вернёт ненулевой exit code - это ожидаемо детектируемый fail сценарий,
+  # а не сбой самого checker-а, поэтому пробы также защищены от bats fail-on-nonzero-exit.
+  if backend_get_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://backend/); then
+    backend_get_rc=0
+  else
+    backend_get_rc=$?
+  fi
+  if backend_post_code=$(kubectl --context "$CTX" exec -n "$NS" frontend -- curl -sS --max-time 5 -X POST -o /dev/null -w '%{http_code}' http://backend/); then
+    backend_post_rc=0
+  else
+    backend_post_rc=$?
+  fi
   printf 'regression frontend->backend GET: rc=%s status=%s\nregression frontend->backend POST: rc=%s status=%s\n' \
     "$backend_get_rc" "$backend_get_code" "$backend_post_rc" "$backend_post_code" >> "$CHECKER_DIR/4/fqdn-runtime.txt"
   backend_regression_ok=true

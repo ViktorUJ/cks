@@ -40,7 +40,10 @@ rm -f "/tmp/${HUBBLE_ARCHIVE}" "/tmp/${HUBBLE_ARCHIVE}.sha256sum"
 
 cilium status --wait
 # Relay нужен для hubble observe с рабочей машины. Повторный запуск безопасен.
-cilium hubble enable --relay --wait
+# cilium-cli v0.19.7 не поддерживает флаг --wait для 'hubble enable' (только для
+# 'status') - ждём готовности Hubble Relay отдельной командой.
+cilium hubble enable --relay
+kubectl -n kube-system rollout status deployment/hubble-relay --timeout=180s
 
 echo "*** version evidence (pinned client/server contract) ***"
 kubectl version
