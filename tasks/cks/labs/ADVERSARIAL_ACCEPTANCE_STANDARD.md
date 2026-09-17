@@ -150,18 +150,33 @@ Calico-ноде (для этого Calico предлагает `HostEndpoint`/`G
 CNI-специфичных механизмов, которые уже покрыты в лабе 102 (`CiliumNetworkPolicy`). README
 лабы явно формулирует это как lab-specific exception, а не как общую рекомендацию совмещать
 Calico с UFW на реальном кластере. Чтобы конфликт не был тихим и непроверяемым риском,
-задание 3 требует deterministic E2E contract вокруг UFW enable/reload: bootstrap
-подтверждает `calico-node` Ready до начала задания; до `ufw enable` фиксируется baseline
-всех проверяемых сетевых flows (в том числе прямая проба TCP/10250, доказывающая
-исходную сетевую достижимость до применения firewall - без этого шага post-hardening
-transport failure нельзя было бы отличить от посторонней причины, например от
-недостижимости порта на уровне security group); после `ufw enable` и после отдельного
-`ufw reload` те же проверки повторяются и требуют: `calico-node` остаётся Ready, Node
-остаётся Ready, Pod DNS работает, Pod -> Kubernetes Service работает, Pod -> API server
-работает, нужный host traffic (SSH/API от worker, API от самой ноды и от Pod CIDR) работает,
-а запрещённый `worker -> kubelet:10250` flow блокируется именно host firewall (не иной
-причиной). Любой сбой в этой цепочке проверок должен явно фиксироваться как
-infrastructure/control error, а не маскироваться как случайный transient failure.
+задание 3 реализует deterministic E2E contract вокруг UFW enable/reload:
+
+- **Checker-owned bootstrap baseline** (`worker.sh`, до выдачи лабы студенту и до
+  какого-либо изменения UFW): прямая проба TCP/10250 (kubelet HTTPS) с worker station,
+  сохранённая в `/var/work/tests/bootstrap-baseline-3.txt`. Это независимо от
+  student-owned `artifacts/3/preflight.txt`, которую студент технически мог бы
+  сфабриковать или записать после hardening - checker сверяет post-hardening результат
+  с ЭТИМ файлом, а не только со student-artifact.
+- **Exact allow-set** через `sudo ufw show added` (декларативный список реально
+  выполненных `ufw allow`/`ufw limit` команд в исходной форме, а не через regex по
+  iptables-производному `ufw status`, который допускает множество синтаксических форм
+  того же results - short form, app profile, interface-scoped, IPv6). Тест требует
+  ровно 5 строк: loopback + 4 source-scoped правила (`worker_ip`→`22/tcp`,
+  `worker_ip`→`6443/tcp`, `node_ip`→`6443/tcp`, `pod_cidr`→`6443/tcp`) - любая лишняя
+  строка любой формы (в т.ч. короткая `ufw allow 8080/tcp` без `from`) увеличивает
+  счётчик и проваливает тест.
+- **Post-enable retest**: сразу после `ufw --force enable` проверяются `calico-node`
+  Ready, Node Ready, `/readyz`, Pod DNS (`getent hosts kubernetes.default.svc...`), Pod →
+  Kubernetes Service, и негативный worker → kubelet:10250 (транспортный deny).
+- **Post-reload retest**: тест сам выполняет `sudo ufw reload` и повторяет ВСЕ те же
+  проверки (readyz/node/calico-node/DNS/Pod→API/worker→kubelet:10250 deny) - правило,
+  работающее только в памяти сразу после `enable`, но не переживающее `reload`, не
+  считается корректным решением и явно проваливает тест с отдельным hint.
+
+Любой сбой в этой цепочке проверок явно фиксируется как infrastructure/control error (с
+конкретным hint, указывающим, какой шаг цепочки не прошёл), а не маскируется как случайный
+transient failure.
 
 ## Как это соотносится с существующими лабами
 

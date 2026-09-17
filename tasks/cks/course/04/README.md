@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 04. NetworkPolicy for security
 
@@ -77,9 +77,9 @@ spec:
   - Egress
 ```
 
-Order matters operationally: first identify the map of allowed connections and prepare allow policies, then apply default-deny and the required permissions immediately in a controlled rollout. Otherwise, applications will lose DNS, access to dependencies, ingress/monitoring traffic, or an external API. Ordinary kubelet liveness/readiness/startup probes between a Pod and its node are not typical traffic blocked by default-deny in the standard NetworkPolicy model; nevertheless, check host/CNI specifics in your environment. For a new isolated namespace, it is useful to create the deny policies before launching workload Pods.
+Order matters operationally: first identify the map of allowed connections and prepare allow policies, then apply default-deny and the required allow rules immediately in a controlled rollout. Otherwise, applications will lose DNS, access to dependencies, ingress/monitoring traffic, or an external API. Ordinary kubelet liveness/readiness/startup probes between a Pod and its node are not typical traffic blocked by default-deny in the standard NetworkPolicy model; nevertheless, check host/CNI specifics in your environment. For a new isolated namespace, it is useful to create the deny policies before launching workload Pods.
 
-Policies are additive: Kubernetes has no `deny`/`allow` order or priority between `NetworkPolicy` objects. For each `Pod` and each direction, the allow rules of all applicable policies are combined separately. For a `source Pod → destination Pod` connection, both sides are checked independently: if the source `Pod` is isolated for `Egress`, its egress rules must allow the destination; if the destination `Pod` is isolated for `Ingress`, its ingress rules must allow the source. When both sides are isolated, both permissions are required. Reply traffic for an allowed connection does not require a separate reverse rule: it is implicitly allowed. A direction for which a `Pod` is not isolated by any applicable `NetworkPolicy` does not require an additional allow rule.
+Policies are additive: Kubernetes has no `deny`/`allow` order or priority between `NetworkPolicy` objects. For each `Pod` and each direction, the allow rules of all applicable policies are combined separately. For a `source Pod → destination Pod` connection, both sides are checked independently: if the source `Pod` is isolated for `Egress`, its egress rules must allow the destination; if the destination `Pod` is isolated for `Ingress`, its ingress rules must allow the source. When both sides are isolated, both sides must allow the connection. Reply traffic for an allowed connection does not require a separate reverse rule: it is implicitly allowed. A direction for which a `Pod` is not isolated by any applicable `NetworkPolicy` does not require an additional allow rule.
 
 | Policy | What it isolates | When to apply it |
 |---|---|---|
@@ -87,7 +87,7 @@ Policies are additive: Kubernetes has no `deny`/`allow` order or priority betwee
 | `Egress` only | Outbound traffic from selected Pods | To protect metadata, external APIs, and against exfiltration |
 | `Ingress` and `Egress` | Both directions | The normal goal for a sensitive namespace |
 
-## 04.3. Narrow permissions: selector, IP, and port
+## 04.3. Fine-grained allow rules: selectors, IPs, and ports
 
 After default-deny, describe only the required connections. The following example allows a Pod with `app: frontend` to connect to a Pod with `app: backend` over TCP 8080 in the same namespace:
 
@@ -343,9 +343,9 @@ For the instructional diagnosis above, tag `nicolaka/netshoot:v0.16` is used; th
 
 - A flat pod network gives a compromised workload a path for lateral movement; `NetworkPolicy` reduces this attack surface.
 - Start with default-deny ingress and egress, then allow only the required directions, sources, destinations, and ports.
-- Policies are additive: permission must exist for the isolated egress source and the isolated ingress destination.
+- Policies are additive: an allow rule must exist for the isolated egress source and for the isolated ingress destination.
 - For a cross-namespace connection, place `namespaceSelector` and `podSelector` in one rule item if both conditions are required.
-- Egress default-deny requires an explicit DNS permission, usually to CoreDNS on UDP/TCP 53.
+- Egress default-deny requires an explicit DNS allow rule, usually to CoreDNS on UDP/TCP 53.
 - The API object alone does not guarantee filtering: you need a CNI with `NetworkPolicy` support and a test of allowed and denied traffic.
 
 ## 04.10. How this helps: on the exam and in real work
@@ -386,7 +386,7 @@ An empty `podSelector` selects all Pods in the namespace where the policy was cr
 <details>
 <summary>3. Why is default-deny ingress for backend insufficient for a frontend -> backend connection when egress is isolated?</summary>
 
-Ingress and egress are checked independently for each side of a connection. If backend is isolated for ingress, its rule must allow frontend, but with isolated egress, frontend must have a separate permission to reach backend:8080; reply traffic is implicitly allowed only for an already allowed connection.
+Ingress and egress are checked independently for each side of a connection. If backend is isolated for ingress, its rule must allow frontend, but with isolated egress, frontend must have a separate egress allow rule for backend:8080; reply traffic is implicitly allowed only for an already allowed connection.
 </details>
 
 <details>

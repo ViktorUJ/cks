@@ -1,8 +1,8 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 10. RBAC for minimizing access
 
-> **The problem.** An attacker who gains a shell in a Pod or a stolen token will not stop at one namespace if the ServiceAccount or user has excessive rights. A broad `verb`, a forgotten `cluster-admin` granted for convenience, or available `escalate`/`bind`/`impersonate` turns a local compromise into reading every Secret, creating Pod objects on any node, or complete cluster takeover. The vulnerability itself does not decide this - RBAC has already allowed it.
+> **The problem.** An attacker who gains a shell in a Pod or a stolen token will not stop at one namespace if the ServiceAccount or user has excessive permissions. A broad `verb`, a forgotten `cluster-admin` granted for convenience, or available `escalate`/`bind`/`impersonate` turns a local compromise into reading every Secret, creating Pod objects on any node, or complete cluster takeover. The vulnerability itself does not decide this - RBAC has already allowed it.
 
 > **What comes next.** Chapters 07-09 reduced the attack surface of cluster components. Now we limit the consequences of compromising an identity, ServiceAccount, or Pod: RBAC must grant only access that is truly required. This is the CKS Cluster Hardening domain (15%).
 
@@ -33,7 +33,7 @@ Start with `Role` and `RoleBinding` when the task is local to a namespace. Use `
 
 > 🎯 Check a specific identity, verb, resource, and scope using a `can-i` pair: required action - `yes`; dangerous neighbor - `no`.
 
-## 10.2. Auditing effective rights: `kubectl auth can-i`
+## 10.2. Auditing effective permissions: `kubectl auth can-i`
 
 YAML shows intent, not final authorization: a subject can receive access from several bindings, a built-in role, a group, or an aggregated `ClusterRole`. Ask the API server with `kubectl auth can-i`.
 
@@ -49,7 +49,7 @@ kubectl auth can-i list pods -n default
 # If the question is whether this action is allowed in all namespaces:
 kubectl auth can-i list pods --all-namespaces
 
-# A particular expected allow and expected denial - but these are the rights of YOUR
+# A particular expected allow and expected denial - but these are the permissions of YOUR
 # current identity, not those of the audited ServiceAccount or user.
 kubectl auth can-i list pods -n cks-104
 kubectl auth can-i get secrets -n cks-104
@@ -64,9 +64,9 @@ kubectl auth can-i get secrets -n cks-104 --as="$SA"
 # no
 ```
 
-Without `--as`, `can-i` always answers for the identity under which you run `kubectl` - your own kubeconfig, not the tested identity. A task almost always asks about a specific ServiceAccount, user, or group, so the check needs `--as=<identity>`: without it, `yes`/`no` proves nothing about the audit target, only your own rights.
+Without `--as`, `can-i` always answers for the identity under which you run `kubectl` - your own kubeconfig, not the tested identity. A task almost always asks about a specific ServiceAccount, user, or group, so the check needs `--as=<identity>`: without it, `yes`/`no` proves nothing about the audit target, only your own permissions.
 
-`--as-group` does not replace `--as` and is not an independent alternative. It is a list of additional impersonated groups, applied only together with an impersonated user. If a task tests rights received through a group binding, set `--as` and **also** the required `--as-group`:
+`--as-group` does not replace `--as` and is not an independent alternative. It is a list of additional impersonated groups, applied only together with an impersonated user. If a task tests permissions received through a group binding, set `--as` and **also** the required `--as-group`:
 
 ```bash
 kubectl auth can-i list pods -n cks-104 \
@@ -86,7 +86,7 @@ kubectl auth can-i create clusterrolebindings --as="$SA"
 kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
 ```
 
-`--as` uses Kubernetes impersonation. In Kubernetes 1.36, a request can be allowed either by broad legacy verb `impersonate` or by Constrained Impersonation: a separate right on the identity and separate `impersonate-on:<mode>:<verb>` right on the actual API request performed. If required impersonation permissions are absent, the API returns `forbidden` before checking the rights of the impersonated identity.
+`--as` uses Kubernetes impersonation. In Kubernetes 1.36, a request can be allowed either by broad legacy verb `impersonate` or by Constrained Impersonation: a separate permission on the identity and separate `impersonate-on:<mode>:<verb>` permission on the actual API request performed. If required impersonation permissions are absent, the API returns `forbidden` before checking the permissions of the impersonated identity.
 
 For a security audit, do not grant legacy `impersonate` automatically: choose the model that fits the required workflow and document its scope.
 
@@ -177,19 +177,19 @@ kubectl get clusterrole "$ROLE_NAME" -o yaml
 
 ## 10.3. Dangerous verbs and resources: escalation paths
 
-Not all rules are equal. Read-only access to `pods` and `get` on `secrets` have entirely different impact, and some verbs implicitly obtain existing rights. During review, look for the following combinations before ordinary `get`/`list`.
+Not all rules are equal. Read-only access to `pods` and `get` on `secrets` have entirely different impact, and some verbs implicitly obtain existing permissions. During review, look for the following combinations before ordinary `get`/`list`.
 
 | Verb or resource | Why it is dangerous | Safe approach |
 |---|---|---|
 | `escalate` on `roles`/`clusterroles` | Together with ordinary `create`/`update` on Role/ClusterRole, removes the requirement to hold every permission written into the role. | Do not grant it to workloads or ordinary namespace administrators; control both CRUD on RBAC objects and the bypass verb separately. |
 | `bind` on `roles`/`clusterroles` | Together with ordinary `create`/`update` on RoleBinding/ClusterRoleBinding, removes the requirement to hold permissions from the referenced role. | Restrict to particular roles with `resourceNames` and grant only with truly needed binding management. |
 | `impersonate` on `users`, `groups`, `serviceaccounts`, `uids`, or `userextras/<name>` | Allows requests as another identity, including a more privileged one. Extra fields use an exact resource name, for example `userextras/scopes`, in API group `authentication.k8s.io`. | Grant to an auditor only when needed, and restrict with `resourceNames`. |
-| `create`/`update`/`patch` RoleBinding and ClusterRoleBinding | Together with an accessible role, can transfer rights; ClusterRoleBinding does this for the whole cluster. | Prohibit for applications; separate access granting from workload development. |
+| `create`/`update`/`patch` RoleBinding and ClusterRoleBinding | Together with an accessible role, can transfer permissions; ClusterRoleBinding does this for the whole cluster. | Prohibit for applications; separate access granting from workload development. |
 | `get`/`list`/`watch` `secrets` | A Secret often holds a password, registry credential, key, or bearer token; `list`/`watch` disclose many Secret values. | Specify one Secret with `resourceNames` for `get`, or give the application no API access. |
-| `create` `serviceaccounts/token` | Issues a token for the selected ServiceAccount and can become a way to use its rights. | Allow only trusted automation, for specific ServiceAccount objects. |
+| `create` `serviceaccounts/token` | Issues a token for the selected ServiceAccount and can become a way to use its permissions. | Allow only trusted automation, for specific ServiceAccount objects. |
 | `create` `pods/exec` | Gives interactive command execution in a running Pod plus access to its network, filesystem, and mounted Secret objects. | Do not include in ordinary roles; use short-lived break-glass access and audit. |
 | `create` `pods/portforward` | Creates a tunnel to Pod ports, bypassing ordinary network exposure. | Grant narrowly for diagnostics and revoke after the incident. |
-| `create` workload (`pods`, `deployments`, `jobs`, etc.) | Creating a Pod/workload in a namespace itself gives strong indirect access: you can select any ServiceAccount in that namespace and reference Secret, ConfigMap, and accessible storage from a Pod spec, even without separate `get secrets` for the original identity. This can obtain another workload's data or API rights. If policy permits a privileged/host-level Pod, consequences can extend to the node. | Do not grant to untrusted tenant identities unnecessarily; treat workload creation as privileged, constraining Pod Security, ServiceAccount, Secret/storage design, and admission policy. |
+| `create` workload (`pods`, `deployments`, `jobs`, etc.) | Creating a Pod/workload in a namespace itself gives strong indirect access: you can select any ServiceAccount in that namespace and reference Secret, ConfigMap, and accessible storage from a Pod spec, even without separate `get secrets` for the original identity. This can obtain another workload's data or API permissions. If policy permits a privileged/host-level Pod, consequences can extend to the node. | Do not grant to untrusted tenant identities unnecessarily; treat workload creation as privileged, constraining Pod Security, ServiceAccount, Secret/storage design, and admission policy. |
 | `nodes` | Access to Node objects discloses infrastructure information; changing a Node is a cluster-wide operation. | Exclude from tenant roles; grant to separate operational identities. |
 | `get` `nodes/proxy` | Allows proxy requests to kubelet. This is not read-only: kubelet proxy operations can bypass admission and ordinary API-server audit. | Do not grant to workloads or tenant roles; grant only to strictly controlled operational identity. |
 
@@ -207,7 +207,7 @@ rules:
 
 Wildcards are especially dangerous in three places: `apiGroups: ["*"]`, `resources: ["*"]`, and `verbs: ["*"]`. They include new API groups, CRD, subresources, and verbs added after an upgrade. A rule safe today silently becomes broader tomorrow. A wildcard also hinders audit: YAML does not reveal whether access to `secrets`, `pods/exec`, or `rolebindings` exists.
 
-> 🧠 RBAC is additive: a narrow role does not cancel an issued Allow. `escalate`, `bind`, `impersonate`, bindings, Secret, and dangerous subresources can transfer others' rights.
+> 🧠 RBAC is additive: a narrow role does not cancel an issued Allow. `escalate`, `bind`, `impersonate`, bindings, Secret, and dangerous subresources can transfer others' permissions.
 
 ```yaml
 # Unsafe: the entire current and future namespace API
@@ -303,7 +303,7 @@ flowchart TB
 
 `ClusterRole` does not automatically mean cluster-wide access: it can contain rules for namespaced resources and be granted through `RoleBinding` only in a specific namespace. Cluster-wide scope appears precisely with `ClusterRoleBinding`. Cluster-scoped resources and `nonResourceURLs` need `ClusterRole` + `ClusterRoleBinding`.
 
-## 10.5. Built-in and aggregated ClusterRole: hidden expansion of rights
+## 10.5. Built-in and aggregated ClusterRole: hidden permission expansion
 
 Built-in `ClusterRole` objects are convenient, but not equal in risk. `view` is for reading ordinary namespaced objects and intentionally has no access to Secret, Role, or RoleBinding because a Secret often holds ServiceAccount privileges. `edit` permits changing most namespaced resources and reading Secret, but cannot change Role or RoleBinding; it can nevertheless run a Pod as any ServiceAccount in the same namespace. `admin` can manage most RBAC in a namespace.
 
@@ -316,9 +316,9 @@ Built-in `cluster-admin` holds the broadest wildcard permissions. Through `Clust
 | `admin` | Broad namespace administration, including roles/bindings inside its boundary | High risk of namespace escalation and takeover of team applications. |
 | `cluster-admin` | Through `ClusterRoleBinding` - full access to the entire cluster; through `RoleBinding` - complete control of resources in that binding's namespace, including the Namespace object itself | Even a local binding is extremely risky; ClusterRoleBinding means cluster compromise. |
 
-Aggregation can extend a built-in ClusterRole with rules from other ClusterRole objects. The RBAC controller combines rules from roles labeled `rbac.authorization.k8s.io/aggregate-to-<role>: "true"`. This is useful for CRD: for example, a plugin can add read-only rules for its API to `view`. But this label is a supply-chain and RBAC boundary: a created or modified role can silently grant every `view`, `edit`, or `admin` user additional rights.
+Aggregation can extend a built-in ClusterRole with rules from other ClusterRole objects. The RBAC controller combines rules from roles labeled `rbac.authorization.k8s.io/aggregate-to-<role>: "true"`. This is useful for CRD: for example, a plugin can add read-only rules for its API to `view`. But this label is a supply-chain and RBAC boundary: a created or modified role can silently grant every `view`, `edit`, or `admin` user additional permissions.
 
-> 🧠 `aggregate-to-*` changes the effective permissions of the whole built-in-role audience; a wildcard in the source role expands rights massively.
+> 🧠 `aggregate-to-*` changes the effective permissions of the whole built-in-role audience; a wildcard in the source role expands permissions massively.
 
 ```yaml
 # Example: extend the built-in view role only to read a CRD.
@@ -355,7 +355,7 @@ kubectl get clusterrole -l rbac.authorization.k8s.io/aggregate-to-admin=true
 | Manage `ValidatingWebhookConfiguration`/`MutatingWebhookConfiguration` | Changes validation or mutation of admission requests cluster-wide | Do not grant to tenant roles; review webhook endpoint, CA, and rules. |
 | `patch` Namespace labels | Can change Pod Security Admission labels and admit a different Pod profile | Restrict to a dedicated platform identity and review label changes. |
 | Create/change PV with `hostPath` | A claim and Pod can obtain a node filesystem path | Prohibit for tenant roles; control storage policy and Pod Security Admission. |
-| Issue ServiceAccount tokens (`create serviceaccounts/token`) | Allows acting with the rights of the selected ServiceAccount | Allow only trusted automation on particular ServiceAccount objects. |
+| Issue ServiceAccount tokens (`create serviceaccounts/token`) | Allows acting with the permissions of the selected ServiceAccount | Allow only trusted automation on particular ServiceAccount objects. |
 | Membership in `system:masters` | This is a superuser group that bypasses ordinary RBAC evaluation | Do not grant to applications; control certificate source and external groups. |
 
 > 🎯 After an RBAC change, prove both the permitted action and the expected denial.
@@ -375,7 +375,7 @@ kubectl auth can-i list pods -n cks-104 --as="$SA"
 # yes
 # yes
 
-# Undesired rights: workload modification, Secret, exec, and RBAC
+# Undesired permissions: workload modification, Secret, exec, and RBAC
 kubectl auth can-i delete pods -n cks-104 --as="$SA"
 kubectl auth can-i get secrets -n cks-104 --as="$SA"
 kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
@@ -388,7 +388,7 @@ kubectl auth can-i create clusterrolebindings --as="$SA"
 # no
 ```
 
-Also check scope. The same identity must not read Pod objects in a neighboring namespace and must not have cluster-scoped rights merely because it was granted Pod access.
+Also check scope. The same identity must not read Pod objects in a neighboring namespace and must not have cluster-scoped permissions merely because it was granted Pod access.
 
 ```bash
 kubectl auth can-i list pods -n default --as="$SA"
@@ -414,7 +414,7 @@ In production, include this `can-i` set in a smoke test after an RBAC change, an
 ## 10.7. How this is applied in production
 
 - **Role by default.** Teams and applications receive namespaced `Role`/`RoleBinding`; `ClusterRoleBinding` requires an owner, reason, expiry, and security review.
-- **ServiceAccount by default.** Do not give application rights to the `default` ServiceAccount. If a workload does not call the Kubernetes API, set `automountServiceAccountToken: false`; otherwise create a dedicated ServiceAccount with minimal rights. This keeps audit and revocation focused.
+- **ServiceAccount by default.** Do not give application permissions to the `default` ServiceAccount. If a workload does not call the Kubernetes API, set `automountServiceAccountToken: false`; otherwise create a dedicated ServiceAccount with minimal permissions. This keeps audit and revocation focused.
 - **RBAC as code.** Keep custom roles in Git and check rule and aggregation-label diffs in CI. Explicitly block wildcard, `escalate`, `bind`, `impersonate`, and Secret access without an explicit exception.
 - **API-server authorization configuration.** First determine which of two mutually exclusive configuration methods is used.
 
@@ -522,7 +522,7 @@ The RBAC controller adds rules from a ClusterRole with this label to final built
 <details>
 <summary>9. **Flashback (Chapter 04).** `NetworkPolicy` from Chapter 04 is an allow-list: default-deny first, then narrow allowances. Where does the same “deny everything, then explicitly allow” logic work in RBAC design, and when does a request actually receive default-deny?</summary>
 
-In RBAC, start with the absence of required permissions and add only exact `apiGroups`, `resources`, and `verbs` at minimal scope. A request is denied when no applicable `RoleBinding` or `ClusterRoleBinding` grants Allow. Check not only the binding where the subject appears directly, but also rights received through its groups, such as `system:serviceaccounts` for a ServiceAccount. Therefore the absence of a direct `RoleBinding` for a user or ServiceAccount does not itself prove lack of access; confirm the final boundary with `kubectl auth can-i` for a specific identity. Unlike NetworkPolicy, the RBAC authorizer in API server makes the decision, but the result is likewise an explicit allow-list.
+In RBAC, start with the absence of required permissions and add only exact `apiGroups`, `resources`, and `verbs` at minimal scope. A request is denied when no applicable `RoleBinding` or `ClusterRoleBinding` grants Allow. Check not only the binding where the subject appears directly, but also permissions received through its groups, such as `system:serviceaccounts` for a ServiceAccount. Therefore the absence of a direct `RoleBinding` for a user or ServiceAccount does not itself prove lack of access; confirm the final boundary with `kubectl auth can-i` for a specific identity. Unlike NetworkPolicy, the RBAC authorizer in API server makes the decision, but the result is likewise an explicit allow-list.
 </details>
 
 ## Practice

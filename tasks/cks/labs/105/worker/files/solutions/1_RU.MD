@@ -59,7 +59,11 @@ printf 'role=control-plane,workload\nworker_ip=%s\nnode_ip=%s\npod_cidr=%s\n' \
 
 # Baseline ДО UFW: доказываем, что TCP/10250 (kubelet HTTPS) реально достижим сейчас -
 # без этого шага post-hardening "заблокировано" ничего не доказывает, порт мог быть
-# недоступен по совершенно другой причине ещё раньше (security group, routing).
+# недоступен по совершенно другой причине ещё раньше (security group, routing). Отдельно
+# от этой student-owned пробы checker уже зафиксировал свой собственный, checker-owned
+# bootstrap baseline в /var/work/tests/bootstrap-baseline-3.txt ДО того, как лаба была
+# выдана студенту - этот шаг всё равно нужен, потому что тест сравнивает post-hardening
+# состояние именно с этим вашим файлом (в дополнение к checker-owned проверке).
 set +e
 baseline_kubelet_code=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 \
   "https://${NODE_IP}:10250/healthz")
@@ -81,6 +85,12 @@ ssh "$CP" "sudo ufw allow from '$POD_CIDR' to any port 6443 proto tcp comment 'C
 ssh "$CP" 'sudo ufw allow in on lo comment "CKS105 loopback"; sudo ufw default allow outgoing; sudo ufw default deny incoming; sudo ufw --force enable'
 ssh "$CP" 'sudo ufw status verbose; sudo ufw status' \
   | tee /var/work/tests/artifacts/3/ufw.txt
+# 'ufw show added' - декларативный список ровно тех правил, что вы реально добавили, в
+# исходной форме команды. Проверка сравнивает именно этот список с ожидаемым allowlist -
+# сохраните его тоже, это самая надёжная evidence exact allow-set (независимая от того,
+# как 'ufw status' группирует/переупорядочивает iptables-производные строки).
+ssh "$CP" 'sudo ufw show added' \
+  | tee -a /var/work/tests/artifacts/3/ufw.txt
 
 cat > /var/work/tests/artifacts/3/recovery.txt <<'EOF'
 # Выполнять из ещё открытой SSH/console session при потере API:
@@ -95,6 +105,9 @@ EOF
 kubectl get --raw=/readyz --context "$CTX"
 kubectl get nodes --context "$CTX"
 kubectl rollout status deployment/health-probe -n cks-105-health --timeout=60s
+# Pod DNS должен продолжать работать - это отдельная проверка от Pod -> API server.
+kubectl exec -n cks-105-health deploy/health-probe -- \
+  sh -c 'getent hosts kubernetes.default.svc.cluster.local >/dev/null && echo DNS_OK || echo DNS_FAIL'
 kubectl exec -n cks-105-health deploy/health-probe -- \
   sh -c 'code=$(curl -ksS -o /dev/null -w "%{http_code}" --max-time 5 https://kubernetes.default.svc/readyz); test "$code" != 000'
 
@@ -103,11 +116,28 @@ set +e
 curl -ksS -o /dev/null -w 'kubelet_http=%{http_code}\n' --connect-timeout 2 --max-time 3 \
   "https://${NODE_IP}:10250/healthz"
 set -e
+
+# Обязательный полный E2E retest ПОСЛЕ 'ufw reload' - доказывает, что ruleset переживает
+# reload, а не только работает в памяти сразу после 'ufw enable'. Без этого шага можно
+# случайно настроить правило, которое реально не персистентно (например, забыть 'ufw
+# allow' до перезапуска сервиса) и получить ложное PASS сразу после enable.
+ssh "$CP" 'sudo ufw reload'
+sleep 2
+kubectl get --raw=/readyz --context "$CTX"
+kubectl get nodes --context "$CTX"
+kubectl get pods -n kube-system -l k8s-app=calico-node --context "$CTX"
+kubectl exec -n cks-105-health deploy/health-probe -- \
+  sh -c 'code=$(curl -ksS -o /dev/null -w "%{http_code}" --max-time 5 https://kubernetes.default.svc/readyz); test "$code" != 000'
+set +e
+curl -ksS -o /dev/null -w 'post_reload_kubelet_http=%{http_code}\n' --connect-timeout 2 --max-time 3 \
+  "https://${NODE_IP}:10250/healthz"
+set -e
 ```
 
-В выводе должны быть `Status: active`, `Default: deny (incoming)` и source-scoped rules.
-Не закрывайте исходную SSH session, пока `/readyz`, nodes, workload и отрицательная
-проверка `10250` не дали ожидаемый результат.
+В выводе должны быть `Status: active`, `Default: deny (incoming)` и source-scoped rules -
+как в `ufw status verbose`, так и в декларативном списке `ufw show added`. Не закрывайте
+исходную SSH session, пока `/readyz`, nodes, calico-node, workload (включая Pod DNS) и обе
+отрицательные проверки `10250` (до и после `ufw reload`) не дали ожидаемый результат.
 
 ## 4. Защитить kubeconfig администратора
 

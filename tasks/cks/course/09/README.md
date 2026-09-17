@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 09. Insecure component arguments, TLS hardening, and binary verification
 
@@ -718,7 +718,7 @@ sudo cat "/proc/${APIPID}/cmdline" | tr '\0' '\n'
 sudo systemctl cat kubelet
 sudo ps -ef | grep '[k]ubelet'
 
-# 1d. Final actuated KubeletConfiguration after base config, --config-dir, and overrides.
+# 1d. Final effective KubeletConfiguration after the base config, --config-dir, and overrides.
 NODE="${NODE:?set target node name from kubectl get nodes}"
 kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" \
   | jq '.kubeletconfig | {
@@ -964,82 +964,3 @@ If task 4 caused difficulty, return to chapters 04 and 08 together rather than s
 
 ---
 [Table of contents](../README.md) · [Chapter 08](../08/README.md) · [Chapter 10](../10/README.md)
-
-  # @SECLEVEL=0 weakens only this one-time test client so that modern
-  # OpenSSL can form a TLS 1.1 ClientHello where possible; the server is unchanged.
-  if openssl s_client \
-      -connect "$endpoint" \
-      -servername "$servername" \
-      -tls1_1 \
-      -cipher 'DEFAULT:@SECLEVEL=0' \
-      -msg -state \
-      </dev/null >"$neg" 2>&1
-  then
-    rc=0
-  else
-    rc=$?
-  fi
-
-  if grep -Eq '^>>> .*Handshake.*ClientHello' "$neg" \
-     && grep -Eq '^<<< .*Alert.*fatal protocol_version|alert protocol version' "$neg"
-  then
-    echo 'PASS: client sent TLS 1.1 ClientHello and server rejected it with protocol_version'
-    rm -f "$neg"
-    return 0
-  fi
-
-  if grep -Eqi 'no protocols available|no ciphers available|unsupported protocol' "$neg" \
-     && ! grep -Eq '^>>> .*Handshake.*ClientHello' "$neg"
-  then
-    cat "$neg" >&2
-    echo 'INCONCLUSIVE: local OpenSSL/crypto policy blocked TLS 1.1 before ClientHello' >&2
-    rm -f "$neg"
-    return 1
-  fi
-
-  cat "$neg" >&2
-  echo "INCONCLUSIVE/FAIL: server-side TLS 1.1 rejection was not proven (s_client rc=${rc})" >&2
-  rm -f "$neg"
-  return 1
-}
-check_tls11_rejected "$API" kubernetes
-
-# etcd: first verify the permitted TLS 1.2 handshake with mTLS - the same model
-# as apiserver: s_client exit status, -verify_return_error, and a check of the
-# actually negotiated cipher, not only Verify return code.
-OUT="$(mktemp)"
-
-if sudo openssl s_client \
-    -connect 127.0.0.1:2379 \
-    -tls1_2 \
-    -CAfile /etc/kubernetes/pki/etcd/ca.crt \
-    -cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
-    -key /etc/kubernetes/pki/etcd/healthcheck-client.key \
-    -verify_return_error \
-    </dev/null >"$OUT" 2>&1
-then
-  if grep -Eq 'Cipher is \(NONE\)|Cipher[[:space:]]*:[[:space:]]*0000' "$OUT"; then
-    cat "$OUT"
-    rm -f "$OUT"
-    echo 'FAIL: etcd TLS 1.2 handshake has no negotiated cipher' >&2
-    exit 1
-  fi
-  grep -E 'Protocol|Cipher|Verify return code' "$OUT"
-  echo 'PASS: etcd TLS 1.2 handshake succeeded'
-else
-  cat "$OUT" >&2
-  rm -f "$OUT"
-  echo 'FAIL: etcd TLS 1.2 handshake failed' >&2
-  exit 1
-fi
-rm -f "$OUT"
-
-# Then a negative test: TLS 1.1 must not negotiate. The same criterion as for
-# apiserver: prove that the client sent ClientHello and the server returned protocol_version.
-# A separate function (not check_tls11_rejected): etcd requires an mTLS client cert/key,
-# which the apiserver function does not accept. Return 1 on every non-PASS branch for the same reason.
-check_etcd_tls11_rejected() {
-  local endpoint="$1" cacert="$2" cert="$3" key="$4"
-  local neg rc
-
-  neg="$(mktemp)" || return 1

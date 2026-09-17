@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 02. Kubernetes security model: 4C, attack surface, and attack phases
 
@@ -164,7 +164,7 @@ kubectl get clusterrolebinding -o json \
   | jq -r --argjson names "$(echo "$dangerous" | jq -R . | jq -s .)" '
       .items[]
       | select(.roleRef.name as $r | $names | index($r))
-      | "\(.metadata.name) -> роль \(.roleRef.name) (cluster-wide), subjects: \([.subjects[]? | "\(.kind):\(.name)"] | join(", "))"
+      | "\(.metadata.name) -> role \(.roleRef.name) (cluster-wide), subjects: \([.subjects[]? | "\(.kind):\(.name)"] | join(", "))"
     '
 
 # Step B': the same role can also be bound with RoleBinding - its permissions
@@ -173,7 +173,7 @@ kubectl get rolebinding -A -o json \
   | jq -r --argjson names "$(echo "$dangerous" | jq -R . | jq -s .)" '
       .items[]
       | select(.roleRef.kind == "ClusterRole" and (.roleRef.name as $r | $names | index($r)))
-      | "\(.metadata.name) (namespace \(.metadata.namespace)) -> роль \(.roleRef.name) (только в этом namespace), subjects: \([.subjects[]? | "\(.kind):\(.name)"] | join(", "))"
+      | "\(.metadata.name) (namespace \(.metadata.namespace)) -> role \(.roleRef.name) (only in this namespace), subjects: \([.subjects[]? | "\(.kind):\(.name)"] | join(", "))"
     '
 ```
 
@@ -188,7 +188,7 @@ kubectl get clusterroles -o json | jq -r '
   | .rules[]?
   | select(((.verbs // []) | index("*"))
       and (((.apiGroups // []) | index("*") | not) or ((.resources // []) | index("*") | not)))
-  | "\($name): verbs=* на apiGroups=\(.apiGroups // []) resources=\(.resources // [])"
+  | "\($name): verbs=* on apiGroups=\(.apiGroups // []) resources=\(.resources // [])"
 '
 ```
 
@@ -501,7 +501,7 @@ Why a literal is worse than a reference to `Secret` deserves careful treatment, 
 |---|---|---|
 | Storage location | inside PodSpec/Deployment - that is, in a workload object | in a separate `Secret` object; in etcd the value is **base64 rather than encrypted** unless encryption at rest is enabled |
 | Exposure to VCS | the workload manifest is normally what is committed, so the value goes to git with it - but only if the manifest is actually committed | the workload manifest contains only the key name; the value can still land in git separately, for example in a plain-YAML `Secret` or Helm values |
-| Visibility through the API | visible to anyone who can read a Deployment/Pod - a much broader group than `Secrets` readers | direct API reads require `secrets` rights in this namespace (which can be narrowed by `resourceNames`), **but** this does not guarantee isolation: a subject that can create a Pod/Deployment in the namespace can mount an existing `Secret` as a volume or pass it through `env` without any `get`/`list`/`watch` permission on `secrets` |
+| Visibility through the API | visible to anyone who can read a Deployment/Pod - a much broader group than `Secrets` readers | direct API reads require `secrets` permissions in this namespace (which can be narrowed by `resourceNames`), **but** this does not guarantee isolation: a subject that can create a Pod/Deployment in the namespace can mount an existing `Secret` as a volume or pass it through `env` without any `get`/`list`/`watch` permission on `secrets` |
 | Inclusion in the audit log | depends on audit policy and level: `Metadata` logs no body; `Request` logs the request body but not the response; `RequestResponse` logs both request and response bodies | the same, but the event concerns `Secret`, and secret reads are easier to select with a separate rule. `create`/`update` can disclose a value already at `Request`; a value returned by a normal `get` appears in the log only with `RequestResponse` |
 | Encryption at rest | the literal can be encrypted together with the workload object if this API resource is covered by a suitable `EncryptionConfiguration` rule - directly (for example, `deployments.apps`) or through a wildcard (`*.apps`, `*.*` - since Kubernetes v1.27+) - and the **first** provider of that rule is an encryption provider rather than `identity`; by default `--encryption-provider-config` is not set at all, so the API server stores such data in etcd without at-rest encryption | `Secret` is not encrypted automatically either: that resource must be covered by an `EncryptionConfiguration` rule (directly `secrets` or via a wildcard) with an encryption provider first. If `identity` is first, new records still go to etcd as plaintext even when the resource is formally “included in configuration” |
 | Update without rebuild | the workload manifest must be changed and re-applied | the value changes in one object; the workload is untouched |
@@ -557,7 +557,7 @@ Nearly everything above can be done by ready-made tools, and in real work it is 
 | Tool | What it covers from the checks above | Status |
 |---|---|---|
 | [kube-bench](https://github.com/aquasecurity/kube-bench) | control-plane, kubelet, and etcd configuration against the CIS Benchmark - partly Steps 2 and 5 | actively maintained; covered in [Chapter 07](../07/README.md) and Lab 103 |
-| [Kubescape](https://kubescape.io/) | dangerous Pod settings, broad RBAC rights, hostPath/hostNetwork/privileged, mutable tags - Steps 3, 4, and 6; scans both a live cluster and manifests/Helm against NSA, MITRE, and SOC 2 frameworks | CNCF Incubating; actively developed |
+| [Kubescape](https://kubescape.io/) | dangerous Pod settings, broad RBAC permissions, hostPath/hostNetwork/privileged, mutable tags - Steps 3, 4, and 6; scans both a live cluster and manifests/Helm against NSA, MITRE, and SOC 2 frameworks | CNCF Incubating; actively developed |
 | `trivy k8s` ([Trivy](https://trivy.dev/)) | misconfiguration in cluster objects plus image CVEs and KBOM - Steps 4, 6, and part of the Code layer | actively maintained; image scanning is covered in [Chapter 28](../28/README.md) and Lab 111 |
 | [kubeaudit](https://github.com/Shopify/kubeaudit) | focused workload checks: root, capabilities, `allowPrivilegeEscalation`, missing `readOnlyRootFilesystem` - Step 4 | **archived** upstream on 2024-10-30, read-only; appears in older articles but is unsuitable for new processes |
 | [kube-linter](https://docs.kubelinter.io/), [kubesec](https://kubesec.io/) | the same indicators, but in manifests before deployment rather than in a live cluster | maintained; covered in [Chapter 27](../27/README.md) and Lab 111 |
@@ -609,7 +609,7 @@ Consider the following areas separately.
 - **Runtime.** `privileged`, `hostPath`, `hostPID`, extra capabilities, and a writable root filesystem help an attacker move from application RCE to the node or persist inside a container.
 - **Data and identities.** `Secrets`, ServiceAccount tokens, kubeconfig, certificates, and cloud credentials are often more valuable than the container itself. Base64 in `Secret` is not encryption, and reading `Secrets` through RBAC requires the same control as production database access.
 
-Below is a minimal workload with Container-layer restrictions. Understand exactly what they protect: **not a Pod from compromise, but the cluster and node from an already compromised Pod**. These fields do not remove an application vulnerability - it belongs to the Code layer and remains. They take effect after an attacker has gained code execution inside the container: `runAsNonRoot` keeps them from being root, `drop: [ALL]` removes kernel capabilities, `seccompProfile` narrows the syscall set, `allowPrivilegeEscalation: false` prevents gaining more rights than at start, and `readOnlyRootFilesystem` makes it harder to place tools in the container and persist. Together they reduce blast radius: node escape and turning one compromised Pod into entry to the whole cluster become substantially harder. The fields are not explained again here: CKA covers their semantics, and CKS develops the hardening in Chapter 18.
+Below is a minimal workload with Container-layer restrictions. Understand exactly what they protect: **not a Pod from compromise, but the cluster and node from an already compromised Pod**. These fields do not remove an application vulnerability - it belongs to the Code layer and remains. They take effect after an attacker has gained code execution inside the container: `runAsNonRoot` keeps them from being root, `drop: [ALL]` removes kernel capabilities, `seccompProfile` narrows the syscall set, `allowPrivilegeEscalation: false` prevents gaining additional privileges after process start, and `readOnlyRootFilesystem` makes it harder to place tools in the container and persist. Together they reduce blast radius: node escape and turning one compromised Pod into entry to the whole cluster become substantially harder. The fields are not explained again here: CKA covers their semantics, and CKS develops the hardening in Chapter 18.
 
 ```yaml
 apiVersion: v1
@@ -712,11 +712,11 @@ Mapping the model to the **OWASP Kubernetes Top 10 - 2025** helps ensure a risk 
 | no segmentation between Pod objects and namespaces | K05 Missing Network Segmentation Controls | K07 Missing Network Segmentation Controls | default-deny and focused `NetworkPolicy`, CNI flow/deny events |
 | exposed API, kubelet, etcd, webhook, or another Kubernetes component | K06 Overly Exposed Kubernetes Components | K09 Misconfigured Cluster Components | private network, TLS, restricted endpoints, and access logs |
 | insecure or vulnerable control-plane, node, or runtime configuration | K07 Misconfigured And Vulnerable Cluster Components | 2022 K09 + K10 | secure configuration, updates, scanner/config audit, and access logs |
-| movement from the cluster into cloud through metadata, node credentials, or wrongly issued identity | K08 Cluster-To-Cloud Lateral Movement | K07 Missing Network Segmentation Controls, K03 Overly Permissive RBAC Configurations, and K08 Secret Management Failures | egress policy, minimal node-identity rights and **workload identity**, flow logs, and cloud audit |
+| movement from the cluster into cloud through metadata, node credentials, or wrongly issued identity | K08 Cluster-To-Cloud Lateral Movement | K07 Missing Network Segmentation Controls, K03 Overly Permissive RBAC Configurations, and K08 Secret Management Failures | egress policy, minimal node-identity permissions and **workload identity**, flow logs, and cloud audit |
 | weak authentication or inappropriate anonymous access | K09 Broken Authentication Mechanisms | K06 Broken Authentication Mechanisms | verified issuer/audience, disabled or unauthorized anonymous identity, authentication/audit events |
 | no signals of actions and violations | K10 Inadequate Logging And Monitoring | K05 Inadequate Logging and Monitoring | audit policy, runtime and network telemetry, retained alerts with identity and time |
 
-K08 connects the Cloud layer to subsequent chapters: the metadata endpoint and node credentials must not become an implicit path for a Pod, and workload identity must issue a separate short-lived identity with minimal rights. Treat metadata, IAM, and egress as one lateral-movement boundary, not independent topics.
+K08 connects the Cloud layer to subsequent chapters: the metadata endpoint and node credentials must not become an implicit path for a Pod, and workload identity must issue a separate short-lived identity with minimal permissions. Treat metadata, IAM, and egress as one lateral-movement boundary, not independent topics.
 
 > 🔬 A security-engineering exercise for a separate test namespace.
 
@@ -761,7 +761,7 @@ The last two commands apply when Falco is installed as a systemd service. For a 
 Do not add security controls at random. Five principles make it possible to evaluate any decision.
 
 1. **Defense in depth.** One failure must not open the whole path. For example, a fixed image lowers the chance of RCE, `SecurityContext` limits the process after RCE, NetworkPolicy constrains lateral movement, and Falco plus audit help notice the remaining risk.
-2. **Least privilege.** An identity, workload, and process receive only the rights they need. In practice, that means exact RBAC `verbs`, a dedicated ServiceAccount, `drop: [ALL]`, no `privileged`, minimal IAM permissions, and short-lived credentials.
+2. **Least privilege.** An identity, workload, and process receive only the permissions they need. In practice, that means exact RBAC `verbs`, a dedicated ServiceAccount, `drop: [ALL]`, no `privileged`, minimal IAM permissions, and short-lived credentials.
 3. **Immutability.** A production workload must not be “fixed” by installing a package in a running container. Rebuild, scan, sign, and deploy the image by digest. This reduces the surface and makes state reproducible.
 4. **Minimize attack surface.** An uninstalled package, closed port, disabled endpoint, and unissued token cannot be used. Inventory services, open ports, RBAC, and images regularly.
 5. **Zero trust on the network.** Being in one cluster or namespace must not grant automatic trust. Standard `NetworkPolicy` selects Pod/Namespace by labels, IP/CIDR, and ports; it is not authenticated workload identity or ServiceAccount-aware authorization. Begin networking with default-deny, then add narrow allowances by selector, address, port, and direction. If identity-aware network protection is necessary, use separate CNI/service-mesh mechanisms such as Cilium identity/mTLS or Istio mTLS.
@@ -790,7 +790,7 @@ The model does not replace the CKS curriculum. It shows why chapters are grouped
 | Layer or phase | CKS domain | Course chapters | Primary outcome |
 |---|---|---|---|
 | Cloud, Pod network, initial access, and lateral movement | Cluster Setup - 15% | [04](../04/README.md), [05](../05/README.md), [06](../06/README.md), [07](../07/README.md), [08](../08/README.md), [09](../09/README.md) | network segmentation, metadata/endpoint protection, CIS, and TLS hardening |
-| Cluster API, persistence, and privilege escalation | Cluster Hardening - 15% | [10](../10/README.md), [11](../11/README.md), [12](../12/README.md), [13](../13/README.md) | minimal rights, secure ServiceAccount objects, a closed API, and timely updates |
+| Cluster API, persistence, and privilege escalation | Cluster Hardening - 15% | [10](../10/README.md), [11](../11/README.md), [12](../12/README.md), [13](../13/README.md) | minimal permissions, secure ServiceAccount objects, a closed API, and timely updates |
 | Node and container runtime, privilege escalation | System Hardening - 10% | [14](../14/README.md), [15](../15/README.md), [16](../16/README.md), [17](../17/README.md) | reduced node attack surface, MAC, and syscall filtering |
 | Container, data, and lateral movement | Minimize Microservice Vulnerabilities - 20% | [18](../18/README.md), [19](../19/README.md), [20](../20/README.md), [21](../21/README.md), [22](../22/README.md), [23](../23/README.md) | hardened workloads, policy admission, Secret protection, sandboxing, and mTLS |
 | Code and build pipeline, initial access | Supply Chain Security - 20% | [24](../24/README.md), [25](../25/README.md), [26](../26/README.md), [27](../27/README.md), [28](../28/README.md) | a trusted, verifiable artifact before execution |
@@ -822,7 +822,7 @@ For one test namespace, draw a DFD `Internet -> Ingress -> Pod -> ServiceAccount
 - **Exfiltration** - unauthorized transfer of data beyond a trust boundary.
 - **Immutable infrastructure** - an approach in which a production artifact is not modified at runtime but replaced by a new verified version.
 - **Kill chain** - a sequence of attack phases from initial access to the goal.
-- **Least privilege** - granting only the minimum rights necessary.
+- **Least privilege** - granting only the minimum permissions necessary.
 - **Lateral movement** - an attacker moving from the initial workload to other systems, data, or identities.
 - **Zero trust** - rejecting implicit trust based on network, namespace, or location.
 
@@ -847,9 +847,9 @@ The model makes a security review concrete. Instead of asking “is the cluster 
 ## 02.10. Self-check questions
 
 <details>
-<summary>1. Why does Container-layer protection not compensate for a public API endpoint or excessive cloud IAM rights?</summary>
+<summary>1. Why does Container-layer protection not compensate for a public API endpoint or excessive cloud IAM permissions?</summary>
 
-4C consists of nested but independent layers: `SecurityContext` and `NetworkPolicy` can constrain a compromised workload, but do not close a public API endpoint or reduce granted cloud IAM rights. The API needs TLS, authentication/authorization, and access restriction; cloud identity needs minimal IAM rights, workload identity, and metadata controls.
+4C consists of nested but independent layers: `SecurityContext` and `NetworkPolicy` can constrain a compromised workload, but do not close a public API endpoint or reduce granted cloud IAM permissions. The API needs TLS, authentication/authorization, and access restriction; cloud identity needs minimal IAM permissions, workload identity, and metadata controls.
 </details>
 
 <details>
@@ -861,7 +861,7 @@ The Cloud layer has cloud credentials, VPC, metadata, disks, and snapshots; the 
 <details>
 <summary>3. How does persistence through `CronJob` differ from privilege escalation through `ClusterRoleBinding`?</summary>
 
-`CronJob` creates a recurring workload and gives an attacker persistence, so it belongs to persistence. `ClusterRoleBinding` can grant broad rights and elevate an identity; its creation after `kubectl exec` should be correlated as a potential execution → persistence/privilege-escalation chain.
+`CronJob` creates a recurring workload and gives an attacker persistence, so it belongs to persistence. `ClusterRoleBinding` can grant broad permissions and elevate an identity; its creation after `kubectl exec` should be correlated as a potential execution → persistence/privilege-escalation chain.
 </details>
 
 <details>

@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 12. Restricting access to the Kubernetes API
 
@@ -45,9 +45,9 @@ The order matters in investigation. `401 Unauthorized` means a request failed Au
 
 ### Why `system:anonymous` is dangerous
 
-Anonymous access is sometimes retained for a legacy health check or out of habit. The anonymous subject itself grants nothing, but one mistaken `RoleBinding` or `ClusterRoleBinding` for `system:anonymous` or `system:unauthenticated` makes the API available without a key, certificate, or token. Close entry first, then remove already granted rights: disabled anonymous access today does not make a dangerous binding safe forever.
+Anonymous access is sometimes retained for a legacy health check or out of habit. The anonymous subject itself grants nothing, but one mistaken `RoleBinding` or `ClusterRoleBinding` for `system:anonymous` or `system:unauthenticated` makes the API available without a key, certificate, or token. Close entry first, then remove already granted permissions: disabled anonymous access today does not make a dangerous binding safe forever.
 
-For standard kubeadm, complete `--anonymous-auth=false` cannot be treated as a universal baseline: its health probes call `/livez` and `/readyz` without credentials, so a global anonymous prohibition can return `401` and restart API server. The primary option for such a cluster is a stable `AuthenticationConfiguration` connected through `--authentication-config`. Its conditions are an allowlist of **exact** paths: no other path becomes anonymous even with a permissive RBAC binding. This also affects token-based `kubeadm join`: before trusting the API, a client reads `/api/v1/namespaces/kube-public/configmaps/cluster-info` unauthenticated. Choose one of two tested options: add this exact path during public token discovery, or disable public discovery and use file/HTTPS discovery. A health-only allowlist without this path is incompatible with ordinary token-based join. Add `/healthz` only if a health check truly uses it. Every exception needs a separate review of routes, network access, and anonymous-subject rights.
+For standard kubeadm, complete `--anonymous-auth=false` cannot be treated as a universal baseline: its health probes call `/livez` and `/readyz` without credentials, so a global anonymous prohibition can return `401` and restart API server. The primary option for such a cluster is a stable `AuthenticationConfiguration` connected through `--authentication-config`. Its conditions are an allowlist of **exact** paths: no other path becomes anonymous even with a permissive RBAC binding. This also affects token-based `kubeadm join`: before trusting the API, a client reads `/api/v1/namespaces/kube-public/configmaps/cluster-info` unauthenticated. Choose one of two tested options: add this exact path during public token discovery, or disable public discovery and use file/HTTPS discovery. A health-only allowlist without this path is incompatible with ordinary token-based join. Add `/healthz` only if a health check truly uses it. Every exception needs a separate review of routes, network access, and anonymous-subject permissions.
 
 On a kubeadm control plane, `kube-apiserver` is usually a static Pod. Edit the active manifest locally on control plane with node-console access and a stored rollback path. Do not copy backup YAML into `/etc/kubernetes/manifests/`: kubelet can treat it as another static Pod.
 
@@ -211,7 +211,7 @@ sudo ss -H -lntp '( sport = :10250 )'
 Do not delete a `ClusterRole` by name at random: one role can be required by another subject. Find bindings whose `subjects` actually name the anonymous user or its group, check the assigned role, and only then remove an unnecessary binding.
 
 ```bash
-# ClusterRoleBinding objects that directly grant rights to anonymous user or unauthenticated group.
+# ClusterRoleBinding objects that directly grant permissions to anonymous user or unauthenticated group.
 kubectl get clusterrolebinding -o json | jq -r '
   .items[]
   | select(any(.subjects[]?;
@@ -240,7 +240,7 @@ kubectl delete clusterrolebinding "$REVIEWED_CLUSTERROLEBINDING"
 kubectl delete rolebinding -n "$NAMESPACE" "$REVIEWED_ROLEBINDING"
 ```
 
-Also check every binding granting rights to group `system:unauthenticated`: disabling anonymous access closes its normal path, but policy must stay minimal and understandable after future identity-provider changes.
+Also check every binding granting permissions to group `system:unauthenticated`: disabling anonymous access closes its normal path, but policy must stay minimal and understandable after future identity-provider changes.
 
 ## 12.3. Authorization modes and NodeRestriction
 
@@ -270,7 +270,7 @@ sudo grep -n -- '--authorization-mode' /etc/kubernetes/manifests/kube-apiserver.
 
 > 🎯 kubeadm baseline: `Node,RBAC` without `AlwaysAllow`; `Node` serves kubelet, RBAC limits other identities, and `NodeRestriction` limits permitted mutating requests with node credentials.
 
-**NodeRestriction** is a validating admission plugin that complements `Node` authorizer. `Node` authorizer determines kubelet API rights and relation-sensitive reads; `NodeRestriction` then limits permissible **changes**: kubelet can modify only its own Node and Pod objects bound to that node, and cannot change protected Node labels/taints outside the allowed model. Read requests do not go through admission, so their scope is set by authorizer.
+**NodeRestriction** is a validating admission plugin that complements `Node` authorizer. `Node` authorizer determines kubelet API permissions and relation-sensitive reads; `NodeRestriction` then limits permissible **changes**: kubelet can modify only its own Node and Pod objects bound to that node, and cannot change protected Node labels/taints outside the allowed model. Read requests do not go through admission, so their scope is set by authorizer.
 
 ```mermaid
 flowchart TB
@@ -293,7 +293,7 @@ sudo grep -nE -- '--(enable|disable)-admission-plugins' \
 sudo crictl ps --name kube-apiserver
 ```
 
-In Kubernetes v1.36, `--enable-admission-plugins` adds plugins to the built-in default-enabled set; do not enumerate defaults in that flag. If `NodeRestriction` is not enabled, add it to the explicit additional list. Preserve other additional plugins already in `--enable-admission-plugins`, and separately ensure a required default or plugin is not disabled through `--disable-admission-plugins`. RBAC controls general role/binding-based permissions for users, groups, and ServiceAccount; `Node` authorizer serves special node-identity rights. `NodeRestriction` does not replace them: it adds admission restrictions to kubelet mutating requests. Also consider feature gate `ServiceAccountNodeAudienceRestriction`: when enabled, NodeRestriction narrows audiences for which kubelet can request ServiceAccount tokens through `TokenRequest` to audiences already used by Pod objects on that node or explicitly granted through RBAC. It is not a substitute for NodeRestriction, but an additional limit for node-originated token requests.
+In Kubernetes v1.36, `--enable-admission-plugins` adds plugins to the built-in default-enabled set; do not enumerate defaults in that flag. If `NodeRestriction` is not enabled, add it to the explicit additional list. Preserve other additional plugins already in `--enable-admission-plugins`, and separately ensure a required default or plugin is not disabled through `--disable-admission-plugins`. RBAC controls general role/binding-based permissions for users, groups, and ServiceAccount; `Node` authorizer serves special node-identity permissions. `NodeRestriction` does not replace them: it adds admission restrictions to kubelet mutating requests. Also consider feature gate `ServiceAccountNodeAudienceRestriction`: when enabled, NodeRestriction narrows audiences for which kubelet can request ServiceAccount tokens through `TokenRequest` to audiences already used by Pod objects on that node or explicitly granted through RBAC. It is not a substitute for NodeRestriction, but an additional limit for node-originated token requests.
 
 > 🎯 Restrict `:6443` to a private endpoint or precise CIDR allowlist; for Pod objects, check a separate egress policy.
 
@@ -341,11 +341,11 @@ kubectl cluster-info
 kubectl get --raw='/livez?verbose'
 ```
 
-> 🔬 `kubectl proxy` and `port-forward` are auxiliary ways to access locally: they use operator kubeconfig rights and create additional diagnostic surface.
+> 🔬 `kubectl proxy` and `port-forward` are auxiliary ways to access locally: they use operator kubeconfig permissions and create additional diagnostic surface.
 
 ## 12.4.1. Local API gateways: `kubectl proxy` and `port-forward`
 
-`kubectl proxy` and `kubectl port-forward` use the user's kubeconfig authority; they do not create a new restricted identity. By default `kubectl proxy` listens on `127.0.0.1`, limiting risk to the local machine. Do not expand it with `--address` unnecessarily; a broad `--accept-hosts`, particularly `--disable-filter`, can make a proxy accessible to other clients as a gateway to the API with operator rights. Similarly, do not use `kubectl port-forward --address 0.0.0.0` unless a short separately agreed connection through a protected network is necessary. End a temporary tunnel after diagnostics and do not treat it as a substitute for firewall, RBAC, or NetworkPolicy.
+`kubectl proxy` and `kubectl port-forward` use the user's kubeconfig authority; they do not create a new restricted identity. By default `kubectl proxy` listens on `127.0.0.1`, limiting risk to the local machine. Do not expand it with `--address` unnecessarily; a broad `--accept-hosts`, particularly `--disable-filter`, can make a proxy accessible to other clients as a gateway to the API with operator permissions. Similarly, do not use `kubectl port-forward --address 0.0.0.0` unless a short separately agreed connection through a protected network is necessary. End a temporary tunnel after diagnostics and do not treat it as a substitute for firewall, RBAC, or NetworkPolicy.
 
 > 🎯 Confirm active configuration, safe flags, readiness after reload, `401` for an anonymous path, and targeted `can-i` with `no`; diagnose static Pod through kubelet and runtime.
 
@@ -411,7 +411,7 @@ curl -k -sS -o /dev/null -w '%{http_code}\n' "$APISERVER/readyz"
 
 `401` on `/version` proves only that this protected path does not accept an anonymous request; it does not prove global disabling of anonymous authenticator. With selective `AuthenticationConfiguration`, exact allowed paths such as `/readyz` or discovery path can intentionally work without credentials. If connection times out or is refused, diagnose firewall, Security Group, DNS, and route first; this is not proof of Authentication configuration.
 
-With cluster-admin rights, separately check authorizer through impersonation:
+With cluster-admin permissions, separately check authorizer through impersonation:
 
 ```bash
 # There must be no permission. The calling administrator needs impersonate right.
@@ -421,7 +421,7 @@ kubectl auth can-i get pods --all-namespaces \
 kubectl auth can-i list secrets --all-namespaces \
   --as=system:anonymous --as-group=system:unauthenticated
 
-# Explicitly check minimal rights of the ServiceAccount from Lab 104.
+# Explicitly check minimal permissions of the ServiceAccount from Lab 104.
 kubectl auth can-i list pods -n cks-104 \
   --as=system:serviceaccount:cks-104:app-sa
 kubectl auth can-i delete pods -n cks-104 \
@@ -447,7 +447,7 @@ Expect `no` for anonymous checks and prohibited `delete`; `list pods` for dedica
 
 - **Several layers, one baseline.** `--anonymous-auth=false` where compatible with probes and bootstrap dependencies, or narrow conditions for exact health/discovery paths in `AuthenticationConfiguration`, `Node,RBAC`, NodeRestriction with assessment of `ServiceAccountNodeAudienceRestriction`, a closed kubelet read-only port, and private/strictly allowlisted API endpoint belong in kubeadm configuration, node image, or IaC. Manual static-Pod editing is acceptable for an emergency task, but must not be the only source of truth.
 - **Network by purpose.** Administrators work through VPN/bastion, CI/CD has separate egress addresses, workers/control plane receive only required rules, and for Pod-to-API traffic record actual datapath/source and allow only workloads that truly need API. A public endpoint is acceptable only with explicit risk owner, strict source restriction, and strong authentication; a private endpoint remains a strong, but not only, option.
-- **Reassess rights after identity changes.** Regularly find bindings for `system:anonymous`, `system:unauthenticated`, obsolete users, and ServiceAccount; remove unused ones and test `kubectl auth can-i`.
+- **Reassess permissions after identity changes.** Regularly find bindings for `system:anonymous`, `system:unauthenticated`, obsolete users, and ServiceAccount; remove unused ones and test `kubectl auth can-i`.
 - **Observability does not expose diagnostics.** Metrics, audit, and centralized logs provide needed visibility; enable profiling temporarily, through an allowlist, and with a disable plan.
 - **Divide a managed control plane by responsibility.** You cannot edit a provider static-Pod manifest, but can and must control endpoint exposure, allowed CIDRs, RBAC, admission policy, node security groups, and kubelet access.
 
@@ -468,7 +468,7 @@ Expect `no` for anonymous checks and prohibited `delete`; `list pods` for dedica
 - Protect the API with several independent layers: network, TLS, authentication, and authorization; admission additionally applies to mutating and supported custom requests.
 - For kubelet, disable anonymous access (`--anonymous-auth=false`). On kube-apiserver, either explicitly limit health endpoints and, while public token discovery is needed, exact `kube-public/cluster-info` path through `AuthenticationConfiguration`; in both cases, inspect and remove only unnecessary RoleBinding/ClusterRoleBinding for `system:anonymous` and `system:unauthenticated`.
 - Disable legacy kubelet read-only port with `readOnlyPort: 0`; retain `10250` only with authentication, `Webhook` authorization, and network restriction.
-- The secure kubeadm base authorizer chain is `Node,RBAC`; `AlwaysAllow` is incompatible with least privilege. `Node` authorizer sets kubelet API rights and NodeRestriction adds limits to its mutating requests.
+- The secure kubeadm base authorizer chain is `Node,RBAC`; `AlwaysAllow` is incompatible with least privilege. `Node` authorizer sets kubelet API permissions and NodeRestriction adds limits to its mutating requests.
 - Prefer a private endpoint for API `:6443`; a public endpoint requires a strict firewall/Security Group allowlist and strong authentication. In every case, focused NetworkPolicy for Pod egress reduces lateral movement.
 - `--profiling=false`, enabled ServiceAccount lookup for API revocation of legacy tokens, and flag audit reduce surface. Bound projected tokens, not `--service-account-lookup=false`, provide short TTL.
 - Prove the result with separate checks: anonymous `curl` to a protected path such as `/version` must return API `401`; verify intentionally allowed health/discovery paths separately. `kubectl auth can-i --as=system:anonymous --as-group=system:unauthenticated` checks the authorizer for the impersonated identity and must return `no` for a prohibited action.
@@ -477,7 +477,7 @@ Expect `no` for anonymous checks and prohibited `delete`; `list pods` for dedica
 
 **On the exam.** A task normally gives control-plane access and asks you to close anonymous API or remove a dangerous binding. Find the active static-Pod manifest, save a copy outside `/etc/kubernetes/manifests/`, change the single required flag, wait for API recreation, and check `/readyz`. Then use `curl` without credentials to a protected path such as `/version`; with selective configuration, separately account for intentionally allowed exact paths. `kubectl auth can-i --as=system:anonymous --as-group=system:unauthenticated` checks only authorizer for an impersonated identity; do not stop at finding text in a file.
 
-**Exam scenario: a kubeadm cluster was created with `AlwaysAllow`.** The current context can point to an account that should not have rights after RBAC is enabled, while kubeconfig (or a separate kubeconfig) contains a known administrative account. Before changing it, select that account explicitly **for every command**: do not run `kubectl config use-context`, which could lose the original context and create a false successful result.
+**Exam scenario: a kubeadm cluster was created with `AlwaysAllow`.** The current context can point to an account that should not have permissions after RBAC is enabled, while kubeconfig (or a separate kubeconfig) contains a known administrative account. Before changing it, select that account explicitly **for every command**: do not run `kubectl config use-context`, which could lose the original context and create a false successful result.
 
 ```bash
 CURRENT_CONTEXT=$(kubectl config current-context)
@@ -493,7 +493,7 @@ sudo cp -a /etc/kubernetes/manifests/kube-apiserver.yaml \
 sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
-In the manifest, replace `--authorization-mode=AlwaysAllow` with `--authorization-mode=Node,RBAC` without removing other arguments. If `--authorization-config` is found, do not add `--authorization-mode` at the same time: fix active structured configuration by its schema. A `can-i` check **before** remediation does not prove the admin account has RBAC rights: with `AlwaysAllow` it succeeds for any authenticated subject.
+In the manifest, replace `--authorization-mode=AlwaysAllow` with `--authorization-mode=Node,RBAC` without removing other arguments. If `--authorization-config` is found, do not add `--authorization-mode` at the same time: fix active structured configuration by its schema. A `can-i` check **before** remediation does not prove the admin account has RBAC permissions: with `AlwaysAllow` it succeeds for any authenticated subject.
 
 ```bash
 # Kubelet recreates the static Pod; do not end control-plane access before verification.

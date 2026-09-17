@@ -1,10 +1,10 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 05. Protecting node metadata and endpoints; protecting GUIs
 
 > **The problem.** A compromised Pod or SSRF can reach an endpoint unavailable to an external user: node cloud metadata, the control plane, or an administrative GUI. A single improperly allowed network path can expose the node's cloud identity and temporary credentials or a privileged management interface. Ordinary workload RBAC does not protect metadata because it is not a Kubernetes API.
 
-> **What comes next.** In Chapter 04, we turned a flat pod network into a set of allowed connections. Now we will apply egress isolation to especially dangerous destinations: cloud metadata, the control plane, and GUIs. This is the Cluster Setup (15%) CKS domain. An error in one such permission can turn a Pod compromise into a cloud identity or cluster compromise.
+> **What comes next.** In Chapter 04, we turned a flat pod network into a set of allowed connections. Now we will apply egress isolation to especially dangerous destinations: cloud metadata, the control plane, and GUIs. This is the Cluster Setup (15%) CKS domain. An error in one such allowed network path can turn a Pod compromise into a cloud identity or cluster compromise.
 
 > **What you need from CKA.** Basic egress `NetworkPolicy` syntax, `ipBlock`, and CNI operation are covered in [CKA Chapter 34](../../../cka/course/34/README.md). Here we consider node metadata and administrative endpoint threats rather than repeat policy basics.
 
@@ -91,7 +91,7 @@ spec:
   - Egress
 ```
 
-Then add separate minimal permissions. For example, most Pods need DNS to CoreDNS. Confirm the actual labels and destination address in your cluster.
+Then add separate narrow egress allow rules. For example, most Pods need DNS to CoreDNS. Confirm the actual labels and destination address in your cluster.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -407,11 +407,11 @@ It is the typical node cloud metadata endpoint, not an ordinary external Service
 <details>
 <summary>2. Why is `NetworkPolicy` with `ipBlock.except` not a global denial for every policy in the namespace?</summary>
 
-`except` excludes an address only from one specific `ipBlock` rule. Policies are additive, so another egress policy with a broad CIDR or a direct metadata permission can reopen access; default-deny and narrow allows for actual dependencies are more durable.
+`except` excludes an address only from one specific `ipBlock` rule. Policies are additive, so another egress policy with a broad CIDR or a direct allow rule for the metadata endpoint can reopen access; default-deny and narrow allows for actual dependencies are more durable.
 </details>
 
 <details>
-<summary>3. Which permissions are normally needed after default-deny egress so that the application does not lose DNS?</summary>
+<summary>3. Which egress allow rules are normally needed after default-deny so that the application does not lose DNS?</summary>
 
 Usually, narrow egress to the actual CoreDNS endpoints in `kube-system` on UDP 53 and TCP 53 is needed. Before applying it, check the actual DNS Pod labels; in a given architecture, queries can be handled by NodeLocal DNSCache or another DNS component.
 </details>

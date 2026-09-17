@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 08. Secure Ingress with TLS
 
@@ -218,7 +218,7 @@ Do not replace edge redirect with application logic if it can be provided at the
 
 > 🏭 A supported Gateway API controller and its status/compatibility; the capabilities of `GatewayClass` are defined by the particular implementation.
 
-> 🔬 **Gateway API v1.6 currentness.** In Gateway API v1.6, `TCPRoute` and `UDPRoute` moved to Standard `v1`; new experimental resources are placed in a separate `gateway.networking.x-k8s.io` group with an `X` prefix. `XBackend` remains experimental, and its `ExternalHostname` support requires deliberate opt-in because of security trade-offs, including confused-deputy risk. This is production-current context, not CKS Core. [Official release blog](https://kubernetes.io/blog/2026/08/03/gateway-api-v1-6-release/).
+> 🔬 **Gateway API v1.6 status.** In Gateway API v1.6, `TCPRoute` and `UDPRoute` moved to Standard `v1`; new experimental resources are placed in a separate `gateway.networking.x-k8s.io` group with an `X` prefix. `XBackend` remains experimental, and its `ExternalHostname` support requires deliberate opt-in because of security trade-offs, including confused-deputy risk. This is current production context, not CKS Core. [Official release blog](https://kubernetes.io/blog/2026/08/03/gateway-api-v1-6-release/).
 
 ### Gateway API: the current production path
 

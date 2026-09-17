@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 03. Linux security mechanisms under the hood
 
@@ -330,7 +330,7 @@ Remember these boundaries separately:
 
 > 🎯 Remove `privileged`, host namespaces, excessive capabilities, and `allowPrivilegeEscalation: true`; set `capabilities.drop: [ALL]`, `RuntimeDefault`, and the required MAC profile.
 
-## 03.4. Linux capabilities: root must be split up
+## 03.4. Linux capabilities: split root privileges into fine-grained capabilities
 
 UID 0 is not the only sign of privilege. The Linux kernel divides part of root's authority into capabilities. A process has several capability sets, including permitted, effective, inheritable, bounding, and ambient. Checking only `id` does not prove that a process is safe.
 
@@ -589,7 +589,7 @@ Typical errors:
 - **PID namespace** - isolation of the process list and PIDs.
 - **network namespace** - isolation of interfaces, routes, and the network stack.
 - **cgroup** - a group of processes with resource limits and accounting.
-- **capability** - a separate Linux privilege extracted from root authority.
+- **capability** - an individual Linux privilege separated from the traditional all-powerful root privilege set.
 - **CAP_SYS_ADMIN** - an excessively broad capability that is dangerous for an ordinary workload.
 - **syscall** - a system call through which a process accesses the kernel.
 - **seccomp** - a syscall filter applied by the kernel to a process.

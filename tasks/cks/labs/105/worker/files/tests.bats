@@ -75,35 +75,63 @@ control_plane() {
   worker_ip=$(ssh "${SSH_OPTS[@]}" "$cp" 'printf "%s" "${SSH_CONNECTION%% *}"' 2>/dev/null || true)
   node_ip=$(kubectl get node "$cp" --context "$CTX" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null || true)
   pod_cidr=$(kubectl get node "$cp" --context "$CTX" -o jsonpath='{.spec.podCIDR}' 2>/dev/null || true)
-  run ssh "${SSH_OPTS[@]}" "$cp" 'sudo ufw status verbose; sudo ufw status'
-  firewall="$output"
+
+  # Checker-owned bootstrap baseline (captured by worker.sh BEFORE the lab was handed to
+  # the student and before any UFW rule existed). This cannot be fabricated or backdated
+  # by the student, unlike their own artifacts/3/preflight.txt line.
+  bootstrap_baseline=$(cat /var/work/tests/bootstrap-baseline-3.txt 2>/dev/null || true)
+  bootstrap_rc=$(printf '%s\n' "$bootstrap_baseline" | grep -oE 'CURL_EXIT=[0-9]+' | cut -d= -f2)
+  bootstrap_http=$(printf '%s\n' "$bootstrap_baseline" | grep -oE 'HTTPCODE=[0-9]{3}' | cut -d= -f2)
+  bootstrap_baseline_ok="no"
+  if [[ "$bootstrap_rc" == "0" && "$bootstrap_http" =~ ^[1-5][0-9][0-9]$ ]]; then
+    bootstrap_baseline_ok="yes"
+  fi
+
+  run ssh "${SSH_OPTS[@]}" "$cp" 'sudo ufw status verbose; sudo ufw status; echo ===ADDED===; sudo ufw show added'
+  firewall_full="$output"
   firewall_status=$status
+  firewall="${firewall_full%%===ADDED===*}"
+  added_rules="${firewall_full#*===ADDED===}"
+
   ready=$(kubectl get --raw=/readyz --context "$CTX" 2>/dev/null || true)
   node_ready=$(kubectl get node "$cp" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
   calico_ready=$(kubectl get pods -n kube-system -l k8s-app=calico-node --context "$CTX" \
     -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
   workload_ready=$(kubectl get deployment health-probe -n cks-105-health --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null || true)
+  pod_dns=$(kubectl exec -n cks-105-health deploy/health-probe --context "$CTX" -- sh -c 'getent hosts kubernetes.default.svc.cluster.local >/dev/null 2>&1 && echo RESOLVED || echo FAILED' 2>/dev/null || true)
   pod_http=$(kubectl exec -n cks-105-health deploy/health-probe --context "$CTX" -- sh -c 'curl -ksS -o /dev/null -w "%{http_code}" --max-time 5 https://kubernetes.default.svc/readyz' 2>/dev/null || true)
-  set +e
-  kubelet_http=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 "https://${node_ip}:10250/healthz" 2>/dev/null)
-  kubelet_status=$?
-  set -e
+  if out=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 "https://${node_ip}:10250/healthz" 2>/dev/null); then
+    kubelet_status=0
+  else
+    kubelet_status=$?
+  fi
+  kubelet_http="$out"
 
-  # Exact structural allow-set check: normalize 'ufw status' into individual rule lines
-  # instead of grepping for arbitrary substrings anywhere in the output. A rule only
-  # counts if the exact port/proto matches AND the exact source matches.
+  # Exact allow-set check via 'ufw show added': this report renders the literal 'ufw
+  # allow ...' commands that were run (see ufw's own get_command()), independent of how
+  # 'ufw status' normalizes/orders/groups iptables-derived output. A rule only counts if
+  # it appears in this declarative list with the exact port/proto/source.
   esc_worker="${worker_ip//./\\.}"
   esc_node="${node_ip//./\\.}"
   esc_pod_cidr=$(printf '%s' "$pod_cidr" | sed 's/[.[\*^$/]/\\&/g')
 
-  rule_ssh_worker=$(grep -Eq "^22/tcp[[:space:]]+ALLOW( IN)?[[:space:]]+${esc_worker}([[:space:]]|$)" <<<"$firewall" && echo yes || echo no)
-  rule_api_worker=$(grep -Eq "^6443/tcp[[:space:]]+ALLOW( IN)?[[:space:]]+${esc_worker}([[:space:]]|$)" <<<"$firewall" && echo yes || echo no)
-  rule_api_node=$(grep -Eq "^6443/tcp[[:space:]]+ALLOW( IN)?[[:space:]]+${esc_node}([[:space:]]|$)" <<<"$firewall" && echo yes || echo no)
-  rule_api_podcidr=$(grep -Eq "^6443/tcp[[:space:]]+ALLOW( IN)?[[:space:]]+${esc_pod_cidr}([[:space:]]|$)" <<<"$firewall" && echo yes || echo no)
+  rule_ssh_worker=$(grep -Eq "^ufw allow from ${esc_worker} to any port 22 proto tcp" <<<"$added_rules" && echo yes || echo no)
+  rule_api_worker=$(grep -Eq "^ufw allow from ${esc_worker} to any port 6443 proto tcp" <<<"$added_rules" && echo yes || echo no)
+  rule_api_node=$(grep -Eq "^ufw allow from ${esc_node} to any port 6443 proto tcp" <<<"$added_rules" && echo yes || echo no)
+  rule_api_podcidr=$(grep -Eq "^ufw allow from ${esc_pod_cidr} to any port 6443 proto tcp" <<<"$added_rules" && echo yes || echo no)
 
-  # Any 'ALLOW ... Anywhere' rule for ANY port (not just 22/6443) widens the allow-set
-  # beyond the documented allowlist and must not exist.
-  broad_rule=$(grep -E '^[0-9]+(:[0-9]+)?/(tcp|udp)[[:space:]]+ALLOW( IN)?[[:space:]]+Anywhere([[:space:]]|$)' <<<"$firewall" || true)
+  # Exact allow-set: count every added allow/limit rule line (any UFW rule form - short
+  # 'ufw allow 8080/tcp', source-scoped 'ufw allow from X to any port Y proto tcp', or
+  # interface-scoped 'ufw allow in on lo') and require it to be exactly the 4 documented
+  # source-scoped rules plus the loopback rule - anything else (extra port, extra source,
+  # app profile, broad Anywhere rule in ANY form) makes the total diverge from 5.
+  total_added_allow=$(grep -cE '^ufw (allow|limit) ' <<<"$added_rules" || true)
+  loopback_rule=$(grep -Eq '^ufw allow in on lo' <<<"$added_rules" && echo yes || echo no)
+  exact_allow_set="no"
+  if [[ "$rule_ssh_worker" == "yes" && "$rule_api_worker" == "yes" && "$rule_api_node" == "yes" \
+        && "$rule_api_podcidr" == "yes" && "$loopback_rule" == "yes" && "$total_added_allow" -eq 5 ]]; then
+    exact_allow_set="yes"
+  fi
 
   calico_all_ready=yes
   [[ -z "$calico_ready" ]] && calico_all_ready=no
@@ -113,14 +141,48 @@ control_plane() {
 
   baseline_present=$(grep -Eq 'baseline kubelet 10250: CURL_EXIT=0 HTTPCODE=[1-5][0-9][0-9]' "$ARTIFACTS/3/preflight.txt" 2>/dev/null && echo yes || echo no)
 
-  if [[ "$firewall_status" -eq 0 ]] \
+  # Full E2E retest AFTER an explicit 'ufw reload' - proves the ruleset survives a reload,
+  # not just the in-memory state right after 'ufw enable'. Only run once the structural
+  # allow-set and recovery evidence already look sane, to avoid reloading (and risking a
+  # lockout window on a misconfigured firewall) when the base checks would fail anyway.
+  reload_ready="not-run"
+  reload_node_ready="not-run"
+  reload_calico_ready="not-run"
+  reload_pod_http="not-run"
+  reload_kubelet_status="not-run"
+  if [[ "$firewall_status" -eq 0 && "$exact_allow_set" == "yes" ]]; then
+    run ssh "${SSH_OPTS[@]}" "$cp" 'sudo ufw reload'
+    reload_status=$status
+    if [[ "$reload_status" -eq 0 ]]; then
+      sleep 2
+      reload_ready=$(kubectl get --raw=/readyz --context "$CTX" 2>/dev/null || true)
+      reload_node_ready=$(kubectl get node "$cp" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+      reload_calico_ready=yes
+      rc2=$(kubectl get pods -n kube-system -l k8s-app=calico-node --context "$CTX" \
+        -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+      [[ -z "$rc2" ]] && reload_calico_ready=no
+      for cond in $rc2; do [[ "$cond" != "True" ]] && reload_calico_ready=no; done
+      reload_pod_http=$(kubectl exec -n cks-105-health deploy/health-probe --context "$CTX" -- sh -c 'curl -ksS -o /dev/null -w "%{http_code}" --max-time 5 https://kubernetes.default.svc/readyz' 2>/dev/null || true)
+      if out2=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 "https://${node_ip}:10250/healthz" 2>/dev/null); then
+        reload_kubelet_status=0
+      else
+        reload_kubelet_status=$?
+      fi
+    fi
+  fi
+
+  if [[ "$bootstrap_baseline_ok" == "yes" ]] \
+    && [[ "$firewall_status" -eq 0 ]] \
     && grep -q 'Status: active' <<<"$firewall" \
     && grep -q 'Default: deny (incoming)' <<<"$firewall" \
-    && [[ "$rule_ssh_worker" == "yes" && "$rule_api_worker" == "yes" && "$rule_api_node" == "yes" && "$rule_api_podcidr" == "yes" ]] \
-    && [[ -z "$broad_rule" && "$ready" == "ok" && "$node_ready" == "True" && "$calico_all_ready" == "yes" ]] \
-    && [[ "${workload_ready:-0}" -ge 1 && -n "$pod_http" && "$pod_http" != "000" ]] \
+    && [[ "$exact_allow_set" == "yes" ]] \
+    && [[ "$ready" == "ok" && "$node_ready" == "True" && "$calico_all_ready" == "yes" ]] \
+    && [[ "${workload_ready:-0}" -ge 1 && "$pod_dns" == "RESOLVED" && -n "$pod_http" && "$pod_http" != "000" ]] \
     && [[ "$kubelet_status" -ne 0 && ( -z "$kubelet_http" || "$kubelet_http" == "000" ) ]] \
     && [[ "$baseline_present" == "yes" ]] \
+    && [[ "$reload_ready" == "ok" && "$reload_node_ready" == "True" && "$reload_calico_ready" == "yes" ]] \
+    && [[ "$reload_pod_http" != "000" && -n "$reload_pod_http" ]] \
+    && [[ "$reload_kubelet_status" != "0" ]] \
     && grep -q 'Status: active' "$ARTIFACTS/3/ufw.txt" \
     && grep -q 'Default: deny (incoming)' "$ARTIFACTS/3/ufw.txt" \
     && grep -q 'role=control-plane,workload' "$ARTIFACTS/3/preflight.txt" \
@@ -129,32 +191,30 @@ control_plane() {
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    if [[ "$baseline_present" != "yes" ]]; then
+    if [[ "$bootstrap_baseline_ok" != "yes" ]]; then
+      echo "HINT: the checker's own bootstrap-time baseline for TCP/10250 (captured before the lab started, independent of your artifacts) shows the port was already unreachable before any UFW change existed on this node - this is an infrastructure precondition failure, not something you can fix from inside the lab. Contact the lab operator."
+    elif [[ "$baseline_present" != "yes" ]]; then
       echo "HINT: artifacts/3/preflight.txt must contain a baseline probe of TCP/10250 recorded BEFORE UFW was enabled, in the exact form 'baseline kubelet 10250: CURL_EXIT=0 HTTPCODE=<1xx-5xx>'. Without this, a post-UFW block cannot be attributed to UFW - the port might have already been unreachable for an unrelated reason."
     elif [[ "$firewall_status" -ne 0 ]] || ! grep -q 'Status: active' <<<"$firewall"; then
       echo "HINT: UFW is not active. Enable it with 'sudo ufw --force enable' AFTER adding the required allow rules - never enable a default-deny firewall before you have an SSH rule in place, you can lock yourself out."
-    elif [[ -n "$broad_rule" ]]; then
-      echo "HINT: Found a broad 'ALLOW ... Anywhere' rule for some port - the allowlist must be scoped exactly to worker_ip/node_ip/pod_cidr, with no other port left open to any source."
-    elif [[ "$rule_ssh_worker" != "yes" ]]; then
-      echo "HINT: No UFW rule allows TCP/22 from the worker IP ($worker_ip) specifically. Add it BEFORE enabling default-deny, otherwise you lose SSH access."
-    elif [[ "$rule_api_worker" != "yes" ]]; then
-      echo "HINT: No UFW rule allows TCP/6443 (API server) from the worker IP. Without it, kubectl from the worker station will stop working once UFW is enabled."
-    elif [[ "$rule_api_node" != "yes" ]]; then
-      echo "HINT: No UFW rule allows TCP/6443 from the node's own InternalIP ($node_ip) - the control-plane node talks to its own apiserver over this address too, and this task requires an explicit rule for it, not just an implicit loopback allowance."
-    elif [[ "$rule_api_podcidr" != "yes" ]]; then
-      echo "HINT: No UFW rule allows TCP/6443 specifically from the Pod CIDR ($pod_cidr). The Pod CIDR must be scoped to port 6443 exactly - if it appears in the ufw output for a different port, or as a bare substring somewhere unrelated to 6443/tcp, that does not count."
+    elif [[ "$exact_allow_set" != "yes" ]]; then
+      echo "HINT: 'sudo ufw show added' does not show EXACTLY the 5 documented rules (loopback + worker->22/tcp + worker->6443/tcp + node_ip->6443/tcp + pod_cidr->6443/tcp). Any extra allow/limit rule (another port, another source, an app profile, or a broad 'Anywhere' rule) or any missing one of the 5 makes this fail - 'ufw show added' shows the literal commands you ran, independent of how 'ufw status' displays/orders them."
     elif [[ "$calico_all_ready" != "yes" ]]; then
       echo "HINT: calico-node Pod(s) are not Ready after the UFW change (conditions='$calico_ready'). UFW is an iptables/nftables manager and can conflict with the rules Calico installs - see the lab-specific exception note in README and ADVERSARIAL_ACCEPTANCE_STANDARD.md."
     elif [[ "$ready" != "ok" || "$node_ready" != "True" ]]; then
       echo "HINT: The cluster is not healthy after your firewall change (readyz=$ready node_ready=$node_ready). Something you allowed/blocked is breaking control-plane or node communication - check kubelet-to-apiserver and CNI ports too."
-    elif [[ "${workload_ready:-0}" -lt 1 || -z "$pod_http" || "$pod_http" == "000" ]]; then
-      echo "HINT: The health-probe workload cannot reach the API server from inside a Pod (pod_http=$pod_http). This proves in-cluster traffic, distinct from your own SSH session - check your rules do not accidentally block Pod-originated traffic."
+    elif [[ "${workload_ready:-0}" -lt 1 || "$pod_dns" != "RESOLVED" || -z "$pod_http" || "$pod_http" == "000" ]]; then
+      echo "HINT: The health-probe workload cannot resolve DNS and/or reach the API server from inside a Pod (pod_dns=$pod_dns pod_http=$pod_http). This proves in-cluster traffic, distinct from your own SSH session - check your rules do not accidentally block Pod-originated or DNS traffic."
     elif [[ "$kubelet_status" -eq 0 && "$kubelet_http" != "000" ]]; then
       echo "HINT: Port 10250 (kubelet API) is reachable directly from the worker station - this task expects it to stay blocked from outside sources that are not the control plane itself."
+    elif [[ "$reload_ready" != "ok" || "$reload_node_ready" != "True" || "$reload_calico_ready" != "yes" || "$reload_pod_http" == "000" || -z "$reload_pod_http" || "$reload_pod_http" == "not-run" ]]; then
+      echo "HINT: after 'sudo ufw reload' the same E2E checks (readyz/node Ready/calico-node Ready/Pod->API) must still pass. A ruleset that only works in-memory right after 'ufw enable' but breaks (or was never actually persisted) after a reload is not a correct fix - re-run the same commands and confirm they survive 'sudo ufw reload'."
+    elif [[ "$reload_kubelet_status" == "0" ]]; then
+      echo "HINT: after 'sudo ufw reload', worker->kubelet:10250 became reachable again - the deny rule for this flow did not survive the reload."
     else
       echo "HINT: Firewall behavior is correct, but one of the evidence files (ufw.txt/preflight.txt/recovery.txt) is missing the required exact content - check each file's expected line individually."
     fi
-    echo "firewall_status=$firewall_status worker_ip=$worker_ip node_ip=$node_ip pod_cidr=$pod_cidr readyz=$ready node_ready=$node_ready calico_ready='$calico_ready' workload_ready=$workload_ready pod_http=$pod_http kubelet_status=$kubelet_status kubelet_http=$kubelet_http broad_rule=${broad_rule:-none} rule_ssh_worker=$rule_ssh_worker rule_api_worker=$rule_api_worker rule_api_node=$rule_api_node rule_api_podcidr=$rule_api_podcidr baseline_present=$baseline_present"
+    echo "firewall_status=$firewall_status worker_ip=$worker_ip node_ip=$node_ip pod_cidr=$pod_cidr readyz=$ready node_ready=$node_ready calico_ready='$calico_ready' workload_ready=$workload_ready pod_dns=$pod_dns pod_http=$pod_http kubelet_status=$kubelet_status kubelet_http=$kubelet_http exact_allow_set=$exact_allow_set total_added_allow=$total_added_allow rule_ssh_worker=$rule_ssh_worker rule_api_worker=$rule_api_worker rule_api_node=$rule_api_node rule_api_podcidr=$rule_api_podcidr baseline_present=$baseline_present bootstrap_baseline_ok=$bootstrap_baseline_ok reload_ready=$reload_ready reload_node_ready=$reload_node_ready reload_calico_ready=$reload_calico_ready reload_pod_http=$reload_pod_http reload_kubelet_status=$reload_kubelet_status"
     result=1
   fi
   [ "$result" -eq 0 ]

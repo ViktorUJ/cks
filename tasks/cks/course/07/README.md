@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 07. CIS Benchmark and kube-bench
 
@@ -32,7 +32,7 @@ Checks are grouped by roles and components. Profile names and recommendation IDs
 
 > 🔬 Version/profile mapping determines report reliability. Use a profile selected by supported `kube-bench`, and remediate the specific check.
 
-> **Currentness snapshot as of 2026-09-08.** `kube-bench` branch `main` publishes a table in `docs/platforms.md`: CIS `1.12` for Kubernetes `1.32-1.33` and CIS `2.0` for Kubernetes `1.34-1.35`.
+> **Version-support snapshot as of 2026-09-08.** `kube-bench` branch `main` publishes a table in `docs/platforms.md`: CIS `1.12` for Kubernetes `1.32-1.33` and CIS `2.0` for Kubernetes `1.34-1.35`.
 >
 > However, distinguish the published support table from the contents of a particular kube-bench release. For example, pinned `v0.16.0` below does not yet contain `cfg/cis-2.0`: its bundled `cfg/config.yaml` maps Kubernetes `1.34` to `cis-1.12`, and has no mapping for `1.35`.
 >
@@ -182,15 +182,15 @@ sudo ps -ef | grep '[k]ubelet'
 
 # Determine --config and --config-dir values from the actual ExecStart/process.
 # Do not substitute kubeadm paths if the process uses others.
-KUBELET_CONFIG='<фактическое значение --config>'
-KUBELET_CONFIG_DIR='<фактическое значение --config-dir или пустая строка>'
+KUBELET_CONFIG='<actual --config value>'
+KUBELET_CONFIG_DIR='<actual --config-dir value or empty string>'
 
 if [[ -n "$KUBELET_CONFIG" ]]; then
   sudo grep -nE \
     'readOnlyPort|anonymous:|authorization:|protectKernelDefaults' \
     "$KUBELET_CONFIG"
 else
-  echo 'kubelet запущен без --config: учитывайте built-in defaults, drop-ins и CLI flags'
+  echo 'kubelet is running without --config: account for built-in defaults, drop-ins, and CLI flags'
 fi
 
 if [[ -n "$KUBELET_CONFIG_DIR" ]]; then
@@ -264,7 +264,7 @@ kubectl get --raw "/api/v1/nodes/${NODE}/proxy/configz" \
   | jq '.kubeletconfig | {readOnlyPort, authentication, authorization, protectKernelDefaults}'
 ```
 
-For an external user, access to `10250` must still be restricted by firewall and network topology. `authorization-mode=Webhook` does not make the port safe by itself - it makes kubelet ask the Kubernetes API about the rights of an authenticated subject.
+For an external user, access to `10250` must still be restricted by firewall and network topology. `authorization-mode=Webhook` does not make the port safe by itself - it makes kubelet ask the Kubernetes API about the permissions of an authenticated subject.
 
 ## 07.6. Example: find and remediate an etcd FAIL
 

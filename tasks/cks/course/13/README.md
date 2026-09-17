@@ -1,4 +1,4 @@
-[Русская версия](ru.md) · [Versión en español](es.md) · [Version française](fr.md) · [Deutsche Version](de.md) · [ქართული ვერსია](ge.md) · [繁體中文版](tw.md) · [日本語版](jp.md)
+[Русская версия](ru.md)
 
 # Chapter 13. Upgrading Kubernetes to remediate vulnerabilities
 
@@ -212,7 +212,7 @@ When updating a package repository, check repository source and signature. Do no
 - **release cadence** - regularity of minor and patch releases.
 - **support window** - range of supported branches; upstream Kubernetes normally keeps `N`, `N-1`, and `N-2`.
 - **version skew** - permitted component-version difference; kubelet is not newer than API server and not more than three minor versions older.
-- **`kubeadm upgrade plan` / `apply` / `node`** - upgrade plan / application on the first control plane / configuration upgrade of a particular node.
+- **`kubeadm upgrade plan` / `apply` / `node`** - plan the upgrade / apply the upgrade on the first control-plane node / update the configuration on a specific node.
 - **rolling upgrade** - one-node-at-a-time upgrade with verification between steps.
 - **`cordon` / `drain` / `uncordon`** - prevent scheduling / evict workload / return node to scheduling.
 - **node image** - agreed OS, runtime, and package image for a node.
