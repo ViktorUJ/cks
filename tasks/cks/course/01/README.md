@@ -54,7 +54,7 @@ The CKS page and FAQ are updated independently and can temporarily disagree. Imm
 
 The practical consequence is that you must check object syntax and admission behavior against documentation for the version open in the exam environment, not against the course version.
 
-| Area | Core labs `101-112`: v1.36 | Exam: v1.35 or the actual attempt version |
+| Area | Core labs `101-112`: v1.36 | Exam: v1.35 or the version used in your exam attempt |
 |---|---|---|
 | Basic Kubernetes API and CKS techniques | Practice normal syntax, but check CNI/runtime support | Check the documentation and ExamUI for the specific attempt |
 | User Namespaces | `hostUsers: false` became Stable/GA in v1.36; a lab can rely on this behavior | Do not automatically transfer this behavior to an attempt: check the version, runtime, and feature availability |

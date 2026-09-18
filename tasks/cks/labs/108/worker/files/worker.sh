@@ -46,6 +46,11 @@ chmod 0755 /usr/local/bin/install-kyverno
 # сторонний образ с неконтролируемым тегом; студент сам создаёт ConfigMap/Deployment
 # из этого файла как часть задания, сам код backend уже дан, чтобы задание проверяло
 # понимание ImageReview API и wiring admission plugin, а не умение писать HTTP-сервер.
+# Backend слушает HTTPS (stdlib ssl, без сторонних зависимостей) - upstream Kubernetes
+# документация для ImagePolicyWebhook явно требует 'It is required that the backend
+# communicate over TLS' и пример kubeconfig использует 'server: https://...'; сертификат
+# генерируется отдельно самим заданием (после того как известен ClusterIP backend'а для
+# SAN) и монтируется тем же ConfigMap механизмом, что и сам server.py.
 mkdir -p /opt/image-policy-backend
 cat >/opt/image-policy-backend/server.py <<'PYEOF'
 #!/usr/bin/env python3
@@ -53,8 +58,15 @@ cat >/opt/image-policy-backend/server.py <<'PYEOF'
 
 Denies any container image ending in ':latest' or with no tag at all (which
 Kubernetes/OCI resolve to implicit 'latest'). Allows everything else.
+
+Serves over HTTPS using a certificate/key mounted at /opt/image-policy/tls -
+the upstream ImagePolicyWebhook contract requires the backend to communicate
+over TLS (see the 'Configuration file format' section of the Kubernetes
+admission-controllers reference), so this backend does not offer a plain HTTP
+fallback.
 """
 import json
+import ssl
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
@@ -102,7 +114,14 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    HTTPServer(("0.0.0.0", 8443), Handler).serve_forever()
+    server = HTTPServer(("0.0.0.0", 8443), Handler)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(
+        certfile="/opt/image-policy/tls/tls.crt",
+        keyfile="/opt/image-policy/tls/tls.key",
+    )
+    server.socket = ctx.wrap_socket(server.socket, server_side=True)
+    server.serve_forever()
 PYEOF
 chmod 0644 /opt/image-policy-backend/server.py
 

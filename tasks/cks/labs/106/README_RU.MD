@@ -101,19 +101,19 @@ ssh control-plane sudo jq empty \
 | **1** | **Перевести AppArmor profile в enforce** |
 | :---: | :--- |
 | Что делаем | На ноде `control-plane` переведите profile `k8s-106-deny-write` в режим `enforce`. Исходный режим `complain` записывает нарушения, но не является защитой. Не удаляйте profile и не меняйте его имя. |
-| Критерии приёмки | Нода с label `security.cks.io/localhost-profiles-106=true` существует; `/etc/apparmor.d/k8s-106-deny-write` доступен; `aa-status` показывает `k8s-106-deny-write (enforce)`. |
+| Критерии приёмки | Нода с label `security.cks.io/localhost-profiles-106=true` существует; `/etc/apparmor.d/k8s-106-deny-write` доступен; `/sys/kernel/security/apparmor/profiles` содержит строку `k8s-106-deny-write (enforce)`. Checker-owned bootstrap-baseline (зафиксирован ДО выдачи лабы, пока профиль был ещё в `complain`) подтверждает, что запись, соответствующая паттерну `/work/**` этого профиля, тогда действительно проходила - без этого нельзя доказать, что именно переход в `enforce` вызвал последующий отказ. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
 
-Команда `sudo apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write` перезагружает уже существующий профиль - если он был в `complain`, а файл на диске уже описывает `enforce`, этой команды достаточно. Проверьте себя через `aa-status | grep k8s-106-deny-write` - вывод должен явно показывать `(enforce)`, не просто наличие профиля в списке.
+Команда `sudo apparmor_parser -r /etc/apparmor.d/k8s-106-deny-write` перезагружает уже существующий профиль - если он был в `complain`, а файл на диске уже описывает `enforce`, этой команды достаточно. Проверьте себя через `sudo cat /sys/kernel/security/apparmor/profiles | grep k8s-106-deny-write` - вывод должен явно показывать `(enforce)`. Не проверяйте это через `aa-status`: эта команда группирует профили под заголовками секций (`N profiles are in enforce mode.`) и печатает под ними только голые имена профилей, БЕЗ суффикса `(enforce)`/`(complain)` у каждой строки - такой суффикс есть только в `/proc/<pid>/attr/current` и в файле ядра `/sys/kernel/security/apparmor/profiles`, а не в списке профилей `aa-status`.
 </details>
 
 ---
 | **2** | **Localhost AppArmor Pod и блокировка записи** |
 | :---: | :--- |
 | Что делаем | Создайте namespace `security-106` и Pod `apparmor-writer`. Pod должен выбрать label ноды из инфраструктуры, отключить automount ServiceAccount token и на уровне Pod задать `appArmorProfile.type: Localhost`, `localhostProfile: k8s-106-deny-write`. Используйте `busybox:1.36`, контейнер `app`, команду сна `sleep 3600` и `emptyDir`, смонтированный в `/work`. После запуска подтвердите эффективный profile командой `cat /proc/1/attr/current` (если интерфейс доступен), выполните разрешённую операцию чтения, например `cat /etc/hostname >/dev/null`, и затем попытайтесь записать файл в `/work`; операция обязана завершиться отказом. На ноде зафиксируйте AppArmor denial для profile/process из `journalctl -k | grep -i apparmor` либо `dmesg | grep -i apparmor`. |
-| Критерии приёмки | Pod запущен, использует именно Localhost profile и правильный nodeSelector; effective profile процесса показывает `k8s-106-deny-write` в enforce mode (когда `/proc/.../attr/current` доступен); разрешённая операция проходит, а запись в `/work/cks-106-denied.txt` завершается AppArmor-отказом. В kernel journal/audit log есть относящееся к попытке событие `apparmor="DENIED"` с этим profile. |
+| Критерии приёмки | Pod запущен, использует именно Localhost profile и правильный nodeSelector; effective profile процесса показывает `k8s-106-deny-write` в enforce mode (когда `/proc/.../attr/current` доступен); разрешённая операция чтения в `/work` проходит, а checker independently пишет свой собственный уникальный (per-run) файл в `/work` и получает AppArmor-отказ. В kernel journal/audit log есть относящееся именно к ЭТОЙ попытке (по уникальному имени файла) событие `apparmor="DENIED"` с этим profile - это исключает false pass от устаревшего denial-события в журнале. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -148,13 +148,29 @@ ssh control-plane sudo jq empty \
 ---
 | **5** | **Доказать отказ syscall `unshare(2)`** |
 | :---: | :--- |
-| Что делаем | В команде контейнера `localhost-seccomp` выполните `unshare -m true`, сохраните успешное подтверждение ожидаемого отказа в `/tmp/unshare-result` как строку `unshare denied by seccomp`, затем удерживайте контейнер через `sleep 3600`. Повторная команда `kubectl exec ... -- unshare -m true` должна вернуть ненулевой код. Для attack-minded negative control создайте Pod `sysadmin-control` на той же ноде с `seccompProfile.type: Unconfined` и той же единственной capability `SYS_ADMIN`; его `unshare -m true` должен завершиться успешно. Удалите control Pod после проверки. |
+| Что делаем | В команде контейнера `localhost-seccomp` выполните `unshare -n true`, сохраните успешное подтверждение ожидаемого отказа в `/tmp/unshare-result` как строку `unshare denied by seccomp`, затем удерживайте контейнер через `sleep 3600`. Повторная команда `kubectl exec ... -- unshare -n true` должна вернуть ненулевой код. Для attack-minded negative control создайте Pod `sysadmin-control` на той же ноде с `seccompProfile.type: Unconfined` и той же единственной capability `SYS_ADMIN`; его `unshare -n true` должен завершиться успешно. Удалите control Pod после проверки. |
 | Критерии приёмки | Localhost Pod запущен; `Seccomp: 2`; `unshare` блокируется custom profile. В control Pod тот же syscall с той же capability и без seccomp filter проходит. Это доказывает kernel behavior, а не только наличие YAML. |
 
 <details>
 <summary>💡 Подсказка к заданию 5</summary>
 
-Порядок команд важен для доказательности: сначала выполните `unshare -m true` и убедитесь, что он падает с ошибкой (ненулевой exit code), ТОЛЬКО ПОТОМ запишите строку `unshare denied by seccomp` в `/tmp/unshare-result` - не пишите строку заранее, "предполагая" результат. Negative control (`sysadmin-control`) должен использовать ТУ ЖЕ capability `SYS_ADMIN`, но `seccompProfile.type: Unconfined` - если забыть указать `Unconfined` явно, Pod может получить `RuntimeDefault` по умолчанию (если включён `seccompDefault` из задания 7) и тест не покажет разницу.
+Используйте именно `unshare -n true` (unshare network namespace, `CLONE_NEWNET`), а НЕ
+`unshare -m true`. `-m` (mount namespace) требует `CAP_SYS_ADMIN` так же, как и `-n`, но
+BusyBox `unshare -m` после успешного `unshare(2)` дополнительно выполняет ВТОРОЙ,
+самостоятельный `mount(2)` syscall (`mount("none", "/", NULL, MS_REC|MS_PRIVATE, NULL)`
+для принудительной private propagation - это поведение unshare, активное по умолчанию,
+если явно не передан `--propagation unchanged`, и даже тогда `mount()` всё равно
+вызывается, просто с нулевыми флагами). containerd's default AppArmor-профиль (`RuntimeDefault`,
+который получает Pod без явного `securityContext.appArmorProfile`) содержит `deny mount,`
+БЕЗ каких-либо условий на флаги - этот запрет действует независимо от capabilities и от
+seccomp. Поэтому `unshare -m true` может провалиться с `EPERM` из-за AppArmor ДАЖЕ когда
+seccomp вообще не ограничивает `unshare`, что делает такой probe ненадёжным доказательством
+именно seccomp-отказа. `unshare -n` (`CLONE_NEWNET`) вызывает ТОЛЬКО сам syscall
+`unshare(2)` без какого-либо последующего `mount()` - и `localhost-seccomp`, и
+`sysadmin-control` используют один и тот же `SYS_ADMIN`, поэтому разница в результате
+однозначно объясняется именно seccomp filter, а не побочным эффектом AppArmor.
+
+Порядок команд важен для доказательности: сначала выполните `unshare -n true` и убедитесь, что он падает с ошибкой (ненулевой exit code), ТОЛЬКО ПОТОМ запишите строку `unshare denied by seccomp` в `/tmp/unshare-result` - не пишите строку заранее, "предполагая" результат. Negative control (`sysadmin-control`) должен использовать ТУ ЖЕ capability `SYS_ADMIN`, но `seccompProfile.type: Unconfined` - если забыть указать `Unconfined` явно, Pod может получить `RuntimeDefault` по умолчанию (если включён `seccompDefault` из задания 7) и тест не покажет разницу.
 </details>
 
 Linux capabilities и privilege escalation — разные оси. `allowPrivilegeEscalation: false`
@@ -179,24 +195,40 @@ file capabilities), но не удаляет `SYS_ADMIN`, уже добавле�
 | **7** | **`seccompDefault: true` на уровне kubelet: baseline без явного профиля** |
 | :---: | :--- |
 | Что делаем | Все Pod в заданиях 3–5 явно указывают `seccompProfile` в манифесте. В реальности разработчик может забыть это поле — тогда без node-level baseline Pod получает `Unconfined`. На ноде включите `seccompDefault: true` в `/var/lib/kubelet/config.yaml` и перезапустите kubelet (`systemctl restart kubelet`). Создайте Pod `no-seccomp-field` в `security-106` на подготовленной ноде из `busybox:1.36` (`sleep 3600`), **не указывая securityContext.seccompProfile вообще** ни на уровне Pod, ни на уровне контейнера. Через `/proc/1/status` внутри контейнера подтвердите, что kubelet применил `RuntimeDefault` автоматически (`Seccomp: 2`), а не оставил `Unconfined` (`Seccomp: 0`). |
-| Критерии приёмки | `/var/lib/kubelet/config.yaml` содержит `seccompDefault: true`; `systemctl is-active kubelet` возвращает `active`, нода остаётся `Ready`; Pod `no-seccomp-field` не имеет `seccompProfile` ни на одном уровне своей спецификации; `/proc/1/status` внутри контейнера показывает `Seccomp: 2`. |
+| Критерии приёмки | Эффективная (применённая) конфигурация kubelet - через `/api/v1/nodes/<node>/proxy/configz`, поле `.kubeletconfig.seccompDefault` - равна `true`; `systemctl is-active kubelet` возвращает `active`, нода остаётся `Ready`; Pod `no-seccomp-field` не имеет `seccompProfile` ни на одном уровне своей спецификации; `/proc/1/status` внутри контейнера показывает `Seccomp: 2`. |
 
 <details>
 <summary>💡 Подсказка к заданию 7</summary>
 
 Ключевое требование - Pod ДЕЙСТВИТЕЛЬНО не должен упоминать `seccompProfile` вообще, ни на уровне Pod, ни на уровне контейнера. Если вы скопируете манифест из задания 3 и просто забудете удалить это поле - тест не докажет то, что должен: что именно node-level `seccompDefault` (а не явное указание в манифесте) обеспечило `Seccomp: 2`.
+
+Проверка ориентируется на РЕАЛЬНО ПРИМЕНЁННУЮ конфигурацию kubelet, а не на текст файла на
+диске: `curl`/`kubectl get --raw /api/v1/nodes/<node>/proxy/configz | jq .kubeletconfig.seccompDefault`.
+Простой grep по `/var/lib/kubelet/config.yaml` не доказывает, что именно этот файл
+использует запущенный kubelet - командный флаг или drop-in могли бы переопределить
+значение без изменения самого файла. Обязательно перезапустите kubelet после правки
+файла - конфигурация не подхватывается на лету.
 </details>
 
 ---
 | **8** | **Отладка и пересборка сломанного AppArmor-профиля (`apparmor_parser -r -v`)** |
 | :---: | :--- |
-| Что делаем | На диске уже лежит `/etc/apparmor.d/k8s-106-broken-profile` — профиль с синтаксической ошибкой (пропущена запятая после правила `deny /work/** w`), который **никогда не был загружен** в ядро. Найдите ошибку через `apparmor_parser -p /etc/apparmor.d/k8s-106-broken-profile` (либо `apparmor_parser -r -v`, который также покажет syntax error при попытке загрузки), исправьте файл и загрузите профиль в ядро через `sudo apparmor_parser -r -v /etc/apparmor.d/k8s-106-broken-profile`. Подтвердите загрузку через `aa-status \| grep k8s-106-broken-profile`. Сохраните вывод ошибки **до** исправления и подтверждение загрузки **после** в `/var/work/tests/artifacts/8/apparmor-debug.txt`. |
-| Критерии приёмки | `apparmor-debug.txt` содержит текст ошибки парсера (например, `syntax error`) из попытки **до** исправления; `/etc/apparmor.d/k8s-106-broken-profile` на диске больше не содержит исходную синтаксическую ошибку; `aa-status` показывает `k8s-106-broken-profile` среди загруженных профилей (в любом режиме - `enforce` или `complain`); повторный `apparmor_parser -p` на исправленном файле завершается без ошибки. |
+| Что делаем | На диске уже лежит `/etc/apparmor.d/k8s-106-broken-profile` — профиль с синтаксической ошибкой, который **никогда не был загружен** в ядро. Найдите ошибку самостоятельно через `apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profile` (`-Q`/`--skip-kernel-load`: полностью выполняет проверку/компиляцию профиля, но не загружает его в ядро и не требует привилегий) или `apparmor_parser -d /etc/apparmor.d/k8s-106-broken-profile` (`-d`/`--debug`, однократно - только проверка синтаксической корректности), исправьте файл и загрузите профиль в ядро через `sudo apparmor_parser -r -v /etc/apparmor.d/k8s-106-broken-profile`. Подтвердите загрузку через `aa-status \| grep k8s-106-broken-profile`. Сохраните вывод ошибки **до** исправления и подтверждение загрузки **после** в `/var/work/tests/artifacts/8/apparmor-debug.txt`. |
+| Критерии приёмки | `apparmor-debug.txt` содержит текст ошибки парсера (например, `syntax error`) из попытки **до** исправления; checker-owned bootstrap-baseline (зафиксирован ДО выдачи лабы, независимо от вашего artifact) независимо подтверждает, что исходный профиль действительно содержал syntax error; `/etc/apparmor.d/k8s-106-broken-profile` на диске больше не содержит исходную синтаксическую ошибку; `aa-status` показывает `k8s-106-broken-profile` среди загруженных профилей (в любом режиме - `enforce` или `complain`); повторный `apparmor_parser -Q` на исправленном файле завершается без ошибки. |
 
 <details>
 <summary>💡 Подсказка к заданию 8</summary>
 
-`apparmor_parser -p` (dry-run, "parse only") не загружает профиль в ядро - используйте его сначала, чтобы БЕЗОПАСНО найти синтаксическую ошибку без побочных эффектов. Только после исправления файла используйте `-r` (reload/load) для реальной загрузки в ядро. Ошибка в этом профиле - пропущенная запятая после `deny /work/** w` перед следующим правилом; AppArmor-синтаксис требует запятую как разделитель правил внутри блока.
+`apparmor_parser -p` (`--preprocess`) НЕ является safe dry-run/syntax-check режимом - это
+всего лишь preprocessing: разворачивает `#include` директивы и печатает получившийся
+профиль в stdout, само по себе не гарантируя отсутствие побочных эффектов и не будучи
+предназначенным именно для проверки синтаксиса. Используйте `-Q`/`--skip-kernel-load`
+(выполняет полную компиляцию/проверку, но не загружает в ядро и не требует привилегий)
+или `-d`/`--debug` (однократно - только проверка синтаксической корректности), чтобы
+БЕЗОПАСНО найти синтаксическую ошибку без побочных эффектов. Только после исправления
+файла используйте `-r` (reload/load) для реальной загрузки в ядро. AppArmor-синтаксис
+требует запятую как разделитель правил внутри блока - изучите вывод парсера, чтобы
+найти, какого символа не хватает и где именно.
 </details>
 
 ## Проверка

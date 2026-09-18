@@ -61,9 +61,9 @@ printf 'role=control-plane,workload\nworker_ip=%s\nnode_ip=%s\npod_cidr=%s\n' \
 # без этого шага post-hardening "заблокировано" ничего не доказывает, порт мог быть
 # недоступен по совершенно другой причине ещё раньше (security group, routing). Отдельно
 # от этой student-owned пробы checker уже зафиксировал свой собственный, checker-owned
-# bootstrap baseline в /var/work/tests/bootstrap-baseline-3.txt ДО того, как лаба была
-# выдана студенту - этот шаг всё равно нужен, потому что тест сравнивает post-hardening
-# состояние именно с этим вашим файлом (в дополнение к checker-owned проверке).
+# bootstrap baseline в /var/lib/cks-lab105-checker/bootstrap-baseline-3.txt ДО того, как
+# лаба была выдана студенту - этот шаг всё равно нужен, потому что тест сравнивает
+# post-hardening состояние именно с этим вашим файлом (в дополнение к checker-owned проверке).
 set +e
 baseline_kubelet_code=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 \
   "https://${NODE_IP}:10250/healthz")
@@ -85,10 +85,14 @@ ssh "$CP" "sudo ufw allow from '$POD_CIDR' to any port 6443 proto tcp comment 'C
 ssh "$CP" 'sudo ufw allow in on lo comment "CKS105 loopback"; sudo ufw default allow outgoing; sudo ufw default deny incoming; sudo ufw --force enable'
 ssh "$CP" 'sudo ufw status verbose; sudo ufw status' \
   | tee /var/work/tests/artifacts/3/ufw.txt
-# 'ufw show added' - декларативный список ровно тех правил, что вы реально добавили, в
-# исходной форме команды. Проверка сравнивает именно этот список с ожидаемым allowlist -
-# сохраните его тоже, это самая надёжная evidence exact allow-set (независимая от того,
-# как 'ufw status' группирует/переупорядочивает iptables-производные строки).
+# 'ufw show added' - нормализованное представление правил, которые вы реально добавили
+# (НЕ гарантированно исходный вид/порядок команд - UFW нормализует их при отображении).
+# Проверка сравнивает именно этот список с ожидаемым allowlist - сохраните его тоже, это
+# самая надёжная evidence exact allow-set (независимая от того, как 'ufw status'
+# группирует/переупорядочивает iptables-производные строки). Управляйте firewall только
+# через 'ufw' - НЕ редактируйте /etc/ufw/before*.rules или /etc/ufw/after*.rules вручную,
+# это framework-файлы с общими default-правилами, а не место для source-scoped rules;
+# checker сверяет их хэш с checker-owned bootstrap-baseline и заметит прямое редактирование.
 ssh "$CP" 'sudo ufw show added' \
   | tee -a /var/work/tests/artifacts/3/ufw.txt
 
@@ -126,18 +130,39 @@ sleep 2
 kubectl get --raw=/readyz --context "$CTX"
 kubectl get nodes --context "$CTX"
 kubectl get pods -n kube-system -l k8s-app=calico-node --context "$CTX"
+# Pod DNS повторяем ТЕМ ЖЕ probe, что и до reload - reload может перезапустить
+# kube-proxy/CNI rule programming и вызвать DNS-специфичную регрессию, которую отдельная
+# HTTP-проверка сама по себе не поймает.
+kubectl exec -n cks-105-health deploy/health-probe -- \
+  sh -c 'getent hosts kubernetes.default.svc.cluster.local >/dev/null && echo DNS_OK || echo DNS_FAIL'
 kubectl exec -n cks-105-health deploy/health-probe -- \
   sh -c 'code=$(curl -ksS -o /dev/null -w "%{http_code}" --max-time 5 https://kubernetes.default.svc/readyz); test "$code" != 000'
+# Тот же контракт, что и до reload: сохраняем И exit code, И HTTPCODE - транспортная
+# ошибка с пустым/'000' HTTP-кодом, а не просто ненулевой exit статус сам по себе.
 set +e
-curl -ksS -o /dev/null -w 'post_reload_kubelet_http=%{http_code}\n' --connect-timeout 2 --max-time 3 \
-  "https://${NODE_IP}:10250/healthz"
+post_reload_kubelet_code=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 \
+  "https://${NODE_IP}:10250/healthz")
+post_reload_kubelet_rc=$?
 set -e
+printf 'post_reload_kubelet 10250: CURL_EXIT=%s HTTPCODE=%s\n' "$post_reload_kubelet_rc" "$post_reload_kubelet_code"
+
+# Проверка decl vs effective: 'ufw show added' - декларативный список, реконструированный
+# из '### tuple ###' метаданных, которые ufw сам пишет в user.rules при добавлении
+# правила через CLI. Реальное же состояние ядра после 'ufw reload' - именно то, что
+# показывает 'ufw show user-rules' (iptables -L на ufw-user-input/-forward/-output).
+# Сравнивайте не только КОЛИЧЕСТВО строк, но и их СОДЕРЖИМОЕ (source/port/proto) с этими
+# же 5 правилами: одинаковое число правил само по себе НЕ доказательство, что это те же
+# самые 5 правил - ufw-user-input построчно должен показывать именно loopback (all, lo)
+# и три tcp dpt:22/6443 правила с точными source-адресами, а ufw6-user-input должен быть
+# полностью пуст (ни одно из 5 правил не IPv6).
+ssh "$CP" 'sudo ufw show user-rules'
 ```
 
 В выводе должны быть `Status: active`, `Default: deny (incoming)` и source-scoped rules -
 как в `ufw status verbose`, так и в декларативном списке `ufw show added`. Не закрывайте
-исходную SSH session, пока `/readyz`, nodes, calico-node, workload (включая Pod DNS) и обе
-отрицательные проверки `10250` (до и после `ufw reload`) не дали ожидаемый результат.
+исходную SSH session, пока `/readyz`, nodes, calico-node, workload (включая Pod DNS до и
+после reload) и обе отрицательные проверки `10250` (до и после `ufw reload`, с тем же
+CURL_EXIT/HTTPCODE контрактом) не дали ожидаемый результат.
 
 ## 4. Защитить kubeconfig администратора
 

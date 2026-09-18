@@ -488,7 +488,7 @@ sudo grep -Rns -- '--container-runtime-endpoint\|containerRuntimeEndpoint' \
   /var/lib/kubelet /etc/systemd/system /usr/lib/systemd/system 2>/dev/null || true
 ```
 
-Protect more than just the socket. `/run/containerd` holds runtime state and sockets, while `/var/lib/containerd` holds persistent content and metadata. For containerd, the reference is `0700` for `/var/lib/containerd` and `0711` for the `/run/containerd` root: the second mode allows traversal, which a user-namespaced workload can require, without exposing directory contents. Sensitive subdirectories must be `0700`, sockets `0660` with a system group with no unprivileged users; no path must be writable by ordinary users or containers. Configuration, plugins, and CNI must also be root-owned and protected from writes by unauthorized subjects: this usually means `/etc/containerd`, the runtime's plugin directories, and `/etc/cni/net.d`, with CNI binaries in `/opt/cni/bin` (check the exact paths against your distribution and configuration). Do not change them with a broad `chmod -R`: check ownership and writable bits precisely.
+Protect more than just the socket. `/run/containerd` holds runtime state and sockets, while `/var/lib/containerd` holds persistent content and metadata. For containerd, the reference is `0700` for `/var/lib/containerd` and `0711` for the `/run/containerd` root: the second mode allows traversal, which a user-namespaced workload can require, without exposing directory contents. Sensitive subdirectories must be `0700`, sockets `0660` with a system group with no unprivileged users; no path must be writable by ordinary users or containers. Configuration, plugins, and CNI must also be root-owned and protected from writes by unauthorized users or processes: this usually means `/etc/containerd`, the runtime's plugin directories, and `/etc/cni/net.d`, with CNI binaries in `/opt/cni/bin` (check the exact paths against your distribution and configuration). Do not change them with a broad `chmod -R`: check ownership and writable bits precisely.
 
 ```bash
 sudo find /run/containerd /var/lib/containerd /etc/containerd /etc/cni/net.d /opt/cni/bin \
@@ -509,7 +509,7 @@ sudo stat -Lc '%A %a %U:%G %n' /var/run/docker.sock 2>/dev/null || true
 getent group docker || true
 getent group docker | awk -F: '{print $4}'
 UNPRIVILEGED_USER='unprivileged-user'
-sudo -u "$UNPRIVILEGED_USER" docker ps  # a denial is expected for a disallowed user
+sudo -u "$UNPRIVILEGED_USER" docker ps  # access must be denied for an unauthorized user
 ```
 
 If Docker is not needed on a Kubernetes node, it is more reliable to remove the package, or to disable and mask `docker.service` and `docker.socket` after confirming that kubelet or operational tasks do not depend on them.
@@ -540,7 +540,7 @@ The following baseline applies to a **new** Docker installation after checking v
 
 #### Existing Docker host: separate migration
 
-Do not apply this JSON to an already running Docker host as an ordinary edit followed by a restart. Before the change, gather an inventory of containers/images/volumes, check `/etc/subuid` and `/etc/subgid`, bind mounts, host networking and privileged containers, assess compatibility with `userns-remap`, and prepare a recreate/migration and rollback plan.
+Do not apply this JSON to an existing Docker host as a simple configuration edit followed by a restart. Before the change, gather an inventory of containers/images/volumes, check `/etc/subuid` and `/etc/subgid`, bind mounts, host networking and privileged containers, assess compatibility with `userns-remap`, and prepare a recreate/migration and rollback plan.
 
 ```bash
 set -euo pipefail
@@ -637,8 +637,8 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 - [ ] Confirmed unnecessary packages are removed; the node image has a package allowlist and an update process, not undocumented manual drift.
 - [ ] `ss -tulpn` contains no unexplained listeners; `10250`, `6443`, etcd, and SSH are accessible only where and to whom the architecture requires.
 - [ ] `2375` is not configured and not listening; the full gate examines the effective `ExecStart`/argv, `daemon.json hosts` or an explicitly reviewed custom config, the effective `docker.socket Listen`, and `ss -lntp`. There is no unauthorized Docker TCP endpoint on **any** port, including an endpoint that is not yet listening or is socket-activated. An allowed endpoint has a risk owner, effective `tlsverify=true`, a CA, server certificate/key, confirmed client-certificate authentication, and a firewall/security-group allowlist; `2376` alone does not prove mTLS.
-- [ ] `/run/containerd/containerd.sock` and, if present, `/run/nri/nri.sock` are not accessible to ordinary users, are not mounted into an unprivileged workload, and `sudo crictl` still works; allowed groups consist only of system subjects.
-- [ ] `/run/containerd`, `/var/lib/containerd`, and configuration/plugins/CNI are root-owned and not writable by unauthorized subjects; there is no public TCP debug endpoint, and metrics without TLS/auth are restricted to loopback or a management interface.
+- [ ] `/run/containerd/containerd.sock` and, if present, `/run/nri/nri.sock` are not accessible to ordinary users, are not mounted into an unprivileged workload, and `sudo crictl` still works; allowed groups contain only authorized system accounts.
+- [ ] `/run/containerd`, `/var/lib/containerd`, and configuration/plugins/CNI are root-owned and not writable by unauthorized users or processes; there is no public TCP debug endpoint, and metrics without TLS/auth are restricted to loopback or a management interface.
 - [ ] If Docker is installed, its access is restricted by unit/package policy and an ordinary user cannot run `docker ps`; `daemon.json` has passed `dockerd --validate`.
 - [ ] Docker/containerd and kubelet are healthy, and the changes are recorded in the image/IaC/change record.
 
@@ -687,7 +687,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 - `systemctl disable --now` stops an unnecessary service and prevents its autostart; `apt purge` applies only to a confirmed package after checking dependencies.
 - Ports are assessed by process and sources: kubelet `10250` and API `6443` must not be open to the entire Internet, and Docker `2375` must not listen at all.
 - `-H tcp://0.0.0.0:2375` is unauthenticated remote root. Keep Docker on a Unix socket; any TCP endpoint is only a justified mTLS exception, and `2376` is not proof of its safety.
-- containerd is the primary modern CRI runtime; access to its socket and the NRI socket is root-equivalent, restricted to system subjects, and never mounted into an unprivileged workload.
+- containerd is the primary modern CRI runtime; access to its socket and the NRI socket is root-equivalent, restricted to authorized system accounts and processes, and never mounted into an unprivileged workload.
 - Docker/containerd socket permissions are not set with a universal `chmod`: they are pinned through the policy of the relevant unit/package, without a world-writable mode and without ordinary users.
 - `/run/containerd`, `/var/lib/containerd`, and config/plugins/CNI are protected root-owned surfaces; Unix debug is restricted, TCP debug is never public, and metrics without TLS/auth listen only on loopback or a management interface.
 - `live-restore`, `no-new-privileges`, and `userns-remap` in `daemon.json` apply only to a justified Docker host and require validation, a compatibility test, and rollout.

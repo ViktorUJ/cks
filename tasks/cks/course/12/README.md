@@ -390,7 +390,7 @@ sudo grep -n -- '--config' /etc/kubernetes/manifests/kube-scheduler.yaml
 
 After changing a static Pod, confirm more than the YAML line. Kubelet must start a new container and the API must become Ready. On YAML error or unsupported flag, use local console, `journalctl -u kubelet`, `crictl ps -a`, and the saved manifest copy.
 
-## 12.6. Verification: prove that entry is closed
+## 12.6. Verification: prove that unauthorized API access is blocked
 
 Perform verification in two independent layers: authentication without a credential and authorization for an explicit subject. Check from a network that should have TCP access to the API; firewall timeout and API `401` are different, but both are useful results in their own layers.
 
@@ -414,7 +414,7 @@ curl -k -sS -o /dev/null -w '%{http_code}\n' "$APISERVER/readyz"
 With cluster-admin permissions, separately check authorizer through impersonation:
 
 ```bash
-# There must be no permission. The calling administrator needs impersonate right.
+# There must be no permission. The calling administrator needs the `impersonate` permission.
 # A full anonymous identity includes both user and group.
 kubectl auth can-i get pods --all-namespaces \
   --as=system:anonymous --as-group=system:unauthenticated
@@ -446,7 +446,7 @@ Expect `no` for anonymous checks and prohibited `delete`; `list pods` for dedica
 ## 12.8. How this is applied in production
 
 - **Several layers, one baseline.** `--anonymous-auth=false` where compatible with probes and bootstrap dependencies, or narrow conditions for exact health/discovery paths in `AuthenticationConfiguration`, `Node,RBAC`, NodeRestriction with assessment of `ServiceAccountNodeAudienceRestriction`, a closed kubelet read-only port, and private/strictly allowlisted API endpoint belong in kubeadm configuration, node image, or IaC. Manual static-Pod editing is acceptable for an emergency task, but must not be the only source of truth.
-- **Network by purpose.** Administrators work through VPN/bastion, CI/CD has separate egress addresses, workers/control plane receive only required rules, and for Pod-to-API traffic record actual datapath/source and allow only workloads that truly need API. A public endpoint is acceptable only with explicit risk owner, strict source restriction, and strong authentication; a private endpoint remains a strong, but not only, option.
+- **Restrict network access by purpose.** Administrators work through VPN/bastion, CI/CD has separate egress addresses, workers/control plane receive only required rules, and for Pod-to-API traffic record actual datapath/source and allow only workloads that truly need API. A public endpoint is acceptable only with explicit risk owner, strict source restriction, and strong authentication; a private endpoint remains a strong, but not only, option.
 - **Reassess permissions after identity changes.** Regularly find bindings for `system:anonymous`, `system:unauthenticated`, obsolete users, and ServiceAccount; remove unused ones and test `kubectl auth can-i`.
 - **Observability does not expose diagnostics.** Metrics, audit, and centralized logs provide needed visibility; enable profiling temporarily, through an allowlist, and with a disable plan.
 - **Divide a managed control plane by responsibility.** You cannot edit a provider static-Pod manifest, but can and must control endpoint exposure, allowed CIDRs, RBAC, admission policy, node security groups, and kubelet access.

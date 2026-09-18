@@ -4,11 +4,11 @@
 
 > **The problem.** An attacker who gains network access to a control-plane endpoint or
 > the ability to change a file on a node does not look for a vulnerability in Kubernetes itself, but for an insecure
-> adjacent argument: anonymous access, a read-only kubelet port, weak TLS, or a substituted
+> adjacent argument: anonymous access, a read-only kubelet port, weak TLS, or a tampered or unexpectedly replaced
 > `kubelet`/`kubectl`/image before it even starts. One such flaw can open access to
-> API/etcd or provide code execution in the context of a substituted artifact. For a platform
-> binary, consequences depend on the runtime: a substituted kubelet/control-plane binary gets
-> the permissions of its service process, while a substituted `kubectl` gets the permissions of its invoking
+> API/etcd or provide code execution in the context of a tampered or replaced artifact. For a platform
+> binary, consequences depend on the runtime: a tampered or replaced kubelet/control-plane binary gets
+> the permissions of its service process, while a tampered or replaced `kubectl` gets the permissions of its invoking
 > OS user and access to that user's kubeconfig/credentials.
 
 > **What comes next.** In chapter 08, we protected external HTTP ingress with TLS. Now we must protect
@@ -33,9 +33,9 @@ state. Therefore, a weak parameter has a greater impact than an error in one app
 A typical attack chain looks like this: an attacker gains network access to an endpoint or
 the ability to change a file on a node; they use anonymous access, a read-only kubelet port,
 `AlwaysAllow`, or profiling; then read data or act with someone else's permissions.
-An alternative path is to substitute an artifact before execution. A substituted kubelet or
+An alternative path is to tamper with or replace an artifact before execution. A tampered or replaced kubelet or
 control-plane binary runs with the permissions of the corresponding service/host process;
-a substituted `kubectl` with the permissions of the local user and their available Kubernetes
+a tampered or replaced `kubectl` runs with the permissions of the local user and their available Kubernetes
 credentials; a container image with the permissions of its workload security context. Therefore,
 verify provenance before execution and assess consequences by actual execution
 context, not by the blanket formula “component permissions”.
@@ -44,7 +44,7 @@ context, not by the blanket formula “component permissions”.
 flowchart TB
     net["Network or node<br/>access"] --> weak["Dangerous argument<br/>or weak TLS"]
     weak --> api["Access to<br/>API/kubelet/etcd"]
-    file["Substituted binary<br/>or image"] --> runtime["Code with the permissions<br/>of its context"]
+    file["Tampered/replaced binary<br/>or image"] --> runtime["Code with the permissions<br/>of its context"]
     api --> impact["Secrets, workload,<br/>privilege escalation"]
     runtime --> impact
     harden["Minimum flags<br/>+ TLS · signature<br/>and binary sha256"] --> verify["Health and provenance<br/>verification"]
@@ -161,7 +161,7 @@ rule to `--feature-gates`.
 
 Determine actual `--config`, `--config-dir`, and CLI arguments through
 `systemctl cat kubelet` and the actual process command line. Do not set one ordinary
-parameter in several sources at once without necessity.
+parameter in several sources at once unless necessary.
 
 For scheduler, first check whether `--config=<path>` is set:
 `KubeSchedulerConfiguration` can be its effective source, and some legacy CLI flags are
@@ -648,16 +648,16 @@ the Kubernetes platform itself.
 Detailed container-image verification, including digest, signing, and SBOM, is intentionally not
 duplicated here: this is Supply Chain Security, see [chapters 24-28](../24/README.md).
 
-## 09.6. Practical scenario: detect substitution before damage
+## 09.6. Practical scenario: detect binary tampering before it causes damage
 
-Imagine that a `kubelet` substituted after download has reached a worker. An ordinary
+Imagine that a tampered or replaced `kubelet` binary has reached a worker after download. An ordinary
 `kubelet --version` check does not find the problem: a malicious binary can return the expected
 version.
 
 First record observed hashes, compare them with the approved release manifest, and
 perform evidence/provenance/baseline/authorized-change triage before choosing containment. Do not “fix”
 a mismatch by changing the reference hash: on an unconfirmed change or other signs of
-substitution, escalate according to the incident runbook.
+binary tampering or unexpected replacement, escalate according to the incident runbook.
 
 ```bash
 # 1. Preserve evidence on the node before replacing the file.
@@ -682,7 +682,7 @@ logs - and correlate time, owner, and digest; (4) compare with the previously kn
 baseline and scope on other nodes. Do not “fix” a mismatch by changing the reference hash.
 
 If evidence does not confirm an authorized change, provenance/baseline does not match, or there are
-other signs of substitution, escalate according to the incident runbook: stop further
+other signs of binary tampering or unexpected replacement, escalate according to the incident runbook: stop further
 spread, apply proportionate containment (up to cordon/drain or node isolation), preserve logs,
 and replace the node or binary in a controlled way. A single hash reliably reports a mismatch of
 expected bytes, but does not explain its cause or change path. Responding to a container image and
@@ -781,7 +781,7 @@ sudo crictl ps | grep -E 'kube-apiserver|kube-controller-manager|kube-scheduler|
 | flag is visible but `kube-bench` still reports FAIL | process args and one value source | a template, not the active manifest, was changed; a duplicate exists |
 | port `10255` still listens | systemd drop-in and kubelet `ps` | wrong config file was edited or an old flag overrides YAML |
 | TLS 1.2 client no longer connects | certificate algorithm, cipher list, client TLS | suites are too narrow or client is incompatible |
-| `sha256sum --check` returns FAIL | approved manifest, path, and version | wrong binary, corrupted download, or substitution |
+| `sha256sum --check` returns FAIL | approved manifest, path, and version | wrong binary, corrupted download, binary tampering, or unexpected replacement |
 
 `kube-bench` is useful as a regression control, but its profile must match the Kubernetes
 version and architecture. Rerun relevant targets after the fix and save the
@@ -813,7 +813,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   platform baseline separately. Image signing, SBOM, registry, and admission controls are
   supply-chain topics of chapters 24-28.
 - **Safe rollback.** Keep the manifest backup outside the static Pod directory, and test rollback
-  in non-production. On suspected substitution, reinstalling the node from a trusted image is preferable
+  in non-production. If binary tampering or unexpected replacement is suspected, rebuilding the node from a trusted image is preferable
   to continuing to operate a potentially modified host.
 
 ## 09.9. Mini-glossary
@@ -888,7 +888,7 @@ signature, and admission control.
 <details>
 <summary>2. Which configuration sources must be checked before changing kubelet parameters?</summary>
 
-First inspect `systemctl cat kubelet` and actual process arguments through `ps` to find the real `--config`, `--config-dir`, and other CLI arguments. In Kubernetes 1.36, merge order is: CLI feature gates have the lowest priority, then primary config, then `*.conf` drop-ins, then CLI arguments other than feature gates have the highest priority. When accessible, check the resulting `KubeletConfiguration` through `/configz`; do not set one parameter in several sources at once without need.
+First inspect `systemctl cat kubelet` and actual process arguments through `ps` to find the real `--config`, `--config-dir`, and other CLI arguments. In Kubernetes 1.36, merge order is: CLI feature gates have the lowest priority, then primary config, then `*.conf` drop-ins, then CLI arguments other than feature gates have the highest priority. When accessible, check the resulting `KubeletConfiguration` through `/configz`; do not set one parameter in several sources at once unless necessary.
 </details>
 
 <details>

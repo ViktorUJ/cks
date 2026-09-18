@@ -10,8 +10,12 @@ Bootstrap загрузил profile, но намеренно включил ре�
 
 ```bash
 ssh control-plane sudo aa-enforce /etc/apparmor.d/k8s-106-deny-write
-ssh control-plane "sudo aa-status | grep -F 'k8s-106-deny-write'"
+ssh control-plane "sudo cat /sys/kernel/security/apparmor/profiles | grep -F 'k8s-106-deny-write'"
 # ожидается: k8s-106-deny-write (enforce)
+# Не проверяйте это через 'aa-status | grep ...': aa-status группирует профили под
+# заголовками секций ('N profiles are in enforce mode.') и печатает под ними голые
+# имена БЕЗ суффикса (enforce)/(complain) на каждой строке - такой суффикс есть только
+# в /proc/<pid>/attr/current и в файле ядра /sys/kernel/security/apparmor/profiles.
 ```
 
 `aa-enforce` меняет режим загруженной policy. Не требуется и небезопасно копировать
@@ -63,17 +67,22 @@ kubectl wait -n security-106 --for=condition=Ready pod/apparmor-writer --timeout
 kubectl exec -n security-106 apparmor-writer -- cat /proc/1/attr/current
 # k8s-106-deny-write (enforce)
 
-# Положительный контроль: разрешённая операция чтения по-прежнему работает.
-kubectl exec -n security-106 apparmor-writer -- sh -c 'cat /etc/hostname >/dev/null'
+# Положительный контроль ДО отказа: разрешённая read-операция именно на том же /work,
+# где будет проверяться denial - без этого шага отказ записи было бы невозможно отличить
+# от полностью неработающего mount/mountPath (в этом случае даже чтение было бы недоступно).
+kubectl exec -n security-106 apparmor-writer -- sh -c 'ls /work'
 
 # Отрицательный контроль: denial должен быть именно отказом записи AppArmor.
 kubectl exec -n security-106 apparmor-writer -- \
   sh -c 'printf blocked >/work/cks-106-denied.txt'
 # ожидается ненулевой код: Permission denied / Operation not permitted
 
-# На ноде свяжите отказ с profile в kernel/audit log. Выполняйте сразу после попытки выше.
-ssh control-plane 'sudo journalctl -k --since "5 minutes ago" | grep -i apparmor || sudo dmesg | grep -i apparmor'
-# ожидается запись с apparmor="DENIED" и profile="k8s-106-deny-write"
+# Ненулевой exit code и текст 'permission denied' сами по себе НЕ доказывают, что именно
+# AppArmor это правило сработало - обычная DAC/filesystem ошибка выглядела бы идентично
+# с точки зрения shell. Свяжите отказ именно с этим profile через kernel audit log.
+# Выполняйте сразу после попытки выше.
+ssh control-plane "sudo journalctl -k --no-pager -n 500 | grep -F 'apparmor=\"DENIED\"' | grep -F 'profile=\"k8s-106-deny-write\"' | grep -F 'cks-106-denied.txt'"
+# ожидается запись вида: ... apparmor="DENIED" ... profile="k8s-106-deny-write" name=".../cks-106-denied.txt" ... denied_mask="w" ...
 ```
 
 Если `/proc/1/attr/current` недоступен в конкретном runtime, зафиксируйте это и опирайтесь
@@ -120,11 +129,21 @@ kubectl exec -n security-106 runtime-default -- grep '^Seccomp:' /proc/1/status
 относительно seccomp root: `profiles/cks-106-deny-unshare.json`.
 
 `SYS_ADMIN` здесь — намеренное опасное исключение только для laboratory control. Без custom
-filter `unshare -m` с этой capability может сработать; seccomp должен вернуть `EPERM`.
+filter `unshare -n` с этой capability может сработать; seccomp должен вернуть `EPERM`.
 Это не hardened combination. `allowPrivilegeEscalation: false` включает `no_new_privs`, но
 не отнимает capabilities, уже выданные процессу, поэтому мы не используем это поле как
 «компенсацию» для `SYS_ADMIN`. В production такую capability удаляют, если нет доказанной
 необходимости. В Kubernetes capability записывается как `SYS_ADMIN`, без префикса `CAP_`.
+
+Используем `unshare -n` (network namespace, `CLONE_NEWNET`), а НЕ `unshare -m` (mount
+namespace). Обе операции требуют одну и ту же `CAP_SYS_ADMIN`, но BusyBox `unshare -m`
+после успешного `unshare(2)` дополнительно выполняет самостоятельный `mount(2)` syscall
+для forced private propagation - а containerd default AppArmor-профиль (`RuntimeDefault`,
+который получает этот Pod, так как явный `appArmorProfile` здесь не задан) содержит
+`deny mount,` без каких-либо условий на флаги, независимо от capabilities/seccomp. Поэтому
+`unshare -m true` может провалиться с `EPERM` из-за AppArmor, даже если seccomp вообще не
+ограничивает `unshare` - такой probe смешивал бы две разные security control. `unshare -n`
+вызывает только сам syscall `unshare(2)`, без побочного `mount()`.
 
 ```yaml
 # localhost-seccomp.yaml
@@ -148,7 +167,7 @@ spec:
     - sh
     - -ec
     - |
-      if unshare -m true 2>/tmp/unshare.err; then
+      if unshare -n true 2>/tmp/unshare.err; then
         echo 'unshare unexpectedly succeeded' >/tmp/unshare-result
         exit 1
       fi
@@ -169,7 +188,7 @@ kubectl exec -n security-106 localhost-seccomp -- cat /tmp/unshare-result
 kubectl exec -n security-106 localhost-seccomp -- grep '^Seccomp:' /proc/1/status
 # Seccomp: 2
 
-kubectl exec -n security-106 localhost-seccomp -- unshare -m true
+kubectl exec -n security-106 localhost-seccomp -- unshare -n true
 # ожидается ненулевой код: Operation not permitted / Permission denied
 ```
 
@@ -179,7 +198,7 @@ filter. Успех control Pod доказывает, что отказ выше 
 ```bash
 kubectl run sysadmin-control -n security-106 --rm -i --restart=Never \
   --image=busybox:1.36 \
-  --overrides='{"spec":{"nodeSelector":{"security.cks.io/localhost-profiles-106":"true"},"securityContext":{"seccompProfile":{"type":"Unconfined"}},"containers":[{"name":"sysadmin-control","image":"busybox:1.36","securityContext":{"capabilities":{"add":["SYS_ADMIN"]}},"command":["unshare","-m","true"]}]}}'
+  --overrides='{"spec":{"nodeSelector":{"security.cks.io/localhost-profiles-106":"true"},"securityContext":{"seccompProfile":{"type":"Unconfined"}},"containers":[{"name":"sysadmin-control","image":"busybox:1.36","securityContext":{"capabilities":{"add":["SYS_ADMIN"]}},"command":["unshare","-n","true"]}]}}'
 # ожидается exit 0; Pod удаляется из-за --rm
 ```
 
@@ -290,6 +309,13 @@ kubectl apply -f no-seccomp-field.yaml
 kubectl wait -n security-106 --for=condition=Ready pod/no-seccomp-field --timeout=60s
 kubectl exec -n security-106 no-seccomp-field -- grep '^Seccomp:' /proc/1/status
 # Seccomp: 2  -- kubelet применил RuntimeDefault сам, без поля в манифесте
+
+# Проверьте себя через РЕАЛЬНО ПРИМЕНЁННУЮ конфигурацию kubelet, не через текст файла на
+# диске - drop-in или флаг командной строки могли бы переопределить значение без
+# изменения самого config.yaml:
+node=control-plane
+kubectl get --raw "/api/v1/nodes/${node}/proxy/configz" | jq '.kubeletconfig.seccompDefault'
+# true
 ```
 
 Без `seccompDefault: true` тот же манифест дал бы `Seccomp: 0` (`Unconfined`) - это легко
@@ -299,11 +325,14 @@ kubectl exec -n security-106 no-seccomp-field -- grep '^Seccomp:' /proc/1/status
 
 `/etc/apparmor.d/k8s-106-broken-profile` уже на диске, но никогда не загружался: в нём не
 хватает запятой после правила `deny /work/** w`. Сначала находим ошибку без загрузки в
-ядро - `-p` только парсит файл:
+ядро. `-p`/`--preprocess` здесь НЕ подходит - это preprocessing (разворачивает
+`#include` в stdout), а не safe dry-run/syntax-check. Используем `-Q`/`--skip-kernel-load`
+(полная компиляция/проверка без загрузки в ядро, без привилегий) или `-d`/`--debug`
+(однократно - только syntax check):
 
 ```bash
 mkdir -p /var/work/tests/artifacts/8
-ssh control-plane 'sudo apparmor_parser -p /etc/apparmor.d/k8s-106-broken-profile' \
+ssh control-plane 'apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profile' \
   2>&1 | tee /var/work/tests/artifacts/8/apparmor-debug.txt
 # ... syntax error, unexpected TOK_CLOSE, expecting TOK_END_OF_RULE
 ```
@@ -315,8 +344,8 @@ ssh control-plane "sudo sed -i 's/^\(\s*deny \/work\/\*\* w\)\$/\1,/' /etc/appar
 ssh control-plane 'sudo tail -5 /etc/apparmor.d/k8s-106-broken-profile'
 ```
 
-Загружаем исправленный профиль в ядро - именно `-r -v` (reload + verbose), а не только
-`-p`, которое ничего не загружает:
+Загружаем исправленный профиль в ядро - именно `-r -v` (reload + verbose), а не `-Q`/`-p`,
+которые ничего не загружают:
 
 ```bash
 ssh control-plane 'sudo apparmor_parser -r -v /etc/apparmor.d/k8s-106-broken-profile' \
@@ -327,7 +356,7 @@ ssh control-plane 'sudo aa-status | grep k8s-106-broken-profile'
 Финальная проверка, что файл теперь валиден без ошибок:
 
 ```bash
-ssh control-plane 'sudo apparmor_parser -p /etc/apparmor.d/k8s-106-broken-profile'
+ssh control-plane 'apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profile'
 echo "exit: $?"
 # exit: 0
 ```

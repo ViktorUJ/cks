@@ -86,7 +86,7 @@ Read a result in this order: record the recommendation ID, path or flag, effecti
 | `FAIL` | determine which component and configuration source the cluster uses, then remediate and verify |
 | `WARN` | read the recommendation text; confirm manually, document an exception, or remediate it |
 
-This cycle - run `kube-bench`, find the particular `FAIL`/`WARN` in your report, remediate it, and check again - is the working process for the whole chapter. Each cluster has different findings, based on deployment method, kubeadm distribution, component versions, and existing hardening. Therefore, the remainder of this chapter does not work through CIS recommendations in numeric order. It covers one section for each control-plane component and node (`kube-apiserver`, `kube-controller-manager`, `kube-scheduler`, `kubelet`, and `etcd`), which are the most common categories in real `kube-bench` reports, and explains how to remediate them safely rather than list every possible benchmark item.
+This cycle - run `kube-bench`, find the particular `FAIL`/`WARN` in your report, remediate it, and check again - is the workflow used throughout this chapter. Each cluster has different findings, based on deployment method, kubeadm distribution, component versions, and existing hardening. Therefore, the remainder of this chapter does not work through CIS recommendations in numeric order. It covers one section for each control-plane component and node (`kube-apiserver`, `kube-controller-manager`, `kube-scheduler`, `kubelet`, and `etcd`), which are the most common categories in real `kube-bench` reports, and explains how to remediate them safely rather than list every possible benchmark item.
 
 ## 07.3. Example: find and remediate a kube-apiserver FAIL
 
@@ -170,7 +170,7 @@ The same cycle - run `kube-bench`, find `FAIL`, edit the manifest, verify it - a
 2. If the cause is not found quickly, revert the edit using the manifest backup - this is faster than parsing complex YAML under exam pressure.
 3. After recovery, repeat the edit more accurately and wait for `Ready` again before moving to the next finding.
 
-## 07.5. kubelet: a closed API and kernel-parameter protection
+## 07.5. kubelet: a locked-down API and kernel-parameter protection
 
 Kubelet runs on every node and has authority to execute Pod objects. An exposed read-only API, anonymous access, or weak authorization can reveal node data and in some cases enable further compromise. `protectKernelDefaults: true` makes kubelet fail initialization if kernel flags that it expects for its work have different values. With `protectKernelDefaults: false`, kubelet tries to set these parameters to their expected values itself.
 
@@ -370,7 +370,7 @@ Common errors and diagnostics:
 - **Regular drift control.** Run `kube-bench` after a Kubernetes upgrade and periodically in CI/CD or a separate security task. Store the result as an artifact together with benchmark and Kubernetes versions.
 - **Document exceptions.** A managed control plane, alternative CNI, or architectural decision can make a rule inapplicable. For every exception, record the risk owner, reason, and compensating control.
 - **Make changes in small batches.** Change static Pod objects one at a time, checking `/readyz` and restart. For an HA control plane, use a rolling order and a rollback plan.
-- **Grant access by purpose.** A private key, kubeconfig, manifest, and data directory are available only to the service user and administrators who truly need them. Check permissions regularly with configuration-management tooling.
+- **Grant access only as needed.** A private key, kubeconfig, manifest, and data directory are available only to the service user and administrators who truly need them. Check permissions regularly with configuration-management tooling.
 
 ## 07.9. Mini-glossary
 

@@ -254,7 +254,7 @@ rules:
   verbs: ["get"]
 ```
 
-Remove `nodes/proxy` from such roles: even `get` on this subresource is not harmless read-only access. Through kubelet WebSocket endpoints, it can permit command execution in containers. Fine-grained authorization does not replace TLS, network controls, or RBAC review, but it makes it possible to migrate from this broad privilege to verifiable least privilege.
+Remove `nodes/proxy` from such roles: even `get` on this subresource is not harmless read-only access. Through kubelet WebSocket endpoints, it can permit command execution in containers. Fine-grained authorization does not replace TLS, network controls, or RBAC review, but it makes it possible to migrate from this broad permission to verifiable least privilege.
 
 At the cloud layer, use a security group or firewall: allow `2379` only from authorized etcd clients, primarily kube-apiserver; allow `2380` only between etcd members. This difference is important for external etcd. Allow `10250` only to the control plane and explicitly required monitoring; allow `6443` only from trusted networks, a VPN, a bastion, or a private endpoint. Do not expose etcd through NodePort, LoadBalancer, a reverse proxy, or public DNS. etcd requires client/peer TLS and client certificates, not only port filtering.
 
@@ -338,7 +338,7 @@ On timeout, `curl` can exit with a nonzero code, so automation must retain both 
 | `except` does not give the expected block | Another rule has a broader allow, metadata goes through IPv6, or link-local/host endpoint enforcement depends on the CNI and dataplane |
 | Kubelet is accessible externally | Firewall/security group is open, anonymous access is enabled, the endpoint listens on the wrong interface, or RBAC grants excessive `nodes/proxy` |
 | Legacy GUI is accessible from the Internet | The Service has `LoadBalancer`/`NodePort`, the Ingress is public, or there is no authentication proxy |
-| A GUI user sees too much | `cluster-admin` was granted, `view` was applied cluster-wide without need, or the Role contains `secrets`/dangerous subresources |
+| A GUI user sees too much | `cluster-admin` was granted, `view` was applied cluster-wide without a specific need, or the Role contains `secrets`/dangerous subresources |
 
 A useful diagnostic order is to check Pod labels and policies, confirm CNI support, check DNS, then compare allowed and denied requests. For a node endpoint, separately check the cloud firewall, host firewall, binding address, and component flags. Do not test etcd with writes or unauthenticated destructive requests on a production cluster.
 
@@ -386,7 +386,7 @@ A useful diagnostic order is to check Pod labels and policies, confirm CNI suppo
 >
 > **Attacker objective:** turn apparently read-only access into the ability to control containers on the node.
 >
-> **Abuse path:** an unsafe privilege - the ServiceAccount has `get` on `nodes/proxy`; kubelet `GET` and WebSocket endpoints then create the previously described RCE risk.
+> **Abuse path:** an unsafe permission - the ServiceAccount has `get` on `nodes/proxy`; kubelet `GET` and WebSocket endpoints then create the previously described RCE risk.
 >
 > **Expected evidence:** SubjectAccessReview, audit events, and kubelet access telemetry.
 >

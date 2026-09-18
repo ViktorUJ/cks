@@ -78,12 +78,36 @@ control_plane() {
 
   # Checker-owned bootstrap baseline (captured by worker.sh BEFORE the lab was handed to
   # the student and before any UFW rule existed). This cannot be fabricated or backdated
-  # by the student, unlike their own artifacts/3/preflight.txt line.
-  bootstrap_baseline=$(cat /var/work/tests/bootstrap-baseline-3.txt 2>/dev/null || true)
+  # by the student, unlike their own artifacts/3/preflight.txt line - PROVIDED the trust
+  # boundary actually holds. /var/work/tests itself is made world-writable (chmod -R 777)
+  # by the shared work_pc_v2 bootstrap template, so a root:root 0444 file living INSIDE
+  # it would NOT be a real trust boundary: a world-writable parent lets any local account
+  # delete and recreate the file (Unix delete/create permission is governed by the
+  # directory, not the file). This baseline therefore lives in a separate directory
+  # (/var/lib/cks-lab105-checker).
+  #
+  # ARCHITECTURAL LIMITATION (see ADVERSARIAL_ACCEPTANCE_STANDARD.md): this lab's own
+  # 'check_result' runs 'bats /var/work/tests/tests.bats' WITHOUT sudo, as the 'ubuntu'
+  # account. This check itself therefore CANNOT require sudo to read the baseline -
+  # otherwise the normal PASS path breaks for every student. The directory is 0711 (not
+  # 0700) so 'ubuntu' can stat/cat a known filename inside it without listing the
+  # directory, and the file itself is 0444 (read-only, not writable without root). This
+  # is defense-in-depth against ACCIDENTAL modification, not a hardened boundary against a
+  # student who deliberately escalates via sudo (which 'ubuntu' has, passwordless, on this
+  # same host) - a fully tamper-proof, purely local, self-hosted baseline is not
+  # achievable on this architecture.
+  baseline_dir_owner_mode=$(stat -c '%U:%G %a' /var/lib/cks-lab105-checker 2>/dev/null || true)
+  baseline_owner_mode=$(stat -c '%U:%G %a' /var/lib/cks-lab105-checker/bootstrap-baseline-3.txt 2>/dev/null || true)
+  baseline_trust_boundary_ok="no"
+  if [[ "$baseline_dir_owner_mode" =~ ^root:root\ 0?711$ && "$baseline_owner_mode" =~ ^root:root\ 0?444$ ]]; then
+    baseline_trust_boundary_ok="yes"
+  fi
+
+  bootstrap_baseline=$(cat /var/lib/cks-lab105-checker/bootstrap-baseline-3.txt 2>/dev/null || true)
   bootstrap_rc=$(printf '%s\n' "$bootstrap_baseline" | grep -oE 'CURL_EXIT=[0-9]+' | cut -d= -f2)
   bootstrap_http=$(printf '%s\n' "$bootstrap_baseline" | grep -oE 'HTTPCODE=[0-9]{3}' | cut -d= -f2)
   bootstrap_baseline_ok="no"
-  if [[ "$bootstrap_rc" == "0" && "$bootstrap_http" =~ ^[1-5][0-9][0-9]$ ]]; then
+  if [[ "$baseline_trust_boundary_ok" == "yes" && "$bootstrap_rc" == "0" && "$bootstrap_http" =~ ^[1-5][0-9][0-9]$ ]]; then
     bootstrap_baseline_ok="yes"
   fi
 
@@ -107,10 +131,11 @@ control_plane() {
   fi
   kubelet_http="$out"
 
-  # Exact allow-set check via 'ufw show added': this report renders the literal 'ufw
-  # allow ...' commands that were run (see ufw's own get_command()), independent of how
-  # 'ufw status' normalizes/orders/groups iptables-derived output. A rule only counts if
-  # it appears in this declarative list with the exact port/proto/source.
+  # Exact allow-set check via 'ufw show added': this report renders a NORMALIZED
+  # representation of the rules that were run (see ufw's own get_command()) - it is not
+  # guaranteed to be the literal/original command text or original order, since UFW
+  # normalizes and can reorder entries. A rule only counts if it appears in this
+  # normalized list with the exact port/proto/source.
   esc_worker="${worker_ip//./\\.}"
   esc_node="${node_ip//./\\.}"
   esc_pod_cidr=$(printf '%s' "$pod_cidr" | sed 's/[.[\*^$/]/\\&/g')
@@ -120,17 +145,103 @@ control_plane() {
   rule_api_node=$(grep -Eq "^ufw allow from ${esc_node} to any port 6443 proto tcp" <<<"$added_rules" && echo yes || echo no)
   rule_api_podcidr=$(grep -Eq "^ufw allow from ${esc_pod_cidr} to any port 6443 proto tcp" <<<"$added_rules" && echo yes || echo no)
 
-  # Exact allow-set: count every added allow/limit rule line (any UFW rule form - short
-  # 'ufw allow 8080/tcp', source-scoped 'ufw allow from X to any port Y proto tcp', or
-  # interface-scoped 'ufw allow in on lo') and require it to be exactly the 4 documented
-  # source-scoped rules plus the loopback rule - anything else (extra port, extra source,
-  # app profile, broad Anywhere rule in ANY form) makes the total diverge from 5.
-  total_added_allow=$(grep -cE '^ufw (allow|limit) ' <<<"$added_rules" || true)
+  # Exact allow-set: count EVERY added rule line of ANY action (allow/deny/reject/limit,
+  # including 'route ...' forms), not just allow/limit - an extra 'ufw deny'/'ufw reject'/
+  # 'ufw route allow' rule must also make the total diverge from 5, even though it is not
+  # itself an ALLOW. Any UFW rule line in ANY form (short 'ufw allow 8080/tcp',
+  # source-scoped 'ufw allow from X to any port Y proto tcp', interface-scoped 'ufw allow
+  # in on lo', or a route rule) counts. Require exactly the 4 documented source-scoped
+  # allow rules plus the loopback allow rule and NOTHING else.
+  total_added_allow=$(grep -cE '^ufw (allow|deny|reject|limit|route) ' <<<"$added_rules" || true)
   loopback_rule=$(grep -Eq '^ufw allow in on lo' <<<"$added_rules" && echo yes || echo no)
   exact_allow_set="no"
   if [[ "$rule_ssh_worker" == "yes" && "$rule_api_worker" == "yes" && "$rule_api_node" == "yes" \
         && "$rule_api_podcidr" == "yes" && "$loopback_rule" == "yes" && "$total_added_allow" -eq 5 ]]; then
     exact_allow_set="yes"
+  fi
+
+  # 'ufw show added' only reflects rules added through the ufw CLI. A student could bypass
+  # it entirely by hand-editing the UFW framework files directly (/etc/ufw/before*.rules,
+  # /etc/ufw/after*.rules) to add an extra ingress path that never shows up in 'ufw show
+  # added' or in a naive 'ufw status' grep. Compare their current hash against the
+  # checker-owned bootstrap-time hash (captured before the lab started) to catch this.
+  # This baseline lives outside /var/work/tests (see the trust-boundary note above) and
+  # is itself validated for owner/mode below, since the same world-writable-parent issue
+  # would apply to it too if it were left inside /var/work/tests.
+  ufw_framework_dir_owner_mode=$(stat -c '%U:%G %a' /var/lib/cks-lab105-checker 2>/dev/null || true)
+  ufw_framework_file_owner_mode=$(stat -c '%U:%G %a' /var/lib/cks-lab105-checker/bootstrap-ufw-framework-baseline.txt 2>/dev/null || true)
+  ufw_framework_baseline_trust_ok="no"
+  if [[ "$ufw_framework_dir_owner_mode" =~ ^root:root\ 0?711$ && "$ufw_framework_file_owner_mode" =~ ^root:root\ 0?444$ ]]; then
+    ufw_framework_baseline_trust_ok="yes"
+  fi
+  ufw_framework_baseline=$(cat /var/lib/cks-lab105-checker/bootstrap-ufw-framework-baseline.txt 2>/dev/null || true)
+  run ssh "${SSH_OPTS[@]}" "$cp" 'sudo sha256sum /etc/ufw/before.rules /etc/ufw/before6.rules /etc/ufw/after.rules /etc/ufw/after6.rules 2>/dev/null | sort -k2'
+  ufw_framework_current="$output"
+  ufw_framework_unchanged="no"
+  if [[ "$ufw_framework_baseline_trust_ok" == "yes" && -n "$ufw_framework_baseline" && "$ufw_framework_current" == "$ufw_framework_baseline" ]]; then
+    ufw_framework_unchanged="yes"
+  fi
+
+  # 'ufw show added' is a DECLARATIVE view reconstructed from '### tuple ###' metadata
+  # comments that ufw itself writes into user.rules/user6.rules when a rule is added
+  # through the ufw CLI. UFW loads user.rules via 'iptables-restore' on enable/reload,
+  # so a rule hand-added directly to user.rules WITHOUT the matching tuple metadata can
+  # become part of the EFFECTIVE firewall after 'ufw reload' while being invisible to
+  # 'ufw show added' and leaving all four before/after framework hashes untouched (it
+  # only touches user.rules, which is a separate file). Directly inspect the ACTUAL
+  # kernel-loaded ufw-user-* chains via 'ufw show user-rules' and require the rule COUNT
+  # in the ufw-user-input chain specifically to match the declared allow-set count - a
+  # real bypass rule loaded into the kernel but absent from 'ufw show added' makes this
+  # count diverge.
+  #
+  # 'ufw show user-rules' output is NOT a flat list of iptables -L blocks: per ufw's own
+  # get_running_raw() (rules_type == 'user'), it prints an 'IPV4 (user):' section header,
+  # then Chain blocks for ufw-user-input/-forward/-output, THEN the built-in
+  # ufw-user-limit-accept/ufw-user-limit chains (which always exist and have their own
+  # rule rows even with zero user-added limit rules), and - whenever IPv6 is enabled on
+  # the host (the common case) - a SECOND full 'IPV6:' section repeating all of the
+  # above for the ufw6-user-* chains. Counting every non-header/non-blank line across the
+  # whole output (as an earlier version of this check did) therefore always overcounts
+  # by including the IPV4/IPV6 section header lines and the built-in limit chains' own
+  # rows, causing a false FAIL even for a fully correct student solution. Extract ONLY
+  # the ufw-user-input chain's rule rows (ingress traffic, which is what this task's
+  # allow-set concerns) using an explicit block boundary, not a global line count.
+  #
+  # A bare rule COUNT is still not sufficient evidence on its own: a student could keep
+  # the '### tuple ###' metadata for all 5 declared rules intact (so 'ufw show added'
+  # still reports exactly the expected 5 commands) while hand-editing one of the
+  # corresponding '-A ufw-user-input ...' lines in /etc/ufw/user.rules to a WIDER rule -
+  # e.g. replacing the documented 'node_ip -> 6443/tcp' with 'node_ip -> any' - without
+  # changing the line count at all. Five effective rules that are the wrong five rules
+  # must not read as a match. Check the SEMANTIC content of each expected rule (source,
+  # interface, protocol, destination port) against the real 'iptables -n -v -x -L
+  # ufw-user-input' rows (that is what 'ufw show user-rules' renders), not just how many
+  # rows exist.
+  run ssh "${SSH_OPTS[@]}" "$cp" 'sudo ufw show user-rules'
+  ufw_user_chains_status=$status
+  ufw_user_input_block=$(awk '/^Chain ufw-user-input /{flag=1; next} /^Chain /{flag=0} flag' <<<"$output")
+  ufw_user_chain_rule_count=$(grep -vE '^[[:space:]]*pkts[[:space:]]|^[[:space:]]*$' <<<"$ufw_user_input_block" | grep -cE '.' || true)
+  ufw6_user_input_block=$(awk '/^Chain ufw6-user-input /{flag=1; next} /^Chain /{flag=0} flag' <<<"$output")
+  ufw6_user_chain_rule_count=$(grep -vE '^[[:space:]]*pkts[[:space:]]|^[[:space:]]*$' <<<"$ufw6_user_input_block" | grep -cE '.' || true)
+
+  # Exact per-rule semantic match. All 5 documented rules use IPv4 addresses, so a
+  # correct solution leaves ufw6-user-input completely empty - UFW only ever populates
+  # the IPv6 chain for a rule whose source/destination is itself an IPv6 literal/CIDR.
+  # Any row appearing there (e.g. a raw bypass rule hand-added to user6.rules, which
+  # 'ufw show added'/the IPv4 framework hash cannot see) is therefore itself a fail,
+  # independent of the IPv4 count.
+  ufw_loopback_ok=$(grep -Eq '^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+all[[:space:]]+--[[:space:]]+lo[[:space:]]+\*[[:space:]]+0\.0\.0\.0/0[[:space:]]+0\.0\.0\.0/0[[:space:]]*$' <<<"$ufw_user_input_block" && echo yes || echo no)
+  ufw_ssh_worker_ok=$(grep -Eq "^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+tcp[[:space:]]+--[[:space:]]+\*[[:space:]]+\*[[:space:]]+${esc_worker}(/32)?[[:space:]]+0\.0\.0\.0/0[[:space:]]+tcp dpt:22[[:space:]]*\$" <<<"$ufw_user_input_block" && echo yes || echo no)
+  ufw_api_worker_ok=$(grep -Eq "^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+tcp[[:space:]]+--[[:space:]]+\*[[:space:]]+\*[[:space:]]+${esc_worker}(/32)?[[:space:]]+0\.0\.0\.0/0[[:space:]]+tcp dpt:6443[[:space:]]*\$" <<<"$ufw_user_input_block" && echo yes || echo no)
+  ufw_api_node_ok=$(grep -Eq "^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+tcp[[:space:]]+--[[:space:]]+\*[[:space:]]+\*[[:space:]]+${esc_node}(/32)?[[:space:]]+0\.0\.0\.0/0[[:space:]]+tcp dpt:6443[[:space:]]*\$" <<<"$ufw_user_input_block" && echo yes || echo no)
+  ufw_api_podcidr_ok=$(grep -Eq "^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+tcp[[:space:]]+--[[:space:]]+\*[[:space:]]+\*[[:space:]]+${esc_pod_cidr}[[:space:]]+0\.0\.0\.0/0[[:space:]]+tcp dpt:6443[[:space:]]*\$" <<<"$ufw_user_input_block" && echo yes || echo no)
+
+  ufw_effective_matches_declared="no"
+  if [[ "$ufw_user_chains_status" -eq 0 && "$ufw_user_chain_rule_count" == "$total_added_allow" \
+        && "$ufw6_user_chain_rule_count" -eq 0 && "$ufw_loopback_ok" == "yes" \
+        && "$ufw_ssh_worker_ok" == "yes" && "$ufw_api_worker_ok" == "yes" \
+        && "$ufw_api_node_ok" == "yes" && "$ufw_api_podcidr_ok" == "yes" ]]; then
+    ufw_effective_matches_declared="yes"
   fi
 
   calico_all_ready=yes
@@ -145,11 +256,16 @@ control_plane() {
   # not just the in-memory state right after 'ufw enable'. Only run once the structural
   # allow-set and recovery evidence already look sane, to avoid reloading (and risking a
   # lockout window on a misconfigured firewall) when the base checks would fail anyway.
+  # This repeats EVERY probe used pre-reload, including Pod DNS and the full HTTPCODE
+  # contract for the negative kubelet probe - not just a subset.
   reload_ready="not-run"
   reload_node_ready="not-run"
   reload_calico_ready="not-run"
+  reload_pod_dns="not-run"
   reload_pod_http="not-run"
   reload_kubelet_status="not-run"
+  reload_kubelet_http="not-run"
+  reload_ufw_effective_matches_declared="not-run"
   if [[ "$firewall_status" -eq 0 && "$exact_allow_set" == "yes" ]]; then
     run ssh "${SSH_OPTS[@]}" "$cp" 'sudo ufw reload'
     reload_status=$status
@@ -162,11 +278,55 @@ control_plane() {
         -o jsonpath='{.items[*].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
       [[ -z "$rc2" ]] && reload_calico_ready=no
       for cond in $rc2; do [[ "$cond" != "True" ]] && reload_calico_ready=no; done
+      # Same Pod DNS probe as the pre-reload check - a reload can restart kube-proxy/CNI
+      # rule programming and cause a DNS-specific regression that a pure HTTP probe would
+      # not catch on its own.
+      reload_pod_dns=$(kubectl exec -n cks-105-health deploy/health-probe --context "$CTX" -- sh -c 'getent hosts kubernetes.default.svc.cluster.local >/dev/null 2>&1 && echo RESOLVED || echo FAILED' 2>/dev/null || true)
       reload_pod_http=$(kubectl exec -n cks-105-health deploy/health-probe --context "$CTX" -- sh -c 'curl -ksS -o /dev/null -w "%{http_code}" --max-time 5 https://kubernetes.default.svc/readyz' 2>/dev/null || true)
-      if out2=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 "https://${node_ip}:10250/healthz" 2>/dev/null); then
+      # Same contract as the pre-reload negative probe: save BOTH exit status AND the
+      # HTTP code, not just the exit status. A transport failure (exit != 0) with a
+      # non-empty/non-000 HTTPCODE would indicate a partial connection, not a clean deny.
+      if reload_out=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 "https://${node_ip}:10250/healthz" 2>/dev/null); then
         reload_kubelet_status=0
       else
         reload_kubelet_status=$?
+      fi
+      reload_kubelet_http="$reload_out"
+
+      # Re-verify the effective kernel-loaded UFW user chains AFTER reload too, not only
+      # right after enable - 'ufw reload' is exactly the moment a hand-edited user.rules
+      # (without matching tuple metadata) would actually get loaded via
+      # 'iptables-restore', so checking only pre-reload state could miss a bypass rule
+      # that was added to user.rules but not yet active until this reload. Same
+      # block-scoped extraction AND same per-rule semantic match as the pre-reload check
+      # above - see the comments there for why a flat line count over the whole 'ufw show
+      # user-rules' output (including the IPV4/IPV6 section headers and the built-in
+      # ufw-user-limit-accept/ufw-user-limit chains) would overcount, and why a rule
+      # COUNT alone (even block-scoped) cannot distinguish 5 correct rules from 5 rules
+      # where one was quietly widened (e.g. 'node_ip -> 6443/tcp' rewritten to
+      # 'node_ip -> any') while keeping the tuple metadata that 'ufw show added' relies
+      # on. ufw6-user-input must stay empty for the same reason as pre-reload: none of
+      # the 5 documented rules is an IPv6 rule, so any row appearing there is itself a
+      # bypass, independent of the IPv4 count.
+      run ssh "${SSH_OPTS[@]}" "$cp" 'sudo ufw show user-rules'
+      reload_ufw_user_chains_status=$status
+      reload_ufw_user_input_block=$(awk '/^Chain ufw-user-input /{flag=1; next} /^Chain /{flag=0} flag' <<<"$output")
+      reload_ufw_user_chain_rule_count=$(grep -vE '^[[:space:]]*pkts[[:space:]]|^[[:space:]]*$' <<<"$reload_ufw_user_input_block" | grep -cE '.' || true)
+      reload_ufw6_user_input_block=$(awk '/^Chain ufw6-user-input /{flag=1; next} /^Chain /{flag=0} flag' <<<"$output")
+      reload_ufw6_user_chain_rule_count=$(grep -vE '^[[:space:]]*pkts[[:space:]]|^[[:space:]]*$' <<<"$reload_ufw6_user_input_block" | grep -cE '.' || true)
+
+      reload_ufw_loopback_ok=$(grep -Eq '^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+all[[:space:]]+--[[:space:]]+lo[[:space:]]+\*[[:space:]]+0\.0\.0\.0/0[[:space:]]+0\.0\.0\.0/0[[:space:]]*$' <<<"$reload_ufw_user_input_block" && echo yes || echo no)
+      reload_ufw_ssh_worker_ok=$(grep -Eq "^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+tcp[[:space:]]+--[[:space:]]+\*[[:space:]]+\*[[:space:]]+${esc_worker}(/32)?[[:space:]]+0\.0\.0\.0/0[[:space:]]+tcp dpt:22[[:space:]]*\$" <<<"$reload_ufw_user_input_block" && echo yes || echo no)
+      reload_ufw_api_worker_ok=$(grep -Eq "^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+tcp[[:space:]]+--[[:space:]]+\*[[:space:]]+\*[[:space:]]+${esc_worker}(/32)?[[:space:]]+0\.0\.0\.0/0[[:space:]]+tcp dpt:6443[[:space:]]*\$" <<<"$reload_ufw_user_input_block" && echo yes || echo no)
+      reload_ufw_api_node_ok=$(grep -Eq "^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+tcp[[:space:]]+--[[:space:]]+\*[[:space:]]+\*[[:space:]]+${esc_node}(/32)?[[:space:]]+0\.0\.0\.0/0[[:space:]]+tcp dpt:6443[[:space:]]*\$" <<<"$reload_ufw_user_input_block" && echo yes || echo no)
+      reload_ufw_api_podcidr_ok=$(grep -Eq "^[[:space:]]*[0-9]+[[:space:]]+[0-9]+[[:space:]]+ACCEPT[[:space:]]+tcp[[:space:]]+--[[:space:]]+\*[[:space:]]+\*[[:space:]]+${esc_pod_cidr}[[:space:]]+0\.0\.0\.0/0[[:space:]]+tcp dpt:6443[[:space:]]*\$" <<<"$reload_ufw_user_input_block" && echo yes || echo no)
+
+      reload_ufw_effective_matches_declared="no"
+      if [[ "$reload_ufw_user_chains_status" -eq 0 && "$reload_ufw_user_chain_rule_count" == "$total_added_allow" \
+            && "$reload_ufw6_user_chain_rule_count" -eq 0 && "$reload_ufw_loopback_ok" == "yes" \
+            && "$reload_ufw_ssh_worker_ok" == "yes" && "$reload_ufw_api_worker_ok" == "yes" \
+            && "$reload_ufw_api_node_ok" == "yes" && "$reload_ufw_api_podcidr_ok" == "yes" ]]; then
+        reload_ufw_effective_matches_declared="yes"
       fi
     fi
   fi
@@ -176,13 +336,17 @@ control_plane() {
     && grep -q 'Status: active' <<<"$firewall" \
     && grep -q 'Default: deny (incoming)' <<<"$firewall" \
     && [[ "$exact_allow_set" == "yes" ]] \
+    && [[ "$ufw_framework_unchanged" == "yes" ]] \
+    && [[ "$ufw_effective_matches_declared" == "yes" ]] \
     && [[ "$ready" == "ok" && "$node_ready" == "True" && "$calico_all_ready" == "yes" ]] \
     && [[ "${workload_ready:-0}" -ge 1 && "$pod_dns" == "RESOLVED" && -n "$pod_http" && "$pod_http" != "000" ]] \
     && [[ "$kubelet_status" -ne 0 && ( -z "$kubelet_http" || "$kubelet_http" == "000" ) ]] \
     && [[ "$baseline_present" == "yes" ]] \
     && [[ "$reload_ready" == "ok" && "$reload_node_ready" == "True" && "$reload_calico_ready" == "yes" ]] \
+    && [[ "$reload_pod_dns" == "RESOLVED" ]] \
     && [[ "$reload_pod_http" != "000" && -n "$reload_pod_http" ]] \
-    && [[ "$reload_kubelet_status" != "0" ]] \
+    && [[ "$reload_kubelet_status" != "0" && ( -z "$reload_kubelet_http" || "$reload_kubelet_http" == "000" ) ]] \
+    && [[ "$reload_ufw_effective_matches_declared" == "yes" ]] \
     && grep -q 'Status: active' "$ARTIFACTS/3/ufw.txt" \
     && grep -q 'Default: deny (incoming)' "$ARTIFACTS/3/ufw.txt" \
     && grep -q 'role=control-plane,workload' "$ARTIFACTS/3/preflight.txt" \
@@ -191,14 +355,24 @@ control_plane() {
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    if [[ "$bootstrap_baseline_ok" != "yes" ]]; then
+    if [[ "$baseline_trust_boundary_ok" != "yes" ]]; then
+      echo "HINT: /var/lib/cks-lab105-checker (dir='$baseline_dir_owner_mode') or its bootstrap-baseline-3.txt (file='$baseline_owner_mode') is not locked down to root:root 0711/0444 as expected - this baseline must stay checker-owned and unmodifiable by the student account. This is an infrastructure trust-boundary failure, not something you can fix from inside the lab. Contact the lab operator."
+    elif [[ "$bootstrap_baseline_ok" != "yes" ]]; then
       echo "HINT: the checker's own bootstrap-time baseline for TCP/10250 (captured before the lab started, independent of your artifacts) shows the port was already unreachable before any UFW change existed on this node - this is an infrastructure precondition failure, not something you can fix from inside the lab. Contact the lab operator."
     elif [[ "$baseline_present" != "yes" ]]; then
       echo "HINT: artifacts/3/preflight.txt must contain a baseline probe of TCP/10250 recorded BEFORE UFW was enabled, in the exact form 'baseline kubelet 10250: CURL_EXIT=0 HTTPCODE=<1xx-5xx>'. Without this, a post-UFW block cannot be attributed to UFW - the port might have already been unreachable for an unrelated reason."
     elif [[ "$firewall_status" -ne 0 ]] || ! grep -q 'Status: active' <<<"$firewall"; then
       echo "HINT: UFW is not active. Enable it with 'sudo ufw --force enable' AFTER adding the required allow rules - never enable a default-deny firewall before you have an SSH rule in place, you can lock yourself out."
     elif [[ "$exact_allow_set" != "yes" ]]; then
-      echo "HINT: 'sudo ufw show added' does not show EXACTLY the 5 documented rules (loopback + worker->22/tcp + worker->6443/tcp + node_ip->6443/tcp + pod_cidr->6443/tcp). Any extra allow/limit rule (another port, another source, an app profile, or a broad 'Anywhere' rule) or any missing one of the 5 makes this fail - 'ufw show added' shows the literal commands you ran, independent of how 'ufw status' displays/orders them."
+      echo "HINT: 'sudo ufw show added' does not show EXACTLY the 5 documented rules (loopback + worker->22/tcp + worker->6443/tcp + node_ip->6443/tcp + pod_cidr->6443/tcp). Any extra rule of ANY action (another allow, a deny, a reject, a route rule, an app profile, or a broad 'Anywhere' rule) or any missing one of the 5 makes this fail - 'ufw show added' shows a normalized representation of the rules you ran (not necessarily the literal/original command text or order), independent of how 'ufw status' displays them."
+    elif [[ "$ufw_framework_unchanged" != "yes" ]]; then
+      if [[ "$ufw_framework_baseline_trust_ok" != "yes" ]]; then
+        echo "HINT: /var/lib/cks-lab105-checker (dir='$ufw_framework_dir_owner_mode') or its bootstrap-ufw-framework-baseline.txt (file='$ufw_framework_file_owner_mode') is not locked down to root:root 0711/0444 as expected. This is an infrastructure trust-boundary failure, not something you can fix from inside the lab. Contact the lab operator."
+      else
+        echo "HINT: /etc/ufw/before.rules, before6.rules, after.rules, or after6.rules on the control plane no longer match the checker-owned hash captured before the lab started. This task only allows managing the firewall through the 'ufw' command itself (allow/deny/reject/limit/route, then enable/reload) - directly hand-editing the UFW framework rule files to add an extra ingress path bypasses 'ufw show added' entirely and is not permitted."
+      fi
+    elif [[ "$ufw_effective_matches_declared" != "yes" ]]; then
+      echo "HINT: the ACTUAL kernel-loaded firewall rules ('sudo ufw show user-rules', which reflects real iptables state) do not semantically match the 5 documented rules. This checks more than a count: ufw-user-input must have exactly $total_added_allow rows (got $ufw_user_chain_rule_count) AND each of the 5 rows must be the exact expected rule - loopback='$ufw_loopback_ok' worker->22/tcp='$ufw_ssh_worker_ok' worker->6443/tcp='$ufw_api_worker_ok' node_ip->6443/tcp='$ufw_api_node_ok' pod_cidr->6443/tcp='$ufw_api_podcidr_ok' - AND ufw6-user-input must be completely empty (got $ufw6_user_chain_rule_count rows; none of the 5 documented rules is IPv6, so any row there is an unauthorized extra rule). 'ufw show added' is reconstructed from '### tuple ###' metadata comments that ufw writes when you use the 'ufw' CLI - a rule hand-added directly to /etc/ufw/user.rules or user6.rules WITHOUT that metadata (or with an existing rule's port/source WIDENED while keeping its metadata line intact) can become active in the kernel after 'ufw reload' while staying invisible to 'ufw show added', to the before/after framework file hashes, AND to a naive rule count. Only manage the firewall through the 'ufw' command itself; do not hand-edit user.rules/user6.rules."
     elif [[ "$calico_all_ready" != "yes" ]]; then
       echo "HINT: calico-node Pod(s) are not Ready after the UFW change (conditions='$calico_ready'). UFW is an iptables/nftables manager and can conflict with the rules Calico installs - see the lab-specific exception note in README and ADVERSARIAL_ACCEPTANCE_STANDARD.md."
     elif [[ "$ready" != "ok" || "$node_ready" != "True" ]]; then
@@ -209,12 +383,16 @@ control_plane() {
       echo "HINT: Port 10250 (kubelet API) is reachable directly from the worker station - this task expects it to stay blocked from outside sources that are not the control plane itself."
     elif [[ "$reload_ready" != "ok" || "$reload_node_ready" != "True" || "$reload_calico_ready" != "yes" || "$reload_pod_http" == "000" || -z "$reload_pod_http" || "$reload_pod_http" == "not-run" ]]; then
       echo "HINT: after 'sudo ufw reload' the same E2E checks (readyz/node Ready/calico-node Ready/Pod->API) must still pass. A ruleset that only works in-memory right after 'ufw enable' but breaks (or was never actually persisted) after a reload is not a correct fix - re-run the same commands and confirm they survive 'sudo ufw reload'."
-    elif [[ "$reload_kubelet_status" == "0" ]]; then
-      echo "HINT: after 'sudo ufw reload', worker->kubelet:10250 became reachable again - the deny rule for this flow did not survive the reload."
+    elif [[ "$reload_pod_dns" != "RESOLVED" ]]; then
+      echo "HINT: after 'sudo ufw reload', the health-probe Pod can no longer resolve DNS (reload_pod_dns=$reload_pod_dns), even though other checks may look fine. A reload can restart kube-proxy/CNI rule programming and cause a DNS-specific regression that a plain HTTP probe would not catch - re-run the same DNS check used before the reload and confirm it still resolves."
+    elif [[ "$reload_kubelet_status" == "0" || ( -n "$reload_kubelet_http" && "$reload_kubelet_http" != "000" ) ]]; then
+      echo "HINT: after 'sudo ufw reload', worker->kubelet:10250 became reachable again (reload_kubelet_status=$reload_kubelet_status reload_kubelet_http=$reload_kubelet_http) - the deny rule for this flow did not survive the reload. This must match the SAME contract as the pre-reload check: a transport failure/timeout with an empty or '000' HTTP code, not just a nonzero curl exit status on its own."
+    elif [[ "$reload_ufw_effective_matches_declared" != "yes" ]]; then
+      echo "HINT: after 'sudo ufw reload', the ACTUAL kernel-loaded firewall rules ('sudo ufw show user-rules') no longer semantically match the 5 documented rules. ufw-user-input must have exactly $total_added_allow rows (got $reload_ufw_user_chain_rule_count) AND each of the 5 rows must be the exact expected rule - loopback='$reload_ufw_loopback_ok' worker->22/tcp='$reload_ufw_ssh_worker_ok' worker->6443/tcp='$reload_ufw_api_worker_ok' node_ip->6443/tcp='$reload_ufw_api_node_ok' pod_cidr->6443/tcp='$reload_ufw_api_podcidr_ok' - AND ufw6-user-input must stay completely empty (got $reload_ufw6_user_chain_rule_count rows). 'ufw reload' is exactly the moment a hand-edited user.rules/user6.rules entry (missing tuple metadata, or an existing rule quietly WIDENED while keeping its metadata line) gets loaded into the kernel via iptables-restore/ip6tables-restore - only manage the firewall through the 'ufw' command itself."
     else
       echo "HINT: Firewall behavior is correct, but one of the evidence files (ufw.txt/preflight.txt/recovery.txt) is missing the required exact content - check each file's expected line individually."
     fi
-    echo "firewall_status=$firewall_status worker_ip=$worker_ip node_ip=$node_ip pod_cidr=$pod_cidr readyz=$ready node_ready=$node_ready calico_ready='$calico_ready' workload_ready=$workload_ready pod_dns=$pod_dns pod_http=$pod_http kubelet_status=$kubelet_status kubelet_http=$kubelet_http exact_allow_set=$exact_allow_set total_added_allow=$total_added_allow rule_ssh_worker=$rule_ssh_worker rule_api_worker=$rule_api_worker rule_api_node=$rule_api_node rule_api_podcidr=$rule_api_podcidr baseline_present=$baseline_present bootstrap_baseline_ok=$bootstrap_baseline_ok reload_ready=$reload_ready reload_node_ready=$reload_node_ready reload_calico_ready=$reload_calico_ready reload_pod_http=$reload_pod_http reload_kubelet_status=$reload_kubelet_status"
+    echo "firewall_status=$firewall_status worker_ip=$worker_ip node_ip=$node_ip pod_cidr=$pod_cidr readyz=$ready node_ready=$node_ready calico_ready='$calico_ready' workload_ready=$workload_ready pod_dns=$pod_dns pod_http=$pod_http kubelet_status=$kubelet_status kubelet_http=$kubelet_http exact_allow_set=$exact_allow_set total_added_allow=$total_added_allow rule_ssh_worker=$rule_ssh_worker rule_api_worker=$rule_api_worker rule_api_node=$rule_api_node rule_api_podcidr=$rule_api_podcidr ufw_framework_unchanged=$ufw_framework_unchanged ufw_effective_matches_declared=$ufw_effective_matches_declared ufw_user_chain_rule_count=$ufw_user_chain_rule_count ufw6_user_chain_rule_count=$ufw6_user_chain_rule_count ufw_loopback_ok=$ufw_loopback_ok ufw_ssh_worker_ok=$ufw_ssh_worker_ok ufw_api_worker_ok=$ufw_api_worker_ok ufw_api_node_ok=$ufw_api_node_ok ufw_api_podcidr_ok=$ufw_api_podcidr_ok baseline_present=$baseline_present bootstrap_baseline_ok=$bootstrap_baseline_ok baseline_trust_boundary_ok=$baseline_trust_boundary_ok baseline_owner_mode='$baseline_owner_mode' reload_ready=$reload_ready reload_node_ready=$reload_node_ready reload_calico_ready=$reload_calico_ready reload_pod_dns=$reload_pod_dns reload_pod_http=$reload_pod_http reload_kubelet_status=$reload_kubelet_status reload_kubelet_http=$reload_kubelet_http reload_ufw_effective_matches_declared=$reload_ufw_effective_matches_declared reload_ufw_user_chain_rule_count=$reload_ufw_user_chain_rule_count reload_ufw6_user_chain_rule_count=$reload_ufw6_user_chain_rule_count"
     result=1
   fi
   [ "$result" -eq 0 ]

@@ -90,7 +90,7 @@ kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
 
 For a security audit, do not grant legacy `impersonate` automatically: choose the model that fits the required workflow and document its scope.
 
-> 🔬 Constrained Impersonation in Kubernetes 1.36+ separately limits the substituted identity and the action permitted while impersonating.
+> 🔬 Constrained Impersonation in Kubernetes 1.36+ separately limits the impersonated identity and the action permitted while impersonating.
 
 ### 10.2.1. Constrained Impersonation: limit identity and action
 
@@ -369,7 +369,7 @@ kubectl apply -f app-sa-rbac.yaml
 
 SA=system:serviceaccount:cks-104:app-sa
 
-# Functionally necessary right
+# Functionally necessary permission
 kubectl auth can-i get pods -n cks-104 --as="$SA"
 kubectl auth can-i list pods -n cks-104 --as="$SA"
 # yes
@@ -508,7 +508,7 @@ For `create` and `deletecollection` on a top-level resource, object name is not 
 </details>
 
 <details>
-<summary>7. Why is `get nodes/proxy` not a read-only right, and to whom is it acceptable to grant it?</summary>
+<summary>7. Why is `get nodes/proxy` not a read-only permission, and to whom is it acceptable to grant it?</summary>
 
 `get nodes/proxy` allows proxy requests to kubelet, and those operations can bypass admission and ordinary API-server audit. It is therefore not harmless reading of a Node object. Do not grant it to workloads or tenant roles; it is acceptable only for a strictly controlled operational identity, preferably using narrower `nodes/metrics`, `nodes/stats`, and other fine-grained subresources.
 </details>

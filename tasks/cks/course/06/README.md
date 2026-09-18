@@ -340,7 +340,7 @@ For an API, it is safer to enumerate permitted methods, paths, and, when needed,
 use a broad `path: ".*"`. L7 policy does not replace application authentication and authorization:
 it reduces the available surface, but does not know the user or API business rules.
 
-Cilium can also filter DNS by query name. Do not enable an L7 proxy without need: it
+Cilium can also filter DNS by query name. Do not enable an L7 proxy unless it is required: it
 adds processing to the traffic path and requires separate load testing.
 
 > 🔬 gRPC is filtered as HTTP/2 through `POST` and the method path.

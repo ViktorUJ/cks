@@ -182,7 +182,6 @@ EOF_POD
   binding=$(kubectl get validatingadmissionpolicybinding require-no-automount-token-binding --context "$CTX" -o json 2>/dev/null)
   policy_name=$(jq -r '.spec.policyName // ""' <<<"$binding" 2>/dev/null)
   actions=$(jq -r '(.spec.validationActions // []) | index("Deny") != null' <<<"$binding" 2>/dev/null)
-  ns_scoped=$(jq -r '(.spec.matchResources.namespaceSelector.matchLabels["kubernetes.io/metadata.name"] // "") == "'"$RESTRICTED_NS"'" or ((.spec.matchResources.namespaceSelector.matchExpressions // [])[] | select(.key == "kubernetes.io/metadata.name" and .operator == "In") | .values | index("'"$RESTRICTED_NS"'") != null)' <<<"$binding" 2>/dev/null)
   set +e
   # This Pod is fully PSA restricted-compliant (non-root, seccomp, drop ALL, no escalation)
   # but omits automountServiceAccountToken: false. PSA alone must accept it; only the new
@@ -241,10 +240,46 @@ spec:
 EOF_POD
 )
   allow_status=$?
+  # Functional scope proof: the SAME probe Pod (PSA-compliant, missing the automount
+  # opt-out) applied to a DIFFERENT namespace must NOT be denied by this VAP - a Binding
+  # whose namespaceSelector merely CONTAINS RESTRICTED_NS among several matched
+  # namespaces (e.g. matchExpressions.values: [RESTRICTED_NS, OBSERVE_NS]) would still
+  # satisfy a structural 'does the selector mention RESTRICTED_NS' check, yet would
+  # incorrectly ALSO deny this same Pod shape in OBSERVE_NS - a cluster-wide scope
+  # regression that a purely structural selector check cannot catch. OBSERVE_NS has
+  # warn/audit baseline (from task 3) but no enforce, so PSA itself will not deny this
+  # Pod there either - a denial in OBSERVE_NS can only mean the VAP's Binding scope is
+  # broader than intended.
+  other_ns_output=$(kubectl apply --context "$CTX" --dry-run=server -f - 2>&1 <<EOF_POD
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vap-scope-check
+  namespace: $OBSERVE_NS
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+EOF_POD
+)
+  other_ns_status=$?
   set -e
-  if [[ -n "$policy" && "$policy_name" == "require-no-automount-token" && "$actions" == "true" && "$ns_scoped" == "true" \
+  if [[ -n "$policy" && "$policy_name" == "require-no-automount-token" && "$actions" == "true" \
     && "$deny_status" -ne 0 && "$deny_output" == *"require-no-automount-token"* && "$deny_output" != *"violates PodSecurity"* \
-    && "$allow_status" -eq 0 ]]; then
+    && "$allow_status" -eq 0 && "$other_ns_status" -eq 0 ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -252,16 +287,16 @@ EOF_POD
       echo "HINT: ValidatingAdmissionPolicy 'require-no-automount-token' does not exist. Create it with a CEL expression checking automountServiceAccountToken == false."
     elif [[ "$policy_name" != "require-no-automount-token" || "$actions" != "true" ]]; then
       echo "HINT: ValidatingAdmissionPolicyBinding must reference policyName 'require-no-automount-token' and set validationActions: [Deny]."
-    elif [[ "$ns_scoped" != "true" ]]; then
-      echo "HINT: The binding's matchResources.namespaceSelector must scope to namespace '$RESTRICTED_NS' specifically - an unscoped binding would affect the whole cluster unexpectedly."
     elif [[ "$deny_status" -eq 0 || "$deny_output" != *"require-no-automount-token"* ]]; then
       echo "HINT: A fully PSA-compliant Pod that omits automountServiceAccountToken: false was NOT denied by your VAP. Check the CEL expression actually evaluates automountServiceAccountToken, not some other field."
     elif [[ "$deny_output" == *"violates PodSecurity"* ]]; then
       echo "HINT: The denial message mentions 'violates PodSecurity' - that means PSA (not your VAP) is doing the rejecting, likely for an unrelated reason. This test needs the VAP-specific denial isolated - make sure the test Pod is otherwise fully PSA-restricted-compliant."
     elif [[ "$allow_status" -ne 0 ]]; then
       echo "HINT: A Pod that DOES set automountServiceAccountToken: false was rejected - it should be allowed. Check your CEL condition logic is not inverted."
+    elif [[ "$other_ns_status" -ne 0 ]]; then
+      echo "HINT: The SAME PSA-compliant Pod shape (missing automountServiceAccountToken: false) was DENIED in namespace '$OBSERVE_NS' too - your Binding's matchResources.namespaceSelector matches more than just '$RESTRICTED_NS'. Scope it to exactly that one namespace, e.g. matchLabels: {kubernetes.io/metadata.name: $RESTRICTED_NS}, not a broader matchExpressions list that happens to include it alongside other namespaces."
     fi
-    echo "policy_name=$policy_name actions=$actions ns_scoped=$ns_scoped deny_status=$deny_status deny_output=$deny_output allow_status=$allow_status allow_output=$allow_output"
+    echo "policy_name=$policy_name actions=$actions deny_status=$deny_status deny_output=$deny_output allow_status=$allow_status allow_output=$allow_output other_ns_status=$other_ns_status other_ns_output=$other_ns_output"
     result=1
   fi
   [ "$result" -eq 0 ]

@@ -55,7 +55,7 @@ flowchart TB
 The Pod-level value takes precedence. If the Pod does not set this field, the ServiceAccount value is used. Therefore, the secure pattern is to disable automount on the namespace's `default` SA and on newly created SAs by default, and describe exceptions explicitly in the Pod manifest only after verifying that it genuinely needs the API.
 
 ```bash
-# For an existing namespace: deny a token to the default SA.
+# For an existing namespace: disable automatic token mounting for the default ServiceAccount.
 kubectl -n cks-104 patch serviceaccount default \
   -p '{"automountServiceAccountToken":false}'
 
@@ -88,7 +88,7 @@ spec:
     image: nginx:1.30.4
 ```
 
-Do not confuse the absence of a token with the absence of a ServiceAccount. The Pod still has identity `app-sa`; a credential is simply not issued in its filesystem. Do not expect `automount: false` to stop an application that receives a token by another method - through a Secret, projected volume, or environment variable. Exclude such sources separately.
+Do not confuse the absence of an automatically mounted token with the absence of a ServiceAccount. The Pod still has identity `app-sa`; the standard ServiceAccount token is simply not mounted into its filesystem. Do not expect `automount: false` to stop an application that receives a token by another method - through a Secret, projected volume, or environment variable. Exclude such sources separately.
 
 > 🧠 JWT claims, audience, rotation, and bound-object verification define the boundaries of a token credential.
 
@@ -268,7 +268,7 @@ In Kubernetes 1.36+, Constrained Impersonation extends the old one-verb `imperso
 Verification must prove two independent conditions: a Pod without an API task does not contain a token, and a Pod with an API task receives only the specified short-lived credential and only the permissions of its Role.
 
 ```bash
-# After creating app-without-api: the token must not exist.
+# After creating app-without-api: the automatically mounted token file must not be present.
 kubectl -n cks-104 exec app-without-api -- \
   test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
 
@@ -309,7 +309,7 @@ If a Pod still has the standard token after changing the SA, check `spec.automou
 
 ## 11.6. How this is applied in production
 
-- **Deny by default for tokens.** The platform team disables `automountServiceAccountToken` on the `default` SA in each application namespace. A workload that does not need the API fixes `automountServiceAccountToken: false` in its Pod template as well, making the exception visible in code review.
+- **Disable automatic token mounting by default.** The platform team disables `automountServiceAccountToken` on the `default` SA in each application namespace. A workload that does not need the API sets `automountServiceAccountToken: false` in its Pod template as well, making the exception visible in code review.
 - **One workload - one SA.** Separate ServiceAccounts and minimal RBAC bindings reduce blast radius. For permissions in one namespace, use `RoleBinding`; it can refer to a local `Role` or reusable `ClusterRole`. Use `ClusterRoleBinding` only when the subject genuinely needs cluster-wide scope - for cluster-scoped resources and/or identical namespaced permissions in every namespace.
 - **Bound token instead of static Secret.** Pods use a projected token with a short lifetime and narrow audience. For external systems, use TokenRequest, OIDC workload identity, or cloud federation rather than copying a service-account-token Secret.
 - **Cloud identity separate from Kubernetes RBAC.** IRSA, Workload Identity, and similar mechanisms bind an SA to a cloud role. This does not remove Kubernetes RBAC: separately check which API permissions and cloud permissions the workload receives.
@@ -329,7 +329,7 @@ If a Pod still has the standard token after changing the SA, check `spec.automou
 ## 11.8. Chapter summary
 
 - A `default` SA token in a compromised Pod is a Kubernetes API credential; RBAC determines its impact, so minimize token and permissions together.
-- `automountServiceAccountToken: false` disables automatic token issuance. The Pod value takes precedence over the ServiceAccount value; already created Pods must be recreated.
+- `automountServiceAccountToken: false` disables automatic mounting of the ServiceAccount token. The Pod value takes precedence over the ServiceAccount value; already created Pods must be recreated.
 - A modern Pod receives a bound projected token with limited lifetime and audience, which kubelet rotates. Kubernetes still officially supports a manually created long-lived ServiceAccount token Secret, but this course treats it as a documented exception rather than the ordinary way to issue a Pod credential.
 - A workload with API access receives a separate SA, namespaced Role, and RoleBinding with exact `verbs` and `resources`, not the `default` SA permissions or a wildcard.
 - Verification includes the absence of a token in an ordinary Pod, `kubectl auth can-i` for the SA, and a real API call with an explicitly projected credential; diagnose `401` and `403` differently.
@@ -338,7 +338,7 @@ If a Pod still has the standard token after changing the SA, check `spec.automou
 
 **On the exam.** Quickly create a ServiceAccount, Role, and RoleBinding, then confirm permission and denial through `kubectl auth can-i --as=system:serviceaccount:<ns>:<sa>`. Pay attention to where automount must be disabled: the namespace's `default` SA or a particular Pod. Check that the token file is absent through `kubectl exec`, not YAML alone. Lab 104 combines this skill with RBAC and restriction of anonymous API access.
 
-**In real work.** ServiceAccount is part of every Pod's attack surface. A "no tokens until necessity is proven" policy together with separate least-privilege SAs reduces the impact of RCE in an application. A projected bound token with a short lifetime and correct audience makes the credential narrower and more manageable, but does not eliminate the need for RBAC, audit, and network isolation.
+**In real work.** ServiceAccount is part of every Pod's attack surface. A "no tokens unless explicitly required" policy together with separate least-privilege SAs reduces the impact of RCE in an application. A projected bound token with a short lifetime and correct audience makes the credential narrower and more manageable, but does not eliminate the need for RBAC, audit, and network isolation.
 
 ## 11.10. Self-check questions
 

@@ -74,6 +74,54 @@ check_result
 `kubectl label namespace psa-restricted-107 pod-security.kubernetes.io/enforce=restricted pod-security.kubernetes.io/enforce-version=v1.36` - оба label применяются мгновенно, PSA не требует перезапуска чего-либо. Проверьте себя через `kubectl apply --dry-run=server` с `hostNetwork: true` - именно `--dry-run=server` (не `client`), потому что admission controllers, включая PSA, работают только на server-side.
 </details>
 
+<details>
+<summary>🔍 Проверьте себя перед `check_result`</summary>
+
+Сначала baseline - ДО установки labels убедитесь, что тот же небезопасный manifest
+проходит (иначе непонятно, denial вызван вашим enforce label или чем-то ещё):
+
+```bash
+kubectl apply --dry-run=server -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: self-check-hostnetwork
+  namespace: psa-restricted-107
+spec:
+  hostNetwork: true
+  containers:
+  - name: unsafe
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+EOF
+echo "baseline exit: $?"
+```
+
+Установите оба label, затем повторите ТОТ ЖЕ manifest - теперь должна быть ошибка
+admission с текстом `violates PodSecurity`:
+
+```bash
+kubectl label namespace psa-restricted-107 \
+  pod-security.kubernetes.io/enforce=restricted \
+  pod-security.kubernetes.io/enforce-version=v1.36
+
+kubectl apply --dry-run=server -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: self-check-hostnetwork
+  namespace: psa-restricted-107
+spec:
+  hostNetwork: true
+  containers:
+  - name: unsafe
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+EOF
+echo "after-label exit: $?"
+```
+</details>
+
 ---
 | **2** | **Hardened Pod, проходящий restricted** |
 | :---: | :--- |
@@ -83,7 +131,7 @@ check_result
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
 
-Если Pod получает admission rejection - читайте сообщение об ошибке внимательно, оно обычно называет ТОЧНОЕ недостающее поле (например, "container has no capabilities.drop"). `restricted` требует поля И на уровне Pod, И на уровне контейнера - забыть seccompProfile на одном из двух уровней - частая ошибка.
+Если Pod получает admission rejection - читайте сообщение об ошибке внимательно, оно обычно называет ТОЧНОЕ недостающее поле (например, "container has no capabilities.drop"). Важная деталь про семантику PSS `restricted` в Kubernetes 1.36: она требует эффективный (не обязательно буквально продублированный) допустимый `seccompProfile` - pod-level профиль (`spec.securityContext.seccompProfile.type`) может наследоваться контейнерами, у которых своё поле не задано, и наоборот, container-level поля достаточно, если оно явно задано у ВСЕХ контейнеров, даже без pod-level профиля. То есть сам PSS не требует буквально ОБА уровня одновременно. **В этой лабе мы намеренно просим задать `RuntimeDefault` явно и на Pod, и на контейнере** - не потому что этого требует PSS, а чтобы вы попрактиковались с обоими уровнями конфигурации. Аналогично `runAsUser: 1000` - это explicit hardening-решение именно этой лабы: PSS `restricted` запрещает UID `0`, но не требует конкретно `1000` (любое non-zero значение или полное отсутствие поля допустимо для самого PSS).
 </details>
 
 ---
@@ -98,6 +146,56 @@ check_result
 Четыре отдельных label - легко забыть один из них (особенно `-version` для одного из режимов). Проверьте все четыре сразу: `kubectl get namespace psa-observe-107 -o jsonpath='{.metadata.labels}' | jq`.
 </details>
 
+<details>
+<summary>🔍 Проверьте себя перед `check_result`</summary>
+
+Baseline - ДО установки labels нарушающий manifest должен пройти без предупреждения PSA
+(namespace ещё не наблюдается):
+
+```bash
+kubectl apply --dry-run=server -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: self-check-baseline-violation
+  namespace: psa-observe-107
+spec:
+  hostNetwork: true
+  containers:
+  - name: legacy
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+EOF
+```
+
+Установите все четыре label, затем повторите ТОТ ЖЕ manifest - теперь `kubectl apply`
+должен вывести `Warning: ... would violate PodSecurity "baseline:v1.36"`, а команда
+всё равно должна завершиться успехом (exit 0), а не ошибкой:
+
+```bash
+kubectl label namespace psa-observe-107 \
+  pod-security.kubernetes.io/audit=baseline \
+  pod-security.kubernetes.io/audit-version=v1.36 \
+  pod-security.kubernetes.io/warn=baseline \
+  pod-security.kubernetes.io/warn-version=v1.36
+
+kubectl apply --dry-run=server -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: self-check-baseline-violation
+  namespace: psa-observe-107
+spec:
+  hostNetwork: true
+  containers:
+  - name: legacy
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+EOF
+echo "exit code: $?"
+```
+</details>
+
 ---
 | **4** | **Warn/audit не блокируют legacy workload** |
 | :---: | :--- |
@@ -108,6 +206,26 @@ check_result
 <summary>💡 Подсказка к заданию 4</summary>
 
 Если Pod НЕ создался - проверьте, не установили ли вы случайно `enforce` label в задании 3 вместо только `audit`/`warn`. Warning от PSA появляется прямо в выводе `kubectl apply` (`Warning: would violate PodSecurity "baseline:v1.36"`), не нужно искать его в отдельном логе.
+</details>
+
+<details>
+<summary>🔍 Проверьте себя перед `check_result`</summary>
+
+Это задание фактически повторяет self-check задания 3, но с постоянным Pod. После
+создания `baseline-audit-sample` убедитесь, что он действительно существует и
+`Running`/`Pending` (не был отклонён):
+
+```bash
+kubectl get pod baseline-audit-sample -n psa-observe-107 -o jsonpath='{.status.phase}{"\n"}{.spec.hostNetwork}'
+```
+
+Сравните с namespace `psa-restricted-107` (задание 1): тот же самый nonsafe manifest там
+ДОЛЖЕН быть отклонён, а здесь - принят. Разница именно в `enforce` label, который есть
+у одного namespace и отсутствует у другого:
+
+```bash
+kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
+```
 </details>
 
 ---
@@ -131,7 +249,112 @@ check_result
 <details>
 <summary>💡 Подсказка к заданию 6</summary>
 
-Тестовый Pod для этого задания должен быть ПОЛНОСТЬЮ PSA-совместим (все поля из задания 2), кроме отсутствующего `automountServiceAccountToken: false` - если тестовый Pod нарушает и PSS, и вашу новую policy одновременно, вы не сможете доказать, что именно ВАША policy сработала, а не встроенный PSA. `ValidatingAdmissionPolicyBinding` без `matchResources.namespaceSelector` применится ко ВСЕМУ кластеру - обязательно ограничьте scope только нужным namespace.
+Тестовый Pod для этого задания должен быть ПОЛНОСТЬЮ PSA-совместим (все поля из задания 2), кроме отсутствующего `automountServiceAccountToken: false` - если тестовый Pod нарушает и PSS, и вашу новую policy одновременно, вы не сможете доказать, что именно ВАША policy сработала, а не встроенный PSA. `ValidatingAdmissionPolicyBinding` без `matchResources.namespaceSelector` применится ко ВСЕМУ кластеру - обязательно ограничьте scope ТОЧНО одним namespace `psa-restricted-107` (например через `matchLabels: {kubernetes.io/metadata.name: psa-restricted-107}`), а не через `matchExpressions` с несколькими значениями, где `psa-restricted-107` - лишь одно из нескольких совпадающих namespace: если ваш selector случайно матчит и `psa-observe-107`, то же самое правило начнёт неожиданно действовать и там.
+</details>
+
+<details>
+<summary>🔍 Проверьте себя перед `check_result`</summary>
+
+Baseline - ДО создания VAP/Binding тот же PSA-совместимый, но без automount opt-out,
+Pod должен пройти (PSA сам его не отклоняет, `automountServiceAccountToken` не входит
+в PSS):
+
+```bash
+kubectl apply --dry-run=server -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: self-check-automount
+  namespace: psa-restricted-107
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+EOF
+echo "baseline exit: $?"
+```
+
+Создайте VAP + Binding, повторите ТОТ ЖЕ manifest - теперь должна быть ошибка admission
+именно с текстом вашей policy (`require-no-automount-token`), НЕ с `violates
+PodSecurity` (если видите `violates PodSecurity` - значит отклоняет PSA, а не ваша
+policy, и тестовый Pod не полностью PSA-совместим). Затем добавьте
+`automountServiceAccountToken: false` к тому же manifest - теперь должен пройти:
+
+```bash
+kubectl apply -f require-no-automount-token.yaml   # ваши VAP + Binding
+
+kubectl apply --dry-run=server -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: self-check-automount
+  namespace: psa-restricted-107
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+EOF
+# ожидается: Error from server ... require-no-automount-token: ...
+```
+
+Наконец, самое важное - проверьте ГРАНИЦУ scope, а не только факт denial: тот же самый
+manifest (без automount opt-out), но в namespace `psa-observe-107`, должен ПРОЙТИ - если
+он тоже отклоняется, значит ваш `namespaceSelector` матчит больше, чем один namespace:
+
+```bash
+kubectl apply --dry-run=server -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: self-check-automount-other-ns
+  namespace: psa-observe-107
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+EOF
+echo "exit code in psa-observe-107: $?"
+# ожидается: 0 (не denied) - иначе scope binding'а слишком широкий
+```
 </details>
 
 ## Проверка
