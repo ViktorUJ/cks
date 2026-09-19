@@ -12,6 +12,7 @@ COSIGN_VERSION="3.1.3"
 
 printf '%s\n' '*** worker bootstrap CKS lab 111: pinned supply-chain tools'
 until kubectl get nodes --no-headers >/dev/null 2>&1; do sleep 5; done
+kubectl create namespace cks-111 --dry-run=client -o yaml | kubectl apply -f -
 
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl jq golang-go
@@ -108,7 +109,15 @@ case "$arch" in
   amd64) helm_arch=amd64 ;;
   arm64) helm_arch=arm64 ;;
 esac
-curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${helm_arch}.tar.gz" -o "$workdir/helm.tgz"
+# Same fail-fast checksum verification contract as every other directly downloaded
+# release binary above - Helm publishes a matching .sha256sum asset per release archive.
+helm_dist="helm-${HELM_VERSION}-linux-${helm_arch}.tar.gz"
+helm_url="https://get.helm.sh/${helm_dist}"
+curl --fail --location --silent --show-error -o "$workdir/helm.tgz" "$helm_url"
+curl --fail --location --silent --show-error -o "$workdir/helm.tgz.sha256sum" "${helm_url}.sha256sum"
+helm_sha256=$(awk '{print $1; exit}' "$workdir/helm.tgz.sha256sum")
+[[ "$helm_sha256" =~ ^[a-fA-F0-9]{64}$ ]] || { echo "Invalid Helm SHA-256" >&2; exit 1; }
+printf '%s  %s\n' "$helm_sha256" "$workdir/helm.tgz" | sha256sum --check --status -
 tar -xzf "$workdir/helm.tgz" -C "$workdir"
 install -m 0755 "$workdir/linux-${helm_arch}/helm" /usr/local/bin/helm
 
@@ -117,6 +126,15 @@ cat >/usr/local/bin/install-kyverno <<'KYVERNO_EOF'
 set -euo pipefail
 # Kyverno 1.19 / chart 3.9.0: current supported branch verified 2026-08-31,
 # первый релиз с полным CEL-policy feature parity (ImageValidatingPolicy).
+#
+# LAB-SPECIFIC ARCHITECTURE EXCEPTION: официальная support matrix Kyverno 1.19
+# охватывает Kubernetes 1.33-1.35 (см. https://kyverno.io/docs/releases/); этот кластер
+# закреплён на Kubernetes 1.36, что вне протестированного диапазона upstream ("Other
+# Kubernetes versions may work, but are not tested and therefore no guarantees are made
+# as to their full compatibility"). Комбинация 1.36 используется в этой лабе как
+# осознанный trade-off после smoke-проверки install/admission на конкретной паре версий.
+# Обновить закреплённую версию Kyverno/chart и снять это исключение, когда выйдет релиз с
+# официальной поддержкой Kubernetes 1.36.
 helm repo add kyverno https://kyverno.github.io/kyverno/
 helm repo update
 helm upgrade --install kyverno kyverno/kyverno \
@@ -162,6 +180,39 @@ cat > /home/ubuntu/cks-111/README.txt <<'EOF'
 Исправляйте только Dockerfile и deployment.yaml. Отчёты храните в /var/work/tests/artifacts.
 Базовый образ начинается с nginx:1.27.3-alpine, но итоговые base и hardened image должны быть pinned registry manifest digest.
 EOF
+
+# Checker-owned before-fix baseline, captured from the ORIGINAL starter files before the
+# student can touch them. tests.bats compares student-submitted evidence against this
+# bootstrap-origin baseline instead of trusting hand-written text/JSON that merely matches
+# a schema/regex - this is analogous to Lab 109's checker-owned baseline pattern.
+CHECKER=/var/lib/cks-lab111-checker
+install -d -o root -g root -m 0700 "$CHECKER"
+hadolint /home/ubuntu/cks-111/Dockerfile > "$CHECKER/hadolint-before.txt" 2>&1 || true
+kubesec scan /home/ubuntu/cks-111/deployment.yaml > "$CHECKER/kubesec-before.json" 2>&1 || true
+kube-linter lint /home/ubuntu/cks-111/deployment.yaml --format json > "$CHECKER/kube-linter-before.json" 2>&1 || true
+
+# The "|| true" above only tolerates the EXPECTED non-zero exit from findings being
+# present - it must not also silently accept a genuinely broken/empty/malformed baseline.
+# Validate positive postconditions before handing the lab to the student: if the trusted
+# reference baseline itself is invalid, this is an infrastructure failure and must abort
+# bootstrap rather than turn into an unexplainable student FAIL in test 2 later.
+if ! grep -Eq 'DL[0-9]+' "$CHECKER/hadolint-before.txt"; then
+  echo "FATAL: bootstrap hadolint baseline does not contain a DL#### finding" >&2
+  exit 1
+fi
+if ! jq -e 'type == "array" and length > 0 and .[0].scoring' "$CHECKER/kubesec-before.json" >/dev/null 2>&1; then
+  echo "FATAL: bootstrap kubesec baseline is not a valid non-empty scored JSON array" >&2
+  exit 1
+fi
+if ! jq -e 'type == "object" and (.Summary | type == "object") and (.Reports | type == "array") and (.Reports | length > 0)' \
+    "$CHECKER/kube-linter-before.json" >/dev/null 2>&1; then
+  echo "FATAL: bootstrap kube-linter baseline is not a valid KubeLinter JSON object with findings" >&2
+  exit 1
+fi
+
+chown -R root:root "$CHECKER"
+chmod 0400 "$CHECKER"/*
+
 chown -R ubuntu:ubuntu /home/ubuntu/cks-111 /var/work/tests/artifacts
 
 for binary in trivy kubesec kube-linter hadolint syft bom cosign; do

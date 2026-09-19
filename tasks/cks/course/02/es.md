@@ -40,7 +40,7 @@ flowchart TB
 | Container | image, container runtime, namespaces, procesos y sistema de archivos | image vulnerable, Pod `privileged`, container escape | image mínima, `SecurityContext`, seccomp, AppArmor, `RuntimeClass` |
 | Code | código fuente, dependencias, configuración y secretos | RCE en la aplicación, filtración de Secret, dependencia maliciosa | review, dependency scan, SBOM, no guardar secretos en el código, configuración segura |
 
-4C es útil como orden de comprobación. Si un pod tiene derecho a leer todos los `Secrets`, primero se corrige la capa Cluster: RBAC. Si un proceso dentro del pod puede instalar una utilidad y descargar un payload, hacen falta restricciones de la capa Container y control de egress. Si el endpoint de la aplicación acepta comandos arbitrarios, ningún manifiesto de Kubernetes sustituye la corrección de la capa Code.
+4C es útil como orden de comprobación. Si un pod tiene permiso para leer todos los `Secrets`, primero se corrige la capa Cluster: RBAC. Si un proceso dentro del pod puede instalar una utilidad y descargar un payload, hacen falta restricciones de la capa Container y control de egress. Si el endpoint de la aplicación acepta comandos arbitrarios, ningún manifiesto de Kubernetes sustituye la corrección de la capa Code.
 
 > 🎯 El orden Cloud → Cluster → Container → Code y los comandos básicos de cada paso.
 
@@ -168,7 +168,7 @@ kubectl get clusterrolebinding -o json \
   | jq -r --argjson names "$(echo "$dangerous" | jq -R . | jq -s .)" '
       .items[]
       | select(.roleRef.name as $r | $names | index($r))
-      | "\(.metadata.name) -> роль \(.roleRef.name) (cluster-wide), subjects: \([.subjects[]? | "\(.kind):\(.name)"] | join(", "))"
+      | "\(.metadata.name) -> rol \(.roleRef.name) (cluster-wide), subjects: \([.subjects[]? | "\(.kind):\(.name)"] | join(", "))"
     '
 
 # Paso B': el mismo rol puede vincularse también mediante RoleBinding; entonces los permisos
@@ -178,7 +178,7 @@ kubectl get rolebinding -A -o json \
   | jq -r --argjson names "$(echo "$dangerous" | jq -R . | jq -s .)" '
       .items[]
       | select(.roleRef.kind == "ClusterRole" and (.roleRef.name as $r | $names | index($r)))
-      | "\(.metadata.name) (namespace \(.metadata.namespace)) -> роль \(.roleRef.name) (только в этом namespace), subjects: \([.subjects[]? | "\(.kind):\(.name)"] | join(", "))"
+      | "\(.metadata.name) (namespace \(.metadata.namespace)) -> rol \(.roleRef.name) (solo en este namespace), subjects: \([.subjects[]? | "\(.kind):\(.name)"] | join(", "))"
     '
 ```
 
@@ -193,7 +193,7 @@ kubectl get clusterroles -o json | jq -r '
   | .rules[]?
   | select(((.verbs // []) | index("*"))
       and (((.apiGroups // []) | index("*") | not) or ((.resources // []) | index("*") | not)))
-  | "\($name): verbs=* на apiGroups=\(.apiGroups // []) resources=\(.resources // [])"
+  | "\($name): verbs=* en apiGroups=\(.apiGroups // []) resources=\(.resources // [])"
 '
 ```
 
@@ -494,7 +494,7 @@ kubectl get pods -A -o json | jq -r '
   | .env[]?
   | select(.value != null)
   | select(.name | test("PASSWORD|SECRET|TOKEN|KEY|CREDENTIAL"; "i"))
-  | "\($ns)/\($pod): env \(.name) задан литеральным значением"
+  | "\($ns)/\($pod): env \(.name) está definido con un valor literal"
 '
 ```
 
@@ -610,7 +610,7 @@ Considere por separado las siguientes zonas.
 - **Control plane.** `kube-apiserver` recibe solicitudes de administración. Configuraciones débiles de authentication/authorization, `--anonymous-auth=true` con una identity `system:anonymous` autorizada o endpoint inseguros accesibles, reglas admission inseguras o acceso a la API desde Internet lo convierten en la principal entrada al clúster. La extensibilidad del control plane también forma parte de la superficie: admission webhooks, API agregada, CRD/operators y sus ServiceAccount deben comprobarse como código, endpoint e identidad RBAC. `etcd` contiene el estado del clúster y datos Secret; por tanto, su puerto cliente y certificados no deben hacerse accesibles a workload.
 - **kubelet y nodo.** Kubelet inicia containers y tiene credentials del nodo. El acceso a `10250`, al socket container runtime, SSH o acceso de escritura a static Pod manifests equivale a menudo al control del nodo. El nodo es parte de la base de confianza, no solo un lugar donde se ejecutan Pod.
 - **Red Pod.** En una red plana, un Pod comprometido puede escanear servicios, acceder a DNS, API, metadata u otros workload. La protección son default-deny, reglas de ingress/egress específicas, segmentación de namespace y cifrado donde sea necesario.
-- **Images y supply chain.** El tag `latest`, un registry desconocido, una dependencia con CVE o un build artifact sustituido crean una amenaza antes de iniciar el Pod. Se necesitan digest, escaneo, SBOM, firma y policy de admisión.
+- **Images y supply chain.** El tag `latest`, un registry desconocido, una dependencia con CVE o un build artifact manipulado o reemplazado de forma inesperada crean una amenaza antes de iniciar el Pod. Se necesitan digest, escaneo, SBOM, firma y policy de admisión.
 - **Runtime.** `privileged`, `hostPath`, `hostPID`, capabilities superfluas y root filesystem writable ayudan al atacante a pasar de RCE en la aplicación al nodo o a persistir en el container.
 - **Datos e identidades.** `Secrets`, ServiceAccount tokens, kubeconfig, certificados y cloud credentials suelen ser más valiosos que el propio container. Base64 en `Secret` no es cifrado, y leer `Secrets` mediante RBAC requiere el mismo control que acceder a una production database.
 
@@ -795,7 +795,7 @@ El modelo no sustituye el programa CKS. Muestra por qué los capítulos se agrup
 | Capa o fase | Dominio CKS | Capítulos del curso | Resultado principal |
 |---|---|---|---|
 | Cloud, red Pod, initial access y lateral movement | Cluster Setup - 15% | [04](../04/es.md), [05](../05/es.md), [06](../06/es.md), [07](../07/es.md), [08](../08/es.md), [09](../09/es.md) | segmentación de red, protección de metadata/endpoints, hardening CIS y TLS |
-| Cluster API, persistence y privilege escalation | Cluster Hardening - 15% | [10](../10/es.md), [11](../11/es.md), [12](../12/es.md), [13](../13/es.md) | permisos mínimos, ServiceAccount seguros, API cerrada, actualizaciones oportunas |
+| Cluster API, persistence y privilege escalation | Cluster Hardening - 15% | [10](../10/es.md), [11](../11/es.md), [12](../12/es.md), [13](../13/es.md) | permisos mínimos, ServiceAccount seguros, acceso a la API restringido, actualizaciones oportunas |
 | Node y container runtime, privilege escalation | System Hardening - 10% | [14](../14/es.md), [15](../15/es.md), [16](../16/es.md), [17](../17/es.md) | reducción de la superficie del nodo, MAC y syscall filtering |
 | Container, datos y lateral movement | Minimize Microservice Vulnerabilities - 20% | [18](../18/es.md), [19](../19/es.md), [20](../20/es.md), [21](../21/es.md), [22](../22/es.md), [23](../23/es.md) | workloads hardened, policy admission, protección de Secret, sandbox y mTLS |
 | Code y build pipeline, initial access | Supply Chain Security - 20% | [24](../24/es.md), [25](../25/es.md), [26](../26/es.md), [27](../27/es.md), [28](../28/es.md) | artifact confiable y verificable antes de ejecutarse |

@@ -193,7 +193,7 @@ kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
 cilium status --wait || true
 ```
 
-Статус шифрования читаем у агента через `cilium-dbg`: это in-pod debug CLI, поставляемый с Cilium agent. Локальный `cilium` CLI остаётся инструментом install/cluster-level и не заменяет его внутри Pod. `--all-encryption` даёт evidence WireGuard peer и allowed-IP/remote-node, поэтому проверяем не только отсутствие plaintext в capture.
+Статус шифрования читаем у агента через `cilium-dbg`: это in-pod debug CLI, поставляемый с Cilium agent. Локальный `cilium` CLI остаётся инструментом install/cluster-level и не заменяет его внутри Pod. У `cilium-dbg status` НЕТ флага `--all-encryption` (в 1.20.x доступны только `--all-addresses`, `--all-clusters`, `--all-controllers`, `--all-health`, `--all-nodes`, `--all-redirects`, `--verbose`) - подробный peer/allowed-IP/remote-node evidence получаем через `cilium-dbg debuginfo --output json`, а не через несуществующий флаг.
 
 ```bash
 agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}')
@@ -201,22 +201,60 @@ agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0
   printf '$ cilium-dbg encrypt status
 '
   kubectl -n kube-system exec "$agent" -- cilium-dbg encrypt status
-  printf '$ cilium-dbg status --all-encryption
+  printf '$ cilium-dbg debuginfo --output json
 '
-  kubectl -n kube-system exec "$agent" -- cilium-dbg status --all-encryption
+  kubectl -n kube-system exec "$agent" -- cilium-dbg debuginfo --output json
 } | tee /var/work/tests/artifacts/4/cilium-encrypt-status.txt
 grep -Eqi 'peer|allowed[ -]?ip|remote node' /var/work/tests/artifacts/4/cilium-encrypt-status.txt
 ```
 
 ## 5. Захват межнодового WireGuard пакета
 
-WireGuard по умолчанию использует UDP/51871. Capture выполняется на node interface;
-`-A` специально делает отсутствие marker проверяемым. Внутри зашифрованного пакета
-marker существует, поэтому ответ `wget` всё равно его содержит.
+WireGuard по умолчанию использует UDP/51871. Фильтр ТОЛЬКО по `udp port 51871` заранее
+исключает plaintext TCP из результата и поэтому НЕ доказывает его отсутствие - вместо
+этого фиксируем один и тот же capture scope (`host <remote-node-ip>`, без port-фильтра) и
+сравниваем ДО/ПОСЛЕ включения WireGuard по одному и тому же межнодовому flow.
 
 ```bash
+gvisor_node=$(kubectl get pod gvisor-sandbox -n sandbox-110 -o jsonpath='{.spec.nodeName}')
+remote_ip=$(kubectl get node "$gvisor_node" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
+echo "remote_ip=$remote_ip"
+```
+
+Сначала baseline: временно отключаем WireGuard, повторяем ТОТ ЖЕ request с ТЕМ ЖЕ
+capture scope и подтверждаем, что plaintext marker виден.
+
+```bash
+kubectl -n kube-system patch configmap cilium-config --type merge \
+  -p '{"data":{"enable-wireguard":"false"}}'
+kubectl -n kube-system rollout restart daemonset/cilium
+kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
+
+baseline=/tmp/wireguard-baseline.txt
+ssh k8s110_controlPlane_1 "sudo timeout 20 tcpdump -nni any 'host $remote_ip' -A" >"$baseline" 2>&1 &
+capture_pid=$!
+sleep 3
+kubectl exec -n sandbox-110 runc-baseline -- \
+  wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080
+wait "$capture_pid" || true
+
+if ! grep -Fq 'CKS110-WIREGUARD-MARKER' "$baseline"; then
+  echo 'baseline capture should show the plaintext marker while WireGuard is disabled' >&2
+  exit 1
+fi
+```
+
+Восстанавливаем WireGuard и повторяем ТОТ ЖЕ request с ТЕМ ЖЕ capture scope: теперь
+должен быть виден WireGuard UDP/51871 и не должно быть marker.
+
+```bash
+kubectl -n kube-system patch configmap cilium-config --type merge \
+  -p '{"data":{"enable-wireguard":"true"}}'
+kubectl -n kube-system rollout restart daemonset/cilium
+kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
+
 capture=/var/work/tests/artifacts/5/wireguard-tcpdump.txt
-ssh k8s110_controlPlane_1 'sudo timeout 20 tcpdump -nni any udp port 51871 -A' >"$capture" 2>&1 &
+ssh k8s110_controlPlane_1 "sudo timeout 20 tcpdump -nni any 'host $remote_ip' -A" >"$capture" 2>&1 &
 capture_pid=$!
 sleep 3
 kubectl exec -n sandbox-110 runc-baseline -- \
@@ -231,8 +269,9 @@ fi
 ```
 
 Не делайте вывод по `tcpdump` в Pod netns: там трафик до Cilium encryption point ещё
-может быть plaintext. Доказательство здесь - отсутствие HTTP marker на node capture при
-наличии UDP WireGuard пакетов.
+может быть plaintext. Доказательство здесь - переход от видимого marker (WireGuard
+отключён) к его отсутствию (WireGuard включён) при ОДНОМ И ТОМ ЖЕ capture scope, а не
+предвзятый фильтр, который заранее не мог бы увидеть plaintext.
 
 ## 6. Istio и PeerAuthentication STRICT
 
@@ -319,7 +358,34 @@ spec:
   - name: app
     image: curlimages/curl:8.11.0
     command: ["sh", "-c", "sleep 3600"]
----
+```
+
+```bash
+kubectl apply -f market-workloads.yaml
+kubectl rollout status -n market deployment/market-api --timeout=180s
+kubectl rollout status -n market deployment/market-client --timeout=180s
+kubectl wait -n default --for=condition=Ready pod/mesh-outside --timeout=180s
+kubectl get pods -n market
+
+# Baseline (STRICT еще не применена): plaintext client вне mesh должен получить 200 -
+# это доказывает, что связность в принципе работает и любой последующий отказ будет
+# вызван именно STRICT mTLS, а не независимой DNS/network-проблемой.
+set +e
+kubectl exec -n default mesh-outside -- \
+  curl -sv --max-time 10 http://market-api.market.svc.cluster.local \
+  > /var/work/tests/artifacts/6/market-outside-baseline.txt 2>&1
+baseline_status=$?
+set -e
+printf 'exit_code=%d\n' "$baseline_status" >> /var/work/tests/artifacts/6/market-outside-baseline.txt
+cat /var/work/tests/artifacts/6/market-outside-baseline.txt
+if [[ "$baseline_status" -ne 0 ]]; then
+  echo "baseline plaintext request should succeed BEFORE STRICT is applied" >&2
+  exit 1
+fi
+```
+
+```yaml
+# market-strict.yaml
 apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
@@ -331,15 +397,12 @@ spec:
 ```
 
 ```bash
-kubectl apply -f market-workloads.yaml
-kubectl rollout status -n market deployment/market-api --timeout=180s
-kubectl rollout status -n market deployment/market-client --timeout=180s
-kubectl wait -n default --for=condition=Ready pod/mesh-outside --timeout=180s
-kubectl get pods -n market
+kubectl apply -f market-strict.yaml
 kubectl get peerauthentication -n market market-strict -o yaml
 
 kubectl exec -n market deploy/market-client -- \
   curl -si http://market-api | tee /var/work/tests/artifacts/6/market-inside.txt
+echo "exit_code=$?" >> /var/work/tests/artifacts/6/market-inside.txt
 # HTTP/1.1 200 OK
 
 set +e
@@ -348,6 +411,7 @@ kubectl exec -n default mesh-outside -- \
   > /var/work/tests/artifacts/6/market-outside.txt 2>&1
 outside_status=$?
 set -e
+printf 'exit_code=%d\n' "$outside_status" >> /var/work/tests/artifacts/6/market-outside.txt
 cat /var/work/tests/artifacts/6/market-outside.txt
 if [[ "$outside_status" -eq 0 ]] || grep -Eq 'HTTP/[0-9.]+ 2[0-9][0-9]' \
   /var/work/tests/artifacts/6/market-outside.txt; then

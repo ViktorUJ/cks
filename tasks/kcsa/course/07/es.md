@@ -138,11 +138,11 @@ Al revisar una configuración, primero se buscan valores explícitamente insegur
 
 El equipo de plataforma normalmente formaliza la protección del control plane como un conjunto repetible de comprobaciones, no como una configuración puntual:
 
-1. Restringe la ruta a API Server a redes administrativas y usa solo TLS con una CA de confianza.
-2. Separa las identidades de las personas, CI/CD y componentes del control plane; comprueba RBAC según el principio de least privilege.
-3. Cierra `etcd` a los nodos de trabajo y las redes de aplicaciones, protege los certificados y aplica encryption at rest a los recursos sensibles.
-4. Crea snapshots de `etcd`, los almacena como datos secretos y comprueba periódicamente la restauración en un entorno seguro.
-5. Escanea la configuración respecto a CIS Benchmark, rastrea cambios en static Pod manifests y recopila audit logs.
+1. Restrinja la ruta a API Server a redes administrativas y use solo TLS con una CA de confianza.
+2. Separe las identidades de las personas, CI/CD y componentes del control plane; compruebe RBAC según el principio de least privilege.
+3. Cierre `etcd` a los nodos de trabajo y las redes de aplicaciones, proteja los certificados y aplique encryption at rest a los recursos sensibles.
+4. Cree snapshots de `etcd`, los almacene como datos secretos y compruebe periódicamente la restauración en un entorno seguro.
+5. Escanee la configuración respecto a CIS Benchmark, rastree cambios en static Pod manifests y recopile audit logs.
 
 Esto no significa que un equipo mantenga manualmente todo en cualquier clúster. En Kubernetes gestionado, el proveedor cloud opera parte del control plane, pero la responsabilidad de IAM, acceso a API, secretos, logs, red y comprensión de los límites de responsabilidad sigue siendo del usuario de la plataforma.
 

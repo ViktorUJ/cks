@@ -38,7 +38,7 @@ hadolint "$ROOT/Dockerfile" | tee "$ART/2/hadolint-before.txt"; test "${PIPESTAT
 kubesec scan "$ROOT/deployment.yaml" > "$ART/2/kubesec-before.json" || true
 kube-linter lint "$ROOT/deployment.yaml" --format json > "$ART/2/kube-linter-before.json" || true
 jq '.[0].scoring' "$ART/2/kubesec-before.json"
-jq 'length' "$ART/2/kube-linter-before.json"
+jq '{summary: .Summary, findings: (.Reports | length)}' "$ART/2/kube-linter-before.json"
 ```
 
 ## 3. Исправить Dockerfile
@@ -184,15 +184,26 @@ Syft умеет и SPDX, и CycloneDX; здесь берём CycloneDX (`bom` у
 ```bash
 mkdir -p "$ART/7"
 syft "$IMAGE" -o "cyclonedx-json=$ART/7/syft.cdx.json"
+set -o pipefail
 cosign verify \
   --certificate-oidc-issuer https://accounts.google.com \
   --certificate-identity keyless@distroless.iam.gserviceaccount.com \
-  gcr.io/distroless/static:nonroot \
-  | tee "$ART/7/cosign-verify.txt"
-# Сохранить также reference, который может отсутствовать в компактном JSON-выводе cosign.
-printf '\nreference=gcr.io/distroless/static:nonroot\n' >> "$ART/7/cosign-verify.txt"
+  gcr.io/distroless/static-debian13:nonroot \
+  2>&1 | tee "$ART/7/cosign-verify.txt"
+cosign_rc=${PIPESTATUS[0]}
+set +o pipefail
+[[ "$cosign_rc" -eq 0 ]]
+
+# gcr.io/distroless/static:nonroot (без суффикса -debian13) считается deprecated и больше
+# не обновляется согласно официальному README Distroless - используем текущий
+# поддерживаемый тег gcr.io/distroless/static-debian13:nonroot. Успех cosign verify
+# определяется exit code, а не литеральной строкой "Verified OK" - такой строки нет в
+# реальном выводе cosign (успешный вывод начинается строкой "Verification for <image> --"
+# и списком выполненных проверок). Сохраняем reference отдельно для evidence, не для
+# pass/fail проверки.
+printf '\nreference=gcr.io/distroless/static-debian13:nonroot\n' >> "$ART/7/cosign-verify.txt"
 jq '.bomFormat, (.components | length)' "$ART/7/syft.cdx.json"
-grep -E 'Verified OK|gcr.io/distroless/static:nonroot' "$ART/7/cosign-verify.txt"
+test -s "$ART/7/cosign-verify.txt"
 ```
 
 ## 8. `trivy sbom`: сканирование готового SBOM-файла
@@ -203,15 +214,16 @@ SBOM из задания 6 описывает состав компоненто�
 
 ```bash
 mkdir -p "$ART/8"
-{
-  echo "trivy sbom --format json --output $ART/8/sbom-scan.json $ART/6/bom.spdx.json"
-  trivy sbom --format json --output "$ART/8/sbom-scan.json" "$ART/6/bom.spdx.json"
-} > /tmp/cks-111-trivy-sbom.log 2>&1
-# Записать использованную команду прямо в evidence-файл, чтобы критерий видел trivy sbom.
-jq --arg cmd "trivy sbom --format json --output $ART/8/sbom-scan.json $ART/6/bom.spdx.json" \
-  '. + {ScanCommand: $cmd}' "$ART/8/sbom-scan.json" > "$ART/8/sbom-scan.json.tmp" \
-  && mv "$ART/8/sbom-scan.json.tmp" "$ART/8/sbom-scan.json"
-jq '.ScanCommand, (.Results | length)' "$ART/8/sbom-scan.json"
+printf '%s\n' \
+  "trivy sbom --format json --output $ART/8/sbom-scan.json $ART/6/bom.spdx.json" \
+  > "$ART/8/sbom-scan-command.txt"
+
+trivy sbom \
+  --format json \
+  --output "$ART/8/sbom-scan.json" \
+  "$ART/6/bom.spdx.json"
+
+jq '(.Results | length)' "$ART/8/sbom-scan.json"
 ```
 
 ## 9a. Kyverno и `ImageValidatingPolicy` на trusted signature
@@ -220,19 +232,32 @@ jq '.ScanCommand, (.Results | length)' "$ART/8/sbom-scan.json"
 
 ```bash
 sudo install-kyverno
-kubectl -n kyverno get deployment -l app.kubernetes.io/part-of=kyverno
-kubectl -n kyverno wait --for=condition=Available deployment -l app.kubernetes.io/part-of=kyverno --timeout=180s
+kubectl -n kyverno get deployment kyverno-admission-controller
+kubectl -n kyverno wait --for=condition=Available deployment/kyverno-admission-controller --timeout=180s
 ```
 
-Сгенерируйте учебную пару ключей и подпишите именно `$HARDENED_IMAGE` из задания 3/4, а
-не upstream `nginx`. Не переносите этот `cosign.key` в production CI.
+Сгенерируйте учебную пару ключей ВНЕ `$ROOT` - этот каталог повторно используется как
+Docker build context в задании 9c (`COPY . /usr/share/nginx/html` в Dockerfile копирует
+ВСЁ содержимое build context), поэтому `cosign.key`, оставленный внутри `$ROOT`, попадёт
+внутрь публикуемого image filesystem как утечка private signing key в registry. Подпишите
+именно `$HARDENED_IMAGE` из задания 3/4, а не upstream `nginx`. Не переносите этот
+`cosign.key` в production CI.
 
 ```bash
+export KEYDIR=/home/ubuntu/.cks111-cosign
+install -d -m 0700 "$KEYDIR"
 mkdir -p "$ART/9a" "$ART/9b" "$ART/9c"
-cosign generate-key-pair
-cosign sign --key cosign.key --yes "$HARDENED_IMAGE" | tee "$ART/9a/cosign-sign.txt"
+
+(
+  cd "$KEYDIR"
+  cosign generate-key-pair
+)
+chmod 0600 "$KEYDIR/cosign.key"
+chmod 0644 "$KEYDIR/cosign.pub"
+
+cosign sign --key "$KEYDIR/cosign.key" --yes "$HARDENED_IMAGE" | tee "$ART/9a/cosign-sign.txt"
 # Реально проверяем подпись тем же public key, а не только наличие текста sign-команды.
-cosign verify --key cosign.pub "$HARDENED_IMAGE" | tee "$ART/9a/cosign-verify.txt"
+cosign verify --key "$KEYDIR/cosign.pub" "$HARDENED_IMAGE" | tee "$ART/9a/cosign-verify.txt"
 ```
 
 Создайте `ImageValidatingPolicy`, ссылающуюся на публичный ключ, которым только что
@@ -265,7 +290,7 @@ spec:
     cosign:
       key:
         data: |-
-$(sed 's/^/          /' cosign.pub)
+$(sed 's/^/          /' "$KEYDIR/cosign.pub")
   validations:
   - message: "catalog image must have a valid release signature"
     expression: >-
@@ -339,8 +364,9 @@ export HARDENED_DIGEST="${HARDENED_IMAGE#*@}"
 # Обязательная проверка: unsigned candidate должен быть физически другим artifact,
 # а не тем же digest, что уже подписанный HARDENED_IMAGE.
 [[ "$UNSIGNED_DIGEST" != "$HARDENED_DIGEST" ]] || { echo "UNSIGNED_DIGEST совпал с HARDENED_DIGEST - соберите с другим build-arg/меткой"; exit 1; }
-printf 'hardened_digest=%s\nunsigned_digest=%s\ndistinct=true\n' \
-  "$HARDENED_DIGEST" "$UNSIGNED_DIGEST" | tee "$ART/9c/digest-comparison.txt"
+printf 'hardened_digest=%s\nunsigned_digest=%s\nunsigned_image=%s\ndistinct=true\n' \
+  "$HARDENED_DIGEST" "$UNSIGNED_DIGEST" "$UNSIGNED_IMAGE" \
+  | tee "$ART/9c/digest-comparison.txt"
 ```
 
 `$ROOT/Dockerfile` из задания 3 должен принимать этот build-arg (например,
@@ -349,7 +375,11 @@ printf 'hardened_digest=%s\nunsigned_digest=%s\ndistinct=true\n' \
 одной безопасной меткой, не затрагивая security-свойства, проверенные в заданиях 3-4.
 
 Явно доказываем, что этот digest существует и pullable, прежде чем проверять policy -
-иначе denial ничего не докажет:
+иначе denial ничего не докажет. Это self-check evidence для вас: checker для задания 9c
+не доверяет текстовым файлам как единственному доказательству - он сам резолвит
+`unsigned_image` из `digest-comparison.txt`, сам проверяет отсутствие подписи и сам
+создаёт новый Pod с этим образом, поэтому написать эти файлы вручную без реального
+работающего admission control недостаточно для PASS.
 
 ```bash
 docker buildx imagetools inspect "$UNSIGNED_IMAGE" | tee "$ART/9c/unsigned-exists.txt"
@@ -360,7 +390,7 @@ grep -q "$UNSIGNED_DIGEST" "$ART/9c/unsigned-exists.txt"
 Pod, чтобы denial было предсказуемо специфичным для signature, а не для чего-то ещё:
 
 ```bash
-cosign verify --key cosign.pub "$UNSIGNED_IMAGE" > "$ART/9c/unsigned-not-signed.txt" 2>&1 || true
+cosign verify --key "$KEYDIR/cosign.pub" "$UNSIGNED_IMAGE" > "$ART/9c/unsigned-not-signed.txt" 2>&1 || true
 grep -Eiq 'error|no matching signatures' "$ART/9c/unsigned-not-signed.txt"
 ```
 
@@ -370,7 +400,7 @@ signature, а не на generic admission-ошибку:
 ```bash
 kubectl run catalog-unsigned-probe -n cks-111 --image="$UNSIGNED_IMAGE" --restart=Never \
   2>&1 | tee "$ART/9c/admission-deny.txt" || true
-grep -Ei 'require-signed-catalog-images|signature|attestor|verifyImageSignatures' "$ART/9c/admission-deny.txt"
+grep -F 'catalog image must have a valid release signature' "$ART/9c/admission-deny.txt"
 kubectl get pod catalog-unsigned-probe -n cks-111 2>&1 | grep -q 'not found'
 ```
 

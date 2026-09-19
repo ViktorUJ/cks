@@ -89,8 +89,10 @@ SBOM решает задачу инвентаризации КОМПОНЕНТО
 | `worker` | рабочая станция для анализа, `kubectl`, `check_result` и security tools |
 
 Инфраструктура CKA-style: единственная control-plane-нода разрешена для workload и
-помечена `cks.io/lab=111`. Однако задания выполняются на worker; кластер существует
-для единообразного экзаменационного окружения, а не для деплоя приложения.
+помечена `cks.io/lab=111`. Основные команды и security tools запускаются на worker.
+Kubernetes-кластер используется как target environment для проверки hardened workload и
+admission-time signature policy: задание 4 разворачивает `catalog`, а задания 9b/9c
+выполняют positive/negative admission probes.
 
 На worker заранее доступны ровно эти фиксированные версии:
 
@@ -105,7 +107,11 @@ SBOM решает задачу инвентаризации КОМПОНЕНТО
 | Cosign | `3.1.3` | signing и verification подписи OCI-образа |
 
 Helm и `install-kyverno` также доступны на worker, но Kyverno намеренно **не установлен**:
-его установка - часть задания 9, как в лабе 108.
+его установка - часть задания 9, как в лабе 108. `install-kyverno` закрепляет Kyverno
+`1.19`/chart `3.9.0`; официальная support matrix upstream для этой версии - Kubernetes
+`1.33-1.35`, тогда как этот кластер на `1.36`. Это осознанное lab-specific исключение вне
+протестированного диапазона (аналогично прецеденту в лабе 108), а не гарантированная
+официальная поддержка - при обновлении Kyverno снимите это исключение.
 
 ## Развёртывание
 
@@ -132,7 +138,7 @@ check_result
 | **1** | **Trivy: отчёт об уязвимостях образа** |
 | :---: | :--- |
 | Что делаем | Просканируйте immutable `$IMAGE` с Trivy, включая OS и library vulnerabilities, и сохраните структурированный JSON в `/var/work/tests/artifacts/1/trivy-report.json`. |
-| Критерии приёмки | Файл непустой, JSON разбирается `jq`, содержит `Results` и immutable reference анализируемого образа. |
+| Критерии приёмки | Файл непустой, JSON разбирается `jq`, содержит `Results` и immutable reference анализируемого образа. Checker самостоятельно повторяет `trivy image` для того же образа и требует, чтобы этот свежий сканирование также успешно совпадало по `ArtifactName` - вручную написанный, но синтаксически валидный JSON не проходит. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -143,8 +149,8 @@ check_result
 ---
 | **2** | **Исходные отчёты статического анализа** |
 | :---: | :--- |
-| Что делаем | До исправлений сохраните результаты: Hadolint в `2/hadolint-before.txt`, kubesec JSON в `2/kubesec-before.json`, kube-linter JSON в `2/kube-linter-before.json`. Не скрывайте ошибки через `|| true` в файлах отчётов: ненулевой exit code линтера ожидаем. |
-| Критерии приёмки | Все три артефакта существуют; Hadolint содержит findings, kubesec содержит `scoring`, kube-linter — JSON-массив findings. |
+| Что делаем | ДО исправлений (не трогая ни одного из этих трёх файлов после начала задания 3) сохраните результаты: Hadolint в `2/hadolint-before.txt`, kubesec JSON в `2/kubesec-before.json`, kube-linter JSON в `2/kube-linter-before.json`, запуская их непосредственно против ИСХОДНЫХ стартовых `Dockerfile`/`deployment.yaml`. Не скрывайте ошибки через `|| true` в файлах отчётов: ненулевой exit code линтера ожидаем. |
+| Критерии приёмки | Все три артефакта существуют; Hadolint содержит findings, kubesec содержит `scoring`, kube-linter — валидный JSON-объект KubeLinter с полями `Reports` и `Summary`; до исправлений `Reports` содержит findings. Checker сравнивает содержимое всех трёх артефактов с собственным baseline, снятым при provisioning против исходных стартовых файлов ДО того, как они были выданы студенту - вручную написанный, но синтаксически валидный отчёт не проходит. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -180,7 +186,7 @@ check_result
 | **5** | **Поиск версий пакетов** |
 | :---: | :--- |
 | Что делаем | Используйте Trivy в режиме списка всех пакетов для `$IMAGE`. Сохраните команду, immutable image reference, канонический `nginx@sha256:<manifest-digest>` из `Metadata.RepoDigests[0]` и как минимум три строки `имя=версия` в `/var/work/tests/artifacts/5/version-search.txt`. Не заменяйте поиск ручным списком: в evidence должна быть строка команды с `trivy image --list-all-pkgs`. |
-| Критерии приёмки | Артефакт содержит команду, immutable `nginx:1.27.3-alpine@sha256:...`, `repo_digest=nginx@sha256:...` из Trivy и минимум три пары package/version. |
+| Критерии приёмки | Артефакт содержит команду, immutable `nginx:1.27.3-alpine@sha256:...`, `repo_digest=nginx@sha256:...` из Trivy и минимум три пары package/version. Checker самостоятельно повторяет `trivy image --list-all-pkgs` для того же образа и требует, чтобы `repo_digest=` и минимум три сохранённые пары `name=version` совпадали с этим свежим сканированием - вручную написанный, но синтаксически правдоподобный список не проходит. |
 
 <details>
 <summary>💡 Подсказка к заданию 5</summary>
@@ -191,8 +197,8 @@ check_result
 ---
 | **6** | **SPDX SBOM через bom** |
 | :---: | :--- |
-| Что делаем | Сгенерируйте SPDX JSON SBOM для `nginx:1.27.3-alpine` инструментом `bom` (его нативный формат — SPDX); сохраните в `/var/work/tests/artifacts/6/bom.spdx.json`. В файл `6/bom-command.txt` запишите выполненную команду. |
-| Критерии приёмки | SBOM — валидный JSON, имеет `spdxVersion`, содержит массив `packages`; command evidence использует `bom generate`. |
+| Что делаем | Сгенерируйте SPDX JSON SBOM инструментом `bom` именно для immutable `$IMAGE` (тот же `tag@digest`, что использовался в задании 1, а не bare tag `nginx:1.27.3-alpine`); сохраните в `/var/work/tests/artifacts/6/bom.spdx.json`. В файл `6/bom-command.txt` запишите выполненную команду с точным `--image $IMAGE`. |
+| Критерии приёмки | SBOM — валидный JSON, имеет `spdxVersion`, содержит массив `packages`; один из top-level пакетов, на который ссылается `documentDescribes`, идентифицирует ТОТ ЖЕ manifest digest, что `$IMAGE` из задания 1 (через `versionInfo`/`name`); `bom-command.txt` содержит точный immutable `$IMAGE` и использует `bom generate`. SBOM для другого образа (не связанного с `$IMAGE` из задания 1) не проходит, даже если `bom-command.txt` подделан. |
 
 <details>
 <summary>💡 Подсказка к заданию 6</summary>
@@ -203,8 +209,8 @@ check_result
 ---
 | **7** | **CycloneDX SBOM через Syft и проверка Cosign** |
 | :---: | :--- |
-| Что делаем | Сгенерируйте CycloneDX JSON SBOM Syft для `nginx:1.27.3-alpine` в `7/syft.cdx.json`. Затем проверьте подпись публичного образа `gcr.io/distroless/static:nonroot` через keyless Cosign и сохраните полный успешный вывод в `7/cosign-verify.txt`. Для Distroless используйте issuer `https://accounts.google.com` и identity `keyless@distroless.iam.gserviceaccount.com`. |
-| Критерии приёмки | Syft SBOM имеет `bomFormat: CycloneDX` и `components`; в выводе Cosign есть `Verified OK` и reference `gcr.io/distroless/static:nonroot`. |
+| Что делаем | Сгенерируйте CycloneDX JSON SBOM Syft для того же immutable `$IMAGE` (`nginx:1.27.3-alpine@sha256:<manifest-digest>`) из задания 1 и сохраните его в `7/syft.cdx.json`. Затем проверьте подпись публичного образа `gcr.io/distroless/static-debian13:nonroot` через keyless Cosign и сохраните полный успешный вывод в `7/cosign-verify.txt`. Для Distroless используйте issuer `https://accounts.google.com` и identity `keyless@distroless.iam.gserviceaccount.com`. |
+| Критерии приёмки | Syft SBOM имеет `bomFormat: CycloneDX`, непустой `components`, `metadata.component.type == "container"` и `metadata.component.version`, равный manifest digest того же `$IMAGE` из задания 1 - SBOM для другого образа (bare tag, alpine, busybox и т.п.) не проходит; реальная команда `cosign verify` для `gcr.io/distroless/static-debian13:nonroot` (актуальный поддерживаемый тег - `gcr.io/distroless/static:nonroot` без суффикса `-debian13` считается deprecated согласно официальному README Distroless и больше не обновляется) с указанными issuer/identity завершается с exit code `0`, а полный вывод сохранён в `7/cosign-verify.txt`. |
 
 <details>
 <summary>💡 Подсказка к заданию 7</summary>
@@ -233,7 +239,7 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 <details>
 <summary>💡 Подсказка к заданию 9a</summary>
 
-`cosign generate-key-pair` создаёт `cosign.key`/`cosign.pub` в текущей директории - учебная пара, не привязанная ни к какому OIDC issuer, в отличие от keyless verification из задания 7. `matchImageReferences` в policy должен ограничивать её действие ИМЕННО вашим repository (`$HARDENED_REPO`), а не всем кластером - иначе policy заблокирует ВСЕ Pod без подписи, включая системные компоненты Kubernetes.
+`cosign generate-key-pair` создаёт `cosign.key`/`cosign.pub` в текущей директории - учебная пара, не привязанная ни к какому OIDC issuer, в отличие от keyless verification из задания 7. Private key храните вне `/home/ubuntu/cks-111`, потому что этот каталог повторно используется как Docker build context в задании 9c - `cosign.key`, оставленный внутри него, попадёт прямо в файловую систему публикуемого image через `COPY . /usr/share/nginx/html`. `matchImageReferences` в policy должен ограничивать её действие ИМЕННО вашим repository (`$HARDENED_REPO`), а не всем кластером - иначе policy заблокирует ВСЕ Pod без подписи, включая системные компоненты Kubernetes.
 </details>
 
 ---
@@ -252,7 +258,7 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 | **9c** | **Signature-specific DENY: unsigned digest, реально существующий в том же repository** |
 | :---: | :--- |
 | Что делаем | Соберите и опубликуйте **второй** tag в том же repository, что и `$HARDENED_IMAGE` (например, `${HARDENED_TAG%:*}:unsigned-1.0`), не подписывая его. Этот образ должен быть **физически другим artifact**, а не тем же digest, что уже подписанный `$HARDENED_IMAGE` - если собрать тот же `Dockerfile`/context без изменений, reproducible/cached build может дать идентичный digest, и тогда "unsigned" тег на самом деле укажет на уже подписанный artifact, а `cosign verify` неожиданно пройдёт. Внесите контролируемое отличие через build-arg (например `--build-arg CKS_SIGNATURE_TEST=unsigned-1` с соответствующим `ARG`/`LABEL` в Dockerfile) и явно сохраните доказательство `$UNSIGNED_DIGEST != $HARDENED_DIGEST` в `9c/digest-comparison.txt`. Получите registry manifest digest тем же способом, что в задании 3 (`docker buildx imagetools inspect`), сформируйте `$UNSIGNED_IMAGE` в том же repository. Явно докажите, что этот digest **существует и pullable** (`docker buildx imagetools inspect "$UNSIGNED_IMAGE"` успешен) и **не имеет** валидной подписи вашим ключом (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` завершается ошибкой) - сохраните оба вывода в `9c/unsigned-exists.txt` и `9c/unsigned-not-signed.txt`. Затем создайте Pod `catalog-unsigned-probe` с этим `$UNSIGNED_IMAGE` и сохраните admission denial в `9c/admission-deny.txt`. |
-| Критерии приёмки | `9c/digest-comparison.txt` подтверждает `$UNSIGNED_DIGEST != $HARDENED_DIGEST`; `9c/unsigned-exists.txt` подтверждает, что `$UNSIGNED_IMAGE` находится в том же repository, что `$HARDENED_IMAGE`, и успешно разрешается registry; `9c/unsigned-not-signed.txt` подтверждает отсутствие валидной подписи; Pod `catalog-unsigned-probe` не создан; `9c/admission-deny.txt` содержит denial, специфичный для проверки подписи (упоминает `ImageValidatingPolicy`/`require-signed-catalog-images`/`signature`/`attestor`), а не любую admission-ошибку (`manifest unknown`/registry lookup недостаточны). |
+| Критерии приёмки | `9c/digest-comparison.txt` содержит `hardened_digest=`, `unsigned_digest=` и `unsigned_image=` (полная `tag@digest`-ссылка в том же repository, что `$HARDENED_IMAGE`, с genuinely другим digest). Checker сам выполняет проверку: резолвит `unsigned_image` в registry, подтверждает отсутствие валидной подписи через собственный `cosign verify`, создаёт СВОЙ новый Pod с этим образом и требует уникальный validation message собственной policy: `catalog image must have a valid release signature`. Generic admission/signature error от другой policy не считается PASS, а не любую admission-ошибку (`manifest unknown`/registry lookup недостаточны). Написанные вручную evidence-файлы без реального admission control не дают PASS - checker не доверяет никаким текстовым файлам, кроме `unsigned_image=` как указателя на реальный образ для проверки. |
 
 <details>
 <summary>💡 Подсказка к заданию 9c</summary>

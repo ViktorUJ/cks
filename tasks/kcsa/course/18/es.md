@@ -125,10 +125,10 @@ Un mesh se justifica cuando muchos servicios necesitan una identity común, mTLS
 
 El equipo une estas herramientas en un único proceso, en lugar de instalarlas por separado:
 
-1. Define las señales de seguridad básicas: rechazos de autenticación, aumento de 5xx, egress prohibido, eventos de Falco y cambios de certificados.
-2. Exporta métricas a Prometheus y Grafana, y correlaciona registros, flujos de red de Hubble y eventos de auditoría por tiempo, namespace, `Pod` e identity.
-3. Gestiona los certificados como credential: conoce el propietario de la CA, los plazos, la ruta de rotación y el método para revocar el acceso comprometido.
-4. Para cada ingress y egress, documenta las direcciones confiables, TLS termination y el requisito de comprobación del peer. Para los flujos críticos entre servicios, aplica `NetworkPolicy` y, si se necesita una capa común de identity, service mesh con mTLS.
+1. Defina las señales de seguridad básicas: rechazos de autenticación, aumento de 5xx, egress prohibido, eventos de Falco y cambios de certificados.
+2. Exporte métricas a Prometheus y Grafana, y correlacione registros, flujos de red de Hubble y eventos de auditoría por tiempo, namespace, `Pod` e identity.
+3. Gestione los certificados como credential: conozca el propietario de la CA, los plazos, la ruta de rotación y el método para revocar el acceso comprometido.
+4. Para cada ingress y egress, documente las direcciones confiables, TLS termination y el requisito de comprobación del peer. Para los flujos críticos entre servicios, aplique `NetworkPolicy` y, si se necesita una capa común de identity, service mesh con mTLS.
 
 Por ejemplo, una alerta informa que el servicio de pagos empezó a conectarse a una dirección externa desconocida. Una métrica muestra el aumento del egress, Hubble indica el `Pod` de origen, Falco ayuda a comprobar el comportamiento del proceso y los registros de la aplicación y el audit log completan el panorama. Tras la contención, el equipo ajusta la egress policy, no solo bloquea una dirección IP.
 

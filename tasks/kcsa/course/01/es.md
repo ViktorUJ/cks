@@ -18,7 +18,7 @@ KCSA es un examen remoto supervisado con preguntas multiple choice. **Según las
 
 **Instantánea de las reglas del 2026-09-01.** La matriz oficial de idiomas de Linux Foundation indica que KCSA está disponible solo en inglés. La política de LF para los exámenes multiple choice prohíbe herramientas, materiales de referencia y sitios web externos. Por ello, prepárate de forma práctica: resuelve las formulaciones de las preguntas y todas las opciones de respuesta en inglés, y practica recordar los términos y descartar distractors sin documentación, búsqueda ni notas.
 
-El número de preguntas, la duración, la puntuación de aprobación y otras condiciones organizativas pueden cambiar después de la fecha de la instantánea. Antes de registrarte, vuelve a comprobar la página de KCSA de Linux Foundation, Multiple Choice Exams: Important Instructions/FAQ y Candidate Handbook, en lugar de un resumen antiguo o una prueba de entrenamiento.
+El número de preguntas, la duración, la puntuación de aprobación y otras condiciones organizativas pueden cambiar después de la fecha de la instantánea. Antes de registrarse, vuelva a comprobar la página de KCSA de Linux Foundation, Multiple Choice Exams: Important Instructions/FAQ y Candidate Handbook, en lugar de un resumen antiguo o una prueba de entrenamiento.
 
 | Característica | KCSA | CKS |
 |---|---|---|
@@ -91,7 +91,7 @@ La práctica del curso consiste en preguntas multiple choice al final de los cap
 2. Responder las preguntas sin pistas y analizar no solo la opción errónea, sino también la razón de su error.
 3. Repasar los dominios proporcionalmente a sus pesos: un 22% para component security y fundamentals, no solo los temas más conocidos.
 4. Resolver un mock con temporizador, después agrupar los errores por dominios y volver a los capítulos correspondientes.
-5. Antes de registrarte, comprobar con Linux Foundation el formato, las reglas de proctoring y la puntuación de aprobación.
+5. Antes de registrarse, comprobar con Linux Foundation el formato, las reglas de proctoring y la puntuación de aprobación.
 
 ## 01.6 Versiones y deriva del programa
 
@@ -99,7 +99,7 @@ Los ejemplos de este curso están orientados a Kubernetes `v1.36`. KCSA es un ex
 
 El programa también puede cambiar en dos vías independientes. Para el examen real, la estructura y los pesos se toman de la página LIVE de Linux Foundation: actualmente son seis dominios con pesos `14/22/22/16/16/10`. En el repositorio `cncf/curriculum` hay otra edición de seis dominios y pesos diferentes. El curso mantiene la estructura actual de LF, pero incluye los temas coincidentes de ambas ediciones para seguir siendo útil ante una posible transición.
 
-La fecha de comprobación, los pesos actuales, la descripción de la divergencia LF/CNCF y la regla de actualización están fijados en la [política de versiones de KCSA](../../VERSION_POLICY.md). Antes del examen, vuelve a comprobar la fuente primaria: el curso no puede sustituir las condiciones vigentes de Linux Foundation.
+La fecha de comprobación, los pesos actuales, la descripción de la divergencia LF/CNCF y la regla de actualización están fijados en la [política de versiones de KCSA](../../VERSION_POLICY.md). Antes del examen, vuelva a comprobar la fuente primaria: el curso no puede sustituir las condiciones vigentes de Linux Foundation.
 
 ## 01.7 Cómo se aplica esto en la práctica
 

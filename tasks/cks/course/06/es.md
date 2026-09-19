@@ -442,3 +442,439 @@ red hacia otro nodo o Pod. Esto añade:
 > solo como un ejemplo histórico, no como práctica actual.
 
 > 🎯 Permite UDP/TCP 53 hacia CoreDNS confiable y limita el acceso externo con `toFQDNs`; Cilium usa respuestas DNS observadas y una caché FQDN.
+
+## 06.4. Egress basado en DNS y `toFQDNs`
+
+Las IP de un servicio SaaS público cambian, una CDN entrega direcciones diferentes y la aplicación
+suele conocer no una IP, sino un nombre. `toFQDNs` permite el egress hacia nombres al asociarlos
+con las IP que el DNS-proxy de Cilium observó en respuestas DNS permitidas; no es una resolución
+DNS estática al aplicar YAML. El proxy llena la caché FQDN teniendo en cuenta el TTL y luego permite
+la conexión a una IP de esta caché. Por tanto, dirija la resolución DNS solo a DNS de clúster
+confiable (por ejemplo, CoreDNS), seleccionado mediante un selector exacto: Cilium no consulta DNS
+por sí mismo y no debe confiar en un nameserver arbitrario.
+
+La policy siguiente permite consultas DNS de frontend a CoreDNS y HTTPS solo a
+`example.com`. `rules.dns` permite la consulta DNS y `toFQDNs`, la conexión posterior
+a la IP devuelta para el nombre permitido.
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: frontend-external-api-only
+  namespace: cks-102
+spec:
+  endpointSelector:
+    matchLabels:
+      app: frontend
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s:io.kubernetes.pod.namespace: kube-system
+        k8s:k8s-app: kube-dns
+    toPorts:
+    - ports:
+      - port: "53"
+        protocol: UDP
+      - port: "53"
+        protocol: TCP
+      rules:
+        dns:
+        - matchPattern: "*"
+  - toFQDNs:
+    - matchName: "example.com"
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+```
+
+`matchName` selecciona exactamente un nombre. Para un conjunto controlado de subdominios, use
+`matchPattern`, por ejemplo, `"*.example.com"`: este wildcard no debe considerarse una autorización
+para el nombre apex `example.com`. Si necesita tanto `example.com` como sus subdominios, expréselos
+en reglas separadas. No use `"*"` sin una necesidad explícita: en `toFQDNs`, ese pattern elimina
+la restricción por nombre DNS y permite destinos obtenidos de la caché DNS para todos los nombres
+coincidentes; las demás condiciones de la misma regla, como `toPorts`, continúan aplicándose.
+Antes de aplicarla, compruebe los labels reales de CoreDNS en su clúster: en algunas instalaciones
+se usa una etiqueta distinta en vez de `k8s-app: kube-dns`.
+
+```bash
+kubectl -n kube-system get pod --show-labels | grep -E 'coredns|dns'
+```
+
+El siguiente ejemplo es una comprobación manual ilustrativa, no un acceptance test determinista.
+IANA indica explícitamente que el servicio HTTP de los dominios de documentación (`example.com`,
+`example.org`, etc.) se proporciona best-effort y no está destinado a ser un endpoint de testing
+para software: https://www.iana.org/news/2024/example-domain-http-methods.
+Si `example.com`/`www.google.com` no están disponibles en su entorno (restricciones de red,
+un fallo temporal o bloqueo en una red concreta), esto no significa que la policy sea errónea:
+sustitúyalos por un FQDN para el que haya confirmado independientemente, antes de aplicar la policy,
+la resolución DNS y un HTTPS funcional.
+
+```bash
+kubectl -n cks-102 exec deploy/frontend -- \
+  curl -I --max-time 5 https://example.com
+kubectl -n cks-102 exec deploy/frontend -- \
+  curl -I --max-time 5 https://www.google.com
+```
+
+Antes de aplicar la policy, confirme que ambas solicitudes anteriores pasan sin restricciones.
+Solo después aplique `toFQDNs` y compare: `example.com:443` debe pasar, y
+`www.google.com:443` debe ser bloqueado específicamente por la policy, no por una indisponibilidad
+accidental del servicio externo.
+
+`toFQDNs` no es un DLP completo ni una comprobación del HTTP `Host`: es control de acceso de red
+basado en la resolución DNS observada. DoH/DoT ocultan la consulta DNS del DNS-proxy y tampoco
+llenan la caché FQDN. Una conexión directa a una IP tampoco crea una asociación FQDN; solo funciona
+si esa IP ya está en la caché tras una respuesta DNS permitida o si la permite una regla L3/L4 más
+amplia. No permita servidores DNS no autorizados, DoH/DoT ni IP directas si esto es relevante para
+el modelo de amenazas: limite el egress a DNS confiable, habilite la DNS visibility necesaria y
+combine las reglas con un proxy/firewall en el perímetro de red.
+
+> 🔬 `world`, `cluster`, `host` y CCNP para límites en toda la plataforma; pruebe un scope estrecho y tenga en cuenta el host firewall y el tráfico del sistema.
+
+## 06.5. Entities y policy para todo el clúster
+
+Entities proporcionan identificadores legibles para grupos de direcciones para los que los labels de
+Kubernetes no son adecuados. Los valores más útiles son:
+
+| Entity | Qué incluye | Caso típico |
+|---|---|---|
+| `world` | direcciones fuera del clúster | permitir salida a una API externa o entrada desde fuera |
+| `cluster` | endpoints dentro del clúster | separar el tráfico dentro del clúster de Internet |
+| `host` | endpoint host local del nodo | controlar explícitamente el acceso al nodo |
+| `remote-node` | otros nodos del clúster | permitir la interacción necesaria entre nodos |
+| `kube-apiserver` | Kubernetes API server | restringir el acceso de workloads a la API |
+
+Por ejemplo, un Service que deba aceptar HTTPS solo desde Internet se puede seleccionar por
+label y restringir su ingress a la entity `world`:
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: public-gateway-from-world
+  namespace: cks-102
+spec:
+  endpointSelector:
+    matchLabels:
+      app: public-gateway
+  ingress:
+  - fromEntities:
+    - world
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+```
+
+Para la protección de la plataforma se usa CCNP. El ejemplo siguiente niega el egress hacia la IP
+de metadata a todos los endpoints seleccionados por la policy, pero conserva el resto del egress:
+una policy `egress` aplicable activa por sí misma egress default-deny, por lo que aquí es necesario
+un allow explícito `toEntities: [all]`. `egressDeny` tiene prioridad sobre cualquier allow,
+incluido este allow-all y las reglas de otros CNP/CCNP, por lo que la IP de metadata no se podrá
+abrir por accidente. Primero evalúe si los workloads del sistema necesitan llamadas de metadata y,
+si es necesario, exclúyalos mediante un selector o namespace separado.
+
+```yaml
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: deny-cloud-metadata
+spec:
+  endpointSelector: {}
+  egress:
+  - toEntities:
+    - all
+  egressDeny:
+  - toCIDR:
+    - 169.254.169.254/32
+```
+
+No interprete `host` como un objeto inofensivo. `toEntities: host` controla el acceso de red
+al nodo local y a host-networked workloads, y por tanto puede abrir una ruta hacia kubelet u otros
+listeners TCP/UDP en el host. El runtime CRI socket es un mecanismo separado: por ejemplo,
+containerd suele estar disponible a través del Unix domain socket
+`/var/run/containerd/containerd.sock`, y su exposición depende de los mounts de filesystem/
+`hostPath` y de los privilegios del Pod, no de `toEntities: host` por sí solo. Restringir el tráfico
+del host requiere entender el host firewall de Cilium, el modo `hostFirewall.enabled` y el tráfico
+del control plane; compruébelo en un clúster de prueba para no perder acceso a los nodos o al API
+server. Restrinja por separado el acceso al runtime socket mediante controles de mount/privilege.
+
+## 06.6. Observabilidad y verificación con Hubble
+
+### Qué es Hubble y qué problema resuelve
+
+Una `NetworkPolicy` o `CiliumNetworkPolicy` ordinaria responde a la pregunta «qué está permitido».
+No responde a «qué ocurrió realmente»: por qué no pasó una solicitud concreta, con qué regla exacta
+se relaciona un DROP, si el cliente ve un TCP-connect o si el rechazo ocurrió ya en L7. Sin una
+herramienta así, la investigación se reduce a releer YAML y hacer conjeturas.
+
+**Hubble** es un componente de observabilidad de Cilium que lee los mismos eventos eBPF que ya
+recopila el datapath y los convierte en un flujo legible de flow-events: identity de source/destination,
+contexto L4/L7, verdict (`FORWARDED`/`DROPPED`) y motivo del rechazo. No sustituye el Kubernetes
+audit log ni lee por usted el contenido de la solicitud: muestra qué decidió hacer Cilium con una
+conexión concreta y por qué.
+
+> 🔬 La arquitectura de Hubble Server/Relay/UI, el CLI y los componentes dependen de la versión y del método de instalación de Cilium.
+
+Desde el punto de vista arquitectónico, Hubble consta de cuatro partes:
+
+- **Hubble Server** - integrado en `cilium-agent` y se ejecuta en cada nodo; entrega flow
+  events mediante gRPC.
+- **Hubble Relay** (`hubble-relay`) - componente separado que se conecta al Server de todos
+  los nodos y ofrece una vista unificada del clúster en vez de nodo por nodo.
+- **Hubble CLI** (`hubble`) - cliente de línea de comandos; se conecta a Relay para una
+  vista de todo el clúster o al Server local de un nodo.
+- **Hubble UI** (`hubble-ui`) - interfaz gráfica opcional sobre Relay con un mapa de las
+  relaciones de servicios.
+
+**Cómo se habilita.** En distribuciones gestionadas e instalaciones estándar de Cilium, Hubble
+suele habilitarse con una flag de Helm durante la instalación o actualización, por ejemplo
+`--set hubble.relay.enabled=true --set hubble.ui.enabled=true`; la flag exacta depende de la
+versión del chart. Para CKS y este capítulo basta con saber una cosa: si Hubble ya está habilitado
+en el clúster, `cilium status` muestra su estado, y el CLI `hubble` puede conectarse mediante
+port-forward a Relay, como se muestra abajo. No es necesario habilitar Hubble desde cero para la
+lab: es tarea del administrador del clúster, no parte del CNP que se aplica.
+
+> 🎯 Genere tráfico permitido y denegado esperado y, a continuación, observe Hubble flows con un filtro de namespace, verdict o protocol.
+
+Antes de la prueba, asegúrese de que los agentes Cilium estén sanos. Los comandos suelen ejecutarse
+en una máquina de trabajo que tiene disponible el CLI `cilium`; el método exacto para habilitar
+Hubble depende de la instalación de Cilium.
+
+`hubble` es un binario separado, no parte del CLI `cilium`. Debe instalarse una vez en la máquina
+de trabajo descargando el release correspondiente de GitHub; los pasos para cada plataforma están
+en la instrucción oficial [Instalar el cliente Hubble](https://docs.cilium.io/en/stable/observability/hubble/setup/#install-the-hubble-client).
+Tras la instalación, compruebe el binario con el comando `hubble help`.
+
+```bash
+cilium status --wait
+cilium connectivity test
+
+# Si Hubble relay está habilitado, el CLI creará una conexión local a él.
+cilium hubble port-forward &
+hubble status
+
+# Tráfico y rechazos solo del namespace de formación.
+hubble observe --namespace cks-102 --verdict DROPPED
+hubble observe --namespace cks-102 --protocol http
+```
+
+La secuencia de comprobación de L3/L4, L7 y FQDN en la lab 102 debe ser reproducible:
+
+1. Asegúrese de que `frontend` y `backend` estén Running y que sus labels coincidan con los selectores.
+2. Aplique un CNP L3/L4. Una solicitud desde frontend a backend:80 debe pasar; desde un Pod sin
+   `app: frontend`, debe obtener un timeout o DROP.
+3. Sustituya o complemente la regla con un CNP L7. `GET /` debe devolver `200` y `POST /` debe
+   recibir un rechazo del proxy (normalmente `403`).
+4. Aplique la policy DNS/FQDN. Compruebe la resolución y HTTPS al nombre permitido; después,
+   intente acceder a un nombre no permitido.
+5. En una terminal separada, observe Hubble y guarde el flow permitido y el rechazado como
+   evidencia del resultado.
+
+Para el diagnóstico también son útiles el CLI del agente y los objetos Kubernetes:
+
+```bash
+kubectl -n cks-102 get ciliumnetworkpolicy -o yaml
+kubectl -n kube-system get pods -l k8s-app=cilium
+
+# Se ejecuta en el Pod cilium del nodo elegido.
+kubectl -n kube-system exec ds/cilium -- cilium-dbg endpoint list
+kubectl -n kube-system exec ds/cilium -- cilium-dbg policy get
+```
+
+Si `hubble observe` está vacío, compruebe primero `hubble status`, la presencia de Hubble Relay,
+el contexto kubeconfig y los filtros de namespace/verdict. Si DNS deja de funcionar después de
+default deny, casi siempre falta permitir UDP/TCP 53 hacia los endpoints CoreDNS reales. Si una
+regla L7 no coincide inesperadamente, compruebe el puerto, protocol, HTTP method, la expresión
+regular path y TLS: HTTP cifrado sin una configuración adecuada no es visible para el L7-proxy.
+
+> 🎯 Compruebe labels/selectors, dirección, puertos y DNS; después compare el flow permitido y el rechazado en Hubble; despliegue desde un allow estrecho con rollback.
+
+## 06.7. Errores frecuentes y orden seguro de despliegue
+
+| Síntoma | Causa probable | Qué comprobar |
+|---|---|---|
+| Los nombres dejan de resolverse después de la policy | DNS no está permitido o el selector de CoreDNS es incorrecto | labels de CoreDNS, UDP y TCP 53, Hubble DROPPED |
+| Tanto `GET` como `POST` se rechazan | la identity L3 o el puerto L4 no coincidieron | labels del endpoint, puerto Service y targetPort |
+| Una regla L7 no restringe una solicitud | el tráfico no se reconoce como HTTP o hay una regla más amplia | protocol, TLS, `cilium policy get`, Hubble HTTP flows |
+| La policy FQDN no da acceso al Service | el nombre no coincide con la respuesta DNS o la caché IP aún no está llena | `hubble observe --protocol dns`, `matchName`, TTL |
+| CCNP rompió el tráfico del sistema | el selector es demasiado amplio o no se consideraron endpoints del sistema | scope de la policy, namespace/labels, rollout en un namespace de prueba |
+| No hay eventos en Hubble | Hubble Relay/CLI no están conectados o el filtro es demasiado estrecho | `hubble status`, port-forward, quitar filtros |
+
+**Cilium Policy Audit Mode** es útil durante la preparación de una policy L3/L4: cuando se
+habilita para el daemon (`--policy-audit-mode=true`) o para un endpoint seleccionado, deja pasar
+el tráfico que la policy de otro modo habría descartado y registra el policy verdict correspondiente.
+En este modo, no busque tal tráfico solo mediante `--verdict DROPPED`: observe los policy verdicts:
+
+```bash
+hubble observe flows -t policy-verdict --namespace cks-102
+```
+
+Un flow que coincide con una denegación futura se verá como `AUDITED`, aunque la conexión aún
+pasa. Tras deshabilitar Audit Mode, la misma prueba se convierte en `DENIED` si la regla realmente
+la deniega, o sigue siendo `ALLOWED` si una regla allow cubre el flow. Primero recopile estos eventos
+mediante Hubble, estreche las reglas allow y solo entonces habilite el enforcement. Es un modo de
+diagnóstico temporal, no una protección de producción: en él no se aplican bloqueos; para una
+policy L7 tampoco sustituye una prueba HTTP/DNS real.
+
+Orden seguro: en staging, primero observe Hubble y guarde un baseline de flows reales; si es
+necesario, use brevemente Policy Audit Mode; después añada un allow estrecho y pruébelo desde un
+Pod de prueba; solo entonces habilite un deny o amplíe el scope en producción. No empiece con
+`endpointSelector: {}` en una CCNP en un clúster de producción. Cada cambio necesita rollback:
+`kubectl delete ciliumnetworkpolicy <name> -n <namespace>` o reversión mediante GitOps, no una
+edición manual sin historial.
+
+> 🏭 Rollout de CNP: review, staging, GitOps, baseline flows y propiedad separada de CCNP y la policy de aplicación.
+
+## 06.8. Cómo se usa esto en producción
+
+- **Mantenga las policies junto al workload.** Los CNP de aplicaciones pasan por code review,
+  se prueban en staging y se aplican mediante una herramienta GitOps. El equipo de plataforma posee
+  por separado los CCNP de aplicación amplia.
+- **Los labels son un contrato de seguridad.** Los equipos estandarizan labels como `app`,
+  `component` y `tenant`, y no permiten que un workload modifique arbitrariamente labels relevantes
+  para seguridad. De lo contrario, un selector de policy puede empezar a seleccionar el endpoint
+  equivocado.
+- **Use L7 para API valiosas.** Permitir solo HTTP methods/paths esperados reduce el riesgo de
+  lateral movement, pero no sustituye OAuth, mTLS ni la autorización de la aplicación.
+- **Construya el egress a partir de DNS y destino.** Use `toFQDNs` para API externas conocidas,
+  no como regla universal. DNS, un proxy y un perimeter firewall siguen siendo capas de defense
+  in depth.
+- **Habilite Hubble antes de un incidente.** Dashboards para flows `DROPPED` y flow logs
+  conservados permiten distinguir un error de policy de un fallo de aplicación e investigar más
+  rápido un egress sospechoso.
+
+## 06.9. Mini-glosario
+
+- **Cilium** - una plataforma de CNI y seguridad basada en eBPF para Kubernetes.
+- **CiliumNetworkPolicy (CNP)** - recurso de policy de Cilium con alcance de namespace.
+- **CiliumClusterwideNetworkPolicy (CCNP)** - policy de Cilium para todo el clúster.
+- **Identity** - identificador de endpoint construido por Cilium a partir de labels.
+- **L3/L4** - capa de red y protocolo/puerto de transporte.
+- **L7** - capa de protocolo, por ejemplo, un HTTP method/path o DNS.
+- **`toFQDNs`** - regla de egress por nombres DNS y respuestas DNS observadas.
+- **Entity** - grupo de direcciones predefinido de Cilium, por ejemplo, `world`, `cluster` o `host`.
+- **Hubble** - observabilidad de flujos de red de Cilium.
+- **eBPF** - mecanismo del kernel de Linux sobre el que Cilium implementa el datapath y el enforcement de policy.
+
+## 06.10. Resumen del capítulo
+
+- Cilium complementa la NetworkPolicy nativa con policies L3/L4/L7, identities, FQDN y
+  observabilidad de Hubble.
+- CNP se aplica en un namespace, mientras que CCNP se aplica en todo el clúster; los CCNP amplios
+  requieren un rollout especialmente cuidadoso.
+- `endpointSelector` selecciona el endpoint protegido, `fromEndpoints`/`toEndpoints` definen L3
+  y `toPorts` define L4.
+- Las reglas HTTP L7 permiten solo los métodos y paths necesarios, pero no sustituyen la
+  autenticación de aplicación y requieren un protocolo plaintext reconocible.
+- `toFQDNs` restringe el egress externo por nombres; requiere permitir DNS por separado y tener
+  en cuenta la caché DNS, el TTL y posibles bypasses.
+- `toEntities` expresa acceso a `world`, `cluster`, `host` y otros grupos del sistema.
+- Hubble muestra flows permitidos y denegados y es la herramienta principal para la verificación
+  y la resolución de problemas de policy.
+
+## 06.11. Cómo ayuda esto: en el examen y en el trabajo real
+
+**En el examen.** La habilidad portátil de aplicar network security policies es obligatoria: leer
+rápidamente los labels, escoger un namespace y dirección (`ingress`/`egress`), permitir el flow
+necesario y demostrar el resultado. **Si el clúster o fixture proporcionado usa Cilium**, también
+debe saber crear una `CiliumNetworkPolicy` con `endpointSelector`, restringir HTTP o `toFQDNs`
+cuando sea necesario y verificar flows con `hubble observe`. L7, FQDN y Hubble son temas avanzados
+específicos de Cilium, no una interfaz garantizada por el currículo público en cada tarea; aun así,
+permita DNS con una regla separada.
+
+**En el trabajo real.** La policy de Cilium convierte los límites arquitectónicos en reglas
+ejecutables: un frontend no obtiene acceso arbitrario a un backend, un workload no puede acceder a
+un destino arbitrario de Internet y el flow hacia una API se puede estrechar a las operaciones
+necesarias. Hubble hace verificables estos límites durante el rollout y la investigación de incidentes.
+
+## 06.12. Preguntas de autoevaluación
+
+<details>
+<summary>1. ¿En qué se diferencia CNP de la `NetworkPolicy` nativa, además del formato del recurso?</summary>
+
+CNP usa identities de Cilium construidas a partir de labels y añade filtrado L7 HTTP/DNS, `toFQDNs`,
+entities (`world`, `cluster`, `host`) y observabilidad de Hubble. NetworkPolicy nativa sigue siendo
+un control L3/L4 portable, y CNP/CCNP la complementan; una denegación explícita de Cilium tiene
+prioridad sobre un allow de ambos tipos de policy.
+</details>
+
+<details>
+<summary>2. ¿Qué ocurre con el ingress de un endpoint si CNP lo selecciona, pero el tráfico no coincide con ninguna regla allow?</summary>
+
+En `policyEnforcementMode: default`, un endpoint queda aislado para la dirección descrita por una
+policy aplicable. Si un CNP contiene `ingress`, este actúa como default-deny hasta que coincida una
+regla allow; de igual modo, `egress` aísla solo el tráfico saliente.
+</details>
+
+<details>
+<summary>3. ¿Cómo expresar en una regla CNP «solo frontend a backend TCP/80»?</summary>
+
+Un CNP selecciona el backend mediante un `endpointSelector` con `app: backend` y usa
+`fromEndpoints` con `app: frontend` en `ingress`. En `toPorts`, establezca el puerto `"80"` y
+`protocol: TCP`; para una conexión entre namespaces, añada `k8s:io.kubernetes.pod.namespace` a
+los `matchLabels` de origen.
+</details>
+
+<details>
+<summary>4. ¿Por qué permitir TCP/80 aún no restringe `POST /admin`, y cómo se puede restringir?</summary>
+
+Una regla L3/L4 permite toda la conexión TCP en el puerto 80 y no distingue un HTTP method o path.
+Dentro de `toPorts`, añada `rules.http`, por ejemplo `method: "GET"` y un `path: "^/$"` estrecho;
+el L7-proxy de Cilium rechazará entonces una solicitud que no coincida, normalmente con 403.
+</details>
+
+<details>
+<summary>5. ¿Cómo funcionan `toFQDNs` y por qué DNS se debe permitir por separado junto con ellos?</summary>
+
+`toFQDNs` no resuelve un nombre al aplicar YAML: el DNS-proxy de Cilium observa una respuesta DNS
+permitida, llena una caché FQDN con TTL y permite una conexión a la IP obtenida. Por ello, permita
+por separado el DNS de un Pod hacia CoreDNS confiable; DoH/DoT no llena esta caché y una IP directa
+no crea una asociación FQDN.
+</details>
+
+<details>
+<summary>6. ¿Cuándo encajan las entities `world`, `cluster` y `host`, y por qué `host` requiere especial cuidado?</summary>
+
+`world` designa direcciones fuera del clúster, `cluster` designa endpoints dentro de él y `host`
+designa el endpoint host local del nodo y los host-networked workloads. El acceso a `host` puede
+afectar a kubelet y a otros listeners de red del nodo, así que requiere una policy de host firewall
+cuidadosa. El runtime CRI socket es otra ruta de ataque: normalmente es un Unix socket en el
+filesystem del nodo y se debe proteger restringiendo `hostPath`, privilegios y otros mecanismos de
+acceso al filesystem del host.
+</details>
+
+<details>
+<summary>7. ¿Qué comandos de Hubble ayudan a demostrar que Cilium descartó un flow prohibido?</summary>
+
+Después de `cilium status --wait` y de configurar el acceso a Hubble, observe los rechazos con
+`hubble observe --namespace cks-102 --verdict DROPPED`. Para correlacionar HTTP y DNS, use
+respectivamente `hubble observe --namespace cks-102 --protocol http` y la observación DNS; en
+Policy Audit Mode, una denegación futura aparece como `AUDITED` mediante
+`hubble observe flows -t policy-verdict --namespace cks-102`.
+</details>
+
+<details>
+<summary>8. ¿Por qué es peligroso comenzar un despliegue CCNP con `endpointSelector: {}` en un clúster de producción?</summary>
+
+CCNP se aplica en todo el clúster y un selector vacío selecciona todos los endpoints, por lo que un
+error de allow/deny puede cortar el tráfico del sistema y de las aplicaciones. Primero pruebe la
+regla con labels estrechos en un namespace separado, observe el baseline mediante Hubble y prepare
+el rollback eliminando la policy o revirtiéndola mediante GitOps.
+</details>
+
+## Práctica
+
+Refuerce L3/L4, L7 HTTP, egress basado en DNS y Hubble en la lab 102. Complete las tareas en
+orden de policy, en vez de intentar depurar todas las capas a la vez.
+
+🧪 Lab 102 (Cilium NetworkPolicy L3/L4/L7): [tasks/cks/labs/102](../../labs/102/README_ES.MD)
+
+🎮 Cilium Hubble (documentación y ejemplos interactivos):
+[Observabilidad de Hubble](https://docs.cilium.io/en/stable/observability/hubble/) ·
+[Network policy](https://docs.cilium.io/en/stable/security/network/)
+
+---
+[Índice](../README_ES.md) · [Capítulo 05](../05/es.md) · [Capítulo 07](../07/es.md)

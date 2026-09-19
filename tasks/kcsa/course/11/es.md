@@ -153,7 +153,7 @@ Admission control
 └── ValidatingAdmissionWebhook
 ```
 
-`LimitRanger` aplica las restricciones y defaults de `LimitRange`; `ResourceQuota` no permite superar la quota del namespace; `ServiceAccount` realiza automatizaciones relacionadas con service account; `AlwaysPullImages` exige hacer pull de la image antes de iniciarla; `NodeRestriction` restringe las modificaciones del kubelet. Son ejemplos de admission plugins, no una lista que debas memorizar por completo.
+`LimitRanger` aplica las restricciones y defaults de `LimitRange`; `ResourceQuota` no permite superar la quota del namespace; `ServiceAccount` realiza automatizaciones relacionadas con service account; `AlwaysPullImages` exige hacer pull de la image antes de iniciarla; `NodeRestriction` restringe las modificaciones del kubelet. Son ejemplos de admission plugins, no una lista que deba memorizar por completo.
 
 En Kubernetes `v1.36` hay dos API de políticas declarativas integradas basadas en CEL: `MutatingAdmissionPolicy` para modificar API-objects adecuados y `ValidatingAdmissionPolicy` para verificar y rechazar solicitudes no adecuadas. `MutatingAdmissionPolicy` es estable desde `v1.36` y está enabled by default. Los admission webhooks siguen siendo servicios HTTP externos y se necesitan cuando una policy requiere lógica o integraciones que no se pueden expresar mediante una política CEL integrada. Estos mecanismos no sustituyen authentication, authorization ni PSA.
 
