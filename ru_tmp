@@ -1,0 +1,223 @@
+```yaml:apiVersion: node.k8s.io/v1
+```yaml:kind: RuntimeClass
+```yaml:metadata:
+```yaml:  name: gvisor
+```yaml:handler: runsc
+```bash:kubectl apply -f runtimeclass-gvisor.yaml
+```bash:kubectl get runtimeclass
+```bash:kubectl get runtimeclass gvisor -o yaml
+```yaml:apiVersion: admissionregistration.k8s.io/v1
+```yaml:kind: ValidatingAdmissionPolicy
+```yaml:metadata:
+```yaml:  name: restrict-gvisor-runtimeclass
+```yaml:spec:
+```yaml:  matchConstraints:
+```yaml:    resourceRules:
+```yaml:    - apiGroups: [""]
+```yaml:      apiVersions: ["v1"]
+```yaml:      operations: ["CREATE", "UPDATE"]
+```yaml:      resources: ["pods"]
+```yaml:  validations:
+```yaml:  - expression: "!has(object.spec.runtimeClassName) || object.spec.runtimeClassName != 'gvisor' || object.metadata.namespace == 'tenant-a'"
+```yaml:    message: "runtimeClassName gvisor is allowed only in tenant-a"
+```yaml:---
+```yaml:apiVersion: admissionregistration.k8s.io/v1
+```yaml:kind: ValidatingAdmissionPolicyBinding
+```yaml:metadata:
+```yaml:  name: restrict-gvisor-runtimeclass
+```yaml:spec:
+```yaml:  policyName: restrict-gvisor-runtimeclass
+```yaml:  validationActions: [Deny]
+```bash:kubectl apply -f restrict-gvisor-runtimeclass.yaml
+```bash:
+```bash:kubectl -n tenant-b run gvisor-not-allowed \
+```bash:  --image=nginxinc/nginx-unprivileged:1.30.4-alpine-slim \
+```bash:  --restart=Never \
+```bash:  --overrides='{"spec":{"runtimeClassName":"gvisor"}}' \
+```bash:  --dry-run=server
+```bash:kubectl label node worker-sandbox sandbox.runtime/gvisor=true
+```bash:kubectl taint node worker-sandbox sandbox.runtime/gvisor=true:NoSchedule
+```yaml:apiVersion: node.k8s.io/v1
+```yaml:kind: RuntimeClass
+```yaml:metadata:
+```yaml:  name: gvisor
+```yaml:handler: runsc
+```yaml:scheduling:
+```yaml:  nodeSelector:
+```yaml:    sandbox.runtime/gvisor: "true"
+```yaml:  tolerations:
+```yaml:  - key: sandbox.runtime/gvisor
+```yaml:    operator: Equal
+```yaml:    value: "true"
+```yaml:    effect: NoSchedule
+```yaml:apiVersion: v1
+```yaml:kind: Pod
+```yaml:metadata:
+```yaml:  name: untrusted-web
+```yaml:  namespace: tenant-a
+```yaml:spec:
+```yaml:  runtimeClassName: gvisor
+```yaml:  securityContext:
+```yaml:    runAsNonRoot: true
+```yaml:    seccompProfile:
+```yaml:      type: RuntimeDefault
+```yaml:  containers:
+```yaml:  - name: app
+```yaml:    image: nginxinc/nginx-unprivileged:1.30.4-alpine-slim
+```yaml:    ports:
+```yaml:    - containerPort: 8080
+```yaml:    securityContext:
+```yaml:      allowPrivilegeEscalation: false
+```yaml:      capabilities:
+```yaml:        drop: ["ALL"]
+```bash:kubectl -n tenant-a apply -f untrusted-web.yaml
+```bash:kubectl -n tenant-a get pod untrusted-web -o wide
+```bash:kubectl -n tenant-a get pod untrusted-web -o jsonpath='{.spec.runtimeClassName}{"\n"}'
+```bash:kubectl -n tenant-a get pod untrusted-web -o jsonpath='{.spec.nodeSelector}{"\n"}'
+```bash:kubectl -n tenant-a describe pod untrusted-web
+```yaml:apiVersion: node.k8s.io/v1
+```yaml:kind: RuntimeClass
+```yaml:metadata:
+```yaml:  name: kata
+```yaml:handler: kata
+```yaml:scheduling:
+```yaml:  nodeSelector:
+```yaml:    sandbox.runtime/kata: "true"
+```yaml:  tolerations:
+```yaml:  - key: sandbox.runtime/kata
+```yaml:    operator: Equal
+```yaml:    value: "true"
+```yaml:    effect: NoSchedule
+```bash:VERSION="${VERSION:?set an approved gVisor version}"
+```bash:ARCH=$(uname -m)
+```bash:BASE_URL="https://storage.googleapis.com/gvisor/releases/release/${VERSION}/${ARCH}"
+```bash:
+```bash:curl -fsSLO "${BASE_URL}/gvisor.tar.zstd"
+```bash:curl -fsSLO "${BASE_URL}/gvisor.tar.zstd.sha512"
+```bash:sha512sum -c gvisor.tar.zstd.sha512
+```bash:mkdir gvisor
+```bash:zstd -d -c gvisor.tar.zstd | tar -xf - -C gvisor
+```bash:sudo install -d -o root -g root -m 0755 /usr/local/lib/gvisor
+```bash:sudo cp -a gvisor/. /usr/local/lib/gvisor/
+```bash:sudo ln -sf /usr/local/lib/gvisor/runsc /usr/local/bin/runsc
+```bash:sudo ln -sf /usr/local/lib/gvisor/containerd-shim-runsc-v1 \
+```bash:  /usr/local/bin/containerd-shim-runsc-v1
+```bash:
+```bash:runsc --version
+```bash:command -v containerd-shim-runsc-v1
+```bash:ls -ld /usr/local/lib/gvisor/gvisor-bin
+```bash:sudo cp -a /etc/containerd/config.toml \
+```bash:  "/etc/containerd/config.toml.before-runsc.$(date +%F-%H%M%S)"
+```bash:containerd --version
+```bash:sudo sed -n '1,180p' /etc/containerd/config.toml
+```toml:version = 2
+```toml:
+```toml:[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runsc]
+```toml:  runtime_type = "io.containerd.runsc.v1"
+```toml:[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runsc]
+```toml:  runtime_type = "io.containerd.runsc.v1"
+```bash:sudo systemctl restart containerd
+```bash:sudo systemctl is-active --quiet containerd && echo 'containerd: active'
+```bash:sudo journalctl -u containerd -b --no-pager | tail -n 80
+```bash:sudo crictl info | jq '.config.containerd.runtimes.runsc'
+```bash:command -v containerd-shim-kata-v2
+```bash:kata-runtime --version
+```bash:sudo kata-runtime check
+```bash:
+```bash:KATA_BACKEND="${KATA_BACKEND:?set qemu-kvm, clh-azure, or clh-azure-runtime-rs}"
+```bash:case "$KATA_BACKEND" in
+```bash:  qemu-kvm)
+```bash:    sudo test -c /dev/kvm && sudo test -r /dev/kvm || {
+```bash:      echo 'ERROR: QEMU/KVM RuntimeClass requires accessible /dev/kvm' >&2
+```bash:      exit 1
+```bash:    }
+```bash:    ls -l /dev/kvm
+```bash:    ;;
+```bash:  clh-azure|clh-azure-runtime-rs)
+```bash:    sudo test -c /dev/mshv && sudo test -r /dev/mshv || {
+```bash:      echo 'ERROR: clh-azure RuntimeClass requires accessible /dev/mshv' >&2
+```bash:      exit 1
+```bash:    }
+```bash:    ls -l /dev/mshv
+```bash:    ;;
+```bash:  *)
+```bash:    echo "ERROR: unsupported selected Kata backend: $KATA_BACKEND" >&2
+```bash:    exit 2
+```bash:    ;;
+```bash:esac
+```toml:version = 2
+```toml:
+```toml:[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.kata]
+```toml:  runtime_type = "io.containerd.kata.v2"
+```toml:  privileged_without_host_devices = true
+```toml:[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.kata]
+```toml:  runtime_type = "io.containerd.kata.v2"
+```toml:  privileged_without_host_devices = true
+```bash:sudo systemctl restart containerd
+```bash:sudo systemctl is-active --quiet containerd && echo 'containerd: active'
+```bash:sudo crictl info | jq '.config.containerd.runtimes.kata'
+```yaml:apiVersion: apps/v1
+```yaml:kind: Deployment
+```yaml:metadata:
+```yaml:  name: report-worker
+```yaml:  namespace: tenant-a
+```yaml:spec:
+```yaml:  replicas: 2
+```yaml:  selector:
+```yaml:    matchLabels:
+```yaml:      app: report-worker
+```yaml:  template:
+```yaml:    metadata:
+```yaml:      labels:
+```yaml:        app: report-worker
+```yaml:    spec:
+```yaml:      runtimeClassName: gvisor
+```yaml:      securityContext:
+```yaml:        runAsNonRoot: true
+```yaml:        seccompProfile:
+```yaml:          type: RuntimeDefault
+```yaml:      containers:
+```yaml:      - name: worker
+```yaml:        image: registry.example.com/report-worker@sha256:<digest>
+```yaml:        securityContext:
+```yaml:          allowPrivilegeEscalation: false
+```yaml:          capabilities:
+```yaml:            drop: ["ALL"]
+```yaml:apiVersion: node.k8s.io/v1
+```yaml:kind: RuntimeClass
+```yaml:metadata:
+```yaml:  name: kata
+```yaml:handler: kata
+```yaml:overhead:
+```yaml:  podFixed:
+```yaml:    memory: "<measured-memory-overhead>"
+```yaml:    cpu: "<measured-cpu-overhead>"
+```yaml:scheduling:
+```yaml:  nodeSelector:
+```yaml:    sandbox.runtime/kata: "true"
+```bash:NS=tenant-a
+```bash:POD=untrusted-web
+```bash:
+```bash:kubectl -n "$NS" get pod "$POD" -o wide
+```bash:kubectl -n "$NS" get pod "$POD" \
+```bash:  -o jsonpath='{.spec.runtimeClassName}{" node="}{.spec.nodeName}{" phase="}{.status.phase}{"\n"}'
+```bash:kubectl -n "$NS" describe pod "$POD"
+```bash:
+```bash:sudo crictl pods --name "$POD"
+```bash:sudo crictl ps -a --name "$POD"
+```bash:sudo crictl info | jq '.config.containerd.runtimes.runsc'
+```bash:sudo journalctl -u containerd --since '15 minutes ago' --no-pager | \
+```bash:  grep -Ei 'runsc|gvisor|kata|sandbox|error'
+```bash:kubectl -n "$NS" exec "$POD" -- sh -c '
+```bash:  echo "=== uname ==="; uname -a
+```bash:  echo "=== pid 1 cgroup ==="; cat /proc/1/cgroup
+```bash:  echo "=== mounts ==="; mount | head -n 20
+```bash:  echo "=== dmesg (if permitted) ==="; dmesg 2>&1 | head -n 40 || true
+```bash:'
+```bash:
+```bash:uname -a
+```bash:sudo journalctl -u containerd --since '15 minutes ago' --no-pager | tail -n 120
+```text:$ dmesg
+```text:...
+```text:Starting gVisor
+```text:...
