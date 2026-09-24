@@ -15,7 +15,8 @@ pod_node_has_label() {
   local pod="$1" namespace="$2" label="$3" value="$4"
   local node
   node=$(kubectl get pod "$pod" -n "$namespace" --context "$CTX" -o jsonpath='{.spec.nodeName}' 2>/dev/null)
-  [[ -n "$node" ]] && [[ "$(kubectl get node "$node" --context "$CTX" -o jsonpath="{.metadata.labels['${label}']}" 2>/dev/null)" == "$value" ]]
+  # jsonpath with ['a.b/c'] returns an empty string for label keys containing dots, so use jq.
+  [[ -n "$node" ]] && [[ "$(kubectl get node "$node" --context "$CTX" -o json 2>/dev/null | jq -r --arg l "$label" '.metadata.labels[$l] // empty')" == "$value" ]]
 }
 
 @test "0 Init" {

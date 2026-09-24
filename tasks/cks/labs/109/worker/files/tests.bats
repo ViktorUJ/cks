@@ -178,18 +178,18 @@ except Exception:
 }
 
 @test "5. Secret reader RBAC is least-privilege and its Pod does not mount a token" {
-  allowed=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader get secret/encrypted-secret -n "$NS" 2>/dev/null)
-  list_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader list secrets -n "$NS" 2>/dev/null)
-  other_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader get secret/legacy-secret -n "$NS" 2>/dev/null)
+  allowed=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader get secret/encrypted-secret -n "$NS" 2>/dev/null || true)
+  list_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader list secrets -n "$NS" 2>/dev/null || true)
+  other_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader get secret/legacy-secret -n "$NS" 2>/dev/null || true)
   # A Role granting only "list secrets" excluded above would still let watch/create/
   # update/patch/delete on Secrets slip through unnoticed - probe each verb individually
   # against the specific named resource (and the broader "secrets" resource for verbs
   # that are meaningless with resourceNames, like create) to close that gap.
-  watch_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader watch secret/encrypted-secret -n "$NS" 2>/dev/null)
-  create_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader create secrets -n "$NS" 2>/dev/null)
-  update_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader update secret/encrypted-secret -n "$NS" 2>/dev/null)
-  patch_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader patch secret/encrypted-secret -n "$NS" 2>/dev/null)
-  delete_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader delete secret/encrypted-secret -n "$NS" 2>/dev/null)
+  watch_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader watch secret/encrypted-secret -n "$NS" 2>/dev/null || true)
+  create_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader create secrets -n "$NS" 2>/dev/null || true)
+  update_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader update secret/encrypted-secret -n "$NS" 2>/dev/null || true)
+  patch_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader patch secret/encrypted-secret -n "$NS" 2>/dev/null || true)
+  delete_denied=$(kubectl auth can-i --context "$CTX" --as=system:serviceaccount:${NS}:secret-reader delete secret/encrypted-secret -n "$NS" 2>/dev/null || true)
   sa_json=$(kubectl -n "$NS" --context "$CTX" get serviceaccount secret-reader -o json 2>/dev/null || true)
   sa_automount=$(jq -r '.automountServiceAccountToken' <<<"$sa_json" 2>/dev/null)
   pod=$(kubectl -n "$NS" --context "$CTX" get pod secret-reader-109 -o json 2>/dev/null || true)

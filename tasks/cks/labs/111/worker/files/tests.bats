@@ -157,7 +157,7 @@ record_result() {
     # was never actually produced by running the three analyzers on the real starter files.
     if cmp -s "$h" <(sudo cat "$CHECKER/hadolint-before.txt") \
       && diff -q <(jq -S . "$k") <(sudo jq -S . "$CHECKER/kubesec-before.json") >/dev/null 2>&1 \
-      && diff -q <(jq -S . "$l") <(sudo jq -S . "$CHECKER/kube-linter-before.json") >/dev/null 2>&1; then
+      && diff -q <(jq -S 'del(.Summary.CheckEndTime)' "$l") <(sudo jq -S 'del(.Summary.CheckEndTime)' "$CHECKER/kube-linter-before.json") >/dev/null 2>&1; then
       result=0
     else
       echo "HINT: One of the three before-fix reports does not match the bootstrap-captured baseline from the ORIGINAL starter Dockerfile/deployment.yaml - re-run hadolint/kubesec/kube-linter directly against the untouched starter files (before making any remediation edits), do not hand-write or reconstruct the report text."
@@ -173,7 +173,7 @@ record_result() {
 @test "3. Dockerfile is pinned, has no secret or remote ADD, and runs non-root" {
   file="$ROOT/Dockerfile"; report="$ART/3/hadolint-after.txt"
   result=1
-  if [[ -f "$file" ]] && grep -Eq '^FROM[[:space:]]+nginx:1[.]27[.]3-alpine@sha256:[a-f0-9]{64}$' "$file" && ! grep -Eqi '^[[:space:]]*ADD[[:space:]]+https?://|^[[:space:]]*ENV[[:space:]].*(API_TOKEN|TOKEN)|sudo|:latest' "$file" && grep -Eq '^[[:space:]]*USER[[:space:]]+[1-9][0-9]*(:[0-9]+)?[[:space:]]*$' "$file" && grep -Eq '^[[:space:]]*ARG[[:space:]]+CKS_SIGNATURE_TEST' "$file" && grep -Eq '^[[:space:]]*LABEL[[:space:]]+cks[.]signature-test=\$CKS_SIGNATURE_TEST[[:space:]]*$' "$file" && [[ -s "$report" ]] && ! grep -Eq 'DL3007|DL3013|DL3020|DL3045' "$report"; then
+  if [[ -f "$file" ]] && grep -Eq '^FROM[[:space:]]+nginx:1[.]27[.]3-alpine@sha256:[a-f0-9]{64}$' "$file" && ! grep -Eqi '^[[:space:]]*ADD[[:space:]]+https?://|^[[:space:]]*ENV[[:space:]].*(API_TOKEN|TOKEN)|sudo|:latest' "$file" && grep -Eq '^[[:space:]]*USER[[:space:]]+[1-9][0-9]*(:[0-9]+)?[[:space:]]*$' "$file" && grep -Eq '^[[:space:]]*ARG[[:space:]]+CKS_SIGNATURE_TEST' "$file" && grep -Eq '^[[:space:]]*LABEL[[:space:]]+cks[.]signature-test=\$CKS_SIGNATURE_TEST[[:space:]]*$' "$file" && [[ -f "$report" ]] && ! grep -Eq 'DL3007|DL3013|DL3020|DL3045' "$report"; then
     # Independently re-run hadolint against the CURRENT Dockerfile rather than trusting
     # only the student artifact, which could be hand-edited or left over from a stale run.
     # An independent re-run alone only proves the file's CURRENT state is clean - it does
@@ -225,8 +225,9 @@ record_result() {
   # than trusting only the student artifacts, which could be any syntactically valid JSON
   # of the right top-level type without ever having been produced by the real tools.
   checker_kubesec=$(mktemp); checker_kubelinter=$(mktemp)
-  kubesec scan "$file" > "$checker_kubesec" 2>&1 || true
-  kube-linter lint "$file" --format json > "$checker_kubelinter" 2>&1 || true
+  # stderr must not be merged into JSON output (kube-linter prints "Error: found N lint errors").
+  kubesec scan "$file" > "$checker_kubesec" 2>/dev/null || true
+  kube-linter lint "$file" --format json > "$checker_kubelinter" 2>/dev/null || true
   if ! jq -e 'type == "array" and length > 0 and .[0].scoring' "$checker_kubesec" >/dev/null 2>&1; then
     echo "HINT: The checker independently re-ran kubesec against the CURRENT deployment.yaml and could not get a valid scored JSON array from it - check the file is still valid YAML kubesec can parse."
     echo "Checker re-run of kubesec against current deployment.yaml is invalid"
@@ -505,7 +506,7 @@ record_result() {
               .SPDXID as $id |
               (($doc.documentDescribes // []) | index($id)) != null
             )
-          | (.versionInfo // .name // "")
+          | (if (.versionInfo // "") != "" then .versionInfo else (.name // "") end)
           | select(endswith($digest))
         ]
         | length > 0
@@ -527,7 +528,7 @@ record_result() {
           [
             $doc.packages[]
             | select(.SPDXID as $id | (($doc.documentDescribes // []) | index($id)) != null)
-            | (.versionInfo // .name // "")
+            | (if (.versionInfo // "") != "" then .versionInfo else (.name // "") end)
             | select(endswith($digest))
           ] | length > 0
         )
@@ -590,7 +591,9 @@ record_result() {
     # and additionally cross-checks the component INVENTORY so a minimal hand-written
     # CycloneDX document with only the required digest cannot pass.
     checker_sbom=$(mktemp)
-    if syft "$expected_image" -o "cyclonedx-json=$checker_sbom" >/dev/null 2>&1 \
+    # Syft records the tag (not the digest) as metadata.component.version for tag@digest refs;
+    # a digest-only reference records the manifest digest, which is what is verified below.
+    if syft "${expected_image%%:*}@${expected_digest}" -o "cyclonedx-json=$checker_sbom" >/dev/null 2>&1 \
       && jq -e --arg digest "$expected_digest" '
         .bomFormat == "CycloneDX" and
         .metadata.component.type == "container" and
@@ -630,12 +633,12 @@ record_result() {
   result=1
 
   if [[ -s "$report" ]] \
-    && jq -e '(.Results | type == "array")' "$report" >/dev/null 2>&1 \
+    && jq -e '(.SchemaVersion != null) and (.ArtifactType == "spdx") and ((.Results // []) | type == "array")' "$report" >/dev/null 2>&1 \
     && grep -Fq "trivy sbom" "$cmd_file" 2>/dev/null \
     && grep -Fq "$input_sbom" "$cmd_file" 2>/dev/null \
     && trivy sbom --format json --output "$checker_report" "$input_sbom" \
          >/dev/null 2>&1 \
-    && jq -e '(.Results | type == "array")' "$checker_report" \
+    && jq -e '(.SchemaVersion != null) and (.ArtifactType == "spdx") and ((.Results // []) | type == "array")' "$checker_report" \
          >/dev/null 2>&1; then
     result=0
   else

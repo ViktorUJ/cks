@@ -19,6 +19,36 @@ trivy --version; kubesec version; kube-linter version; hadolint --version
 syft version; bom version; cosign version
 ```
 
+## 0. Подготовка: Docker, buildx и registry
+
+На worker нет Docker и registry, а задания 3 и 9c публикуют образ. Установите Docker Engine
+с buildx (Ubuntu 22.04):
+
+```bash
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+sudo usermod -aG docker ubuntu   # затем переподключитесь по ssh, чтобы группа применилась
+docker buildx version
+```
+
+Registry: анонимный публичный `ttl.sh` (без логина). В `ttl.sh` tag образа - это срок его
+жизни (`1h`, `2h`), поэтому в заданиях 3 и 9c используются именно такие tag. Путь делаем
+случайным, потому что registry общий. Пароль ключа cosign оставляем пустым, чтобы команды не
+ждали ввода:
+
+```bash
+export REG_PATH="cks111-$(head -c6 /dev/urandom | xxd -p)"
+export COSIGN_PASSWORD=""
+```
+
+Docker Hub принимает анонимные pull с ограничением (около 100 за 6 часов с одного IP), а
+Trivy/Syft/bom и `check_result` тоже тянут образы. Если увидите `TOOMANYREQUESTS`, подождите или
+выполните `docker login` под своей учётной записью.
+
 ## 1. Trivy report
 
 ```bash
@@ -124,6 +154,7 @@ CMD ["nginx", "-g", "daemon off;"]
 EOF
 mkdir -p "$ART/3"
 hadolint "$ROOT/Dockerfile" | tee "$ART/3/hadolint-after.txt"
+# Чистый Dockerfile даёт ПУСТОЙ вывод hadolint (код возврата 0) - пустой файл здесь ожидаем и корректен.
 grep -nE '^(FROM|COPY|USER)' "$ROOT/Dockerfile"
 ```
 
@@ -135,13 +166,13 @@ security-свойств (base image, non-root, отсутствие secret) - э
 Соберите и **опубликуйте** образ в registry, доступный Kubernetes; один только local image ID/DiffID не подходит для digest pinning. Подставьте свой repository, затем получите registry manifest digest и сформируйте immutable reference:
 
 ```bash
-export HARDENED_TAG=registry.example/cks111/catalog:1.0
-# docker login registry.example
-# docker buildx build --platform linux/amd64 --push -t "$HARDENED_TAG" "$ROOT"
+export HARDENED_TAG="ttl.sh/${REG_PATH}/catalog:2h"   # tag в ttl.sh = срок жизни образа
+# Свой registry: export HARDENED_TAG=registry.example/cks111/catalog:1.0 && docker login registry.example
+docker buildx build --platform linux/amd64 --push -t "$HARDENED_TAG" "$ROOT"
 export HARDENED_DIGEST=$(docker buildx imagetools inspect "$HARDENED_TAG" --format '{{.Manifest.Digest}}')
 export HARDENED_IMAGE="${HARDENED_TAG%:*}@${HARDENED_DIGEST}"
 printf '%s
-' "$HARDENED_IMAGE"   # registry.example/cks111/catalog@sha256:<manifest-digest>
+' "$HARDENED_IMAGE"   # ttl.sh/<REG_PATH>/catalog@sha256:<manifest-digest>
 ```
 
 ## 4. Исправить Deployment
@@ -245,7 +276,7 @@ declare -A pkgset
 for line in "${containers[@]}"; do
   cname=$(awk '{print $1}' <<<"$line"); ref=$(awk '{print $2}' <<<"$line")
   bom generate --format json --output "$ART/5b/bom/$cname.spdx.json" --image "$ref"
-  pkgset["$cname"]=$(jq -r '.packages[]? | select(.name and .versionInfo) | "\(.name)=\(.versionInfo)"' "$ART/5b/bom/$cname.spdx.json" | sort -u)
+  pkgset["$cname"]=$(jq -r '.packages[]? | select((.name // "") != "" and (.versionInfo // "") != "") | "\(.name)=\(.versionInfo)"' "$ART/5b/bom/$cname.spdx.json" | sort -u)
 done
 
 names=("${!pkgset[@]}")
@@ -284,7 +315,10 @@ Syft умеет и SPDX, и CycloneDX; здесь берём CycloneDX (`bom` у
 
 ```bash
 mkdir -p "$ART/7"
-syft "$IMAGE" -o "cyclonedx-json=$ART/7/syft.cdx.json"
+# Для ссылки вида tag@digest Syft записывает в metadata.component.version только tag; ссылка
+# без tag ("nginx@sha256:...") даёт version = manifest digest, который и проверяется.
+syft "nginx@${IMAGE#*@}" -o "cyclonedx-json=$ART/7/syft.cdx.json"
+jq -r '.metadata.component.version' "$ART/7/syft.cdx.json"   # sha256:<manifest-digest>
 set -o pipefail
 cosign verify \
   --certificate-oidc-issuer https://accounts.google.com \
@@ -324,8 +358,13 @@ trivy sbom \
   --output "$ART/8/sbom-scan.json" \
   "$ART/6/bom.spdx.json"
 
-jq '(.Results | length)' "$ART/8/sbom-scan.json"
+jq '{artifact: .ArtifactType, results: ((.Results // []) | length)}' "$ART/8/sbom-scan.json"
 ```
+
+В SPDX от `bom` для multi-arch образа нет сведений об ОС (Trivy пишет `Detected OS family="none"`),
+поэтому `Results` может отсутствовать: команда выполнена успешно, но уязвимости не сопоставлены.
+Это ограничение входного SBOM, а не ошибка команды. Для сравнения: CycloneDX из задания 7 содержит
+ОС (`operating-system`), и `trivy sbom` по нему даёт непустой `Results`.
 
 ## 9a. Kyverno и `ImageValidatingPolicy` на trusted signature
 
@@ -356,7 +395,8 @@ mkdir -p "$ART/9a" "$ART/9b" "$ART/9c"
 chmod 0600 "$KEYDIR/cosign.key"
 chmod 0644 "$KEYDIR/cosign.pub"
 
-cosign sign --key "$KEYDIR/cosign.key" --yes "$HARDENED_IMAGE" | tee "$ART/9a/cosign-sign.txt"
+# cosign sign пишет ход работы в stderr, поэтому 2>&1 обязателен - иначе артефакт останется пустым.
+cosign sign --key "$KEYDIR/cosign.key" --yes "$HARDENED_IMAGE" 2>&1 | tee "$ART/9a/cosign-sign.txt"
 # Реально проверяем подпись тем же public key, а не только наличие текста sign-команды.
 cosign verify --key "$KEYDIR/cosign.pub" "$HARDENED_IMAGE" | tee "$ART/9a/cosign-verify.txt"
 ```
@@ -451,7 +491,9 @@ manifest digest, что и уже подписанный образ, и тогд
 вносим контролируемое отличие через `ARG`/`LABEL`, которое гарантированно меняет digest:
 
 ```bash
-export UNSIGNED_TAG="${HARDENED_TAG%:*}:unsigned-1.0"
+# В ttl.sh tag - это срок жизни, поэтому второй tag тоже должен быть длительностью (1h).
+# В обычном registry подойдёт любое имя, например :unsigned-1.0.
+export UNSIGNED_TAG="${HARDENED_TAG%:*}:1h"
 docker buildx build \
   --platform linux/amd64 \
   --build-arg CKS_SIGNATURE_TEST=unsigned-1 \

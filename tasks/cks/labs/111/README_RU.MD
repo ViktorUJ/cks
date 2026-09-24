@@ -103,7 +103,7 @@ admission-time signature policy: задание 4 разворачивает `ca
 | kube-linter | `0.8.3` | policy lint Kubernetes YAML |
 | Hadolint | `2.12.0` | lint Dockerfile |
 | Syft | `1.51.0` | SBOM CycloneDX JSON |
-| bom | `0.7.0` | SBOM SPDX JSON (нативный формат `bom`) |
+| bom | `0.8.0` | SBOM SPDX JSON (нативный формат `bom`) |
 | Cosign | `3.1.3` | signing и verification подписи OCI-образа |
 
 Helm и `install-kyverno` также доступны на worker, но Kyverno намеренно **не установлен**:
@@ -112,6 +112,36 @@ Helm и `install-kyverno` также доступны на worker, но Kyverno 
 `1.33-1.35`, тогда как этот кластер на `1.36`. Это осознанное lab-specific исключение вне
 протестированного диапазона (аналогично прецеденту в лабе 108), а не гарантированная
 официальная поддержка - при обновлении Kyverno снимите это исключение.
+
+## Предварительные условия и ограничения
+
+**Docker, buildx и registry на worker не предоставляются.** Задания 3 и 9c требуют собрать и
+**опубликовать** образ в registry, доступном и с worker, и из кластера (immutable-ссылка
+`repo@sha256:...` берётся из registry, локальный image ID не подходит). Подготовьте это сами
+до задания 3:
+
+- установите Docker Engine с плагином buildx (`docker-buildx-plugin`) на worker и добавьте
+  пользователя `ubuntu` в группу `docker` (после этого переподключитесь по ssh);
+- выберите registry. Самый простой вариант для лабы - анонимный публичный `ttl.sh`: образ
+  `ttl.sh/<уникальный-путь>/catalog:2h` живёт ограниченное время (tag - это срок жизни: `1h`,
+  `2h` и т.д.), логин не нужен. Путь делайте случайным, публичный registry общий. Подойдёт и
+  любой ваш registry с `docker login`;
+- подробная последовательность команд - в шаге «0. Подготовка» [решения](worker/files/solutions/1_RU.MD).
+
+**Лимит Docker Hub.** Bootstrap, Trivy/Syft/bom и каждый `check_result` скачивают образы
+анонимно из Docker Hub, а у анонимных запросов лимит на pull с одного IP (около 100 за 6
+часов). Много повторных запусков `check_result` подряд могут закончиться `TOOMANYREQUESTS` -
+тогда отдельные тесты падают не из-за вашего решения. Подождите (окно лимита скользящее),
+не запускайте проверку без необходимости или выполните `docker login` под своей учётной
+записью Docker Hub.
+
+**Cosign и пароль ключа.** `cosign generate-key-pair` и `cosign sign --key` спрашивают пароль
+ключа; для учебной пары можно оставить его пустым (`export COSIGN_PASSWORD=""`), чтобы команды
+не ждали ввода.
+
+**`trivy sbom` и SPDX от `bom` (задание 8).** Trivy не определяет ОС по SPDX-файлу `bom`, поэтому
+в отчёте может не быть массива `Results`. Это ожидаемо: проверяется, что отчёт получен из
+SPDX-файла (`ArtifactType: spdx`), а `Results`, если он есть, является массивом.
 
 ## Развёртывание
 
@@ -293,7 +323,7 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 ---
 | **9c** | **Signature-specific DENY: unsigned digest, реально существующий в том же repository** |
 | :---: | :--- |
-| Что делаем | Соберите и опубликуйте **второй** tag в том же repository, что и `$HARDENED_IMAGE` (например, `${HARDENED_TAG%:*}:unsigned-1.0`), не подписывая его. Этот образ должен быть **физически другим artifact**, а не тем же digest, что уже подписанный `$HARDENED_IMAGE` - если собрать тот же `Dockerfile`/context без изменений, reproducible/cached build может дать идентичный digest, и тогда "unsigned" тег на самом деле укажет на уже подписанный artifact, а `cosign verify` неожиданно пройдёт. Внесите контролируемое отличие через build-arg (например `--build-arg CKS_SIGNATURE_TEST=unsigned-1` с соответствующим `ARG`/`LABEL` в Dockerfile) и явно сохраните доказательство `$UNSIGNED_DIGEST != $HARDENED_DIGEST` в `9c/digest-comparison.txt`. Получите registry manifest digest тем же способом, что в задании 3 (`docker buildx imagetools inspect`), сформируйте `$UNSIGNED_IMAGE` в том же repository. Явно докажите, что этот digest **существует и pullable** (`docker buildx imagetools inspect "$UNSIGNED_IMAGE"` успешен) и **не имеет** валидной подписи вашим ключом (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` завершается ошибкой) - сохраните оба вывода в `9c/unsigned-exists.txt` и `9c/unsigned-not-signed.txt`. Затем создайте Pod `catalog-unsigned-probe` с этим `$UNSIGNED_IMAGE` и сохраните admission denial в `9c/admission-deny.txt`. |
+| Что делаем | Соберите и опубликуйте **второй** tag в том же repository, что и `$HARDENED_IMAGE` (например, `${HARDENED_TAG%:*}:unsigned-1.0`; в `ttl.sh` tag - это срок жизни, поэтому используйте `${HARDENED_TAG%:*}:1h`), не подписывая его. Этот образ должен быть **физически другим artifact**, а не тем же digest, что уже подписанный `$HARDENED_IMAGE` - если собрать тот же `Dockerfile`/context без изменений, reproducible/cached build может дать идентичный digest, и тогда "unsigned" тег на самом деле укажет на уже подписанный artifact, а `cosign verify` неожиданно пройдёт. Внесите контролируемое отличие через build-arg (например `--build-arg CKS_SIGNATURE_TEST=unsigned-1` с соответствующим `ARG`/`LABEL` в Dockerfile) и явно сохраните доказательство `$UNSIGNED_DIGEST != $HARDENED_DIGEST` в `9c/digest-comparison.txt`. Получите registry manifest digest тем же способом, что в задании 3 (`docker buildx imagetools inspect`), сформируйте `$UNSIGNED_IMAGE` в том же repository. Явно докажите, что этот digest **существует и pullable** (`docker buildx imagetools inspect "$UNSIGNED_IMAGE"` успешен) и **не имеет** валидной подписи вашим ключом (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` завершается ошибкой) - сохраните оба вывода в `9c/unsigned-exists.txt` и `9c/unsigned-not-signed.txt`. Затем создайте Pod `catalog-unsigned-probe` с этим `$UNSIGNED_IMAGE` и сохраните admission denial в `9c/admission-deny.txt`. |
 | Критерии приёмки | `9c/digest-comparison.txt` содержит `hardened_digest=`, `unsigned_digest=` и `unsigned_image=` (полная `tag@digest`-ссылка в том же repository, что `$HARDENED_IMAGE`, с genuinely другим digest). Checker сам выполняет проверку: резолвит `unsigned_image` в registry, подтверждает отсутствие валидной подписи через собственный `cosign verify`, создаёт СВОЙ новый Pod с этим образом и требует уникальный validation message собственной policy: `catalog image must have a valid release signature`. Generic admission/signature error от другой policy не считается PASS, а не любую admission-ошибку (`manifest unknown`/registry lookup недостаточны). Написанные вручную evidence-файлы без реального admission control не дают PASS - checker не доверяет никаким текстовым файлам, кроме `unsigned_image=` как указателя на реальный образ для проверки. |
 
 <details>

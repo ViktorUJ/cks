@@ -88,10 +88,10 @@ helm_dist="helm-${HELM_VERSION}-linux-${arch}.tar.gz"
 helm_url="https://get.helm.sh/${helm_dist}"
 curl --fail --location --silent --show-error -o "$workdir/$helm_dist" "$helm_url"
 curl --fail --location --silent --show-error -o "$workdir/${helm_dist}.sha256sum" "${helm_url}.sha256sum"
-# get.helm.sh's .sha256sum asset is a bare hex digest with no filename column, so compare
-# it directly rather than relying on `sha256sum --check`'s "hash  filename" line format.
+# get.helm.sh's .sha256sum asset is "<hex>  <filename>" (hash plus filename column), so take
+# only the first field and compare it with the computed digest.
 helm_actual_sha=$(sha256sum "$workdir/$helm_dist" | awk '{print $1}')
-helm_expected_sha=$(tr -d '[:space:]' < "$workdir/${helm_dist}.sha256sum")
+helm_expected_sha=$(awk '{print $1}' "$workdir/${helm_dist}.sha256sum")
 [[ -n "$helm_expected_sha" && "$helm_actual_sha" == "$helm_expected_sha" ]]
 tar -xzf "$workdir/$helm_dist" -C "$workdir"
 install -m 0755 "$workdir/linux-${arch}/helm" /usr/local/bin/helm
@@ -115,20 +115,64 @@ chmod 0755 /usr/local/bin/install-kyverno
 # dependency on Docker Hub reachability at grading time. Pull the two base images once here
 # at bootstrap time and retag them under lab-owned repository names; they stay in
 # containerd's local content store under the k8s.io namespace, so kubelet (via CRI,
-# imagePullPolicy: IfNotPresent) and `ctr` both resolve them from cache afterwards without
+# imagePullPolicy: IfNotPresent) and `crictl` both resolve them from cache afterwards without
 # any further network access to docker.io.
 install -d -m 0755 /etc/cks112
 ctr -n k8s.io images pull docker.io/library/busybox:1.36 >/dev/null
 ctr -n k8s.io images pull docker.io/library/alpine:3.20 >/dev/null
-ctr -n k8s.io images tag docker.io/library/busybox:1.36 localhost:5000/cks112/trusted:1 >/dev/null
-ctr -n k8s.io images tag docker.io/library/alpine:3.20 localhost:5000/cks112/untrusted:1 >/dev/null
+ctr -n k8s.io images tag docker.io/library/busybox:1.36 cks112.local:5000/cks112/trusted:1 >/dev/null
+ctr -n k8s.io images tag docker.io/library/alpine:3.20 cks112.local:5000/cks112/untrusted:1 >/dev/null
+
+# Direct-to-runtime launcher for task 9. It talks to containerd over CRI (crictl), so the
+# container is created WITHOUT kube-apiserver/admission, yet stays visible to Falco's
+# container plugin, which resolves image metadata (container.image.repository) only for
+# CRI-known containers. `ctr run` containers always show <NA> there. Falco reports the
+# alphabetically first name of the image, which is why the lab-owned registry host
+# (cks112.local) sorts before docker.io.
+cat >/usr/local/bin/cks112-run <<'RUN_EOF'
+#!/usr/bin/env bash
+# usage: cks112-run <image> <unique-id> '<shell command>'
+set -euo pipefail
+image=$1; id=$2; cmd=$3
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+cat >"$tmp/pod.json" <<J
+{"metadata":{"name":"$id","namespace":"runtime-112","uid":"$id","attempt":1},"log_directory":"/tmp","linux":{"cgroup_parent":"/kubepods.slice/kubepods-besteffort.slice","security_context":{"namespace_options":{"network":2}}}}
+J
+jq -n --arg id "$id" --arg image "$image" --arg cmd "$cmd" \
+  '{metadata:{name:$id},image:{image:$image},command:["sh","-c",$cmd],log_path:($id+".log"),linux:{}}' >"$tmp/ctr.json"
+# kubelet treats a sandbox it does not own as an orphan and may remove it between runp and
+# start ("can't find shim for sandbox"), so retry the whole sequence with a fresh sandbox.
+for attempt in 1 2 3 4 5; do
+  if pod=$(crictl runp "$tmp/pod.json" 2>/dev/null) \
+     && ctr=$(crictl create "$pod" "$tmp/ctr.json" "$tmp/pod.json" 2>/dev/null) \
+     && crictl start "$ctr" >/dev/null 2>&1; then
+    echo "$ctr"
+    exit 0
+  fi
+  [[ -n "${pod:-}" ]] && { crictl stopp "$pod" >/dev/null 2>&1 || true; crictl rmp "$pod" >/dev/null 2>&1 || true; }
+  pod=""
+  sleep 1
+done
+echo "cks112-run: could not start container for $image" >&2
+exit 1
+RUN_EOF
+cat >/usr/local/bin/cks112-rm <<'RM_EOF'
+#!/usr/bin/env bash
+# usage: cks112-rm <unique-id>  (removes the sandbox and its container created by cks112-run)
+for pod in $(crictl pods --name "^$1\$" -q 2>/dev/null); do
+  crictl stopp "$pod" >/dev/null 2>&1 || true
+  crictl rmp "$pod" >/dev/null 2>&1 || true
+done
+exit 0
+RM_EOF
+chmod 0755 /usr/local/bin/cks112-run /usr/local/bin/cks112-rm
 
 cat >/etc/cks112/registry.env <<'EOF'
-export CKS112_REGISTRY='localhost:5000'
+export CKS112_REGISTRY='cks112.local:5000'
 export CKS112_TRUSTED_REPO='cks112/trusted'
 export CKS112_UNTRUSTED_REPO='cks112/untrusted'
-export CKS112_TRUSTED_IMAGE='localhost:5000/cks112/trusted:1'
-export CKS112_UNTRUSTED_IMAGE='localhost:5000/cks112/untrusted:1'
+export CKS112_TRUSTED_IMAGE='cks112.local:5000/cks112/trusted:1'
+export CKS112_UNTRUSTED_IMAGE='cks112.local:5000/cks112/untrusted:1'
 EOF
 chmod 0644 /etc/cks112/registry.env
 

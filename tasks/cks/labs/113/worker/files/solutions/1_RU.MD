@@ -9,6 +9,10 @@ export KUBECONFIG=/home/ubuntu/.kube/config
 export CTX=cluster1-admin@cluster1
 kubectl config use-context "$CTX"
 mkdir -p /var/work/tests/artifacts/{1,2,4}
+# Имена узлов в Kubernetes - hostname инстансов (ip-10-...), а не ssh-алиасы; определяем их по роли.
+export CP_NODE=$(kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+export WORKER_NODE=$(kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}')
+echo "control-plane=$CP_NODE worker=$WORKER_NODE"
 ```
 
 ## Шаг 0. Параллельно запустите availability-полинг (задание 4)
@@ -19,8 +23,11 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 
 ```bash
 while true; do
-  available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null)
-  echo "$(date +%s) available=${available:-0}" >> /var/work/tests/artifacts/4/canary-availability.log
+  if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then
+    echo "$(date +%s) available=${available:-0}"                     # API ответил: пустое поле = 0 доступных реплик
+  else
+    echo "$(date +%s) available=api-unreachable"                     # API недоступен - это не простой нагрузки
+  fi >> /var/work/tests/artifacts/4/canary-availability.log
   sleep 5
 done
 ```
@@ -86,7 +93,7 @@ grep -q 'SUCCESS' /var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt
 kubelet:
 
 ```bash
-kubectl drain k8s113_controlPlane_1 --context "$CTX" --ignore-daemonsets --delete-emptydir-data
+kubectl drain "$CP_NODE" --context "$CTX" --ignore-daemonsets --delete-emptydir-data
 ```
 
 ```bash
@@ -101,8 +108,8 @@ kubelet --version
 ```
 
 ```bash
-kubectl uncordon k8s113_controlPlane_1 --context "$CTX"
-kubectl get node k8s113_controlPlane_1 --context "$CTX" -o wide
+kubectl uncordon "$CP_NODE" --context "$CTX"
+kubectl get node "$CP_NODE" --context "$CTX" -o wide
 ```
 
 Проверяем итоговые версии на control-plane:
@@ -152,7 +159,7 @@ ssh k8s113_node_worker1 'sudo kubeadm upgrade node' \
 ### Drain, обновление kubelet/kubectl, uncordon для worker-узла
 
 ```bash
-kubectl drain k8s113_node_worker1 --context "$CTX" --ignore-daemonsets --delete-emptydir-data
+kubectl drain "$WORKER_NODE" --context "$CTX" --ignore-daemonsets --delete-emptydir-data
 ```
 
 ```bash
@@ -167,8 +174,8 @@ kubelet --version
 ```
 
 ```bash
-kubectl uncordon k8s113_node_worker1 --context "$CTX"
-kubectl get node k8s113_node_worker1 --context "$CTX" -o wide
+kubectl uncordon "$WORKER_NODE" --context "$CTX"
+kubectl get node "$WORKER_NODE" --context "$CTX" -o wide
 ```
 
 ## 3. Проверка порядка upgrade
@@ -185,6 +192,12 @@ kubectl get nodes --context "$CTX" -o wide
 ```
 
 ## 4. Проверка отсутствия downtime
+
+> Во время `kubeadm upgrade apply` на единственном control-plane API server на несколько
+> секунд перезапускается, и `kubectl` в цикле опроса не отвечает. Такие строки записаны как
+> `available=api-unreachable` и в подсчёт минимума не входят (шаблон `[0-9]+`): недоступность
+> API - не простой `canary`, контейнеры работают. Поэтому downtime доказывает независимый
+> монитор чекера, который считает работающие контейнеры через `crictl` на обоих узлах.
 
 Остановите цикл опроса из Шага 0 (`Ctrl+C` в его сессии) и проверьте, что минимальное
 значение `available` за весь прогон не опускалось до 0:

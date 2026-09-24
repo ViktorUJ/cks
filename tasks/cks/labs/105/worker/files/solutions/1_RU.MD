@@ -188,7 +188,13 @@ ssh "$CP" "sudo stat -c '%U %G %a' /etc/kubernetes/admin.conf" \
 ssh "$CP" "sudo sed -i -E 's/^[[:space:]]*PermitRootLogin[[:space:]]+.*/PermitRootLogin no/' /etc/ssh/sshd_config"
 ssh "$CP" "sudo grep -qE '^[[:space:]]*PermitRootLogin[[:space:]]+' /etc/ssh/sshd_config || echo 'PermitRootLogin no' | sudo tee -a /etc/ssh/sshd_config"
 ssh "$CP" 'sudo sshd -t && sudo systemctl reload ssh'
+sleep 2
 ```
+
+Пауза `sleep 2` после `reload ssh` нужна намеренно: на время перезапуска sshd следующий
+`ssh` на control-plane может на 1-2 секунды получить `Connection refused`. Это нормально и не
+означает, что конфигурация сломана (её уже проверил `sshd -t`) - просто повторите команду.
+Текущая сессия при этом не рвётся, а новые подключения после паузы проходят.
 
 `sshd -T` без connection context не применяет `Match`-блоки вообще - man `sshd(8)`
 прямо говорит, что `Match` в test mode применяется только когда передан `-C`. Поэтому

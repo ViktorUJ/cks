@@ -69,12 +69,17 @@ ssh control-plane 'sudo stat -c "%a %U:%G %n" /etc/kubernetes/enc/encryption-con
 
 ## 3. Подключить конфигурацию к static kube-apiserver
 
-Сначала сохраним manifest. На control-plane откройте именно существующий static-Pod
+Сначала сохраним manifest **вне** каталога `/etc/kubernetes/manifests/`: kubelet читает как static
+Pod каждый не скрытый файл этого каталога, включая `*.bak`. Копия оригинального manifest внутри
+каталога - это второй static Pod с тем же именем; kubelet может продолжать запускать именно её
+(старую конфигурацию без `--encryption-provider-config`), а правка основного файла молча не
+вступит в силу, и шифрование останется выключенным при внешне здоровом API server.
+На control-plane откройте именно существующий static-Pod
 manifest и добавьте **к имеющимся** `command`, `volumeMounts` и `volumes` эти элементы;
 не заменяйте весь файл шаблоном.
 
 ```bash
-ssh control-plane 'sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml.bak-109'
+ssh control-plane 'sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/kube-apiserver.yaml.bak-109'
 ssh -t control-plane 'sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml'
 ```
 

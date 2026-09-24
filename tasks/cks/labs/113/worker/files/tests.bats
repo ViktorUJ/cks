@@ -6,6 +6,11 @@ ARTIFACTS="/var/work/tests/artifacts"
 TARGET_MINOR="1.36"
 START_MINOR="1.35"
 
+# Node objects are named after the instance hostnames (ip-10-...), not after the ssh aliases
+# k8s113_controlPlane_1 / k8s113_node_worker1, so resolve them by role.
+cp_node() { kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true; }
+worker_node() { kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true; }
+
 record_result() {
   echo '1' >> /var/work/tests/result/all
   if [[ "$1" -eq 0 ]]; then echo '1' >> /var/work/tests/result/ok; fi
@@ -22,7 +27,7 @@ record_result() {
   kubelet_ver=$(ssh -o BatchMode=yes k8s113_controlPlane_1 'kubelet --version' 2>/dev/null || true)
   api_server_ver=$(kubectl version --context "$CTX" -o json 2>/dev/null | jq -r '.serverVersion.gitVersion // empty')
   cp_kubectl_ver=$(ssh -o BatchMode=yes k8s113_controlPlane_1 'kubectl version --client -o json' 2>/dev/null | jq -r '.clientVersion.gitVersion // empty')
-  node_status=$(kubectl get node k8s113_controlPlane_1 --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+  node_status=$(kubectl get node "$(cp_node)" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
   evidence="$ARTIFACTS/1/kubeadm-upgrade-apply.txt"
   if [[ "$kubeadm_ver" == v${TARGET_MINOR}.* && "$kubelet_ver" == *"v${TARGET_MINOR}."* \
         && "$api_server_ver" == v${TARGET_MINOR}.* && "$cp_kubectl_ver" == v${TARGET_MINOR}.* \
@@ -39,7 +44,7 @@ record_result() {
     elif [[ "$kubelet_ver" != *"v${TARGET_MINOR}."* ]]; then
       echo "HINT: kubelet on the control-plane is not on v${TARGET_MINOR}.x yet - after 'kubeadm upgrade apply' succeeds, drain the node, upgrade the kubelet/kubectl packages, and restart kubelet."
     elif [[ "$node_status" != "True" ]]; then
-      echo "HINT: control-plane node is not Ready - did you uncordon it after upgrading kubelet? Check 'kubectl get node k8s113_controlPlane_1'."
+      echo "HINT: control-plane node is not Ready - did you uncordon it after upgrading kubelet? Check 'kubectl get nodes'."
     else
       echo "HINT: $evidence is missing or doesn't contain the real 'kubeadm upgrade apply' output with 'SUCCESS' and the target version - save the actual command output, not a paraphrase."
     fi
@@ -53,8 +58,8 @@ record_result() {
   kubeadm_ver=$(ssh -o BatchMode=yes k8s113_node_worker1 'kubeadm version -o short' 2>/dev/null || true)
   kubelet_ver=$(ssh -o BatchMode=yes k8s113_node_worker1 'kubelet --version' 2>/dev/null || true)
   worker_kubectl_ver=$(ssh -o BatchMode=yes k8s113_node_worker1 'kubectl version --client -o json' 2>/dev/null | jq -r '.clientVersion.gitVersion // empty')
-  node_status=$(kubectl get node k8s113_node_worker1 --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
-  node_version=$(kubectl get node k8s113_node_worker1 --context "$CTX" -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null || true)
+  node_status=$(kubectl get node "$(worker_node)" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true)
+  node_version=$(kubectl get node "$(worker_node)" --context "$CTX" -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null || true)
   evidence="$ARTIFACTS/2/kubeadm-upgrade-node.txt"
   if [[ "$kubeadm_ver" == v${TARGET_MINOR}.* && "$kubelet_ver" == *"v${TARGET_MINOR}."* \
         && "$worker_kubectl_ver" == v${TARGET_MINOR}.* \
@@ -67,9 +72,9 @@ record_result() {
     elif [[ "$worker_kubectl_ver" != v${TARGET_MINOR}.* ]]; then
       echo "HINT: the local 'kubectl' client package on the worker node is not on v${TARGET_MINOR}.x yet - upgrade the kubectl package alongside kubelet."
     elif [[ "$node_version" != v${TARGET_MINOR}.* ]]; then
-      echo "HINT: 'kubectl get node k8s113_node_worker1' still reports the old kubelet version - after 'kubeadm upgrade node' succeeds on the worker, drain it, upgrade kubelet/kubectl packages, restart kubelet."
+      echo "HINT: 'kubectl get nodes' still reports the worker's the old kubelet version - after 'kubeadm upgrade node' succeeds on the worker, drain it, upgrade kubelet/kubectl packages, restart kubelet."
     elif [[ "$node_status" != "True" ]]; then
-      echo "HINT: worker node is not Ready - did you uncordon it after the kubelet restart? Check 'kubectl get node k8s113_node_worker1'."
+      echo "HINT: worker node is not Ready - did you uncordon it after the kubelet restart? Check 'kubectl get nodes'."
     else
       echo "HINT: $evidence is missing or empty - save the real 'kubeadm upgrade node' command output from the worker as evidence."
     fi
@@ -137,10 +142,10 @@ record_result() {
 }
 
 @test "5. no node is left in an old minor version or stuck cordoned" {
-  cp_version=$(kubectl get node k8s113_controlPlane_1 --context "$CTX" -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null || true)
-  worker_version=$(kubectl get node k8s113_node_worker1 --context "$CTX" -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null || true)
-  cp_unschedulable=$(kubectl get node k8s113_controlPlane_1 --context "$CTX" -o jsonpath='{.spec.unschedulable}' 2>/dev/null || true)
-  worker_unschedulable=$(kubectl get node k8s113_node_worker1 --context "$CTX" -o jsonpath='{.spec.unschedulable}' 2>/dev/null || true)
+  cp_version=$(kubectl get node "$(cp_node)" --context "$CTX" -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null || true)
+  worker_version=$(kubectl get node "$(worker_node)" --context "$CTX" -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null || true)
+  cp_unschedulable=$(kubectl get node "$(cp_node)" --context "$CTX" -o jsonpath='{.spec.unschedulable}' 2>/dev/null || true)
+  worker_unschedulable=$(kubectl get node "$(worker_node)" --context "$CTX" -o jsonpath='{.spec.unschedulable}' 2>/dev/null || true)
   if [[ "$cp_version" == v${TARGET_MINOR}.* && "$worker_version" == v${TARGET_MINOR}.* ]] \
      && [[ -z "$cp_unschedulable" || "$cp_unschedulable" == "false" ]] \
      && [[ -z "$worker_unschedulable" || "$worker_unschedulable" == "false" ]]; then

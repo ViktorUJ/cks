@@ -54,6 +54,16 @@ chmod 0644 /opt/lab106-fixtures/cks-106-deny-unshare.json
 CONTROL_PLANE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 printf '%s control-plane\n' "$CONTROL_PLANE_IP" >> /etc/hosts
 
+# Root login is not keyed on the node, only ubuntu is. This script and any root-run checker
+# would otherwise default to root@control-plane and fail (and the wait loop below would
+# always time out). Map the alias to ubuntu for both root and the ubuntu student user.
+for ssh_home in /root /home/ubuntu; do
+  install -d -m 0700 "$ssh_home/.ssh"
+  printf 'Host control-plane\n  User ubuntu\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  LogLevel ERROR\n' >> "$ssh_home/.ssh/config"
+  chmod 0600 "$ssh_home/.ssh/config"
+done
+chown -R ubuntu:ubuntu /home/ubuntu/.ssh
+
 # work_pc_v2 supplies node names through /etc/hosts and the shared SSH key.
 # Fail early if that required lab access path is not usable.
 for attempt in {1..24}; do

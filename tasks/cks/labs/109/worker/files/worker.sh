@@ -8,6 +8,19 @@ ETCD_DIR="/var/lib/cks-109/etcd"
 
 echo "*** CKS lab 109 worker bootstrap"
 until kubectl get nodes --context "$CTX" --no-headers >/dev/null 2>&1; do sleep 5; done
+
+# The README/solution use "ssh control-plane", but the alias is not created by the shared
+# worker template, and root login is keyed on the node for ubuntu only. This script, the
+# etcdctl-109 wrapper and any root-run checker default to root@ - map the alias to ubuntu
+# for both root and the student user.
+CONTROL_PLANE_IP=$(kubectl get nodes --context "$CTX" -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+grep -q ' control-plane$' /etc/hosts || printf '%s control-plane\n' "$CONTROL_PLANE_IP" >> /etc/hosts
+for ssh_home in /root /home/ubuntu; do
+  install -d -m 0700 "$ssh_home/.ssh"
+  printf 'Host control-plane\n  User ubuntu\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  LogLevel ERROR\n' >> "$ssh_home/.ssh/config"
+  chmod 0600 "$ssh_home/.ssh/config"
+done
+chown -R ubuntu:ubuntu /home/ubuntu/.ssh
 for attempt in {1..24}; do
   if ssh -o BatchMode=yes -o ConnectTimeout=5 control-plane 'sudo -n true' >/dev/null 2>&1; then break; fi
   sleep 5

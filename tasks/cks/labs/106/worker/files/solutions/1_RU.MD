@@ -316,7 +316,9 @@ ssh control-plane 'sudo grep -q "^seccompDefault:" /var/lib/kubelet/config.yaml 
   || echo "seccompDefault: true" | sudo tee -a /var/lib/kubelet/config.yaml'
 ssh control-plane 'sudo systemctl restart kubelet'
 ssh control-plane 'sudo systemctl is-active kubelet'
-kubectl get node control-plane -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}'
+# Имя Node в API - не алиас 'control-plane' из /etc/hosts, а реальное имя ноды (ip-10-...).
+NODE=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
+kubectl get node "$NODE" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}'
 ```
 
 Создаём Pod без единого упоминания `seccompProfile` - ни на Pod, ни на container level:
@@ -346,7 +348,7 @@ kubectl exec -n security-106 no-seccomp-field -- grep '^Seccomp:' /proc/1/status
 # Проверьте себя через РЕАЛЬНО ПРИМЕНЁННУЮ конфигурацию kubelet, не через текст файла на
 # диске - drop-in или флаг командной строки могли бы переопределить значение без
 # изменения самого config.yaml:
-node=control-plane
+node=$NODE
 kubectl get --raw "/api/v1/nodes/${node}/proxy/configz" | jq '.kubeletconfig.seccompDefault'
 # true
 ```

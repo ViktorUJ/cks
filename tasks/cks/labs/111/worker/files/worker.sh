@@ -7,15 +7,21 @@ KUBESEC_VERSION="2.14.0"
 KUBE_LINTER_VERSION="0.8.3"
 HADOLINT_VERSION="2.12.0"
 SYFT_VERSION="1.51.0"
-BOM_VERSION="0.7.0"
+BOM_VERSION="0.8.0"
 COSIGN_VERSION="3.1.3"
 
 printf '%s\n' '*** worker bootstrap CKS lab 111: pinned supply-chain tools'
 until kubectl get nodes --no-headers >/dev/null 2>&1; do sleep 5; done
 kubectl create namespace cks-111 --dry-run=client -o yaml | kubectl apply -f -
 
+# The shared worker image can be left with podman/buildah/golang-github-containers-* unpacked
+# but not configured (conffile prompt on /etc/containers/policy.json). Any later apt-get
+# install then fails in the same dpkg transaction and aborts this whole script under set -e.
+# dpkg (not apt) needs --force-conf* as plain arguments.
+DEBIAN_FRONTEND=noninteractive dpkg --configure -a --force-confdef --force-confold || true
+
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl jq golang-go
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" ca-certificates curl jq
 arch=$(dpkg --print-architecture)
 case "$arch" in
   amd64) gh_arch=amd64 ;;
@@ -92,8 +98,20 @@ download_verified \
 tar -xzf "$workdir/syft_${SYFT_VERSION}_linux_${gh_arch}.tar.gz" -C "$workdir" syft
 install -m 0755 "$workdir/syft" /usr/local/bin/syft
 
-# BOM is installed through Go's module checksum verification; do not disable GOSUMDB.
-GOSUMDB=sum.golang.org GOBIN=/usr/local/bin go install "sigs.k8s.io/bom/cmd/bom@v${BOM_VERSION}"
+# bom v0.7.x fails on current Docker Hub images ("invalid tar header" while reading layers,
+# reproducible for nginx/python/node/ruby); v0.8.0 fixes it. It also needs Go >= 1.24, but
+# Ubuntu 22.04 ships golang-go 1.18, so 'go install' cannot build it anyway. Use the
+# publisher's release binary, verified against a checksum pinned here (computed from the
+# release asset at pin time; bump together with BOM_VERSION).
+case "$gh_arch" in
+  amd64) bom_sha256="cafd00b75a8df860fec54d19b9e24fb48556c0848d0abf9e40cd2eabb11a8710" ;;
+  arm64) bom_sha256="921ad8ecd43b79b6f33122a6e85cb2a663e47b54007f08aceaf4e844a9c007cd" ;;
+esac
+download_verified_pinned \
+  "https://github.com/kubernetes-sigs/bom/releases/download/v${BOM_VERSION}/bom-${gh_arch}-linux" \
+  "bom" \
+  "$bom_sha256"
+install -m 0755 "$workdir/bom" /usr/local/bin/bom
 
 download_verified \
   "https://github.com/sigstore/cosign/releases/download/v${COSIGN_VERSION}/cosign-linux-${gh_arch}" \
@@ -188,8 +206,10 @@ EOF
 CHECKER=/var/lib/cks-lab111-checker
 install -d -o root -g root -m 0700 "$CHECKER"
 hadolint /home/ubuntu/cks-111/Dockerfile > "$CHECKER/hadolint-before.txt" 2>&1 || true
-kubesec scan /home/ubuntu/cks-111/deployment.yaml > "$CHECKER/kubesec-before.json" 2>&1 || true
-kube-linter lint /home/ubuntu/cks-111/deployment.yaml --format json > "$CHECKER/kube-linter-before.json" 2>&1 || true
+# JSON baselines: stderr must NOT be merged in (kube-linter prints "Error: found N lint errors"
+# there), or the file is no longer valid JSON. hadolint output is plain text, so it keeps 2>&1.
+kubesec scan /home/ubuntu/cks-111/deployment.yaml > "$CHECKER/kubesec-before.json" 2>/dev/null || true
+kube-linter lint /home/ubuntu/cks-111/deployment.yaml --format json > "$CHECKER/kube-linter-before.json" 2>/dev/null || true
 
 # The "|| true" above only tolerates the EXPECTED non-zero exit from findings being
 # present - it must not also silently accept a genuinely broken/empty/malformed baseline.
@@ -359,7 +379,7 @@ for tag in "${PKG_POOL[@]}"; do
   sbom_tmp=$(mktemp)
   bom generate --format json --output "$sbom_tmp" --image "$ref" >/dev/null 2>&1
   PKG_REF["$tag"]="$ref"
-  PKG_SBOM["$tag"]=$(jq -r '.packages[]? | select(.name and .versionInfo) | "\(.name)=\(.versionInfo)"' "$sbom_tmp" | sort -u)
+  PKG_SBOM["$tag"]=$(jq -r '.packages[]? | select((.name // "") != "" and (.versionInfo // "") != "") | "\(.name)=\(.versionInfo)"' "$sbom_tmp" | sort -u)
   rm -f "$sbom_tmp"
 done
 

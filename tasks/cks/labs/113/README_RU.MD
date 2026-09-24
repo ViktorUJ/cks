@@ -96,7 +96,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 | **2** | **Upgrade worker-узла до целевого minor** |
 | :---: | :--- |
 | Что делаем | На `k8s113_node_worker1` аналогично переключите `pkgs.k8s.io` на `core:/stable:/v1.36`, обновите `kubeadm`, выполните `kubeadm upgrade node` (не `apply` - это команда только для control-plane). Затем `kubectl drain` этого узла (с рабочей машины, не с самого узла), обновите `kubelet`/`kubectl`, перезапустите `kubelet`, `kubectl uncordon`. |
-| Критерии приёмки | `kubeadm version`, `kubelet --version` и локальный `kubectl version --client` на worker-узле сообщают `v1.36.x`; `kubectl get node k8s113_node_worker1` показывает `v1.36.x` в `kubeletVersion` и статус `Ready`. Вывод `kubeadm upgrade node` сохранён в `/var/work/tests/artifacts/2/kubeadm-upgrade-node.txt`. |
+| Критерии приёмки | `kubeadm version`, `kubelet --version` и локальный `kubectl version --client` на worker-узле сообщают `v1.36.x`; `kubectl get nodes` показывает для worker-узла `v1.36.x` в `kubeletVersion` и статус `Ready`. Вывод `kubeadm upgrade node` сохранён в `/var/work/tests/artifacts/2/kubeadm-upgrade-node.txt`. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>

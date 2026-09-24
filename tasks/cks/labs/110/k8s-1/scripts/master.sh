@@ -4,8 +4,10 @@ set -euo pipefail
 export KUBECONFIG=/root/.kube/config
 
 echo "*** control-plane bootstrap: CKS lab 110"
-until [[ "$(kubectl get nodes --no-headers 2>/dev/null | awk '$2 == "Ready" {count++} END {print count+0}')" -ge 2 ]]; do
-  echo "waiting for the gVisor worker to join and become Ready"
+# Nodes cannot become Ready before a CNI exists, so wait only for the worker to REGISTER
+# here; readiness is awaited after Cilium is installed (cilium status --wait below).
+until [[ "$(kubectl get nodes --no-headers 2>/dev/null | wc -l)" -ge 2 ]]; do
+  echo "waiting for the gVisor worker to join"
   sleep 5
 done
 
@@ -19,12 +21,14 @@ if ! kubectl -n kube-system get daemonset cilium >/dev/null 2>&1; then
   cilium install --version 1.20.1
 fi
 cilium status --wait
+until [[ "$(kubectl get nodes --no-headers 2>/dev/null | awk '$2 == "Ready" {count++} END {print count+0}')" -ge 2 ]]; do sleep 5; done
 
 # Regular test clients run on the control-plane; sandboxed workloads select the worker
 # through RuntimeClass scheduling constraints set by the student.
 kubectl taint nodes "$(hostname)" node-role.kubernetes.io/control-plane:NoSchedule- || true
 kubectl label node "$(hostname)" lab.cks.io/role=control-plane --overwrite
-kubectl label nodes -l node_name=gvisor sandbox.runtime/gvisor=true lab.cks.io/role=gvisor --overwrite
+# The single non-control-plane node is the gVisor worker (it has no kubeconfig to label itself).
+kubectl label nodes -l '!node-role.kubernetes.io/control-plane' sandbox.runtime/gvisor=true lab.cks.io/role=gvisor --overwrite
 
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tcpdump

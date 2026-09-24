@@ -38,13 +38,13 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
 
 @test "2. A shell in the prepared container was detected by the standard Falco rule" {
   echo '1' >> /var/work/tests/result/all
-  pod=$(kubectl get pod falco-shell -n "$NS" --context "$CTX" -o json 2>/dev/null)
+  pod=$(kubectl get pod falco-shell -n "$NS" --context "$CTX" -o json 2>/dev/null || true)
   phase=$(jq -r '.status.phase // ""' <<<"$pod" 2>/dev/null)
   image=$(jq -r '.spec.containers[]? | select(.name == "app") | .image' <<<"$pod" 2>/dev/null)
   stdin=$(jq -r '.spec.containers[]? | select(.name == "app") | .stdin == true' <<<"$pod" 2>/dev/null)
   tty=$(jq -r '.spec.containers[]? | select(.name == "app") | .tty == true' <<<"$pod" 2>/dev/null)
   artifact=/var/work/tests/artifacts/2/falco-shell.log
-  journal_lines=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco -b --no-pager -n 1000 | grep -F 'Terminal shell in container'" 2>/dev/null || true)
+  journal_lines=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager | grep -F -e 'A shell was spawned in a container with an attached terminal' -e 'Terminal shell in container'" 2>/dev/null || true)
   artifact_line=$(tail -n1 "$artifact" 2>/dev/null || true)
   contained=false
   [[ -s /var/work/tests/artifacts/6/containment.txt ]] && contained=true
@@ -59,7 +59,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
     if [[ "$pod_state_ok" != true ]]; then
       echo "HINT: Pod 'falco-shell' must be Running with image busybox:1.36, stdin: true, and tty: true - an interactive TTY session is what triggers the 'Terminal shell in container' rule."
     elif [[ -z "$journal_lines" ]]; then
-      echo "HINT: No 'Terminal shell in container' line found in Falco's journal - open an actual interactive shell into the Pod (kubectl exec -it) rather than a one-shot command."
+      echo "HINT: No terminal-shell alert ('A shell was spawned in a container with an attached terminal') found in Falco's journal - open an actual interactive shell into the Pod (kubectl exec -it) rather than a one-shot command."
     else
       echo "HINT: falco-shell.log's last line is not an exact copy of a real journalctl line for this alert - copy the real line verbatim, do not paraphrase or hand-write it."
     fi
@@ -74,7 +74,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   local_rule=$(ssh -o BatchMode=yes control-plane "sudo test -r '$FALCO_RULES' && sudo cat '$FALCO_RULES'" 2>/dev/null || true)
   active=$(ssh -o BatchMode=yes control-plane 'systemctl is-active falco 2>/dev/null' 2>/dev/null || true)
   artifact=/var/work/tests/artifacts/3/falco-custom.log
-  journal_lines=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco -b --no-pager -n 1000 | grep -F 'CKS112 custom shell marker'" 2>/dev/null || true)
+  journal_lines=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager | grep -F 'CKS112 custom shell marker'" 2>/dev/null || true)
   artifact_line=$(tail -n1 "$artifact" 2>/dev/null || true)
   custom_rule_block=$(awk '
     /^- rule: CKS112 Custom Shell Marker$/ { found=1 }
@@ -109,6 +109,16 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   [ "$result" -eq 0 ]
 }
 
+# An evidence artifact must be a genuine event from the API server audit log: its auditID has to
+# be present in the log on the node (a hand-written or edited file will not be). It cannot be
+# compared with the checker's own fresh request - that event has a different auditID/timestamp.
+audit_artifact_is_real() {
+  local id
+  id=$(jq -r '.auditID // empty' "$1" 2>/dev/null) || return 1
+  [[ "$id" =~ ^[0-9a-f-]{36}$ ]] || return 1
+  ssh -o BatchMode=yes control-plane "sudo grep -Fq '\"auditID\":\"$id\"' '$AUDIT_LOG'" 2>/dev/null
+}
+
 @test "4. kube-apiserver audits ConfigMap at RequestResponse but Secret only at Metadata (no body)" {
   echo '1' >> /var/work/tests/result/all
   manifest=$(ssh -o BatchMode=yes control-plane "sudo cat '$APISERVER_MANIFEST'" 2>/dev/null || true)
@@ -134,8 +144,8 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
         && -n "$cm_event" && -n "$secret_event" && -s "$cm_artifact" && -s "$secret_artifact" ]] \
      && jq -e '.level == "RequestResponse" and .objectRef.resource == "configmaps" and .objectRef.name == "audit-config"' "$cm_artifact" >/dev/null 2>&1 \
      && jq -e '.level == "Metadata" and .objectRef.resource == "secrets" and .objectRef.name == "audit-secret" and (has("requestObject") | not) and (has("responseObject") | not)' "$secret_artifact" >/dev/null 2>&1 \
-     && [[ "$(jq -S -c . "$cm_artifact" 2>/dev/null)" == "$(jq -S -c . <<<"$cm_event" 2>/dev/null)" ]] \
-     && [[ "$(jq -S -c . "$secret_artifact" 2>/dev/null)" == "$(jq -S -c . <<<"$secret_event" 2>/dev/null)" ]]; then
+     && audit_artifact_is_real "$cm_artifact" \
+     && audit_artifact_is_real "$secret_artifact"; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -158,7 +168,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
 
 @test "5. immutable-app rejects rootfs writes but retains a writable emptyDir /tmp" {
   echo '1' >> /var/work/tests/result/all
-  pod=$(kubectl get pod immutable-app -n "$NS" --context "$CTX" -o json 2>/dev/null)
+  pod=$(kubectl get pod immutable-app -n "$NS" --context "$CTX" -o json 2>/dev/null || true)
   phase=$(jq -r '.status.phase // ""' <<<"$pod" 2>/dev/null)
   readonly=$(jq -r '.spec.containers[]? | select(.name == "app") | .securityContext.readOnlyRootFilesystem == true' <<<"$pod" 2>/dev/null)
   writable_tmp=$(jq -r '([.spec.volumes[]? | select(.name == "writable-tmp" and .emptyDir != null)] | length == 1) and ([.spec.containers[]? | select(.name == "app") | .volumeMounts[]? | select(.name == "writable-tmp" and .mountPath == "/tmp" and (.readOnly // false) == false)] | length == 1)' <<<"$pod" 2>/dev/null)
@@ -204,7 +214,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   host_pid=$(awk -F= '$1 == "host_pid" {print $2}' "$summary" 2>/dev/null)
   node=$(awk -F= '$1 == "node" {print $2}' "$summary" 2>/dev/null)
   current_node=$(kubectl get nodes --context "$CTX" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
-  journal=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco -b --no-pager -n 2000 | grep -F 'CKS112 custom shell marker' | tail -20" 2>/dev/null || true)
+  journal=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager | grep -F 'CKS112 custom shell marker' | tail -20" 2>/dev/null || true)
 
   np=$(kubectl get networkpolicy incident-quarantine -n "$NS" --context "$CTX" -o json 2>/dev/null || true)
   quarantine=$(jq -r '(.spec.podSelector == {}) and ((.spec.policyTypes | sort) == ["Egress","Ingress"]) and ((.spec.ingress // []) | length == 0) and ((.spec.egress // []) | length == 0)' <<<"$np" 2>/dev/null)
@@ -235,7 +245,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   grep -q '^attack_phase=Execution$' "$summary" 2>/dev/null || evidence_ok=false
   grep -q '^technique=Container Administration Command$' "$summary" 2>/dev/null || evidence_ok=false
   grep -q '^containment=quarantine-and-delete$' "$summary" 2>/dev/null || evidence_ok=false
-  jq -e '.level == "Metadata" and .verb == "create" and .objectRef.resource == "pods" and .objectRef.subresource == "exec" and .objectRef.namespace == "runtime-112" and .objectRef.name == "falco-shell" and (has("requestObject") | not) and (has("responseObject") | not)' "$audit_event" >/dev/null 2>&1 || evidence_ok=false
+  jq -e '.level == "Metadata" and (.verb == "create" or .verb == "get") and .objectRef.resource == "pods" and .objectRef.subresource == "exec" and .objectRef.namespace == "runtime-112" and .objectRef.name == "falco-shell" and (has("requestObject") | not) and (has("responseObject") | not)' "$audit_event" >/dev/null 2>&1 || evidence_ok=false
 
   if [[ "$evidence_ok" == true && "$quarantine" == true && "$pod_absent" -ne 0 && "$exec_status" -ne 0 ]] \
     && grep -Eq '^exec_exit=[1-9][0-9]*$' "$dir/containment.txt"; then
@@ -265,7 +275,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   config_d=$(ssh -o BatchMode=yes control-plane "sudo cat /etc/falco/config.d/cks112-output.yaml" 2>/dev/null || true)
   active=$(ssh -o BatchMode=yes control-plane 'systemctl is-active falco 2>/dev/null' 2>/dev/null || true)
 
-  ci_pod=$(kubectl get pod ci-runner -n "$NS" --context "$CTX" -o json 2>/dev/null)
+  ci_pod=$(kubectl get pod ci-runner -n "$NS" --context "$CTX" -o json 2>/dev/null || true)
   ci_phase=$(jq -r '.status.phase // ""' <<<"$ci_pod" 2>/dev/null)
   ci_stdin=$(jq -r '.spec.containers[]? | select(.name == "app") | .stdin == true' <<<"$ci_pod" 2>/dev/null)
   ci_tty=$(jq -r '.spec.containers[]? | select(.name == "app") | .tty == true' <<<"$ci_pod" 2>/dev/null)
@@ -350,19 +360,25 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   webhook_config=$(ssh -o BatchMode=yes control-plane "sudo cat /etc/kubernetes/audit/webhook-config.yaml" 2>/dev/null || true)
   ready=$(kubectl get --context "$CTX" --raw=/readyz 2>/dev/null || true)
 
-  receiver_pod=$(kubectl get deployment audit-receiver -n "$NS" --context "$CTX" -o json 2>/dev/null)
+  receiver_pod=$(kubectl get deployment audit-receiver -n "$NS" --context "$CTX" -o json 2>/dev/null || true)
   receiver_available=$(jq -r '.status.availableReplicas // 0' <<<"$receiver_pod" 2>/dev/null)
-  receiver_svc=$(kubectl get service audit-receiver -n "$NS" --context "$CTX" -o json 2>/dev/null)
+  receiver_svc=$(kubectl get service audit-receiver -n "$NS" --context "$CTX" -o json 2>/dev/null || true)
   receiver_port=$(jq -r '.spec.ports[]?.port' <<<"$receiver_svc" 2>/dev/null)
 
   # Baseline the receiver's log length BEFORE the fresh request, so a stale delivery from
   # an earlier (possibly broken-since) prompt cannot count as evidence for this run.
-  receiver_pod_name=$(kubectl get pod -n "$NS" --context "$CTX" -l app=audit-receiver -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+  receiver_pod_name=$(kubectl get pod -n "$NS" --context "$CTX" -l app=audit-receiver -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
   logs_before=$(kubectl logs -n "$NS" --context "$CTX" "$receiver_pod_name" 2>/dev/null | wc -l)
 
   kubectl get configmap audit-config -n "$NS" --context "$CTX" -o json >/dev/null 2>&1 || true
   sleep 3
   receiver_logs=$(kubectl logs -n "$NS" --context "$CTX" "$receiver_pod_name" 2>/dev/null | tail -n +"$((logs_before + 1))")
+
+  # The echo receiver pretty-prints the parsed body ("resource": "configmaps"), so allow optional spaces.
+  logs_match=no
+  if grep -Eq '"resource": ?"configmaps"' <<<"$receiver_logs" && grep -Eq '"name": ?"audit-config"' <<<"$receiver_logs"; then
+    logs_match=yes
+  fi
 
   if [[ "$ready" == "ok" \
     && "$manifest" == *'--audit-webhook-config-file=/etc/kubernetes/audit/webhook-config.yaml'* \
@@ -371,8 +387,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
     && "$manifest" == *'--audit-log-path=/var/log/kubernetes/audit/audit.log'* \
     && "$webhook_config" == *'server: http://'* \
     && "$receiver_available" -ge 1 && -n "$receiver_port" \
-    && "$receiver_logs" == *'"resource":"configmaps"'* \
-    && "$receiver_logs" == *'"name":"audit-config"'* ]]; then
+    && "$logs_match" == yes ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -385,7 +400,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
     else
       echo "HINT: A FRESH GET of configmaps/audit-config just made by this check did not show up in audit-receiver's logs written AFTER that request - a stale delivery from earlier in the session does not count. Make sure the webhook is still actually delivering events right now, and that the receiver Service selector matches its Pod."
     fi
-    echo "ready=$ready webhook_flag=$([[ "$manifest" == *'audit-webhook-config-file'* ]] && echo yes || echo no) receiver_available=$receiver_available receiver_port=${receiver_port:-missing} logs_before=$logs_before fresh_logs_have_configmaps_audit_config=$([[ "$receiver_logs" == *'"resource":"configmaps"'* && "$receiver_logs" == *'"name":"audit-config"'* ]] && echo yes || echo no)"
+    echo "ready=$ready webhook_flag=$([[ "$manifest" == *'audit-webhook-config-file'* ]] && echo yes || echo no) receiver_available=$receiver_available receiver_port=${receiver_port:-missing} logs_before=$logs_before fresh_logs_have_configmaps_audit_config=$logs_match"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -401,8 +416,8 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   CKS112_TRUSTED_IMAGE=$(sed -n "s/^export CKS112_TRUSTED_IMAGE='\(.*\)'\$/\1/p" <<<"$registry_env" | tail -1)
   CKS112_UNTRUSTED_IMAGE=$(sed -n "s/^export CKS112_UNTRUSTED_IMAGE='\(.*\)'\$/\1/p" <<<"$registry_env" | tail -1)
 
-  crd=$(kubectl get crd validatingpolicies.policies.kyverno.io -o name --context "$CTX" 2>/dev/null)
-  policy=$(kubectl get validatingpolicy require-trusted-registry-runtime-112 -o json --context "$CTX" 2>/dev/null)
+  crd=$(kubectl get crd validatingpolicies.policies.kyverno.io -o name --context "$CTX" 2>/dev/null || true)
+  policy=$(kubectl get validatingpolicy require-trusted-registry-runtime-112 -o json --context "$CTX" 2>/dev/null || true)
   policy_ok=0
   policy_message=$(jq -r '[.spec.validations[]?.message, .spec.validations[]?.messageExpression] | join(" ")' <<<"$policy" 2>/dev/null)
   policy_expr=$(jq -r '[.spec.validations[]?.expression] | join(" ")' <<<"$policy" 2>/dev/null)
@@ -493,17 +508,17 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
     prefix_marker="CKS112_CTR_BYPASS_PREFIX_${run_id}"
     case "$observed_repo" in
       */*) prefix_ref="${observed_repo}-evil:cks112-check" ;;
-      *)   prefix_ref="${CKS112_REGISTRY:-localhost:5000}/${observed_repo}-evil:cks112-check" ;;
+      *)   prefix_ref="${CKS112_REGISTRY:-cks112.local:5000}/${observed_repo}-evil:cks112-check" ;;
     esac
 
     ssh -o BatchMode=yes control-plane "sudo ctr -n k8s.io images tag '$CKS112_UNTRUSTED_IMAGE' '$prefix_ref'" >/dev/null 2>&1 || true
 
-    ssh -o BatchMode=yes control-plane "sudo ctr -n k8s.io run -d '$CKS112_TRUSTED_IMAGE' '$trusted_id' sh -c 'echo $trusted_marker; sleep 4'" >/dev/null 2>&1 || true
-    ssh -o BatchMode=yes control-plane "sudo ctr -n k8s.io run -d '$CKS112_UNTRUSTED_IMAGE' '$untrusted_id' sh -c 'echo $untrusted_marker; sleep 4'" >/dev/null 2>&1 || true
-    ssh -o BatchMode=yes control-plane "sudo ctr -n k8s.io run -d '$prefix_ref' '$prefix_id' sh -c 'echo $prefix_marker; sleep 4'" >/dev/null 2>&1 || true
+    ssh -o BatchMode=yes control-plane "sudo cks112-run '$CKS112_TRUSTED_IMAGE' '$trusted_id' 'echo $trusted_marker; sleep 4'" >/dev/null 2>&1 || true
+    ssh -o BatchMode=yes control-plane "sudo cks112-run '$CKS112_UNTRUSTED_IMAGE' '$untrusted_id' 'echo $untrusted_marker; sleep 4'" >/dev/null 2>&1 || true
+    ssh -o BatchMode=yes control-plane "sudo cks112-run '$prefix_ref' '$prefix_id' 'echo $prefix_marker; sleep 4'" >/dev/null 2>&1 || true
     sleep 3
 
-    fresh_alerts=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco --since '$probe_ts' --no-pager | grep -F 'CKS112 runtime bypass of admission'" 2>/dev/null || true)
+    fresh_alerts=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco-modern-bpf --since '$probe_ts' --no-pager | grep -F 'CKS112 runtime bypass of admission'" 2>/dev/null || true)
 
     grep -Fq "$trusted_marker" <<<"$fresh_alerts" || trusted_ok=1
     grep -Fq "$untrusted_marker" <<<"$fresh_alerts" && untrusted_ok=1
@@ -511,7 +526,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
 
     for cid in "$trusted_id" "$untrusted_id" "$prefix_id"; do
       ssh -o BatchMode=yes control-plane \
-        "sudo ctr -n k8s.io task kill '$cid' 2>/dev/null; sudo ctr -n k8s.io task rm '$cid' 2>/dev/null; sudo ctr -n k8s.io container rm '$cid' 2>/dev/null" \
+        "sudo cks112-rm '$cid'" \
         >/dev/null 2>&1 || true
     done
   fi
@@ -553,7 +568,7 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
     elif [[ "$prefix_ok" -ne 1 ]]; then
       echo "HINT: A fresh checker-owned direct-containerd run using the '<observed-repo>-evil' prefix-trap image did not trigger your Falco bypass rule - this proves the condition is not truly exact (==/!=) against the observed repository value."
     else
-      echo "HINT: falco-bypass-attempt.log does not show a matching alert for CKS112_CTR_BYPASS - make sure you ran 'ctr run' with a fresh, unique container ID (not reusing one from a previous attempt still running) and that Falco restarted after adding the rule."
+      echo "HINT: falco-bypass-attempt.log does not show a matching alert for CKS112_CTR_BYPASS - make sure you ran 'cks112-run' with a fresh, unique container ID (not reusing one from a previous attempt still running) and that Falco restarted after adding the rule."
     fi
     echo "crd=${crd:-missing} policy_ok=$policy_ok blocked_absent=$blocked_absent deny_artifact=$deny_artifact rule_present=$([[ "$local_rule" == *'CKS112 Runtime Bypass of Admission'* ]] && echo yes || echo no) bypass_artifact=$bypass_artifact observed_repo=${observed_repo:-missing} admission_ok=$admission_ok trusted_admission_ok=$trusted_admission_ok trusted_ok=$trusted_ok untrusted_ok=$untrusted_ok prefix_ok=$prefix_ok policy_message=$policy_message policy_expr=$policy_expr"
     result=1
@@ -567,10 +582,10 @@ APISERVER_MANIFEST="/etc/kubernetes/manifests/kube-apiserver.yaml"
   active=$(ssh -o BatchMode=yes control-plane 'systemctl is-active falco 2>/dev/null' 2>/dev/null || true)
   artifact=/var/work/tests/artifacts/10/falco-devmem.log
   scaled_artifact=/var/work/tests/artifacts/10/scaled-down.json
-  journal_lines=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco -b --no-pager -n 2000 | grep -F 'CKS112 Container access to /dev/mem'" 2>/dev/null || true)
+  journal_lines=$(ssh -o BatchMode=yes control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager | grep -F 'CKS112 Container access to /dev/mem'" 2>/dev/null || true)
   artifact_line=$(tail -n1 "$artifact" 2>/dev/null || true)
   pod_from_alert=$(sed -n 's/.*k8s_pod=\([^ ]*\).*/\1/p' <<<"$artifact_line" | tail -1)
-  deployment=$(kubectl get deployment mem-scanner -n "$NS" --context "$CTX" -o json 2>/dev/null)
+  deployment=$(kubectl get deployment mem-scanner -n "$NS" --context "$CTX" -o json 2>/dev/null || true)
   replicas=$(jq -r '.spec.replicas // -1' <<<"$deployment" 2>/dev/null)
   if [[ "$active" == "active" \
     && "$local_rule" == *'rule: CKS112 Container access to /dev/mem'* \

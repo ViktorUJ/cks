@@ -543,6 +543,17 @@ EOF
   else
     backend_restored_status=1
   fi
+  # Endpoints being restored does not mean the ClusterIP data path is programmed yet:
+  # kube-proxy needs 1-2s more, and the next test (Gatekeeper) starts immediately after
+  # this one - its probes would hit 'connection refused' from the fail-closed webhook and
+  # be misattributed. Wait until admission actually works again before finishing.
+  for _ in $(seq 1 30); do
+    if kubectl run "webhook-recovery-probe" --image="nginx:recovery-$(date +%s%N)" --dry-run=server -o name \
+      --context "$CTX" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 1
+  done
   set -e
   if [[ "$manifest" == *'ImagePolicyWebhook'* \
     && "$manifest" == *'--admission-control-config-file=/etc/kubernetes/image-policy/admission-config.yaml'* \

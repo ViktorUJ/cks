@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export KUBECONFIG=/root/.kube/config
 
 echo "*** gVisor workload node bootstrap: CKS lab 110"
-until kubectl get node "$(hostname)" >/dev/null 2>&1; do sleep 5; done
+# This node has no kubeconfig (only the control-plane does), so it must not call kubectl:
+# node labels are applied by the control-plane bootstrap.
+until systemctl is-active --quiet kubelet; do sleep 5; done
 
 # containerd_gvizor installed runsc и записал его runtime handler в config.toml.
 # Лаба намеренно откатывает именно эту секцию к состоянию "runsc установлен, но
@@ -26,6 +27,5 @@ text = re.sub(
 open(path, "w", encoding="utf-8").write(text)
 PY
 systemctl restart containerd
-kubectl label node "$(hostname)" sandbox.runtime/gvisor=true lab.cks.io/role=gvisor --overwrite
 
 echo "*** runsc workload node is ready (containerd runsc handler intentionally removed for task 1)"

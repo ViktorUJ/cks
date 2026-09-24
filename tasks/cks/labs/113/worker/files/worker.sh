@@ -6,6 +6,17 @@ export KUBECONFIG=/root/.kube/config
 echo "*** worker PC CKS lab 113"
 until kubectl get nodes --no-headers 2>/dev/null | wc -l | grep -q '^2$'; do sleep 5; done
 
+# The lab nodes are reached as "ssh k8s113_controlPlane_1" / "ssh k8s113_node_worker1" (aliases in
+# /etc/hosts). Their host keys are not in any known_hosts and the nodes accept only the ubuntu
+# user, so every non-interactive ssh - this script, the root-run cks113-monitor and the
+# BatchMode calls in check_result - would fail. Configure both root and the student user.
+for ssh_home in /root /home/ubuntu; do
+  install -d -m 0700 "$ssh_home/.ssh"
+  printf 'Host k8s113_*\n  User ubuntu\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  LogLevel ERROR\n' >> "$ssh_home/.ssh/config"
+  chmod 0600 "$ssh_home/.ssh/config"
+done
+chown -R ubuntu:ubuntu /home/ubuntu/.ssh
+
 for host in k8s113_controlPlane_1 k8s113_node_worker1; do
   for attempt in {1..24}; do
     if ssh -o BatchMode=yes -o ConnectTimeout=5 "$host" 'sudo -n true' >/dev/null 2>&1; then
@@ -88,30 +99,34 @@ while true; do
       jq -r '.serverVersion.gitVersion // "unknown"' 2>/dev/null
   )
 
+  # Node objects are named after the instance hostnames (ip-10-...), not after the ssh aliases.
+  cp_node=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+  worker_node=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+
   cp_kubelet=$(
-    kubectl get node k8s113_controlPlane_1 \
+    kubectl get node "$cp_node" \
       -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null || true
   )
   worker_kubelet=$(
-    kubectl get node k8s113_node_worker1 \
+    kubectl get node "$worker_node" \
       -o jsonpath='{.status.nodeInfo.kubeletVersion}' 2>/dev/null || true
   )
 
   cp_ready=$(
-    kubectl get node k8s113_controlPlane_1 \
+    kubectl get node "$cp_node" \
       -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true
   )
   worker_ready=$(
-    kubectl get node k8s113_node_worker1 \
+    kubectl get node "$worker_node" \
       -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || true
   )
 
   cp_unsched=$(
-    kubectl get node k8s113_controlPlane_1 \
+    kubectl get node "$cp_node" \
       -o jsonpath='{.spec.unschedulable}' 2>/dev/null || true
   )
   worker_unsched=$(
-    kubectl get node k8s113_node_worker1 \
+    kubectl get node "$worker_node" \
       -o jsonpath='{.spec.unschedulable}' 2>/dev/null || true
   )
 
