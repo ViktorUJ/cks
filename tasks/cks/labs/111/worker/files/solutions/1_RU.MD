@@ -19,35 +19,34 @@ trivy --version; kubesec version; kube-linter version; hadolint --version
 syft version; bom version; cosign version
 ```
 
-## 0. Подготовка: Docker, buildx и registry
+## 0. Подготовка: podman и registry
 
-На worker нет Docker и registry, а задания 3 и 9c публикуют образ. Установите Docker Engine
-с buildx (Ubuntu 22.04):
+Для сборки и публикации образов используется `podman` (он есть в списке инструментов экзамена;
+rootless, работает от `ubuntu`). Registry уже поднят bootstrap'ом: это `registry:2` на control-plane
+(`<IP узла>:5000`, plain HTTP внутри VPC, данные на локальном PV узла). Podman на worker настроен
+на него как на insecure registry (`/etc/containers/registries.conf.d/cks111.conf`), containerd на
+узле - тоже, поэтому флаг `--tls-verify=false` не нужен. Образы лабы заранее скачаны в локальный
+кеш, которым пользуются Trivy и Syft, поэтому повторные сканы не упираются в лимит Docker Hub.
+
+Адрес registry:
 
 ```bash
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
-  | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
-sudo usermod -aG docker ubuntu   # затем переподключитесь по ssh, чтобы группа применилась
-docker buildx version
+export REGISTRY="$(cat /etc/cks111/registry)"     # <IP control-plane>:5000
+curl -fsS "http://$REGISTRY/v2/" && echo " registry ok: $REGISTRY"
+podman --version
 ```
 
-Registry: анонимный публичный `ttl.sh` (без логина). В `ttl.sh` tag образа - это срок его
-жизни (`1h`, `2h`), поэтому в заданиях 3 и 9c используются именно такие tag. Путь делаем
-случайным, потому что registry общий. Пароль ключа cosign оставляем пустым, чтобы команды не
-ждали ввода:
+Пароль ключа cosign оставляем пустым, чтобы команды не ждали ввода:
 
 ```bash
-export REG_PATH="cks111-$(head -c6 /dev/urandom | xxd -p)"
 export COSIGN_PASSWORD=""
 ```
 
-Docker Hub принимает анонимные pull с ограничением (около 100 за 6 часов с одного IP), а
-Trivy/Syft/bom и `check_result` тоже тянут образы. Если увидите `TOOMANYREQUESTS`, подождите или
-выполните `docker login` под своей учётной записью.
+Registry работает по HTTP: digest опубликованного образа берём из `podman push --digestfile`, а
+существование манифеста проверяем запросом к `/v2/`. `cosign` сам использует HTTP для адресов
+частных сетей; для Kyverno в policy задаётся `credentials.allowInsecureRegistry: true`. `bom` читает
+образы только из registry, поэтому по-прежнему обращается к Docker Hub; если увидите
+`TOOMANYREQUESTS`, подождите или выполните `podman login docker.io` под своей учётной записью.
 
 ## 1. Trivy report
 
@@ -166,13 +165,12 @@ security-свойств (base image, non-root, отсутствие secret) - э
 Соберите и **опубликуйте** образ в registry, доступный Kubernetes; один только local image ID/DiffID не подходит для digest pinning. Подставьте свой repository, затем получите registry manifest digest и сформируйте immutable reference:
 
 ```bash
-export HARDENED_TAG="ttl.sh/${REG_PATH}/catalog:2h"   # tag в ttl.sh = срок жизни образа
-# Свой registry: export HARDENED_TAG=registry.example/cks111/catalog:1.0 && docker login registry.example
-docker buildx build --platform linux/amd64 --push -t "$HARDENED_TAG" "$ROOT"
-export HARDENED_DIGEST=$(docker buildx imagetools inspect "$HARDENED_TAG" --format '{{.Manifest.Digest}}')
+export HARDENED_TAG="$REGISTRY/catalog:1.0"
+podman build -t "$HARDENED_TAG" "$ROOT"
+podman push --digestfile /tmp/cks-111-hardened.digest "$HARDENED_TAG"
+export HARDENED_DIGEST=$(cat /tmp/cks-111-hardened.digest)
 export HARDENED_IMAGE="${HARDENED_TAG%:*}@${HARDENED_DIGEST}"
-printf '%s
-' "$HARDENED_IMAGE"   # ttl.sh/<REG_PATH>/catalog@sha256:<manifest-digest>
+printf '%s\n' "$HARDENED_IMAGE"   # <IP>:5000/catalog@sha256:<manifest-digest>
 ```
 
 ## 4. Исправить Deployment
@@ -343,28 +341,28 @@ test -s "$ART/7/cosign-verify.txt"
 
 ## 8. `trivy sbom`: сканирование готового SBOM-файла
 
-SBOM из задания 6 описывает состав компонентов, но не содержит вывода об уязвимостях;
-`trivy sbom` принимает такой файл напрямую как вход, без повторного обращения к registry
-за самим image.
+CycloneDX SBOM из задания 7 описывает состав компонентов и ОС образа, но не содержит вывода об
+уязвимостях; `trivy sbom` принимает такой файл напрямую как вход, без повторного обращения к
+registry за самим image.
 
 ```bash
 mkdir -p "$ART/8"
 printf '%s\n' \
-  "trivy sbom --format json --output $ART/8/sbom-scan.json $ART/6/bom.spdx.json" \
+  "trivy sbom --format json --output $ART/8/sbom-scan.json $ART/7/syft.cdx.json" \
   > "$ART/8/sbom-scan-command.txt"
 
 trivy sbom \
   --format json \
   --output "$ART/8/sbom-scan.json" \
-  "$ART/6/bom.spdx.json"
+  "$ART/7/syft.cdx.json"
 
-jq '{artifact: .ArtifactType, results: ((.Results // []) | length)}' "$ART/8/sbom-scan.json"
+jq '{artifact: .ArtifactType, os: .Metadata.OS.Family, results: (.Results | length), vulns: ([.Results[]?.Vulnerabilities[]?] | length)}' "$ART/8/sbom-scan.json"
 ```
 
-В SPDX от `bom` для multi-arch образа нет сведений об ОС (Trivy пишет `Detected OS family="none"`),
-поэтому `Results` может отсутствовать: команда выполнена успешно, но уязвимости не сопоставлены.
-Это ограничение входного SBOM, а не ошибка команды. Для сравнения: CycloneDX из задания 7 содержит
-ОС (`operating-system`), и `trivy sbom` по нему даёт непустой `Results`.
+Trivy определяет ОС по компоненту `operating-system` из CycloneDX (`alpine 3.20.5`) и
+сопоставляет пакеты с базой уязвимостей - `Results` непустой. Для сравнения: SPDX из задания 6
+(`bom`) для multi-arch образа не содержит ОС (`Detected OS family="none"`), и `trivy sbom` по нему
+не находит ничего (`Results` пуст) - поэтому для этого задания берётся CycloneDX.
 
 ## 9a. Kyverno и `ImageValidatingPolicy` на trusted signature
 
@@ -417,6 +415,8 @@ metadata:
 spec:
   failurePolicy: Fail
   validationActions: [Deny]
+  credentials:
+    allowInsecureRegistry: true   # registry лабы работает по HTTP
   matchConstraints:
     resourceRules:
     - apiGroups: [""]
@@ -457,22 +457,28 @@ ReplicaSet/Pod, и наблюдаемый `Running` может быть тот �
 POLICY_CREATED=$(kubectl get imagevalidatingpolicy require-signed-catalog-images \
   -o jsonpath='{.metadata.creationTimestamp}')
 
-kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" \
-  --restart=Never --command -- sleep 300
+# Сразу после создания policy первый вызов webhook Kyverno (проверка подписи в registry)
+# может упереться в таймаут 10 с (`failed calling webhook ... context deadline exceeded`);
+# при failurePolicy=Fail Pod тогда не создаётся. Повторите создание, пока webhook не прогреется.
+for attempt in $(seq 1 10); do
+  kubectl run signed-admission-check -n cks-111 --image="$HARDENED_IMAGE" \
+    --restart=Never --command -- sleep 3600 && break
+  sleep 10
+done
 kubectl wait --for=condition=Ready pod/signed-admission-check -n cks-111 --timeout=60s
 
 kubectl get pod signed-admission-check -n cks-111 -o json \
   | jq --arg policy "$POLICY_CREATED" '{
       creationTimestamp: .metadata.creationTimestamp,
       policyCreationTimestamp: $policy,
-      createdAfterPolicy: (.metadata.creationTimestamp > $policy),
+      createdAfterPolicy: (.metadata.creationTimestamp >= $policy),
       image: .spec.containers[0].image,
       phase: .status.phase,
       ready: ([.status.conditions[]? | select(.type == "Ready") | .status] | any(. == "True"))
     }' | tee "$ART/9b/signed-admission-check.json"
 ```
 
-Критерий: `createdAfterPolicy == true` и `ready == true`. Это - и только это - доказывает,
+Критерий (`creationTimestamp` имеет точность 1 с, поэтому сравнение нестрогое): `createdAfterPolicy == true` и `ready == true`. Это - и только это - доказывает,
 что именно **эта** policy пропустила именно **этот**, ранее не существовавший Pod с
 подписанным образом, а не что старый Pod просто продолжает работать.
 
@@ -491,16 +497,10 @@ manifest digest, что и уже подписанный образ, и тогд
 вносим контролируемое отличие через `ARG`/`LABEL`, которое гарантированно меняет digest:
 
 ```bash
-# В ttl.sh tag - это срок жизни, поэтому второй tag тоже должен быть длительностью (1h).
-# В обычном registry подойдёт любое имя, например :unsigned-1.0.
-export UNSIGNED_TAG="${HARDENED_TAG%:*}:1h"
-docker buildx build \
-  --platform linux/amd64 \
-  --build-arg CKS_SIGNATURE_TEST=unsigned-1 \
-  --push \
-  -t "$UNSIGNED_TAG" \
-  "$ROOT"
-export UNSIGNED_DIGEST=$(docker buildx imagetools inspect "$UNSIGNED_TAG" --format '{{.Manifest.Digest}}')
+export UNSIGNED_TAG="${HARDENED_TAG%:*}:unsigned-1"
+podman build --build-arg CKS_SIGNATURE_TEST=unsigned-1 -t "$UNSIGNED_TAG" "$ROOT"
+podman push --digestfile /tmp/cks-111-unsigned.digest "$UNSIGNED_TAG"
+export UNSIGNED_DIGEST=$(cat /tmp/cks-111-unsigned.digest)
 export UNSIGNED_IMAGE="${HARDENED_REPO}@${UNSIGNED_DIGEST}"
 export HARDENED_DIGEST="${HARDENED_IMAGE#*@}"
 
@@ -525,8 +525,9 @@ printf 'hardened_digest=%s\nunsigned_digest=%s\nunsigned_image=%s\ndistinct=true
 работающего admission control недостаточно для PASS.
 
 ```bash
-docker buildx imagetools inspect "$UNSIGNED_IMAGE" | tee "$ART/9c/unsigned-exists.txt"
-grep -q "$UNSIGNED_DIGEST" "$ART/9c/unsigned-exists.txt"
+curl -fsSI -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
+  "http://$REGISTRY/v2/catalog/manifests/$UNSIGNED_DIGEST" | tee "$ART/9c/unsigned-exists.txt"
+grep -qi "docker-content-digest: $UNSIGNED_DIGEST" "$ART/9c/unsigned-exists.txt"
 ```
 
 Явно доказываем отсутствие валидной подписи этим же ключом - **до** попытки создания

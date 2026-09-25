@@ -21,7 +21,7 @@ kubectl create namespace cks-111 --dry-run=client -o yaml | kubectl apply -f -
 DEBIAN_FRONTEND=noninteractive dpkg --configure -a --force-confdef --force-confold || true
 
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" ca-certificates curl jq
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" ca-certificates curl jq podman uidmap
 arch=$(dpkg --print-architecture)
 case "$arch" in
   amd64) gh_arch=amd64 ;;
@@ -231,6 +231,48 @@ if ! jq -e 'type == "object" and (.Summary | type == "object") and (.Reports | t
 fi
 
 
+# ---------------------------------------------------------------------------
+# Local image store. Docker Hub allows only ~100 anonymous manifest pulls per 6 h per IP, and
+# every `trivy image` / `syft` re-scan (bootstrap, the student's solution and each check_result)
+# used to hit it, which made check_result fail with TOOMANYREQUESTS after a few runs. Trivy and
+# Syft look in the local Docker daemon first (trivy: docker,containerd,podman,remote), so each
+# lab image is pulled ONCE here and every later scan by digest reference is served locally.
+# `bom` can only read from a registry/tar and keeps pulling remotely (a few requests per run).
+# Docker is only an internal scan cache here (trivy/syft prefer the local daemon and report the
+# canonical index RepoDigest, unlike the podman store); the student builds and pushes with podman.
+if ! command -v docker >/dev/null 2>&1; then
+  install -m 0755 -d /etc/apt/keyrings
+  curl --fail --location --silent --show-error -o /etc/apt/keyrings/docker.asc https://download.docker.com/linux/ubuntu/gpg
+  echo "deb [arch=$arch signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+    > /etc/apt/sources.list.d/docker.list
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+    docker-ce docker-ce-cli containerd.io
+fi
+# Lab registry runs on the control-plane node over plain HTTP (see k8s-1/scripts/master.sh).
+# The student works with podman (an exam tool): mark the registry as insecure system-wide so
+# rootless `podman push/pull` accept it without --tls-verify=false.
+CP_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+mkdir -p /etc/cks111 /etc/containers/registries.conf.d
+printf '%s\n' "${CP_IP}:5000" > /etc/cks111/registry
+printf '[[registry]]\nlocation = "%s:5000"\ninsecure = true\n' "$CP_IP" > /etc/containers/registries.conf.d/cks111.conf
+systemctl enable --now docker
+# Group membership applies to new ssh sessions (the checker and the student run as ubuntu).
+usermod -aG docker ubuntu
+
+# Best effort: if Docker Hub refuses the pull, trivy/syft fall back to the remote registry.
+pull_local() {
+  local ref="$1" attempt
+  docker image inspect "$ref" >/dev/null 2>&1 && return 0
+  for attempt in 1 2 3; do
+    docker pull --quiet "$ref" >/dev/null 2>&1 && return 0
+    sleep 5
+  done
+  echo "WARN: could not pre-pull $ref (Docker Hub rate limit?); scans will use the remote registry" >&2
+  return 0
+}
+pull_local nginx:1.27.3-alpine
+
 # Task 1b fixture: multi-image CVE triage. Candidates are official, well-maintained
 # Python images spanning several years of base-OS packages, so real (not synthetic)
 # CVE differences between them are expected without us hand-picking any specific CVE ID
@@ -242,6 +284,7 @@ CANDIDATE_TAGS=(python:3.9-slim python:3.11-slim python:3.13-slim)
 declare -A CANDIDATE_REF
 declare -A CANDIDATE_CVES
 for tag in "${CANDIDATE_TAGS[@]}"; do
+  pull_local "$tag"
   probe_json=$(trivy image --scanners vuln --format json --quiet "$tag" 2>/dev/null)
   repo_digest=$(jq -r '.Metadata.RepoDigests[0] // ""' <<<"$probe_json")
   if [[ -z "$repo_digest" ]]; then
@@ -307,6 +350,7 @@ TRIAGE_POOL=(python:3.7-slim python:3.8-slim python:3.9-slim python:3.10-slim py
 declare -A TRIAGE_REF
 declare -A TRIAGE_CRITICAL
 for tag in "${TRIAGE_POOL[@]}"; do
+  pull_local "$tag"
   probe_json=$(trivy image --scanners vuln --format json --quiet "$tag" 2>/dev/null)
   repo_digest=$(jq -r '.Metadata.RepoDigests[0] // ""' <<<"$probe_json")
   if [[ -z "$repo_digest" ]]; then

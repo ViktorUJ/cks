@@ -241,6 +241,17 @@ pod_node_has_label() {
     kubectl -n kube-system rollout status daemonset/cilium --context "$CTX" --timeout=120s >/dev/null 2>&1 || true
   fi
 
+  # `rollout status` returns before the WireGuard peers are handshaken; a capture taken in that
+  # window sees plaintext or no UDP/51871 at all. Wait until the agent reports a peer, then warm
+  # the tunnel with one request so the timed capture below observes the steady state.
+  for _ in $(seq 1 30); do
+    kubectl -n kube-system exec ds/cilium -c cilium-agent --context "$CTX" -- cilium-dbg status 2>/dev/null \
+      | grep -Eq 'Encryption:\s*Wireguard.*Peers: [1-9]' && break
+    sleep 2
+  done
+  kubectl exec -n "$SANDBOX_NS" runc-baseline --context "$CTX" -- wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080 >/dev/null 2>&1 || true
+  sleep 3
+
   # The checker performs its OWN post-change capture and its OWN request rather than
   # trusting only the student-owned wireguard-tcpdump.txt artifact (which could have been
   # captured at a different time / on different traffic). Same scope as the baseline above.

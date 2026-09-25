@@ -11,6 +11,16 @@ done
 mkdir -p /var/work/tests/artifacts/{1,2,3,4,5,6,7,8,9,10}
 chown -R ubuntu:ubuntu /var/work/tests/artifacts
 
+# The solution/README use bare "ssh $CP" and "ssh docker-host". Fresh nodes are not in
+# known_hosts, so without this every non-interactive ssh fails with "Host key verification
+# failed". Node names are instance hostnames (ip-10-...), aliases come from /etc/hosts.
+for ssh_home in /root /home/ubuntu; do
+  install -d -m 0700 "$ssh_home/.ssh"
+  printf 'Host ip-10-* k8s1_* docker-host\n  User ubuntu\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  LogLevel ERROR\n' >> "$ssh_home/.ssh/config"
+  chmod 0600 "$ssh_home/.ssh/config"
+done
+chown -R ubuntu:ubuntu /home/ubuntu/.ssh
+
 # Cache recovery context before the firewall exercise. A correct source-scoped rule keeps
 # worker -> API available; the cached name remains useful if a student makes a mistake.
 kubectl get nodes -l node-role.kubernetes.io/control-plane \

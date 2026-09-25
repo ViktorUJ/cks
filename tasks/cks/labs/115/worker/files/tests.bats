@@ -30,7 +30,22 @@ create_probe() {
 curl_probe() {
   local namespace=$1 pod=$2 destination=$3
   kubectl --context "$CTX" -n "$namespace" exec "$pod" -- sh -c \
-    "set +e; code=\$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 '$destination'); rc=\$?; printf 'CURL_EXIT:%s\\nHTTPCODE:%s\\n' \"\$rc\" \"\$code\"; exit 0"
+    "set +e; code=\$(curl -sSk -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 '$destination'); rc=\$?; printf 'CURL_EXIT:%s\\nHTTPCODE:%s\\n' \"\$rc\" \"\$code\"; exit 0"
+}
+
+# A freshly created probe Pod has a brand-new Cilium identity, so the first connection under
+# `authentication.mode: required` is dropped until the SPIRE handshake and the operator's
+# identity registration finish. Retry the "must be allowed" probes instead of a single shot.
+curl_probe_retry() {
+  local namespace=$1 pod=$2 destination=$3 output attempt
+  for attempt in 1 2 3 4 5 6 7 8; do
+    output=$(curl_probe "$namespace" "$pod" "$destination")
+    if grep -q '^CURL_EXIT:0$' <<<"$output"; then
+      break
+    fi
+    sleep 3
+  done
+  printf '%s\n' "$output"
 }
 
 assert_reachable() {
@@ -67,7 +82,8 @@ assert_transport_denied() {
 
 @test "2. Cilium installed with kube-proxy replacement and the Service datapath works" {
   echo 1 >> /var/work/tests/result/all
-  status=$(cilium status 2>&1) || true
+  # cilium-cli 0.19 `cilium status` no longer prints KubeProxyReplacement/Encryption; the agent does.
+  status=$(kubectl --context "$CTX" -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status 2>&1) || true
   kpr_ok=false
   grep -qE 'KubeProxyReplacement:\s*(True|Strict)' <<<"$status" && kpr_ok=true
   nodes_ready=$(kubectl --context "$CTX" get nodes -o json 2>/dev/null | jq -r '[.items[].status.conditions[] | select(.type=="Ready") | .status=="True"] | all')
@@ -87,7 +103,8 @@ assert_transport_denied() {
 
 @test "3. WireGuard transparent encryption is enabled in the effective Cilium config" {
   echo 1 >> /var/work/tests/result/all
-  status=$(cilium status 2>&1) || true
+  # cilium-cli 0.19 `cilium status` no longer prints KubeProxyReplacement/Encryption; the agent does.
+  status=$(kubectl --context "$CTX" -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status 2>&1) || true
   wg_ok=false
   grep -qE 'Encryption:\s*Wireguard' <<<"$status" && wg_ok=true
 
@@ -152,11 +169,11 @@ assert_transport_denied() {
 
   kubectl --context "$CTX" delete -f - <<<"$clean" >/dev/null 2>&1
   sleep 2
-  baseline=$(curl_probe "$INGRESS_NS" "${CHECKER_PREFIX}-authorized" "$backend_url")
+  baseline=$(curl_probe_retry "$INGRESS_NS" "${CHECKER_PREFIX}-authorized" "$backend_url")
 
   kubectl --context "$CTX" apply -f - <<<"$clean" >/dev/null
   sleep 3
-  authorized=$(curl_probe "$INGRESS_NS" "${CHECKER_PREFIX}-authorized" "$backend_url")
+  authorized=$(curl_probe_retry "$INGRESS_NS" "${CHECKER_PREFIX}-authorized" "$backend_url")
 
   create_probe "$APP_NS" "${CHECKER_PREFIX}-wrong-ns"
   wrong=$(curl_probe "$APP_NS" "${CHECKER_PREFIX}-wrong-ns" "$backend_url")

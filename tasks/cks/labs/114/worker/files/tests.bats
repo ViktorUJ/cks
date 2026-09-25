@@ -142,11 +142,21 @@ norm() {
   create_probe "$NS" "${CHECKER_PREFIX}-in-cluster"
   in_cluster=$(curl_probe_in_cluster "${CHECKER_PREFIX}-in-cluster" "http://kubernetes-public.$NS.svc.cluster.local/")
 
-  if [[ "$default_svc_ok" == "ClusterIP" && "$shape" == true && "$ready" == true ]] && \
-     assert_reachable "$external" && assert_reachable "$in_cluster"; then
+  # Task 4 turns the Service into ClusterIP, so once it is done the NodePort state can no longer
+  # be probed live. The checker-owned monitor (cks114-monitor) records that the Service really was
+  # NodePort/30114 and answered from the worker; that record also satisfies this test.
+  nodeport_phase_seen=false
+  [[ -s /var/lib/cks-lab114-checker/nodeport-phase-seen ]] && nodeport_phase_seen=true
+
+  live_ok=false
+  if [[ "$shape" == true && "$ready" == true ]] && assert_reachable "$external" && assert_reachable "$in_cluster"; then
+    live_ok=true
+  fi
+
+  if [[ "$default_svc_ok" == "ClusterIP" ]] && [[ "$live_ok" == true || "$nodeport_phase_seen" == true ]]; then
     echo 1 >> /var/work/tests/result/ok
   else
-    echo "HINT: kubernetes-public must be type NodePort with nodePort 30114, reachable both via <node-internal-ip>:30114 from the worker and via the in-cluster Service DNS name; default/kubernetes Service must stay ClusterIP." >&2
+    echo "HINT: kubernetes-public must be type NodePort with nodePort 30114, reachable both via <node-internal-ip>:30114 from the worker and via the in-cluster Service DNS name; default/kubernetes Service must stay ClusterIP. The NodePort phase must have really happened (it is recorded by a checker-owned monitor), so do task 3 before reducing the Service to ClusterIP in task 4." >&2
     false
   fi
 }

@@ -4,7 +4,20 @@ ROOT=/home/ubuntu/cks-111
 KEYDIR=/home/ubuntu/.cks111-cosign
 ART=/var/work/tests/artifacts
 
+# A test that aborts (errexit) before record_result would otherwise be missing from the score
+# denominator, so a failing test could still yield 100%. setup/teardown count it as a failure.
+setup() {
+  RESULT_RECORDED=0
+}
+
+teardown() {
+  if [[ "${RESULT_RECORDED:-0}" -ne 1 && "$BATS_TEST_NUMBER" -gt 1 ]]; then
+    echo '1' >> /var/work/tests/result/all
+  fi
+}
+
 record_result() {
+  RESULT_RECORDED=1
   echo '1' >> /var/work/tests/result/all
   if [[ "$1" -eq 0 ]]; then echo '1' >> /var/work/tests/result/ok; fi
   return "$1"
@@ -19,7 +32,7 @@ record_result() {
 @test "1. Trivy vulnerability report is structured and identifies the required image" {
   report="$ART/1/trivy-report.json"
   result=1
-  image=$(jq -r '.ArtifactName // ""' "$report" 2>/dev/null)
+  image=$(jq -r '.ArtifactName // ""' "$report" 2>/dev/null) || true
   checker_report=$(mktemp)
   if [[ -s "$report" ]] \
     && [[ "$image" =~ ^nginx:1[.]27[.]3-alpine@sha256:[a-f0-9]{64}$ ]] \
@@ -247,10 +260,10 @@ record_result() {
   # the security-relevant substance (kubesec's scoring/advise, kube-linter's check names)
   # against this fresh run, normalized via jq -S and ignoring genuinely nondeterministic
   # fields (timestamps) rather than requiring byte-for-byte equality.
-  student_kubesec_norm=$(jq -Sc '[.[] | .scoring]' "$k" 2>/dev/null)
-  checker_kubesec_norm=$(jq -Sc '[.[] | .scoring]' "$checker_kubesec" 2>/dev/null)
-  student_kubelinter_norm=$(jq -Sc '{summaryStatus: .Summary.ChecksStatus, checks: ([.Reports[]?.Check] | sort)}' "$l" 2>/dev/null)
-  checker_kubelinter_norm=$(jq -Sc '{summaryStatus: .Summary.ChecksStatus, checks: ([.Reports[]?.Check] | sort)}' "$checker_kubelinter" 2>/dev/null)
+  student_kubesec_norm=$(jq -Sc '[.[] | .scoring]' "$k" 2>/dev/null) || true
+  checker_kubesec_norm=$(jq -Sc '[.[] | .scoring]' "$checker_kubesec" 2>/dev/null) || true
+  student_kubelinter_norm=$(jq -Sc '{summaryStatus: .Summary.ChecksStatus, checks: ([.Reports[]?.Check] | sort)}' "$l" 2>/dev/null) || true
+  checker_kubelinter_norm=$(jq -Sc '{summaryStatus: .Summary.ChecksStatus, checks: ([.Reports[]?.Check] | sort)}' "$checker_kubelinter" 2>/dev/null) || true
   rm -f "$checker_kubesec" "$checker_kubelinter"
 
   if [[ -z "$student_kubesec_norm" || "$student_kubesec_norm" != "$checker_kubesec_norm" ]]; then
@@ -466,10 +479,10 @@ record_result() {
     done
   fi
 
-  deploy=$(kubectl -n cks-111 get deployment pkg-audit-app -o json 2>/dev/null)
-  remaining=$(jq -r '[.spec.template.spec.containers[]?.name] | sort | join(",")' <<<"$deploy" 2>/dev/null)
+  deploy=$(kubectl -n cks-111 get deployment pkg-audit-app -o json 2>/dev/null) || true
+  remaining=$(jq -r '[.spec.template.spec.containers[]?.name] | sort | join(",")' <<<"$deploy" 2>/dev/null) || true
   expected_remaining=$(printf '%s\n' "$clean_container" | tr ',' '\n' | sort | tr '\n' ',' | sed 's/,$//')
-  available=$(jq -r '.status.availableReplicas // 0' <<<"$deploy" 2>/dev/null)
+  available=$(jq -r '.status.availableReplicas // 0' <<<"$deploy" 2>/dev/null) || true
 
   remediation_ok=0
   [[ "$remaining" == "$expected_remaining" ]] && remediation_ok=1
@@ -490,7 +503,7 @@ record_result() {
 
 @test "6. bom generated an SPDX SBOM and command evidence" {
   sbom="$ART/6/bom.spdx.json"; command_file="$ART/6/bom-command.txt"
-  expected_image=$(jq -r '.ArtifactName // ""' "$ART/1/trivy-report.json" 2>/dev/null)
+  expected_image=$(jq -r '.ArtifactName // ""' "$ART/1/trivy-report.json" 2>/dev/null) || true
   expected_digest="${expected_image#*@}"
   result=1
   if [[ "$expected_image" =~ ^nginx:1[.]27[.]3-alpine@sha256:[a-f0-9]{64}$ ]] \
@@ -533,8 +546,8 @@ record_result() {
           ] | length > 0
         )
       ' "$checker_sbom" >/dev/null 2>&1; then
-      student_pkgs=$(jq -Sc '[.packages[]? | {name: .name, versionInfo: (.versionInfo // "")}] | sort' "$sbom" 2>/dev/null)
-      checker_pkgs=$(jq -Sc '[.packages[]? | {name: .name, versionInfo: (.versionInfo // "")}] | sort' "$checker_sbom" 2>/dev/null)
+      student_pkgs=$(jq -Sc '[.packages[]? | {name: .name, versionInfo: (.versionInfo // "")}] | sort' "$sbom" 2>/dev/null) || true
+      checker_pkgs=$(jq -Sc '[.packages[]? | {name: .name, versionInfo: (.versionInfo // "")}] | sort' "$checker_sbom" 2>/dev/null) || true
       student_pkg_count=$(jq '.packages | length' "$sbom" 2>/dev/null || echo 0)
       checker_pkg_count=$(jq '.packages | length' "$checker_sbom" 2>/dev/null || echo 0)
       # Require a realistic, non-trivial package inventory (not just the one top-level
@@ -561,7 +574,7 @@ record_result() {
 @test "7. Syft CycloneDX SBOM and keyless Cosign verification are valid" {
   sbom="$ART/7/syft.cdx.json"
   verify="$ART/7/cosign-verify.txt"
-  expected_image=$(jq -r '.ArtifactName // ""' "$ART/1/trivy-report.json" 2>/dev/null)
+  expected_image=$(jq -r '.ArtifactName // ""' "$ART/1/trivy-report.json" 2>/dev/null) || true
   expected_digest="${expected_image#*@}"
   result=1
 
@@ -599,8 +612,8 @@ record_result() {
         .metadata.component.type == "container" and
         .metadata.component.version == $digest
       ' "$checker_sbom" >/dev/null 2>&1; then
-      student_components=$(jq -Sc '[.components[]? | {name: .name, version: (.version // "")}] | sort' "$sbom" 2>/dev/null)
-      checker_components=$(jq -Sc '[.components[]? | {name: .name, version: (.version // "")}] | sort' "$checker_sbom" 2>/dev/null)
+      student_components=$(jq -Sc '[.components[]? | {name: .name, version: (.version // "")}] | sort' "$sbom" 2>/dev/null) || true
+      checker_components=$(jq -Sc '[.components[]? | {name: .name, version: (.version // "")}] | sort' "$checker_sbom" 2>/dev/null) || true
       student_comp_count=$(jq '.components | length' "$sbom" 2>/dev/null || echo 0)
       checker_comp_count=$(jq '.components | length' "$checker_sbom" 2>/dev/null || echo 0)
       # Require a realistic, non-trivial component inventory and require the student
@@ -624,25 +637,27 @@ record_result() {
   record_result "$result"
 }
 
-@test "8. trivy sbom can scan the task-6 SBOM file" {
+@test "8. trivy sbom scans the task-7 CycloneDX SBOM and matches vulnerabilities" {
   report="$ART/8/sbom-scan.json"
-  input_sbom="$ART/6/bom.spdx.json"
+  input_sbom="$ART/7/syft.cdx.json"
   cmd_file="$ART/8/sbom-scan-command.txt"
   checker_report=$(mktemp)
+  # A scan is only meaningful if Trivy recognised the OS from the SBOM and produced at least one
+  # os-pkgs result; the task-6 SPDX from `bom` has no OS info and always yields Results=0.
+  valid_scan='(.SchemaVersion != null) and (.ArtifactType == "cyclonedx") and ((.Results // []) | length > 0) and ([.Results[]? | .Vulnerabilities[]?] | length > 0)'
 
   result=1
 
   if [[ -s "$report" ]] \
-    && jq -e '(.SchemaVersion != null) and (.ArtifactType == "spdx") and ((.Results // []) | type == "array")' "$report" >/dev/null 2>&1 \
+    && jq -e "$valid_scan" "$report" >/dev/null 2>&1 \
     && grep -Fq "trivy sbom" "$cmd_file" 2>/dev/null \
     && grep -Fq "$input_sbom" "$cmd_file" 2>/dev/null \
     && trivy sbom --format json --output "$checker_report" "$input_sbom" \
          >/dev/null 2>&1 \
-    && jq -e '(.SchemaVersion != null) and (.ArtifactType == "spdx") and ((.Results // []) | type == "array")' "$checker_report" \
-         >/dev/null 2>&1; then
+    && jq -e "$valid_scan" "$checker_report" >/dev/null 2>&1; then
     result=0
   else
-    echo "HINT: sbom-scan.json must be valid native Trivy JSON with a 'Results' array (not hand-modified with an added ScanCommand field), sbom-scan-command.txt must show 'trivy sbom' actually run against the task-6 SBOM file, and the checker independently re-runs 'trivy sbom' on that exact input file itself - it does not trust any student-authored ScanCommand field inside the JSON."
+    echo "HINT: sbom-scan.json must be native Trivy JSON (ArtifactType cyclonedx) with a non-empty 'Results' that lists vulnerabilities, sbom-scan-command.txt must show 'trivy sbom' run against the task-7 CycloneDX file ($input_sbom), and the checker independently re-runs 'trivy sbom' on that exact file - it does not trust any student-authored field inside the JSON."
     echo "Missing or impure trivy sbom scan evidence: $report"
   fi
 
@@ -652,8 +667,8 @@ record_result() {
 
 @test "9a. Kyverno policy has exact repository scope and a verifiable Cosign signature" {
   sign="$ART/9a/cosign-sign.txt"
-  crd=$(kubectl get crd imagevalidatingpolicies.policies.kyverno.io -o name 2>/dev/null)
-  policy=$(kubectl get imagevalidatingpolicy require-signed-catalog-images -o json 2>/dev/null)
+  crd=$(kubectl get crd imagevalidatingpolicies.policies.kyverno.io -o name 2>/dev/null) || true
+  policy=$(kubectl get imagevalidatingpolicy require-signed-catalog-images -o json 2>/dev/null) || true
   hardened_image=$(kubectl get deployment catalog -n cks-111 -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
   hardened_repo=${hardened_image%@*}
   policy_ok=0; cosign_ok=0
@@ -697,36 +712,38 @@ record_result() {
 
 @test "9b. A fresh Pod is admitted with the exact Cosign-verified signed image" {
   evidence="$ART/9b/signed-admission-check.json"
-  policy_created=$(kubectl get imagevalidatingpolicy require-signed-catalog-images -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null)
+  policy_created=$(kubectl get imagevalidatingpolicy require-signed-catalog-images -o jsonpath='{.metadata.creationTimestamp}' 2>/dev/null) || true
   catalog_image=$(kubectl get deployment catalog -n cks-111 -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
-  pod=$(kubectl get pod signed-admission-check -n cks-111 -o json 2>/dev/null)
-  pod_created=$(jq -r '.metadata.creationTimestamp // ""' <<<"$pod" 2>/dev/null)
-  pod_phase=$(jq -r '.status.phase // ""' <<<"$pod" 2>/dev/null)
-  pod_ready=$(jq -r '[.status.conditions[]? | select(.type == "Ready") | .status] | any(. == "True")' <<<"$pod" 2>/dev/null)
-  pod_image=$(jq -r '.spec.containers[0].image // ""' <<<"$pod" 2>/dev/null)
+  pod=$(kubectl get pod signed-admission-check -n cks-111 -o json 2>/dev/null) || true
+  pod_created=$(jq -r '.metadata.creationTimestamp // ""' <<<"$pod" 2>/dev/null) || true
+  pod_phase=$(jq -r '.status.phase // ""' <<<"$pod" 2>/dev/null) || true
+  pod_ready=$(jq -r '[.status.conditions[]? | select(.type == "Ready") | .status] | any(. == "True")' <<<"$pod" 2>/dev/null) || true
+  pod_image=$(jq -r '.spec.containers[0].image // ""' <<<"$pod" 2>/dev/null) || true
   image_ok=0; cosign_ok=0
   if [[ -n "$catalog_image" && "$pod_image" == "$catalog_image" && "$pod_image" =~ @sha256:[a-f0-9]{64}$ ]]; then image_ok=1; fi
   if [[ "$image_ok" -eq 1 && -s "$KEYDIR/cosign.pub" ]] \
     && cosign verify --key "$KEYDIR/cosign.pub" "$pod_image" >/dev/null 2>&1; then cosign_ok=1; fi
+  # The evidence is a snapshot taken right after admission; the live Pod may have finished since
+  # (phase/ready drift), so only the immutable facts (timestamps, image) must match the live Pod.
+  # creationTimestamp has 1 s resolution: a Pod created in the same second as the policy (fast
+  # automation) is still "not before" it, so compare with >= rather than strictly later.
   evidence_ok=0
   if [[ -s "$evidence" ]] && jq -e \
       --arg policy "$policy_created" \
       --arg created "$pod_created" \
       --arg image "$pod_image" \
-      --arg phase "$pod_phase" \
-      --argjson ready "$pod_ready" '
+      '
         (.policyCreationTimestamp // "") == $policy and
         (.creationTimestamp // "") == $created and
-        (.creationTimestamp > .policyCreationTimestamp) and
+        (.creationTimestamp >= .policyCreationTimestamp) and
         (.createdAfterPolicy == true) and
         (.image // "") == $image and
-        (.phase // "") == $phase and
-        (.ready // false) == $ready
+        ((.ready == true) or (.phase == "Succeeded"))
       ' "$evidence" >/dev/null 2>&1; then
     evidence_ok=1
   fi
   if [[ -n "$policy_created" && -n "$pod_created" ]] \
-    && [[ "$pod_created" > "$policy_created" ]] \
+    && [[ ! "$pod_created" < "$policy_created" ]] \
     && [[ "$pod_phase" != "Failed" && "$image_ok" -eq 1 && "$cosign_ok" -eq 1 ]] \
     && [[ "$pod_ready" == "true" || "$pod_phase" == "Succeeded" ]] \
     && [[ "$evidence_ok" -eq 1 ]]; then
@@ -780,7 +797,12 @@ record_result() {
     return
   fi
 
-  if ! docker buildx imagetools inspect "$unsigned_image" >/dev/null 2>&1; then
+  # `docker buildx imagetools` talks HTTPS only; the lab registry is plain HTTP, so ask it directly.
+  unsigned_host=${unsigned_image%%/*}
+  unsigned_rest=${unsigned_image#*/}
+  if ! curl -fsS -o /dev/null --max-time 10 \
+       -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json' \
+       "http://${unsigned_host}/v2/${unsigned_rest%@*}/manifests/${unsigned_rest#*@}" >/dev/null 2>&1; then
     echo "HINT: The unsigned_image reference does not resolve in the registry - it must be a real, pullable manifest."
     echo "Unsigned image does not resolve in the registry"
     record_result "$result"

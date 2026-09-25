@@ -25,7 +25,7 @@ ssh k8s110_node_gvisor 'runsc --version; sudo systemctl is-active containerd; gr
 перезапустите containerd:
 
 ```bash
-ssh k8s110_node_gvisor 'sudo tee -a /etc/containerd/config.toml > /dev/null <<EOF
+ssh k8s110_node_gvisor 'grep -q "runtimes\.runsc\]" /etc/containerd/config.toml || sudo tee -a /etc/containerd/config.toml > /dev/null <<EOF
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runsc]
   runtime_type = "io.containerd.runsc.v1"
 EOF
@@ -33,6 +33,8 @@ sudo systemctl restart containerd
 sudo systemctl is-active containerd
 grep -A1 "runtimes.runsc" /etc/containerd/config.toml'
 ```
+
+Проверка `grep -q` делает шаг идемпотентным: повторный запуск не задвоит секцию (дубль `[...runtimes.runsc]` ломает containerd).
 
 Kubelet не нужно перезапускать: `RuntimeClass` вызывает containerd runtime handler по
 имени при каждом создании Pod, а не при старте kubelet.

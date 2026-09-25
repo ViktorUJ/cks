@@ -39,4 +39,47 @@ kubectl config use-context staging-admin@staging >/dev/null
 chown ubuntu:ubuntu "$KUBECONFIG"
 cp "$KUBECONFIG" /root/.kube/config
 
+# Tasks 3 and 4 describe two successive states of the same Service (NodePort, then ClusterIP),
+# so at the end of the lab only one of them can be observed. This checker-owned monitor records
+# that the NodePort phase really happened (Service type NodePort/30114 answering from the worker),
+# so test 3 can be satisfied after the Service was reduced to ClusterIP in task 4.
+CHECKER=/var/lib/cks-lab114-checker
+install -d -o root -g root -m 0755 "$CHECKER"
+cat >/usr/local/bin/cks114-monitor <<'MON_EOF'
+#!/usr/bin/env bash
+set -u
+export KUBECONFIG=/home/ubuntu/.kube/config
+CTX=cluster1-admin@cluster1
+MARK=/var/lib/cks-lab114-checker/nodeport-phase-seen
+while true; do
+  if [[ ! -s "$MARK" ]]; then
+    svc=$(kubectl --context "$CTX" -n cks-114 get svc kubernetes-public -o json 2>/dev/null || true)
+    if [[ -n "$svc" ]] && jq -e '.spec.type == "NodePort" and .spec.ports[0].nodePort == 30114' <<<"$svc" >/dev/null 2>&1; then
+      node_ip=$(kubectl --context "$CTX" get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null || true)
+      code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 "http://${node_ip}:30114/" 2>/dev/null || true)
+      if [[ "$code" =~ ^[1-5][0-9][0-9]$ ]]; then
+        printf '%s nodeport=30114 http=%s node=%s\n' "$(date +%s)" "$code" "$node_ip" > "$MARK"
+      fi
+    fi
+  fi
+  sleep 2
+done
+MON_EOF
+chmod 0755 /usr/local/bin/cks114-monitor
+cat >/etc/systemd/system/cks114-monitor.service <<'UNIT_EOF'
+[Unit]
+Description=CKS lab 114 checker-owned NodePort phase monitor
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/cks114-monitor
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+UNIT_EOF
+systemctl daemon-reload
+systemctl enable --now cks114-monitor
+
 echo "*** lab 114 kubeconfig ready, contexts: $(kubectl config get-contexts -o name | tr '\n' ' ')"

@@ -115,33 +115,38 @@ Helm и `install-kyverno` также доступны на worker, но Kyverno 
 
 ## Предварительные условия и ограничения
 
-**Docker, buildx и registry на worker не предоставляются.** Задания 3 и 9c требуют собрать и
+**podman и registry на стенде уже настроены.** Для сборки и публикации образов используйте `podman`
+(инструмент из списка экзамена; rootless, от пользователя `ubuntu`). Задания 3 и 9c требуют собрать и
 **опубликовать** образ в registry, доступном и с worker, и из кластера (immutable-ссылка
-`repo@sha256:...` берётся из registry, локальный image ID не подходит). Подготовьте это сами
-до задания 3:
+`repo@sha256:...` берётся из registry, локальный image ID не подходит). Такой registry -
+`registry:2` на control-plane - поднят bootstrap'ом:
 
-- установите Docker Engine с плагином buildx (`docker-buildx-plugin`) на worker и добавьте
-  пользователя `ubuntu` в группу `docker` (после этого переподключитесь по ssh);
-- выберите registry. Самый простой вариант для лабы - анонимный публичный `ttl.sh`: образ
-  `ttl.sh/<уникальный-путь>/catalog:2h` живёт ограниченное время (tag - это срок жизни: `1h`,
-  `2h` и т.д.), логин не нужен. Путь делайте случайным, публичный registry общий. Подойдёт и
-  любой ваш registry с `docker login`;
+- адрес: `<IP control-plane>:5000`, он записан в `/etc/cks111/registry` на worker;
+- протокол - обычный HTTP внутри VPC: podman на worker и containerd на узле настроены на него как на
+  insecure registry (флаг `--tls-verify=false` не нужен), а в `ImageValidatingPolicy` для Kyverno нужен
+  `credentials.allowInsecureRegistry: true`;
+- данные хранятся на локальном PV узла (`/var/lib/cks111-registry`), поэтому переживают
+  перезапуск Pod'а registry;
+- digest опубликованного образа получайте из `podman push --digestfile`, а наличие манифеста
+  проверяйте запросом к `/v2/` (в registry нет HTTPS-only инструментов вроде `docker buildx imagetools`);
 - подробная последовательность команд - в шаге «0. Подготовка» [решения](worker/files/solutions/1_RU.MD).
 
-**Лимит Docker Hub.** Bootstrap, Trivy/Syft/bom и каждый `check_result` скачивают образы
-анонимно из Docker Hub, а у анонимных запросов лимит на pull с одного IP (около 100 за 6
-часов). Много повторных запусков `check_result` подряд могут закончиться `TOOMANYREQUESTS` -
-тогда отдельные тесты падают не из-за вашего решения. Подождите (окно лимита скользящее),
-не запускайте проверку без необходимости или выполните `docker login` под своей учётной
-записью Docker Hub.
+**Лимит Docker Hub.** У анонимных pull с одного IP лимит (около 100 запросов за 6 часов).
+Чтобы `check_result` не упирался в него, bootstrap один раз скачивает образы лабы в локальный кеш
+(`nginx:1.27.3-alpine` и кандидаты для заданий 1b/1c), а Trivy и Syft при повторных сканах берут
+образ из этого кеша по той же ссылке `имя@sha256:...`, не обращаясь к Docker Hub. `bom` умеет
+читать образ только из registry, поэтому он по-прежнему делает несколько запросов на запуск.
+Если Docker Hub всё же вернул `TOOMANYREQUESTS`, подождите (окно лимита скользящее) или выполните
+`podman login docker.io` под своей учётной записью.
 
 **Cosign и пароль ключа.** `cosign generate-key-pair` и `cosign sign --key` спрашивают пароль
 ключа; для учебной пары можно оставить его пустым (`export COSIGN_PASSWORD=""`), чтобы команды
 не ждали ввода.
 
-**`trivy sbom` и SPDX от `bom` (задание 8).** Trivy не определяет ОС по SPDX-файлу `bom`, поэтому
-в отчёте может не быть массива `Results`. Это ожидаемо: проверяется, что отчёт получен из
-SPDX-файла (`ArtifactType: spdx`), а `Results`, если он есть, является массивом.
+**`trivy sbom` и SBOM без ОС (задание 8).** SPDX от `bom` для multi-arch образа не содержит
+сведений об ОС: Trivy пишет `Detected OS family="none"` и не находит уязвимостей (`Results` пуст).
+Поэтому в задании 8 сканируется CycloneDX из задания 7 - в нём есть компонент `operating-system`,
+и `trivy sbom` даёт непустой `Results`.
 
 ## Развёртывание
 
@@ -287,8 +292,8 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 ---
 | **8** | **`trivy sbom`: сканирование готового SBOM-файла на уязвимости** |
 | :---: | :--- |
-| Что делаем | SBOM из задания 6 (`6/bom.spdx.json`) описывает состав image, но сам по себе не содержит вывода об уязвимостях. Просканируйте именно этот SBOM-файл (не image напрямую) инструментом `trivy sbom` и сохраните структурированный JSON в `/var/work/tests/artifacts/8/sbom-scan.json`. Команда должна явно принимать SBOM-файл как вход, а не пересканировать `$IMAGE`. |
-| Критерии приёмки | Файл непустой, JSON разбирается `jq`, содержит `Results`; evidence содержит команду `trivy sbom` с путём к `bom.spdx.json` из задания 6. |
+| Что делаем | CycloneDX SBOM из задания 7 (`7/syft.cdx.json`) описывает состав image и его ОС, но сам по себе не содержит вывода об уязвимостях. Просканируйте именно этот SBOM-файл (не image напрямую) инструментом `trivy sbom` и сохраните структурированный JSON в `/var/work/tests/artifacts/8/sbom-scan.json`. Команда должна явно принимать SBOM-файл как вход, а не пересканировать `$IMAGE`. |
+| Критерии приёмки | Файл непустой, JSON разбирается `jq`, `ArtifactType` = `cyclonedx`, `Results` непустой и содержит найденные уязвимости; `sbom-scan-command.txt` содержит команду `trivy sbom` с путём к `7/syft.cdx.json`. Checker сам повторяет `trivy sbom` по этому файлу. |
 
 <details>
 <summary>💡 Подсказка к заданию 8</summary>
@@ -323,7 +328,7 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 ---
 | **9c** | **Signature-specific DENY: unsigned digest, реально существующий в том же repository** |
 | :---: | :--- |
-| Что делаем | Соберите и опубликуйте **второй** tag в том же repository, что и `$HARDENED_IMAGE` (например, `${HARDENED_TAG%:*}:unsigned-1.0`; в `ttl.sh` tag - это срок жизни, поэтому используйте `${HARDENED_TAG%:*}:1h`), не подписывая его. Этот образ должен быть **физически другим artifact**, а не тем же digest, что уже подписанный `$HARDENED_IMAGE` - если собрать тот же `Dockerfile`/context без изменений, reproducible/cached build может дать идентичный digest, и тогда "unsigned" тег на самом деле укажет на уже подписанный artifact, а `cosign verify` неожиданно пройдёт. Внесите контролируемое отличие через build-arg (например `--build-arg CKS_SIGNATURE_TEST=unsigned-1` с соответствующим `ARG`/`LABEL` в Dockerfile) и явно сохраните доказательство `$UNSIGNED_DIGEST != $HARDENED_DIGEST` в `9c/digest-comparison.txt`. Получите registry manifest digest тем же способом, что в задании 3 (`docker buildx imagetools inspect`), сформируйте `$UNSIGNED_IMAGE` в том же repository. Явно докажите, что этот digest **существует и pullable** (`docker buildx imagetools inspect "$UNSIGNED_IMAGE"` успешен) и **не имеет** валидной подписи вашим ключом (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` завершается ошибкой) - сохраните оба вывода в `9c/unsigned-exists.txt` и `9c/unsigned-not-signed.txt`. Затем создайте Pod `catalog-unsigned-probe` с этим `$UNSIGNED_IMAGE` и сохраните admission denial в `9c/admission-deny.txt`. |
+| Что делаем | Соберите и опубликуйте **второй** tag в том же repository, что и `$HARDENED_IMAGE` (например, `${HARDENED_TAG%:*}:unsigned-1.0`), не подписывая его. Этот образ должен быть **физически другим artifact**, а не тем же digest, что уже подписанный `$HARDENED_IMAGE` - если собрать тот же `Dockerfile`/context без изменений, reproducible/cached build может дать идентичный digest, и тогда "unsigned" тег на самом деле укажет на уже подписанный artifact, а `cosign verify` неожиданно пройдёт. Внесите контролируемое отличие через build-arg (например `--build-arg CKS_SIGNATURE_TEST=unsigned-1` с соответствующим `ARG`/`LABEL` в Dockerfile) и явно сохраните доказательство `$UNSIGNED_DIGEST != $HARDENED_DIGEST` в `9c/digest-comparison.txt`. Получите registry manifest digest тем же способом, что в задании 3 (`podman push --digestfile`), сформируйте `$UNSIGNED_IMAGE` в том же repository. Явно докажите, что этот digest **существует и pullable** (запрос `GET /v2/catalog/manifests/<digest>` к registry успешен) и **не имеет** валидной подписи вашим ключом (`cosign verify --key cosign.pub "$UNSIGNED_IMAGE"` завершается ошибкой) - сохраните оба вывода в `9c/unsigned-exists.txt` и `9c/unsigned-not-signed.txt`. Затем создайте Pod `catalog-unsigned-probe` с этим `$UNSIGNED_IMAGE` и сохраните admission denial в `9c/admission-deny.txt`. |
 | Критерии приёмки | `9c/digest-comparison.txt` содержит `hardened_digest=`, `unsigned_digest=` и `unsigned_image=` (полная `tag@digest`-ссылка в том же repository, что `$HARDENED_IMAGE`, с genuinely другим digest). Checker сам выполняет проверку: резолвит `unsigned_image` в registry, подтверждает отсутствие валидной подписи через собственный `cosign verify`, создаёт СВОЙ новый Pod с этим образом и требует уникальный validation message собственной policy: `catalog image must have a valid release signature`. Generic admission/signature error от другой policy не считается PASS, а не любую admission-ошибку (`manifest unknown`/registry lookup недостаточны). Написанные вручную evidence-файлы без реального admission control не дают PASS - checker не доверяет никаким текстовым файлам, кроме `unsigned_image=` как указателя на реальный образ для проверки. |
 
 <details>

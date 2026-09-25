@@ -28,11 +28,15 @@ cilium install --version 1.20.1 \
   --set k8sServiceHost="$node_ip" \
   --set k8sServicePort=6443
 cilium status --wait
+kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status | grep KubeProxyReplacement
 kubectl get nodes
 ```
 
+> `cilium status` из cilium-cli 0.19 не печатает строки `KubeProxyReplacement`/`Encryption`;
+> их показывает `cilium-dbg status` внутри Pod'а агента (так же проверяет и checker).
+
 ```
-KubeProxyReplacement:   True   [eth0 10.115.1.x (Direct Routing)]
+KubeProxyReplacement:   True   [ens5 10.115.1.x (Direct Routing)]
 NAME              STATUS   ROLES           AGE   VERSION
 ip-10-115-1-xxx   Ready    control-plane   4m    v1.36.0
 ```
@@ -59,8 +63,14 @@ cilium upgrade --version 1.20.1 \
   --set k8sServicePort=6443 \
   --set encryption.enabled=true \
   --set encryption.type=wireguard
+kubectl -n kube-system rollout restart ds/cilium
+kubectl -n kube-system rollout status ds/cilium --timeout=180s
 cilium status --wait
+kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg status | grep Encryption
 ```
+
+> `cilium upgrade` меняет только ConfigMap: агент применяет `encryption.*` после перезапуска
+> (до него `Encryption: Disabled`).
 
 ```
 Encryption:             Wireguard       [NodeEncryption: Disabled, cilium_wg0 (Pubkey: ..., Port: 51871, Peers: 0)]
@@ -78,6 +88,17 @@ api HTTP:403
 
 ## 4. Cilium Mutual Authentication (SPIRE)
 
+Три параметра сверх минимальных из задания нужны именно в этом стенде:
+
+- `authentication.enabled=true` - без него chart отклоняет `spire.enabled=true`
+  (`SPIRE integration requires .Values.authentication.enabled=true ...`).
+- `install.server.dataStorage.enabled=false` - в кластере нет StorageClass, поэтому PVC
+  `spire-data-spire-server-0` навсегда остаётся `Pending`, а `spire-server-0` - `Pending`
+  (для лабы хватает эфемерного хранилища).
+- `install.server.securityContext.runAsUser=0` - образ `spire-server` стартует от uid 1000 и
+  не может создать `api.sock` в hostPath-каталоге `root:755`; сервер молча завершает
+  endpoint'ы и убивается liveness-пробой (`Waiting for spire-server to start...` в `cilium-init`).
+
 ```bash
 cilium upgrade --version 1.20.1 \
   --set kubeProxyReplacement=true \
@@ -85,17 +106,29 @@ cilium upgrade --version 1.20.1 \
   --set k8sServicePort=6443 \
   --set encryption.enabled=true \
   --set encryption.type=wireguard \
+  --set authentication.enabled=true \
   --set authentication.mutual.spire.enabled=true \
-  --set authentication.mutual.spire.install.enabled=true
+  --set authentication.mutual.spire.install.enabled=true \
+  --set authentication.mutual.spire.install.server.dataStorage.enabled=false \
+  --set authentication.mutual.spire.install.server.securityContext.runAsUser=0
+kubectl -n cilium-spire rollout status statefulset/spire-server --timeout=300s
+kubectl -n cilium-spire rollout status daemonset/spire-agent --timeout=300s
 kubectl get pods -A | grep spire
 ```
 
 ```
-kube-system   spire-agent-xxxxx    1/1     Running   0    2m
-kube-system   spire-server-0       1/1     Running   0    2m
+cilium-spire   spire-agent-xxxxx    1/1     Running   0    2m
+cilium-spire   spire-server-0       2/2     Running   0    2m
 ```
 
+Pod'ы SPIRE живут в namespace `cilium-spire`. Сразу после установки перезапустите Cilium,
+чтобы агент и оператор заново зарегистрировали identities в уже работающем SPIRE:
+
 ```bash
+kubectl -n kube-system rollout restart deploy/cilium-operator ds/cilium
+kubectl -n kube-system rollout status ds/cilium --timeout=180s
+kubectl -n kube-system rollout status deploy/cilium-operator --timeout=180s
+cilium status --wait
 kubectl delete pod svc-check --ignore-not-found
 ```
 
@@ -144,20 +177,30 @@ ciliumnetworkpolicy.cilium.io/backend-auth-required created
 
 ## 6. Positive/negative control
 
+Негативный контроль - **отдельный Pod** в `app-115`: трафик Pod'а к самому себе (в том числе
+через Service) Cilium всегда пропускает, поэтому `exec` в `backend` ничего не доказывает.
+
 ```bash
-kubectl -n ingress-115 exec client -- curl -sS -o /dev/null -w 'client HTTP:%{http_code}\n' -m5 http://backend.app-115.svc.cluster.local/
-kubectl -n app-115 exec backend -- curl -sS -o /dev/null -w 'self HTTP:%{http_code}\n' -m5 http://backend.app-115.svc.cluster.local/
+kubectl -n app-115 run intruder --image=curlimages/curl:8.11.1 --command -- sleep 3600
+kubectl -n app-115 wait --for=condition=Ready pod/intruder --timeout=90s
+sleep 20
+kubectl -n ingress-115 exec client -- curl -sS -o /dev/null -w 'client HTTP:%{http_code}\n' -m10 http://backend.app-115.svc.cluster.local/
+kubectl -n app-115 exec intruder -- curl -sS -o /dev/null -w 'intruder HTTP:%{http_code}\n' -m5 http://backend.app-115.svc.cluster.local/ || true
+kubectl -n kube-system exec ds/cilium -c cilium-agent -- cilium-dbg bpf auth list
 ```
 
 ```
 client HTTP:200
-self HTTP:000
-curl: (28) Connection timed out after 5000 milliseconds
+curl: (28) Connection timed out after 5002 milliseconds
+intruder HTTP:000
+SRC IDENTITY   DST IDENTITY   REMOTE NODE ID   AUTH TYPE   EXPIRATION
+11376          33174          0                spire       ...
 ```
 
-`client` из `ingress-115` проходит mutual authentication и получает `200`; probe из
-`app-115` с чужой identity - transport deny (не `k8s-app=backend` selector allow, и не
-`ingress-115` identity, требуемая policy).
+`client` из `ingress-115` проходит mutual authentication (запись `spire` в `auth list`) и
+получает `200`; `intruder` из `app-115` - transport deny (нет allow для его identity).
+Первый запрос нового клиента может занять несколько секунд: SYN отбрасывается, пока идёт
+SPIFFE-handshake, затем ретрансмит проходит.
 
 ---
 

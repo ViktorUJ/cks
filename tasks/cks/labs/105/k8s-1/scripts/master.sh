@@ -88,7 +88,10 @@ find / -xdev -perm -4000 -type f -print 2>/dev/null \
   > /var/lib/cks-lab105/system-suid-baseline.txt
 
 cp /bin/true /usr/local/bin/cks-lab105-suid-tool
-chmod 4755 /usr/local/bin/cks-lab105-suid-tool
+# chown must come BEFORE chmod: the kernel clears the setuid bit on any chown of an
+# executable file (even chown root:root by root), so chmod 4755 followed by chown leaves 0755.
 chown root:root /usr/local/bin/cks-lab105-suid-tool
+chmod 4755 /usr/local/bin/cks-lab105-suid-tool
+[[ "$(stat -c '%a' /usr/local/bin/cks-lab105-suid-tool)" == 4755 ]]
 
 echo "*** CKS lab 105 control-plane preparation complete"
