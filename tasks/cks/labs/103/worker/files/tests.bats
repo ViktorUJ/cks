@@ -444,17 +444,17 @@ record_result() {
     result=0
   else
     if [[ ! -s "$cm_before" || "$cm_before_ok" != true ]]; then
-      echo "HINT: $cm_before must be captured BEFORE any fix and contain a line starting with exactly '[FAIL] 1.3.2' - kube-bench check for kube-controller-manager profiling, run with --targets controlplane."
+      echo "HINT: $cm_before must be captured BEFORE any fix and contain a line starting with exactly '[FAIL] 1.3.2' - kube-bench check for kube-controller-manager profiling (lives under the 'master' target, run with plain --check, no --targets restriction)."
     elif [[ ! -s "$sched_before" || "$sched_before_ok" != true ]]; then
-      echo "HINT: $sched_before must be captured BEFORE any fix and contain a line starting with exactly '[FAIL] 1.4.1' - kube-bench check for kube-scheduler profiling, run with --targets controlplane."
+      echo "HINT: $sched_before must be captured BEFORE any fix and contain a line starting with exactly '[FAIL] 1.4.1' - kube-bench check for kube-scheduler profiling (lives under the 'master' target, run with plain --check, no --targets restriction)."
     elif [[ "$cm_flag_ok" != true ]]; then
       echo "HINT: The running kube-controller-manager Pod's command does not include '--profiling=false' yet. Add it to /etc/kubernetes/manifests/kube-controller-manager.yaml's command list and wait for kubelet to recreate the static Pod."
     elif [[ "$sched_flag_ok" != true ]]; then
       echo "HINT: The running kube-scheduler Pod's command does not include '--profiling=false' yet. Add it to /etc/kubernetes/manifests/kube-scheduler.yaml's command list and wait for kubelet to recreate the static Pod."
     elif [[ "$cm_after_ok" != true || "$cm_after_no_fail" != true ]]; then
-      echo "HINT: $cm_after must contain '[PASS] 1.3.2' and no '[FAIL] 1.3.2' - re-run kube-bench --check 1.3.2 --targets controlplane after the fix and save the fresh output."
+      echo "HINT: $cm_after must contain '[PASS] 1.3.2' and no '[FAIL] 1.3.2' - re-run kube-bench --check 1.3.2 after the fix and save the fresh output."
     elif [[ "$sched_after_ok" != true || "$sched_after_no_fail" != true ]]; then
-      echo "HINT: $sched_after must contain '[PASS] 1.4.1' and no '[FAIL] 1.4.1' - re-run kube-bench --check 1.4.1 --targets controlplane after the fix and save the fresh output."
+      echo "HINT: $sched_after must contain '[PASS] 1.4.1' and no '[FAIL] 1.4.1' - re-run kube-bench --check 1.4.1 after the fix and save the fresh output."
     elif [[ "$cm_phase" != "Running" ]]; then
       echo "HINT: kube-controller-manager Pod is not Running (phase=$cm_phase) after the manifest edit. Check 'kubectl describe pod' for a YAML syntax error."
     else
@@ -470,12 +470,19 @@ record_result() {
   before=/var/work/tests/artifacts/10/before.txt
   after=/var/work/tests/artifacts/10/after.txt
 
+  # Pinned kube-bench 0.16.0's cis-1.12 profile (used everywhere else in this lab) does NOT
+  # have a protect-kernel-defaults check at all - CIS retired/renumbered it out of that
+  # profile version. Its own "4.2.6" under cis-1.12 is a DIFFERENT check
+  # (--make-iptables-util-chains, PASS by default) - matching bare ID alone would let that
+  # unrelated, already-passing check masquerade as evidence. This check still exists, under
+  # the same ID, in the older cis-1.24 profile, so task 10 explicitly asks for --benchmark
+  # cis-1.24 for this one check; match on the check's actual text, not just its ID.
   before_ok=false
-  grep -Eq '^\[FAIL\][[:space:]]+4[.]2[.]6([[:space:]]|$)' "$before" 2>/dev/null && before_ok=true
+  grep -Eiq '^\[FAIL\][[:space:]]+4[.]2[.]6[[:space:]].*protect-kernel-defaults' "$before" 2>/dev/null && before_ok=true
   after_pass_ok=false
-  grep -Eq '^\[PASS\][[:space:]]+4[.]2[.]6([[:space:]]|$)' "$after" 2>/dev/null && after_pass_ok=true
+  grep -Eiq '^\[PASS\][[:space:]]+4[.]2[.]6[[:space:]].*protect-kernel-defaults' "$after" 2>/dev/null && after_pass_ok=true
   after_no_fail=true
-  grep -Eq '^\[FAIL\][[:space:]]+4[.]2[.]6([[:space:]]|$)' "$after" 2>/dev/null && after_no_fail=false
+  grep -Eiq '^\[FAIL\][[:space:]]+4[.]2[.]6[[:space:]].*protect-kernel-defaults' "$after" 2>/dev/null && after_no_fail=false
 
   configz=$(kubectl get --raw="/api/v1/nodes/$(worker_node)/proxy/configz" --context "$CTX" 2>/dev/null)
   configz_ok=false
@@ -488,11 +495,11 @@ record_result() {
     result=0
   else
     if [[ ! -s "$before" || "$before_ok" != true ]]; then
-      echo "HINT: $before must be captured BEFORE any fix, ON THE WORKER NODE, and contain a line starting with exactly '[FAIL] 4.2.6' - kube-bench check for kubelet --protect-kernel-defaults, run with --targets node."
+      echo "HINT: $before must be captured BEFORE any fix, ON THE WORKER NODE, and contain a line starting with exactly '[FAIL] 4.2.6' whose text mentions protect-kernel-defaults - run 'kube-bench run --benchmark cis-1.24 --check 4.2.6' (NOT cis-1.12 - that profile's own 4.2.6 is a different, already-passing check)."
     elif [[ "$configz_ok" != true ]]; then
       echo "HINT: The worker node's actuated kubelet configuration (via /configz) does not show protectKernelDefaults=true. Set 'protectKernelDefaults: true' in the worker node's /var/lib/kubelet/config.yaml and restart kubelet there (not on the control-plane)."
     elif [[ "$after_pass_ok" != true || "$after_no_fail" != true ]]; then
-      echo "HINT: $after must contain '[PASS] 4.2.6' and no '[FAIL] 4.2.6' - re-run kube-bench --check 4.2.6 --targets node on the worker node after the fix and save the fresh output."
+      echo "HINT: $after must contain '[PASS] 4.2.6' (protect-kernel-defaults wording) and no matching '[FAIL]' - re-run kube-bench --benchmark cis-1.24 --check 4.2.6 on the worker node after the fix and save the fresh output."
     else
       echo "HINT: worker node is not Ready (status=$ready) after the kubelet config change/restart."
     fi

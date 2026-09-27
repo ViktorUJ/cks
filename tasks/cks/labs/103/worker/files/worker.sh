@@ -10,15 +10,26 @@ CTX="cluster1-admin@cluster1"
 # Verify the newest release before each course build.
 KUBE_BENCH_VERSION="0.16.0"
 
-# Do not prepare the lab until the single control-plane node is visible through the
-# same context used by tests and students.
-echo "Waiting for a Kubernetes node..."
-until kubectl get nodes --context "$CTX" --no-headers 2>/dev/null | grep -q .; do
+# Do not prepare the lab until the control-plane node is visible through the same context
+# used by tests and students. The cluster now also has a worker node (items[0] is not
+# guaranteed to be control-plane once a second node exists), so select by role explicitly.
+echo "Waiting for the control-plane node..."
+until kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane --no-headers 2>/dev/null | grep -q .; do
   sleep 5
 done
-
-CONTROL_PLANE_IP=$(kubectl get nodes --context "$CTX" -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+CONTROL_PLANE_IP=$(kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 printf '%s control-plane\n' "$CONTROL_PLANE_IP" >> /etc/hosts
+
+# README/solution use bare "ssh control-plane" (and, for task 10, "ssh $WORKER_NODE" with the
+# real k8s node name, ip-10-...) with no ssh flags at all - without this, the very first such
+# command fails with "Host key verification failed" on a fresh instance. Cover both the
+# "control-plane" alias above and any node's real hostname (ip-10-*) in one go.
+for ssh_home in /root /home/ubuntu; do
+  install -d -m 0700 "$ssh_home/.ssh"
+  printf 'Host control-plane ip-10-*\n  User ubuntu\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  LogLevel ERROR\n' >> "$ssh_home/.ssh/config"
+  chmod 0600 "$ssh_home/.ssh/config"
+done
+chown -R ubuntu:ubuntu /home/ubuntu/.ssh
 
 # kube-bench ships its benchmark configuration alongside the binary. Keep the complete,
 # pinned release on the worker so it can be copied to the control-plane for task 1.

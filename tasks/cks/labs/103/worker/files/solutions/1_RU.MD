@@ -378,20 +378,21 @@ kubectl -n kube-system get pods -l component=kube-controller-manager
 ## Задание 9. Remediation cycle: profiling на kube-controller-manager и kube-scheduler
 
 Тот же приём, что в заданиях 7-8 (найти конкретный `[FAIL]` через kube-bench, исправить,
-подтвердить `[PASS]`), только для другого раздела CIS - `--targets controlplane`, checks
-`1.3.2` (kube-controller-manager) и `1.4.1` (kube-scheduler). Задание 3 уже отключило
-profiling только на kube-apiserver; kubeadm по умолчанию НЕ добавляет `--profiling=false`
-в манифесты kube-controller-manager/kube-scheduler вообще.
+подтвердить `[PASS]`), для checks `1.3.2` (kube-controller-manager profiling) и `1.4.1`
+(kube-scheduler profiling). Оба, как и весь раздел `1.x`, относятся к target `master` в
+`cis-1.12`, поэтому явный `--targets` не нужен - точно так же, как в заданиях 7-8. Задание 3
+уже отключило profiling только на kube-apiserver; kubeadm по умолчанию НЕ добавляет
+`--profiling=false` в манифесты kube-controller-manager/kube-scheduler вообще.
 
 ```bash
 mkdir -p /var/work/tests/artifacts/9
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets controlplane --check 1.3.2' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.3.2' \
   | tee /var/work/tests/artifacts/9/controller-manager-before.txt
 grep -A1 '1.3.2' /var/work/tests/artifacts/9/controller-manager-before.txt
 # [FAIL] 1.3.2 Ensure that the --profiling argument is set to false ...
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets controlplane --check 1.4.1' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.4.1' \
   | tee /var/work/tests/artifacts/9/scheduler-before.txt
 grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-before.txt
 # [FAIL] 1.4.1 Ensure that the --profiling argument is set to false ...
@@ -426,12 +427,12 @@ kubectl -n kube-system get pod -l component=kube-controller-manager --context "$
 kubectl -n kube-system get pod -l component=kube-scheduler --context "$CTX" -o json \
   | jq -e '.items[0].spec.containers[0].command | index("--profiling=false") != null'
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets controlplane --check 1.3.2' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.3.2' \
   | tee /var/work/tests/artifacts/9/controller-manager-after.txt
 grep -A1 '1.3.2' /var/work/tests/artifacts/9/controller-manager-after.txt
 # [PASS] 1.3.2 Ensure that the --profiling argument is set to false ...
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets controlplane --check 1.4.1' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.4.1' \
   | tee /var/work/tests/artifacts/9/scheduler-after.txt
 grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 # [PASS] 1.4.1 Ensure that the --profiling argument is set to false ...
@@ -442,9 +443,17 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 
 ## Задание 10. Remediation cycle: protect-kernel-defaults на worker-узле
 
-Тот же приём, что в заданиях 7-9, теперь на РЕАЛЬНОМ worker-узле (не control-plane) и для
-`--targets node` (`check 4.2.6`). Сначала установите `kube-bench` на worker-узел - точно
-так же, как задание 1 устанавливало его на control-plane:
+Тот же приём, что в заданиях 7-9, теперь на РЕАЛЬНОМ worker-узле (не control-plane), но для
+ДРУГОГО профиля. Пиннутый `kube-bench 0.16.0`/`cis-1.12` (используемый во всех остальных
+заданиях этой лабы) вообще не содержит check protect-kernel-defaults - CIS убрал/
+переномеровал его начиная с этой версии профиля; собственный `4.2.6` в `cis-1.12` - это
+ДРУГОЙ check (`--make-iptables-util-chains`, `PASS` по умолчанию, к protect-kernel-defaults
+отношения не имеет). Нужный check с тем же ID `4.2.6` существует в более старом профиле
+`cis-1.24` того же бинарника - используйте именно его, явным `--benchmark cis-1.24`, только
+для этого одного задания.
+
+Сначала установите `kube-bench` на worker-узел - точно так же, как задание 1 устанавливало
+его на control-plane:
 
 ```bash
 WORKER_NODE=$(kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}')
@@ -452,7 +461,7 @@ scp -r /opt/kube-bench "$WORKER_NODE:/tmp/kube-bench"
 ssh "$WORKER_NODE" 'sudo rm -rf /opt/kube-bench && sudo mv /tmp/kube-bench /opt/kube-bench'
 
 mkdir -p /var/work/tests/artifacts/10
-ssh "$WORKER_NODE" 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets node --check 4.2.6' \
+ssh "$WORKER_NODE" 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.24 --check 4.2.6' \
   | tee /var/work/tests/artifacts/10/before.txt
 grep -A1 '4.2.6' /var/work/tests/artifacts/10/before.txt
 # [FAIL] 4.2.6 Ensure that the --protect-kernel-defaults argument is set to true ...
@@ -475,7 +484,7 @@ kubectl get node "$WORKER_NODE" --context "$CTX" -o jsonpath='{.status.condition
 kubectl get --raw="/api/v1/nodes/$WORKER_NODE/proxy/configz" --context "$CTX" \
   | jq -e '.kubeletconfig.protectKernelDefaults == true'
 
-ssh "$WORKER_NODE" 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets node --check 4.2.6' \
+ssh "$WORKER_NODE" 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.24 --check 4.2.6' \
   | tee /var/work/tests/artifacts/10/after.txt
 grep -A1 '4.2.6' /var/work/tests/artifacts/10/after.txt
 # [PASS] 4.2.6 Ensure that the --protect-kernel-defaults argument is set to true ...
