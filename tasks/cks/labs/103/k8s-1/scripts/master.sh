@@ -4,6 +4,29 @@ set -euo pipefail
 echo "*** master node cks lab 103 k8s-1"
 export KUBECONFIG=/root/.kube/config
 
+# kube-bench installed here directly (not copied from the worker bastion) - matches the real
+# exam, where it is already present on nodes. Task 1 (control-plane report) then runs it
+# in place, no scp step needed. Task 10 still installs it for real on the k8s WORKER node
+# (as a student action), so the actual install mechanics are exercised at least once.
+KUBE_BENCH_VERSION="0.16.0"
+arch=$(dpkg --print-architecture)
+case "$arch" in
+  amd64) release_arch="amd64" ;;
+  arm64) release_arch="arm64" ;;
+  *) echo "Unsupported architecture for kube-bench: $arch" >&2; exit 1 ;;
+esac
+workdir=$(mktemp -d)
+trap 'rm -rf "$workdir"' EXIT
+curl -fsSL -o "$workdir/kube-bench.tar.gz" \
+  "https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION}_linux_${release_arch}.tar.gz"
+tar -xzf "$workdir/kube-bench.tar.gz" -C "$workdir"
+install -d -m 0755 /opt/kube-bench
+cp -a "$workdir"/cfg /opt/kube-bench/cfg
+install -m 0755 "$workdir/kube-bench" /opt/kube-bench/kube-bench
+ln -sf /opt/kube-bench/kube-bench /usr/local/bin/kube-bench
+rm -rf "$workdir"
+trap - EXIT
+
 # Permit the TLS demo workload (and other control-plane-scheduled fixtures) to run here too,
 # even though the cluster now also has a real worker node (added for kube-bench's "node"
 # target - task 10, CIS 4.2.6 protect-kernel-defaults).

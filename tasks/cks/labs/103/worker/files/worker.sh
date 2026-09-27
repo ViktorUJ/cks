@@ -4,11 +4,6 @@ set -euo pipefail
 echo "*** worker pc cks lab 103 k8s-1"
 export KUBECONFIG=/root/.kube/config
 CTX="cluster1-admin@cluster1"
-# Latest kube-bench release verified 2026-08-31 (published 2026-08-05); asset
-# kube-bench_${VERSION}_linux_${arch}.tar.gz confirmed present. kube-bench auto-detects the
-# Kubernetes version and maps it to a CIS profile (K8s and CIS versions are not 1:1).
-# Verify the newest release before each course build.
-KUBE_BENCH_VERSION="0.16.0"
 
 # Do not prepare the lab until the control-plane node is visible through the same context
 # used by tests and students. The cluster now also has a worker node (items[0] is not
@@ -19,6 +14,10 @@ until kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plan
 done
 CONTROL_PLANE_IP=$(kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 printf '%s control-plane\n' "$CONTROL_PLANE_IP" >> /etc/hosts
+# kube-bench itself is NOT installed on this bastion: it lives on control-plane (installed
+# there directly by k8s-1/scripts/master.sh, matching the real exam where it is already
+# present on nodes) and, as a real student-run install, on the worker k8s node for task 10.
+# Nothing here ever needs its own local copy or scp's one anywhere.
 
 # README/solution use bare "ssh control-plane" (and, for task 10, "ssh $WORKER_NODE" with the
 # real k8s node name, ip-10-...) with no ssh flags at all - without this, the very first such
@@ -30,25 +29,6 @@ for ssh_home in /root /home/ubuntu; do
   chmod 0600 "$ssh_home/.ssh/config"
 done
 chown -R ubuntu:ubuntu /home/ubuntu/.ssh
-
-# kube-bench ships its benchmark configuration alongside the binary. Keep the complete,
-# pinned release on the worker so it can be copied to the control-plane for task 1.
-arch=$(dpkg --print-architecture)
-case "$arch" in
-  amd64) release_arch="amd64" ;;
-  arm64) release_arch="arm64" ;;
-  *) echo "Unsupported architecture for kube-bench: $arch" >&2; exit 1 ;;
-esac
-
-workdir=$(mktemp -d)
-trap 'rm -rf "$workdir"' EXIT
-curl -fsSL -o "$workdir/kube-bench.tar.gz" \
-  "https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION}_linux_${release_arch}.tar.gz"
-tar -xzf "$workdir/kube-bench.tar.gz" -C "$workdir"
-install -d -m 0755 /opt/kube-bench
-cp -a "$workdir"/cfg /opt/kube-bench/cfg
-install -m 0755 "$workdir/kube-bench" /opt/kube-bench/kube-bench
-ln -sf /opt/kube-bench/kube-bench /usr/local/bin/kube-bench
 
 mkdir -p /var/work/tests/artifacts/{1,5,6}
 chown -R ubuntu:ubuntu /var/work/tests/artifacts

@@ -15,18 +15,16 @@ ssh control-plane sudo hostname
 
 ## Задание 1. Отчёт kube-bench
 
-`kube-bench` `0.16.0` на worker уже расположен в `/opt/kube-bench`. Скопируйте полный
-каталог, чтобы на узле были и binary, и `cfg`. Kubernetes `1.36` пока отсутствует в
-официальной support table kube-bench; встроенный version mapping этой версии заканчивается
-записью `"1.34": "cis-1.12"` - более новых профилей (включая какой-либо профиль под 1.35/1.36)
-в `0.16.0` нет вовсе, поэтому используем именно `cis-1.12` как ближайший существующий.
-Поэтому мы запускаем его принудительно как approximate hardening signal, а не как
-authoritative CIS compliance assessment.
+`kube-bench` `0.16.0` уже установлен на `control-plane` (как и на реальном экзамене, где
+CIS Benchmark tooling на нодах уже есть) - копировать его туда с worker не нужно. Kubernetes
+`1.36` пока отсутствует в официальной support table kube-bench; встроенный version mapping
+этой версии заканчивается записью `"1.34": "cis-1.12"` - более новых профилей (включая
+какой-либо профиль под 1.35/1.36) в `0.16.0` нет вовсе, поэтому используем именно `cis-1.12`
+как ближайший существующий. Поэтому мы запускаем его принудительно как approximate
+hardening signal, а не как authoritative CIS compliance assessment.
 
 ```bash
 mkdir -p /var/work/tests/artifacts/1
-scp -r /opt/kube-bench control-plane:/tmp/kube-bench
-ssh control-plane 'sudo rm -rf /opt/kube-bench && sudo mv /tmp/kube-bench /opt/kube-bench'
 {
   printf 'kubernetes_version=%s\n' "$(kubectl version -o json | jq -r '.serverVersion.gitVersion')"
   printf 'kube_bench_version=%s\n' "$(ssh control-plane 'sudo /opt/kube-bench/kube-bench version' | awk 'NF {print $NF}' | tail -1)"
@@ -452,13 +450,26 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 `cis-1.24` того же бинарника - используйте именно его, явным `--benchmark cis-1.24`, только
 для этого одного задания.
 
-Сначала установите `kube-bench` на worker-узел - точно так же, как задание 1 устанавливало
-его на control-plane:
+В отличие от control-plane, на worker-узле `kube-bench` НЕ предустановлен - установите его
+здесь сами (реальный install, не копия с control-plane или worker PC): скачайте тот же
+пиннутый релиз с GitHub, распакуйте `binary` и `cfg`:
 
 ```bash
 WORKER_NODE=$(kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}')
-scp -r /opt/kube-bench "$WORKER_NODE:/tmp/kube-bench"
-ssh "$WORKER_NODE" 'sudo rm -rf /opt/kube-bench && sudo mv /tmp/kube-bench /opt/kube-bench'
+KUBE_BENCH_VERSION=0.16.0
+ssh "$WORKER_NODE" "
+  arch=\$(dpkg --print-architecture)
+  workdir=\$(mktemp -d)
+  curl -fsSL -o \"\$workdir/kube-bench.tar.gz\" \
+    'https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION}_linux_'\"\$arch\"'.tar.gz'
+  tar -xzf \"\$workdir/kube-bench.tar.gz\" -C \"\$workdir\"
+  sudo install -d -m 0755 /opt/kube-bench
+  sudo cp -a \"\$workdir\"/cfg /opt/kube-bench/cfg
+  sudo install -m 0755 \"\$workdir/kube-bench\" /opt/kube-bench/kube-bench
+  sudo ln -sf /opt/kube-bench/kube-bench /usr/local/bin/kube-bench
+  rm -rf \"\$workdir\"
+"
+ssh "$WORKER_NODE" 'kube-bench version'
 
 mkdir -p /var/work/tests/artifacts/10
 ssh "$WORKER_NODE" 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.24 --check 4.2.6' \
