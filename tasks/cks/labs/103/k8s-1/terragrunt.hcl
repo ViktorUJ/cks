@@ -61,5 +61,29 @@ inputs = {
     root_volume = local.vars.locals.root_volume
   }
 
-  k8s_worker = {}
+  # Second, real k8s node (kubelet-joined, not the "worker" bastion VM that hosts
+  # kubectl/check_result). Needed so kube-bench's "node" target checks (e.g.
+  # --protect-kernel-defaults) run against an actual kubelet, distinct from control-plane
+  # components checked via the "master"/"controlplane"/"etcd" targets.
+  k8s_worker = {
+    "node1" = {
+      k8_version         = local.vars.locals.k8_version
+      instance_type      = local.vars.locals.instance_type_worker
+      key_name           = local.vars.locals.key_name
+      ami_id             = local.vars.locals.ami_id
+      ubuntu_version     = local.vars.locals.ubuntu_version
+      subnet_number      = "1"
+      user_data_template = "template/worker.sh"
+      runtime            = local.vars.locals.runtime
+      runtime_script     = "template/runtime.sh"
+      task_script_url    = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-156/tasks/cks/labs/103/k8s-1/scripts/worker.sh"
+      node_labels        = "lab.cks.io/role=cis-worker"
+      cidrs              = local.vars.locals.access_cidrs
+      root_volume        = local.vars.locals.root_volume
+      ssh = {
+        private_key = dependency.ssh-keys.outputs.private_key
+        pub_key     = dependency.ssh-keys.outputs.pub_key
+      }
+    }
+  }
 }

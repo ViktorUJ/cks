@@ -375,11 +375,30 @@ grep -A1 '1.1.3' /var/work/tests/artifacts/8/after.txt
 kubectl -n kube-system get pods -l component=kube-controller-manager
 ```
 
-## Задание 9. Отключить profiling на kube-controller-manager и kube-scheduler
+## Задание 9. Remediation cycle: profiling на kube-controller-manager и kube-scheduler
 
-Задание 3 отключило profiling только на kube-apiserver. kubeadm по умолчанию НЕ добавляет
-`--profiling=false` в манифесты kube-controller-manager/kube-scheduler - тот же приём,
-для двух других static Pod manifests.
+Тот же приём, что в заданиях 7-8 (найти конкретный `[FAIL]` через kube-bench, исправить,
+подтвердить `[PASS]`), только для другого раздела CIS - `--targets controlplane`, checks
+`1.3.2` (kube-controller-manager) и `1.4.1` (kube-scheduler). Задание 3 уже отключило
+profiling только на kube-apiserver; kubeadm по умолчанию НЕ добавляет `--profiling=false`
+в манифесты kube-controller-manager/kube-scheduler вообще.
+
+```bash
+mkdir -p /var/work/tests/artifacts/9
+
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets controlplane --check 1.3.2' \
+  | tee /var/work/tests/artifacts/9/controller-manager-before.txt
+grep -A1 '1.3.2' /var/work/tests/artifacts/9/controller-manager-before.txt
+# [FAIL] 1.3.2 Ensure that the --profiling argument is set to false ...
+
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets controlplane --check 1.4.1' \
+  | tee /var/work/tests/artifacts/9/scheduler-before.txt
+grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-before.txt
+# [FAIL] 1.4.1 Ensure that the --profiling argument is set to false ...
+```
+
+Исправляем оба static Pod manifests - тот же приём, что в задании 3, только для двух
+других компонентов:
 
 ```bash
 ssh control-plane
@@ -397,7 +416,8 @@ kubectl -n kube-system get pods -l component=kube-scheduler --context "$CTX"
 ```
 
 Проверяем не текст файла, а реально запущенный Pod (kubelet пересоздаёт static Pod не
-мгновенно после изменения манифеста):
+мгновенно после изменения манифеста), и повторный точечный запуск того же check должен
+показать `PASS`:
 
 ```bash
 kubectl -n kube-system get pod -l component=kube-controller-manager --context "$CTX" -o json \
@@ -405,6 +425,58 @@ kubectl -n kube-system get pod -l component=kube-controller-manager --context "$
 
 kubectl -n kube-system get pod -l component=kube-scheduler --context "$CTX" -o json \
   | jq -e '.items[0].spec.containers[0].command | index("--profiling=false") != null'
+
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets controlplane --check 1.3.2' \
+  | tee /var/work/tests/artifacts/9/controller-manager-after.txt
+grep -A1 '1.3.2' /var/work/tests/artifacts/9/controller-manager-after.txt
+# [PASS] 1.3.2 Ensure that the --profiling argument is set to false ...
+
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets controlplane --check 1.4.1' \
+  | tee /var/work/tests/artifacts/9/scheduler-after.txt
+grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
+# [PASS] 1.4.1 Ensure that the --profiling argument is set to false ...
 ```
 
-Оба должны вывести `true`, а обе команды `kubectl get pods` выше - показать `Running`.
+`jq -e` должен вывести `true` для обоих компонентов, а обе команды `kubectl get pods`
+выше - показать `Running`.
+
+## Задание 10. Remediation cycle: protect-kernel-defaults на worker-узле
+
+Тот же приём, что в заданиях 7-9, теперь на РЕАЛЬНОМ worker-узле (не control-plane) и для
+`--targets node` (`check 4.2.6`). Сначала установите `kube-bench` на worker-узел - точно
+так же, как задание 1 устанавливало его на control-plane:
+
+```bash
+WORKER_NODE=$(kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}')
+scp -r /opt/kube-bench "$WORKER_NODE:/tmp/kube-bench"
+ssh "$WORKER_NODE" 'sudo rm -rf /opt/kube-bench && sudo mv /tmp/kube-bench /opt/kube-bench'
+
+mkdir -p /var/work/tests/artifacts/10
+ssh "$WORKER_NODE" 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets node --check 4.2.6' \
+  | tee /var/work/tests/artifacts/10/before.txt
+grep -A1 '4.2.6' /var/work/tests/artifacts/10/before.txt
+# [FAIL] 4.2.6 Ensure that the --protect-kernel-defaults argument is set to true ...
+```
+
+`protectKernelDefaults` не входит в kubeadm-сгенерированный `KubeletConfiguration` вообще -
+поле физически отсутствует (эквивалентно небезопасному default `false`), поэтому просто
+добавьте его, а не ищите существующую строку для замены:
+
+```bash
+ssh "$WORKER_NODE" 'echo "protectKernelDefaults: true" | sudo tee -a /var/lib/kubelet/config.yaml'
+ssh "$WORKER_NODE" 'sudo systemctl restart kubelet'
+kubectl get node "$WORKER_NODE" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}'
+```
+
+Подтвердите через `/configz` (реально применённая конфигурация, не текст файла) и
+повторным точечным запуском check:
+
+```bash
+kubectl get --raw="/api/v1/nodes/$WORKER_NODE/proxy/configz" --context "$CTX" \
+  | jq -e '.kubeletconfig.protectKernelDefaults == true'
+
+ssh "$WORKER_NODE" 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets node --check 4.2.6' \
+  | tee /var/work/tests/artifacts/10/after.txt
+grep -A1 '4.2.6' /var/work/tests/artifacts/10/after.txt
+# [PASS] 4.2.6 Ensure that the --protect-kernel-defaults argument is set to true ...
+```

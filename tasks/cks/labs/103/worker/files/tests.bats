@@ -8,8 +8,20 @@ control_plane() {
     -o jsonpath='{.items[0].metadata.name}' 2>/dev/null
 }
 
+# The second node (added for task 10 / kube-bench's "node" target) is a real k8s-joined
+# worker, named after its instance hostname (ip-10-...) like control_plane() above - not
+# after the k8s1_node_node1 ssh alias the terraform module also creates.
+worker_node() {
+  kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null
+}
+
 node_ssh() {
   ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=10 "$(control_plane)" "$@"
+}
+
+worker_ssh() {
+  ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=10 "$(worker_node)" "$@"
 }
 
 record_result() {
@@ -391,28 +403,58 @@ record_result() {
   record_result 8 "$result"
 }
 
-@test "9. kube-controller-manager and kube-scheduler have profiling disabled and stay healthy" {
+@test "9. kube-bench checks 1.3.2/1.4.1 go from FAIL to PASS after disabling profiling on controller-manager and scheduler" {
+  cm_before=/var/work/tests/artifacts/9/controller-manager-before.txt
+  cm_after=/var/work/tests/artifacts/9/controller-manager-after.txt
+  sched_before=/var/work/tests/artifacts/9/scheduler-before.txt
+  sched_after=/var/work/tests/artifacts/9/scheduler-after.txt
+
   cm_command=$(kubectl -n kube-system get pod -l component=kube-controller-manager --context "$CTX" -o json 2>/dev/null \
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
   sched_command=$(kubectl -n kube-system get pod -l component=kube-scheduler --context "$CTX" -o json 2>/dev/null \
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
-  cm_status=1
-  if printf '%s' "$cm_command" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1; then
-    cm_status=0
-  fi
-  sched_status=1
-  if printf '%s' "$sched_command" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1; then
-    sched_status=0
-  fi
+  cm_flag_ok=false
+  printf '%s' "$cm_command" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1 && cm_flag_ok=true
+  sched_flag_ok=false
+  printf '%s' "$sched_command" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1 && sched_flag_ok=true
   cm_phase=$(kubectl get pods -n kube-system --context "$CTX" -l component=kube-controller-manager -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
   sched_phase=$(kubectl get pods -n kube-system --context "$CTX" -l component=kube-scheduler -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
-  if [[ "$cm_status" -eq 0 && "$sched_status" -eq 0 && "$cm_phase" == "Running" && "$sched_phase" == "Running" ]]; then
+
+  # Same before/after discovery cycle as tasks 7/8, applied to check IDs that live under
+  # kube-bench's "controlplane" target (1.3.2 kube-controller-manager, 1.4.1 kube-scheduler)
+  # rather than "master" (1.1.x file permissions).
+  cm_before_ok=false
+  grep -Eq '^\[FAIL\][[:space:]]+1[.]3[.]2([[:space:]]|$)' "$cm_before" 2>/dev/null && cm_before_ok=true
+  cm_after_ok=false
+  grep -Eq '^\[PASS\][[:space:]]+1[.]3[.]2([[:space:]]|$)' "$cm_after" 2>/dev/null && cm_after_ok=true
+  cm_after_no_fail=true
+  grep -Eq '^\[FAIL\][[:space:]]+1[.]3[.]2([[:space:]]|$)' "$cm_after" 2>/dev/null && cm_after_no_fail=false
+
+  sched_before_ok=false
+  grep -Eq '^\[FAIL\][[:space:]]+1[.]4[.]1([[:space:]]|$)' "$sched_before" 2>/dev/null && sched_before_ok=true
+  sched_after_ok=false
+  grep -Eq '^\[PASS\][[:space:]]+1[.]4[.]1([[:space:]]|$)' "$sched_after" 2>/dev/null && sched_after_ok=true
+  sched_after_no_fail=true
+  grep -Eq '^\[FAIL\][[:space:]]+1[.]4[.]1([[:space:]]|$)' "$sched_after" 2>/dev/null && sched_after_no_fail=false
+
+  if [[ -s "$cm_before" && "$cm_before_ok" == true && -s "$cm_after" && "$cm_after_ok" == true && "$cm_after_no_fail" == true ]] \
+    && [[ -s "$sched_before" && "$sched_before_ok" == true && -s "$sched_after" && "$sched_after_ok" == true && "$sched_after_no_fail" == true ]] \
+    && [[ "$cm_flag_ok" == true && "$sched_flag_ok" == true ]] \
+    && [[ "$cm_phase" == "Running" && "$sched_phase" == "Running" ]]; then
     result=0
   else
-    if [[ "$cm_status" -ne 0 ]]; then
-      echo "HINT: The running kube-controller-manager Pod's command does not include '--profiling=false'. Add it to /etc/kubernetes/manifests/kube-controller-manager.yaml's command list and wait for kubelet to recreate the static Pod."
-    elif [[ "$sched_status" -ne 0 ]]; then
-      echo "HINT: The running kube-scheduler Pod's command does not include '--profiling=false'. Add it to /etc/kubernetes/manifests/kube-scheduler.yaml's command list and wait for kubelet to recreate the static Pod."
+    if [[ ! -s "$cm_before" || "$cm_before_ok" != true ]]; then
+      echo "HINT: $cm_before must be captured BEFORE any fix and contain a line starting with exactly '[FAIL] 1.3.2' - kube-bench check for kube-controller-manager profiling, run with --targets controlplane."
+    elif [[ ! -s "$sched_before" || "$sched_before_ok" != true ]]; then
+      echo "HINT: $sched_before must be captured BEFORE any fix and contain a line starting with exactly '[FAIL] 1.4.1' - kube-bench check for kube-scheduler profiling, run with --targets controlplane."
+    elif [[ "$cm_flag_ok" != true ]]; then
+      echo "HINT: The running kube-controller-manager Pod's command does not include '--profiling=false' yet. Add it to /etc/kubernetes/manifests/kube-controller-manager.yaml's command list and wait for kubelet to recreate the static Pod."
+    elif [[ "$sched_flag_ok" != true ]]; then
+      echo "HINT: The running kube-scheduler Pod's command does not include '--profiling=false' yet. Add it to /etc/kubernetes/manifests/kube-scheduler.yaml's command list and wait for kubelet to recreate the static Pod."
+    elif [[ "$cm_after_ok" != true || "$cm_after_no_fail" != true ]]; then
+      echo "HINT: $cm_after must contain '[PASS] 1.3.2' and no '[FAIL] 1.3.2' - re-run kube-bench --check 1.3.2 --targets controlplane after the fix and save the fresh output."
+    elif [[ "$sched_after_ok" != true || "$sched_after_no_fail" != true ]]; then
+      echo "HINT: $sched_after must contain '[PASS] 1.4.1' and no '[FAIL] 1.4.1' - re-run kube-bench --check 1.4.1 --targets controlplane after the fix and save the fresh output."
     elif [[ "$cm_phase" != "Running" ]]; then
       echo "HINT: kube-controller-manager Pod is not Running (phase=$cm_phase) after the manifest edit. Check 'kubectl describe pod' for a YAML syntax error."
     else
@@ -422,4 +464,40 @@ record_result() {
     result=1
   fi
   record_result 9 "$result"
+}
+
+@test "10. kube-bench check 4.2.6 goes from FAIL to PASS after enabling protect-kernel-defaults on the worker node" {
+  before=/var/work/tests/artifacts/10/before.txt
+  after=/var/work/tests/artifacts/10/after.txt
+
+  before_ok=false
+  grep -Eq '^\[FAIL\][[:space:]]+4[.]2[.]6([[:space:]]|$)' "$before" 2>/dev/null && before_ok=true
+  after_pass_ok=false
+  grep -Eq '^\[PASS\][[:space:]]+4[.]2[.]6([[:space:]]|$)' "$after" 2>/dev/null && after_pass_ok=true
+  after_no_fail=true
+  grep -Eq '^\[FAIL\][[:space:]]+4[.]2[.]6([[:space:]]|$)' "$after" 2>/dev/null && after_no_fail=false
+
+  configz=$(kubectl get --raw="/api/v1/nodes/$(worker_node)/proxy/configz" --context "$CTX" 2>/dev/null)
+  configz_ok=false
+  printf '%s' "$configz" | jq -e '.kubeletconfig.protectKernelDefaults == true' >/dev/null 2>&1 && configz_ok=true
+  ready=$(kubectl get node "$(worker_node)" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+
+  if [[ -s "$before" && "$before_ok" == true ]] \
+    && [[ -s "$after" && "$after_pass_ok" == true && "$after_no_fail" == true ]] \
+    && [[ "$configz_ok" == true && "$ready" == "True" ]]; then
+    result=0
+  else
+    if [[ ! -s "$before" || "$before_ok" != true ]]; then
+      echo "HINT: $before must be captured BEFORE any fix, ON THE WORKER NODE, and contain a line starting with exactly '[FAIL] 4.2.6' - kube-bench check for kubelet --protect-kernel-defaults, run with --targets node."
+    elif [[ "$configz_ok" != true ]]; then
+      echo "HINT: The worker node's actuated kubelet configuration (via /configz) does not show protectKernelDefaults=true. Set 'protectKernelDefaults: true' in the worker node's /var/lib/kubelet/config.yaml and restart kubelet there (not on the control-plane)."
+    elif [[ "$after_pass_ok" != true || "$after_no_fail" != true ]]; then
+      echo "HINT: $after must contain '[PASS] 4.2.6' and no '[FAIL] 4.2.6' - re-run kube-bench --check 4.2.6 --targets node on the worker node after the fix and save the fresh output."
+    else
+      echo "HINT: worker node is not Ready (status=$ready) after the kubelet config change/restart."
+    fi
+    echo "configz=$configz"
+    result=1
+  fi
+  record_result 10 "$result"
 }

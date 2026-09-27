@@ -4,7 +4,9 @@ set -euo pipefail
 echo "*** master node cks lab 103 k8s-1"
 export KUBECONFIG=/root/.kube/config
 
-# The lab is intentionally single-node. Permit the TLS demo workload to schedule here.
+# Permit the TLS demo workload (and other control-plane-scheduled fixtures) to run here too,
+# even though the cluster now also has a real worker node (added for kube-bench's "node"
+# target - task 10, CIS 4.2.6 protect-kernel-defaults).
 kubectl taint nodes "$(hostname)" node-role.kubernetes.io/control-plane:NoSchedule- || true
 
 # Стартовая уязвимость для задания 7: kube-bench проверяет права static Pod manifests

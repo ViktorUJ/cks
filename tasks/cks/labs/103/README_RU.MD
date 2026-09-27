@@ -4,10 +4,11 @@
 
 ## Описание
 
-В этой лабораторной работе вы настраиваете одноузловой Kubernetes-кластер как инженер
-по безопасности: фиксируете исходную картину CIS Benchmark, исправляете небезопасные
-параметры kubelet и kube-apiserver, публикуете Ingress только по TLS, ограничиваете TLS
-control plane и подтверждаете целостность установленных Kubernetes-бинарников.
+В этой лабораторной работе вы настраиваете двухузловой Kubernetes-кластер (control-plane +
+worker) как инженер по безопасности: устанавливаете `kube-bench` и по его находкам
+(не по памяти) исправляете небезопасные параметры control-plane компонентов и kubelet
+worker-узла, публикуете Ingress только по TLS, ограничиваете TLS control plane и
+подтверждаете целостность установленных Kubernetes-бинарников.
 
 Это не повторение базовой настройки Kubernetes из CKA. Здесь важны места применения
 настроек: `KubeletConfiguration`, static Pod manifests control plane, TLS-параметры etcd
@@ -77,8 +78,8 @@ flowchart TB
 |---|---|
 | `vpc` | VPC `10.103.0.0/16` с публичными подсетями |
 | `ssh-keys` | SSH-ключи для доступа к нодам |
-| `k8s-1` | Одноузловой Kubernetes `1.36.0` (kubeadm), containerd и Calico |
-| `worker` | Рабочая машина с `kubectl`, `kube-bench`, SSH-доступом и `check_result` |
+| `k8s-1` | Kubernetes `1.36.0` (kubeadm), containerd и Calico: control-plane + один worker-узел |
+| `worker` | Рабочая машина (bastion) с `kubectl`, `kube-bench`, SSH-доступом и `check_result` |
 
 > **Версия и экзамен.** На 2026-09-06 официальный CKS exam исходит из Kubernetes `v1.35`. Эта лаба использует `1.36.0`, поэтому всё, что относится к этой версии, является forward-looking учебным сценарием, а не заявлением о текущей экзаменационной версии.
 
@@ -232,15 +233,28 @@ ssh control-plane "curl -sS -k --max-time 5 --resolve secure.cks.local:443:${CON
 
 ---
 
-| **9** | **Отключить profiling на оставшихся control-plane компонентах** |
+| **9** | **Remediation cycle: profiling на kube-controller-manager и kube-scheduler** |
 | :---: | :--- |
-| Что делаем | Задание 3 уже отключило profiling на kube-apiserver. По умолчанию kubeadm не добавляет `--profiling=false` в манифесты `kube-controller-manager` и `kube-scheduler` вообще - оба компонента до сих пор обслуживают pprof HTTP endpoints с профилированием процесса. Добавьте `--profiling=false` в `command` static Pod manifests `/etc/kubernetes/manifests/kube-controller-manager.yaml` и `/etc/kubernetes/manifests/kube-scheduler.yaml`. Дождитесь пересоздания обоих static Pods и убедитесь, что оба остаются `Running`. |
-| Критерии приёмки | - реально запущенный Pod `kube-controller-manager` содержит `--profiling=false` в своём `command` (проверяется через API, а не текстом файла на диске);<br/>- то же самое для `kube-scheduler`;<br/>- оба Pod в фазе `Running` после пересоздания. |
+| Что делаем | Тот же приём, что в заданиях 7-8, для другого раздела CIS (`--targets controlplane`). Запустите `kube-bench --check 1.3.2` (kube-controller-manager profiling) и `--check 1.4.1` (kube-scheduler profiling) на `control-plane` и сохраните вывод **до** исправления в `/var/work/tests/artifacts/9/controller-manager-before.txt` и `.../scheduler-before.txt` - оба должны содержать `[FAIL]`. Задание 3 уже отключило profiling на kube-apiserver; по умолчанию kubeadm не добавляет `--profiling=false` в манифесты `kube-controller-manager`/`kube-scheduler` вообще. Добавьте `--profiling=false` в `command` обоих static Pod manifests, дождитесь пересоздания и повторно запустите те же check'и, сохранив вывод в `.../controller-manager-after.txt` и `.../scheduler-after.txt` - оба должны содержать `[PASS]` без единого `[FAIL]`. |
+| Критерии приёмки | `before`-файлы содержат `[FAIL]` для `1.3.2`/`1.4.1` соответственно; реально запущенные Pod'ы `kube-controller-manager`/`kube-scheduler` содержат `--profiling=false` в своём `command` (проверяется через API); `after`-файлы содержат `[PASS]` без `[FAIL]` для тех же check; оба Pod в фазе `Running`. |
 
 <details>
 <summary>💡 Подсказка к заданию 9</summary>
 
-Тот же приём, что и в задании 3, только для двух других static Pod manifests. Не редактируйте Pod через `kubectl edit` - kubelet перезапишет любое такое изменение из файла на диске. Добавьте флаг прямо в YAML на ноде и подождите пересоздания - оно происходит не мгновенно. Не путайте это задание с `protectKernelDefaults` (это отдельный kubelet-параметр, уже закрыт в лабе 105 заданием 8) - здесь речь именно про HTTP profiling endpoint control-plane компонентов.
+Тот же порядок действий, что в заданиях 7-8: сначала `before.txt` с `[FAIL]`, потом правка манифеста, потом `after.txt` с `[PASS]`. Не редактируйте Pod через `kubectl edit` - kubelet перезапишет любое такое изменение из файла на диске. Добавьте флаг прямо в YAML на ноде и подождите пересоздания - оно происходит не мгновенно. Не путайте это задание с `protectKernelDefaults` (задание 10, отдельный kubelet-параметр worker-узла) - здесь речь именно про HTTP profiling endpoint control-plane компонентов.
+</details>
+
+---
+
+| **10** | **Remediation cycle: protect-kernel-defaults на worker-узле** |
+| :---: | :--- |
+| Что делаем | Тот же приём, что в заданиях 7-9, теперь на РЕАЛЬНОМ worker-узле кластера (не control-plane) и для `--targets node` (`check 4.2.6`). Установите `kube-bench` на worker-узел - так же, как задание 1 устанавливало его на control-plane. Запустите `--check 4.2.6` и сохраните вывод **до** исправления в `/var/work/tests/artifacts/10/before.txt` (должен содержать `[FAIL]`). kubeadm-сгенерированный `KubeletConfiguration` на worker-узле вообще не содержит поле `protectKernelDefaults` (эквивалентно небезопасному default `false`) - добавьте `protectKernelDefaults: true` в `/var/lib/kubelet/config.yaml` этого узла, перезапустите kubelet, дождитесь `Ready`, затем повторно запустите тот же check и сохраните `/var/work/tests/artifacts/10/after.txt` (должен содержать `[PASS]` без `[FAIL]`). |
+| Критерии приёмки | `before.txt` содержит `[FAIL]` для `4.2.6`; в действующей kubelet configuration worker-узла (`/configz`) есть `protectKernelDefaults: true`; `after.txt` содержит `[PASS]` для `4.2.6` без `[FAIL]`; worker-узел `Ready` после перезапуска. |
+
+<details>
+<summary>💡 Подсказка к заданию 10</summary>
+
+Найдите имя worker-узла через `kubectl get nodes -l '!node-role.kubernetes.io/control-plane'` - это НЕ control-plane и НЕ рабочая машина (bastion), с которой вы выполняете команды. Скопируйте установленный `kube-bench` (`/opt/kube-bench`, вместе с каталогом `cfg`) на этот узел так же, как в задании 1 - на control-plane. Поле `protectKernelDefaults` в kubeadm-сгенерированном `config.yaml` отсутствует физически, поэтому просто допишите его, не ищите существующую строку для замены (в отличие от `readOnlyPort` в задании 2). После `systemctl restart kubelet` на worker-узле дождитесь его возврата в `Ready`, прежде чем повторно запускать check.
 </details>
 
 ---
@@ -253,8 +267,8 @@ ssh control-plane "curl -sS -k --max-time 5 --resolve secure.cks.local:443:${CON
 check_result
 ```
 
-Проверка содержит Init и девять независимых заданий. Системные задания проверяются по
-состоянию узла control plane через SSH и по артефактам, а не только по объектам API.
+Проверка содержит Init и десять независимых заданий. Системные задания проверяются по
+состоянию узлов control plane/worker через SSH и по артефактам, а не только по объектам API.
 
 ## Решение
 
