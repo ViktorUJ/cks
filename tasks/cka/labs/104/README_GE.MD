@@ -77,7 +77,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, **master + worker(`disk=ssd`)** |
 | `worker`   | სამუშაო მანქანა `kubectl`-ით, კლასტერზე წვდომით და `check_result`-ით |
 
-ინსტანსები: `t3.medium`, Ubuntu `22.04`. კლასტერი **ორკვანძიანია** — master (control-plane)
+ინსტანსები: `t4g.medium`, Ubuntu `22.04`. კლასტერი **ორკვანძიანია** — master (control-plane)
 და ერთი worker ლეიბლით `disk=ssd`. metrics-server დაყენებულია (საჭიროა HPA-სთვის). master-ზე
 შენარჩუნებულია taint `control-plane` — მასზე განთავსებისთვის საჭიროა toleration.
 

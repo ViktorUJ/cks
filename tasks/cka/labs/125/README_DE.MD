@@ -72,7 +72,7 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt bereitgestellt und be
 
 Die Antwortdateien für JSONPath werden in `/home/ubuntu/answers/` gespeichert.
 
-Instanzen: `t3.medium` (master) Ubuntu `22.04`. Der Cluster ist Single-Node — beim Master ist
+Instanzen: `t4g.medium` (master) Ubuntu `22.04`. Der Cluster ist Single-Node — beim Master ist
 der Taint `control-plane` entfernt, daher werden Pods direkt auf ihm geplant.
 
 ## Bereitstellung

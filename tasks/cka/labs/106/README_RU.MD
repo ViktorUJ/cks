@@ -62,7 +62,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, одноузловой |
 | `worker`   | Рабочая машина с `kubectl` и `check_result`                 |
 
-Инстансы: `t3.medium` (master) Ubuntu `22.04`. Кластер одноузловой — master
+Инстансы: `t4g.medium` (master) Ubuntu `22.04`. Кластер одноузловой — master
 «разтейнчен» (снят taint `control-plane`), поэтому поды планируются прямо на него.
 
 ## Развёртывание

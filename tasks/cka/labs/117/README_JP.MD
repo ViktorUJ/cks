@@ -70,7 +70,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm）、Calico、metrics-server、**master + 1 worker**；起動時にクラスタ層の障害を注入します |
 | `worker`   | `kubectl` と `check_result` を備えた作業マシン；クラスタのノードへ SSH でアクセス可能 |
 
-インスタンス：`t3.medium`、Ubuntu `22.04`。クラスタは 2 ノード構成で、master（control-plane）と
+インスタンス：`t4g.medium`、Ubuntu `22.04`。クラスタは 2 ノード構成で、master（control-plane）と
 worker が 1 台です。
 
 ## デプロイ

@@ -61,7 +61,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, master + worker |
 | `worker`   | სამუშაო მანქანა `kubectl`-ით და `check_result`-ით            |
 
-ინსტანსები: `t3.medium`, Ubuntu `22.04`. კლასტერი ორკვანძიანია — master (control-plane) და
+ინსტანსები: `t4g.medium`, Ubuntu `22.04`. კლასტერი ორკვანძიანია — master (control-plane) და
 ერთი worker. Worker-ს აქვს ლეიბლი `node=node_2` და კატალოგი `/pv/analytics` hostPath-ისთვის,
 ამიტომ ტომის მქონე Pod სწორედ მასზე უნდა დაიგეგმოს.
 

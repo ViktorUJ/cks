@@ -73,7 +73,7 @@ El entorno se despliega en AWS (`eu-central-1`) mediante Terragrunt y consta de:
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, **master + 1 worker** |
 | `worker`   | Máquina de trabajo con `kubectl`, acceso al clúster y `check_result`   |
 
-Instancias: `t3.medium`, Ubuntu `22.04`. El clúster tiene **dos nodos**: el master
+Instancias: `t4g.medium`, Ubuntu `22.04`. El clúster tiene **dos nodos**: el master
 (control-plane) y un worker. En el master se conserva el taint `control-plane`, por lo que
 los Pods normales van al worker y en el master solo aterrizan aquellos que tienen un
 toleration adecuado (como el DaemonSet de la tarea 3).

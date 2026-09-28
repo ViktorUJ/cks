@@ -73,7 +73,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, **master + 1 worker** |
 | `worker`   | Рабочая машина с `kubectl`, доступом к кластеру и `check_result`     |
 
-Инстансы: `t3.medium` Ubuntu `22.04`. Кластер **двухнодовый** — master (control-plane) и
+Инстансы: `t4g.medium` Ubuntu `22.04`. Кластер **двухнодовый** — master (control-plane) и
 один worker. На master сохранён taint `control-plane`, поэтому обычные Pods идут на
 worker, а на master попадают только те, у кого есть подходящий toleration (как у
 DaemonSet в задании 3).

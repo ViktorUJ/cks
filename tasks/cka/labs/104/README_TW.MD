@@ -76,7 +76,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm）、CNI Calico、metrics-server、**master + worker(`disk=ssd`)** |
 | `worker`   | 帶 `kubectl`、叢集存取權與 `check_result` 的工作機器                   |
 
-實例：`t3.medium` Ubuntu `22.04`。叢集是 **兩個節點** - master（control-plane）與
+實例：`t4g.medium` Ubuntu `22.04`。叢集是 **兩個節點** - master（control-plane）與
 一個帶 label `disk=ssd` 的 worker。metrics-server 已安裝（HPA 需要它）。master 上
 保留了 `control-plane` taint - 要在它上面放置東西就需要 toleration。
 

@@ -58,7 +58,7 @@ L'environnement est déployé dans AWS (`eu-central-1`) via Terragrunt et compre
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), **SANS CNI**, master + 1 nœud worker ; `netprobe` est déployé à l'avance (Pods en `Pending` jusqu'à l'installation du CNI) |
 | `worker`   | Machine de travail avec `kubectl` et `check_result` ; accès SSH aux nœuds du cluster |
 
-Instances : `t3.medium` Ubuntu `22.04`. Le cluster a deux nœuds — master (control plane) et un
+Instances : `t4g.medium` Ubuntu `22.04`. Le cluster a deux nœuds — master (control plane) et un
 worker ; le CNI n'est pas installé, donc les nœuds démarrent en NotReady.
 
 ## Déploiement

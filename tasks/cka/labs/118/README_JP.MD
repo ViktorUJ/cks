@@ -72,7 +72,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm）、Calico、**master + worker 1 台**；起動時に CoreDNS を停止させる |
 | `worker`   | `kubectl` と `check_result` を備えた作業マシン；control plane へ SSH 可能 |
 
-インスタンス：`t3.medium`、Ubuntu `22.04`。クラスタは 2 ノード構成で、master（control-plane）
+インスタンス：`t4g.medium`、Ubuntu `22.04`。クラスタは 2 ノード構成で、master（control-plane）
 と 1 つの worker です。
 
 ## デプロイ

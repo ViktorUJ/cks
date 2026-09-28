@@ -61,7 +61,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes **`1.33.1`**（kubeadm）、CNI Calico、metrics-server、master + 1 worker |
 | `worker`   | `kubectl` と `check_result` を備えた作業マシン；クラスタのノードへ SSH アクセス可 |
 
-インスタンス：`t3.medium` Ubuntu `22.04`。クラスタは 2 ノード構成 - master（control-plane）と
+インスタンス：`t4g.medium` Ubuntu `22.04`。クラスタは 2 ノード構成 - master（control-plane）と
 1 台の worker です。
 
 ## デプロイ

@@ -59,7 +59,7 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt ausgerollt und besteh
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), **OHNE CNI**, Master + 1 Worker-Node; `netprobe` ist vorab ausgerollt (Pods bleiben `Pending`, bis das CNI installiert ist) |
 | `worker`   | Arbeitsmaschine mit `kubectl` und `check_result`; SSH-Zugriff auf die Cluster-Nodes |
 
-Instanzen: `t3.medium` Ubuntu `22.04`. Der Cluster hat zwei Nodes — Master (Control Plane) und
+Instanzen: `t4g.medium` Ubuntu `22.04`. Der Cluster hat zwei Nodes — Master (Control Plane) und
 einen Worker; das CNI ist nicht installiert, deshalb starten die Nodes in NotReady.
 
 ## Bereitstellung

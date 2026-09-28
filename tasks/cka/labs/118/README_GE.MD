@@ -73,7 +73,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), Calico, **master + 1 worker**; გაშვებისას აქრობს CoreDNS-ს |
 | `worker`   | სამუშაო მანქანა `kubectl`-ით და `check_result`-ით; SSH-წვდომა control plane-ზე |
 
-ინსტანსები: `t3.medium` Ubuntu `22.04`. კლასტერი ორკვანძიანია — master (control-plane) და
+ინსტანსები: `t4g.medium` Ubuntu `22.04`. კლასტერი ორკვანძიანია — master (control-plane) და
 ერთი worker.
 
 ## განთავსება

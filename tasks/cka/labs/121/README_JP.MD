@@ -38,7 +38,7 @@ ClusterRole/ClusterRoleBinding、そして `kubectl auth can-i` による実効�
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm）、CNI Calico、metrics-server、単一ノード；namespace `rbac` はあらかじめ作成済み |
 | `worker`   | `kubectl` と `check_result` を備えた作業マシン                                   |
 
-インスタンス：`t3.medium`（master）、Ubuntu `22.04`。クラスタは単一ノードで、master は
+インスタンス：`t4g.medium`（master）、Ubuntu `22.04`。クラスタは単一ノードで、master は
 「テイント解除済み」（`control-plane` taint が外されている）ため、Pod は直接そこにスケジュールされます。
 
 ## デプロイ

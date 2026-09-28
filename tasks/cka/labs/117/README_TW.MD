@@ -70,7 +70,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`(kubeadm),Calico,metrics-server,**master + 1 worker**;啟動時會注入叢集層級的故障 |
 | `worker`   | 工作機,具備 `kubectl` 與 `check_result`;可 SSH 存取叢集節點            |
 
-執行個體:`t3.medium`,Ubuntu `22.04`。叢集有兩個節點 - master(control-plane)與
+執行個體:`t4g.medium`,Ubuntu `22.04`。叢集有兩個節點 - master(control-plane)與
 一個 worker。
 
 ## 部署

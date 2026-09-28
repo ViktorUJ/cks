@@ -58,7 +58,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm）、**CNI なし**、master + worker ノード 1 台；`netprobe` は事前にデプロイ済み（CNI 導入までは Pods は `Pending`） |
 | `worker`   | `kubectl` と `check_result` を備えた作業マシン；クラスタのノードへ SSH でアクセス可能 |
 
-インスタンス：`t3.medium`、Ubuntu `22.04`。クラスタは 2 ノード構成で、master（control-plane）と
+インスタンス：`t4g.medium`、Ubuntu `22.04`。クラスタは 2 ノード構成で、master（control-plane）と
 worker 1 台です；CNI が導入されていないため、ノードは NotReady で起動します。
 
 ## デプロイ

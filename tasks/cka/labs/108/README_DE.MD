@@ -62,7 +62,7 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt ausgerollt und besteh
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, Master + Worker |
 | `worker`   | Arbeitsmaschine mit `kubectl` und `check_result`               |
 
-Instanzen: `t3.medium`, Ubuntu `22.04`. Der Cluster hat zwei Nodes — den Master
+Instanzen: `t4g.medium`, Ubuntu `22.04`. Der Cluster hat zwei Nodes — den Master
 (control-plane) und einen Worker. Der Worker trägt das Label `node=node_2` und das Verzeichnis
 `/pv/analytics` für hostPath, daher muss der Pod mit dem Volume genau dort geplant werden.
 
