@@ -10,7 +10,7 @@
 export KUBECONFIG=/home/ubuntu/.kube/config
 export CTX=cluster1-admin@cluster1
 kubectl config use-context "$CTX"
-ssh control-plane sudo hostname
+ssh control-plane hostname
 ```
 
 ## Задание 1. Отчёт kube-bench
@@ -452,7 +452,7 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 
 В отличие от control-plane, на worker-узле `kube-bench` НЕ предустановлен - установите его
 здесь сами (реальный install, не копия с control-plane или worker PC): скачайте тот же
-пиннутый релиз с GitHub, распакуйте `binary` и `cfg`:
+закреплённый релиз с GitHub, распакуйте `binary` и `cfg`:
 
 ```bash
 WORKER_NODE=$(kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}')

@@ -28,7 +28,7 @@ worker-узла, публикуете Ingress только по TLS, огран�
 <details>
 <summary>1. Почему запуск kube-bench профилем `cis-1.12` на Kubernetes 1.36 нельзя называть authoritative CIS compliance?</summary>
 
-Пиннутая в этой лабе версия `kube-bench 0.16.0` не содержит профиля для 1.36 вообще - её встроенный version mapping доходит только до `"1.34": "cis-1.12"` (самый новый доступный профиль). Явно указывая `--benchmark cis-1.12` на кластере 1.36, мы принудительно используем ближайший существующий профиль как approximation: часть проверок может быть неактуальна для более новой версии, а новые security-relevant параметры именно для 1.36 этот профиль ещё не покрывает. Это ценный практический сигнал, но не formal compliance statement для версии 1.36.
+Версия `kube-bench 0.16.0`, закреплённая в этой лабе, не содержит профиля для 1.36 вообще - её встроенный version mapping доходит только до `"1.34": "cis-1.12"` (самый новый доступный профиль). Явно указывая `--benchmark cis-1.12` на кластере 1.36, мы принудительно используем ближайший существующий профиль как approximation: часть проверок может быть неактуальна для более новой версии, а новые security-relevant параметры именно для 1.36 этот профиль ещё не покрывает. Это ценный практический сигнал, но не formal compliance statement для версии 1.36.
 </details>
 
 <details>
@@ -83,7 +83,7 @@ flowchart TB
 
 > **Версия и экзамен.** На 2026-09-06 официальный CKS exam исходит из Kubernetes `v1.35`. Эта лаба использует `1.36.0`, поэтому всё, что относится к этой версии, является forward-looking учебным сценарием, а не заявлением о текущей экзаменационной версии.
 
-Control-plane разтаинчен, поэтому при необходимости на нём можно запустить учебный Pod.
+С control-plane снят taint, поэтому при необходимости на нём можно запустить учебный Pod.
 Для заданий 2, 3 и 5 static Pods автоматически пересоздаются kubelet после сохранения
 изменённого манифеста или конфигурации. Не удаляйте control-plane Pods вручную.
 
@@ -97,15 +97,15 @@ TASK=103 make run_cks_task
 
 ```bash
 kubectl config use-context cluster1-admin@cluster1
-time_left
-check_result
+time_left      # сколько времени осталось на лабу
+check_result   # запускает автоматические тесты и показывает результат
 ```
 
 Адрес control-plane можно получить и проверить так:
 
 ```bash
 kubectl get nodes -o wide
-ssh control-plane sudo hostname
+ssh control-plane hostname
 ```
 
 ## Задания
@@ -114,7 +114,7 @@ ssh control-plane sudo hostname
 
 | **1** | **Отчёт CIS Benchmark** |
 | :---: | :--- |
-| Что делаем | На узле `control-plane` прогоните `kube-bench` для Kubernetes `1.36.0`. Сохраните полный evidence в `/var/work/tests/artifacts/1/kube-bench.txt`: `kubernetes_version`, `kube_bench_version`, выбранный `benchmark`, `mapping_status`, затем сам отчёт. `kube-bench` на `control-plane` уже установлен (как и на реальном экзамене, где CIS Benchmark tooling на нодах уже есть) - устанавливать или копировать его не нужно, проверяться должен именно узел. Встроенный в пиннутый `kube-bench 0.16.0` version mapping заканчивается записью `"1.34": "cis-1.12"` - более новых профилей (включая какой-либо профиль под 1.35/1.36) в этой версии нет вовсе. Поэтому запускайте `--benchmark cis-1.12` явно и помечайте результат на `1.36` как `forced-approximate`, а не authoritative compliance. **Запускайте полный набор targets для `cis-1.12`:** `--targets master,node,controlplane,etcd,policies` - это карта targets, которую kube-bench сопоставляет профилю `cis-1.12`; пропуск любого из них даёт неполный отчёт. |
+| Что делаем | На узле `control-plane` прогоните `kube-bench` для Kubernetes `1.36.0`. Сохраните полный evidence в `/var/work/tests/artifacts/1/kube-bench.txt`: `kubernetes_version`, `kube_bench_version`, выбранный `benchmark`, `mapping_status`, затем сам отчёт. `kube-bench` на `control-plane` уже установлен (как и на реальном экзамене, где CIS Benchmark tooling на нодах уже есть) - устанавливать или копировать его не нужно, проверяться должен именно узел. Встроенный в закреплённую версию `kube-bench 0.16.0` version mapping заканчивается записью `"1.34": "cis-1.12"` - более новых профилей (включая какой-либо профиль под 1.35/1.36) в этой версии нет вовсе. Поэтому запускайте `--benchmark cis-1.12` явно и помечайте результат на `1.36` как `forced-approximate`, а не authoritative compliance. **Запускайте полный набор targets для `cis-1.12`:** `--targets master,node,controlplane,etcd,policies` - это карта targets, которую kube-bench сопоставляет профилю `cis-1.12`; пропуск любого из них даёт неполный отчёт. Без явного `--targets` kube-bench сам определяет тип текущей ноды и берёт для него не весь этот список, а более узкий набор - `etcd` и `policies` в такой auto-detected запуск не попадают, поэтому отчёт без явного `--targets` окажется неполным. |
 | Критерии приёмки | - evidence содержит все четыре version/mapping поля;<br/>- `mapping_status=forced-approximate` явно объясняет отсутствие официального покрытия `1.36`;<br/>- в отчёте есть результаты всех разделов `master`, `node`, `controlplane`, `etcd`, `policies` (не только произвольная строка `[PASS]`/`[WARN]`/`[FAIL]`);<br/>- текст не выдаёт результат за authoritative CIS compliance для Kubernetes `1.36`. |
 
 <details>
@@ -127,7 +127,7 @@ ssh control-plane sudo hostname
 
 | **2** | **Hardening kubelet: read-only port и anonymous auth** |
 | :---: | :--- |
-| Что делаем | На control-plane найдите и устраните две небезопасные настройки kubelet: он всё ещё обслуживает read-only порт без аутентификации и принимает анонимные запросы (см. главу про hardening kubelet). Отчёт `kube-bench` из задания 1 уже отметил обе проблемы в секции `node` для этого же узла - если не уверены, что именно проверяется, найдите там `[FAIL]` рядом с этими двумя темами. Исправьте `kubelet configuration`, перезапустите kubelet и дождитесь готовности ноды. Не подменяйте проверку текстовым артефактом: настройки должны быть применены на ноде. |
+| Что делаем | На control-plane найдите и устраните две небезопасные настройки kubelet: он всё ещё обслуживает read-only порт без аутентификации и принимает анонимные запросы (см. главу про hardening kubelet). Используйте отчёт `kube-bench` из задания 1 как источник истины: он уже отметил обе проблемы в секции `node` для этого же узла - найдите там `[FAIL]` рядом с этими двумя темами и ориентируйтесь на них. Исправьте `kubelet configuration`, перезапустите kubelet и дождитесь готовности ноды. Не подменяйте проверку текстовым артефактом: настройки должны быть применены на ноде. |
 | Критерии приёмки | - в действующей kubelet configuration read-only порт отключён;<br/>- anonymous authentication kubelet отключён;<br/>- нода `Ready` после перезапуска. |
 
 <details>
@@ -140,13 +140,13 @@ ssh control-plane sudo hostname
 
 | **3** | **Hardening kube-apiserver: отключить profiling** |
 | :---: | :--- |
-| Что делаем | В static Pod manifest `/etc/kubernetes/manifests/kube-apiserver.yaml` добавьте `--profiling=false`. Дождитесь пересоздания kube-apiserver и убедитесь, что API готов. |
-| Критерии приёмки | - в manifest kube-apiserver есть `--profiling=false`;<br/>- `kubectl get --raw='/readyz'` возвращает успешный результат;<br/>- static Pod kube-apiserver запущен. |
+| Что делаем | kube-apiserver до сих пор обслуживает pprof HTTP endpoint профилирования процесса. Используйте отчёт `kube-bench` из задания 1 как источник истины: он уже отметил эту проблему в секции `master` для того же узла - найдите там `[FAIL]` рядом с этой темой и ориентируйтесь на него. Исправьте static Pod manifest kube-apiserver, дождитесь пересоздания и убедитесь, что API готов. |
+| Критерии приёмки | - реально запущенный Pod kube-apiserver содержит `--profiling=false` в своём `command` (проверяется через API, а не текстом файла на диске);<br/>- `kubectl get --raw='/readyz'` возвращает успешный результат;<br/>- static Pod kube-apiserver запущен. |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Не редактируйте Pod через `kubectl edit` - это static Pod, kubelet управляет им напрямую из файла манифеста на диске и перезапишет любое изменение через API обратно. Добавьте флаг прямо в YAML-файл на ноде и подождите: kubelet заметит изменение файла не мгновенно.
+Ищите в отчёте задания 1 check `1.2.15` (`--profiling`) в секции `master`. Ему соответствует флаг `--profiling=false` в `command` static Pod manifest `/etc/kubernetes/manifests/kube-apiserver.yaml`. Не редактируйте Pod через `kubectl edit` - это static Pod, kubelet управляет им напрямую из файла манифеста на диске и перезапишет любое изменение через API обратно. Добавьте флаг прямо в YAML-файл на ноде и подождите: kubelet заметит изменение файла не мгновенно.
 </details>
 
 ---
@@ -159,7 +159,15 @@ ssh control-plane sudo hostname
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
 
-Создавайте TLS Secret через `kubectl create secret tls secure-ingress-tls --cert=... --key=...` - это автоматически задаёт правильный `type: kubernetes.io/tls` и корректно кодирует данные в base64. Если создать Secret вручную с типом `Opaque` и ключами `tls.crt`/`tls.key`, тест на `type` не пройдёт, даже если данные технически валидны. Не забудьте `-addext 'subjectAltName=DNS:secure.cks.local'` при генерации сертификата openssl - современные клиенты и Ingress controller проверяют именно SAN, а не только CN.
+На реальном экзамене сертификат обычно уже выдан заранее - здесь его нужно сгенерировать самостоятельно:
+
+```bash
+openssl req -x509 -nodes -newkey ec -pkeyopt ec_paramgen_curve:P-256 \
+  -keyout tls.key -out tls.crt -days 30 \
+  -subj "/CN=secure.cks.local" -addext "subjectAltName=DNS:secure.cks.local"
+```
+
+`-addext 'subjectAltName=DNS:secure.cks.local'` обязателен - современные клиенты и Ingress controller проверяют именно SAN, а не только CN. Создавайте TLS Secret через `kubectl create secret tls secure-ingress-tls --cert=tls.crt --key=tls.key` - это автоматически задаёт правильный `type: kubernetes.io/tls` и корректно кодирует данные в base64. Если создать Secret вручную с типом `Opaque` и ключами `tls.crt`/`tls.key`, тест на `type` не пройдёт, даже если данные технически валидны.
 
 Проверка пары certificate/private key делается по public key, а не по RSA-specific modulus - это работает одинаково для RSA и EC/ECDSA ключей:
 
@@ -228,7 +236,7 @@ ssh control-plane "curl -sS -k --max-time 5 --resolve secure.cks.local:443:${CON
 <details>
 <summary>💡 Подсказка к заданию 8</summary>
 
-Тот же порядок действий, что и в задании 7: сначала `before.txt` с `[FAIL]`, потом `chmod`, потом `after.txt` с `[PASS]`. Не переносите старые CIS check ID "по памяти" - `1.1.3` в пиннутой версии `kube-bench 0.16.0`/профиле `cis-1.12` - это именно kube-controller-manager pod specification file permissions, проверьте это через `--check 1.1.3` перед тем, как исправлять.
+Тот же порядок действий, что и в задании 7: сначала `before.txt` с `[FAIL]`, потом `chmod`, потом `after.txt` с `[PASS]`. Не переносите старые CIS check ID "по памяти" - `1.1.3` в закреплённой версии `kube-bench 0.16.0`/профиле `cis-1.12` - это именно kube-controller-manager pod specification file permissions, проверьте это через `--check 1.1.3` перед тем, как исправлять.
 </details>
 
 ---
@@ -248,7 +256,7 @@ ssh control-plane "curl -sS -k --max-time 5 --resolve secure.cks.local:443:${CON
 
 | **10** | **Remediation cycle: protect-kernel-defaults на worker-узле** |
 | :---: | :--- |
-| Что делаем | Тот же приём, что в заданиях 7-9, теперь на РЕАЛЬНОМ worker-узле кластера (не control-plane), но для ДРУГОГО профиля: пиннутый `cis-1.12` (используемый везде в этой лабе) не содержит check protect-kernel-defaults вообще - CIS убрал/переномеровал его в этой версии профиля, а собственный `4.2.6` в `cis-1.12` - другой check (`--make-iptables-util-chains`, PASS по умолчанию). Нужный check с тем же ID существует в более старом профиле `cis-1.24` того же бинарника - используйте явно `--benchmark cis-1.24 --check 4.2.6` только для этого задания. В отличие от `control-plane`, `kube-bench` на worker-узле НЕ предустановлен - установите его здесь сами (реальный install: скачать тот же пиннутый релиз, распаковать `binary` и `cfg`), а не копируйте откуда-либо. Сохраните вывод **до** исправления в `/var/work/tests/artifacts/10/before.txt` (должен содержать `[FAIL]` с текстом про protect-kernel-defaults). kubeadm-сгенерированный `KubeletConfiguration` на worker-узле вообще не содержит поле `protectKernelDefaults` (эквивалентно небезопасному default `false`) - добавьте `protectKernelDefaults: true` в `/var/lib/kubelet/config.yaml` этого узла, перезапустите kubelet, дождитесь `Ready`, затем повторно запустите тот же check (тем же `cis-1.24`) и сохраните `/var/work/tests/artifacts/10/after.txt` (должен содержать `[PASS]`). |
+| Что делаем | Тот же приём, что в заданиях 7-9, теперь на РЕАЛЬНОМ worker-узле кластера (не control-plane), но для ДРУГОГО профиля: закреплённый `cis-1.12` (используемый везде в этой лабе) не содержит check protect-kernel-defaults вообще - CIS убрал/переномеровал его в этой версии профиля, а собственный `4.2.6` в `cis-1.12` - другой check (`--make-iptables-util-chains`, PASS по умолчанию). Нужный check с тем же ID существует в более старом профиле `cis-1.24` того же бинарника - используйте явно `--benchmark cis-1.24 --check 4.2.6` только для этого задания. В отличие от `control-plane`, `kube-bench` на worker-узле НЕ предустановлен - установите его здесь сами (реальный install: скачать тот же закреплённый релиз, распаковать `binary` и `cfg`), а не копируйте откуда-либо. Сохраните вывод **до** исправления в `/var/work/tests/artifacts/10/before.txt` (должен содержать `[FAIL]` с текстом про protect-kernel-defaults). kubeadm-сгенерированный `KubeletConfiguration` на worker-узле вообще не содержит поле `protectKernelDefaults` (эквивалентно небезопасному default `false`) - добавьте `protectKernelDefaults: true` в `/var/lib/kubelet/config.yaml` этого узла, перезапустите kubelet, дождитесь `Ready`, затем повторно запустите тот же check (тем же `cis-1.24`) и сохраните `/var/work/tests/artifacts/10/after.txt` (должен содержать `[PASS]`). |
 | Критерии приёмки | `before.txt` содержит `[FAIL] 4.2.6` с текстом про protect-kernel-defaults (не любой `4.2.6`); в действующей kubelet configuration worker-узла (`/configz`) есть `protectKernelDefaults: true`; `after.txt` содержит `[PASS] 4.2.6` с тем же текстом, без `[FAIL]`; worker-узел `Ready` после перезапуска. |
 
 <details>
