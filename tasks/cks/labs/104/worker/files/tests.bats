@@ -239,9 +239,34 @@ NS="security-104"
   # Live negative control: an actually-unauthenticated identity (system:anonymous in
   # group system:unauthenticated) must not be able to read the resources the removed
   # lab-owned binding used to grant, cluster-wide.
-  anon_cannot_pods=$(kubectl auth can-i get pods -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated --context "$CTX" 2>/dev/null || true)
-  anon_cannot_secrets=$(kubectl auth can-i get secrets -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated --context "$CTX" 2>/dev/null || true)
-  anon_cannot_configmaps=$(kubectl auth can-i get configmaps -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated --context "$CTX" 2>/dev/null || true)
+  # A real unauthenticated request only ever carries system:anonymous + group
+  # system:unauthenticated - NEVER system:authenticated. Adding --as-group=system:authenticated
+  # (previously needed only so the impersonated self-check request itself wasn't rejected)
+  # tests a broader, non-existent identity and could mask a real anonymous grant while also
+  # picking up unrelated system:authenticated bindings as false positives. Issue an explicit
+  # admin-created SubjectAccessReview naming the exact anonymous identity instead - it does
+  # not rely on impersonation, so no extra group is needed - across every namespace, since
+  # -A on can-i covered the whole cluster before.
+  anon_allowed_anywhere() {
+    local resource="$1" ns allowed
+    while IFS= read -r ns; do
+      [[ -n "$ns" ]] || continue
+      allowed=$(jq -n --arg ns "$ns" --arg resource "$resource" '{
+          apiVersion: "authorization.k8s.io/v1",
+          kind: "SubjectAccessReview",
+          spec: {
+            user: "system:anonymous",
+            groups: ["system:unauthenticated"],
+            resourceAttributes: {namespace: $ns, group: "", resource: $resource, verb: "get"}
+          }
+        }' | kubectl create --context "$CTX" -f - -o json 2>/dev/null | jq -r '.status.allowed // false')
+      [[ "$allowed" == "true" ]] && { echo true; return 0; }
+    done < <(kubectl get namespaces --context "$CTX" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null)
+    echo false
+  }
+  anon_cannot_pods=$([[ "$(anon_allowed_anywhere pods)" == "false" ]] && echo no || echo yes)
+  anon_cannot_secrets=$([[ "$(anon_allowed_anywhere secrets)" == "false" ]] && echo no || echo yes)
+  anon_cannot_configmaps=$([[ "$(anon_allowed_anywhere configmaps)" == "false" ]] && echo no || echo yes)
   config_path=""
   config_content=""
   if [[ -n "$auth_config_flag" ]]; then
@@ -394,10 +419,18 @@ except Exception:
   kubectl get clusterrole build-agent-hidden-privesc --context "$CTX" >/dev/null 2>&1
   role_status=$?
   set -e
-  cannot_impersonate=$(kubectl auth can-i impersonate users --as="system:serviceaccount:$NS:build-agent" --context "$CTX" 2>/dev/null || true)
+  # kubectl auth can-i TYPE/NAME parses the part after "/" as a resourceName, not a
+  # subresource (see 'kubectl auth can-i --help': "jobs.batch/bar" checks a job literally
+  # NAMED bar) - certificatesigningrequests/approval must use --subresource=approval
+  # instead, or this check silently tests permission on a nonexistent object named
+  # "approval" and can never observe a real grant. signers/<name> is correct as-is: for
+  # the virtual "signers" resource, the resourceName really is the signer's own name.
+  cannot_impersonate_users=$(kubectl auth can-i impersonate users --as="system:serviceaccount:$NS:build-agent" --context "$CTX" 2>/dev/null || true)
+  cannot_impersonate_groups=$(kubectl auth can-i impersonate groups --as="system:serviceaccount:$NS:build-agent" --context "$CTX" 2>/dev/null || true)
+  cannot_impersonate_serviceaccounts=$(kubectl auth can-i impersonate serviceaccounts -n "$NS" --as="system:serviceaccount:$NS:build-agent" --context "$CTX" 2>/dev/null || true)
   cannot_bind=$(kubectl auth can-i bind clusterroles --as="system:serviceaccount:$NS:build-agent" --context "$CTX" 2>/dev/null || true)
   cannot_escalate=$(kubectl auth can-i escalate clusterroles --as="system:serviceaccount:$NS:build-agent" --context "$CTX" 2>/dev/null || true)
-  cannot_approve_csr=$(kubectl auth can-i update certificatesigningrequests/approval --as="system:serviceaccount:$NS:build-agent" --context "$CTX" 2>/dev/null || true)
+  cannot_approve_csr=$(kubectl auth can-i update certificatesigningrequests --subresource=approval --as="system:serviceaccount:$NS:build-agent" --context "$CTX" 2>/dev/null || true)
   cannot_approve_signer=$(kubectl auth can-i approve signers/kubernetes.io/kube-apiserver-client --as="system:serviceaccount:$NS:build-agent" --context "$CTX" 2>/dev/null || true)
   # The artifact must record the dangerous ClusterRoleBinding NAME (what was actually
   # deleted and what the auth can-i checks below are being verified against), not merely
@@ -409,7 +442,8 @@ except Exception:
   fi
   if [[ "$binding_before_ok" == "true" ]] \
     && [[ "$binding_status" -ne 0 && "$role_status" -ne 0 ]] \
-    && [[ "$cannot_impersonate" == "no" && "$cannot_bind" == "no" && "$cannot_escalate" == "no" \
+    && [[ "$cannot_impersonate_users" == "no" && "$cannot_impersonate_groups" == "no" && "$cannot_impersonate_serviceaccounts" == "no" \
+          && "$cannot_bind" == "no" && "$cannot_escalate" == "no" \
           && "$cannot_approve_csr" == "no" && "$cannot_approve_signer" == "no" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
@@ -420,18 +454,18 @@ except Exception:
       echo "HINT: ClusterRoleBinding 'build-agent-hidden-privesc' still exists. Delete it - do not leave the dangerous binding in place."
     elif [[ "$role_status" -eq 0 ]]; then
       echo "HINT: ClusterRole 'build-agent-hidden-privesc' still exists. Delete it too, not just the binding - a leftover dangerous ClusterRole is a template ready to be reused by a new binding."
-    elif [[ "$cannot_impersonate" != "no" ]]; then
-      echo "HINT: ServiceAccount 'build-agent' can still impersonate users. Check for another ClusterRoleBinding granting the 'impersonate' verb, not just the one already removed."
+    elif [[ "$cannot_impersonate_users" != "no" || "$cannot_impersonate_groups" != "no" || "$cannot_impersonate_serviceaccounts" != "no" ]]; then
+      echo "HINT: ServiceAccount 'build-agent' can still impersonate users/groups/serviceaccounts (users=$cannot_impersonate_users groups=$cannot_impersonate_groups serviceaccounts=$cannot_impersonate_serviceaccounts - all should be 'no'). The fixture grants impersonate on all three resource types, not just users - check for another ClusterRoleBinding granting any of them."
     elif [[ "$cannot_bind" != "no" ]]; then
       echo "HINT: ServiceAccount 'build-agent' can still 'bind' clusterroles. This verb was not being checked before and is easy to miss - check it was actually revoked, not just 'escalate'."
     elif [[ "$cannot_escalate" != "no" ]]; then
       echo "HINT: ServiceAccount 'build-agent' can still 'escalate' clusterroles. This is a distinct verb from 'bind' - check both were revoked, not only one of them."
     elif [[ "$cannot_approve_csr" != "no" ]]; then
-      echo "HINT: ServiceAccount 'build-agent' can still update certificatesigningrequests/approval. This right lives on a separate rule - check it was not granted through a different binding."
+      echo "HINT: ServiceAccount 'build-agent' can still update the certificatesigningrequests/approval subresource. This right lives on a separate rule - check it was not granted through a different binding."
     elif [[ "$cannot_approve_signer" != "no" ]]; then
       echo "HINT: ServiceAccount 'build-agent' can still 'approve' on signer 'kubernetes.io/kube-apiserver-client'. This is a SEPARATE right from certificatesigningrequests/approval - both the update verb AND the signer-scoped approve verb must be revoked."
     fi
-    echo "binding_before_ok=$binding_before_ok binding_status=$binding_status role_status=$role_status cannot_impersonate=$cannot_impersonate cannot_bind=$cannot_bind cannot_escalate=$cannot_escalate cannot_approve_csr=$cannot_approve_csr cannot_approve_signer=$cannot_approve_signer"
+    echo "binding_before_ok=$binding_before_ok binding_status=$binding_status role_status=$role_status cannot_impersonate_users=$cannot_impersonate_users cannot_impersonate_groups=$cannot_impersonate_groups cannot_impersonate_serviceaccounts=$cannot_impersonate_serviceaccounts cannot_bind=$cannot_bind cannot_escalate=$cannot_escalate cannot_approve_csr=$cannot_approve_csr cannot_approve_signer=$cannot_approve_signer"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -544,7 +578,19 @@ except Exception:
   set -e
   # Independently re-run the authorization check ourselves after containment - do not
   # trust containment-result.txt as the sole proof that access was actually revoked.
-  independent_can_i=$(kubectl auth can-i '*' '*' --as=system:serviceaccount:security-104:build-agent --context "$CTX" 2>/dev/null || true)
+  # 'kubectl auth can-i' with neither -n nor -A checks only the CURRENT kubeconfig
+  # namespace (not cluster-wide) - a lingering namespaced RoleBinding naming build-agent
+  # as subject in some OTHER namespace would be invisible to a single unscoped call. Check
+  # every namespace that actually exists.
+  independent_can_i="no"
+  while IFS= read -r ns; do
+    [[ -n "$ns" ]] || continue
+    can_all=$(kubectl auth can-i '*' '*' -n "$ns" --as=system:serviceaccount:security-104:build-agent --context "$CTX" 2>/dev/null || true)
+    if [[ "$can_all" == "yes" ]]; then
+      independent_can_i="yes"
+      break
+    fi
+  done < <(kubectl get namespaces --context "$CTX" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null)
 
   if [[ -n "$command" && -n "$log_flag" && "$readyz_ok" == "ok" ]] \
     && [[ "$real_log_ok" == "true" ]] \
@@ -796,9 +842,13 @@ except Exception:
     kubeconfig_allowed_status=$?
     kubeconfig_denied_out=$(kubectl --kubeconfig="$kubeconfig_file" get pods -n "$NS" 2>&1)
     kubeconfig_denied_status=$?
+    # Confirm the kubeconfig actually authenticates AS john (not merely that it happens to
+    # get 200/403 through some other coincidentally-matching identity/cert).
+    kubeconfig_whoami=$(kubectl --kubeconfig="$kubeconfig_file" auth whoami -o jsonpath='{.status.userInfo.username}' 2>/dev/null)
     set -e
     if [[ "$kubeconfig_allowed_status" -eq 0 ]] \
-      && [[ "$kubeconfig_denied_status" -ne 0 && "$kubeconfig_denied_out" == *"orbidden"* ]]; then
+      && [[ "$kubeconfig_denied_status" -ne 0 && "$kubeconfig_denied_out" == *"orbidden"* ]] \
+      && [[ "$kubeconfig_whoami" == "john" ]]; then
       kubeconfig_ok=true
     fi
   fi
@@ -828,9 +878,9 @@ except Exception:
     elif [[ "$real_auth_ok" != "true" ]]; then
       echo "HINT: Presenting the saved certificate/key directly to the API server over TLS (not via 'kubectl auth can-i --as') did not behave as expected - a request to /api/v1/namespaces/development/pods should return 200 and the same request against namespace '$NS' should return 403. Save the issued certificate as $crt_file and its private key as $key_file (PEM format)."
     elif [[ "$kubeconfig_ok" != "true" ]]; then
-      echo "HINT: $kubeconfig_file is missing, or 'kubectl --kubeconfig=$kubeconfig_file get pods -n development' does not succeed, or the same command against namespace '$NS' does not fail with Forbidden. Build a real kubeconfig for john from the issued cert/key (kubectl config set-cluster/set-credentials --client-certificate/--client-key/set-context/use-context, all with --kubeconfig=$kubeconfig_file) - this proves you assembled a usable client identity, not just that the raw cert/key files individually work over curl."
+      echo "HINT: $kubeconfig_file is missing, or 'kubectl --kubeconfig=$kubeconfig_file get pods -n development' does not succeed, or the same command against namespace '$NS' does not fail with Forbidden, or 'kubectl --kubeconfig=$kubeconfig_file auth whoami' does not report username 'john' (got '${kubeconfig_whoami:-<empty>}'). Build a real kubeconfig for john from the issued cert/key (kubectl config set-cluster/set-credentials --client-certificate/--client-key/set-context/use-context, all with --kubeconfig=$kubeconfig_file) - this proves you assembled a usable client identity that actually authenticates as john, not just that some cert/key pair happens to work over curl."
     fi
-    echo "signer_ok=$signer_ok approved=$approved cn_ok=$cn_ok chain_ok=$chain_ok can_create=$can_create can_list=$can_list can_get=$can_get cannot_delete=$cannot_delete cannot_other_ns=$cannot_other_ns cannot_get_secret=$cannot_get_secret cannot_update_cm=$cannot_update_cm john_structure_ok=$john_structure_ok real_auth_ok=$real_auth_ok kubeconfig_ok=$kubeconfig_ok"
+    echo "signer_ok=$signer_ok approved=$approved cn_ok=$cn_ok chain_ok=$chain_ok can_create=$can_create can_list=$can_list can_get=$can_get cannot_delete=$cannot_delete cannot_other_ns=$cannot_other_ns cannot_get_secret=$cannot_get_secret cannot_update_cm=$cannot_update_cm john_structure_ok=$john_structure_ok real_auth_ok=$real_auth_ok kubeconfig_ok=$kubeconfig_ok kubeconfig_whoami=$kubeconfig_whoami"
     result=1
   fi
   [ "$result" -eq 0 ]

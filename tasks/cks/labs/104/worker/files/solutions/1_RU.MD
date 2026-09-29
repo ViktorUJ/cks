@@ -410,15 +410,23 @@ k delete clusterrolebinding build-agent-hidden-privesc
 k delete clusterrole build-agent-hidden-privesc
 ```
 
-Подтверждаем отзыв ВСЕХ заявленных опасных прав, а не только части из них:
+Подтверждаем отзыв ВСЕХ заявленных опасных прав, а не только части из них. Два нюанса:
+fixture даёт `impersonate` сразу на три типа ресурса (`users`/`groups`/`serviceaccounts`) -
+проверка только `users` не доказывает отзыв остальных двух; а `TYPE/NAME` в `kubectl auth
+can-i` - это resourceName, а не subresource (`kubectl auth can-i --help` прямо показывает
+пример "jobs.batch/bar" - проверка объекта, буквально названного `bar`), поэтому для
+`certificatesigningrequests/approval` нужен отдельный флаг `--subresource=approval`, а не
+слэш:
 
 ```bash
 k auth can-i impersonate users --as=system:serviceaccount:security-104:build-agent
+k auth can-i impersonate groups --as=system:serviceaccount:security-104:build-agent
+k auth can-i impersonate serviceaccounts -n security-104 --as=system:serviceaccount:security-104:build-agent
 k auth can-i bind clusterroles --as=system:serviceaccount:security-104:build-agent
 k auth can-i escalate clusterroles --as=system:serviceaccount:security-104:build-agent
-k auth can-i update certificatesigningrequests/approval --as=system:serviceaccount:security-104:build-agent
+k auth can-i update certificatesigningrequests --subresource=approval --as=system:serviceaccount:security-104:build-agent
 k auth can-i approve signers/kubernetes.io/kube-apiserver-client --as=system:serviceaccount:security-104:build-agent
-# no / no / no / no / no
+# no / no / no / no / no / no / no
 ```
 
 В конце выполните `check_result`.
@@ -601,11 +609,14 @@ ssh control-plane "sudo cat /var/log/kubernetes/audit/audit.log" \
 записью в логе при верификации.
 
 Containment: удаляем привязку и подтверждаем, что доступ реально отозван, а не просто
-объект недоступен для чтения:
+объект недоступен для чтения. `can-i` без `-n`/`-A` проверяет только текущий namespace
+kubeconfig-контекста, а не весь кластер - для namespaced RoleBinding в `security-104`
+(в отличие от уже удалённого cluster-wide ClusterRoleBinding) это меняет результат,
+поэтому указываем namespace явно:
 
 ```bash
 k delete clusterrolebinding incident-simulated-escalation
-k auth can-i '*' '*' --as=system:serviceaccount:security-104:build-agent \
+k auth can-i '*' '*' -n security-104 --as=system:serviceaccount:security-104:build-agent \
   | tee /var/work/tests/artifacts/9/containment-result.txt
 # no
 ```
@@ -812,6 +823,10 @@ k --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig get pods -n developm
 
 k --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig get pods -n security-104
 # Error from server (Forbidden) - тот же 403, что и в curl-проверке выше
+
+k --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig auth whoami
+# Username: john - подтверждает, что kubeconfig реально аутентифицируется именно как
+# john, а не просто случайно даёт нужные коды ответа
 ```
 
 В конце выполните `check_result`.
