@@ -20,8 +20,10 @@ trap 'rm -rf "$workdir"' EXIT
 curl -fsSL -o "$workdir/kube-bench.tar.gz" \
   "https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION}_linux_${release_arch}.tar.gz"
 tar -xzf "$workdir/kube-bench.tar.gz" -C "$workdir"
-install -d -m 0755 /opt/kube-bench
-cp -a "$workdir"/cfg /opt/kube-bench/cfg
+# cfg goes to kube-bench's own default --config-dir (/etc/kube-bench/cfg) - exactly where a
+# real exam install would put it - so students never need to pass --config-dir explicitly.
+install -d -m 0755 /opt/kube-bench /etc/kube-bench
+cp -a "$workdir"/cfg /etc/kube-bench/cfg
 install -m 0755 "$workdir/kube-bench" /opt/kube-bench/kube-bench
 ln -sf /opt/kube-bench/kube-bench /usr/local/bin/kube-bench
 rm -rf "$workdir"

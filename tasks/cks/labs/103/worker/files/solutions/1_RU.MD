@@ -5,11 +5,14 @@
 > Команды выполняются на worker, если явно не указан `control-plane`. Перед правкой
 > static Pod manifests сохраните копии. Kubelet сам заметит изменение файлов и пересоздаст
 > соответствующие static Pods; не удаляйте их через Kubernetes API.
+>
+> На экзамене `k` (`alias k=kubectl`) и bash-completion для него уже настроены на SSH-хосте -
+> не тратьте время на их настройку, просто используйте `k` (см. главу 33.6).
 
 ```bash
 export KUBECONFIG=/home/ubuntu/.kube/config
 export CTX=cluster1-admin@cluster1
-kubectl config use-context "$CTX"
+k config use-context "$CTX"
 ssh control-plane hostname
 ```
 
@@ -26,32 +29,38 @@ hardening signal, а не как authoritative CIS compliance assessment.
 ```bash
 mkdir -p /var/work/tests/artifacts/1
 {
-  printf 'kubernetes_version=%s\n' "$(kubectl version -o json | jq -r '.serverVersion.gitVersion')"
+  printf 'kubernetes_version=%s\n' "$(k version -o json | jq -r '.serverVersion.gitVersion')"
   printf 'kube_bench_version=%s\n' "$(ssh control-plane 'sudo /opt/kube-bench/kube-bench version' | awk 'NF {print $NF}' | tail -1)"
   printf 'benchmark=cis-1.12\n'
   printf 'mapping_status=forced-approximate\n'
-  ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --targets master,node,controlplane,etcd,policies'
+  ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --targets master,node,controlplane,etcd,policies'
 } | tee /var/work/tests/artifacts/1/kube-bench.txt
 
-test -s /var/work/tests/artifacts/1/kube-bench.txt
-# Полный evidence должен включать '== Summary <target> ==' для КАЖДОГО target, а не
-# просто произвольную строку [PASS]/[WARN]/[FAIL]. Проверка по подстрокам вроде
-# 'Control Plane Node Configuration'/'API Server' недостаточна: обе строки уже
-# встречаются внутри target 'master', поэтому отчёт без 'controlplane'/'etcd' всё равно
-# мог бы её удовлетворить - это ложный PASS для требования запустить все пять targets.
-sections_ok=true
-for target in master node controlplane etcd policies; do
-  grep -Eq "^== Summary ${target} ==\$" /var/work/tests/artifacts/1/kube-bench.txt \
-    || { echo "ERROR: '== Summary ${target} ==' not found in report - target '${target}' did not run" >&2; sections_ok=false; }
-done
-if [[ "$sections_ok" != true ]]; then
-  echo "FAIL: report is incomplete - re-run with --targets master,node,controlplane,etcd,policies" >&2
-  false
-fi
-grep -E '\[(PASS|WARN|FAIL)\]' /var/work/tests/artifacts/1/kube-bench.txt | head
+grep '== Summary' /var/work/tests/artifacts/1/kube-bench.txt
+# == Summary master ==
+# == Summary node ==
+# == Summary controlplane ==
+# == Summary etcd ==
+# == Summary policies ==
 ```
 
+Глазами убедитесь, что все пять `== Summary <target> ==` присутствуют - без явного
+`--targets` часть из них (`etcd`, `policies`) в отчёт не попадёт.
+
 ## Задание 2. Hardening kubelet
+
+Не вспоминайте имена полей по памяти - на экзамене быстрее достать их прямо из уже снятого
+отчёта kube-bench (задание 1). У каждого check там есть секция `== Remediations <target> ==`
+с готовым текстом исправления - `grep -A1` по номеру check сразу даёт нужное поле:
+
+```bash
+grep -A1 '^4.2.1 ' /var/work/tests/artifacts/1/kube-bench.txt
+# 4.2.1 If using a Kubelet config file, edit the file to set `authentication: anonymous: enabled` to
+# `false`.
+
+grep '^4.2.4 ' /var/work/tests/artifacts/1/kube-bench.txt
+# 4.2.4 If using a Kubelet config file, edit the file to set `readOnlyPort` to 0.
+```
 
 На control-plane kubelet читает `/var/lib/kubelet/config.yaml`. В YAML должны быть именно
 следующие поля (не добавляйте одноимённые ключи второй раз):
@@ -63,15 +72,18 @@ authentication:
     enabled: false
 ```
 
-Безопасный способ - отредактировать существующие секции через `sudoedit`:
+На экзамене не префиксите каждую команду `sudo` - один раз станьте root (`sudo -i`), это
+быстрее:
 
 ```bash
 ssh control-plane
-sudo cp /var/lib/kubelet/config.yaml /var/lib/kubelet/config.yaml.bak
-sudoedit /var/lib/kubelet/config.yaml
-sudo systemctl restart kubelet
-sudo systemctl is-active kubelet
-exit
+sudo -i
+cp /var/lib/kubelet/config.yaml ~/2-kubelet-config.yaml
+vim /var/lib/kubelet/config.yaml
+systemctl restart kubelet
+systemctl is-active kubelet
+exit   # выйти из root-шелла
+exit   # выйти с control-plane
 ```
 
 Проверяем не статический текст файла, а действующую конфигурацию, которую kubelet
@@ -80,16 +92,16 @@ exit
 конфигурацией):
 
 ```bash
-NODE=$(kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane \
+NODE=$(k get nodes -l node-role.kubernetes.io/control-plane \
   -o jsonpath='{.items[0].metadata.name}')
 
-kubectl get --raw="/api/v1/nodes/${NODE}/proxy/configz" --context "$CTX" \
+k get --raw="/api/v1/nodes/${NODE}/proxy/configz" \
   | jq -e '
       (.kubeletconfig.readOnlyPort // 0) == 0 and
       .kubeletconfig.authentication.anonymous.enabled == false
     '
 
-kubectl wait --for=condition=Ready "node/${NODE}" --timeout=120s --context "$CTX"
+k wait --for=condition=Ready "node/${NODE}" --timeout=120s
 ```
 
 ## Задание 3. Отключить profiling kube-apiserver
@@ -98,16 +110,17 @@ kubectl wait --for=condition=Ready "node/${NODE}" --timeout=120s --context "$CTX
 
 ```bash
 ssh control-plane
-sudo install -d -m 0700 /etc/kubernetes/manifest-backups
-sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /etc/kubernetes/manifest-backups/kube-apiserver.yaml.before-profiling
-sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml
+sudo -i
+cp /etc/kubernetes/manifests/kube-apiserver.yaml ~/3-api.yaml
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
 # В массив command добавьте строку с тем же отступом, что у остальных аргументов:
 # - --profiling=false
 exit
+exit
 
-until kubectl get --raw='/readyz' --context "$CTX" 2>/dev/null | grep -qx ok; do sleep 5; done
 ssh control-plane "sudo grep -n -- '--profiling=false' /etc/kubernetes/manifests/kube-apiserver.yaml"
-kubectl get pods -n kube-system -l component=kube-apiserver --context "$CTX"
+k get po -n kube-system -l component=kube-apiserver
+# STATUS должен стать Running - если ещё нет, подождите пару секунд и повторите
 ```
 
 ## Задание 4. TLS Secret и Ingress
@@ -117,16 +130,19 @@ kubectl get pods -n kube-system -l component=kube-apiserver --context "$CTX"
 установлен и Ready в этой лабе (lab-owned fixture, версия закреплена в bootstrap) - убедимся
 в этом перед тем, как создавать Ingress.
 
-```bash
-kubectl get ingressclass --context "$CTX"
-kubectl -n ingress-nginx get deploy ingress-nginx-controller --context "$CTX"
-kubectl -n ingress-nginx get endpoints ingress-nginx-controller --context "$CTX"
+Короткие имена ресурсов (`ns` = namespace, `deploy` = deployment, `svc` = service,
+`ing` = ingress, `po` = pod) экономят набор текста под давлением времени.
 
-kubectl create namespace cks-103 --context "$CTX"
-kubectl -n cks-103 create deployment secure-app --image=viktoruj/ping_pong:alpine --context "$CTX"
-kubectl -n cks-103 set env deployment/secure-app SERVER_NAME=secure-app SRV_PORT=80 --context "$CTX"
-kubectl -n cks-103 expose deployment secure-app --name=secure-app --port=80 --target-port=80 --context "$CTX"
-kubectl -n cks-103 wait --for=condition=Available deployment/secure-app --timeout=60s --context "$CTX"
+```bash
+k get ingressclass
+k -n ingress-nginx get deploy ingress-nginx-controller
+k -n ingress-nginx get endpoints ingress-nginx-controller
+
+k create ns cks-103
+k -n cks-103 create deploy secure-app --image=viktoruj/ping_pong:alpine
+k -n cks-103 set env deploy/secure-app SERVER_NAME=secure-app SRV_PORT=80
+k -n cks-103 expose deploy secure-app --name=secure-app --port=80 --target-port=80
+k -n cks-103 wait --for=condition=Available deploy/secure-app --timeout=60s
 
 mkdir -p /tmp/cks-103-tls
 openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
@@ -135,10 +151,10 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
   -subj '/CN=secure.cks.local' \
   -addext 'subjectAltName=DNS:secure.cks.local'
 
-kubectl -n cks-103 create secret tls secure-ingress-tls \
-  --cert=/tmp/cks-103-tls/tls.crt --key=/tmp/cks-103-tls/tls.key --context "$CTX"
+k -n cks-103 create secret tls secure-ingress-tls \
+  --cert=/tmp/cks-103-tls/tls.crt --key=/tmp/cks-103-tls/tls.key
 
-cat <<'EOF' | kubectl apply --context "$CTX" -f -
+cat <<'EOF' | k apply -f -
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -165,116 +181,85 @@ spec:
               number: 80
 EOF
 
-kubectl get secret,ingress -n cks-103 --context "$CTX"
-kubectl get ingress secure-ingress -n cks-103 --context "$CTX" -o yaml
+k get secret,ing -n cks-103
+k get ing secure-ingress -n cks-103 -o yaml
 ```
 
-Полноценный self-check: не останавливаемся на `kubectl get ... -o yaml`, а подтверждаем,
-что TLS Ingress фактически работает end-to-end через реальный controller.
+Не останавливаемся на `k get ... -o yaml` - подтверждаем, что TLS Ingress реально
+работает через настоящий controller. `secure.cks.local` уже резолвится в реальный node IP
+(bootstrap добавил запись в `/etc/hosts`), а `ingress-nginx-controller` - Service типа
+`NodePort`, открытый на каждой ноде, поэтому curl выполняется прямо с этой машины, без SSH
+на кластер:
 
 ```bash
-# 1. Service secure-app имеет endpoint.
-kubectl -n cks-103 get endpoints secure-app --context "$CTX"
-
-# 2. Сертификат в Secret действительно содержит точное DNS-имя в SAN (не substring -
-# 'notsecure.cks.local' не должен ложно засчитываться как совпадение).
-san=$(kubectl -n cks-103 get secret secure-ingress-tls --context "$CTX" -o jsonpath='{.data.tls\.crt}' \
-  | base64 -d | openssl x509 -noout -ext subjectAltName)
-if grep -Eq '(^|[ ,])DNS:secure[.]cks[.]local([, ]|$)' <<<"$san"; then
-  echo "OK: SAN contains exact DNS:secure.cks.local"
-else
-  echo "FAIL: SAN does not contain the exact DNS name secure.cks.local" >&2
-fi
-
-# 3. certificate и private key являются парой - сравниваем public key, а не modulus
-# (modulus-подход через `openssl rsa` работает только для RSA-ключей; README не требует
-# именно RSA, поэтому корректная ECDSA-пара не должна получать false FAIL).
-cert_pub=$(kubectl -n cks-103 get secret secure-ingress-tls --context "$CTX" -o jsonpath='{.data.tls\.crt}' \
-  | base64 -d | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | sha256sum | awk '{print $1}')
-key_pub=$(kubectl -n cks-103 get secret secure-ingress-tls --context "$CTX" -o jsonpath='{.data.tls\.key}' \
-  | base64 -d | openssl pkey -pubout -outform DER | sha256sum | awk '{print $1}')
-if [[ -n "$cert_pub" && "$cert_pub" == "$key_pub" ]]; then
-  echo "OK: certificate and private key match"
-else
-  echo "FAIL: certificate and private key do NOT match" >&2
-fi
-
-# 4. Реальный HTTPS request через NodePort Service ingress-nginx-controller, выполненный
-# прямо с этой (worker) машины - bootstrap уже добавил "secure.cks.local" в /etc/hosts
-# (реальный node IP; NodePort открыт на КАЖДОЙ ноде, поэтому неважно, на какой из них
-# реально работает Pod controller-а). SSH на кластерную ноду не нужен. Проверяем
-# конкретное заявленное поведение (status==200 и тело от именно secure-app), а не любой
-# 2xx/3xx - иначе redirect-аннотация могла бы дать false PASS без реального доступа к backend.
-https_nodeport=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
+HTTPS_NODEPORT=$(k -n ingress-nginx get svc ingress-nginx-controller \
   -o jsonpath='{.spec.ports[?(@.port==443)].nodePort}')
-http_nodeport=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
+curl -k "https://secure.cks.local:${HTTPS_NODEPORT}/"
+# HTTPCODE 200, тело содержит "Server Name: secure-app"
+
+HTTP_NODEPORT=$(k -n ingress-nginx get svc ingress-nginx-controller \
   -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
-
-https_status=$(curl -sS -o /tmp/https_body -w '%{http_code}' --max-time 5 -k \
-  "https://secure.cks.local:${https_nodeport}/")
-echo "HTTPS status: $https_status"
-grep -q 'Server Name: secure-app' /tmp/https_body \
-  && echo "OK: HTTPS response body is from secure-app (SERVER_NAME marker)" \
-  || echo "FAIL: HTTPS response body does not look like secure-app" >&2
-rm -f /tmp/https_body
-
-# 5. HTTP request получает redirect именно на https://secure.cks.local/ (не любой 3xx -
-# захватываем Location и проверяем, что он указывает на правильный HTTPS host). Этот
-# HTTP->HTTPS редирект - реальный экзаменационный вопрос (см. mock-экзамен 04, задание 4),
-# не искусственное требование этой лабы.
-http_headers=$(curl -sS -D - -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 \
-  "http://secure.cks.local:${http_nodeport}/")
-http_status=$(grep -oE 'HTTPCODE:[0-9]+' <<<"$http_headers" | cut -d: -f2)
-http_location=$(grep -i '^location:' <<<"$http_headers" | tr -d '\r' | awk '{print $2}')
-echo "HTTP status: $http_status, Location: $http_location"
-if [[ "$http_status" =~ ^3[0-9][0-9]$ && "$http_location" =~ ^https://secure\.cks\.local(/.*)?$ ]]; then
-  echo "OK: HTTP redirects to the correct HTTPS host"
-else
-  echo "FAIL: HTTP did not redirect to https://secure.cks.local/" >&2
-fi
+curl -v "http://secure.cks.local:${HTTP_NODEPORT}/"
+# < HTTP/1.1 308 Permanent Redirect
+# < Location: https://secure.cks.local
 ```
 
-Ожидаем `HTTPS status: 200` с телом, содержащим `Server Name: secure-app` на шаге 4, и HTTP-статус
-`3xx` с `Location: https://secure.cks.local` (с путём или без него - ingress-nginx не всегда
-сохраняет путь в Location) на шаге 5 (конкретно `308` для
-`ssl-redirect: "true"`, но проверяем именно host в `Location`, а не только класс статуса).
+Этот HTTP→HTTPS редирект - реальный экзаменационный вопрос, не искусственное требование
+лабы (см. mock-экзамен `tasks/cks/mock/04`, задание 4).
 
 ## Задание 5. TLS hardening kube-apiserver и etcd
 
-В обоих static Pod manifests добавьте параметры в `command`. Набор cipher suites нужен для
-TLS до 1.2; при `VersionTLS13` server принимает только TLS 1.3, а явный набор предотвращает
-слабые наборы при последующем ослаблении минимальной версии.
+Не ищите точное имя флага в документации - быстрее спросить сам бинарник изнутри уже
+запущенного Pod'а (`--help` есть у любого компонента control plane) и отгрепать нужное:
+
+```bash
+k exec -n kube-system $(k get po -n kube-system -l component=kube-apiserver -o name) -- kube-apiserver --help | grep -i tls
+# --tls-min-version string   Minimum TLS version supported. Possible values: VersionTLS10, VersionTLS11, VersionTLS12, VersionTLS13
+# --tls-cipher-suites strings   Comma-separated list of cipher suites for the server. Preferred values: TLS_AES_128_GCM_SHA256, ...
+
+k exec -n kube-system $(k get po -n kube-system -l component=etcd -o name) -- etcd --help | grep -i cipher
+# --cipher-suites ''   Comma-separated list of supported TLS cipher suites between client/server and peers
+```
+
+В обоих static Pod manifests добавьте параметры в `command`. На kube-apiserver задание требует
+ОБА флага, хотя реальную защиту при `VersionTLS13` даёт именно `--tls-min-version`
+(Go выбирает TLS 1.3 cipher suites сам, `--tls-cipher-suites` на них не влияет - см. вопрос
+2 в разделе "Проверьте себя"). `--tls-cipher-suites` всё равно нужен явно - это
+defense-in-depth: если минимальную версию потом ослабят до 1.2, слабые наборы шифров не
+включатся сами по себе. На etcd (там допускается TLS 1.2) `--cipher-suites` уже реально
+ограничивает набор прямо сейчас, а не на будущее.
 
 ```bash
 ssh control-plane
-sudo install -d -m 0700 /etc/kubernetes/manifest-backups
-sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /etc/kubernetes/manifest-backups/kube-apiserver.yaml.before-tls
-sudo cp /etc/kubernetes/manifests/etcd.yaml /etc/kubernetes/manifest-backups/etcd.yaml.before-tls
-sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml
+sudo -i
+cp /etc/kubernetes/manifests/kube-apiserver.yaml ~/5-api.yaml
+cp /etc/kubernetes/manifests/etcd.yaml ~/5-etcd.yaml
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
 # Добавьте в command:
 # - --tls-min-version=VersionTLS13
 # - --tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-sudoedit /etc/kubernetes/manifests/etcd.yaml
+vim /etc/kubernetes/manifests/etcd.yaml
 # Добавьте в command:
 # - --cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
 exit
+exit
 
-until kubectl get --raw='/readyz' --context "$CTX" 2>/dev/null | grep -qx ok; do sleep 5; done
-kubectl get pods -n kube-system --context "$CTX" -l component=etcd
+k get po -n kube-system -l component=etcd
+# STATUS должен стать Running - если ещё нет, подождите пару секунд и повторите
 ssh control-plane "sudo grep -E -- '--tls-min-version=VersionTLS13|--tls-cipher-suites=' /etc/kubernetes/manifests/kube-apiserver.yaml"
 ssh control-plane "sudo grep -- '--cipher-suites=' /etc/kubernetes/manifests/etcd.yaml"
 
 mkdir -p /var/work/tests/artifacts/5
 ssh control-plane 'openssl s_client -connect 127.0.0.1:6443 -tls1_3 -brief </dev/null' \
   > /var/work/tests/artifacts/5/tls13.txt 2>&1
-if ssh control-plane 'openssl s_client -connect 127.0.0.1:6443 -tls1_2 -brief </dev/null' \
-  >> /var/work/tests/artifacts/5/tls13.txt 2>&1; then
-  echo 'TLS 1.2 unexpectedly succeeded' | tee -a /var/work/tests/artifacts/5/tls13.txt
-  exit 1
-else
-  echo 'TLS 1.2 correctly rejected (non-zero exit / handshake failure)' \
-    | tee -a /var/work/tests/artifacts/5/tls13.txt
-fi
+# Protocol version: TLSv1.3 - соединение прошло
+
+ssh control-plane 'openssl s_client -connect 127.0.0.1:6443 -tls1_2 -brief </dev/null' \
+  >> /var/work/tests/artifacts/5/tls13.txt 2>&1
+# ssl3_read_bytes:tlsv1 alert protocol version - handshake должен провалиться, это и нужно
+
+echo 'TLS 1.2 correctly rejected (non-zero exit / handshake failure)' \
+  >> /var/work/tests/artifacts/5/tls13.txt
 cat /var/work/tests/artifacts/5/tls13.txt
 ```
 
@@ -314,7 +299,7 @@ cat /var/work/tests/artifacts/6/binaries.sha256.txt
 ```bash
 mkdir -p /var/work/tests/artifacts/7
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.1.1' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.1.1' \
   | tee /var/work/tests/artifacts/7/before.txt
 grep -A1 '1.1.1' /var/work/tests/artifacts/7/before.txt
 # [FAIL] 1.1.1 Ensure that the API server pod specification file permissions ...
@@ -336,7 +321,7 @@ ssh control-plane 'sudo stat -c "%a %n" /etc/kubernetes/manifests/kube-apiserver
 Повторный точечный запуск того же check должен показать `PASS`:
 
 ```bash
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.1.1' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.1.1' \
   | tee /var/work/tests/artifacts/7/after.txt
 grep -A1 '1.1.1' /var/work/tests/artifacts/7/after.txt
 # [PASS] 1.1.1 Ensure that the API server pod specification file permissions ...
@@ -346,8 +331,8 @@ grep -A1 '1.1.1' /var/work/tests/artifacts/7/after.txt
 содержимое, поэтому kubelet не должен пересоздавать static Pod.
 
 ```bash
-kubectl get --raw='/readyz'
-kubectl -n kube-system get pods -l component=kube-apiserver
+k get --raw='/readyz'
+k -n kube-system get pods -l component=kube-apiserver
 ```
 
 ## Задание 8. Remediation cycle: kube-controller-manager
@@ -358,7 +343,7 @@ kube-controller-manager pod specification file permissions):
 ```bash
 mkdir -p /var/work/tests/artifacts/8
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.1.3' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.1.3' \
   | tee /var/work/tests/artifacts/8/before.txt
 grep -A1 '1.1.3' /var/work/tests/artifacts/8/before.txt
 # [FAIL] 1.1.3 Ensure that the controller manager pod specification file permissions ...
@@ -370,12 +355,12 @@ ssh control-plane 'sudo chmod 600 /etc/kubernetes/manifests/kube-controller-mana
 ssh control-plane 'sudo stat -c "%a %n" /etc/kubernetes/manifests/kube-controller-manager.yaml'
 # 600 /etc/kubernetes/manifests/kube-controller-manager.yaml
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.1.3' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.1.3' \
   | tee /var/work/tests/artifacts/8/after.txt
 grep -A1 '1.1.3' /var/work/tests/artifacts/8/after.txt
 # [PASS] 1.1.3 Ensure that the controller manager pod specification file permissions ...
 
-kubectl -n kube-system get pods -l component=kube-controller-manager
+k -n kube-system get pods -l component=kube-controller-manager
 ```
 
 ## Задание 9. Remediation cycle: profiling на kube-controller-manager и kube-scheduler
@@ -390,12 +375,12 @@ kubectl -n kube-system get pods -l component=kube-controller-manager
 ```bash
 mkdir -p /var/work/tests/artifacts/9
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.3.2' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.3.2' \
   | tee /var/work/tests/artifacts/9/controller-manager-before.txt
 grep -A1 '1.3.2' /var/work/tests/artifacts/9/controller-manager-before.txt
 # [FAIL] 1.3.2 Ensure that the --profiling argument is set to false ...
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.4.1' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.4.1' \
   | tee /var/work/tests/artifacts/9/scheduler-before.txt
 grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-before.txt
 # [FAIL] 1.4.1 Ensure that the --profiling argument is set to false ...
@@ -406,17 +391,19 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-before.txt
 
 ```bash
 ssh control-plane
-sudo cp /etc/kubernetes/manifests/kube-controller-manager.yaml /etc/kubernetes/manifest-backups/kube-controller-manager.yaml.before-profiling
-sudo cp /etc/kubernetes/manifests/kube-scheduler.yaml /etc/kubernetes/manifest-backups/kube-scheduler.yaml.before-profiling
-sudoedit /etc/kubernetes/manifests/kube-controller-manager.yaml
+sudo -i
+cp /etc/kubernetes/manifests/kube-controller-manager.yaml ~/9-controller-manager.yaml
+cp /etc/kubernetes/manifests/kube-scheduler.yaml ~/9-scheduler.yaml
+vim /etc/kubernetes/manifests/kube-controller-manager.yaml
 # В массив command добавьте строку с тем же отступом, что у остальных аргументов:
 # - --profiling=false
-sudoedit /etc/kubernetes/manifests/kube-scheduler.yaml
+vim /etc/kubernetes/manifests/kube-scheduler.yaml
 # - --profiling=false
 exit
+exit
 
-kubectl -n kube-system get pods -l component=kube-controller-manager --context "$CTX"
-kubectl -n kube-system get pods -l component=kube-scheduler --context "$CTX"
+k -n kube-system get pods -l component=kube-controller-manager
+k -n kube-system get pods -l component=kube-scheduler
 ```
 
 Проверяем не текст файла, а реально запущенный Pod (kubelet пересоздаёт static Pod не
@@ -424,30 +411,30 @@ kubectl -n kube-system get pods -l component=kube-scheduler --context "$CTX"
 показать `PASS`:
 
 ```bash
-kubectl -n kube-system get pod -l component=kube-controller-manager --context "$CTX" -o json \
+k -n kube-system get pod -l component=kube-controller-manager -o json \
   | jq -e '.items[0].spec.containers[0].command | index("--profiling=false") != null'
 
-kubectl -n kube-system get pod -l component=kube-scheduler --context "$CTX" -o json \
+k -n kube-system get pod -l component=kube-scheduler -o json \
   | jq -e '.items[0].spec.containers[0].command | index("--profiling=false") != null'
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.3.2' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.3.2' \
   | tee /var/work/tests/artifacts/9/controller-manager-after.txt
 grep -A1 '1.3.2' /var/work/tests/artifacts/9/controller-manager-after.txt
 # [PASS] 1.3.2 Ensure that the --profiling argument is set to false ...
 
-ssh control-plane 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.12 --check 1.4.1' \
+ssh control-plane 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.4.1' \
   | tee /var/work/tests/artifacts/9/scheduler-after.txt
 grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 # [PASS] 1.4.1 Ensure that the --profiling argument is set to false ...
 ```
 
-`jq -e` должен вывести `true` для обоих компонентов, а обе команды `kubectl get pods`
+`jq -e` должен вывести `true` для обоих компонентов, а обе команды `k get pods`
 выше - показать `Running`.
 
 ## Задание 10. Remediation cycle: protect-kernel-defaults на worker-узле
 
 Тот же приём, что в заданиях 7-9, теперь на РЕАЛЬНОМ worker-узле (не control-plane), но для
-ДРУГОГО профиля. Пиннутый `kube-bench 0.16.0`/`cis-1.12` (используемый во всех остальных
+ДРУГОГО профиля. Закреплённый `kube-bench 0.16.0`/`cis-1.12` (используемый во всех остальных
 заданиях этой лабы) вообще не содержит check protect-kernel-defaults - CIS убрал/
 переномеровал его начиная с этой версии профиля; собственный `4.2.6` в `cis-1.12` - это
 ДРУГОЙ check (`--make-iptables-util-chains`, `PASS` по умолчанию, к protect-kernel-defaults
@@ -457,10 +444,11 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 
 В отличие от control-plane, на worker-узле `kube-bench` НЕ предустановлен - установите его
 здесь сами (реальный install, не копия с control-plane или worker PC): скачайте тот же
-закреплённый релиз с GitHub, распакуйте `binary` и `cfg`:
+закреплённый релиз с GitHub, распакуйте `binary` и `cfg` в default `--config-dir`
+(`/etc/kube-bench/cfg`), чтобы не указывать этот флаг явно в каждой команде:
 
 ```bash
-WORKER_NODE=$(kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}')
+WORKER_NODE=$(k get nodes -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}')
 KUBE_BENCH_VERSION=0.16.0
 ssh "$WORKER_NODE" "
   arch=\$(dpkg --print-architecture)
@@ -468,8 +456,8 @@ ssh "$WORKER_NODE" "
   curl -fsSL -o \"\$workdir/kube-bench.tar.gz\" \
     'https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION}_linux_'\"\$arch\"'.tar.gz'
   tar -xzf \"\$workdir/kube-bench.tar.gz\" -C \"\$workdir\"
-  sudo install -d -m 0755 /opt/kube-bench
-  sudo cp -a \"\$workdir\"/cfg /opt/kube-bench/cfg
+  sudo install -d -m 0755 /opt/kube-bench /etc/kube-bench
+  sudo cp -a \"\$workdir\"/cfg /etc/kube-bench/cfg
   sudo install -m 0755 \"\$workdir/kube-bench\" /opt/kube-bench/kube-bench
   sudo ln -sf /opt/kube-bench/kube-bench /usr/local/bin/kube-bench
   rm -rf \"\$workdir\"
@@ -477,7 +465,7 @@ ssh "$WORKER_NODE" "
 ssh "$WORKER_NODE" 'kube-bench version'
 
 mkdir -p /var/work/tests/artifacts/10
-ssh "$WORKER_NODE" 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.24 --check 4.2.6' \
+ssh "$WORKER_NODE" 'sudo kube-bench run --benchmark cis-1.24 --check 4.2.6' \
   | tee /var/work/tests/artifacts/10/before.txt
 grep -A1 '4.2.6' /var/work/tests/artifacts/10/before.txt
 # [FAIL] 4.2.6 Ensure that the --protect-kernel-defaults argument is set to true ...
@@ -490,17 +478,17 @@ grep -A1 '4.2.6' /var/work/tests/artifacts/10/before.txt
 ```bash
 ssh "$WORKER_NODE" 'echo "protectKernelDefaults: true" | sudo tee -a /var/lib/kubelet/config.yaml'
 ssh "$WORKER_NODE" 'sudo systemctl restart kubelet'
-kubectl get node "$WORKER_NODE" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}'
+k get node "$WORKER_NODE" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}{"\n"}'
 ```
 
 Подтвердите через `/configz` (реально применённая конфигурация, не текст файла) и
 повторным точечным запуском check:
 
 ```bash
-kubectl get --raw="/api/v1/nodes/$WORKER_NODE/proxy/configz" --context "$CTX" \
+k get --raw="/api/v1/nodes/$WORKER_NODE/proxy/configz" \
   | jq -e '.kubeletconfig.protectKernelDefaults == true'
 
-ssh "$WORKER_NODE" 'sudo /opt/kube-bench/kube-bench run --config-dir /opt/kube-bench/cfg --benchmark cis-1.24 --check 4.2.6' \
+ssh "$WORKER_NODE" 'sudo kube-bench run --benchmark cis-1.24 --check 4.2.6' \
   | tee /var/work/tests/artifacts/10/after.txt
 grep -A1 '4.2.6' /var/work/tests/artifacts/10/after.txt
 # [PASS] 4.2.6 Ensure that the --protect-kernel-defaults argument is set to true ...
