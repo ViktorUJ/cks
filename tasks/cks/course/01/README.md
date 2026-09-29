@@ -47,7 +47,7 @@ A task may assign a separate host: in that case, run `ssh <host>` from the base 
 
 Kubernetes versions must be distinguished:
 
-- **The course and core labs `101-113` use `v1.36`** (`k8_version = "1.36.0"` in their lab environments): this version is used to verify Kubernetes-native commands, flags, and API behavior in the course; compatibility of third-party components must be checked against their own support matrix. There is one intentional exception - lab `113` starts on `v1.35.x` because its topic is the minor upgrade itself to `v1.36.x`.
+- **The course and core labs `101-114` use `v1.36`** (`k8_version = "1.36.0"` in their lab environments): this version is used to verify Kubernetes-native commands, flags, and API behavior in the course; compatibility of third-party components must be checked against their own support matrix. There is one intentional exception - lab `113` starts on `v1.35.x` because its topic is the minor upgrade itself to `v1.36.x`.
 - **The Linux Foundation defines the exam environment version, and it can lag behind the course version.** The main [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) page lists Kubernetes **v1.35**, but Important Instructions and the FAQ are updated independently and can temporarily show another version. For a particular attempt, ExamUI and the instructions for the scheduled exam take precedence. The published CNCF curriculum overview remains named [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), but this does not override the parameters specified by the Linux Foundation for your attempt. Therefore, **do not treat `v1.36` as the exam version**.
 
 The CKS page and FAQ are updated independently and can temporarily disagree. Immediately before an attempt, confirm the Kubernetes version, number and format of tasks, passing score, prerequisite, and permitted resources first on the main [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) page and then in ExamUI for the scheduled attempt. Do not treat a version or rules recorded in the course as permanent.
@@ -204,7 +204,7 @@ A common mistake is applying a security tool without checking the attack path. F
 ## 01.9 Chapter summary
 
 - CKS builds on CKA and tests practical protection of clusters, workloads, nodes, and the supply chain.
-- The course and core labs `101-113` target Kubernetes v1.36 (lab `113` starts on v1.35.x because its topic is upgrading to v1.36.x itself).
+- The course and core labs `101-114` target Kubernetes v1.36 (lab `113` starts on v1.35.x because its topic is upgrading to v1.36.x itself).
 - The exam requires confident terminal work with multiple clusters and node configuration.
 - The six domains cover cluster setup, hardening, workload protection, supply chain, and runtime security.
 - New emphases in the 2024 curriculum are Cilium, CIS, SBOM, KubeLinter, and sandboxed containers.
@@ -237,7 +237,7 @@ In a performance-based format, you perform the task in a terminal on the provide
 <details>
 <summary>3. Which Kubernetes version is fixed in this course and its labs?</summary>
 
-Kubernetes `v1.36` is fixed for training and core labs `101-113` (`k8_version = "1.36.0"`). The Linux Foundation sets the exam version, and it cannot be inferred automatically from the course version.
+Kubernetes `v1.36` is fixed for training and core labs `101-114` (`k8_version = "1.36.0"`). The Linux Foundation sets the exam version, and it cannot be inferred automatically from the course version.
 </details>
 
 <details>

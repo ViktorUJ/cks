@@ -47,7 +47,7 @@ Una tarea puede asignar un host independiente: en ese caso, ejecute `ssh <host>`
 
 Las versiones de Kubernetes se deben distinguir:
 
-- **La versión de formación y los laboratorios principales `101-113` de este curso es `v1.36`** (`k8_version = "1.36.0"` en sus entornos de laboratorio): en ella se comprueban los comandos, flags y el comportamiento de API nativos de Kubernetes del curso; la compatibilidad de los componentes de terceros debe verificarse con su propia matriz de compatibilidad. Hay una excepción deliberada: el laboratorio `113` comienza en `v1.35.x`, porque su tema es el propio proceso de actualización menor a `v1.36.x`.
+- **La versión de formación y los laboratorios principales `101-114` de este curso es `v1.36`** (`k8_version = "1.36.0"` en sus entornos de laboratorio): en ella se comprueban los comandos, flags y el comportamiento de API nativos de Kubernetes del curso; la compatibilidad de los componentes de terceros debe verificarse con su propia matriz de compatibilidad. Hay una excepción deliberada: el laboratorio `113` comienza en `v1.35.x`, porque su tema es el propio proceso de actualización menor a `v1.36.x`.
 - **Linux Foundation define la versión del entorno de examen, que puede quedar por detrás de la versión del curso.** La página principal de [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) indica Kubernetes **v1.35**, pero Important Instructions y las FAQ se actualizan de forma independiente y pueden mostrar temporalmente otra versión. Para un intento concreto, tienen prioridad ExamUI y las instrucciones del examen asignado. La descripción general publicada del programa de CNCF sigue llamándose [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), pero esto no anula los parámetros especificados por Linux Foundation para su intento. Por tanto, **no considere `v1.36` como la versión del examen**.
 
 La página de CKS y las FAQ se actualizan de forma independiente y pueden discrepar temporalmente. Justo antes de un intento, confirme la versión de Kubernetes, la cantidad y el formato de las tareas, la puntuación mínima, el prerrequisito y los recursos permitidos, primero en la página principal de [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) y después en ExamUI para el intento asignado. No considere permanentes la versión ni las reglas registradas en el curso.
@@ -204,7 +204,7 @@ Un error típico es aplicar una herramienta de protección sin comprobar la ruta
 ## 01.9 Resumen del capítulo
 
 - CKS continúa CKA y comprueba la protección práctica del clúster, los workload, los Nodes y la supply chain.
-- La versión objetivo del curso y los laboratorios principales `101-113` es Kubernetes v1.36 (el laboratorio `113` comienza en v1.35.x, porque su tema es la propia actualización a v1.36.x).
+- La versión objetivo del curso y los laboratorios principales `101-114` es Kubernetes v1.36 (el laboratorio `113` comienza en v1.35.x, porque su tema es la propia actualización a v1.36.x).
 - El examen exige soltura en el terminal, con varios clústeres y la configuración de Nodes.
 - Los seis dominios abarcan la configuración del clúster, hardening, workload, supply chain y protección en runtime.
 - Los nuevos énfasis del programa de 2024 son Cilium, CIS, SBOM, KubeLinter y contenedores aislados.
@@ -237,7 +237,7 @@ En un formato performance-based, la tarea se realiza en el terminal sobre los cl
 <details>
 <summary>3. ¿Qué versión de Kubernetes está fijada en este curso y sus laboratorios?</summary>
 
-Para la formación y los laboratorios principales `101-113` está fijada Kubernetes `v1.36` (`k8_version = "1.36.0"`). Linux Foundation establece la versión del examen, y no se puede deducir automáticamente de la versión del curso.
+Para la formación y los laboratorios principales `101-114` está fijada Kubernetes `v1.36` (`k8_version = "1.36.0"`). Linux Foundation establece la versión del examen, y no se puede deducir automáticamente de la versión del curso.
 </details>
 
 <details>

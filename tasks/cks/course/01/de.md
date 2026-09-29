@@ -47,7 +47,7 @@ Eine Aufgabe kann einen separaten host zuweisen: Führen Sie in diesem Fall `ssh
 
 Kubernetes-Versionen müssen unterschieden werden:
 
-- **Die Ausbildungs- und core labs-Version `101-113` dieses Kurses ist `v1.36`** (`k8_version = "1.36.0"` in ihren Laborumgebungen): Darin werden Kubernetes-native Befehle, Flags und API-Verhalten des Kurses geprüft; die Kompatibilität von Third-Party-Komponenten muss anhand ihrer eigenen support matrix geprüft werden. Konstruktionsbedingte Ausnahme ist Lab `113`: Sein Cluster startet mit `v1.35.x`, denn die Aufgabenstellung behandelt den Prozess eines minor upgrade auf `v1.36.x`.
+- **Die Ausbildungs- und core labs-Version `101-114` dieses Kurses ist `v1.36`** (`k8_version = "1.36.0"` in ihren Laborumgebungen): Darin werden Kubernetes-native Befehle, Flags und API-Verhalten des Kurses geprüft; die Kompatibilität von Third-Party-Komponenten muss anhand ihrer eigenen support matrix geprüft werden. Konstruktionsbedingte Ausnahme ist Lab `113`: Sein Cluster startet mit `v1.35.x`, denn die Aufgabenstellung behandelt den Prozess eines minor upgrade auf `v1.36.x`.
 - **Die Version der Prüfungsumgebung legt die Linux Foundation fest, und sie kann hinter der Kursversion zurückliegen.** Die Hauptseite [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) nennt Kubernetes **v1.35**, Important Instructions und FAQ werden jedoch unabhängig aktualisiert und können vorübergehend eine andere Version zeigen. Für den konkreten Versuch haben ExamUI und die Anweisungen der zugewiesenen Prüfung Vorrang. Das veröffentlichte CNCF curriculum overview bleibt nach Dateinamen [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), dies hebt die von der Linux Foundation für den Versuch angegebenen Parameter jedoch nicht auf. **Betrachten Sie `v1.36` daher nicht als Prüfungsversion.**
 
 Die CKS-Seiten und FAQ werden unabhängig aktualisiert und können vorübergehend voneinander abweichen. Bestätigen Sie unmittelbar vor dem Versuch Kubernetes-Version, Anzahl und Format der Aufgaben, Bestehensgrenze, Voraussetzungen und erlaubte Ressourcen zuerst auf der CKS-Hauptseite [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) und danach in ExamUI für den zugewiesenen Versuch. Verlassen Sie sich nicht darauf, dass die im Kurs dokumentierte Version oder Regeln dauerhaft gelten.
@@ -204,7 +204,7 @@ Ein typischer Fehler besteht darin, ein Schutzmittel ohne Überprüfung des Angr
 ## 01.9 Zusammenfassung des Kapitels
 
 - CKS setzt CKA fort und prüft den praktischen Schutz von Cluster, workload, Nodes und supply chain.
-- Die Zielversion des Kurses und der core labs `101-113` ist Kubernetes v1.36 (Lab `113` beginnt mit v1.35.x, da seine Aufgabe das Upgrade selbst auf v1.36.x ist).
+- Die Zielversion des Kurses und der core labs `101-114` ist Kubernetes v1.36 (Lab `113` beginnt mit v1.35.x, da seine Aufgabe das Upgrade selbst auf v1.36.x ist).
 - Die Prüfung verlangt sicheren Umgang im Terminal, mit mehreren Clustern und mit Node-Konfiguration.
 - Sechs Domänen decken Cluster-Setup, Hardening, workload, Supply Chain und Runtime-Schutz ab.
 - Neue Schwerpunkte des Curriculums 2024 sind Cilium, CIS, SBOM, KubeLinter und sandboxed containers.
@@ -237,7 +237,7 @@ In einem performance-based Format wird die Aufgabe im Terminal auf bereitgestell
 <details>
 <summary>3. Welche Kubernetes-Version ist in diesem Kurs und den Laborübungen festgelegt?</summary>
 
-Für die Ausbildung und core labs `101-113` ist Kubernetes `v1.36` (`k8_version = "1.36.0"`) festgelegt. Die Prüfungsversion legt die Linux Foundation fest; sie kann nicht automatisch aus der Kursversion abgeleitet werden.
+Für die Ausbildung und core labs `101-114` ist Kubernetes `v1.36` (`k8_version = "1.36.0"`) festgelegt. Die Prüfungsversion legt die Linux Foundation fest; sie kann nicht automatisch aus der Kursversion abgeleitet werden.
 </details>
 
 <details>

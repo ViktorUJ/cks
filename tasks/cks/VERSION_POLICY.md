@@ -6,11 +6,11 @@ Three versions are independent and must not be automatically aligned:
 
 | Track | Current value | Source of truth |
 |---|---:|---|
-| Training labs (core, `labs/101-113`) | Kubernetes `v1.36` (lab `113` is an exception: starts on `v1.35.x`, upgrades to `v1.36.x` - that upgrade is the task's own topic) | `env.hcl` of the core labs, verified tool compatibility |
+| Training labs (core, `labs/101-114`) | Kubernetes `v1.36` (lab `113` is an exception: starts on `v1.35.x`, upgrades to `v1.36.x` - that upgrade is the task's own topic) | `env.hcl` of the core labs, verified tool compatibility |
 | CKS exam environment | Kubernetes `v1.35` | LF CKS product page + LF "Important Instructions: CKS" (checked 2026-09-10) + LF FAQ (checked 2026-09-13); FAQ is an independent official observation when it publishes the environment version |
 | CKS curriculum | `CKS Curriculum v1.34` | root-level CKS curriculum PDF in `cncf/curriculum` |
 
-The single training baseline is `labs/101-113`, complemented by the full-exam simulations
+The single training baseline is `labs/101-114`, complemented by the full-exam simulations
 in `mock/01-04`. There is no separate lab track.
 
 A version mismatch is not by itself a defect. Before releasing the course, separately:

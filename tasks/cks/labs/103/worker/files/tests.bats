@@ -422,8 +422,8 @@ record_result() {
   sched_phase=$(kubectl get pods -n kube-system --context "$CTX" -l component=kube-scheduler -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
 
   # Same before/after discovery cycle as tasks 7/8, applied to check IDs that live under
-  # kube-bench's "controlplane" target (1.3.2 kube-controller-manager, 1.4.1 kube-scheduler)
-  # rather than "master" (1.1.x file permissions).
+  # kube-bench's "master" target in cis-1.12 (1.3.2 kube-controller-manager, 1.4.1
+  # kube-scheduler) - same target as 1.1.x file permissions, just a different subsection.
   cm_before_ok=false
   grep -Eq '^\[FAIL\][[:space:]]+1[.]3[.]2([[:space:]]|$)' "$cm_before" 2>/dev/null && cm_before_ok=true
   cm_after_ok=false
