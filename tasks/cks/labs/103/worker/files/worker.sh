@@ -41,10 +41,16 @@ chown -R ubuntu:ubuntu /var/work/tests/artifacts
 
 # Trusted checksum fixture для проверки задания 6: checker должен сравнивать реально
 # установленные бинарники с независимо полученными официальными суммами, а не доверять
-# student-owned artifact на слово. Загружаем их один раз при bootstrap в checker-only
-# каталог, недоступный из student-facing README/solution.
-mkdir -p /var/work/tests/checker-fixtures
-curl -fsSL -o /var/work/tests/checker-fixtures/kubelet.sha256 \
+# student-owned artifact на слово. Живёт ВНЕ /var/work/tests намеренно: shared
+# work_pc_v2 bootstrap template делает "chmod -R 777 /var/work/tests" ДО запуска этого
+# lab-specific script, поэтому даже root:root 0644 файл внутри /var/work/tests можно
+# было бы удалить/подменить без sudo через writable parent directory - сам каталог
+# фикстур должен быть вне этого дерева. Тот же паттерн, что уже принят в лабе 105.
+CHECKER_DIR=/var/lib/cks-lab103-checker
+install -d -o root -g root -m 0711 "$CHECKER_DIR"
+curl -fsSL -o "$CHECKER_DIR/kubelet.sha256" \
   "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kubelet.sha256"
-curl -fsSL -o /var/work/tests/checker-fixtures/kubectl.sha256 \
+curl -fsSL -o "$CHECKER_DIR/kubectl.sha256" \
   "https://dl.k8s.io/release/v1.36.0/bin/linux/amd64/kubectl.sha256"
+chown root:root "$CHECKER_DIR/kubelet.sha256" "$CHECKER_DIR/kubectl.sha256"
+chmod 0444 "$CHECKER_DIR/kubelet.sha256" "$CHECKER_DIR/kubectl.sha256"

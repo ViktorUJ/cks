@@ -120,7 +120,7 @@ ssh control-plane hostname
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
 
-Проверка ожидает четыре конкретных строки-маркера в начале файла: `kubernetes_version=v1.36.x`, `kube_bench_version=v0.16.0`, `benchmark=cis-1.12`, `mapping_status=forced-approximate` - это не декоративный текст, а формат, который тест ищет буквально. Запускайте `kube-bench` на самом control-plane node, а не удалённо с worker - у kube-bench нет режима "проверить чужую ноду по SSH". Не забудьте `--targets master,node,controlplane,etcd,policies` - без явного указания targets секции `etcd` и `policies` могут быть пропущены. Также добавляйте `--config-dir /opt/kube-bench/cfg` явно: у бинарника `--config-dir` по умолчанию указывает на `/etc/kube-bench/cfg` (а не на текущую директорию), которого здесь не существует, из-за чего без явного флага `kube-bench` завершается ошибкой `config file is missing 'target_mapping' section`.
+Проверка ожидает четыре конкретных строки-маркера в начале файла: `kubernetes_version=v1.36.x`, `kube_bench_version=v0.16.0`, `benchmark=cis-1.12`, `mapping_status=forced-approximate` - это не декоративный текст, а формат, который тест ищет буквально. Запускайте `kube-bench` на самом control-plane node, а не удалённо с worker - у kube-bench нет режима "проверить чужую ноду по SSH". Не забудьте `--targets master,node,controlplane,etcd,policies` - без явного указания targets секции `etcd` и `policies` могут быть пропущены. `kube-bench` уже установлен вместе с конфигурацией в его штатном каталоге `/etc/kube-bench/cfg`, поэтому `--config-dir` в этой лабе указывать не нужно - используйте этот флаг только если вы сами разместили `cfg` в другом каталоге и передаёте фактический путь к этой копии.
 </details>
 
 ---

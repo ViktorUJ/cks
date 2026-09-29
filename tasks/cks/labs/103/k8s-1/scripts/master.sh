@@ -17,9 +17,14 @@ case "$arch" in
 esac
 workdir=$(mktemp -d)
 trap 'rm -rf "$workdir"' EXIT
-curl -fsSL -o "$workdir/kube-bench.tar.gz" \
-  "https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION}_linux_${release_arch}.tar.gz"
-tar -xzf "$workdir/kube-bench.tar.gz" -C "$workdir"
+asset="kube-bench_${KUBE_BENCH_VERSION}_linux_${release_arch}.tar.gz"
+base="https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}"
+curl -fsSL -o "$workdir/$asset" "$base/$asset"
+# Same lesson lab 103's own task 6 teaches: verify against an independently published
+# checksum, not one computed from the file itself.
+curl -fsSL -o "$workdir/checksums.txt" "$base/kube-bench_${KUBE_BENCH_VERSION}_checksums.txt"
+(cd "$workdir" && grep -E "[[:space:]]${asset}\$" checksums.txt | sha256sum --check --strict -)
+tar -xzf "$workdir/$asset" -C "$workdir"
 # cfg goes to kube-bench's own default --config-dir (/etc/kube-bench/cfg) - exactly where a
 # real exam install would put it - so students never need to pass --config-dir explicitly.
 install -d -m 0755 /opt/kube-bench /etc/kube-bench

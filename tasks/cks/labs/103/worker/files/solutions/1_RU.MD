@@ -459,19 +459,27 @@ grep -A1 '1.4.1' /var/work/tests/artifacts/9/scheduler-after.txt
 
 ```bash
 WORKER_NODE=$(k get nodes -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}')
+
+cat <<'EOF' > /tmp/install-kube-bench.sh
 KUBE_BENCH_VERSION=0.16.0
-ssh "$WORKER_NODE" "
-  arch=\$(dpkg --print-architecture)
-  workdir=\$(mktemp -d)
-  curl -fsSL -o \"\$workdir/kube-bench.tar.gz\" \
-    'https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}/kube-bench_${KUBE_BENCH_VERSION}_linux_'\"\$arch\"'.tar.gz'
-  tar -xzf \"\$workdir/kube-bench.tar.gz\" -C \"\$workdir\"
-  sudo install -d -m 0755 /opt/kube-bench /etc/kube-bench
-  sudo cp -a \"\$workdir\"/cfg /etc/kube-bench/cfg
-  sudo install -m 0755 \"\$workdir/kube-bench\" /opt/kube-bench/kube-bench
-  sudo ln -sf /opt/kube-bench/kube-bench /usr/local/bin/kube-bench
-  rm -rf \"\$workdir\"
-"
+arch=$(dpkg --print-architecture)
+workdir=$(mktemp -d)
+asset="kube-bench_${KUBE_BENCH_VERSION}_linux_${arch}.tar.gz"
+base="https://github.com/aquasecurity/kube-bench/releases/download/v${KUBE_BENCH_VERSION}"
+curl -fsSL -o "$workdir/$asset" "$base/$asset"
+# Тот же приём, что в задании 6: сверяем с независимо опубликованной суммой, а не с
+# суммой, вычисленной из самого файла.
+curl -fsSL -o "$workdir/checksums.txt" "$base/kube-bench_${KUBE_BENCH_VERSION}_checksums.txt"
+(cd "$workdir" && grep -E "[[:space:]]${asset}\$" checksums.txt | sha256sum --check --strict -)
+tar -xzf "$workdir/$asset" -C "$workdir"
+sudo install -d -m 0755 /opt/kube-bench /etc/kube-bench
+sudo cp -a "$workdir"/cfg /etc/kube-bench/cfg
+sudo install -m 0755 "$workdir/kube-bench" /opt/kube-bench/kube-bench
+sudo ln -sf /opt/kube-bench/kube-bench /usr/local/bin/kube-bench
+rm -rf "$workdir"
+EOF
+scp /tmp/install-kube-bench.sh "$WORKER_NODE":/tmp/install-kube-bench.sh
+ssh "$WORKER_NODE" 'bash /tmp/install-kube-bench.sh'
 ssh "$WORKER_NODE" 'kube-bench version'
 
 mkdir -p /var/work/tests/artifacts/10
