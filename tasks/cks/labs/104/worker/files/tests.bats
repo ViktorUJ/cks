@@ -791,10 +791,12 @@ except Exception:
   kubeconfig_ok=false
   kubeconfig_file="/var/work/tests/artifacts/12/john.kubeconfig"
   if [[ -s "$kubeconfig_file" ]]; then
+    set +e
     kubectl --kubeconfig="$kubeconfig_file" get pods -n development >/dev/null 2>&1
     kubeconfig_allowed_status=$?
     kubeconfig_denied_out=$(kubectl --kubeconfig="$kubeconfig_file" get pods -n "$NS" 2>&1)
     kubeconfig_denied_status=$?
+    set -e
     if [[ "$kubeconfig_allowed_status" -eq 0 ]] \
       && [[ "$kubeconfig_denied_status" -ne 0 && "$kubeconfig_denied_out" == *"orbidden"* ]]; then
       kubeconfig_ok=true
