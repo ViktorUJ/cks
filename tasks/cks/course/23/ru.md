@@ -21,7 +21,7 @@
 > [главе 34 CKA](../../../cka/course/34/ru.md). Здесь предполагается, что вы умеете
 > найти Pod, Service, node и проверить обычный `curl`.
 
-> 🧠 Cilium WireGuard/IPsec защищает node-to-node transport, mesh mTLS — proxy-соединения и workload identity, NetworkPolicy — разрешение потока.
+> 🧠 Cilium WireGuard/IPsec защищает node-to-node transport, mesh mTLS - proxy-соединения и workload identity, NetworkPolicy - разрешение потока.
 
 ## 23.1. Две задачи, два уровня: encryption и mTLS
 
@@ -72,7 +72,7 @@ flowchart TB
 > 🎯 До изменения зафиксируйте CNI, версии, firewall, MTU и cross-node placement тестовых Pod.
 
 
-**Зафиксировать** здесь значит не менять конфигурацию, а сохранить baseline — снимок
+**Зафиксировать** здесь значит не менять конфигурацию, а сохранить baseline - снимок
 работающего состояния, с которым можно сравнить результат после rollout. Запишите вывод
 проверок в заметку change/incident или учебные записи: какой CNI уже обслуживает сеть и его
 версию; какие версии Kubernetes/kernel/Cilium участвуют; разрешает ли firewall нужный
@@ -234,7 +234,7 @@ kubectl -n kube-system get pods -l k8s-app=cilium -o name |
 
 Ожидаются healthy agents и encryption state без ошибок peer/handshake на каждой node. В
 зависимости от версии Cilium команда может показывать интерфейс WireGuard, peers, public
-keys или счётчики. `cilium-dbg` — CLI локального agent: если subcommand отсутствует,
+keys или счётчики. `cilium-dbg` - CLI локального agent: если subcommand отсутствует,
 выполните `cilium-dbg --help` **в этом же agent** и сверяйте документацию установленной
 версии Cilium, потому что этот binary поставляется вместе с agent. Внешний Cilium CLI
 `cilium`, который запускают с административной машины, имеет отдельную нумерацию: для него
@@ -272,12 +272,12 @@ control-plane.
 
 > 🏭 Для скомпрометированной node: изоляция, сохранение evidence, вывод старого peer из доверия; private key не попадает в ticket, Git или чат.
 
-**Что это означает на практике:** «скомпрометирована» — есть основание считать, что
-злоумышленник мог выполнять команды на node или читать её данные. **Изолировать** — не
+**Что это означает на практике:** «скомпрометирована» - есть основание считать, что
+злоумышленник мог выполнять команды на node или читать её данные. **Изолировать** - не
 назначать на неё новые Pod и ограничить её участие в кластере по approved incident procedure;
-это сдерживает распространение, но не стирает следы. **Evidence** — нужные для расследования
+это сдерживает распространение, но не стирает следы. **Evidence** - нужные для расследования
 метаданные и логи (время, node name, состояние Cilium и события), а не копия private key.
-**Вывести старый peer из доверия** — после регенерации key или замены node убедиться, что
+**Вывести старый peer из доверия** - после регенерации key или замены node убедиться, что
 остальные nodes больше не принимают traffic, аутентифицированный старым public key. Следующий
 список показывает безопасный порядок этих действий.
 
@@ -298,7 +298,7 @@ Cilium автоматизирует lifecycle keys, но security design всё 
 `kubectl get secret -A` и широкое право читать Secrets дают доступ не только к IPsec
 material, но и к множеству иных секретов. Ограничьте RBAC и audit доступ к `kube-system`.
 
-> 🔬 IPsec — альтернативный backend Cilium с key rotation, ESP-диагностикой, совместимым Cilium CLI и key-overlap window.
+> 🔬 IPsec - альтернативный backend Cilium с key rotation, ESP-диагностикой, совместимым Cilium CLI и key-overlap window.
 
 ## 23.5. IPsec: когда нужен и как не сломать key management
 
@@ -311,7 +311,7 @@ Security Associations. Его часто выбирают, когда корпо
 Типовой переход для Cilium release с поддержкой IPsec начинается с Secret ключа: agent
 должен получить `cilium-ipsec-keys` **до** включения `encryption.type=ipsec`. Выполняйте
 создание только с административной машины, где установлен поддерживаемый совместимый Cilium
-CLI и есть kubeconfig. Если Secret уже существует, не перезаписывайте его случайно — сначала
+CLI и есть kubeconfig. Если Secret уже существует, не перезаписывайте его случайно - сначала
 проверьте owner и version-specific rotation procedure:
 
 ```bash
@@ -382,12 +382,12 @@ packet loss. Практический минимум для change request:
 следом намеренно: это **не** следующий параметр Cilium и не prerequisite для IPsec, а
 независимый дополнительный слой. Для cross-node запроса Cilium защищает outer packet между
 nodes, тогда как Istio mTLS позволяет proxy проверить identity конкретного workload. Поэтому
-healthy Cilium encryption ещё не доказывает injection, certificate или mTLS policy Istio —
+healthy Cilium encryption ещё не доказывает injection, certificate или mTLS policy Istio -
 эти проверки выполняются отдельно в следующем разделе.
 
 > 🎯 Istio mTLS связывает certificate с workload identity; отличайте `PeerAuthentication: STRICT` от `DestinationRule` с `ISTIO_MUTUAL` и проверяйте proxy/injection.
 
-> 🔬 **Upstream identity primitive.** Kubernetes v1.37 стабилизировал Pod Certificates и ClusterTrustBundles. Они дают X.509 primitives на уровне Kubernetes, но не делают Istio/SPIFFE identity plane автоматически ненужным: signer, trust model и mesh enforcement — отдельные архитектурные решения. См. [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Upstream identity primitive.** Kubernetes v1.37 стабилизировал Pod Certificates и ClusterTrustBundles. Они дают X.509 primitives на уровне Kubernetes, но не делают Istio/SPIFFE identity plane автоматически ненужным: signer, trust model и mesh enforcement - отдельные архитектурные решения. См. [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 23.6. Istio: sidecar, SPIFFE workload identity и `PeerAuthentication`
 
@@ -405,7 +405,7 @@ Istio решает другую часть задачи: proxy workload полу
 и проверяют identity peer. `PeerAuthentication: STRICT` может запретить plaintext inbound
 traffic. В связке они работают так: **Istio защищает и аутентифицирует workload-to-workload
 connection, Cilium дополнительно защищает пакет на недоверенном межузловом участке**.
-`NetworkPolicy` остаётся третьим слоем — она определяет, какой flow вообще разрешён.
+`NetworkPolicy` остаётся третьим слоем - она определяет, какой flow вообще разрешён.
 
 | Вопрос | Cilium WireGuard/IPsec | Istio mTLS |
 |---|---|---|
@@ -424,7 +424,7 @@ underlay: скрыть inner Pod IP/port и другой L3/L4 metadata от ф�
 чувствительный cross-node flow вне mesh либо выполнить policy/compliance требование к
 шифрованию между nodes. Оба слоя нужны только когда применимы **обе** цели: workload
 identity/mTLS **и** защита underlay или non-mesh traffic. Если application не требует
-workload identity или mesh-compatible behavior, Istio не включают автоматически — сначала
+workload identity или mesh-compatible behavior, Istio не включают автоматически - сначала
 оценивают threat model, compatibility и overhead.
 Istio sidecar (`istio-proxy`, Envoy) перехватывает inbound/outbound workload traffic.
 Istiod выдаёт workload сертификат на основе Kubernetes ServiceAccount; proxy устанавливают
@@ -433,11 +433,11 @@ mTLS и проверяют identity peer. Workload identity имеет форм�
 слушать обычный HTTP порт, потому что TLS завершается в sidecar, а не в app container.
 
 В **ambient mode** Istio не добавляет отдельный sidecar в каждый Pod: вместо этого на
-каждой node работает `ztunnel` (**Zero Trust Tunnel**) — специальный node-level proxy.
+каждой node работает `ztunnel` (**Zero Trust Tunnel**) - специальный node-level proxy.
 Он выполняет L3/L4-задачи mesh, в том числе mTLS и authentication, не заставляя приложение
 самостоятельно работать с TLS.
 
-`HBONE` (**HTTP-Based Overlay Network Environment**) — защищённый Istio tunnel между
+`HBONE` (**HTTP-Based Overlay Network Environment**) - защищённый Istio tunnel между
 компонентами mesh. Он переносит несколько TCP streams через одно mTLS connection; поэтому
 workload traffic может быть защищён, хотя в списке containers Pod нет `istio-proxy`.
 Отсутствие `istio-proxy` в ambient mode не означает plaintext client. В обеих моделях
@@ -777,7 +777,7 @@ linkerd install --crds | kubectl apply -f -
 linkerd install | kubectl apply -f -
 linkerd check
 
-# Viz — отдельное extension; устанавливайте его до viz commands.
+# Viz - отдельное extension; устанавливайте его до viz commands.
 linkerd viz install | kubectl apply -f -
 linkerd viz check
 ```
@@ -1088,7 +1088,7 @@ WireGuard принимает пакет только после криптогр
 <details>
 <summary>3. Какие firewall-протоколы надо разрешить между нодами: UDP/51871 для Cilium WireGuard и ESP (IP protocol 50) для Cilium IPsec?</summary>
 
-Для WireGuard между worker nodes разрешают UDP порт Cilium, по умолчанию `51871`, но фактическое значение проверяют в установленной конфигурации. Для Cilium IPsec разрешают ESP — IP protocol 50. Типичный IKE/NAT-T UDP/4500 не относится к описываемому Cilium IPsec механизму.
+Для WireGuard между worker nodes разрешают UDP порт Cilium, по умолчанию `51871`, но фактическое значение проверяют в установленной конфигурации. Для Cilium IPsec разрешают ESP - IP protocol 50. Типичный IKE/NAT-T UDP/4500 не относится к описываемому Cilium IPsec механизму.
 </details>
 
 <details>
@@ -1100,7 +1100,7 @@ Peers могут оказаться с разными ключами, что в�
 <details>
 <summary>5. Какова разница между Istio `PeerAuthentication: STRICT` и `DestinationRule` с `ISTIO_MUTUAL`?</summary>
 
-`PeerAuthentication: STRICT` — server-side inbound policy: proxy принимает только mTLS и отклоняет plaintext. `DestinationRule` с `ISTIO_MUTUAL` — client-side намерение: Envoy использует сертификаты и trust bundle Istio для outbound соединения. Это две стороны одной связи; `SIMPLE` не предъявляет workload client certificate, а `DISABLE` отправляет plaintext.
+`PeerAuthentication: STRICT` - server-side inbound policy: proxy принимает только mTLS и отклоняет plaintext. `DestinationRule` с `ISTIO_MUTUAL` - client-side намерение: Envoy использует сертификаты и trust bundle Istio для outbound соединения. Это две стороны одной связи; `SIMPLE` не предъявляет workload client certificate, а `DISABLE` отправляет plaintext.
 </details>
 
 <details>

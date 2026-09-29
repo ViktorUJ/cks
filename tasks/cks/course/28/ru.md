@@ -60,12 +60,12 @@ Severity - приоритет для очереди, а не доказател�
 наличие фикса и срок устранения фиксируют в vulnerability-management процессе.
 
 Для production-triage добавьте два внешних сигнала к этому анализу. [CISA Known Exploited
-Vulnerabilities (KEV)](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) —
+Vulnerabilities (KEV)](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) -
 авторитетный каталог CVE с подтверждённой эксплуатацией *in the wild*; он является важным
 входом для приоритизации. [FIRST EPSS](https://www.first.org/epss/) оценивает вероятность
 эксплуатации CVE в ближайшие 30 дней, но не является самостоятельным risk score. Confirmed
 exploitation или присутствие в KEV должно резко повышать приоритет. EPSS используйте вместе с
-достижимостью уязвимого кода, impact и контекстом среды — например, exposure, privileges и
+достижимостью уязвимого кода, impact и контекстом среды - например, exposure, privileges и
 компенсирующими контролями. Ни KEV, ни EPSS не являются экзаменационным gate и не заменяют
 анализ достижимости или экспозиции конкретного workload.
 
@@ -269,7 +269,7 @@ trivy config --severity HIGH,CRITICAL Dockerfile
 | Передавать `--ignore-unfixed` без учёта | Backlog известных рисков становится невидимым | Отдельный отчёт и SLA на no-fix CVE |
 | Печатать secret findings в общий CI log | Секрет может стать доступен читателям log | Маскировать output, отзывать раскрытый secret |
 
-> 🔬 Grype и Clair — альтернативные scanners; выбор инструмента не меняет требования сканировать digest, хранить evidence и повторно проверять remediation.
+> 🔬 Grype и Clair - альтернативные scanners; выбор инструмента не меняет требования сканировать digest, хранить evidence и повторно проверять remediation.
 
 ## 28.5. Grype, Clair и сканирование при допуске
 
@@ -380,7 +380,7 @@ scan и identifier или версию базы из лога вместе с `t
 В cluster полезны два независимых контроля:
 
 1. **Inventory и continuous scanning.** Получать runtime identifiers из всех Pod status,
-   canonical digest после сопоставления, namespace, owner и report, а отдельно —
+   canonical digest после сопоставления, namespace, owner и report, а отдельно -
    `spec.volumes[].image.reference`. Для multi-platform artifact сопоставлять node architecture
    и workload с platform manifest; Trivy Operator создаёт post-admission reports и обнаруживает
    новую CVE без нового deployment.
@@ -434,7 +434,7 @@ test "$deployment_arch" = "$required_arch" || {
   exit 1
 }
 
-# Контракт: IMAGE_DIGEST — canonical OCI digest вида sha256:<64-hex>,
+# Контракт: IMAGE_DIGEST - canonical OCI digest вида sha256:<64-hex>,
 # например значение containerimage.digest, возвращённое Buildx после push.
 image_digest="${IMAGE_DIGEST:?set verified image digest (sha256:<64-hex>)}"
 new_image="registry.example.com/payments/api:1.4.3@${image_digest}"
@@ -539,13 +539,13 @@ artifact, безопасно заменить его и доказать, что
 <details>
 <summary>1. Почему успешный scan вчера не доказывает отсутствие CVE сегодня?</summary>
 
-Vulnerability database постоянно обновляется, поэтому вчерашний чистый digest может сегодня получить новую CVE запись без изменения Dockerfile. Scan — это snapshot состава и базы в момент проверки. Поэтому images регулярно пересканируют после build, перед promotion/deploy и по расписанию для уже опубликованных digest.
+Vulnerability database постоянно обновляется, поэтому вчерашний чистый digest может сегодня получить новую CVE запись без изменения Dockerfile. Scan - это snapshot состава и базы в момент проверки. Поэтому images регулярно пересканируют после build, перед promotion/deploy и по расписанию для уже опубликованных digest.
 </details>
 
 <details>
 <summary>2. Что меняют флаги `--severity HIGH,CRITICAL`, `--ignore-unfixed` и `--exit-code 1`?</summary>
 
-`--scanners vuln` ограничивает этот gate CVE/vulnerability findings; secret scanning — отдельный
+`--scanners vuln` ограничивает этот gate CVE/vulnerability findings; secret scanning - отдельный
 control. `--severity HIGH,CRITICAL` оставляет в отчёте только vulnerability finding этих уровней.
 `--ignore-unfixed` исключает CVE без известной fixed version, но не устраняет их риск: их ведут
 отдельным процессом. `--exit-code 1` делает подходящую находку причиной ненулевого exit code и

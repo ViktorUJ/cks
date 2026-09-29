@@ -628,7 +628,7 @@ Private key - секретный материал, поэтому ему нуж�
 <details>
 <summary>7. Какими командами вы докажете, что после исправления API, etcd и kubelet здоровы?</summary>
 
-Для API и объектов используют `kubectl get --raw='/readyz?verbose'`, `kubectl get nodes` и `kubectl get --all-namespaces pods`. Static Pod и etcd проверяют `kubectl -n kube-system get pods -o wide` и `sudo crictl ps`, kubelet — `sudo systemctl status kubelet` и `journalctl -u kubelet`; затем повторяют нужный target или check `kube-bench`.
+Для API и объектов используют `kubectl get --raw='/readyz?verbose'`, `kubectl get nodes` и `kubectl get --all-namespaces pods`. Static Pod и etcd проверяют `kubectl -n kube-system get pods -o wide` и `sudo crictl ps`, kubelet - `sudo systemctl status kubelet` и `journalctl -u kubelet`; затем повторяют нужный target или check `kube-bench`.
 </details>
 
 ## Практика

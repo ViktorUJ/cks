@@ -64,7 +64,7 @@ root-процессом небезопасен, а удаление сертиф
 **осмысленно**: оставляют runtime, CA bundle, timezone data и dynamic libraries, которые
 действительно требуются приложению.
 
-> 🧠 Меньше файлов в runtime image — меньше post-exploitation инструментов у атакующего; выбор между `scratch`/distroless/Alpine — trade-off между attack surface и диагностируемостью.
+> 🧠 Меньше файлов в runtime image - меньше post-exploitation инструментов у атакующего; выбор между `scratch`/distroless/Alpine - trade-off между attack surface и диагностируемостью.
 
 ## 24.2. `scratch`, distroless и Alpine: выбрать runtime по потребностям
 
@@ -252,7 +252,7 @@ immutable: если secret создан в layer stage, который вход�
 `RUN rm /tmp/token` в следующем layer не стирает его байты из нижнего layer. Поэтому
 secret нельзя передавать через `COPY`, `ADD`, `ARG` или `ENV`.
 
-Обычный multi-stage build — другой случай: отдельные layers builder не становятся layers
+Обычный multi-stage build - другой случай: отдельные layers builder не становятся layers
 final runtime image, если final stage начинается с собственного `FROM` и через
 `COPY --from` переносится только нужный artifact.
 
@@ -477,7 +477,7 @@ Debug image также должен иметь конкретную версию
 | secret найден в `dive`/history | credential скопирован, передан `ARG` или удалён в позднем layer | отозвать secret, пересобрать без него, использовать BuildKit/Podman secret mount |
 | Docker и Podman собрали разный результат | разный builder/cache/platform или незафиксированный base image | явно задать platform при необходимости, зафиксировать digest и сравнить final digest |
 
-> 🏭 Pinned base/release digest, узкий context, secret management, non-root runtime, SBOM/scan/signature и admission; отладка — в утверждённом ephemeral debug image.
+> 🏭 Pinned base/release digest, узкий context, secret management, non-root runtime, SBOM/scan/signature и admission; отладка - в утверждённом ephemeral debug image.
 
 ## 24.7. Как это применяют в продакшене
 
@@ -564,7 +564,7 @@ Debug image также должен иметь конкретную версию
 <details>
 <summary>1. Почему shell и package manager в runtime image увеличивают последствия RCE, хотя их отсутствие не исправляет уязвимость приложения?</summary>
 
-После RCE shell, `curl`/`wget`, compiler и package manager дают атакующему готовые средства скачать payload, ставить утилиты и исследовать filesystem. Их отсутствие сокращает post-exploitation surface, но не исправляет исходную RCE и не заменяет SecurityContext, NetworkPolicy или runtime detection. Поэтому минимизация — defence in depth, а не граница безопасности сама по себе.
+После RCE shell, `curl`/`wget`, compiler и package manager дают атакующему готовые средства скачать payload, ставить утилиты и исследовать filesystem. Их отсутствие сокращает post-exploitation surface, но не исправляет исходную RCE и не заменяет SecurityContext, NetworkPolicy или runtime detection. Поэтому минимизация - defence in depth, а не граница безопасности сама по себе.
 </details>
 
 <details>
@@ -606,7 +606,7 @@ Debug image также должен иметь конкретную версию
 <details>
 <summary>8. Какие признаки в `dive` указывают на слишком широкий context или waste в layers?</summary>
 
-Большой layer от `COPY . .` обычно означает широкий context или неверный порядок Dockerfile. Compiler, package cache, tests, `.git`, `.env`, private key и `.npmrc` показывают лишнее содержимое, а wasted bytes после `RUN install` и отдельного `RUN rm` — позднее удаление. Пустой либо root `User` также сигнализирует, что Dockerfile не задал non-root user.
+Большой layer от `COPY . .` обычно означает широкий context или неверный порядок Dockerfile. Compiler, package cache, tests, `.git`, `.env`, private key и `.npmrc` показывают лишнее содержимое, а wasted bytes после `RUN install` и отдельного `RUN rm` - позднее удаление. Пустой либо root `User` также сигнализирует, что Dockerfile не задал non-root user.
 </details>
 
 <details>

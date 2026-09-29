@@ -15,7 +15,7 @@
 > поверхности атаки и без простоя.
 
 > **Что нужно знать из CKA.** Полная процедура `kubeadm upgrade`, различие `apply` и
-> `node`, `cordon`/`drain`/`uncordon`, PodDisruptionBudget и обновление ОС — отдельный
+> `node`, `cordon`/`drain`/`uncordon`, PodDisruptionBudget и обновление ОС - отдельный
 > lifecycle-навык. Здесь фиксируем необходимую security-последовательность: CVE, EOL,
 > advisories, version skew, evidence и зависимости ноды.
 
@@ -104,7 +104,7 @@ flowchart TB
 2. kubelet **не более чем на три minor-версии старее** API server.
 
 Из них следует порядок: сначала обновляют control plane, затем рабочие узлы. Допустимый
-skew — временное состояние для короткого rolling upgrade, а не нормальный режим жизни
+skew - временное состояние для короткого rolling upgrade, а не нормальный режим жизни
 старых нод месяцами. Диапазон для других компонентов зависит от версии и роли; перед
 изменением сверяйтесь с официальной
 [policy version skew](https://kubernetes.io/releases/version-skew-policy/).
@@ -179,11 +179,11 @@ CVE с меньшим CVSS, но без authentication в доступном и�
 
 ### Официальный маршрут
 
-- [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/) — основной документ: выбор target version, первый и дополнительные control-plane узлы, проверка кластера и recovery.
-- [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) — отдельная последовательность для worker-ноды Linux.
-- [Changing the Kubernetes package repository](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/change-package-repository/) — используйте, когда target minor требует переключения `pkgs.k8s.io` repository.
-- [Safely Drain a Node](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/) — поведение `drain`, PodDisruptionBudget и DaemonSet.
-- [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/) — границы совместимости, если формулировка задания вызывает сомнение.
+- [Upgrading kubeadm clusters](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/) - основной документ: выбор target version, первый и дополнительные control-plane узлы, проверка кластера и recovery.
+- [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) - отдельная последовательность для worker-ноды Linux.
+- [Changing the Kubernetes package repository](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/change-package-repository/) - используйте, когда target minor требует переключения `pkgs.k8s.io` repository.
+- [Safely Drain a Node](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/) - поведение `drain`, PodDisruptionBudget и DaemonSet.
+- [Version Skew Policy](https://kubernetes.io/releases/version-skew-policy/) - границы совместимости, если формулировка задания вызывает сомнение.
 
 Если target minor отличается от current upstream, в документации переключите selector версии
 на соответствующую ветку: команды и package versions должны относиться именно к target
@@ -208,7 +208,7 @@ release, а не к примеру из конспекта.
    health check не проходит, остановитесь и разберите причину; не добавляйте наугад
    `--force`, `--disable-eviction` или `--ignore-preflight-errors`.
 
-> 🎯 **CKS Core.** На экзамене документация — часть рабочего процесса: откройте guide,
+> 🎯 **CKS Core.** На экзамене документация - часть рабочего процесса: откройте guide,
 > сопоставьте текущий шаг с заданием и выполняйте его буквально. Не нужно создавать custom
 > automation или воспроизводить production change runbook.
 
@@ -239,7 +239,7 @@ workload и нодой. Поэтому inventory и patch policy должны о
 
 До планирования перехода на Kubernetes v1.35+ выполните preflight **на каждой ноде**:
 kubelet и runtime должны работать с cgroup v2 и согласованным `systemd` cgroup driver.
-`failCgroupV1` — поле `KubeletConfiguration`, а не feature gate; его default равен `true`
+`failCgroupV1` - поле `KubeletConfiguration`, а не feature gate; его default равен `true`
 с v1.35. Не отключайте его через `failCgroupV1: false`, чтобы продлить жизнь cgroup v1:
 временный override возможен лишь как краткая, документированная мера миграции. Если
 проверка не проходит, сначала мигрируйте ОС/runtime в stage и проверьте node image, а не

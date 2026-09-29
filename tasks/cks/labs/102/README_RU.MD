@@ -40,7 +40,7 @@ L3/L4 разрешает или запрещает соединение цели
 <details>
 <summary>3. Почему для доказательства L7-denial через Hubble важно captur'ить трафик именно во время теста, а не после?</summary>
 
-`hubble observe --follow`, запущенный до запроса, — удобный режим для controlled capture: он снижает риск, что нужный flow выйдет из retention buffer до сохранения. Это не единственный способ получить валидное evidence: обычный `hubble observe` может прочитать уже сохранённые события в пределах retention window (например, с корректным `--since`), а вывод можно экспортировать в файл. В любом варианте evidence должно однозначно связывать временное окно, source/destination, HTTP method/path и verdict с конкретными GET/POST test case.
+`hubble observe --follow`, запущенный до запроса, - удобный режим для controlled capture: он снижает риск, что нужный flow выйдет из retention buffer до сохранения. Это не единственный способ получить валидное evidence: обычный `hubble observe` может прочитать уже сохранённые события в пределах retention window (например, с корректным `--since`), а вывод можно экспортировать в файл. В любом варианте evidence должно однозначно связывать временное окно, source/destination, HTTP method/path и verdict с конкретными GET/POST test case.
 
 </details>
 

@@ -1,9 +1,9 @@
-# Лаба 109 — Шифрование Secret в etcd и минимальный доступ
+# Лаба 109 - Шифрование Secret в etcd и минимальный доступ
 
 ## Цель
 
 В этой CKS-лабе вы докажете, что Kubernetes Secret без encryption at rest хранится в
-etcd как читаемые bytes (base64 — не шифрование), включите `aescbc` через
+etcd как читаемые bytes (base64 - не шифрование), включите `aescbc` через
 `EncryptionConfiguration`, подключите его к static `kube-apiserver`, перепишете старые
 Secret и ограничите доступ к данным RBAC и `automountServiceAccountToken`.
 
@@ -53,7 +53,7 @@ base64 - это просто кодирование, обратимое без �
 | `k8s-1` | одноузловой kubeadm control-plane: Kubernetes **1.36.0**, containerd, **Calico** |
 | `worker` | рабочая машина с `kubectl`, `etcdctl` 3.6.0 и helper `etcdctl-109` |
 
-Control-plane намеренно принимает обычные Pod — отдельный Kubernetes worker не создаётся.
+Control-plane намеренно принимает обычные Pod - отдельный Kubernetes worker не создаётся.
 До начала заданий bootstrap создаёт namespace `encryption-109` и безобидный
 `legacy-secret`. Этот Secret создан **до** EncryptionConfiguration, поэтому служит
 контролируемым доказательством plaintext состояния.
@@ -82,7 +82,7 @@ check_result
 | **1** | **Доказать исходный plaintext Secret** |
 | :---: | :--- |
 | Что делаем | До включения шифрования запросите raw запись `/registry/secrets/encryption-109/legacy-secret` через `sudo etcdctl-109 get ... --print-value-only`, пропустите через `strings` и сохраните результат в `/var/work/109/plaintext-proof.txt`. |
-| Критерии приёмки | Файл непустой, содержит ровно marker `cks-109-legacy-plaintext` и не содержит `k8s:enc:`. Это доказательство исходного состояния: `Secret.data` — base64, не encryption at rest. |
+| Критерии приёмки | Файл непустой, содержит ровно marker `cks-109-legacy-plaintext` и не содержит `k8s:enc:`. Это доказательство исходного состояния: `Secret.data` - base64, не encryption at rest. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -175,7 +175,7 @@ TASK=109 make delete_cks_task
 ## Дополнительно: KMS v2 и полный жизненный цикл ротации
 
 **KMS v2 (опциональный walkthrough).** Внешний KMS-plugin подключается к API server как
-provider `kms` в `EncryptionConfiguration`; его endpoint — локальный Unix socket, а ключ
+provider `kms` в `EncryptionConfiguration`; его endpoint - локальный Unix socket, а ключ
 provider получает стабильное имя, например `kms-v2-primary`. API server генерирует
 случайный **DEK** для шифрования каждой записи Secret, KMS-plugin шифрует (wrap) этот DEK
 своим **KEK** (ключом, управляемым внешним key manager), а etcd хранит ciphertext Secret
@@ -199,7 +199,7 @@ resources:
 Kubernetes; эта лаба не поднимает KMS-plugin и не выдаёт рабочий socket.
 
 **Полная ротация ключа provider.** Выполненная в задании 4 миграция plaintext в первый
-`aescbc`-ключ — не полная ротация ключа. Для неё: (1) сделайте защищённый etcd snapshot и
+`aescbc`-ключ - не полная ротация ключа. Для неё: (1) сделайте защищённый etcd snapshot и
 проверьте, что старый ключ сохранён и доступен для rollback; (2) добавьте новый ключ
 первым в `aescbc.keys`, оставив старый вторым, затем перезапустите API server; (3)
 перезапишите существующие Secret через API, чтобы они были зашифрованы новым первым ключом;

@@ -784,10 +784,26 @@ except Exception:
       "$server/api/v1/namespaces/$NS/pods" 2>/dev/null || true)
     [[ "$allowed_code" == "200" && "$denied_code" == "403" ]] && real_auth_ok=true
   fi
+  # Same live proof, but through kubectl using a real kubeconfig built from the issued
+  # cert/key - curl proves the cert works at the HTTP/TLS level, this proves the student
+  # actually assembled a usable client identity (set-cluster/set-credentials/set-context),
+  # which is the more exam-realistic workflow.
+  kubeconfig_ok=false
+  kubeconfig_file="/var/work/tests/artifacts/12/john.kubeconfig"
+  if [[ -s "$kubeconfig_file" ]]; then
+    kubectl --kubeconfig="$kubeconfig_file" get pods -n development >/dev/null 2>&1
+    kubeconfig_allowed_status=$?
+    kubeconfig_denied_out=$(kubectl --kubeconfig="$kubeconfig_file" get pods -n "$NS" 2>&1)
+    kubeconfig_denied_status=$?
+    if [[ "$kubeconfig_allowed_status" -eq 0 ]] \
+      && [[ "$kubeconfig_denied_status" -ne 0 && "$kubeconfig_denied_out" == *"orbidden"* ]]; then
+      kubeconfig_ok=true
+    fi
+  fi
   if [[ "$signer_ok" == "true" && "$approved" == "true" && "$cn_ok" == "true" && "$chain_ok" == "true" \
     && "$can_create" == "yes" && "$can_list" == "yes" && "$can_get" == "yes" && "$cannot_delete" == "no" \
     && "$cannot_other_ns" == "no" && "$cannot_get_secret" == "no" && "$cannot_update_cm" == "no" \
-    && "$john_structure_ok" == "true" && "$real_auth_ok" == "true" ]]; then
+    && "$john_structure_ok" == "true" && "$real_auth_ok" == "true" && "$kubeconfig_ok" == "true" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -809,8 +825,10 @@ except Exception:
       echo "HINT: RBAC for user 'john' must be exactly ONE RoleBinding in 'development' (single subject: {kind: User, name: john}) referencing a Role with EXACTLY one rule (create/get/list on pods only), and NO ClusterRoleBinding naming john at all (found ${john_rb_count:-0} RoleBinding(s) in '${john_rb_ns:-<none>}', ${john_crb_count:-0} ClusterRoleBinding(s), role='$john_role_name'). The can-i checks above prove effective access but this proves the grant itself is scoped exactly as required."
     elif [[ "$real_auth_ok" != "true" ]]; then
       echo "HINT: Presenting the saved certificate/key directly to the API server over TLS (not via 'kubectl auth can-i --as') did not behave as expected - a request to /api/v1/namespaces/development/pods should return 200 and the same request against namespace '$NS' should return 403. Save the issued certificate as $crt_file and its private key as $key_file (PEM format)."
+    elif [[ "$kubeconfig_ok" != "true" ]]; then
+      echo "HINT: $kubeconfig_file is missing, or 'kubectl --kubeconfig=$kubeconfig_file get pods -n development' does not succeed, or the same command against namespace '$NS' does not fail with Forbidden. Build a real kubeconfig for john from the issued cert/key (kubectl config set-cluster/set-credentials --client-certificate/--client-key/set-context/use-context, all with --kubeconfig=$kubeconfig_file) - this proves you assembled a usable client identity, not just that the raw cert/key files individually work over curl."
     fi
-    echo "signer_ok=$signer_ok approved=$approved cn_ok=$cn_ok chain_ok=$chain_ok can_create=$can_create can_list=$can_list can_get=$can_get cannot_delete=$cannot_delete cannot_other_ns=$cannot_other_ns cannot_get_secret=$cannot_get_secret cannot_update_cm=$cannot_update_cm john_structure_ok=$john_structure_ok real_auth_ok=$real_auth_ok"
+    echo "signer_ok=$signer_ok approved=$approved cn_ok=$cn_ok chain_ok=$chain_ok can_create=$can_create can_list=$can_list can_get=$can_get cannot_delete=$cannot_delete cannot_other_ns=$cannot_other_ns cannot_get_secret=$cannot_get_secret cannot_update_cm=$cannot_update_cm john_structure_ok=$john_structure_ok real_auth_ok=$real_auth_ok kubeconfig_ok=$kubeconfig_ok"
     result=1
   fi
   [ "$result" -eq 0 ]

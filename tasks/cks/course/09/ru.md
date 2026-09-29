@@ -66,7 +66,7 @@ cipher suites, как проверить доступность и как отк
 control plane принадлежит провайдеру: не пытайтесь править его host files, а проверьте
 документацию доступных security-настроек.
 
-> 🎯 Проверьте active config и process args, исправьте единственный effective source, перезапустите компонент и подтвердите active state, поведение и health; для binary — provenance и SHA-256.
+> 🎯 Проверьте active config и process args, исправьте единственный effective source, перезапустите компонент и подтвердите active state, поведение и health; для binary - provenance и SHA-256.
 
 ## 09.2. Опасные аргументы: что искать и почему
 
@@ -813,7 +813,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   требуемого mTLS/firewall либо другой drift относительно topology кластера.
 - **Проверяемая поставка.** Pipeline проверяет keyless signature/certificate binary с
   ожидаемыми identity/issuer и SHA-256 как integrity check, сохраняет утверждённый
-  platform baseline отдельно. Image signing, SBOM, registry и admission controls —
+  platform baseline отдельно. Image signing, SBOM, registry и admission controls -
   supply-chain тема глав 24-28.
 - **Безопасный rollback.** Backup manifest хранится вне static Pod directory, а rollback
   проверен в non-production. При подозрении на подмену предпочтительнее переустановить
@@ -850,7 +850,7 @@ grep -E '\[FAIL\]|\[WARN\]' kube-bench-after.txt
   benchmark или совместимости и проверяют его с certificate key algorithm и клиентами.
 - `cosign verify-blob` с ожидаемыми certificate identity/issuer проверяет происхождение
   Kubernetes binary; `sha256sum --check` дополнительно сравнивает байты с trusted
-  checksum. Image digest, signing и SBOM относятся к Supply Chain Security — главам 24-28.
+  checksum. Image digest, signing и SBOM относятся к Supply Chain Security - главам 24-28.
 - Доказательство hardening включает активные arguments, отрицательную проверку опасного
   поведения, TLS handshake, health control plane и повторный `kube-bench`.
 
@@ -923,7 +923,7 @@ RSA-only список не содержит suite, совместимый с к�
 <details>
 <summary>7. Почему tag container image не доказывает его содержимое и что доказывает image digest?</summary>
 
-Tag является изменяемой ссылкой и может указывать на другие байты после повторной публикации, поэтому он не идентифицирует конкретное содержимое образа. Digest связывает образ с конкретным криптографическим содержимым: полученный образ должен соответствовать этому digest. Проверка подписи, SBOM и admission policy — отдельные supply-chain контроли, а не свойство tag.
+Tag является изменяемой ссылкой и может указывать на другие байты после повторной публикации, поэтому он не идентифицирует конкретное содержимое образа. Digest связывает образ с конкретным криптографическим содержимым: полученный образ должен соответствовать этому digest. Проверка подписи, SBOM и admission policy - отдельные supply-chain контроли, а не свойство tag.
 </details>
 
 <details>

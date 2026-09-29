@@ -45,7 +45,7 @@ Terragrunt создаёт Kubernetes `1.36.0` в `eu-central-1`:
 | `worker` | рабочая машина с `kubectl`, `cilium`, `istioctl`, `check_result` и SSH aliases к нодам |
 
 Проверенная 2026-08-31 матрица (сверяйте перед каждой сборкой): Kubernetes обучения
-`1.36.0`; Cilium data plane — поддерживаемая lab-сборка, совместимость которой с
+`1.36.0`; Cilium data plane - поддерживаемая lab-сборка, совместимость которой с
 Kubernetes `1.36` надо подтвердить по актуальной requirements matrix; Cilium CLI `0.19.7`
 (совместим с Cilium `1.17+`); Istio `1.30.4` (ветка `1.30` официально поддерживает Kubernetes
 `1.32–1.36`). Версия экзамена здесь не определяет совместимость lab tooling; по данным LF

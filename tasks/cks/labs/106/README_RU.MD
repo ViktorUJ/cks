@@ -1,4 +1,4 @@
-# Лаба 106 — AppArmor и seccomp: node-local policy и проверяемые отказы
+# Лаба 106 - AppArmor и seccomp: node-local policy и проверяемые отказы
 
 ## Цель
 
@@ -15,7 +15,7 @@ placement Pod и фактическое поведение процесса.
 
 ## Threat model
 
-Предположим RCE в контейнере. Вопрос после compromise — не «мог ли атакующий получить shell», а «что этот shell может сделать дальше» и насколько велик его blast radius.
+Предположим RCE в контейнере. Вопрос после compromise - не «мог ли атакующий получить shell», а «что этот shell может сделать дальше» и насколько велик его blast radius.
 
 AppArmor в заданиях 1–2 ограничивает объекты и операции: профиль переводится в enforce и затем доказывается отказ записи. Так уже скомпрометированный процесс не получает неограниченное действие только потому, что он выполняется в контейнере.
 
@@ -61,7 +61,7 @@ Kubelet сам разрешает относительный путь относ
 Для экономии ресурсов control-plane является единственной workload-нодой: с неё снят
 `NoSchedule` taint. Она помечена label
 `security.cks.io/localhost-profiles-106=true`. Все Pod этой лабы должны выбирать именно
-эту ноду — plan-профиль не переносится планировщиком (scheduler) на другую ноду.
+эту ноду - plan-профиль не переносится планировщиком (scheduler) на другую ноду.
 
 Bootstrap подготовил **только**:
 
@@ -70,7 +70,7 @@ Bootstrap подготовил **только**:
   (AppArmor profile) и `cks-106-deny-unshare.json` (custom seccomp profile).
 
 Ни AppArmor profile, ни seccomp profile **не** предустановлены на workload-ноде и не
-загружены в её ядро — перенос и первичная загрузка каждого из них - часть заданий 1 и 5.
+загружены в её ядро - перенос и первичная загрузка каждого из них - часть заданий 1 и 5.
 Не меняйте путь seccomp profile и не создавайте profile внутри обычного Pod: перенос
 файлов на ноду выполняется вами как администратором ноды через SSH, а не изнутри workload.
 
@@ -101,8 +101,8 @@ ls -la /opt/lab106-fixtures/
 ---
 | **1** | **Перенести и загрузить AppArmor profile** |
 | :---: | :--- |
-| Что делаем | Исходник profile `k8s-106-deny-write` лежит только на рабочей машине, в `/opt/lab106-fixtures/k8s-106-deny-write`. Скопируйте его на ноду `control-plane` в `/etc/apparmor.d/k8s-106-deny-write` (например, через `scp`) и загрузите в ядро через `sudo apparmor_parser -r`. Profile уже содержит флаг `complain` — второй раз включать его не нужно, это задача задания 2. |
-| Критерии приёмки | `/etc/apparmor.d/k8s-106-deny-write` присутствует на ноде; `/sys/kernel/security/apparmor/profiles` содержит строку с именем `k8s-106-deny-write` (в любом режиме — `complain` или `enforce`), то есть profile реально загружен в ядро, а не просто скопирован на диск. |
+| Что делаем | Исходник profile `k8s-106-deny-write` лежит только на рабочей машине, в `/opt/lab106-fixtures/k8s-106-deny-write`. Скопируйте его на ноду `control-plane` в `/etc/apparmor.d/k8s-106-deny-write` (например, через `scp`) и загрузите в ядро через `sudo apparmor_parser -r`. Profile уже содержит флаг `complain` - второй раз включать его не нужно, это задача задания 2. |
+| Критерии приёмки | `/etc/apparmor.d/k8s-106-deny-write` присутствует на ноде; `/sys/kernel/security/apparmor/profiles` содержит строку с именем `k8s-106-deny-write` (в любом режиме - `complain` или `enforce`), то есть profile реально загружен в ядро, а не просто скопирован на диск. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -110,7 +110,7 @@ ls -la /opt/lab106-fixtures/
 `scp /opt/lab106-fixtures/k8s-106-deny-write control-plane:/tmp/` копирует файл на ноду
 во временный каталог; переместите его оттуда с `sudo` в `/etc/apparmor.d/` (обычный
 пользователь не имеет прав записи туда напрямую). Затем `sudo apparmor_parser -r
-/etc/apparmor.d/k8s-106-deny-write` компилирует и загружает profile в ядро — без этого
+/etc/apparmor.d/k8s-106-deny-write` компилирует и загружает profile в ядро - без этого
 шага файл на диске не даёт вообще никакой защиты и не появится в
 `/sys/kernel/security/apparmor/profiles`.
 </details>
@@ -161,7 +161,7 @@ ls -la /opt/lab106-fixtures/
 ---
 | **5** | **Перенести и использовать custom Localhost seccomp profile** |
 | :---: | :--- |
-| Что делаем | Исходник `cks-106-deny-unshare.json` лежит только на рабочей машине, в `/opt/lab106-fixtures/cks-106-deny-unshare.json`. Определите ноду с label `security.cks.io/localhost-profiles-106=true`, создайте на ней каталог `/var/lib/kubelet/seccomp/profiles/` (если его ещё нет) и скопируйте туда JSON под тем же именем. Затем создайте Pod `localhost-seccomp` в `security-106` на этой ноде. На уровне Pod укажите `seccompProfile.type: Localhost` и относительный путь `profiles/cks-106-deny-unshare.json` — без `/var/lib/kubelet/seccomp/`. Контейнер `app` должен использовать `busybox:1.36`, получить capability `SYS_ADMIN` и остаться запущенным после проверки. **Не выдавайте эту комбинацию за hardened baseline:** `SYS_ADMIN` остаётся одной из самых опасных capabilities, а `allowPrivilegeEscalation: false` не отнимает уже выданные права. Это capability-focused experiment, где безопасность показывает конкретный seccomp deny. |
+| Что делаем | Исходник `cks-106-deny-unshare.json` лежит только на рабочей машине, в `/opt/lab106-fixtures/cks-106-deny-unshare.json`. Определите ноду с label `security.cks.io/localhost-profiles-106=true`, создайте на ней каталог `/var/lib/kubelet/seccomp/profiles/` (если его ещё нет) и скопируйте туда JSON под тем же именем. Затем создайте Pod `localhost-seccomp` в `security-106` на этой ноде. На уровне Pod укажите `seccompProfile.type: Localhost` и относительный путь `profiles/cks-106-deny-unshare.json` - без `/var/lib/kubelet/seccomp/`. Контейнер `app` должен использовать `busybox:1.36`, получить capability `SYS_ADMIN` и остаться запущенным после проверки. **Не выдавайте эту комбинацию за hardened baseline:** `SYS_ADMIN` остаётся одной из самых опасных capabilities, а `allowPrivilegeEscalation: false` не отнимает уже выданные права. Это capability-focused experiment, где безопасность показывает конкретный seccomp deny. |
 | Критерии приёмки | JSON profile перенесён и существует на ноде по правильному пути; Pod с правильным nodeSelector использует profile `Localhost:profiles/cks-106-deny-unshare.json`; JSON profile содержит `SCMP_ACT_ERRNO`/`errnoRet: 1` для `unshare`; в контейнере добавлен только требуемый для эксперимента `SYS_ADMIN`. |
 
 <details>
@@ -198,7 +198,7 @@ seccomp вообще не ограничивает `unshare`, что делае�
 Порядок команд важен для доказательности: сначала выполните `unshare -n true` и убедитесь, что он падает с ошибкой (ненулевой exit code), ТОЛЬКО ПОТОМ запишите строку `unshare denied by seccomp` в `/tmp/unshare-result` - не пишите строку заранее, "предполагая" результат. Negative control (`sysadmin-control`) должен использовать ТУ ЖЕ capability `SYS_ADMIN`, но `seccompProfile.type: Unconfined` - если забыть указать `Unconfined` явно, Pod может получить `RuntimeDefault` по умолчанию (если включён `seccompDefault` из задания 8) и тест не покажет разницу.
 </details>
 
-Linux capabilities и privilege escalation — разные оси. `allowPrivilegeEscalation: false`
+Linux capabilities и privilege escalation - разные оси. `allowPrivilegeEscalation: false`
 включает `no_new_privs` и запрещает получать **новые** права через `execve` (setuid/setgid и
 file capabilities), но не удаляет `SYS_ADMIN`, уже добавленную в bounding/effective set.
 Для обычной рабочей нагрузки используйте `capabilities.drop: ["ALL"]` и отдельно
@@ -219,7 +219,7 @@ file capabilities), но не удаляет `SYS_ADMIN`, уже добавле�
 ---
 | **8** | **`seccompDefault: true` на уровне kubelet: baseline без явного профиля** |
 | :---: | :--- |
-| Что делаем | Все Pod в заданиях 4–6 явно указывают `seccompProfile` в манифесте. В реальности разработчик может забыть это поле — тогда без node-level baseline Pod получает `Unconfined`. На ноде включите `seccompDefault: true` в `/var/lib/kubelet/config.yaml` и перезапустите kubelet (`systemctl restart kubelet`). Создайте Pod `no-seccomp-field` в `security-106` на подготовленной ноде из `busybox:1.36` (`sleep 3600`), **не указывая securityContext.seccompProfile вообще** ни на уровне Pod, ни на уровне контейнера. Через `/proc/1/status` внутри контейнера подтвердите, что kubelet применил `RuntimeDefault` автоматически (`Seccomp: 2`), а не оставил `Unconfined` (`Seccomp: 0`). |
+| Что делаем | Все Pod в заданиях 4–6 явно указывают `seccompProfile` в манифесте. В реальности разработчик может забыть это поле - тогда без node-level baseline Pod получает `Unconfined`. На ноде включите `seccompDefault: true` в `/var/lib/kubelet/config.yaml` и перезапустите kubelet (`systemctl restart kubelet`). Создайте Pod `no-seccomp-field` в `security-106` на подготовленной ноде из `busybox:1.36` (`sleep 3600`), **не указывая securityContext.seccompProfile вообще** ни на уровне Pod, ни на уровне контейнера. Через `/proc/1/status` внутри контейнера подтвердите, что kubelet применил `RuntimeDefault` автоматически (`Seccomp: 2`), а не оставил `Unconfined` (`Seccomp: 0`). |
 | Критерии приёмки | Эффективная (применённая) конфигурация kubelet - через `/api/v1/nodes/<node>/proxy/configz`, поле `.kubeletconfig.seccompDefault` - равна `true`; `systemctl is-active kubelet` возвращает `active`, нода остаётся `Ready`; Pod `no-seccomp-field` не имеет `seccompProfile` ни на одном уровне своей спецификации; `/proc/1/status` внутри контейнера показывает `Seccomp: 2`. |
 
 <details>
@@ -238,7 +238,7 @@ file capabilities), но не удаляет `SYS_ADMIN`, уже добавле�
 ---
 | **9** | **Отладка и пересборка сломанного AppArmor-профиля (`apparmor_parser -r -v`)** |
 | :---: | :--- |
-| Что делаем | На диске уже лежит `/etc/apparmor.d/k8s-106-broken-profile` — профиль с синтаксической ошибкой, который **никогда не был загружен** в ядро. Найдите ошибку самостоятельно через `sudo apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profile` (`-Q`/`--skip-kernel-load`: полностью выполняет проверку/компиляцию профиля, но не загружает его в ядро) или `sudo apparmor_parser -d /etc/apparmor.d/k8s-106-broken-profile` (`-d`/`--debug`, однократно - только проверка синтаксической корректности), исправьте файл и загрузите профиль в ядро через `sudo apparmor_parser -r -v /etc/apparmor.d/k8s-106-broken-profile`. Подтвердите загрузку через `aa-status \| grep k8s-106-broken-profile`. Сохраните вывод ошибки **до** исправления и подтверждение загрузки **после** в `/var/work/tests/artifacts/8/apparmor-debug.txt`. |
+| Что делаем | На диске уже лежит `/etc/apparmor.d/k8s-106-broken-profile` - профиль с синтаксической ошибкой, который **никогда не был загружен** в ядро. Найдите ошибку самостоятельно через `sudo apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profile` (`-Q`/`--skip-kernel-load`: полностью выполняет проверку/компиляцию профиля, но не загружает его в ядро) или `sudo apparmor_parser -d /etc/apparmor.d/k8s-106-broken-profile` (`-d`/`--debug`, однократно - только проверка синтаксической корректности), исправьте файл и загрузите профиль в ядро через `sudo apparmor_parser -r -v /etc/apparmor.d/k8s-106-broken-profile`. Подтвердите загрузку через `aa-status \| grep k8s-106-broken-profile`. Сохраните вывод ошибки **до** исправления и подтверждение загрузки **после** в `/var/work/tests/artifacts/8/apparmor-debug.txt`. |
 | Критерии приёмки | `apparmor-debug.txt` содержит текст ошибки парсера (например, `syntax error`) из попытки **до** исправления; checker-owned bootstrap-baseline (зафиксирован ДО выдачи лабы, независимо от вашего artifact) независимо подтверждает, что исходный профиль действительно содержал syntax error; `/etc/apparmor.d/k8s-106-broken-profile` на диске больше не содержит исходную синтаксическую ошибку; `aa-status` показывает `k8s-106-broken-profile` среди загруженных профилей (в любом режиме - `enforce` или `complain`); повторный `apparmor_parser -Q` на исправленном файле завершается без ошибки. |
 
 <details>
@@ -272,7 +272,7 @@ check_result
 
 Проверка содержит Init и девять независимых тестов. Она читает state Pod через API, проверяет
 profile на ноде по SSH и выполняет контролируемые отрицательные сценарии. Если Localhost
-Pod не создаётся, сначала посмотрите `kubectl describe pod`: обычная причина — абсолютный
+Pod не создаётся, сначала посмотрите `kubectl describe pod`: обычная причина - абсолютный
 путь вместо относительного или назначение Pod на ноду без profile.
 
 ## Решение

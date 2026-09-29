@@ -19,7 +19,7 @@
 > Role, RoleBinding и проверка прав - в [главе 38 CKA](../../../cka/course/38/ru.md).
 > Здесь не повторяем базовый синтаксис, а применяем его для least privilege.
 
-> 🧠 Token в скомпрометированном Pod — bearer credential ServiceAccount: его ущерб определяется не самим файлом, а всеми текущими и будущими RBAC-правами этой identity.
+> 🧠 Token в скомпрометированном Pod - bearer credential ServiceAccount: его ущерб определяется не самим файлом, а всеми текущими и будущими RBAC-правами этой identity.
 
 ## 11.1. Сценарий атаки: token `default`-ServiceAccount в Pod
 
@@ -248,7 +248,7 @@ OIDC/JWT проверяет подпись и claims, но не узнаёт о�
 валидным только до `exp`. Если объект лишь помечен на удаление (`deletionTimestamp`),
 authenticator отклонит token не позднее чем через 60 секунд.
 
-В Kubernetes v1.33+ `ServiceAccountNodeAudienceRestriction` — Beta и включена по
+В Kubernetes v1.33+ `ServiceAccountNodeAudienceRestriction` - Beta и включена по
 умолчанию. Само ограничение применяет admission plugin `NodeRestriction`: когда feature
 gate включён, `NodeRestriction` активен и запрос TokenRequest приходит от распознанной
 node/kubelet identity, kubelet по умолчанию может запрашивать только audiences, уже
@@ -270,7 +270,7 @@ credential. Kubernetes всё ещё официально поддерживае
 обычный способ дать Pod доступ к API: он не получает автоматическую короткую ротацию и
 сильнее увеличивает ущерб при утечке.
 
-> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount token остаётся основной JWT identity-моделью этой главы. Kubernetes v1.37 также стабилизировал Pod Certificates и ClusterTrustBundles — built-in primitives для выдачи и ротации X.509 workload credentials. Это production-current extension, а не замена CKS Core: см. [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
+> 🔬 **Kubernetes v1.37: X.509 workload identity.** Bound ServiceAccount token остаётся основной JWT identity-моделью этой главы. Kubernetes v1.37 также стабилизировал Pod Certificates и ClusterTrustBundles - built-in primitives для выдачи и ротации X.509 workload credentials. Это production-current extension, а не замена CKS Core: см. [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
 ## 11.4. Выделенный ServiceAccount и минимальный RBAC
 
@@ -357,7 +357,7 @@ kubectl auth can-i --list -n cks-104 \
 
 ## 11.4.1. RBAC: права на workload могут стать эскалацией ServiceAccount
 
-Право создавать или изменять workload — не только право на запуск приложения. Если субъект
+Право создавать или изменять workload - не только право на запуск приложения. Если субъект
 может создать Pod/Deployment с `serviceAccountName` другого, более привилегированного SA в
 том же namespace, он может выполнить код с token и API-правами этого SA. Поэтому встроенную
 роль `edit` нельзя считать безобидной: помимо изменения workload и чтения Secret она может
@@ -366,16 +366,16 @@ kubectl auth can-i --list -n cks-104 \
 workload.
 
 Проверяйте и другие RBAC escalation paths отдельно от обычных read/write прав: создание
-`PersistentVolume` может дать Pod доступ к данным или пути хоста; создание/одобрение CSR —
+`PersistentVolume` может дать Pod доступ к данным или пути хоста; создание/одобрение CSR -
 выдать новую identity; изменение `ValidatingWebhookConfiguration` или
-`MutatingWebhookConfiguration` — изменить admission-контроль. Права `bind`, `escalate`,
+`MutatingWebhookConfiguration` - изменить admission-контроль. Права `bind`, `escalate`,
 `impersonate`, управление RoleBinding/ClusterRoleBinding и эти пути выдают только отдельным
 административным ролям. Не добавляйте пользователей в `system:masters`: эта группа получает
 неограниченный superuser-доступ и обходит RBAC и authorization webhooks.
 
 В Kubernetes 1.36+ Constrained Impersonation расширяет старую модель одного verb
 `impersonate`: применяются отдельные разрешения, включая `impersonate:user-info` и
-`impersonate-on:*`. Это не причина выдавать impersonation шире — ограничивайте субъект,
+`impersonate-on:*`. Это не причина выдавать impersonation шире - ограничивайте субъект,
 группы и scope, а для проверки используйте отдельную минимальную admin-role.
 
 ## 11.5. Проверка и диагностика: token, API и RBAC
@@ -409,9 +409,9 @@ kubectl -n cks-104 exec api-reader -- sh -ec '
 
 - TLS/certificate error до HTTP-ответа: проверяйте CA file, DNS/SAN, endpoint и
   доступность TLS.
-- HTTP `401 Unauthorized`: API server не принял credential — проверяйте token path,
+- HTTP `401 Unauthorized`: API server не принял credential - проверяйте token path,
   подпись/issuer, `audience`, `exp`/время и целостность token.
-- HTTP `403 Forbidden`: authentication прошла, но authorizer не разрешил действие —
+- HTTP `403 Forbidden`: authentication прошла, но authorizer не разрешил действие -
   проверяйте Role/RoleBinding, namespace и targeted `kubectl auth can-i`.
 
 Если в Pod всё ещё есть стандартный token после изменения SA, проверьте `spec.automountServiceAccountToken`
@@ -554,7 +554,7 @@ test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
 volume автоматически не исчезает.
 
 Это доказывает отсутствие **стандартной автоматической инъекции**, а не отсутствие любого
-возможного ServiceAccount credential. Если requirement — «Pod вообще не должен получать
+возможного ServiceAccount credential. Если requirement - «Pod вообще не должен получать
 SA token», дополнительно ревьюйте `volumes`, `projected.serviceAccountToken`, Secret/env,
 sidecar/init-container и другие механизмы выдачи credential.
 </details>
@@ -565,7 +565,7 @@ sidecar/init-container и другие механизмы выдачи credentia
    главы 21 (например, `db-password`), и почему bound projected token эту угрозу снижает
    иначе, чем encryption at rest снижает угрозу для `Secret` в etcd?</summary>
 
-Legacy ServiceAccount token — bearer credential, позволяющий действовать как identity в Kubernetes API в пределах её RBAC; `db-password` обычно открывает доступ к конкретной прикладной системе. Bound projected token уменьшает риск использования украденного credential сроком, audience, привязкой к Pod и ротацией. Encryption at rest защищает данные Secret в etcd, но не ограничивает уже смонтированный или прочитанный token и не заменяет его короткий lifecycle.
+Legacy ServiceAccount token - bearer credential, позволяющий действовать как identity в Kubernetes API в пределах её RBAC; `db-password` обычно открывает доступ к конкретной прикладной системе. Bound projected token уменьшает риск использования украденного credential сроком, audience, привязкой к Pod и ротацией. Encryption at rest защищает данные Secret в etcd, но не ограничивает уже смонтированный или прочитанный token и не заменяет его короткий lifecycle.
 </details>
 
 ## Практика

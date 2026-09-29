@@ -184,7 +184,7 @@ baseline: доступ, образ и время жизни debug-container сл
 Не решайте ошибку командой `chmod -R 777 /`. Права образа и volume должны быть минимальны:
 процессу нужен его UID/GID и право записи только в собственный runtime-каталог.
 
-> 🎯 `emptyDir` — явный scratch space с lifecycle Pod. Умейте выбрать узкий mount path, объяснить его очистку при replacement Pod и не путать его с persistent storage.
+> 🎯 `emptyDir` - явный scratch space с lifecycle Pod. Умейте выбрать узкий mount path, объяснить его очистку при replacement Pod и не путать его с persistent storage.
 
 ## 31.3. `emptyDir`: контролируемая временная запись
 
@@ -547,7 +547,7 @@ kubectl get pods -A -o json | jq -r '
 явно `true`; отдельно оцените исключённые namespaces и статус policy. Не запускайте
 такой audit с выводом Secret: эта команда читает только Pod spec и image reference.
 
-> 🎯 PSA `restricted` — встроенный namespace baseline: начните с `warn`/`audit`, затем включайте `enforce` с pinned version. Помните, что он не требует `readOnlyRootFilesystem` сам по себе.
+> 🎯 PSA `restricted` - встроенный namespace baseline: начните с `warn`/`audit`, затем включайте `enforce` с pinned version. Помните, что он не требует `readOnlyRootFilesystem` сам по себе.
 
 ## 31.8. Pod Security Admission: baseline и enforce
 
@@ -611,7 +611,7 @@ kubectl apply -f rejected.yaml
 пользовательские namespaces и documented platform exceptions, ограничивайте доступ к таким
 namespaces RBAC и регулярно пересматривайте исключения.
 
-> 🔬 Native VAP с CEL — современное upstream-расширение PSA для точных admission требований. Проверяйте coverage resources, controller templates и exception scope: это архитектурная, а не только YAML-задача.
+> 🔬 Native VAP с CEL - современное upstream-расширение PSA для точных admission требований. Проверяйте coverage resources, controller templates и exception scope: это архитектурная, а не только YAML-задача.
 
 ## 31.9. Native ValidatingAdmissionPolicy: vendor-neutral admission gate
 
@@ -733,7 +733,7 @@ spec:
       allowPrivilegeEscalation: false
       capabilities:
         drop: ["ALL"]
-      # Единственное намеренное нарушение — readOnlyRootFilesystem отсутствует.
+      # Единственное намеренное нарушение - readOnlyRootFilesystem отсутствует.
 YAML
 }
 
@@ -781,7 +781,7 @@ Bindings на непересекающиеся scopes с platform-controlled `na
 «allow Binding» не отменяет совпадающий Deny. У exception должны быть владелец, ticket, expiry
 и RBAC, не позволяющий developer-у самостоятельно расширить scope.
 
-> 🏭 Kyverno — optional extension, когда действительно нужны reports, mutation, централизованные exceptions или controller autogen. Не ставьте policy engine вместо достаточного native baseline без операционной причины.
+> 🏭 Kyverno - optional extension, когда действительно нужны reports, mutation, централизованные exceptions или controller autogen. Не ставьте policy engine вместо достаточного native baseline без операционной причины.
 
 ## 31.10. Kyverno: optional production extension и autogen controller rules
 
@@ -973,7 +973,7 @@ PSA version следует pin-ить через labels, потому что с�
 <details>
 <summary>8. Как доказать, что native Policy Binding действительно блокирует нарушение, а не просто создана?</summary>
 
-После перевода `validationActions` Binding в `Deny` подают bad Pod, у которого единственное намеренное нарушение — отсутствует `readOnlyRootFilesystem`. `kubectl apply` обязан завершиться non-zero с уникальным message policy, а не с сетевой, RBAC или quota ошибкой. Позитивно проверяют good Pod и отдельно границу temporary exception namespace; для Pod-only VAP небезопасный Deployment может быть принят, но его Pod будет отклонён.
+После перевода `validationActions` Binding в `Deny` подают bad Pod, у которого единственное намеренное нарушение - отсутствует `readOnlyRootFilesystem`. `kubectl apply` обязан завершиться non-zero с уникальным message policy, а не с сетевой, RBAC или quota ошибкой. Позитивно проверяют good Pod и отдельно границу temporary exception namespace; для Pod-only VAP небезопасный Deployment может быть принят, но его Pod будет отклонён.
 </details>
 
 <details>

@@ -86,7 +86,7 @@ proxy (Envoy или DNS proxy). В текущих stable-версиях Cilium �
 также использовать netfilter/`iptables` TPROXY. Поэтому Cilium не следует описывать как
 datapath, который при любых функциях полностью исключает `iptables` и userspace.
 
-> 🎯 Используйте нативную `NetworkPolicy` для labels/CIDR и L3/L4-портов, CNP — для L7 HTTP/DNS, `toFQDNs`, `toEntities` и Cilium-наблюдаемости.
+> 🎯 Используйте нативную `NetworkPolicy` для labels/CIDR и L3/L4-портов, CNP - для L7 HTTP/DNS, `toFQDNs`, `toEntities` и Cilium-наблюдаемости.
 
 ### Когда достаточно `NetworkPolicy`, а когда нужен CNP
 
@@ -172,7 +172,7 @@ endpoint. Их allow-правила учитываются вместе, но я
 > platform-wide границ, но не обязательная отдельная тема CKS: перед использованием
 > проверьте, включены ли соответствующие API и поддержка в вашем Cilium-кластере.
 
-> 🎯 В CNP `endpointSelector` выбирает Pod, `fromEndpoints`/`toEndpoints` — identity, `toPorts` — протокол и порт; ingress и egress создают default-deny независимо.
+> 🎯 В CNP `endpointSelector` выбирает Pod, `fromEndpoints`/`toEndpoints` - identity, `toPorts` - протокол и порт; ingress и egress создают default-deny независимо.
 
 ## 06.2. L3/L4: разрешить только нужный workload и порт
 
@@ -787,7 +787,7 @@ production-кластере. Для каждого изменения нужен
 поток и доказать результат. **Если предоставленный кластер или fixture использует Cilium**,
 нужно также уметь создать `CiliumNetworkPolicy` с `endpointSelector`, при необходимости
 ограничить HTTP или `toFQDNs` и проверить flows командой `hubble observe`. L7, FQDN и
-Hubble — Cilium-specific углубление, а не гарантированный публичной программой интерфейс
+Hubble - Cilium-specific углубление, а не гарантированный публичной программой интерфейс
 каждой задачи; DNS всё равно разрешайте отдельным правилом.
 
 **В реальной работе.** Cilium policy переводит архитектурные границы в исполнимые правила:
@@ -830,10 +830,10 @@ L3/L4 rule разрешает всё TCP-соединение на порту 80
 <details>
 <summary>6. Когда подходят entities `world`, `cluster` и `host`, и почему `host` требует особой осторожности?</summary>
 
-`world` обозначает адреса вне кластера, `cluster` — endpoints внутри него, а `host` —
+`world` обозначает адреса вне кластера, `cluster` - endpoints внутри него, а `host` -
 локальный host endpoint ноды и host-networked workloads. Доступ к `host` может затрагивать
 kubelet и другие сетевые listener ноды, поэтому требует осторожной host-firewall policy.
-Runtime CRI socket — другой attack path: обычно это Unix socket на filesystem ноды, и его
+Runtime CRI socket - другой attack path: обычно это Unix socket на filesystem ноды, и его
 нужно защищать ограничением `hostPath`, привилегий и других механизмов доступа к host
 filesystem.
 </details>

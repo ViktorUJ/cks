@@ -1,4 +1,4 @@
-# Лаба 107 — Pod Security Admission: restricted, audit/warn и read-only root filesystem
+# Лаба 107 - Pod Security Admission: restricted, audit/warn и read-only root filesystem
 
 ## Цель
 
@@ -126,7 +126,7 @@ echo "after-label exit: $?"
 | **2** | **Hardened Pod, проходящий restricted** |
 | :---: | :--- |
 | Что делаем | Создайте Pod `restricted-app` в `psa-restricted-107` из `busybox:1.36`, работающий не от root и не завершающийся сразу. Установите pod-level `runAsNonRoot: true`, `runAsUser: 1000` и `seccompProfile: RuntimeDefault`. В container securityContext запретите privilege escalation, сбросьте capability `ALL`, явно оставьте `privileged: false` и задайте `seccompProfile: RuntimeDefault`. |
-| Критерии приёмки | Pod принят PSA и запущен; работает как UID 1000/non-root; seccomp — `RuntimeDefault`; escalation и privileged запрещены; capabilities `ALL` сброшены. |
+| Критерии приёмки | Pod принят PSA и запущен; работает как UID 1000/non-root; seccomp - `RuntimeDefault`; escalation и privileged запрещены; capabilities `ALL` сброшены. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -231,7 +231,7 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 ---
 | **5** | **Read-only root filesystem с writable emptyDir** |
 | :---: | :--- |
-| Что делаем | Доработайте `restricted-app`: на контейнере включите `readOnlyRootFilesystem: true`. Создайте volume `writable-tmp` типа `emptyDir` (рекомендуется `medium: Memory`, чтобы временные файлы не попадали на диск ноды) и смонтируйте его в `/tmp` без `readOnly: true`. Контейнеру разрешено писать только в этот временный том; не используйте `hostPath`. Докажите оба исхода живым вызовом внутри Pod: попытка записи в корень контейнера (например, `touch /root-write-test.txt`) должна завершиться ошибкой `Read-only file system`, а запись в `/tmp/test.txt` — успешно пройти. При изменении неизменяемых полей Pod удалите и создайте `restricted-app` заново с тем же именем. |
+| Что делаем | Доработайте `restricted-app`: на контейнере включите `readOnlyRootFilesystem: true`. Создайте volume `writable-tmp` типа `emptyDir` (рекомендуется `medium: Memory`, чтобы временные файлы не попадали на диск ноды) и смонтируйте его в `/tmp` без `readOnly: true`. Контейнеру разрешено писать только в этот временный том; не используйте `hostPath`. Докажите оба исхода живым вызовом внутри Pod: попытка записи в корень контейнера (например, `touch /root-write-test.txt`) должна завершиться ошибкой `Read-only file system`, а запись в `/tmp/test.txt` - успешно пройти. При изменении неизменяемых полей Pod удалите и создайте `restricted-app` заново с тем же именем. |
 | Критерии приёмки | У контейнера read-only root filesystem; `emptyDir` с именем `writable-tmp` смонтирован в `/tmp` как writable; hardened-настройки из задания 2 сохранены; живая попытка записи в корень контейнера возвращает `Read-only file system`, а запись в `/tmp/test.txt` завершается успешно и читаемым содержимым. |
 
 <details>
@@ -243,7 +243,7 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 ---
 | **6** | **Native ValidatingAdmissionPolicy: требовать `automountServiceAccountToken: false`** |
 | :---: | :--- |
-| Что делаем | PSA `restricted` уже требует `allowPrivilegeEscalation: false`, `capabilities.drop` содержит `ALL`, non-root и seccomp — задание 2 показывает именно это. Но PSS `restricted` **не проверяет** `automountServiceAccountToken`: Pod, не нуждающийся в Kubernetes API, может тихо получить смонтированный ServiceAccount token и полностью пройти PSA. Это отдельный, не покрытый PSS control, поэтому здесь уместен именно custom `ValidatingAdmissionPolicy`, а не дублирование встроенного PSA. В namespace `psa-restricted-107` создайте `ValidatingAdmissionPolicy` `require-no-automount-token` с CEL-выражением, требующим `automountServiceAccountToken == false` на уровне Pod. Примените `ValidatingAdmissionPolicyBinding` `require-no-automount-token-binding`, ограниченную `matchResources.namespaceSelector` на `psa-restricted-107`, с `validationActions: [Deny]`. Докажите оба исхода server-side dry-run: полностью PSA-совместимый Pod (со всеми полями из задания 2 — non-root, seccomp, drop ALL, escalation false) **без** `automountServiceAccountToken: false` должен быть отклонён именно этой policy, а не PSA; тот же Pod с `automountServiceAccountToken: false` должен пройти. |
+| Что делаем | PSA `restricted` уже требует `allowPrivilegeEscalation: false`, `capabilities.drop` содержит `ALL`, non-root и seccomp - задание 2 показывает именно это. Но PSS `restricted` **не проверяет** `automountServiceAccountToken`: Pod, не нуждающийся в Kubernetes API, может тихо получить смонтированный ServiceAccount token и полностью пройти PSA. Это отдельный, не покрытый PSS control, поэтому здесь уместен именно custom `ValidatingAdmissionPolicy`, а не дублирование встроенного PSA. В namespace `psa-restricted-107` создайте `ValidatingAdmissionPolicy` `require-no-automount-token` с CEL-выражением, требующим `automountServiceAccountToken == false` на уровне Pod. Примените `ValidatingAdmissionPolicyBinding` `require-no-automount-token-binding`, ограниченную `matchResources.namespaceSelector` на `psa-restricted-107`, с `validationActions: [Deny]`. Докажите оба исхода server-side dry-run: полностью PSA-совместимый Pod (со всеми полями из задания 2 - non-root, seccomp, drop ALL, escalation false) **без** `automountServiceAccountToken: false` должен быть отклонён именно этой policy, а не PSA; тот же Pod с `automountServiceAccountToken: false` должен пройти. |
 | Критерии приёмки | `ValidatingAdmissionPolicy require-no-automount-token` и её `ValidatingAdmissionPolicyBinding` существуют, `validationActions` содержит `Deny`, Binding матчит только `psa-restricted-107`. Server-side dry-run PSA-совместимого Pod без `automountServiceAccountToken: false` отклонён с сообщением именно этой policy (не PSA-сообщением `violates PodSecurity`); тот же Pod с `automountServiceAccountToken: false` принят. |
 
 <details>
@@ -359,19 +359,19 @@ echo "exit code in psa-observe-107: $?"
 
 | **7** | **Controller-driven admission denial: диагностика через ReplicaSet events** |
 | :---: | :--- |
-| Что делаем | В пустом namespace `psa-controller-107` создайте Deployment `controller-app` (label `app=controller-app`, replicas=1) с простым Pod template без hardening (например `busybox:1.36`, `sleep 3600`, без `securityContext`) — он должен успешно запуститься, PSA пока не мешает. Затем включите `pod-security.kubernetes.io/enforce=restricted` и `enforce-version=v1.36` на этом namespace (уже существующий Pod продолжит работать — PSA не трогает уже созданные объекты). Удалите текущий Pod: ReplicaSet попытается создать замену, и теперь admission её отклонит. Проверьте причину через `kubectl -n psa-controller-107 describe rs` и `kubectl -n psa-controller-107 get events` — там будет `FailedCreate` с текстом `violates PodSecurity "restricted:v1.36"`. Исправьте Pod template Deployment (добавьте те же hardening поля, что в задании 2: non-root, `seccompProfile: RuntimeDefault`, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`) и дождитесь, пока ReplicaSet успешно создаст новый, проходящий Pod. |
-| Критерии приёмки | Namespace enforces `restricted:v1.36`; Deployment template полностью PSS-restricted-compliant; после удаления текущего Pod ReplicaSet реально создаёт новый Ready Pod под текущим enforce-режимом (не просто "объект существует" — проверяется живым удалением и повторным созданием). |
+| Что делаем | В пустом namespace `psa-controller-107` создайте Deployment `controller-app` (label `app=controller-app`, replicas=1) с простым Pod template без hardening (например `busybox:1.36`, `sleep 3600`, без `securityContext`) - он должен успешно запуститься, PSA пока не мешает. Затем включите `pod-security.kubernetes.io/enforce=restricted` и `enforce-version=v1.36` на этом namespace (уже существующий Pod продолжит работать - PSA не трогает уже созданные объекты). Удалите текущий Pod: ReplicaSet попытается создать замену, и теперь admission её отклонит. Проверьте причину через `kubectl -n psa-controller-107 describe rs` и `kubectl -n psa-controller-107 get events` - там будет `FailedCreate` с текстом `violates PodSecurity "restricted:v1.36"`. Исправьте Pod template Deployment (добавьте те же hardening поля, что в задании 2: non-root, `seccompProfile: RuntimeDefault`, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`) и дождитесь, пока ReplicaSet успешно создаст новый, проходящий Pod. |
+| Критерии приёмки | Namespace enforces `restricted:v1.36`; Deployment template полностью PSS-restricted-compliant; после удаления текущего Pod ReplicaSet реально создаёт новый Ready Pod под текущим enforce-режимом (не просто "объект существует" - проверяется живым удалением и повторным созданием). |
 
 <details>
 <summary>💡 Подсказка к заданию 7</summary>
 
 Порядок важен: сначала Deployment без hardening (проходит, PSA пока не enforce), потом
 label enforce=restricted на namespace (существующий Pod не пострадает), потом `kubectl
-delete pod -l app=controller-app` — вот тут ReplicaSet и наткнётся на admission deny.
+delete pod -l app=controller-app` - вот тут ReplicaSet и наткнётся на admission deny.
 Если не удалить Pod вручную, вы не увидите отказ вообще, пока естественным образом не
 произойдёт какой-то reschedule. Чинить нужно именно `spec.template` в Deployment (`kubectl
 edit deployment controller-app` или `kubectl apply` с исправленным манифестом), а не
-namespace label — откат enforce не является решением этого задания.
+namespace label - откат enforce не является решением этого задания.
 </details>
 
 ---
@@ -386,8 +386,8 @@ check_result
 
 Проверка содержит Init и семь независимых заданий. Она дополнительно выполняет
 server-side dry-run небезопасного Pod, поэтому отсутствие постоянного «плохого» Pod в
-restricted namespace — ожидаемый и правильный результат. Задание 7 checker сам удаляет
-текущий Pod `controller-app` и проверяет, что ReplicaSet реально пересоздаёт Ready Pod —
+restricted namespace - ожидаемый и правильный результат. Задание 7 checker сам удаляет
+текущий Pod `controller-app` и проверяет, что ReplicaSet реально пересоздаёт Ready Pod -
 не принимает как доказательство текст events.
 
 ## Решение
@@ -411,7 +411,7 @@ TASK=107 make delete_cks_task
 Режим `audit` добавляет в **audit event kube-apiserver** annotation
 `pod-security.kubernetes.io/audit-violations` для нарушившего Pod. Учебная инфраструктура
 не настраивает и не предоставляет audit-log sink, поэтому эту annotation здесь нельзя
-прочитать через `kubectl`. Наблюдаемое доказательство в задании 4 — предупреждение PSA
+прочитать через `kubectl`. Наблюдаемое доказательство в задании 4 - предупреждение PSA
 (`Warning: ... would violate PodSecurity "baseline"`) при server-side admission и успешное
 создание Pod без `enforce`; audit mode объяснён, но его log annotation этой лабой не
 проверяется.

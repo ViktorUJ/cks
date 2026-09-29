@@ -194,8 +194,8 @@ image version и rollback должны идти через обычный про
 Минимальность не значит отсутствие средств восстановления: должен остаться согласованный
 способ доступа, журналирования и диагностики.
 
-> 🏭 **Production.** Специализированная Kubernetes-ОС — например,
-> [Bottlerocket](https://bottlerocket.dev/) — может уменьшить mutable host footprint за счёт
+> 🏭 **Production.** Специализированная Kubernetes-ОС - например,
+> [Bottlerocket](https://bottlerocket.dev/) - может уменьшить mutable host footprint за счёт
 > намеренно минимального immutable image и управляемого update workflow. Это архитектурный
 > выбор: до rollout в production проверьте в stage поддержку целевой версии Kubernetes,
 > CNI/CSI, bootstrap, observability, debug-доступа и rollback. Не переносите на такую ОС
@@ -218,7 +218,7 @@ image version и rollback должны идти через обычный про
 MODULE='example_module'
 lsmod | sort
 sudo modinfo "$MODULE"
-# `modprobe -c` — источник истины для effective configuration.
+# `modprobe -c` - источник истины для effective configuration.
 EFFECTIVE_MODPROBE_CONFIG=$(sudo modprobe -c) || {
   echo 'ERROR: cannot read effective modprobe configuration' >&2
   exit 2
@@ -328,7 +328,7 @@ containerd, NRI или Docker API, часто может запустить пр
 смонтировать filesystem хоста или получить credentials ноды. Поэтому Unix socket - граница
 доступа, а не безобидная деталь реализации.
 
-> 🎯 Доступ к containerd CRI socket — только у `root` и минимальных системных потребителей, без world-writable mode и mount в непривилегированный workload.
+> 🎯 Доступ к containerd CRI socket - только у `root` и минимальных системных потребителей, без world-writable mode и mount в непривилегированный workload.
 
 ```mermaid
 flowchart TB
@@ -357,7 +357,7 @@ flowchart TB
 ```bash
 set -euo pipefail
 # Этот gate проверяет independently effective configuration и actual listeners.
-# false — безопасный baseline; true допускается лишь для documented risk exception.
+# false - безопасный baseline; true допускается лишь для documented risk exception.
 ALLOW_REMOTE_DOCKER_API=false
 declare -a TCP_CONFIGURATION_SOURCES=()
 USES_SOCKET_ACTIVATION=false
@@ -584,10 +584,10 @@ sudo grep -Rns -- '--container-runtime-endpoint\|containerRuntimeEndpoint' \
 ```
 
 Защищайте не только socket. `/run/containerd` содержит runtime-состояние и sockets, а
-`/var/lib/containerd` - persistent content и metadata. Для containerd ориентир — `0700` для
+`/var/lib/containerd` - persistent content и metadata. Для containerd ориентир - `0700` для
 `/var/lib/containerd` и `0711` для корня `/run/containerd`: второй режим допускает traversal,
 который может требоваться user-namespaced workload, но не раскрывает содержимое каталога.
-Чувствительные подкаталоги должны быть `0700`, sockets — `0660` с системной группой без
+Чувствительные подкаталоги должны быть `0700`, sockets - `0660` с системной группой без
 непривилегированных пользователей; ни один путь не должен быть writable обычным пользователям
 или контейнерам. Конфигурация, plugins и CNI также должны
 быть root-owned и защищены от записи неавторизованных субъектов: обычно это
@@ -863,7 +863,7 @@ sudo ss -lntup | grep -E 'containerd|debug|metrics' || true
 - Порты оценивают по процессу и источникам: kubelet `10250` и API `6443` не должны быть
   открыты всему интернету, а Docker `2375` не должен слушаться вовсе.
 - `-H tcp://0.0.0.0:2375` - неаутентифицированный удалённый root. Оставляйте Docker на
-  Unix socket; любой TCP endpoint — только обоснованное mTLS-исключение, а `2376` не
+  Unix socket; любой TCP endpoint - только обоснованное mTLS-исключение, а `2376` не
   является доказательством его безопасности.
 - containerd - основной современный CRI runtime; доступ к его socket и NRI socket
   root-equivalent, ограничен системными субъектами и никогда не монтируется в
@@ -914,13 +914,13 @@ Docker TCP, исправить права socket или отключить servi
 <details>
 <summary>4. Почему `10250` и `6443` нельзя одинаково «закрыть везде», а `2375` должен отсутствовать?</summary>
 
-`10250` нужен защищённому kubelet API, а `6443` — API server, поэтому их доступ зависит от роли ноды и архитектуры: control plane, worker, администраторам и monitoring дают точные allowlist. Они не должны быть доступны интернету, но полное закрытие сломает нужные потоки. `2375` — неаутентифицированный Docker TCP API и в безопасном baseline не нужен вовсе.
+`10250` нужен защищённому kubelet API, а `6443` - API server, поэтому их доступ зависит от роли ноды и архитектуры: control plane, worker, администраторам и monitoring дают точные allowlist. Они не должны быть доступны интернету, но полное закрытие сломает нужные потоки. `2375` - неаутентифицированный Docker TCP API и в безопасном baseline не нужен вовсе.
 </details>
 
 <details>
 <summary>5. Почему `tcp://0.0.0.0:2375` равнозначен удалённому root, даже если сейчас есть firewall?</summary>
 
-Docker API на `2375` не использует TLS и authentication; любой достигший порта клиент может создавать привилегированные контейнеры, монтировать host filesystem и получать доступ к ноде. Firewall — лишь внешний компенсирующий слой, и его ошибка снова откроет этот root-equivalent API. Поэтому TCP endpoint нужно убрать из активного unit, drop-in и `daemon.json`, а не только фильтровать сетью.
+Docker API на `2375` не использует TLS и authentication; любой достигший порта клиент может создавать привилегированные контейнеры, монтировать host filesystem и получать доступ к ноде. Firewall - лишь внешний компенсирующий слой, и его ошибка снова откроет этот root-equivalent API. Поэтому TCP endpoint нужно убрать из активного unit, drop-in и `daemon.json`, а не только фильтровать сетью.
 </details>
 
 <details>

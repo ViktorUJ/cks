@@ -706,7 +706,7 @@ flowchart TB
 
 Это не утверждение, что каждый Pod имеет доступ к metadata или может изменить API. Это два потока, которые нужно отдельно разрешить или запретить, а затем подтвердить их наблюдаемостью.
 
-Рабочее сопоставление с **OWASP Kubernetes Top 10 — 2025** помогает не потерять класс риска. Это не замена threat model: один поток может относиться к нескольким категориям. Редакция 2022 ниже оставлена только как **legacy mapping** для старых книг и курсов; это не всегда соответствие один к одному.
+Рабочее сопоставление с **OWASP Kubernetes Top 10 - 2025** помогает не потерять класс риска. Это не замена threat model: один поток может относиться к нескольким категориям. Редакция 2022 ниже оставлена только как **legacy mapping** для старых книг и курсов; это не всегда соответствие один к одному.
 
 | Риск в модели | Основная категория OWASP Kubernetes Top 10 (2025) | Legacy mapping: OWASP 2022 | Пример control и evidence |
 |---|---|---|---|
@@ -854,13 +854,13 @@ flowchart TB
 <details>
 <summary>1. Почему защита Container-слоя не компенсирует публичный API endpoint или избыточные cloud IAM-права?</summary>
 
-4C — это вложенные, но независимые слои: `SecurityContext` и `NetworkPolicy` могут ограничить скомпрометированный workload, но не закрывают публичный API endpoint и не уменьшают выданные cloud IAM-права. Для API нужны TLS, authentication/authorization и ограничение доступа, а для cloud identity — минимальные IAM-права, workload identity и metadata controls.
+4C - это вложенные, но независимые слои: `SecurityContext` и `NetworkPolicy` могут ограничить скомпрометированный workload, но не закрывают публичный API endpoint и не уменьшают выданные cloud IAM-права. Для API нужны TLS, authentication/authorization и ограничение доступа, а для cloud identity - минимальные IAM-права, workload identity и metadata controls.
 </details>
 
 <details>
 <summary>2. Какие активы находятся на каждом из слоёв 4C в вашем кластере?</summary>
 
-На Cloud-слое это cloud credentials, VPC, metadata, диски и snapshots; на Cluster-слое — API server, etcd, kubelet, PKI и RBAC. Container-слой включает image, runtime, namespaces, процессы и файловую систему, а Code-слой — исходный код, зависимости, конфигурацию и секреты.
+На Cloud-слое это cloud credentials, VPC, metadata, диски и snapshots; на Cluster-слое - API server, etcd, kubelet, PKI и RBAC. Container-слой включает image, runtime, namespaces, процессы и файловую систему, а Code-слой - исходный код, зависимости, конфигурацию и секреты.
 </details>
 
 <details>

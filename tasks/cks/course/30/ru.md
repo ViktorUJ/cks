@@ -12,7 +12,7 @@
 
 > **Что нужно из CKA.** Устройство ноды, container runtime и CNI - в [главе 02 CKA](../../../cka/course/02/ru.md), процессы контейнера и диагностика на ноде - в [главе 40 CKA](../../../cka/course/40/ru.md). Модель фаз атаки дана в [главе 02](../02/ru.md), установка и базовый синтаксис Falco - в [главе 29](../29/ru.md). Здесь не повторяем их, а связываем сигнал с расследованием.
 
-> 🧠 Incident detection — это корреляция независимых источников, а не доверие одному alert: каждый слой уменьшает неопределённость, которую оставляют остальные.
+> 🧠 Incident detection - это корреляция независимых источников, а не доверие одному alert: каждый слой уменьшает неопределённость, которую оставляют остальные.
 
 ## 30.1. Детект угроз по слоям: один инцидент, несколько источников
 
@@ -222,7 +222,7 @@ sudo falco -L | grep -Ei 'shell|sensitive|dev.mem|read.*shadow'
 ```
 
 Перед reload валидируйте полный конфиг. При включённом `watch_config_files` Falco hot-reload-ит
-rule/config file; сначала проверьте успешную перезагрузку в журнале. Restart — fallback, если
+rule/config file; сначала проверьте успешную перезагрузку в журнале. Restart - fallback, если
 watching выключен, reload не произошёл или изменение этого требует. На production node
 согласуйте окно и следите за health агента: неисправное YAML-правило может оставить runtime
 detection без работающего процесса.
@@ -259,7 +259,7 @@ kubectl -n falco logs daemonset/falco -c falco --all-pods=true --prefix --since=
 | `%fd.name`, `%fd.typechar`                                                         | файл/дескриптор, с которым работал syscall                        | путь может быть относительным или resolved runtime-ом                                                                                               |
 | `%fd.lip`, `%fd.lport`, `%fd.rip`, `%fd.rport`                                 | local/remote endpoint сетевого события                                          | применимы к сетевым событиям, не к file open; для client/server semantics используйте `%fd.cip`/`%fd.cport` и `%fd.sip`/`%fd.sport` |
 | `%container.id`, `%container.full_id`, `%container.name`                         | контейнер для связи с CRI                                                    | `container.id` обычно усечён; сохраняйте `full_id`, когда enrichment его предоставил                                                  |
-| `%container.image.repository`, `%container.image.tag`, `%container.image.digest` | ссылка на образ и registry digest из runtime enrichment                          | digest может быть пуст при задержке/отсутствии enrichment; `ContainerStatus.imageID` — runtime-specific identifier, поэтому не требуйте их универсального равенства; при необходимости сверяйте CRI/runtime inspect |
+| `%container.image.repository`, `%container.image.tag`, `%container.image.digest` | ссылка на образ и registry digest из runtime enrichment                          | digest может быть пуст при задержке/отсутствии enrichment; `ContainerStatus.imageID` - runtime-specific identifier, поэтому не требуйте их универсального равенства; при необходимости сверяйте CRI/runtime inspect |
 | `%k8s.ns.name`, `%k8s.pod.name`, `%k8s.pod.uid`                                  | Kubernetes scope и стабильный Pod UID                                               | поля требуют корректной интеграции runtime/Kubernetes metadata                                                                                      |
 
 Полный формат для file-правила уже показан в разделе 30.2. Для network detection не используйте `fd.name` как единственное доказательство: добавьте адрес и порт. Например, локальное правило для исходящего соединения внешнего контейнерного процесса может начинаться с такого output:
@@ -274,7 +274,7 @@ output: >
   k8s_ns=%k8s.ns.name k8s_pod=%k8s.pod.name k8s_pod_uid=%k8s.pod.uid)
 ```
 
-Не добавляйте все поля «на всякий случай». `proc.cmdline`, environment и request body могут раскрыть passwords, bearer tokens и PII. Определите redact policy, ограничьте доступ к SIEM и журналу Falco, срок хранения и процедуру передачи evidence. При этом нельзя вырезать container ID, Pod UID, node, UTC-время и, когда runtime его предоставил, image digest: без них alert почти невозможно надёжно связать с другими источниками. Если digest или `container_full_id` пуст, сохраните исходный alert и дополните его результатами `kubectl get pod` и `crictl inspect`, а не подставляйте догадку. Для attribution первично сопоставляйте Pod UID, exact container ID, node и timestamp. `status.containerStatuses[].imageID` — runtime-specific identifier/hint, а не переносимое доказательство равенства `%container.image.digest`; сильнее evidence даёт digest-pinned `spec.containers[].image`. Для multi-arch image учитывайте разрешение index в platform manifest выбранной архитектуры node; `crictl inspect` или `crictl images --digests` — дополнительное evidence.
+Не добавляйте все поля «на всякий случай». `proc.cmdline`, environment и request body могут раскрыть passwords, bearer tokens и PII. Определите redact policy, ограничьте доступ к SIEM и журналу Falco, срок хранения и процедуру передачи evidence. При этом нельзя вырезать container ID, Pod UID, node, UTC-время и, когда runtime его предоставил, image digest: без них alert почти невозможно надёжно связать с другими источниками. Если digest или `container_full_id` пуст, сохраните исходный alert и дополните его результатами `kubectl get pod` и `crictl inspect`, а не подставляйте догадку. Для attribution первично сопоставляйте Pod UID, exact container ID, node и timestamp. `status.containerStatuses[].imageID` - runtime-specific identifier/hint, а не переносимое доказательство равенства `%container.image.digest`; сильнее evidence даёт digest-pinned `spec.containers[].image`. Для multi-arch image учитывайте разрешение index в platform manifest выбранной архитектуры node; `crictl inspect` или `crictl images --digests` - дополнительное evidence.
 
 ### Проверить доступные поля и фактическое обогащение
 
@@ -297,7 +297,7 @@ sudo journalctl -u falco --since '10 minutes ago' --no-pager | \
 ## 30.4. От alert к MITRE ATT&CK tactics: практический разбор
 
 Один syscall не обозначает фазу атаки автоматически. Термины `Initial Access`, `Execution`,
-`Credential Access`, `Lateral Movement`, `Persistence`, `Privilege Escalation`, `Defense Evasion` и `Exfiltration` ниже — это tactics MITRE ATT&CK, а не классическая Lockheed Martin
+`Credential Access`, `Lateral Movement`, `Persistence`, `Privilege Escalation`, `Defense Evasion` и `Exfiltration` ниже - это tactics MITRE ATT&CK, а не классическая Lockheed Martin
 Cyber Kill Chain. Фазу определяют по последовательности, identity и цели. Ниже - пример controlled incident: web-Pod получает shell, читает service-account token, обращается к API и пытается открыть `/dev/mem`. Последнее действие не доказывает успешный escape, но повышает приоритет расследования.
 
 ```mermaid
@@ -381,7 +381,7 @@ sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
 )
 ```
 
-> 🏭 Containment — последовательный workflow с обратимыми первыми шагами, явным владельцем решения и доказательством результата. Выбор между quarantine, cordon и удалением workload зависит от scope и сохранённого evidence.
+> 🏭 Containment - последовательный workflow с обратимыми первыми шагами, явным владельцем решения и доказательством результата. Выбор между quarantine, cordon и удалением workload зависит от scope и сохранённого evidence.
 
 ## 30.5. После alert: containment, а не только evidence
 
@@ -397,13 +397,13 @@ sudo crictl inspect "$CONTAINER_ID" > "$EVIDENCE/crictl-inspect.json"
 | Действие | Что делает | Когда уместно | Что теряете/чего не гарантирует |
 | --- | --- | --- | --- |
 | **NetworkPolicy quarantine** | additive L3/L4 isolation selected Pod при CNI, который реально enforces NetworkPolicy | обратимый первый шаг: ограничивает новые разрешённые TCP/UDP/SCTP connections, сохраняя Pod и evidence | не priority deny: все selecting policies складывают allow; traffic resident node, non-L4 и existing connections имеют ограничения/зависят от CNI |
-| **Cordon ноды** | `kubectl cordon <node>` — scheduling freeze: блокирует scheduling новых обычных Pod; существующие Pod продолжают работать | дополнительный preparatory step при подозрении на node compromise | не изолирует скомпрометированные node, kubelet, host process, сеть или credentials; нужен infrastructure isolation runbook |
+| **Cordon ноды** | `kubectl cordon <node>` - scheduling freeze: блокирует scheduling новых обычных Pod; существующие Pod продолжают работать | дополнительный preparatory step при подозрении на node compromise | не изолирует скомпрометированные node, kubelet, host process, сеть или credentials; нужен infrastructure isolation runbook |
 | **Остановка owning workload** | определить owner/controller и изменить source desired state, например `kubectl scale deployment --replicas=0` | подтверждённый активный риск, evidence уже сохранён | простое `kubectl delete pod` обычно создаст replacement и теряет live-процесс, `/proc`-контекст и возможность повторного `strace` |
 
 Порядок обычно такой: сначала проверяют возможности CNI и все policy, выбирающие Pod, затем при необходимости применяют NetworkPolicy как обратимое ограничение новых соединений. `cordon` используют лишь как scheduling freeze. При подозрении на host/node compromise реальное containment выполняют по infrastructure runbook: убрать node из LB/service paths, применить cloud firewall/security group/NAC/EDR host isolation, ограничить node и workload credentials, затем контролируемо заменить/rebuild node. После сохранения evidence останавливают owning workload, а не только один Pod. Автоматическое **evict** ноды (`kubectl drain`) также пересоздаёт workload на другой ноде, если не остановлен controller.
 
 ```bash
-# Шаг 1: NetworkPolicy quarantine — ограничение новых L3/L4 connections, не уничтожающее evidence.
+# Шаг 1: NetworkPolicy quarantine - ограничение новых L3/L4 connections, не уничтожающее evidence.
 # До применения подтвердите, что CNI enforces NetworkPolicy, и просмотрите ВСЕ policy,
 # которые уже выбирают этот Pod: их allow rules складываются с quarantine.
 # Не угадывайте существующий label скомпрометированного Pod: назначьте отдельный marker.
@@ -427,7 +427,7 @@ kubectl -n "$NAMESPACE" get networkpolicy
 kubectl -n "$NAMESPACE" get networkpolicy incident-quarantine
 # Проверьте НОВОЕ соединение после применения; судьба уже установленного зависит от CNI.
 
-# Шаг 2 — только scheduling freeze, не node isolation:
+# Шаг 2 - только scheduling freeze, не node isolation:
 NODE="${NODE:?set NODE to the node from the Falco alert}"
 kubectl cordon "$NODE"
 kubectl get node "$NODE"
@@ -593,9 +593,9 @@ sudo grep -E 'openat|openat2|connect|execve|clone' \
 `strace -f` следует только за `fork`/`vfork`/`clone`, созданными **после** attach к уже трассируемому процессу; `-ff` делает то же и пишет отдельный файл на процесс. Уже существующих descendants он не находит. Поэтому attach делают к точному живому host PID `%proc.pid` из alert; PID 1 контейнера используют лишь для базового `/proc`-контекста.
 
 **Если контейнер уже завершён или перезапущен:** отсутствие текущего PID не опровергает alert.
-Сразу сохраните durable evidence — исходную строку Falco, audit/flow IDs, timestamps, Pod UID,
+Сразу сохраните durable evidence - исходную строку Falco, audit/flow IDs, timestamps, Pod UID,
 image digest, `kubectl get pod -o yaml`, `kubectl logs --previous` (если применимо), CRI/journal
-logs и restart count. `/proc/<pid>`, текущий cgroup и runtime record — volatile evidence и
+logs и restart count. `/proc/<pid>`, текущий cgroup и runtime record - volatile evidence и
 могут исчезнуть при cleanup; Falco/audit/application logs и сохранённый CRI inspect нужно
 выгрузить до destructive containment. Не пытайтесь «повторить» вредоносное действие на
 production.
@@ -659,7 +659,7 @@ flowchart TB
 ```bash
 set -euo pipefail
 sudo falco -c /etc/falco/falco.yaml --dry-run
-# При watch_config_files: true проверить hot reload в журнале; restart — только fallback.
+# При watch_config_files: true проверить hot reload в журнале; restart - только fallback.
 sudo journalctl -u falco --since '2 minutes ago' --no-pager
 
 # Fail closed: не продолжать и не удалять namespace, если он уже существовал.
@@ -784,7 +784,7 @@ kubectl delete namespace runtime-lab
 <details>
 <summary>4. Чем `%user.name` отличается от Kubernetes user/ServiceAccount в API audit-log?</summary>
 
-`%user.name` — effective Linux user процесса, наблюдаемый Falco на node. Kubernetes authenticated user или ServiceAccount отражается в `.user.username` audit event и относится к API request. Эти identity нельзя отождествлять: для attribution их коррелируют по времени, Pod/SA и другим устойчивым IDs.
+`%user.name` - effective Linux user процесса, наблюдаемый Falco на node. Kubernetes authenticated user или ServiceAccount отражается в `.user.username` audit event и относится к API request. Эти identity нельзя отождествлять: для attribution их коррелируют по времени, Pod/SA и другим устойчивым IDs.
 
 </details>
 

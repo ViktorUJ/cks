@@ -1,50 +1,25 @@
-# Лаба 104 — эталонное решение: RBAC, ServiceAccount token и anonymous API
+# Лаба 104 - эталонное решение: RBAC, ServiceAccount token и anonymous API
 
 > Выполняйте команды с рабочей машины, если в шаге не указано иное. Namespace
 > `security-104` уже существует.
+>
+> На экзамене `k` (`alias k=kubectl`) и bash-completion для него уже настроены на SSH-хосте -
+> не тратьте время на их настройку, просто используйте `k` (см. главу 33.6).
 
 ## 1. Минимальный доступ `auditor` только к Pod
 
-Создадим ServiceAccount, одно точное правило и namespaced binding:
-
-```yaml
-# auditor-rbac.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: auditor
-  namespace: security-104
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: pod-observer
-  namespace: security-104
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: auditor-pod-observer
-  namespace: security-104
-subjects:
-- kind: ServiceAccount
-  name: auditor
-  namespace: security-104
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: pod-observer
-```
+На экзамене писать полный YAML для типового RBAC-объекта вручную - потеря времени:
+`kubectl create` генерирует ServiceAccount/Role/RoleBinding одной командой каждый:
 
 ```bash
-kubectl apply -f auditor-rbac.yaml
-kubectl auth can-i list pods -n security-104 \
+k create sa auditor -n security-104
+k create role pod-observer -n security-104 --resource=pods --verb=get,list,watch
+k create rolebinding auditor-pod-observer -n security-104 \
+  --role=pod-observer --serviceaccount=security-104:auditor
+
+k auth can-i list pods -n security-104 \
   --as=system:serviceaccount:security-104:auditor
-kubectl auth can-i delete secrets -n security-104 \
+k auth can-i delete secrets -n security-104 \
   --as=system:serviceaccount:security-104:auditor # должно быть no
 ```
 
@@ -59,57 +34,50 @@ API server по умолчанию. Отдельную audience допустим
 отклоняет как invalid любое значение меньше `600` секунд для `serviceAccountToken`
 projected source, независимо от того, что написано в манифесте.
 
+Точный синтаксис `projected.sources[].serviceAccountToken` по памяти на экзамене
+вспоминать не нужно - на `kubernetes.io/docs` он есть в разделе Concepts → Storage →
+[Projected Volumes](https://kubernetes.io/docs/concepts/storage/projected-volumes/), под
+заголовком **"serviceAccountToken projected volumes"** (там готовый пример Pod с этим
+volume - берите структуру оттуда, а не пишите с нуля). `kubectl run` не умеет добавлять
+такой volume через флаги - генерируем скелет Pod через `--dry-run=client -o yaml` и
+дописываем в `vim` только нужные поля, скопированные из примера в документации:
+
+```bash
+k create sa api-client -n security-104
+k run token-client -n security-104 --image=busybox:1.36 --command --dry-run=client -o yaml \
+  -- sh -c "sleep 3600" > token-client.yaml
+vim token-client.yaml
+```
+
 ```yaml
-# token-client.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: api-client
-  namespace: security-104
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: token-client
-  namespace: security-104
+# В spec Pod добавьте (containers/image/command уже сгенерированы kubectl run):
 spec:
-  serviceAccountName: api-client
-  automountServiceAccountToken: false
+  serviceAccountName: api-client              # добавить
+  automountServiceAccountToken: false         # добавить
   containers:
-  - name: client
-    image: busybox:1.36
-    command: ["sh", "-c", "sleep 3600"]
-    volumeMounts:
-    - name: api-token
-      mountPath: /var/run/secrets/tokens
-      readOnly: true
-  volumes:
-  - name: api-token
-    projected:
-      sources:
-      - serviceAccountToken:
-          path: api-token
-          expirationSeconds: 3600
+  - name: token-client
+    volumeMounts:                             # добавить
+    - name: api-token                         # добавить
+      mountPath: /var/run/secrets/tokens       # добавить
+      readOnly: true                          # добавить
+    ...
+  volumes:                                    # добавить
+  - name: api-token                           # добавить
+    projected:                                # добавить
+      sources:                                # добавить
+      - serviceAccountToken:                  # добавить
+          path: api-token                     # добавить
+          expirationSeconds: 3600             # добавить
 ```
 
 ```bash
-kubectl apply -f token-client.yaml
-kubectl wait -n security-104 --for=condition=Ready pod/token-client --timeout=120s
-kubectl exec -n security-104 token-client -- \
+k apply -f token-client.yaml
+k wait -n security-104 --for=condition=Ready po/token-client --timeout=120s
+k exec -n security-104 token-client -- \
   ls -l /var/run/secrets/tokens/api-token
+# файл есть - если манифест совпадает с примером из документации, kubelet его выпустил
 
-# Это реальный запрос к API TokenReview с токеном из volume; он должен подтвердить
-# именно ServiceAccount api-client, а не только наличие поля в YAML.
-TOKEN=$(kubectl exec -n security-104 token-client -- cat /var/run/secrets/tokens/api-token)
-jq -n --arg token "$TOKEN" \
-  '{apiVersion:"authentication.k8s.io/v1", kind:"TokenReview", spec:{token:$token}}' \
-  | kubectl create -f - -o json \
-  | jq '{authenticated: .status.authenticated, username: .status.user.username}'
-# {"authenticated": true, "username": "system:serviceaccount:security-104:api-client"}
-
-# Это отдельная authorization-проверка: аутентифицированный токен не получает
-# избыточное RBAC-разрешение.
-kubectl auth can-i delete secrets -n security-104 \
+k auth can-i delete secrets -n security-104 \
   --as=system:serviceaccount:security-104:api-client
 # no
 ```
@@ -119,37 +87,35 @@ kubectl auth can-i delete secrets -n security-104 \
 Отключаем автомонтирование и на ServiceAccount, и на Pod: это защищает от последующих
 изменений шаблона или ServiceAccount.
 
+`kubectl create serviceaccount` не имеет флага для `automountServiceAccountToken` - создаём
+и сразу патчим:
+
+```bash
+k create sa no-token-sa -n security-104
+k patch sa no-token-sa -n security-104 -p '{"automountServiceAccountToken":false}'
+k run no-token -n security-104 --image=busybox:1.36 --command --dry-run=client -o yaml \
+  -- sh -c "sleep 3600" > no-token.yaml
+vim no-token.yaml
+```
+
 ```yaml
-# no-token.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: no-token-sa
-  namespace: security-104
-automountServiceAccountToken: false
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: no-token
-  namespace: security-104
+# В spec Pod добавьте:
 spec:
-  serviceAccountName: no-token-sa
-  automountServiceAccountToken: false
+  serviceAccountName: no-token-sa       # добавить
+  automountServiceAccountToken: false   # добавить
   containers:
-  - name: app
-    image: busybox:1.36
-    command: ["sh", "-c", "sleep 3600"]
+  - name: no-token
+    ...
 ```
 
 ```bash
-kubectl apply -f no-token.yaml
-kubectl wait -n security-104 --for=condition=Ready pod/no-token --timeout=60s
-kubectl get pod no-token -n security-104 -o jsonpath='{.spec.automountServiceAccountToken}'
+k apply -f no-token.yaml
+k wait -n security-104 --for=condition=Ready po/no-token --timeout=60s
+k get po no-token -n security-104 -o jsonpath='{.spec.automountServiceAccountToken}'
 
 # Подтверждаем на уровне runtime, а не только на уровне YAML-спецификации: в
 # контейнере действительно нет файла токена.
-kubectl exec -n security-104 no-token -- \
+k exec -n security-104 no-token -- \
   test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
 echo "exit code: $?"
 # exit code: 0 - файла нет, exec сам отработал успешно
@@ -166,24 +132,27 @@ echo "exit code: $?"
 шаблон не останется для повторного использования):
 
 ```bash
-kubectl delete clusterrolebinding legacy-operator-admin
-kubectl delete clusterrole legacy-operator-admin
-kubectl auth can-i get secrets -n security-104 \
+k delete clusterrolebinding legacy-operator-admin
+k delete clusterrole legacy-operator-admin
+k auth can-i get secrets -n security-104 \
   --as=system:serviceaccount:security-104:legacy-operator # должно быть no
 ```
 
 ## 5. Отключение anonymous-auth
 
-Подключитесь к control-plane. Простое `--anonymous-auth=false` здесь не подходит: kubeadm
-`release-1.36` генерирует kube-apiserver static Pod с HTTPS liveness/readiness/startup
-probes на `/livez` и `/readyz`, а kubelet HTTP probes не передают client credentials -
-при полном отключении anonymous access эти запросы получат `401`, и kubelet начнёт
-считать kube-apiserver нездоровым (что в свою очередь ломает и задание 9, зависящее от
-стабильно работающего API server). Вместо этого используем `AuthenticationConfiguration`
-с `anonymous.conditions`, ограничивающими anonymous access только тремя health-путями:
+Простое `--anonymous-auth=false` здесь не подходит: kubeadm `release-1.36` генерирует
+kube-apiserver static Pod с HTTPS liveness/readiness/startup probes на `/livez` и
+`/readyz`, а kubelet HTTP probes не передают client credentials - при полном отключении
+anonymous access эти запросы получат `401`, и kubelet начнёт считать kube-apiserver
+нездоровым (что в свою очередь ломает и задание 9, зависящее от стабильно работающего API
+server). Вместо этого используем `AuthenticationConfiguration` с `anonymous.conditions`,
+ограничивающими anonymous access только тремя health-путями. На экзамене не префиксите
+каждую команду `sudo` - один раз станьте root (`sudo -i`), это быстрее:
 
 ```bash
-sudo tee /etc/kubernetes/authentication-config.yaml >/dev/null <<'EOF'
+ssh control-plane
+sudo -i
+cat > /etc/kubernetes/authentication-config.yaml <<'EOF'
 apiVersion: apiserver.config.k8s.io/v1
 kind: AuthenticationConfiguration
 jwt: []
@@ -197,46 +166,47 @@ EOF
 ```
 
 Правим static manifest: убираем `--anonymous-auth=true` полностью (нельзя оставлять
-рядом с `--authentication-config` - kube-apiserver откажется стартовать, если заданы оба)
-и добавляем `--authentication-config`, а также `hostPath` volume/volumeMount для нового
-файла конфигурации, аналогично тому, как задание 9 добавляет volume для audit policy -
-kube-apiserver читает `authentication-config.yaml` с файловой системы ноды, поэтому файл
-должен быть виден внутри container через volumeMount, а не только лежать на хосте:
+рядом с `--authentication-config` - kube-apiserver откажется стартовать, если заданы оба),
+добавляем `--authentication-config`, а также `hostPath` volume/volumeMount для нового
+файла конфигурации - kube-apiserver читает `authentication-config.yaml` с файловой
+системы ноды, поэтому файл должен быть виден внутри container через volumeMount, а не
+только лежать на хосте:
 
 ```bash
-sudo sed -i \
-  -e '\#--anonymous-auth=#d' \
-  -e '/- kube-apiserver/a\    - --authentication-config=/etc/kubernetes/authentication-config.yaml' \
-  /etc/kubernetes/manifests/kube-apiserver.yaml
-
-sudo python3 - <<'EOF'
-import yaml
-path = "/etc/kubernetes/manifests/kube-apiserver.yaml"
-with open(path) as f:
-    manifest = yaml.safe_load(f)
-container = manifest["spec"]["containers"][0]
-container.setdefault("volumeMounts", []).append({
-    "name": "authentication-config",
-    "mountPath": "/etc/kubernetes/authentication-config.yaml",
-    "readOnly": True,
-})
-manifest["spec"].setdefault("volumes", []).append({
-    "name": "authentication-config",
-    "hostPath": {"path": "/etc/kubernetes/authentication-config.yaml", "type": "File"},
-})
-with open(path, "w") as f:
-    yaml.safe_dump(manifest, f)
-EOF
+cp /etc/kubernetes/manifests/kube-apiserver.yaml ~/5-api.yaml
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
+# В массиве command:
+# - удалите строку "- --anonymous-auth=true"
+# - добавьте строку с тем же отступом, что у остальных аргументов:
+#   - --authentication-config=/etc/kubernetes/authentication-config.yaml
+# В volumeMounts контейнера (тот же отступ, что у соседних элементов):
+#   - mountPath: /etc/kubernetes/authentication-config.yaml
+#     name: authentication-config
+#     readOnly: true
+# В volumes Pod (тот же отступ, что у соседних элементов):
+#   - hostPath:
+#       path: /etc/kubernetes/authentication-config.yaml
+#       type: File
+#     name: authentication-config
+systemctl restart kubelet
+exit
+exit
 ```
 
-Kubelet автоматически перезапустит API server. На рабочей машине дождитесь готовности
-(Pod должен остаться `Running`/`Ready`, а не попасть в цикл перезапуска) и проверьте все
-три поведения: `/version` отклоняет анонимные запросы, а `/livez`/`/readyz` - принимают:
+`systemctl restart kubelet` форсирует немедленную пересборку static Pod - на экзамене
+быстрее, чем ждать, пока kubelet сам заметит изменение файла (обычно секунды, но не
+гарантированно мгновенно):
 
 ```bash
-until kubectl get --raw=/readyz >/dev/null 2>&1; do sleep 2; done
-kubectl -n kube-system get pods -l component=kube-apiserver
-SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+k get po -n kube-system -l component=kube-apiserver
+# STATUS должен стать Running - если ещё нет, подождите пару секунд и повторите
+```
+
+Проверьте все три поведения: `/version` отклоняет анонимные запросы, а `/livez`/`/readyz`
+- принимают:
+
+```bash
+SERVER=$(k config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/version" # 401 - anonymous access закрыт
 curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/livez"   # 200 - health probe работает
 curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/readyz"  # 200 - health probe работает
@@ -248,7 +218,7 @@ curl -k -o /dev/null -s -w '%{http_code}\n' "$SERVER/readyz"  # 200 - health pro
 для уже аутентифицированных клиентов:
 
 ```bash
-kubectl get --raw=/readyz # ok
+k get --raw=/readyz # ok
 ```
 
 Аутентификация без ограничивающей авторизации бессмысленна - проверьте, что
@@ -256,7 +226,7 @@ kubectl get --raw=/readyz # ok
 (kubeadm задаёт это по умолчанию, но стоит убедиться, что ничего не поменяло флаг):
 
 ```bash
-kubectl get pods -n kube-system -l component=kube-apiserver \
+k get po -n kube-system -l component=kube-apiserver \
   -o jsonpath='{.items[0].spec.containers[0].command}' | tr ',' '\n' | grep authorization-mode
 # --authorization-mode=Node,RBAC
 ```
@@ -265,7 +235,7 @@ kubectl get pods -n kube-system -l component=kube-apiserver \
 или группу - в кластере намеренно оставлена одна такая lab-owned привязка:
 
 ```bash
-kubectl get clusterrolebinding -o json | jq -r \
+k get clusterrolebinding -o json | jq -r \
   '.items[] | select([.subjects[]? | select(.name == "system:anonymous" or .name == "system:unauthenticated")] | length > 0) | .metadata.name'
 # system:public-info-viewer
 # lab104-unintended-anonymous-access
@@ -275,27 +245,27 @@ kubectl get clusterrolebinding -o json | jq -r \
 `system:unauthenticated`, но её ClusterRole разрешает read-only `GET` только к
 non-resource URL `/livez`, `/readyz`, `/healthz`, `/version`, `/version/`, а не к обычным
 Kubernetes-ресурсам - это default Kubernetes RBAC, требуемая часть bootstrap, не трогайте
-её. Это не то же самое, что `anonymous.conditions` из задания 5: тот список ограничивает,
-на каких путях запрос вообще получает anonymous identity на этапе authentication (там
-только `/livez`/`/readyz`/`/healthz`) - `/version` анонимно возвращает `401` именно
-потому, что anonymous identity туда не назначается, а не потому что у
-`system:public-info-viewer` там не хватает прав. `lab104-unintended-anonymous-access` - намеренная
-lab-owned находка: её ClusterRole `lab104-anonymous-debug-access` даёт полноценный RBAC
-`get`/`list` на `pods`/`secrets`/`configmaps` кластерно, то есть ЛЮБОЙ анонимный запрос
-может их читать. Удаляем оба объекта, как и в заданиях 4/7:
+её. Это не то же самое, что `anonymous.conditions` из этого же задания: тот список
+ограничивает, на каких путях запрос вообще получает anonymous identity на этапе
+authentication (там только `/livez`/`/readyz`/`/healthz`) - `/version` анонимно возвращает
+`401` именно потому, что anonymous identity туда не назначается, а не потому что у
+`system:public-info-viewer` там не хватает прав. `lab104-unintended-anonymous-access` -
+намеренная lab-owned находка: её ClusterRole `lab104-anonymous-debug-access` даёт
+полноценный RBAC `get`/`list` на `pods`/`secrets`/`configmaps` кластерно, то есть ЛЮБОЙ
+анонимный запрос может их читать. Удаляем оба объекта, как и в заданиях 4/7:
 
 ```bash
-kubectl delete clusterrolebinding lab104-unintended-anonymous-access
-kubectl delete clusterrole lab104-anonymous-debug-access
+k delete clusterrolebinding lab104-unintended-anonymous-access
+k delete clusterrole lab104-anonymous-debug-access
 ```
 
 Подтверждаем отзыв реальным негативным контролем от имени именно неаутентифицированной
 идентичности, а не просто отсутствием объекта:
 
 ```bash
-kubectl auth can-i get pods -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
-kubectl auth can-i get secrets -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
-kubectl auth can-i get configmaps -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
+k auth can-i get pods -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
+k auth can-i get secrets -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
+k auth can-i get configmaps -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
 # no / no / no
 ```
 
@@ -306,7 +276,7 @@ Pod/Secret/ConfigMap - если бы lab-owned binding остался, отве�
 
 В конце выполните `check_result`.
 
-## 6. Secret через env раскрывается в `/proc/1/environ`: рефакторинг на volume
+## 6. Утечка Secret через env в `/proc/1/environ`: переход на volume
 
 `app-vulnerable` получает `db-creds` через `envFrom`, поэтому значение попадает в
 environment процесса PID 1 контейнера. Любой, у кого есть право на `kubectl exec` в этот
@@ -315,53 +285,51 @@ Pod, может прочитать секрет напрямую из `/proc`, �
 
 ```bash
 mkdir -p /var/work/tests/artifacts/6
-EXPECTED_PASSWORD=$(kubectl get secret db-creds -n security-104 \
-  -o jsonpath='{.data.DB_PASSWORD}' | base64 -d)
-kubectl exec -n security-104 app-vulnerable -- cat /proc/1/environ \
-  | tr '\0' '\n' | tee /var/work/tests/artifacts/6/env-leak-before.txt
-grep -F "DB_PASSWORD=$EXPECTED_PASSWORD" /var/work/tests/artifacts/6/env-leak-before.txt
+k exec -n security-104 app-vulnerable -- cat /proc/1/environ \
+  | tr '\0' '\n' | grep DB_PASSWORD | tee /var/work/tests/artifacts/6/env-leak-before.txt
 ```
 
-Сохраняем именно строку с реальным значением секрета, а не просто слово `DB_PASSWORD` -
-checker сверяет artifact с фактическим значением из Secret `db-creds`, поэтому файл,
-содержащий только имя переменной без значения, не будет принят как доказательство утечки.
+Сохраняем именно строку `DB_PASSWORD=<реальное значение>` из окружения процесса, а не
+просто слово `DB_PASSWORD` без значения - checker сам сверит её с фактическим значением
+из Secret `db-creds`, отдельно вычислять и сравнивать значение самим не нужно.
 
 Пересоздаём Pod с тем же именем: убираем `envFrom`, монтируем тот же Secret как volume
 `db-creds-vol` в `/etc/secrets`, read-only, с `defaultMode: 0400` (`256` в decimal, как его
-показывает `kubectl get pod -o json`). `0400` — это read-only только для владельца файла
+показывает `kubectl get pod -o json`). `0400` - это read-only только для владельца файла
 внутри контейнера; сам процесс приложения всё равно должен запускаться под этим UID, иначе
 он не сможет прочитать файл.
 
-```yaml
-# app-vulnerable-fixed.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: app-vulnerable
-  namespace: security-104
-spec:
-  automountServiceAccountToken: false
-  containers:
-  - name: app
-    image: busybox:1.36
-    command: ["sh", "-c", "sleep 3600"]
-    volumeMounts:
-    - name: db-creds-vol
-      mountPath: /etc/secrets
-      readOnly: true
-  volumes:
-  - name: db-creds-vol
-    secret:
-      secretName: db-creds
-      defaultMode: 0400
-```
-
-Поле - неизменяемое; Pod нужно удалить и создать заново с тем же именем:
+Поле - неизменяемое; Pod нужно удалить и создать заново с тем же именем. Снова дешевле
+сгенерировать скелет через `--dry-run` и дописать volume в `vim`, чем писать весь YAML:
 
 ```bash
-kubectl delete pod app-vulnerable -n security-104
-kubectl apply -f app-vulnerable-fixed.yaml
-kubectl wait -n security-104 --for=condition=Ready pod/app-vulnerable --timeout=120s
+k run app-vulnerable -n security-104 --image=busybox:1.36 --command --dry-run=client -o yaml \
+  -- sh -c "sleep 3600" > app-vulnerable-fixed.yaml
+vim app-vulnerable-fixed.yaml
+```
+
+```yaml
+# В spec Pod добавьте:
+spec:
+  automountServiceAccountToken: false     # добавить
+  containers:
+  - name: app-vulnerable
+    volumeMounts:                         # добавить
+    - name: db-creds-vol                  # добавить
+      mountPath: /etc/secrets             # добавить
+      readOnly: true                      # добавить
+    ...
+  volumes:                                # добавить
+  - name: db-creds-vol                    # добавить
+    secret:                               # добавить
+      secretName: db-creds                # добавить
+      defaultMode: 0400                   # добавить
+```
+
+```bash
+k delete pod app-vulnerable -n security-104
+k apply -f app-vulnerable-fixed.yaml
+k wait -n security-104 --for=condition=Ready po/app-vulnerable --timeout=120s
 ```
 
 Подтверждаем три итоговых свойства, а не только «секрета нет в environment»: файловые
@@ -370,23 +338,23 @@ kubectl wait -n security-104 --for=condition=Ready pod/app-vulnerable --timeout=
 сломать саму функциональность приложения:
 
 ```bash
-kubectl exec -n security-104 app-vulnerable -- cat /proc/1/environ | tr '\0' '\n' | grep DB_PASSWORD
+k exec -n security-104 app-vulnerable -- cat /proc/1/environ | tr '\0' '\n' | grep DB_PASSWORD
 # ничего не найдено - это ожидаемо
 
-kubectl exec -n security-104 app-vulnerable -- stat -L -c '%a' /etc/secrets/DB_PASSWORD \
+k exec -n security-104 app-vulnerable -- stat -L -c '%a' /etc/secrets/DB_PASSWORD \
   | tee /var/work/tests/artifacts/6/secret-file-mode.txt
 # 400 - именно это значение, а не произвольный текст, где-то содержащий "400". Флаг -L
 # обязателен: секретный volume монтируется через цепочку симлинков ("..data"), и без -L
 # stat покажет режим самого симлинка (всегда 777 в Linux), а не реального файла.
 
 # Positive control: процесс приложения должен реально мочь прочитать значение секрета.
-kubectl exec -n security-104 app-vulnerable -- cat /etc/secrets/DB_PASSWORD
-# должно совпадать с $EXPECTED_PASSWORD выше
+k exec -n security-104 app-vulnerable -- cat /etc/secrets/DB_PASSWORD
+# должно совпадать со значением, которое было в env-leak-before.txt до фикса
 ```
 
 `defaultMode: 0400` защищает от чтения другими UID на этом же Pod (например, соседним
 sidecar-container без нужного UID), но не заменяет encryption at rest у etcd и не мешает
-процессу, запущенному под ожидаемым UID, прочитать сам файл — mount разрешает именно это.
+процессу, запущенному под ожидаемым UID, прочитать сам файл - mount разрешает именно это.
 Убедитесь также, что `db-creds` не смонтирован каким-то ВТОРЫМ способом одновременно
 (например, ещё и через `projected` volume) - должен остаться ровно один volume,
 монтирующий этот Secret.
@@ -396,43 +364,40 @@ sidecar-container без нужного UID), но не заменяет encrypt
 ## 7. Аудит и отзыв скрытых RBAC-путей privilege escalation
 
 `build-agent-hidden-privesc` не содержит wildcard `*`, но `impersonate`/`bind`/`escalate`/
-CSR-approval — отдельная категория опасных verbs: они не расширяют список видимых
+CSR-approval - отдельная категория опасных verbs: они не расширяют список видимых
 ресурсов, а дают возможность **действовать от чужого имени** или **выдать себе
 дополнительные права**. В этой версии fixture ClusterRole также содержит базовые
 `create`/`update` на `clusterroles`/`clusterrolebindings` - без них `bind`/`escalate`
 были бы неполными escalation primitives (RBAC требует ЛИБО уже иметь права из роли, ЛИБО
 явно иметь `escalate`/`bind` НА ФОНЕ попытки реально создать/обновить Role/Binding).
-Находим все ClusterRoleBinding, чьи ClusterRole разрешают любой из опасных verbs:
+Находим все ClusterRoleBinding, чьи ClusterRole разрешают любой из опасных verbs. Идём не
+от ClusterRole (их в кластере десятки, включая штатные `system:*`), а от
+ClusterRoleBinding - `kubectl get clusterrolebinding` уже по умолчанию показывает колонку
+`ROLE` (формат `ClusterRole/<имя>`), а `-o wide` добавляет ещё `USERS`/`GROUPS`/
+`SERVICEACCOUNTS` - ни custom-columns, ни YAML не нужны:
 
 ```bash
 mkdir -p /var/work/tests/artifacts/7
-kubectl get clusterrole -o json \
-  | jq '[.items[] | select([.rules[]?.verbs[]?] | any(. == "impersonate" or . == "bind" or . == "escalate")) | .metadata.name]' \
-  > /tmp/dangerous-clusterroles.json
-cat /tmp/dangerous-clusterroles.json
-
-kubectl get clusterrolebinding -o json \
-  | jq -r --slurpfile roles /tmp/dangerous-clusterroles.json \
-    '.items[] | select(.roleRef.kind == "ClusterRole" and (.roleRef.name | IN($roles[0][]))) | .metadata.name' \
-  | tee /var/work/tests/artifacts/7/dangerous-bindings-before.txt
+k get clusterrolebinding -o wide | grep -v system:
+# build-agent-hidden-privesc   ClusterRole/build-agent-hidden-privesc   ...   security-104/build-agent
 ```
 
-Отдельно фиксируем CSR-approval - это не в `verbs` того же ClusterRole по имени ресурса
-`clusterroles`, а отдельное правило на `certificatesigningrequests/approval` и `signers`.
-**Важно**: находим сначала опасные ClusterRole, а затем - ClusterRoleBinding, которые НА
-НИХ ССЫЛАЮТСЯ, а не сами имена ClusterRole (имя ClusterRole и имя ClusterRoleBinding могут
-не совпадать - в этой лабе они случайно совпадают, но полагаться на это нельзя):
+Для каждого кандидата смотрим его ClusterRole человекочитаемо, без `jq`/`grep` по YAML -
+`kubectl describe` сам печатает verbs таблицей, там сразу видно `impersonate`/`bind`/
+`escalate` и отдельное правило на `certificatesigningrequests/approval`:
 
 ```bash
-kubectl get clusterrole -o json \
-  | jq '[.items[] | select([.rules[]? | select(.resources[]? == "certificatesigningrequests/approval")] | length > 0) | .metadata.name]' \
-  > /tmp/dangerous-csr-clusterroles.json
-cat /tmp/dangerous-csr-clusterroles.json
+k describe clusterrole build-agent-hidden-privesc
+# Verbs в PolicyRule-таблице покажут impersonate / bind / escalate / update
+# (на certificatesigningrequests/approval) - глазами видно, что роль опасна
+```
 
-kubectl get clusterrolebinding -o json \
-  | jq -r --slurpfile roles /tmp/dangerous-csr-clusterroles.json \
-    '.items[] | select(.roleRef.kind == "ClusterRole" and (.roleRef.name | IN($roles[0][]))) | .metadata.name' \
-  >> /var/work/tests/artifacts/7/dangerous-bindings-before.txt
+Сохраняем имя ClusterRoleBinding (не ClusterRole - они могут не совпадать, в этой лабе
+совпали случайно) в artifact:
+
+```bash
+echo build-agent-hidden-privesc > /var/work/tests/artifacts/7/dangerous-bindings-before.txt
+cat /var/work/tests/artifacts/7/dangerous-bindings-before.txt
 ```
 
 `build-agent-hidden-privesc` должен быть в итоговом файле (как имя ClusterRoleBinding,
@@ -441,18 +406,18 @@ kubectl get clusterrolebinding -o json \
 core-компонентам Kubernetes необходимый `impersonate`/CSR доступ:
 
 ```bash
-kubectl delete clusterrolebinding build-agent-hidden-privesc
-kubectl delete clusterrole build-agent-hidden-privesc
+k delete clusterrolebinding build-agent-hidden-privesc
+k delete clusterrole build-agent-hidden-privesc
 ```
 
 Подтверждаем отзыв ВСЕХ заявленных опасных прав, а не только части из них:
 
 ```bash
-kubectl auth can-i impersonate users --as=system:serviceaccount:security-104:build-agent
-kubectl auth can-i bind clusterroles --as=system:serviceaccount:security-104:build-agent
-kubectl auth can-i escalate clusterroles --as=system:serviceaccount:security-104:build-agent
-kubectl auth can-i update certificatesigningrequests/approval --as=system:serviceaccount:security-104:build-agent
-kubectl auth can-i approve signers/kubernetes.io/kube-apiserver-client --as=system:serviceaccount:security-104:build-agent
+k auth can-i impersonate users --as=system:serviceaccount:security-104:build-agent
+k auth can-i bind clusterroles --as=system:serviceaccount:security-104:build-agent
+k auth can-i escalate clusterroles --as=system:serviceaccount:security-104:build-agent
+k auth can-i update certificatesigningrequests/approval --as=system:serviceaccount:security-104:build-agent
+k auth can-i approve signers/kubernetes.io/kube-apiserver-client --as=system:serviceaccount:security-104:build-agent
 # no / no / no / no / no
 ```
 
@@ -465,19 +430,17 @@ kubectl auth can-i approve signers/kubernetes.io/kube-apiserver-client --as=syst
 Pod, чтобы ни один новый workload не получил токен по умолчанию, даже если разработчик
 забудет явное поле в манифесте.
 
+ServiceAccount `default` создаётся отдельным контроллером асинхронно после появления
+Namespace - `kubectl wait` умеет ждать именно появления объекта (`--for=create`), не
+только его condition, поэтому не нужен ни ручной retry, ни самодельный цикл:
+
 ```bash
-kubectl create namespace security-104-baseline
+k create namespace security-104-baseline
+k wait -n security-104-baseline --for=create sa/default --timeout=30s
 
-# ServiceAccount 'default' создаётся отдельным контроллером асинхронно после появления
-# Namespace - patch сразу после create может ударить в несуществующий объект. Дожидаемся
-# его появления, прежде чем патчить.
-until kubectl -n security-104-baseline get serviceaccount default >/dev/null 2>&1; do
-  sleep 1
-done
-
-kubectl -n security-104-baseline patch serviceaccount default \
+k -n security-104-baseline patch sa default \
   -p '{"automountServiceAccountToken":false}'
-kubectl -n security-104-baseline get serviceaccount default \
+k -n security-104-baseline get sa default \
   -o jsonpath='{.automountServiceAccountToken}{"\n"}'
 # false
 ```
@@ -488,31 +451,20 @@ kubectl -n security-104-baseline get serviceaccount default \
 доказывало бы только точечную настройку самого Pod (как в задании 3), а не то, что
 namespace-level baseline реально работает:
 
-```yaml
-# implicit-default-sa.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: implicit-default-sa
-  namespace: security-104-baseline
-spec:
-  containers:
-  - name: app
-    image: busybox:1.36
-    command: ["sh", "-c", "sleep 3600"]
-```
+Здесь не нужен даже `--dry-run` - раз в Pod не добавляется ни одного поля про SA/automount,
+`kubectl run` без флагов создаёт ровно то, что нужно, напрямую:
 
 ```bash
-kubectl apply -f implicit-default-sa.yaml
-kubectl wait -n security-104-baseline --for=condition=Ready pod/implicit-default-sa --timeout=60s
-kubectl get pod implicit-default-sa -n security-104-baseline -o jsonpath='{.spec.serviceAccountName}{"\n"}'
+k run implicit-default-sa -n security-104-baseline --image=busybox:1.36 --command -- sh -c "sleep 3600"
+k wait -n security-104-baseline --for=condition=Ready po/implicit-default-sa --timeout=60s
+k get po implicit-default-sa -n security-104-baseline -o jsonpath='{.spec.serviceAccountName}{"\n"}'
 # default
 
-kubectl get pod implicit-default-sa -n security-104-baseline \
+k get po implicit-default-sa -n security-104-baseline \
   -o jsonpath='{.spec.automountServiceAccountToken}{"\n"}'
 # пустой вывод - поле отсутствует в спеке, а не установлено в false
 
-kubectl exec -n security-104-baseline implicit-default-sa -- \
+k exec -n security-104-baseline implicit-default-sa -- \
   test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
 echo "exit code: $?"
 # exit code: 0 - файла нет, и сам exec отработал успешно (в отличие от банального
@@ -536,44 +488,69 @@ echo "exit code: $?"
 (wildcard, impersonate/bind/escalate, automount). Здесь нужен другой слой защиты -
 обнаружение **опасного RBAC grant, выданного администратором** (по ошибке, из-за
 скомпрометированной автоматизации, или злонамеренно), а не только текущий снимок RBAC.
-Подключаемся к control-plane по SSH и готовим минимальный audit backend:
+Подключаемся к control-plane и готовим минимальный audit backend:
 
 ```bash
 ssh control-plane
-sudo mkdir -p /etc/kubernetes/audit /var/log/kubernetes/audit
-```
-
-```yaml
-# /etc/kubernetes/audit/policy.yaml
+sudo -i
+mkdir -p /etc/kubernetes/audit /var/log/kubernetes/audit
+cat > /etc/kubernetes/audit/policy.yaml <<'EOF'
 apiVersion: audit.k8s.io/v1
 kind: Policy
+omitStages:
+- RequestReceived
 rules:
 - level: RequestResponse
   resources:
   - group: "rbac.authorization.k8s.io"
     resources: ["clusterroles", "clusterrolebindings"]
 - level: Metadata
+EOF
 ```
 
 Правило RBAC стоит первым - более специфичное правило должно предшествовать общему
-catch-all, иначе `Metadata` перехватит событие раньше. Правим static manifest API server:
+catch-all, иначе `Metadata` перехватит событие раньше. `omitStages: [RequestReceived]`
+на уровне всей policy убирает лишнюю запись до обработки запроса - у неё нет
+`requestObject`/`responseStatus`, которые всё равно фильтрует checker (`stage ==
+"ResponseComplete"`), а с catch-all `Metadata`-правилом на ВСЕ остальные запросы кластера
+эта стадия удваивала бы объём audit.log без пользы.
+
+Правим static manifest: добавляем `--audit-policy-file`/`--audit-log-path` и hostPath
+volume/volumeMount для каталогов policy и логов - тем же приёмом, что и в задании 5 для
+`authentication-config.yaml`:
 
 ```bash
-sudo sed -i \
-  -e '/- kube-apiserver/a\    - --audit-policy-file=/etc/kubernetes/audit/policy.yaml\n    - --audit-log-path=/var/log/kubernetes/audit/audit.log' \
-  /etc/kubernetes/manifests/kube-apiserver.yaml
+cp /etc/kubernetes/manifests/kube-apiserver.yaml ~/9-api.yaml
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
+# В массиве command добавьте строки с тем же отступом, что у остальных аргументов:
+#   - --audit-policy-file=/etc/kubernetes/audit/policy.yaml
+#   - --audit-log-path=/var/log/kubernetes/audit/audit.log
+# В volumeMounts контейнера (тот же отступ, что у соседних элементов):
+#   - mountPath: /etc/kubernetes/audit
+#     name: audit-policy
+#     readOnly: true
+#   - mountPath: /var/log/kubernetes/audit
+#     name: audit-log
+# В volumes Pod (тот же отступ, что у соседних элементов):
+#   - hostPath:
+#       path: /etc/kubernetes/audit
+#       type: Directory
+#     name: audit-policy
+#   - hostPath:
+#       path: /var/log/kubernetes/audit
+#       type: DirectoryOrCreate
+#     name: audit-log
+systemctl restart kubelet
+exit
+exit
 ```
 
-Добавляем hostPath volume/volumeMount для каталогов policy и логов (редактируем секции
-`volumes`/`volumeMounts` того же манифеста, тем же способом, каким в задании 5 уже
-добавлялся `hostPath` volume/volumeMount для `authentication-config.yaml` - здесь
-дополнительно нужен volume, потому что kube-apiserver читает policy-файл и пишет
-log-файл на файловой системе ноды). После сохранения kubelet
-перезапустит static Pod автоматически.
+`systemctl restart kubelet` форсирует немедленную пересборку static Pod - так же, как в
+задании 5, быстрее ждать не нужно:
 
 ```bash
-until kubectl get --raw=/readyz >/dev/null 2>&1; do sleep 2; done
-kubectl -n kube-system get pods -l component=kube-apiserver
+k get po -n kube-system -l component=kube-apiserver
+# STATUS должен стать Running - если ещё нет, подождите пару секунд и повторите
 ```
 
 Возвращаемся на рабочую машину (от имени администратора `cluster1-admin`) и создаём
@@ -583,41 +560,52 @@ kubectl -n kube-system get pods -l component=kube-apiserver
 сделал и кому именно были выданы права:
 
 ```bash
-kubectl create clusterrolebinding incident-simulated-escalation \
+k create clusterrolebinding incident-simulated-escalation \
   --clusterrole=cluster-admin \
   --serviceaccount=security-104:build-agent
 ```
 
-Ищем именно это событие в audit log (на control-plane) и сохраняем его целиком:
+Сначала просто убеждаемся глазами, что audit-правило реально работает и событие попало в
+лог - на экзамене обычно нужна именно эта проверка, а не готовый artifact:
+
+```bash
+ssh control-plane
+sudo cat /var/log/kubernetes/audit/audit.log | jq . | grep -A 30 incident-simulated-escalation
+exit
+```
+
+`jq .` печатает каждую запись лога человекочитаемо (по одному полю на строку), `grep -A 30`
+показывает найденную строку с именем и 30 строк ПОСЛЕ неё - этого достаточно, чтобы увидеть
+`stage`, `user.username` (реальный инициатор), `requestObject.roleRef`,
+`requestObject.subjects` глазами, без специального jq-синтаксиса.
+
+Этого достаточно для реального экзамена, но эта лаба дополнительно требует artifact-файл с
+событием - не потому что чекеру мало знать, что правило работает (он сам, независимо,
+читает `audit.log` на control-plane через SSH), а чтобы проверить отдельный навык:
+извлечь и сохранить именно РЕАЛЬНУЮ запись как forensic evidence, а не пересказать её
+своими словами (checker сверяет `auditID` вашего файла с `auditID` реальной записи в логе).
+`/var/work/tests/artifacts/9/` - путь на РАБОЧЕЙ машине, а не на control-plane, поэтому
+сохраняем с рабочей машины через `ssh control-plane "..."`, той же связкой grep по обычным
+подстрокам (имя события + `ResponseComplete`, чтобы не попасть на промежуточную
+`ResponseStarted` запись того же request):
 
 ```bash
 mkdir -p /var/work/tests/artifacts/9
 ssh control-plane "sudo cat /var/log/kubernetes/audit/audit.log" \
-  | jq -c 'select(
-      .verb == "create" and
-      .stage == "ResponseComplete" and
-      .objectRef.resource == "clusterrolebindings" and
-      .objectRef.name == "incident-simulated-escalation" and
-      .responseStatus.code == 201
-    )' \
-  | tail -n1 | tee /var/work/tests/artifacts/9/audit-escalation-event.json
-jq '{initiator: .user.username, roleRef: .requestObject.roleRef, subjects: .requestObject.subjects, auditID: .auditID}' \
-  /var/work/tests/artifacts/9/audit-escalation-event.json
+  | grep incident-simulated-escalation | grep ResponseComplete \
+  | tail -n1 > /var/work/tests/artifacts/9/audit-escalation-event.json
 ```
 
-Фильтруем именно `stage == "ResponseComplete"` с `responseStatus.code == 201` - при
-`RequestResponse` level policy один и тот же request может дать несколько записей в
-log (`ResponseStarted`/`ResponseComplete`), и нам нужна именно финальная запись с успешным
-кодом ответа и полным `requestObject`, а не промежуточная. Сохраняем событие **целиком**,
-как оно реально лежит в audit log (включая `auditID`) - не переписываем и не собираем
-JSON вручную, иначе artifact не будет совпадать с реальной записью в логе при верификации.
+Сохраняем событие **целиком**, как оно реально лежит в audit log (включая `auditID`) - не
+переписываем и не собираем JSON вручную, иначе artifact не будет совпадать с реальной
+записью в логе при верификации.
 
 Containment: удаляем привязку и подтверждаем, что доступ реально отозван, а не просто
 объект недоступен для чтения:
 
 ```bash
-kubectl delete clusterrolebinding incident-simulated-escalation
-kubectl auth can-i '*' '*' --as=system:serviceaccount:security-104:build-agent \
+k delete clusterrolebinding incident-simulated-escalation
+k auth can-i '*' '*' --as=system:serviceaccount:security-104:build-agent \
   | tee /var/work/tests/artifacts/9/containment-result.txt
 # no
 ```
@@ -638,8 +626,8 @@ source of truth - **событие во времени** (audit log), котор
 
 ```bash
 mkdir -p /var/work/tests/artifacts/10
-SERVICE_USER=$(kubectl get secret legacy-config -n security-104 -o jsonpath='{.data.SERVICE_USER}' | base64 -d)
-SERVICE_TOKEN=$(kubectl get secret legacy-config -n security-104 -o jsonpath='{.data.SERVICE_TOKEN}' | base64 -d)
+SERVICE_USER=$(k get secret legacy-config -n security-104 -o jsonpath='{.data.SERVICE_USER}' | base64 -d)
+SERVICE_TOKEN=$(k get secret legacy-config -n security-104 -o jsonpath='{.data.SERVICE_TOKEN}' | base64 -d)
 printf 'SERVICE_USER=%s\nSERVICE_TOKEN=%s\n' "$SERVICE_USER" "$SERVICE_TOKEN" \
   | tee /var/work/tests/artifacts/10/decoded-values.txt
 ```
@@ -648,41 +636,41 @@ printf 'SERVICE_USER=%s\nSERVICE_TOKEN=%s\n' "$SERVICE_USER" "$SERVICE_TOKEN" \
 `--from-literal` сам кодирует значение в base64, вручную это делать не нужно:
 
 ```bash
-kubectl create secret generic rehydrated-config -n security-104 \
+k create secret generic rehydrated-config -n security-104 \
   --from-literal=SERVICE_USER="$SERVICE_USER" \
   --from-literal=SERVICE_TOKEN="$SERVICE_TOKEN"
 ```
 
-Монтируем его как read-only volume в Pod:
+Монтируем его как read-only volume в Pod - снова dry-run + точечная правка в `vim`:
+
+```bash
+k run secret-workflow -n security-104 --image=busybox:1.36 --command --dry-run=client -o yaml \
+  -- sh -c "sleep 3600" > secret-workflow.yaml
+vim secret-workflow.yaml
+```
 
 ```yaml
-# secret-workflow.yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: secret-workflow
-  namespace: security-104
+# В spec Pod добавьте:
 spec:
-  automountServiceAccountToken: false
+  automountServiceAccountToken: false      # добавить
   containers:
-  - name: app
-    image: busybox:1.36
-    command: ["sh", "-c", "sleep 3600"]
-    volumeMounts:
-    - name: rehydrated-config-vol
-      mountPath: /etc/rehydrated
-      readOnly: true
-  volumes:
-  - name: rehydrated-config-vol
-    secret:
-      secretName: rehydrated-config
+  - name: secret-workflow
+    volumeMounts:                          # добавить
+    - name: rehydrated-config-vol          # добавить
+      mountPath: /etc/rehydrated           # добавить
+      readOnly: true                       # добавить
+    ...
+  volumes:                                 # добавить
+  - name: rehydrated-config-vol            # добавить
+    secret:                                # добавить
+      secretName: rehydrated-config        # добавить
 ```
 
 ```bash
-kubectl apply -f secret-workflow.yaml
-kubectl wait -n security-104 --for=condition=Ready pod/secret-workflow --timeout=60s
-kubectl exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_USER
-kubectl exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_TOKEN
+k apply -f secret-workflow.yaml
+k wait -n security-104 --for=condition=Ready po/secret-workflow --timeout=60s
+k exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_USER
+k exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_TOKEN
 # должны совпасть с $SERVICE_USER / $SERVICE_TOKEN выше
 ```
 
@@ -694,54 +682,30 @@ kubectl exec -n security-104 secret-workflow -- cat /etc/rehydrated/SERVICE_TOKE
 лишний `delete`, добавляем нужный `watch`:
 
 ```bash
-kubectl patch role pod-role -n rbac-a --type=json -p \
+k patch role pod-role -n rbac-a --type=json -p \
   '[{"op":"replace","path":"/rules/0/verbs","value":["get","list","watch"]}]'
-kubectl auth can-i delete pods -n rbac-a --as=system:serviceaccount:rbac-a:dev # no
-kubectl auth can-i watch pods -n rbac-a --as=system:serviceaccount:rbac-a:dev  # yes
+k auth can-i delete pods -n rbac-a --as=system:serviceaccount:rbac-a:dev # no
+k auth can-i watch pods -n rbac-a --as=system:serviceaccount:rbac-a:dev  # yes
 ```
 
 `shared-config` уже существует в `rbac-b`. Создаём НОВЫЙ Role+RoleBinding именно в
 `rbac-b` - RoleBinding поддерживает subject из другого namespace, но сами права
 действуют только в namespace самого RoleBinding:
 
-```yaml
-# rbac-b-access.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: configmap-reader
-  namespace: rbac-b
-rules:
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["get", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: configmap-reader-binding
-  namespace: rbac-b
-subjects:
-- kind: ServiceAccount
-  name: dev
-  namespace: rbac-a
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: configmap-reader
-```
-
 ```bash
-kubectl apply -f rbac-b-access.yaml
-kubectl auth can-i get configmaps -n rbac-b --as=system:serviceaccount:rbac-a:dev    # yes
-kubectl auth can-i delete configmaps -n rbac-b --as=system:serviceaccount:rbac-a:dev # no
-kubectl auth can-i get secrets -n rbac-b --as=system:serviceaccount:rbac-a:dev       # no
+k create role configmap-reader -n rbac-b --resource=configmaps --verb=get,list
+k create rolebinding configmap-reader-binding -n rbac-b \
+  --role=configmap-reader --serviceaccount=rbac-a:dev
+
+k auth can-i get configmaps -n rbac-b --as=system:serviceaccount:rbac-a:dev    # yes
+k auth can-i delete configmaps -n rbac-b --as=system:serviceaccount:rbac-a:dev # no
+k auth can-i get secrets -n rbac-b --as=system:serviceaccount:rbac-a:dev       # no
 ```
 
 Создаём Pod в `rbac-a`, который реально использует `dev`:
 
 ```bash
-kubectl run rbac-a-workload -n rbac-a --image=busybox:1.36 \
+k run rbac-a-workload -n rbac-a --image=busybox:1.36 \
   --overrides='{"spec":{"serviceAccountName":"dev"}}' -- sh -c "sleep 3600"
 ```
 
@@ -766,23 +730,20 @@ openssl req -new -key /var/work/tests/artifacts/12/john.key \
 корректный signer именно для client-auth сертификата, который будет аутентифицировать
 запросы к API server):
 
-```yaml
-# john-csr.yaml
+```bash
+cat > john-csr.yaml <<EOF
 apiVersion: certificates.k8s.io/v1
 kind: CertificateSigningRequest
 metadata:
   name: john-csr
 spec:
-  request: BASE64_CSR_HERE
+  request: $(base64 -w0 /tmp/john.csr)
   signerName: kubernetes.io/kube-apiserver-client
   usages: ["client auth"]
-```
-
-```bash
-sed -i "s#BASE64_CSR_HERE#$(base64 -w0 /tmp/john.csr)#" john-csr.yaml
-kubectl apply -f john-csr.yaml
-kubectl certificate approve john-csr
-kubectl get csr john-csr -o jsonpath='{.status.certificate}' \
+EOF
+k apply -f john-csr.yaml
+k certificate approve john-csr
+k get csr john-csr -o jsonpath='{.status.certificate}' \
   | base64 -d > /var/work/tests/artifacts/12/john.crt
 ```
 
@@ -797,42 +758,19 @@ openssl x509 -in /var/work/tests/artifacts/12/john.crt -noout -subject
 # subject=CN = john
 ```
 
-RBAC: Role в `development`, RoleBinding на `kind: User, name: john`:
-
-```yaml
-# john-rbac.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: john-pod-access
-  namespace: development
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["create", "list", "get"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: john-pod-access-binding
-  namespace: development
-subjects:
-- kind: User
-  name: john
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: john-pod-access
-```
+RBAC: Role в `development`, RoleBinding на `kind: User, name: john` - `--user=john` в
+`kubectl create rolebinding` сам проставляет `kind: User`, писать YAML не нужно:
 
 ```bash
-kubectl apply -f john-rbac.yaml
-kubectl auth can-i create pods -n development --as=john  # yes
-kubectl auth can-i list pods -n development --as=john    # yes
-kubectl auth can-i get pods -n development --as=john     # yes
-kubectl auth can-i delete pods -n development --as=john  # no
-kubectl auth can-i create pods -n security-104 --as=john # no
+k create role john-pod-access -n development --resource=pods --verb=create,list,get
+k create rolebinding john-pod-access-binding -n development \
+  --role=john-pod-access --user=john
+
+k auth can-i create pods -n development --as=john  # yes
+k auth can-i list pods -n development --as=john    # yes
+k auth can-i get pods -n development --as=john     # yes
+k auth can-i delete pods -n development --as=john  # no
+k auth can-i create pods -n security-104 --as=john # no
 ```
 
 `--as=john` доказывает только RBAC-логику (impersonation, доступную любому admin
@@ -841,7 +779,7 @@ kubectl auth can-i create pods -n security-104 --as=john # no
 запрос:
 
 ```bash
-SERVER=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+SERVER=$(k config view --minify -o jsonpath='{.clusters[0].cluster.server}')
 ssh control-plane sudo cat /etc/kubernetes/pki/ca.crt > /tmp/cluster-ca.crt
 curl -s -o /dev/null -w '%{http_code}\n' --cacert /tmp/cluster-ca.crt \
   --cert /var/work/tests/artifacts/12/john.crt --key /var/work/tests/artifacts/12/john.key \
@@ -849,6 +787,31 @@ curl -s -o /dev/null -w '%{http_code}\n' --cacert /tmp/cluster-ca.crt \
 curl -s -o /dev/null -w '%{http_code}\n' --cacert /tmp/cluster-ca.crt \
   --cert /var/work/tests/artifacts/12/john.crt --key /var/work/tests/artifacts/12/john.key \
   "$SERVER/api/v1/namespaces/security-104/pods"     # 403
+```
+
+То же самое доказательство, но через привычный `kubectl`, а не `curl` - собираем John отдельный
+kubeconfig из уже выпущенного сертификата (`set-credentials` с `--client-certificate`/
+`--client-key`, а не `--token`, потому что identity здесь именно client-cert, а не
+ServiceAccount token):
+
+```bash
+k config set-cluster cluster1 --server="$SERVER" \
+  --certificate-authority=/tmp/cluster-ca.crt --embed-certs=true \
+  --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig
+k config set-credentials john \
+  --client-certificate=/var/work/tests/artifacts/12/john.crt \
+  --client-key=/var/work/tests/artifacts/12/john.key --embed-certs=true \
+  --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig
+k config set-context john@cluster1 --cluster=cluster1 --user=john \
+  --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig
+k config use-context john@cluster1 \
+  --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig
+
+k --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig get pods -n development
+# работает - RBAC пропускает
+
+k --kubeconfig=/var/work/tests/artifacts/12/john.kubeconfig get pods -n security-104
+# Error from server (Forbidden) - тот же 403, что и в curl-проверке выше
 ```
 
 В конце выполните `check_result`.

@@ -31,7 +31,7 @@ A version mismatch is not by itself a defect. Before releasing the course, separ
 
 Upstream latest stable показывает production-current состояние, а версия экзамена меняется
 независимо. Когда upstream minor новее minor, указанного на LF CKS product page, exam
-snapshot перепроверяют чаще: default threshold для `cks-exam-snapshot.yaml` — 7 дней вместо
+snapshot перепроверяют чаще: default threshold для `cks-exam-snapshot.yaml` - 7 дней вместо
 обычных 30. Это не основание автоматически обновлять labs: для нового Kubernetes minor
 создают отдельный Security Delta, а 🎯 CKS Core меняют только после подтверждения
 exam/curriculum relevance. Явный `--max-age-days` сохраняет приоритет над этой policy.

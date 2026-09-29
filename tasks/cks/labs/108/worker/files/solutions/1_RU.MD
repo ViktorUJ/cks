@@ -1,4 +1,4 @@
-# Лаба 108 — эталонное решение: Kyverno admission policies
+# Лаба 108 - эталонное решение: Kyverno admission policies
 
 > Все команды выполняются на рабочей машине. Контекст уже настроен; namespace
 > `policy-108` создан стартовым скриптом. Сначала установите Kyverno и дождитесь
@@ -505,7 +505,7 @@ rm -rf "$workdir"
 ```
 
 Отредактируйте static manifest **на `control-plane`**. Не заменяйте существующий
-`--enable-admission-plugins` целиком — допишите `ImagePolicyWebhook` к текущему значению
+`--enable-admission-plugins` целиком - допишите `ImagePolicyWebhook` к текущему значению
 (обычно там уже есть `NodeRestriction`), добавьте `--admission-control-config-file` и
 `--runtime-config`, смонтируйте новую директорию как hostPath:
 
@@ -590,7 +590,7 @@ production-конфигурации ImagePolicyWebhook.
 ## 7. Gatekeeper: дописать Rego blocklist в ConstraintTemplate
 
 Gatekeeper и стартовый (неполный) `ConstraintTemplate`/`Constraint` уже развёрнуты
-bootstrap-ом кластера в отдельном namespace `gatekeeper-108` — это отдельный, третий
+bootstrap-ом кластера в отдельном namespace `gatekeeper-108` - это отдельный, третий
 admission engine в этой лабе (после Kyverno и ImagePolicyWebhook), проверяющий именно
 OPA/Rego skill. `gatekeeper-108` изолирован от Kyverno-заданий 1-5 (`policy-108`)
 специально: иначе один и тот же тестовый Pod мог бы быть отклонён и Kyverno, и
@@ -607,8 +607,8 @@ blocked_registry("untrusted-registry.example")
 blocked_registry("docker-fake.test")
 ```
 
-`very-bad-registry.test` среди них нет — именно эту строку нужно дописать. `Constraint
-deny-bad-registries` уже полностью корректен и не использует `spec.parameters` вообще —
+`very-bad-registry.test` среди них нет - именно эту строку нужно дописать. `Constraint
+deny-bad-registries` уже полностью корректен и не использует `spec.parameters` вообще -
 редактировать его не нужно; исправление находится ИМЕННО в Rego внутри
 `ConstraintTemplate`, не в Constraint. Отредактируйте template (например `kubectl edit
 constrainttemplate k8sblockedregistries`, или `get -o yaml` → правка → `apply -f -`),
@@ -621,8 +621,8 @@ blocked_registry("very-bad-registry.test")
 ```
 
 Проверьте все три исхода server-side dry-run, без создания постоянного Pod: новый
-registry должен быть denied, старый (уже блокированный) — оставаться denied (регрессии
-нет), доверенный — проходить:
+registry должен быть denied, старый (уже блокированный) - оставаться denied (регрессии
+нет), доверенный - проходить:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'
@@ -668,8 +668,8 @@ EOF
 ```
 
 Убедитесь, что отказ действительно пришёл от Gatekeeper (`validation.gatekeeper.sh`), а
-не от одной из Kyverno `ValidatingPolicy` из заданий 2-4 — сообщение об ошибке явно
+не от одной из Kyverno `ValidatingPolicy` из заданий 2-4 - сообщение об ошибке явно
 называет webhook и имя вашего Constraint. Не решайте задание через `Constraint.spec.parameters`
-— в этой версии policy Constraint их вообще не использует.
+- в этой версии policy Constraint их вообще не использует.
 
 Выполните `check_result`.

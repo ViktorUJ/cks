@@ -19,7 +19,7 @@
 > служит интерфейсом Kubernetes к profile AppArmor, а главная задача - подготовить profile на
 > ноде, назначить его Pod и доказать, что запрет действительно сработал.
 
-> 🧠 AppArmor — path-based MAC между процессом и ядром; он дополняет DAC, capabilities, seccomp и RBAC, но не заменяет ни один из этих слоёв.
+> 🧠 AppArmor - path-based MAC между процессом и ядром; он дополняет DAC, capabilities, seccomp и RBAC, но не заменяет ни один из этих слоёв.
 
 ## 16.1. AppArmor: policy между процессом и ядром
 
@@ -303,8 +303,8 @@ kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.met
 
 Пустой результат Pod audit не доказывает отсутствие container-level override или legacy
 configuration в controller. Дополнительно проверьте templates Deployment, StatefulSet,
-DaemonSet, Job и CronJob: для первых четырёх — `.spec.template.metadata.annotations`,
-`.spec.template.spec.securityContext.appArmorProfile` и container overrides; для CronJob —
+DaemonSet, Job и CronJob: для первых четырёх - `.spec.template.metadata.annotations`,
+`.spec.template.spec.securityContext.appArmorProfile` и container overrides; для CronJob -
 те же поля под `.spec.jobTemplate.spec.template`. При миграции исправляйте controller/template
 manifest, а не только созданный им Pod.
 
@@ -386,7 +386,7 @@ sudo aa-enforce /etc/apparmor.d/k8s-demo
 ```
 
 Для evidence сначала проверяйте audit subsystem (`ausearch` при активном auditd, затем
-`/var/log/audit/audit.log`); `journalctl -k` и `dmesg` — fallback. Если источники недоступны,
+`/var/log/audit/audit.log`); `journalctl -k` и `dmesg` - fallback. Если источники недоступны,
 это `REVIEW_REQUIRED`, а не доказательство отсутствия denial.
 
 
@@ -544,7 +544,7 @@ kubectl describe pod -n "$NS" "$POD"
 <details>
 <summary>1. Почему AppArmor не заменяет UID/GID, capabilities, seccomp или RBAC?</summary>
 
-Эти контроли отвечают на разные вопросы: DAC проверяет UID/GID и mode bits, capabilities — отдельные привилегии ядра, seccomp — допустимые syscalls, а RBAC — Kubernetes API-доступ identity. AppArmor добавляет path-based MAC для действий процесса по profile. Поэтому profile дополняет, но не отменяет необходимости non-root, dropped capabilities, seccomp и минимального RBAC.
+Эти контроли отвечают на разные вопросы: DAC проверяет UID/GID и mode bits, capabilities - отдельные привилегии ядра, seccomp - допустимые syscalls, а RBAC - Kubernetes API-доступ identity. AppArmor добавляет path-based MAC для действий процесса по profile. Поэтому profile дополняет, но не отменяет необходимости non-root, dropped capabilities, seccomp и минимального RBAC.
 </details>
 
 <details>
@@ -569,7 +569,7 @@ kubectl describe pod -n "$NS" "$POD"
 <details>
 <summary>5. Какие значения `appArmorProfile.type` допустимы и когда оправдан `Unconfined`?</summary>
 
-Допустимы `RuntimeDefault`, `Localhost` и `Unconfined`. `RuntimeDefault` служит общим baseline при доступном AppArmor, а `Localhost` — для проверенного application-specific profile, заранее загруженного на ноде. `Unconfined` оправдан только как временное диагностическое исключение с явным владельцем риска, а не как способ исправить profile failure.
+Допустимы `RuntimeDefault`, `Localhost` и `Unconfined`. `RuntimeDefault` служит общим baseline при доступном AppArmor, а `Localhost` - для проверенного application-specific profile, заранее загруженного на ноде. `Unconfined` оправдан только как временное диагностическое исключение с явным владельцем риска, а не как способ исправить profile failure.
 </details>
 
 <details>

@@ -46,7 +46,7 @@ ssh "$CP" 'sudo ss -ltn | grep -qE "[:.]8080([[:space:]]|$)"' \
 
 Сначала определяем топологию и необходимые источники. Это одноузловой control-plane,
 который также запускает workload. Worker должен иметь SSH и API access; Pod CIDR и сам
-узел — API access. Межнодовых kubelet/CNI flows здесь нет. Не открываем `22`/`6443` для
+узел - API access. Межнодовых kubelet/CNI flows здесь нет. Не открываем `22`/`6443` для
 `Anywhere`.
 
 ```bash

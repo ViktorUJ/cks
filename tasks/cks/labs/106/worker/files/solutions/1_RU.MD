@@ -1,4 +1,4 @@
-# Лаба 106 — эталонное решение: AppArmor и seccomp
+# Лаба 106 - эталонное решение: AppArmor и seccomp
 
 > Выполняйте Kubernetes-команды с рабочей машины. Для заданий 1–2 нужен SSH-доступ к
 > ноде `control-plane`. Namespace `security-106` создаётся в задании 3.
@@ -117,7 +117,7 @@ Unix permission.
 
 ## 4. RuntimeDefault для обычного Pod
 
-`RuntimeDefault` — переносимый baseline, который выбирает стандартный профиль
+`RuntimeDefault` - переносимый baseline, который выбирает стандартный профиль
 containerd/runtime. Поле задано явно на уровне Pod.
 
 ```yaml
@@ -161,7 +161,7 @@ ssh control-plane 'sudo jq empty /var/lib/kubelet/seccomp/profiles/cks-106-deny-
 
 В API указываем путь относительно seccomp root: `profiles/cks-106-deny-unshare.json`.
 
-`SYS_ADMIN` здесь — намеренное опасное исключение только для laboratory control. Без custom
+`SYS_ADMIN` здесь - намеренное опасное исключение только для laboratory control. Без custom
 filter `unshare -n` с этой capability может сработать; seccomp должен вернуть `EPERM`.
 Это не hardened combination. `allowPrivilegeEscalation: false` включает `no_new_privs`, но
 не отнимает capabilities, уже выданные процессу, поэтому мы не используем это поле как

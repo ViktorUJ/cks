@@ -12,7 +12,7 @@
 
 > **Что нужно из CKA.** CKS продолжает, а не заменяет CKA. Перед началом повторите [введение в CKA](../../../cka/course/01/ru.md) и [оглавление CKA](../../../cka/course/README_RU.md). Курс предполагает уверенную работу с `kubectl`, YAML-манифестами, pod, Service, Ingress, RBAC, ServiceAccount, TLS, kubeadm и компонентами control plane. Если базовые термины и модель угроз cloud native пока не уверены, начните с [курса KCSA](../../../kcsa/course/README_RU.md) - он необязателен формально, но задаёт словарь, на который CKS постоянно опирается.
 
-> 🧠 KCSA даёт язык рисков, CKA — операционную базу, CKS — применение этих знаний для ограничения и расследования компрометации.
+> 🧠 KCSA даёт язык рисков, CKA - операционную базу, CKS - применение этих знаний для ограничения и расследования компрометации.
 
 ## 01.1 Что такое CKS и чем он отличается от CKA и KCSA
 
@@ -214,7 +214,7 @@ flowchart TB
 - Новые акценты программы 2024 - Cilium, CIS, SBOM, KubeLinter и sandboxed containers.
 - Инструмент ценен только вместе с проверкой: нужно доказать, что защита сработала и атака не проходит.
 
-> 🎯 Сначала определите слой проблемы — API/RBAC, network, node, image или runtime — затем примените минимальное изменение и проверьте именно условие задачи.
+> 🎯 Сначала определите слой проблемы - API/RBAC, network, node, image или runtime - затем примените минимальное изменение и проверьте именно условие задачи.
 
 > 🏭 Secure configuration, ограничение доступа, контроль артефактов, логирование и расследование работают вместе.
 
@@ -247,7 +247,7 @@ CKS продолжает CKA и предполагает уверенную ра
 <details>
 <summary>4. Какие шесть доменов CKS и какие из них имеют наибольший вес?</summary>
 
-Домены: Cluster Setup, Cluster Hardening, System Hardening, Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security. По 20% имеют Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security; Cluster Setup и Cluster Hardening имеют по 15%, System Hardening — 10%.
+Домены: Cluster Setup, Cluster Hardening, System Hardening, Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security. По 20% имеют Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security; Cluster Setup и Cluster Hardening имеют по 15%, System Hardening - 10%.
 </details>
 
 <details>
@@ -265,7 +265,7 @@ CKS продолжает CKA и предполагает уверенную ра
 <details>
 <summary>7. Почему для security-настройки недостаточно только применить manifest?</summary>
 
-Наличие манифеста не доказывает работу защиты: CNI может не применять `NetworkPolicy`, старые Secret могут не быть перешифрованы после `EncryptionConfiguration`, а правило Falco может не быть загружено. После каждого изменения нужно проверять именно требуемый результат — например, отклонение forbidden Pod, недоступность закрытого порта или отсутствие запрещённого сетевого потока.
+Наличие манифеста не доказывает работу защиты: CNI может не применять `NetworkPolicy`, старые Secret могут не быть перешифрованы после `EncryptionConfiguration`, а правило Falco может не быть загружено. После каждого изменения нужно проверять именно требуемый результат - например, отклонение forbidden Pod, недоступность закрытого порта или отсутствие запрещённого сетевого потока.
 </details>
 
 ## Практика

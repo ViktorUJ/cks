@@ -1,4 +1,4 @@
-# Лаба 107 — эталонное решение: Pod Security Admission и immutable root filesystem
+# Лаба 107 - эталонное решение: Pod Security Admission и immutable root filesystem
 
 > Выполняйте команды на рабочей машине. Контекст `cluster1-admin@cluster1` уже
 > настроен. Namespace `psa-restricted-107` и `psa-observe-107` созданы стартовым
