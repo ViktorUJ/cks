@@ -106,6 +106,15 @@ k wait --for=condition=Ready "node/${NODE}" --timeout=120s
 
 ## Задание 3. Отключить profiling kube-apiserver
 
+Тот же приём, что в задании 2 - используйте отчёт kube-bench из задания 1 как источник
+истины, не вспоминайте флаг по памяти:
+
+```bash
+grep -A2 '^1.2.15 ' /var/work/tests/artifacts/1/kube-bench.txt
+# 1.2.15 Edit the API server pod specification file /etc/kubernetes/manifests/kube-apiserver.yaml
+# on the control plane node and set the below parameter.
+```
+
 Добавьте параметр в список `command` контейнера `kube-apiserver`.
 
 ```bash
