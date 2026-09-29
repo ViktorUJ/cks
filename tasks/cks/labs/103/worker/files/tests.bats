@@ -131,7 +131,12 @@ record_result() {
   command_json=$(kubectl -n kube-system get pod -l component=kube-apiserver --context "$CTX" -o json 2>/dev/null \
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
   manifest_status=1
-  if printf '%s' "$command_json" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1; then
+  # index(...) alone only proves --profiling=false is PRESENT - a duplicate/conflicting
+  # --profiling=true elsewhere in the same command list would still pass that check. Require
+  # it to be the ONLY --profiling flag present.
+  if printf '%s' "$command_json" | jq -e '
+       [.[] | select(test("^--profiling($|=)"))] == ["--profiling=false"]
+     ' >/dev/null 2>&1; then
     manifest_status=0
   fi
   ready=$(kubectl get --raw='/readyz' --context "$CTX" 2>/dev/null)
@@ -140,7 +145,7 @@ record_result() {
     result=0
   else
     if [[ "$manifest_status" -ne 0 ]]; then
-      echo "HINT: The running kube-apiserver Pod's command does not include '--profiling=false'. Check /etc/kubernetes/manifests/kube-apiserver.yaml has this flag in the command list (any valid YAML indentation works - what matters is the actual running Pod spec, checked via the Kubernetes API)."
+      echo "HINT: The running kube-apiserver Pod's command must contain exactly one --profiling flag, and it must be '--profiling=false' - no duplicate or conflicting --profiling value is allowed. Check /etc/kubernetes/manifests/kube-apiserver.yaml has this flag in the command list (any valid YAML indentation works - what matters is the actual running Pod spec, checked via the Kubernetes API)."
     elif [[ "$ready" != "ok" ]]; then
       echo "HINT: API server is not ready after the manifest edit. Wait longer for kubelet to pick up the change and restart the static Pod, or check for a YAML syntax error in the manifest."
     elif [[ "$phase" != "Running" ]]; then
@@ -275,13 +280,23 @@ record_result() {
   etcd_command=$(kubectl -n kube-system get pod -l component=etcd --context "$CTX" -o json 2>/dev/null \
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
   manifest_status=1
-  if printf '%s' "$api_command" | jq -e '
-       index("--tls-min-version=VersionTLS13") != null and
-       any(.[]; startswith("--tls-cipher-suites=") and (contains("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256") and contains("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384")))
-     ' >/dev/null 2>&1 \
-     && printf '%s' "$etcd_command" | jq -e '
-       any(.[]; startswith("--cipher-suites=") and (contains("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256") and contains("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384")))
-     ' >/dev/null 2>&1; then
+  # Require the EXACT two-suite set on a single flag occurrence, not just "contains both" -
+  # a too-permissive check would accept extra suites appended to the list, or a duplicate
+  # --tls-min-version/--(tls-)cipher-suites flag where only one occurrence is correct.
+  wanted_ciphers='["TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"]'
+  api_tls_ok=$(printf '%s' "$api_command" | jq -e --argjson wanted "$wanted_ciphers" '
+       ([.[] | select(startswith("--tls-min-version="))] == ["--tls-min-version=VersionTLS13"])
+       and
+       ([.[] | select(startswith("--tls-cipher-suites="))] as $flags
+        | ($flags | length) == 1
+        and (($flags[0] | ltrimstr("--tls-cipher-suites=") | split(",") | sort) == ($wanted | sort)))
+     ' >/dev/null 2>&1 && echo true || echo false)
+  etcd_tls_ok=$(printf '%s' "$etcd_command" | jq -e --argjson wanted "$wanted_ciphers" '
+       [.[] | select(startswith("--cipher-suites="))] as $flags
+       | ($flags | length) == 1
+       and (($flags[0] | ltrimstr("--cipher-suites=") | split(",") | sort) == ($wanted | sort))
+     ' >/dev/null 2>&1 && echo true || echo false)
+  if [[ "$api_tls_ok" == "true" && "$etcd_tls_ok" == "true" ]]; then
     manifest_status=0
   fi
   ready=$(kubectl get --raw='/readyz' --context "$CTX" 2>/dev/null)
@@ -295,7 +310,7 @@ record_result() {
     result=0
   else
     if [[ "$manifest_status" -ne 0 ]]; then
-      echo "HINT: The running kube-apiserver Pod's command must include --tls-min-version=VersionTLS13 and a --tls-cipher-suites entry containing both TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 and TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384; the running etcd Pod's command must include a --cipher-suites entry with the same two suites. This is checked against the actual running Pod spec via the Kubernetes API, not by matching exact YAML text."
+      echo "HINT: The running kube-apiserver Pod's command must contain exactly one --tls-min-version=VersionTLS13 flag and exactly one --tls-cipher-suites flag whose value is EXACTLY TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 (order doesn't matter, but no extra or duplicate suites); the running etcd Pod's command must contain exactly one --cipher-suites flag with the same exact two suites. This is checked against the actual running Pod spec via the Kubernetes API, not by matching exact YAML text."
     elif [[ "$ready" != "ok" || "$etcd_phase" != "Running" ]]; then
       echo "HINT: API server or etcd is not healthy after the TLS change. A too-restrictive cipher list can break internal component communication - double check the exact cipher suite strings for typos."
     elif [[ "$tls12_status" -eq 0 ]]; then
@@ -478,10 +493,16 @@ record_result() {
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
   sched_command=$(kubectl -n kube-system get pod -l component=kube-scheduler --context "$CTX" -o json 2>/dev/null \
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
+  # Same precision requirement as task 3: exactly one --profiling flag, no duplicate or
+  # conflicting value alongside --profiling=false.
   cm_flag_ok=false
-  printf '%s' "$cm_command" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1 && cm_flag_ok=true
+  printf '%s' "$cm_command" | jq -e '
+    [.[] | select(test("^--profiling($|=)"))] == ["--profiling=false"]
+  ' >/dev/null 2>&1 && cm_flag_ok=true
   sched_flag_ok=false
-  printf '%s' "$sched_command" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1 && sched_flag_ok=true
+  printf '%s' "$sched_command" | jq -e '
+    [.[] | select(test("^--profiling($|=)"))] == ["--profiling=false"]
+  ' >/dev/null 2>&1 && sched_flag_ok=true
   cm_phase=$(kubectl get pods -n kube-system --context "$CTX" -l component=kube-controller-manager -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
   sched_phase=$(kubectl get pods -n kube-system --context "$CTX" -l component=kube-scheduler -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
 
@@ -527,9 +548,9 @@ record_result() {
     elif [[ ! -s "$sched_before" || "$sched_before_ok" != true ]]; then
       echo "HINT: $sched_before must be captured BEFORE any fix and contain a line starting with exactly '[FAIL] 1.4.1' - kube-bench check for kube-scheduler profiling (lives under the 'master' target, run with plain --check, no --targets restriction)."
     elif [[ "$cm_flag_ok" != true ]]; then
-      echo "HINT: The running kube-controller-manager Pod's command does not include '--profiling=false' yet. Add it to /etc/kubernetes/manifests/kube-controller-manager.yaml's command list and wait for kubelet to recreate the static Pod."
+      echo "HINT: The running kube-controller-manager Pod's command must contain exactly one --profiling flag, and it must be '--profiling=false' - no duplicate or conflicting --profiling value is allowed. Add it to /etc/kubernetes/manifests/kube-controller-manager.yaml's command list and wait for kubelet to recreate the static Pod."
     elif [[ "$sched_flag_ok" != true ]]; then
-      echo "HINT: The running kube-scheduler Pod's command does not include '--profiling=false' yet. Add it to /etc/kubernetes/manifests/kube-scheduler.yaml's command list and wait for kubelet to recreate the static Pod."
+      echo "HINT: The running kube-scheduler Pod's command must contain exactly one --profiling flag, and it must be '--profiling=false' - no duplicate or conflicting --profiling value is allowed. Add it to /etc/kubernetes/manifests/kube-scheduler.yaml's command list and wait for kubelet to recreate the static Pod."
     elif [[ "$cm_after_ok" != true || "$cm_after_no_fail" != true ]]; then
       echo "HINT: $cm_after must contain '[PASS] 1.3.2' and no '[FAIL] 1.3.2' - re-run kube-bench --check 1.3.2 after the fix and save the fresh output."
     elif [[ "$sched_after_ok" != true || "$sched_after_no_fail" != true ]]; then

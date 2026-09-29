@@ -224,9 +224,10 @@ NS="security-104"
   fi
   # Audit for lab-owned unintended anonymous/unauthenticated RBAC bindings: the fixture
   # ClusterRole+ClusterRoleBinding must be gone, but the STOCK kubeadm binding
-  # 'system:public-info-viewer' (also targets system:unauthenticated, but only for the
-  # /healthz and /version non-resource URLs) must be left alone - a checker or student
-  # that treats every anonymous-adjacent binding as a violation would break bootstrap.
+  # 'system:public-info-viewer' (also targets system:unauthenticated, default Kubernetes
+  # RBAC granting read-only GET on the /livez, /readyz, /healthz, /version, /version/
+  # non-resource URLs) must be left alone - a checker or student that treats every
+  # anonymous-adjacent binding as a violation would break bootstrap.
   set +e
   kubectl get clusterrole lab104-anonymous-debug-access --context "$CTX" >/dev/null 2>&1
   lab_anon_role_status=$?
@@ -298,7 +299,7 @@ except Exception:
     elif [[ "$lab_anon_role_status" -eq 0 || "$lab_anon_binding_status" -eq 0 ]]; then
       echo "HINT: The lab-owned ClusterRole 'lab104-anonymous-debug-access' and/or ClusterRoleBinding 'lab104-unintended-anonymous-access' still exist. Delete BOTH - this binding grants system:unauthenticated (i.e. any anonymous request) real RBAC read access to pods/secrets/configmaps, which is a separate, intentional finding from the AuthenticationConfiguration work above."
     elif [[ "$stock_binding_status" -ne 0 ]]; then
-      echo "HINT: The STOCK kubeadm ClusterRoleBinding 'system:public-info-viewer' is missing. Do not delete it - it also targets group system:unauthenticated, but only grants access to the /healthz and /version non-resource URLs, which is standard, required kubeadm bootstrap behaviour, not the lab-owned finding you are meant to remove."
+      echo "HINT: The STOCK kubeadm ClusterRoleBinding 'system:public-info-viewer' is missing. Do not delete it - it also targets group system:unauthenticated, but only grants read-only GET on the /livez, /readyz, /healthz, /version, /version/ non-resource URLs (default Kubernetes RBAC), which is standard, required kubeadm bootstrap behaviour, not the lab-owned finding you are meant to remove."
     elif [[ "$anon_cannot_pods" != "no" || "$anon_cannot_secrets" != "no" || "$anon_cannot_configmaps" != "no" ]]; then
       echo "HINT: An unauthenticated identity (system:anonymous / group system:unauthenticated) can still read pods, secrets, or configmaps somewhere in the cluster (pods=$anon_cannot_pods secrets=$anon_cannot_secrets configmaps=$anon_cannot_configmaps). Check for ANOTHER ClusterRoleBinding/RoleBinding granting access to system:unauthenticated or system:anonymous besides the one you already removed."
     fi
@@ -591,9 +592,19 @@ except Exception:
     values_match=true
   fi
   pod=$(kubectl get pod secret-workflow -n "$NS" --context "$CTX" -o json 2>/dev/null || true)
+  # Two independent existence checks (a volume for rehydrated-config exists SOMEWHERE, and
+  # SOME readOnly mount exists at /etc/rehydrated) would accept an unused correct volume
+  # alongside a different volume/Secret mounted at /etc/rehydrated. Link them by volume name.
   mount_ok=$(jq -r '
-    ([.spec.volumes[]? | select(.secret.secretName == "rehydrated-config")] | length == 1) and
-    ([.spec.containers[]?.volumeMounts[]? | select(.mountPath == "/etc/rehydrated" and .readOnly == true)] | length == 1)
+    [.spec.volumes[]? | select(.secret.secretName == "rehydrated-config")] as $secretVolumes
+    | ($secretVolumes | length) == 1
+    and (
+      $secretVolumes[0].name as $secretVolumeName
+      | ([.spec.containers[]?.volumeMounts[]? | select(.mountPath == "/etc/rehydrated")] | length) == 1
+      and ([.spec.containers[]?.volumeMounts[]?
+            | select(.name == $secretVolumeName and .mountPath == "/etc/rehydrated" and .readOnly == true)]
+           | length) == 1
+    )
   ' <<<"$pod" 2>/dev/null)
   set +e
   kubectl wait -n "$NS" --for=condition=Ready pod/secret-workflow --timeout=60s --context "$CTX" >/dev/null 2>&1
@@ -627,7 +638,10 @@ except Exception:
 @test "11. Repaired Role in rbac-a and a cross-namespace RoleBinding grant exactly the intended access" {
   echo '1' >> /var/work/tests/result/all
   role=$(kubectl get role pod-role -n rbac-a --context "$CTX" -o json 2>/dev/null || true)
+  # Also require exactly ONE rule total - the original two checks alone would accept the
+  # correct pods rule PLUS an extra, unrelated rule (e.g. get secrets) bolted on.
   role_verbs_ok=$(jq -r '
+    (.rules | length == 1) and
     ([.rules[]? | select(.apiGroups == [""] and .resources == ["pods"])] | length == 1) and
     ((.rules[] | select(.apiGroups == [""] and .resources == ["pods"]) | .verbs | sort) == ["get","list","watch"])
   ' <<<"$role" 2>/dev/null)
@@ -639,27 +653,57 @@ except Exception:
   can_list_cm=$(kubectl auth can-i list configmaps -n rbac-b --as=system:serviceaccount:rbac-a:dev --context "$CTX" 2>/dev/null || true)
   cannot_delete_cm=$(kubectl auth can-i delete configmaps -n rbac-b --as=system:serviceaccount:rbac-a:dev --context "$CTX" 2>/dev/null || true)
   cannot_secrets_cm=$(kubectl auth can-i get secrets -n rbac-b --as=system:serviceaccount:rbac-a:dev --context "$CTX" 2>/dev/null || true)
+  # Extra live negative controls: a handful of can-i spot checks alone would miss an
+  # otherwise-unexercised extra verb like watch/update on configmaps.
+  cannot_watch_cm=$(kubectl auth can-i watch configmaps -n rbac-b --as=system:serviceaccount:rbac-a:dev --context "$CTX" 2>/dev/null || true)
+  cannot_update_cm=$(kubectl auth can-i update configmaps -n rbac-b --as=system:serviceaccount:rbac-a:dev --context "$CTX" 2>/dev/null || true)
+
+  # Structural check of the NEW rbac-b Role+RoleBinding: README does not mandate a specific
+  # name for either, so find the RoleBinding by its subject (dev@rbac-a) instead, then
+  # validate the Role it actually references has EXACTLY get/list on configmaps and nothing
+  # else - the can-i spot checks above prove effective access but not that no unrelated rule
+  # was also granted through this same binding.
+  rbac_b_bindings=$(kubectl get rolebinding -n rbac-b --context "$CTX" -o json 2>/dev/null \
+    | jq -c '[.items[] | select(
+        (.subjects | length) == 1 and
+        .subjects[0].kind == "ServiceAccount" and .subjects[0].name == "dev" and .subjects[0].namespace == "rbac-a" and
+        .roleRef.apiGroup == "rbac.authorization.k8s.io" and .roleRef.kind == "Role"
+      )]' 2>/dev/null)
+  rbac_b_binding_count=$(jq -r 'length' <<<"$rbac_b_bindings" 2>/dev/null)
+  rbac_b_role_name=$(jq -r '.[0].roleRef.name // ""' <<<"$rbac_b_bindings" 2>/dev/null)
+  rbac_b_role=$(kubectl get role "$rbac_b_role_name" -n rbac-b --context "$CTX" -o json 2>/dev/null || true)
+  rbac_b_role_ok=$(jq -r '
+    (.rules | length == 1) and
+    (.rules[0].apiGroups == [""]) and (.rules[0].resources == ["configmaps"]) and
+    ((.rules[0].verbs | sort) == ["get","list"])
+  ' <<<"$rbac_b_role" 2>/dev/null)
+  rbac_b_structure_ok=false
+  [[ "$rbac_b_binding_count" == "1" && "$rbac_b_role_ok" == "true" ]] && rbac_b_structure_ok=true
+
   pod=$(kubectl get pod -n rbac-a --context "$CTX" -o json 2>/dev/null || true)
   pod_uses_dev=$(jq -r '[.items[]? | select(.spec.serviceAccountName == "dev")] | length > 0' <<<"$pod" 2>/dev/null)
   if [[ "$role_verbs_ok" == "true" \
     && "$can_get" == "yes" && "$can_list" == "yes" && "$can_watch" == "yes" && "$cannot_delete" == "no" \
     && "$can_get_cm" == "yes" && "$can_list_cm" == "yes" && "$cannot_delete_cm" == "no" && "$cannot_secrets_cm" == "no" \
+    && "$cannot_watch_cm" == "no" && "$cannot_update_cm" == "no" && "$rbac_b_structure_ok" == "true" \
     && "$pod_uses_dev" == "true" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
     if [[ "$role_verbs_ok" != "true" ]]; then
-      echo "HINT: Role 'pod-role' in namespace 'rbac-a' must have EXACTLY the verbs get, list, watch on pods - the original fixture also had 'delete' (must be removed) and was missing 'watch' (must be added). Fix the EXISTING Role in-place, do not create a second one."
+      echo "HINT: Role 'pod-role' in namespace 'rbac-a' must have EXACTLY ONE rule granting EXACTLY the verbs get, list, watch on pods - the original fixture also had 'delete' (must be removed) and was missing 'watch' (must be added). Fix the EXISTING Role in-place, do not create a second one or add extra rules."
     elif [[ "$can_get" != "yes" || "$can_list" != "yes" || "$can_watch" != "yes" || "$cannot_delete" != "no" ]]; then
       echo "HINT: ServiceAccount 'dev' in 'rbac-a' does not have exactly get/list/watch on pods in its own namespace (get=$can_get list=$can_list watch=$can_watch delete=$cannot_delete, delete should be 'no'). Check the RoleBinding 'pod-role-binding' is still correctly bound after you edited the Role."
     elif [[ "$can_get_cm" != "yes" || "$can_list_cm" != "yes" ]]; then
       echo "HINT: ServiceAccount 'dev' (from rbac-a) cannot get/list ConfigMaps in namespace 'rbac-b' (get=$can_get_cm list=$can_list_cm). Create a NEW Role+RoleBinding IN rbac-b, with the RoleBinding's subject set to ServiceAccount 'dev' in namespace 'rbac-a' - a RoleBinding can reference a subject from a different namespace than itself, but the rights it grants are still scoped to the RoleBinding's own namespace."
-    elif [[ "$cannot_delete_cm" != "no" || "$cannot_secrets_cm" != "no" ]]; then
-      echo "HINT: ServiceAccount 'dev' has MORE access in 'rbac-b' than intended (delete configmaps=$cannot_delete_cm, get secrets=$cannot_secrets_cm - both should be 'no'). Grant only get/list on configmaps, nothing else."
+    elif [[ "$cannot_delete_cm" != "no" || "$cannot_secrets_cm" != "no" || "$cannot_watch_cm" != "no" || "$cannot_update_cm" != "no" ]]; then
+      echo "HINT: ServiceAccount 'dev' has MORE access in 'rbac-b' than intended (delete configmaps=$cannot_delete_cm, get secrets=$cannot_secrets_cm, watch configmaps=$cannot_watch_cm, update configmaps=$cannot_update_cm - all should be 'no'). Grant only get/list on configmaps, nothing else."
+    elif [[ "$rbac_b_structure_ok" != "true" ]]; then
+      echo "HINT: Could not find exactly one RoleBinding in 'rbac-b' whose only subject is ServiceAccount 'dev' from 'rbac-a', referencing a Role with EXACTLY one rule (get/list on configmaps only) - found $rbac_b_binding_count matching binding(s), role='$rbac_b_role_name'. The can-i checks above prove effective access but this proves the grant itself is scoped exactly as required, with no extra rule riding along on the same binding."
     elif [[ "$pod_uses_dev" != "true" ]]; then
       echo "HINT: No Pod in namespace 'rbac-a' uses serviceAccountName 'dev'. Create one so the cross-namespace access is actually exercised by a real workload, not just proven via 'kubectl auth can-i --as'."
     fi
-    echo "role_verbs_ok=$role_verbs_ok can_get=$can_get can_list=$can_list can_watch=$can_watch cannot_delete=$cannot_delete can_get_cm=$can_get_cm can_list_cm=$can_list_cm cannot_delete_cm=$cannot_delete_cm cannot_secrets_cm=$cannot_secrets_cm pod_uses_dev=$pod_uses_dev"
+    echo "role_verbs_ok=$role_verbs_ok can_get=$can_get can_list=$can_list can_watch=$can_watch cannot_delete=$cannot_delete can_get_cm=$can_get_cm can_list_cm=$can_list_cm cannot_delete_cm=$cannot_delete_cm cannot_secrets_cm=$cannot_secrets_cm cannot_watch_cm=$cannot_watch_cm cannot_update_cm=$cannot_update_cm rbac_b_structure_ok=$rbac_b_structure_ok pod_uses_dev=$pod_uses_dev"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -693,6 +737,37 @@ except Exception:
   can_get=$(kubectl auth can-i get pods -n development --as=john --context "$CTX" 2>/dev/null || true)
   cannot_delete=$(kubectl auth can-i delete pods -n development --as=john --context "$CTX" 2>/dev/null || true)
   cannot_other_ns=$(kubectl auth can-i create pods -n "$NS" --as=john --context "$CTX" 2>/dev/null || true)
+  # Extra live negative controls: the spot checks above prove create/list/get/delete on
+  # pods specifically, but wouldn't notice an unrelated extra verb/resource riding along
+  # on the same or another binding (e.g. get secrets, update configmaps).
+  cannot_get_secret=$(kubectl auth can-i get secrets -n development --as=john --context "$CTX" 2>/dev/null || true)
+  cannot_update_cm=$(kubectl auth can-i update configmaps -n development --as=john --context "$CTX" 2>/dev/null || true)
+
+  # Structural check: find every RoleBinding/ClusterRoleBinding whose subject is exactly
+  # {kind: User, name: john}, and require there to be EXACTLY one RoleBinding (in
+  # development, referencing a Role with exactly create/get/list on pods) and NO
+  # ClusterRoleBinding at all - can-i alone would not catch an extra ClusterRoleBinding
+  # that happens not to touch pods/development but still grants john something elsewhere.
+  john_rolebindings=$(kubectl get rolebinding -A --context "$CTX" -o json 2>/dev/null \
+    | jq -c '[.items[] | select([.subjects[]? | select(.kind == "User" and .name == "john")] | length > 0)]' 2>/dev/null)
+  john_clusterrolebindings=$(kubectl get clusterrolebinding --context "$CTX" -o json 2>/dev/null \
+    | jq -c '[.items[] | select([.subjects[]? | select(.kind == "User" and .name == "john")] | length > 0)]' 2>/dev/null)
+  john_rb_count=$(jq -r 'length' <<<"$john_rolebindings" 2>/dev/null)
+  john_crb_count=$(jq -r 'length' <<<"$john_clusterrolebindings" 2>/dev/null)
+  john_rb_ns=$(jq -r '.[0].metadata.namespace // ""' <<<"$john_rolebindings" 2>/dev/null)
+  john_rb_subjects_ok=$(jq -r '(.[0].subjects | length) == 1' <<<"$john_rolebindings" 2>/dev/null)
+  john_role_name=$(jq -r '.[0].roleRef.name // ""' <<<"$john_rolebindings" 2>/dev/null)
+  john_role=$(kubectl get role "$john_role_name" -n development --context "$CTX" -o json 2>/dev/null || true)
+  john_role_ok=$(jq -r '
+    (.rules | length == 1) and
+    (.rules[0].apiGroups == [""]) and (.rules[0].resources == ["pods"]) and
+    ((.rules[0].verbs | sort) == ["create","get","list"])
+  ' <<<"$john_role" 2>/dev/null)
+  john_structure_ok=false
+  if [[ "$john_rb_count" == "1" && "$john_crb_count" == "0" && "$john_rb_ns" == "development" \
+    && "$john_rb_subjects_ok" == "true" && "$john_role_ok" == "true" ]]; then
+    john_structure_ok=true
+  fi
   # Live proof of REAL client-cert authentication, not just RBAC impersonation via
   # --as=john (which any admin can do regardless of whether a valid cert was ever
   # issued): present the student-saved cert/key directly to the API server over TLS.
@@ -711,7 +786,8 @@ except Exception:
   fi
   if [[ "$signer_ok" == "true" && "$approved" == "true" && "$cn_ok" == "true" && "$chain_ok" == "true" \
     && "$can_create" == "yes" && "$can_list" == "yes" && "$can_get" == "yes" && "$cannot_delete" == "no" \
-    && "$cannot_other_ns" == "no" && "$real_auth_ok" == "true" ]]; then
+    && "$cannot_other_ns" == "no" && "$cannot_get_secret" == "no" && "$cannot_update_cm" == "no" \
+    && "$john_structure_ok" == "true" && "$real_auth_ok" == "true" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -725,14 +801,16 @@ except Exception:
       echo "HINT: The issued certificate does not verify against this cluster's own CA (/etc/kubernetes/pki/ca.crt on control-plane). Something is wrong with how the CSR was created or approved."
     elif [[ "$can_create" != "yes" || "$can_list" != "yes" || "$can_get" != "yes" ]]; then
       echo "HINT: User 'john' cannot create/list/get pods in namespace 'development' (create=$can_create list=$can_list get=$can_get). Create a Role in 'development' with these verbs on pods and a RoleBinding with subject {kind: User, name: john}."
-    elif [[ "$cannot_delete" != "no" ]]; then
-      echo "HINT: User 'john' can delete pods in 'development' - the task only grants create/list/get. Remove the extra verb."
+    elif [[ "$cannot_delete" != "no" || "$cannot_get_secret" != "no" || "$cannot_update_cm" != "no" ]]; then
+      echo "HINT: User 'john' has MORE access in 'development' than intended (delete pods=$cannot_delete, get secrets=$cannot_get_secret, update configmaps=$cannot_update_cm - all should be 'no'). The task grants exactly create/list/get on pods, nothing else."
     elif [[ "$cannot_other_ns" != "no" ]]; then
       echo "HINT: User 'john' has pod-create access in namespace '$NS' too - the RoleBinding must be scoped to 'development' only, not a ClusterRoleBinding."
+    elif [[ "$john_structure_ok" != "true" ]]; then
+      echo "HINT: RBAC for user 'john' must be exactly ONE RoleBinding in 'development' (single subject: {kind: User, name: john}) referencing a Role with EXACTLY one rule (create/get/list on pods only), and NO ClusterRoleBinding naming john at all (found ${john_rb_count:-0} RoleBinding(s) in '${john_rb_ns:-<none>}', ${john_crb_count:-0} ClusterRoleBinding(s), role='$john_role_name'). The can-i checks above prove effective access but this proves the grant itself is scoped exactly as required."
     elif [[ "$real_auth_ok" != "true" ]]; then
       echo "HINT: Presenting the saved certificate/key directly to the API server over TLS (not via 'kubectl auth can-i --as') did not behave as expected - a request to /api/v1/namespaces/development/pods should return 200 and the same request against namespace '$NS' should return 403. Save the issued certificate as $crt_file and its private key as $key_file (PEM format)."
     fi
-    echo "signer_ok=$signer_ok approved=$approved cn_ok=$cn_ok chain_ok=$chain_ok can_create=$can_create can_list=$can_list can_get=$can_get cannot_delete=$cannot_delete cannot_other_ns=$cannot_other_ns real_auth_ok=$real_auth_ok"
+    echo "signer_ok=$signer_ok approved=$approved cn_ok=$cn_ok chain_ok=$chain_ok can_create=$can_create can_list=$can_list can_get=$can_get cannot_delete=$cannot_delete cannot_other_ns=$cannot_other_ns cannot_get_secret=$cannot_get_secret cannot_update_cm=$cannot_update_cm john_structure_ok=$john_structure_ok real_auth_ok=$real_auth_ok"
     result=1
   fi
   [ "$result" -eq 0 ]

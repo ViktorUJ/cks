@@ -272,9 +272,14 @@ kubectl get clusterrolebinding -o json | jq -r \
 ```
 
 `system:public-info-viewer` - штатная kubeadm-привязка: она тоже целится в
-`system:unauthenticated`, но её ClusterRole разрешает доступ только к non-resource URL
-`/healthz`/`/version`, а не к обычным Kubernetes-ресурсам - это нормальная, требуемая
-часть bootstrap, не трогайте её. `lab104-unintended-anonymous-access` - намеренная
+`system:unauthenticated`, но её ClusterRole разрешает read-only `GET` только к
+non-resource URL `/livez`, `/readyz`, `/healthz`, `/version`, `/version/`, а не к обычным
+Kubernetes-ресурсам - это default Kubernetes RBAC, требуемая часть bootstrap, не трогайте
+её. Это не то же самое, что `anonymous.conditions` из задания 5: тот список ограничивает,
+на каких путях запрос вообще получает anonymous identity на этапе authentication (там
+только `/livez`/`/readyz`/`/healthz`) - `/version` анонимно возвращает `401` именно
+потому, что anonymous identity туда не назначается, а не потому что у
+`system:public-info-viewer` там не хватает прав. `lab104-unintended-anonymous-access` - намеренная
 lab-owned находка: её ClusterRole `lab104-anonymous-debug-access` даёт полноценный RBAC
 `get`/`list` на `pods`/`secrets`/`configmaps` кластерно, то есть ЛЮБОЙ анонимный запрос
 может их читать. Удаляем оба объекта, как и в заданиях 4/7:
