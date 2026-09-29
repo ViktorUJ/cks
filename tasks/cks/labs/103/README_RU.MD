@@ -153,7 +153,7 @@ ssh control-plane hostname
 
 | **4** | **Secure Ingress с TLS** |
 | :---: | :--- |
-| Что делаем | Создайте namespace `cks-103` и TLS-Secret `secure-ingress-tls` типа `kubernetes.io/tls` для хоста `secure.cks.local` (сертификат должен содержать `secure.cks.local` именно в Subject Alternative Name, не только в CN). Создайте Deployment `secure-app` (`viktoruj/ping_pong:alpine`, задайте `SERVER_NAME=secure-app` и `SRV_PORT=80` через `kubectl set env`), Service `secure-app` и Ingress `secure-ingress` с `ingressClassName: nginx`, TLS-секцией для этого хоста и ссылкой на Secret. Включите аннотацию `nginx.ingress.kubernetes.io/ssl-redirect: "true"`. Controller `ingress-nginx` в этой лабе уже установлен и Ready как lab-owned fixture (см. [главу 08](../../course/08/ru.md) про его retirement) - убедитесь, что он реально обрабатывает ваш Ingress: HTTPS-запрос через controller должен получить ответ `200` с телом, содержащим `Server Name: secure-app` (маркер именно этого backend), а HTTP-запрос - redirect (`Location`) на HTTPS-host `https://secure.cks.local` (ingress-nginx не всегда сохраняет путь в `Location`, проверяется именно host). Для проверки сертификата допустим самоподписанный сертификат. |
+| Что делаем | • Сгенерируйте самоподписанный сертификат для `secure.cks.local` с этим именем именно в Subject Alternative Name, не только в CN (команда - в подсказке).<br/>• Создайте namespace `cks-103` и из этого сертификата - TLS-Secret `secure-ingress-tls` типа `kubernetes.io/tls`.<br/>• Разверните Deployment `secure-app` (`viktoruj/ping_pong:alpine`, `SERVER_NAME=secure-app` и `SRV_PORT=80` через `kubectl set env`) и Service `secure-app`.<br/>• Создайте Ingress `secure-ingress` с `ingressClassName: nginx`, TLS-секцией на этот хост со ссылкой на `secure-ingress-tls` и аннотацией `nginx.ingress.kubernetes.io/ssl-redirect: "true"`.<br/>• Controller `ingress-nginx` в этой лабе уже установлен и Ready как lab-owned fixture (см. [главу 08](../../course/08/ru.md) про его retirement) - убедитесь, что он реально обрабатывает ваш Ingress (см. критерии приёмки). |
 | Критерии приёмки | - Secret `secure-ingress-tls` в `cks-103` имеет тип `kubernetes.io/tls` и поля `tls.crt`, `tls.key`; соответствие пары проверяется по public key (алгоритм-независимо, без привязки к RSA/modulus);<br/>- сертификат содержит `secure.cks.local` в SAN;<br/>- Ingress `secure-ingress` содержит `ingressClassName: nginx`, аннотацию `ssl-redirect: "true"`, `spec.tls` с хостом `secure.cks.local` и ссылкой на `secure-ingress-tls`, backend `secure-app:80`;<br/>- Service `secure-app` имеет реальный endpoint;<br/>- controller `ingress-nginx` Ready;<br/>- HTTPS-запрос через controller действительно возвращает `200` с телом, содержащим `Server Name: secure-app` (не просто любой `2xx`/`3xx`, который может вернуть сам controller без доступа к backend);<br/>- HTTP-запрос через controller получает redirect с заголовком `Location`, указывающим на HTTPS-host `https://secure.cks.local` (не любой `3xx`; путь после хоста необязателен). |
 
 <details>
@@ -179,12 +179,14 @@ key_pub=$(kubectl -n cks-103 get secret secure-ingress-tls -o jsonpath='{.data.t
 [[ -n "$cert_pub" && "$cert_pub" == "$key_pub" ]]
 ```
 
-Для end-to-end проверки не используйте Pod IP из `Endpoints` controller-а - он не гарантированно маршрутизируется с отдельной worker VM. Используйте ClusterIP Service `ingress-nginx-controller` и выполняйте запрос **с control-plane node**, где cluster Service networking доступен:
+Для end-to-end проверки не используйте Pod IP из `Endpoints` controller-а - он не гарантированно маршрутизируется с отдельной worker VM. `secure.cks.local` уже резолвится в реальный node IP (запись добавлена в `/etc/hosts` этой машины при bootstrap), а `ingress-nginx-controller` - Service типа `NodePort`, открытый на каждой ноде, поэтому запрос можно выполнять прямо с worker, без SSH на кластер:
 
 ```bash
-CONTROLLER_IP=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.spec.clusterIP}')
-ssh control-plane "curl -sS -k --max-time 5 --resolve secure.cks.local:443:${CONTROLLER_IP} https://secure.cks.local/"
+HTTPS_NODEPORT=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.port==443)].nodePort}')
+curl -sS -k --max-time 5 "https://secure.cks.local:${HTTPS_NODEPORT}/"
 ```
+
+Проверка HTTP→HTTPS redirect - не искусственное требование этой лабы, а реальный вопрос экзамена (см. mock-экзамен `tasks/cks/mock/04`, задание 4: `Create an Ingress with a redirect from HTTP to HTTPS`).
 </details>
 
 ---

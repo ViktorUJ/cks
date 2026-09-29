@@ -145,8 +145,10 @@ record_result() {
   service_endpoint=$(kubectl -n cks-103 get endpoints secure-app --context "$CTX" -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)
   controller_ready=$(kubectl -n ingress-nginx get deploy ingress-nginx-controller --context "$CTX" \
     -o jsonpath='{.status.availableReplicas}' 2>/dev/null)
-  controller_svc_ip=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
-    -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
+  https_nodeport=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
+    -o jsonpath='{.spec.ports[?(@.port==443)].nodePort}' 2>/dev/null)
+  http_nodeport=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
+    -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}' 2>/dev/null)
 
   # SAN сертификата (точное DNS-имя, не substring) и cert/key pairing по public key
   # (не привязано к RSA - работает и для EC/ECDSA пар).
@@ -167,25 +169,24 @@ record_result() {
   cert_key_match=false
   [[ -n "$cert_pub" && "$cert_pub" == "$key_pub" ]] && cert_key_match=true
 
-  # Реальный runtime request через controller Service ClusterIP, выполненный с
-  # control-plane node (Pod IP из Endpoints не гарантированно маршрутизируется с
-  # отдельной worker VM - Pod CIDR в этой лабе отличается от VPC CIDR). Проверяем не
-  # просто класс статус-кода, а конкретное заявленное поведение: HTTPS должен реально
-  # дойти до secure-app (status==200 И тело ответа содержит
-  # маркер Server Name: secure-app - иначе ssl-redirect/другая аннотация может вернуть
-  # 2xx/3xx без реального доступа к backend), а HTTP должен redirect-ить именно на
-  # https://secure.cks.local/.
+  # Реальный runtime request прямо с этой (worker) машины через NodePort Service
+  # ingress-nginx-controller - тот же под capacity, что "secure.cks.local" в /etc/hosts
+  # уже резолвит в реальный node IP (bootstrap), поэтому SSH на кластерную ноду не нужен.
+  # Проверяем не просто класс статус-кода, а конкретное заявленное поведение: HTTPS должен
+  # реально дойти до secure-app (status==200 И тело ответа содержит маркер
+  # Server Name: secure-app - иначе ssl-redirect/другая аннотация может вернуть 2xx/3xx без
+  # реального доступа к backend), а HTTP должен redirect-ить именно на https://secure.cks.local/.
   https_status=""
   https_body=""
   http_status=""
   http_location=""
-  if [[ -n "$controller_svc_ip" ]]; then
-    https_response=$(node_ssh "curl -sS -D - -o /tmp/https_body.$$ -w 'HTTPCODE:%{http_code}' --max-time 5 -k \
-      --resolve secure.cks.local:443:${controller_svc_ip} https://secure.cks.local/; cat /tmp/https_body.$$; rm -f /tmp/https_body.$$" 2>/dev/null)
+  if [[ -n "$https_nodeport" && -n "$http_nodeport" ]]; then
+    https_response=$(curl -sS -D - -o /tmp/https_body.$$ -w 'HTTPCODE:%{http_code}' --max-time 5 -k \
+      "https://secure.cks.local:${https_nodeport}/" 2>/dev/null; cat /tmp/https_body.$$ 2>/dev/null; rm -f /tmp/https_body.$$)
     https_status=$(grep -oE 'HTTPCODE:[0-9]+' <<<"$https_response" | tail -1 | cut -d: -f2)
     https_body="$https_response"
-    http_headers=$(node_ssh "curl -sS -D - -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 \
-      --resolve secure.cks.local:80:${controller_svc_ip} http://secure.cks.local/" 2>/dev/null)
+    http_headers=$(curl -sS -D - -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 \
+      "http://secure.cks.local:${http_nodeport}/" 2>/dev/null)
     http_status=$(grep -oE 'HTTPCODE:[0-9]+' <<<"$http_headers" | tail -1 | cut -d: -f2)
     http_location=$(grep -i '^location:' <<<"$http_headers" | tr -d '\r' | awk '{print $2}')
   fi
@@ -233,12 +234,12 @@ record_result() {
     elif [[ "$cert_key_match" != "true" ]]; then
       echo "HINT: the certificate and private key in the Secret do not form a valid pair (public key mismatch) - re-generate them together with the same openssl command. This check works for RSA and EC/ECDSA keys alike."
     elif [[ "$https_ok" != "true" ]]; then
-      echo "HINT: a real HTTPS request through the ingress-nginx-controller Service ClusterIP (from the control-plane node) did not return status 200 with a body containing 'Server Name: secure-app' (status=$https_status). A redirect-only annotation or misrouted Ingress can return some 2xx/3xx without ever reaching secure-app - this check requires the actual backend response, not just a similar-looking status class. Make sure the Deployment sets SERVER_NAME=secure-app."
+      echo "HINT: a real HTTPS request to https://secure.cks.local:<nodeport>/ did not return status 200 with a body containing 'Server Name: secure-app' (status=$https_status). A redirect-only annotation or misrouted Ingress can return some 2xx/3xx without ever reaching secure-app - this check requires the actual backend response, not just a similar-looking status class. Make sure the Deployment sets SERVER_NAME=secure-app."
     else
       echo "HINT: a plain HTTP request through the controller did not redirect to https://secure.cks.local/ specifically (status=$http_status, location=$http_location) - check the ssl-redirect annotation is 'true' and that the redirect Location header actually points at the HTTPS host, not just any 3xx."
     fi
     echo "secret_type=$secret_type ingress_class=$ingress_class ssl_redirect=$ssl_redirect host=$host secret=$secret_name path=$path/$path_type backend=$service:$service_port"
-    echo "service_endpoint=$service_endpoint controller_ready=$controller_ready controller_svc_ip=$controller_svc_ip san_ok=$san_ok cert_key_match=$cert_key_match https_status=$https_status http_status=$http_status http_location=$http_location"
+    echo "service_endpoint=$service_endpoint controller_ready=$controller_ready https_nodeport=$https_nodeport http_nodeport=$http_nodeport san_ok=$san_ok cert_key_match=$cert_key_match https_status=$https_status http_status=$http_status http_location=$http_location"
     result=1
   fi
   record_result 4 "$result"

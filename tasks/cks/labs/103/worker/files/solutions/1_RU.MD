@@ -199,26 +199,31 @@ else
   echo "FAIL: certificate and private key do NOT match" >&2
 fi
 
-# 4. Реальный HTTPS request через controller Service ClusterIP, выполненный с
-# control-plane node. Pod IP из Endpoints не гарантированно маршрутизируется с отдельной
-# worker VM (Pod CIDR 10.0.0.0/16 отличается от VPC CIDR 10.103.0.0/16 в этой лабе),
-# поэтому проверяем через Service и с узла кластера, а не с worker по Pod IP. Проверяем
+# 4. Реальный HTTPS request через NodePort Service ingress-nginx-controller, выполненный
+# прямо с этой (worker) машины - bootstrap уже добавил "secure.cks.local" в /etc/hosts
+# (реальный node IP; NodePort открыт на КАЖДОЙ ноде, поэтому неважно, на какой из них
+# реально работает Pod controller-а). SSH на кластерную ноду не нужен. Проверяем
 # конкретное заявленное поведение (status==200 и тело от именно secure-app), а не любой
 # 2xx/3xx - иначе redirect-аннотация могла бы дать false PASS без реального доступа к backend.
-controller_svc_ip=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
-  -o jsonpath='{.spec.clusterIP}')
+https_nodeport=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
+  -o jsonpath='{.spec.ports[?(@.port==443)].nodePort}')
+http_nodeport=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
+  -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}')
 
-https_status=$(ssh control-plane "curl -sS -o /tmp/https_body -w '%{http_code}' --max-time 5 -k \
-  --resolve secure.cks.local:443:${controller_svc_ip} https://secure.cks.local/")
+https_status=$(curl -sS -o /tmp/https_body -w '%{http_code}' --max-time 5 -k \
+  "https://secure.cks.local:${https_nodeport}/")
 echo "HTTPS status: $https_status"
-ssh control-plane "cat /tmp/https_body; rm -f /tmp/https_body" | grep -q 'Server Name: secure-app' \
+grep -q 'Server Name: secure-app' /tmp/https_body \
   && echo "OK: HTTPS response body is from secure-app (SERVER_NAME marker)" \
   || echo "FAIL: HTTPS response body does not look like secure-app" >&2
+rm -f /tmp/https_body
 
 # 5. HTTP request получает redirect именно на https://secure.cks.local/ (не любой 3xx -
-# захватываем Location и проверяем, что он указывает на правильный HTTPS host).
-http_headers=$(ssh control-plane "curl -sS -D - -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 \
-  --resolve secure.cks.local:80:${controller_svc_ip} http://secure.cks.local/")
+# захватываем Location и проверяем, что он указывает на правильный HTTPS host). Этот
+# HTTP->HTTPS редирект - реальный экзаменационный вопрос (см. mock-экзамен 04, задание 4),
+# не искусственное требование этой лабы.
+http_headers=$(curl -sS -D - -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 \
+  "http://secure.cks.local:${http_nodeport}/")
 http_status=$(grep -oE 'HTTPCODE:[0-9]+' <<<"$http_headers" | cut -d: -f2)
 http_location=$(grep -i '^location:' <<<"$http_headers" | tr -d '\r' | awk '{print $2}')
 echo "HTTP status: $http_status, Location: $http_location"

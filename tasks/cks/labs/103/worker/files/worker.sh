@@ -14,6 +14,12 @@ until kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plan
 done
 CONTROL_PLANE_IP=$(kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 printf '%s control-plane\n' "$CONTROL_PLANE_IP" >> /etc/hosts
+# Task 4's Ingress host, resolved directly to a real node IP - same pattern as the mock
+# exams (see tasks/cks/mock/04/worker/files/worker.sh): NodePort is exposed on EVERY node
+# regardless of which one actually runs the ingress-nginx-controller Pod, so this works
+# without depending on scheduling, and lets students curl by domain name straight from
+# this machine instead of SSHing into a cluster node.
+printf '%s secure.cks.local\n' "$CONTROL_PLANE_IP" >> /etc/hosts
 # kube-bench itself is NOT installed on this bastion: it lives on control-plane (installed
 # there directly by k8s-1/scripts/master.sh, matching the real exam where it is already
 # present on nodes) and, as a real student-run install, on the worker k8s node for task 10.
