@@ -19,7 +19,7 @@
 > Здесь рассматриваем безопасное применение этих механизмов на публичном входе, а не
 > повторяем их основы.
 
-> 🧠 TLS защищает только путь клиента до TLS termination; controller → Service → Pod — отдельная граница.
+> 🧠 TLS защищает только путь клиента до TLS termination; controller → Service → Pod - отдельная граница.
 
 ## 08.1. Модель угроз: почему HTTP на Ingress недостаточен
 
@@ -59,7 +59,7 @@ flowchart TB
 Secret хранит ключ и сертификат, но сам по себе не включает TLS, пока на него не сошлётся
 Ingress.
 
-> 🎯 Уметь выпустить тестовый certificate для заданного host с SAN, сверить certificate/key и использовать `--cacert` вместо `-k` — практический минимум для TLS-задачи.
+> 🎯 Уметь выпустить тестовый certificate для заданного host с SAN, сверить certificate/key и использовать `--cacert` вместо `-k` - практический минимум для TLS-задачи.
 
 ## 08.2. Сертификат и ключ: тестовый self-signed и production-подход
 
@@ -243,7 +243,7 @@ entrypoint выбранного controller, а не только по налич
 
 ## 08.5. ingress-nginx: retired-controller и границы аннотаций
 
-> **NGINX Ingress Controller retired.** С марта 2026 проект `ingress-nginx` retired и больше не получает релизов и security-фиксов ([анонс](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)). CKS требует корректно настроенный Ingress с TLS, но публичная компетенция не гарантирует конкретный controller или nginx-specific annotations. На экзамене сначала проверяйте controller, данный лабораторией; синтаксис `ingressClassName: nginx` и его аннотации — лишь возможный fixture. Для production не разворачивайте retired-controller на новых кластерах: выбирайте поддерживаемую реализацию или Gateway API. Переносимая часть — TLS Secret, `spec.tls`, host/SNI, SAN, Service endpoints и проверка HTTPS — не зависит от controller.
+> **NGINX Ingress Controller retired.** С марта 2026 проект `ingress-nginx` retired и больше не получает релизов и security-фиксов ([анонс](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/)). CKS требует корректно настроенный Ingress с TLS, но публичная компетенция не гарантирует конкретный controller или nginx-specific annotations. На экзамене сначала проверяйте controller, данный лабораторией; синтаксис `ingressClassName: nginx` и его аннотации - лишь возможный fixture. Для production не разворачивайте retired-controller на новых кластерах: выбирайте поддерживаемую реализацию или Gateway API. Переносимая часть - TLS Secret, `spec.tls`, host/SNI, SAN, Service endpoints и проверка HTTPS - не зависит от controller.
 
 > 🎯 Для ingress-nginx `spec.tls` обычно включает redirect; `ssl-redirect` и `force-ssl-redirect` зависят от реализации и topology.
 
@@ -306,7 +306,7 @@ spec:
 Gateway API описывает три TLS-модели: **edge termination** (HTTPS listener расшифровывает
 трафик на Gateway), **TLS passthrough** (Gateway передаёт TLS-handshake backend без
 termination) и TLS к backend после termination (ре-encryption). Для последней модели
-`BackendTLSPolicy` из Gateway API v1.4.0 — GA в Standard Channel — задаёт SNI и проверку
+`BackendTLSPolicy` из Gateway API v1.4.0 - GA в Standard Channel - задаёт SNI и проверку
 certificate backend. Поддержка конкретной модели зависит от Gateway controller.
 
 Для нового production-кластера используйте поддерживаемую реализацию Gateway API. В примере
@@ -445,7 +445,7 @@ API `AllowValidOnly` валидирует сертификат во время T
 может отклонить само TLS-соединение без HTTP-ответа - controller-neutral модели «всегда
 400/403» здесь не существует.
 
-> 🔬 `auth-tls-*` — API retired ingress-nginx; переносимая модель — валидный client certificate на edge.
+> 🔬 `auth-tls-*` - API retired ingress-nginx; переносимая модель - валидный client certificate на edge.
 
 ### ingress-nginx: аннотации `auth-tls-*`
 
@@ -606,7 +606,7 @@ implementation.
 проверка сертификата на границе кластера подтверждает identity TLS-клиента, а не
 авторизует конкретное действие внутри приложения.
 
-> 🎯 `curl --resolve` с `--cacert` проверяет HTTPS, а `openssl s_client -servername` — certificate, отданный controller.
+> 🎯 `curl --resolve` с `--cacert` проверяет HTTPS, а `openssl s_client -servername` - certificate, отданный controller.
 
 ## 08.7. Проверка: controller-neutral HTTPS, host и сертификат
 
@@ -759,7 +759,7 @@ CA bundle через `--cacert <ca-bundle.pem>`, а не отключайте ve
 убедиться, что выбранные controller и backend endpoints существуют, и выполнить успешный
 HTTPS-вызов через `curl --resolve`. Всегда проверяйте namespace, `secretName`, `hosts` и
 `ingressClassName` либо Gateway route. `308`, `ssl-redirect` и
-`force-ssl-redirect` — детали **только fixture с ingress-nginx**: используйте их лишь если
+`force-ssl-redirect` - детали **только fixture с ingress-nginx**: используйте их лишь если
 задача явно предоставляет этот controller и требует соответствующую топологию.
 
 **В реальной работе.** Secure Ingress - граница между недоверенным клиентом и приложением.
@@ -794,7 +794,7 @@ TLS защищает канал от клиента до ingress controller, г�
 <details>
 <summary>4. Почему Ingress и его TLS Secret должны находиться в одном namespace?</summary>
 
-Secret — namespaced объект, и Ingress из `web` не может сослаться на Secret из `default` или другого namespace. Поэтому `secretName` в `spec.tls` должен ссылаться на Secret, созданный в том же namespace, что и Ingress.
+Secret - namespaced объект, и Ingress из `web` не может сослаться на Secret из `default` или другого namespace. Поэтому `secretName` в `spec.tls` должен ссылаться на Secret, созданный в том же namespace, что и Ingress.
 
 </details>
 
@@ -808,7 +808,7 @@ Secret — namespaced объект, и Ingress из `web` не может сос
 <details>
 <summary>6. Какие два результата ожидаются от `curl` для HTTP и HTTPS после настройки redirect?</summary>
 
-HTTPS-вызов с правильными SNI и Host, например через `curl --resolve`, должен успешно получить backend, в примере — HTTP 200. Для лабораторного self-signed certificate передайте его как доверенный certificate через `--cacert tls.crt`; `-k` используйте только как отдельный diagnostic bypass, его успех подтверждает соединение, но не доказывает корректность certificate, SAN или цепочки. Только для fixture с ingress-nginx и `spec.tls` отдельный HTTP-запрос ожидаемо возвращает redirect, обычно 308, с `Location`; статус не является переносимой семантикой Ingress API.
+HTTPS-вызов с правильными SNI и Host, например через `curl --resolve`, должен успешно получить backend, в примере - HTTP 200. Для лабораторного self-signed certificate передайте его как доверенный certificate через `--cacert tls.crt`; `-k` используйте только как отдельный diagnostic bypass, его успех подтверждает соединение, но не доказывает корректность certificate, SAN или цепочки. Только для fixture с ingress-nginx и `spec.tls` отдельный HTTP-запрос ожидаемо возвращает redirect, обычно 308, с `Location`; статус не является переносимой семантикой Ingress API.
 
 </details>
 

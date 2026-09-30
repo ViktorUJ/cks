@@ -4,7 +4,7 @@
 
 > **Проблема.** Синтаксически корректный manifest может незаметно добавить
 > `privileged: true`, root-процесс, writable root filesystem или image с `:latest`, а
-> Dockerfile — небезопасный build-паттерн. После merge такой риск уже попадёт в CI и
+> Dockerfile - небезопасный build-паттерн. После merge такой риск уже попадёт в CI и
 > кластер, где его исправление потребует rollout или incident response. Нужна проверка
 > исходных Dockerfile и manifests до build, push и deploy.
 
@@ -116,7 +116,7 @@ helm template payments-api ./chart --namespace payments \
 
 Не отправляйте приватные manifests в публичный online scanner. Локальный binary или утверждённый CI container оставляет исходники в вашем execution environment.
 
-> 🎯 `kube-linter` — Kubernetes-oriented static analysis: прочитайте finding, исправьте manifest и повторите lint до чистого результата.
+> 🎯 `kube-linter` - Kubernetes-oriented static analysis: прочитайте finding, исправьте manifest и повторите lint до чистого результата.
 
 ## 27.3. `kube-linter`: проверка Kubernetes best practices
 
@@ -622,7 +622,7 @@ jobs:
         path: kubesec-report.json
 ```
 
-Проверяйте exit code и машинно проверяемый результат, а не наличие текста в stdout. `tee` лишь сохраняет JSON, а `pipefail` лишь не скрывает failure самого scanner: они не делают security gate. У `kubesec` default JSON — массив результатов; итоговый score складывает positive и negative points, а `scoring.critical` — отдельный список critical findings. Поэтому `jq -e` обязан проверить каждый элемент: валидность schema, отсутствие critical findings и versioned numeric score threshold. В примере ниже любой пустой массив, invalid result, critical finding, нечисловой score или score `<= 0` завершает команду с non-zero. Если конкретный critical rule сознательно допустим, оформляйте узкое versioned exception с owner и expiry, а не компенсируйте его общим score.
+Проверяйте exit code и машинно проверяемый результат, а не наличие текста в stdout. `tee` лишь сохраняет JSON, а `pipefail` лишь не скрывает failure самого scanner: они не делают security gate. У `kubesec` default JSON - массив результатов; итоговый score складывает positive и negative points, а `scoring.critical` - отдельный список critical findings. Поэтому `jq -e` обязан проверить каждый элемент: валидность schema, отсутствие critical findings и versioned numeric score threshold. В примере ниже любой пустой массив, invalid result, critical finding, нечисловой score или score `<= 0` завершает команду с non-zero. Если конкретный critical rule сознательно допустим, оформляйте узкое versioned exception с owner и expiry, а не компенсируйте его общим score.
 
 ```bash
 set -euo pipefail
@@ -768,13 +768,13 @@ Templates ещё не являются тем ресурсом, который �
 <details>
 <summary>7. Что нужно сделать после finding: отключить rule, исправить source или принять узкое исключение?</summary>
 
-Обычный путь — исправить исходный Dockerfile, manifest или policy и повторить проверки. Глобальный `--ignore` скрывает системное нарушение; legitimate exception ограничивают конкретным rule и scope, документируют причиной, owner и сроком пересмотра. После правки lint, `conftest`, policy tests и server dry-run должны вновь пройти.
+Обычный путь - исправить исходный Dockerfile, manifest или policy и повторить проверки. Глобальный `--ignore` скрывает системное нарушение; legitimate exception ограничивают конкретным rule и scope, документируют причиной, owner и сроком пересмотра. После правки lint, `conftest`, policy tests и server dry-run должны вновь пройти.
 </details>
 
 <details>
 <summary>8. Почему `set -o pipefail` важен для команды scanner, вывод которой передаётся в `tee`?</summary>
 
-Без `pipefail` shell может вернуть статус последней успешной команды `tee`, скрыв падение scanner. Он сохраняет failure исходной команды во всём pipeline. Однако для `kubesec` этого недостаточно: JSON нужно явно проверить `jq -e` для каждого элемента массива — `.valid == true`, пустой `scoring.critical` и versioned score threshold; один положительный score не компенсирует critical finding.
+Без `pipefail` shell может вернуть статус последней успешной команды `tee`, скрыв падение scanner. Он сохраняет failure исходной команды во всём pipeline. Однако для `kubesec` этого недостаточно: JSON нужно явно проверить `jq -e` для каждого элемента массива - `.valid == true`, пустой `scoring.critical` и versioned score threshold; один положительный score не компенсирует critical finding.
 </details>
 
 <details>

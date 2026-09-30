@@ -4,10 +4,11 @@
 
 ## Описание
 
-В этой лабораторной работе вы настраиваете одноузловой Kubernetes-кластер как инженер
-по безопасности: фиксируете исходную картину CIS Benchmark, исправляете небезопасные
-параметры kubelet и kube-apiserver, публикуете Ingress только по TLS, ограничиваете TLS
-control plane и подтверждаете целостность установленных Kubernetes-бинарников.
+В этой лабораторной работе вы настраиваете двухузловой Kubernetes-кластер (control-plane +
+worker) как инженер по безопасности: устанавливаете `kube-bench` и по его находкам
+(не по памяти) исправляете небезопасные параметры control-plane компонентов и kubelet
+worker-узла, публикуете Ingress только по TLS, ограничиваете TLS control plane и
+подтверждаете целостность установленных Kubernetes-бинарников.
 
 Это не повторение базовой настройки Kubernetes из CKA. Здесь важны места применения
 настроек: `KubeletConfiguration`, static Pod manifests control plane, TLS-параметры etcd
@@ -27,7 +28,7 @@ control plane и подтверждаете целостность устано�
 <details>
 <summary>1. Почему запуск kube-bench профилем `cis-1.12` на Kubernetes 1.36 нельзя называть authoritative CIS compliance?</summary>
 
-Пиннутая в этой лабе версия `kube-bench 0.16.0` не содержит профиля для 1.36 вообще - её встроенный version mapping доходит только до `"1.34": "cis-1.12"` (самый новый доступный профиль). Явно указывая `--benchmark cis-1.12` на кластере 1.36, мы принудительно используем ближайший существующий профиль как approximation: часть проверок может быть неактуальна для более новой версии, а новые security-relevant параметры именно для 1.36 этот профиль ещё не покрывает. Это ценный практический сигнал, но не formal compliance statement для версии 1.36.
+Версия `kube-bench 0.16.0`, закреплённая в этой лабе, не содержит профиля для 1.36 вообще - её встроенный version mapping доходит только до `"1.34": "cis-1.12"` (самый новый доступный профиль). Явно указывая `--benchmark cis-1.12` на кластере 1.36, мы принудительно используем ближайший существующий профиль как approximation: часть проверок может быть неактуальна для более новой версии, а новые security-relevant параметры именно для 1.36 этот профиль ещё не покрывает. Это ценный практический сигнал, но не formal compliance statement для версии 1.36.
 </details>
 
 <details>
@@ -77,12 +78,12 @@ flowchart TB
 |---|---|
 | `vpc` | VPC `10.103.0.0/16` с публичными подсетями |
 | `ssh-keys` | SSH-ключи для доступа к нодам |
-| `k8s-1` | Одноузловой Kubernetes `1.36.0` (kubeadm), containerd и Calico |
-| `worker` | Рабочая машина с `kubectl`, `kube-bench`, SSH-доступом и `check_result` |
+| `k8s-1` | Kubernetes `1.36.0` (kubeadm), containerd и Calico: control-plane + один worker-узел |
+| `worker` | Рабочая машина (bastion) с `kubectl`, SSH-доступом и `check_result` (сам `kube-bench` здесь не нужен - он уже на `control-plane` и устанавливается на worker-узле по ходу лабы) |
 
 > **Версия и экзамен.** На 2026-09-06 официальный CKS exam исходит из Kubernetes `v1.35`. Эта лаба использует `1.36.0`, поэтому всё, что относится к этой версии, является forward-looking учебным сценарием, а не заявлением о текущей экзаменационной версии.
 
-Control-plane разтаинчен, поэтому при необходимости на нём можно запустить учебный Pod.
+С control-plane снят taint, поэтому при необходимости на нём можно запустить учебный Pod.
 Для заданий 2, 3 и 5 static Pods автоматически пересоздаются kubelet после сохранения
 изменённого манифеста или конфигурации. Не удаляйте control-plane Pods вручную.
 
@@ -96,15 +97,15 @@ TASK=103 make run_cks_task
 
 ```bash
 kubectl config use-context cluster1-admin@cluster1
-time_left
-check_result
+time_left      # сколько времени осталось на лабу
+check_result   # запускает автоматические тесты и показывает результат
 ```
 
 Адрес control-plane можно получить и проверить так:
 
 ```bash
 kubectl get nodes -o wide
-ssh control-plane sudo hostname
+ssh control-plane hostname
 ```
 
 ## Задания
@@ -113,52 +114,60 @@ ssh control-plane sudo hostname
 
 | **1** | **Отчёт CIS Benchmark** |
 | :---: | :--- |
-| Что делаем | На узле `control-plane` прогоните `kube-bench` для Kubernetes `1.36.0`. Сохраните полный evidence в `/var/work/tests/artifacts/1/kube-bench.txt`: `kubernetes_version`, `kube_bench_version`, выбранный `benchmark`, `mapping_status`, затем сам отчёт. Установленный на worker `kube-bench` можно скопировать на узел; проверяться должен именно узел. Встроенный в пиннутый `kube-bench 0.16.0` version mapping заканчивается записью `"1.34": "cis-1.12"` - более новых профилей (включая какой-либо профиль под 1.35/1.36) в этой версии нет вовсе. Поэтому запускайте `--benchmark cis-1.12` явно и помечайте результат на `1.36` как `forced-approximate`, а не authoritative compliance. **Запускайте полный набор targets для `cis-1.12`:** `--targets master,node,controlplane,etcd,policies` - это карта targets, которую kube-bench сопоставляет профилю `cis-1.12`; пропуск любого из них даёт неполный отчёт. |
+| Что делаем | На узле `control-plane` прогоните `kube-bench` для Kubernetes `1.36.0`. Сохраните полный evidence в `/var/work/tests/artifacts/1/kube-bench.txt`: `kubernetes_version`, `kube_bench_version`, выбранный `benchmark`, `mapping_status`, затем сам отчёт. `kube-bench` на `control-plane` уже установлен (как и на реальном экзамене, где CIS Benchmark tooling на нодах уже есть) - устанавливать или копировать его не нужно, проверяться должен именно узел. Встроенный в закреплённую версию `kube-bench 0.16.0` version mapping заканчивается записью `"1.34": "cis-1.12"` - более новых профилей (включая какой-либо профиль под 1.35/1.36) в этой версии нет вовсе. Поэтому запускайте `--benchmark cis-1.12` явно и помечайте результат на `1.36` как `forced-approximate`, а не authoritative compliance. **Запускайте полный набор targets для `cis-1.12`:** `--targets master,node,controlplane,etcd,policies` - это карта targets, которую kube-bench сопоставляет профилю `cis-1.12`; пропуск любого из них даёт неполный отчёт. Без явного `--targets` kube-bench сам определяет тип текущей ноды и берёт для него не весь этот список, а более узкий набор - `etcd` и `policies` в такой auto-detected запуск не попадают, поэтому отчёт без явного `--targets` окажется неполным. |
 | Критерии приёмки | - evidence содержит все четыре version/mapping поля;<br/>- `mapping_status=forced-approximate` явно объясняет отсутствие официального покрытия `1.36`;<br/>- в отчёте есть результаты всех разделов `master`, `node`, `controlplane`, `etcd`, `policies` (не только произвольная строка `[PASS]`/`[WARN]`/`[FAIL]`);<br/>- текст не выдаёт результат за authoritative CIS compliance для Kubernetes `1.36`. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
 
-Проверка ожидает четыре конкретных строки-маркера в начале файла: `kubernetes_version=v1.36.x`, `kube_bench_version=v0.16.0`, `benchmark=cis-1.12`, `mapping_status=forced-approximate` - это не декоративный текст, а формат, который тест ищет буквально. Запускайте `kube-bench` на самом control-plane node, а не удалённо с worker - у kube-bench нет режима "проверить чужую ноду по SSH". Не забудьте `--targets master,node,controlplane,etcd,policies` - без явного указания targets секции `etcd` и `policies` могут быть пропущены. Также добавляйте `--config-dir /opt/kube-bench/cfg` явно: у бинарника `--config-dir` по умолчанию указывает на `/etc/kube-bench/cfg` (а не на текущую директорию), которого здесь не существует, из-за чего без явного флага `kube-bench` завершается ошибкой `config file is missing 'target_mapping' section`.
+Проверка ожидает четыре конкретных строки-маркера в начале файла: `kubernetes_version=v1.36.x`, `kube_bench_version=v0.16.0`, `benchmark=cis-1.12`, `mapping_status=forced-approximate` - это не декоративный текст, а формат, который тест ищет буквально. Запускайте `kube-bench` на самом control-plane node, а не удалённо с worker - у kube-bench нет режима "проверить чужую ноду по SSH". Не забудьте `--targets master,node,controlplane,etcd,policies` - без явного указания targets секции `etcd` и `policies` могут быть пропущены. `kube-bench` уже установлен вместе с конфигурацией в его штатном каталоге `/etc/kube-bench/cfg`, поэтому `--config-dir` в этой лабе указывать не нужно - используйте этот флаг только если вы сами разместили `cfg` в другом каталоге и передаёте фактический путь к этой копии.
 </details>
 
 ---
 
 | **2** | **Hardening kubelet: read-only port и anonymous auth** |
 | :---: | :--- |
-| Что делаем | На control-plane исправьте kubelet configuration: установите `readOnlyPort: 0` и `authentication.anonymous.enabled: false` в `/var/lib/kubelet/config.yaml`. Перезапустите kubelet и дождитесь готовности ноды. Не подменяйте проверку текстовым артефактом: настройки должны быть применены на ноде. |
-| Критерии приёмки | - в действующей kubelet configuration есть `readOnlyPort: 0`;<br/>- anonymous authentication kubelet отключён;<br/>- нода `Ready` после перезапуска. |
+| Что делаем | На control-plane найдите и устраните две небезопасные настройки kubelet: он всё ещё обслуживает read-only порт без аутентификации и принимает анонимные запросы (см. главу про hardening kubelet). Используйте отчёт `kube-bench` из задания 1 как источник истины: он уже отметил обе проблемы в секции `node` для этого же узла - найдите там `[FAIL]` рядом с этими двумя темами и ориентируйтесь на них. Исправьте `kubelet configuration`, перезапустите kubelet и дождитесь готовности ноды. Не подменяйте проверку текстовым артефактом: настройки должны быть применены на ноде. |
+| Критерии приёмки | - в действующей kubelet configuration read-only порт отключён;<br/>- anonymous authentication kubelet отключён;<br/>- нода `Ready` после перезапуска. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
 
-`authentication.anonymous.enabled: false` находится ВЛОЖЕННО, под ключом `authentication.anonymous`, а не как отдельное top-level поле `anonymous: false` - проверьте отступы YAML внимательно. После правки config.yaml нужно перезапустить сам сервис kubelet (`systemctl restart kubelet`), редактирование файла само по себе не применяет изменения к работающему процессу.
+Ищите в отчёте задания 1 checks `4.2.1` (`--anonymous-auth`) и `4.2.4` (`--read-only-port`) в секции `node`. В `KubeletConfiguration` (`/var/lib/kubelet/config.yaml`) им соответствуют `authentication.anonymous.enabled` и `readOnlyPort` - CIS требует `authentication.anonymous.enabled: false` и `readOnlyPort: 0`. `authentication.anonymous.enabled` находится ВЛОЖЕННО, под ключом `authentication.anonymous`, а не как отдельное top-level поле `anonymous: false` - проверьте отступы YAML внимательно. После правки config.yaml нужно перезапустить сам сервис kubelet (`systemctl restart kubelet`), редактирование файла само по себе не применяет изменения к работающему процессу.
 </details>
 
 ---
 
 | **3** | **Hardening kube-apiserver: отключить profiling** |
 | :---: | :--- |
-| Что делаем | В static Pod manifest `/etc/kubernetes/manifests/kube-apiserver.yaml` добавьте `--profiling=false`. Дождитесь пересоздания kube-apiserver и убедитесь, что API готов. |
-| Критерии приёмки | - в manifest kube-apiserver есть `--profiling=false`;<br/>- `kubectl get --raw='/readyz'` возвращает успешный результат;<br/>- static Pod kube-apiserver запущен. |
+| Что делаем | kube-apiserver до сих пор обслуживает pprof HTTP endpoint профилирования процесса. Используйте отчёт `kube-bench` из задания 1 как источник истины: он уже отметил эту проблему в секции `master` для того же узла - найдите там `[FAIL]` рядом с этой темой и ориентируйтесь на него. Исправьте static Pod manifest kube-apiserver, дождитесь пересоздания и убедитесь, что API готов. |
+| Критерии приёмки | - реально запущенный Pod kube-apiserver содержит `--profiling=false` в своём `command` (проверяется через API, а не текстом файла на диске);<br/>- `kubectl get --raw='/readyz'` возвращает успешный результат;<br/>- static Pod kube-apiserver запущен. |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Не редактируйте Pod через `kubectl edit` - это static Pod, kubelet управляет им напрямую из файла манифеста на диске и перезапишет любое изменение через API обратно. Добавьте флаг прямо в YAML-файл на ноде и подождите: kubelet заметит изменение файла не мгновенно.
+Ищите в отчёте задания 1 check `1.2.15` (`--profiling`) в секции `master`. Ему соответствует флаг `--profiling=false` в `command` static Pod manifest `/etc/kubernetes/manifests/kube-apiserver.yaml`. Не редактируйте Pod через `kubectl edit` - это static Pod, kubelet управляет им напрямую из файла манифеста на диске и перезапишет любое изменение через API обратно. Добавьте флаг прямо в YAML-файл на ноде и подождите: kubelet заметит изменение файла не мгновенно.
 </details>
 
 ---
 
 | **4** | **Secure Ingress с TLS** |
 | :---: | :--- |
-| Что делаем | Создайте namespace `cks-103` и TLS-Secret `secure-ingress-tls` типа `kubernetes.io/tls` для хоста `secure.cks.local` (сертификат должен содержать `secure.cks.local` именно в Subject Alternative Name, не только в CN). Создайте Deployment `secure-app` (`viktoruj/ping_pong:alpine`, задайте `SERVER_NAME=secure-app` и `SRV_PORT=80` через `kubectl set env`), Service `secure-app` и Ingress `secure-ingress` с `ingressClassName: nginx`, TLS-секцией для этого хоста и ссылкой на Secret. Включите аннотацию `nginx.ingress.kubernetes.io/ssl-redirect: "true"`. Controller `ingress-nginx` в этой лабе уже установлен и Ready как lab-owned fixture (см. [главу 08](../../course/08/ru.md) про его retirement) - убедитесь, что он реально обрабатывает ваш Ingress: HTTPS-запрос через controller должен получить ответ `200` с телом, содержащим `Server Name: secure-app` (маркер именно этого backend), а HTTP-запрос - redirect (`Location`) на HTTPS-host `https://secure.cks.local` (ingress-nginx не всегда сохраняет путь в `Location`, проверяется именно host). Для проверки сертификата допустим самоподписанный сертификат. |
+| Что делаем | • Сгенерируйте самоподписанный сертификат для `secure.cks.local` с этим именем именно в Subject Alternative Name, не только в CN (команда - в подсказке).<br/>• Создайте namespace `cks-103` и из этого сертификата - TLS-Secret `secure-ingress-tls` типа `kubernetes.io/tls`.<br/>• Разверните Deployment `secure-app` (`viktoruj/ping_pong:alpine`, `SERVER_NAME=secure-app` и `SRV_PORT=80` через `kubectl set env`) и Service `secure-app`.<br/>• Создайте Ingress `secure-ingress` с `ingressClassName: nginx`, TLS-секцией на этот хост со ссылкой на `secure-ingress-tls` и аннотацией `nginx.ingress.kubernetes.io/ssl-redirect: "true"`.<br/>• Controller `ingress-nginx` в этой лабе уже установлен и Ready как lab-owned fixture (см. [главу 08](../../course/08/ru.md) про его retirement) - убедитесь, что он реально обрабатывает ваш Ingress (см. критерии приёмки). |
 | Критерии приёмки | - Secret `secure-ingress-tls` в `cks-103` имеет тип `kubernetes.io/tls` и поля `tls.crt`, `tls.key`; соответствие пары проверяется по public key (алгоритм-независимо, без привязки к RSA/modulus);<br/>- сертификат содержит `secure.cks.local` в SAN;<br/>- Ingress `secure-ingress` содержит `ingressClassName: nginx`, аннотацию `ssl-redirect: "true"`, `spec.tls` с хостом `secure.cks.local` и ссылкой на `secure-ingress-tls`, backend `secure-app:80`;<br/>- Service `secure-app` имеет реальный endpoint;<br/>- controller `ingress-nginx` Ready;<br/>- HTTPS-запрос через controller действительно возвращает `200` с телом, содержащим `Server Name: secure-app` (не просто любой `2xx`/`3xx`, который может вернуть сам controller без доступа к backend);<br/>- HTTP-запрос через controller получает redirect с заголовком `Location`, указывающим на HTTPS-host `https://secure.cks.local` (не любой `3xx`; путь после хоста необязателен). |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
 
-Создавайте TLS Secret через `kubectl create secret tls secure-ingress-tls --cert=... --key=...` - это автоматически задаёт правильный `type: kubernetes.io/tls` и корректно кодирует данные в base64. Если создать Secret вручную с типом `Opaque` и ключами `tls.crt`/`tls.key`, тест на `type` не пройдёт, даже если данные технически валидны. Не забудьте `-addext 'subjectAltName=DNS:secure.cks.local'` при генерации сертификата openssl - современные клиенты и Ingress controller проверяют именно SAN, а не только CN.
+На реальном экзамене сертификат обычно уже выдан заранее - здесь его нужно сгенерировать самостоятельно:
+
+```bash
+openssl req -x509 -nodes -newkey ec -pkeyopt ec_paramgen_curve:P-256 \
+  -keyout tls.key -out tls.crt -days 30 \
+  -subj "/CN=secure.cks.local" -addext "subjectAltName=DNS:secure.cks.local"
+```
+
+`-addext 'subjectAltName=DNS:secure.cks.local'` обязателен - современные клиенты и Ingress controller проверяют именно SAN, а не только CN. Создавайте TLS Secret через `kubectl create secret tls secure-ingress-tls --cert=tls.crt --key=tls.key` - это автоматически задаёт правильный `type: kubernetes.io/tls` и корректно кодирует данные в base64. Если создать Secret вручную с типом `Opaque` и ключами `tls.crt`/`tls.key`, тест на `type` не пройдёт, даже если данные технически валидны.
 
 Проверка пары certificate/private key делается по public key, а не по RSA-specific modulus - это работает одинаково для RSA и EC/ECDSA ключей:
 
@@ -170,12 +179,14 @@ key_pub=$(kubectl -n cks-103 get secret secure-ingress-tls -o jsonpath='{.data.t
 [[ -n "$cert_pub" && "$cert_pub" == "$key_pub" ]]
 ```
 
-Для end-to-end проверки не используйте Pod IP из `Endpoints` controller-а - он не гарантированно маршрутизируется с отдельной worker VM. Используйте ClusterIP Service `ingress-nginx-controller` и выполняйте запрос **с control-plane node**, где cluster Service networking доступен:
+Для end-to-end проверки не используйте Pod IP из `Endpoints` controller-а - он не гарантированно маршрутизируется с отдельной worker VM. `secure.cks.local` уже резолвится в реальный node IP (запись добавлена в `/etc/hosts` этой машины при bootstrap), а `ingress-nginx-controller` - Service типа `NodePort`, открытый на каждой ноде, поэтому запрос можно выполнять прямо с worker, без SSH на кластер:
 
 ```bash
-CONTROLLER_IP=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.spec.clusterIP}')
-ssh control-plane "curl -sS -k --max-time 5 --resolve secure.cks.local:443:${CONTROLLER_IP} https://secure.cks.local/"
+HTTPS_NODEPORT=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.port==443)].nodePort}')
+curl -sS -k --max-time 5 "https://secure.cks.local:${HTTPS_NODEPORT}/"
 ```
+
+Проверка HTTP→HTTPS redirect - не искусственное требование этой лабы, а реальный вопрос экзамена (см. mock-экзамен `tasks/cks/mock/04`, задание 4: `Create an Ingress with a redirect from HTTP to HTTPS`).
 </details>
 
 ---
@@ -227,20 +238,33 @@ ssh control-plane "curl -sS -k --max-time 5 --resolve secure.cks.local:443:${CON
 <details>
 <summary>💡 Подсказка к заданию 8</summary>
 
-Тот же порядок действий, что и в задании 7: сначала `before.txt` с `[FAIL]`, потом `chmod`, потом `after.txt` с `[PASS]`. Не переносите старые CIS check ID "по памяти" - `1.1.3` в пиннутой версии `kube-bench 0.16.0`/профиле `cis-1.12` - это именно kube-controller-manager pod specification file permissions, проверьте это через `--check 1.1.3` перед тем, как исправлять.
+Тот же порядок действий, что и в задании 7: сначала `before.txt` с `[FAIL]`, потом `chmod`, потом `after.txt` с `[PASS]`. Не переносите старые CIS check ID "по памяти" - `1.1.3` в закреплённой версии `kube-bench 0.16.0`/профиле `cis-1.12` - это именно kube-controller-manager pod specification file permissions, проверьте это через `--check 1.1.3` перед тем, как исправлять.
 </details>
 
 ---
 
-| **9** | **Отключить profiling на оставшихся control-plane компонентах** |
+| **9** | **Remediation cycle: profiling на kube-controller-manager и kube-scheduler** |
 | :---: | :--- |
-| Что делаем | Задание 3 уже отключило profiling на kube-apiserver. По умолчанию kubeadm не добавляет `--profiling=false` в манифесты `kube-controller-manager` и `kube-scheduler` вообще - оба компонента до сих пор обслуживают pprof HTTP endpoints с профилированием процесса. Добавьте `--profiling=false` в `command` static Pod manifests `/etc/kubernetes/manifests/kube-controller-manager.yaml` и `/etc/kubernetes/manifests/kube-scheduler.yaml`. Дождитесь пересоздания обоих static Pods и убедитесь, что оба остаются `Running`. |
-| Критерии приёмки | - реально запущенный Pod `kube-controller-manager` содержит `--profiling=false` в своём `command` (проверяется через API, а не текстом файла на диске);<br/>- то же самое для `kube-scheduler`;<br/>- оба Pod в фазе `Running` после пересоздания. |
+| Что делаем | Тот же приём, что в заданиях 7-8, для checks `1.3.2` (kube-controller-manager profiling) и `1.4.1` (kube-scheduler profiling) - оба под тем же профилем `cis-1.12`, явный `--targets` не нужен. Запустите `kube-bench --check 1.3.2` и `--check 1.4.1` на `control-plane` и сохраните вывод **до** исправления в `/var/work/tests/artifacts/9/controller-manager-before.txt` и `.../scheduler-before.txt` - оба должны содержать `[FAIL]`. Задание 3 уже отключило profiling на kube-apiserver; по умолчанию kubeadm не добавляет `--profiling=false` в манифесты `kube-controller-manager`/`kube-scheduler` вообще. Добавьте `--profiling=false` в `command` обоих static Pod manifests, дождитесь пересоздания и повторно запустите те же check'и, сохранив вывод в `.../controller-manager-after.txt` и `.../scheduler-after.txt` - оба должны содержать `[PASS]` без единого `[FAIL]`. |
+| Критерии приёмки | `before`-файлы содержат `[FAIL]` для `1.3.2`/`1.4.1` соответственно; реально запущенные Pod'ы `kube-controller-manager`/`kube-scheduler` содержат `--profiling=false` в своём `command` (проверяется через API); `after`-файлы содержат `[PASS]` без `[FAIL]` для тех же check; оба Pod в фазе `Running`. |
 
 <details>
 <summary>💡 Подсказка к заданию 9</summary>
 
-Тот же приём, что и в задании 3, только для двух других static Pod manifests. Не редактируйте Pod через `kubectl edit` - kubelet перезапишет любое такое изменение из файла на диске. Добавьте флаг прямо в YAML на ноде и подождите пересоздания - оно происходит не мгновенно. Не путайте это задание с `protectKernelDefaults` (это отдельный kubelet-параметр, уже закрыт в лабе 105 заданием 8) - здесь речь именно про HTTP profiling endpoint control-plane компонентов.
+Тот же порядок действий, что в заданиях 7-8: сначала `before.txt` с `[FAIL]`, потом правка манифеста, потом `after.txt` с `[PASS]`. Не редактируйте Pod через `kubectl edit` - kubelet перезапишет любое такое изменение из файла на диске. Добавьте флаг прямо в YAML на ноде и подождите пересоздания - оно происходит не мгновенно. Не путайте это задание с `protectKernelDefaults` (задание 10, отдельный kubelet-параметр worker-узла) - здесь речь именно про HTTP profiling endpoint control-plane компонентов.
+</details>
+
+---
+
+| **10** | **Remediation cycle: protect-kernel-defaults на worker-узле** |
+| :---: | :--- |
+| Что делаем | Тот же приём, что в заданиях 7-9, теперь на РЕАЛЬНОМ worker-узле кластера (не control-plane), но для ДРУГОГО профиля: закреплённый `cis-1.12` (используемый везде в этой лабе) не содержит check protect-kernel-defaults вообще - CIS убрал/переномеровал его в этой версии профиля, а собственный `4.2.6` в `cis-1.12` - другой check (`--make-iptables-util-chains`, PASS по умолчанию). Нужный check с тем же ID существует в более старом профиле `cis-1.24` того же бинарника - используйте явно `--benchmark cis-1.24 --check 4.2.6` только для этого задания. В отличие от `control-plane`, `kube-bench` на worker-узле НЕ предустановлен - установите его здесь сами (реальный install: скачать тот же закреплённый релиз, распаковать `binary` и `cfg`), а не копируйте откуда-либо. Сохраните вывод **до** исправления в `/var/work/tests/artifacts/10/before.txt` (должен содержать `[FAIL]` с текстом про protect-kernel-defaults). kubeadm-сгенерированный `KubeletConfiguration` на worker-узле вообще не содержит поле `protectKernelDefaults` (эквивалентно небезопасному default `false`) - добавьте `protectKernelDefaults: true` в `/var/lib/kubelet/config.yaml` этого узла, перезапустите kubelet, дождитесь `Ready`, затем повторно запустите тот же check (тем же `cis-1.24`) и сохраните `/var/work/tests/artifacts/10/after.txt` (должен содержать `[PASS]`). |
+| Критерии приёмки | `before.txt` содержит `[FAIL] 4.2.6` с текстом про protect-kernel-defaults (не любой `4.2.6`); в действующей kubelet configuration worker-узла (`/configz`) есть `protectKernelDefaults: true`; `after.txt` содержит `[PASS] 4.2.6` с тем же текстом, без `[FAIL]`; worker-узел `Ready` после перезапуска. |
+
+<details>
+<summary>💡 Подсказка к заданию 10</summary>
+
+Найдите имя worker-узла через `kubectl get nodes -l '!node-role.kubernetes.io/control-plane'` - это НЕ control-plane и НЕ рабочая машина (bastion), с которой вы выполняете команды. Установите `kube-bench` на нём реальной командой (`curl` + `tar` + `install`), не копированием с control-plane или worker PC - в отличие от control-plane, здесь его специально нет, чтобы вы один раз прошли сам процесс установки. Не забудьте `--benchmark cis-1.24` (не `cis-1.12`, используемый везде в остальных заданиях) - иначе `--check 4.2.6` найдёт другой, уже проходящий check и задание не докажет ничего. Поле `protectKernelDefaults` в kubeadm-сгенерированном `config.yaml` отсутствует физически, поэтому просто допишите его, не ищите существующую строку для замены (в отличие от `readOnlyPort` в задании 2). После `systemctl restart kubelet` на worker-узле дождитесь его возврата в `Ready`, прежде чем повторно запускать check.
 </details>
 
 ---
@@ -253,8 +277,8 @@ ssh control-plane "curl -sS -k --max-time 5 --resolve secure.cks.local:443:${CON
 check_result
 ```
 
-Проверка содержит Init и девять независимых заданий. Системные задания проверяются по
-состоянию узла control plane через SSH и по артефактам, а не только по объектам API.
+Проверка содержит Init и десять независимых заданий. Системные задания проверяются по
+состоянию узлов control plane/worker через SSH и по артефактам, а не только по объектам API.
 
 ## Решение
 

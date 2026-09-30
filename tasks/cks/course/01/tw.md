@@ -47,7 +47,7 @@ CKS 是 performance-based 考試：在提供的叢集和節點上，透過終端
 
 需要區分 Kubernetes 版本：
 
-- **本課程和 core labs `101-113` 的學習版本是 `v1.36`**（其實驗環境中的 `k8_version = "1.36.0"`）：課程中的 Kubernetes-native 命令、flags 和 API 行為都以此版本檢驗；第三方元件的相容性須依其 support matrix 確認。設計上的例外是 lab `113`：其叢集以 `v1.35.x` 啟動，因為任務主題本身就是升級至 `v1.36.x`。
+- **本課程和 core labs `101-114` 的學習版本是 `v1.36`**（其實驗環境中的 `k8_version = "1.36.0"`）：課程中的 Kubernetes-native 命令、flags 和 API 行為都以此版本檢驗；第三方元件的相容性須依其 support matrix 確認。設計上的例外是 lab `113`：其叢集以 `v1.35.x` 啟動，因為任務主題本身就是升級至 `v1.36.x`。
 - **考試環境版本由 Linux Foundation 指定，且可能落後課程版本。** [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) 主頁指出 Kubernetes **v1.35**，但 Important Instructions 和 FAQ 獨立更新，可能暫時顯示其他版本。具體考試以 ExamUI 和指定考試的說明為準。公開的 CNCF curriculum overview 檔名仍為 [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks)，但不會取代 Linux Foundation 為該次考試指定的參數。因此**不要把 `v1.36` 視為考試版本**。
 
 CKS 和 FAQ 頁面獨立更新，可能暫時不一致。考試前直接在 [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) 主頁，再在指定考試的 ExamUI 中確認 Kubernetes 版本、任務數量與格式、及格分數、prerequisite 和允許資源。不要把課程固定的版本或規則當成永久不變。
@@ -204,7 +204,7 @@ flowchart TB
 ## 01.9 本章總結
 
 - CKS 延續 CKA，檢驗對叢集、workloads、節點和 supply chain 的實際防護。
-- 課程和 core labs `101-113` 的目標版本是 Kubernetes v1.36（lab `113` 以 v1.35.x 啟動，因為主題是升級到 v1.36.x）。
+- 課程和 core labs `101-114` 的目標版本是 Kubernetes v1.36（lab `113` 以 v1.35.x 啟動，因為主題是升級到 v1.36.x）。
 - 考試要求熟練使用終端機、多个叢集和節點設定。
 - 六個領域涵蓋叢集設定、hardening、workload、supply chain 和 runtime 防護。
 - 2024 課綱的新重點是 Cilium、CIS、SBOM、KubeLinter 和 sandboxed containers。
@@ -237,7 +237,7 @@ Performance-based 格式是在提供的叢集和節點上透過終端機完成�
 <details>
 <summary>3. 本課程和實驗固定使用哪個 Kubernetes 版本？</summary>
 
-學習和 core labs `101-113` 固定使用 Kubernetes `v1.36`（`k8_version = "1.36.0"`）。考試版本由 Linux Foundation 指定，不能從課程版本自動推導。
+學習和 core labs `101-114` 固定使用 Kubernetes `v1.36`（`k8_version = "1.36.0"`）。考試版本由 Linux Foundation 指定，不能從課程版本自動推導。
 </details>
 
 <details>

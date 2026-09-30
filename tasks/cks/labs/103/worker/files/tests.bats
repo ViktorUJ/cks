@@ -8,8 +8,20 @@ control_plane() {
     -o jsonpath='{.items[0].metadata.name}' 2>/dev/null
 }
 
+# The second node (added for task 10 / kube-bench's "node" target) is a real k8s-joined
+# worker, named after its instance hostname (ip-10-...) like control_plane() above - not
+# after the k8s1_node_node1 ssh alias the terraform module also creates.
+worker_node() {
+  kubectl get nodes --context "$CTX" -l '!node-role.kubernetes.io/control-plane' \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null
+}
+
 node_ssh() {
   ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=10 "$(control_plane)" "$@"
+}
+
+worker_ssh() {
+  ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=10 "$(worker_node)" "$@"
 }
 
 record_result() {
@@ -38,13 +50,32 @@ record_result() {
   else
     sections_ok=false
   fi
+
+  # The student-owned report above can be hand-written; independently re-run the same
+  # scan ourselves on the control-plane so a fabricated file alone cannot pass this test.
+  live_report=$(node_ssh 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --targets master,node,controlplane,etcd,policies' 2>/dev/null)
+  live_version=$(node_ssh 'sudo /opt/kube-bench/kube-bench version' 2>/dev/null | awk 'NF {print $NF}' | tail -1)
+  live_sections_ok=true
+  if [[ -n "$live_report" ]]; then
+    for target in master node controlplane etcd policies; do
+      grep -Eq "^== Summary ${target} ==\$" <<<"$live_report" || live_sections_ok=false
+    done
+  else
+    live_sections_ok=false
+  fi
+  live_results_ok=false
+  grep -Eq '^\[(PASS|WARN|FAIL)\][[:space:]]+[0-9]' <<<"$live_report" && live_results_ok=true
+  live_version_ok=false
+  [[ "$live_version" == "0.16.0" || "$live_version" == "v0.16.0" ]] && live_version_ok=true
+
   if [[ -s "$report" ]] \
     && grep -Eq '^kubernetes_version=v1[.]36([.]|$)' "$report" \
     && grep -Eq '^kube_bench_version=v?0[.]16[.]0$' "$report" \
     && grep -qx 'benchmark=cis-1.12' "$report" \
     && grep -qx 'mapping_status=forced-approximate' "$report" \
     && grep -Eq '\[(PASS|WARN|FAIL)\]' "$report" \
-    && [[ "$sections_ok" == true ]]; then
+    && [[ "$sections_ok" == true ]] \
+    && [[ "$live_version_ok" == true && "$live_sections_ok" == true && "$live_results_ok" == true ]]; then
     result=0
   else
     if ! [[ -s "$report" ]]; then
@@ -59,6 +90,10 @@ record_result() {
       echo "HINT: Report must include 'mapping_status=forced-approximate' exactly - this documents that v1.36 is newer than kube-bench's built-in version map."
     elif [[ "$sections_ok" != true ]]; then
       echo "HINT: Report must contain a '== Summary <target> ==' line for EVERY target (master, node, controlplane, etcd, policies), not just any single [PASS]/[WARN]/[FAIL] line - run with --targets master,node,controlplane,etcd,policies to get the full section set. A report missing the 'controlplane' or 'etcd' target can still contain strings like 'Control Plane Node Configuration' inside the 'master' target output, so checking for those substrings alone is not sufficient proof all five targets ran."
+    elif [[ "$live_version_ok" != true ]]; then
+      echo "HINT: kube-bench installed on the control-plane reports version '$live_version', not 0.16.0 - the report's own version_ok marker is not enough, the actually installed binary must match."
+    elif [[ "$live_sections_ok" != true || "$live_results_ok" != true ]]; then
+      echo "HINT: Independently re-running kube-bench on the control-plane right now did not produce a full five-target report - the saved artifact alone (even if hand-written) is not accepted as proof; make sure kube-bench is actually installed and runnable there."
     else
       echo "HINT: Report must contain at least one line with [PASS], [WARN], or [FAIL] - check kube-bench actually ran the full scan, not just the config check."
     fi
@@ -96,7 +131,12 @@ record_result() {
   command_json=$(kubectl -n kube-system get pod -l component=kube-apiserver --context "$CTX" -o json 2>/dev/null \
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
   manifest_status=1
-  if printf '%s' "$command_json" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1; then
+  # index(...) alone only proves --profiling=false is PRESENT - a duplicate/conflicting
+  # --profiling=true elsewhere in the same command list would still pass that check. Require
+  # it to be the ONLY --profiling flag present.
+  if printf '%s' "$command_json" | jq -e '
+       [.[] | select(test("^--profiling($|=)"))] == ["--profiling=false"]
+     ' >/dev/null 2>&1; then
     manifest_status=0
   fi
   ready=$(kubectl get --raw='/readyz' --context "$CTX" 2>/dev/null)
@@ -105,7 +145,7 @@ record_result() {
     result=0
   else
     if [[ "$manifest_status" -ne 0 ]]; then
-      echo "HINT: The running kube-apiserver Pod's command does not include '--profiling=false'. Check /etc/kubernetes/manifests/kube-apiserver.yaml has this flag in the command list (any valid YAML indentation works - what matters is the actual running Pod spec, checked via the Kubernetes API)."
+      echo "HINT: The running kube-apiserver Pod's command must contain exactly one --profiling flag, and it must be '--profiling=false' - no duplicate or conflicting --profiling value is allowed. Check /etc/kubernetes/manifests/kube-apiserver.yaml has this flag in the command list (any valid YAML indentation works - what matters is the actual running Pod spec, checked via the Kubernetes API)."
     elif [[ "$ready" != "ok" ]]; then
       echo "HINT: API server is not ready after the manifest edit. Wait longer for kubelet to pick up the change and restart the static Pod, or check for a YAML syntax error in the manifest."
     elif [[ "$phase" != "Running" ]]; then
@@ -133,8 +173,10 @@ record_result() {
   service_endpoint=$(kubectl -n cks-103 get endpoints secure-app --context "$CTX" -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null)
   controller_ready=$(kubectl -n ingress-nginx get deploy ingress-nginx-controller --context "$CTX" \
     -o jsonpath='{.status.availableReplicas}' 2>/dev/null)
-  controller_svc_ip=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
-    -o jsonpath='{.spec.clusterIP}' 2>/dev/null)
+  https_nodeport=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
+    -o jsonpath='{.spec.ports[?(@.port==443)].nodePort}' 2>/dev/null)
+  http_nodeport=$(kubectl -n ingress-nginx get svc ingress-nginx-controller --context "$CTX" \
+    -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}' 2>/dev/null)
 
   # SAN сертификата (точное DNS-имя, не substring) и cert/key pairing по public key
   # (не привязано к RSA - работает и для EC/ECDSA пар).
@@ -155,25 +197,24 @@ record_result() {
   cert_key_match=false
   [[ -n "$cert_pub" && "$cert_pub" == "$key_pub" ]] && cert_key_match=true
 
-  # Реальный runtime request через controller Service ClusterIP, выполненный с
-  # control-plane node (Pod IP из Endpoints не гарантированно маршрутизируется с
-  # отдельной worker VM - Pod CIDR в этой лабе отличается от VPC CIDR). Проверяем не
-  # просто класс статус-кода, а конкретное заявленное поведение: HTTPS должен реально
-  # дойти до secure-app (status==200 И тело ответа содержит
-  # маркер Server Name: secure-app - иначе ssl-redirect/другая аннотация может вернуть
-  # 2xx/3xx без реального доступа к backend), а HTTP должен redirect-ить именно на
-  # https://secure.cks.local/.
+  # Реальный runtime request прямо с этой (worker) машины через NodePort Service
+  # ingress-nginx-controller - тот же под capacity, что "secure.cks.local" в /etc/hosts
+  # уже резолвит в реальный node IP (bootstrap), поэтому SSH на кластерную ноду не нужен.
+  # Проверяем не просто класс статус-кода, а конкретное заявленное поведение: HTTPS должен
+  # реально дойти до secure-app (status==200 И тело ответа содержит маркер
+  # Server Name: secure-app - иначе ssl-redirect/другая аннотация может вернуть 2xx/3xx без
+  # реального доступа к backend), а HTTP должен redirect-ить именно на https://secure.cks.local/.
   https_status=""
   https_body=""
   http_status=""
   http_location=""
-  if [[ -n "$controller_svc_ip" ]]; then
-    https_response=$(node_ssh "curl -sS -D - -o /tmp/https_body.$$ -w 'HTTPCODE:%{http_code}' --max-time 5 -k \
-      --resolve secure.cks.local:443:${controller_svc_ip} https://secure.cks.local/; cat /tmp/https_body.$$; rm -f /tmp/https_body.$$" 2>/dev/null)
+  if [[ -n "$https_nodeport" && -n "$http_nodeport" ]]; then
+    https_response=$(curl -sS -D - -o /tmp/https_body.$$ -w 'HTTPCODE:%{http_code}' --max-time 5 -k \
+      "https://secure.cks.local:${https_nodeport}/" 2>/dev/null; cat /tmp/https_body.$$ 2>/dev/null; rm -f /tmp/https_body.$$)
     https_status=$(grep -oE 'HTTPCODE:[0-9]+' <<<"$https_response" | tail -1 | cut -d: -f2)
     https_body="$https_response"
-    http_headers=$(node_ssh "curl -sS -D - -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 \
-      --resolve secure.cks.local:80:${controller_svc_ip} http://secure.cks.local/" 2>/dev/null)
+    http_headers=$(curl -sS -D - -o /dev/null -w 'HTTPCODE:%{http_code}' --max-time 5 \
+      "http://secure.cks.local:${http_nodeport}/" 2>/dev/null)
     http_status=$(grep -oE 'HTTPCODE:[0-9]+' <<<"$http_headers" | tail -1 | cut -d: -f2)
     http_location=$(grep -i '^location:' <<<"$http_headers" | tr -d '\r' | awk '{print $2}')
   fi
@@ -221,12 +262,12 @@ record_result() {
     elif [[ "$cert_key_match" != "true" ]]; then
       echo "HINT: the certificate and private key in the Secret do not form a valid pair (public key mismatch) - re-generate them together with the same openssl command. This check works for RSA and EC/ECDSA keys alike."
     elif [[ "$https_ok" != "true" ]]; then
-      echo "HINT: a real HTTPS request through the ingress-nginx-controller Service ClusterIP (from the control-plane node) did not return status 200 with a body containing 'Server Name: secure-app' (status=$https_status). A redirect-only annotation or misrouted Ingress can return some 2xx/3xx without ever reaching secure-app - this check requires the actual backend response, not just a similar-looking status class. Make sure the Deployment sets SERVER_NAME=secure-app."
+      echo "HINT: a real HTTPS request to https://secure.cks.local:<nodeport>/ did not return status 200 with a body containing 'Server Name: secure-app' (status=$https_status). A redirect-only annotation or misrouted Ingress can return some 2xx/3xx without ever reaching secure-app - this check requires the actual backend response, not just a similar-looking status class. Make sure the Deployment sets SERVER_NAME=secure-app."
     else
       echo "HINT: a plain HTTP request through the controller did not redirect to https://secure.cks.local/ specifically (status=$http_status, location=$http_location) - check the ssl-redirect annotation is 'true' and that the redirect Location header actually points at the HTTPS host, not just any 3xx."
     fi
     echo "secret_type=$secret_type ingress_class=$ingress_class ssl_redirect=$ssl_redirect host=$host secret=$secret_name path=$path/$path_type backend=$service:$service_port"
-    echo "service_endpoint=$service_endpoint controller_ready=$controller_ready controller_svc_ip=$controller_svc_ip san_ok=$san_ok cert_key_match=$cert_key_match https_status=$https_status http_status=$http_status http_location=$http_location"
+    echo "service_endpoint=$service_endpoint controller_ready=$controller_ready https_nodeport=$https_nodeport http_nodeport=$http_nodeport san_ok=$san_ok cert_key_match=$cert_key_match https_status=$https_status http_status=$http_status http_location=$http_location"
     result=1
   fi
   record_result 4 "$result"
@@ -239,13 +280,23 @@ record_result() {
   etcd_command=$(kubectl -n kube-system get pod -l component=etcd --context "$CTX" -o json 2>/dev/null \
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
   manifest_status=1
-  if printf '%s' "$api_command" | jq -e '
-       index("--tls-min-version=VersionTLS13") != null and
-       any(.[]; startswith("--tls-cipher-suites=") and (contains("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256") and contains("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384")))
-     ' >/dev/null 2>&1 \
-     && printf '%s' "$etcd_command" | jq -e '
-       any(.[]; startswith("--cipher-suites=") and (contains("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256") and contains("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384")))
-     ' >/dev/null 2>&1; then
+  # Require the EXACT two-suite set on a single flag occurrence, not just "contains both" -
+  # a too-permissive check would accept extra suites appended to the list, or a duplicate
+  # --tls-min-version/--(tls-)cipher-suites flag where only one occurrence is correct.
+  wanted_ciphers='["TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"]'
+  api_tls_ok=$(printf '%s' "$api_command" | jq -e --argjson wanted "$wanted_ciphers" '
+       ([.[] | select(startswith("--tls-min-version="))] == ["--tls-min-version=VersionTLS13"])
+       and
+       ([.[] | select(startswith("--tls-cipher-suites="))] as $flags
+        | ($flags | length) == 1
+        and (($flags[0] | ltrimstr("--tls-cipher-suites=") | split(",") | sort) == ($wanted | sort)))
+     ' >/dev/null 2>&1 && echo true || echo false)
+  etcd_tls_ok=$(printf '%s' "$etcd_command" | jq -e --argjson wanted "$wanted_ciphers" '
+       [.[] | select(startswith("--cipher-suites="))] as $flags
+       | ($flags | length) == 1
+       and (($flags[0] | ltrimstr("--cipher-suites=") | split(",") | sort) == ($wanted | sort))
+     ' >/dev/null 2>&1 && echo true || echo false)
+  if [[ "$api_tls_ok" == "true" && "$etcd_tls_ok" == "true" ]]; then
     manifest_status=0
   fi
   ready=$(kubectl get --raw='/readyz' --context "$CTX" 2>/dev/null)
@@ -259,7 +310,7 @@ record_result() {
     result=0
   else
     if [[ "$manifest_status" -ne 0 ]]; then
-      echo "HINT: The running kube-apiserver Pod's command must include --tls-min-version=VersionTLS13 and a --tls-cipher-suites entry containing both TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 and TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384; the running etcd Pod's command must include a --cipher-suites entry with the same two suites. This is checked against the actual running Pod spec via the Kubernetes API, not by matching exact YAML text."
+      echo "HINT: The running kube-apiserver Pod's command must contain exactly one --tls-min-version=VersionTLS13 flag and exactly one --tls-cipher-suites flag whose value is EXACTLY TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 (order doesn't matter, but no extra or duplicate suites); the running etcd Pod's command must contain exactly one --cipher-suites flag with the same exact two suites. This is checked against the actual running Pod spec via the Kubernetes API, not by matching exact YAML text."
     elif [[ "$ready" != "ok" || "$etcd_phase" != "Running" ]]; then
       echo "HINT: API server or etcd is not healthy after the TLS change. A too-restrictive cipher list can break internal component communication - double check the exact cipher suite strings for typos."
     elif [[ "$tls12_status" -eq 0 ]]; then
@@ -287,9 +338,26 @@ record_result() {
 
   # Не доверяем student artifact на слово: checker независимо вычисляет SHA-256 реально
   # установленных бинарников и сравнивает с trusted checksum, загруженным при bootstrap
-  # (не тем же файлом, который проверяется).
-  trusted_kubelet=$(awk '{print $1}' /var/work/tests/checker-fixtures/kubelet.sha256 2>/dev/null)
-  trusted_kubectl=$(awk '{print $1}' /var/work/tests/checker-fixtures/kubectl.sha256 2>/dev/null)
+  # (не тем же файлом, который проверяется). Каталог фикстур лежит ВНЕ /var/work/tests
+  # (shared bootstrap делает этот каталог world-writable ДО lab-specific script) - без
+  # этой проверки origin/permissions студент без sudo мог бы подменить сам каталог
+  # фикстур через writable parent, даже если файлы внутри выглядят как root:root 0444.
+  CHECKER_DIR=/var/lib/cks-lab103-checker
+  checker_dir_owner=$(stat -c '%U:%G' "$CHECKER_DIR" 2>/dev/null)
+  checker_dir_mode=$(stat -c '%a' "$CHECKER_DIR" 2>/dev/null)
+  kubelet_ref_owner=$(stat -c '%U:%G' "$CHECKER_DIR/kubelet.sha256" 2>/dev/null)
+  kubelet_ref_mode=$(stat -c '%a' "$CHECKER_DIR/kubelet.sha256" 2>/dev/null)
+  kubectl_ref_owner=$(stat -c '%U:%G' "$CHECKER_DIR/kubectl.sha256" 2>/dev/null)
+  kubectl_ref_mode=$(stat -c '%a' "$CHECKER_DIR/kubectl.sha256" 2>/dev/null)
+  fixture_origin_ok=false
+  if [[ "$checker_dir_owner" == "root:root" && "$checker_dir_mode" == "711" ]] \
+    && [[ "$kubelet_ref_owner" == "root:root" && "$kubelet_ref_mode" == "444" ]] \
+    && [[ "$kubectl_ref_owner" == "root:root" && "$kubectl_ref_mode" == "444" ]]; then
+    fixture_origin_ok=true
+  fi
+
+  trusted_kubelet=$(awk '{print $1}' "$CHECKER_DIR/kubelet.sha256" 2>/dev/null)
+  trusted_kubectl=$(awk '{print $1}' "$CHECKER_DIR/kubectl.sha256" 2>/dev/null)
 
   kubelet_path=$(node_ssh "command -v kubelet" 2>/dev/null)
   actual_kubelet=$(node_ssh "sha256sum \"$kubelet_path\"" 2>/dev/null | awk '{print $1}')
@@ -303,10 +371,12 @@ record_result() {
   artifact_ok=false
   grep -Eq 'kubelet.*: OK' "$report" && grep -Eq 'kubectl.*: OK' "$report" && artifact_ok=true
 
-  if [[ "$kubelet_ok" == "true" && "$kubectl_ok" == "true" && "$artifact_ok" == "true" ]]; then
+  if [[ "$fixture_origin_ok" == "true" && "$kubelet_ok" == "true" && "$kubectl_ok" == "true" && "$artifact_ok" == "true" ]]; then
     result=0
   else
-    if [[ "$kubelet_ok" != "true" ]]; then
+    if [[ "$fixture_origin_ok" != "true" ]]; then
+      echo "HINT: trusted checksum fixtures at $CHECKER_DIR are not root:root with the expected 0711/0444 permissions (dir=$checker_dir_owner/$checker_dir_mode, kubelet.sha256=$kubelet_ref_owner/$kubelet_ref_mode, kubectl.sha256=$kubectl_ref_owner/$kubectl_ref_mode) - this checker-owned fixture must not be student-writable."
+    elif [[ "$kubelet_ok" != "true" ]]; then
       echo "HINT: the actual installed kubelet on control-plane does not match the official v1.36.0 checksum (independently verified by the checker, not by trusting your artifact). expected=$trusted_kubelet actual=$actual_kubelet"
     elif [[ "$kubectl_ok" != "true" ]]; then
       echo "HINT: the actual installed kubectl on worker does not match the official v1.36.0 checksum (independently verified by the checker, not by trusting your artifact). expected=$trusted_kubectl actual=$actual_kubectl"
@@ -336,10 +406,19 @@ record_result() {
   after_no_fail=true
   grep -Eq '^\[FAIL\][[:space:]]+1[.]1[.]1([[:space:]]|$)' "$after" && after_no_fail=false
 
+  # Independently re-run the same check ourselves - a hand-written after.txt alone must
+  # not be enough to pass without kube-bench actually confirming PASS right now.
+  live_111=$(node_ssh 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.1.1' 2>/dev/null)
+  live_111_ok=false
+  grep -Eq '^\[PASS\][[:space:]]+1[.]1[.]1([[:space:]]|$)' <<<"$live_111" \
+    && ! grep -Eq '^\[FAIL\][[:space:]]+1[.]1[.]1([[:space:]]|$)' <<<"$live_111" \
+    && live_111_ok=true
+
   if [[ -s "$before" && "$before_check_ok" == "true" ]] \
     && [[ -s "$after" && "$after_pass_ok" == "true" && "$after_no_fail" == "true" ]] \
     && [[ "$perm" == "600" ]] \
-    && [[ "$ready" == "ok" && "$phase" == "Running" ]]; then
+    && [[ "$ready" == "ok" && "$phase" == "Running" ]] \
+    && [[ "$live_111_ok" == true ]]; then
     result=0
   else
     if [[ ! -s "$before" || "$before_check_ok" != "true" ]]; then
@@ -348,6 +427,8 @@ record_result() {
       echo "HINT: /etc/kubernetes/manifests/kube-apiserver.yaml permissions are '$perm', not 600. Run 'chmod 600' on this file - CIS 1.1.1 requires it to be readable/writable only by its owner."
     elif [[ "$after_pass_ok" != "true" || "$after_no_fail" != "true" ]]; then
       echo "HINT: after.txt must contain a line starting with exactly '[PASS] 1.1.1' and no line starting with '[FAIL] 1.1.1' - re-run kube-bench --check 1.1.1 after the chmod and save the fresh output."
+    elif [[ "$live_111_ok" != true ]]; then
+      echo "HINT: Independently re-running kube-bench --check 1.1.1 right now does not show PASS - the saved after.txt alone (even if hand-written) is not accepted as proof."
     else
       echo "HINT: kube-apiserver must remain healthy after the chmod (readyz=ok, Pod Running) - this is a fs-only permission change and should not require the static Pod to be recreated."
     fi
@@ -370,10 +451,19 @@ record_result() {
   after_no_fail=true
   grep -Eq '^\[FAIL\][[:space:]]+1[.]1[.]3([[:space:]]|$)' "$after" && after_no_fail=false
 
+  # Independently re-run the same check ourselves - a hand-written after.txt alone must
+  # not be enough to pass without kube-bench actually confirming PASS right now.
+  live_113=$(node_ssh 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.1.3' 2>/dev/null)
+  live_113_ok=false
+  grep -Eq '^\[PASS\][[:space:]]+1[.]1[.]3([[:space:]]|$)' <<<"$live_113" \
+    && ! grep -Eq '^\[FAIL\][[:space:]]+1[.]1[.]3([[:space:]]|$)' <<<"$live_113" \
+    && live_113_ok=true
+
   if [[ -s "$before" && "$before_check_ok" == "true" ]] \
     && [[ -s "$after" && "$after_pass_ok" == "true" && "$after_no_fail" == "true" ]] \
     && [[ "$perm" == "600" ]] \
-    && [[ "$phase" == "Running" ]]; then
+    && [[ "$phase" == "Running" ]] \
+    && [[ "$live_113_ok" == true ]]; then
     result=0
   else
     if [[ ! -s "$before" || "$before_check_ok" != "true" ]]; then
@@ -382,6 +472,8 @@ record_result() {
       echo "HINT: /etc/kubernetes/manifests/kube-controller-manager.yaml permissions are '$perm', not 600. Run 'chmod 600' on this file - CIS 1.1.3 requires it to be readable/writable only by its owner."
     elif [[ "$after_pass_ok" != "true" || "$after_no_fail" != "true" ]]; then
       echo "HINT: after.txt must contain a line starting with exactly '[PASS] 1.1.3' and no line starting with '[FAIL] 1.1.3' - re-run kube-bench --check 1.1.3 after the chmod and save the fresh output."
+    elif [[ "$live_113_ok" != true ]]; then
+      echo "HINT: Independently re-running kube-bench --check 1.1.3 right now does not show PASS - the saved after.txt alone (even if hand-written) is not accepted as proof."
     else
       echo "HINT: kube-controller-manager must remain Running after the chmod - this is a fs-only permission change and should not require the static Pod to be recreated."
     fi
@@ -391,28 +483,82 @@ record_result() {
   record_result 8 "$result"
 }
 
-@test "9. kube-controller-manager and kube-scheduler have profiling disabled and stay healthy" {
+@test "9. kube-bench checks 1.3.2/1.4.1 go from FAIL to PASS after disabling profiling on controller-manager and scheduler" {
+  cm_before=/var/work/tests/artifacts/9/controller-manager-before.txt
+  cm_after=/var/work/tests/artifacts/9/controller-manager-after.txt
+  sched_before=/var/work/tests/artifacts/9/scheduler-before.txt
+  sched_after=/var/work/tests/artifacts/9/scheduler-after.txt
+
   cm_command=$(kubectl -n kube-system get pod -l component=kube-controller-manager --context "$CTX" -o json 2>/dev/null \
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
   sched_command=$(kubectl -n kube-system get pod -l component=kube-scheduler --context "$CTX" -o json 2>/dev/null \
     | jq -c '.items[0].spec.containers[0].command' 2>/dev/null)
-  cm_status=1
-  if printf '%s' "$cm_command" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1; then
-    cm_status=0
-  fi
-  sched_status=1
-  if printf '%s' "$sched_command" | jq -e 'index("--profiling=false") != null' >/dev/null 2>&1; then
-    sched_status=0
-  fi
+  # Same precision requirement as task 3: exactly one --profiling flag, no duplicate or
+  # conflicting value alongside --profiling=false.
+  cm_flag_ok=false
+  printf '%s' "$cm_command" | jq -e '
+    [.[] | select(test("^--profiling($|=)"))] == ["--profiling=false"]
+  ' >/dev/null 2>&1 && cm_flag_ok=true
+  sched_flag_ok=false
+  printf '%s' "$sched_command" | jq -e '
+    [.[] | select(test("^--profiling($|=)"))] == ["--profiling=false"]
+  ' >/dev/null 2>&1 && sched_flag_ok=true
   cm_phase=$(kubectl get pods -n kube-system --context "$CTX" -l component=kube-controller-manager -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
   sched_phase=$(kubectl get pods -n kube-system --context "$CTX" -l component=kube-scheduler -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
-  if [[ "$cm_status" -eq 0 && "$sched_status" -eq 0 && "$cm_phase" == "Running" && "$sched_phase" == "Running" ]]; then
+
+  # Same before/after discovery cycle as tasks 7/8, applied to check IDs that live under
+  # kube-bench's "master" target in cis-1.12 (1.3.2 kube-controller-manager, 1.4.1
+  # kube-scheduler) - same target as 1.1.x file permissions, just a different subsection.
+  cm_before_ok=false
+  grep -Eq '^\[FAIL\][[:space:]]+1[.]3[.]2([[:space:]]|$)' "$cm_before" 2>/dev/null && cm_before_ok=true
+  cm_after_ok=false
+  grep -Eq '^\[PASS\][[:space:]]+1[.]3[.]2([[:space:]]|$)' "$cm_after" 2>/dev/null && cm_after_ok=true
+  cm_after_no_fail=true
+  grep -Eq '^\[FAIL\][[:space:]]+1[.]3[.]2([[:space:]]|$)' "$cm_after" 2>/dev/null && cm_after_no_fail=false
+
+  sched_before_ok=false
+  grep -Eq '^\[FAIL\][[:space:]]+1[.]4[.]1([[:space:]]|$)' "$sched_before" 2>/dev/null && sched_before_ok=true
+  sched_after_ok=false
+  grep -Eq '^\[PASS\][[:space:]]+1[.]4[.]1([[:space:]]|$)' "$sched_after" 2>/dev/null && sched_after_ok=true
+  sched_after_no_fail=true
+  grep -Eq '^\[FAIL\][[:space:]]+1[.]4[.]1([[:space:]]|$)' "$sched_after" 2>/dev/null && sched_after_no_fail=false
+
+  # Independently re-run both checks ourselves - hand-written after.txt files alone must
+  # not be enough to pass without kube-bench actually confirming PASS right now.
+  live_cm=$(node_ssh 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.3.2' 2>/dev/null)
+  live_cm_ok=false
+  grep -Eq '^\[PASS\][[:space:]]+1[.]3[.]2([[:space:]]|$)' <<<"$live_cm" \
+    && ! grep -Eq '^\[FAIL\][[:space:]]+1[.]3[.]2([[:space:]]|$)' <<<"$live_cm" \
+    && live_cm_ok=true
+  live_sched=$(node_ssh 'sudo /opt/kube-bench/kube-bench run --benchmark cis-1.12 --check 1.4.1' 2>/dev/null)
+  live_sched_ok=false
+  grep -Eq '^\[PASS\][[:space:]]+1[.]4[.]1([[:space:]]|$)' <<<"$live_sched" \
+    && ! grep -Eq '^\[FAIL\][[:space:]]+1[.]4[.]1([[:space:]]|$)' <<<"$live_sched" \
+    && live_sched_ok=true
+
+  if [[ -s "$cm_before" && "$cm_before_ok" == true && -s "$cm_after" && "$cm_after_ok" == true && "$cm_after_no_fail" == true ]] \
+    && [[ -s "$sched_before" && "$sched_before_ok" == true && -s "$sched_after" && "$sched_after_ok" == true && "$sched_after_no_fail" == true ]] \
+    && [[ "$cm_flag_ok" == true && "$sched_flag_ok" == true ]] \
+    && [[ "$cm_phase" == "Running" && "$sched_phase" == "Running" ]] \
+    && [[ "$live_cm_ok" == true && "$live_sched_ok" == true ]]; then
     result=0
   else
-    if [[ "$cm_status" -ne 0 ]]; then
-      echo "HINT: The running kube-controller-manager Pod's command does not include '--profiling=false'. Add it to /etc/kubernetes/manifests/kube-controller-manager.yaml's command list and wait for kubelet to recreate the static Pod."
-    elif [[ "$sched_status" -ne 0 ]]; then
-      echo "HINT: The running kube-scheduler Pod's command does not include '--profiling=false'. Add it to /etc/kubernetes/manifests/kube-scheduler.yaml's command list and wait for kubelet to recreate the static Pod."
+    if [[ ! -s "$cm_before" || "$cm_before_ok" != true ]]; then
+      echo "HINT: $cm_before must be captured BEFORE any fix and contain a line starting with exactly '[FAIL] 1.3.2' - kube-bench check for kube-controller-manager profiling (lives under the 'master' target, run with plain --check, no --targets restriction)."
+    elif [[ ! -s "$sched_before" || "$sched_before_ok" != true ]]; then
+      echo "HINT: $sched_before must be captured BEFORE any fix and contain a line starting with exactly '[FAIL] 1.4.1' - kube-bench check for kube-scheduler profiling (lives under the 'master' target, run with plain --check, no --targets restriction)."
+    elif [[ "$cm_flag_ok" != true ]]; then
+      echo "HINT: The running kube-controller-manager Pod's command must contain exactly one --profiling flag, and it must be '--profiling=false' - no duplicate or conflicting --profiling value is allowed. Add it to /etc/kubernetes/manifests/kube-controller-manager.yaml's command list and wait for kubelet to recreate the static Pod."
+    elif [[ "$sched_flag_ok" != true ]]; then
+      echo "HINT: The running kube-scheduler Pod's command must contain exactly one --profiling flag, and it must be '--profiling=false' - no duplicate or conflicting --profiling value is allowed. Add it to /etc/kubernetes/manifests/kube-scheduler.yaml's command list and wait for kubelet to recreate the static Pod."
+    elif [[ "$cm_after_ok" != true || "$cm_after_no_fail" != true ]]; then
+      echo "HINT: $cm_after must contain '[PASS] 1.3.2' and no '[FAIL] 1.3.2' - re-run kube-bench --check 1.3.2 after the fix and save the fresh output."
+    elif [[ "$sched_after_ok" != true || "$sched_after_no_fail" != true ]]; then
+      echo "HINT: $sched_after must contain '[PASS] 1.4.1' and no '[FAIL] 1.4.1' - re-run kube-bench --check 1.4.1 after the fix and save the fresh output."
+    elif [[ "$live_cm_ok" != true ]]; then
+      echo "HINT: Independently re-running kube-bench --check 1.3.2 right now does not show PASS - the saved controller-manager-after.txt alone (even if hand-written) is not accepted as proof."
+    elif [[ "$live_sched_ok" != true ]]; then
+      echo "HINT: Independently re-running kube-bench --check 1.4.1 right now does not show PASS - the saved scheduler-after.txt alone (even if hand-written) is not accepted as proof."
     elif [[ "$cm_phase" != "Running" ]]; then
       echo "HINT: kube-controller-manager Pod is not Running (phase=$cm_phase) after the manifest edit. Check 'kubectl describe pod' for a YAML syntax error."
     else
@@ -422,4 +568,65 @@ record_result() {
     result=1
   fi
   record_result 9 "$result"
+}
+
+@test "10. kube-bench check 4.2.6 goes from FAIL to PASS after enabling protect-kernel-defaults on the worker node" {
+  before=/var/work/tests/artifacts/10/before.txt
+  after=/var/work/tests/artifacts/10/after.txt
+
+  # Pinned kube-bench 0.16.0's cis-1.12 profile (used everywhere else in this lab) does NOT
+  # have a protect-kernel-defaults check at all - CIS retired/renumbered it out of that
+  # profile version. Its own "4.2.6" under cis-1.12 is a DIFFERENT check
+  # (--make-iptables-util-chains, PASS by default) - matching bare ID alone would let that
+  # unrelated, already-passing check masquerade as evidence. This check still exists, under
+  # the same ID, in the older cis-1.24 profile, so task 10 explicitly asks for --benchmark
+  # cis-1.24 for this one check; match on the check's actual text, not just its ID.
+  before_ok=false
+  grep -Eiq '^\[FAIL\][[:space:]]+4[.]2[.]6[[:space:]].*protect-kernel-defaults' "$before" 2>/dev/null && before_ok=true
+  after_pass_ok=false
+  grep -Eiq '^\[PASS\][[:space:]]+4[.]2[.]6[[:space:]].*protect-kernel-defaults' "$after" 2>/dev/null && after_pass_ok=true
+  after_no_fail=true
+  grep -Eiq '^\[FAIL\][[:space:]]+4[.]2[.]6[[:space:]].*protect-kernel-defaults' "$after" 2>/dev/null && after_no_fail=false
+
+  configz=$(kubectl get --raw="/api/v1/nodes/$(worker_node)/proxy/configz" --context "$CTX" 2>/dev/null)
+  configz_ok=false
+  printf '%s' "$configz" | jq -e '.kubeletconfig.protectKernelDefaults == true' >/dev/null 2>&1 && configz_ok=true
+  ready=$(kubectl get node "$(worker_node)" --context "$CTX" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)
+
+  # This task requires a REAL install of kube-bench on the worker node, not just the
+  # student's own before/after.txt files (those can be hand-written). Independently confirm
+  # the tool is actually present at the right version, and re-run the same check ourselves.
+  kube_bench_path=$(worker_ssh 'command -v kube-bench' 2>/dev/null)
+  kube_bench_version=$(worker_ssh 'kube-bench version' 2>/dev/null | awk 'NF {print $NF}' | tail -1)
+  kube_bench_version_ok=false
+  [[ "$kube_bench_version" == "0.16.0" || "$kube_bench_version" == "v0.16.0" ]] && kube_bench_version_ok=true
+  live_check=$(worker_ssh 'sudo kube-bench run --benchmark cis-1.24 --check 4.2.6' 2>/dev/null)
+  live_check_ok=false
+  grep -Eiq '^\[PASS\][[:space:]]+4[.]2[.]6[[:space:]].*protect-kernel-defaults' <<<"$live_check" \
+    && ! grep -Eiq '^\[FAIL\][[:space:]]+4[.]2[.]6[[:space:]].*protect-kernel-defaults' <<<"$live_check" \
+    && live_check_ok=true
+
+  if [[ -s "$before" && "$before_ok" == true ]] \
+    && [[ -s "$after" && "$after_pass_ok" == true && "$after_no_fail" == true ]] \
+    && [[ "$configz_ok" == true && "$ready" == "True" ]] \
+    && [[ -n "$kube_bench_path" && "$kube_bench_version_ok" == true && "$live_check_ok" == true ]]; then
+    result=0
+  else
+    if [[ ! -s "$before" || "$before_ok" != true ]]; then
+      echo "HINT: $before must be captured BEFORE any fix, ON THE WORKER NODE, and contain a line starting with exactly '[FAIL] 4.2.6' whose text mentions protect-kernel-defaults - run 'kube-bench run --benchmark cis-1.24 --check 4.2.6' (NOT cis-1.12 - that profile's own 4.2.6 is a different, already-passing check)."
+    elif [[ -z "$kube_bench_path" || "$kube_bench_version_ok" != true ]]; then
+      echo "HINT: kube-bench 0.16.0 is not actually installed and runnable on the worker node (command -v kube-bench: '${kube_bench_path:-missing}', version: '${kube_bench_version:-missing}') - install it there for real, matching the release used everywhere else in this lab."
+    elif [[ "$configz_ok" != true ]]; then
+      echo "HINT: The worker node's actuated kubelet configuration (via /configz) does not show protectKernelDefaults=true. Set 'protectKernelDefaults: true' in the worker node's /var/lib/kubelet/config.yaml and restart kubelet there (not on the control-plane)."
+    elif [[ "$after_pass_ok" != true || "$after_no_fail" != true ]]; then
+      echo "HINT: $after must contain '[PASS] 4.2.6' (protect-kernel-defaults wording) and no matching '[FAIL]' - re-run kube-bench --benchmark cis-1.24 --check 4.2.6 on the worker node after the fix and save the fresh output."
+    elif [[ "$live_check_ok" != true ]]; then
+      echo "HINT: Independently re-running kube-bench --benchmark cis-1.24 --check 4.2.6 on the worker node right now does not show PASS - the saved after.txt alone (even if hand-written) is not accepted as proof."
+    else
+      echo "HINT: worker node is not Ready (status=$ready) after the kubelet config change/restart."
+    fi
+    echo "configz=$configz"
+    result=1
+  fi
+  record_result 10 "$result"
 }

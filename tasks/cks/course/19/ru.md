@@ -12,7 +12,7 @@
 
 > **Что нужно из CKA.** Поля `securityContext`, non-root запуск, capabilities и `allowPrivilegeEscalation` разобраны в [главе 20 CKA](../../../cka/course/20/ru.md). Здесь используем их как контракт, который PSA проверяет и принудительно соблюдает.
 
-> 🧠 PSA оценивает Pod на admission, RBAC — право создать объект; PSS `privileged`, `baseline` и `restricted` не заменяют runtime hardening, сеть или scan.
+> 🧠 PSA оценивает Pod на admission, RBAC - право создать объект; PSS `privileged`, `baseline` и `restricted` не заменяют runtime hardening, сеть или scan.
 
 ## 19.1. Зачем нужен PSA
 
@@ -165,7 +165,7 @@ pod-security.kubernetes.io/<mode>-version=<version>
 
 `<mode>` - `enforce`, `audit` или `warn`; `<level>` - `privileged`, `baseline` либо `restricted`. Значение версии - Kubernetes minor version, например `v1.36`, или `latest`. Для каждого режима версию можно задать отдельно.
 
-PSA labels — часть security boundary. Identity, которой разрешено создавать workloads в application namespace, не должна автоматически получать `create`, `patch` или `update` для `Namespace`: изменив либо удалив PSA labels, она меняет применяемую policy.
+PSA labels - часть security boundary. Identity, которой разрешено создавать workloads в application namespace, не должна автоматически получать `create`, `patch` или `update` для `Namespace`: изменив либо удалив PSA labels, она меняет применяемую policy.
 
 ```bash
 # Сначала наблюдаем restricted, но уже запрещаем самые опасные Pod.
@@ -185,12 +185,12 @@ kubectl label namespace payments \
 
 PSA применяет policy к новым Pod и к update, которые входят в его policy checks. Не ожидайте, что смена лейбла удалит уже работающие Pod: PSA не является controller и не исправляет существующие объекты. Когда меняется `enforce` level или version label namespace, PSA проверяет существующие Pod и возвращает warnings о нарушениях; это migration signal, а не автоматическое удаление. Не каждое изменение namespace запускает такую проверку.
 
-`latest` удобно для небольшого test-кластера, но в production создаёт риск: после обновления Kubernetes содержание стандарта может стать строже, и ранее работающий rollout будет отклонён. Поэтому в учебных примерах этой главы версия зафиксирована на `v1.36` — **training baseline** курса и core labs. Для своего production-кластера выбирайте PSS pin, соответствующий фактической версии его API server; не используйте версию выше неё.
+`latest` удобно для небольшого test-кластера, но в production создаёт риск: после обновления Kubernetes содержание стандарта может стать строже, и ранее работающий rollout будет отклонён. Поэтому в учебных примерах этой главы версия зафиксирована на `v1.36` - **training baseline** курса и core labs. Для своего production-кластера выбирайте PSS pin, соответствующий фактической версии его API server; не используйте версию выше неё.
 
 > **Версионная граница обучения, экзамена и production.** Связанный файл curriculum сейчас называется
 > `CKS_Curriculum v1.34`; это версия учебного документа, а не версия runtime. Training baseline
-> курса и core labs — Kubernetes `v1.36`, поэтому labels и матрица выше используют `v1.36`.
-> Экзаменационная среда CKS в зафиксированном снимке курса — Kubernetes `v1.35`; перед попыткой
+> курса и core labs - Kubernetes `v1.36`, поэтому labels и матрица выше используют `v1.36`.
+> Экзаменационная среда CKS в зафиксированном снимке курса - Kubernetes `v1.35`; перед попыткой
 > сверяйте фактическую версию в ExamUI. Production-версию PSS всегда выбирают по версии API server
 > конкретного кластера: учебный pin `v1.36` не является ни обещанием требований экзамена, ни
 > рекомендацией «всегда использовать v1.36» в будущем.
@@ -312,7 +312,7 @@ plugins:
 
 Username exemption относится к identity конкретного API request. Pod, созданный из Deployment, DaemonSet или Job, обычно создаёт controller, а не исходный пользователь; его exemption не передаётся controller-created Pod. Не exempt controller ServiceAccounts ради workload: это может bypass PSA для всех ресурсов, которые создаёт такой controller. Также не путайте exemption PSA с RBAC. Exemption не даёт право создать Pod; он лишь пропускает PSS-проверку, если RBAC уже разрешил запрос.
 
-> 🔬 `PodSecurityPolicy` удалён в Kubernetes v1.25; стандартные ограничения переносят в PSA/PSS, организационные — в policy engine.
+> 🔬 `PodSecurityPolicy` удалён в Kubernetes v1.25; стандартные ограничения переносят в PSA/PSS, организационные - в policy engine.
 
 ## 19.8. PSP: почему старые манифесты не работают
 
@@ -347,7 +347,7 @@ PSA нельзя расширить собственными полями. Эт�
 NS=payments
 SUBJECT='system:serviceaccount:payments:ci'  # identity, которую проверяете
 
-# PSA labels — security boundary: creator workloads не должен сам менять policy namespace.
+# PSA labels - security boundary: creator workloads не должен сам менять policy namespace.
 kubectl auth can-i create pods -n "$NS" --as="$SUBJECT"
 kubectl auth can-i create namespaces --as="$SUBJECT"
 kubectl auth can-i patch namespaces/"$NS" --as="$SUBJECT"
@@ -380,9 +380,9 @@ kubectl -n "$NS" get pod web -o jsonpath='{.spec.containers[*].securityContext}{
 | `kubectl apply` отвечает Forbidden, Pod не создан | PSA или RBAC отказал до persistence | сравните текст ошибки с `auth can-i` и labels namespace |
 | System component сломан после restricted | компоненту нужен допустимый отдельный namespace или узкое exemption | не ослабляйте прикладной namespace; зафиксируйте исключение |
 
-Для application/CI identity ожидайте `no` для `create namespaces`, `patch namespaces/<application-namespace>` и `update namespaces/<application-namespace>`. Делегированное создание namespace — отдельный privileged workflow: PSA labels должны назначаться и защищаться platform control/admission policy.
+Для application/CI identity ожидайте `no` для `create namespaces`, `patch namespaces/<application-namespace>` и `update namespaces/<application-namespace>`. Делегированное создание namespace - отдельный privileged workflow: PSA labels должны назначаться и защищаться platform control/admission policy.
 
-Для observability собирайте API audit logs и метрики PSA `pod_security_evaluations_total`, `pod_security_errors_total` и `pod_security_exemptions_total`, если они доступны в вашей дистрибуции. Наборы labels различаются: у evaluations есть `decision`, `mode`, `policy_level`, `policy_version`, `request_operation`, `resource`, `subresource`; у errors — `fatal`, `request_operation`, `resource`, `subresource`; у exemptions — только request/resource dimensions. Label `policy` здесь не существует. Для `audit`/`warn` `decision="deny"` означает найденное нарушение проверяемой policy, а не API rejection: запрос отклоняет только `mode="enforce"`. В CI добавьте `kubectl apply --dry-run=server` прямого Pod против test namespace с теми же PSA-лейблами, что и production; template workload дополнительно проверяйте реальным rollout там же.
+Для observability собирайте API audit logs и метрики PSA `pod_security_evaluations_total`, `pod_security_errors_total` и `pod_security_exemptions_total`, если они доступны в вашей дистрибуции. Наборы labels различаются: у evaluations есть `decision`, `mode`, `policy_level`, `policy_version`, `request_operation`, `resource`, `subresource`; у errors - `fatal`, `request_operation`, `resource`, `subresource`; у exemptions - только request/resource dimensions. Label `policy` здесь не существует. Для `audit`/`warn` `decision="deny"` означает найденное нарушение проверяемой policy, а не API rejection: запрос отклоняет только `mode="enforce"`. В CI добавьте `kubectl apply --dry-run=server` прямого Pod против test namespace с теми же PSA-лейблами, что и production; template workload дополнительно проверяйте реальным rollout там же.
 
 > 🏭 IaC создаёт namespace с pinned `enforce=restricted`; исключения хранятся с expiry, policy engine добавляет организационные правила.
 

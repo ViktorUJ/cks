@@ -1,13 +1,13 @@
-# Лаба 108 — Admission policies с Kyverno
+# Лаба 108 - Admission policies с Kyverno
 
 ## Цель
 
 В этой CKS-лабе вы установите Kyverno и защитите namespace `policy-108` policy-as-code
 правилами. Практика охватывает validating admission: запрет тега `latest`, обязательный
-`runAsNonRoot`, allowlist registry; в последнем, опциональном этапе — mutation Pod при
-admission. Задание 6 сравнивает этот подход с другим механизмом — встроенным
+`runAsNonRoot`, allowlist registry; в последнем, опциональном этапе - mutation Pod при
+admission. Задание 6 сравнивает этот подход с другим механизмом - встроенным
 `ImagePolicyWebhook`, где решение об image принимает внешний HTTP(S)-backend через API
-`ImageReview`, а не CEL-выражение внутри кластера. Финальное задание 7 — третий, отдельный
+`ImageReview`, а не CEL-выражение внутри кластера. Финальное задание 7 - третий, отдельный
 admission engine: **Gatekeeper (OPA/Rego)**, где вы чините уже развёрнутую, но неполную
 policy, а не пишете CEL внутри Kyverno. Работайте только с объектами и именами, указанными
 в заданиях.
@@ -77,7 +77,7 @@ check_result
 | **1** | **Установить Kyverno** |
 | :---: | :--- |
 | Что делаем | Установите Kyverno в namespace `kyverno`. Используйте подготовленную на worker команду `/usr/local/bin/install-kyverno`; она применяет закреплённый Helm chart. Дождитесь доступности admission controller. |
-| Критерии приёмки | В кластере есть CRD `validatingpolicies.policies.kyverno.io`; версия Kyverno — `1.19.x`; минимум один Deployment namespace `kyverno` имеет доступную реплику. |
+| Критерии приёмки | В кластере есть CRD `validatingpolicies.policies.kyverno.io`; версия Kyverno - `1.19.x`; минимум один Deployment namespace `kyverno` имеет доступную реплику. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -279,32 +279,32 @@ image через `kubectl debug` на уже запущенном разрешё
 ---
 | **6** | **ImagePolicyWebhook: внешний backend вместо CEL policy** |
 | :---: | :--- |
-| Что делаем | На рабочей машине уже подготовлен `/opt/image-policy-backend/server.py` — минимальный HTTPS-сервер, реализующий `ImageReview` API (отклоняет image с тегом `:latest` или без тега вовсе). Скопируйте его на `control-plane` и разверните как Deployment в namespace `image-policy`, за Service `image-policy-backend` на порту `8443`. Backend должен принимать соединения по TLS (upstream `ImagePolicyWebhook` контракт требует HTTPS, plain HTTP не поддерживается). На `control-plane` настройте `AdmissionConfiguration` для plugin `ImagePolicyWebhook` (`defaultAllow: false`) и kubeconfig, указывающий на ваш backend. В static manifest `kube-apiserver.yaml` **добавьте** `ImagePolicyWebhook` к уже существующему списку `--enable-admission-plugins` (не заменяйте список целиком - иначе рискуете выключить уже включённые plugins) и включите `--runtime-config=imagepolicy.k8s.io/v1alpha1=true`. После восстановления API создайте Pod с `:latest` — должен быть отклонён; затем Pod с закреплённым тегом — должен быть создан. |
+| Что делаем | На рабочей машине уже подготовлен `/opt/image-policy-backend/server.py` - минимальный HTTPS-сервер, реализующий `ImageReview` API (отклоняет image с тегом `:latest` или без тега вовсе). Скопируйте его на `control-plane` и разверните как Deployment в namespace `image-policy`, за Service `image-policy-backend` на порту `8443`. Backend должен принимать соединения по TLS (upstream `ImagePolicyWebhook` контракт требует HTTPS, plain HTTP не поддерживается). На `control-plane` настройте `AdmissionConfiguration` для plugin `ImagePolicyWebhook` (`defaultAllow: false`) и kubeconfig, указывающий на ваш backend. В static manifest `kube-apiserver.yaml` **добавьте** `ImagePolicyWebhook` к уже существующему списку `--enable-admission-plugins` (не заменяйте список целиком - иначе рискуете выключить уже включённые plugins) и включите `--runtime-config=imagepolicy.k8s.io/v1alpha1=true`. После восстановления API создайте Pod с `:latest` - должен быть отклонён; затем Pod с закреплённым тегом - должен быть создан. |
 | Критерии приёмки | `image-policy-backend` Available; kube-apiserver healthy с добавленным (не заменённым) plugin и `--runtime-config`; kubeconfig backend'а использует `https://` (не `http://`); Pod с `:latest` отклонён именно ImagePolicyWebhook (сообщение admission содержит `image policy webhook backend denied`); Pod с закреплённым тегом создан и Running; backend, временно остановленный (недоступный), приводит к отказу в приёме НОВОГО image (`defaultAllow: false` работает как fail-closed, а не fail-open). |
 
 <details>
 <summary>💡 Подсказка к заданию 6</summary>
 
-`ImagePolicyWebhook` — принципиально другой механизм, чем Kyverno из заданий 1-5: решение принимает внешний HTTPS-backend через API `ImageReview`, а не CEL-выражение внутри кластера. Скопируйте готовый `/opt/image-policy-backend/server.py` на `control-plane` (например `scp`/`cat` через SSH) — задание проверяет понимание wiring admission plugin, TLS-контракта и ImageReview API, а не умение писать HTTP-сервер с нуля. Для TLS: сначала создайте Service (чтобы узнать `ClusterIP`), затем самоподписанный сертификат с этим IP в SAN (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), затем Deployment, монтирующий и код, и сертификат. Не заменяйте существующий `--enable-admission-plugins` новым значением целиком — допишите `ImagePolicyWebhook` через запятую к уже включённым plugins (обычно там уже есть `NodeRestriction`). Также не забудьте `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` — без явного включения этого API backend не будет вызван вообще. Namespace `image-policy` не создан заранее — создайте его сами перед Deployment/Service. Если застряли на детальной последовательности ресурсов/путей/флагов — эталонный порядок действий приведён в решении.
+`ImagePolicyWebhook` - принципиально другой механизм, чем Kyverno из заданий 1-5: решение принимает внешний HTTPS-backend через API `ImageReview`, а не CEL-выражение внутри кластера. Скопируйте готовый `/opt/image-policy-backend/server.py` на `control-plane` (например `scp`/`cat` через SSH) - задание проверяет понимание wiring admission plugin, TLS-контракта и ImageReview API, а не умение писать HTTP-сервер с нуля. Для TLS: сначала создайте Service (чтобы узнать `ClusterIP`), затем самоподписанный сертификат с этим IP в SAN (`openssl req -x509 -newkey ... -addext "subjectAltName=IP:<ClusterIP>"`), затем Deployment, монтирующий и код, и сертификат. Не заменяйте существующий `--enable-admission-plugins` новым значением целиком - допишите `ImagePolicyWebhook` через запятую к уже включённым plugins (обычно там уже есть `NodeRestriction`). Также не забудьте `--runtime-config=imagepolicy.k8s.io/v1alpha1=true` - без явного включения этого API backend не будет вызван вообще. Namespace `image-policy` не создан заранее - создайте его сами перед Deployment/Service. Если застряли на детальной последовательности ресурсов/путей/флагов - эталонный порядок действий приведён в решении.
 </details>
 
 ---
 | **7** | **Gatekeeper ConstraintTemplate: дописать Rego blocklist** |
 | :---: | :--- |
-| Что делаем | В кластере уже установлен **Gatekeeper** (OPA), а также `ConstraintTemplate` `k8sblockedregistries` и `Constraint` `K8sBlockedRegistries/deny-bad-registries`, ограниченный отдельным namespace `gatekeeper-108` (не `policy-108` — это отдельный от Kyverno-заданий 1-5 полигон, чтобы Kyverno и Gatekeeper не отклоняли один и тот же Pod одновременно). Rego внутри `ConstraintTemplate` уже содержит несколько заблокированных registry (`untrusted-registry.example`, `docker-fake.test`), но **намеренно не содержит** `very-bad-registry.test`. Найдите `ConstraintTemplate.spec.targets[].rego` и допишите в него правило для `very-bad-registry.test` — именно в Rego, а не в параметрах `Constraint` (`deny-bad-registries` уже полностью корректен и не использует `spec.parameters` вообще — трогать его не нужно). |
+| Что делаем | В кластере уже установлен **Gatekeeper** (OPA), а также `ConstraintTemplate` `k8sblockedregistries` и `Constraint` `K8sBlockedRegistries/deny-bad-registries`, ограниченный отдельным namespace `gatekeeper-108` (не `policy-108` - это отдельный от Kyverno-заданий 1-5 полигон, чтобы Kyverno и Gatekeeper не отклоняли один и тот же Pod одновременно). Rego внутри `ConstraintTemplate` уже содержит несколько заблокированных registry (`untrusted-registry.example`, `docker-fake.test`), но **намеренно не содержит** `very-bad-registry.test`. Найдите `ConstraintTemplate.spec.targets[].rego` и допишите в него правило для `very-bad-registry.test` - именно в Rego, а не в параметрах `Constraint` (`deny-bad-registries` уже полностью корректен и не использует `spec.parameters` вообще - трогать его не нужно). |
 | Критерии приёмки | `ConstraintTemplate k8sblockedregistries` существует; его Rego содержит и исходные правила (`untrusted-registry.example`), и новое правило для `very-bad-registry.test`; Pod с образом из `very-bad-registry.test` в `gatekeeper-108` отклоняется именно этим Gatekeeper Constraint (сообщение admission ссылается на `k8sblockedregistries`); Pod с образом из уже заблокированного `untrusted-registry.example` всё ещё отклоняется (регрессии нет); Pod с образом из доверенного `registry.k8s.io` проходит. |
 
 <details>
 <summary>💡 Подсказка к заданию 7</summary>
 
-Найдите ConstraintTemplate через `kubectl get constrainttemplate k8sblockedregistries -o yaml`. Rego лежит в `spec.targets[].rego` как многострочная строка — именно её нужно редактировать (`kubectl edit constrainttemplate k8sblockedregistries`, либо `get -o yaml` → правка → `apply`). Существующий Rego объявляет заблокированные registry через отдельные факты вида `blocked_registry("untrusted-registry.example")` — допишите ещё одну такую строку для `very-bad-registry.test`, не удаляя и не заменяя уже существующие. Не путайте это с `Constraint.spec.parameters` — в этой версии policy Constraint не использует parameters вообще, редактировать там нечего.
+Найдите ConstraintTemplate через `kubectl get constrainttemplate k8sblockedregistries -o yaml`. Rego лежит в `spec.targets[].rego` как многострочная строка - именно её нужно редактировать (`kubectl edit constrainttemplate k8sblockedregistries`, либо `get -o yaml` → правка → `apply`). Существующий Rego объявляет заблокированные registry через отдельные факты вида `blocked_registry("untrusted-registry.example")` - допишите ещё одну такую строку для `very-bad-registry.test`, не удаляя и не заменяя уже существующие. Не путайте это с `Constraint.spec.parameters` - в этой версии policy Constraint не использует parameters вообще, редактировать там нечего.
 </details>
 
 <details>
 <summary>🔍 Проверьте себя перед `check_result`</summary>
 
 Baseline - ДО исправления: Pod из `very-bad-registry.test` должен пройти (Rego пока
-его не покрывает), а уже заблокированный `untrusted-registry.example` — быть отклонён:
+его не покрывает), а уже заблокированный `untrusted-registry.example` - быть отклонён:
 
 ```bash
 kubectl apply --dry-run=server -f - <<'EOF'

@@ -12,7 +12,7 @@
 
 > **Что нужно из CKA.** Базовое устройство контейнеров, namespaces, cgroups и runtime разобрано в CKA: [контейнеры](../../../cka/course/00-4-containers/ru.md), [Linux](../../../cka/course/00-5-linux/ru.md) и [network namespaces](../../../cka/course/00-7-netns/ru.md). Здесь не повторяем создание контейнера и базовые команды CKA, а рассматриваем security-свойства, проверку изоляции и пути её обхода.
 
-> 🧠 Изоляция контейнера — сочетание независимых Linux-границ, а не одна «магическая» настройка.
+> 🧠 Изоляция контейнера - сочетание независимых Linux-границ, а не одна «магическая» настройка.
 
 ## 03.1. Изоляция контейнера - это набор границ, а не виртуальная машина
 
@@ -226,7 +226,7 @@ kubectl exec -n demo deploy/web -- sh -c '
 kubectl get pod -A -o jsonpath='{range .items[*]}{.metadata.namespace}{"/"}{.metadata.name}{" hostPID="}{.spec.hostPID}{" hostNetwork="}{.spec.hostNetwork}{" hostIPC="}{.spec.hostIPC}{"\n"}{end}'
 ```
 
-> 🧠 Namespace ограничивает видимость, cgroup — потребление; `limits` создают ресурсную границу, а `requests` помогают планированию.
+> 🧠 Namespace ограничивает видимость, cgroup - потребление; `limits` создают ресурсную границу, а `requests` помогают планированию.
 
 ## 03.3. cgroups: ресурсные пределы как защита от DoS
 
@@ -268,11 +268,11 @@ spec:
         memory: 256Mi
 ```
 
-> 🔬 `spec.resources` на уровне Pod — beta-возможность Kubernetes v1.34 для общего resource budget контейнеров.
+> 🔬 `spec.resources` на уровне Pod - beta-возможность Kubernetes v1.34 для общего resource budget контейнеров.
 
 ### Pod-Level Resources: общая граница Pod
 
-**Pod-Level Resources** находятся в Beta с Kubernetes v1.34 и включены по умолчанию. Через `spec.resources` можно задать общий `requests` и `limits` Pod для CPU, memory и hugepages: это aggregate budget всего Pod, а не замена явных ресурсов контейнера. Aggregate Pod limit — реальная общая граница для контейнеров Pod; container-level limits остаются отдельными пределами каждого контейнера.
+**Pod-Level Resources** находятся в Beta с Kubernetes v1.34 и включены по умолчанию. Через `spec.resources` можно задать общий `requests` и `limits` Pod для CPU, memory и hugepages: это aggregate budget всего Pod, а не замена явных ресурсов контейнера. Aggregate Pod limit - реальная общая граница для контейнеров Pod; container-level limits остаются отдельными пределами каждого контейнера.
 
 ```yaml
 apiVersion: v1
@@ -619,13 +619,13 @@ sudo cat "/proc/$PID/cgroup"
 <details>
 <summary>1. Почему контейнер не равен виртуальной машине и какая роль у общего kernel ноды?</summary>
 
-Обычный OCI workload под runc/containerd — это Linux-процесс с общим ядром ноды, а не отдельная VM. Namespaces, cgroups, capabilities, MAC и seccomp создают несколько границ, но уязвимость ядра или runtime может привести от выполнения кода в контейнере к container escape.
+Обычный OCI workload под runc/containerd - это Linux-процесс с общим ядром ноды, а не отдельная VM. Namespaces, cgroups, capabilities, MAC и seccomp создают несколько границ, но уязвимость ядра или runtime может привести от выполнения кода в контейнере к container escape.
 </details>
 
 <details>
 <summary>2. Какие namespaces разделяют процессы, сеть и mount points, и какие поля Pod могут убрать эти границы?</summary>
 
-`PID` namespace изолирует дерево процессов, `NET` — интерфейсы, маршруты и порты, а `MNT` — mount points и файловую иерархию. Поля `hostPID`, `hostNetwork` и `hostIPC` отключают соответствующие границы; `hostPath` и `privileged: true` также меняют модель доступа к ресурсам ноды.
+`PID` namespace изолирует дерево процессов, `NET` - интерфейсы, маршруты и порты, а `MNT` - mount points и файловую иерархию. Поля `hostPID`, `hostNetwork` и `hostIPC` отключают соответствующие границы; `hostPath` и `privileged: true` также меняют модель доступа к ресурсам ноды.
 </details>
 
 <details>

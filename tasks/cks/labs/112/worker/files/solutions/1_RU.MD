@@ -117,7 +117,7 @@ cat /var/work/tests/artifacts/3/falco-custom.log
 Создадим policy по правилу главы 32: полный request/response пишем только для
 нечувствительного `configmaps` в `runtime-112`; для `secrets` берём `Metadata`, чтобы тело Secret
 (токены, пароли) не попало в журнал. `None` и `omitStages` действительно сокращают high-volume
-noise; финальный catch-all `Metadata` — fallback logging, а не шумоподавление. Порядок правил важен: специфичные правила идут до catch-all.
+noise; финальный catch-all `Metadata` - fallback logging, а не шумоподавление. Порядок правил важен: специфичные правила идут до catch-all.
 
 ```bash
 ssh control-plane 'sudo tee /etc/kubernetes/audit/policy.yaml >/dev/null' <<'YAML'

@@ -558,7 +558,7 @@ get pods -l component=kube-apiserver`. Не выводите production-логи
 данные могут содержать имена объектов и ошибки доступа.
 
 Для учебного self-managed кластера можно взять значение непосредственно через `etcdctl` и убедиться,
-что marker отсутствует в байтах ответа. TLS-параметры ниже — типичный kubeadm-пример: сначала сверьте
+что marker отсутствует в байтах ответа. TLS-параметры ниже - типичный kubeadm-пример: сначала сверьте
 endpoint, CA и cert/key paths с **текущим** etcd manifest. Проверка fail-closed: PASS возможен только,
 если `etcdctl` прочитал непустое значение нужного ключа, `strings` успешно отработал и marker не найден.
 
@@ -717,7 +717,7 @@ restore и минимизируйте количество людей, identitie
 <details>
 <summary>1. Почему base64 в поле `Secret.data` не защищает секрет от владельца etcd snapshot?</summary>
 
-Base64 — кодирование, а не шифрование: `kubectl get secret -o yaml` можно декодировать без ключа. Владелец etcd snapshot получает сохранённое API-состояние в обход authentication, authorization и audit API server. Encryption at rest меняет это, сохраняя ciphertext выбранных ресурсов.
+Base64 - кодирование, а не шифрование: `kubectl get secret -o yaml` можно декодировать без ключа. Владелец etcd snapshot получает сохранённое API-состояние в обход authentication, authorization и audit API server. Encryption at rest меняет это, сохраняя ciphertext выбранных ресурсов.
 </details>
 
 <details>

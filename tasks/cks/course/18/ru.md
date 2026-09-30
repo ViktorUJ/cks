@@ -233,7 +233,7 @@ spec:
     image: registry.example.invalid/app:1.4.2
 ```
 
-`supplementalGroupsPolicy` — GA/stable в Kubernetes v1.35 (lifecycle: alpha v1.31 → beta
+`supplementalGroupsPolicy` - GA/stable в Kubernetes v1.35 (lifecycle: alpha v1.31 → beta
 v1.33 → GA v1.35), согласно официальному release blog Kubernetes. Feature gate
 `SupplementalGroupsPolicy` зафиксирован в состоянии enabled by default. Всё равно нужен CRI с
 поддержкой: известная поддержка есть у containerd с v2.0 и CRI-O с v1.31. Проверяйте ноду по `status.features.supplementalGroupsPolicy: true`. Начиная с v1.33
@@ -247,7 +247,7 @@ kubelet отклоняет Pod с `Strict` на неподдерживаемой
 Это поля того же `SecurityContext`, но они не являются универсальным Linux baseline выше.
 `seLinuxOptions` на Pod или container задаёт SELinux label процесса; container-level значение
 перекрывает Pod-level. При обычном рекурсивном SELinux relabel именно **container runtime**
-меняет label inode содержимого тома перед его использованием контейнером — не kubelet.
+меняет label inode содержимого тома перед его использованием контейнером - не kubelet.
 Pod-level `seLinuxChangePolicy: MountOption` запрашивает relabel через mount option
 `-o context=`, но сам по себе его не гарантирует. Для PVC с access mode, отличным от
 `ReadWriteOncePod`, в Kubernetes v1.36 нужны включённый feature gate `SELinuxMount` (он
@@ -257,7 +257,7 @@ Pod-level `seLinuxChangePolicy: MountOption` запрашивает relabel че
 
 > 🔬 **Upstream v1.37.** В Kubernetes v1.37 `SELinuxMount` стал GA и включён по умолчанию. Перед upgrade SELinux-enabled кластера проверьте volume-label conflicts; при необходимости workload может явно сохранить recursive behavior через `spec.securityContext.seLinuxChangePolicy: Recursive`. Подробности: [Kubernetes v1.37 Security Delta](../APPENDIX_K8S_137_SECURITY_DELTA_RU.md).
 
-`procMount` — только container-level Linux option: безопасный default `Default` оставляет
+`procMount` - только container-level Linux option: безопасный default `Default` оставляет
 маскированные чувствительные части `/proc`; `Unmasked` расширяет обзор процесса и не подходит
 для restricted workload. Начиная с Kubernetes v1.30 `Unmasked` допустим только для Pod в user
 namespace, то есть при `spec.hostUsers: false`. Pod-level `securityContext.sysctls` задаёт
@@ -556,7 +556,7 @@ test, ожидаемый `EPERM`/`Operation not permitted` и проверку n
 ```bash
 # Declarative intent текущего учебного Pod.
 kubectl get pod hardened-web -o yaml
-# В production source of truth управляемого workload — его controller template:
+# В production source of truth управляемого workload - его controller template:
 # kubectl get deploy <deployment-name> -o yaml
 
 # Pod-level context и context каждого обычного/init container
@@ -675,7 +675,7 @@ Effective UID этого container будет `20001`. Для полей, дос
 <details>
 <summary>4. Почему нельзя считать `fsGroup` механизмом исправления прав всех файлов image layer?</summary>
 
-`fsGroup` — настройка Pod, которая помогает с групповым доступом к поддерживаемым volume. Она не предназначена для смены owner всех файлов image layer и не заменяет корректные ownership и UID в образе. Для writable путей нужно также явно выбрать volume и проверить поддержку storage driver.
+`fsGroup` - настройка Pod, которая помогает с групповым доступом к поддерживаемым volume. Она не предназначена для смены owner всех файлов image layer и не заменяет корректные ownership и UID в образе. Для writable путей нужно также явно выбрать volume и проверить поддержку storage driver.
 </details>
 
 <details>
@@ -714,7 +714,7 @@ Effective UID этого container будет `20001`. Для полей, дос
 RBAC `create namespaces` решает, может ли identity создать объект, но не проверяет обязательные metadata labels в новом запросе. Пользователь с этим правом может создать namespace без `pod-security.kubernetes.io/enforce=restricted`, а PSA будет действовать по default configuration, которая не обязана быть restricted. Нужна admission-level policy, например ValidatingAdmissionPolicy или policy engine, требующая нужные labels при CREATE; RBAC остаётся дополнительным ограничением круга создателей namespace.
 </details>
 
-> 🏭 Общий chart/template и CI/admission policy; у исключения — scope, владелец, причина, срок пересмотра и evidence.
+> 🏭 Общий chart/template и CI/admission policy; у исключения - scope, владелец, причина, срок пересмотра и evidence.
 
 ## 18.11. Как это применяют в продакшене
 

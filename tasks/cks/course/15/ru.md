@@ -53,7 +53,7 @@ Least privilege означает не «никому ничего не дава�
 вторую SSH-сессию. Ошибка в `sudoers`, firewall или `sshd_config` может оставить вас без
 административного доступа.
 
-> 🧠 Захват ноды — цепочка внешнего входа, локальной identity, `sudo`, файловых прав и runtime sockets; least privilege на хосте не заменяет Kubernetes RBAC.
+> 🧠 Захват ноды - цепочка внешнего входа, локальной identity, `sudo`, файловых прав и runtime sockets; least privilege на хосте не заменяет Kubernetes RBAC.
 
 > 🎯 Используйте отдельных пользователей, минимум групп, узкий audited `sudo` и точные owner/mode; проверяйте effective permissions целевого пользователя и writable родительские каталоги.
 
@@ -140,7 +140,7 @@ sudo visudo -cf /etc/sudoers
 
 ```sudoers
 # /etc/sudoers.d/k8s-operator - точный wrapper, без wildcard и без аргументов.
-# Пустые кавычки — аргументная спецификация «только без аргументов»; её отсутствие
+# Пустые кавычки - аргументная спецификация «только без аргументов»; её отсутствие
 # разрешила бы запуск этого пути с любыми аргументами.
 Cmnd_Alias KUBELET_STATUS = /usr/local/sbin/k8s-kubelet-status ""
 k8s-operator ALL=(root) KUBELET_STATUS
@@ -168,7 +168,7 @@ printf '%s\n' "$policy" | tee /tmp/k8s-operator-sudo-policy.txt
 ограничения.
 
 Для всех административных действий полезно сохранять следы. Event/command logging и
-I/O logging — разные механизмы sudoers: `logfile` задаёт file destination event log, а
+I/O logging - разные механизмы sudoers: `logfile` задаёт file destination event log, а
 `log_input`/`log_output` либо command tags `LOG_INPUT`/`LOG_OUTPUT` записывают ввод/вывод
 в location из `iolog_*` или на `log_servers`.
 
@@ -303,7 +303,7 @@ sudo ss -lntup | grep -E ':(22|6443|10250|10256|10257|10259|2379|2380)\b' || tru
 правила. Выберите инструмент, поддерживаемый образом ноды и системой управления
 конфигурацией, и сделайте его единственным источником истины.
 
-> 🔬 Не требуется заучивать все реализации; важно понимать и уметь применить host firewall control в доступном окружении. Ниже — `ufw`, `iptables` и `nftables` как альтернативные backend.
+> 🔬 Не требуется заучивать все реализации; важно понимать и уметь применить host firewall control в доступном окружении. Ниже - `ufw`, `iptables` и `nftables` как альтернативные backend.
 
 ### Вариант A: `ufw`
 
@@ -714,7 +714,7 @@ ssh -o BatchMode=yes "k8s-operator@${NODE_ADDRESS}" 'sudo -n -l'
 <details>
 <summary>5. Чем отличаются области ответственности host firewall, Security Group и NetworkPolicy?</summary>
 
-Host firewall управляет трафиком самой ноды, Security Group или cloud firewall — сетевой границей инфраструктуры и источниками к endpoint. NetworkPolicy применяется CNI главным образом к Pod-трафику и не заменяет защиту host/control-plane пути во всех топологиях. Контроли дополняют друг друга, поэтому их нельзя считать взаимозаменяемыми.
+Host firewall управляет трафиком самой ноды, Security Group или cloud firewall - сетевой границей инфраструктуры и источниками к endpoint. NetworkPolicy применяется CNI главным образом к Pod-трафику и не заменяет защиту host/control-plane пути во всех топологиях. Контроли дополняют друг друга, поэтому их нельзя считать взаимозаменяемыми.
 </details>
 
 <details>
@@ -726,7 +726,7 @@ Host firewall управляет трафиком самой ноды, Security 
 <details>
 <summary>7. Какие команды докажут, что SSH- и firewall-настройки не только записаны, но и работают?</summary>
 
-Синтаксис и итог SSH проверяют `sudo sshd -t` и `sudo sshd -T | grep ...`, затем делают реальный key-only вход из разрешённой сети через `ssh -o BatchMode=yes ...`. Активный firewall проверяют выбранным механизмом: `ufw status verbose`, `iptables -S INPUT` или `nft list ruleset`, а listeners — `sudo ss -lntup`. Из неразрешённого сегмента `nc -vz -w 3 <node> 22` должен дать ожидаемый отказ или timeout.
+Синтаксис и итог SSH проверяют `sudo sshd -t` и `sudo sshd -T | grep ...`, затем делают реальный key-only вход из разрешённой сети через `ssh -o BatchMode=yes ...`. Активный firewall проверяют выбранным механизмом: `ufw status verbose`, `iptables -S INPUT` или `nft list ruleset`, а listeners - `sudo ss -lntup`. Из неразрешённого сегмента `nc -vz -w 3 <node> 22` должен дать ожидаемый отказ или timeout.
 </details>
 
 <details>

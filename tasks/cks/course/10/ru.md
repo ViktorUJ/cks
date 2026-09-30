@@ -23,12 +23,12 @@
 RBAC отвечает на запрос API server сочетанием identity, `verb`, ресурса, namespace и иногда
 имени объекта. Разрешения **аддитивны**: если любой `RoleBinding` или `ClusterRoleBinding`
 даёт доступ, более узкая роль его не отнимает. Поэтому запрет нельзя выразить второй ролью:
-нужно удалить или сузить существующую привязку. Kubernetes RBAC — **allow-only** модель: в ней нет отрицательных deny-правил и условий
+нужно удалить или сузить существующую привязку. Kubernetes RBAC - **allow-only** модель: в ней нет отрицательных deny-правил и условий
 наподобие времени суток или source IP. Такие требования нельзя в общем случае переложить
 на admission: он запускается после authentication/authorization только для
 create/delete/modify (и некоторых custom verbs), а `get`, `list` и `watch` обходят admission
 layer. Для условной **авторизации API** нужен внешний/Webhook authorizer либо иной
-authorization/policy layer; source IP дополнительно ограничивают сетью — firewall,
+authorization/policy layer; source IP дополнительно ограничивают сетью - firewall,
 load balancer или NetworkPolicy, где это применимо. Admission policy подходит лишь для
 запросов, которые она действительно перехватывает, а не как замена RBAC conditions.
 
@@ -61,7 +61,7 @@ namespace, на какой срок и нужен ли вообще доступ
 через `RoleBinding` только в одном namespace. `ClusterRoleBinding` расширяет область на весь
 кластер и требует отдельного обоснования.
 
-> 🎯 Проверяйте конкретные identity, verb, resource и scope парой `can-i`: нужное действие — `yes`, опасное соседнее — `no`.
+> 🎯 Проверяйте конкретные identity, verb, resource и scope парой `can-i`: нужное действие - `yes`, опасное соседнее - `no`.
 
 ## 10.2. Аудит фактических прав: `kubectl auth can-i`
 
@@ -151,7 +151,7 @@ kubectl auth can-i create pods/exec -n cks-104 --as="$SA"
 ### 10.2.1. Constrained Impersonation: ограничить identity и действие
 
 > **Kubernetes 1.36+ / advanced.** Это production-материал сверх обязательного ядра CKS:
-> экзаменационный приоритет — точные обычные Role/Binding и минимальный `impersonate`.
+> экзаменационный приоритет - точные обычные Role/Binding и минимальный `impersonate`.
 
 **Constrained Impersonation** - Beta в Kubernetes v1.36+ и включена по умолчанию. В отличие
 от обычного `impersonate`, она не даёт выполнять от имени цели всё, что та может. Для
@@ -280,7 +280,7 @@ Subresource пишется через косую черту: `resources: ["pods/
 Напротив, `get` на `nodes/proxy` - отдельное опасное разрешение на kubelet proxy, а не
 безобидное чтение node.
 
-В Kubernetes 1.36 `KubeletFineGrainedAuthz` — GA и включён постоянно. Для законной
+В Kubernetes 1.36 `KubeletFineGrainedAuthz` - GA и включён постоянно. Для законной
 операционной задачи выдавайте узкий subresource вместо `nodes/proxy`: например
 `nodes/stats`, `nodes/metrics`, `nodes/log`, `nodes/pods`, `nodes/healthz` или
 `nodes/configz`. Kubelet проверяет именно эти пути отдельно; для остальных запросов и
@@ -553,7 +553,7 @@ Role, ClusterRole и binding отправляйте на review. Долгожи�
 пересматривайте по фактическому назначению ServiceAccount, логам аудита и владельцу
 workload.
 
-> 🏭 Роли и aggregation labels хранятся в Git, изменения проходят review, а critical positive/negative `can-i` проверки — CI; break-glass имеет владельца и срок.
+> 🏭 Роли и aggregation labels хранятся в Git, изменения проходят review, а critical positive/negative `can-i` проверки - CI; break-glass имеет владельца и срок.
 
 ## 10.7. Как это применяют в продакшене
 
@@ -645,7 +645,7 @@ workload.
 >
 > **Retest:** разрешённый API call работает, а запрещённый возвращает `403`.
 >
-> **ATT&CK:** [T1528 — Steal Application Access Token](https://attack.mitre.org/techniques/T1528/).
+> **ATT&CK:** [T1528 - Steal Application Access Token](https://attack.mitre.org/techniques/T1528/).
 
 ## 10.11. Вопросы для самопроверки
 

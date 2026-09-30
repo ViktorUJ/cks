@@ -62,7 +62,7 @@ kubectl -n payments exec metadata-check -- sh -c '
 kubectl -n payments delete pod metadata-check
 ```
 
-Адрес и протокол metadata зависят от provider. `169.254.169.254` — **типовой AWS-подобный сценарий компетенции, а не гарантированная задача экзамена**. Этот well-known address используют AWS IMDS и Azure IMDS; в GKE Dataplane V2 его также использует GKE metadata server. Для Azure, GCP и private metadata proxy сверяйте документированный endpoint provider и добавляйте его в модель угроз отдельно. В AWS при включённом IPv6 IMDS дополнительно учитывайте `fd00:ec2::254`: IPv4-only блокировка не доказывает полную защиту.
+Адрес и протокол metadata зависят от provider. `169.254.169.254` - **типовой AWS-подобный сценарий компетенции, а не гарантированная задача экзамена**. Этот well-known address используют AWS IMDS и Azure IMDS; в GKE Dataplane V2 его также использует GKE metadata server. Для Azure, GCP и private metadata proxy сверяйте документированный endpoint provider и добавляйте его в модель угроз отдельно. В AWS при включённом IPv6 IMDS дополнительно учитывайте `fd00:ec2::254`: IPv4-only блокировка не доказывает полную защиту.
 
 > 🧠 Metadata endpoint не ограничивается RBAC и правами `ServiceAccount`; SSRF или shell в workload могут дать cloud credentials при широких сети и IAM ноды.
 
@@ -149,8 +149,8 @@ spec:
 | Provider | Node identity | Workload identity и metadata path | Network control | IAM/control и evidence |
 |---|---|---|---|---|
 | AWS / EKS | IAM role ноды через IMDS `169.254.169.254` (и `fd00:ec2::254` при IPv6) | EKS Pod Identity или IRSA вместо node credentials | IMDSv2 с hop limit `1` как baseline для non-`hostNetwork` Pod; `hostNetwork: true` Pod сохраняют доступ к IMDS и требуют отдельного контроля/admission policy; policy/firewall - дополнительные слои | Минимальная IAM role ноды; CloudTrail и проверка, что Pod не получает node credentials |
-| GKE | Service account/access scopes ноды | Workload Identity Federation: Pod -> GKE metadata server (`metadata.google.internal` / metadata IP) -> KSA token -> STS -> short-lived federated token | Current examples для strict policy: обычный dataplane — `169.254.169.252/32`, TCP `988` и `987`; GKE Dataplane V2 — `169.254.169.254/32`, TCP `80` и `8080`. Перед применением сверяйте документацию GKE | Минимальные IAM роли KSA/GSA; Cloud Audit Logs и проверка federated token |
-| Azure / AKS | Managed identity ноды через IMDS `169.254.169.254` | Microsoft Entra Workload ID | AKS IMDS restriction — **Preview**, только для non-`hostNetwork` Pod; не предназначен для production SLA, несовместим с рядом add-ons/extension scenarios и не поддерживает Windows node pools | Минимальная managed identity ноды; проверка Entra federation и отдельно применимости IMDS restriction |
+| GKE | Service account/access scopes ноды | Workload Identity Federation: Pod -> GKE metadata server (`metadata.google.internal` / metadata IP) -> KSA token -> STS -> short-lived federated token | Current examples для strict policy: обычный dataplane - `169.254.169.252/32`, TCP `988` и `987`; GKE Dataplane V2 - `169.254.169.254/32`, TCP `80` и `8080`. Перед применением сверяйте документацию GKE | Минимальные IAM роли KSA/GSA; Cloud Audit Logs и проверка federated token |
+| Azure / AKS | Managed identity ноды через IMDS `169.254.169.254` | Microsoft Entra Workload ID | AKS IMDS restriction - **Preview**, только для non-`hostNetwork` Pod; не предназначен для production SLA, несовместим с рядом add-ons/extension scenarios и не поддерживает Windows node pools | Минимальная managed identity ноды; проверка Entra federation и отдельно применимости IMDS restriction |
 
 GKE Workload Identity создаёт важный на первый взгляд парадокс: безопасная workload identity сама использует GKE metadata server. Поэтому запретить `169.254.169.254` как универсальное правило нельзя: этот адрес используют Azure IMDS и GKE Dataplane V2, а не только AWS. При strict `NetworkPolicy` разрешите только документированный путь для фактического GKE dataplane: `169.254.169.252/32` на TCP `988` и `987` для Workload Identity Federation в обычном dataplane либо `169.254.169.254/32` на TCP `80` и `8080` для GKE Dataplane V2. Это текущие примеры, а не вечные константы: перепроверьте документацию GKE перед применением. `hostNetwork` Pod имеют другую модель доступа и требуют отдельной оценки.
 
@@ -226,7 +226,7 @@ kubectl get clusterrolebinding \
   -o custom-columns=NAME:.metadata.name,ROLE:.roleRef.name,SUBJECTS:.subjects[*].name
 ```
 
-`Webhook` authorization - необходимый baseline, но не доказательство безопасности kubelet. В Kubernetes v1.36 **Fine-Grained Kubelet Authorization — GA и feature gate locked enabled**. Вместо широкого `nodes/proxy` для роли monitoring/observability выдавайте только нужные subresources с минимальным набором verbs и только там, где это действительно необходимо. Полная GA-карта endpoint → RBAC subresource следующая:
+`Webhook` authorization - необходимый baseline, но не доказательство безопасности kubelet. В Kubernetes v1.36 **Fine-Grained Kubelet Authorization - GA и feature gate locked enabled**. Вместо широкого `nodes/proxy` для роли monitoring/observability выдавайте только нужные subresources с минимальным набором verbs и только там, где это действительно необходимо. Полная GA-карта endpoint → RBAC subresource следующая:
 
 | Kubelet endpoint | Fine-grained RBAC resource | Fallback через `nodes/proxy` |
 |---|---|---|
@@ -278,7 +278,7 @@ rules:
   verbs: ["get"]
 ```
 
-Проверяйте права конкретной ServiceAccount в целевом namespace через `kubectl auth can-i`: `get pods/log` должен вернуть `yes`, а чтение `secrets` и `create pods/exec` — `no`.
+Проверяйте права конкретной ServiceAccount в целевом namespace через `kubectl auth can-i`: `get pods/log` должен вернуть `yes`, а чтение `secrets` и `create pods/exec` - `no`.
 
 > 🎯 Доказать нужный доступ и отказ через positive/negative verification, а не ограничиваться изменением конфигурации.
 
@@ -324,7 +324,7 @@ kubectl -n payments exec egress-test -- sh -c '
 
 # GKE WIF: metadata path может быть намеренно доступен; проверяйте получение
 # short-lived workload identity, а не ожидайте timeout, и подтверждайте отсутствие node identity.
-# AKS: проверяйте Entra Workload ID отдельно; IMDS restriction — Preview, не покрывает hostNetwork Pod, не предназначен для production SLA, может быть несовместим с add-ons/extension scenarios и не поддерживает Windows node pools.
+# AKS: проверяйте Entra Workload ID отдельно; IMDS restriction - Preview, не покрывает hostNetwork Pod, не предназначен для production SLA, может быть несовместим с add-ons/extension scenarios и не поддерживает Windows node pools.
 ```
 
 При timeout `curl` может завершиться с ненулевым кодом, поэтому в автоматизации сохраняйте и exit code, и stdout/stderr. В лабе 101 проверка metadata строится именно на `curl --max-time 3`; не требуйте конкретный текст ошибки от всех CNI.
@@ -375,7 +375,7 @@ kubectl -n payments exec egress-test -- sh -c '
 
 ## 05.9. Как это пригодится: на экзамене и в реальной работе
 
-**На экзамене.** Защита metadata и node endpoints — компетенция CKS; конкретный provider, адрес или способ реализации не гарантированы. `169.254.169.254` и egress policy — типовой AWS-подобный сценарий этой главы. Помните, что default-deny egress ломает DNS без явного allow, а `NetworkPolicy` аддитивны. В заданиях на hardening ищите открытые `10250`, `2379`, `2380`, `6443` и чрезмерный RBAC.
+**На экзамене.** Защита metadata и node endpoints - компетенция CKS; конкретный provider, адрес или способ реализации не гарантированы. `169.254.169.254` и egress policy - типовой AWS-подобный сценарий этой главы. Помните, что default-deny egress ломает DNS без явного allow, а `NetworkPolicy` аддитивны. В заданиях на hardening ищите открытые `10250`, `2379`, `2380`, `6443` и чрезмерный RBAC.
 
 **В реальной работе.** Самый важный навык - провести границу между Pod network, node network и cloud control plane. Policy для workload, host firewall, cloud security group, IMDSv2, workload identity и RBAC нужны вместе. Так одиночная SSRF или RCE не превращается в доступ к credentials ноды или control plane.
 
@@ -386,7 +386,7 @@ kubectl -n payments exec egress-test -- sh -c '
 >
 > **Attacker objective:** превратить кажущийся read-only доступ в возможность управлять контейнерами на ноде.
 >
-> **Abuse path:** небезопасная привилегия — ServiceAccount имеет `get` на `nodes/proxy`; через kubelet `GET` и WebSocket endpoints возникает уже описанный риск RCE.
+> **Abuse path:** небезопасная привилегия - ServiceAccount имеет `get` на `nodes/proxy`; через kubelet `GET` и WebSocket endpoints возникает уже описанный риск RCE.
 >
 > **Expected evidence:** SubjectAccessReview, audit events и telemetry доступа к kubelet.
 >
@@ -394,7 +394,7 @@ kubectl -n payments exec egress-test -- sh -c '
 >
 > **Retest:** metrics продолжают работать, а management/exec path больше не авторизован.
 >
-> **ATT&CK:** [T1609 — Container Administration Command](https://attack.mitre.org/techniques/T1609/) и [T1613 — Container and Resource Discovery](https://attack.mitre.org/techniques/T1613/).
+> **ATT&CK:** [T1609 - Container Administration Command](https://attack.mitre.org/techniques/T1609/) и [T1613 - Container and Resource Discovery](https://attack.mitre.org/techniques/T1613/).
 
 ## 05.10. Вопросы для самопроверки
 
@@ -437,7 +437,7 @@ AWS IMDSv2 требует сначала получить временный tok
 <details>
 <summary>7. Почему даже `get` на `nodes/proxy` рискованнее, чем минимальные права `get` на `nodes/metrics` или `nodes/stats`?</summary>
 
-`nodes/proxy` — широкий доступ к kubelet API, и даже `get` на нём через kubelet WebSocket endpoints может разрешить выполнение команд в контейнерах. В v1.36 fine-grained kubelet authorization позволяет monitoring-роли получить только `get` на `nodes/metrics` и/или `nodes/stats`; после миграции широкий `nodes/proxy` нужно удалить.
+`nodes/proxy` - широкий доступ к kubelet API, и даже `get` на нём через kubelet WebSocket endpoints может разрешить выполнение команд в контейнерах. В v1.36 fine-grained kubelet authorization позволяет monitoring-роли получить только `get` на `nodes/metrics` и/или `nodes/stats`; после миграции широкий `nodes/proxy` нужно удалить.
 </details>
 
 <details>
@@ -449,7 +449,7 @@ AWS IMDSv2 требует сначала получить временный tok
 <details>
 <summary>9. Почему read-only роль для legacy Dashboard или другого web UI обычно требует `get/list/watch` на ресурсах, но только `get` на `pods/log`, и как проверить это через `kubectl auth can-i` без реального доступа к UI?</summary>
 
-Для отображения списков Pod, Service и Events UI нужны `get`, `list` и `watch`, но чтение subresource `pods/log` практически требует только `get`. Права конкретной ServiceAccount проверяют в целевом namespace командой `kubectl auth can-i`: `get pods/log` должен вернуть `yes`, а `get secrets` и `create pods/exec` — `no`.
+Для отображения списков Pod, Service и Events UI нужны `get`, `list` и `watch`, но чтение subresource `pods/log` практически требует только `get`. Права конкретной ServiceAccount проверяют в целевом namespace командой `kubectl auth can-i`: `get pods/log` должен вернуть `yes`, а `get secrets` и `create pods/exec` - `no`.
 </details>
 
 ## Практика

@@ -19,7 +19,7 @@
 > сертификаты и CSR - в [главе 39 CKA](../../../cka/course/39/ru.md). Здесь не повторяем
 > эти механизмы, а применяем их для hardening API.
 
-> 🧠 Сеть, TLS, authentication и authorization — независимые последовательные барьеры;
+> 🧠 Сеть, TLS, authentication и authorization - независимые последовательные барьеры;
 > admission добавляется для запросов, к которым он применим. Timeout/refused, `401` и `403`
 > указывают на разные слои.
 
@@ -61,7 +61,7 @@ flowchart TB
   субъектом. Если anonymous access включён, запрос без credential получает субъект
   `system:anonymous` и группу `system:unauthenticated`. В актуальном
   `AuthenticationConfiguration` anonymous access можно ограничить явным allowlist **точных
-  HTTP paths**. Частый вариант — `/livez`, `/readyz` и при необходимости `/healthz`; для
+  HTTP paths**. Частый вариант - `/livez`, `/readyz` и при необходимости `/healthz`; для
   kubeadm public token discovery отдельным явно разрешённым path может быть
   `/api/v1/namespaces/kube-public/configmaps/cluster-info`. Остальные paths anonymous
   identity не получают.
@@ -93,8 +93,8 @@ Anonymous access иногда оставляют ради устаревшего
 Для стандартного kubeadm полный `--anonymous-auth=false` нельзя считать универсальным
 baseline: его health probes обращаются к `/livez` и `/readyz` без credentials, поэтому при
 глобальном запрете anonymous они могут получать `401` и перезапускать API server. Основной
-вариант для такого кластера — стабильный `AuthenticationConfiguration`, подключаемый через
-`--authentication-config`. Условия в нём — allowlist **точных** путей: любой другой путь не
+вариант для такого кластера - стабильный `AuthenticationConfiguration`, подключаемый через
+`--authentication-config`. Условия в нём - allowlist **точных** путей: любой другой путь не
 становится anonymous даже при разрешающей RBAC binding. Это влияет и на token-based
 `kubeadm join`: до доверия к API клиент unauthenticated читает
 `/api/v1/namespaces/kube-public/configmaps/cluster-info`. Поэтому выберите один из двух
@@ -163,7 +163,7 @@ volumes:
 ```
 
 После изменения проверьте, что container действительно видит файл, API server
-восстановился и `/readyz` успешен. `hostPath` — локальный путь ноды: в HA control plane
+восстановился и `/readyz` успешен. `hostPath` - локальный путь ноды: в HA control plane
 создайте одинаковый файл и mount на **каждой** control-plane ноде, иначе её apiserver не
 сможет смонтировать файл и подняться.
 
@@ -191,7 +191,7 @@ apiServer:
 Полное отключение через `--anonymous-auth=false` допустимо только после предварительного
 изменения kubeadm health probes на аутентифицированные либо иной проверенный механизм и
 проверки bootstrap-зависимостей. После сохранения kubelet пересоздаёт static Pod. Манифест
-— это desired source, а не доказательство argv уже работающего apiserver. Не перезапускайте
+- это desired source, а не доказательство argv уже работающего apiserver. Не перезапускайте
 одновременно все control-plane компоненты и не завершайте SSH-сессию, пока API не
 восстановился.
 
@@ -273,7 +273,7 @@ authorization:
 неподдерживаемой либо небезопасной конфигурации, а не пытайтесь включить ради совместимости.
 
 ```bash
-# На каждой ноде: ошибка ss — ошибка проверки, а не подтверждение закрытого порта.
+# На каждой ноде: ошибка ss - ошибка проверки, а не подтверждение закрытого порта.
 listeners=$(sudo ss -H -lnt '( sport = :10255 )') || {
   echo 'ERROR: cannot inspect TCP listener 10255' >&2; exit 2;
 }
@@ -314,7 +314,7 @@ kubectl get rolebinding -A -o json | jq -r '
 ```
 
 Не удаляйте binding только из-за совпадения субъекта. В частности,
-`system:public-info-viewer` — штатная default ClusterRoleBinding для
+`system:public-info-viewer` - штатная default ClusterRoleBinding для
 `system:unauthenticated` с non-sensitive public information; при включённом RBAC missing
 subjects штатных binding могут быть восстановлены auto-reconciliation после старта API.
 Также в kubeadm token discovery используется RoleBinding
@@ -383,7 +383,7 @@ RBAC. В другой осознанной архитектуре общий aut
 > ограничивает остальные identities, а `NodeRestriction` ограничивает допустимые mutating
 > requests с node credentials.
 
-**NodeRestriction** — validating admission plugin, дополняющий `Node` authorizer. `Node`
+**NodeRestriction** - validating admission plugin, дополняющий `Node` authorizer. `Node`
 authorizer определяет API-права kubelet и ограничивает relation-sensitive reads;
 `NodeRestriction` затем ограничивает допустимые **изменения**: kubelet может изменять
 только свой `Node` и `Pod`, назначенные этой ноде, и не может менять защищённые Node
@@ -469,12 +469,12 @@ flowchart TB
   используйте private endpoint или tunnel.
 - **Host firewall** (`nftables`, `iptables`, `ufw`) на self-managed control-plane: дублирует
   сетевой периметр и ограничивает источники, если cloud firewall ошибочно расширят.
-- **NetworkPolicy**: `kubernetes.default.svc` — логическое имя Service, а стандартная
+- **NetworkPolicy**: `kubernetes.default.svc` - логическое имя Service, а стандартная
   NetworkPolicy не выбирает destination Service по имени. Ограничение egress к API строят
   через `ipBlock`/endpoint CIDR с проверкой реального datapath либо через CNI-specific
   entity, FQDN или Service policy. Не переносите `ipBlock` между CNI вслепую: DNAT Service
   может происходить до или после policy и не имеет универсальной семантики. Разрешайте API
-  только namespace и workload, которым он действительно нужен — это сокращает lateral
+  только namespace и workload, которым он действительно нужен - это сокращает lateral
   movement после компрометации Pod.
 - **Маршрутизация и DNS**: убедитесь, что control-plane endpoint публикуется и разрешается
   только так, как требует выбранная модель доступа; private endpoint часто упрощает это, но
@@ -575,7 +575,7 @@ sudo grep -n -- '--config' /etc/kubernetes/manifests/kube-scheduler.yaml
 | broad anonymous access | запрос без credential получает `system:anonymous`; при selective config исключены только exact allowed paths | `AuthenticationConfiguration` с минимальным allowlist exact paths либо `--anonymous-auth=false`, если это совместимо с probes/bootstrapping; cleanup bindings |
 | `--authorization-mode=AlwaysAllow` | любой аутентифицированный либо anonymous субъект проходит authz | `Node,RBAC` либо осознанная интеграция Webhook |
 | отсутствует `NodeRestriction` | скомпрометированный kubelet получает более широкий путь к API | включить plugin, сохранив существующие defaults |
-| profiling включён без нужды | лишние диагностические endpoints | для apiserver/controller-manager — `--profiling=false`; для scheduler с `--config` — `enableProfiling: false` в активном `KubeSchedulerConfiguration` |
+| profiling включён без нужды | лишние диагностические endpoints | для apiserver/controller-manager - `--profiling=false`; для scheduler с `--config` - `enableProfiling: false` в активном `KubeSchedulerConfiguration` |
 | `readOnlyPort` не равен `0` | legacy kubelet API без authentication | `readOnlyPort: 0` |
 | публичный `6443` | увеличенная поверхность для credentials attacks и уязвимостей API | private endpoint либо строгий CIDR allowlist, firewall и сильная authentication |
 
@@ -678,10 +678,10 @@ credential и не доказывает состояние anonymous authenticat
 - **`system:unauthenticated`** - группа анонимного субъекта; binding на неё требует
   такого же ревью, как binding на `system:anonymous`.
 - **authorization mode** - authorizer API server, например `Node`, `RBAC` или `Webhook`.
-- **Node authorizer** — специальный authorizer для kubelet identities; разрешает
+- **Node authorizer** - специальный authorizer для kubelet identities; разрешает
   необходимые node operations и relation-sensitive доступ к объектам, связанным с Pod этой
   ноды.
-- **NodeRestriction** — validating admission plugin, ограничивающий допустимые изменения
+- **NodeRestriction** - validating admission plugin, ограничивающий допустимые изменения
   Node/Pod со стороны kubelet и защищённые Node labels; с
   `ServiceAccountNodeAudienceRestriction` также ограничивает audiences node-originated
   `TokenRequest`.
@@ -706,7 +706,7 @@ credential и не доказывает состояние anonymous authenticat
   `system:anonymous` и `system:unauthenticated`.
 - Legacy kubelet read-only port отключают `readOnlyPort: 0`; `10250` оставляют только с
   authentication, `Webhook` authorization и сетевым ограничением.
-- Безопасная базовая authorizer-цепочка kubeadm — `Node,RBAC`; `AlwaysAllow` несовместим с
+- Безопасная базовая authorizer-цепочка kubeadm - `Node,RBAC`; `AlwaysAllow` несовместим с
   least privilege. `Node` authorizer задаёт kubelet API-права, а NodeRestriction добавляет
   ограничения к его mutating requests.
 - Для API `:6443` предпочитают private endpoint; при public endpoint обязательны строгий
@@ -804,13 +804,13 @@ Authorization; Admission добавляется, если тип запроса 
 <details>
 <summary>3. Чем `10255` отличается от `10250` и какие настройки нужны kubelet API?</summary>
 
-`10255` — исторический read-only неаутентифицированный kubelet API и должен быть выключен `readOnlyPort: 0` либо `--read-only-port=0`. `10250` — нормальный kubelet API, который не открывают всем: для него нужны authentication, `Webhook` authorization и сетевые правила/firewall. Отключение `10255` подтверждают через `ss`, а не только строкой конфигурации.
+`10255` - исторический read-only неаутентифицированный kubelet API и должен быть выключен `readOnlyPort: 0` либо `--read-only-port=0`. `10250` - нормальный kubelet API, который не открывают всем: для него нужны authentication, `Webhook` authorization и сетевые правила/firewall. Отключение `10255` подтверждают через `ss`, а не только строкой конфигурации.
 </details>
 
 <details>
 <summary>4. Почему `AlwaysAllow` нельзя добавлять рядом с `RBAC` как «запасной» mode?</summary>
 
-Authorizer-цепочка останавливается сразу, когда модуль возвращает Allow или Deny; только NoOpinion передаёт запрос далее. `AlwaysAllow` возвращает Allow для дошедших до него запросов и тем самым обнуляет least privilege для этой части цепочки. Безопасный kubeadm baseline — `Node,RBAC`, а не fallback с разрешением всех.
+Authorizer-цепочка останавливается сразу, когда модуль возвращает Allow или Deny; только NoOpinion передаёт запрос далее. `AlwaysAllow` возвращает Allow для дошедших до него запросов и тем самым обнуляет least privilege для этой части цепочки. Безопасный kubeadm baseline - `Node,RBAC`, а не fallback с разрешением всех.
 </details>
 
 <details>

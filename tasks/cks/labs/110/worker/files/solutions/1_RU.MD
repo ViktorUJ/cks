@@ -182,7 +182,7 @@ agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0
 } | tee /var/work/tests/artifacts/4/tool-versions.txt
 ```
 
-Для Helm-managed Cilium source of truth — Helm values:
+Для Helm-managed Cilium source of truth - Helm values:
 `helm upgrade cilium cilium/cilium -n kube-system --reuse-values --set encryption.enabled=true --set encryption.type=wireguard`.
 В учебной установке Cilium не имеет Helm release, поэтому используем documented ConfigMap
 key и перезапускаем agents:

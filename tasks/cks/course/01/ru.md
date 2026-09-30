@@ -12,7 +12,7 @@
 
 > **Что нужно из CKA.** CKS продолжает, а не заменяет CKA. Перед началом повторите [введение в CKA](../../../cka/course/01/ru.md) и [оглавление CKA](../../../cka/course/README_RU.md). Курс предполагает уверенную работу с `kubectl`, YAML-манифестами, pod, Service, Ingress, RBAC, ServiceAccount, TLS, kubeadm и компонентами control plane. Если базовые термины и модель угроз cloud native пока не уверены, начните с [курса KCSA](../../../kcsa/course/README_RU.md) - он необязателен формально, но задаёт словарь, на который CKS постоянно опирается.
 
-> 🧠 KCSA даёт язык рисков, CKA — операционную базу, CKS — применение этих знаний для ограничения и расследования компрометации.
+> 🧠 KCSA даёт язык рисков, CKA - операционную базу, CKS - применение этих знаний для ограничения и расследования компрометации.
 
 ## 01.1 Что такое CKS и чем он отличается от CKA и KCSA
 
@@ -51,7 +51,7 @@ flowchart TB
 
 Версии Kubernetes нужно различать:
 
-- **Версия обучения и core labs `101-113` этого курса - `v1.36`** (`k8_version = "1.36.0"` в их лабораторных окружениях): на ней проверяются Kubernetes-native команды, флаги и API-поведение курса; compatibility third-party компонентов необходимо сверять с их собственной support matrix. Исключение по конструкции - лаба `113`: её кластер стартует на `v1.35.x`, потому что тема задания - сам процесс minor upgrade до `v1.36.x`.
+- **Версия обучения и core labs `101-114` этого курса - `v1.36`** (`k8_version = "1.36.0"` в их лабораторных окружениях): на ней проверяются Kubernetes-native команды, флаги и API-поведение курса; compatibility third-party компонентов необходимо сверять с их собственной support matrix. Исключение по конструкции - лаба `113`: её кластер стартует на `v1.35.x`, потому что тема задания - сам процесс minor upgrade до `v1.36.x`.
 - **Версию экзаменационной среды задаёт Linux Foundation, и она может отставать от версии курса.** Основная страница [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/) указывает Kubernetes **v1.35**, однако Important Instructions и FAQ обновляются независимо и могут временно показывать другую версию. Для конкретной попытки приоритет имеют ExamUI и инструкции назначенного экзамена. Опубликованный CNCF curriculum overview по имени файла остаётся [`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks), но это не отменяет параметров, указанных Linux Foundation для попытки. Поэтому **не считайте `v1.36` версией экзамена**.
 
 Страницы CKS и FAQ обновляются независимо и могут временно расходиться. Непосредственно перед попыткой подтвердите версию Kubernetes, количество и формат задач, проходной балл, пререквизит и разрешённые ресурсы сначала на основной странице [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/), затем в ExamUI для назначенной попытки. Не полагайтесь на версию или правила, зафиксированные в курсе, как на постоянные.
@@ -208,13 +208,13 @@ flowchart TB
 ## 01.9 Итоги главы
 
 - CKS продолжает CKA и проверяет практическую защиту кластера, workloads, нод и supply chain.
-- Целевая версия курса и core labs `101-113` - Kubernetes v1.36 (лаба `113` стартует на v1.35.x, так как её тема - сам upgrade до v1.36.x).
+- Целевая версия курса и core labs `101-114` - Kubernetes v1.36 (лаба `113` стартует на v1.35.x, так как её тема - сам upgrade до v1.36.x).
 - Экзамен требует уверенной работы в терминале, с несколькими кластерами и конфигурацией нод.
 - Шесть доменов охватывают настройку кластера, hardening, workload, supply chain и runtime-защиту.
 - Новые акценты программы 2024 - Cilium, CIS, SBOM, KubeLinter и sandboxed containers.
 - Инструмент ценен только вместе с проверкой: нужно доказать, что защита сработала и атака не проходит.
 
-> 🎯 Сначала определите слой проблемы — API/RBAC, network, node, image или runtime — затем примените минимальное изменение и проверьте именно условие задачи.
+> 🎯 Сначала определите слой проблемы - API/RBAC, network, node, image или runtime - затем примените минимальное изменение и проверьте именно условие задачи.
 
 > 🏭 Secure configuration, ограничение доступа, контроль артефактов, логирование и расследование работают вместе.
 
@@ -241,13 +241,13 @@ CKS продолжает CKA и предполагает уверенную ра
 <details>
 <summary>3. Какая версия Kubernetes зафиксирована в этом курсе и лабораторных работах?</summary>
 
-Для обучения и core labs `101-113` зафиксирована Kubernetes `v1.36` (`k8_version = "1.36.0"`). Версию экзамена задаёт Linux Foundation, и её нельзя автоматически выводить из версии курса.
+Для обучения и core labs `101-114` зафиксирована Kubernetes `v1.36` (`k8_version = "1.36.0"`). Версию экзамена задаёт Linux Foundation, и её нельзя автоматически выводить из версии курса.
 </details>
 
 <details>
 <summary>4. Какие шесть доменов CKS и какие из них имеют наибольший вес?</summary>
 
-Домены: Cluster Setup, Cluster Hardening, System Hardening, Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security. По 20% имеют Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security; Cluster Setup и Cluster Hardening имеют по 15%, System Hardening — 10%.
+Домены: Cluster Setup, Cluster Hardening, System Hardening, Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security. По 20% имеют Minimize Microservice Vulnerabilities, Supply Chain Security и Monitoring, Logging and Runtime Security; Cluster Setup и Cluster Hardening имеют по 15%, System Hardening - 10%.
 </details>
 
 <details>
@@ -265,7 +265,7 @@ CKS продолжает CKA и предполагает уверенную ра
 <details>
 <summary>7. Почему для security-настройки недостаточно только применить manifest?</summary>
 
-Наличие манифеста не доказывает работу защиты: CNI может не применять `NetworkPolicy`, старые Secret могут не быть перешифрованы после `EncryptionConfiguration`, а правило Falco может не быть загружено. После каждого изменения нужно проверять именно требуемый результат — например, отклонение forbidden Pod, недоступность закрытого порта или отсутствие запрещённого сетевого потока.
+Наличие манифеста не доказывает работу защиты: CNI может не применять `NetworkPolicy`, старые Secret могут не быть перешифрованы после `EncryptionConfiguration`, а правило Falco может не быть загружено. После каждого изменения нужно проверять именно требуемый результат - например, отклонение forbidden Pod, недоступность закрытого порта или отсутствие запрещённого сетевого потока.
 </details>
 
 ## Практика

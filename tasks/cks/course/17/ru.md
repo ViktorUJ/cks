@@ -344,7 +344,7 @@ kubectl exec -n "$NS" "$POD" -c "$CTR" -- grep '^Seccomp:' /proc/1/status
 Старые manifest могут использовать annotation
 `seccomp.security.alpha.kubernetes.io/pod` или
 `container.seccomp.security.alpha.kubernetes.io/<container>`. Это исторический интерфейс: начиная с Kubernetes v1.25 эти annotations **нефункциональны**
-и не назначают seccomp profile. Их наличие в современном кластере — сигнал для audit, а не
+и не назначают seccomp profile. Их наличие в современном кластере - сигнал для audit, а не
 работающая совместимость; замените их на `securityContext.seccompProfile`. Не смешивайте
 annotation и API-поле, особенно с разными значениями. После миграции протестируйте новый Pod
 и проверьте его effective mode.
@@ -377,7 +377,7 @@ kernel журналировать попытки `unshare`, `setns`, `mount` и 
 }
 ```
 
-> 🔬 `syscalls[].args`, `errnoRet` и фильтрация по аргументам syscall — узкие version- и architecture-dependent детали.
+> 🔬 `syscalls[].args`, `errnoRet` и фильтрация по аргументам syscall - узкие version- и architecture-dependent детали.
 
 OCI seccomp умеет сопоставлять не только имя syscall, но и его аргументы через
 `syscalls[].args` (`index`, `value`, необязательный `valueTwo`, `op`). Например,
@@ -627,7 +627,7 @@ capability. Для учебного доказательства фиксиру�
 соответствующий node audit/log. В реальном расследовании изолируйте тест и не добавляйте
 `CAP_SYS_ADMIN` лишь для того, чтобы обойти одно ограничение и «проверить» другое.
 
-> 🧠 Seccomp контролирует syscalls, capabilities — привилегии, AppArmor/SELinux — доступ к объектам и операциям.
+> 🧠 Seccomp контролирует syscalls, capabilities - привилегии, AppArmor/SELinux - доступ к объектам и операциям.
 
 ## 17.7. Как связать seccomp, capabilities и AppArmor
 
@@ -806,7 +806,7 @@ Capabilities определяют, есть ли у процесса специ�
 <details>
 <summary>7. Что доказывает `Seccomp: 2` в `/proc/1/status`, а чего он не доказывает?</summary>
 
-`Seccomp: 2` доказывает, что у проверяемого процесса включён filter mode; `0` означает отсутствие фильтра, а `1` — legacy strict mode. Эта цифра не раскрывает имя JSON, содержимое или идентичность effective profile. Для этого связывают manifest precedence, kubelet/runtime configuration, доставку профиля и ожидаемое поведение.
+`Seccomp: 2` доказывает, что у проверяемого процесса включён filter mode; `0` означает отсутствие фильтра, а `1` - legacy strict mode. Эта цифра не раскрывает имя JSON, содержимое или идентичность effective profile. Для этого связывают manifest precedence, kubelet/runtime configuration, доставку профиля и ожидаемое поведение.
 </details>
 
 <details>
@@ -821,7 +821,7 @@ Capabilities определяют, есть ли у процесса специ�
 Admission-policy проверяет лишь YAML до записи объекта и не подтверждает, что node сможет применить профиль. На фактической node должны совпасть поддержка seccomp runtime/kubelet, effective `securityContext` с учётом container override и, для `Localhost`, существование совместимого JSON под kubelet seccomp root. Container также не должен быть `privileged`, потому что Kubernetes запускает его `Unconfined`; результат проверяют через события и `Seccomp: 2` у нужного процесса.
 </details>
 
-> 🏭 `RuntimeDefault` в template/admission; custom `Localhost` — versioned profile с совместимым pool, наблюдением и rollback.
+> 🏭 `RuntimeDefault` в template/admission; custom `Localhost` - versioned profile с совместимым pool, наблюдением и rollback.
 
 ## 17.13. Как это применяют в продакшене
 

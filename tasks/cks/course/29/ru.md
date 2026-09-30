@@ -21,7 +21,7 @@
 > `kubectl logs`, Events и наблюдаемость - в [главе 28 CKA](../../../cka/course/28/ru.md).
 > Здесь их не повторяем: используем для security-сигнала и его проверки.
 
-> 🧠 Falco отвечает на вопрос о действиях уже работающего процесса, тогда как scan и admission оценивают artifact или manifest раньше. Alert — повод для triage, а не самостоятельный verdict: его связывают с workload, identity, audit и другими evidence, прежде чем запускать destructive remediation.
+> 🧠 Falco отвечает на вопрос о действиях уже работающего процесса, тогда как scan и admission оценивают artifact или manifest раньше. Alert - повод для triage, а не самостоятельный verdict: его связывают с workload, identity, audit и другими evidence, прежде чем запускать destructive remediation.
 
 ## 29.1. Зачем нужен runtime-детектор
 
@@ -240,7 +240,7 @@ kubectl -n falco describe daemonset falco
 передают через values/ConfigMap chart или монтируют как отдельный файл. Не редактируйте
 файл внутри живого Falco Pod: изменение исчезнет после restart/rollout и не пройдёт review.
 Сохраняйте правило в Git и применяйте декларативно. При включённом `watch_config_files`
-Falco hot-reload-ит изменённые config/rule files; restart или rollout restart — fallback, если
+Falco hot-reload-ит изменённые config/rule files; restart или rollout restart - fallback, если
 watching выключен, reload не произошёл или изменение этого требует.
 
 > 🎯 Умейте найти фактически загружаемые `rules_files`, добавить local rule, валидировать полный config, сгенерировать контролируемый event и найти alert на Falco Pod той же node. Ready/active agent без успешной цепочки rule → event → contextual alert не является доказательством готовности.
@@ -578,7 +578,7 @@ kubectl -n falco describe daemonset falco
 выключены. Для Prometheus нужны включённые metrics, web server и его Prometheus endpoint:
 
 ```yaml
-# falco.yaml — конкретные доступные опции сверяйте с pinned версией Falco.
+# falco.yaml - конкретные доступные опции сверяйте с pinned версией Falco.
 metrics:
   enabled: true
   kernel_event_counters_enabled: true
@@ -591,7 +591,7 @@ webserver:
 Проверяйте event rate и kernel-side drops (`scap.n_drops*`), а также потери output queue
 (`falco.outputs_queue_num_drops`; в Prometheus имена получают префикс
 `falcosecurity_` и суффикс `_total`). `buf_size_preset` определяет размер буфера capture,
-а `base_syscalls` — набор syscall для capture: это troubleshooting/performance knobs, а не
+а `base_syscalls` - набор syscall для capture: это troubleshooting/performance knobs, а не
 универсальные значения. Сначала измерьте drops и нагрузку на test-ноду, затем меняйте один
 параметр, повторяйте нагрузочный тест и подтверждайте, что coverage нужных rule не потерян.
 
@@ -627,21 +627,21 @@ rules, может добавить узкое исключение к уже о�
 `tags` группируют rule по домену и MITRE, например `container`, `filesystem`,
 `mitre_credential_access`; их используют для review, rollout и выбора общих `append_output`
 настроек. Начинайте с upstream tag `maturity_stable`, затем после staging и анализа false
-positives добавляйте `maturity_incubating` и `maturity_sandbox`. Maturity — не обещание низкого
+positives добавляйте `maturity_incubating` и `maturity_sandbox`. Maturity - не обещание низкого
 шума в конкретной среде: custom rule и каждую новую группу всё равно тестируют.
 
-Это не только tags: stable rules поставляет artifact `falco-rules`, а incubating и sandbox —
+Это не только tags: stable rules поставляет artifact `falco-rules`, а incubating и sandbox -
 отдельные `falco-incubating-rules` и `falco-sandbox-rules`. Чтобы реально использовать дополнительные менее зрелые incubating/sandbox
 группы, закрепите точные версии всех нужных artifacts в
 `falcoctl.config.artifact.install.refs`, отключите `falcoctl artifact follow` и добавьте их
 files в `falco.rules_files` (стандартные пути: `/etc/falco/falco-incubating_rules.yaml` и
 `/etc/falco/falco-sandbox_rules.yaml`). При переопределении `rules_files` сохраните уже нужные
-paths — например `k8s_audit_rules.yaml`, `rules.d`, `falco_rules.yaml` и local files. Каждую
+paths - например `k8s_audit_rules.yaml`, `rules.d`, `falco_rules.yaml` и local files. Каждую
 добавленную maturity-группу валидируют полным config на staging до rollout.
 
 ### Production extension: sources, plugins, JSON и совместимость
 
-Falco — не только syscall detector. Rule с `source: syscall` работает по kernel events;
+Falco - не только syscall detector. Rule с `source: syscall` работает по kernel events;
 plugin может дать иной event source, например Kubernetes Audit или CloudTrail, и дополнительные
 fields для условий/output. Это не взаимозаменяемые способы получить Pod metadata: для syscall
 rule контекст контейнера дают driver и CRI/Kubernetes metadata.
@@ -750,7 +750,7 @@ Rules artifact должен быть совместим с engine: исполь�
 `fd.name=/dev/mem` и подходящего `open*` syscall. В output включите как минимум command,
 container ID, `%k8s.ns.name` и `%k8s.pod.name`, затем подтвердите alert контролируемым
 событием. Pod и namespace появляются благодаря рабочим Falco driver и CRI/Kubernetes
-metadata; не включайте произвольные plugins только ради этих полей — сначала проверьте
+metadata; не включайте произвольные plugins только ради этих полей - сначала проверьте
 доступность полей через `falco --list` и корректный runtime socket. Не редактируйте upstream
 rules без причины и не ограничивайтесь командой запуска: критерий обычно проверяет конкретный
 event/output.
@@ -792,13 +792,13 @@ Package-install удобен для одной ноды или экзамена,
 <details>
 <summary>4. Чем отличаются `rule`, `condition`, `output`, `priority`, `macro` и `list`?</summary>
 
-`rule` — именованный detector; его `condition` — булево выражение по fields события. `output` задаёт текст alert, а `priority` — его серьёзность. `macro` даёт переиспользуемое имя части condition, а `list` содержит набор значений, благодаря чему ruleset проще review и tuning.
+`rule` - именованный detector; его `condition` - булево выражение по fields события. `output` задаёт текст alert, а `priority` - его серьёзность. `macro` даёт переиспользуемое имя части condition, а `list` содержит набор значений, благодаря чему ruleset проще review и tuning.
 </details>
 
 <details>
 <summary>5. Почему custom rule нужно класть в `falco_rules.local.yaml`, а не менять `falco_rules.yaml`?</summary>
 
-`falco_rules.yaml` — upstream/vendor ruleset, который обновление package может перезаписать. Local file сохраняет custom override отдельно, пригоден для Git/review и загружается в порядке, заданном `rules_files`. После изменения проверяют полную конфигурацию командой `falco -c /etc/falco/falco.yaml --dry-run`, чтобы не потерять upstream macro вроде `open_read`.
+`falco_rules.yaml` - upstream/vendor ruleset, который обновление package может перезаписать. Local file сохраняет custom override отдельно, пригоден для Git/review и загружается в порядке, заданном `rules_files`. После изменения проверяют полную конфигурацию командой `falco -c /etc/falco/falco.yaml --dry-run`, чтобы не потерять upstream macro вроде `open_read`.
 </details>
 
 <details>

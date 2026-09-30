@@ -1,15 +1,15 @@
-# Лаба 111 — анализ образов, статические исправления и supply-chain evidence
+# Лаба 111 - анализ образов, статические исправления и supply-chain evidence
 
 ## Цель
 
 В этой CKS-лабе вы соберёте воспроизводимые evidence-артефакты для контейнерного
 приложения: отчёты уязвимостей и статических анализаторов, безопасные исправления
 `Dockerfile` и манифеста рабочей нагрузки, два SBOM, поиск версий зависимостей и проверку
-подписи образа. Результат — не просто вывод терминала: каждый отчёт должен быть
+подписи образа. Результат - не просто вывод терминала: каждый отчёт должен быть
 сохранён в указанном месте и пригоден для аудита.
 
 Это CKS-задача по security tooling и supply chain, а не упражнение CKA. Большинство
-артефактов анализируются локально на worker; единственное исключение — задание 4, где
+артефактов анализируются локально на worker; единственное исключение - задание 4, где
 нужно применить hardened Deployment для проверки Ready/Available и HTTP smoke test.
 
 ## Threat model
@@ -167,7 +167,7 @@ check_result
 
 ## Задания
 
-`nginx:1.27.3-alpine` — mutable tag, а не закреплённая ссылка. Сначала получите канонический registry manifest digest из `Metadata.RepoDigests[0]` Trivy JSON и используйте immutable reference `nginx:1.27.3-alpine@sha256:<manifest-digest>` (далее `$IMAGE`). Для собственного hardened image сначала соберите и опубликуйте image в registry, доступный кластеру, затем используйте его manifest digest; локальный image ID и layer DiffID не являются registry manifest digest.
+`nginx:1.27.3-alpine` - mutable tag, а не закреплённая ссылка. Сначала получите канонический registry manifest digest из `Metadata.RepoDigests[0]` Trivy JSON и используйте immutable reference `nginx:1.27.3-alpine@sha256:<manifest-digest>` (далее `$IMAGE`). Для собственного hardened image сначала соберите и опубликуйте image в registry, доступный кластеру, затем используйте его manifest digest; локальный image ID и layer DiffID не являются registry manifest digest.
 
 ---
 | **1** | **Trivy: отчёт об уязвимостях образа** |
@@ -184,8 +184,8 @@ check_result
 ---
 | **1b** | **Multi-image CVE triage: найти образ, содержащий конкретный CVE** |
 | :---: | :--- |
-| Что делаем | Откройте `~/cks-111/candidates.txt` - там три immutable image reference (`CANDIDATE_1/2/3`) и целевой `TARGET_CVE`, определённые индивидуально для вашего инстанса лабы во время bootstrap. Просканируйте **все три** образа Trivy и найдите, какой из них реально содержит `TARGET_CVE`. Сохраните JSON-отчёт именно этого образа в `/var/work/tests/artifacts/1b/target-scan.json`, а строку `OFFENDING_IMAGE=<полная ссылка этого образа>` — в `/var/work/tests/artifacts/1b/answer.txt`. |
-| Критерии приёмки | `answer.txt` указывает именно тот `CANDIDATE_N`, чей реальный Trivy-скан содержит `TARGET_CVE`; `target-scan.json` — подлинный вывод Trivy для этого же образа (checker сам повторяет сканирование и сравнивает). |
+| Что делаем | Откройте `~/cks-111/candidates.txt` - там три immutable image reference (`CANDIDATE_1/2/3`) и целевой `TARGET_CVE`, определённые индивидуально для вашего инстанса лабы во время bootstrap. Просканируйте **все три** образа Trivy и найдите, какой из них реально содержит `TARGET_CVE`. Сохраните JSON-отчёт именно этого образа в `/var/work/tests/artifacts/1b/target-scan.json`, а строку `OFFENDING_IMAGE=<полная ссылка этого образа>` - в `/var/work/tests/artifacts/1b/answer.txt`. |
+| Критерии приёмки | `answer.txt` указывает именно тот `CANDIDATE_N`, чей реальный Trivy-скан содержит `TARGET_CVE`; `target-scan.json` - подлинный вывод Trivy для этого же образа (checker сам повторяет сканирование и сравнивает). |
 
 <details>
 <summary>💡 Подсказка к заданию 1b</summary>
@@ -196,20 +196,20 @@ check_result
 ---
 | **1c** | **Workload image triage by CRITICAL severity** |
 | :---: | :--- |
-| Что делаем | В namespace `cks-111` уже развёрнуты 4 Deployment (label `cks.io/task=1c`), каждый с одним immutable digest-pinned image. Получите image references из этих LIVE Deployments (не угадывайте по имени тега), просканируйте **все 4** образа Trivy с `--severity CRITICAL` и посчитайте число уникальных CRITICAL `VulnerabilityID` для каждого. Определите Deployment с наибольшим числом CRITICAL ("самый уязвимый") и два Deployment с наименьшим числом ("два наименее уязвимых") — запишите их имена в `/var/work/tests/artifacts/1c/ranking.txt` как `MOST_VULNERABLE=<deployment-name>`, `LEAST_VULNERABLE_1=<deployment-name>`, `LEAST_VULNERABLE_2=<deployment-name>`. Для образа самого уязвимого Deployment сгенерируйте CycloneDX SBOM **именно Trivy** (`trivy image --format cyclonedx`) в `1c/cyclonedx.json`. Затем remediate: оставьте `replicas > 0` только у двух наименее уязвимых Deployment, остальные два (включая самый уязвимый) масштабируйте на `replicas: 0`. |
-| Критерии приёмки | Checker сам повторяет Trivy CRITICAL-скан всех 4 live images и вычисляет ranking заново — ranking.txt должен совпадать с этим свежим сканированием, а не с устаревшим/угаданным. `cyclonedx.json` — валидный CycloneDX-документ именно от Trivy, относящийся к образу реально самого уязвимого Deployment. Ровно 2 Deployment (наименее уязвимые по свежему скану) имеют `replicas > 0`, остальные 2 — `replicas: 0`. |
+| Что делаем | В namespace `cks-111` уже развёрнуты 4 Deployment (label `cks.io/task=1c`), каждый с одним immutable digest-pinned image. Получите image references из этих LIVE Deployments (не угадывайте по имени тега), просканируйте **все 4** образа Trivy с `--severity CRITICAL` и посчитайте число уникальных CRITICAL `VulnerabilityID` для каждого. Определите Deployment с наибольшим числом CRITICAL ("самый уязвимый") и два Deployment с наименьшим числом ("два наименее уязвимых") - запишите их имена в `/var/work/tests/artifacts/1c/ranking.txt` как `MOST_VULNERABLE=<deployment-name>`, `LEAST_VULNERABLE_1=<deployment-name>`, `LEAST_VULNERABLE_2=<deployment-name>`. Для образа самого уязвимого Deployment сгенерируйте CycloneDX SBOM **именно Trivy** (`trivy image --format cyclonedx`) в `1c/cyclonedx.json`. Затем remediate: оставьте `replicas > 0` только у двух наименее уязвимых Deployment, остальные два (включая самый уязвимый) масштабируйте на `replicas: 0`. |
+| Критерии приёмки | Checker сам повторяет Trivy CRITICAL-скан всех 4 live images и вычисляет ranking заново - ranking.txt должен совпадать с этим свежим сканированием, а не с устаревшим/угаданным. `cyclonedx.json` - валидный CycloneDX-документ именно от Trivy, относящийся к образу реально самого уязвимого Deployment. Ровно 2 Deployment (наименее уязвимые по свежему скану) имеют `replicas > 0`, остальные 2 - `replicas: 0`. |
 
 <details>
 <summary>💡 Подсказка к заданию 1c</summary>
 
-Получайте image references командой вида `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` — не пытайтесь угадать по имени Deployment, какой образ "новее" или "безопаснее". Команда для подсчёта: `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, затем `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. Для CycloneDX используйте именно `trivy image --format cyclonedx --output <file> <ref>` — не Syft (Syft уже используется в задании 7 для другого образа, здесь явно требуется Trivy). Масштабирование делается через `kubectl scale deployment/<name> -n cks-111 --replicas=0` (или `--replicas=1` для оставляемых).
+Получайте image references командой вида `kubectl -n cks-111 get deployment -l cks.io/task=1c -o jsonpath=...` - не пытайтесь угадать по имени Deployment, какой образ "новее" или "безопаснее". Команда для подсчёта: `trivy image --scanners vuln --severity CRITICAL --format json <ref>`, затем `jq '[.Results[]?.Vulnerabilities[]?.VulnerabilityID] | unique | length'`. Для CycloneDX используйте именно `trivy image --format cyclonedx --output <file> <ref>` - не Syft (Syft уже используется в задании 7 для другого образа, здесь явно требуется Trivy). Масштабирование делается через `kubectl scale deployment/<name> -n cks-111 --replicas=0` (или `--replicas=1` для оставляемых).
 </details>
 
 ---
 | **2** | **Исходные отчёты статического анализа** |
 | :---: | :--- |
 | Что делаем | ДО исправлений (не трогая ни одного из этих трёх файлов после начала задания 3) сохраните результаты: Hadolint в `2/hadolint-before.txt`, kubesec JSON в `2/kubesec-before.json`, kube-linter JSON в `2/kube-linter-before.json`, запуская их непосредственно против ИСХОДНЫХ стартовых `Dockerfile`/`deployment.yaml`. Не скрывайте ошибки через `|| true` в файлах отчётов: ненулевой exit code линтера ожидаем. |
-| Критерии приёмки | Все три артефакта существуют; Hadolint содержит findings, kubesec содержит `scoring`, kube-linter — валидный JSON-объект KubeLinter с полями `Reports` и `Summary`; до исправлений `Reports` содержит findings. Checker сравнивает содержимое всех трёх артефактов с собственным baseline, снятым при provisioning против исходных стартовых файлов ДО того, как они были выданы студенту - вручную написанный, но синтаксически валидный отчёт не проходит. |
+| Критерии приёмки | Все три артефакта существуют; Hadolint содержит findings, kubesec содержит `scoring`, kube-linter - валидный JSON-объект KubeLinter с полями `Reports` и `Summary`; до исправлений `Reports` содержит findings. Checker сравнивает содержимое всех трёх артефактов с собственным baseline, снятым при provisioning против исходных стартовых файлов ДО того, как они были выданы студенту - вручную написанный, но синтаксически валидный отчёт не проходит. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -233,7 +233,7 @@ check_result
 | **4** | **Исправить workload YAML по kubesec и kube-linter** |
 | :---: | :--- |
 | Что делаем | Сначала соберите и опубликуйте hardened image из задания 3, затем укажите в `deployment.yaml` его immutable manifest reference `registry/.../catalog@sha256:<manifest-digest>` (не upstream nginx). На уровне Pod добавьте `automountServiceAccountToken: false`, `runAsNonRoot: true`, `seccompProfile: RuntimeDefault`; в контейнере задайте `allowPrivilegeEscalation: false`, `readOnlyRootFilesystem: true`, `capabilities.drop: ["ALL"]`, requests/limits CPU и memory. Для nginx смонтируйте writable `emptyDir`/tmpfs в temp, pid/run, cache и config paths и подготовьте config до старта. Удалите `privileged`, примените Deployment, подтвердите Ready/Available и успешный HTTP request. Сохраните новые отчёты `4/kubesec-after.json` и `4/kube-linter-after.json`. |
-| Критерии приёмки | YAML использует digest-pinned hardened image с `USER 101`, а не upstream nginx; требуемые поля и writable mounts присутствуют; `privileged` отсутствует; Deployment Available и HTTP request успешен; оба итоговых отчёта — валидный JSON. |
+| Критерии приёмки | YAML использует digest-pinned hardened image с `USER 101`, а не upstream nginx; требуемые поля и writable mounts присутствуют; `privileged` отсутствует; Deployment Available и HTTP request успешен; оба итоговых отчёта - валидный JSON. |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
@@ -256,20 +256,20 @@ check_result
 ---
 | **5b** | **Find a package version in workload images and remove offending containers** |
 | :---: | :--- |
-| Что делаем | В namespace `cks-111` уже развёрнут Deployment `pkg-audit-app` с тремя контейнерами (`c1`, `c2`, `c3`), каждый на своём immutable digest-pinned image. Ровно в двух из трёх images присутствует один и тот же пакет конкретной версии — заданные для вашего инстанса лабы `TARGET_PACKAGE`/`TARGET_VERSION` определены динамически при provisioning, зашитых значений нет. Получите все три image references из live Deployment, для каждого выполните `bom generate` (сохраняйте каждый SBOM отдельно в `/var/work/tests/artifacts/5b/bom/`), определите, какие два контейнера реально содержат один и тот же package/version, и запишите найденную пару в `5b/answer.txt` как `TARGET_PACKAGE=<name>` и `TARGET_VERSION=<version>`. Удалите ИМЕННО эти два offending контейнера из Deployment (через `kubectl edit`/`kubectl apply` исправленного манифеста) так, чтобы остался только "чистый" контейнер, а Deployment оставался `Available`. |
+| Что делаем | В namespace `cks-111` уже развёрнут Deployment `pkg-audit-app` с тремя контейнерами (`c1`, `c2`, `c3`), каждый на своём immutable digest-pinned image. Ровно в двух из трёх images присутствует один и тот же пакет конкретной версии - заданные для вашего инстанса лабы `TARGET_PACKAGE`/`TARGET_VERSION` определены динамически при provisioning, зашитых значений нет. Получите все три image references из live Deployment, для каждого выполните `bom generate` (сохраняйте каждый SBOM отдельно в `/var/work/tests/artifacts/5b/bom/`), определите, какие два контейнера реально содержат один и тот же package/version, и запишите найденную пару в `5b/answer.txt` как `TARGET_PACKAGE=<name>` и `TARGET_VERSION=<version>`. Удалите ИМЕННО эти два offending контейнера из Deployment (через `kubectl edit`/`kubectl apply` исправленного манифеста) так, чтобы остался только "чистый" контейнер, а Deployment оставался `Available`. |
 | Критерии приёмки | `answer.txt` называет реальный package/version, присутствующий именно в двух из трёх исходных images (не угаданный); в `5b/bom/` есть хотя бы один настоящий вывод `bom generate`, подтверждающий эту находку. Checker независимо выполняет `bom generate` для исходных candidate images (сохранённых при provisioning) и сверяет ваш ответ с этим независимым запуском. Итоговый Deployment содержит только "чистый" контейнер и остаётся `Available`. |
 
 <details>
 <summary>💡 Подсказка к заданию 5b</summary>
 
-Команда — `bom generate --format json --output <file> --image <ref>` для КАЖДОГО из трёх image references по отдельности. Сравнивайте SBOM попарно: пакет считается "offending", если одна и та же пара `name`/`versionInfo` встречается в SBOM двух контейнеров, но отсутствует (или имеет другую версию) в третьем. Не пытайтесь угадать по имени/тегу образа — некоторые пары образов могут казаться "похожими", но фактическое совпадение пакета определяется только сравнением реальных SBOM. Редактируя Deployment, удаляйте контейнер целиком из `spec.template.spec.containers`, а не просто меняйте его image.
+Команда - `bom generate --format json --output <file> --image <ref>` для КАЖДОГО из трёх image references по отдельности. Сравнивайте SBOM попарно: пакет считается "offending", если одна и та же пара `name`/`versionInfo` встречается в SBOM двух контейнеров, но отсутствует (или имеет другую версию) в третьем. Не пытайтесь угадать по имени/тегу образа - некоторые пары образов могут казаться "похожими", но фактическое совпадение пакета определяется только сравнением реальных SBOM. Редактируя Deployment, удаляйте контейнер целиком из `spec.template.spec.containers`, а не просто меняйте его image.
 </details>
 
 ---
 | **6** | **SPDX SBOM через bom** |
 | :---: | :--- |
 | Что делаем | Сгенерируйте SPDX JSON SBOM инструментом `bom` именно для immutable `$IMAGE` (тот же `tag@digest`, что использовался в задании 1, а не bare tag `nginx:1.27.3-alpine`); сохраните в `/var/work/tests/artifacts/6/bom.spdx.json`. В файл `6/bom-command.txt` запишите выполненную команду с точным `--image $IMAGE`. |
-| Критерии приёмки | SBOM — валидный JSON, имеет `spdxVersion`, содержит массив `packages`; один из top-level пакетов, на который ссылается `documentDescribes`, идентифицирует ТОТ ЖЕ manifest digest, что `$IMAGE` из задания 1 (через `versionInfo`/`name`); `bom-command.txt` содержит точный immutable `$IMAGE` и использует `bom generate`. SBOM для другого образа (не связанного с `$IMAGE` из задания 1) не проходит, даже если `bom-command.txt` подделан. Checker дополнительно самостоятельно перегенерирует SBOM тем же `bom` для того же образа и требует, чтобы набор пакетов (`name`/`versionInfo`) в вашем SBOM совпадал с этим свежим запуском - минимальный вручную написанный SPDX-документ с одним top-level пакетом не проходит. |
+| Критерии приёмки | SBOM - валидный JSON, имеет `spdxVersion`, содержит массив `packages`; один из top-level пакетов, на который ссылается `documentDescribes`, идентифицирует ТОТ ЖЕ manifest digest, что `$IMAGE` из задания 1 (через `versionInfo`/`name`); `bom-command.txt` содержит точный immutable `$IMAGE` и использует `bom generate`. SBOM для другого образа (не связанного с `$IMAGE` из задания 1) не проходит, даже если `bom-command.txt` подделан. Checker дополнительно самостоятельно перегенерирует SBOM тем же `bom` для того же образа и требует, чтобы набор пакетов (`name`/`versionInfo`) в вашем SBOM совпадал с этим свежим запуском - минимальный вручную написанный SPDX-документ с одним top-level пакетом не проходит. |
 
 <details>
 <summary>💡 Подсказка к заданию 6</summary>

@@ -69,7 +69,7 @@ RuntimeClass, выделяет совместимые nodes, задаёт admiss
 Разработчик указывает разрешённый `runtimeClassName`; ему не нужен доступ к containerd или
 SSH на worker node.
 
-> 🧠 gVisor добавляет userspace kernel, Kata — lightweight VM с guest kernel и более сильной изоляцией ценой ресурсов.
+> 🧠 gVisor добавляет userspace kernel, Kata - lightweight VM с guest kernel и более сильной изоляцией ценой ресурсов.
 
 ## 22.2. Два подхода: gVisor и Kata Containers
 
@@ -363,7 +363,7 @@ containerd --version
 sudo sed -n '1,180p' /etc/containerd/config.toml
 ```
 
-Если текущий header — `version = 2`, добавьте handler в старый CRI plugin path:
+Если текущий header - `version = 2`, добавьте handler в старый CRI plugin path:
 
 ```toml
 version = 2
@@ -372,7 +372,7 @@ version = 2
   runtime_type = "io.containerd.runsc.v1"
 ```
 
-Если текущий header — `version = 3` **или** `version = 4`, используйте новый runtime
+Если текущий header - `version = 3` **или** `version = 4`, используйте новый runtime
 plugin path (сам header в существующем файле не меняйте):
 
 ```toml
@@ -381,7 +381,7 @@ plugin path (сам header в существующем файле не меня�
   runtime_type = "io.containerd.runsc.v1"
 ```
 
-containerd 2.x продолжает поддерживать config v2; config v4 — актуальная версия в
+containerd 2.x продолжает поддерживать config v2; config v4 - актуальная версия в
 containerd 2.3, а старые configs мигрируются при запуске. Поэтому не меняйте header
 самовольно ради добавления runtime: сначала сверяйте `version = ...`, effective config и
 documentation вашей поставки containerd.
@@ -413,7 +413,7 @@ Kata требует не только `containerd-shim-kata-v2`, но и выб�
 Kata release, развёрнутый конфигурационным management на отдельном pool. Не копируйте
 бинарник с laptop на production worker.
 
-### Сначала — что именно настраивается
+### Сначала - что именно настраивается
 
 Это настройка **node**, а не Pod: прежде чем Kubernetes сможет запустить Pod в Kata,
 на каждой целевой node должна существовать целая цепочка:
@@ -421,13 +421,13 @@ Kata release, развёрнутый конфигурационным management
 `RuntimeClass.spec.handler` → CRI handler в `containerd` → Kata shim → выбранный backend
 виртуализации → lightweight VM с guest kernel.
 
-- **Kata runtime / shim** — компоненты на node, через которые `containerd` создаёт sandbox
+- **Kata runtime / shim** - компоненты на node, через которые `containerd` создаёт sandbox
   VM; `containerd-shim-kata-v2` должен быть доступен service `containerd`.
-- **Backend (hypervisor)** — механизм VM: обычно QEMU/KVM, а для некоторых Azure/Microsoft
-  Hypervisor конфигураций — Cloud Hypervisor с `mshv`.
-- **CRI handler** — именованная запись в `config.toml`, например `kata` или `kata-qemu`;
+- **Backend (hypervisor)** - механизм VM: обычно QEMU/KVM, а для некоторых Azure/Microsoft
+  Hypervisor конфигураций - Cloud Hypervisor с `mshv`.
+- **CRI handler** - именованная запись в `config.toml`, например `kata` или `kata-qemu`;
   она говорит `containerd`, какой Kata runtime вызвать. Это не имя Pod и не имя binary.
-- **RuntimeClass** — Kubernetes-объект, который позднее передаст kubelet точное имя этого
+- **RuntimeClass** - Kubernetes-объект, который позднее передаст kubelet точное имя этого
   handler. Он не устанавливает Kata и не исправляет node configuration.
 
 Поэтому начинайте не с создания Pod. Безопасный порядок такой:
@@ -439,7 +439,7 @@ Kata release, развёрнутый конфигурационным management
 4. Перезапустите `containerd` и убедитесь через `crictl info`, что handler появился.
 5. Только затем создавайте `RuntimeClass` с тем же handler и запускайте canary Pod.
 
-В следующей проверке `KATA_BACKEND` — не auto-detection. Задайте значение, которое
+В следующей проверке `KATA_BACKEND` - не auto-detection. Задайте значение, которое
 соответствует уже выбранному RuntimeClass/hypervisor: `qemu-kvm` для QEMU/KVM либо
 `clh-azure` / `clh-azure-runtime-rs` для Microsoft Hypervisor. Наличие другого устройства
 не является успехом.
@@ -452,7 +452,7 @@ kata-runtime --version
 sudo kata-runtime check
 
 # Укажите backend фактически выбранного RuntimeClass/hypervisor:
-# qemu-kvm — QEMU/KVM; clh-azure или clh-azure-runtime-rs — Microsoft Hypervisor.
+# qemu-kvm - QEMU/KVM; clh-azure или clh-azure-runtime-rs - Microsoft Hypervisor.
 KATA_BACKEND="${KATA_BACKEND:?set qemu-kvm, clh-azure, or clh-azure-runtime-rs}"
 case "$KATA_BACKEND" in
   qemu-kvm)
@@ -477,9 +477,9 @@ esac
 ```
 
 `kata-runtime check` и `/dev/kvm` относятся к распространённой QEMU/KVM конфигурации.
-Общий критерий — наличие и работоспособность backend-а, который требует выбранный Kata
+Общий критерий - наличие и работоспособность backend-а, который требует выбранный Kata
 RuntimeClass/hypervisor. На Microsoft Hypervisor `/dev/mshv` с mshv-capable VMM, например
-Cloud Hypervisor для `clh-azure`/`clh-azure-runtime-rs`, — поддерживаемая альтернатива;
+Cloud Hypervisor для `clh-azure`/`clh-azure-runtime-rs`, - поддерживаемая альтернатива;
 поэтому отсутствие `/dev/kvm` само по себе не универсальный FAIL. Не маркируйте node как
 `sandbox.runtime/kata=true`, пока выбранный backend, nested virtualization (если нужна) и
 instance type не подтверждены.
@@ -678,7 +678,7 @@ Starting gVisor
 ...
 ```
 
-`...` означает другие строки лога, намеренно не показанные в примере. `Starting gVisor` —
+`...` означает другие строки лога, намеренно не показанные в примере. `Starting gVisor` -
 полезный учебный признак, что workload видит gVisor sandbox kernel. Если `dmesg` запрещён
 или marker отсутствует, не выдавайте Pod дополнительные privileges ради этой строки:
 проверьте `runtimeClassName`, placement и handler.
@@ -706,7 +706,7 @@ Starting gVisor
 | `FailedCreatePodSandBox`, unknown runtime handler | нет блока handler, ошибочное имя или containerd не перечитан | сверить `RuntimeClass.handler`, config.toml, `crictl info`; исправить и restart по runbook |
 | `executable file not found` для shim | shim не установлен или вне PATH service containerd | проверить `command -v`, permissions и systemd Environment |
 | gVisor Pod стартует, приложение ломается | syscall, mount или network feature не поддержаны/иначе реализованы | минимальный reproducer, runtime docs, исправить app либо выбрать иной approved runtime |
-| Kata не стартует | недоступен backend выбранного RuntimeClass, nested virtualization, hypervisor/kernel config или capacity | `kata-runtime check`, для QEMU/KVM — `/dev/kvm`, для Microsoft Hypervisor — `/dev/mshv` и mshv-capable VMM, cloud instance capabilities, logs shim |
+| Kata не стартует | недоступен backend выбранного RuntimeClass, nested virtualization, hypervisor/kernel config или capacity | `kata-runtime check`, для QEMU/KVM - `/dev/kvm`, для Microsoft Hypervisor - `/dev/mshv` и mshv-capable VMM, cloud instance capabilities, logs shim |
 | Pod оказался на обычной node | RuntimeClass без `scheduling`, pool не tainted или указан другой class | проверить class, node name, labels/taints; не считать это sandbox rollout |
 
 Не «лечите» `FailedCreatePodSandBox` удалением `runtimeClassName`: это превращает
@@ -796,7 +796,7 @@ gVisor `runsc` перехватывает большую часть syscalls и 
 <details>
 <summary>3. Чем отличаются `RuntimeClass.metadata.name`, `handler` и `runtime_type` containerd?</summary>
 
-`metadata.name`, например `gvisor`, — значение для `spec.runtimeClassName` в Pod. `handler`, например `runsc`, должен точно совпадать с именем runtime в CRI configuration node. `runtime_type`, например `io.containerd.runsc.v1`, — implementation runtime в конфигурации containerd и не является именем RuntimeClass.
+`metadata.name`, например `gvisor`, - значение для `spec.runtimeClassName` в Pod. `handler`, например `runsc`, должен точно совпадать с именем runtime в CRI configuration node. `runtime_type`, например `io.containerd.runsc.v1`, - implementation runtime в конфигурации containerd и не является именем RuntimeClass.
 </details>
 
 <details>

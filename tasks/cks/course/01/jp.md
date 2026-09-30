@@ -47,7 +47,7 @@ CKS試験はperformance-basedです。提供されるクラスターとノード
 
 Kubernetesのバージョンは区別する必要があります。
 
-- **このコースの学習環境とcore labs `101-113`のバージョンは`v1.36`です**（各ラボ環境の`k8_version = "1.36.0"`）。ここでKubernetes-nativeのコマンド、フラグ、API動作を確認します。third-partyコンポーネントの互換性は、各コンポーネントのsupport matrixで確認してください。構成上の例外はラボ`113`で、タスクのテーマが`v1.36.x`へのminor upgradeそのものであるため、クラスターは`v1.35.x`から開始します。
+- **このコースの学習環境とcore labs `101-114`のバージョンは`v1.36`です**（各ラボ環境の`k8_version = "1.36.0"`）。ここでKubernetes-nativeのコマンド、フラグ、API動作を確認します。third-partyコンポーネントの互換性は、各コンポーネントのsupport matrixで確認してください。構成上の例外はラボ`113`で、タスクのテーマが`v1.36.x`へのminor upgradeそのものであるため、クラスターは`v1.35.x`から開始します。
 - **試験環境のバージョンはLinux Foundationが定め、コースのバージョンより古い場合があります。** [CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/)のメインページはKubernetes **v1.35**を示していますが、Important InstructionsとFAQは独立して更新され、異なるバージョンが一時的に表示されることがあります。特定の受験では、ExamUIと割り当てられた試験の指示が優先されます。公開されているCNCF curriculum overviewはファイル名として[`CKS Curriculum v1.34`](https://github.com/cncf/curriculum/tree/master/cks)のままですが、これはLinux Foundationが受験用に示すパラメータを上書きしません。したがって、**`v1.36`を試験のバージョンとみなさないでください**。
 
 CKSページとFAQは独立して更新されるため、一時的に内容が一致しない場合があります。受験直前に、Kubernetesバージョン、タスクの数と形式、合格点、前提条件、許可リソースを、まずメインの[CKS](https://training.linuxfoundation.org/certification/certified-kubernetes-security-specialist/)ページで、次に割り当てられた受験のExamUIで確認してください。コースに記載されたバージョンやルールを恒久的なものとして信頼してはいけません。
@@ -204,7 +204,7 @@ flowchart TB
 ## 01.9 章のまとめ
 
 - CKSはCKAの続きであり、クラスター、workload、ノード、supply chainを実践的に保護する能力を問います。
-- コースとcore labs `101-113`の対象バージョンはKubernetes v1.36です（ラボ`113`はテーマがv1.36.xへのupgradeそのものであるためv1.35.xから始まります）。
+- コースとcore labs `101-114`の対象バージョンはKubernetes v1.36です（ラボ`113`はテーマがv1.36.xへのupgradeそのものであるためv1.35.xから始まります）。
 - 試験では、複数クラスターとノード設定を扱うターミナル作業への習熟が必要です。
 - 6つのドメインは、クラスター設定、hardening、workload、supply chain、runtime保護を扱います。
 - 2024年curriculumの新しい重点は、Cilium、CIS、SBOM、KubeLinter、sandboxed containersです。
@@ -237,7 +237,7 @@ performance-based形式では、出来合いの回答を選ぶのではなく、
 <details>
 <summary>3. このコースとラボで固定されているKubernetesバージョンは何ですか?</summary>
 
-学習環境とcore labs `101-113`ではKubernetes `v1.36`（`k8_version = "1.36.0"`）に固定されています。試験のバージョンはLinux Foundationが定めるものであり、コースのバージョンから自動的に推測することはできません。
+学習環境とcore labs `101-114`ではKubernetes `v1.36`（`k8_version = "1.36.0"`）に固定されています。試験のバージョンはLinux Foundationが定めるものであり、コースのバージョンから自動的に推測することはできません。
 </details>
 
 <details>

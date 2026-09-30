@@ -655,7 +655,7 @@ v1.31 `kubectl exec` по умолчанию использует WebSocket: HTT
 он включён, WebSocket `GET` для `pods/exec`, `pods/attach` и `pods/portforward` дополнительно
 проходит permission `create`; если администратор отключил gate, этой дополнительной проверки
 нет. Audit verb самого WebSocket request остаётся `get`, поэтому detection учитывает
-фактический audit verb и конфигурацию gate. `ResponseStarted` — первое полезное evidence
+фактический audit verb и конфигурацию gate. `ResponseStarted` - первое полезное evidence
 активного upgrade, не ждите `ResponseComplete`, пока сессия ещё открыта.
 
 ```bash
@@ -672,7 +672,7 @@ sudo jq -r '
   | @tsv
 ' /var/log/kubernetes/audit/audit.log | column -t -s $'\t'
 
-# ephemeralcontainers — обычная update/patch операция с окончательным 2xx outcome.
+# ephemeralcontainers - обычная update/patch операция с окончательным 2xx outcome.
 sudo jq -r '
   select(.stage == "ResponseComplete")
   | select(.objectRef.resource == "pods" and .objectRef.subresource == "ephemeralcontainers")
@@ -718,7 +718,7 @@ sudo jq -r '
 6. **18-20 мин:** проверить rotation, актуальность `apiserver_audit_event_total` /
    `apiserver_audit_error_total` и записать rollback path.
 
-> 🏭 Audit policy в продакшене — часть устойчивого процесса: версионирование, review, central delivery, retention и владелец каждого исключения.
+> 🏭 Audit policy в продакшене - часть устойчивого процесса: версионирование, review, central delivery, retention и владелец каждого исключения.
 
 ## 32.9. Как это применяют в продакшене
 
@@ -808,7 +808,7 @@ backup манифеста → policy и directories → флаги/mounts → д
 <details>
 <summary>1. Какие поля audit event отвечают на «кто», «что», «откуда» и «успешно ли»?</summary>
 
-«Кто» дают `.user.username`, `.user.groups`, `.user.uid` и при наличии `.impersonatedUser`; «что» — `.verb`, `.requestURI` и `.objectRef`. Для «откуда» используют `.sourceIPs` и `.userAgent`, но сверяют их с доверенным proxy и другими источниками. Успех показывает `.responseStatus.code` и `.responseStatus.reason`.
+«Кто» дают `.user.username`, `.user.groups`, `.user.uid` и при наличии `.impersonatedUser`; «что» - `.verb`, `.requestURI` и `.objectRef`. Для «откуда» используют `.sourceIPs` и `.userAgent`, но сверяют их с доверенным proxy и другими источниками. Успех показывает `.responseStatus.code` и `.responseStatus.reason`.
 </details>
 
 <details>
@@ -820,7 +820,7 @@ backup манифеста → policy и directories → флаги/mounts → д
 <details>
 <summary>3. Чем `Metadata` отличается от `Request` и почему Secret не следует писать на `RequestResponse`?</summary>
 
-`Metadata` сохраняет identity, URI, verb, objectRef, timestamps и status без request/response body. `Request` добавляет `.requestObject`, а `RequestResponse` — ещё и `.responseObject`. Body Secret может содержать токены и passwords, поэтому для Secrets ставят `Metadata`, а высокий level применяют только в узком согласованном forensic case.
+`Metadata` сохраняет identity, URI, verb, objectRef, timestamps и status без request/response body. `Request` добавляет `.requestObject`, а `RequestResponse` - ещё и `.responseObject`. Body Secret может содержать токены и passwords, поэтому для Secrets ставят `Metadata`, а высокий level применяют только в узком согласованном forensic case.
 </details>
 
 <details>
@@ -838,7 +838,7 @@ Rules проверяются сверху вниз, и API server применя
 <details>
 <summary>6. Что ограничивают `--audit-log-maxsize`, `--audit-log-maxbackup` и `--audit-log-maxage` и почему этого недостаточно для compliance retention?</summary>
 
-`maxsize` задаёт размер активного файла до rotation, `maxbackup` — число старых копий, а `maxage` — максимальный возраст copies. Это ограничивает локальный operational buffer, но node может быть скомпрометирована, удалена или заполнена. Compliance требует отдельно определённых central storage, доступа, encryption, retention, legal hold и tamper resistance.
+`maxsize` задаёт размер активного файла до rotation, `maxbackup` - число старых копий, а `maxage` - максимальный возраст copies. Это ограничивает локальный operational buffer, но node может быть скомпрометирована, удалена или заполнена. Compliance требует отдельно определённых central storage, доступа, encryption, retention, legal hold и tamper resistance.
 </details>
 
 <details>

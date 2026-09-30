@@ -1,4 +1,4 @@
-# Лаба 111 — эталонное решение
+# Лаба 111 - эталонное решение
 
 Все команды выполняются на worker. Сначала задайте общие переменные и убедитесь, что
 используются установленные pinned binaries:
@@ -175,7 +175,7 @@ printf '%s\n' "$HARDENED_IMAGE"   # <IP>:5000/catalog@sha256:<manifest-digest>
 
 ## 4. Исправить Deployment
 
-`readOnlyRootFilesystem` требует writable runtime paths nginx. `emptyDir` даёт их адресно; init container (также hardened image с `USER 101`) копирует default config в отдельный writable config volume. `$HARDENED_IMAGE` — собранная и digest-pinned ссылка из задания 3, не upstream image.
+`readOnlyRootFilesystem` требует writable runtime paths nginx. `emptyDir` даёт их адресно; init container (также hardened image с `USER 101`) копирует default config в отдельный writable config volume. `$HARDENED_IMAGE` - собранная и digest-pinned ссылка из задания 3, не upstream image.
 
 ```bash
 cat > "$ROOT/deployment.yaml" <<EOF
