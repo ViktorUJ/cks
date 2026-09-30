@@ -25,16 +25,16 @@ dependency "vpc" {
 }
 
 inputs = {
-  questions_list    = local.vars.locals.questions_list
-  solutions_scripts = local.vars.locals.solutions_scripts
-  solutions_video   = local.vars.locals.solutions_video
-  region            = local.vars.locals.region
-  aws               = local.vars.locals.aws
-  prefix            = local.vars.locals.prefix
-  tags_common       = local.vars.locals.tags
-  app_name          = "docker-worker"
-  subnets           = dependency.vpc.outputs.subnets
-  vpc_id            = dependency.vpc.outputs.vpc_id
+  questions_list        = local.vars.locals.questions_list
+  solutions_scripts     = local.vars.locals.solutions_scripts
+  solutions_video       = local.vars.locals.solutions_video
+  region                = local.vars.locals.region
+  aws                   = local.vars.locals.aws
+  prefix                = local.vars.locals.prefix
+  tags_common           = local.vars.locals.tags
+  app_name              = "docker-worker"
+  subnets               = dependency.vpc.outputs.subnets
+  vpc_id                = dependency.vpc.outputs.vpc_id
   all_spot_subnet       = local.vars.locals.all_spot_subnet
   spot_additional_types = local.vars.locals.spot_additional_types
 

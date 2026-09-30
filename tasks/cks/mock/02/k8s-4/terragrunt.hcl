@@ -24,16 +24,16 @@ dependency "ssh-keys" {
 }
 
 inputs = {
-  region       = local.vars.locals.region
-  aws          = local.vars.locals.aws
-  prefix       = "cluster4"
-  tags_common  = local.vars.locals.tags
-  app_name     = "k8s"
-  subnets      = dependency.vpc.outputs.subnets
-  vpc_id       = dependency.vpc.outputs.vpc_id
-  cluster_name = "k8s4"
-  node_type    = local.vars.locals.node_type
-  ssh_password_enable =local.vars.locals.ssh_password_enable
+  region                = local.vars.locals.region
+  aws                   = local.vars.locals.aws
+  prefix                = "cluster4"
+  tags_common           = local.vars.locals.tags
+  app_name              = "k8s"
+  subnets               = dependency.vpc.outputs.subnets
+  vpc_id                = dependency.vpc.outputs.vpc_id
+  cluster_name          = "k8s4"
+  node_type             = local.vars.locals.node_type
+  ssh_password_enable   = local.vars.locals.ssh_password_enable
   spot_additional_types = local.vars.locals.spot_additional_types
   all_spot_subnet       = local.vars.locals.all_spot_subnet
 

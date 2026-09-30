@@ -9,7 +9,7 @@ locals {
 terraform {
   source = "../../..//modules/k8s_self_managment_v2/"
   extra_arguments "retry_lock" {
-    commands = get_terraform_commands_that_need_locking()
+    commands  = get_terraform_commands_that_need_locking()
     arguments = ["-lock-timeout=20m"]
   }
 
@@ -38,7 +38,7 @@ inputs = {
 
   k8s_master = {
     k8_version         = local.vars.locals.k8_version
-    runtime = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
+    runtime            = local.vars.locals.runtime # docker  , cri-o  , containerd ( need test it ) , containerd_gvizor
     runtime_script     = "template/runtime.sh"
     instance_type      = local.vars.locals.instance_type
     key_name           = local.vars.locals.key_name

@@ -8,3 +8,7 @@ venv
 /docker/ping_pong/dist/*
 terraform/environments/**/**
 **.vscode
+
+# Generated Python bytecode
+__pycache__/
+*.py[cod]
