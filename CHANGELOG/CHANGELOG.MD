@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.36.1 (30.09.2026)
+### Features
+* KCSA  [self-study course](../tasks/kcsa/course/README.md) is added. Available in 8 languages: Russian (source), English, Spanish, French, German, Georgian, Traditional Chinese and Japanese.
+
 ## 0.35.1 (25.08.2026)
 ### Features
 * Amazon EKS [self-study course](../tasks/eks/course/README.md) is added: 48 chapters (Part 0 - an optional foundation on AWS accounts, IAM, VPC, EC2 and tooling; Parts 1-9 - cluster architecture, nodes and compute, identity and security, storage, networking, observability, operations and troubleshooting) tied to the hands-on labs. Available in 8 languages: Russian (source), English, Spanish, French, German, Georgian, Traditional Chinese and Japanese.
