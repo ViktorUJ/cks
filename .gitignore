@@ -8,3 +8,4 @@ venv
 /docker/ping_pong/dist/*
 terraform/environments/**/**
 **.vscode
+*.DS_Store
