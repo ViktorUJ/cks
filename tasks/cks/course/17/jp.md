@@ -249,7 +249,7 @@ application 自身が filter を設定していない privileged container で�
 
 `Unconfined` は container のこの layer を無効にします。test node での controlled comparison など短い exception として使うことはできますが、恒久的な `Operation not permitted` の「解決策」にしてはいけません。owner、removal deadline、具体的な理由を記録し、その後 least privilege を復元してください。
 
-古い manifest は annotation `seccomp.security.alpha.kubernetes.io/pod` または `container.seccomp.security.alpha.kubernetes.io/<container>` を使用することがあります。これは historical interface です。Kubernetes v1.25 以降、これらの annotation は**機能せず**、seccomp profile を割り当てません。modern cluster での存在は working compatibility ではなく audit の signal です。`securityContext.seccompProfile` に置き換えてください。特に異なる値で annotation と API field を混在させないでください。migration 後は新しい Pod を test し、その effective mode を確認します。
+古い manifest は annotation `seccomp.security.alpha.kubernetes.io/pod` または `container.seccomp.security.alpha.kubernetes.io/<container>` を使用することがあります。これは historical interface です。Kubernetes v1.27 以降、これらの annotation は**機能せず**、seccomp profile を割り当てません。modern cluster での存在は working compatibility ではなく audit の signal です。`securityContext.seccompProfile` に置き換えてください。特に異なる値で annotation と API field を混在させないでください。migration 後は新しい Pod を test し、その effective mode を確認します。
 
 > 🎯 OCI seccomp format に従って `Localhost` の JSON profile を作成し、対象 node に load して、container の effective mode を確認してください。
 

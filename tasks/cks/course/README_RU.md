@@ -1,3 +1,5 @@
+[Eng version](README.md) · [Versión en español](README_ES.md) · [Version française](README_FR.md) · [Deutsche Version](README_DE.md) · [ქართული ვერსია](README_GE.md) · [繁體中文版](README_TW.md) · [日本語版](README_JP.md)
+
 # CKS: практический самоучитель по безопасности Kubernetes
 
 Практический курс подготовки к **CKS (Certified Kubernetes Security Specialist)** - сертификации CNCF и Linux Foundation по защите Kubernetes. Это продолжение [курса CKA + CKAD](../../cka/course/README_RU.md): предполагается, что вы уже умеете администрировать кластер, работать с `kubectl`, RBAC, NetworkPolicy, SecurityContext, kubeadm и TLS. CKS не повторяет эту базу, а применяет её к моделям угроз, hardening и расследованию инцидентов.
@@ -16,7 +18,7 @@
 
 ## Как устроен курс
 
-Каждая тема - каталог с номером и русским исходником `ru.md`. Переводы появятся в `README.md`, `es.md`, `fr.md`, `de.md`, `ge.md`, `tw.md` и `jp.md`; ссылку на язык добавляют в переключатель только вместе с соответствующим файлом. Главы сгруппированы по доменам CKS и помечены цветом:
+Каждая тема - каталог с номером и файлами по языкам: русский исходник `ru.md` и переводы `README.md` (English), `es.md`, `fr.md`, `de.md`, `ge.md`, `tw.md`, `jp.md`. Главы сгруппированы по доменам CKS и помечены цветом:
 
 - 🟦 Cluster Setup - 15%
 - 🟥 Cluster Hardening - 15%

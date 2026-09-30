@@ -363,7 +363,7 @@ privileged კონტეინერისთვის.
 ძველმა manifest-ებმა შეიძლება გამოიყენონ annotation
 `seccomp.security.alpha.kubernetes.io/pod` ან
 `container.seccomp.security.alpha.kubernetes.io/<container>`. ეს ისტორიული
-ინტერფეისია: Kubernetes v1.25-იდან ეს annotations **არაფუნქციონალურია** და
+ინტერფეისია: Kubernetes v1.27-იდან ეს annotations **არაფუნქციონალურია** და
 seccomp profile-ს არ ანიჭებს. მათი არსებობა თანამედროვე კლასტერში audit-ისთვის
 სიგნალია და არა მოქმედი თავსებადობა; ჩაანაცვლეთ ისინი `securityContext.seccompProfile`-ით.
 ნუ აურევთ annotation-სა და API-ველს ერთად, განსაკუთრებით სხვადასხვა

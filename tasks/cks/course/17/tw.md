@@ -317,7 +317,7 @@ removal deadline 與具體原因，然後恢復 least privilege。
 
 舊 manifest 可能使用 annotation `seccomp.security.alpha.kubernetes.io/pod` 或
 `container.seccomp.security.alpha.kubernetes.io/<container>`。這是歷史 interface：自 Kubernetes
-v1.25 起，這些 annotations **沒有功能**，不會指派 seccomp profile。它們存在於現代 cluster 是
+v1.27 起，這些 annotations **沒有功能**，不會指派 seccomp profile。它們存在於現代 cluster 是
 audit signal，而不是可用 compatibility；改為 `securityContext.seccompProfile`。不要混用 annotation
 與 API field，特別是 values 不同時。遷移後，測試新 Pod 並確認 effective mode。
 

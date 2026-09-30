@@ -852,10 +852,38 @@ except Exception:
       kubeconfig_ok=true
     fi
   fi
+  # Provenance chain: john-csr.status.certificate -> john.crt/john.key -> john.kubeconfig.
+  # CN=john + a working TLS login would also pass for a SECOND CSR with the same CN, so
+  # compare fingerprints to prove the saved files really come from john-csr.
+  saved_cert_matches_csr=false
+  saved_key_matches_cert=false
+  kubeconfig_credentials_match=false
+  if [[ -s "$crt_file" && -s "$key_file" && -n "$cert_pem" ]]; then
+    csr_cert_fp=$(printf '%s\n' "$cert_pem" | openssl x509 -outform DER 2>/dev/null | sha256sum | awk '{print $1}' || true)
+    saved_cert_fp=$(openssl x509 -in "$crt_file" -outform DER 2>/dev/null | sha256sum | awk '{print $1}' || true)
+    [[ -n "$csr_cert_fp" && "$csr_cert_fp" == "$saved_cert_fp" ]] && saved_cert_matches_csr=true
+    saved_cert_pub_fp=$(openssl x509 -in "$crt_file" -pubkey -noout 2>/dev/null | openssl pkey -pubin -outform DER 2>/dev/null | sha256sum | awk '{print $1}' || true)
+    saved_key_pub_fp=$(openssl pkey -in "$key_file" -pubout -outform DER 2>/dev/null | sha256sum | awk '{print $1}' || true)
+    [[ -n "$saved_cert_pub_fp" && "$saved_cert_pub_fp" == "$saved_key_pub_fp" ]] && saved_key_matches_cert=true
+  fi
+  if [[ -s "$kubeconfig_file" && "$saved_cert_matches_csr" == "true" && "$saved_key_matches_cert" == "true" ]]; then
+    kubeconfig_json=$(kubectl config view --raw --flatten --kubeconfig="$kubeconfig_file" -o json 2>/dev/null || true)
+    current_context=$(jq -r '."current-context" // ""' <<<"$kubeconfig_json" 2>/dev/null || true)
+    current_user=$(jq -r --arg ctx "$current_context" '.contexts[]? | select(.name == $ctx) | .context.user // ""' <<<"$kubeconfig_json" 2>/dev/null || true)
+    embedded_cert_b64=$(jq -r --arg u "$current_user" '.users[]? | select(.name == $u) | .user["client-certificate-data"] // ""' <<<"$kubeconfig_json" 2>/dev/null || true)
+    embedded_key_b64=$(jq -r --arg u "$current_user" '.users[]? | select(.name == $u) | .user["client-key-data"] // ""' <<<"$kubeconfig_json" 2>/dev/null || true)
+    if [[ -n "$embedded_cert_b64" && -n "$embedded_key_b64" ]]; then
+      kube_cert_fp=$(printf '%s' "$embedded_cert_b64" | base64 -d 2>/dev/null | openssl x509 -outform DER 2>/dev/null | sha256sum | awk '{print $1}' || true)
+      kube_key_pub_fp=$(printf '%s' "$embedded_key_b64" | base64 -d 2>/dev/null | openssl pkey -pubout -outform DER 2>/dev/null | sha256sum | awk '{print $1}' || true)
+      [[ "$kube_cert_fp" == "$saved_cert_fp" && "$kube_key_pub_fp" == "$saved_key_pub_fp" ]] && kubeconfig_credentials_match=true
+    fi
+  fi
   if [[ "$signer_ok" == "true" && "$approved" == "true" && "$cn_ok" == "true" && "$chain_ok" == "true" \
     && "$can_create" == "yes" && "$can_list" == "yes" && "$can_get" == "yes" && "$cannot_delete" == "no" \
     && "$cannot_other_ns" == "no" && "$cannot_get_secret" == "no" && "$cannot_update_cm" == "no" \
-    && "$john_structure_ok" == "true" && "$real_auth_ok" == "true" && "$kubeconfig_ok" == "true" ]]; then
+    && "$john_structure_ok" == "true" && "$real_auth_ok" == "true" && "$kubeconfig_ok" == "true" \
+    && "$saved_cert_matches_csr" == "true" && "$saved_key_matches_cert" == "true" \
+    && "$kubeconfig_credentials_match" == "true" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -879,8 +907,14 @@ except Exception:
       echo "HINT: Presenting the saved certificate/key directly to the API server over TLS (not via 'kubectl auth can-i --as') did not behave as expected - a request to /api/v1/namespaces/development/pods should return 200 and the same request against namespace '$NS' should return 403. Save the issued certificate as $crt_file and its private key as $key_file (PEM format)."
     elif [[ "$kubeconfig_ok" != "true" ]]; then
       echo "HINT: $kubeconfig_file is missing, or 'kubectl --kubeconfig=$kubeconfig_file get pods -n development' does not succeed, or the same command against namespace '$NS' does not fail with Forbidden, or 'kubectl --kubeconfig=$kubeconfig_file auth whoami' does not report username 'john' (got '${kubeconfig_whoami:-<empty>}'). Build a real kubeconfig for john from the issued cert/key (kubectl config set-cluster/set-credentials --client-certificate/--client-key/set-context/use-context, all with --kubeconfig=$kubeconfig_file) - this proves you assembled a usable client identity that actually authenticates as john, not just that some cert/key pair happens to work over curl."
+    elif [[ "$saved_cert_matches_csr" != "true" ]]; then
+      echo "HINT: $crt_file is not the certificate issued in john-csr.status.certificate. Save the certificate from john-csr itself, not another valid certificate with the same CN."
+    elif [[ "$saved_key_matches_cert" != "true" ]]; then
+      echo "HINT: $key_file does not match the public key of $crt_file. Preserve the private key used to generate john-csr."
+    elif [[ "$kubeconfig_credentials_match" != "true" ]]; then
+      echo "HINT: $kubeconfig_file does not use the same client certificate/private key saved as john.crt/john.key. Build the kubeconfig from those exact credentials (embed them with --embed-certs=true)."
     fi
-    echo "signer_ok=$signer_ok approved=$approved cn_ok=$cn_ok chain_ok=$chain_ok can_create=$can_create can_list=$can_list can_get=$can_get cannot_delete=$cannot_delete cannot_other_ns=$cannot_other_ns cannot_get_secret=$cannot_get_secret cannot_update_cm=$cannot_update_cm john_structure_ok=$john_structure_ok real_auth_ok=$real_auth_ok kubeconfig_ok=$kubeconfig_ok kubeconfig_whoami=$kubeconfig_whoami"
+    echo "signer_ok=$signer_ok approved=$approved cn_ok=$cn_ok chain_ok=$chain_ok can_create=$can_create can_list=$can_list can_get=$can_get cannot_delete=$cannot_delete cannot_other_ns=$cannot_other_ns cannot_get_secret=$cannot_get_secret cannot_update_cm=$cannot_update_cm john_structure_ok=$john_structure_ok real_auth_ok=$real_auth_ok kubeconfig_ok=$kubeconfig_ok kubeconfig_whoami=$kubeconfig_whoami saved_cert_matches_csr=$saved_cert_matches_csr saved_key_matches_cert=$saved_key_matches_cert kubeconfig_credentials_match=$kubeconfig_credentials_match"
     result=1
   fi
   [ "$result" -eq 0 ]

@@ -248,7 +248,7 @@ Para un contenedor privileged sin un filtro instalado por la propia aplicación,
 
 `Unconfined` deshabilita esta capa para un contenedor. Puede usarse como una excepción breve, por ejemplo para una comparación controlada en una node de prueba, pero no como una "solución" permanente a `Operation not permitted`. Registre el responsable, la fecha límite de retirada y el motivo específico; después restaure el mínimo privilegio.
 
-Los manifests antiguos pueden usar la annotation `seccomp.security.alpha.kubernetes.io/pod` o `container.seccomp.security.alpha.kubernetes.io/<container>`. Esta es una interfaz histórica: desde Kubernetes v1.25, estas annotations son **no funcionales** y no asignan un profile seccomp. Su presencia en un clúster moderno es una señal de audit, no compatibilidad funcional; sustitúyalas por `securityContext.seccompProfile`. No mezcle la annotation y el campo de API, especialmente con valores distintos. Después de migrar, pruebe el nuevo Pod y compruebe su modo efectivo.
+Los manifests antiguos pueden usar la annotation `seccomp.security.alpha.kubernetes.io/pod` o `container.seccomp.security.alpha.kubernetes.io/<container>`. Esta es una interfaz histórica: desde Kubernetes v1.27, estas annotations son **no funcionales** y no asignan un profile seccomp. Su presencia en un clúster moderno es una señal de audit, no compatibilidad funcional; sustitúyalas por `securityContext.seccompProfile`. No mezcle la annotation y el campo de API, especialmente con valores distintos. Después de migrar, pruebe el nuevo Pod y compruebe su modo efectivo.
 
 > 🎯 Cree un profile JSON `Localhost` en formato OCI seccomp, cárguelo en la node requerida y confirme el modo efectivo del contenedor.
 

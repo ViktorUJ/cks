@@ -248,7 +248,7 @@ For a privileged container without a filter installed by the application itself,
 
 `Unconfined` disables this layer for a container. It can be used as a short exception, for example for a controlled comparison on a test node, but not as a permanent "solution" to `Operation not permitted`. Record the owner, removal deadline, and specific reason; then restore least privilege.
 
-Old manifests can use the `seccomp.security.alpha.kubernetes.io/pod` or `container.seccomp.security.alpha.kubernetes.io/<container>` annotation. This is a historical interface: since Kubernetes v1.25 these annotations are **non-functional** and do not assign a seccomp profile. Their presence in a modern cluster is an audit signal, not working compatibility; replace them with `securityContext.seccompProfile`. Do not mix the annotation and API field, especially with different values. After migration, test the new Pod and check its effective mode.
+Old manifests can use the `seccomp.security.alpha.kubernetes.io/pod` or `container.seccomp.security.alpha.kubernetes.io/<container>` annotation. This is a historical interface: since Kubernetes v1.27 these annotations are **non-functional** and do not assign a seccomp profile. Their presence in a modern cluster is an audit signal, not working compatibility; replace them with `securityContext.seccompProfile`. Do not mix the annotation and API field, especially with different values. After migration, test the new Pod and check its effective mode.
 
 > 🎯 Build a `Localhost` JSON profile in OCI seccomp format, load it on the required node, and confirm the container's effective mode.
 

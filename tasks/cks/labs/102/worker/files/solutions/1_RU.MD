@@ -136,7 +136,7 @@ policy - DNS и оба контрольных endpoint должны быть р�
 сертификат fixture):
 
 ```bash
-k -n cks-102 exec frontend -- getent hosts allowed.cks102.test
+k -n cks-102 exec frontend -- nslookup allowed.cks102.test
 k -n cks-102 exec frontend -- curl -sSk -o /dev/null -w 'allowed:443 HTTP:%{http_code}\n' -m10 https://allowed.cks102.test/
 k -n cks-102 exec frontend -- curl -sS -o /dev/null -w 'allowed:80 HTTP:%{http_code}\n' -m5 http://allowed.cks102.test:80/
 k -n cks-102 exec frontend -- curl -sSk -o /dev/null -w 'blocked:443 HTTP:%{http_code}\n' -m10 https://blocked.cks102.test/

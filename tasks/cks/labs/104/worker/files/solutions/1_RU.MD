@@ -82,6 +82,31 @@ k auth can-i delete secrets -n security-104 \
 # no
 ```
 
+Проверяем не только наличие файла, но и то, что именно смонтированный projected token
+реально аутентифицируется как ожидаемый ServiceAccount, отправив его в `TokenReview`:
+
+```bash
+TOKEN=$(k exec -n security-104 token-client -- cat /var/run/secrets/tokens/api-token)
+
+k create -o jsonpath='{.status.authenticated}{" "}{.status.user.username}{"\n"}' -f - <<EOF
+apiVersion: authentication.k8s.io/v1
+kind: TokenReview
+spec:
+  token: $TOKEN
+EOF
+# true system:serviceaccount:security-104:api-client
+```
+
+Для лабораторной работы эта проверка обязательна: наличие файла само по себе не доказывает,
+что projected token валиден и аутентифицируется как ожидаемый ServiceAccount. `TokenReview`
+должен вернуть `authenticated: true` и username
+`system:serviceaccount:security-104:api-client`.
+
+На экзамене отдельно выполнять `TokenReview` не нужно, если этого не требует условие задачи:
+там достаточно быстро создать корректный projected token volume и проверить результат тем
+способом, который нужен в конкретном задании. Здесь `TokenReview` - учебная verification-проверка,
+которая одновременно соответствует критерию приёмки лабораторной работы.
+
 ## 3. Pod без токена API
 
 Отключаем автомонтирование и на ServiceAccount, и на Pod: это защищает от последующих
@@ -259,20 +284,37 @@ k delete clusterrolebinding lab104-unintended-anonymous-access
 k delete clusterrole lab104-anonymous-debug-access
 ```
 
-Подтверждаем отзыв реальным негативным контролем от имени именно неаутентифицированной
-идентичности, а не просто отсутствием объекта:
+Подтверждаем отзыв негативным контролем от имени именно неаутентифицированной идентичности
+(`system:anonymous` + группа `system:unauthenticated`, и больше ничего) через
+`SubjectAccessReview` - его создаёт admin-контекст, поэтому список групп не приходится
+искусственно расширять:
 
 ```bash
-k auth can-i get pods -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
-k auth can-i get secrets -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
-k auth can-i get configmaps -A --as=system:anonymous --as-group=system:unauthenticated --as-group=system:authenticated
-# no / no / no
+for R in pods secrets configmaps; do
+  for NS in $(k get ns -o jsonpath='{.items[*].metadata.name}'); do
+    ALLOWED=$(k create -o jsonpath='{.status.allowed}' -f - <<EOF
+apiVersion: authorization.k8s.io/v1
+kind: SubjectAccessReview
+spec:
+  user: system:anonymous
+  groups: ["system:unauthenticated"]
+  resourceAttributes:
+    namespace: $NS
+    resource: $R
+    verb: get
+EOF
+    )
+    printf '%-12s %-24s %s\n' "$R" "$NS" "$ALLOWED"
+  done
+done
+# для каждой строки ожидается false
 ```
 
-Второй `--as-group=system:authenticated` нужен только чтобы impersonated-идентичность вообще
-могла выполнить сам запрос `can-i` (SelfSubjectAccessReview); без него `system:anonymous`
-получит `Forbidden` вместо `no`, что не доказывает отзыв прав. Эта группа не даёт доступа к
-Pod/Secret/ConfigMap - если бы lab-owned binding остался, ответ был бы `yes`.
+Не добавляйте `--as-group=system:authenticated` в `can-i --as=system:anonymous`: реальный
+неаутентифицированный запрос в эту группу не входит, и проверка перестанет отражать
+настоящую anonymous-идентичность. Проверяем каждый namespace отдельно, потому что
+RoleBinding действует только в своём namespace: отсутствие cluster-wide привязки не
+доказывает отсутствие локальной, а критерий приёмки запрещает доступ ни в одном namespace.
 
 В конце выполните `check_result`.
 
