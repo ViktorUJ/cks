@@ -382,13 +382,15 @@ ssh control-plane 'sudo apparmor_parser -Q /etc/apparmor.d/k8s-106-broken-profil
 # ... syntax error, unexpected TOK_CLOSE, expecting TOK_END_OF_RULE
 ```
 
-Обязательно с `sudo`, даже с флагом `-Q`/`--skip-kernel-load`: этот флаг лишь пропускает
-загрузку профиля в ЯДРО, но `apparmor_parser` всё равно пытается настроить policy cache в
-`/var/cache/apparmor` при каждом запуске. Без привилегий это падает с "Failed setting up
-policy cache (/var/cache/apparmor): Permission denied" ДО того, как парсер доходит до
-проверки синтаксиса - вы получите обманчивую ошибку о правах доступа вместо реальной
-синтаксической ошибки, а `apparmor-debug.txt` не будет содержать нужный текст "syntax
-error" для проверки.
+Используем `sudo` и для compile-only проверки `-Q`: на ноде лабы (apparmor 3.0.4, Ubuntu)
+без привилегий парсер при каждом запуске пытается настроить policy cache в
+`/var/cache/apparmor` и падает с "Failed setting up policy cache (/var/cache/apparmor):
+Permission denied" ДО проверки синтаксиса - вы получите обманчивую ошибку о правах вместо
+реальной синтаксической ошибки, а `apparmor-debug.txt` не будет содержать нужный текст
+"syntax error". Проверено на самой ноде, в том числе на заведомо сломанном профиле.
+Альтернатива без `sudo` - добавить `-K`/`--skip-cache` (`apparmor_parser -Q -K ...`): без
+кэширования парсер доходит до разбора профиля. `sudo` в этой лабе выбран для единого
+workflow с последующим `-r`, который в любом случае требует привилегий.
 
 Исправляем: правило AppArmor обязано завершаться запятой.
 

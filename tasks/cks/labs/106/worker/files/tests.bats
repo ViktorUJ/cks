@@ -7,14 +7,14 @@ NODE_LABEL="security.cks.io/localhost-profiles-106"
 AA_PROFILE="k8s-106-deny-write"
 SECCOMP_PROFILE="profiles/cks-106-deny-unshare.json"
 
-# Lab-owned canonical AppArmor profile (worker-side fixture). Whitespace is ignored when
-# comparing, so harmless reformatting of the flags list does not matter, but any change to
-# the rules does. Only one change is allowed: Task 2 removes the 'complain' flag.
-aa_norm() { tr -d '[:space:]'; }
-canonical_aa_profile_complain() { cat "/opt/lab106-fixtures/${AA_PROFILE}" 2>/dev/null | aa_norm; }
-canonical_aa_profile_enforce() { sed 's/, complain,/,/' "/opt/lab106-fixtures/${AA_PROFILE}" 2>/dev/null | aa_norm; }
+# Lab-owned canonical AppArmor profile (worker-side fixture). Compared byte for byte (command
+# substitution drops the trailing newline on both sides): whitespace separates AppArmor
+# tokens, so it must not be normalised away. Task 1 copies the fixture as-is; Task 2 may only
+# remove the 'complain' flag.
+canonical_aa_profile_complain() { cat "/opt/lab106-fixtures/${AA_PROFILE}" 2>/dev/null; }
+canonical_aa_profile_enforce() { sed 's/, complain,/,/' "/opt/lab106-fixtures/${AA_PROFILE}" 2>/dev/null; }
 read_node_aa_profile() {
-  ssh -o BatchMode=yes control-plane "sudo cat /etc/apparmor.d/${AA_PROFILE} 2>/dev/null" 2>/dev/null | aa_norm || true
+  ssh -o BatchMode=yes control-plane "sudo cat /etc/apparmor.d/${AA_PROFILE} 2>/dev/null" 2>/dev/null || true
 }
 
 @test "0 Init" {
