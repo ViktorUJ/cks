@@ -372,7 +372,7 @@ kubectl get --raw "/api/v1/nodes/${node}/proxy/configz" | jq '.kubeletconfig.sec
 хватает запятой после правила `deny /work/** w`. Сначала находим ошибку без загрузки в
 ядро. `-p`/`--preprocess` здесь НЕ подходит - это preprocessing (разворачивает
 `#include` в stdout), а не safe dry-run/syntax-check. Используем `-Q`/`--skip-kernel-load`
-(полная компиляция/проверка без загрузки в ядро, без привилегий) или `-d`/`--debug`
+(полная компиляция/проверка без загрузки в ядро) или `-d`/`--debug`
 (однократно - только syntax check):
 
 ```bash

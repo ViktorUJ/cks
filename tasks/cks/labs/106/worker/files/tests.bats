@@ -119,7 +119,7 @@ read_node_aa_profile() {
       echo "HINT: /var/lib/cks-lab106-checker (dir='$baseline_dir_owner_mode') or its bootstrap-baseline-1.txt (file='$baseline_file_owner_mode') is not locked down to root:root 0700/0400 as expected - this is an infrastructure precondition failure, not something you can fix from inside the lab. Contact the lab operator."
     elif [[ "$bootstrap_baseline_ok" != "yes" ]]; then
       echo "HINT: the checker's own bootstrap-time baseline shows the write probe under the complain-mode profile did NOT succeed as expected before the lab started - this is an infrastructure precondition failure, not something you can fix from inside the lab. Contact the lab operator."
-    elif [[ "$profile_matches_enforce_fixture" != "yes" ]]; then
+    elif [[ "$profile_matches_enforce_fixture" != "yes" && "$current_profile" != "$(canonical_aa_profile_complain)" ]]; then
       echo "HINT: The enforced profile on disk no longer matches the lab fixture. Preserve the supplied rules exactly and change only the profile mode from complain to enforce."
     else
       echo "HINT: /sys/kernel/security/apparmor/profiles does not contain a line '${AA_PROFILE} (enforce)'. Load the profile with 'apparmor_parser -r /etc/apparmor.d/${AA_PROFILE}' then 'aa-enforce /etc/apparmor.d/${AA_PROFILE}' (or edit the flags and reload) - the file being present is not enough, it must actually be parsed and loaded into the kernel in enforce mode. Note: 'aa-status' output does NOT show a per-profile '(enforce)' suffix in its profile list, so do not rely on grepping that command's output for this string."
