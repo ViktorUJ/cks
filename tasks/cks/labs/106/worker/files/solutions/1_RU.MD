@@ -35,9 +35,9 @@ ssh control-plane "sudo cat /sys/kernel/security/apparmor/profiles | grep -F 'k8
 # в /proc/<pid>/attr/current и в файле ядра /sys/kernel/security/apparmor/profiles.
 ```
 
-Не используйте `aa-enforce`/`aa-complain`/`aa-status` и другие инструменты пакета
-`apparmor-utils`, написанные на Python, для ЭТОГО профиля, пока не выполнено задание 9:
-все они внутри вызывают `apparmor.read_profiles()`, который при старте разбирает
+Не используйте `aa-enforce`/`aa-complain` и другие инструменты изменения профилей из
+пакета `apparmor-utils`, написанные на Python, для ЭТОГО профиля, пока не выполнено
+задание 9: они внутри вызывают `apparmor.read_profiles()`, который при старте разбирает
 (парсит) **все** файлы в `/etc/apparmor.d/`, включая ещё не загруженный и заведомо
 сломанный `/etc/apparmor.d/k8s-106-broken-profile` из задания 9 - и падают с ошибкой
 парсера на ЧУЖОМ файле, даже не пытаясь дойти до вашего профиля. `apparmor_parser`
@@ -45,6 +45,11 @@ ssh control-plane "sudo cat /sys/kernel/security/apparmor/profiles | grep -F 'k8
 только его и не подвержен этой проблеме - именно поэтому мы правим флаг профиля
 (убираем `complain` из `flags=(...)`) вручную через `sed`, а затем перезагружаем именно
 этот файл через `apparmor_parser -r`.
+
+`aa-status` - отдельный инструмент просмотра состояния, а не изменения профилей, и сюда он
+не относится. Режим конкретного профиля проверяйте машинно через
+`/sys/kernel/security/apparmor/profiles`: там формат `name (enforce|complain)` однозначен
+(см. выше, почему не `aa-status | grep`).
 
 ## 3. Pod с Localhost AppArmor и отказом записи
 
@@ -300,8 +305,13 @@ kubectl run runc-baseline-userns -n security-106 --rm -i --restart=Never \
   -- sh -c 'echo baseline-no-userns; sleep 5' &
 sleep 2
 kubectl get pod runc-baseline-userns -n security-106 -o jsonpath='{.status.containerStatuses[0].containerID}' 2>/dev/null
-# Обычный Pod без hostUsers: false использует host user namespace напрямую -
-# у него отдельного /proc/<PID>/uid_map с непривилегированной трансляцией не будет.
+# У обычного Pod без hostUsers: false файл /proc/<host-PID>/uid_map тоже существует,
+# но процесс остаётся в host (initial) user namespace. Поэтому mapping начинается с
+# UID 0 -> host UID 0 (обычно строка вида `0 0 4294967295`), а не с непривилегированного
+# per-Pod host UID.
+#
+# У userns-probe с hostUsers: false ожидаем противоположное:
+# `0 <ненулевой-host-uid> <диапазон-per-pod>`.
 ```
 
 ## 8. `seccompDefault: true` на kubelet
