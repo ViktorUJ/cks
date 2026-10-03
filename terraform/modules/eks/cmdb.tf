@@ -2,7 +2,7 @@ resource "time_static" "time" {}
 
 
 data "aws_dynamodb_table" "cmdb" {
-  name     = var.backend_dynamodb_table
+  name     = var.cmdb_dynamodb_table
   provider = aws.cmdb
 
 }
