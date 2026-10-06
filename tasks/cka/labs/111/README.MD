@@ -62,7 +62,7 @@ The environment is deployed in AWS (`eu-central-1`) via Terragrunt and consists 
 | `k8s-1`    | Kubernetes **`1.33.1`** (kubeadm), Calico CNI, metrics-server, master + 1 worker |
 | `worker`   | Work machine with `kubectl` and `check_result`; SSH access to the cluster nodes |
 
-Instances: `t3.medium`, Ubuntu `22.04`. The cluster has two nodes — the master
+Instances: `t4g.medium`, Ubuntu `22.04`. The cluster has two nodes — the master
 (control-plane) and one worker.
 
 ## Deployment

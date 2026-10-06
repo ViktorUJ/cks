@@ -40,7 +40,7 @@ Die Umgebung wird in AWS (`eu-central-1`) via Terragrunt bereitgestellt und best
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, Single-Node |
 | `worker`   | Arbeitsmaschine mit `kubectl` und `check_result`                       |
 
-Instanzen: `t3.medium` (master), Ubuntu `22.04`. Der Cluster ist Single-Node — beim Master
+Instanzen: `t4g.medium` (master), Ubuntu `22.04`. Der Cluster ist Single-Node — beim Master
 ist der Taint `control-plane` entfernt, daher werden Pods direkt auf ihm eingeplant.
 
 ## Bereitstellung

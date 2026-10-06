@@ -68,7 +68,7 @@ The environment is deployed in AWS (`eu-central-1`) via Terragrunt and consists 
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), Calico CNI, metrics-server; creates the seed Pod `app-xyz3322` in namespace `app-logs` |
 | `worker`   | Work machine with `kubectl` and `check_result`; on start it creates `/var/work/109/app-old.yaml` and the working directories |
 
-Instances: `t3.medium` (master), Ubuntu `22.04`. The cluster is single-node — the master is
+Instances: `t4g.medium` (master), Ubuntu `22.04`. The cluster is single-node — the master is
 untainted (the `control-plane` taint is removed), so Pods are scheduled directly on it.
 
 ## Deployment

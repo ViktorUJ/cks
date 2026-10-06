@@ -69,7 +69,7 @@ The environment is deployed in AWS (`eu-central-1`) via Terragrunt and consists 
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), Calico CNI, metrics-server, single-node |
 | `worker`   | Work machine with `kubectl` and `check_result`; on startup it creates the file `/var/work/105/config.yaml` for task 3 |
 
-Instances: `t3.medium` (master), Ubuntu `22.04`. The cluster is single-node — the master is
+Instances: `t4g.medium` (master), Ubuntu `22.04`. The cluster is single-node — the master is
 untainted (the `control-plane` taint is removed), so Pods are scheduled directly on it.
 
 ## Deployment

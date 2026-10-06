@@ -72,7 +72,7 @@ flowchart TB
 
 JSONPath 的答案檔案會儲存在 `/home/ubuntu/answers/`。
 
-執行個體:`t3.medium`(master),Ubuntu `22.04`。叢集為單節點 - master
+執行個體:`t4g.medium`(master),Ubuntu `22.04`。叢集為單節點 - master
 已解除污點(移除了 `control-plane` taint),因此 Pod 會直接排程到它上面。
 
 ## 部署

@@ -60,7 +60,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, master + worker |
 | `worker`   | Рабочая машина с `kubectl` и `check_result`                 |
 
-Инстансы: `t3.medium` Ubuntu `22.04`. Кластер двухнодовый — master (control-plane) и один
+Инстансы: `t4g.medium` Ubuntu `22.04`. Кластер двухнодовый — master (control-plane) и один
 worker. Worker несёт label `node=node_2` и каталог `/pv/analytics` для hostPath, поэтому
 Pod с томом должен планироваться именно на него.
 

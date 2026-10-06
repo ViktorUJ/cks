@@ -61,7 +61,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes **`1.33.1`**(kubeadm),CNI Calico,metrics-server,master + 1 worker |
 | `worker`   | 具備 `kubectl` 與 `check_result` 的工作機;可 SSH 連線到叢集節點          |
 
-執行個體:`t3.medium`,Ubuntu `22.04`。叢集為雙節點 - master(control-plane)與
+執行個體:`t4g.medium`,Ubuntu `22.04`。叢集為雙節點 - master(control-plane)與
 一個 worker。
 
 ## 部署

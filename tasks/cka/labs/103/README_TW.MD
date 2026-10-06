@@ -72,7 +72,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm)、CNI Calico、metrics-server、**master + 1 worker** |
 | `worker`   | 工作機, 具備 `kubectl`、叢集存取權與 `check_result`     |
 
-實例: `t3.medium`, Ubuntu `22.04`。叢集為**雙節點** — master (control-plane) 與
+實例: `t4g.medium`, Ubuntu `22.04`。叢集為**雙節點** — master (control-plane) 與
 一個 worker。master 上保留了 `control-plane` taint, 因此一般的 Pods 會落在
 worker 上, 只有具備相符 toleration 的 Pod 才會落到 master 上 (就像
 題目 3 中的 DaemonSet)。

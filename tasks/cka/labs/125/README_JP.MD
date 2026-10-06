@@ -72,7 +72,7 @@ flowchart TB
 
 JSONPath の解答ファイルは `/home/ubuntu/answers/` に保存します。
 
-インスタンス：`t3.medium`（master）、Ubuntu `22.04`。クラスタは単一ノード構成で、master の
+インスタンス：`t4g.medium`（master）、Ubuntu `22.04`。クラスタは単一ノード構成で、master の
 taint は解除されています（`control-plane` taint を削除）。そのため Pod は master 上に直接スケジュールされます。
 
 ## デプロイ

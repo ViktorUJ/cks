@@ -44,7 +44,7 @@ node-ზე ეკიდება.
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, ერთკვანძიანი; namespace `sched` წინასწარ შექმნილია |
 | `worker`   | სამუშაო მანქანა `kubectl`-ითა და `check_result`-ით                              |
 
-ინსტანსები: `t3.medium` (master), Ubuntu `22.04`. კლასტერი ერთკვანძიანია — master-ს
+ინსტანსები: `t4g.medium` (master), Ubuntu `22.04`. კლასტერი ერთკვანძიანია — master-ს
 მოშორებულია taint `control-plane`, ამიტომ pod-ები პირდაპირ მასზე იგეგმება.
 
 ## განთავსება

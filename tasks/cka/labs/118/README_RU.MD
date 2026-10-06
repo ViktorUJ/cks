@@ -72,7 +72,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), Calico, **master + 1 worker**; при старте гасит CoreDNS |
 | `worker`   | Рабочая машина с `kubectl` и `check_result`; SSH-доступ к control plane |
 
-Инстансы: `t3.medium` Ubuntu `22.04`. Кластер двухнодовый — master (control-plane) и
+Инстансы: `t4g.medium` Ubuntu `22.04`. Кластер двухнодовый — master (control-plane) и
 один worker.
 
 ## Развёртывание

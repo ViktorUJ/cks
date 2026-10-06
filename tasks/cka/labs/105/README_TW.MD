@@ -70,7 +70,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`（kubeadm）、CNI Calico、metrics-server，單節點 |
 | `worker`   | 帶有 `kubectl` 與 `check_result` 的工作機；啟動時會為題目 3 建立檔案 `/var/work/105/config.yaml` |
 
-實例：`t3.medium`（master），Ubuntu `22.04`。叢集是單節點的 - master
+實例：`t4g.medium`（master），Ubuntu `22.04`。叢集是單節點的 - master
 已移除污點（移除了 `control-plane` taint），因此 Pod 會直接排程到它上面。
 
 ## 部署

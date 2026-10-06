@@ -70,7 +70,7 @@ El entorno se despliega en AWS (`eu-central-1`) mediante Terragrunt y consta de:
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server; crea el Pod semilla `app-xyz3322` en el namespace `app-logs` |
 | `worker`   | Máquina de trabajo con `kubectl` y `check_result`; al arrancar crea `/var/work/109/app-old.yaml` y los directorios de trabajo |
 
-Instancias: `t3.medium` (master), Ubuntu `22.04`. El clúster es de un solo nodo: al master se
+Instancias: `t4g.medium` (master), Ubuntu `22.04`. El clúster es de un solo nodo: al master se
 le ha quitado el taint `control-plane`, por lo que los pods se planifican directamente en él.
 
 ## Despliegue

@@ -77,7 +77,7 @@ Die Umgebung wird in AWS (`eu-central-1`) über Terragrunt ausgerollt und besteh
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, **Master + Worker(`disk=ssd`)** |
 | `worker`   | Arbeitsmaschine mit `kubectl`, Cluster-Zugriff und `check_result`    |
 
-Instanzen: `t3.medium`, Ubuntu `22.04`. Der Cluster hat **zwei Nodes** — Master
+Instanzen: `t4g.medium`, Ubuntu `22.04`. Der Cluster hat **zwei Nodes** — Master
 (Control-Plane) und einen Worker mit dem Label `disk=ssd`. metrics-server ist installiert
 (für HPA erforderlich). Auf dem Master bleibt der Taint `control-plane` erhalten — für eine
 Platzierung dort ist ein Toleration nötig.

@@ -76,7 +76,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`(kubeadm),CNI Calico,metrics-server;已安裝 **ingress-nginx(NodePort 30102)** 與 **Gateway API(CRD + NGINX Gateway Fabric)**;種子 namespaces `prod-db`/`prod`/`stage`,以及 namespace `gw` 中供遷移使用的種子 `Ingress shop-ingress` |
 | `worker`   | 具備 `kubectl` 與 `check_result` 的工作機                     |
 
-執行個體:`t3.medium`(master),Ubuntu `22.04`。叢集為單節點 - master 已解除污點
+執行個體:`t4g.medium`(master),Ubuntu `22.04`。叢集為單節點 - master 已解除污點
 (移除了 `control-plane` taint),因此 Pod 會直接排程到它上面。
 
 ## 部署

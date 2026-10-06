@@ -80,7 +80,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm)、CNI Calico、metrics-server 導入済み |
 | `worker`   | `kubectl`、クラスターへのアクセス、`check_result` を備えた作業マシン |
 
-インスタンス：`t3.medium` (master)、Ubuntu `22.04`。クラスターは単一ノードで、master の
+インスタンス：`t4g.medium` (master)、Ubuntu `22.04`。クラスターは単一ノードで、master の
 taint は外されています (`control-plane` taint を削除) ので、Pod は直接そこに配置されます。
 
 ## デプロイ

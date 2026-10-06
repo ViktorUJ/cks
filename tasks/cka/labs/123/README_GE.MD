@@ -58,7 +58,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), **CNI-ის გარეშე**, master + 1 worker-node; წინასწარ განთავსებულია `netprobe` (Pods `Pending`-შია CNI-ის დაყენებამდე) |
 | `worker`   | სამუშაო მანქანა `kubectl`-ითა და `check_result`-ით; SSH-წვდომა კლასტერის node-ებზე |
 
-ინსტანსები: `t3.medium` Ubuntu `22.04`. კლასტერი ორკვანძიანია — master (control plane) და
+ინსტანსები: `t4g.medium` Ubuntu `22.04`. კლასტერი ორკვანძიანია — master (control plane) და
 ერთი worker; CNI დაყენებული არ არის, ამიტომ node-ები NotReady მდგომარეობაში იწყებენ.
 
 ## განთავსება

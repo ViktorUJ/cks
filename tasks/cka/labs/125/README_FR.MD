@@ -73,7 +73,7 @@ L'environnement est déployé dans AWS (`eu-central-1`) via Terragrunt et se com
 
 Les fichiers de réponse pour JSONPath sont enregistrés dans `/home/ubuntu/answers/`.
 
-Instances : `t3.medium` (master) Ubuntu `22.04`. Le cluster est à un seul nœud — le master est
+Instances : `t4g.medium` (master) Ubuntu `22.04`. Le cluster est à un seul nœud — le master est
 « détainté » (le taint `control-plane` est retiré), donc les pods sont planifiés directement
 sur lui.
 

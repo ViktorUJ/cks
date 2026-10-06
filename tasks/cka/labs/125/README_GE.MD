@@ -72,7 +72,7 @@ flowchart TB
 
 JSONPath-ის პასუხების ფაილები ინახება `/home/ubuntu/answers/`-ში.
 
-ინსტანსები: `t3.medium` (master) Ubuntu `22.04`. კლასტერი ერთკვანძიანია — master-ს მოშორებულია
+ინსტანსები: `t4g.medium` (master) Ubuntu `22.04`. კლასტერი ერთკვანძიანია — master-ს მოშორებულია
 taint `control-plane`, ამიტომ pod-ები პირდაპირ მასზე იგეგმება.
 
 ## განთავსება

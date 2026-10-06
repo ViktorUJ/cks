@@ -71,7 +71,7 @@ Die Umgebung wird in AWS (`eu-central-1`) per Terragrunt bereitgestellt und best
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, ein Node |
 | `worker`   | Arbeitsmaschine mit `kubectl` und `check_result`; beim Start erstellt sie die Datei `/var/work/105/config.yaml` für Aufgabe 3 |
 
-Instanzen: `t3.medium` (Master), Ubuntu `22.04`. Der Cluster hat einen Node — beim Master
+Instanzen: `t4g.medium` (Master), Ubuntu `22.04`. Der Cluster hat einen Node — beim Master
 ist der Taint `control-plane` entfernt, daher werden Pods direkt auf ihm geplant.
 
 ## Bereitstellung

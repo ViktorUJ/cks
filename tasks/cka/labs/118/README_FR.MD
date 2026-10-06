@@ -74,7 +74,7 @@ L'environnement est déployé dans AWS (`eu-central-1`) via Terragrunt et se com
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), Calico, **master + 1 worker** ; éteint CoreDNS au démarrage |
 | `worker`   | Machine de travail avec `kubectl` et `check_result` ; accès SSH au control plane |
 
-Instances : `t3.medium` Ubuntu `22.04`. Le cluster comporte deux nœuds — le master
+Instances : `t4g.medium` Ubuntu `22.04`. Le cluster comporte deux nœuds — le master
 (control-plane) et un worker.
 
 ## Déploiement

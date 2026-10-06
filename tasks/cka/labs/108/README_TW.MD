@@ -60,7 +60,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`(kubeadm),CNI Calico,metrics-server,master + worker |
 | `worker`   | 具備 `kubectl` 與 `check_result` 的工作機                     |
 
-執行個體:`t3.medium`,Ubuntu `22.04`。叢集為雙節點 - master(control-plane)與一台
+執行個體:`t4g.medium`,Ubuntu `22.04`。叢集為雙節點 - master(control-plane)與一台
 worker。Worker 帶有 label `node=node_2` 以及供 hostPath 使用的目錄 `/pv/analytics`,因此
 帶有 volume 的 Pod 必須正好排程到它上面。
 

@@ -72,7 +72,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, ერთკვანძიანი |
 | `worker`   | სამუშაო მანქანა `kubectl`-ითა და `check_result`-ით; გაშვებისას აყენებს `podman`-ს და ქმნის `/var/work/107/Dockerfile`-ს 4-ე დავალებისთვის |
 
-ინსტანსები: `t3.medium` (master), Ubuntu `22.04`. კლასტერი ერთკვანძიანია — master-ს
+ინსტანსები: `t4g.medium` (master), Ubuntu `22.04`. კლასტერი ერთკვანძიანია — master-ს
 მოშორებულია taint `control-plane`, ამიტომ pod-ები პირდაპირ მასზე იგეგმება.
 
 ## განთავსება

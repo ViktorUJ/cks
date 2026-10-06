@@ -74,7 +74,7 @@ L'environnement est déployé dans AWS (`eu-central-1`) via Terragrunt et se com
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, **master + 1 worker** |
 | `worker`   | Machine de travail avec `kubectl`, accès au cluster et `check_result`  |
 
-Instances : `t3.medium`, Ubuntu `22.04`. Le cluster comporte **deux nœuds** — le master
+Instances : `t4g.medium`, Ubuntu `22.04`. Le cluster comporte **deux nœuds** — le master
 (control-plane) et un worker. Le taint `control-plane` est conservé sur le master, les Pods
 ordinaires vont donc sur le worker et seuls ceux qui disposent d'un toleration adapté
 atterrissent sur le master (comme le DaemonSet de la tâche 3).

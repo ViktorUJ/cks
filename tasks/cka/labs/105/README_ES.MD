@@ -72,7 +72,7 @@ El entorno se despliega en AWS (`eu-central-1`) con Terragrunt y consta de:
 | `k8s-1`    | Kubernetes `1.35.2` (kubeadm), CNI Calico, metrics-server, de un solo nodo |
 | `worker`   | Máquina de trabajo con `kubectl` y `check_result`; al arrancar crea el fichero `/var/work/105/config.yaml` para la tarea 3 |
 
-Instancias: `t3.medium` (master), Ubuntu `22.04`. El clúster es de un solo nodo: al master
+Instancias: `t4g.medium` (master), Ubuntu `22.04`. El clúster es de un solo nodo: al master
 se le ha quitado el taint `control-plane`, por lo que los pods se planifican directamente
 en él.
 

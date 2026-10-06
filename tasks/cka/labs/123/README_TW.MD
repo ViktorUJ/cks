@@ -58,7 +58,7 @@ flowchart TB
 | `k8s-1`    | Kubernetes `1.35.2`(kubeadm),**不含 CNI**,master + 1 個 worker 節點;`netprobe` 已預先部署(在安裝 CNI 之前 Pods 會停在 `Pending`) |
 | `worker`   | 工作機,具備 `kubectl` 與 `check_result`;可透過 SSH 存取叢集節點        |
 
-執行個體:`t3.medium`,Ubuntu `22.04`。叢集為雙節點 - master(control plane)與
+執行個體:`t4g.medium`,Ubuntu `22.04`。叢集為雙節點 - master(control plane)與
 一個 worker;由於沒有安裝 CNI,節點啟動後會處於 NotReady。
 
 ## 部署
