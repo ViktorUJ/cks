@@ -92,6 +92,11 @@ EOF
 # ожидается: успех (никакая ошибка admission)
 ```
 
+Убедитесь, что обработка тега учитывает двоеточие в registry-порту: `registry.example:5000/app`
+не содержит image tag и должно быть отклонено как implicit latest. Digest должен
+приниматься и в других списках контейнеров - например, в `initContainers` и через
+`kubectl debug --image=...` для `ephemeralContainers`.
+
 ## 3. Требовать `runAsNonRoot`
 
 Политика требует значение именно `true` в Pod-level `securityContext`; неявное
@@ -170,6 +175,10 @@ untrusted-значение; проверьте, что policy действите
 registry, кроме двух разрешённых), а не просто денылист `docker.io` буквальной строкой -
 иначе unqualified image, другой сторонний registry или похожий по написанию host легко
 пройдут мимо:
+
+Positive controls должны покрывать оба разрешённых prefix (`registry.k8s.io/` и
+`ghcr.io/cks-lab/`) в `containers`, `initContainers` и `ephemeralContainers`; не
+ограничивайте один из registry только обычными контейнерами.
 
 ```bash
 kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'

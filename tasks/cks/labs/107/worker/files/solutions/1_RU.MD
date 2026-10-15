@@ -198,7 +198,9 @@ kubectl apply -f require-no-automount-token.yaml
 kubectl get validatingadmissionpolicy,validatingadmissionpolicybinding
 ```
 
-Докажите оба исхода через server-side dry-run, не сохраняя постоянный Pod. Первый Pod
+Докажите все три состояния через server-side dry-run, не сохраняя постоянный Pod. Pod без
+поля должен получить DENY от точной пары policy + binding, `false` должен пройти, а
+`true` должен получить DENY от той же пары. Первый Pod
 полностью соответствует PSA `restricted` (non-root, seccomp, `allowPrivilegeEscalation:
 false`, `capabilities.drop: ["ALL"]`) - PSA сам его принял бы, поэтому отказ должен
 прийти именно от новой policy, а не от `violates PodSecurity`:
@@ -228,7 +230,8 @@ spec:
       seccompProfile:
         type: RuntimeDefault
 YAML
-# Error from server: ... require-no-automount-token: spec.automountServiceAccountToken must be explicitly set to false
+# Error from server: ... ValidatingAdmissionPolicy 'require-no-automount-token'
+# with binding 'require-no-automount-token-binding' denied request: ...
 ```
 
 Тот же Pod с добавленным `automountServiceAccountToken: false` должен пройти:
@@ -261,6 +264,38 @@ spec:
 YAML
 ```
 
+Явное значение `true` тоже должно быть отклонено той же policy и binding:
+
+```bash
+kubectl apply --dry-run=server -f - <<'YAML'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vap-explicit-true-check
+  namespace: psa-restricted-107
+spec:
+  automountServiceAccountToken: true
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+YAML
+# Error from server: ... ValidatingAdmissionPolicy 'require-no-automount-token'
+# with binding 'require-no-automount-token-binding' denied request: ...
+```
+
 `Binding.matchResources.namespaceSelector` ограничивает policy только `psa-restricted-107`:
 Pod в других namespace (например `psa-observe-107`) не проверяется этим правилом и не
 получает лишний Deny.
@@ -291,7 +326,7 @@ kubectl -n psa-controller-107 delete pod -l app=controller-app
 kubectl -n psa-controller-107 get events --sort-by=.lastTimestamp | tail -5
 # ... FailedCreate ... violates PodSecurity "restricted:v1.36": ...
 kubectl -n psa-controller-107 get deploy controller-app
-# controller-app   1/1     1            0           ...   <- READY 0, AVAILABLE 0
+# controller-app   0/1     1            0           ...   <- READY 0/1, AVAILABLE 0
 ```
 
 Чиним template - добавляем те же hardening поля, что в задании 2:

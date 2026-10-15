@@ -66,7 +66,7 @@ check_result
 | **1** | **Enforce restricted с закреплённой версией** |
 | :---: | :--- |
 | Что делаем | На namespace `psa-restricted-107` установите `pod-security.kubernetes.io/enforce=restricted` и `pod-security.kubernetes.io/enforce-version=v1.36`. Убедитесь, что PSA действительно отвергает небезопасный Pod: server-side dry-run Pod с `hostNetwork: true` в этом namespace должен завершиться ошибкой с `violates PodSecurity`. Не меняйте labels системных namespace. |
-| Критерии приёмки | Оба enforce-label имеют точные значения; небезопасный Pod не проходит admission в `psa-restricted-107`. |
+| Критерии приёмки | Оба enforce-label имеют точные значения; небезопасный Pod не проходит admission в `psa-restricted-107`; системные namespace `kube-system`, `kube-public` и `kube-node-lease` не получают `pod-security.kubernetes.io/*` labels в рамках этой лаборатории. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -126,7 +126,7 @@ echo "after-label exit: $?"
 | **2** | **Hardened Pod, проходящий restricted** |
 | :---: | :--- |
 | Что делаем | Создайте Pod `restricted-app` в `psa-restricted-107` из `busybox:1.36`, работающий не от root и не завершающийся сразу. Установите pod-level `runAsNonRoot: true`, `runAsUser: 1000` и `seccompProfile: RuntimeDefault`. В container securityContext запретите privilege escalation, сбросьте capability `ALL`, явно оставьте `privileged: false` и задайте `seccompProfile: RuntimeDefault`. |
-| Критерии приёмки | Pod принят PSA и запущен; работает как UID 1000/non-root; seccomp - `RuntimeDefault`; escalation и privileged запрещены; capabilities `ALL` сброшены. |
+| Критерии приёмки | Pod принят PSA и запущен; работает как UID 1000/non-root, и ни один container/init/ephemeral container не переопределяет pod-level `runAsUser: 1000`; seccomp - `RuntimeDefault`; escalation и privileged запрещены; capabilities `ALL` сброшены. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -232,7 +232,7 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 | **5** | **Read-only root filesystem с writable emptyDir** |
 | :---: | :--- |
 | Что делаем | Доработайте `restricted-app`: на контейнере включите `readOnlyRootFilesystem: true`. Создайте volume `writable-tmp` типа `emptyDir` (рекомендуется `medium: Memory`, чтобы временные файлы не попадали на диск ноды) и смонтируйте его в `/tmp` без `readOnly: true`. Контейнеру разрешено писать только в этот временный том; не используйте `hostPath`. Докажите оба исхода живым вызовом внутри Pod: попытка записи в корень контейнера (например, `touch /root-write-test.txt`) должна завершиться ошибкой `Read-only file system`, а запись в `/tmp/test.txt` - успешно пройти. При изменении неизменяемых полей Pod удалите и создайте `restricted-app` заново с тем же именем. |
-| Критерии приёмки | У контейнера read-only root filesystem; `emptyDir` с именем `writable-tmp` смонтирован в `/tmp` как writable; hardened-настройки из задания 2 сохранены; живая попытка записи в корень контейнера возвращает `Read-only file system`, а запись в `/tmp/test.txt` завершается успешно и читаемым содержимым. |
+| Критерии приёмки | У контейнера read-only root filesystem; `emptyDir` с именем `writable-tmp` смонтирован в `/tmp` как writable; для regular containers это единственный writable declarative `volumeMount`, а все дополнительные `volumeMounts` read-only; hardened-настройки из задания 2 сохранены; живая попытка записи в корень контейнера возвращает `Read-only file system`, а запись в `/tmp/test.txt` завершается успешно и читаемым содержимым. |
 
 <details>
 <summary>💡 Подсказка к заданию 5</summary>
@@ -243,8 +243,8 @@ kubectl get namespace psa-restricted-107 psa-observe-107 --show-labels
 ---
 | **6** | **Native ValidatingAdmissionPolicy: требовать `automountServiceAccountToken: false`** |
 | :---: | :--- |
-| Что делаем | PSA `restricted` уже требует `allowPrivilegeEscalation: false`, `capabilities.drop` содержит `ALL`, non-root и seccomp - задание 2 показывает именно это. Но PSS `restricted` **не проверяет** `automountServiceAccountToken`: Pod, не нуждающийся в Kubernetes API, может тихо получить смонтированный ServiceAccount token и полностью пройти PSA. Это отдельный, не покрытый PSS control, поэтому здесь уместен именно custom `ValidatingAdmissionPolicy`, а не дублирование встроенного PSA. В namespace `psa-restricted-107` создайте `ValidatingAdmissionPolicy` `require-no-automount-token` с CEL-выражением, требующим `automountServiceAccountToken == false` на уровне Pod. Примените `ValidatingAdmissionPolicyBinding` `require-no-automount-token-binding`, ограниченную `matchResources.namespaceSelector` на `psa-restricted-107`, с `validationActions: [Deny]`. Докажите оба исхода server-side dry-run: полностью PSA-совместимый Pod (со всеми полями из задания 2 - non-root, seccomp, drop ALL, escalation false) **без** `automountServiceAccountToken: false` должен быть отклонён именно этой policy, а не PSA; тот же Pod с `automountServiceAccountToken: false` должен пройти. |
-| Критерии приёмки | `ValidatingAdmissionPolicy require-no-automount-token` и её `ValidatingAdmissionPolicyBinding` существуют, `validationActions` содержит `Deny`, Binding матчит только `psa-restricted-107`. Server-side dry-run PSA-совместимого Pod без `automountServiceAccountToken: false` отклонён с сообщением именно этой policy (не PSA-сообщением `violates PodSecurity`); тот же Pod с `automountServiceAccountToken: false` принят. Policy покрывает все Pod, выбранные её `resourceRules`, внутри `psa-restricted-107`: не добавляйте `spec.matchConditions`, `matchConstraints.objectSelector` или `matchConstraints.namespaceSelector` в `ValidatingAdmissionPolicy`, а также `objectSelector` в Binding `matchResources` - они сужают coverage до части Pod, и workload сможет выпасть из проверки по label или условию запроса. Дополнительный namespace scope этого задания задаётся только Binding `matchResources.namespaceSelector`, точно привязанным к `psa-restricted-107`. CEL validation не должна содержать исключений по имени/labels/annotations Pod, user/request, `namespaceObject`, `params`, `variables` или другим полям: решение зависит только от `object.spec.automountServiceAccountToken` (допустима любая корректная CEL-форма, в том числе optional-синтаксис `object.spec.?automountServiceAccountToken.orValue(true) == false`). `matchConstraints.resourceRules` ограничивают policy ровно `core/v1 pods` для операций `CREATE` и `UPDATE`, `excludeResourceRules` не используются; `variables` и `paramKind` не используются. Binding не сужает resource/operation scope через собственные `resourceRules`/`excludeResourceRules`. Это позволяет доказать полный boolean contract тремя состояниями `missing / false / true`, а не несколькими выбранными workload-примерами. |
+| Что делаем | PSA `restricted` уже требует `allowPrivilegeEscalation: false`, `capabilities.drop` содержит `ALL`, non-root и seccomp - задание 2 показывает именно это. Но PSS `restricted` **не проверяет** `automountServiceAccountToken`: Pod, не нуждающийся в Kubernetes API, может тихо получить смонтированный ServiceAccount token и полностью пройти PSA. Это отдельный, не покрытый PSS control, поэтому здесь уместен именно custom `ValidatingAdmissionPolicy`, а не дублирование встроенного PSA. В namespace `psa-restricted-107` создайте `ValidatingAdmissionPolicy` `require-no-automount-token` с CEL-выражением, требующим `automountServiceAccountToken == false` на уровне Pod. Примените `ValidatingAdmissionPolicyBinding` `require-no-automount-token-binding`, ограниченную `matchResources.namespaceSelector` на `psa-restricted-107`, с `validationActions: [Deny]`. Докажите все три состояния server-side dry-run: полностью PSA-совместимый Pod (со всеми полями из задания 2 - non-root, seccomp, drop ALL, escalation false) без поля должен получить DENY от точной пары policy+binding; `automountServiceAccountToken: false` должен получить ALLOW; `automountServiceAccountToken: true` должен снова получить DENY от той же пары. |
+| Критерии приёмки | `ValidatingAdmissionPolicy require-no-automount-token` и её `ValidatingAdmissionPolicyBinding` существуют, `validationActions` содержит `Deny`, Binding матчит только `psa-restricted-107`. В лаборатории существует ровно одна Binding для этой policy - `require-no-automount-token-binding`; дополнительные Binding этой policy для других namespace не создаются. Server-side dry-run PSA-совместимого Pod без `automountServiceAccountToken: false` отклонён именно парой `ValidatingAdmissionPolicy 'require-no-automount-token'` и `ValidatingAdmissionPolicyBinding 'require-no-automount-token-binding'` (не PSA-сообщением `violates PodSecurity` и не другой policy); Pod с `automountServiceAccountToken: false` принят, а Pod с `automountServiceAccountToken: true` отклонён той же точной парой. Policy покрывает все Pod, выбранные её `resourceRules`, внутри `psa-restricted-107`: не добавляйте `spec.matchConditions`, `matchConstraints.objectSelector` или `matchConstraints.namespaceSelector` в `ValidatingAdmissionPolicy`, а также `objectSelector` в Binding `matchResources` - они сужают coverage до части Pod, и workload сможет выпасть из проверки по label или условию запроса. Дополнительный namespace scope этого задания задаётся только Binding `matchResources.namespaceSelector`, точно привязанным к `psa-restricted-107`; selector не содержит условий по другим namespace-label keys и сам по себе однозначно ограничивает scope этим namespace. CEL validation не должна содержать исключений по имени/labels/annotations Pod, user/request, `namespaceObject`, `params`, `variables` или другим полям: решение зависит только от `object.spec.automountServiceAccountToken` (допустима любая корректная CEL-форма, в том числе optional-синтаксис `object.spec.?automountServiceAccountToken.orValue(true) == false`). `spec.auditAnnotations` отсутствует или пуст: её отдельные CEL expressions могут влиять на admission через `failurePolicy`, поэтому в этом задании admission control должен задаваться только `spec.validations`. `matchConstraints.resourceRules` ограничивают policy ровно `core/v1 pods` для операций `CREATE` и `UPDATE`, без `resourceNames`; `scope` отсутствует, равен `*` или `Namespaced`, но не `Cluster`; `excludeResourceRules` не используются. Binding не сужает resource/operation scope через собственные `resourceRules`/`excludeResourceRules`. Это позволяет доказать полный boolean contract тремя состояниями `missing / false / true`, а не несколькими выбранными workload-примерами. |
 
 <details>
 <summary>💡 Подсказка к заданию 6</summary>
@@ -287,11 +287,10 @@ EOF
 echo "baseline exit: $?"
 ```
 
-Создайте VAP + Binding, повторите ТОТ ЖЕ manifest - теперь должна быть ошибка admission
-именно с текстом вашей policy (`require-no-automount-token`), НЕ с `violates
-PodSecurity` (если видите `violates PodSecurity` - значит отклоняет PSA, а не ваша
-policy, и тестовый Pod не полностью PSA-совместим). Затем добавьте
-`automountServiceAccountToken: false` к тому же manifest - теперь должен пройти:
+Создайте VAP + Binding и повторите manifest без поля - теперь запрос должен получить
+DENY именно от `ValidatingAdmissionPolicy 'require-no-automount-token'` через binding
+`require-no-automount-token-binding`, НЕ от PSA. Затем проверьте оба явных значения:
+`false` должен пройти, а `true` должен получить DENY от той же точной пары.
 
 ```bash
 kubectl apply -f require-no-automount-token.yaml   # ваши VAP + Binding
@@ -320,7 +319,73 @@ spec:
       seccompProfile:
         type: RuntimeDefault
 EOF
-# ожидается: Error from server ... require-no-automount-token: ...
+# ожидается: ValidatingAdmissionPolicy 'require-no-automount-token' with binding
+# 'require-no-automount-token-binding' denied request: ...
+```
+
+С тем же PSA-совместимым manifest задайте `automountServiceAccountToken: false` - запрос
+должен пройти:
+
+```bash
+kubectl apply --dry-run=server -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: self-check-automount-false
+  namespace: psa-restricted-107
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+EOF
+# ожидается: pod/self-check-automount-false created (или server-side dry-run success)
+```
+
+Теперь задайте `automountServiceAccountToken: true` - запрос снова должен быть отклонён
+точно той же policy и binding:
+
+```bash
+kubectl apply --dry-run=server -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: self-check-automount-true
+  namespace: psa-restricted-107
+spec:
+  automountServiceAccountToken: true
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: busybox:1.36
+    command: ["sh", "-c", "sleep 5"]
+    securityContext:
+      privileged: false
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+EOF
+# ожидается: ValidatingAdmissionPolicy 'require-no-automount-token' with binding
+# 'require-no-automount-token-binding' denied request: ...
 ```
 
 Наконец, самое важное - проверьте ГРАНИЦУ scope, а не только факт denial: тот же самый

@@ -16,6 +16,17 @@ CONTROLLER_NS="psa-controller-107"
   labels=$(kubectl get namespace "$RESTRICTED_NS" --context "$CTX" -o json 2>/dev/null)
   enforce=$(jq -r '.metadata.labels["pod-security.kubernetes.io/enforce"] // ""' <<<"$labels")
   version=$(jq -r '.metadata.labels["pod-security.kubernetes.io/enforce-version"] // ""' <<<"$labels")
+  system_psa_labels=$(kubectl get namespace kube-system kube-public kube-node-lease \
+    --context "$CTX" -o json 2>/dev/null \
+    | jq -c '
+        [
+          .items[] as $ns
+          | (($ns.metadata.labels // {}) | to_entries[])
+          | select(.key | startswith("pod-security.kubernetes.io/"))
+          | {namespace: $ns.metadata.name, key: .key, value: .value}
+        ]
+      ') || system_psa_labels='[{"error":"unable-to-read-system-namespaces"}]'
+  system_psa_clean=$(jq -r 'length == 0' <<<"$system_psa_labels" 2>/dev/null) || system_psa_clean=false
   set +e
   rejection=$(kubectl apply --context "$CTX" --dry-run=server -f - 2>&1 <<EOF_POD
 apiVersion: v1
@@ -33,7 +44,7 @@ EOF_POD
 )
   rejection_status=$?
   set -e
-  if [[ "$enforce" == "restricted" && "$version" == "v1.36" && "$rejection_status" -ne 0 && "$rejection" =~ violates[[:space:]]PodSecurity.*restricted ]]; then
+  if [[ "$enforce" == "restricted" && "$version" == "v1.36" && "$rejection_status" -ne 0 && "$rejection" =~ violates[[:space:]]PodSecurity.*restricted && "$system_psa_clean" == "true" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
@@ -41,10 +52,12 @@ EOF_POD
       echo "HINT: Namespace '$RESTRICTED_NS' must have label 'pod-security.kubernetes.io/enforce: restricted'."
     elif [[ "$version" != "v1.36" ]]; then
       echo "HINT: Namespace must also pin 'pod-security.kubernetes.io/enforce-version: v1.36' - without a fixed version, the enforced PSS baseline can silently change on a Kubernetes upgrade."
+    elif [[ "$system_psa_clean" != "true" ]]; then
+      echo "HINT: Do not apply Pod Security labels to system namespaces in this lab. Remove lab-added pod-security.kubernetes.io/* labels from kube-system, kube-public and kube-node-lease."
     else
       echo "HINT: A Pod with hostNetwork: true (an unsafe field) was not rejected by admission. Check the enforce label actually took effect - labels on an existing namespace apply immediately, no restart needed."
     fi
-    echo "enforce=$enforce version=$version rejection_status=$rejection_status rejection=$rejection"
+    echo "enforce=$enforce version=$version system_psa_clean=$system_psa_clean system_psa_labels=$system_psa_labels rejection_status=$rejection_status rejection=$rejection"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -64,17 +77,61 @@ EOF_POD
       .securityContext.seccompProfile.type == "RuntimeDefault"
     ] | length > 0 and all)
   ' <<<"$pod" 2>/dev/null)
+  effective_uid_1000=$(jq -r '
+    (.spec.securityContext.runAsUser == 1000)
+    and
+    (
+      [
+        .spec.containers[]?,
+        .spec.initContainers[]?,
+        .spec.ephemeralContainers[]?
+      ]
+      | length > 0
+      and all(.[]; ((.securityContext.runAsUser // 1000) | tonumber) == 1000)
+    )
+  ' <<<"$pod" 2>/dev/null) || effective_uid_1000=false
   phase=$(jq -r '.status.phase // ""' <<<"$pod" 2>/dev/null)
-  if [[ "$hardened" == "true" && "$phase" == "Running" ]]; then
+
+  # Existing Pods are not retroactively rejected when an enforce label is added.
+  # Force PodSecurity to re-evaluate every existing Pod in this dedicated namespace
+  # by dry-running a change of enforce-version from v1.36 to "latest". On this lab's
+  # Kubernetes 1.36 API server, latest resolves to the same v1.36 PSS rules; the dry-run
+  # changes nothing, but PodSecurity still reports existing violations as warnings.
+  set +e
+  psa_recheck=$(kubectl label namespace "$RESTRICTED_NS" \
+    --context "$CTX" \
+    --dry-run=server \
+    --overwrite \
+    pod-security.kubernetes.io/enforce=restricted \
+    pod-security.kubernetes.io/enforce-version=latest \
+    2>&1)
+  psa_recheck_status=$?
+  set -e
+
+  psa_recheck_clean=true
+  if [[ "$psa_recheck_status" -ne 0 ]] \
+    || grep -Fq "existing pods in namespace \"$RESTRICTED_NS\" violate the new PodSecurity enforce level" <<<"$psa_recheck"; then
+    psa_recheck_clean=false
+  fi
+
+  if [[ "$hardened" == "true" \
+    && "$effective_uid_1000" == "true" \
+    && "$phase" == "Running" \
+    && "$psa_recheck_clean" == "true" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
     if [[ "$hardened" != "true" ]]; then
-      echo "HINT: Pod 'restricted-app' is missing one of the required restricted-level fields: Pod-level runAsNonRoot: true + runAsUser: 1000 + seccompProfile RuntimeDefault, AND per-container allowPrivilegeEscalation: false + privileged: false + capabilities.drop: [ALL] + seccompProfile RuntimeDefault. Check each field individually - a single missing one fails admission under 'restricted'."
-    else
+      echo "HINT: Pod 'restricted-app' does not match this lab's explicit hardening contract: pod-level runAsNonRoot: true + runAsUser: 1000 + seccompProfile RuntimeDefault, and per-container allowPrivilegeEscalation: false + privileged: false + capabilities.drop: [ALL] + seccompProfile RuntimeDefault. Some requirements are intentionally stricter/more explicit than the minimum PSS 'restricted' contract (including explicit privileged: false, container-level seccomp when pod-level seccomp applies, and exact UID 1000). Fix the lab-required fields, then confirm the Pod is admitted and Running."
+    elif [[ "$effective_uid_1000" != "true" ]]; then
+      echo "HINT: Pod-level runAsUser: 1000 is overridden by at least one container/init/ephemeral container. Container securityContext overrides Pod securityContext; this lab requires effective UID 1000."
+    elif [[ "$phase" != "Running" ]]; then
       echo "HINT: Pod spec satisfies the restricted profile but is not Running (phase=$phase). Check 'kubectl describe pod' for a scheduling or image-pull issue unrelated to PSA."
+    else
+      echo "HINT: Existing Pods are not retroactively rejected when PSA enforce labels are added. A live server-side dry-run re-evaluation found an existing Pod in '$RESTRICTED_NS' that violates restricted. Fix/recreate 'restricted-app' so its CURRENT spec is actually valid under restricted:v1.36."
     fi
-    echo "hardened=$hardened phase=$phase"
+    echo "effective_uid_1000=$effective_uid_1000"
+    echo "hardened=$hardened phase=$phase psa_recheck_status=$psa_recheck_status psa_recheck_clean=$psa_recheck_clean psa_recheck=$psa_recheck"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -107,9 +164,16 @@ EOF_POD
 
 @test "4. baseline-audit-sample is admitted and warn reports the baseline violation" {
   echo '1' >> /var/work/tests/result/all
+
   pod=$(kubectl get pod baseline-audit-sample -n "$OBSERVE_NS" --context "$CTX" -o json 2>/dev/null)
   host_network=$(jq -r '.spec.hostNetwork == true' <<<"$pod" 2>/dev/null)
   phase=$(jq -r '.status.phase // ""' <<<"$pod" 2>/dev/null)
+  labels=$(kubectl get namespace "$OBSERVE_NS" --context "$CTX" -o json 2>/dev/null)
+  enforce=$(jq -r '.metadata.labels["pod-security.kubernetes.io/enforce"] // ""' <<<"$labels" 2>/dev/null)
+
+  # Positive control: warn/audit must REPORT the baseline violation but must not
+  # reject the request. Capture both output and exit status.
+  set +e
   warning=$(kubectl apply --context "$CTX" --dry-run=server -f - 2>&1 <<EOF_POD
 apiVersion: v1
 kind: Pod
@@ -124,16 +188,29 @@ spec:
     command: ["sh", "-c", "sleep 5"]
 EOF_POD
 )
-  if [[ "$host_network" == "true" && ( "$phase" == "Running" || "$phase" == "Pending" ) && "$warning" =~ Warning:.*[Vv]iolat.*PodSecurity.*baseline ]]; then
+  warning_status=$?
+  set -e
+
+  if [[ "$host_network" == "true" \
+    && ( "$phase" == "Running" || "$phase" == "Pending" ) \
+    && -z "$enforce" \
+    && "$warning_status" -eq 0 \
+    && "$warning" =~ Warning:.*[Vv]iolat.*PodSecurity.*baseline ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
     if [[ "$host_network" != "true" ]]; then
-      echo "HINT: Pod 'baseline-audit-sample' must set hostNetwork: true - this deliberately violates baseline so warn/audit have something to report, while still being ADMITTED because this namespace has no enforce label."
+      echo "HINT: Pod 'baseline-audit-sample' must set hostNetwork: true - this deliberately violates baseline so warn/audit have something to report."
+    elif [[ "$phase" != "Running" && "$phase" != "Pending" ]]; then
+      echo "HINT: Pod 'baseline-audit-sample' must have been admitted by the API and exist as Running/Pending (phase=$phase)."
+    elif [[ -n "$enforce" ]]; then
+      echo "HINT: Namespace '$OBSERVE_NS' must not have an enforce label. Task 4 is proving that warn/audit report a violation without blocking it."
+    elif [[ "$warning_status" -ne 0 ]]; then
+      echo "HINT: The current server-side dry-run was rejected (exit=$warning_status). warn/audit must not block this baseline-violating Pod; remove the admission control that is denying it before treating this task as complete."
     else
       echo "HINT: A hostNetwork Pod applied to '$OBSERVE_NS' did not produce a PodSecurity 'Warning:' mentioning 'baseline' - check that the warn label from test 3 is actually set and that the violating field (hostNetwork) is one baseline actually restricts."
     fi
-    echo "hostNetwork=$host_network phase=$phase psa_warning=$warning"
+    echo "hostNetwork=$host_network phase=$phase enforce=$enforce warning_status=$warning_status psa_warning=$warning"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -144,9 +221,30 @@ EOF_POD
   pod=$(kubectl get pod restricted-app -n "$RESTRICTED_NS" --context "$CTX" -o json 2>/dev/null)
   readonly=$(jq -r '[.spec.containers[]? | .securityContext.readOnlyRootFilesystem == true] | length > 0 and all' <<<"$pod" 2>/dev/null)
   writable_tmp=$(jq -r '
-    ([.spec.volumes[]? | select(.name == "writable-tmp" and .emptyDir != null)] | length == 1) and
-    ([.spec.containers[]?.volumeMounts[]? | select(.name == "writable-tmp" and .mountPath == "/tmp" and (.readOnly // false) == false)] | length > 0)
-  ' <<<"$pod" 2>/dev/null)
+    ([.spec.volumes[]?
+      | select(.name == "writable-tmp" and .emptyDir != null)]
+     | length == 1)
+    and
+    ([.spec.containers[]?] | length > 0)
+    and
+    all(
+      .spec.containers[]?;
+      ([.volumeMounts[]?
+        | select(
+            .name == "writable-tmp"
+            and .mountPath == "/tmp"
+            and (.readOnly // false) == false
+          )]
+       | length == 1)
+      and
+      ([.volumeMounts[]?
+        | select(
+            (.readOnly // false) == false
+            and (.name != "writable-tmp" or .mountPath != "/tmp")
+          )]
+       | length == 0)
+    )
+  ' <<<"$pod" 2>/dev/null) || writable_tmp=false
   host_paths=$(jq -r '[.spec.volumes[]? | select(.hostPath != null)] | length' <<<"$pod" 2>/dev/null)
   set +e
   root_write=$(kubectl exec -n "$RESTRICTED_NS" restricted-app --context "$CTX" -- sh -c 'touch /root-write-test.txt' 2>&1)
@@ -163,7 +261,7 @@ EOF_POD
     if [[ "$readonly" != "true" ]]; then
       echo "HINT: All containers must set securityContext.readOnlyRootFilesystem: true."
     elif [[ "$writable_tmp" != "true" ]]; then
-      echo "HINT: Volume 'writable-tmp' (emptyDir) must be mounted at exactly '/tmp' with readOnly not set to true - the app needs SOME writable path even with a read-only rootfs."
+      echo "HINT: Each regular container must have exactly one writable mount: volume 'writable-tmp' at '/tmp'. All other volumeMounts must set readOnly: true."
     elif [[ "$host_paths" != "0" ]]; then
       echo "HINT: Do not use hostPath for the writable directory - it must be an emptyDir, hostPath would leak data to the node's filesystem."
     elif [[ "$root_write_status" -eq 0 ]]; then
@@ -181,6 +279,11 @@ EOF_POD
   echo '1' >> /var/work/tests/result/all
   policy=$(kubectl get validatingadmissionpolicy require-no-automount-token --context "$CTX" -o json 2>/dev/null)
   binding=$(kubectl get validatingadmissionpolicybinding require-no-automount-token-binding --context "$CTX" -o json 2>/dev/null)
+  bindings_for_policy=$(kubectl get validatingadmissionpolicybindings \
+    --context "$CTX" -o json 2>/dev/null \
+    | jq -c '[.items[] | select(.spec.policyName == "require-no-automount-token") | .metadata.name] | sort') || bindings_for_policy='[]'
+  binding_set_exact=$(jq -r 'length == 1 and .[0] == "require-no-automount-token-binding"' \
+    <<<"$bindings_for_policy" 2>/dev/null) || binding_set_exact=false
   policy_name=$(jq -r '.spec.policyName // ""' <<<"$binding" 2>/dev/null)
   actions=$(jq -r '(.spec.validationActions // []) | index("Deny") != null' <<<"$binding" 2>/dev/null)
   # Structural scope proof: the selector must pin the immutable namespace-name label to
@@ -188,14 +291,20 @@ EOF_POD
   # probe in OBSERVE_NS cannot tell "only RESTRICTED_NS" from "everything except OBSERVE_NS".
   selector_exact=$(jq -r --arg ns "$RESTRICTED_NS" '
       (.spec.matchResources.namespaceSelector // {}) as $s
+      | ($s.matchLabels // {}) as $ml
+      | ($s.matchExpressions // []) as $me
       | (
-          (($s.matchLabels["kubernetes.io/metadata.name"] // "") == $ns)
+          ([($ml | keys[]) | . == "kubernetes.io/metadata.name"] | all)
+          and ([$me[]? | .key == "kubernetes.io/metadata.name"] | all)
+          and (
+          (($ml["kubernetes.io/metadata.name"] // "") == $ns)
           or
-          any(($s.matchExpressions // [])[];
+          any($me[]?;
               .key == "kubernetes.io/metadata.name"
               and .operator == "In"
               and ((.values // []) | length) == 1
               and .values[0] == $ns)
+          )
         )
     ' <<<"$binding" 2>/dev/null) || selector_exact=false
   # No extra per-object/per-request scope filters: a label-based objectSelector or a false
@@ -224,6 +333,8 @@ EOF_POD
   done < <(jq -r '.spec.validations[]?.expression // empty' <<<"$policy" 2>/dev/null)
   policy_variables_empty=$(jq -r '((.spec.variables // []) | length) == 0' <<<"$policy" 2>/dev/null) || policy_variables_empty=false
   policy_param_kind_empty=$(jq -r '(.spec.paramKind == null)' <<<"$policy" 2>/dev/null) || policy_param_kind_empty=false
+  policy_audit_annotations_empty=$(jq -r '((.spec.auditAnnotations // []) | length) == 0' \
+    <<<"$policy" 2>/dev/null) || policy_audit_annotations_empty=false
   # Resource/operation scope: exactly core/v1 pods for CREATE and UPDATE, no excludes; the
   # Binding intersects with the policy, so it must not add its own resourceRules/excludes.
   policy_rules_exact=$(jq -r '
@@ -234,6 +345,8 @@ EOF_POD
                 ((.apiGroups // []) == [""])
                 and ((.apiVersions // []) == ["v1"])
                 and ((.resources // []) == ["pods"])
+                and (((.resourceNames // []) | length) == 0)
+                and (.scope == null or .scope == "" or .scope == "*" or .scope == "Namespaced")
                 and (((.operations // []) | length) > 0)
                 and all(.operations[]; . == "CREATE" or . == "UPDATE"))
           and (([$rules[].operations[]] | index("CREATE")) != null)
@@ -347,6 +460,13 @@ spec:
 EOF_POD
 )
   true_status=$?
+  expected_vap_reason="ValidatingAdmissionPolicy 'require-no-automount-token' with binding 'require-no-automount-token-binding' denied request:"
+  deny_reason="${deny_output#* is forbidden: }"
+  true_reason="${true_output#* is forbidden: }"
+  deny_attributed=false
+  true_attributed=false
+  [[ "$deny_reason" == "$expected_vap_reason"* ]] && deny_attributed=true
+  [[ "$true_reason" == "$expected_vap_reason"* ]] && true_attributed=true
   # Functional scope proof: the SAME probe Pod (PSA-compliant, missing the automount
   # opt-out) applied to a DIFFERENT namespace must NOT be denied by this VAP - a Binding
   # whose namespaceSelector merely CONTAINS RESTRICTED_NS among several matched
@@ -385,28 +505,34 @@ EOF_POD
   other_ns_status=$?
   set -e
   if [[ -n "$policy" && "$policy_name" == "require-no-automount-token" && "$actions" == "true" \
-    && "$deny_status" -ne 0 && "$deny_output" == *"require-no-automount-token"* && "$deny_output" != *"violates PodSecurity"* \
+    && "$binding_set_exact" == "true" \
+    && "$deny_status" -ne 0 && "$deny_attributed" == "true" && "$deny_output" != *"violates PodSecurity"* \
     && "$allow_status" -eq 0 && "$other_ns_status" -eq 0 \
-    && "$true_status" -ne 0 && "$true_output" == *"require-no-automount-token"* && "$true_output" != *"violates PodSecurity"* \
+    && "$true_status" -ne 0 && "$true_attributed" == "true" && "$true_output" != *"violates PodSecurity"* \
     && "$selector_exact" == "true" \
     && "$policy_match_conditions_empty" == "true" && "$policy_object_selector_empty" == "true" \
     && "$policy_namespace_selector_empty" == "true" \
     && "$binding_object_selector_empty" == "true" && "$validation_dependency_ok" == "true" \
     && "$policy_variables_empty" == "true" && "$policy_param_kind_empty" == "true" \
+    && "$policy_audit_annotations_empty" == "true" \
     && "$policy_rules_exact" == "true" && "$binding_resource_rules_empty" == "true" ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
     if [[ -z "$policy" ]]; then
       echo "HINT: ValidatingAdmissionPolicy 'require-no-automount-token' does not exist. Create it with a CEL expression checking automountServiceAccountToken == false."
+    elif [[ "$binding_set_exact" != "true" ]]; then
+      echo "HINT: This lab expects exactly one binding for policy 'require-no-automount-token': 'require-no-automount-token-binding'. Remove extra bindings that extend the policy to other namespaces."
     elif [[ "$policy_name" != "require-no-automount-token" || "$actions" != "true" ]]; then
       echo "HINT: ValidatingAdmissionPolicyBinding must reference policyName 'require-no-automount-token' and set validationActions: [Deny]."
     elif [[ "$policy_match_conditions_empty" != "true" || "$policy_object_selector_empty" != "true" || "$policy_namespace_selector_empty" != "true" || "$binding_object_selector_empty" != "true" ]]; then
       echo "HINT: Task 6 must cover every Pod in '$RESTRICTED_NS'. Do not narrow the policy with spec.matchConditions, matchConstraints.objectSelector, or matchConstraints.namespaceSelector, and do not use a Binding objectSelector. Namespace scoping for this lab belongs only in the Binding exact namespaceSelector for '$RESTRICTED_NS'."
-    elif [[ "$validation_dependency_ok" != "true" || "$policy_variables_empty" != "true" || "$policy_param_kind_empty" != "true" ]]; then
-      echo "HINT: Task 6 validation may use any correct CEL form, including optional-field syntax, but its only admission-data dependency must be object.spec.automountServiceAccountToken. Do not use oldObject/request/params/namespaceObject/variables/authorizer or other object fields."
+    elif [[ "$validation_dependency_ok" != "true" || "$policy_variables_empty" != "true" || "$policy_param_kind_empty" != "true" || "$policy_audit_annotations_empty" != "true" ]]; then
+      echo "HINT: Task 6 admission behavior must depend only on object.spec.automountServiceAccountToken. Do not use oldObject/request/params/namespaceObject/variables/authorizer, other object fields, or auditAnnotations in this lab; auditAnnotations contain independent CEL expressions whose runtime errors can change admission behavior through failurePolicy."
     elif [[ "$policy_rules_exact" != "true" || "$binding_resource_rules_empty" != "true" ]]; then
-      echo "HINT: Task 6 VAP must match exactly core/v1 Pods for CREATE and UPDATE, with no excludeResourceRules. The Binding must not add resourceRules/excludeResourceRules; its only extra scope is the exact namespaceSelector for '$RESTRICTED_NS'."
+      echo "HINT: Task 6 VAP must match all core/v1 Pods (no resourceNames restriction) for CREATE and UPDATE, with Namespaced/unspecified scope and no excludeResourceRules. The Binding must not add resourceRules/excludeResourceRules."
+    elif [[ "$deny_attributed" != "true" || "$true_attributed" != "true" ]]; then
+      echo "HINT: The denial must come from ValidatingAdmissionPolicy 'require-no-automount-token' through binding 'require-no-automount-token-binding'. A denial from another admission policy is not proof that the required policy works."
     elif [[ "$deny_status" -eq 0 || "$deny_output" != *"require-no-automount-token"* ]]; then
       echo "HINT: A fully PSA-compliant Pod that omits automountServiceAccountToken: false was NOT denied by your VAP. Check the CEL expression actually evaluates automountServiceAccountToken, not some other field."
     elif [[ "$deny_output" == *"violates PodSecurity"* ]]; then
@@ -421,7 +547,7 @@ EOF_POD
     if [[ "$selector_exact" != "true" && "$other_ns_status" -eq 0 ]]; then
       echo "HINT: Binding namespaceSelector must contain an exact namespace-name constraint for '$RESTRICTED_NS' using kubernetes.io/metadata.name=<namespace> (matchLabels or In with exactly one value). Merely excluding '$OBSERVE_NS' or using a broader selector is not enough."
     fi
-    echo "policy_namespace_selector_empty=$policy_namespace_selector_empty policy_rules_exact=$policy_rules_exact binding_resource_rules_empty=$binding_resource_rules_empty policy_variables_empty=$policy_variables_empty policy_param_kind_empty=$policy_param_kind_empty validation_count=$validation_count validation_dependency_ok=$validation_dependency_ok policy_match_conditions_empty=$policy_match_conditions_empty policy_object_selector_empty=$policy_object_selector_empty binding_object_selector_empty=$binding_object_selector_empty selector_exact=$selector_exact true_status=$true_status true_output=$true_output policy_name=$policy_name actions=$actions deny_status=$deny_status deny_output=$deny_output allow_status=$allow_status allow_output=$allow_output other_ns_status=$other_ns_status other_ns_output=$other_ns_output"
+    echo "bindings_for_policy=$bindings_for_policy binding_set_exact=$binding_set_exact deny_attributed=$deny_attributed true_attributed=$true_attributed policy_namespace_selector_empty=$policy_namespace_selector_empty policy_rules_exact=$policy_rules_exact binding_resource_rules_empty=$binding_resource_rules_empty policy_variables_empty=$policy_variables_empty policy_param_kind_empty=$policy_param_kind_empty policy_audit_annotations_empty=$policy_audit_annotations_empty validation_count=$validation_count validation_dependency_ok=$validation_dependency_ok policy_match_conditions_empty=$policy_match_conditions_empty policy_object_selector_empty=$policy_object_selector_empty binding_object_selector_empty=$binding_object_selector_empty selector_exact=$selector_exact true_status=$true_status true_output=$true_output policy_name=$policy_name actions=$actions deny_status=$deny_status deny_output=$deny_output allow_status=$allow_status allow_output=$allow_output other_ns_status=$other_ns_status other_ns_output=$other_ns_output"
     result=1
   fi
   [ "$result" -eq 0 ]
@@ -434,6 +560,7 @@ EOF_POD
   version=$(jq -r '.metadata.labels["pod-security.kubernetes.io/enforce-version"] // ""' <<<"$labels")
 
   dep=$(kubectl -n "$CONTROLLER_NS" get deploy controller-app --context "$CTX" -o json 2>/dev/null)
+  dep_uid=$(jq -r '.metadata.uid // ""' <<<"$dep" 2>/dev/null)
   hardened=$(jq -r '
     (.spec.template.spec.securityContext.runAsNonRoot == true) and
     (.spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation == false) and
@@ -442,42 +569,137 @@ EOF_POD
      (.spec.template.spec.containers[0].securityContext.seccompProfile.type == "RuntimeDefault"))
   ' <<<"$dep" 2>/dev/null)
 
-  # Live retest with identity proof: record the current controller-owned Pod (name, UID,
-  # Ready) BEFORE deleting it, delete exactly that Pod, then require a NEW Pod (different
-  # UID) to become Ready. Deployment.status.readyReplicas alone can be stale right after the
-  # delete, and a selector that matches no Pod would delete nothing.
   replicas=$(jq -r '.spec.replicas // 0' <<<"$dep" 2>/dev/null)
   template_app_label=$(jq -r '.spec.template.metadata.labels.app // ""' <<<"$dep" 2>/dev/null)
+  # A Ready Pod from an OLD ReplicaSet is not proof that the CURRENT Deployment
+  # template was fixed. Require the Deployment controller to have observed the
+  # current generation and completed the rollout before deleting any Pod.
+  rollout_current=$(jq -r '
+      (.metadata.generation // 0) as $generation
+      | (.status.observedGeneration // 0) as $observed
+      | (
+          $generation > 0
+          and $observed == $generation
+          and (.status.updatedReplicas // 0) == 1
+          and (.status.readyReplicas // 0) == 1
+          and (.status.availableReplicas // 0) == 1
+          and (.status.unavailableReplicas // 0) == 0
+        )
+    ' <<<"$dep" 2>/dev/null) || rollout_current=false
+
+  deployment_rs_uids=$(kubectl -n "$CONTROLLER_NS" get replicasets \
+    --context "$CTX" -o json 2>/dev/null \
+    | jq -c --arg dep_uid "$dep_uid" '
+        [
+          .items[]
+          | select(
+              any(
+                .metadata.ownerReferences[]?;
+                .controller == true
+                and .kind == "Deployment"
+                and .uid == $dep_uid
+              )
+            )
+          | .metadata.uid
+        ]
+      ') || deployment_rs_uids='[]'
+  deployment_rs_count=$(jq -r 'length' <<<"$deployment_rs_uids" 2>/dev/null) || deployment_rs_count=0
+
   old_pods=$(kubectl -n "$CONTROLLER_NS" get pods -l app=controller-app --context "$CTX" -o json 2>/dev/null)
-  old_count=$(jq -r '[.items[] | select(.metadata.deletionTimestamp == null)] | length' <<<"$old_pods" 2>/dev/null)
+  owned_old_pods=$(jq -c --argjson rs_uids "$deployment_rs_uids" '
+      [
+        .items[]
+        | select(.metadata.deletionTimestamp == null)
+        | select(
+            any(
+              .metadata.ownerReferences[]?;
+              .controller == true
+              and .kind == "ReplicaSet"
+              and (
+                .uid as $owner_uid
+                | any($rs_uids[]; . == $owner_uid)
+              )
+            )
+          )
+      ]
+    ' <<<"$old_pods" 2>/dev/null) || owned_old_pods='[]'
+  old_count=$(jq -r 'length' <<<"$owned_old_pods" 2>/dev/null) || old_count=0
   old_name=""
   old_uid=""
   old_ready="false"
   if [[ "$old_count" == "1" ]]; then
-    old_name=$(jq -r '[.items[] | select(.metadata.deletionTimestamp == null)][0].metadata.name // ""' <<<"$old_pods")
-    old_uid=$(jq -r '[.items[] | select(.metadata.deletionTimestamp == null)][0].metadata.uid // ""' <<<"$old_pods")
-    old_ready=$(jq -r 'any([.items[] | select(.metadata.deletionTimestamp == null)][0].status.conditions[]?; .type == "Ready" and .status == "True")' <<<"$old_pods" 2>/dev/null)
+    old_name=$(jq -r '.[0].metadata.name // ""' <<<"$owned_old_pods")
+    old_uid=$(jq -r '.[0].metadata.uid // ""' <<<"$owned_old_pods")
+    old_ready=$(jq -r 'any(.[0].status.conditions[]?; .type == "Ready" and .status == "True")' <<<"$owned_old_pods" 2>/dev/null)
   fi
   recreated=false
   new_uid=""
-  if [[ "$replicas" == "1" && "$template_app_label" == "controller-app" && "$old_count" == "1" \
-        && -n "$old_name" && -n "$old_uid" && "$old_ready" == "true" ]]; then
-    kubectl -n "$CONTROLLER_NS" delete pod "$old_name" --context "$CTX" --wait=true >/dev/null 2>&1 || true
-    for i in $(seq 1 24); do
-      replacement=$(kubectl -n "$CONTROLLER_NS" get pods -l app=controller-app --context "$CTX" -o json 2>/dev/null)
-      new_uid=$(jq -r --arg old "$old_uid" '
-          [ .items[]
-            | select(.metadata.uid != $old)
-            | select(.metadata.deletionTimestamp == null)
-            | select(any(.status.conditions[]?; .type == "Ready" and .status == "True")) ]
-          | if length == 1 then .[0].metadata.uid else "" end
-        ' <<<"$replacement" 2>/dev/null)
-      if [[ -n "$new_uid" ]]; then
-        recreated=true
-        break
-      fi
-      sleep 5
-    done
+  delete_status=1
+  delete_output=""
+  if [[ -n "$dep_uid" \
+    && "$deployment_rs_count" -ge 1 \
+    && "$replicas" == "1" \
+    && "$template_app_label" == "controller-app" \
+    && "$rollout_current" == "true" \
+    && "$old_count" == "1" \
+    && -n "$old_name" \
+    && -n "$old_uid" \
+    && "$old_ready" == "true" ]]; then
+    set +e
+    delete_output=$(kubectl -n "$CONTROLLER_NS" delete pod "$old_name" \
+      --context "$CTX" --wait=true 2>&1)
+    delete_status=$?
+    set -e
+
+    if [[ "$delete_status" -eq 0 ]]; then
+      for i in $(seq 1 24); do
+        current_rs_uids=$(kubectl -n "$CONTROLLER_NS" get replicasets \
+          --context "$CTX" -o json 2>/dev/null \
+          | jq -c --arg dep_uid "$dep_uid" '
+              [
+                .items[]
+                | select(
+                    any(
+                      .metadata.ownerReferences[]?;
+                      .controller == true
+                      and .kind == "Deployment"
+                      and .uid == $dep_uid
+                    )
+                  )
+                | .metadata.uid
+              ]
+            ') || current_rs_uids='[]'
+        replacement=$(kubectl -n "$CONTROLLER_NS" get pods \
+          -l app=controller-app --context "$CTX" -o json 2>/dev/null)
+        new_uid=$(jq -r \
+          --arg old "$old_uid" \
+          --argjson rs_uids "$current_rs_uids" '
+            [
+              .items[]
+              | select(.metadata.uid != $old)
+              | select(.metadata.deletionTimestamp == null)
+              | select(
+                  any(
+                    .metadata.ownerReferences[]?;
+                    .controller == true
+                    and .kind == "ReplicaSet"
+                    and (
+                      .uid as $owner_uid
+                      | any($rs_uids[]; . == $owner_uid)
+                    )
+                  )
+                )
+              | select(any(.status.conditions[]?; .type == "Ready" and .status == "True"))
+            ]
+            | if length == 1 then .[0].metadata.uid else "" end
+          ' <<<"$replacement" 2>/dev/null)
+        if [[ -n "$new_uid" ]]; then
+          recreated=true
+          break
+        fi
+        sleep 5
+      done
+    fi
   fi
 
   # Negative control: an unrelated unsafe Pod must still be denied in this
@@ -501,25 +723,47 @@ EOF_POD
   unsafe_status=$?
   set -e
 
-  if [[ "$enforce" == "restricted" && "$version" == "v1.36" && "$hardened" == "true" && \
-        "$replicas" == "1" && "$template_app_label" == "controller-app" && \
-        "$old_count" == "1" && "$old_ready" == "true" && \
-        "$recreated" == "true" && -n "$new_uid" && "$new_uid" != "$old_uid" && \
-        "$unsafe_status" -ne 0 && "$unsafe" =~ violates[[:space:]]PodSecurity ]]; then
+  if [[ "$enforce" == "restricted" \
+    && "$version" == "v1.36" \
+    && "$hardened" == "true" \
+    && -n "$dep_uid" \
+    && "$deployment_rs_count" -ge 1 \
+    && "$replicas" == "1" \
+    && "$template_app_label" == "controller-app" \
+    && "$rollout_current" == "true" \
+    && "$old_count" == "1" \
+    && "$old_ready" == "true" \
+    && "$delete_status" -eq 0 \
+    && "$recreated" == "true" \
+    && -n "$new_uid" \
+    && "$new_uid" != "$old_uid" \
+    && "$unsafe_status" -ne 0 \
+    && "$unsafe" =~ violates[[:space:]]PodSecurity ]]; then
     echo '1' >> /var/work/tests/result/ok
     result=0
   else
-    if [[ "$replicas" != "1" ]]; then
+    if [[ -z "$dep_uid" ]]; then
+      echo "HINT: Deployment 'controller-app' was not found or has no UID."
+    elif [[ "$deployment_rs_count" -lt 1 ]]; then
+      echo "HINT: No ReplicaSet owned by Deployment 'controller-app' was found. A same-label ReplicaSet owned by another controller does not satisfy this task."
+    elif [[ "$replicas" != "1" ]]; then
       echo "HINT: Deployment controller-app must have replicas: 1 for this scenario."
     elif [[ "$template_app_label" != "controller-app" ]]; then
       echo "HINT: Deployment Pod template must have label app=controller-app; otherwise the lab's delete/recreate probe cannot target the controller-owned Pod."
     elif [[ "$old_count" != "1" || "$old_ready" != "true" ]]; then
-      echo "HINT: Before the recreation probe there must be exactly one Ready controller-app Pod owned by the Deployment."
+      echo "HINT: Before deletion there must be exactly one Ready Pod whose controller ownerReference points to a ReplicaSet owned by Deployment 'controller-app'. A Pod that only shares label app=controller-app is not enough."
+    elif [[ "$rollout_current" != "true" ]]; then
+      echo "HINT: Deployment 'controller-app' is not fully rolled out to its CURRENT template. Require observedGeneration==generation and exactly one updated/ready/available replica before testing recreation; a Ready Pod from an older ReplicaSet is not proof that the current template works."
+    elif [[ "$delete_status" -ne 0 ]]; then
+      echo "HINT: The checker could not delete the original Deployment-owned Pod: $delete_output"
     elif [[ "$recreated" != "true" ]]; then
-      echo "HINT: After deleting the original Pod, no NEW Ready Pod with a different UID appeared. Check ReplicaSet events for the current PodSecurity admission failure."
+      echo "HINT: After deleting the original Deployment-owned Pod, no NEW Ready Pod owned by a ReplicaSet of the same Deployment UID appeared. Check 'kubectl -n $CONTROLLER_NS describe rs' and namespace events for the current PodSecurity admission failure."
+    elif [[ "$unsafe_status" -eq 0 || ! "$unsafe" =~ violates[[:space:]]PodSecurity ]]; then
+      echo "HINT: The namespace no longer proves restricted enforcement: the independent unsafe Pod was not rejected by PodSecurity."
+    else
+      echo "HINT: $CONTROLLER_NS must enforce restricted:v1.36 and controller-app's CURRENT Pod template must be PSS-restricted-compliant so its own ReplicaSet can recreate a Ready Pod after deletion."
     fi
-    echo "HINT: $CONTROLLER_NS must enforce restricted:v1.36; controller-app's Pod template must be fully PSS-restricted-compliant (runAsNonRoot, seccompProfile RuntimeDefault, capabilities drop ALL, allowPrivilegeEscalation false) so its ReplicaSet can actually recreate a Ready Pod after deletion under this enforce level. If the Pod never comes back Ready, check 'kubectl -n $CONTROLLER_NS describe rs' and 'kubectl -n $CONTROLLER_NS get events' for the exact PodSecurity violation, then fix the Deployment template - not the namespace label."
-    echo "replicas=$replicas template_app_label=$template_app_label old_count=$old_count old_name=$old_name old_uid=$old_uid old_ready=$old_ready recreated=$recreated new_uid=$new_uid enforce=$enforce version=$version hardened=$hardened unsafe_status=$unsafe_status unsafe=$unsafe"
+    echo "dep_uid=$dep_uid deployment_rs_uids=$deployment_rs_uids deployment_rs_count=$deployment_rs_count rollout_current=$rollout_current replicas=$replicas template_app_label=$template_app_label old_count=$old_count old_name=$old_name old_uid=$old_uid old_ready=$old_ready delete_status=$delete_status delete_output=$delete_output recreated=$recreated new_uid=$new_uid enforce=$enforce version=$version hardened=$hardened unsafe_status=$unsafe_status unsafe=$unsafe"
     result=1
   fi
   [ "$result" -eq 0 ]

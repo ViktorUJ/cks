@@ -47,7 +47,7 @@ chmod 0644 /var/lib/cks-lab108-checker/baseline-admission-plugins.txt
 # Kyverno (задание 1: студент сам устанавливает через install-kyverno), Gatekeeper
 # предустановлен здесь bootstrap-ом: задание посвящено починке уже готовой (слегка
 # неполной) policy, а не установке admission engine с нуля - это уже покрыто заданием 1.
-GATEKEEPER_VERSION="v3.17.1"  # текущий stable release gatekeeper-library на дату лабы
+GATEKEEPER_VERSION="v3.23.1"
 kubectl apply -f "https://raw.githubusercontent.com/open-policy-agent/gatekeeper/${GATEKEEPER_VERSION}/deploy/gatekeeper.yaml"
 kubectl -n gatekeeper-system wait --for=condition=Available --timeout=180s deployment/gatekeeper-controller-manager
 kubectl -n gatekeeper-system wait --for=condition=Available --timeout=180s deployment/gatekeeper-audit

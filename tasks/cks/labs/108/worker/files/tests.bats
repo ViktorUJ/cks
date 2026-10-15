@@ -22,9 +22,48 @@ node_ssh() {
   ssh -oBatchMode=yes -oStrictHostKeyChecking=no -oConnectTimeout=10 "$(control_plane)" "$@"
 }
 
-policy_enforced() {
+policy_contract_ok() {
   kubectl get validatingpolicy "$1" --context "$CTX" -o json 2>/dev/null | \
-    jq -e '.apiVersion == "policies.kyverno.io/v1" and (.spec.validationActions | index("Deny") != null)' >/dev/null
+    jq -e --arg ns "$NS" '
+      def empty_selector($s):
+        (($s.matchLabels // {}) | length) == 0 and
+        (($s.matchExpressions // []) | length) == 0;
+      def exact_ns_expression($e; $ns):
+        ($e | gsub("[[:space:]]"; "")) as $x |
+        $x == ("request.namespace==\u0027" + $ns + "\u0027") or
+        $x == ("request.namespace==\"" + $ns + "\"") or
+        $x == ("\u0027" + $ns + "\u0027==request.namespace") or
+        $x == ("\"" + $ns + "\"==request.namespace");
+      def exact_ns_selector($s; $ns):
+        ((($s.matchLabels // {}) == {"kubernetes.io/metadata.name": $ns}) and
+          (($s.matchExpressions // []) | length) == 0) or
+        ((($s.matchLabels // {}) | length) == 0 and
+          (($s.matchExpressions // []) == [{"key":"kubernetes.io/metadata.name","operator":"In","values":[$ns]}]));
+      .apiVersion == "policies.kyverno.io/v1" and
+      .kind == "ValidatingPolicy" and
+      ((.spec.validationActions // []) | index("Deny") != null) and
+      ((.spec.matchConstraints.resourceRules // []) as $rules |
+        ($rules | length) > 0 and all($rules[];
+          ((.apiGroups // []) == [""]) and ((.apiVersions // []) == ["v1"]) and
+          (((.resourceNames // []) | length) == 0) and
+          ((.operations // []) | length) > 0 and
+          all(.operations[]; . == "CREATE" or . == "UPDATE") and
+          (.resources // [] | length) > 0 and
+          all(.resources[]; . == "pods" or . == "pods/ephemeralcontainers")) and
+        (((.spec.matchConstraints.excludeResourceRules // []) | length) == 0)) and
+      empty_selector(.spec.matchConstraints.objectSelector // {}) and
+      (((.spec.matchConditions // []) as $conditions |
+        (($conditions | length) == 1 and
+          exact_ns_expression($conditions[0].expression // ""; $ns) and
+          empty_selector(.spec.matchConstraints.namespaceSelector // {})) or
+        (($conditions | length) == 0 and
+          exact_ns_selector(.spec.matchConstraints.namespaceSelector // {}; $ns))))
+    ' >/dev/null
+}
+
+kyverno_denied_by() {
+  local expected_policy="$1" status="$2" output="$3"
+  [[ "$status" -ne 0 && "$output" == *"Policy ${expected_policy} failed:"* ]]
 }
 
 @test "0 Init" {
@@ -56,9 +95,9 @@ policy_enforced() {
 
 @test "2. deny-latest-tag rejects explicit and implicit latest in all container lists" {
   set +e
-  policy_enforced deny-latest-tag
+  policy_contract_ok deny-latest-tag
   policy_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  main_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -71,8 +110,11 @@ spec:
   - name: app
     image: registry.k8s.io/pause:latest
 EOF
+)
   main_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  main_attributed=false
+  kyverno_denied_by deny-latest-tag "$main_status" "$main_output" && main_attributed=true
+  untagged_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -85,8 +127,28 @@ spec:
   - name: app
     image: registry.k8s.io/pause
 EOF
+)
   untagged_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  untagged_attributed=false
+  kyverno_denied_by deny-latest-tag "$untagged_status" "$untagged_output" && untagged_attributed=true
+  port_untagged_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: registry-port-implicit-latest-must-fail
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: app
+    image: registry.example:5000/app
+EOF
+)
+  port_untagged_status=$?
+  port_untagged_attributed=false
+  kyverno_denied_by deny-latest-tag "$port_untagged_status" "$port_untagged_output" && port_untagged_attributed=true
+  init_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -102,8 +164,11 @@ spec:
   - name: app
     image: registry.k8s.io/pause:3.10
 EOF
+)
   init_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  init_attributed=false
+  kyverno_denied_by deny-latest-tag "$init_status" "$init_output" && init_attributed=true
+  untagged_init_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -119,22 +184,33 @@ spec:
   - name: app
     image: registry.k8s.io/pause:3.10
 EOF
+)
   untagged_init_status=$?
+  untagged_init_attributed=false
+  kyverno_denied_by deny-latest-tag "$untagged_init_status" "$untagged_init_output" && untagged_init_attributed=true
 
   kubectl delete pod ephemeral-policy-base -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   kubectl run ephemeral-policy-base -n "$NS" --context "$CTX" --restart=Never \
     --image=registry.k8s.io/pause:3.10 --overrides='{"spec":{"securityContext":{"runAsNonRoot":true}}}' >/dev/null 2>&1
   kubectl wait pod/ephemeral-policy-base -n "$NS" --context "$CTX" --for=condition=Ready --timeout=90s >/dev/null 2>&1
   base_status=$?
-  kubectl debug pod/ephemeral-policy-base -n "$NS" --context "$CTX" --target=ephemeral-policy-base \
-    --image=registry.k8s.io/e2e-test-images/busybox:latest --profile=general -- true >/dev/null 2>&1
+  ephemeral_latest_output=$(kubectl debug pod/ephemeral-policy-base -n "$NS" --context "$CTX" --target=ephemeral-policy-base \
+    --image=registry.k8s.io/e2e-test-images/busybox:latest --profile=general -- true 2>&1)
   ephemeral_latest_status=$?
-  kubectl debug pod/ephemeral-policy-base -n "$NS" --context "$CTX" --target=ephemeral-policy-base \
-    --image=registry.k8s.io/e2e-test-images/busybox --profile=general -- true >/dev/null 2>&1
+  ephemeral_latest_attributed=false
+  kyverno_denied_by deny-latest-tag "$ephemeral_latest_status" "$ephemeral_latest_output" && ephemeral_latest_attributed=true
+  ephemeral_untagged_output=$(kubectl debug pod/ephemeral-policy-base -n "$NS" --context "$CTX" --target=ephemeral-policy-base \
+    --image=registry.k8s.io/e2e-test-images/busybox --profile=general -- true 2>&1)
   ephemeral_untagged_status=$?
+  ephemeral_untagged_attributed=false
+  kyverno_denied_by deny-latest-tag "$ephemeral_untagged_status" "$ephemeral_untagged_output" && ephemeral_untagged_attributed=true
   kubectl debug pod/ephemeral-policy-base -n "$NS" --context "$CTX" --target=ephemeral-policy-base \
     --image=registry.k8s.io/e2e-test-images/busybox:1.36-1 --profile=general -- true >/dev/null 2>&1
   ephemeral_trusted_status=$?
+  kubectl debug pod/ephemeral-policy-base -n "$NS" --context "$CTX" --target=ephemeral-policy-base \
+    --attach=false --image=registry.k8s.io/pause@sha256:5a92cb1de40c9c50e1c72e83bf35b9b32ce88e0d1b93f5e2727d97a44c176f56 \
+    --profile=general -- true >/dev/null 2>&1
+  digest_ephemeral_status=$?
   kubectl delete pod ephemeral-policy-base -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
 
   # Positive control for the OTHER explicitly-allowed image reference form: task 2
@@ -156,17 +232,38 @@ spec:
     image: registry.k8s.io/pause@sha256:5a92cb1de40c9c50e1c72e83bf35b9b32ce88e0d1b93f5e2727d97a44c176f56
 EOF
   digest_status=$?
+  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+apiVersion: v1
+kind: Pod
+metadata:
+  name: digest-pinned-init-ok
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  initContainers:
+  - name: init
+    image: registry.k8s.io/pause@sha256:5a92cb1de40c9c50e1c72e83bf35b9b32ce88e0d1b93f5e2727d97a44c176f56
+  containers:
+  - name: app
+    image: registry.k8s.io/pause:3.10
+EOF
+  digest_init_status=$?
   set -e
   if [[ "$policy_status" -eq 0 && "$main_status" -ne 0 && "$untagged_status" -ne 0 \
-    && "$init_status" -ne 0 && "$untagged_init_status" -ne 0 \
-    && "$base_status" -eq 0 && "$ephemeral_latest_status" -ne 0 && "$ephemeral_untagged_status" -ne 0 \
-    && "$ephemeral_trusted_status" -eq 0 && "$digest_status" -eq 0 ]]; then result=0; else
+    && "$main_attributed" == "true" && "$untagged_attributed" == "true" && "$port_untagged_attributed" == "true" \
+    && "$init_attributed" == "true" && "$untagged_init_attributed" == "true" \
+    && "$base_status" -eq 0 && "$ephemeral_latest_attributed" == "true" && "$ephemeral_untagged_attributed" == "true" \
+    && "$ephemeral_trusted_status" -eq 0 && "$digest_status" -eq 0 \
+    && "$digest_init_status" -eq 0 && "$digest_ephemeral_status" -eq 0 ]]; then result=0; else
     if [[ "$policy_status" -ne 0 ]]; then
       echo "HINT: ValidatingPolicy 'deny-latest-tag' does not exist, is not apiVersion policies.kyverno.io/v1, or does not have validationActions: [Deny]."
     elif [[ "$main_status" -eq 0 ]]; then
       echo "HINT: A Pod with image tag ':latest' was admitted - it should be denied. Check your CEL expression actually parses the tag, not just checks for the string 'latest' loosely."
     elif [[ "$untagged_status" -eq 0 ]]; then
       echo "HINT: A Pod with NO tag at all (implicit latest) was admitted - an image reference without ':tag' defaults to 'latest' and must be denied the same way as an explicit ':latest'."
+    elif [[ "$port_untagged_attributed" != "true" ]]; then
+      echo "HINT: 'registry.example:5000/app' has a registry port but no image tag. The colon before the last '/' is not a tag separator; deny-latest-tag must reject it as implicit latest."
     elif [[ "$init_status" -eq 0 ]]; then
       echo "HINT: A Pod with a ':latest' initContainer (but a pinned main container) was admitted - your policy must check spec.initContainers, not only spec.containers."
     elif [[ "$untagged_init_status" -eq 0 ]]; then
@@ -177,19 +274,21 @@ EOF
       echo "HINT: 'kubectl debug' adding an UNTAGGED (implicit latest) ephemeral container was admitted - implicit latest must be denied in spec.ephemeralContainers too, not only as an explicit ':latest' string."
     elif [[ "$digest_status" -ne 0 ]]; then
       echo "HINT: A digest-pinned image (image@sha256:...) was rejected - task 2 requires accepting EITHER a non-latest tag OR a digest reference. Check your CEL treats a digest reference as a valid, always-allowed form, not just an absence of ':latest'."
+    elif [[ "$digest_init_status" -ne 0 || "$digest_ephemeral_status" -ne 0 ]]; then
+      echo "HINT: Digest-pinned images must be accepted in regular, init and ephemeral container lists."
     elif [[ "$base_status" -ne 0 || "$ephemeral_trusted_status" -ne 0 ]]; then
       echo "HINT: A correctly pinned image was unexpectedly rejected - check your policy is not too broad (e.g. accidentally matching any image string containing digits, or blocking all debug/ephemeral operations)."
     fi
-    echo "policy_enforced=$policy_status main=$main_status untagged=$untagged_status init=$init_status untagged_init=$untagged_init_status base=$base_status ephemeral_latest=$ephemeral_latest_status ephemeral_untagged=$ephemeral_untagged_status ephemeral_trusted=$ephemeral_trusted_status digest=$digest_status"; result=1
+    echo "policy_contract=$policy_status main=$main_status untagged=$untagged_status port_untagged=$port_untagged_status port_attributed=$port_untagged_attributed init=$init_status untagged_init=$untagged_init_status base=$base_status ephemeral_latest=$ephemeral_latest_status ephemeral_untagged=$ephemeral_untagged_status ephemeral_trusted=$ephemeral_trusted_status digest=$digest_status digest_init=$digest_init_status digest_ephemeral=$digest_ephemeral_status"; result=1
   fi
   record_result "$result"
 }
 
 @test "3. require-run-as-non-root rejects a root-capable Pod" {
   set +e
-  policy_enforced require-run-as-non-root
+  policy_contract_ok require-run-as-non-root
   policy_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  root_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -202,8 +301,11 @@ spec:
   - name: app
     image: registry.k8s.io/pause:3.10
 EOF
+)
   admission_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  root_attributed=false
+  kyverno_denied_by require-run-as-non-root "$admission_status" "$root_output" && root_attributed=true
+  unset_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -214,26 +316,33 @@ spec:
   - name: app
     image: registry.k8s.io/pause:3.10
 EOF
+)
   unset_status=$?
+  unset_attributed=false
+  kyverno_denied_by require-run-as-non-root "$unset_status" "$unset_output" && unset_attributed=true
   set -e
-  if [[ "$policy_status" -eq 0 && "$admission_status" -ne 0 && "$unset_status" -ne 0 ]]; then result=0; else
+  if [[ "$policy_status" -eq 0 && "$root_attributed" == "true" && "$unset_attributed" == "true" ]]; then result=0; else
     if [[ "$policy_status" -ne 0 ]]; then
       echo "HINT: ValidatingPolicy 'require-run-as-non-root' does not exist or is not enforced (Deny)."
-    elif [[ "$admission_status" -eq 0 ]]; then
+    elif [[ "$root_attributed" != "true" && "$admission_status" -eq 0 ]]; then
       echo "HINT: A Pod with securityContext.runAsNonRoot: false was admitted - it should be denied. Check your CEL expression is actually evaluating spec.securityContext.runAsNonRoot, and that a false value (not just a missing value) is caught."
-    else
+    elif [[ "$root_attributed" != "true" ]]; then
+      echo "HINT: The false-value Pod was denied, but not by ValidatingPolicy require-run-as-non-root."
+    elif [[ "$unset_attributed" != "true" && "$unset_status" -eq 0 ]]; then
       echo "HINT: A Pod with NO Pod-level securityContext.runAsNonRoot at all was admitted - the task requires the field to be explicitly true, so a MISSING field must be denied the same way as an explicit false. Check your CEL uses something like 'has(...) && ... == true' rather than only catching the literal false value."
+    else
+      echo "HINT: The unset-value Pod was denied, but not by ValidatingPolicy require-run-as-non-root."
     fi
-    echo "policy_enforced=$policy_status root_admission_status=$admission_status unset_status=$unset_status"; result=1
+    echo "policy_contract=$policy_status root_admission_status=$admission_status root_attributed=$root_attributed unset_status=$unset_status unset_attributed=$unset_attributed"; result=1
   fi
   record_result "$result"
 }
 
 @test "4. allow-approved-registries blocks bypasses and admits trusted images in all container lists" {
   set +e
-  policy_enforced allow-approved-registries
+  policy_contract_ok allow-approved-registries
   policy_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  main_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -246,8 +355,11 @@ spec:
   - name: app
     image: docker.io/library/busybox:1.36
 EOF
+)
   main_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  main_attributed=false
+  kyverno_denied_by allow-approved-registries "$main_status" "$main_output" && main_attributed=true
+  unqualified_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -260,12 +372,15 @@ spec:
   - name: app
     image: busybox:1.36
 EOF
+)
   unqualified_status=$?
+  unqualified_attributed=false
+  kyverno_denied_by allow-approved-registries "$unqualified_status" "$unqualified_output" && unqualified_attributed=true
   # A pinned (non-latest) tag is used here deliberately: task 2's policy must already
   # deny ":latest" regardless of registry, so an unpinned tag on quay.io would be denied
   # for an ambiguous reason and would NOT isolate/prove the registry allowlist control
   # specifically (this probe's only purpose is to confirm quay.io itself is rejected).
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  quay_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -278,8 +393,11 @@ spec:
   - name: app
     image: quay.io/prometheus/busybox:v0.24.0
 EOF
+)
   quay_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  quay_attributed=false
+  kyverno_denied_by allow-approved-registries "$quay_status" "$quay_output" && quay_attributed=true
+  lookalike_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -292,8 +410,11 @@ spec:
   - name: app
     image: registry.k8s.io.evil.example/pause:3.10
 EOF
+)
   lookalike_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  lookalike_attributed=false
+  kyverno_denied_by allow-approved-registries "$lookalike_status" "$lookalike_output" && lookalike_attributed=true
+  lookalike_path_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -306,8 +427,11 @@ spec:
   - name: app
     image: ghcr.io/cks-lab.evil/busybox:1.36
 EOF
+)
   lookalike_path_status=$?
-  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+  lookalike_path_attributed=false
+  kyverno_denied_by allow-approved-registries "$lookalike_path_status" "$lookalike_path_output" && lookalike_path_attributed=true
+  init_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -323,7 +447,10 @@ spec:
   - name: app
     image: registry.k8s.io/pause:3.10
 EOF
+)
   init_status=$?
+  init_attributed=false
+  kyverno_denied_by allow-approved-registries "$init_status" "$init_output" && init_attributed=true
   cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
 apiVersion: v1
 kind: Pod
@@ -341,6 +468,23 @@ spec:
     image: ghcr.io/cks-lab/app:1.0.0
 EOF
   trusted_lists_status=$?
+  cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1
+apiVersion: v1
+kind: Pod
+metadata:
+  name: approved-ghcr-init
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  initContainers:
+  - name: init
+    image: ghcr.io/cks-lab/init:1.0.0
+  containers:
+  - name: app
+    image: registry.k8s.io/pause:3.10
+EOF
+  trusted_ghcr_init_status=$?
 
   # Reuse a real running trusted Pod to exercise the ephemeralcontainers subresource.
   kubectl delete pod registry-ephemeral-base -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
@@ -348,18 +492,25 @@ EOF
     --image=registry.k8s.io/pause:3.10 --overrides='{"spec":{"securityContext":{"runAsNonRoot":true}}}' >/dev/null 2>&1
   kubectl wait pod/registry-ephemeral-base -n "$NS" --context "$CTX" --for=condition=Ready --timeout=90s >/dev/null 2>&1
   base_status=$?
-  kubectl debug pod/registry-ephemeral-base -n "$NS" --context "$CTX" --target=registry-ephemeral-base \
-    --image=docker.io/library/busybox:1.36 --profile=general -- true >/dev/null 2>&1
+  ephemeral_untrusted_output=$(kubectl debug pod/registry-ephemeral-base -n "$NS" --context "$CTX" --target=registry-ephemeral-base \
+    --image=docker.io/library/busybox:1.36 --profile=general -- true 2>&1)
   ephemeral_untrusted_status=$?
+  ephemeral_untrusted_attributed=false
+  kyverno_denied_by allow-approved-registries "$ephemeral_untrusted_status" "$ephemeral_untrusted_output" && ephemeral_untrusted_attributed=true
   kubectl debug pod/registry-ephemeral-base -n "$NS" --context "$CTX" --target=registry-ephemeral-base \
     --image=registry.k8s.io/e2e-test-images/busybox:1.36-1 --profile=general -- true >/dev/null 2>&1
   ephemeral_trusted_status=$?
+  kubectl debug pod/registry-ephemeral-base -n "$NS" --context "$CTX" --target=registry-ephemeral-base \
+    --attach=false --image=ghcr.io/cks-lab/debug:1.0.0 --profile=general -- true >/dev/null 2>&1
+  ephemeral_ghcr_trusted_status=$?
   kubectl delete pod registry-ephemeral-base -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   set -e
   if [[ "$policy_status" -eq 0 && "$main_status" -ne 0 && "$unqualified_status" -ne 0 \
-    && "$quay_status" -ne 0 && "$lookalike_status" -ne 0 && "$lookalike_path_status" -ne 0 \
-    && "$init_status" -ne 0 && "$trusted_lists_status" -eq 0 && "$base_status" -eq 0 \
-    && "$ephemeral_untrusted_status" -ne 0 && "$ephemeral_trusted_status" -eq 0 ]]; then result=0; else
+    && "$main_attributed" == "true" && "$unqualified_attributed" == "true" \
+    && "$quay_attributed" == "true" && "$lookalike_attributed" == "true" && "$lookalike_path_attributed" == "true" \
+    && "$init_attributed" == "true" && "$trusted_lists_status" -eq 0 && "$trusted_ghcr_init_status" -eq 0 && "$base_status" -eq 0 \
+    && "$ephemeral_untrusted_attributed" == "true" && "$ephemeral_trusted_status" -eq 0 \
+    && "$ephemeral_ghcr_trusted_status" -eq 0 ]]; then result=0; else
     if [[ "$policy_status" -ne 0 ]]; then
       echo "HINT: ValidatingPolicy 'allow-approved-registries' does not exist or is not enforced (Deny)."
     elif [[ "$main_status" -eq 0 ]]; then
@@ -374,14 +525,18 @@ EOF
       echo "HINT: A look-alike path under ghcr.io ('ghcr.io/cks-lab.evil/...') was admitted - check your match is anchored on the exact 'ghcr.io/cks-lab/' prefix (including the trailing slash), not a loose substring match that a sibling path like 'cks-lab.evil' could satisfy."
     elif [[ "$init_status" -eq 0 ]]; then
       echo "HINT: An unapproved initContainer image was admitted even though the main container was trusted - your policy must check spec.initContainers too, not just spec.containers."
+    elif [[ "$main_attributed" != "true" || "$unqualified_attributed" != "true" || "$quay_attributed" != "true" || "$lookalike_attributed" != "true" || "$lookalike_path_attributed" != "true" || "$init_attributed" != "true" || "$ephemeral_untrusted_attributed" != "true" ]]; then
+      echo "HINT: One or more negative probes were denied, but not by ValidatingPolicy allow-approved-registries. A denial from another policy does not prove this task."
     elif [[ "$trusted_lists_status" -ne 0 ]]; then
       echo "HINT: A Pod with BOTH main and init containers from approved registries was rejected - it should be allowed. Check your allowlist actually covers both 'registry.k8s.io' and 'ghcr.io/cks-lab' if both are meant to be trusted."
+    elif [[ "$trusted_ghcr_init_status" -ne 0 || "$ephemeral_ghcr_trusted_status" -ne 0 ]]; then
+      echo "HINT: Both approved prefixes must be accepted in every container list, including ghcr.io/cks-lab/* in initContainers and ephemeralContainers."
     elif [[ "$ephemeral_untrusted_status" -eq 0 ]]; then
       echo "HINT: 'kubectl debug' adding an ephemeral container from an unapproved registry was admitted - check your policy also covers spec.ephemeralContainers."
     elif [[ "$base_status" -ne 0 || "$ephemeral_trusted_status" -ne 0 ]]; then
       echo "HINT: A Pod/ephemeral container from an approved registry was unexpectedly rejected - your allowlist match may be too narrow (e.g. exact string match instead of prefix match)."
     fi
-    echo "policy_enforced=$policy_status main=$main_status unqualified=$unqualified_status quay=$quay_status lookalike=$lookalike_status lookalike_path=$lookalike_path_status init=$init_status trusted_lists=$trusted_lists_status base=$base_status ephemeral_untrusted=$ephemeral_untrusted_status ephemeral_trusted=$ephemeral_trusted_status"; result=1
+    echo "policy_contract=$policy_status main=$main_status main_attributed=$main_attributed unqualified=$unqualified_status unqualified_attributed=$unqualified_attributed quay=$quay_status quay_attributed=$quay_attributed lookalike=$lookalike_status lookalike_attributed=$lookalike_attributed lookalike_path=$lookalike_path_status lookalike_path_attributed=$lookalike_path_attributed init=$init_status init_attributed=$init_attributed trusted_lists=$trusted_lists_status ghcr_init=$trusted_ghcr_init_status base=$base_status ephemeral_untrusted=$ephemeral_untrusted_status ephemeral_untrusted_attributed=$ephemeral_untrusted_attributed ephemeral_trusted=$ephemeral_trusted_status ephemeral_ghcr=$ephemeral_ghcr_trusted_status"; result=1
   fi
   record_result "$result"
 }
@@ -432,12 +587,29 @@ spec:
 EOF
 )
   existing_status=$?
+  mutated_outside=$(cat <<'EOF' | kubectl apply --dry-run=server --context "$CTX" -o json -f - 2>/dev/null
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mutation-scope-check
+  namespace: default
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: app
+    image: registry.k8s.io/pause:3.10
+EOF
+)
+  outside_status=$?
   set -e
   label=$(jq -r '.metadata.labels["security.cks.io/managed-by"] // empty' <<<"$mutated" 2>/dev/null)
   existing_label=$(jq -r '.metadata.labels["security.cks.io/managed-by"] // empty' <<<"$mutated_existing" 2>/dev/null)
+  outside_label=$(jq -r '.metadata.labels["security.cks.io/managed-by"] // empty' <<<"$mutated_outside" 2>/dev/null)
   has_mutate=$(jq -r '(.spec.mutations // []) | length' <<<"$policy" 2>/dev/null)
   if [[ "$admission_status" -eq 0 && "$label" == "kyverno" && "$has_mutate" -ge 1 \
-    && "$existing_status" -eq 0 && "$existing_label" == "external" ]]; then
+    && "$existing_status" -eq 0 && "$existing_label" == "external" \
+    && "$outside_status" -eq 0 && -z "$outside_label" ]]; then
     echo '1' >> /var/work/tests/result/ok
   else
     if [[ "$has_mutate" -lt 1 ]]; then
@@ -446,8 +618,10 @@ EOF
       echo "OPTIONAL HINT: The dry-run admission response Pod is missing label 'security.cks.io/managed-by: kyverno' - check the mutation's applyConfiguration/patch actually sets this exact key/value."
     elif [[ "$existing_label" != "external" ]]; then
       echo "OPTIONAL HINT: A Pod that already had label 'security.cks.io/managed-by: external' had its value overwritten to '$existing_label' - the mutation must only ADD the label if it is absent, not unconditionally overwrite an existing value."
+    elif [[ "$outside_status" -ne 0 || -n "$outside_label" ]]; then
+      echo "OPTIONAL HINT: MutatingPolicy must be scoped to namespace policy-108. A dry-run Pod in namespace default must remain unmodified."
     fi
-    echo "OPTIONAL: mutation not ready (admission_status=$admission_status label=$label existing_status=$existing_status existing_label=$existing_label mutate_rules=$has_mutate)"
+    echo "OPTIONAL: mutation not ready (admission_status=$admission_status label=$label existing_status=$existing_status existing_label=$existing_label outside_status=$outside_status outside_label=$outside_label mutate_rules=$has_mutate)"
   fi
   # Последний этап опционален: check_result его проверяет, но не делает лабу неуспешной -
   # если MutatingPolicy отсутствует вовсе, шаг выше уже вернул до этой точки без записи в
@@ -459,6 +633,14 @@ EOF
 @test "6. ImagePolicyWebhook denies :latest via external backend and admits a pinned tag" {
   manifest=$(node_ssh "sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml" 2>/dev/null || true)
   baseline_plugins=$(node_ssh "sudo cat /var/lib/cks-lab108-checker/baseline-admission-plugins.txt" 2>/dev/null || true)
+  backend_kubeconfig=$(node_ssh "sudo cat /etc/kubernetes/image-policy/kubeconfig" 2>/dev/null || true)
+  admission_config=$(node_ssh "sudo cat /etc/kubernetes/image-policy/admission-config.yaml" 2>/dev/null || true)
+  backend_server=$(grep -E '^[[:space:]]*server:[[:space:]]*' <<<"$backend_kubeconfig" | head -n1 | sed -E "s/^[[:space:]]*server:[[:space:]]*//; s/^[\"']//; s/[\"'][[:space:]]*$//")
+  backend_https_ok=false
+  [[ "$backend_server" =~ ^https://[^/]+:8443/imagepolicy$ ]] && backend_https_ok=true
+  default_allow_false=false
+  grep -Eq '^[[:space:]]*defaultAllow:[[:space:]]*false[[:space:]]*$' <<<"$admission_config" && default_allow_false=true
+  service_port=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -r '[.spec.ports[]? | select(.port == 8443)] | length') || service_port=0
   current_plugins=$(grep -oE -- '--enable-admission-plugins=[^"[:space:]]*' <<<"$manifest" | sed 's/^--enable-admission-plugins=//' || true)
   backend_available=$(kubectl get deployment image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | \
     jq -r '.status.availableReplicas // 0' 2>/dev/null)
@@ -547,9 +729,11 @@ EOF
   # kube-proxy needs 1-2s more, and the next test (Gatekeeper) starts immediately after
   # this one - its probes would hit 'connection refused' from the fail-closed webhook and
   # be misattributed. Wait until admission actually works again before finishing.
+  recovery_status=1
   for _ in $(seq 1 30); do
     if kubectl run "webhook-recovery-probe" --image="nginx:recovery-$(date +%s%N)" --dry-run=server -o name \
       --context "$CTX" >/dev/null 2>&1; then
+      recovery_status=0
       break
     fi
     sleep 1
@@ -558,12 +742,13 @@ EOF
   if [[ "$manifest" == *'ImagePolicyWebhook'* \
     && "$manifest" == *'--admission-control-config-file=/etc/kubernetes/image-policy/admission-config.yaml'* \
     && "$manifest" == *'imagepolicy.k8s.io/v1alpha1=true'* \
+    && "$backend_https_ok" == "true" && "$default_allow_false" == "true" && "$service_port" -ge 1 \
     && "$preserved_baseline_plugins" == "yes" \
     && "$backend_available" -ge 1 \
     && "$latest_status" -ne 0 && "$deny_message" == *'image policy webhook backend denied'* \
     && "$pinned_status" -eq 0 \
     && "$failclosed_status" -ne 0 \
-    && "$backend_restored_status" -eq 0 ]]; then
+    && "$backend_restored_status" -eq 0 && "$recovery_status" -eq 0 ]]; then
     result=0
   else
     if [[ "$backend_available" -lt 1 ]]; then
@@ -576,6 +761,12 @@ EOF
       echo "HINT: kube-apiserver.yaml is missing --runtime-config=imagepolicy.k8s.io/v1alpha1=true - without it the ImageReview API is not served and the backend is never called."
     elif [[ "$manifest" != *'--admission-control-config-file='* ]]; then
       echo "HINT: kube-apiserver.yaml is missing --admission-control-config-file pointing at your AdmissionConfiguration file."
+    elif [[ "$backend_https_ok" != "true" ]]; then
+      echo "HINT: /etc/kubernetes/image-policy/kubeconfig must target the backend with HTTPS on :8443/imagepolicy."
+    elif [[ "$service_port" -lt 1 ]]; then
+      echo "HINT: Service image-policy/image-policy-backend must expose port 8443."
+    elif [[ "$default_allow_false" != "true" ]]; then
+      echo "HINT: AdmissionConfiguration must explicitly set ImagePolicyWebhook imagePolicy.defaultAllow: false."
     elif [[ "$latest_status" -eq 0 ]]; then
       echo "HINT: Pod webhook-latest-must-fail (nginx:latest) was created - it should have been denied by the ImagePolicyWebhook backend. Check the backend is reachable from kube-apiserver (Service/kubeconfig server URL) and defaultAllow is false."
     elif [[ "$deny_message" != *'image policy webhook backend denied'* ]]; then
@@ -584,10 +775,12 @@ EOF
       echo "HINT: Pod webhook-pinned-ok (nginx:1.27.3) was not created/Ready - a correctly pinned tag should be allowed by the backend logic in server.py."
     elif [[ "$failclosed_status" -eq 0 ]]; then
       echo "HINT: A Pod was ADMITTED while the image-policy-backend Service was detached (unreachable) - defaultAllow must be false, so admission should be DENIED (fail-closed) when the backend cannot be reached, not silently allowed (fail-open)."
+    elif [[ "$backend_restored_status" -eq 0 && "$recovery_status" -ne 0 ]]; then
+      echo "HINT: Service Endpoints returned, but admission through ImagePolicyWebhook did not recover within 30 seconds."
     else
       echo "HINT: image-policy-backend's Service did not recover its Endpoints after being restored - check nothing about the fail-closed probe left the Service/Deployment selector mismatched."
     fi
-    echo "backend_available=$backend_available preserved_baseline_plugins=$preserved_baseline_plugins baseline_plugins=$baseline_plugins current_plugins=$current_plugins latest_status=$latest_status pinned_status=$pinned_status backend_detached_status=$backend_detached_status failclosed_status=$failclosed_status restore_patch_status=$restore_patch_status backend_restored_status=$backend_restored_status deny_message=$deny_message failclosed_message=$failclosed_message"
+    echo "backend_available=$backend_available backend_server=$backend_server backend_https_ok=$backend_https_ok service_port_8443_count=$service_port default_allow_false=$default_allow_false preserved_baseline_plugins=$preserved_baseline_plugins baseline_plugins=$baseline_plugins current_plugins=$current_plugins latest_status=$latest_status pinned_status=$pinned_status backend_detached_status=$backend_detached_status failclosed_status=$failclosed_status restore_patch_status=$restore_patch_status backend_restored_status=$backend_restored_status recovery_status=$recovery_status deny_message=$deny_message failclosed_message=$failclosed_message"
     result=1
   fi
   kubectl delete pod webhook-latest-must-fail webhook-pinned-ok webhook-failclosed-must-fail --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
@@ -600,15 +793,36 @@ EOF
   template=$(kubectl get constrainttemplate k8sblockedregistries --context "$CTX" -o json 2>/dev/null)
   template_status=$?
   rego=$(jq -r '.spec.targets[] | select(.target == "admission.k8s.gatekeeper.sh") | .rego' <<<"$template" 2>/dev/null)
+  constraint=$(kubectl get k8sblockedregistries deny-bad-registries --context "$CTX" -o json 2>/dev/null)
+  constraint_status=$?
+  constraint_contract_ok=false
+  if [[ "$constraint_status" -eq 0 ]] && jq -e '
+    .apiVersion == "constraints.gatekeeper.sh/v1beta1" and
+    .kind == "K8sBlockedRegistries" and
+    .metadata.name == "deny-bad-registries" and
+    ((.spec.parameters // {}) | length) == 0 and
+    ((.spec.match.namespaces // []) == ["gatekeeper-108"]) and
+    (((.spec.match.excludedNamespaces // []) | length) == 0) and
+    (((.spec.match.labelSelector // {}) | length) == 0) and
+    (((.spec.match.namespaceSelector // {}) | length) == 0) and
+    ((.spec.match.kinds // []) == [{"apiGroups":[""],"kinds":["Pod"]}])
+  ' <<<"$constraint" >/dev/null 2>&1; then
+    constraint_contract_ok=true
+  fi
+  constraints_for_template=$(kubectl get k8sblockedregistries --context "$CTX" -o json 2>/dev/null | jq -c '[.items[].metadata.name] | sort') || constraints_for_template='[]'
+  constraint_set_exact=false
+  [[ "$constraints_for_template" == '["deny-bad-registries"]' ]] && constraint_set_exact=true
   # The fix must be additive Rego, not a parameters edit: Constraint.spec.parameters is
   # not used by this ConstraintTemplate's Rego at all (it reads hardcoded
   # blocked_registry(...) facts), so a student who only patches
   # Constraint.spec.parameters.blocked would leave the Rego - and therefore the actual
   # admission behavior - completely unchanged.
-  rego_has_old=false
-  grep -Fq 'blocked_registry("untrusted-registry.example")' <<<"$rego" && rego_has_old=true
+  rego_has_old_untrusted=false
+  grep -Eq '^[[:space:]]*blocked_registry\("untrusted-registry\.example"\)[[:space:]]*$' <<<"$rego" && rego_has_old_untrusted=true
+  rego_has_old_docker_fake=false
+  grep -Eq '^[[:space:]]*blocked_registry\("docker-fake\.test"\)[[:space:]]*$' <<<"$rego" && rego_has_old_docker_fake=true
   rego_has_new=false
-  grep -Fq 'blocked_registry("very-bad-registry.test")' <<<"$rego" && rego_has_new=true
+  grep -Eq '^[[:space:]]*blocked_registry\("very-bad-registry\.test"\)[[:space:]]*$' <<<"$rego" && rego_has_new=true
 
   new_bad_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_POD'
 apiVersion: v1
@@ -639,6 +853,19 @@ spec:
 EOF_POD
 )
   old_bad_status=$?
+  old_docker_fake_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_POD'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gatekeeper-old-docker-fake
+  namespace: gatekeeper-108
+spec:
+  containers:
+  - name: app
+    image: docker-fake.test/app:1
+EOF_POD
+)
+  old_docker_fake_status=$?
   trusted_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_POD'
 apiVersion: v1
 kind: Pod
@@ -658,16 +885,22 @@ EOF_POD
   # a namespace none of the Kyverno policies from tasks 2-5 (scoped to policy-108) ever
   # match, so a 'kyverno' string in the denial message here would indicate cross-talk
   # between the two admission engines, not a real Gatekeeper-only proof.
-  if [[ "$template_status" -eq 0 && "$rego_has_old" == "true" && "$rego_has_new" == "true" \
-    && "$new_bad_status" -ne 0 && "$new_bad_output" == *"k8sblockedregistries"* && "$new_bad_output" != *"kyverno"* \
-    && "$old_bad_status" -ne 0 && "$old_bad_output" == *"k8sblockedregistries"* \
+  if [[ "$template_status" -eq 0 && "$constraint_contract_ok" == "true" && "$constraint_set_exact" == "true" \
+    && "$rego_has_old_untrusted" == "true" && "$rego_has_old_docker_fake" == "true" && "$rego_has_new" == "true" \
+    && "$new_bad_status" -ne 0 && "$new_bad_output" == *'[deny-bad-registries]'* && "$new_bad_output" == *'validation.gatekeeper.sh'* \
+    && "$old_bad_status" -ne 0 && "$old_bad_output" == *'[deny-bad-registries]'* \
+    && "$old_docker_fake_status" -ne 0 && "$old_docker_fake_output" == *'[deny-bad-registries]'* \
     && "$trusted_status" -eq 0 ]]; then
     result=0
   else
     if [[ "$template_status" -ne 0 ]]; then
       echo "HINT: ConstraintTemplate 'k8sblockedregistries' not found - check it was not accidentally deleted, and that you edited the existing object rather than replacing it under a different name."
-    elif [[ "$rego_has_old" != "true" ]]; then
-      echo "HINT: spec.targets[].rego in the ConstraintTemplate no longer contains 'blocked_registry(\"untrusted-registry.example\")' - you must ADD a new rule for very-bad-registry.test alongside the existing ones, not replace them."
+    elif [[ "$constraint_contract_ok" != "true" ]]; then
+      echo "HINT: Constraint K8sBlockedRegistries/deny-bad-registries must remain Pod-only in gatekeeper-108 with no parameters, selectors or exclusions."
+    elif [[ "$constraint_set_exact" != "true" ]]; then
+      echo "HINT: This lab expects exactly one K8sBlockedRegistries Constraint: deny-bad-registries."
+    elif [[ "$rego_has_old_untrusted" != "true" || "$rego_has_old_docker_fake" != "true" ]]; then
+      echo "HINT: Keep BOTH original active Rego facts: untrusted-registry.example and docker-fake.test."
     elif [[ "$rego_has_new" != "true" ]]; then
       echo "HINT: spec.targets[].rego does not contain 'blocked_registry(\"very-bad-registry.test\")' yet - edit the ConstraintTemplate's Rego (not the Constraint's parameters, which this template does not even use) and add this fact."
     elif [[ "$new_bad_status" -eq 0 ]]; then
@@ -676,10 +909,12 @@ EOF_POD
       echo "HINT: The probe Pod was denied, but not clearly by the Gatekeeper 'k8sblockedregistries' constraint (or the denial actually came from an unrelated Kyverno policy) - check you fixed the ConstraintTemplate's Rego, not a Kyverno policy, and that the probe ran in namespace gatekeeper-108."
     elif [[ "$old_bad_status" -eq 0 ]]; then
       echo "HINT: A Pod with image from the ALREADY-blocked 'untrusted-registry.example' was admitted after your edit - your change must be additive (a new blocked_registry(...) fact alongside the existing one), not a replacement of the original rule."
+    elif [[ "$old_docker_fake_status" -eq 0 ]]; then
+      echo "HINT: docker-fake.test was blocked before the task and must remain denied after the edit."
     elif [[ "$trusted_status" -ne 0 ]]; then
       echo "HINT: A Pod from the already-trusted registry (registry.k8s.io) was denied after your fix - check your Rego edit did not accidentally introduce a syntax error or an overly broad rule."
     fi
-    echo "template_status=$template_status rego_has_old=$rego_has_old rego_has_new=$rego_has_new new_bad_status=$new_bad_status new_bad_output=$new_bad_output old_bad_status=$old_bad_status old_bad_output=$old_bad_output trusted_status=$trusted_status trusted_output=$trusted_output"
+    echo "template_status=$template_status constraint_status=$constraint_status constraint_contract_ok=$constraint_contract_ok constraint_set_exact=$constraint_set_exact constraints=$constraints_for_template rego_old_untrusted=$rego_has_old_untrusted rego_old_docker_fake=$rego_has_old_docker_fake rego_new=$rego_has_new new_bad_status=$new_bad_status new_bad_output=$new_bad_output old_bad_status=$old_bad_status old_bad_output=$old_bad_output old_docker_fake_status=$old_docker_fake_status old_docker_fake_output=$old_docker_fake_output trusted_status=$trusted_status trusted_output=$trusted_output"
     result=1
   fi
   record_result "$result"
