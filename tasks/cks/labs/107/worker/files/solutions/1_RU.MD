@@ -93,7 +93,8 @@ kubectl exec -n psa-restricted-107 restricted-app -- sh -c 'echo probe > /tmp/te
 ```
 
 Если `restricted-app` уже создан без read-only filesystem, поле Pod изменять нельзя;
-удалите и создайте его повторно:
+удалите и создайте его повторно (если вы делаете это уже после задания 6, добавьте в `spec`
+поле `automountServiceAccountToken: false` - иначе политика из задания 6 отклонит Pod):
 
 ```bash
 kubectl delete pod restricted-app -n psa-restricted-107
