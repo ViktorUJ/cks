@@ -127,7 +127,16 @@ task2_port_denials_isolated() (
     payload=$(jq -nc --argjson actions "$old_actions" '{spec:{validationActions:$actions}}') || return 1
     jq -en --argjson actions "$old_actions" '$actions | index("Deny") != null' >/dev/null 2>&1 && requires_deny=1
     for _ in $(seq 1 30); do
-      if kubectl patch validatingpolicy allow-approved-registries --context "$CTX" --type=merge -p "$payload" >/dev/null 2>&1; then
+      current=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []' 2>/dev/null)
+      # A concurrent actor owns any state differing from our exact Audit value.
+      # Never clobber their change with an unconditional restore.
+      if [[ "$current" != '["Audit"]' && "$current" != "$old_actions" ]]; then
+        echo "FATAL: Concurrent validationActions update; preserve current policy and resolve manually." >&2
+        return 1
+      fi
+      if [[ "$current" == "$old_actions" ]] || kubectl patch validatingpolicy allow-approved-registries \
+        --context "$CTX" --type=json \
+        -p "$(jq -nc --argjson original "$old_actions" '[{"op":"test","path":"/spec/validationActions","value":["Audit"]},{"op":"replace","path":"/spec/validationActions","value":$original}]')" >/dev/null 2>&1; then
         current=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []' 2>/dev/null)
         if [[ "$current" == "$old_actions" ]]; then
           if [[ "$requires_deny" -eq 0 ]]; then
@@ -169,8 +178,8 @@ EOF_PORT_RESTORED
   if [[ -n "$old_actions" ]]; then
     # Arm EXIT recovery BEFORE the state-changing API request, not after it.
     restore_needed=1
-    kubectl patch validatingpolicy allow-approved-registries --context "$CTX" --type=merge \
-      -p '{"spec":{"validationActions":["Audit"]}}' >/dev/null 2>&1 || return 1
+    kubectl patch validatingpolicy allow-approved-registries --context "$CTX" --type=json \
+      -p "$(jq -nc --argjson old "$old_actions" '[{"op":"test","path":"/spec/validationActions","value":$old},{"op":"replace","path":"/spec/validationActions","value":["Audit"]}]')" >/dev/null 2>&1 || return 1
     for _ in $(seq 1 30); do
       if kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1 <<'EOF_PORT_READY'
 apiVersion: v1
@@ -1168,12 +1177,27 @@ EOF
   # config that ADDS the new plugin by REPLACING the whole flag value would silently
   # drop e.g. NodeRestriction and must not pass just because 'ImagePolicyWebhook' is
   # present somewhere in the manifest.
+  # kubeadm explicitly enables NodeRestriction (not a default-on plugin). The
+  # control-plane bootstrap snapshot lives on a node where students have sudo,
+  # so an empty/replaced snapshot is NOT sufficient evidence of preservation.
+  # Require the expected kubeadm safety plugin independently of that snapshot.
+  required_node_restriction_ok=false
+  if [[ "$plugin_flag_count" -eq 1 ]] \
+    && [[ ",$current_plugins," == *,NodeRestriction,* ]]; then
+    required_node_restriction_ok=true
+  fi
+  baseline_snapshot_ok=false
+  if [[ -n "$baseline_plugins" && ",$baseline_plugins," == *,NodeRestriction,* ]]; then
+    baseline_snapshot_ok=true
+  fi
   preserved_baseline_plugins="yes"
-  if [[ -n "$baseline_plugins" ]]; then
+  if [[ "$baseline_snapshot_ok" != "true" ]]; then
+    preserved_baseline_plugins="no"
+  else
     IFS=',' read -ra _baseline_arr <<<"$baseline_plugins"
     for p in "${_baseline_arr[@]}"; do
       [[ -z "$p" ]] && continue
-      if ! grep -qE "(^|,)${p}(,|\$)" <<<"$current_plugins"; then
+      if [[ ",$current_plugins," != *",${p},"* ]]; then
         preserved_baseline_plugins="no"
         break
       fi
@@ -1238,23 +1262,58 @@ EOF_IPW_INIT_OK
     --image=registry.k8s.io/e2e-test-images/busybox:1.36-1 --profile=general -- true 2>&1)
   ephemeral_positive_status=$?
 
-  # The backend contract covers EVERY namespace except policy-108. Checking only
-  # default is insufficient: a deliberately namespace-scoped backend that denies
-  # latest only in default would otherwise pass the full Task 6 score.
+  # Enumerate actual namespaces (including kube-system, kube-public, Kyverno and
+  # Gatekeeper namespaces). A backend hard-coded for default/gatekeeper-108/image-policy
+  # must not pass while admitting latest or untagged images elsewhere.
   other_ns_probe_ok=true
   other_ns_probe_details=""
-  for probe_ns in gatekeeper-108 image-policy; do
+  namespace_list=$(kubectl get namespaces --context "$CTX" -o json 2>&1)
+  namespace_list_status=$?
+  probe_namespaces=()
+  if [[ "$namespace_list_status" -ne 0 ]]; then
+    other_ns_probe_ok=false
+    other_ns_probe_details="Unable to enumerate namespaces: ${namespace_list}"
+  else
+    mapfile -t probe_namespaces < <(jq -r '.items[]? | select(.metadata.deletionTimestamp == null) | .metadata.name | select(. != "policy-108")' <<<"$namespace_list" 2>/dev/null)
+    if [[ "${#probe_namespaces[@]}" -eq 0 || " ${probe_namespaces[*]} " != *" default "* \
+      || " ${probe_namespaces[*]} " != *" kube-system "* ]]; then
+      other_ns_probe_ok=false
+      other_ns_probe_details="Namespace enumeration is incomplete or malformed."
+    fi
+  fi
+  for probe_ns in "${probe_namespaces[@]}"; do
     nonce="$(date +%s%N)-$$"
     other_latest_output=$(kubectl run -n "$probe_ns" "ipw-latest-${nonce}" \
       --image=nginx:latest --dry-run=server --context "$CTX" 2>&1)
     other_latest_status=$?
+    other_implicit_output=$(kubectl run -n "$probe_ns" "ipw-implicit-${nonce}" \
+      --image=nginx --dry-run=server --context "$CTX" 2>&1)
+    other_implicit_status=$?
+    other_init_output=$(kubectl apply -n "$probe_ns" --dry-run=server --context "$CTX" -f - 2>&1 <<EOF_IPW_NS_INIT
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ipw-init-${nonce}
+  namespace: ${probe_ns}
+spec:
+  initContainers:
+  - name: init
+    image: nginx:latest
+  containers:
+  - name: app
+    image: nginx:1.27.3
+EOF_IPW_NS_INIT
+    )
+    other_init_status=$?
     other_pinned_output=$(kubectl run -n "$probe_ns" "ipw-pinned-${nonce}" \
       --image=nginx:1.27.3 --dry-run=server --context "$CTX" 2>&1)
     other_pinned_status=$?
     if [[ "$other_latest_status" -eq 0 || "$other_latest_output" != *'image policy webhook backend denied'* \
+      || "$other_implicit_status" -eq 0 || "$other_implicit_output" != *'image policy webhook backend denied'* \
+      || "$other_init_status" -eq 0 || "$other_init_output" != *'image policy webhook backend denied'* \
       || "$other_pinned_status" -ne 0 ]]; then
       other_ns_probe_ok=false
-      other_ns_probe_details="${other_ns_probe_details} ns=${probe_ns} deny=${other_latest_status} deny_message=${other_latest_output} allow=${other_pinned_status} allow_message=${other_pinned_output};"
+      other_ns_probe_details="${other_ns_probe_details} ns=${probe_ns} latest=${other_latest_status} latest_message=${other_latest_output} implicit=${other_implicit_status} implicit_message=${other_implicit_output} init=${other_init_status} init_message=${other_init_output} allow=${other_pinned_status} allow_message=${other_pinned_output};"
     fi
   done
 
@@ -1278,9 +1337,14 @@ EOF_IPW_INIT_OK
     [[ "$selector_restore_pending" -eq 1 ]] || return 0
     local restore_json observed
     restore_json=$(jq -nc --argjson original "$original_selector" \
-      '[{"op":"replace","path":"/spec/selector","value":$original}]') || return 1
+      '[{"op":"test","path":"/spec/selector","value":{"app":"image-policy-backend-detached-for-probe"}},{"op":"replace","path":"/spec/selector","value":$original}]') || return 1
     for _ in $(seq 1 30); do
-      if kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
+      observed=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null)
+      if [[ "$observed" != '{"app":"image-policy-backend-detached-for-probe"}' && "$observed" != "$original_selector" ]]; then
+        echo "FATAL: Concurrent Service selector change; checker will not overwrite it." >&2
+        return 1
+      fi
+      if [[ "$observed" == "$original_selector" ]] || kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
         --type=json -p "$restore_json" >/dev/null 2>&1; then
         observed=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null)
         if [[ "$observed" == "$original_selector" ]]; then
@@ -1302,7 +1366,7 @@ EOF_IPW_INIT_OK
     trap 'exit 130' INT
     trap 'exit 143' TERM
     kubectl patch service image-policy-backend -n image-policy --context "$CTX" --type=json \
-      -p '[{"op":"replace","path":"/spec/selector","value":{"app":"image-policy-backend-detached-for-probe"}}]' >/dev/null 2>&1
+      -p "$(jq -nc --argjson original "$original_selector" '[{"op":"test","path":"/spec/selector","value":$original},{"op":"replace","path":"/spec/selector","value":{"app":"image-policy-backend-detached-for-probe"}}]')" >/dev/null 2>&1
     detach_patch_ok=$?
   fi
   for _ in $(seq 1 24); do
@@ -1379,6 +1443,7 @@ EOF_IPW_INIT_OK
     && "$backend_https_ok" == "true" && "$backend_service_target_ok" == "true" \
     && "$default_allow_false" == "true" && "$service_port" -ge 1 \
     && "$preserved_baseline_plugins" == "yes" && "$image_policy_plugin_enabled" == "true" \
+    && "$required_node_restriction_ok" == "true" && "$baseline_snapshot_ok" == "true" \
     && "$backend_available" -ge 1 \
     && "$latest_status" -ne 0 && "$deny_message" == *'image policy webhook backend denied'* \
     && "$implicit_status" -ne 0 && "$implicit_output" == *'image policy webhook backend denied'* \
@@ -1402,7 +1467,7 @@ EOF_IPW_INIT_OK
     elif [[ "$image_policy_plugin_enabled" != "true" ]]; then
       echo "HINT: Exactly one active --enable-admission-plugins flag must contain ImagePolicyWebhook as an exact plugin token. Comments and duplicate flags are not proof."
     elif [[ "$preserved_baseline_plugins" != "yes" ]]; then
-      echo "HINT: One or more admission plugins that were enabled BEFORE your change (baseline: '$baseline_plugins') are missing from the current --enable-admission-plugins value ('$current_plugins') - you replaced the flag instead of appending to it, which silently disables plugins like NodeRestriction."
+      echo "HINT: kubeadm enables NodeRestriction. The baseline snapshot must contain it, and the CURRENT --enable-admission-plugins flag must still contain NodeRestriction alongside ImagePolicyWebhook. Baseline data on the student-administered node alone is not trusted proof."
     elif [[ "$manifest" != *'imagepolicy.k8s.io/v1alpha1=true'* ]]; then
       echo "HINT: kube-apiserver.yaml is missing --runtime-config=imagepolicy.k8s.io/v1alpha1=true - without it the ImageReview API is not served and the backend is never called."
     elif [[ "$manifest" != *'--admission-control-config-file='* ]]; then
@@ -1432,7 +1497,7 @@ EOF_IPW_INIT_OK
     elif [[ "$pinned_status" -ne 0 ]]; then
       echo "HINT: Pod webhook-pinned-ok (nginx:1.27.3) was not created/Ready - a correctly pinned tag should be allowed by the backend logic in server.py."
     elif [[ "$other_ns_probe_ok" != "true" ]]; then
-      echo "HINT: ImagePolicyWebhook must enforce latest/implicit restrictions outside default, including gatekeeper-108 and image-policy. A pinned image must remain admissible in both namespaces. ${other_ns_probe_details}"
+      echo "HINT: ImagePolicyWebhook must deny explicit/implicit latest and latest initContainers in EVERY existing namespace except policy-108, while allowing pinned tags. ${other_ns_probe_details}"
     elif [[ "$backend_detached_status" -ne 0 ]]; then
       echo "HINT: Backend Endpoints did not become empty. Fail-closed was not actually tested."
     elif [[ "$failclosed_status" -eq 0 || "$failclosed_is_backend_error" != "true" ]]; then

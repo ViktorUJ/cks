@@ -68,7 +68,7 @@ spec:
 ```
 
 ```bash
-kubectl apply --context "$CTX" -f deny-latest-tag.yaml
+kubectl apply -f deny-latest-tag.yaml
 ```
 
 Задание разрешает ДВЕ формы image reference - non-latest tag ИЛИ digest. Проверьте
@@ -76,7 +76,7 @@ kubectl apply --context "$CTX" -f deny-latest-tag.yaml
 написать policy, которая случайно отклоняет ВСЕ digest references:
 
 ```bash
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -143,7 +143,7 @@ spec:
 ```
 
 ```bash
-kubectl apply --context "$CTX" -f require-run-as-non-root.yaml
+kubectl apply -f require-run-as-non-root.yaml
 ```
 
 ## 4. Разрешить только утверждённые registry
@@ -183,7 +183,7 @@ spec:
 ```
 
 ```bash
-kubectl apply --context "$CTX" -f allow-approved-registries.yaml
+kubectl apply -f allow-approved-registries.yaml
 ```
 
 Проверка без создания Pod и без image pull. `docker.io` - лишь ОДНО конкретное
@@ -197,7 +197,7 @@ Positive controls должны покрывать оба разрешённых 
 ограничивайте один из registry только обычными контейнерами.
 
 ```bash
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -211,7 +211,7 @@ spec:
     image: docker.io/library/busybox:1.36
 EOF
 
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -225,7 +225,7 @@ spec:
     image: busybox:1.36
 EOF
 
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -239,7 +239,7 @@ spec:
     image: quay.io/prometheus/busybox:v0.24.0
 EOF
 
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -258,7 +258,7 @@ EOF
 контейнером, второй - только `initContainers`; отклониться должны оба:
 
 ```bash
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -272,7 +272,7 @@ spec:
     image: docker.io/library/busybox:1.36
 EOF
 
-kubectl apply --dry-run=server --context "$CTX" -f - <<'EOF'
+kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -335,8 +335,8 @@ spec:
 ```
 
 ```bash
-kubectl apply --context "$CTX" -f add-kyverno-managed-label.yaml
-kubectl apply --dry-run=server --context "$CTX" -o json -f - <<'EOF' \
+kubectl apply -f add-kyverno-managed-label.yaml
+kubectl apply --dry-run=server -o json -f - <<'EOF' \
   | jq -r '.metadata.labels["security.cks.io/managed-by"]'
 apiVersion: v1
 kind: Pod
@@ -352,7 +352,7 @@ spec:
 EOF
 # ожидается: kyverno
 
-kubectl apply --dry-run=server --context "$CTX" -o json -f - <<'EOF' \
+kubectl apply --dry-run=server -o json -f - <<'EOF' \
   | jq -r '.metadata.labels["security.cks.io/managed-by"]'
 apiVersion: v1
 kind: Pod
@@ -391,20 +391,20 @@ cat /opt/image-policy-backend/server.py
 Скопируйте его на `control-plane` и создайте namespace + ConfigMap:
 
 ```bash
-CP=$(kubectl get nodes --context "$CTX" -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+CP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
 scp -o StrictHostKeyChecking=no /opt/image-policy-backend/server.py "$CP":/tmp/server.py
 
-kubectl create namespace image-policy --context "$CTX" --dry-run=client -o yaml | kubectl apply --context "$CTX" -f -
-kubectl create configmap image-policy-backend-src -n image-policy --context "$CTX" \
+kubectl create namespace image-policy --dry-run=client -o yaml | kubectl apply -f -
+kubectl create configmap image-policy-backend-src -n image-policy \
   --from-file=server.py=/opt/image-policy-backend/server.py \
-  --dry-run=client -o yaml | kubectl apply --context "$CTX" -f -
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 Создайте Service **до** Deployment - нужен `ClusterIP` для правильного SAN в
 сертификате:
 
 ```bash
-cat <<'EOF' | kubectl apply --context "$CTX" -f -
+cat <<'EOF' | kubectl apply -f -
 apiVersion: v1
 kind: Service
 metadata:
@@ -418,7 +418,7 @@ spec:
     targetPort: 8443
 EOF
 
-BACKEND_IP=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o jsonpath='{.spec.clusterIP}')
+BACKEND_IP=$(kubectl get service image-policy-backend -n image-policy -o jsonpath='{.spec.clusterIP}')
 echo "$BACKEND_IP"
 ```
 
@@ -431,15 +431,15 @@ openssl req -x509 -nodes -newkey rsa:2048 -days 3 \
   -subj "/CN=image-policy-backend" \
   -addext "subjectAltName=IP:${BACKEND_IP}"
 
-kubectl create secret tls image-policy-backend-tls -n image-policy --context "$CTX" \
+kubectl create secret tls image-policy-backend-tls -n image-policy \
   --cert="$workdir/tls.crt" --key="$workdir/tls.key" \
-  --dry-run=client -o yaml | kubectl apply --context "$CTX" -f -
+  --dry-run=client -o yaml | kubectl apply -f -
 ```
 
 Разверните Deployment, монтируя и код, и сертификат:
 
 ```bash
-cat <<'EOF' | kubectl apply --context "$CTX" -f -
+cat <<'EOF' | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -476,7 +476,7 @@ spec:
           secretName: image-policy-backend-tls
 EOF
 
-kubectl rollout status deployment/image-policy-backend -n image-policy --context "$CTX" --timeout=90s
+kubectl rollout status deployment/image-policy-backend -n image-policy --timeout=90s
 ```
 
 Скопируйте CA-сертификат (здесь self-signed, поэтому сертификат сервера сам и есть его
@@ -562,18 +562,18 @@ spec:
 kubelet сам подхватит изменение static Pod. Дождитесь восстановления API:
 
 ```bash
-until kubectl get --context "$CTX" --raw=/readyz 2>/dev/null | grep -q '^ok$'; do sleep 5; done
+until kubectl get --raw=/readyz 2>/dev/null | grep -q '^ok$'; do sleep 5; done
 ```
 
 Проверьте оба случая:
 
 ```bash
-kubectl run webhook-latest-must-fail --image=nginx:latest --context "$CTX"
+kubectl run webhook-latest-must-fail --image=nginx:latest
 # Error from server (Forbidden): pods "webhook-latest-must-fail" is forbidden:
 # image policy webhook backend denied one or more images: Images using latest tag are not allowed
 
-kubectl run webhook-pinned-ok --image=nginx:1.27.3 --context "$CTX"
-kubectl get pod webhook-pinned-ok --context "$CTX"
+kubectl run webhook-pinned-ok --image=nginx:1.27.3
+kubectl get pod webhook-pinned-ok
 # STATUS: Running
 ```
 
@@ -596,22 +596,22 @@ plugin без исключения по namespace в нашей конфигур
 создаёт и не удаляет ни одного Pod, только временно убирает `Endpoints`:
 
 ```bash
-kubectl get service image-policy-backend -n image-policy --context "$CTX" -o jsonpath='{.spec.selector}'
+kubectl get service image-policy-backend -n image-policy -o jsonpath='{.spec.selector}'
 # сохраните это значение, чтобы восстановить его позже
 
-kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
+kubectl patch service image-policy-backend -n image-policy \
   -p '{"spec":{"selector":{"app":"image-policy-backend-detached-for-probe"}}}'
-kubectl get endpoints image-policy-backend -n image-policy --context "$CTX" -w
+kubectl get endpoints image-policy-backend -n image-policy -w
 # Ctrl+C, когда ENDPOINTS опустеет
 
-kubectl run webhook-should-fail-closed --image="nginx:fail-closed-check-$(date +%s%N)" --context "$CTX"
+kubectl run webhook-should-fail-closed --image="nginx:fail-closed-check-$(date +%s%N)"
 # ожидается: Forbidden - backend недоступен, defaultAllow:false запрещает admission
 # (используем ЕЩЁ НЕ виденный тег, а не просто дату в секундах, чтобы не столкнуться с
 # TTL-кэшем ответа backend'а на этот же тег из предыдущей попытки)
 
-kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
+kubectl patch service image-policy-backend -n image-policy \
   -p '{"spec":{"selector":{"app":"image-policy-backend"}}}'
-kubectl get endpoints image-policy-backend -n image-policy --context "$CTX" -w
+kubectl get endpoints image-policy-backend -n image-policy -w
 # Ctrl+C, когда ENDPOINTS снова появится - это тот же самый Pod, что и до пробы, никакой
 # пересборки/пересоздания не потребовалось
 ```

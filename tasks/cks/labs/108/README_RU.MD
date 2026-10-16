@@ -146,7 +146,7 @@ echo "baseline exit: $?"
 admission (exit не 0), а сообщение должно ссылаться на вашу policy:
 
 ```bash
-kubectl apply --context "$CTX" -f deny-latest-tag.yaml   # ваш файл policy
+kubectl apply -f deny-latest-tag.yaml   # ваш файл policy
 kubectl apply --dry-run=server -f - <<'EOF'
 apiVersion: v1
 kind: Pod
