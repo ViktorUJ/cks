@@ -127,7 +127,18 @@ task2_port_denials_isolated() (
     payload=$(jq -nc --argjson actions "$old_actions" '{spec:{validationActions:$actions}}') || return 1
     jq -en --argjson actions "$old_actions" '$actions | index("Deny") != null' >/dev/null 2>&1 && requires_deny=1
     for _ in $(seq 1 30); do
-      current=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []' 2>/dev/null)
+      # API outages/read failures are transient, not evidence of a concurrent edit.
+      # Retry them while leaving the cleanup armed; only a successful, parsed read
+      # can establish that a different actor owns the current policy value.
+      local policy_json
+      if ! policy_json=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" --request-timeout=5s -o json 2>/dev/null); then
+        sleep 2
+        continue
+      fi
+      if ! current=$(jq -cer '.spec.validationActions // [] | select(type == "array")' <<<"$policy_json" 2>/dev/null); then
+        sleep 2
+        continue
+      fi
       # A concurrent actor owns any state differing from our exact Audit value.
       # Never clobber their change with an unconditional restore.
       if [[ "$current" != '["Audit"]' && "$current" != "$old_actions" ]]; then
@@ -135,15 +146,15 @@ task2_port_denials_isolated() (
         return 1
       fi
       if [[ "$current" == "$old_actions" ]] || kubectl patch validatingpolicy allow-approved-registries \
-        --context "$CTX" --type=json \
+        --context "$CTX" --request-timeout=5s --type=json \
         -p "$(jq -nc --argjson original "$old_actions" '[{"op":"test","path":"/spec/validationActions","value":["Audit"]},{"op":"replace","path":"/spec/validationActions","value":$original}]')" >/dev/null 2>&1; then
-        current=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []' 2>/dev/null)
+        current=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" --request-timeout=5s -o json 2>/dev/null | jq -c '.spec.validationActions // []' 2>/dev/null)
         if [[ "$current" == "$old_actions" ]]; then
           if [[ "$requires_deny" -eq 0 ]]; then
             restore_needed=0
             return 0
           fi
-          verify_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_PORT_RESTORED'
+          verify_output=$(kubectl apply --dry-run=server --context "$CTX" --request-timeout=5s -f - 2>&1 <<'EOF_PORT_RESTORED'
 apiVersion: v1
 kind: Pod
 metadata:
@@ -171,7 +182,16 @@ EOF_PORT_RESTORED
   }
   # EXIT cleanup covers ordinary errors, CTRL-C and TERM. Do not promise SIGKILL
   # recovery: OS-level kill -9 does not permit cleanup in any shell.
-  trap 'restore_task4_policy || true' EXIT
+  # Preserve the original exit status and finish restoration even when another
+  # SIGINT/SIGTERM arrives during the bounded Kubernetes API retries.
+  finish_task2_port_probe() {
+    local exit_status=$?
+    trap - EXIT
+    trap '' INT TERM
+    restore_task4_policy || exit_status=1
+    exit "$exit_status"
+  }
+  trap 'finish_task2_port_probe' EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
   old_actions=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []' 2>/dev/null)
@@ -1148,6 +1168,92 @@ EOF
   true
 }
 
+# A new namespace is not in the list of namespaces existing at lab bootstrap.
+# A hard-coded backend allowlist for the current namespaces must fail this probe.
+# This is a subshell: EXIT cleanup runs even when a negative probe returns early.
+image_policy_fresh_namespace_probe() (
+  local probe_ns="ipw-probe-$(date +%s%N)-$$" cleanup_armed=0
+  local negative_output negative_status implicit_output implicit_status positive_output positive_status
+  cleanup_fresh_namespace() {
+    [[ "$cleanup_armed" -eq 1 ]] || return 0
+    local attempt ns_json get_status
+    for attempt in $(seq 1 30); do
+      # A delete API timeout is ambiguous: the request may or may not have applied.
+      # Reissue the idempotent deletion, then verify that Kubernetes has accepted it.
+      kubectl delete namespace "$probe_ns" --context "$CTX" --request-timeout=5s --ignore-not-found --wait=false \
+        >/dev/null 2>&1 || true
+      ns_json=$(kubectl get namespace "$probe_ns" --context "$CTX" --request-timeout=5s --ignore-not-found -o json 2>/dev/null)
+      get_status=$?
+      if [[ "$get_status" -eq 0 ]]; then
+        if [[ -z "$ns_json" ]] || jq -e '.metadata.deletionTimestamp != null' \
+          <<<"$ns_json" >/dev/null 2>&1; then
+          cleanup_armed=0
+          return 0
+        fi
+      fi
+      sleep 2
+    done
+    echo "FATAL: temporary ImagePolicyWebhook namespace $probe_ns was not confirmed deleted/Terminating after 30 attempts; remove it before rerunning check_result." >&2
+    return 1
+  }
+  finish_fresh_namespace_probe() {
+    local exit_status=$?
+    trap - EXIT
+    # A second INT/TERM must not abort the bounded namespace teardown midway.
+    trap '' INT TERM
+    cleanup_fresh_namespace || exit_status=1
+    exit "$exit_status"
+  }
+  trap 'finish_fresh_namespace_probe' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  # Arm recovery BEFORE create: an API timeout may occur after namespace creation.
+  cleanup_armed=1
+  if ! kubectl create namespace "$probe_ns" --context "$CTX" >/dev/null 2>&1; then
+    echo "FRESH_NS: failed to create ${probe_ns}" >&2
+    return 1
+  fi
+  # PodSecurity Restricted compliant probes, independent of namespace PSA labels.
+  # A non-latest pinned reference must get through admission; both latest forms
+  # must be denied specifically by the image-policy backend.
+  image_policy_fresh_pod() {
+    local image="$1" pod_name="$2"
+    kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<EOF_FRESH_IPW
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ${pod_name}
+  namespace: ${probe_ns}
+spec:
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    image: ${image}
+    securityContext:
+      runAsUser: 1000
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+EOF_FRESH_IPW
+  }
+  negative_output=$(image_policy_fresh_pod nginx:latest fresh-latest)
+  negative_status=$?
+  implicit_output=$(image_policy_fresh_pod nginx fresh-implicit)
+  implicit_status=$?
+  positive_output=$(image_policy_fresh_pod nginx:1.27.3 fresh-pinned)
+  positive_status=$?
+  if [[ "$negative_status" -ne 0 && "$negative_output" == *'image policy webhook backend denied'* \
+    && "$implicit_status" -ne 0 && "$implicit_output" == *'image policy webhook backend denied'* \
+    && "$positive_status" -eq 0 ]]; then
+    return 0
+  fi
+  echo "FRESH_NS: namespace=${probe_ns} latest=${negative_status} latest_message=${negative_output} implicit=${implicit_status} implicit_message=${implicit_output} pinned=${positive_status} pinned_message=${positive_output}" >&2
+  return 1
+)
+
 @test "6. ImagePolicyWebhook denies :latest via external backend and admits a pinned tag" {
   # Scope signal/EXIT handlers to this test only; other Bats cases keep their own traps.
   (
@@ -1308,14 +1414,22 @@ EOF_IPW_NS_INIT
     other_pinned_output=$(kubectl run -n "$probe_ns" "ipw-pinned-${nonce}" \
       --image=nginx:1.27.3 --dry-run=server --context "$CTX" 2>&1)
     other_pinned_status=$?
+    # Some namespaces (gatekeeper-system) enforce PodSecurity restricted and reject
+    # a plain Pod for unrelated reasons; only a rejection BY the image-policy
+    # backend counts against a pinned image.
     if [[ "$other_latest_status" -eq 0 || "$other_latest_output" != *'image policy webhook backend denied'* \
       || "$other_implicit_status" -eq 0 || "$other_implicit_output" != *'image policy webhook backend denied'* \
       || "$other_init_status" -eq 0 || "$other_init_output" != *'image policy webhook backend denied'* \
-      || "$other_pinned_status" -ne 0 ]]; then
+      || ( "$other_pinned_status" -ne 0 && "$other_pinned_output" == *'image policy webhook'* ) ]]; then
       other_ns_probe_ok=false
       other_ns_probe_details="${other_ns_probe_details} ns=${probe_ns} latest=${other_latest_status} latest_message=${other_latest_output} implicit=${other_implicit_status} implicit_message=${other_implicit_output} init=${other_init_status} init_message=${other_init_output} allow=${other_pinned_status} allow_message=${other_pinned_output};"
     fi
   done
+
+  # Exercise an unpredictable namespace created AFTER the backend configuration.
+  # Merely enumerating namespaces that already existed is not proof of future scope.
+  fresh_ns_probe_details=$(image_policy_fresh_namespace_probe 2>&1)
+  fresh_ns_probe_status=$?
 
   # Fail-closed check: defaultAllow:false means that if the backend becomes unreachable,
   # a NEW pinned-tag image (not cached from an earlier allow/deny decision, so the TTL
@@ -1339,14 +1453,24 @@ EOF_IPW_NS_INIT
     restore_json=$(jq -nc --argjson original "$original_selector" \
       '[{"op":"test","path":"/spec/selector","value":{"app":"image-policy-backend-detached-for-probe"}},{"op":"replace","path":"/spec/selector","value":$original}]') || return 1
     for _ in $(seq 1 30); do
-      observed=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null)
+      # A transport failure or invalid API response is not a third-party edit.
+      # Keep retrying while the Service remains detached and cleanup is armed.
+      local service_json
+      if ! service_json=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" --request-timeout=5s -o json 2>/dev/null); then
+        sleep 2
+        continue
+      fi
+      if ! observed=$(jq -cer '.spec.selector // {} | select(type == "object")' <<<"$service_json" 2>/dev/null); then
+        sleep 2
+        continue
+      fi
       if [[ "$observed" != '{"app":"image-policy-backend-detached-for-probe"}' && "$observed" != "$original_selector" ]]; then
         echo "FATAL: Concurrent Service selector change; checker will not overwrite it." >&2
         return 1
       fi
       if [[ "$observed" == "$original_selector" ]] || kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
-        --type=json -p "$restore_json" >/dev/null 2>&1; then
-        observed=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null)
+        --request-timeout=5s --type=json -p "$restore_json" >/dev/null 2>&1; then
+        observed=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" --request-timeout=5s -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null)
         if [[ "$observed" == "$original_selector" ]]; then
           selector_restore_pending=0
           return 0
@@ -1362,7 +1486,16 @@ EOF_IPW_NS_INIT
     # Arm cleanup before ANY write to Service; a partial/aborted patch still has
     # a chance to be repaired. Parent Bats runner handlers remain untouched.
     selector_restore_pending=1
-    trap 'restore_webhook_selector || true' EXIT
+    # Keep the Service recovery running to completion if another signal arrives
+    # during EXIT cleanup; a signal does not bypass the live read-back.
+    finish_service_selector_probe() {
+      local exit_status=$?
+      trap - EXIT
+      trap '' INT TERM
+      restore_webhook_selector || exit_status=1
+      exit "$exit_status"
+    }
+    trap 'finish_service_selector_probe' EXIT
     trap 'exit 130' INT
     trap 'exit 143' TERM
     kubectl patch service image-policy-backend -n image-policy --context "$CTX" --type=json \
@@ -1453,7 +1586,7 @@ EOF_IPW_NS_INIT
     && "$init_pinned_status" -eq 0 \
     && "$ephemeral_latest_status" -ne 0 && "$ephemeral_latest_output" == *'image policy webhook backend denied'* \
     && "$ephemeral_positive_status" -eq 0 && "$pinned_status" -eq 0 \
-    && "$other_ns_probe_ok" == "true" \
+    && "$other_ns_probe_ok" == "true" && "$fresh_ns_probe_status" -eq 0 \
     && "$backend_detached_status" -eq 0 && "$failclosed_status" -ne 0 \
     && "$failclosed_is_backend_error" == "true" && "$detach_patch_ok" -eq 0 \
     && "$selector_exact_restored" == "true" && "$restore_patch_status" -eq 0 \
@@ -1498,6 +1631,8 @@ EOF_IPW_NS_INIT
       echo "HINT: Pod webhook-pinned-ok (nginx:1.27.3) was not created/Ready - a correctly pinned tag should be allowed by the backend logic in server.py."
     elif [[ "$other_ns_probe_ok" != "true" ]]; then
       echo "HINT: ImagePolicyWebhook must deny explicit/implicit latest and latest initContainers in EVERY existing namespace except policy-108, while allowing pinned tags. ${other_ns_probe_details}"
+    elif [[ "$fresh_ns_probe_status" -ne 0 ]]; then
+      echo "HINT: ImagePolicyWebhook must enforce explicit and implicit latest in a newly-created namespace, too. ${fresh_ns_probe_details}"
     elif [[ "$backend_detached_status" -ne 0 ]]; then
       echo "HINT: Backend Endpoints did not become empty. Fail-closed was not actually tested."
     elif [[ "$failclosed_status" -eq 0 || "$failclosed_is_backend_error" != "true" ]]; then
