@@ -1343,6 +1343,14 @@ EOF_IPW_INIT_OK
       echo "HINT: The Pod was denied, but not with the expected ImagePolicyWebhook message - check the denial actually came from the backend (your server.py 'reason' field), not from an unrelated admission controller."
     elif [[ "$implicit_status" -eq 0 || "$port_implicit_status" -eq 0 || "$implicit_output" != *'image policy webhook backend denied'* || "$port_implicit_output" != *'image policy webhook backend denied'* ]]; then
       echo "HINT: ImagePolicyWebhook backend must deny implicit latest, including registry-port images without a tag, with exact backend attribution."
+    elif [[ "$annotation_bypass_status" -eq 0 || "$annotation_bypass_output" != *'image policy webhook backend denied'* ]]; then
+      echo "HINT: A Pod carrying the user-supplied annotation alpha.image-policy.k8s.io/break-glass=true was not denied by the backend - Pod annotations are attacker-controlled and must never bypass ImagePolicyWebhook."
+    elif [[ "$init_latest_status" -eq 0 || "$init_latest_output" != *'image policy webhook backend denied'* ]]; then
+      echo "HINT: A Pod with a ':latest' initContainer in namespace default was not denied by the backend - ImagePolicyWebhook reviews initContainers too, do not limit the check to spec.containers."
+    elif [[ "$ephemeral_latest_status" -eq 0 || "$ephemeral_latest_output" != *'image policy webhook backend denied'* ]]; then
+      echo "HINT: 'kubectl debug' with a ':latest' ephemeral container in namespace default was not denied by the backend."
+    elif [[ "$init_pinned_status" -ne 0 || "$ephemeral_positive_status" -ne 0 ]]; then
+      echo "HINT: A correctly pinned initContainer or ephemeral container in namespace default was rejected - the backend must only deny latest/untagged images."
     elif [[ "$pinned_status" -ne 0 ]]; then
       echo "HINT: Pod webhook-pinned-ok (nginx:1.27.3) was not created/Ready - a correctly pinned tag should be allowed by the backend logic in server.py."
     elif [[ "$backend_detached_status" -ne 0 ]]; then
