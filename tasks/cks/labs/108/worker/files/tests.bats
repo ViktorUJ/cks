@@ -110,6 +110,115 @@ kyverno_denied_by() {
   [[ "$status" -ne 0 && "$output" == *"Policy ${expected_policy} failed:"* ]]
 }
 
+# Isolate Task 2 registry-port negatives from the Task 4 allowlist. A port-only
+# image is denied by BOTH policies: accepting either denial masks a broken Task 2.
+# Temporarily switch Task 4 to Audit, wait for the updated effective admission
+# behavior, prove ALL THREE Task 2 port denials, and restore the exact actions.
+# The restore is live-verified.
+task2_port_denials_isolated() {
+  local base_pod="$1" old_actions="" restore_needed=0 ready=0 ok=0
+  local output status init_output init_status eph_output eph_status
+  local restore_output restore_status
+  old_actions=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []' 2>/dev/null)
+  if [[ -n "$old_actions" ]]; then
+    kubectl patch validatingpolicy allow-approved-registries --context "$CTX" --type=merge \
+      -p '{"spec":{"validationActions":["Audit"]}}' >/dev/null 2>&1 || return 1
+    restore_needed=1
+    for _ in $(seq 1 30); do
+      if kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1 <<'EOF_PORT_READY'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: task2-port-allowlist-audit-preflight
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: app
+    image: docker.io/library/busybox:1.36
+EOF_PORT_READY
+      then ready=1; break; fi
+      sleep 1
+    done
+  else
+    ready=1  # Task 4 is not installed yet; aggregate Task 4 grading still requires it.
+  fi
+  if [[ "$ready" -eq 1 ]]; then
+    output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_PORT_MAIN'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: task2-port-main-negative
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: app
+    image: registry.example:5000/app
+EOF_PORT_MAIN
+    )
+    status=$?
+    init_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_PORT_INIT'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: task2-port-init-negative
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  initContainers:
+  - name: init
+    image: registry.example:5000/app
+  containers:
+  - name: app
+    image: registry.k8s.io/pause:3.10
+EOF_PORT_INIT
+    )
+    init_status=$?
+    eph_output=$(kubectl debug "pod/${base_pod}" -n "$NS" --context "$CTX" --target="$base_pod" \
+      --image=registry.example:5000/app --profile=general -- true 2>&1)
+    eph_status=$?
+    if kyverno_denied_by deny-latest-tag "$status" "$output" \
+      && kyverno_denied_by deny-latest-tag "$init_status" "$init_output" \
+      && kyverno_denied_by deny-latest-tag "$eph_status" "$eph_output"; then ok=1; fi
+  fi
+  if [[ "$restore_needed" -eq 1 ]]; then
+    kubectl patch validatingpolicy allow-approved-registries --context "$CTX" --type=merge \
+      -p "$(jq -nc --argjson actions "$old_actions" '{spec:{validationActions:$actions}}')" >/dev/null 2>&1
+    restore_status=$?
+    if [[ "$restore_status" -eq 0 ]]; then
+      for _ in $(seq 1 30); do
+        restore_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_PORT_RESTORED'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: task2-port-allowlist-restored
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: app
+    image: docker.io/library/busybox:1.36
+EOF_PORT_RESTORED
+        )
+        restore_status=$?
+        kyverno_denied_by allow-approved-registries "$restore_status" "$restore_output" && break
+        sleep 1
+      done
+      if ! kyverno_denied_by allow-approved-registries "$restore_status" "$restore_output"; then ok=0; fi
+    else
+      ok=0
+    fi
+    restore_needed=0
+    [[ "$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []')" == "$old_actions" ]] || ok=0
+  fi
+  [[ "$ok" -eq 1 ]]
+}
+
 @test "0 Init" {
   echo '' > /var/work/tests/result/all
   echo '' > /var/work/tests/result/ok
@@ -280,6 +389,8 @@ EOF
     --attach=false --image=registry.k8s.io/pause@sha256:5a92cb1de40c9c50e1c72e83bf35b9b32ce88e0d1b93f5e2727d97a44c176f56 \
     --profile=general -- true >/dev/null 2>&1
   digest_ephemeral_status=$?
+  task2_port_denials_isolated ephemeral-policy-base
+  strict_port_status=$?
   kubectl delete pod ephemeral-policy-base -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
 
   # Positive control for the OTHER explicitly-allowed image reference form: task 2
@@ -341,18 +452,38 @@ EOF
   update_latest_attributed=false
   kyverno_denied_by deny-latest-tag "$update_latest_status" "$update_latest_output" && update_latest_attributed=true
   kubectl delete pod "$update_latest_pod" -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
+  update_init_pod="latest-init-update-$(date +%s%N)-$$"
+  kubectl run "$update_init_pod" -n "$NS" --context "$CTX" --restart=Never \
+    --image=registry.k8s.io/pause:3.10 \
+    --overrides='{"spec":{"securityContext":{"runAsNonRoot":true},"initContainers":[{"name":"init","image":"registry.k8s.io/pause:3.10"}]}}' >/dev/null 2>&1
+  update_init_create_status=$?
+  update_init_output=""; update_init_status=1; update_init_positive_status=1
+  if [[ "$update_init_create_status" -eq 0 ]]; then
+    update_init_output=$(kubectl patch pod "$update_init_pod" -n "$NS" --context "$CTX" \
+      --type=json --dry-run=server \
+      -p='[{"op":"replace","path":"/spec/initContainers/0/image","value":"registry.k8s.io/pause:latest"}]' 2>&1)
+    update_init_status=$?
+    kubectl patch pod "$update_init_pod" -n "$NS" --context "$CTX" --type=json --dry-run=server \
+      -p='[{"op":"replace","path":"/spec/initContainers/0/image","value":"registry.k8s.io/pause:3.11"}]' >/dev/null 2>&1
+    update_init_positive_status=$?
+  fi
+  update_init_attributed=false
+  kyverno_denied_by deny-latest-tag "$update_init_status" "$update_init_output" && update_init_attributed=true
+  kubectl delete pod "$update_init_pod" -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   set -e
   if [[ "$policy_status" -eq 0 && "$main_status" -ne 0 && "$untagged_status" -ne 0 \
-    && "$main_attributed" == "true" && "$untagged_attributed" == "true" && "$port_untagged_attributed" == "true" \
+    && "$main_attributed" == "true" && "$untagged_attributed" == "true" \
     && "$init_attributed" == "true" && "$untagged_init_attributed" == "true" \
     && "$base_status" -eq 0 && "$ephemeral_latest_attributed" == "true" && "$ephemeral_untagged_attributed" == "true" \
     && "$ephemeral_trusted_status" -eq 0 && "$digest_status" -eq 0 \
     && "$digest_init_status" -eq 0 && "$digest_ephemeral_status" -eq 0 \
-    && "$port_init_attributed" == "true" && "$ephemeral_port_attributed" == "true" \
+    && "$strict_port_status" -eq 0 \
     && "$update_latest_create_status" -eq 0 && "$update_latest_attributed" == "true" \
-    && "$update_latest_positive_status" -eq 0 ]]; then result=0; else
+    && "$update_latest_positive_status" -eq 0 \
+    && "$update_init_create_status" -eq 0 && "$update_init_attributed" == "true" \
+    && "$update_init_positive_status" -eq 0 ]]; then result=0; else
     if [[ "$policy_status" -ne 0 ]]; then
-      echo "HINT: ValidatingPolicy 'deny-latest-tag' does not exist, is not apiVersion policies.kyverno.io/v1, or does not have validationActions: [Deny]."
+      echo "HINT: ValidatingPolicy 'deny-latest-tag' does not exist, is not apiVersion policies.kyverno.io/v1, does not have validationActions: [Deny], is not limited to namespace policy-108, or its resourceRules do not cover pods CREATE, pods UPDATE and pods/ephemeralcontainers UPDATE."
     elif [[ "$main_status" -eq 0 ]]; then
       echo "HINT: A Pod with image tag ':latest' was admitted - it should be denied. Check your CEL expression actually parses the tag, not just checks for the string 'latest' loosely."
     elif [[ "$untagged_status" -eq 0 ]]; then
@@ -458,6 +589,88 @@ EOF
   init_override_status=$?
   init_override_attributed=false
   kyverno_denied_by require-run-as-non-root "$init_override_status" "$init_override_output" && init_override_attributed=true
+  main_runasnonroot_only_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_MAIN_RUNASNONROOT_ONLY'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: main-runasnonroot-only-negative
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: app
+    image: registry.k8s.io/pause:3.10
+    securityContext:
+      runAsNonRoot: false
+EOF_MAIN_RUNASNONROOT_ONLY
+  )
+  main_runasnonroot_only_status=$?
+  main_runasnonroot_only_attributed=false
+  kyverno_denied_by require-run-as-non-root "${main_runasnonroot_only_status}" "${main_runasnonroot_only_output}" && main_runasnonroot_only_attributed=true
+  main_runasuser_only_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_MAIN_RUNASUSER_ONLY'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: main-runasuser-only-negative
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: app
+    image: registry.k8s.io/pause:3.10
+    securityContext:
+      runAsUser: 0
+EOF_MAIN_RUNASUSER_ONLY
+  )
+  main_runasuser_only_status=$?
+  main_runasuser_only_attributed=false
+  kyverno_denied_by require-run-as-non-root "${main_runasuser_only_status}" "${main_runasuser_only_output}" && main_runasuser_only_attributed=true
+  init_runasnonroot_only_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_INIT_RUNASNONROOT_ONLY'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-runasnonroot-only-negative
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  initContainers:
+  - name: init
+    image: registry.k8s.io/pause:3.10
+    securityContext:
+      runAsNonRoot: false
+  containers:
+  - name: app
+    image: registry.k8s.io/pause:3.10
+EOF_INIT_RUNASNONROOT_ONLY
+  )
+  init_runasnonroot_only_status=$?
+  init_runasnonroot_only_attributed=false
+  kyverno_denied_by require-run-as-non-root "${init_runasnonroot_only_status}" "${init_runasnonroot_only_output}" && init_runasnonroot_only_attributed=true
+  init_runasuser_only_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_INIT_RUNASUSER_ONLY'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-runasuser-only-negative
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  initContainers:
+  - name: init
+    image: registry.k8s.io/pause:3.10
+    securityContext:
+      runAsUser: 0
+  containers:
+  - name: app
+    image: registry.k8s.io/pause:3.10
+EOF_INIT_RUNASUSER_ONLY
+  )
+  init_runasuser_only_status=$?
+  init_runasuser_only_attributed=false
+  kyverno_denied_by require-run-as-non-root "${init_runasuser_only_status}" "${init_runasuser_only_output}" && init_runasuser_only_attributed=true
   pod_uid_zero_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF'
 apiVersion: v1
 kind: Pod
@@ -510,12 +723,27 @@ EOF
   fi
   ephemeral_root_attributed=false
   kyverno_denied_by require-run-as-non-root "$ephemeral_root_status" "$ephemeral_root_output" && ephemeral_root_attributed=true
+  eph_runasnonroot_only_output=$(kubectl patch pod "$ephemeral_root_pod" -n "$NS" --context "$CTX" \
+    --subresource=ephemeralcontainers --type=json --dry-run=server \
+    -p='[{"op":"add","path":"/spec/ephemeralContainers","value":[{"name":"debug-runasnonroot","image":"registry.k8s.io/pause:3.10","securityContext":{"runAsNonRoot":false}}]}]' 2>&1)
+  eph_runasnonroot_only_status=$?
+  eph_runasnonroot_only_attributed=false
+  kyverno_denied_by require-run-as-non-root "${eph_runasnonroot_only_status}" "${eph_runasnonroot_only_output}" && eph_runasnonroot_only_attributed=true
+  eph_runasuser_only_output=$(kubectl patch pod "$ephemeral_root_pod" -n "$NS" --context "$CTX" \
+    --subresource=ephemeralcontainers --type=json --dry-run=server \
+    -p='[{"op":"add","path":"/spec/ephemeralContainers","value":[{"name":"debug-runasuser","image":"registry.k8s.io/pause:3.10","securityContext":{"runAsUser":0}}]}]' 2>&1)
+  eph_runasuser_only_status=$?
+  eph_runasuser_only_attributed=false
+  kyverno_denied_by require-run-as-non-root "${eph_runasuser_only_status}" "${eph_runasuser_only_output}" && eph_runasuser_only_attributed=true
   kubectl delete pod "$ephemeral_root_pod" -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   set -e
   if [[ "$policy_status" -eq 0 && "$root_attributed" == "true" && "$unset_attributed" == "true" \
     && "$main_override_attributed" == "true" && "$init_override_attributed" == "true" \
     && "$pod_uid_zero_attributed" == "true" && "$override_positive_status" -eq 0 \
-    && "$ephemeral_create_status" -eq 0 && "$ephemeral_root_attributed" == "true" ]]; then
+    && "$main_runasnonroot_only_attributed" == "true" && "$main_runasuser_only_attributed" == "true" \
+    && "$init_runasnonroot_only_attributed" == "true" && "$init_runasuser_only_attributed" == "true" \
+    && "$ephemeral_create_status" -eq 0 && "$ephemeral_root_attributed" == "true" \
+    && "$eph_runasnonroot_only_attributed" == "true" && "$eph_runasuser_only_attributed" == "true" ]]; then
     result=0
   else
     echo "HINT: require-run-as-non-root must DENY unset/false Pod-level values, Pod UID 0, and root overrides in containers, initContainers and ephemeralContainers. All denials must be attributed to this policy; a safe container-level override must be admitted."
@@ -738,6 +966,24 @@ EOF
   update_registry_attributed=false
   kyverno_denied_by allow-approved-registries "$update_registry_status" "$update_registry_output" && update_registry_attributed=true
   kubectl delete pod "$update_registry_pod" -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
+  update_registry_init_pod="registry-init-update-$(date +%s%N)-$$"
+  kubectl run "$update_registry_init_pod" -n "$NS" --context "$CTX" --restart=Never \
+    --image=registry.k8s.io/pause:3.10 \
+    --overrides='{"spec":{"securityContext":{"runAsNonRoot":true},"initContainers":[{"name":"init","image":"registry.k8s.io/pause:3.10"}]}}' >/dev/null 2>&1
+  update_registry_init_create_status=$?
+  update_registry_init_output=""; update_registry_init_status=1; update_registry_init_positive_status=1
+  if [[ "$update_registry_init_create_status" -eq 0 ]]; then
+    update_registry_init_output=$(kubectl patch pod "$update_registry_init_pod" -n "$NS" --context "$CTX" \
+      --type=json --dry-run=server \
+      -p='[{"op":"replace","path":"/spec/initContainers/0/image","value":"quay.io/prometheus/busybox:v0.24.0"}]' 2>&1)
+    update_registry_init_status=$?
+    kubectl patch pod "$update_registry_init_pod" -n "$NS" --context "$CTX" --type=json --dry-run=server \
+      -p='[{"op":"replace","path":"/spec/initContainers/0/image","value":"ghcr.io/cks-lab/init:1.0.0"}]' >/dev/null 2>&1
+    update_registry_init_positive_status=$?
+  fi
+  update_registry_init_attributed=false
+  kyverno_denied_by allow-approved-registries "$update_registry_init_status" "$update_registry_init_output" && update_registry_init_attributed=true
+  kubectl delete pod "$update_registry_init_pod" -n "$NS" --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   set -e
   if [[ "$policy_status" -eq 0 && "$main_status" -ne 0 && "$unqualified_status" -ne 0 \
     && "$main_attributed" == "true" && "$unqualified_attributed" == "true" \
@@ -747,9 +993,11 @@ EOF
     && "$ephemeral_ghcr_trusted_status" -eq 0 \
     && "$quay_init_attributed" == "true" && "$ephemeral_lookalike_attributed" == "true" \
     && "$update_registry_create_status" -eq 0 && "$update_registry_attributed" == "true" \
-    && "$update_registry_positive_status" -eq 0 ]]; then result=0; else
+    && "$update_registry_positive_status" -eq 0 \
+    && "$update_registry_init_create_status" -eq 0 && "$update_registry_init_attributed" == "true" \
+    && "$update_registry_init_positive_status" -eq 0 ]]; then result=0; else
     if [[ "$policy_status" -ne 0 ]]; then
-      echo "HINT: ValidatingPolicy 'allow-approved-registries' does not exist or is not enforced (Deny)."
+      echo "HINT: ValidatingPolicy 'allow-approved-registries' does not exist, is not enforced (Deny), is not limited to namespace policy-108, or its resourceRules do not cover pods CREATE, pods UPDATE and pods/ephemeralcontainers UPDATE."
     elif [[ "$main_status" -eq 0 ]]; then
       echo "HINT: An image from docker.io (not in the approved registry allowlist) was admitted - check your registry match logic actually restricts to the approved prefix(es)."
     elif [[ "$unqualified_status" -eq 0 ]]; then
@@ -910,17 +1158,63 @@ EOF
     done
   fi
   set +e
-  kubectl delete pod webhook-latest-must-fail webhook-pinned-ok webhook-failclosed-must-fail --context "$CTX" --ignore-not-found --wait=true --timeout=120s >/dev/null 2>&1
-  kubectl run webhook-latest-must-fail --image=nginx:latest --context "$CTX" 2>/tmp/webhook-latest-err.txt >/dev/null
+  kubectl delete pod -n default webhook-latest-must-fail webhook-pinned-ok webhook-failclosed-must-fail --context "$CTX" --ignore-not-found --wait=true --timeout=120s >/dev/null 2>&1
+  kubectl run -n default webhook-latest-must-fail --image=nginx:latest --context "$CTX" 2>/tmp/webhook-latest-err.txt >/dev/null
   latest_status=$?
-  implicit_output=$(kubectl run webhook-implicit-must-fail --image=nginx --dry-run=server --context "$CTX" 2>&1)
+  implicit_output=$(kubectl run -n default webhook-implicit-must-fail --image=nginx --dry-run=server --context "$CTX" 2>&1)
   implicit_status=$?
-  port_implicit_output=$(kubectl run webhook-port-implicit-must-fail --image=registry.example:5000/app --dry-run=server --context "$CTX" 2>&1)
+  port_implicit_output=$(kubectl run -n default webhook-port-implicit-must-fail --image=registry.example:5000/app --dry-run=server --context "$CTX" 2>&1)
   port_implicit_status=$?
-  kubectl run webhook-pinned-ok --image=nginx:1.27.3 --context "$CTX" >/dev/null 2>&1
-  kubectl wait pod/webhook-pinned-ok --context "$CTX" --for=condition=Ready --timeout=90s >/dev/null 2>&1
+  kubectl run -n default webhook-pinned-ok --image=nginx:1.27.3 --context "$CTX" >/dev/null 2>&1
+  kubectl wait -n default pod/webhook-pinned-ok --context "$CTX" --for=condition=Ready --timeout=90s >/dev/null 2>&1
   pinned_status=$?
   deny_message=$(cat /tmp/webhook-latest-err.txt 2>/dev/null || true)
+
+  # Explicitly test user-supplied ImageReview annotations: they MUST NOT bypass the
+  # backend. Also verify initContainer and ephemeralContainer paths, not only main.
+  annotation_bypass_output=$(kubectl run -n default webhook-user-annotation-must-fail \
+    --annotations='alpha.image-policy.k8s.io/break-glass=true' \
+    --image=nginx:latest --dry-run=server --context "$CTX" 2>&1)
+  annotation_bypass_status=$?
+  init_latest_output=$(kubectl apply --dry-run=server -n default --context "$CTX" -f - 2>&1 <<'EOF_IPW_INIT'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webhook-init-latest-must-fail
+  namespace: default
+spec:
+  initContainers:
+  - name: init
+    image: nginx:latest
+  containers:
+  - name: app
+    image: nginx:1.27.3
+EOF_IPW_INIT
+  )
+  init_latest_status=$?
+  init_pinned_output=$(kubectl apply --dry-run=server -n default --context "$CTX" -f - 2>&1 <<'EOF_IPW_INIT_OK'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webhook-init-pinned-positive
+  namespace: default
+spec:
+  initContainers:
+  - name: init
+    image: nginx:1.27.3
+  containers:
+  - name: app
+    image: nginx:1.27.3
+EOF_IPW_INIT_OK
+  )
+  init_pinned_status=$?
+  ephemeral_latest_output=$(kubectl debug -n default pod/webhook-pinned-ok --context "$CTX" \
+    --target=webhook-pinned-ok --image=nginx:latest --profile=general -- true 2>&1)
+  ephemeral_latest_status=$?
+  ephemeral_positive_output=$(kubectl debug -n default pod/webhook-pinned-ok --context "$CTX" \
+    --target=webhook-pinned-ok --attach=false \
+    --image=registry.k8s.io/e2e-test-images/busybox:1.36-1 --profile=general -- true 2>&1)
+  ephemeral_positive_status=$?
 
   # Fail-closed check: defaultAllow:false means that if the backend becomes unreachable,
   # a NEW pinned-tag image (not cached from an earlier allow/deny decision, so the TTL
@@ -936,9 +1230,13 @@ EOF
   # false FAIL for an otherwise-correct student solution. Patching the Service selector
   # only changes routing to the EXISTING (already-admitted, already-Running) Pod - no
   # new Pod is created, so there is nothing left for ImagePolicyWebhook to block.
-  original_selector=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector' 2>/dev/null || true)
-  kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
-    -p '{"spec":{"selector":{"app":"image-policy-backend-detached-for-probe"}}}' >/dev/null 2>&1
+  original_selector=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null || true)
+  detach_patch_ok=1
+  if [[ -n "$original_selector" && "$original_selector" != '{}' ]]; then
+    kubectl patch service image-policy-backend -n image-policy --context "$CTX" --type=json \
+      -p '[{"op":"replace","path":"/spec/selector","value":{"app":"image-policy-backend-detached-for-probe"}}]' >/dev/null 2>&1
+    detach_patch_ok=$?
+  fi
   for _ in $(seq 1 24); do
     eps=$(kubectl get endpoints image-policy-backend -n image-policy --context "$CTX" -o jsonpath='{.subsets}' 2>/dev/null || true)
     [[ -z "$eps" ]] && break
@@ -950,7 +1248,7 @@ EOF
     backend_detached_status=1
   fi
   unique_tag="failclosed-$(date +%s%N)-$$"
-  kubectl run webhook-failclosed-must-fail --image="nginx:${unique_tag}" --context "$CTX" 2>/tmp/webhook-failclosed-err.txt >/dev/null
+  kubectl run -n default webhook-failclosed-must-fail --image="nginx:${unique_tag}" --context "$CTX" 2>/tmp/webhook-failclosed-err.txt >/dev/null
   failclosed_status=$?
   failclosed_message=$(cat /tmp/webhook-failclosed-err.txt 2>/dev/null || true)
   failclosed_is_backend_error=false
@@ -963,15 +1261,17 @@ EOF
   # `-o jsonpath`, since kubectl's jsonpath map printer emits Go-style `map[k:v]`
   # syntax which is not valid JSON and would make this patch a no-op silently
   # swallowed by the >/dev/null 2>&1 redirect below).
-  if [[ -n "$original_selector" && "$original_selector" != "null" ]]; then
+  restore_patch_status=1
+  if [[ "$detach_patch_ok" -eq 0 && -n "$original_selector" && "$original_selector" != '{}' ]]; then
+    selector_restore_patch=$(jq -nc --argjson original "$original_selector" \
+      '[{"op":"replace","path":"/spec/selector","value":$original}]')
     kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
-      --type=merge -p "{\"spec\":{\"selector\":${original_selector}}}" >/dev/null 2>&1
-    restore_patch_status=$?
-  else
-    kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
-      --type=merge -p '{"spec":{"selector":{"app":"image-policy-backend"}}}' >/dev/null 2>&1
+      --type=json -p "$selector_restore_patch" >/dev/null 2>&1
     restore_patch_status=$?
   fi
+  selector_after_restore=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null || true)
+  selector_exact_restored=false
+  [[ "$restore_patch_status" -eq 0 && "$selector_after_restore" == "$original_selector" ]] && selector_exact_restored=true
   for _ in $(seq 1 24); do
     eps=$(kubectl get endpoints image-policy-backend -n image-policy --context "$CTX" -o jsonpath='{.subsets}' 2>/dev/null || true)
     [[ -n "$eps" ]] && break
@@ -988,7 +1288,7 @@ EOF
   # be misattributed. Wait until admission actually works again before finishing.
   recovery_status=1
   for _ in $(seq 1 30); do
-    if kubectl run "webhook-recovery-probe" --image="nginx:recovery-$(date +%s%N)" --dry-run=server -o name \
+    if kubectl run -n default "webhook-recovery-probe" --image="nginx:recovery-$(date +%s%N)" --dry-run=server -o name \
       --context "$CTX" >/dev/null 2>&1; then
       recovery_status=0
       break
@@ -1006,9 +1306,14 @@ EOF
     && "$latest_status" -ne 0 && "$deny_message" == *'image policy webhook backend denied'* \
     && "$implicit_status" -ne 0 && "$implicit_output" == *'image policy webhook backend denied'* \
     && "$port_implicit_status" -ne 0 && "$port_implicit_output" == *'image policy webhook backend denied'* \
-    && "$pinned_status" -eq 0 \
+    && "$annotation_bypass_status" -ne 0 && "$annotation_bypass_output" == *'image policy webhook backend denied'* \
+    && "$init_latest_status" -ne 0 && "$init_latest_output" == *'image policy webhook backend denied'* \
+    && "$init_pinned_status" -eq 0 \
+    && "$ephemeral_latest_status" -ne 0 && "$ephemeral_latest_output" == *'image policy webhook backend denied'* \
+    && "$ephemeral_positive_status" -eq 0 && "$pinned_status" -eq 0 \
     && "$backend_detached_status" -eq 0 && "$failclosed_status" -ne 0 \
-    && "$failclosed_is_backend_error" == "true" && "$restore_patch_status" -eq 0 \
+    && "$failclosed_is_backend_error" == "true" && "$detach_patch_ok" -eq 0 \
+    && "$selector_exact_restored" == "true" && "$restore_patch_status" -eq 0 \
     && "$backend_restored_status" -eq 0 && "$recovery_status" -eq 0 ]]; then
     result=0
   else
@@ -1054,7 +1359,7 @@ EOF
     echo "backend_available=$backend_available backend_server=$backend_server backend_https_ok=$backend_https_ok backend_service_target_ok=$backend_service_target_ok service_port_8443_count=$service_port default_allow_false=$default_allow_false preserved_baseline_plugins=$preserved_baseline_plugins baseline_plugins=$baseline_plugins current_plugins=$current_plugins latest_status=$latest_status implicit_status=$implicit_status implicit_message=$implicit_output port_implicit_status=$port_implicit_status port_implicit_message=$port_implicit_output pinned_status=$pinned_status backend_detached_status=$backend_detached_status failclosed_status=$failclosed_status failclosed_is_backend_error=$failclosed_is_backend_error restore_patch_status=$restore_patch_status backend_restored_status=$backend_restored_status recovery_status=$recovery_status deny_message=$deny_message failclosed_message=$failclosed_message"
     result=1
   fi
-  kubectl delete pod webhook-latest-must-fail webhook-pinned-ok webhook-failclosed-must-fail --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
+  kubectl delete pod -n default webhook-latest-must-fail webhook-pinned-ok webhook-failclosed-must-fail --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   rm -f /tmp/webhook-latest-err.txt /tmp/webhook-failclosed-err.txt
   record_result "$result"
 }
@@ -1159,8 +1464,8 @@ EOF_POD
   if [[ "$template_status" -eq 0 && "$constraint_contract_ok" == "true" && "$constraint_set_exact" == "true" \
     && "$rego_has_old_untrusted" == "true" && "$rego_has_old_docker_fake" == "true" && "$rego_has_new" == "true" \
     && "$new_bad_status" -ne 0 && "$new_bad_output" == *'[deny-bad-registries]'* && "$new_bad_output" == *'validation.gatekeeper.sh'* \
-    && "$old_bad_status" -ne 0 && "$old_bad_output" == *'[deny-bad-registries]'* \
-    && "$old_docker_fake_status" -ne 0 && "$old_docker_fake_output" == *'[deny-bad-registries]'* \
+    && "$old_bad_status" -ne 0 && "$old_bad_output" == *'[deny-bad-registries]'* && "$old_bad_output" == *'validation.gatekeeper.sh'* \
+    && "$old_docker_fake_status" -ne 0 && "$old_docker_fake_output" == *'[deny-bad-registries]'* && "$old_docker_fake_output" == *'validation.gatekeeper.sh'* \
     && "$trusted_status" -eq 0 ]]; then
     result=0
   else

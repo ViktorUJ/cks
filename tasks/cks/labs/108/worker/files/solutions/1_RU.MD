@@ -577,7 +577,14 @@ kubectl get pod webhook-pinned-ok --context "$CTX"
 # STATUS: Running
 ```
 
-`defaultAllow: false` означает fail-closed: если backend недоступен, все image
+`ImagePolicyWebhook` использует backend из `/opt/image-policy-backend/server.py`:
+в `default` и остальных namespace (кроме `policy-108`) он запрещает explicit/implicit
+latest; `policy-108` целиком контролируют три Kyverno-политики из заданий 2–4.
+Это лабораторная изоляция механизмов, а не универсальный production pattern.
+Пользовательская аннотация `alpha.image-policy.k8s.io/break-glass` разрешение НЕ даёт:
+ImageReview forwarding annotations не является проверкой подлинности.
+
+`defaultAllow: false` означает fail-closed: если backend недоступен, новые Pod/image
 запрещаются, а не разрешаются. Проверьте это явно - но НЕ масштабируйте
 `image-policy-backend` до 0 реплик: `ImagePolicyWebhook` - это cluster-wide admission
 plugin без исключения по namespace в нашей конфигурации, поэтому он проверяет и Pod

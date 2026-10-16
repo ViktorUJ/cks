@@ -56,8 +56,9 @@ cat >/opt/image-policy-backend/server.py <<'PYEOF'
 #!/usr/bin/env python3
 """Minimal ImagePolicyWebhook backend implementing the ImageReview contract.
 
-Denies any container image ending in ':latest' or with no tag at all (which
-Kubernetes/OCI resolve to implicit 'latest'). Allows everything else.
+Denies explicit/implicit latest in all namespaces except policy-108, whose
+image admission is owned by the Kyverno policies in Tasks 2-4. User-supplied
+Pod annotations never bypass the backend.
 
 Serves over HTTPS using a certificate/key mounted at /opt/image-policy/tls -
 the upstream ImagePolicyWebhook contract requires the backend to communicate
@@ -93,17 +94,26 @@ class Handler(BaseHTTPRequestHandler):
             return
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length) or b"{}")
-        images = body.get("spec", {}).get("containers", [])
-        image_names = [c.get("image", "") for c in images]
-        denied = [img for img in image_names if is_untrusted(img)]
-        if denied:
-            status = {
-                "allowed": False,
-                "reason": "image policy webhook backend denied one or more images: "
-                "Images using latest tag are not allowed",
-            }
-        else:
+        # Isolate the two admission exercises by a fixed lab namespace boundary:
+        # policy-108 is controlled by the three Kyverno admission policies (Tasks 2-4).
+        # ImagePolicyWebhook evaluates the remaining namespaces, including default and
+        # gatekeeper-108. NEVER trust a break-glass annotation from Pod metadata: the
+        # Kubernetes ImageReview API forwards user-supplied annotations unvalidated.
+        # The checker separately proves all three Kyverno policies in policy-108.
+        if body.get("spec", {}).get("namespace") == "policy-108":
             status = {"allowed": True}
+        else:
+            images = body.get("spec", {}).get("containers", [])
+            image_names = [c.get("image", "") for c in images]
+            denied = [img for img in image_names if is_untrusted(img)]
+            if denied:
+                status = {
+                    "allowed": False,
+                    "reason": "image policy webhook backend denied one or more images: "
+                    "Images using latest tag are not allowed",
+                }
+            else:
+                status = {"allowed": True}
         response = {
             "apiVersion": "imagepolicy.k8s.io/v1alpha1",
             "kind": "ImageReview",
