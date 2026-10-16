@@ -115,15 +115,62 @@ kyverno_denied_by() {
 # Temporarily switch Task 4 to Audit, wait for the updated effective admission
 # behavior, prove ALL THREE Task 2 port denials, and restore the exact actions.
 # The restore is live-verified.
-task2_port_denials_isolated() {
+task2_port_denials_isolated() (
+  # Run the mutation in a child shell: EXIT/INT/TERM cleanup remains scoped to
+  # this probe and cannot replace Bats' own parent-process handlers.
   local base_pod="$1" old_actions="" restore_needed=0 ready=0 ok=0
   local output status init_output init_status eph_output eph_status
   local restore_output restore_status
+  restore_task4_policy() {
+    [[ "$restore_needed" -eq 1 ]] || return 0
+    local payload current verify_output verify_status requires_deny=0
+    payload=$(jq -nc --argjson actions "$old_actions" '{spec:{validationActions:$actions}}') || return 1
+    jq -en --argjson actions "$old_actions" '$actions | index("Deny") != null' >/dev/null 2>&1 && requires_deny=1
+    for _ in $(seq 1 30); do
+      if kubectl patch validatingpolicy allow-approved-registries --context "$CTX" --type=merge -p "$payload" >/dev/null 2>&1; then
+        current=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []' 2>/dev/null)
+        if [[ "$current" == "$old_actions" ]]; then
+          if [[ "$requires_deny" -eq 0 ]]; then
+            restore_needed=0
+            return 0
+          fi
+          verify_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_PORT_RESTORED'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: task2-port-allowlist-restored
+  namespace: policy-108
+spec:
+  securityContext:
+    runAsNonRoot: true
+  containers:
+  - name: app
+    image: docker.io/library/busybox:1.36
+EOF_PORT_RESTORED
+          )
+          verify_status=$?
+          if kyverno_denied_by allow-approved-registries "$verify_status" "$verify_output"; then
+            restore_needed=0
+            return 0
+          fi
+        fi
+      fi
+      sleep 2
+    done
+    echo 'FATAL: checker could not restore allow-approved-registries to its original effective validationActions. Restore it manually before continuing.' >&2
+    return 1
+  }
+  # EXIT cleanup covers ordinary errors, CTRL-C and TERM. Do not promise SIGKILL
+  # recovery: OS-level kill -9 does not permit cleanup in any shell.
+  trap 'restore_task4_policy || true' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   old_actions=$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []' 2>/dev/null)
   if [[ -n "$old_actions" ]]; then
+    # Arm EXIT recovery BEFORE the state-changing API request, not after it.
+    restore_needed=1
     kubectl patch validatingpolicy allow-approved-registries --context "$CTX" --type=merge \
       -p '{"spec":{"validationActions":["Audit"]}}' >/dev/null 2>&1 || return 1
-    restore_needed=1
     for _ in $(seq 1 30); do
       if kubectl apply --dry-run=server --context "$CTX" -f - >/dev/null 2>&1 <<'EOF_PORT_READY'
 apiVersion: v1
@@ -186,38 +233,11 @@ EOF_PORT_INIT
       && kyverno_denied_by deny-latest-tag "$eph_status" "$eph_output"; then ok=1; fi
   fi
   if [[ "$restore_needed" -eq 1 ]]; then
-    kubectl patch validatingpolicy allow-approved-registries --context "$CTX" --type=merge \
-      -p "$(jq -nc --argjson actions "$old_actions" '{spec:{validationActions:$actions}}')" >/dev/null 2>&1
-    restore_status=$?
-    if [[ "$restore_status" -eq 0 ]]; then
-      for _ in $(seq 1 30); do
-        restore_output=$(kubectl apply --dry-run=server --context "$CTX" -f - 2>&1 <<'EOF_PORT_RESTORED'
-apiVersion: v1
-kind: Pod
-metadata:
-  name: task2-port-allowlist-restored
-  namespace: policy-108
-spec:
-  securityContext:
-    runAsNonRoot: true
-  containers:
-  - name: app
-    image: docker.io/library/busybox:1.36
-EOF_PORT_RESTORED
-        )
-        restore_status=$?
-        kyverno_denied_by allow-approved-registries "$restore_status" "$restore_output" && break
-        sleep 1
-      done
-      if ! kyverno_denied_by allow-approved-registries "$restore_status" "$restore_output"; then ok=0; fi
-    else
-      ok=0
-    fi
-    restore_needed=0
-    [[ "$(kubectl get validatingpolicy allow-approved-registries --context "$CTX" -o json 2>/dev/null | jq -c '.spec.validationActions // []')" == "$old_actions" ]] || ok=0
+    # Normal-path recovery uses the same retrying, live-verified cleanup as EXIT.
+    restore_task4_policy || ok=0
   fi
   [[ "$ok" -eq 1 ]]
-}
+)
 
 @test "0 Init" {
   echo '' > /var/work/tests/result/all
@@ -1120,6 +1140,8 @@ EOF
 }
 
 @test "6. ImagePolicyWebhook denies :latest via external backend and admits a pinned tag" {
+  # Scope signal/EXIT handlers to this test only; other Bats cases keep their own traps.
+  (
   manifest=$(node_ssh "sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml" 2>/dev/null || true)
   baseline_plugins=$(node_ssh "sudo cat /var/lib/cks-lab108-checker/baseline-admission-plugins.txt" 2>/dev/null || true)
   backend_kubeconfig=$(node_ssh "sudo cat /etc/kubernetes/image-policy/kubeconfig" 2>/dev/null || true)
@@ -1216,6 +1238,26 @@ EOF_IPW_INIT_OK
     --image=registry.k8s.io/e2e-test-images/busybox:1.36-1 --profile=general -- true 2>&1)
   ephemeral_positive_status=$?
 
+  # The backend contract covers EVERY namespace except policy-108. Checking only
+  # default is insufficient: a deliberately namespace-scoped backend that denies
+  # latest only in default would otherwise pass the full Task 6 score.
+  other_ns_probe_ok=true
+  other_ns_probe_details=""
+  for probe_ns in gatekeeper-108 image-policy; do
+    nonce="$(date +%s%N)-$$"
+    other_latest_output=$(kubectl run -n "$probe_ns" "ipw-latest-${nonce}" \
+      --image=nginx:latest --dry-run=server --context "$CTX" 2>&1)
+    other_latest_status=$?
+    other_pinned_output=$(kubectl run -n "$probe_ns" "ipw-pinned-${nonce}" \
+      --image=nginx:1.27.3 --dry-run=server --context "$CTX" 2>&1)
+    other_pinned_status=$?
+    if [[ "$other_latest_status" -eq 0 || "$other_latest_output" != *'image policy webhook backend denied'* \
+      || "$other_pinned_status" -ne 0 ]]; then
+      other_ns_probe_ok=false
+      other_ns_probe_details="${other_ns_probe_details} ns=${probe_ns} deny=${other_latest_status} deny_message=${other_latest_output} allow=${other_pinned_status} allow_message=${other_pinned_output};"
+    fi
+  done
+
   # Fail-closed check: defaultAllow:false means that if the backend becomes unreachable,
   # a NEW pinned-tag image (not cached from an earlier allow/deny decision, so the TTL
   # cache cannot mask this) must still be DENIED, not silently admitted. Detach the
@@ -1231,8 +1273,34 @@ EOF_IPW_INIT_OK
   # only changes routing to the EXISTING (already-admitted, already-Running) Pod - no
   # new Pod is created, so there is nothing left for ImagePolicyWebhook to block.
   original_selector=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null || true)
+  selector_restore_pending=0
+  restore_webhook_selector() {
+    [[ "$selector_restore_pending" -eq 1 ]] || return 0
+    local restore_json observed
+    restore_json=$(jq -nc --argjson original "$original_selector" \
+      '[{"op":"replace","path":"/spec/selector","value":$original}]') || return 1
+    for _ in $(seq 1 30); do
+      if kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
+        --type=json -p "$restore_json" >/dev/null 2>&1; then
+        observed=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null)
+        if [[ "$observed" == "$original_selector" ]]; then
+          selector_restore_pending=0
+          return 0
+        fi
+      fi
+      sleep 2
+    done
+    echo 'FATAL: Service image-policy/image-policy-backend selector could not be restored; new Pod admission may remain unavailable. Restore the selector from the saved original_selector before continuing.' >&2
+    return 1
+  }
   detach_patch_ok=1
   if [[ -n "$original_selector" && "$original_selector" != '{}' ]]; then
+    # Arm cleanup before ANY write to Service; a partial/aborted patch still has
+    # a chance to be repaired. Parent Bats runner handlers remain untouched.
+    selector_restore_pending=1
+    trap 'restore_webhook_selector || true' EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
     kubectl patch service image-policy-backend -n image-policy --context "$CTX" --type=json \
       -p '[{"op":"replace","path":"/spec/selector","value":{"app":"image-policy-backend-detached-for-probe"}}]' >/dev/null 2>&1
     detach_patch_ok=$?
@@ -1247,6 +1315,15 @@ EOF_IPW_INIT_OK
   else
     backend_detached_status=1
   fi
+  # Endpoints can be empty while kube-proxy has not yet removed the old ClusterIP rules,
+  # so a probe sent at that instant may still reach the old backend Pod. Wait (server-side
+  # dry-run, nothing is created) until a never-seen image is actually refused; a fail-open
+  # configuration is admitted on every attempt and still fails below.
+  for _ in $(seq 1 20); do
+    kubectl run -n default webhook-failclosed-wait --image="nginx:fcwait-$(date +%s%N)-$$" \
+      --dry-run=server --context "$CTX" >/dev/null 2>&1 || break
+    sleep 1
+  done
   unique_tag="failclosed-$(date +%s%N)-$$"
   kubectl run -n default webhook-failclosed-must-fail --image="nginx:${unique_tag}" --context "$CTX" 2>/tmp/webhook-failclosed-err.txt >/dev/null
   failclosed_status=$?
@@ -1262,16 +1339,16 @@ EOF_IPW_INIT_OK
   # syntax which is not valid JSON and would make this patch a no-op silently
   # swallowed by the >/dev/null 2>&1 redirect below).
   restore_patch_status=1
-  if [[ "$detach_patch_ok" -eq 0 && -n "$original_selector" && "$original_selector" != '{}' ]]; then
-    selector_restore_patch=$(jq -nc --argjson original "$original_selector" \
-      '[{"op":"replace","path":"/spec/selector","value":$original}]')
-    kubectl patch service image-policy-backend -n image-policy --context "$CTX" \
-      --type=json -p "$selector_restore_patch" >/dev/null 2>&1
-    restore_patch_status=$?
-  fi
-  selector_after_restore=$(kubectl get service image-policy-backend -n image-policy --context "$CTX" -o json 2>/dev/null | jq -c '.spec.selector // {}' 2>/dev/null || true)
   selector_exact_restored=false
-  [[ "$restore_patch_status" -eq 0 && "$selector_after_restore" == "$original_selector" ]] && selector_exact_restored=true
+  if [[ "$selector_restore_pending" -eq 1 ]]; then
+    restore_webhook_selector
+    restore_patch_status=$?
+    if [[ "$restore_patch_status" -eq 0 ]]; then
+      selector_exact_restored=true
+      # Safe to disarm after live read-back: no Service mutation pending.
+      trap - EXIT INT TERM
+    fi
+  fi
   for _ in $(seq 1 24); do
     eps=$(kubectl get endpoints image-policy-backend -n image-policy --context "$CTX" -o jsonpath='{.subsets}' 2>/dev/null || true)
     [[ -n "$eps" ]] && break
@@ -1311,6 +1388,7 @@ EOF_IPW_INIT_OK
     && "$init_pinned_status" -eq 0 \
     && "$ephemeral_latest_status" -ne 0 && "$ephemeral_latest_output" == *'image policy webhook backend denied'* \
     && "$ephemeral_positive_status" -eq 0 && "$pinned_status" -eq 0 \
+    && "$other_ns_probe_ok" == "true" \
     && "$backend_detached_status" -eq 0 && "$failclosed_status" -ne 0 \
     && "$failclosed_is_backend_error" == "true" && "$detach_patch_ok" -eq 0 \
     && "$selector_exact_restored" == "true" && "$restore_patch_status" -eq 0 \
@@ -1353,6 +1431,8 @@ EOF_IPW_INIT_OK
       echo "HINT: A correctly pinned initContainer or ephemeral container in namespace default was rejected - the backend must only deny latest/untagged images."
     elif [[ "$pinned_status" -ne 0 ]]; then
       echo "HINT: Pod webhook-pinned-ok (nginx:1.27.3) was not created/Ready - a correctly pinned tag should be allowed by the backend logic in server.py."
+    elif [[ "$other_ns_probe_ok" != "true" ]]; then
+      echo "HINT: ImagePolicyWebhook must enforce latest/implicit restrictions outside default, including gatekeeper-108 and image-policy. A pinned image must remain admissible in both namespaces. ${other_ns_probe_details}"
     elif [[ "$backend_detached_status" -ne 0 ]]; then
       echo "HINT: Backend Endpoints did not become empty. Fail-closed was not actually tested."
     elif [[ "$failclosed_status" -eq 0 || "$failclosed_is_backend_error" != "true" ]]; then
@@ -1370,6 +1450,7 @@ EOF_IPW_INIT_OK
   kubectl delete pod -n default webhook-latest-must-fail webhook-pinned-ok webhook-failclosed-must-fail --context "$CTX" --ignore-not-found --wait=false >/dev/null 2>&1
   rm -f /tmp/webhook-latest-err.txt /tmp/webhook-failclosed-err.txt
   record_result "$result"
+  )
 }
 
 @test "7. Gatekeeper ConstraintTemplate Rego blocks very-bad-registry.test without losing the old rule" {
