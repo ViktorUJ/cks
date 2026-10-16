@@ -333,10 +333,30 @@ kubectl -n psa-controller-107 get deploy controller-app
 Чиним template - добавляем те же hardening поля, что в задании 2:
 
 ```bash
-kubectl -n psa-controller-107 patch deployment controller-app --type=json -p '[
-  {"op":"add","path":"/spec/template/spec/securityContext","value":{"runAsNonRoot":true,"runAsUser":1000,"seccompProfile":{"type":"RuntimeDefault"}}},
-  {"op":"add","path":"/spec/template/spec/containers/0/securityContext","value":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}
-]'
+kubectl -n psa-controller-107 edit deployment controller-app
+```
+
+В `spec.template.spec` замените строку `securityContext: {}` на блок ниже, а в контейнер `busybox`
+(имя контейнера - `busybox`, создано `kubectl create deployment`) добавьте свой `securityContext`:
+
+```yaml
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: busybox
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+```
+
+Сохраните и дождитесь rollout:
+
+```bash
 kubectl -n psa-controller-107 rollout status deployment/controller-app
 ```
 

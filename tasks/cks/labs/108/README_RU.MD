@@ -104,7 +104,7 @@ kubectl get deployment -n kyverno -o json | \
 | **2** | **Запретить image с тегом `latest`** |
 | :---: | :--- |
 | Что делаем | Создайте CEL-based `ValidatingPolicy` `deny-latest-tag` (`policies.kyverno.io/v1`) с `validationActions: [Deny]`. Она должна применяться к Pod и subresource `pods/ephemeralcontainers` namespace `policy-108` и отклонять любой image в `containers`, `initContainers` или `ephemeralContainers`, который является явным `:latest` ИЛИ implicit latest (образ без тега и без digest вообще). |
-| Критерии приёмки | Policy существует и работает в режиме Deny; admission отклоняет и явный `:latest`, и implicit latest (untagged) в каждом из трёх списков контейнеров, включая image с registry-портом без тега (`registry.example:5000/app`), а versioned trusted images и digest-pinned images в каждом списке принимает. |
+| Критерии приёмки | Policy существует и работает в режиме Deny; admission отклоняет и явный `:latest`, и implicit latest (untagged) в каждом из трёх списков контейнеров, включая image с registry-портом без тега (`registry.example:5000/app`), а versioned trusted images и digest-pinned images в каждом списке принимает. При UPDATE существующего Pod изменение `spec.containers[*].image` или `spec.initContainers[*].image` на `:latest` также отклоняется этой policy (обычные Pod image-поля допускают in-place UPDATE). |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -173,8 +173,8 @@ subresource). Наконец, проверьте positive control - versioned ta
 ---
 | **3** | **Требовать запуск не от root** |
 | :---: | :--- |
-| Что делаем | Создайте CEL-based `ValidatingPolicy` `require-run-as-non-root` в режиме Deny. Для каждого Pod в `policy-108` поле `spec.securityContext.runAsNonRoot` должно быть явно равно `true`. |
-| Критерии приёмки | Policy существует и Deny; Pod с `runAsNonRoot: false`, а также Pod без этого поля вообще (неявное значение), не проходит server-side admission. |
+| Что делаем | Создайте CEL-based `ValidatingPolicy` `require-run-as-non-root` в режиме Deny. Для каждого Pod в `policy-108` поле `spec.securityContext.runAsNonRoot` должно быть явно равно `true`. На уровне Pod и всех контейнеров запрещены `runAsUser: 0` и container-level `runAsNonRoot: false`: настройки контейнера могут переопределить Pod-level securityContext. |
+| Критерии приёмки | Policy существует и Deny; Pod с `runAsNonRoot: false` или без этого поля, Pod-level `runAsUser: 0`, а также контейнер с `runAsNonRoot: false` / `runAsUser: 0` в `containers`, `initContainers`, `ephemeralContainers` отклоняются именно этой policy. Безопасное explicit container-level `runAsNonRoot: true`, `runAsUser: 1000` принимается. |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
@@ -223,7 +223,7 @@ admission. Затем проверьте positive control: тот же Pod, но
 | **4** | **Allowlist container registry** |
 | :---: | :--- |
 | Что делаем | Создайте CEL-based `ValidatingPolicy` `allow-approved-registries` в режиме Deny. Для каждого контейнера (`containers`, `initContainers`, `ephemeralContainers`) разрешайте только `registry.k8s.io/*` или `ghcr.io/cks-lab/*`; остальные image registry запретите. |
-| Критерии приёмки | Policy существует и Deny; untrusted image отклоняется во всех трёх списках; оба approved prefixes (`registry.k8s.io/` и `ghcr.io/cks-lab/`) допускаются в каждом из трёх списков. |
+| Критерии приёмки | Policy существует и Deny; untrusted image отклоняется во всех трёх списках; оба approved prefixes (`registry.k8s.io/` и `ghcr.io/cks-lab/`) допускаются в каждом из трёх списков. Обычный Pod UPDATE, меняющий image на unapproved registry, отклоняется самой policy; проверяются также другие unapproved registry и host/path-lookalikes в init/ephemeral списках. |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
@@ -281,7 +281,7 @@ image через `kubectl debug` на уже запущенном разрешё
 | **6** | **ImagePolicyWebhook: внешний backend вместо CEL policy** |
 | :---: | :--- |
 | Что делаем | На рабочей машине уже подготовлен `/opt/image-policy-backend/server.py` - минимальный HTTPS-сервер, реализующий `ImageReview` API (отклоняет image с тегом `:latest` или без тега вовсе). Скопируйте его на `control-plane` и разверните как Deployment в namespace `image-policy`, за Service `image-policy-backend` на порту `8443`. Backend должен принимать соединения по TLS (upstream `ImagePolicyWebhook` контракт требует HTTPS, plain HTTP не поддерживается). На `control-plane` настройте `AdmissionConfiguration` для plugin `ImagePolicyWebhook` (`defaultAllow: false`) и kubeconfig, указывающий на ваш backend. В static manifest `kube-apiserver.yaml` **добавьте** `ImagePolicyWebhook` к уже существующему списку `--enable-admission-plugins` (не заменяйте список целиком - иначе рискуете выключить уже включённые plugins) и включите `--runtime-config=imagepolicy.k8s.io/v1alpha1=true`. После восстановления API создайте Pod с `:latest` - должен быть отклонён; затем Pod с закреплённым тегом - должен быть создан. |
-| Критерии приёмки | `image-policy-backend` Available; kube-apiserver healthy с добавленным (не заменённым) plugin и `--runtime-config`; kubeconfig backend'а использует `https://` (не `http://`); Pod с `:latest` отклонён именно ImagePolicyWebhook (сообщение admission содержит `image policy webhook backend denied`); Pod с закреплённым тегом создан и Running; backend, временно остановленный (недоступный), приводит к отказу в приёме НОВОГО image (`defaultAllow: false` работает как fail-closed, а не fail-open). |
+| Критерии приёмки | `image-policy-backend` Available; kube-apiserver healthy с добавленным (не заменённым) plugin и `--runtime-config`; kubeconfig backend'а использует HTTPS `https://<ClusterIP Service image-policy-backend>:8443/imagepolicy`; Pod с `:latest` и implicit latest (в том числе registry-port без тега) отклоняется именно ImagePolicyWebhook (сообщение admission содержит `image policy webhook backend denied`); Pod с закреплённым тегом создан и Running; Service действительно теряет Endpoints во время проверки backend outage, kube-apiserver отвечает отказом конкретно из-за связи с этим endpoint (`defaultAllow: false` работает как fail-closed), затем Service и admission восстанавливаются. |
 
 <details>
 <summary>💡 Подсказка к заданию 6</summary>

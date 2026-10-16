@@ -100,7 +100,10 @@ EOF
 ## 3. Требовать `runAsNonRoot`
 
 Политика требует значение именно `true` в Pod-level `securityContext`; неявное
-значение и `false` не проходят.
+значение и `false` не проходят. Дополнительно запрещены `runAsUser: 0` на уровне
+Pod и container-level overrides `runAsNonRoot: false` / `runAsUser: 0` во всех
+трёх container lists, иначе container-level securityContext сможет переопределить
+Pod-level `runAsNonRoot: true` и запустить root-процесс.
 
 ```yaml
 # require-run-as-non-root.yaml
@@ -120,10 +123,23 @@ spec:
   - name: policy-108-only
     expression: request.namespace == 'policy-108'
   validations:
-  - message: Pod securityContext.runAsNonRoot must be true.
+  - message: Pod and every container must have an effective non-root security context.
     expression: >-
       has(object.spec.securityContext) &&
-      object.spec.securityContext.?runAsNonRoot.orValue(false)
+      object.spec.securityContext.?runAsNonRoot.orValue(false) &&
+      object.spec.securityContext.?runAsUser.orValue(1) != 0 &&
+      object.spec.containers.all(c,
+        !has(c.securityContext) ||
+        (c.securityContext.?runAsNonRoot.orValue(true) &&
+         c.securityContext.?runAsUser.orValue(1) != 0)) &&
+      object.spec.?initContainers.orValue([]).all(c,
+        !has(c.securityContext) ||
+        (c.securityContext.?runAsNonRoot.orValue(true) &&
+         c.securityContext.?runAsUser.orValue(1) != 0)) &&
+      object.spec.?ephemeralContainers.orValue([]).all(c,
+        !has(c.securityContext) ||
+        (c.securityContext.?runAsNonRoot.orValue(true) &&
+         c.securityContext.?runAsUser.orValue(1) != 0))
 ```
 
 ```bash
