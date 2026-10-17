@@ -182,17 +182,15 @@ agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0
 } | tee /var/work/tests/artifacts/4/tool-versions.txt
 ```
 
-Для Helm-managed Cilium source of truth - Helm values:
-`helm upgrade cilium cilium/cilium -n kube-system --reuse-values --set encryption.enabled=true --set encryption.type=wireguard`.
-В учебной установке Cilium не имеет Helm release, поэтому используем documented ConfigMap
-key и перезапускаем agents:
+Кластер развёрнут командой `cilium install`, которая устанавливает Cilium **через Helm**.
+Долговременный source of truth — Helm values release `cilium`; используем pinned Cilium CLI upgrade и после него проверяем live ConfigMap и agents:
 
 ```bash
-kubectl -n kube-system patch configmap cilium-config --type merge \
-  -p '{"data":{"enable-wireguard":"true"}}'
-kubectl -n kube-system rollout restart daemonset/cilium
+cilium upgrade --version 1.20.1 \
+  --set encryption.enabled=true --set encryption.type=wireguard --wait
 kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
-cilium status --wait || true
+test "$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-wireguard}')" = true
+cilium status --wait
 ```
 
 Статус шифрования читаем у агента через `cilium-dbg`: это in-pod debug CLI, поставляемый с Cilium agent. Локальный `cilium` CLI остаётся инструментом install/cluster-level и не заменяет его внутри Pod. У `cilium-dbg status` НЕТ флага `--all-encryption` (в 1.20.x доступны только `--all-addresses`, `--all-clusters`, `--all-controllers`, `--all-health`, `--all-nodes`, `--all-redirects`, `--verbose`) - подробный peer/allowed-IP/remote-node evidence получаем через `cilium-dbg debuginfo --output json`, а не через несуществующий флаг.
@@ -249,15 +247,30 @@ failure не оставил WireGuard отключённым.
 ```bash
 orig_wireguard=$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-wireguard}')
 restore_wireguard() {
-  kubectl -n kube-system patch cm cilium-config --type merge \
-    -p "{\"data\":{\"enable-wireguard\":\"${orig_wireguard:-true}\"}}"
-  kubectl -n kube-system rollout restart ds/cilium
-  kubectl -n kube-system rollout status ds/cilium --timeout=180s
+  local current
+  for attempt in $(seq 1 15); do
+    current=$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-wireguard}' --request-timeout=12s 2>/dev/null) || { sleep 2; continue; }
+    if [[ "$current" == false ]]; then
+      kubectl -n kube-system patch cm cilium-config --type=json --request-timeout=12s \
+        -p '[{"op":"test","path":"/data/enable-wireguard","value":"false"},{"op":"replace","path":"/data/enable-wireguard","value":"true"}]' || { sleep 2; continue; }
+    elif [[ "$current" != true ]]; then
+      echo "FATAL: concurrent Cilium change ($current); manual reconciliation required" >&2
+      return 1
+    fi
+    kubectl -n kube-system rollout restart ds/cilium && \
+      kubectl -n kube-system rollout status ds/cilium --timeout=180s && return 0
+    sleep 2
+  done
+  echo 'FATAL: Cilium WireGuard restoration was not verified' >&2
+  return 1
 }
-trap restore_wireguard EXIT
+trap 'restore_wireguard || true' EXIT
+trap 'restore_wireguard || true; exit 130' INT
+trap 'restore_wireguard || true; exit 143' TERM
 
-kubectl -n kube-system patch configmap cilium-config --type merge \
-  -p '{"data":{"enable-wireguard":"false"}}'
+test "$orig_wireguard" = true || { echo 'expected WireGuard enabled before baseline' >&2; exit 1; }
+kubectl -n kube-system patch cm cilium-config --type=json \
+  -p '[{"op":"test","path":"/data/enable-wireguard","value":"true"},{"op":"replace","path":"/data/enable-wireguard","value":"false"}]'
 kubectl -n kube-system rollout restart daemonset/cilium
 kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
 
@@ -281,11 +294,8 @@ fi
 выходе.
 
 ```bash
-kubectl -n kube-system patch configmap cilium-config --type merge \
-  -p '{"data":{"enable-wireguard":"true"}}'
-kubectl -n kube-system rollout restart daemonset/cilium
-kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
-trap - EXIT
+restore_wireguard || exit 1
+trap - EXIT INT TERM
 
 capture=/var/work/tests/artifacts/5/wireguard-tcpdump.txt
 ssh k8s110_controlPlane_1 "sudo timeout 20 tcpdump -nni '$remote_iface' 'host $remote_ip' -A" >"$capture" 2>&1 &
@@ -295,7 +305,7 @@ kubectl exec -n sandbox-110 runc-baseline -- \
   wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080
 wait "$capture_pid" || true
 
-grep -E 'UDP|51871' "$capture"
+grep -E 'IP .*\.51871 > .*\.51871: UDP' "$capture"
 if grep -Fq 'CKS110-WIREGUARD-MARKER' "$capture"; then
   echo 'marker leaked to node capture' >&2
   exit 1
@@ -434,9 +444,15 @@ spec:
 kubectl apply -f market-strict.yaml
 kubectl get peerauthentication -n market market-strict -o yaml
 
+set +e
 kubectl exec -n market deploy/market-client -- \
-  curl -si http://market-api | tee /var/work/tests/artifacts/6/market-inside.txt
-echo "exit_code=$?" >> /var/work/tests/artifacts/6/market-inside.txt
+  curl -si --max-time 10 http://market-api \
+  > /var/work/tests/artifacts/6/market-inside.txt 2>&1
+inside_status=$?
+set -e
+printf 'exit_code=%d\n' "$inside_status" >> /var/work/tests/artifacts/6/market-inside.txt
+test "$inside_status" -eq 0
+grep -Eq '^HTTP/1[.]1 200' /var/work/tests/artifacts/6/market-inside.txt
 # HTTP/1.1 200 OK
 
 set +e

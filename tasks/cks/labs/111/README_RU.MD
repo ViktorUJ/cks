@@ -304,7 +304,7 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 ---
 | **9a** | **Kyverno: установить и создать `ImageValidatingPolicy` на trusted signature** |
 | :---: | :--- |
-| Что делаем | Установите Kyverno через `install-kyverno` и дождитесь готовности `admission controller`. Сгенерируйте локальную пару ключей `cosign generate-key-pair` (учебная пара, не production key). Подпишите **собственный** hardened image из задания 4 (`$HARDENED_IMAGE`, не upstream nginx) вашим private key и сохраните вывод `cosign sign` в `9a/cosign-sign.txt`. Создайте `ImageValidatingPolicy` `require-signed-catalog-images`, которая проверяет `verifyImageSignatures` вашим public key для всех Pod с image в repository вашего `$HARDENED_IMAGE`, и **отклоняет** (`validationActions: [Deny]`) unsigned/невалидно подписанные образы. |
+| Что делаем | Установите Kyverno через `install-kyverno` и дождитесь готовности `admission controller`. Сгенерируйте локальную пару ключей `cosign generate-key-pair` (учебная пара, не production key). Подпишите **собственный** hardened image из задания 4 (`$HARDENED_IMAGE`, не upstream nginx) вашим private key и сохраните вывод `cosign sign` в `9a/cosign-sign.txt`. Создайте `ImageValidatingPolicy` `require-signed-catalog-images`, которая проверяет `verifyImageSignatures` вашим public key для всех Pod с image в repository вашего `$HARDENED_IMAGE`, включая `pods/ephemeralcontainers` UPDATE и все container lists, и **отклоняет** (`validationActions: [Deny]`) unsigned/невалидно подписанные образы. |
 | Критерии приёмки | Kyverno установлен и его admission controller `Available`; `9a/cosign-sign.txt` содержит успешный вывод подписи именно `$HARDENED_IMAGE`; реальная команда `cosign verify --key cosign.pub "$HARDENED_IMAGE"` завершается успешно; применённая `ImageValidatingPolicy require-signed-catalog-images` существует, имеет `apiVersion: policies.kyverno.io/v1`, `validationActions: [Deny]`, public key и `verifyImageSignatures`, а её `matchImageReferences` ограничены именно `$HARDENED_REPO:*` и `$HARDENED_REPO@*`, а не небезопасным префиксом `$HARDENED_REPO*`. |
 
 <details>
@@ -343,7 +343,7 @@ Syft генерирует CycloneDX через флаг `-o cyclonedx-json` (н�
 check_result
 ```
 
-Проверка содержит `Init` и одиннадцать независимых тестов (задание 9 разделено на 9a/9b/9c). Она проверяет содержимое файлов и
+Проверка содержит `Init` и четырнадцать независимых оценочных тестов (задание 9 разделено на 9a/9b/9c). Она проверяет содержимое файлов и
 JSON, а не только наличие имён. Внешние registry-запросы требуются для Trivy, SBOM и
 Cosign; если registry временно недоступен, повторите именно соответствующую команду.
 

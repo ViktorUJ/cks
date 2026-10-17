@@ -415,6 +415,7 @@ metadata:
 spec:
   failurePolicy: Fail
   validationActions: [Deny]
+  failurePolicy: Fail
   credentials:
     allowInsecureRegistry: true   # registry лабы работает по HTTP
   matchConstraints:
@@ -422,7 +423,7 @@ spec:
     - apiGroups: [""]
       apiVersions: ["v1"]
       operations: ["CREATE", "UPDATE"]
-      resources: ["pods"]
+      resources: ["pods", "pods/ephemeralcontainers"]
   matchImageReferences:
   - glob: "${HARDENED_REPO}:*"
   - glob: "${HARDENED_REPO}@*"

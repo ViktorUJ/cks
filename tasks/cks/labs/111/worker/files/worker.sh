@@ -401,6 +401,12 @@ spec:
 EOF
 done
 kubectl -n cks-111 wait --for=condition=Available deployment -l cks.io/task=1c --timeout=180s
+# Immutable root-owned snapshot of the four bootstrap-created Deployments (UID + images).
+# Students can scale them, but cannot substitute arbitrary unscanned images/objects.
+kubectl -n cks-111 get deployments -l cks.io/task=1c -o json > "$CHECKER/task1c-deployments.json"
+jq -e '.items | length == 4 and all(.[]; (.metadata.uid | length > 0) and
+  (.spec.template.spec.containers | length == 1) and
+  (.spec.template.spec.containers[0].image | test("@sha256:[a-f0-9]{64}$")))'   "$CHECKER/task1c-deployments.json" >/dev/null
 
 # ---------------------------------------------------------------------------
 # Task 5b fixture: package-version workload remediation. Discover, from the
@@ -492,6 +498,7 @@ CLEAN_CONTAINER=c3
 OFFENDING_IMAGE_1=${PKG_REF[${OFFENDING_TAGS[0]}]}
 OFFENDING_IMAGE_2=${PKG_REF[${OFFENDING_TAGS[1]}]}
 CLEAN_IMAGE=${PKG_REF[$CLEAN_TAG]}
+DEPLOYMENT_UID=$(kubectl -n cks-111 get deployment pkg-audit-app -o jsonpath='{.metadata.uid}')
 EOF
 
 chown -R root:root "$CHECKER"

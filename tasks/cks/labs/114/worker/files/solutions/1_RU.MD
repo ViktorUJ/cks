@@ -1,5 +1,3 @@
-[Eng version](1.MD)
-
 # Лаба 114 - краткое решение
 
 ## 1. Kubeconfig context inventory
@@ -97,6 +95,12 @@ curl -sS -o /dev/null -w 'external HTTP:%{http_code}\n' -m5 "http://$node_ip:301
 kubectl -n cks-114 run probe --image=curlimages/curl:8.10.1 --restart=Never --command -- sleep 300
 kubectl -n cks-114 wait --for=condition=Ready pod/probe --timeout=60s
 kubectl -n cks-114 exec probe -- curl -sS -o /dev/null -w 'in-cluster HTTP:%{http_code}\n' -m5 http://kubernetes-public.cks-114.svc.cluster.local/
+# Перед Task 4 дождитесь независимой фиксации NodePort и DNS probes монитором.
+for i in $(seq 1 60); do
+  test -s /var/lib/cks-lab114-checker/nodeport-phase-seen && break
+  sleep 3
+done
+test -s /var/lib/cks-lab114-checker/nodeport-phase-seen || { echo 'NodePort history not captured'; exit 1; }
 ```
 
 ```

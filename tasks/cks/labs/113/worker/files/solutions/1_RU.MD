@@ -49,9 +49,10 @@ keyring и `sources.list.d/kubernetes.list`:
 
 ```bash
 ssh k8s113_controlPlane_1 '
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+set -euo pipefail
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key | sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+printf "%s\n" "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update -qq
 '
 ```
@@ -126,20 +127,23 @@ ssh k8s113_controlPlane_1 'kubeadm version -o short; kubelet --version'
 быть новее control-plane). Дождитесь восстановления `canary` до `2/2` перед стартом:
 
 ```bash
-kubectl wait \
-  -n upgrade-113 \
-  --for=condition=Available \
-  deployment/canary \
-  --timeout=180s
+kubectl rollout status deployment/canary -n upgrade-113 --timeout=180s
+for attempt in {1..90}; do
+  available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}' 2>/dev/null || true)
+  [[ "$available" == "2" ]] && break
+  sleep 2
+done
+[[ "$available" == "2" ]] || { echo "canary is not 2/2 Available" >&2; exit 1; }
 
 kubectl get pods -n upgrade-113 -l app=canary -o wide
 ```
 
 ```bash
 ssh k8s113_node_worker1 '
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+set -euo pipefail
+sudo install -d -m 0755 /etc/apt/keyrings
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key | sudo gpg --batch --yes --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+printf "%s\n" "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 sudo apt-get update -qq
 sudo apt-mark unhold kubeadm
 sudo apt-get install -y --allow-change-held-packages kubeadm

@@ -118,7 +118,7 @@ check_result
 | **4** | **Re-encrypt и доказать ciphertext** |
 | :---: | :--- |
 | Что делаем | После готовности API server создайте в `encryption-109` Secret `encrypted-secret` с literal `token=cks-109-fresh-ciphertext`. Перепишите все ранее существующие Secret через API (`kubectl get secrets --all-namespaces -o json | kubectl replace -f -`). Проверьте оба Secret через API и raw etcd. Только после этой проверки удалите временный `identity` fallback, перезапустите static kube-apiserver и снова проверьте `/readyz` и чтение обоих Secret. |
-| Критерии приёмки | `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями; raw value каждого начинается с `k8s:enc:aescbc:v1:`; legacy marker больше не виден в raw etcd; в финальной конфигурации отсутствует `identity`, API healthy. |
+| Критерии приёмки | `legacy-secret` и `encrypted-secret` читаются через API с исходными значениями; raw value каждого начинается с `k8s:enc:aescbc:v1:`; legacy marker больше не виден в raw etcd; исходные payload/UID всего bootstrap Secret corpus сохранены, все записи зашифрованы первым действующим ключом; ключ из финального файла способен расшифровать ciphertext обоих canary Secret; в финальной конфигурации отсутствует `identity`, API healthy. |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
@@ -130,7 +130,7 @@ check_result
 | **5** | **Минимизировать RBAC и отключить automount** |
 | :---: | :--- |
 | Что делаем | Создайте ServiceAccount `secret-reader` в `encryption-109` с `automountServiceAccountToken: false`. Role `secret-reader-109` должна давать только `get` только Secret `encrypted-secret`; привяжите её одноимённым RoleBinding. Создайте Pod `secret-reader-109` c этим ServiceAccount, `automountServiceAccountToken: false`, образом `registry.k8s.io/pause:3.10`. |
-| Критерии приёмки | ServiceAccount может `get encrypted-secret`, но не `list secrets` и не `get legacy-secret`; Pod Running и не имеет автоматически добавленного `kube-api-access-*` volume. |
+| Критерии приёмки | Effective RBAC для ServiceAccount с его штатными группами позволяет `get encrypted-secret` в `encryption-109` и запрещает другие Secret-операции, в том числе доступ к Secret других namespace; Role/RoleBinding точные. Pod Running с одним `pause:3.10`, без автоматически либо вручную смонтированных ServiceAccount token и других credential-bearing sources (Secret/hostPath/CSI/PVC volumes, Secret env/envFrom); безобидные emptyDir/ConfigMap volumes допустимы; `automountServiceAccountToken: false` в Pod и ServiceAccount. |
 
 <details>
 <summary>💡 Подсказка к заданию 5</summary>

@@ -17,6 +17,7 @@ command -v jq >/dev/null 2>&1 || missing_packages+=(jq)
 command -v strings >/dev/null 2>&1 || missing_packages+=(binutils)
 command -v ssh >/dev/null 2>&1 || missing_packages+=(openssh-client)
 python3 -c "import yaml" >/dev/null 2>&1 || missing_packages+=(python3-yaml)
+python3 -c "from cryptography.hazmat.primitives.ciphers import Cipher" >/dev/null 2>&1 || missing_packages+=(python3-cryptography)
 if ((${#missing_packages[@]})); then
   apt-get update -qq
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing_packages[@]}"
@@ -130,15 +131,25 @@ chmod 0600 /var/lib/cks-109/legacy-secret-baseline.txt
 # checker's full-corpus loop a no-op (defaulting all_migrated/all_readable to true),
 # which would silently DISABLE the "all pre-existing Secrets were migrated" acceptance
 # criterion instead of surfacing an infrastructure problem.
-kubectl get secrets --all-namespaces \
-  -o jsonpath='{range .items[*]}{.metadata.namespace}{" "}{.metadata.name}{" "}{.metadata.uid}{"\n"}{end}' \
-  >/var/lib/cks-109/all-secrets-baseline.txt
-if [[ ! -s /var/lib/cks-109/all-secrets-baseline.txt ]]; then
-  echo "FATAL: full Secret corpus baseline capture is empty - cannot establish trusted migration baseline" >&2
+# Capture original content digests as well as identities: a migration must preserve
+# every pre-existing Secret's payload and type, not merely its UID.
+kubectl get secrets --all-namespaces -o json | python3 -c '
+import hashlib, json, sys
+items = json.load(sys.stdin)["items"]
+for s in items:
+    m = s["metadata"]
+    identity = (m["namespace"], m["name"], m["uid"])
+    payload = {"type": s.get("type"), "data": s.get("data") or {}, "immutable": s.get("immutable")}
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    print(*identity, hashlib.sha256(raw).hexdigest())
+' > /var/lib/cks-109/all-secrets-baseline.txt
+if [[ ! -s /var/lib/cks-109/all-secrets-baseline.txt ]] || \
+  ! awk 'NF != 4 || ($4 !~ /^[0-9a-f]+$/ || length($4) != 64) { bad=1 } END { exit bad ? 1 : 0 }' /var/lib/cks-109/all-secrets-baseline.txt; then
+  echo "FATAL: incomplete identity/data hash baseline" >&2
   exit 1
 fi
 if ! grep -q '^encryption-109 legacy-secret ' /var/lib/cks-109/all-secrets-baseline.txt; then
-  echo "FATAL: full Secret corpus baseline does not contain the expected legacy-secret entry" >&2
+  echo "FATAL: full Secret corpus baseline does not contain legacy-secret" >&2
   exit 1
 fi
 chmod 0600 /var/lib/cks-109/all-secrets-baseline.txt

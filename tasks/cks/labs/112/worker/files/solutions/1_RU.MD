@@ -503,7 +503,7 @@ EOF
 из задания 4 - webhook дополняет локальный лог, а не заменяет его:
 
 ```bash
-ssh control-plane 'sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml.bak-webhook'
+ssh control-plane 'sudo install -d -m 0700 /etc/kubernetes/backup && sudo cp -p /etc/kubernetes/manifests/kube-apiserver.yaml /etc/kubernetes/backup/kube-apiserver.yaml.pre-webhook'
 ssh control-plane "sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml"
 # Добавить в command:
 #   - --audit-webhook-config-file=/etc/kubernetes/audit/webhook-config.yaml
@@ -578,8 +578,8 @@ spec:
     resourceRules:
     - apiGroups: [""]
       apiVersions: ["v1"]
-      resources: ["pods"]
-      operations: ["CREATE"]
+      resources: ["pods", "pods/ephemeralcontainers"]
+      operations: ["CREATE", "UPDATE"]
   matchConditions:
   - name: only-runtime-112
     expression: "object.metadata.namespace == 'runtime-112'"
@@ -587,7 +587,13 @@ spec:
   - expression: >
       object.spec.containers.all(c,
         image(c.image).registry() == '${CKS112_REGISTRY}' &&
-        image(c.image).repository() == '${CKS112_TRUSTED_REPO}')
+        image(c.image).repository() == '${CKS112_TRUSTED_REPO}') &&
+      (!has(object.spec.initContainers) || object.spec.initContainers.all(c,
+        image(c.image).registry() == '${CKS112_REGISTRY}' &&
+        image(c.image).repository() == '${CKS112_TRUSTED_REPO}')) &&
+      (!has(object.spec.ephemeralContainers) || object.spec.ephemeralContainers.all(c,
+        image(c.image).registry() == '${CKS112_REGISTRY}' &&
+        image(c.image).repository() == '${CKS112_TRUSTED_REPO}'))
     message: "CKS112_TRUSTED_REPO_POLICY: only ${CKS112_TRUSTED_IMAGE} is allowed in runtime-112"
   validationActions: [Deny]
 YAML
@@ -772,14 +778,13 @@ ssh control-plane "sudo cks112-rm $BYPASS_2" || true
 # Собираем evil-ссылку так, чтобы TRUSTED_REPO остался буквальным префиксом registry-строки,
 # независимо от того, включает ли он сам hostname registry (cks112.local:5000/...) или только
 # repository-путь (cks112/...):
-case "$TRUSTED_REPO" in
-  */*) EVIL_IMAGE_REF="${TRUSTED_REPO}-evil:1.0" ;;
-  *)   EVIL_IMAGE_REF="${CKS112_REGISTRY}/${TRUSTED_REPO}-evil:1.0" ;;
-esac
-# Содержимое образа для prefix-trap не имеет значения - переиспользуем уже локально
-# присутствующий untrusted-образ и просто помечаем его новым (evil) именем.
-ssh control-plane "sudo ctr -n k8s.io images tag $CKS112_UNTRUSTED_IMAGE $EVIL_IMAGE_REF"
-ssh control-plane "sudo cks112-run $EVIL_IMAGE_REF $PREFIX_TRAP 'echo CKS112_CTR_BYPASS; sleep 5'"
+# The canonical prefix trap is preseeded as CKS112_PREFIX_IMAGE with a
+# different image digest. The Falco-observed repository must equal the
+# Falco-observed trusted repository plus "-evil".
+EVIL_IMAGE_REF="$CKS112_PREFIX_IMAGE"
+# Prefix-trap имеет отдельный digest, подготовленный bootstrap: reuse того же
+# untrusted digest даёт ошибочную Falco/CRI image.repository attribution.
+ssh control-plane "sudo cks112-run $EVIL_IMAGE_REF $PREFIX_TRAP 'sleep 2; echo CKS112_CTR_BYPASS; sleep 6'"
 sleep 3
 # Ищем именно наблюдаемое значение TRUSTED_REPO с суффиксом -evil, а не хардкодим
 # конкретное имя репозитория - EVIL_IMAGE_REF мог быть построен из любого observed
@@ -791,8 +796,8 @@ ssh control-plane "sudo journalctl -u falco-modern-bpf --since '$START_TS' --no-
 ssh control-plane "sudo cks112-rm $PREFIX_TRAP" || true
 ```
 
-> `$EVIL_IMAGE_REF` строится КАК СУФФИКС к observed `$TRUSTED_REPO` (`<trusted-repo>-evil`),
-> поэтому его repository-строка гарантированно НАЧИНАЕТСЯ с `$TRUSTED_REPO` как точной
+> `$EVIL_IMAGE_REF` берётся из отдельного bootstrap fixture (`$CKS112_PREFIX_IMAGE`) с
+> repository `<trusted-repo>-evil` и собственным digest, поэтому Falco видит значение, начинающееся с `$TRUSTED_REPO` как точной
 > подстроки-префикса, независимо от того, какой конкретно формат ваш стек реально
 > использует (`cks112/trusted` или `cks112.local:5000/cks112/trusted`) - именно на этом и
 > только на этом основано доказательство prefix-trap.
@@ -861,8 +866,17 @@ ssh control-plane "sudo journalctl -u falco-modern-bpf -b --no-pager -n 500 | gr
 cat /var/work/tests/artifacts/10/falco-devmem.log
 ```
 
-Убедившись, что обнаружение подтверждено самим Falco (а не Pod manifest), останавливаем
-workload:
+Убедившись, что обнаружение подтверждено самим Falco (а не Pod manifest), сохраните Pod,
+названный в alert, и убедитесь, что он действительно принадлежит ReplicaSet Deployment
+`mem-scanner` до масштабирования:
+
+```bash
+ALERT_POD=$(sed -n 's/.*k8s_pod=\([^ ]*\).*/\1/p' /var/work/tests/artifacts/10/falco-devmem.log | tail -1)
+test -n "$ALERT_POD"
+kubectl get pod "$ALERT_POD" -n runtime-112 -o json > /var/work/tests/artifacts/10/detected-pod.json
+```
+
+Затем останавливаем workload:
 
 ```bash
 kubectl scale deployment mem-scanner -n runtime-112 --replicas=0

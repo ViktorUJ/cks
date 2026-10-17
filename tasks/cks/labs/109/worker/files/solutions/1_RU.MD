@@ -57,8 +57,9 @@ resources:
 EOF
 
 ssh control-plane 'sudo install -d -o root -g root -m 0700 /etc/kubernetes/enc'
-scp "$cfg" control-plane:/tmp/encryption-config-109.yaml
-ssh control-plane 'sudo install -o root -g root -m 0600 /tmp/encryption-config-109.yaml /etc/kubernetes/enc/encryption-config.yaml && sudo rm -f /tmp/encryption-config-109.yaml'
+# Stream the secret directly over SSH into the root-only directory. Never leave
+# a potentially world-readable staging copy under /tmp on the control-plane.
+ssh control-plane 'sudo sh -c "umask 077; cat > /etc/kubernetes/enc/encryption-config.yaml; chown root:root /etc/kubernetes/enc/encryption-config.yaml; chmod 0600 /etc/kubernetes/enc/encryption-config.yaml"' < "$cfg"
 rm -f "$cfg"
 ssh control-plane 'sudo stat -c "%a %U:%G %n" /etc/kubernetes/enc/encryption-config.yaml'
 # 600 root:root /etc/kubernetes/enc/encryption-config.yaml

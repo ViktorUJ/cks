@@ -1,5 +1,3 @@
-[Eng version](1.MD)
-
 # Лаба 115 - краткое решение
 
 > Advanced/production track. Точные версии/флаги CLI могут отличаться между

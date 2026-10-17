@@ -108,7 +108,7 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 | **3** | **Соблюсти правильный порядок upgrade** |
 | :---: | :--- |
 | Что делаем | Убедитесь, что вы выполнили upgrade control-plane (задание 1) полностью, включая uncordon, ДО того как начали upgrade worker-узла (задание 2). Никакого отдельного действия в кластере это задание не требует - порядок автоматически проверяется checker-owned монитором состояния кластера и версий. |
-| Критерии приёмки | Control-plane должна полностью перейти на `1.36.x`, стать `Ready` и schedulable, пока worker всё ещё остаётся на `1.35.x`; только после этого может начаться upgrade worker-узла. |
+| Критерии приёмки | Checker-owned monitor должен зафиксировать исходный `1.35.x` baseline, полный переход control-plane на `1.36.x` (включая `Ready` и schedulable) при worker на `1.35.x`, и только затем начало upgrade worker-узла. Состояние переживает перезапуск монитора; отсутствие baseline или разрыв наблюдения свыше 60 секунд не засчитывается. |
 
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
@@ -120,12 +120,12 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 | **4** | **Доказать отсутствие downtime у существующей нагрузки** |
 | :---: | :--- |
 | Что делаем | Пока выполняете задания 1-2, параллельно (в отдельной сессии на рабочей машине) запустите цикл, опрашивающий доступность Deployment `canary` в namespace `upgrade-113` каждые несколько секунд, и допишите каждую строку опроса в `/var/work/tests/artifacts/4/canary-availability.log` в формате, содержащем `available=N` (например `available=2`). Продолжайте опрос на протяжении всего upgrade обоих узлов. |
-| Критерии приёмки | Deployment `canary` в конце имеет `2/2` доступных реплик. Отсутствие downtime проверяется checker-owned мониторингом (независимая проверка через `crictl` на обоих узлах), а не содержимым student-лога. Файл `/var/work/tests/artifacts/4/canary-availability.log` не пуст, содержит минимум 2 отдельные строки `available=N` (как доказательство того, что вы действительно опрашивали Deployment в цикле на протяжении upgrade, а не записали значение один раз в конце). |
+| Критерии приёмки | Deployment `canary` в конце имеет `2/2` доступных реплик, исходные Deployment/PDB и required Pod anti-affinity сохранены. Отсутствие downtime проверяется checker-owned monitor по Pod Ready и CRI-контейнерам именно из `upgrade-113`; ошибки API/SSH/CRI учитываются как UNKNOWN, а не как ноль. Student-файл `/var/work/tests/artifacts/4/canary-availability.log` должен содержать минимум две строки формата `<unix_timestamp> available=N` или `<unix_timestamp> available=api-unreachable`, с наблюдениями до upgrade control-plane и после начала upgrade worker. |
 
 <details>
 <summary>💡 Подсказка к заданию 4</summary>
 
-Пример цикла опроса, который можно оставить работать в отдельном терминале/`screen`/`tmux` на всё время выполнения заданий 1-2: `while true; do echo "$(date +%s) available=$(kubectl get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}')" >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Если Deployment на короткое время терял все реплики - скорее всего оба Pod'а оказались на одном и том же узле без anti-affinity, и `drain` этого узла разом убрал оба; проверьте распределение `kubectl get pods -n upgrade-113 -o wide` и, если нужно, перераспределите реплики перед повторной попыткой.
+Пример цикла опроса, который можно оставить работать в отдельном терминале/`screen`/`tmux` на всё время выполнения заданий 1-2: `while true; do if available=$(kubectl get deployment canary -n upgrade-113 --context "$CTX" -o jsonpath='{.status.availableReplicas}' 2>/dev/null); then echo "$(date +%s) available=${available:-0}"; else echo "$(date +%s) available=api-unreachable"; fi >> /var/work/tests/artifacts/4/canary-availability.log; sleep 5; done`. Если Deployment на короткое время терял все реплики - проверьте `kubectl get pods -n upgrade-113 -o wide` и что последовательные drain соблюдают PDB и required anti-affinity.
 </details>
 
 ## Проверка

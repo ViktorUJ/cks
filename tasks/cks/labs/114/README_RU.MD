@@ -69,7 +69,7 @@ client certificate без его использования для аутент�
 |           **2**           | **Client certificate extraction**                                                                                                                                                                       |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |       Что делаем       | Извлеките `client-certificate-data` пользователя `cluster9-admin` из kubeconfig, декодируйте base64 и разберите сертификат через `openssl x509`. Сохраните результат в `/var/work/tests/artifacts/task2-cert.txt` в формате `KEY=VALUE`, по одному значению на строку: `SHA256_FP`, `SUBJECT`, `ISSUER`, `NOTBEFORE`, `NOTAFTER`. |
-| Критерии приёмки | Все пять значений в артефакте совпадают с тем, что реально извлекается из текущего kubeconfig (checker извлекает сертификат независимо и сравнивает). |
+| Критерии приёмки | Все пять значений в артефакте совпадают с тем, что извлекается из исходного bootstrap-сертификата `cluster9-admin` (checker сверяет исходный fingerprint, неизменность сертификата в kubeconfig и все пять полей). |
 |        Проверка        | ```bash<br/>cert=$(kubectl config view --raw -o jsonpath='{.users[?(@.name=="cluster9-admin")].user.client-certificate-data}' \| base64 -d)<br/>echo "$cert" \| openssl x509 -noout -fingerprint -sha256 -subject -issuer -startdate -enddate<br/>```<br/>`-fingerprint -sha256` выводит `sha256 Fingerprint=AA:BB:...` - в артефакт запишите hex без двоеточий (регистр не важен). |
 
 ---
@@ -77,7 +77,7 @@ client certificate без его использования для аутент�
 |           **3**           | **Baseline: NodePort exposure**                                                                                                                                                                       |
 | :-----------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |       Что делаем       | Создайте namespace `cks-114`, Deployment `backend` (например `viktoruj/ping_pong:alpine` с `SRV_PORT=80`, label `app=backend`), и Service `kubernetes-public` типа `NodePort` на порту 80, с явным `nodePort: 30114`. **Не трогайте** `default/kubernetes` Service. |
-| Критерии приёмки | Backend реально достижим и с самого узла по `<node-internal-ip>:30114`, и внутри кластера по `kubernetes-public.cks-114.svc.cluster.local`. `default/kubernetes` остаётся `ClusterIP`. Задание 4 потом превращает этот же Service в `ClusterIP`, поэтому к концу лабы NodePort-состояние уже не наблюдается: то, что фаза NodePort действительно была (Service `NodePort`/30114 отвечал с worker), фиксирует независимый монитор проверки. Сначала выполните задание 3 полностью, и только потом задание 4. |
+| Критерии приёмки | Backend реально достижим и с самого узла по `<node-internal-ip>:30114`, и внутри кластера по `kubernetes-public.cks-114.svc.cluster.local`. `default/kubernetes` остаётся `ClusterIP`. Задание 4 потом превращает этот же Service в `ClusterIP`, поэтому к концу лабы NodePort-состояние уже не наблюдается: историческая фаза NodePort подтверждается двумя HTTP 200 пробами (с worker и по DNS из Pod), проверкой backend/EndpointSlice и монитором, сохраняющим UID Service и Deployment. Сначала выполните задание 3 полностью и дождитесь файла `/var/lib/cks-lab114-checker/nodeport-phase-seen`, который создаёт монитор после обеих успешных live-проб; только потом выполняйте задание 4. Файл является подтверждением исторической фазы для того же Service/Deployment. |
 |        Проверка        | С worker (снаружи кластера): `curl http://<node-internal-ip>:30114/` -> HTTP 200.<br/>Изнутри кластера (временный Pod с curl): `curl http://kubernetes-public.cks-114.svc.cluster.local/` -> HTTP 200. IP узла: `kubectl get nodes -o wide`. |
 
 ---
@@ -95,8 +95,7 @@ check_result
 ```
 
 Checker проверяет `current-context` и живой запрос к API через него, независимо извлекает и разбирает
-сертификат `cluster9-admin` и сравнивает с вашим артефактом, а также сам выполняет внешний и
-внутрикластерный probe к `kubernetes-public` до и после смены типа Service.
+сертификат `cluster9-admin`, проверяет его относительно исходного bootstrap fingerprint и сравнивает с вашим артефактом, а также выполняет внешний и внутрикластерный HTTP 200 probe, проверяет Deployment, EndpointSlice и неизменность `default/kubernetes`. Историческую NodePort-фазу подтверждает root-owned монитор с двумя live-пробами до переключения Service; в состоянии ClusterIP checker проверяет live DNS и транспортный отказ NodePort.
 
 Эталонное решение: [worker/files/solutions/1_RU.MD](worker/files/solutions/1_RU.MD).
 

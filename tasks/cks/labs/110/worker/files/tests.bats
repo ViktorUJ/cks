@@ -19,342 +19,406 @@ pod_node_has_label() {
   [[ -n "$node" ]] && [[ "$(kubectl get node "$node" --context "$CTX" -o json 2>/dev/null | jq -r --arg l "$label" '.metadata.labels[$l] // empty')" == "$value" ]]
 }
 
+wireguard_peers_on_all_nodes() {
+  local nodes agents daemon ds_uid n agent info status node_ip remote_ip peer_key
+  local -a names=() ips=() keys=() wg_interfaces=()
+  nodes=$(kubectl get nodes --context "$CTX" -o json) || return 1
+  jq -e '(.items | length) == 2 and
+    ([.items[].metadata.labels["lab.cks.io/role"]] | sort) == ["control-plane","gvisor"]' \
+    <<<"$nodes" >/dev/null || return 1
+  daemon=$(kubectl -n kube-system get daemonset cilium --context "$CTX" -o json) || return 1
+  ds_uid=$(jq -er '.metadata.uid | select(type == "string" and length > 0)' <<<"$daemon") || return 1
+  agents=$(kubectl -n kube-system get pods --context "$CTX" -l k8s-app=cilium -o json) || return 1
+
+  while IFS= read -r n; do
+    [[ -n "$n" ]] || return 1
+    agent=$(jq -er --arg node "$n" --arg owner "$ds_uid" '
+      [.items[] | select(
+        .spec.nodeName == $node and .status.phase == "Running" and
+        .metadata.deletionTimestamp == null and
+        any(.status.conditions[]?; .type == "Ready" and .status == "True") and
+        any(.metadata.ownerReferences[]?;
+          .kind == "DaemonSet" and .controller == true and .uid == $owner)
+      )] | if length == 1 then .[0].metadata.name else empty end
+    ' <<<"$agents") || return 1
+    [[ -n "$agent" ]] || return 1
+    info=$(kubectl -n kube-system exec "$agent" -c cilium-agent --context "$CTX" -- cilium-dbg debuginfo --output json) || return 1
+    status=$(kubectl -n kube-system exec "$agent" -c cilium-agent --context "$CTX" -- cilium-dbg status) || return 1
+    peer_key=$(jq -er '
+      [.encryption.wireguard.interfaces[]? | select(
+        .name == "cilium_wg0" and .["listen-port"] == 51871 and
+        (.["peer-count"] // 0) >= 1 and
+        (.["public-key"] | type == "string" and length > 0)
+      )] | if length == 1 then .[0]["public-key"] else empty end
+    ' <<<"$info") || return 1
+    grep -Eq 'Encryption:[[:space:]]*Wireguard.*Peers:[[:space:]]*[1-9]' <<<"$status" || return 1
+    ! grep -Eqi 'Encryption:.*IPsec' <<<"$status" || return 1
+    node_ip=$(jq -er --arg node "$n" '
+      [.items[] | select(.metadata.name == $node) |
+        .status.addresses[]? | select(.type == "InternalIP") | .address] |
+      if length == 1 then .[0] else empty end
+    ' <<<"$nodes") || return 1
+    names+=("$n")
+    ips+=("$node_ip")
+    keys+=("$peer_key")
+    wg_interfaces+=("$info")
+  done < <(jq -r '.items[].metadata.name' <<<"$nodes")
+  [[ ${#names[@]} -eq 2 && "${keys[0]}" != "${keys[1]}" ]] || return 1
+
+  # In a two-node cluster every peer must be the actual OTHER node, not an
+  # unrelated/stale peer entry. Compare the remote endpoint and public key
+  # against the other genuine Cilium agent's live interface.
+  for i in 0 1; do
+    local other=$((1-i))
+    jq -e --arg ip "${ips[$other]}" --arg key "${keys[$other]}" '
+      [.encryption.wireguard.interfaces[]? | select(.name == "cilium_wg0") |
+       .peers[]? | select(.["public-key"] == $key and
+        .endpoint == ($ip + ":51871") and
+        ((.["allowed-ips"] // []) | length > 0))] | length >= 1
+    ' <<<"${wg_interfaces[$i]}" >/dev/null || return 1
+  done
+}
+
 @test "0 Init" {
   : > /var/work/tests/result/all
   : > /var/work/tests/result/ok
   : > /var/work/tests/result/requests
 }
 
-@test "1. containerd runsc runtime is repaired in config.toml and RuntimeClass gvisor selects it" {
-  rc=$(kubectl get runtimeclass gvisor --context "$CTX" -o json 2>/dev/null)
-  handler=$(jq -r '.handler // empty' <<<"$rc")
-  node_selector=$(jq -r '.scheduling.nodeSelector["sandbox.runtime/gvisor"] // empty' <<<"$rc")
-  toml_check=$(ssh k8s110_node_gvisor 'sudo systemctl is-active containerd && sudo grep -A1 "runtimes.runsc" /etc/containerd/config.toml' 2>/dev/null || true)
-  if [[ "$handler" == "runsc" && "$node_selector" == "true" ]] \
-    && [[ "$toml_check" == *"active"* && "$toml_check" == *'runtime_type = "io.containerd.runsc.v1"'* ]] \
+@test "1. RuntimeClass gvisor uses an active, exactly configured containerd runsc handler" {
+  local rc handler selector toml_ok
+  rc=$(kubectl get runtimeclass gvisor --context "$CTX" -o json 2>/dev/null || true)
+  handler=$(jq -r '.handler // empty' <<<"$rc" 2>/dev/null || true)
+  selector=$(jq -r '.scheduling.nodeSelector["sandbox.runtime/gvisor"] // empty' <<<"$rc" 2>/dev/null || true)
+  toml_ok=$(ssh -o BatchMode=yes -o ConnectTimeout=8 k8s110_node_gvisor 'sudo systemctl is-active --quiet containerd && sudo python3 - <<"PY"
+import re
+from pathlib import Path
+text = Path("/etc/containerd/config.toml").read_text()
+header = r"\[plugins\.\"io\.containerd\.grpc\.v1\.cri\"\.containerd\.runtimes\.runsc\]"
+sections = re.findall(r"(?ms)^" + header + r"[ \t]*\n(.*?)(?=^\[|\Z)", text)
+valid = len(sections) == 1 and re.search(r"(?m)^\s*runtime_type\s*=\s*\"io\.containerd\.runsc\.v1\"\s*$", sections[0]) is not None
+print("ok" if valid else "invalid")
+PY' 2>/dev/null || true)
+  if [[ "$handler" == runsc && "$selector" == true && "$toml_ok" == ok ]] \
     && grep -Fqx 'RuntimeClass gvisor: handler runsc' "$ARTIFACTS/1/runsc-runtime.txt"; then
-    result=0
+    record_result 0
   else
-    if [[ "$handler" != "runsc" ]]; then
-      echo "HINT: RuntimeClass 'gvisor' must have handler: runsc exactly, matching the name registered in containerd's config.toml."
-    elif [[ "$node_selector" != "true" ]]; then
-      echo "HINT: RuntimeClass 'gvisor' scheduling.nodeSelector must include 'sandbox.runtime/gvisor: true' - without this, a Pod requesting this RuntimeClass could be scheduled on a node that never got runsc installed."
-    elif [[ "$toml_check" != *"active"* ]]; then
-      echo "HINT: containerd is not active on the gVisor node after your config.toml edit - check for a TOML syntax error."
-    else
-      echo "HINT: config.toml's [plugins.\"io.containerd.grpc.v1.cri\".containerd.runtimes.runsc] section is missing or has the wrong runtime_type - it must be exactly 'io.containerd.runsc.v1'."
-    fi
-    echo "handler=${handler:-missing} sandbox_selector=${node_selector:-missing} toml_check=$toml_check; expected $ARTIFACTS/1/runsc-runtime.txt"
-    result=1
+    echo "HINT: require exactly one runsc containerd section with the exact runtime_type, active daemon, RuntimeClass handler and scheduler selector; handler=$handler selector=$selector toml=$toml_ok"
+    record_result 1
   fi
-  record_result "$result"
 }
 
-@test "2. gVisor Pod is Running on the sandbox node and exposes a distinct kernel view" {
-  phase=$(kubectl get pod gvisor-sandbox -n "$SANDBOX_NS" --context "$CTX" -o jsonpath='{.status.phase}' 2>/dev/null)
-  runtime_class=$(kubectl get pod gvisor-sandbox -n "$SANDBOX_NS" --context "$CTX" -o jsonpath='{.spec.runtimeClassName}' 2>/dev/null)
-  automount=$(kubectl get pod gvisor-sandbox -n "$SANDBOX_NS" --context "$CTX" -o jsonpath='{.spec.automountServiceAccountToken}' 2>/dev/null)
-  no_token_volume=$(kubectl get pod gvisor-sandbox -n "$SANDBOX_NS" --context "$CTX" -o json | jq -r '[.spec.volumes[]? | .projected.sources[]? | select(.serviceAccountToken != null)] | length == 0' 2>/dev/null)
-  release=$(kubectl exec -n "$SANDBOX_NS" gvisor-sandbox --context "$CTX" -- uname -r 2>/dev/null || true)
-  dmesg_output=$(kubectl exec -n "$SANDBOX_NS" gvisor-sandbox --context "$CTX" -- dmesg 2>/dev/null || true)
-  if [[ "$phase" == "Running" && "$runtime_class" == "gvisor" && -n "$release" && "$automount" == "false" && "$no_token_volume" == "true" ]] \
+@test "2. gVisor Pod uses runsc, has no API token and is selected by the live Service" {
+  local pod svc slices phase release dmesg_output pod_ok svc_ok
+  pod=$(kubectl -n "$SANDBOX_NS" get pod gvisor-sandbox --context "$CTX" -o json 2>/dev/null || true)
+  svc=$(kubectl -n "$SANDBOX_NS" get service gvisor-echo --context "$CTX" -o json 2>/dev/null || true)
+  slices=$(kubectl -n "$SANDBOX_NS" get endpointslices --context "$CTX" -l kubernetes.io/service-name=gvisor-echo -o json 2>/dev/null || true)
+  phase=$(jq -r '.status.phase // empty' <<<"$pod" 2>/dev/null || true)
+  pod_ok=$(jq -r '
+    .spec.runtimeClassName == "gvisor" and
+    .spec.automountServiceAccountToken == false and
+    (.spec.containers | length == 1) and
+    (.spec.containers[0].name == "app") and
+    (.spec.containers[0].image == "busybox:1.36") and
+    ([.spec.volumes[]? | select(((.projected.sources // []) | any(.serviceAccountToken != null)) or (.secret.secretName != null))] | length == 0)
+  ' <<<"$pod" 2>/dev/null || true)
+  svc_ok=$(jq -r --arg ip "$(jq -r '.status.podIP // empty' <<<"$pod" 2>/dev/null)" '
+    .kind == "Service" and
+    .spec.selector == {"app":"gvisor-echo"} and
+    ([.spec.ports[]? | select(.port == 8080 and (.targetPort == 8080 or .targetPort == "http"))] | length == 1)
+  ' <<<"$svc" 2>/dev/null || true)
+  local endpoint_ok
+  endpoint_ok=$(jq -r --arg ip "$(jq -r '.status.podIP // empty' <<<"$pod" 2>/dev/null)" '
+    [.items[]?.endpoints[]? | select(.conditions.ready == true) | .addresses[]? | select(. == $ip)] | length > 0
+  ' <<<"$slices" 2>/dev/null || true)
+  release=$(kubectl -n "$SANDBOX_NS" exec gvisor-sandbox --context "$CTX" -c app -- uname -r 2>/dev/null || true)
+  dmesg_output=$(kubectl -n "$SANDBOX_NS" exec gvisor-sandbox --context "$CTX" -c app -- dmesg 2>/dev/null || true)
+  if [[ "$phase" == "Running" && "$pod_ok" == "true" && "$svc_ok" == "true" && "$endpoint_ok" == "true" && -n "$release" ]] \
     && pod_node_has_label gvisor-sandbox "$SANDBOX_NS" sandbox.runtime/gvisor true \
-    && grep -Fq "gvisor uname -r: $release" "$ARTIFACTS/2/gvisor-kernel.txt" \
     && [[ "$dmesg_output" == *"Starting gVisor"* ]] \
+    && grep -Fqx "gvisor uname -r: $release" "$ARTIFACTS/2/gvisor-kernel.txt" \
     && grep -Fq "Starting gVisor" "$ARTIFACTS/2/gvisor-kernel.txt"; then
-    result=0
+    record_result 0
   else
-    if [[ "$runtime_class" != "gvisor" ]]; then
-      echo "HINT: Pod 'gvisor-sandbox' must set spec.runtimeClassName: gvisor."
-    elif [[ "$phase" != "Running" ]]; then
-      echo "HINT: Pod is not Running. Check the Pod was scheduled on the labelled gVisor node, and that containerd's runsc handler is actually working (see test 1)."
-    elif [[ "$automount" != "false" || "$no_token_volume" != "true" ]]; then
-      echo "HINT: Pod 'gvisor-sandbox' must set automountServiceAccountToken: false with no kube-api-access token volume - this Pod does not need a ServiceAccount token."
-    elif [[ "$dmesg_output" != *"Starting gVisor"* ]]; then
-      echo "HINT: dmesg inside the Pod does not show 'Starting gVisor' - this is the tell-tale sign the Pod is really running under the gVisor sandbox kernel, not runc. Check runtimeClassName took effect."
-    else
-      echo "HINT: The kernel/dmesg evidence looks correct but gvisor-kernel.txt is missing the exact expected lines - save both the uname -r output and the dmesg 'Starting gVisor' line."
-    fi
-    echo "phase=$phase runtimeClass=$runtime_class release=${release:-missing} automount=${automount:-missing} dmesg=${dmesg_output:0:80}; gVisor artifact or placement is invalid"
-    result=1
+    echo "HINT: require the exact running busybox:1.36 app under gvisor, no mounted token, ready gvisor-echo EndpointSlice, and live kernel evidence; phase=$phase pod=$pod_ok service=$svc_ok endpoint=$endpoint_ok"
+    record_result 1
   fi
-  record_result "$result"
 }
 
-@test "3. Default-runc comparison Pod runs outside the sandbox and records the difference" {
-  phase=$(kubectl get pod runc-baseline -n "$SANDBOX_NS" --context "$CTX" -o jsonpath='{.status.phase}' 2>/dev/null)
-  runtime_class=$(kubectl get pod runc-baseline -n "$SANDBOX_NS" --context "$CTX" -o jsonpath='{.spec.runtimeClassName}' 2>/dev/null)
-  automount=$(kubectl get pod runc-baseline -n "$SANDBOX_NS" --context "$CTX" -o jsonpath='{.spec.automountServiceAccountToken}' 2>/dev/null)
-  no_token_volume=$(kubectl get pod runc-baseline -n "$SANDBOX_NS" --context "$CTX" -o json | jq -r '[.spec.volumes[]? | .projected.sources[]? | select(.serviceAccountToken != null)] | length == 0' 2>/dev/null)
-  gvisor_release=$(kubectl exec -n "$SANDBOX_NS" gvisor-sandbox --context "$CTX" -- uname -r 2>/dev/null || true)
-  runc_release=$(kubectl exec -n "$SANDBOX_NS" runc-baseline --context "$CTX" -- uname -r 2>/dev/null || true)
-  if [[ "$phase" == "Running" && -z "$runtime_class" && -n "$gvisor_release" && -n "$runc_release" && "$gvisor_release" != "$runc_release" && "$automount" == "false" && "$no_token_volume" == "true" ]] \
+@test "3. Baseline Pod runs default runc on the control-plane with the prescribed image" {
+  local pod phase ok gvisor_release runc_release
+  pod=$(kubectl get pod runc-baseline -n "$SANDBOX_NS" --context "$CTX" -o json 2>/dev/null || true)
+  phase=$(jq -r '.status.phase // empty' <<<"$pod" 2>/dev/null || true)
+  ok=$(jq -r '
+    ((.spec.runtimeClassName == null) or .spec.runtimeClassName == "") and
+    .spec.automountServiceAccountToken == false and
+    .spec.nodeSelector["lab.cks.io/role"] == "control-plane" and
+    (.spec.containers | length == 1) and
+    (.spec.containers[0].name == "app") and
+    (.spec.containers[0].image == "busybox:1.36") and
+    ([.spec.volumes[]? | select(((.projected.sources // []) | any(.serviceAccountToken != null)) or (.secret.secretName != null))] | length == 0)
+  ' <<<"$pod" 2>/dev/null || true)
+  gvisor_release=$(kubectl exec -n "$SANDBOX_NS" gvisor-sandbox -c app --context "$CTX" -- uname -r 2>/dev/null || true)
+  runc_release=$(kubectl exec -n "$SANDBOX_NS" runc-baseline -c app --context "$CTX" -- uname -r 2>/dev/null || true)
+  if [[ "$phase" == "Running" && "$ok" == "true" && -n "$gvisor_release" && -n "$runc_release" && "$gvisor_release" != "$runc_release" ]] \
     && pod_node_has_label runc-baseline "$SANDBOX_NS" lab.cks.io/role control-plane \
-    && grep -Fq "gvisor uname -r: $gvisor_release" "$ARTIFACTS/3/runtime-comparison.txt" \
-    && grep -Fq "runc uname -r: $runc_release" "$ARTIFACTS/3/runtime-comparison.txt"; then
-    result=0
+    && grep -Fqx "gvisor uname -r: $gvisor_release" "$ARTIFACTS/3/runtime-comparison.txt" \
+    && grep -Fqx "runc uname -r: $runc_release" "$ARTIFACTS/3/runtime-comparison.txt"; then
+    record_result 0
   else
-    if [[ -n "$runtime_class" ]]; then
-      echo "HINT: Pod 'runc-baseline' must NOT set runtimeClassName at all - it should use the cluster's default runc runtime for comparison."
-    elif [[ "$automount" != "false" || "$no_token_volume" != "true" ]]; then
-      echo "HINT: Pod 'runc-baseline' must set automountServiceAccountToken: false with no kube-api-access token volume - this Pod does not need a ServiceAccount token."
-    elif [[ "$gvisor_release" == "$runc_release" ]]; then
-      echo "HINT: uname -r reports the SAME kernel release for both Pods - gVisor's runsc should expose a distinct kernel version string from the host's real kernel. Check gvisor-sandbox is really using runtimeClassName: gvisor."
-    else
-      echo "HINT: Runtime placement or the release comparison looks correct, but runtime-comparison.txt is missing one of the two required 'uname -r' lines with the exact prefix 'gvisor uname -r:' / 'runc uname -r:'."
-    fi
-    echo "phase=$phase runtimeClass=${runtime_class:-default-runc} automount=${automount:-missing} gvisor=$gvisor_release runc=$runc_release"
-    result=1
+    echo "HINT: require exact runc-baseline app/image/selector/no-token, Running on control-plane, and distinct live kernels; pod_ok=$ok phase=$phase"
+    record_result 1
   fi
-  record_result "$result"
 }
 
-@test "4. Cilium WireGuard transparent encryption is enabled and status is saved" {
-  agent=$(kubectl -n kube-system get pods --context "$CTX" -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-  encrypt_status=$(kubectl -n kube-system exec "$agent" --context "$CTX" -- cilium-dbg encrypt status 2>&1 || true)
-  debuginfo_json=$(kubectl -n kube-system exec "$agent" --context "$CTX" -- cilium-dbg debuginfo --output json 2>&1 || true)
-  wireguard_section=$(jq -r '.encryption.wireguard // .Encryption.Wireguard // empty' <<<"$debuginfo_json" 2>/dev/null || true)
-  status="$encrypt_status"$'\n'"$debuginfo_json"
-  client_version=$(cilium version --client 2>&1 || true)
+@test "4. Cilium encryption is live on both nodes and survives agent recreation" {
+  local versions ds_json ds_image ds_ready ds_desired config_version cli_version agents nodes n pod info status valid
   versions="$ARTIFACTS/4/tool-versions.txt"
-  # Structural source-of-truth check: this lab installation is not a Helm release, so the
-  # declared config must live in the cilium-config ConfigMap (enable-wireguard: "true"),
-  # not just be a transient runtime state that a restart could silently lose.
-  config_wireguard=$(kubectl -n kube-system get configmap cilium-config --context "$CTX" -o jsonpath='{.data.enable-wireguard}' 2>/dev/null || true)
-  # Cross-check the version artifact against the ACTUAL running DaemonSet image, rather
-  # than accepting any string that merely contains "cilium".
-  ds_image=$(kubectl -n kube-system get daemonset cilium --context "$CTX" -o jsonpath='{.spec.template.spec.containers[?(@.name=="cilium-agent")].image}' 2>/dev/null || true)
-  version_artifact_image_line=$(grep -E '^Cilium agent=' "$versions" 2>/dev/null || true)
-  image_matches_artifact=0
-  if [[ -n "$ds_image" && "$version_artifact_image_line" == *"$ds_image"* ]]; then
-    image_matches_artifact=1
-  fi
-  ds_ready=$(kubectl -n kube-system get daemonset cilium --context "$CTX" -o jsonpath='{.status.numberReady}' 2>/dev/null || true)
-  ds_desired=$(kubectl -n kube-system get daemonset cilium --context "$CTX" -o jsonpath='{.status.desiredNumberScheduled}' 2>/dev/null || true)
-  daemonset_ready=0
-  if [[ -n "$ds_ready" && -n "$ds_desired" && "$ds_ready" == "$ds_desired" && "$ds_ready" -ge 1 ]]; then
-    daemonset_ready=1
-  fi
-  # Persistence-through-restart: delete the probed agent Pod and confirm the replacement
-  # comes back Ready with WireGuard still active from the declared ConfigMap source of
-  # truth, not from an ephemeral runtime-only toggle that a restart would lose.
-  persists_after_restart=0
-  if [[ "$config_wireguard" == "true" && "$daemonset_ready" -eq 1 ]]; then
-    kubectl -n kube-system delete pod "$agent" --context "$CTX" >/dev/null 2>&1 || true
-    kubectl -n kube-system rollout status daemonset/cilium --context "$CTX" --timeout=120s >/dev/null 2>&1 || true
-    new_agent=$(kubectl -n kube-system get pods --context "$CTX" -l k8s-app=cilium -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-    if [[ -n "$new_agent" ]]; then
-      post_restart_status=$(kubectl -n kube-system exec "$new_agent" --context "$CTX" -- cilium-dbg encrypt status 2>&1 || true)
-      [[ "$post_restart_status" =~ [Ww]ire[Gg]uard ]] && persists_after_restart=1
+  ds_json=$(kubectl -n kube-system get ds cilium --context "$CTX" -o json 2>/dev/null || true)
+  ds_image=$(jq -r '.spec.template.spec.containers[]? | select(.name=="cilium-agent") | .image' <<<"$ds_json" 2>/dev/null)
+  ds_ready=$(jq -r '.status.numberReady // 0' <<<"$ds_json" 2>/dev/null)
+  ds_desired=$(jq -r '.status.desiredNumberScheduled // 0' <<<"$ds_json" 2>/dev/null)
+  config_version=$(kubectl -n kube-system get cm cilium-config --context "$CTX" -o jsonpath='{.data.enable-wireguard}' 2>/dev/null || true)
+  cli_version=$(cilium version --client 2>&1 || true)
+  agents=$(kubectl -n kube-system get pods --context "$CTX" -l k8s-app=cilium -o json 2>/dev/null || true)
+  nodes=$(kubectl get nodes --context "$CTX" -l 'lab.cks.io/role' -o json 2>/dev/null || true)
+  valid=1
+  [[ "$config_version" == "true" && "$ds_ready" == "$ds_desired" && "$ds_desired" -ge 2 && -n "$ds_image" ]] || valid=0
+  [[ "$cli_version" == *0.19.7* ]] || valid=0
+  grep -Eq '^Kubernetes=v?1[.]36' "$versions" 2>/dev/null || valid=0
+  grep -Fqx "Cilium agent=$ds_image" "$versions" 2>/dev/null || valid=0
+  grep -Eq '^Cilium CLI=v?0[.]19[.]7$' "$versions" 2>/dev/null || valid=0
+  grep -Fq 'cilium-dbg encrypt status' "$ARTIFACTS/4/cilium-encrypt-status.txt" 2>/dev/null || valid=0
+  grep -Fq 'cilium-dbg debuginfo --output json' "$ARTIFACTS/4/cilium-encrypt-status.txt" 2>/dev/null || valid=0
+  # Independently enumerate ALL real nodes, checking the expected two role labels and
+  # a live WireGuard peer on each. Removing a node label must never skip a node.
+  wireguard_peers_on_all_nodes || valid=0
+  # Restart a *known* agent and wait for its exact UID to change before inspecting its replacement.
+  pod=$(jq -r '.items[]? | select(.status.phase=="Running") | .metadata.name' <<<"$agents" 2>/dev/null | head -n1)
+  n=$(jq -r --arg p "$pod" '.items[]? | select(.metadata.name == $p) | .spec.nodeName' <<<"$agents" 2>/dev/null)
+  if [[ "$valid" -eq 1 && -n "$pod" && -n "$n" ]]; then
+    kubectl -n kube-system delete pod "$pod" --context "$CTX" --wait=true --timeout=90s >/dev/null 2>&1 || valid=0
+    kubectl -n kube-system rollout status ds/cilium --context "$CTX" --timeout=180s >/dev/null 2>&1 || valid=0
+    agents=$(kubectl -n kube-system get pods --context "$CTX" -l k8s-app=cilium -o json 2>/dev/null || true)
+    pod=$(jq -r --arg node "$n" --arg old "$pod" '.items[]? | select(.spec.nodeName==$node and .metadata.name!=$old and .status.phase=="Running") | .metadata.name' <<<"$agents" 2>/dev/null | head -n1)
+    [[ -n "$pod" ]] || valid=0
+    if [[ -n "$pod" ]]; then
+      # After the recreated agent is Running, revalidate BOTH physical nodes,
+      # including actual allowed-IP peers (not just the restarted agent's peer-count).
+      wireguard_peers_on_all_nodes || valid=0
     fi
   fi
-  if [[ -n "$agent" && "$status" =~ [Ww]ire[Gg]uard ]] \
-    && ! grep -Eqi 'IPsec.*enabled|Encryption:.*IPsec' <<<"$status" \
-    && [[ "$client_version" == *0.19.7* ]] \
-    && grep -Eq 'Kubernetes[=: ]+v?1[.]36' "$versions" \
-    && grep -Eqi 'Cilium agent=.*cilium' "$versions" \
-    && grep -Eq 'Cilium CLI[=: ]+v?0[.]19[.]7' "$versions" \
-    && grep -Fq 'cilium-dbg encrypt status' "$ARTIFACTS/4/cilium-encrypt-status.txt" \
-    && grep -Fq 'cilium-dbg debuginfo --output json' "$ARTIFACTS/4/cilium-encrypt-status.txt" \
-    && grep -Eqi 'WireGuard|Encryption:.*Wireguard' "$ARTIFACTS/4/cilium-encrypt-status.txt" \
-    && grep -Eqi 'peer|allowed[ -]?ip|remote node' "$ARTIFACTS/4/cilium-encrypt-status.txt" \
-    && [[ "$config_wireguard" == "true" && "$image_matches_artifact" -eq 1 && "$daemonset_ready" -eq 1 && "$persists_after_restart" -eq 1 ]]; then
-    result=0
+  if [[ "$valid" -eq 1 ]]; then
+    record_result 0
   else
-    if [[ -z "$agent" ]]; then
-      echo "HINT: No cilium-agent Pod found in kube-system - check Cilium is actually installed and running."
-    elif [[ "$config_wireguard" != "true" ]]; then
-      echo "HINT: ConfigMap kube-system/cilium-config does not have enable-wireguard: \"true\" - this lab installation is not a Helm release, so the declared source-of-truth is this ConfigMap key, not just current runtime state."
-    elif [[ "$image_matches_artifact" -ne 1 ]]; then
-      echo "HINT: tool-versions.txt's 'Cilium agent=' line does not match the actual image running in the kube-system/cilium DaemonSet - save the real image from the DaemonSet/Pod spec, not an arbitrary string containing 'cilium'."
-    elif [[ "$daemonset_ready" -ne 1 ]]; then
-      echo "HINT: DaemonSet kube-system/cilium is not fully Ready - check the rollout after enabling WireGuard."
-    elif [[ "$persists_after_restart" -ne 1 ]]; then
-      echo "HINT: After the checker restarted one Cilium agent Pod, the replacement did not come back with WireGuard active - this means WireGuard was enabled by a transient/runtime-only action rather than the declared ConfigMap source of truth, so it does not survive an agent restart."
-    elif ! [[ "$status" =~ [Ww]ire[Gg]uard ]]; then
-      echo "HINT: 'cilium-dbg encrypt status' does not mention WireGuard - enable transparent encryption in the Cilium Helm values (encryption.enabled=true, encryption.type=wireguard) and restart the agents."
-    elif grep -Eqi 'IPsec.*enabled|Encryption:.*IPsec' <<<"$status"; then
-      echo "HINT: IPsec appears enabled instead of/alongside WireGuard - this task specifically requires WireGuard mode."
-    else
-      echo "HINT: Runtime status looks correct, but one of the evidence files (tool-versions.txt / cilium-encrypt-status.txt) is missing a required exact line - check Kubernetes/Cilium/CLI version strings and the WireGuard peer/allowed-ip details are all saved."
-    fi
-    echo "cilium_agent=${agent:-missing} config_wireguard=${config_wireguard:-missing} image_matches_artifact=$image_matches_artifact daemonset_ready=$daemonset_ready persists_after_restart=$persists_after_restart; status=$status"
-    result=1
+    echo "HINT: both Cilium agents must report live WireGuard peers and allowed IPs, versions must match, and recreated agent must retain peers"
+    record_result 1
   fi
-  record_result "$result"
 }
 
-@test "5. Cross-node traffic reaches gVisor service while captured WireGuard traffic hides the marker" {
-  # Baseline -> change -> same probe: a filter that pre-excludes everything except
-  # udp port 51871 can never prove plaintext is ABSENT (it would look identical whether
-  # or not WireGuard were even active). Instead the checker captures the SAME scope
-  # (host <remote-node-ip>, no port filter) before and after toggling WireGuard, so the
-  # disappearance of the plaintext marker is actually observed, not assumed.
-  #
-  # Capturing on "any" is NOT a valid on-wire observation point for WireGuard: it also
-  # sees traffic on Cilium's internal cilium_wg0 tunnel interface, which by design carries
-  # the DECRYPTED inner Pod-to-Pod flow (that is the whole point of a tunnel interface -
-  # WireGuard hands you cleartext there). A capture on "any" would see the marker on
-  # cilium_wg0 even when node-to-node encryption on the physical NIC is working correctly,
-  # causing a false FAIL. We must resolve and capture on the actual physical egress
-  # interface toward the remote node.
-  gvisor_node=$(kubectl get pod gvisor-sandbox -n "$SANDBOX_NS" --context "$CTX" -o jsonpath='{.spec.nodeName}' 2>/dev/null)
-  remote_ip=$(kubectl get node "$gvisor_node" --context "$CTX" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null)
-  remote_iface=""
-  if [[ -n "$remote_ip" ]]; then
-    remote_iface=$(ssh -o BatchMode=yes k8s110_controlPlane_1 \
-      "ip route get '$remote_ip' 2>/dev/null | awk '{for (i=1;i<=NF;i++) if (\$i==\"dev\") {print \$(i+1); exit}}'" 2>/dev/null || true)
+@test "5. The same cross-node flow is plaintext with WireGuard disabled and encrypted after restoration" {
+  local gvisor_node remote_ip remote_iface baseline_capture post_capture before_response after_response
+  local baseline_rc post_rc baseline_ok=0 post_ok=0 restore_ok=1 wg_mutated=0 current
+  gvisor_node=$(kubectl -n "$SANDBOX_NS" get pod gvisor-sandbox --context "$CTX" -o jsonpath='{.spec.nodeName}' 2>/dev/null || true)
+  remote_ip=$(kubectl get node "$gvisor_node" --context "$CTX" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}' 2>/dev/null || true)
+  remote_iface=$(ssh -o BatchMode=yes -o ConnectTimeout=8 k8s110_controlPlane_1 "ip route get '$remote_ip'" 2>/dev/null | awk '{for (i=1;i<=NF;i++) if ($i=="dev") {print $(i+1); exit}}')
+  if [[ ! "$remote_ip" =~ ^[0-9.]+$ || ! "$remote_iface" =~ ^[a-zA-Z0-9_.:-]+$ || "$remote_iface" =~ ^(any|cilium|lxc|veth) ]]; then
+    echo 'HINT: exact physical egress interface and remote node IPv4 are required; never use tcpdump -i any or a pre-filtered UDP-only capture'
+    record_result 1
+    return
   fi
-  # Reject "any" and known Cilium/veth/lxc internal interfaces - only a real physical NIC
-  # is a valid observation point for the on-wire encrypted state.
-  if [[ -z "$remote_iface" || "$remote_iface" == "any" || "$remote_iface" =~ ^(cilium|lxc|veth) ]]; then
-    remote_iface=""
+  current=$(kubectl -n kube-system get cm cilium-config --context "$CTX" -o jsonpath='{.data.enable-wireguard}' 2>/dev/null || true)
+  if [[ "$current" != true ]]; then
+    echo "HINT: begin with WireGuard enabled, got '${current:-unreadable}'; refusing to disable networking"
+    record_result 1
+    return
   fi
-
-  orig_wireguard=$(kubectl -n kube-system get configmap cilium-config --context "$CTX" -o jsonpath='{.data.enable-wireguard}' 2>/dev/null || true)
-  restore_wireguard() {
-    kubectl -n kube-system patch configmap cilium-config --context "$CTX" --type merge \
-      -p "{\"data\":{\"enable-wireguard\":\"${orig_wireguard:-true}\"}}" >/dev/null 2>&1 || true
-    kubectl -n kube-system rollout restart daemonset/cilium --context "$CTX" >/dev/null 2>&1 || true
-    kubectl -n kube-system rollout status daemonset/cilium --context "$CTX" --timeout=120s >/dev/null 2>&1 || true
+  # JSON Patch test/replace prevents clobbering an unrelated concurrent configuration change.
+  wg_transition() {
+    local from="$1" to="$2" payload
+    printf -v payload '[{"op":"test","path":"/data/enable-wireguard","value":"%s"},{"op":"replace","path":"/data/enable-wireguard","value":"%s"}]' "$from" "$to"
+    kubectl -n kube-system patch cm cilium-config --context "$CTX" --type=json -p "$payload" --request-timeout=12s >/dev/null 2>&1
   }
-  trap restore_wireguard RETURN
-
-  baseline_capture_ok=0
-  if [[ -n "$remote_ip" && -n "$remote_iface" ]]; then
-    kubectl -n kube-system patch configmap cilium-config --context "$CTX" --type merge \
-      -p '{"data":{"enable-wireguard":"false"}}' >/dev/null 2>&1 || true
-    kubectl -n kube-system rollout restart daemonset/cilium --context "$CTX" >/dev/null 2>&1 || true
-    kubectl -n kube-system rollout status daemonset/cilium --context "$CTX" --timeout=120s >/dev/null 2>&1 || true
-    baseline_capture=$(mktemp)
-    ssh -o BatchMode=yes k8s110_controlPlane_1 "sudo timeout 15 tcpdump -nni '$remote_iface' 'host $remote_ip' -A" >"$baseline_capture" 2>&1 &
-    baseline_pid=$!
-    sleep 3
-    kubectl exec -n "$SANDBOX_NS" runc-baseline --context "$CTX" -- wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080 >/dev/null 2>&1 || true
-    wait "$baseline_pid" 2>/dev/null || true
-    grep -Fq 'CKS110-WIREGUARD-MARKER' "$baseline_capture" && baseline_capture_ok=1
-    rm -f "$baseline_capture"
-
-    kubectl -n kube-system patch configmap cilium-config --context "$CTX" --type merge \
-      -p '{"data":{"enable-wireguard":"true"}}' >/dev/null 2>&1 || true
-    kubectl -n kube-system rollout restart daemonset/cilium --context "$CTX" >/dev/null 2>&1 || true
-    kubectl -n kube-system rollout status daemonset/cilium --context "$CTX" --timeout=120s >/dev/null 2>&1 || true
+  wg_rollout() {
+    kubectl -n kube-system rollout restart ds/cilium --context "$CTX" --request-timeout=12s >/dev/null 2>&1 &&
+    kubectl -n kube-system rollout status ds/cilium --context "$CTX" --timeout=180s >/dev/null 2>&1
+  }
+  wg_restore() {
+    local attempt seen
+    [[ "$wg_mutated" -eq 1 ]] || return 0
+    trap '' INT TERM
+    for attempt in $(seq 1 15); do
+      seen=$(kubectl -n kube-system get cm cilium-config --context "$CTX" -o jsonpath='{.data.enable-wireguard}' --request-timeout=12s 2>/dev/null) || { sleep 2; continue; }
+      if [[ "$seen" == false ]]; then
+        wg_transition false true || { sleep 2; continue; }
+      elif [[ "$seen" != true ]]; then
+        echo "FATAL: cilium-config concurrently changed to '$seen'; manual reconciliation required" >&2
+        return 1
+      fi
+      if wg_rollout && [[ "$(kubectl -n kube-system get cm cilium-config --context "$CTX" -o jsonpath='{.data.enable-wireguard}' --request-timeout=12s 2>/dev/null)" == true ]]; then
+        wg_mutated=0
+        return 0
+      fi
+      sleep 2
+    done
+    echo 'FATAL: WireGuard restoration unverified after 15 retries; examine cilium-config and DaemonSet immediately' >&2
+    return 1
+  }
+  trap 'wg_restore || true' EXIT
+  trap 'wg_restore || true; exit 130' INT
+  trap 'wg_restore || true; exit 143' TERM
+  baseline_capture=$(mktemp); post_capture=$(mktemp)
+  wg_mutated=1
+  if wg_transition true false; then
+    if wg_rollout; then
+      ssh -o BatchMode=yes -o ConnectTimeout=8 k8s110_controlPlane_1 "sudo timeout 18 tcpdump -s 0 -nnAi '$remote_iface' 'host $remote_ip'" >"$baseline_capture" 2>&1 &
+      local pid=$!
+      sleep 3
+      set +e
+      before_response=$(kubectl -n "$SANDBOX_NS" exec runc-baseline -c app --context "$CTX" -- wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080 2>&1)
+      baseline_rc=$?
+      set -e
+      wait "$pid" 2>/dev/null || true
+      [[ "$baseline_rc" -eq 0 && "$before_response" == *CKS110-WIREGUARD-MARKER* ]] && grep -Fq 'CKS110-WIREGUARD-MARKER' "$baseline_capture" && baseline_ok=1
+    fi
   fi
-
-  # `rollout status` returns before the WireGuard peers are handshaken; a capture taken in that
-  # window sees plaintext or no UDP/51871 at all. Wait until the agent reports a peer, then warm
-  # the tunnel with one request so the timed capture below observes the steady state.
+  if ! wg_restore; then
+    restore_ok=0
+  fi
+  trap 'wg_restore || true; exit 130' INT
+  trap 'wg_restore || true; exit 143' TERM
+  # Fail closed until every Cilium agent has a live WireGuard peer: a first-Pod
+  # check can pass while the other node still sends unencrypted traffic.
+  local peer_ok=0
   for _ in $(seq 1 30); do
-    kubectl -n kube-system exec ds/cilium -c cilium-agent --context "$CTX" -- cilium-dbg status 2>/dev/null \
-      | grep -Eq 'Encryption:\s*Wireguard.*Peers: [1-9]' && break
+    if wireguard_peers_on_all_nodes; then peer_ok=1; break; fi
     sleep 2
   done
-  kubectl exec -n "$SANDBOX_NS" runc-baseline --context "$CTX" -- wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080 >/dev/null 2>&1 || true
-  sleep 3
-
-  # The checker performs its OWN post-change capture and its OWN request rather than
-  # trusting only the student-owned wireguard-tcpdump.txt artifact (which could have been
-  # captured at a different time / on different traffic). Same scope as the baseline above.
-  checker_capture=$(mktemp)
-  if [[ -n "$remote_ip" && -n "$remote_iface" ]]; then
-    ssh -o BatchMode=yes k8s110_controlPlane_1 "sudo timeout 15 tcpdump -nni '$remote_iface' 'host $remote_ip' -A" >"$checker_capture" 2>&1 &
-  else
-    ssh -o BatchMode=yes k8s110_controlPlane_1 "sudo timeout 15 tcpdump -nni any 'udp port 51871' -A" >"$checker_capture" 2>&1 &
+  if [[ "$restore_ok" -eq 1 && "$peer_ok" -eq 1 && "$baseline_ok" -eq 1 ]]; then
+    ssh -o BatchMode=yes -o ConnectTimeout=8 k8s110_controlPlane_1 "sudo timeout 18 tcpdump -s 0 -nnAi '$remote_iface' 'host $remote_ip'" >"$post_capture" 2>&1 &
+    local pid=$!
+    sleep 3
+    set +e
+    after_response=$(kubectl -n "$SANDBOX_NS" exec runc-baseline -c app --context "$CTX" -- wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080 2>&1)
+    post_rc=$?
+    set -e
+    wait "$pid" 2>/dev/null || true
+    # Require actual 51871 -> 51871 traffic; a generic UDP packet is NOT WireGuard evidence.
+    if [[ "$post_rc" -eq 0 && "$after_response" == *CKS110-WIREGUARD-MARKER* ]] \
+      && grep -Eqi 'IP .*\.51871 > .*\.51871: UDP' "$post_capture" \
+      && ! grep -Fq 'CKS110-WIREGUARD-MARKER' "$post_capture"; then post_ok=1; fi
   fi
-  capture_pid=$!
-  sleep 3
-  set +e
-  response=$(kubectl exec -n "$SANDBOX_NS" runc-baseline --context "$CTX" -- wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080 2>&1)
-  request_status=$?
-  set -e
-  wait "$capture_pid" 2>/dev/null || true
-  student_capture="$ARTIFACTS/5/wireguard-tcpdump.txt"
-  checker_capture_ok=0
-  if grep -Eq 'UDP|51871' "$checker_capture" && ! grep -Fq 'CKS110-WIREGUARD-MARKER' "$checker_capture"; then
-    checker_capture_ok=1
-  fi
-  if [[ "$request_status" -eq 0 && "$response" == *"CKS110-WIREGUARD-MARKER"* && "$checker_capture_ok" -eq 1 && "$baseline_capture_ok" -eq 1 ]] \
-    && grep -Eq 'UDP|51871' "$student_capture" && ! grep -Fq 'CKS110-WIREGUARD-MARKER' "$student_capture"; then
+  local student_capture="$ARTIFACTS/5/wireguard-tcpdump.txt"
+  if [[ "$baseline_ok" -eq 1 && "$post_ok" -eq 1 && "$restore_ok" -eq 1 && "$wg_mutated" -eq 0 ]] \
+    && grep -Eqi 'IP .*\.51871 > .*\.51871: UDP' "$student_capture" \
+    && ! grep -Fq 'CKS110-WIREGUARD-MARKER' "$student_capture"; then
     result=0
   else
-    if [[ "$request_status" -ne 0 || "$response" != *"CKS110-WIREGUARD-MARKER"* ]]; then
-      echo "HINT: The cross-node request from runc-baseline to the gVisor service did not succeed or did not return the expected marker - check Service DNS resolves and encryption is not breaking normal connectivity."
-    elif [[ "$baseline_capture_ok" -ne 1 ]]; then
-      echo "HINT: The checker's own BASELINE capture (same request, same host-scoped filter, WireGuard temporarily disabled) did not show the plaintext marker - this means the baseline/post-change comparison cannot prove causality. Check node connectivity independent of WireGuard."
-    elif [[ "$checker_capture_ok" -ne 1 ]]; then
-      echo "HINT: The checker's own live capture (taken during THIS request) does not show WireGuard UDP/51871, or still shows the plaintext marker - this proves encryption is not actually active on the wire for this specific traffic, regardless of what your own artifact shows."
-    elif ! grep -Eq 'UDP|51871' "$student_capture"; then
-      echo "HINT: wireguard-tcpdump.txt does not show UDP/51871 traffic - capture packets WHILE making the cross-node request, on the interface actually carrying node-to-node traffic (not loopback)."
-    else
-      echo "HINT: The tcpdump capture contains the plaintext marker text 'CKS110-WIREGUARD-MARKER' - this proves traffic was NOT actually encrypted at the point you captured it. Capture on the physical NIC, not inside the Pod's veth, to see the true on-wire state."
-    fi
-    echo "request_status=$request_status response=$response baseline_capture_ok=$baseline_capture_ok checker_capture_ok=$checker_capture_ok remote_ip=${remote_ip:-missing} remote_iface=${remote_iface:-missing}; capture must show WireGuard UDP and no plaintext marker"
+    echo "HINT: need marker on identical plaintext capture, working same-node-pair request, actual UDP 51871 peer packets without marker, and verified WireGuard restoration; baseline=$baseline_ok post=$post_ok restore=$restore_ok"
     result=1
   fi
-  rm -f "$checker_capture"
-  restore_wireguard
-  trap - RETURN
+  rm -f "$baseline_capture" "$post_capture"
+  if [[ "$wg_mutated" -eq 0 ]]; then trap - EXIT INT TERM; fi
   record_result "$result"
 }
 
-@test "6. market PeerAuthentication STRICT allows mesh client and denies plaintext client" {
-  mode=$(kubectl get peerauthentication market-strict -n market --context "$CTX" -o jsonpath='{.spec.mtls.mode}' 2>/dev/null)
-  injection=$(kubectl get namespace market --context "$CTX" -o jsonpath='{.metadata.labels.istio-injection}' 2>/dev/null)
-  istiod_image=$(kubectl get deployment istiod -n istio-system --context "$CTX" -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)
-  outside_sidecar=$(kubectl get pod mesh-outside -n default --context "$CTX" -o json | jq -r '[.spec.containers[]? | select(.name == "istio-proxy")] | length' 2>/dev/null)
-  inside=$(kubectl exec -n market deploy/market-client --context "$CTX" -- curl -sS -o /dev/null -w '%{http_code}' http://market-api 2>&1 || true)
+@test "6. Exact Istio STRICT policy is live, mesh uses sidecars, and plaintext is denied only by mTLS" {
+  local policy ns istiod_image ap cp op svc pods endpoint_ok workload_ok outside_ok=0 inside_ok=0 baseline_ok=0 restored_ok=0
+  local baseline_code outside_code inside_code outside_rc initial_mode selected_policy
+  policy=$(kubectl -n market get peerauthentication market-strict --context "$CTX" -o json 2>/dev/null || true)
+  initial_mode=$(jq -r '.spec.mtls.mode // empty' <<<"$policy" 2>/dev/null || true)
+  selected_policy=$(jq -r '(.spec.selector == null) and (.spec.portLevelMtls == null)' <<<"$policy" 2>/dev/null || true)
+  ns=$(kubectl get namespace market --context "$CTX" -o jsonpath='{.metadata.labels.istio-injection}' 2>/dev/null || true)
+  istiod_image=$(kubectl -n istio-system get deploy istiod --context "$CTX" -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+  ap=$(kubectl -n market get pods -l app=market-api --context "$CTX" -o json 2>/dev/null || true)
+  cp=$(kubectl -n market get pods -l app=market-client --context "$CTX" -o json 2>/dev/null || true)
+  op=$(kubectl -n default get pod mesh-outside --context "$CTX" -o json 2>/dev/null || true)
+  svc=$(kubectl -n market get svc market-api --context "$CTX" -o json 2>/dev/null || true)
+  endpoint_ok=$(jq -r '.spec.selector == {"app":"market-api"} and ([.spec.ports[]? | select(.name=="http" and .port==80 and (.targetPort==8080 or .targetPort=="http"))] | length == 1)' <<<"$svc" 2>/dev/null || true)
+  workload_ok=$(jq -r '[.items[]? | select(.status.phase=="Running" and ([.status.containerStatuses[]? | select(.ready==true)]|length)>=2 and ([.spec.containers[]? | select(.name=="istio-proxy")]|length)==1)] | length >= 1' <<<"$ap" 2>/dev/null || true)
+  [[ "$workload_ok" == true ]] && workload_ok=$(jq -r '[.items[]? | select(.status.phase=="Running" and ([.status.containerStatuses[]? | select(.ready==true)]|length)>=2 and ([.spec.containers[]? | select(.name=="istio-proxy")]|length)==1)] | length >= 1' <<<"$cp" 2>/dev/null || true)
+  [[ "$workload_ok" == true ]] && workload_ok=$(jq -r '.status.phase=="Running" and ([.spec.containers[]? | select(.name=="istio-proxy")]|length)==0' <<<"$op" 2>/dev/null || true)
+  # A more-specific PeerAuthentication can override the namespace-wide STRICT policy.
+  local other_policies
+  other_policies=$(kubectl -n market get peerauthentications --context "$CTX" -o json 2>/dev/null | jq -r '[.items[]? | select(.metadata.name != "market-strict" and .spec.selector != null)] | length' 2>/dev/null || echo 1)
+  if [[ "$initial_mode" != STRICT || "$selected_policy" != true || "$ns" != enabled || "$istiod_image" != *1.30.4* || "$workload_ok" != true || "$endpoint_ok" != true || "$other_policies" != 0 ]]; then
+    echo "HINT: require exact namespace-wide market-strict STRICT, two injected Ready workloads, non-injected outside Pod, correct HTTP Service and no overriding workload policy"
+    record_result 1
+    return
+  fi
+  # Obtain a live application HTTP status, keeping curl's transport exit code separate.
+  inside_code=$(kubectl -n market exec deploy/market-client -c app --context "$CTX" -- curl -sS -o /dev/null -w '%{http_code}' --max-time 10 http://market-api 2>/dev/null || true)
   set +e
-  outside=$(kubectl exec -n default mesh-outside --context "$CTX" -- curl -sS --max-time 10 http://market-api.market.svc.cluster.local 2>&1)
-  outside_status=$?
+  outside_code=$(kubectl -n default exec mesh-outside -c app --context "$CTX" -- curl -sS -o /dev/null -w '%{http_code}' --max-time 10 http://market-api.market.svc.cluster.local 2>/dev/null)
+  outside_rc=$?
   set -e
-  # Outcome-based check, not a literal socket-error string (wording is implementation- and
-  # version-dependent). STRICT mTLS is proven by: policy is STRICT, in-mesh client gets 200,
-  # and the plaintext outside client does NOT get a successful HTTP response (curl fails and
-  # no 2xx status is returned).
-  outside_ok=1
-  if [[ "$outside_status" -ne 0 ]] && ! grep -Eq 'HTTP/[0-9.]+ 2[0-9][0-9]' "$ARTIFACTS/6/market-outside.txt" \
-    && grep -Eq '^exit_code=[1-9][0-9]*$' "$ARTIFACTS/6/market-outside.txt"; then
-    outside_ok=0
+  [[ "$inside_code" == 200 ]] && inside_ok=1
+  [[ "$outside_code" != 2?? && "$outside_code" != 3?? ]] && outside_ok=1
+  [[ "$outside_rc" -ne 0 ]] || outside_ok=0
+  # The mutation is guarded by an atomic JSON Patch and must be undone before scoring.
+  policy_transition() {
+    local from="$1" to="$2" payload
+    printf -v payload '[{"op":"test","path":"/spec/mtls/mode","value":"%s"},{"op":"replace","path":"/spec/mtls/mode","value":"%s"}]' "$from" "$to"
+    kubectl -n market patch peerauthentication market-strict --context "$CTX" --type=json -p "$payload" --request-timeout=12s >/dev/null 2>&1
+  }
+  local mutated=0
+  restore_policy() {
+    local attempt seen
+    [[ "$mutated" -eq 1 ]] || return 0
+    trap '' INT TERM
+    for attempt in $(seq 1 15); do
+      seen=$(kubectl -n market get peerauthentication market-strict --context "$CTX" -o jsonpath='{.spec.mtls.mode}' --request-timeout=12s 2>/dev/null) || { sleep 2; continue; }
+      if [[ "$seen" == PERMISSIVE ]]; then
+        policy_transition PERMISSIVE STRICT || { sleep 2; continue; }
+      elif [[ "$seen" != STRICT ]]; then
+        echo "FATAL: PeerAuthentication concurrently changed to '$seen'; manual reconciliation required" >&2
+        return 1
+      fi
+      [[ "$(kubectl -n market get peerauthentication market-strict --context "$CTX" -o jsonpath='{.spec.mtls.mode}' --request-timeout=12s 2>/dev/null)" == STRICT ]] && { mutated=0; return 0; }
+      sleep 2
+    done
+    echo 'FATAL: failed to restore market-strict STRICT after 15 retries' >&2
+    return 1
+  }
+  trap 'restore_policy || true' EXIT
+  trap 'restore_policy || true; exit 130' INT
+  trap 'restore_policy || true; exit 143' TERM
+  mutated=1
+  if policy_transition STRICT PERMISSIVE; then
+    # Wait for Envoy propagation; a fixed three-second sleep is not a reliability guarantee.
+    for _ in $(seq 1 20); do
+      baseline_code=$(kubectl -n default exec mesh-outside -c app --context "$CTX" -- curl -sS -o /dev/null -w '%{http_code}' --max-time 5 http://market-api.market.svc.cluster.local 2>/dev/null || true)
+      [[ "$baseline_code" == 200 ]] && { baseline_ok=1; break; }
+      sleep 2
+    done
   fi
-  # Baseline control: temporarily flip the SAME PeerAuthentication to PERMISSIVE (with a
-  # guaranteed restore via trap), repeat the identical plaintext probe, and require 200 -
-  # this proves the earlier STRICT rejection was actually CAUSED by mTLS enforcement and
-  # not by an unrelated DNS/network/client problem that would fail regardless of mode.
-  baseline_ok=0
-  restore_policy() { kubectl patch peerauthentication market-strict -n market --context "$CTX" --type merge -p '{"spec":{"mtls":{"mode":"STRICT"}}}' >/dev/null 2>&1 || true; }
-  if [[ "$mode" == "STRICT" ]]; then
-    trap restore_policy RETURN
-    kubectl patch peerauthentication market-strict -n market --context "$CTX" \
-      --type merge -p '{"spec":{"mtls":{"mode":"PERMISSIVE"}}}' >/dev/null 2>&1 || true
-    sleep 3
-    set +e
-    baseline_response=$(kubectl exec -n default mesh-outside --context "$CTX" -- curl -sS -o /dev/null -w '%{http_code}' --max-time 10 http://market-api.market.svc.cluster.local 2>&1)
-    set -e
-    [[ "$baseline_response" == "200" ]] && baseline_ok=1
-    restore_policy
-    trap - RETURN
-    sleep 3
+  if restore_policy; then
+    restored_ok=1
   fi
-  if [[ "$mode" == "STRICT" && "$injection" == "enabled" && "$istiod_image" == *1.30.4* && "$outside_sidecar" == "0" && "$inside" == "200" && "$outside_ok" -eq 0 && "$baseline_ok" -eq 1 ]] \
-    && grep -Fq 'HTTP/1.1 200 OK' "$ARTIFACTS/6/market-inside.txt" \
-    && grep -Eq '^exit_code=0$' "$ARTIFACTS/6/market-inside.txt"; then
+  trap 'restore_policy || true; exit 130' INT
+  trap 'restore_policy || true; exit 143' TERM
+  # Recheck the *effective* post-rollback policy outcome (not only the YAML field).
+  local again=0
+  if [[ "$restored_ok" -eq 1 ]]; then
+    for _ in $(seq 1 20); do
+      set +e
+      outside_code=$(kubectl -n default exec mesh-outside -c app --context "$CTX" -- curl -sS -o /dev/null -w '%{http_code}' --max-time 5 http://market-api.market.svc.cluster.local 2>/dev/null)
+      outside_rc=$?
+      set -e
+      if [[ "$outside_rc" -ne 0 && "$outside_code" != 2?? && "$outside_code" != 3?? ]]; then again=1; break; fi
+      sleep 2
+    done
+  fi
+  if [[ "$inside_ok" -eq 1 && "$outside_ok" -eq 1 && "$baseline_ok" -eq 1 && "$restored_ok" -eq 1 && "$again" -eq 1 && "$mutated" -eq 0 ]] \
+    && grep -Eq '^HTTP/1[.]1 200' "$ARTIFACTS/6/market-inside.txt" \
+    && grep -Eq '^exit_code=0$' "$ARTIFACTS/6/market-inside.txt" \
+    && grep -Eq '^exit_code=[1-9][0-9]*$' "$ARTIFACTS/6/market-outside.txt" \
+    && ! grep -Eq 'HTTP/[0-9.]+ 2[0-9][0-9]' "$ARTIFACTS/6/market-outside.txt"; then
     result=0
   else
-    if [[ "$mode" != "STRICT" ]]; then
-      echo "HINT: PeerAuthentication 'market-strict' spec.mtls.mode must be 'STRICT' exactly - PERMISSIVE would accept both mTLS and plaintext, defeating this task's goal."
-    elif [[ "$injection" != "enabled" ]]; then
-      echo "HINT: Namespace 'market' must have label istio-injection: enabled so the sidecar is actually injected into workloads there."
-    elif [[ "$outside_sidecar" != "0" ]]; then
-      echo "HINT: Pod 'mesh-outside' in namespace 'default' must NOT have an istio-proxy sidecar - it represents a client outside the mesh, on purpose."
-    elif [[ "$inside" != "200" ]]; then
-      echo "HINT: The in-mesh client (market-client, with sidecar) did not get HTTP 200 from market-api - check both Pods are actually injected and mTLS is negotiating correctly."
-    elif [[ "$outside_ok" -ne 0 ]]; then
-      echo "HINT: The plaintext client OUTSIDE the mesh got a successful 2xx response from market-api, or market-outside.txt is missing a proper non-zero 'exit_code=' line - STRICT mTLS should reject a client without an Istio sidecar, and the artifact must record that failure's exit code, not just its text output."
-    elif [[ "$baseline_ok" -ne 1 ]]; then
-      echo "HINT: When the checker temporarily set the SAME policy to PERMISSIVE, the plaintext client still did not get HTTP 200 - this means the earlier STRICT failure may be caused by an unrelated DNS/network/client issue rather than mTLS enforcement itself. Check basic connectivity to market-api independent of PeerAuthentication."
-    fi
-    echo "mode=$mode injection=$injection istiod_image=$istiod_image outside_sidecar=$outside_sidecar inside=$inside outside_status=$outside_status outside=$outside baseline_ok=$baseline_ok"
+    echo "HINT: require real sidecars, STRICT denied, PERMISSIVE allowed, and restored STRICT denied; inside=$inside_ok outside=$outside_ok permissive=$baseline_ok restored=$restored_ok observed=$again"
     result=1
   fi
+  if [[ "$mutated" -eq 0 ]]; then trap - EXIT INT TERM; fi
   record_result "$result"
 }

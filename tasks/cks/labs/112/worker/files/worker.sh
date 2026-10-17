@@ -6,6 +6,11 @@ export KUBECONFIG=/root/.kube/config
 echo "*** worker PC CKS lab 112"
 until kubectl get nodes --no-headers >/dev/null 2>&1; do sleep 5; done
 
+# Semantic validation of audit policy, kubeconfig and Falco rules in tests.bats.
+apt-get update -qq
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-yaml
+python3 -c 'import yaml' >/dev/null
+
 # README/solution use "ssh control-plane", but the shared worker template creates no alias
 # and root login is keyed on the node for ubuntu only. Map the alias to ubuntu for both root
 # (this script, root-run tooling) and the student user.

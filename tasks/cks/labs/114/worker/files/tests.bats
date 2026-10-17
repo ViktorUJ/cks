@@ -4,44 +4,67 @@ export KUBECONFIG=/home/ubuntu/.kube/config
 CTX="cluster1-admin@cluster1"
 NS="cks-114"
 NODEPORT=30114
-CHECKER_LABEL="cks.lab/checker=114"
+BASE="/var/lib/cks-lab114-checker"
+TRUSTED_CONFIG="$BASE/expected-kubeconfig"
 
 setup() {
   CHECKER_PREFIX="cks-114-checker-${BATS_TEST_NUMBER}-$$"
+  PROBE_POD=""
+  PENDING_SUCCESS=false
 }
 
 teardown() {
-  kubectl --context "$CTX" -n "$NS" delete pod -l "$CHECKER_LABEL" \
-    --ignore-not-found --wait=false >/dev/null 2>&1 || true
+  local attempt reason
+  if [[ -n "$PROBE_POD" ]]; then
+    for attempt in $(seq 1 8); do
+      kubectl --request-timeout=8s --kubeconfig "$TRUSTED_CONFIG" --context "$CTX" -n "$NS" delete pod "$PROBE_POD" \
+        --ignore-not-found --wait=true --timeout=20s >/dev/null 2>&1 || true
+      reason=$(kubectl --request-timeout=8s --kubeconfig "$TRUSTED_CONFIG" --context "$CTX" -n "$NS" \
+        get pod "$PROBE_POD" -o name 2>&1) && rc=0 || rc=$?
+      if [[ "$rc" -ne 0 && "$reason" == *NotFound* ]]; then PROBE_POD=""; break; fi
+      sleep 1
+    done
+    if [[ -n "$PROBE_POD" ]]; then
+      echo "FATAL: probe Pod $PROBE_POD could not be confirmed deleted" >&2
+      return 1
+    fi
+  fi
+  # Bats teardown FAIL must also prevent result/ok from recording a PASS.
+  if [[ "$PENDING_SUCCESS" == true ]]; then
+    echo 1 >> /var/work/tests/result/ok
+  fi
+  return 0
 }
-
 create_probe() {
-  local namespace=$1 name=$2 image=${3:-curlimages/curl:8.11.1}
-  kubectl --context "$CTX" -n "$namespace" run "$name" --restart=Never --image="$image" \
-    --labels="$CHECKER_LABEL" --command -- sh -c 'sleep 300' >/dev/null
-  kubectl --context "$CTX" -n "$namespace" wait --for=condition=Ready "pod/$name" --timeout=90s >/dev/null
+  local namespace=$1 name=$2
+  PROBE_POD=$name
+  kubectl --request-timeout=8s --kubeconfig "$TRUSTED_CONFIG" --context "$CTX" -n "$namespace" run "$name" \
+    --restart=Never --image=curlimages/curl:8.11.1 \
+    --labels='cks.lab/checker=114' --command -- sleep 300 >/dev/null || return 1
+  kubectl --request-timeout=8s --kubeconfig "$TRUSTED_CONFIG" --context "$CTX" -n "$namespace" wait \
+    --for=condition=Ready "pod/$name" --timeout=90s >/dev/null
 }
 
 curl_probe_in_cluster() {
   local pod=$1 destination=$2
-  kubectl --context "$CTX" -n "$NS" exec "$pod" -- sh -c \
-    "set +e; code=\$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 '$destination'); rc=\$?; printf 'CURL_EXIT:%s\\nHTTPCODE:%s\\n' \"\$rc\" \"\$code\"; exit 0"
+  kubectl --request-timeout=8s --kubeconfig "$TRUSTED_CONFIG" --context "$CTX" -n "$NS" exec "$pod" -- sh -c \
+    "set +e; code=\$(curl --noproxy '*' -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 '$destination'); rc=\$?; printf 'CURL_EXIT:%s\\nHTTPCODE:%s\\n' \"\$rc\" \"\$code\"; exit 0"
 }
 
 curl_probe_local() {
   local destination=$1 code rc
   set +e
-  code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 "$destination")
+  code=$(curl --noproxy '*' -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 5 "$destination")
   rc=$?
   set -e
   printf 'CURL_EXIT:%s\nHTTPCODE:%s\n' "$rc" "$code"
 }
 
-assert_reachable() {
+assert_http_200() {
   local output=$1 rc code
   rc=$(sed -n 's/^CURL_EXIT:\([0-9][0-9]*\)$/\1/p' <<<"$output" | tail -1)
   code=$(sed -n 's/^HTTPCODE:\([0-9][0-9][0-9]\)$/\1/p' <<<"$output" | tail -1)
-  [[ "$rc" == 0 && "$code" =~ ^[1-5][0-9][0-9]$ ]]
+  [[ "$rc" == 0 && "$code" == 200 ]]
 }
 
 assert_transport_denied() {
@@ -52,13 +75,55 @@ assert_transport_denied() {
 }
 
 node_internal_ip() {
-  kubectl --context "$CTX" get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}'
+  kubectl --request-timeout=8s --kubeconfig "$TRUSTED_CONFIG" --context "$CTX" get nodes \
+    -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}'
 }
 
-norm() {
-  # Strip all whitespace so KEY=VALUE artifact lines tolerate formatting/spacing
-  # differences from the student while still requiring the same underlying data.
-  tr -d '[:space:]' <<<"$1"
+norm() { tr -d '[:space:]' <<<"$1"; }
+
+backend_contract() {
+  /usr/local/bin/cks114-backend-contract "$1"
+}
+
+default_kubernetes_unchanged() {
+  local expected current
+  expected=$(cat "$BASE/default-kubernetes-sha256" 2>/dev/null) || return 1
+  [[ "$expected" =~ ^[0-9a-f]{64}$ ]] || return 1
+  current=$(kubectl --request-timeout=8s --kubeconfig "$TRUSTED_CONFIG" \
+    --context "$CTX" -n default get svc kubernetes -o json 2>/dev/null | \
+    jq -cS '{uid:.metadata.uid,spec:.spec}' | sha256sum | cut -d' ' -f1) || return 1
+  [[ "$current" == "$expected" ]]
+}
+
+historical_phase_matches() {
+  local live=$1 mark="$BASE/nodeport-phase-seen" svc_uid dep_uid seen
+  [[ -s "$mark" ]] || return 1
+  svc_uid=$(sed -n 's/^SERVICE_UID=//p' "$mark")
+  dep_uid=$(sed -n 's/^DEPLOYMENT_UID=//p' "$mark")
+  seen=$(sed -n 's/^SEEN_AT=//p' "$mark")
+  [[ "$svc_uid" =~ ^[0-9a-f-]{36}$ && "$dep_uid" =~ ^[0-9a-f-]{36}$ && "$seen" =~ ^[0-9]{10,}$ ]] || return 1
+  grep -Fxq "SERVICE_UID=$svc_uid" <<<"$live" && \
+    grep -Fxq "DEPLOYMENT_UID=$dep_uid" <<<"$live"
+}
+
+poll_external_up() {
+  local url=$1 sample i
+  for i in $(seq 1 15); do
+    sample=$(curl_probe_local "$url")
+    if assert_http_200 "$sample"; then return 0; fi
+    sleep 2
+  done
+  return 1
+}
+
+poll_external_down() {
+  local url=$1 sample i
+  for i in $(seq 1 15); do
+    sample=$(curl_probe_local "$url")
+    if assert_transport_denied "$sample"; then return 0; fi
+    sleep 2
+  done
+  return 1
 }
 
 @test "0 Init" {
@@ -67,123 +132,113 @@ norm() {
   : > /var/work/tests/result/ok
 }
 
-@test "1. Student switched to the real, live cluster1 context out of several kubeconfig contexts" {
+@test "1. Student switched to the authentic live cluster1 context" {
   echo 1 >> /var/work/tests/result/all
   current=$(kubectl config current-context 2>/dev/null)
   contexts=$(kubectl config get-contexts -o name 2>/dev/null | sort)
   expected_contexts=$(printf '%s\n' cluster9-admin@cluster1 legacy-admin@legacy staging-admin@staging "$CTX" | sort)
-  server=$(kubectl config view -o jsonpath='{.clusters[?(@.name=="cluster1")].cluster.server}' 2>/dev/null)
+  # Pin connectivity/authentication wiring, but allow a harmless default namespace
+  # on a context: it does not change which API or user credentials are selected.
+  kube_projection='{
+    clusters: ([.clusters[] | {name,cluster:.cluster}] | sort_by(.name)),
+    users: ([.users[] | {name,user:.user}] | sort_by(.name)),
+    contexts: ([.contexts[] | {name,cluster:.context.cluster,user:.context.user}] | sort_by(.name))
+  }'
+  fixture=$(kubectl --kubeconfig "$TRUSTED_CONFIG" config view --raw -o json 2>/dev/null | jq -cS "$kube_projection")
+  student=$(kubectl config view --raw -o json 2>/dev/null | jq -cS "$kube_projection")
   live=$(kubectl --context "$CTX" get --raw /version 2>/dev/null | jq -r 'has("gitVersion")' 2>/dev/null || echo false)
-  if [[ "$current" == "$CTX" && "$contexts" == "$expected_contexts" && \
-        "$server" =~ ^https://.+:6443$ && "$live" == true ]]; then
-    echo 1 >> /var/work/tests/result/ok
+  nodes=$(kubectl --context "$CTX" get nodes -o json 2>/dev/null | jq -r '(.items|length)>0' 2>/dev/null || echo false)
+  if [[ "$current" == "$CTX" && "$contexts" == "$expected_contexts" && -n "$fixture" && \
+        "$student" == "$fixture" && "$live" == true && "$nodes" == true ]]; then
+    PENDING_SUCCESS=true
   else
-    echo "HINT: run 'kubectl config get-contexts', find the context that actually reaches the API server (not the decoy staging/legacy ones), and 'kubectl config use-context $CTX'." >&2
-    false
+    echo "HINT: use-context $CTX and keep the original four-context kubeconfig, its cluster connection and client credentials intact." >&2
+    return 1
   fi
 }
 
-@test "2. Extracted cluster9-admin client certificate matches the checker's own extraction" {
+@test "2. Certificate evidence matches the original bootstrap fixture" {
   echo 1 >> /var/work/tests/result/all
   artifact=/var/work/tests/artifacts/task2-cert.txt
   if [[ ! -s "$artifact" ]]; then
-    echo "HINT: write SHA256_FP=/SUBJECT=/ISSUER=/NOTBEFORE=/NOTAFTER= lines to $artifact after extracting the cluster9-admin client certificate." >&2
-    false
+    echo "HINT: write SHA256_FP/SUBJECT/ISSUER/NOTBEFORE/NOTAFTER to $artifact." >&2
+    return 1
   fi
-
+  fixture_fp=$(cat "$BASE/initial-cert-sha256" 2>/dev/null)
   cert_pem=$(kubectl config view --raw -o jsonpath='{.users[?(@.name=="cluster9-admin")].user.client-certificate-data}' 2>/dev/null | base64 -d 2>/dev/null)
-  if [[ -z "$cert_pem" ]]; then
-    echo "HINT: kubectl config view --raw ... | base64 -d must decode to a real client-certificate-data for user cluster9-admin." >&2
-    false
-  fi
-
   expected_fp=$(openssl x509 -in <(printf '%s' "$cert_pem") -noout -fingerprint -sha256 2>/dev/null | cut -d= -f2 | tr -d ':' | tr 'A-F' 'a-f')
   expected_subject=$(openssl x509 -in <(printf '%s' "$cert_pem") -noout -subject 2>/dev/null)
   expected_issuer=$(openssl x509 -in <(printf '%s' "$cert_pem") -noout -issuer 2>/dev/null)
   expected_notbefore=$(openssl x509 -in <(printf '%s' "$cert_pem") -noout -startdate 2>/dev/null)
   expected_notafter=$(openssl x509 -in <(printf '%s' "$cert_pem") -noout -enddate 2>/dev/null)
-
   student_fp=$(grep -m1 '^SHA256_FP=' "$artifact" | cut -d= -f2- | tr 'A-F' 'a-f')
   student_subject=$(grep -m1 '^SUBJECT=' "$artifact" | cut -d= -f2-)
   student_issuer=$(grep -m1 '^ISSUER=' "$artifact" | cut -d= -f2-)
   student_notbefore=$(grep -m1 '^NOTBEFORE=' "$artifact" | cut -d= -f2-)
   student_notafter=$(grep -m1 '^NOTAFTER=' "$artifact" | cut -d= -f2-)
-
-  fp_ok=false; [[ "$(norm "$student_fp")" == "$(norm "$expected_fp")" && -n "$expected_fp" ]] && fp_ok=true
-  subject_ok=false; [[ "$(norm "$student_subject")" == *"cluster9-admin"* && "$(norm "$student_subject")" == "$(norm "$expected_subject")" ]] && subject_ok=true
-  issuer_ok=false; [[ "$(norm "$student_issuer")" == "$(norm "$expected_issuer")" ]] && issuer_ok=true
-  notbefore_ok=false; [[ "$(norm "$student_notbefore")" == "$(norm "$expected_notbefore")" ]] && notbefore_ok=true
-  notafter_ok=false; [[ "$(norm "$student_notafter")" == "$(norm "$expected_notafter")" ]] && notafter_ok=true
-
-  if [[ "$fp_ok" == true && "$subject_ok" == true && "$issuer_ok" == true && "$notbefore_ok" == true && "$notafter_ok" == true ]]; then
-    echo 1 >> /var/work/tests/result/ok
+  if [[ "$fixture_fp" =~ ^[0-9a-f]{64}$ && "$expected_fp" == "$fixture_fp" && \
+        "$(norm "$student_fp")" == "$(norm "$expected_fp")" && \
+        "$(norm "$student_subject")" == *cluster9-admin* && \
+        "$(norm "$student_subject")" == "$(norm "$expected_subject")" && \
+        "$(norm "$student_issuer")" == "$(norm "$expected_issuer")" && \
+        "$(norm "$student_notbefore")" == "$(norm "$expected_notbefore")" && \
+        "$(norm "$student_notafter")" == "$(norm "$expected_notafter")" ]]; then
+    PENDING_SUCCESS=true
   else
-    echo "HINT: SHA256_FP/SUBJECT/ISSUER/NOTBEFORE/NOTAFTER in $artifact must match 'openssl x509 -noout -fingerprint -sha256/-subject/-issuer/-startdate/-enddate' run on the actual decoded cluster9-admin certificate, not a placeholder." >&2
-    false
+    echo "HINT: values must match the original cluster9-admin certificate, independently pinned during bootstrap." >&2
+    return 1
   fi
 }
 
-@test "3. kubernetes-public NodePort Service exposes the backend on the node and in-cluster, default/kubernetes untouched" {
+@test "3. The same backend had a verified NodePort 30114 and internal DNS HTTP 200 phase" {
   echo 1 >> /var/work/tests/result/all
-  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then
-    echo "HINT: create namespace $NS with a backend Deployment and a kubernetes-public NodePort Service before task 3 validation." >&2
-    false
+  if ! default_kubernetes_unchanged; then
+    echo "HINT: default/kubernetes was modified from its bootstrap identity/specification." >&2
+    return 1
   fi
-
-  default_svc_ok=$(kubectl --context "$CTX" get svc kubernetes -n default -o jsonpath='{.spec.type}' 2>/dev/null)
-  svc_json=$(kubectl --context "$CTX" -n "$NS" get svc kubernetes-public -o json 2>/dev/null)
-  shape=$(jq -r '.spec.type == "NodePort" and (.spec.ports[0].nodePort == 30114)' <<<"$svc_json" 2>/dev/null)
-  ready=$(kubectl --context "$CTX" -n "$NS" get pod -l app=backend -o json 2>/dev/null | jq -r '
-    (.items | length > 0) and ([.items[] | (.status.conditions // []) | any(.type == "Ready" and .status == "True")] | any)')
-
   node_ip=$(node_internal_ip)
-  external=$(curl_probe_local "http://$node_ip:$NODEPORT/")
-
-  create_probe "$NS" "${CHECKER_PREFIX}-in-cluster"
-  in_cluster=$(curl_probe_in_cluster "${CHECKER_PREFIX}-in-cluster" "http://kubernetes-public.$NS.svc.cluster.local/")
-
-  # Task 4 turns the Service into ClusterIP, so once it is done the NodePort state can no longer
-  # be probed live. The checker-owned monitor (cks114-monitor) records that the Service really was
-  # NodePort/30114 and answered from the worker; that record also satisfies this test.
-  nodeport_phase_seen=false
-  [[ -s /var/lib/cks-lab114-checker/nodeport-phase-seen ]] && nodeport_phase_seen=true
-
-  live_ok=false
-  if [[ "$shape" == true && "$ready" == true ]] && assert_reachable "$external" && assert_reachable "$in_cluster"; then
-    live_ok=true
+  create_probe "$NS" "${CHECKER_PREFIX}-in-cluster" || return 1
+  in_cluster=$(curl_probe_in_cluster "$PROBE_POD" "http://kubernetes-public.$NS.svc.cluster.local/")
+  if ! assert_http_200 "$in_cluster"; then
+    echo "HINT: the in-cluster Service DNS must return HTTP 200 from a Ready backend." >&2
+    return 1
   fi
-
-  if [[ "$default_svc_ok" == "ClusterIP" ]] && [[ "$live_ok" == true || "$nodeport_phase_seen" == true ]]; then
-    echo 1 >> /var/work/tests/result/ok
+  nodeport=$(backend_contract NodePort 2>/dev/null || true)
+  if [[ -n "$nodeport" ]]; then
+    if poll_external_up "http://$node_ip:$NODEPORT/"; then
+      PENDING_SUCCESS=true
+      return 0
+    fi
+  fi
+  clusterip=$(backend_contract ClusterIP 2>/dev/null || true)
+  if [[ -n "$clusterip" ]] && historical_phase_matches "$clusterip"; then
+    PENDING_SUCCESS=true
   else
-    echo "HINT: kubernetes-public must be type NodePort with nodePort 30114, reachable both via <node-internal-ip>:30114 from the worker and via the in-cluster Service DNS name; default/kubernetes Service must stay ClusterIP. The NodePort phase must have really happened (it is recorded by a checker-owned monitor), so do task 3 before reducing the Service to ClusterIP in task 4." >&2
-    false
+    echo "HINT: the trusted monitor must have captured HTTP 200 via NodePort 30114 AND Service DNS for this exact Service/Deployment before the ClusterIP switch." >&2
+    return 1
   fi
 }
 
-@test "4. kubernetes-public reduced to ClusterIP: NodePort path denied, in-cluster path still allowed" {
+@test "4. ClusterIP preserves the same backend and closes node:30114 transport" {
   echo 1 >> /var/work/tests/result/all
-  if ! kubectl --context "$CTX" get namespace "$NS" >/dev/null 2>&1; then
-    echo "HINT: complete task 3 before reducing kubernetes-public to ClusterIP." >&2
-    false
+  if ! default_kubernetes_unchanged; then
+    echo "HINT: default/kubernetes must remain untouched from its initial spec and UID." >&2
+    return 1
   fi
-
-  svc_json=$(kubectl --context "$CTX" -n "$NS" get svc kubernetes-public -o json 2>/dev/null)
-  shape=$(jq -r '.spec.type == "ClusterIP" and ([.spec.ports[] | has("nodePort")] | any | not)' <<<"$svc_json" 2>/dev/null)
-  ready=$(kubectl --context "$CTX" -n "$NS" get pod -l app=backend -o json 2>/dev/null | jq -r '
-    (.items | length > 0) and ([.items[] | (.status.conditions // []) | any(.type == "Ready" and .status == "True")] | any)')
-
+  clusterip=$(backend_contract ClusterIP 2>/dev/null || true)
+  if [[ -z "$clusterip" ]] || ! historical_phase_matches "$clusterip"; then
+    echo "HINT: require ClusterIP with backend Deployment and ready EndpointSlices, linked to an authentic earlier NodePort phase." >&2
+    return 1
+  fi
   node_ip=$(node_internal_ip)
-  external=$(curl_probe_local "http://$node_ip:$NODEPORT/")
-
-  create_probe "$NS" "${CHECKER_PREFIX}-in-cluster"
-  in_cluster=$(curl_probe_in_cluster "${CHECKER_PREFIX}-in-cluster" "http://kubernetes-public.$NS.svc.cluster.local/")
-
-  if [[ "$shape" == true && "$ready" == true ]] && \
-     assert_transport_denied "$external" && assert_reachable "$in_cluster"; then
-    echo 1 >> /var/work/tests/result/ok
+  external_denied=false
+  poll_external_down "http://$node_ip:$NODEPORT/" && external_denied=true
+  create_probe "$NS" "${CHECKER_PREFIX}-in-cluster" || return 1
+  in_cluster=$(curl_probe_in_cluster "$PROBE_POD" "http://kubernetes-public.$NS.svc.cluster.local/")
+  if [[ "$external_denied" == true ]] && assert_http_200 "$in_cluster"; then
+    PENDING_SUCCESS=true
   else
-    echo "HINT: kubernetes-public must become type ClusterIP with no nodePort on any port (node:30114 must now be transport-denied), while the in-cluster Service DNS path must remain reachable and the backend Pod stays healthy." >&2
-    false
+    echo "HINT: 30114 must be transport-denied (curl 7/28, HTTP 000), and Service DNS must still return HTTP 200." >&2
+    return 1
   fi
 }
