@@ -82,7 +82,7 @@ check_result
 | **1** | **Доказать исходный plaintext Secret** |
 | :---: | :--- |
 | Что делаем | До включения шифрования запросите raw запись `/registry/secrets/encryption-109/legacy-secret` через `sudo etcdctl-109 get ... --print-value-only`, пропустите через `strings` и сохраните результат в `/var/work/109/plaintext-proof.txt`. |
-| Критерии приёмки | Файл непустой, содержит ровно marker `cks-109-legacy-plaintext` и не содержит `k8s:enc:`. Это доказательство исходного состояния: `Secret.data` - base64, не encryption at rest. |
+| Критерии приёмки | Файл содержит полный вывод `strings` исходной raw-записи (совпадает со снимком bootstrap, включая marker `cks-109-legacy-plaintext`) и не содержит `k8s:enc:`; вручную набранная строка не принимается. Это доказательство исходного состояния: `Secret.data` - base64, не encryption at rest. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -94,7 +94,7 @@ check_result
 | **2** | **Создать EncryptionConfiguration для Secret** |
 | :---: | :--- |
 | Что делаем | На control-plane создайте `/etc/kubernetes/enc/encryption-config.yaml`, owner `root:root`, mode `0600`. Формат: `apiserver.config.k8s.io/v1`, `EncryptionConfiguration`; для `secrets` первым provider задайте `aescbc` с именованным base64-ключом из **32 случайных bytes**, затем `identity: {}`. |
-| Критерии приёмки | Файл защищён mode `0600`; config содержит `secrets`, `aescbc` и корректный 32-byte key. `identity` допустим только последним временным fallback для legacy plaintext. |
+| Критерии приёмки | Файл `root:root` mode `0600` в каталоге `root:root` mode `0700`; основной действующий provider для `secrets` — **первый** `aescbc` с корректным named base64 key из 32 bytes. `identity` допустим только последним временным fallback для legacy plaintext. Symlink на файл/каталог запрещён. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>
@@ -111,7 +111,7 @@ check_result
 <details>
 <summary>💡 Подсказка к заданию 3</summary>
 
-Три отдельных изменения нужны одновременно: сам флаг `--encryption-provider-config`, `volumeMounts` (внутри контейнера) И `volumes` (hostPath на уровне Pod spec) - забыть любое из трёх приведёт либо к CrashLoopBackOff (флаг указывает на файл, которого контейнер не видит), либо к тому, что флаг просто не будет передан. Сохраните копию оригинального manifest (`sudo cp kube-apiserver.yaml kube-apiserver.yaml.bak`) перед правкой - если что-то пойдёт не так, у вас будет путь для быстрого восстановления.
+Три отдельных изменения нужны одновременно: сам флаг `--encryption-provider-config`, `volumeMounts` (внутри контейнера) И `volumes` (hostPath на уровне Pod spec) - забыть любое из трёх приведёт либо к CrashLoopBackOff (флаг указывает на файл, которого контейнер не видит), либо к тому, что флаг просто не будет передан. Сохраните backup **вне** `/etc/kubernetes/manifests`, например `sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/kube-apiserver.yaml.bak-109`. Kubelet читает дополнительные не скрытые файлы из каталога static manifests; соседний `kube-apiserver.yaml.bak` может быть воспринят как второй static Pod и заблокировать применение новой конфигурации.
 </details>
 
 ---
@@ -176,10 +176,10 @@ TASK=109 make delete_cks_task
 
 **KMS v2 (опциональный walkthrough).** Внешний KMS-plugin подключается к API server как
 provider `kms` в `EncryptionConfiguration`; его endpoint - локальный Unix socket, а ключ
-provider получает стабильное имя, например `kms-v2-primary`. API server генерирует
-случайный **DEK** для шифрования каждой записи Secret, KMS-plugin шифрует (wrap) этот DEK
-своим **KEK** (ключом, управляемым внешним key manager), а etcd хранит ciphertext Secret
-и wrapped DEK. Таким образом, KEK не лежит в etcd; availability, ACL и backup KMS становятся
+provider получает стабильное имя, например `kms-v2-primary`. В KMS v2 API server получает через plugin зашифрованный seed (wrapped под внешним
+**KEK**) и на его основе выводит ключи для шифрования отдельных объектов. KMS v2
+использует seed/DEK на уровне API server, а не отдельный вызов KMS для каждого Secret.
+В etcd сохраняются ciphertext Secret и необходимые данные для восстановления ключа. Таким образом, KEK не лежит в etcd; availability, ACL и backup KMS становятся
 частью модели безопасности. Минимальный **иллюстративный** provider (endpoint должен
 соответствовать установленному plugin) выглядит так:
 

@@ -227,9 +227,10 @@ check_result
 
 `aescbc` выше нужен только для учебной механики. В production KMS v2 подключает
 поддерживаемый KMS-plugin через локальный Unix socket в `EncryptionConfiguration`.
-API server создаёт уникальный data-encryption key (**DEK**) для записи Secret и шифрует
-его внешним key-encryption key (**KEK**) через plugin; в etcd сохраняются ciphertext
-ресурса и wrapped DEK. KEK остаётся во внешнем KMS, а не в etcd или в Git. Схема
+Для KMS v2 API server использует зашифрованный seed/DEK на уровне API server и
+выводит ключи шифрования отдельных записей. Plugin защищает seed через внешний KEK;
+этим KMS v2 отличается от per-resource KMS v1. Etcd хранит ciphertext ресурсов и
+метаданные, необходимые для расшифровки. KEK остаётся во внешнем KMS, а не в etcd или в Git. Схема
 конфигурации зависит от версии Kubernetes и plugin, но принципиально нужны provider `kms`,
 стабильное имя key и endpoint socket. Не копируйте примерный endpoint из чужого кластера:
 сверьте формат KMS v2 и health/ACL требования с документацией своей версии Kubernetes.

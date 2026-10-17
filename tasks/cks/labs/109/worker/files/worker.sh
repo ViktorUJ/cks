@@ -9,6 +9,20 @@ ETCD_DIR="/var/lib/cks-109/etcd"
 echo "*** CKS lab 109 worker bootstrap"
 until kubectl get nodes --context "$CTX" --no-headers >/dev/null 2>&1; do sleep 5; done
 
+# The checker uses jq, Python PyYAML and strings. Do not rely on an undocumented
+# package set in the shared work_pc_v2 image; provision missing dependencies.
+missing_packages=()
+command -v python3 >/dev/null 2>&1 || missing_packages+=(python3)
+command -v jq >/dev/null 2>&1 || missing_packages+=(jq)
+command -v strings >/dev/null 2>&1 || missing_packages+=(binutils)
+command -v ssh >/dev/null 2>&1 || missing_packages+=(openssh-client)
+python3 -c "import yaml" >/dev/null 2>&1 || missing_packages+=(python3-yaml)
+if ((${#missing_packages[@]})); then
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing_packages[@]}"
+fi
+python3 -c "import yaml"
+
 # The README/solution use "ssh control-plane", but the alias is not created by the shared
 # worker template, and root login is keyed on the node for ubuntu only. This script, the
 # etcdctl-109 wrapper and any root-run checker default to root@ - map the alias to ubuntu
@@ -102,6 +116,9 @@ fi
   echo "legacy_secret_uid=${legacy_uid}"
   echo "legacy_secret_raw_marker_present=yes"
   echo "legacy_secret_raw_had_no_enc_prefix=yes"
+  # The complete `strings` output is bound to the observed bootstrap etcd bytes.
+  # A handwritten marker alone no longer counts as the required raw-etcd proof.
+  echo "legacy_secret_strings_sha256=$(printf '%s\n' "$legacy_raw" | sha256sum | awk '{print $1}')"
 } >/var/lib/cks-109/legacy-secret-baseline.txt
 chmod 0600 /var/lib/cks-109/legacy-secret-baseline.txt
 
