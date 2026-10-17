@@ -188,6 +188,9 @@ agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0
 ```bash
 cilium upgrade --version 1.20.1 \
   --set encryption.enabled=true --set encryption.type=wireguard --wait
+# Helm меняет только ConfigMap: шаблон DaemonSet не меняется, поэтому агенты сами
+# не перезапускаются и продолжают работать без WireGuard - перезапустите их явно.
+kubectl -n kube-system rollout restart daemonset/cilium
 kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
 test "$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-wireguard}')" = true
 cilium status --wait

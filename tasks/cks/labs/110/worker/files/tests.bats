@@ -335,9 +335,9 @@ PY' 2>/dev/null || true)
   op=$(kubectl -n default get pod mesh-outside --context "$CTX" -o json 2>/dev/null || true)
   svc=$(kubectl -n market get svc market-api --context "$CTX" -o json 2>/dev/null || true)
   endpoint_ok=$(jq -r '.spec.selector == {"app":"market-api"} and ([.spec.ports[]? | select(.name=="http" and .port==80 and (.targetPort==8080 or .targetPort=="http"))] | length == 1)' <<<"$svc" 2>/dev/null || true)
-  workload_ok=$(jq -r '[.items[]? | select(.status.phase=="Running" and ([.status.containerStatuses[]? | select(.ready==true)]|length)>=2 and ([.spec.containers[]? | select(.name=="istio-proxy")]|length)==1)] | length >= 1' <<<"$ap" 2>/dev/null || true)
-  [[ "$workload_ok" == true ]] && workload_ok=$(jq -r '[.items[]? | select(.status.phase=="Running" and ([.status.containerStatuses[]? | select(.ready==true)]|length)>=2 and ([.spec.containers[]? | select(.name=="istio-proxy")]|length)==1)] | length >= 1' <<<"$cp" 2>/dev/null || true)
-  [[ "$workload_ok" == true ]] && workload_ok=$(jq -r '.status.phase=="Running" and ([.spec.containers[]? | select(.name=="istio-proxy")]|length)==0' <<<"$op" 2>/dev/null || true)
+  workload_ok=$(jq -r '[.items[]? | select(.status.phase=="Running" and (([.status.containerStatuses[]?, .status.initContainerStatuses[]?] | map(select(.ready==true)) | length)>=2) and ([(.spec.containers[]?, .spec.initContainers[]?) | select(.name=="istio-proxy")]|length)==1)] | length >= 1' <<<"$ap" 2>/dev/null || true)
+  [[ "$workload_ok" == true ]] && workload_ok=$(jq -r '[.items[]? | select(.status.phase=="Running" and (([.status.containerStatuses[]?, .status.initContainerStatuses[]?] | map(select(.ready==true)) | length)>=2) and ([(.spec.containers[]?, .spec.initContainers[]?) | select(.name=="istio-proxy")]|length)==1)] | length >= 1' <<<"$cp" 2>/dev/null || true)
+  [[ "$workload_ok" == true ]] && workload_ok=$(jq -r '.status.phase=="Running" and ([(.spec.containers[]?, .spec.initContainers[]?) | select(.name=="istio-proxy")]|length)==0' <<<"$op" 2>/dev/null || true)
   # A more-specific PeerAuthentication can override the namespace-wide STRICT policy.
   local other_policies
   other_policies=$(kubectl -n market get peerauthentications --context "$CTX" -o json 2>/dev/null | jq -r '[.items[]? | select(.metadata.name != "market-strict" and .spec.selector != null)] | length' 2>/dev/null || echo 1)
