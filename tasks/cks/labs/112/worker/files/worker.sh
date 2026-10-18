@@ -6,9 +6,15 @@ export KUBECONFIG=/root/.kube/config
 echo "*** worker PC CKS lab 112"
 until kubectl get nodes --no-headers >/dev/null 2>&1; do sleep 5; done
 
+# The shared worker template can leave podman/buildah/golang-github-containers-* unpacked but
+# not configured (conffile prompt on /etc/containers/registries.conf). Any later apt-get install
+# then fails in the same dpkg transaction and aborts this script under set -e. dpkg (not apt)
+# needs --force-conf* as plain arguments.
+DEBIAN_FRONTEND=noninteractive dpkg --configure -a --force-confdef --force-confold || true
+
 # Semantic validation of audit policy, kubeconfig and Falco rules in tests.bats.
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-yaml
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" python3-yaml
 python3 -c 'import yaml' >/dev/null
 
 # README/solution use "ssh control-plane", but the shared worker template creates no alias

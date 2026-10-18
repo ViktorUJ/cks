@@ -39,7 +39,7 @@ inputs = {
     cidrs              = local.vars.locals.access_cidrs
     subnet_number      = "0"
     ubuntu_version     = local.vars.locals.ubuntu_version
-    user_data_template = "template/worker.sh"
+    user_data_template = "template/worker_podman_fix.sh"
     util               = { kubectl_version = local.vars.locals.k8_version }
     exam_time_minutes  = "360"
     test_url           = "https://raw.githubusercontent.com/ViktorUJ/cks/AG-156/tasks/cks/labs/112/worker/files/tests.bats"
