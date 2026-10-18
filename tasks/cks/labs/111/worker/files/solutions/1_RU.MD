@@ -415,7 +415,6 @@ metadata:
 spec:
   failurePolicy: Fail
   validationActions: [Deny]
-  failurePolicy: Fail
   credentials:
     allowInsecureRegistry: true   # registry лабы работает по HTTP
   matchConstraints:
