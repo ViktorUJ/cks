@@ -495,19 +495,24 @@ except (AssertionError,ValueError,TypeError,KeyError,StopIteration,yaml.YAMLErro
     "sudo test -r '$AUDIT_LOG' && sudo wc -l < '$AUDIT_LOG'" 2>/dev/null || echo 0)
   get_ok=no
   kubectl get configmap audit-config -n "$NS" --context "$CTX" -o json >/dev/null 2>&1 && get_ok=yes
-  sleep 5
-  local_events=$(ssh -o BatchMode=yes control-plane \
-    "sudo tail -n +$((audit_before+1)) '$AUDIT_LOG'" 2>/dev/null || true)
-  audit_id=$(jq -r --arg ns "$NS" '
-    select(.stage=="ResponseComplete" and .verb=="get" and
-      .objectRef.namespace==$ns and .objectRef.resource=="configmaps" and
-      .objectRef.name=="audit-config") | .auditID' <<<"$local_events" 2>/dev/null | tail -1)
-  receiver_logs=$(kubectl logs -n "$NS" --context "$CTX" "$receiver_name" 2>/dev/null | tail -n +"$((logs_before+1))")
+  # The webhook backend batches events, so delivery can lag; poll instead of a fixed sleep.
   delivery_ok=no
-  if [[ "$audit_id" =~ ^[0-9a-fA-F-]{36}$ ]] \
-     && grep -Fq "$audit_id" <<<"$receiver_logs" ; then
-    delivery_ok=yes
-  fi
+  audit_id=""
+  for _ in $(seq 1 10); do
+    sleep 2.5
+    local_events=$(ssh -o BatchMode=yes control-plane \
+      "sudo tail -n +$((audit_before+1)) '$AUDIT_LOG'" 2>/dev/null || true)
+    audit_id=$(jq -r --arg ns "$NS" '
+      select(.stage=="ResponseComplete" and .verb=="get" and
+        .objectRef.namespace==$ns and .objectRef.resource=="configmaps" and
+        .objectRef.name=="audit-config") | .auditID' <<<"$local_events" 2>/dev/null | tail -1)
+    receiver_logs=$(kubectl logs -n "$NS" --context "$CTX" "$receiver_name" 2>/dev/null | tail -n +"$((logs_before+1))")
+    if [[ "$audit_id" =~ ^[0-9a-fA-F-]{36}$ ]] \
+       && grep -Fq "$audit_id" <<<"$receiver_logs" ; then
+      delivery_ok=yes
+      break
+    fi
+  done
   active_pod=$(kubectl get pod -n kube-system --context "$CTX" -l component=kube-apiserver -o json 2>/dev/null || true)
   live_flags_ok=$(jq -r '
     [.items[]? | select(.status.phase=="Running") |
@@ -526,6 +531,8 @@ except (AssertionError,ValueError,TypeError,KeyError,StopIteration,yaml.YAMLErro
   else
     echo "HINT: Audit webhook requires valid kubeconfig to the actual audit-receiver Service:8080/audit, live apiserver with BOTH backends, ready receiver endpoint, and an identical NEW auditID in file and receiver."
     echo "ready=$ready available=${receiver_available:-0} endpoint=$endpoint_ok config=$config_ok live=$live_flags_ok get=$get_ok delivery=$delivery_ok auditID=${audit_id:-missing}"
+    echo "DIAG receiver=${receiver_name:-none} logs_before=${logs_before:-?} audit_before=${audit_before:-?} local_events=$(wc -l <<<"${local_events:-}") receiver_new_lines=$(wc -l <<<"${receiver_logs:-}") restarts=$(kubectl get pod "${receiver_name:-x}" -n "$NS" --context "$CTX" -o jsonpath='{.status.containerStatuses[0].restartCount}' 2>&1)"
+    echo "DIAG receiver_total_now=$(kubectl logs -n "$NS" --context "$CTX" "${receiver_name:-x}" 2>&1 | wc -l) id_in_receiver_now=$(kubectl logs -n "$NS" --context "$CTX" "${receiver_name:-x}" 2>&1 | grep -Fc "${audit_id:-NOID}")"
     result=1
   fi
   [ "$result" -eq 0 ]
