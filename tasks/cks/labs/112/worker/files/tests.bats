@@ -144,6 +144,45 @@ except (AssertionError,KeyError,StopIteration,TypeError,yaml.YAMLError):
   [ "$result" -eq 0 ]
 }
 
+# An evidence artifact must be a genuine event from the API server audit log: its auditID has to
+# be present in the log on the node (a hand-written or edited file will not be). It cannot be
+# compared with the checker's own fresh request - that event has a different auditID/timestamp.
+audit_artifact_is_real() {
+  local id
+  id=$(jq -r '.auditID // empty' "$1" 2>/dev/null) || return 1
+  [[ "$id" =~ ^[0-9a-f-]{36}$ ]] || return 1
+  ssh -o BatchMode=yes control-plane "sudo grep -Fq '\"auditID\":\"$id\"' '$AUDIT_LOG'" 2>/dev/null
+}
+
+# Audit applies the FIRST matching rule, so the contract is checked by simulating that: the first
+# rule matching configmaps in runtime-112 must be RequestResponse, and the first rule matching
+# secrets (in any namespace) must be Metadata - no earlier broad rule may shadow them.
+audit_policy_contract() {
+  python3 -c '
+import sys, yaml
+try:
+  pol = yaml.safe_load(sys.stdin.read())
+  assert pol.get("kind") == "Policy"
+  rules = pol.get("rules") or []
+  def first(res, ns):
+    for r in rules:
+      if r.get("nonResourceURLs") or r.get("users") or r.get("userGroups") or r.get("verbs"):
+        continue
+      if r.get("namespaces") and ns not in r["namespaces"]:
+        continue
+      rr = r.get("resources")
+      if rr and not any(g.get("group", "") == "" and (res in (g.get("resources") or []) or "*" in (g.get("resources") or [])) for g in rr):
+        continue
+      return r.get("level")
+    return None
+  assert first("configmaps", "runtime-112") == "RequestResponse"
+  for ns in ("runtime-112", "default", "kube-system", "other-ns"):
+    assert first("secrets", ns) == "Metadata"
+except (AssertionError, AttributeError, TypeError, yaml.YAMLError):
+  sys.exit(1)
+' <<<"$1" >/dev/null 2>&1
+}
+
 @test "4. kube-apiserver audits ConfigMap at RequestResponse but Secret only at Metadata (no body)" {
   echo '1' >> /var/work/tests/result/all
   manifest=$(ssh -o BatchMode=yes control-plane "sudo cat '$APISERVER_MANIFEST'" 2>/dev/null || true)
@@ -620,7 +659,7 @@ YAML
     [[ "$update_rc" -ne 0 && "$update_out" == *'CKS112_TRUSTED_REPO_POLICY'* ]] && update_denied=1
     ephemeral_out=$(kubectl patch pod "$trusted_admission_probe" -n "$NS" --context "$CTX" \
       --subresource=ephemeralcontainers --dry-run=server --type=json \
-      -p "[{\"op\":\"add\",\"path\":\"/spec/ephemeralContainers\",\"value\":[{\"name\":\"dbg\",\"image\":\"$CKS112_UNTRUSTED_IMAGE\",\"command\":[\"sh\"],\"targetContainerName\":\"app\"}]}]" 2>&1) && ephemeral_rc=0 || ephemeral_rc=$?
+      -p "[{\"op\":\"add\",\"path\":\"/spec/ephemeralContainers\",\"value\":[{\"name\":\"dbg\",\"image\":\"$CKS112_UNTRUSTED_IMAGE\",\"command\":[\"sh\"]}]}]" 2>&1) && ephemeral_rc=0 || ephemeral_rc=$?
     [[ "$ephemeral_rc" -ne 0 && "$ephemeral_out" == *'CKS112_TRUSTED_REPO_POLICY'* ]] && ephemeral_denied=1
   fi
 
@@ -737,8 +776,9 @@ YAML
   replicas=$(jq -r '.spec.replicas // -1' <<<"$deployment" 2>/dev/null)
   rs_name=$(jq -r '.metadata.ownerReferences[]? | select(.kind=="ReplicaSet" and .controller==true) | .name' "$detected_pod" 2>/dev/null | head -1)
   rs_obj=$(kubectl get replicaset "$rs_name" -n "$NS" --context "$CTX" -o json 2>/dev/null || true)
+  rs_json=${rs_obj:-'{}'}
   owner_ok=$(jq -n --arg pod "$pod_from_alert" --arg ns "$NS" \
-    --slurpfile saved "$detected_pod" --argjson rs "${rs_obj:-{}}" '
+    --slurpfile saved "$detected_pod" --argjson rs "$rs_json" '
     ($saved | length == 1) and
     $saved[0].metadata.name == $pod and $saved[0].metadata.namespace == $ns and
     ([ $saved[0].metadata.ownerReferences[]? | select(.kind=="ReplicaSet" and .controller==true and .uid==$rs.metadata.uid) ] | length == 1) and
@@ -765,7 +805,7 @@ YAML
   else
     if [[ "$local_rule" != *'rule: CKS112 Container access to /dev/mem'* ]]; then
       echo "HINT: falco_rules.local.yaml is missing rule 'CKS112 Container access to /dev/mem' with condition 'evt.type in (open, openat, openat2) and fd.name = /dev/mem and container.id != host', priority CRITICAL, and output fields container_id=%container.id k8s_pod=%k8s.pod.name k8s_ns=%k8s.ns.name."
-    elif [[ "$local_rule" == *'proc.cmdline'*'/dev/mem'* ]]; then
+    elif [[ "$local_rule" != *'evt.type in (open, openat, openat2)'* || "$local_rule" != *'fd.name = /dev/mem'* ]]; then
       echo "HINT: This task requires a file/device-open condition (evt.type in open/openat/openat2 + fd.name), not a spawned_process/proc.cmdline condition like tasks 3/7/9 - those detect process launch by command line, this one must detect the open() syscall on the device itself."
     elif [[ -z "$journal_lines" ]]; then
       echo "HINT: No matching alert found in Falco's journal - after adding the rule, restart Falco and wait for mem-scanner's next periodic /dev/mem open attempt (it loops every ~15s)."
