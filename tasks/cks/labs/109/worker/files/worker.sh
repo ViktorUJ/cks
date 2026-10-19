@@ -4,7 +4,6 @@ set -euo pipefail
 export KUBECONFIG=/root/.kube/config
 CTX="cluster1-admin@cluster1"
 ETCD_VERSION="3.6.0"
-ETCD_DIR="/var/lib/cks-109/etcd"
 
 echo "*** CKS lab 109 worker bootstrap"
 until kubectl get nodes --context "$CTX" --no-headers >/dev/null 2>&1; do sleep 5; done
@@ -26,8 +25,8 @@ python3 -c "import yaml"
 
 # The README/solution use "ssh control-plane", but the alias is not created by the shared
 # worker template, and root login is keyed on the node for ubuntu only. This script, the
-# etcdctl-109 wrapper and any root-run checker default to root@ - map the alias to ubuntu
-# for both root and the student user.
+# Any root-run checker defaults to root@ - map the alias to ubuntu for both root and the
+# student user.
 CONTROL_PLANE_IP=$(kubectl get nodes --context "$CTX" -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
 grep -q ' control-plane$' /etc/hosts || printf '%s control-plane\n' "$CONTROL_PLANE_IP" >> /etc/hosts
 for ssh_home in /root /home/ubuntu; do
@@ -48,32 +47,19 @@ workdir=$(mktemp -d)
 trap 'rm -rf "$workdir"' EXIT
 curl -fsSL "https://github.com/etcd-io/etcd/releases/download/v${ETCD_VERSION}/etcd-v${ETCD_VERSION}-linux-${etcd_arch}.tar.gz" -o "$workdir/etcd.tgz"
 tar -xzf "$workdir/etcd.tgz" -C "$workdir"
-install -m 0755 "$workdir/etcd-v${ETCD_VERSION}-linux-${etcd_arch}/etcdctl" /usr/local/bin/etcdctl
+# As on the exam, etcdctl is run ON the control-plane node with the standard kubeadm client
+# certificates from /etc/kubernetes/pki/etcd. Ship the pinned binary there; nothing etcd-private
+# is copied to the worker.
+ssh -o BatchMode=yes control-plane 'sudo tee /usr/local/bin/etcdctl >/dev/null && sudo chmod 0755 /usr/local/bin/etcdctl' \
+  <"$workdir/etcd-v${ETCD_VERSION}-linux-${etcd_arch}/etcdctl"
+ssh -o BatchMode=yes control-plane 'etcdctl version | head -n1'
 
-# The private etcd client material is copied only to a root-owned directory on this
-# disposable lab worker. The SSH tunnel keeps etcd bound to loopback on the control-plane.
-install -d -m 0700 "$ETCD_DIR"
-for file in ca.crt server.crt server.key; do
-  ssh -o BatchMode=yes control-plane "sudo cat /etc/kubernetes/pki/etcd/${file}" >"${ETCD_DIR}/${file}"
-done
-chmod 0600 "$ETCD_DIR"/*
+# Checker-side helper (the same standard command the learner runs on the control-plane).
+etcd_get() {
+  ssh -o BatchMode=yes control-plane "sudo ETCDCTL_API=3 etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key get '$1' --print-value-only"
+}
 
-cat >/usr/local/bin/etcdctl-109 <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-ETCD_DIR=/var/lib/cks-109/etcd
-if ! ss -ltn 2>/dev/null | grep -q '127.0.0.1:23790'; then
-  ssh -f -N -o BatchMode=yes -o ExitOnForwardFailure=yes \
-    -L 127.0.0.1:23790:127.0.0.1:2379 control-plane
-fi
-exec env ETCDCTL_API=3 etcdctl \
-  --endpoints=https://127.0.0.1:23790 \
-  --cacert="${ETCD_DIR}/ca.crt" \
-  --cert="${ETCD_DIR}/server.crt" \
-  --key="${ETCD_DIR}/server.key" "$@"
-EOF
-chmod 0755 /usr/local/bin/etcdctl-109
-
+# The learner reads etcd on the control-plane and copies the proof here with scp.
 install -d -o ubuntu -g ubuntu -m 0755 /var/work/109
 kubectl config use-context "$CTX" >/dev/null
 
@@ -97,7 +83,7 @@ if [[ -z "$legacy_uid" ]]; then
   echo "FATAL: legacy-secret has no UID - cannot establish a trusted baseline" >&2
   exit 1
 fi
-legacy_raw=$(etcdctl-109 get /registry/secrets/encryption-109/legacy-secret --print-value-only | strings)
+legacy_raw=$(etcd_get /registry/secrets/encryption-109/legacy-secret | strings)
 if [[ -z "$legacy_raw" ]]; then
   echo "FATAL: raw etcd read for legacy-secret returned nothing - cannot establish a trusted plaintext baseline" >&2
   exit 1
@@ -154,4 +140,4 @@ if ! grep -q '^encryption-109 legacy-secret ' /var/lib/cks-109/all-secrets-basel
 fi
 chmod 0600 /var/lib/cks-109/all-secrets-baseline.txt
 
-echo "*** etcdctl $(etcdctl version | head -n1) is ready; use etcdctl-109 for the tunnelled lab endpoint"
+echo "*** etcdctl is installed on the control-plane (ssh control-plane); use the standard kubeadm etcd certificates in /etc/kubernetes/pki/etcd"

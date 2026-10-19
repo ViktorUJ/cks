@@ -51,17 +51,18 @@ base64 - это просто кодирование, обратимое без �
 | `vpc` | VPC `10.10.0.0/16` с публичными подсетями |
 | `ssh-keys` | SSH-ключи для worker и control-plane |
 | `k8s-1` | одноузловой kubeadm control-plane: Kubernetes **1.36.0**, containerd, **Calico** |
-| `worker` | рабочая машина с `kubectl`, `etcdctl` 3.6.0 и helper `etcdctl-109` |
+| `worker` | рабочая машина с `kubectl`; на control-plane (`ssh control-plane`) установлен стандартный `etcdctl` 3.6.0, как на экзамене |
 
 Control-plane намеренно принимает обычные Pod - отдельный Kubernetes worker не создаётся.
 До начала заданий bootstrap создаёт namespace `encryption-109` и безобидный
 `legacy-secret`. Этот Secret создан **до** EncryptionConfiguration, поэтому служит
 контролируемым доказательством plaintext состояния.
 
-`etcdctl-109` на рабочей машине создаёт SSH tunnel к loopback endpoint etcd и использует
-TLS-материалы в root-only каталоге. Это намеренно ограниченный механизм учебной среды;
-в production нельзя переносить etcd private key на worker и нельзя давать пользователям
-прямой доступ к etcd.
+Операции над узлом выполняются на самом control-plane, как на экзамене: зайдите на него
+(`ssh control-plane`), работайте там и выйдите (`exit`); `kubectl` - с рабочей машины. Raw-запись
+etcd читается стандартным `etcdctl` из документации Kubernetes с kubeadm-сертификатами из
+`/etc/kubernetes/pki/etcd/` (`ca.crt`, `server.crt`, `server.key`). Готовые примеры команд -
+в разделе «Где взять примеры в документации» эталонного решения.
 
 ## Развёртывание
 
@@ -81,13 +82,13 @@ check_result
 ---
 | **1** | **Доказать исходный plaintext Secret** |
 | :---: | :--- |
-| Что делаем | До включения шифрования запросите raw запись `/registry/secrets/encryption-109/legacy-secret` через `sudo etcdctl-109 get ... --print-value-only`, пропустите через `strings` и сохраните результат в `/var/work/109/plaintext-proof.txt`. |
+| Что делаем | До включения шифрования запросите raw запись `/registry/secrets/encryption-109/legacy-secret` стандартным `etcdctl get ... --print-value-only`. Зайдите на control-plane (`ssh control-plane`) и работайте на нём, как на экзамене: пропустите вывод через `strings` и сохраните результат в файл на control-plane (`/tmp/plaintext-proof.txt`), затем скопируйте его на рабочую машину командой `scp` в `/var/work/109/plaintext-proof.txt`. |
 | Критерии приёмки | Файл содержит полный вывод `strings` исходной raw-записи (совпадает со снимком bootstrap, включая marker `cks-109-legacy-plaintext`) и не содержит `k8s:enc:`; вручную набранная строка не принимается. Это доказательство исходного состояния: `Secret.data` - base64, не encryption at rest. |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
 
-Это задание нужно выполнить ПЕРВЫМ, до задания 2 - как только вы включите EncryptionConfiguration и перепишете Secret, plaintext-доказательство исчезнет и вы не сможете зафиксировать его post-hoc. `etcdctl-109` уже настроен на SSH tunnel и TLS - используйте именно этот helper, а не пытайтесь подключиться к etcd напрямую.
+Это задание нужно выполнить ПЕРВЫМ, до задания 2 - как только вы включите EncryptionConfiguration и перепишете Secret, plaintext-доказательство исчезнет и вы не сможете зафиксировать его post-hoc. Команда `etcdctl` с флагами `--cacert/--cert/--key` берётся из официальной документации Kubernetes (раздел «Verify that newly written data is encrypted» на странице Encrypting Confidential Data at Rest); пути к сертификатам kubeadm: `/etc/kubernetes/pki/etcd/ca.crt`, `server.crt`, `server.key`. Точные ссылки - в разделе «Где взять примеры в документации» эталонного решения.
 </details>
 
 ---
@@ -148,19 +149,6 @@ check_result
 файла конфигурации, а реальный ciphertext `k8s:enc:aescbc:v1:` для новой и прежней
 etcd-записи и отсутствие migration-only `identity` в финальной конфигурации. Перед массовым re-encryption в реальной среде требуется snapshot, план
 ротации ключей и контролируемое окно; эта лаба не является production runbook.
-
-## Статический DoD
-
-Перед сдачей проверьте, что в `tasks/cks/labs/109` есть только полный CKS-набор:
-
-- `README_RU.MD` и `worker/files/solutions/1_RU.MD`; переводов и CKA-материалов нет;
-- `env.hcl` фиксирует `k8_version = "1.36.0"` и CNI `calico`;
-- присутствуют `vpc`, `ssh-keys`, `k8s-1` и `worker` Terragrunt-конфигурации;
-- control-plane bootstrap создаёт legacy plaintext canary, worker bootstrap устанавливает
-  pinned `etcdctl` и helper;
-- `tests.bats` содержит `0 Init` и ровно пять тематических acceptance tests;
-- документация, тесты и решение покрывают plaintext proof, EncryptionConfiguration,
-  apiserver flag/mount, re-encryption с `k8s:enc`, RBAC и automount.
 
 ## Решение
 

@@ -1,9 +1,28 @@
 # Лаба 109 - эталонное решение: encryption at rest для Secret
 
-> Все действия выполняются на рабочей машине. Это **только учебный одноузловой кластер**:
-> bootstrap намеренно дал worker root-доступ к копии etcd TLS-материалов в закрытом
-> каталоге и loopback SSH tunnel. В production не копируют `server.key` на рабочую
-> станцию и не открывают прямой доступ к etcd.
+> Работаем как на экзамене: команды `kubectl` выполняются на рабочей машине, а операции над
+> узлом (etcd, файлы и manifest control-plane) - на самом control-plane: зайдите на него
+> `ssh control-plane`, выполните команды и выйдите (`exit`). Это **только учебный одноузловой
+> кластер**; в production прямой доступ к etcd пользователям не дают.
+
+## Где взять примеры в документации
+
+Все команды ниже взяты из официальной документации Kubernetes - на экзамене их нужно найти там
+же, а не помнить наизусть:
+
+| Что нужно                                                                                                                                                                                                                                                                                                            | Страница и раздел                                                                                                                                                                                    |
+| :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Прочитать raw-запись etcd и увидеть префикс `k8s:enc:aescbc:v1:` (команда `ETCDCTL_API=3 etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key get /registry/secrets/default/secret1 \| hexdump -C`) | [Encrypting Confidential Data at Rest - Verify that newly written data is encrypted](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#verifying-that-data-is-encrypted)                             |
+| Пример `EncryptionConfiguration` с `aescbc` и `identity`                                                                                                                                                                                                                                                       | [Encrypting Confidential Data at Rest - Write an encryption configuration file](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#write-an-encryption-configuration-file)                            |
+| Флаг `--encryption-provider-config` и монтирование файла в static Pod kube-apiserver                                                                                                                                                                                                                | [Encrypting Confidential Data at Rest - Use the new encryption configuration file](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#use-the-new-encryption-configuration-file)                      |
+| Перезаписать все Secret (`kubectl get secrets --all-namespaces -o json \| kubectl replace -f -`)                                                                                                                                                                                                             | [Encrypting Confidential Data at Rest - Ensure all relevant data are encrypted](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#ensure-all-secrets-are-encrypted)                                  |
+| Ротация ключа (шаги 1-7) и удаление старого ключа                                                                                                                                                                                                                                       | [Encrypting Confidential Data at Rest - Rotate a decryption key](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#rotating-a-decryption-key)                                                        |
+| Где взять пути к сертификатам etcd, если их не помнить: «`trusted-ca-file`, `cert-file` и `key-file` можно получить из описания Pod etcd» (`kubectl -n kube-system describe pod etcd-<node>` или `/etc/kubernetes/manifests/etcd.yaml`)       | [Operating etcd clusters for Kubernetes - Snapshot using etcdctl options](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/)                                                               |
+| Role/RoleBinding и ServiceAccount (`automountServiceAccountToken`)                                                                                                                                                                                                                                                        | [Using RBAC Authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), [Configure Service Accounts for Pods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) |
+
+Пути к сертификатам в kubeadm-кластере: `/etc/kubernetes/pki/etcd/ca.crt`,
+`/etc/kubernetes/pki/etcd/server.crt`, `/etc/kubernetes/pki/etcd/server.key`; эндпоинт по умолчанию -
+`https://127.0.0.1:2379`, поэтому на control-plane флаг `--endpoints` не нужен.
 
 ```bash
 export KUBECONFIG=/home/ubuntu/.kube/config
@@ -15,13 +34,44 @@ kubectl config use-context "$CTX"
 ## 1. Зафиксировать доказательство plaintext до включения шифрования
 
 `Secret.data` в API кодируется base64, а не шифруется. Bootstrap создал безопасный
-canary до появления EncryptionConfiguration. Выполним запрос к raw value etcd через
-подготовленный tunnel и сохраним только строковое доказательство.
+canary до появления EncryptionConfiguration. Сначала посмотрим raw-запись etcd командой из
+документации, затем сохраним строковое доказательство в файл `/var/work/109/plaintext-proof.txt`
+на control-plane (`/tmp/plaintext-proof.txt`), затем скопируем его на рабочую машину в
+`/var/work/109/plaintext-proof.txt` (каталог создан bootstrap-ом): проверка читает файл на рабочей машине.
+
+Зайдите на control-plane и выполните на нём (в этой команде всё из документации, кроме ключа в
+etcd: `/registry/secrets/<namespace>/<name>`):
 
 ```bash
-sudo etcdctl-109 get /registry/secrets/encryption-109/legacy-secret \
-  --print-value-only | strings | tee /var/work/109/plaintext-proof.txt
+ssh control-plane
+sudo -i
+```
+
+```bash
+# на control-plane: raw-запись etcd, вывод hexdump -C показывает plaintext
+ETCDCTL_API=3 etcdctl \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  get /registry/secrets/encryption-109/legacy-secret | hexdump -C
+
+# сохранить доказательство (только значение, через strings) - тоже на control-plane
+ETCDCTL_API=3 etcdctl \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  get /registry/secrets/encryption-109/legacy-secret --print-value-only \
+  | strings > /tmp/plaintext-proof.txt
+cat /tmp/plaintext-proof.txt
 # cks-109-legacy-plaintext
+exit   # из root
+exit   # с control-plane
+```
+
+```bash
+# на рабочей машине: скопировать доказательство
+scp control-plane:/tmp/plaintext-proof.txt /var/work/109/plaintext-proof.txt
+cat /var/work/109/plaintext-proof.txt
 ```
 
 На этом шаге в файле нет `k8s:enc:`. Это доказательство состояния **до** настройки;
@@ -34,15 +84,21 @@ sudo etcdctl-109 get /registry/secrets/encryption-109/legacy-secret \
 manager используйте KMS v2; локальный provider выбирайте только с актуальным threat model
 и процедурой ротации.
 
-Сгенерируем 32-byte ключ AES-256, закодируем base64 и передадим конфигурацию на
-control-plane. `aescbc` стоит первым: им будут записываться новые Secret. `identity`
-последним позволяет API server прочитать старую plaintext запись только до миграции.
+Сгенерируем 32-byte ключ AES-256, закодируем base64 и создадим конфигурацию на control-plane.
+`aescbc` стоит первым: им будут записываться новые Secret. `identity` последним позволяет API
+server прочитать старую plaintext запись только до миграции. Пример файла - на странице
+документации (ссылка в начале решения).
 
 ```bash
-umask 077
-key=$(head -c 32 /dev/urandom | base64 -w0)
-cfg=$(mktemp)
-cat >"$cfg" <<EOF
+ssh control-plane
+sudo -i
+```
+
+```bash
+# на control-plane (root)
+mkdir -m 700 /etc/kubernetes/enc
+key=$(head -c 32 /dev/urandom | base64)
+cat > /etc/kubernetes/enc/encryption-config.yaml <<EOF
 apiVersion: apiserver.config.k8s.io/v1
 kind: EncryptionConfiguration
 resources:
@@ -55,14 +111,10 @@ resources:
         secret: ${key}
   - identity: {}
 EOF
-
-ssh control-plane 'sudo install -d -o root -g root -m 0700 /etc/kubernetes/enc'
-# Stream the secret directly over SSH into the root-only directory. Never leave
-# a potentially world-readable staging copy under /tmp on the control-plane.
-ssh control-plane 'sudo sh -c "umask 077; cat > /etc/kubernetes/enc/encryption-config.yaml; chown root:root /etc/kubernetes/enc/encryption-config.yaml; chmod 0600 /etc/kubernetes/enc/encryption-config.yaml"' < "$cfg"
-rm -f "$cfg"
-ssh control-plane 'sudo stat -c "%a %U:%G %n" /etc/kubernetes/enc/encryption-config.yaml'
-# 600 root:root /etc/kubernetes/enc/encryption-config.yaml
+chmod 600 /etc/kubernetes/enc/encryption-config.yaml
+ls -ld /etc/kubernetes/enc; ls -l /etc/kubernetes/enc
+exit   # из root
+exit   # с control-plane
 ```
 
 Настоящий ключ нельзя помещать в Git, ticket, терминальный log или Terraform state.
@@ -80,8 +132,14 @@ manifest и добавьте **к имеющимся** `command`, `volumeMounts`
 не заменяйте весь файл шаблоном.
 
 ```bash
-ssh control-plane 'sudo cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/kube-apiserver.yaml.bak-109'
-ssh -t control-plane 'sudoedit /etc/kubernetes/manifests/kube-apiserver.yaml'
+ssh control-plane
+sudo -i
+```
+
+```bash
+# на control-plane (root)
+cp /etc/kubernetes/manifests/kube-apiserver.yaml /root/kube-apiserver.yaml.bak-109
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
 ```yaml
@@ -106,8 +164,15 @@ Kubelet заметит изменение и перезапустит static Pod
 server, иначе ошибка YAML/пути может оставить control-plane недоступным.
 
 ```bash
+# всё ещё на control-plane: проверить, что флаг попал в рабочий manifest, затем выйти
+grep -n -- '--encryption-provider-config\|encryption-config' /etc/kubernetes/manifests/kube-apiserver.yaml
+exit   # из root
+exit   # с control-plane
+```
+
+```bash
+# на рабочей машине: дождаться API server
 kubectl get --raw='/readyz?verbose'
-ssh control-plane "sudo grep -n -- '--encryption-provider-config\|encryption-config' /etc/kubernetes/manifests/kube-apiserver.yaml"
 ```
 
 ## 4. Переписать старые Secret и проверить ciphertext
@@ -125,10 +190,30 @@ kubectl -n "$NS" get secret legacy-secret -o jsonpath='{.data.token}' | base64 -
 kubectl -n "$NS" get secret encrypted-secret -o jsonpath='{.data.token}' | base64 -d; echo
 # cks-109-legacy-plaintext
 # cks-109-fresh-ciphertext
+```
 
-sudo etcdctl-109 get /registry/secrets/encryption-109/legacy-secret --print-value-only | strings | head
-sudo etcdctl-109 get /registry/secrets/encryption-109/encrypted-secret --print-value-only | strings | head
+Raw-записи читаем на control-plane, как в задании 1:
+
+```bash
+ssh control-plane
+sudo -i
+```
+
+```bash
+# на control-plane (root)
+ETCDCTL_API=3 etcdctl \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  get /registry/secrets/encryption-109/legacy-secret | hexdump -C
+ETCDCTL_API=3 etcdctl \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  get /registry/secrets/encryption-109/encrypted-secret | hexdump -C
 # обе записи начинаются с k8s:enc:aescbc:v1:...
+exit   # из root
+exit   # с control-plane
 ```
 
 API возвращает plaintext авторизованному клиенту - это нормально и не доказывает
@@ -140,14 +225,23 @@ static kube-apiserver через CRI и ещё раз проверяем здо�
 после snapshot и подтверждения ciphertext всех затронутых типов ресурсов.
 
 ```bash
-ssh control-plane \
-  "sudo sed -i '/^[[:space:]]*- identity: {}/d' /etc/kubernetes/enc/encryption-config.yaml"
-ssh control-plane \
-  "sudo crictl ps --name kube-apiserver -q | head -n1 | xargs -r sudo crictl stop"
+ssh control-plane
+sudo -i
+```
 
+```bash
+# на control-plane (root): убрать identity и перезапустить static kube-apiserver
+vim /etc/kubernetes/enc/encryption-config.yaml   # удалить строку "- identity: {}"
+crictl ps | grep kube-apiserver
+crictl stop <id контейнера kube-apiserver>
+exit   # из root
+exit   # с control-plane
+```
+
+```bash
+# на рабочей машине
 until kubectl get --raw=/readyz 2>/dev/null | grep -qx ok; do sleep 2; done
 kubectl -n "$NS" get secret legacy-secret encrypted-secret
-ssh control-plane 'sudo grep -n identity /etc/kubernetes/enc/encryption-config.yaml || true'
 ```
 
 Финальное состояние этой лабы: encrypted provider первый и единственный, `identity`
@@ -256,9 +350,22 @@ check_result
 ciphertext, а не только общий `k8s:enc` prefix:
 
 ```bash
+# на рабочей машине
 kubectl get secrets --all-namespaces -o json | kubectl replace -f -
-sudo etcdctl-109 get /registry/secrets/encryption-109/legacy-secret \
-  --print-value-only | strings | grep -F 'k8s:enc:aescbc:v1:cks-109-aescbc-2026-rotation:'
+ssh control-plane
+sudo -i
+```
+
+```bash
+# на control-plane (root)
+ETCDCTL_API=3 etcdctl \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  get /registry/secrets/encryption-109/legacy-secret --print-value-only \
+  | strings | grep -F 'k8s:enc:aescbc:v1:cks-109-aescbc-2026-rotation:'
+exit   # из root
+exit   # с control-plane
 ```
 
 Когда migration всех Secret подтверждена, backup сделан, API читает данные и `/readyz`

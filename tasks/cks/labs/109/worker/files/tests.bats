@@ -6,6 +6,12 @@ NS="encryption-109"
 LEGACY_KEY="/registry/secrets/${NS}/legacy-secret"
 ENCRYPTED_KEY="/registry/secrets/${NS}/encrypted-secret"
 
+# The same standard command a learner runs on the control-plane (etcdctl with the kubeadm client
+# certificates from /etc/kubernetes/pki/etcd); output is the raw stored value.
+etcd_get() {
+  ssh -o BatchMode=yes control-plane "sudo ETCDCTL_API=3 etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key get '$1' --print-value-only"
+}
+
 record_result() {
   echo '1' >> /var/work/tests/result/all
   if [[ "$1" -eq 0 ]]; then echo '1' >> /var/work/tests/result/ok; fi
@@ -31,7 +37,7 @@ record_result() {
         "$(grep -Fq 'k8s:enc:' "$proof" && echo yes || echo no)" == no ]]; then
     result=0
   else
-    echo "HINT: capture the complete pre-encryption raw etcd value with 'sudo etcdctl-109 get ... --print-value-only | strings | tee /var/work/109/plaintext-proof.txt' BEFORE changing encryption. A manually typed marker does not match the checker-owned bootstrap fingerprint."
+    echo "HINT: on the control-plane (ssh control-plane) read the pre-encryption raw etcd value with the standard etcdctl (etcdctl --cacert/--cert/--key get <key> --print-value-only | strings > /tmp/plaintext-proof.txt) BEFORE changing encryption, then copy it to the worker: scp control-plane:/tmp/plaintext-proof.txt /var/work/109/plaintext-proof.txt. A manually typed marker does not match the bootstrap snapshot, and the file must be the complete 'strings' output of the original raw value (it must not contain k8s:enc:)."
     result=1
   fi
   record_result "$result"
@@ -163,7 +169,7 @@ REMOTE
 verify_109_disk_key() {
   local etcd_key="$1" expected_marker="$2" contents raw
   contents=$(ssh -o BatchMode=yes control-plane 'sudo cat /etc/kubernetes/enc/encryption-config.yaml' 2>/dev/null) || return 1
-  raw=$(sudo etcdctl-109 get "$etcd_key" --print-value-only 2>/dev/null | base64 -w0) || return 1
+  raw=$(etcd_get "$etcd_key" 2>/dev/null | base64 -w0) || return 1
   [[ -n "$contents" && -n "$raw" ]] || return 1
   CKS109_CFG_B64=$(printf '%s' "$contents" | base64 -w0) \
   CKS109_RAW_B64="$raw" CKS109_MARKER="$expected_marker" python3 -c '
@@ -212,9 +218,9 @@ except Exception:
   baseline_was_plaintext=$(sudo awk -F= '/^legacy_secret_raw_had_no_enc_prefix=/{print $2}' /var/lib/cks-109/legacy-secret-baseline.txt 2>/dev/null || true)
   current_uid=$(kubectl -n "$NS" --context "$CTX" get secret legacy-secret -o jsonpath='{.metadata.uid}' 2>/dev/null || true)
   set -o pipefail
-  sudo etcdctl-109 get "$LEGACY_KEY" --print-value-only 2>/dev/null | grep -aq '^k8s:enc:aescbc:v1:'
+  etcd_get "$LEGACY_KEY" 2>/dev/null | grep -aq '^k8s:enc:aescbc:v1:'
   legacy_cipher=$?
-  sudo etcdctl-109 get "$ENCRYPTED_KEY" --print-value-only 2>/dev/null | grep -aq '^k8s:enc:aescbc:v1:'
+  etcd_get "$ENCRYPTED_KEY" 2>/dev/null | grep -aq '^k8s:enc:aescbc:v1:'
   fresh_cipher=$?
   set +o pipefail
   uid_matches_baseline=$([[ -n "$baseline_uid" && "$current_uid" == "$baseline_uid" ]] && echo true || echo false)
@@ -253,7 +259,7 @@ except Exception:
     sys.exit(1)
 ' <<<"$secret_json" 2>/dev/null || true)
       [[ "$actual_digest" == "$base_digest" ]] || all_data_preserved=false
-      if [[ -z "$final_keyname" ]] || ! sudo etcdctl-109 get "/registry/secrets/${base_ns}/${base_name}" --print-value-only 2>/dev/null | grep -aq "^k8s:enc:aescbc:v1:${final_keyname}:"; then
+      if [[ -z "$final_keyname" ]] || ! etcd_get "/registry/secrets/${base_ns}/${base_name}" 2>/dev/null | grep -aq "^k8s:enc:aescbc:v1:${final_keyname}:"; then
         all_migrated=false
       fi
     done < <(sudo cat /var/lib/cks-109/all-secrets-baseline.txt 2>/dev/null)
