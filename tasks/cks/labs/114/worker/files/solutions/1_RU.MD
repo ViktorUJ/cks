@@ -130,7 +130,7 @@ kubectl -n cks-114 exec probe -- curl -sS -o /dev/null -w 'in-cluster HTTP:%{htt
 ```
 
 ```
-curl: (28) Connection timed out after 5000 milliseconds
+curl: (7) Failed to connect to 10.114.1.xxx port 30114 after 0 ms: Connection refused
 external HTTP:000
 in-cluster HTTP:200
 ```

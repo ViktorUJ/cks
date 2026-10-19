@@ -143,7 +143,7 @@ record_result() {
   pdb=$(kubectl get pdb canary -n upgrade-113 --context "$CTX" -o json 2>/dev/null || true)
   workload_valid=false
   pdb_valid=false
-  if printf '%s' "$deployment" | jq -e '
+  if [[ -n "$deployment" ]] && printf '%s' "$deployment" | jq -e '
     .spec.replicas == 2 and .status.availableReplicas == 2 and
     .spec.selector.matchLabels == {"app":"canary"} and
     .spec.template.metadata.labels.app == "canary" and
@@ -156,7 +156,7 @@ record_result() {
     .spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchLabels == {"app":"canary"} and
     (.spec.template.spec.readinessGates // [] | length == 0)
   ' >/dev/null 2>&1; then workload_valid=true; fi
-  if printf '%s' "$pdb" | jq -e '
+  if [[ -n "$pdb" ]] && printf '%s' "$pdb" | jq -e '
     .spec.minAvailable == 1 and .spec.selector == {"matchLabels":{"app":"canary"}}
   ' >/dev/null 2>&1; then pdb_valid=true; fi
 

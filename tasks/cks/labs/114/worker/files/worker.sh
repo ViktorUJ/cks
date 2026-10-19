@@ -234,7 +234,7 @@ while true; do
         if kubectl --request-timeout=8s --context "$CTX" -n "$NS" run "$PROBE" \
              --restart=Never --image=curlimages/curl:8.11.1 \
              --labels='cks.lab/checker-monitor=114' \
-             --overrides="{\"metadata\":{\"annotations\":{\"cks.lab/monitor-nonce\":\"$NONCE\"}}}" \
+             --overrides="{\"metadata\":{\"annotations\":{\"cks.lab/monitor-nonce\":\"$NONCE\"}},\"spec\":{\"terminationGracePeriodSeconds\":0}}" \
              --command -- sleep 300 >/dev/null 2>&1 && \
            kubectl --request-timeout=8s --context "$CTX" -n "$NS" wait \
              --for=condition=Ready "pod/$PROBE" --timeout=90s >/dev/null 2>&1; then
