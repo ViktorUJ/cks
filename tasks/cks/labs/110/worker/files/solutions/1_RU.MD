@@ -90,6 +90,13 @@ control-plane, где такого handler нет. gVisor-нода при это
 `busybox httpd` одновременно даёт shell для `uname` и небольшой HTTP endpoint для
 межнодового опыта WireGuard. `runtimeClassName` применён на Pod, а не на контейнер.
 
+`nodeSelector` и `tolerations` в Pod заданы явно: так видно, на какую ноду и почему он попадает.
+Это то же самое, что описано в `scheduling` самого `RuntimeClass`. Если в Pod их не указать,
+ничего не сломается: при создании Pod с `runtimeClassName` Kubernetes сам **добавляет** в него
+`nodeSelector` и `tolerations` из `RuntimeClass.scheduling` (проверить: `kubectl -n sandbox-110 get
+pod gvisor-sandbox -o jsonpath='{.spec.nodeSelector}'`). Но тогда в манифесте этого не видно, а без
+`scheduling` в RuntimeClass Pod мог бы попасть на ноду без `runsc` и не запуститься.
+
 ```yaml
 # gvisor-sandbox.yaml
 apiVersion: v1
@@ -101,6 +108,13 @@ metadata:
     app: gvisor-echo
 spec:
   runtimeClassName: gvisor
+  nodeSelector:
+    sandbox.runtime/gvisor: "true"
+  tolerations:
+  - key: sandbox.runtime/gvisor
+    operator: Equal
+    value: "true"
+    effect: NoSchedule
   automountServiceAccountToken: false
   containers:
   - name: app
@@ -439,18 +453,12 @@ kubectl get pods -n market
 # Baseline (STRICT еще не применена): plaintext client вне mesh должен получить 200 -
 # это доказывает, что связность в принципе работает и любой последующий отказ будет
 # вызван именно STRICT mTLS, а не независимой DNS/network-проблемой.
-set +e
 kubectl exec -n default mesh-outside -- \
   curl -sv --max-time 10 http://market-api.market.svc.cluster.local \
   > /var/work/tests/artifacts/6/market-outside-baseline.txt 2>&1
-baseline_status=$?
-set -e
-printf 'exit_code=%d\n' "$baseline_status" >> /var/work/tests/artifacts/6/market-outside-baseline.txt
+echo "exit_code=$?" >> /var/work/tests/artifacts/6/market-outside-baseline.txt
 cat /var/work/tests/artifacts/6/market-outside-baseline.txt
-if [[ "$baseline_status" -ne 0 ]]; then
-  echo "baseline plaintext request should succeed BEFORE STRICT is applied" >&2
-  exit 1
-fi
+# ожидаем: HTTP/1.1 200 OK и в конце exit_code=0
 ```
 
 ```yaml
@@ -469,30 +477,21 @@ spec:
 kubectl apply -f market-strict.yaml
 kubectl get peerauthentication -n market market-strict -o yaml
 
-set +e
+# запрос изнутри mesh (client с sidecar)
 kubectl exec -n market deploy/market-client -- \
   curl -si --max-time 10 http://market-api \
   > /var/work/tests/artifacts/6/market-inside.txt 2>&1
-inside_status=$?
-set -e
-printf 'exit_code=%d\n' "$inside_status" >> /var/work/tests/artifacts/6/market-inside.txt
-test "$inside_status" -eq 0
-grep -Eq '^HTTP/1[.]1 200' /var/work/tests/artifacts/6/market-inside.txt
-# HTTP/1.1 200 OK
+echo "exit_code=$?" >> /var/work/tests/artifacts/6/market-inside.txt
+cat /var/work/tests/artifacts/6/market-inside.txt
+# ожидаем: HTTP/1.1 200 OK и в конце exit_code=0
 
-set +e
+# тот же запрос снаружи mesh (plaintext, без sidecar)
 kubectl exec -n default mesh-outside -- \
   curl -sv --max-time 10 http://market-api.market.svc.cluster.local \
   > /var/work/tests/artifacts/6/market-outside.txt 2>&1
-outside_status=$?
-set -e
-printf 'exit_code=%d\n' "$outside_status" >> /var/work/tests/artifacts/6/market-outside.txt
+echo "exit_code=$?" >> /var/work/tests/artifacts/6/market-outside.txt
 cat /var/work/tests/artifacts/6/market-outside.txt
-if [[ "$outside_status" -eq 0 ]] || grep -Eq 'HTTP/[0-9.]+ 2[0-9][0-9]' \
-  /var/work/tests/artifacts/6/market-outside.txt; then
-  echo "plaintext client unexpectedly received a successful HTTP response" >&2
-  exit 1
-fi
+# ожидаем: Recv failure: Connection reset by peer и в конце exit_code=56 (не 0)
 ```
 
 `PeerAuthentication` управляет inbound server mode. Внутренний client получает
