@@ -79,6 +79,57 @@ wireguard_peers_on_all_nodes() {
   done
 }
 
+# The deployed Helm release is the durable configuration source; a manual
+# cilium-config patch with a DaemonSet restart is not an accepted replacement.
+cilium_helm_wireguard_source_ok() {
+  local releases
+  releases=$(kubectl -n kube-system get secrets --context "$CTX" \
+    -l 'owner=helm,name=cilium,status=deployed' -o json 2>/dev/null) || return 1
+  python3 -c '
+import base64, gzip, json, sys
+try:
+    items = json.load(sys.stdin)["items"]
+    assert len(items) == 1
+    item = items[0]
+    assert item["metadata"]["namespace"] == "kube-system"
+    kubernetes_data = base64.b64decode(item["data"]["release"], validate=True)
+    helm_data = base64.b64decode(kubernetes_data, validate=True)
+    release = json.loads(gzip.decompress(helm_data))
+    assert release["name"] == "cilium"
+    assert release["namespace"] == "kube-system"
+    assert release["info"]["status"] == "deployed"
+    encryption = release["config"]["encryption"]
+    assert encryption["enabled"] is True
+    assert encryption["type"] == "wireguard"
+except (KeyError, TypeError, ValueError, AssertionError, OSError, EOFError):
+    sys.exit(1)
+' <<<"$releases"
+}
+
+# Legacy Istio sidecars live in containers; native sidecars are restartable
+# initContainers. Independently require a Ready application and Ready Envoy,
+# rather than counting any two Ready statuses (possibly unrelated sidecars).
+istio_injected_workload_ready() {
+  local pods_json="$1"
+  jq -r '
+    def injected_ready:
+      .metadata.deletionTimestamp == null and
+      .status.phase == "Running" and
+      any(.status.conditions[]?; .type == "Ready" and .status == "True") and
+      ([.spec.containers[]? | select(.name == "app")] | length == 1) and
+      any(.status.containerStatuses[]?; .name == "app" and .ready == true) and
+      ([(.spec.containers[]?, .spec.initContainers[]?) |
+        select(.name == "istio-proxy")] | length == 1) and
+      (
+        (any(.spec.containers[]?; .name == "istio-proxy") and
+         any(.status.containerStatuses[]?; .name == "istio-proxy" and .ready == true)) or
+        (any(.spec.initContainers[]?; .name == "istio-proxy" and .restartPolicy == "Always") and
+         any(.status.initContainerStatuses[]?; .name == "istio-proxy" and .ready == true))
+      );
+    [.items[]? | select(injected_ready)] | length >= 1
+  ' <<<"$pods_json"
+}
+
 @test "0 Init" {
   : > /var/work/tests/result/all
   : > /var/work/tests/result/ok
@@ -193,20 +244,41 @@ PY' 2>/dev/null || true)
   # Independently enumerate ALL real nodes, checking the expected two role labels and
   # a live WireGuard peer on each. Removing a node label must never skip a node.
   wireguard_peers_on_all_nodes || valid=0
-  # Restart a *known* agent and wait for its exact UID to change before inspecting its replacement.
-  pod=$(jq -r '.items[]? | select(.status.phase=="Running") | .metadata.name' <<<"$agents" 2>/dev/null | head -n1)
-  n=$(jq -r --arg p "$pod" '.items[]? | select(.metadata.name == $p) | .spec.nodeName' <<<"$agents" 2>/dev/null)
-  if [[ "$valid" -eq 1 && -n "$pod" && -n "$n" ]]; then
+  cilium_helm_wireguard_source_ok || valid=0
+  # Select only the genuine DS-controlled, Ready Cilium Pod and prove that its
+  # UID changed. A lab-owned impostor with k8s-app=cilium must not satisfy restart.
+  local ds_uid old_pod old_uid replacement
+  ds_uid=$(jq -r '.metadata.uid // empty' <<<"$ds_json" 2>/dev/null)
+  old_pod=$(jq -cer --arg ds "$ds_uid" '
+    [.items[]? | select(
+      .status.phase == "Running" and .metadata.deletionTimestamp == null and
+      any(.status.conditions[]?; .type == "Ready" and .status == "True") and
+      any(.metadata.ownerReferences[]?;
+        .kind == "DaemonSet" and .controller == true and .uid == $ds))] |
+    if length >= 1 then .[0] else empty end
+  ' <<<"$agents" 2>/dev/null) || old_pod=''
+  pod=$(jq -r '.metadata.name // empty' <<<"$old_pod" 2>/dev/null)
+  n=$(jq -r '.spec.nodeName // empty' <<<"$old_pod" 2>/dev/null)
+  old_uid=$(jq -r '.metadata.uid // empty' <<<"$old_pod" 2>/dev/null)
+  if [[ "$valid" -eq 1 && -n "$ds_uid" && -n "$pod" && -n "$n" && -n "$old_uid" ]]; then
     kubectl -n kube-system delete pod "$pod" --context "$CTX" --wait=true --timeout=90s >/dev/null 2>&1 || valid=0
     kubectl -n kube-system rollout status ds/cilium --context "$CTX" --timeout=180s >/dev/null 2>&1 || valid=0
     agents=$(kubectl -n kube-system get pods --context "$CTX" -l k8s-app=cilium -o json 2>/dev/null || true)
-    pod=$(jq -r --arg node "$n" --arg old "$pod" '.items[]? | select(.spec.nodeName==$node and .metadata.name!=$old and .status.phase=="Running") | .metadata.name' <<<"$agents" 2>/dev/null | head -n1)
-    [[ -n "$pod" ]] || valid=0
-    if [[ -n "$pod" ]]; then
-      # After the recreated agent is Running, revalidate BOTH physical nodes,
-      # including actual allowed-IP peers (not just the restarted agent's peer-count).
+    replacement=$(jq -cer --arg ds "$ds_uid" --arg node "$n" --arg old "$old_uid" '
+      [.items[]? | select(
+        .spec.nodeName == $node and .metadata.uid != $old and
+        .metadata.deletionTimestamp == null and .status.phase == "Running" and
+        any(.status.conditions[]?; .type == "Ready" and .status == "True") and
+        any(.metadata.ownerReferences[]?;
+          .kind == "DaemonSet" and .controller == true and .uid == $ds))] |
+      if length == 1 then .[0] else empty end
+    ' <<<"$agents" 2>/dev/null) || replacement=''
+    [[ -n "$replacement" ]] || valid=0
+    if [[ -n "$replacement" ]]; then
       wireguard_peers_on_all_nodes || valid=0
     fi
+  else
+    valid=0
   fi
   if [[ "$valid" -eq 1 ]]; then
     record_result 0
@@ -335,8 +407,8 @@ PY' 2>/dev/null || true)
   op=$(kubectl -n default get pod mesh-outside --context "$CTX" -o json 2>/dev/null || true)
   svc=$(kubectl -n market get svc market-api --context "$CTX" -o json 2>/dev/null || true)
   endpoint_ok=$(jq -r '.spec.selector == {"app":"market-api"} and ([.spec.ports[]? | select(.name=="http" and .port==80 and (.targetPort==8080 or .targetPort=="http"))] | length == 1)' <<<"$svc" 2>/dev/null || true)
-  workload_ok=$(jq -r '[.items[]? | select(.status.phase=="Running" and (([.status.containerStatuses[]?, .status.initContainerStatuses[]?] | map(select(.ready==true)) | length)>=2) and ([(.spec.containers[]?, .spec.initContainers[]?) | select(.name=="istio-proxy")]|length)==1)] | length >= 1' <<<"$ap" 2>/dev/null || true)
-  [[ "$workload_ok" == true ]] && workload_ok=$(jq -r '[.items[]? | select(.status.phase=="Running" and (([.status.containerStatuses[]?, .status.initContainerStatuses[]?] | map(select(.ready==true)) | length)>=2) and ([(.spec.containers[]?, .spec.initContainers[]?) | select(.name=="istio-proxy")]|length)==1)] | length >= 1' <<<"$cp" 2>/dev/null || true)
+  workload_ok=$(istio_injected_workload_ready "$ap" 2>/dev/null || true)
+  [[ "$workload_ok" == true ]] && workload_ok=$(istio_injected_workload_ready "$cp" 2>/dev/null || true)
   [[ "$workload_ok" == true ]] && workload_ok=$(jq -r '.status.phase=="Running" and ([(.spec.containers[]?, .spec.initContainers[]?) | select(.name=="istio-proxy")]|length)==0' <<<"$op" 2>/dev/null || true)
   # A more-specific PeerAuthentication can override the namespace-wide STRICT policy.
   local other_policies

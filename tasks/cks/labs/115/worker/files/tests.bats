@@ -214,7 +214,9 @@ check_spire_pair() {
         while IFS= read -r agent; do
           [[ -n "$agent" ]] || continue
           table=$(k -n kube-system exec "$agent" -c cilium-agent -- cilium-dbg bpf auth list 2>/dev/null) || continue
-          if awk -v src="$src" -v dst="$dst" '($1==src && $2==dst && $4=="spire") {hit=1} END {exit !hit}' <<<"$table"; then
+          # Cilium lists the pair as (backend identity, client identity), i.e. the destination of the
+          # traffic first, so accept the exact pair in either column order.
+          if awk -v src="$src" -v dst="$dst" '(($1==src && $2==dst) || ($1==dst && $2==src)) && $4=="spire" {hit=1} END {exit !hit}' <<<"$table"; then
             return 0
           fi
         done < <(jq -r --arg uid "$ds_uid" '.items[]? | select(
@@ -236,9 +238,8 @@ check_spire_pair() {
 
 @test "1. No kube-proxy DaemonSet and the Kubernetes API is available" {
   echo 1 >> /var/work/tests/result/all
-  local output
-  output=$(k -n kube-system get ds kube-proxy -o json 2>&1)
-  local rc=$?
+  local output rc=0
+  output=$(k -n kube-system get ds kube-proxy -o json 2>&1) || rc=$?
   if [[ $rc -ne 0 && "$output" == *"NotFound"* ]] && k get nodes -o json | jq -e '.items | length > 0' >/dev/null; then
     PENDING_SUCCESS=true
   else

@@ -161,25 +161,96 @@ audit_policy_contract() {
   python3 -c '
 import sys, yaml
 try:
-  pol = yaml.safe_load(sys.stdin.read())
-  assert pol.get("kind") == "Policy"
-  rules = pol.get("rules") or []
-  def first(res, ns):
-    for r in rules:
-      if r.get("nonResourceURLs") or r.get("users") or r.get("userGroups") or r.get("verbs"):
-        continue
-      if r.get("namespaces") and ns not in r["namespaces"]:
-        continue
-      rr = r.get("resources")
-      if rr and not any(g.get("group", "") == "" and (res in (g.get("resources") or []) or "*" in (g.get("resources") or [])) for g in rr):
-        continue
-      return r.get("level")
-    return None
-  assert first("configmaps", "runtime-112") == "RequestResponse"
-  for ns in ("runtime-112", "default", "kube-system", "other-ns"):
-    assert first("secrets", ns) == "Metadata"
-except (AssertionError, AttributeError, TypeError, yaml.YAMLError):
-  sys.exit(1)
+    policy = yaml.safe_load(sys.stdin.read())
+    assert isinstance(policy, dict) and policy.get("kind") == "Policy"
+    rules = policy.get("rules")
+    assert isinstance(rules, list) and rules
+
+    def overlaps_resource(rule, resource):
+        # A rule with nonResourceURLs cannot match a Secret/ConfigMap API request.
+        if rule.get("nonResourceURLs"):
+            return False
+        groups = rule.get("resources") or []
+        if not groups:
+            return True  # empty resources means all API resources
+        for group in groups:
+            if not isinstance(group, dict):
+                return True  # fail closed on malformed fields
+            if group.get("group", "") not in ("", "*"):
+                continue
+            resources = group.get("resources") or []
+            if not resources or resource in resources or "*" in resources:
+                return True
+        return False
+
+    def could_match(rule, resource, namespace):
+        if not overlaps_resource(rule, resource):
+            return False
+        namespaces = rule.get("namespaces") or []
+        # namespace=None means any namespaced Secret; restrictions to real
+        # namespaces still represent a leak in at least one namespace.
+        if namespace is None:
+            return not namespaces or any(n != "" for n in namespaces)
+        return not namespaces or namespace in namespaces
+
+    def unconditional(rule, resource, namespace):
+        if not could_match(rule, resource, namespace):
+            return False
+        if any(rule.get(f) for f in ("users", "userGroups", "verbs")):
+            return False
+        namespaces = rule.get("namespaces") or []
+        if namespace is None and namespaces:
+            return False
+        for group in rule.get("resources") or []:
+            if group.get("group", "") in ("", "*"):
+                values = group.get("resources") or []
+                if not values or resource in values or "*" in values:
+                    if group.get("resourceNames"):
+                        return False
+        return True
+
+    # First-match semantics. Conditional rules can leak Secret bodies for
+    # a particular verb, user, resource name, or kube-system namespace. No
+    # such rule may precede a global, unconditional Metadata guard.
+    def require_cover(resource, namespace, level):
+        for rule in rules:
+            if not isinstance(rule, dict):
+                return False
+            if not could_match(rule, resource, namespace):
+                continue
+            if rule.get("level") != level:
+                return False
+            if unconditional(rule, resource, namespace):
+                return True
+        return False
+
+    # The lab permits full HTTP bodies only for controlled ConfigMaps in
+    # runtime-112; a broad RequestResponse rule in another namespace would
+    # capture unrelated object bodies despite a correct local positive test.
+    for rule in rules:
+        if rule.get("level") == "RequestResponse":
+            assert rule.get("namespaces") == ["runtime-112"]
+            groups = rule.get("resources") or []
+            assert groups and all(
+                isinstance(g, dict) and g.get("group", "") == "" and
+                g.get("resources") == ["configmaps"] for g in groups
+            )
+    assert "RequestReceived" in (policy.get("omitStages") or [])
+    assert any(r.get("level") == "None" and
+               r.get("nonResourceURLs") for r in rules)
+    assert any(r.get("level") == "None" and
+               any(g.get("group", "") == "" and
+                   "events" in (g.get("resources") or [])
+                   for g in r.get("resources") or []) for r in rules)
+    fallback = rules[-1]
+    assert fallback.get("level") == "Metadata" and not any(
+        fallback.get(key) for key in
+        ("namespaces", "users", "userGroups", "verbs", "resources", "nonResourceURLs")
+    )
+    assert require_cover("secrets", None, "Metadata")
+    assert require_cover("configmaps", "runtime-112", "RequestResponse")
+except (AssertionError, AttributeError, KeyError, TypeError, ValueError, yaml.YAMLError):
+    sys.exit(1)
 ' <<<"$1" >/dev/null 2>&1
 }
 
