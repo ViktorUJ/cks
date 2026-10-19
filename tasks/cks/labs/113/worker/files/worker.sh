@@ -174,8 +174,11 @@ while true; do
   # Observe Pod Ready directly when the API is available. Deployment status
   # may lag reconciliation during kube-apiserver upgrades; an API/CRI read error
   # is UNKNOWN and never manufactured into zero.
+  # While kube-apiserver restarts it can return an empty Pod list (ready_pods=0) although the
+  # containers keep running, so an API zero counts as an outage only when the CRI count
+  # does not confirm a running canary container.
   canary_status=unknown
-  if [[ "$canary_running" == 0 || "$ready_pods" == 0 ]]; then
+  if [[ "$canary_running" == 0 || ( "$ready_pods" == 0 && ! "$canary_running" =~ ^[1-9][0-9]*$ ) ]]; then
     canary_status=down
     canary_outage_seen=1
   elif [[ "$ready_pods" =~ ^[1-9][0-9]*$ ||
