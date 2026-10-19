@@ -171,7 +171,8 @@ exit   # с control-plane
 ```
 
 ```bash
-# на рабочей машине: дождаться API server
+# на рабочей машине: API server перезапускается около минуты; повторяйте, пока команда
+# не вернёт "readyz check passed" (до этого будет "connection refused")
 kubectl get --raw='/readyz?verbose'
 ```
 
