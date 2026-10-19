@@ -187,6 +187,15 @@ while true; do
                        .kind == "ReplicaSet" and .apiVersion == "apps/v1" and
                        .controller == true and
                        (.uid as $owner_uid | $replica_set_uids | index($owner_uid) != null)) and
+                   # ownerReferences are user-settable; require the exact
+                   # bootstrap canary workload, not an arbitrary Ready Pod.
+                   (.spec.containers | length) == 1 and
+                   .spec.containers[0].name == "canary" and
+                   .spec.containers[0].image == "registry.k8s.io/pause:3.9" and
+                   .spec.automountServiceAccountToken == false and
+                   any(.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[]?;
+                       .topologyKey == "kubernetes.io/hostname" and
+                       .labelSelector.matchLabels == {"app":"canary"}) and
                    any(.status.conditions[]?;
                        .type == "Ready" and .status == "True"))
           ] | length
@@ -235,11 +244,13 @@ while true; do
   # reading alone never proves Availability. During API restarts, treat these
   # incomplete observations as ambiguous for at most 240 s across restarts.
   canary_status=unknown
-  # Both independent API observations explicitly say zero: no Ready Pod and
-  # no available Deployment replica. This is downtime even if CRI processes
-  # still run. Only unavailable/inconsistent observations qualify as ambiguous.
-  if [[ "$ready_pods" == 0 && "$available" == 0 ]] ||
-     [[ "$canary_running" == 0 ]]; then
+  # An authoritative zero from the Deployment (a successful, validated GET with
+  # availableReplicas absent/0) is downtime even if some Pod looks Ready: Ready Pods can be
+  # forged (user-settable ownerReferences), the Deployment status cannot. A zero Ready-Pod
+  # count alone is NOT treated as downtime: while kube-apiserver restarts it can return an
+  # empty Pod list although the Deployment still reports availability (observed on a real
+  # upgrade); that case stays ambiguous and is bounded by the 240 s window below.
+  if [[ "$available" == 0 || "$canary_running" == 0 ]]; then
     canary_status=down
     canary_outage_seen=1
     ambiguous_since=0
