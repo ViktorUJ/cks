@@ -137,10 +137,11 @@ istio_injected_workload_ready() {
 }
 
 @test "1. RuntimeClass gvisor uses an active, exactly configured containerd runsc handler" {
-  local rc handler selector toml_ok
+  local rc handler selector toleration toml_ok
   rc=$(kubectl get runtimeclass gvisor --context "$CTX" -o json 2>/dev/null || true)
   handler=$(jq -r '.handler // empty' <<<"$rc" 2>/dev/null || true)
   selector=$(jq -r '.scheduling.nodeSelector["sandbox.runtime/gvisor"] // empty' <<<"$rc" 2>/dev/null || true)
+  toleration=$(jq -r 'any(.scheduling.tolerations[]?; .key == "sandbox.runtime/gvisor" and (.operator // "Equal") == "Equal" and .value == "true" and .effect == "NoSchedule")' <<<"$rc" 2>/dev/null || true)
   toml_ok=$(ssh -o BatchMode=yes -o ConnectTimeout=8 k8s110_node_gvisor 'sudo systemctl is-active --quiet containerd && sudo python3 - <<"PY"
 import re
 from pathlib import Path
@@ -150,11 +151,11 @@ sections = re.findall(r"(?ms)^" + header + r"[ \t]*\n(.*?)(?=^\[|\Z)", text)
 valid = len(sections) == 1 and re.search(r"(?m)^\s*runtime_type\s*=\s*\"io\.containerd\.runsc\.v1\"\s*$", sections[0]) is not None
 print("ok" if valid else "invalid")
 PY' 2>/dev/null || true)
-  if [[ "$handler" == runsc && "$selector" == true && "$toml_ok" == ok ]] \
+  if [[ "$handler" == runsc && "$selector" == true && "$toleration" == true && "$toml_ok" == ok ]] \
     && grep -Fqx 'RuntimeClass gvisor: handler runsc' "$ARTIFACTS/1/runsc-runtime.txt"; then
     record_result 0
   else
-    echo "HINT: require exactly one runsc containerd section with the exact runtime_type, active daemon, RuntimeClass handler and scheduler selector; handler=$handler selector=$selector toml=$toml_ok"
+    echo "HINT: require exactly one runsc containerd section with the exact runtime_type, active daemon, RuntimeClass handler, scheduler nodeSelector and the toleration for the sandbox.runtime/gvisor=true:NoSchedule taint of the gVisor node; handler=$handler selector=$selector toleration=$toleration toml=$toml_ok"
     record_result 1
   fi
 }

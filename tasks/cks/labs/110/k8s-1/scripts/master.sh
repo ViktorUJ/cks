@@ -23,12 +23,14 @@ fi
 cilium status --wait
 until [[ "$(kubectl get nodes --no-headers 2>/dev/null | awk '$2 == "Ready" {count++} END {print count+0}')" -ge 2 ]]; do sleep 5; done
 
-# Regular test clients run on the control-plane; sandboxed workloads select the worker
-# through RuntimeClass scheduling constraints set by the student.
+# Regular test clients run on the control-plane, so it stays schedulable without tolerations.
 kubectl taint nodes "$(hostname)" node-role.kubernetes.io/control-plane:NoSchedule- || true
 kubectl label node "$(hostname)" lab.cks.io/role=control-plane --overwrite
 # The single non-control-plane node is the gVisor worker (it has no kubeconfig to label itself).
+# It is tainted so that only workloads that tolerate the taint (the RuntimeClass scheduling
+# tolerations set by the student, and market-api) can land there.
 kubectl label nodes -l '!node-role.kubernetes.io/control-plane' sandbox.runtime/gvisor=true lab.cks.io/role=gvisor --overwrite
+kubectl taint nodes -l '!node-role.kubernetes.io/control-plane' sandbox.runtime/gvisor=true:NoSchedule --overwrite
 
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq tcpdump

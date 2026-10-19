@@ -83,8 +83,8 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 ---
 | **1** | **Upgrade control-plane до целевого minor** |
 | :---: | :--- |
-| Что делаем | На `k8s113_controlPlane_1` переключите apt-репозиторий `pkgs.k8s.io` с `core:/stable:/v1.35` на `core:/stable:/v1.36` (новый keyring и `sources.list.d/kubernetes.list`). Обновите пакет `kubeadm` до `1.36.x`, выполните `kubeadm upgrade plan`, затем `kubeadm upgrade apply v1.36.x`. Только после успешного `apply` выполните `kubectl drain` этого узла, обновите пакеты `kubelet`/`kubectl` до `1.36.x`, перезапустите `kubelet`, затем `kubectl uncordon`. |
-| Критерии приёмки | `kubeadm version`, `kubelet --version`, локальный `kubectl version --client` и версия API server (`kubectl version`) на control-plane сообщают `v1.36.x`. Узел `k8s113_controlPlane_1` в статусе `Ready`. Полный вывод команды `kubeadm upgrade apply` (со строкой `SUCCESS` и целевой версией) сохранён буквально в `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt`. |
+| Что делаем | Зайдите на `k8s113_controlPlane_1` (`ssh`, затем `sudo -i`) и переключите apt-репозиторий `pkgs.k8s.io` с `core:/stable:/v1.35` на `core:/stable:/v1.36`: в `/etc/apt/sources.list.d/kubernetes.list` меняется только версия в URL (так описано в документации Kubernetes, keyring прежний). Обновите пакет `kubeadm` до `1.36.x`, выполните `kubeadm upgrade plan`, затем `kubeadm upgrade apply v1.36.x`. Только после успешного `apply` выполните `kubectl drain` этого узла, обновите пакеты `kubelet`/`kubectl` до `1.36.x`, перезапустите `kubelet`, затем `kubectl uncordon`. |
+| Критерии приёмки | `kubeadm version`, `kubelet --version`, локальный `kubectl version --client` и версия API server (`kubectl version`) на control-plane сообщают `v1.36.x`. Узел `k8s113_controlPlane_1` в статусе `Ready`. Полный вывод команды `kubeadm upgrade apply` (со строкой `SUCCESS` и целевой версией) сохранён буквально в `/var/work/tests/artifacts/1/kubeadm-upgrade-apply.txt` на рабочей машине (команда выполняется на узле, вывод пишется в файл на узле, затем копируется `scp`). |
 
 <details>
 <summary>💡 Подсказка к заданию 1</summary>
@@ -95,8 +95,8 @@ mkdir -p /var/work/tests/artifacts/{1,2,4}
 ---
 | **2** | **Upgrade worker-узла до целевого minor** |
 | :---: | :--- |
-| Что делаем | На `k8s113_node_worker1` аналогично переключите `pkgs.k8s.io` на `core:/stable:/v1.36`, обновите `kubeadm`, выполните `kubeadm upgrade node` (не `apply` - это команда только для control-plane). Затем `kubectl drain` этого узла (с рабочей машины, не с самого узла), обновите `kubelet`/`kubectl`, перезапустите `kubelet`, `kubectl uncordon`. |
-| Критерии приёмки | `kubeadm version`, `kubelet --version` и локальный `kubectl version --client` на worker-узле сообщают `v1.36.x`; `kubectl get nodes` показывает для worker-узла `v1.36.x` в `kubeletVersion` и статус `Ready`. Вывод `kubeadm upgrade node` сохранён в `/var/work/tests/artifacts/2/kubeadm-upgrade-node.txt`. |
+| Что делаем | На `k8s113_node_worker1` (`ssh`, `sudo -i`) аналогично переключите `pkgs.k8s.io` на `core:/stable:/v1.36`, обновите `kubeadm`, выполните `kubeadm upgrade node` (не `apply` - это команда только для control-plane). Затем `kubectl drain` этого узла (с рабочей машины, не с самого узла), обновите `kubelet`/`kubectl`, перезапустите `kubelet`, `kubectl uncordon`. |
+| Критерии приёмки | `kubeadm version`, `kubelet --version` и локальный `kubectl version --client` на worker-узле сообщают `v1.36.x`; `kubectl get nodes` показывает для worker-узла `v1.36.x` в `kubeletVersion` и статус `Ready`. Вывод `kubeadm upgrade node` сохранён в файл на узле и скопирован `scp` в `/var/work/tests/artifacts/2/kubeadm-upgrade-node.txt` на рабочей машине. |
 
 <details>
 <summary>💡 Подсказка к заданию 2</summary>

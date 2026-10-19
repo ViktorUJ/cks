@@ -1,8 +1,19 @@
 # Лаба 110 - эталонное решение: gVisor, WireGuard и Istio STRICT
 
-> Все Kubernetes-команды выполняются на рабочей машине. Имена `gvisor-sandbox`,
+> Работаем как на экзамене: `kubectl`, `cilium` и `istioctl` - на рабочей машине, а операции над
+> узлом (containerd, tcpdump) - на самом узле: зайдите на него `ssh <узел>`, перейдите в root
+> (`sudo -i`), выполните команды и выйдите (`exit`, `exit`). Имена `gvisor-sandbox`,
 > `runc-baseline`, `gvisor-echo`, `market-api`, `market-client`, `mesh-outside` и пути
 > артефактов являются частью проверяемого контракта лабы.
+
+## Где взять примеры в документации
+
+| Что нужно | Страница и раздел |
+| :--- | :--- |
+| Секция `runsc` в `/etc/containerd/config.toml` (`runtime_type = "io.containerd.runsc.v1"`), перезапуск containerd и YAML `RuntimeClass` с `handler: runsc` | [gVisor - Containerd Quick Start: Configure containerd, Restart containerd, Set up the Kubernetes RuntimeClass](https://gvisor.dev/docs/user_guide/containerd/quick_start/) |
+| `RuntimeClass`, поля `scheduling.nodeSelector` и `scheduling.tolerations` | [Kubernetes - Runtime Class: Scheduling](https://kubernetes.io/docs/concepts/containers/runtime-class/#scheduling) |
+| Включить WireGuard (`encryption.enabled=true`, `encryption.type=wireguard`) и проверить (`cilium-dbg status \| grep Encryption`) | [Cilium - WireGuard Transparent Encryption: Enable WireGuard in Cilium, Validate the Setup](https://docs.cilium.io/en/stable/security/network/encryption-wireguard/) |
+| `PeerAuthentication` с `mtls.mode: STRICT` | [Istio - PeerAuthentication](https://istio.io/latest/docs/reference/config/security/peer_authentication/) |
 
 ```bash
 export KUBECONFIG=/home/ubuntu/.kube/config
@@ -18,23 +29,27 @@ bootstrap намеренно убрал runtime-секцию `runsc` из `/etc/
 типичная экзаменационная ситуация, когда бинарник есть, а containerd про него не знает.
 
 ```bash
-ssh k8s110_node_gvisor 'runsc --version; sudo systemctl is-active containerd; grep -c runsc /etc/containerd/config.toml || true'
+ssh k8s110_node_gvisor
+sudo -i
 ```
 
-Допишите секцию `runsc` в `config.toml` (значение `runtime_type` обязательно точное) и
-перезапустите containerd:
-
 ```bash
-ssh k8s110_node_gvisor 'grep -q "runtimes\.runsc\]" /etc/containerd/config.toml || sudo tee -a /etc/containerd/config.toml > /dev/null <<EOF
+# на gVisor-ноде (root): бинарник есть, containerd активен, секции runsc в конфиге нет
+runsc --version
+systemctl is-active containerd
+grep runsc /etc/containerd/config.toml
+
+# дописать секцию runsc (значение runtime_type обязательно точное) и перезапустить containerd
+cat >> /etc/containerd/config.toml <<EOF
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runsc]
   runtime_type = "io.containerd.runsc.v1"
 EOF
-sudo systemctl restart containerd
-sudo systemctl is-active containerd
-grep -A1 "runtimes.runsc" /etc/containerd/config.toml'
+systemctl restart containerd
+systemctl is-active containerd
+grep -A1 runtimes.runsc /etc/containerd/config.toml
+exit   # из root
+exit   # с gVisor-ноды
 ```
-
-Проверка `grep -q` делает шаг идемпотентным: повторный запуск не задвоит секцию (дубль `[...runtimes.runsc]` ломает containerd).
 
 Kubelet не нужно перезапускать: `RuntimeClass` вызывает containerd runtime handler по
 имени при каждом создании Pod, а не при старте kubelet.
@@ -49,6 +64,11 @@ handler: runsc
 scheduling:
   nodeSelector:
     sandbox.runtime/gvisor: "true"
+  tolerations:
+  - key: sandbox.runtime/gvisor
+    operator: Equal
+    value: "true"
+    effect: NoSchedule
 ```
 
 ```bash
@@ -58,8 +78,12 @@ printf 'RuntimeClass gvisor: handler runsc\n' \
   > /var/work/tests/artifacts/1/runsc-runtime.txt
 ```
 
-`scheduling.nodeSelector` - важная граница: scheduler не назначит `runsc` workload
-на control-plane, где такого handler нет.
+`scheduling.nodeSelector` - важная граница: scheduler не назначит `runsc` workload на
+control-plane, где такого handler нет. gVisor-нода при этом помечена taint'ом
+`sandbox.runtime/gvisor=true:NoSchedule` (`kubectl describe node <gvisor-узел> | grep Taints`):
+на неё не попадёт ни один Pod, кроме тех, что его терпят. `scheduling.tolerations` в RuntimeClass
+автоматически добавляются ко всем Pod с этим классом, поэтому `gvisor-sandbox` туда попадает,
+а остальные - нет.
 
 ## 2. Запустить sandboxed Pod и Service
 
@@ -114,7 +138,8 @@ kubectl wait -n sandbox-110 --for=condition=Ready pod/gvisor-sandbox --timeout=1
   kubectl exec -n sandbox-110 gvisor-sandbox -- uname -r
   printf '\n--- gvisor dmesg ---\n'
   kubectl exec -n sandbox-110 gvisor-sandbox -- dmesg 2>&1 || true
-} | tee /var/work/tests/artifacts/2/gvisor-kernel.txt
+} > /var/work/tests/artifacts/2/gvisor-kernel.txt
+cat /var/work/tests/artifacts/2/gvisor-kernel.txt
 kubectl get pod -n sandbox-110 gvisor-sandbox -o wide
 ```
 
@@ -152,7 +177,7 @@ kubectl wait -n sandbox-110 --for=condition=Ready pod/runc-baseline --timeout=18
   kubectl exec -n sandbox-110 gvisor-sandbox -- uname -r
   printf 'runc uname -r: '
   kubectl exec -n sandbox-110 runc-baseline -- uname -r
-} | tee /var/work/tests/artifacts/3/runtime-comparison.txt
+} > /var/work/tests/artifacts/3/runtime-comparison.txt
 cat /var/work/tests/artifacts/3/runtime-comparison.txt
 ```
 
@@ -179,7 +204,8 @@ agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0
   printf 'Cilium CLI=v0.19.7\n'
   printf 'Cilium data plane=verify current supported lab build against Kubernetes 1.36 requirements matrix\n'
   printf 'Istio=1.30.4\n'
-} | tee /var/work/tests/artifacts/4/tool-versions.txt
+} > /var/work/tests/artifacts/4/tool-versions.txt
+cat /var/work/tests/artifacts/4/tool-versions.txt
 ```
 
 Кластер развёрнут командой `cilium install`, которая устанавливает Cilium **через Helm**.
@@ -207,118 +233,109 @@ agent=$(kubectl -n kube-system get pods -l k8s-app=cilium -o jsonpath='{.items[0
   printf '$ cilium-dbg debuginfo --output json
 '
   kubectl -n kube-system exec "$agent" -- cilium-dbg debuginfo --output json
-} | tee /var/work/tests/artifacts/4/cilium-encrypt-status.txt
+} > /var/work/tests/artifacts/4/cilium-encrypt-status.txt
+cat /var/work/tests/artifacts/4/cilium-encrypt-status.txt
 grep -Eqi 'peer|allowed[ -]?ip|remote node' /var/work/tests/artifacts/4/cilium-encrypt-status.txt
 ```
 
 ## 5. Захват межнодового WireGuard пакета
 
 WireGuard по умолчанию использует UDP/51871. Фильтр ТОЛЬКО по `udp port 51871` заранее
-исключает plaintext TCP из результата и поэтому НЕ доказывает его отсутствие - вместо
-этого фиксируем один и тот же capture scope (`host <remote-node-ip>`, без port-фильтра) и
-сравниваем ДО/ПОСЛЕ включения WireGuard по одному и тому же межнодовому flow.
+исключает plaintext TCP из результата и поэтому НЕ доказывает его отсутствие - вместо этого
+используем один и тот же capture scope (`host <remote-node-ip>`, без port-фильтра) и сравниваем
+ДО/ПОСЛЕ включения WireGuard по одному и тому же межнодовому flow.
 
-Захват на `any` НЕ является корректной точкой наблюдения on-wire state: `any` видит и
-внутренний Cilium-интерфейс `cilium_wg0`, на котором по конструкции WireGuard-туннелей
-проходит УЖЕ РАСШИФРОВАННЫЙ inner Pod-to-Pod трафик (это и есть смысл tunnel-интерфейса -
-WireGuard отдаёт вам plaintext именно там). При захвате на `any` marker будет виден на
-`cilium_wg0` даже при полностью исправно работающем шифровании на физическом NIC - нужно
-определить и захватывать именно физический egress-интерфейс к remote node.
+Захват на `any` НЕ является корректной точкой наблюдения on-wire state: `any` видит и внутренний
+Cilium-интерфейс `cilium_wg0`, на котором по конструкции туннеля проходит УЖЕ РАСШИФРОВАННЫЙ
+трафик. Захватывать нужно физический egress-интерфейс к удалённому узлу (не `any`, `cilium_*`,
+`lxc*`, `veth*`).
+
+Понадобятся два терминала: **терминал 1** - control-plane (там `tcpdump`), **терминал 2** -
+рабочая машина (запросы и `kubectl`).
 
 ```bash
+# терминал 2 (рабочая машина): IP узла с gVisor-Pod'ом - это "удалённый" узел для control-plane
 gvisor_node=$(kubectl get pod gvisor-sandbox -n sandbox-110 -o jsonpath='{.spec.nodeName}')
 remote_ip=$(kubectl get node "$gvisor_node" -o jsonpath='{.status.addresses[?(@.type=="InternalIP")].address}')
 echo "remote_ip=$remote_ip"
-
-remote_iface=$(ssh k8s110_controlPlane_1 \
-  "ip route get '$remote_ip' | awk '{for (i=1;i<=NF;i++) if (\$i==\"dev\") {print \$(i+1); exit}}'")
-echo "remote_iface=$remote_iface"
-# Требуем непустой физический интерфейс - отклоняем any/cilium_*/lxc*/veth* как точки
-# доказательства on-wire state, они либо агрегируют несколько путей, либо сами являются
-# внутренними Cilium/veth-интерфейсами с уже расшифрованным/pre-encryption трафиком.
-if [[ -z "$remote_iface" || "$remote_iface" == "any" || "$remote_iface" =~ ^(cilium|lxc|veth) ]]; then
-  echo "could not resolve a physical egress interface toward $remote_ip" >&2
-  exit 1
-fi
 ```
 
-Сначала baseline: временно отключаем WireGuard, повторяем ТОТ ЖЕ request с ТЕМ ЖЕ
-capture scope (тот же физический интерфейс) и подтверждаем, что plaintext marker виден.
-До отключения сохраняем исходное значение и ставим cleanup trap, чтобы verification
-failure не оставил WireGuard отключённым.
+```bash
+# терминал 1: зайти на control-plane и узнать физический интерфейс к remote_ip
+ssh k8s110_controlPlane_1
+sudo -i
+```
 
 ```bash
-orig_wireguard=$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-wireguard}')
-restore_wireguard() {
-  local current
-  for attempt in $(seq 1 15); do
-    current=$(kubectl -n kube-system get cm cilium-config -o jsonpath='{.data.enable-wireguard}' --request-timeout=12s 2>/dev/null) || { sleep 2; continue; }
-    if [[ "$current" == false ]]; then
-      kubectl -n kube-system patch cm cilium-config --type=json --request-timeout=12s \
-        -p '[{"op":"test","path":"/data/enable-wireguard","value":"false"},{"op":"replace","path":"/data/enable-wireguard","value":"true"}]' || { sleep 2; continue; }
-    elif [[ "$current" != true ]]; then
-      echo "FATAL: concurrent Cilium change ($current); manual reconciliation required" >&2
-      return 1
-    fi
-    kubectl -n kube-system rollout restart ds/cilium && \
-      kubectl -n kube-system rollout status ds/cilium --timeout=180s && return 0
-    sleep 2
-  done
-  echo 'FATAL: Cilium WireGuard restoration was not verified' >&2
-  return 1
-}
-trap 'restore_wireguard || true' EXIT
-trap 'restore_wireguard || true; exit 130' INT
-trap 'restore_wireguard || true; exit 143' TERM
+# терминал 1 (control-plane, root): впишите значение remote_ip из терминала 2
+remote_ip=10.110.2.172
+ip route get $remote_ip
+# 10.110.2.172 dev ens5 src 10.110.1.x   <- интерфейс (ens5), не any / cilium_* / lxc* / veth*
+```
 
-test "$orig_wireguard" = true || { echo 'expected WireGuard enabled before baseline' >&2; exit 1; }
-kubectl -n kube-system patch cm cilium-config --type=json \
-  -p '[{"op":"test","path":"/data/enable-wireguard","value":"true"},{"op":"replace","path":"/data/enable-wireguard","value":"false"}]'
+**Baseline: WireGuard выключен.** Временно отключаем WireGuard и повторяем ТОТ ЖЕ запрос с ТЕМ ЖЕ
+capture scope. В конце обязательно вернём `enable-wireguard: "true"`.
+
+```bash
+# терминал 2
+kubectl -n kube-system patch cm cilium-config --type merge -p '{"data":{"enable-wireguard":"false"}}'
 kubectl -n kube-system rollout restart daemonset/cilium
 kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
-
-baseline=/tmp/wireguard-baseline.txt
-ssh k8s110_controlPlane_1 "sudo timeout 20 tcpdump -nni '$remote_iface' 'host $remote_ip' -A" >"$baseline" 2>&1 &
-capture_pid=$!
-sleep 3
-kubectl exec -n sandbox-110 runc-baseline -- \
-  wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080
-wait "$capture_pid" || true
-
-if ! grep -Fq 'CKS110-WIREGUARD-MARKER' "$baseline"; then
-  echo 'baseline capture should show the plaintext marker while WireGuard is disabled' >&2
-  exit 1
-fi
 ```
-
-Восстанавливаем WireGuard и повторяем ТОТ ЖЕ request с ТЕМ ЖЕ capture scope: теперь
-должен быть виден WireGuard UDP/51871 и не должно быть marker. После успешного явного
-восстановления снимаем trap, чтобы не восстанавливать WireGuard повторно на нормальном
-выходе.
 
 ```bash
-restore_wireguard || exit 1
-trap - EXIT INT TERM
-
-capture=/var/work/tests/artifacts/5/wireguard-tcpdump.txt
-ssh k8s110_controlPlane_1 "sudo timeout 20 tcpdump -nni '$remote_iface' 'host $remote_ip' -A" >"$capture" 2>&1 &
-capture_pid=$!
-sleep 3
-kubectl exec -n sandbox-110 runc-baseline -- \
-  wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080
-wait "$capture_pid" || true
-
-grep -E 'IP .*\.51871 > .*\.51871: UDP' "$capture"
-if grep -Fq 'CKS110-WIREGUARD-MARKER' "$capture"; then
-  echo 'marker leaked to node capture' >&2
-  exit 1
-fi
+# терминал 1 (control-plane, root): захват 20 секунд, затем сразу запустите запрос в терминале 2
+timeout 20 tcpdump -nni ens5 host $remote_ip -A > /tmp/wireguard-baseline.txt
 ```
 
-Не делайте вывод по `tcpdump` в Pod netns: там трафик до Cilium encryption point ещё
-может быть plaintext. Доказательство здесь - переход от видимого marker (WireGuard
-отключён) к его отсутствию (WireGuard включён) при ОДНОМ И ТОМ ЖЕ capture scope, а не
-предвзятый фильтр, который заранее не мог бы увидеть plaintext.
+```bash
+# терминал 2: пока идёт захват (первые ~15 секунд)
+kubectl exec -n sandbox-110 runc-baseline -- \
+  wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080
+```
+
+```bash
+# терминал 1 (после окончания захвата): plaintext marker виден, WireGuard выключен
+grep CKS110-WIREGUARD-MARKER /tmp/wireguard-baseline.txt
+```
+
+**После: WireGuard включён.** Восстанавливаем WireGuard и повторяем ТОТ ЖЕ запрос с ТЕМ ЖЕ scope
+захвата: теперь должен быть виден WireGuard UDP/51871 и не должно быть marker.
+
+```bash
+# терминал 2
+kubectl -n kube-system patch cm cilium-config --type merge -p '{"data":{"enable-wireguard":"true"}}'
+kubectl -n kube-system rollout restart daemonset/cilium
+kubectl -n kube-system rollout status daemonset/cilium --timeout=180s
+```
+
+```bash
+# терминал 1 (control-plane, root): захват 20 секунд
+timeout 20 tcpdump -nni ens5 host $remote_ip -A > /tmp/wireguard-tcpdump.txt
+```
+
+```bash
+# терминал 2: пока идёт захват
+kubectl exec -n sandbox-110 runc-baseline -- \
+  wget -qO- --timeout=10 http://gvisor-echo.sandbox-110.svc.cluster.local:8080
+```
+
+```bash
+# терминал 1 (после окончания захвата)
+grep -E 'UDP' /tmp/wireguard-tcpdump.txt | head -3      # 51871 > 51871: UDP
+grep -c CKS110-WIREGUARD-MARKER /tmp/wireguard-tcpdump.txt   # 0
+exit   # из root
+exit   # с control-plane
+```
+
+```bash
+# терминал 2: забрать capture для проверки
+scp k8s110_controlPlane_1:/tmp/wireguard-tcpdump.txt /var/work/tests/artifacts/5/wireguard-tcpdump.txt
+```
+
+Не делайте вывод по `tcpdump` в Pod netns: там трафик до Cilium encryption point ещё может быть
+plaintext. Доказательство здесь - переход от видимого marker (WireGuard отключён) к его
+отсутствию (WireGuard включён) при ОДНОМ И ТОМ ЖЕ capture scope.
 
 ## 6. Istio и PeerAuthentication STRICT
 
@@ -350,6 +367,11 @@ spec:
     spec:
       nodeSelector:
         lab.cks.io/role: gvisor
+      tolerations:
+      - key: sandbox.runtime/gvisor
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
       automountServiceAccountToken: false
       containers:
       - name: app

@@ -233,8 +233,7 @@ sudo -i
 ```bash
 # на control-plane (root): убрать identity и перезапустить static kube-apiserver
 vim /etc/kubernetes/enc/encryption-config.yaml   # удалить строку "- identity: {}"
-crictl ps | grep kube-apiserver
-crictl stop <id контейнера kube-apiserver>
+crictl stop $(crictl ps --name kube-apiserver -q)
 exit   # из root
 exit   # с control-plane
 ```
