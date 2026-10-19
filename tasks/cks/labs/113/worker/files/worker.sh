@@ -122,18 +122,76 @@ canary_count() {
   printf '%s' "$count"
 }
 
-ambiguous_since=0
+# A monitor restart must not restart the tolerance window for an unresolved
+# Ready=0 observation. Accept the old state format only for the first upgrade.
+if [[ -f "$STATE" ]] && grep -Eq '^ambiguous_since=[0-9]+$' "$STATE"; then
+  ambiguous_since=$(state_value ambiguous_since)
+else
+  ambiguous_since=0
+fi
 while true; do
   ts=$(date +%s)
   if ((last_ts > 0 && ts - last_ts > 60)); then history_gap_seen=1; fi
   last_ts=$ts
 
-  available=$(kget get deployment canary -n upgrade-113 -o jsonpath='{.status.availableReplicas}')
-  [[ "$available" =~ ^[0-9]+$ ]] || available=unknown
+  # Kubernetes omits zero-valued availableReplicas (json omitempty). A successful
+  # Deployment GET with the field absent is authoritative zero; a failed GET is
+  # UNKNOWN. Do not merge these states, or downtime can be hidden by CRI processes.
+  available=unknown
+  deployment_json=$(kget get deployment canary -n upgrade-113 -o json)
+  if [[ -n "$deployment_json" ]]; then
+    available_result=$(printf '%s' "$deployment_json" | jq -er '
+      if .apiVersion == "apps/v1" and .kind == "Deployment" and
+         .metadata.name == "canary" and .metadata.namespace == "upgrade-113" and
+         (.status.availableReplicas == null or
+           ((.status.availableReplicas | type) == "number" and
+            .status.availableReplicas >= 0 and
+            (.status.availableReplicas | floor) == .status.availableReplicas))
+      then (.status.availableReplicas // 0 | tostring)
+      else "unknown" end
+    ' 2>/dev/null) || available_result=unknown
+    [[ "$available_result" =~ ^[0-9]+$ ]] && available=$available_result
+  fi
+  # (kubectl wraps list responses as kind "List"; the raw API uses PodList/ReplicaSetList.)
+  # Count only Ready Pods owned by a live ReplicaSet controlled by the
+  # exact canary Deployment UID. A student can create an unrelated Ready Pod
+  # with app=canary; its status must never mask a real canary outage.
   pod_json=$(kget get pods -n upgrade-113 -l app=canary -o json)
+  rs_json=$(kget get replicasets -n upgrade-113 -l app=canary -o json)
   ready_pods=unknown
-  if [[ -n "$pod_json" ]]; then
-    ready_result=$(printf '%s' "$pod_json" | jq -er '[ (.items // [])[] | select(any(.status.conditions[]?; .type == "Ready" and .status == "True")) ] | length' 2>/dev/null || true)
+  if [[ -n "$deployment_json" && -n "$pod_json" && -n "$rs_json" ]]; then
+    ready_result=$(jq -ner \
+      --argjson dep "$deployment_json" \
+      --argjson rss "$rs_json" \
+      --argjson pods "$pod_json" '
+      if $dep.apiVersion == "apps/v1" and $dep.kind == "Deployment" and
+         $dep.metadata.name == "canary" and
+         $dep.metadata.namespace == "upgrade-113" and
+         ($dep.metadata.uid | type) == "string" and
+         ($dep.metadata.uid | length) > 0 and
+         ($rss.kind == "List" or $rss.kind == "ReplicaSetList") and ($rss.items | type) == "array" and
+         ($pods.kind == "List" or $pods.kind == "PodList") and ($pods.items | type) == "array"
+      then
+        ($rss.items | [ .[] |
+          select(.metadata.namespace == "upgrade-113" and
+                 (.metadata.uid | type) == "string" and
+                 any(.metadata.ownerReferences[]?;
+                     .kind == "Deployment" and .apiVersion == "apps/v1" and
+                     .controller == true and .uid == $dep.metadata.uid)) |
+          .metadata.uid ]) as $replica_set_uids
+        | [ $pods.items[] |
+            select(.metadata.namespace == "upgrade-113" and
+                   .metadata.deletionTimestamp == null and
+                   .status.phase == "Running" and
+                   any(.metadata.ownerReferences[]?;
+                       .kind == "ReplicaSet" and .apiVersion == "apps/v1" and
+                       .controller == true and
+                       (.uid as $owner_uid | $replica_set_uids | index($owner_uid) != null)) and
+                   any(.status.conditions[]?;
+                       .type == "Ready" and .status == "True"))
+          ] | length
+      else "unknown" end
+    ' 2>/dev/null) || ready_result=unknown
     [[ "$ready_result" =~ ^[0-9]+$ ]] && ready_pods=$ready_result
   fi
   api=$(kget version -o json | jq -r '.serverVersion.gitVersion // "unknown"' 2>/dev/null)
@@ -172,35 +230,41 @@ while true; do
     canary_running=$((cp_canary + worker_canary))
   fi
 
-  # CRI running proves a process exists, not that the Service has Ready endpoints. A zero Ready
-  # count while CRI still sees the canary is ambiguous: it is never counted as UP. While
-  # kube-apiserver is upgraded it can return an empty Pod list for tens of seconds, so the
-  # ambiguity is tolerated only for a bounded time and becomes UNKNOWN (never a pass) if it lasts.
+  # Positive availability requires BOTH a Ready Pod and a Deployment with
+  # availableReplicas > 0. A running CRI process or a single stale status
+  # reading alone never proves Availability. During API restarts, treat these
+  # incomplete observations as ambiguous for at most 240 s across restarts.
   canary_status=unknown
-  if [[ "$canary_running" == 0 || ( "$ready_pods" == 0 && ! "$canary_running" =~ ^[1-9][0-9]*$ ) ]]; then
+  # Both independent API observations explicitly say zero: no Ready Pod and
+  # no available Deployment replica. This is downtime even if CRI processes
+  # still run. Only unavailable/inconsistent observations qualify as ambiguous.
+  if [[ "$ready_pods" == 0 && "$available" == 0 ]] ||
+     [[ "$canary_running" == 0 ]]; then
     canary_status=down
     canary_outage_seen=1
     ambiguous_since=0
-  elif [[ "$ready_pods" == 0 && ! "$available" =~ ^[1-9][0-9]*$ ]]; then
-    canary_status=ambiguous
-    ((ambiguous_since == 0)) && ambiguous_since=$ts
-    if ((ts - ambiguous_since > 240)); then canary_unknown_seen=1; fi
-  elif [[ "$ready_pods" =~ ^[1-9][0-9]*$ ||
-          "$cp_canary" =~ ^[1-9][0-9]*$ || "$worker_canary" =~ ^[1-9][0-9]*$ ||
+  elif [[ "$ready_pods" =~ ^[1-9][0-9]*$ &&
           "$available" =~ ^[1-9][0-9]*$ ]]; then
     canary_status=up
     ambiguous_since=0
     healthy_samples=$((healthy_samples + 1))
+  elif [[ "$ready_pods" =~ ^[1-9][0-9]*$ ||
+          "$canary_running" =~ ^[1-9][0-9]*$ ||
+          "$available" =~ ^[1-9][0-9]*$ ]]; then
+    canary_status=ambiguous
+    if ((ambiguous_since == 0)); then ambiguous_since=$ts; fi
+    if ((ts - ambiguous_since > 240)); then canary_unknown_seen=1; fi
   else
-    ambiguous_since=0
+    # No authoritative Pod Ready or independent running/available observation:
+    # a missing API+CRI snapshot is NOT an available canary.
     canary_unknown_seen=1
   fi
 
   tmp=$(mktemp "$DIR/order-state.XXXXXXXX") || exit 1
-  printf 'baseline_seen=%s\ncp_done_seen=%s\norder_violation=%s\nworker_target_seen=%s\ncanary_outage_seen=%s\ncanary_unknown_seen=%s\nhistory_gap_seen=%s\nhealthy_samples=%s\nlast_ts=%s\ncp_done_at=%s\nworker_target_at=%s\n' \
+  printf 'baseline_seen=%s\ncp_done_seen=%s\norder_violation=%s\nworker_target_seen=%s\ncanary_outage_seen=%s\ncanary_unknown_seen=%s\nhistory_gap_seen=%s\nhealthy_samples=%s\nlast_ts=%s\ncp_done_at=%s\nworker_target_at=%s\nambiguous_since=%s\n' \
     "$baseline_seen" "$cp_done_seen" "$order_violation" "$worker_target_seen" \
     "$canary_outage_seen" "$canary_unknown_seen" "$history_gap_seen" \
-    "$healthy_samples" "$last_ts" "$cp_done_at" "$worker_target_at" >"$tmp"
+    "$healthy_samples" "$last_ts" "$cp_done_at" "$worker_target_at" "$ambiguous_since" >"$tmp"
   chmod 0644 "$tmp"
   mv -f "$tmp" "$STATE"
   printf '%s available=%s ready_pods=%s cp_canary=%s worker_canary=%s canary_running=%s canary_status=%s api=%s cp_kubeadm=%s cp_kubelet=%s cp_ready=%s cp_unsched=%s worker_kubeadm=%s worker_kubelet=%s\n' \
