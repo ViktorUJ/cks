@@ -388,12 +388,9 @@ Backend уже подготовлен на рабочей машине:
 cat /opt/image-policy-backend/server.py
 ```
 
-Скопируйте его на `control-plane` и создайте namespace + ConfigMap:
+Создайте namespace и ConfigMap с кодом backend'а:
 
 ```bash
-CP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
-scp -o StrictHostKeyChecking=no /opt/image-policy-backend/server.py "$CP":/tmp/server.py
-
 kubectl create namespace image-policy --dry-run=client -o yaml | kubectl apply -f -
 kubectl create configmap image-policy-backend-src -n image-policy \
   --from-file=server.py=/opt/image-policy-backend/server.py \
@@ -481,20 +478,26 @@ kubectl rollout status deployment/image-policy-backend -n image-policy --timeout
 
 Скопируйте CA-сертификат (здесь self-signed, поэтому сертификат сервера сам и есть его
 собственный CA) на `control-plane`, чтобы kube-apiserver мог проверить цепочку при
-подключении к backend'у:
+подключении к backend'у, и зайдите на узел:
 
 ```bash
-scp -o StrictHostKeyChecking=no "$workdir/tls.crt" "$CP":/tmp/image-policy-ca.crt
+CP=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='{.items[0].metadata.name}')
+scp "$workdir/tls.crt" "$CP":/tmp/image-policy-ca.crt
+rm -rf "$workdir"
+echo "$BACKEND_IP"     # понадобится на узле
+ssh "$CP"
+sudo -i
 ```
 
-На `control-plane` (по SSH) создайте admission config и kubeconfig для backend. Путь на
-диске **на самом control-plane**, а не на рабочей машине:
+На `control-plane` создайте admission config и kubeconfig для backend. Пути - на диске **самого
+control-plane**:
 
 ```bash
-ssh "$CP" 'sudo mkdir -p /etc/kubernetes/image-policy'
-ssh "$CP" 'sudo mv /tmp/image-policy-ca.crt /etc/kubernetes/image-policy/ca.crt'
+# на control-plane (root)
+mkdir /etc/kubernetes/image-policy
+mv /tmp/image-policy-ca.crt /etc/kubernetes/image-policy/ca.crt
 
-ssh "$CP" "sudo tee /etc/kubernetes/image-policy/admission-config.yaml >/dev/null" <<'EOF'
+cat > /etc/kubernetes/image-policy/admission-config.yaml <<EOF
 apiVersion: apiserver.config.k8s.io/v1
 kind: AdmissionConfiguration
 plugins:
@@ -508,7 +511,8 @@ plugins:
       defaultAllow: false
 EOF
 
-ssh "$CP" "sudo tee /etc/kubernetes/image-policy/kubeconfig >/dev/null" <<EOF
+BACKEND_IP=10.111.15.20     # впишите ClusterIP, который вывел "echo $BACKEND_IP"
+cat > /etc/kubernetes/image-policy/kubeconfig <<EOF
 apiVersion: v1
 kind: Config
 clusters:
@@ -525,17 +529,16 @@ contexts:
     user: kube-apiserver
 current-context: image-policy
 EOF
-
-rm -rf "$workdir"
 ```
 
-Отредактируйте static manifest **на `control-plane`**. Не заменяйте существующий
-`--enable-admission-plugins` целиком - допишите `ImagePolicyWebhook` к текущему значению
-(обычно там уже есть `NodeRestriction`), добавьте `--admission-control-config-file` и
+Отредактируйте static manifest **на `control-plane`** (вы уже в root-сессии). Не заменяйте
+существующий `--enable-admission-plugins` целиком - допишите `ImagePolicyWebhook` к текущему
+значению (обычно там уже есть `NodeRestriction`), добавьте `--admission-control-config-file` и
 `--runtime-config`, смонтируйте новую директорию как hostPath:
 
 ```bash
-ssh "$CP" 'sudo cat /etc/kubernetes/manifests/kube-apiserver.yaml'
+# на control-plane (root)
+vim /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
 
 ```yaml
@@ -559,7 +562,14 @@ spec:
       type: DirectoryOrCreate
 ```
 
-kubelet сам подхватит изменение static Pod. Дождитесь восстановления API:
+После сохранения выйдите с узла; kubelet сам подхватит изменение static Pod:
+
+```bash
+exit   # из root
+exit   # с control-plane
+```
+
+Дождитесь восстановления API:
 
 ```bash
 until kubectl get --raw=/readyz 2>/dev/null | grep -q '^ok$'; do sleep 5; done

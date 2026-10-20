@@ -17,6 +17,9 @@
 | `kubectl uncordon <node>` | [Upgrading kubeadm clusters - Uncordon the node](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/#uncordon-the-node) |
 | Worker-узел: `kubeadm upgrade node` | [Upgrading Linux nodes](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/upgrading-linux-nodes/) |
 
+На узлах Ubuntu `needrestart` настроен в режиме «только список» (без диалога OK/Cancel), поэтому
+`apt-get install` не останавливается на вопросах.
+
 Вместо `1.36.x` в командах подставьте реальный patch из `apt-cache madison kubeadm` и из
 вывода `kubeadm upgrade plan`.
 
@@ -64,9 +67,18 @@ vim /etc/apt/sources.list.d/kubernetes.list
 
 apt update
 apt-cache madison kubeadm | head -3
+```
 
-# обновить kubeadm (реальный patch вместо x)
+Обновите kubeadm (реальный patch вместо `x`). **Эту команду выполняйте отдельно:** `apt-get`
+сбрасывает буфер ввода терминала, поэтому строки, вставленные сразу за ней, пропадают.
+
+```bash
+# на control-plane (root)
 apt-mark unhold kubeadm && apt-get update && apt-get install -y kubeadm='1.36.x-*' && apt-mark hold kubeadm
+```
+
+```bash
+# на control-plane (root)
 kubeadm version -o short
 kubeadm upgrade plan
 ```
@@ -102,6 +114,10 @@ sudo -i
 ```bash
 # на control-plane (root)
 apt-mark unhold kubelet kubectl && apt-get update && apt-get install -y kubelet='1.36.x-*' kubectl='1.36.x-*' && apt-mark hold kubelet kubectl
+```
+
+```bash
+# на control-plane (root)
 systemctl daemon-reload
 systemctl restart kubelet
 kubelet --version
@@ -131,10 +147,18 @@ sudo -i
 ```
 
 ```bash
-# на worker (root): те же шаги репозитория и kubeadm
+# на worker (root): тот же репозиторий, что и на control-plane
 vim /etc/apt/sources.list.d/kubernetes.list     # v1.35 -> v1.36
-apt-mark unhold kubeadm && apt-get update && apt-get install -y kubeadm='1.36.x-*' && apt-mark hold kubeadm
+apt update
+```
 
+```bash
+# на worker (root)
+apt-mark unhold kubeadm && apt-get update && apt-get install -y kubeadm='1.36.x-*' && apt-mark hold kubeadm
+```
+
+```bash
+# на worker (root)
 # на worker-узле (и дополнительных control-plane) вместо apply выполняется upgrade node
 kubeadm upgrade node > /tmp/kubeadm-upgrade-node.txt 2>&1
 cat /tmp/kubeadm-upgrade-node.txt | tail -3
@@ -156,6 +180,10 @@ sudo -i
 ```bash
 # на worker (root)
 apt-mark unhold kubelet kubectl && apt-get update && apt-get install -y kubelet='1.36.x-*' kubectl='1.36.x-*' && apt-mark hold kubelet kubectl
+```
+
+```bash
+# на worker (root)
 systemctl daemon-reload
 systemctl restart kubelet
 kubelet --version

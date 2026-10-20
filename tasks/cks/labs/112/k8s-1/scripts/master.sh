@@ -3,6 +3,11 @@ set -euo pipefail
 
 export KUBECONFIG=/root/.kube/config
 
+# Интерактивный `apt-get install` в Ubuntu 22.04 показывает диалог needrestart (OK/Cancel) и теряет
+# вставленные в терминал команды. Только выводим список сервисов, не показывая диалог.
+mkdir -p /etc/needrestart/conf.d
+echo "\$nrconf{restart} = 'l';" > /etc/needrestart/conf.d/99-cks-lab.conf
+
 echo "*** control-plane / workload node CKS lab 112 bootstrap"
 until kubectl get nodes --no-headers >/dev/null 2>&1; do sleep 5; done
 

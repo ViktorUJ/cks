@@ -394,6 +394,10 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
 ---
 apiVersion: v1
 kind: Service
