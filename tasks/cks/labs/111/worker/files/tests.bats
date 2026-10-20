@@ -509,25 +509,33 @@ record_result() {
   # rather than trusting only the persisted baseline text or the student's own artifact.
   checker_sbom=$(mktemp)
   checker_confirms=0
-  if bom generate --format json --output "$checker_sbom" --image "$offending_image_1" >/dev/null 2>&1 \
-    && jq -e --arg pkg "$target_package" --arg ver "$target_version" \
+  answer="$ART/5b/answer.txt"
+  student_pkg=$(awk -F= '$1=="TARGET_PACKAGE"{print substr($0,index($0,"=")+1)}' "$answer" 2>/dev/null)
+  student_ver=$(awk -F= '$1=="TARGET_VERSION"{print substr($0,index($0,"=")+1)}' "$answer" 2>/dev/null)
+  # The two offending images share many OS packages, so ANY name=version present in both of them
+  # and absent from the clean image is a valid answer (checker-owned list built at provisioning).
+  identify_ok=0
+  if sudo test -r "$CHECKER/task5b-valid-pairs.txt"; then
+    [[ -n "$student_pkg" && -n "$student_ver" ]] \
+      && sudo grep -qxF "${student_pkg}=${student_ver}" "$CHECKER/task5b-valid-pairs.txt" && identify_ok=1
+  else
+    [[ "$student_pkg" == "$target_package" && "$student_ver" == "$target_version" ]] && identify_ok=1
+  fi
+
+  if [[ "$identify_ok" -eq 1 ]] \
+    && bom generate --format json --output "$checker_sbom" --image "$offending_image_1" >/dev/null 2>&1 \
+    && jq -e --arg pkg "$student_pkg" --arg ver "$student_ver" \
       'any(.packages[]?; .name == $pkg and .versionInfo == $ver)' "$checker_sbom" >/dev/null 2>&1; then
     checker_confirms=1
   fi
   rm -f "$checker_sbom"
-
-  answer="$ART/5b/answer.txt"
-  student_pkg=$(awk -F= '$1=="TARGET_PACKAGE"{print substr($0,index($0,"=")+1)}' "$answer" 2>/dev/null)
-  student_ver=$(awk -F= '$1=="TARGET_VERSION"{print substr($0,index($0,"=")+1)}' "$answer" 2>/dev/null)
-  identify_ok=0
-  [[ "$student_pkg" == "$target_package" && "$student_ver" == "$target_version" ]] && identify_ok=1
 
   bom_dir="$ART/5b/bom"
   spdx_ok=0
   if [[ -d "$bom_dir" ]]; then
     for f in "$bom_dir"/*.json; do
       [[ -f "$f" ]] || continue
-      if jq -e --arg pkg "$target_package" --arg ver "$target_version" \
+      if jq -e --arg pkg "$student_pkg" --arg ver "$student_ver" \
         'any(.packages[]?; .name == $pkg and .versionInfo == $ver)' "$f" >/dev/null 2>&1; then
         spdx_ok=1
         break

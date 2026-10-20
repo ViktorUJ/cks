@@ -501,6 +501,12 @@ CLEAN_IMAGE=${PKG_REF[$CLEAN_TAG]}
 DEPLOYMENT_UID=$(kubectl -n cks-111 get deployment pkg-audit-app -o jsonpath='{.metadata.uid}')
 EOF
 
+# Every name=version pair present in BOTH offending images and absent from the clean one is a
+# valid answer (the two images share many OS packages, so the task has no single "right" package).
+comm -12 <(printf '%s\n' "${PKG_SBOM[${OFFENDING_TAGS[0]}]}") <(printf '%s\n' "${PKG_SBOM[${OFFENDING_TAGS[1]}]}") \
+  | grep -vxFf <(printf '%s\n' "${PKG_SBOM[$CLEAN_TAG]}") > "$CHECKER/task5b-valid-pairs.txt"
+grep -qxF "${TARGET_PACKAGE}=${TARGET_VERSION}" "$CHECKER/task5b-valid-pairs.txt"
+
 chown -R root:root "$CHECKER"
 chmod 0400 "$CHECKER"/*
 
