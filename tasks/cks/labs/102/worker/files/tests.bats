@@ -106,7 +106,8 @@ no_unexpected_policies() {
   # содержать L7 http rule из задания 3 - этот тест проверяет только L3/L4 shape, не
   # запрещая L7 rule.
   policy_ok=$(printf '%s' "$policy" | jq -r '
-    (.spec.endpointSelector.matchLabels == {"app":"backend"})
+    ((.specs // []) | length == 0)
+    and (.spec.endpointSelector.matchLabels == {"app":"backend"})
     and ((.spec.ingress // []) | length == 1)
     and ((.spec.ingress[0].fromEndpoints // []) | length == 1)
     and (.spec.ingress[0].fromEndpoints[0].matchLabels == {"role":"frontend"})
@@ -162,7 +163,8 @@ no_unexpected_policies() {
   # ровно один L7 http rule (GET /), без дублирующего L4-only правила на том же порту и без
   # дополнительных methods/paths.
   policy_ok=$(printf '%s' "$policy" | jq -r '
-    (.spec.endpointSelector.matchLabels == {"app":"backend"})
+    ((.specs // []) | length == 0)
+    and (.spec.endpointSelector.matchLabels == {"app":"backend"})
     and ((.spec.ingress // []) | length == 1)
     and ((.spec.ingress[0].fromEndpoints // []) | length == 1)
     and (.spec.ingress[0].fromEndpoints[0].matchLabels == {"role":"frontend"})
@@ -289,7 +291,8 @@ no_unexpected_policies() {
       and ((.toGroups // []) | length == 0)
       and ((.toNodes // []) | length == 0);
 
-    (.spec.endpointSelector.matchLabels == {"role":"frontend"})
+    ((.specs // []) | length == 0)
+    and (.spec.endpointSelector.matchLabels == {"role":"frontend"})
     and ((.spec.endpointSelector.matchExpressions // []) | length == 0)
     and ((.spec.egress // []) | length == 3)
     and ((.spec.egress // []) as $e
@@ -458,6 +461,14 @@ no_unexpected_policies() {
   # fromEndpoints по namespace finance и rules.http path matching /private/. Порядок
   # правил в массиве не имеет значения для Cilium, поэтому проверяем оба варианта.
   policy_ok=$(printf '%s' "$policy" | jq -r '
+    # Permit the documented prefix spellings, including explicit full anchors.
+    # Runtime probes below independently verify the prefix actually works.
+    def path_shape_ok($root):
+      . as $p
+      | ([($root + ".*"), ($root + ".+"), $root,
+          ("^" + $root + ".*$"), ("^" + $root + ".+$"),
+          ("^" + $root + "$"),
+          ("^" + $root + "(.*)$") ] | index($p)) != null;
     def http_rule_ok($pathfrag):
       ((.toPorts // []) | length) == 1
       and ((.toPorts[0].ports // []) | length) == 1
@@ -466,7 +477,7 @@ no_unexpected_policies() {
       and ((.toPorts[0].ports[0].endPort // null) == null)
       and ((.toPorts[0].rules.http // []) | length) == 1
       and (.toPorts[0].rules.http[0].method == "GET")
-      and (.toPorts[0].rules.http[0].path | test("^" + $pathfrag + "(\\.\\*|\\.\\+)?$"));
+      and (.toPorts[0].rules.http[0].path | path_shape_ok($pathfrag));
     # NOTE: fromEndpoints containing a bare empty selector looks like "match any
     # identity" but is NOT: Cilium implicitly scopes a fromEndpoints selector with no
     # explicit namespace label to the policy own namespace, even for an empty selector -
@@ -486,7 +497,8 @@ no_unexpected_policies() {
       and (.fromEndpoints[0].matchLabels["k8s:io.kubernetes.pod.namespace"] == "finance")
       and ((.fromEndpoints[0].matchLabels | length) == 1)
       and ((.fromEndpoints[0].matchExpressions // []) | length == 0);
-    (.spec.endpointSelector.matchLabels == {"app":"portal"})
+    ((.specs // []) | length == 0)
+    and (.spec.endpointSelector.matchLabels == {"app":"portal"})
     and ((.spec.ingress // []) | length == 2)
     and (any(.spec.ingress[]; any_rule and http_rule_ok("/public/")))
     and (any(.spec.ingress[]; finance_rule and http_rule_ok("/private/")))
@@ -495,21 +507,25 @@ no_unexpected_policies() {
   policies_ok=false
   no_unexpected_policies "production" portal-policy && policies_ok=true
 
-  # Read-only baseline: validate both endpoint routes on the real portal Pod
-  # over loopback. Since this traffic does not enter ingress CNP, a malicious
-  # application returning 403 is not mistaken for policy enforcement.
+  # Read-only backend baseline: validate representative nested routes on the
+  # real portal Pod via loopback, without changing any live CNP.
+  # Prefix contract: check a non-empty suffix (not only the directory root).
+  # This also accepts a correct /public/.+ policy without enforcing an
+  # unnecessarily specific regex spelling.
+  public_path="/public/cks102-probe"
+  private_path="/private/cks102-probe"
   baseline_ok=false
-  kubectl --context "$CTX" exec -n production portal -- wget -q -T 5 -O /dev/null http://127.0.0.1/public/ >/dev/null 2>&1 && \
-  kubectl --context "$CTX" exec -n production portal -- wget -q -T 5 -O /dev/null http://127.0.0.1/private/ >/dev/null 2>&1 && baseline_ok=true
+  kubectl --context "$CTX" exec -n production portal -- wget -q -T 5 -O /dev/null "http://127.0.0.1${public_path}" >/dev/null 2>&1 && \
+  kubectl --context "$CTX" exec -n production portal -- wget -q -T 5 -O /dev/null "http://127.0.0.1${private_path}" >/dev/null 2>&1 && baseline_ok=true
   base_fin_pub_code=$([[ "$baseline_ok" == true ]] && echo 200 || echo 000)
   base_fin_priv_code="$base_fin_pub_code"
   base_ext_pub_code="$base_fin_pub_code"
   base_ext_priv_code="$base_fin_pub_code"
 
-  fin_pub_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/public/ 2>/dev/null) || true
-  fin_priv_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/private/ 2>/dev/null) || true
-  ext_pub_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/public/ 2>/dev/null) || true
-  ext_priv_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' http://portal.production/private/ 2>/dev/null) || true
+  fin_pub_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' "http://portal.production${public_path}" 2>/dev/null) || true
+  fin_priv_code=$(kubectl --context "$CTX" exec -n finance finance-client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' "http://portal.production${private_path}" 2>/dev/null) || true
+  ext_pub_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' "http://portal.production${public_path}" 2>/dev/null) || true
+  ext_priv_code=$(kubectl --context "$CTX" exec -n "$NS" client -- curl -sS --max-time 5 -o /dev/null -w '%{http_code}' "http://portal.production${private_path}" 2>/dev/null) || true
 
   {
     printf 'baseline finance public=%s private=%s\nbaseline external public=%s private=%s\n' \
@@ -528,17 +544,17 @@ no_unexpected_policies() {
     record_result 0
   else
     if [[ "$policy_ok" != "true" ]]; then
-      echo "HINT: portal-policy must select exactly {app:portal}, with a single cross-namespace public rule permitting GET /public/.* and a separate finance-only rule permitting GET /private/.*. No broader alternation/regex, extra ingress or L4-only bypass is allowed."
+      echo "HINT: portal-policy must select exactly {app:portal}, with public GET /public/* from all namespaces and private GET /private/* only from finance. A literal directory-only path is insufficient if it cannot handle /public/cks102-probe and /private/cks102-probe. No alternation, extra ingress or L4-only bypass is allowed."
     elif [[ "$policies_ok" != "true" ]]; then
       echo "HINT: only 'portal-policy' is expected to exist as a policy resource in namespace 'production'."
     elif [[ "$baseline_ok" != "true" ]]; then
-      echo "HINT: portal must serve both /public/ and /private/ over loopback with HTTP 200 (location /public/ and location /private/ in the nginx config). This control never changes the live policy."
+      echo "HINT: portal must serve /public/cks102-probe and /private/cks102-probe over loopback with HTTP 200. This control never changes the live policy."
     elif [[ "$fin_pub_code" != "200" || "$fin_priv_code" != "200" ]]; then
-      echo "HINT: finance-client must get 200 on BOTH /public/* and /private/* after the policy is applied - the fromEndpoints:[{}] rule already matches the finance identity too, so finance should also get /public/*."
+      echo "HINT: finance-client must get 200 on BOTH /public/* and /private/* after the policy is applied - the public matchExpressions:Exists rule matches finance as well, so finance should also get /public/*."
     elif [[ "$ext_pub_code" != "200" ]]; then
       echo "HINT: the external client (namespace '$NS') must still get 200 on /public/* - that path must be open to any cluster endpoint."
     else
-      echo "HINT: the external client (namespace '$NS') must get exactly 403 on /private/* (Envoy L7 deny), not a transport-level deny - the fromEndpoints:[{}] rule already admits the TCP connection for everyone, so /private/* denial happens at L7, not L4."
+      echo "HINT: the external client (namespace '$NS') must get exactly 403 on /private/* (Envoy L7 deny), not a transport-level deny - the public matchExpressions:Exists rule already admits TCP connections for every namespace, so /private/* denial happens at L7, not L4."
     fi
     cat "$CHECKER_DIR/6/portal-runtime.txt" 2>/dev/null
     record_result 1
